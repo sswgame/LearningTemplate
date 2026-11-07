@@ -189,7 +189,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool VoxelGameModeComponent::startGame()
     {
-        const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
+        const VoxelBlockCatalog* pCatalog = game::findSubsystem<const VoxelBlockCatalog>();
         if ( pCatalog == nullptr || pCatalog->getBlocks().empty() )
         {
             SW_LOG_ERROR_ID( "VoxelGameMode.BlockCatalogNotLoaded", "[Voxel] the block catalog is not loaded - the world cannot start" );

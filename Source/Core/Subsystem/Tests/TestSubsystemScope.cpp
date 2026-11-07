@@ -102,6 +102,32 @@ SW_TEST_CASE( SubsystemScopeTest, FindsOwnedAndBorrowedByType )
     SW_EXPECT_TRUE( scope.bind( &other ) );
 }
 
+/** @brief [SubsystemScopeTest] const 로 건 객체는 const 로 찾는 쪽만 찾고, 같은 타입은 const 든 아니든 두 칸이 되지 않는다. */
+SW_TEST_CASE( SubsystemScopeTest, ConstBindingIsFoundOnlyAsConst )
+{
+    SubsystemScope     parent;
+    SubsystemScope     scope{ &parent };
+    const ScopeCatalog catalog{ 3 };
+    SW_EXPECT_TRUE( scope.bind( &catalog ) );
+    SW_EXPECT_TRUE( scope.find<const ScopeCatalog>() == &catalog );
+    SW_EXPECT_TRUE( locateSubsystem<const ScopeCatalog>( &scope ) == &catalog );
+    SW_EXPECT_TRUE( scope.find<ScopeCatalog>() == nullptr );
+    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &scope ) == nullptr );
+
+    ScopeCatalog mutableCatalog{ 4 };
+    SW_EXPECT_FALSE( scope.bind( &mutableCatalog ) );
+    const ScopeCatalog otherConst{ 5 };
+    SW_EXPECT_FALSE( scope.bind( &otherConst ) );
+
+    // 상위의 일반 칸은 비-const 조회에 그대로 보이고, 가까운 const 칸이 const 조회에서 이긴다.
+    SW_EXPECT_TRUE( parent.bind( &mutableCatalog ) );
+    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &scope ) == &mutableCatalog );
+    SW_EXPECT_TRUE( locateSubsystem<const ScopeCatalog>( &scope ) == &catalog );
+
+    scope.unbind<const ScopeCatalog>();
+    SW_EXPECT_TRUE( scope.find<const ScopeCatalog>() == nullptr );
+}
+
 /**
  * @brief [SubsystemScopeTest] 이 범위에 없으면 상위 범위에서 찾고, 하위 범위가 같은 타입을 걸면 그것이 이긴다
  */

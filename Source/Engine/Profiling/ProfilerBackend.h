@@ -72,7 +72,7 @@ namespace sw
          */
         static void setActiveBackend( IProfilerBackend* pBackend );
 #if SW_PROFILER_BACKEND_COMPILED
-        /** @brief Tracy 가 켜질 때 `TaskManager::setProfileHook` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
+        /** @brief Tracy 가 켜질 때 `TaskManager::bindProfileHook` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
         static const TaskProfileHook* getTaskProfileHook();
 #endif
 

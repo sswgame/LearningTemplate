@@ -30,8 +30,8 @@ namespace sw
             settings._clock._secondsPerDay = 120.0f;
             settings._clock._daysPerSeason = 28;
             settings._clock._startHour     = 6.0f;
-            settings._pQuestCatalog        = game::findSubsystem<QuestCatalog>();
-            settings._pReputationCatalog   = game::findSubsystem<ReputationCatalog>(); // 생물 호감도 = 세력 creature.<종>
+            settings._pQuestCatalog        = game::findSubsystem<const QuestCatalog>();
+            settings._pReputationCatalog   = game::findSubsystem<const ReputationCatalog>(); // 생물 호감도 = 세력 creature.<종>
             return settings;
         }
     };

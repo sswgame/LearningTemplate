@@ -43,8 +43,6 @@ namespace sw
             caps._bBindless       = SW_TRUE;
             caps._bNativeBindless = SW_FALSE;
             caps._bCompute        = SW_TRUE;
-            caps._bOffscreenRT    = SW_TRUE;
-            caps._bIndirectDraw   = SW_TRUE;
             // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 설정할 수 없다.
             // gpu_cull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
             // 쓰려면 둘 중 하나를 포기해야 한다. 인다이렉트 드로우를 살리고 컬링을 끈다
@@ -68,8 +66,6 @@ namespace sw
             caps._bBindless                   = SW_TRUE;
             caps._bNativeBindless             = SW_TRUE; // 후보. 런타임은 Device::getCapabilities()
             caps._bCompute                    = SW_TRUE;
-            caps._bOffscreenRT                = SW_TRUE;
-            caps._bIndirectDraw               = SW_TRUE;
             caps._bGPUCulling                 = SW_TRUE;
             caps._bGPUMeshMorph               = SW_TRUE;
             caps._bMultiDrawIndirect          = SW_TRUE;
@@ -85,8 +81,6 @@ namespace sw
             caps._bBindless       = SW_TRUE;
             caps._bNativeBindless = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
             caps._bCompute        = SW_TRUE;
-            caps._bOffscreenRT    = SW_TRUE;
-            caps._bIndirectDraw   = SW_TRUE;
             caps._bGPUCulling     = SW_TRUE;
             // 주의: 백엔드 하나가 다른 이미지를 내면 **쿠킹된 셰이더 산출물이 낡았는지부터 의심할 것**
             // (`App.exe --cook-shaders` 로 다시 쿠킹하고 비교한다). Vulkan 의 모프는 DX12, DX11 과 픽셀 수가 같다.
@@ -107,8 +101,6 @@ namespace sw
             caps._bBindless       = SW_TRUE;
             caps._bNativeBindless = SW_FALSE;
             caps._bCompute        = SW_TRUE;
-            caps._bOffscreenRT    = SW_TRUE;
-            caps._bIndirectDraw   = SW_TRUE;
             caps._bGPUCulling     = SW_TRUE;
             // 주의: GL 드라이버는 early-return 형태의 `MorphPool::computeElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
             // 잘못 컴파일해 풀에서 **한 슬롯 앞 원소**를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
@@ -121,8 +113,6 @@ namespace sw
 #endif
             caps._bThreadSafeResourceCreation = SW_FALSE;
             caps._bWireframeFill              = SW_TRUE;
-            caps._bPersistentStagingRing      = SW_TRUE; // 후보. 런타임은 OpenGLRHIDevice::getCapabilities 가 링을 만들었는지(GL 4.4)로 덮는다
-            caps._bPersistentReadbackRing     = SW_TRUE; // 위와 같다
             return caps;
         }
     };

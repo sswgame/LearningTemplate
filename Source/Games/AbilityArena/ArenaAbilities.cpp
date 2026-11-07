@@ -63,7 +63,7 @@ namespace sw
         // 어느 탄인지는 어빌리티 데이터(`<Param name="projectile">`)가 반드시 적고, 피해 · 속도 · 사거리 · 반지름은 그 탄 정의(게임 서비스 `ProjectileCatalog`)다.
         // 탄의 피해는 숫자라 피해 이펙트의 SetByCaller 로 넘긴다 — 방어 · 저항은 이펙트 계산이 한다.
         const hashed_string      projectileID = getNameParameter( "projectile" );
-        const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+        const ProjectileCatalog* pProjectiles = game::findSubsystem<const ProjectileCatalog>();
         const ProjectileDef*     pProjectile  = pProjectiles != nullptr && projectileID.empty() == false ? pProjectiles->find( projectileID ) : nullptr;
         if ( pProjectile == nullptr )
         {

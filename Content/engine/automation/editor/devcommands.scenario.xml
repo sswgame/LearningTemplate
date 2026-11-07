@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 자동화가 부르지 않던 에디터 개발 명령을 한 번씩 부른다. 디버그 그리기 시연, 없는 태그 고르기(0 개), 입력 녹화 시작 · 멈춤(파일을 쓴다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/devcommands.scenario.xml -unattended
+-->
+<Scenario name="editor.devcommands" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
+	<EditorWaitSettled/>
+	<!-- 쉬는 에디터에는 임포트도 로딩 화면도 없다 -->
+	<WaitUntil watch="Editor.AssetImportBusy" equals="0" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Editor.LoadingScreenShown" equals="0" timeoutWallSeconds="30"/>
+	<DevCommand line="debugdraw.demo 1"/>
+	<ExpectLog id="DevCommand.Reply" contains="debug draw demo for 1 s" atLeast="1"/>
+	<EditorWaitSettled/>
+	<DevCommand line="select.tag Automation.NoSuchTag"/>
+	<ExpectLog id="DevCommand.Reply" contains="selected 0" atLeast="1"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scenario.record start Saved/Automation/devcommands/record.scenario.xml"/>
+	<ExpectLog id="DevCommand.Reply" contains="recording input to" atLeast="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="scenario.record stop"/>
+	<ExpectLog id="DevCommand.Reply" contains="events skipped" atLeast="1"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

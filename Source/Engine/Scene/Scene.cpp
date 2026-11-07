@@ -684,8 +684,19 @@ namespace sw
         if ( _bRegistrationHeld == false )
             return;
         _bRegistrationHeld = SW_FALSE;
-        ScopedTimer registerTimer{ "Scene.load.register" }; // 받는 프레임에 드는 비용 — 길어지면 `endDeferredRegistration` 을 프레임마다 나눈다
+        ScopedTimer registerTimer{ "Scene.load.register" };
         _objectManager->endDeferredRegistration();
+    }
+
+    bool Scene::pumpHeldRegistration( uint32 maxCount )
+    {
+        if ( _bRegistrationHeld == false )
+            return true;
+        ScopedTimer registerTimer{ "Scene.load.register" }; // 나눈 프레임마다 하나씩 찍힌다
+        if ( _objectManager->pumpDeferredRegistration( maxCount ) == false )
+            return false;
+        _bRegistrationHeld = SW_FALSE;
+        return true;
     }
 
     bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, const NodeBuild build, vector<uint64>* pOutListObjectID, const StopToken& stopToken )

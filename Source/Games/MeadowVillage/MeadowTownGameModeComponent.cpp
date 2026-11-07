@@ -70,7 +70,7 @@ namespace sw
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
         if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == SessionStateInitResult::Refused )
             return false;
-        if ( initializeTown( _town, *pState ) == false || validateViews( *game::findSubsystem<CreatureLifeCatalog>() ) == false )
+        if ( initializeTown( _town, *pState ) == false || validateViews( *game::findSubsystem<const CreatureLifeCatalog>() ) == false )
             return false;
         if ( pState->isFreshGame() )
         {
@@ -169,7 +169,7 @@ namespace sw
 
     bool MeadowTownGameModeComponent::initializeTown( CreatureTown& outTown, SessionStateComponent& state )
     {
-        const CreatureLifeCatalog* pCatalog = game::findSubsystem<CreatureLifeCatalog>();
+        const CreatureLifeCatalog* pCatalog = game::findSubsystem<const CreatureLifeCatalog>();
         if ( pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "MeadowTown.TownCannotStartCreature", "[Meadow] the town cannot start - the creature catalog is not loaded" );

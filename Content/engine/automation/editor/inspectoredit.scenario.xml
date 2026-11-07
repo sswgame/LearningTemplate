@@ -15,6 +15,11 @@
 	<Expect watch="Editor.SelectedProperty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<EditorWaitSettled/>
+	<!-- 같은 선택을 그리는 동안 배치 묶음을 다시 짓지 않는다 -->
+	<Remember watch="Editor.InspectorLayoutRebuildCount" as="layout"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.InspectorLayoutRebuildCount" sameAs="layout"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>

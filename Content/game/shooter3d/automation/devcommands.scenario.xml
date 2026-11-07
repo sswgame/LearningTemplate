@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  게임 쪽 개발 명령 — 사진 모드(카메라 디렉터가 있어야 한다)와 의도 녹화 · 저장 · 재생. 게임프레임워크 컴포넌트를 쓰므로 engine 이 아니라 이 팩에 둔다.
+  사진 모드: 켜면 "game paused" 로 답하고, 찍기 · 끄기까지. 의도: 모든 폰을 녹화해 파일로 쓰고 그 파일을 다시 재생한다(트랙이 하나 이상).
+  실행: App -scenario=game/shooter3d/automation/devcommands.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.devcommands" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="60"/>
+	<DevCommand line="autoplay off"/>
+	<DevCommand line="photo.on"/>
+	<ExpectLog id="DevCommand.Reply" contains="photo mode: on (game paused)" atLeast="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="photo.shot"/>
+	<Wait frames="5"/>
+	<DevCommand line="photo.off"/>
+	<ExpectLog id="DevCommand.Reply" contains="photo mode: off" atLeast="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="intent.record 120"/>
+	<ExpectLog id="DevCommand.Reply" contains="intent: recording every pawn" atLeast="1"/>
+	<Wait frames="30"/>
+	<DevCommand line="intent.save {out}/devcommands.swintent"/>
+	<ExpectLog id="DevCommand.Reply" contains="track(s) written" atLeast="1"/>
+	<Wait frames="2"/>
+	<DevCommand line="intent.play {out}/devcommands.swintent"/>
+	<ExpectLog id="DevCommand.Reply" contains="intent: playing" atLeast="1"/>
+	<Wait frames="10"/>
+	<Pass/>
+</Scenario>

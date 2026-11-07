@@ -13,7 +13,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
-#include "GameFramework/Runtime/World/Environment/GravityComponent.h"
 
 namespace sw
 {
@@ -116,9 +115,6 @@ namespace sw
     void LaunchPadComponent::launch( GameObject& target )
     {
         ++_launchCount;
-        GravityComponent* pGravity = target.getComponent<GravityComponent>();
-        if ( pGravity != nullptr )
-            pGravity->jump( _launchVelocity._y );
         // 캐릭터 컨트롤러는 쏜 속도를 그대로 받는다. 수직 속도는 덮어쓰고, 수평 속도는 다시 디딜 때까지 유지한다.
         CharacterControllerComponent* pController = target.getComponent<CharacterControllerComponent>();
         if ( pController != nullptr )

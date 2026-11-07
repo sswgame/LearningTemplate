@@ -199,8 +199,7 @@ namespace sw
                 return outCatalog != nullptr;
             } ) == false )
                 return false;
-            // shortcut: 게임 범위 조회(`SubsystemScope::bind`)가 const 객체를 받지 않는다 — 찾는 쪽은 모두 const 로 읽는다. 범위가 const 를 받게 되면 지운다.
-            bindScopedService( const_cast<TCatalog*>( outCatalog.get() ) );
+            bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
             return true;
         }
 

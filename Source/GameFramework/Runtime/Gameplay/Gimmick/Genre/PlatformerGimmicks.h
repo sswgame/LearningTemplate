@@ -92,7 +92,7 @@ namespace sw
 {
     /**
      * @class LaunchPadComponent
-     * @brief 스프링과 점프대입니다. 겹치기 시작한 것(태그로 거름)을 `_launchVelocity`(월드)로 쏩니다. `GravityComponent` 가 있으면 수직 속도를 바로 주고,
+     * @brief 스프링과 점프대입니다. 겹치기 시작한 것(태그로 거름)을 `_launchVelocity`(월드)로 쏘고
      *        `GimmickLaunchEvent` 를 냅니다. 캐릭터 컨트롤러와 이동 몸이 이 이벤트를 받습니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Launch Pad", Tooltip = "Spring / jump pad: launches whatever starts overlapping" )

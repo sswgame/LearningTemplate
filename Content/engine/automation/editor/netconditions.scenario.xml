@@ -24,6 +24,13 @@
 	<ExpectLog id="DevCommand.Reply" contains="netplay stats from 2 of 2 process(es)" atLeast="1"/>
 	<Expect watch="Editor.NetPlayEmulationDroppedPackets" atLeast="1"/>
 	<Expect watch="Editor.NetPlayResentMessages" atLeast="1"/>
+	<Expect watch="Editor.NetPlayMeasuredLossPercent" atLeast="1"/>
+	<!-- 서버 콘솔로 한 줄 보내기 -->
+	<DevCommand line="netplay.server state.objects"/>
+	<ExpectLog id="DevCommand.Reply" contains="sent to the server: state.objects" atLeast="1"/>
+	<DevCommand line="netplay.server state.hashnames"/>
+	<DevCommand line="netplay.stats 5"/>
+	<ExpectLog id="DevCommand.Reply" contains="process(es)" atLeast="2"/>
 	<EditorWaitSettled/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>

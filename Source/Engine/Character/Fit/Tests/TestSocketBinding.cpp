@@ -200,6 +200,9 @@ SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOn
     SW_REQUIRE_TRUE( pTaken == rig._manager.resolveGameObject( unit ) );
     SW_EXPECT_TRUE( pTaken->isActive() );
     SW_EXPECT_TRUE( pool.takePart( sword ) == nullptr );
+    SW_EXPECT_EQUAL( 1u, pool.getStoredCount() );
+    SW_EXPECT_EQUAL( 1u, pool.getTakeHitCount() );
+    SW_EXPECT_EQUAL( 2u, pool.getTakeMissCount() ); // 없는 에셋 하나 + 다 꺼낸 뒤 하나
 
     // 물리로 떨어진 부품(떨군 무기)은 받지 않는다 — 부르는 쪽이 지운다.
     Internal::Rig             dropRig;

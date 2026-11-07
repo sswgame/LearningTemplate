@@ -33,7 +33,7 @@ namespace sw
     };
 
     /** @struct TextureFormatFamily @brief 푼 형식 묶음 하나입니다. */
-    struct TextureFormatFamily
+    struct SW_API TextureFormatFamily
     {
         string    _name;
         string    _suffix;

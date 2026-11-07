@@ -30,6 +30,7 @@ from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
+from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -115,6 +116,14 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[CMakePathCase] FAIL — 대소문자만 다른 CMake 경로 {len(listCaseViolation)}건(Linux 구성이 선다)")
         for line in listCaseViolation:
+            print(f"  - {line}")
+
+    # --- 참조 0 인 컴포넌트 · 감시 값 · 개발 명령(쓰는 곳은 형식이 말하지 못한다 — FeatureReferences.py 머리말) ---------------
+    listFeatureProblem = checkFeatureReferences(projectRoot)
+    if listFeatureProblem:
+        hasErrors = True
+        print(f"[FeatureReferences] FAIL — 쓰는 곳이 없거나 낡은 예외 {len(listFeatureProblem)}건")
+        for line in listFeatureProblem:
             print(f"  - {line}")
 
     # --- clang-format(셰이더도 같은 설정, Content/.clang-format) -------------------

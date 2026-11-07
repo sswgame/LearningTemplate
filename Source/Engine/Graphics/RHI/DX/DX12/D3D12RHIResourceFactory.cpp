@@ -775,7 +775,7 @@ namespace sw
             pList->ResourceBarrier( 1, &barrier );
         }
         // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 읽기 버퍼는 보관표가 쥐고 있다가 `takeTextureReadback` 이 Map 한다.
-        // 읽기 버퍼는 읽기마다 만든다(되읽기 링이 없다, 능력 비트 `_bPersistentReadbackRing` 거짓) — 링이 아니므로 `Busy` 가 없다.
+        // 읽기 버퍼는 읽기마다 만든다(되읽기 링이 없다) — 링이 아니므로 `Busy` 가 없다.
         const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureReadback" );
         if ( serial == 0 )
             return RHITransferSubmit::rejected();

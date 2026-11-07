@@ -56,5 +56,10 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.timeline.unloadTrace"/>
 	<WaitUntil watch="Editor.ProfilerLoadedTraceThreads" equals="0" timeoutFrames="60"/>
+	<!-- 긴 캡처는 정한 시간이 지나면 저절로 끝난다 -->
+	<EditorWaitSettled/>
+	<DevCommand line="profile.trace record 0.25 {out}/record.trace.json"/>
+	<WaitUntil watch="Profiler.TraceRecording" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="Profiler.TraceRecording" equals="0" timeoutWallSeconds="30"/>
 	<Pass/>
 </Scenario>

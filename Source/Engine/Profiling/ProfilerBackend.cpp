@@ -149,6 +149,8 @@ namespace sw
             static void endTaskZone( const TaskProfileZone& zone ) { static_cast<IProfilerBackend*>( zone._pContext )->endZone( zone._token ); }
 
             static constexpr TaskProfileHook kTaskProfileHook{ &beginTaskZone, &endTaskZone };
+            /** @brief Tracy 가 켜진 동안 태스크 훅을 쥡니다(`shutdown` 이 풉니다). */
+            static inline Subscription s_taskProfileHookBinding{};
 #endif
         };
 
@@ -193,7 +195,7 @@ namespace sw
         }
         Memory::unregisterAllocationObserver();
 #if SW_PROFILER_BACKEND_COMPILED
-        TaskManager::setProfileHook( nullptr );
+        ProfilerBackendInternal::s_taskProfileHookBinding.reset();
 #endif
         setActiveBackend( nullptr );
     }
@@ -217,7 +219,7 @@ namespace sw
         }
         setActiveBackend( &ProfilerBackendInternal::s_tracy );
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
-        TaskManager::setProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
+        ProfilerBackendInternal::s_taskProfileHookBinding = TaskManager::bindProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
         if ( gv_tracyMemory )
             Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
 

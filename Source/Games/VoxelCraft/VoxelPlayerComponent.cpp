@@ -198,7 +198,7 @@ namespace sw
         _bBodyPlaced = SW_FALSE;
         _hotbar      = VoxelHotbar{};
         // 물 블록과 처음 핫바는 씬 데이터에 적힌 블록 이름입니다. 카탈로그나 이름이 틀리면 플레이어를 만들지 않고, 이유는 오류 로그에 남깁니다.
-        const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
+        const VoxelBlockCatalog* pCatalog = game::findSubsystem<const VoxelBlockCatalog>();
         if ( pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "VoxelPlayer.NoVoxelBlockCatalogGameService", "[Voxel] no VoxelBlockCatalog game service - the player cannot start" );
@@ -292,7 +292,7 @@ namespace sw
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const VoxelGameModeComponent* pGameMode       = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
-        const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<VoxelBlockCatalog>();
+        const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<const VoxelBlockCatalog>();
         const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || deltaTime <= 0.0f;
         if ( bNotReadyToTick )
             return;

@@ -65,11 +65,14 @@ namespace sw::editor
 
             /**
              * @brief @p offset 에서 시작하는 경로가 `_base="` 칸의 값이면 true 입니다.
-             * @details 항목 상속의 `_base="game/x/items.xml#id"` 도 경로 글자가 `#` 에서 끊겨 파일만 대상이 된다. shortcut: 글 검색이라 주석에 적은 `_base="…"` 도 센다 — 그 결과는 한 번 더 읽는 것뿐이다, 칸 단위 추출(`AssetReferenceFields`)로 옮길 때 사라진다.
+             * @details 항목 상속의 `_base="game/x/items.xml#id"` 도 경로 글자가 `#` 에서 끊겨 파일만 대상이 된다. XML 주석에 적은 `_base="…"` 는 참조가 아니다.
              */
             static bool isBaseAttributeValue( string_view text, size_t offset )
             {
                 if ( offset == 0 || ( text[offset - 1] != '"' && text[offset - 1] != '\'' ) )
+                    return false;
+                const size_t commentOpen = text.rfind( "<!--", offset );
+                if ( commentOpen != string_view::npos && text.find( "-->", commentOpen ) > offset )
                     return false;
                 const string_view name{ DataInheritance::kBaseAttribute };
                 size_t            end = offset - 1;

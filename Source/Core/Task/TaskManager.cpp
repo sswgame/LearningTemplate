@@ -7,6 +7,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/formatString.h"
+#include "Core/Delegate/AtomicSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -57,8 +58,8 @@ namespace sw
         atomic<uint32>         s_nextInstanceID{ 1 };
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
 #if !defined( SW_SHIPPING )
-        /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskManager::setProfileHook`). 없으면 nullptr.
-        atomic<const TaskProfileHook*> s_pProfileHook{ nullptr };
+        /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskManager::bindProfileHook`). 없으면 nullptr.
+        AtomicSlot<const TaskProfileHook*> s_profileHookSlot;
 #endif
 
         /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us)입니다. 기다리는 동안에는 다른 일을 돕습니다.
@@ -901,9 +902,9 @@ namespace sw
     // 5) 스테이지
     // ------------------------------------------------------------------------------
 #if !defined( SW_SHIPPING )
-    void TaskManager::setProfileHook( const TaskProfileHook* pHook )
+    Subscription TaskManager::bindProfileHook( const TaskProfileHook* pHook )
     {
-        s_pProfileHook.store( pHook, std::memory_order_release );
+        return s_profileHookSlot.bind( pHook );
     }
 #endif
 
@@ -927,7 +928,7 @@ namespace sw
         if ( stage._pNode == nullptr )
             return;
 #if !defined( SW_SHIPPING )
-        const TaskProfileHook* pHook = s_pProfileHook.load( std::memory_order_acquire );
+        const TaskProfileHook* pHook = s_profileHookSlot.get();
         const TaskProfileZone  zone  = ( pHook != nullptr && stage._pNode->_arrName[0] != '\0' && stage._pNode->_join.getPending() > 0 )
                                          ? pHook->_pBeginZone( stage._pNode->_arrName, TaskProfileZoneKind::WaitStage )
                                          : TaskProfileZone{};
@@ -1160,7 +1161,7 @@ namespace sw
             t_pCurrentRunningTask      = pNode;
             const ScopedMemoryTag taskMemoryTag{ pNode->_memoryTag };
 #if !defined( SW_SHIPPING )
-            const TaskProfileHook* pHook = s_pProfileHook.load( std::memory_order_acquire );
+            const TaskProfileHook* pHook = s_profileHookSlot.get();
             const TaskProfileZone  zone  = ( pHook != nullptr && pNode->_arrName[0] != '\0' ) ? pHook->_pBeginZone( pNode->_arrName, TaskProfileZoneKind::Execute )
                                                                                               : TaskProfileZone{};
 #endif

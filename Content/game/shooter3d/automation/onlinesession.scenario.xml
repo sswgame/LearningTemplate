@@ -25,5 +25,7 @@
 	<Wait frames="1"/>
 	<DevCommand line="online.disconnect"/>
 	<Expect watch="Online.SessionState" equals="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="online.status"/>
 	<Pass/>
 </Scenario>

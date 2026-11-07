@@ -72,22 +72,18 @@ SW_TEST_CASE( RHIDeviceTest, CapabilityMatrixNativeVsEmulated )
     const RHICapabilities dx12 = RHIAvailability::query( RHIBackend::DirectX12 );
     SW_EXPECT_TRUE( dx12._bBindless != SW_FALSE );
     SW_EXPECT_TRUE( dx12._bNativeBindless != SW_FALSE );
-    SW_EXPECT_TRUE( dx12._bOffscreenRT != SW_FALSE );
 
     const RHICapabilities dx11 = RHIAvailability::query( RHIBackend::DirectX11 );
     SW_EXPECT_TRUE( dx11._bBindless != SW_FALSE );
     SW_EXPECT_TRUE( dx11._bNativeBindless == SW_FALSE );
-    SW_EXPECT_TRUE( dx11._bOffscreenRT != SW_FALSE );
 
     const RHICapabilities gl = RHIAvailability::query( RHIBackend::OpenGL );
     SW_EXPECT_TRUE( gl._bBindless != SW_FALSE );
     SW_EXPECT_TRUE( gl._bNativeBindless == SW_FALSE );
-    SW_EXPECT_TRUE( gl._bOffscreenRT != SW_FALSE );
 
     const RHICapabilities vk = RHIAvailability::query( RHIBackend::Vulkan );
     SW_EXPECT_TRUE( vk._bBindless != SW_FALSE );
     SW_EXPECT_TRUE( vk._bNativeBindless != SW_FALSE );
-    SW_EXPECT_TRUE( vk._bOffscreenRT != SW_FALSE );
 }
 
 /**

@@ -81,8 +81,6 @@ namespace sw::constant::memory
     inline constexpr size_t kBytesPerGigabyte = kBytesPerMegabyte * 1024;
     /** @brief 선형 할당기 기본 초기 용량 (64KB)입니다. */
     inline constexpr size_t kDefaultLinearCapacity = size_t{ 64 } * 1024;
-    /** @brief 프레임 아레나 기본 청크 크기 (1MB)입니다. */
-    inline constexpr size_t kDefaultFrameArenaCapacity = size_t{ 1024 } * 1024;
     /** @brief 작업 훔치기(work stealing) 덱의 기본 용량(1024)입니다. */
     inline constexpr size_t kDefaultDequeCapacity = 1024;
 } // namespace sw::constant::memory

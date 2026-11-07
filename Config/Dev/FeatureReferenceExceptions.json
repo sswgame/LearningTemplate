@@ -1,0 +1,42 @@
+{
+    "_folders": {},
+    "_components": {
+        "AudioListenerComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "BuoyancyComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "BuoyancyVolumeComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "FoliageInfluencerComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "GimmickWeightComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "GrabberComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "JointComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "LocomotionWarpingComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "MeleeHitboxComponent": "ActionCombat 키트는 어떤 게임도 싣지 않아 데이터 배치가 없다(unfinished_survey K1) - 그 시연 게임을 세울 때 놓는다",
+        "MotionWarpingComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "NavMeshLinkComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "NavMeshObstacleComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "PersistAcrossScenesComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "PoseRetargetComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "SequenceAppearanceComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "SplineRiverPathComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "TerrainColliderComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
+        "UnitStatsComponent": "ActionCombat 키트는 어떤 게임도 싣지 않아 데이터 배치가 없다(unfinished_survey K1) - 그 시연 게임을 세울 때 놓는다"
+    },
+    "_watches": {
+        "Animation.CrowdVertexAnimationMeshes": "아주 먼 군중의 정점 애니메이션을 켠 콘텐츠가 아직 없어 값이 늘 0 이다 - 그런 콘텐츠를 놓을 때 판정한다",
+        "Editor.AssetImportFinishedCount": "임포트 끝 횟수 진단 값. 임포트를 끝까지 기다리는 판정은 Editor.AssetImportBusy 가 한다",
+        "Editor.CharacterEditorPenetrationMarks": "관통 점은 피팅 데이터가 겹치는 차림에서만 찍힌다(charactereditor 시나리오 주석) - 겹치는 데이터가 시험 팩에 없다",
+        "SocketPartPool.TakeHits": "재스폰이 있어야 오른다. 카운터 자체는 단위 테스트(SocketPartPoolTest)가 보고, 풀 효과 비교는 -gv_socketPartPool=0 과 손으로 한다"
+    },
+    "_devCommands": {
+        "appearance.bakeatlas": "스펙 파일을 받아 결과를 디스크에 쓰는 손 도구 - 시험 스펙을 아직 두지 않았다",
+        "automation.hang": "게임 스레드를 일부러 멈춰 멈춤 감시를 보는 명령 - 체인을 죽인다. 혼자 돌려야 한다",
+        "debugkeys.rebind": "사용자 키 파일을 쓰는 명령 - 무인 실행은 사용자 파일을 건드리지 않는 규칙이라 체인에 넣지 않는다",
+        "debugkeys.rebind.reset": "사용자 키 파일을 쓰는 명령 - 무인 실행은 사용자 파일을 건드리지 않는 규칙이라 체인에 넣지 않는다",
+        "input.xtest": "Linux X11 XTEST 입력 - linux-verify 절차가 손으로 쓴다. Windows 체인에 없다",
+        "net.serverOverlay": "-gv_serverPoseOverlayPort 로 띄운 클라이언트에서만 답한다(꺼져 있으면 명령 실패)",
+        "renderdoc.capture": "RenderDoc 이 붙은 실행에서만 뜻이 있다",
+        "renderdoc.ui": "RenderDoc 이 붙은 실행에서만 뜻이 있다",
+        "scenario.play": "시나리오 세션 안에서 재생기를 또 세우지 않는다 - 재생은 시퀀서 항목 Scenario 와 콘솔이 쓴다",
+        "scenario.stop": "scenario.play 의 짝",
+        "scene.leakcurve": "씬을 여러 번 다시 읽는 측정 - 체인 시간을 크게 늘리고 씬을 바꾼다"
+    }
+}

@@ -59,7 +59,7 @@ namespace sw
 
     bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
     {
-        const RTSCatalog* pCatalog = game::findSubsystem<RTSCatalog>();
+        const RTSCatalog* pCatalog = game::findSubsystem<const RTSCatalog>();
         if ( pCatalog == nullptr )
             return false;
         if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, RTSSettings{} ) == false )
@@ -86,7 +86,7 @@ namespace sw
             return false;
         }
         // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.
-        const RTSCatalog* pCatalog    = game::findSubsystem<RTSCatalog>();
+        const RTSCatalog* pCatalog    = game::findSubsystem<const RTSCatalog>();
         bool              bUnitsKnown = true;
         for ( const string* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
         {

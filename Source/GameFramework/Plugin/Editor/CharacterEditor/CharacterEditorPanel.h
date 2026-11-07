@@ -49,7 +49,6 @@ namespace sw::editor
             uint32 _boneCount{ 0 };
             uint32 _socketCount{ 0 };
             uint32 _equippedSlotCount{ 0 };
-            uint32 _traceCount{ 0 };
             uint32 _presetCount{ 0 };
             uint32 _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
             uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)

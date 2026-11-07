@@ -37,7 +37,7 @@ namespace sw
                 outListShot.clear();
                 if ( def._listShot.empty() )
                     return true;
-                const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+                const ProjectileCatalog* pProjectiles = game::findSubsystem<const ProjectileCatalog>();
                 if ( pProjectiles == nullptr )
                 {
                     SW_LOG_ERROR_ID( "ActionRoom.ShooterNoProjectileCatalog", "Monster '%#' shoots but no ProjectileCatalog is registered as a game service - the action room does not spawn it", def._id );
@@ -278,7 +278,7 @@ namespace sw
         }
 
         // 정의의 출처는 게임이 등록한 카탈로그 하나다. 코드 폴백이 없어 데이터 오타가 내장 수치로 조용히 바뀌지 않는다.
-        const MonsterCatalog* pCatalog = game::findSubsystem<MonsterCatalog>();
+        const MonsterCatalog* pCatalog = game::findSubsystem<const MonsterCatalog>();
         if ( pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "ActionRoom.MonsterNoMonsterCatalogRegistered", "Monster '%#': no MonsterCatalog is registered as a game service - the action room does not spawn it", monsterID.c_str() );

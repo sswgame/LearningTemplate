@@ -12,6 +12,51 @@
 using namespace sw;
 
 /**
+ * @brief [DeferredRegistrationTest] 나눠 부르면 한도만큼만 붙은 순서로 등록되고, 끝나면 미루기가 풀려 다음 컴포넌트는 바로 등록된다. 남은 것은 `endDeferredRegistration` 이 끝낼 수도 있다
+ */
+SW_TEST_CASE( DeferredRegistrationTest, PumpRegistersUpToTheBudgetInOrder )
+{
+    GameObjectManager manager;
+    manager.beginDeferredRegistration();
+    SkyComponent* arrSky[3]{};
+    for ( SkyComponent*& pSky : arrSky )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( "Sky" ) );
+        SW_REQUIRE_NOT_NULL( pObject );
+        pSky = pObject->addComponent<SkyComponent>();
+        SW_REQUIRE_NOT_NULL( pSky );
+    }
+    SW_EXPECT_FALSE( manager.pumpDeferredRegistration( 2 ) );
+    SW_EXPECT_TRUE( arrSky[0]->isRegistered() );
+    SW_EXPECT_TRUE( arrSky[1]->isRegistered() );
+    SW_EXPECT_FALSE( arrSky[2]->isRegistered() );
+
+    // 한도를 다 쓰지 않으면 끝난다 — 미루기가 풀려 새 컴포넌트는 바로 등록된다.
+    SW_EXPECT_TRUE( manager.pumpDeferredRegistration( 100 ) );
+    SW_EXPECT_TRUE( arrSky[2]->isRegistered() );
+    GameObject* pLate = manager.createGameObject( hashed_string( "Late" ) );
+    SW_REQUIRE_NOT_NULL( pLate );
+    SkyComponent* pLateSky = pLate->addComponent<SkyComponent>();
+    SW_REQUIRE_NOT_NULL( pLateSky );
+    SW_EXPECT_TRUE( pLateSky->isRegistered() );
+
+    // 나누다 만 묶음은 바깥 짝이 모두 끝낸다(비동기 결과를 그대로 받는 길).
+    manager.beginDeferredRegistration();
+    GameObject* pFirst = manager.createGameObject( hashed_string( "First" ) );
+    GameObject* pNext  = manager.createGameObject( hashed_string( "Next" ) );
+    SW_REQUIRE_NOT_NULL( pFirst );
+    SW_REQUIRE_NOT_NULL( pNext );
+    SkyComponent* pFirstSky = pFirst->addComponent<SkyComponent>();
+    SkyComponent* pNextSky  = pNext->addComponent<SkyComponent>();
+    SW_REQUIRE_NOT_NULL( pFirstSky );
+    SW_REQUIRE_NOT_NULL( pNextSky );
+    SW_EXPECT_FALSE( manager.pumpDeferredRegistration( 1 ) );
+    SW_EXPECT_FALSE( pNextSky->isRegistered() );
+    manager.endDeferredRegistration();
+    SW_EXPECT_TRUE( pNextSky->isRegistered() );
+}
+
+/**
  * @brief [DeferredRegistrationTest] 미루는 동안 붙은 컴포넌트는 등록되지 않고, 바깥 짝이 끝날 때 등록된다(중첩은 바깥 짝까지 쥔다)
  */
 SW_TEST_CASE( DeferredRegistrationTest, RegistersWhenOutermostDeferralEnds )

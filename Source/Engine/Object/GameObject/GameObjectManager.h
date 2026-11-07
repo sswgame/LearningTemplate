@@ -240,6 +240,12 @@ namespace sw
         void beginDeferredRegistration() { ++_deferredRegistrationDepth; }
         /** @brief `beginDeferredRegistration` 의 짝입니다. 바깥 짝이면 미룬 등록을 붙은 순서로, 이어 미룬 로드 뒤 처리를 부릅니다(게임 스레드). */
         void endDeferredRegistration();
+        /**
+         * @brief 바깥 짝의 미룬 등록을 @p maxCount 개까지(등록 뒤 로드 뒤 처리, 합쳐서 센다) 불러 큰 씬을 받는 프레임을 나눕니다. 0 이면 한도가 없습니다(게임 스레드).
+         * @details 언리얼 `LevelStreamingComponentsRegistrationGranularity` 와 같은 자리다. 다 끝나면 true 이고 미루기가 풀린다(`endDeferredRegistration` 을 부르지 않는다). 남았으면 false 이고
+         *          다음 프레임에 다시 부른다 — 그동안 이 매니저는 활성 씬이 아니어야 한다(`SceneManager` 가 씬을 받기 전에 부른다). 바깥 짝 하나만 쥔 동안만 부른다.
+         */
+        [[nodiscard]] bool pumpDeferredRegistration( uint32 maxCount );
         /** @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세웁니다. */
         void registerComponent( Component& comp );
         /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세웁니다. */
@@ -639,6 +645,21 @@ namespace sw
 #undef SW_SCENE_FRAME_STEP
 
     private:
+        /** @brief 미룬 등록 · 로드 뒤 처리의 한 묶음과, 나눠 부를 때 어디까지 불렀는지입니다. */
+        struct DeferredRegistrationBatch
+        {
+            vector<ComponentHandle> _listRegister{};
+            vector<ComponentHandle> _listPostLoad{};
+            size_t                  _registerCursor{ 0 };
+            size_t                  _postLoadCursor{ 0 };
+
+            /** @brief 남은 것을 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 입니다. */
+            [[nodiscard]] bool pump( GameObjectManager& manager, uint32 maxCount );
+        };
+        /** @brief 줄에 선 것과 나누다 만 묶음을 합쳐 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 이고, 남았으면 `_pumpBatch` 에 둡니다. */
+        [[nodiscard]] bool pumpQueuedRegistration( uint32 maxCount );
+
+    private:
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,
         // 저장소 → 틱 레지스트리 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
 
@@ -689,5 +710,7 @@ namespace sw
         /** @brief 미룬 등록 · 로드 뒤 처리입니다(붙은 순서). 핸들로 들어 그 사이 해체돼도 안전합니다. */
         vector<ComponentHandle> _listDeferredRegister;
         vector<ComponentHandle> _listDeferredPostLoad;
+        /** @brief `pumpDeferredRegistration` 이 나눠 부르는 중인 묶음입니다. 비어 있으면 나누는 중이 아닙니다. */
+        DeferredRegistrationBatch _pumpBatch;
     };
 } // namespace sw

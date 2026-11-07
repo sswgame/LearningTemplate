@@ -10,6 +10,7 @@
 #include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -314,10 +315,11 @@ namespace sw
         void releaseCurrentThreadHelperSlot();
 #if !defined( SW_SHIPPING )
         /**
-         * @brief 태스크 실행 · 스테이지 대기 구간을 내보낼 곳을 꽂습니다(nullptr 이면 뗍니다). 프로세스의 모든 매니저가 함께 씁니다.
-         * @details @p pHook 은 프로세스 끝까지 살아 있어야 합니다(실행 중인 태스크가 읽고 있을 수 있다). 꽂혀 있지 않으면 태스크마다 원자 읽기 하나가 비용의 전부입니다.
+         * @brief 태스크 실행 · 스테이지 대기 구간을 내보낼 곳을 꽂습니다. 돌려준 구독이 풀리면 뗍니다. 프로세스의 모든 매니저가 함께 씁니다.
+         * @details 뒤에 건 훅이 앞의 것을 갈아 끼우고, 앞 구독이 늦게 풀려도 새 훅을 지우지 않습니다(`AtomicSlot`). @p pHook 은 프로세스 끝까지 살아 있어야 합니다
+         *          (실행 중인 태스크가 읽고 있을 수 있다). 꽂혀 있지 않으면 태스크마다 원자 읽기 하나가 비용의 전부입니다.
          */
-        static void setProfileHook( const TaskProfileHook* pHook );
+        [[nodiscard]] static Subscription bindProfileHook( const TaskProfileHook* pHook );
 #endif
         /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한입니다(메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
         static constexpr uint32 kMaxHelperThreadCount = 8;

@@ -72,7 +72,7 @@ namespace sw
     bool MeadowFarmGameModeComponent::startGame()
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        const CropCatalog*     pCrops = game::findSubsystem<CropCatalog>();
+        const CropCatalog*     pCrops = game::findSubsystem<const CropCatalog>();
         if ( pState == nullptr || pCrops == nullptr )
         {
             SW_LOG_ERROR_ID( "MeadowFarm.FarmCannotStart", "[Meadow] the farm cannot start - %#", pState == nullptr ? "no SessionStateComponent in front of it on this object" : "the crop catalog is not loaded" );
@@ -105,7 +105,7 @@ namespace sw
         if ( bFrameRead == false )
             return false;
         FarmField field;
-        field.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<CropCatalog>() );
+        field.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<const CropCatalog>() );
         const bool bRead = field.readState( body ) && body.getRemainingBytes() == 0 && archive.getRemainingBytes() == 0;
         if ( bRead == false )
             return false;
@@ -143,7 +143,7 @@ namespace sw
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );
-        const CropCatalog* pCrops = game::findSubsystem<CropCatalog>();
+        const CropCatalog* pCrops = game::findSubsystem<const CropCatalog>();
         int32              earned = 0;
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {

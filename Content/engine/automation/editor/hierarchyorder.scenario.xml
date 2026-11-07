@@ -16,6 +16,11 @@
 	<Expect watch="Editor.HierarchyRowIndex" equals="2"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<EditorWaitSettled/>
+	<!-- 구조가 그대로면 행 모델을 다시 짓지 않는다 -->
+	<Remember watch="Editor.HierarchyRowRebuildCount" as="rows"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.HierarchyRowRebuildCount" sameAs="rows"/>
+	<EditorWaitSettled/>
 	<DevCommand line="editor scene.moveSiblingUp"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
@@ -35,6 +40,7 @@
 	<DevCommand line="editor scene.createFolder"/>
 	<WaitUntil watch="Editor.ObjectCount" equals="10" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
+	<Expect watch="Editor.HierarchyRowRebuildCount" differsFrom="rows"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.ObjectCount" equals="9" timeoutFrames="60"/>

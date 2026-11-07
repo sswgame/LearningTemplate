@@ -166,7 +166,7 @@ namespace sw
     {
         if ( _pCatalog != nullptr )
             return _pCatalog;
-        return game::findSubsystem<AbilityCatalog>();
+        return game::findSubsystem<const AbilityCatalog>();
     }
 
     const AbilityClassRegistry* AbilityComponent::findClassRegistry() const

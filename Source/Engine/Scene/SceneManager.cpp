@@ -39,6 +39,7 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadInFlight, 8, "씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadPinMegabytes, 256, "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadHoldFrames, 120, "로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간)" );
+    SW_GLOBAL_VARIABLE( int32, gv_sceneRegisterComponentsPerFrame, 2000, "비동기로 지은 씬을 받을 때 프레임마다 부르는 컴포넌트 등록 · 로드 뒤 처리 수 (0 = 한 프레임에 모두)" );
 
     SceneManager::SceneManager()
         : _listLoadedScene{}
@@ -525,6 +526,8 @@ namespace sw
         updateScenePreload();
         if ( _asyncLoad == nullptr || _asyncLoad->_bReady.load( std::memory_order_acquire ) == false )
             return;
+        if ( pumpPendingSceneRegistration() == false )
+            return; // 남은 등록은 다음 프레임에 — 그동안 로드는 진행 중으로 보인다(`isTransitioning`)
 
         unique_ptr<Scene> pendingScene;
         {
@@ -598,6 +601,23 @@ namespace sw
         // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
         if ( bQueuedSatisfiedByThisLoad )
             _queuedPromise.setValue( pAdopted );
+    }
+
+    bool SceneManager::pumpPendingSceneRegistration()
+    {
+        // 결정적 실행은 한 프레임에 모두 부른다 — 시나리오의 첫 프레임이 벽시계 아닌 값에 달리지 않게(언리얼 FlushAsyncLoading 자리).
+        const bool bAllAtOnce = gv_sceneRegisterComponentsPerFrame <= 0 || AssetManager::isFinishingAssetWorkEachFrame();
+        // 어차피 버릴 결과(다른 경로가 대기 · 타입 표가 바뀜)는 훅을 부르지 않는다 — 내릴 모듈의 훅을 돌리지 않는다.
+        const bool bTypeTableChanged = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
+        Scene*     pScene{ nullptr };
+        {
+            ScopedLock<mutex> lock{ _asyncLoad->_mutex }; // 워커는 끝났다(`_bReady`) — 칸만 읽고 훅은 잠금 밖에서 부른다
+            pScene = _asyncLoad->_scene.get();
+        }
+        const bool bDiscard = pScene == nullptr || bTypeTableChanged || ( _queuedPath.empty() == false && FileUtil::pathsEqualNormalized( pScene->getSourcePath(), _queuedPath ) == false );
+        if ( bAllAtOnce || bDiscard )
+            return true; // `applyScene` 이 끝낸다
+        return pScene->pumpHeldRegistration( static_cast<uint32>( gv_sceneRegisterComponentsPerFrame ) );
     }
 
     /**

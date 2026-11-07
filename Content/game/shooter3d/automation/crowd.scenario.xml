@@ -23,6 +23,9 @@
 	<Wait frames="240"/>
 	<Screenshot file="fight.ppm"/>
 	<Wait frames="5"/>
+	<!-- 소켓 부품 풀: 첫 적은 쉬는 부품이 없어 새로 스폰하고, 사라진 적의 부품은 풀이 받는다 -->
+	<Expect watch="SocketPartPool.TakeMisses" atLeast="1"/>
+	<WaitUntil watch="SocketPartPool.Stored" atLeast="1" timeoutSeconds="60"/>
 	<ExpectImage file="chase.ppm" golden="chase"/>
 	<ExpectImage file="fight.ppm" golden="fight"/>
 	<Pass/>

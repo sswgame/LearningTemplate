@@ -593,7 +593,7 @@ namespace sw
             return false;
         }
         // 영속 매핑(glBufferStorage + GL_MAP_PERSISTENT_BIT)은 GL 4.4 코어다(glad 는 4.4 미만 컨텍스트에서 이 포인터를 채우지 않는다). 없으면 링을 두지 않고
-        // 텍스처 업로드를 모두 Rejected 로 돌려준다 — 클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다(RHICapabilities::_bPersistentStagingRing).
+        // 텍스처 업로드를 모두 Rejected 로 돌려준다 — 클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다.
         if ( glad_glBufferStorage == nullptr )
         {
             SW_LOG_ERROR_ID( "OpenGL.OpenGLARBBufferStorage", "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no staging ring and every texture upload is rejected" );
@@ -621,8 +621,7 @@ namespace sw
             SW_LOG_ERROR_ID( "OpenGL.OpenGLBackendNeedsReadback", "The OpenGL backend needs a readback ring capacity (gv_rhiReadbackRingMegabytes must be positive)" );
             return false;
         }
-        // 업로드 링과 같은 GL 4.4 조건이다. 없으면 텍스처 되읽기를 모두 Rejected 로 돌려준다 — 컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다
-        // (RHICapabilities::_bPersistentReadbackRing).
+        // 업로드 링과 같은 GL 4.4 조건이다. 없으면 텍스처 되읽기를 모두 Rejected 로 돌려준다 — 컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다.
         if ( glad_glBufferStorage == nullptr )
         {
             SW_LOG_ERROR_ID( "OpenGL.OpenGLARBBufferStorage2", "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no readback ring and every texture readback is rejected" );
@@ -1132,6 +1131,15 @@ namespace sw
             } );
         }
         _releaseQueue.flushAll();
+    }
+
+    bool OpenGLRHIDevice::debugRemoveDevice()
+    {
+        if ( _bInitialized == SW_FALSE )
+            return false;
+        SW_LOG_WARNING_ID( "OpenGL.MarkingDeviceLost", "Marking the GL device lost on request (rhi.removeDevice) - GL cannot lose its context on demand, so this is the state after the first failed fence: later transfer submits are rejected" );
+        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        return true;
     }
 
     uint64 OpenGLRHIDevice::endTransfer()

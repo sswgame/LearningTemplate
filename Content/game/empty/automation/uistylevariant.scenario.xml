@@ -17,6 +17,8 @@
 	<Wait frames="20"/>
 	<Screenshot file="uistylevariant_child.ppm"/>
 	<Wait frames="2"/>
+	<!-- 글리프 래스터 예산이 남긴 글이 없다 -->
+	<WaitUntil watch="UI.DeferredGlyphs" equals="0" timeoutFrames="120"/>
 	<ExpectImagesDiffer first="uistylevariant_base.ppm" second="uistylevariant_child.ppm" region="0.6,0.3,0.85,0.7" minDiffering="0.5"/>
 	<Pass/>
 </Scenario>

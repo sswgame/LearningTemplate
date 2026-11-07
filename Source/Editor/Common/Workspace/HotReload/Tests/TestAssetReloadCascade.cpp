@@ -166,6 +166,25 @@ SW_TEST_CASE( AssetReloadCascadeTest, CatalogRouteInlinesReferences )
     SW_EXPECT_TRUE( json._referenceUse == AssetReferenceUse::ResolvedAtUse );
 }
 
+/** @brief [AssetReloadCascadeTest] XML 주석에 적은 `_base="…"` 는 상속 참조가 아니다 - 주석이 닫힌 뒤의 칸은 그대로 상속이다 */
+SW_TEST_CASE( AssetReloadCascadeTest, IndexIgnoresBaseInsideXMLComment )
+{
+    const sw::vector<sw::string>     listKnownID{ "game/t/a.xml", "game/t/b.xml" };
+    sw::vector<EditorAssetReference> listReference;
+    constexpr sw::string_view        kText = R"(<R><!-- <I _base="game/t/a.xml"/> --><I _base="game/t/b.xml"/></R>)";
+    EditorReferenceIndex::extractReferences( "game/t/child.xml", kText, listKnownID, listReference );
+    for ( const EditorAssetReference& reference : listReference )
+    {
+        SW_EXPECT_EQUAL( reference._targetPath == "game/t/b.xml", static_cast<bool>( reference._bInlined ) );
+    }
+    bool bFoundInherited = false;
+    for ( const EditorAssetReference& reference : listReference )
+    {
+        bFoundInherited = bFoundInherited || reference._targetPath == "game/t/b.xml";
+    }
+    SW_EXPECT_TRUE( bFoundInherited );
+}
+
 /** @brief [AssetReloadCascadeTest] 역색인은 `_base` 칸을 다른 경로 칸과 가른다 - 항목 상속은 `#` 앞 파일이 대상이고, 이름이 비슷한 칸(`my_base`)은 아니다 */
 SW_TEST_CASE( AssetReloadCascadeTest, IndexMarksBaseReferences )
 {

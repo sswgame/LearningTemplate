@@ -13,6 +13,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -241,9 +241,7 @@ namespace sw
         {
             RHICapabilities caps  = RHIAvailability::query( RHIBackend::DirectX12 );
             caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
-            // 텍스처 업로드는 영속 매핑 스테이징 링으로만 간다(링이 없으면 초기화가 실패한다). 되읽기는 읽기마다 자기 읽기 힙 버퍼를 만들어 되읽기 링이 없다.
-            caps._bPersistentStagingRing = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
-            caps._bGPUBreadcrumbs        = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
+            caps._bGPUBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
             return caps;
         }
 

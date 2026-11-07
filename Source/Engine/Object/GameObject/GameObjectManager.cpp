@@ -196,6 +196,7 @@ namespace sw
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}
+        , _pumpBatch{}
     {
         // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
         const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
@@ -653,23 +654,56 @@ namespace sw
         SW_ASSERT( _deferredRegistrationDepth != 0 );
         if ( --_deferredRegistrationDepth != 0 )
             return;
-        // shortcut: 한 번에 모두 부른다 — 큰 씬에서 받는 프레임이 길면 언리얼처럼 프레임마다 나눠 등록한다(`LevelStreamingComponentsRegistrationGranularity`).
+        (void)pumpQueuedRegistration( 0 );
+    }
+
+    bool GameObjectManager::pumpDeferredRegistration( uint32 maxCount )
+    {
+        SW_ASSERT( _deferredRegistrationDepth == 1 );
+        --_deferredRegistrationDepth; // 훅이 만든 컴포넌트는 미루지 않고 바로 등록한다(한 번에 부를 때와 같다)
+        const bool bDone = pumpQueuedRegistration( maxCount );
+        if ( bDone == false )
+            ++_deferredRegistrationDepth;
+        return bDone;
+    }
+
+    bool GameObjectManager::pumpQueuedRegistration( uint32 maxCount )
+    {
+        // 묶음을 꺼내 들고 부른다 — 훅이 프리팹을 지으면 이 함수가 다시 불리는데, 그 안쪽 미루기는 제 묶음만 끝내야 한다.
+        DeferredRegistrationBatch batch = std::move( _pumpBatch );
+        _pumpBatch                      = DeferredRegistrationBatch{};
+        batch._listRegister.insert( batch._listRegister.end(), _listDeferredRegister.begin(), _listDeferredRegister.end() );
+        batch._listPostLoad.insert( batch._listPostLoad.end(), _listDeferredPostLoad.begin(), _listDeferredPostLoad.end() );
+        _listDeferredRegister.clear();
+        _listDeferredPostLoad.clear();
+        if ( batch.pump( *this, maxCount ) )
+            return true;
+        _pumpBatch = std::move( batch );
+        return false;
+    }
+
+    bool GameObjectManager::DeferredRegistrationBatch::pump( GameObjectManager& manager, uint32 maxCount )
+    {
         // 등록을 모두 끝낸 뒤 로드 뒤 처리를 부른다 — 바로 붙이던 때와 같이 `onPostLoad` 가 같은 배치의 다른 컴포넌트가 등록된 뒤를 본다.
-        vector<ComponentHandle> listRegister;
-        vector<ComponentHandle> listPostLoad;
-        listRegister.swap( _listDeferredRegister );
-        listPostLoad.swap( _listDeferredPostLoad );
-        for ( const ComponentHandle handle : listRegister )
+        uint32 calledCount = 0;
+        while ( _registerCursor < _listRegister.size() )
         {
-            Component* pComp = resolveComponent( handle );
+            if ( maxCount != 0 && calledCount == maxCount )
+                return false;
+            Component* pComp = manager.resolveComponent( _listRegister[_registerCursor++] );
             if ( pComp != nullptr && pComp->isPendingDestroy() == false ) // 받기 전에 파괴가 정해졌다 — 등록하지 않으므로 해체도 해제를 부르지 않는다
-                pComp->dispatchRegister( *this );
+                pComp->dispatchRegister( manager );
+            ++calledCount;
         }
-        for ( const ComponentHandle handle : listPostLoad )
+        while ( _postLoadCursor < _listPostLoad.size() )
         {
-            Component* pComp = resolveComponent( handle );
+            if ( maxCount != 0 && calledCount == maxCount )
+                return false;
+            Component* pComp = manager.resolveComponent( _listPostLoad[_postLoadCursor++] );
             if ( pComp != nullptr && pComp->isPendingDestroy() == false )
                 pComp->onPostLoad();
+            ++calledCount;
         }
+        return true;
     }
 } // namespace sw

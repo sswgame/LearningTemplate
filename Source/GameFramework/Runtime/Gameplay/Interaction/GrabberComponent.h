@@ -2,8 +2,8 @@
  * @file GrabberComponent.h
  * @brief 집기, 던지기, 붙이기입니다. 물리 백엔드를 모르는 인터페이스(`IGrabPhysics`)와 그것을 쓰는 컴포넌트를 담습니다.
  * @details 게임이 `IGrabPhysics` 를 게임 서비스로 등록하면 그것을 쓰고, 없으면 강체 백엔드(`RigidBodyGrabPhysics`)를 쓴다. 이 백엔드는 강체를 키네마틱으로 손에 묶고, 놓을 때
- *          동적으로 되돌리고 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 쥐고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 분리하며,
- *          속도는 대상의 `GravityComponent` 수직 속도로만 준다.
+ *          동적으로 되돌리고 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 쥐고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 분리한다.
+ *          속도를 받을 몸이 없어 놓은 자리에 남는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

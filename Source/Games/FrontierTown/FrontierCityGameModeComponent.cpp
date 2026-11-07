@@ -67,7 +67,7 @@ namespace sw
 
     bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state )
     {
-        const CityCatalog* pCatalog = game::findSubsystem<CityCatalog>();
+        const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
             return false;
         if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, CitySettings{}, state.makeRefs() ) == false )

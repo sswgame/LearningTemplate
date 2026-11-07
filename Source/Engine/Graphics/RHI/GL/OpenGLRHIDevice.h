@@ -158,6 +158,8 @@ namespace sw
         /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. GL 은 프레임 끝마다 내는 펜스(`_arrFrameDoneSync`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
+        /** @brief 장치 손실 흉내입니다. GL 은 문맥을 일부러 잃을 API 가 없어 DX11 처럼 첫 손실을 본 뒤의 상태(전송 거절 · 대기 멈춤)만 만든다 — GPU 는 살아 있다. */
+        bool debugRemoveDevice() override;
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
@@ -165,14 +167,8 @@ namespace sw
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 SSBO(g_SwInstances, t4)로 읽을 수 있어 true 입니다(glBindBufferBase). */
         bool supportsInstancedSceneDraw() const override { return true; }
 
-        /** @brief 정적 능력 테이블에 런타임 값을 덮습니다. 업로드 · 되읽기 링은 초기화가 실제로 만들었을 때만 참입니다(`GL_ARB_buffer_storage`, GL 4.4). */
-        RHICapabilities getCapabilities() const override
-        {
-            RHICapabilities caps          = RHIAvailability::query( RHIBackend::OpenGL );
-            caps._bPersistentStagingRing  = _stagingRingBuffer != 0 ? SW_TRUE : SW_FALSE;
-            caps._bPersistentReadbackRing = _readbackRingBuffer != 0 ? SW_TRUE : SW_FALSE;
-            return caps;
-        }
+        /** @brief GL 은 런타임에 덮는 값이 없어 정적 능력 테이블 그대로입니다. */
+        RHICapabilities getCapabilities() const override { return RHIAvailability::query( RHIBackend::OpenGL ); }
 
         /** @brief 초기화가 물어 둔 값으로 답합니다(ASTC · ETC2 — `GL_INTERNALFORMAT_SUPPORTED`). 다른 형식은 GL 4.6 의 정적 형식 표에 있으면 참입니다. */
         bool supportsTextureFormat( RHIFormat format ) const override;

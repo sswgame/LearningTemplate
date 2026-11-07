@@ -28,7 +28,7 @@ namespace sw
 {
     /**
      * @brief RTTI 없이 타입마다 고유한 64비트 해시입니다(함수 서명 글의 해시). 같은 빌드 안에서는 어느 모듈 라이브러리가 계산해도 같다.
-     * @details const 를 뗀 타입으로 부른다(`locateSubsystem` 이 뗀다) — `const T` 로 찾아도 `T` 로 건 것을 찾는다.
+     * @details `T` 와 `const T` 는 해시가 다르다 — 칸의 const 가 곧 그 해시다(`SubsystemScope::bind`). 찾는 규칙은 `findInLocator` 한 곳에 있다.
      */
     template <typename T>
     constexpr uint64 getSubsystemTypeHash() noexcept
@@ -51,16 +51,31 @@ namespace sw
         virtual const ISubsystemLocator* getParentScope() const = 0;
     };
 
+    /**
+     * @brief 범위 하나에서 @p T 를 찾습니다(상위는 보지 않는다). `const T` 로 찾으면 const 칸과 일반 칸을 모두 보고, `T` 로 찾으면 일반 칸만 봅니다.
+     * @details const 로 건 객체(공유 캐시의 카탈로그)는 `T*` 로 내주지 못한다 — 형식이 쓰기를 막으므로 찾는 쪽이 const 를 적어야 찾는다.
+     */
+    template <typename T>
+    T* findInLocator( const ISubsystemLocator& scope )
+    {
+        void* pFound = scope.findInScope( getSubsystemTypeHash<T>() );
+        if constexpr ( std::is_const_v<T> )
+        {
+            if ( pFound == nullptr )
+                pFound = scope.findInScope( getSubsystemTypeHash<std::remove_const_t<T>>() );
+        }
+        return static_cast<T*>( pFound );
+    }
+
     /** @brief @p pScope 부터 상위로 올라가며 @p T 를 찾습니다. 어느 범위에도 없으면 nullptr 입니다. */
     template <typename T>
     T* locateSubsystem( const ISubsystemLocator* pScope )
     {
-        const uint64 typeHash = getSubsystemTypeHash<std::remove_const_t<T>>();
         for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
         {
-            void* pFound = pScope->findInScope( typeHash );
+            T* const pFound = findInLocator<T>( *pScope );
             if ( pFound != nullptr )
-                return static_cast<T*>( pFound );
+                return pFound;
         }
         return nullptr;
     }
@@ -180,15 +195,19 @@ namespace sw
 
         /**
          * @brief 소유하지 않는 객체를 타입 @p T 로 겁니다. 객체는 범위보다 오래 살아야 하고, 먼저 사라지면 `unbind` 합니다.
-         * @return 같은 타입이 이미 걸려 있으면 false 이고 걸지 않습니다(먼저 `unbind`).
+         * @details @p T 가 const 면(공유 캐시의 카탈로그) `const T` 로 찾는 쪽만 찾는다(`findInLocator`). 칸의 `void*` 는 형식을 지운 저장일 뿐 const 는 해시에 남는다.
+         * @return 같은 타입이 const 든 아니든 이미 걸려 있으면 false 이고 걸지 않습니다(먼저 `unbind`).
          */
         template <class T>
         [[nodiscard]] bool bind( T* pObject )
         {
-            return pObject != nullptr && registerEntry( getSubsystemTypeHash<T>(), static_cast<void*>( pObject ), false );
+            using TPlain = std::remove_const_t<T>;
+            if ( pObject == nullptr || findOwnEntry( getSubsystemTypeHash<TPlain>() ) != nullptr || findOwnEntry( getSubsystemTypeHash<const TPlain>() ) != nullptr )
+                return false;
+            return registerEntry( getSubsystemTypeHash<T>(), const_cast<TPlain*>( pObject ), false );
         }
 
-        /** @brief 타입 @p T 로 빌려 건 객체를 풉니다. 소유한 서브시스템은 풀지 않습니다. */
+        /** @brief 타입 @p T(건 때와 같은 const)로 빌려 건 객체를 풉니다. 소유한 서브시스템은 풀지 않습니다. */
         template <class T>
         void unbind()
         {
@@ -199,7 +218,7 @@ namespace sw
         template <class T>
         T* find() const
         {
-            return static_cast<T*>( findInScope( getSubsystemTypeHash<std::remove_const_t<T>>() ) );
+            return findInLocator<T>( *this );
         }
 
         /** @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`, 소유한 서브시스템을 초기화 뒤에 묻는 자리). */

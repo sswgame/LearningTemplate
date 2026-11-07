@@ -2,11 +2,10 @@
 
 #include "Core/Container/SlotHandle.h"
 #include "Core/Math/AABB.h"
+#include "Core/Math/AABB2D.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Spatial/BVHTree3D.h"
 #include "Core/Spatial/SpatialHashGrid2D.h"
-#include "Core/Spatial/SpatialOctree.h"
-#include "Core/Spatial/SpatialQuadTree.h"
 #include "Core/Testing/TestFramework.h"
 
 namespace sw
@@ -26,197 +25,7 @@ namespace sw
     } // namespace
 } // namespace sw
 
-// Engine_Spatial — 쿼드트리 · 옥트리 · 해시 그리드 · BVH 의 삽입/갱신/질의.
-
-SW_TEST_CASE( SpatialTest, SpatialQuadTreeInsertAndRangeQuery )
-{
-    sw::SpatialQuadTree tree( sw::AABB2D{
-        sw::float2{   0.0f,    0.0f},
-        sw::float2{1000.0f, 1000.0f}
-    } );
-    SW_EXPECT_EQUAL( size_t( 0 ), tree.getTotalElements() );
-
-    // 요소 3개 삽입
-    SW_EXPECT_TRUE( tree.insert( 1, sw::AABB2D{
-                                        sw::float2{10.0f, 10.0f},
-                                        sw::float2{50.0f, 50.0f}
-    } ) );
-    SW_EXPECT_TRUE( tree.insert( 2, sw::AABB2D{
-                                        sw::float2{ 80.0f,  80.0f},
-                                        sw::float2{120.0f, 120.0f}
-    } ) );
-    SW_EXPECT_TRUE( tree.insert( 3, sw::AABB2D{
-                                        sw::float2{800.0f, 800.0f},
-                                        sw::float2{900.0f, 900.0f}
-    } ) );
-    SW_EXPECT_EQUAL( size_t( 3 ), tree.getTotalElements() );
-
-    // 범위 쿼리 (좌하단 영역)
-    sw::vector<sw::SpatialElement2D> listResults;
-    tree.queryRange( sw::AABB2D{
-                         sw::float2{  0.0f,   0.0f},
-                         sw::float2{200.0f, 200.0f}
-    },
-                     listResults );
-    SW_EXPECT_EQUAL( size_t( 2 ), listResults.size() );
-
-    // 점 쿼리
-    listResults.clear();
-    tree.queryPoint( 25.0f, 25.0f, listResults );
-    SW_EXPECT_EQUAL( size_t( 1 ), listResults.size() );
-    SW_EXPECT_EQUAL( uint64( 1 ), listResults[0]._id );
-
-    // 요소 업데이트 및 사용자 데이터 보존 검증
-    uint32 customData = 42;
-    tree.insert( 4, sw::AABB2D{
-                        sw::float2{200.0f, 200.0f},
-                        sw::float2{250.0f, 250.0f}
-    },
-                 &customData );
-    SW_EXPECT_TRUE( tree.update( 4, sw::AABB2D{
-                                        sw::float2{300.0f, 300.0f},
-                                        sw::float2{350.0f, 350.0f}
-    } ) );
-    listResults.clear();
-    tree.queryPoint( 320.0f, 320.0f, listResults );
-    SW_EXPECT_EQUAL( size_t( 1 ), listResults.size() );
-    SW_EXPECT_EQUAL( uint64( 4 ), listResults[0]._id );
-    SW_EXPECT_EQUAL( reinterpret_cast<void*>( &customData ), listResults[0]._pUserData );
-
-    SW_EXPECT_TRUE( tree.update( 1, sw::AABB2D{
-                                        sw::float2{750.0f, 750.0f},
-                                        sw::float2{850.0f, 850.0f}
-    } ) );
-    listResults.clear();
-    tree.queryPoint( 25.0f, 25.0f, listResults );
-    SW_EXPECT_EQUAL( size_t( 0 ), listResults.size() );
-
-    SW_EXPECT_TRUE( tree.remove( 2 ) );
-    SW_EXPECT_TRUE( tree.remove( 4 ) );
-    SW_EXPECT_EQUAL( size_t( 2 ), tree.getTotalElements() );
-
-    tree.clear();
-    SW_EXPECT_EQUAL( size_t( 0 ), tree.getTotalElements() );
-}
-
-// ------------------------------------------------------------------------------
-// 2) SpatialOctree 3D 공간 분할 및 구체/AABB 쿼리 검증
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( SpatialTest, SpatialOctreeInsertAndQuery )
-{
-    sw::SpatialOctree octree( sw::AABB{
-        sw::float3{   0.0f,    0.0f,    0.0f},
-        sw::float3{1000.0f, 1000.0f, 1000.0f}
-    } );
-    SW_EXPECT_EQUAL( size_t( 0 ), octree.getTotalElements() );
-
-    uint32 octUserData = 999;
-    SW_EXPECT_TRUE( octree.insert( 101, sw::AABB{
-                                            sw::float3{10.0f, 10.0f, 10.0f},
-                                            sw::float3{20.0f, 20.0f, 20.0f}
-    },
-                                   &octUserData ) );
-    SW_EXPECT_TRUE( octree.insert( 102, sw::AABB{
-                                            sw::float3{500.0f, 500.0f, 500.0f},
-                                            sw::float3{550.0f, 550.0f, 550.0f}
-    } ) );
-    SW_EXPECT_EQUAL( size_t( 2 ), octree.getTotalElements() );
-
-    // 업데이트 후 pUserData 보존 검증
-    SW_EXPECT_TRUE( octree.update( 101, sw::AABB{
-                                            sw::float3{30.0f, 30.0f, 30.0f},
-                                            sw::float3{40.0f, 40.0f, 40.0f}
-    } ) );
-
-    sw::vector<sw::SpatialElement3D> listResults;
-    octree.queryRange( sw::AABB{
-                           sw::float3{  0.0f,   0.0f,   0.0f},
-                           sw::float3{100.0f, 100.0f, 100.0f}
-    },
-                       listResults );
-    SW_EXPECT_EQUAL( size_t( 1 ), listResults.size() );
-    SW_EXPECT_EQUAL( uint64( 101 ), listResults[0]._id );
-    SW_EXPECT_EQUAL( reinterpret_cast<void*>( &octUserData ), listResults[0]._pUserData );
-
-    listResults.clear();
-    octree.querySphere( sw::float3{ 525.0f, 525.0f, 525.0f }, 100.0f, listResults );
-    SW_EXPECT_EQUAL( size_t( 1 ), listResults.size() );
-    SW_EXPECT_EQUAL( uint64( 102 ), listResults[0]._id );
-
-    SW_EXPECT_TRUE( octree.remove( 101 ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), octree.getTotalElements() );
-}
-
-// ------------------------------------------------------------------------------
-// 10) SpatialOctree 및 SpatialQuadTree Node Collapse (트리 축소) 검증
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
-{
-    // 1. Octree 분할 및 축소
-    sw::SpatialOctree octree( sw::AABB{
-                                  sw::float3{   0.0f,    0.0f,    0.0f},
-                                  sw::float3{1000.0f, 1000.0f, 1000.0f}
-    },
-                              4, 3 );
-
-    // 8개 요소 삽입 (노드 분할 유도)
-    for ( uint64 elementID = 1; elementID <= 8; ++elementID )
-    {
-        const float32 offset = static_cast<float32>( elementID * 20 );
-        octree.insert( elementID, sw::AABB{
-                                      sw::float3{        offset,         offset,         offset},
-                                      sw::float3{offset + 10.0f, offset + 10.0f, offset + 10.0f}
-        } );
-    }
-    SW_EXPECT_EQUAL( size_t( 8 ), octree.getTotalElements() );
-
-    // 7개 요소 삭제 (남은 1개 요소로 인해 자식 노드가 루트로 collapse 축소됨)
-    for ( uint64 elementID = 2; elementID <= 8; ++elementID )
-    {
-        SW_EXPECT_TRUE( octree.remove( elementID ) );
-    }
-    SW_EXPECT_EQUAL( size_t( 1 ), octree.getTotalElements() );
-
-    sw::vector<sw::SpatialElement3D> listOctreeResults;
-    octree.queryRange( sw::AABB{
-                           sw::float3{ 0.0f,  0.0f,  0.0f},
-                           sw::float3{50.0f, 50.0f, 50.0f}
-    },
-                       listOctreeResults );
-    SW_EXPECT_EQUAL( size_t( 1 ), listOctreeResults.size() );
-    SW_EXPECT_EQUAL( uint64( 1 ), listOctreeResults[0]._id );
-
-    // 2. QuadTree 분할 및 축소
-    sw::SpatialQuadTree quadTree( sw::AABB2D{
-                                      sw::float2{   0.0f,    0.0f},
-                                      sw::float2{1000.0f, 1000.0f}
-    },
-                                  4, 3 );
-    for ( uint64 elementID = 1; elementID <= 8; ++elementID )
-    {
-        const float32 offset = static_cast<float32>( elementID * 20 );
-        quadTree.insert( elementID, sw::AABB2D{
-                                        sw::float2{        offset,         offset},
-                                        sw::float2{offset + 10.0f, offset + 10.0f}
-        } );
-    }
-    SW_EXPECT_EQUAL( size_t( 8 ), quadTree.getTotalElements() );
-
-    for ( uint64 elementID = 2; elementID <= 8; ++elementID )
-    {
-        SW_EXPECT_TRUE( quadTree.remove( elementID ) );
-    }
-    SW_EXPECT_EQUAL( size_t( 1 ), quadTree.getTotalElements() );
-
-    sw::vector<sw::SpatialElement2D> listQuadResults;
-    quadTree.queryRange( sw::AABB2D{
-                             sw::float2{ 0.0f,  0.0f},
-                             sw::float2{50.0f, 50.0f}
-    },
-                         listQuadResults );
-    SW_EXPECT_EQUAL( size_t( 1 ), listQuadResults.size() );
-    SW_EXPECT_EQUAL( uint64( 1 ), listQuadResults[0]._id );
-}
+// Engine_Spatial — 해시 그리드 · BVH 의 삽입/갱신/질의.
 
 // ------------------------------------------------------------------------------
 // 14) SpatialHashGrid2D 엔티티 등록, 이동, 삭제 및 카운트 검증
@@ -459,53 +268,6 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFilterin
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );
 }
 
-/**
- * @brief [SpatialTest] update 가 실패하면 원소는 있던 자리에 그대로 남는다
- * @details `SpatialTree::update` 는 지우고 다시 넣는다. 새 경계가 월드 밖이면 `insert` 가 실패하는데, 그때 원소가
- *          **이미 지워진 뒤**면 호출부는 false 를 받고 "그대로겠지" 로 읽지만 실제로는 사라진다. 월드를 벗어나는 오브젝트에서
- *          바로 일어나는 일이다. 형제 둘(`SpatialHashGrid2D` · `BVHTree3D`)의 update 와 같은 약속이어야 한다.
- */
-SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
-{
-    sw::SpatialQuadTree tree( sw::AABB2D{
-        sw::float2{   0.0f,    0.0f},
-        sw::float2{1000.0f, 1000.0f}
-    } );
-
-    const sw::AABB2D originalBounds{
-        sw::float2{100.0f, 100.0f},
-        sw::float2{140.0f, 140.0f}
-    };
-    int32 userData = 7;
-    SW_REQUIRE_TRUE( tree.insert( 42, originalBounds, &userData ) );
-    SW_REQUIRE_EQUAL( size_t( 1 ), tree.getTotalElements() );
-
-    // 월드 밖으로 옮기려 한다 — 삽입이 실패해야 하고, 실패했으면 원래 자리에 남아야 한다.
-    const sw::AABB2D outsideWorld{
-        sw::float2{9000.0f, 9000.0f},
-        sw::float2{9100.0f, 9100.0f}
-    };
-    SW_EXPECT_FALSE( tree.update( 42, outsideWorld ) );
-
-    SW_EXPECT_EQUAL( size_t( 1 ), tree.getTotalElements() );
-    sw::vector<sw::SpatialElement2D> listFound;
-    tree.queryRange( originalBounds, listFound );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
-    SW_EXPECT_EQUAL( uint64( 42 ), listFound[0]._id );
-    SW_EXPECT_EQUAL( &userData, listFound[0]._pUserData );
-
-    // 월드 안으로 옮기는 것은 여전히 된다 — 위 거부가 과잉이 아님을 못 박는다.
-    const sw::AABB2D movedBounds{
-        sw::float2{700.0f, 700.0f},
-        sw::float2{740.0f, 740.0f}
-    };
-    SW_EXPECT_TRUE( tree.update( 42, movedBounds ) );
-    listFound.clear();
-    tree.queryRange( movedBounds, listFound );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
-    SW_EXPECT_EQUAL( &userData, listFound[0]._pUserData );
-}
-
 // ------------------------------------------------------------------------------
 // 18) SpatialHashGrid2D 셀 수 상한 — 아주 큰 경계 상자가 그리드를 부수지 않는다
 // ------------------------------------------------------------------------------
@@ -590,7 +352,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
 
 /**
  * @brief [SpatialTest] 모든 질의가 결과 벡터를 먼저 비운다
- * @details `SpatialHashGrid2D` · `BVHTree3D` · `SpatialTree` 가 같은 약속이다. 어느 하나가 **덧붙이기만** 하거나
+ * @details `SpatialHashGrid2D` · `BVHTree3D` 가 같은 약속이다. 어느 하나가 **덧붙이기만** 하거나
  *          트리가 빌 때 벡터를 아예 건드리지 않고 돌아가면, 벡터 하나를 프레임마다 돌려 쓰는 호출부에 **지난 프레임의 답이 이번
  *          답인 척** 남는다. 질의마다 새 벡터를 넘기는 테스트는 이것을 못 잡는다.
  */
@@ -628,57 +390,6 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
 
         bvh.queryRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, listHit );
         SW_EXPECT_TRUE( listHit.empty() );
-    }
-
-    BLOCK( "SpatialQuadTree" )
-    {
-        sw::SpatialQuadTree tree( sw::AABB2D{
-            sw::float2{-100.0f, -100.0f},
-            sw::float2{ 100.0f,  100.0f}
-        } );
-        tree.insert( 1, sw::AABB2D{
-                            sw::float2{0.0f, 0.0f},
-                            sw::float2{5.0f, 5.0f}
-        } );
-
-        const sw::AABB2D range{
-            sw::float2{1.0f, 1.0f},
-            sw::float2{2.0f, 2.0f}
-        };
-
-        sw::vector<sw::SpatialElement2D> listElement;
-        tree.queryRange( range, listElement );
-        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
-
-        tree.queryRange( range, listElement );
-        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
-
-        tree.queryPoint( 1.5f, 1.5f, listElement );
-        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
-
-        tree.clear();
-        tree.queryRange( range, listElement );
-        SW_EXPECT_TRUE( listElement.empty() );
-    }
-
-    BLOCK( "SpatialOctree" )
-    {
-        sw::SpatialOctree octree( sw::AABB{
-            {-100.0f, -100.0f, -100.0f},
-            { 100.0f,  100.0f,  100.0f}
-        } );
-        octree.insert( 1, box );
-
-        sw::vector<sw::SpatialElement3D> listElement;
-        octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
-        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
-
-        octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
-        SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
-
-        octree.clear();
-        octree.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listElement );
-        SW_EXPECT_TRUE( listElement.empty() );
     }
 }
 

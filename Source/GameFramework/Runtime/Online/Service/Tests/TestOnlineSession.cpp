@@ -30,8 +30,15 @@ namespace
         }
     };
 
-    class UnregisteredTestClient final
+    class UnregisteredTestClient final : public IOnlineClientService
     {
+    public:
+        const OnlineProtocolEntry& getProtocol() const override { return test::getTestLoginProtocol(); }
+        void                       onServicePush( uint16 kind, BitReader& body ) override
+        {
+            (void)kind;
+            (void)body;
+        }
     };
 
     struct OnlineSessionTest

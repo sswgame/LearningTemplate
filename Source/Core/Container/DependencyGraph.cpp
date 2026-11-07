@@ -3,7 +3,10 @@
 #include "Core/Container/DependencyGraph.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Foundation/Constants.h"
+
+#include <algorithm>
+#include <functional>
+#include <utility>
 
 namespace sw
 {
@@ -11,9 +14,6 @@ namespace sw
     {
         struct DependencyGraphInternal
         {
-            /** @brief 찾지 못함을 뜻하는 노드 번호입니다. */
-            static constexpr uint32 kNoNode = constant::invalid_index::kUint32;
-
             /** @brief 깊이 우선 방문 상태입니다. */
             enum class VisitState : uint8
             {
@@ -191,35 +191,42 @@ namespace sw
         }
         vector<uint8> listEmitted( nodeCount, SW_FALSE );
 
-        // shortcut: 준비된 노드를 매번 처음부터 훑는다(O(n²)) — 그래프가 수백 노드를 넘으면 순위 힙으로 바꾼다.
-        while ( order._listOrder.size() < nodeCount )
+        // 준비된 노드의 최소 힙 — (순위, 번호)로 줄 세워 순위가 같으면 번호가 작은 쪽이 먼저다.
+        using ReadyNode = std::pair<uint32, uint32>;
+        vector<ReadyNode> listReady;
+        for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
         {
-            uint32 readyIndex = DependencyGraphInternal::kNoNode;
-            for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-            {
-                if ( listEmitted[nodeIndex] == SW_TRUE || listRemaining[nodeIndex] != 0 )
-                    continue;
-                if ( readyIndex == DependencyGraphInternal::kNoNode || listRank[nodeIndex] < listRank[readyIndex] )
-                    readyIndex = nodeIndex;
-            }
-            if ( readyIndex == DependencyGraphInternal::kNoNode )
-            {
-                for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-                {
-                    if ( listEmitted[nodeIndex] == SW_FALSE )
-                        order._listUnsorted.push_back( nodeIndex );
-                }
-                order._listOrder.clear();
-                order._listCycle = findCycle( order._listUnsorted );
-                return order;
-            }
+            if ( listRemaining[nodeIndex] == 0 )
+                listReady.push_back( ReadyNode{ listRank[nodeIndex], nodeIndex } );
+        }
+        std::make_heap( listReady.begin(), listReady.end(), std::greater<ReadyNode>{} );
+
+        while ( listReady.empty() == false )
+        {
+            std::pop_heap( listReady.begin(), listReady.end(), std::greater<ReadyNode>{} );
+            const uint32 readyIndex = listReady.back().second;
+            listReady.pop_back();
 
             listEmitted[readyIndex] = SW_TRUE;
             order._listOrder.push_back( readyIndex );
             for ( const uint32 dependent : listDependent[readyIndex] )
             {
-                --listRemaining[dependent];
+                if ( --listRemaining[dependent] != 0 )
+                    continue;
+                listReady.push_back( ReadyNode{ listRank[dependent], dependent } );
+                std::push_heap( listReady.begin(), listReady.end(), std::greater<ReadyNode>{} );
             }
+        }
+
+        if ( order._listOrder.size() < nodeCount )
+        {
+            for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+            {
+                if ( listEmitted[nodeIndex] == SW_FALSE )
+                    order._listUnsorted.push_back( nodeIndex );
+            }
+            order._listOrder.clear();
+            order._listCycle = findCycle( order._listUnsorted );
         }
         return order;
     }

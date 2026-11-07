@@ -9,10 +9,12 @@
 	<!-- 물리 차: 서스펜션에 내려앉는다 -->
 	<WaitUntil watch="Vehicle.GroundedWheels" target="Car" equals="4" timeoutFrames="180"/>
 	<Expect watch="Vehicle.ForwardSpeed" target="Car" near="0" tolerance="0.5"/>
+	<Wait frames="1"/>
 	<!-- 앞으로 — 페달 -->
 	<Intent pawn="Car" move="0,1" frames="240"/>
 	<WaitUntil watch="Vehicle.ForwardSpeed" target="Car" atLeast="4" timeoutFrames="240"/>
 	<Expect watch="Object.Z" target="Car" atLeast="1"/>
+	<Wait frames="1"/>
 	<!-- 오른쪽 앞으로 — 조향. 차는 +X 쪽으로 간다 -->
 	<Intent pawn="Car" move="0.7,0.7" frames="180"/>
 	<WaitUntil watch="Object.X" target="Car" atLeast="-7" timeoutFrames="180"/>
@@ -23,6 +25,7 @@
 	<Intent pawn="Kart" move="0,1" frames="120"/>
 	<WaitUntil watch="Vehicle.ForwardSpeed" target="Kart" atLeast="8" timeoutFrames="120"/>
 	<Expect watch="Object.Y" target="Kart" near="0" tolerance="0.05"/>
+	<Wait frames="1"/>
 	<Intent pawn="Kart" move="0.7,0.7" frames="120"/>
 	<WaitUntil watch="Object.X" target="Kart" atLeast="9" timeoutFrames="120"/>
 	<Pass/>

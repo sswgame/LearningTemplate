@@ -23,6 +23,8 @@
 	<EditorClick mark="viewport.visualizer.navmesh"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.NavigationBakeCount" equals="0"/>
+	<Expect watch="Editor.NavMeshCount" equals="0"/>
+	<Expect watch="Editor.NavMeshSegments" equals="0"/>
 	<EditorWaitSettled/>
 	<DevCommand line="editor navigation.bake"/>
 	<WaitUntil watch="Editor.NavigationBakeCount" equals="1" timeoutFrames="75"/>

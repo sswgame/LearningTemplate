@@ -145,10 +145,6 @@ namespace sw::editor
             {
                 return readPublished( &CharacterEditorPanel::Published::_equippedSlotCount, outValue );
             }
-            [[nodiscard]] static bool readTraceCount( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                return readPublished( &CharacterEditorPanel::Published::_traceCount, outValue );
-            }
             [[nodiscard]] static bool readExportCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 return readPublished( &CharacterEditorPanel::Published::_exportCount, outValue );
@@ -187,8 +183,6 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorCharacterEditorSocketCount, "Editor.CharacterEditorSocketCount", "Sockets in the socket file the Character Editor has loaded", &CharacterEditorPanelInternal::readSocketCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorEquippedSlotCount, "Editor.CharacterEditorEquippedSlotCount", "Slots that hold an item in the appearance selection",
                          &CharacterEditorPanelInternal::readEquippedSlotCount );
-    SW_AUTOMATION_WATCH( editorCharacterEditorTraceCount, "Editor.CharacterEditorTraceCount", "Rule explanation lines for the current appearance selection",
-                         &CharacterEditorPanelInternal::readTraceCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorExportCount, "Editor.CharacterEditorExportCount", "Data presets the Character Editor exported in this run",
                          &CharacterEditorPanelInternal::readExportCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorPresetCount, "Editor.CharacterEditorPresetCount", "Presets in the Character Editor's preset store", &CharacterEditorPanelInternal::readPresetCount );
@@ -1316,8 +1310,6 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawExplanation()
     {
-        Published& published  = _published;
-        published._traceCount = 0;
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdPlugin", "WhyDoesItLookLikeThisRules" ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
         if ( _document.isDatabaseLoaded() == false )
@@ -1334,7 +1326,6 @@ namespace sw::editor
         _document.refreshResolvedPreview(); // 선택 · 데이터가 바뀔 때만 다시 푼다
         const ResolvedAppearance&        resolved = _document.getResolvedPreview();
         const AppearanceSelectionReport& report   = _document.getResolvedReport();
-        published._traceCount                     = static_cast<uint32>( resolved._listTrace.size() );
 
         if ( report._bUnknownBasePreset == SW_TRUE )
             ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Base preset is not in the data" );

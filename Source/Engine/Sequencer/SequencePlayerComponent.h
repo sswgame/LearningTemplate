@@ -66,7 +66,7 @@ namespace sw
         /**
          * @brief 카메라 신호를 받을 델리게이트를 등록합니다. 엔진은 카메라 디렉터를 모르므로 블렌드 · 프리셋 · 흔들림은 듣는 쪽(게임 프레임워크)이 합니다.
          * @details 한 갱신의 신호는 `SequenceTimelineUtil::collectPlaybackCameraSignals` 순서로 낸다. 재생을 멈출 때 컷이 덮고 있었으면 시네마틱 끝을 낸다.
-         *          대기 뷰 신호를 듣는 렌더 쪽(LOD, 스트리밍, PSO 미리 만들기)은 아직 없다. 돌려준 구독이 사라지면 뗍니다.
+         *          대기 뷰 신호는 카메라 매니저를 거쳐 LOD 까지 간다(`CameraManagerComponent` 의 대기 뷰 설명). 돌려준 구독이 사라지면 뗍니다.
          */
         [[nodiscard]] Subscription registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate );
         /** @brief 재생 빠르기(초당 프레임)입니다. */

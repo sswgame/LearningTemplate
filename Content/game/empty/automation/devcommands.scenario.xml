@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  자동화가 부르지 않던 개발 명령을 한 번씩 부른다 — 손 도구라도 깨지면 알 수 있게. 값이 있는 것은 답(DevCommand.Reply)이나 변수로 판정한다.
+  시각 로그: 켜기 → 상태 → 끄기 → 저장 → 재생 → 비우기. 타임스케일: 0 이면 멈춤으로 답하고 1 로 돌아온다. 애니메이션 되감기 창, 개체 덤프, 디버그 그리기 범주, 설정 확인, 넷 세션 없는 답.
+  환경 의존(renderdoc · xtest · 장치 제거 · 멈춤 감시 · 누수 곡선)은 여기 없다 — 까닭은 Config/Dev/FeatureReferenceExceptions.json.
+  실행: App -scenario=game/empty/automation/devcommands.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.devcommands" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
+	<Wait frames="5"/>
+	<!-- 시각 로그 -->
+	<DevCommand line="visuallog.on"/>
+	<ExpectLog id="DevCommand.Reply" contains="vlog: recording" atLeast="1"/>
+	<DevCommand line="visuallog.status"/>
+	<ExpectLog id="DevCommand.Reply" contains="vlog: recording," atLeast="1"/>
+	<Wait frames="2"/>
+	<DevCommand line="visuallog.off"/>
+	<ExpectLog id="DevCommand.Reply" contains="vlog: stopped" atLeast="1"/>
+	<DevCommand line="visuallog.save {out}/devcommands.vlog.json"/>
+	<ExpectLog id="DevCommand.Reply" contains="vlog: saved" atLeast="1"/>
+	<DevCommand line="visuallog.replay 0"/>
+	<ExpectLog id="DevCommand.Reply" contains="vlog: replayed" atLeast="1"/>
+	<DevCommand line="visuallog.clear"/>
+	<ExpectLog id="DevCommand.Reply" contains="vlog: cleared" atLeast="1"/>
+	<Wait frames="1"/>
+	<!-- 타임스케일 -->
+	<DevCommand line="timescale 0"/>
+	<ExpectLog id="DevCommand.Reply" contains="(paused)" atLeast="1"/>
+	<Wait frames="2"/>
+	<DevCommand line="timescale 1"/>
+	<ExpectLog id="DevCommand.Reply" contains="time scale = 1" atLeast="1"/>
+	<Wait frames="1"/>
+	<!-- 애니메이션 되감기 -->
+	<DevCommand line="anim.rewind.seconds 2"/>
+	<ExpectLog id="DevCommand.Reply" contains="rewind window =" atLeast="1"/>
+	<DevCommand line="anim.rewind on"/>
+	<Wait frames="3"/>
+	<!-- 이 씬에는 스켈레톤이 없어 트랙이 없다 — 시각으로 되감기는 트랙이 있어야 하므로(없으면 명령 실패) 되돌리기만 부른다 -->
+	<DevCommand line="anim.rewind.scrub resume"/>
+	<DevCommand line="anim.rewind off"/>
+	<Wait frames="1"/>
+	<!-- 살펴보기 · 범주 · 설정 · 넷 세션 없는 답 -->
+	<DevCommand line="state.hash"/>
+	<DevCommand line="world.cells"/>
+	<ExpectLog id="DevCommand.Reply" contains="the active scene does not stream" atLeast="1"/>
+	<DevCommand line="object.dump GameCamera"/>
+	<ExpectLog id="DevCommand.Reply" contains="object GameCamera id=" atLeast="1"/>
+	<DevCommand line="debugdraw.category"/>
+	<ExpectLog id="DevCommand.Reply" contains="categories:" atLeast="1"/>
+	<DevCommand line="settings.confirm"/>
+	<ExpectLog id="DevCommand.Reply" contains="settings: nothing awaits confirmation" atLeast="1"/>
+	<DevCommand line="net.status"/>
+	<DevCommand line="net.disconnect"/>
+	<DevCommand line="net.reconnect"/>
+	<ExpectLog id="DevCommand.Reply" contains="net session: none" atLeast="3"/>
+	<Wait frames="1"/>
+	<Pass/>
+</Scenario>

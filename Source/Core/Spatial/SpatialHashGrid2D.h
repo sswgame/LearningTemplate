@@ -4,7 +4,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Spatial/SpatialTree.h"
+#include "Core/Math/AABB2D.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw
 {

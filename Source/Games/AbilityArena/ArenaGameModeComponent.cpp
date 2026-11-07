@@ -233,7 +233,7 @@ namespace sw
 
     bool ArenaGameModeComponent::startGame()
     {
-        const AbilityCatalog* pCatalog = game::findSubsystem<AbilityCatalog>();
+        const AbilityCatalog* pCatalog = game::findSubsystem<const AbilityCatalog>();
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
             SW_LOG_ERROR_ID( "ArenaGameMode.AbilityCatalogNotLoaded", "[Arena] the ability catalog is not loaded - the arena cannot start" );
@@ -624,7 +624,7 @@ namespace sw
         if ( pManager == nullptr || isStarted() == false )
             return;
         // 날아가는 값은 탄 정의다(어빌리티는 어느 탄인지와 실을 스펙만 정한다). 아레나에는 벽이 없어 날지 않거나 사거리가 없는 탄은 받지 않는다.
-        const ProjectileCatalog* pCatalog    = game::findSubsystem<ProjectileCatalog>();
+        const ProjectileCatalog* pCatalog    = game::findSubsystem<const ProjectileCatalog>();
         const ProjectileDef*     pProjectile = pCatalog != nullptr ? pCatalog->find( request._projectileID ) : nullptr;
         if ( pProjectile == nullptr || pProjectile->_speed <= 0.0f || pProjectile->_range <= 0.0f )
         {

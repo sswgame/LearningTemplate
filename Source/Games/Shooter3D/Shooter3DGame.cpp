@@ -69,7 +69,7 @@ namespace sw
         // 무기는 기본 탄을 받아야 하고(태그 조건), 탄마다 두 표면의 탄착이 있어야 한다 — 틀리면 이유를 남기고 게임을 띄우지 않는다.
         if ( _pWeaponCatalog->checkProjectiles( *_pProjectileCatalog ) == false || checkImpacts() == false )
             return false;
-        const ItemCatalog*          pItemCatalog = game::findSubsystem<ItemCatalog>();
+        const ItemCatalog*          pItemCatalog = game::findSubsystem<const ItemCatalog>();
         vector<WeaponItemReference> listUnknownItem;
         if ( pItemCatalog == nullptr )
         {

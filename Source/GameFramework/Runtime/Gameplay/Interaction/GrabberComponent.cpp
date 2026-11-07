@@ -9,7 +9,6 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/World/Environment/GravityComponent.h"
 
 namespace sw
 {
@@ -27,13 +26,10 @@ namespace sw
     void TransformGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity )
     {
         (void)holder;
+        (void)velocity; // 강체가 없으면 속도를 받을 곳이 없다 - 놓은 자리에 남는다. 던지려면 대상에 강체를 둔다(RigidBodyGrabPhysics)
         SceneComponent* pTargetScene = target.getPrimarySceneComponent();
         if ( pTargetScene != nullptr )
             pTargetScene->detachFromComponent( AttachRule::KeepWorld );
-        // 강체가 없으므로 수직 속도만 중력 컴포넌트에 넘긴다. 수평 속도는 강체 백엔드를 쓸 때만 적용한다.
-        GravityComponent* pGravity = target.getComponent<GravityComponent>();
-        if ( pGravity != nullptr && velocity._y != 0.0f )
-            pGravity->jump( velocity._y );
     }
 
     bool RigidBodyGrabPhysics::attach( GameObject& holder, GameObject& target, const float3& localOffset )

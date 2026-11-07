@@ -236,9 +236,6 @@ namespace sw
             caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill     = _bFillModeNonSolid;
             caps._bGPUBreadcrumbs    = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
-            // 텍스처 업로드 · 되읽기는 영속 매핑 링으로만 간다(링이 없으면 초기화가 실패한다).
-            caps._bPersistentStagingRing  = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
-            caps._bPersistentReadbackRing = _readbackRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
             return caps;
         }
 
