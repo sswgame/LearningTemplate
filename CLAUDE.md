@@ -23,6 +23,7 @@
 
 ## 보조 도구
 
+- **도구 게이트:** 아래 도구 · 스킬은 글 규칙이 아니라 훅이 강제한다(`.claude/hooks/ToolGate.py`, 규칙은 데이터 `.claude/hooks/ToolGateRules.json`, 테스트 `py -3 .claude/hooks/TestToolGate.py`). 그 일 앞에서 요구한 스킬 · graphify 를 하지 않으면 호출이 거절되고 먼저 할 일이 안내된다. 새 스킬을 들이면 쓸 자리를 표에 한 줄 더한다 — 설치만 하고 쓰지 않는 스킬을 두지 않는다.
 - graphify: 코드를 읽기 전에 그래프로 범위를 좁힌다 — 본 트리 루트에서는 `graphify query "<질문>"`(`path "<A>" "<B>"` · `explain "<개념>"` 도), 워크트리에서는 같은 명령에 `--graph "$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json"` 을 붙인다(그래프는 본 저장소 루트 `graphify-out/` 하나다 — 코드 폴더 안에 두지 않는다). 갱신은 Stop 훅이 `GRAPHIFY_OUT=<루트>/graphify-out graphify update Source` 로 한다. 손으로 돌릴 때도 `GRAPHIFY_OUT` 을 빼면 `Source/graphify-out/` 이 생겨 소속 게이트가 멈춘다. 작업자 보고에는 그래프로 찾은 범위를 한 줄 적는다.
 - taste-skill: 에디터 UI(ImGui 패널 · 테마 토큰 `Content/editor/theme/*.tokens.json`)를 고칠 때 `Skill` 로 부르고 `references/app-screens.md`(앱 화면 규칙)를 따른다 — 강조색은 데이터 · 선택에만, 켜진 토글은 중립 단계, 본문은 그로테스크 한 벌(로그 줄만 고정폭). 검사 스크립트는 DOM 용이라 확인은 `editor/uicapture.scenario.xml` 스크린샷으로 한다.
 - bundle-verify · linux-verify · scenario-debug: 묶음 끝 검증과 push, Linux 빌드 · 체인 · 골든(`Scripts/dev/LinuxScenarios.py`), 시나리오 실패 추적은 `Skill` 로 부르고 그 절차를 따른다. 임시 스크립트를 새로 만들지 말고 여기에 더한다.
