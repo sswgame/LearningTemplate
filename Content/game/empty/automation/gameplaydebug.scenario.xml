@@ -18,5 +18,15 @@
 	<DevCommand line="hud.print gimmick"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[gimmick] target: ShowcaseLogic" atLeast="1"/>
 	<DevCommand line="debug.target clear"/>
+	<!-- 물리 접촉: 발판 · 나무통이 땅에 닿은 시작이 기록에 있다(대상을 정하지 않아 전부) -->
+	<DevCommand line="hud.print contacts"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[contacts] target: all objects" atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains=": Begin " atLeast="1"/>
+	<!-- 캐릭터 이동: 스텝 기록을 켜고 몇 프레임 돈 뒤 본다(이 무대에 캐릭터가 없으면 target: none 한 줄 — 섹션은 그래도 돈다) -->
+	<DevCommand line="movement.history on"/>
+	<Wait frames="10"/>
+	<DevCommand line="hud.print movement"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[movement] target: " atLeast="1"/>
+	<DevCommand line="movement.history off"/>
 	<Pass/>
 </Scenario>

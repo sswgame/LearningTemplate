@@ -58,6 +58,23 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 접촉 · 겹침의 시작과 끝 하나입니다(물리 접촉 디버거가 읽는 고정 용량 기록 — `ScenePhysics::collectContactLog`). 유지는 남기지 않는다(스텝마다 쏟아진다). */
+    struct PhysicsContactLogEntry
+    {
+        uint64              _stepIndex{ 0 };  ///< 이벤트가 나온 프레임의 마지막 스텝 번호
+        uint64              _objectA{ 0 };    ///< 바디 A 주인 오브젝트 id(바디 사용자 값)
+        uint64              _objectB{ 0 };    ///< 바디 B 주인 오브젝트 id
+        float3              _point{};         ///< 대표 접촉점(월드, 2D 는 Z=0)
+        float3              _normal{};        ///< A 에서 B 쪽 법선
+        float32             _impulse{ 0.0f }; ///< 시작 충격량(뉴턴초, 겹침은 0)
+        PhysicsContactPhase _phase{ PhysicsContactPhase::Begin };
+        uint8               _bOverlap{ SW_FALSE }; ///< 막지 않는 겹침(트리거 · 센서)
+        uint8               _bIs2D{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @class ScenePhysics @brief 씬 하나의 강체 물리입니다. 파일 머리말 참고. */
     class SW_API ScenePhysics final : public ISceneService
     {
@@ -140,6 +157,13 @@ namespace sw
         const vector<PhysicsContactEvent3D>& getFrameEvents3D() const { return _listFrameEvent3D; }
         /** @brief 마지막 프레임이 낸 2D 접촉 이벤트입니다. */
         const vector<PhysicsContactEvent2D>& getFrameEvents2D() const { return _listFrameEvent2D; }
+        /** @brief 접촉 기록의 칸 수입니다(고정 용량). */
+        static constexpr uint32 kContactLogCapacity = 32;
+        /**
+         * @brief 최근 접촉 · 겹침의 시작과 끝(오래된 것부터)을 @p outListEntry 에 채웁니다(먼저 비운다). 고정 용량 고리 — 넘으면 오래된 것이 밀린다.
+         * @details 디버그 HUD 는 4 Hz 라 이번 프레임 이벤트만으로는 스친 트리거를 놓친다. 시작 · 끝만 남겨(유지는 빼고) 비용은 그 이벤트의 복사 하나다.
+         */
+        void collectContactLog( vector<PhysicsContactLogEntry>& outListEntry ) const;
 
         /** @brief 물리 컴포넌트를 단계 목록에 넣습니다(`PhysicsComponent::onRegister`). */
         void registerComponent( PhysicsComponent* pComponent );
@@ -215,9 +239,11 @@ namespace sw
         vector<RigidBody2DComponent*> _listBodyOwner2D; ///< 2D 바디 핸들의 칸 번호 → 주인 강체
         vector<PhysicsContactEvent3D> _listFrameEvent3D;
         vector<PhysicsContactEvent2D> _listFrameEvent2D;
-        vector<PhysicsContactEvent3D> _listDispatchEvent3D; ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
-        vector<PhysicsContactEvent2D> _listDispatchEvent2D; ///< 위와 같다
-        vector<SweptOverlap2D>        _listDispatchSwept;   ///< 위와 같다
+        vector<PhysicsContactEvent3D> _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D> _listDispatchEvent2D;                ///< 위와 같다
+        vector<SweptOverlap2D>        _listDispatchSwept;                  ///< 위와 같다
+        PhysicsContactLogEntry        _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
+        uint64                        _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
         uint64                        _stepCount;
         uint32                        _debrisBodyCount;
         float32                       _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)

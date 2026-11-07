@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -73,7 +74,61 @@ namespace sw
         , _verticalSpeed{ 0.0f }
         , _pendingJumpSpeed{ 0.0f }
         , _pendingGroundYaw{ 0.0f }
+        , _listStepHistory{}
+        , _stepHistoryCount{ 0 }
     {
+    }
+
+    namespace
+    {
+        struct CharacterControllerHistoryInternal
+        {
+            /** @brief 모든 캐릭터의 스텝 기록 스위치입니다(물리 워커가 읽는다). */
+            static atomic<bool>& getEnabled()
+            {
+                static atomic<bool> s_bEnabled{ false };
+                return s_bEnabled;
+            }
+
+            /** @brief `movement.history on|off` — 캐릭터 이동 디버거(HUD 섹션 `movement`)의 스텝 기록. */
+            static bool runHistory( const vector<string>& listArgument, string& outReply )
+            {
+                bool bEnabled = false;
+                if ( listArgument.size() != 1 || StringUtil::tryParseBool( listArgument[0], bEnabled ) == false )
+                    return false;
+                CharacterControllerComponent::setStepHistoryEnabled( bEnabled );
+                outReply = bEnabled ? "movement.history on" : "movement.history off";
+                return true;
+            }
+        };
+    } // namespace
+
+    void CharacterControllerComponent::setStepHistoryEnabled( bool bEnabled )
+    {
+        CharacterControllerHistoryInternal::getEnabled().store( bEnabled, std::memory_order_relaxed );
+    }
+
+    bool CharacterControllerComponent::isStepHistoryEnabled()
+    {
+        return CharacterControllerHistoryInternal::getEnabled().load( std::memory_order_relaxed );
+    }
+
+    float3 CharacterControllerComponent::getRequestedMoveVelocity() const
+    {
+        ScopedLock<SpinLock> lock{ _commandLock };
+        return _moveVelocity;
+    }
+
+    void CharacterControllerComponent::collectStepHistory( vector<StepRecord>& outListRecord ) const
+    {
+        outListRecord.clear();
+        if ( _listStepHistory.empty() )
+            return;
+        const uint32 count = _stepHistoryCount < kStepHistoryCapacity ? _stepHistoryCount : kStepHistoryCapacity;
+        for ( uint32 index = _stepHistoryCount - count; index < _stepHistoryCount; ++index )
+        {
+            outListRecord.push_back( _listStepHistory[index % kStepHistoryCapacity] );
+        }
     }
 
     void CharacterControllerComponent::setMoveVelocity( const float3& velocity )
@@ -233,6 +288,17 @@ namespace sw
 
         _previousPosition = _state._position;
         _state            = pScene->moveCharacter( _character, float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z }, fixedDeltaTime );
+        if ( isStepHistoryEnabled() )
+        {
+            // 진단 기록 — 켰을 때만 칸을 만들고 쓴다(꺼져 있으면 이 분기 하나).
+            if ( _listStepHistory.empty() )
+                _listStepHistory.resize( kStepHistoryCapacity );
+            _listStepHistory[_stepHistoryCount % kStepHistoryCapacity] = StepRecord{
+                float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z },
+                _state
+            };
+            ++_stepHistoryCount;
+        }
         // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
         _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.
@@ -293,4 +359,6 @@ namespace sw
     {
         PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
+    SW_DEV_COMMAND( MovementHistory, "movement.history", "movement.history on|off",
+                    "Record the last character controller steps (request, result) for the movement debugger (hud.print movement)", &CharacterControllerHistoryInternal::runHistory );
 } // namespace sw

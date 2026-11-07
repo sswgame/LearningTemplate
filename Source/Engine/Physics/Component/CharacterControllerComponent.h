@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -73,6 +74,27 @@ namespace sw
         float3 getSimulatedPosition() const { return _state._position; }
         /** @brief 캐릭터 핸들입니다(시작 전이면 무효). */
         PhysicsCharacterHandle getCharacterHandle() const { return _character; }
+        /** @brief 마지막 스텝의 이동 결과 전부입니다(딛은 바디 · 실어 나른 속도 · 바닥 회전 포함). 이동 디버거가 읽는다. */
+        const PhysicsCharacterState3D& getCharacterState() const { return _state; }
+        /** @brief 조종이 요청한 수평 속도(`setMoveVelocity`)입니다 — 루트 모션 · 면 속도 · 공중 관성을 더하기 전 값이라 "요청 → 실제" 를 비교한다. 아무 스레드에서 읽어도 된다. */
+        float3 getRequestedMoveVelocity() const;
+
+        /** @brief 스텝 기록 한 칸입니다(이동 디버거가 미끄러짐 · 벽 걸림 · 착지 판정을 전후로 본다). */
+        struct StepRecord
+        {
+            float3                  _stepVelocity{}; ///< 이 스텝이 백엔드에 넘긴 속도(요청 + 루트 모션 + 면 + 공중 관성, 수직 포함)
+            PhysicsCharacterState3D _result{};       ///< 그 결과
+        };
+        /** @brief 스텝 기록의 칸 수입니다(고정 용량). */
+        static constexpr uint32 kStepHistoryCapacity = 8;
+        /**
+         * @brief 모든 캐릭터의 스텝 기록을 켜거나 끕니다(개발 명령 `movement.history on|off`). 꺼져 있으면 스텝마다 분기 하나뿐이고 칸을 만들지 않는다.
+         * @details 언리얼 CharacterMovement 의 `p.VisualizeMovement` 처럼 전역 스위치다. 켜면 캐릭터마다 첫 스텝에 칸 `kStepHistoryCapacity` 개를 한 번 만든다.
+         */
+        static void setStepHistoryEnabled( bool bEnabled );
+        static bool isStepHistoryEnabled();
+        /** @brief 최근 스텝 기록(오래된 것부터)을 @p outListRecord 에 채웁니다(먼저 비운다). 기록이 꺼져 있었으면 비어 있다. 게임 스레드에서 물리 스텝 밖에 부른다. */
+        void collectStepHistory( vector<StepRecord>& outListRecord ) const;
         /** @brief 상태 해시에 트랜스폼과 속도 · 접지를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
@@ -132,5 +154,7 @@ namespace sw
         float32                         _verticalSpeed;
         float32 _pendingJumpSpeed       SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
         float32                         _pendingGroundYaw;             ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
+        vector<StepRecord>              _listStepHistory;              ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
+        uint32                          _stepHistoryCount;             ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
     };
 } // namespace sw

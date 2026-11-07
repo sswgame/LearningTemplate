@@ -33,6 +33,12 @@ namespace sw
     {
     }
 
+    float32 CharacterController2DComponent::getRequestedMoveVelocity() const
+    {
+        ScopedLock<SpinLock> lock{ _commandLock };
+        return _moveVelocity;
+    }
+
     void CharacterController2DComponent::setMoveVelocity( float32 velocity )
     {
         ScopedLock<SpinLock> lock{ _commandLock };

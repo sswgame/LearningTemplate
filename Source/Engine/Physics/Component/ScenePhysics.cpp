@@ -95,6 +95,8 @@ namespace sw
         , _listDispatchEvent3D{}
         , _listDispatchEvent2D{}
         , _listDispatchSwept{}
+        , _arrContactLog{}
+        , _contactLogCount{ 0 }
         , _stepCount{ 0 }
         , _debrisBodyCount{ 0 }
         , _fixedStepOverride{ 0.0f }
@@ -480,8 +482,18 @@ namespace sw
         const vector<PhysicsContactEvent3D>& listEvent3D = _listDispatchEvent3D;
         const vector<PhysicsContactEvent2D>& listEvent2D = _listDispatchEvent2D;
         const vector<SweptOverlap2D>&        listSwept   = _listDispatchSwept;
+        // 접촉 기록 — 시작 · 끝만 고정 용량 고리에(진단, 유지는 스텝마다 쏟아져 뺀다).
+        const auto recordLog = [this]( uint64 objectA, uint64 objectB, const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bOverlap, bool bIs2D )
+        {
+            if ( phase == PhysicsContactPhase::Stay )
+                return;
+            _arrContactLog[_contactLogCount % kContactLogCapacity] =
+                PhysicsContactLogEntry{ _stepCount, objectA, objectB, point, normal, impulse, phase, bOverlap ? SW_TRUE : SW_FALSE, bIs2D ? SW_TRUE : SW_FALSE };
+            ++_contactLogCount;
+        };
         for ( const PhysicsContactEvent3D& event : listEvent3D )
         {
+            recordLog( event._userDataA, event._userDataB, event._point, event._normal, event._impulse, event._phase, event.isOverlap(), false );
             const bool bTriggerA = event._bTriggerA == SW_TRUE;
             const bool bTriggerB = event._bTriggerB == SW_TRUE;
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, event._point, event._normal, event._impulse, event._phase,
@@ -505,12 +517,23 @@ namespace sw
         {
             const float3 point{ event._point._x, event._point._y, 0.0f };
             const float3 normal{ event._normal._x, event._normal._y, 0.0f };
-            const bool   bTriggerA = event._bTriggerA == SW_TRUE;
-            const bool   bTriggerB = event._bTriggerB == SW_TRUE;
+            recordLog( event._userDataA, event._userDataB, point, normal, event._impulse, event._phase, event.isOverlap(), true );
+            const bool bTriggerA = event._bTriggerA == SW_TRUE;
+            const bool bTriggerB = event._bTriggerB == SW_TRUE;
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, point, normal, event._impulse, event._phase, bTriggerA, bTriggerB,
                           event.isOverlap(), true, 1.0f );
             deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, point, -normal, event._impulse, event._phase, bTriggerB, bTriggerA,
                           event.isOverlap(), true, 1.0f );
+        }
+    }
+
+    void ScenePhysics::collectContactLog( vector<PhysicsContactLogEntry>& outListEntry ) const
+    {
+        outListEntry.clear();
+        const uint64 count = _contactLogCount < kContactLogCapacity ? _contactLogCount : kContactLogCapacity;
+        for ( uint64 index = _contactLogCount - count; index < _contactLogCount; ++index )
+        {
+            outListEntry.push_back( _arrContactLog[index % kContactLogCapacity] );
         }
     }
 

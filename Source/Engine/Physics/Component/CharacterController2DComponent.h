@@ -51,6 +51,10 @@ namespace sw
         float2 getSimulatedPosition() const { return _state._position; }
         /** @brief 캐릭터 핸들입니다(시작 전이면 무효). */
         PhysicsCharacterHandle getCharacterHandle() const { return _character; }
+        /** @brief 마지막 스텝의 이동 결과 전부입니다(이동 디버거가 읽는다). */
+        const PhysicsCharacterState2D& getCharacterState() const { return _state; }
+        /** @brief 조종이 요청한 수평 속도(`setMoveVelocity`)입니다 — "요청 → 실제" 를 비교한다. 아무 스레드에서 읽어도 된다. */
+        float32 getRequestedMoveVelocity() const;
         /** @brief 상태 해시에 트랜스폼과 속도 · 접지를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 

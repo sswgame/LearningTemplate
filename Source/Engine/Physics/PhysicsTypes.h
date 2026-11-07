@@ -50,6 +50,7 @@ namespace sw
     };
 
     /** @brief 접촉과 트리거 이벤트의 단계입니다(유니티 Enter, Stay, Exit). */
+    ENUM()
     enum class PhysicsContactPhase : uint8
     {
         Begin = 0,
