@@ -72,7 +72,6 @@ namespace sw
         /** @brief @p interactor 가 지금 이것을 시작할 수 없는 첫 까닭입니다(정의 · 꺼짐 · 쿨다운 · 필수 태그 · 금지 태그 순). 시작할 수 있으면 `None` — 상호작용 디버거가 보인다. */
         InteractionBlockReason findBlockReason( const GameObject& interactor ) const;
         /** @brief 남은 쿨다운(초)입니다. */
-        float32 getCooldownRemaining() const { return _cooldownRemaining; }
         /**
          * @brief 하는 쪽이 설 월드 위치와 방향입니다. 방향은 요이며 라디안이고, `atan2( 앞.x, 앞.z )` 로 구합니다.
          * @return 정의의 마커를 소켓 테이블에서 찾았으면 true 입니다. 못 찾았으면 false 이고, 오브젝트의 원점과 앞 방향을 씁니다.

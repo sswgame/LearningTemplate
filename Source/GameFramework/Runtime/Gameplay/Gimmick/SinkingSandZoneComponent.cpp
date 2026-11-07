@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
@@ -81,8 +82,7 @@ namespace sw
 {
     SinkingSandZoneComponent::OccupantRecord::OccupantRecord()
         : _object{}
-        , _visual{}
-        , _visualPosition{}
+        , _listVisual{}
         , _depth{ 0.0f }
         , _secondsAtBottom{ 0.0f }
         , _escapeCount{ 0 }
@@ -174,11 +174,15 @@ namespace sw
             if ( pRecord == nullptr )
             {
                 OccupantRecord created;
-                created._object         = object.getHandle();
-                MeshComponent* pMesh    = object.getComponent<MeshComponent>(); // 첫 메시가 몸이다 — 부품은 그 아래에 붙어 함께 내려간다
-                created._visual         = TComponentHandle<MeshComponent>{ pMesh };
-                created._visualPosition = pMesh != nullptr ? pMesh->getLocalPosition() : float3{};
-                created._bWasGrounded   = pController->isGrounded() ? SW_TRUE : SW_FALSE;
+                created._object = object.getHandle();
+                // 외형 부품(모자 · 장비)은 몸 메시의 자식이 아니라 따로 붙은 메시일 수 있다 — 첫 메시만 내리면 부품이 지면에 남는다.
+                // 다른 메시에 매달리지 않은 메시를 모두 내린다(매달린 것은 부모를 따라 내려간다 — 두 번 내리지 않는다).
+                object.forEachComponentOfType<MeshComponent>( [&created]( MeshComponent* pMesh )
+                {
+                    if ( hasMeshAncestor( *pMesh ) == false )
+                        created._listVisual.push_back( SunkVisual{ TComponentHandle<MeshComponent>{ pMesh }, pMesh->getLocalPosition() } );
+                } );
+                created._bWasGrounded = pController->isGrounded() ? SW_TRUE : SW_FALSE;
                 _listOccupant.push_back( created );
                 pRecord = &_listOccupant.back();
             }
@@ -201,17 +205,33 @@ namespace sw
             }
             // 같은 깊이가 이동과 표현을 함께 정한다.
             pController->applyMoveScale( pRecord->_phase == SinkingSandPhase::Engulfed ? 0.0f : computeMoveScale( pRecord->_depth ) );
-            MeshComponent* pMesh = manager.resolveComponent( pRecord->_visual );
-            if ( pMesh != nullptr )
-                pMesh->setLocalPosition( pRecord->_visualPosition - float3{ 0.0f, pRecord->_depth, 0.0f } );
+            for ( const SunkVisual& visual : pRecord->_listVisual )
+            {
+                MeshComponent* pMesh = manager.resolveComponent( visual._mesh );
+                if ( pMesh != nullptr )
+                    pMesh->setLocalPosition( visual._localPosition - float3{ 0.0f, pRecord->_depth, 0.0f } );
+            }
         }
     }
 
     void SinkingSandZoneComponent::restoreVisual( GameObjectManager& manager, const OccupantRecord& record )
     {
-        MeshComponent* pMesh = manager.resolveComponent( record._visual );
-        if ( pMesh != nullptr )
-            pMesh->setLocalPosition( record._visualPosition );
+        for ( const SunkVisual& visual : record._listVisual )
+        {
+            MeshComponent* pMesh = manager.resolveComponent( visual._mesh );
+            if ( pMesh != nullptr )
+                pMesh->setLocalPosition( visual._localPosition );
+        }
+    }
+
+    bool SinkingSandZoneComponent::hasMeshAncestor( const SceneComponent& component )
+    {
+        for ( const SceneComponent* pParent = component.getParent(); pParent != nullptr; pParent = pParent->getParent() )
+        {
+            if ( isA<MeshComponent>( pParent ) )
+                return true;
+        }
+        return false;
     }
 
     float32 SinkingSandZoneComponent::computeMoveScale( float32 depth ) const

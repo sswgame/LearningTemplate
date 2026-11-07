@@ -46,17 +46,23 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 점유자 하나의 상태입니다. */
+        /** @brief 깊이만큼 내리는 메시 하나와 들어올 때의 로컬 자리입니다. */
+        struct SunkVisual
+        {
+            TComponentHandle<MeshComponent> _mesh;
+            float3                          _localPosition;
+        };
+
         struct OccupantRecord
         {
-            GameObjectHandle                _object;
-            TComponentHandle<MeshComponent> _visual;          ///< 깊이만큼 내리는 메시(없으면 표현 없이 이동만 느려진다)
-            float3                          _visualPosition;  ///< 들어올 때 메시의 로컬 자리
-            float32                         _depth;           ///< 빠진 깊이(m, 0.._maxDepth)
-            float32                         _secondsAtBottom; ///< 가장 깊은 곳에 머문 게임 초
-            uint32                          _escapeCount;     ///< 뛰어서 깊이를 줄인 수
-            SinkingSandPhase                _phase;
-            uint8                           _bWasGrounded : 1; ///< 지난 틱에 디디고 있었다(떠오르는 순간을 점프로 본다)
-            uint8                           _reserved     : 7;
+            GameObjectHandle   _object;
+            vector<SunkVisual> _listVisual;      ///< 깊이만큼 내리는 메시들 — 다른 메시에 매달리지 않은 메시 전부(몸 · 모자 같은 외형 부품). 비면 이동만 느려진다
+            float32            _depth;           ///< 빠진 깊이(m, 0.._maxDepth)
+            float32            _secondsAtBottom; ///< 가장 깊은 곳에 머문 게임 초
+            uint32             _escapeCount;     ///< 뛰어서 깊이를 줄인 수
+            SinkingSandPhase   _phase;
+            uint8              _bWasGrounded : 1; ///< 지난 틱에 디디고 있었다(떠오르는 순간을 점프로 본다)
+            uint8              _reserved     : 7;
 
             OccupantRecord();
         };
@@ -79,7 +85,9 @@ namespace sw
         /** @brief 쌓인 게임 초만큼 점유자를 고르고 깊이 · 이동 계수 · 표현을 갱신합니다(틱 뒤 게임 스레드). */
         void updateOccupants( GameObjectManager& manager );
         /** @brief 점유자의 메시를 원래 자리로 되돌립니다. */
-        static void restoreVisual( GameObjectManager& manager, const OccupantRecord& record );
+        /** @brief @p component 위로 메시가 있는지 봅니다(있으면 그 메시를 따라 내려간다). */
+        [[nodiscard]] static bool hasMeshAncestor( const SceneComponent& component );
+        static void               restoreVisual( GameObjectManager& manager, const OccupantRecord& record );
 
     private:
         PROPERTY( Category = "Zone", DisplayName = "Half Extents", Units = m, Tooltip = "Half size of the box around the owner (rotation and scale are not used)" )

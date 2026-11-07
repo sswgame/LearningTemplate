@@ -114,13 +114,13 @@ SW_TEST_CASE( ReflectionValidationTest, NestedElementCost, ._tags = "bench" )
     actor._listPart.resize( kElementCount );
     actor._listPart[kElementCount / 2]._weight = -1.0f;
 
-    const sw::int64 startNanoseconds = sw::MonotonicClock::nowNanoseconds();
-    for ( sw::int32 repeat = 0; repeat < kRepeatCount; ++repeat )
+    const int64 startNanoseconds = sw::MonotonicClock::nowNanoseconds();
+    for ( int32 repeat = 0; repeat < kRepeatCount; ++repeat )
     {
         sw::ValidationContext context;
         SW_EXPECT_EQUAL( 1u, sw::ReflectionValidation::validateObject( *pType, &actor, context ) );
     }
-    const sw::int64 elapsedNanoseconds = sw::MonotonicClock::nowNanoseconds() - startNanoseconds;
+    const int64 elapsedNanoseconds = sw::MonotonicClock::nowNanoseconds() - startNanoseconds;
     SW_LOG_INFO_ID( "ReflectionValidationTest.NestedElementCost", "Validation of %# sequence elements: %# ns per element", kElementCount,
-                    elapsedNanoseconds / static_cast<sw::int64>( kElementCount * kRepeatCount ) );
+                    elapsedNanoseconds / static_cast<int64>( kElementCount * kRepeatCount ) );
 }

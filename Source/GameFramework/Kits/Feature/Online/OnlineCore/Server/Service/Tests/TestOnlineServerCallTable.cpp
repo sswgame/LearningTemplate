@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // OnlineServerCallTableTest — 서버 호출 표: 응답은 한 번이고 어느 순서로 끝나도 남은 수가 맞다. 대기 수 P 에 따른 완료 비용을 잰다(nogpu).

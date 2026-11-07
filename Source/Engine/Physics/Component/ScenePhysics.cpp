@@ -488,7 +488,7 @@ namespace sw
             if ( phase == PhysicsContactPhase::Stay )
                 return;
             _arrContactLog[_contactLogCount % kContactLogCapacity] =
-                PhysicsContactLogEntry{ _stepCount, objectA, objectB, point, normal, impulse, phase, bOverlap ? SW_TRUE : SW_FALSE, bIs2D ? SW_TRUE : SW_FALSE };
+                PhysicsContactLogEntry{ _stepCount, objectA, objectB, point, normal, impulse, phase, static_cast<uint8>( bOverlap ? SW_TRUE : SW_FALSE ), static_cast<uint8>( bIs2D ? SW_TRUE : SW_FALSE ) };
             ++_contactLogCount;
         };
         for ( const PhysicsContactEvent3D& event : listEvent3D )
