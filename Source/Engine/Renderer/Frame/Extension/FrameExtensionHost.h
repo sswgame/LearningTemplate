@@ -16,6 +16,7 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw
 {
@@ -83,6 +84,30 @@ namespace sw
         static void logFailureOnce( string_view key, const char* pReason, string_view detail );
 
     private:
+        /**
+         * @struct PassDeclarationCheck
+         * @brief 패스 선언 하나의 검사 결과입니다. 선언 · 파이프라인 첨부 · 임시 텍스처 요청이 그대로면 다음 프레임에 다시 쓴다(`findPassCheck`).
+         * @details 실행 콜백은 프레임마다 새로 오므로 받아들인 패스를 통째로 다시 쓸 수 없다 — 콜백에 기대지 않는 검사(포맷 찾기 · 이름 intern · 선언 해시)만 남긴다.
+         */
+        struct PassDeclarationCheck
+        {
+            ExtensionPassParams _params{};            ///< 이 결과를 낸 선언(다음 프레임 선언과 맞대 본다)
+            const char*         _pFailure{ nullptr }; ///< 어긋난 이유(문자열 상수, 없으면 받아들일 선언)
+            hashed_string       _graphName{};         ///< 그래프 노드 이름("Extension.<이름>")
+            hashed_string       _colorTarget{};       ///< 첫 쓰기 컬러 첨부
+            hashed_string       _depthTarget{};       ///< 깊이 첨부(없으면 빈 이름)
+            RHIFormat           _colorFormat{ RHIFormat::Unknown };
+            uint64              _declarationHash{ 0 }; ///< 프레임 선언 서명에 넣는 이 선언의 해시
+        };
+
+        /** @brief 검사가 읽는 파이프라인 첨부 · 확장 셰이더 목록 · 임시 텍스처 요청이 지난번과 다르면 지난 검사 결과를 버리고 임시 텍스처 이름 열쇠를 다시 만듭니다. */
+        void refreshPassChecks();
+        /** @brief 선언 차례 @p entryIndex 의 검사 결과입니다. 같은 자리의 지난 결과와 선언이 같으면 그것, 아니면 새로 검사해 그 자리에 둡니다. */
+        const PassDeclarationCheck& findPassCheck( size_t entryIndex, const ExtensionPassParams& params );
+        /** @brief 선언 하나를 검사합니다(이름 · 중복 · 실행 콜백은 부르는 쪽이 본다). */
+        [[nodiscard]] PassDeclarationCheck checkPassDeclaration( const ExtensionPassParams& params ) const;
+        /** @brief 첨부 이름의 포맷 — 파이프라인 XML 의 첨부, 아니면 이번 프레임의 임시 텍스처 요청입니다. 없으면 false 입니다. */
+        [[nodiscard]] bool findAttachmentFormat( const string& name, RHIFormat& outFormat ) const;
         /** @brief 요소가 쓰는 메시를 찾거나 읽기를 맡기고 GPU 에 올립니다. 기록 전에만 부릅니다. 아직 읽는 중이면 nullptr(그 요소는 이번 프레임 건너뛴다), 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */
         Mesh* resolveMesh( const hashed_string& meshID );
 
@@ -94,6 +119,14 @@ namespace sw
         vector<ExtensionFramePass> _listPass;
         /// @brief 이번 프레임에 요청된 모듈 임시 텍스처입니다(`ExtensionPassBuilder::createTexture`).
         vector<ExtensionTextureDesc> _listTexture;
+        /// @brief `_listTexture` 의 첨부 이름 열쇠입니다(같은 차례). 요청이 바뀐 프레임에만 다시 만든다(`refreshPassChecks`).
+        vector<hashed_string> _listTextureName;
+        /// @brief 선언 차례마다의 검사 결과입니다(`findPassCheck`). 프레임을 넘어 남는다.
+        vector<PassDeclarationCheck> _listPassCheck;
+        /// @brief `_listPassCheck` 를 낸 파이프라인 첨부 · 확장 셰이더 목록 · 임시 텍스처 요청입니다(바뀌면 결과를 버린다).
+        vector<RenderPassAttachment> _listCheckedAttachment;
+        vector<string>               _listCheckedShader;
+        vector<ExtensionTextureDesc> _listCheckedTexture;
         vector<ExtensionDrawElement> _listDrawElement;
         /// @brief 요소가 쓰는 메시를 쥐는 표입니다(`MeshUtil::acquirePrimitive` · `MeshCache` 는 약한 참조라 렌더러 쪽이 쥔다). 기록 전(셋업)에만 바꾼다.
         unordered_map<hashed_string, shared_ptr<Mesh>> _mapMesh;
