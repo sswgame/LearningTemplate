@@ -298,7 +298,7 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 | 연쇄 | 지금 | 바꿀 모양 |
 |---|---|---|
-| AI 이동: 의도 → 경로 → 군중 → 컨트롤러 → 물리 | 경로 질의(`SceneNavigation::findPath` · `GridPathfinder` · `AreaGraph`)와 군중(`DetourCrowd::update`)이 게임 스레드 동기. 질의는 스레드 안전(스레드마다 질의 객체)인데 요청 API 가 없다 | 비동기 경로 요청 큐(요청 → 워커 → 다음 프레임 결과, 세대 · 취소, 언리얼 `FindPathAsync` · 유니티 `NavMeshQuery` 잡). 타일 교체는 진행 중 질의가 끝난 뒤. 군중 진행(⑤)을 워커 잡으로 — 넣기(④) · 쓰기(⑥) 사이. 격자 길찾기도 같은 큐 |
+| AI 이동: 의도 → 경로 → 군중 → 컨트롤러 → 물리 | (9 차) 비동기 경로 요청 줄 `PathRequestQueue<TSolver>`(칸 + 세대 핸들, 다음 수확에서 Ready, 취소) — 내비메시 `SceneNavigation::requestPath` 는 Navigation 단계에서 넘기고 다음 Navigation 단계에서 수확, 타일 교체 · 장애물 캐시 · 링크는 수확이 낸 증표(`NavMeshWriteAccess`)를 받아야 컴파일된다. 군중 진행은 씬 서비스 프레임 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)로 워커에 가 Animation 단계와 겹치고 FlushPostAnimation 앞에서 결과를 쓴다. RTS 유닛 A* 는 같은 줄(`GridPathSolver`)로 걸음 끝에 모아 푼다. 동기로 남긴 곳(감시 값 · 일정 구간 경로 · 방 그래프 · `NavGridMover`)은 까닭을 주석에 | 남은 것: 한 종류의 군중 안을 나누기(Detour 군중은 한 덩어리 — 종류 하나에 에이전트 수천이면 언리얼 Mass 처럼 군중을 지역으로 쪼갠다), 측정은 `load/navcrowd` |
 | 틱 안 씬 순회(14 컴포넌트) | 한 컴포넌트가 다른 오브젝트 일을 대신 해 오브젝트 단위 병렬을 버리고 N² 가 된다 | 각 오브젝트 자기 틱 · 공간 색인 질의 · 같은 타입이 많으면 일괄 틱, 순서가 필요하면 서브틱 선행 조건 |
 | 틱 뒤 지연 큐 32 곳 | 구조 변경 지연(맞다)과 순서 맞추기(서브틱 자리)가 섞여 있다 | 순서 맞추기는 서브틱 선행 조건으로 |
 | 씬 서비스(메시 LOD · 텍스처 스트리밍 · 씬 오디오 · VFX · 폴리지 지형 따라가기 · 넷 오브젝트 표) | 대상마다 독립인데 직렬 | 안에서 `runParallelByCost`, 앞뒤가 이어지면(LOD → 스트리밍 우선순위) 스테이지 · `whenAll` |

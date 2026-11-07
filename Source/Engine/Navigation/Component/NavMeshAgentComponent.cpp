@@ -12,6 +12,7 @@ namespace sw
 {
     bool NavMeshAgentMover::moveTo( const float3& destination )
     {
+        // 경로는 군중이 다음 내비게이션 갱신의 워커 일에서 구한다 — 여기서는 받아들이기만 하고, 길이 없으면 나중에 `Failed` 로 알린다(`INavMover::moveTo` 의 늦은 실패).
         _agent.setDestination( destination );
         return _agent.getMoveStatus() != NavMoveStatus::Failed;
     }

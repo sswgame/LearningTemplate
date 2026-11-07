@@ -58,7 +58,8 @@ namespace sw
      * @brief 유니티 `NavMeshAgent` · 언리얼 `UCrowdFollowingComponent` 의 자리입니다. 씬의 내비게이션(`SceneNavigation`)에 등록되고, 그것이 틱마다
      *        에이전트 종류의 군중(DetourCrowd)을 한 번에 진행합니다 — 이 컴포넌트는 스스로 틱하지 않습니다.
      * @details 요청(`setDestination` · `stop` · `warp`)은 이 오브젝트의 틱(병렬 워커)에서 불러도 됩니다 — 적어 두었다가 다음 내비게이션 갱신
-     *          (그 프레임의 PrePhysics · DuringPhysics 틱 뒤, 애니메이션 · 물리 앞)에 군중에 넣습니다. 상태 · 속도는 그 갱신이 써 둔 것을 읽습니다.
+     *          (그 프레임의 PrePhysics · DuringPhysics 틱 뒤, 애니메이션 · 물리 앞)에 군중에 넣습니다. 경로 찾기 · 조향(군중 진행)은 워커에서 애니메이션과 겹쳐 돌고,
+     *          상태 · 속도 · 자리는 물리 앞(`FlushPostAnimation` 단계 앞)에 써 둔 것을 읽습니다 — 같은 프레임의 물리 · PostPhysics 틱이 그 값을 봅니다.
      *
      *          **움직이는 쪽**은 `_driveMode` 하나가 정합니다. `Transform` 이면 이 컴포넌트가 오브젝트 자리를 직접 옮기고(바깥이 멀리 옮기면 순간이동으로 본다),
      *          `CharacterController` 면 군중이 원한 속도를 같은 오브젝트의 컨트롤러에 넘기고(`setMoveVelocity`) 컨트롤러가 실제로 간 자리를 다음 갱신에서

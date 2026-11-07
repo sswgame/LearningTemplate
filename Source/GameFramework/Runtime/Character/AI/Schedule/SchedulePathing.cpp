@@ -157,6 +157,8 @@ namespace sw
         int2 walkable{};
         if ( _pGrid->isWalkable( query._start ) == false && _pGrid->findNearestWalkable( query._start, SchedulePathingInternal::kNearestRadius, walkable ) )
             query._start = walkable;
+        // 동기 질의를 남긴다 — 일정은 구간이 바뀔 때 NPC 하나에 한 번 경로를 만들고 그 자리에서 도착 시각을 정한다(결과가 같은 호출 안에서 필요하다).
+        // 매 걸음 대상 수만큼 다시 구하는 곳(RTS 유닛)만 요청 줄(`PathRequestQueue<GridPathSolver>`)에 세운다.
         vector<int2>         listCell;
         const GridPathResult result = _pPathfinder->findPath( *_pGrid, query, listCell );
         vector<float3>       listPoint;
@@ -235,8 +237,9 @@ namespace sw
         vector<hashed_string> listPathArea;
         const bool            bOtherArea = from._area.empty() == false && to._area.empty() == false && from._area != to._area;
         GameFlags             noFlags;
-        const GameFlags&      flags         = _pFlags != nullptr ? *_pFlags : noFlags;
-        const bool            bUseAreaGraph = bOtherArea && _pGraph != nullptr && _pGraph->findPath( from._area, to._area, flags, listPathArea ) && listPathArea.size() >= 2;
+        const GameFlags&      flags = _pFlags != nullptr ? *_pFlags : noFlags;
+        // 방 그래프 질의는 동기로 둔다 — 방 수십 개를 훑는 탐색이고 구간이 바뀔 때 한 번이라 워커에 넘기는 비용이 더 크다.
+        const bool bUseAreaGraph = bOtherArea && _pGraph != nullptr && _pGraph->findPath( from._area, to._area, flags, listPathArea ) && listPathArea.size() >= 2;
         if ( bUseAreaGraph )
         {
             for ( size_t areaIndex = 0; areaIndex < listPathArea.size(); ++areaIndex )
