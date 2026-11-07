@@ -3,7 +3,6 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -95,7 +94,7 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && ResourceComposer::saveText( absPath.str(), toXML() );
+        return ResourceComposer::saveText( absPath.str(), toXML() );
     }
 
     bool SequenceAsset::loadFromXMLText( string_view xmlView )

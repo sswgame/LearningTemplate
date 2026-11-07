@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Character/CharacterDataReader.h"
@@ -196,14 +195,18 @@ namespace sw
                 SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kTableAssetID );
                 return false;
             }
-            SocketSet reread;
-            if ( reread.loadFromXMLText( text, absPath.str(), kinds ) == false || reread.saveToXMLText() != fullText )
+            string error;
+            if ( ResourceComposer::checkDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
             {
-                SW_LOG_ERROR_ID( "SocketSet.DeltaMismatch", "Socket set '%#': the difference from base '%#' does not read back the same - not saved (a field the base writes cannot be removed by a variant)", absPath.str(), _baseID );
+                SocketSet reread;
+                return reread.loadFromXMLText( deltaText, absPath.str(), kinds ) ? reread.saveToXMLText() : string{};
+            }, error ) == false )
+            {
+                SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# - not saved", absPath.str(), error.c_str() );
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), text ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "SocketSet.WriteFailed", "Socket set could not be written: %#", absPath.str() );
             return false;

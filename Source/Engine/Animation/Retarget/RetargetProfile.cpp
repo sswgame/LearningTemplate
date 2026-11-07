@@ -2,7 +2,6 @@
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
@@ -148,16 +147,13 @@ namespace sw
                 DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
                 return false;
             }
-            if ( DataInheritance::makeDelta( fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, text ) == false )
-                return false;
-            RetargetProfile reread;
-            if ( reread.loadFromXMLText( text, absPath.str() ) == false || reread.toXML() != fullText )
+            return ResourceComposer::saveDelta( absPath.str(), fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
             {
-                SW_LOG_ERROR_ID( "RetargetProfile.DeltaMismatch", "Retarget profile '%#': the difference from base '%#' does not read back the same - not saved (a value the base writes cannot be reset to the default by a variant)", absPath.str(), _baseID );
-                return false;
-            }
+                RetargetProfile reread;
+                return reread.loadFromXMLText( deltaText, absPath.str() ) ? reread.toXML() : string{};
+            } );
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), text ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "RetargetProfile.WriteFailed", "Retarget profile could not be written: %#", absPath.str() );
             return false;

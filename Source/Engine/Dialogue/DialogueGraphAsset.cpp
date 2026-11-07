@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -74,7 +73,7 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && ResourceComposer::saveText( absPath.str(), toXML() );
+        return ResourceComposer::saveText( absPath.str(), toXML() );
     }
 
     bool DialogueGraphAsset::loadFromXMLText( string_view xmlView )

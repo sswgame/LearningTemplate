@@ -379,17 +379,16 @@ namespace sw
             return false; // 프리셋 차이를 쓰지 못했다(`saveToXMLText` 가 알렸다)
         if ( FileUtil::readOptionalTextFile( absPath.str(), existingText ) == OptionalFileRead::Read )
         {
-            const string      baseID = DataInheritance::findBasePath( existingText );
-            AudioEventLibrary parent;
+            const string baseID = DataInheritance::findBasePath( existingText );
             if ( baseID.empty() == false )
             {
-                string deltaText;
-                if ( parent.loadFromAsset( AssetID{ baseID } ) == false || DataInheritance::makeDelta( saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID, deltaText ) == false )
+                AudioEventLibrary parent;
+                if ( parent.loadFromAsset( AssetID{ baseID } ) == false )
                 {
-                    SW_LOG_ERROR_ID( "AudioEventLibrary.VariantNotSaved", "%#: audio event library not saved - its parent '%#' could not be read", absPath.str(), baseID );
+                    DataInheritance::reportBaseNotFound( baseID, absPath.str() );
                     return false;
                 }
-                saveText = std::move( deltaText );
+                return ResourceComposer::saveDelta( absPath.str(), saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID );
             }
         }
         if ( ResourceComposer::saveText( absPath.str(), saveText ) == false )

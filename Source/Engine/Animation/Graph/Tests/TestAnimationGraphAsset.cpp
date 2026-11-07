@@ -200,7 +200,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
     SW_EXPECT_EQUAL( graph.toXML(), reread.toXML() );
 
     graph._listLink[0]._blendSeconds = -1.0f; // 형식 기본값은 쓰지 않으므로 부모의 0.2 를 덮을 수 없다
-    SW_EXPECT_LOG( "AnimationGraphAsset.DeltaMismatch" );
+    SW_EXPECT_LOG( "ResourceSave.DeltaNotSaved" );
     SW_EXPECT_FALSE( graph.saveToFile( *absPath ) ); // 부모 없는 한 벌로 끊지 않는다
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
     SW_EXPECT_TRUE( written.find( "_base=" ) != sw::string::npos ); // 앞 저장이 그대로 남는다

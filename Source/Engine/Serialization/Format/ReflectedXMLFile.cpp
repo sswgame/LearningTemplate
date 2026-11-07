@@ -2,8 +2,6 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -80,13 +78,6 @@ namespace sw
             return false;
         }
 
-        string deltaText;
-        if ( DataInheritance::makeDelta( XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID, deltaText ) == false ||
-             FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), deltaText ) == false )
-        {
-            SW_LOG_ERROR_ID( "Xml.WriteFailed", "XML write failed: %# (%#)", absPath.str(), pTypeInfo->_name.c_str() );
-            return false;
-        }
-        return true;
+        return ResourceComposer::saveDelta( absPath.str(), XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
     }
 } // namespace sw

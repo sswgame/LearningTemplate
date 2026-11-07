@@ -420,16 +420,15 @@ namespace sw::editor
             return false;
         }
         string deltaText;
-        if ( DataInheritance::makeDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, deltaText ) == false )
+        string deltaError;
+        if ( ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
         {
-            outError = "The difference from the base tree could not be made - see the log";
-            return false;
-        }
-        BehaviorTreeEditModel reread;
-        string                rereadError;
-        if ( reread.parse( deltaText, rereadError ) == false || reread.write() != fullText )
+            BehaviorTreeEditModel reread;
+            string                rereadError;
+            return reread.parse( text, rereadError ) ? reread.write() : string{};
+        }, deltaText, deltaError ) == false )
         {
-            outError = "The edit cannot be written as a difference from base '" + _baseID + "' (a node without an id changed, or a field the base writes was removed) - not saved";
+            outError = "Not saved: " + deltaError + " (or a node without an id changed)";
             return false;
         }
         outText = std::move( deltaText );

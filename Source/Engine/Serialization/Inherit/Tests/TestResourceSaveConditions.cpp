@@ -198,3 +198,29 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
 
     SW_REQUIRE_TRUE( ResourceLayers::setLayers( listPreviousLayer ) );
 }
+
+/**
+ * @brief [ResourceSaveDeltaTest] `_base` 저장 한 벌이 폴더를 만들어 차이만 쓰고, 다시 읽어 다르면 쓰지 않고 있던 파일을 지키는지 검증
+ */
+SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
+{
+    const ScopedScratchDomain   domain;
+    const string                path = domain.makeDiskPath( "new/folder/child.xml" );
+    const DataInheritanceSchema schema{ "Doc" };
+    constexpr string_view       kParent = R"(<Doc a="1" b="2" />)";
+    constexpr string_view       kFull   = R"(<Doc a="1" b="3" />)";
+
+    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", []( const string& )
+    { return string{ kFull }; } ) );
+    string written;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, written ) );
+    SW_EXPECT_TRUE( written.find( "_base" ) != string::npos );
+    SW_EXPECT_TRUE( written.find( "a=" ) == string::npos ); // 부모와 같은 칸은 적지 않는다
+
+    SW_EXPECT_LOG( "ResourceSave.DeltaNotSaved" );
+    SW_EXPECT_FALSE( ResourceComposer::saveDelta( path, R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
+    { return string{ "different" }; } ) );
+    string kept;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( path, kept ) );
+    SW_EXPECT_EQUAL( written, kept );
+}

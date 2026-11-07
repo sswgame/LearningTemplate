@@ -3,7 +3,6 @@
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
@@ -148,26 +147,19 @@ namespace sw
         if ( absPath.str().empty() )
             return false;
         const string fullText = toXML();
-        string       deltaText;
-        if ( _baseID.empty() == false )
+        if ( _baseID.empty() )
+            return ResourceComposer::saveText( absPath.str(), fullText );
+        AnimationGraphAsset parent;
+        if ( parent.loadFromFile( AssetID{ _baseID } ) == false )
         {
-            AnimationGraphAsset parent;
-            if ( parent.loadFromFile( AssetID{ _baseID } ) == false )
-            {
-                DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
-                return false;
-            }
-            if ( DataInheritance::makeDelta( fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, deltaText ) == false )
-                return false;
-            // 프리팹처럼 뺀 글을 다시 읽어 같을 때만 쓴다 — 칸을 형식 기본값으로 되돌리면 차이로 적을 수 없다. 그때 부모 없는 한 벌로 쓰면 변형이 끊기므로 쓰지 않고 오류다.
-            AnimationGraphAsset reread;
-            if ( reread.parseText( deltaText, absPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) ) == false || reread.toXML() != fullText )
-            {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.DeltaMismatch", "Animation graph '%#': the difference from base '%#' does not read back the same - not saved (a value the base writes cannot be reset to the default by a variant)", absPath.str(), _baseID );
-                return false;
-            }
+            DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
+            return false;
         }
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && ResourceComposer::saveText( absPath.str(), deltaText.empty() ? fullText : deltaText );
+        return ResourceComposer::saveDelta( absPath.str(), fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
+        {
+            AnimationGraphAsset reread;
+            return reread.parseText( deltaText, absPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) ) ? reread.toXML() : string{};
+        } );
     }
 
     bool AnimationGraphAsset::loadFromXMLText( string_view xmlView )

@@ -546,17 +546,8 @@ namespace sw
         XMLDocument parentDoc;
         if ( _baseScenePath.empty() || buildXML( fullDoc ) == false || parent.buildXML( parentDoc ) == false )
             return false;
-        string deltaText;
-        if ( DataInheritance::makeDelta( fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath, deltaText ) == false )
-        {
-            SW_LOG_ERROR_ID( "SceneDocument.DeltaNotMade", "Scene '%#' could not be written as a difference from '%#' - it is not saved", _name, _baseScenePath );
+        if ( ResourceComposer::saveDelta( absPath.str(), fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
             return false;
-        }
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), deltaText ) == false )
-        {
-            SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
-            return false;
-        }
         SW_LOG_INFO_ID( "SceneDocument.SavedDelta", "Saved '%#' as a difference from '%#' -> %#", _name, _baseScenePath, absPath.str() );
         return true;
     }

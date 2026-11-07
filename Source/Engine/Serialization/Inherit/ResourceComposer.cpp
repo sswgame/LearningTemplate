@@ -826,6 +826,8 @@ namespace sw
                 return false;
             }
         }
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
+            return false;
         string sourceText;
         if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
             return FileUtil::writeTextFile( absPath, text );
@@ -833,5 +835,37 @@ namespace sw
         if ( restoreConditions( text, sourceText, absPath, ResourceTags::capture(), restoredText ) == false )
             return false;
         return FileUtil::writeTextFile( absPath, restoredText );
+    }
+
+    bool ResourceComposer::checkDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread, string& outError )
+    {
+        if ( reread.isBound() == false || string_view{ reread( deltaText ) } == fullText )
+            return true;
+        outError = "the difference from base '" + string{ baseID } + "' does not read back the same (a value the base writes cannot be reset to the default by a variant)";
+        return false;
+    }
+
+    bool ResourceComposer::makeCheckedDelta( const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread, string& outDeltaText,
+                                             string& outError )
+    {
+        if ( DataInheritance::makeDelta( fullText, parentFullText, schema, baseID, outDeltaText ) )
+            return checkDeltaReadsBack( outDeltaText, fullText, baseID, reread, outError );
+        outError = "the difference from base '" + string{ baseID } + "' could not be made (see the log)";
+        return false;
+    }
+
+    bool ResourceComposer::saveDelta( const string_view absPath, const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread )
+    {
+        string deltaText;
+        string error;
+        if ( makeCheckedDelta( fullText, parentFullText, schema, baseID, reread, deltaText, error ) == false )
+        {
+            SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# - not saved", string{ absPath }.c_str(), error.c_str() );
+            return false;
+        }
+        if ( saveText( absPath, deltaText ) )
+            return true;
+        SW_LOG_ERROR_ID( "ResourceSave.WriteFailed", "'%#' could not be written", string{ absPath }.c_str() );
+        return false;
     }
 } // namespace sw
