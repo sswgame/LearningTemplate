@@ -35,7 +35,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "User Settings"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
         /** @brief 기본 폭(85 칸)은 범주 탭 아홉 개 중 뒤쪽(debug)을 스크롤 화살표 뒤로 숨겼다 — 엔진 범주가 한 줄에 들어가는 폭으로 연다. */
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 125.0f, 28.0f ); }
 

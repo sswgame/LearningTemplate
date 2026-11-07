@@ -321,7 +321,7 @@ namespace sw::editor
             ImGui::TableSetColumnIndex( 1 );
             const bool bSelected = pObject != nullptr && pObject == pPrimary;
             if ( ImGui::Selectable( issue._sourceLabel.empty() ? "(unnamed)" : issue._sourceLabel.c_str(), bSelected,
-                                    ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick ) )
+                                    ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_AllowOverlap ) ) // 줄 끝 Fix 단추가 클릭을 받는다
             {
                 (void)selectRowObject( rowIndex ); // 활성 씬에 없는 오브젝트(지운 것)면 고를 것이 없다
                 SceneComponent* pSceneComponent = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;

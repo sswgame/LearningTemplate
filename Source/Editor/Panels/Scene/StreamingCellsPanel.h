@@ -32,7 +32,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Streaming Cells"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
 
         /** @brief 미리보기 상태와 명령입니다. */
         StreamingCellsModel& getModel() { return _model; }

@@ -64,7 +64,6 @@ namespace sw::editor
         EditorAssetType  getDocumentKind() const override;
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 36.0f ); }
-        bool             isToolPanel() const override { return true; }
         /** @brief 미리보기 화면을 닫고 ImGui 텍스처를 놓습니다. */
         void shutdown() override;
 

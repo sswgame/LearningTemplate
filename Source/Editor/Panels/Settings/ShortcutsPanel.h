@@ -33,7 +33,6 @@ namespace sw::editor
         ShortcutsPanel();
 
         const utf8* getPanelTitle() const override { return "Keyboard Shortcuts"; }
-        bool        isToolPanel() const override { return true; }
         void        drawContent() override;
         void        shutdown() override;
 

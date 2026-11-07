@@ -33,7 +33,6 @@ namespace sw::editor
         AudioMixerPanel();
 
         const utf8*      getPanelTitle() const override { return "Audio Mixer"; }
-        bool             isToolPanel() const override { return true; }
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 22.0f ); }
 

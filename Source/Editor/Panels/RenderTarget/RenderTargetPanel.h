@@ -54,7 +54,6 @@ namespace sw::editor
         /** @brief 기본 창 크기를 반환합니다. */
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 필요할 때 여는 도구이므로 닫힌 채로 시작합니다. */
-        bool isToolPanel() const override { return true; }
         /** @brief ImGui 에 등록한 미리보기 텍스처를 해제합니다. */
         void shutdown() override;
 

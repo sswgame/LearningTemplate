@@ -38,7 +38,6 @@ namespace sw::editor
         ~ProjectSettingsPanel() override;
 
         const utf8*      getPanelTitle() const override { return "Project Settings"; }
-        bool             isToolPanel() const override { return true; }
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
 

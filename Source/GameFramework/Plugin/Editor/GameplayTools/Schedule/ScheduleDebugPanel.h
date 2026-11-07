@@ -32,7 +32,6 @@ namespace sw::editor
         ScheduleDebugPanel();
 
         const utf8*      getPanelTitle() const override { return "NPC Schedule"; }
-        bool             isToolPanel() const override { return true; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 120.0f, 33.0f ); }
         void             drawContent() override;
 

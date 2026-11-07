@@ -27,7 +27,6 @@ namespace sw::editor
         /** @brief 메모 필드 · 모으기 단추 · 폴더 목록을 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-        bool isToolPanel() const override { return true; }
 
         /** @brief 메모 · 폴더 줄과 모으기 명령입니다. */
         BugReportModel& getModel() { return _model; }

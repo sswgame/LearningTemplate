@@ -27,7 +27,6 @@ namespace sw::editor
         ModulesPanel();
 
         const utf8*      getPanelTitle() const override { return "Modules"; }
-        bool             isToolPanel() const override { return true; }
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 33.0f ); }
 

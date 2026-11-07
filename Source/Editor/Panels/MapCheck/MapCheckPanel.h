@@ -27,7 +27,6 @@ namespace sw::editor
         /** @brief 거르기 · 테이블을 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-        bool isToolPanel() const override { return true; }
 
         /**
          * @brief 활성 씬의 모든 오브젝트를 다시 검증합니다(Check Map 단추와 같다).

@@ -22,7 +22,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Data Layers"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
 
     private:
         DataLayersModel _model;

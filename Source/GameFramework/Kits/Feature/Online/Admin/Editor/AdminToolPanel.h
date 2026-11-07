@@ -30,7 +30,6 @@ namespace sw::editor
         AdminToolPanel();
 
         const utf8*      getPanelTitle() const override { return kPanelTitle; }
-        bool             isToolPanel() const override { return true; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 45.0f ); }
         void             drawContent() override;
 

@@ -88,7 +88,8 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( SequenceDebuggerPanel, SequenceDebuggerPanel::kPanelID, EditorPanelCategory::Tool, 1005 );
     SequenceDebuggerPanel::SequenceDebuggerPanel()
-        : _listProvider{}
+        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        , _listProvider{}
         , _providerText{}
         , _watched{}
     {

@@ -26,7 +26,6 @@ namespace sw::editor
         ParkLayoutPanel();
 
         const utf8* getPanelTitle() const override { return kPanelTitle; }
-        bool        isToolPanel() const override { return true; }
         void        drawContent() override;
 
     private:

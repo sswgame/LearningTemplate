@@ -44,7 +44,6 @@ namespace sw::editor
         GimmickGraphPanel();
 
         const utf8*      getPanelTitle() const override { return kPanelTitle; }
-        bool             isToolPanel() const override { return true; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 37.0f ); }
         void             drawContent() override;
         void             shutdown() override;

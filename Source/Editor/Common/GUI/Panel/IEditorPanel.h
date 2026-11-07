@@ -53,7 +53,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 2) IEditorPanel: 제목, 크롬, 내용
         //    shutdown 은 GPU 리소스가 있는 패널만 재정의한다(렌더 전 패널 훅은 두지 않는다 — 재정의가 없는데 매 프레임 가상 호출로 돌았다)
-        //    isToolPanel 이면 닫힌 채로 시작한다(필요할 때 여는 도구)
+        //    처음 열림은 생성자 인자 하나가 정한다(필요할 때 여는 도구는 false)
         // ------------------------------------------------------------------------------
         /** @brief 패널 제목을 반환합니다. */
         virtual const utf8* getPanelTitle() const = 0;
@@ -61,8 +61,6 @@ namespace sw::editor
         void draw();
         /** @brief 패널을 종료할 때 리소스를 정리합니다. */
         virtual void shutdown() {}
-        /** @brief 도구 패널이면 true 입니다. 도구 패널은 닫힌 채, 핵심 패널은 열린 채 시작합니다. */
-        virtual bool isToolPanel() const { return false; }
         /** @brief 기본 배치에서 붙을 영역입니다. 기본은 떠 있는 창입니다. */
         virtual EditorDockSlot getDefaultDockSlot() const { return EditorDockSlot::Floating; }
         /**

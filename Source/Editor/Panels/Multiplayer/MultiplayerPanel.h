@@ -28,7 +28,6 @@ namespace sw::editor
         MultiplayerPanel();
 
         const utf8*      getPanelTitle() const override { return "Multiplayer"; }
-        bool             isToolPanel() const override { return true; }
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 101.0f, 29.0f ); }
 

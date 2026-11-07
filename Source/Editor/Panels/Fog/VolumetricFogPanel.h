@@ -26,7 +26,6 @@ namespace sw::editor
 
         const utf8*      getPanelTitle() const override { return "Volumetric Fog"; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 60.0f, 20.0f ); }
-        bool             isToolPanel() const override { return true; }
         void             drawContent() override;
 
     private:

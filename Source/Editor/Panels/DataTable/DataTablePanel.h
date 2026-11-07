@@ -39,7 +39,6 @@ namespace sw::editor
         /** @brief 패널 UI를 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-        bool               isToolPanel() const override { return true; }
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
         /**

@@ -47,7 +47,6 @@ namespace sw::editor
         /** @brief 프로파일러 UI를 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구이므로 닫힌 채로 시작합니다. */
-        bool isToolPanel() const override { return true; }
 
     private:
         /** @brief 메모리 프로파일 탭을 그립니다. */

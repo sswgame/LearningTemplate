@@ -41,7 +41,6 @@ namespace sw::editor
         MeshModifiersPanel();
 
         const utf8* getPanelTitle() const override { return "Mesh Modifiers"; }
-        bool        isToolPanel() const override { return true; }
         /** @brief 스택 목록 · 기즈모 · 매개변수 · 하위 스택이 세로로 길다 - 기본(640 x 420)이면 매개변수가 첫 화면 밖으로 밀린다. */
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 75.0f, 47.0f ); }
         void             drawContent() override;

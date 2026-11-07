@@ -27,7 +27,6 @@ namespace sw::editor
         /** @brief 툴바 · 표 · 상세를 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-        bool isToolPanel() const override { return true; }
 
     private:
         /** @brief 고른 파일의 Diff · History · Revert 단추와 상세 줄을 그립니다. */

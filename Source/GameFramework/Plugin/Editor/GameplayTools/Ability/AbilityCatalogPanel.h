@@ -41,7 +41,6 @@ namespace sw::editor
         AbilityCatalogPanel();
 
         const utf8*        getPanelTitle() const override { return "Ability Catalog"; }
-        bool               isToolPanel() const override { return true; }
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 110.0f, 36.0f ); }
         void               drawContent() override;
         [[nodiscard]] bool saveDocument() override;

@@ -31,7 +31,6 @@ namespace sw::editor
         PreferencesPanel();
 
         const utf8* getPanelTitle() const override { return "Preferences"; }
-        bool        isToolPanel() const override { return true; }
         void        drawContent() override;
         void        shutdown() override;
 

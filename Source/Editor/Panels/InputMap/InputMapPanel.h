@@ -33,7 +33,6 @@ namespace sw::editor
 
         const utf8*      getPanelTitle() const override { return "Input Map Editor"; }
         void             drawContent() override;
-        bool             isToolPanel() const override { return true; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 128.0f, 34.0f ); }
 
         /**

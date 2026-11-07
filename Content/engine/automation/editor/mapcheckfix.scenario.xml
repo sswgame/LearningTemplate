@@ -51,6 +51,8 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitSettled/>
+	<!-- 심은 오류는 씬을 열 때 · 되돌린 뒤 · Check Map 이 다시 검증할 때 한 줄씩 알린다 -->
+	<ExpectLog id="ObjectValidation.Issue" contains="ZeroRadiusLight" count="3"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

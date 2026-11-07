@@ -34,7 +34,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Cutscene Debugger"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
 
         /** @brief 고른(없으면 첫) 플레이어입니다. 활성 씬에 플레이어가 없으면 nullptr 입니다(감시 값이 읽는다). */
         SequencePlayerComponent* findWatchedPlayer() const;

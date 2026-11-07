@@ -51,7 +51,6 @@ namespace sw::editor
         /** @brief 기본 창 크기를 반환합니다. */
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 91.0f, 25.0f ); }
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-        bool               isToolPanel() const override { return true; }
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
         /** @brief 값은 전역 변수 관리자에 바로 적용되어 있어 창을 닫아도 잃는 것이 없다 — 닫기에 확인을 두면 저장하거나 값을 초기화하지 않고는 창을 숨길 수 없다. */

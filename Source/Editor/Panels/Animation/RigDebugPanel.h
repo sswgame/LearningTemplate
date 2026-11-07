@@ -36,7 +36,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Rig Debug"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
 
     private:
         /** @brief 노드 표를 그립니다(이름 · 종류 · 본 · 가중치 · 이번 프레임 값 · 켜짐). 고른 노드가 쓰는 본을 @p outListSelectedBone 에 담습니다. @p tableFlags 는 ImGuiTableFlags 입니다. */

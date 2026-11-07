@@ -33,7 +33,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Animation Rewind"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
 
     private:
         /** @brief 켜기 · 창 길이 · 상태 줄입니다. */
