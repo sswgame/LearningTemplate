@@ -136,27 +136,35 @@
     {
       "name": "Web-Shipping",
       "displayName": "Web Shipping (Emscripten, WebGPU)",
-      "description": "브라우저 배포(Emscripten + emdawnwebgpu). emsdk 를 활성화한 셸(EMSDK)에서 구성한다 — 새 의존성이라 아직 붙이지 않았다(docs/PlatformTargets.md)",
+      "description": "브라우저 배포(Emscripten + vcpkg dawn 의 emdawnwebgpu). 툴체인은 저장소의 Tools/emsdk(설치 py -3 Scripts/setup/PlatformSdk.py web — 판은 Config/Environment/search_paths.defaults.json)",
       "inherits": [
         "base-vcpkg",
         "base-shipping"
       ],
       "cacheVariables": {
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/Tools/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
         "SW_SHIPPING_RHI_BACKEND": "WebGPU"
+      },
+      "environment": {
+        "EMSDK": "${sourceDir}/Tools/emsdk",
+        "EMSCRIPTEN_ROOT": "${sourceDir}/Tools/emsdk/upstream/emscripten",
+        "EM_CONFIG": "${sourceDir}/Tools/emsdk/.emscripten"
       }
     },
     {
       "name": "Android-Shipping",
       "displayName": "Android Shipping (NDK, Vulkan, arm64)",
-      "description": "Android 배포(NDK r27 이상, API 29, arm64-v8a). ANDROID_NDK_HOME 이 NDK 를 가리켜야 한다 — APK 패키징은 아직 없다(docs/PlatformTargets.md)",
+      "description": "Android 배포(API 29, arm64-v8a). NDK 는 저장소의 Tools/Android/ndk/<판>(설치 py -3 Scripts/setup/PlatformSdk.py android — 판은 Config/Environment/search_paths.defaults.json 의 android_ndk_version, 이 경로와 같은지 설치 스크립트가 본다) — APK 패키징은 아직 없다(docs/PlatformTargets.md)",
       "inherits": [
         "base-vcpkg",
         "base-shipping"
       ],
+      "environment": {
+        "ANDROID_NDK_HOME": "${sourceDir}/Tools/Android/ndk/29.0.14206865"
+      },
       "cacheVariables": {
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/Tools/Android/ndk/29.0.14206865/build/cmake/android.toolchain.cmake",
         "VCPKG_TARGET_TRIPLET": "arm64-android",
         "ANDROID_ABI": "arm64-v8a",
         "ANDROID_PLATFORM": "android-29",

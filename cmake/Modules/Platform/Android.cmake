@@ -2,7 +2,7 @@
 # @file cmake/Modules/Platform/Android.cmake
 # @brief Android 플랫폼 정의 — 매크로 · 이름, NDK 시스템 라이브러리(android · log · vulkan), NativeActivity 글루.
 # @note `SW_PLATFORM_LINUX` 를 켜지 않는다. 켜면 `__linux__` 검사를 통과해 X11 · ALSA · epoll 가지로 조용히 간다(언리얼 `PLATFORM_ANDROID` 도 Linux 와 따로다, 기억).
-#       구성: `cmake --preset Android-Shipping`(NDK r27 이상, ANDROID_NDK_HOME). 앱 실행 파일은 공유 라이브러리(libApp.so)로 짓고 NativeActivity 가 연다
+#       구성: `cmake --preset Android-Shipping` — 프리셋이 `Tools/Android/ndk/<판>`(설치 `py -3 Scripts/setup/PlatformSdk.py android`)을 가리킨다. 앱 실행 파일은 공유 라이브러리(libApp.so)로 짓고 NativeActivity 가 연다
 #       (sw_addExecutable). APK 패키징(매니페스트 · Gradle)은 아직 없다 — 새 의존성이라 붙이지 않았다(docs/PlatformTargets.md).
 # ==============================================================================
 
@@ -19,7 +19,7 @@ list(APPEND sw_flag_libraries sw_platform_android)
 if(NOT TARGET sw_android_native_app_glue)
 	set(swAppGlueDir "${CMAKE_ANDROID_NDK}/sources/android/native_app_glue")
 	if(NOT EXISTS "${swAppGlueDir}/android_native_app_glue.c")
-		message(FATAL_ERROR "[Android] android_native_app_glue.c not found under ${swAppGlueDir} - point ANDROID_NDK_HOME at an NDK (r27+)")
+		message(FATAL_ERROR "[Android] android_native_app_glue.c not found under ${swAppGlueDir} - install the NDK with py -3 Scripts/setup/PlatformSdk.py android")
 	endif()
 	add_library(sw_android_native_app_glue STATIC "${swAppGlueDir}/android_native_app_glue.c")
 	target_include_directories(sw_android_native_app_glue PUBLIC "${swAppGlueDir}")

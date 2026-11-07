@@ -60,6 +60,31 @@
     "cgltf",
     "meshoptimizer",
     "joltphysics",
+    {
+      "name": "dawn",
+      "default-features": false,
+      "features": [
+        "vulkan",
+        "d3d12",
+        "tint-tools"
+      ],
+      "platform": "windows & !uwp"
+    },
+    {
+      "name": "dawn",
+      "default-features": false,
+      "features": [
+        "vulkan",
+        "x11",
+        "tint-tools"
+      ],
+      "platform": "linux"
+    },
+    {
+      "name": "dawn",
+      "default-features": false,
+      "platform": "emscripten"
+    },
     "box2d",
     "nfrechette-acl",
     "recastnavigation",

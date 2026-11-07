@@ -1,8 +1,8 @@
 # ==============================================================================
 # @file cmake/Modules/Platform/Web.cmake
-# @brief 웹(Emscripten) 플랫폼 정의 — 매크로 · 이름, WebGPU 라이브러리 타깃, 링크 옵션.
+# @brief 웹(Emscripten) 플랫폼 정의 — 매크로 · 이름, 링크 옵션.
 # @note Emscripten 은 POSIX 층을 흉내 낸다(파일 · 시계 · pthread). 소켓 · 프로세스처럼 없는 것은 그 자리의 `#elif` 가 오류로 알린다.
-#       구성: `emcmake cmake --preset web-release`(emsdk 4.0.10 이상 — emdawnwebgpu 포트가 든 판, docs/PlatformTargets.md). 새 의존성이라 아직 붙이지 않았다.
+#       구성: `cmake --preset Web-Shipping` — 프리셋이 `Tools/emsdk`(설치 `py -3 Scripts/setup/PlatformSdk.py web`)의 Emscripten 툴체인을 가리킨다(docs/PlatformTargets.md).
 # ==============================================================================
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
@@ -27,13 +27,8 @@ target_link_options(sw_platform_web INTERFACE
 )
 list(APPEND sw_flag_libraries sw_platform_web)
 
-# WebGPU — emdawnwebgpu 포트(webgpu/webgpu.h · 구현은 브라우저). RHI 표의 graphics_libs 이름이다(CookContract.json).
-if(NOT TARGET sw_graphics_webgpu_libs)
-	add_library(sw_graphics_webgpu_libs INTERFACE)
-	target_compile_options(sw_graphics_webgpu_libs INTERFACE --use-port=emdawnwebgpu)
-	target_link_options(sw_graphics_webgpu_libs INTERFACE --use-port=emdawnwebgpu)
-endif()
-
+# WebGPU 라이브러리(`sw_graphics_webgpu_libs` — RHI 표의 graphics_libs 이름)는 ThirdParty/dawn 이 만든다: vcpkg dawn 포트가 깐 emdawnwebgpu 포트 파일
+# (`--use-port=<vcpkg>/share/dawn/emdawnwebgpu.port.py`)이라 데스크톱 Dawn 과 같은 판의 webgpu.h 다. 이름은 링크 때 풀린다(이 파일이 먼저 읽힌다).
 if(NOT TARGET sw_graphics_libs)
 	add_library(sw_graphics_libs INTERFACE)
 	target_link_libraries(sw_graphics_libs INTERFACE sw_graphics_webgpu_libs)

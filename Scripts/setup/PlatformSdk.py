@@ -8,13 +8,16 @@ Scripts/setup/PlatformSdk.py
   py -3 Scripts/setup/PlatformSdk.py web        # Tools/emsdk (emsdk install · activate)
   py -3 Scripts/setup/PlatformSdk.py android    # Tools/JDK + Tools/Android (명령줄 도구 → NDK · 플랫폼 · 빌드 도구)
   py -3 Scripts/setup/PlatformSdk.py all
+  py -3 Scripts/setup/PlatformSdk.py check      # 프리셋(Web-Shipping · Android-Shipping)이 가리키는 Tools 경로가 이 설정의 판과 같은지만 본다
 
 라이브러리(Dawn · Tint)는 여기가 아니라 ThirdParty/dawn 이 vcpkg 로 받는다.
+프리셋은 JSON 이라 이 설정을 읽지 못한다 — NDK 판이 경로에 한 번 더 적히므로 `check`(설치 끝에도 돈다)가 둘이 같은지 본다.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -27,6 +30,9 @@ from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToo
 from common.ToolchainConfig import loadSearchPaths  # noqa: E402
 from common.HostPlatform import isWindowsHost  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+
+
+kPresetFile = Path(__file__).resolve().parents[2] / "CMakePresets.json"
 
 
 class PlatformSdk:
@@ -90,11 +96,34 @@ class PlatformSdk:
         return root
 
 
+    def checkPresets(self) -> None:
+        """프리셋의 Tools 경로가 설정의 판 · 폴더와 같은지 봅니다. 다르면 ValueError 로 멈춘다(엉뚱한 NDK · emsdk 로 짓지 않게)."""
+        listPreset = json.loads(kPresetFile.read_text(encoding="utf-8"))["configurePresets"]
+        presets = {preset["name"]: preset for preset in listPreset}
+        ndkHome = f"${{sourceDir}}/{self.require('android_sdk_tools_subdir')}/ndk/{self.require('android_ndk_version')}"
+        emsdkHome = f"${{sourceDir}}/{self.require('emsdk_tools_subdir')}"
+        listExpected = [
+            ("Android-Shipping", "environment", "ANDROID_NDK_HOME", ndkHome),
+            ("Android-Shipping", "cacheVariables", "VCPKG_CHAINLOAD_TOOLCHAIN_FILE", f"{ndkHome}/build/cmake/android.toolchain.cmake"),
+            ("Web-Shipping", "environment", "EMSDK", emsdkHome),
+            ("Web-Shipping", "cacheVariables", "VCPKG_CHAINLOAD_TOOLCHAIN_FILE", f"{emsdkHome}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"),
+        ]
+        listMismatch = []
+        for presetName, section, key, expected in listExpected:
+            actual = presets[presetName][section][key]
+            if actual != expected:
+                listMismatch.append(f"{presetName}.{section}.{key} = {actual} (expected {expected})")
+        if listMismatch:
+            raise ValueError("[PlatformSdk] CMakePresets.json does not match Config/Environment/search_paths: " + "; ".join(listMismatch))
+        print("[PlatformSdk] presets match the configured emsdk · NDK")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="웹 · Android 빌드 도구를 Tools/ 아래에 받는다")
-    parser.add_argument("target", choices=["web", "android", "all"])
+    parser.add_argument("target", choices=["web", "android", "all", "check"])
     args = parser.parse_args()
     sdk = PlatformSdk()
+    sdk.checkPresets()
     if args.target in ("web", "all"):
         sdk.installWeb()
     if args.target in ("android", "all"):

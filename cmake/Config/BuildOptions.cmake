@@ -91,7 +91,7 @@ else()
 	message(FATAL_ERROR "[BuildOptions] no default Shipping RHI backend for host '${CMAKE_HOST_SYSTEM_NAME}' - set SW_SHIPPING_RHI_BACKEND")
 endif()
 
-set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 Vulkan OpenGL)
+set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 Vulkan OpenGL WebGPU)
 
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 
