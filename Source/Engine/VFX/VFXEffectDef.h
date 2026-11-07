@@ -11,9 +11,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -344,6 +346,7 @@ namespace sw
     struct SW_API VFXEffectDef
     {
         REFLECT_BODY();
+        friend struct AssetTypeLoader;
 
         /** @brief 효과 파일의 접미사입니다. 데이터 종류 표(`SW_ASSET_TYPE`)가 이 값으로 파일을 찾습니다. */
         static constexpr string_view kExtension = ".vfx.xml";
@@ -351,7 +354,7 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `VFXEffectDef.cpp` 의 `SW_ASSET_TYPE`). */
+        /** @brief 이 에셋 종류입니다(등록은 `VFXEffectDef.cpp` 의 캐시 등록 줄 `SW_SHARED_ASSET_CACHE`). */
         static constexpr AssetTypeDef kAssetType{ "VFXEffectDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Emitters; each one is a separate transparent sort candidate" )
@@ -359,8 +362,6 @@ namespace sw
         PROPERTY( Tooltip = "User parameters the emitters bind by name and the component overrides at run time" )
         vector<VFXUserParameterDef> _listUserParameter{};
 
-        /** @brief 리소스 상대 경로의 효과를 읽습니다. 모르는 이름 · 범위 밖 값 · 필수 칸 누락이면 오류를 남기고 false 이며 효과가 빕니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 디스크 파일의 효과를 읽습니다(도구 · 테스트용, `ReflectedXMLFile::loadDescFromDiskFile`). 실패하면 효과가 빕니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 사용자 파라미터입니다. 없으면 nullptr 입니다. */
@@ -369,7 +370,19 @@ namespace sw
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
 
     private:
+        /**
+         * @brief 리소스 상대 경로의 효과를 읽습니다. 모르는 이름 · 범위 밖 값 · 필수 칸 누락이면 오류를 남기고 false 이며 효과가 빕니다.
+         * @details 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<VFXEffectDef>::acquire` 로 한 벌을 쥔다(컴포넌트마다 파일을 다시 읽지 않는다).
+         */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 읽기가 끝난 효과의 커브를 정렬하고 값을 봅니다. 틀리면 효과를 비웁니다. */
         [[nodiscard]] bool finishLoad( bool bRead, string_view sourceLabel );
     };
+
+    /**
+     * @brief 효과를 경로마다 한 벌 나눠 줍니다("VFXEffectDef", 인스턴스화는 `VFXEffectDef.cpp`).
+     * @details 다시 읽기는 떼어 낸다(`Detach`) — 시뮬레이션과 렌더 스레드가 방출기 정의를 효과의 별칭 포인터로 쥐므로 쥔 객체를 제자리에서 바꾸지 않는다.
+     *          핫 리로드는 효과 경로 칸을 가진 컴포넌트에 알리고(`onPropertyChanged`) 컴포넌트가 새 객체를 받는다(언리얼 Niagara 시스템 에셋 한 벌 · 유니티 프리팹 파티클 한 벌, 기억에 의존).
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<VFXEffectDef>;
 } // namespace sw

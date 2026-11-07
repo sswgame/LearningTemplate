@@ -139,7 +139,7 @@ namespace sw
         , _listPublished{}
         , _listMeshEmitter{}
         , _listMeshLoad{}
-        , _listEffectParameter{}
+        , _pEffect{}
         , _listUserParameter{}
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
@@ -280,7 +280,7 @@ namespace sw
     bool VFXComponent::setUserParameter( string_view name, const float4& value )
     {
         const string nameText{ name };
-        if ( VectorUtil::findBy<&VFXUserParameterDef::_name>( _listEffectParameter, nameText ) == nullptr )
+        if ( _pEffect == nullptr || _pEffect->findUserParameter( nameText ) == nullptr )
         {
             SW_LOG_ERROR_ID( "VFXComponent.UnknownUserParameter", "VFX '%#': no user parameter '%#'", _effectPath, nameText );
             return false;
@@ -298,7 +298,7 @@ namespace sw
 
     void VFXComponent::applyUserParameters()
     {
-        vector<VFXUserParameterDef> listValue = _listEffectParameter;
+        vector<VFXUserParameterDef> listValue = _pEffect != nullptr ? _pEffect->_listUserParameter : vector<VFXUserParameterDef>{};
         for ( const VFXUserParameterDef& entry : _listUserParameter )
         {
             VFXUserParameterDef* pValue = VectorUtil::findBy<&VFXUserParameterDef::_name>( listValue, entry._name );
@@ -416,20 +416,22 @@ namespace sw
         _listSimulation.clear();
         _listPublished.clear();
         _listGPURequest.clear();
-        _listEffectParameter.clear();
+        _pEffect.reset();
         _bPlaying = SW_FALSE;
         if ( _effectPath.empty() )
             return;
-        VFXEffectDef effect;
-        if ( effect.loadFromAsset( AssetID{ _effectPath } ) == false )
+        // 효과는 공유 캐시의 한 벌이다 — 같은 효과를 쓰는 컴포넌트가 파일을 다시 읽지 않는다. 핫 리로드는 떼어 낸 새 객체를 이 자리에서 받는다(`onPropertyChanged`).
+        _pEffect = _effectPath.acquire();
+        if ( _pEffect == nullptr )
             return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
-        _listEffectParameter = std::move( effect._listUserParameter );
+        const VFXEffectDef& effect = *_pEffect;
         _listSimulation.reserve( effect._listEmitter.size() );
         // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.
         const float32 spawnScale = MathUtil::max( 0.0f, static_cast<float32>( gv_effectsSpawnScale ) );
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( effect._listEmitter.size() ); ++emitterIndex )
         {
-            shared_ptr<const VFXEmitterDef> pDef = make_shared<const VFXEmitterDef>( std::move( effect._listEmitter[emitterIndex] ) );
+            // 방출기 정의는 효과의 별칭 포인터다(사본 없음) — 렌더 스레드가 쥔 동안 효과가 산다.
+            shared_ptr<const VFXEmitterDef> pDef( _pEffect, &effect._listEmitter[emitterIndex] );
             const uint64                    seed = HashUtil::combine( _seed, emitterIndex );
             if ( VFXComponentInternal::selectSimulationTarget( *pDef ) == VFXSimulationTarget::CPU )
                 _listSimulation.emplace_back( std::in_place_type<VFXCPUSimulation>, std::move( pDef ), seed, spawnScale );

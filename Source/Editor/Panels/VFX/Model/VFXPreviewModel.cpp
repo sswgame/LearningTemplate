@@ -3,8 +3,10 @@
 #include "Editor/Panels/VFX/Model/VFXPreviewModel.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -37,13 +39,14 @@ namespace sw::editor
     {
         _listEmitterRow.clear();
         _previewEffectPath.clear();
-        VFXEffectDef effect;
-        if ( effect.loadFromAsset( AssetID{ assetPath } ) == false )
+        // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).
+        const shared_ptr<const VFXEffectDef> pEffect = SharedAssetCache<VFXEffectDef>::acquire( assetPath );
+        if ( pEffect == nullptr )
         {
             _status = "The effect could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
-        for ( const VFXEmitterDef& emitter : effect._listEmitter )
+        for ( const VFXEmitterDef& emitter : pEffect->_listEmitter )
         {
             VFXPreviewEmitterRow& row = _listEmitterRow.emplace_back();
             row._name                 = emitter._name;

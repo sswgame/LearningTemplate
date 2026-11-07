@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
@@ -95,8 +96,12 @@ namespace sw
         };
     } // namespace
 
-    /** @brief 효과 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). 접미사 글자는 에셋 종류와 같은 `kExtension` 하나다. */
-    SW_ASSET_TYPE( VFXEffectDef, VFXEffectDef::kAssetType.withPathRule( AssetPathRule{ {}, {}, VFXEffectDef::kExtension } ).withLoader( AssetTypeLoader::of<VFXEffectDef>() ) );
+    /**
+     * 효과 데이터 파일 종류와 그 공유 캐시입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). 접미사 글자는 에셋 종류와 같은 `kExtension` 하나다.
+     * 시뮬레이션이 방출기 정의를 별칭 포인터로 쥐므로 다시 읽기는 떼어 낸다(`Detach`).
+     */
+    SW_SHARED_ASSET_CACHE( VFXEffectDef, VFXEffectDef,
+                           VFXEffectDef::kAssetType.withPathRule( AssetPathRule{ {}, {}, VFXEffectDef::kExtension } ).withLoader( AssetTypeLoader::of<VFXEffectDef>( MemoryTag::Asset, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw
 
 namespace sw

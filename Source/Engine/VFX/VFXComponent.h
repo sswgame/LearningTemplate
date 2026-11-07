@@ -166,11 +166,11 @@ namespace sw
         PROPERTY( Category = "VFX", DisplayName = "Effect", Tooltip = "Particle effect (.vfx.xml)" )
         AssetRef<VFXEffectDef>                        _effectPath;
         vector<EmitterSimulation>                     _listSimulation;
-        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;       ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
-        vector<VFXGPUEmitterRequest>                  _listGPURequest;      ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
-        vector<MeshEmitter>                           _listMeshEmitter;     ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
-        vector<MeshHandle>                            _listMeshLoad;        ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
-        vector<VFXUserParameterDef>                   _listEffectParameter; ///< 효과가 선언한 사용자 파라미터와 기본값(효과를 읽을 때 옮겨 둔다)
+        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;   ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
+        vector<VFXGPUEmitterRequest>                  _listGPURequest;  ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
+        vector<MeshEmitter>                           _listMeshEmitter; ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
+        vector<MeshHandle>                            _listMeshLoad;    ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
+        shared_ptr<const VFXEffectDef>                _pEffect;         ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
