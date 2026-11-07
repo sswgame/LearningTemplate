@@ -9,6 +9,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -209,6 +210,18 @@ namespace sw
         return SessionStateInitResult::Restored;
     }
 
+    void SessionStateComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<SessionStateComponent>( this );
+    }
+
+    void SessionStateComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SessionStateComponent>( this );
+        Component::onUnregister( manager );
+    }
+
     void SessionStateComponent::onBeginPlay()
     {
         Component::onBeginPlay();
@@ -353,19 +366,23 @@ namespace sw
         outListState.clear();
         if ( pManager == nullptr )
             return;
-        pManager->forEachGameObject( [&outListState]( GameObject* pObject )
+        for ( SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
         {
-            SessionStateComponent* pState = pObject->getComponent<SessionStateComponent>();
-            if ( pState != nullptr && pState->isInitialized() )
+            if ( pState->isInitialized() )
                 outListState.push_back( pState );
-        } );
+        }
     }
 
     const SessionStateComponent* SessionStateComponent::findFirstOpen( const GameObjectManager* pManager )
     {
-        vector<SessionStateComponent*> listState;
-        collectOpen( pManager, listState );
-        return listState.empty() ? nullptr : listState.front();
+        if ( pManager == nullptr )
+            return nullptr;
+        for ( const SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
+        {
+            if ( pState->isInitialized() )
+                return pState;
+        }
+        return nullptr;
     }
 
     bool SessionStateComponent::applyPendingState()

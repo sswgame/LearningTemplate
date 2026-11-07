@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -69,6 +70,18 @@ namespace sw
     {
         setCanEverTick( true );
         _pose._phase = KillcamPhase::Done;
+    }
+
+    void KillcamComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<KillcamComponent>( this );
+    }
+
+    void KillcamComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<KillcamComponent>( this );
+        Component::onUnregister( manager );
     }
 
     void KillcamComponent::onEndPlay()
@@ -145,13 +158,8 @@ namespace sw
 
     KillcamComponent* KillcamComponent::findInScene( const GameObjectManager& manager )
     {
-        KillcamComponent* pFound = nullptr;
-        manager.forEachComponentOfType<KillcamComponent>( [&pFound]( KillcamComponent* pKillcam )
-        {
-            if ( pFound == nullptr )
-                pFound = pKillcam;
-        } );
-        return pFound;
+        const ComponentRegistry::View<KillcamComponent> listKillcam = manager.getComponentRegistry().getAll<KillcamComponent>();
+        return listKillcam.empty() ? nullptr : listKillcam[0];
     }
 
     void KillcamComponent::applyPose()

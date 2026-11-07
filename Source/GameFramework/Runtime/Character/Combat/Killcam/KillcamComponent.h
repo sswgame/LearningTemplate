@@ -30,6 +30,10 @@ namespace sw
         KillcamComponent();
         virtual ~KillcamComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 쏘는 쪽이 기록할 킬캠을 씬을 훑지 않고 찾는다(`findInScene`). */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내립니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
@@ -50,7 +54,7 @@ namespace sw
         KillcamPhase           getPhase() const { return _pose._phase; }
         const KillcamSettings& getSettings() const { return _settings; }
 
-        /** @brief 씬의 첫 킬캠입니다(쏘는 쪽이 기록을 넣을 곳). 없으면 nullptr 입니다 — 킬캠이 없는 씬은 기록하지 않는다. */
+        /** @brief 씬의 첫 킬캠(등록 순서)입니다(쏘는 쪽이 기록을 넣을 곳). 없으면 nullptr 입니다 — 킬캠이 없는 씬은 기록하지 않는다. 레지스트리를 읽어 씬을 훑지 않는다. */
         static KillcamComponent* findInScene( const GameObjectManager& manager );
 
     private:

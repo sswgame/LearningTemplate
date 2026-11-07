@@ -10,6 +10,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include <algorithm>
 
@@ -37,6 +38,18 @@ namespace sw
     }
 
     PairedAnimationComponent::~PairedAnimationComponent() = default;
+
+    void PairedAnimationComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<PairedAnimationComponent>( this );
+    }
+
+    void PairedAnimationComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<PairedAnimationComponent>( this );
+        Component::onUnregister( manager );
+    }
 
     void PairedAnimationComponent::onBeginPlay()
     {
@@ -160,8 +173,8 @@ namespace sw
 
     bool PairedAnimationComponent::appendRoleComponentBindings( GameObjectManager& manager, vector<PairedAnimationBinding>& inoutListBinding ) const
     {
-        vector<GameObject*> listObject;
-        manager.getAllGameObjects( listObject );
+        // 역할을 적은 컴포넌트는 레지스트리에서 찾는다(등록 순서) — 씬의 오브젝트를 모두 모으지 않는다.
+        const ComponentRegistry::View<PairedAnimationComponent> listPaired = manager.getComponentRegistry().getAll<PairedAnimationComponent>();
         for ( const PairedAnimationRoleDef& role : _def->getRoles() )
         {
             const bool bBound = VectorUtil::containsIf( inoutListBinding, [&role]( const PairedAnimationBinding& binding )
@@ -169,10 +182,10 @@ namespace sw
             if ( bBound )
                 continue;
             const SkeletalAnimatorComponent* pFound = nullptr;
-            for ( GameObject* pObject : listObject )
+            for ( const PairedAnimationComponent* pOther : listPaired )
             {
-                const PairedAnimationComponent*  pOther     = pObject->getComponent<PairedAnimationComponent>();
-                const bool                       bNamesRole = pOther != nullptr && pOther != this && pOther->_pairedAnimationPath == _pairedAnimationPath && hashed_string( pOther->_role ) == role._name;
+                GameObject*                      pObject    = pOther->getOwner();
+                const bool                       bNamesRole = pObject != nullptr && pOther != this && pOther->_pairedAnimationPath == _pairedAnimationPath && hashed_string( pOther->_role ) == role._name;
                 const SkeletalAnimatorComponent* pAnimator  = bNamesRole ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
                 if ( pAnimator == nullptr )
                     continue;

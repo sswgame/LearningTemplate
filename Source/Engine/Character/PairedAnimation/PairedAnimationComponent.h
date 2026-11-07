@@ -38,6 +38,10 @@ namespace sw
         PairedAnimationComponent();
         virtual ~PairedAnimationComponent() override;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다 — 세션 시작이 다른 역할을 적은 컴포넌트를 씬을 훑지 않고 찾는다(`appendRoleComponentBindings`). */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내립니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
         /** @brief `_bStartOnPlay` 가 켜졌으면 첫 틱에 세션 시작을 틱 뒤로 미룹니다(다른 참가자의 애니메이터가 모두 선 뒤). 그 밖에는 할 일이 없습니다. */
