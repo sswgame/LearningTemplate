@@ -23,8 +23,12 @@ namespace sw
         RHIDescriptorIndex     _arrShaderResource[shaderslot::wgpu::kTRange]; ///< t 슬롯 — 머티리얼 · 엔진 텍스처 칸(t16..)은 텍스처 번호, 그 앞은 버퍼 번호
         RHIDescriptorIndex     _arrUnorderedAccess[shaderslot::wgpu::kURange];
         uint32                 _arrRootConstant[shaderslot::kRootConstantDwords];
+        WGPUBuffer             _rootSliceBuffer; ///< 지금 루트 상수를 담은 상수 링 칸(같은 값이면 그리기마다 새 칸을 받지 않는다 — 바인드 그룹 캐시가 맞으려면 칸이 같아야 한다)
+        uint64                 _rootSliceOffset;
+        uint64                 _rootSliceSerial;      ///< 그 칸을 받은 프레임 시리얼(다른 프레임이면 링이 다시 쓰였다)
         uint8                  _bRootConstantSet : 1; ///< 루트 상수를 한 번이라도 적었다(아니면 b2 는 0 으로 채운 칸이다)
-        [[maybe_unused]] uint8 _reserved         : 7;
+        uint8                  _bRootSliceDirty  : 1; ///< 칸을 받은 뒤 루트 상수가 바뀌었다
+        [[maybe_unused]] uint8 _reserved         : 6;
 
         WebGPUSlotState();
     };
@@ -63,6 +67,8 @@ namespace sw
         void detachFromDevice();
         /** @brief 열린 계산 패스를 닫습니다(렌더 패스 · 복사 앞, 리스트 끝). */
         void endComputePass();
+        /** @brief 이 지점의 GPU 시각을 @p slotIndex 에 적습니다(빈 계산 패스의 시작 시각). 렌더 패스 안이면 적지 않고 오류로 남긴다 — 엔진은 패스 사이에서만 적는다. */
+        void writeTimestamp( uint32 slotIndex ) override;
 
         void setViewport( const RHIViewport& viewport ) override;
         void setScissorRect( const RHIScissorRect& rect ) override;
@@ -95,8 +101,11 @@ namespace sw
         void                     setComputePipelineStateNative( RHIPipelineStateHandle pso ) override;
         void                     dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void                     dispatchIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset ) override;
-        /** @brief WebGPU 는 자원 상태를 구현이 따라간다 — 전이가 없다(언리얼 · 유니티의 WebGPU 백엔드도 같다, 기억). */
-        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override { (void)texture; }
+        /**
+         * @brief WebGPU 는 자원 상태를 구현이 따라간다 — 전이가 없다(언리얼 · 유니티의 WebGPU 백엔드도 같다, 기억). 깊이 텍스처는 여기서 R32 실수 사본을 채운다.
+         * @details 깊이를 읽는 셰이더는 사본을 읽는다(`WebGPURHIDevice::createDepthSampleCopy`). 다른 백엔드도 깊이를 읽기 전에 이 함수를 부르는 계약이라(Vulkan 레이아웃 전이) 자리가 같다.
+         */
+        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { (void)texture; }
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
@@ -110,8 +119,13 @@ namespace sw
         WGPUCommandEncoder getEncoder() const;
         /** @brief 계산 패스를 엽니다(없으면). 렌더 패스가 열려 있으면 기반이 이미 닫았다. */
         WGPUComputePassEncoder ensureComputePass();
-        /** @brief 파이프라인의 그룹 0 을 지금 슬롯으로 짓습니다. 셰이더가 자원을 쓰지 않으면 nullptr 입니다(걸지 않는다). */
-        [[nodiscard]] WGPUBindGroup createBindGroup( const WebGPUPipelineRecord& pipeline, const WebGPUSlotState& slots ) const;
+        /**
+         * @brief 파이프라인의 그룹 0 을 지금 슬롯으로 찾거나 짓습니다(장치의 프레임 캐시 — 그룹은 캐시가 가진다). 셰이더가 자원을 쓰지 않으면 nullptr 입니다(걸지 않는다).
+         * @details 루트 상수 칸은 값이 바뀔 때만 새로 받는다(`WebGPUSlotState::_bRootSliceDirty`) — 받을 때마다 다른 칸이면 같은 재질의 그리기도 캐시가 맞지 않는다.
+         */
+        [[nodiscard]] WGPUBindGroup findBindGroup( const WebGPUPipelineRecord& pipeline, WebGPUSlotState& slots );
+        /** @brief 텍스처 칸 @p binding 에 걸 뷰입니다. 깊이 텍스처는 이 프레임에 채운 R32 사본이어야 한다 — 아니면 오류로 남긴다(`prepareTextureForShaderRead` 누락). */
+        [[nodiscard]] WGPUTextureView resolveSampledView( RHIDescriptorIndex index ) const;
         /** @brief 그리기 직전에 파이프라인 · 그룹 · 정점 버퍼를 겁니다. 걸 수 없으면 false 이고 그리기를 버린다. */
         [[nodiscard]] bool prepareDraw();
         /** @brief 인덱스 버퍼를 겁니다(인덱스 그리기). 걸지 않았거나 부서졌으면 false 입니다. */
@@ -144,6 +158,7 @@ namespace sw
 
         void beginCommandList() override { _context.beginCommandList(); }
         void endCommandList() override { _context.endCommandList(); }
+        void writeTimestamp( uint32 slotIndex ) override { _context.writeTimestamp( slotIndex ); }
         /** @brief 닫은 커맨드 버퍼를 넘깁니다(디바이스가 제출 목록에 넣는다). */
         [[nodiscard]] WGPUCommandBuffer takeFinishedCommandBuffer() { return _context.takeFinishedCommandBuffer(); }
         /** @brief 디바이스가 먼저 내려갔다 — 리스트의 객체를 놓습니다(`RHILiveCommandListUtil::detachAll`). */

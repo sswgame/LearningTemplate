@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHICommandContext.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -55,7 +56,11 @@ namespace sw
         , _arrShaderResource{}
         , _arrUnorderedAccess{}
         , _arrRootConstant{}
+        , _rootSliceBuffer{ nullptr }
+        , _rootSliceOffset{ 0 }
+        , _rootSliceSerial{ 0 }
         , _bRootConstantSet{ SW_FALSE }
+        , _bRootSliceDirty{ SW_TRUE }
         , _reserved{ 0 }
     {
         WebGPURHICommandContextInternal::fillInvalid( _arrConstantBuffer, std::size( _arrConstantBuffer ) );
@@ -319,6 +324,7 @@ namespace sw
             SW_FATAL( "WebGPU root constants overflow: offset %# + %# dwords > %#", destOffsetIn32BitValues, num32BitValues, shaderslot::kRootConstantDwords );
         Memory::copy( &slots._arrRootConstant[destOffsetIn32BitValues], pData, num32BitValues * sizeof( uint32 ) );
         slots._bRootConstantSet = SW_TRUE;
+        slots._bRootSliceDirty  = SW_TRUE;
     }
 
     void WebGPURHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
@@ -384,8 +390,21 @@ namespace sw
         pRecord->_overrideOffset = ringOffset;
     }
 
+    WGPUTextureView WebGPURHICommandContext::resolveSampledView( RHIDescriptorIndex index ) const
+    {
+        const WebGPUBindlessEntry* pEntry   = _pDevice->_textureTable.find( index );
+        const WebGPUTextureRecord* pTexture = pEntry != nullptr ? _pDevice->findTexture( pEntry->_handle ) : nullptr;
+        if ( pTexture == nullptr )
+            return _pDevice->_defaultTextureView;
+        // 깊이 텍스처의 샘플 뷰는 R32 사본이다 — 이 프레임에 채우지 않았으면 지난 깊이(또는 0)를 읽는다. 부르는 쪽이 `prepareTextureForShaderRead` 를 빠뜨렸다.
+        if ( pTexture->_depthSampleTexture != nullptr && pTexture->_depthCopySerial != _pDevice->getFrameSerial() )
+            SW_LOG_ERROR_ONCE_ID( "WebGPU.DepthSampledWithoutPrepare", "WebGPU: a depth texture (%#x%#) is sampled without prepareTextureForShaderRead this frame - its R32 copy is stale",
+                                  pTexture->_desc._width, pTexture->_desc._height );
+        return pTexture->_sampleView;
+    }
+
     // 길이 유지(긴 함수 정리 기준): 바인딩 번호의 띠(b · t · s · u)마다 한 갈래라 나누면 같은 표를 네 번 넘긴다.
-    WGPUBindGroup WebGPURHICommandContext::createBindGroup( const WebGPUPipelineRecord& pipeline, const WebGPUSlotState& slots ) const
+    WGPUBindGroup WebGPURHICommandContext::findBindGroup( const WebGPUPipelineRecord& pipeline, WebGPUSlotState& slots )
     {
         namespace wgpu = shaderslot::wgpu;
         using Internal = WebGPURHICommandContextInternal;
@@ -433,9 +452,7 @@ namespace sw
                 const RHIDescriptorIndex index      = slot < wgpu::kTRange ? slots._arrShaderResource[slot] : kInvalidDescriptorIndex;
                 if ( bTextureAt )
                 {
-                    const WebGPUBindlessEntry* pEntry   = _pDevice->_textureTable.find( index );
-                    const WebGPUTextureRecord* pTexture = pEntry != nullptr ? _pDevice->findTexture( pEntry->_handle ) : nullptr;
-                    listEntry.push_back( Internal::makeTextureEntry( binding, pTexture != nullptr ? pTexture->_sampleView : _pDevice->_defaultTextureView ) );
+                    listEntry.push_back( Internal::makeTextureEntry( binding, resolveSampledView( index ) ) );
                     continue;
                 }
                 const WebGPUBindlessEntry* pEntry  = _pDevice->_bufferTable.find( index );
@@ -448,10 +465,14 @@ namespace sw
             const uint32 slot = binding - wgpu::kBShift;
             if ( slot == shaderslot::kRootConstantEmulationSlot )
             {
-                WGPUBuffer ringBuffer = nullptr;
-                uint64     ringOffset = 0;
-                _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), ringBuffer, ringOffset );
-                listEntry.push_back( Internal::makeBufferEntry( binding, ringBuffer, ringOffset, sizeof( slots._arrRootConstant ) ) );
+                const bool bNeedSlice = slots._bRootSliceDirty != SW_FALSE || slots._rootSliceSerial != _pDevice->getFrameSerial() || slots._rootSliceBuffer == nullptr;
+                if ( bNeedSlice )
+                {
+                    _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), slots._rootSliceBuffer, slots._rootSliceOffset );
+                    slots._rootSliceSerial = _pDevice->getFrameSerial();
+                    slots._bRootSliceDirty = SW_FALSE;
+                }
+                listEntry.push_back( Internal::makeBufferEntry( binding, slots._rootSliceBuffer, slots._rootSliceOffset, sizeof( slots._arrRootConstant ) ) );
                 continue;
             }
             const WebGPUBindlessEntry* pEntry  = slot < wgpu::kBRange ? _pDevice->_bufferTable.find( slots._arrConstantBuffer[slot] ) : nullptr;
@@ -465,12 +486,8 @@ namespace sw
             listEntry.push_back( bRenamed ? Internal::makeBufferEntry( binding, pBuffer->_overrideBuffer, pBuffer->_overrideOffset, pBuffer->_sizeBytes )
                                           : Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes ) );
         }
-        WGPUBindGroupDescriptor desc{};
-        desc.layout     = pipeline._groupLayout;
-        desc.entryCount = listEntry.size();
-        desc.entries    = listEntry.data();
-        // shortcut: 그리기마다 그룹을 새로 짓는다(브라우저에서 JS 객체 하나), 프레임 시간이 그룹 생성에 드러나면 (레이아웃, 항목) 해시로 프레임 캐시를 둔다.
-        return wgpuDeviceCreateBindGroup( _pDevice->_device, &desc );
+        // 같은 (레이아웃, 항목) 은 프레임 안에서 한 번만 짓는다 — 브라우저에서 그룹 하나는 JS 객체 하나라 그리기마다 지으면 GC 압력이 그리기 수만큼 는다.
+        return _pDevice->_bindGroupCache.findOrCreate( _pDevice->_device, pipeline._groupLayout, listEntry );
     }
 
     // ------------------------------------------------------------------------------
@@ -498,12 +515,9 @@ namespace sw
         } );
         if ( bBound == false )
             return false;
-        const WGPUBindGroup group = createBindGroup( *pPipeline, _state._graphics );
+        const WGPUBindGroup group = findBindGroup( *pPipeline, _state._graphics );
         if ( group != nullptr )
-        {
-            wgpuRenderPassEncoderSetBindGroup( _state._renderPass, 0, group, 0, nullptr );
-            wgpuBindGroupRelease( group ); // 인코더가 기록한 동안 붙들고 있다(명세)
-        }
+            wgpuRenderPassEncoderSetBindGroup( _state._renderPass, 0, group, 0, nullptr ); // 그룹은 캐시가 가진다 — 인코더가 기록한 동안 붙들고 있다(명세)
         return true;
     }
 
@@ -583,12 +597,9 @@ namespace sw
         if ( pass == nullptr )
             return nullptr;
         wgpuComputePassEncoderSetPipeline( pass, pPipeline->_computePipeline );
-        const WGPUBindGroup group = createBindGroup( *pPipeline, _state._compute );
+        const WGPUBindGroup group = findBindGroup( *pPipeline, _state._compute );
         if ( group != nullptr )
-        {
             wgpuComputePassEncoderSetBindGroup( pass, 0, group, 0, nullptr );
-            wgpuBindGroupRelease( group );
-        }
         return pass;
     }
 
@@ -646,6 +657,36 @@ namespace sw
         target.texture = dstTexture;
         const WGPUExtent3D extent{ MathUtil::min( width, dstWidth ), MathUtil::min( height, dstHeight ), 1 };
         wgpuCommandEncoderCopyTextureToTexture( encoder, &source, &target, &extent );
+    }
+
+    void WebGPURHICommandContext::prepareTextureForShaderReadNative( RHITextureHandle texture )
+    {
+        WebGPUTextureRecord* const pRecord = _pDevice != nullptr ? _pDevice->findTexture( texture ) : nullptr;
+        if ( pRecord == nullptr || pRecord->_depthSampleTexture == nullptr )
+            return; // 깊이가 아닌 텍스처는 구현이 상태를 따라간다
+        if ( _state._renderPass != nullptr )
+        {
+            // 패스 안에서는 다른 렌더 패스(사본)를 열 수 없다 — 다른 백엔드도 패스 안의 전이는 결함이다(Vulkan 레이아웃 전이는 패스 밖이어야 한다).
+            SW_LOG_ERROR_ONCE_ID( "WebGPU.DepthPrepareInsidePass", "WebGPU: prepareTextureForShaderRead on a depth texture inside an open render pass - the R32 copy is not refreshed" );
+            return;
+        }
+        endComputePass();
+        const WGPUCommandEncoder encoder = getEncoder();
+        if ( encoder != nullptr )
+            _pDevice->encodeDepthSampleCopy( encoder, *pRecord );
+    }
+
+    void WebGPURHICommandContext::writeTimestamp( uint32 slotIndex )
+    {
+        if ( _pDevice == nullptr )
+            return;
+        if ( _state._renderPass != nullptr )
+        {
+            SW_LOG_ERROR_ONCE_ID( "WebGPU.TimestampInsidePass", "WebGPU: writeTimestamp inside an open render pass - WebGPU writes timestamps only at pass boundaries" );
+            return;
+        }
+        endComputePass();
+        _pDevice->writeTimestampSlot( getEncoder(), slotIndex );
     }
 
     void WebGPURHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )

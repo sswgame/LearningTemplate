@@ -508,6 +508,23 @@ namespace sw
             sliceDesc.aspect          = WGPUTextureAspect_All;
             record._listSliceView.push_back( wgpuTextureCreateView( record._texture, &sliceDesc ) );
         }
+        // 셰이더가 읽는 깊이는 R32 실수 사본으로 읽는다 — WGSL 은 깊이 텍스처를 `texture_depth_*` 로만 받는데 엔진 셰이더는 실수 텍스처로 읽는다(`createDepthSampleCopy`).
+        if ( bDepth && desc._bIsShaderResource != SW_FALSE && _pDevice->createDepthSampleCopy( record ) == false )
+        {
+            SW_LOG_ERROR_ID( "WebGPU.DepthSampleCopyFailed", "WebGPU: the R32 float copy of a %#x%# depth texture could not be created", desc._width, desc._height );
+            WebGPUTextureRecord failed = std::move( record );
+            _pDevice->releaseDepthSampleCopy( failed );
+            for ( const WGPUTextureView view : failed._listSliceView )
+            {
+                if ( view != nullptr )
+                    wgpuTextureViewRelease( view );
+            }
+            if ( failed._sampleView != nullptr )
+                wgpuTextureViewRelease( failed._sampleView );
+            wgpuTextureDestroy( failed._texture );
+            wgpuTextureRelease( failed._texture );
+            return 0;
+        }
         return _pDevice->_textures.insert( std::move( record ) );
     }
 
@@ -520,6 +537,7 @@ namespace sw
         // 그 텍스처의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `registerBindlessTexture`).
         _pDevice->_textureTable.removeHandle( texture, true );
         _pDevice->_uavTable.removeHandle( texture, true );
+        _pDevice->releaseDepthSampleCopy( record );
         const WGPUTexture       native     = record._texture;
         const WGPUTextureView   sampleView = record._sampleView;
         vector<WGPUTextureView> listSlice  = std::move( record._listSliceView );

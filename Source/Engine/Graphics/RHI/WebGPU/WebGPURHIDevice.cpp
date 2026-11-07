@@ -5,6 +5,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -20,10 +21,28 @@ namespace sw
     {
         struct WebGPURHIDeviceInternal
         {
-            static constexpr uint64 kConstantRingBytes  = 4ull * 1024ull * 1024ull; ///< 프레임마다의 상수 링(넘치면 더 큰 링을 하나 더 만든다)
-            static constexpr uint64 kConstantAlignment  = 256;                      ///< 상수 버퍼 바인딩 오프셋 정렬(기본 한도 minUniformBufferOffsetAlignment)
-            static constexpr uint64 kDefaultBufferBytes = 64ull * 1024ull;          ///< 빈 슬롯에 거는 버퍼(셰이더가 읽는 최소 크기를 넘게 넉넉히)
-            static constexpr uint64 kIdleWaitTimeoutMs  = 10000;                    ///< 네이티브 `waitIdle` 의 상한(DX11 · 전송 대기와 같다)
+            static constexpr uint64 kConstantRingBytes      = 4ull * 1024ull * 1024ull;                     ///< 프레임마다의 상수 링(넘치면 더 큰 링을 하나 더 만든다)
+            static constexpr uint64 kConstantAlignment      = 256;                                          ///< 상수 버퍼 바인딩 오프셋 정렬(기본 한도 minUniformBufferOffsetAlignment)
+            static constexpr uint64 kDefaultBufferBytes     = 64ull * 1024ull;                              ///< 빈 슬롯에 거는 버퍼(셰이더가 읽는 최소 크기를 넘게 넉넉히)
+            static constexpr uint64 kIdleWaitTimeoutMs      = 10000;                                        ///< 네이티브 `waitIdle` 의 상한(DX11 · 전송 대기와 같다)
+            static constexpr uint32 kTimestampReadbackCount = constant::render::kMaxFrameCountInFlight + 1; ///< 되읽기 버퍼 풀 — 매핑이 늦어도 그만큼은 이어 잰다(넘치면 그 프레임을 건너뛴다)
+            static constexpr uint64 kTimestampBytes         = static_cast<uint64>( constant::render::kMaxGPUTimestampSlot ) * sizeof( uint64 );
+
+            /**
+             * @brief 깊이 → R32 실수 사본의 WGSL 입니다. 큰 삼각형 하나로 덮고 같은 텍셀의 깊이를 `textureLoad` 로 옮긴다(필터 없음 — 크기가 같다).
+             * @details 출력은 vec4f 다 — 단일 채널 첨부에도 넉넉한 성분은 버려진다(명세: 출력 성분 수가 형식보다 적으면 안 된다).
+             *          https://www.w3.org/TR/WGSL/#textureload — `textureLoad(t: texture_depth_2d, coords, level) -> f32`.
+             */
+            static constexpr const utf8* kDepthCopyWGSL = R"(
+@group(0) @binding(0) var sourceDepth : texture_depth_2d;
+@vertex fn vsMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
+    let corner = vec2f(f32((vertexIndex << 1u) & 2u), f32(vertexIndex & 2u));
+    return vec4f(corner * 2.0 - 1.0, 0.0, 1.0);
+}
+@fragment fn fsMain(@builtin(position) position : vec4f) -> @location(0) vec4f {
+    return vec4f(textureLoad(sourceDepth, vec2i(position.xy), 0), 0.0, 0.0, 1.0);
+}
+)";
 
             /** @brief 어댑터 요청 결과를 받습니다(WaitAnyOnly — `waitForFuture` 가 기다린다). */
             static void onAdapter( WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
@@ -111,6 +130,88 @@ namespace sw
             if ( _listEntry[index]._handle == handle && _listEntry[index]._bTexture == kind )
                 remove( static_cast<RHIDescriptorIndex>( index ) );
         }
+    }
+
+    // ------------------------------------------------------------------------------
+    // 바인드 그룹 캐시
+    // ------------------------------------------------------------------------------
+    WebGPUBindGroupCache::WebGPUBindGroupCache()
+        : _mapGroup{}
+        , _createdCount{ 0 }
+        , _hitCount{ 0 }
+    {
+    }
+
+    uint64 WebGPUBindGroupCache::makeKeyHash( WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
+    {
+        // 칸마다 섞는다 — 구조체 통째로 해시하면 패딩 바이트(값이 정해지지 않은 자리)가 섞여 같은 항목이 다른 키가 된다.
+        const auto appendValue = []( uint64 hash, const auto& value )
+        { return HashUtil::appendBytes64( hash, &value, sizeof( value ) ); };
+        uint64 hash = appendValue( HashUtil::kFNVOffset64, layout );
+        for ( const WGPUBindGroupEntry& entry : listEntry )
+        {
+            hash = appendValue( hash, entry.binding );
+            hash = appendValue( hash, entry.buffer );
+            hash = appendValue( hash, entry.offset );
+            hash = appendValue( hash, entry.size );
+            hash = appendValue( hash, entry.sampler );
+            hash = appendValue( hash, entry.textureView );
+        }
+        return hash;
+    }
+
+    bool WebGPUBindGroupCache::isSameEntryList( const vector<WGPUBindGroupEntry>& listA, const vector<WGPUBindGroupEntry>& listB )
+    {
+        if ( listA.size() != listB.size() )
+            return false;
+        for ( size_t index = 0; index < listA.size(); ++index )
+        {
+            const WGPUBindGroupEntry& entryA = listA[index];
+            const WGPUBindGroupEntry& entryB = listB[index];
+            const bool                bSame  = entryA.binding == entryB.binding && entryA.buffer == entryB.buffer && entryA.offset == entryB.offset && entryA.size == entryB.size &&
+                               entryA.sampler == entryB.sampler && entryA.textureView == entryB.textureView;
+            if ( bSame == false )
+                return false;
+        }
+        return true;
+    }
+
+    WGPUBindGroup WebGPUBindGroupCache::findOrCreate( WGPUDevice device, WGPUBindGroupLayout layout, const vector<WGPUBindGroupEntry>& listEntry )
+    {
+        vector<CachedGroup>& listBucket = _mapGroup[makeKeyHash( layout, listEntry )];
+        for ( const CachedGroup& cached : listBucket )
+        {
+            if ( cached._layout == layout && isSameEntryList( cached._listEntry, listEntry ) )
+            {
+                ++_hitCount;
+                return cached._group;
+            }
+        }
+        WGPUBindGroupDescriptor desc{};
+        desc.layout               = layout;
+        desc.entryCount           = listEntry.size();
+        desc.entries              = listEntry.data();
+        const WGPUBindGroup group = wgpuDeviceCreateBindGroup( device, &desc );
+        if ( group == nullptr )
+            return nullptr;
+        listBucket.push_back( CachedGroup{ layout, listEntry, group } );
+        ++_createdCount;
+        return group;
+    }
+
+    void WebGPUBindGroupCache::clear()
+    {
+        for ( auto& [hash, listBucket] : _mapGroup )
+        {
+            (void)hash;
+            for ( const CachedGroup& cached : listBucket )
+            {
+                wgpuBindGroupRelease( cached._group );
+            }
+        }
+        _mapGroup.clear();
+        _createdCount = 0;
+        _hitCount     = 0;
     }
 
     // ------------------------------------------------------------------------------
@@ -326,6 +427,17 @@ namespace sw
         , _defaultTexture{ nullptr }
         , _defaultTextureView{ nullptr }
         , _defaultBuffer{ nullptr }
+        , _depthCopyPipeline{ nullptr }
+        , _depthCopyGroupLayout{ nullptr }
+        , _bindGroupCache{}
+        , _timestampProvider{ *this }
+        , _timestampQuerySet{ nullptr }
+        , _timestampResolveBuffer{ nullptr }
+        , _listTimestampReadback{}
+        , _pPendingTimestampReadback{ nullptr }
+        , _timestampWrittenMask{ 0 }
+        , _timestampFrame{}
+        , _bTimestampEnabled{ SW_FALSE }
         , _listConstantRing{}
         , _activeRingIndex{ 0 }
         , _releaseQueue{}
@@ -347,7 +459,10 @@ namespace sw
         , _bTextureASTC{ SW_FALSE }
         , _bTextureETC2{ SW_FALSE }
         , _bDepthClipControl{ SW_FALSE }
+        , _bTimestampQuery{ SW_FALSE }
+        , _reservedFeature{ 0 }
     {
+        _pTimestampProvider = &_timestampProvider;
     }
 
     WebGPURHIDevice::~WebGPURHIDevice()
@@ -413,6 +528,7 @@ namespace sw
         _bDepth32Stencil8     = enableOptional( WGPUFeatureName_Depth32FloatStencil8 );
         _bTextureFormatsTier1 = enableOptional( WGPUFeatureName_TextureFormatsTier1 );
         _bDepthClipControl    = enableOptional( WGPUFeatureName_DepthClipControl );
+        _bTimestampQuery      = enableOptional( WGPUFeatureName_TimestampQuery ); // GPU 패스 시간(브라우저는 기본 100 µs 단위로 거칠게 준다 — 명세의 정밀도 제한)
 
         // 한도는 어댑터가 주는 최대를 그대로 요구한다 — 기본 한도(텍스처 16 · 저장 버퍼 8 칸/단계)를 넘는 패스가 있다. 패스가 그마저 넘으면 PSO 생성이 검증 오류로 드러난다.
         if ( wgpuAdapterGetLimits( _adapter, &_limits ) != WGPUStatus_Success )
@@ -493,7 +609,294 @@ namespace sw
         bufferDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst;
         bufferDesc.size  = WebGPURHIDeviceInternal::kDefaultBufferBytes;
         _defaultBuffer   = wgpuDeviceCreateBuffer( _device, &bufferDesc );
-        return _defaultTextureView != nullptr && _defaultBuffer != nullptr; // 새 버퍼 · 텍스처는 0 으로 시작한다(명세)
+        return _defaultTextureView != nullptr && _defaultBuffer != nullptr && createDepthCopyPipeline(); // 새 버퍼 · 텍스처는 0 으로 시작한다(명세)
+    }
+
+    bool WebGPURHIDevice::createDepthCopyPipeline()
+    {
+        WGPUShaderSourceWGSL source{};
+        source.chain.sType = WGPUSType_ShaderSourceWGSL;
+        source.code        = WebGPURHIUtil::toStringView( WebGPURHIDeviceInternal::kDepthCopyWGSL );
+        WGPUShaderModuleDescriptor moduleDesc{};
+        moduleDesc.nextInChain        = &source.chain;
+        moduleDesc.label              = WebGPURHIUtil::toStringView( "SW Depth Sample Copy" );
+        const WGPUShaderModule module = wgpuDeviceCreateShaderModule( _device, &moduleDesc );
+        if ( module == nullptr )
+            return false;
+        WGPUColorTargetState target{};
+        target.format    = WGPUTextureFormat_R32Float;
+        target.writeMask = WGPUColorWriteMask_All;
+        WGPUFragmentState fragment{};
+        fragment.module      = module;
+        fragment.entryPoint  = WebGPURHIUtil::toStringView( "fsMain" );
+        fragment.targetCount = 1;
+        fragment.targets     = &target;
+        WGPURenderPipelineDescriptor pipelineDesc{};
+        pipelineDesc.label              = WebGPURHIUtil::toStringView( "SW Depth Sample Copy" );
+        pipelineDesc.layout             = nullptr; // 자동 레이아웃 — 그룹 0 은 깊이 텍스처 하나(sampleType depth)
+        pipelineDesc.vertex.module      = module;
+        pipelineDesc.vertex.entryPoint  = WebGPURHIUtil::toStringView( "vsMain" );
+        pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipelineDesc.primitive.cullMode = WGPUCullMode_None;
+        pipelineDesc.multisample.count  = 1;
+        pipelineDesc.multisample.mask   = MathUtil::kMaxUInt32;
+        pipelineDesc.fragment           = &fragment;
+        _depthCopyPipeline              = wgpuDeviceCreateRenderPipeline( _device, &pipelineDesc );
+        wgpuShaderModuleRelease( module );
+        if ( _depthCopyPipeline == nullptr )
+            return false;
+        _depthCopyGroupLayout = wgpuRenderPipelineGetBindGroupLayout( _depthCopyPipeline, 0 );
+        return _depthCopyGroupLayout != nullptr;
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 사본 텍스처 · 샘플 뷰 · 면마다의 (첨부 뷰, 깊이 뷰, 그룹) 셋을 한 자리에서 짓는다 — 나누면 같은 면 설명을 세 번 넘긴다.
+    bool WebGPURHIDevice::createDepthSampleCopy( WebGPUTextureRecord& record )
+    {
+        const uint32          layers = MathUtil::max( record._desc._arraySize, 1u );
+        WGPUTextureDescriptor copyDesc{};
+        copyDesc.label             = WebGPURHIUtil::toStringView( "SW Depth Sample Copy" );
+        copyDesc.usage             = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_RenderAttachment;
+        copyDesc.dimension         = WGPUTextureDimension_2D;
+        copyDesc.size              = WGPUExtent3D{ record._desc._width, record._desc._height, layers };
+        copyDesc.format            = WGPUTextureFormat_R32Float;
+        copyDesc.mipLevelCount     = 1; // 깊이 밉은 사본에 옮기지 않는다 — 엔진의 깊이 텍스처는 밉 하나다(HZB 는 따로 만든 실수 텍스처다)
+        copyDesc.sampleCount       = 1;
+        record._depthSampleTexture = wgpuDeviceCreateTexture( _device, &copyDesc );
+        if ( record._depthSampleTexture == nullptr )
+            return false;
+        WGPUTextureViewDescriptor sampleDesc{};
+        sampleDesc.format          = WGPUTextureFormat_R32Float;
+        sampleDesc.dimension       = record._desc._dimension == RHITextureDimension::TextureCube ? WGPUTextureViewDimension_Cube
+                                                                                                 : ( record._desc._dimension == RHITextureDimension::Texture2DArray ? WGPUTextureViewDimension_2DArray
+                                                                                                                                                                    : WGPUTextureViewDimension_2D );
+        sampleDesc.baseMipLevel    = 0;
+        sampleDesc.mipLevelCount   = 1;
+        sampleDesc.baseArrayLayer  = 0;
+        sampleDesc.arrayLayerCount = layers;
+        sampleDesc.aspect          = WGPUTextureAspect_All;
+        if ( record._sampleView != nullptr )
+            wgpuTextureViewRelease( record._sampleView ); // 깊이 측면 샘플 뷰는 셰이더가 실수로 읽을 수 없다 — 사본의 뷰로 바꾼다
+        record._sampleView = wgpuTextureCreateView( record._depthSampleTexture, &sampleDesc );
+        for ( uint32 layer = 0; layer < layers; ++layer )
+        {
+            WGPUTextureViewDescriptor targetDesc{};
+            targetDesc.format          = WGPUTextureFormat_R32Float;
+            targetDesc.dimension       = WGPUTextureViewDimension_2D;
+            targetDesc.mipLevelCount   = 1;
+            targetDesc.baseArrayLayer  = layer;
+            targetDesc.arrayLayerCount = 1;
+            targetDesc.aspect          = WGPUTextureAspect_All;
+            record._listDepthCopyTarget.push_back( wgpuTextureCreateView( record._depthSampleTexture, &targetDesc ) );
+            WGPUTextureViewDescriptor readDesc{};
+            readDesc.format                = record._wgpuFormat;
+            readDesc.dimension             = WGPUTextureViewDimension_2D;
+            readDesc.mipLevelCount         = 1;
+            readDesc.baseArrayLayer        = layer;
+            readDesc.arrayLayerCount       = 1;
+            readDesc.aspect                = WGPUTextureAspect_DepthOnly;
+            const WGPUTextureView readView = wgpuTextureCreateView( record._texture, &readDesc );
+            record._listDepthReadView.push_back( readView );
+            WGPUBindGroupEntry entry{};
+            entry.binding     = 0;
+            entry.textureView = readView;
+            WGPUBindGroupDescriptor groupDesc{};
+            groupDesc.layout     = _depthCopyGroupLayout;
+            groupDesc.entryCount = 1;
+            groupDesc.entries    = &entry;
+            record._listDepthCopyGroup.push_back( readView != nullptr ? wgpuDeviceCreateBindGroup( _device, &groupDesc ) : nullptr );
+            if ( record._listDepthCopyTarget.back() == nullptr || record._listDepthCopyGroup.back() == nullptr )
+                return false;
+        }
+        return record._sampleView != nullptr;
+    }
+
+    void WebGPURHIDevice::encodeDepthSampleCopy( WGPUCommandEncoder encoder, WebGPUTextureRecord& record )
+    {
+        // shortcut: 부를 때마다 옮긴다(깊이를 다시 쓰지 않았어도), 프레임 시간에 사본 패스가 드러나면 깊이 첨부로 연 패스가 사본을 낡았다고 적게 한다.
+        for ( size_t layer = 0; layer < record._listDepthCopyGroup.size(); ++layer )
+        {
+            WGPURenderPassColorAttachment color{};
+            color.view       = record._listDepthCopyTarget[layer];
+            color.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+            color.loadOp     = WGPULoadOp_Clear; // 화면 전체를 덮는다 — 앞 내용을 읽지 않는다(타일 GPU 는 불러오기를 건너뛴다)
+            color.storeOp    = WGPUStoreOp_Store;
+            color.clearValue = WGPUColor{ 0.0, 0.0, 0.0, 0.0 };
+            WGPURenderPassDescriptor passDesc{};
+            passDesc.label                   = WebGPURHIUtil::toStringView( "SW Depth Sample Copy" );
+            passDesc.colorAttachmentCount    = 1;
+            passDesc.colorAttachments        = &color;
+            const WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass( encoder, &passDesc );
+            if ( pass == nullptr )
+                return;
+            wgpuRenderPassEncoderSetPipeline( pass, _depthCopyPipeline );
+            wgpuRenderPassEncoderSetBindGroup( pass, 0, record._listDepthCopyGroup[layer], 0, nullptr );
+            wgpuRenderPassEncoderDraw( pass, 3, 1, 0, 0 );
+            wgpuRenderPassEncoderEnd( pass );
+            wgpuRenderPassEncoderRelease( pass );
+        }
+        record._depthCopySerial = _frameSerial;
+    }
+
+    void WebGPURHIDevice::releaseDepthSampleCopy( WebGPUTextureRecord& record )
+    {
+        if ( record._depthSampleTexture == nullptr )
+            return;
+        const WGPUTexture       copy      = record._depthSampleTexture;
+        vector<WGPUTextureView> listView  = std::move( record._listDepthCopyTarget );
+        vector<WGPUTextureView> listRead  = std::move( record._listDepthReadView );
+        vector<WGPUBindGroup>   listGroup = std::move( record._listDepthCopyGroup );
+        record._depthSampleTexture        = nullptr;
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [copy, listView, listRead, listGroup]()
+        {
+            for ( const WGPUBindGroup group : listGroup )
+            {
+                if ( group != nullptr )
+                    wgpuBindGroupRelease( group );
+            }
+            for ( const WGPUTextureView view : listRead )
+            {
+                if ( view != nullptr )
+                    wgpuTextureViewRelease( view );
+            }
+            for ( const WGPUTextureView view : listView )
+            {
+                if ( view != nullptr )
+                    wgpuTextureViewRelease( view );
+            }
+            wgpuTextureDestroy( copy );
+            wgpuTextureRelease( copy );
+        } ) );
+    }
+
+    // ------------------------------------------------------------------------------
+    // 타임스탬프
+    // ------------------------------------------------------------------------------
+    uint32 WebGPURHIDevice::getTimestampSlotCount() const
+    {
+        const bool bReady = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampQuerySet != nullptr;
+        return bReady ? constant::render::kMaxGPUTimestampSlot : 0u;
+    }
+
+    bool WebGPURHIDevice::readTimestamps( RHITimestampFrame& outFrame )
+    {
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    void WebGPURHIDevice::ensureTimestampQuerySet()
+    {
+        const bool bNotNeeded = _bTimestampQuery == SW_FALSE || _timestampQuerySet != nullptr || _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE;
+        if ( bNotNeeded )
+            return;
+        WGPUQuerySetDescriptor queryDesc{};
+        queryDesc.label    = WebGPURHIUtil::toStringView( "SW GPU Timestamps" );
+        queryDesc.type     = WGPUQueryType_Timestamp;
+        queryDesc.count    = constant::render::kMaxGPUTimestampSlot;
+        _timestampQuerySet = wgpuDeviceCreateQuerySet( _device, &queryDesc );
+        WGPUBufferDescriptor resolveDesc{};
+        resolveDesc.label       = WebGPURHIUtil::toStringView( "SW Timestamp Resolve" );
+        resolveDesc.usage       = WGPUBufferUsage_QueryResolve | WGPUBufferUsage_CopySrc;
+        resolveDesc.size        = WebGPURHIDeviceInternal::kTimestampBytes;
+        _timestampResolveBuffer = wgpuDeviceCreateBuffer( _device, &resolveDesc );
+        for ( uint32 index = 0; index < WebGPURHIDeviceInternal::kTimestampReadbackCount; ++index )
+        {
+            unique_ptr<WebGPUTimestampReadback> readback = make_unique<WebGPUTimestampReadback>();
+            WGPUBufferDescriptor                readDesc{};
+            readDesc.label    = WebGPURHIUtil::toStringView( "SW Timestamp Readback" );
+            readDesc.usage    = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
+            readDesc.size     = WebGPURHIDeviceInternal::kTimestampBytes;
+            readback->_buffer = wgpuDeviceCreateBuffer( _device, &readDesc );
+            _listTimestampReadback.push_back( std::move( readback ) );
+        }
+        if ( _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr )
+            SW_LOG_ERROR_ID( "WebGPU.TimestampQuerySetFailed", "WebGPU: the timestamp query set or its resolve buffer could not be created - GPU pass times stay empty" );
+    }
+
+    void WebGPURHIDevice::writeTimestampSlot( WGPUCommandEncoder encoder, uint32 slotIndex )
+    {
+        const bool bCannotWrite = encoder == nullptr || _timestampQuerySet == nullptr || slotIndex >= constant::render::kMaxGPUTimestampSlot ||
+                                  _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE;
+        if ( bCannotWrite )
+            return;
+        // WebGPU 는 패스 경계에서만 시각을 적는다(인코더의 writeTimestamp 는 명세에서 빠졌다) — 빈 계산 패스의 시작 시각을 이 칸에 적는다.
+        // https://www.w3.org/TR/webgpu/#dom-gpucomputepassdescriptor-timestampwrites
+        WGPUPassTimestampWrites writes{};
+        writes.querySet                  = _timestampQuerySet;
+        writes.beginningOfPassWriteIndex = slotIndex;
+        writes.endOfPassWriteIndex       = WGPU_QUERY_SET_INDEX_UNDEFINED;
+        WGPUComputePassDescriptor passDesc{};
+        passDesc.timestampWrites          = &writes;
+        const WGPUComputePassEncoder pass = wgpuCommandEncoderBeginComputePass( encoder, &passDesc );
+        if ( pass == nullptr )
+            return;
+        wgpuComputePassEncoderEnd( pass );
+        wgpuComputePassEncoderRelease( pass );
+        _timestampWrittenMask |= makeGPUTimestampSlotBit( slotIndex );
+    }
+
+    void WebGPURHIDevice::resolveTimestamps()
+    {
+        const GPUTimestampSlotMask mask = _timestampWrittenMask;
+        _timestampWrittenMask           = 0;
+        _pPendingTimestampReadback      = nullptr;
+        if ( mask == 0 || _timestampQuerySet == nullptr || _timestampResolveBuffer == nullptr || _frameEncoder == nullptr )
+            return;
+        WebGPUTimestampReadback* pFree = nullptr;
+        for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
+        {
+            if ( readback->_buffer != nullptr && readback->_state.load( std::memory_order_acquire ) == WebGPUTimestampReadback::Free )
+            {
+                pFree = readback.get();
+                break;
+            }
+        }
+        if ( pFree == nullptr )
+            return; // 앞 프레임들의 매핑이 아직이다 — 이번 프레임은 재지 않는다(기다리면 재려던 파이프라인이 멈춘다)
+        wgpuCommandEncoderResolveQuerySet( _frameEncoder, _timestampQuerySet, 0, constant::render::kMaxGPUTimestampSlot, _timestampResolveBuffer, 0 );
+        wgpuCommandEncoderCopyBufferToBuffer( _frameEncoder, _timestampResolveBuffer, 0, pFree->_buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes );
+        pFree->_writtenMask = mask;
+        pFree->_state.store( WebGPUTimestampReadback::Mapping, std::memory_order_release );
+        _pPendingTimestampReadback = pFree;
+    }
+
+    void WebGPURHIDevice::mapTimestampReadback()
+    {
+        WebGPUTimestampReadback* const pReadback = _pPendingTimestampReadback;
+        _pPendingTimestampReadback               = nullptr;
+        if ( pReadback == nullptr )
+            return;
+        WGPUBufferMapCallbackInfo mapInfo{};
+        mapInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+        mapInfo.callback  = &WebGPURHIDevice::onTimestampMapped;
+        mapInfo.userdata1 = pReadback;
+        (void)wgpuBufferMapAsync( pReadback->_buffer, WGPUMapMode_Read, 0, WebGPURHIDeviceInternal::kTimestampBytes, mapInfo );
+    }
+
+    void WebGPURHIDevice::onTimestampMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
+    {
+        (void)pUserdata2;
+        WebGPUTimestampReadback* const pReadback = static_cast<WebGPUTimestampReadback*>( pUserdata1 );
+        if ( status != WGPUMapAsyncStatus_Success )
+            SW_LOG_ERROR_ONCE_ID( "WebGPU.TimestampMapFailed", "WebGPU: timestamp readback mapping failed: %#", WebGPURHIUtil::fromStringView( message ) );
+        pReadback->_state.store( status == WGPUMapAsyncStatus_Success ? WebGPUTimestampReadback::Mapped : WebGPUTimestampReadback::Failed, std::memory_order_release );
+    }
+
+    void WebGPURHIDevice::collectTimestampReadbacks()
+    {
+        for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
+        {
+            const uint8 state = readback->_state.load( std::memory_order_acquire );
+            if ( state == WebGPUTimestampReadback::Mapped )
+            {
+                // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestamp::resolve` 가 음수로 둔다(마스크).
+                const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback->_buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
+                if ( pTick != nullptr )
+                    (void)RHITimestamp::resolve( pTick, readback->_writtenMask, 1.0, _timestampFrame );
+                wgpuBufferUnmap( readback->_buffer );
+            }
+            if ( state == WebGPUTimestampReadback::Mapped || state == WebGPUTimestampReadback::Failed )
+                readback->_state.store( WebGPUTimestampReadback::Free, std::memory_order_release );
+        }
     }
 
     bool WebGPURHIDevice::initializeInternal( const RHISwapChainDesc& desc )
@@ -539,6 +942,26 @@ namespace sw
         { (void)probe; } );
         _readbackTable.clear();
         _listFrameFence.clear();
+        _bindGroupCache.clear();
+        for ( const unique_ptr<WebGPUTimestampReadback>& readback : _listTimestampReadback )
+        {
+            if ( readback->_buffer != nullptr )
+                wgpuBufferRelease( readback->_buffer );
+        }
+        _listTimestampReadback.clear();
+        _pPendingTimestampReadback = nullptr;
+        if ( _timestampResolveBuffer != nullptr )
+            wgpuBufferRelease( _timestampResolveBuffer );
+        if ( _timestampQuerySet != nullptr )
+            wgpuQuerySetRelease( _timestampQuerySet );
+        _timestampResolveBuffer = nullptr;
+        _timestampQuerySet      = nullptr;
+        if ( _depthCopyGroupLayout != nullptr )
+            wgpuBindGroupLayoutRelease( _depthCopyGroupLayout );
+        if ( _depthCopyPipeline != nullptr )
+            wgpuRenderPipelineRelease( _depthCopyPipeline );
+        _depthCopyGroupLayout = nullptr;
+        _depthCopyPipeline    = nullptr;
         for ( ConstantRing& ring : _listConstantRing )
         {
             if ( ring._buffer != nullptr )
@@ -783,6 +1206,9 @@ namespace sw
         processCompletions();
         if ( _bDeviceLost != SW_FALSE )
             return;
+        // 지난 프레임의 그룹은 그 프레임의 커맨드가 붙들고 있다(명세) — 캐시는 놓는다. 프레임을 넘겨 들면 놓인 자원의 핸들 값이 새 객체에 다시 나갈 수 있다.
+        _bindGroupCache.clear();
+        ensureTimestampQuerySet();
         // GPU 가 끝낸 프레임의 링을 다시 쓴다 — 끝나지 않았으면 이 프레임의 첫 칸 요청이 새 링을 만든다(브라우저는 기다릴 수 없다. 링 수가 앞서간 프레임 수만큼 자란다).
         const uint64 completed = _completedFrameSerial.load( std::memory_order_acquire );
         _activeRingIndex       = static_cast<uint32>( _listConstantRing.size() );
@@ -801,9 +1227,11 @@ namespace sw
 
     void WebGPURHIDevice::endFrameInternal( bool vsync, bool bPresent )
     {
-        (void)vsync; // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        (void)vsync;         // 스왑체인 구성이 정한다(`applyVSyncInternal`)
+        resolveTimestamps(); // 프레임 인코더는 이 프레임의 마지막 세그먼트다 — 앞서 낸 리스트의 시각까지 모두 풀린다
         closeFrameEncoder();
         submitPending();
+        mapTimestampReadback();
 
         unique_ptr<WebGPUFrameFence> fence = make_unique<WebGPUFrameFence>();
         fence->_serial                     = _frameSerial;
@@ -909,6 +1337,7 @@ namespace sw
         // 네이티브(Dawn)는 이벤트를 돌려야 콜백이 온다. 브라우저는 이벤트 루프가 이미 불렀다 — 불러도 해가 없다.
         wgpuInstanceProcessEvents( _instance );
         retireFinishedFrames();
+        collectTimestampReadbacks();
         (void)_transferQueue.retireDone( []( const unique_ptr<WebGPUTransferProbe>& probe )
         { return probe->_bDone.load( std::memory_order_acquire ) != SW_FALSE; },
                                          []( unique_ptr<WebGPUTransferProbe>& probe )
