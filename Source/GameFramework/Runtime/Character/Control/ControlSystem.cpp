@@ -63,6 +63,8 @@ namespace sw
         , _listQueuedPossess{}
         , _pInputOverride{ nullptr }
         , _pInputCaptureOverride{ nullptr }
+        , _serverTickSource{}
+        , _serverTickOffset{ 0 }
         , _tick{ 0 }
         , _bRecording{ SW_FALSE }
         , _reserved{ 0 }

@@ -4,12 +4,14 @@
  * @details 씬 프레임 단계 `FrameSystems` 에서 돈다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -83,6 +85,26 @@ namespace sw
         void setTick( uint32 tick ) { _tick = tick; }
 
         /**
+         * @brief 이 씬의 서버 틱을 알립니다 — 넷 시뮬레이션 틱을 가진 컴포넌트가 자기 틱에서 부릅니다. 차이(`서버 틱 − 조종 틱`)만 듭니다.
+         * @details 틱 함수 바닥(`TickedPathMoverComponent`)이 이 값으로 자리를 낸다. 씬 값 하나라 쓰는 쪽은 바닥을 모르고 바닥은 쓰는 쪽을 모른다 — 예전에는
+         *          쓰는 쪽이 씬의 바닥을 모두 돌며 칸마다 써 넣었다(틱 안 씬 순회, 바닥 틱과 겹치는 쓰기). 병렬 틱에서 쓰므로 원자값이고, 같은 프레임에 바닥이
+         *          이 값을 읽게 하는 순서는 `setServerTickSource` 의 선행 조건이 맡는다. 서버는 `넷 틱`, 클라이언트는 `예측하는 입력 틱 + 서버 차이` 를 넣는다.
+         */
+        void publishServerTick( int64 serverTick ) { _serverTickOffset.store( serverTick - static_cast<int64>( _tick ), std::memory_order_release ); }
+        /** @brief 지금 조종 틱에 맞춘 서버 틱입니다. 아무도 알리지 않았으면 조종 틱과 같습니다(차이 0). 0 아래로 내려가지 않습니다. */
+        uint32 getServerTick() const
+        {
+            const int64 serverTick = static_cast<int64>( _tick ) + _serverTickOffset.load( std::memory_order_acquire );
+            return serverTick > 0 ? static_cast<uint32>( serverTick ) : 0u;
+        }
+        /**
+         * @brief 서버 틱을 알리는 틱(`publishServerTick` 을 부르는 컴포넌트의 주 틱)입니다. 서버 틱을 읽는 서브틱이 이것을 선행 조건으로 걸어 같은 프레임의 값을 읽는다.
+         * @details 시작 · 끝(게임 스레드, 틱 밖)에서만 바꾼다 — 읽는 틱과 겹치지 않는다. 언리얼 `AddTickPrerequisiteComponent` 의 대상을 씬이 하나 알려 주는 자리다.
+         */
+        void                 setServerTickSource( const SubTickHandle& source ) { _serverTickSource = source; }
+        const SubTickHandle& getServerTickSource() const { return _serverTickSource; }
+
+        /**
          * @brief 의도 기록을 켜거나 끕니다. 켤 때 기록을 비우고 폰마다 @p capacityTicks 틱 크기의 고리를 잡습니다.
          * @details 켠 뒤에는 틱마다 모든 폰의 의도(폰에 넣은 값)를 적는다.
          *          끄면 기록은 남으며, `getHistory` 로 읽어 `.swintent` 로 쓸 수 있다.
@@ -117,6 +139,8 @@ namespace sw
         vector<QueuedPossess>                   _listQueuedPossess;
         InputManager*                           _pInputOverride;
         const IInputCaptureQuery*               _pInputCaptureOverride;
+        SubTickHandle                           _serverTickSource; ///< 서버 틱을 알리는 틱(없으면 빈 핸들)
+        atomic<int64>                           _serverTickOffset; ///< 서버 틱 − 조종 틱(`publishServerTick`)
         uint32                                  _tick;
         uint8                                   _bRecording : 1;
         [[maybe_unused]] uint8                  _reserved   : 7;

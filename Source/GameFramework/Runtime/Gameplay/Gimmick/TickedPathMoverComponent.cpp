@@ -2,8 +2,6 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -18,7 +16,7 @@ namespace sw
         , _tickSeconds{ constant::time::kDefaultFixedStepSeconds }
         , _bPingPong{ true }
         , _startPosition{}
-        , _tickOffset{ 0 }
+        , _boundTickSource{}
         , _bStarted{ SW_FALSE }
         , _bWarnedNoTick{ false }
     {
@@ -31,11 +29,14 @@ namespace sw
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         _startPosition               = pScene != nullptr ? pScene->getWorldPosition() : float3{};
         _bStarted                    = pScene != nullptr;
+        registerSubTick( TickGroup::DuringPhysics, kApplySubTickID );
     }
 
-    void TickedPathMoverComponent::onTick( float32 deltaTime )
+    void TickedPathMoverComponent::onSubTick( uint32 subTickID, float32 deltaTime )
     {
-        Component::onTick( deltaTime );
+        Component::onSubTick( subTickID, deltaTime );
+        if ( subTickID != kApplySubTickID )
+            return;
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ControlSystem*     pControl = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
@@ -46,14 +47,17 @@ namespace sw
             _bWarnedNoTick = true;
             return;
         }
-        const int64 tick = static_cast<int64>( pControl->getTick() ) + _tickOffset;
-        applyTick( static_cast<uint32>( MathUtil::max( tick, int64{ 0 } ) ) );
-    }
-
-    void TickedPathMoverComponent::setTickOffsetInScene( GameObjectManager& manager, int64 tickOffset )
-    {
-        manager.forEachComponentOfType<TickedPathMoverComponent>( [tickOffset]( TickedPathMoverComponent* pMover )
-        { pMover->setTickOffset( tickOffset ); } );
+        // 서버 틱을 알리는 틱 뒤에 돈다(같은 프레임의 값). 바뀐 걸기는 틱 뒤에 들어 다음 프레임부터 순서가 맞는다.
+        const SubTickHandle& source = pControl->getServerTickSource();
+        if ( source != _boundTickSource )
+        {
+            if ( _boundTickSource.isValid() )
+                (void)removeSubTickPrerequisite( kApplySubTickID, _boundTickSource );
+            if ( source.isValid() )
+                (void)addSubTickPrerequisite( kApplySubTickID, source );
+            _boundTickSource = source;
+        }
+        applyTick( pControl->getServerTick() );
     }
 
     void TickedPathMoverComponent::setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong )

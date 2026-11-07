@@ -17,7 +17,6 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
@@ -74,15 +73,15 @@ namespace sw
             }
 
             /**
-             * @brief 씬의 틱 함수 바닥(`TickedPathMoverComponent`)을 서버 틱 @p serverTick 의 자리에 둔다 — 바닥은 조종 시스템 틱에 차이를 더해 움직인다.
-             *        조종 시스템이 없는 씬이면 바닥도 움직이지 않으므로 둘 것이 없다.
+             * @brief 씬에 서버 틱 @p serverTick 을 알린다 — 틱 함수 바닥(`TickedPathMoverComponent`)이 자기 서브틱에서 그 자리를 읽는다(바닥을 돌지 않는다).
+             *        조종 시스템이 없는 씬이면 바닥도 움직이지 않으므로 알릴 곳이 없다.
              */
-            static void alignTickedMovers( const GameObject* pOwner, int64 serverTick )
+            static void publishServerTick( const GameObject* pOwner, int64 serverTick )
             {
-                GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-                const ControlSystem* pControl = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
+                const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                ControlSystem*           pControl = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
                 if ( pControl != nullptr )
-                    TickedPathMoverComponent::setTickOffsetInScene( *pManager, serverTick - static_cast<int64>( pControl->getTick() ) );
+                    pControl->publishServerTick( serverTick );
             }
         };
     } // namespace
@@ -194,6 +193,9 @@ namespace sw
         _reconciledTick = 0;
         _controllerID   = -1;
         pMovement->setNetDriven( true );
+        // 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
+        if ( ControlSystem* pControl = ControlSystem::find( *getOwner()->getManager() ) )
+            pControl->setServerTickSource( getTickHandle() );
         SW_LOG_INFO_ID( "ShooterNetPawn.ShooterNetPawnMovement", "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
     }
 
@@ -202,6 +204,9 @@ namespace sw
         _routerSubscription.reset();
         if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getManager() != nullptr )
             MeleeSweepHistory::release( *getOwner()->getManager() );
+        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getManager() != nullptr ? ControlSystem::find( *getOwner()->getManager() ) : nullptr;
+        if ( pControl != nullptr && pControl->getServerTickSource() == getTickHandle() )
+            pControl->setServerTickSource( SubTickHandle{} );
         ShooterBodyMovementComponent* pMovement = findMovement();
         if ( pMovement != nullptr )
         {
@@ -259,7 +264,7 @@ namespace sw
     void ShooterNetPawnComponent::stepServer( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
     {
         ++_tick;
-        ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) );
+        ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) );
         const SceneNetLink* pLink = findLink();
         if ( pLink == nullptr || pLink->isBound() == false )
             return;
@@ -340,7 +345,7 @@ namespace sw
         // 예측하는 이 입력 틱은 서버에서 (입력 틱 + 서버 차이) 틱에 시뮬레이션된다 — 바닥을 그 자리에 둬야 바닥 위 예측이 서버와 맞는다.
         const std::optional<int64> serverTickOffset = _client.findServerTickOffset();
         if ( serverTickOffset.has_value() )
-            ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
+            ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
         const ControlIntent intent = takeNetIntent( movement );
         // 입력 하나의 상한을 넘는 주장은 다음 입력 틱에 싣는다. `_frame` 은 입력 틱이다 — 서버가 그 입력을 꺼낸 프레임으로 옮긴다.
         const size_t claimCount = MathUtil::min( _listClaim.size(), static_cast<size_t>( NetClientServerMessage::kMaxClaimsPerIntent ) );
