@@ -45,7 +45,6 @@ namespace sw
         if ( pInfo == nullptr )
             return node;
 
-        node._speaker = pInfo->_pDefaultSpeaker;
         switch ( pInfo->_body )
         {
             case DialogueNodeBody::Text:

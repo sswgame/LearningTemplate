@@ -5,6 +5,7 @@
  *          (`AnimationGraphPreviewModel`)와 같은 선이다. 그래프는 부를 때 넘긴다(모델은 문서를 갖지 않는다). 다음 노드는 러너와 같은 `DialogueCursor::step` 이 정한다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -27,8 +28,15 @@ namespace sw::editor
 
         DialogueGraphPreviewModel();
 
-        /** @brief 다른 문서를 읽었다 — 재생을 멈추고 지금 노드를 잊습니다(옛 문서의 노드 id 로 새 문서를 걷지 않는다). */
-        void resetForDocument() { stop(); }
+        /**
+         * @brief 다른 문서를 읽었다 — 재생을 멈추고 지금 노드를 잊습니다(옛 문서의 노드 id 로 새 문서를 걷지 않는다).
+         * @param graphPath 문서의 리소스 경로입니다. 뷰포트 미리보기가 이 그래프를 돌리는 러너만 고르고, 화자 오브젝트는 그 러너의 화자 표로 찾는다.
+         */
+        void resetForDocument( string_view graphPath )
+        {
+            stop();
+            _graphPath = string{ graphPath };
+        }
         /** @brief @p graph 의 시작 노드부터 재생합니다. */
         void play( const DialogueGraphAsset& graph );
         /** @brief @p input 으로 한 단계 넘깁니다. 지금 노드가 없으면 시작 노드로 갑니다. */
@@ -45,6 +53,7 @@ namespace sw::editor
         void enterNode( const DialogueGraphAsset& graph, int32 nodeID );
 
     private:
+        string  _graphPath;   ///< 미리보는 문서의 리소스 경로
         float32 _holdSeconds; ///< 지금 노드에 머문 시간
         int32   _nodeID;
         uint8   _bPlaying : 1;

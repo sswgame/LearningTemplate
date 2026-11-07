@@ -45,7 +45,7 @@ namespace sw
                 const SequencePlayerComponent* pPlayer = findTargetPlayer( query, outValue );
                 if ( pPlayer == nullptr )
                     return false;
-                for ( uint8 kindIndex = 0; kindIndex <= static_cast<uint8>( SequenceHistoryKind::UnboundBinding ); ++kindIndex )
+                for ( uint8 kindIndex = 0; kindIndex <= static_cast<uint8>( SequenceHistoryKind::Span ); ++kindIndex )
                 {
                     const SequenceHistoryKind kind = static_cast<SequenceHistoryKind>( kindIndex );
                     if ( query._key == getEnumName( kind ) )
@@ -54,7 +54,7 @@ namespace sw
                         return true;
                     }
                 }
-                outValue.setText( "key must be Started, Finished, Stopped, Event, CameraSignal or UnboundBinding" );
+                outValue.setText( "key must be Started, Finished, Stopped, Event, CameraSignal, UnboundBinding or Span" );
                 return false;
             }
 
@@ -78,7 +78,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( sequenceFrame, "Sequence.Frame", "Current frame of the target's sequence player", &SequencePlayerComponentInternal::readFrame, true, false );
-    SW_AUTOMATION_QUERY_WATCH( sequenceHistory, "Sequence.History", "Lines of one kind (key: Started, Finished, Stopped, Event, CameraSignal, UnboundBinding) in the target's recent sequence history",
+    SW_AUTOMATION_QUERY_WATCH( sequenceHistory, "Sequence.History", "Lines of one kind (key: Started, Finished, Stopped, Event, CameraSignal, UnboundBinding, Span) in the target's recent sequence history",
                                &SequencePlayerComponentInternal::readHistory, true, true );
     SW_AUTOMATION_QUERY_WATCH( sequenceBoundObject, "Sequence.BoundObject", "Name of the object the target's sequence player binds to binding id key; none when unbound",
                                &SequencePlayerComponentInternal::readBoundObject, true, true );
@@ -333,7 +333,10 @@ namespace sw
         vector<const SequenceTrackItem*> listCrossed;
         SequenceTimelineUtil::applyPlayback( pManager, _player, view, &listCrossed );
         SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _state._listSpawned );
-        SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _state._listSpan );
+        vector<const SequenceTrackItem*> listEnteredSpan;
+        SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _state._listSpan, &listEnteredSpan );
+        for ( const SequenceTrackItem* pItem : listEnteredSpan )
+            _history.record( SequenceHistoryKind::Span, _player.getCurrentFrame(), pItem->_binding, pItem->_name );
 
         // 카메라 신호는 듣는 쪽이 있거나 기록할 때만 모은다(신호도 사본이라 핸들러가 시퀀스를 바꿔도 안전하다).
         if ( _cameraSignalMulticast.isBound() || build::kShipping == false )

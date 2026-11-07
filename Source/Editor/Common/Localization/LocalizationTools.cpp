@@ -484,11 +484,13 @@ namespace sw
                 gatherer.addIssue( origin, "dialogue cannot be parsed", true );
                 return;
             }
-            // 화자 · 대사 · 선택지 — 키이거나 글 그대로인 값을 넣는다(`DialogueGraphAsset::resolveLocalizedText` 가 같은 규칙으로 찾는다)
+            // 화자 이름(화자 목록) · 대사 · 선택지 — 키이거나 글 그대로인 값을 넣는다(`DialogueGraphAsset::resolveLocalizedText` 가 같은 규칙으로 찾는다)
+            for ( const DialogueSpeaker& speaker : dialogue._listSpeaker )
+            {
+                gatherer.addTextOrKey( speaker._name, "Dialogue speaker name", origin );
+            }
             for ( const DialogueAssetNode& node : dialogue._listNode )
             {
-                if ( node._speaker.empty() == false )
-                    gatherer.addTextOrKey( node._speaker, "Dialogue speaker name", origin );
                 if ( node._text.empty() == false )
                     gatherer.addTextOrKey( node._text, "Dialogue line", origin );
                 for ( const string& choice : node._listChoice )

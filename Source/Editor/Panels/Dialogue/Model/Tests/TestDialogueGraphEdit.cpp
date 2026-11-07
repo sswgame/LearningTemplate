@@ -16,6 +16,26 @@ SW_TEST_CASE( DialogueGraphEditTest, DefaultGraphLinksChoicesToTheirTargets )
     SW_EXPECT_EQUAL( DialogueGraphAsset::encodeChoicePin( 3, 1 ), graph._listLink[3]._fromPin );
 }
 
+// 화자는 id 로 더하고 지운다 — 지운 화자를 쓰던 줄은 화자 없음이 되어 그래프가 다시 읽힌다(없는 id 를 가리킨 채 남지 않는다).
+SW_TEST_CASE( DialogueGraphEditTest, SpeakersAreAddedAndRemovedByID )
+{
+    DialogueGraphAsset graph;
+    DialogueGraphEdit::makeDefaultGraph( graph );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( graph._listSpeaker.size() ) );
+    SW_EXPECT_EQUAL( 1u, graph._listNode[1]._speaker );
+    const uint32 guardID = DialogueGraphEdit::addSpeaker( graph, "Guard" );
+    SW_EXPECT_EQUAL( 2u, guardID );
+    DialogueGraphEdit::addNode( graph, DialogueAssetNodeKind::Dialogue, 6 );
+    SW_EXPECT_EQUAL( 1u, graph._listNode.back()._speaker ); // 새 줄은 목록의 첫 화자
+
+    DialogueGraphEdit::removeSpeaker( graph, 1 );
+    SW_EXPECT_EQUAL( kDialogueNoSpeaker, graph._listNode[1]._speaker );
+    SW_EXPECT_EQUAL( kDialogueNoSpeaker, graph._listNode.back()._speaker );
+    DialogueGraphAsset reread;
+    SW_EXPECT_TRUE( reread.loadFromXMLText( graph.toXML() ) );
+    SW_EXPECT_EQUAL( string( "Guard" ), reread.resolveSpeakerName( guardID ) );
+}
+
 // 지운 선택지의 링크는 사라지고, 뒤 선택지의 링크는 같은 선택지를 계속 가리킨다.
 SW_TEST_CASE( DialogueGraphEditTest, RemovingAChoiceKeepsTheOtherChoicesLinked )
 {

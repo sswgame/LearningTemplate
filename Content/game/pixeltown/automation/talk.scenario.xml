@@ -52,6 +52,8 @@
 	<Tap slot="Key.Space" hold="1"/>
 	<WaitUntil watch="Town.Talking" equals="1" timeoutFrames="30"/>
 	<Expect watch="Town.ShownLines" equals="1"/>
+	<!-- 자막의 화자는 그래프 화자 목록(id 1 → Elder)에서 푼 이름이다 — 노드는 화자를 id 로 가리킨다. -->
+	<WaitUntil watch="UI.SubtitleSpeaker" is="Elder" timeoutFrames="10"/>
 	<!-- 대화 중에는 걷지 않는다. -->
 	<Wait frames="1"/>
 	<Tap slot="Key.D" hold="2"/>

@@ -38,15 +38,20 @@ namespace sw
 
             static void enterAnimation( const SequenceSpanContext& context )
             {
-                if ( findAnimator( context ) == nullptr )
+                const SkeletalAnimatorComponent* pAnimator = findAnimator( context );
+                if ( pAnimator == nullptr )
                 {
                     SW_LOG_ERROR_ID( "SequenceSpan.AnimationNoAnimator", "Sequence animation '%#' - the bound object '%#' has no SkeletalAnimatorComponent", context._pItem->_name,
                                      context._pTarget != nullptr ? context._pTarget->getName().c_str() : "?" );
                     return;
                 }
-                context._pState->_clip = SharedAssetCache<AnimationClip>::acquire( context._pItem->_clip );
+                // 클립은 대상 애니메이션 셋의 이름(또는 '/' 가 든 클립 파일 경로)이다 — 애니메이터가 상태 노드를 푸는 규칙과 같다.
+                const string clipPath = pAnimator->makeClipPath( hashed_string( context._pItem->_clip.c_str() ) );
+                if ( clipPath.empty() == false )
+                    context._pState->_clip = SharedAssetCache<AnimationClip>::acquire( clipPath );
                 if ( context._pState->_clip == nullptr )
-                    SW_LOG_ERROR_ID( "SequenceSpan.AnimationClipMissing", "Sequence animation '%#' - clip '%#' could not be read", context._pItem->_name, context._pItem->_clip );
+                    SW_LOG_ERROR_ID( "SequenceSpan.AnimationClipMissing", "Sequence animation '%#' - clip '%#' is not in the bound animation set or could not be read", context._pItem->_name,
+                                     context._pItem->_clip );
             }
 
             static void updateAnimation( const SequenceSpanContext& context )
@@ -106,9 +111,11 @@ namespace sw
                 ISubtitleSink* pSubtitles = engine::findSubsystem<ISubtitleSink>();
                 if ( pSubtitles == nullptr )
                     return; // 보일 곳이 없는 구성(전용 서버 · 하네스)이다
-                const string& key      = context._pItem->_text;
-                const utf8*   pText    = LocalizedText::find( key, key.c_str() );
-                const utf8*   pSpeaker = context._pTarget != nullptr ? context._pTarget->getName().c_str() : "";
+                const string& key   = context._pItem->_text;
+                const utf8*   pText = LocalizedText::find( key, key.c_str() );
+                // 화자는 바인딩의 표시 이름(현지화 키 또는 글)이다 — 씬 오브젝트 이름은 찾기 · 표시에 쓰지 않는다. 바인딩이 없으면 화자 없는 줄이다.
+                const SequenceBinding* pBinding = context._pAsset != nullptr ? context._pAsset->findBinding( context._pItem->_binding ) : nullptr;
+                const utf8*            pSpeaker = pBinding != nullptr ? LocalizedText::find( pBinding->_name, pBinding->_name.c_str() ) : "";
                 pSubtitles->postSubtitle( pSpeaker, pText, computeSpanSeconds( context ) );
             }
         };

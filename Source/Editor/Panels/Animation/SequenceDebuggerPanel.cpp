@@ -62,6 +62,8 @@ namespace sw::editor
                         return "Camera";
                     case SequenceHistoryKind::UnboundBinding:
                         return "Unbound";
+                    case SequenceHistoryKind::Span:
+                        return "Span";
                 }
                 return "?";
             }

@@ -7,6 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/World/WidgetComponent.h"
@@ -108,6 +109,21 @@ namespace sw
             outValue         = viewport._touchTargetSize;
             return bRead;
         }
+
+        /** @brief 감시 값 `UI.SubtitleSpeaker` 입니다 — 가장 최근에 보이기 시작한 자막 줄의 화자(현지화한 글)이고, 보이는 줄이 없으면 `none` 입니다. 시퀀서 자막 · 대화가 화자를 바인딩 표시 이름으로 냈는지 본다. */
+        [[nodiscard]] bool readSubtitleSpeaker( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            (void)query;
+            const UISubtitleService* pSubtitles = engine::findSubsystem<UISubtitleService>();
+            if ( pSubtitles == nullptr )
+            {
+                outValue.setText( "no subtitle service" );
+                return false;
+            }
+            const uint32 count = pSubtitles->getActiveLineCount();
+            outValue.setText( count > 0 ? string_view{ pSubtitles->getActiveLine( count - 1 )._speaker } : string_view{ "none" } );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( uiSafeInsetTop, "UI.SafeInsetTop", "Top safe-area inset of the UI viewport in UI units (notch or status bar, or the debug safe zone)", &readSafeInsetTop );
@@ -118,4 +134,5 @@ namespace sw
     SW_AUTOMATION_WATCH( uiDeferredGlyphs, "UI.DeferredGlyphs", "Glyphs the last UI paint left for the next frame because the glyph raster budget ran out (0: all text is drawn)", &readDeferredGlyphs );
     SW_AUTOMATION_QUERY_WATCH( widgetMarkerVisible, "UI.MarkerVisible", "1 while the target object's screen-space widget marker is shown (0: collapsed, world space or no content)",
                                &readWidgetMarkerVisible, true, false );
+    SW_AUTOMATION_QUERY_WATCH( uiSubtitleSpeaker, "UI.SubtitleSpeaker", "Speaker of the newest visible subtitle line (none: no line is shown)", &readSubtitleSpeaker, false, false );
 } // namespace sw

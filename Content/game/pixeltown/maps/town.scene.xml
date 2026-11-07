@@ -125,7 +125,11 @@
 					                         _attachComponent="None"
 					                         _currentAnimation="idle_down"
 					                         _bRepeat="true" />
-					<DialogueRunnerComponent _graphPath="game/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true" />
+					<DialogueRunnerComponent _graphPath="game/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true">
+						<_listSpeakerSlot>
+							<DialogueSpeakerSlot _speaker="1" _object="5" />
+						</_listSpeakerSlot>
+					</DialogueRunnerComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

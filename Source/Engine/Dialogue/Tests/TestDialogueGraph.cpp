@@ -333,6 +333,32 @@ SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
     SW_EXPECT_EQUAL( "Option 1", choiceNode._listChoice[0] );
 
     const DialogueAssetNode dialogueNode = DialogueCursor::makeNode( DialogueAssetNodeKind::Dialogue, 10 );
-    SW_EXPECT_FALSE( dialogueNode._speaker.empty() );
+    SW_EXPECT_EQUAL( kDialogueNoSpeaker, dialogueNode._speaker ); // 화자는 그래프의 목록에서 고른다(에디터가 첫 화자를 넣는다)
     SW_EXPECT_FALSE( dialogueNode._text.empty() );
+}
+
+/**
+ * @brief [DialogueGraphTest] 노드의 화자는 그래프 화자 목록의 id 로 풀리고, 목록에 없는 id · 겹친 id · 이름 글은 읽기 오류인지 검증
+ * @details 화자를 이름 글로 두면 씬 오브젝트를 이름으로 찾게 된다(이름을 바꾸면 끊긴다). id 는 표시 이름과 따로 산다.
+ */
+SW_TEST_CASE( DialogueGraphTest, SpeakerIsAnIDOfTheSpeakerList )
+{
+    DialogueGraphAsset asset;
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listSpeaker><DialogueSpeaker _id="3" _name="Elder" /></_listSpeaker>)"
+                                            R"(<_listNode><DialogueAssetNode _id="1" _type="Start" /><DialogueAssetNode _id="2" _type="Dialogue" _speaker="3" _text="Hello" /></_listNode></DialogueGraphAsset>)" ) );
+    const DialogueAssetNode* pLine = asset.findNode( 2 );
+    SW_REQUIRE_NOT_NULL( pLine );
+    SW_EXPECT_EQUAL( 3u, pLine->_speaker );
+    SW_EXPECT_EQUAL( string( "Elder" ), asset.resolveSpeakerName( pLine->_speaker ) );
+    SW_EXPECT_TRUE( asset.resolveSpeakerName( kDialogueNoSpeaker ).empty() );
+    SW_EXPECT_EQUAL( 4u, asset.makeNextSpeakerID() );
+
+    SW_EXPECT_LOG( "Dialogue.SpeakerMissing" );   // 목록에 없는 화자
+    SW_EXPECT_LOG( "Dialogue.SpeakerIDInvalid" ); // 겹친 화자 id
+    SW_EXPECT_LOG( "Config.KeyUnknown" );         // 화자 칸에 이름 글(옛 모양) — 읽지 못한 값
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _speaker="7" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText(
+        R"(<DialogueGraphAsset><_listSpeaker><DialogueSpeaker _id="1" _name="A" /><DialogueSpeaker _id="1" _name="B" /></_listSpeaker><_listNode /></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _speaker="Elder" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_TRUE( asset._listSpeaker.empty() );
 }

@@ -10,8 +10,10 @@ namespace sw::editor
 {
     void DialogueGraphEdit::makeDefaultGraph( DialogueGraphAsset& outGraph )
     {
+        outGraph._listSpeaker.clear();
         outGraph._listNode.clear();
         outGraph._listLink.clear();
+        outGraph._listSpeaker.push_back( DialogueSpeaker{ 1, "Elder" } );
 
         DialogueAssetNode startNode{};
         startNode._id          = 1;
@@ -23,7 +25,7 @@ namespace sw::editor
         DialogueAssetNode dialogueNode{};
         dialogueNode._id          = 2;
         dialogueNode._type        = DialogueAssetNodeKind::Dialogue;
-        dialogueNode._speaker     = "Elder";
+        dialogueNode._speaker     = 1;
         dialogueNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
         dialogueNode._position._x = 250.0f;
         dialogueNode._position._y = 100.0f;
@@ -66,10 +68,31 @@ namespace sw::editor
 
     void DialogueGraphEdit::addNode( DialogueGraphAsset& inoutGraph, DialogueAssetNodeKind type, int32 nodeID )
     {
-        DialogueAssetNode node = DialogueCursor::makeNode( type, nodeID );
-        node._position._x      = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
-        node._position._y      = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
+        DialogueAssetNode       node  = DialogueCursor::makeNode( type, nodeID );
+        const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( type );
+        if ( pInfo != nullptr && pInfo->_bHasSpeaker && inoutGraph._listSpeaker.empty() == false )
+            node._speaker = inoutGraph._listSpeaker.front()._id;
+        node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
+        node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
         inoutGraph._listNode.push_back( std::move( node ) );
+    }
+
+    uint32 DialogueGraphEdit::addSpeaker( DialogueGraphAsset& inoutGraph, string_view name )
+    {
+        const uint32 speakerID = inoutGraph.makeNextSpeakerID();
+        inoutGraph._listSpeaker.push_back( DialogueSpeaker{ speakerID, string{ name } } );
+        return speakerID;
+    }
+
+    void DialogueGraphEdit::removeSpeaker( DialogueGraphAsset& inoutGraph, uint32 speakerID )
+    {
+        VectorUtil::removeIf( inoutGraph._listSpeaker, [speakerID]( const DialogueSpeaker& speaker )
+        { return speaker._id == speakerID; } );
+        for ( DialogueAssetNode& node : inoutGraph._listNode )
+        {
+            if ( node._speaker == speakerID )
+                node._speaker = kDialogueNoSpeaker;
+        }
     }
 
     void DialogueGraphEdit::removeChoice( DialogueGraphAsset& inoutGraph, DialogueAssetNode& inoutNode, size_t choiceIndex )

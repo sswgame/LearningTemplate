@@ -1967,6 +1967,7 @@
 		<entry key="EditorDialogueGraph.AddNodeTip"
 		       text="이 종류의 노드를 그래프에 추가합니다. 캔버스 빈 곳을 오른쪽 클릭해 찾아 넣을 수도 있습니다."
 		       sourceHash="9c377eccceb7bfb6" />
+		<entry key="EditorDialogueGraph.AddSpeaker" text="+ 화자 추가" sourceHash="fe22bf62ce64a49c" />
 		<entry key="EditorDialogueGraph.AdvancePreviewTip"
 		       text="기다리지 않고 미리보기를 다음 노드로 넘깁니다."
 		       sourceHash="e0a2c5da95de576b" />
@@ -2001,15 +2002,23 @@
 		<entry key="EditorDialogueGraph.RemoveChoiceTip"
 		       text="이 선택지를 지웁니다."
 		       sourceHash="b7774179aa87387b" />
+		<entry key="EditorDialogueGraph.RemoveSpeakerTip"
+		       text="이 화자를 지웁니다. 이 화자를 쓰던 대사는 화자 없음이 됩니다."
+		       sourceHash="ce276216b573033f" />
 		<entry key="EditorDialogueGraph.ResetDefaultTip"
 		       text="그래프 전체를 예제 대화로 바꿉니다."
 		       sourceHash="69495125907b4e07" />
 		<entry key="EditorDialogueGraph.SaveTip"
 		       text="대화 그래프와 노드 배치를 애셋 파일에 씁니다."
 		       sourceHash="ec60155945a56850" />
+		<entry key="EditorDialogueGraph.SpeakerNameTip" text="화자로 보이는 이름 또는 현지화 키입니다." sourceHash="9aa39997271510e1" />
 		<entry key="EditorDialogueGraph.SpeakerTip"
-		       text="이 대사의 화자로 표시되는 이름입니다."
-		       sourceHash="9d0d0bd4282358bc" />
+		       text="이 대사의 화자입니다. 그래프의 화자 목록에서 고릅니다. 말하는 씬 오브젝트는 대화 러너의 Speakers 목록에서 정합니다."
+		       sourceHash="8c626fc01e423af6" />
+		<entry key="EditorDialogueGraph.Speakers" text="화자" sourceHash="b6a535fede052183" />
+		<entry key="EditorDialogueGraph.SpeakersTip"
+		       text="대사가 id 로 가리키는 화자입니다. 이름을 바꿔도 대사가 끊기지 않습니다."
+		       sourceHash="9e897421399a33e5" />
 		<entry key="EditorDialogueGraph.StopPreviewTip" text="미리보기를 끝냅니다." sourceHash="8c71f209080b39c5" />
 		<entry key="EditorDialogueGraph.TextTip"
 		       text="플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다."

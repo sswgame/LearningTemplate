@@ -37,6 +37,8 @@
 	<WaitUntil watch="Appearance.Preset" target="Actor" is="SkeletonWarrior" timeoutFrames="4"/>
 	<Wait frames="8"/>
 	<Screenshot file="cinematic_b.ppm"/>
+	<!-- ⑦ 구간 항목(프레임 72 — 사진 뒤): 자막의 화자는 씬 오브젝트 이름이 아니라 바인딩 3 의 표시 이름이다. 클립은 Actor 셋의 이름으로 풀린다(못 풀면 SequenceSpan.AnimationClipMissing 오류). -->
+	<WaitUntil watch="UI.SubtitleSpeaker" is="Actor" timeoutSeconds="1"/>
 
 	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutSeconds="2"/>
 	<Expect watch="Cinematic.CutCamera" target="Director" is="none"/>
@@ -53,6 +55,7 @@
 	<Expect watch="Sequence.History" target="Director" key="Event" equals="1"/>
 	<Expect watch="Sequence.History" target="Director" key="CameraSignal" atLeast="6"/>
 	<Expect watch="Sequence.History" target="Director" key="UnboundBinding" equals="0"/>
+	<Expect watch="Sequence.History" target="Director" key="Span" equals="3"/>
 	<ExpectImagesDiffer first="cinematic_a.ppm" second="cinematic_b.ppm" minDiffering="0.05"/>
 	<Pass/>
 </Scenario>

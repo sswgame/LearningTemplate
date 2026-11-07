@@ -15,6 +15,7 @@
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Object/Component/Component.h"
@@ -53,14 +54,16 @@ namespace sw::editor
                 return FileUtil::pathsEqualNormalized( animatorPath, graphPath );
             }
 
-            /** @brief 대사 미리보기 메서드의 시그니처( string speaker, string text )인지입니다. */
+            /** @brief 대사 미리보기 메서드의 시그니처( string graphPath, uint32 speakerID, string text ) -> GameObjectHandle 인지입니다. */
             static bool takesDialogueLineArgs( const FunctionInfo& method )
             {
-                // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<string>`)로 묻는다 — 이름 리터럴을 두지 않는다.
-                const auto isTextParameter = []( const FunctionParameterInfo& parameter )
-                { return ReflectedValueUtil::findBuiltinIndex( hashed_string( parameter._typeName.c_str() ) ) == ReflectBuiltinOf<string>::kIndex; };
-                const bool bTwoTextParameters = method._listParameter.size() == 2 && isTextParameter( method._listParameter[0] ) && isTextParameter( method._listParameter[1] );
-                return bTwoTextParameters && method._invoker.isBound();
+                // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 리터럴을 두지 않는다.
+                const auto isParameterOf = []( const FunctionParameterInfo& parameter, int32 builtinIndex )
+                { return ReflectedValueUtil::findBuiltinIndex( hashed_string( parameter._typeName.c_str() ) ) == builtinIndex; };
+                const bool bSignature = method._listParameter.size() == 3 && isParameterOf( method._listParameter[0], ReflectBuiltinOf<string>::kIndex ) &&
+                                        isParameterOf( method._listParameter[1], ReflectBuiltinOf<uint32>::kIndex ) && isParameterOf( method._listParameter[2], ReflectBuiltinOf<string>::kIndex );
+                const bool bReturnsHandle = ReflectedValueUtil::findBuiltinIndex( hashed_string( method._returnTypeName.c_str() ) ) == ReflectBuiltinOf<GameObjectHandle>::kIndex;
+                return bSignature && bReturnsHandle && method._invoker.isBound();
             }
 
             /**
@@ -116,18 +119,12 @@ namespace sw::editor
         SequenceTimelineUtil::applySpans( pManager, asset, bindings, frame, framesPerSecond, inoutListSpan );
     }
 
-    void EditorViewportPreview::applyDialogueLine( string_view speaker, string_view text )
+    void EditorViewportPreview::applyDialogueLine( string_view graphPath, uint32 speakerID, string_view text )
     {
         GameObjectManager* pManager = editor::getActiveObjectManager();
+        GameObjectHandle   speakerObject{};
         if ( pManager != nullptr )
         {
-            if ( speaker.empty() == false )
-            {
-                GameObject* pSpeaker = pManager->findGameObjectByName( hashed_string{ speaker } );
-                if ( pSpeaker != nullptr )
-                    editor::getSubsystem<EditorWorkspace>().selectGameObject( pSpeaker ); // 필수
-            }
-
             const vector<GameObject*> listObject = pManager->getAllGameObjects();
             for ( GameObject* pObject : listObject )
             {
@@ -144,16 +141,23 @@ namespace sw::editor
                         continue;
                     if ( EditorViewportPreviewInternal::takesDialogueLineArgs( *pMethod ) == false )
                     {
-                        SW_LOG_WARNING_ID( "EditorViewportPreview.EditorPreviewButDoesNot", "%#::%# is EditorPreview=%# but does not take ( string speaker, string text )",
+                        SW_LOG_WARNING_ID( "EditorViewportPreview.EditorPreviewButDoesNot", "%#::%# is EditorPreview=%# but does not take ( string graphPath, uint32 speakerID, string text )",
                                            pType->_name.c_str(), pMethod->_name.c_str(), kDialogueLinePreview );
                         continue;
                     }
-                    pMethod->_invoker( pComp, TaskArgs{ string{ speaker }, string{ text } } );
+                    const TaskValue         result = pMethod->_invoker( pComp, TaskArgs{ string{ graphPath }, speakerID, string{ text } } );
+                    const GameObjectHandle* pBound = result.getPtr<GameObjectHandle>();
+                    if ( speakerObject.isValid() == false && pBound != nullptr && pBound->isValid() )
+                        speakerObject = *pBound;
                 }
             }
+            // 화자는 그 그래프를 돌리는 컴포넌트의 화자 표가 정한 오브젝트다 — 묶인 곳이 없으면 고르지 않는다(이름으로 찾지 않는다).
+            GameObject* pSpeaker = speakerObject.isValid() ? pManager->resolveGameObject( speakerObject ) : nullptr;
+            if ( pSpeaker != nullptr )
+                editor::getSubsystem<EditorWorkspace>().selectGameObject( pSpeaker );
         }
-        if ( speaker.empty() == false || text.empty() == false )
-            SW_LOG_INFO_ID( "EditorViewportPreview.DialoguePreview", "Dialogue preview [%#]: %#", string{ speaker }.c_str(), string{ text }.c_str() );
+        if ( text.empty() == false )
+            SW_LOG_INFO_ID( "EditorViewportPreview.DialoguePreview", "Dialogue preview [speaker %#]: %#", speakerID, string{ text }.c_str() );
     }
 
     const FunctionInfo* EditorViewportPreview::findPreviewMethod( const TypeInfo& type, string_view previewKind )

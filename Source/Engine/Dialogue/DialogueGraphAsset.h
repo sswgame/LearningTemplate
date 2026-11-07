@@ -72,7 +72,6 @@ namespace sw
     struct DialogueNodeInfo
     {
         const utf8*           _pName;                                                                                               /**< 화면 이름입니다(파일의 종류 이름은 열거자 이름이다). */
-        const utf8*           _pDefaultSpeaker;                                                                                     /**< 새 노드의 화자입니다. */
         const utf8*           _pDefaultBody;                                                                                        /**< 새 노드의 본문입니다. `_body` 필드에 들어갑니다. */
         float4                _color;                                                                                               /**< 그래프 노드 머리 색입니다. */
         DialogueAssetNodeKind _type;                                                                                                /**< 노드 타입입니다. 테이블의 순번과 같아야 합니다. */
@@ -93,16 +92,35 @@ namespace sw
      * @details 에셋 이름 해석, 런타임 진행(`DialogueCursor`), 에디터 그리기, 추가 메뉴, 인스펙터가 모두 이 테이블을 읽는다.
      */
     inline constexpr DialogueNodeInfo kArrDialogueNodeInfo[] = {
-        {   "Start",    "",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeKind::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
-        {"Dialogue", "NPC", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeKind::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
-        {  "Choice",    "",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeKind::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
-        {  "Branch",    "",           "visited == 1", float4( 1.0f, 0.8f, 0.2f, 1.0f ),   DialogueAssetNodeKind::Branch,   DialogueNodeFlow::Condition, DialogueNodeOutput::Branch, DialogueNodeBody::Condition,  true, false,  true, 0},
-        {  "Action",    "",           "event(ready)", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeKind::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
-        {     "End",    "",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeKind::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
+        {   "Start",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeKind::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
+        {"Dialogue", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeKind::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
+        {  "Choice",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeKind::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
+        {  "Branch",           "visited == 1", float4( 1.0f, 0.8f, 0.2f, 1.0f ),   DialogueAssetNodeKind::Branch,   DialogueNodeFlow::Condition, DialogueNodeOutput::Branch, DialogueNodeBody::Condition,  true, false,  true, 0},
+        {  "Action",           "event(ready)", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeKind::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
+        {     "End",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeKind::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
     };
 
     static_assert( SW_COUNT_OF( kArrDialogueNodeInfo ) == static_cast<size_t>( DialogueAssetNodeKind::Count ),
                    "DialogueAssetNodeKind 을 늘렸으면 kArrDialogueNodeInfo 에도 줄을 더할 것" );
+
+    /** @brief 노드의 화자 칸이 이 값이면 화자가 없습니다. */
+    inline constexpr uint32 kDialogueNoSpeaker = 0;
+
+    /**
+     * @brief 대화 그래프의 화자 하나입니다. 노드는 화자를 이 id 로 가리킨다.
+     * @details 이름은 표시용(현지화 키 또는 글)이고 씬 오브젝트를 찾는 데 쓰지 않는다 — 어느 오브젝트가 그 화자인지는 그래프를 돌리는 쪽(러너의 화자 표)이 정한다.
+     *          시퀀서 바인딩(`SequenceBinding`)과 같은 나눔이다(언리얼 Dialogue Wave 의 Speaker 와 씬 액터의 연결, 유니티 Timeline 바인딩).
+     */
+    REFLECT()
+    struct SW_API DialogueSpeaker
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 1, Tooltip = "Speaker id the nodes refer to, unique in the graph and 1 or more" )
+        uint32 _id{ kDialogueNoSpeaker };
+        PROPERTY( Required, Meta = "Localizable", Tooltip = "Display name or localization key (not used to find scene objects)" )
+        string _name;
+    };
 
     /** @brief 대화 그래프 노드입니다. id 와 종류는 파일에 반드시 적습니다(`PROPERTY( Required )`). */
     REFLECT()
@@ -114,8 +132,9 @@ namespace sw
         int32 _id{ 0 };
         PROPERTY( Required, Tooltip = "Node type" )
         DialogueAssetNodeKind _type{ DialogueAssetNodeKind::Dialogue };
-        PROPERTY( Tooltip = "Speaker name or localization key" )
-        string _speaker;
+        /** @brief 화자(`DialogueGraphAsset::_listSpeaker` 의 id)입니다. 0 은 화자 없음이다. 이름으로 씬 오브젝트를 찾지 않는다 — 어느 오브젝트인지는 러너의 화자 표가 정한다. */
+        PROPERTY( Tooltip = "Speaker id of the graph's speaker list (0: no speaker)" )
+        uint32 _speaker{ kDialogueNoSpeaker };
         PROPERTY( Tooltip = "Line text or localization key" )
         string _text;
         PROPERTY( Tooltip = "Condition expression the Branch node evaluates, for example hasKey && weather(rain)" )
@@ -193,6 +212,12 @@ namespace sw
         const DialogueAssetNode* findStartNode() const;
         /** @brief id 로 노드를 찾습니다. */
         const DialogueAssetNode* findNode( int32 nodeID ) const;
+        /** @brief id 로 화자를 찾습니다. 없거나 0 이면 nullptr 입니다. */
+        const DialogueSpeaker* findSpeaker( uint32 speakerID ) const;
+        /** @brief 화자 @p speakerID 의 표시 이름을 현지화해 돌려줍니다. 화자가 없으면 빈 글입니다. */
+        string resolveSpeakerName( uint32 speakerID ) const;
+        /** @brief 아직 쓰지 않은 화자 id 입니다(지금 가장 큰 id + 1). 에디터가 화자를 더할 때 쓴다. */
+        uint32 makeNextSpeakerID() const;
 
         // ------------------------------------------------------------------------------
         // 핀 번호 계약: **이 파일이 기준이다.**
@@ -241,6 +266,9 @@ namespace sw
         /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
         static string resolveLocalizedText( string_view textOrKey );
 
+        /** @brief 화자 목록입니다. 노드의 `_speaker` 가 이 id 를 가리킨다. */
+        PROPERTY( Tooltip = "Speakers the nodes refer to by id" )
+        vector<DialogueSpeaker> _listSpeaker;
         PROPERTY( Tooltip = "Nodes of the graph" )
         vector<DialogueAssetNode> _listNode;
         PROPERTY( Tooltip = "Links between node pins" )
@@ -252,7 +280,7 @@ namespace sw
     private:
         /** @brief 읽은 본문(@p xml)을 이 그래프에 채우고 의미를 봅니다. 틀리면 그래프를 비우고 false 입니다. */
         [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const ResourceContext& context );
-        /** @brief 노드 · 링크 id 가 1 이상이고 겹치지 않는지, 링크의 두 핀이 있는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
+        /** @brief 노드 · 링크 · 화자 id 가 1 이상이고 겹치지 않는지, 링크의 두 핀이 있는지, 노드의 화자가 목록에 있는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
     };
 } // namespace sw

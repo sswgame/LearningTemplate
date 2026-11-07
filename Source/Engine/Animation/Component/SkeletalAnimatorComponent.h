@@ -272,6 +272,11 @@ namespace sw
          * @param clip nullptr 이거나 weight 가 0 이면 덮어쓰기가 꺼집니다.
          */
         void setSequencerOverride( shared_ptr<const AnimationClip> clip, float32 time, float32 weight );
+        /**
+         * @brief 클립 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다.
+         * @details 시퀀서 애니메이션 구간도 이 규칙으로 클립을 푼다 — 가져온 클립 파일은 내용 해시 이름이라 손으로 적는 시퀀스는 셋의 클립 이름을 쓴다.
+         */
+        string makeClipPath( const hashed_string& clipName ) const;
 
         /** @brief 이번 프레임에 울린 알림입니다(다음 평가까지 유효). 이름에 따른 처리기 연결은 받는 쪽(`setNotifyListener`)이 맡습니다. */
         const vector<AnimationFiredNotify>& getFiredNotifies() const { return _listFiredNotify; }
@@ -484,8 +489,6 @@ namespace sw
         void updateLODFades( float32 deltaSeconds );
         /** @brief 기본 포즈 단계입니다. */
         void populateBasePose( SkeletalMeshComponent& skeletalMesh );
-        /** @brief 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다. */
-        string makeClipPath( const hashed_string& clipName ) const;
         /** @brief `_animationSetPath` 의 셋을 읽어 둡니다(게임 스레드, 시작 · 그래프 읽기 · 경로 변경). 비었으면 놓습니다. */
         void refreshAnimationSet();
         /** @brief 이번 프레임의 알림을 받는 쪽에 넘깁니다(게임 스레드). */

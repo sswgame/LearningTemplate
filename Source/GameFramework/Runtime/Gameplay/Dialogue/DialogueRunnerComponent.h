@@ -7,6 +7,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Object/Component/Component.h"
@@ -20,6 +21,7 @@ namespace sw
     struct DialogueStepInput;
 
     class GameFlags;
+    class GameObject;
     class ISubtitleSink;
 
     ENUM()
@@ -41,6 +43,21 @@ namespace sw
         string _text;
         PROPERTY()
         int32 _nodeID{ 0 };
+    };
+
+    /**
+     * @brief 러너의 화자 표 한 줄 — 그래프의 화자 id 에 묶인 이 씬의 오브젝트입니다(시퀀서 `SequenceBindingSlot` 과 같은 모양).
+     * @details 오브젝트는 핸들 PROPERTY 라 씬 파일에는 엔티티의 파일 id 로 적힌다 — 이름을 바꿔도 끊기지 않는다. 이름으로 찾는 폴백은 없다.
+     */
+    REFLECT()
+    struct SW_GF_API DialogueSpeakerSlot
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1, Tooltip = "Speaker id in the dialogue graph" )
+        uint32 _speaker{ kDialogueNoSpeaker };
+        PROPERTY( Tooltip = "Scene object that speaks as that speaker" )
+        GameObjectHandle _object{};
     };
 } // namespace sw
 
@@ -69,6 +86,9 @@ namespace sw
         AssetRef<DialogueGraphAsset> _graphPath;
         PROPERTY( Category = "Dialogue", DisplayName = "Post Subtitles", Tooltip = "Also show each line as a subtitle (leave off when a dialogue UI already shows the text)" )
         bool _bPostSubtitles;
+        /** @brief 그래프의 화자 id 마다 이 씬의 오브젝트입니다. 같은 그래프를 다른 씬 · 다른 캐릭터에 다시 쓴다. */
+        PROPERTY( Category = "Dialogue", DisplayName = "Speakers", Tooltip = "Scene object for each speaker id of the graph" )
+        vector<DialogueSpeakerSlot> _listSpeakerSlot;
 
         static constexpr int32 kMaxChainedNodes = 64; ///< 사람을 기다리지 않고 한 번에 지나가는 노드 수의 상한
 
@@ -98,8 +118,16 @@ namespace sw
         bool advance();
         bool selectChoice( int32 choiceIndex );
         void stopDialogue();
+        /**
+         * @brief 에디터 대사 미리보기입니다. 이 러너의 그래프가 @p graphPath 면 줄을 보이고 화자 @p speakerID 에 묶인 오브젝트를 돌려줍니다(에디터가 그것을 고른다).
+         * @details 다른 그래프의 러너는 아무것도 하지 않고 무효 핸들을 돌려준다. 화자 이름은 이 러너의 그래프 화자 목록에서 푼다 — 씬 오브젝트를 이름으로 찾지 않는다.
+         */
         FUNCTION( Category = "Preview", DisplayName = "Preview Line", EditorPreview = "DialogueLine" )
-        void previewLine( string speaker, string text );
+        GameObjectHandle previewLine( string graphPath, uint32 speakerID, string text );
+        /** @brief 화자 @p speakerID 에 묶인 살아 있는 오브젝트입니다. 묶이지 않았으면 nullptr 입니다. */
+        GameObject* findSpeakerObject( uint32 speakerID ) const;
+        /** @brief 화자 @p speakerID 를 @p object 에 묶습니다(칸이 있으면 바꾸고, 무효 핸들이면 칸을 지운다). 코드 · 테스트가 쓴다 — 씬 파일은 PROPERTY 로 든다. */
+        void setSpeakerObject( uint32 speakerID, GameObjectHandle object );
 
         /** @brief Branch 조건과 `flag.*` 동작이 읽고 쓰는 월드 플래그입니다. 빌려 쓰므로 러너보다 오래 살아야 하며, nullptr 이면 모든 플래그가 0 입니다. */
         void setFlags( GameFlags* pFlags );
@@ -108,9 +136,11 @@ namespace sw
         /** @brief `_bPostSubtitles` 가 줄을 보낼 곳입니다. 테스트가 정하며 nullptr 이면 엔진 서비스(`ISubtitleSink`, 전용 서버는 없다)를 씁니다. 빌려 씁니다. */
         void setSubtitleSink( ISubtitleSink* pSubtitleSink ) { _pSubtitleSinkOverride = pSubtitleSink; }
 
-        DialogueRunnerState   getState() const;
-        int32                 getCurrentNodeID() const;
-        const string&         getCurrentSpeaker() const;
+        DialogueRunnerState getState() const;
+        int32               getCurrentNodeID() const;
+        const string&       getCurrentSpeaker() const;
+        /** @brief 지금 줄의 화자 id 입니다(없으면 `kDialogueNoSpeaker`). `findSpeakerObject` 로 오브젝트를 얻는다. */
+        uint32                getCurrentSpeakerID() const { return _currentSpeakerID; }
         const string&         getCurrentText() const;
         const vector<string>& getCurrentChoices() const;
 
@@ -166,6 +196,7 @@ namespace sw
         DelegateSlot<OnDialogueFinishedFunc> _onFinished;
         DialogueRunnerState                  _state;
         int32                                _currentNodeID;
+        uint32                               _currentSpeakerID;
         /** @brief 노드에 들어가거나 대화를 멈출 때마다 늘어납니다. Action 핸들러가 그 안에서 대화를 옮겼는지 봅니다. */
         uint32 _transitionSerial;
     };

@@ -6138,6 +6138,11 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDialogueGraph.AddSpeaker" source="+ Add Speaker">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDialogueGraph.AdvancePreviewTip" source="Move the preview to the next node without waiting.">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
@@ -6201,6 +6206,11 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDialogueGraph.RemoveSpeakerTip" source="Remove this speaker. Lines that used it are left without a speaker.">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDialogueGraph.ResetDefaultTip" source="Replace the whole graph with the sample conversation.">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
@@ -6211,7 +6221,23 @@
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorDialogueGraph.SpeakerTip" source="Name shown as the speaker of this line.">
+		<entry key="EditorDialogueGraph.SpeakerNameTip" source="Name shown as the speaker, or a localization key.">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.SpeakerTip"
+		       source="Speaker of this line, picked from the graph's speakers. The scene object that speaks is set in the dialogue runner's Speakers list.">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.Speakers" source="Speakers">
+			<origins>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.SpeakersTip" source="Speakers the lines refer to by id. Renaming one keeps every line linked.">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>

@@ -38,6 +38,7 @@ namespace sw
     {
         const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Script );
+        _listSpeaker.clear();
         _listNode.clear();
         _listLink.clear();
         if ( path.empty() )
@@ -55,6 +56,7 @@ namespace sw
     bool DialogueGraphAsset::loadFromDiskFile( string_view diskPath )
     {
         SW_MEMORY_SCOPE( Script );
+        _listSpeaker.clear();
         _listNode.clear();
         _listLink.clear();
         if ( diskPath.empty() )
@@ -83,12 +85,14 @@ namespace sw
 
     bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel, const ResourceContext& context )
     {
+        _listSpeaker.clear();
         _listNode.clear();
         _listLink.clear();
         _listComment.clear();
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readComposedXMLDocument` 가 로그로 알린다).
         if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validateFile( sourceLabel ) )
             return true;
+        _listSpeaker.clear();
         _listNode.clear();
         _listLink.clear();
         _listComment.clear();
@@ -126,7 +130,51 @@ namespace sw
                              link._fromPin, link._toPin );
             bValid = false;
         }
+        for ( size_t speakerIndex = 0; speakerIndex < _listSpeaker.size(); ++speakerIndex )
+        {
+            const uint32 speakerID  = _listSpeaker[speakerIndex]._id;
+            bool         bDuplicate = false;
+            for ( size_t previousIndex = 0; previousIndex < speakerIndex; ++previousIndex )
+            {
+                bDuplicate = bDuplicate || _listSpeaker[previousIndex]._id == speakerID;
+            }
+            if ( speakerID != kDialogueNoSpeaker && bDuplicate == false )
+                continue;
+            SW_LOG_ERROR_ID( "Dialogue.SpeakerIDInvalid", "Dialogue graph '%#': speaker %# needs a unique _id of 1 or more (has %#)", sourceLabel, speakerIndex, speakerID );
+            bValid = false;
+        }
+        // 화자는 id 로만 가리킨다 — 목록에 없는 id 는 이름으로 찾아 메우지 않고 읽기 오류다.
+        for ( const DialogueAssetNode& node : _listNode )
+        {
+            if ( node._speaker == kDialogueNoSpeaker || findSpeaker( node._speaker ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "Dialogue.SpeakerMissing", "Dialogue graph '%#': node %# refers to speaker %# which is not in _listSpeaker", sourceLabel, node._id, node._speaker );
+            bValid = false;
+        }
         return bValid;
+    }
+
+    const DialogueSpeaker* DialogueGraphAsset::findSpeaker( uint32 speakerID ) const
+    {
+        if ( speakerID == kDialogueNoSpeaker )
+            return nullptr;
+        return VectorUtil::findBy<&DialogueSpeaker::_id>( _listSpeaker, speakerID );
+    }
+
+    string DialogueGraphAsset::resolveSpeakerName( uint32 speakerID ) const
+    {
+        const DialogueSpeaker* pSpeaker = findSpeaker( speakerID );
+        return pSpeaker != nullptr ? resolveLocalizedText( pSpeaker->_name ) : string{};
+    }
+
+    uint32 DialogueGraphAsset::makeNextSpeakerID() const
+    {
+        uint32 largestID = kDialogueNoSpeaker;
+        for ( const DialogueSpeaker& speaker : _listSpeaker )
+        {
+            largestID = speaker._id > largestID ? speaker._id : largestID;
+        }
+        return largestID + 1;
     }
 
     string DialogueGraphAsset::toXML() const

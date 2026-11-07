@@ -3,11 +3,14 @@
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/ISubtitleSink.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
@@ -18,6 +21,7 @@ namespace sw
     DialogueRunnerComponent::DialogueRunnerComponent()
         : _graphPath{}
         , _bPostSubtitles{ false }
+        , _listSpeakerSlot{}
         , _graph{}
         , _listCompiled{}
         , _pFlags{ nullptr }
@@ -32,6 +36,7 @@ namespace sw
         , _onFinished{}
         , _state{ DialogueRunnerState::Idle }
         , _currentNodeID{ 0 }
+        , _currentSpeakerID{ kDialogueNoSpeaker }
         , _transitionSerial{ 0 }
     {
         setCanEverTick( false ); // 대화는 입력 · 이벤트로만 넘어간다 — 빈 틱에 워커를 쓰지 않는다
@@ -204,6 +209,7 @@ namespace sw
         const bool bWasActive = ( _state != DialogueRunnerState::Idle && _state != DialogueRunnerState::Finished );
         _state                = DialogueRunnerState::Idle;
         _currentNodeID        = 0;
+        _currentSpeakerID     = kDialogueNoSpeaker;
         _currentSpeaker.clear();
         _currentText.clear();
         _listCurrentChoice.clear();
@@ -215,13 +221,36 @@ namespace sw
         }
     }
 
-    void DialogueRunnerComponent::previewLine( string speaker, string text )
+    GameObjectHandle DialogueRunnerComponent::previewLine( string graphPath, uint32 speakerID, string text )
     {
-        _state          = DialogueRunnerState::ShowingDialogue;
-        _currentSpeaker = std::move( speaker );
-        _currentText    = std::move( text );
+        if ( _graphPath.path() != graphPath )
+            return GameObjectHandle{}; // 다른 그래프를 돌리는 러너다
+        _state            = DialogueRunnerState::ShowingDialogue;
+        _currentSpeakerID = speakerID;
+        _currentSpeaker   = _graph.resolveSpeakerName( speakerID );
+        _currentText      = DialogueGraphAsset::resolveLocalizedText( text );
         _listCurrentChoice.clear();
         notifyLine();
+        const GameObject* pSpeaker = findSpeakerObject( speakerID );
+        return pSpeaker != nullptr ? pSpeaker->getHandle() : GameObjectHandle{};
+    }
+
+    GameObject* DialogueRunnerComponent::findSpeakerObject( uint32 speakerID ) const
+    {
+        const GameObject*        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr || speakerID == kDialogueNoSpeaker )
+            return nullptr;
+        const DialogueSpeakerSlot* pSlot = VectorUtil::findBy<&DialogueSpeakerSlot::_speaker>( _listSpeakerSlot, speakerID );
+        return pSlot != nullptr && pSlot->_object.isValid() ? pManager->resolveGameObject( pSlot->_object ) : nullptr;
+    }
+
+    void DialogueRunnerComponent::setSpeakerObject( uint32 speakerID, GameObjectHandle object )
+    {
+        VectorUtil::removeIf( _listSpeakerSlot, [speakerID]( const DialogueSpeakerSlot& slot )
+        { return slot._speaker == speakerID; } );
+        if ( object.isValid() )
+            _listSpeakerSlot.push_back( DialogueSpeakerSlot{ speakerID, object } );
     }
 
     void DialogueRunnerComponent::setFlags( GameFlags* pFlags )
@@ -383,18 +412,20 @@ namespace sw
             }
             case DialogueAssetNodeKind::Dialogue:
             {
-                _state          = DialogueRunnerState::ShowingDialogue;
-                _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
-                _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
+                _state            = DialogueRunnerState::ShowingDialogue;
+                _currentSpeakerID = node._speaker;
+                _currentSpeaker   = _graph.resolveSpeakerName( node._speaker );
+                _currentText      = DialogueGraphAsset::resolveLocalizedText( node._text );
                 _listCurrentChoice.clear();
                 notifyLine();
                 return false;
             }
             case DialogueAssetNodeKind::Choice:
             {
-                _state          = DialogueRunnerState::WaitingForChoice;
-                _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
-                _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
+                _state            = DialogueRunnerState::WaitingForChoice;
+                _currentSpeakerID = node._speaker;
+                _currentSpeaker   = _graph.resolveSpeakerName( node._speaker );
+                _currentText      = DialogueGraphAsset::resolveLocalizedText( node._text );
                 _listCurrentChoice.clear();
                 _listCurrentChoice.reserve( node._listChoice.size() );
                 for ( const string& choice : node._listChoice )

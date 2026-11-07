@@ -10,7 +10,8 @@
 namespace sw::editor
 {
     DialogueGraphPreviewModel::DialogueGraphPreviewModel()
-        : _holdSeconds{ 0.0f }
+        : _graphPath{}
+        , _holdSeconds{ 0.0f }
         , _nodeID{ 0 }
         , _bPlaying{ SW_FALSE }
     {
@@ -96,7 +97,7 @@ namespace sw::editor
         _nodeID = nodeID;
         // 러너가 알리는 노드(대사, 선택지)만 뷰포트에 보인다.
         if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
-            EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
+            EditorViewportPreview::applyDialogueLine( _graphPath, pNode->_speaker, pNode->_text );
         if ( pInfo->_flow == DialogueNodeFlow::Finish )
             _bPlaying = SW_FALSE;
     }

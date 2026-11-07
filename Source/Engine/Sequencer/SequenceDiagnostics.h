@@ -31,6 +31,7 @@ namespace sw
         Event,          ///< 시작 프레임을 지난 항목(이벤트 · 외형 · 시나리오)
         CameraSignal,   ///< 카메라 신호(`_detail` 이 `SequenceCameraSignalKind`)
         UnboundBinding, ///< 묶이지 않은 바인딩 때문에 틀지 않았다(`_binding`)
+        Span,           ///< 구간 항목(애니메이션 · 소리 · 자막)에 들어갔다
     };
 
     /** @brief 기록 한 줄입니다. 이름은 고정 길이로 잘라 담는다(할당 없음). */

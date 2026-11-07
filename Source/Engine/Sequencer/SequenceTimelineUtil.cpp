@@ -614,7 +614,7 @@ namespace sw
     }
 
     void SequenceTimelineUtil::applySpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond,
-                                           vector<SequenceSpanState>& inoutListSpan )
+                                           vector<SequenceSpanState>& inoutListSpan, vector<const SequenceTrackItem*>* pOutListEntered )
     {
         for ( uint32 itemIndex = 0; itemIndex < static_cast<uint32>( asset._listItem.size() ); ++itemIndex )
         {
@@ -639,6 +639,7 @@ namespace sw
             }
             SequenceSpanContext context;
             context._pManager        = pManager;
+            context._pAsset          = &asset;
             context._pItem           = &item;
             context._pTarget         = pTarget;
             context._pState          = pState;
@@ -649,6 +650,8 @@ namespace sw
                 pState->_bInside = SW_TRUE;
                 if ( handler._pEnter != nullptr )
                     handler._pEnter( context );
+                if ( pOutListEntered != nullptr )
+                    pOutListEntered->push_back( &item );
             }
             if ( bInside && handler._pUpdate != nullptr )
                 handler._pUpdate( context );
@@ -674,6 +677,7 @@ namespace sw
                 continue;
             SequenceSpanContext context;
             context._pManager        = pManager;
+            context._pAsset          = &asset;
             context._pItem           = &item;
             context._pTarget         = findTarget( pManager, bindings, item._binding );
             context._pState          = &state;

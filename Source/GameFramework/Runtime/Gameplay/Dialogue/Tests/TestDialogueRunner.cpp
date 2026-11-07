@@ -4,6 +4,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -52,8 +54,9 @@ namespace
     {
         DialogueGraphBuilder builder;
         (void)builder.add( kStart, DialogueAssetNodeKind::Start );
-        DialogueAssetNode& line                                     = builder.add( kLine, DialogueAssetNodeKind::Dialogue );
-        line._speaker                                               = "Elder";
+        DialogueAssetNode& line = builder.add( kLine, DialogueAssetNodeKind::Dialogue );
+        line._speaker           = 1;
+        builder._asset._listSpeaker.push_back( DialogueSpeaker{ 1, "Elder" } );
         line._text                                                  = "Hello";
         DialogueAssetNode& ask                                      = builder.add( kChoice, DialogueAssetNodeKind::Choice );
         ask._text                                                   = "Where?";
@@ -321,4 +324,34 @@ SW_TEST_CASE( DialogueRunnerTest, StopClearsAndNotifiesOnce )
     SW_EXPECT_EQUAL( 0, runner.getCurrentNodeID() );
     runner.stopDialogue();
     SW_EXPECT_EQUAL( 1, probe._finishCount );
+}
+
+/**
+ * @brief [DialogueRunnerTest] 화자는 그래프의 화자 id 이고, 씬 오브젝트는 러너의 화자 표가 정한다 — 오브젝트 이름이 화자 이름과 달라도 묶인 것이 화자다
+ * @details 이름으로 찾던 모양(에디터 대사 미리보기)이 다시 생기지 않게, 미리보기도 이 표로 오브젝트를 돌려주고 다른 그래프의 러너는 응하지 않는지 본다.
+ */
+SW_TEST_CASE( DialogueRunnerTest, SpeakerSlotBindsTheSceneObject )
+{
+    GameObjectManager        manager;
+    GameObject*              pActor  = manager.createGameObject( hashed_string( "Villager_03" ) ); // 화자 표시 이름(Elder)과 다른 오브젝트 이름
+    GameObject*              pOwner  = manager.createGameObject( hashed_string( "Talk" ) );
+    DialogueRunnerComponent* pRunner = pOwner->addComponent<DialogueRunnerComponent>();
+    SW_REQUIRE_NOT_NULL( pRunner );
+    pRunner->setGraph( makeConversation() );
+    pRunner->_graphPath = string( "game/test/elder.dialogue.xml" );
+    SW_EXPECT_NULL( pRunner->findSpeakerObject( 1 ) ); // 묶이지 않았다 — 이름 "Elder" 로 찾지 않는다
+
+    pRunner->setSpeakerObject( 1, pActor->getHandle() );
+    SW_EXPECT_TRUE( pRunner->findSpeakerObject( 1 ) == pActor );
+    SW_REQUIRE_TRUE( pRunner->startDialogue() );
+    SW_EXPECT_EQUAL( 1u, pRunner->getCurrentSpeakerID() );
+    SW_EXPECT_EQUAL( string( "Elder" ), pRunner->getCurrentSpeaker() );
+
+    const GameObjectHandle previewed = pRunner->previewLine( "game/test/elder.dialogue.xml", 1, "Hi" );
+    SW_EXPECT_TRUE( previewed == pActor->getHandle() );
+    SW_EXPECT_EQUAL( string( "Elder" ), pRunner->getCurrentSpeaker() );
+    SW_EXPECT_FALSE( pRunner->previewLine( "game/test/other.dialogue.xml", 1, "Hi" ).isValid() );
+
+    pRunner->setSpeakerObject( 1, GameObjectHandle{} );
+    SW_EXPECT_NULL( pRunner->findSpeakerObject( 1 ) );
 }

@@ -148,6 +148,7 @@ namespace sw
     struct SequenceSpanContext
     {
         GameObjectManager*       _pManager{ nullptr };
+        const SequenceAsset*     _pAsset{ nullptr }; ///< 항목의 시퀀스 — 바인딩의 표시 이름(자막 화자)을 여기서 읽는다
         const SequenceTrackItem* _pItem{ nullptr };
         GameObject*              _pTarget{ nullptr };
         SequenceSpanState*       _pState{ nullptr };
@@ -235,9 +236,10 @@ namespace sw
         /**
          * @brief 구간 처리기가 있는 항목(애니메이션 · 소리 · 자막)을 @p frame 에 맞춥니다 — 구간에 들어가면 들어가기, 머무는 동안 머물기, 벗어나면 나가기를 부른다(`SequenceSpanHandler`).
          * @details 구간 상태는 @p inoutListSpan 이 쥔다(항목 번호로 찾는다). 대상이 필요한 항목인데 바인딩이 묶이지 않았으면 들어가지 않는다.
+         *          @p pOutListEntered 가 있으면 이번에 들어간 항목을 더한다(재생 기록 `SequenceHistoryKind::Span`).
          */
         static void applySpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond,
-                                vector<SequenceSpanState>& inoutListSpan );
+                                vector<SequenceSpanState>& inoutListSpan, vector<const SequenceTrackItem*>* pOutListEntered = nullptr );
         /** @brief 들어가 있는 구간을 모두 나가고 목록을 비웁니다(멈춤 · 씬 나감 — 소리를 멈추고 애니메이션 덮어쓰기를 끈다). */
         static void releaseSpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, float32 framesPerSecond, vector<SequenceSpanState>& inoutListSpan );
         /** @brief 재생 전 상태(클립 대상의 활성 · 키 트랙 대상의 값)를 @p outListRestore 에 채웁니다(`SequenceFinishPolicy::RestoreState`). 묶이지 않은 대상은 건너뛴다. */

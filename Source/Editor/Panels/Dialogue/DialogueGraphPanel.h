@@ -53,6 +53,8 @@ namespace sw::editor
         void updateNodeIssues();
         /** @brief 선택한 노드의 상세 인스펙터를 그립니다. */
         void drawSelectedNodeInspector();
+        /** @brief 그래프의 화자 목록(이름 고치기 · 더하기 · 빼기)을 그립니다. 노드는 화자를 id 로 가리키므로 이름을 바꿔도 줄이 끊기지 않는다. */
+        void drawSpeakerList();
 
         using DialogueNode = NodeType;
         using DialogueLink = LinkType;

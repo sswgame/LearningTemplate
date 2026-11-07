@@ -1,0 +1,12 @@
+<!--
+	Empty 사운드 이벤트(AudioEventLibrary). 시네마틱 시나리오(automation/cinematic)의 시퀀스 소리 구간(data/cinematic.seq.xml 의 Audio 항목)이 낸다 — 화면 소리(2D)다.
+-->
+<AudioEventLibrary>
+	<_listEvent>
+		<AudioEventDef _name="CinematicCue" _bus="sfx" _priority="60" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/empty/sounds/click.ogg" />
+			</_listClip>
+		</AudioEventDef>
+	</_listEvent>
+</AudioEventLibrary>

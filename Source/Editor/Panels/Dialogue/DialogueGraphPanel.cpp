@@ -324,9 +324,41 @@ namespace sw::editor
             const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
             if ( pInfo != nullptr )
                 drawNodeFields( *pSelectedNode, *pInfo );
+            ImGui::Separator();
         }
+        drawSpeakerList();
 
         EditorChrome::endSection();
+    }
+
+    void DialogueGraphPanel::drawSpeakerList()
+    {
+        ImGui::TextUnformatted( SW_LOCKEY( "EditorDialogueGraph", "Speakers" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakersTip" ) );
+        for ( size_t speakerIndex = 0; speakerIndex < _graph._listSpeaker.size(); ++speakerIndex )
+        {
+            DialogueSpeaker& speaker = _graph._listSpeaker[speakerIndex];
+            ImGui::PushID( static_cast<int32>( speaker._id ) );
+            EditorWidgets::drawTextField( "##SpeakerName", speaker._name );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                notifyDocumentEdited( "Rename Dialogue Speaker", "dialogue-inspector" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerNameTip" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
+            if ( ImGui::Button( "X" ) )
+            {
+                DialogueGraphEdit::removeSpeaker( _graph, speaker._id );
+                notifyDocumentEdited( "Remove Dialogue Speaker" );
+                ImGui::PopID();
+                break;
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "RemoveSpeakerTip" ) );
+            ImGui::PopID();
+        }
+        if ( ImGui::Button( SW_LOCKEY( "EditorDialogueGraph", "AddSpeaker" ) ) )
+        {
+            DialogueGraphEdit::addSpeaker( _graph, "Speaker" );
+            notifyDocumentEdited( "Add Dialogue Speaker" );
+        }
     }
 
     void DialogueGraphPanel::ensureDefaults()
@@ -339,7 +371,7 @@ namespace sw::editor
         DialogueGraphAsset        data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
         applyLoadedGraph( std::move( data ), result );
-        _preview.resetForDocument();
+        _preview.resetForDocument( getLoadedAssetPath() );
         return result;
     }
 
@@ -482,9 +514,10 @@ namespace sw::editor
             return;
         }
 
-        const ImVec4 headerColor( pInfo->_color._x, pInfo->_color._y, pInfo->_color._z, pInfo->_color._w );
+        const ImVec4           headerColor( pInfo->_color._x, pInfo->_color._y, pInfo->_color._z, pInfo->_color._w );
+        const DialogueSpeaker* pSpeaker = pInfo->_bHasSpeaker ? _graph.findSpeaker( node._speaker ) : nullptr;
         if ( pInfo->_bHasSpeaker )
-            ImGui::TextColored( headerColor, "[%s: %s]", pInfo->_pName, node._speaker.empty() ? SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" ) : node._speaker.c_str() );
+            ImGui::TextColored( headerColor, "[%s: %s]", pInfo->_pName, pSpeaker == nullptr ? SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" ) : pSpeaker->_name.c_str() );
         else
             ImGui::TextColored( headerColor, "[%s]", pInfo->_pName );
 
@@ -624,9 +657,28 @@ namespace sw::editor
     {
         if ( info._bHasSpeaker )
         {
-            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Speaker" ), "Speaker" ), node._speaker );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            // 화자는 그래프 화자 목록의 id 다 — 이름 글을 적지 않고 목록에서 고른다(이름을 바꿔도 줄이 끊기지 않는다).
+            const DialogueSpeaker* pCurrent = _graph.findSpeaker( node._speaker );
+            const utf8*            pPreview = pCurrent != nullptr ? pCurrent->_name.c_str() : SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" );
+            if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Speaker" ), "Speaker" ), pPreview ) )
+            {
+                if ( ImGui::Selectable( SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" ), node._speaker == kDialogueNoSpeaker ) && node._speaker != kDialogueNoSpeaker )
+                {
+                    node._speaker = kDialogueNoSpeaker;
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                }
+                for ( const DialogueSpeaker& speaker : _graph._listSpeaker )
+                {
+                    ImGui::PushID( static_cast<int32>( speaker._id ) );
+                    if ( ImGui::Selectable( speaker._name.c_str(), node._speaker == speaker._id ) && node._speaker != speaker._id )
+                    {
+                        node._speaker = speaker._id;
+                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::EndCombo();
+            }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerTip" ) );
         }
 

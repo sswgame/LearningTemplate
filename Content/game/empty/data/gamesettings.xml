@@ -14,6 +14,8 @@
   <inputMap path="common/input/move.input.xml"/>
   <inputMap path="game/empty/data/kitdemo.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <!-- 시네마틱 시퀀스의 소리 구간이 내는 이벤트 -->
+  <audioEvents>game/empty/audio/empty.audioevents.xml</audioEvents>
   <!-- 벤치 캐릭터 프리팹(-gv_stressTestCharacterPrefab — 부하 시나리오 load/townsfolk)의 외형은 공용 팩(common)의 외형 데이터다. 외형이 장비 아이템을 참조하므로 아이템도 함께 -->
   <RequiredData kind="items" pack="common"/>
   <RequiredData kind="appearance" pack="common"/>

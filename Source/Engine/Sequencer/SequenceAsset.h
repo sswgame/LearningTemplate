@@ -57,7 +57,7 @@ namespace sw
         Scenario    = 6, /**< 시작 프레임을 지날 때 시나리오 `_scenario` 를 재생합니다(`ScenarioPlayback::play` — 연출 안에 게임 행동 · 입력을 끼운다, 언리얼 시퀀서 이벤트 트랙이 블루프린트를 부르는 자리). */
         Animation   = 7, /**< 구간 동안 대상 애니메이터의 시퀀서 슬롯에 클립 `_clip` 을 구간 시작부터의 시간으로 섞습니다(언리얼 Skeletal Animation 트랙). 세기는 `_amplitude`(0..1)입니다. */
         Audio       = 8, /**< 시작 프레임을 지날 때 대상(또는 바인딩이 없으면 화면 소리) 에미터에서 이벤트 `_sound` 를 내고, 구간이 끝나면 그 소리를 멈춥니다(언리얼 Audio 트랙). */
-        Subtitle    = 9, /**< 시작 프레임을 지날 때 자막 `_text`(현지화 키 `Namespace.Key`)를 구간 길이만큼 올립니다. 화자는 바인딩한 오브젝트의 이름입니다(`ISubtitleSink`). */
+        Subtitle    = 9, /**< 시작 프레임을 지날 때 자막 `_text`(현지화 키 `Namespace.Key`)를 구간 길이만큼 올립니다. 화자는 바인딩의 표시 이름(`SequenceBinding::_name`, 현지화 키 또는 글)입니다 — 씬 오브젝트 이름이 아니다(`ISubtitleSink`). */
         Count            /**< 표식입니다. 종류가 아닙니다. */
     };
 
@@ -207,14 +207,14 @@ namespace sw
         /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 리소스 id)입니다. 다른 종류는 비운다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Scenario: scenario (.scenario.xml) played when the start frame is crossed" )
         string _scenario;
-        /** @brief 애니메이션: 구간 동안 섞을 클립입니다. 다른 종류는 비운다. */
-        PROPERTY( AssetPath, AssetType = "AnimationClip", SkipIfEmpty, Tooltip = "Animation: clip blended over the target's animation during the span" )
+        /** @brief 애니메이션: 구간 동안 섞을 클립입니다 — 대상 애니메이션 셋의 클립 이름, 또는 클립 파일 경로(`SkeletalAnimatorComponent::makeClipPath`). 다른 종류는 비운다. */
+        PROPERTY( AssetPath, AssetType = "AnimationClip", SkipIfEmpty, Tooltip = "Animation: clip blended over the target's animation during the span (a clip name of the target's animation set, or a clip file)" )
         string _clip;
         /** @brief 소리: 시작 프레임을 지날 때 낼 오디오 이벤트 이름입니다. 다른 종류는 비운다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Audio: audio event posted when the start frame is crossed and stopped when the span ends" )
         string _sound;
         /** @brief 자막: 올릴 줄의 현지화 키(`Namespace.Key`)입니다. 다른 종류는 비운다. */
-        PROPERTY( SkipIfEmpty, Tooltip = "Subtitle: localization key (Namespace.Key) of the line shown for the span" )
+        PROPERTY( SkipIfEmpty, Meta = "Localizable", Tooltip = "Subtitle: localization key (Namespace.Key) or text of the line shown for the span" )
         string _text;
         /** @brief 대상 바인딩(`SequenceBinding::_id`)입니다. 0 은 없음이며, 종류가 대상을 요구하면 읽기 오류입니다. */
         PROPERTY( Tooltip = "Binding id of the object the item drives (0: none; Spawn: the binding the spawned object fills)" )
