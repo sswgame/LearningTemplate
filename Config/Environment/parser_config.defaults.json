@@ -69,6 +69,7 @@
         ]
     },
     "tuning": {
-        "source_lookback_bytes": 512
+        "source_lookback_bytes": 512,
+        "max_parallel_parses": 8
     }
 }

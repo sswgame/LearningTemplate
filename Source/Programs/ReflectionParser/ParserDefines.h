@@ -179,6 +179,7 @@ namespace sw
 
         // tuning.*
         inline constexpr const utf8* kSourceLookbackBytes = "source_lookback_bytes";
+        inline constexpr const utf8* kMaxParallelParses   = "max_parallel_parses";
 
         // toolchain_config.json
         inline constexpr const utf8* kLlvmPath          = sw::config::kKeyLlvmPath;

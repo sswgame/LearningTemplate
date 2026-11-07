@@ -37,8 +37,14 @@ namespace sw
          *          시각도 봅니다 — 보지 않으면 설정을 고쳐도 산출물이 옛 모양으로 남습니다(CMake 는 DEPENDS 로 파서를 다시 부르지만
          *          파서가 스스로 "최신" 이라며 건너뛴다).
          */
-        vector<string>          _listLoadedFile;
-        uint32                  _sourceLookbackBytes;
+        vector<string> _listLoadedFile;
+        uint32         _sourceLookbackBytes;
+        /**
+         * @brief 묶음 파싱이 실패해 헤더마다 다시 파싱할 때 동시에 여는 TU 의 상한입니다(`tuning.max_parallel_parses`, 필수).
+         * @details TU 하나가 엔진 공통 헤더 전체를 들고 메모리 대역을 나눠 쓴다 — 16 개를 함께 돌리면 한 파싱이 1.0 초에서 2.1 초로 늘었다(`ReflectionPipeline::parsePending` 주석의 실측).
+         *          예전에는 하드웨어 스레드 수만큼 띄웠다(상한 없음). 값은 측정 후보다(S8) — 최대 RSS · 전체 시간을 재 고친다.
+         */
+        uint32                  _maxParallelParses;
         uint8                   _bLoaded  : 1;
         [[maybe_unused]] uint8  _reserved : 7;
         [[maybe_unused]] uint16 _padding;

@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
@@ -464,11 +465,15 @@ namespace sw
         if ( listPending.empty() )
             return 0;
 
+        // 동시에 여는 TU 는 설정의 상한(`tuning.max_parallel_parses`)까지다 — TU 마다 공통 헤더 전체를 들어 하드웨어 스레드만큼 띄우면 메모리와 대역이 먼저 찬다.
         uint32 workerCount = std::thread::hardware_concurrency();
         if ( workerCount == 0 )
             workerCount = 1;
+        workerCount = MathUtil::min( workerCount, _pSession->_config._maxParallelParses );
         if ( workerCount > listPending.size() )
             workerCount = static_cast<uint32>( listPending.size() );
+        SW_LOG_INFO_ID( "ReflectionPipeline.ParallelFallback", "Batch parse failed - parsing %# headers one by one on %# workers (cap tuning.max_parallel_parses = %#)",
+                        static_cast<uint32>( listPending.size() ), workerCount, _pSession->_config._maxParallelParses );
 
         TaskManager taskManager;
         if ( taskManager.initialize( workerCount ) == false )
