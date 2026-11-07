@@ -11,18 +11,19 @@
 
 namespace sw
 {
-    void TickBatchRegistry::registerType( Entry& entry )
+    bool TickBatchRegistry::registerEntry( Entry& entry )
     {
         if ( entry._pStaticType == nullptr || entry._pFunction == nullptr )
-            return;
+            return false;
         {
             ScopedLock<mutex> lock{ _mutex };
             (void)_listEntry.addLogged( &entry, "Tick batch entry" ); // 같은 줄을 다시 올리면 `AlreadyPresent` 라 할 일이 없다
         }
         _generation.fetch_add( 1, std::memory_order_acq_rel );
+        return true;
     }
 
-    void TickBatchRegistry::unregisterType( Entry& entry )
+    void TickBatchRegistry::unregisterEntry( Entry& entry )
     {
         bool bRemoved = false;
         {
@@ -53,20 +54,6 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         return _listEntry.getCount();
-    }
-} // namespace sw
-
-namespace sw
-{
-    void TickBatchRegistrar::attach( const ISubsystemLocator& scope )
-    {
-        // 모듈을 올리는 길은 엔진 서비스가 선 동안에만 온다 — 레지스트리가 없으면 그 실행의 잘못이라 멈춘다(`getSubsystem`).
-        requireSubsystem<TickBatchRegistry>( scope ).registerType( _entry );
-    }
-
-    void TickBatchRegistrar::detach( const ISubsystemLocator& scope )
-    {
-        requireSubsystem<TickBatchRegistry>( scope ).unregisterType( _entry );
     }
 } // namespace sw
 

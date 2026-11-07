@@ -230,9 +230,9 @@ SW_TEST_CASE( InputMapBundleTest, ExtensionsAreOrderedByID )
     const InputMapExtension   second{ "b.input", "common/input/kits/b.input.xml" };
     const InputMapExtension   first{ "a.input", "common/input/kits/a.input.xml" };
     const InputMapExtension   duplicate{ "a.input", "common/input/kits/other.input.xml" };
-    SW_EXPECT_TRUE( registry.registerExtension( &second ) );
-    SW_EXPECT_TRUE( registry.registerExtension( &first ) );
-    SW_EXPECT_FALSE( registry.registerExtension( &duplicate ) );
+    SW_EXPECT_TRUE( registry.registerEntry( &second ) );
+    SW_EXPECT_TRUE( registry.registerEntry( &first ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &duplicate ) );
 
     vector<AssetID> listAsset;
     registry.appendAssets( listAsset );
@@ -240,7 +240,7 @@ SW_TEST_CASE( InputMapBundleTest, ExtensionsAreOrderedByID )
     SW_EXPECT_EQUAL( string( first._pAssetPath ), listAsset[0].str() );
     SW_EXPECT_EQUAL( string( second._pAssetPath ), listAsset[1].str() );
 
-    registry.unregisterExtension( &first );
+    registry.unregisterEntry( &first );
     listAsset.clear();
     registry.appendAssets( listAsset );
     SW_EXPECT_EQUAL( size_t{ 1 }, listAsset.size() );

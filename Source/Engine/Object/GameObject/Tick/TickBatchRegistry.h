@@ -30,7 +30,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
@@ -55,7 +55,7 @@ namespace sw
 
         /**
          * @struct Entry
-         * @brief 등록 줄 하나입니다. 등록하는 객체(`TickBatchRegistration<T>`)가 멤버로 들고, 레지스트리는 그 주소를 공용 등록 목록(`RegistrationList`)에 올립니다.
+         * @brief 등록 줄 하나입니다. 등록자(`TickBatchRegistrar`)가 멤버로 들고, 레지스트리는 그 주소를 공용 등록 목록(`RegistrationList`)에 올립니다.
          * @details 줄이 레지스트리에 있는 동안 살아 있고 옮겨지지 않아야 합니다 — 등록 객체가 정적 객체(모듈의 수명)이거나 테스트의 지역 `Entry` 입니다.
          */
         struct Entry
@@ -69,10 +69,10 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 줄 하나를 등록합니다. 세대를 올립니다. 같은 함수의 줄이 둘 오를 수 있으며(정적 등록자와 테스트의 지역 줄), 각자 자기 줄만 지웁니다. */
-        void registerType( Entry& entry ) SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 줄 하나를 등록합니다. 세대를 올립니다. 같은 함수의 줄이 둘 오를 수 있으며(정적 등록자와 테스트의 지역 줄), 각자 자기 줄만 지웁니다. 타입 · 함수가 비었으면 false 입니다. */
+        [[nodiscard]] bool registerEntry( Entry& entry ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 자기 줄의 등록을 지웁니다(모듈 해제). 오르지 않은 줄이면 아무것도 하지 않습니다. 세대를 올립니다. */
-        void unregisterType( Entry& entry ) SW_EXCLUDES_LOCK( _mutex );
+        void unregisterEntry( Entry& entry ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 정확히 @p pType 인 컴포넌트의 일괄 틱 함수입니다. 등록이 없으면 nullptr 입니다. 나중에 오른 줄이 먼저다(테스트의 지역 줄이 정적 등록을 덮는다). */
         TickBatchFunction findFunction( const TypeInfo* pType ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 등록 · 해제마다 오르는 세대입니다. `TickRegistry` 가 바뀐 것을 보고 항목을 다시 짓습니다. */
@@ -89,26 +89,10 @@ namespace sw
     SW_SERVICE_SLOT( TickBatchRegistry, Required );
 
     /**
-     * @class TickBatchRegistrar
-     * @brief 일괄 틱 줄 하나의 정적 등록자입니다(`TickBatchRegistration<T>` 의 바탕). 모듈을 올린 쪽이 붙이고(`attach`) 내리기 전에 뗍니다(`detach`).
-     * @details 만들 때는 링크 때 목록(`ModuleObjectRegistrar::getHead`)에만 달린다 — 레지스트리는 서비스 범위에 있어 정적 초기화 때는 아직 없다.
+     * @brief 일괄 틱 줄 하나의 정적 등록자입니다. 줄은 이 등록자가 들고, 붙은 동안 레지스트리의 등록 목록에 오릅니다.
+     * @details 링크 때 목록에 달리는 객체라 정적 객체로만 둔다. 테스트처럼 범위 안에서만 올리려면 지역 `TickBatchRegistry::Entry` 를 레지스트리에 직접 올린다.
      */
-    class SW_API TickBatchRegistrar : public ModuleObjectRegistrar
-    {
-    public:
-        void attach( const ISubsystemLocator& scope ) override;
-        void detach( const ISubsystemLocator& scope ) override;
-
-    protected:
-        explicit TickBatchRegistrar( const TickBatchRegistry::Entry& entry )
-            : _entry{ entry }
-        {
-        }
-        ~TickBatchRegistrar() = default;
-
-    private:
-        TickBatchRegistry::Entry _entry; ///< 레지스트리의 등록 목록에 오르는 줄 — 붙인 동안 오른다
-    };
+    using TickBatchRegistrar = ModuleEntryRegistrar<TickBatchRegistry, TickBatchRegistry::Entry>;
 } // namespace sw
 
 namespace sw
@@ -138,33 +122,15 @@ namespace sw
     };
 } // namespace sw
 
-namespace sw
-{
-    /**
-     * @brief 정적 객체 하나로 타입을 등록합니다 — 모듈을 올릴 때 붙고 내리기 전에 떨어진다(`TickBatchRegistrar`). `SW_REGISTER_TICK_BATCH` 가 만듭니다.
-     * @details 링크 때 목록에 달리는 객체라 정적 객체로만 둔다. 테스트처럼 범위 안에서만 올리려면 지역 `TickBatchRegistry::Entry` 를 레지스트리에 직접 올린다.
-     */
-    template <typename TComponent>
-    class TickBatchRegistration final : public TickBatchRegistrar
-    {
-    public:
-        TickBatchRegistration()
-            : TickBatchRegistrar{
-                  TickBatchRegistry::Entry{ &TComponent::StaticType, &TickBatchOf<TComponent>::tickRange }
-        }
-        {
-        }
-
-        TickBatchRegistration( const TickBatchRegistration& )            = delete;
-        TickBatchRegistration& operator=( const TickBatchRegistration& ) = delete;
-    };
-} // namespace sw
-
 /**
  * @brief 컴포넌트 타입을 일괄 틱 경로에 올립니다. 그 타입의 `.cpp` 에서 `onTick` 정의 뒤, `namespace sw` 안에 `SW_REGISTER_TICK_BATCH( 타입 );` 로 한 번 씁니다.
  * @details 정적 등록 객체가 모듈을 올릴 때 등록되고 내리기 전에 지워집니다(`TickBatchRegistrar`).
  */
-#define SW_REGISTER_TICK_BATCH( Type )                                     \
-    static ::sw::TickBatchRegistration<Type> s_tickBatchRegistration##Type \
-    {                                                                      \
+#define SW_REGISTER_TICK_BATCH( Type )                             \
+    static ::sw::TickBatchRegistrar s_tickBatchRegistration##Type  \
+    {                                                              \
+        ::sw::TickBatchRegistry::Entry                             \
+        {                                                          \
+            &Type::StaticType, &::sw::TickBatchOf<Type>::tickRange \
+        }                                                          \
     }

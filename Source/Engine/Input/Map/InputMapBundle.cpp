@@ -22,13 +22,13 @@ namespace sw
     {
     }
 
-    bool InputMapExtensionRegistry::registerExtension( const InputMapExtension* pExtension )
+    bool InputMapExtensionRegistry::registerEntry( const InputMapExtension* pExtension )
     {
         ScopedLock<mutex> lock{ _mutex };
         return _registration.addLogged( pExtension, "Input map extension", pExtension != nullptr ? string_view{ pExtension->_pID } : string_view{} ) == RegistrationResult::Added;
     }
 
-    void InputMapExtensionRegistry::unregisterExtension( const InputMapExtension* pExtension )
+    void InputMapExtensionRegistry::unregisterEntry( const InputMapExtension* pExtension )
     {
         ScopedLock<mutex> lock{ _mutex };
         (void)_registration.remove( pExtension ); // 없으면 뺄 것이 없다
@@ -41,24 +41,6 @@ namespace sw
         {
             inoutListAsset.push_back( AssetID{ string_view{ pExtension->_pAssetPath } } );
         }
-    }
-
-    InputMapExtensionRegistrar::InputMapExtensionRegistrar( const InputMapExtension* pExtension )
-        : _pExtension{ pExtension }
-        , _bRegistered{ SW_FALSE }
-    {
-    }
-
-    void InputMapExtensionRegistrar::attach( const ISubsystemLocator& scope )
-    {
-        _bRegistered = requireSubsystem<InputMapExtensionRegistry>( scope ).registerExtension( _pExtension ) ? SW_TRUE : SW_FALSE;
-    }
-
-    void InputMapExtensionRegistrar::detach( const ISubsystemLocator& scope )
-    {
-        if ( _bRegistered == SW_TRUE )
-            requireSubsystem<InputMapExtensionRegistry>( scope ).unregisterExtension( _pExtension );
-        _bRegistered = SW_FALSE;
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( InputMapExtensionRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( InputMapExtensionRegistry ) );

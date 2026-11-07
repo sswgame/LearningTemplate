@@ -14,7 +14,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DevCommandsEnabled.h"
-#include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
 {
@@ -127,9 +127,9 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 섹션을 올립니다. 이름이 비었거나 · 예약어거나 · 이미 있거나 · 본문이 없으면 false 입니다. */
-        [[nodiscard]] bool registerSection( const DebugHUDSectionRegistration* pRegistration );
+        [[nodiscard]] bool registerEntry( const DebugHUDSectionRegistration* pRegistration );
         /** @brief 섹션을 뺍니다(없으면 아무 일도 없습니다). */
-        void unregisterSection( const DebugHUDSectionRegistration* pRegistration );
+        void unregisterEntry( const DebugHUDSectionRegistration* pRegistration );
         /** @brief 이름(대소문자 무시)으로 섹션을 찾습니다. */
         const DebugHUDSectionRegistration* findSection( string_view name ) const;
         /** @brief 섹션 전부(순서 값 → 이름순)의 복사본입니다. 포인터는 이번 호출 안에서만 씁니다(모듈이 내려가면 빠진다). */
@@ -169,19 +169,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_DEBUG_HUD_SECTION` 이 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다(`ModuleObjectRegistrar`). */
-    class SW_API DebugHUDSectionRegistrar final : public ModuleObjectRegistrar
-    {
-    public:
-        explicit DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration );
-
-        void attach( const ISubsystemLocator& scope ) override;
-        void detach( const ISubsystemLocator& scope ) override;
-
-    private:
-        const DebugHUDSectionRegistration* _pRegistration;
-        uint8                              _bRegistered : 1;
-    };
+    /** @brief `SW_DEBUG_HUD_SECTION` 이 두는 정적 등록자입니다. */
+    using DebugHUDSectionRegistrar = ModuleEntryRegistrar<DebugHUDRegistry, const DebugHUDSectionRegistration*>;
 } // namespace sw
 
 #if SW_DEV_COMMANDS_ENABLED

@@ -16,7 +16,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DevCommandsEnabled.h"
-#include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
 {
@@ -79,9 +79,9 @@ namespace sw
         [[nodiscard]] static bool readCountArgument( string_view argument, uint32& outValue );
 
         /** @brief 명령을 올립니다. 이름이 비었거나 이미 있으면 false 입니다. */
-        [[nodiscard]] bool registerCommand( const DevCommandRegistration* pRegistration );
+        [[nodiscard]] bool registerEntry( const DevCommandRegistration* pRegistration );
         /** @brief 명령을 뺍니다(없으면 아무 일도 없습니다). */
-        void unregisterCommand( const DevCommandRegistration* pRegistration );
+        void unregisterEntry( const DevCommandRegistration* pRegistration );
         /** @brief 이름(대소문자 무시)으로 명령을 찾습니다. */
         const DevCommandRegistration* findCommand( string_view name ) const;
         /** @brief @p prefix 로 시작하는(대소문자 무시) 명령 이름을 사전순으로 채웁니다. */
@@ -99,21 +99,8 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @brief `SW_DEV_COMMAND` 가 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다(`ModuleObjectRegistrar`).
-     */
-    class SW_API DevCommandRegistrar final : public ModuleObjectRegistrar
-    {
-    public:
-        explicit DevCommandRegistrar( const DevCommandRegistration* pRegistration );
-
-        void attach( const ISubsystemLocator& scope ) override;
-        void detach( const ISubsystemLocator& scope ) override;
-
-    private:
-        const DevCommandRegistration* _pRegistration;
-        uint8                         _bRegistered : 1;
-    };
+    /** @brief `SW_DEV_COMMAND` 가 두는 정적 등록자입니다. */
+    using DevCommandRegistrar = ModuleEntryRegistrar<DevCommandRegistry, const DevCommandRegistration*>;
 } // namespace sw
 
 #if SW_DEV_COMMANDS_ENABLED

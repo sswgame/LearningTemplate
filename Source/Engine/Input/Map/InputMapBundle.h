@@ -17,7 +17,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -46,8 +46,8 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        [[nodiscard]] bool registerExtension( const InputMapExtension* pExtension );
-        void               unregisterExtension( const InputMapExtension* pExtension );
+        [[nodiscard]] bool registerEntry( const InputMapExtension* pExtension );
+        void               unregisterEntry( const InputMapExtension* pExtension );
         /** @brief 등록된 맵 파일을 id 순으로 @p inoutListAsset 뒤에 더합니다. 읽는 차례가 모듈을 올린 순서에 달리지 않게 한다. */
         void appendAssets( vector<AssetID>& inoutListAsset ) const;
 
@@ -58,19 +58,8 @@ namespace sw
 
     SW_SERVICE_SLOT( InputMapExtensionRegistry, Required );
 
-    /** @brief `SW_INPUT_MAP_EXTENSION` 이 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다. */
-    class SW_API InputMapExtensionRegistrar final : public ModuleObjectRegistrar
-    {
-    public:
-        explicit InputMapExtensionRegistrar( const InputMapExtension* pExtension );
-
-        void attach( const ISubsystemLocator& scope ) override;
-        void detach( const ISubsystemLocator& scope ) override;
-
-    private:
-        const InputMapExtension* _pExtension;
-        uint8                    _bRegistered : 1;
-    };
+    /** @brief `SW_INPUT_MAP_EXTENSION` 이 두는 정적 등록자입니다. */
+    using InputMapExtensionRegistrar = ModuleEntryRegistrar<InputMapExtensionRegistry, const InputMapExtension*>;
 
     /**
      * @brief `gamesettings.xml` 의 묶음 줄(`<inputMap path="common/input/base.input.xml"/>`) 하나입니다.

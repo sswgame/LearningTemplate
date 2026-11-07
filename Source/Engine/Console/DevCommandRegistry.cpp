@@ -50,7 +50,7 @@ namespace sw
     {
     }
 
-    bool DevCommandRegistry::registerCommand( const DevCommandRegistration* pRegistration )
+    bool DevCommandRegistry::registerEntry( const DevCommandRegistration* pRegistration )
     {
         const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr;
         if ( bInvalidRegistration )
@@ -64,7 +64,7 @@ namespace sw
         return result == RegistrationResult::Added;
     }
 
-    void DevCommandRegistry::unregisterCommand( const DevCommandRegistration* pRegistration )
+    void DevCommandRegistry::unregisterEntry( const DevCommandRegistration* pRegistration )
     {
         ScopedLock<mutex> lock{ _mutex };
         (void)_registration.remove( pRegistration ); // 등록되어 있지 않은 명령을 빼는 것은 할 일이 없다
@@ -92,24 +92,6 @@ namespace sw
                 outListName.push_back( pRegistration->_pName );
         }
         VectorUtil::sort( outListName );
-    }
-
-    DevCommandRegistrar::DevCommandRegistrar( const DevCommandRegistration* pRegistration )
-        : _pRegistration{ pRegistration }
-        , _bRegistered{ SW_FALSE }
-    {
-    }
-
-    void DevCommandRegistrar::attach( const ISubsystemLocator& scope )
-    {
-        _bRegistered = requireSubsystem<DevCommandRegistry>( scope ).registerCommand( _pRegistration ) ? SW_TRUE : SW_FALSE;
-    }
-
-    void DevCommandRegistrar::detach( const ISubsystemLocator& scope )
-    {
-        if ( _bRegistered == SW_TRUE )
-            requireSubsystem<DevCommandRegistry>( scope ).unregisterCommand( _pRegistration );
-        _bRegistered = SW_FALSE;
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( DevCommandRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DevCommandRegistry ) );

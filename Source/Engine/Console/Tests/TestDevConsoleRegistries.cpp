@@ -37,20 +37,20 @@ SW_TEST_CASE( DevConsoleRegistryTest, CommandRegistration )
     DevCommandRegistry           registry;
     const DevCommandRegistration first  = makeCommand( "debug.draw" );
     const DevCommandRegistration second = makeCommand( "DEBUG.DRAW" );
-    SW_REQUIRE_TRUE( registry.registerCommand( &first ) );
-    SW_EXPECT_FALSE( registry.registerCommand( &second ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &first ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &second ) );
     SW_EXPECT_TRUE( registry.findCommand( "Debug.Draw" ) == &first );
     SW_EXPECT_EQUAL( uint32( 1 ), registry.getCount() );
 
-    SW_EXPECT_FALSE( registry.registerCommand( nullptr ) );
+    SW_EXPECT_FALSE( registry.registerEntry( nullptr ) );
     const DevCommandRegistration noName = makeCommand( "" );
-    SW_EXPECT_FALSE( registry.registerCommand( &noName ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &noName ) );
     const DevCommandRegistration noBody{ "nobody", "", "", nullptr };
-    SW_EXPECT_FALSE( registry.registerCommand( &noBody ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &noBody ) );
 
-    registry.unregisterCommand( &second ); // 등록되지 않은 줄은 아무 일도 없다
+    registry.unregisterEntry( &second ); // 등록되지 않은 줄은 아무 일도 없다
     SW_EXPECT_EQUAL( uint32( 1 ), registry.getCount() );
-    registry.unregisterCommand( &first );
+    registry.unregisterEntry( &first );
     SW_EXPECT_TRUE( registry.findCommand( "debug.draw" ) == nullptr );
 }
 
@@ -61,9 +61,9 @@ SW_TEST_CASE( DevConsoleRegistryTest, CollectNamesByPrefix )
     const DevCommandRegistration zebra = makeCommand( "net.zebra" );
     const DevCommandRegistration alpha = makeCommand( "net.alpha" );
     const DevCommandRegistration other = makeCommand( "hud" );
-    SW_REQUIRE_TRUE( registry.registerCommand( &zebra ) );
-    SW_REQUIRE_TRUE( registry.registerCommand( &alpha ) );
-    SW_REQUIRE_TRUE( registry.registerCommand( &other ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &zebra ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &alpha ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &other ) );
 
     vector<string> listName{ "stale" };
     registry.collectNames( "NET.", listName );
@@ -118,20 +118,20 @@ SW_TEST_CASE( DevConsoleRegistryTest, HUDSectionRegistration )
     for ( const utf8* pBad : { "list", "OPACITY", "on", "off", "1", "two words", "a,b", "-minus" } )
     {
         const DebugHUDSectionRegistration bad = makeSection( pBad );
-        SW_EXPECT_FALSE( registry.registerSection( &bad ) );
+        SW_EXPECT_FALSE( registry.registerEntry( &bad ) );
     }
-    SW_EXPECT_FALSE( registry.registerSection( nullptr ) );
+    SW_EXPECT_FALSE( registry.registerEntry( nullptr ) );
     SW_EXPECT_EQUAL( uint64( 0 ), registry.getRevision() );
 
     const DebugHUDSectionRegistration late  = makeSection( "zeta", 5 );
     const DebugHUDSectionRegistration bravo = makeSection( "bravo", 1 );
     const DebugHUDSectionRegistration alpha = makeSection( "alpha", 1 );
     const DebugHUDSectionRegistration twin  = makeSection( "ALPHA", 9 );
-    SW_REQUIRE_TRUE( registry.registerSection( &late ) );
-    SW_REQUIRE_TRUE( registry.registerSection( &bravo ) );
-    SW_REQUIRE_TRUE( registry.registerSection( &alpha ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &late ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &bravo ) );
+    SW_REQUIRE_TRUE( registry.registerEntry( &alpha ) );
     const uint64 revision = registry.getRevision();
-    SW_EXPECT_FALSE( registry.registerSection( &twin ) );
+    SW_EXPECT_FALSE( registry.registerEntry( &twin ) );
     SW_EXPECT_EQUAL( revision, registry.getRevision() );
 
     const vector<const DebugHUDSectionRegistration*> listSection = registry.getSections();
@@ -141,7 +141,7 @@ SW_TEST_CASE( DevConsoleRegistryTest, HUDSectionRegistration )
     SW_EXPECT_TRUE( listSection[2] == &late );
     SW_EXPECT_TRUE( registry.findSection( "Bravo" ) == &bravo );
 
-    registry.unregisterSection( &bravo );
+    registry.unregisterEntry( &bravo );
     SW_EXPECT_TRUE( registry.findSection( "bravo" ) == nullptr );
     SW_EXPECT_EQUAL( revision + 1, registry.getRevision() );
 }

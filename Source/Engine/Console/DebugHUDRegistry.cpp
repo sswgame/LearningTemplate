@@ -126,7 +126,7 @@ namespace sw
         return false;
     }
 
-    bool DebugHUDRegistry::registerSection( const DebugHUDSectionRegistration* pRegistration )
+    bool DebugHUDRegistry::registerEntry( const DebugHUDSectionRegistration* pRegistration )
     {
         const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr;
         if ( bInvalidRegistration )
@@ -153,7 +153,7 @@ namespace sw
         return result == RegistrationResult::Added;
     }
 
-    void DebugHUDRegistry::unregisterSection( const DebugHUDSectionRegistration* pRegistration )
+    void DebugHUDRegistry::unregisterEntry( const DebugHUDSectionRegistration* pRegistration )
     {
         ScopedLock<mutex> lock{ _mutex };
         if ( _registration.remove( pRegistration ) )
@@ -228,23 +228,5 @@ namespace sw
 
 namespace sw
 {
-    DebugHUDSectionRegistrar::DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration )
-        : _pRegistration{ pRegistration }
-        , _bRegistered{ SW_FALSE }
-    {
-    }
-
-    void DebugHUDSectionRegistrar::attach( const ISubsystemLocator& scope )
-    {
-        _bRegistered = requireSubsystem<DebugHUDRegistry>( scope ).registerSection( _pRegistration ) ? SW_TRUE : SW_FALSE;
-    }
-
-    void DebugHUDSectionRegistrar::detach( const ISubsystemLocator& scope )
-    {
-        if ( _bRegistered == SW_TRUE )
-            requireSubsystem<DebugHUDRegistry>( scope ).unregisterSection( _pRegistration );
-        _bRegistered = SW_FALSE;
-    }
-
     SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw
