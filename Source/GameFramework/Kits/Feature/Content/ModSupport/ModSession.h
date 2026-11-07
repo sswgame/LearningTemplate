@@ -2,7 +2,8 @@
  * @file ModSession.h
  * @brief 한 게임 세션의 모드 구성입니다 — 시작 때 한 번 검증 · 마운트 · 캐시 갱신하고, 세션이 끝날 때 뗀다. 실행 중에 켜고 끄지 않는다.
  * @details 흐름: 모드 폴더(`<설치 폴더>/<id>/`)의 매니페스트를 읽고(`ModManifest`) 순서를 정하고(`ModResolver`), 팩을 검사하고(경로 · 크기 · 항목 수 · 덮어쓰기),
- *          허용 목록이 있으면 대조하고(서버, `ModAllowList`), 엔진 팩 VFS 에 패치 팩으로 기본 팩 위에 올린 뒤(`PackManager::mountPatchPack`) 덮어쓴 리소스를 쥔
+ *          허용 목록이 있으면 대조하고(서버, `ModAllowList`), 엔진 팩 VFS 에 패치 팩으로 기본 팩 위에 올리고(`PackManager::mountPatchPack`), 층을 밝힌 모드의
+ *          층 뿌리(`mods/<id>/layer`)를 엔진 덮어쓰기 층 목록 끝에 더한 뒤(`ResourceLayers` — 모드 순서대로, 뒤가 나중에 얹는다) 덮어쓰거나 층을 얹은 리소스를 쥔
  *          캐시를 다시 읽힌다(`AssetManager::reloadChangedPaths`). 하나라도 실패하면 이 세션은 모드 없이 서지 않고 실패를 돌려준다 — 서버와 다른 구성으로 조용히 돌지 않는다.
  *
  *          팩 VFS 는 엔진의 것이고 이 키트는 조정자다(팩 기능을 복제하지 않는다). 수명은 게임 인스턴스와 같다 — 시나리오 체인 · 모듈 리로드처럼 인스턴스를 다시 세우는
@@ -64,7 +65,7 @@ namespace sw
          */
         [[nodiscard]] bool applyForGame( string_view packRoot );
 
-        /** @brief 올린 모드 팩을 내리고, 덮어썼던 리소스를 쥔 캐시를 다시 읽힙니다. 올린 것이 없으면 아무것도 하지 않는다. */
+        /** @brief 더한 층을 되돌리고 올린 모드 팩을 내리고, 덮어썼거나 층을 얹었던 리소스를 쥔 캐시를 다시 읽힙니다. 올린 것이 없으면 아무것도 하지 않는다. */
         void release();
 
         /** @brief 지금 켠 구성입니다(켜지 않았으면 빈 구성). */
@@ -90,20 +91,28 @@ namespace sw
         [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, string& outFolder );
 
     private:
+        /** @brief 이 세션이 바꾼 기본 리소스 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
+        vector<string> makeChangedPaths() const;
         /** @brief 켤 모드의 매니페스트를 읽습니다(id 형식 · 파일 크기 · id 와 폴더 이름의 일치). */
         [[nodiscard]] static bool loadManifests( const ModSessionRequest& request, const ModSupportSettings& settings, vector<ModManifest>& outListManifest );
         /** @brief 모드 하나의 팩 경로를 정합니다 — 묶은 팩이면 그것, 소스 폴더면(개발 구성만) 묶어서 그 경로. 둘 다 있거나 없으면 오류입니다. */
         [[nodiscard]] bool preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, string& outPackPath );
-        /** @brief 팩을 검사하고 내용 해시를 구합니다(크기 · 도메인 없음 · 항목 수 · 항목 크기 · 경로 꼴 · 모드 접두 또는 밝힌 덮어쓰기 · 밝힌 덮어쓰기가 모두 들었고 기본 리소스가 있음). */
+        /**
+         * @brief 팩을 검사하고 내용 해시를 구합니다(크기 · 도메인 없음 · 항목 수 · 항목 크기 · 경로 꼴 · 모드 접두 또는 밝힌 덮어쓰기 · 밝힌 덮어쓰기와 층이 모두 들었고 기본 리소스가 있음).
+         * @details 층 폴더(`mods/<id>/layer/`)의 항목은 밝힌 층이어야 한다 — 엔진 층은 그 뿌리 아래 파일이면 무엇이든 얹으므로, 밝히지 않은 층 파일은 정책(`<Overridable>`)을 지나지 않고 기본 리소스를 바꾼다.
+         */
         [[nodiscard]] static bool checkPack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash );
 
     private:
         AssetManager&          _assets;
-        vector<string>         _listMountedPackPath; ///< 이 세션이 올린 팩(마운트 순서)
-        vector<string>         _listBuiltPackPath;   ///< 이 세션이 소스 모드에서 묶은 팩 파일(내린 뒤 지운다)
-        vector<string>         _listOverridePath;    ///< 켠 모드가 덮어쓴 기본 리소스 id
+        vector<string>         _listMountedPackPath;   ///< 이 세션이 올린 팩(마운트 순서)
+        vector<string>         _listBuiltPackPath;     ///< 이 세션이 소스 모드에서 묶은 팩 파일(내린 뒤 지운다)
+        vector<string>         _listOverridePath;      ///< 켠 모드가 덮어쓴 기본 리소스 id
+        vector<string>         _listLayerPath;         ///< 켠 모드가 층을 얹은 기본 리소스 id
+        vector<string>         _listPreviousLayerRoot; ///< 모드 층을 더하기 전의 엔진 층 목록(`ResourceLayers` — 내릴 때 되돌린다)
         ModSetDigest           _digest;
-        uint8                  _bApplied : 1; ///< `apply` 를 불렀다(성공 여부와 상관없이 세션마다 한 번)
-        [[maybe_unused]] uint8 _reserved : 7;
+        uint8                  _bApplied   : 1; ///< `apply` 를 불렀다(성공 여부와 상관없이 세션마다 한 번)
+        uint8                  _bLayersSet : 1; ///< 이 세션이 엔진 층 목록에 모드 층을 더했다
+        [[maybe_unused]] uint8 _reserved   : 6;
     };
 } // namespace sw

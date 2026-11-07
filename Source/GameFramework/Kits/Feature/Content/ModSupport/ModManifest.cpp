@@ -141,6 +141,11 @@ namespace sw
         return formatToString( "%#/%#/", kModDomainRoot, id );
     }
 
+    string ModManifest::makeLayerRoot( string_view id )
+    {
+        return formatToString( "%#/%#/%#", kModDomainRoot, id, kLayerFolder );
+    }
+
     bool ModManifest::parseXMLText( string_view text, string_view sourceName, ModManifest& outManifest )
     {
         using Internal = ModManifestInternal;
@@ -181,6 +186,7 @@ namespace sw
             Element::of<&ModManifest::readDependency>( "Dependency" ).uncounted(),
             Element::of<&ModManifest::readConflict>( "Conflict" ).uncounted(),
             Element::of<&ModManifest::readOverride>( "Override" ).uncounted(),
+            Element::of<&ModManifest::readLayer>( "Layer" ).uncounted(),
         };
         if ( XMLCatalogReader::readInDocumentOrder( manifest, root, sourceName, kArrElement ).isClean() == false )
             return false;
@@ -237,12 +243,27 @@ namespace sw
         string_view path;
         if ( ModManifestInternal::readText( node, "path", sourceName, path ) == false || ModManifestInternal::checkOverridePath( path, sourceName ) == false )
             return false;
-        if ( VectorUtil::contains( _listOverride, string{ path } ) )
+        if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )
         {
-            SW_LOG_ERROR_ID( "ModManifest.DuplicateOverride", "Mod manifest '%#': override '%#' is listed twice", sourceName, path );
+            SW_LOG_ERROR_ID( "ModManifest.DuplicateOverride", "Mod manifest '%#': '%#' is listed twice (as an override or a layer)", sourceName, path );
             return false;
         }
         _listOverride.emplace_back( path );
+        return true;
+    }
+
+    bool ModManifest::readLayer( const XMLNode& node, string_view sourceName )
+    {
+        // 층은 덮어쓰기와 같은 경로 규칙이다(정규형 · 기본 리소스만) — 한 리소스를 통째로 바꾸면서 그 위에 차이를 얹는 것은 뜻이 없어 겹치면 거절한다.
+        string_view path;
+        if ( ModManifestInternal::readText( node, "path", sourceName, path ) == false || ModManifestInternal::checkOverridePath( path, sourceName ) == false )
+            return false;
+        if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )
+        {
+            SW_LOG_ERROR_ID( "ModManifest.DuplicateOverride", "Mod manifest '%#': '%#' is listed twice (as an override or a layer)", sourceName, path );
+            return false;
+        }
+        _listLayer.emplace_back( path );
         return true;
     }
 

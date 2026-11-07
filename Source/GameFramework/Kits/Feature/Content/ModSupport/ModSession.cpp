@@ -21,6 +21,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModPackBuilder.h"
@@ -125,8 +126,11 @@ namespace sw
         , _listMountedPackPath{}
         , _listBuiltPackPath{}
         , _listOverridePath{}
+        , _listLayerPath{}
+        , _listPreviousLayerRoot{}
         , _digest{}
         , _bApplied{ 0 }
+        , _bLayersSet{ 0 }
         , _reserved{ 0 }
     {
     }
@@ -270,18 +274,38 @@ namespace sw
             }
             _listMountedPackPath.push_back( listPackPath[orderIndex] );
         }
+        vector<string> listLayerRoot = ResourceLayers::getLayers();
         for ( const size_t manifestIndex : listOrder )
         {
-            for ( const string& path : listManifest[manifestIndex]._listOverride )
+            const ModManifest& manifest = listManifest[manifestIndex];
+            for ( const string& path : manifest._listOverride )
             {
                 if ( VectorUtil::contains( _listOverridePath, path ) == false )
                     _listOverridePath.push_back( path );
             }
+            for ( const string& path : manifest._listLayer )
+            {
+                if ( VectorUtil::contains( _listLayerPath, path ) == false )
+                    _listLayerPath.push_back( path );
+            }
+            if ( manifest._listLayer.empty() == false )
+                listLayerRoot.push_back( ModManifest::makeLayerRoot( manifest._id ) );
+        }
+        // 모드 층은 게임 팩의 층 위에 모드 순서대로 얹는다 — 뒤(우선순위가 높은) 모드의 차이가 나중에 얹혀 이긴다.
+        if ( _listLayerPath.empty() == false )
+        {
+            _listPreviousLayerRoot = ResourceLayers::getLayers();
+            if ( ResourceLayers::setLayers( listLayerRoot ) == false )
+            {
+                release();
+                return false;
+            }
+            _bLayersSet = 1;
         }
 
-        // 덮어쓴 리소스를 이미 쥔 캐시는 다시 읽힌다. 제자리로 다시 읽지 못하는 캐시가 쥐었으면 옛 내용을 계속 내주므로 거절한다(모드를 더 일찍 적용해야 한다).
+        // 덮어쓰거나 층을 얹은 리소스를 이미 쥔 캐시는 다시 읽힌다. 제자리로 다시 읽지 못하는 캐시가 쥐었으면 옛 내용을 계속 내주므로 거절한다(모드를 더 일찍 적용해야 한다).
         vector<string> listStale;
-        (void)_assets.reloadChangedPaths( _listOverridePath, listStale );
+        (void)_assets.reloadChangedPaths( makeChangedPaths(), listStale );
         if ( listStale.empty() == false )
         {
             for ( const string& path : listStale )
@@ -298,8 +322,24 @@ namespace sw
         return true;
     }
 
+    vector<string> ModSession::makeChangedPaths() const
+    {
+        vector<string> listPath = _listOverridePath;
+        for ( const string& path : _listLayerPath )
+        {
+            if ( VectorUtil::contains( listPath, path ) == false )
+                listPath.push_back( path );
+        }
+        return listPath;
+    }
+
     void ModSession::release()
     {
+        // 층을 먼저 되돌린다 — 팩을 내린 뒤의 다시 읽기가 사라진 층 뿌리를 보지 않게.
+        if ( _bLayersSet != 0 && ResourceLayers::setLayers( _listPreviousLayerRoot ) == false )
+            SW_LOG_ERROR_ID( "ModSession.LayersNotRestored", "The resource layers before the mods could not be restored - the next session may still see mod layers" );
+        _bLayersSet = 0;
+        _listPreviousLayerRoot.clear();
         PackManager& packs = _assets.getPackManager();
         for ( auto it = _listMountedPackPath.rbegin(); it != _listMountedPackPath.rend(); ++it )
         {
@@ -312,13 +352,14 @@ namespace sw
         {
             // 덮어썼던 리소스를 쥔 캐시는 기본 내용으로 다시 읽힌다 — 다음 세션이 모드 내용을 보지 않게.
             vector<string> listStale;
-            (void)_assets.reloadChangedPaths( _listOverridePath, listStale );
+            (void)_assets.reloadChangedPaths( makeChangedPaths(), listStale );
             for ( const string& path : listStale )
             {
                 SW_LOG_ERROR_ID( "ModSession.OverrideStillHeld", "Mod override '%#' is still held by a cache that cannot reload it - the next session would see the mod's content", path );
             }
         }
         _listOverridePath.clear();
+        _listLayerPath.clear();
         for ( const string& builtPath : _listBuiltPackPath )
         {
             if ( FileUtil::removeFile( builtPath ) == false )
@@ -448,8 +489,16 @@ namespace sw
         vector<string> listEntryPath;
         reader.collectAllEntryPaths( listEntryPath );
         const string contentPrefix = ModManifest::makeContentPrefix( manifest._id );
+        const string layerPrefix   = ModManifest::makeLayerRoot( manifest._id ) + "/";
         for ( const string& entryPath : listEntryPath )
         {
+            // 층 폴더의 파일은 엔진 층이 기본 리소스에 얹으므로 밝힌 층만 둔다(정책을 지나지 않은 차이를 막는다).
+            if ( StringUtil::startsWith( entryPath, layerPrefix ) && VectorUtil::contains( manifest._listLayer, entryPath.substr( layerPrefix.size() ) ) == false )
+            {
+                SW_LOG_ERROR_ID( "ModSession.UndeclaredLayer", "Mod pack '%#': '%#' is in the layer folder but '%#' is not a declared <Layer>", packPath, entryPath,
+                                 entryPath.substr( layerPrefix.size() ) );
+                return false;
+            }
             PackFileEntry entry;
             if ( reader.getFileEntry( entryPath, entry ) == false || entry._uncompressedSize > settings._maxEntryBytes )
             {
@@ -479,6 +528,20 @@ namespace sw
             if ( AssetIO::hasAsset( AssetID{ overridePath } ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.OverrideTargetMissing", "Mod '%#' overrides '%#', which is not a resource of the game", manifest._id, overridePath );
+                return false;
+            }
+        }
+        for ( const string& layerPath : manifest._listLayer )
+        {
+            if ( VectorUtil::contains( listEntryPath, layerPrefix + layerPath ) == false )
+            {
+                SW_LOG_ERROR_ID( "ModSession.LayerNotInPack", "Mod '%#' declares layer '%#' but its pack does not hold '%#'", manifest._id, layerPath, layerPrefix + layerPath );
+                return false;
+            }
+            // 층은 원본을 부모로 삼는다 — 원본이 없으면 얹을 곳이 없다(오타난 층이 조용히 아무것도 바꾸지 않게 두지 않는다).
+            if ( AssetIO::hasAsset( AssetID{ layerPath } ) == false )
+            {
+                SW_LOG_ERROR_ID( "ModSession.LayerTargetMissing", "Mod '%#' layers '%#', which is not a resource of the game", manifest._id, layerPath );
                 return false;
             }
         }

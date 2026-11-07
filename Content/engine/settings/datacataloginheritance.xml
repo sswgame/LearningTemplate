@@ -185,6 +185,9 @@
 	<Catalog root="LootCatalog">
 		<Entry name="Table" key="id"/>
 	</Catalog>
+	<Catalog root="MonsterCatalog">
+		<Entry name="Monster" key="id"/>
+	</Catalog>
 	<Catalog root="ProjectileCatalog">
 		<Entry name="Projectile" key="id">
 			<Field name="OnHit" key="call"/>

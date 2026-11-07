@@ -11,10 +11,12 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModPackBuilder.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 // 모드 세션 — 엔진 팩 VFS 에 올리고 · 덮어쓰기가 낱개 파일 위에 서고 · 세션이 끝나면 내려간다. 바깥 폴더의 잘못된 모드는 하나도 올리지 않고 거절한다.
 // 기본 리소스는 케이스 도메인(`testproject/…`, 붙인 디스크 도메인 — 낱개 파일을 먼저 읽는 자리)이다.
@@ -220,6 +222,50 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     SW_EXPECT_FALSE( tryApply( { "fake" } ) );
 
     SW_EXPECT_EQUAL( string( "base" ), Internal::read( Internal::kBasePath ) );
+}
+
+// 층을 밝힌 모드는 엔진 덮어쓰기 층 끝에 자기 층 뿌리를 더하고, 기본 표는 원본을 부모로 항목이 더해져 읽힌다. 세션이 끝나면 층 목록이 앞 값으로 돌아간다.
+// 층 폴더에 밝히지 않은 파일이 있으면(정책을 지나지 않고 기본 리소스를 바꾼다) 하나도 올리지 않는다.
+SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
+{
+    using Internal = TestModSessionInternal;
+    test::ScopedScratchDomain domain;
+    const string              basePath = "testproject/data/quests.xml";
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/quests.xml" ),
+                                          R"(<QuestCatalog><Quest id="base_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
+    const string            root          = test::makeScratchPath( "ModRoot" );
+    const ModSessionRequest request       = Internal::makeRequest( root, { "tide" } );
+    const string            modDir        = FileUtil::joinPath( request._installFolder, "tide" );
+    const string            content       = FileUtil::joinPath( modDir, ModPackBuilder::kSourceFolderName );
+    const string            layerFile     = FileUtil::joinPath( content, ModManifest::makeLayerRoot( "tide" ) + "/" + basePath );
+    const vector<string>    listLayerBase = ResourceLayers::getLayers();
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( modDir, ModManifest::kFileName ),
+                                          R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path=")" + basePath + R"("/></Mod>)" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( layerFile, R"(<QuestCatalog><Quest id="tide_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    {
+        ModSession session( assets );
+        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        vector<string> listExpected = listLayerBase;
+        listExpected.push_back( "mods/tide/layer" );
+        SW_EXPECT_TRUE( ResourceLayers::getLayers() == listExpected );
+        const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath );
+        SW_REQUIRE_TRUE( pQuests != nullptr );
+        SW_EXPECT_TRUE( pQuests->find( hashed_string( "base_quest" ) ) != nullptr ); // 원본 항목은 그대로
+        SW_EXPECT_TRUE( pQuests->find( hashed_string( "tide_quest" ) ) != nullptr ); // 층이 더한 항목
+    }
+    SW_EXPECT_TRUE( ResourceLayers::getLayers() == listLayerBase );
+    SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
+
+    // 밝히지 않은 층 파일.
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( content, ModManifest::makeLayerRoot( "tide" ) + "/testproject/data/welcome.xml" ), "sneaky" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    ModSession sneaky( assets );
+    SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );
+    SW_EXPECT_FALSE( sneaky.apply( request, Internal::makeSettings() ) );
+    SW_EXPECT_TRUE( ResourceLayers::getLayers() == listLayerBase );
+    SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
 
 // 켤 모드가 없으면 아무것도 하지 않는다 — 모드 없는 실행은 이 키트가 있어도 그대로다.

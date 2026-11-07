@@ -95,6 +95,39 @@ SW_TEST_CASE( ModManifestTest, ReadsEveryField )
     SW_EXPECT_EQUAL( string( "mods/lantern_2/" ), ModManifest::makeContentPrefix( manifest._id ) );
 }
 
+// 층은 덮어쓰기와 같은 경로 규칙이고 같은 정책을 받는다 — 한 리소스를 덮어쓰면서 층을 얹지 않고, 층 뿌리는 모드 도메인 안이다.
+SW_TEST_CASE( ModManifestTest, ReadsLayersUnderTheOverrideRules )
+{
+    ModManifest manifest;
+    SW_REQUIRE_TRUE( ModManifest::parseXMLText( R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0">
+        <Layer path="game/test/data/quests.xml"/>
+        <Layer path="game/test/data/monsters.xml"/>
+    </Mod>)",
+                                                "test", manifest ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, manifest._listLayer.size() );
+    SW_EXPECT_EQUAL( string( "game/test/data/monsters.xml" ), manifest._listLayer[1] );
+    SW_EXPECT_TRUE( manifest._listOverride.empty() );
+    SW_EXPECT_EQUAL( string( "mods/tide/layer" ), ModManifest::makeLayerRoot( manifest._id ) );
+
+    SW_EXPECT_LOG( "ModManifest.DuplicateOverride" ); // 같은 리소스를 덮어쓰면서 층을 얹는다
+    SW_EXPECT_FALSE( ModManifest::parseXMLText(
+        R"(<Mod id="a" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Override path="game/test/data/q.xml"/><Layer path="game/test/data/q.xml"/></Mod>)", "test",
+        manifest ) );
+    SW_EXPECT_LOG( "ModManifest.OverridesModContent" ); // 다른 모드의 콘텐츠에는 얹지 않는다
+    SW_EXPECT_FALSE(
+        ModManifest::parseXMLText( R"(<Mod id="a" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path="mods/b/data/q.xml"/></Mod>)", "test", manifest ) );
+
+    // 정책 밖의 층은 거절, 두 모드가 같은 표에 얹는 것은 충돌이 아니다.
+    vector<ModManifest> listManifest{ TestModManifestInternal::makeManifest( "outside", 0 ) };
+    listManifest[0]._listLayer.push_back( "game/test/database.xml" );
+    SW_EXPECT_LOG( "ModResolver.LayerNotAllowed" );
+    SW_EXPECT_EQUAL( string( "<rejected>" ), TestModManifestInternal::resolveIDs( listManifest ) );
+    listManifest = { TestModManifestInternal::makeManifest( "first", 0 ), TestModManifestInternal::makeManifest( "second", 1 ) };
+    listManifest[0]._listLayer.push_back( "game/test/data/quests.xml" );
+    listManifest[1]._listLayer.push_back( "game/test/data/quests.xml" );
+    SW_EXPECT_EQUAL( string( "first,second" ), TestModManifestInternal::resolveIDs( listManifest ) );
+}
+
 // id 는 폴더 이름과 리소스 경로가 된다 — 구분자 · `..` · 대문자 · 드라이브는 형식에서 막는다.
 SW_TEST_CASE( ModManifestTest, IDRuleBlocksPathEscape )
 {

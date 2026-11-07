@@ -1,6 +1,6 @@
 /**
  * @file ModManifest.h
- * @brief 콘텐츠 전용 모드 하나의 매니페스트(`<모드 폴더>/mod.xml`)입니다 — id · 판 · 맞는 콘텐츠 판 범위 · 우선순위 · 의존 · 충돌 · 덮어쓰는 기본 리소스.
+ * @brief 콘텐츠 전용 모드 하나의 매니페스트(`<모드 폴더>/mod.xml`)입니다 — id · 판 · 맞는 콘텐츠 판 범위 · 우선순위 · 의존 · 충돌 · 덮어쓰는 기본 리소스 · 층으로 얹는 기본 리소스.
  * @details 모드는 쿠킹된 콘텐츠 · 데이터만 든다(네이티브 DLL · 스크립트 VM 은 없다 — `docs/DesignBacklog.md` "모드 지원 키트"). 매니페스트는 바깥 사람이 쓴 신뢰하지 않는 입력이라
  *          모든 칸이 필수이고, 모르는 원소 · 틀린 형식 · 범위 밖 값은 이유를 남기고 거절한다. 언리얼 UGC 플러그인의 `.uplugin`(판 · 의존)과 Godot `.pck` 의 덮어쓰기를
  *          한 파일에 둔 자리다(기억에 의존).
@@ -9,7 +9,12 @@
  *              <Dependency id="base_pack" minVersion="1.0.0" optional="false"/>
  *              <Conflict id="other_mod"/>
  *              <Override path="game/empty/data/welcome.xml"/>
+ *              <Layer path="game/empty/data/quests.xml"/>
  *          </Mod>
+ *
+ *          `<Override>` 는 기본 리소스를 통째로 바꾸고(팩 우선순위 — 두 모드가 같은 파일을 덮으면 충돌이다), `<Layer>` 는 기본 리소스 위에 차이를 얹는다
+ *          (엔진 덮어쓰기 층 `ResourceLayers` — 층 파일 `mods/<id>/layer/<경로>` 가 원본을 부모로 삼아 항목을 더하고 고친다). DLC · 확장처럼 표에 항목을 더하는 모드는
+ *          층을 쓴다 — 여럿이 같은 표에 얹어도 서로를 지우지 않는다. 언리얼 Game Feature 플러그인이 데이터 레지스트리에 행을 더하는 자리다(기억에 의존).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -64,8 +69,9 @@ namespace sw
     {
         static constexpr const utf8* kFileName      = "mod.xml";
         static constexpr const utf8* kRootElement   = "Mod";
-        static constexpr size_t      kMaxIDLength   = 48;     ///< id 글자 수 상한(폴더 이름 · 리소스 경로 한 칸)
-        static constexpr const utf8* kModDomainRoot = "mods"; ///< 모드가 새로 더하는 리소스의 도메인 뿌리(`mods/<id>/…`)
+        static constexpr size_t      kMaxIDLength   = 48;      ///< id 글자 수 상한(폴더 이름 · 리소스 경로 한 칸)
+        static constexpr const utf8* kModDomainRoot = "mods";  ///< 모드가 새로 더하는 리소스의 도메인 뿌리(`mods/<id>/…`)
+        static constexpr const utf8* kLayerFolder   = "layer"; ///< 모드 콘텐츠 안 덮어쓰기 층 폴더(`mods/<id>/layer/<기본 리소스 id>`)
 
         string                _id;
         ModVersion            _version;
@@ -75,6 +81,7 @@ namespace sw
         vector<ModDependency> _listDependency;
         vector<string>        _listConflict; ///< 함께 켜면 거절하는 모드 id
         vector<string>        _listOverride; ///< 덮어쓰는 기본 리소스 id(정규형). 모드 팩에 그 경로가 있어야 한다
+        vector<string>        _listLayer;    ///< 층으로 얹는 기본 리소스 id(정규형). 모드 팩에 `makeLayerRoot( id ) + "/" + 경로` 가 있어야 한다. 덮어쓰기와 겹치지 않는다
 
         /**
          * @brief id 규칙(소문자 · 숫자 · `_`, 1 ~ `kMaxIDLength` 글자)을 지키면 true 입니다.
@@ -83,6 +90,8 @@ namespace sw
         static bool isValidID( string_view id );
         /** @brief 모드 @p id 가 새로 더하는 리소스의 경로 접두(`mods/<id>/`)입니다. */
         static string makeContentPrefix( string_view id );
+        /** @brief 모드 @p id 의 덮어쓰기 층 뿌리(`mods/<id>/layer` — 끝 `/` 없음, `ResourceLayers` 의 뿌리 꼴)입니다. */
+        static string makeLayerRoot( string_view id );
 
         /**
          * @brief 매니페스트 글을 읽습니다. 틀리면(모르는 원소 · 빠진 칸 · 틀린 id · 판 · 범위 · 정규형이 아니거나 `mods/` 아래인 덮어쓰기 · 같은 덮어쓰기 · 자기 의존) 이유를 오류로 남기고 false 입니다.
@@ -100,5 +109,7 @@ namespace sw
         [[nodiscard]] bool readConflict( const XMLNode& node, string_view sourceName );
         /** @brief `<Override>` 한 줄을 읽습니다(정규형 기본 리소스 id 만). */
         [[nodiscard]] bool readOverride( const XMLNode& node, string_view sourceName );
+        /** @brief `<Layer>` 한 줄을 읽습니다(정규형 기본 리소스 id 만, 덮어쓰기와 겹치지 않는다). */
+        [[nodiscard]] bool readLayer( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw

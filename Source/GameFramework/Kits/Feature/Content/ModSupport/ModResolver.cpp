@@ -42,6 +42,15 @@ namespace sw
                         return false;
                     }
                 }
+                // 층도 기본 리소스를 바꾸므로 같은 허락을 받는다. 여러 모드가 한 리소스에 층을 얹는 것은 충돌이 아니다(차이가 차례로 얹힌다).
+                for ( const string& path : manifest._listLayer )
+                {
+                    if ( settings.isOverridable( path ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "ModResolver.LayerNotAllowed", "Mod '%#' layers '%#', which the game does not let mods change (ModSupportSettings <Overridable>)", manifest._id, path );
+                        return false;
+                    }
+                }
                 for ( const ModDependency& dependency : manifest._listDependency )
                 {
                     const size_t dependencyIndex = findIndex( listManifest, dependency._id );
