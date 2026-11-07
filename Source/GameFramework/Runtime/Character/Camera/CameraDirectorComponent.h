@@ -15,7 +15,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UILayer.h"
+#include "Engine/Window/IUILayerVisibility.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
@@ -81,10 +81,10 @@ namespace sw
         void clearViewOverride();
         bool isViewOverridden() const { return _bViewOverride; }
         /**
-         * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), UI 레이어를 숨기고(`_photoHiddenUILayers` 속성이 정한 레이어에 `UISystem::addLayerHideRequest`),
+         * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), UI 레이어를 숨기고(`_photoHiddenUILayers` 속성이 정한 레이어에 `IUILayerVisibility::addLayerHideRequest`),
          *        지금 포즈에서 시작하는 자유 카메라를 디렉터 포즈 위에 덮습니다.
          * @details 디렉터 상태(프리셋, 블렌드, 덮어쓴 시점)는 건드리지 않고 마지막 쓰기만 바꾼다. 그래서 끌 때 되돌릴 것은 정지 요청과 UI 숨김 요청뿐이다.
-         *          카메라 컴포넌트는 UI 를 모르고, 이 디렉터가 UI 시스템에 "이 레이어를 숨겨 달라" 는 요청만 건다 — 어느 레이어인지는 게임 데이터(속성)가 정한다.
+         *          카메라 컴포넌트는 UI 를 모르고, 이 디렉터가 레이어 숨김 창구(`IUILayerVisibility`)에 "이 레이어를 숨겨 달라" 는 요청만 건다 — 어느 레이어인지는 게임 데이터(속성)가 정한다.
          *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 함수라서 쓰지 않는다. 겹치면 끌 때 탑승 시점을 지운다.
          *          조작은 게임 입력 맵이 아니라 엔진의 포토 모드 입력 맵(`EngineDefaultAssets::_photoModeInputMap`)에서 읽는다. 그래서 게임마다 맵에 액션을 더하지 않아도 되고,
          *          게임 키와 겹쳐도 게임이 멈춰 있어 부딪히지 않는다(언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 추가하는 것과 같다).

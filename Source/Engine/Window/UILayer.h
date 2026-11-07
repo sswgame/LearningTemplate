@@ -1,6 +1,7 @@
 /**
- * @file UILayer.h
+ * @file Engine/Window/UILayer.h
  * @brief 화면 레이어(`UILayer`)와 레이어 집합(`UILayerMask`)입니다. 화면을 정의하는 `UIScreen.h` 없이 레이어만 쓰는 쪽(카메라 디렉터의 포토 모드 데이터)이 가볍게 가져다 씁니다.
+ * @details UI 폴더가 아니라 창 폴더에 둔다 — 게임 창 위에 겹치는 층의 이름이라 UI 를 짓지 않는 구성(전용 서버)의 게임 데이터도 이 형식을 칸으로 든다(`IUILayerVisibility`).
  */
 #pragma once
 #include "Core/Foundation/EnumUtil.h"

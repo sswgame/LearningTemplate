@@ -10,7 +10,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Render/UIPaintPass.h"
-#include "Engine/UI/Screen/UILayer.h"
+#include "Engine/Window/UILayer.h"
 
 namespace sw
 {

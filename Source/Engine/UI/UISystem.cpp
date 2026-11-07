@@ -1059,7 +1059,7 @@ namespace sw
     {
         UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
         build._pStartupParts->_pUISystem = &uiSystem;
-        const bool bExposed              = scope.expose<IInputCaptureQuery>( uiSystem );
+        const bool bExposed              = scope.expose<IInputCaptureQuery>( uiSystem ) && scope.expose<IUILayerVisibility>( uiSystem );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

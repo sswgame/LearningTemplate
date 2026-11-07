@@ -18,10 +18,10 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIBindingDef.h"
-#include "Engine/UI/Screen/UILayer.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
+#include "Engine/Window/UILayer.h"
 
 namespace sw
 {

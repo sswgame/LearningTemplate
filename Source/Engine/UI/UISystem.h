@@ -30,6 +30,7 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
+#include "Engine/Window/IUILayerVisibility.h"
 
 namespace sw
 {
@@ -82,7 +83,7 @@ namespace sw
      *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
      *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
      */
-    class SW_API UISystem final : public ISubsystem, public IInputCaptureQuery
+    class SW_API UISystem final : public ISubsystem, public IInputCaptureQuery, public IUILayerVisibility
     {
     public:
         UISystem();
@@ -254,9 +255,9 @@ namespace sw
          *          요청 뒤에 열린 화면도 숨깁니다. 엔진은 레이어 가시성 기능만 주고 어느 레이어를 숨길지는 거는 쪽의 데이터가 정합니다(Godot `CanvasLayer.visible`, 언리얼 `AHUD::bShowHUD`, 유니티 `Canvas.enabled`).
          *          건 쪽이 같은 집합으로 `removeLayerHideRequest` 를 꼭 부릅니다.
          */
-        void addLayerHideRequest( UILayerMask layers );
+        void addLayerHideRequest( UILayerMask layers ) override;
         /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. 건 적 없는 레이어를 풀면 단언으로 멈춥니다. */
-        void removeLayerHideRequest( UILayerMask layers );
+        void removeLayerHideRequest( UILayerMask layers ) override;
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
         /**
