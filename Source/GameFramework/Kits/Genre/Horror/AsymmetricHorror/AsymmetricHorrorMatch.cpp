@@ -60,7 +60,6 @@ namespace sw
         , _listLockerOccupant{}
         , _eventBuffer{}
         , _listInteractionScratch{}
-        , _listCombatHealthScratch{}
         , _match{}
         , _timer{}
         , _hatchPosition{}
@@ -695,8 +694,7 @@ namespace sw
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
         (void)target._combatHealth.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
-        _listCombatHealthScratch.clear();
-        target._combatHealth.pollEvents( _listCombatHealthScratch );
+        target._combatHealth.discardEvents();
         awardScore( _killer._score, "Hit", 1.0f );
         if ( target._combatHealth.isDowned() )
         {
@@ -826,8 +824,7 @@ namespace sw
         {
             (void)target._combatHealth.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         }
-        _listCombatHealthScratch.clear();
-        target._combatHealth.pollEvents( _listCombatHealthScratch );
+        target._combatHealth.discardEvents();
         target._state          = SurvivorState::Carried;
         target._wiggleProgress = 0.0f;
         target._position       = _killer._position;
@@ -940,8 +937,7 @@ namespace sw
             (void)target._combatHealth.heal( 1.0f );
             target._state = SurvivorState::Healthy;
         }
-        _listCombatHealthScratch.clear();
-        target._combatHealth.pollEvents( _listCombatHealthScratch );
+        target._combatHealth.discardEvents();
         pushEvent( AsymmetricHorrorEvent::Kind::Healed, -1, patient, static_cast<float32>( target._state ), target._position );
     }
 
@@ -949,8 +945,7 @@ namespace sw
     {
         survivor._combatHealth.respawn();
         (void)survivor._combatHealth.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
-        _listCombatHealthScratch.clear();
-        survivor._combatHealth.pollEvents( _listCombatHealthScratch );
+        survivor._combatHealth.discardEvents();
         survivor._state          = SurvivorState::Injured;
         survivor._wiggleProgress = 0.0f;
         survivor._bWiggling      = SW_FALSE;
@@ -966,8 +961,7 @@ namespace sw
         if ( _killer._carrying == survivorIndex )
             _killer._carrying = -1;
         survivor._combatHealth.kill( -1 );
-        _listCombatHealthScratch.clear();
-        survivor._combatHealth.pollEvents( _listCombatHealthScratch );
+        survivor._combatHealth.discardEvents();
         survivor._state    = SurvivorState::Sacrificed;
         survivor._bBledOut = bBledOut ? SW_TRUE : SW_FALSE;
         _match.reportKill( survivor._participant, _killer._participant );
@@ -1744,8 +1738,7 @@ namespace sw
             case SurvivorState::Dying:
             {
                 survivor._combatHealth.update( deltaTime );
-                _listCombatHealthScratch.clear();
-                survivor._combatHealth.pollEvents( _listCombatHealthScratch );
+                survivor._combatHealth.discardEvents();
                 if ( survivor._combatHealth.isDead() )
                 {
                     sacrifice( survivorIndex, true ); // 출혈사

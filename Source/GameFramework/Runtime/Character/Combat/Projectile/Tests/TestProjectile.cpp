@@ -104,6 +104,13 @@ namespace
             return bullet;
         }
 
+        /** @brief 한 걸음의 사건을 @p inoutListEvent 뒤에 모읍니다. 여러 걸음을 한 번에 세는 테스트가 씁니다. */
+        static void stepCollect( ProjectileSimulation& simulation, float32 deltaTime, const IProjectileWorld& world, vector<ProjectileEvent>& inoutListEvent )
+        {
+            const vector<ProjectileEvent>& listStep = simulation.step( deltaTime, world );
+            inoutListEvent.insert( inoutListEvent.end(), listStep.begin(), listStep.end() );
+        }
+
         static int32 countKind( const vector<ProjectileEvent>& listEvent, ProjectileEvent::Kind kind )
         {
             int32 count = 0;
@@ -241,7 +248,7 @@ SW_TEST_CASE( ProjectileTest, PierceHitsTheNextTarget )
     vector<ProjectileEvent> listEvent;
     for ( int32 step = 0; step < 10 && simulation.getProjectiles().empty() == false; ++step )
     {
-        simulation.step( 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( simulation, 1.0f / 60.0f, world, listEvent );
     }
     SW_REQUIRE_EQUAL( 2, Util::countKind( listEvent, ProjectileEvent::Kind::Hit ) );
     SW_EXPECT_EQUAL( 0, listEvent[0]._hit._other );
@@ -264,7 +271,7 @@ SW_TEST_CASE( ProjectileTest, BounceReflectsOffSurfaces )
     vector<ProjectileEvent> listEvent;
     for ( int32 step = 0; step < 5; ++step )
     {
-        bouncy.step( 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( bouncy, 1.0f / 60.0f, world, listEvent );
     }
     SW_REQUIRE_EQUAL( size_t( 1 ), bouncy.getProjectiles().size() );
     SW_EXPECT_EQUAL( 1, Util::countKind( listEvent, ProjectileEvent::Kind::Bounced ) );
@@ -276,7 +283,7 @@ SW_TEST_CASE( ProjectileTest, BounceReflectsOffSurfaces )
     listEvent.clear();
     for ( int32 step = 0; step < 5; ++step )
     {
-        plain.step( 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( plain, 1.0f / 60.0f, world, listEvent );
     }
     SW_EXPECT_TRUE( plain.getProjectiles().empty() );
     SW_REQUIRE_EQUAL( 1, Util::countKind( listEvent, ProjectileEvent::Kind::Hit ) );
@@ -300,7 +307,7 @@ SW_TEST_CASE( ProjectileTest, HomingTurnsTowardTheTargetInThePlane )
     vector<ProjectileEvent> listEvent;
     for ( int32 step = 0; step < 30; ++step )
     {
-        simulation.step( 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( simulation, 1.0f / 60.0f, world, listEvent );
     }
     SW_REQUIRE_EQUAL( size_t( 1 ), simulation.getProjectiles().size() );
     const ProjectileState& flying = simulation.getProjectiles()[0];
@@ -325,7 +332,7 @@ SW_TEST_CASE( ProjectileTest, RangeAndLifetimeEndTheProjectile )
     vector<ProjectileEvent> listEvent;
     for ( int32 step = 0; step < 20; ++step )
     {
-        simulation.step( 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( simulation, 1.0f / 60.0f, world, listEvent );
     }
     SW_EXPECT_TRUE( simulation.getProjectiles().empty() );
     SW_REQUIRE_EQUAL( 2, Util::countKind( listEvent, ProjectileEvent::Kind::Expired ) );
@@ -351,7 +358,7 @@ SW_TEST_CASE( ProjectileTest, StateRoundTripIsDeterministic )
     missile._drag                = 0.1f;
     (void)original.spawn( missile );
     vector<ProjectileEvent> listEvent;
-    original.step( 1.0f / 60.0f, world, listEvent );
+    Util::stepCollect( original, 1.0f / 60.0f, world, listEvent );
 
     Archive written;
     original.writeState( written );
@@ -360,8 +367,8 @@ SW_TEST_CASE( ProjectileTest, StateRoundTripIsDeterministic )
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     for ( int32 step = 0; step < 10; ++step )
     {
-        original.step( 1.0f / 60.0f, world, listEvent );
-        restored.step( 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( original, 1.0f / 60.0f, world, listEvent );
+        Util::stepCollect( restored, 1.0f / 60.0f, world, listEvent );
     }
     SW_REQUIRE_EQUAL( original.getProjectiles().size(), restored.getProjectiles().size() );
     SW_EXPECT_TRUE( original.getProjectiles()[0]._position == restored.getProjectiles()[0]._position );
@@ -377,4 +384,23 @@ SW_TEST_CASE( ProjectileTest, StateRoundTripIsDeterministic )
     Archive              forgedReading( listByte.data(), listByte.size() );
     SW_EXPECT_FALSE( refused.readState( forgedReading ) );
     SW_EXPECT_TRUE( refused.getProjectiles().empty() );
+}
+
+/** @brief [ProjectileTest] step 은 이번 걸음의 사건만 돌려준다 — 지난 걸음의 사건이 남지 않고, 시간이 흐르지 않은 걸음은 비어 있다 */
+SW_TEST_CASE( ProjectileTest, StepReturnsOnlyThisStepEvents )
+{
+    LineWorld world;
+    world._listTarget = {
+        float3{ 1.0f, 0.0f, 0.0f }
+    };
+    ProjectileSimulation simulation;
+    (void)simulation.spawn( Util::makeBullet( 120.0f ) ); // id 는 쓰지 않는다
+
+    int32 hitCount = 0;
+    for ( int32 step = 0; step < 10; ++step )
+    {
+        hitCount += Util::countKind( simulation.step( 1.0f / 60.0f, world ), ProjectileEvent::Kind::Hit );
+    }
+    SW_EXPECT_EQUAL( 1, hitCount );
+    SW_EXPECT_TRUE( simulation.step( 0.0f, world ).empty() );
 }

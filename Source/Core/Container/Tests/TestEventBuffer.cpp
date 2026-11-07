@@ -77,3 +77,21 @@ SW_TEST_CASE( EventBufferTest, LeaseHolderDrainsAndCopiesCarryNoLease )
     buffer.moveAllTo( second, listEvent );
     SW_EXPECT_EQUAL( 3, listEvent[0] );
 }
+
+/** @brief [EventBufferTest] takeAll 은 쌓인 것만 돌려주고, 순회 중에 쌓은 알림은 다음 번에 나온다. */
+SW_TEST_CASE( EventBufferTest, TakeAllReturnsPendingAndKeepsLaterPushes )
+{
+    EventBuffer<int32> buffer;
+    buffer.push( 1 );
+    const vector<int32>& listFirst = buffer.takeAll();
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listFirst.size() );
+    SW_EXPECT_TRUE( buffer.isEmpty() );
+
+    buffer.push( 2 ); // 순회 중에 쌓는 자리다
+    SW_EXPECT_EQUAL( 1, listFirst[0] );
+
+    const vector<int32>& listSecond = buffer.takeAll();
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listSecond.size() );
+    SW_EXPECT_EQUAL( 2, listSecond[0] );
+    SW_EXPECT_TRUE( buffer.takeAll().empty() );
+}

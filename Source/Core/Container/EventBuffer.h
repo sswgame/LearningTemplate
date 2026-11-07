@@ -65,6 +65,18 @@ namespace sw
             moveTo( outList );
         }
 
+        /**
+         * @brief 쌓인 알림을 꺼내 버퍼가 든 목록으로 돌려줍니다. 다음 `takeAll` 까지 유효합니다. 순회 중에 쌓은 알림은 다음 번에 나옵니다.
+         * @details 받는 쪽이 칸을 두고 비워 `moveAllTo` 로 받던 모양(clear → poll → 순회)을 대신합니다. 여러 곳의 알림을 한 목록에 모으는 쪽은 `moveAllTo` 를 씁니다. 표를 쥔 큐에는 쓸 수 없습니다.
+         */
+        [[nodiscard]] const vector<T>& takeAll()
+        {
+            SW_ASSERT( _gate.hasHolder() == false && "This drain queue is gated; drain it with the lease" );
+            _listTaken.clear();
+            _listTaken.swap( _listPending );
+            return _listTaken;
+        }
+
         /** @brief 쌓인 알림을 버립니다(용량은 둔다). */
         void clear() { _listPending.clear(); }
 
@@ -88,6 +100,7 @@ namespace sw
 
     private:
         vector<T>    _listPending;
+        vector<T>    _listTaken; ///< `takeAll` 이 돌려준 목록. 복사 · 이동에 따라가지 않는다(지난 꺼냄의 것이다)
         ConsumerGate _gate;
     };
 } // namespace sw

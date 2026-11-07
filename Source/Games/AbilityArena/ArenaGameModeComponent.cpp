@@ -211,7 +211,6 @@ namespace sw
         , _listProjectile{}
         , _projectiles{}
         , _listProjectileCargo{}
-        , _listProjectileEventScratch{}
         , _listPendingUnit{}
         , _tintCache{}
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
@@ -675,10 +674,8 @@ namespace sw
     void ArenaGameModeComponent::stepProjectiles( float32 deltaTime )
     {
         const ArenaProjectileQuery query( _listUnitView, _unitRadius, _arenaHalfSize + 2.0f );
-        _listProjectileEventScratch.clear();
-        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
-        GameObjectManager* pManager = getObjectManager();
-        for ( const ProjectileEvent& event : _listProjectileEventScratch )
+        GameObjectManager*         pManager = getObjectManager();
+        for ( const ProjectileEvent& event : _projectiles.step( deltaTime, query ) )
         {
             const uint32 projectileID = event._projectile._id;
             const bool   bUnitHit     = event._kind == ProjectileEvent::Kind::Hit && event._hit._kind == ProjectileHitKind::Target && pManager != nullptr;

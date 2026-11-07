@@ -137,6 +137,8 @@ namespace sw
         /** @brief 살아 있거나 부활할 수 있는 팀원 수입니다. */
         int32 countStanding( int32 team ) const;
         void  pollEvents( vector<MatchEvent>& outListEvent );
+        /** @brief 쌓인 알림을 꺼내 돌려줍니다. 다음 `takeEvents` 까지 유효합니다(`EventBuffer::takeAll`). */
+        [[nodiscard]] const vector<MatchEvent>& takeEvents() { return _eventBuffer.takeAll(); }
 
         /** @brief 팀, 참가자, 경과 시간, 단계 시간, 승리 팀, 단계를 씁니다. 설정은 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;

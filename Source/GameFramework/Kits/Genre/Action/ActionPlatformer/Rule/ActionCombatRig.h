@@ -137,7 +137,6 @@ namespace sw
         MoveTimeline                   _timeline;
         WeaponState                    _gun;
         ProjectileSimulation           _projectiles;
-        vector<ProjectileEvent>        _listProjectileEventScratch;
         EventBuffer<ActionCombatEvent> _eventBuffer;
         int32                          _comboIndex; ///< 지금 기술의 콤보 인덱스(−1이면 쉬는 중)
         int32                          _attackBufferFrames;

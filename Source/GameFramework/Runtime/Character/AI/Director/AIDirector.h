@@ -217,7 +217,6 @@ namespace sw
         EventBuffer<AIDirectorEvent>                _eventBuffer;
         RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
         vector<float32>                             _listScratchWeight;
-        vector<SpawnEvent>                          _listScratchSpawnEvent;
         const AIDirectorProfile*                    _pProfile;
         const SpawnTable*                           _pSpawnTable;
         IAIDirectorIntensityModel*                  _pCustomModel;

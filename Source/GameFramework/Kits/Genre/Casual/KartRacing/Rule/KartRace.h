@@ -252,7 +252,6 @@ namespace sw
     private:
         vector<KartRacer>          _listRacer;
         ProjectileSimulation       _projectiles;
-        vector<ProjectileEvent>    _listProjectileEventScratch;
         EventBuffer<KartRaceEvent> _eventBuffer;
         vector<Countdown>          _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
         vector<int32>              _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호

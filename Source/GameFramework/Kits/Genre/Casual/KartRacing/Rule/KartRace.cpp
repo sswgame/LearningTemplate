@@ -173,7 +173,6 @@ namespace sw
     KartRace::KartRace()
         : _listRacer{}
         , _projectiles{}
-        , _listProjectileEventScratch{}
         , _eventBuffer{}
         , _listItemBoxTimer{}
         , _listPlaceOrder{}
@@ -712,9 +711,8 @@ namespace sw
         _projectiles.removeDead();
 
         // 걸음: 수명 · 유도 · 이동 · 맞음(쏜 차의 유예 · 1등 공격의 대상만)은 공통 시뮬레이션이 한다.
-        const KartProjectileQuery query( *this );
-        _listProjectileEventScratch.clear();
-        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
+        const KartProjectileQuery      query( *this );
+        const vector<ProjectileEvent>& listEvent = _projectiles.step( deltaTime, query );
 
         // 걸음 뒤: 날아가는 아이템은 트랙 높이를 따르고(바나나는 놓인 자리), 맞은 아이템은 효과를 준다.
         for ( ProjectileState& projectile : _projectiles.accessProjectiles() )
@@ -722,7 +720,7 @@ namespace sw
             if ( projectile._velocity.getLengthSquared() > 0.0f )
                 projectile._position._y = _pTrack->sampleHeight( projectile._position._x, projectile._position._z );
         }
-        for ( const ProjectileEvent& event : _listProjectileEventScratch )
+        for ( const ProjectileEvent& event : listEvent )
         {
             const KartItemDef* pItem = _pItemCatalog->find( event._projectile._defID );
             if ( event._kind != ProjectileEvent::Kind::Hit || pItem == nullptr )

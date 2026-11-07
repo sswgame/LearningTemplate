@@ -212,6 +212,7 @@ namespace sw
 
     ProjectileSimulation::ProjectileSimulation()
         : _listProjectile{}
+        , _listEventScratch{}
         , _planeNormal{}
         , _nextID{ 1 }
     {
@@ -232,16 +233,18 @@ namespace sw
         return added._id;
     }
 
-    void ProjectileSimulation::step( float32 deltaTime, const IProjectileWorld& world, vector<ProjectileEvent>& outListEvent )
+    const vector<ProjectileEvent>& ProjectileSimulation::step( float32 deltaTime, const IProjectileWorld& world )
     {
+        _listEventScratch.clear();
         if ( deltaTime <= 0.0f )
-            return;
+            return _listEventScratch;
         for ( ProjectileState& projectile : _listProjectile )
         {
             if ( projectile._bAlive == SW_TRUE )
-                ProjectileSimulationInternal::stepOne( projectile, deltaTime, _planeNormal, world, outListEvent );
+                ProjectileSimulationInternal::stepOne( projectile, deltaTime, _planeNormal, world, _listEventScratch );
         }
         removeDead();
+        return _listEventScratch;
     }
 
     void ProjectileSimulation::removeDead()

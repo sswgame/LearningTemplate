@@ -403,7 +403,6 @@ namespace sw
         vector<int32>                       _listLockerOccupant;
         EventBuffer<AsymmetricHorrorEvent>  _eventBuffer;
         vector<InteractionEvent>            _listInteractionScratch;
-        vector<CombatHealthEvent>           _listCombatHealthScratch;
         MatchState                          _match;
         FixedStepTimer                      _timer;
         float3                              _hatchPosition;

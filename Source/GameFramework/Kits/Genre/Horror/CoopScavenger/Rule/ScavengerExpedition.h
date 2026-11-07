@@ -214,7 +214,6 @@ namespace sw
         vector<ScavengerCrewMember> _listCrew;
         vector<ScavengerScrap>      _listShipScrap;
         EventBuffer<ScavengerEvent> _eventBuffer;
-        vector<SpawnEvent>          _listSpawnScratch;
         ScavengerExpeditionData     _data;
         ScavengerQuota              _quota;
         ScavengerFacility           _facility;

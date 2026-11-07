@@ -51,7 +51,6 @@ namespace sw
         , _timeline{}
         , _gun{}
         , _projectiles{}
-        , _listProjectileEventScratch{}
         , _eventBuffer{}
         , _comboIndex{ -1 }
         , _attackBufferFrames{ 0 }
@@ -231,8 +230,7 @@ namespace sw
 
         // 투사체는 움직이다가, 시간 · 사거리가 다 되거나 벽에 닿으면 없앤다(공통 발사체 시뮬레이션).
         const ActionRigProjectileQuery query( pMap );
-        _listProjectileEventScratch.clear();
-        _projectiles.step( kFrameTime, query, _listProjectileEventScratch );
+        (void)_projectiles.step( kFrameTime, query ); // 사건은 쓰지 않는다
     }
 
     int32 ActionCombatRig::takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit )

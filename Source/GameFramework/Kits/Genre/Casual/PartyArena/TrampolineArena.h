@@ -258,7 +258,6 @@ namespace sw
     private:
         vector<TrampolinePlayer>     _listPlayer;
         EventBuffer<TrampolineEvent> _eventBuffer;
-        vector<MatchEvent>           _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 이벤트 버퍼이다
         TrampolineSettings           _settings;
         TimingJudge                  _judge;
         PartyItemSpawner             _itemSpawner;

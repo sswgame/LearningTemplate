@@ -206,7 +206,6 @@ namespace sw
         , _listCandidate{}
         , _listTagged{}
         , _projectiles{}
-        , _listProjectileEvent{}
         , _previousTarget{}
         , _previousTargetPosition{}
     {
@@ -233,9 +232,7 @@ namespace sw
         if ( _projectiles.getProjectiles().empty() )
             return;
         const TurretProjectileWorld world{ _listTagged, _hitRadius };
-        _listProjectileEvent.clear();
-        _projectiles.step( constant::time::kDefaultFixedStepSeconds, world, _listProjectileEvent );
-        for ( const ProjectileEvent& event : _listProjectileEvent )
+        for ( const ProjectileEvent& event : _projectiles.step( constant::time::kDefaultFixedStepSeconds, world ) )
         {
             if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
                 continue;

@@ -71,7 +71,6 @@ namespace sw
         , _layers{}
         , _listActor{}
         , _projectiles{}
-        , _listProjectileEventScratch{}
         , _listMonsterDef{}
         , _listMonsterShot{}
         , _attackCooldown{}
@@ -361,8 +360,7 @@ namespace sw
     void ActionRoom::updateProjectiles( float32 deltaTime )
     {
         const ActionRoomProjectileQuery query;
-        _listProjectileEventScratch.clear();
-        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
+        (void)_projectiles.step( deltaTime, query ); // 사건은 쓰지 않는다
     }
 
     void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )

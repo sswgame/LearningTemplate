@@ -152,7 +152,6 @@ namespace sw
     TrampolineArena::TrampolineArena()
         : _listPlayer{}
         , _eventBuffer{}
-        , _listMatchEvent{}
         , _settings{}
         , _judge{}
         , _itemSpawner{}
@@ -270,9 +269,7 @@ namespace sw
         _itemSpawner.discardEvents();
 
         _match.update( deltaTime );
-        _listMatchEvent.clear();
-        _match.pollEvents( _listMatchEvent );
-        for ( const MatchEvent& event : _listMatchEvent )
+        for ( const MatchEvent& event : _match.takeEvents() )
         {
             if ( event._kind == MatchEvent::Kind::Respawned && isValidPlayer( event._participant ) )
                 respawn( event._participant );
@@ -378,7 +375,6 @@ namespace sw
             }
         }
         arena._eventBuffer.clear();
-        arena._listMatchEvent.clear();
         *this = std::move( arena );
         return true;
     }

@@ -30,7 +30,6 @@ namespace sw
         : _listCrew{}
         , _listShipScrap{}
         , _eventBuffer{}
-        , _listSpawnScratch{}
         , _data{}
         , _quota{}
         , _facility{}
@@ -283,8 +282,7 @@ namespace sw
     void ScavengerExpedition::notifyThreatDespawned( bool bIndoor, uint32 spawnID )
     {
         (void)( bIndoor ? _indoorDirector : _outdoorDirector ).notifyDespawned( spawnID );
-        _listSpawnScratch.clear();
-        ( bIndoor ? _indoorDirector : _outdoorDirector ).pollEvents( _listSpawnScratch );
+        ( bIndoor ? _indoorDirector : _outdoorDirector ).discardEvents();
     }
 
     int32 ScavengerExpedition::sellAllShipScrap( ScavengerActionResult& outResult )
@@ -539,9 +537,7 @@ namespace sw
 
     void ScavengerExpedition::collectThreatEvents( SpawnDirector& director, bool bIndoor )
     {
-        _listSpawnScratch.clear();
-        director.pollEvents( _listSpawnScratch );
-        for ( const SpawnEvent& spawn : _listSpawnScratch )
+        for ( const SpawnEvent& spawn : director.takeEvents() )
         {
             if ( spawn._kind != SpawnEvent::Kind::Spawned )
                 continue;
@@ -672,7 +668,6 @@ namespace sw
         if ( bBodiesValid == false )
             return false;
         restored._eventBuffer.clear();
-        restored._listSpawnScratch.clear();
         *this = std::move( restored );
         return true;
     }

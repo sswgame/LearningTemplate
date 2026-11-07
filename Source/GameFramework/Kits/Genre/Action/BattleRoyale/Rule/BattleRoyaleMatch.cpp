@@ -18,7 +18,6 @@ namespace sw
         : _listPlayer{}
         , _listSupplyDrop{}
         , _eventBuffer{}
-        , _listMatchScratch{}
         , _matchState{}
         , _zone{}
         , _random{}
@@ -401,9 +400,7 @@ namespace sw
 
     void BattleRoyaleMatch::collectMatchEvents()
     {
-        _listMatchScratch.clear();
-        _matchState.pollEvents( _listMatchScratch );
-        for ( const MatchEvent& event : _listMatchScratch )
+        for ( const MatchEvent& event : _matchState.takeEvents() )
         {
             if ( event._kind == MatchEvent::Kind::TeamEliminated )
                 pushEvent( BattleRoyaleEvent::Kind::TeamEliminated, -1, -1, event._team, event._value );

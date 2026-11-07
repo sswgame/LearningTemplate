@@ -70,7 +70,6 @@ namespace sw
         , _eventBuffer{}
         , _listTrace{}
         , _listScratchWeight{}
-        , _listScratchSpawnEvent{}
         , _pProfile{ nullptr }
         , _pSpawnTable{ nullptr }
         , _pCustomModel{ nullptr }
@@ -271,9 +270,7 @@ namespace sw
 
     void AIDirector::pollSpawnEvents()
     {
-        _listScratchSpawnEvent.clear();
-        _spawnDirector.pollEvents( _listScratchSpawnEvent );
-        for ( const SpawnEvent& spawn : _listScratchSpawnEvent )
+        for ( const SpawnEvent& spawn : _spawnDirector.takeEvents() )
         {
             AIDirectorEvent event;
             event._kind      = spawn._kind == SpawnEvent::Kind::Spawned ? AIDirectorEventKind::Spawned : AIDirectorEventKind::Despawned;

@@ -134,8 +134,11 @@ namespace sw
         void setPlaneNormal( const float3& normal );
         /** @brief 탄을 넣고 id 를 돌려줍니다. 살아 있는 탄으로 넣습니다. */
         uint32 spawn( const ProjectileState& projectile );
-        /** @brief 한 걸음 진행합니다. 생긴 일을 @p outListEvent 뒤에 붙이고, 끝난 탄을 목록에서 뺍니다. */
-        void step( float32 deltaTime, const IProjectileWorld& world, vector<ProjectileEvent>& outListEvent );
+        /**
+         * @brief 한 걸음 진행하고 끝난 탄을 목록에서 뺍니다.
+         * @return 이번 걸음에 생긴 일입니다. 버퍼는 시뮬레이션이 들고 다음 `step` 까지 유효합니다 — 걸음마다 쓰는 쪽이 칸을 두고 비우던 것을 한 곳으로 모았다. 쓰지 않으면 받지 않아도 된다.
+         */
+        const vector<ProjectileEvent>& step( float32 deltaTime, const IProjectileWorld& world );
         /** @brief 쓰는 쪽이 끝낸 탄(`_bAlive` 거짓)을 뺍니다. */
         void removeDead();
         /** @brief 모든 탄을 지웁니다. id 는 이어서 셉니다(지운 탄과 새 탄이 겹치지 않게). */
@@ -156,6 +159,7 @@ namespace sw
 
     private:
         vector<ProjectileState> _listProjectile;
+        vector<ProjectileEvent> _listEventScratch; ///< 이번 걸음의 사건(`step`). 상태가 아니라 저장하지 않는다
         float3                  _planeNormal;
         uint32                  _nextID;
     };

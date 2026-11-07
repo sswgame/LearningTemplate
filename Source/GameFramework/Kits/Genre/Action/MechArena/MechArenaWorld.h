@@ -338,10 +338,7 @@ namespace sw
         ProjectileSimulation        _projectiles;
         vector<hashed_string>       _listTeamName;
         EventBuffer<MechArenaEvent> _eventBuffer;
-        vector<CombatHealthEvent>   _listCombatHealthScratch;
-        vector<MatchEvent>          _listMatchScratch;
         vector<LockOnCandidate>     _listCandidateScratch;
-        vector<ProjectileEvent>     _listProjectileEventScratch;
         MatchState                  _match;
         FixedStepTimer              _timer;
         const MechCatalog*          _pMechCatalog;

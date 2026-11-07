@@ -283,7 +283,6 @@ namespace sw
         CollisionLayers              _layers;
         vector<Actor>                _listActor;
         ProjectileSimulation         _projectiles;
-        vector<ProjectileEvent>      _listProjectileEventScratch;
         vector<MonsterDef>           _listMonsterDef;  ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
         vector<vector<ResolvedShot>> _listMonsterShot; ///< `_listMonsterDef` 와 같은 순서로, 그 종의 사격 줄마다 푼 탄(싸움 도중 탄 카탈로그를 다시 읽어도 그대로다)
         Countdown                    _attackCooldown;

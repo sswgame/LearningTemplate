@@ -266,7 +266,6 @@ namespace sw
         vector<GameObjectHandle> _listProjectile; ///< 투사체의 모습(상태 저장 전에 걷는다). 탄 자체는 `_projectiles` 다
         ProjectileSimulation     _projectiles;
         vector<ProjectileCargo>  _listProjectileCargo;
-        vector<ProjectileEvent>  _listProjectileEventScratch;
         vector<SpawnRequest>     _listPendingUnit;
         MaterialTintCache        _tintCache; ///< 플레이어, Grunt, Caster, 투사체 색.
         float3                   _playerFocus;

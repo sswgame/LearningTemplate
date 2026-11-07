@@ -97,7 +97,7 @@ namespace sw
         {
             const float32 drain = ( _pDef->_coreDrainPerHour + ( _bGalloping != SW_FALSE ? _pDef->_gallopCoreDrainPerHour : 0.0f ) ) * gameHours;
             DepletingValue::take( _healthCore, drain );
-            _staminaCore = MathUtil::max( 0.0f, _staminaCore - drain );
+            DepletingValue::take( _staminaCore, drain );
             _hoursSinceBrush += gameHours;
         }
         _bGalloping = SW_FALSE;

@@ -171,6 +171,10 @@ namespace sw
         bool notifyDespawned( uint32 spawnID );
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<SpawnEvent>& outListEvent );
+        /** @brief 쌓인 알림을 꺼내 돌려줍니다. 다음 `takeEvents` 까지 유효합니다(`EventBuffer::takeAll`). */
+        [[nodiscard]] const vector<SpawnEvent>& takeEvents() { return _eventBuffer.takeAll(); }
+        /** @brief 쌓인 알림을 꺼내지 않고 버립니다. */
+        void discardEvents() { _eventBuffer.clear(); }
 
         float32 getBudget() const { return _budget; }
         float32 getTime() const { return _time; }

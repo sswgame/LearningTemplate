@@ -171,7 +171,6 @@ namespace sw
         vector<BattleRoyalePlayer>     _listPlayer;
         vector<BattleRoyaleSupplyDrop> _listSupplyDrop;
         EventBuffer<BattleRoyaleEvent> _eventBuffer;
-        vector<MatchEvent>             _listMatchScratch;
         MatchState                     _matchState;
         BattleRoyaleZone               _zone;
         GameRandom                     _random;

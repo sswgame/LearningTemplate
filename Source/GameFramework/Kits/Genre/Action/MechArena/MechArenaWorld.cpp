@@ -361,10 +361,7 @@ namespace sw
         , _projectiles{}
         , _listTeamName{}
         , _eventBuffer{}
-        , _listCombatHealthScratch{}
-        , _listMatchScratch{}
         , _listCandidateScratch{}
-        , _listProjectileEventScratch{}
         , _match{}
         , _timer{}
         , _pMechCatalog{ nullptr }
@@ -588,9 +585,7 @@ namespace sw
     void MechArenaWorld::stepMatch( float32 deltaTime )
     {
         _match.update( deltaTime );
-        _listMatchScratch.clear();
-        _match.pollEvents( _listMatchScratch );
-        for ( const MatchEvent& event : _listMatchScratch )
+        for ( const MatchEvent& event : _match.takeEvents() )
         {
             if ( event._kind == MatchEvent::Kind::Respawned )
             {
@@ -962,8 +957,7 @@ namespace sw
             finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다
 
         const CombatHealthDamageResult result = target._combatHealth.applyDamage( finalDamage, finalDown, attacker );
-        _listCombatHealthScratch.clear();
-        target._combatHealth.pollEvents( _listCombatHealthScratch );
+        target._combatHealth.discardEvents();
         if ( result._bIgnored == SW_TRUE )
             return;
         const int32 victimParticipant   = target._listParticipant.empty() ? -1 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
@@ -1313,8 +1307,7 @@ namespace sw
         const MechDef*   pMech    = pilot.getMech();
 
         pilot._combatHealth.update( deltaTime );
-        _listCombatHealthScratch.clear();
-        pilot._combatHealth.pollEvents( _listCombatHealthScratch );
+        pilot._combatHealth.discardEvents();
         if ( pilot._state == MechPilotState::Down && pilot._combatHealth.isPoiseBroken() == false )
         {
             // 기상: 다운치는 가득 찬 채로 일어나고 잠시 무적이다.
@@ -1584,9 +1577,7 @@ namespace sw
     {
         // 걸음은 공통 시뮬레이션이 하고, 키트는 맞은 조종사에게 슬롯의 반응을 준다. 반응은 모든 탄이 움직인 뒤에 준다(걸음 안에서 세계를 바꾸지 않는다).
         const MechArenaProjectileQuery query( *this );
-        _listProjectileEventScratch.clear();
-        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
-        for ( const ProjectileEvent& event : _listProjectileEventScratch )
+        for ( const ProjectileEvent& event : _projectiles.step( deltaTime, query ) )
         {
             if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
                 continue;
