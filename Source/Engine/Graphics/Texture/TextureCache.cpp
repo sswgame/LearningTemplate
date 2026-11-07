@@ -17,6 +17,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
@@ -465,6 +466,8 @@ namespace sw
 
     uint32 TextureCache::completePendingLoads( IRHIDevice* pDevice, uint32 maxCount )
     {
+        // 업로드 전용 계측(렌더 스레드 업로드 판단 — DesignBacklog "렌더 스레드와 업로드"): 펌프 CPU 시간, 프레임당 제출 · 폴링 · 대기 수.
+        SW_PROFILE_SCOPE( "RT.TextureUpload.pump" );
         return pumpPendingLoads( pDevice, maxCount, false );
     }
 
@@ -493,6 +496,8 @@ namespace sw
             listUploading.swap( _impl->_listUploading );
         }
         uint32 completedCount = 0;
+        if ( bBlocking == false )
+            SW_PROFILE_COUNT( "RT.TextureUpload.polled", listUploading.size() );
         for ( const shared_ptr<TextureLoadOperation>& pOperation : listUploading )
         {
             pOperation->_pDevice.store( pDevice, std::memory_order_release );
@@ -511,6 +516,8 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _impl->_awaitingMutex };
             const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listAwaitingUpload.size() );
+            if ( bBlocking == false )
+                SW_PROFILE_COUNT( "RT.TextureUpload.waiting", _impl->_listAwaitingUpload.size() - takeCount ); // 프레임 상한에 밀려 다음 프레임으로 넘어간 수
             if ( takeCount == 0 )
                 return completedCount;
             listOperation.assign( std::make_move_iterator( _impl->_listAwaitingUpload.begin() ), std::make_move_iterator( _impl->_listAwaitingUpload.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
@@ -523,6 +530,8 @@ namespace sw
             pOperation->_pDevice.store( pDevice, std::memory_order_release );
             if ( pOperation->runCompletionIfPending() == false )
                 continue;
+            if ( bBlocking == false )
+                SW_PROFILE_COUNT( "RT.TextureUpload.submitted", 1 );
             // `Busy`(스테이징이 참)면 로드 작업이 스스로 대기 목록으로 돌아갔다 — 이 프레임의 나머지도 같은 이유로 못 내므로 순서를 지켜 앞에 되돌려 놓고 멈춘다.
             if ( pOperation->isAwaitingCompletion() == false )
                 continue;
@@ -1005,11 +1014,18 @@ namespace sw
         // 렌더 타깃 · CPU 텍스처는 읽을 파일이 없다 — 업로드 단계만 있다.
         if ( _source != Source::File )
             return true;
+        // 읽기와 머리 풀기는 한 함수라 `IO` 하나에 적는다(`AssetLoadPhase` 규칙). 올리기는 완료 단계의 따로 된 기록(`TextureUpload`)이다.
+        AssetLoadScope loadScope( "Texture", getPath() );
         _pImage = make_unique<DDSImageData>();
         if ( Texture2D::readImage( AssetID{ getPath() }, *_pImage ) == false )
         {
             _loadError = "the DDS could not be read or uses a format the engine cannot upload";
             _pImage.reset();
+        }
+        else
+        {
+            loadScope.setBytes( _pImage->_bytes.size() );
+            loadScope.setSucceeded();
         }
         // 실패도 완료 단계로 넘긴다 — 진행 중 표시는 완료 단계 하나가 내린다(헤더).
         return true;
@@ -1114,8 +1130,15 @@ namespace sw
                 const bool bAlreadyResident = _source == Source::CPUBytes && _pTexture->isRHIValid();
                 if ( bAlreadyResident )
                     return concludeCompletion( *pCache, true, outError );
+                // 제출 CPU 시간(장치 자원 만들기 · 스테이징 복사 · 전송 제출). GPU 전송 완료까지는 아니다(이후 프레임의 폴링). `Busy`(스테이징이 참)는 실패 수로 보인다.
+                AssetLoadScope uploadScope( "TextureUpload", getPath() );
+                uploadScope.beginPhase( AssetLoadPhase::Upload );
                 const Texture2DUploadStep step = _source == Source::File ? _pTexture->beginUploadFromImage( pDevice, getPath(), *_pImage, _residency, bBlocking )
                                                                          : _pTexture->beginUploadFromCPUBytes( pDevice, bBlocking );
+                if ( step == Texture2DUploadStep::Submitted && _source == Source::File )
+                    uploadScope.setBytes( _pImage->_bytes.size() );
+                if ( step == Texture2DUploadStep::Submitted )
+                    uploadScope.setSucceeded();
                 if ( step == Texture2DUploadStep::Busy )
                     return AssetCompletionStep::Busy; // 다음 프레임에 다시 제출한다(텍스처는 지웠다)
                 if ( step == Texture2DUploadStep::Failed )
