@@ -31,6 +31,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -68,6 +69,8 @@ namespace sw
         _gameScope.emplaceSubsystem<GameLocalStore>();
         // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
         _gameScope.emplaceSubsystem<OnlineSession>( _packConfig._data );
+        // 텔레메트리 · 크래시 업로드는 gamesettings 에 끝점이 있을 때만 엔진 업로더에 HTTP 클라이언트를 끼운다 - 없으면 아무 일도 하지 않는다.
+        _gameScope.emplaceSubsystem<TelemetryUploadLink>( _packConfig._data );
     }
 
     GameInstance::~GameInstance()

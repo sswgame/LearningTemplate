@@ -29,7 +29,8 @@ namespace sw
 
             /**
              * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄 처리까지만 시작한 상태이며(서비스와 게임 모듈이 없습니다) 번들만 보내고 끝냅니다.
-             * @note 이 저장소는 네트워크 API 를 포함하지 않습니다. 게임이 IHTTPClient 를 구현하면 여기서 HTTPCrashReportUploader 를 씁니다.
+             * @note App 은 GameFramework 의 HTTP 클라이언트를 링크하지 않아(층) 이 프로세스의 업로더는 보내지 않는 기본값이고 묶음을 건드리지 않습니다(`Kept`).
+             *       끝점이 있는 게임은 다음 기동의 게임 프로세스가 같은 폴더를 올립니다(`TelemetryUploadLink`).
              */
             static TaskResult runCrashReporter( const CommandLineManager& commandLine )
             {

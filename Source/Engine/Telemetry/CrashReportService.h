@@ -125,7 +125,8 @@ namespace sw
 
         /**
          * @brief 보고 프로세스의 일 — 보낼 줄의 묶음을 업로더로 올립니다. `Sent` 면 상태를 바꾸고 덤프를 지우며(매니페스트 · 작은 파일은 남긴다),
-         *        아니면 시도 수만 올립니다. 올린 수입니다.
+         *        실패(`Failed`)면 시도 수만 올리고, 보내지 않은 업로더(`Kept`)면 매니페스트를 건드리지 않습니다. 올린 수입니다.
+         * @details 보고 프로세스와 게임 프로세스(`TelemetryUploadLink` 가 끝점을 받았을 때)가 같은 폴더로 부를 수 있습니다.
          */
         static uint32 runReporter( string_view reportsFolder, ICrashReportUploader& uploader );
 

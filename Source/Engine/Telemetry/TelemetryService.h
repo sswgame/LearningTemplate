@@ -169,6 +169,12 @@ namespace sw
          * @details 참조로 받아 "없음" 을 넘길 수 없습니다 — 업로더는 항상 하나이고, 호출부는 따로 널 검사 · 기본값 처리를 하지 않습니다.
          */
         void setUploader( ITelemetryUploader& uploader );
+        /**
+         * @brief @p uploader 가 지금 업로더면 쓰지 않은 묶음과 지금 스풀 파일을 닫아 그 업로더로 보낸 뒤 기본 업로더(`NullTelemetryUploader`)로 되돌립니다.
+         * @details 업로더를 빌려 준 쪽이 사라지기 전에 부릅니다(빌린 참조가 남지 않는다). 다른 업로더가 꽂혀 있으면 아무것도 하지 않습니다.
+         *          이 뒤에 남는 사건(`session.end`)은 다음 실행이 닫힌 파일로 이어 받아 보냅니다.
+         */
+        void releaseUploader( ITelemetryUploader& uploader );
 
         TelemetryRecordResult record( const TelemetryEvent& event );
         /** @brief 세션 시계를 흘리고 flush 시간이 되면 씁니다(게임 스레드). */

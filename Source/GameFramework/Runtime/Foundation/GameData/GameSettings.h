@@ -88,6 +88,20 @@ namespace sw
         PROPERTY()
         string _onlineGameBuild; ///< Hello 와 로그인에 싣는 게임 빌드 글(점으로 나눈 정수열). 온라인 서버를 적었으면 필수다
 
+        // 텔레메트리 · 크래시 보고를 받을 곳(`TelemetryUploadLink`). 운영자가 정하는 값이라 저장소의 팩은 적지 않는다 — 적지 않으면 동의해도 기계 밖으로 나가지 않는다.
+        // 언리얼 `DefaultEngine.ini` 의 `[Analytics]` · `[CrashReportClient] DataRouterUrl` 자리다(기억에 의존).
+        PROPERTY()
+        string _telemetryUploadEndpoint; ///< 텔레메트리 스풀 파일을 POST 할 주소(`http://` · `https://`). `-gv_telemetryUploadEndpoint` 가 있으면 그 주소다
+
+        PROPERTY()
+        string _telemetryUploadKeyEnvironment; ///< 텔레메트리 API 키를 담은 환경 변수 이름. 비면 키 없이 보낸다. 적었는데 변수가 비면 업로드를 켜지 않는다(오류)
+
+        PROPERTY()
+        string _crashUploadEndpoint; ///< 크래시 보고 묶음을 multipart 로 POST 할 주소. `-gv_crashUploadEndpoint` 가 있으면 그 주소다
+
+        PROPERTY()
+        string _telemetryUploadTrustFile; ///< `https://` 끝점의 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). `https://` 끝점이면 필수다
+
         PROPERTY()
         DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
 

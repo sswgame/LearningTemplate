@@ -513,6 +513,8 @@ namespace sw
                 bundle._listFilePath.push_back( FileUtil::joinPath( folder, files.at( index ).get( "name" ).asString() ) );
             }
             const CrashReportUploadResult result = uploader.upload( bundle );
+            if ( result == CrashReportUploadResult::Kept )
+                continue; // 보내지 않은 업로더(기본)는 시도가 아니다 — 시도 수를 쓰면 끝점을 나중에 정해도 묶음이 상한에 걸려 영영 못 간다. 매니페스트도 쓰지 않아 같은 묶음을 올리는 다른 프로세스와 겹쳐 쓰지 않는다
             if ( result == CrashReportUploadResult::Sent )
             {
                 Internal::setState( manifest, CrashReportState::Sent );

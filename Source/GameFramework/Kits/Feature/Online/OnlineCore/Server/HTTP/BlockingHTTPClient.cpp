@@ -30,10 +30,10 @@ namespace sw
         shutdown();
     }
 
-    bool BlockingHTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings )
+    bool BlockingHTTPClient::initialize()
     {
         ScopedLock<mutex> lock{ _sendMutex };
-        return _client.initialize( std::move( transport ), transportSettings, settings );
+        return _client.initialize();
     }
 
     void BlockingHTTPClient::shutdown()
@@ -42,9 +42,10 @@ namespace sw
         _client.shutdown();
     }
 
-    void BlockingHTTPClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
+    bool BlockingHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError )
     {
-        _client.registerTLSContext( host, pTLSContext );
+        ScopedLock<mutex> lock{ _sendMutex };
+        return _client.registerHostTLS( url, trustFile, trustOption, outError );
     }
 
     bool BlockingHTTPClient::makeClientRequest( const HTTPRequest& request, HTTPClientRequest& outRequest )
@@ -77,13 +78,14 @@ namespace sw
             return response;
         }
         ScopedLock<mutex>          lock{ _sendMutex };
-        const uint64               requestID = _client.submitRequest( clientRequest );
+        HTTPClient&                client    = _client.get();
+        const uint64               requestID = client.submitRequest( clientRequest );
         vector<HTTPClientResponse> listResponse;
         for ( ;; )
         {
-            _client.update();
+            client.update();
             listResponse.clear();
-            (void)_client.pollResponses( listResponse ); // 이 객체만 요청을 맡기므로 다른 요청의 응답은 없다
+            (void)client.pollResponses( listResponse ); // 이 객체만 요청을 맡기므로 다른 요청의 응답은 없다
             for ( const HTTPClientResponse& clientResponse : listResponse )
             {
                 if ( clientResponse._requestID != requestID )

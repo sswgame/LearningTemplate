@@ -404,6 +404,20 @@ namespace sw
         _pUploader = &uploader;
     }
 
+    void TelemetryService::releaseUploader( ITelemetryUploader& uploader )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _pUploader != &uploader )
+            return;
+        if ( _bInitialized == SW_TRUE && _bConsent == SW_TRUE )
+        {
+            flushLocked();
+            closeCurrentFileLocked();
+            uploadClosedLocked();
+        }
+        _pUploader = &_nullUploader;
+    }
+
     TelemetryRecordResult TelemetryService::record( const TelemetryEvent& event )
     {
         ScopedLock<mutex> lock{ _mutex };
