@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -97,4 +98,10 @@ namespace sw
         (void)physics;
         _submergedPontoonCount = 0;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( buoyancySubmergedPontoons, "Buoyancy.SubmergedPontoons", "Pontoons of the first buoyancy component that touched water in the last step", BuoyancyComponent,
+                                &BuoyancyComponent::getSubmergedPontoonCount );
 } // namespace sw

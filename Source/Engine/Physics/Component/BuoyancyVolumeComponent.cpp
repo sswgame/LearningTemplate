@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/BuoyancyVolumeComponent.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -70,4 +71,10 @@ namespace sw
                 ++_submergedBodyCount;
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( buoyancyVolumeSubmergedBodies, "BuoyancyVolume.SubmergedBodies", "Bodies the first water box floated in the last fixed step", BuoyancyVolumeComponent,
+                                &BuoyancyVolumeComponent::getSubmergedBodyCount );
 } // namespace sw

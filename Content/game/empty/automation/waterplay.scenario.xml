@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  물 · 지형 물리(maps/waterplay — envshowcase 를 물려받음) — 값으로 판정한다(골든 없음).
+  ① 지형 충돌: TerrainColliderComponent 가 청크 바디를 세우고, 지형에 떨어진 Roller 는 지형 위(Y ≥ 0)에 멈춘다(충돌이 없으면 끝없이 떨어진다). Roller 의 FoliageInfluencerComponent 가 풀 휘게 하는 구 하나로 잡힌다.
+  ② 강 경로: SplineRiverPathComponent 가 스플라인을 4 m 간격으로 샘플해 강 점 넷을 수십 개로 바꾼다.
+  ③ 파도 있는 물(호수, 수면 Y 8): BuoyancyComponent 폰툰을 단 Floater 가 수면 둘레에 뜬다.
+  ④ 물 상자(BuoyancyVolumeComponent, 윗면 Y 52, 흐름 +X 0.3 m/s): Bobber 가 잠겨 떠 있고 흐름을 따라 +X 로 밀린다.
+  ⑤ 경첩(JointComponent, 월드에 연결): Sign 은 고리 1 m 아래에 매달린 채 떨어지지 않는다.
+  실행: App -scenario=game/empty/automation/waterplay.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.waterplay" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/waterplay.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="TerrainCollider.BodyCount" atLeast="1" timeoutFrames="60"/>
+	<Expect watch="Foliage.InfluencerCount" equals="1"/>
+	<WaitUntil watch="Water.RiverPointCount" target="River" atLeast="10" timeoutFrames="30"/>
+
+	<Wait frames="300"/>
+	<Expect watch="Object.Y" target="Roller" atLeast="0"/>
+	<Expect watch="Object.Y" target="Roller" atMost="44"/>
+	<Expect watch="Buoyancy.SubmergedPontoons" atLeast="1"/>
+	<Expect watch="Object.Y" target="Floater" atLeast="7"/>
+	<Expect watch="Object.Y" target="Floater" atMost="9.5"/>
+	<Expect watch="BuoyancyVolume.SubmergedBodies" atLeast="1"/>
+	<Expect watch="Object.Y" target="Bobber" atLeast="49"/>
+	<Expect watch="Object.Y" target="Bobber" atMost="53"/>
+	<Expect watch="Object.X" target="Bobber" atLeast="-59.8"/>
+	<Expect watch="Object.DistanceTo" target="Sign" key="SignHook" near="1" tolerance="0.1"/>
+	<Expect watch="Joint.Position" near="0" tolerance="0.2"/>
+	<Pass/>
+</Scenario>

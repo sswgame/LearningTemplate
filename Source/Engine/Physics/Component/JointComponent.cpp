@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/JointComponent.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
@@ -153,4 +154,9 @@ namespace sw
         _jointBodyA = PhysicsBodyHandle{};
         _jointBodyB = PhysicsBodyHandle{};
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( jointPosition, "Joint.Position", "Hinge angle (rad), slider distance or distance length of the first joint", JointComponent, &JointComponent::getJointPosition );
 } // namespace sw

@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -21,6 +22,7 @@
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
@@ -700,4 +702,70 @@ namespace sw
         // 쿠킹이 쓰는 길이다 — 런타임 베이크와 같은 기하(입력 해시)를 그 자리에서 내야 하므로 메시를 기다린다(`Wait` 는 늘 0 을 돌려준다).
         (void)NavGeometryCollector::collectGeometry( manager, pSurface, settings, listSource, NavMeshArrival::Wait, outGeometry );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct SceneNavigationWatchesInternal
+        {
+            /**
+             * @brief 질의 대상(시작)에서 `key` 이름의 오브젝트(끝)까지 첫 베이크된 에이전트 종류의 경로를 찾습니다. 못 찾으면 까닭을 적고 false 입니다.
+             * @details 시나리오가 "이 장애물이 길을 막아 돌아가는지 · 이 링크로 건너는지" 를 값으로 본다(언리얼 Navigation Test Actor 의 자리).
+             */
+            static bool findQueryPath( const AutomationWatchQuery& query, AutomationWatchValue& outValue, NavPath& outPath )
+            {
+                const GameObject*     pStart  = query.findTargetObject();
+                const GameObject*     pEnd    = query._pManager != nullptr ? query._pManager->findGameObjectByName( hashed_string{ query._key } ) : nullptr;
+                const SceneComponent* pFrom   = pStart != nullptr ? pStart->getPrimarySceneComponent() : nullptr;
+                const SceneComponent* pTo     = pEnd != nullptr ? pEnd->getPrimarySceneComponent() : nullptr;
+                const bool            bNoEnds = pFrom == nullptr || pTo == nullptr;
+                if ( bNoEnds )
+                {
+                    outValue.setText( pStart == nullptr ? query.getTargetProblem() : "no end object named by key (with a scene component)" );
+                    return false;
+                }
+                const SceneNavigation& navigation = query._pManager->getSubsystem<SceneNavigation>();
+                vector<hashed_string>  listAgentType;
+                navigation.collectBakedAgentTypes( listAgentType );
+                if ( listAgentType.empty() )
+                {
+                    outValue.setText( "no navmesh baked yet" );
+                    return false;
+                }
+                if ( navigation.findPath( listAgentType.front(), pFrom->getWorldPosition(), pTo->getWorldPosition(), outPath ) != NavPathStatus::Complete )
+                {
+                    outValue.setText( "no complete path" );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 감시 값 `Nav.PathLength` 입니다. 대상에서 `key` 오브젝트까지 다듬은 경로의 길이(m)이고, 끝까지 가는 경로가 없으면 값이 없습니다. */
+            [[nodiscard]] static bool readPathLength( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                NavPath path;
+                if ( findQueryPath( query, outValue, path ) == false )
+                    return false;
+                outValue.setNumber( static_cast<float64>( path.computeLength() ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Nav.PathLinkCount` 입니다. 그 경로가 건너는 오프 메시 링크 수입니다. */
+            [[nodiscard]] static bool readPathLinkCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                NavPath path;
+                if ( findQueryPath( query, outValue, path ) == false )
+                    return false;
+                outValue.setNumber( static_cast<float64>( path._listLinkCrossing.size() ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( navPathLength, "Nav.PathLength", "Length (m) of the complete navmesh path from the target to the object named by key; absent without one",
+                               &SceneNavigationWatchesInternal::readPathLength, true, true );
+    SW_AUTOMATION_QUERY_WATCH( navPathLinkCount, "Nav.PathLinkCount", "Off-mesh links the navmesh path from the target to the object named by key crosses",
+                               &SceneNavigationWatchesInternal::readPathLinkCount, true, true );
 } // namespace sw

@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Terrain/TerrainColliderComponent.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
@@ -240,4 +241,10 @@ namespace sw
     {
         PhysicsNameValidation::validateMaterial( context, "_material", _material );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( terrainColliderBodyCount, "TerrainCollider.BodyCount", "Static chunk bodies the first terrain collider holds (0 before play or without a terrain)", TerrainColliderComponent,
+                                &TerrainColliderComponent::getBodyCount );
 } // namespace sw

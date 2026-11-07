@@ -1,0 +1,174 @@
+<Scene formatVersion="2" _base="game/empty/maps/envshowcase.scene.xml" name="WaterPlay">
+	<!-- 물 · 지형 물리 시나리오(automation/waterplay)의 무대 — envshowcase 를 물려받아 물리를 얹는다.
+	     지형에 충돌(TerrainColliderComponent)을 더하고, 강 경로를 스플라인이 몰게 하고(SplineRiverPathComponent), 호수 위 상자는 폰툰으로 뜨고(BuoyancyComponent — 파도 있는 물),
+	     공중의 물 상자(BuoyancyVolumeComponent — 상자 부피, 흐름)에 떨어진 상자는 떠서 흐름을 따라 밀리고, 지형에 떨어진 상자는 풀을 눕히며(FoliageInfluencerComponent) 지형 위에 멈추고,
+	     간판은 경첩(JointComponent)으로 고리에 매달려 흔들린다. 언리얼 Water 플러그인의 폰툰 · 유니티 부력 스크립트 · Physics Constraint 의 자리. -->
+	<entities>
+		<entity id="4" name="Terrain">
+			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
+				<_listComponent>
+					<TerrainComponent _componentName="TerrainComponent"
+					                  _bActive="true"
+					                  _localPosition="-128,0,-128"
+					                  _localRotation="0,0,0"
+					                  _localScale="1,1,1"
+					                  _attachOwner="None"
+					                  _attachOwnerID="0"
+					                  _attachComponent="None"
+					                  _heightfieldPath="game/empty/heightfields/valley.heightfield"
+					                  _materialPath="engine/materials/terrain.material"
+					                  _layerWeightsPath="game/empty/heightfields/valley.layerweights"
+					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
+					                  _size="256,256"
+					                  _heightMin="0"
+					                  _heightMax="40"
+					                  _detailTiling="0.25"
+					                  _cliffStart="0.7"
+					                  _cliffLayer="-1"
+					                  _chunkCells="32"
+					                  _lodDistance="48">
+						<_listLayer>
+							<TerrainLayer _name="Grass" _color="0.2,0.36,0.1,1" _detailStrength="0.45" _bTriplanar="false" />
+							<TerrainLayer _name="Dirt" _color="0.33,0.24,0.15,1" _detailStrength="0.5" _bTriplanar="false" />
+							<TerrainLayer _name="Rock" _color="0.4,0.39,0.37,1" _detailStrength="0.7" _bTriplanar="true" />
+							<TerrainLayer _name="Sand" _color="0.66,0.58,0.4,1" _detailStrength="0.4" _bTriplanar="false" />
+						</_listLayer>
+					</TerrainComponent>
+					<TerrainColliderComponent _componentName="TerrainColliderComponent" _bActive="true" _layer="Default" _material="" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="River">
+			<GameObject _schemaVersion="0" _name="River" _bActive="true">
+				<_listComponent>
+					<WaterBodyComponent _componentName="WaterBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="None"
+					                    _shape="River"
+					                    _materialPath="engine/materials/water.material"
+					                    _size="64,64"
+					                    _cellSize="1"
+					                    _riverWidth="8"
+					                    _shallowColor="0.1,0.45,0.45,0.35"
+					                    _deepColor="0.01,0.08,0.16,0.92"
+					                    _skyColor="0.55,0.7,0.85,1"
+					                    _deepDepth="4"
+					                    _foamWidth="0.35"
+					                    _rippleStrength="0.35"
+					                    _bUnderwaterFog="true"
+					                    _fogColor="0.05,0.2,0.25,1"
+					                    _fogDensity="0.15">
+						<_listRiverPoint>
+							<item>-104,16,-88</item>
+							<item>-58,13,-50</item>
+							<item>-24,10.5,-16</item>
+							<item>4,8,8</item>
+						</_listRiverPoint>
+						<_listWave>
+							<GerstnerWave _direction="0.8" _wavelength="3" _amplitude="0.03" _steepness="0.4" />
+						</_listWave>
+					</WaterBodyComponent>
+					<SplineComponent _samplesPerSegment="16" _type="CatmullRom" _bClosed="false">
+						<_listControlPoint>
+							<item>-104,16,-88</item>
+							<item>-58,13,-50</item>
+							<item>-24,10.5,-16</item>
+							<item>4,8,8</item>
+						</_listControlPoint>
+					</SplineComponent>
+					<SplineRiverPathComponent _sampleSpacing="4" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Floater">
+			<GameObject _schemaVersion="0" _name="Floater" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="40,12,30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="20">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+					<BuoyancyComponent _waterDensity="1000" _linearDrag="200">
+						<_listPontoon>
+							<BuoyancyPontoon _center="0.4,-0.3,0.4" _radius="0.35" />
+							<BuoyancyPontoon _center="-0.4,-0.3,0.4" _radius="0.35" />
+							<BuoyancyPontoon _center="0.4,-0.3,-0.4" _radius="0.35" />
+							<BuoyancyPontoon _center="-0.4,-0.3,-0.4" _radius="0.35" />
+						</_listPontoon>
+					</BuoyancyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="WaterTank">
+			<GameObject _schemaVersion="0" _name="WaterTank" _bActive="true">
+				<_listComponent>
+					<BuoyancyVolumeComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _halfExtents="3,2,3" _buoyancy="2" _linearDrag="1" _angularDrag="1" _flowVelocity="0.3,0,0" _layerMask="4294967295" />
+					<MeshComponent _localPosition="-60,50,60" _localRotation="0,0,0" _localScale="6,4,6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/water.material" _boundsRadius="5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="Bobber">
+			<GameObject _schemaVersion="0" _name="Bobber" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-60,55,60" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="10">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Roller">
+			<GameObject _schemaVersion="0" _name="Roller" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-20,45,-40" _localRotation="0.3,0.2,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="20">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
+					<FoliageInfluencerComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _radius="1.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="SignHook">
+			<GameObject _schemaVersion="0" _name="SignHook" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-40,49,20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="Sign">
+			<GameObject _schemaVersion="0" _name="Sign" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-40,48,20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="5">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.6,0.4,0.05" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.8,0.1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1" _blendMode="Opaque" />
+					<JointComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _jointType="Hinge" _axis="1,0,0" _normalAxis="0,1,0" _minLimit="0" _maxLimit="0" _swingLimitNormal="0" _swingLimitPlane="0" _motorMode="Off" _motorTarget="0" _motorMaxForce="0" _bLimitsEnabled="false" _bCollideConnectedBodies="false" _bConnectToWorld="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
