@@ -11,7 +11,7 @@
 | 대상 | 요구 | 근거 |
 |---|---|---|
 | Android | Vulkan 1.2(`constant::render::kVulkanRequiredMinor`), API 29(Android 10) 이상 | R4 가 1.3 → 1.2 로 낮췄다(demote 대신 clip 순서). Android 의 1.2 장치는 대체로 Android 11+ 출하분(기억). NDK 의 `libvulkan.so` 를 링크한다(로더 포트 없음) |
-| 웹 | WebGPU(`navigator.gpu`), Chrome · Edge 121+(Android 포함), Firefox 141+(Windows), Safari 26+(기억) | WebGL2 판은 없다. 같은 API 를 데스크톱에서 Dawn 으로 돌려 본다(Dawn 포트가 붙으면) |
+| 웹 | WebGPU(`navigator.gpu`), Chrome · Edge 121+(Android 포함), Firefox 141+(Windows), Safari 26+(기억) | WebGL2 판은 없다. 같은 API 를 데스크톱에서 Dawn 으로 돌려 본다(vcpkg `dawn` — `ThirdParty/dawn`, Windows · Linux 플랫폼 순서 맨 끝) |
 
 ## 엔진 요구와 대상 대조
 
@@ -27,13 +27,14 @@
 | 블록 압축 | 쿠킹 변형(`Config/Engine/EngineConfig.json` `_textureFormats`) | BC 는 대개 없다 → ASTC · ETC2 | `texture-compression-bc` · `-astc` · `-etc2` 모두 선택 | 쿠킹이 대상마다 목록대로 굽고 실행 때 장치가 지원하는 첫 묶음을 고른다(끝남). 웹 목록은 BC · ASTC · ETC2(셋 다 없는 장치는 오류) |
 | `R32_FLOAT` 선형 샘플 | 깊이 히스토리 · 자동 노출을 선형 샘플러로 읽는 패스가 있다 | 선형 필터는 선택 | `float32-filterable` 기능(기억) | WebGPU 필수 기능 — 없으면 장치 생성이 `DriverUnsupported` 로 멈춘다 |
 | 깊이 형식 · 되읽기 | `D24_UNORM_S8_UINT`, 깊이 되읽기는 float32 | 장치마다 D24S8 이 없을 수 있다 — 장치 생성이 고른다(`selectDepthFormat`) | `depth24plus-stencil8` 은 복사 원본이 될 수 없다 | WebGPU: `depth32float-stencil8` 기능이 있으면 그것, 없으면 `depth24plus-stencil8` 이고 깊이 되읽기는 `Rejected`(로그) |
+| 깊이 샘플 | 셰이더가 깊이를 실수 텍스처(`Texture2D<float>`)로 읽는다 | 된다 | 깊이는 `texture_depth_*` 로만 읽힌다(자동 레이아웃이 실수로 보면 검증 오류) | WebGPU: 셰이더가 읽는 깊이 텍스처는 R32 실수 사본을 두고 샘플 뷰가 사본이다 — `prepareTextureForShaderRead` 가 내장 WGSL(`textureLoad`) 패스로 채운다(언리얼 모바일의 SceneDepthAux 자리, 기억). 그 프레임에 채우지 않은 사본을 읽으면 오류 로그 |
 | 멀티 드로우 · count 버퍼 | `_bMultiDrawIndirect`, `drawIndirectCount` | 선택(장치 값으로 덮는다 — 이미 있다) | 없음(`multi-draw-indirect` 는 실험, 기억) | 능력 깃발 거짓 — 엔진이 배치마다 간접 드로우를 낸다(DX11 길). 배치 번호는 루트 상수(DX11 과 같다) |
 | 간접 첫 인스턴스 | 간접 인자의 `firstInstance` | 1.2 코어 기능 `drawIndirectFirstInstance` | `indirect-first-instance` 기능 | WebGPU: 기능이 있으면 켜고 없으면 장치 생성이 멈춘다(GPUScene 이 인자에 첫 인스턴스를 적는다) |
 | 와이어프레임 | `RHIFillMode::Wireframe` | `fillModeNonSolid` 선택(장치 값 — 이미 있다) | 폴리곤 모드 없음 | `_bWireframeFill` 거짓 — 보기 모드를 받지 않는다(이미 있는 길) |
 | 지오메트리 · 테셀레이션 | 파이프라인 XML 이 고르는 선택 스테이지 | 선택(장치 값) | 없음 | 그런 PSO 는 오류로 만들지 않는다(Vulkan 과 같은 규칙) |
 | 스레드 | 렌더 스레드 · 병렬 기록 · 워커 생성 | 모두 된다 | 장치는 만든 스레드에서만(Emscripten 에서 JS 객체는 워커를 넘지 못한다) | `_bParallelCommandRecording` · `_bThreadSafeResourceCreation` 거짓, 웹은 렌더 스레드를 띄우지 않는다(`gv_useRenderThread` 기본값을 플랫폼 사슬로) |
 | GPU 대기 | `waitIdle`(종료 · 백엔드 교체 · 크기 변경 · 셰이더 핫 리로드 · 파이프라인 바꿈) | 된다 | 브라우저는 GPU 를 동기로 기다릴 수 없다 | 씬 활성화 · 에셋 핫 리로드 · 캡처는 이미 `flushRenderThread` + 펜스 지연 해제다(`RHI.GPUIdleWaits` 시나리오). WebGPU 의 `waitIdleInternal` 은 기다리지 않고 해제 큐를 비운다 — WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세). 되읽기는 늘 `mapAsync` 콜백이다 |
-| 타임스탬프 | `IRHITimestampProvider` | 된다(`timestampPeriod`) | `timestamp-query` 선택 | WebGPU: 아직 제공자가 없다(nullptr — 이미 있는 선택 능력 모양). `timestamp-query` 로 다는 것은 남은 일 |
+| 타임스탬프 | `IRHITimestampProvider` | 된다(`timestampPeriod`) | `timestamp-query` 선택, 시각은 패스 경계에서만(값은 나노초, 브라우저는 거칠게 준다) | WebGPU: 기능이 있으면 제공자가 칸을 연다 — `writeTimestamp` 는 빈 계산 패스의 시작 시각이고 프레임 끝에 풀어 되읽기 버퍼 풀로 기다리지 않고 읽는다. 지금 GPU 시계를 묻는 길이 없어 `readGPUClockNanos` 는 거짓(외부 타임라인은 열지 않는다) |
 | 표면 | 창 핸들(`IRenderSurface`) | `ANativeWindow*`(`NativeSurfaceKind::AndroidWindow`), 앱 수명 안에서 사라졌다 생긴다 | canvas 선택자(`NativeSurfaceKind::WebCanvas`) | Android: `VK_KHR_android_surface`. 웹: `WGPUSurfaceSourceCanvasHTMLSelector` |
 
 ## 단계별 상태(코드와 대조, 2026-11-07)
@@ -47,7 +48,7 @@
 ## 화면 대응(모바일 · 데스크톱)
 
 - 안전 여백: 플랫폼 창이 `IWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiDebugSafeZone`)와 큰 쪽을 고른다.
-- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. Vulkan 스왑체인은 `IDENTITY` 변환이라 합성기가 돌린다(pre-rotation 은 남은 일).
+- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. Vulkan 스왑체인은 `IDENTITY` 변환이라 합성기가 돌린다 — 회전한 기기는 표시마다 `VK_SUBOPTIMAL_KHR` 를 주므로 서피스의 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged`). 엔진이 그림을 미리 돌리는 pre-rotation 은 남은 일이다.
 - 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서가 `_when` 변형으로 다시 배치한다.
 - 손가락: 터치 장치의 첫 손가락이 UI 포인터가 되고, 조작을 비켜 짚으면 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
@@ -55,18 +56,23 @@
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 
-- 빌드: Emscripten · NDK 로 한 번도 짓지 못했다 — Core · Engine 의 `#error "Unsupported platform"` 사슬 중 Android · Web 갈래가 없는 곳이 컴파일에서 드러난다(설계대로).
-- WebGPU: 깊이를 색으로 샘플하는 패스(깊이 텍스처는 `texture_depth_2d` 로만 읽힌다 — 자동 레이아웃이 `float` 로 보면 검증 오류) — 언리얼 모바일의 SceneDepthAux(R32F 사본)처럼 깊이 사본 패스와 능력 깃발이 필요하다. 그리기마다 짓는 바인드 그룹의 캐시, 타임스탬프 제공자, 브라우저 Gamepad API.
-- Android: APK 패키징(매니페스트 · Gradle), 인텐트로 받는 명령줄, 패드 연결, pre-rotation, 미리보기 문맥의 `screen` 태그(지금 태그는 전역이라 에디터 미리보기에 compact 변형이 보이지 않는다).
+- 빌드: Emscripten · NDK 로 한 번도 짓지 못했다 — 프리셋 `Web-Shipping` · `Android-Shipping` 이 `Tools/emsdk` · `Tools/Android/ndk/<판>` 을 가리킨다(설치 `py -3 Scripts/setup/PlatformSdk.py all`, 프리셋과 설정의 판 대조는 `… check`). Core · Engine 의 `#error "Unsupported platform"` 사슬 중 Android · Web 갈래가 없는 곳이 컴파일에서 드러난다(설계대로).
+- Android: APK 패키징(매니페스트 · Gradle), pre-rotation(스왑체인을 `currentTransform` 으로 만들고 백버퍼에 그리는 정점 단계 · 뷰포트 · 가위를 돌린다 — 백버퍼를 쓰는 PSO 마다 회전 변형이 필요하다), 미리보기 문맥의 `screen` 태그(지금 태그는 전역이라 에디터 미리보기에 compact 변형이 보이지 않는다).
 
-## 받아야 할 의존성(추가하지 않았다 — 붙일 때 사용자에게 라이선스를 받는다)
+## 입력(웹 · Android)
+
+- 패드: 웹은 Gamepad API 를 프레임마다 읽는다 — W3C standard 배치만 옮기고(`PlatformGamepadLayout`), 배치가 다른 패드는 연결하지 않고 한 번 알린다. 브라우저는 사용자가 패드를 한 번 누르기 전에는 패드를 보이지 않는다. Android 는 패드 · 조이스틱 장치의 키 · 축 이벤트를 장치 번호마다 패드 칸으로 보내고(방아쇠 LTRIGGER/BRAKE · RTRIGGER/GAS 합침, HAT 축은 D패드), 연결 · 끊김은 `InputDevice.getDeviceIds()` 를 1 초마다 JNI 로 대조한다.
+- 포인터 잠금: 웹은 Pointer Lock API(다음 입력 콜백까지 미뤄 청한다 — 사용자 입력 안에서만 된다), 잠긴 동안은 이동량만 온다. 가두기는 브라우저에 없고 Android 는 잠그지 않는다(한 번 오류 로그).
+- Android 명령줄: 인텐트 문자열 추가값 `args` — `adb shell am start -n <패키지>/android.app.NativeActivity --es args "-scenario empty/noidlewait"`.
+
+## 의존성
 
 | 무엇 | 쓰는 곳 | 판(기억) | 라이선스 |
 |---|---|---|---|
-| Emscripten SDK(emsdk) | 웹 빌드 도구 사슬(`emcmake`), `emdawnwebgpu` 포트(`--use-port=emdawnwebgpu` — `webgpu/webgpu.h`) | 4.0.10 이상(emdawnwebgpu 포트가 든 판) | MIT / University of Illinois NCSA(emscripten), BSD-3(Dawn) |
-| Dawn | 데스크톱에서 WebGPU 백엔드를 돌려 보는 네이티브 구현(`webgpu_dawn`), Tint(SPIR-V → WGSL) | 크로미움 분기 판을 고정(vcpkg `dawn` 포트는 없다 — 오버레이 포트로) | BSD-3-Clause |
-| Tint 실행 파일 | 셰이더 쿠커의 SPIR-V → WGSL 단계(`Config/Engine/ShaderTools.json` 의 경로) | Dawn 과 같은 판 | BSD-3-Clause |
-| Android NDK | `libvulkan.so` · `libandroid.so` · `liblog.so`, `android_native_app_glue`(NDK 소스) | r27 이상(API 29 대상) | Apache-2.0(NDK), 앱 글루 Apache-2.0 |
+| Emscripten SDK(emsdk) | 웹 빌드 도구 사슬 — `Tools/emsdk`(`PlatformSdk.py web`) | `search_paths.defaults.json` 의 `emsdk_version` | MIT / University of Illinois NCSA(emscripten) |
+| Dawn | vcpkg `dawn`(`ThirdParty/dawn`) — 데스크톱은 네이티브 구현(`dawn::webgpu_dawn`, Windows `vulkan,d3d12`, Linux `vulkan,x11`), 웹은 같은 판의 emdawnwebgpu 포트 파일(`webgpu/webgpu.h`) | vcpkg 기준선의 판(지금 20260911.162847) | BSD-3-Clause |
+| Tint 실행 파일 | 셰이더 쿠커의 SPIR-V → WGSL 단계 — `dawn[tint-tools]` 가 깔고 빌드가 App 옆에 둔다(`sw_copyTintTool`) | Dawn 과 같은 판 | BSD-3-Clause |
+| Android NDK | `libvulkan.so` · `libandroid.so` · `liblog.so`, `android_native_app_glue`(NDK 소스) — `Tools/Android/ndk/<판>`(`PlatformSdk.py android`) | `android_ndk_version` | Apache-2.0(NDK), 앱 글루 Apache-2.0 |
 | Android SDK · Gradle | APK 패키징(NativeActivity 매니페스트) | AGP 8.x | Apache-2.0 |
 
 ## 엔진 비교(기억)
