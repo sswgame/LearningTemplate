@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/SharedVectorPool.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -35,14 +36,20 @@ namespace sw
     public:
         /**
          * @brief 애니메이션 유닛의 스킨 팔레트를 스냅샷으로 옮깁니다. 프리미티브 더티와 무관하게 매 프레임 실행합니다.
-         * @details 팔레트는 포즈가 바뀔 때마다 바뀌므로 수집 건너뛰기(아무것도 바뀌지 않음) 판단보다 앞에서 따로 돈다. 배열은 프레임마다 새로 만들어
-         *          공유한다. RT 가 지난 프레임 배열을 읽는 동안 덮어쓰지 않기 위해서다. 유닛도 지난 팔레트도 없으면 아무것도 하지 않는다.
+         * @details 팔레트는 포즈가 바뀔 때마다 바뀌므로 수집 건너뛰기(아무것도 바뀌지 않음) 판단보다 앞에서 따로 돈다. 배열은 아무도 쥐지 않은 것을 재사용해
+         *          공유한다(`SharedVectorPool`). RT 가 지난 프레임 배열을 읽는 동안 덮어쓰지 않기 위해서다. 유닛도 지난 팔레트도 없으면 아무것도 하지 않는다.
          */
         void collect( const AnimationSystem& animation, GPUSceneSnapshot& inoutSnapshot );
 
     private:
         /** @brief 지난 프레임 팔레트 행 수입니다. 이번 프레임 배열을 그만큼 미리 확보합니다(캐릭터 천 명이면 행이 십만 개이므로, 자라면서 옮겨지지 않게 합니다). */
         size_t _paletteRowCountHint{ 0 };
+        /** @brief 지난 프레임 모프 가중치 수입니다. */
+        size_t _morphWeightCountHint{ 0 };
+        /** @brief 팔레트 행 배열입니다. 패킷이 다 놓은 배열을 다시 씁니다. */
+        SharedVectorPool<float4> _paletteRowPool;
+        /** @brief 모프 가중치 배열입니다. */
+        SharedVectorPool<float32> _morphWeightPool;
     };
 } // namespace sw
 
@@ -718,6 +725,8 @@ namespace sw
         vector<GPUTransparentSortKey> _listScratchParticleKey;
         /// @brief 입자 그리기를 정렬 순서로 옮겨 담는 작업 배열입니다(`_snapshot._listParticleBatch` 와 맞바꾼다).
         vector<GPUParticleBatch> _listScratchParticleBatch;
+        /** @brief GPU 메시 방출기의 인스턴스 칸 배열입니다. 패킷이 다 놓은 배열을 다시 씁니다. */
+        SharedVectorPool<uint32> _vfxInstanceSlotPool;
         /// @brief 주 투명 배치마다 첫 인스턴스의 키입니다(`fillMainBatchHeadKeys` — 입자 자리 정하기).
         vector<GPUTransparentSortKey> _listScratchBatchHeadKey;
         /// @brief 추가 뷰 하나의 입자 정렬 키입니다(`computeViewTransparentOrders` 가 뷰마다 다시 쓴다).

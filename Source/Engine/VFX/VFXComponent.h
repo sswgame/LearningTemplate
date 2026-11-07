@@ -3,6 +3,7 @@
  * @brief 파티클 효과(`*.vfx.xml`) 하나를 씬에서 재생하는 컴포넌트입니다(유니티 ParticleSystem, 언리얼 UNiagaraComponent 자리).
  */
 #pragma once
+#include "Core/Container/SharedVectorPool.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -100,6 +101,8 @@ namespace sw
         uint32 getEmitterCount() const { return static_cast<uint32>( _listSimulation.size() ); }
         /** @brief 방출기 @p emitterIndex 의 데이터입니다. 번호는 `getEmitterCount` 보다 작아야 합니다. */
         const VFXEmitterDef& getEmitterDef( uint32 emitterIndex ) const;
+        /** @brief 방출기 @p emitterIndex 의 텍스처 경로입니다. 효과를 읽을 때 한 번 intern 한다(수집이 방출기마다 프레임마다 묻는다). */
+        const hashed_string& getEmitterTexturePath( uint32 emitterIndex ) const { return _listEmitterTexturePath[emitterIndex]; }
         /** @brief 방출기 @p emitterIndex 를 시뮬레이션하는 곳입니다(효과를 읽을 때 정했다). 번호는 `getEmitterCount` 보다 작아야 합니다. */
         VFXSimulationTarget getEmitterSimulationTarget( uint32 emitterIndex ) const;
         /**
@@ -166,11 +169,13 @@ namespace sw
         PROPERTY( Category = "VFX", DisplayName = "Effect", Tooltip = "Particle effect (.vfx.xml)" )
         AssetRef<VFXEffectDef>                        _effectPath;
         vector<EmitterSimulation>                     _listSimulation;
-        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;   ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
-        vector<VFXGPUEmitterRequest>                  _listGPURequest;  ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
-        vector<MeshEmitter>                           _listMeshEmitter; ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
-        vector<MeshHandle>                            _listMeshLoad;    ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
-        shared_ptr<const VFXEffectDef>                _pEffect;         ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
+        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;          ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
+        vector<SharedVectorPool<GPUParticle>>         _listParticlePool;       ///< CPU 방출기마다 입자 배열(패킷이 다 놓은 배열을 다시 쓴다)
+        vector<hashed_string>                         _listEmitterTexturePath; ///< 방출기마다 텍스처 경로
+        vector<VFXGPUEmitterRequest>                  _listGPURequest;         ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
+        vector<MeshEmitter>                           _listMeshEmitter;        ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
+        vector<MeshHandle>                            _listMeshLoad;           ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
+        shared_ptr<const VFXEffectDef>                _pEffect;                ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr

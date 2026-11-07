@@ -146,20 +146,22 @@ namespace sw
         const VFXEmitterDef& def = getDef();
         outListParticle.clear();
         outListParticle.reserve( _listParticle.size() );
-        // 띠는 태어난 순서로 잇는다. 풀 안의 자리는 지우기(마지막과 바꾸기)마다 섞이므로 번호로 다시 줄 세운다.
-        vector<uint32> listOrder( _listParticle.size() );
-        for ( uint32 slot = 0; slot < static_cast<uint32>( _listParticle.size() ); ++slot )
+        // 띠는 태어난 순서로 잇는다. 풀 안의 자리는 지우기(마지막과 바꾸기)마다 섞이므로 번호로 다시 줄 세운다. 순서 배열은 띠에만 필요하다.
+        const bool     bRibbon = def._renderMode == VFXRenderMode::Ribbon;
+        vector<uint32> listOrder;
+        if ( bRibbon )
         {
-            listOrder[slot] = slot;
-        }
-        if ( def._renderMode == VFXRenderMode::Ribbon )
-        {
+            listOrder.resize( _listParticle.size() );
+            for ( uint32 slot = 0; slot < static_cast<uint32>( _listParticle.size() ); ++slot )
+            {
+                listOrder[slot] = slot;
+            }
             VectorUtil::sort( listOrder, [this]( uint32 slotA, uint32 slotB )
             { return _listParticle[slotA]._particleIndex < _listParticle[slotB]._particleIndex; } );
         }
-        for ( const uint32 slot : listOrder )
+        for ( uint32 orderIndex = 0; orderIndex < static_cast<uint32>( _listParticle.size() ); ++orderIndex )
         {
-            const Particle& particle = _listParticle[slot];
+            const Particle& particle = _listParticle[bRibbon ? listOrder[orderIndex] : orderIndex];
             // 수명이 다한 입자는 `integrateStep` 이 지우므로 비율은 늘 0..1 이고, 데이터 검증이 커브 키를 보장한다.
             const float32 lifeRatio = particle._age / particle._lifetime;
             GPUParticle   output{};

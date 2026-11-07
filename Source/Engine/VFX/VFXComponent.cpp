@@ -137,6 +137,8 @@ namespace sw
         : _effectPath{}
         , _listSimulation{}
         , _listPublished{}
+        , _listParticlePool{}
+        , _listEmitterTexturePath{}
         , _listMeshEmitter{}
         , _listMeshLoad{}
         , _pEffect{}
@@ -415,6 +417,8 @@ namespace sw
         releaseMeshEmitters();
         _listSimulation.clear();
         _listPublished.clear();
+        _listParticlePool.clear();
+        _listEmitterTexturePath.clear();
         _listGPURequest.clear();
         _pEffect.reset();
         _bPlaying = SW_FALSE;
@@ -439,6 +443,12 @@ namespace sw
                 _listSimulation.emplace_back( std::in_place_type<VFXGPUEmitter>, std::move( pDef ), seed, spawnScale );
         }
         _listPublished.resize( _listSimulation.size() );
+        _listParticlePool.resize( _listSimulation.size() );
+        _listEmitterTexturePath.reserve( effect._listEmitter.size() );
+        for ( const VFXEmitterDef& emitter : effect._listEmitter )
+        {
+            _listEmitterTexturePath.push_back( hashed_string( emitter._texturePath.c_str() ) );
+        }
         _listGPURequest.resize( _listSimulation.size() );
         applyUserParameters();
         rebuildMeshEmitters();
@@ -587,8 +597,8 @@ namespace sw
                 writeMeshEntries( emitterIndex, nullptr );
                 continue;
             }
-            // 새 배열이다 — 지난 배열은 렌더 스레드가 아직 읽고 있을 수 있다.
-            shared_ptr<vector<GPUParticle>> pListParticle = make_shared<vector<GPUParticle>>();
+            // 아무도 쥐지 않은 배열이다 — 지난 배열은 렌더 스레드가 아직 읽고 있을 수 있다.
+            shared_ptr<vector<GPUParticle>> pListParticle = _listParticlePool[emitterIndex].acquire();
             simulation.writeParticles( *pListParticle );
             writeMeshEntries( emitterIndex, pListParticle.get() );
             _listPublished[emitterIndex] = std::move( pListParticle );

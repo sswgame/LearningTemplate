@@ -58,16 +58,21 @@ namespace sw
             {
                 entry._firstMorphWeight = static_cast<uint32>( inoutListWeight.size() );
                 entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
+                inoutListWeight.resize( inoutListWeight.size() + pListMorphWeight->size() );
+                float32* pWeight = inoutListWeight.data() + entry._firstMorphWeight;
                 for ( const float32 weight : *pListMorphWeight )
                 {
-                    inoutListWeight.push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
+                    *pWeight++ = MathUtil::clamp( weight, 0.0f, 1.0f );
                 }
             }
+            // 뼈마다 push_back 세 번이던 것을 한 번에 늘리고 포인터로 쓴다.
+            inoutListRow.resize( inoutListRow.size() + listPalette.size() * 3 );
+            float4* pRow = inoutListRow.data() + entry._firstRow;
             for ( const float4x4& matrix : listPalette )
             {
-                inoutListRow.push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
-                inoutListRow.push_back( float4{ matrix._12, matrix._22, matrix._32, matrix._42 } );
-                inoutListRow.push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
+                *pRow++ = float4{ matrix._11, matrix._21, matrix._31, matrix._41 };
+                *pRow++ = float4{ matrix._12, matrix._22, matrix._32, matrix._42 };
+                *pRow++ = float4{ matrix._13, matrix._23, matrix._33, matrix._43 };
             }
             inoutSnapshot._listSkinPalette.push_back( entry );
         }
@@ -82,9 +87,10 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.GPUScene.build.skinPalettes" );
 
         inoutSnapshot._listSkinPalette.clear();
-        shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
-        shared_ptr<vector<float32>> listWeight = make_shared<vector<float32>>();
+        shared_ptr<vector<float4>>  listRow    = _paletteRowPool.acquire();
+        shared_ptr<vector<float32>> listWeight = _morphWeightPool.acquire();
         listRow->reserve( _paletteRowCountHint );
+        listWeight->reserve( _morphWeightCountHint );
         // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다. 유닛 하나가 빠지면(시체를 정리함) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
         // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬이며 바인드 포즈) 한 번 그려진다.
         for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
@@ -102,6 +108,7 @@ namespace sw
                 appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr ); // 멤버마다 단계가 다르다 — 모든 단계
         }
         _paletteRowCountHint               = listRow->size();
+        _morphWeightCountHint              = listWeight->size();
         inoutSnapshot._pListSkinPaletteRow = std::move( listRow );
         inoutSnapshot._pListMorphWeight    = std::move( listWeight );
     }
@@ -1158,7 +1165,8 @@ namespace sw
         const uint32               meshCount   = static_cast<uint32>( primitives.getAll().size() );
         const uint32               opaqueCount = _snapshot.getOpaqueInstanceCount();
         const uint32               firstSlot   = meshCount + batch.getFirstEntrySlot();
-        shared_ptr<vector<uint32>> pListSlot   = make_shared<vector<uint32>>( batch.getCount(), constant::invalid_index::kUint32 );
+        shared_ptr<vector<uint32>> pListSlot   = _vfxInstanceSlotPool.acquire();
+        pListSlot->assign( batch.getCount(), constant::invalid_index::kUint32 );
         for ( uint32 entryIndex = 0; entryIndex < batch.getCount(); ++entryIndex )
         {
             const uint32 primitiveSlot  = firstSlot + entryIndex;
