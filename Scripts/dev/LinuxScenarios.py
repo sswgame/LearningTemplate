@@ -5,6 +5,9 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
 
 명령:
   setup                  Xvfb · 글꼴을 sudo 없이 ~/lt-deps 에 푼다(한 번)
+  setup-dzn              GPU Vulkan(dzn — Mesa 의 Vulkan-on-D3D12)을 sudo 없이 ~/lt-deps/dzn 에 짓는다(한 번)
+  --gpu dzn              (어느 명령 앞에든) 시나리오를 소프트웨어(lavapipe · llvmpipe) 대신 WSL GPU(dzn Vulkan · d3d12 GL)로 돌린다.
+                         골든은 소프트웨어로 뜬 .linux 라 그림 비교는 참고만 한다
   build                  본 저장소 HEAD 를 클론으로 옮겨 Linux-Release 를 짓고 임포트 결과를 복사한다
   chain [--record] 이름… Scenario.<이름> 체인을 돌리고 진 단계와 까닭을 낸다(--record 는 .linux 골든 기록)
   stages 묶음…           쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode)
@@ -62,11 +65,33 @@ def shell(command, **kwargs):
     return subprocess.run(command, shell=True, executable='/bin/bash', env=dict(os.environ, PATH=PATH_LINUX), **kwargs)
 
 
+# 시나리오 드라이버. 기본은 소프트웨어(lavapipe · llvmpipe — 결정적이고 .linux 골든이 이것으로 떴다). `--gpu dzn` 은 WSL 의 GPU 로 돈다:
+# Vulkan 은 직접 지은 dzn(시스템 Mesa 에 없다 — setup-dzn), GL 은 시스템 Mesa 의 d3d12 gallium. dzn 은 Vulkan 1.2 까지다(엔진 요구 1.2).
+GPU = 'software'
+DZN = f'{HOME}/lt-deps/dzn'
+DZN_MESA_VERSION = '26.0.8'
+DZN_DEBS = ('directx-headers-dev libdrm-dev libdrm2 libpciaccess-dev libpciaccess0 libx11-dev libx11-xcb-dev libx11-xcb1 libxau-dev libxcb-dri2-0-dev '
+            'libxcb-dri2-0 libxcb-dri3-0 libxcb-dri3-dev libxcb-glx0-dev libxcb-glx0 libxcb-keysyms1-dev libxcb-keysyms1 libxcb-present-dev '
+            'libxcb-present0 libxcb-randr0-dev libxcb-randr0 libxcb-render0-dev libxcb-render0 libxcb-shape0-dev libxcb-shape0 libxcb-shm0-dev '
+            'libxcb-shm0 libxcb-sync-dev libxcb-sync1 libxcb-xfixes0-dev libxcb-xfixes0 libxcb1-dev libxdmcp-dev libxext-dev libxext6 libxfixes-dev '
+            'libxfixes3 libxrandr-dev libxrandr2 libxrender-dev libxrender1 libxshmfence-dev libxshmfence1 libxxf86vm-dev libxxf86vm1 meson '
+            'python3-mako python3-markupsafe python3-packaging python3-yaml vulkan-tools x11proto-dev').split()
+DZN_MESON_OPTIONS = ('-Dvulkan-drivers=microsoft-experimental -Dgallium-drivers= -Dplatforms=x11 -Dopengl=false -Dgles1=disabled -Dgles2=disabled '
+                     '-Degl=disabled -Dglx=disabled -Dgbm=disabled -Dllvm=disabled -Dvideo-codecs= -Dxmlconfig=disabled -Dzstd=disabled '
+                     '-Dbuild-tests=false -Dvalgrind=disabled -Dlibunwind=disabled -Dlmsensors=disabled -Dlibdir=lib -Dbuildtype=release')
+
+
 def scenario_env(display):
-    env = dict(os.environ, PATH=PATH_LINUX, DISPLAY=f':{display}', LIBGL_ALWAYS_SOFTWARE='1', GALLIUM_DRIVER='llvmpipe',
-               VK_ICD_FILENAMES='/usr/share/vulkan/icd.d/lvp_icd.json',
-               VK_ADD_LAYER_PATH=f'{HOME}/lt-deps/vl/usr/share/vulkan/explicit_layer.d',
-               LD_LIBRARY_PATH=f'{HOME}/lt-deps/vl/usr/lib/x86_64-linux-gnu')
+    if GPU == 'dzn':
+        # dzn 은 libxcb-keysyms 등 시스템에 없는 xcb 라이브러리를 ~/lt-deps/dzn/root 에서 찾는다 — 빠지면 ICD 가 조용히 안 올라와 로더 확장 5 개만 보인다.
+        env = dict(os.environ, PATH=PATH_LINUX, DISPLAY=f':{display}', GALLIUM_DRIVER='d3d12',
+                   VK_ICD_FILENAMES=f'{DZN}/install/share/vulkan/icd.d/dzn_icd.x86_64.json',
+                   LD_LIBRARY_PATH=f'/usr/lib/wsl/lib:{DZN}/root/usr/lib/x86_64-linux-gnu')
+    else:
+        env = dict(os.environ, PATH=PATH_LINUX, DISPLAY=f':{display}', LIBGL_ALWAYS_SOFTWARE='1', GALLIUM_DRIVER='llvmpipe',
+                   VK_ICD_FILENAMES='/usr/share/vulkan/icd.d/lvp_icd.json',
+                   VK_ADD_LAYER_PATH=f'{HOME}/lt-deps/vl/usr/share/vulkan/explicit_layer.d',
+                   LD_LIBRARY_PATH=f'{HOME}/lt-deps/vl/usr/lib/x86_64-linux-gnu')
     env.pop('WAYLAND_DISPLAY', None)
     return env
 
@@ -361,13 +386,42 @@ def stop():
     return 1 if left else 0
 
 
+def setup_dzn():
+    """dzn(Mesa microsoft-experimental Vulkan)을 sudo 없이 짓는다: 빌드 의존 deb 를 풀고 Mesa 소스를 받아 meson 으로 ~/lt-deps/dzn/install 에 설치한다."""
+    os.makedirs(f'{DZN}/deb', exist_ok=True)
+    for package in DZN_DEBS:
+        if shell(f'cd {DZN}/deb && apt-get download {package}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+            print('내려받지 못함:', package)
+    shell(f'cd {DZN}/deb && mkdir -p {DZN}/root && for d in *.deb; do dpkg -x "$d" {DZN}/root; done', check=True)
+    source = f'{DZN}/src/mesa-{DZN_MESA_VERSION}'
+    if not os.path.isdir(source):
+        shell(f'mkdir -p {DZN}/src && cd {DZN}/src && curl -sSLO https://archive.mesa3d.org/mesa-{DZN_MESA_VERSION}.tar.xz && tar xf mesa-{DZN_MESA_VERSION}.tar.xz', check=True)
+    root = f'{DZN}/root/usr'
+    env = dict(os.environ, PATH=f'{root}/bin:{PATH_LINUX}', PYTHONPATH=f'{root}/lib/python3/dist-packages',
+               PKG_CONFIG_PATH=f'{root}/lib/x86_64-linux-gnu/pkgconfig:{root}/share/pkgconfig', CPATH=f'{root}/include',
+               LIBRARY_PATH=f'{root}/lib/x86_64-linux-gnu', LD_LIBRARY_PATH=f'{root}/lib/x86_64-linux-gnu')
+    subprocess.run(f'meson setup --wipe {DZN}/build {source} {DZN_MESON_OPTIONS} -Dprefix={DZN}/install || meson setup {DZN}/build {source} {DZN_MESON_OPTIONS} -Dprefix={DZN}/install',
+                   shell=True, executable='/bin/bash', env=env, check=True)
+    subprocess.run(f'ninja -C {DZN}/build install', shell=True, executable='/bin/bash', env=env, check=True)
+    print('dzn:', f'{DZN}/install/share/vulkan/icd.d/dzn_icd.x86_64.json')
+    return 0
+
+
 def main(argv):
     if isWindowsHost():
         return run_in_wsl(argv)
+    global GPU
+    if argv[:1] == ['--gpu'] and len(argv) > 1:
+        GPU = argv[1]
+        argv = argv[2:]
+        if GPU not in ('dzn', 'software'):
+            sys.exit(f'--gpu 는 dzn 또는 software 다: {GPU}')
     command = argv[0] if argv else ''
     arguments = argv[1:]
     if command == 'setup':
         return setup()
+    if command == 'setup-dzn':
+        return setup_dzn()
     if command == 'build':
         return build()
     if command == 'chain':
