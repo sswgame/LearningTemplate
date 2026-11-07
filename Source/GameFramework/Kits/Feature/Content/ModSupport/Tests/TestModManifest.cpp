@@ -112,6 +112,7 @@ SW_TEST_CASE( ModManifestTest, IDRuleBlocksPathEscape )
 SW_TEST_CASE( ModManifestTest, RejectsMalformedManifests )
 {
     ModManifest manifest;
+    SW_EXPECT_LOG( "Xml.ParseError" ); // 문서 파서가 먼저 알린다
     SW_EXPECT_LOG( "ModManifest.NotXML" );
     SW_EXPECT_FALSE( ModManifest::parseXMLText( "<Mod", "test", manifest ) );
     SW_EXPECT_LOG( "ModManifest.WrongRoot" );

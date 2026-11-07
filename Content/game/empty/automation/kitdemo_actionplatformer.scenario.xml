@@ -14,6 +14,7 @@
 	<Expect watch="KitDemo.Platformer.Lives" equals="3"/>
 	<Expect watch="KitDemo.Platformer.Checkpoint" equals="-1"/>
 	<!-- 오른쪽으로 달린다 — 길 위의 비밀을 줍는다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Press slot="Key.D"/>
 	<WaitUntil watch="KitDemo.Platformer.Secrets" equals="1" timeoutFrames="120"/>
 	<!-- 구덩이 앞에서 점프(정점 가까이 누른다) -->

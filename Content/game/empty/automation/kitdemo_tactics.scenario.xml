@@ -14,6 +14,7 @@
 	<Expect watch="KitDemo.Tactics.CursorX" equals="0"/>
 	<Expect watch="KitDemo.Tactics.CursorY" equals="1"/>
 	<!-- 1 턴: 기사를 고른다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Confirm"/>
 	<WaitUntil watch="KitDemo.Tactics.Selected" equals="0" timeoutFrames="10"/>
 	<!-- 커서를 오른쪽으로 두 칸 → 이동 -->
@@ -22,18 +23,21 @@
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
 	<Wait frames="4"/>
 	<Expect watch="KitDemo.Tactics.CursorX" equals="2"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Confirm"/>
 	<Wait frames="2"/>
 	<!-- 한 칸 더 → 첫 경비병을 친다. 아군이 모두 행동해 적 페이즈(이동 0 이라 서 있다)를 지나 2 턴이 된다 -->
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
 	<Wait frames="4"/>
 	<Expect watch="KitDemo.Tactics.CursorX" equals="3"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Confirm"/>
 	<WaitUntil watch="KitDemo.Tactics.EnemiesAlive" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="KitDemo.Tactics.Turn" equals="2" timeoutFrames="60"/>
 	<WaitUntil watch="KitDemo.Tactics.PhaseTeam" equals="0" timeoutFrames="60"/>
 	<Expect watch="KitDemo.Tactics.PlayersAlive" equals="1"/>
 	<!-- 2 턴: 커서를 기사(2,1)로 돌려 고르고, 두 칸 가서 둘째 경비병을 친다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="-1" seconds="0.05"/>
 	<Wait frames="4"/>
 	<Action name="KitDemo.Confirm"/>
@@ -43,6 +47,7 @@
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
 	<Wait frames="4"/>
 	<Expect watch="KitDemo.Tactics.CursorX" equals="4"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Confirm"/>
 	<Wait frames="2"/>
 	<ActionAxis name="Move" x="1" seconds="0.05"/>

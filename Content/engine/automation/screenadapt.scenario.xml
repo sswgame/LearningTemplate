@@ -14,6 +14,7 @@
 	<Expect watch="UI.SafeInsetTop" near="117" tolerance="1"/>
 	<Expect watch="UI.SafeInsetBottom" near="117" tolerance="1"/>
 	<Expect watch="UI.TouchTargetSize" equals="48"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Touch x="0.5" y="0.5" frames="3"/>
 	<Wait frames="5"/>
 	<!-- 돌리기 — 가로 1170x540 은 UI 2340x1080 이다 -->

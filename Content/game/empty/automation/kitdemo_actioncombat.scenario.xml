@@ -11,6 +11,7 @@
 	<Expect watch="KitDemo.Combat.Phase" equals="0"/>
 	<Expect watch="KitDemo.Combat.PlayerHP" equals="100"/>
 	<!-- 홀: 오른쪽 졸개를 두 번 친다(쿨다운 0.28 초) -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Attack"/>
 	<Wait seconds="0.4"/>
 	<Action name="KitDemo.Attack"/>
@@ -19,6 +20,7 @@
 	<ActionAxis name="Move" x="-1" seconds="0.1"/>
 	<Wait seconds="0.2"/>
 	<Expect watch="KitDemo.Combat.PlayerX" near="-0.4" tolerance="0.1"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Attack"/>
 	<Wait seconds="0.4"/>
 	<Action name="KitDemo.Attack"/>
@@ -28,6 +30,7 @@
 	<WaitUntil watch="KitDemo.Combat.Phase" equals="2" timeoutFrames="120"/>
 	<Expect watch="KitDemo.Combat.Alive" equals="1"/>
 	<!-- 오른쪽으로 돌아서 보스를 네 번 친다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="1" seconds="0.1"/>
 	<Wait seconds="0.2"/>
 	<Action name="KitDemo.Attack"/>

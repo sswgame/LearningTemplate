@@ -46,9 +46,11 @@ namespace
             return 7.0;
         }
 
+        static constexpr uint32 kSeedModulo = 1000000u;
+
         static float64 readSeed( const GameplayContext& context, const VocabularyNoParams& /*args*/ )
         {
-            return static_cast<float64>( context.getSeed() );
+            return static_cast<float64>( context.getSeed() % kSeedModulo ); // 식의 숫자 상한 안에서 비교한다(씨앗은 32 비트 전체를 쓴다)
         }
 
         static ActionResult runCount( ActionContext& context, const VocabularyNoParams& /*params*/ )
@@ -163,7 +165,7 @@ SW_TEST_CASE( ConditionExprTest, CallsInOneExpressionRollApart )
     GameplayContext expected = context;
     expected.mixCallSeed( 1u );
     SW_EXPECT_NOT_EQUAL( 12345u, expected.getSeed() );
-    const string text = formatToString( "testFixed == 7 && testSeed == %#", expected.getSeed() );
+    const string text = formatToString( "testFixed == 7 && testSeed == %#", expected.getSeed() % XTestUtil::kSeedModulo );
     SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
     SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
 }

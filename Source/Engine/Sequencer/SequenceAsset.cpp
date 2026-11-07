@@ -41,7 +41,7 @@ namespace sw
             {SequenceItemKind::CameraShake, 0xFF80A0C0u,                kFieldBinding,                  kFieldBinding,                        nullptr, false, false, false,  true, false, false},
             {      SequenceItemKind::Spawn, 0xFF80C0A0u, kFieldBinding | kFieldPrefab,   kFieldBinding | kFieldPrefab,                        nullptr, false, false, false, false,  true, false},
             { SequenceItemKind::Appearance, 0xFFC0A070u, kFieldBinding | kFieldPreset,   kFieldBinding | kFieldPreset,                        nullptr, false,  true, false, false, false, false},
-            {   SequenceItemKind::Scenario, 0xFF70A0C0u,               kFieldScenario, kFieldBinding | kFieldScenario,                        nullptr, false,  true, false, false, false, false},
+            {   SequenceItemKind::Scenario, 0xFF70A0C0u,               kFieldScenario, kFieldBinding | kFieldScenario,                        nullptr, false,  true, false, false, false,  true},
             {  SequenceItemKind::Animation, 0xFFA0A060u,   kFieldBinding | kFieldClip,     kFieldBinding | kFieldClip, &kSequenceAnimationSpanHandler, false, false, false, false, false, false},
             {      SequenceItemKind::Audio, 0xFF6080C0u,                  kFieldSound,    kFieldBinding | kFieldSound,     &kSequenceAudioSpanHandler, false, false, false, false, false, false},
             {   SequenceItemKind::Subtitle, 0xFFB0B0B0u,                   kFieldText,     kFieldBinding | kFieldText,  &kSequenceSubtitleSpanHandler, false, false, false, false, false, false},
