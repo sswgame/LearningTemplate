@@ -2,85 +2,67 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
-#include "Core/Concurrency/atomic.h"
-
-#include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/IAudioService.h"
-
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-
 namespace sw
 {
     namespace
     {
         struct GameSoundInternal
         {
-            /** @brief 한 번 쓰는 에미터 id 의 시작입니다 — 컴포넌트 id(작은 수부터 센다)와 겹치지 않는 높은 자리. */
-            static constexpr AudioEmitterID kOneShotEmitterBase = AudioEmitterID{ 1 } << 62;
-
-            /** @brief 오디오 엔진입니다. 서비스가 없거나 내려가 있으면 nullptr 입니다. */
-            static AudioEngine* findEngine()
+            /** @brief 등록된 소리 창구입니다. 함수 안 정적 변수라 등록자의 정적 초기화 순서와 무관하다. */
+            static IGameSoundPlayer*& slot()
             {
-                IAudioService* pAudio = game::findSubsystem<IAudioService>();
-                return pAudio != nullptr && pAudio->isInitialized() ? &pAudio->getEngine() : nullptr;
+                static IGameSoundPlayer* s_pPlayer = nullptr;
+                return s_pPlayer;
             }
-
-            inline static atomic<uint64> s_nextOneShotEmitter{ 0 };
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
+    IGameSoundPlayer* IGameSoundPlayer::find()
+    {
+        return GameSoundInternal::slot();
+    }
+
+    IGameSoundPlayer::Registration::Registration( IGameSoundPlayer& player )
+    {
+        SW_ASSERT( GameSoundInternal::slot() == nullptr ); // 이미지에 하나다 — 둘이면 등록의 잘못이다
+        GameSoundInternal::slot() = &player;
+    }
+
     bool GameSound::play( const AssetID& assetID, const hashed_string& bus )
     {
-        IAudioService* pAudio = game::findSubsystem<IAudioService>();
-        return pAudio != nullptr && pAudio->play( assetID, bus );
+        IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
+        return pPlayer != nullptr && pPlayer->play( assetID, bus );
     }
 
     bool GameSound::playMusic( const AssetID& assetID )
     {
-        IAudioService* pAudio = game::findSubsystem<IAudioService>();
-        return pAudio != nullptr && pAudio->playMusic( assetID );
+        IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
+        return pPlayer != nullptr && pPlayer->playMusic( assetID );
     }
 
     bool GameSound::loadEvents( const AssetID& assetID )
     {
-        const string_view path    = assetID.view();
-        AudioEngine*      pEngine = GameSoundInternal::findEngine();
-        if ( pEngine == nullptr )
-            return true;
-        AudioEventLibrary library;
-        if ( library.loadFromAsset( assetID ) == false )
-            return false;
-        return pEngine->loadEventLibrary( hashed_string( path ), library );
+        // 창구가 없으면(전용 서버) 할 일이 없다 — 서버는 소리 파일을 읽지 않는다.
+        IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
+        return pPlayer == nullptr || pPlayer->loadEvents( assetID );
     }
 
     void GameSound::unloadEvents( string_view path )
     {
-        AudioEngine* pEngine = GameSoundInternal::findEngine();
-        if ( pEngine != nullptr )
-            pEngine->unloadEventLibrary( hashed_string( path ) );
+        if ( IGameSoundPlayer* pPlayer = IGameSoundPlayer::find() )
+            pPlayer->unloadEvents( path );
     }
 
-    AudioPlayingID GameSound::postEvent( const hashed_string& eventName )
+    GameSoundPlayingID GameSound::postEvent( const hashed_string& eventName )
     {
-        AudioEngine* pEngine = GameSoundInternal::findEngine();
-        return pEngine != nullptr ? pEngine->postEvent( eventName, 0 ) : 0;
+        IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
+        return pPlayer != nullptr ? pPlayer->postEvent( eventName ) : 0;
     }
 
-    AudioPlayingID GameSound::postEventAt( const hashed_string& eventName, const float3& position )
+    GameSoundPlayingID GameSound::postEventAt( const hashed_string& eventName, const float3& position )
     {
-        AudioEngine* pEngine = GameSoundInternal::findEngine();
-        if ( pEngine == nullptr )
-            return 0;
-        // 한 번 쓰는 에미터 — 자리를 두고 내고 바로 지운다. 엔진은 그 자리의 소리가 끝날 때까지 자리를 남긴다.
-        const AudioEmitterID emitterID = GameSoundInternal::kOneShotEmitterBase + GameSoundInternal::s_nextOneShotEmitter.fetch_add( 1 );
-        pEngine->setEmitter( emitterID, position, float3{} );
-        const AudioPlayingID playingID = pEngine->postEvent( eventName, emitterID );
-        pEngine->removeEmitter( emitterID );
-        return playingID;
+        IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
+        return pPlayer != nullptr ? pPlayer->postEventAt( eventName, position ) : 0;
     }
 } // namespace sw
 

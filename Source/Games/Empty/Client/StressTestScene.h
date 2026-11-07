@@ -16,8 +16,8 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 
-#include "Games/Empty/StressTestFraming.h"
-#include "Games/Empty/StressTestSceneSettings.h"
+#include "Games/Empty/Client/StressTestFraming.h"
+#include "Games/Empty/Client/StressTestSceneSettings.h"
 
 namespace sw
 {

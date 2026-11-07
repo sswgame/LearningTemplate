@@ -5,11 +5,11 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Audio/AudioClip.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Rendering/PointLightComponent.h"
 #include "Engine/Rendering/SpotLightComponent.h"

@@ -50,9 +50,9 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
-#include "Games/Empty/StressTestCombatComponent.h"
-#include "Games/Empty/StressTestMoverComponent.h"
-#include "Games/Empty/StressTestSceneSettings.h"
+#include "Games/Empty/Client/StressTestCombatComponent.h"
+#include "Games/Empty/Client/StressTestMoverComponent.h"
+#include "Games/Empty/Client/StressTestSceneSettings.h"
 
 namespace sw
 {

@@ -1,11 +1,10 @@
 #include "pch.h"
 
-// 렌더러 헤더를 쓰는 시연이라 클라이언트 빌드에만 있다(서버는 Engine/Renderer 를 짓지 않아 이 번역 단위가 링크 오류가 된다).
-#if defined( SW_WITH_CLIENT_CODE )
+#include "Games/Empty/Client/EmptyRenderDemo.h"
 
-    #include "Games/Empty/EmptyRenderDemo.h"
+#include "Core/Math/MatrixMath.h"
 
-    #include "Core/Math/MatrixMath.h"
+// 렌더러 헤더를 쓰는 시연이라 클라이언트 전용 소스(`Client/`)다 — 전용 서버는 짓지 않는다.
 
 namespace sw
 {
@@ -84,5 +83,3 @@ namespace sw
         { static_cast<EmptyDrawDemoProxy&>( proxy ).setElements( listCube ); } ) );
     }
 } // namespace sw
-
-#endif // SW_WITH_CLIENT_CODE

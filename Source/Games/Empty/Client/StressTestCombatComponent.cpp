@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/StressTestCombatComponent.h"
+#include "Games/Empty/Client/StressTestCombatComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -18,7 +18,7 @@
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 
-#include "Games/Empty/StressTestSceneSettings.h"
+#include "Games/Empty/Client/StressTestSceneSettings.h"
 
 namespace sw
 {
