@@ -329,7 +329,7 @@ namespace sw
 {
     /**
      * @struct GPUSkinPalette
-     * @brief 스킨드 메시 하나의 팔레트 구간입니다. 행은 `GPUSceneSnapshot::_pListSkinPaletteRow` 의 float4 이고, 본 하나가 세 행입니다(행벡터 4x4 의 0, 1, 2번 열).
+     * @brief 스킨드 메시 하나의 팔레트 구간입니다. 행은 `GPUSceneSnapshot::_pListSkinPaletteRow` 의 float4 이고, 본 하나가 세 행입니다(행벡터 4x4 의 0, 1, 2번 열, 또는 `_bDualQuaternion` 이면 실수부 · 허수부 · 스케일).
      */
     struct GPUSkinPalette
     {
@@ -341,6 +341,8 @@ namespace sw
         uint32 _boneCount{ 0 };
         uint32 _firstMorphWeight{ 0 }; ///< `GPUSceneSnapshot::_pListMorphWeight` 안에서 이 메시의 모프 가중치가 시작하는 위치
         uint32 _morphWeightCount{ 0 }; ///< 모프 가중치 수(0이면 모프 없음)
+        /// @brief 본 세 행이 듀얼 쿼터니언(실수부 · 허수부 · 스케일)이다. 아니면 행렬 세 열이다(`SkinningMethod`, mesh_skin.hlsl 가 인스턴스마다 고른다).
+        uint8 _bDualQuaternion : 1 { 0 };
     };
 } // namespace sw
 

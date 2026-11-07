@@ -8,7 +8,9 @@
  * 그리는 메시마다의 인스턴스 표(결과 시작 · 가중치 구간 시작 · 정점 수 · 팔레트 시작 · 모프 가중치 시작 · 타깃 수 · 레스트 구간 시작 · 차이 구간 시작)이 둘을 잇는다.
  * 가중치 안의 차이 시작 번호는 그 원본의 차이 구간 기준 상대 번호다. 스레드 하나 = 스킨 구간의
  * 결과 정점 하나 — 인스턴스를 이분 탐색으로 찾아 원본 레스트 정점에 모프 차이를 가중치만큼 더하고(블렌드 셰이프 — 언리얼 모프 타깃과 같은 순서:
- * 모프 다음 스키닝), 본 넷의 팔레트 행렬로 섞어 결과 버퍼에 쓴다. 정점 셰이더는 모프와 같은 길(MorphPool::loadVertex)로 결과를 읽는다.
+ * 모프 다음 스키닝), 본 넷으로 섞어 결과 버퍼에 쓴다. 정점 셰이더는 모프와 같은 길(MorphPool::loadVertex)로 결과를 읽는다.
+ * 섞는 방식은 인스턴스마다 프레임 값 머리가 고른다(SkinningMethod) — 선형(팔레트 행렬 가중 합)과 듀얼 쿼터니언(회전 · 이동을 DQ 로 섞고 스케일은 따로 선형,
+ * Kavan 2007 DLB). 본 행의 뜻도 그 방식을 따른다(binding_slots.hlsli 10 절).
  *
  * 바인딩 계약(binding_slots.hlsli): 컴퓨트 CB 는 b0, 읽기 t0..t3, 쓰기 u0.
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( rest, 0 ) / ( weights, 1 ) / ( palette, 2 ) / ( instances, 3 ) / bindComputeUAV( morph, 0 ).
@@ -54,12 +56,30 @@ float3 transformDirection( uint bone, float3 direction )
     return float3( dot( direction, g_SkinPalette[row].xyz ), dot( direction, g_SkinPalette[row + 1u].xyz ), dot( direction, g_SkinPalette[row + 2u].xyz ) );
 }
 
-/** @brief 팔레트 버퍼를 float 배열로 볼 때 @p index 번째 값 — 모프 가중치가 본 행 뒤에 float4 로 담겨 있다. */
-float loadMorphWeight( uint index )
+/** @brief 팔레트 버퍼를 float 배열로 볼 때 @p index 번째 값 — 프레임 값(스키닝 방식 · 모프 가중치)이 본 행 뒤에 float4 로 담겨 있다. */
+float loadFrameValue( uint index )
 {
     const float4 packed    = g_SkinPalette[index / 4u];
     const uint   component = index % 4u;
     return component == 0u ? packed.x : ( component == 1u ? packed.y : ( component == 2u ? packed.z : packed.w ) );
+}
+
+/** @brief 단위 쿼터니언 @p rotation 으로 방향을 돌린다 — C++ DualQuaternion::transformDirection(행벡터 makeFromQuaternion 과 같다)과 같은 식이다. */
+float3 rotateByQuaternion( float4 rotation, float3 direction )
+{
+    const float3 inner = cross( rotation.xyz, direction ) + direction * rotation.w;
+    return direction + cross( rotation.xyz, inner ) * 2.0f;
+}
+
+/** @brief 섞은 듀얼 쿼터니언(실수부 @p real · 허수부 @p dual, 정규화 전)과 스케일로 점을 옮긴다 — 스케일 → 회전 → 이동(행렬 `S * R * T` 와 같은 순서). */
+float3 transformPointDualQuaternion( float4 real, float4 dual, float3 scale, float3 position )
+{
+    const float  inverseLength = rsqrt( max( dot( real, real ), 1e-12f ) );
+    const float4 unitReal      = real * inverseLength;
+    const float4 unitDual      = dual * inverseLength;
+    // 이동 = 2 · (허수부 ⊗ 켤레 실수부).xyz — DualQuaternion::getTranslation 과 같다.
+    const float3 translation = 2.0f * ( unitReal.w * unitDual.xyz - unitDual.w * unitReal.xyz + cross( unitReal.xyz, unitDual.xyz ) );
+    return rotateByQuaternion( unitReal, position * scale ) + translation;
 }
 
 /** @brief 스킨 구간의 결과 번호가 속한 인스턴스 — 결과 시작이 그 번호 이하인 마지막 줄(줄은 결과 시작 순이다). */
@@ -109,7 +129,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         const float4 delta       = g_RestVertices[element];
         const float3 deltaNormal = g_RestVertices[element + 1u].xyz;
         const uint   target      = (uint)delta.w;
-        const float  weight      = ( target < morph.y ) ? loadMorphWeight( morph.x + target ) : 0.0f;
+        const float  weight      = ( target < morph.y ) ? loadFrameValue( morph.x + SW_SKIN_FRAME_HEADER_FLOATS + target ) : 0.0f;
         position += delta.xyz * weight;
         normal += deltaNormal * weight;
     }
@@ -117,13 +137,42 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     float3 skinnedPosition = float3( 0.0f, 0.0f, 0.0f );
     float3 skinnedNormal   = float3( 0.0f, 0.0f, 0.0f );
     float3 skinnedTangent  = float3( 0.0f, 0.0f, 0.0f );
-    SW_UNROLL for ( uint influence = 0u; influence < 4u; ++influence )
+    // 방식은 인스턴스마다 하나라 같은 스레드 묶음(이웃 정점)은 대개 같은 갈래를 탄다.
+    const bool bDualQuaternion = loadFrameValue( morph.x ) > 0.5f * ( SW_SKIN_METHOD_LINEAR + SW_SKIN_METHOD_DUAL_QUATERNION );
+    if ( bDualQuaternion )
     {
-        const uint  bone   = min( paletteBase + (uint)joints[influence], g_SkinBoneCount - 1u );
-        const float weight = weights[influence];
-        skinnedPosition += transformPoint( bone, position ) * weight;
-        skinnedNormal += transformDirection( bone, normal ) * weight;
-        skinnedTangent += transformDirection( bone, tangent.xyz ) * weight;
+        // 본 행 = 실수부 · 허수부 · 스케일. 실수부의 부호를 첫 본에 맞춰(대척점) 최단 경로로 섞는다 — DualQuaternion::dlb 와 같은 규칙.
+        const uint   firstBone = min( paletteBase + (uint)joints[0], g_SkinBoneCount - 1u );
+        const float4 pivot     = g_SkinPalette[firstBone * SW_SKIN_FLOAT4_PER_BONE];
+        float4       real      = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        float4       dual      = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        float3       scale     = float3( 0.0f, 0.0f, 0.0f );
+        SW_UNROLL for ( uint influence = 0u; influence < 4u; ++influence )
+        {
+            const uint   bone     = min( paletteBase + (uint)joints[influence], g_SkinBoneCount - 1u );
+            const uint   row      = bone * SW_SKIN_FLOAT4_PER_BONE;
+            const float4 boneReal = g_SkinPalette[row];
+            const float  weight   = weights[influence] * ( dot( boneReal, pivot ) < 0.0f ? -1.0f : 1.0f );
+            real += boneReal * weight;
+            dual += g_SkinPalette[row + 1u] * weight;
+            scale += g_SkinPalette[row + 2u].xyz * weights[influence];
+        }
+        const float4 unitReal = real * rsqrt( max( dot( real, real ), 1e-12f ) );
+        skinnedPosition       = transformPointDualQuaternion( real, dual, scale, position );
+        // 노멀 · 탄젠트는 회전만 — 선형 경로와 같이 균등 스케일을 가정하고 아래에서 정규화한다.
+        skinnedNormal  = rotateByQuaternion( unitReal, normal );
+        skinnedTangent = rotateByQuaternion( unitReal, tangent.xyz );
+    }
+    else
+    {
+        SW_UNROLL for ( uint influence = 0u; influence < 4u; ++influence )
+        {
+            const uint  bone   = min( paletteBase + (uint)joints[influence], g_SkinBoneCount - 1u );
+            const float weight = weights[influence];
+            skinnedPosition += transformPoint( bone, position ) * weight;
+            skinnedNormal += transformDirection( bone, normal ) * weight;
+            skinnedTangent += transformDirection( bone, tangent.xyz ) * weight;
+        }
     }
 
     const uint   word         = ( g_SkinVertexBase + skinIndex ) * SW_MORPH_RESULT_WORDS_PER_VERTEX; // 결과 배치는 binding_slots.hlsli 10 절

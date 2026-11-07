@@ -115,6 +115,7 @@ namespace sw
     SkeletalMeshComponent::SkeletalMeshComponent()
         : _skeletonPath{}
         , _updateRateDivisor{ 1 }
+        , _skinningMethod{ SkinningMethod::Linear }
         , _skeleton{ SkeletalMeshComponentInternal::getImplicitSkeleton() }
         , _skinSourceMesh{}
         , _skinSourceContentID{ 0 }

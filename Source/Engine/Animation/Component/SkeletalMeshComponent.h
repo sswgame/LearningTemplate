@@ -50,6 +50,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum SkinningMethod
+     * @brief 본 가중치로 정점을 섞는 방식입니다(GPU 스키닝 컴퓨트 mesh_skin.hlsl 이 유닛마다 고른다).
+     * @details 선형(LBS)은 행렬을 가중 합하고, 듀얼 쿼터니언(DQS)은 회전 · 이동을 듀얼 쿼터니언으로 섞어(스케일은 따로 선형) 비틀린 관절이 가늘어지지 않는다(캔디 래퍼).
+     *          Maya · Blender 의 Skin/Armature "Dual Quaternion" 과 같은 선택이다(언리얼 · 유니티는 기본이 선형). 비용은 DQS 가 조금 더 크다.
+     */
+    ENUM()
+    enum class SkinningMethod : uint8
+    {
+        Linear = 0,     ///< 행렬 가중 합(기본). 스케일 · 전단도 그대로 섞인다.
+        DualQuaternion, ///< 듀얼 쿼터니언 혼합 — 비틀림에서 부피를 지킨다. 스케일은 축별 선형 혼합이다.
+    };
+
+    /**
      * @class SkeletalMeshComponent
      * @brief 장비 부품 하나가 유닛 하나입니다(캐릭터 몸, 투구, 무기). 스켈레톤이 없는 부품은 본 하나짜리 암묵 스켈레톤을 받습니다.
      * @details - **포즈**: 로컬 포즈(SoA) → 모델 공간 → 스킨 팔레트 순서입니다. 기본 포즈 단계에서 레퍼런스 포즈로 시작하고, 등록된 작업(애니메이터)이 덮어씁니다.
@@ -104,6 +117,10 @@ namespace sw
         const vector<float4x4>& getModelSpaceTransforms() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getModelSpaceTransforms() : _listModelSpace; }
         /** @brief 스킨 팔레트(메시의 역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. 묶음과 나누는 중이면 묶음의 것입니다. */
         const vector<float4x4>& getSkinPalette() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getSkinPalette() : _listSkinPalette; }
+        /** @brief 스키닝 방식(PROPERTY)입니다. 군중 묶음과 나누는 중이면 묶음의 팔레트를 선형으로 그린다(묶음 멤버마다 방식이 다를 수 있다). */
+        SkinningMethod getSkinningMethod() const { return _pCrowdBucket != nullptr ? SkinningMethod::Linear : _skinningMethod; }
+        /** @brief 스키닝 방식을 바꿉니다. 다음 스냅샷부터 적용된다. */
+        void setSkinningMethod( SkinningMethod method ) { _skinningMethod = method; }
         /** @brief 이름이 일치하는 본의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */
         [[nodiscard]] bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
         /** @brief 스켈레톤이 정한 소켓(변형이 더한 자리)의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */
@@ -310,7 +327,9 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
         AssetRef<Skeleton> _skeletonPath;
         PROPERTY( Category = "Animation", DisplayName = "Update Rate Divisor", Tooltip = "Build the pose every N frames (animation LOD)", Min = 1.0, Max = 16.0 )
-        uint32                     _updateRateDivisor;
+        uint32 _updateRateDivisor;
+        PROPERTY( Category = "Animation", DisplayName = "Skinning Method", Tooltip = "Linear blends bone matrices; Dual Quaternion keeps volume at twisted joints" )
+        SkinningMethod             _skinningMethod;
         shared_ptr<const Skeleton> _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다. 동일성 확인과 핫 리로드 대조에 씁니다. 이 컴포넌트의 메시는 그 복사본입니다.
         shared_ptr<Mesh>                                _skinSourceMesh;

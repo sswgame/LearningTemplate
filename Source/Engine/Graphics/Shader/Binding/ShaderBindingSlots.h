@@ -174,6 +174,11 @@ namespace sw
         inline constexpr uint32 kSkinFloat4PerVertex = SW_SKIN_FLOAT4_PER_VERTEX;
         /// @brief 스킨 팔레트 본 하나의 원소(float4) 수입니다.
         inline constexpr uint32 kSkinFloat4PerBone = SW_SKIN_FLOAT4_PER_BONE;
+        /// @brief 스킨 인스턴스 프레임 값의 머리 float 수입니다([0] 스키닝 방식). 모프 가중치가 그 뒤에 온다.
+        inline constexpr uint32 kSkinFrameHeaderFloats = SW_SKIN_FRAME_HEADER_FLOATS;
+        /// @brief 프레임 값 머리의 스키닝 방식 — 선형 · 듀얼 쿼터니언입니다(mesh_skin.hlsl 가 본 행을 읽는 방식).
+        inline constexpr float32 kSkinMethodLinear         = static_cast<float32>( SW_SKIN_METHOD_LINEAR );
+        inline constexpr float32 kSkinMethodDualQuaternion = static_cast<float32>( SW_SKIN_METHOD_DUAL_QUATERNION );
         /// @brief 스킨 인스턴스 표 한 줄의 원소(uint4) 수입니다.
         inline constexpr uint32 kSkinUint4PerInstance = SW_SKIN_UINT4_PER_INSTANCE;
         /// @brief VAT 표에서 메시 하나의 머리 단어(uint32) 수입니다.

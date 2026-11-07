@@ -347,9 +347,13 @@
 #define SW_MORPH_RESULT_WORDS_PER_VERTEX 5u
 // 스킨 가중치 버퍼 — 원본 정점 하나 = float4 셋([3i] 가중치 넷, [3i+1] 원본 스켈레톤 본 번호 넷, [3i+2] 모프 차이 구간(시작 · 수)).
 #define SW_SKIN_FLOAT4_PER_VERTEX 3u
-// 스킨 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ). 본 행 뒤에 모프 가중치가 float4 로 이어진다.
-#define SW_SKIN_FLOAT4_PER_BONE 3u
-// 스킨 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작 · 가중치 구간 시작 · 정점 수 · 팔레트 시작, [2i+1] 모프 가중치 시작 · 타깃 수 · 레스트 구간 시작 · 차이 구간 시작).
+// 스킨 팔레트 — 본 하나 = float4 셋. 선형이면 행벡터 규약 4x4 행렬의 0 · 1 · 2 열(위치 = dot( float4( p, 1 ), 열 )), 듀얼 쿼터니언이면 실수부 · 허수부 · 스케일(xyz).
+// 본 행 뒤에 인스턴스마다 프레임 값이 float 로 이어진다 — [0] 스키닝 방식(SW_SKIN_METHOD_*), [1..] 모프 가중치(타깃 순서).
+#define SW_SKIN_FLOAT4_PER_BONE        3u
+#define SW_SKIN_FRAME_HEADER_FLOATS    1u
+#define SW_SKIN_METHOD_LINEAR          0
+#define SW_SKIN_METHOD_DUAL_QUATERNION 1
+// 스킨 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작 · 가중치 구간 시작 · 정점 수 · 팔레트 시작, [2i+1] 프레임 값 시작 · 타깃 수 · 레스트 구간 시작 · 차이 구간 시작).
 #define SW_SKIN_UINT4_PER_INSTANCE 2u
 // 정점 애니메이션(VAT) 표(g_SwVertexAnimation, 32 비트 단어 배열) — 메시마다 머리 단어 10 개([0] 프레임 수 · [1] 프레임율(float 비트) · [2] 정점 수 · [3] 반복 ·
 // [4..6] 위치 경계 중심 · [7..9] 반 크기, 모두 float 비트) 뒤에 원소가 프레임 우선 순서로 이어진다. 원소 하나 = 단어 둘(위치 snorm16 x3 + 옥타헤드럴 법선 snorm8 x2).

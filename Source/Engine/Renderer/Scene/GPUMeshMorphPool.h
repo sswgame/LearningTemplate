@@ -114,7 +114,7 @@ namespace sw
         uint32 _sourceBase{ 0 };       ///< 원본 가중치 구간의 시작(가중치 버퍼의 정점)
         uint32 _vertexCount{ 0 };      ///< 정점 수
         uint32 _paletteBase{ 0 };      ///< 팔레트에서의 시작 본
-        uint32 _morphWeightBase{ 0 };  ///< 둘째 uint4. 팔레트 버퍼를 float 배열로 볼 때 이 인스턴스 모프 가중치의 시작
+        uint32 _frameValueBase{ 0 };   ///< 둘째 uint4. 팔레트 버퍼를 float 배열로 볼 때 이 인스턴스 프레임 값의 시작([0] 스키닝 방식, 뒤로 모프 가중치)
         uint32 _morphTargetCount{ 0 }; ///< 모프 타깃 수
         uint32 _restBase{ 0 };         ///< 원본 레스트 구간의 시작(레스트 버퍼의 정점)
         uint32 _deltaBase{ 0 };        ///< 원본 모프 차이 구간의 시작(레스트 버퍼의 원소 — 가중치 안 차이 시작은 이 구간 기준 상대 번호)
@@ -361,8 +361,8 @@ namespace sw
         uint32         _skinSourceVertexCount{ 0 };
         uint32         _skinRepackCount{ 0 };
         uint32         _lastSkinUploadBytes{ 0 };
-        uint32         _skinMorphWeightCount{ 0 }; ///< 인스턴스 모프 가중치의 합(팔레트 뒤에 float4 로 싣는다)
-        uint64         _updateCount{ 0 };          ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
+        uint32         _skinFrameValueCount{ 0 }; ///< 인스턴스 프레임 값(머리 + 모프 가중치)의 합(팔레트 뒤에 float4 로 싣는다)
+        uint64         _updateCount{ 0 };         ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
         uint32         _morphLiveVertexCount{ 0 };
         uint32         _morphRepackCount{ 0 };
         uint32         _lastMorphUploadBytes{ 0 };

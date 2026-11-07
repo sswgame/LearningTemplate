@@ -37,6 +37,12 @@ namespace sw
          *          `float4x4::decompose` 로 뽑으므로 스케일이 섞인 행렬에서도 맞습니다.
          */
         static DualQuaternion fromMatrix( const float4x4& mat );
+        /**
+         * @brief 변환 행렬에서 만들고 떼어 낸 스케일을 @p outScale 로 돌려줍니다. 행렬은 `스케일 * 회전 * 이동`(행벡터)으로 읽습니다.
+         * @details DQ 스키닝이 본마다 이 둘을 싣습니다(스케일은 따로 선형 혼합한 뒤 회전 앞에 곱한다 — `transformPoint` 와 mesh_skin.hlsl).
+         *          축 하나가 0 인 행렬(숨긴 본)은 회전이 단위이고 스케일은 0 에 가깝습니다 — 점이 이동 자리로 모이는 것은 선형 스키닝과 같습니다.
+         */
+        static DualQuaternion fromMatrix( const float4x4& mat, float3& outScale );
 
         /** @brief 실수부 길이로 양쪽을 나눠 단위 듀얼 쿼터니언으로 만듭니다. */
         void normalize();
@@ -49,6 +55,13 @@ namespace sw
         quaternion getRotation() const;
         /** @brief 변환 행렬로 되돌립니다. 스케일은 항상 1 입니다. */
         float4x4 toMatrix4x4() const;
+
+        /**
+         * @brief 단위 듀얼 쿼터니언으로 점을 옮깁니다(회전 뒤 이동). `toMatrix4x4()` 로 옮긴 것과 같고, mesh_skin.hlsl 의 DQ 경로가 같은 식입니다.
+         */
+        float3 transformPoint( const float3& point ) const;
+        /** @brief 회전만으로 방향을 옮깁니다(이동 없음). */
+        float3 transformDirection( const float3& direction ) const;
 
         /** @brief 두 변환을 선형 결합한 뒤 정규화(DLB)해 최단 경로 스크루 보간을 만듭니다. */
         static DualQuaternion dlb( const DualQuaternion& a, const DualQuaternion& b, float32 t );

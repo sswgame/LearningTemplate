@@ -38,10 +38,16 @@ namespace sw
         // 스케일이 섞인 행렬에 makeFromRotationMatrix 를 바로 걸면 회전이 틀린다. 축 길이로
         // 먼저 나눠야 한다. 그 일은 Core 의 decompose 가 이미 하므로 여기서 다시 적지 않는다.
         // (스케일 (2,1,1) + Z 90도 행렬이 112.6도로 읽히던 경우다.)
-        float3     scale{};
+        float3 scale{};
+        return fromMatrix( mat, scale );
+    }
+
+    DualQuaternion DualQuaternion::fromMatrix( const float4x4& mat, float3& outScale )
+    {
+        // 축 하나가 0 이면 decompose 는 회전을 단위로 두고 false 다 — 그 본의 점은 스케일 0 으로 이동 자리에 모이므로 회전은 뜻이 없다.
         quaternion rot{};
         float3     trans{};
-        mat.decompose( scale, rot, trans );
+        static_cast<void>( mat.decompose( outScale, rot, trans ) );
         return DualQuaternion( rot, trans );
     }
 
@@ -84,6 +90,19 @@ namespace sw
         mat._42          = t._y;
         mat._43          = t._z;
         return mat;
+    }
+
+    float3 DualQuaternion::transformDirection( const float3& direction ) const
+    {
+        // v + 2 q.xyz × (q.xyz × v + w v) — `float4x4::makeFromQuaternion` 을 행벡터로 곱한 것과 같다.
+        const float3 axis{ _real._x, _real._y, _real._z };
+        const float3 inner = axis.cross( direction ) + direction * _real._w;
+        return direction + axis.cross( inner ) * 2.0f;
+    }
+
+    float3 DualQuaternion::transformPoint( const float3& point ) const
+    {
+        return transformDirection( point ) + getTranslation();
     }
 
     DualQuaternion DualQuaternion::dlb( const DualQuaternion& a, const DualQuaternion& b, float32 t )

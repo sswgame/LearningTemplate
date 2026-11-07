@@ -9,6 +9,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Skeletal/DualQuaternion.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -43,17 +44,20 @@ namespace sw
     {
         /**
          * @brief 팔레트 한 벌(과 모프 가중치)을 행 · 가중치 버퍼 끝에 싣고 스냅샷에 항목을 더합니다.
-         * @details 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(mesh_skin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
+         * @details 선형이면 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(mesh_skin.hlsl). 듀얼 쿼터니언이면 본 하나가
+         *          실수부 · 허수부 · 스케일(xyz) 세 행이다 — 행렬을 `스케일 * 회전 * 이동` 으로 나눠 싣고, 셰이더가 스케일을 따로 섞어 회전 앞에 곱한다.
+         *          모프 가중치는 [0, 1] 로 제한해 싣는다.
          */
         void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const shared_ptr<Mesh>& mesh, uint32 skinSlot,
-                            uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
+                            uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight, SkinningMethod method )
         {
             GPUSkinPalette entry{};
-            entry._mesh      = mesh;
-            entry._skinSlot  = skinSlot;
-            entry._lodIndex  = lodIndex;
-            entry._firstRow  = static_cast<uint32>( inoutListRow.size() );
-            entry._boneCount = static_cast<uint32>( listPalette.size() );
+            entry._bDualQuaternion = method == SkinningMethod::DualQuaternion ? 1 : 0;
+            entry._mesh            = mesh;
+            entry._skinSlot        = skinSlot;
+            entry._lodIndex        = lodIndex;
+            entry._firstRow        = static_cast<uint32>( inoutListRow.size() );
+            entry._boneCount       = static_cast<uint32>( listPalette.size() );
             if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
             {
                 entry._firstMorphWeight = static_cast<uint32>( inoutListWeight.size() );
@@ -68,11 +72,25 @@ namespace sw
             // 뼈마다 push_back 세 번이던 것을 한 번에 늘리고 포인터로 쓴다.
             inoutListRow.resize( inoutListRow.size() + listPalette.size() * 3 );
             float4* pRow = inoutListRow.data() + entry._firstRow;
-            for ( const float4x4& matrix : listPalette )
+            if ( entry._bDualQuaternion != 0 )
             {
-                *pRow++ = float4{ matrix._11, matrix._21, matrix._31, matrix._41 };
-                *pRow++ = float4{ matrix._12, matrix._22, matrix._32, matrix._42 };
-                *pRow++ = float4{ matrix._13, matrix._23, matrix._33, matrix._43 };
+                for ( const float4x4& matrix : listPalette )
+                {
+                    float3               scale{};
+                    const DualQuaternion bone = DualQuaternion::fromMatrix( matrix, scale );
+                    *pRow++                   = float4{ bone._real._x, bone._real._y, bone._real._z, bone._real._w };
+                    *pRow++                   = float4{ bone._dual._x, bone._dual._y, bone._dual._z, bone._dual._w };
+                    *pRow++                   = float4{ scale._x, scale._y, scale._z, 0.0f };
+                }
+            }
+            else
+            {
+                for ( const float4x4& matrix : listPalette )
+                {
+                    *pRow++ = float4{ matrix._11, matrix._21, matrix._31, matrix._41 };
+                    *pRow++ = float4{ matrix._12, matrix._22, matrix._32, matrix._42 };
+                    *pRow++ = float4{ matrix._13, matrix._23, matrix._33, matrix._43 };
+                }
             }
             inoutSnapshot._listSkinPalette.push_back( entry );
         }
@@ -99,13 +117,15 @@ namespace sw
             const uint32 skinSlot = pUnit->getSkinSlot();
             if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pUnit->getOwnSkinSlot() )
                 continue;
-            appendPalette( inoutSnapshot, *listRow, *listWeight, pUnit->getMesh(), skinSlot, pUnit->getLODIndex(), pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
+            appendPalette( inoutSnapshot, *listRow, *listWeight, pUnit->getMesh(), skinSlot, pUnit->getLODIndex(), pUnit->getSkinPalette(), &pUnit->getMorphWeights(),
+                           pUnit->getSkinningMethod() );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr ); // 멤버마다 단계가 다르다 — 모든 단계
+                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr,
+                               SkinningMethod::Linear ); // 멤버마다 단계 · 방식이 다르다 — 모든 단계, 선형
         }
         _paletteRowCountHint               = listRow->size();
         _morphWeightCountHint              = listWeight->size();

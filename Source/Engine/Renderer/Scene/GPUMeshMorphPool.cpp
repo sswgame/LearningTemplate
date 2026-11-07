@@ -449,9 +449,9 @@ namespace sw
         _listSkinMesh.clear();
         _listSkinSlot.clear();
         _listSkinRow.clear();
-        _skinBoneCount        = 0;
-        _skinMorphWeightCount = 0;
-        uint32 resultOffset   = 0;
+        _skinBoneCount       = 0;
+        _skinFrameValueCount = 0;
+        uint32 resultOffset  = 0;
         for ( size_t skinIndex = 0; skinIndex < listSkinMesh.size(); ++skinIndex )
         {
             Mesh* const  pMesh     = listSkinMesh[skinIndex];
@@ -486,7 +486,7 @@ namespace sw
             row._vertexCount      = count;
             row._paletteBase      = _skinBoneCount;
             row._morphTargetCount = pLower != nullptr ? 0u : pMesh->getMorphTargetCount(); // 낮은 단계 정점은 모프 차이가 없다(`Mesh::setLODs`)
-            row._morphWeightBase  = _skinMorphWeightCount;                                 // 팔레트 뒤 구간 기준 — 팔레트 본 수가 정해진 뒤 아래에서 절대 위치로 옮긴다
+            row._frameValueBase   = _skinFrameValueCount;                                  // 팔레트 뒤 구간 기준 — 팔레트 본 수가 정해진 뒤 아래에서 절대 위치로 옮긴다
             if ( skinSlot >= _listSkinResultOffset.size() )
                 _listSkinResultOffset.resize( static_cast<size_t>( skinSlot ) + 1u, GPUSkinResultOffset{} );
             // 정점 셰이더는 정점 흐름 번호(낮은 단계면 그 단계 첫 정점부터)에서 첫 정점을 빼고 결과 시작에 더한다.
@@ -495,13 +495,13 @@ namespace sw
             _listSkinSlot.push_back( skinSlot );
             _listSkinRow.push_back( row );
             _skinBoneCount += pMesh->getSkinBoneCount();
-            _skinMorphWeightCount += row._morphTargetCount;
+            _skinFrameValueCount += shaderslot::kSkinFrameHeaderFloats + row._morphTargetCount;
             resultOffset += count;
         }
-        // 모프 가중치는 팔레트 버퍼의 본 행 뒤에 float4 로 싣는다 — 셰이더는 그 버퍼를 float 배열로 본다(float4 셋 × 본 수 = float 열둘 × 본 수).
+        // 프레임 값(스키닝 방식 + 모프 가중치)은 팔레트 버퍼의 본 행 뒤에 float4 로 싣는다 — 셰이더는 그 버퍼를 float 배열로 본다(float4 셋 × 본 수 = float 열둘 × 본 수).
         for ( GPUSkinInstanceRow& row : _listSkinRow )
         {
-            row._morphWeightBase += _skinBoneCount * shaderslot::kSkinFloat4PerBone * 4u;
+            row._frameValueBase += _skinBoneCount * shaderslot::kSkinFloat4PerBone * 4u;
         }
         _vertexCount = _skinVertexBase + resultOffset;
     }
@@ -533,7 +533,7 @@ namespace sw
             _skinResultOffsets.upload( pDevice, _listSkinResultOffset.data(), skinResultOffsetCount * static_cast<uint32>( sizeof( GPUSkinResultOffset ) ) );
         if ( _skinBoneCount > 0 )
         {
-            if ( _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
+            if ( _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinFrameValueCount + 3u ) / 4u,
                                               GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr ) == false )
                 SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedCreateSkinPalette", "Failed to create the skin palette buffer (%# bones) - skinned meshes are not drawn", _skinBoneCount );
         }
@@ -810,16 +810,17 @@ namespace sw
                 _listScratchPaletteIndex[skinSlot] = paletteIndex;
         }
 
-        // 풀 순서로 다시 모은다. 팔레트가 없는(아직 평가되지 않은) 메시는 단위 행렬 — 바인드 포즈다.
+        // 풀 순서로 다시 모은다. 팔레트가 없는(아직 평가되지 않은) 메시는 단위 변환 — 바인드 포즈다. 단위 변환은 그 인스턴스의 본 행 방식(선형 · 듀얼 쿼터니언)으로 적는다.
         const size_t paletteElementCount = static_cast<size_t>( _skinBoneCount ) * shaderslot::kSkinFloat4PerBone;
-        _listScratchPaletteRow.assign( paletteElementCount + ( _skinMorphWeightCount + 3u ) / 4u, float4{} );
+        _listScratchPaletteRow.assign( paletteElementCount + ( _skinFrameValueCount + 3u ) / 4u, float4{} );
         for ( size_t skinIndex = 0; skinIndex < _listSkinMesh.size(); ++skinIndex )
         {
-            const Mesh*           pMesh     = _listSkinMesh[skinIndex];
-            const uint32          boneBase  = _listSkinRow[skinIndex]._paletteBase;
-            const uint32          boneCount = pMesh->getSkinBoneCount();
-            const uint32          found     = _listScratchPaletteIndex[_listSkinSlot[skinIndex]];
-            const GPUSkinPalette* pFound    = ( found != kInvalidBase ) ? &listPalette[found] : nullptr;
+            const Mesh*           pMesh           = _listSkinMesh[skinIndex];
+            const uint32          boneBase        = _listSkinRow[skinIndex]._paletteBase;
+            const uint32          boneCount       = pMesh->getSkinBoneCount();
+            const uint32          found           = _listScratchPaletteIndex[_listSkinSlot[skinIndex]];
+            const GPUSkinPalette* pFound          = ( found != kInvalidBase ) ? &listPalette[found] : nullptr;
+            const bool            bDualQuaternion = pFound != nullptr && pFound->_bDualQuaternion != 0;
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
             {
                 float4*      pRow     = &_listScratchPaletteRow[( static_cast<size_t>( boneBase ) + boneIndex ) * shaderslot::kSkinFloat4PerBone];
@@ -833,16 +834,25 @@ namespace sw
                     }
                     continue;
                 }
+                if ( bDualQuaternion )
+                {
+                    pRow[0] = float4{ 0.0f, 0.0f, 0.0f, 1.0f }; // 실수부 — 회전 없음
+                    pRow[1] = float4{ 0.0f, 0.0f, 0.0f, 0.0f }; // 허수부 — 이동 없음
+                    pRow[2] = float4{ 1.0f, 1.0f, 1.0f, 0.0f }; // 스케일 1
+                    continue;
+                }
                 pRow[0] = float4{ 1.0f, 0.0f, 0.0f, 0.0f };
                 pRow[1] = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
                 pRow[2] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
             }
-            // 모프 가중치 — 팔레트 뒤 구간에 이 인스턴스 몫(타깃 수)만큼. 없으면 0(레스트).
-            const GPUSkinInstanceRow& row             = _listSkinRow[skinIndex];
-            const bool                bNoMorphWeights = row._morphTargetCount == 0 || pFound == nullptr || pListMorphWeight == nullptr;
+            // 프레임 값 — 머리(스키닝 방식)는 늘 싣고, 모프 가중치는 팔레트 뒤 구간에 이 인스턴스 몫(타깃 수)만큼. 없으면 0(레스트).
+            const GPUSkinInstanceRow& row    = _listSkinRow[skinIndex];
+            float32*                  pValue = reinterpret_cast<float32*>( _listScratchPaletteRow.data() ) + row._frameValueBase;
+            pValue[0]                        = bDualQuaternion ? shaderslot::kSkinMethodDualQuaternion : shaderslot::kSkinMethodLinear;
+            const bool bNoMorphWeights       = row._morphTargetCount == 0 || pFound == nullptr || pListMorphWeight == nullptr;
             if ( bNoMorphWeights )
                 continue;
-            float32* pWeight = reinterpret_cast<float32*>( _listScratchPaletteRow.data() ) + row._morphWeightBase;
+            float32* pWeight = pValue + shaderslot::kSkinFrameHeaderFloats;
             for ( uint32 targetIndex = 0; targetIndex < row._morphTargetCount && targetIndex < pFound->_morphWeightCount; ++targetIndex )
             {
                 const size_t source = static_cast<size_t>( pFound->_firstMorphWeight ) + targetIndex;
@@ -883,6 +893,6 @@ namespace sw
         _skinVertexBase        = 0;
         _skinBoneCount         = 0;
         _skinSourceVertexCount = 0;
-        _skinMorphWeightCount  = 0;
+        _skinFrameValueCount   = 0;
     }
 } // namespace sw
