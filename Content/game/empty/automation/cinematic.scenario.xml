@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  시네마틱 묶음(SequencePlayerComponent · CinematicCameraComponent · CameraManagerComponent) — 값과 같은 실행의 두 장으로 판정한다.
+  ① 플레이어 카메라는 매니저가 뷰 타깃(GameplayView) 자리에 둔다 — 씬에 적은 자리와 멀리 떨어져 있어 매니저가 돌지 않으면 진다.
+  ② 프리롤에 대기 뷰가 CutA 로 올라 플레이어 매니저에 닿고, 컷이 오면 풀리며 화면이 CutA 다. ③ CutB 로 끊어 바뀐다(두 장이 다르다).
+  ④ 끝나면 화면이 플레이어 카메라로 돌아오고 마지막 컷 자리에서 0.5 초 섞여 나온다(언리얼 Blend Out) — 섞는 동안은 타깃과 떨어져 있고, 끝나면 타깃에 닿는다.
+  프레임: 시퀀스 30 fps · 고정 60 Hz 라 시퀀스 한 프레임이 틱 둘이다. 시한은 조건 대기로 둔다.
+  실행: App -scenario=game/empty/automation/cinematic.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.cinematic" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/cinematic.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="2"/>
+	<Expect watch="Camera.FrameObject" is="GameCamera"/>
+	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
+	<Expect watch="CameraManager.PendingCamera" target="GameCamera" is="none"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="none"/>
+	<Wait frames="1"/>
+
+	<PlaySequence object="Director"/>
+	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="CutA" timeoutSeconds="1.5"/>
+	<Expect watch="Camera.FrameObject" is="GameCamera"/>
+	<WaitUntil watch="Camera.FrameObject" is="CutA" timeoutSeconds="1"/>
+	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="none" timeoutFrames="4"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="CutA"/>
+	<Wait frames="8"/>
+	<Screenshot file="cinematic_a.ppm"/>
+	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="CutB" timeoutSeconds="1.5"/>
+	<WaitUntil watch="Camera.FrameObject" is="CutB" timeoutSeconds="1"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="CutB"/>
+	<Wait frames="8"/>
+	<Screenshot file="cinematic_b.ppm"/>
+
+	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutSeconds="2"/>
+	<Expect watch="Cinematic.CutCamera" target="Director" is="none"/>
+	<Expect watch="CameraManager.Blending" target="GameCamera" equals="1"/>
+	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atLeast="0.5"/>
+	<WaitUntil watch="CameraManager.Blending" target="GameCamera" equals="0" timeoutSeconds="1"/>
+	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
+	<WaitSequence object="Director"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="cinematic_a.ppm" second="cinematic_b.ppm" minDiffering="0.05"/>
+	<Pass/>
+</Scenario>

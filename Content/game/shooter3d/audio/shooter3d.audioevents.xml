@@ -66,5 +66,19 @@
 				<AudioClipEntry _path="game/shooter3d/sounds/impact_metal_light_001.ogg" _volumeDb="-8" />
 			</_listClip>
 		</AudioEventDef>
+		<!-- 아레나 환경음(AudioAmbientEmitterComponent) — 루프. 영역 소리는 ambient 버스로 간다. 발전기 쪽은 같은 소리를 점에서 낸다(벽 뒤 가림). -->
+		<AudioEventDef _name="ArenaHum"
+		                _bus="ambient"
+		                _attenuation="Default"
+		                _priority="20"
+		                _maxInstances="2"
+		                _steal="Farthest"
+		                _volumeDbMin="-16"
+		                _volumeDbMax="-16"
+		                _bLoop="true">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/thruster_fire_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
 	</_listEvent>
 </AudioEventLibrary>

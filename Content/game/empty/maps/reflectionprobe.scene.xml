@@ -1,0 +1,40 @@
+<Scene formatVersion="2" name="ReflectionProbe">
+	<!-- 반사 프로브 시나리오(automation/reflectionprobe)의 무대 — 거울 판 위로 내려다보는 카메라. 프로브는 Probe 레이어라 처음에는 없다.
+	     reflectionprobe.reflprobe 는 에디터 굽기가 아니라 면마다 색이 다른 고정 데이터다(+X 빨강 · -X 파랑 · +Z 초록 · +Y 흰색, 판이 반사하는 방향이 무슨 색을 받는지가 뚜렷하다) — 굽기는 GPU 로 씬 옆 파일을 다시 쓰므로 체인에 두지 않는다(editor/reflectionprobebake). 찍은 위치는 프로브 위치(0,2,0)와 같아야 읽힌다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Probe" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-4" _localRotation="0.6,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="0.2" _ambient="0.1" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="MirrorFloor">
+			<GameObject _schemaVersion="0" _name="MirrorFloor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="9,1,9" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/reflectionprobe_mirror.material" _boundsRadius="8" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Probe" layers="Probe">
+			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
+				<_listComponent>
+					<ReflectionProbeComponent _localPosition="0,2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _extent="12,6,12" _blendDistance="0.5" _probeDataPath="game/empty/maps/reflectionprobe.reflprobe" _resolution="16" _captureResolution="64" _bakeSampleCount="16" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -9,6 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/SphericalHarmonics.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -20,6 +22,7 @@ namespace sw
     {
         Gradient = 0, ///< 천정 · 지평선 · 땅 3색 그러데이션(`sky.hlsl` 의 evaluateSky)
         Atmosphere,   ///< 레일리 · 미 단일 산란(`SkyAtmosphere::evaluateScattering`) — 시간대는 방향광 방향이 정한다
+        Hdri,         ///< 등장방형 HDR 텍스처(`sky.hlsl` 의 evaluateHdri, 언리얼 HDRI Backdrop · 유니티 Skybox/Panoramic). 간접 조명은 원본을 투영한 SH9 계수다
     };
 } // namespace sw
 
@@ -96,6 +99,7 @@ namespace sw
      *          지수가 클수록 지평선 띠가 좁다. 셰이더 상수로는 `g_SkyZenith`(rgb, w = 지수) · `g_SkyHorizon`(rgb) · `g_SkyGround`(rgb, w = 세기)로 싣는다.
      *          `Atmosphere` 모드: 산란(`SkyAtmosphere`) × 해 색 × `_atmosphere._sunIntensity` × 세기. 해는 `setSun` 으로 받는다 — 해(방향광)가 없으면 해 색이 0 이라 하늘은 0(땅도 0)이다(폴백 없음).
      *          셰이더는 해 방향 · 색을 키 라이트 상수(`g_KeyLightDirIntensity` · `g_KeyLightColor`)에서 읽는다 — 같은 값이다. 같은 식을 간접 조명 베이크가 프로브마다 SH 로 투영한다.
+     *          `Hdri` 모드: 셰이더는 텍스처를 읽고, 이 식은 원본을 투영한 SH9 계수(`_hdriAmbient`)를 평가해 간접 조명에 저주파 빛을 준다(언리얼 Sky Light 의 저차 SH 와 같은 자리). 음수 링잉은 0 으로 자른다.
      */
     struct SW_API SkyGradient
     {
@@ -109,6 +113,9 @@ namespace sw
         SkyClouds     _clouds{};                           ///< 구름 층(모드와 무관)
         float3        _toSunDirection{ 0.0f, 1.0f, 0.0f }; ///< 해 쪽 단위 방향(대기 모드). `setSun` 이 정한다
         float3        _sunColor{};                         ///< 해 색(선형 RGB, 세기 곱하기 전). 0 이면 해가 없다
+        hashed_string _hdriTexture{};                      ///< HDRI 모드의 등장방형 텍스처 경로
+        float32       _hdriRotation{ 0.0f };               ///< HDRI 모드에서 하늘을 Y 축으로 돌리는 각(라디안)
+        SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/dev/MakeSkyHdriPrefabs.py`). CPU 는 텍스처를 읽지 않는다
 
         /**
          * @brief 해(방향광)를 정합니다. @p lightTravelDirection 은 빛이 나아가는 방향(방향광의 `getLightDirection`)이고 해 쪽은 그 반대다. 길이가 0 이면 해가 없다(색 0).

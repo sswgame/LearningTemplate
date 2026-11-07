@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  볼륨 안개(froxel, FogComponent._bVolumetric) — 같은 무대의 안개를 평범한 안개(fogshowcase)와 볼륨 안개(fogvolumetric, 그 씬을 물려받아 안개만 바꿨다)로 찍어 견준다.
+  컴퓨트(volumetric_fog.hlsl)가 돌지 않거나 안개 패스(fog.hlsl)가 볼륨을 읽지 않으면 두 장이 같아서 진다. 골든이 아니라 같은 실행의 두 장이다.
+  평범한 안개와 볼륨의 빛 1(앰비언트)은 같은 식이므로, 차이는 산란 배율 × (해 + 점광) 뿐이다. 화면 위쪽 먼 띠로 본다. 화면 아래 가까운 바닥은 안개가 얇아 차이가 작으니 보지 않는다.
+  실행: App -scenario=game/empty/automation/fogvolumetric.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.fogvolumetric" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="fog_plain.ppm"/>
+	<Wait frames="2"/>
+	<LoadScene path="game/empty/maps/fogvolumetric.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="fog_volume.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="fog_plain.ppm" second="fog_volume.ppm" region="0.2,0.3,0.8,0.45" minDiffering="0.2"/>
+	<Pass/>
+</Scenario>

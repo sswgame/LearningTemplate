@@ -1579,5 +1579,64 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 공간 오디오(automation/spatialaudio) — 아레나 안쪽 구석의 잔향 존과 영역 환경음, 벽의 전력함에서 나는 점 소리(가림). -->
+		<entity id="97" name="ArenaReverbZone">
+			<GameObject _schemaVersion="0" _name="ArenaReverbZone" _bActive="true">
+				<_listComponent>
+					<AudioReverbZoneComponent _componentName="AudioReverbZoneComponent"
+					                          _bActive="true"
+					                          _localPosition="-15,2,15"
+					                          _localRotation="0,0,0"
+					                          _localScale="1,1,1"
+					                          _attachOwner="None"
+					                          _attachOwnerID="0"
+					                          _attachComponent="None"
+					                          _snapshot="Cave"
+					                          _halfExtents="5,4,5"
+					                          _radius="5"
+					                          _fadeDistance="1"
+					                          _shape="Box" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="98" name="ArenaAmbience">
+			<GameObject _schemaVersion="0" _name="ArenaAmbience" _bActive="true">
+				<_listComponent>
+					<AudioAmbientEmitterComponent _componentName="AudioAmbientEmitterComponent"
+					                              _bActive="true"
+					                              _localPosition="15,2,15"
+					                              _localRotation="0,0,0"
+					                              _localScale="1,1,1"
+					                              _attachOwner="None"
+					                              _attachOwnerID="0"
+					                              _attachComponent="None"
+					                              _event="ArenaHum"
+					                              _bPlayOnBeginPlay="true"
+					                              _bStopOnEndPlay="true"
+					                              _bOcclusion="false"
+					                              _halfExtents="5,4,5"
+					                              _radius="5"
+					                              _shape="Box" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="99" name="PowerBoxHum">
+			<GameObject _schemaVersion="0" _name="PowerBoxHum" _bActive="true">
+				<_listComponent>
+					<AudioEmitterComponent _componentName="AudioEmitterComponent"
+					                       _bActive="true"
+					                       _localPosition="-19.95,1.4,6"
+					                       _localRotation="0,0,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _event="ArenaHum"
+					                       _bPlayOnBeginPlay="true"
+					                       _bStopOnEndPlay="true"
+					                       _bOcclusion="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

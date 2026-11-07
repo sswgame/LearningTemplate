@@ -1,0 +1,55 @@
+<Scene formatVersion="2" name="Dismemberment">
+	<!-- 절단 시나리오(automation/dismemberment)의 무대 — 해골 전사(몸 영역 표 skeleton_warrior.fit.xml 이 있는 유일한 리그)에 래그돌과 절단을 붙여 바닥 위에 세운다.
+	     Shooter3D 의 적은 지금 생물(trilobite · quadshell)이라 몸 영역 표가 없고, 붙이면 enemydeath 골든이 바뀐다 — 그래서 이 무대에서 먼저 돈다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-5" _localRotation="0.1,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Skeleton">
+			<GameObject _schemaVersion="0" _name="Skeleton" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" />
+					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" />
+					<RagdollComponent _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />
+					<DismembermentComponent _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
+						<_listSeverableRegion>
+							<item>Head</item>
+							<item>Arm_L</item>
+							<item>Arm_R</item>
+						</_listSeverableRegion>
+					</DismembermentComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

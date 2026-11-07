@@ -22,7 +22,7 @@ namespace sw
      * @details 베이크(`ReflectionProbeBaker`, 에디터 `lighting.bakeReflectionProbes`)가 이 위치에서 면 여섯을 GPU 로 찍어 접고 거른 `.reflprobe` 를 쓰고 `_probeDataPath` 에 적는다.
      *          읽은 데이터의 찍은 위치가 지금 위치와 다르면(옮기고 다시 베이크하지 않았다) 쓰지 않고 오류를 남긴다 — 옛 자리의 반사를 새 자리에 비추지 않는다(폴백 없음).
      *          셰이더 소비는 라이트 목록의 `SW_LIGHT_TYPE_REFLECTION_PROBE` 원소(그리드 항목)다(`collectSceneLights`). 상자 밖은 받지 않고, 경계 안쪽 `_blendDistance` 동안
-     *          앰비언트 반사로 섞여 사라진다. 시차 보정(상자에 닿는 점으로 반사 방향을 고치기)은 하지 않는다 — shortcut: 상자가 크면 가까운 벽의 반사가 어긋난다, 실내 씬을 굽게 되면 더한다.
+     *          앰비언트 반사로 섞여 사라진다. 상자에 닿는 점으로 반사 방향을 고친다(시차 보정, `ReflectionProbeAsset::computeParallaxDirection`) — 상자가 방과 맞을수록 가까운 벽의 반사가 맞다.
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Reflection Probe", Tooltip = "Baked reflection of the surroundings for surfaces inside a box", Meta = "Icon=LightPoint, IconColor=Light" )
     class SW_API ReflectionProbeComponent : public SceneComponent

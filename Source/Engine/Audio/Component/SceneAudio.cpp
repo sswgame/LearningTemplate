@@ -11,6 +11,7 @@
 #include "Engine/Audio/Component/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Audio/Component/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -48,8 +49,51 @@ namespace sw
                     velocity *= kMaxSpeed / speed;
                 return velocity;
             }
+
+            /** @brief 감시 값 `Audio.ReverbIntensity` 입니다. 리버브 존들이 스냅샷 `key` 에 건 세기입니다. */
+            [[nodiscard]] static bool readReverbIntensity( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                if ( query._pManager == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( query._pManager->getSubsystem<SceneAudio>().findZoneIntensity( hashed_string{ query._key } ) ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Audio.EmitterDistance` 입니다. 대상 에미터가 지난 프레임에 엔진에 넣은 소리 자리와 리스너 사이 거리(m)입니다 — 영역 앰비언트는 안에 서면 0 입니다. */
+            [[nodiscard]] static bool readEmitterDistance( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*            pTarget  = query.findTargetObject();
+                const AudioEmitterComponent* pEmitter = pTarget != nullptr ? pTarget->getComponent<AudioEmitterComponent>() : nullptr;
+                if ( pEmitter == nullptr || pEmitter->_bHasLastAudioPosition == false )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "audio emitter updated by the scene audio" ) );
+                    return false;
+                }
+                const float3& listener = query._pManager->getSubsystem<SceneAudio>().getPrimaryListenerPosition();
+                outValue.setNumber( static_cast<float64>( float3::getDistance( pEmitter->_lastAudioPosition, listener ) ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Audio.InstanceCount` 입니다. 오디오 엔진에 살아 있는 이벤트 인스턴스 수입니다. */
+            [[nodiscard]] static bool readInstanceCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const AudioEngine* pEngine = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
+                if ( pEngine == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pEngine->getStats()._instanceCount );
+                return true;
+            }
         };
     } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_QUERY_WATCH( audioReverbIntensity, "Audio.ReverbIntensity", "Intensity the reverb zones put on the mix snapshot named key (0..1)", &SceneAudioInternal::readReverbIntensity, false, true );
+    SW_AUTOMATION_QUERY_WATCH( audioEmitterDistance, "Audio.EmitterDistance", "Distance from the listener to where the target emitter sounds (m); 0 inside an ambient volume", &SceneAudioInternal::readEmitterDistance, true,
+                               false );
+    // 오디오 스레드가 명령을 옮겨야 값이 바뀐다 — 벽시계 시한으로 기다린다.
+    SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount );
 } // namespace sw
 
 namespace sw
@@ -163,6 +207,17 @@ namespace sw
         updateEmitters( *pEngine, deltaSeconds, previousListenerPosition != _primaryListenerPosition );
         updateOcclusion( *pEngine, pScene3D, pScene2D );
         updateReverbZones( *pEngine );
+    }
+
+    float32 SceneAudio::findZoneIntensity( const hashed_string& snapshot ) const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        for ( const ZoneValue& value : _listZoneValue )
+        {
+            if ( value._snapshot == snapshot )
+                return value._intensity;
+        }
+        return 0.0f;
     }
 
     void SceneAudio::updateListeners( AudioEngine& audioEngine, float32 deltaSeconds, const CameraComponent* pCamera )

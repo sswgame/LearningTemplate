@@ -196,3 +196,47 @@ SW_TEST_CASE( SkyTest, FindSkyTakesTheSunFromTheDirectionalLight )
     SW_EXPECT_NEAR( 0.5f, gradient._sunColor._y, 1.0e-6f );
     SW_EXPECT_TRUE( gradient._clouds._bEnabled == SW_FALSE ); // 구름 기본은 끔
 }
+
+/** @brief [SkyTest] HDRI 모드의 CPU 식은 SH9 계수를 세기 · 회전과 함께 평가하고, 음수 링잉은 0 으로 자른다 */
+SW_TEST_CASE( SkyTest, HdriEvaluatesAmbientWithRotation )
+{
+    SkyGradient sky;
+    sky._mode      = SkyMode::Hdri;
+    sky._intensity = 2.0f;
+
+    // 한 색 하늘 — 어느 방향이든 그 색 × 세기다.
+    sky._hdriAmbient = SH9Color::makeConstant( float3{ 0.25f, 0.5f, 1.0f } );
+    const float3 up  = sky.evaluateRadiance( float3{ 0.0f, 1.0f, 0.0f } );
+    SW_EXPECT_NEAR( 0.5f, up._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 1.0f, up._y, 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, up._z, 1.0e-4f );
+
+    // +Z 쪽에서 오는 빛 — 돌리지 않으면 +Z 가 -Z 보다 밝다. 하늘을 Y 축으로 반 바퀴 돌리면 뒤바뀐다.
+    sky._intensity            = 1.0f;
+    sky._hdriAmbient          = SH9Color::makeDirectional( float3{ 0.0f, 0.0f, 1.0f }, float3{ 1.0f, 1.0f, 1.0f } );
+    const float32 frontBefore = sky.evaluateRadiance( float3{ 0.0f, 0.0f, 1.0f } )._x;
+    const float32 backBefore  = sky.evaluateRadiance( float3{ 0.0f, 0.0f, -1.0f } )._x;
+    SW_EXPECT_TRUE( frontBefore > backBefore );
+    sky._hdriRotation = MathUtil::kPi;
+    SW_EXPECT_NEAR( frontBefore, sky.evaluateRadiance( float3{ 0.0f, 0.0f, -1.0f } )._x, 1.0e-4f );
+    SW_EXPECT_NEAR( backBefore, sky.evaluateRadiance( float3{ 0.0f, 0.0f, 1.0f } )._x, 1.0e-4f );
+    SW_EXPECT_TRUE( backBefore >= 0.0f );
+}
+
+/** @brief [SkyTest] 컴포넌트는 HDRI 모드에서만 텍스처 경로와 계수를 값으로 넘긴다 */
+SW_TEST_CASE( SkyTest, ComponentPassesHdriOnlyInHdriMode )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Sky" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    SkyComponent* pSky = pObject->addComponent<SkyComponent>();
+    SW_REQUIRE_NOT_NULL( pSky );
+    pSky->setHdriTexture( "engine/textures/sky/moonless_golf.dds" );
+    pSky->setHdriAmbient( SH9Color::makeConstant( float3{ 1.0f, 1.0f, 1.0f } ) );
+    SW_EXPECT_TRUE( pSky->makeGradient()._hdriTexture.empty() );
+
+    pSky->setMode( SkyMode::Hdri );
+    const SkyGradient gradient = pSky->makeGradient();
+    SW_EXPECT_TRUE( gradient._hdriTexture == hashed_string( "engine/textures/sky/moonless_golf.dds" ) );
+    SW_EXPECT_NEAR( 1.0f, gradient.evaluateRadiance( float3{ 0.0f, 1.0f, 0.0f } )._x, 1.0e-4f );
+}

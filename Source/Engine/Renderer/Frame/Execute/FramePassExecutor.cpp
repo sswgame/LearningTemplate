@@ -448,7 +448,8 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
         // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
         float32 exposureScale = MathUtil::pow( 2.0f, post._exposureCompensation );
-        _autoExposure.prepareAutoExposure( view, _state.getAnimationTime(), exposureScale );
+        // 적응 시계는 패킷의 게임 시계다(멈춘 게임은 적응도 멈춘다 — 언리얼 눈 적응의 월드 델타). 벽시계면 고정 프레임 시간 실행에서 같은 프레임이 다른 노출이 된다.
+        _autoExposure.prepareAutoExposure( view, _state._gpuScene.getVertexAnimationTime(), exposureScale );
         context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ exposureScale, MathUtil::max( 0.0f, post._saturation ), MathUtil::max( 0.0f, post._contrast ),
                                                                                  MathUtil::saturate( post._vignetteIntensity ) } );
         const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;
@@ -1320,6 +1321,10 @@ namespace sw
             return;
         FramePassContext&    context     = input._context;
         const hashed_string& colorTarget = input._declaredColor[0]._attachment;
+        // HDRI 하늘은 텍스처를 원본(SourceColor) 역할로 건다 — 쿠키 블릿과 같은 길이라 네 백엔드에 칸을 더하지 않는다. 다 읽기 전이면 걸지 않고 셰이더가 검게 칠한다.
+        const Texture2D* pHdri = _state._skyHdriLoad.isReady() ? _state._skyHdriLoad.getOperation()->getTexture() : nullptr;
+        if ( pHdri != nullptr && pHdri->isRHIValid() )
+            context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, pHdri->getHandle(), pHdri->getSRV() );
         if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, skyPSO );

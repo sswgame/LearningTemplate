@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -24,8 +25,26 @@ namespace sw
         {
             /** @brief 시퀀서 흔들림의 기본 위상 속도(rad/s)입니다. 충격의 기본값과 같은 빠르기입니다. */
             static constexpr float32 kDefaultShakeFrequency = 30.0f;
+
+            /** @brief 감시 값 `Cinematic.CutCamera` 입니다. 대상의 시네마틱 컴포넌트가 지금 화면을 덮는다고 아는 컷 카메라의 오브젝트 이름이고, 덮지 않으면 `none` 입니다. */
+            [[nodiscard]] static bool readCutCamera( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*               pTarget    = query.findTargetObject();
+                const CinematicCameraComponent* pCinematic = pTarget != nullptr ? pTarget->getComponent<CinematicCameraComponent>() : nullptr;
+                if ( pCinematic == nullptr )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "cinematic camera" ) );
+                    return false;
+                }
+                const GameObject* pCut = pCinematic->isCinematicActive() ? query._pManager->resolveGameObject( pCinematic->getCurrentCutCamera() ) : nullptr;
+                outValue.setText( pCut != nullptr ? pCut->getName().c_str() : "none" );
+                return true;
+            }
         };
     } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( cinematicCutCamera, "Cinematic.CutCamera", "Name of the cut camera the target's cinematic component knows covers the screen; none between cinematics",
+                               &CinematicCameraComponentInternal::readCutCamera, true, false );
 } // namespace sw
 
 namespace sw

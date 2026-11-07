@@ -1,0 +1,38 @@
+<!-- Scripts/dev/MakeSkyHdriPrefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수다. -->
+<Prefab formatVersion="0" name="Sky_overcast_soil_puresky">
+	<GameObject _schemaVersion="0" _name="Sky_overcast_soil_puresky" _bActive="true">
+		<_listComponent>
+			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/overcast_soil_puresky.dds" _hdriRotation="0">
+				<_listHdriAmbient>
+					<item>3.252302</item>
+					<item>3.203131</item>
+					<item>3.188855</item>
+					<item>1.468527</item>
+					<item>1.456609</item>
+					<item>1.465316</item>
+					<item>0.213152</item>
+					<item>0.173743</item>
+					<item>0.135718</item>
+					<item>-0.142241</item>
+					<item>-0.099449</item>
+					<item>-0.059887</item>
+					<item>0.028750</item>
+					<item>0.036872</item>
+					<item>0.044834</item>
+					<item>0.125048</item>
+					<item>0.118326</item>
+					<item>0.112034</item>
+					<item>-0.184590</item>
+					<item>-0.200401</item>
+					<item>-0.225288</item>
+					<item>-0.029144</item>
+					<item>-0.013217</item>
+					<item>-0.000332</item>
+					<item>-0.591932</item>
+					<item>-0.603963</item>
+					<item>-0.634899</item>
+				</_listHdriAmbient>
+			</SkyComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

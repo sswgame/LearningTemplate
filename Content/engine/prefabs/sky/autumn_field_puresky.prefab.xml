@@ -1,0 +1,38 @@
+<!-- Scripts/dev/MakeSkyHdriPrefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수다. -->
+<Prefab formatVersion="0" name="Sky_autumn_field_puresky">
+	<GameObject _schemaVersion="0" _name="Sky_autumn_field_puresky" _bActive="true">
+		<_listComponent>
+			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/autumn_field_puresky.dds" _hdriRotation="0">
+				<_listHdriAmbient>
+					<item>3.463545</item>
+					<item>3.624593</item>
+					<item>3.862587</item>
+					<item>2.387904</item>
+					<item>2.249467</item>
+					<item>2.094283</item>
+					<item>3.635746</item>
+					<item>3.339665</item>
+					<item>2.884426</item>
+					<item>2.708988</item>
+					<item>2.483654</item>
+					<item>2.140691</item>
+					<item>2.683550</item>
+					<item>2.424570</item>
+					<item>2.055102</item>
+					<item>3.647994</item>
+					<item>3.292637</item>
+					<item>2.786147</item>
+					<item>1.786156</item>
+					<item>1.758825</item>
+					<item>1.655973</item>
+					<item>4.162928</item>
+					<item>3.828239</item>
+					<item>3.313392</item>
+					<item>0.550989</item>
+					<item>0.696707</item>
+					<item>0.828086</item>
+				</_listHdriAmbient>
+			</SkyComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -3,13 +3,15 @@
  * @brief 씬의 하늘입니다. 천정 · 지평선 · 땅 색의 그러데이션 또는 대기 산란(레일리 · 미)으로 방향마다의 하늘빛(복사휘도)을 정하고, 그 위에 구름 층을 얹을 수 있습니다.
  * @details 렌더러는 이 값을 패킷으로 받아 스카이 패스(`RenderPassType::Sky`, `sky.hlsl`)가 아무것도 그리지 않은 곳(깊이 원경)을 칠한다.
  *          같은 식(`SkyGradient::evaluateRadiance`)을 간접 조명 베이크가 프로브마다 SH 로 투영한다.
- *          언리얼 `SkyAtmosphere` + `SkyLight`, 유니티 `RenderSettings.skybox`(Gradient 앰비언트) 자리이고, 큐브맵은 아직 없다.
+ *          언리얼 `SkyAtmosphere` + `SkyLight`, 유니티 `RenderSettings.skybox`(Gradient 앰비언트 · Panoramic) 자리다. HDRI 모드는 큐브로 굽지 않고 등장방형을 바로 읽는다(유니티 Panoramic 과 같다) — 프리팹 `engine/prefabs/sky/*` 이 텍스처와 투영한 SH 계수를 함께 든다.
  *          대기 모드의 시간대는 씬의 방향광 방향이 정한다(해 = 방향광이 오는 쪽) — 방향광이 없으면 하늘이 어둡다. 구름은 평면 노이즈 층이다(`SkyClouds`).
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -17,6 +19,7 @@
 namespace sw
 {
     class GameObjectManager;
+    class Texture2D;
 } // namespace sw
 
 namespace sw
@@ -43,6 +46,9 @@ namespace sw
         void        setHorizonColor( const float3& color ) { _horizonColor = color; }
         void        setGroundColor( const float3& color ) { _groundColor = color; }
         void        setIntensity( float32 intensity ) { _intensity = intensity; }
+        void        setMode( SkyMode mode ) { _mode = mode; }
+        void        setHdriTexture( string_view path ) { _hdriTexture = path; }
+        void        setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
 
         /** @brief @p manager 의 첫 활성 하늘입니다. 없으면 @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
         [[nodiscard]] static bool findSky( const GameObjectManager& manager, SkyGradient& outGradient );
@@ -58,8 +64,14 @@ namespace sw
         float32 _intensity;
         PROPERTY( Category = "Sky", DisplayName = "Horizon Exponent", Min = 0.1, Tooltip = "Higher keeps the horizon color in a narrower band" )
         float32 _horizonExponent;
-        PROPERTY( Category = "Sky", DisplayName = "Mode", Tooltip = "Gradient: three colors. Atmosphere: Rayleigh + Mie scattering, the sun is the directional light (Ground Color is the ground albedo)" )
+        PROPERTY( Category = "Sky", DisplayName = "Mode", Tooltip = "Gradient: three colors. Atmosphere: Rayleigh + Mie scattering, the sun is the directional light (Ground Color is the ground albedo). Hdri: an equirectangular HDR texture" )
         SkyMode _mode;
+        PROPERTY( Category = "HDRI", DisplayName = "Texture", EditCondition = "_mode == Hdri", Tooltip = "Equirectangular HDR texture drawn as the sky" )
+        AssetRef<Texture2D> _hdriTexture;
+        PROPERTY( Category = "HDRI", DisplayName = "Rotation", Units = rad, EditCondition = "_mode == Hdri", Tooltip = "Turns the sky around the vertical axis" )
+        float32 _hdriRotation;
+        PROPERTY( Category = "HDRI", DisplayName = "Ambient SH", EditCondition = "_mode == Hdri", Tooltip = "27 SH9 coefficients of the source image (basis * 3 + channel) lighting the probes; written by Scripts/dev/MakeSkyHdriPrefabs.py" )
+        vector<float32> _listHdriAmbient;
         PROPERTY( Category = "Atmosphere", DisplayName = "Rayleigh Scale", Min = 0.0, EditCondition = "_mode == Atmosphere", Tooltip = "Multiplies the Rayleigh scattering (blue sky); 0 removes it" )
         float32 _rayleighScale;
         PROPERTY( Category = "Atmosphere", DisplayName = "Mie Scale", Min = 0.0, EditCondition = "_mode == Atmosphere", Tooltip = "Multiplies the Mie scattering (haze, the glow around the sun)" )

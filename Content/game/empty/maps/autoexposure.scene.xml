@@ -1,0 +1,96 @@
+<Scene formatVersion="2" name="AutoExposure">
+	<!-- 자동 노출 시나리오(automation/autoexposure)의 무대 — 카메라 앞을 어두운 벽이 다 덮는다. Bright 레이어를 켜면 앞에 밝은 벽과 강한 점광이 오른다(카메라는 움직이지 않는다).
+	     범위 -5 · 3 EV 는 언리얼 AutoExposureMinBrightness · MaxBrightness 자리다. 어두운 벽에서는 노출이 올라가 있어 밝은 벽이 처음에 하얗게 날아간다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Bright" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-2"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false">
+						<_postProcess _autoExposureMinEv="-5"
+						              _autoExposureMaxEv="3"
+						              _autoExposureSpeedUp="3"
+						              _autoExposureSpeedDown="3" />
+					</CameraComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,1,1"
+					                           _intensity="0"
+					                           _ambient="0.1"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="DarkWall">
+			<GameObject _schemaVersion="0" _name="DarkWall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1.6,6"
+					               _localRotation="0,0,0"
+					               _localScale="60,60,1"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="45"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BrightWall" layers="Bright">
+			<GameObject _schemaVersion="0" _name="BrightWall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1.6,3"
+					               _localRotation="0,0,0"
+					               _localScale="60,60,1"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="45"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="BrightLamp" layers="Bright">
+			<GameObject _schemaVersion="0" _name="BrightLamp" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="0,1.6,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="1,1,1"
+					                     _intensity="30"
+					                     _radius="20" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

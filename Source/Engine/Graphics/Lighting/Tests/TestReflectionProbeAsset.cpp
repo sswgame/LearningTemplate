@@ -435,3 +435,17 @@ SW_TEST_CASE( ReflectionProbeAssetTest, RougherLevelsBlurTheLight )
     SW_EXPECT_NEAR( 1.0f, sharp, 0.001f );
     SW_EXPECT_TRUE( 0.01f < rough && rough < 0.99f );
 }
+
+/** @brief [ReflectionProbeAssetTest] 시차 보정: 찍은 위치에 선 표면은 방향이 그대로이고, 벽 가까운 표면은 상자 벽의 그 점을 찍은 위치에서 보는 방향으로 읽는다 */
+SW_TEST_CASE( ReflectionProbeAssetTest, ParallaxDirectionPointsAtTheBoxHit )
+{
+    const float3 center{ 0.0f, 0.0f, 0.0f };
+    const float3 half{ 5.0f, 5.0f, 5.0f };
+    const float3 up{ 0.0f, 1.0f, 0.0f };
+
+    SW_EXPECT_TRUE( Util::isNear( up, ReflectionProbeAsset::computeParallaxDirection( center, up, center, half, center ), 0.0001f ) );
+
+    // (4, 0, 0) 에서 위로 쏘면 (4, 5, 0) 에 닿는다 — 가운데에서 보면 위가 아니라 비스듬하다.
+    const float3 expected = float3{ 4.0f, 5.0f, 0.0f }.normalize();
+    SW_EXPECT_TRUE( Util::isNear( expected, ReflectionProbeAsset::computeParallaxDirection( float3{ 4.0f, 0.0f, 0.0f }, up, center, half, center ), 0.0001f ) );
+}

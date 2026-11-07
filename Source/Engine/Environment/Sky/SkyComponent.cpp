@@ -2,6 +2,9 @@
 
 #include "Engine/Environment/Sky/SkyComponent.h"
 
+#include "Core/Log/LogOnce.h"
+#include "Core/Memory/Memory.h"
+
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,6 +19,9 @@ namespace sw
         , _intensity{ 1.0f }
         , _horizonExponent{ 4.0f }
         , _mode{ SkyMode::Gradient }
+        , _hdriTexture{}
+        , _hdriRotation{ 0.0f }
+        , _listHdriAmbient{}
         , _rayleighScale{ 1.0f }
         , _mieScale{ 1.0f }
         , _mieAnisotropy{ 0.76f }
@@ -45,6 +51,16 @@ namespace sw
         gradient._intensity       = _intensity;
         gradient._horizonExponent = _horizonExponent;
         gradient._mode            = _mode;
+        gradient._hdriRotation    = _hdriRotation;
+        if ( _mode == SkyMode::Hdri )
+        {
+            gradient._hdriTexture = hashed_string( _hdriTexture.c_str() );
+            // 칸 수가 틀리면 간접 조명을 지어내지 않는다 — 계수는 0 이고 하늘 그림만 나온다.
+            if ( _listHdriAmbient.size() == SH9Color::kCoefficientCount )
+                Memory::copy( gradient._hdriAmbient._arrCoefficient, _listHdriAmbient.data(), sizeof( gradient._hdriAmbient._arrCoefficient ) );
+            else
+                SW_LOG_ERROR_ONCE_ID( "Sky.HdriAmbientCount", "HDRI sky needs %# ambient SH coefficients (got %#) - probes get no sky light", SH9Color::kCoefficientCount, static_cast<uint32>( _listHdriAmbient.size() ) );
+        }
 
         SkyAtmosphere& atmosphere      = gradient._atmosphere;
         atmosphere._rayleighScale      = _rayleighScale;

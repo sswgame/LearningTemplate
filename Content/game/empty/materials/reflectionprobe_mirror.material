@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MaterialDef formatVersion="0" name="reflectionprobe_mirror" _base="engine/materials/pbrmaterial.material">
+	<_properties>
+		<item name="_roughness" defaultValue="0.05"/>
+		<item name="_metallic" defaultValue="1"/>
+	</_properties>
+</MaterialDef>

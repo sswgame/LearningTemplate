@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -13,6 +14,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -280,4 +282,47 @@ namespace sw
         deliverHit( *rayHit._pObject, hit );
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct CharacterHitCommandsInternal
+        {
+            /** @brief 이름 붙은 오브젝트의 래그돌에서 뼈 @p listArgument[1] 의 바디를 치명타로 맞힙니다 — 때린 쪽 없이 맞음 길(절단 · 래그돌 전환)을 그대로 지나게 한다(시나리오). */
+            static bool runFatalHit( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                    return false;
+                GameObject*             pObject  = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                const RagdollComponent* pRagdoll = pObject != nullptr ? pObject->getComponent<RagdollComponent>() : nullptr;
+                const PhysicsAsset*     pAsset   = pRagdoll != nullptr ? pRagdoll->getPhysicsAsset() : nullptr;
+                if ( pAsset == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' with a ragdoll physics asset in the active scene";
+                    return false;
+                }
+                const hashed_string bone( listArgument[1] );
+                for ( size_t bodyIndex = 0; bodyIndex < pAsset->_listBody.size(); ++bodyIndex )
+                {
+                    if ( pAsset->_listBody[bodyIndex]._bone != bone )
+                        continue;
+                    HitInfo hit;
+                    hit._bodyIndex = static_cast<int32>( bodyIndex );
+                    hit._direction = float3{ 0.0f, 0.0f, 1.0f };
+                    hit._damage    = 100.0f;
+                    hit._impulse   = 40.0f;
+                    hit._bFatal    = true;
+                    CharacterRayHit::deliverHit( *pObject, hit );
+                    outReply = "fatal hit on " + listArgument[1];
+                    return true;
+                }
+                outReply = "the ragdoll has no body on bone '" + listArgument[1] + "'";
+                return false;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( CombatFatalHit, "combat.fatalhit", "combat.fatalhit <name> <bone>", "Deliver a fatal hit to the ragdoll body on a bone of a named object of the active scene", &CharacterHitCommandsInternal::runFatalHit );
 } // namespace sw

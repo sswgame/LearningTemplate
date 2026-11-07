@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
@@ -111,6 +112,8 @@ namespace sw
         vector<RealtimeProbeRequest> _listFrameRealtimeProbe{};
         RealtimeProbeUpdater         _probeUpdater{};   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)
         SkyGradient                  _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
+        hashed_string                _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
+        TextureHandle                _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.

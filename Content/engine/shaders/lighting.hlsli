@@ -382,12 +382,20 @@ float4 LightData::sampleReflectionProbe( float3 worldPosition, float3 reflectDir
     float3       radiance   = float3( 0.0f, 0.0f, 0.0f );
     if ( bUsable )
     {
-        const float2 uv        = ReflectionProbe::encodeOctahedral( reflectDirection );
-        const float  levelPick = saturate( roughness ) * (float)( levelCount - 1u );
-        const uint   lowLevel  = min( (uint)levelPick, levelCount - 1u );
-        const uint   highLevel = min( lowLevel + 1u, levelCount - 1u );
-        radiance               = lerp( ReflectionProbe::sampleLevel( firstTexel, resolution, lowLevel, uv ), ReflectionProbe::sampleLevel( firstTexel, resolution, highLevel, uv ),
-                                       levelPick - (float)lowLevel );
+        // 시차 보정: 표면에서 반사 방향으로 상자 벽에 닿는 점을 찾고, 찍은 위치에서 그 점을 보는 방향으로 읽는다(언리얼 Box Reflection Capture 와 같다). C++ `ReflectionProbeAsset::computeParallaxDirection` 과 같은 식이다.
+        const float3 safeDirection = float3( abs( reflectDirection.x ) < 1e-5f ? 1e-5f : reflectDirection.x, abs( reflectDirection.y ) < 1e-5f ? 1e-5f : reflectDirection.y,
+                                             abs( reflectDirection.z ) < 1e-5f ? 1e-5f : reflectDirection.z );
+        const float3 toMax       = ( _positionRadius.xyz + halfExtent - worldPosition ) / safeDirection;
+        const float3 toMin       = ( _positionRadius.xyz - halfExtent - worldPosition ) / safeDirection;
+        const float3 farAxis     = max( toMax, toMin );
+        const float  hitDistance = min( farAxis.x, min( farAxis.y, farAxis.z ) );
+        const float3 toHit       = worldPosition + reflectDirection * hitDistance - _directionType.xyz;
+        const float2 uv          = ReflectionProbe::encodeOctahedral( normalize( toHit ) );
+        const float  levelPick   = saturate( roughness ) * (float)( levelCount - 1u );
+        const uint   lowLevel    = min( (uint)levelPick, levelCount - 1u );
+        const uint   highLevel   = min( lowLevel + 1u, levelCount - 1u );
+        radiance                 = lerp( ReflectionProbe::sampleLevel( firstTexel, resolution, lowLevel, uv ), ReflectionProbe::sampleLevel( firstTexel, resolution, highLevel, uv ),
+                                         levelPick - (float)lowLevel );
     }
     return float4( radiance, bUsable ? weight : 0.0f );
 }

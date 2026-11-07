@@ -27,6 +27,13 @@ namespace sw
                     *pOutError = pMessage;
             }
 
+            /** @brief 한 축에서 상자 안의 점이 방향을 따라 상자 벽을 나가기까지의 거리입니다(시차 보정). 셰이더 lighting.hlsli 와 같은 식이다. */
+            [[nodiscard]] static float32 computeAxisExit( float32 position, float32 direction, float32 center, float32 halfExtent )
+            {
+                const float32 safe = MathUtil::abs( direction ) < 1e-5f ? 1e-5f : direction;
+                return MathUtil::max( ( center + halfExtent - position ) / safe, ( center - halfExtent - position ) / safe );
+            }
+
             /** @brief 한 변 텍셀 수와 단계 수가 범위 안인지 봅니다. 텍셀을 잡기 전에 부릅니다 — 범위 밖 값이 큰 할당을 일으키지 않게. */
             [[nodiscard]] static bool isSizeInRange( uint32 resolution, uint32 levelCount, string* pOutError )
             {
@@ -279,6 +286,16 @@ namespace sw
         const float32 x    = u + ( u >= 0.0f ? -fold : fold );
         const float32 z    = v + ( v >= 0.0f ? -fold : fold );
         return float3{ x, y, z }.normalize();
+    }
+
+    float3 ReflectionProbeAsset::computeParallaxDirection( const float3& worldPosition, const float3& reflectDirection, const float3& boxCenter, const float3& boxHalfExtent, const float3& capturePosition )
+    {
+        using Internal            = ReflectionProbeAssetInternal;
+        const float32 exitX       = Internal::computeAxisExit( worldPosition._x, reflectDirection._x, boxCenter._x, boxHalfExtent._x );
+        const float32 exitY       = Internal::computeAxisExit( worldPosition._y, reflectDirection._y, boxCenter._y, boxHalfExtent._y );
+        const float32 exitZ       = Internal::computeAxisExit( worldPosition._z, reflectDirection._z, boxCenter._z, boxHalfExtent._z );
+        const float32 hitDistance = MathUtil::min( exitX, MathUtil::min( exitY, exitZ ) );
+        return ( worldPosition + reflectDirection * hitDistance - capturePosition ).normalize();
     }
 } // namespace sw
 

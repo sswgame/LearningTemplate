@@ -531,19 +531,28 @@ namespace sw
         // 셰이더 상수 배치는 SkyGradient 머리 주석이 기준이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
         _state._bHasFrameSky   = bHasSky ? SW_TRUE : SW_FALSE;
         _state._frameSkySource = bHasSky ? sky : SkyGradient{};
+        // HDRI 텍스처는 워커가 읽는다 — 다 읽기 전 프레임의 하늘은 검다(캔버스의 경로 이미지와 같다). 핸들이 참조를 쥔다.
+        const hashed_string hdriPath = bHasSky && sky._mode == SkyMode::Hdri ? sky._hdriTexture : hashed_string{};
+        if ( hdriPath != _state._skyHdriPath )
+        {
+            _state._skyHdriPath = hdriPath;
+            _state._skyHdriLoad = hdriPath.empty() || engine::areEngineServicesBound() == false ? TextureHandle{}
+                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async );
+        }
         if ( bHasSky == false )
         {
             _state._frameSky = FrameSkyState{};
             return;
         }
         _state._frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
-        _state._frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, 0.0f };
+        _state._frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, sky._hdriRotation };
         _state._frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
 
-        // 대기 산란 — 셰이더가 해 방향 · 색을 키 라이트 상수에서 읽으므로 여기에는 대기의 값만 싣는다. 그러데이션 모드는 w = 0 이라 셰이더가 그 길을 고른다.
+        // 대기 산란 — 셰이더가 해 방향 · 색을 키 라이트 상수에서 읽으므로 여기에는 대기의 값만 싣는다. w 가 모드를 고른다(그러데이션 0 · 대기 1 · HDRI 2, sky.hlsl 머리 주석).
         const SkyAtmosphere& atmosphere      = sky._atmosphere;
         const float3         rayleigh        = atmosphere.computeRayleighBeta();
-        _state._frameSky._atmosphereRayleigh = float4{ rayleigh._x, rayleigh._y, rayleigh._z, sky._mode == SkyMode::Atmosphere ? 1.0f : 0.0f };
+        const float32        skyModeValue    = static_cast<float32>( static_cast<uint8>( sky._mode ) );
+        _state._frameSky._atmosphereRayleigh = float4{ rayleigh._x, rayleigh._y, rayleigh._z, skyModeValue };
         _state._frameSky._atmosphereMie      = float4{ atmosphere.computeMieBeta(), SkyAtmosphere::kMieScaleHeightKm, atmosphere._mieAnisotropy, atmosphere._sunIntensity };
         _state._frameSky._atmosphereGeometry = float4{ atmosphere._planetRadiusKm, atmosphere._atmosphereHeightKm, atmosphere._observerAltitudeKm, atmosphere._sunDiscAngle };
 
@@ -726,6 +735,9 @@ namespace sw
         _fog.release();
         _state._probeUpdater.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
+        // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
+        _state._skyHdriLoad  = TextureHandle{};
+        _state._skyHdriPath  = hashed_string{};
         _bPassResourcesReady = SW_FALSE;
     }
 

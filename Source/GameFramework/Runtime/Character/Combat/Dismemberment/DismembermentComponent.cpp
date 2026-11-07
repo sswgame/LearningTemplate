@@ -7,6 +7,7 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
@@ -172,8 +173,47 @@ namespace sw
                 }
                 return center;
             }
+
+            /** @brief 질의 대상의 절단 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
+            static const DismembermentComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*             pTarget = query.findTargetObject();
+                const DismembermentComponent* pFound  = pTarget != nullptr ? pTarget->getComponent<DismembermentComponent>() : nullptr;
+                if ( pFound == nullptr )
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "dismemberment" ) );
+                return pFound;
+            }
+
+            /** @brief 감시 값 `Dismemberment.SeveredCount` 입니다. 대상에서 잘린 영역 수입니다. */
+            [[nodiscard]] static bool readSeveredCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const DismembermentComponent* pFound = findTarget( query, outValue );
+                if ( pFound == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pFound->getSeveredRegions().size() ) );
+                return true;
+            }
+
+            /** @brief 감시 값 `Dismemberment.RegionBlood` 입니다. 영역 `key` 의 표면 상태에 오른 피 채널 값입니다. 표에 없는 영역이면 값이 없습니다. */
+            [[nodiscard]] static bool readRegionBlood( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const DismembermentComponent* pFound = findTarget( query, outValue );
+                if ( pFound == nullptr )
+                    return false;
+                const int32 regionIndex = pFound->findRegionIndex( hashed_string{ query._key } );
+                if ( regionIndex < 0 )
+                {
+                    outValue.setText( "no such body region" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pFound->getSurfaceState().getRegionValue( static_cast<uint32>( regionIndex ), pFound->getBloodChannel() ) ) );
+                return true;
+            }
         };
     } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( dismembermentSeveredCount, "Dismemberment.SeveredCount", "Body regions severed from the target", &DismembermentComponentInternal::readSeveredCount, true, false );
+    SW_AUTOMATION_QUERY_WATCH( dismembermentRegionBlood, "Dismemberment.RegionBlood", "Blood channel of the target's body region named key", &DismembermentComponentInternal::readRegionBlood, true, true );
 } // namespace sw
 
 namespace sw

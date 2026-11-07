@@ -86,6 +86,8 @@ namespace sw
         void setOcclusionQuery( const IAudioOcclusionQuery* pQuery ) { _pOcclusionOverride = pQuery; }
         /** @brief 마지막 프레임의 첫 리스너 자리입니다(앰비언트 가장 가까운 점 · 리버브 존 판정). */
         const float3& getPrimaryListenerPosition() const { return _primaryListenerPosition; }
+        /** @brief 지난 프레임에 리버브 존들이 스냅샷 @p snapshot 에 건 세기(0..1)입니다. 거는 존이 없으면 0 입니다. */
+        float32 findZoneIntensity( const hashed_string& snapshot ) const;
 
         // 세 등록은 구독을 돌려준다. 구독이 사라지면 뺀다. 거절(nullptr · 이미 올라 있음)이면 빈 구독이다.
         /** @brief 리스너 컴포넌트를 올립니다. */
@@ -126,7 +128,7 @@ namespace sw
         IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );     /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
         RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );     /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
         vector<AudioEmitterComponent*>                     _listEmitterSnapshot;        /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
-        vector<ZoneValue>                                  _listZoneValue;              /**< 지난 프레임의 스냅샷 세기입니다. */
+        vector<ZoneValue> _listZoneValue                   SW_GUARDED_BY( _mutex );     /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                                  _listZoneCurrent;            /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
         GameObjectManager&                                 _manager;                    /**< 이 서비스를 가진 씬의 매니저입니다(카메라 · 물리 서비스를 찾는다). */
         IAudioService*                                     _pAudioService;              /**< 생성자로 받은 오디오 서비스(빌림)입니다. */

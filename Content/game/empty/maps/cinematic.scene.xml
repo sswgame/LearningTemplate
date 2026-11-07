@@ -1,0 +1,74 @@
+<Scene formatVersion="2" name="Cinematic">
+	<!-- 시네마틱 시나리오(automation/cinematic)의 무대 — 플레이어 카메라(GameCamera)는 카메라 매니저로 GameplayView 를 보고, Director 의 시퀀스가 CutA · CutB 로 화면을 덮었다가 돌려준다. 언리얼 PlayerCameraManager + Level Sequence Camera Cut 의 조립과 같다.
+	     컷 카메라와 뷰 타깃은 Custom 역할이라 직접 뽑히지 않는다. 색이 다른 상자 둘을 컷마다 다른 쪽에서 본다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,20,-30" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+					<CameraManagerComponent _viewTarget="2" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="GameplayView">
+			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,5,-12" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="CutA">
+			<GameObject _schemaVersion="0" _name="CutA" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="-3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="CutB">
+			<GameObject _schemaVersion="0" _name="CutB" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<SequencePlayerComponent _sequencePath="game/empty/data/cinematic.seq.xml" _framesPerSecond="30" _bLoop="false" _bAutoPlay="false" />
+					<CinematicCameraComponent _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="BoxLeft">
+			<GameObject _schemaVersion="0" _name="BoxLeft" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="2.2" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="BoxRight">
+			<GameObject _schemaVersion="0" _name="BoxRight" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2.2" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

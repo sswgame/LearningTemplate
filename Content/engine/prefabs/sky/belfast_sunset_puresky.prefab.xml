@@ -1,0 +1,38 @@
+<!-- Scripts/dev/MakeSkyHdriPrefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수다. -->
+<Prefab formatVersion="0" name="Sky_belfast_sunset_puresky">
+	<GameObject _schemaVersion="0" _name="Sky_belfast_sunset_puresky" _bActive="true">
+		<_listComponent>
+			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/belfast_sunset_puresky.dds" _hdriRotation="0">
+				<_listHdriAmbient>
+					<item>4.367898</item>
+					<item>3.616571</item>
+					<item>4.107910</item>
+					<item>0.892019</item>
+					<item>0.905782</item>
+					<item>1.340448</item>
+					<item>1.888507</item>
+					<item>1.194343</item>
+					<item>0.713219</item>
+					<item>3.189793</item>
+					<item>2.299451</item>
+					<item>1.904658</item>
+					<item>0.222502</item>
+					<item>0.214272</item>
+					<item>0.284016</item>
+					<item>0.203072</item>
+					<item>0.161788</item>
+					<item>0.150238</item>
+					<item>0.180970</item>
+					<item>-0.084808</item>
+					<item>-0.346393</item>
+					<item>2.487178</item>
+					<item>1.595451</item>
+					<item>0.995044</item>
+					<item>2.475870</item>
+					<item>1.634981</item>
+					<item>0.977176</item>
+				</_listHdriAmbient>
+			</SkyComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  절단(DismembermentComponent) — 치명타가 잘라 낼 수 있는 영역의 뼈에 들면 그 영역이 몸에서 빠지고, 조각이 자기 강체로 떨어지며, 표면 상태에 피가 오른다.
+  ① 잘라 낼 수 없는 뼈(hips — Torso 는 목록에 없다)는 자르지 않는다. 이때 치명타는 래그돌로 넘긴다. ② 왼팔 뼈 치명타 → 영역 하나가 잘리고 Skeleton_Arm_L 오브젝트가 생겨 바닥까지 떨어진다.
+  ③ 같은 영역은 다시 잘리지 않는다. 값으로 판정한다(골든 없음). 맞음은 개발 명령 combat.fatalhit 가 낸다 — 때린 쪽 없이 `CharacterRayHit::deliverHit` 를 그대로 지난다.
+  실행: App -scenario=game/empty/automation/dismemberment.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.dismemberment" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/dismemberment.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="30"/>
+	<Expect watch="Dismemberment.SeveredCount" target="Skeleton" equals="0"/>
+	<Expect watch="Object.Exists" target="Skeleton_Arm_L" equals="0"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="combat.fatalhit Skeleton hips"/>
+	<Wait frames="2"/>
+	<Expect watch="Dismemberment.SeveredCount" target="Skeleton" equals="0"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="combat.fatalhit Skeleton upperarm.l"/>
+	<WaitUntil watch="Dismemberment.SeveredCount" target="Skeleton" equals="1" timeoutFrames="5"/>
+	<Expect watch="Object.Exists" target="Skeleton_Arm_L" equals="1"/>
+	<Expect watch="Dismemberment.RegionBlood" target="Skeleton" key="Arm_L" atLeast="0.99"/>
+	<Expect watch="Dismemberment.RegionBlood" target="Skeleton" key="Arm_R" atMost="0.01"/>
+	<WaitUntil watch="Object.Y" target="Skeleton_Arm_L" atMost="0.5" timeoutSeconds="5"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="combat.fatalhit Skeleton lowerarm.l"/>
+	<Wait frames="2"/>
+	<Expect watch="Dismemberment.SeveredCount" target="Skeleton" equals="1"/>
+	<Pass/>
+</Scenario>

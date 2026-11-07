@@ -69,6 +69,8 @@ namespace sw
         GameObjectHandle getLastPiece() const { return _lastPiece; }
         /** @brief 표면 상태(영역 × 채널)를 반환합니다. 머티리얼 파라미터가 읽는 값입니다. */
         const CharacterSurfaceState& getSurfaceState() const { return _surfaceState; }
+        /** @brief 잘린 영역에 올리는 표면 채널 이름입니다. */
+        const hashed_string& getBloodChannel() const { return _bloodChannel; }
         /** @brief 이름의 영역 번호를 반환합니다(테이블 순서). 없으면 -1 입니다. */
         int32 findRegionIndex( const hashed_string& region ) const;
 

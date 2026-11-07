@@ -68,6 +68,11 @@ namespace sw
         static float2 encodeOctahedral( const float3& direction );
         /** @brief 옥타헤드럴 UV([0, 1]²)를 길이 1 의 방향으로 폅니다. */
         static float3 decodeOctahedral( const float2& uv );
+        /**
+         * @brief 시차 보정입니다. 상자 안의 @p worldPosition 에서 반사 방향 @p reflectDirection(길이 1)으로 상자 벽에 닿는 점을 찍은 위치 @p capturePosition 에서 보는 방향(길이 1)을 돌려줍니다.
+         * @details 셰이더 `LightData::sampleReflectionProbe`(lighting.hlsli)와 같은 식이다. 프로브는 찍은 곳에서 본 둘레이므로 그대로 읽으면 찍은 곳에서 먼 표면일수록 가까운 벽의 반사가 어긋난다.
+         */
+        static float3 computeParallaxDirection( const float3& worldPosition, const float3& reflectDirection, const float3& boxCenter, const float3& boxHalfExtent, const float3& capturePosition );
     };
 } // namespace sw
 

@@ -1,6 +1,6 @@
 /**
  * @file ObjectWatches.cpp
- * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo`.
+ * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo` · `Camera.FrameObject`.
  * @details 대상 고르기 규칙은 `AutomationTarget`(`Engine/Automation/Watch/AutomationWatch.h`)이 정한다.
  */
 #include "pch.h"
@@ -9,8 +9,10 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -138,6 +140,20 @@ namespace sw
             outValue.setNumber( static_cast<float64>( float3::getDistance( position, otherPosition ) ) );
             return true;
         }
+
+        /** @brief 감시 값 `Camera.FrameObject` 입니다. 이번 프레임에 화면을 그리는 게임 카메라의 오브젝트 이름입니다(시퀀서 컷이 덮으면 컷 카메라). 카메라가 없으면 값이 없습니다. */
+        [[nodiscard]] bool readFrameCameraObject( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const CameraComponent* pCamera = query._pManager != nullptr ? query._pManager->getFrameCamera() : nullptr;
+            const GameObject*      pOwner  = pCamera != nullptr ? pCamera->getOwner() : nullptr;
+            if ( pOwner == nullptr )
+            {
+                outValue.setText( "no game camera this frame" );
+                return false;
+            }
+            outValue.setText( pOwner->getName().c_str() );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( objectX, "Object.X", "World X of the target object (m)", &readObjectX, true, false );
@@ -147,4 +163,5 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( objectProperty, "Object.Property", "Component property of the target object (key = <ComponentType>.<property>; numbers and strings)",
                                &readObjectProperty, true, true );
     SW_AUTOMATION_QUERY_WATCH( objectDistanceTo, "Object.DistanceTo", "World distance from the target object to the object named key (m)", &readObjectDistanceTo, true, true );
+    SW_AUTOMATION_QUERY_WATCH( cameraFrameObject, "Camera.FrameObject", "Name of the object whose camera draws this frame (a sequencer cut camera while one covers the frame)", &readFrameCameraObject, false, false );
 } // namespace sw

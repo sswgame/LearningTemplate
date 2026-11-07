@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  공간 오디오(Engine/Audio/Component) — 아레나에 놓인 영역 환경음 · 점 소리 · 잔향 존을 값으로 판정한다. 소리 자체는 듣지 않는다(장치가 없어도 오디오 엔진은 오프라인으로 돈다).
+  ① 시작할 때 환경음 둘이 낸 인스턴스가 산다(이벤트 ArenaHum, _bPlayOnBeginPlay). ② 플레이어(스폰 0,0,-16)는 구석의 존 · 상자 밖이라 잔향 0, 환경음까지 거리 > 0 이다.
+  ③ 존과 상자를 플레이어 자리로 옮기면(object.place — 플레이어는 이동 컴포넌트가 자리를 쥐므로 옮기는 쪽을 존으로 둔다) 잔향 세기가 오르고 환경음은 리스너 자리에서 난다(언리얼 Audio Volume 의 가장 가까운 점). ④ 되돌리면 다시 0 이다.
+  실행: App -scenario=game/shooter3d/automation/spatialaudio.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.spatialaudio" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<AllowLog id="Audio.DeviceLost" reason="장치 없는 러너에서도 오프라인으로 돈다"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Audio.InstanceCount" atLeast="2" timeoutWallSeconds="10"/>
+	<Expect watch="Audio.ReverbIntensity" key="Cave" equals="0"/>
+	<Expect watch="Audio.EmitterDistance" target="ArenaAmbience" atLeast="10"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="object.place ArenaReverbZone 0 2 -16"/>
+	<DevCommand line="object.place ArenaAmbience 0 2 -16"/>
+	<WaitUntil watch="Audio.ReverbIntensity" key="Cave" atLeast="0.99" timeoutFrames="10"/>
+	<WaitUntil watch="Audio.EmitterDistance" target="ArenaAmbience" atMost="0.01" timeoutFrames="10"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="object.place ArenaReverbZone -15 2 15"/>
+	<DevCommand line="object.place ArenaAmbience 15 2 15"/>
+	<WaitUntil watch="Audio.ReverbIntensity" key="Cave" atMost="0.01" timeoutFrames="10"/>
+	<WaitUntil watch="Audio.EmitterDistance" target="ArenaAmbience" atLeast="10" timeoutFrames="10"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,39 @@
+<Scene formatVersion="2" _base="game/empty/maps/fogshowcase.scene.xml" name="FogVolumetric">
+	<!-- 볼륨 안개 시나리오(automation/fogvolumetric)의 무대 — fogshowcase 를 물려받아 안개만 froxel 로 켜고, 그리드 길(지역 빛 산란)을 지나도록 점광 하나를 더한다.
+	     산란 배율이 크다: 해 하나의 위상 함수 값은 0.1 안팎이라 배율 1 이면 평범한 안개와 색 거리 문턱(12)을 넘게 달라지지 않는다. -->
+	<entities>
+		<entity id="6" name="Fog">
+			<GameObject _schemaVersion="0" _name="Fog" _bActive="true">
+				<_listComponent>
+					<FogComponent _color="0.75,0.82,0.9"
+					              _density="0.03"
+					              _heightFalloff="0.05"
+					              _baseHeight="0"
+					              _startDistance="0"
+					              _maxOpacity="1"
+					              _inscatterColor="1,0.9,0.7"
+					              _inscatterIntensity="0"
+					              _inscatterExponent="8"
+					              _bVolumetric="true"
+					              _volumeDistance="64"
+					              _scattering="30"
+					              _anisotropy="0.3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="FogLamp">
+			<GameObject _schemaVersion="0" _name="FogLamp" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="0,3,10"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="1,0.45,0.2"
+					                     _intensity="8"
+					                     _radius="12" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

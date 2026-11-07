@@ -1,0 +1,38 @@
+<!-- Scripts/dev/MakeSkyHdriPrefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수다. -->
+<Prefab formatVersion="0" name="Sky_moonless_golf">
+	<GameObject _schemaVersion="0" _name="Sky_moonless_golf" _bActive="true">
+		<_listComponent>
+			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/moonless_golf.dds" _hdriRotation="0">
+				<_listHdriAmbient>
+					<item>0.681568</item>
+					<item>0.583370</item>
+					<item>0.397324</item>
+					<item>0.246473</item>
+					<item>0.224419</item>
+					<item>0.209902</item>
+					<item>-0.091720</item>
+					<item>-0.168525</item>
+					<item>-0.071583</item>
+					<item>-0.357936</item>
+					<item>-0.298969</item>
+					<item>-0.172944</item>
+					<item>-0.149374</item>
+					<item>-0.121373</item>
+					<item>-0.085165</item>
+					<item>-0.019061</item>
+					<item>-0.011889</item>
+					<item>0.008102</item>
+					<item>0.049426</item>
+					<item>0.139864</item>
+					<item>0.083185</item>
+					<item>-0.002920</item>
+					<item>0.088805</item>
+					<item>0.100389</item>
+					<item>0.551432</item>
+					<item>0.399113</item>
+					<item>0.186995</item>
+				</_listHdriAmbient>
+			</SkyComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

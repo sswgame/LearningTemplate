@@ -1,7 +1,8 @@
 // 하늘 — 스카이 패스(RenderPassType::Sky). 불투명 패스 뒤 · 반투명 앞에 풀스크린 삼각형을 깊이 1 에 그린다.
 // 깊이 테스트(LessEqual)만 하고 쓰지 않으므로 아무것도 그리지 않은 곳(깊이 클리어 1)만 칠해진다. 씬에 하늘이 없으면 패스가 돌지 않는다(FrameRenderer).
 //
-// 모드 둘 — 그러데이션(g_SkyAtmosphereRayleigh.w = 0)과 대기 산란(= 1).
+// 모드 셋 — 그러데이션(g_SkyAtmosphereRayleigh.w = 0), 대기 산란(= 1), HDRI(= 2).
+//   HDRI: 등장방형 HDR 텍스처(패스가 원본 역할 g_SourceColorIndex 로 건다, 다 읽기 전이면 검정)를 밉 0 에서 직접 쌍선형으로 읽는다 — 하드웨어 샘플은 이음매에서 미분이 튀어 낮은 밉 줄이 보이고, GL 의 엔진 칸은 클램프다. g_SkyHorizon.w 가 Y 축 회전(라디안), g_SkyGround.w 가 세기다. C++ SkyGradient::evaluateRadiance 가 같은 회전으로 SH9 계수를 평가하고, 계수는 Scripts/dev/MakeSkyHdriPrefabs.py 가 같은 방향 식으로 투영한다.
 //   그러데이션: C++ SkyGradient::evaluateRadiance 와 같은 식이다 — 위는 천정 → 지평선, 아래는 땅 → 지평선, 지평선 쪽 비율 (1 - |y|)^지수, 마지막에 세기.
 //     상수 배치: g_SkyZenith(rgb, w 지수) · g_SkyHorizon(rgb) · g_SkyGround(rgb, w 세기).
 //   대기 산란: C++ SkyAtmosphere::evaluateScattering 와 같은 식 · 같은 구간 수(kAtmosphereViewSteps · kAtmosphereLightSteps) · 같은 상수다(식을 고치면 두 곳을 함께).
@@ -45,6 +46,31 @@ float3 evaluateSky( float3 direction )
     const float  horizonWeight = pow( max( 1.0f - abs( elevation ), 0.0f ), g_SkyZenith.w );
     const float3 poleColor     = ( elevation >= 0.0f ) ? g_SkyZenith.rgb : g_SkyGround.rgb;
     return lerp( poleColor, g_SkyHorizon.rgb, horizonWeight ) * g_SkyGround.w;
+}
+
+/** @brief 등장방형 HDR 텍스처의 텍셀 하나입니다. 가로는 감싸고 세로는 자른다. */
+float3 loadHdriTexel( int2 texel, int2 size )
+{
+    const int2 wrapped = int2( ( texel.x % size.x + size.x ) % size.x, clamp( texel.y, 0, size.y - 1 ) );
+    return Bindless::loadEngineTexel( g_SourceColorIndex, SW_EMU_SLOT_SourceColor, wrapped ).rgb;
+}
+
+/** @brief 방향의 HDRI 복사휘도입니다. 행 0 이 +Y, u 0.5 가 +Z 다. 텍스처가 아직 없으면 검정입니다. */
+float3 evaluateHdri( float3 direction )
+{
+    if ( g_SourceColorIndex == kInvalidIndex )
+        return float3( 0.0f, 0.0f, 0.0f );
+    const float  cosine  = cos( g_SkyHorizon.w );
+    const float  sine    = sin( g_SkyHorizon.w );
+    const float3 rotated = float3( direction.x * cosine - direction.z * sine, direction.y, direction.x * sine + direction.z * cosine );
+    const float2 uv      = float2( atan2( rotated.x, rotated.z ) / ( 2.0f * kPi ) + 0.5f, acos( clamp( rotated.y, -1.0f, 1.0f ) ) / kPi );
+    const int2   size    = int2( Bindless::getEngineTextureSize( g_SourceColorIndex, SW_EMU_SLOT_SourceColor ) );
+    const float2 texelUv = uv * float2( size ) - 0.5f;
+    const int2   base    = int2( floor( texelUv ) );
+    const float2 blend   = texelUv - floor( texelUv );
+    const float3 top     = lerp( loadHdriTexel( base, size ), loadHdriTexel( base + int2( 1, 0 ), size ), blend.x );
+    const float3 bottom  = lerp( loadHdriTexel( base + int2( 0, 1 ), size ), loadHdriTexel( base + int2( 1, 1 ), size ), blend.x );
+    return lerp( top, bottom, blend.y ) * g_SkyGround.w;
 }
 
 // ------------------------------------------------------------------------------
@@ -239,7 +265,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float4 farPoint  = mul( float4( input._clipXy, 1.0f, 1.0f ), g_InvViewProj );
     const float3 direction = normalize( farPoint.xyz / farPoint.w - nearPoint.xyz / nearPoint.w );
 
-    const bool   bAtmosphere  = g_SkyAtmosphereRayleigh.w > 0.5f;
+    const bool   bHdri        = g_SkyAtmosphereRayleigh.w > 1.5f;
+    const bool   bAtmosphere  = g_SkyAtmosphereRayleigh.w > 0.5f && bHdri == false;
     const float3 lightTravel  = g_KeyLightDirIntensity.xyz;
     const float  travelLength = length( lightTravel );
     const float3 toSun        = travelLength > 1.0e-6f ? -lightTravel / travelLength : float3( 0.0f, 1.0f, 0.0f );
@@ -253,6 +280,10 @@ float4 PSMain( PSInput input ) : SV_TARGET
     {
         sun = atmosphereSun;
         sky = ( computeAtmosphere( direction, toSun, g_SkyGround.rgb ) + computeSunDisc( direction, toSun ) ) * atmosphereSun;
+    }
+    else if ( bHdri )
+    {
+        sky = evaluateHdri( direction );
     }
     else
     {

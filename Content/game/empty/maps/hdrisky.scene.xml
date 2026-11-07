@@ -1,0 +1,21 @@
+<Scene formatVersion="2" name="HdriSky">
+	<!-- HDRI 하늘 시나리오(automation/hdrisky)의 무대 — 하늘만 보는 카메라. 낮 · 밤 하늘은 레이어로 갈아 끼우는 공용 프리팹(engine/prefabs/sky)이다. 처음 찾은 하늘이 이기므로 한 번에 하나만 켠다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Day" _bInitiallyActive="true" />
+			<SceneDataLayerDef _name="Night" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,0" _localRotation="-0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="1.2" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="SkyDay" layers="Day" prefab="engine/prefabs/sky/autumn_field_puresky.prefab.xml" />
+		<entity id="3" name="SkyNight" layers="Night" prefab="engine/prefabs/sky/moonless_golf.prefab.xml" />
+	</entities>
+</Scene>
