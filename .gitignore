@@ -121,9 +121,11 @@ Content/Config/Editor/
 **/ShaderCache/
 **/shader_cache/
 *.shadercache
-# Claude Code — 설정 · 인계 · 작업자 워크트리는 로컬이다. 스킬(`.claude/skills/`)은 저장소에 둔다(2026-11-07 사용자 결정 — 외부 스킬은 라이선스 파일과 함께).
+# Claude Code — 설정 · 인계 · 작업자 워크트리는 로컬이다. 스킬 · 명령 · 하위 에이전트(`.claude/skills/` · `commands/` · `agents/`)는 저장소에 둔다(2026-11-07 사용자 결정 — 외부 스킬은 라이선스 파일과 함께).
 .claude/*
 !.claude/skills/
+!.claude/commands/
+!.claude/agents/
 
 # graphify 산출물(코드 그래프 · 로컬 캐시)
 graphify-out/
