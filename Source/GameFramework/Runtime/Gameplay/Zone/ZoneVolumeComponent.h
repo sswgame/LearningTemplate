@@ -62,7 +62,7 @@ namespace sw
         const ZoneTracker&         getTracker() const { return _tracker; }
         const ZoneCompiledProfile& getCompiledProfile() const { return _compiled; }
         /** @brief 지금 퍼진 크기(m, 반 크기 · 반지름에 더한다)입니다. */
-        float32 getGrowth() const { return _growth; }
+        float32 getGrowthDistance() const { return _growth; }
         /** @brief 덮어쓰기 목록입니다(인스펙터가 물려받은 값과 바꾼 값을 가른다). */
         const vector<ZoneModuleDef>& getModuleOverrides() const { return _listModuleOverride; }
         vector<ZoneModuleDef>&       getModuleOverrides() { return _listModuleOverride; }
@@ -84,7 +84,7 @@ namespace sw
 
     private:
         /** @brief 프로필을 합치고 컴파일해 입력을 엽니다. */
-        void openZone();
+        void activateZone();
         /** @brief 흐름 점이 있으면 @p position 에서 가장 가까운 구간의 방향(단위, 월드)입니다. 없으면 0 입니다. */
         float3 computeFlowDirection( const float3& center, const float3& position ) const;
 

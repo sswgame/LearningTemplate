@@ -78,7 +78,7 @@ namespace sw
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {
             if ( pManager != nullptr && pZone->_bValid == SW_TRUE )
-                pZone->_tracker.exitAll( *pManager, pZone->_compiled, ActionSource{ hashed_string( string( "surface:" ) + pZone->_kind.c_str() ), GameObjectHandle{} } );
+                pZone->_tracker.exitAllOccupants( *pManager, pZone->_compiled, ActionSource{ hashed_string( string( "surface:" ) + pZone->_kind.c_str() ), GameObjectHandle{} } );
         }
         _listSurfaceZone.clear();
         Component::onEndPlay();
@@ -148,7 +148,7 @@ namespace sw
         inoutList.push_back( contact );
     }
 
-    ZoneContactComponent::SurfaceZone& ZoneContactComponent::findOrCreateZone( const SurfaceKindTable& table, const hashed_string& kind )
+    ZoneContactComponent::SurfaceZone& ZoneContactComponent::findOrAddSurfaceZone( const SurfaceKindTable& table, const hashed_string& kind )
     {
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {
@@ -167,7 +167,7 @@ namespace sw
         else if ( pZone->_compiled.compile( *pProfile, sourceName, game::findSubsystem<const AbilityCatalog>() ) )
             pZone->_bValid = SW_TRUE;
         if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getManager() != nullptr )
-            ZoneTracker::beginSource( *pOwner->getManager(), pZone->_compiled );
+            ZoneTracker::onZoneOpened( *pOwner->getManager(), pZone->_compiled );
         _listSurfaceZone.push_back( std::move( pZone ) );
         return *_listSurfaceZone.back();
     }
@@ -248,7 +248,7 @@ namespace sw
         // 종류마다 같은 처리 길 — 이번 프레임에 닿은 종류는 안, 아닌 종류는 나간다.
         for ( const ContactRecord& contact : listContact )
         {
-            (void)findOrCreateZone( *pTable, contact._kind );
+            (void)findOrAddSurfaceZone( *pTable, contact._kind );
         }
         for ( unique_ptr<SurfaceZone>& pZone : _listSurfaceZone )
         {
@@ -271,7 +271,7 @@ namespace sw
                 pZone->_tracker.touch( *pOwner, sample );
             }
             const ActionSource source{ hashed_string( string( "surface:" ) + pZone->_kind.c_str() ), sourceObject };
-            pZone->_tracker.finishFrame( manager, pZone->_compiled, source, deltaTime );
+            pZone->_tracker.dispatchOverlapEvents( manager, pZone->_compiled, source, deltaTime );
         }
 
         // 이펙트의 이동 제약을 컨트롤러의 이동 계수로(최솟값이라 폰 이동기와 함께 불러도 두 번 곱하지 않는다). 속박이면 걷지 않는다.

@@ -31,7 +31,7 @@ namespace sw
             return;
         // 메시 자리 쓰기는 틱 뒤 게임 스레드에서 한다(속성은 이 프레임의 지역 처리 뒤 값이다).
         pManager->executeOrDeferPostTickOnComponent( *this, []( VisualSinkReactionComponent& self, GameObjectManager& manager )
-        { self.applyDepth( manager ); } );
+        { self.applySinkDepth( manager ); } );
     }
 
     void VisualSinkReactionComponent::onEndPlay()
@@ -43,7 +43,7 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void VisualSinkReactionComponent::applyDepth( GameObjectManager& manager )
+    void VisualSinkReactionComponent::applySinkDepth( GameObjectManager& manager )
     {
         GameObject* const             pOwner   = getOwner();
         const AbilityComponent* const pAbility = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;

@@ -29,10 +29,10 @@ namespace sw
         if ( pManager == nullptr )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( JumpEscapeReactionComponent& self, GameObjectManager& /*manager*/ )
-        { self.detectEscape(); } );
+        { self.updateJumpEscape(); } );
     }
 
-    void JumpEscapeReactionComponent::detectEscape()
+    void JumpEscapeReactionComponent::updateJumpEscape()
     {
         GameObject* const                         pOwner      = getOwner();
         const CharacterControllerComponent* const pController = pOwner != nullptr ? pOwner->getComponent<CharacterControllerComponent>() : nullptr;

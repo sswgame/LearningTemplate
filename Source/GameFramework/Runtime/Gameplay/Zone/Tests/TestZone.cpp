@@ -94,13 +94,13 @@ namespace
             sample._zoneDepth01 = depth01;
             tracker.beginFrame();
             tracker.touch( hero(), sample );
-            tracker.finishFrame( _manager, profile, ActionSource{ hashed_string( pSource ), GameObjectHandle{} }, deltaTime );
+            tracker.dispatchOverlapEvents( _manager, profile, ActionSource{ hashed_string( pSource ), GameObjectHandle{} }, deltaTime );
         }
 
         void leave( ZoneTracker& tracker, const ZoneCompiledProfile& profile, const utf8* pSource )
         {
             tracker.beginFrame();
-            tracker.finishFrame( _manager, profile, ActionSource{ hashed_string( pSource ), GameObjectHandle{} }, 0.1f );
+            tracker.dispatchOverlapEvents( _manager, profile, ActionSource{ hashed_string( pSource ), GameObjectHandle{} }, 0.1f );
         }
     };
 } // namespace

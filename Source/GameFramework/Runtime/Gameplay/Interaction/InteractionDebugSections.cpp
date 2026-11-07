@@ -63,7 +63,7 @@ namespace sw
                     }
                     if ( const ZoneVolumeComponent* pVolume = pObject->getComponent<ZoneVolumeComponent>() )
                     {
-                        writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getTracker().getOccupancies().size() ) + " inside" );
+                        writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getTracker().getOccupants().size() ) + " inside" );
                         ++lineCount;
                     }
                 }

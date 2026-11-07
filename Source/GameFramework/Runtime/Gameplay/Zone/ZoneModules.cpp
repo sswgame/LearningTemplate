@@ -58,15 +58,15 @@ namespace sw
         {
         public:
             const utf8* getKindName() const override { return "Action"; }
-            void        describeParams( vector<ZoneParamSpec>& outListSpec ) const override
+            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "on", ZoneParamKind::Text, "Enter" } );
                 outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
                 outListSpec.push_back( ZoneParamSpec{ "delay", ZoneParamKind::Number, "0" } );
                 outListSpec.push_back( ZoneParamSpec{ "do", ZoneParamKind::Actions, "" } );
             }
-            bool acceptsExtraValues() const override { return true; }
-            bool acceptsCases() const override { return true; }
+            bool supportsActionParams() const override { return true; }
+            bool supportsCaseList() const override { return true; }
             bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const override
             {
                 return ZoneModulesInternal::checkChoice( module, "on", { "Enter", "Stay", "Exit", "Became", "Lost" }, sourceName );
@@ -140,7 +140,7 @@ namespace sw
 
         private:
             static const string& readOn( const ZoneEventContext& context ) { return context._pModule->getText( hashed_string( "on" ) ); }
-            static void          run( const ZoneEventContext& context ) { context.invokeFirstMatch( context._pModule->getActions( hashed_string( "do" ) ) ); }
+            static void          run( const ZoneEventContext& context ) { context.runFirstMatchingCase( context._pModule->getActions( hashed_string( "do" ) ) ); }
         };
 
         /**
@@ -152,7 +152,7 @@ namespace sw
         {
         public:
             const utf8* getKindName() const override { return "PhysicsField"; }
-            void        describeParams( vector<ZoneParamSpec>& outListSpec ) const override
+            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "direction", ZoneParamKind::Text, "Uniform" } );
                 outListSpec.push_back( ZoneParamSpec{ "axis", ZoneParamKind::Vector, "0,0,0" } );
@@ -220,7 +220,7 @@ namespace sw
         {
         public:
             const utf8* getKindName() const override { return "Blackboard"; }
-            void        describeParams( vector<ZoneParamSpec>& outListSpec ) const override
+            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "key", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "value", ZoneParamKind::Number, "1" } );
@@ -255,7 +255,7 @@ namespace sw
         {
         public:
             const utf8* getKindName() const override { return "NavArea"; }
-            void        describeParams( vector<ZoneParamSpec>& outListSpec ) const override
+            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "area", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "agents", ZoneParamKind::Text, "" } );
@@ -288,7 +288,7 @@ namespace sw
         {
         public:
             const utf8* getKindName() const override { return "SurfaceChannel"; }
-            void        describeParams( vector<ZoneParamSpec>& outListSpec ) const override
+            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
             {
                 outListSpec.push_back( ZoneParamSpec{ "channel", ZoneParamKind::Text, nullptr } );
                 outListSpec.push_back( ZoneParamSpec{ "rate", ZoneParamKind::Number, nullptr } );

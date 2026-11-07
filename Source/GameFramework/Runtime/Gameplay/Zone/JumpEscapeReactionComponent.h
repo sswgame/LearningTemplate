@@ -36,7 +36,7 @@ namespace sw
         /** @brief 뛰어서 스택을 줄인 수입니다(감시 값 · 진단). */
         uint32 getEscapeCount() const { return _escapeCount; }
         /** @brief 점프를 보고 스택을 줄입니다(틱 뒤 게임 스레드, 테스트도 부른다). */
-        void detectEscape();
+        void updateJumpEscape();
 
     private:
         PROPERTY( Required, Category = "Reaction", DisplayName = "Effect", Tooltip = "Stacking effect id whose stacks a jump removes" )

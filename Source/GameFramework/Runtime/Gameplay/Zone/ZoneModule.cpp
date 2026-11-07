@@ -161,7 +161,7 @@ namespace sw
                 bool bOk = ConditionExpr::compile( def._condition, sourceName, outModule._condition, kBareCondition );
 
                 vector<ZoneParamSpec> listSpec;
-                outModule._pProcessor->describeParams( listSpec );
+                outModule._pProcessor->collectParamSpecs( listSpec );
                 for ( const ZoneParamSpec& spec : listSpec )
                 {
                     ZoneCompiledParam   param;
@@ -183,7 +183,7 @@ namespace sw
                     { return paramDef._name == hashed_string( spec._pName ); } );
                     if ( bDeclared )
                         continue;
-                    if ( outModule._pProcessor->acceptsExtraValues() == false )
+                    if ( outModule._pProcessor->supportsActionParams() == false )
                     {
                         SW_LOG_ERROR_ID( "Zone.ParamUnknown", "%#: kind '%#' has no parameter '%#'", sourceName, def._kind.c_str(), paramDef._name.c_str() );
                         bOk = false;
@@ -195,7 +195,7 @@ namespace sw
                     bOk                = compileParam( ZoneParamKind::Number, paramDef._value, sourceName, pCatalog, param ) && bOk;
                     outModule._listParam.push_back( std::move( param ) );
                 }
-                if ( def._listCase.empty() == false && outModule._pProcessor->acceptsCases() == false )
+                if ( def._listCase.empty() == false && outModule._pProcessor->supportsCaseList() == false )
                 {
                     SW_LOG_ERROR_ID( "Zone.CasesNotAccepted", "%#: kind '%#' does not take cases", sourceName, def._kind.c_str() );
                     bOk = false;
@@ -312,7 +312,7 @@ namespace sw
         return pParam != nullptr ? pParam->_listCall : s_empty;
     }
 
-    void ZoneCompiledModule::evaluateExtraValues( const GameplayContext& context, ActionValues& outValues ) const
+    void ZoneCompiledModule::evaluateActionParams( const GameplayContext& context, ActionValues& outValues ) const
     {
         for ( const ZoneCompiledParam& param : _listParam )
         {
@@ -351,7 +351,7 @@ namespace sw
         }
     }
 
-    void ZoneEventContext::invokeFirstMatch( const vector<GameActionCall>& listDefault ) const
+    void ZoneEventContext::runFirstMatchingCase( const vector<GameActionCall>& listDefault ) const
     {
         if ( _pModule == nullptr || _pModule->_listCase.empty() )
         {

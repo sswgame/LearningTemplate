@@ -96,7 +96,7 @@ namespace sw
         _listOccupancy.push_back( std::move( created ) );
     }
 
-    void ZoneTracker::finishFrame( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, float32 deltaTime )
+    void ZoneTracker::dispatchOverlapEvents( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source, float32 deltaTime )
     {
         // 알리지 않은 대상은 나갔다. 사라진 대상(파괴 · 씬 전환)도 나간 것으로 친다 — 대상이 없으면 처리기는 부르지 않고 기록만 버린다.
         for ( size_t index = _listOccupancy.size(); index > 0; --index )
@@ -125,13 +125,13 @@ namespace sw
         }
     }
 
-    void ZoneTracker::exitAll( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source )
+    void ZoneTracker::exitAllOccupants( GameObjectManager& manager, const ZoneCompiledProfile& profile, const ActionSource& source )
     {
         ++_stamp; // 아무도 알리지 않은 프레임 — 모두 나간다
-        finishFrame( manager, profile, source, 0.0f );
+        dispatchOverlapEvents( manager, profile, source, 0.0f );
     }
 
-    void ZoneTracker::beginSource( GameObjectManager& manager, const ZoneCompiledProfile& profile )
+    void ZoneTracker::onZoneOpened( GameObjectManager& manager, const ZoneCompiledProfile& profile )
     {
         for ( const ZoneCompiledModule& module : profile.getModules() )
         {
@@ -149,7 +149,7 @@ namespace sw
         return nullptr;
     }
 
-    void ZoneTracker::collectLog( vector<ZoneLogEntry>& outListEntry ) const
+    void ZoneTracker::collectEventLog( vector<ZoneLogEntry>& outListEntry ) const
     {
         const uint32 count = _logCount < kLogCapacity ? _logCount : kLogCapacity;
         for ( uint32 index = _logCount - count; index < _logCount; ++index )
@@ -212,7 +212,7 @@ namespace sw
                     context._world.set<BlackboardSlot>( &pAI->getBlackboard() );
                     context._world.set<BlackboardWriteSlot>( &pAI->getBlackboard() );
                 }
-                module.evaluateExtraValues( context._world, values );
+                module.evaluateActionParams( context._world, values );
                 context._world.set<ActionValuesSlot>( &values );
                 context._bConditionTrue = module._condition.evaluate( context._world ) ? SW_TRUE : SW_FALSE;
                 switch ( event )

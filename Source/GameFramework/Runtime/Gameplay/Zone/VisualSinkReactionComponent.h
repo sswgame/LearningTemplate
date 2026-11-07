@@ -46,7 +46,7 @@ namespace sw
         /** @brief 내리는 메시 수입니다(감시 값 · 진단). */
         uint32 getLoweredMeshCount() const { return static_cast<uint32>( _listVisual.size() ); }
         /** @brief 속성을 읽어 메시를 내립니다(틱 뒤 게임 스레드, 테스트도 부른다). */
-        void applyDepth( GameObjectManager& manager );
+        void applySinkDepth( GameObjectManager& manager );
 
     private:
         /** @brief 내리는 메시 하나와 원래 로컬 자리입니다. */

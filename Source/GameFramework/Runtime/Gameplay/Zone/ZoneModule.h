@@ -113,7 +113,7 @@ namespace sw
         /** @brief 동작 칸입니다(없는 이름이면 빈 목록). */
         const vector<GameActionCall>& getActions( const hashed_string& name ) const;
         /** @brief 처리기 표 밖의 수치 칸(동작이 읽는 값)을 대상마다 평가해 @p outValues 에 넣습니다. */
-        void evaluateExtraValues( const GameplayContext& context, ActionValues& outValues ) const;
+        void evaluateActionParams( const GameplayContext& context, ActionValues& outValues ) const;
     };
 
     /**
@@ -166,7 +166,7 @@ namespace sw
         /** @brief 동작 목록을 이 문맥으로 부릅니다(대상 · 출처 · 값 칸이 든다). */
         void invoke( const vector<GameActionCall>& listCall ) const;
         /** @brief 경우 목록이 있으면 처음 맞는 경우의 동작을, 없으면 @p listDefault 를 부릅니다. */
-        void invokeFirstMatch( const vector<GameActionCall>& listDefault ) const;
+        void runFirstMatchingCase( const vector<GameActionCall>& listDefault ) const;
     };
 
     /**
@@ -181,11 +181,11 @@ namespace sw
         /** @brief 데이터가 적는 종류 이름입니다(`_kind`). */
         virtual const utf8* getKindName() const = 0;
         /** @brief 매개변수 표입니다. */
-        virtual void describeParams( vector<ZoneParamSpec>& outListSpec ) const = 0;
+        virtual void collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const = 0;
         /** @brief 표 밖의 수치 칸을 동작 값으로 받으면 true 입니다(할 일 모듈). 아니면 모르는 이름은 오류다. */
-        virtual bool acceptsExtraValues() const { return false; }
+        virtual bool supportsActionParams() const { return false; }
         /** @brief 경우 목록을 받으면 true 입니다. */
-        virtual bool acceptsCases() const { return false; }
+        virtual bool supportsCaseList() const { return false; }
         /** @brief 읽은 모듈의 칸 사이 규칙(고르기 글의 값 · 범위)을 봅니다. 틀리면 까닭을 오류 로그로 남기고 false 입니다(로드 실패). */
         virtual bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const
         {

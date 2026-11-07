@@ -55,7 +55,7 @@ namespace sw
     void ZoneVolumeComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        openZone();
+        activateZone();
     }
 
     void ZoneVolumeComponent::onEndPlay()
@@ -66,7 +66,7 @@ namespace sw
         if ( pManager != nullptr && _bReady == SW_TRUE )
         {
             const ActionSource source{ getSourceName(), pOwner->getHandle() };
-            _tracker.exitAll( *pManager, _compiled, source );
+            _tracker.exitAllOccupants( *pManager, _compiled, source );
         }
         Component::onEndPlay();
     }
@@ -117,7 +117,7 @@ namespace sw
         _bReady      = SW_FALSE;
     }
 
-    void ZoneVolumeComponent::openZone()
+    void ZoneVolumeComponent::activateZone()
     {
         if ( _bOpened == SW_TRUE )
             return;
@@ -135,7 +135,7 @@ namespace sw
         }
         _bReady = SW_TRUE;
         if ( GameObjectManager* pManager = pOwner->getManager() )
-            ZoneTracker::beginSource( *pManager, _compiled );
+            ZoneTracker::onZoneOpened( *pManager, _compiled );
     }
 
     bool ZoneVolumeComponent::sampleAt( const float3& position, float32 bodyHeight, ZoneSample& outSample ) const
@@ -243,7 +243,7 @@ namespace sw
                 _tracker.touch( *pObject, sample );
         } );
         const ActionSource source{ getSourceName(), pOwner->getHandle() };
-        _tracker.finishFrame( manager, _compiled, source, deltaTime );
+        _tracker.dispatchOverlapEvents( manager, _compiled, source, deltaTime );
 
         // 수명이 끝난 런타임 영역은 오브젝트째 지운다 — 끝(onEndPlay)이 안의 대상을 내보낸다.
         if ( _lifetime > 0.0f && _age >= _lifetime && pOwner->isPendingDestroy() == false )
