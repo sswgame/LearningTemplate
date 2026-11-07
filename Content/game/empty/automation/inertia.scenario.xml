@@ -6,7 +6,7 @@
   ② 같은 기울기의 눈 · 빙판 비탈에 멈춰 놓인 썰매: 둘 다 내려가며 빨라지고(내리막 가속), 빙판(구름 저항 0.005)이 눈(0.06)보다 빠르고 멀리 간다.
   ③ 탑승자를 태운 카트(LeanKart)가 가속하면 탑승자가 뒤로, 급정거하면 앞으로 기운다(Vehicle.RiderLean — 좌석 가속도 × 0.025 rad/(m/s²), 최대 0.35).
   ④ 광산 수레(Minecart)는 레일 스플라인 위로 굴러 내려가 열린 끝에서 선다.
-  사진: 탑승자를 태우고 눈 비탈을 내려가는 썰매(inertia_sled.ppm — 골든은 통합에서 기록).
+  사진: 탑승자를 태우고 눈 비탈을 내려가는 썰매(골든 inertia_sled).
   실행: ctest -R Scenario.game.empty.inertia
 -->
 <Scenario name="game.empty.inertia" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -36,6 +36,7 @@
 	<Expect watch="Vehicle.RiderLean" target="LeanKart" atLeast="0.25"/>
 	<!-- 탑승자를 태우고 눈 비탈을 내려가는 썰매 -->
 	<Screenshot file="inertia_sled.ppm" waitForSettle="false"/>
+	<ExpectImage file="inertia_sled.ppm" golden="inertia_sled"/>
 	<Wait frames="1"/>
 	<!-- ② 내리막 가속 — 빙판 썰매가 6 m/s 에 닿을 때 눈 썰매는 더 느리다 -->
 	<WaitUntil watch="Vehicle.ForwardSpeed" target="SledIce" atLeast="6" timeoutFrames="600"/>
