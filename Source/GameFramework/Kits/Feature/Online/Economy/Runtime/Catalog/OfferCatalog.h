@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -100,6 +101,13 @@ namespace sw
         friend class XMLCatalog<OfferCatalog>;
 
     public:
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<OfferCatalog>` 가 접미사로 가른다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".offers.xml", AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `OfferCatalog.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "OfferCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
         /** @brief 상품을 추가합니다. 테스트에서 씁니다. 규칙을 어기면 false 를 반환합니다. 규칙은 가격과 스토어 상품 중 하나만 있을 것, 지급이 하나 이상일 것, id 에 쓸 수 있는 글자만 쓸 것, 같은 id 가 없을 것입니다. */
         [[nodiscard]] bool addOffer( const OfferDef& def );
 

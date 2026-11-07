@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -87,6 +88,13 @@ namespace sw
         friend class XMLCatalog<RecipeCatalog>;
 
     public:
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<RecipeCatalog>` 가 접미사로 가른다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".recipes.xml", AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `Crafting.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "RecipeCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
         /** @brief @p itemID 를 만드는 레시피 목록입니다. 제작 화면의 "이걸 만들려면" 에 씁니다. */
         void findRecipesFor( const hashed_string& itemID, vector<const RecipeDef*>& outListRecipe ) const;
 

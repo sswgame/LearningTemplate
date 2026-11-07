@@ -15,6 +15,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -146,6 +147,13 @@ namespace sw
         friend class XMLCatalog<AdventureDungeonCatalog>;
 
     public:
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<AdventureDungeonCatalog>` 가 접미사로 가른다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".dungeons.xml", AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `AdventureDungeon.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "AdventureDungeonCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
     private:
         static constexpr const utf8* kXMLRootName = "AdventureDungeons"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );

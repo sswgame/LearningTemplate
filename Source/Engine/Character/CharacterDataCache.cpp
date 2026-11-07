@@ -64,6 +64,6 @@ namespace sw
     SW_SHARED_ASSET_CACHE( PairedAnimationDef, PairedAnimationDef,
                            PairedAnimationDef::kAssetType.withLoader( AssetTypeLoader::of<PairedAnimationDef>( MemoryTag::Animation, SharedAssetReloadMode::Detach ) ) );
     SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, PhysicsAsset::kAssetType.withLoader( AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );
-    SW_SHARED_ASSET_CACHE( FitTables, FitTables, AssetTypeDef::makeCacheOnly( "FitTables", AssetTypeLoader::with<FitTables, &CharacterDataCacheInternal::loadFitTables>( MemoryTag::Animation ) ) );
-    SW_SHARED_ASSET_CACHE( FitPartDef, FitPartDef, AssetTypeDef::makeCacheOnly( "FitPartDef", AssetTypeLoader::of<FitPartDef>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( FitTables, FitTables, FitTables::kAssetType.withLoader( AssetTypeLoader::with<FitTables, &CharacterDataCacheInternal::loadFitTables>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( FitPartDef, FitPartDef, FitPartDef::kAssetType.withLoader( AssetTypeLoader::of<FitPartDef>( MemoryTag::Animation ) ) );
 } // namespace sw

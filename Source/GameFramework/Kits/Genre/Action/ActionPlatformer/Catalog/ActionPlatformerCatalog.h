@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -215,6 +216,13 @@ namespace sw
         friend class XMLCatalog<ActionPlatformerCatalog>;
 
     public:
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<ActionPlatformerCatalog>` 가 접미사로 가른다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".actionplatformer.xml", AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `ActionPlatformerCatalog.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "ActionPlatformerCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
         ActionPlatformerCatalog();
 
         const ActionStageDef*     findStage( const hashed_string& id ) const { return _stageCatalog.find( id ); }

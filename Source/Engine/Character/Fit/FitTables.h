@@ -26,6 +26,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include <optional>
@@ -134,6 +135,13 @@ namespace sw
     class SW_API FitTables
     {
     public:
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<FitTables>` 가 접미사로 가른다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".fit.xml", AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "FitTables", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
         /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 연산 이름과 인자는 @p operators 에 대조합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators );
         /** @brief 리소스 파일에서 읽습니다. */

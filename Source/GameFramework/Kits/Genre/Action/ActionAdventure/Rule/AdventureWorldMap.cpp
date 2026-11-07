@@ -183,6 +183,6 @@ namespace sw
 
 namespace sw
 {
-    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<AdventureWorldMap>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( AdventureWorldMap, AdventureWorldMap, SW_KIT_API, AssetTypeDef::makeCacheOnly( "AdventureWorldMap", AssetTypeLoader::of<AdventureWorldMap>( MemoryTag::Game ) ) );
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<AdventureWorldMap>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( AdventureWorldMap, AdventureWorldMap, SW_KIT_API, AdventureWorldMap::kAssetType.withLoader( AssetTypeLoader::of<AdventureWorldMap>( MemoryTag::Game ) ) );
 } // namespace sw

@@ -176,6 +176,6 @@ namespace sw
 
 namespace sw
 {
-    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<KartItemCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( KartItemCatalog, KartItemCatalog, SW_KIT_API, AssetTypeDef::makeCacheOnly( "KartItemCatalog", AssetTypeLoader::of<KartItemCatalog>( MemoryTag::Game ) ) );
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<KartItemCatalog>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( KartItemCatalog, KartItemCatalog, SW_KIT_API, KartItemCatalog::kAssetType.withLoader( AssetTypeLoader::of<KartItemCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

@@ -147,6 +147,6 @@ namespace sw
 
 namespace sw
 {
-    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<MonsterCatalog>::acquire`). 복사 · 이동을 막은 형식이라 다시 읽으면 떼어 낸다. 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( MonsterCatalog, MonsterCatalog, SW_KIT_API, AssetTypeDef::makeCacheOnly( "MonsterCatalog", AssetTypeLoader::of<MonsterCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<MonsterCatalog>::acquire`). 복사 · 이동을 막은 형식이라 다시 읽으면 떼어 낸다. 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( MonsterCatalog, MonsterCatalog, SW_KIT_API, MonsterCatalog::kAssetType.withLoader( AssetTypeLoader::of<MonsterCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw
