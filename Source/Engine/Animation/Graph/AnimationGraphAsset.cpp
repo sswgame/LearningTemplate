@@ -79,6 +79,7 @@ namespace sw
                 schema._bEmptyClears = SW_FALSE;
                 schema._listField.push_back( makeKeyedList( "nodes", "name" ) );
                 schema._listField.push_back( makeKeyedList( "links", "id" ) );
+                schema._listField.back()._listIdentityAttribute = { "from", "to" }; // 전이 id 는 숫자라 자식이 새로 더한 전이가 부모 id 와 우연히 겹친다 — 끝점이 다르면 오류다
                 schema._listField.push_back( makeKeyedList( "bone_masks", "name" ) );
                 schema._listField.push_back( makeKeyedList( "layers", "name" ) );
                 schema._listField.push_back( makeKeyedList( "comments", "id" ) );

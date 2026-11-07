@@ -239,6 +239,48 @@ SW_TEST_CASE( DataInheritanceTest, BadListEntriesAreErrors )
     }
 }
 
+/**
+ * @brief [DataInheritanceTest] 정체 속성(`_listIdentityAttribute`)이 다른 같은 열쇠는 고침이 아니라 겹침이라 오류다. `Replace` 로만 바꾸고, 차이 저장은 그 모양으로 적는다
+ * @details 애니메이션 그래프 전이(id 가 숫자)가 이 규칙을 쓴다. 예전에는 자식이 새로 더한 전이가 부모의 같은 id 전이에 조용히 합쳐졌다.
+ */
+SW_TEST_CASE( DataInheritanceTest, IdentityChangeUnderSameKeyIsACollision )
+{
+    DataInheritanceSchema schema{ "Doc" };
+    DataInheritanceSchema pass{ "_listPass" };
+    pass._keyAttribute          = "_name";
+    pass._listIdentityAttribute = { "_cull" };
+    schema._listField.push_back( std::move( pass ) );
+    DataInheritanceTestSource source;
+    source.add( "base.xml", Util::kBase );
+    string flat;
+    {
+        SW_EXPECT_LOG( "DataInheritance.KeyCollision" );
+        SW_EXPECT_FALSE( DataInheritance::flatten( R"(<Doc _base="base.xml"><_listPass><Pass _name="A" _cull="None" /></_listPass></Doc>)", "child", schema, source, flat ) );
+    }
+    // 같은 정체에 다른 칸을 고치는 것은 고침이다
+    SW_REQUIRE_TRUE( DataInheritance::flatten( R"(<Doc _base="base.xml"><_listPass><Pass _name="A" _cull="Back" _extra="1" /></_listPass></Doc>)", "child", schema, source, flat ) );
+    // 일부러 바꾸면 Replace 다
+    SW_REQUIRE_TRUE( DataInheritance::flatten( R"(<Doc _base="base.xml"><_listPass><Pass _name="A" _cull="None" _op="Replace" /></_listPass></Doc>)", "child", schema, source, flat ) );
+
+    static constexpr const utf8* kFull = R"(<Doc _name="Base" _speed="1" _color="red">
+        <_listPass>
+            <Pass _name="A" _cull="None"><_listInput><item>x</item></_listInput></Pass>
+            <Pass _name="B" _cull="Back"><_listInput><item>y</item></_listInput></Pass>
+            <Pass _name="C" _cull="None" />
+        </_listPass>
+        <_inner _a="1" _b="2" />
+        <_tags><item>t1</item><item>t2</item></_tags>
+    </Doc>)";
+    string                       delta;
+    SW_REQUIRE_TRUE( DataInheritance::makeDelta( kFull, Util::kBase, schema, "base.xml", delta ) );
+    SW_EXPECT_TRUE( delta.find( "Replace" ) != string::npos );
+    SW_REQUIRE_TRUE( DataInheritance::flatten( delta, "child", schema, source, flat ) );
+    XMLDocument doc;
+    SW_REQUIRE_TRUE( doc.parse( flat ) );
+    SW_EXPECT_EQUAL( string( "None" ), string( Util::findPass( doc, "A" ).getAttributeText( "_cull" ) ) );
+    SW_EXPECT_EQUAL( string( "A,B,C" ), Util::passOrder( doc ) );
+}
+
 /** @brief [DataInheritanceTest] 사슬이 설정의 상한을 넘으면 오류다 */
 SW_TEST_CASE( DataInheritanceTest, ChainDeeperThanConfigIsAnError )
 {

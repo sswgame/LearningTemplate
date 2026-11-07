@@ -246,6 +246,18 @@ namespace sw
                 return true;
             }
 
+            /** @brief @p child 가 적은 정체 속성(`DataInheritanceSchema::_listIdentityAttribute`) 가운데 @p parent 와 값이 다른 첫 이름입니다. 없으면 nullptr 입니다. */
+            [[nodiscard]] static const string* findIdentityChange( const XMLNode& parent, const XMLNode& child, const DataInheritanceSchema& schema )
+            {
+                for ( const string& attribute : schema._listIdentityAttribute )
+                {
+                    const utf8* pChildValue = child.findAttribute( attribute.c_str() );
+                    if ( pChildValue != nullptr && string_view{ pChildValue } != parent.getAttributeText( attribute.c_str() ) )
+                        return &attribute;
+                }
+                return nullptr;
+            }
+
             /** @brief 자식의 목록 원소 하나를 얹습니다. */
             [[nodiscard]] static bool applyChildEntry( const XMLNode& element, const DataInheritanceSchema& schema, vector<ListEntry>& inoutListEntry, string_view sourceName )
             {
@@ -279,6 +291,13 @@ namespace sw
                 {
                     inoutListEntry.erase( inoutListEntry.begin() + ( pEntry - inoutListEntry.data() ) );
                     return true;
+                }
+                const string* pChangedIdentity = pEntry != nullptr && bReplace == false ? findIdentityChange( pEntry->_parentNode, element, schema ) : nullptr;
+                if ( pChangedIdentity != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "DataInheritance.KeyCollision", "'%#': element '%#' of list '%#' has another %# than its base - the key collides with the base's element (use a new key, or %#=\"%#\" to replace it)",
+                                     sourceName, key, schema._name, *pChangedIdentity, DataInheritance::kOpAttribute, DataInheritance::kOpReplace );
+                    return false;
                 }
                 if ( pEntry == nullptr )
                 {
@@ -539,7 +558,11 @@ namespace sw
 
                     XMLDocument   scratch;
                     const XMLNode item = scratch.appendRoot( fullEntry._parentNode.getName() );
-                    if ( bNew )
+                    // 정체가 바뀐 원소는 고침이 아니라 바꿈이다 — 차이로 적으면 읽기가 열쇠 겹침으로 거절한다(`_listIdentityAttribute`).
+                    const bool bReplaced = bNew == false && findIdentityChange( pEntry->_parentNode, fullEntry._parentNode, schema ) != nullptr;
+                    if ( bReplaced )
+                        item.setAttribute( DataInheritance::kOpAttribute, DataInheritance::kOpReplace );
+                    if ( bNew || bReplaced )
                     {
                         mergeAttributes( XMLNode{}, fullEntry._parentNode, item );
                         for ( XMLNode element = fullEntry._parentNode.findChild(); element.isValid(); element = element.findNextSibling() )
@@ -656,6 +679,7 @@ namespace sw
         : _name{ name }
         , _keyAttribute{}
         , _listKeptAttribute{}
+        , _listIdentityAttribute{}
         , _listField{}
         , _bEmptyClears{ SW_TRUE }
         , _bSelfNested{ SW_FALSE }

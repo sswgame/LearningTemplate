@@ -68,10 +68,16 @@ namespace sw
      */
     struct SW_API DataInheritanceSchema
     {
-        string                        _name;              ///< 원소 이름. 맨 위 노드는 문서 루트 이름이다
-        string                        _keyAttribute;      ///< 비어 있지 않으면 자식들이 이 속성을 열쇠로 하는 목록이다
-        vector<string>                _listKeptAttribute; ///< 부모 · 기본값과 같아도 저장이 지우지 않는 속성(필수 칸 · 형식 판 · 이름)
-        vector<DataInheritanceSchema> _listField;         ///< 안으로 들어가 합치는 자식 원소
+        string         _name;              ///< 원소 이름. 맨 위 노드는 문서 루트 이름이다
+        string         _keyAttribute;      ///< 비어 있지 않으면 자식들이 이 속성을 열쇠로 하는 목록이다
+        vector<string> _listKeptAttribute; ///< 부모 · 기본값과 같아도 저장이 지우지 않는 속성(필수 칸 · 형식 판 · 이름)
+        /**
+         * @brief 열쇠 있는 목록 원소의 정체 속성입니다(애니메이션 그래프 전이의 `from` · `to`). 자식이 부모와 같은 열쇠의 원소에 다른 값을 적으면 고침이 아니라 열쇠가 겹친 것이다.
+         * @details 겹침은 읽기 오류다(`DataInheritance.KeyCollision`) — 예전에는 새로 더하려던 원소가 부모 원소에 조용히 합쳐졌다. 일부러 바꾸려면 `_op="Replace"` 로 통째로 바꾼다.
+         *          차이 저장은 정체가 바뀐 원소를 그 모양(`Replace`)으로 적는다. 언리얼 · Godot 의 상속은 이름이 같으면 덮어쓰기다(기억에 의존) — 여기는 열쇠가 숫자 id 라 우연히 겹친다.
+         */
+        vector<string>                _listIdentityAttribute;
+        vector<DataInheritanceSchema> _listField; ///< 안으로 들어가 합치는 자식 원소
         /**
          * @brief 저장이 "부모에 있는데 자식에게 없는 칸" 을 빈 값(`attr=""`)이나 빈 원소로 적어 지웁니다. 기본은 켜짐입니다.
          * @details `SkipIfEmpty` 칸은 빈 값을 쓰지 않아 없음이 곧 비었음이다. 값 없는 깃발을 빈 글로 읽지 못하는 손 형식(머티리얼)은 끈다 — 그때 부모의 값은 자식이 지울 수 없다.
