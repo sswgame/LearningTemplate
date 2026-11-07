@@ -188,6 +188,15 @@ namespace sw
         void readMovedBodies( const vector<TOwner*>& listOwner, const TScene& scene );
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
+        /**
+         * @brief 스텝 훅 목록(`_arrListFrameHook`)이 낡았으면 단계 목록에서 다시 거릅니다 — 그 훅을 재정의하지 않은 컴포넌트(`PhysicsComponent::_unusedFrameHooks`)를 뺀다.
+         * @details 순서는 단계 목록의 순서 그대로다(예전과 같은 차례로 부른다). 등록 · 해제와 처음 기본 구현이 불린 때만 낡는다.
+         */
+        void refreshFrameHookLists();
+        /** @brief 훅 @p hook 의 단계 @p phase 목록입니다(`refreshFrameHookLists` 뒤에 쓴다). */
+        vector<PhysicsComponent*>& getFrameHookList( PhysicsFrameHook hook, uint32 phase );
+        /** @brief 막 부른 @p component 가 훅 @p hook 을 재정의하지 않았다고 밝혔으면 목록을 낡았다고 적습니다. */
+        void recordFrameHookCalled( const PhysicsComponent& component, PhysicsFrameHook hook );
 
     private:
         GameObjectManager&              _manager;             ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
@@ -199,16 +208,19 @@ namespace sw
         unique_ptr<IPhysicsScene2D>     _pScene2D;
         FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
-        vector<RigidBodyComponent*>     _listBodyOwner3D;     ///< 3D 바디 핸들의 칸 번호 → 주인 강체(없으면 nullptr, `bindBodyOwner`)
-        vector<RigidBody2DComponent*>   _listBodyOwner2D;     ///< 2D 바디 핸들의 칸 번호 → 주인 강체
-        vector<PhysicsContactEvent3D>   _listFrameEvent3D;
-        vector<PhysicsContactEvent2D>   _listFrameEvent2D;
-        vector<PhysicsContactEvent3D>   _listDispatchEvent3D; ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
-        vector<PhysicsContactEvent2D>   _listDispatchEvent2D; ///< 위와 같다
-        vector<SweptOverlap2D>          _listDispatchSwept;   ///< 위와 같다
-        uint64                          _stepCount;
-        uint32                          _debrisBodyCount;
-        float32                         _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        uint8                           _bConfigured : 1;
+        /// @brief 프레임 훅(`PhysicsFrameHook` 의 BeginFrame · PreStep · PostStep · EndFrame 차례)마다, 단계마다 그 훅을 부를 컴포넌트입니다(`refreshFrameHookLists`).
+        vector<PhysicsComponent*>     _arrListFrameHook[4][3];
+        vector<RigidBodyComponent*>   _listBodyOwner3D; ///< 3D 바디 핸들의 칸 번호 → 주인 강체(없으면 nullptr, `bindBodyOwner`)
+        vector<RigidBody2DComponent*> _listBodyOwner2D; ///< 2D 바디 핸들의 칸 번호 → 주인 강체
+        vector<PhysicsContactEvent3D> _listFrameEvent3D;
+        vector<PhysicsContactEvent2D> _listFrameEvent2D;
+        vector<PhysicsContactEvent3D> _listDispatchEvent3D; ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D> _listDispatchEvent2D; ///< 위와 같다
+        vector<SweptOverlap2D>        _listDispatchSwept;   ///< 위와 같다
+        uint64                        _stepCount;
+        uint32                        _debrisBodyCount;
+        float32                       _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
+        uint8                         _bConfigured         : 1;
+        uint8                         _bFrameHookListStale : 1; ///< 스텝 훅 목록을 다시 걸러야 한다(등록 · 해제 · 기본 구현 호출)
     };
 } // namespace sw

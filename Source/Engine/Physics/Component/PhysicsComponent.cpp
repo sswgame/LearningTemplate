@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
 
+#include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -14,9 +15,38 @@ namespace sw
         , _physicsIndex{ kNotRegistered }
         , _syncedTransformVersion{ 0 }
         , _phase{ phase }
+        , _unusedFrameHooks{ PhysicsFrameHook::None }
         , _bRebuildPending{ false }
         , _bTeleportPending{ false }
     {
+    }
+
+    void PhysicsComponent::beginPhysicsFrame( ScenePhysics& physics )
+    {
+        (void)physics;
+        _unusedFrameHooks = EnumUtil::setFlag( _unusedFrameHooks, PhysicsFrameHook::BeginFrame );
+    }
+
+    void PhysicsComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    {
+        (void)physics;
+        (void)fixedDeltaTime;
+        (void)stepIndex;
+        (void)stepCount;
+        _unusedFrameHooks = EnumUtil::setFlag( _unusedFrameHooks, PhysicsFrameHook::PreStep );
+    }
+
+    void PhysicsComponent::postPhysicsStep( ScenePhysics& physics )
+    {
+        (void)physics;
+        _unusedFrameHooks = EnumUtil::setFlag( _unusedFrameHooks, PhysicsFrameHook::PostStep );
+    }
+
+    void PhysicsComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
+    {
+        (void)physics;
+        (void)alpha;
+        _unusedFrameHooks = EnumUtil::setFlag( _unusedFrameHooks, PhysicsFrameHook::EndFrame );
     }
 
     void PhysicsComponent::onRegister( GameObjectManager& manager )

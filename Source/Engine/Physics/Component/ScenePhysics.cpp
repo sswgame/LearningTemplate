@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/ScenePhysics.h"
 
+#include "Core/Foundation/EnumUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -29,6 +30,20 @@ namespace sw
         struct ScenePhysicsInternal
         {
             static constexpr uint32 kPhaseCount = static_cast<uint32>( PhysicsComponentPhase::Count );
+            /** @brief 스텝 훅 목록의 차례(`_arrListFrameHook` 의 첫 번호)입니다. */
+            static constexpr PhysicsFrameHook kArrFrameHook[] = { PhysicsFrameHook::BeginFrame, PhysicsFrameHook::PreStep, PhysicsFrameHook::PostStep, PhysicsFrameHook::EndFrame };
+
+            /** @brief @p hook 의 목록 번호입니다. */
+            static uint32 toFrameHookIndex( PhysicsFrameHook hook )
+            {
+                for ( uint32 index = 0; index < static_cast<uint32>( std::size( kArrFrameHook ) ); ++index )
+                {
+                    if ( kArrFrameHook[index] == hook )
+                        return index;
+                }
+                SW_ASSERT( false && "알 수 없는 스텝 훅" );
+                return 0;
+            }
 
             /** @brief @p owner 를 자기 바디 핸들의 칸 번호 자리에 적습니다. */
             template <typename TOwner>
@@ -72,6 +87,7 @@ namespace sw
         , _pScene2D{}
         , _stepTimer{}
         , _arrListComponent{}
+        , _arrListFrameHook{}
         , _listBodyOwner3D{}
         , _listBodyOwner2D{}
         , _listFrameEvent3D{}
@@ -83,6 +99,7 @@ namespace sw
         , _debrisBodyCount{ 0 }
         , _fixedStepOverride{ 0.0f }
         , _bConfigured{ SW_FALSE }
+        , _bFrameHookListStale{ SW_TRUE }
     {
     }
 
@@ -255,6 +272,7 @@ namespace sw
         vector<PhysicsComponent*>& listComponent = _arrListComponent[static_cast<uint32>( pComponent->_phase )];
         pComponent->_physicsIndex                = static_cast<uint32>( listComponent.size() );
         listComponent.push_back( pComponent );
+        _bFrameHookListStale = SW_TRUE;
     }
 
     void ScenePhysics::unregisterComponent( PhysicsComponent* pComponent )
@@ -270,6 +288,39 @@ namespace sw
         pMoved->_physicsIndex    = index;
         listComponent.pop_back();
         pComponent->_physicsIndex = PhysicsComponent::kNotRegistered;
+        _bFrameHookListStale      = SW_TRUE; // 스텝 훅 목록이 지운 컴포넌트를 가리키지 않게 다음 사용 전에 다시 거른다
+    }
+
+    void ScenePhysics::refreshFrameHookLists()
+    {
+        if ( _bFrameHookListStale == SW_FALSE )
+            return;
+        _bFrameHookListStale = SW_FALSE;
+        for ( uint32 hookIndex = 0; hookIndex < static_cast<uint32>( std::size( ScenePhysicsInternal::kArrFrameHook ) ); ++hookIndex )
+        {
+            const PhysicsFrameHook hook = ScenePhysicsInternal::kArrFrameHook[hookIndex];
+            for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
+            {
+                vector<PhysicsComponent*>& listHook = _arrListFrameHook[hookIndex][phase];
+                listHook.clear();
+                for ( PhysicsComponent* pComponent : _arrListComponent[phase] )
+                {
+                    if ( EnumUtil::hasFlag( pComponent->_unusedFrameHooks, hook ) == false )
+                        listHook.push_back( pComponent );
+                }
+            }
+        }
+    }
+
+    vector<PhysicsComponent*>& ScenePhysics::getFrameHookList( PhysicsFrameHook hook, uint32 phase )
+    {
+        return _arrListFrameHook[ScenePhysicsInternal::toFrameHookIndex( hook )][phase];
+    }
+
+    void ScenePhysics::recordFrameHookCalled( const PhysicsComponent& component, PhysicsFrameHook hook )
+    {
+        if ( EnumUtil::hasFlag( component._unusedFrameHooks, hook ) )
+            _bFrameHookListStale = SW_TRUE;
     }
 
     void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )
@@ -328,12 +379,15 @@ namespace sw
         configureOnce();
 
         // 바디 → 관절 → 캐릭터. 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다) — 그래도 자리로 돌아 목록이 줄어도 넘지 않는다.
+        // 훅은 그 훅을 재정의한 컴포넌트만 부른다(기본 구현이 한 번 불리면 목록에서 빠진다 — 차례는 단계 목록 그대로).
+        refreshFrameHookLists();
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {
-            vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
+            vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::BeginFrame, phase );
             for ( size_t index = 0; index < listComponent.size(); ++index )
             {
                 listComponent[index]->beginPhysicsFrame( *this );
+                recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::BeginFrame );
             }
         }
         sweepContinuousColliders2D();
@@ -342,12 +396,14 @@ namespace sw
         const float32 fixedStep = _stepTimer.getStep();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
+            refreshFrameHookLists();
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
-                vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
+                vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::PreStep, phase );
                 for ( size_t index = 0; index < listComponent.size(); ++index )
                 {
                     listComponent[index]->prePhysicsStep( *this, fixedStep, stepIndex, stepCount );
+                    recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::PreStep );
                 }
             }
             if ( _pScene3D != nullptr )
@@ -368,23 +424,27 @@ namespace sw
                 readMovedBodies( _listBodyOwner3D, *_pScene3D );
             if ( _pScene2D != nullptr )
                 readMovedBodies( _listBodyOwner2D, *_pScene2D );
+            refreshFrameHookLists();
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
-                vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
+                vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::PostStep, phase );
                 for ( size_t index = 0; index < listComponent.size(); ++index )
                 {
                     listComponent[index]->postPhysicsStep( *this );
+                    recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::PostStep );
                 }
             }
         }
 
         const float32 alpha = _stepTimer.getAlpha();
+        refreshFrameHookLists();
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {
-            vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
+            vector<PhysicsComponent*>& listComponent = getFrameHookList( PhysicsFrameHook::EndFrame, phase );
             for ( size_t index = 0; index < listComponent.size(); ++index )
             {
                 listComponent[index]->endPhysicsFrame( *this, alpha );
+                recordFrameHookCalled( *listComponent[index], PhysicsFrameHook::EndFrame );
             }
         }
 
