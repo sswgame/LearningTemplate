@@ -3,6 +3,7 @@
 #include "Engine/Renderer/EngineRenderDriver.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -20,6 +21,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
