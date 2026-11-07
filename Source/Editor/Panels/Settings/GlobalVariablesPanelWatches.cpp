@@ -6,8 +6,6 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -19,10 +17,10 @@ namespace sw::editor
         /** @brief 전역 변수 창의 목록 재구성 횟수입니다. 창이 없으면(에디터 컨텍스트 없음 · 창 인스턴스 없음) 값을 내지 않습니다. */
         [[nodiscard]] bool readGlobalVariablesRebuildCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = editor::findSubsystem<EditorContext>();
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+            if ( pPanels == nullptr )
                 return false;
-            const GlobalVariablesPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<GlobalVariablesPanel>();
+            const GlobalVariablesPanel* pPanel = pPanels->findPanel<GlobalVariablesPanel>();
             if ( pPanel == nullptr )
                 return false;
             outValue = static_cast<float64>( pPanel->getListRebuildCount() );

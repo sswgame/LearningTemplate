@@ -9,7 +9,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -369,7 +368,7 @@ namespace sw::editor
     ToolAssetLoadResult DialogueGraphPanel::loadDocument()
     {
         DialogueGraphAsset        data;
-        const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
+        const ToolAssetLoadResult result = DialogueGraphEdit::loadGraph( data, getLoadedAssetPath() );
         applyLoadedGraph( std::move( data ), result );
         _preview.resetForDocument( getLoadedAssetPath() );
         return result;
@@ -379,7 +378,7 @@ namespace sw::editor
     {
         DialogueGraphAsset data = captureGraphData();
         // 실패하면 아무것도 지우지 않는다. AnimationGraphPanel 쪽 주석을 참고한다.
-        if ( EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() ) == false )
+        if ( DialogueGraphEdit::saveGraph( data, getLoadedAssetPath() ) == false )
             return false;
 
         clearDocumentDirty();

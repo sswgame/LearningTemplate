@@ -16,8 +16,17 @@
         "Editor/Common/Workspace/Asset/EditorAssetType.h": "에셋 종류 서술(IEditorPanel 이 쓴다)"
     },
     "_migratedViews": [
+        "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
         "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
         "Source/Editor/Panels/BugReport/BugReportPanel",
+        "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
+        "Source/Editor/Panels/Inspector/DataPathPropertyDrawer",
+        "Source/Editor/Panels/Inspector/FloatCurvePropertyDrawer",
+        "Source/Editor/Panels/Inspector/IInspectorComponent",
+        "Source/Editor/Panels/Inspector/InspectorLayoutWatches",
+        "Source/Editor/Panels/InputMap/InputMapWatches",
+        "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
+        "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
         "Source/Editor/Panels/Scene/DataLayersPanel",
         "Source/Editor/Panels/TileSet/TileSetPanel"

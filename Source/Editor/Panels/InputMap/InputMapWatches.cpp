@@ -7,7 +7,6 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/InputMap/InputMapPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
@@ -20,8 +19,8 @@ namespace sw::editor
         /** @brief Input Map Editor 값 하나를 읽습니다. 0 은 선택한 액션의 바인딩 수, 1 은 그 0번 바인딩의 발화 규칙, 2 는 충돌 수입니다. 패널이 없거나 선택한 액션이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readInputMapValue( uint32 which, float64& outValue )
         {
-            EditorContext*       pContext = getWatchContext( __func__ );
-            const InputMapPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<InputMapPanel>() : nullptr;
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            const InputMapPanel*      pPanel  = pPanels != nullptr ? pPanels->findPanel<InputMapPanel>() : nullptr;
             if ( pPanel == nullptr )
                 return false;
             uint32 value{ 0 };

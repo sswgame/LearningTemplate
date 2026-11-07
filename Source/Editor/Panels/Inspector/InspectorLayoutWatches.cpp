@@ -7,8 +7,6 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/InspectorPanel.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -20,8 +18,8 @@ namespace sw::editor
         /** @brief 인스펙터 창입니다. 에디터 컨텍스트나 창이 없으면 nullptr 입니다. */
         const InspectorPanel* findInspectorPanel()
         {
-            EditorContext* pContext = editor::findSubsystem<EditorContext>();
-            return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<InspectorPanel>() : nullptr;
+            const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+            return pPanels != nullptr ? pPanels->findPanel<InspectorPanel>() : nullptr;
         }
 
         /** @brief 인스펙터 그리드의 묶음 재구성 횟수입니다. 에디터 컨텍스트나 인스펙터 창이 없으면 값을 내지 않습니다. */

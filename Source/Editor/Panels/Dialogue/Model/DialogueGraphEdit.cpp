@@ -4,10 +4,22 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+
 #include "Engine/Dialogue/DialogueCursor.h"
 
 namespace sw::editor
 {
+    ToolAssetLoadResult DialogueGraphEdit::loadGraph( DialogueGraphAsset& outGraph, const string_view path )
+    {
+        return EditorToolAssetCommands::loadDialogueGraph( outGraph, path );
+    }
+
+    bool DialogueGraphEdit::saveGraph( const DialogueGraphAsset& graph, const string_view path )
+    {
+        return EditorToolAssetCommands::saveDialogueGraph( graph, path );
+    }
+
     void DialogueGraphEdit::makeDefaultGraph( DialogueGraphAsset& outGraph )
     {
         outGraph._listSpeaker.clear();

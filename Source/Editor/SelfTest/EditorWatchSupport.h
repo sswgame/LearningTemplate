@@ -16,6 +16,7 @@ namespace sw
 namespace sw::editor
 {
     class EditorContext;
+    class EditorPanelManager;
 
     /** @brief 감시 값 `Editor.VisualizerOn` 이 볼 뷰포트 시각화 id 입니다. */
     SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorWatchVisualizer );
@@ -33,6 +34,8 @@ namespace sw::editor
      * @details 프로브는 float 값만 돌려 사유를 줄 수 없어 이유를 로그로 남기고 nullptr 를 돌려줍니다. @p pWatch 는 `__func__` 입니다.
      */
     [[nodiscard]] EditorContext* getWatchContext( const utf8* pWatch );
+    /** @brief 프로브가 패널을 찾을 패널 관리자입니다. 컨텍스트가 없으면 `getWatchContext` 와 같이 이유를 로그로 남기고 nullptr 입니다 — 패널 View 의 감시 값이 작업 공간 헤더를 보지 않게 한다. */
+    [[nodiscard]] EditorPanelManager* getWatchPanelManager( const utf8* pWatch );
 
     /** @brief 활성 씬에서 `gv_editorWatchObject` 이름의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
     [[nodiscard]] const GameObject* findWatchedObject();

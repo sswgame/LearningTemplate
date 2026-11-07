@@ -8,6 +8,7 @@
 
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -31,6 +32,12 @@ namespace sw::editor
         if ( pContext == nullptr )
             SW_LOG_ERROR_ID( "EditorWatchSupport.EditorContextMissingReadsNothing", "[Watch] EditorContext is missing - %# reads nothing", pWatch );
         return pContext;
+    }
+
+    EditorPanelManager* getWatchPanelManager( const utf8* pWatch )
+    {
+        EditorContext* pContext = getWatchContext( pWatch );
+        return pContext != nullptr ? &pContext->getSubsystem<EditorPanelManager>() : nullptr;
     }
 
     const GameObject* findWatchedObject()

@@ -7,7 +7,6 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
@@ -20,9 +19,8 @@ namespace sw::editor
         /** @brief 렌더 타깃 창 값 하나를 읽습니다. 열려 있지 않으면 값을 내지 않으며, 픽셀 값은 읽은 적이 없으면 내지 않습니다. */
         [[nodiscard]] bool readRenderTargetPanelValue( uint32 which, float64& outValue )
         {
-            EditorContext*           pContext = getWatchContext( __func__ );
-            const RenderTargetPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<RenderTargetPanel>()
-                                                                    : nullptr;
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            const RenderTargetPanel*  pPanel  = pPanels != nullptr ? pPanels->findPanel<RenderTargetPanel>() : nullptr;
             if ( pPanel == nullptr || pPanel->isOpen() == false )
                 return false;
             switch ( which )
