@@ -172,19 +172,20 @@ namespace sw
 
     void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
+        const NetSnapshot& world = _world; // 여러 워커가 함께 읽는다 — const 로 잡아 쓰기 접근(경합 검사가 쓰기로 센다)을 막는다
         // 이 클라이언트에 관련 있는 엔티티만 넣는다. 엔티티 버퍼는 제자리에 덮어써서 용량을 남긴다.
         NetSnapshot& filtered           = scratch._filtered;
-        filtered._tick                  = _world._tick;
+        filtered._tick                  = world._tick;
         filtered._ownerState            = client._ownerState;                  // 복사 대입으로 스크래치 버퍼의 용량을 재사용한다
         filtered._firstMissingInputTick = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다. 입력은 전송 전에 게임 스레드가 넣었다
         NetPrioritizer& prioritizer     = client._prioritizer;
         prioritizer.beginAccumulate();
         size_t                     relevantCount = 0;
         vector<NetRelevantEntity>& listRelevant  = scratch._listRelevant;
-        _pPolicy->collectRelevantEntities( connectionID, _world._listEntity, listRelevant ); // 월드는 여러 워커가 함께 읽는다. 차례는 월드 차례(id 순)다
+        _pPolicy->collectRelevantEntities( connectionID, world._listEntity, listRelevant ); // 월드는 여러 워커가 함께 읽는다. 차례는 월드 차례(id 순)다
         for ( const NetRelevantEntity& relevant : listRelevant )
         {
-            const NetEntityState& entity   = _world._listEntity[relevant._worldIndex];
+            const NetEntityState& entity   = world._listEntity[relevant._worldIndex];
             const float32         priority = relevant._priority;
             if ( relevantCount < filtered._listEntity.size() )
                 filtered._listEntity[relevantCount] = entity;
@@ -211,13 +212,13 @@ namespace sw
         if ( client._bHasAck )
         {
             const NetSnapshot* pCandidate = client._listSent.find( client._ackedTick );
-            const bool         bRecent    = _world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
+            const bool         bRecent    = world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
             if ( pCandidate != nullptr && bRecent )
                 pBaseline = pCandidate;
         }
         BitWriter& writer = scratch._messageWriter.begin( NetClientServerMessage::kSnapshot );
         // 보낸 복원 스냅샷은 그 틱의 슬롯에 바로 쓴다. 같은 틱을 두 번 보내서 기준 슬롯과 겹치면 사본을 거친다. 슬롯의 이전 버퍼는 남는다.
-        NetSnapshot& slot = client._listSent.acquire( _world._tick );
+        NetSnapshot& slot = client._listSent.acquire( world._tick );
         if ( &slot == pBaseline )
         {
             NetSnapshot written;
@@ -236,7 +237,7 @@ namespace sw
             if ( scratch._listCurrent[index] == NetSnapshot::kEntityAlreadyCurrent )
                 prioritizer.markSent( entityID );
             else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
-                prioritizer.markSentUnconfirmed( entityID, _world._tick );
+                prioritizer.markSentUnconfirmed( entityID, world._tick );
         }
         (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 호출해도 NetEndpoint 가 보호한다
     }
