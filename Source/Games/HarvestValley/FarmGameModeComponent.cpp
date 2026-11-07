@@ -509,7 +509,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "FarmGameMode.AutoFarmerPrefabNo", "[Farm] auto farmer prefab '%#' has no FarmAutoFarmerAIComponent - auto play cannot take the farmer", _autoFarmerPrefab.c_str() );
                 return;
             }
-            pAI->assignDirector( getOwner()->getHandle() );
+            pAI->assignGameMode( getOwner()->getHandle() );
             if ( isFarmerDrivenByAI() == false )
                 pAI->possess( *pPawn );
             return;

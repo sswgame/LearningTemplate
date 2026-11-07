@@ -470,7 +470,7 @@ namespace sw
         , _crypto{ crypto }
         , _settings{ settings }
         , _ticketAuthority{ ticketAuthority }
-        , _outcome{ outOutcome }
+        , _result{ outOutcome }
     {
     }
 
@@ -780,8 +780,8 @@ namespace sw
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
-            _outcome._listOnline.push_back( LoginSessionRef{ session._accountID, token._sessionID, LoginRevokeReason::None } );
-            _outcome._listEvent.push_back( LoginEvent{ session._accountID, token._sessionID, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
+            _result._listOnline.push_back( LoginSessionRef{ session._accountID, token._sessionID, LoginRevokeReason::None } );
+            _result._listEvent.push_back( LoginEvent{ session._accountID, token._sessionID, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
             outGrant._identity      = Internal::makeIdentity( session._accountID, profile );
             outGrant._deletionDueMs = profile._deletionDueMs;
             outGrant._token         = rotated;
@@ -833,8 +833,8 @@ namespace sw
         const ServiceStoreResult commitResult = _connection.commit( transaction );
         if ( commitResult != ServiceStoreResult::Ok && commitResult != ServiceStoreResult::Conflict )
             return LoginResult::StoreUnavailable;
-        _outcome._listOffline.push_back( LoginSessionRef{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut } );
-        _outcome._listEvent.push_back( LoginEvent{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut, LoginEvent::Kind::LoggedOut } );
+        _result._listOffline.push_back( LoginSessionRef{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut } );
+        _result._listEvent.push_back( LoginEvent{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut, LoginEvent::Kind::LoggedOut } );
         return LoginResult::Ok;
     }
 
@@ -851,7 +851,7 @@ namespace sw
             if ( Internal::decodeSession( sessionRaw._bytes, session ) == false )
                 return;
             if ( attempt == 0 )
-                _outcome._listDisconnected.push_back( LoginSessionRef{ session._accountID, sessionID, LoginRevokeReason::None } );
+                _result._listDisconnected.push_back( LoginSessionRef{ session._accountID, sessionID, LoginRevokeReason::None } );
             if ( session._revokeReason != LoginRevokeReason::None || session._resumeDeadlineMs != 0 )
                 return;
             session._resumeDeadlineMs = nowMs + _settings._reconnectGraceMs;
@@ -882,7 +882,7 @@ namespace sw
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            _outcome._listRevoked.push_back( LoginSessionRef{ accountID, sessionID, reason } );
+            _result._listRevoked.push_back( LoginSessionRef{ accountID, sessionID, reason } );
             return LoginResult::Ok;
         }
         return LoginResult::StoreUnavailable;
@@ -1123,7 +1123,7 @@ namespace sw
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             if ( sessionID != 0 )
-                _outcome._listRevoked.push_back( LoginSessionRef{ identity._accountID, sessionID, LoginRevokeReason::AccountDeleted } );
+                _result._listRevoked.push_back( LoginSessionRef{ identity._accountID, sessionID, LoginRevokeReason::AccountDeleted } );
             outDueMs = profile._deletionDueMs;
             return LoginResult::Ok;
         }
@@ -1258,7 +1258,7 @@ namespace sw
             if ( bReadable && Internal::evaluateSession( session, nowMs ) == LoginResult::Ok )
                 continue;
             const LoginRevokeReason reason = bReadable ? session._revokeReason : LoginRevokeReason::Administrative;
-            _outcome._listRevoked.push_back( LoginSessionRef{ online._accountID, online._sessionID, reason } );
+            _result._listRevoked.push_back( LoginSessionRef{ online._accountID, online._sessionID, reason } );
         }
     }
 
@@ -1419,9 +1419,9 @@ namespace sw
     void LoginStoreLogic::recordSessionOpened( uint64 accountID, const LoginSessionToken& token, uint64 replacedSessionID )
     {
         if ( replacedSessionID != 0 )
-            _outcome._listRevoked.push_back( LoginSessionRef{ accountID, replacedSessionID, LoginRevokeReason::DuplicateLogin } );
-        _outcome._listOnline.push_back( LoginSessionRef{ accountID, token._sessionID, LoginRevokeReason::None } );
-        _outcome._listEvent.push_back( LoginEvent{ accountID, token._sessionID, LoginRevokeReason::None, LoginEvent::Kind::LoggedIn } );
+            _result._listRevoked.push_back( LoginSessionRef{ accountID, replacedSessionID, LoginRevokeReason::DuplicateLogin } );
+        _result._listOnline.push_back( LoginSessionRef{ accountID, token._sessionID, LoginRevokeReason::None } );
+        _result._listEvent.push_back( LoginEvent{ accountID, token._sessionID, LoginRevokeReason::None, LoginEvent::Kind::LoggedIn } );
     }
 
     LoginResult LoginStoreLogic::stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID )

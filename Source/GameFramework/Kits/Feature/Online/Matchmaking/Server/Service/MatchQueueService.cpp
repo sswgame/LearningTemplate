@@ -195,7 +195,7 @@ namespace sw
             MatchAssignment assignment;
             assignment._ticketID = ticketID;
             assignment._modeID   = _mapLocalTicket[ticketID]._modeID;
-            assignment._outcome  = MatchQueueResult::Timeout;
+            assignment._result   = MatchQueueResult::Timeout;
             notifyLocalTicket( ticketID, assignment );
         }
     }
@@ -456,7 +456,7 @@ namespace sw
             MatchAssignment assignment;
             assignment._ticketID = ticket._ticketID;
             assignment._modeID   = state._maker.getDefinition()._modeID;
-            assignment._outcome  = MatchQueueResult::Timeout;
+            assignment._result   = MatchQueueResult::Timeout;
             deliverToTicket( ticket._originServerID, assignment );
         }
         for ( MatchFormed& match : listFormed )
@@ -494,7 +494,7 @@ namespace sw
         assignment._ticketID = backfilled._ticket._ticketID;
         assignment._matchID  = request._matchID;
         assignment._modeID   = request._modeID;
-        assignment._outcome  = MatchQueueResult::Found;
+        assignment._result   = MatchQueueResult::Found;
         assignment._serverID = request._serverID;
         assignment._address  = request._address;
         // 포트 샤딩 — 티켓(파티)은 한 샤드에 함께 간다. 대표 계정이 샤드를 정한다(새 경기 배정과 같은 규칙).
@@ -570,7 +570,7 @@ namespace sw
             assignment._ticketID = ticket._ticketID;
             assignment._matchID  = match._matchID;
             assignment._modeID   = match._modeID;
-            assignment._outcome  = bPlaced ? MatchQueueResult::Found : failOutcome;
+            assignment._result   = bPlaced ? MatchQueueResult::Found : failOutcome;
             if ( bPlaced )
             {
                 assignment._serverID = picked._descriptor._serverID;
@@ -620,7 +620,7 @@ namespace sw
             MatchAssignment assignment;
             assignment._matchID = match._matchID;
             assignment._modeID  = lobby._modeID;
-            assignment._outcome = bPlaced ? MatchQueueResult::Found : MatchQueueResult::NoServer;
+            assignment._result  = bPlaced ? MatchQueueResult::Found : MatchQueueResult::NoServer;
             if ( bPlaced )
             {
                 assignment._serverID = picked._descriptor._serverID;
@@ -755,7 +755,7 @@ namespace sw
     {
         MatchAssignment cancelled;
         cancelled._ticketID = ticketID;
-        cancelled._outcome  = MatchQueueResult::Cancelled;
+        cancelled._result   = MatchQueueResult::Cancelled;
         const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt != _mapLocalTicket.end() )
         {

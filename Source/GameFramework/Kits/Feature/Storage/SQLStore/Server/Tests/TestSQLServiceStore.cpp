@@ -147,7 +147,7 @@ namespace
      */
     struct ServiceStoreParity
     {
-        static void record( vector<string>& inoutListLine, string_view step, ServiceStoreResult result, int32 detail = 0 )
+        static void addLine( vector<string>& inoutListLine, string_view step, ServiceStoreResult result, int32 detail = 0 )
         {
             inoutListLine.push_back( formatToString( "%#: %# %#", step, static_cast<int32>( result ), detail ) );
         }
@@ -157,14 +157,14 @@ namespace
         {
             outInfo                         = ServiceCommitInfo{};
             const ServiceStoreResult result = connection.commit( transaction, &outInfo );
-            record( inoutListLine, step, result, outInfo._conflictIndex );
+            addLine( inoutListLine, step, result, outInfo._conflictIndex );
         }
 
         /** @brief 읽고 결과와 바이트 수를 적습니다. 레코드는 @p outRecord 에 남습니다. */
         static void recordRead( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const hashed_string& table, string_view key, ServiceRecord& outRecord )
         {
             const ServiceStoreResult result = connection.readRecord( table, key, outRecord );
-            record( inoutListLine, step, result, static_cast<int32>( outRecord._bytes.size() ) );
+            addLine( inoutListLine, step, result, static_cast<int32>( outRecord._bytes.size() ) );
         }
 
         static vector<string> runScenario( IServiceStoreConnection& connection )
@@ -262,7 +262,7 @@ namespace
             recordCommit( listLine, connection, "same key twice", twice, info );
             recordCommit( listLine, connection, "empty transaction", ServiceTransaction{}, info );
             vector<ServiceRecord> listRecord;
-            record( listLine, "list zero", connection.listRecords( kTable, "", "", 0, false, listRecord ) );
+            addLine( listLine, "list zero", connection.listRecords( kTable, "", "", 0, false, listRecord ) );
             return listLine;
         }
 

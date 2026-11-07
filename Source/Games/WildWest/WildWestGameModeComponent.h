@@ -90,7 +90,7 @@ namespace sw
         AssetRef<WeatherCatalog> _weatherDataPath;
         PROPERTY( Category = "Outlaw", DisplayName = "Region", Tooltip = "<Region id> in the western catalog this map belongs to" )
         hashed_string _regionID;
-        PROPERTY( Category = "Outlaw", DisplayName = "Base Temperature", Tooltip = "Air temperature of the region before the weather", Units = "C" )
+        PROPERTY( Category = "Outlaw", DisplayName = "Base Temperature", Tooltip = "Air temperature of the region before the weather" )
         float32 _regionBaseTemperature;
         PROPERTY( Category = "Outlaw", DisplayName = "Seconds Per Day", Min = 1.0, Tooltip = "Real seconds of one game day", Units = s )
         float32 _secondsPerDay;

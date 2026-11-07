@@ -589,13 +589,13 @@ namespace sw
         if ( _listMatchAssignment.empty() == false )
         {
             const MatchAssignment& assignment = _listMatchAssignment.front();
-            if ( assignment._outcome == MatchQueueResult::Found )
+            if ( assignment._result == MatchQueueResult::Found )
             {
                 _pRunner->getMutableMetrics().recordMatch( assignment._matchID );
                 finishStep( string_view{} );
                 return;
             }
-            finishStep( "wait_match.outcome" + LoadBotInternal::makeNumberText( static_cast<int64>( assignment._outcome ) ) );
+            finishStep( "wait_match.outcome" + LoadBotInternal::makeNumberText( static_cast<int64>( assignment._result ) ) );
             return;
         }
         if ( nowMs >= _waitUntilMs )

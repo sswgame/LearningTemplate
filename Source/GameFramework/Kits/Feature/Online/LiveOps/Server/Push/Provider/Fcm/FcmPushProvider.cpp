@@ -169,7 +169,7 @@ namespace sw
         waiting._deliveryID = deliveryID;
         waiting._bodyBytes  = std::move( bodyBytes );
         if ( _tokenSource.request( now ) == false )
-            flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, nowMs ); // 서명하지 못했다 — 키가 틀렸다
+            flushWaiting( ServiceAccountTokenSource::ResponseResult::Rejected, nowMs ); // 서명하지 못했다 — 키가 틀렸다
     }
 
     void FcmPushProvider::submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds /*nowMs*/ )
@@ -184,16 +184,16 @@ namespace sw
         _mapRequestToDelivery[_pHTTPClient->submitRequest( request )] = deliveryID;
     }
 
-    void FcmPushProvider::flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds nowMs )
+    void FcmPushProvider::flushWaiting( ServiceAccountTokenSource::ResponseResult outcome, UnixMilliseconds nowMs )
     {
         vector<Waiting> listWaiting;
         listWaiting.swap( _listWaiting );
         for ( const Waiting& waiting : listWaiting )
         {
-            if ( outcome == ServiceAccountTokenSource::Outcome::Granted )
+            if ( outcome == ServiceAccountTokenSource::ResponseResult::Granted )
                 submitSend( waiting._deliveryID, waiting._bodyBytes, nowMs );
             else
-                complete( waiting._deliveryID, outcome == ServiceAccountTokenSource::Outcome::Retryable ? PushDeliveryStatus::Transient : PushDeliveryStatus::Rejected );
+                complete( waiting._deliveryID, outcome == ServiceAccountTokenSource::ResponseResult::Retryable ? PushDeliveryStatus::Transient : PushDeliveryStatus::Rejected );
         }
     }
 
@@ -227,8 +227,8 @@ namespace sw
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, nowMs );
-            if ( outcome != ServiceAccountTokenSource::Outcome::None )
+            const ServiceAccountTokenSource::ResponseResult outcome = _tokenSource.handleResponse( response, nowMs );
+            if ( outcome != ServiceAccountTokenSource::ResponseResult::None )
             {
                 flushWaiting( outcome, nowMs );
                 continue;
