@@ -79,7 +79,6 @@ endfunction()
 #   SOURCES     소스
 #   LINK_PUBLIC · LINK_PRIVATE   링크(PRIVATE 끝에 sw_global_options 가 붙는다)
 #   DEFINITIONS 더 붙일 PRIVATE 정의
-#   UNITY_BATCH 유니티 묶음 크기(주면 `sw_setUnityBuild`)
 #   REFLECTION_HEADERS  리플렉션 입력 헤더. 비우면 폴더를 재귀로 훑는다(`sw_addReflectionStep` 자동 훑기)
 #   REFLECTION_EXCLUDE  자동 훑기에서 뺄 경로 정규식(하위 폴더의 다른 모듈 — 키트 · 게임의 `/Editor/`)
 #   NO_REFLECTION       리플렉션 단계를 두지 않는다(RHI 백엔드)
@@ -88,7 +87,7 @@ endfunction()
 #   CONTENT_OWNER       콘텐츠 모듈 검사에서 이 모듈 타입의 주인(기본 MODULE_NAME) — 게임은 이름이 모두 SWGame 이라 `game:<폴더>` 로 가른다
 # ------------------------------------------------------------------------------
 function(sw_addModuleLibrary TARGET_NAME)
-	cmake_parse_arguments(ARG "NO_REFLECTION;NO_REGISTRY" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH;REFLECTION_EXCLUDE;MODULE_NAME;CONTENT_OWNER"
+	cmake_parse_arguments(ARG "NO_REFLECTION;NO_REGISTRY" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;REFLECTION_EXCLUDE;MODULE_NAME;CONTENT_OWNER"
 		"SOURCES;LINK_PUBLIC;LINK_PRIVATE;DEFINITIONS;REFLECTION_HEADERS" ${ARGN})
 
 	if(NOT ARG_DEV_TYPE MATCHES "^(SHARED|MODULE)$")
@@ -165,9 +164,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 		sw_registerDynamicModule(${TARGET_NAME} ${ARG_KIND} MODULE_NAME ${ARG_MODULE_NAME})
 	endif()
 
-	if(ARG_UNITY_BATCH)
-		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE ${ARG_UNITY_BATCH})
-	endif()
+	sw_setUnityBuild(${TARGET_NAME})
 
 	if(NOT ARG_NO_REFLECTION)
 		# 게임 모듈의 타입은 다른 모듈이 링크하지 않는다. 타입을 내보내는 매크로도 없다(`GameModuleExports.h` 는 C-ABI 진입점만 만든다).
@@ -236,11 +233,7 @@ function(sw_addModulePart PART_NAME)
 		add_dependencies(${PART_NAME} ${ARG_OWNER}_ReflectionGen)
 	endif()
 	sw_configurePCH(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-	get_target_property(bOwnerUnity ${ARG_OWNER} UNITY_BUILD)
-	if(bOwnerUnity)
-		get_target_property(ownerBatch ${ARG_OWNER} UNITY_BUILD_BATCH_SIZE)
-		sw_setUnityBuild(${PART_NAME} BATCH_SIZE ${ownerBatch})
-	endif()
+	sw_setUnityBuild(${PART_NAME})
 	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 라이브러리에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
 	target_link_libraries(${ARG_OWNER} PRIVATE ${PART_NAME})
 endfunction()
@@ -287,7 +280,6 @@ function(sw_addGameFrameworkKit KIT_NAME)
 		FOLDER "Source/GameFramework/Kits"
 		SOURCES ${listKitSource}
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
-		UNITY_BATCH ${SW_UNITY_BATCH_KIT}
 		REFLECTION_EXCLUDE "/Editor/"
 	)
 	# 키트의 에디터 확장(언리얼 플러그인의 <X>Editor 모듈)은 키트 폴더의 Editor/ 다. 런타임 · 서버로 나뉜 키트는 `Runtime/` 이 이 함수를 부르고
@@ -376,7 +368,6 @@ function(sw_addGameModule MODULE_NAME)
 		FOLDER "Source/Games"
 		SOURCES ${listGameSource}
 		LINK_PRIVATE Engine ModuleAPI GameFramework ${listKit}
-		UNITY_BATCH 8
 		REFLECTION_EXCLUDE "/Editor/"
 		MODULE_NAME ${MODULE_NAME}
 		CONTENT_OWNER "game:${gameName}"

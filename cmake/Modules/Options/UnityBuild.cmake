@@ -5,29 +5,27 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) sw_setUnityBuild — 타겟 UNITY_BUILD ON/OFF (BATCH_SIZE, 기본 12)
+# 1) sw_setUnityBuild — 타겟 UNITY_BUILD ON/OFF (크기는 SW_UNITY_BATCH_SIZE 한 값, OFF 는 묶을 수 없는 타깃)
 # ------------------------------------------------------------------------------
 function(sw_setUnityBuild TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
 
-	cmake_parse_arguments(ARG "OFF" "BATCH_SIZE" "" ${ARGN})
+	cmake_parse_arguments(ARG "OFF" "" "" ${ARGN})
 
 	if(ARG_OFF OR NOT SW_ENABLE_UNITY_BUILD)
 		set_target_properties(${TARGET_NAME} PROPERTIES UNITY_BUILD OFF)
 		return()
 	endif()
 
-	set(batch 12)
-
-	if(ARG_BATCH_SIZE)
-		set(batch ${ARG_BATCH_SIZE})
+	if(NOT SW_UNITY_BATCH_SIZE GREATER 1)
+		message(FATAL_ERROR "[UnityBuild] SW_UNITY_BATCH_SIZE='${SW_UNITY_BATCH_SIZE}' must be 2 or more (turn unity off with SW_ENABLE_UNITY_BUILD=OFF)")
 	endif()
 
 	set_target_properties(${TARGET_NAME} PROPERTIES
 		UNITY_BUILD ON
-		UNITY_BUILD_BATCH_SIZE ${batch}
+		UNITY_BUILD_BATCH_SIZE ${SW_UNITY_BATCH_SIZE}
 	)
 
 	sw_skipUnityForX11Sources(${TARGET_NAME})

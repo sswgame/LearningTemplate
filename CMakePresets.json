@@ -55,7 +55,8 @@
       "cacheVariables": {
         "SW_GAMES": "ALL",
         "SW_BUILD_UNUSED_KITS": "ON",
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "SW_ENABLE_UNITY_BUILD": "ON"
       }
     },
     {
@@ -84,7 +85,8 @@
       "cacheVariables": {
         "SW_GAMES": "ALL",
         "SW_BUILD_UNUSED_KITS": "ON",
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "SW_ENABLE_UNITY_BUILD": "ON"
       }
     },
     {

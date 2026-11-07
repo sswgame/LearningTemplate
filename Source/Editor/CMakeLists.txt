@@ -180,7 +180,7 @@ function(sw_applyEditorCoreSettings TARGET_NAME)
 		POSITION_INDEPENDENT_CODE ON
 		INTERPROCEDURAL_OPTIMIZATION FALSE)
 	sw_configurePCH(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-	sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
+	sw_setUnityBuild(${TARGET_NAME})
 endfunction()
 
 # 코어 리플렉션이 만든 FlagOps 우산(`/FI`)과 gen 폴더를 TARGET_NAME 에 준다. PUBLIC 이면 TARGET_NAME 을 링크하는 쪽도 받는다.
@@ -287,7 +287,6 @@ sw_addModuleLibrary(EditorModule
 	FOLDER "Source/Editor"
 	SOURCES ${listEditorSource}
 	LINK_PRIVATE ${listEditorViewLink}
-	UNITY_BATCH 8
 	# REFLECTION_HEADERS 를 주지 않는다 — 리플렉션 입력은 폴더를 훑어 REFLECT · ENUM 매크로가 있는 헤더로 정한다(손 목록에 빠뜨리면 StaticType 링크 오류).
 	# 코어 폴더의 헤더는 뺀다 — 그쪽은 EditorCoreReflect 가 한 번만 짓는다(두 곳에 있으면 StaticType 이 중복 정의된다).
 	REFLECTION_EXCLUDE "${editorCoreReflectRegex}"

@@ -111,11 +111,10 @@ set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 # (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다).
 option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 엔진 커버리지 계측(libFuzzer)" OFF)
 
-option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용" OFF)
-# 유니티 범위 확대 측정용(빌드 속도 계획 5단계): Core_objects 와 GameFramework 키트의 묶음 크기. 0 이면 묶지 않는다.
-# SW_ENABLE_UNITY_BUILD 가 꺼져 있으면 값과 상관없이 묶지 않는다(`sw_setUnityBuild`). 측정이 끝나 값을 정하면 이 변수를 지우고 호출부에 숫자를 쓴다.
-set(SW_UNITY_BATCH_CORE 0 CACHE STRING "Core_objects 유니티 묶음 크기(0=묶지 않음)")
-set(SW_UNITY_BATCH_KIT 0 CACHE STRING "GameFramework 키트 유니티 묶음 크기(0=묶지 않음)")
+# 유니티 빌드는 Release 프리셋만 켠다(사용자 2026-11-08) — 묶은 TU 는 앞 소스의 include 를 빌려 빠진 include · 헤더 의존 결함을 가린다.
+# Debug(묶음 끝 검증의 첫 단계)는 TU 하나씩 지어 그 결함을 잡는다. 켜면 라이브러리 · 모듈 타깃 모두를 같은 크기로 묶는다(`sw_setUnityBuild`).
+option(SW_ENABLE_UNITY_BUILD "라이브러리 · 모듈 타깃에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 — Release 프리셋이 켠다" OFF)
+set(SW_UNITY_BATCH_SIZE 12 CACHE STRING "유니티 파일 하나에 묶는 소스 수(모든 타깃 한 값)")
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션

@@ -85,9 +85,7 @@ function(sw_addCoreObjects TARGET_NAME PCH_ENTRY_NAME PCH_FILE)
 	endif()
 
 	sw_configurePCH(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/${PCH_FILE}")
-	if(SW_UNITY_BATCH_CORE)
-		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE ${SW_UNITY_BATCH_CORE})
-	endif()
+	sw_setUnityBuild(${TARGET_NAME})
 	target_link_libraries(${TARGET_NAME} PRIVATE sw_global_options)
 endfunction()
 

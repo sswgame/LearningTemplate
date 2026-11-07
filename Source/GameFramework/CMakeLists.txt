@@ -33,7 +33,6 @@ sw_addModuleLibrary(GameFramework
 	FOLDER "Source/GameFramework"
 	SOURCES ${listGameFrameworkSource}
 	LINK_PUBLIC Engine sw_public_source_includes
-	UNITY_BATCH 8
 	REFLECTION_HEADERS ${listGameFrameworkHeader}
 )
 # 결정적 시뮬레이션 키트(`GF_MechArena` 의 판 걸음)가 부르는 Runtime 의 줄 밖 실수 함수 — 부르는 TU 만 표시하면 여기 축약이 구성마다 비트를 바꾼다
