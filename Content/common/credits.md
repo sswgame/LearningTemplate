@@ -1,5 +1,7 @@
 # 공용 팩 — 에셋 출처
 
+**Quaternius 라이선스 확인(2026-11-08).** 아래 Quaternius 묶음 여덟(Universal Base Characters · Universal Animation Library 1 · 2 · Stylized Nature · Medieval Village · Fantasy Props MegaKit · Sci-Fi Essentials Kit · Modular Character Outfits - Fantasy)은 각 묶음 페이지(itch.io · quaternius.com/packs)가 "Free to use in personal, educational and commercial projects. (CC0 License)" 로 밝힌다. quaternius.com/license.html 의 QAL v1.0(8/28/2026, 원본 재배포 금지)은 7 절에서 이미 받은 에셋에 소급하지 않는다고 적는다. 새로 받는 Quaternius 묶음은 그 묶음 페이지가 CC0 일 때만 들인다 — QAL 묶음은 원본을 저장소에 둘 수 없으니 다른 CC0 출처를 쓴다.
+
 | 파일 | 원본 | 라이선스 |
 |------|------|----------|
 | `models_raw/quaternius/characters/superhero_*_fullbody.gltf` · `*.bin` · `textures_raw/quaternius/characters/*.png` | Quaternius "Universal Base Characters" Standard(무료판, <https://quaternius.itch.io/universal-base-characters>) — `Base Characters/Godot - UE` 의 glTF 둘과 텍스처. 텍스처는 `textures_raw/` 로 옮겨 glTF 의 uri 를 고쳤고, 파일 이름은 소문자로 바꿨다(묶음 glTF 가 `*_normal_png.png` 로 가리키던 노멀 둘은 `*_normal.png` 로 — 노멀 텍스처 규칙이 이름 꼬리로 고른다). 쓰지 않는 사본(`*_BaseColor_png.png`)은 뺐다 | CC0 1.0 |
