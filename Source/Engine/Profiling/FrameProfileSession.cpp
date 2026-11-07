@@ -9,6 +9,7 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -45,6 +46,10 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
 #endif
+    /**
+     * @brief `-gv_profileReportPath=<경로>`: 측정 창의 보고를 JSON 으로도 씁니다(비면 끄기). 회귀 스크립트가 로그 글을 긁지 않고 칸으로 읽는다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_profileReportPath, "", "측정 창의 보고를 이 경로에 JSON 으로 저장 (비면 끄기)" );
 
     bool FrameProfileSession::isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget )
     {
@@ -133,6 +138,7 @@ namespace sw
         [[maybe_unused]] const int64 elapsedMicro = frameEndMicro - _measureStartMicro;
         SW_LOG_INFO_ID( "FrameProfileSession.WallFramesMsUs", "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / constant::time::kMicrosecondsPerMillisecond, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
         reportHitches();
+        fillReport( profiler, frames, elapsedMicro );
         reportAllocations( frames );
 #if SW_PROFILER_TRACE_ENABLED
         if ( gv_profileTracePath.empty() == false )
@@ -140,6 +146,45 @@ namespace sw
 #endif
         profiler.setEnabled( false );
         _bQuitRequested = SW_TRUE;
+    }
+
+    void FrameProfileSession::fillReport( const FrameProfiler& profiler, uint64 frames, int64 elapsedMicro )
+    {
+        FrameProfileReport& report = _report;
+        report                     = FrameProfileReport{};
+        report._build              = build::kConfigName;
+        report._platform           = build::kPlatformName;
+        report._target             = build::kTargetName;
+        report._warmupFrames       = static_cast<int64>( kWarmupFrames );
+        report._frames             = static_cast<int64>( frames );
+        report._elapsedMicro       = elapsedMicro;
+        report._microPerFrame      = elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames );
+        report._listWorstFrameMicro.assign( std::begin( _arrWorstFrameMicro ), std::end( _arrWorstFrameMicro ) );
+        report._over16ms                    = _arrHitchCount[0];
+        report._over33ms                    = _arrHitchCount[1];
+        report._over100ms                   = _arrHitchCount[2];
+        const FramePacing pacing            = computePacing( _arrPacingBin, kPacingBinCount );
+        report._pacingMedianMicro           = pacing._medianMicro;
+        report._pacingOverOneAndHalf        = pacing._overOneAndHalfMedian;
+        report._pacingOverTwoAndHalf        = pacing._overTwoAndHalfMedian;
+        const MemoryProfiler* const pMemory = MemoryProfiler::getActive();
+        if ( _bAllocationTrackingStarted == SW_TRUE && pMemory != nullptr && frames > 0 )
+        {
+            const uint64 allocationCount   = pMemory->getTotalAllocationCount() - _allocationCountAtStart;
+            report._allocationCount        = static_cast<int64>( allocationCount );
+            report._allocationsPerFrameX10 = static_cast<int64>( ( allocationCount * 10 ) / frames );
+            report._allocationTracked      = 1;
+        }
+        profiler.collectScopeSummaries( report._listScope );
+    }
+
+    bool FrameProfileSession::saveReport( string_view rhiBackend, string_view scene )
+    {
+        if ( gv_profileReportPath.empty() )
+            return true;
+        _report._rhiBackend = string( rhiBackend );
+        _report._scene      = string( scene );
+        return _report.saveToFile( gv_profileReportPath.c_str() );
     }
 
     void FrameProfileSession::recordFrameInterval( int64 intervalMicro )

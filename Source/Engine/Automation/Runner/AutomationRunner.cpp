@@ -519,6 +519,15 @@ namespace sw
             finish( AutomationResult::LoadError, "<Load> could not set gv_profileSeconds (a build without the frame profiler?)" );
             return;
         }
+        // 측정 창의 기계 판독 보고(`profile.report.json`)를 산출물 폴더에 — 기준선과 견주는 스크립트가 로그 글 대신 칸으로 읽는다. 명령줄로 경로를 이미 줬으면 그것을 둔다.
+        GlobalVariableManager&    variables        = engine::getSubsystem<GlobalVariableManager>();
+        const GlobalVariableInfo* pReportPath      = variables.findVariable( "gv_profileReportPath" );
+        const bool                bReportPathGiven = pReportPath != nullptr && pReportPath->getValueAsString().empty() == false;
+        if ( bReportPathGiven == false && variables.setValueFromString( "gv_profileReportPath", FileUtil::joinPath( _outputDirectory, "profile.report.json" ) ) == false )
+        {
+            finish( AutomationResult::LoadError, "<Load> could not set gv_profileReportPath" );
+            return;
+        }
         // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
         _run._loadDeadlineSeconds = AutomationRunnerInternal::readNowSeconds() + 2.0 * static_cast<float64>( seconds ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds;
         SW_LOG_INFO_ID( "Automation.LoadWindowClientsMeshes", "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,

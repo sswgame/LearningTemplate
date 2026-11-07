@@ -6,8 +6,12 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Profiling/FrameProfileReport.h"
+
 namespace sw
 {
+    class FrameProfiler;
+
     /**
      * @class FrameProfileSession
      * @brief 프레임 프로파일 한 회분의 진행 상태를 들고 판정합니다.
@@ -71,6 +75,14 @@ namespace sw
         bool hasReported() const { return _bReported == SW_TRUE; }
 
         /**
+         * @brief 보고를 낸 프레임에 부르는 쪽(`Engine`)이 이 층이 볼 수 없는 환경(RHI · 씬)을 채워 `-gv_profileReportPath` 에 JSON 으로 씁니다. 경로가 비면 아무것도 하지 않습니다.
+         * @return 경로가 없거나 썼으면 true, 쓰지 못했으면 false(오류는 남겼다).
+         */
+        [[nodiscard]] bool saveReport( string_view rhiBackend, string_view scene );
+        /** @brief 측정 창의 기계 판독 보고입니다(`hasReported` 뒤에 유효). */
+        const FrameProfileReport& getReport() const { return _report; }
+
+        /**
          * @brief 측정 창을 닫을 때인가입니다. 프레임 목표와 시간 목표 가운데 먼저 닿는 쪽이 닫습니다(0 인 목표는 보지 않습니다).
          * @details 프레임 상한이 없는 실행은 초당 프레임 수가 장면마다 수십 배 달라 "N 프레임" 이 몇 초인지 모릅니다 — 오래 도는 테스트(soak)은
          *          시간으로 끊습니다(`-gv_profileSeconds`).
@@ -89,6 +101,8 @@ namespace sw
          *        평균 · 백분위 표가 가리는 한 번의 긴 프레임을 본다.
          */
         void reportHitches() const;
+        /** @brief 측정 창의 값(벽시계 · 히치 · 페이싱 · 할당 · 구간 표)을 `_report` 에 담습니다. 로그 표와 같은 값이다. */
+        void fillReport( const FrameProfiler& profiler, uint64 frames, int64 elapsedMicro );
 
     private:
         /** @brief 측정할 프레임 수입니다. 0 이면 프레임 수로 끊지 않습니다(시간 목표만 있을 때). */
@@ -121,5 +135,7 @@ namespace sw
         uint32 _arrHitchCount[3]{};
         /** @brief 측정 창의 프레임 간격 히스토그램입니다(칸 너비 `kPacingBinMicro`). 할당 없이 중앙값과 놓친 주기를 구한다. */
         uint32 _arrPacingBin[kPacingBinCount]{};
+        /** @brief 측정 창의 기계 판독 보고입니다(`fillReport` 가 채우고 `saveReport` 가 쓴다). */
+        FrameProfileReport _report{};
     };
 } // namespace sw

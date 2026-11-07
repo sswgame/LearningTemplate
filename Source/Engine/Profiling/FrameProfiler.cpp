@@ -55,18 +55,13 @@ namespace sw
             return ( uint64( FrameProfiler::kSubBucketCount ) + mantissa ) << ( octave - FrameProfiler::kSubBucketBit );
         }
 
-        // 이 둘은 report() 의 표 출력에만 쓰인다. 배포본에서는 SW_LOG_INFO 가 사라져 report()
+        // 이것은 report() 의 표 출력에만 쓰인다. 배포본에서는 SW_LOG_INFO 가 사라져 report()
         // 본문이 통째로 빠지므로 여기도 같은 조건으로 묶는다. 묶지 않으면 쓰이지 않는 함수 경고가 난다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         /**
          * @brief 나노초를 마이크로초 정수로 바꿉니다.
          * @details 실수로 찍으면 값마다 소수 자릿수가 달라져 표가 어긋납니다. 정수 us 로 고정합니다.
          */
-        uint64 toMicros( uint64 nanos )
-        {
-            return nanos / constant::time::kNanosecondsPerMicrosecond;
-        }
-
         /** @brief 표가 어긋나지 않게 이름을 고정 폭으로 맞춥니다. */
         void padRight( fixed_string<constant::buffer::kMax64>& out, const utf8* pText, size_t width )
         {
@@ -286,6 +281,22 @@ namespace sw
         SW_LOG_INFO_ID( "FrameProfiler.Frames", "[Profile] ===== %# — %# frames =====", pTitle != nullptr ? pTitle : "", frames );
         SW_LOG_INFO_ID( "FrameProfiler.AvgUsP50Us", "[Profile] %#  avg_us   p50_us   p99_us   min_us   max_us   per_frame", nameColumn.c_str() );
 
+        vector<FrameProfileScopeSummary> listSummary;
+        collectScopeSummaries( listSummary );
+        for ( const FrameProfileScopeSummary& summary : listSummary )
+        {
+            // 시간이 0 인 구간은 순수 카운터(SW_PROFILE_COUNT)다. 시간 열은 의미가 없다.
+            padRight( nameColumn, summary._name.c_str(), 32 );
+            SW_LOG_INFO_ID( "FrameProfiler.ScopeRow", "[Profile] %#  %#   %#   %#   %#   %#   %#.%#", nameColumn.c_str(), summary._avgMicro, summary._p50Micro,
+                            summary._p99Micro, summary._minMicro, summary._maxMicro, summary._callsPerFrameX10 / 10, summary._callsPerFrameX10 % 10 );
+        }
+#endif
+    }
+
+    void FrameProfiler::collectScopeSummaries( vector<FrameProfileScopeSummary>& outListSummary ) const
+    {
+        const auto toMicro = []( uint64 nanos )
+        { return static_cast<int64>( nanos / constant::time::kNanosecondsPerMicrosecond ); };
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
         {
@@ -293,19 +304,16 @@ namespace sw
             const utf8*  pScopeName = scope._pName.load( std::memory_order_acquire );
             if ( scope._sampledFrames == 0 || pScopeName == nullptr )
                 continue;
-
-            padRight( nameColumn, pScopeName, 32 );
-
-            // 시간이 0 인 구간은 순수 카운터(SW_PROFILE_COUNT)다. 시간 열은 의미가 없다.
-            const uint64 avgUs       = toMicros( scope._totalNanos / scope._sampledFrames );
-            const uint64 perFrameX10 = ( scope._totalCalls * 10 ) / scope._sampledFrames;
-
-            SW_LOG_INFO_ID( "FrameProfiler.ScopeRow", "[Profile] %#  %#   %#   %#   %#   %#   %#.%#",
-                            nameColumn.c_str(), avgUs, toMicros( getPercentileNanos( index, 50 ) ),
-                            toMicros( getPercentileNanos( index, 99 ) ), toMicros( scope._minNanos ),
-                            toMicros( scope._maxNanos ), perFrameX10 / 10, perFrameX10 % 10 );
+            FrameProfileScopeSummary summary;
+            summary._name             = pScopeName;
+            summary._avgMicro         = toMicro( scope._totalNanos / scope._sampledFrames );
+            summary._p50Micro         = toMicro( getPercentileNanos( index, 50 ) );
+            summary._p99Micro         = toMicro( getPercentileNanos( index, 99 ) );
+            summary._minMicro         = toMicro( scope._minNanos );
+            summary._maxMicro         = toMicro( scope._maxNanos );
+            summary._callsPerFrameX10 = static_cast<int64>( ( scope._totalCalls * 10 ) / scope._sampledFrames );
+            outListSummary.push_back( std::move( summary ) );
         }
-#endif
     }
 
     void FrameProfiler::reset()

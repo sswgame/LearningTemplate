@@ -30,6 +30,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
+#include "Engine/Profiling/FrameProfileReport.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 
 namespace sw
@@ -184,6 +185,8 @@ namespace sw
          */
         uint64 getPercentileNanos( uint32 slot, uint32 percent ) const;
 
+        /** @brief 측정 창에 표본이 있는 구간마다 요약(avg · p50 · p99 · min · max · 프레임당 호출)을 @p outListSummary 에 붙입니다(`report` 표와 기계 판독 보고가 같은 값을 쓴다). */
+        void collectScopeSummaries( vector<FrameProfileScopeSummary>& outListSummary ) const;
         /** @brief 모은 통계를 로그로 남깁니다. avg · p50 · p99 · min · max · per_frame 순입니다. */
         void report( const utf8* pTitle ) const;
         /** @brief 통계와 프레임 수를 비웁니다. 워밍업 구간을 버릴 때 씁니다. */

@@ -636,6 +636,9 @@ namespace sw
         const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
         if ( bReportedNow && bHasDevice )
             _pRHI->getDevice().getMemoryTracker().report( _pRHI->getDevice().getBackendName() );
+        // 기계 판독 보고(`-gv_profileReportPath`) — RHI · 씬은 보고 세션의 층이 볼 수 없어 여기서 채운다. 실패는 세션이 오류로 남겼다.
+        if ( bReportedNow )
+            (void)_profileSession.saveReport( bHasDevice ? string_view( _pRHI->getDevice().getBackendName() ) : string_view{}, makeFrameContext()._activeSceneID );
         // 캐시 적중 · 실패 표도 같은 자리에서 잇는다. 보고 세션은 Profiling 층이라 에셋 매니저(Resource)를 볼 수 없다.
         if ( bReportedNow )
             CacheStatsUtil::logReport( "profile window" );
