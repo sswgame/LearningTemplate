@@ -97,6 +97,12 @@ endfunction()
 #   한국어 Windows 에서 봇 인자가 CP949 로 들어왔다 — 만드는 함수 하나가 매니페스트까지 붙이면 빠뜨릴 자리가 없다.
 # ------------------------------------------------------------------------------
 function(sw_addExecutable TARGET_NAME)
+	# Android 는 실행 파일이 없다 — NativeActivity 가 공유 라이브러리(lib<이름>.so)를 열고 android_main 을 부른다(App/Android/AndroidMain.cpp).
+	if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+		add_library(${TARGET_NAME} SHARED ${ARGN})
+		target_link_libraries(${TARGET_NAME} PRIVATE sw_android_native_app_glue)
+		return()
+	endif()
 	add_executable(${TARGET_NAME} ${ARGN})
 	if(WIN32)
 		target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/cmake/Modules/Platform/WindowsProcess.manifest")

@@ -170,6 +170,16 @@ namespace sw
     {
         if ( event == WindowLifecycleEvent::SurfaceLost || event == WindowLifecycleEvent::AppSuspended )
             flushSubmittedPackets();
+        // 표면은 이 통보가 돌아오면 사라진다(Android) — 스왑체인 · 표면을 지금 놓고, 돌아오면 새 창으로 다시 짓는다. 멈춘 동안은 프레임을 돌지 않는다(`IWindow::isRenderPaused`).
+        const bool bHasDevice = _pRHI != nullptr && _pRHI->hasDevice();
+        if ( bHasDevice && event == WindowLifecycleEvent::SurfaceLost )
+        {
+            if ( _pRenderThread != nullptr )
+                _pRenderThread->waitIdle( RHIWaitIdleReason::WindowSwapChain );
+            _pRHI->getDevice().releaseSurface();
+        }
+        if ( bHasDevice && event == WindowLifecycleEvent::SurfaceRestored && _pRHI->getDevice().restoreSurface() == false )
+            SW_LOG_ERROR_ID( "Render.SurfaceRestoreFailed", "The native surface came back but the RHI could not rebuild its swap chain - the screen stays black" );
     }
 
     void EngineRenderDriver::onMainWindowResize( const uint32 width, const uint32 height )

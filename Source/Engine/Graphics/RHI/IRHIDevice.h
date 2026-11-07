@@ -417,6 +417,13 @@ namespace sw
          *          @p desc 의 창 핸들 · 디스플레이 · 표면 종류 · 크기를 읽는다. 버퍼 수 · 포맷 · VSync 는 메인 창과 같은 값을 쓴다(같은 렌더 패스 · 파이프라인을 쓴다).
          */
         [[nodiscard]] IRHISwapChain* createSwapChain( const RHISwapChainDesc& desc );
+        /**
+         * @brief 주 창의 네이티브 표면을 잃었습니다(Android 의 onPause · 창 파괴 — `WindowLifecycleEvent::SurfaceLost`). 렌더 스레드를 비운 뒤 백엔드가 스왑체인 · 표면을 놓습니다.
+         * @details 데스크톱 표면은 사라지지 않아 백엔드 기본은 아무것도 하지 않는다. 장치 · 자원은 그대로다 — 언리얼 Android 의 `FAndroidWindow` 표면 교체와 같은 자리다(기억).
+         */
+        void releaseSurface();
+        /** @brief 주 창의 표면이 돌아왔습니다(`SurfaceRestored`). 표면(`setRenderSurface`)이 새 핸들을 준다. 다시 짓지 못하면 false 이고 그리지 못한다(오류는 백엔드가 남긴다). */
+        [[nodiscard]] bool restoreSurface();
         /** @brief 스왑체인 크기를 바꿉니다. 크기가 같거나 한쪽이 0(최소화)이면 아무것도 하지 않습니다. 렌더 스레드와 GPU 를 비운 뒤에 바꿉니다. */
         void resizeSwapChain( IRHISwapChain& swapChain, uint32 width, uint32 height );
         /** @brief `createSwapChain` 이 만든 스왑체인을 부숩니다. nullptr 은 무시합니다. 창을 부수기 전에 부릅니다(표면이 창보다 먼저 사라져야 한다). */
@@ -594,6 +601,10 @@ namespace sw
         virtual void resizeSwapChainInternal( IRHISwapChain& swapChain, uint32 width, uint32 height ) = 0;
         /** @brief `destroySwapChain` 의 백엔드 훅입니다. 렌더 스레드와 GPU 는 이미 비었습니다. */
         virtual void destroySwapChainInternal( IRHISwapChain& swapChain ) = 0;
+        /** @brief `releaseSurface` 의 백엔드 훅입니다. 렌더 스레드는 이미 비었다. 사라지는 표면이 없는 백엔드는 할 일이 없다. */
+        virtual void releaseSurfaceInternal() {}
+        /** @brief `restoreSurface` 의 백엔드 훅입니다. */
+        [[nodiscard]] virtual bool restoreSurfaceInternal() { return true; }
         /** @brief `acquireSwapChainImage` 의 백엔드 훅입니다(렌더 스레드, 프레임 안). */
         [[nodiscard]] virtual bool acquireSwapChainImageInternal( IRHISwapChain& swapChain ) = 0;
 

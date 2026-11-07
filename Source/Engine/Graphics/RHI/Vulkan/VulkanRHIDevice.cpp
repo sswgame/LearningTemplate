@@ -32,6 +32,8 @@
     #include <xcb/xcb.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
+#elif defined( SW_PLATFORM_ANDROID )
+    #include <vulkan/vulkan_android.h>
 #else
     #error "Unsupported platform"
 #endif
@@ -924,6 +926,16 @@ namespace sw
             SW_LOG_ERROR_ID( "Vulkan.InstallLibxcb1DevLibx11", "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
             return false;
         }
+#elif defined( SW_PLATFORM_ANDROID )
+        // NDK 의 libvulkan.so 가 로더다 — 표면 확장은 Android 1.0 부터 늘 있다(그래도 없으면 장치가 Vulkan 을 주지 않는 것이다).
+        if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_ANDROID_SURFACE_EXTENSION_NAME ) == false )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.NoAndroidSurfaceExtension", "VK_KHR_android_surface is not available." );
+            _initResult = RHIInitResult::DriverUnsupported;
+            return false;
+        }
+        listExtension.push_back( VK_KHR_ANDROID_SURFACE_EXTENSION_NAME );
+        _wsiKind = VulkanWsiKind::Android;
 #else
     #error "Unsupported platform"
 #endif
@@ -1499,6 +1511,36 @@ namespace sw
         _swapChain.setRequestedVSync( isVSyncEnabled() );
         if ( _width != 0 && _height != 0 )
             _bSwapChainDirty = 1;
+    }
+
+    void VulkanRHIDevice::releaseSurfaceInternal()
+    {
+        if ( _device == nullptr )
+            return;
+        {
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "releaseSurface: vkDeviceWaitIdle" );
+        }
+        // 네이티브 창(ANativeWindow)은 이 함수가 돌아온 뒤 사라진다 — 스왑체인 · 표면을 지금 놓는다. 장치 · 자원은 그대로다(돌아오면 표면만 다시 짓는다).
+        destroyFrameFences();
+        _swapChain.destroySemaphores( _device );
+        _swapChain.destroy( _device );
+        _swapChain.destroySurface( _instance );
+    }
+
+    bool VulkanRHIDevice::restoreSurfaceInternal()
+    {
+        if ( _device == nullptr || _pSurface == nullptr )
+            return false;
+        _pHWnd          = _pSurface->getSurfaceHandle(); // 새 ANativeWindow 다(같은 자리의 다른 창)
+        _pDisplayHandle = _pSurface->getSurfaceDisplay();
+        _width          = _pSurface->getSurfaceWidth();
+        _height         = _pSurface->getSurfaceHeight();
+        if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
+            return false;
+        // 큐 패밀리는 그대로 쓴다 — 같은 장치의 새 창이라 표시 지원이 같다(Android 는 그래픽 큐가 늘 표시한다, 기억). 스왑체인은 다음 프레임이 다시 짓는다.
+        _bSwapChainDirty = 1;
+        return true;
     }
 
     bool VulkanRHIDevice::recreateSwapChain()

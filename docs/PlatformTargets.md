@@ -33,7 +33,7 @@
 | 지오메트리 · 테셀레이션 | 파이프라인 XML 이 고르는 선택 스테이지 | 선택(장치 값) | 없음 | 그런 PSO 는 오류로 만들지 않는다(Vulkan 과 같은 규칙) |
 | 스레드 | 렌더 스레드 · 병렬 기록 · 워커 생성 | 모두 된다 | 장치는 만든 스레드에서만(Emscripten 에서 JS 객체는 워커를 넘지 못한다) | `_bParallelCommandRecording` · `_bThreadSafeResourceCreation` 거짓, 웹은 렌더 스레드를 띄우지 않는다(`gv_useRenderThread` 기본값을 플랫폼 사슬로) |
 | GPU 대기 | `waitIdle`(종료 · 백엔드 교체 · 크기 변경 · 셰이더 핫 리로드 · 파이프라인 바꿈) | 된다 | 브라우저는 GPU 를 동기로 기다릴 수 없다 | 씬 활성화 · 에셋 핫 리로드 · 캡처는 이미 `flushRenderThread` + 펜스 지연 해제다(`RHI.GPUIdleWaits` 시나리오). WebGPU 의 `waitIdleInternal` 은 기다리지 않고 해제 큐를 비운다 — WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세). 되읽기는 늘 `mapAsync` 콜백이다 |
-| 타임스탬프 | `IRHITimestampProvider` | 된다(`timestampPeriod`) | `timestamp-query` 선택 | WebGPU: 기능이 있을 때만 제공자를 단다(없으면 nullptr — 이미 있는 선택 능력 모양) |
+| 타임스탬프 | `IRHITimestampProvider` | 된다(`timestampPeriod`) | `timestamp-query` 선택 | WebGPU: 아직 제공자가 없다(nullptr — 이미 있는 선택 능력 모양). `timestamp-query` 로 다는 것은 남은 일 |
 | 표면 | 창 핸들(`IRenderSurface`) | `ANativeWindow*`(`NativeSurfaceKind::AndroidWindow`), 앱 수명 안에서 사라졌다 생긴다 | canvas 선택자(`NativeSurfaceKind::WebCanvas`) | Android: `VK_KHR_android_surface`. 웹: `WGPUSurfaceSourceCanvasHTMLSelector` |
 
 ## 단계별 상태(코드와 대조, 2026-11-07)
@@ -43,6 +43,21 @@
 3. **WebGPU RHI 백엔드** — `Source/Engine/Graphics/RHI/WebGPU/`. 셰이더 대상 `WGSL_WebGPU`(DXC SPIR-V → Tint → WGSL, 바인딩 표를 앞에 붙인 바이너리), 고정 슬롯 모델.
 4. **Emscripten 빌드** — `cmake/Modules/Platform/Web.cmake`(링크 옵션 · 포트), 메인 루프는 브라우저 프레임 콜백(`emscripten_set_main_loop_arg`), canvas 창.
 5. **Android Vulkan** — `cmake/Modules/Platform/Android.cmake`(NDK 라이브러리), `android_main` 진입 · `ANativeWindow` 창, `VK_KHR_android_surface`.
+
+## 화면 대응(모바일 · 데스크톱)
+
+- 안전 여백: 플랫폼 창이 `IWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiDebugSafeZone`)와 큰 쪽을 고른다.
+- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. Vulkan 스왑체인은 `IDENTITY` 변환이라 합성기가 돌린다(pre-rotation 은 남은 일).
+- 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서가 `_when` 변형으로 다시 배치한다.
+- 손가락: 터치 장치의 첫 손가락이 UI 포인터가 되고, 조작을 비켜 짚으면 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
+- 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
+- 에디터: UI 미리보기 견본(`uiresolutions.xml`)이 기기 여백 · density 를 싣고 "돌리기" 로 가로를 본다. 같은 조건의 시나리오는 `engine/automation/screenadapt`(단계 `Touch`).
+
+## 남은 일(코드를 붙여 보지 못한 것)
+
+- 빌드: Emscripten · NDK 로 한 번도 짓지 못했다 — Core · Engine 의 `#error "Unsupported platform"` 사슬 중 Android · Web 갈래가 없는 곳이 컴파일에서 드러난다(설계대로).
+- WebGPU: 깊이를 색으로 샘플하는 패스(깊이 텍스처는 `texture_depth_2d` 로만 읽힌다 — 자동 레이아웃이 `float` 로 보면 검증 오류) — 언리얼 모바일의 SceneDepthAux(R32F 사본)처럼 깊이 사본 패스와 능력 깃발이 필요하다. 그리기마다 짓는 바인드 그룹의 캐시, 타임스탬프 제공자, 브라우저 Gamepad API.
+- Android: APK 패키징(매니페스트 · Gradle), 인텐트로 받는 명령줄, 패드 연결, pre-rotation, 미리보기 문맥의 `screen` 태그(지금 태그는 전역이라 에디터 미리보기에 compact 변형이 보이지 않는다).
 
 ## 받아야 할 의존성(추가하지 않았다 — 붙일 때 사용자에게 라이선스를 받는다)
 

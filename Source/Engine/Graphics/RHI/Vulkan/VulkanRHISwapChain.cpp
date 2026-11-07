@@ -6,7 +6,10 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_ANDROID )
+    #include <android/native_window.h>
+    #include <vulkan/vulkan_android.h>
+#elif defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
 
     #include <X11/Xlib-xcb.h>
@@ -16,6 +19,10 @@
     #include <xcb/xcb.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
+#elif defined( SW_PLATFORM_WINDOWS )
+// Win32 표면 헤더는 VulkanRHIUtil.h 가 이미 연다.
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -179,6 +186,7 @@ namespace sw
             case VulkanWsiKind::Xlib:
             case VulkanWsiKind::Xcb:
             case VulkanWsiKind::Wayland:
+            case VulkanWsiKind::Android:
             {
                 SW_LOG_ERROR_ID( "Vulkan.VulkanWSIKindCannot", "Vulkan WSI kind %# cannot create a surface on Windows (only Win32 can).", static_cast<uint32>( wsiKind ) );
                 return false;
@@ -201,6 +209,7 @@ namespace sw
                 return VulkanRHISwapChainInternal::createXcbSurface( instance, pDisplay, window, _surface );
             case VulkanWsiKind::None:
             case VulkanWsiKind::Win32:
+            case VulkanWsiKind::Android:
             {
                 SW_LOG_ERROR_ID( "Vulkan.VulkanWSIKindCannot2", "Vulkan WSI kind %# cannot create a surface on Linux (instance creation picks Xlib, Xcb or Wayland).", static_cast<uint32>( wsiKind ) );
                 return false;
@@ -208,6 +217,22 @@ namespace sw
         }
         SW_LOG_ERROR_ID( "Vulkan.UnknownVulkanWSIKind", "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
         return false;
+#elif defined( SW_PLATFORM_ANDROID )
+        (void)pDisplayHandle;
+        if ( wsiKind != VulkanWsiKind::Android || pWindowHandle == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.AndroidNeedsNativeWindow", "Vulkan on Android needs an ANativeWindow surface (WSI kind %#, window %#)", static_cast<uint32>( wsiKind ), pWindowHandle );
+            return false;
+        }
+        VkAndroidSurfaceCreateInfoKHR createInfo{};
+        createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+        createInfo.window = static_cast<ANativeWindow*>( pWindowHandle );
+        if ( vkCreateAndroidSurfaceKHR( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.FailedCreateAndroidSurface", "Failed to create the Android Vulkan surface" );
+            return false;
+        }
+        return true;
 #else
     #error "Unsupported platform"
 #endif
@@ -345,9 +370,9 @@ namespace sw
                 compositeAlpha = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
         }
 
-        VkSurfaceTransformFlagBitsKHR preTransform = capabilities.currentTransform;
-        if ( ( capabilities.supportedTransforms & preTransform ) == 0 )
-            preTransform = ( ( capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) != 0 ) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : capabilities.currentTransform;
+        // 회전한 휴대 기기 화면(currentTransform 이 90 · 270)에서 currentTransform 을 그대로 쓰면 그림이 옆으로 눕는다 — 엔진이 그림을 미리 돌리지 않으므로 IDENTITY 로 두고 합성기가 돌린다.
+        // shortcut: 합성기 회전은 GPU 한 번을 더 쓴다(Android 성능 지침의 pre-rotation), 휴대 기기 프레임이 모자라면 투영 · 뷰포트를 돌리고 currentTransform 을 쓴다.
+        VkSurfaceTransformFlagBitsKHR preTransform = ( capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) != 0 ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : capabilities.currentTransform;
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

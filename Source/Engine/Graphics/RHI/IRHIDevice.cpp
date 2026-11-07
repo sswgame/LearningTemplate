@@ -161,6 +161,18 @@ namespace sw
             pfnFlush( _pRenderThreadFlushContext.load( std::memory_order_relaxed ) );
     }
 
+    void IRHIDevice::releaseSurface()
+    {
+        waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        releaseSurfaceInternal();
+    }
+
+    bool IRHIDevice::restoreSurface()
+    {
+        flushRenderThread();
+        return restoreSurfaceInternal();
+    }
+
     uint64 IRHIDevice::getGPUIdleWaitCount() const
     {
         return _pDeferredHandleQueue->_gpuIdleWaitCount.load( std::memory_order_relaxed );

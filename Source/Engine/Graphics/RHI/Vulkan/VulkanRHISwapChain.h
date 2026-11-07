@@ -40,6 +40,7 @@ namespace sw
         Xlib,    ///< VK_KHR_xlib_surface — Display* 와 X11 Window
         Xcb,     ///< VK_KHR_xcb_surface — Display* 에서 얻은 xcb 연결과 X11 Window
         Wayland, ///< VK_KHR_wayland_surface — wl_display* 와 wl_surface*
+        Android, ///< VK_KHR_android_surface — ANativeWindow*(앱 수명 안에서 사라졌다 생긴다 — `IRHIDevice::releaseSurface` · `restoreSurface`)
     };
 
     /**

@@ -535,6 +535,10 @@ namespace sw
          * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 테이블까지 함께 갱신한다.
          */
         [[nodiscard]] bool recreateSwapChain();
+        /** @brief 표면을 잃었다(Android `APP_CMD_TERM_WINDOW`) — GPU 를 쉬게 하고 스왑체인 · 표면을 놓습니다. */
+        void releaseSurfaceInternal() override;
+        /** @brief 표면이 돌아왔다 — 새 네이티브 창으로 표면을 다시 짓고 다음 프레임에 스왑체인을 다시 만듭니다. */
+        [[nodiscard]] bool restoreSurfaceInternal() override;
         /**
          * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
          * @details 다른 창은 이 프레임에 처음 쓰일 때 이미지를 획득하고(낡았으면 그 자리에서 다시 만든다) 그 신호를 이 프레임의 첫 제출이 기다리게 하며,
