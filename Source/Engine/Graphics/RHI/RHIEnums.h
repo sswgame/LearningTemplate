@@ -45,6 +45,8 @@ namespace sw
         ETC2_RGBA8_UNORM = 18, ///< 16 B/블록, ETC2 RGB + EAC 알파
         EAC_R11_UNORM    = 19, ///< 8 B/블록, 단일 채널
         EAC_RG11_UNORM   = 20, ///< 16 B/블록, 2채널(노멀맵)
+        /// @brief 32비트 부동소수점 RGBA(16 B). `R32G32B32_FLOAT` 텍스처를 그 형식이 없는 장치(모바일 Vulkan · WebGPU)에 올릴 때 펴는 형식이다(`Texture2D::expandToFourChannels`).
+        R32G32B32A32_FLOAT = 21,
     };
 
     /**

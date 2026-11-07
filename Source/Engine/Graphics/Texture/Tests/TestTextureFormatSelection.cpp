@@ -160,3 +160,34 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( DDSFormat::kEngineDxgiEACRG11 ) == RHIFormat::EAC_RG11_UNORM );
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
+
+/**
+ * @brief [TextureFormatSelectionTest] 세 채널 실수 이미지는 텍셀마다 알파 1 을 붙여 네 채널로 펴고, 다른 형식은 펴지 않는다
+ */
+SW_TEST_CASE( TextureFormatSelectionTest, ExpandsThreeChannelFloatToFour )
+{
+    constexpr uint32 kDxgiR32G32B32 = 6;
+    const float32    arrSource[]    = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+    DDSImageData     image;
+    image._width      = 2;
+    image._height     = 1;
+    image._dxgiFormat = kDxgiR32G32B32;
+    image._bytes.resize( sizeof( arrSource ) );
+    Memory::copy( image._bytes.data(), arrSource, sizeof( arrSource ) );
+
+    DDSImageData expanded;
+    SW_REQUIRE_TRUE( Texture2D::expandToFourChannels( image, expanded ) );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( expanded._dxgiFormat ) == RHIFormat::R32G32B32A32_FLOAT );
+    SW_REQUIRE_EQUAL( size_t{ 32 }, expanded._bytes.size() );
+    float32 arrResult[8]{};
+    Memory::copy( arrResult, expanded._bytes.data(), sizeof( arrResult ) );
+    const float32 arrExpected[] = { 1.0f, 2.0f, 3.0f, 1.0f, 4.0f, 5.0f, 6.0f, 1.0f };
+    for ( size_t index = 0; index < 8; ++index )
+    {
+        SW_EXPECT_EQUAL( arrExpected[index], arrResult[index] );
+    }
+
+    DDSImageData notFloat = image;
+    notFloat._dxgiFormat  = 28; // R8G8B8A8_UNORM
+    SW_EXPECT_FALSE( Texture2D::expandToFourChannels( notFloat, expanded ) );
+}

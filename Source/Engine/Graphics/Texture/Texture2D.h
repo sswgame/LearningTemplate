@@ -110,7 +110,7 @@ namespace sw
          *          bindless 에 등록하지 않는다(전송 계약 1 · 8) — 그 사이 `isRHIValid` 는 거짓이다.
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다(블로킹 헬퍼 — 동기 `acquire` 의 `wait()`). 거짓이면 `Busy` 를 그대로 돌려준다.
          */
-        [[nodiscard]] Texture2DUploadStep beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency, bool bBlocking );
+        [[nodiscard]] Texture2DUploadStep beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& sourceImage, TextureResidency residency, bool bBlocking );
         /**
          * @brief 제출한 업로드(`beginUploadFromImage` · `beginUploadFromCPUBytes`)가 끝났는지 보고, 끝났으면 bindless 에 등록합니다.
          * @param bBlocking 참이면 끝날 때까지 기다립니다(10 초 상한 — 넘으면 오류와 `Failed`). 거짓이면 `Pending` 을 그대로 돌려줍니다.
@@ -125,7 +125,7 @@ namespace sw
          *          남는다(오류를 남긴다). 이미 올리는 중이거나 올릴 것이 없으면 `Failed` 다(오류 없음).
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다. 거짓이면 `Busy` 를 그대로 돌려줍니다(만든 텍스처는 지웠다).
          */
-        [[nodiscard]] Texture2DUploadStep beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& image, bool bBlocking );
+        [[nodiscard]] Texture2DUploadStep beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& sourceImage, bool bBlocking );
         /**
          * @brief `beginUpgradeResidency` 가 낸 업로드가 끝났는지 보고, 끝났으면 새 텍스처를 bindless 에 등록해 바꿔 끼웁니다(렌더 스레드).
          * @details 옛 자원은 @p outRetired 로 내놓는다: 게임 스레드가 이미 만든 패킷이 옛 SRV 번호를 값으로 가지고 있으므로 그 패킷이 끝난 뒤에 해제한다(`TextureCache::releaseRetiredTextures`).
@@ -196,6 +196,13 @@ namespace sw
         /** @brief DDS 가 알려 주는 DXGI 포맷 번호를 RHIFormat 으로 바꿉니다. 대응이 없으면 Unknown 입니다. */
         static RHIFormat toRHIFormatFromDxgi( uint32 dxgiFormat );
         /**
+         * @brief 세 채널 실수(`R32G32B32_FLOAT`) 이미지를 네 채널(`R32G32B32A32_FLOAT`, 알파 1)로 폅니다. 밉 · 층의 바이트가 이어져 있어 텍셀마다 한 번이면 된다.
+         * @details 세 채널 실수 텍스처는 D3D · 데스크톱 Vulkan 에만 있고 모바일 Vulkan 은 대개, WebGPU 는 늘 없다 — 그런 장치에 올릴 때 쓴다(`docs/PlatformTargets.md`).
+         *          언리얼도 `PF_R32G32B32F` 를 플랫폼이 못 쓰면 `PF_A32B32G32R32F` 로 올린다(기억).
+         * @return 원본이 세 채널 실수가 아니거나 바이트가 텍셀 크기의 배수가 아니면 false 이고 @p outImage 는 건드리지 않습니다.
+         */
+        [[nodiscard]] static bool expandToFourChannels( const DDSImageData& image, DDSImageData& outImage );
+        /**
          * @brief 텍스처 품질(`gv_textureMipDrop`)로 버릴 위쪽 밉을 고릅니다. 밉 사슬이 있는 텍스처만 줄이고, 남은 밉 0 은 `kMinMipDropExtent` 이상이고
          *        블록 크기의 배수여야 합니다(BC 는 4 의 배수 — 아니면 백엔드가 만들지 못한다). 마지막 밉 하나는 늘 남깁니다.
          * @details 밉이 하나뿐인 텍스처(UI 아이콘 · 글꼴 아틀라스 · 룩업 표)는 줄이지 않는다. 화면에 1:1 로 그리는 것이라 밉을 만들지 않기 때문이다.
@@ -212,6 +219,8 @@ namespace sw
          */
         [[nodiscard]] static Texture2DUploadStep submitCreatedTexture( IRHIResourceFactory& factory, RHITextureHandle handle, const RHITextureUploadDesc& upload, bool bBlocking,
                                                                        string_view label, RHITransferTicket& outTicket );
+        /** @brief @p device 가 @p image 의 형식을 받으면 그대로, 세 채널 실수인데 못 받으면 네 채널로 편 @p outExpanded 를 돌려줍니다(`expandToFourChannels`). */
+        static const DDSImageData& selectDeviceImage( const IRHIDevice& device, const DDSImageData& image, DDSImageData& outExpanded );
         /**
          * @brief 새 GPU 텍스처를 만들고 위쪽 @p drop 밉을 뺀 사슬의 업로드를 제출합니다(SRV 는 등록하지 않는다). 실패하면 오류를 남기고 만든 것을 지우며 @p outHandle 은 0 입니다.
          * @details 처음 업로드(`beginUploadFromImage`)와 스트리밍의 바꿔 끼우기(`beginUpgradeResidency`)가 같은 순서를 쓴다 — 둘이 따로 쓰면 한쪽만 실패 정리를 빠뜨린다.

@@ -76,6 +76,8 @@ namespace sw
                 return RHIFormat::B8G8R8A8_UNORM;
             case 10: // DXGI_FORMAT_R16G16B16A16_FLOAT
                 return RHIFormat::R16G16B16A16_FLOAT;
+            case 2: // DXGI_FORMAT_R32G32B32A32_FLOAT
+                return RHIFormat::R32G32B32A32_FLOAT;
             case 6: // DXGI_FORMAT_R32G32B32_FLOAT
                 return RHIFormat::R32G32B32_FLOAT;
             case 16: // DXGI_FORMAT_R32G32_FLOAT
@@ -113,6 +115,33 @@ namespace sw
             default:
                 return RHIFormat::Unknown;
         }
+    }
+
+    bool Texture2D::expandToFourChannels( const DDSImageData& image, DDSImageData& outImage )
+    {
+        constexpr uint32 kSourceTexelBytes = 12;
+        constexpr uint32 kTargetTexelBytes = 16;
+        constexpr uint32 kDxgiR32G32B32A32 = 2;
+        if ( toRHIFormatFromDxgi( image._dxgiFormat ) != RHIFormat::R32G32B32_FLOAT || image._bytes.size() % kSourceTexelBytes != 0 )
+            return false;
+        const size_t      texelCount = image._bytes.size() / kSourceTexelBytes;
+        constexpr float32 kOne       = 1.0f;
+        DDSImageData      expanded   = image;
+        expanded._dxgiFormat         = kDxgiR32G32B32A32;
+        expanded._bytes.resize( texelCount * kTargetTexelBytes );
+        for ( size_t texel = 0; texel < texelCount; ++texel )
+        {
+            Memory::copy( expanded._bytes.data() + texel * kTargetTexelBytes, image._bytes.data() + texel * kSourceTexelBytes, kSourceTexelBytes );
+            Memory::copy( expanded._bytes.data() + texel * kTargetTexelBytes + kSourceTexelBytes, &kOne, sizeof( kOne ) );
+        }
+        outImage = std::move( expanded );
+        return true;
+    }
+
+    const DDSImageData& Texture2D::selectDeviceImage( const IRHIDevice& device, const DDSImageData& image, DDSImageData& outExpanded )
+    {
+        const bool bNeedsExpansion = toRHIFormatFromDxgi( image._dxgiFormat ) == RHIFormat::R32G32B32_FLOAT && device.supportsTextureFormat( RHIFormat::R32G32B32_FLOAT ) == false;
+        return bNeedsExpansion && expandToFourChannels( image, outExpanded ) ? outExpanded : image;
     }
 
     Texture2DMipDrop Texture2D::computeMipDrop( RHIFormat format, uint32 width, uint32 height, uint32 mipCount, int32 requestedDrop )
@@ -184,12 +213,14 @@ namespace sw
         return finishUpload( pDevice, true ) == Texture2DUploadStatus::Ready;
     }
 
-    Texture2DUploadStep Texture2D::beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency, bool bBlocking )
+    Texture2DUploadStep Texture2D::beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& sourceImage, TextureResidency residency, bool bBlocking )
     {
         if ( pDevice == nullptr || relativePath.empty() )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
             releaseRHI( pDevice );
+        DDSImageData        expandedImage;
+        const DDSImageData& image = selectDeviceImage( *pDevice, sourceImage, expandedImage );
 
         const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
         SW_ASSERT( format != RHIFormat::Unknown ); // `readImage` 가 거른다
@@ -298,13 +329,15 @@ namespace sw
         return Texture2DUploadStatus::Ready;
     }
 
-    Texture2DUploadStep Texture2D::beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& image, bool bBlocking )
+    Texture2DUploadStep Texture2D::beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& sourceImage, bool bBlocking )
     {
         // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
         const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid() && _upgrade._ticket.isValid() == false;
         if ( bUpgradable == false )
             return Texture2DUploadStep::Failed;
-        const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
+        DDSImageData        expandedImage;
+        const DDSImageData& image  = selectDeviceImage( *pDevice, sourceImage, expandedImage );
+        const RHIFormat     format = toRHIFormatFromDxgi( image._dxgiFormat );
         SW_ASSERT( format == _format ); // 같은 파일의 같은 이미지다(`TextureCache` 가 로드 단계의 이미지를 보관했다)
         const uint32              fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
         const Texture2DMipDrop    qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );

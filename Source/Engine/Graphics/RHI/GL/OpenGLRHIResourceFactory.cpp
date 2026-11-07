@@ -66,6 +66,7 @@ namespace sw
             {  RHIFormat::ETC2_RGBA8_UNORM, OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC,                0,                    0},
             {     RHIFormat::EAC_R11_UNORM,       OpenGLRHIDeviceFormat::kCompressedR11EAC,                0,                    0},
             {    RHIFormat::EAC_RG11_UNORM,      OpenGLRHIDeviceFormat::kCompressedRG11EAC,                0,                    0},
+            {RHIFormat::R32G32B32A32_FLOAT,                                     GL_RGBA32F,          GL_RGBA,             GL_FLOAT},
         };
         static_assert( isRHIFormatTableInOrder( arrFormatRow ), "arrFormatRow needs one row per RHIFormat, in enumerator order" );
 

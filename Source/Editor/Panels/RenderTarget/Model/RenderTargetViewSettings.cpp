@@ -73,6 +73,7 @@ namespace sw::editor
             case RHIFormat::R8G8B8A8_UNORM:
             case RHIFormat::B8G8R8A8_UNORM:
             case RHIFormat::R16G16B16A16_FLOAT:
+            case RHIFormat::R32G32B32A32_FLOAT:
                 return 4;
             case RHIFormat::R16G16_SNORM: // 옥타헤드럴 법선을 방향 색(xyz * 0.5 + 0.5)으로 풀어 보이므로 보이는 채널은 RGB 셋이다
             case RHIFormat::R32G32B32_FLOAT:
@@ -138,6 +139,12 @@ namespace sw::editor
                 outValue._x = RenderTargetViewSettingsInternal::readFloat( pPixel );
                 outValue._y = RenderTargetViewSettingsInternal::readFloat( pPixel + 4 );
                 outValue._z = RenderTargetViewSettingsInternal::readFloat( pPixel + 8 );
+                break;
+            }
+            case RHIFormat::R32G32B32A32_FLOAT:
+            {
+                outValue = float4{ RenderTargetViewSettingsInternal::readFloat( pPixel ), RenderTargetViewSettingsInternal::readFloat( pPixel + 4 ),
+                                   RenderTargetViewSettingsInternal::readFloat( pPixel + 8 ), RenderTargetViewSettingsInternal::readFloat( pPixel + 12 ) };
                 break;
             }
             case RHIFormat::R32G32_FLOAT:

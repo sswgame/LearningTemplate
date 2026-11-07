@@ -1002,6 +1002,9 @@ namespace sw
             // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
             if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
                 continue;
+            // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
+            if ( meetsBindlessRequirements( device, candidateProperties.deviceName ) == false )
+                continue;
 
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
@@ -1054,6 +1057,37 @@ namespace sw
             SW_LOG_ERROR_ID( "Vulkan.NoVulkanDeviceGraphics", "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::render::kVulkanRequiredMajor,
                              constant::render::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
+    }
+
+    bool VulkanRHIDevice::meetsBindlessRequirements( VkPhysicalDevice device, const utf8* pDeviceName )
+    {
+        VkPhysicalDeviceVulkan12Features features12{};
+        features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        VkPhysicalDeviceFeatures2 features2{};
+        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        features2.pNext = &features12;
+        vkGetPhysicalDeviceFeatures2( device, &features2 );
+        VkPhysicalDeviceDescriptorIndexingProperties indexing{};
+        indexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+        VkPhysicalDeviceProperties2 properties2{};
+        properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        properties2.pNext = &indexing;
+        vkGetPhysicalDeviceProperties2( device, &properties2 );
+
+        // 텍스처 세트(set 1)의 두 배열이 쓰는 기능 · 한도다(createDescriptorResources). 데스크톱 드라이버는 모두 넘고, 모바일은 장치마다 다르다(docs/PlatformTargets.md).
+        const bool bFeatures = features12.runtimeDescriptorArray == VK_TRUE && features12.descriptorBindingPartiallyBound == VK_TRUE &&
+                               features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE && features12.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE &&
+                               features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE;
+        const bool bLimits = indexing.maxPerStageDescriptorUpdateAfterBindSampledImages >= kBindlessTextureCount &&
+                             indexing.maxDescriptorSetUpdateAfterBindSampledImages >= kBindlessTextureCount &&
+                             indexing.maxPerStageDescriptorUpdateAfterBindStorageImages >= kBindlessStorageImageCount &&
+                             indexing.maxDescriptorSetUpdateAfterBindStorageImages >= kBindlessStorageImageCount;
+        if ( bFeatures && bLimits )
+            return true;
+        SW_LOG_WARNING_ID( "Vulkan.SkippingDeviceBindless", "Skipping Vulkan device '%#': descriptor indexing features %# or update-after-bind limits (sampled %# / %#, storage %# / %#) are below the bindless sets",
+                           pDeviceName, bFeatures ? "present" : "missing", indexing.maxPerStageDescriptorUpdateAfterBindSampledImages, kBindlessTextureCount,
+                           indexing.maxPerStageDescriptorUpdateAfterBindStorageImages, kBindlessStorageImageCount );
+        return false;
     }
 
     bool VulkanRHIDevice::selectDepthFormat()
