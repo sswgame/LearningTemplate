@@ -1,6 +1,8 @@
 // RigFileRewriteTest — 리그 파일 되쓰기: 변형(`_base`) 파일은 물려받은 노드 · 대상을 이름 열쇠의 덮어쓰기 줄로 더하고 부모를 지킨다(nogpu).
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 

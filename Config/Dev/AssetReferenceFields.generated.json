@@ -63,6 +63,7 @@
         "_profilePath",
         "_reference",
         "_renderPipeline",
+        "_resourceRemap",
         "_rigPath",
         "_sequencePath",
         "_shaderAutoExposure",

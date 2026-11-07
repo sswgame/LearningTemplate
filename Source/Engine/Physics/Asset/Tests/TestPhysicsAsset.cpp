@@ -54,8 +54,9 @@ SW_TEST_CASE( PhysicsAssetTest, ChildSavesOnlyItsDifference )
     SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
     SW_EXPECT_TRUE( saved.find( "pelvis" ) == string::npos ); // 고치지 않은 바디는 물려받는다
 
-    PhysicsAsset reloaded;
-    SW_REQUIRE_TRUE( reloaded.loadFromAsset( test::ScopedScratchDomain::makeID( "child.physics.xml" ) ) );
+    const shared_ptr<const PhysicsAsset> pReloaded = SharedAssetCache<PhysicsAsset>::acquire( test::ScopedScratchDomain::makeID( "child.physics.xml" ).view() );
+    SW_REQUIRE_TRUE( pReloaded != nullptr );
+    const PhysicsAsset& reloaded = *pReloaded;
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( reloaded._listBody.size() ) );
     SW_EXPECT_NEAR( 10.0f, reloaded._listBody[0]._mass, 0.0f );
     SW_EXPECT_NEAR( 4.0f, reloaded._listBody[1]._mass, 0.0f );

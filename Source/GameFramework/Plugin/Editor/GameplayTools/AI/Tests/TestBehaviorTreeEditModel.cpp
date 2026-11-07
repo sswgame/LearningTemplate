@@ -1,6 +1,8 @@
 // BehaviorTreeEditModelTest — 행동 트리 편집 모델의 변형 저장: 부모(`_base`)를 가리키던 트리는 부모와의 차이로 쓰고 다시 읽으면 같은 트리다(nogpu).
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 

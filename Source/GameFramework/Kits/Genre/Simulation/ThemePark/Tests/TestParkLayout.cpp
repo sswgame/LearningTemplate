@@ -1,6 +1,8 @@
 // ParkLayoutTest — 공원 배치(`ParkLayout`)를 공유 캐시로 읽는다: 같은 경로는 같은 객체이고, 로더가 같은 팩의 코스터 레이아웃을 공유 캐시에서 받아 쥔다.
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"

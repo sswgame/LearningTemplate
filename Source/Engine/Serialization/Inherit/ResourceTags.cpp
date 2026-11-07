@@ -298,7 +298,11 @@ namespace sw
                 string axisText;
                 for ( const string& axis : listAxis )
                 {
-                    axisText += axisText.empty() ? axis : ", " + axis;
+                    if ( !axisText.empty() )
+                    {
+                        axisText += ", ";
+                    }
+                    axisText += axis;
                 }
                 error = formatToString( "'%#' is not axis.value of a known axis (%#)", tag, axisText.c_str() );
                 return;
