@@ -16,19 +16,23 @@ namespace sw
     {
         struct ResourceTagsInternal
         {
-            static constexpr const utf8* kArrPlatformValue[] = { "windows", "linux" }; ///< `build::kPlatformName` 을 소문자로(플랫폼을 더하면 한 줄)
-            static constexpr const utf8* kArrTargetValue[]   = { "client", "server" }; ///< 팩 쿠킹 대상(`PackCookParams::_buildTarget`)과 같은 둘
+            static constexpr const utf8* kArrPlatformValue[]    = { "windows", "linux", "android", "web" }; ///< `build::kPlatformName` 을 소문자로(플랫폼을 더하면 한 줄 — 빠지면 `Engine` 기동이 멈춘다)
+            static constexpr const utf8* kArrScreenValue[]      = { "regular", "compact" };                 ///< UI 뷰포트 너비가 `UIScaleSettings::_compactMaxWidth` 보다 좁으면 compact(`UISystem::syncScreenTags`)
+            static constexpr const utf8* kArrOrientationValue[] = { "landscape", "portrait" };              ///< UI 뷰포트가 세로로 길면 portrait
+            static constexpr const utf8* kArrTargetValue[]      = { "client", "server" };                   ///< 팩 쿠킹 대상(`PackCookParams::_buildTarget`)과 같은 둘
 
             /** @brief 축 표입니다. 순서는 오류 문장 · 편집기 목록의 순서입니다. */
             static constexpr ResourceTagAxis kArrAxis[] = {
-                {"platform", ResourceTagTiming::Cook, ResourceTagArity::Single, kArrPlatformValue, static_cast<uint32>( SW_COUNT_OF( kArrPlatformValue ) ),    ResourceTagScope::Shared},
-                {  "target", ResourceTagTiming::Cook, ResourceTagArity::Single,   kArrTargetValue,   static_cast<uint32>( SW_COUNT_OF( kArrTargetValue ) ),    ResourceTagScope::Shared},
-                { "quality", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0, ResourceTagScope::PerClient}, ///< 사용자 설정 `graphics.quality`(핸들러 `resource.tag`)
-                {  "locale", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0, ResourceTagScope::PerClient}, ///< 현지화의 지금 언어
-                {  "region", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 출시 지역(게임 코드가 넣는다)
-                {   "layer", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`)
-                { "feature", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 게임이 켜는 기능 태그(행사 · 계절)
-                {    "flag", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 게임 플래그를 리소스에 비추는 태그(게임 코드가 켠다)
+                {   "platform", ResourceTagTiming::Cook, ResourceTagArity::Single,    kArrPlatformValue,    static_cast<uint32>( SW_COUNT_OF( kArrPlatformValue ) ),    ResourceTagScope::Shared},
+                {     "target", ResourceTagTiming::Cook, ResourceTagArity::Single,      kArrTargetValue,      static_cast<uint32>( SW_COUNT_OF( kArrTargetValue ) ),    ResourceTagScope::Shared},
+                {    "quality", ResourceTagTiming::Load, ResourceTagArity::Single,              nullptr,                                                          0, ResourceTagScope::PerClient}, ///< 사용자 설정 `graphics.quality`(핸들러 `resource.tag`)
+                {     "locale", ResourceTagTiming::Load, ResourceTagArity::Single,              nullptr,                                                          0, ResourceTagScope::PerClient}, ///< 현지화의 지금 언어
+                {     "region", ResourceTagTiming::Load, ResourceTagArity::Single,              nullptr,                                                          0,    ResourceTagScope::Shared}, ///< 출시 지역(게임 코드가 넣는다)
+                {      "layer", ResourceTagTiming::Load,  ResourceTagArity::Multi,              nullptr,                                                          0,    ResourceTagScope::Shared}, ///< 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`)
+                {    "feature", ResourceTagTiming::Load,  ResourceTagArity::Multi,              nullptr,                                                          0,    ResourceTagScope::Shared}, ///< 게임이 켜는 기능 태그(행사 · 계절)
+                {       "flag", ResourceTagTiming::Load,  ResourceTagArity::Multi,              nullptr,                                                          0,    ResourceTagScope::Shared}, ///< 게임 플래그를 리소스에 비추는 태그(게임 코드가 켠다)
+                {     "screen", ResourceTagTiming::Load, ResourceTagArity::Single,      kArrScreenValue,      static_cast<uint32>( SW_COUNT_OF( kArrScreenValue ) ), ResourceTagScope::PerClient}, ///< 좁은 화면 재배치(UI 문서의 `_when="screen.compact"`)
+                {"orientation", ResourceTagTiming::Load, ResourceTagArity::Single, kArrOrientationValue, static_cast<uint32>( SW_COUNT_OF( kArrOrientationValue ) ), ResourceTagScope::PerClient}, ///< 가로 · 세로 배치
             };
 
             struct State

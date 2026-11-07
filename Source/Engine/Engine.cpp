@@ -553,6 +553,9 @@ namespace sw
         frame._height               = vpHeight;
         frame._pointerOrigin        = int2{ mainOutput._windowX, mainOutput._windowY };
         frame._contentScale         = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
+        // 플랫폼 안전 여백(노치 · 시스템 바)은 창 전체에 그릴 때만 맞다 — 에디터 게임 뷰(창 안의 이미지)는 창의 여백과 무관하다.
+        const bool bWholeWindow     = pMainWindow != nullptr && pMainWindow->getWidth() == vpWidth && pMainWindow->getHeight() == vpHeight;
+        frame._safeInsets           = bWholeWindow ? pMainWindow->getSafeAreaInsets() : float4{};
         frame._unscaledDeltaSeconds = engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
         _pUIDriver->updateFrame( frame );
     }

@@ -473,6 +473,9 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "##Safezone", &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Rotate" ) ) );
+        ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Rotate" ), &_model.editRotated() );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "RotateTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "LayoutRects" ) ) );
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "LayoutRects" ), &_bShowLayout );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "LayoutRectsTip" ) );

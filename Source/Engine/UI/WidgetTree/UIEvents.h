@@ -46,7 +46,8 @@ namespace sw
         UIPointerEventKind _kind{ UIPointerEventKind::Move };
         MouseButton        _button{ MouseButton::Left };
         uint8              _pointerIndex{ 0 };
-        uint8              _clickCount{ 1 }; ///< 두 번 누르면 2 입니다(InputMap doubleClickTime 과 같은 판정).
+        uint8              _clickCount{ 1 };         ///< 두 번 누르면 2 입니다(InputMap doubleClickTime 과 같은 판정).
+        float32            _touchTargetSize{ 0.0f }; ///< 손가락이면 가장 작은 조작 크기(UI 단위)입니다 — 조작을 비켜 짚으면 이만큼 넓힌 가장 가까운 조작이 받는다. 마우스는 0
     };
 } // namespace sw
 

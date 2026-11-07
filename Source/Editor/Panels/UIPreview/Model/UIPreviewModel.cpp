@@ -125,6 +125,7 @@ namespace sw::editor
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
         , _safeZone{ 0.0f }
+        , _bRotated{ false }
         , _animationScrub{ 0.0f }
         , _bAnimationLoop{ false }
         , _bReloadedAfterSave{ false }
@@ -246,10 +247,11 @@ namespace sw::editor
             _error = "UI preview resolutions could not be read (EngineDefaultAssets _uiResolutionPresets - see the log)";
             return;
         }
-        _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), *pResolution, _uiScale, _safeZone );
-        const string targetPath          = UIPreviewLogic::makeTargetPath( _viewport );
-        const bool   bReopen             = _screen == kInvalidUIScreenHandle || offscreen.findScreen( _screen ) == nullptr || _documentPath != _openedDocument;
-        const bool   bPreviousOpenFailed = bReopen && _error.empty() == false && _documentPath == _openedDocument;
+        const UIResolutionPreset resolution = _bRotated ? UIPreviewLogic::rotatePreset( *pResolution ) : *pResolution;
+        _viewport                           = UIPreviewLogic::makeViewport( ui.getScaleSettings(), resolution, _uiScale, _safeZone );
+        const string targetPath             = UIPreviewLogic::makeTargetPath( _viewport );
+        const bool   bReopen                = _screen == kInvalidUIScreenHandle || offscreen.findScreen( _screen ) == nullptr || _documentPath != _openedDocument;
+        const bool   bPreviousOpenFailed    = bReopen && _error.empty() == false && _documentPath == _openedDocument;
         if ( bPreviousOpenFailed )
             return; // 같은 문서가 지난번에 만들지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
         if ( bReopen )

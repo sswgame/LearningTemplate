@@ -7,6 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/RHICapabilities.h"
+
 namespace sw
 {
     /**
@@ -20,6 +22,9 @@ namespace sw
         uint32 _systemMemoryMb{ 0 };   ///< 물리 메모리(MB). 못 읽으면 0 입니다.
         uint32 _gpuMemoryMb{ 0 };      ///< 기본 어댑터의 전용 비디오 메모리(MB). 못 읽거나 소프트웨어 어댑터면 0 입니다.
         string _gpuName{};             ///< 기본 어댑터 이름. 못 읽으면 비어 있습니다.
+        string _platformName{};        ///< 이 빌드의 플랫폼(`build::kPlatformName` — Windows · Linux · Android · Web)
+        /// 이 플랫폼의 기본 RHI 백엔드가 주는 능력(정적 표 — 장치를 띄우기 전이라 `RHIAvailability::query`)입니다. 규칙이 bindless · 멀티 드로우 · GPU 컬링을 요구할 수 있다.
+        RHICapabilities _rhiCapabilities{};
     };
 } // namespace sw
 

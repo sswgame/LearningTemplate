@@ -45,6 +45,12 @@ namespace sw
          *          렌더 변환은 역변환으로 따르고, 자르는 패널 밖의 점은 그 자식도 받지 않는다.
          */
         static bool hitTest( const WidgetTree& tree, const float2& screenPoint, UIWidgetPath& outPath );
+        /**
+         * @brief 손가락 히트 테스트입니다. 점이 조작(포커스를 받는 위젯)에 바로 닿으면 `hitTest` 와 같고, 아니면 상자를 @p minTargetSize 까지 넓힌 조작 중 중심이 가장 가까운 것을 고릅니다.
+         * @details 작은 단추를 손가락으로 누르기 어렵게 하지 않는다 — Android `TouchDelegate` · Material 의 48dp 터치 영역과 같은 뜻이다(기억). 넓혀도 닿는 조작이 없으면 `hitTest` 의 결과다.
+         *          @p minTargetSize 가 0 이하이면 넓히지 않는다.
+         */
+        static bool hitTestTouch( const WidgetTree& tree, const float2& screenPoint, float32 minTargetSize, UIWidgetPath& outPath );
         /** @brief @p widget 까지의 조상 경로(루트에서 @p widget)를 만듭니다. 트리에 없으면 false 이고 경로는 비어 있습니다. */
         static bool makePathTo( const WidgetTree& tree, WidgetID widget, UIWidgetPath& outPath );
         /**

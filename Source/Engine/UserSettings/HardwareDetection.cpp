@@ -6,12 +6,14 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 
 namespace sw
 {
@@ -95,7 +97,8 @@ namespace sw
                                  ( jobLimit.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_PROCESS_MEMORY ) != 0;
         if ( bJobLimited )
             result._systemMemoryMb = MathUtil::min( result._systemMemoryMb, static_cast<uint32>( jobLimit.ProcessMemoryLimit / constant::memory::kBytesPerMegabyte ) );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        // Android 는 bionic 의 sysconf, 웹은 Emscripten 이 힙 상한을 물리 메모리로 답한다(기억).
         const int64 pageCount = static_cast<int64>( sysconf( _SC_PHYS_PAGES ) );
         const int64 pageSize  = static_cast<int64>( sysconf( _SC_PAGE_SIZE ) );
         if ( pageCount > 0 && pageSize > 0 )
@@ -104,6 +107,9 @@ namespace sw
     #error "Unsupported platform"
 #endif
         HardwareDetectionInternal::probeAdapter( result );
+        result._platformName                     = build::kPlatformName;
+        const span<const RHIBackend> listBackend = RHIAvailability::getPlatformBackendOrder();
+        result._rhiCapabilities                  = listBackend.empty() ? RHICapabilities{} : RHIAvailability::query( listBackend[0] );
         if ( gv_emulatedGPUMemoryMb > 0 )
             result._gpuMemoryMb = result._gpuMemoryMb > 0 ? MathUtil::min( result._gpuMemoryMb, static_cast<uint32>( gv_emulatedGPUMemoryMb ) ) : static_cast<uint32>( gv_emulatedGPUMemoryMb );
         return result;

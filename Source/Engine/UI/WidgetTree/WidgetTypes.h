@@ -199,10 +199,12 @@ namespace sw
      */
     struct UIViewport
     {
-        float2  _size{};          ///< UI 단위 크기(물리 크기 / 배율)입니다. 레이아웃 루트가 놓이는 사각형입니다.
-        float2  _physicalSize{};  ///< 물리 픽셀 크기입니다.
-        float4  _safeInsets{};    ///< 안전 영역(왼쪽, 위, 오른쪽, 아래, UI 단위)입니다. `SafeZonePanel` 이 안쪽으로 밀어 넣습니다.
-        float32 _uiScale{ 1.0f }; ///< UI 단위에서 물리 픽셀로의 배율입니다.
+        float2  _size{};                  ///< UI 단위 크기(물리 크기 / 배율)입니다. 레이아웃 루트가 놓이는 사각형입니다.
+        float2  _physicalSize{};          ///< 물리 픽셀 크기입니다.
+        float4  _safeInsets{};            ///< 안전 영역(왼쪽, 위, 오른쪽, 아래, UI 단위)입니다. `SafeZonePanel` 이 안쪽으로 밀어 넣습니다.
+        float32 _uiScale{ 1.0f };         ///< UI 단위에서 물리 픽셀로의 배율입니다.
+        float32 _contentScale{ 1.0f };    ///< 창 배율(DPI / 기준 — Android density)입니다. 화면 등급(`screen`)이 물리 너비를 이것으로 나눈 dp 로 정한다
+        float32 _touchTargetSize{ 0.0f }; ///< 손가락이 고를 수 있는 가장 작은 조작 크기(UI 단위, `UIScaleSettings::_minTouchTargetSize`)입니다. 0 이면 넓히지 않는다
         /// 이 화면의 왼쪽 위가 놓인 창 클라이언트 픽셀입니다. 게임 창(백버퍼)이면 0 이고, 에디터 게임 뷰면 패널 안 이미지 자리(`ViewportTarget::_windowX`)입니다.
         /// 포인터는 창 픽셀에서 이것을 뺀 뒤 배율로 나눕니다(`UIInputRouter::processPointer`).
         int2 _pointerOrigin{};

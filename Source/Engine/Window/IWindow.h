@@ -228,6 +228,12 @@ namespace sw
          * @details 게임 UI 는 기본으로 곱하지 않는다(해상도 규칙이 이미 창 크기를 따른다. `UIScaleSettings::_bApplyContentScale` 참고).
          */
         virtual float32 getContentScale() const { return 1.0f; }
+        /**
+         * @brief 그리면 가려지는 가장자리(왼쪽, 위, 오른쪽, 아래, 물리 픽셀)입니다 — 노치 · 둥근 모서리 · 시스템 바. 데스크톱 창은 0 이다.
+         * @details UI 의 안전 영역(`UIScaleSettings::makeViewport` → `SafeZonePanel`)이 읽는다. 회전하면 변이 바뀌므로 플랫폼 창이 크기 · 회전 통보 때 다시 읽는다.
+         *          언리얼 `FDisplayMetrics::TitleSafePaddingSize` · 유니티 `Screen.safeArea` 자리다(기억).
+         */
+        virtual float4 getSafeAreaInsets() const { return float4{}; }
 
         /** @brief 배율 1 에 해당하는 DPI 입니다(Windows 와 X11 의 기준). */
         static constexpr float32 kReferenceDPI = 96.0f;

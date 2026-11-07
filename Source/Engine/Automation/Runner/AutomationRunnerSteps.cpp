@@ -377,6 +377,28 @@ namespace sw
             return true;
         }
 
+        [[nodiscard]] static bool prepareTouch( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        {
+            AutomationRunner& runner = asRunner( context );
+            // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(`MousePosition` 과 같은 규칙). 손가락은 마우스와 따로 간다 — 터치 장치의 포인터 0 이다.
+            const MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
+            const IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            const bool                 bNoWindowForTouch = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            if ( bNoWindowForTouch )
+            {
+                outError = step.describe() + ": no window to touch";
+                return false;
+            }
+            AutomationTouchParams args;
+            if ( step.readFields( args, outError ) == false )
+                return false;
+            const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
+            const int32 y = static_cast<int32>( MathUtil::round( args._y * static_cast<float32>( pWindow->getHeight() - 1 ) ) );
+            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTouch( RawInputEventType::TouchDown, 0, x, y ) );
+            runner._inputScript.addEvent( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ) );
+            return true;
+        }
+
         [[nodiscard]] static bool prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&           runner = asRunner( context );
@@ -621,6 +643,7 @@ namespace sw
     SW_AUTOMATION_STEP( runnerMouseDelta, "MouseDelta", nullptr, &AutomationStep::validateFields<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMouseDelta ) );
     SW_AUTOMATION_STEP( runnerWheel, "Wheel", nullptr, &AutomationStep::validateFields<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWheel ) );
     SW_AUTOMATION_STEP( runnerMousePosition, "MousePosition", nullptr, &AutomationStep::validateFields<AutomationMousePositionParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMousePosition ) );
+    SW_AUTOMATION_STEP( runnerTouch, "Touch", nullptr, &AutomationStep::validateFields<AutomationTouchParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareTouch ) );
     SW_AUTOMATION_STEP( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationStep::validateFields<AutomationGamepadAxisParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareGamepadAxis ) );
     SW_AUTOMATION_STEP( runnerText, "Text", nullptr, &AutomationStep::validateFields<AutomationTextStepParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareText ) );
     SW_AUTOMATION_STEP( runnerVariable, "Variable", &AutomationRunnerEngineSteps::runVariable, &AutomationRunnerStepsInternal::validateVariable, AutomationStepOptions{} );

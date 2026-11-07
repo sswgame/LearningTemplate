@@ -134,10 +134,12 @@ namespace sw::editor
         /** @brief 고른 언어 코드입니다. 비면 게임 언어 그대로입니다. */
         const string& getLanguage() const { return _language; }
         /** @brief 언어 콤보의 @p index 번째 줄을 고릅니다. */
-        void              selectLanguage( uint32 index );
-        float32&          editUIScale() { return _uiScale; }
-        float32&          editTextScale() { return _textScale; }
-        float32&          editSafeZone() { return _safeZone; }
+        void     selectLanguage( uint32 index );
+        float32& editUIScale() { return _uiScale; }
+        float32& editTextScale() { return _textScale; }
+        float32& editSafeZone() { return _safeZone; }
+        /** @brief 견본을 가로로 돌려 볼지입니다(`UIPreviewLogic::rotatePreset`). */
+        bool&             editRotated() { return _bRotated; }
         const UIViewport& getViewport() const { return _viewport; }
 
         // --- 고른 위젯 · 위젯 목록 ---------------------------------------------------------------
@@ -301,6 +303,7 @@ namespace sw::editor
         float32                         _uiScale;
         float32                         _textScale;
         float32                         _safeZone;
+        bool                            _bRotated;           ///< NOLINT(sw-bool-flag): ImGui 체크 상자가 `bool&` 로 고친다
         float32                         _animationScrub;     ///< 시간 막대 값(초)
         bool                            _bAnimationLoop;     ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(감시 값) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

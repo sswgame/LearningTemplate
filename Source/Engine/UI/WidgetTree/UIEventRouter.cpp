@@ -3,6 +3,7 @@
 #include "Engine/UI/WidgetTree/UIEventRouter.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -52,6 +53,37 @@ namespace sw
                     return true;
                 inoutListWidget.pop_back();
                 return false;
+            }
+
+            /** @brief 넓힌 상자 안에서 중심이 가장 가까운 조작을 찾습니다(`hitTestTouch`). 가려진 · 꺼진 위젯은 보지 않는다. */
+            static void findNearestTouchTarget( const Widget& widget, const float2& screenPoint, float32 minTargetSize, const Widget*& ioBest, float32& ioBestDistance )
+            {
+                const WidgetVisibility visibility = widget.getVisibility();
+                if ( visibility == WidgetVisibility::Collapsed || visibility == WidgetVisibility::Hidden || visibility == WidgetVisibility::HitTestInvisible )
+                    return;
+                const bool bTarget = visibility == WidgetVisibility::Visible && widget.supportsFocus() && widget.isEnabledInHierarchy();
+                if ( bTarget )
+                {
+                    const WidgetGeometry& geometry = widget.getGeometry();
+                    const float2          corner0  = geometry.transformPoint( float2{} );
+                    const float2          corner1  = geometry.transformPoint( geometry._size );
+                    const float2          center{ ( corner0._x + corner1._x ) * 0.5f, ( corner0._y + corner1._y ) * 0.5f };
+                    const float32         halfX    = MathUtil::max( MathUtil::abs( corner1._x - corner0._x ), minTargetSize ) * 0.5f;
+                    const float32         halfY    = MathUtil::max( MathUtil::abs( corner1._y - corner0._y ), minTargetSize ) * 0.5f;
+                    const float32         dx       = screenPoint._x - center._x;
+                    const float32         dy       = screenPoint._y - center._y;
+                    const float32         distance = dx * dx + dy * dy;
+                    if ( MathUtil::abs( dx ) <= halfX && MathUtil::abs( dy ) <= halfY && distance < ioBestDistance )
+                    {
+                        ioBest         = &widget;
+                        ioBestDistance = distance;
+                    }
+                }
+                const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
+                for ( uint32 index = 0; pPanel != nullptr && index < pPanel->getChildCount(); ++index )
+                {
+                    findNearestTouchTarget( *pPanel->getChild( index ), screenPoint, minTargetSize, ioBest, ioBestDistance );
+                }
             }
 
             /** @brief 경로를 따라 터널링 후 버블링 순서로 이벤트를 보냅니다. @p Handler 는 그 이벤트를 받는 Widget 의 가상 함수입니다. */
@@ -104,6 +136,22 @@ namespace sw
         outPath._listWidget.clear();
         const Widget* pRoot = tree.getRoot();
         return pRoot != nullptr && UIEventRouterInternal::hitTestRecursive( *pRoot, screenPoint, outPath._listWidget );
+    }
+
+    bool UIEventRouter::hitTestTouch( const WidgetTree& tree, const float2& screenPoint, float32 minTargetSize, UIWidgetPath& outPath )
+    {
+        const bool          bHit    = hitTest( tree, screenPoint, outPath );
+        const Widget* const pLeaf   = bHit ? tree.findWidgetByID( outPath.getLeaf() ) : nullptr;
+        const bool          bDirect = pLeaf != nullptr && pLeaf->supportsFocus();
+        const Widget* const pRoot   = tree.getRoot();
+        if ( bDirect || minTargetSize <= 0.0f || pRoot == nullptr )
+            return bHit;
+        const Widget* pBest        = nullptr;
+        float32       bestDistance = MathUtil::kMaxFloat;
+        UIEventRouterInternal::findNearestTouchTarget( *pRoot, screenPoint, minTargetSize, pBest, bestDistance );
+        if ( pBest == nullptr )
+            return bHit;
+        return makePathTo( tree, pBest->getID(), outPath );
     }
 
     bool UIEventRouter::makePathTo( const WidgetTree& tree, WidgetID widget, UIWidgetPath& outPath )

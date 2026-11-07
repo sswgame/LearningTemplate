@@ -366,8 +366,7 @@ namespace sw
             return {};
         for ( const ScalabilityAutoDetectRule& rule : listGroup.front()._listAutoDetectRule )
         {
-            const bool bMatches = probe._logicalCoreCount >= rule._minLogicalCoreCount && probe._systemMemoryMb >= rule._minSystemMemoryMb && probe._gpuMemoryMb >= rule._minGPUMemoryMb;
-            if ( bMatches )
+            if ( rule.matches( probe ) )
                 return rule._preset;
         }
         return listGroup.front()._autoDetectFallback;

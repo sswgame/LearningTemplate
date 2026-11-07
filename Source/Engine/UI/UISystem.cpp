@@ -29,6 +29,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -184,6 +185,8 @@ namespace sw
         , _textLayout{}
         , _scaleSettings{}
         , _viewport{}
+        , _pScreenTag{ nullptr }
+        , _pOrientationTag{ nullptr }
         , _paintState{}
         , _activeScreen{ kInvalidUIScreenHandle }
         , _listTickScratch{}
@@ -326,6 +329,7 @@ namespace sw
     {
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI }; // 그리기 캐시, 그리기 목록, 텍스트 배치, 글리프 아틀라스가 프레임 안에서 커진다
         _viewport = viewport;
+        syncScreenTags( viewport );
         _pThemes->syncSetting(); // 사용자 설정의 테마를 따라간다 — 바뀌면 `onThemeChanged` 가 모든 화면을 다시 맞춘다
         syncScreenSwitches();
         reopenClosedScreens();
@@ -975,7 +979,7 @@ namespace sw
         if ( isInitialized() == false )
             return;
         // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
-        UIViewport viewport     = computeViewport( float2{ static_cast<float32>( frame._width ), static_cast<float32>( frame._height ) }, frame._contentScale );
+        UIViewport viewport     = computeViewport( float2{ static_cast<float32>( frame._width ), static_cast<float32>( frame._height ) }, frame._contentScale, frame._safeInsets );
         viewport._pointerOrigin = frame._pointerOrigin; // 백버퍼면 빈 출력이라 0 이다
         // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
         IAudioService* const pAudio = engine::findSubsystem<IAudioService>();
@@ -1058,9 +1062,23 @@ namespace sw
         _paintState.endPaint( painter.getDeferredGlyphCount() );
     }
 
-    UIViewport UISystem::computeViewport( const float2& physicalSize, float32 contentScale ) const
+    void UISystem::syncScreenTags( const UIViewport& viewport )
     {
-        return UIScaleSettings::makeViewport( _scaleSettings, physicalSize, gv_uiScale, contentScale, gv_uiDebugSafeZone );
+        if ( viewport._size._x <= 0.0f || viewport._size._y <= 0.0f )
+            return; // 최소화 — 등급을 바꾸지 않는다(돌아오면 같은 등급이라 다시 읽지 않는다)
+        const float32     widthDp      = viewport._physicalSize._x / ( viewport._contentScale > 0.0f ? viewport._contentScale : 1.0f );
+        const utf8* const pScreen      = widthDp < _scaleSettings._compactMaxWidth ? "compact" : "regular";
+        const utf8* const pOrientation = viewport._size._y > viewport._size._x ? "portrait" : "landscape";
+        // 값은 축 표의 상수 글이라 주소로 견준다(같은 글 상수 — 위 두 줄이 유일한 출처다).
+        if ( pScreen != _pScreenTag && ResourceTags::setAxisValue( "screen", pScreen ) )
+            _pScreenTag = pScreen;
+        if ( pOrientation != _pOrientationTag && ResourceTags::setAxisValue( "orientation", pOrientation ) )
+            _pOrientationTag = pOrientation;
+    }
+
+    UIViewport UISystem::computeViewport( const float2& physicalSize, float32 contentScale, const float4& platformSafeInsets ) const
+    {
+        return UIScaleSettings::makeViewport( _scaleSettings, physicalSize, gv_uiScale, contentScale, platformSafeInsets, gv_uiDebugSafeZone );
     }
 
     UILayoutContext UISystem::makeLayoutContext() const

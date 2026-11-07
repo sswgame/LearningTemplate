@@ -86,6 +86,11 @@ namespace sw
         bool setInputMode( UIInputMode mode );
         /** @brief 마우스 상태를 포인터 이벤트로 바꿔 @p listScreen(그리기 순서)으로 보냅니다. 창 픽셀은 @p viewport 의 배율로 UI 단위로 바꿉니다. */
         void processPointer( const vector<unique_ptr<UIScreen>>& listScreen, const UIViewport& viewport );
+        /**
+         * @brief 첫 손가락(터치 장치의 포인터 0)을 UI 포인터로 보냅니다 — 닿음은 Down, 끌기는 Move, 뗌은 Up 이다. 조작을 비켜 짚으면 뷰포트의 터치 타깃 크기만큼 넓혀 고른다.
+         * @details 여러 손가락 몸짓(집기 · 두 손가락 끌기)은 UI 가 받지 않는다 — 게임 입력 맵이 터치 장치를 직접 읽는다. 언리얼 Slate 도 첫 손가락만 커서로 다룬다(기억).
+         */
+        void processTouch( const vector<unique_ptr<UIScreen>>& listScreen, const UIViewport& viewport );
         /** @brief 화면이 없을 때 `UI.Pause` 가 오면 소비하고 true 를 반환합니다(부르는 쪽이 일시정지 메뉴를 엽니다). @p bHasPauseMenu 가 false 면 보지 않습니다. */
         [[nodiscard]] bool pollPauseAction( bool bHasPauseMenu );
         /** @brief UI 액션을 활성 화면 @p pActive 로 보냅니다(탐색, 스틱, 스크롤, 확인, 탭, 지우기, 뒤로). 없거나 액션을 받지 않는 화면이면 스틱 상태만 지웁니다. */
@@ -156,6 +161,7 @@ namespace sw
         UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향입니다(기울이지 않았으면 Next 이며 쓰지 않는 값입니다).
         UIInputMode                  _inputMode;
         uint8                        _bPointerKnown    : 1; ///< 마우스 위치를 한 번 읽었는지 나타냅니다(첫 프레임의 Move 기준).
+        uint8                        _bTouchActive     : 1; ///< 첫 손가락이 닿아 있습니다(`processTouch` — 끌기 Move 를 보낸다).
         uint8                        _bStickHeld       : 1; ///< 스틱이 탐색 임계값을 넘어 기울어 있는지 나타냅니다.
         uint8                        _bMousePixelKnown : 1; ///< `_lastMousePixel` 을 한 번 읽었는지 나타냅니다.
     };

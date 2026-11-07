@@ -53,6 +53,20 @@ namespace sw
         float32 _y{ 0.0f };
     };
 
+    /** @brief `Touch` 의 인자입니다(클라이언트 영역의 비율 · 닿아 있는 프레임 수). 손가락 0 이 닿았다 뗀다 — 휴대 기기의 탭을 데스크톱 시나리오에서 흉내 낸다. */
+    REFLECT()
+    struct SW_API AutomationTouchParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0, Max = 1 )
+        float32 _x{ 0.0f };
+        PROPERTY( Required, Min = 0, Max = 1 )
+        float32 _y{ 0.0f };
+        PROPERTY( Name = "frames", Min = 1, Max = 600 )
+        uint32 _holdFrameCount{ 1 };
+    };
+
     /** @brief `GamepadAxis` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationGamepadAxisParams

@@ -690,3 +690,22 @@ SW_TEST_CASE( WidgetTreeTest, HierarchyEnabledLooksAtAncestors )
     SW_EXPECT_TRUE( grid._pA->isEnabled() );
     SW_EXPECT_FALSE( grid._pA->isEnabledInHierarchy() );
 }
+
+/**
+ * @brief [UIEventRouterTest] 손가락이 조작 사이 빈 곳을 짚으면 넓힌 상자에 드는 가장 가까운 조작이 받고, 넓히지 않으면(0) 마우스와 같다
+ */
+SW_TEST_CASE( UIEventRouterTest, TouchHitTestGrowsSmallTargets )
+{
+    UIFocusGrid  grid;
+    UIWidgetPath path;
+    SW_REQUIRE_TRUE( UIEventRouter::hitTestTouch( grid._tree, float2{ 60.0f, 20.0f }, 80.0f, path ) );
+    SW_EXPECT_TRUE( path.getLeaf() == grid._pA->getID() );
+    SW_EXPECT_TRUE( path.contains( grid._pCanvas->getID() ) );
+
+    (void)UIEventRouter::hitTestTouch( grid._tree, float2{ 60.0f, 20.0f }, 0.0f, path ); // 캔버스가 받거나 아무도 받지 않는다 — 조작은 아니다
+    SW_EXPECT_TRUE( path.getLeaf() != grid._pA->getID() );
+
+    // 두 조작 사이 한가운데보다 B 쪽이면 B 가 받는다(중심 거리)
+    SW_REQUIRE_TRUE( UIEventRouter::hitTestTouch( grid._tree, float2{ 90.0f, 20.0f }, 80.0f, path ) );
+    SW_EXPECT_TRUE( path.getLeaf() == grid._pB->getID() );
+}

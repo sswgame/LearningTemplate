@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Telemetry/TelemetrySchema.h"
+#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 /**
@@ -71,4 +72,31 @@ SW_TEST_CASE( UserSettingsSchemaXMLTest, TelemetryReadsThroughSchemas )
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::TelemetrySchema broken;
     SW_EXPECT_FALSE( broken.loadFromXMLText( "<TelemetrySchema><Pipeline sessionSample=\"2\"/></TelemetrySchema>" ) );
+}
+
+/**
+ * @brief [UserSettingsSchemaXMLTest] 자동 품질 규칙은 하한 · 플랫폼 · RHI 능력을 모두 넘어야 맞는다(휴대 기기 줄은 그 플랫폼에서만)
+ */
+SW_TEST_CASE( UserSettingsSchemaXMLTest, AutoDetectRuleChecksPlatformAndCapabilities )
+{
+    sw::ScalabilityAutoDetectRule rule;
+    rule._platform               = "Android";
+    rule._minSystemMemoryMb      = 7500;
+    rule._bRequireNativeBindless = true;
+
+    sw::HardwareDetectionResult probe;
+    probe._platformName                     = "Android";
+    probe._systemMemoryMb                   = 8000;
+    probe._rhiCapabilities._bNativeBindless = SW_TRUE;
+    SW_EXPECT_TRUE( rule.matches( probe ) );
+
+    probe._rhiCapabilities._bNativeBindless = SW_FALSE;
+    SW_EXPECT_FALSE( rule.matches( probe ) ); // 능력이 모자란다
+
+    probe._rhiCapabilities._bNativeBindless = SW_TRUE;
+    probe._platformName                     = "Windows";
+    SW_EXPECT_FALSE( rule.matches( probe ) ); // 다른 플랫폼
+
+    const sw::ScalabilityAutoDetectRule anyPlatform;
+    SW_EXPECT_TRUE( anyPlatform.matches( probe ) ); // 빈 규칙은 무엇이든 맞는다(마지막 줄)
 }

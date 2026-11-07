@@ -289,7 +289,7 @@ namespace sw
          * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다. 배율은 규칙 × gv_uiScale(설정이 켜면 × 창 배율)이고, 안전 영역은 gv_uiDebugSafeZone 입니다.
          * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`).
          */
-        UIViewport computeViewport( const float2& physicalSize, float32 contentScale ) const;
+        UIViewport computeViewport( const float2& physicalSize, float32 contentScale, const float4& platformSafeInsets ) const;
         /**
          * @brief 지금 뷰포트(`update` 가 받은 것), gv_uiTextScale, 텍스트 측정, 문화권 방향으로 레이아웃 컨텍스트를 만듭니다(`UILayoutPass::update` 에 넘깁니다).
          * @details 루트의 흐름 방향은 문화권이 오른쪽에서 왼쪽인지(`UILayoutPass::isCultureRightToLeft`)로 정한다. 문화권이 바뀌면 다음 순회에서 트리를 다시 배치한다.
@@ -354,6 +354,12 @@ namespace sw
         void paintScreens();
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
+        /**
+         * @brief 뷰포트에서 화면 등급(`screen` — compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올린다 — 그 태그를 쓴 문서는 다시 읽힌다.
+         * @details 좁은 화면 재배치는 데이터다(문서의 `_when` 변형) — 코드가 배치를 고르지 않는다. 경계는 `UIScaleSettings::_compactMaxWidth`(UI 단위)다.
+         *          Android 의 smallestWidth 자원 한정자 · 유니티 Device Simulator 의 방향과 같은 자리다(기억).
+         */
+        void syncScreenTags( const UIViewport& viewport );
         /** @brief 닫기를 요청한 화면을 지웁니다. */
         void applyPendingCloses();
         /** @brief 닫는 중이 아닌 화면마다 `UIScreen::onTick` 을 부릅니다(틱이 화면을 올리고 닫아도 되도록 번호로 돕니다). */
@@ -394,7 +400,9 @@ namespace sw
         unique_ptr<TextLayoutEngine> _textLayout;
         UIScaleSettings              _scaleSettings;
         UIViewport                   _viewport;
-        UICanvasPaintState           _paintState; ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
+        const utf8*                  _pScreenTag;      ///< 마지막으로 올린 `screen` 값(`syncScreenTags`). 아직 없으면 nullptr
+        const utf8*                  _pOrientationTag; ///< 마지막으로 올린 `orientation` 값
+        UICanvasPaintState           _paintState;      ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
         UIScreenHandle               _activeScreen;
         vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
         vector<SwitchScreen>         _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).

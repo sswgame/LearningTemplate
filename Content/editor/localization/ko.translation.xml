@@ -865,6 +865,7 @@
 		<entry key="EdLabel.ResetOverlays" text="겹치기 초기화" sourceHash="e3fd9d48c6d453b9" />
 		<entry key="EdLabel.ResetToDefault" text="기본값으로" sourceHash="f786171004dde79c" />
 		<entry key="EdLabel.ResetToX100" text="x1.00 으로" sourceHash="fd16cba56760caa2" />
+		<entry key="EdLabel.Rotate" text="돌리기" sourceHash="f5197db2d5f2926a" />
 		<entry key="EdLabel.SelectAWidgetToEditItsProperties"
 		       text="위젯을 고르면 프로퍼티를 편집합니다."
 		       sourceHash="03a32e1f7acb8032" />
@@ -3124,6 +3125,7 @@
 		<entry key="EditorUIPreview.ResolutionTip"
 		       text="문서를 배치할 화면 크기입니다. 출시 전에 여러 화면비에서 레이아웃을 확인합니다."
 		       sourceHash="59c62ac68b92d3dd" />
+		<entry key="EditorUIPreview.RotateTip" text="기기를 90 도 돌립니다. 너비와 높이가 바뀌고 안전 여백이 노치를 따라 돕니다." sourceHash="53508f49102007f8" />
 		<entry key="EditorUIPreview.SafeZoneTip"
 		       text="가장자리를 잘라 내는 TV 처럼 각 변에서 잘라 낼 화면 비율(0~0.1)입니다. 빨간 테두리가 안전 영역입니다."
 		       sourceHash="9a7b1c6ae212b752" />

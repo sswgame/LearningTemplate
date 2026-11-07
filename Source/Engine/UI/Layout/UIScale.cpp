@@ -95,21 +95,25 @@ namespace sw
         return MathUtil::max( scaled, MathUtil::min( fontSize, kMinScaledFontSize ) );
     }
 
-    UIViewport UIScaleSettings::makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale,
-                                              float32 safeZoneRatio )
+    UIViewport UIScaleSettings::makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale, const float4& platformSafeInsets,
+                                              float32 debugSafeZoneRatio )
     {
         float32 scale = settings.computeResolutionScale( physicalSize ) * ( userScale > 0.0f ? userScale : 1.0f );
         if ( settings._bApplyContentScale && contentScale > 0.0f )
             scale *= contentScale;
 
-        const float32 ratio = MathUtil::clamp( safeZoneRatio, 0.0f, UIScaleInternal::kMaxSafeZoneRatio );
+        const float32 ratio = MathUtil::clamp( debugSafeZoneRatio, 0.0f, UIScaleInternal::kMaxSafeZoneRatio );
         UIViewport    viewport{};
-        viewport._physicalSize = physicalSize;
-        viewport._uiScale      = scale;
-        viewport._size         = float2{ physicalSize._x / scale, physicalSize._y / scale };
-        const float32 insetX   = physicalSize._x * ratio / scale;
-        const float32 insetY   = physicalSize._y * ratio / scale;
-        viewport._safeInsets   = float4{ insetX, insetY, insetX, insetY };
+        viewport._physicalSize    = physicalSize;
+        viewport._uiScale         = scale;
+        viewport._size            = float2{ physicalSize._x / scale, physicalSize._y / scale };
+        viewport._touchTargetSize = settings._minTouchTargetSize;
+        viewport._contentScale    = contentScale > 0.0f ? contentScale : 1.0f;
+        const float32 debugX      = physicalSize._x * ratio;
+        const float32 debugY      = physicalSize._y * ratio;
+        // 변마다 플랫폼 여백(노치 · 시스템 바)과 흉내 중 큰 것을 UI 단위로 — 노치는 한 변에만 있고 흉내는 네 변 대칭이다.
+        viewport._safeInsets = float4{ MathUtil::max( platformSafeInsets._x, debugX ) / scale, MathUtil::max( platformSafeInsets._y, debugY ) / scale,
+                                       MathUtil::max( platformSafeInsets._z, debugX ) / scale, MathUtil::max( platformSafeInsets._w, debugY ) / scale };
         return viewport;
     }
 

@@ -50,8 +50,71 @@ namespace sw
             outValue            = pUI != nullptr ? static_cast<float64>( pUI->getPaintState().getDeferredGlyphCount() ) : 0.0;
             return pUI != nullptr && pUI->isInitialized();
         }
+
+        /** @brief 지금 UI 뷰포트를 읽습니다(초기화 전이면 false). 아래 화면 대응 감시 값이 함께 쓴다. */
+        [[nodiscard]] bool readViewport( UIViewport& outViewport )
+        {
+            const UISystem* pUI = engine::findSubsystem<UISystem>();
+            if ( pUI == nullptr || pUI->isInitialized() == false )
+                return false;
+            outViewport = pUI->getViewport();
+            return true;
+        }
+
+        /** @brief 감시 값 `UI.SafeInsetTop` · `UI.SafeInsetBottom` 입니다 — 안전 영역 위 · 아래(UI 단위). 노치 · 시스템 바가 SafeZonePanel 에 닿는지 본다. */
+        [[nodiscard]] bool readSafeInsetTop( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            UIViewport viewport{};
+            const bool bRead = readViewport( viewport );
+            outValue         = viewport._safeInsets._y;
+            return bRead;
+        }
+
+        [[nodiscard]] bool readSafeInsetBottom( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            UIViewport viewport{};
+            const bool bRead = readViewport( viewport );
+            outValue         = viewport._safeInsets._w;
+            return bRead;
+        }
+
+        /** @brief 감시 값 `UI.ViewportWidth` · `UI.ViewportHeight` 입니다 — UI 단위 크기(회전 · 크기 변경 뒤 배치가 따라왔는지). */
+        [[nodiscard]] bool readViewportWidth( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            UIViewport viewport{};
+            const bool bRead = readViewport( viewport );
+            outValue         = viewport._size._x;
+            return bRead;
+        }
+
+        [[nodiscard]] bool readViewportHeight( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            UIViewport viewport{};
+            const bool bRead = readViewport( viewport );
+            outValue         = viewport._size._y;
+            return bRead;
+        }
+
+        /** @brief 감시 값 `UI.TouchTargetSize` 입니다 — 손가락 조작의 가장 작은 상자(UI 단위, 데이터 `uiscale.xml`). */
+        [[nodiscard]] bool readTouchTargetSize( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            UIViewport viewport{};
+            const bool bRead = readViewport( viewport );
+            outValue         = viewport._touchTargetSize;
+            return bRead;
+        }
     } // namespace
 
+    SW_AUTOMATION_WATCH( uiSafeInsetTop, "UI.SafeInsetTop", "Top safe-area inset of the UI viewport in UI units (notch or status bar, or the debug safe zone)", &readSafeInsetTop );
+    SW_AUTOMATION_WATCH( uiSafeInsetBottom, "UI.SafeInsetBottom", "Bottom safe-area inset of the UI viewport in UI units (gesture bar or the debug safe zone)", &readSafeInsetBottom );
+    SW_AUTOMATION_WATCH( uiViewportWidth, "UI.ViewportWidth", "UI viewport width in UI units (follows resize and rotation)", &readViewportWidth );
+    SW_AUTOMATION_WATCH( uiViewportHeight, "UI.ViewportHeight", "UI viewport height in UI units (follows resize and rotation)", &readViewportHeight );
+    SW_AUTOMATION_WATCH( uiTouchTargetSize, "UI.TouchTargetSize", "Smallest touch target in UI units (uiscale.xml _minTouchTargetSize)", &readTouchTargetSize );
     SW_AUTOMATION_WATCH( uiDeferredGlyphs, "UI.DeferredGlyphs", "Glyphs the last UI paint left for the next frame because the glyph raster budget ran out (0: all text is drawn)", &readDeferredGlyphs );
     SW_AUTOMATION_QUERY_WATCH( widgetMarkerVisible, "UI.MarkerVisible", "1 while the target object's screen-space widget marker is shown (0: collapsed, world space or no content)",
                                &readWidgetMarkerVisible, true, false );

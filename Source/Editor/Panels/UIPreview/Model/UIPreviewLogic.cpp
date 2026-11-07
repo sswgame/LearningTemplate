@@ -159,8 +159,19 @@ namespace sw::editor
     UIViewport UIPreviewLogic::makeViewport( const UIScaleSettings& settings, const UIResolutionPreset& resolution, float32 userScale, float32 safeZoneRatio )
     {
         const float2 physicalSize{ static_cast<float32>( resolution._width ), static_cast<float32>( resolution._height ) };
-        // 창 OS 배율은 1 — 미리보기는 해상도 규칙과 사용자 배율만 본다(모니터 DPI 는 게임 창의 일).
-        return UIScaleSettings::makeViewport( settings, physicalSize, userScale, 1.0f, safeZoneRatio );
+        // 창 배율은 견본 기기의 것이다(데스크톱 1 · 휴대 기기 density) — 배율 설정이 창 배율을 곱할 때만 쓰인다. 안전 여백도 견본 기기의 노치 · 시스템 바다.
+        return UIScaleSettings::makeViewport( settings, physicalSize, userScale, resolution._contentScale, resolution._safeInsets, safeZoneRatio );
+    }
+
+    UIResolutionPreset UIPreviewLogic::rotatePreset( const UIResolutionPreset& resolution )
+    {
+        UIResolutionPreset rotated = resolution;
+        rotated._width             = resolution._height;
+        rotated._height            = resolution._width;
+        // 시계 방향 90 도: 위 → 오른쪽, 오른쪽 → 아래, 아래 → 왼쪽, 왼쪽 → 위(float4 는 왼쪽 · 위 · 오른쪽 · 아래).
+        const float4& insets = resolution._safeInsets;
+        rotated._safeInsets  = float4{ insets._w, insets._x, insets._y, insets._z };
+        return rotated;
     }
 
     float2 UIPreviewLogic::fitImage( const float2& imageSize, const float2& available )

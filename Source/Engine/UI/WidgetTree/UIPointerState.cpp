@@ -36,7 +36,9 @@ namespace sw
         }
         else
         {
-            result._bHitWidget = UIEventRouter::hitTest( tree, event._position, _scratchPath ) ? SW_TRUE : SW_FALSE;
+            const bool bHit    = event._touchTargetSize > 0.0f ? UIEventRouter::hitTestTouch( tree, event._position, event._touchTargetSize, _scratchPath )
+                                                               : UIEventRouter::hitTest( tree, event._position, _scratchPath );
+            result._bHitWidget = bHit ? SW_TRUE : SW_FALSE;
         }
         updateHover( &tree, _scratchPath );
 

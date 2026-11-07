@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -28,6 +29,14 @@ namespace sw
 
         PROPERTY( Min = 1 )
         uint32 _height{};
+
+        /// 이 기기가 알리는 안전 여백(왼쪽, 위, 오른쪽, 아래, 물리 픽셀 — 세로 방향 기준)입니다. 미리보기를 돌리면 변도 함께 돈다(`UIPreviewLogic::rotatePreset`).
+        PROPERTY()
+        float4 _safeInsets{};
+
+        /// 기기의 화면 배율(DPI / 160 — Android density, 데스크톱 1)입니다. 배율 설정이 창 배율을 곱할 때 미리보기가 그 값으로 곱한다.
+        PROPERTY( Min = 0.25, Max = 8.0 )
+        float32 _contentScale{ 1.0f };
     };
 } // namespace sw
 

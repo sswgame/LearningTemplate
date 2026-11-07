@@ -18,6 +18,7 @@ namespace sw
         uint32  _height{ 0 };                  ///< 픽셀 높이
         int2    _pointerOrigin{ 0, 0 };        ///< 주 출력의 창 안 왼쪽 위(백버퍼면 0)
         float32 _contentScale{ 1.0f };         ///< 주 창의 DPI 배율
+        float4  _safeInsets{};                 ///< 플랫폼 안전 여백(왼 · 위 · 오른 · 아래 픽셀 — 창 전체에 그릴 때만, 아니면 0)
         float32 _unscaledDeltaSeconds{ 0.0f }; ///< 실제 경과 — 정지 메뉴 아래서도 애니메이션 · 자막 · 알림이 흐른다
     };
 

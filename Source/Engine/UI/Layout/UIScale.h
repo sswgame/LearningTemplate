@@ -58,6 +58,10 @@ namespace sw
         float32 _maxScale{ 4.0f };
         PROPERTY( DisplayName = "Apply Content Scale", Tooltip = "Multiply by the OS window scale (desktop-style UI only)" )
         bool _bApplyContentScale{ false };
+        PROPERTY( DisplayName = "Min Touch Target", Min = 0.0, Tooltip = "Smallest touch target (UI units) - a touch that misses every control picks the nearest one whose box grown to this size holds the point" )
+        float32 _minTouchTargetSize{ 48.0f }; ///< Android 48dp · Apple 44pt 지침(기억). 0 이면 넓히지 않는다(`UIEventRouter::hitTestTouch`)
+        PROPERTY( DisplayName = "Compact Max Width", Min = 0.0, Tooltip = "A screen narrower than this (density-independent pixels: physical width / content scale) is compact - documents relayout with _when=\"screen.compact\"" )
+        float32 _compactMaxWidth{ 600.0f }; ///< Android sw600dp 의 경계(기억, dp = 물리 픽셀 / 창 배율). 리소스 태그 축 `screen` 이 이 값으로 compact · regular 를 고른다(`UISystem::syncScreenTags`)
 
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 를 반환하며, 읽은 값은 남습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
@@ -79,9 +83,10 @@ namespace sw
          * @param physicalSize 그릴 화면의 픽셀 크기입니다.
          * @param userScale 사용자 UI 배율입니다(gv_uiScale).
          * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`). 설정이 켜져 있을 때만 곱합니다.
-         * @param safeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로 미는 값입니다(gv_uiDebugSafeZone, 플랫폼 안전 영역).
+         * @param platformSafeInsets 플랫폼이 알린 안전 여백(왼쪽, 위, 오른쪽, 아래, 물리 픽셀 — 노치 · 시스템 바, `IWindow::getSafeAreaInsets`)입니다.
+         * @param debugSafeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로 미는 흉내입니다(gv_uiDebugSafeZone). 변마다 둘 중 큰 것이 이긴다(언리얼 `r.DebugSafeZone` 과 같은 겹침, 기억).
          */
-        static UIViewport makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale,
-                                        float32 safeZoneRatio );
+        static UIViewport makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale, const float4& platformSafeInsets,
+                                        float32 debugSafeZoneRatio );
     };
 } // namespace sw

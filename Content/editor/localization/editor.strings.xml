@@ -2599,6 +2599,11 @@
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdLabel.Rotate" source="Rotate">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdLabel.SelectAWidgetToEditItsProperties" source="Select a widget to edit its properties.">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
@@ -8486,6 +8491,11 @@
 		</entry>
 		<entry key="EditorUIPreview.ResolutionTip"
 		       source="Screen size to lay the document out for. Check layouts at several aspect ratios before shipping.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.RotateTip" source="Turn the device 90 degrees: width and height swap and the safe area insets follow the notch.">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>

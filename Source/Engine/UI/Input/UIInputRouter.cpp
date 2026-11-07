@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/Devices/MouseDevice.h"
+#include "Engine/Input/Devices/TouchDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -138,6 +139,7 @@ namespace sw
         , _stickDirection{ UINavigationDirection::Next }
         , _inputMode{ UIInputMode::Pointer }
         , _bPointerKnown{ SW_FALSE }
+        , _bTouchActive{ SW_FALSE }
         , _bStickHeld{ SW_FALSE }
         , _bMousePixelKnown{ SW_FALSE }
     {
@@ -265,8 +267,50 @@ namespace sw
         return true;
     }
 
+    void UIInputRouter::processTouch( const vector<unique_ptr<UIScreen>>& listScreen, const UIViewport& viewport )
+    {
+        const TouchDevice* const pTouch = _pInput->getTouch();
+        if ( pTouch == nullptr )
+            return;
+        constexpr uint16 kPrimaryFinger = 0;
+        const bool       bPressed       = pTouch->wasControlPressed( kPrimaryFinger );
+        const bool       bReleased      = pTouch->wasControlReleased( kPrimaryFinger );
+        const bool       bDown          = pTouch->isControlDown( kPrimaryFinger );
+        if ( bPressed == false && bReleased == false && ( bDown == false || _bTouchActive == SW_FALSE ) )
+            return;
+        const int2     pixel   = pTouch->getPointerPosition( kPrimaryFinger );
+        const float32  uiScale = viewport._uiScale > 0.0f ? viewport._uiScale : 1.0f;
+        UIPointerEvent event{};
+        event._position        = float2{ static_cast<float32>( pixel._x - viewport._pointerOrigin._x ) / uiScale, static_cast<float32>( pixel._y - viewport._pointerOrigin._y ) / uiScale };
+        event._button          = MouseButton::Left;
+        event._touchTargetSize = viewport._touchTargetSize;
+        if ( bPressed )
+        {
+            // 손가락은 호버가 없다 — 닿는 자리로 먼저 옮겨야 누름이 그 위젯에 간다(마우스의 Move → Down 순서와 같게).
+            event._kind = UIPointerEventKind::Move;
+            (void)dispatchPointerEvent( listScreen, event );
+            event._kind = UIPointerEventKind::Down;
+            (void)dispatchPointerEvent( listScreen, event );
+            _bTouchActive = SW_TRUE;
+        }
+        else if ( bDown && bReleased == false )
+        {
+            event._kind = UIPointerEventKind::Move;
+            (void)dispatchPointerEvent( listScreen, event );
+        }
+        if ( bReleased )
+        {
+            event._kind = UIPointerEventKind::Up;
+            (void)dispatchPointerEvent( listScreen, event );
+            _bTouchActive = SW_FALSE;
+            _pointer.clearHover(); // 손가락을 떼면 그 자리에 호버가 남지 않는다
+        }
+        (void)setInputMode( UIInputMode::Pointer );
+    }
+
     void UIInputRouter::processPointer( const vector<unique_ptr<UIScreen>>& listScreen, const UIViewport& viewport )
     {
+        processTouch( listScreen, viewport );
         const MouseDevice* pMouse = _pInput->getMouse();
         if ( pMouse == nullptr )
             return;

@@ -163,6 +163,11 @@ namespace sw::editor
          *        @p safeZoneRatio 만큼 안쪽으로(안전 영역 보기). 견본은 엔진 표(`UIResolutionPresetTable`)의 한 줄입니다.
          */
         static UIViewport makeViewport( const UIScaleSettings& settings, const UIResolutionPreset& resolution, float32 userScale, float32 safeZoneRatio );
+        /**
+         * @brief 견본을 90 도 돌립니다(가로 ↔ 세로). 크기를 맞바꾸고 안전 여백도 따라 돌린다 — 세로의 위(노치)는 시계 방향으로 돌리면 오른쪽이 된다.
+         * @details 휴대 기기의 방향 전환과 같다(Android `Surface.ROTATION_90` · 유니티 Device Simulator 의 회전, 기억).
+         */
+        static UIResolutionPreset rotatePreset( const UIResolutionPreset& resolution );
         /** @brief 크기 @p imageSize 의 이미지를 @p available 안에 비율을 지켜 맞춘 크기입니다(늘리지 않는다 — 1 배가 상한). */
         static float2 fitImage( const float2& imageSize, const float2& available );
         /** @brief 그린 이미지 위의 점 @p imagePoint(이미지 왼쪽 위 원점, 그린 크기 @p drawSize)를 UI 단위 점으로 옮깁니다. */

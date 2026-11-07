@@ -11,6 +11,7 @@
 #include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/OverlayPanel.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
+#include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/WidgetTree/Tests/UITestWidgets.h"
 
@@ -675,4 +676,38 @@ SW_TEST_CASE( MapCheckRowsTest, RowsAreFilteredAndErrorsComeFirst )
     MapCheckRows::populate( listIssue, search, listRow, shownCounts );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listRow.size() );
     SW_EXPECT_TRUE( listRow[0]._sourceLabel == "Zeta" );
+}
+
+/**
+ * @brief [UIPreviewLogicTest] 견본을 돌리면 크기가 맞바뀌고 안전 여백이 시계 방향으로 돈다(세로의 위 노치 → 가로의 오른쪽)
+ */
+SW_TEST_CASE( UIPreviewLogicTest, RotatePresetSwapsSizeAndTurnsInsets )
+{
+    UIResolutionPreset portrait{};
+    portrait._width                    = 1080;
+    portrait._height                   = 2400;
+    portrait._safeInsets               = float4{ 1.0f, 118.0f, 3.0f, 63.0f };
+    const UIResolutionPreset landscape = UIPreviewLogic::rotatePreset( portrait );
+    SW_EXPECT_EQUAL( 2400u, landscape._width );
+    SW_EXPECT_EQUAL( 1080u, landscape._height );
+    SW_EXPECT_EQUAL( 63.0f, landscape._safeInsets._x );
+    SW_EXPECT_EQUAL( 1.0f, landscape._safeInsets._y );
+    SW_EXPECT_EQUAL( 118.0f, landscape._safeInsets._z );
+    SW_EXPECT_EQUAL( 3.0f, landscape._safeInsets._w );
+}
+
+/**
+ * @brief [UIPreviewLogicTest] 뷰포트의 안전 영역은 변마다 플랫폼 여백과 흉내 비율 중 큰 것을 UI 단위로 담고, 터치 타깃 크기를 설정에서 싣는다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, ViewportSafeInsetsTakeTheLargerPerEdge )
+{
+    UIScaleSettings settings{};
+    settings._rule               = UIScaleRule::Fixed;
+    settings._minTouchTargetSize = 48.0f;
+    const UIViewport viewport    = UIScaleSettings::makeViewport( settings, float2{ 1000.0f, 2000.0f }, 1.0f, 1.0f, float4{ 0.0f, 120.0f, 0.0f, 10.0f }, 0.01f );
+    SW_EXPECT_EQUAL( 10.0f, viewport._safeInsets._x );  // 흉내 1000 × 0.01
+    SW_EXPECT_EQUAL( 120.0f, viewport._safeInsets._y ); // 노치가 흉내 20 보다 크다
+    SW_EXPECT_EQUAL( 10.0f, viewport._safeInsets._z );
+    SW_EXPECT_EQUAL( 20.0f, viewport._safeInsets._w ); // 흉내 2000 × 0.01 이 시스템 바 10 보다 크다
+    SW_EXPECT_EQUAL( 48.0f, viewport._touchTargetSize );
 }

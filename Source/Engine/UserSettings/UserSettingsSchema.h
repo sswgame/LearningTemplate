@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    struct HardwareDetectionResult;
+
     class GlobalVariableManager;
     class UserSettingsHandlerRegistry;
     class XMLNode;
@@ -234,6 +236,17 @@ namespace sw
         uint32 _minSystemMemoryMb{ 0 };
         PROPERTY( Name = "minGPUMemoryMb", Max = 1073741824 )
         uint32 _minGPUMemoryMb{ 0 }; ///< 기본 어댑터의 전용 비디오 메모리 하한. 0 이면 보지 않는다. 메모리를 못 읽은 기계(0)는 하한이 있는 규칙에 맞지 않는다.
+        PROPERTY( Name = "platform" )
+        string _platform{}; ///< 이 플랫폼(`build::kPlatformName`)에서만 맞는다. 비면 모든 플랫폼이다 — 휴대 기기 줄을 데스크톱 줄보다 앞에 둔다
+        PROPERTY( Name = "requireNativeBindless" )
+        bool _bRequireNativeBindless{ false }; ///< NOLINT(sw-bool-flag): 집합체다(리플렉션이 칸마다 읽는다) — C++17 비트필드는 기본값을 둘 수 없다
+        PROPERTY( Name = "requireMultiDrawIndirect" )
+        bool _bRequireMultiDrawIndirect{ false }; ///< NOLINT(sw-bool-flag): 집합체다(리플렉션이 칸마다 읽는다) — C++17 비트필드는 기본값을 둘 수 없다
+        PROPERTY( Name = "requireGPUCulling" )
+        bool _bRequireGPUCulling{ false }; ///< NOLINT(sw-bool-flag): 집합체다(리플렉션이 칸마다 읽는다) — C++17 비트필드는 기본값을 둘 수 없다
+
+        /** @brief @p probe 가 이 규칙의 하한 · 플랫폼 · RHI 능력을 모두 넘으면 true 입니다(언리얼 Scalability 의 장치 프로필 · 유니티 Quality 의 플랫폼 기본과 같은 자리, 기억). */
+        [[nodiscard]] bool matches( const HardwareDetectionResult& probe ) const;
     };
 } // namespace sw
 

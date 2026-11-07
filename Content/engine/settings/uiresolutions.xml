@@ -1,4 +1,6 @@
-<!-- 화면 해상도 견본(물리 픽셀) — 에디터 UI 미리보기가 쓴다. 첫 줄이 처음 여는 견본이다(UIResolutionPresetTable). -->
+<!-- 화면 해상도 견본(물리 픽셀) — 에디터 UI 미리보기가 쓴다. 첫 줄이 처음 여는 견본이다(UIResolutionPresetTable).
+     휴대 기기 줄은 세로 방향 기준의 안전 여백(왼쪽,위,오른쪽,아래 — 노치 · 상태 바 · 제스처 막대, 물리 픽셀)과 화면 배율(density)을 싣는다. 미리보기의 "돌리기" 가 가로로 돌린다.
+     기기 수치는 공개 사양 기억값이다(붙이는 기기로 다시 잰다). -->
 <UIResolutionPresetTable>
 	<_listResolution>
 		<UIResolutionPreset _name="1920x1080 (Full HD)" _width="1920" _height="1080" />
@@ -7,5 +9,9 @@
 		<UIResolutionPreset _name="3840x2160 (4K)" _width="3840" _height="2160" />
 		<UIResolutionPreset _name="2560x1080 (21:9)" _width="2560" _height="1080" />
 		<UIResolutionPreset _name="1080x1920 (Portrait)" _width="1080" _height="1920" />
+		<UIResolutionPreset _name="Phone 1080x2400 (punch hole, gesture bar)" _width="1080" _height="2400" _safeInsets="0,118,0,63" _contentScale="2.625" />
+		<UIResolutionPreset _name="Phone 720x1600 (teardrop notch, nav bar)" _width="720" _height="1600" _safeInsets="0,80,0,96" _contentScale="2" />
+		<UIResolutionPreset _name="Tablet 1600x2560 (status bar)" _width="1600" _height="2560" _safeInsets="0,48,0,48" _contentScale="2" />
+		<UIResolutionPreset _name="Foldable inner 1812x2176" _width="1812" _height="2176" _safeInsets="0,96,0,48" _contentScale="2.625" />
 	</_listResolution>
 </UIResolutionPresetTable>

@@ -12,10 +12,21 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
 namespace sw
 {
+    bool ScalabilityAutoDetectRule::matches( const HardwareDetectionResult& probe ) const
+    {
+        const bool             bSpec         = probe._logicalCoreCount >= _minLogicalCoreCount && probe._systemMemoryMb >= _minSystemMemoryMb && probe._gpuMemoryMb >= _minGPUMemoryMb;
+        const bool             bPlatform     = _platform.empty() || StringUtil::equals( _platform, probe._platformName );
+        const RHICapabilities& caps          = probe._rhiCapabilities;
+        const bool             bCapabilities = ( _bRequireNativeBindless == false || caps._bNativeBindless != SW_FALSE ) && ( _bRequireMultiDrawIndirect == false || caps._bMultiDrawIndirect != SW_FALSE ) &&
+                                   ( _bRequireGPUCulling == false || caps._bGPUCulling != SW_FALSE );
+        return bSpec && bPlatform && bCapabilities;
+    }
+
     namespace
     {
         struct UserSettingsSchemaInternal
