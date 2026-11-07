@@ -499,6 +499,17 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
+					<AudioListenerComponent _componentName="AudioListenerComponent"
+					                        _bActive="true"
+					                        _localPosition="0,0,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerID="0"
+					                        _attachComponent="CameraComponent#0"
+					                        _screenHalfWidth="10"
+					                        _listenerIndex="0"
+					                        _mode="World3D" />
 					<MeshComponent _componentName="ViewWeapon"
 					               _bActive="true"
 					               _localPosition="0.16,-0.15,0.42"
@@ -1580,7 +1591,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<!-- 공간 오디오(automation/spatialaudio) — 아레나 안쪽 구석의 잔향 존과 영역 환경음, 벽의 전력함에서 나는 점 소리(가림). -->
+		<!-- 공간 오디오(automation/spatialaudio) — 아레나 안쪽 구석의 잔향 존과 영역 환경음, 벽의 전력함에서 나는 점 소리(가림).
+		     듣는 자리는 플레이어 눈(Player 의 AudioListenerComponent)이다 — 3인칭 · 킬캠 시점으로 바꿔도 소리는 몸에서 듣는다(automation/audiolistener). -->
 		<entity id="97" name="ArenaReverbZone">
 			<GameObject _schemaVersion="0" _name="ArenaReverbZone" _bActive="true">
 				<_listComponent>
