@@ -72,6 +72,7 @@
 		       text="선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)"
 		       sourceHash="d501e3c769a8b3f1" />
 		<entry key="Catalog Editor" text="카탈로그 편집기" sourceHash="4bfb149f63cb4f61" />
+		<entry key="Changes" text="변경 사항" sourceHash="5b424751e1043b2a" />
 		<entry key="Character Editor" text="캐릭터 편집기" sourceHash="3db3ea4ef1e64749" />
 		<entry key="Check Out (Lock)" text="체크아웃(잠금)" sourceHash="03c20a4c6b4d8383" />
 		<entry key="Clip Preview" text="클립 미리보기" sourceHash="9e69276570145a3b" />
@@ -104,6 +105,7 @@
 		<entry key="Creates an organizing folder under the selected object (or the root)"
 		       text="고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
 		       sourceHash="788f45ec38d1c127" />
+		<entry key="Cutscene Debugger" text="컷씬 디버거" sourceHash="6bc219e759f91cdc" />
 		<entry key="Data Layers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="Data Table Editor" text="데이터 테이블 편집기" sourceHash="9fa50cb618dc4886" />
 		<entry key="Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
@@ -115,12 +117,20 @@
 		<entry key="Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdButton.Add" text="추가" sourceHash="f9aee319a006c9b4" />
 		<entry key="EdButton.AddComponent" text="컴포넌트 추가" sourceHash="4ea9ecf3731289fb" />
+		<entry key="EdButton.BackToFolders" text="폴더로 돌아가기" sourceHash="c88cd62aabb54b76" />
 		<entry key="EdButton.BuildFailed" text="빌드 실패" sourceHash="7290df8bb9b262d8" />
 		<entry key="EdButton.CheckMap" text="맵 검사" sourceHash="3fbc737f419fb311" />
 		<entry key="EdButton.CollectNow" text="지금 모으기" sourceHash="57c0ab9dc3fd16ad" />
 		<entry key="EdButton.Compile" text="컴파일" sourceHash="3804955c32a9bc7e" />
 		<entry key="EdButton.Compiling" text="컴파일 중..." sourceHash="5f9bdcd1a3ca19ed" />
 		<entry key="EdButton.DebugDraw" text="디버그 그리기" sourceHash="b91fd5a01241caca" />
+		<entry key="EdButton.DeleteCollection" text="컬렉션 지우기" sourceHash="317006269d0d1476" />
+		<entry key="EdButton.Diff" text="차이" sourceHash="f48ac77358c2843a" />
+		<entry key="EdButton.Discard" text="버리기" sourceHash="c00a88b90cd60661" />
+		<entry key="EdButton.Fix" text="고치기" sourceHash="f2a69e199c809518" />
+		<entry key="EdButton.FixAll" text="모두 고치기" sourceHash="1d0544f104c7f5cb" />
+		<entry key="EdButton.History" text="기록" sourceHash="58c754018ec47b5f" />
+		<entry key="EdButton.NewCollection" text="새 컬렉션" sourceHash="c02cbf6ebf0b6cdb" />
 		<entry key="EdButton.NewFolder" text="새 폴더" sourceHash="8c94696381c29127" />
 		<entry key="EdButton.OpenFolder" text="폴더 열기" sourceHash="5f5f52d825d4f3ef" />
 		<entry key="EdButton.Overlays" text="오버레이" sourceHash="997e01cb507f1410" />
@@ -138,7 +148,10 @@
 		<entry key="EdButton.ResetSection" text="섹션 되돌리기" sourceHash="c03a0b1a004ffb97" />
 		<entry key="EdButton.ResetToDefault" text="기본값으로 되돌리기" sourceHash="f786171004dde79c" />
 		<entry key="EdButton.ResetToThemeDefaults" text="테마 기본값으로 되돌리기" sourceHash="d51d36e98480c6c6" />
+		<entry key="EdButton.Restore" text="되살리기" sourceHash="26f91b6796e33111" />
 		<entry key="EdButton.ResumeServer" text="서버 재개" sourceHash="fdd0c4b276662459" />
+		<entry key="EdButton.Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdButton.SaveSearch" text="검색 저장" sourceHash="8a1f494066bba724" />
 		<entry key="EdButton.Simulate" text="시뮬레이트" sourceHash="cfcffcf35292bc6f" />
 		<entry key="EdButton.Step" text="한 프레임" sourceHash="d9994f251f1280cf" />
 		<entry key="EdButton.StepN" text="N 프레임" sourceHash="4b3245a46428ef09" />
@@ -606,6 +619,9 @@
 		       sourceHash="2d17573e065de4bb" />
 		<entry key="EdFormat.Choices" text="선택지({choiceCount}):" sourceHash="f4a11b6677b8a27e" />
 		<entry key="EdFormat.Cmd" text="명령: {actionCommand}" sourceHash="45863577c777d0c8" />
+		<entry key="EdFormat.CollectionItemMissing"
+		       text="{asset} (옮겨졌거나 지워짐)"
+		       sourceHash="b0479cabbb2eed0f" />
 		<entry key="EdFormat.ComponentSAreNot"
 		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다"
 		       sourceHash="6f52e74415d01355" />
@@ -666,6 +682,13 @@
 		       text="{name}  {blend, select, additive {가산} other {알파}}{looping, select, yes {  반복} other {}}  최대 {maxParticles}  {texturePath}"
 		       sourceHash="c4dbe4d688875299" />
 		<entry key="EdFormat.ModuleOff" text="꺼짐 — {reason}" sourceHash="2a4840d525147443" />
+		<entry key="EdFormat.MoveAssetCount"
+		       text="파일 {assetCount}개를 {destination}(으)로 옮기기"
+		       sourceHash="f1cf570450909cfa" />
+		<entry key="EdFormat.MoveFixesReferrers"
+		       text="참조하는 파일 {referrerCount}개를 같은 단계에서 고칩니다. 쓰기가 하나라도 실패하면 모두 되돌립니다"
+		       sourceHash="8813e00ab1b360d8" />
+		<entry key="EdFormat.MoveRefused" text="옮길 수 없습니다: {reason}" sourceHash="d1cec7dbb416130d" />
 		<entry key="EdFormat.MoveToRecycleBin"
 		       text="'{file}' 을 휴지통으로 옮길까요?"
 		       sourceHash="3138ed4fd3a78c0b" />
@@ -691,6 +714,15 @@
 		<entry key="EdFormat.PixelDepth"
 		       text="픽셀 ({probedTexelX}, {probedTexelY}): 깊이 {probedPixelX}"
 		       sourceHash="946b432bf1b2d07e" />
+		<entry key="EdFormat.PlacementNoSurface"
+		       text="커서 아래에 표면이 없어 {asset} 을(를) 놓지 않습니다. 오브젝트 · 콜라이더 · 지면을 겨누세요"
+		       sourceHash="3424c73036ee68ec" />
+		<entry key="EdFormat.PlacementOnSurface"
+		       text="{asset} 을(를) {surface} 위에 놓기"
+		       sourceHash="97630c42f4037b5b" />
+		<entry key="EdFormat.PlacementOpensInstead"
+		       text="{asset} 은(는) 놓으면 열립니다 — 이 종류는 씬에 배치할 수 없습니다"
+		       sourceHash="85e6c3e20fd7aad0" />
 		<entry key="EdFormat.PlaybackControlsTotalFrames"
 		       text="재생 제어(전체 프레임: {frameCount}, 길이: {totalDuration}초):"
 		       sourceHash="6ea074b30205343c" />
@@ -709,6 +741,9 @@
 		       text="범위 {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
 		       sourceHash="b17ecd9eafda185f" />
 		<entry key="EdFormat.Ready" text="{sW_EDITORICON}  준비됨" sourceHash="5823a33dbacdfe5f" />
+		<entry key="EdFormat.RevertFileToHead"
+		       text="{file} 을(를) HEAD 로 되돌릴까요? 스테이징한 편집과 저장하지 않은 편집을 잃습니다."
+		       sourceHash="204df220dcc99ed9" />
 		<entry key="EdFormat.RightTrigger" text="오른쪽 트리거: {rightTrigger}" sourceHash="6efeae86586e0ab5" />
 		<entry key="EdFormat.RootMotion"
 		       text="루트 모션: ({rootMotionTranslationX}, {rootMotionTranslationY}, {rootMotionTranslationZ})"
@@ -874,10 +909,12 @@
 		       text="위젯을 고르면 프로퍼티를 편집합니다."
 		       sourceHash="03a32e1f7acb8032" />
 		<entry key="EdLabel.Sent" text="보냄" sourceHash="57ade424d57c6edf" />
+		<entry key="EdLabel.SharedWithTheProject" text="프로젝트와 공유" sourceHash="08385934e88b4706" />
 		<entry key="EdLabel.Show2DStickTriggerGauges"
 		       text="2D 스틱 · 트리거 게이지 보이기"
 		       sourceHash="4ff57c5ad554a390" />
 		<entry key="EdLabel.ShowAll" text="모두 보이기" sourceHash="9c55b48de3e2306f" />
+		<entry key="EdLabel.ShowAllFunctions" text="모든 함수 보기" sourceHash="6b5c63957bd81656" />
 		<entry key="EdLabel.ShowDebugHUDCtrlF3" text="디버그 HUD 보이기(Ctrl+F3)" sourceHash="f6ae7a11a7075416" />
 		<entry key="EdLabel.ShowFaceButtonsABXY" text="앞면 단추 보이기(A/B/X/Y)" sourceHash="69f6fbfd42a05310" />
 		<entry key="EdLabel.ShowLiveActionTriggerStream"
@@ -1207,6 +1244,9 @@
 		       sourceHash="3ce6bd7d42158e88" />
 		<entry key="EdText.UpSend" text="올리기(보냄)" sourceHash="524c69bb88be662d" />
 		<entry key="EdText.Use" text="쓰기" sourceHash="625ad019db843f94" />
+		<entry key="EdText.UsedOutsideTheMovedFilesBy"
+		       text="옮기는 파일 밖에서 쓰는 곳:"
+		       sourceHash="34327347515f7565" />
 		<entry key="EdText.Validate" text="검사" sourceHash="bad7d2734149470b" />
 		<entry key="EdText.Value" text="값" sourceHash="41f7dca46d3f1b4a" />
 		<entry key="EdText.VirtualInputInjectorGameplayMacroSimulator"
@@ -1315,6 +1355,7 @@
 		<entry key="EdVerb.Clear" text="지우기" sourceHash="b4f1dffbb6be6302" />
 		<entry key="EdVerb.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
 		<entry key="EdVerb.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
+		<entry key="EdVerb.Move" text="옮기기" sourceHash="379c18aec5654894" />
 		<entry key="EdVerb.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="EdVerb.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
 		<entry key="EdVerb.Refresh" text="새로 고침" sourceHash="7b7163270e57e8b4" />
@@ -1424,7 +1465,6 @@
 		<entry key="EdWidget.Starting" text="시작 중" sourceHash="4c60317e4731da19" />
 		<entry key="EdWidget.TagFilter" text="태그" sourceHash="03aa3cfb08dff960" />
 		<entry key="EdWidget.Target" text="대상" sourceHash="ff5bb7742c2896c8" />
-		<entry key="EdWidget.TargetObject" text="대상 오브젝트" sourceHash="20c7355665060aef" />
 		<entry key="EdWidget.Theme" text="테마" sourceHash="aab875d8cfcfe712" />
 		<entry key="EdWidget.Tiles" text="타일" sourceHash="de8252d2a4d268ce" />
 		<entry key="EdWidget.Variables" text="변수" sourceHash="b28f9fa3f23f63c2" />
@@ -1671,6 +1711,19 @@
 		<entry key="EditorAudioGraph.SetOutput" text="출력으로 지정" sourceHash="44e1db1124a858ee" />
 		<entry key="EditorAudioGraph.StopPreview" text="미리 듣기 멈춤" sourceHash="f83bedb815ca8289" />
 		<entry key="EditorAudioGraph.Unsaved" text="* 저장하지 않은 변경" sourceHash="6e6e4d288ea76fc4" />
+		<entry key="EditorAutosave.CanRestore" text="되살릴 수 있음" sourceHash="135fcc139c5c2497" />
+		<entry key="EditorAutosave.DiscardTooltip"
+		       text="이 씬의 사본을 모두 지웁니다"
+		       sourceHash="b049aae9e7c74d25" />
+		<entry key="EditorAutosave.NothingToRecover"
+		       text="복구할 저장 안 된 작업이 없습니다. 에디터가 정상적으로 닫히지 않으면 여기에 사본이 나타납니다."
+		       sourceHash="2a3a43b34723dfa6" />
+		<entry key="EditorAutosave.RecoveryIntro"
+		       text="지난 에디터 세션이 정상적으로 닫히지 않았습니다. 되살리기는 저장하지 않은 변경이 있는 씬의 가장 새 사본을 엽니다. 원본 파일은 저장할 때만 바뀝니다."
+		       sourceHash="d09221865e1c502b" />
+		<entry key="EditorAutosave.RestoreTooltip"
+		       text="가장 새 사본을 저장하지 않은 씬으로 엽니다. 남기려면 저장하세요"
+		       sourceHash="dbe504d004f8aa66" />
 		<entry key="EditorBugReport.Capture"
 		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugReports/&lt;시각>/ 에 모읍니다"
 		       sourceHash="e37d757ff11c6fb3" />
@@ -1769,6 +1822,13 @@
 		<entry key="EditorContentBrowser.AllPacks"
 		       text="끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)"
 		       sourceHash="067ec08ebb217cae" />
+		<entry key="EditorContentBrowser.Collections" text="컬렉션" sourceHash="3f5390ecd7d14626" />
+		<entry key="EditorContentBrowser.DeleteCollectionTooltip"
+		       text="이 컬렉션을 지웁니다. 에셋은 제자리에 남습니다"
+		       sourceHash="e899990c44539d9e" />
+		<entry key="EditorContentBrowser.EmptyCollection"
+		       text="이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
+		       sourceHash="7b266442dc624f84" />
 		<entry key="EditorContentBrowser.Import"
 		       text="외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다"
 		       sourceHash="2898d0429b60b307" />
@@ -1787,6 +1847,12 @@
 		<entry key="EditorContentBrowser.NavigateForward"
 		       text="다음 폴더로 이동 (마우스 앞으로가기 버튼 / Alt+Right)"
 		       sourceHash="e3fb58ac278840e8" />
+		<entry key="EditorContentBrowser.NewCollectionTooltip"
+		       text="컬렉션을 만들고 선택한 에셋을 넣습니다. 에셋을 컬렉션 위에 놓으면 더해집니다"
+		       sourceHash="05ca12df71a90792" />
+		<entry key="EditorContentBrowser.NoCollections"
+		       text="저장한 검색이나 컬렉션이 아직 없습니다. 아래에서 검색을 저장하거나 컬렉션을 만드세요."
+		       sourceHash="af74ae861f933baa" />
 		<entry key="EditorContentBrowser.NoDependencies"
 		       text="이 에셋은 다른 에셋을 참조하지 않습니다."
 		       sourceHash="50ab40c25cca0908" />
@@ -1802,11 +1868,17 @@
 		<entry key="EditorContentBrowser.Refresh"
 		       text="디스크 파일 및 리소스 루트 목록을 새로고침합니다"
 		       sourceHash="e351299aebb05930" />
+		<entry key="EditorContentBrowser.SaveSearchTooltip"
+		       text="검색어와 종류 필터를 이름을 붙여 남깁니다"
+		       sourceHash="e63df314aa28c4e0" />
 		<entry key="EditorContentBrowser.SearchHint" text="콘텐츠 검색" sourceHash="aed3d9bd3922b0ec" />
 		<entry key="EditorContentBrowser.SearchTooltip"
 		       text="에셋 이름 또는 확장자로 필터링하여 검색합니다"
 		       sourceHash="e11492bee77d447c" />
 		<entry key="EditorContentBrowser.SelectFolder" text="폴더를 선택하세요" sourceHash="2bd7ee39f002dd76" />
+		<entry key="EditorContentBrowser.SharedCollectionTooltip"
+		       text="공유 항목은 Config/Editor/ContentCollections.txt 에 써서 프로젝트와 함께 커밋합니다. 나머지는 이 컴퓨터에만 남습니다"
+		       sourceHash="809d3119a07c0de0" />
 		<entry key="EditorContentBrowser.TileSize"
 		       text="타일 썸네일의 크기를 조절합니다 (64px ~ 160px)"
 		       sourceHash="0643d7eb938c0df1" />
@@ -2134,6 +2206,7 @@
 		<entry key="EditorInspector.ClearAssetReference"
 		       text="이 에셋 참조를 비웁니다."
 		       sourceHash="f17ea5903678d603" />
+		<entry key="EditorInspector.DiagnosticMethodTag" text="진단" sourceHash="ca9e13f23f0c433e" />
 		<entry key="EditorInspector.FavoriteProperty" text="즐겨찾기한 프로퍼티" sourceHash="fb249f89853db486" />
 		<entry key="EditorInspector.FavoritesSection" text="즐겨찾기" sourceHash="20a500234e838dda" />
 		<entry key="EditorInspector.FollowingSelection"
@@ -2143,9 +2216,16 @@
 		       text="이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
 		       sourceHash="2949005a455de65b" />
 		<entry key="EditorInspector.MultipleValues" text="값이 여러 개입니다" sourceHash="076c678f4bbd3ed9" />
+		<entry key="EditorInspector.NetRoleMethodRunsLocally"
+		       text="네트워크 역할은 선언일 뿐입니다. 여기서 부르면 네트워크가 아니라 이 프로세스에서 실행됩니다"
+		       sourceHash="a795d92a1859b233" />
+		<entry key="EditorInspector.NetRoleNotRoutedTag" text="RPC 전달 안 됨" sourceHash="80eceb89b37b45f8" />
 		<entry key="EditorInspector.NewElementHint" text="새 요소 (Enter)" sourceHash="1aa8dbc03ddac16c" />
 		<entry key="EditorInspector.NewKeyHint" text="새 키 (Enter)" sourceHash="47b32bac92c70617" />
 		<entry key="EditorInspector.NoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
+		<entry key="EditorInspector.NoCallInEditorMethods"
+		       text="CallInEditor 함수가 없습니다. 나머지를 부르려면 보기 옵션에서 모든 함수 보기를 켜세요."
+		       sourceHash="858e92231af0f29c" />
 		<entry key="EditorInspector.NoFunctionMethods"
 		       text="FUNCTION() 메서드가 없습니다."
 		       sourceHash="12839db98b7d1b33" />
@@ -2183,6 +2263,9 @@
 		<entry key="EditorInspector.SelectionGone"
 		       text="선택한 오브젝트가 더 이상 없습니다."
 		       sourceHash="23ddb8c723e96d95" />
+		<entry key="EditorInspector.ShowAllFunctionsTooltip"
+		       text="진단 보기: CallInEditor 가 없는 FUNCTION 도 보입니다. 에디터 안전을 선언하지 않았으므로 기본 목록에서는 숨깁니다"
+		       sourceHash="6200c86065c13e70" />
 		<entry key="EditorInspector.ShowInContentBrowser"
 		       text="콘텐츠 브라우저에서 보여 줍니다"
 		       sourceHash="6f318bdda96ed595" />
@@ -2201,6 +2284,9 @@
 		<entry key="EditorMapCheck.CheckMap"
 		       text="활성 씬의 모든 오브젝트를 다시 검증합니다"
 		       sourceHash="513adef7c162ddc7" />
+		<entry key="EditorMapCheck.FixAllTooltip"
+		       text="보이는 줄의 안전한 고침을 모두 한 번의 실행 취소 단계로 적용합니다. 고치기 버튼이 없는 줄은 손으로 고쳐야 합니다"
+		       sourceHash="3778efd46b5886db" />
 		<entry key="EditorMapCheck.NoIssues"
 		       text="검증 문제가 없습니다. Check Map 은 활성 씬의 모든 오브젝트를 검증합니다."
 		       sourceHash="a042e68eb738c2fe" />
@@ -2655,9 +2741,43 @@
 		<entry key="EditorScene.VisibleInEditor"
 		       text="에디터에서 보입니다 - 클릭하면 숨깁니다(저장하지 않습니다)"
 		       sourceHash="7f2b213a53a71e65" />
+		<entry key="EditorSequenceDebugger.ActiveSection" text="활성 항목" sourceHash="0845d3ac17275137" />
+		<entry key="EditorSequenceDebugger.BindingsSection" text="바인딩" sourceHash="3d5586781c492703" />
+		<entry key="EditorSequenceDebugger.EmptyHistoryHint"
+		       text="아직 기록된 것이 없습니다. 시퀀스를 재생하면 이벤트와 카메라 신호가 보입니다."
+		       sourceHash="3614bfa7bac806e8" />
+		<entry key="EditorSequenceDebugger.HistorySection" text="최근 재생" sourceHash="f311857b0313bb2f" />
+		<entry key="EditorSequenceDebugger.NoActiveItemsHint"
+		       text="현재 프레임에 걸친 항목이 없습니다."
+		       sourceHash="f099e722d8484142" />
+		<entry key="EditorSequenceDebugger.NoBindingsHint"
+		       text="이 시퀀스에는 바인딩이 없습니다."
+		       sourceHash="6edc9dccba1aa7a9" />
+		<entry key="EditorSequenceDebugger.NoPlayersHint"
+		       text="활성 씬에 Sequence Player 가 없습니다. 그것이 있는 씬을 열거나 플레이를 누르세요."
+		       sourceHash="2a364866a59ff4d7" />
+		<entry key="EditorSequenceDebugger.NotSpawnedYet" text="아직 스폰되지 않음" sourceHash="7a1f4a2fa58fe53e" />
+		<entry key="EditorSequenceDebugger.PlayerLabel" text="플레이어" sourceHash="333dc56ddffd8ea0" />
+		<entry key="EditorSequenceDebugger.PlayheadFormat"
+		       text="프레임 {frame} ({frameMin} ~ {frameMax}), {state}"
+		       sourceHash="85d6517eeb6f62be" />
+		<entry key="EditorSequenceDebugger.Unbound" text="바인딩 안 됨" sourceHash="e7a38a6492965c7a" />
+		<entry key="EditorSequencer.AddBindingFromSelection"
+		       text="선택에서 바인딩 추가"
+		       sourceHash="5693a6de7fbb2111" />
+		<entry key="EditorSequencer.AddBindingFromSelectionTip"
+		       text="선택한 오브젝트의 이름으로 바인딩을 더하고 이 씬의 Sequence Player 에서 그 오브젝트에 바인딩합니다."
+		       sourceHash="7b87676d51e56c48" />
+		<entry key="EditorSequencer.AddCutButton" text="컷 추가" sourceHash="ac147fc64bba45b4" />
+		<entry key="EditorSequencer.AddCutTip"
+		       text="현재 프레임에서 선택한 바인딩의 카메라로 카메라 컷을 시작합니다. 나뉜 컷은 바로 앞에서 끝납니다."
+		       sourceHash="e783f57fa531958f" />
 		<entry key="EditorSequencer.AddKeyTip"
 		       text="대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다"
 		       sourceHash="16f07e74ed05266c" />
+		<entry key="EditorSequencer.AddLensTrackTip"
+		       text="선택한 바인딩의 카메라에 렌즈 트랙(시야각 · 초점 · 조리개 · 렌즈 시프트)을 더합니다."
+		       sourceHash="f6743e7776d3311c" />
 		<entry key="EditorSequencer.AddPropertyTrackTip"
 		       text="고른 오브젝트 컴포넌트의 숫자 프로퍼티 하나를 키로 모는 트랙을 더합니다"
 		       sourceHash="85e564686f766382" />
@@ -2667,33 +2787,79 @@
 		<entry key="EditorSequencer.AddTransformTrackTip"
 		       text="고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
 		       sourceHash="0a22f5584fe08e9e" />
+		<entry key="EditorSequencer.BindSelection" text="선택 바인딩" sourceHash="9c0aa4f91f4c05ac" />
+		<entry key="EditorSequencer.BindSelectionTip"
+		       text="선택한 바인딩을 씬에서 선택한 오브젝트에 바인딩합니다. 실행 취소하면 이전 오브젝트로 돌아갑니다."
+		       sourceHash="36c3079a690321ab" />
+		<entry key="EditorSequencer.BindingContextFormat"
+		       text="{player} 의 Sequence Player 바인딩"
+		       sourceHash="ae5f857d1359a23a" />
+		<entry key="EditorSequencer.BindingLabel" text="바인딩" sourceHash="50ebe627b4bc7d02" />
+		<entry key="EditorSequencer.BindingNameLabel" text="바인딩 이름" sourceHash="d968880d3aaaa3e5" />
+		<entry key="EditorSequencer.BindingNameTip"
+		       text="에디터에 보이고 스폰한 오브젝트가 받는 이름입니다. 오브젝트는 이 이름이 아니라 바인딩 id 로 찾습니다."
+		       sourceHash="40de44d12b72956d" />
+		<entry key="EditorSequencer.BindingUsesFormat" text="{count}곳에서 사용" sourceHash="271edf2dfa48b27c" />
+		<entry key="EditorSequencer.BindingsSection" text="바인딩" sourceHash="3d5586781c492703" />
+		<entry key="EditorSequencer.CameraCutsSection" text="카메라 컷" sourceHash="b45dc89b0307839b" />
 		<entry key="EditorSequencer.CancelItemTip" text="새 항목을 버립니다." sourceHash="9f6b9e10ef5b67af" />
 		<entry key="EditorSequencer.CinematicNoteTip"
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
 		       sourceHash="10888390b009288d" />
+		<entry key="EditorSequencer.ClipLabel" text="클립" sourceHash="3e092e9d1ee2c5bb" />
+		<entry key="EditorSequencer.ClipTip"
+		       text="구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+		       sourceHash="6f17aa73e43916d3" />
 		<entry key="EditorSequencer.CreateItemButton" text="항목 만들기" sourceHash="40462b2baa211920" />
 		<entry key="EditorSequencer.CreateItemTip"
 		       text="항목을 타임라인에 더합니다. 필수 칸을 모두 채워야 합니다."
 		       sourceHash="591d213dd75a37ba" />
 		<entry key="EditorSequencer.CurveButton" text="커브" sourceHash="c341553c3556d2b4" />
+		<entry key="EditorSequencer.CutLaneTip"
+		       text="카메라별 카메라 컷입니다. 컷을 누르면 선택하고 그 프레임으로 옮깁니다."
+		       sourceHash="c5612e135548c69d" />
+		<entry key="EditorSequencer.DeleteBinding" text="바인딩 지우기" sourceHash="3048d6ca42f0b223" />
+		<entry key="EditorSequencer.DeleteBindingTip"
+		       text="선택한 바인딩을 지웁니다. 그것을 쓰는 항목과 트랙을 먼저 지우세요."
+		       sourceHash="e83e15fc2c3f78aa" />
 		<entry key="EditorSequencer.DeleteKeyButton" text="키 지우기" sourceHash="9c0aca1551241c65" />
 		<entry key="EditorSequencer.DeleteKeyTip"
 		       text="현재 프레임에 있는 이 트랙의 키를 모든 채널에서 지웁니다."
 		       sourceHash="49c0091d760285d9" />
+		<entry key="EditorSequencer.DeleteSelectedKeys" text="선택한 키 지우기" sourceHash="c5e8219f1798304d" />
+		<entry key="EditorSequencer.DeleteSelectedKeysTip"
+		       text="모든 채널에서 선택한 키를 모두 지웁니다."
+		       sourceHash="a35ed921f1e141b5" />
 		<entry key="EditorSequencer.DeleteTrackTip"
 		       text="선택한 키 트랙과 그 키를 모두 지웁니다."
 		       sourceHash="2ff5f20c5adced56" />
 		<entry key="EditorSequencer.DraftHint"
 		       text="필수 칸을 채우면 항목을 만들 수 있습니다."
 		       sourceHash="c98782582a54e3a9" />
-		<entry key="EditorSequencer.ItemTargetTip"
-		       text="이 항목이 작용하는 씬 오브젝트의 이름입니다."
-		       sourceHash="bf2c3dcae8da0cd0" />
+		<entry key="EditorSequencer.ItemBindingTip"
+		       text="이 항목이 작용하는 오브젝트의 바인딩입니다."
+		       sourceHash="84541c00ce7d9314" />
 		<entry key="EditorSequencer.KeyButton" text="키" sourceHash="506b6a19d12f414c" />
+		<entry key="EditorSequencer.KeyStripTip"
+		       text="키를 누르면 선택하고, Ctrl+클릭은 더하거나 빼며, 끌면 선택한 키를 프레임 단위로 옮깁니다. 빈 곳을 누르면 그 프레임으로 갑니다."
+		       sourceHash="242e6a92495c3c83" />
+		<entry key="EditorSequencer.LensTargetNotFound"
+		       text="대상에 Camera 가 없습니다"
+		       sourceHash="08016d2d6ae8ee36" />
 		<entry key="EditorSequencer.LoadTip"
 		       text="저장하지 않은 편집을 버리고 포커스된 .seq 파일을 디스크에서 다시 읽습니다."
 		       sourceHash="a7fd6955fa49a19b" />
 		<entry key="EditorSequencer.NextKeyTip" text="다음 키로" sourceHash="3e237c799dc70cd3" />
+		<entry key="EditorSequencer.NoBindingChoice" text="(없음)" sourceHash="8c36545f724b9460" />
+		<entry key="EditorSequencer.NoBindingContextHint"
+		       text="이 씬에 이 시퀀스를 재생하는 Sequence Player 가 없습니다. 오브젝트를 바인딩하고 미리 보려면 하나 더하세요."
+		       sourceHash="cda8ee8e1da074bd" />
+		<entry key="EditorSequencer.NoBindingsHint"
+		       text="바인딩이 없습니다. 오브젝트를 선택하고 그것으로 바인딩을 더하세요."
+		       sourceHash="32886ee7ccfabcb1" />
+		<entry key="EditorSequencer.NoCutsHint"
+		       text="카메라 컷이 없습니다. 카메라 바인딩을 선택하고 컷을 더하세요."
+		       sourceHash="a0b9f7a2ac3e8084" />
 		<entry key="EditorSequencer.NoKeyTracksHint"
 		       text="키 트랙이 없습니다. 오브젝트를 선택하고 트랜스폼 트랙이나 프로퍼티 트랙을 추가합니다."
 		       sourceHash="25e7f8af93f545af" />
@@ -2743,17 +2909,27 @@
 		<entry key="EditorSequencer.SelectItemHint"
 		       text="편집하려면 타임라인에서 항목을 선택합니다."
 		       sourceHash="a4d100ffc931f778" />
-		<entry key="EditorSequencer.SpawnNameTip"
-		       text="스폰한 오브젝트가 받을 이름입니다."
-		       sourceHash="873321dc60f62fdf" />
+		<entry key="EditorSequencer.SoundLabel" text="소리" sourceHash="2593d0c70a1c5074" />
+		<entry key="EditorSequencer.SoundTip"
+		       text="시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
+		       sourceHash="86fa2343e0131e5e" />
+		<entry key="EditorSequencer.SpawnBindingTip"
+		       text="스폰한 오브젝트가 채울 바인딩입니다. 오브젝트 이름은 바인딩 이름입니다."
+		       sourceHash="da3f71298a513c5f" />
+		<entry key="EditorSequencer.SpawnedBinding" text="시퀀스가 스폰함" sourceHash="961eabd19a249d12" />
 		<entry key="EditorSequencer.StopTip"
 		       text="재생을 멈추고 첫 프레임으로 돌아가며, 카메라 컷이 가져간 카메라를 돌려줍니다."
 		       sourceHash="5cc090cc2d6ab53d" />
 		<entry key="EditorSequencer.TargetNotFound"
 		       text="대상 오브젝트를 찾을 수 없습니다"
 		       sourceHash="f17bc32821b93da2" />
+		<entry key="EditorSequencer.TextLabel" text="글" sourceHash="2492f5fb1b05b45e" />
+		<entry key="EditorSequencer.TextTip"
+		       text="구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
+		       sourceHash="46adf64e038e3eed" />
 		<entry key="EditorSequencer.TrackNameLabel" text="이름" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EditorSequencer.TrackTargetLabel" text="대상" sourceHash="ff5bb7742c2896c8" />
+		<entry key="EditorSequencer.UnboundBinding" text="바인딩 안 됨" sourceHash="e7a38a6492965c7a" />
 		<entry key="EditorSettings.BuildModules"
 		       text="바뀐 모듈 구성으로 모든 모듈을 컴파일합니다"
 		       sourceHash="8b6c73917e57c622" />
@@ -2853,6 +3029,31 @@
 		       sourceHash="a1bd1ac3c2159e7d" />
 		<entry key="EditorSettings.VariableDescription" text="설명: {description}" sourceHash="74726e3b69f5be05" />
 		<entry key="EditorSettings.VariableModule" text="모듈: {module}" sourceHash="352331a1bd61a69b" />
+		<entry key="EditorSourceControl.CannotRevertTooltip"
+		       text="추적하지 않는 파일과 충돌은 여기서 되돌리지 않습니다 — 되돌리면 파일이 지워지거나 충돌이 가려집니다"
+		       sourceHash="46cd4a71b5982567" />
+		<entry key="EditorSourceControl.Listing" text="바뀐 파일을 나열하는 중..." sourceHash="cfd8df71b510bdea" />
+		<entry key="EditorSourceControl.NoChanges"
+		       text="바뀐 파일이 없습니다. 저장한 편집이 여기에 나타납니다."
+		       sourceHash="155865c774a585c5" />
+		<entry key="EditorSourceControl.NoDetail"
+		       text="아직 차이가 없습니다. 차이나 기록을 누르세요."
+		       sourceHash="745f379b19735022" />
+		<entry key="EditorSourceControl.NoGit"
+		       text="PATH 에서 git 을 찾지 못해 변경을 나열할 수 없습니다. git 을 설치하고 에디터를 다시 시작하세요."
+		       sourceHash="932e7d23ed3e961a" />
+		<entry key="EditorSourceControl.PickAFile"
+		       text="차이나 기록을 볼 파일을 고르세요."
+		       sourceHash="4fbf7af3ddd41ead" />
+		<entry key="EditorSourceControl.RevertTooltip"
+		       text="이 파일을 HEAD 로 되돌립니다(스테이징한 편집과 저장하지 않은 편집을 잃습니다)"
+		       sourceHash="11576d7f6c0d6a89" />
+		<entry key="EditorSourceControl.ScopeTooltip"
+		       text="바뀐 파일을 나열하고, 파일의 HEAD 대비 차이와 최근 커밋 20개를 보이며, 추적하는 파일을 되돌립니다. 커밋 · 푸시 · 브랜치는 git 도구에서 합니다"
+		       sourceHash="3cc4b8fd8fc5a8c3" />
+		<entry key="EditorSourceControl.UntrackedNoDiff"
+		       text="이 파일은 아직 추적하지 않아 비교할 것이 없습니다."
+		       sourceHash="b39eab142b02fe31" />
 		<entry key="EditorSpriteClip.AddAllCells" text="모든 칸 추가" sourceHash="b3f0599f36e9ce72" />
 		<entry key="EditorSpriteClip.AddAllCellsTip"
 		       text="왼쪽 위부터 격자의 칸마다 프레임을 하나씩 더합니다."
@@ -3114,13 +3315,17 @@
 		       sourceHash="7daf38977ee3df61" />
 		<entry key="EditorTileSet.KindRule" text="규칙 타일" sourceHash="771284da15382675" />
 		<entry key="EditorTileSet.KindTile" text="타일" sourceHash="1e5099ef2e9bcca9" />
-		<entry key="EditorTileSet.LoadingAtlasHint" text="아틀라스 텍스처를 읽는 중입니다." sourceHash="fefa24d8a7845482" />
+		<entry key="EditorTileSet.LoadingAtlasHint"
+		       text="아틀라스 텍스처를 읽는 중입니다."
+		       sourceHash="fefa24d8a7845482" />
 		<entry key="EditorTileSet.Look" text="모습" sourceHash="4efeeeb48a45a316" />
 		<entry key="EditorTileSet.NavCost" text="이동 비용" sourceHash="e6ae51ab780334c1" />
 		<entry key="EditorTileSet.NavCostTip"
 		       text="길 찾기 비용입니다(1 ~ 255). 255 는 막힘입니다."
 		       sourceHash="6366b0d7b65e777d" />
-		<entry key="EditorTileSet.NoAtlasHint" text="셀을 고를 아틀라스 텍스처를 적으세요." sourceHash="ffc4c986856efe65" />
+		<entry key="EditorTileSet.NoAtlasHint"
+		       text="셀을 고를 아틀라스 텍스처를 적으세요."
+		       sourceHash="ffc4c986856efe65" />
 		<entry key="EditorTileSet.NoBrushesHint"
 		       text="브러시가 없습니다. 타일을 더한 뒤 아틀라스에서 셀을 고르세요."
 		       sourceHash="b34eae1ed921c757" />
@@ -3134,12 +3339,16 @@
 		       sourceHash="b3a63462ace556d5" />
 		<entry key="EditorTileSet.RemoveLastFrame" text="마지막 프레임 빼기" sourceHash="f5df799d1030f0d6" />
 		<entry key="EditorTileSet.RuleLabel" text="규칙 {index}" sourceHash="6771d0f81ca91205" />
-		<entry key="EditorTileSet.RuleOrderTip" text="이웃이 맞는 첫 규칙이 이깁니다." sourceHash="5474eba063de0276" />
+		<entry key="EditorTileSet.RuleOrderTip"
+		       text="이웃이 맞는 첫 규칙이 이깁니다."
+		       sourceHash="5474eba063de0276" />
 		<entry key="EditorTileSet.SaveTip"
 		       text="타일셋을 씁니다. 문제가 있으면 저장하지 않아 게임이 깨진 파일을 읽지 않습니다."
 		       sourceHash="e43d0d29276cc4b2" />
 		<entry key="EditorTileSet.Solid" text="단단함" sourceHash="fe31d1c784d29ef4" />
-		<entry key="EditorTileSet.SolidTip" text="캐릭터가 이 타일을 지나가지 못합니다." sourceHash="2416573a9d510042" />
+		<entry key="EditorTileSet.SolidTip"
+		       text="캐릭터가 이 타일을 지나가지 못합니다."
+		       sourceHash="2416573a9d510042" />
 		<entry key="EditorTileSet.TileSize" text="타일 크기" sourceHash="93df9e95fc4aa10a" />
 		<entry key="EditorTileSet.TileSizeTip" text="셀 한 칸의 월드 크기입니다." sourceHash="644af77bd299a76b" />
 		<entry key="EditorTip.CameraFOV"
@@ -3218,7 +3427,9 @@
 		<entry key="EditorUIPreview.ResolutionTip"
 		       text="문서를 배치할 화면 크기입니다. 출시 전에 여러 화면비에서 레이아웃을 확인합니다."
 		       sourceHash="59c62ac68b92d3dd" />
-		<entry key="EditorUIPreview.RotateTip" text="기기를 90 도 돌립니다. 너비와 높이가 바뀌고 안전 여백이 노치를 따라 돕니다." sourceHash="53508f49102007f8" />
+		<entry key="EditorUIPreview.RotateTip"
+		       text="기기를 90 도 돌립니다. 너비와 높이가 바뀌고 안전 여백이 노치를 따라 돕니다."
+		       sourceHash="53508f49102007f8" />
 		<entry key="EditorUIPreview.SafeZoneTip"
 		       text="가장자리를 잘라 내는 TV 처럼 각 변에서 잘라 낼 화면 비율(0~0.1)입니다. 빨간 테두리가 안전 영역입니다."
 		       sourceHash="9a7b1c6ae212b752" />
@@ -3498,6 +3709,7 @@
 		<entry key="Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
 		       text="실행 중 입력을 Saved/Automation/Recorded/recorded.scenario.xml 로 녹화합니다. 한 번 더 누르면 멈추고 씁니다"
 		       sourceHash="28a33328ee162805" />
+		<entry key="Recovered Work" text="복구한 작업" sourceHash="a38cd4c448efdb13" />
 		<entry key="Redo" text="다시 실행" sourceHash="7417792bbe720149" />
 		<entry key="Redo the last undone edit"
 		       text="마지막으로 되돌린 편집을 다시 합니다"

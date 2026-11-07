@@ -20,7 +20,22 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Gilded Knight Helmet" source="Gilded Knight Helmet" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet (Dyeable)" source="Knight Helmet (Dyeable)" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>

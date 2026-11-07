@@ -9,8 +9,13 @@
 		<entry source="Easy" text="쉬움" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
+		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
 		<entry source="Hard" text="어려움" />
+		<entry source="Heraldic Cape" text="문장 망토" />
 		<entry source="Knight Helmet" text="기사 투구" />
+		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
+		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
+		<entry source="Knight Sword (Merged)" text="기사 검(병합)" />
 		<entry source="Longbow" text="장궁" />
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
@@ -23,6 +28,7 @@
 		<entry source="Recon Patch" text="정찰 패치" />
 		<entry source="Recon Vest" text="정찰 조끼" />
 		<entry source="Round Shield" text="둥근 방패" />
+		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="Travel Cape" text="여행 망토" />

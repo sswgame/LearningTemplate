@@ -235,6 +235,11 @@ msgid "Current"
 msgstr "현재값"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnEvent"
+msgid "Event"
+msgstr "사건"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnName"
 msgid "Name"
 msgstr "이름"
@@ -245,6 +250,11 @@ msgid "Remaining"
 msgstr "남은 시간"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnSource"
+msgid "Source"
+msgstr "출처"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnStacks"
 msgid "Stacks"
 msgstr "스택"
@@ -253,6 +263,16 @@ msgstr "스택"
 msgctxt "EdAbilityDebug.ColumnTag"
 msgid "Tag"
 msgstr "태그"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnTime"
+msgid "Time"
+msgstr "시각"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.HintNoLog"
+msgid "No effect applied, rejected or removed yet."
+msgstr "아직 적용 · 거부 · 제거된 이펙트가 없습니다."
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintNoTarget"
@@ -293,6 +313,11 @@ msgstr "어트리뷰트"
 msgctxt "EdAbilityDebug.SectionEffects"
 msgid "Active Effects"
 msgstr "걸린 이펙트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionLog"
+msgid "Recent effects"
+msgstr "최근 이펙트"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionTags"
@@ -2179,12 +2204,6 @@ msgctxt "settings.common.off"
 msgid "Off"
 msgstr "끔"
 
-#. Display-change confirmation dialog; seconds counts down
-#. Max length: 80
-msgctxt "settings.confirm.keepChanges"
-msgid "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
-msgstr "이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다."
-
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
@@ -2464,9 +2483,3 @@ msgstr "자동으로 보내기"
 msgctxt "settings.privacy.telemetry"
 msgid "Share Usage Data"
 msgstr "사용 데이터 공유"
-
-#. Shown after applying settings marked apply=restart
-#. Max length: 80
-msgctxt "settings.restartRequired"
-msgid "{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
-msgstr "설정 {count}개는 다시 시작한 뒤에 적용됩니다."

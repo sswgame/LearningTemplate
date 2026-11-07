@@ -2,11 +2,14 @@
 	<entries>
 		<entry source="(CPU only)" text="(CPU 전용)" />
 		<entry source="(None)" text="(없음)" />
+		<entry source="(none)" text="(없음)" />
 		<entry source="5.1 Surround" text="5.1 서라운드" />
 		<entry source="7.1 Surround" text="7.1 서라운드" />
 		<entry source="A scene's Character Appearance component names this id."
 		       text="씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다." />
 		<entry source="A wild {name} appeared!" text="야생의 {name}(이)가 나타났다!" />
+		<entry source="Abilities" text="어빌리티" />
+		<entry source="Ability sets" text="어빌리티 세트" />
 		<entry source="Abort" text="중단" />
 		<entry source="Accessibility" text="접근성" />
 		<entry source="Account" text="계정" />
@@ -19,16 +22,21 @@
 		<entry source="Add Item" text="항목 추가" />
 		<entry source="Add Key" text="키 추가" />
 		<entry source="Add Modifier" text="모디파이어 추가" />
+		<entry source="Add ability" text="어빌리티 더하기" />
 		<entry source="Add bone turn" text="뼈 회전 추가" />
 		<entry source="Add chain" text="사슬 추가" />
+		<entry source="Add effect" text="이펙트 더하기" />
 		<entry source="Add node" text="노드 추가" />
 		<entry source="Add notify at t" text="t 에 알림 추가" />
 		<entry source="Add pair" text="짝 추가" />
+		<entry source="Add set" text="세트 더하기" />
 		<entry source="Add slot" text="칸 추가" />
 		<entry source="Aim" text="조준" />
 		<entry source="Already used by" text="이미 사용 중:" />
 		<entry source="Ambient Volume" text="환경음 음량" />
 		<entry source="Amount" text="양" />
+		<entry source="An entry other entries use is not removed. Change those references first."
+		       text="다른 항목이 쓰는 항목은 지우지 않습니다. 그 참조를 먼저 바꾸세요." />
 		<entry source="Anchor" text="기준" />
 		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
 		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다" />
@@ -87,6 +95,7 @@
 		<entry source="Count (0 = until it fails)" text="횟수(0 = 실패할 때까지)" />
 		<entry source="Crash Reports" text="크래시 보고" />
 		<entry source="Crouch" text="앉기" />
+		<entry source="Cue presentations" text="큐 연출" />
 		<entry source="Current" text="현재값" />
 		<entry source="Custom" text="사용자 지정" />
 		<entry source="Customization values" text="꾸미기 값" />
@@ -117,13 +126,17 @@
 		<entry source="Duration (s)" text="길이(초)" />
 		<entry source="Edit" text="편집" />
 		<entry source="Edit this group's nested stack" text="이 묶음의 하위 스택 편집" />
+		<entry source="Effects" text="이펙트" />
 		<entry source="Effects Quality" text="효과 품질" />
 		<entry source="Effects Volume" text="효과음 음량" />
 		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
 		<entry source="End maintenance" text="점검 끝내기" />
 		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
+		<entry source="Enter an ability catalog file (game/&lt;game>/data/abilities.xml) to edit it."
+		       text="편집할 어빌리티 카탈로그 파일(game/&lt;게임>/data/abilities.xml)을 적으세요." />
 		<entry source="Entrance is inside the footprint" text="입구가 바닥 영역 안에 있음" />
 		<entry source="Equip set" text="장비 세트" />
+		<entry source="Event" text="사건" />
 		<entry source="Event JSON" text="이벤트 JSON" />
 		<entry source="Event id" text="이벤트 id" />
 		<entry source="Export as World Warp" text="월드 워프로 내보내기" />
@@ -133,6 +146,8 @@
 		       text="카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다." />
 		<entry source="Field of View" text="시야각" />
 		<entry source="Fight: 1/2 moves, Enter=Move0, Esc=Run" text="싸운다: 1/2 기술, Enter=기술0, Esc=도망" />
+		<entry source="File" text="파일" />
+		<entry source="Filter by id" text="id 로 거르기" />
 		<entry source="Fit check (view only)" text="맞춤 검사(보기만)" />
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
 		<entry source="Focus gate" text="정문 보기" />
@@ -146,6 +161,7 @@
 		<entry source="Game time" text="게임 시각" />
 		<entry source="Gamepad Sensitivity" text="게임패드 감도" />
 		<entry source="Gameplay" text="게임플레이" />
+		<entry source="Go" text="가기" />
 		<entry source="Got away safely!" text="무사히 도망쳤다!" />
 		<entry source="Grant" text="지급" />
 		<entry source="Grant / Revoke" text="지급 / 회수" />
@@ -164,6 +180,8 @@
 		       text="이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다." />
 		<entry source="IK goal" text="IK 목표" />
 		<entry source="Infinite" text="무한" />
+		<entry source="Inherited from the base entry. Picking a value writes it on this entry."
+		       text="부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다." />
 		<entry source="Interface Volume" text="인터페이스 음량" />
 		<entry source="Invert" text="반전" />
 		<entry source="Invert Vertical Look" text="상하 시점 반전" />
@@ -226,6 +244,9 @@
 		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다" />
 		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
 		       text="이 선택에는 꾸미기 스키마가 없습니다(외형 데이터를 불러오고 스키마가 있는 기준 프리셋을 고르세요)." />
+		<entry source="No effect applied, rejected or removed yet."
+		       text="아직 적용 · 거부 · 제거된 이펙트가 없습니다." />
+		<entry source="No entry uses this one." text="이 항목을 쓰는 곳이 없습니다." />
 		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
 		       text="아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다." />
 		<entry source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
@@ -270,6 +291,8 @@
 		<entry source="Pick a base preset to see which rules hid or changed what."
 		       text="기준 프리셋을 고르면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다." />
 		<entry source="Pick an ability system..." text="어빌리티 시스템 고르기..." />
+		<entry source="Pick an entry on the left to see what it uses and what uses it."
+		       text="왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다." />
 		<entry source="Place" text="장소" />
 		<entry source="Play" text="재생" />
 		<entry source="Point" text="점" />
@@ -298,6 +321,7 @@
 		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
 		       text="프리셋 파일을 다시 읽습니다(카탈로그 편집기에서 저장한 뒤)" />
 		<entry source="Reason code" text="사유 코드" />
+		<entry source="Recent effects" text="최근 이펙트" />
 		<entry source="Recompute Normals" text="법선 다시 계산" />
 		<entry source="Redo" text="다시 실행" />
 		<entry source="Redo appearance" text="외형 다시 실행" />
@@ -424,10 +448,16 @@
 		<entry source="Text Language" text="표시 언어" />
 		<entry source="Text Size" text="글자 크기" />
 		<entry source="Texture Quality" text="텍스처 품질" />
+		<entry source="The catalog file the game reads. Edits keep its comments and layout."
+		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다." />
 		<entry source="The curve's value at this key." text="이 키에서 곡선이 가지는 값입니다." />
 		<entry source="The node editor could not be created" text="노드 편집기를 만들지 못했습니다" />
 		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
 		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요." />
+		<entry source="The runtime loader could not read the saved file. See the log for the reason."
+		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요." />
+		<entry source="The runtime loader reads the saved file."
+		       text="런타임 로더가 저장한 파일을 읽습니다." />
 		<entry source="The same checklist as a runtime UI window (shows in the game view while playing)"
 		       text="같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)." />
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
@@ -458,6 +488,9 @@
 		<entry source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다." />
 		<entry source="Use selected object" text="고른 오브젝트 쓰기" />
+		<entry source="Used by" text="쓰는 곳" />
+		<entry source="Uses" text="쓰는 것" />
+		<entry source="Uses no other entry." text="다른 항목을 쓰지 않습니다." />
 		<entry source="Value" text="값" />
 		<entry source="Vertical Sync" text="수직 동기화" />
 		<entry source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."

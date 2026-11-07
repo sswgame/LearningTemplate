@@ -93,8 +93,7 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdAbilityCatalog.FileTip"
-		       source="The catalog file the game reads. Edits keep its comments and layout.">
+		<entry key="EdAbilityCatalog.FileTip" source="The catalog file the game reads. Edits keep its comments and layout.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -116,7 +115,7 @@
 			</origins>
 		</entry>
 		<entry key="EdAbilityCatalog.NoFileHint"
-		       source="Enter an ability catalog file (game/&lt;game&gt;/data/abilities.xml) to edit it.">
+		       source="Enter an ability catalog file (game/&lt;game>/data/abilities.xml) to edit it.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -126,8 +125,7 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdAbilityCatalog.PickEntryHint"
-		       source="Pick an entry on the left to see what it uses and what uses it.">
+		<entry key="EdAbilityCatalog.PickEntryHint" source="Pick an entry on the left to see what it uses and what uses it.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -2181,10 +2179,6 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
-		<entry key="settings.confirm.keepChanges"
-		       source="Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
-		       comment="Display-change confirmation dialog; seconds counts down"
-		       maxLength="80" />
 		<entry key="settings.controls.aimMode" source="Aim" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>
@@ -2397,9 +2391,5 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
-		<entry key="settings.restartRequired"
-		       source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
-		       comment="Shown after applying settings marked apply=restart"
-		       maxLength="80" />
 	</entries>
 </SourceStringTable>

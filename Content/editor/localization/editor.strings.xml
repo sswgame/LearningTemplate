@@ -1328,14 +1328,14 @@
 		</entry>
 		<entry key="EdCommon.QuickOpenIndexing" source="Indexing assets...">
 			<origins>
-				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 				<item>Source/Editor/Common/Input/CommandPalettePopup.cpp</item>
+				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.QuickOpenNoMatches" source="No matching assets or game objects found.">
 			<origins>
-				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 				<item>Source/Editor/Common/Input/CommandPalettePopup.cpp</item>
+				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.RHIBackend" source="Current graphics RHI backend: {backend} ({fps} FPS)">
@@ -1539,6 +1539,7 @@
 		<entry key="EdField.Atlas" source="Atlas">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdField.AtlasID" source="Atlas ID">
@@ -2039,7 +2040,8 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.MoveFixesReferrers" source="{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back">
+		<entry key="EdFormat.MoveFixesReferrers"
+		       source="{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
@@ -2116,7 +2118,8 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.PlacementNoSurface" source="No surface under the cursor - {asset} will not be placed. Aim at an object, a collider or the ground">
+		<entry key="EdFormat.PlacementNoSurface"
+		       source="No surface under the cursor - {asset} will not be placed. Aim at an object, a collider or the ground">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
 			</origins>
@@ -2126,7 +2129,8 @@
 				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.PlacementOpensInstead" source="{asset} opens on release - this type cannot be placed in the scene">
+		<entry key="EdFormat.PlacementOpensInstead"
+		       source="{asset} opens on release - this type cannot be placed in the scene">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
 			</origins>
@@ -4330,6 +4334,7 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Clear" source="Clear">
@@ -4383,6 +4388,7 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
 			</origins>
 		</entry>
@@ -4394,6 +4400,7 @@
 				<item>Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
@@ -4402,13 +4409,15 @@
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
-				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Reset" source="Reset">
 			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
@@ -4431,6 +4440,7 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
@@ -4440,8 +4450,8 @@
 				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
-				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Stop" source="Stop">
@@ -4751,6 +4761,7 @@
 		<entry key="EdWidget.Name" source="Name">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.NewActionName" source="New Action Name">
@@ -4874,11 +4885,6 @@
 		<entry key="EdWidget.Target" source="Target">
 			<origins>
 				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdWidget.TargetObject" source="Target Object">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Theme" source="Theme">
@@ -5059,14 +5065,12 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.MaskSourceNone"
-		       source="No entry reaches this bone, so its weight is 0.">
+		<entry key="EditorAnimationGraph.MaskSourceNone" source="No entry reaches this bone, so its weight is 0.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.MaskSourceSubtree"
-		       source="Set on this bone and spread to its children.">
+		<entry key="EditorAnimationGraph.MaskSourceSubtree" source="Set on this bone and spread to its children.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
@@ -5099,8 +5103,7 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.PaintSubtreeTip"
-		       source="Set this weight on the bone and every child bone.">
+		<entry key="EditorAnimationGraph.PaintSubtreeTip" source="Set this weight on the bone and every child bone.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
@@ -5544,12 +5547,14 @@
 				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAutosave.NothingToRecover" source="No unsaved work to recover. Copies appear here when the editor did not close normally.">
+		<entry key="EditorAutosave.NothingToRecover"
+		       source="No unsaved work to recover. Copies appear here when the editor did not close normally.">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAutosave.RecoveryIntro" source="The last editor session did not close normally. Restore opens the newest copy of a scene with unsaved changes; the original file changes only when you save.">
+		<entry key="EditorAutosave.RecoveryIntro"
+		       source="The last editor session did not close normally. Restore opens the newest copy of a scene with unsaved changes; the original file changes only when you save.">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
 			</origins>
@@ -5789,12 +5794,14 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.DeleteCollectionTooltip" source="Delete this collection. The assets stay where they are">
+		<entry key="EditorContentBrowser.DeleteCollectionTooltip"
+		       source="Delete this collection. The assets stay where they are">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.EmptyCollection" source="This collection is empty. Drop assets on its name to add them.">
+		<entry key="EditorContentBrowser.EmptyCollection"
+		       source="This collection is empty. Drop assets on its name to add them.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
@@ -5831,12 +5838,14 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.NewCollectionTooltip" source="Make a collection - the selected asset goes in. Drop assets on a collection to add them">
+		<entry key="EditorContentBrowser.NewCollectionTooltip"
+		       source="Make a collection - the selected asset goes in. Drop assets on a collection to add them">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.NoCollections" source="No saved searches or collections yet. Save a search or make a collection below.">
+		<entry key="EditorContentBrowser.NoCollections"
+		       source="No saved searches or collections yet. Save a search or make a collection below.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
@@ -5886,7 +5895,8 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.SharedCollectionTooltip" source="Shared entries are written to Config/Editor/ContentCollections.txt and committed with the project; the others stay on this machine">
+		<entry key="EditorContentBrowser.SharedCollectionTooltip"
+		       source="Shared entries are written to Config/Editor/ContentCollections.txt and committed with the project; the others stay on this machine">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
@@ -6591,7 +6601,8 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.NetRoleMethodRunsLocally" source="The network role is a declaration only: calling it here runs it in this process, not over the network">
+		<entry key="EditorInspector.NetRoleMethodRunsLocally"
+		       source="The network role is a declaration only: calling it here runs it in this process, not over the network">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
@@ -6616,7 +6627,8 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.NoCallInEditorMethods" source="No CallInEditor functions. Turn on Show All Functions in the view options to call the others.">
+		<entry key="EditorInspector.NoCallInEditorMethods"
+		       source="No CallInEditor functions. Turn on Show All Functions in the view options to call the others.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
@@ -6708,7 +6720,8 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.ShowAllFunctionsTooltip" source="Diagnostic view: also list FUNCTIONs without CallInEditor. They declare no editor safety, so the default list hides them">
+		<entry key="EditorInspector.ShowAllFunctionsTooltip"
+		       source="Diagnostic view: also list FUNCTIONs without CallInEditor. They declare no editor safety, so the default list hides them">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
@@ -6745,7 +6758,8 @@
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMapCheck.FixAllTooltip" source="Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix">
+		<entry key="EditorMapCheck.FixAllTooltip"
+		       source="Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix">
 			<origins>
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
 			</origins>
@@ -7683,7 +7697,8 @@
 				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequenceDebugger.EmptyHistoryHint" source="Nothing recorded yet. Play the sequence to see its events and camera signals.">
+		<entry key="EditorSequenceDebugger.EmptyHistoryHint"
+		       source="Nothing recorded yet. Play the sequence to see its events and camera signals.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
 			</origins>
@@ -7703,7 +7718,8 @@
 				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequenceDebugger.NoPlayersHint" source="No Sequence Player in the active scene. Open a scene with one, or press Play.">
+		<entry key="EditorSequenceDebugger.NoPlayersHint"
+		       source="No Sequence Player in the active scene. Open a scene with one, or press Play.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
 			</origins>
@@ -7733,7 +7749,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.AddBindingFromSelectionTip" source="Add a binding named after the selected object and bind it in this scene's Sequence Player.">
+		<entry key="EditorSequencer.AddBindingFromSelectionTip"
+		       source="Add a binding named after the selected object and bind it in this scene's Sequence Player.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7743,7 +7760,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.AddCutTip" source="Start a camera cut at the current frame through the selected binding's camera; the cut it splits ends just before.">
+		<entry key="EditorSequencer.AddCutTip"
+		       source="Start a camera cut at the current frame through the selected binding's camera; the cut it splits ends just before.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7753,7 +7771,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.AddLensTrackTip" source="Add a lens track (field of view, focus, aperture, lens shift) for the selected binding's camera.">
+		<entry key="EditorSequencer.AddLensTrackTip"
+		       source="Add a lens track (field of view, focus, aperture, lens shift) for the selected binding's camera.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7781,7 +7800,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.BindSelectionTip" source="Bind the selected binding to the object selected in the scene. Undo restores the previous object.">
+		<entry key="EditorSequencer.BindSelectionTip"
+		       source="Bind the selected binding to the object selected in the scene. Undo restores the previous object.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7801,7 +7821,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.BindingNameTip" source="Shown in the editor and given to spawned objects; objects are found by binding id, not by this name.">
+		<entry key="EditorSequencer.BindingNameTip"
+		       source="Shown in the editor and given to spawned objects; objects are found by binding id, not by this name.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7837,7 +7858,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ClipTip" source="Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser.">
+		<entry key="EditorSequencer.ClipTip"
+		       source="Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7858,7 +7880,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.CutLaneTip" source="Camera cuts by camera. Click a cut to select it and move to that frame.">
+		<entry key="EditorSequencer.CutLaneTip"
+		       source="Camera cuts by camera. Click a cut to select it and move to that frame.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7868,7 +7891,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.DeleteBindingTip" source="Delete the selected binding. Remove the items and tracks that use it first.">
+		<entry key="EditorSequencer.DeleteBindingTip"
+		       source="Delete the selected binding. Remove the items and tracks that use it first.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7908,17 +7932,13 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ItemTargetTip" source="Name of the scene object this item acts on.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorSequencer.KeyButton" source="Key">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.KeyStripTip" source="Click a key to select it, Ctrl+click to add or remove, drag to move the selected keys by whole frames. Click empty space to go to that frame.">
+		<entry key="EditorSequencer.KeyStripTip"
+		       source="Click a key to select it, Ctrl+click to add or remove, drag to move the selected keys by whole frames. Click empty space to go to that frame.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7943,7 +7963,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.NoBindingContextHint" source="No Sequence Player in this scene plays this sequence. Add one to bind objects and preview.">
+		<entry key="EditorSequencer.NoBindingContextHint"
+		       source="No Sequence Player in this scene plays this sequence. Add one to bind objects and preview.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8067,17 +8088,13 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.SoundTip" source="Audio event posted when the start frame is crossed and stopped when the span ends.">
+		<entry key="EditorSequencer.SoundTip"
+		       source="Audio event posted when the start frame is crossed and stopped when the span ends.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.SpawnBindingTip" source="Binding the spawned object fills; its name is the binding name.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.SpawnNameTip" source="Name the spawned object gets.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8103,7 +8120,8 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.TextTip" source="Localization key (Namespace.Key) of the subtitle line shown for the span.">
+		<entry key="EditorSequencer.TextTip"
+		       source="Localization key (Namespace.Key) of the subtitle line shown for the span.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8372,7 +8390,8 @@
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSourceControl.CannotRevertTooltip" source="Untracked files and conflicts are not reverted here - reverting would delete the file or hide the conflict">
+		<entry key="EditorSourceControl.CannotRevertTooltip"
+		       source="Untracked files and conflicts are not reverted here - reverting would delete the file or hide the conflict">
 			<origins>
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
@@ -8392,7 +8411,8 @@
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSourceControl.NoGit" source="git was not found on PATH, so changes cannot be listed. Install git and restart the editor.">
+		<entry key="EditorSourceControl.NoGit"
+		       source="git was not found on PATH, so changes cannot be listed. Install git and restart the editor.">
 			<origins>
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
@@ -8402,17 +8422,20 @@
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSourceControl.RevertTooltip" source="Put this file back to HEAD (staged and unsaved edits are lost)">
+		<entry key="EditorSourceControl.RevertTooltip"
+		       source="Put this file back to HEAD (staged and unsaved edits are lost)">
 			<origins>
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSourceControl.ScopeTooltip" source="Lists changed files, shows a file's diff against HEAD and its last 20 commits, and reverts tracked files. Commit, push and branches stay in your git tool">
+		<entry key="EditorSourceControl.ScopeTooltip"
+		       source="Lists changed files, shows a file's diff against HEAD and its last 20 commits, and reverts tracked files. Commit, push and branches stay in your git tool">
 			<origins>
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSourceControl.UntrackedNoDiff" source="This file is not tracked yet, so there is nothing to compare with.">
+		<entry key="EditorSourceControl.UntrackedNoDiff"
+		       source="This file is not tracked yet, so there is nothing to compare with.">
 			<origins>
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
@@ -8911,8 +8934,7 @@
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorTileSet.AtlasCellTip"
-		       source="Click a cell to use it. Shift-click adds it as an animation frame.">
+		<entry key="EditorTileSet.AtlasCellTip" source="Click a cell to use it. Shift-click adds it as an animation frame.">
 			<origins>
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
@@ -8999,8 +9021,7 @@
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorTileSet.NoBrushesHint"
-		       source="No brushes yet. Add a tile, then pick its cell in the atlas.">
+		<entry key="EditorTileSet.NoBrushesHint" source="No brushes yet. Add a tile, then pick its cell in the atlas.">
 			<origins>
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 			</origins>
@@ -9260,7 +9281,8 @@
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorUIPreview.RotateTip" source="Turn the device 90 degrees: width and height swap and the safe area insets follow the notch.">
+		<entry key="EditorUIPreview.RotateTip"
+		       source="Turn the device 90 degrees: width and height swap and the safe area insets follow the notch.">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
@@ -9520,20 +9542,17 @@
 				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorVolumetricFog.StateNoDevice"
-		       source="The renderer has no device this frame, so nothing is drawn.">
+		<entry key="EditorVolumetricFog.StateNoDevice" source="The renderer has no device this frame, so nothing is drawn.">
 			<origins>
 				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorVolumetricFog.StateNoFog"
-		       source="No fog in this scene. Add a Fog component to see volumetric fog.">
+		<entry key="EditorVolumetricFog.StateNoFog" source="No fog in this scene. Add a Fog component to see volumetric fog.">
 			<origins>
 				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorVolumetricFog.StateUnderwater"
-		       source="The camera is under water. Underwater fog has no volume.">
+		<entry key="EditorVolumetricFog.StateUnderwater" source="The camera is under water. Underwater fog has no volume.">
 			<origins>
 				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
 			</origins>

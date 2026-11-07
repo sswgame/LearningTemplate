@@ -239,6 +239,12 @@ msgctxt "Catalog Editor"
 msgid "Catalog Editor"
 msgstr "카탈로그 편집기"
 
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Changes"
+msgid "Changes"
+msgstr "변경 사항"
+
 #. Context: Editor command name
 #: editor/commands/charactereditor.commands.xml
 #: editor/panels/editor.panels.xml
@@ -386,6 +392,12 @@ msgstr "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만�
 
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
+msgctxt "Cutscene Debugger"
+msgid "Cutscene Debugger"
+msgstr "컷씬 디버거"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
 msgctxt "Data Layers"
 msgid "Data Layers"
 msgstr "데이터 레이어"
@@ -448,6 +460,11 @@ msgctxt "EdButton.AddComponent"
 msgid "Add Component"
 msgstr "컴포넌트 추가"
 
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdButton.BackToFolders"
+msgid "Back to Folders"
+msgstr "폴더로 돌아가기"
+
 #: Source/Editor/Common/GUI/EditorMenuBar.cpp
 msgctxt "EdButton.BuildFailed"
 msgid "Build Failed"
@@ -477,6 +494,41 @@ msgstr "컴파일 중..."
 msgctxt "EdButton.DebugDraw"
 msgid "Debug Draw"
 msgstr "디버그 그리기"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdButton.DeleteCollection"
+msgid "Delete Collection"
+msgstr "컬렉션 지우기"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EdButton.Diff"
+msgid "Diff"
+msgstr "차이"
+
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EdButton.Discard"
+msgid "Discard"
+msgstr "버리기"
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EdButton.Fix"
+msgid "Fix"
+msgstr "고치기"
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EdButton.FixAll"
+msgid "Fix All"
+msgstr "모두 고치기"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EdButton.History"
+msgid "History"
+msgstr "기록"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdButton.NewCollection"
+msgid "New Collection"
+msgstr "새 컬렉션"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EdButton.NewFolder"
@@ -554,10 +606,25 @@ msgctxt "EdButton.ResetToThemeDefaults"
 msgid "Reset to Theme Defaults"
 msgstr "테마 기본값으로 되돌리기"
 
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EdButton.Restore"
+msgid "Restore"
+msgstr "되살리기"
+
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EdButton.ResumeServer"
 msgid "Resume server"
 msgstr "서버 재개"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EdButton.Revert"
+msgid "Revert"
+msgstr "되돌리기"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdButton.SaveSearch"
+msgid "Save Search"
+msgstr "검색 저장"
 
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
 msgctxt "EdButton.Simulate"
@@ -1284,11 +1351,13 @@ msgctxt "EdCommon.QuickOpenHint"
 msgid "Type to search assets, scenes, game objects (ESC to cancel)..."
 msgstr "에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)..."
 
+#: Source/Editor/Common/Input/CommandPalettePopup.cpp
 #: Source/Editor/Common/Input/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenIndexing"
 msgid "Indexing assets..."
 msgstr "에셋을 인덱싱하는 중..."
 
+#: Source/Editor/Common/Input/CommandPalettePopup.cpp
 #: Source/Editor/Common/Input/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenNoMatches"
 msgid "No matching assets or game objects found."
@@ -1482,6 +1551,7 @@ msgid "Accent Color"
 msgstr "강조색"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
 msgctxt "EdField.Atlas"
 msgid "Atlas"
 msgstr "아틀라스"
@@ -1814,6 +1884,11 @@ msgctxt "EdFormat.Cmd"
 msgid "cmd: {actionCommand}"
 msgstr "명령: {actionCommand}"
 
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdFormat.CollectionItemMissing"
+msgid "{asset} (moved or deleted)"
+msgstr "{asset} (옮겨졌거나 지워짐)"
+
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdFormat.ComponentSAreNot"
 msgid "{componentCount, plural, one {# component is} other {# components are}} not on every selected object"
@@ -1965,6 +2040,21 @@ msgid "Off - {reason}"
 msgstr "꺼짐 — {reason}"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdFormat.MoveAssetCount"
+msgid "Move {assetCount} file(s) to {destination}"
+msgstr "파일 {assetCount}개를 {destination}(으)로 옮기기"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdFormat.MoveFixesReferrers"
+msgid "{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back"
+msgstr "참조하는 파일 {referrerCount}개를 같은 단계에서 고칩니다. 쓰기가 하나라도 실패하면 모두 되돌립니다"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdFormat.MoveRefused"
+msgid "Cannot move: {reason}"
+msgstr "옮길 수 없습니다: {reason}"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EdFormat.MoveToRecycleBin"
 msgid "Move '{file}' to the Recycle Bin?"
 msgstr "'{file}' 을 휴지통으로 옮길까요?"
@@ -2029,6 +2119,21 @@ msgctxt "EdFormat.PixelDepth"
 msgid "Pixel ({probedTexelX}, {probedTexelY}): depth {probedPixelX}"
 msgstr "픽셀 ({probedTexelX}, {probedTexelY}): 깊이 {probedPixelX}"
 
+#: Source/Editor/Viewport/EditorViewportAssetPlacement.cpp
+msgctxt "EdFormat.PlacementNoSurface"
+msgid "No surface under the cursor - {asset} will not be placed. Aim at an object, a collider or the ground"
+msgstr "커서 아래에 표면이 없어 {asset} 을(를) 놓지 않습니다. 오브젝트 · 콜라이더 · 지면을 겨누세요"
+
+#: Source/Editor/Viewport/EditorViewportAssetPlacement.cpp
+msgctxt "EdFormat.PlacementOnSurface"
+msgid "Place {asset} on the {surface}"
+msgstr "{asset} 을(를) {surface} 위에 놓기"
+
+#: Source/Editor/Viewport/EditorViewportAssetPlacement.cpp
+msgctxt "EdFormat.PlacementOpensInstead"
+msgid "{asset} opens on release - this type cannot be placed in the scene"
+msgstr "{asset} 은(는) 놓으면 열립니다 — 이 종류는 씬에 배치할 수 없습니다"
+
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.PlaybackControlsTotalFrames"
 msgid "Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):"
@@ -2078,6 +2183,11 @@ msgstr "범위 {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
 msgctxt "EdFormat.Ready"
 msgid "{sW_EDITORICON}  Ready"
 msgstr "{sW_EDITORICON}  준비됨"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EdFormat.RevertFileToHead"
+msgid "Revert {file} to HEAD? Its staged and unsaved edits are lost."
+msgstr "{file} 을(를) HEAD 로 되돌릴까요? 스테이징한 편집과 저장하지 않은 편집을 잃습니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdFormat.RightTrigger"
@@ -2596,6 +2706,11 @@ msgid "Reset to x1.00"
 msgstr "x1.00 으로"
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EdLabel.Rotate"
+msgid "Rotate"
+msgstr "돌리기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EdLabel.SelectAWidgetToEditItsProperties"
 msgid "Select a widget to edit its properties."
 msgstr "위젯을 고르면 프로퍼티를 편집합니다."
@@ -2604,6 +2719,11 @@ msgstr "위젯을 고르면 프로퍼티를 편집합니다."
 msgctxt "EdLabel.Sent"
 msgid "Sent"
 msgstr "보냄"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdLabel.SharedWithTheProject"
+msgid "Shared with the project"
+msgstr "프로젝트와 공유"
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EdLabel.Show2DStickTriggerGauges"
@@ -2614,6 +2734,11 @@ msgstr "2D 스틱 · 트리거 게이지 보이기"
 msgctxt "EdLabel.ShowAll"
 msgid "Show All"
 msgstr "모두 보이기"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EdLabel.ShowAllFunctions"
+msgid "Show All Functions"
+msgstr "모든 함수 보기"
 
 #: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
 msgctxt "EdLabel.ShowDebugHUDCtrlF3"
@@ -3936,6 +4061,11 @@ msgctxt "EdText.Use"
 msgid "Use"
 msgstr "쓰기"
 
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdText.UsedOutsideTheMovedFilesBy"
+msgid "Used outside the moved files by:"
+msgstr "옮기는 파일 밖에서 쓰는 곳:"
+
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EdText.Validate"
 msgid "Validate"
@@ -4148,6 +4278,7 @@ msgstr "적용"
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 #: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
 msgctxt "EdVerb.Cancel"
 msgid "Cancel"
 msgstr "취소"
@@ -4177,6 +4308,11 @@ msgctxt "EdVerb.Load"
 msgid "Load"
 msgstr "불러오기"
 
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EdVerb.Move"
+msgid "Move"
+msgstr "옮기기"
+
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
@@ -4196,6 +4332,7 @@ msgstr "다시 실행"
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
 #: Source/Editor/SelfTest/TestRunnerPanel.cpp
 msgctxt "EdVerb.Refresh"
 msgid "Refresh"
@@ -4207,6 +4344,7 @@ msgstr "새로 고침"
 #: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 #: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdVerb.Reload"
@@ -4215,12 +4353,15 @@ msgstr "다시 읽기"
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
 msgctxt "EdVerb.Remove"
 msgid "Remove"
 msgstr "제거"
 
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
 #: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
 #: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
@@ -4243,6 +4384,7 @@ msgstr "되돌리기"
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
@@ -4252,6 +4394,7 @@ msgstr "되돌리기"
 #: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
 #: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EdVerb.Save"
 msgid "Save"
@@ -4555,6 +4698,7 @@ msgid "Mask"
 msgstr "마스크"
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
 msgctxt "EdWidget.Name"
 msgid "Name"
 msgstr "이름"
@@ -4681,11 +4825,6 @@ msgstr "태그"
 msgctxt "EdWidget.Target"
 msgid "Target"
 msgstr "대상"
-
-#: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EdWidget.TargetObject"
-msgid "Target Object"
-msgstr "대상 오브젝트"
 
 #: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdWidget.Theme"
@@ -5298,6 +5437,31 @@ msgctxt "EditorAudioGraph.Unsaved"
 msgid "Unsaved changes"
 msgstr "* 저장하지 않은 변경"
 
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EditorAutosave.CanRestore"
+msgid "Ready to restore"
+msgstr "되살릴 수 있음"
+
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EditorAutosave.DiscardTooltip"
+msgid "Delete every copy of this scene"
+msgstr "이 씬의 사본을 모두 지웁니다"
+
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EditorAutosave.NothingToRecover"
+msgid "No unsaved work to recover. Copies appear here when the editor did not close normally."
+msgstr "복구할 저장 안 된 작업이 없습니다. 에디터가 정상적으로 닫히지 않으면 여기에 사본이 나타납니다."
+
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EditorAutosave.RecoveryIntro"
+msgid "The last editor session did not close normally. Restore opens the newest copy of a scene with unsaved changes; the original file changes only when you save."
+msgstr "지난 에디터 세션이 정상적으로 닫히지 않았습니다. 되살리기는 저장하지 않은 변경이 있는 씬의 가장 새 사본을 엽니다. 원본 파일은 저장할 때만 바뀝니다."
+
+#: Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp
+msgctxt "EditorAutosave.RestoreTooltip"
+msgid "Open the newest copy as an unsaved scene. Save to keep it"
+msgstr "가장 새 사본을 저장하지 않은 씬으로 엽니다. 남기려면 저장하세요"
+
 #: Source/Editor/Panels/BugReport/BugReportPanel.cpp
 msgctxt "EditorBugReport.Capture"
 msgid "Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugReports/<time>/ with the note above"
@@ -5519,6 +5683,21 @@ msgid "Off shows only the active game pack; on shows every pack under game/ (def
 msgstr "끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.Collections"
+msgid "Collections"
+msgstr "컬렉션"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.DeleteCollectionTooltip"
+msgid "Delete this collection. The assets stay where they are"
+msgstr "이 컬렉션을 지웁니다. 에셋은 제자리에 남습니다"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.EmptyCollection"
+msgid "This collection is empty. Drop assets on its name to add them."
+msgstr "이 컬렉션은 비었습니다. 에셋을 이름 위에 놓으면 더해집니다."
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.Import"
 msgid "Import external files (textures, shaders, sounds, ...) into the current folder"
 msgstr "외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다"
@@ -5549,6 +5728,16 @@ msgid "Go to the next folder (Mouse Forward button / Alt+Right)"
 msgstr "다음 폴더로 이동 (마우스 앞으로가기 버튼 / Alt+Right)"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.NewCollectionTooltip"
+msgid "Make a collection - the selected asset goes in. Drop assets on a collection to add them"
+msgstr "컬렉션을 만들고 선택한 에셋을 넣습니다. 에셋을 컬렉션 위에 놓으면 더해집니다"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.NoCollections"
+msgid "No saved searches or collections yet. Save a search or make a collection below."
+msgstr "저장한 검색이나 컬렉션이 아직 없습니다. 아래에서 검색을 저장하거나 컬렉션을 만드세요."
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.NoDependencies"
 msgid "This asset names no other asset."
 msgstr "이 에셋은 다른 에셋을 참조하지 않습니다."
@@ -5574,6 +5763,11 @@ msgid "Refresh the disk files and the content root list"
 msgstr "디스크 파일 및 리소스 루트 목록을 새로고침합니다"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.SaveSearchTooltip"
+msgid "Keep the search text and the type filter under a name"
+msgstr "검색어와 종류 필터를 이름을 붙여 남깁니다"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.SearchHint"
 msgid "Search Content"
 msgstr "콘텐츠 검색"
@@ -5587,6 +5781,11 @@ msgstr "에셋 이름 또는 확장자로 필터링하여 검색합니다"
 msgctxt "EditorContentBrowser.SelectFolder"
 msgid "Select a folder"
 msgstr "폴더를 선택하세요"
+
+#: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
+msgctxt "EditorContentBrowser.SharedCollectionTooltip"
+msgid "Shared entries are written to Config/Editor/ContentCollections.txt and committed with the project; the others stay on this machine"
+msgstr "공유 항목은 Config/Editor/ContentCollections.txt 에 써서 프로젝트와 함께 커밋합니다. 나머지는 이 컴퓨터에만 남습니다"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.TileSize"
@@ -6204,6 +6403,11 @@ msgid "Clear asset reference"
 msgstr "이 에셋 참조를 비웁니다."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.DiagnosticMethodTag"
+msgid "Diagnostic"
+msgstr "진단"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.FavoriteProperty"
 msgid "Favorite property"
 msgstr "즐겨찾기한 프로퍼티"
@@ -6230,6 +6434,16 @@ msgid "Multiple values"
 msgstr "값이 여러 개입니다"
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.NetRoleMethodRunsLocally"
+msgid "The network role is a declaration only: calling it here runs it in this process, not over the network"
+msgstr "네트워크 역할은 선언일 뿐입니다. 여기서 부르면 네트워크가 아니라 이 프로세스에서 실행됩니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.NetRoleNotRoutedTag"
+msgid "RPC not routed"
+msgstr "RPC 전달 안 됨"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NewElementHint"
 msgid "new element (Enter)"
 msgstr "새 요소 (Enter)"
@@ -6243,6 +6457,11 @@ msgstr "새 키 (Enter)"
 msgctxt "EditorInspector.NoActiveScene"
 msgid "No active scene."
 msgstr "활성 씬이 없습니다."
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.NoCallInEditorMethods"
+msgid "No CallInEditor functions. Turn on Show All Functions in the view options to call the others."
+msgstr "CallInEditor 함수가 없습니다. 나머지를 부르려면 보기 옵션에서 모든 함수 보기를 켜세요."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.NoFunctionMethods"
@@ -6331,6 +6550,11 @@ msgctxt "EditorInspector.SelectionGone"
 msgid "Selected object no longer exists."
 msgstr "선택한 오브젝트가 더 이상 없습니다."
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.ShowAllFunctionsTooltip"
+msgid "Diagnostic view: also list FUNCTIONs without CallInEditor. They declare no editor safety, so the default list hides them"
+msgstr "진단 보기: CallInEditor 가 없는 FUNCTION 도 보입니다. 에디터 안전을 선언하지 않았으므로 기본 목록에서는 숨깁니다"
+
 #: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
 msgctxt "EditorInspector.ShowInContentBrowser"
 msgid "Show in the Content Browser"
@@ -6360,6 +6584,11 @@ msgstr "보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 �
 msgctxt "EditorMapCheck.CheckMap"
 msgid "Validate every object of the active scene again"
 msgstr "활성 씬의 모든 오브젝트를 다시 검증합니다"
+
+#: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
+msgctxt "EditorMapCheck.FixAllTooltip"
+msgid "Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix"
+msgstr "보이는 줄의 안전한 고침을 모두 한 번의 실행 취소 단계로 적용합니다. 고치기 버튼이 없는 줄은 손으로 고쳐야 합니다"
 
 #: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
 msgctxt "EditorMapCheck.NoIssues"
@@ -7221,10 +7450,90 @@ msgctxt "EditorScene.VisibleInEditor"
 msgid "Visible in the editor - click to hide (not saved)"
 msgstr "에디터에서 보입니다 - 클릭하면 숨깁니다(저장하지 않습니다)"
 
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.ActiveSection"
+msgid "Active items"
+msgstr "활성 항목"
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.BindingsSection"
+msgid "Bindings"
+msgstr "바인딩"
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.EmptyHistoryHint"
+msgid "Nothing recorded yet. Play the sequence to see its events and camera signals."
+msgstr "아직 기록된 것이 없습니다. 시퀀스를 재생하면 이벤트와 카메라 신호가 보입니다."
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.HistorySection"
+msgid "Recent playback"
+msgstr "최근 재생"
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.NoActiveItemsHint"
+msgid "No item covers the current frame."
+msgstr "현재 프레임에 걸친 항목이 없습니다."
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.NoBindingsHint"
+msgid "This sequence has no bindings."
+msgstr "이 시퀀스에는 바인딩이 없습니다."
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.NoPlayersHint"
+msgid "No Sequence Player in the active scene. Open a scene with one, or press Play."
+msgstr "활성 씬에 Sequence Player 가 없습니다. 그것이 있는 씬을 열거나 플레이를 누르세요."
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.NotSpawnedYet"
+msgid "Not spawned yet"
+msgstr "아직 스폰되지 않음"
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.PlayerLabel"
+msgid "Player"
+msgstr "플레이어"
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.PlayheadFormat"
+msgid "Frame {frame} of {frameMin} to {frameMax}, {state}"
+msgstr "프레임 {frame} ({frameMin} ~ {frameMax}), {state}"
+
+#: Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp
+msgctxt "EditorSequenceDebugger.Unbound"
+msgid "Unbound"
+msgstr "바인딩 안 됨"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.AddBindingFromSelection"
+msgid "Add binding from selection"
+msgstr "선택에서 바인딩 추가"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.AddBindingFromSelectionTip"
+msgid "Add a binding named after the selected object and bind it in this scene's Sequence Player."
+msgstr "선택한 오브젝트의 이름으로 바인딩을 더하고 이 씬의 Sequence Player 에서 그 오브젝트에 바인딩합니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.AddCutButton"
+msgid "Add cut"
+msgstr "컷 추가"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.AddCutTip"
+msgid "Start a camera cut at the current frame through the selected binding's camera; the cut it splits ends just before."
+msgstr "현재 프레임에서 선택한 바인딩의 카메라로 카메라 컷을 시작합니다. 나뉜 컷은 바로 앞에서 끝납니다."
+
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.AddKeyTip"
 msgid "Key the target's current values on every channel at this frame."
 msgstr "대상의 지금 값을 이 프레임의 키로 모든 채널에 찍습니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.AddLensTrackTip"
+msgid "Add a lens track (field of view, focus, aperture, lens shift) for the selected binding's camera."
+msgstr "선택한 바인딩의 카메라에 렌즈 트랙(시야각 · 초점 · 조리개 · 렌즈 시프트)을 더합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.AddPropertyTrackTip"
@@ -7242,6 +7551,51 @@ msgid "Add a track that keys the selected object's position, rotation and scale.
 msgstr "고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindSelection"
+msgid "Bind selection"
+msgstr "선택 바인딩"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindSelectionTip"
+msgid "Bind the selected binding to the object selected in the scene. Undo restores the previous object."
+msgstr "선택한 바인딩을 씬에서 선택한 오브젝트에 바인딩합니다. 실행 취소하면 이전 오브젝트로 돌아갑니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindingContextFormat"
+msgid "Bindings of Sequence Player on {player}"
+msgstr "{player} 의 Sequence Player 바인딩"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindingLabel"
+msgid "Binding"
+msgstr "바인딩"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindingNameLabel"
+msgid "Binding name"
+msgstr "바인딩 이름"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindingNameTip"
+msgid "Shown in the editor and given to spawned objects; objects are found by binding id, not by this name."
+msgstr "에디터에 보이고 스폰한 오브젝트가 받는 이름입니다. 오브젝트는 이 이름이 아니라 바인딩 id 로 찾습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindingUsesFormat"
+msgid "{count} uses"
+msgstr "{count}곳에서 사용"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.BindingsSection"
+msgid "Bindings"
+msgstr "바인딩"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CameraCutsSection"
+msgid "Camera cuts"
+msgstr "카메라 컷"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.CancelItemTip"
 msgid "Discard the new item."
 msgstr "새 항목을 버립니다."
@@ -7250,6 +7604,16 @@ msgstr "새 항목을 버립니다."
 msgctxt "EditorSequencer.CinematicNoteTip"
 msgid "Free-form notes saved with the sequence. It does not affect playback."
 msgstr "시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ClipLabel"
+msgid "Clip"
+msgstr "클립"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ClipTip"
+msgid "Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser."
+msgstr "구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.CreateItemButton"
@@ -7267,6 +7631,21 @@ msgid "Curve"
 msgstr "커브"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CutLaneTip"
+msgid "Camera cuts by camera. Click a cut to select it and move to that frame."
+msgstr "카메라별 카메라 컷입니다. 컷을 누르면 선택하고 그 프레임으로 옮깁니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteBinding"
+msgid "Delete binding"
+msgstr "바인딩 지우기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteBindingTip"
+msgid "Delete the selected binding. Remove the items and tracks that use it first."
+msgstr "선택한 바인딩을 지웁니다. 그것을 쓰는 항목과 트랙을 먼저 지우세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.DeleteKeyButton"
 msgid "Delete key"
 msgstr "키 지우기"
@@ -7275,6 +7654,16 @@ msgstr "키 지우기"
 msgctxt "EditorSequencer.DeleteKeyTip"
 msgid "Remove this track's keys at the current frame on every channel."
 msgstr "현재 프레임에 있는 이 트랙의 키를 모든 채널에서 지웁니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteSelectedKeys"
+msgid "Delete selected keys"
+msgstr "선택한 키 지우기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DeleteSelectedKeysTip"
+msgid "Remove every selected key on every channel."
+msgstr "모든 채널에서 선택한 키를 모두 지웁니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.DeleteTrackTip"
@@ -7287,14 +7676,24 @@ msgid "Fill in the required fields to create the item."
 msgstr "필수 칸을 채우면 항목을 만들 수 있습니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EditorSequencer.ItemTargetTip"
-msgid "Name of the scene object this item acts on."
-msgstr "이 항목이 작용하는 씬 오브젝트의 이름입니다."
+msgctxt "EditorSequencer.ItemBindingTip"
+msgid "Binding of the object this item acts on."
+msgstr "이 항목이 작용하는 오브젝트의 바인딩입니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.KeyButton"
 msgid "Key"
 msgstr "키"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.KeyStripTip"
+msgid "Click a key to select it, Ctrl+click to add or remove, drag to move the selected keys by whole frames. Click empty space to go to that frame."
+msgstr "키를 누르면 선택하고, Ctrl+클릭은 더하거나 빼며, 끌면 선택한 키를 프레임 단위로 옮깁니다. 빈 곳을 누르면 그 프레임으로 갑니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.LensTargetNotFound"
+msgid "Target has no Camera"
+msgstr "대상에 Camera 가 없습니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.LoadTip"
@@ -7305,6 +7704,26 @@ msgstr "저장하지 않은 편집을 버리고 포커스된 .seq 파일을 디�
 msgctxt "EditorSequencer.NextKeyTip"
 msgid "Go to the next key"
 msgstr "다음 키로"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.NoBindingChoice"
+msgid "(none)"
+msgstr "(없음)"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.NoBindingContextHint"
+msgid "No Sequence Player in this scene plays this sequence. Add one to bind objects and preview."
+msgstr "이 씬에 이 시퀀스를 재생하는 Sequence Player 가 없습니다. 오브젝트를 바인딩하고 미리 보려면 하나 더하세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.NoBindingsHint"
+msgid "No bindings. Select an object and add a binding from it."
+msgstr "바인딩이 없습니다. 오브젝트를 선택하고 그것으로 바인딩을 더하세요."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.NoCutsHint"
+msgid "No camera cuts. Select a camera binding and add a cut."
+msgstr "카메라 컷이 없습니다. 카메라 바인딩을 선택하고 컷을 더하세요."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.NoKeyTracksHint"
@@ -7402,9 +7821,24 @@ msgid "Select an item on the timeline to edit it."
 msgstr "편집하려면 타임라인에서 항목을 선택합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
-msgctxt "EditorSequencer.SpawnNameTip"
-msgid "Name the spawned object gets."
-msgstr "스폰한 오브젝트가 받을 이름입니다."
+msgctxt "EditorSequencer.SoundLabel"
+msgid "Sound"
+msgstr "소리"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.SoundTip"
+msgid "Audio event posted when the start frame is crossed and stopped when the span ends."
+msgstr "시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.SpawnBindingTip"
+msgid "Binding the spawned object fills; its name is the binding name."
+msgstr "스폰한 오브젝트가 채울 바인딩입니다. 오브젝트 이름은 바인딩 이름입니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.SpawnedBinding"
+msgid "Spawned by the sequence"
+msgstr "시퀀스가 스폰함"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.StopTip"
@@ -7417,6 +7851,16 @@ msgid "Target object not found"
 msgstr "대상 오브젝트를 찾을 수 없습니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TextLabel"
+msgid "Text"
+msgstr "글"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.TextTip"
+msgid "Localization key (Namespace.Key) of the subtitle line shown for the span."
+msgstr "구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.TrackNameLabel"
 msgid "Name"
 msgstr "이름"
@@ -7425,6 +7869,11 @@ msgstr "이름"
 msgctxt "EditorSequencer.TrackTargetLabel"
 msgid "Target"
 msgstr "대상"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.UnboundBinding"
+msgid "Unbound"
+msgstr "바인딩 안 됨"
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.BuildModules"
@@ -7670,6 +8119,51 @@ msgstr "설명: {description}"
 msgctxt "EditorSettings.VariableModule"
 msgid "Module: {module}"
 msgstr "모듈: {module}"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.CannotRevertTooltip"
+msgid "Untracked files and conflicts are not reverted here - reverting would delete the file or hide the conflict"
+msgstr "추적하지 않는 파일과 충돌은 여기서 되돌리지 않습니다 — 되돌리면 파일이 지워지거나 충돌이 가려집니다"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.Listing"
+msgid "Listing changed files..."
+msgstr "바뀐 파일을 나열하는 중..."
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.NoChanges"
+msgid "No changed files. Edits you save appear here."
+msgstr "바뀐 파일이 없습니다. 저장한 편집이 여기에 나타납니다."
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.NoDetail"
+msgid "No diff yet. Press Diff or History."
+msgstr "아직 차이가 없습니다. 차이나 기록을 누르세요."
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.NoGit"
+msgid "git was not found on PATH, so changes cannot be listed. Install git and restart the editor."
+msgstr "PATH 에서 git 을 찾지 못해 변경을 나열할 수 없습니다. git 을 설치하고 에디터를 다시 시작하세요."
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.PickAFile"
+msgid "Pick a file to see its diff or history."
+msgstr "차이나 기록을 볼 파일을 고르세요."
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.RevertTooltip"
+msgid "Put this file back to HEAD (staged and unsaved edits are lost)"
+msgstr "이 파일을 HEAD 로 되돌립니다(스테이징한 편집과 저장하지 않은 편집을 잃습니다)"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.ScopeTooltip"
+msgid "Lists changed files, shows a file's diff against HEAD and its last 20 commits, and reverts tracked files. Commit, push and branches stay in your git tool"
+msgstr "바뀐 파일을 나열하고, 파일의 HEAD 대비 차이와 최근 커밋 20개를 보이며, 추적하는 파일을 되돌립니다. 커밋 · 푸시 · 브랜치는 git 도구에서 합니다"
+
+#: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
+msgctxt "EditorSourceControl.UntrackedNoDiff"
+msgid "This file is not tracked yet, so there is nothing to compare with."
+msgstr "이 파일은 아직 추적하지 않아 비교할 것이 없습니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AddAllCells"
@@ -8465,6 +8959,11 @@ msgstr "파일에서 미리보기를 다시 만듭니다. 에디터 밖에서 XM
 msgctxt "EditorUIPreview.ResolutionTip"
 msgid "Screen size to lay the document out for. Check layouts at several aspect ratios before shipping."
 msgstr "문서를 배치할 화면 크기입니다. 출시 전에 여러 화면비에서 레이아웃을 확인합니다."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.RotateTip"
+msgid "Turn the device 90 degrees: width and height swap and the safe area insets follow the notch."
+msgstr "기기를 90 도 돌립니다. 너비와 높이가 바뀌고 안전 여백이 노치를 따라 돕니다."
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EditorUIPreview.SafeZoneTip"
@@ -9358,6 +9857,12 @@ msgstr "입력을 시나리오 파일로 녹화합니다"
 msgctxt "Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
 msgid "Records input while running to Saved/Automation/Recorded/recorded.scenario.xml. Press again to stop and write it"
 msgstr "실행 중 입력을 Saved/Automation/Recorded/recorded.scenario.xml 로 녹화합니다. 한 번 더 누르면 멈추고 씁니다"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Recovered Work"
+msgid "Recovered Work"
+msgstr "복구한 작업"
 
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml

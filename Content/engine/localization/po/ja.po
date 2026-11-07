@@ -235,6 +235,11 @@ msgid "Current"
 msgstr "現在値"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnEvent"
+msgid "Event"
+msgstr "イベント"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnName"
 msgid "Name"
 msgstr "名前"
@@ -245,6 +250,11 @@ msgid "Remaining"
 msgstr "残り"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnSource"
+msgid "Source"
+msgstr "出典"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnStacks"
 msgid "Stacks"
 msgstr "スタック"
@@ -253,6 +263,16 @@ msgstr "スタック"
 msgctxt "EdAbilityDebug.ColumnTag"
 msgid "Tag"
 msgstr "タグ"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnTime"
+msgid "Time"
+msgstr "時刻"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.HintNoLog"
+msgid "No effect applied, rejected or removed yet."
+msgstr "適用・拒否・削除されたエフェクトはまだありません。"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintNoTarget"
@@ -293,6 +313,11 @@ msgstr "アトリビュート"
 msgctxt "EdAbilityDebug.SectionEffects"
 msgid "Active Effects"
 msgstr "有効なエフェクト"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionLog"
+msgid "Recent effects"
+msgstr "最近のエフェクト"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionTags"
@@ -2179,12 +2204,6 @@ msgctxt "settings.common.off"
 msgid "Off"
 msgstr "オフ"
 
-#. Display-change confirmation dialog; seconds counts down
-#. Max length: 80
-msgctxt "settings.confirm.keepChanges"
-msgid "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
-msgstr "この設定を維持しますか? {seconds} 秒後に元に戻ります。"
-
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
@@ -2464,9 +2483,3 @@ msgstr "自動で送信"
 msgctxt "settings.privacy.telemetry"
 msgid "Share Usage Data"
 msgstr "使用状況データを共有"
-
-#. Shown after applying settings marked apply=restart
-#. Max length: 80
-msgctxt "settings.restartRequired"
-msgid "{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
-msgstr "{count} 件の設定は再起動後に反映されます。"

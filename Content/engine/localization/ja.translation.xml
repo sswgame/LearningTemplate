@@ -27,7 +27,7 @@
 		       text="親項目から継承した値です。選ぶとこの項目に書き込みます。"
 		       sourceHash="258dfb955934f894" />
 		<entry key="EdAbilityCatalog.NoFileHint"
-		       text="編集するアビリティカタログファイル(game/&lt;ゲーム&gt;/data/abilities.xml)を入力してください。"
+		       text="編集するアビリティカタログファイル(game/&lt;ゲーム>/data/abilities.xml)を入力してください。"
 		       sourceHash="40ad614f3e928f78" />
 		<entry key="EdAbilityCatalog.NoneChoice" text="(なし)" sourceHash="8c36545f724b9460" />
 		<entry key="EdAbilityCatalog.PickEntryHint"
@@ -43,7 +43,9 @@
 		<entry key="EdAbilityCatalog.Save" text="保存" sourceHash="33f85f24c0f5f008" />
 		<entry key="EdAbilityCatalog.Undo" text="元に戻す" sourceHash="8f4be9f086eb530f" />
 		<entry key="EdAbilityCatalog.UsedBy" text="使われている場所" sourceHash="779c0036ee34fe7d" />
-		<entry key="EdAbilityCatalog.UsedByNothing" text="この項目を使う項目はありません。" sourceHash="ce418dbe01852ba4" />
+		<entry key="EdAbilityCatalog.UsedByNothing"
+		       text="この項目を使う項目はありません。"
+		       sourceHash="ce418dbe01852ba4" />
 		<entry key="EdAbilityCatalog.Uses" text="使うもの" sourceHash="a48f82f001b89585" />
 		<entry key="EdAbilityCatalog.UsesNothing" text="他の項目を使いません。" sourceHash="44bec3c2ce8364f4" />
 		<entry key="EdAbilityCatalog.ValidationFailed"
@@ -57,10 +59,16 @@
 		<entry key="EdAbilityDebug.ColumnCooldown" text="クールダウン" sourceHash="8b59db90be866528" />
 		<entry key="EdAbilityDebug.ColumnCount" text="数" sourceHash="71a5c9f4b68ef4d4" />
 		<entry key="EdAbilityDebug.ColumnCurrent" text="現在値" sourceHash="ab8b4cbbb1fa71fa" />
+		<entry key="EdAbilityDebug.ColumnEvent" text="イベント" sourceHash="d0ea7366ebc403ff" />
 		<entry key="EdAbilityDebug.ColumnName" text="名前" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EdAbilityDebug.ColumnRemaining" text="残り" sourceHash="dd9423c2ce1195a3" />
+		<entry key="EdAbilityDebug.ColumnSource" text="出典" sourceHash="5f43af3669b1e098" />
 		<entry key="EdAbilityDebug.ColumnStacks" text="スタック" sourceHash="1d286181862db5e4" />
 		<entry key="EdAbilityDebug.ColumnTag" text="タグ" sourceHash="6ce0cb19e201b153" />
+		<entry key="EdAbilityDebug.ColumnTime" text="時刻" sourceHash="48e186fb300e5464" />
+		<entry key="EdAbilityDebug.HintNoLog"
+		       text="適用・拒否・削除されたエフェクトはまだありません。"
+		       sourceHash="249a7225f66cf71f" />
 		<entry key="EdAbilityDebug.HintNoTarget"
 		       text="AbilityComponent を持つオブジェクトを選択するか、上で選んでください。"
 		       sourceHash="ec7db3b86d2e4de6" />
@@ -75,6 +83,7 @@
 		<entry key="EdAbilityDebug.SectionAbilities" text="付与されたアビリティ" sourceHash="59c749c8cdb544fa" />
 		<entry key="EdAbilityDebug.SectionAttributes" text="アトリビュート" sourceHash="16b9446e3a70e1f4" />
 		<entry key="EdAbilityDebug.SectionEffects" text="有効なエフェクト" sourceHash="6991d93fa865e70d" />
+		<entry key="EdAbilityDebug.SectionLog" text="最近のエフェクト" sourceHash="562c325175e2853c" />
 		<entry key="EdAbilityDebug.SectionTags" text="所有タグ" sourceHash="35d4aac5d07d7ce3" />
 		<entry key="EdMeshModifiers.AddItem" text="項目を追加" sourceHash="1373a4ab54d88333" />
 		<entry key="EdMeshModifiers.AddModifier" text="モディファイアを追加" sourceHash="f4d95a66cf236fed" />
@@ -609,9 +618,6 @@
 		<entry key="settings.category.language" text="言語" sourceHash="efcf950b3cc4fc3b" />
 		<entry key="settings.category.privacy" text="プライバシー" sourceHash="e78c02e9a98a0f47" />
 		<entry key="settings.common.off" text="オフ" sourceHash="302cbb19bf9a174a" />
-		<entry key="settings.confirm.keepChanges"
-		       text="この設定を維持しますか? {seconds} 秒後に元に戻ります。"
-		       sourceHash="d8bd8dfcd7e97078" />
 		<entry key="settings.controls.aimMode" text="エイム" sourceHash="f9a3e0199ffcbd16" />
 		<entry key="settings.controls.crouchMode" text="しゃがみ" sourceHash="cd7743f6969479eb" />
 		<entry key="settings.controls.gamepadSensitivity" text="ゲームパッド感度" sourceHash="524014273006eb8b" />
@@ -654,8 +660,5 @@
 		<entry key="settings.privacy.crashReports.local" text="ローカルに保存" sourceHash="8b3c1bab8e4d3093" />
 		<entry key="settings.privacy.crashReports.send" text="自動で送信" sourceHash="9fa9bb8c8057dbfa" />
 		<entry key="settings.privacy.telemetry" text="使用状況データを共有" sourceHash="35369209785d4d0d" />
-		<entry key="settings.restartRequired"
-		       text="{count} 件の設定は再起動後に反映されます。"
-		       sourceHash="6462a7414eb6a4f5" />
 	</entries>
 </TranslationTable>

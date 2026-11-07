@@ -27,7 +27,7 @@
 		       text="부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다."
 		       sourceHash="258dfb955934f894" />
 		<entry key="EdAbilityCatalog.NoFileHint"
-		       text="편집할 어빌리티 카탈로그 파일(game/&lt;게임&gt;/data/abilities.xml)을 적으세요."
+		       text="편집할 어빌리티 카탈로그 파일(game/&lt;게임>/data/abilities.xml)을 적으세요."
 		       sourceHash="40ad614f3e928f78" />
 		<entry key="EdAbilityCatalog.NoneChoice" text="(없음)" sourceHash="8c36545f724b9460" />
 		<entry key="EdAbilityCatalog.PickEntryHint"
@@ -43,9 +43,13 @@
 		<entry key="EdAbilityCatalog.Save" text="저장" sourceHash="33f85f24c0f5f008" />
 		<entry key="EdAbilityCatalog.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
 		<entry key="EdAbilityCatalog.UsedBy" text="쓰는 곳" sourceHash="779c0036ee34fe7d" />
-		<entry key="EdAbilityCatalog.UsedByNothing" text="이 항목을 쓰는 곳이 없습니다." sourceHash="ce418dbe01852ba4" />
+		<entry key="EdAbilityCatalog.UsedByNothing"
+		       text="이 항목을 쓰는 곳이 없습니다."
+		       sourceHash="ce418dbe01852ba4" />
 		<entry key="EdAbilityCatalog.Uses" text="쓰는 것" sourceHash="a48f82f001b89585" />
-		<entry key="EdAbilityCatalog.UsesNothing" text="다른 항목을 쓰지 않습니다." sourceHash="44bec3c2ce8364f4" />
+		<entry key="EdAbilityCatalog.UsesNothing"
+		       text="다른 항목을 쓰지 않습니다."
+		       sourceHash="44bec3c2ce8364f4" />
 		<entry key="EdAbilityCatalog.ValidationFailed"
 		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요."
 		       sourceHash="f82ad242c323c715" />
@@ -57,10 +61,16 @@
 		<entry key="EdAbilityDebug.ColumnCooldown" text="쿨다운" sourceHash="8b59db90be866528" />
 		<entry key="EdAbilityDebug.ColumnCount" text="개수" sourceHash="71a5c9f4b68ef4d4" />
 		<entry key="EdAbilityDebug.ColumnCurrent" text="현재값" sourceHash="ab8b4cbbb1fa71fa" />
+		<entry key="EdAbilityDebug.ColumnEvent" text="사건" sourceHash="d0ea7366ebc403ff" />
 		<entry key="EdAbilityDebug.ColumnName" text="이름" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EdAbilityDebug.ColumnRemaining" text="남은 시간" sourceHash="dd9423c2ce1195a3" />
+		<entry key="EdAbilityDebug.ColumnSource" text="출처" sourceHash="5f43af3669b1e098" />
 		<entry key="EdAbilityDebug.ColumnStacks" text="스택" sourceHash="1d286181862db5e4" />
 		<entry key="EdAbilityDebug.ColumnTag" text="태그" sourceHash="6ce0cb19e201b153" />
+		<entry key="EdAbilityDebug.ColumnTime" text="시각" sourceHash="48e186fb300e5464" />
+		<entry key="EdAbilityDebug.HintNoLog"
+		       text="아직 적용 · 거부 · 제거된 이펙트가 없습니다."
+		       sourceHash="249a7225f66cf71f" />
 		<entry key="EdAbilityDebug.HintNoTarget"
 		       text="AbilityComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
 		       sourceHash="ec7db3b86d2e4de6" />
@@ -75,6 +85,7 @@
 		<entry key="EdAbilityDebug.SectionAbilities" text="부여된 어빌리티" sourceHash="59c749c8cdb544fa" />
 		<entry key="EdAbilityDebug.SectionAttributes" text="어트리뷰트" sourceHash="16b9446e3a70e1f4" />
 		<entry key="EdAbilityDebug.SectionEffects" text="걸린 이펙트" sourceHash="6991d93fa865e70d" />
+		<entry key="EdAbilityDebug.SectionLog" text="최근 이펙트" sourceHash="562c325175e2853c" />
 		<entry key="EdAbilityDebug.SectionTags" text="소유 태그" sourceHash="35d4aac5d07d7ce3" />
 		<entry key="EdMeshModifiers.AddItem" text="항목 추가" sourceHash="1373a4ab54d88333" />
 		<entry key="EdMeshModifiers.AddModifier" text="모디파이어 추가" sourceHash="f4d95a66cf236fed" />
@@ -595,9 +606,6 @@
 		<entry key="settings.category.language" text="언어" sourceHash="efcf950b3cc4fc3b" />
 		<entry key="settings.category.privacy" text="개인 정보" sourceHash="e78c02e9a98a0f47" />
 		<entry key="settings.common.off" text="끔" sourceHash="302cbb19bf9a174a" />
-		<entry key="settings.confirm.keepChanges"
-		       text="이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다."
-		       sourceHash="d8bd8dfcd7e97078" />
 		<entry key="settings.controls.aimMode" text="조준" sourceHash="f9a3e0199ffcbd16" />
 		<entry key="settings.controls.crouchMode" text="앉기" sourceHash="cd7743f6969479eb" />
 		<entry key="settings.controls.gamepadSensitivity" text="게임패드 감도" sourceHash="524014273006eb8b" />
@@ -638,8 +646,5 @@
 		<entry key="settings.privacy.crashReports.local" text="로컬에만 보관" sourceHash="8b3c1bab8e4d3093" />
 		<entry key="settings.privacy.crashReports.send" text="자동으로 보내기" sourceHash="9fa9bb8c8057dbfa" />
 		<entry key="settings.privacy.telemetry" text="사용 데이터 공유" sourceHash="35369209785d4d0d" />
-		<entry key="settings.restartRequired"
-		       text="설정 {count}개는 다시 시작한 뒤에 적용됩니다."
-		       sourceHash="6462a7414eb6a4f5" />
 	</entries>
 </TranslationTable>

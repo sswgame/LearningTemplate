@@ -8,9 +8,14 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#. Context: TextWidget._text
+#: game/shooter3d/ui/hud.ui.xml
+msgctxt "/"
+msgid "/"
+msgstr "/"
+
 #. Context: Weapon name
 #: common/data/items.xml
-#: game/shooter3d/data/weapons.xml
 msgctxt "Assault Rifle"
 msgid "Assault Rifle"
 msgstr "돌격 소총"
@@ -29,9 +34,45 @@ msgstr "뼈 방패"
 
 #. Context: Item name
 #: common/data/items.xml
+msgctxt "Gilded Knight Helmet"
+msgid "Gilded Knight Helmet"
+msgstr "금박 기사 투구"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Heraldic Cape"
+msgid "Heraldic Cape"
+msgstr "문장 망토"
+
+#. Context: Item name
+#: common/data/items.xml
 msgctxt "Knight Helmet"
 msgid "Knight Helmet"
 msgstr "기사 투구"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Helmet (Dyeable)"
+msgid "Knight Helmet (Dyeable)"
+msgstr "기사 투구(염색 가능)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Helmet (Merged)"
+msgid "Knight Helmet (Merged)"
+msgstr "기사 투구(병합)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Sword (Merged)"
+msgid "Knight Sword (Merged)"
+msgstr "기사 검(병합)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Longbow"
+msgid "Longbow"
+msgstr "장궁"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -41,14 +82,12 @@ msgstr "이 빠진 칼"
 
 #. Context: Weapon name
 #: common/data/items.xml
-#: game/shooter3d/data/weapons.xml
 msgctxt "Pistol"
 msgid "Pistol"
 msgstr "권총"
 
 #. Context: Weapon name
 #: common/data/items.xml
-#: game/shooter3d/data/weapons.xml
 msgctxt "Pump Shotgun"
 msgid "Pump Shotgun"
 msgstr "펌프 산탄총"
@@ -58,6 +97,12 @@ msgstr "펌프 산탄총"
 msgctxt "Round Shield"
 msgid "Round Shield"
 msgstr "둥근 방패"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Round Shield (Merged)"
+msgid "Round Shield (Merged)"
+msgstr "둥근 방패(병합)"
 
 #. Context: Item name
 #: common/data/items.xml
