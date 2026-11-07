@@ -18,8 +18,6 @@
 			<ArenaProjectileComponent _componentName="ArenaProjectileComponent"
 			                          _bActive="true"
 			                          _director="0"
-			                          _radius="0.25"
-			                          _unitRadius="0.5"
 			                          _visualLift="0.9" />
 			<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
 			                          _bActive="true"

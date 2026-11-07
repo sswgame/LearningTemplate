@@ -4,6 +4,8 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
@@ -58,14 +60,15 @@ namespace sw
         const ArenaGameModeComponent* pDirector      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
         const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
-        // 피해 · 속도 · 사거리는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
-        const std::optional<float32> damage    = getParameter( "damage" );
-        const std::optional<float32> speed     = getParameter( "speed" );
-        const std::optional<float32> range     = getParameter( "range" );
-        const bool                   bComplete = damage.has_value() && speed.has_value() && range.has_value();
-        if ( bComplete == false )
+        // 어느 탄인지는 어빌리티 데이터(`<Param name="projectile">`)가 반드시 적고, 피해 · 속도 · 사거리 · 반지름은 그 탄 정의(게임 서비스 `ProjectileCatalog`)다.
+        // 탄의 피해는 숫자라 피해 이펙트의 SetByCaller 로 넘긴다 — 방어 · 저항은 이펙트 계산이 한다.
+        const hashed_string      projectileID = getNameParameter( "projectile" );
+        const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+        const ProjectileDef*     pProjectile  = pProjectiles != nullptr && projectileID.empty() == false ? pProjectiles->find( projectileID ) : nullptr;
+        if ( pProjectile == nullptr )
         {
-            SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsParamName2", "ability '%#' needs <Param name=\"damage\">, \"speed\" and \"range\"", getConfig()._id.c_str() );
+            SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsProjectile", "ability '%#' needs <Param name=\"projectile\" text=\"...\"> naming a projectile in the projectile catalog (got '%#')",
+                             getConfig()._id.c_str(), projectileID.c_str() );
             cancelAbility();
             return;
         }
@@ -73,10 +76,10 @@ namespace sw
         {
             AbilityEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( spec.isValid() )
-                spec.setSetByCallerMagnitude( "Damage", *damage );
+                spec.setSetByCallerMagnitude( "Damage", pProjectile->_damage );
             const hashed_string     extraEffect = getNameParameter( "extraEffect" );
             const AbilityEffectSpec extraSpec   = extraEffect.empty() ? AbilityEffectSpec{} : makeOutgoingSpec( extraEffect );
-            pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), spec, extraSpec, *speed, *range );
+            pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), projectileID, spec, extraSpec );
         }
         endAbility();
     }

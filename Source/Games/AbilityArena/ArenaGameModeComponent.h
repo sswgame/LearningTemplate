@@ -5,9 +5,15 @@
  *          (`Content/game/abilityarena/data/abilities.xml`)가 맡습니다. 유닛 하나의 몸은 폰 쪽 `ArenaUnitComponent`(의도만 읽는다)가, 판단은 조종자
  *          (플레이어 조종자, `ArenaEnemyAIComponent`, `ArenaAutoBattleAIComponent`)가 맡는다. 이 컴포넌트는 "언제 누가 등장하고 누가 쓰러졌는가, 누가 누구를 조종하는가"만 안다.
  *
- *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 유닛 스냅샷(위치, 팀, 생존 여부)을 한 번 기록하고, 유닛과 투사체(`DuringPhysics`),
- *          카메라(`PostUpdate`)는 그것을 **읽기만** 한다(목록은 `data()` 로 읽는다). 스폰과 빙의는 틱 안에서 할 수 없으므로 요청을 쌓아 두었다가
+ *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 유닛 스냅샷(위치, 팀, 생존 여부)을 한 번 기록하고 그 스냅샷으로 투사체를 한 걸음 돌린다.
+ *          유닛과 투사체의 모습(`DuringPhysics`), 카메라(`PostUpdate`)는 그것을 **읽기만** 한다(목록은 `data()` 로 읽는다). 스폰과 빙의는 틱 안에서 할 수 없으므로 요청을 쌓아 두었다가
  *          `executeOrDeferPostTick` 한 번으로 틱이 끝난 뒤에 처리한다. 효과음도 그때 낸다.
+ *
+ *          **투사체**는 단일 발사체 시뮬레이션(`ProjectileSimulation`) 하나에서 아레나 바닥(법선 Y) 평면으로 돈다. 날아가는 값은 어빌리티가 가리키는 탄 정의(게임 서비스 `ProjectileCatalog`)이고,
+ *          탄마다 실은 어빌리티 이펙트 스펙은 탄 id 로 찾는 짐(`ProjectileCargo`)이다 — 스펙은 쏜 쪽 어빌리티 시스템을 가리키는 런타임 값이라 탄 상태 바이트에 넣지 않는다.
+ *          맞으면 스펙을 틱 뒤 게임 스레드에서 맞은 쪽 어빌리티 시스템에 건다. 이펙트의 적용 · 차단(BlockedTag)은 그 어빌리티 시스템의 규칙이고 탄은 나르기만 한다.
+ *          이 엔진의 어빌리티 시스템은 복제 · 예측을 하지 않는다. 언리얼 GAS 도 투사체는 서버의 액터가 GameplayEffectSpecHandle 을 들고 날아 서버에서 거는 길이고
+ *          투사체 자체를 예측하지 않는다(기억에 의존한 비교) — 복제가 생기면 시뮬레이션은 결정적이라 서버 권위 그대로 두고 짐(스펙)만 서버에 남기면 된다.
  */
 #pragma once
 #include "Core/Container/GameObjectHandle.h"
@@ -23,6 +29,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
@@ -91,11 +98,14 @@ namespace sw
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 어빌리티 시스템을 반환합니다(어빌리티가 대상을 찾을 때 씁니다). */
         AbilityComponent* findNearestHostile( const AbilityComponent& from, float32 maxRange ) const;
         /**
-         * @brief @p from 이 @p facing 방향으로 투사체를 쏩니다. 처음 닿은 적대 유닛에 @p spec(있으면 @p extraSpec 도)을 적용합니다.
-         * @details 어느 스레드에서 불러도 된다. 투사체는 틱이 끝난 뒤(게임 스레드) 스폰한다. 스펙은 쏜 순간 만든 것이라 쏜 쪽이 그 사이 쓰러져도 남는다.
+         * @brief @p from 이 @p facing 방향으로 탄 @p projectileID(`ProjectileCatalog`)를 쏩니다. 맞은 적대 유닛에 @p spec(있으면 @p extraSpec 도)을 적용합니다.
+         * @details 어느 스레드에서 불러도 된다. 투사체는 틱이 끝난 뒤(게임 스레드) 시뮬레이션에 넣고 모습을 스폰한다. 스펙은 쏜 순간 만든 것이라 쏜 쪽이 그 사이 쓰러져도 남는다.
+         *          탄이 없으면 그때 오류를 남기고 쏘지 않는다(어빌리티가 피해를 읽을 때 이미 봤다).
          */
-        void launchProjectile( const AbilityComponent& from, const float3& facing, const AbilityEffectSpec& spec, const AbilityEffectSpec& extraSpec,
-                               float32 speed, float32 range ) const;
+        void launchProjectile( const AbilityComponent& from, const float3& facing, const hashed_string& projectileID, const AbilityEffectSpec& spec,
+                               const AbilityEffectSpec& extraSpec ) const;
+        /** @brief 날고 있는 탄 @p projectileID 입니다. 끝났으면 nullptr 입니다. 투사체의 모습(`ArenaProjectileComponent`)이 `DuringPhysics` 에서 읽습니다. */
+        const ProjectileState* findProjectile( uint32 projectileID ) const;
         /** @brief 이번 프레임 스냅샷의 플레이어 위치(틱 전)를 반환합니다. 없으면 아레나 중앙입니다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
         /** @brief 이번 프레임 스냅샷의 플레이어 오브젝트를 반환합니다(없으면 빈 핸들). PostPhysics 이후 단계는 이것의 트랜스폼으로 이번 프레임 위치를 읽습니다. */
@@ -153,15 +163,23 @@ namespace sw
             ArenaUnitKind    _kind{ ArenaUnitKind::Grunt };
         };
 
-        /** @brief 쏠 투사체 하나입니다. 틱이 끝난 뒤(`launchProjectile` 이 미룬 일) 스폰합니다. */
+        /** @brief 쏠 투사체 하나입니다. 틱이 끝난 뒤(`launchProjectile` 이 미룬 일) 시뮬레이션에 넣습니다. */
         struct ProjectileRequest
         {
             AbilityEffectSpec _spec{};
             AbilityEffectSpec _extraSpec{};
-            float3            _position{};
-            float3            _velocity{};
-            float32           _range{ 0.0f };
+            hashed_string     _projectileID{};
+            float3            _origin{}; ///< 쏜 유닛의 발 위치(탄은 몸 밖에서 나간다)
+            float3            _direction{};
             uint8             _bFromPlayer{ SW_FALSE };
+        };
+
+        /** @brief 날고 있는 탄 하나가 실은 이펙트 스펙입니다. 탄 id(`ProjectileState::_id`)로 찾고, 탄이 끝나면 지웁니다. */
+        struct ProjectileCargo
+        {
+            AbilityEffectSpec _spec{};
+            AbilityEffectSpec _extraSpec{};
+            uint32            _projectileID{ 0 };
         };
 
     private:
@@ -187,6 +205,10 @@ namespace sw
         void updatePlayerRespawn( float32 deltaTime );
         void logStatus( float32 deltaTime );
         void pruneProjectiles();
+        /** @brief 이번 스냅샷으로 투사체를 한 걸음 돌리고, 맞은 유닛에 실은 스펙을 틱 뒤로 미뤄 겁니다. 끝난 탄의 짐을 지웁니다. */
+        void stepProjectiles( float32 deltaTime );
+        /** @brief 탄 @p projectileID 의 짐을 지웁니다. */
+        void dropCargo( uint32 projectileID );
         bool hasPendingUnit( ArenaUnitKind kind ) const;
         /** @brief 종류별 어빌리티 세트 id(PROPERTY — 씬 데이터)입니다. */
         const hashed_string& findAbilitySetID( ArenaUnitKind kind ) const;
@@ -236,14 +258,15 @@ namespace sw
         float4 _projectileTint;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
-        PROPERTY( Category = "Combat", DisplayName = "Unit Radius", Tooltip = "Projectiles start this far outside the caster body", Min = 0.0, Units = m )
+        PROPERTY( Category = "Combat", DisplayName = "Unit Radius", Tooltip = "Body radius of a unit: projectiles start outside it and hit within it plus their own radius", Min = 0.0, Units = m )
         float32 _unitRadius;
-        PROPERTY( Category = "Combat", DisplayName = "Projectile Radius", Min = 0.0, Units = m )
-        float32 _projectileRadius;
 
         vector<ArenaUnit>        _listUnit;
         vector<ArenaUnitView>    _listUnitView;
-        vector<GameObjectHandle> _listProjectile;
+        vector<GameObjectHandle> _listProjectile; ///< 투사체의 모습(상태 저장 전에 걷는다). 탄 자체는 `_projectiles` 다
+        ProjectileSimulation     _projectiles;
+        vector<ProjectileCargo>  _listProjectileCargo;
+        vector<ProjectileEvent>  _listProjectileEventScratch;
         vector<SpawnRequest>     _listPendingUnit;
         MaterialTintCache        _tintCache; ///< 플레이어, Grunt, Caster, 투사체 색.
         float3                   _playerFocus;

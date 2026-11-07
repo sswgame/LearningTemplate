@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AbilityArena 의 탄 — 날아가는 것. 속성 이름은 ProjectileDef 의 필드 이름이다(빠진 것은 기본값). 거리는 m, 시간은 초.
+     어빌리티(abilities.xml)의 <Param name="projectile"> 이 이 id 를 가리키고, damage 는 피해 이펙트의 SetByCaller "Damage" 로 간다.
+     탄은 디렉터의 발사체 시뮬레이션이 아레나 바닥 평면에서 돌린다 — 중력은 쓰지 않고, 벽이 없어 날아야(speed) 하고 사거리(range)가 있어야 한다.
+     radius 는 맞음 반지름이다(유닛 몸 반지름은 디렉터의 _unitRadius). 적 화염탄은 화염구의 차이만 적는다(_base). -->
+<ProjectileCatalog>
+  <Projectile id="arena_fireball" tags="Ammo.Fireball" damage="18" speed="14" range="16" radius="0.25" gravityScale="0"/>
+  <Projectile id="arena_bolt" _base="arena_fireball" tags="Ammo.Bolt" damage="8" speed="8" range="14"/>
+</ProjectileCatalog>

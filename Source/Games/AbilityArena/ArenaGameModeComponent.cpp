@@ -16,6 +16,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -77,8 +79,92 @@ namespace sw
                 outValue = director.isPlayerDrivenByAI() ? 1.0 : 0.0;
                 return true;
             }
+
+            static constexpr int32 kTeamEnemy  = 0; ///< `ProjectileState::_team` — 적이 쏜 탄
+            static constexpr int32 kTeamPlayer = 1; ///< 플레이어 편이 쏜 탄
+
+            /** @brief 맞은 유닛 @p target 에 짐의 스펙을 틱 뒤(게임 스레드)에 겁니다. 대상은 다른 워커가 틱하고 있을 수 있다. 무적이면 이펙트의 BlockedTag 가 막는다. */
+            static void applyCargo( GameObjectManager& manager, GameObjectHandle target, const AbilityEffectSpec& spec, const AbilityEffectSpec& extraSpec )
+            {
+                GameObjectManager* pManager = &manager;
+                manager.executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, target, spec, extraSpec]()
+                {
+                    GameObject*       pTarget        = pManager->resolveGameObject( target );
+                    AbilityComponent* pAbilitySystem = pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
+                    if ( pAbilitySystem == nullptr )
+                        return;
+                    if ( spec.isValid() )
+                        (void)pAbilitySystem->applyGameplayEffectSpecToSelf( spec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
+                    if ( extraSpec.isValid() )
+                        (void)pAbilitySystem->applyGameplayEffectSpecToSelf( extraSpec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
+                    // 피격음은 이펙트의 큐(`AbilityPresentation.Hit.*`)가 카탈로그의 `<AbilityPresentation>` 로 낸다 — 여기서 따로 내지 않는다.
+                } ) );
+            }
         };
     } // namespace
+
+    /**
+     * @class ArenaProjectileQuery
+     * @brief 아레나의 탄이 묻는 세계입니다. 맞는 것은 이번 스냅샷의 적대 유닛(선분에서 유닛 반지름 + 탄 반지름 안, 선분 앞쪽이 먼저)이고, 판 밖은 표면입니다(튕기는 탄은 판 가장자리에서 튕긴다).
+     * @details 편은 쏜 쪽이 플레이어 편인지로 가른다(플레이어 편 탄은 플레이어가 아닌 유닛을, 적 탄은 플레이어를 맞힌다). 쓰러진 유닛은 지나간다. 유도 대상은 두지 않는다.
+     *          `_other` · `_lastHit` 는 이번 스냅샷의 유닛 번호다. shortcut: 관통 탄이 다음 프레임에 같은 유닛을 거르는 데 쓰는 번호는 유닛이 빠지면 밀린다 — 관통 탄을 쓰게 되면 유닛 핸들로 바꾼다.
+     */
+    class ArenaProjectileQuery : public IProjectileWorld
+    {
+    public:
+        ArenaProjectileQuery( const vector<ArenaUnitView>& listView, float32 unitRadius, float32 boundsHalfSize )
+            : _listView{ listView }
+            , _unitRadius{ unitRadius }
+            , _boundsHalfSize{ boundsHalfSize }
+        {
+        }
+
+        bool findTargetPoint( const ProjectileState& /*projectile*/, float3& /*outPoint*/ ) const override { return false; }
+
+        bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const override
+        {
+            using Internal                     = ArenaGameModeComponentInternal;
+            const float3         segment       = to - from;
+            const float32        lengthSquared = segment.getLengthSquared();
+            const float32        reach         = _unitRadius + projectile._radius;
+            const bool           bFromPlayer   = projectile._team == Internal::kTeamPlayer;
+            const ArenaUnitView* pView         = _listView.data(); // 같은 그룹의 다른 투사체 모습과 함께 읽으므로 첨자 대신 포인터로
+            int32                hitIndex      = -1;
+            float32              hitRatio      = 2.0f;
+            for ( size_t viewIndex = 0; viewIndex < _listView.size(); ++viewIndex )
+            {
+                const ArenaUnitView& view      = pView[viewIndex];
+                const bool           bSameTeam = ( view._kind == ArenaUnitKind::Player ) == bFromPlayer;
+                if ( bSameTeam || view._bAlive == SW_FALSE || static_cast<int32>( viewIndex ) == projectile._lastHit )
+                    continue;
+                const float32 ratio = lengthSquared > 0.0f ? MathUtil::clamp( ( view._position - from ).dot( segment ) / lengthSquared, 0.0f, 1.0f ) : 0.0f;
+                const float3  point = from + segment * ratio;
+                if ( float3::getDistance( point, view._position ) > reach || ratio >= hitRatio )
+                    continue;
+                hitIndex         = static_cast<int32>( viewIndex );
+                hitRatio         = ratio;
+                outHit._position = point;
+            }
+            if ( hitIndex >= 0 )
+            {
+                outHit._other = hitIndex;
+                outHit._kind  = ProjectileHitKind::Target;
+                return true;
+            }
+            const bool bOutX = MathUtil::abs( to._x ) > _boundsHalfSize;
+            if ( bOutX == false && MathUtil::abs( to._z ) <= _boundsHalfSize )
+                return false;
+            outHit._position = to;
+            outHit._normal   = bOutX ? float3{ to._x > 0.0f ? -1.0f : 1.0f, 0.0f, 0.0f } : float3{ 0.0f, 0.0f, to._z > 0.0f ? -1.0f : 1.0f };
+            outHit._kind     = ProjectileHitKind::Surface;
+            return true;
+        }
+
+    private:
+        const vector<ArenaUnitView>& _listView;
+        float32                      _unitRadius;
+        float32                      _boundsHalfSize;
+    };
 
     /**
      * @brief `-gv_arenaAutoPlay=1`: 디렉터의 자동 전투를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 플레이어도 AI 가 움직입니다.
@@ -120,10 +206,12 @@ namespace sw
         , _projectileTint{ 1.0f, 0.6f, 0.1f, 1.0f }
         , _statusLogInterval{ 5.0f }
         , _unitRadius{ 0.5f }
-        , _projectileRadius{ 0.25f }
         , _listUnit{}
         , _listUnitView{}
         , _listProjectile{}
+        , _projectiles{}
+        , _listProjectileCargo{}
+        , _listProjectileEventScratch{}
         , _listPendingUnit{}
         , _tintCache{}
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
@@ -138,6 +226,7 @@ namespace sw
         , _bPossessionDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
+        _projectiles.setPlaneNormal( float3{ 0.0f, 1.0f, 0.0f } ); // 탄은 아레나 바닥 위 발 높이 평면에서 난다
     }
 
     ArenaGameModeComponent::~ArenaGameModeComponent() = default;
@@ -231,6 +320,8 @@ namespace sw
             logStatus( deltaTime );
         }
         updateUnitViews();
+        if ( deltaTime > 0.0f )
+            stepProjectiles( deltaTime ); // 방금 적은 스냅샷으로 맞음을 본다
 
         // 빙의는 틱이 끝난 뒤에 한다. 자동 플레이 스위치와 플레이어 폰을 조종하는 조종자가 다르면 플러시를 잡는다(`hasPendingSpawn`).
         const PawnComponent* pPlayerPawn = findPlayerPawn();
@@ -246,6 +337,8 @@ namespace sw
         _listUnit.clear();
         _listUnitView.clear();
         _listProjectile.clear();
+        _projectiles.clear(); // 짐(스펙)은 런타임 값이라 상태에 싣지 않는다 — 모습과 함께 걷는다
+        _listProjectileCargo.clear();
         _listPendingUnit.clear();
         _playerRespawnTimer = -1.0f;
         _autoBattleObject   = GameObjectHandle{};
@@ -333,8 +426,8 @@ namespace sw
         return pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
     }
 
-    void ArenaGameModeComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const AbilityEffectSpec& spec,
-                                                   const AbilityEffectSpec& extraSpec, float32 speed, float32 range ) const
+    void ArenaGameModeComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const hashed_string& projectileID, const AbilityEffectSpec& spec,
+                                                   const AbilityEffectSpec& extraSpec ) const
     {
         const GameObject*    pFrom     = from.getOwner();
         const ArenaUnitView* pFromView = pFrom != nullptr ? findUnitView( pFrom->getHandle() ) : nullptr;
@@ -343,12 +436,12 @@ namespace sw
             return;
 
         ProjectileRequest request;
-        request._spec        = spec;
-        request._extraSpec   = extraSpec;
-        request._position    = pFromView->_position + facing * ( _unitRadius + _projectileRadius );
-        request._velocity    = facing * speed;
-        request._range       = range;
-        request._bFromPlayer = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
+        request._spec         = spec;
+        request._extraSpec    = extraSpec;
+        request._projectileID = projectileID;
+        request._origin       = pFromView->_position;
+        request._direction    = facing;
+        request._bFromPlayer  = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
         // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
         const TComponentHandle<ArenaGameModeComponent> self{ this };
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
@@ -526,12 +619,34 @@ namespace sw
 
     void ArenaGameModeComponent::spawnProjectile( const ProjectileRequest& request )
     {
+        using Internal              = ArenaGameModeComponentInternal;
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr || isStarted() == false )
             return;
-        GameObject*               pObject     = spawnPrefab( *pManager, _projectilePrefab, "ArenaProjectile" );
-        ArenaProjectileComponent* pProjectile = pObject != nullptr ? pObject->getComponent<ArenaProjectileComponent>() : nullptr;
-        if ( pProjectile == nullptr )
+        // 날아가는 값은 탄 정의다(어빌리티는 어느 탄인지와 실을 스펙만 정한다). 아레나에는 벽이 없어 날지 않거나 사거리가 없는 탄은 받지 않는다.
+        const ProjectileCatalog* pCatalog    = game::findSubsystem<ProjectileCatalog>();
+        const ProjectileDef*     pProjectile = pCatalog != nullptr ? pCatalog->find( request._projectileID ) : nullptr;
+        if ( pProjectile == nullptr || pProjectile->_speed <= 0.0f || pProjectile->_range <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "ArenaGameMode.ProjectileUnusable", "[Arena] projectile '%#' is not in the projectile catalog or does not fly with a range - not fired", request._projectileID.c_str() );
+            return;
+        }
+        const ResolvedShot shot       = ResolvedShot::resolve( *pProjectile, {}, {} );
+        const float3       origin     = request._origin + request._direction * ( _unitRadius + shot._radius );
+        ProjectileState    projectile = ProjectileState::launch( shot, origin, request._direction, 0.0f ); // 바닥 평면에 묶여 중력은 의미가 없다
+        projectile._team              = request._bFromPlayer == SW_TRUE ? Internal::kTeamPlayer : Internal::kTeamEnemy;
+        ProjectileCargo cargo;
+        cargo._spec         = request._spec;
+        cargo._extraSpec    = request._extraSpec;
+        cargo._projectileID = _projectiles.spawn( projectile );
+        _listProjectileCargo.push_back( cargo );
+        if ( request._bFromPlayer == SW_TRUE )
+            ++_playerShotCount;
+
+        // 모습은 탄을 읽기만 한다(`ArenaProjectileComponent`). 모습이 없어도 탄은 난다.
+        GameObject*               pObject = spawnPrefab( *pManager, _projectilePrefab, "ArenaProjectile" );
+        ArenaProjectileComponent* pView   = pObject != nullptr ? pObject->getComponent<ArenaProjectileComponent>() : nullptr;
+        if ( pView == nullptr )
         {
             if ( pObject != nullptr )
                 pManager->destroyGameObject( pObject );
@@ -539,13 +654,57 @@ namespace sw
         }
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
-            applyTint( *pMesh, ArenaGameModeComponentInternal::kProjectileTint );
-        pProjectile->launch( getOwner()->getHandle(), request._position, request._velocity, request._range, request._spec, request._extraSpec,
-                             request._bFromPlayer == SW_TRUE );
-        if ( request._bFromPlayer == SW_TRUE )
-            ++_playerShotCount;
+            applyTint( *pMesh, Internal::kProjectileTint );
+        pView->bind( getOwner()->getHandle(), cargo._projectileID, origin );
         pruneProjectiles();
         _listProjectile.push_back( pObject->getHandle() );
+    }
+
+    const ProjectileState* ArenaGameModeComponent::findProjectile( uint32 projectileID ) const
+    {
+        const vector<ProjectileState>& listProjectile = _projectiles.getProjectiles();
+        const ProjectileState*         pProjectile    = listProjectile.data(); // 여러 모습이 같은 그룹에서 함께 읽으므로 첨자 대신 포인터로
+        for ( size_t index = 0; index < listProjectile.size(); ++index )
+        {
+            if ( pProjectile[index]._id == projectileID )
+                return pProjectile + index;
+        }
+        return nullptr;
+    }
+
+    void ArenaGameModeComponent::stepProjectiles( float32 deltaTime )
+    {
+        const ArenaProjectileQuery query( _listUnitView, _unitRadius, _arenaHalfSize + 2.0f );
+        _listProjectileEventScratch.clear();
+        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
+        GameObjectManager* pManager = getObjectManager();
+        for ( const ProjectileEvent& event : _listProjectileEventScratch )
+        {
+            const uint32 projectileID = event._projectile._id;
+            const bool   bUnitHit     = event._kind == ProjectileEvent::Kind::Hit && event._hit._kind == ProjectileHitKind::Target && pManager != nullptr;
+            if ( bUnitHit )
+            {
+                for ( const ProjectileCargo& cargo : _listProjectileCargo )
+                {
+                    if ( cargo._projectileID == projectileID )
+                        ArenaGameModeComponentInternal::applyCargo( *pManager, _listUnitView[static_cast<size_t>( event._hit._other )]._object, cargo._spec, cargo._extraSpec );
+                }
+            }
+            if ( event._projectile._bAlive == SW_FALSE )
+                dropCargo( projectileID );
+        }
+    }
+
+    void ArenaGameModeComponent::dropCargo( uint32 projectileID )
+    {
+        for ( size_t index = 0; index < _listProjectileCargo.size(); ++index )
+        {
+            if ( _listProjectileCargo[index]._projectileID != projectileID )
+                continue;
+            _listProjectileCargo[index] = _listProjectileCargo.back();
+            _listProjectileCargo.pop_back();
+            return;
+        }
     }
 
     void ArenaGameModeComponent::applyTint( MeshComponent& mesh, int32 tintIndex )

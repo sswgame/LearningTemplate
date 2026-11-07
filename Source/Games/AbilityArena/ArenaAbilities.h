@@ -31,7 +31,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 바라보는 쪽으로 투사체를 쏩니다(`speed` · `range`). 맞은 적에게 `damageEffect`(SetByCaller "Damage" = `damage`)와 `extraEffect` 를 겁니다.
+     * @brief 바라보는 쪽으로 탄 `projectile`(`ProjectileCatalog` 의 id — 속도 · 사거리 · 반지름 · 피해)을 쏩니다. 맞은 적에게 `damageEffect`(SetByCaller "Damage" = 탄의 피해)와 `extraEffect` 를 겁니다.
      * @details 스펙은 쏘는 순간 만듭니다 — 날아가는 동안 쏜 쪽이 쓰러져도 공격력 스냅샷과 레벨이 남습니다.
      */
     REFLECT( Abstract )

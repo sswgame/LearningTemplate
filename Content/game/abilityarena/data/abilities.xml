@@ -101,9 +101,7 @@
   <Ability id="GA_Fireball" class="Projectile" cost="GE_Cost_Fireball" cooldown="GE_Cooldown_Fireball">
     <AbilityTag tag="Ability.Skill.Fireball"/>
     <BlockedTag tag="State.Dead"/>
-    <Param name="speed" value="14"/>
-    <Param name="range" value="16"/>
-    <Param name="damage" value="18"/>
+    <Param name="projectile" text="arena_fireball"/>
     <Param name="damageEffect" text="GE_Damage_Fireball"/>
     <Param name="extraEffect" text="GE_Burn"/>
   </Ability>
@@ -140,9 +138,7 @@
   </Ability>
 
   <Ability id="GA_EnemyBolt" _base="GA_Fireball" cost="" cooldown="GE_Cooldown_EnemyBolt">
-    <Param name="speed" value="8"/>
-    <Param name="range" value="14"/>
-    <Param name="damage" value="8"/>
+    <Param name="projectile" text="arena_bolt"/>
     <Param name="extraEffect" _op="Remove"/>
   </Ability>
 

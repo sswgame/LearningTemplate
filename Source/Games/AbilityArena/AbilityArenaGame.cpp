@@ -11,6 +11,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
@@ -22,7 +23,7 @@
 
 namespace sw
 {
-    /** @brief 어빌리티 데이터(공유 캐시의 한 벌)와 클래스 레지스트리(이 모듈의 코드)를 들고 게임 서비스로 겁니다 — 모듈이 다시 올라오면 새 인스턴스가 다시 건다. */
+    /** @brief 어빌리티 · 탄 데이터(공유 캐시의 한 벌)와 클래스 레지스트리(이 모듈의 코드)를 들고 게임 서비스로 겁니다 — 모듈이 다시 올라오면 새 인스턴스가 다시 건다. */
     class AbilityArenaGame : public GameInstance
     {
     public:
@@ -33,8 +34,9 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        AbilityClassRegistry             _abilityClasses;  ///< 이 게임의 어빌리티 클래스(코드)
-        shared_ptr<const AbilityCatalog> _pAbilityCatalog; ///< 어빌리티 데이터(공유 캐시의 한 벌)
+        AbilityClassRegistry                _abilityClasses;     ///< 이 게임의 어빌리티 클래스(코드)
+        shared_ptr<const AbilityCatalog>    _pAbilityCatalog;    ///< 어빌리티 데이터(공유 캐시의 한 벌)
+        shared_ptr<const ProjectileCatalog> _pProjectileCatalog; ///< 투사체 어빌리티가 쏘는 탄(공유 캐시의 한 벌)
     };
 } // namespace sw
 
@@ -43,6 +45,7 @@ namespace sw
     AbilityArenaGame::AbilityArenaGame()
         : _abilityClasses{}
         , _pAbilityCatalog{}
+        , _pProjectileCatalog{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         getStateSnapshot().registerGameMode<ArenaGameModeComponent>();
@@ -56,7 +59,8 @@ namespace sw
         ArenaAbilities::registerClasses( _abilityClasses );
         bindScopedService( &_abilityClasses );
         // 어빌리티 데이터는 필수다 — 못 읽으면 게임을 띄우지 않는다. 읽으면 어빌리티 시스템이 찾는 게임 범위에 걸린다.
-        if ( loadRequiredCatalog( _pAbilityCatalog ) == false )
+        // 탄도 필수다 — 투사체 어빌리티의 탄속 · 사거리 · 피해가 그 탄 정의다.
+        if ( loadRequiredCatalog( _pAbilityCatalog ) == false || loadRequiredCatalog( _pProjectileCatalog ) == false )
             return false;
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)getSubsystem<GameSceneFlow>().requestFirstScene();
