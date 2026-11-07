@@ -3,6 +3,7 @@
 #include "Editor/Panels/Autosave/Model/RecoveredWorkViewModel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
@@ -39,10 +40,10 @@ namespace sw::editor
         if ( savedTicks <= 0 )
             return string( "-" );
         const int64 seconds = ( nowTicks - savedTicks ) / FileUtil::kFileTimeTicksPerSecond;
-        if ( seconds < 60 )
+        if ( seconds < constant::time::kSecondsPerMinute )
             return formatToString( "%# s ago", seconds < 0 ? 0 : seconds );
-        if ( seconds < 3600 )
-            return formatToString( "%# min ago", seconds / 60 );
-        return formatToString( "%# h ago", seconds / 3600 );
+        if ( seconds < constant::time::kSecondsPerHour )
+            return formatToString( "%# min ago", seconds / constant::time::kSecondsPerMinute );
+        return formatToString( "%# h ago", seconds / constant::time::kSecondsPerHour );
     }
 } // namespace sw::editor
