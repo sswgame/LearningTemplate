@@ -152,6 +152,7 @@ namespace sw
         , _extentWidth{ 0 }
         , _extentHeight{ 0 }
         , _imageIndex{ 0 }
+        , _createdTransform{ 0 }
         , _requestedFormat{ constant::render::kBackBufferFormat }
         , _actualBackBufferFormat{ constant::render::kBackBufferFormat }
         , _requestedBufferCount{ 0 }
@@ -159,6 +160,16 @@ namespace sw
         , _bSurfaceEmpty{ SW_FALSE }
         , _bImageHeld{ SW_FALSE }
     {
+    }
+
+    bool VulkanRHISwapChain::hasSurfaceChanged( VkPhysicalDevice physicalDevice ) const
+    {
+        VkSurfaceCapabilitiesKHR capabilities{};
+        if ( _surface == VK_NULL_HANDLE || vkGetPhysicalDeviceSurfaceCapabilitiesKHR( physicalDevice, _surface, &capabilities ) != VK_SUCCESS )
+            return true; // 묻지 못하면 다시 만들어 본다(다시 만들기가 진짜 오류를 낸다)
+        const bool bFixedExtent   = capabilities.currentExtent.width != UINT32_MAX && capabilities.currentExtent.height != UINT32_MAX;
+        const bool bExtentChanged = bFixedExtent && ( capabilities.currentExtent.width != _extentWidth || capabilities.currentExtent.height != _extentHeight );
+        return bExtentChanged || static_cast<uint32>( capabilities.currentTransform ) != _createdTransform;
     }
 
     bool VulkanRHISwapChain::createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, VulkanWsiKind wsiKind )
@@ -413,6 +424,7 @@ namespace sw
         _extentWidth            = extent.width;
         _extentHeight           = extent.height;
         _imageIndex             = 0;
+        _createdTransform       = static_cast<uint32>( capabilities.currentTransform );
         _listImageFence.assign( _listImage.size(), VK_NULL_HANDLE );
 
         return createImageViews( device );

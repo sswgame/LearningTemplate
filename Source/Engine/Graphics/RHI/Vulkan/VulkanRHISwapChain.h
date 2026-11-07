@@ -128,6 +128,14 @@ namespace sw
         /** @brief 현재 이미지를 화면에 표시합니다. 이 이미지의 renderFinished 세마포어를 기다립니다. 결과와 상관없이 이미지를 내려놓습니다. */
         VulkanSwapChainStatus present( VkQueue queue );
 
+        /**
+         * @brief 서피스의 지금 회전(`currentTransform`)이나 고정 크기(`currentExtent`)가 이 스왑체인을 만들 때와 달라졌는지입니다(다시 만들 까닭이 있는가).
+         * @details `VK_SUBOPTIMAL_KHR` 만으로 다시 만들지 않는다 — Android 10+ 는 preTransform 이 currentTransform 과 다르면 표시마다 SUBOPTIMAL 을 준다
+         *          (https://developer.android.com/games/optimize/vulkan-prerotation). 엔진은 IDENTITY 로 만들고 합성기가 돌리므로(`create`), 회전한 기기에서
+         *          SUBOPTIMAL 마다 다시 만들면 같은 스왑체인을 프레임마다 다시 만든다. 서피스가 정말 바뀌었을 때만 참이다.
+         */
+        [[nodiscard]] bool hasSurfaceChanged( VkPhysicalDevice physicalDevice ) const;
+
         bool isValid() const { return _swapChain != nullptr; }
         /** @brief 마지막 `create` 가 서피스 크기 0(최소화나 종료 중)이라 물러났는지입니다. 오류가 아니라 기다릴 상태입니다. */
         bool isSurfaceEmpty() const { return _bSurfaceEmpty; }
@@ -179,6 +187,8 @@ namespace sw
         uint32 _extentWidth;
         uint32 _extentHeight;
         uint32 _imageIndex;
+        /// @brief 만들 때 서피스가 보고한 회전(VkSurfaceTransformFlagBitsKHR 값 — `hasSurfaceChanged` 가 지금 값과 대조한다).
+        uint32 _createdTransform;
 
         /// @brief 요청한 백버퍼 포맷입니다(계약값 `constant::render::kBackBufferFormat`).
         RHIFormat _requestedFormat;

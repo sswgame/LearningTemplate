@@ -2046,7 +2046,9 @@ namespace sw
                 reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "beginFrame: vkAcquireNextImageKHR" );
                 return;
             }
-            if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
+            // Suboptimal 은 서피스가 정말 바뀌었을 때만 다시 만든다 — 회전한 Android 기기는 IDENTITY 스왑체인에 표시마다 Suboptimal 을 준다(`hasSurfaceChanged`).
+            const bool bRecreate = status == VulkanSwapChainStatus::OutOfDate || ( status == VulkanSwapChainStatus::Suboptimal && _swapChain.hasSurfaceChanged( _physicalDevice ) );
+            if ( bRecreate )
             {
                 if ( recreateSwapChain() == false || _swapChain.isValid() == false )
                 {
@@ -2183,7 +2185,7 @@ namespace sw
             const VulkanSwapChainStatus presentStatus = _swapChain.present( _graphicsQueue ); // 큐 락 안(위의 queueLock)
             if ( presentStatus == VulkanSwapChainStatus::DeviceLost )
                 reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "endFrame: vkQueuePresentKHR" );
-            else if ( presentStatus == VulkanSwapChainStatus::OutOfDate || presentStatus == VulkanSwapChainStatus::Suboptimal )
+            else if ( presentStatus == VulkanSwapChainStatus::OutOfDate || ( presentStatus == VulkanSwapChainStatus::Suboptimal && _swapChain.hasSurfaceChanged( _physicalDevice ) ) )
             {
                 // 다음 beginFrame 에서 스왑체인을 다시 만든다.
                 _bSwapChainDirty = 1;
