@@ -1,0 +1,9 @@
+<!--
+  워프 정렬 페어드 애니메이션(`maps/pairedwarp.scene.xml`) — 기사 둘. Lead 가 환호하고(앵커), Partner 는 시작 자리에서 Lead 앞 1.5 m(마주 봄)로 0.5 초 동안 루트 모션을 휘어 들어온 뒤 상호작용 동작을 한다.
+  Partner 의 MotionWarpingComponent 가 창을 받고, LocomotionWarpingComponent 는 세션 동안 재생 속도를 세션에 넘긴다(보폭 보정이 시계를 바꾸지 않게).
+  클립은 common/models/kaykit/knight/knight.animset.xml 에서 이름으로 찾는다. 타임라인 길이는 앵커 클립 Cheer 의 길이다.
+-->
+<PairedAnimation duration="1.6666666">
+  <Role name="Lead" anchor="true" required="true" clip="Cheer" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
+  <Role name="Partner" required="true" clip="Interact" align="warp" offset="0 0 1.5" yaw="180" warpEnd="0.5" maxAlignDistance="3" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
+</PairedAnimation>

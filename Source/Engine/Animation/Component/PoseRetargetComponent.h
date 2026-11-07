@@ -76,14 +76,14 @@ namespace sw
         void setTargetReferencePose( const Pose& referencePose );
         /** @brief 지금 묶인 리타기터입니다(테스트 · 진단). */
         const PoseRetargeter& getRetargeter() const { return _retargeter; }
+        /** @brief 이번 기본 포즈 단계가 원본을 옮겨 쓸지 반환합니다(프로필이 준비되고 원본을 찾을 수 있다). 포즈 접근 선언과 `populateBasePose` 가 같은 판정을 쓴다. 감시 값도 읽는다. */
+        bool isRetargeting() const;
 
     private:
         /** @brief 같은 오브젝트의 유닛에 붙고, 원본 의존을 맞춥니다. */
         void bindToUnit();
         /** @brief 원본 유닛입니다(없으면 nullptr). */
         SkeletalMeshComponent* findSource() const;
-        /** @brief 이번 기본 포즈 단계가 원본을 옮겨 쓸지 반환합니다(프로필이 준비되고 원본을 찾을 수 있다). 포즈 접근 선언과 `populateBasePose` 가 같은 판정을 쓴다. */
-        bool isRetargeting() const;
         /** @brief 기본 포즈 단계입니다(워커). */
         void populateBasePose( SkeletalMeshComponent& skeletalMesh );
 

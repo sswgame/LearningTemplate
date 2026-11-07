@@ -1,0 +1,69 @@
+<Scene formatVersion="2" name="PairedWarp">
+	<!-- 워프 정렬 · 리타깃 시나리오(automation/pairedwarp)의 무대.
+	     Lead(앵커)가 플레이 첫 틱 뒤 페어드 세션(data/anim/cheer_warp)을 시작하고, Partner 는 MotionWarpingComponent 로 Lead 앞 1.5 m(LeadFront)에 휘어 들어온다(언리얼 Motion Warping).
+	     Partner 의 LocomotionWarpingComponent 는 세션 동안 재생 속도를 세션에 넘긴다. Mimic(해골 미니언)은 Lead 의 몸에 붙어 PoseRetargetComponent 로 기사 포즈를 프로필(knight_to_minion)로 옮겨 받는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-6" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Lead">
+			<GameObject _schemaVersion="0" _name="Lead" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _blendMode="Opaque" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
+					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="false" _bPlayOnBegin="true" />
+					<PairedAnimationComponent _pairedAnimationPath="game/empty/data/anim/cheer_warp.pairedanim.xml" _role="Lead" _bStartOnPlay="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Partner">
+			<GameObject _schemaVersion="0" _name="Partner" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localPosition="0.8,0,2.6" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="common/models/kaykit/knight.mesh" _materialPath="common/materials/kaykit_knight.material" _boundsRadius="2" _blendMode="Opaque" _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml" />
+					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/adventurer.animgraph.xml" _animationSetPath="common/models/kaykit/knight/knight.animset.xml" _initialState="Idle" _playRate="1" _blendSeconds="0.2" _bExtractRootMotion="true" _bPlayOnBegin="true" />
+					<PairedAnimationComponent _pairedAnimationPath="game/empty/data/anim/cheer_warp.pairedanim.xml" _role="Partner" _bStartOnPlay="false" />
+					<MotionWarpingComponent />
+					<LocomotionWarpingComponent _bStrideWarping="true" _speedCurve="Speed" _minPlayRate="0.5" _maxPlayRate="2" _bOrientationWarping="false" _maxOrientationAngle="0.8">
+						<_listOrientationBone />
+					</LocomotionWarpingComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="LeadFront">
+			<GameObject _schemaVersion="0" _name="LeadFront" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,1.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Mimic">
+			<GameObject _schemaVersion="0" _name="Mimic" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localPosition="-1.5,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="Lead" _attachOwnerID="4" _attachComponent="SkeletalMeshComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" _skeletonPath="" _bFollowParentPose="false" />
+					<CharacterAppearanceComponent _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
+					<PoseRetargetComponent _profilePath="common/rigs/knight_to_minion.retarget.xml" _bSourceFromParent="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

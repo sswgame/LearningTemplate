@@ -8,6 +8,7 @@
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -172,4 +173,9 @@ namespace sw
                 _listWindow.erase( _listWindow.begin() + static_cast<ptrdiff_t>( windowIndex - 1 ) );
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( motionWarpingOpenWindows, "MotionWarping.OpenWindows", "Warp windows open on the first motion warping component", MotionWarpingComponent, &MotionWarpingComponent::getOpenWindowCount );
 } // namespace sw

@@ -8,6 +8,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -193,4 +194,10 @@ namespace sw
             pose.setBoneTransform( static_cast<uint32>( boneIndex ), local );
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( locomotionWarpingPlayRateHeld, "LocomotionWarping.PlayRateHeld", "1 while another system (a paired animation session) holds the first locomotion warping's play rate",
+                                LocomotionWarpingComponent, &LocomotionWarpingComponent::isPlayRateHeld );
 } // namespace sw

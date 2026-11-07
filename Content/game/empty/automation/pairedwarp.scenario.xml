@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  워프 정렬 · 이동 보정 · 리타깃(maps/pairedwarp) — 값으로 판정한다(골든 없음).
+  ① Lead 가 페어드 세션(cheer_warp)을 시작하면 Partner 의 MotionWarpingComponent 에 창 하나가 열리고, LocomotionWarpingComponent 는 재생 속도를 세션에 넘긴다.
+  ② 창 끝(0.5 초) 뒤 Partner 는 Lead 앞 1.5 m(LeadFront)에 닿아 있고 창은 닫혔다. ③ Mimic(해골 미니언)의 PoseRetargetComponent 가 Lead(부모)의 포즈를 프로필로 옮기고 있다.
+  ④ 세션이 끝나면 재생 속도를 돌려받는다.
+  실행: App -scenario=game/empty/automation/pairedwarp.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.pairedwarp" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/pairedwarp.scene.xml"/>
+	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" equals="1" timeoutFrames="120"/>
+	<Expect watch="MotionWarping.OpenWindows" equals="1"/>
+	<Expect watch="LocomotionWarping.PlayRateHeld" equals="1"/>
+	<Wait frames="45"/>
+	<Expect watch="MotionWarping.OpenWindows" equals="0"/>
+	<Expect watch="Object.DistanceTo" target="Partner" key="LeadFront" atMost="0.1"/>
+	<WaitUntil watch="PoseRetarget.Retargeting" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" equals="2" timeoutSeconds="3"/>
+	<Expect watch="LocomotionWarping.PlayRateHeld" equals="0"/>
+	<Pass/>
+</Scenario>

@@ -7,6 +7,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -178,4 +179,10 @@ namespace sw
         // 이 유닛 자신의 후처리(리그)는 그 위에서 다시 돈다.
         _retargeter.retarget( pSource->getLocalPose(), skeletalMesh.getLocalPose() );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( poseRetargetActive, "PoseRetarget.Retargeting", "1 while the first pose retarget component copies its source's pose through its profile", PoseRetargetComponent,
+                                &PoseRetargetComponent::isRetargeting );
 } // namespace sw
