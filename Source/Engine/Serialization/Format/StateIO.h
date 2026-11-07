@@ -393,13 +393,13 @@ namespace sw
     void serializeState( ::sw::StateIO& io )
 
 /** @brief 비트필드 깃발 하나입니다(`uint8 _bX : 1` 은 참조로 받을 수 없다). 0 · 1 밖을 거절합니다. */
-#define SW_STATE_BITFLAG( io, field )                              \
-    do                                                             \
-    {                                                              \
-        ::sw::uint8 stateFlag = static_cast<::sw::uint8>( field ); \
-        ( io ).flag( stateFlag );                                  \
-        if ( ( io ).isReading() )                                  \
-        {                                                          \
-            field = stateFlag;                                     \
-        }                                                          \
+#define SW_STATE_BITFLAG( io, field )                      \
+    do                                                     \
+    {                                                      \
+        ::uint8 stateFlag = static_cast<::uint8>( field ); \
+        ( io ).flag( stateFlag );                          \
+        if ( ( io ).isReading() )                          \
+        {                                                  \
+            field = stateFlag;                             \
+        }                                                  \
     } while ( false )

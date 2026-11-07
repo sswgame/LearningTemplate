@@ -13,6 +13,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"

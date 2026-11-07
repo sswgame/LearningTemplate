@@ -488,7 +488,7 @@ namespace sw
         }
         for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
         {
-            hashed_string monsterID = io.isWriting() ? _listMonsterDef[defIndex]._id : hashed_string{};
+            hashed_string monsterID = io.isWriting() ? hashed_string( _listMonsterDef[defIndex]._id ) : hashed_string{};
             io.value( monsterID );
             if ( io.isReading() && ( io.isOk() == false || io.check( getOrCreateMonsterDef( monsterID ) == static_cast<int32>( defIndex ) ) == false ) )
                 return;
