@@ -10,6 +10,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/HostInterfaces.h"
+#include "Engine/Presentation/IEngineAudioDriver.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -36,8 +37,8 @@ namespace sw
 
     span<const utf8* const> ModuleUnloadStageSubsystem::getSubsystemDependents() const
     {
-        // 오디오는 스스로 이 뒤에 선다고 적는다(`IAudioService::getSubsystemDependencies` — 서버는 오디오를 짓지 않는다).
-        static constexpr const utf8* kArrDependent[] = { AsyncFileIO::kSubsystemName, InputManager::kSubsystemName, SceneManager::kSubsystemName };
+        // 오디오는 헤더 없이 이름으로 적는다(`IEngineAudioDriver::kOwnerSubsystemName`) — 서버는 오디오를 짓지 않고, 없는 이름은 건너뛴다.
+        static constexpr const utf8* kArrDependent[] = { AsyncFileIO::kSubsystemName, IEngineAudioDriver::kOwnerSubsystemName, InputManager::kSubsystemName, SceneManager::kSubsystemName };
         return kArrDependent;
     }
 } // namespace sw

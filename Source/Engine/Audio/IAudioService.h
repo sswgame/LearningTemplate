@@ -89,7 +89,7 @@ namespace sw
         void shutdown();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Audio";
+        static constexpr const utf8* kSubsystemName = IEngineAudioDriver::kOwnerSubsystemName;
         /** @brief 기동 순서의 자리 — 장치를 열지 못해도 오프라인으로 선다. 음성 스트리밍이 태스크를 쓴다(서버는 장치 없는 NullAudioBackend). */
         SubsystemInitResult     initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
         void                    shutdownSubsystem() override { shutdown(); }

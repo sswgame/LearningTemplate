@@ -19,7 +19,6 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -538,7 +537,7 @@ namespace sw
 {
     span<const utf8* const> IAudioService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ModuleUnloadStageSubsystem::kSubsystemName, TaskManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
         return kArrDependency;
     }
 
