@@ -27,6 +27,7 @@ from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
 from lint.AssetReferences import checkStagedAssetReferences  # noqa: E402
 from lint.ByteReadShape import checkByteReadShape  # noqa: E402
 from lint.CatalogRootShape import checkCatalogRootShape  # noqa: E402
+from lint.CommonShapes import checkCommonShapes  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
@@ -161,6 +162,14 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[FeatureReferences] FAIL — 쓰는 곳이 없거나 낡은 예외 {len(listFeatureProblem)}건")
         for line in listFeatureProblem:
+            print(f"  - {line}")
+
+    # --- 공통 기반이 있는데 손으로 다시 적은 모양(합법 C++ 이라 형식이 가르지 못한다 — CommonShapes.py 머리말) ---------------
+    listCommonProblem = checkCommonShapes(projectRoot)
+    if listCommonProblem:
+        hasErrors = True
+        print(f"[CommonShapes] FAIL — 공통 기반을 두고 손으로 적은 모양 {len(listCommonProblem)}건")
+        for line in listCommonProblem:
             print(f"  - {line}")
 
     # --- clang-format(셰이더도 같은 설정, Content/.clang-format) -------------------

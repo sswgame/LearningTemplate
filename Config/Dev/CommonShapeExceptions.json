@@ -1,0 +1,30 @@
+{
+    "_comment": "Scripts/lint/CommonShapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
+    "enumNameSwitch": {
+        "Source/Engine/Serialization/Fixed/FixedLayout.cpp|FixedReadResult": "리플렉션 생성 코드(ReflectGenerated.h)가 이 헤더를 끌어 ENUM() 을 달 수 없는 아래 층이다",
+        "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다",
+        "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다"
+    },
+    "reloadCount": {
+        "Source/Engine/Asset/Cache/AssetReloadWatch.h": "기반 자신이다",
+        "Source/Engine/Asset/Cache/SharedAssetCacheDefinition.h": "횟수를 내는 쪽이다",
+        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.cpp": "두 캐시 횟수의 합을 굽기 키에 넣는다(computeFitReloadStamp) — 낡음 판정만이 아니다"
+    },
+    "firstComponent": {
+        "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
+    },
+    "oneLineValidator": {
+        "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateFields)"
+    },
+    "canvasDelete": {
+        "Source/Editor/Common/Widgets/EditorNodeGraph.cpp": "기반 자신이다"
+    },
+    "makeDelta": {
+        "Source/Engine/Serialization/Inherit/DataInheritance.cpp": "기반 자신이다",
+        "Source/Engine/Serialization/Inherit/ResourceComposer.cpp": "기반 자신이다",
+        "Source/Engine/Serialization/Inherit/DataCatalogInheritance.cpp": "감싼 카탈로그 글의 차이를 만드는 아래 함수다(makeFileDelta)",
+        "Source/Engine/Graphics/Material/Material.cpp": "글을 돌려주는 API 다(saveToString) — 쓰기는 부르는 쪽이 한다",
+        "Source/Engine/Audio/AudioEvent.cpp": "문서 안 프리셋 항목 하나의 차이다. 파일 저장은 saveDelta 를 탄다",
+        "Source/Editor/Common/Asset/Model/ModelImportMaterial.cpp": "임포트가 견본과의 차이 글을 만들어 넘긴다 — 쓰기는 임포트 절차가 한다"
+    }
+}

@@ -58,6 +58,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("cpp-shape", "lint.CppShape", "C++ 모양 규칙 검사 — 선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선(--files · --all · --summary)"),
     Subcommand("naming-words", "lint.NamingWords", "함수 앞 단어 · 형식 끝 단어를 허용 표와 대조한다"),
     Subcommand("platform-chains", "lint.PlatformChains", "플랫폼 #if 사슬이 빠진 플랫폼을 컴파일 오류로 내는지 본다(--self-check)"),
+    Subcommand("common-shapes", "lint.CommonShapes", "공통 기반을 두고 손으로 적은 모양 검사(--self-check)"),
     Subcommand("feature-refs", "lint.FeatureReferences", "컴포넌트 · 감시 값 · 개발 명령의 참조 0 검사(--self-check)"),
     Subcommand("cmake-path-case", "lint.CMakePathCase", "CMake include · add_subdirectory 경로의 대소문자 검사"),
     Subcommand("format-includes", "lint.Format:mainFormatIncludes", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
