@@ -1,14 +1,19 @@
 #!/bin/bash
 # 묶음 끝 전체 검증: Windows(Debug · Release 빌드 · 단위 · ctest, 서버 빌드 · 단위, 배포 구성)가 모두 통과한 뒤에만 Linux 를 돌린다.
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.linux.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
-# --from debug|release|server|shipping 은 앞 단계를 건너뛴다. 앞 단계가 통과한 뒤 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
+# --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --from debug|release|server|shipping 은 앞 단계를 건너뛴다. 앞 단계가 통과한 뒤 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 cd "$(dirname "$0")/../.." || exit 2
 SHA=$(git rev-parse HEAD)
 FROM=debug
-if [ "$1" = "--from" ]; then
-  FROM=$2
-  shift 2
-fi
+CTEST_JOBS=6
+while true; do
+  case "$1" in
+    --from) FROM=$2; shift 2 ;;
+    # --show: 무인 실행의 창 숨김만 끈다(App 이 SW_SHOW_WINDOWS=1 을 본다 — 판정 · 골든은 같다). 보는 사람을 위해 테스트를 하나씩 돌린다.
+    --show) export SW_SHOW_WINDOWS=1; CTEST_JOBS=1; shift ;;
+    *) break ;;
+  esac
+done
 case "$FROM" in
   debug) STAGE=1 ;;
   release) STAGE=2 ;;
@@ -37,7 +42,7 @@ build_preset() {
 run_ctest() {
   local P=$1
   echo "== $P ctest $(date +%T)"
-  (cd build/$P && ctest -j6 --output-on-failure > Testing/Logs/verify.ctest.log 2>&1)
+  (cd build/$P && ctest -j$CTEST_JOBS --output-on-failure > Testing/Logs/verify.ctest.log 2>&1)
   local RC=$?
   echo "ctest exit=$RC"
   grep -E "tests passed|tests failed|\*\*\*Failed|Timeout|Not Run" build/$P/Testing/Logs/verify.ctest.log | head -30

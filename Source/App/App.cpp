@@ -175,7 +175,6 @@ namespace sw
         // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
         // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
         // 스플래시는 엔진 기동이 에셋 직후 띄웠다(`SplashSubsystem`) — 여기서는 남은 단계의 진행을 적고 닫는다.
-        const bool             bUnattended = _launch.getEngine().getCommandLineManager()->isArgumentProvided( CommandLineArgument::UNATTENDED );
         SplashWindow           noSplash;
         SplashSubsystem* const pSplashHost = engine::findSubsystem<SplashSubsystem>();
         SplashWindow&          splash      = pSplashHost != nullptr ? pSplashHost->getSplash() : noSplash; // 렌더러 없는 구성은 스플래시 단계가 없다
@@ -244,7 +243,8 @@ namespace sw
 
         // 준비가 끝났다. 스플래시 창을 닫고 메인 창을 화면에 띄운다.
         splash.dismiss();
-        if ( bUnattended == false )
+        // 보는 사람이 있으면(무인이 아니거나, 무인이어도 지켜보는 표시가 있으면) 창을 띄운다 — `MainWindowSubsystem::isUnwatched`.
+        if ( MainWindowSubsystem::isUnwatched( *_launch.getEngine().getCommandLineManager() ) == false )
             _pWindow->showWindow( true );
 
         logStartupPhases( timings );

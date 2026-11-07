@@ -2,12 +2,23 @@
 
 #include "Engine/Window/MainWindowSubsystem.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Process/ProcessEnvironment.h"
+
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
 {
+    bool MainWindowSubsystem::isUnwatched( const CommandLineManager& commandLine )
+    {
+        if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) == false )
+            return false;
+        string showWindows;
+        return ( ProcessEnvironment::tryReadNonEmpty( "SW_SHOW_WINDOWS", showWindows ) && showWindows == "1" ) == false;
+    }
+
     MainWindowSubsystem::MainWindowSubsystem()
         : _window{ nullptr }
         , _baseTitle{}

@@ -19,6 +19,7 @@
 
 namespace sw
 {
+    class CommandLineManager;
     class IWindow;
 
     /**
@@ -31,6 +32,12 @@ namespace sw
         /** @brief 서브시스템 이름입니다(창을 쓰는 서브시스템이 의존 항목으로 가리킨다). */
         static constexpr const utf8* kSubsystemName      = "MainWindow";
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc;
+
+        /**
+         * @brief 보는 사람이 없는 실행인지입니다 — 무인(`-unattended`)이고, 사람이 검증을 지켜보는 표시(`SW_SHOW_WINDOWS=1`, `VerifyBundle.sh --show`)가 없을 때 true 입니다.
+         * @details 무인 실행의 "묻지 않음" 과 "창 숨김 · 내보내지 않음" 을 가른다 — 앞의 것은 그대로, 뒤의 것만 이 판정을 따른다. 판정 · 골든은 렌더 타깃을 읽어 결과가 같다. App 과 자동화 세션이 같이 쓴다.
+         */
+        [[nodiscard]] static bool isUnwatched( const CommandLineManager& commandLine );
 
         MainWindowSubsystem();
         ~MainWindowSubsystem() override;
