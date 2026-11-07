@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -92,8 +93,8 @@ namespace sw
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Interaction", Tooltip = "Interaction kind id in the catalog" )
         hashed_string _interactionID;
-        PROPERTY( Category = "Interaction", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table (required)" )
-        string _catalogPath;
+        PROPERTY( Category = "Interaction", DisplayName = "Catalog", Tooltip = "Interaction table (required)" )
+        AssetRef<InteractionCatalog> _catalogPath;
         PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )
         GameObjectHandle _lastInteractor;
         PROPERTY( Category = "Interaction", DisplayName = "Cooldown Remaining", Tooltip = "Seconds until usable again (runtime)", Units = s )

@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -108,8 +109,8 @@ namespace sw
     private:
         PROPERTY( Category = "Smart Object", DisplayName = "Smart Object", Tooltip = "Smart object id in the interaction catalog" )
         hashed_string _smartObjectID;
-        PROPERTY( Category = "Smart Object", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table (required)" )
-        string _catalogPath;
+        PROPERTY( Category = "Smart Object", DisplayName = "Catalog", Tooltip = "Interaction table (required)" )
+        AssetRef<InteractionCatalog> _catalogPath;
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
         vector<GameObjectHandle> _listClaimant SW_GUARDED_BY( _mutex );
 

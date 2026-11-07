@@ -22,7 +22,7 @@
 	<Expect watch="Interaction.HeldMaxDistance" target="EntryFixed" equals="2"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="FileBase" equals="3"/>
 	<Remember watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
-	<DevCommand line="asset.overwriteScratch scratch/catalogcascade/parent_edited.xml scratch/catalogcascade/parent.xml"/>
+	<DevCommand line="asset.overwriteScratch scratch/catalogcascade/parent_edited.interactions.xml scratch/catalogcascade/parent.interactions.xml"/>
 	<WaitUntil watch="Editor.AssetCascadeReloadCount" differsFrom="beforeEdit" timeoutWallSeconds="30"/>
 	<EditorWaitSettled/>
 	<!-- 대상은 다음 틱에 다시 읽은 횟수를 보고 다시 받는다 -->
@@ -30,8 +30,8 @@
 	<Expect watch="Interaction.HeldMaxDistance" target="EntryFixed" equals="2"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="FileBase" equals="7"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="FileExtra" equals="1"/>
-	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/entrychild.xml (inlines scratch/catalogcascade/parent.xml)" count="1"/>
-	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/filechild.xml (inlines scratch/catalogcascade/parent.xml)" count="1"/>
+	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/entrychild.interactions.xml (inlines scratch/catalogcascade/parent.interactions.xml)" count="1"/>
+	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/filechild.interactions.xml (inlines scratch/catalogcascade/parent.interactions.xml)" count="1"/>
 	<DevCommand line="stop"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>

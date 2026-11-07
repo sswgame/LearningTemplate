@@ -30,6 +30,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -178,6 +179,9 @@ namespace sw
         friend class XMLCatalog<InteractionCatalog>;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `InteractionCatalog.cpp` 의 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<InteractionCatalog>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "interactions", AssetPathRule{ {}, {}, ".interactions.xml" }, {} );
+
         void addInteraction( const InteractionDef& def ) { (void)_interactionCatalog.add( def ); }
         void addSmartObject( const SmartObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
 

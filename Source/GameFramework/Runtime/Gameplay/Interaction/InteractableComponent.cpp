@@ -151,7 +151,7 @@ namespace sw
 
     void InteractableComponent::setCatalogPath( string_view path )
     {
-        _catalogPath = string( path );
+        _catalogPath = path;
         resolveDefinition();
     }
 

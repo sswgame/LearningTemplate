@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 항목 상속: 다른 파일의 항목을 부모로 쓴다. Child 는 사거리를 적지 않았고 Fixed 는 적었다. -->
+<Interactions>
+  <Interaction id="Child" _base="game/empty/automation/editor/catalogcascade/parent.interactions.xml#Base" cooldown="0.5"/>
+  <Interaction id="Fixed" _base="game/empty/automation/editor/catalogcascade/parent.interactions.xml#Base" maxDistance="2"/>
+</Interactions>

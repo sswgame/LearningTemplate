@@ -81,7 +81,7 @@ namespace sw
 
     /** 진행 중인 세션이 옛 정의를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. 스키마 테스트와 카탈로그 편집기도 이 정의로 파일을 읽는다. */
     SW_MODULE_SHARED_ASSET_CACHE( Interactions, InteractionCatalog, SW_GF_API,
-                                  AssetTypeDef::makeDataFile( "interactions", AssetPathRule{ {}, {}, ".interactions.xml" }, AssetTypeLoader::of<InteractionCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
+                                  InteractionCatalog::kAssetType.withLoader( AssetTypeLoader::of<InteractionCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 
 } // namespace sw
 
