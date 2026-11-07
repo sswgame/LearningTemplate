@@ -182,11 +182,13 @@ namespace sw
             // 레인마다 이어진 구간 — 일이 서로 독립이라 나누는 모양은 결과에 영향이 없다.
             for ( uint32 laneIndex = 0; laneIndex < laneCount; ++laneIndex )
             {
-                LaneTask& lane  = _listLane[laneIndex];
-                lane._pQueue    = this;
-                lane._laneIndex = laneIndex;
-                lane._start     = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * laneIndex ) / laneCount );
-                lane._end       = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * ( laneIndex + 1 ) ) / laneCount );
+                LaneTask&    lane  = _listLane[laneIndex];
+                const uint32 start = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * laneIndex ) / laneCount );
+                const uint32 end   = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * ( laneIndex + 1 ) ) / laneCount );
+                lane._pSolver      = _pSolver;
+                lane._pJob         = _listInFlightJob.data() + start; // 워커는 컨테이너를 만지지 않는다 — 자기 구간의 포인터만 받는다
+                lane._jobCount     = end - start;
+                lane._laneIndex    = laneIndex;
             }
             if ( bWorkers == false )
             {
@@ -269,16 +271,16 @@ namespace sw
         /** @brief 워커 태스크 하나가 맡는 비행 줄의 이어진 구간입니다. 비행 줄 · 풀이는 `launch` ~ `complete` 사이에 바뀌지 않는다. */
         struct LaneTask
         {
-            PathRequestQueue* _pQueue{ nullptr };
-            uint32            _laneIndex{ 0 };
-            uint32            _start{ 0 };
-            uint32            _end{ 0 };
+            TSolver* _pSolver{ nullptr };
+            Job*     _pJob{ nullptr }; ///< 비행 줄에서 이 레인의 첫 일(주인이 `launch` 에서 잡는다)
+            uint32   _jobCount{ 0 };
+            uint32   _laneIndex{ 0 };
 
             void run()
             {
-                for ( uint32 jobIndex = _start; jobIndex < _end; ++jobIndex )
+                for ( uint32 jobIndex = 0; jobIndex < _jobCount; ++jobIndex )
                 {
-                    _pQueue->_pSolver->solve( _pQueue->_listInFlightJob[jobIndex], _laneIndex );
+                    _pSolver->solve( _pJob[jobIndex], _laneIndex );
                 }
             }
         };

@@ -79,16 +79,17 @@ namespace sw
         void applyLinkFlagsToAllTiles();
 
     private:
-        NavAgentTypeDef                 _agentType;
-        NavTileGrid                     _grid;
-        vector<uint32>                  _listDisabledLinkID; ///< 막힌 링크 번호(정렬)
-        mutable vector<dtNavMeshQuery*> _listQuery;          ///< 스크래치 슬롯마다 하나다(한 스레드만 자기 슬롯을 만진다).
-        mutable dtNavMeshQuery*         _pSharedQuery;       ///< 슬롯 밖 스레드용(`_sharedQueryMutex`)
-        mutable mutex                   _sharedQueryMutex;
-        dtNavMesh*                      _pNavMesh;
-        unique_ptr<RecastTileCache>     _pTileCache; ///< 장애물 캐시(`NavObstacleMode::TileCache` 일 때만 있다)
-        float32                         _minY;
-        float32                         _maxY;
-        uint32                          _revision;
+        NavAgentTypeDef               _agentType;
+        NavTileGrid                   _grid;
+        vector<uint32>                _listDisabledLinkID; ///< 막힌 링크 번호(정렬)
+        unique_ptr<dtNavMeshQuery*[]> _arrQuery;           ///< 스크래치 슬롯마다 하나다(한 스레드만 자기 칸을 만진다). 컨테이너가 아닌 고정 배열 — 워커 여럿이 각자 칸을 쓴다(경로 요청 줄)
+        uint32                        _querySlotCount;     ///< `_arrQuery` 의 칸 수
+        mutable dtNavMeshQuery*       _pSharedQuery;       ///< 슬롯 밖 스레드용(`_sharedQueryMutex`)
+        mutable mutex                 _sharedQueryMutex;
+        dtNavMesh*                    _pNavMesh;
+        unique_ptr<RecastTileCache>   _pTileCache; ///< 장애물 캐시(`NavObstacleMode::TileCache` 일 때만 있다)
+        float32                       _minY;
+        float32                       _maxY;
+        uint32                        _revision;
     };
 } // namespace sw

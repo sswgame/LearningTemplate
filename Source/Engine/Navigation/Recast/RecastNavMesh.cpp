@@ -361,7 +361,8 @@ namespace sw
         : _agentType{}
         , _grid{}
         , _listDisabledLinkID{}
-        , _listQuery{}
+        , _arrQuery{}
+        , _querySlotCount{ 0 }
         , _pSharedQuery{ nullptr }
         , _sharedQueryMutex{}
         , _pNavMesh{ nullptr }
@@ -433,19 +434,20 @@ namespace sw
                 return false;
             }
         }
-        _listQuery.assign( engine::getParallelScratchSlotCount(), nullptr );
+        _querySlotCount = engine::getParallelScratchSlotCount();
+        _arrQuery       = make_unique<dtNavMeshQuery*[]>( _querySlotCount ); // 값 초기화 — 모두 nullptr
         ++_revision;
         return true;
     }
 
     void RecastNavMesh::freeQueries()
     {
-        for ( dtNavMeshQuery*& pQuery : _listQuery )
+        for ( uint32 slot = 0; slot < _querySlotCount; ++slot )
         {
-            dtFreeNavMeshQuery( pQuery );
-            pQuery = nullptr;
+            dtFreeNavMeshQuery( _arrQuery[slot] );
         }
-        _listQuery.clear();
+        _arrQuery.reset();
+        _querySlotCount = 0;
         dtFreeNavMeshQuery( _pSharedQuery );
         _pSharedQuery = nullptr;
     }
@@ -716,9 +718,9 @@ namespace sw
         if ( _pNavMesh == nullptr )
             return nullptr;
         const uint32 slot = engine::getParallelScratchSlot();
-        if ( slot < _listQuery.size() )
+        if ( slot < _querySlotCount )
         {
-            dtNavMeshQuery*& pQuery = _listQuery[slot];
+            dtNavMeshQuery*& pQuery = _arrQuery[slot];
             if ( pQuery == nullptr )
             {
                 pQuery = dtAllocNavMeshQuery();

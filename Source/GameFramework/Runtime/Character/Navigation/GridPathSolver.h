@@ -42,6 +42,7 @@ namespace sw
 
     private:
         const NavGrid*         _pGrid;
-        vector<GridPathfinder> _listPathfinder; ///< 레인 하나에 하나(`prepareBatch` 가 레인 수만큼 늘린다)
+        vector<GridPathfinder> _listPathfinder;  ///< 레인 하나에 하나(`prepareBatch` 가 레인 수만큼 늘린다)
+        GridPathfinder*        _pLanePathfinder; ///< `_listPathfinder` 의 첫 칸 — 워커는 컨테이너를 만지지 않고 이 포인터로 자기 레인 칸만 쓴다(`prepareBatch` 가 잡는다)
     };
 } // namespace sw

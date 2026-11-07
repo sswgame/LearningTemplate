@@ -10,6 +10,7 @@ namespace sw
     GridPathSolver::GridPathSolver( const NavGrid& grid )
         : _pGrid{ &grid }
         , _listPathfinder{}
+        , _pLanePathfinder{ nullptr }
     {
     }
 
@@ -17,10 +18,11 @@ namespace sw
     {
         if ( _listPathfinder.size() < laneCount )
             _listPathfinder.resize( laneCount );
+        _pLanePathfinder = _listPathfinder.data();
     }
 
     void GridPathSolver::solve( GridPathJob& inoutJob, uint32 laneIndex )
     {
-        inoutJob._result = NavAgent::planPath( *_pGrid, _listPathfinder[laneIndex], inoutJob._from, inoutJob._target, inoutJob._listPoint );
+        inoutJob._result = NavAgent::planPath( *_pGrid, _pLanePathfinder[laneIndex], inoutJob._from, inoutJob._target, inoutJob._listPoint );
     }
 } // namespace sw
