@@ -354,6 +354,7 @@
       "listField": [
         "_aiControllerPrefab",
         "_audioEvents",
+        "_autosaveSettings",
         "_bodyShapes",
         "_catalogPath",
         "_documentPath",
@@ -380,6 +381,7 @@
         "_tree",
         "aiControllerPrefab",
         "audioEvents",
+        "autosaveSettings",
         "bodyShapes",
         "catalogPath",
         "documentPath",
@@ -619,6 +621,7 @@
     {
       "owner": "game:WildWest",
       "listField": [
+        "_weatherDataPath",
         "_westernDataPath",
         "westernDataPath"
       ]

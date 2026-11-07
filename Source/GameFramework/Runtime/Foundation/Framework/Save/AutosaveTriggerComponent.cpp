@@ -11,34 +11,19 @@ namespace sw
     AutosaveTriggerComponent::AutosaveTriggerComponent()
         : _trigger{ AutosaveTrigger::Checkpoint }
         , _label{}
-        , _activatorTag{}
-        , _bOnce{ true }
-        , _bFired{ SW_FALSE }
     {
-    }
-
-    void AutosaveTriggerComponent::onOverlapBegin( const OverlapInfo& overlap )
-    {
-        Component::onOverlapBegin( overlap );
-        // 상대의 트리거(감지 범위)는 활성자가 아니다 — 몸이 들어와야 한다.
-        if ( overlap._bOtherTrigger == SW_FALSE )
-            (void)activate( overlap._pOther );
     }
 
     void AutosaveTriggerComponent::configure( AutosaveTrigger trigger, const hashed_string& label, TagID activatorTag )
     {
-        _trigger      = trigger;
-        _label        = label;
-        _activatorTag = activatorTag;
-        _bFired       = SW_FALSE;
+        _trigger = trigger;
+        _label   = label;
+        resetActivation( activatorTag );
     }
 
-    bool AutosaveTriggerComponent::activate( const GameObject* pActivator )
+    bool AutosaveTriggerComponent::onVolumeActivated( const GameObject& activator )
     {
-        if ( pActivator == nullptr || ( _bOnce && _bFired == SW_TRUE ) )
-            return false;
-        if ( _activatorTag.isValid() && pActivator->hasTag( _activatorTag ) == false )
-            return false;
+        (void)activator;
         AutosaveManager* pAutosave = game::findSubsystem<AutosaveManager>();
         if ( pAutosave == nullptr )
             return false;
@@ -65,7 +50,6 @@ namespace sw
                 break;
             }
         }
-        _bFired = SW_TRUE;
         return true;
     }
 } // namespace sw

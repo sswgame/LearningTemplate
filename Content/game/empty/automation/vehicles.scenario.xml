@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  차 둘 — 물리 차(RigidBody + WheeledVehicle + PhysicsCar)와 아케이드 차(ArcadeVehicle)를 의도로 몬다. 같은 의도(가고 싶은 월드 방향)가 두 차 모두에서 가속 · 조향 · 감속이 되는지 값으로 본다.
+  물리 차는 떨어져 네 바퀴가 닿은 뒤에 몬다. 값: 앞 속도(Vehicle.ForwardSpeed), 닿은 바퀴(Vehicle.GroundedWheels), 자리(Object.X · Object.Z).
+  실행: ctest -R Scenario.game.empty.vehicles
+-->
+<Scenario name="game.empty.vehicles" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/vehicles.scene.xml"/>
+	<!-- 물리 차: 서스펜션에 내려앉는다 -->
+	<WaitUntil watch="Vehicle.GroundedWheels" target="Car" equals="4" timeoutFrames="180"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="Car" near="0" tolerance="0.5"/>
+	<!-- 앞으로 — 페달 -->
+	<Intent pawn="Car" move="0,1" frames="240"/>
+	<WaitUntil watch="Vehicle.ForwardSpeed" target="Car" atLeast="4" timeoutFrames="240"/>
+	<Expect watch="Object.Z" target="Car" atLeast="1"/>
+	<!-- 오른쪽 앞으로 — 조향. 차는 +X 쪽으로 간다 -->
+	<Intent pawn="Car" move="0.7,0.7" frames="180"/>
+	<WaitUntil watch="Object.X" target="Car" atLeast="-7" timeoutFrames="180"/>
+	<!-- 뒤로 — 앞으로 가는 동안은 브레이크다 -->
+	<Intent pawn="Car" move="0,-1" frames="240"/>
+	<WaitUntil watch="Vehicle.ForwardSpeed" target="Car" atMost="1" timeoutFrames="240"/>
+	<!-- 아케이드 차: 물리 바디 없이 땅 광선 위를 달린다 -->
+	<Intent pawn="Kart" move="0,1" frames="120"/>
+	<WaitUntil watch="Vehicle.ForwardSpeed" target="Kart" atLeast="8" timeoutFrames="120"/>
+	<Expect watch="Object.Y" target="Kart" near="0" tolerance="0.05"/>
+	<Intent pawn="Kart" move="0.7,0.7" frames="120"/>
+	<WaitUntil watch="Object.X" target="Kart" atLeast="9" timeoutFrames="120"/>
+	<Pass/>
+</Scenario>

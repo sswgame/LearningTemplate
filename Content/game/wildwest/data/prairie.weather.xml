@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 평원의 날씨 — temperature 값은 지역 기온(디렉터 _regionBaseTemperature)에 더해져 플레이어 코어를 깎는다(WesternSurvival::computeAirTemperature). 렌더러는 아직 이 값을 읽지 않는다. -->
+<WeatherCatalog transition="60">
+	<Weather id="clear" weight="3" minDuration="1800" maxDuration="3600">
+		<Values temperature="0"/>
+	</Weather>
+	<Weather id="coldfront" weight="1" minDuration="900" maxDuration="1800">
+		<Values temperature="-25"/>
+	</Weather>
+</WeatherCatalog>

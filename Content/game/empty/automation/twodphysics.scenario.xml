@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  2D 물리 묶음 — 캐릭터(의도 → CharacterPawnMovement2D → CharacterController2D)가 땅에 서고 걷고 뛰며, 힌지(Joint2D)로 매단 판이 축에 매달려 흔들리고,
+  시한 폭탄이 상자(Fracture2D)를 깨고, 다각형 2D 빛(FreeformLight2D)이 벽을 밝힌다. 그림은 두 사진의 차로만 본다(골든 없음).
+  판 무게 중심은 축에서 1.5 m 다 — 힌지가 없으면 판은 땅(Y 0.2)까지 떨어지고, 있으면 2.5 아래로 내려가지 않는다(4 − 1.5).
+  실행: ctest -R Scenario.game.empty.twodphysics
+-->
+<Scenario name="game.empty.twodphysics" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/twodphysics.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="engine/pipeline/forward2dpipeline.xml"/>
+	<!-- 캐릭터: 2 m 위에서 떨어져 땅에 선다 -->
+	<WaitUntil watch="Object.Y" target="Hero" near="0" tolerance="0.1" timeoutFrames="120"/>
+	<!-- 오른쪽으로 걷는다 -->
+	<Intent pawn="Hero" move="1,0" frames="60"/>
+	<WaitUntil watch="Object.X" target="Hero" atLeast="-6.5" timeoutFrames="60"/>
+	<Expect watch="Object.Y" target="Hero" near="0" tolerance="0.1"/>
+	<!-- 뛴다 — 7 m/s 면 2 m 넘게 오른다 -->
+	<Wait frames="1"/>
+	<Intent pawn="Hero" buttons="Jump" frames="2"/>
+	<WaitUntil watch="Object.Y" target="Hero" atLeast="1" timeoutFrames="60"/>
+	<WaitUntil watch="Object.Y" target="Hero" near="0" tolerance="0.1" timeoutFrames="180"/>
+	<!-- 힌지: 판이 내려오되 축 아래 판 길이의 반을 넘지 않는다 -->
+	<WaitUntil watch="Object.Y" target="Plank" atMost="3" timeoutFrames="120"/>
+	<Wait frames="60"/>
+	<Expect watch="Object.Y" target="Plank" atLeast="2.3"/>
+	<Expect watch="Object.X" target="Plank" atLeast="-1.6"/>
+	<!-- 폭탄: 시작 1.5 초에 터져 상자를 깬다 -->
+	<WaitUntil watch="Fracture.Fractured" target="Crate" equals="1" timeoutFrames="240"/>
+	<WaitUntil watch="Fracture.DynamicBodies" target="Crate" atLeast="1" timeoutFrames="30"/>
+	<!-- 다각형 빛: 밝힌 자리(오른쪽 위)의 벽이 빛을 치우면 달라진다 -->
+	<Screenshot file="freeform_on.ppm" waitForSettle="false"/>
+	<Wait frames="1"/>
+	<DevCommand line="teleport WindowLight 100 100 0"/>
+	<Wait frames="2"/>
+	<Screenshot file="freeform_off.ppm" waitForSettle="false"/>
+	<Wait frames="1"/>
+	<ExpectImagesDiffer first="freeform_on.ppm" second="freeform_off.ppm" region="0.6,0.05,0.95,0.45" minDiffering="0.05"/>
+	<Pass/>
+</Scenario>

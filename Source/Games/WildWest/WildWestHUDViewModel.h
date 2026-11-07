@@ -1,6 +1,6 @@
 /**
  * @file WildWestHUDViewModel.h
- * @brief 승마 HUD 문서가 보이는 값(탑승 상태 글 · 말 스태미나)입니다 — 디렉터 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
+ * @brief 서부 평원 HUD 문서가 보이는 값(탑승 상태 글 · 말 스태미나 · 무법자 글)입니다 — 디렉터 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -32,14 +32,19 @@ namespace sw
         void setRideStatus( string_view rideStatus );
         /** @brief 말 스태미나(보이는 정수 — 소수는 올림)와 비율(0..1, 막대)입니다. 말에 타지 않았으면 0 입니다. */
         void setStamina( float32 stamina, float32 ratio );
+        /** @brief 명예 · 수배 · 현상금 · 가죽 · 돈 · 허기 한 줄입니다. 아무 일도 없으면 빈 글이라 그려지지 않습니다. 현지화하지 않은 글입니다. */
+        void setOutlawStatus( string_view outlawStatus );
 
         const string& getRideStatus() const { return _rideStatus; }
+        const string& getOutlawStatus() const { return _outlawStatus; }
         int32         getStamina() const { return _stamina; }
         float32       getStaminaRatio() const { return _staminaRatio; }
 
     private:
         PROPERTY( DisplayName = "Ride Status", Tooltip = "One line about the ride: on foot, or the horse, its gait and speed" )
         string _rideStatus;
+        PROPERTY( DisplayName = "Outlaw Status", Tooltip = "One line about honor, the law, pelts, money and hunger; empty while nothing happened" )
+        string _outlawStatus;
         PROPERTY( DisplayName = "Stamina" )
         int32 _stamina;
         PROPERTY( DisplayName = "Stamina Ratio", Min = 0.0, Max = 1.0, Units = ratio )

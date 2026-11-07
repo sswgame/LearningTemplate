@@ -9,6 +9,7 @@ namespace sw
     WildWestHUDViewModel::WildWestHUDViewModel()
         : UIViewModel{}
         , _rideStatus{}
+        , _outlawStatus{}
         , _stamina{ 0 }
         , _staminaRatio{ 0.0f }
     {
@@ -24,6 +25,11 @@ namespace sw
     void WildWestHUDViewModel::setRideStatus( string_view rideStatus )
     {
         (void)setField( _rideStatus, string( rideStatus ), "_rideStatus" );
+    }
+
+    void WildWestHUDViewModel::setOutlawStatus( string_view outlawStatus )
+    {
+        (void)setField( _outlawStatus, string( outlawStatus ), "_outlawStatus" );
     }
 
     void WildWestHUDViewModel::setStamina( float32 stamina, float32 ratio )

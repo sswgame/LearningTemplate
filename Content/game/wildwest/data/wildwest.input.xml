@@ -7,5 +7,8 @@
 	<action name="West.Whistle" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="F"/>
 	</action>
+	<action name="West.Use" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="G"/>
+	</action>
 	<remove name="Jump"/>
 </InputMap>

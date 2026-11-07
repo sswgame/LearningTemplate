@@ -1,0 +1,207 @@
+<Scene formatVersion="2" name="TwoDPhysics">
+	<!-- 2D 물리 묶음의 무대(automation/twodphysics) — 걷고 뛰는 2D 캐릭터, 힌지로 매단 판, 폭발로 깨지는 상자, 다각형 2D 빛. twod 씬은 골든이 있어 그대로 두고 따로 세웠다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera2D">
+			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-10"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="12"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Wall">
+			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="0,3,2"
+					                 _localRotation="0,0,0"
+					                 _localScale="24,14,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="engine/textures/prototype/grid_light.dds"
+					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _sortingLayer="Background"
+					                 _orderInLayer="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ambient">
+			<GameObject _schemaVersion="0" _name="Ambient" _bActive="true">
+				<_listComponent>
+					<GlobalLight2DComponent _localPosition="0,0,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachComponent="None"
+					                        _color="0.6,0.65,0.8"
+					                        _intensity="0.2" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="WindowLight">
+			<GameObject _schemaVersion="0" _name="WindowLight" _bActive="true">
+				<_listComponent>
+					<FreeformLight2DComponent _localPosition="6,5,0"
+					                          _localRotation="0,0,0"
+					                          _localScale="1,1,1"
+					                          _attachOwner="None"
+					                          _attachComponent="None"
+					                          _color="1,0.9,0.7"
+					                          _intensity="1"
+					                          _falloffDistance="1.5"
+					                          _falloffExponent="1"
+					                          _normalMapHeight="1"
+					                          _bCastShadows="false">
+						<_listPoint>
+							<item>-2,-1.5</item>
+							<item>2,-1.5</item>
+							<item>1,1.5</item>
+							<item>-1,1.5</item>
+						</_listPoint>
+					</FreeformLight2DComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBody2DComponent _localPosition="0,-0.5,0"
+					                      _localRotation="0,0,0"
+					                      _localScale="1,1,1"
+					                      _attachOwner="None"
+					                      _attachComponent="None"
+					                      _bodyType="Static"
+					                      _layer="Static"
+					                      _material="None"
+					                      _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc2D _type="Box" _halfExtents="30,0.5" _localPosition="0,0" _localAngle="0" _material="None" _bLoop="false">
+								<_listPoint />
+							</PhysicsShapeDesc2D>
+						</_listShape>
+					</RigidBody2DComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Hero">
+			<GameObject _schemaVersion="0" _name="Hero" _bActive="true">
+				<_listComponent>
+					<CharacterController2DComponent _localPosition="-8,2,0"
+					                                _localRotation="0,0,0"
+					                                _localScale="1,1,1"
+					                                _attachOwner="None"
+					                                _attachComponent="None"
+					                                _radius="0.3"
+					                                _halfHeight="0.4"
+					                                _maxSlopeAngle="0.7853982"
+					                                _gravityScale="1"
+					                                _layer="Character" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton>
+							<item>Jump</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterPawnMovement2DComponent _jumpButton="Jump" _walkSpeed="5" _acceleration="40" _deceleration="50" _jumpSpeed="7" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Plank">
+			<GameObject _schemaVersion="0" _name="Plank" _bActive="true">
+				<_listComponent>
+					<RigidBody2DComponent _localPosition="0,4,0"
+					                      _localRotation="0,0,0"
+					                      _localScale="1,1,1"
+					                      _attachOwner="None"
+					                      _attachComponent="None"
+					                      _bodyType="Dynamic"
+					                      _layer="Default"
+					                      _material="None"
+					                      _mass="10"
+					                      _linearDamping="0.05"
+					                      _angularDamping="0.05"
+					                      _gravityFactor="1"
+					                      _bTrigger="false"
+					                      _bContinuous="false"
+					                      _bLockRotation="false"
+					                      _bInterpolate="false">
+						<_listShape>
+							<PhysicsShapeDesc2D _type="Box" _halfExtents="1.5,0.2" _localPosition="0,0" _localAngle="0" _material="None" _bLoop="false">
+								<_listPoint />
+							</PhysicsShapeDesc2D>
+						</_listShape>
+					</RigidBody2DComponent>
+					<Joint2DComponent _localPosition="-1.5,4,0"
+					                  _localRotation="0,0,0"
+					                  _localScale="1,1,1"
+					                  _attachOwner="None"
+					                  _attachComponent="None"
+					                  _jointType="Hinge"
+					                  _bLimitsEnabled="false"
+					                  _bCollideConnectedBodies="false"
+					                  _bConnectToWorld="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Crate">
+			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
+				<_listComponent>
+					<RigidBody2DComponent _localPosition="7,0,0"
+					                      _localRotation="0,0,0"
+					                      _localScale="1,1,1"
+					                      _attachOwner="None"
+					                      _attachComponent="None"
+					                      _bodyType="Static"
+					                      _layer="Static"
+					                      _material="None"
+					                      _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc2D _type="Box" _halfExtents="1,1" _localPosition="0,1" _localAngle="0" _material="None" _bLoop="false">
+								<_listPoint />
+							</PhysicsShapeDesc2D>
+						</_listShape>
+					</RigidBody2DComponent>
+					<Fracture2DComponent _localPosition="0,0,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="RigidBody2DComponent#0"
+					                     _size="2,2"
+					                     _pieceCount="8"
+					                     _fractureSeed="7"
+					                     _pattern="Uniform" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Bomb">
+			<GameObject _schemaVersion="0" _name="Bomb" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="5.5,0.5,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<GimmickSensorComponent _defaultWeight="1" _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+					<ExplosiveBarrelComponent _health="30" _radius="5" _damage="80" _fuseTime="1.5" _fractureStrain="200" _blastImpulse="400" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

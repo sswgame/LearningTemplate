@@ -11,6 +11,7 @@
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -143,8 +144,8 @@ namespace sw
         , _director{}
         , _listDirectorEvent{}
         , _listEnemy{}
-        , _effectPool{}
-        , _tracerPool{}
+        , _effectPool{ string{}, 0 }
+        , _tracerPool{ string{}, 0 }
         , _listPendingEnemy{}
         , _listPendingEffect{}
         , _listReplicaSample{}
@@ -301,8 +302,12 @@ namespace sw
         _autoPlayController = GameObjectHandle{};
         _appliedAutoPlay    = -1;
         _listEnemy.clear();
-        _effectPool = EffectPool{};
-        _tracerPool = EffectPool{};
+        // 풀의 인스턴스는 풀이 쥔다(스폰 목록에 없다) — 씬 오브젝트로 스냅샷에 실리지 않게 함께 걷는다.
+        if ( GameObjectManager* pManager = getObjectManager() )
+        {
+            _effectPool.destroyAll( *pManager );
+            _tracerPool.destroyAll( *pManager );
+        }
         _listEnemyView.clear();
         _listPendingEnemy.clear();
         _listPendingEffect.clear();
@@ -350,7 +355,7 @@ namespace sw
     void ShooterGameModeComponent::spawnEffect( const float3& position, float32 size, const float4& color, float32 lifetime )
     {
         GameObjectManager* pManager = getObjectManager();
-        MeshComponent*     pMesh    = pManager != nullptr ? acquirePooledMesh( *pManager, _effectPool, lifetime ) : nullptr;
+        MeshComponent*     pMesh    = pManager != nullptr ? acquirePooledMesh( *pManager, _effectPool, _effectPoolSize, "ShotEffect", lifetime ) : nullptr;
         if ( pMesh == nullptr )
             return;
         pMesh->setLocalPosition( position );
@@ -367,7 +372,7 @@ namespace sw
         if ( length < 1.0e-3f )
             return;
         GameObjectManager* pManager = getObjectManager();
-        MeshComponent*     pMesh    = pManager != nullptr ? acquirePooledMesh( *pManager, _tracerPool, lifetime ) : nullptr;
+        MeshComponent*     pMesh    = pManager != nullptr ? acquirePooledMesh( *pManager, _tracerPool, _tracerPoolSize, "Tracer", lifetime ) : nullptr;
         if ( pMesh == nullptr )
             return;
         // 단위 상자를 선분 가운데에 두고 진행 방향(요 · 피치)으로 돌려 Z 로 늘린다.
@@ -594,45 +599,22 @@ namespace sw
 
     void ShooterGameModeComponent::spawnEffectPools( GameObjectManager& manager )
     {
-        // 탄착과 섬광 구, 탄도선 상자를 미리 스폰하고 숨긴다(오브젝트를 매 발 만들고 지우지 않는다).
-        spawnPool( manager, _effectPrefab.path(), _effectPoolSize, "ShotEffect", _effectPool );
-        spawnPool( manager, _tracerPrefab.path(), _tracerPoolSize, "Tracer", _tracerPool );
+        // 탄착과 섬광 구, 탄도선 상자를 미리 스폰해 꺼 둔다(오브젝트를 매 발 만들고 지우지 않는다).
+        _effectPool = PrefabPool( _effectPrefab.path(), static_cast<uint32>( _effectPoolSize ) );
+        _tracerPool = PrefabPool( _tracerPrefab.path(), static_cast<uint32>( _tracerPoolSize ) );
+        (void)_effectPool.prewarm( manager, static_cast<uint32>( _effectPoolSize ), "ShotEffect" );
+        (void)_tracerPool.prewarm( manager, static_cast<uint32>( _tracerPoolSize ), "Tracer" );
     }
 
-    void ShooterGameModeComponent::spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool )
+    MeshComponent* ShooterGameModeComponent::acquirePooledMesh( GameObjectManager& manager, PrefabPool& inoutPool, int32 poolSize, const utf8* pName, float32 lifetime )
     {
-        outPool = EffectPool{};
-        for ( int32 effectIndex = 0; effectIndex < count; ++effectIndex )
+        // 수명이 다해 스스로 숨은 것을 돌려받고 꺼낸다. 모두 쓰고 있으면 가장 먼저 꺼낸 것을 다시 쓴다 — 연사가 풀보다 빨라도 새 탄도선이 보인다.
+        inoutPool.releaseBusyIf( manager, []( const GameObject& object )
         {
-            GameObject*    pObject = spawnPrefab( manager, prefab, pName );
-            MeshComponent* pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
-            if ( pMesh == nullptr )
-                continue;
-            pMesh->setVisible( false );
-            outPool._listObject.push_back( pObject->getHandle() );
-        }
-    }
-
-    MeshComponent* ShooterGameModeComponent::acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime )
-    {
-        const uint32 poolSize = static_cast<uint32>( inoutPool._listObject.size() );
-        if ( poolSize == 0 )
-            return nullptr;
-        // 숨어 있는 것을 순번부터 찾는다. 모두 쓰고 있으면 순번 위치의 것(가장 먼저 꺼낸 쪽)을 다시 쓴다. 연사가 풀보다 빨라도 새 탄도선이 보인다.
-        uint32 chosen = inoutPool._cursor % poolSize;
-        for ( uint32 probe = 0; probe < poolSize; ++probe )
-        {
-            const uint32                  slot    = ( inoutPool._cursor + probe ) % poolSize;
-            const GameObject*             pObject = manager.resolveGameObject( inoutPool._listObject[slot] );
-            const ShooterEffectComponent* pEffect = pObject != nullptr ? pObject->getComponent<ShooterEffectComponent>() : nullptr;
-            if ( pEffect != nullptr && pEffect->isIdle() )
-            {
-                chosen = slot;
-                break;
-            }
-        }
-        inoutPool._cursor               = ( chosen + 1 ) % poolSize;
-        GameObject*             pObject = manager.resolveGameObject( inoutPool._listObject[chosen] );
+            const ShooterEffectComponent* pEffect = object.getComponent<ShooterEffectComponent>();
+            return pEffect != nullptr && pEffect->isIdle();
+        } );
+        GameObject*             pObject = inoutPool.acquireRecycling( manager, static_cast<uint32>( poolSize ), pName );
         ShooterEffectComponent* pEffect = pObject != nullptr ? pObject->getComponent<ShooterEffectComponent>() : nullptr;
         MeshComponent*          pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         if ( pEffect == nullptr || pMesh == nullptr )
@@ -947,4 +929,32 @@ namespace sw
         ++_traceFrame;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct ShooterEffectWatchInternal
+        {
+            /** @brief 감시 값 `Shooter3D.EffectCreatedCount` 입니다. 판의 효과 풀이 지금까지 새로 만든 인스턴스 수입니다. */
+            [[nodiscard]] static bool readEffectCreatedCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                bool bFound = false;
+                if ( pManager == nullptr )
+                    return false;
+                pManager->forEachComponentOfType<ShooterGameModeComponent>( [&bFound, &outValue]( ShooterGameModeComponent* pDirector )
+                {
+                    if ( bFound )
+                        return;
+                    bFound   = true;
+                    outValue = static_cast<float64>( pDirector->getEffectCreatedCount() );
+                } );
+                return bFound;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_WATCH( shooterEffectCreatedCount, "Shooter3D.EffectCreatedCount", "Instances the effect pools of the shooter director created so far (reuse does not count)",
+                         &ShooterEffectWatchInternal::readEffectCreatedCount );
 } // namespace sw

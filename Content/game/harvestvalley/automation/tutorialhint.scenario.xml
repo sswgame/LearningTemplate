@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  첫 밭 튜토리얼 힌트 — 농부는 물리 몸이 없어(FarmerComponent 가 자리를 쓴다) 힌트 볼륨이 거리로 잰다(ActivatorVolumeComponent). 시작 자리(X 6)에서는 띄우지 않고, 첫 밭 쪽으로 걸어가면 한 번 띄운다.
+  실행: ctest -R Scenario.harvestvalley (SW_ACTIVE_GAME=HarvestValley) · App -scenario=game/harvestvalley/automation/tutorialhint.scenario.xml -unattended
+-->
+<Scenario name="game.harvestvalley.tutorialhint" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
+	<Expect watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="0"/>
+	<!-- D 를 1 초 — 걷는 빠르기 4 m/s 라 4 m 오른쪽, 힌트 자리(X 10) 반지름 2 안이다 -->
+	<Wait frames="1"/>
+	<Press slot="Key.D"/>
+	<WaitUntil watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="1" timeoutFrames="90"/>
+	<Release slot="Key.D"/>
+	<!-- 같은 자리에 머물러도 다시 띄우지 않는다 -->
+	<Wait frames="30"/>
+	<Expect watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="1"/>
+	<Pass/>
+</Scenario>

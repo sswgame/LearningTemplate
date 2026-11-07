@@ -177,6 +177,7 @@
 						<_listButton>
 							<item>Interact</item>
 							<item>West.Whistle</item>
+							<item>West.Use</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
@@ -450,13 +451,22 @@
 		<entity id="9" name="Ranch">
 			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
+					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
 					<WildWestGameModeComponent _componentName="WildWestGameModeComponent"
 					                           _bActive="true"
 					                           _bAutoPlay="false"
 					                           _westernDataPath="game/wildwest/data/western.xml"
 					                           _player="4"
 					                           _cameraRig="1"
-					                           _whistleButton="West.Whistle" />
+					                           _whistleButton="West.Whistle"
+					                           _useButton="West.Use"
+					                           _weatherDataPath="game/wildwest/data/prairie.weather.xml"
+					                           _regionID="frontier"
+					                           _regionBaseTemperature="22"
+					                           _secondsPerDay="1440"
+					                           _witnessSightRange="12"
+					                           _lowCoreWarning="30"
+					                           _startingMoney="20" />
 					<HUDControllerComponent _componentName="HUDControllerComponent"
 					                        _bActive="true"
 					                        _documentPath="game/wildwest/ui/hud.ui.xml" />
@@ -860,6 +870,314 @@
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 평원 동쪽 마을 — 골든이 찍는 시작 자리(원점 둘레)의 화면 · 그림자 밖이다. 씬이 흐름 격자(_bStreaming)라 시나리오가 순간이동해도 있도록 늘 싣는다. -->
+		<entity id="100" name="Strongbox">
+			<GameObject _schemaVersion="0" _name="Strongbox" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="44,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="Crime"
+					                      _id="theft" _reach="2.5" _bOnce="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="101" name="Clerk">
+			<GameObject _schemaVersion="0" _name="Clerk" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="44,0,4"
+					                _localRotation="0,3.1415927,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Capsule"
+					               _materialPath="game/wildwest/materials/rider.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternWitnessComponent _componentName="WesternWitnessComponent" _bActive="true" _bLawman="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="102" name="Sheriff">
+			<GameObject _schemaVersion="0" _name="Sheriff" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="70,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Capsule"
+					               _materialPath="game/wildwest/materials/rider.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternWitnessComponent _componentName="WesternWitnessComponent" _bActive="true" _bLawman="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="PayBounty"
+					                      _id="" _reach="2.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="103" name="Stranger">
+			<GameObject _schemaVersion="0" _name="Stranger" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="52,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Capsule"
+					               _materialPath="game/wildwest/materials/rider.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="HonorAction"
+					                      _id="help_stranger" _reach="2.5" _bOnce="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="104" name="Deer">
+			<GameObject _schemaVersion="0" _name="Deer" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="60,0,10"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="Hunt"
+					                      _id="deer" _weapon="rifle" _zone="head" _hitCount="1" _reach="2.5" _bOnce="true" _bHideWhenUsed="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="105" name="SkinningRack">
+			<GameObject _schemaVersion="0" _name="SkinningRack" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="60,0,16"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="Skin"
+					                      _id="" _reach="2.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="106" name="TradingPost">
+			<GameObject _schemaVersion="0" _name="TradingPost" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="60,0,22"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="SellPelts"
+					                      _id="" _reach="2.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="107" name="Campfire">
+			<GameObject _schemaVersion="0" _name="Campfire" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="60,0,28"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/sand.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="Eat"
+					                      _id="jerky" _reach="2.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="108" name="Wardrobe">
+			<GameObject _schemaVersion="0" _name="Wardrobe" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="60,0,34"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.8,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/hat.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WesternDeedComponent _componentName="WesternDeedComponent"
+					                      _bActive="true"
+					                      _kind="ChangeClothes"
+					                      _id="duster" _reach="2.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="109" name="TownGate">
+			<GameObject _schemaVersion="0" _name="TownGate" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="36,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<AutosaveTriggerComponent _componentName="AutosaveTriggerComponent"
+					                          _bActive="true"
+					                          _activator="4"
+					                          _radius="3"
+					                          _bOnce="true"
+					                          _trigger="Checkpoint"
+					                          _label="town_gate" />
 				</_listComponent>
 			</GameObject>
 		</entity>

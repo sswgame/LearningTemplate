@@ -7,10 +7,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/ActivatorVolumeComponent.h"
 
 namespace sw
 {
@@ -18,13 +18,13 @@ namespace sw
 
     /**
      * @class TutorialHintComponent
-     * @brief 같은 오브젝트의 트리거 콜라이더에 활성자가 들어오면 `UISystem` 알림(종류 Hint)으로 힌트를 띄웁니다(기본 한 번).
+     * @brief 활성자가 들어오면(`ActivatorVolumeComponent` — 겹침 또는 거리) `UISystem` 알림(종류 Hint)으로 힌트를 띄웁니다(기본 한 번).
      * @details 사용자 설정 `gameplay.showTutorials` 가 꺼져 있으면 띄우지 않습니다(설정 서비스가 없으면 켜진 것으로 본다). 글은 현지화 키 또는 글 그대로이고
      *          리치 텍스트 행동 태그 `[action=이름]` 을 쓸 수 있다. 키보드면 `[ E ]`, 패드면 그 패드의 버튼(입력 장치가 바뀌면 다시 배치된다).
      *          언리얼 Lyra 의 튜토리얼 프롬프트, 유니티 튜토리얼 트리거 스크립트에 해당합니다.
      */
     REFLECT( Category = "UI", DisplayName = "Tutorial Hint", Tooltip = "Shows a tutorial hint notification when the activator enters this object's trigger" )
-    class SW_GF_API TutorialHintComponent : public Component
+    class SW_GF_API TutorialHintComponent : public ActivatorVolumeComponent
     {
     public:
         REFLECT_BODY();
@@ -32,15 +32,13 @@ namespace sw
         TutorialHintComponent();
         ~TutorialHintComponent() override = default;
 
-        void onOverlapBegin( const OverlapInfo& overlap ) override;
-
         /** @brief 글과 활성자 태그를 정하고 발동 표시를 지웁니다. 코드로 만든 볼륨이 씁니다. */
         void configure( string_view text, TagID activatorTag );
-        /** @brief 활성자가 들어온 것으로 칩니다(겹침 이벤트 · 테스트). 띄웠으면 true 입니다. */
-        bool activate( const GameObject* pActivator );
         /** @brief 띄울 UI 시스템을 정합니다. 테스트가 쓰며, 없으면 게임 서비스를 씁니다. */
         void setUISystem( UISystem* pUISystem ) { _pUISystem = pUISystem; }
-        bool hasFired() const { return _bFired; }
+
+    protected:
+        [[nodiscard]] bool onVolumeActivated( const GameObject& activator ) override;
 
     private:
         UISystem* _pUISystem; ///< 테스트가 넘긴 UI(없으면 게임 서비스)
@@ -48,10 +46,5 @@ namespace sw
         string _text;
         PROPERTY( Category = "Hint", DisplayName = "Duration", Min = 0.5, Units = s )
         float32 _durationSeconds;
-        PROPERTY( Category = "Hint", DisplayName = "Activator Tag", Tooltip = "Only objects with this tag activate it (empty: any object)" )
-        TagID _activatorTag;
-        PROPERTY( Category = "Hint", DisplayName = "Once", Tooltip = "Show only the first time" )
-        bool _bOnce;
-        bool _bFired;
     };
 } // namespace sw

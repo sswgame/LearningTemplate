@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  왕복 발판 — 틱 함수 바닥(TickedPathMover)은 2 초에 6 m 가고 2 초에 돌아온다. 자리는 틱 번호의 순수 함수이고, 위의 캐릭터는 물리가 실어 나른다.
+  값: 바닥 X 가 끝(6) 가까이 갔다가 시작(0) 가까이 돌아오고, 그동안 캐릭터가 같은 쪽으로 따라가며 떨어지지 않는다(바닥 윗면 Y 0.25).
+  실행: App -scenario=game/shooter3d/automation/movingfloor.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.movingfloor" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/movingfloor.scene.xml"/>
+	<WaitUntil watch="Object.Y" target="Rider" near="0.25" tolerance="0.1" timeoutFrames="60"/>
+	<WaitUntil watch="Object.X" target="Floor" atLeast="5" timeoutFrames="180"/>
+	<Expect watch="Object.X" target="Rider" atLeast="3"/>
+	<Expect watch="Object.Y" target="Rider" near="0.25" tolerance="0.15"/>
+	<WaitUntil watch="Object.X" target="Floor" atMost="1" timeoutFrames="240"/>
+	<Expect watch="Object.X" target="Rider" atMost="3"/>
+	<Expect watch="Object.Y" target="Rider" near="0.25" tolerance="0.15"/>
+	<Pass/>
+</Scenario>

@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/World/Lifetime/PrefabPool.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
@@ -155,6 +156,8 @@ namespace sw
         uint32            getWave() const { return static_cast<uint32>( _director.getCycle() + 1 ); }
         const AIDirector& getPacingDirector() const { return _director; }
         uint32            getKillCount() const { return _killCount; }
+        /** @brief 효과 풀 둘이 지금까지 새로 만든 인스턴스 수입니다(재사용하면 늘지 않는다 — 감시 값). */
+        uint32 getEffectCreatedCount() const { return _effectPool.getCreatedCount() + _tracerPool.getCreatedCount(); }
 
     protected:
         /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 읽지 못하면 적이 오지 않을 뿐 판은 시작합니다). */
@@ -200,13 +203,6 @@ namespace sw
             float32 _lifetime{ 0.1f };
         };
 
-        /** @brief 효과 풀 하나입니다(같은 프리팹을 숨겨 두고 꺼내 씁니다). */
-        struct EffectPool
-        {
-            vector<GameObjectHandle> _listObject{};
-            uint32                   _cursor{ 0 }; ///< 다음에 볼 위치. 모두 쓰고 있으면 이 위치를 다시 쓴다.
-        };
-
     private:
         void collectBoxes();
         void startPacing();
@@ -215,9 +211,8 @@ namespace sw
         void applyReloadedProfile();
         void requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite );
         void spawnEffectPools( GameObjectManager& manager );
-        void spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool );
-        /** @brief 풀에서 숨어 있는 것 하나를 꺼냅니다. 모두 쓰고 있으면 순번 위치의 것을 다시 씁니다. 없으면 nullptr 을 반환합니다. */
-        MeshComponent* acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime );
+        /** @brief 풀에서 효과 하나를 꺼냅니다. 모두 쓰고 있으면 가장 먼저 꺼낸 것을 다시 씁니다. 프리팹을 읽지 못하면 nullptr 을 반환합니다. */
+        MeshComponent* acquirePooledMesh( GameObjectManager& manager, PrefabPool& inoutPool, int32 poolSize, const utf8* pName, float32 lifetime );
         void           spawnEnemy( GameObjectManager& manager, const EnemyRequest& request );
         /** @brief 스냅샷의 적 하나를 복제 모습으로 세웁니다(네트 클라이언트, 틱 뒤). */
         void spawnReplicaEnemy( GameObjectManager& manager, const ShooterReplicatedEnemy& replica );
@@ -271,8 +266,8 @@ namespace sw
         AIDirector                          _director;
         vector<AIDirectorEvent>             _listDirectorEvent;
         vector<EnemyRecord>                 _listEnemy;
-        EffectPool                          _effectPool;
-        EffectPool                          _tracerPool;
+        PrefabPool                          _effectPool;
+        PrefabPool                          _tracerPool;
         vector<EnemyRequest>                _listPendingEnemy;
         vector<EffectRequest>               _listPendingEffect;
         vector<ShooterReplicatedEnemy>      _listReplicaSample;  ///< 이번 프레임에 받은 적(네트 클라이언트)

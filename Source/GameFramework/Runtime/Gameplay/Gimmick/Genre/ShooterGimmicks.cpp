@@ -3,14 +3,19 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
+#include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
@@ -20,6 +25,57 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @brief 포탑 탄이 묻는 세계입니다. 태그를 가진 대상들을 구로 답합니다(`_other` 는 목록 번호).
+         * @details shortcut: 벽을 보지 않는다 — 쏠 때 시야를 확인했으므로 쏜 뒤 사이에 끼어든 벽만 뚫는다. 탄이 벽에 막혀야 하는 포탑이 생기면 물리 질의를 더한다.
+         */
+        class TurretProjectileWorld final : public IProjectileWorld
+        {
+        public:
+            TurretProjectileWorld( const vector<GameObject*>& listTarget, float32 hitRadius )
+                : _listTarget{ listTarget }
+                , _hitRadius{ hitRadius }
+            {
+            }
+
+            bool findTargetPoint( const ProjectileState& projectile, float3& outPoint ) const override
+            {
+                (void)projectile;
+                (void)outPoint;
+                return false; // 포탑 탄은 유도하지 않는다
+            }
+
+            bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const override
+            {
+                const float3  path   = to - from;
+                const float32 length = path.getLength();
+                if ( length <= 1.0e-5f )
+                    return false;
+                Ray ray;
+                ray._origin    = from;
+                ray._direction = path * ( 1.0f / length );
+                float32 best   = length;
+                bool    bFound = false;
+                for ( size_t targetIndex = 0; targetIndex < _listTarget.size(); ++targetIndex )
+                {
+                    const SceneComponent* pScene = _listTarget[targetIndex]->getPrimarySceneComponent();
+                    float32               hit    = 0.0f;
+                    if ( pScene == nullptr || RayMath::intersectSphere( ray, pScene->getWorldPosition(), _hitRadius + projectile._radius, best, hit ) == false )
+                        continue;
+                    best             = hit;
+                    bFound           = true;
+                    outHit._other    = static_cast<int32>( targetIndex );
+                    outHit._position = from + ray._direction * hit;
+                    outHit._kind     = ProjectileHitKind::Target;
+                }
+                return bFound;
+            }
+
+        private:
+            const vector<GameObject*>& _listTarget;
+            float32                    _hitRadius;
+        };
+
         struct ShooterGimmicksInternal
         {
             static void sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude )
@@ -139,13 +195,70 @@ namespace sw
         , _aimTolerance{ 5.0f * MathUtil::kDegreeToRadian }
         , _fireInterval{ 0.5f }
         , _damage{ 10.0f }
+        , _projectileSpeed{ 0.0f }
+        , _projectileGravityScale{ 0.0f }
+        , _hitRadius{ 0.6f }
         , _target{}
         , _cooldownSteps{ 0 }
         , _shotCount{ 0 }
+        , _hitCount{ 0 }
         , _clock{ GenreGimmickUtil::makeClock() }
         , _listCandidate{}
         , _listTagged{}
+        , _projectiles{}
+        , _listProjectileEvent{}
+        , _previousTarget{}
+        , _previousTargetPosition{}
     {
+    }
+
+    bool TurretComponent::computeAim( const float3& origin, const float3& targetPosition, const float3& targetVelocity, float32 projectileSpeed, float32 gravityScale,
+                                      float3& outAimPoint, float3& outDirection )
+    {
+        outAimPoint = targetPosition;
+        if ( projectileSpeed > 0.0f && Ballistics::computeInterceptPoint( origin, targetPosition, targetVelocity, projectileSpeed, outAimPoint ) == false )
+            return false;
+        if ( projectileSpeed > 0.0f && gravityScale > 0.0f )
+            return Ballistics::computeLaunchDirection( origin, outAimPoint, projectileSpeed, gravityScale, false, outDirection );
+        const float3  toAim  = outAimPoint - origin;
+        const float32 length = toAim.getLength();
+        if ( length <= 1.0e-5f )
+            return false;
+        outDirection = toAim * ( 1.0f / length );
+        return true;
+    }
+
+    void TurretComponent::stepProjectiles( GameObject& owner )
+    {
+        if ( _projectiles.getProjectiles().empty() )
+            return;
+        const TurretProjectileWorld world{ _listTagged, _hitRadius };
+        _listProjectileEvent.clear();
+        _projectiles.step( constant::time::kDefaultFixedStepSeconds, world, _listProjectileEvent );
+        for ( const ProjectileEvent& event : _listProjectileEvent )
+        {
+            if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
+                continue;
+            ++_hitCount;
+            GimmickDamageUtil::applyDamage( *_listTagged[static_cast<size_t>( event._hit._other )], &owner, hashed_string( "Turret" ), event._projectile._damage );
+        }
+    }
+
+    void TurretComponent::fireAt( GameObject& owner, GameObject& victim, const float3& origin, const float3& direction )
+    {
+        ++_shotCount;
+        if ( _projectileSpeed <= 0.0f )
+        {
+            ++_hitCount;
+            GimmickDamageUtil::applyDamage( victim, &owner, hashed_string( "Turret" ), _damage );
+            return;
+        }
+        ResolvedShot shot;
+        shot._damage       = _damage;
+        shot._speed        = _projectileSpeed;
+        shot._gravityScale = _projectileGravityScale;
+        shot._range        = _range * 2.0f; // 앞을 겨눈 자리는 사거리 밖일 수 있다 — 탄은 대상이 달아난 곳까지 간다
+        (void)_projectiles.spawn( ProjectileState::launch( shot, origin, direction, PhysicsSystem::getConfiguredGravityMagnitude() ) );
     }
 
     void TurretComponent::onTick( float32 deltaTime )
@@ -193,11 +306,22 @@ namespace sw
         const WorldLineOfSightQuery lineOfSight{ *pManager };
         const int32                 pick = InteractionSelector::selectBest( viewer, listCandidate, &lineOfSight );
         _target                          = pick >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( pick )]._objectID ) : GameObjectHandle{};
+        stepProjectiles( *pOwner ); // 대상을 놓쳐도 이미 쏜 탄은 날아간다
         if ( pick < 0 )
+        {
+            _previousTarget = GameObjectHandle{};
             return;
+        }
 
-        // 조준: 요를 목표 쪽으로 돌린다.
-        const float3  toTarget   = listCandidate[static_cast<size_t>( pick )]._position - origin;
+        // 조준: 요를 겨눌 곳 쪽으로 돌린다. 날아가는 탄은 대상이 움직인 만큼 앞을 겨눈다 — 처음 본 스텝은 속도를 모르므로 멈춘 것으로 본다.
+        const float3 targetPosition = listCandidate[static_cast<size_t>( pick )]._position;
+        const float3 targetVelocity = _previousTarget == _target ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};
+        _previousTarget             = _target;
+        _previousTargetPosition     = targetPosition;
+        float3        aimPoint{};
+        float3        direction{};
+        const bool    bCanHit    = computeAim( origin, targetPosition, targetVelocity, _projectileSpeed, _projectileGravityScale, aimPoint, direction );
+        const float3  toTarget   = ( bCanHit ? aimPoint : targetPosition ) - origin;
         const float32 desiredYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         float3        rotation   = pScene->getLocalRotation();
         const float32 delta      = MathUtil::wrapAngle( desiredYaw - rotation._y );
@@ -206,14 +330,13 @@ namespace sw
         pScene->setLocalRotation( rotation );
 
         const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance + maxTurn;
-        if ( bAimed == false || _cooldownSteps > 0 )
+        if ( bAimed == false || bCanHit == false || _cooldownSteps > 0 )
             return;
         _cooldownSteps      = GenreGimmickUtil::toSteps( _fireInterval, 1 );
         GameObject* pVictim = pManager->resolveGameObject( _target );
         if ( pVictim == nullptr )
             return;
-        ++_shotCount;
-        GimmickDamageUtil::applyDamage( *pVictim, pOwner, hashed_string( "Turret" ), _damage );
+        fireAt( *pOwner, *pVictim, origin, direction );
     }
 
     DestructibleComponent::DestructibleComponent()

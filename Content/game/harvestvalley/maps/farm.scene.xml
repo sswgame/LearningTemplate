@@ -826,6 +826,27 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="39" name="FirstFieldHint">
+			<GameObject _schemaVersion="0" _name="FirstFieldHint" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="10,0,-1.2"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<TutorialHintComponent _componentName="TutorialHintComponent"
+					                       _bActive="true"
+					                       _activator="33"
+					                       _radius="2"
+					                       _bOnce="true"
+					                       _text="Press [action=Farm.Use] to work the soil with your tool"
+					                       _durationSeconds="6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 		<entity id="34" name="FarmTarget">
 			<GameObject _schemaVersion="0" _name="FarmTarget" _bActive="true">
 				<_listComponent>

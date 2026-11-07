@@ -4,6 +4,7 @@
 
 #include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
@@ -12,11 +13,14 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/HorseFollowAIController.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDeedComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
@@ -62,7 +66,17 @@ namespace sw
         , _player{}
         , _cameraRig{}
         , _whistleButton{}
+        , _useButton{}
+        , _weatherDataPath{}
+        , _regionID{}
+        , _regionBaseTemperature{ 20.0f }
+        , _secondsPerDay{ 1440.0f }
+        , _witnessSightRange{ 12.0f }
+        , _lowCoreWarning{ 30.0f }
+        , _startingMoney{ 0 }
+        , _outlaw{}
         , _pWesternCatalog{}
+        , _pWeatherCatalog{}
         , _bAutoMountRequested{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -72,13 +86,14 @@ namespace sw
 
     void WildWestGameModeComponent::writeState( Archive& outArchive ) const
     {
-        // 판 상태가 없다 — 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
+        // 플레이어의 삶만 싣는다 — 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        _outlaw.writeState( outArchive );
     }
 
     bool WildWestGameModeComponent::readState( Archive& archive )
     {
-        return StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && archive.getRemainingBytes() == 0;
+        return StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && _outlaw.readState( archive ) && archive.getRemainingBytes() == 0;
     }
 
     bool WildWestGameModeComponent::startGame()
@@ -100,17 +115,46 @@ namespace sw
             SW_LOG_ERROR_ID( "WildWestGameMode.RiderPawnNoWhistle", "[WildWest] the rider pawn has no whistle button '%#' - the prairie cannot open", _whistleButton.c_str() );
             return false;
         }
+        if ( pPlayerPawn->findButton( _useButton ) < 0 )
+        {
+            SW_LOG_ERROR_ID( "WildWestGameMode.RiderPawnNoUse", "[WildWest] the rider pawn has no use button '%#' - the prairie cannot open", _useButton.c_str() );
+            return false;
+        }
+        _pWeatherCatalog = _weatherDataPath.empty() ? nullptr : SharedAssetCache<WeatherCatalog>::acquire( _weatherDataPath );
+        if ( _pWeatherCatalog == nullptr )
+        {
+            SW_LOG_ERROR_ID( "WildWestGameMode.WeatherCatalogCouldNot", "[WildWest] the weather catalog '%#' could not be loaded - the prairie cannot open", _weatherDataPath.c_str() );
+            return false;
+        }
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        if ( pState == nullptr )
+        {
+            SW_LOG_ERROR_ID( "WildWestGameMode.NoSessionState", "[WildWest] no SessionStateComponent in front of the director on this object - the prairie cannot open" );
+            return false;
+        }
+        SessionStateSettings settings{};
+        settings._clock._secondsPerDay = _secondsPerDay;
+        settings._pReputationCatalog   = &_pWesternCatalog->getHonorReputation();
+        settings._pWeatherCatalog      = _pWeatherCatalog.get();
+        if ( pState->initialize( settings ) == SessionStateInitResult::Refused )
+            return false; // 까닭은 판 상태가 남겼다
+        AIPerceptionSettings sight{};
+        sight._sightRange = _witnessSightRange;
+        if ( _outlaw.initialize( _pWesternCatalog.get(), pState->makeRefs(), _regionID, _regionBaseTemperature, sight ) == false )
+            return false; // 까닭은 무법자가 남겼다
+        if ( pState->isFreshGame() && _startingMoney > 0 )
+            pState->getWallet().add( _pWesternCatalog->getCurrency(), _startingMoney );
         return true;
     }
 
     void WildWestGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "WildWestGameMode.PrairieOpenWalkWASD", "[WildWest] the prairie is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle" );
+        SW_LOG_INFO_ID( "WildWestGameMode.PrairieOpenWalkWASD", "[WildWest] the prairie is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle, G to act" );
     }
 
     void WildWestGameModeComponent::updateGame( float32 deltaTime )
     {
-        (void)deltaTime;
+        _outlaw.update( deltaTime );
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         GameObjectManager*   pManager    = getObjectManager();
         if ( pPlayerPawn == nullptr || pManager == nullptr )
@@ -121,6 +165,10 @@ namespace sw
         if ( bWhistle )
             pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
             { director.whistleHorses(); } );
+        const bool bUse = pPlayerPawn->wasButtonTriggered( pPlayerPawn->findButton( _useButton ) );
+        if ( bUse )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
+            { director.useDeed(); } );
         const bool bAutoMount = isAutoPlayOn() && _bAutoMountRequested == SW_FALSE;
         if ( bAutoMount )
         {
@@ -129,7 +177,10 @@ namespace sw
             { director.mountNearestHorse(); } );
         }
         pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
-        { director.updateHUD(); } );
+        {
+            director.updateLawSight();
+            director.updateHUD();
+        } );
     }
 
     void WildWestGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
@@ -193,6 +244,57 @@ namespace sw
             SW_LOG_WARNING_ID( "WildWestGameMode.AutoPlayRiderCould", "[WildWest] auto play: the rider could not mount '%#' (result %#)", pSeat->getOwner()->getName().c_str(), static_cast<int32>( result ) );
     }
 
+    void WildWestGameModeComponent::useDeed()
+    {
+        GameObjectManager*    pManager = getObjectManager();
+        const PawnComponent*  pPawn    = findPlayerPawn();
+        const SceneComponent* pRoot    = pPawn != nullptr && pPawn->getOwner() != nullptr ? pPawn->getOwner()->getPrimarySceneComponent() : nullptr;
+        if ( pManager == nullptr || pRoot == nullptr )
+            return;
+        const WesternDeedComponent* pUsed = WesternDeedComponent::useNearest( *pManager, pRoot->getWorldPosition(), _outlaw );
+        if ( pUsed != nullptr && pUsed->getOwner() != nullptr )
+            SW_LOG_INFO_ID( "WildWestGameMode.DeedDone", "[WildWest] did the deed at '%#'", pUsed->getOwner()->getName().c_str() );
+    }
+
+    void WildWestGameModeComponent::updateLawSight()
+    {
+        GameObjectManager*    pManager = getObjectManager();
+        const PawnComponent*  pPawn    = findPlayerPawn();
+        const SceneComponent* pRoot    = pPawn != nullptr && pPawn->getOwner() != nullptr ? pPawn->getOwner()->getPrimarySceneComponent() : nullptr;
+        if ( pManager == nullptr || pRoot == nullptr || _outlaw.getWantedLevel() <= 0 )
+            return;
+        vector<WesternWitness> listWitness;
+        WesternWitnessComponent::collect( *pManager, listWitness );
+        _outlaw.updateSeenByLaw( pRoot->getWorldPosition(), listWitness );
+    }
+
+    string WildWestGameModeComponent::formatOutlawStatus() const
+    {
+        const WesternOutlaw* pOutlaw = findOutlaw();
+        if ( pOutlaw == nullptr )
+            return string{};
+        const FactionDef*      pHonor         = _pWesternCatalog->getHonorReputation().find( hashed_string( WesternCatalog::kHonorFactionID ) );
+        const int32            startHonor     = pHonor != nullptr ? pHonor->_startValue : 0;
+        const WesternSurvival& survival       = pOutlaw->getSurvival();
+        const bool             bLowCore       = survival.getCore( WesternCore::Health ) < _lowCoreWarning || survival.getCore( WesternCore::Stamina ) < _lowCoreWarning;
+        const bool             bNothingToShow = pOutlaw->getHonorValue() == startHonor && pOutlaw->getWantedLevel() == 0 && pOutlaw->getBounty() == 0 && pOutlaw->getPeltCount() == 0 && pOutlaw->getCarcassCount() == 0 && bLowCore == false;
+        if ( bNothingToShow )
+            return string{};
+        string status = formatToString( "Honor %# (%#)", pOutlaw->getHonorValue(), pOutlaw->getHonorTierName().c_str() );
+        if ( pOutlaw->getWantedLevel() > 0 )
+            status += formatToString( " - Wanted %#", pOutlaw->getWantedLevel() );
+        if ( pOutlaw->getBounty() > 0 )
+            status += formatToString( " - Bounty $%#", pOutlaw->getBounty() );
+        if ( pOutlaw->getCarcassCount() > 0 )
+            status += formatToString( " - Carcasses %#", pOutlaw->getCarcassCount() );
+        if ( pOutlaw->getPeltCount() > 0 )
+            status += formatToString( " - Pelts %#", pOutlaw->getPeltCount() );
+        status += formatToString( " - $%#", pOutlaw->getMoney() );
+        if ( bLowCore )
+            status += " - Hungry";
+        return status;
+    }
+
     void WildWestGameModeComponent::updateHUD()
     {
         GameObject*             pOwner      = getOwner();
@@ -203,6 +305,7 @@ namespace sw
         WildWestHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<WildWestHUDViewModel>();
         if ( pViewModel == nullptr )
             return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
+        pViewModel->setOutlawStatus( formatOutlawStatus() );
         const VehicleSeatComponent* pSeat        = VehicleSeatComponent::findSeatOf( *pPlayerPawn );
         const GameObject*           pHorseObject = pSeat != nullptr ? pSeat->getOwner() : nullptr;
         if ( pHorseObject == nullptr )
@@ -222,4 +325,29 @@ namespace sw
         pViewModel->setRideStatus( arrStatus );
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct WildWestWatchesInternal
+        {
+            /** @brief 감시 값 `WildWest.OutlawStatus` 입니다. 대상 디렉터가 HUD 에 쓰는 무법자 글입니다. 아무 일도 없으면 빈 글입니다. */
+            [[nodiscard]] static bool readOutlawStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*                pTarget   = query.findTargetObject();
+                const WildWestGameModeComponent* pDirector = pTarget != nullptr ? pTarget->getComponent<WildWestGameModeComponent>() : nullptr;
+                if ( pDirector == nullptr )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Wild West Director" ) );
+                    return false;
+                }
+                outValue.setText( string_view{ pDirector->formatOutlawStatus() } );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( wildWestOutlawStatus, "WildWest.OutlawStatus", "Outlaw line the director on target writes to the HUD (empty when nothing happened)", &WildWestWatchesInternal::readOutlawStatus, true, false );
 } // namespace sw

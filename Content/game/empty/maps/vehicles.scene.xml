@@ -1,0 +1,191 @@
+<Scene formatVersion="2" name="Vehicles">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,30,-30"
+					                 _localRotation="0.7,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="300"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,10,0"
+					                           _localRotation="0.9,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.95,0.85"
+					                           _intensity="1.3"
+					                           _ambient="0.3"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Default"
+					                    _material="None"
+					                    _mass="0"
+					                    _bTrigger="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="200,0.5,200"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0.5,0"
+					               _localRotation="0,0,0"
+					               _localScale="400,1,400"
+					               _attachOwner="None"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Car">
+			<GameObject _schemaVersion="0" _name="Car" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-8,1.2,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Default"
+					                    _material="None"
+					                    _mass="1200"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.9,0.4,2"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1.8,0.8,4"
+					               _attachOwner="None"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<WheeledVehicleComponent _wheelRadius="0.35"
+					                         _wheelWidth="0.25"
+					                         _halfTrack="0.85"
+					                         _frontAxle="1.3"
+					                         _rearAxle="-1.3"
+					                         _wheelMountHeight="-0.2"
+					                         _suspensionMinLength="0.1"
+					                         _suspensionMaxLength="0.35"
+					                         _suspensionFrequency="1.5"
+					                         _suspensionDamping="0.5"
+					                         _maxSteerAngle="0.52"
+					                         _maxBrakeTorque="1500"
+					                         _maxHandBrakeTorque="4000"
+					                         _engineMaxTorque="500"
+					                         _engineMaxRpm="6000"
+					                         _drive="Rear" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton>
+							<item>HandBrake</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<PhysicsCarComponent _handBrakeButton="HandBrake" _reverseSpeed="0.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Kart">
+			<GameObject _schemaVersion="0" _name="Kart" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="8,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.4,0"
+					               _localRotation="0,0,0"
+					               _localScale="1.2,0.6,2"
+					               _attachOwner="None"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton>
+							<item>Drift</item>
+							<item>Boost</item>
+							<item>Jump</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<ArcadeVehicleComponent _driftButton="Drift"
+					                        _boostButton="Boost"
+					                        _jumpButton="Jump"
+					                        _maxSpeed="30"
+					                        _acceleration="18"
+					                        _brakeDeceleration="40"
+					                        _reverseMaxSpeed="8"
+					                        _steerRate="2.4"
+					                        _steerRateAtMaxSpeed="1.1"
+					                        _bUsePhysicsGround="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

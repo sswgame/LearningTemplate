@@ -11,6 +11,7 @@
 namespace sw
 {
     class WesternCatalog;
+    class WesternOutlaw;
 
     /**
      * @class WesternGameModeComponent
@@ -25,5 +26,7 @@ namespace sw
 
         /** @brief 판이 열렸으면 읽은 서부극 카탈로그이고, 아니면 nullptr 입니다. */
         virtual const WesternCatalog* findWesternCatalog() const = 0;
+        /** @brief 판이 열렸으면 플레이어의 명예 · 법 · 생존 · 사냥이고, 아니면 nullptr 입니다(감시 값이 읽는다). */
+        virtual const WesternOutlaw* findOutlaw() const = 0;
     };
 } // namespace sw

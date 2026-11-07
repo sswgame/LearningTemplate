@@ -167,7 +167,7 @@
 	<Setting id="gameplay.fieldOfView" category="gameplay" type="Float" default="70" min="60" max="110" step="1" target="gv:gv_cameraFieldOfView" text="settings.gameplay.fieldOfView"/>
 	<Setting id="gameplay.cameraShake" category="gameplay" type="Float" default="1" min="0" max="1" step="0.1" target="gv:gv_cameraShakeScale" text="settings.gameplay.cameraShake"/>
 	<Setting id="gameplay.headBob" category="gameplay" type="Bool" default="true" target="gv:gv_cameraHeadBob" text="settings.gameplay.headBob"/>
-	<!-- 튜토리얼 힌트(TutorialHintComponent)를 띄울지 — 대상이 없다, 힌트 볼륨이 getBoolValue 로 읽는다. -->
+	<!-- 튜토리얼 힌트(TutorialHintComponent)를 띄울지 — 게임 변수 대상이 없다, 힌트 볼륨이 getBoolValue 로 읽는다. -->
 	<Setting id="gameplay.showTutorials" category="gameplay" type="Bool" default="true" text="settings.gameplay.showTutorials"/>
 
 	<!-- 접근성 -->

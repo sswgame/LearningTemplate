@@ -1,0 +1,93 @@
+<Scene formatVersion="2" name="MovingFloor">
+	<!-- 왕복 발판 무대(automation/movingfloor) — 틱 함수 바닥(TickedPathMover) 위의 캐릭터를 물리가 실어 나른다. 아레나(arena)는 골든이 있어 그대로 두고 따로 세웠다. 넷 정렬은 ShooterNetPawnComponent 가 맡는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="3,8,-12"
+					                 _localRotation="0.5,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachComponent="None"
+					                    _bodyType="Kinematic"
+					                    _layer="Default"
+					                    _material="None"
+					                    _mass="0"
+					                    _bTrigger="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="2,0.25,2"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="4,0.5,4"
+					               _attachOwner="None"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<TickedPathMoverComponent _segmentSeconds="2" _tickSeconds="0.0166667" _bPingPong="true">
+						<_listWaypoint>
+							<item>6,0,0</item>
+						</_listWaypoint>
+					</TickedPathMoverComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Rider">
+			<GameObject _schemaVersion="0" _name="Rider" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="0,0.4,0"
+					                              _localRotation="0,0,0"
+					                              _localScale="1,1,1"
+					                              _attachOwner="None"
+					                              _attachComponent="None"
+					                              _radius="0.3"
+					                              _halfHeight="0.6"
+					                              _stepHeight="0.3"
+					                              _maxSlopeAngle="0.7853982"
+					                              _gravityScale="1"
+					                              _mass="70"
+					                              _layer="Character" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

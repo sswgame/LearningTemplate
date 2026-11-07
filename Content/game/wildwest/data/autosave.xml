@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WildWest 자동 저장 정책(AutosaveSettings) — 마을 문 체크포인트(prairie 씬의 AutosaveTriggerComponent)와 5 분 간격. 시나리오가 끝날 때마다 사용자 슬롯을 쓰지 않게 종료 저장은 끈다(불러오기 화면이 아직 없다). -->
+<Autosave interval="300" minimumGap="30" slots="3" group="wildwest" prefix="slot" areaChange="true" checkpoint="true" beforeBoss="true" quit="false"/>

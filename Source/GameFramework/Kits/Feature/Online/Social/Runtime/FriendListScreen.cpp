@@ -2,13 +2,12 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendListScreen.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/UISystem.h"
-#include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/UI/Widgets/ListViewWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw
@@ -19,7 +18,6 @@ namespace sw
         {
             static constexpr const utf8* kFriendsName    = "Friends";
             static constexpr const utf8* kStatusName     = "Status";
-            static constexpr const utf8* kRowPrefix      = "Friend.";
             static constexpr const utf8* kRefreshCommand = "Refresh";
             static constexpr const utf8* kCloseCommand   = "Close";
 
@@ -88,6 +86,16 @@ namespace sw
         return handle;
     }
 
+    unique_ptr<Widget> FriendListScreen::makeRow()
+    {
+        return make_unique<TextWidget>();
+    }
+
+    void FriendListScreen::bindRow( Widget& row, const FriendEntry& entry )
+    {
+        static_cast<TextWidget&>( row ).setText( FriendListScreenInternal::makeRowText( entry ) );
+    }
+
     bool FriendListScreen::onCommand( const hashed_string& command, Widget& source )
     {
         using Internal = FriendListScreenInternal;
@@ -120,24 +128,22 @@ namespace sw
         using Internal = FriendListScreenInternal;
         if ( _pModel == nullptr )
             return;
-        WidgetTree&  tree     = getTree();
-        PanelWidget* pFriends = tree.findWidget<PanelWidget>( hashed_string( Internal::kFriendsName ) );
-        TextWidget*  pStatus  = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
+        WidgetTree&     tree     = getTree();
+        ListViewWidget* pFriends = tree.findWidget<ListViewWidget>( hashed_string( Internal::kFriendsName ) );
+        TextWidget*     pStatus  = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
         if ( pFriends == nullptr || pStatus == nullptr )
         {
-            SW_LOG_ERROR_ID( "FriendListScreen.FriendListDocumentNeeds", "Friend list document %# needs a '%#' panel and a '%#' text", getDocumentPath().c_str(), Internal::kFriendsName, Internal::kStatusName );
+            SW_LOG_ERROR_ID( "FriendListScreen.FriendListDocumentNeeds", "Friend list document %# needs a '%#' list view and a '%#' text", getDocumentPath().c_str(), Internal::kFriendsName, Internal::kStatusName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
-        pFriends->clearChildren();
+        // 줄은 목록이 보이는 만큼만 만들고 다시 쓴다(친구 수와 무관하다). 항목 수를 다시 넣으면 모든 줄을 다시 잇는다.
+        pFriends->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
+        { return makeRow(); } ) );
+        pFriends->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
+        { bindRow( row, _pModel->getEntries()[itemIndex] ); } ) );
         const vector<FriendEntry>& listEntry = _pModel->getEntries();
-        for ( size_t index = 0; index < listEntry.size(); ++index )
-        {
-            unique_ptr<TextWidget> row = make_unique<TextWidget>();
-            row->setName( hashed_string( string{ Internal::kRowPrefix } + to_string( static_cast<uint64>( index ) ) ) );
-            row->setText( Internal::makeRowText( listEntry[index] ) );
-            (void)pFriends->addChild( std::move( row ) );
-        }
+        pFriends->setItemCount( static_cast<uint32>( listEntry.size() ) );
         string statusText;
         switch ( _pModel->getState() )
         {

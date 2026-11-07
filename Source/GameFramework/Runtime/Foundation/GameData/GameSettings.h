@@ -88,6 +88,9 @@ namespace sw
         PROPERTY()
         string _onlineGameBuild; ///< Hello 와 로그인에 싣는 게임 빌드 글(점으로 나눈 정수열). 온라인 서버를 적었으면 필수다
 
+        PROPERTY()
+        DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
+
         /**
          * 필수 데이터를 이 게임 팩 밖에서 읽는 종류와 그 팩입니다 — `<RequiredData kind="items" pack="common"/>`, 종류 이름 → 팩 루트.
          * 자리는 어느 팩이든 등록 줄의 팩 안 규칙 하나(`GamePackDataUtil::tryMakeKindPath`)로 만든다. 적지 않은 종류는 이 게임 팩이다.

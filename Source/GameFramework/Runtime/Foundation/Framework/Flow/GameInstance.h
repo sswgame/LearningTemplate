@@ -29,6 +29,7 @@ namespace sw
 
     class AppearanceDatabase;
     class AppearanceDataWatcher;
+    class AutosaveManager;
     class GameObjectManager;
     class ItemCatalog;
     class LoadingScreenController;
@@ -229,6 +230,11 @@ namespace sw
         /** @brief gamesettings 의 사운드 이벤트 라이브러리(`_audioEvents`)를 올립니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true). */
         [[nodiscard]] bool loadAudioEvents();
         /**
+         * @brief gamesettings 의 자동 저장 정책(`_autosaveSettings`)이 있으면 `AutosaveManager` 를 세워 게임 범위에 겁니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true).
+         * @details 저장 바이트는 세이브 슬롯과 같은 봉투다(`captureSnapshot` · `restoreSnapshot` 의 `SerializePurpose::SaveGame`). `update` 가 돌리고 `shutdown` 앞머리가 종료 저장을 맡긴다.
+         */
+        [[nodiscard]] bool startAutosave();
+        /**
          * @brief gamesettings 가 `<RequiredData>` 로 적은 아이템(`items`) · 외형(`appearance`) 데이터를 읽어 게임 범위에 겁니다(외형은 아이템 뒤 — 아이템을 참조한다). 적지 않은 종류는 읽지 않는다.
          * @details 캐릭터 외형을 쓰는 게임마다 같은 로드 · 서비스 걸기 · 핫 리로드를 손으로 짜지 않게 데이터가 정한다(언리얼 GameInstance 서브시스템처럼 바탕이 세운다). 못 읽으면 false(게임을 띄우지 않는다).
          */
@@ -252,6 +258,7 @@ namespace sw
         shared_ptr<const ItemCatalog>     _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
         unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;  ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
+        unique_ptr<AutosaveManager>       _pAutosave;           ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
     };

@@ -1,0 +1,106 @@
+<Scene formatVersion="2" name="TurretLead">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,14,-22"
+					                 _localRotation="0.5,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="LeadTurret">
+			<GameObject _schemaVersion="0" _name="LeadTurret" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,1,-10"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,0.8,0.8"
+					               _attachOwner="None"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<TurretComponent _range="40"
+					                 _viewAngle="0"
+					                 _turnSpeed="3.1415927"
+					                 _aimTolerance="0.08726646"
+					                 _fireInterval="0.5"
+					                 _damage="10"
+					                 _projectileSpeed="25"
+					                 _projectileGravityScale="0"
+					                 _hitRadius="0.6">
+						<_targetTags>
+							<_listTag>
+								<item>Player</item>
+							</_listTag>
+						</_targetTags>
+					</TurretComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Runner">
+			<GameObject _schemaVersion="0" _name="Runner" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-20,1,10"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Player</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+					<SplineComponent _samplesPerSegment="16" _type="Linear" _bClosed="false">
+						<_listControlPoint>
+							<item>0,0,0</item>
+							<item>40,0,0</item>
+						</_listControlPoint>
+					</SplineComponent>
+					<GimmickCircuitComponent _stepTime="0.016666668">
+						<_listNode>
+							<GimmickNodeDesc _id="move" _kind="Mover" _params="speed=6; mode=PingPong; pause=0" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire />
+					</GimmickCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

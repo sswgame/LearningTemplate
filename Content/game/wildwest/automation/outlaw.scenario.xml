@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WildWest 무법자 한 판 — 기수가 평원 동쪽 마을을 돌며 행동 버튼(G)으로 곁의 자리(WesternDeedComponent)를 쓴다. 입력 → 디렉터 → WesternOutlaw → 값까지 본다. 그림 판정은 없다(마을은 골든 밖이다).
+  금고 절도(명예 −20, 점원이 보아 1 초 뒤 신고 → 현상금 25 · 수배 1) → 보안관이 안 보는 곳에서 2 초 만에 식음 → 낯선 이 돕기(명예 +25) → 사슴 사냥 → 가죽 벗기기 → 팔기(3 성 사슴 30 달러) → 현상금 내기 → 하루 감기(코어 감소) → 식사(코어 회복) → 갈아입기.
+  시작 자리에서는 HUD 무법자 글이 비어 있어야 한다 — 탑승 골든이 그 자리를 찍는다.
+  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/outlaw.scenario.xml -unattended
+-->
+<Scenario name="game.wildwest.outlaw" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/>
+	<Expect watch="WildWest.OutlawStatus" target="Ranch" is=""/>
+	<Expect watch="Western.Honor" target="Ranch" equals="0"/>
+	<Expect watch="Western.Money" target="Ranch" equals="20"/>
+	<!-- 절도: 점원이 금고 쪽을 보고 있다 -->
+	<DevCommand line="teleport Player 44 0.05 1.5"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Honor" target="Ranch" equals="-20" timeoutFrames="30"/>
+	<Expect watch="Western.PendingReports" target="Ranch" equals="1"/>
+	<WaitUntil watch="Western.Bounty" target="Ranch" equals="25" timeoutFrames="120"/>
+	<Expect watch="Western.Wanted" target="Ranch" equals="1"/>
+	<Expect watch="WildWest.OutlawStatus" target="Ranch" is="Honor -20 (Neutral) - Wanted 1 - Bounty $25 - $20"/>
+	<!-- 한 번 턴 금고는 다시 고르지 않는다 -->
+	<Wait frames="1"/>
+	<Tap slot="Key.G" hold="1"/>
+	<Wait frames="5"/>
+	<Expect watch="Western.Honor" target="Ranch" equals="-20"/>
+	<!-- 보안관(X 70)이 안 보는 동안 수배가 식는다 -->
+	<WaitUntil watch="Western.Wanted" target="Ranch" equals="0" timeoutFrames="240"/>
+	<Expect watch="Western.Bounty" target="Ranch" equals="25"/>
+	<!-- 낯선 이 돕기 -->
+	<DevCommand line="teleport Player 52 0.05 1.5"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Honor" target="Ranch" equals="5" timeoutFrames="30"/>
+	<!-- 사냥 → 가죽 → 팔기: 알맞은 무기 · 머리 · 한 발이라 3 성, 30 달러 -->
+	<DevCommand line="teleport Player 60 0.05 11"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Carcasses" target="Ranch" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Object.Property" target="Deer" key="WesternDeedComponent._useCount" equals="1" timeoutFrames="30"/>
+	<DevCommand line="teleport Player 60 0.05 17"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Pelts" target="Ranch" equals="1" timeoutFrames="30"/>
+	<Expect watch="Western.Carcasses" target="Ranch" equals="0"/>
+	<DevCommand line="teleport Player 60 0.05 23"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Money" target="Ranch" equals="50" timeoutFrames="30"/>
+	<Expect watch="Western.Pelts" target="Ranch" equals="0"/>
+	<!-- 현상금 내기 -->
+	<DevCommand line="teleport Player 70 0.05 1.5"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Bounty" target="Ranch" equals="0" timeoutFrames="30"/>
+	<Expect watch="Western.Money" target="Ranch" equals="25"/>
+	<Expect watch="WildWest.OutlawStatus" target="Ranch" is="Honor 5 (Neutral) - $25"/>
+	<!-- 하루가 흐르면 코어가 준다(시간당 1.5). 스태미나 코어를 본다 — 체력 코어는 날씨(추위)에 따라 더 줄어 값이 정해지지 않는다 -->
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Western.StaminaCore" target="Ranch" atMost="70" timeoutFrames="10"/>
+	<!-- 식사: 코어가 25 오른다 -->
+	<DevCommand line="teleport Player 60 0.05 29"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.StaminaCore" target="Ranch" atLeast="80" timeoutFrames="30"/>
+	<!-- 갈아입기: 보온이 오른다 -->
+	<DevCommand line="teleport Player 60 0.05 35"/>
+	<Wait frames="3"/>
+	<Tap slot="Key.G" hold="1"/>
+	<WaitUntil watch="Western.Warmth" target="Ranch" equals="5" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WildWest 자동 저장 볼륨 — 마을 문(TownGate, X 36)은 말 탄 기수도 닿도록 거리로 잰다(ActivatorVolumeComponent). 기수가 들어오면 체크포인트를 넘기고, 관리자(gamesettings 의 autosaveSettings)가 슬롯에 저장을 끝낸다.
+  시작 자리에서는 발동하지 않는다. 슬롯은 사용자 폴더의 wildwest/ 그룹이다 — 이번 실행의 저장 수만 본다.
+  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/autosave.scenario.xml -unattended
+-->
+<Scenario name="game.wildwest.autosave" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Wait frames="30"/>
+	<Expect watch="Object.Property" target="TownGate" key="AutosaveTriggerComponent._fireCount" equals="0"/>
+	<DevCommand line="teleport Player 36 0.05 0"/>
+	<WaitUntil watch="Object.Property" target="TownGate" key="AutosaveTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
+	<Expect watch="Autosave.LastCheckpoint" is="town_gate"/>
+	<WaitUntil watch="Autosave.SaveCount" atLeast="1" timeoutSeconds="5"/>
+	<!-- 스냅숏을 찍어도 판은 그대로 돈다 -->
+	<Wait frames="10"/>
+	<Expect watch="Pawn.Controller" target="Player" is="PlayerController"/>
+	<Pass/>
+</Scenario>

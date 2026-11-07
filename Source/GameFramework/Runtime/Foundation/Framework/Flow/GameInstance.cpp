@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
@@ -53,6 +54,7 @@ namespace sw
         , _pItemCatalog{}
         , _pAppearanceDatabase{}
         , _pAppearanceWatcher{}
+        , _pAutosave{}
         , _loadedAudioEvents{}
         , _listSlotRequest{}
     {
@@ -159,7 +161,7 @@ namespace sw
                 pLinkSceneManager->setNetLink( netSession.makeNetLink() );
         }
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
-        const bool bInitialized = bSubsystemsStarted && bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && loadDeclaredCharacterData() && onInitialize();
+        const bool bInitialized = bSubsystemsStarted && bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && loadDeclaredCharacterData() && startAutosave() && onInitialize();
         // 창이 없는 호스트에는 UI 가 없다 — UI 전역 명령 표도 쓰지 않는다. 파생 초기화 뒤에 건다("타이틀로" 는 첫 씬을 요청한 뒤의 일이다).
         if ( game::findSubsystem<UISystem>() != nullptr )
             getSubsystem<GameSceneFlow>().registerSessionCommands( game::getSubsystem<UIGlobalCommandRegistry>() );
@@ -173,6 +175,9 @@ namespace sw
 
     void GameInstance::shutdown()
     {
+        // 씬이 살아 있는 동안 종료 저장을 맡긴다 - 쓰기는 저장소가 끝낸다. 정책이 끄면(`quit`) 맡기지 않는다.
+        if ( _pAutosave != nullptr )
+            (void)_pAutosave->notifyQuit();
         getSubsystem<GameSceneFlow>().unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음) 빈 구독이다
         onShutdown();
         if ( _loadedAudioEvents.empty() == false )
@@ -191,6 +196,7 @@ namespace sw
         _pAppearanceWatcher.reset();
         _pAppearanceDatabase.reset();
         _pItemCatalog.reset();
+        _pAutosave.reset();
         _pWindow = nullptr;
     }
 
@@ -255,6 +261,28 @@ namespace sw
         return true;
     }
 
+    bool GameInstance::startAutosave()
+    {
+        const DataPath& settingsPath = _packConfig._data._autosaveSettings;
+        if ( settingsPath.isSet() == false )
+            return true; // 적지 않은 게임은 자동 저장이 없다
+        AutosaveSettings settings;
+        if ( settings.loadFromAsset( AssetID{ settingsPath.get() } ) == false )
+        {
+            SW_LOG_ERROR_ID( "GameInstance.GameSettingsAutosaveCouldNot", "GameSettings autosaveSettings '%#' could not be loaded (missing or invalid - see the messages above) - the game does not start", settingsPath.c_str() );
+            return false;
+        }
+        _pAutosave = make_unique<AutosaveManager>();
+        if ( _pAutosave->initialize( settings, getSubsystem<GameLocalStore>(),
+                                     AutosaveManager::SaveDelegate::create( [this]( vector<uint8>& outBytes )
+        { return captureSnapshot( SerializePurpose::SaveGame, outBytes ); } ),
+                                     AutosaveManager::LoadDelegate::create( [this]( const vector<uint8>& bytes )
+        { return restoreSnapshot( SerializePurpose::SaveGame, bytes ); } ) ) == false )
+            return false; // 까닭은 관리자가 남겼다
+        bindScopedService( _pAutosave.get() );
+        return true;
+    }
+
     bool GameInstance::loadDeclaredCharacterData()
     {
         const map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
@@ -314,6 +342,8 @@ namespace sw
         if ( _pAppearanceWatcher != nullptr )
             _pAppearanceWatcher->update( *_pAppearanceDatabase, _pItemCatalog.get() );
         onUpdate( deltaTime );
+        if ( _pAutosave != nullptr )
+            _pAutosave->update( deltaTime );
     }
 
     bool GameInstance::serializeState( vector<uint8>& outBytes )

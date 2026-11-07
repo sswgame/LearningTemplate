@@ -1,8 +1,8 @@
 /**
  * @file ServerPickerScreen.h
  * @brief 서버 고르기 화면입니다. `ServerListModel` 의 서버 목록을 줄마다 단추 하나로 보이고, 받는 중이면 상태 글을 보이며, 고른 서버를 델리게이트로 알립니다(온라인 키트 U1).
- * @details 문서(`.ui.xml`)는 호출하는 게임이 경로를 준다(코드에 기본 경로가 없다). 문서가 갖춰야 할 위젯: 서버 단추를 담을 패널 `Servers`, 상태 글 `Status`,
- *          명령이 `Refresh` 인 단추와 `Close` 인 단추(견본: `Content/common/ui/online/serverpicker.ui.xml`). 줄 단추의 이름은 `Server.<번호>` 이고 명령은 `Pick` 이다.
+ * @details 문서(`.ui.xml`)는 호출하는 게임이 경로를 준다(코드에 기본 경로가 없다). 문서가 갖춰야 할 위젯: 서버 줄을 담을 가상 목록 `Servers`(`ListViewWidget`), 상태 글 `Status`,
+ *          명령이 `Refresh` 인 단추와 `Close` 인 단추(견본: `Content/common/ui/online/serverpicker.ui.xml`). 서버가 수천 개여도 보이는 줄만 단추가 있고, 고른 항목은 그 줄이 맡은 번호로 찾는다(명령 `Pick`).
  *          받을 수 없는 상태(`Open` 이 아닌 서버)의 단추는 눌리지 않는다. 목록이 비면 이유를 `Status` 에 적는다 — 빈 화면으로 두지 않는다.
  *          화면은 요청을 보내지 않고 모델을 읽는다. 모델이 화면보다 오래 살아야 한다.
  */
@@ -47,10 +47,13 @@ namespace sw
         /** @brief 모델의 목록이 바뀌었으면 줄과 상태 글을 다시 만듭니다. */
         void onTick( float32 deltaSeconds ) override;
 
+        /** @brief 줄 위젯(글 하나를 든 단추, 명령 `Pick`)을 만듭니다. 목록이 보이는 줄 수만큼 부릅니다. */
+        [[nodiscard]] static unique_ptr<Widget> makeRow();
+        /** @brief 줄 위젯 @p row 가 서버 @p server 를 보이게 합니다. 받지 않는 서버의 단추는 끕니다. */
+        static void bindRow( Widget& row, const ServerListEntry& server );
+
     private:
         void rebuild();
-        /** @brief 줄 단추 이름 `Server.<번호>` 에서 번호를 읽습니다. 형식이 다르면 false 입니다. */
-        [[nodiscard]] static bool parseRowIndex( string_view widgetName, uint32& outIndex );
 
         ServerPickedDelegate _onPicked;
         string               _kind;

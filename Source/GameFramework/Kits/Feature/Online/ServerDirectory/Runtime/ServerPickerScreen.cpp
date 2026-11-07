@@ -2,14 +2,14 @@
 
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerPickerScreen.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/UISystem.h"
-#include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
+#include "Engine/UI/Widgets/ListViewWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw
@@ -20,7 +20,6 @@ namespace sw
         {
             static constexpr const utf8* kServersName    = "Servers";
             static constexpr const utf8* kStatusName     = "Status";
-            static constexpr const utf8* kRowPrefix      = "Server.";
             static constexpr const utf8* kPickCommand    = "Pick";
             static constexpr const utf8* kRefreshCommand = "Refresh";
             static constexpr const utf8* kCloseCommand   = "Close";
@@ -88,16 +87,19 @@ namespace sw
         return handle;
     }
 
-    bool ServerPickerScreen::parseRowIndex( string_view widgetName, uint32& outIndex )
+    unique_ptr<Widget> ServerPickerScreen::makeRow()
     {
-        const string_view prefix = ServerPickerScreenInternal::kRowPrefix;
-        if ( widgetName.size() <= prefix.size() || widgetName.substr( 0, prefix.size() ) != prefix )
-            return false;
-        uint64 index = 0;
-        if ( StringUtil::parseUint64( widgetName.substr( prefix.size() ), index ) == false )
-            return false;
-        outIndex = static_cast<uint32>( index );
-        return true;
+        unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
+        button->setCommand( hashed_string( ServerPickerScreenInternal::kPickCommand ) );
+        (void)button->addChild( make_unique<TextWidget>() );
+        return button;
+    }
+
+    void ServerPickerScreen::bindRow( Widget& row, const ServerListEntry& server )
+    {
+        ButtonWidget& button = static_cast<ButtonWidget&>( row );
+        button.setEnabled( server._state == ServerState::Open );
+        static_cast<TextWidget*>( button.getChild( 0 ) )->setText( ServerPickerScreenInternal::makeRowText( server ) );
     }
 
     bool ServerPickerScreen::onCommand( const hashed_string& command, Widget& source )
@@ -116,8 +118,9 @@ namespace sw
         }
         if ( command == hashed_string( Internal::kPickCommand ) && _pModel != nullptr )
         {
-            uint32 index = 0;
-            if ( parseRowIndex( source.getName().c_str(), index ) == false || index >= _pModel->getEntries().size() )
+            const ListViewWidget* pServers = getTree().findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
+            const uint32          index    = pServers != nullptr ? pServers->findItemIndex( source ) : constant::invalid_index::kUint32;
+            if ( index >= _pModel->getEntries().size() )
                 return false;
             const ServerListEntry server = _pModel->getEntries()[index]; // 델리게이트가 모델을 바꿔도 안전하게 복사해 둔다
             if ( server._state != ServerState::Open )
@@ -142,28 +145,22 @@ namespace sw
         using Internal = ServerPickerScreenInternal;
         if ( _pModel == nullptr )
             return;
-        WidgetTree&  tree     = getTree();
-        PanelWidget* pServers = tree.findWidget<PanelWidget>( hashed_string( Internal::kServersName ) );
-        TextWidget*  pStatus  = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
+        WidgetTree&     tree     = getTree();
+        ListViewWidget* pServers = tree.findWidget<ListViewWidget>( hashed_string( Internal::kServersName ) );
+        TextWidget*     pStatus  = tree.findWidget<TextWidget>( hashed_string( Internal::kStatusName ) );
         if ( pServers == nullptr || pStatus == nullptr )
         {
-            SW_LOG_ERROR_ID( "ServerPickerScreen.ServerPickerDocumentNeeds", "Server picker document %# needs a '%#' panel and a '%#' text", getDocumentPath().c_str(), Internal::kServersName, Internal::kStatusName );
+            SW_LOG_ERROR_ID( "ServerPickerScreen.ServerPickerDocumentNeeds", "Server picker document %# needs a '%#' list view and a '%#' text", getDocumentPath().c_str(), Internal::kServersName, Internal::kStatusName );
             _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
-        pServers->clearChildren();
+        // 줄은 목록이 보이는 만큼만 만들고 다시 쓴다(서버 수와 무관하다). 항목 수를 다시 넣으면 모든 줄을 다시 잇는다.
+        pServers->setRowFactory( ListViewWidget::RowFactoryDelegate::create( []()
+        { return makeRow(); } ) );
+        pServers->setRowBinder( ListViewWidget::RowBinderDelegate::create( [this]( Widget& row, uint32 itemIndex )
+        { bindRow( row, _pModel->getEntries()[itemIndex] ); } ) );
         const vector<ServerListEntry>& listEntry = _pModel->getEntries();
-        for ( size_t index = 0; index < listEntry.size(); ++index )
-        {
-            unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
-            button->setName( hashed_string( string( Internal::kRowPrefix ) + to_string( static_cast<int32>( index ) ) ) );
-            button->setCommand( hashed_string( Internal::kPickCommand ) );
-            button->setEnabled( listEntry[index]._state == ServerState::Open );
-            unique_ptr<TextWidget> label = make_unique<TextWidget>();
-            label->setText( Internal::makeRowText( listEntry[index] ) );
-            (void)button->addChild( std::move( label ) );
-            (void)pServers->addChild( std::move( button ) );
-        }
+        pServers->setItemCount( static_cast<uint32>( listEntry.size() ) );
         switch ( _pModel->getState() )
         {
             case ServerListState::Idle:

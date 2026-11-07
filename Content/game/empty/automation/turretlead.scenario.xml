@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  포탑 앞 겨누기 — 날아가는 탄(25 m/s)을 쏘는 포탑이 옆으로 달리는 대상(6 m/s)을 앞서 겨눠 맞힌다(TurretComponent::computeAim → Ballistics).
+  탄은 대상의 지금 자리가 아니라 앞을 지나므로, 겨누기가 틀리면 쏜 수만 늘고 맞은 수는 늘지 않는다 — 대상 반지름 0.6 m, 곧장 겨누면 비행 0.8 초에 4.8 m 뒤에 떨어진다.
+  실행: ctest -R Scenario.game.empty.turretlead
+-->
+<Scenario name="game.empty.turretlead" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/turretlead.scene.xml"/>
+	<WaitUntil watch="Object.Property" target="LeadTurret" key="TurretComponent._shotCount" atLeast="3" timeoutFrames="240"/>
+	<WaitUntil watch="Object.Property" target="LeadTurret" key="TurretComponent._hitCount" atLeast="2" timeoutFrames="120"/>
+	<Pass/>
+</Scenario>

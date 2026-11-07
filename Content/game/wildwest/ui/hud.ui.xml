@@ -5,6 +5,9 @@
 			<TextWidget _name="RideStatus" _text="{bind:_rideStatus}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="1048,76" />
 			</TextWidget>
+			<TextWidget _name="OutlawStatus" _text="{bind:_outlawStatus}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="1048,116" />
+			</TextWidget>
 			<TextWidget _name="StaminaLabel" _text="Stamina" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-120" _offsetMax="248,-84" />
 			</TextWidget>

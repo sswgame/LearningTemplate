@@ -23,33 +23,19 @@ namespace sw
         : _pUISystem{ nullptr }
         , _text{}
         , _durationSeconds{ 6.0f }
-        , _activatorTag{}
-        , _bOnce{ true }
-        , _bFired{ false }
     {
-    }
-
-    void TutorialHintComponent::onOverlapBegin( const OverlapInfo& overlap )
-    {
-        Component::onOverlapBegin( overlap );
-        // 상대의 트리거(감지 범위)는 활성자가 아니다 — 몸이 들어와야 한다.
-        if ( overlap._bOtherTrigger == SW_FALSE )
-            (void)activate( overlap._pOther );
     }
 
     void TutorialHintComponent::configure( string_view text, TagID activatorTag )
     {
-        _text         = text;
-        _activatorTag = activatorTag;
-        _bFired       = false;
+        _text = text;
+        resetActivation( activatorTag );
     }
 
-    bool TutorialHintComponent::activate( const GameObject* pActivator )
+    bool TutorialHintComponent::onVolumeActivated( const GameObject& activator )
     {
-        const bool bCannotActivate = pActivator == nullptr || _text.empty() || ( _bOnce && _bFired );
-        if ( bCannotActivate )
-            return false;
-        if ( _activatorTag.isValid() && pActivator->hasTag( _activatorTag ) == false )
+        (void)activator;
+        if ( _text.empty() )
             return false;
         // 끈 플레이어에게는 띄우지 않는다 — 한 번 켜기를 바라는 볼륨도 발동한 것으로 치지 않는다(나중에 켜면 그때 보인다).
         // 설정은 엔진 스키마에 있다 — 없거나 타입이 다르면 `resolveKey` 가 오류로 알리고 띄우지 않는다(데이터 결함을 "켜짐" 으로 덮지 않는다).
@@ -69,7 +55,6 @@ namespace sw
         desc._kind            = UINotificationKind::Hint;
         desc._priority        = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
         game::getSubsystem<UINotificationService>().post( desc );
-        _bFired = true;
         return true;
     }
 } // namespace sw
