@@ -10,10 +10,10 @@
     "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
     "listCMakeArgument": [ "--render-portraits", "-scenario" ],
     "listField": [
-        "animationSet", "base", "set", "_albedo", "appearance", "assetPath", "_assetPath", "assetRoots", "atlas", "_atlasPath", "audioEvents", "_cliffPrefab",
-        "_clipPath", "_cookieTexturePath", "_enemyPrefab", "_faceVoice", "fit", "fitTables", "from", "inputMap", "items", "_layoutPath",
-        "_listDefaultGrowingModel", "_listExtensionShader", "_listGrowingModel", "_listRenderPassRef", "loadingScreen", "localizationProject",
-        "material", "mesh", "normalAtlas", "_path", "path", "prefab", "rig", "_rigWeaponSockets", "screen", "_shaderPath", "shaderPath", "skeleton",
-        "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet", "_spriteLibraryPath", "collection"
+        "animationSet", "base", "set", "_albedo", "appearance", "assetPath", "_assetPath", "assetRoots", "atlas", "audioEvents",
+        "fit", "fitTables", "from", "inputMap", "items",
+        "_listExtensionShader", "_listRenderPassRef", "loadingScreen", "localizationProject",
+        "material", "mesh", "normalAtlas", "_path", "path", "prefab", "rig", "screen", "_shaderPath", "shaderPath", "skeleton",
+        "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet", "collection"
     ]
 }

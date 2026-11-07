@@ -17,6 +17,8 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Audio/AudioClip.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -68,7 +70,7 @@ namespace sw
         PROPERTY( Category = "Assets" )
         AssetRef<FacialRig> _faceRig{};
         PROPERTY( Category = "Assets", Tooltip = "Voice line spoken by odd-numbered heads" )
-        string _faceVoice{};
+        AssetRef<AudioClipData> _faceVoice{};
         PROPERTY( Category = "Assets", Tooltip = "Clip played by even-numbered heads" )
         string _faceTalkClip{};
         PROPERTY( Category = "Assets", Tooltip = "Expression worn by even-numbered heads" )
@@ -96,7 +98,7 @@ namespace sw
         PROPERTY( Category = "Assets" )
         AssetRef<Skeleton> _rigCapeSkeleton{};
         PROPERTY( Category = "Assets" )
-        string _rigWeaponSockets{};
+        AssetRef<SocketSet> _rigWeaponSockets{};
         PROPERTY( Category = "Assets", Tooltip = "Skinned enemy mesh of the combat bench" )
         AssetRef<MeshAssetFormat> _combatEnemyMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the combat enemy (KayKit atlas)" )

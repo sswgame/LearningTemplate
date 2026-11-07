@@ -83,7 +83,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Packet layout this mapping reads (LiveLinkFaceLayout, e.g. engine/animation/livelinkface.xml) - required" )
+        PROPERTY( AssetPath, Tooltip = "Packet layout this mapping reads (LiveLinkFaceLayout, e.g. engine/animation/livelinkface.xml) - required" )
         string _layoutPath;
         PROPERTY( Tooltip = "Expressions and the packet channels that drive them" )
         vector<LiveLinkFaceExpression> _listExpression;

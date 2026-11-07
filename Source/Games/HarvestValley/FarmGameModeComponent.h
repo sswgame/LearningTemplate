@@ -55,7 +55,7 @@ namespace sw
         PROPERTY( Tooltip = "Model of the ready crop; empty keeps the growing model tinted with the crop colour" )
         AssetRef<MeshAssetFormat> _readyModel{};
         PROPERTY( Tooltip = "Growing models by stage: the first for stages 0 and 1, then one per stage, the last repeats; empty uses the default growing models" )
-        vector<string> _listGrowingModel{};
+        vector<AssetRef<MeshAssetFormat>> _listGrowingModel{};
     };
 } // namespace sw
 
@@ -276,9 +276,9 @@ namespace sw
         int32 _itemStackSize;
         PROPERTY( Category = "Crop Models", DisplayName = "Crop Models", Tooltip = "Ready and growing models per crop id" )
         vector<FarmCropModel> _listCropModel;
-        PROPERTY( Category = "Crop Models", DisplayName = "Default Growing Models", AssetPath,
+        PROPERTY( Category = "Crop Models", DisplayName = "Default Growing Models",
                   Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
-        vector<string> _listDefaultGrowingModel;
+        vector<AssetRef<MeshAssetFormat>> _listDefaultGrowingModel;
 
         shared_ptr<const CropCatalog> _pCropCatalog;
         ItemCatalog                   _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).

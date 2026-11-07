@@ -52,9 +52,9 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ExtractsOnlyListedFieldsFromXML )
                                      "  <!-- <entity prefab=\"game/x/commented.prefab.xml\"/> -->\n"
                                      "  <entity prefab=\"Game/X/A.prefab.xml\" name=\"game/x/notapath.xml\"/>\n"
                                      "  <MeshComponent _meshID=\"Plane\" _materialPath=\"{bind:_material}\"/>\n"
-                                     "  <_listGrowingModel>\n"
+                                     "  <_listDefaultGrowingModel>\n"
                                      "    <item>game/x/models/stage_a.mesh</item>\n"
-                                     "  </_listGrowingModel>\n"
+                                     "  </_listDefaultGrowingModel>\n"
                                      "  <startMap>game/x/maps/start.scene.xml</startMap>\n"
                                      "</Root>\n";
     const vector<string>  listPath = extractPaths( fields, kText, AssetReferenceSyntax::XML );

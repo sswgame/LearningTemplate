@@ -79,14 +79,14 @@ namespace sw
         void setNormalMapName( string_view normalMap );
 
         /** @brief 스프라이트 클립(`.sprite.xml`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
-        const string& getClipPath() const { return _clipPath; }
+        const string& getClipPath() const { return _clipPath.path(); }
         /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 공유합니다. `SharedAssetCache<SpriteClipAsset>::acquire` 참고). */
         void setClipPath( string_view path );
         /** @brief 읽은 클립입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
         const SpriteClipAsset* getClip() const { return _clip.get(); }
 
         /** @brief 스프라이트 라이브러리(`.spritelib.xml`) 경로입니다. 클립의 라벨 프레임이 여기서 그림을 찾습니다. */
-        const string& getSpriteLibraryPath() const { return _spriteLibraryPath; }
+        const string& getSpriteLibraryPath() const { return _spriteLibraryPath.path(); }
         /** @brief 라이브러리를 바꾸고 읽습니다. 같은 클립이 다른 그림이 됩니다. 재생 중에 불러도 됩니다. */
         void setSpriteLibraryPath( string_view path );
         /** @brief 읽은 라이브러리입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
@@ -178,12 +178,10 @@ namespace sw
          * @brief 스프라이트 클립(`.sprite.xml`) 경로입니다. 보여 줄 프레임은 번호(`_clipFrame`)로 따로 가집니다. 프레임마다 문자열을 만들어
          *        파싱하지 않고 번호 하나를 넘깁니다.
          */
-        PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", AssetPath, AssetType = "SpriteClip",
-                  Tooltip = "Sprite clip (.sprite.xml): atlas frames and named animations" )
-        string _clipPath;
-        PROPERTY( Category = "Rendering", DisplayName = "Sprite Library", AssetPath, AssetType = "SpriteLibrary",
-                  Tooltip = "Sprite library (.spritelib.xml): category and label to frame; swapping it gives the same clip another picture" )
-        string _spriteLibraryPath;
+        PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", Tooltip = "Sprite clip (.sprite.xml): atlas frames and named animations" )
+        AssetRef<SpriteClipAsset> _clipPath;
+        PROPERTY( Category = "Rendering", DisplayName = "Sprite Library", Tooltip = "Sprite library (.spritelib.xml): category and label to frame; swapping it gives the same clip another picture" )
+        AssetRef<SpriteLibrary> _spriteLibraryPath;
         PROPERTY( Category = "Rendering", DisplayName = "Clip Frame", Tooltip = "Frame of the sprite clip to show", Min = 0.0 )
         int32 _clipFrame;
         PROPERTY( Category = "Rendering", DisplayName = "UV Rect", Tooltip = "Atlas rectangle (u, v, width, height) shown when there is no clip" )

@@ -119,7 +119,7 @@ namespace sw
 
     void SpriteComponent::setClipPath( string_view path )
     {
-        _clipPath = string{ path };
+        _clipPath = path;
         refreshClip();
         validateClipLabels();
         refreshTextureInstance();
@@ -129,7 +129,7 @@ namespace sw
 
     void SpriteComponent::setSpriteLibraryPath( string_view path )
     {
-        _spriteLibraryPath = string{ path };
+        _spriteLibraryPath = path;
         refreshClip();
         validateClipLabels();
         refreshTextureInstance();
@@ -239,16 +239,16 @@ namespace sw
     {
         if ( _spriteLibraryPath != _loadedLibraryPath )
         {
-            _loadedLibraryPath = _spriteLibraryPath;
-            _library           = SharedAssetCache<SpriteLibrary>::acquire( _spriteLibraryPath ); // 못 읽으면 로더가 이유를 남겼고, 라벨 검사가 무엇을 대신 그리는지 말한다
+            _loadedLibraryPath = _spriteLibraryPath.path();
+            _library           = _spriteLibraryPath.acquire(); // 못 읽으면 로더가 이유를 남겼고, 라벨 검사가 무엇을 대신 그리는지 말한다
         }
         if ( _clipPath == _loadedClipPath )
             return;
-        _loadedClipPath = _clipPath;
-        _clip           = SharedAssetCache<SpriteClipAsset>::acquire( _clipPath );
+        _loadedClipPath = _clipPath.path();
+        _clip           = _clipPath.acquire();
         // 읽지 못한 경로는 `_loadedClipPath` 에 남아 다시 읽지 않는다. 경고는 로더가 이유와 함께 남겼다. 여기서는 무엇을 대신 그리는지만 말한다.
         if ( _clip == nullptr && _clipPath.empty() == false )
-            SW_LOG_WARNING_ID( "SpriteComponent.SpriteClipCouldNot", "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath );
+            SW_LOG_WARNING_ID( "SpriteComponent.SpriteClipCouldNot", "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath.c_str() );
     }
 
     void SpriteComponent::validateClipLabels() const
@@ -257,13 +257,13 @@ namespace sw
             return;
         if ( _library == nullptr )
         {
-            SW_LOG_ERROR_ID( "SpriteComponent.SpriteLibraryMissing", "Sprite clip '%#' names library labels but the sprite has no readable library ('%#') - those frames show the UV rect", _clipPath, _spriteLibraryPath );
+            SW_LOG_ERROR_ID( "SpriteComponent.SpriteLibraryMissing", "Sprite clip '%#' names library labels but the sprite has no readable library ('%#') - those frames show the UV rect", _clipPath.c_str(), _spriteLibraryPath.c_str() );
             return;
         }
         for ( const SpriteClipFrame& frame : _clip->_listFrame )
         {
             if ( frame.usesLibrary() && _library->findLabel( frame._category, frame._label ) == nullptr )
-                SW_LOG_ERROR_ID( "SpriteComponent.SpriteLibraryLabelMissing", "Sprite library '%#' has no label '%#/%#' that clip '%#' names - that frame shows the UV rect", _spriteLibraryPath, frame._category.c_str(), frame._label.c_str(), _clipPath );
+                SW_LOG_ERROR_ID( "SpriteComponent.SpriteLibraryLabelMissing", "Sprite library '%#' has no label '%#/%#' that clip '%#' names - that frame shows the UV rect", _spriteLibraryPath.c_str(), frame._category.c_str(), frame._label.c_str(), _clipPath.c_str() );
         }
     }
 

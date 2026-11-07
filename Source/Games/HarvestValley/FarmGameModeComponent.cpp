@@ -363,7 +363,7 @@ namespace sw
 
     const string& FarmGameModeComponent::findGrowingModel( const hashed_string& cropID, int32 stage ) const
     {
-        const vector<string>* pList = &_listDefaultGrowingModel;
+        const vector<AssetRef<MeshAssetFormat>>* pList = &_listDefaultGrowingModel;
         for ( const FarmCropModel& model : _listCropModel )
         {
             if ( model._cropID == cropID && model._listGrowingModel.empty() == false )
@@ -371,7 +371,7 @@ namespace sw
         }
         // 첫 모델이 0 · 1 단계, 그다음부터 한 단계에 하나, 모자라면 마지막을 쓴다.
         const int32 index = MathUtil::clamp( stage - 1, 0, static_cast<int32>( pList->size() ) - 1 );
-        return ( *pList )[static_cast<size_t>( index )];
+        return ( *pList )[static_cast<size_t>( index )].path();
     }
 
     // ------------------------------------------------------------------------------
@@ -570,12 +570,19 @@ namespace sw
         }
         _listCropMesh.clear();
         // 작물 모델 표(씬 데이터)의 모델을 모두 미리 잡는다.
-        vector<string> listModelPath = _listDefaultGrowingModel;
+        vector<string> listModelPath;
+        for ( const AssetRef<MeshAssetFormat>& growing : _listDefaultGrowingModel )
+        {
+            listModelPath.push_back( growing.path() );
+        }
         for ( const FarmCropModel& model : _listCropModel )
         {
             if ( model._readyModel.empty() == false )
                 listModelPath.push_back( model._readyModel.path() );
-            listModelPath.insert( listModelPath.end(), model._listGrowingModel.begin(), model._listGrowingModel.end() );
+            for ( const AssetRef<MeshAssetFormat>& growing : model._listGrowingModel )
+            {
+                listModelPath.push_back( growing.path() );
+            }
         }
         // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 미리 쥐는 것이 목적이라 지금 쓰지 않는다(뷰의 `MeshComponent` 가 같은 로드를 받는다).
         // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
