@@ -166,4 +166,11 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 | 키트 하나의 에디터 확장은 그 키트 폴더의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 에는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인의 <X>Editor 모듈 |
 | 폴더 · 파일 이름은 내용으로: `Engine/Content`(층 1 콘텐츠 주소 · 읽기 — 리소스 id · 팩 · 쿠킹 읽기, `Core/File` 은 OS 파일) · `Engine/Foundation` · `Core/{Foundation,Hash}` · `Engine/2D`(층 6, 언리얼 Paper2D) · `Graphics/LOD` · `RHI/{Backend,Transfer,Diagnostics}` · 에셋 파일 `*Asset` · XML 정의 `*Def` | |
 | 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진 것이다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/ContentModules.py`, 씬을 고친 뒤에는 다음 configure 가 본다) | 언리얼 .uproject Plugins |
+| 게임 한 판의 규칙 · 상태 컴포넌트는 `GameMode`(`<게임>GameModeComponent`). `Director` 는 페이싱 감독(AI Director) · 카메라 연출에만. 오브젝트 위의 차지할 수 있는 슬롯은 `SmartObject`, 장비는 `Equipment`(동사 `equip` 은 그대로) | 언리얼 AGameModeBase · Smart Objects, Lyra Equipment |
+| 데이터 묶음: Def 여러 개를 담은 파일은 `<X>Catalog` 이고 XML 루트도 클래스 이름이다. `Table` 은 가중 추첨 · 구간 표와 StringTable 에만, `Set` 은 GAS 이름과 한 에셋 안의 이름 → 항목 묶음에만, 코드 등록 표는 `Registry` | 한 이름 |
+| 저작 정의는 `Def` 하나(`Definition` 은 쓰지 않는다). 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식, 외부 형식 · 프로토콜 · 물리 · 렌더 API 의 자기 용어에만 | 저장소 다수 |
+| 읽기 · 쓰기 동사는 원본 종류를 이름에 넣고 짝을 맞춘다: `loadFromAsset`(에셋 id) · `loadFromFile`/`saveToFile`(OS 경로) · `loadFromXMLText`/`saveToXMLText`(글). `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라 값에만. GameObject 는 `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile · SpawnActor/DestroyActor |
+| 에디터 창 하나의 상태 · 명령은 `<창>Model`. `Document` 는 메모리에 든 파일 내용(SceneDocument · XMLDocument)에만 | Qt Model/View |
+| 알림: 버스의 "바뀌었다" 는 `<X>Changed` · `<X>Revoked`, 플레이어에게 가는 알림은 `<X>Notification`, 운영 공지는 `Announcement`. `Notice` 는 영어 관용구(`ShutdownNotice`)만 | Apple · Google 서버 알림 |
+| 은유는 내용 이름으로: 셈은 `Stats`(`CookStats`), 기록은 `History`, 형식을 런타임에 고르는 구조체 값은 `InstancedStruct`. 매크로는 낱말마다 `_` 로 끊는다(`SW_THEME_COLOR`) — 언리얼 고유 이름을 따른 것(`SW_LOCTEXT`)만 붙인다 | 언리얼 FCookStats · FInstancedStruct |
 | 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(실행 파일 호스트 부품 — 언리얼 Launch), `*Info` 정적 사실 표(언리얼 FPixelFormatInfo), `Core/Container` 등 폴더 이름과 같은 접두어 묶음(언리얼 Containers 처럼 평평하게), `IWindowTitleTarget`(창 제목을 거는 길을 하나로 막는 이음매 — `MainWindowSubsystem` 이 비공개 상속, 테스트가 가짜를 넣는다) | |

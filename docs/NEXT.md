@@ -23,7 +23,12 @@
 
 **상태:** 작업자 R1 ~ R10 · K1 ~ K7 을 모두 합쳐 `453708603b` 를 Windows 검증(Debug · Release · 서버 · shipping-check) 뒤 push 했다. Linux 는 돌리지 않았다.
 
-**1. 다음 묶음 — 이름 정리(사용자 요청 2026-11-07).** 업계 통상 이름과 다른 이름을 한 번에 바꾼다. 조사 표는 그 세션의 scratchpad `naming_survey.md` 였고 남지 않으니 요지를 적는다: `GameModeComponent` 계열 → `GameModeComponent`, `SmartObject*` → `SmartObject*`, 읽기 · 쓰기 동사를 원본 종류로 짝 맞춤(`loadFromAsset` · `loadFromFile` · `loadFromXMLText` / `saveToXMLText`, `parse` 는 글 → 스칼라만), `*Definition` → `*Def`, 열거형 `…Type` → `…Kind`, Catalog(Def 묶음 파일) · Table(추첨 · 구간 표) · Notice/Notification 정리, `SW_THEME_COLOR` → `SW_THEME_COLOR` 류. 남길 것: `Gimmick*`, `gv_`. 세이브는 옛 이름 표 없이 판을 올린다(사용자가 지킬 세이브를 말하지 않았다 — 말하면 옛 이름 표). 컴포넌트 이름은 씬 · 프리팹 XML 원소이므로 데이터도 같은 커밋에서 바꾼다. 규칙 줄은 `docs/agents/` 이름 규칙에 개념 용어 표로 더한다.
+**1. 이름 정리 남은 것(2026-11-07 사용자 요청 — 규칙은 [NamingCpp](agents/NamingCpp.md) 용어 표).** 한 일: GameMode · SmartObject · Def · Kind · 매크로 띄어쓰기 · Stats · InstancedStruct · `Engine/Gameplay` · 창 Model · 알림 이름 · Equipment · 읽기 · 쓰기 동사 일부 · 카탈로그 루트. 컴포넌트 상태 저장소 판을 2 로 올렸다(옛 세이브는 읽지 않는다 — 사용자가 지킬 세이브를 말하면 옛 이름 표). 남은 것:
+- `Vitality` → 체력 상태 기계 이름: `HealthState` 는 서버 상태 점검이 쓰고, `getVitality().getHealth()` · 멤버 `_vitality` 와 기존 `_health` 칸이 섞여 기계적으로 못 바꿨다. 형식과 멤버를 함께 손으로 바꾼다.
+- 지역 이름 `director` · `pDirector`(게임 모드를 가리키는 것만 `gameMode` 로 — 카메라 디렉터와 섞여 있다).
+- 읽기 동사 나머지: `loadText` · `loadFromText`(XML 일 때), `loadElement` · `loadFromNode` · `readFromNode` · `parseNode` → `loadFromXML( const XMLNode& )`, 에셋 id 를 받는 `loadFromFile( AssetID )`(머티리얼 · 그래프 등 → `loadFromAsset`, 같은 클래스의 기존 `loadFromAsset` 과 겹치는지 먼저 본다), `SceneDocument::saveXML( 경로 )` → `saveToFile`.
+- `AppearanceRuleTable` · `SlotTable` → `…Catalog`(루트 원소 함께), 애니메이션 시스템의 "유닛"(`getUnits` · `_listUnit` · 감시 값 `Animation.Crowd*Units`) → SkeletalMesh, 키트 형식 접두어(`DeckBattle` 은 CardGame 키트, `Horror` 가 두 키트에 겹침), 자동화 단계 인자 `…Fields` → `…Params`.
+- 판단해 둔 것(바꾸지 않음): `Gimmick*`, `gv_` · `GlobalVariable`, `ControlIntent`, `*EditModel`, `LootCatalog`(루트 테이블 정의 여럿을 담아 규칙에 맞다), `Ledger`(경제 원장).
 
 **2. 설계 단계 남은 것.**
 - 단계 5: `_when` 조건, 덮어쓰기 층, 경로 교체, 접속 때 합성 해시 대조.
