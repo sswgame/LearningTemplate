@@ -15,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -81,7 +82,7 @@ namespace sw
 
         shared_ptr<const PairedAnimationDef> _def;
         uint32                               _sessionID;
-        uint32                               _seenReloadCount;  ///< 에셋을 받을 때의 `SharedAssetCache<PairedAnimationDef>::getReloadCount`. 달라지면 시작 전에 다시 받는다
+        AssetReloadWatch<PairedAnimationDef> _defReload;        ///< 에셋을 받을 때의 `SharedAssetCache<PairedAnimationDef>::getReloadCount`. 달라지면 시작 전에 다시 받는다
         uint16                               _startRetryFrames; ///< 플레이 시작 때 참가자의 클립이 아직 로딩 중이라(`ParticipantNotReady`) 시작을 미룬 틱 수. 상한을 넘으면 오류다
         uint8                                _bSystemUser;      ///< 씬의 `PairedAnimationSystem` 사용자로 올렸다(끝에서 내린다)
         PROPERTY( Category = "Animation", DisplayName = "Start On Play", Tooltip = "Start the session by itself right after play begins; other roles bind to components naming the same asset and that role" )

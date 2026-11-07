@@ -33,7 +33,7 @@ namespace sw
         , _overrideDef{}
         , _pCatalog{}
         , _pDef{ nullptr }
-        , _seenCatalogReloadCount{ 0 }
+        , _catalogReload{}
         , _appliedHighlight{ 0 }
         , _completedCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
@@ -50,7 +50,7 @@ namespace sw
         }
         _pDef = nullptr;
         _pCatalog.reset();
-        _seenCatalogReloadCount = SharedAssetCache<InteractionCatalog>::getReloadCount();
+        _catalogReload.markSeen();
         if ( _interactionID.empty() )
             return;
         if ( _catalogPath.empty() )
@@ -99,7 +99,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 정의를 다시 찾는다. 진행 중인 세션은 옛 테이블을 쥐고 있어(`shareDefinition`) 끝까지 옛 정의를 읽는다.
-        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != SharedAssetCache<InteractionCatalog>::getReloadCount() )
+        if ( _bHasOverride == SW_FALSE && _catalogReload.isStale() )
             resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
             _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - deltaTime );

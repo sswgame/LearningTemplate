@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -114,9 +115,9 @@ namespace sw
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
         vector<GameObjectHandle> _listClaimant SW_GUARDED_BY( _mutex );
 
-        SmartObjectSlots _slots;
-        mutable mutex    _mutex;
-        uint32           _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        uint8            _bHasOverride;
+        SmartObjectSlots                     _slots;
+        mutable mutex                        _mutex;
+        AssetReloadWatch<InteractionCatalog> _catalogReload; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
+        uint8                                _bHasOverride;
     };
 } // namespace sw

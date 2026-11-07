@@ -42,7 +42,7 @@ namespace sw
         , _lastOwnerWorld{ float4x4::Identity }
         , _pLastOwnerRoot{ nullptr }
         , _lastOwnerVersion{ 0 }
-        , _seenTileSetReloadCount{ 0 }
+        , _tileSetReload{}
         , _elapsedSeconds{ 0.0f }
         , _bLoaded{ SW_FALSE }
         , _bChunkBuildQueued{ SW_FALSE }
@@ -89,9 +89,8 @@ namespace sw
     void TileMapRendererComponent::onTick( float32 deltaTime )
     {
         // 타일셋을 다시 읽었으면(핫 리로드 — 떼어 낸 새 객체) 칠한 맵은 그대로 두고 새 타일셋으로 번호 · 배치를 다시 짓는다.
-        if ( _pTileSet != nullptr && _seenTileSetReloadCount != SharedAssetCache<TileSetAsset>::getReloadCount() )
+        if ( _pTileSet != nullptr && _tileSetReload.takeChanged() )
         {
-            _seenTileSetReloadCount                  = SharedAssetCache<TileSetAsset>::getReloadCount();
             shared_ptr<const TileSetAsset> pReloaded = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath );
             if ( pReloaded != nullptr && pReloaded != _pTileSet )
             {
@@ -139,7 +138,7 @@ namespace sw
             return false;
         }
         // 타일셋은 공유 캐시의 한 벌이다 — 같은 타일셋을 쓰는 맵이 파일을 다시 읽지 않는다.
-        _seenTileSetReloadCount                 = SharedAssetCache<TileSetAsset>::getReloadCount();
+        _tileSetReload.markSeen();
         shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( map._tileSetPath );
         if ( pTileSet == nullptr )
             return false;

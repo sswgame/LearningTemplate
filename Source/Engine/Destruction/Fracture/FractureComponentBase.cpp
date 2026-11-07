@@ -617,7 +617,7 @@ namespace sw
         , _frameSimulatedTime{ 0.0f }
         , _nextSpawnOrder{ 0 }
         , _stillFrameCount{ 0 }
-        , _seenProfileReloadCount{ 0 }
+        , _profileReload{}
         , _bStateReady{ SW_FALSE }
         , _bFractured{ SW_FALSE }
         , _bPoseDirty{ SW_FALSE }
@@ -874,9 +874,9 @@ namespace sw
     bool FractureComponentBase::initializeState( ScenePhysics& physics )
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureState" );
-        _seenProfileReloadCount = SharedAssetCache<DestructionProfile>::getReloadCount(); // 데이터를 받지 못해도 세대를 적는다 — 세대가 바뀔 때까지 다시 묻지 않는다
-        _asset                  = acquireFracture();
-        _bFractureMissing       = _asset == nullptr ? SW_TRUE : SW_FALSE;
+        _profileReload.markSeen(); // 데이터를 받지 못해도 세대를 적는다 — 세대가 바뀔 때까지 다시 묻지 않는다
+        _asset            = acquireFracture();
+        _bFractureMissing = _asset == nullptr ? SW_TRUE : SW_FALSE;
         if ( _asset == nullptr )
             return false;
         // 프로필은 공유 캐시의 한 벌이다 — 같은 프로필을 쓰는 파괴 오브젝트가 파일을 다시 읽지 않는다. 구조 상태는 시작할 때의 값을 들고(결정적 재생 · 네트워크 해시),

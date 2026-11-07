@@ -92,14 +92,14 @@ namespace sw
         , _listClaimant{}
         , _slots{}
         , _mutex{}
-        , _seenCatalogReloadCount{ 0 }
+        , _catalogReload{}
         , _bHasOverride{ SW_FALSE }
     {
     }
 
     void SmartObjectComponent::resolveDefinition()
     {
-        _seenCatalogReloadCount = SharedAssetCache<InteractionCatalog>::getReloadCount();
+        _catalogReload.markSeen();
         if ( _bHasOverride == SW_TRUE || _smartObjectID.empty() )
             return;
         if ( _catalogPath.empty() )
@@ -154,7 +154,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 슬롯을 다시 찾는다. 차지 상태는 슬롯 번호로 이어지고, 줄어든 슬롯의 차지는 해제된다.
-        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != SharedAssetCache<InteractionCatalog>::getReloadCount() )
+        if ( _bHasOverride == SW_FALSE && _catalogReload.isStale() )
             resolveDefinition();
     }
 

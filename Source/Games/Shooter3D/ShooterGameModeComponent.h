@@ -17,6 +17,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -279,12 +280,12 @@ namespace sw
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
         uint32                              _killCount;
-        uint32                              _traceFrame;             ///< 움직임 기록의 프레임 번호.
-        uint32                              _seenProfileReloadCount; ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
-        uint32                              _nextEnemyNetID;         ///< 다음 적의 복제 엔티티 번호
-        int8                                _appliedAutoPlay;        ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
-        uint8                               _bAmmoPending : 1;       ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
-        uint8                               _bPacingReady : 1;       ///< 프로필과 스폰 테이블을 읽었다.
+        uint32                              _traceFrame;       ///< 움직임 기록의 프레임 번호.
+        AssetReloadWatch<AIDirectorProfile> _profileReload;    ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
+        uint32                              _nextEnemyNetID;   ///< 다음 적의 복제 엔티티 번호
+        int8                                _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
+        uint8                               _bAmmoPending : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
+        uint8                               _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
         uint8                               _bPlayerAlive : 1;
         uint8                               _bReplica     : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
         uint8                               _reserved     : 4;

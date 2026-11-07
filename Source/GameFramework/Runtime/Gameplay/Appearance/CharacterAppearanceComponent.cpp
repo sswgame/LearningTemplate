@@ -298,7 +298,7 @@ namespace sw
         , _bodyProportion{}
         , _listShapeMorph{}
         , _bodyShapeSet{}
-        , _seenShapeReloadCount{ 0 }
+        , _shapeReload{}
         , _rig{}
         , _socketCache{}
         , _state{}
@@ -812,8 +812,8 @@ namespace sw
         const ResolvedPart* pBodyPart = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
         if ( pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false )
         {
-            _bodyShapeSet         = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.c_str() );
-            _seenShapeReloadCount = SharedAssetCache<BodyShapeSet>::getReloadCount();
+            _bodyShapeSet = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.c_str() );
+            _shapeReload.markSeen();
             if ( _bodyShapeSet == nullptr )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapesCould", "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
         }
@@ -1660,7 +1660,7 @@ namespace sw
     bool CharacterAppearanceComponent::isMeshAssemblyStale() const
     {
         // 체형 축 데이터를 고치면 본 비율 · 모프를 다시 풀어야 한다(굽지 않는 몸도 해당).
-        if ( _bodyShapeSet != nullptr && _seenShapeReloadCount != SharedAssetCache<BodyShapeSet>::getReloadCount() )
+        if ( _bodyShapeSet != nullptr && _shapeReload.isStale() )
             return true;
         if ( _listMeshAssemblyLoad.empty() )
             return false;

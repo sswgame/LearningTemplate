@@ -34,6 +34,7 @@
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
@@ -242,7 +243,7 @@ namespace sw
         /** @brief 파쇄 데이터를 다시 받아야 하는지입니다(핫 리로드). 쪼갠 뒤에는 묻지 않습니다. */
         virtual bool isFractureStale() const { return false; }
         /** @brief 쥔 프로필을 받은 뒤 프로필 캐시가 다시 읽었는지 봅니다(제자리 다시 읽기 — 상태가 든 값을 새로 받아야 한다). */
-        bool isProfileStale() const { return _seenProfileReloadCount != SharedAssetCache<DestructionProfile>::getReloadCount(); }
+        bool isProfileStale() const { return _profileReload.isStale(); }
         /** @brief 붙어 있는 조각의 형태가 바뀌었을 때 불립니다. 처음 쪼갰을 때, 붙은 그룹이 갈라졌을 때, 떨어졌을 때입니다. 게임 스레드의 물리 프레임 안에서 호출됩니다. */
         virtual void onAnchoredShapeChanged() {}
 
@@ -373,8 +374,8 @@ namespace sw
         float32                                _lastPoseMicroseconds;
         float32                                _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
         uint32                                 _nextSpawnOrder;
-        uint32                                 _stillFrameCount;        ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
-        uint32                                 _seenProfileReloadCount; ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수
+        uint32                                 _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
+        AssetReloadWatch<DestructionProfile>   _profileReload;   ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수
         uint8                                  _bStateReady;
         uint8                                  _bFractured;
         uint8                                  _bPoseDirty;

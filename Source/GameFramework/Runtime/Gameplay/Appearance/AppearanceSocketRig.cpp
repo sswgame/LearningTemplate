@@ -35,8 +35,9 @@ namespace sw
 {
     AppearanceSocketSetCache::AppearanceSocketSetCache()
         : _mapSocketSet{}
-        , _seenReloadCount{ SharedAssetCache<SocketSet>::getReloadCount() }
+        , _socketSetReload{}
     {
+        _socketSetReload.markSeen();
     }
 
     AppearanceSocketSetCache::~AppearanceSocketSetCache() = default;
@@ -64,12 +65,12 @@ namespace sw
     void AppearanceSocketSetCache::clear()
     {
         _mapSocketSet.clear();
-        _seenReloadCount = SharedAssetCache<SocketSet>::getReloadCount();
+        _socketSetReload.markSeen();
     }
 
     bool AppearanceSocketSetCache::isStale() const
     {
-        return _seenReloadCount != SharedAssetCache<SocketSet>::getReloadCount();
+        return _socketSetReload.isStale();
     }
 } // namespace sw
 

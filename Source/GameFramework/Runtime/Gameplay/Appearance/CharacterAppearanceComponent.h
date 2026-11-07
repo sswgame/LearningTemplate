@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -404,7 +405,7 @@ namespace sw
         BoneProportion                                 _bodyProportion;             ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
         vector<BodyMorphWeight>                        _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
         shared_ptr<const BodyShapeSet>                 _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
-        uint32                                         _seenShapeReloadCount;       ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
+        AssetReloadWatch<BodyShapeSet>                 _shapeReload;                ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
         AppearanceSocketRig                            _rig;
         AppearanceSocketSetCache                       _socketCache;
         CharacterAppearanceState                       _state;      ///< 펼친 프리셋과 해석 결과. 장비 · 데이터 · 입력의 버전으로 다시 해석할지 정한다

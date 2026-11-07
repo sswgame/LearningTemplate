@@ -35,7 +35,7 @@ namespace sw
         , _fracturePath{}
         , _navGeometrySource{ *this }
         , _pSceneNavigation{ nullptr }
-        , _seenReloadCount{ 0 }
+        , _fractureReload{}
         , _navGeometryRegistration{}
     {
     }
@@ -89,7 +89,7 @@ namespace sw
         const string path = resolveFracturePath();
         if ( path.empty() )
             return nullptr;
-        _seenReloadCount                      = SharedAssetCache<FractureAsset>::getReloadCount();
+        _fractureReload.markSeen();
         shared_ptr<const FractureAsset> asset = SharedAssetCache<FractureAsset>::acquire( path );
         if ( asset == nullptr )
             SW_LOG_ERROR_ID( "FractureComponent.FractureAssetCouldNot", "'%#': fracture asset '%#' could not be read - the object stays intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", path.c_str() );
@@ -98,7 +98,7 @@ namespace sw
 
     bool FractureComponent::isFractureStale() const
     {
-        return _seenReloadCount != SharedAssetCache<FractureAsset>::getReloadCount();
+        return _fractureReload.isStale();
     }
 } // namespace sw
 

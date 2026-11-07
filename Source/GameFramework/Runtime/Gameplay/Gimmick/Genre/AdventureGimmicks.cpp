@@ -104,13 +104,13 @@ namespace sw
         , _startStimulus{}
         , _grid{}
         , _pTable{}
-        , _seenTableReloadCount{ 0 }
+        , _tableReload{}
     {
     }
 
     void ElementStatusComponent::rebuild()
     {
-        _seenTableReloadCount = SharedAssetCache<ElementRuleCatalog>::getReloadCount();
+        _tableReload.markSeen();
         if ( _tablePath.empty() )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementStatusNoRule", "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
@@ -154,7 +154,7 @@ namespace sw
     void ElementStatusComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        if ( _seenTableReloadCount != SharedAssetCache<ElementRuleCatalog>::getReloadCount() )
+        if ( _tableReload.isStale() )
             rebuild(); // 규칙 테이블 파일이 바뀌었으므로 새 테이블로 다시 만든다. 상태는 처음부터 시작한다
         if ( _grid.update( deltaTime ) > 0 )
             publishSignal();

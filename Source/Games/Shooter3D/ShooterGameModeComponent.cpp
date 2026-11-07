@@ -160,7 +160,7 @@ namespace sw
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
         , _traceFrame{ 0 }
-        , _seenProfileReloadCount{ 0 }
+        , _profileReload{}
         , _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u }
         , _appliedAutoPlay{ -1 }
         , _bAmmoPending{ SW_FALSE }
@@ -239,10 +239,8 @@ namespace sw
 
     void ShooterGameModeComponent::applyReloadedProfile()
     {
-        const uint32 reloadCount = SharedAssetCache<AIDirectorProfile>::getReloadCount();
-        if ( reloadCount == _seenProfileReloadCount )
+        if ( _profileReload.takeChanged() == false )
             return;
-        _seenProfileReloadCount                       = reloadCount;
         shared_ptr<const AIDirectorProfile> pReloaded = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
         if ( pReloaded == nullptr || pReloaded == _pProfile )
             return; // 다른 프로필이 다시 읽혔거나 읽지 못했다(읽기가 오류를 남겼다) — 쥔 프로필로 계속 돈다
@@ -420,7 +418,7 @@ namespace sw
         }
         if ( bPresetsKnown == false )
             return;
-        _seenProfileReloadCount = SharedAssetCache<AIDirectorProfile>::getReloadCount();
+        _profileReload.markSeen();
         if ( acquireRequired( _pacingProfile, _pProfile ) == false )
             return;
         if ( acquireRequired( _spawnTable, _pTable ) == false )

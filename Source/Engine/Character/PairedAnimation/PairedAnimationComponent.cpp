@@ -26,7 +26,7 @@ namespace sw
         , _role{}
         , _def{}
         , _sessionID{ 0 }
-        , _seenReloadCount{ 0 }
+        , _defReload{}
         , _startRetryFrames{ 0 }
         , _bSystemUser{ SW_FALSE }
         , _bStartOnPlay{ SW_FALSE }
@@ -115,7 +115,7 @@ namespace sw
     {
         if ( _pairedAnimationPath.empty() )
             return;
-        _seenReloadCount                         = SharedAssetCache<PairedAnimationDef>::getReloadCount();
+        _defReload.markSeen();
         shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( _pairedAnimationPath );
         if ( def == nullptr )
         {
@@ -133,7 +133,7 @@ namespace sw
         GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         // 파일을 고쳐 캐시가 다시 읽었으면 새 에셋으로 시작한다(돌고 있는 세션은 옛 에셋을 끝까지 쥔다).
-        const bool bAssetReloaded = _pairedAnimationPath.empty() == false && _seenReloadCount != SharedAssetCache<PairedAnimationDef>::getReloadCount();
+        const bool bAssetReloaded = _pairedAnimationPath.empty() == false && _defReload.isStale();
         if ( bAssetReloaded )
             loadDef();
         if ( _def == nullptr || pManager == nullptr )

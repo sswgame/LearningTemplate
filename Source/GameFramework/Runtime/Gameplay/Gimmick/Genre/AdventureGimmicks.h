@@ -11,6 +11,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -106,7 +107,7 @@ namespace sw
         hashed_string _startStimulus;
 
         ElementGrid                          _grid;
-        shared_ptr<const ElementRuleCatalog> _pTable;               ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
-        uint32                               _seenTableReloadCount; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleCatalog>::getReloadCount` 값. 달라지면 다시 만든다
+        shared_ptr<const ElementRuleCatalog> _pTable;      ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
+        AssetReloadWatch<ElementRuleCatalog> _tableReload; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleCatalog>::getReloadCount` 값. 달라지면 다시 만든다
     };
 } // namespace sw

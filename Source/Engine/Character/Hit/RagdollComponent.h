@@ -25,6 +25,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -222,7 +223,7 @@ namespace sw
         Pose                           _physicsPose; ///< 후처리용 스크래치 버퍼다.
         const Skeleton*                _pBoneNameSkeleton;
         SkeletalMeshComponent*         _pUnit;
-        uint32                         _seenAssetReloadCount;
+        AssetReloadWatch<PhysicsAsset> _assetReload;
         int32                          _flinchLayer;
         float32                        _partialWeight;
         float32                        _settleElapsed;

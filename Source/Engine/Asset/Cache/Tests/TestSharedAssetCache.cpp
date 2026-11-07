@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
@@ -102,4 +103,30 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
         SW_EXPECT_EQUAL( string( "second" ), fresh->_text );
     }
     SW_EXPECT_TRUE( engine::getSubsystem<AssetManager>().findAssetCache( SharedAssetCacheTestUtil::Cache::kAssetKindName ) == nullptr );
+}
+
+/**
+ * @brief [SharedAssetCacheTest] 다시 읽기 감시는 받은 뒤에는 낡지 않고, 다시 읽히면 `isStale` 이 알리며(적지 않는다) `takeChanged` 는 다시 읽기마다 한 번만 참인지 검증
+ */
+SW_TEST_CASE( SharedAssetCacheTest, ReloadWatchReportsEachReloadOnce )
+{
+    using Util = SharedAssetCacheTestUtil;
+    const test::ScopedScratchDomain domain;
+    const string                    id = test::ScopedScratchDomain::makeID( "watched.txt" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "watched.txt" ), "first" ) );
+    const Util::ScopedModuleCache                     scope;
+    const shared_ptr<const SharedAssetCacheTestAsset> held = Util::Cache::acquire( id );
+    SW_REQUIRE_TRUE( held != nullptr );
+
+    AssetReloadWatch<SharedAssetCacheTestAsset> watch;
+    watch.markSeen();
+    SW_EXPECT_FALSE( watch.isStale() );
+    SW_EXPECT_FALSE( watch.takeChanged() );
+
+    SW_REQUIRE_TRUE( Util::Cache::reloadShared( id ) );
+    SW_EXPECT_TRUE( watch.isStale() );
+    SW_EXPECT_TRUE( watch.isStale() ); // 묻기만 해서는 적지 않는다
+    SW_EXPECT_TRUE( watch.takeChanged() );
+    SW_EXPECT_FALSE( watch.takeChanged() );
+    SW_EXPECT_FALSE( watch.isStale() );
 }
