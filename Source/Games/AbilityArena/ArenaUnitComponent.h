@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovementComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 
 namespace sw
 {
@@ -43,7 +43,7 @@ namespace sw
      *          자기 오브젝트에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다. 어빌리티가 디렉터를 찾는 길도 이 핸들입니다(`ArenaGameModeComponent::findForUnit`).
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Unit", Tooltip = "Pawn side of an arena unit: moves and presses ability inputs from the control intent" )
-    class ArenaUnitComponent : public DirectorBoundComponent
+    class ArenaUnitComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

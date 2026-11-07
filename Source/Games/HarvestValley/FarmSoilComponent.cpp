@@ -41,7 +41,7 @@ namespace sw
         const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
-        const FarmGameModeComponent* pGameMode = findDirector<FarmGameModeComponent>();
+        const FarmGameModeComponent* pGameMode = findGameMode<FarmGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         const FarmField&    field    = pGameMode->getField();

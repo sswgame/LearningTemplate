@@ -372,7 +372,7 @@ namespace sw
         _bRoundJustRestarted                                  = SW_FALSE;
         GameObject*                     pOwner                = getOwner();
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterGameModeComponent* pDirector             = findDirector<ShooterGameModeComponent>();
+        const ShooterGameModeComponent* pDirector             = findGameMode<ShooterGameModeComponent>();
         const bool                      bMissingCameraContext = pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f;
         if ( bMissingCameraContext )
             return;

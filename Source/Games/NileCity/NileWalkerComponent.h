@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
      * @details 일꾼 수가 줄면 남는 자리는 숨깁니다(오브젝트를 만들고 지우지 않는 풀). 목록 자리는 다른 일꾼에게 넘어갈 수 있어 종류가 바뀐 때만 색을 다시 입힙니다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "Nile Walker View", Tooltip = "Follows one walker of the Nile gameMode city" )
-    class NileWalkerComponent : public DirectorBoundComponent
+    class NileWalkerComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

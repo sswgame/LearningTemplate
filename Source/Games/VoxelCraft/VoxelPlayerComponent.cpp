@@ -178,7 +178,7 @@ namespace sw
         }
         GameObject*                   pOwner    = getOwner();
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const VoxelGameModeComponent* pGameMode = findDirector<VoxelGameModeComponent>();
+        const VoxelGameModeComponent* pGameMode = findGameMode<VoxelGameModeComponent>();
         // 자동 플레이에서는 플레이어 조종자가 폰을 조종하지 않으므로 마우스도 잠그지 않습니다. 시점은 AI 가 정하며 `setAngles` 가 조종 회전을 요청합니다.
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
@@ -251,7 +251,7 @@ namespace sw
         GameObject*                   pOwner          = getOwner();
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const VoxelGameModeComponent* pGameMode       = findDirector<VoxelGameModeComponent>();
+        const VoxelGameModeComponent* pGameMode       = findGameMode<VoxelGameModeComponent>();
         const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<const VoxelBlockCatalog>();
         const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || deltaTime <= 0.0f;
         if ( bNotReadyToTick )

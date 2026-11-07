@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw
      *          화면 위쪽(월드 Y 가 큰) 캐릭터가 뒤에 그려지도록 Z = 발 Y × `_depthPerUnitY` 로 둔다(유니티 Custom Axis (0, 1, 0) 와 같은 결과).
      */
     REFLECT( Category = "Overworld", DisplayName = "Town Walker View", Tooltip = "Follows the town gameMode hero and picks the walk or idle animation for its facing" )
-    class TownWalkerViewComponent : public DirectorBoundComponent
+    class TownWalkerViewComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

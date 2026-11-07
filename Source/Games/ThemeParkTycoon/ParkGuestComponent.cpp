@@ -41,7 +41,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkGameModeComponent* pGameMode = findDirector<ParkGameModeComponent>();
+        const ParkGameModeComponent* pGameMode = findGameMode<ParkGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
 

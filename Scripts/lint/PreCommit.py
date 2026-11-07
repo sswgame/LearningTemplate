@@ -35,6 +35,7 @@ from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.FrameIntern import checkFrameIntern  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
+from lint.PlatformChains import checkPlatformChains  # noqa: E402
 from lint.StateShape import checkStateShape  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 

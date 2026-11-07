@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
 
@@ -61,7 +61,7 @@ namespace sw
      *          탄은 무기가 받는 것만 넣는다(`WeaponDef::_accepts`). 적을 맞히면 그 탄의 맞음 동작(`<OnHit>`)을 적의 태그 문맥으로 부른다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Player", Tooltip = "Movement, weapons, hitscan, health, the body and the tracers of the shooter player" )
-    class ShooterPlayerComponent : public DirectorBoundComponent
+    class ShooterPlayerComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

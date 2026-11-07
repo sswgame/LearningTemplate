@@ -43,7 +43,7 @@ namespace sw
         const bool         bMissingCarContext = pManager == nullptr || pMesh == nullptr || _carIndex < 0;
         if ( bMissingCarContext )
             return;
-        const ParkGameModeComponent* pGameMode = findDirector<ParkGameModeComponent>();
+        const ParkGameModeComponent* pGameMode = findGameMode<ParkGameModeComponent>();
         const CoasterTrain*          pTrain    = pGameMode != nullptr ? pGameMode->findCoasterTrain( _coasterIndex ) : nullptr;
         if ( pTrain == nullptr )
             return;

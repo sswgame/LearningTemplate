@@ -55,7 +55,7 @@ namespace sw
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
-        const TownGameModeComponent* pGameMode = findDirector<TownGameModeComponent>();
+        const TownGameModeComponent* pGameMode = findGameMode<TownGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
         const float3& feet = pGameMode->getHeroPosition();

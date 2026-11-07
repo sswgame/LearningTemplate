@@ -92,7 +92,7 @@ namespace sw
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const VoxelGameModeComponent* pGameMode = findDirector<VoxelGameModeComponent>();
+        const VoxelGameModeComponent* pGameMode = findGameMode<VoxelGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
         // 메싱은 월드를 읽기만 하므로 같은 그룹의 다른 청크와 나란히 실행됩니다. 블록은 틱이 끝난 뒤에만 바뀝니다.

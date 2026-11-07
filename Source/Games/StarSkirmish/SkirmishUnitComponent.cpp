@@ -149,7 +149,7 @@ namespace sw
         const bool               bNotMeasurable = pManager == nullptr || pMesh == nullptr || _bPlaced == SW_FALSE;
         if ( bNotMeasurable )
             return -1.0f;
-        const SkirmishGameModeComponent* pGameMode = findDirector<SkirmishGameModeComponent>();
+        const SkirmishGameModeComponent* pGameMode = findGameMode<SkirmishGameModeComponent>();
         const RTSUnit*                   pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return -1.0f;
@@ -167,7 +167,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishGameModeComponent* pGameMode = findDirector<SkirmishGameModeComponent>();
+        const SkirmishGameModeComponent* pGameMode = findGameMode<SkirmishGameModeComponent>();
         const RTSUnit*                   pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return;

@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Drag Box", Tooltip = "Shows the drag-select box of the skirmish gameMode" )
-    class SkirmishDragComponent : public DirectorBoundComponent
+    class SkirmishDragComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

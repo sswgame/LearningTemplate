@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
      * @details 손님 수가 줄면 남는 칸은 숨깁니다(오브젝트를 만들고 지우지 않는 풀). 탄 손님 · 떠난 손님도 숨깁니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Guest View", Tooltip = "Follows one guest of the park gameMode's simulation" )
-    class ParkGuestComponent : public DirectorBoundComponent
+    class ParkGuestComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

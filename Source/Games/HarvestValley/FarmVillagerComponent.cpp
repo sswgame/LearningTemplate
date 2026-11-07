@@ -43,7 +43,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmVillageGameModeComponent* pGameMode         = findDirector<FarmVillageGameModeComponent>();
+        const FarmVillageGameModeComponent* pGameMode         = findGameMode<FarmVillageGameModeComponent>();
         const bool                          bFollowsAVillager = pGameMode != nullptr && 0 <= _npcIndex && _npcIndex < pGameMode->getVillagerCount();
         if ( bFollowsAVillager == false )
             return;

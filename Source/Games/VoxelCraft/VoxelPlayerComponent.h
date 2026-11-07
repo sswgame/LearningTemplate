@@ -18,7 +18,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
 namespace sw
@@ -41,7 +41,7 @@ namespace sw
      *          디렉터가 월드를 바꾸고 청크의 다시 메싱을 요청합니다. 블록 카탈로그는 게임 서비스(`VoxelBlockCatalog`)로 읽습니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Player", Tooltip = "First-person voxel body, block breaking and placing, and the hotbar" )
-    class VoxelPlayerComponent : public DirectorBoundComponent
+    class VoxelPlayerComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

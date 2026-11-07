@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 커서가 땅 밖이면 숨깁니다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "Nile Cursor View", Tooltip = "Shows the build cursor of the Nile gameMode" )
-    class NileCursorComponent : public DirectorBoundComponent
+    class NileCursorComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();

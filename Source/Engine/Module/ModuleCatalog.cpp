@@ -9,6 +9,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -31,23 +32,6 @@ namespace sw
                 return mask;
             }
 
-            /** @brief 매니페스트 낱말이자 CMake `sw_platform_name` 과 같은 플랫폼 이름입니다. */
-            static const utf8* getPlatformName( const ModulePlatform platform )
-            {
-                switch ( platform )
-                {
-                    case ModulePlatform::Windows:
-                        return "Windows";
-                    case ModulePlatform::Linux:
-                        return "Linux";
-                    case ModulePlatform::Android:
-                        return "Android";
-                    case ModulePlatform::Web:
-                        return "Web";
-                }
-                return "unknown";
-            }
-
             /**
              * @brief 모듈이 도는 플랫폼 비트입니다. 기본은 전부이고 `_listExcludedPlatform` 이 뺍니다(플랫폼 하나를 더할 때 매니페스트 87 개를 고치지 않는다).
              * @details 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 적지 않아도 Android · Web 에서 빠집니다. CMake `sw_readManifestPlatforms` 와 같은 규칙입니다.
@@ -64,7 +48,7 @@ namespace sw
             static string findUnavailableReason( const ModuleManifest& manifest, const ModuleResolveContext& context )
             {
                 if ( ( manifest._platformMask & static_cast<uint8>( context._platform ) ) == 0 )
-                    return string( "not available on " ) + getPlatformName( context._platform );
+                    return string( "not available on " ) + getEnumName( context._platform );
                 if ( ( manifest._configurationMask & static_cast<uint8>( context._configuration ) ) == 0 )
                     return context._configuration == ModuleConfiguration::Dev ? "not built for Dev" : "not built for Shipping";
                 if ( ( manifest._targetMask & context._targetMask ) == 0 )

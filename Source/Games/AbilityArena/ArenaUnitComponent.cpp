@@ -65,7 +65,7 @@ namespace sw
         const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
-        const ArenaGameModeComponent* pGameMode = findDirector<ArenaGameModeComponent>();
+        const ArenaGameModeComponent* pGameMode = findGameMode<ArenaGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )

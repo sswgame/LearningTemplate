@@ -56,7 +56,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmGameModeComponent* pGameMode = findDirector<FarmGameModeComponent>();
+        const FarmGameModeComponent* pGameMode = findGameMode<FarmGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         const float3 lift{ 0.0f, _heightOffset, 0.0f };

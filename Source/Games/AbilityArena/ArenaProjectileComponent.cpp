@@ -34,7 +34,7 @@ namespace sw
         Component::onTick( deltaTime );
         if ( _projectileID == 0 || _bFinished == SW_TRUE )
             return;
-        const ArenaGameModeComponent* pGameMode   = findDirector<ArenaGameModeComponent>();
+        const ArenaGameModeComponent* pGameMode   = findGameMode<ArenaGameModeComponent>();
         const ProjectileState*        pProjectile = pGameMode != nullptr ? pGameMode->findProjectile( _projectileID ) : nullptr;
         if ( pProjectile == nullptr )
         {

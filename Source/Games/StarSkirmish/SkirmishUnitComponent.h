@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
@@ -64,7 +64,7 @@ namespace sw
      *          유닛이 죽거나 안개에 가려지면 디렉터가 오브젝트를 지웁니다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Unit View", Tooltip = "Follows one unit of the skirmish gameMode match" )
-    class SkirmishUnitComponent : public DirectorBoundComponent
+    class SkirmishUnitComponent : public GameModeBoundComponent
     {
     public:
         REFLECT_BODY();
