@@ -2,6 +2,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -220,6 +221,8 @@ SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
 /** @brief [AudioDataVariantTest] 소리 그래프 변형은 노드를 이름으로 합치고, 저장은 부모와 다른 칸만 쓴다 — 저장 → 다시 읽기가 같은 그래프다 */
 SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
 {
+    if constexpr ( build::kWithClientCode == false )
+        return; // 전용 서버는 소리 그래프 파일을 읽지 않는다(`AssetPaths::isExcludedForHost`)
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.audiograph.xml" ),
                                               R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDef _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
