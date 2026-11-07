@@ -258,12 +258,7 @@ namespace sw
         return true;
     }
 
-    uint16 RollbackSession::getMessageKindMask() const
-    {
-        return 1u << ( NetLockstepMessage::kRollbackInput - NetKitMessageRange::kLockstep );
-    }
-
-    NetHandleResult RollbackSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult RollbackSession::receive( NetLockstepMessage::RollbackInput, const NetMessageContext& context, BitReader& body )
     {
         const int32 player      = body.readVarUint31();
         const int32 remoteFrame = body.readVarUint31();

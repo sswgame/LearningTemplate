@@ -95,12 +95,6 @@ namespace sw
         resetClient( connectionID );
     }
 
-    uint16 ReplicationServer::getMessageKindMask() const
-    {
-        return static_cast<uint16>( ( 1u << ( NetClientServerMessage::kSnapshotAck - NetKitMessageRange::kClientServer ) ) |
-                                    ( 1u << ( NetClientServerMessage::kInput - NetKitMessageRange::kClientServer ) ) );
-    }
-
     void ReplicationServer::beginTick( uint32 tick )
     {
         _world._tick      = tick;
@@ -265,23 +259,27 @@ namespace sw
         }
     }
 
-    NetHandleResult ReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult ReplicationServer::receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, BitReader& body )
     {
         if ( context._connectionID < 0 )
             return NetHandleResult::Malformed;
         ClientState& client = acquireClient( context._connectionID );
-        if ( context._kind == NetClientServerMessage::kSnapshotAck )
+        const uint32 tick   = body.readVarUint32();
+        if ( body.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        if ( ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
         {
-            const uint32 tick = body.readVarUint32();
-            if ( body.hasOverflowed() )
-                return NetHandleResult::Malformed;
-            if ( ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
-            {
-                client._ackedTick = tick;
-                client._bHasAck   = SW_TRUE;
-            }
-            return NetHandleResult::Handled;
+            client._ackedTick = tick;
+            client._bHasAck   = SW_TRUE;
         }
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult ReplicationServer::receive( NetClientServerMessage::Input, const NetMessageContext& context, BitReader& body )
+    {
+        if ( context._connectionID < 0 )
+            return NetHandleResult::Malformed;
+        ClientState& client = acquireClient( context._connectionID );
         return handleInput( client, body ) ? NetHandleResult::Handled : NetHandleResult::Malformed;
     }
 

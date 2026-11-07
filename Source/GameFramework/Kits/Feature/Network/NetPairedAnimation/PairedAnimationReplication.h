@@ -23,6 +23,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
@@ -39,12 +40,15 @@ namespace sw
     class PairedAnimationSystem;
     class SkeletalAnimatorComponent;
 
-    /** @brief 페어드 애니메이션 메시지 종류입니다. */
+    /** @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetPairedAnimationMessage
     {
-        static constexpr uint8 kSessionState = NetKitMessageRange::kPairedAnimation + 0; ///< 서버 → 세션 상태(시작 · 늦은 참가). 신뢰, 순서 있음
-        static constexpr uint8 kSessionEnd   = NetKitMessageRange::kPairedAnimation + 1; ///< 서버 → 세션 끝(id). 신뢰, 순서 있음 — 상태 메시지 뒤에 닿아야 한다
-        static_assert( NetMessageRange::isInRange( kSessionEnd, NetKitMessageRange::kPairedAnimation ), "message kinds must stay inside the kit's range" );
+        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 세션 상태(시작 · 늦은 참가)
+        using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
+        using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
+
+        static constexpr uint8 kSessionState = Table::kindOf<SessionState>();
+        static constexpr uint8 kSessionEnd   = Table::kindOf<SessionEnd>();
     };
 } // namespace sw
 
@@ -109,7 +113,7 @@ namespace sw
         /** @brief 끝난 세션의 끝, 새 세션의 상태, 들어온 연결의 상태 순서로 보냅니다(게임 스레드). */
         void update();
 
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kPairedAnimation; }
+        uint8 getMessageRangeBase() const override { return NetPairedAnimationMessage::Table::kRangeBase; }
         /** @brief 받는 종류가 없습니다(연결 사건만 받습니다). */
         uint16          getMessageKindMask() const override { return 0; }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
@@ -155,7 +159,7 @@ namespace sw
      *     _subscription = router.registerHandler( &client );
      * @endcode
      */
-    class SW_KIT_API PairedAnimationReplicationClient : public INetMessageHandler
+    class SW_KIT_API PairedAnimationReplicationClient : public NetTableHandler<PairedAnimationReplicationClient, NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState, NetPairedAnimationMessage::SessionEnd>
     {
     public:
         /** @brief 보관한 상태를 기다린 프레임 상한입니다. 이 프레임 수를 넘게 준비되지 않으면 오류를 남기고 버립니다(무한히 기다리지 않는다). */
@@ -180,13 +184,9 @@ namespace sw
         /** @brief 준비를 기다리며 보관한 상태의 수입니다. */
         uint32 getPendingCount() const { return static_cast<uint32>( _listPending.size() ); }
 
-        uint8  getMessageRangeBase() const override { return NetKitMessageRange::kPairedAnimation; }
-        uint16 getMessageKindMask() const override
-        {
-            constexpr uint8 kBase = NetKitMessageRange::kPairedAnimation;
-            return static_cast<uint16>( ( 1u << ( NetPairedAnimationMessage::kSessionState - kBase ) ) | ( 1u << ( NetPairedAnimationMessage::kSessionEnd - kBase ) ) );
-        }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        // 표의 메시지
+        NetHandleResult receive( NetPairedAnimationMessage::SessionState, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, BitReader& body );
 
         const PairedAnimationReplicationStats& getStats() const { return _stats; }
 

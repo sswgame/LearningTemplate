@@ -20,27 +20,18 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
+#include "GameFramework/Kits/Feature/Network/NetLockstep/NetLockstepMessage.h"
 
 namespace sw
 {
     class INetPeers;
-
-    /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
-    struct NetLockstepMessage
-    {
-        static constexpr uint8 kInput         = NetKitMessageRange::kLockstep + 0;
-        static constexpr uint8 kChecksum      = NetKitMessageRange::kLockstep + 1;
-        static constexpr uint8 kRollbackInput = NetKitMessageRange::kLockstep + 2;
-        static constexpr uint8 kLeave         = NetKitMessageRange::kLockstep + 3; ///< 서버 → 모두. 플레이어와, 그 플레이어가 빈 입력이 되는 틱을 알린다
-        static constexpr int32 kMaxInputBytes = 1000;                              ///< 틱 하나의 입력 상한. 종류, 플레이어, 틱, 길이와 함께 메시지 하나(1024 B)에 들어간다. 넘는 입력은 예약하지 않는다
-        static_assert( NetMessageRange::isInRange( kLeave, NetKitMessageRange::kLockstep ), "message kinds must stay inside the kit's range" );
-    };
 } // namespace sw
 
 namespace sw
@@ -70,7 +61,7 @@ namespace sw
      *     session.reportChecksum( tick, hashOfState );
      * @endcode
      */
-    class SW_KIT_API LockstepSession : public INetMessageHandler
+    class SW_KIT_API LockstepSession : public NetTableHandler<LockstepSession, NetLockstepMessage::Table, NetLockstepMessage::Input, NetLockstepMessage::Checksum, NetLockstepMessage::Leave>
     {
     public:
         static constexpr uint32 kNoLeaveTick   = constant::invalid_index::kUint32;
@@ -104,16 +95,11 @@ namespace sw
         /** @brief 지금 틱의 입력이 모두 모였으면 꺼내고 틱을 넘깁니다. */
         [[nodiscard]] bool tryAdvance( vector<vector<uint8>>& outListInput );
         /** @brief 그 틱을 시뮬레이션한 뒤의 상태 체크섬을 알립니다. */
-        void  reportChecksum( uint32 tick, uint32 checksum );
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
-        /** @brief 입력, 체크섬, 이탈 메시지를 처리합니다. 같은 영역의 롤백 입력은 `RollbackSession` 이 처리합니다. */
-        uint16 getMessageKindMask() const override
-        {
-            return static_cast<uint16>( ( 1u << ( NetLockstepMessage::kInput - NetKitMessageRange::kLockstep ) ) |
-                                        ( 1u << ( NetLockstepMessage::kChecksum - NetKitMessageRange::kLockstep ) ) |
-                                        ( 1u << ( NetLockstepMessage::kLeave - NetKitMessageRange::kLockstep ) ) );
-        }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        void reportChecksum( uint32 tick, uint32 checksum );
+        // 표의 메시지 — 입력, 체크섬, 이탈을 받는다. 같은 영역의 롤백 입력은 `RollbackSession` 이 받는다
+        NetHandleResult receive( NetLockstepMessage::Input, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetLockstepMessage::Checksum, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetLockstepMessage::Leave, const NetMessageContext& context, BitReader& body );
         /** @brief 서버가 클라이언트 연결이 닫혔을 때 호출합니다. 그 플레이어의 이탈 틱을 정해 모두에게 알립니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 

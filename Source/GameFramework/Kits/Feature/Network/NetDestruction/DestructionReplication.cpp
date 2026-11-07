@@ -196,7 +196,7 @@ namespace sw
         }
     }
 
-    NetHandleResult DestructionReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body )
     {
         const uint32 netID = body.readVarUint32();
         if ( body.hasOverflowed() || context._connectionID < 0 )
@@ -493,60 +493,85 @@ namespace sw
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
 
-    NetHandleResult DestructionReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Pose, const NetMessageContext& context, BitReader& body )
     {
-        const uint8 kind   = context._kind;
-        BitReader&  reader = body;
-        if ( kind == NetDestructionMessage::kPose )
-        {
-            const bool bRest = reader.readBool();
-            handlePose( reader, bRest );
-            // 깨진 자세(모자란 비트, 유한하지 않은 값, 범위 밖 칸)는 읽기가 넘침으로 표시한다 — 깨진 메시지로 돌려준다.
-            return reader.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
-        }
+        (void)context;
+        const bool bRest = body.readBool();
+        handlePose( body, bRest );
+        // 깨진 자세(모자란 비트, 유한하지 않은 값, 범위 밖 칸)는 읽기가 넘침으로 표시한다 — 깨진 메시지로 돌려준다.
+        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+    }
+
+    DestructionReplicationClient::Entry* DestructionReplicationClient::readEntry( BitReader& reader, NetHandleResult& outEarly )
+    {
         const uint32 netID = reader.readVarUint32();
         if ( reader.hasOverflowed() )
-            return NetHandleResult::Malformed;
+        {
+            outEarly = NetHandleResult::Malformed;
+            return nullptr;
+        }
         Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
-            return NetHandleResult::Handled; // 이 클라이언트에 없는 오브젝트이므로 메시지를 소비하고 버린다
-        if ( kind == NetDestructionMessage::kEvent )
+            outEarly = NetHandleResult::Handled; // 이 클라이언트에 없는 오브젝트이므로 메시지를 소비하고 버린다
+        return pEntry;
+    }
+
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Event, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        BitReader&      reader = body;
+        NetHandleResult early  = NetHandleResult::Handled;
+        Entry*          pEntry = readEntry( reader, early );
+        if ( pEntry == nullptr )
+            return early;
+        const uint32 serverTick = reader.readVarUint32();
+        const uint32 index      = reader.readVarUint32();
+        _clock.observeServerTick( serverTick );
+        BufferedEvent buffered;
+        buffered._index = index;
+        if ( DestructionReplicationInternal::readEvent( reader, buffered._event ) )
         {
-            const uint32 serverTick = reader.readVarUint32();
-            const uint32 index      = reader.readVarUint32();
-            _clock.observeServerTick( serverTick );
-            BufferedEvent buffered;
-            buffered._index = index;
-            if ( DestructionReplicationInternal::readEvent( reader, buffered._event ) )
+            buffered._bHasPose = reader.readBool() ? SW_TRUE : SW_FALSE;
+            if ( buffered._bHasPose == SW_TRUE )
             {
-                buffered._bHasPose = reader.readBool() ? SW_TRUE : SW_FALSE;
-                if ( buffered._bHasPose == SW_TRUE )
-                {
-                    buffered._groupPose._groupID = buffered._event._groupID;
-                    const bool bPoseRead         = DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
-                    if ( bPoseRead == false )
-                        return NetHandleResult::Malformed;
-                }
-                if ( reader.hasOverflowed() == false )
-                    handleEvent( *pEntry, buffered );
+                buffered._groupPose._groupID = buffered._event._groupID;
+                const bool bPoseRead         = DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
+                if ( bPoseRead == false )
+                    return NetHandleResult::Malformed;
             }
-        }
-        else if ( kind == NetDestructionMessage::kSnapshot )
-        {
-            if ( handleSnapshot( *pEntry, reader ) == false )
-                return NetHandleResult::Malformed;
-        }
-        else
-        {
-            HashCheck check;
-            check._eventCount = reader.readVarUint32();
-            const uint64 low  = reader.readUint32();
-            const uint64 high = reader.readUint32();
-            check._hash       = low | ( high << 32 );
             if ( reader.hasOverflowed() == false )
-                pEntry->_listHashCheck.push_back( check );
+                handleEvent( *pEntry, buffered );
         }
         return reader.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+    }
+
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        NetHandleResult early  = NetHandleResult::Handled;
+        Entry*          pEntry = readEntry( body, early );
+        if ( pEntry == nullptr )
+            return early;
+        if ( handleSnapshot( *pEntry, body ) == false )
+            return NetHandleResult::Malformed;
+        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
+    }
+
+    NetHandleResult DestructionReplicationClient::receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        NetHandleResult early  = NetHandleResult::Handled;
+        Entry*          pEntry = readEntry( body, early );
+        if ( pEntry == nullptr )
+            return early;
+        HashCheck check;
+        check._eventCount = body.readVarUint32();
+        const uint64 low  = body.readUint32();
+        const uint64 high = body.readUint32();
+        check._hash       = low | ( high << 32 );
+        if ( body.hasOverflowed() == false )
+            pEntry->_listHashCheck.push_back( check );
+        return body.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
     }
 
     void DestructionReplicationClient::handleEvent( Entry& entry, const BufferedEvent& received )

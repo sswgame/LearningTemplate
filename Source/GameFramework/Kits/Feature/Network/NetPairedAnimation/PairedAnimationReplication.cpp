@@ -404,27 +404,32 @@ namespace sw
         return result;
     }
 
-    NetHandleResult PairedAnimationReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult PairedAnimationReplicationClient::receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, BitReader& body )
     {
+        (void)context;
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
-        if ( context._kind == NetPairedAnimationMessage::kSessionEnd )
+        const uint32 sessionID = body.readVarUint32();
+        if ( body.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        dropPending( sessionID ); // 준비를 기다리던 상태가 끝난 세션이면 복원할 것이 없다
+        PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );
+        const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
+        if ( pSession != nullptr && pSession->isPlaying() )
         {
-            const uint32 sessionID = body.readVarUint32();
-            if ( body.hasOverflowed() )
-                return NetHandleResult::Malformed;
-            dropPending( sessionID ); // 준비를 기다리던 상태가 끝난 세션이면 복원할 것이 없다
-            PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );
-            const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
-            if ( pSession != nullptr && pSession->isPlaying() )
-            {
-                pSystem->abortSession( *_pManager, sessionID );
-                ++_stats._endAppliedCount;
-            }
-            // 클라이언트 쪽 세션이 먼저 끝났어도(같은 시계로 따라 돈다) 끝 메시지를 받은 것은 남긴다.
-            SW_LOG_INFO_ID( "PairedAnimationReplication.ClientEnd", "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
-            return NetHandleResult::Handled;
+            pSystem->abortSession( *_pManager, sessionID );
+            ++_stats._endAppliedCount;
         }
+        // 클라이언트 쪽 세션이 먼저 끝났어도(같은 시계로 따라 돈다) 끝 메시지를 받은 것은 남긴다.
+        SW_LOG_INFO_ID( "PairedAnimationReplication.ClientEnd", "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult PairedAnimationReplicationClient::receive( NetPairedAnimationMessage::SessionState, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        if ( _pManager == nullptr )
+            return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
         PairedAnimationNetState state{};
         if ( PairedAnimationNetState::read( body, state ) == false )
             return NetHandleResult::Malformed;

@@ -33,6 +33,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
@@ -49,13 +50,17 @@ namespace sw
     class INetPeers;
     class SceneStreamingSubsystem;
 
-    /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
+    /** @brief MMO 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetMMOMessage
     {
-        static constexpr uint8 kEnter  = NetKitMessageRange::kMMO + 0;
-        static constexpr uint8 kLeave  = NetKitMessageRange::kMMO + 1;
-        static constexpr uint8 kUpdate = NetKitMessageRange::kMMO + 2; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다
-        static_assert( NetMessageRange::isInRange( kUpdate, NetKitMessageRange::kMMO ), "message kinds must stay inside the kit's range" );
+        using Enter  = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Leave  = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
+        using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
+
+        static constexpr uint8 kEnter  = Table::kindOf<Enter>();
+        static constexpr uint8 kLeave  = Table::kindOf<Leave>();
+        static constexpr uint8 kUpdate = Table::kindOf<Update>();
 
         static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한. 서버는 넘는 엔티티를 받지 않고, 클라이언트는 넘는 길이를 손상된 메시지로 본다
         static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 판정이 없으면 잃은 것으로 본다. 서버 판정 테이블의 크기이기도 하다
@@ -150,9 +155,9 @@ namespace sw
     public:
         MMOReplicator();
 
-        uint8  getMessageRangeBase() const override { return NetKitMessageRange::kMMO; }
+        uint8  getMessageRangeBase() const override { return NetMMOMessage::Table::kRangeBase; }
         uint16 getMessageKindMask() const override { return 0; }
-        uint16 getNotifiedKindMask() const override { return static_cast<uint16>( 1u << ( NetMMOMessage::kUpdate - NetKitMessageRange::kMMO ) ); }
+        uint16 getNotifiedKindMask() const override { return NetMMOMessage::Table::makeMask<NetMMOMessage::Update>(); }
         /** @brief 받는 종류가 없으므로 라우터는 부르지 않는다. 직접 전달하면 NotMine 이다. */
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 갱신 하나(값 = 그 틱)의 판정을 그 관찰자의 판정 테이블에 적습니다. 다음 `update` 가 전송 중인 갱신을 판정할 때 읽는다. */
@@ -293,16 +298,13 @@ namespace sw
 namespace sw
 {
     /** @brief 클라이언트 쪽에서 보이는 엔티티의 마지막 상태입니다. */
-    class SW_KIT_API MMOClientView : public INetMessageHandler
+    class SW_KIT_API MMOClientView : public NetTableHandler<MMOClientView, NetMMOMessage::Table, NetMMOMessage::Enter, NetMMOMessage::Leave, NetMMOMessage::Update>
     {
     public:
-        uint8  getMessageRangeBase() const override { return NetKitMessageRange::kMMO; }
-        uint16 getMessageKindMask() const override
-        {
-            return static_cast<uint16>( ( 1u << ( NetMMOMessage::kEnter - NetKitMessageRange::kMMO ) ) | ( 1u << ( NetMMOMessage::kLeave - NetKitMessageRange::kMMO ) ) |
-                                        ( 1u << ( NetMMOMessage::kUpdate - NetKitMessageRange::kMMO ) ) );
-        }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        // 표의 메시지
+        NetHandleResult receive( NetMMOMessage::Enter, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetMMOMessage::Leave, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetMMOMessage::Update, const NetMessageContext& context, BitReader& body );
         /** @brief 서버에 (다시) 연결되면 호출합니다. 보이던 엔티티를 비우며, 새 연결은 새로 보임부터 다시 받습니다. */
         void onConnectionOpened( int32 connectionID ) override;
         void pollEvents( vector<MMOClientEvent>& outListEvent );

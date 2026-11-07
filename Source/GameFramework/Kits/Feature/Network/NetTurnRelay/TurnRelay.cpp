@@ -390,13 +390,18 @@ namespace sw
         return true;
     }
 
-    NetHandleResult TurnRelayServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult TurnRelayServer::receive( NetTurnRelayMessage::Join, const NetMessageContext& context, BitReader& body )
     {
         if ( _pHost == nullptr )
             return NetHandleResult::Handled;
-        const bool bWellFormed = context._kind == NetTurnRelayMessage::kJoin ? handleJoin( context._connectionID, body )
-                                                                             : handleAction( context._connectionID, body );
-        return bWellFormed ? NetHandleResult::Handled : NetHandleResult::Malformed;
+        return handleJoin( context._connectionID, body ) ? NetHandleResult::Handled : NetHandleResult::Malformed;
+    }
+
+    NetHandleResult TurnRelayServer::receive( NetTurnRelayMessage::Action, const NetMessageContext& context, BitReader& body )
+    {
+        if ( _pHost == nullptr )
+            return NetHandleResult::Handled;
+        return handleAction( context._connectionID, body ) ? NetHandleResult::Handled : NetHandleResult::Malformed;
     }
 
     void TurnRelayServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
@@ -490,66 +495,98 @@ namespace sw
         return submitID;
     }
 
-    NetHandleResult TurnRelayClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    bool TurnRelayClient::readRoom( BitReader& reader, TurnRelayEvent& outEvent, NetHandleResult& outEarly ) const
     {
-        BitReader&     reader = body;
-        TurnRelayEvent event;
-        event._roomID = reader.readVarUint32();
+        outEvent._roomID = reader.readVarUint32();
         if ( reader.hasOverflowed() )
-            return NetHandleResult::Malformed;
-        if ( event._roomID != _roomID )
-            return NetHandleResult::Handled;
-        switch ( context._kind )
         {
-            case NetTurnRelayMessage::kJoined:
-            {
-                _seat       = reader.readVarUint31();
-                _token      = reader.readUint32();
-                event._kind = TurnRelayEvent::Kind::Joined;
-                event._seat = _seat;
-                break;
-            }
-            case NetTurnRelayMessage::kStarted:
-            {
-                _bStarted   = SW_TRUE;
-                event._kind = TurnRelayEvent::Kind::Started;
-                event._seat = reader.readVarUint31();
-                break;
-            }
-            case NetTurnRelayMessage::kApplied:
-            {
-                event._kind  = TurnRelayEvent::Kind::ActionApplied;
-                event._index = reader.readVarUint31();
-                event._seat  = reader.readVarUint31();
-                if ( reader.readBlob( event._buffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
-                    return NetHandleResult::Malformed;
-                if ( event._index != static_cast<int32>( _listAction.size() ) )
-                    return NetHandleResult::Handled; // 이미 가진 행동이다. 다시 들어올 때 겹친 것이다
-                _listAction.push_back( TurnAction{ event._buffer, event._seat } );
-                break;
-            }
-            case NetTurnRelayMessage::kRejected:
-            {
-                event._kind   = TurnRelayEvent::Kind::ActionRejected;
-                event._index  = reader.readVarUint31();
-                event._reason = static_cast<TurnRejectReason>( reader.readBits( 8 ) );
-                break;
-            }
-            case NetTurnRelayMessage::kDenied:
-            {
-                event._kind   = TurnRelayEvent::Kind::Denied;
-                event._reason = static_cast<TurnRejectReason>( reader.readBits( 8 ) );
-                break;
-            }
-            default:
-            {
-                return NetHandleResult::Handled;
-            }
+            outEarly = NetHandleResult::Malformed;
+            return false;
         }
+        if ( outEvent._roomID != _roomID )
+        {
+            outEarly = NetHandleResult::Handled; // 다른 방의 알림이다
+            return false;
+        }
+        return true;
+    }
+
+    NetHandleResult TurnRelayClient::finishEvent( const BitReader& reader, const TurnRelayEvent& event )
+    {
         if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
         _eventBuffer.push( event );
         return NetHandleResult::Handled;
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Joined, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        TurnRelayEvent  event;
+        NetHandleResult early = NetHandleResult::Handled;
+        if ( readRoom( body, event, early ) == false )
+            return early;
+        _seat       = body.readVarUint31();
+        _token      = body.readUint32();
+        event._kind = TurnRelayEvent::Kind::Joined;
+        event._seat = _seat;
+        return finishEvent( body, event );
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Started, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        TurnRelayEvent  event;
+        NetHandleResult early = NetHandleResult::Handled;
+        if ( readRoom( body, event, early ) == false )
+            return early;
+        _bStarted   = SW_TRUE;
+        event._kind = TurnRelayEvent::Kind::Started;
+        event._seat = body.readVarUint31();
+        return finishEvent( body, event );
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Applied, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        TurnRelayEvent  event;
+        NetHandleResult early = NetHandleResult::Handled;
+        if ( readRoom( body, event, early ) == false )
+            return early;
+        event._kind  = TurnRelayEvent::Kind::ActionApplied;
+        event._index = body.readVarUint31();
+        event._seat  = body.readVarUint31();
+        if ( body.readBlob( event._buffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
+            return NetHandleResult::Malformed;
+        if ( event._index != static_cast<int32>( _listAction.size() ) )
+            return NetHandleResult::Handled; // 이미 가진 행동이다. 다시 들어올 때 겹친 것이다
+        _listAction.push_back( TurnAction{ event._buffer, event._seat } );
+        return finishEvent( body, event );
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Rejected, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        TurnRelayEvent  event;
+        NetHandleResult early = NetHandleResult::Handled;
+        if ( readRoom( body, event, early ) == false )
+            return early;
+        event._kind   = TurnRelayEvent::Kind::ActionRejected;
+        event._index  = body.readVarUint31();
+        event._reason = static_cast<TurnRejectReason>( body.readBits( 8 ) );
+        return finishEvent( body, event );
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Denied, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        TurnRelayEvent  event;
+        NetHandleResult early = NetHandleResult::Handled;
+        if ( readRoom( body, event, early ) == false )
+            return early;
+        event._kind   = TurnRelayEvent::Kind::Denied;
+        event._reason = static_cast<TurnRejectReason>( body.readBits( 8 ) );
+        return finishEvent( body, event );
     }
 
     void TurnRelayClient::pollEvents( vector<TurnRelayEvent>& outListEvent )

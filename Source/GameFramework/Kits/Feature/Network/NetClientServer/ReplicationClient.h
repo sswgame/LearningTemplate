@@ -50,7 +50,7 @@ namespace sw
      * @brief 받은 스냅샷을 틱 순서로 보관하고, `sampleEntity` 로 렌더 시각을 사이에 둔 두 스냅샷의 엔티티와 그 사이 비율을 돌려줍니다.
      * @details 위치와 회전을 섞는 일은 게임이 한다.
      */
-    class SW_KIT_API ReplicationClient : public INetMessageHandler
+    class SW_KIT_API ReplicationClient : public NetTableHandler<ReplicationClient, NetClientServerMessage::Table, NetClientServerMessage::Snapshot>
     {
     public:
         ReplicationClient();
@@ -60,9 +60,7 @@ namespace sw
          * @details 거절된 클라이언트는 호스트가 없는 클라이언트와 같다. 입력을 보내지 않는다.
          */
         [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationClientConfig& settings );
-        uint8              getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
-        uint16             getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
-        NetHandleResult    handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        NetHandleResult    receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body );
         /** @brief 서버에 (다시) 연결되면 호출합니다. 받은 스냅샷과 렌더 시각을 초기화하며, 새 서버의 틱은 이전 서버보다 작을 수 있기 때문입니다. */
         void onConnectionOpened( int32 connectionID ) override;
         /** @brief 렌더 시각을 진행합니다. */

@@ -688,11 +688,28 @@ namespace sw
 
     uint16 GameNetSession::EngineMessageHandler::getMessageKindMask() const
     {
-        const auto bit = []( uint8 kind )
-        { return static_cast<uint16>( 1u << ( kind - NetMessageRange::kEngine ) ); };
+        using Table = GameNetSessionMessage::Table;
         if ( _role == GameNetRole::Server )
-            return bit( GameNetSessionMessage::kResourceDigest );
-        return static_cast<uint16>( bit( GameNetSessionMessage::kServerTick ) | bit( GameNetSessionMessage::kShutdownNotice ) );
+            return Table::makeMask<GameNetSessionMessage::ResourceDigest>();
+        return Table::makeMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
+    }
+
+    NetHandleResult GameNetSession::EngineMessageHandler::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    {
+        struct ReceiveVisitor
+        {
+            GameNetSession&          _session;
+            const NetMessageContext& _context;
+            BitReader&               _body;
+
+            template <typename TMessage>
+            NetHandleResult visit()
+            {
+                return _session.receive( TMessage{}, _context, _body );
+            }
+        };
+        ReceiveVisitor visitor{ _owner, context, body };
+        return GameNetSessionMessage::Table::dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled );
     }
 
     void GameNetSession::EngineMessageHandler::onConnectionOpened( int32 connectionID )
@@ -758,38 +775,42 @@ namespace sw
         SW_LOG_INFO_ID( "GameNetSession.DigestSent", "Net session sent %# resource composition digest(s) to the server", sentCount );
     }
 
-    NetHandleResult GameNetSession::handleEngineMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, BitReader& body )
     {
-        if ( context._kind == GameNetSessionMessage::kResourceDigest )
+        vector<uint8> listIDByte;
+        if ( body.readBlob( listIDByte, GameNetSessionMessage::kMaxDigestIDBytes ) == false )
+            return NetHandleResult::Malformed;
+        ResourceDigestEntry entry;
+        entry._assetID = string( reinterpret_cast<const utf8*>( listIDByte.data() ), listIDByte.size() );
+        entry._hash    = body.readVarUint();
+        if ( body.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
         {
-            vector<uint8> listIDByte;
-            if ( body.readBlob( listIDByte, GameNetSessionMessage::kMaxDigestIDBytes ) == false )
-                return NetHandleResult::Malformed;
-            ResourceDigestEntry entry;
-            entry._assetID = string( reinterpret_cast<const utf8*>( listIDByte.data() ), listIDByte.size() );
-            entry._hash    = body.readVarUint();
-            if ( body.hasOverflowed() )
-                return NetHandleResult::Malformed;
-            if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
-            {
-                SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
-                _peers.disconnect( context._connectionID );
-                _digestComparer.removePeer( context._connectionID );
-            }
-            return NetHandleResult::Handled;
+            SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
+            _peers.disconnect( context._connectionID );
+            _digestComparer.removePeer( context._connectionID );
         }
-        if ( context._kind == GameNetSessionMessage::kShutdownNotice )
-        {
-            const uint32 reasonValue  = static_cast<uint32>( body.readBits( 8 ) );
-            const uint32 graceSeconds = body.readVarUint32();
-            if ( body.hasOverflowed() || reasonValue > static_cast<uint32>( GameShutdownReason::ServerStopped ) )
-                return NetHandleResult::Malformed;
-            _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
-            _shutdownNotice._graceSeconds = graceSeconds;
-            _bShutdownNoticeKnown         = SW_TRUE;
-            SW_LOG_INFO_ID( "GameNetSession.NetSessionClientTold", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
-            return NetHandleResult::Handled;
-        }
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        const uint32 reasonValue  = static_cast<uint32>( body.readBits( 8 ) );
+        const uint32 graceSeconds = body.readVarUint32();
+        if ( body.hasOverflowed() || reasonValue > static_cast<uint32>( GameShutdownReason::ServerStopped ) )
+            return NetHandleResult::Malformed;
+        _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
+        _shutdownNotice._graceSeconds = graceSeconds;
+        _bShutdownNoticeKnown         = SW_TRUE;
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientTold", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
         const uint64 tick = body.readVarUint();
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
@@ -797,6 +818,13 @@ namespace sw
         _latestServerTick = tick;
         _bServerTickKnown = SW_TRUE;
         return NetHandleResult::Handled;
+    }
+
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::Traffic, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        (void)body;
+        return NetHandleResult::Handled; // 마스크 밖이라 오지 않는다 — 부하 메시지는 받는 쪽 라우터가 버린다
     }
 
     void GameNetSession::disconnectPeers()

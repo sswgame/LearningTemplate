@@ -27,6 +27,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
+#include "GameFramework/Kits/Feature/Network/NetLockstep/NetLockstepMessage.h"
 
 namespace sw
 {
@@ -80,7 +81,7 @@ namespace sw
      * @details 플레이어 번호는 서버가 0이고, 클라이언트는 연결 id + 1이다.
      *          망은 스타 토폴로지이다. 서버가 클라이언트의 메시지를 다른 클라이언트에 그대로 다시 보내며, 확인과 이점도 함께 전달된다.
      */
-    class SW_KIT_API RollbackSession : public INetMessageHandler
+    class SW_KIT_API RollbackSession : public NetTableHandler<RollbackSession, NetLockstepMessage::Table, NetLockstepMessage::RollbackInput>
     {
     public:
         static constexpr int32 kHistorySize = 128;
@@ -105,11 +106,10 @@ namespace sw
          */
         [[nodiscard]] bool initialize( INetPeers* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings );
         /** @brief 이번 프레임의 내 입력을 넣고 한 프레임 진행합니다. 필요하면 먼저 되감습니다. 너무 앞서 멈췄거나 시간 동기로 쉬었으면 false 를 반환합니다. */
-        bool  advanceFrame( uint8 localInput );
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
+        bool advanceFrame( uint8 localInput );
         /** @brief 롤백 입력 메시지를 처리합니다. 같은 영역의 락스텝 입력과 체크섬은 `LockstepSession` 이 처리합니다. */
-        uint16          getMessageKindMask() const override;
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /** @brief 롤백 입력을 받습니다(표의 메시지). 같은 영역의 락스텝 메시지는 `LockstepSession` 이 받는다. */
+        NetHandleResult receive( NetLockstepMessage::RollbackInput, const NetMessageContext& context, BitReader& body );
 
         int32 getFrame() const { return _frame; }
         int32 getRollbackCount() const { return _rollbackCount; }

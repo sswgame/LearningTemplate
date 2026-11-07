@@ -7,6 +7,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Input/InputManager.h"
@@ -32,9 +33,13 @@ namespace sw
             static constexpr float32 kSmoothing      = 0.5f;   ///< 클라이언트가 받은 위치로 틱마다 다가가는 비율
             static constexpr float32 kSnapDistance   = 0.001f; ///< 이 거리 안이면 받은 위치로 붙는다(멈춘 뒤 서버와 같은 값이 되게)
             /** @brief 클라이언트 → 서버: 이동 입력(`writeVarUint` 클라이언트 틱, 정수 축 둘). 순서가 뒤바뀐 낡은 입력은 서버가 버린다. */
-            static constexpr uint8 kInputKind = NetMessageRange::kGame + 0;
+            using InputMessage = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelType::Unreliable>;
             /** @brief 서버 → 클라이언트: 아바타 목록(`writeVarUint` 서버 틱 · 개수, 아바타마다 엔티티 id · x · z). 낡은 것은 클라이언트가 버린다. */
-            static constexpr uint8 kStateKind = NetMessageRange::kGame + 1;
+            using StateMessage = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::Unreliable>;
+            using MessageTable = NetMessageTable<NetMessageRange::kGame, InputMessage, StateMessage>;
+
+            static constexpr uint8 kInputKind = MessageTable::kindOf<InputMessage>();
+            static constexpr uint8 kStateKind = MessageTable::kindOf<StateMessage>();
 
             /** @brief 아바타 외곽선 색입니다. 엔티티 id 로 고른다. */
             static float3 pickColor( uint32 entityID )
@@ -110,8 +115,8 @@ namespace sw
                     SW_LOG_ERROR_ID( "NetSimSampleGame.NetSimSampleGameServerCouldNot", "NetSimSampleGame: the server could not claim its message kinds - no input arrives" );
             }
 
-            uint8  getMessageRangeBase() const { return NetMessageRange::kGame; }
-            uint16 getMessageKindMask() const { return static_cast<uint16>( 1u << ( NetSimSampleGameInternal::kInputKind - NetMessageRange::kGame ) ); }
+            uint8  getMessageRangeBase() const { return NetSimSampleGameInternal::MessageTable::kRangeBase; }
+            uint16 getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::InputMessage>(); }
 
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
@@ -292,8 +297,8 @@ namespace sw
                     SW_LOG_ERROR_ID( "NetSimSampleGame.NetSimSampleGameClientCouldNot", "NetSimSampleGame: the client could not claim its message kinds - nothing is shown" );
             }
 
-            uint8  getMessageRangeBase() const { return NetMessageRange::kGame; }
-            uint16 getMessageKindMask() const { return static_cast<uint16>( 1u << ( NetSimSampleGameInternal::kStateKind - NetMessageRange::kGame ) ); }
+            uint8  getMessageRangeBase() const { return NetSimSampleGameInternal::MessageTable::kRangeBase; }
+            uint16 getMessageKindMask() const { return NetSimSampleGameInternal::MessageTable::makeMask<NetSimSampleGameInternal::StateMessage>(); }
 
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {

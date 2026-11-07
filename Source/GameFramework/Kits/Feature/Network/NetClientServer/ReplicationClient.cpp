@@ -84,7 +84,7 @@ namespace sw
         return static_cast<int64>( getLatest()->_tick ) - static_cast<int64>( pOwner->_inputTick );
     }
 
-    NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult ReplicationClient::receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body )
     {
         (void)context; // 클라이언트가 받는 쪽이므로 상대는 서버 하나뿐이다
         // 기준 틱을 먼저 읽어 보고 그 스냅샷을 찾는다.

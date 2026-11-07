@@ -21,6 +21,7 @@
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -31,23 +32,31 @@ namespace sw
 {
     class INetPeers;
 
-    /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
+    /** @brief 턴 중계 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetTurnRelayMessage
     {
-        static constexpr uint8 kJoin     = NetKitMessageRange::kTurnRelay + 0;
-        static constexpr uint8 kJoined   = NetKitMessageRange::kTurnRelay + 1;
-        static constexpr uint8 kAction   = NetKitMessageRange::kTurnRelay + 2;
-        static constexpr uint8 kApplied  = NetKitMessageRange::kTurnRelay + 3;
-        static constexpr uint8 kRejected = NetKitMessageRange::kTurnRelay + 4;
-        static constexpr uint8 kStarted  = NetKitMessageRange::kTurnRelay + 5;
-        static constexpr uint8 kDenied   = NetKitMessageRange::kTurnRelay + 6;
+        using Join     = NetMessageDef<0, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;
+        using Joined   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Action   = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered, 3>; ///< 판 3: 행동 상한이 8 KB 이다
+        using Applied  = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 3>;
+        using Rejected = NetMessageDef<4, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Started  = NetMessageDef<5, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Denied   = NetMessageDef<6, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        using Table    = NetMessageTable<NetKitMessageRange::kTurnRelay, Join, Joined, Action, Applied, Rejected, Started, Denied>;
+
+        static constexpr uint8 kJoin     = Table::kindOf<Join>();
+        static constexpr uint8 kJoined   = Table::kindOf<Joined>();
+        static constexpr uint8 kAction   = Table::kindOf<Action>();
+        static constexpr uint8 kApplied  = Table::kindOf<Applied>();
+        static constexpr uint8 kRejected = Table::kindOf<Rejected>();
+        static constexpr uint8 kStarted  = Table::kindOf<Started>();
+        static constexpr uint8 kDenied   = Table::kindOf<Denied>();
         /**
          * @brief 행동 하나의 바이트 상한입니다. 클라이언트는 넘는 행동을 보내지 않고, 서버와 클라이언트는 넘는 길이를 손상된 메시지로 봅니다.
          * @details 큰 행동은 신뢰 순서 채널이 1 KB 조각으로 나눠 전송한다. 조각마다 신뢰 창 슬롯을 하나씩 쓰므로, 창이 차면 대기 큐와 `flushSeat` 가 기다린다.
          */
         static constexpr int32 kMaxActionBytes = 8 * 1024;
         static_assert( kMaxActionBytes + 32 <= NetConnection::kMaxReliableMessageSize, "an action and its header must fit in one reliable message" );
-        static_assert( NetMessageRange::isInRange( kDenied, NetKitMessageRange::kTurnRelay ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
 
@@ -178,7 +187,7 @@ namespace sw
 namespace sw
 {
     /** @brief 서버 쪽 중계기입니다. 방은 처음 들어오는 클라이언트가 만듭니다. */
-    class SW_KIT_API TurnRelayServer : public INetMessageHandler
+    class SW_KIT_API TurnRelayServer : public NetTableHandler<TurnRelayServer, NetTurnRelayMessage::Table, NetTurnRelayMessage::Join, NetTurnRelayMessage::Action>
     {
     public:
         /** @brief 연결 하나에 큐에 쌓을 수 있는 알림 수입니다. 넘치면 그 연결이 알림을 받지 않는 것으로 보고 끊으며, 토큰으로 돌아오면 다시 받습니다. */
@@ -192,15 +201,10 @@ namespace sw
          */
         [[nodiscard]] bool initialize( INetPeers* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
         /** @brief 매 틱 호스트 `update` 뒤에 부릅니다. 신뢰 창이 차서 못 보낸 행동과 알림을 이어서 보냅니다. */
-        void  update();
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
-        /** @brief 서버가 받는 메시지는 방 입장과 행동입니다. */
-        uint16 getMessageKindMask() const override
-        {
-            return static_cast<uint16>( ( 1u << ( NetTurnRelayMessage::kJoin - NetKitMessageRange::kTurnRelay ) ) |
-                                        ( 1u << ( NetTurnRelayMessage::kAction - NetKitMessageRange::kTurnRelay ) ) );
-        }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        void update();
+        // 표의 메시지 — 서버가 받는 메시지는 방 입장과 행동이다
+        NetHandleResult receive( NetTurnRelayMessage::Join, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetTurnRelayMessage::Action, const NetMessageContext& context, BitReader& body );
         /** @brief 끊긴 연결의 자리를 비웁니다. 자리와 토큰은 남으므로 같은 토큰으로 돌아올 수 있습니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
         void pollEvents( vector<TurnRelayEvent>& outListEvent );
@@ -254,7 +258,7 @@ namespace sw
 namespace sw
 {
     /** @brief 클라이언트 쪽 중계기입니다. 받은 행동을 번호 순서로 보관하고, 다시 들어올 때 놓친 행동을 받습니다. */
-    class SW_KIT_API TurnRelayClient : public INetMessageHandler
+    class SW_KIT_API TurnRelayClient : public NetTableHandler<TurnRelayClient, NetTurnRelayMessage::Table, NetTurnRelayMessage::Joined, NetTurnRelayMessage::Applied, NetTurnRelayMessage::Rejected, NetTurnRelayMessage::Started, NetTurnRelayMessage::Denied>
     {
     public:
         TurnRelayClient();
@@ -264,22 +268,24 @@ namespace sw
         void join( uint32 roomID, int32 seat = -1 );
         /** @brief 행동을 보내고 행동 번호를 반환합니다. 거절 알림에 이 번호가 붙습니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 -1 을 반환합니다. */
         int32 submitAction( const vector<uint8>& buffer );
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
-        /** @brief 클라이언트가 받는 메시지는 입장, 적용, 거절, 시작, 거부입니다. */
-        uint16 getMessageKindMask() const override
-        {
-            constexpr uint8 kBase = NetKitMessageRange::kTurnRelay;
-            return static_cast<uint16>( ( 1u << ( NetTurnRelayMessage::kJoined - kBase ) ) | ( 1u << ( NetTurnRelayMessage::kApplied - kBase ) ) |
-                                        ( 1u << ( NetTurnRelayMessage::kRejected - kBase ) ) | ( 1u << ( NetTurnRelayMessage::kStarted - kBase ) ) |
-                                        ( 1u << ( NetTurnRelayMessage::kDenied - kBase ) ) );
-        }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        // 표의 메시지 — 클라이언트가 받는 메시지는 입장, 적용, 거절, 시작, 거부이다. 모두 방 id 로 시작한다
+        NetHandleResult receive( NetTurnRelayMessage::Joined, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetTurnRelayMessage::Applied, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetTurnRelayMessage::Rejected, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetTurnRelayMessage::Started, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetTurnRelayMessage::Denied, const NetMessageContext& context, BitReader& body );
         void            pollEvents( vector<TurnRelayEvent>& outListEvent );
 
         int32                     getSeat() const { return _seat; }
         uint32                    getToken() const { return _token; }
         bool                      isStarted() const { return _bStarted != SW_FALSE; }
         const vector<TurnAction>& getActions() const { return _listAction; }
+
+    private:
+        /** @brief 방 id 를 읽어 @p outEvent 에 적습니다. 깨졌거나 다른 방이면 false 이고 @p outEarly 가 돌려줄 값이다. */
+        [[nodiscard]] bool readRoom( BitReader& reader, TurnRelayEvent& outEvent, NetHandleResult& outEarly ) const;
+        /** @brief 다 읽은 알림 하나를 쌓습니다. 읽다 넘쳤으면 Malformed 입니다. */
+        NetHandleResult finishEvent( const BitReader& reader, const TurnRelayEvent& event );
 
     private:
         vector<TurnAction>          _listAction;

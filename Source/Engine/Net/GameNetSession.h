@@ -49,6 +49,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Connection/NetEndpointShardSet.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
@@ -142,20 +143,25 @@ namespace sw
      */
     struct GameNetSessionMessage
     {
-        static constexpr uint8 kServerTick     = NetMessageRange::kEngine + 0x00; ///< 서버 → 모두(비신뢰 순서). 방금 끝낸 서버 틱 번호(varuint)
-        static constexpr uint8 kShutdownNotice = NetMessageRange::kEngine + 0x01; ///< 서버 → 모두(신뢰 순서). 서버가 내려가기 시작한다 — 사유(1 바이트 `GameShutdownReason`) + 기다려 주는 시간(varuint 초)
+        using ServerTick     = NetMessageDef<0x00, NetMessageDirection::ToClient, NetChannelType::UnreliableSequenced>; ///< 서버 → 모두. 방금 끝낸 서버 틱 번호(varuint)
+        using ShutdownNotice = NetMessageDef<0x01, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;     ///< 서버 → 모두. 서버가 내려가기 시작한다 — 사유(1 바이트 `GameShutdownReason`) + 기다려 주는 시간(varuint 초)
         /**
          * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
          * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
-        static constexpr uint8 kResourceDigest   = NetMessageRange::kEngine + 0x02;
+        using ResourceDigest                     = NetMessageDef<0x02, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;
         static constexpr int32 kMaxDigestIDBytes = 512; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
          */
-        static constexpr uint8 kTraffic = NetMessageRange::kEngine + 0x0F;
-        static_assert( NetMessageRange::isInRange( kTraffic, NetMessageRange::kEngine ), "engine session message kinds must stay inside the engine range" );
+        using Traffic = NetMessageDef<0x0F, NetMessageDirection::Both, NetChannelType::ReliableOrdered>;
+        using Table   = NetMessageTable<NetMessageRange::kEngine, ServerTick, ShutdownNotice, ResourceDigest, Traffic>;
+
+        static constexpr uint8 kServerTick     = Table::kindOf<ServerTick>();
+        static constexpr uint8 kShutdownNotice = Table::kindOf<ShutdownNotice>();
+        static constexpr uint8 kResourceDigest = Table::kindOf<ResourceDigest>();
+        static constexpr uint8 kTraffic        = Table::kindOf<Traffic>();
     };
 } // namespace sw
 
@@ -329,10 +335,11 @@ namespace sw
             }
 
             /** @brief 라우터에 달기 전에 역할을 정합니다 — 맡는 종류가 역할마다 다르다. */
-            void            setRole( GameNetRole role ) { _role = role; }
-            uint8           getMessageRangeBase() const override { return NetMessageRange::kEngine; }
-            uint16          getMessageKindMask() const override;
-            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleEngineMessage( context, body ); }
+            void   setRole( GameNetRole role ) { _role = role; }
+            uint8  getMessageRangeBase() const override { return GameNetSessionMessage::Table::kRangeBase; }
+            uint16 getMessageKindMask() const override;
+            /** @brief 표(`GameNetSessionMessage::Table`)가 종류를 세션의 `receive` 오버로드로 나눈다. */
+            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
             /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */
             void onConnectionOpened( int32 connectionID ) override;
             /** @brief 연결이 닫혔다 — 합성 대조의 그 연결 상태를 버린다. */
@@ -347,8 +354,11 @@ namespace sw
         void onClientHostFrameBegin( const EngineFrameContext& context );
         /** @brief 프레임 끝 훅입니다(`makeClientHostFrameHooks`). 종료 코드를 정하지 않습니다. */
         int32 onClientHostFrameEnd( const EngineFrameContext& context );
-        /** @brief 엔진 영역 메시지 하나를 처리합니다(`EngineMessageHandler::handleNetMessage`). */
-        NetHandleResult handleEngineMessage( const NetMessageContext& context, BitReader& body );
+        // 엔진 영역 메시지(`EngineMessageHandler::handleNetMessage` 가 표로 나눈다). 부하 메시지(`Traffic`)는 받는 처리기가 없다
+        NetHandleResult receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( GameNetSessionMessage::Traffic, const NetMessageContext& context, BitReader& body );
         /** @brief 지난번 뒤에 바뀐 로드 축 조건 · 층 합성(`ResourceComposition::collectTagDependentChanges`)을 한 줄씩 서버에 보냅니다(클라이언트). 접속 때는 번호를 0 으로 돌려 모두 보낸다. */
         void sendResourceDigest( int32 connectionID );
         /** @brief 합성 대조의 프레임 일입니다 — 클라이언트는 바뀐 줄을 보내고, 서버는 유예가 지나도 어긋난 연결을 끊는다. */

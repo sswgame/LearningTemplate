@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -17,13 +18,17 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
+    /** @brief 클라이언트-서버 복제 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetClientServerMessage
     {
-        static constexpr uint8 kSnapshot    = NetKitMessageRange::kClientServer + 0;
-        static constexpr uint8 kSnapshotAck = NetKitMessageRange::kClientServer + 1;
-        static constexpr uint8 kInput       = NetKitMessageRange::kClientServer + 2;
-        static_assert( NetMessageRange::isInRange( kInput, NetKitMessageRange::kClientServer ), "message kinds must stay inside the kit's range" );
+        using Snapshot    = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::UnreliableSequenced>;
+        using SnapshotAck = NetMessageDef<1, NetMessageDirection::ToServer, NetChannelType::Unreliable>;
+        using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelType::UnreliableSequenced, 6>; ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
+        using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
+
+        static constexpr uint8 kSnapshot    = Table::kindOf<Snapshot>();
+        static constexpr uint8 kSnapshotAck = Table::kindOf<SnapshotAck>();
+        static constexpr uint8 kInput       = Table::kindOf<Input>();
 
         static constexpr int32 kMaxInputBytes      = 255; ///< 틱 하나의 입력 상한. 클라이언트는 넘는 입력을 보내지 않고, 서버는 넘는 길이를 손상된 메시지로 본다
         static constexpr int32 kMaxInputCount      = 32;  ///< 입력 메시지 하나에 싣는 입력 수의 상한이자, 클라이언트가 확인을 기다리며 보관하는 입력 수의 상한이다. 두 쪽이 같은 값을 쓴다

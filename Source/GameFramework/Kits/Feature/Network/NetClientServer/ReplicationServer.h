@@ -139,7 +139,7 @@ namespace sw
      *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... (void)server.setOwnerState( connectionID, tick, pawnStateBytes );
      * @endcode
      */
-    class SW_KIT_API ReplicationServer : public INetMessageHandler
+    class SW_KIT_API ReplicationServer : public NetTableHandler<ReplicationServer, NetClientServerMessage::Table, NetClientServerMessage::SnapshotAck, NetClientServerMessage::Input>
     {
     public:
         ReplicationServer();
@@ -161,9 +161,8 @@ namespace sw
         void sendSnapshots();
         /** @brief 스냅샷 생성을 나눠 처리할 작업 스레드 풀을 지정합니다. 게임은 `&engine::getSubsystem<TaskManager>()` 를 넘깁니다. nullptr 이면 호출한 스레드에서 처리합니다. */
         void            setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
-        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
-        uint16          getMessageKindMask() const override;
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        NetHandleResult receive( NetClientServerMessage::SnapshotAck, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetClientServerMessage::Input, const NetMessageContext& context, BitReader& body );
         /** @brief 연결별 상태(확인 틱, 입력 큐, 처리한 입력 틱)를 초기화합니다. 같은 슬롯에 새로 온 클라이언트가 이전 상태를 물려받지 않게 합니다. */
         void onConnectionOpened( int32 connectionID ) override;
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;

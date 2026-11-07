@@ -32,6 +32,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageTable.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Network/Replication/NetClock.h"
@@ -48,15 +49,21 @@ namespace sw
     class GameObjectManager;
     class INetPeers;
 
-    /** @brief 파괴 메시지 종류입니다. */
+    /** @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetDestructionMessage
     {
-        static constexpr uint8 kEvent           = NetKitMessageRange::kDestruction + 0; ///< 서버 → 이벤트 하나. 신뢰, 순서 없음이며 받는 쪽이 번호로 순서를 맞춘다
-        static constexpr uint8 kSnapshot        = NetKitMessageRange::kDestruction + 1; ///< 서버 → 오브젝트 하나의 상태 스냅숏. 신뢰, 순서 있음이며 64 KB까지 보낸다
-        static constexpr uint8 kPose            = NetKitMessageRange::kDestruction + 2; ///< 서버 → 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰로 보낸다
-        static constexpr uint8 kHash            = NetKitMessageRange::kDestruction + 3; ///< 서버 → (이벤트 수, 상태 해시). 신뢰, 순서 있음
-        static constexpr uint8 kSnapshotRequest = NetKitMessageRange::kDestruction + 4; ///< 클라이언트 → 서버. 스냅숏을 요청한다(신뢰)
-        static_assert( NetMessageRange::isInRange( kSnapshotRequest, NetKitMessageRange::kDestruction ), "message kinds must stay inside the kit's range" );
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableUnordered>;  ///< 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Snapshot        = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지). 판 2: 조각이 아니라 메시지 하나로 보낸다
+        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable>;         ///< 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
+        using Hash            = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;    ///< (이벤트 수, 상태 해시)
+        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;    ///< 스냅숏을 요청한다
+        using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
+
+        static constexpr uint8 kEvent           = Table::kindOf<Event>();
+        static constexpr uint8 kSnapshot        = Table::kindOf<Snapshot>();
+        static constexpr uint8 kPose            = Table::kindOf<Pose>();
+        static constexpr uint8 kHash            = Table::kindOf<Hash>();
+        static constexpr uint8 kSnapshotRequest = Table::kindOf<SnapshotRequest>();
     };
 } // namespace sw
 
@@ -106,7 +113,7 @@ namespace sw
      *     server.update( serverTick );                          // 월드 틱 뒤에 부른다
      * @endcode
      */
-    class SW_KIT_API DestructionReplicationServer : public INetMessageHandler
+    class SW_KIT_API DestructionReplicationServer : public NetTableHandler<DestructionReplicationServer, NetDestructionMessage::Table, NetDestructionMessage::SnapshotRequest>
     {
     public:
         DestructionReplicationServer();
@@ -117,9 +124,7 @@ namespace sw
         /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
         void update( uint32 serverTick );
 
-        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
-        uint16          getMessageKindMask() const override { return 1u << ( NetDestructionMessage::kSnapshotRequest - NetKitMessageRange::kDestruction ); }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        NetHandleResult receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body );
         /** @brief 클라이언트가 들어오면 호출합니다. 이벤트가 있는 오브젝트마다 다음 `update` 에서 스냅숏을 보냅니다. */
         void onConnectionOpened( int32 connectionID ) override;
         /** @brief 그 연결에 쌓인 스냅숏 요청을 지웁니다. */
@@ -189,7 +194,7 @@ namespace sw
      *     client.update( deltaTime );                          // 월드 틱 앞에 부른다(받은 메시지를 분배한 뒤)
      * @endcode
      */
-    class SW_KIT_API DestructionReplicationClient : public INetMessageHandler
+    class SW_KIT_API DestructionReplicationClient : public NetTableHandler<DestructionReplicationClient, NetDestructionMessage::Table, NetDestructionMessage::Event, NetDestructionMessage::Snapshot, NetDestructionMessage::Pose, NetDestructionMessage::Hash>
     {
     public:
         DestructionReplicationClient();
@@ -202,15 +207,11 @@ namespace sw
         /** @brief 테스트용 결함 주입입니다. 그 오브젝트의 다음 이벤트 하나를 적용하지 않고 건너뛰며, 해시 불일치에서 스냅숏 복구까지의 흐름을 확인할 때 씁니다. */
         void skipNextEvent( uint32 netID );
 
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
-        /** @brief 이벤트, 스냅숏, 자세, 해시 메시지를 처리합니다. 같은 영역의 스냅숏 요청은 서버가 처리합니다. */
-        uint16 getMessageKindMask() const override
-        {
-            constexpr uint8 kBase = NetKitMessageRange::kDestruction;
-            return static_cast<uint16>( ( 1u << ( NetDestructionMessage::kEvent - kBase ) ) | ( 1u << ( NetDestructionMessage::kSnapshot - kBase ) ) |
-                                        ( 1u << ( NetDestructionMessage::kPose - kBase ) ) | ( 1u << ( NetDestructionMessage::kHash - kBase ) ) );
-        }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        // 표의 메시지 — 이벤트, 스냅숏, 자세, 해시를 받는다. 같은 영역의 스냅숏 요청은 서버가 받는다
+        NetHandleResult receive( NetDestructionMessage::Event, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetDestructionMessage::Snapshot, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetDestructionMessage::Pose, const NetMessageContext& context, BitReader& body );
+        NetHandleResult receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body );
 
         /** @brief 덩어리를 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수입니다. 자세를 하나도 받지 않았으면 음수입니다. */
         float32                            getRenderTick() const { return _clock.getRenderTick(); }
@@ -258,7 +259,9 @@ namespace sw
 
         FractureComponentBase* resolve( const Entry& entry ) const;
         Entry*                 findEntry( uint32 netID );
-        void                   handleEvent( Entry& entry, const BufferedEvent& received );
+        /** @brief 오브젝트 id 를 읽어 그 항목을 찾습니다. 깨졌으면 Malformed, 이 클라이언트에 없으면 Handled(소비하고 버린다)를 @p outEarly 에 두고 nullptr 입니다. */
+        Entry* readEntry( BitReader& reader, NetHandleResult& outEarly );
+        void   handleEvent( Entry& entry, const BufferedEvent& received );
         /** @brief 번호가 앞선 이벤트를 쌓아 둡니다. 같은 번호는 한 번만 보관합니다. */
         static void bufferEvent( Entry& entry, const BufferedEvent& received );
         static void applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );

@@ -3,7 +3,7 @@
 """
 Scripts/lint/CppShape.py
 
-C++ 모양 규칙 중 컴파일러가 보지 않는 일곱을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
+C++ 모양 규칙 중 컴파일러가 보지 않는 여덟을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
 **왜 형식이 아니라 린트인가.** 여섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
 1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
@@ -18,6 +18,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 일곱을 본다. 규칙 문
 6. 끊긴 비트필드 묶음: 같은 접근 구역의 비트필드 사이에 다른 칸이 있으면 묶음마다 바이트를 따로 먹는다(전처리 갈래로 끊긴 것은 보지 않는다).
 7. 온라인 키트의 프로토콜 표: 키트 서버는 `OnlineProtocolService`, 키트 클라이언트는 `OnlineProtocolClient` 로 선다. 인터페이스(`IOnlineServerService` · `IOnlineClientService`)를 직접 잇는 것은 C++ 로 막을 수 없다 — 테스트의 가짜가 같은 인터페이스를 이어야 한다.
    예외는 없다. 계정 클라이언트의 재접속 게이트도 기반(`OnlineServiceClient::holdSessionRequests`)으로 옮겼다(2026-11-07).
+8. 게임 넷 메시지 표: 넷 키트 · 엔진 세션 · 게임의 메시지는 서술자 표(`NetMessageTable` · `NetTableHandler`, `Core/Network/Message/NetMessageTable.h`)로 선다.
+   손 종류 상수(`NetKitMessageRange::kX + n`), 손 마스크(`1u << ( NetXMessage::kY - … )`), 종류 손 디스패치(`context._kind ==`)는 마스크에서 종류를 빠뜨리거나
+   메시지를 더하고 와이어 버전을 올리지 않는 결함을 다시 낸다(2026-11-07 — 16 곳). 표가 마스크 · 디스패치 · 와이어 해시를 낸다.
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -458,6 +461,26 @@ def checkOnlineProtocolTable(raw: str, code: str, relative: str) -> list[tuple[i
     return listProblem
 
 
+kNetMessageFolders = ("Source/GameFramework/Kits/Feature/Network/", "Source/Engine/Net/", "Source/Games/")
+kHandNetMessagePatterns = (
+    (re.compile(r"NetKitMessageRange::k\w+\s*\+\s*\d"), "손으로 적은 메시지 종류 — 표의 서술자(`NetMessageDef`)와 `Table::kindOf` 를 쓴다"),
+    (re.compile(r"1u\s*<<\s*\(\s*\w*Message::k"), "손으로 쓴 종류 마스크 — `NetTableHandler` 나 `Table::makeMask` 를 쓴다"),
+    (re.compile(r"context\._kind\s*=="), "종류 손 디스패치 — `NetTableHandler` 의 `receive` 오버로드(표가 나눈다)를 쓴다"),
+)
+
+
+def checkNetMessageTable(code: str, relative: str) -> list[tuple[int, str]]:
+    """게임 넷 메시지는 서술자 표로 선다 — 손 종류 상수 · 손 마스크 · 손 디스패치가 되돌아오지 않게 한다."""
+    normalized = relative.replace("\\", "/")
+    if normalized.startswith(kNetMessageFolders) is False or "/Tests/" in normalized:
+        return []
+    listProblem: list[tuple[int, str]] = []
+    for pattern, message in kHandNetMessagePatterns:
+        for match in pattern.finditer(code):
+            listProblem.append((lineOf(code, match.start()), message))
+    return listProblem
+
+
 def inspectFile(path: Path, relative: str) -> list[str]:
     raw = path.read_text(encoding="utf-8-sig", errors="ignore")
     code = stripCode(raw)
@@ -474,6 +497,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
     listProblem += checkSharedTempInTests(code, relative)
     listProblem += checkHandDepletion(code, relative)
     listProblem += checkOnlineProtocolTable(raw, code, relative)
+    listProblem += checkNetMessageTable(code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(listProblem))]
 
 

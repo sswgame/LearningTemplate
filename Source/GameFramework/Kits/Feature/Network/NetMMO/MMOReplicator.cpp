@@ -481,63 +481,69 @@ namespace sw
         _mapEntity.clear();
     }
 
-    NetHandleResult MMOClientView::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult MMOClientView::receive( NetMMOMessage::Enter, const NetMessageContext& context, BitReader& body )
     {
-        BitReader& reader = body;
-        if ( context._kind == NetMMOMessage::kEnter )
+        (void)context;
+        BitReader&   reader = body;
+        const uint32 tick   = reader.readVarUint32();
+        while ( reader.readBool() )
         {
-            const uint32 tick = reader.readVarUint32();
-            while ( reader.readBool() )
-            {
-                ClientEntity entry;
-                entry._tick = tick;
-                if ( MMOReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
-                    return NetHandleResult::Malformed;
-                const uint32 entityID = entry._entity._entityID;
-                _mapEntity[entityID]  = std::move( entry );
-                _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Entered } );
-            }
-            if ( reader.hasOverflowed() )
+            ClientEntity entry;
+            entry._tick = tick;
+            if ( MMOReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
                 return NetHandleResult::Malformed;
+            const uint32 entityID = entry._entity._entityID;
+            _mapEntity[entityID]  = std::move( entry );
+            _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Entered } );
         }
-        else if ( context._kind == NetMMOMessage::kLeave )
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult MMOClientView::receive( NetMMOMessage::Leave, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        BitReader&   reader = body;
+        const uint64 count  = reader.readVarUint();
+        for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
         {
-            const uint64 count = reader.readVarUint();
-            for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
-            {
-                const uint32 entityID = reader.readVarUint32();
-                if ( reader.hasOverflowed() == false && _mapEntity.erase( entityID ) > 0 )
-                    _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Left } );
-            }
-            if ( reader.hasOverflowed() )
-                return NetHandleResult::Malformed;
+            const uint32 entityID = reader.readVarUint32();
+            if ( reader.hasOverflowed() == false && _mapEntity.erase( entityID ) > 0 )
+                _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Left } );
         }
-        else
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult MMOClientView::receive( NetMMOMessage::Update, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        BitReader&   reader = body;
+        const uint32 tick   = reader.readVarUint32();
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        while ( reader.readBool() )
         {
-            const uint32 tick = reader.readVarUint32();
-            if ( reader.hasOverflowed() )
+            MMOEntity update;
+            if ( MMOReplicatorInternal::readEntity( reader, update, false ) == false )
                 return NetHandleResult::Malformed;
-            while ( reader.readBool() )
+            const auto entityIter = _mapEntity.find( update._entityID );
+            if ( entityIter == _mapEntity.end() )
+                continue; // 새로 보임보다 먼저 왔거나 이미 보이지 않게 된 엔티티이므로 버린다
+            if ( tick < entityIter->second._tick )
             {
-                MMOEntity update;
-                if ( MMOReplicatorInternal::readEntity( reader, update, false ) == false )
-                    return NetHandleResult::Malformed;
-                const auto entityIter = _mapEntity.find( update._entityID );
-                if ( entityIter == _mapEntity.end() )
-                    continue; // 새로 보임보다 먼저 왔거나 이미 보이지 않게 된 엔티티이므로 버린다
-                if ( tick < entityIter->second._tick )
-                {
-                    ++_staleUpdateCount; // 순서가 뒤바뀐 오래된 갱신이다. 더 새로운 상태를 덮어쓰지 않게 버린다
-                    continue;
-                }
-                entityIter->second._tick              = tick;
-                entityIter->second._entity._position  = update._position;
-                entityIter->second._entity._listState = std::move( update._listState );
-                _eventBuffer.push( MMOClientEvent{ update._entityID, MMOClientEvent::Kind::Updated } );
+                ++_staleUpdateCount; // 순서가 뒤바뀐 오래된 갱신이다. 더 새로운 상태를 덮어쓰지 않게 버린다
+                continue;
             }
-            if ( reader.hasOverflowed() )
-                return NetHandleResult::Malformed;
+            entityIter->second._tick              = tick;
+            entityIter->second._entity._position  = update._position;
+            entityIter->second._entity._listState = std::move( update._listState );
+            _eventBuffer.push( MMOClientEvent{ update._entityID, MMOClientEvent::Kind::Updated } );
         }
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
         return NetHandleResult::Handled;
     }
 

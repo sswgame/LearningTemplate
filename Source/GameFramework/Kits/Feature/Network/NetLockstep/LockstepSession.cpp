@@ -232,35 +232,46 @@ namespace sw
         (void)_messageWriter.broadcast( *_pHost, NetChannelType::ReliableOrdered );
     }
 
-    NetHandleResult LockstepSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult LockstepSession::receive( NetLockstepMessage::Leave, const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        const int32  player = body.readVarUint31();
+        const uint32 tick   = body.readVarUint32();
+        if ( body.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        // 이탈은 서버만 정한다.
+        const bool bServer     = _pHost != nullptr && _pHost->isServer();
+        const bool bApplyLeave = bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
+        if ( bApplyLeave )
+            applyLeave( player, tick );
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult LockstepSession::receive( NetLockstepMessage::Input, const NetMessageContext& context, BitReader& body )
+    {
+        const int32  player = body.readVarUint31();
+        const uint32 tick   = body.readVarUint32();
+        // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
+        const bool bServer = _pHost != nullptr && _pHost->isServer();
+        if ( bServer && player != context._connectionID + 1 )
+            return NetHandleResult::Handled;
+        vector<uint8> listInput;
+        if ( body.readBlob( listInput, NetLockstepMessage::kMaxInputBytes ) == false )
+            return NetHandleResult::Malformed;
+        if ( body.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        if ( storeInput( player, tick, listInput ) && _pHost != nullptr )
+            (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult LockstepSession::receive( NetLockstepMessage::Checksum, const NetMessageContext& context, BitReader& body )
     {
         const int32  player  = body.readVarUint31();
         const uint32 tick    = body.readVarUint32();
         const bool   bServer = _pHost != nullptr && _pHost->isServer();
-        if ( context._kind == NetLockstepMessage::kLeave )
-        {
-            if ( body.hasOverflowed() )
-                return NetHandleResult::Malformed;
-            // 이탈은 서버만 정한다.
-            const bool bApplyLeave = bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
-            if ( bApplyLeave )
-                applyLeave( player, tick );
-            return NetHandleResult::Handled;
-        }
-        // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
         if ( bServer && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
-        if ( context._kind == NetLockstepMessage::kInput )
-        {
-            vector<uint8> listInput;
-            if ( body.readBlob( listInput, NetLockstepMessage::kMaxInputBytes ) == false )
-                return NetHandleResult::Malformed;
-            if ( body.hasOverflowed() )
-                return NetHandleResult::Malformed;
-            if ( storeInput( player, tick, listInput ) && _pHost != nullptr )
-                (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
-            return NetHandleResult::Handled;
-        }
         const uint32 checksum = body.readUint32();
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
