@@ -1,0 +1,21 @@
+{
+    "_name": "GF_EditorPlugin_Housing",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "Housing 키트의 에디터 확장 — 씬의 하우징 부지마다 경계 · 칸 · id 와 크기를 뷰포트에 겹쳐 보인다(플레이 전에도)",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GF_Housing"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

@@ -76,7 +76,9 @@
         "Viewport.LatticePoint": "#FFF078",
         "Viewport.LatticeSelected": "#FF3C3C",
         "Viewport.ParkGate": "#FFE666",
-        "Viewport.ParkTrack": "#CCCCD9"
+        "Viewport.ParkTrack": "#CCCCD9",
+        "Viewport.HousingPlot": "#D9D9E6C8",
+        "Viewport.HousingCell": "#D9D9E640"
     },
     "_metric": {
         "Radius.Window": 4,

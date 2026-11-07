@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 using namespace sw;
 
@@ -353,4 +354,35 @@ SW_TEST_CASE( HousingLayoutTest, LoadRefusesMismatchesAndFollowsReplacement )
     SW_EXPECT_FALSE( HousingFixture::load( bedV3._layout, bedV2Bytes ) );
     HousingFixture bedV3Compatible{ false, HousingCatalogText::make( true, 3, 2, false ) };
     SW_EXPECT_TRUE( HousingFixture::load( bedV3Compatible._layout, bedV2Bytes ) );
+}
+
+/**
+ * @brief [HousingLayoutTest] 부지는 공유 땅에서 자기 칸 전체를 차지한다 — 남의 칸(다른 부지 · 다른 키트)과 겹치면 하나도 차지하지 않고 거절하고, 닫으면 반납해 다른 부지가 쓴다
+ */
+SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
+{
+    LandRegistry land;
+    land.initialize( 16, 16, 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
+    HousingFixture home;
+    SW_REQUIRE_TRUE( home._layout.bindLand( &land, int2{ 2, 2 } ) );
+    SW_EXPECT_TRUE( home._layout.isLandBound() );
+    SW_EXPECT_TRUE( land.getOwnerName( 2, 2 ) == hashed_string( "Housing.home" ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 7, 7 ) == hashed_string( "Housing.home" ) ); // 6 x 6 칸의 끝
+    SW_EXPECT_TRUE( land.getOwnerName( 8, 8 ).empty() );
+    SW_EXPECT_FALSE( land.isBlockedFor( LandRegistry::kNoOwner, 3, 3 ) ); // 차지일 뿐 막힘이 아니다(길은 지난다)
+
+    HousingFixture neighbour;
+    neighbour._settings._plotID = hashed_string( "next" );
+    neighbour._layout.initialize( neighbour._settings, neighbour._catalog );
+    SW_EXPECT_LOG( "HousingLayout.LandTaken" );
+    SW_EXPECT_FALSE( neighbour._layout.bindLand( &land, int2{ 5, 5 } ) ); // home 의 칸과 겹친다
+    SW_EXPECT_FALSE( neighbour._layout.isLandBound() );
+    SW_EXPECT_TRUE( land.getOwnerName( 10, 10 ).empty() ); // 반쯤 차지하지 않는다
+
+    home._layout.releaseLand();
+    SW_EXPECT_TRUE( land.getOwnerName( 2, 2 ).empty() );
+    SW_EXPECT_TRUE( neighbour._layout.bindLand( &land, int2{ 5, 5 } ) );
+    SW_EXPECT_TRUE( neighbour._layout.bindLand( nullptr, int2{} ) ); // 땅 없는 부지는 단독이다 — 다시 묶으면 앞의 차지를 반납한다
+    SW_EXPECT_FALSE( neighbour._layout.isLandBound() );
+    SW_EXPECT_TRUE( land.getOwnerName( 5, 5 ).empty() );
 }

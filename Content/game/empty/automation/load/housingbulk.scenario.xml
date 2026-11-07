@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  부하 시나리오 — 하우징 대량 가구: 24 x 24 칸 부지(maps/housing_bulk.scene.xml)에 housing.fill 로 바닥 576 · 탁자 288(합 864 배치)을 놓고
+  부품 뷰가 배치 수와 같아진 뒤(중복 · 누락 없음) 프레임 측정 창을 연다 — 부품 프리팹 수가 프레임 비용에 얼마나 드는지 본다(시연 부지의 50 배쯤).
+  측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인(Scenario.empty)이 줍지 않고 따로 혼자 도는 항목이다.
+  실행: ctest -L load (항목 Scenario.empty.load.housingbulk) · App -scenario=game/empty/automation/load/housingbulk.scenario.xml -unattended
+-->
+<Scenario name="game.empty.load.housingbulk" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/housing_bulk.scene.xml"/>
+	<Load durationSeconds="15"/>
+	<Wait frames="5"/>
+	<Expect watch="Housing.LandBound" target="HousingPlot" equals="0"/>
+	<DevCommand line="housing.fill HousingPlot floor 0"/>
+	<ExpectLog id="DevCommand.Reply" contains="filled 576 - Ok placements 576" count="1"/>
+	<Wait frames="1"/>
+	<DevCommand line="housing.fill HousingPlot table 0"/>
+	<ExpectLog id="DevCommand.Reply" contains="filled 288 - Ok placements 864" count="1"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="864"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="8480"/>
+	<WaitUntil watch="Housing.ViewCount" target="HousingPlot" equals="864" timeoutFrames="120"/>
+</Scenario>

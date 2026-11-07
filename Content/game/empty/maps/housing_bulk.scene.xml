@@ -1,0 +1,81 @@
+<!--
+  하우징 대량 가구 부하(GF_Housing) — 24 x 24 칸 · 1 층 부지 하나와 넉넉한 지갑(20000 골드). 카탈로그는 시연과 같은 data/housingparts.xml 이다.
+  부하 시나리오 automation/load/housingbulk.scenario.xml 이 housing.fill 로 바닥 576 · 탁자 288 을 놓고 프레임 측정 창을 연다.
+-->
+<Scene formatVersion="2" name="HousingBulk">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="12,22,-8"
+					                 _localRotation="0.785,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.8"
+					                 _nearZ="0.1"
+					                 _farZ="150"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.9,2.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.35"
+					                           _shadowExtent="20"
+					                           _shadowDistance="30"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="12,-0.05,12"
+					               _localRotation="0,0,0"
+					               _localScale="30,0.1,30"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="HousingPlot">
+			<GameObject _schemaVersion="0" _name="HousingPlot" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<HousingPlotComponent _bAutoPlay="false"
+					                      _partCatalog="game/empty/data/housingparts.xml"
+					                      _startingFunds="20000"
+					                      _ghostPlaceablePrefab="game/empty/prefabs/housing/ghost_placeable.prefab.xml"
+					                      _ghostBlockedPrefab="game/empty/prefabs/housing/ghost_blocked.prefab.xml">
+						<_settings _plotID="bulk" _sizeX="24" _sizeZ="24" _levelCount="1" _historyLimit="64" _bFreePlacement="true" />
+					</HousingPlotComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

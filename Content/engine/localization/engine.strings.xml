@@ -1561,6 +1561,16 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginVisualizer.HousingPlotLabel" source="Plots">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.HousingPlotTip" source="Bounds and cells of every housing plot in the scene, with its id and size">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginVisualizer.MeshModifiersLabel" source="Modifiers">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 하우징 부지 경계 시각화(housing.plot, 툴바 "Plots", Housing 키트의 에디터 확장, 기본 켜짐). 플레이 전 편집 씬에서 부지의 경계 · 칸 · `home  8 x 6` 라벨이 씬 뷰에 겹친다.
+  판정: 부지 틀(원점 · 칸 크기)을 카탈로그 에셋에서 읽을 수 있는 부지 수(Editor.HousingPlotFrames — 열지 않은 부지는 카탈로그를 얻어 칸 크기를 본다)와 사진 한 장(골든 없음, 눈으로 본다).
+  실행: App -EnableEditor -scenario=game/empty/automation/editor/housingplots.scenario.xml -unattended
+-->
+<Scenario name="editor.housingplots" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.open game/empty/maps/housing.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.HousingPlotFrames" equals="1" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="housingplots/plots.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

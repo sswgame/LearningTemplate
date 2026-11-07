@@ -12,6 +12,8 @@
 	<Wait frames="5"/>
 	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="0"/>
 	<Expect watch="Housing.Funds" target="HousingPlot" equals="500"/>
+	<!-- 판 상태(SessionStateComponent)가 없는 씬이라 단독 부지다 — 공유 땅 차지는 단위 테스트 HousingLayoutTest.PlotClaimsItsCellsOnTheSharedLand -->
+	<Expect watch="Housing.LandBound" target="HousingPlot" equals="0"/>
 
 	<!-- ① 고스트 -->
 	<DevCommand line="housing.preview HousingPlot table 2.3 1.2 0 80"/>

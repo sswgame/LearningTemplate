@@ -19,6 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw
 {
@@ -140,6 +141,16 @@ namespace sw
         void initialize( const HousingPlotSettings& settings, const HousingPartCatalog& catalog );
         /** @brief 값을 내고 받는 지갑입니다(카탈로그 통화). 비면 값이 있는 부품은 `NoWallet` 입니다. */
         void bindWallet( Wallet* pWallet ) { _pWallet = pWallet; }
+        /**
+         * @brief 공유 땅(`LandRegistry` — 판 상태)에서 부지 전체를 차지합니다. 부지 칸 (0, 0) 이 땅 칸 @p origin 이고 칸 크기가 같아야 합니다(부르는 쪽이 본다).
+         * @details 주인 이름은 `Housing.<부지 id>` 다. 막힘이 아닌 차지(다른 키트가 그 칸에 놓지 못하지만 길은 지난다)이고, 남의 칸이 하나라도 있으면 아무것도 차지하지 않고 false 다 —
+         *          두 키트(밭 · 도시 · 전장)가 한 맵에서 같은 칸을 쓰지 않는다. @p pLand 가 nullptr 이면 단독 부지(차지 없음)이고 true 다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        /** @brief 차지한 땅을 반납합니다(부지를 닫을 때). 차지하지 않았으면 아무것도 하지 않는다. */
+        void releaseLand();
+        /** @brief 공유 땅을 차지했으면 true 입니다. */
+        bool isLandBound() const { return _land.isBound(); }
 
         /** @brief 스냅하고 검증합니다. 아무것도 바꾸지 않습니다(고스트 미리보기). */
         HousingPlaceCheck evaluate( const HousingCandidate& candidate ) const;
@@ -217,6 +228,7 @@ namespace sw
         HousingPlotSettings       _settings;
         const HousingPartCatalog* _pCatalog;
         Wallet*                   _pWallet;
+        LandBinding               _land;          ///< 빌린 공유 땅(없으면 단독 부지) — 상태에 싣지 않는다(땅은 판 상태가 싣는다)
         vector<HousingPlacement>  _listPlacement; ///< id 오름차순
         vector<uint32>            _listCellOwner; ///< [층(바닥 · 구조물 · 가구)][층수][z][x] 의 배치 id(0 은 빈 칸)
         vector<Edit>              _listEdit;

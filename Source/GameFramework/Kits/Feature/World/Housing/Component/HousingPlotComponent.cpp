@@ -20,6 +20,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
 {
@@ -110,6 +111,49 @@ namespace sw
                 uint32                   newID  = 0;
                 const HousingPlaceResult result = pPlot->place( candidate, newID );
                 outReply                        = formatToString( "id %# - %#", newID, describe( *pPlot, result ) );
+                return true;
+            }
+
+            /**
+             * @brief `housing.fill <plot> <part> <level>` — 층 @p level 의 칸마다(가운데, 격자 · 요 0) 부품을 놓아 본다. 대량 가구 부하 시나리오의 입력이다.
+             * @details 놓인 수와 마지막 결과를 답한다. 겹침 · 받침 · 값이 막은 칸은 건너뛴다(규칙은 `place` 그대로 — 우회하지 않는다).
+             */
+            static bool runFill( const vector<string>& listArgument, string& outReply )
+            {
+                int32 level = 0;
+                if ( listArgument.size() != 3 || StringUtil::parseInt( listArgument[2], level ) == false || level < 0 )
+                    return false;
+                HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
+                if ( pPlot == nullptr )
+                    return true;
+                const HousingPlotSettings& settings = pPlot->getLayout().getSettings();
+                const HousingPartCatalog&  catalog  = *pPlot->getLayout().getCatalog(); // 열린 부지는 카탈로그가 있다(findPlot 이 본다)
+                const HousingPartDef*      pPart    = catalog.findPart( hashed_string( listArgument[1] ) );
+                if ( pPart == nullptr )
+                {
+                    outReply = "housing: no part '" + listArgument[1] + "' in the plot's catalog";
+                    return true;
+                }
+                const float32    cellSize = catalog.getRoot()._cellSize;
+                HousingCandidate candidate;
+                candidate._partID           = pPart->_id;
+                candidate._mode             = HousingPlacementMode::Grid;
+                candidate._transform._level = level;
+                uint32             placed   = 0;
+                HousingPlaceResult result   = HousingPlaceResult::Ok;
+                // 부품 크기 걸음으로 칸을 덮는다(회전 0) — 놓이는 수가 부지 크기로 정해진다(시나리오가 수를 본다).
+                for ( int32 z = 0; z + pPart->_sizeZ <= settings._sizeZ; z += pPart->_sizeZ )
+                {
+                    for ( int32 x = 0; x + pPart->_sizeX <= settings._sizeX; x += pPart->_sizeX )
+                    {
+                        candidate._transform._position = float2{ ( static_cast<float32>( x ) + static_cast<float32>( pPart->_sizeX ) * 0.5f ) * cellSize,
+                                                                 ( static_cast<float32>( z ) + static_cast<float32>( pPart->_sizeZ ) * 0.5f ) * cellSize };
+                        uint32 newID                   = 0;
+                        result                         = pPlot->place( candidate, newID );
+                        placed += result == HousingPlaceResult::Ok ? 1 : 0;
+                    }
+                }
+                outReply = formatToString( "filled %# - %#", placed, describe( *pPlot, result ) );
                 return true;
             }
 
@@ -246,6 +290,16 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Housing.LandBound` 입니다. 부지가 판 상태의 공유 땅을 차지했으면 1 입니다. */
+            [[nodiscard]] static bool readLandBound( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const HousingPlotComponent* pPlot = findTarget( query, outValue );
+                if ( pPlot == nullptr )
+                    return false;
+                outValue.setNumber( pPlot->getLayout().isLandBound() ? 1.0 : 0.0 );
+                return true;
+            }
+
             /** @brief 감시 값 `Housing.Placement` 입니다. 배치 id `key` 의 "x(cm) z(cm) 층 요(도)" 입니다(스냅 결과). 없는 id 면 값이 없습니다. */
             [[nodiscard]] static bool readPlacement( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -276,6 +330,7 @@ namespace sw
     SW_DEV_COMMAND( HousingPreview, "housing.preview", "housing.preview <plot> <part> <x> <z> <level> <yawDegrees> [free]", "Show the ghost of a part on a housing plot and why it can or cannot go there",
                     &HousingPlotInternal::runPreview );
     SW_DEV_COMMAND( HousingPlace, "housing.place", "housing.place <plot> <part> <x> <z> <level> <yawDegrees> [free]", "Place a catalog part on a housing plot (snap, cost)", &HousingPlotInternal::runPlace );
+    SW_DEV_COMMAND( HousingFill, "housing.fill", "housing.fill <plot> <part> <level>", "Try a part at the centre of every cell of one level (bulk furniture load)", &HousingPlotInternal::runFill );
     SW_DEV_COMMAND( HousingRemove, "housing.remove", "housing.remove <plot> <placementID>", "Remove a placement from a housing plot and refund it", &HousingPlotInternal::runRemove );
     SW_DEV_COMMAND( HousingMove, "housing.move", "housing.move <plot> <placementID> <x> <z> <level> <yawDegrees> [free]", "Move a placement on a housing plot", &HousingPlotInternal::runMove );
     SW_DEV_COMMAND( HousingUndo, "housing.undo", "housing.undo <plot>", "Undo the last housing edit", &HousingPlotInternal::runUndo );
@@ -288,6 +343,7 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( housingFunds, "Housing.Funds", "Balance of the target housing plot's wallet", &HousingPlotInternal::readFunds, true, false );
     SW_AUTOMATION_QUERY_WATCH( housingLastResult, "Housing.LastResult", "Result of the target housing plot's last preview or edit", &HousingPlotInternal::readLastResult, true, false );
     SW_AUTOMATION_QUERY_WATCH( housingGhostPlaceable, "Housing.GhostPlaceable", "1 when the target housing plot's ghost stands where the part can go", &HousingPlotInternal::readGhostPlaceable, true, false );
+    SW_AUTOMATION_QUERY_WATCH( housingLandBound, "Housing.LandBound", "1 when the target housing plot claimed its cells on the shared land", &HousingPlotInternal::readLandBound, true, false );
     SW_AUTOMATION_QUERY_WATCH( housingPlacement, "Housing.Placement", "\"xCm zCm level yawDegrees\" of placement id key on the target housing plot", &HousingPlotInternal::readPlacement, true, true );
 } // namespace sw
 
@@ -333,10 +389,37 @@ namespace sw
             return false;
         _layout.initialize( _settings, *_pCatalog );
         _layout.bindWallet( &_wallet );
+        // 판 상태(같은 오브젝트의 SessionStateComponent)가 있으면 그 공유 땅에서 부지를 차지한다 — 밭 · 도시 · 전장 키트와 한 맵의 칸을 나눈다.
+        // 판 상태가 없는 씬은 단독 부지다(땅이 없는 게임 — 선택 연동이지 빠진 필수 값이 아니다).
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        if ( pState != nullptr && pState->isInitialized() == false )
+        {
+            SW_LOG_ERROR_ID( "HousingPlot.SessionStateNotOpen", "Housing plot '%#': the session state on this object is not open yet - put the plot after it so the plot can claim the shared land",
+                             _settings._plotID.c_str() );
+            return false;
+        }
+        if ( pState != nullptr && pState->getLand().isInitialized() )
+        {
+            LandRegistry& land = pState->getLand();
+            if ( MathUtil::nearEqual( land.getCellSize(), _pCatalog->getRoot()._cellSize ) == false )
+            {
+                SW_LOG_ERROR_ID( "HousingPlot.LandCellSizeMismatch", "Housing plot '%#': the shared land cell (%#) and the catalog cell (%#) differ - the plot cannot claim land", _settings._plotID.c_str(),
+                                 land.getCellSize(), _pCatalog->getRoot()._cellSize );
+                return false;
+            }
+            if ( _layout.bindLand( &land, land.computeCell( getPlotOrigin() ) ) == false )
+                return false;
+        }
         _wallet.clear();
         _wallet.setBalance( _pCatalog->getRoot()._currency, _startingFunds );
         _lastResult = HousingPlaceResult::Ok;
         return true;
+    }
+
+    void HousingPlotComponent::onEndPlay()
+    {
+        _layout.releaseLand(); // 판 상태가 같은 오브젝트에서 먼저 닫혀도 땅 칸만 비운다(땅 리비전은 다음 판이 다시 칠한다)
+        GameModeComponent::onEndPlay();
     }
 
     void HousingPlotComponent::serializeState( StateIO& io )
@@ -417,6 +500,21 @@ namespace sw
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pRoot  = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         return pRoot != nullptr ? pRoot->getWorldPosition() : float3{ 0.0f, 0.0f, 0.0f }; // 열린 부지는 startGame 이 루트를 확인했다
+    }
+
+    bool HousingPlotComponent::readPlotFrame( float3& outOrigin, float32& outCellSize ) const
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || pOwner->getPrimarySceneComponent() == nullptr )
+            return false;
+        shared_ptr<const HousingPartCatalog> pCatalog = _pCatalog;
+        if ( pCatalog == nullptr && _partCatalog.empty() == false )
+            pCatalog = _partCatalog.acquire();
+        if ( pCatalog == nullptr )
+            return false;
+        outOrigin   = getPlotOrigin();
+        outCellSize = pCatalog->getRoot()._cellSize;
+        return true;
     }
 
     float2 HousingPlotComponent::computeLocalPosition( const float3& worldPosition ) const

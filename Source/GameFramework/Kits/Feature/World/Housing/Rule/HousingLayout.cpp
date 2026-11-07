@@ -92,6 +92,7 @@ namespace sw
         : _settings{}
         , _pCatalog{ nullptr }
         , _pWallet{ nullptr }
+        , _land{}
         , _listPlacement{}
         , _listCellOwner{}
         , _listEdit{}
@@ -111,6 +112,29 @@ namespace sw
         _editCursor      = 0;
         _nextPlacementID = 1;
         ++_revision;
+    }
+
+    bool HousingLayout::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        releaseLand();
+        if ( pLand == nullptr )
+            return true;
+        LandBinding land;
+        land.bind( pLand, origin, hashed_string( "Housing." + string( _settings._plotID.c_str() ) ) );
+        if ( land.claimRect( 0, 0, _settings._sizeX - 1, _settings._sizeZ - 1, false ) == false )
+        {
+            SW_LOG_ERROR_ID( "HousingLayout.LandTaken", "Housing plot '%#': its %#x%# cells at land cell %#,%# are outside the land or used by another kit", _settings._plotID.c_str(), _settings._sizeX,
+                             _settings._sizeZ, origin._x, origin._y );
+            return false;
+        }
+        _land = land;
+        return true;
+    }
+
+    void HousingLayout::releaseLand()
+    {
+        _land.releaseRect( 0, 0, _settings._sizeX - 1, _settings._sizeZ - 1 );
+        _land = LandBinding{};
     }
 
     const HousingPlacement* HousingLayout::findPlacement( uint32 placementID ) const

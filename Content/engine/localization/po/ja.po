@@ -1526,6 +1526,16 @@ msgctxt "EdPluginTip.TurnATargetBoneInItsParent"
 msgid "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 msgstr "ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる"
 
+#: Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp
+msgctxt "EdPluginVisualizer.HousingPlotLabel"
+msgid "Plots"
+msgstr "敷地"
+
+#: Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp
+msgctxt "EdPluginVisualizer.HousingPlotTip"
+msgid "Bounds and cells of every housing plot in the scene, with its id and size"
+msgstr "シーンのハウジング敷地ごとの境界とマス、ID とサイズ"
+
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
 msgctxt "EdPluginVisualizer.MeshModifiersLabel"
 msgid "Modifiers"

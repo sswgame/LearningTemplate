@@ -473,6 +473,8 @@
 		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
 		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる"
 		       sourceHash="513b712b24165aff" />
+		<entry key="EdPluginVisualizer.HousingPlotLabel" text="敷地" sourceHash="01c091af962d4963" />
+		<entry key="EdPluginVisualizer.HousingPlotTip" text="シーンのハウジング敷地ごとの境界とマス、ID とサイズ" sourceHash="6414cac62d24e333" />
 		<entry key="EdPluginVisualizer.MeshModifiersLabel" text="モディファイア" sourceHash="87ca97e3a5f400d9" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" text="ステージ" sourceHash="ae5da213b7f896ed" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
