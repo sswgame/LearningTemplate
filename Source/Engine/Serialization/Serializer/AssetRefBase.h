@@ -25,7 +25,7 @@ namespace sw
     class SW_API AssetRefBase
     {
     public:
-        /** @brief 리플렉션 형식 이름입니다. 파서가 `AssetRef<T>` 칸의 형식을 이 이름으로 적는다(`AstVisitor`). */
+        /** @brief 리플렉션 형식 이름입니다. 파서가 `AssetRef<T>` 칸의 형식을 이 이름으로 적는다(`PropertyResolver`). */
         static constexpr const utf8* kTypeName = "AssetRef";
 
         /** @brief 참조가 비었으면 true 입니다. 빈 참조는 "가리키지 않음" 이고 종류 검사를 하지 않는다. */

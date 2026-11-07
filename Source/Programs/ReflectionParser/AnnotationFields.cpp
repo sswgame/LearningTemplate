@@ -146,7 +146,7 @@ namespace sw
 
             /**
              * @brief `Old:Target` 목록을 (옛 이름, 대상 열거자) 쌍으로 붙입니다. 꼴이 틀린 항목도 빈 칸을 남겨 그대로 붙입니다.
-             * @details 여기서 버리면 선언한 리다이렉트가 말없이 사라집니다. 꼴과 대상은 `AstVisitor` 가 열거자 목록과 함께 검사해 그 헤더를 실패로 끝냅니다.
+             * @details 여기서 버리면 선언한 리다이렉트가 말없이 사라집니다. 꼴과 대상은 `DeclarationValidator` 가 열거자 목록과 함께 검사해 그 헤더를 실패로 끝냅니다.
              */
             static void appendEnumeratorRedirect( vector<pair<string, string>>& outListRedirect, const string_view value )
             {
@@ -229,7 +229,7 @@ namespace sw
 
             /**
              * @brief 문자열 · 컨테이너 최대 길이입니다. 꼴(1 이상의 32 비트 정수 또는 상수 이름)은 `AnnotationApply` 가 이미 봤습니다.
-             * @details 상수 이름이면 이름만 남깁니다. 값은 선언을 아는 `AstVisitor` 가 그 상수를 찾아 채웁니다(`_maxCountName`).
+             * @details 상수 이름이면 이름만 남깁니다. 값은 선언을 아는 `PropertyResolver` 가 그 상수를 찾아 채웁니다(`_maxCountName`).
              */
             static void applyMaxCount( ParsedPropertyInfo& target, const string_view value )
             {

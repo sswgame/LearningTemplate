@@ -130,7 +130,7 @@ namespace sw
 
             /**
              * @brief `Min` · `Max` 값의 꼴입니다. 쉼표로 나눈 항마다 숫자이거나 필드 이름(`-_halfSize`)이거나 상수 이름(`kMaxLevel`, `Ns::kMaxLevel`)이어야 합니다.
-             * @details 이름이 필드인지 상수인지는 `_` 로 시작하는지로 갈립니다(`AstVisitor::resolveRangeConstants`). `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절합니다. 조용히 0 이 되지 않게 하려는 것입니다.
+             * @details 이름이 필드인지 상수인지는 `_` 로 시작하는지로 갈립니다(`PropertyResolver::resolvePropertyConstants`). `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절합니다. 조용히 0 이 되지 않게 하려는 것입니다.
              */
             static bool isRangeExpression( const string_view value )
             {
