@@ -855,10 +855,10 @@ namespace sw::editor
         return acceptAssetDrop( outPath ) && ( StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( outPath, pExpectedExt ) );
     }
 
-    bool EditorWidgets::acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath )
+    bool EditorWidgets::previewAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath, bool& outbDelivered )
     {
         EditorDragPayload payload{};
-        return EditorInputGUI::acceptDropInRect( minPos, maxPos, pTargetID, EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
+        return EditorInputGUI::previewDropInRect( minPos, maxPos, pTargetID, EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload, outbDelivered ) &&
                EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
     }
 

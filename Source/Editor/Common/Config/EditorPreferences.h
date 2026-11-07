@@ -59,6 +59,10 @@ namespace sw::editor
 
         PROPERTY( Tooltip = "Show the orientation cube" )
         bool _bShowOrientationCube{ true };
+
+        // 지평선 근처의 바닥 평면 교점이 수 km 밖에 놓이지 않게 한다. 언리얼도 커서 아래 표면이 없으면 놓지 않는다.
+        PROPERTY( Min = 1.0, Max = 100000.0, Tooltip = "Farthest surface (m) an asset dragged into the scene view is placed on - beyond it nothing is placed" )
+        float32 _placementMaxDistance{ 500.0f };
     };
 } // namespace sw::editor
 

@@ -8,8 +8,6 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include <imgui.h>
@@ -49,15 +47,11 @@ namespace sw::editor
                 return true;
             }
 
-            virtual bool dropInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos ) const override
+            [[nodiscard]] virtual bool canPlaceInViewport() const override { return true; }
+
+            virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos ) const override
             {
-                GameObject* pSpawned = EditorAssetCommands::spawnPrefab( pManager, pPath, nullptr, "Spawn Prefab in Viewport" );
-                if ( pSpawned == nullptr )
-                    return true; // 실패는 spawnPrefab 이 알린다(편집 금지 · 읽지 못한 프리팹)
-                SceneComponent* pSceneComponent = pSpawned->getPrimarySceneComponent();
-                if ( pSceneComponent != nullptr )
-                    pSceneComponent->setLocalPosition( spawnPos );
-                return true;
+                (void)EditorAssetCommands::spawnPrefabAt( pManager, pPath, worldPos ); // 실패는 spawnPrefabAt 이 알린다(편집 금지 · 읽지 못한 프리팹)
             }
         };
 

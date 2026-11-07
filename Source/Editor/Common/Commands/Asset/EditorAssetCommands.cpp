@@ -157,15 +157,38 @@ namespace sw::editor
         return pSpawned;
     }
 
-    void EditorAssetCommands::dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos )
+    GameObject* EditorAssetCommands::spawnPrefabAt( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
     {
-        if ( pManager == nullptr || pPath == nullptr )
-            return;
+        if ( EditorPlaySession::refuseSceneEdit( "Spawn prefab" ) )
+            return nullptr;
+        GameObject* pSpawned = spawnPrefabWithoutUndo( pManager, pPath, nullptr );
+        if ( pSpawned == nullptr )
+            return nullptr;
+        SceneComponent* pSceneComponent = pSpawned->getPrimarySceneComponent();
+        if ( pSceneComponent != nullptr )
+            pSceneComponent->setLocalPosition( worldPos );
+        EditorTransaction::recordCreation( pSpawned, "Spawn Prefab in Viewport" );
+        EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
+        return pSpawned;
+    }
 
-        // 스폰과 로드는 종류의 동작(프리팹, 텍스처, 씬)이 한다. 처리하지 않은 것은 연다.
-        const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( pPath );
-        if ( pActions != nullptr && pActions->dropInViewport( pManager, pPath, spawnPos ) )
+    bool EditorAssetCommands::canPlaceInViewport( string_view relativePath )
+    {
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( relativePath );
+        return pActions != nullptr && pActions->canPlaceInViewport();
+    }
+
+    void EditorAssetCommands::placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
+    {
+        if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return;
-        (void)openPath( pPath ); // 실패는 openPath 가 알린다
+        // 만드는 일은 종류의 동작(프리팹 · 메시 · 텍스처)이 한다. 놓을 수 없는 종류를 여기로 보내는 것은 부른 쪽의 잘못이다(그 종류는 연다).
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( pPath );
+        if ( pActions == nullptr || pActions->canPlaceInViewport() == false )
+        {
+            SW_LOG_ERROR_ID( "EditorAssetCommands.NotPlaceable", "'%#' cannot be placed in the viewport (its type opens instead) - nothing was placed", pPath );
+            return;
+        }
+        pActions->placeInViewport( pManager, pPath, worldPos );
     }
 } // namespace sw::editor

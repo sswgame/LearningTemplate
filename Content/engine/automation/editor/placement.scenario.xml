@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 씬 뷰 애셋 배치(S3): 끄는 동안 고스트, 커서 아래 표면에 놓기, 표면이 없으면 놓지 않기(원점에 놓지 않는다), 놓을 수 없는 종류는 열기.
+  ① 메시를 누른 채 씬 뷰 위로 옮기면 고스트(놓일 자리 고리 · 법선 · "Place … on the …" 글)가 그려진다. 떼면 표면 위에 하나 생기고 되돌리기가 하나 쌓인다.
+  ② 되돌리기 → 다시 실행이 같은 자리로 돌아온다(씬 해시가 놓은 직후와 같다 — 예전 프리팹 드롭은 위치를 기록 뒤에 입혀 다시 실행에서 원점으로 갔다).
+  ③ 카메라를 하늘로 돌리고 놓으면 표면이 없어 아무것도 생기지 않는다(거절 수 1, 되돌리기 그대로). 고스트 글은 오류 색으로 이유를 적는다.
+  ④ 머티리얼은 놓을 수 없는 종류다 — 고스트가 "놓으면 연다" 고 알리고, 놓으면 열린다(연 수 1, 씬에 오브젝트가 생기지 않는다).
+  볼 그림: placement/ghost.png(캔버스 가운데 고리 + 위로 선 법선 + 커서 옆 글), placement/nosurface.png(빨간 글), placement/opens.png(회색 글).
+  볼 값: Editor.PlacementSurface 1 · 2 · 3 중 하나(editortest 씬 가운데가 무엇이냐에 따라), Editor.PlacementY ≥ 0.
+  실행: App -EnableEditor -scenario=engine/automation/editor/placement.scenario.xml -unattended
+-->
+<Scenario name="editor.placement" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.resetOptional"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
+	<DevCommand line="panel.focus content_browser"/>
+	<EditorWaitSettled/>
+	<DevCommand line="content.open game/empty/models"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.search"/>
+	<EditorWaitSettled/>
+	<EditorText value="crate_medium.mesh"/>
+	<EditorWaitSettled/>
+	<!-- ① 누른 채 옮겨 고스트를 본 뒤 뗀다 -->
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas"/>
+	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.PlacementSurface" atLeast="1"/>
+	<CaptureEditorUI file="placement/ghost.png" maxMagentaFraction="0"/>
+	<EditorClick mark="sceneView.canvas" state="Up"/>
+	<WaitUntil watch="Editor.PlacedCount" equals="1" timeoutFrames="90"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<Expect watch="Editor.PlacementY" atLeast="0"/>
+	<Remember watch="Editor.SceneHash" as="placed"/>
+	<!-- ② 되돌리기 · 다시 실행은 같은 자리 -->
+	<EditorWaitSettled/>
+	<DevCommand line="editor edit.undo"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.SceneHash" differsFrom="placed"/>
+	<DevCommand line="editor edit.redo"/>
+	<WaitUntil watch="Editor.SceneHash" sameAs="placed" timeoutFrames="60"/>
+	<!-- ③ 하늘을 보면 표면이 없다 — 놓지 않는다 -->
+	<EditorWaitSettled/>
+	<DevCommand line="camera.set 0 5 -10 -60 0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas"/>
+	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.PlacementSurface" equals="0"/>
+	<CaptureEditorUI file="placement/nosurface.png" maxMagentaFraction="0"/>
+	<EditorClick mark="sceneView.canvas" state="Up"/>
+	<WaitUntil watch="Editor.PlacementRefusedCount" equals="1" timeoutFrames="90"/>
+	<Expect watch="Editor.PlacedCount" equals="1"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<ExpectLog id="EditorViewportAssetPlacement.NoSurface" atLeast="1"/>
+	<!-- ④ 놓을 수 없는 종류는 연다 -->
+	<EditorWaitSettled/>
+	<DevCommand line="content.open game/empty/materials/matgraph"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.search"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorText value="layered_stone_clean"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.asset.layered_stone_clean.material" state="Down"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas"/>
+	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
+	<CaptureEditorUI file="placement/opens.png" maxMagentaFraction="0"/>
+	<EditorClick mark="sceneView.canvas" state="Up"/>
+	<WaitUntil watch="Editor.PlacementOpenedCount" equals="1" timeoutFrames="90"/>
+	<Expect watch="Editor.PlacedCount" equals="1"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

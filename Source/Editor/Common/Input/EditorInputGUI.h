@@ -140,9 +140,14 @@ namespace sw::editor
          * @details 놓을 위치 표시(앞 · 뒤 · 안)를 놓기 전에 그리는 곳이 쓴다. 기본 강조 사각형은 그리지 않는다.
          */
         [[nodiscard]] static bool previewDrop( EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload, bool& outbDelivered );
-        /** @brief 화면 사각형(@p minPos ~ @p maxPos)을 놓을 자리로 만듭니다(뷰포트 캔버스처럼 위에 다른 것이 그려지는 영역). 그 밖은 `acceptDrop` 과 같습니다. */
-        [[nodiscard]] static bool acceptDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, EditorPayloadKindSet acceptedKinds,
-                                                    EditorDragPayload& outPayload );
+        /**
+         * @brief 화면 사각형(@p minPos ~ @p maxPos)을 놓을 자리로 만듭니다(뷰포트 캔버스처럼 위에 다른 것이 그려지는 영역). 그 밖은 `previewDrop` 과 같습니다 —
+         *        놓기 전에도 true 이고(놓을 자리 미리보기 · 고스트를 그린다), 놓였으면 @p outbDelivered 가 true 입니다. 기본 강조 사각형은 그리지 않습니다.
+         */
+        [[nodiscard]] static bool previewDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, EditorPayloadKindSet acceptedKinds,
+                                                     EditorDragPayload& outPayload, bool& outbDelivered );
+        /** @brief @p acceptedKinds 안의 끌기가 어디선가 진행 중이면 true 입니다(놓을 자리 위가 아니어도). 끌기 동안만 사는 상태를 놓는 쪽이 풀 때 씁니다. */
+        [[nodiscard]] static bool isPayloadInFlight( EditorPayloadKindSet acceptedKinds );
         /** @brief 이름(에셋 상대 경로 · 위젯 타입 이름)을 페이로드 id 로 바꿉니다. 같은 이름은 같은 id 이고 `findPayloadName` 으로 되돌린다. */
         static uint64 registerPayloadName( EditorPayloadKind kind, string_view name );
         /** @brief `registerPayloadName` 이 만든 id 의 이름입니다. 모르는 id 면 false 입니다. */

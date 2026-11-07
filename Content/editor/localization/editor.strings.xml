@@ -2018,6 +2018,21 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.PlacementNoSurface" source="No surface under the cursor - {asset} will not be placed. Aim at an object, a collider or the ground">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PlacementOnSurface" source="Place {asset} on the {surface}">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.PlacementOpensInstead" source="{asset} opens on release - this type cannot be placed in the scene">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportAssetPlacement.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.PlaybackControlsTotalFrames"
 		       source="Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):">
 			<origins>

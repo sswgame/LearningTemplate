@@ -210,18 +210,26 @@ namespace sw::editor
         return bAccepted;
     }
 
-    bool EditorInputGUI::acceptDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload )
+    bool EditorInputGUI::previewDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload,
+                                            bool& outbDelivered )
     {
+        outbDelivered = false;
         EditorDragPayload peeked{};
         if ( EditorInputGUIInternal::peekAcceptedPayload( acceptedKinds, peeked ) == false )
             return false;
         const ImRect rect( ImVec2( minPos._x, minPos._y ), ImVec2( maxPos._x, maxPos._y ) );
         if ( ImGui::BeginDragDropTargetCustom( rect, ImGui::GetID( pTargetID ) ) == false )
             return false;
-        bool       bDelivered = false;
-        const bool bAccepted  = EditorInputGUIInternal::acceptOpenTarget( ImGuiDragDropFlags_None, outPayload, bDelivered );
+        const ImGuiDragDropFlags flags     = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect;
+        const bool               bAccepted = EditorInputGUIInternal::acceptOpenTarget( flags, outPayload, outbDelivered );
         ImGui::EndDragDropTarget();
-        return bAccepted && bDelivered;
+        return bAccepted;
+    }
+
+    bool EditorInputGUI::isPayloadInFlight( EditorPayloadKindSet acceptedKinds )
+    {
+        EditorDragPayload peeked{};
+        return EditorInputGUIInternal::peekAcceptedPayload( acceptedKinds, peeked );
     }
 
     uint64 EditorInputGUI::registerPayloadName( EditorPayloadKind kind, string_view name )

@@ -1,6 +1,6 @@
 /**
  * @file EditorAssetTypeActions.h
- * @brief 애셋 종류별 에디터 동작(썸네일, 열기, 뷰포트 드롭)의 인터페이스입니다. 종류 등록(`EditorAssetTypeRegistration::_pActions`)이 가리킵니다.
+ * @brief 애셋 종류별 에디터 동작(썸네일, 열기, 뷰포트 배치)의 인터페이스입니다. 종류 등록(`EditorAssetTypeRegistration::_pActions`)이 가리킵니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -42,7 +42,15 @@ namespace sw::editor
         virtual bool hasImagePreview() const { return false; }
         /** @brief 전용 도구 패널이 없는 종류를 엽니다. 이 종류가 열기를 하지 않거나 열지 못했으면 false 입니다. */
         [[nodiscard]] virtual bool open( string_view relativePath ) const;
-        /** @brief 뷰포트에 드롭한 것을 처리합니다. 스폰이나 로드를 합니다. 처리하지 않으면 false 이고, 호출하는 쪽이 열기로 넘어갑니다. */
-        [[nodiscard]] virtual bool dropInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos ) const;
+        /**
+         * @brief 씬 뷰에 놓으면 그 자리에 만드는 종류면 true 입니다(프리팹 · 메시 · 텍스처). false 인 종류는 놓을 때 연다 — 뷰포트 고스트가 놓기 전에 그렇다고 알린다.
+         * @details 언리얼의 `UActorFactory` 가 있는 에셋만 뷰포트에 놓이고 나머지는 놓을 수 없다고 표시하는 것과 같다. 위치를 몰라 원점에 놓는 일은 없다.
+         */
+        [[nodiscard]] virtual bool canPlaceInViewport() const { return false; }
+        /**
+         * @brief @p worldPos 에 이 종류의 오브젝트를 만들고 되돌리기 · 선택을 기록합니다. `canPlaceInViewport` 가 true 인 종류만 불린다. 위치는 부른 쪽이 표면에서 구한다.
+         * @details 기본 구현은 오류를 남긴다 — 놓을 수 있다고 하고 구현하지 않은 종류가 조용히 아무것도 하지 않게 두지 않는다.
+         */
+        virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos ) const;
     };
 } // namespace sw::editor

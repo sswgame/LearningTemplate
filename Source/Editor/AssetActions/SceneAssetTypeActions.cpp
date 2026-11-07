@@ -38,13 +38,8 @@ namespace sw::editor
                 return true;
             }
 
+            // 뷰포트에 놓아도 연다(놓을 수 있는 종류가 아니다 — 뷰포트 고스트가 "놓으면 연다" 고 알린다). 언리얼도 맵을 뷰포트에 끌면 연다.
             [[nodiscard]] virtual bool open( string_view relativePath ) const override { return EditorSceneFileCommands::tryOpenScene( relativePath ); }
-
-            virtual bool dropInViewport( GameObjectManager* /*pManager*/, const utf8* pPath, const float3& /*spawnPos*/ ) const override
-            {
-                (void)EditorSceneFileCommands::tryOpenScene( pPath ); // 실패는 tryOpenScene 이 알린다
-                return true;
-            }
         };
 
         const SceneAssetTypeActions s_sceneActions{};

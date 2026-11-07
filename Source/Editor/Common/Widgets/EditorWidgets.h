@@ -260,11 +260,12 @@ namespace sw::editor
         /** @brief `acceptAssetDrop` 에 @p pExpectedExt 거르개(`drawAssetSlot` 과 같은 규칙)를 더합니다. 맞지 않는 애셋은 받지 않습니다. 글 칸에 끌어 놓기를 붙일 때 씁니다. */
         [[nodiscard]] static bool acceptAssetDrop( string& outPath, const utf8* pExpectedExt );
         /**
-         * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고 경로를 받습니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.
+         * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고, 애셋이 그 위로 끌려 와 있으면(놓기 전 포함) 경로를 받아 true 입니다.
+         *        놓였으면 @p outbDelivered 가 true 입니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.
          * @details 뷰포트 캔버스처럼 위에 오버레이 · 기즈모 · HUD 가 그려지는 영역에 씁니다 — "마지막 아이템" 을 타깃으로 잡는 `acceptAssetDrop` 은
-         *          캔버스 다음에 그린 아이템(오버레이 단추 등)에 걸려 캔버스에 놓은 것을 받지 못한다.
+         *          캔버스 다음에 그린 아이템(오버레이 단추 등)에 걸려 캔버스에 놓은 것을 받지 못한다. 놓기 전 프레임은 배치 고스트를 그린다.
          */
-        [[nodiscard]] static bool acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath );
+        [[nodiscard]] static bool previewAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath, bool& outbDelivered );
 
         /**
          * @brief 검색 결과 목록에서 Up/Down 으로 선택을 움직입니다. Enter 면 true 입니다.

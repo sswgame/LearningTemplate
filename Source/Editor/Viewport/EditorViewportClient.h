@@ -4,6 +4,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Viewport/EditorDebugHUDView.h"
+#include "Editor/Viewport/EditorViewportAssetPlacement.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportCanvasOverlay.h"
 #include "Editor/Viewport/EditorViewportGizmo.h"
@@ -24,7 +25,7 @@ namespace sw::editor
      * @class EditorViewportClient
      * @brief 씬 뷰 캔버스 한 장을 조정하는 클라이언트입니다. 일은 책임마다의 값 멤버가 하고, 이 클래스는 순서와 입력 분배만 정합니다.
      * @details 카메라는 `EditorViewportCamera`, 피킹과 호버는 `EditorViewportPicker`, 기즈모는 `EditorViewportGizmo`, 격자 · 자 · 방향 큐브는
-     *          `EditorViewportCanvasOverlay`, 애셋 드롭은 `EditorViewportAssetDrop` 입니다. 모두 비가상으로 직접 부릅니다.
+     *          `EditorViewportCanvasOverlay`, 애셋 배치(고스트 · 표면 · 스냅)는 `EditorViewportAssetPlacement` 입니다. 모두 비가상으로 직접 부릅니다.
      *          그리는 순서(격자 → 시각화 → 자 → 피킹 · 호버 → 기즈모 → HUD · 방향 큐브 → 드롭)는 ImGui 의 "마지막 항목" 과 ImGuizmo 상태에 기대므로 `draw` 한곳에 둡니다.
      */
     class EditorViewportClient
@@ -51,6 +52,8 @@ namespace sw::editor
         const EditorGridStats& getGridStats() const { return _canvasOverlay.getGridStats(); }
         /** @brief 시각화(`debug_draw` · 물리 셰이프 · 내비메시)가 마지막으로 그린 양입니다. 프로브와 자체 테스트가 읽습니다. */
         const EditorVisualizerStats& getVisualizerStats() const { return _visualizerStats; }
+        /** @brief 애셋 배치가 마지막으로 한 일(고스트 · 놓은 자리 · 거절)입니다. 프로브 `Editor.Placement*` 가 읽습니다. */
+        const EditorPlacementStats& getPlacementStats() const { return _assetPlacement.getStats(); }
 
         /** @brief 뷰 행렬을 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const { _camera.getViewMatrix( pOutMatrix ); }
@@ -95,19 +98,20 @@ namespace sw::editor
         void processContextMenu( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered );
 
     private:
-        ViewportToolbarSettings     _toolbarSettings;
-        float32                     _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
-        EditorViewportCamera        _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
-        EditorViewportPicker        _picker;                   ///< 클릭 선택과 호버
-        EditorViewportGizmo         _gizmo;                    ///< 트랜스폼 기즈모와 그 되돌리기
-        EditorViewportCanvasOverlay _canvasOverlay;            ///< 격자, 자, 방향 큐브
-        EditorViewportOverlays      _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
-        EditorDebugHUDView          _hudView;                  ///< 오른쪽 위의 HUD 박스
-        EditorVisualizerStats       _visualizerStats;          ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
-        uint64                      _contextMenuObjectID;      ///< 우클릭 메뉴를 연 순간 맞은 오브젝트 id. 0 이면 빈 곳. 메뉴가 열린 동안 프레임마다 다시 찾는다
-        float3                      _contextMenuWorldPosition; ///< 우클릭 메뉴를 연 순간의 바닥 평면 교점
-        uint8                       _bContextMenuHasWorldPosition : 1;
-        uint8                       _bMaximized                   : 1;
-        [[maybe_unused]] uint8      _reserved                     : 7;
+        ViewportToolbarSettings      _toolbarSettings;
+        float32                      _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
+        EditorViewportCamera         _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
+        EditorViewportPicker         _picker;                   ///< 클릭 선택과 호버
+        EditorViewportGizmo          _gizmo;                    ///< 트랜스폼 기즈모와 그 되돌리기
+        EditorViewportCanvasOverlay  _canvasOverlay;            ///< 격자, 자, 방향 큐브
+        EditorViewportOverlays       _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
+        EditorDebugHUDView           _hudView;                  ///< 오른쪽 위의 HUD 박스
+        EditorVisualizerStats        _visualizerStats;          ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
+        EditorViewportAssetPlacement _assetPlacement;           ///< 끌어 온 애셋의 고스트 · 표면 배치(끄는 동안 정적 물리 사본을 든다)
+        uint64                       _contextMenuObjectID;      ///< 우클릭 메뉴를 연 순간 맞은 오브젝트 id. 0 이면 빈 곳. 메뉴가 열린 동안 프레임마다 다시 찾는다
+        float3                       _contextMenuWorldPosition; ///< 우클릭 메뉴를 연 순간의 바닥 평면 교점
+        uint8                        _bContextMenuHasWorldPosition : 1;
+        uint8                        _bMaximized                   : 1;
+        [[maybe_unused]] uint8       _reserved                     : 7;
     };
 } // namespace sw::editor

@@ -64,6 +64,69 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 씬 뷰 애셋 배치의 기록입니다. 씬 뷰 패널이 없으면 nullptr 입니다. */
+        [[nodiscard]] const EditorPlacementStats* findPlacementStats()
+        {
+            const EditorViewportClient* pClient = findSceneViewClient();
+            return pClient != nullptr ? &pClient->getPlacementStats() : nullptr;
+        }
+
+        /** @brief 배치 고스트가 이번 · 지난 프레임에 그려졌으면 1 입니다(끄는 애셋이 캔버스 위에 있다). */
+        [[nodiscard]] bool readPlacementGhostShown( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr )
+                return false;
+            outValue = pStats->_ghostFrame >= 0 && ImGui::GetFrameCount() - pStats->_ghostFrame <= 1 ? 1.0 : 0.0;
+            return true;
+        }
+
+        /** @brief 마지막 고스트 · 놓기가 찾은 표면입니다(`EditorPlacementSurface` 번호). */
+        [[nodiscard]] bool readPlacementSurface( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr )
+                return false;
+            outValue = static_cast<float64>( pStats->_surface );
+            return true;
+        }
+
+        [[nodiscard]] bool readPlacedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr )
+                return false;
+            outValue = static_cast<float64>( pStats->_placedCount );
+            return true;
+        }
+
+        [[nodiscard]] bool readPlacementRefusedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr )
+                return false;
+            outValue = static_cast<float64>( pStats->_refusedCount );
+            return true;
+        }
+
+        [[nodiscard]] bool readPlacementOpenedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr )
+                return false;
+            outValue = static_cast<float64>( pStats->_openedCount );
+            return true;
+        }
+
+        [[nodiscard]] bool readPlacementY( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorPlacementStats* pStats = findPlacementStats();
+            if ( pStats == nullptr || pStats->_placedCount == 0 )
+                return false;
+            outValue = static_cast<float64>( pStats->_lastPosition._y );
+            return true;
+        }
+
         /** @brief 내비메시 시각화가 지난 프레임에 그린 선분 수입니다. 씬 뷰 패널이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readNavMeshSegments( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -444,4 +507,14 @@ namespace sw::editor
                          &readSceneViewMode );
     SW_AUTOMATION_WATCH( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
                          &readGameViewMode );
+    SW_AUTOMATION_WATCH( editorPlacementGhostShown, "Editor.PlacementGhostShown", "1 while an asset dragged over the scene view draws its placement ghost",
+                         &readPlacementGhostShown );
+    SW_AUTOMATION_WATCH( editorPlacementSurface, "Editor.PlacementSurface",
+                         "Surface the last placement ghost or drop found: 0 none (nothing is placed), 1 collider, 2 object bounds, 3 ground plane", &readPlacementSurface );
+    SW_AUTOMATION_WATCH( editorPlacedCount, "Editor.PlacedCount", "Assets the scene view placed on a surface this session", &readPlacedCount );
+    SW_AUTOMATION_WATCH( editorPlacementRefusedCount, "Editor.PlacementRefusedCount", "Asset drops the scene view refused because no surface was under the cursor",
+                         &readPlacementRefusedCount );
+    SW_AUTOMATION_WATCH( editorPlacementOpenedCount, "Editor.PlacementOpenedCount", "Asset drops on the scene view that opened the asset because its type cannot be placed",
+                         &readPlacementOpenedCount );
+    SW_AUTOMATION_WATCH( editorPlacementY, "Editor.PlacementY", "Height (m) of the last asset the scene view placed (no value before the first)", &readPlacementY );
 } // namespace sw::editor
