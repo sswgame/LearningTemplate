@@ -226,7 +226,7 @@ SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
         sw::string       error;
         const bool       bLoaded = table.loadFromXMLText( xml, "bad.cultures.xml", &error );
         SW_EXPECT_FALSE( bLoaded );
-        SW_EXPECT_TRUE_MSG( error.find( expectedWord ) != sw::string::npos, error.c_str() );
+        SW_EXPECT_TRUE_MSG( error.find( sw::string( expectedWord ) ) != sw::string::npos, error.c_str() );
         SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
     };
     constexpr const utf8* kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";

@@ -30,8 +30,6 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Foundation/EngineServices.h"
-
 namespace sw
 {
     /** @brief 경로 요청 하나의 핸들입니다. 칸 번호와 세대 — 받거나 취소하면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다. */
@@ -85,7 +83,7 @@ namespace sw
             , _pSolver{ &solver }
             , _completedCount{ 0 }
             , _lock{}
-            , _bLaunchedTasks{ SW_FALSE }
+            , _pLaunchedTaskManager{ nullptr }
         {
         }
 
@@ -154,9 +152,10 @@ namespace sw
 
         /**
          * @brief 대기 줄을 워커에 넘깁니다(주인 스레드). 앞서 넘긴 일이 수확되지 않았으면 먼저 수확합니다 — 비행 줄은 한 벌이다.
-         * @details 워커가 없으면(테스트 · 도구) 이 자리에서 모두 풉니다. 결과는 그래도 다음 `complete` 에서 칸에 든다(엔진 유무와 같은 순서).
+         * @details @p pTaskManager 가 nullptr 이면(테스트 · 도구 · 호스트 없는 시뮬레이션) 이 자리에서 모두 풉니다. 결과는 그래도 다음 `complete` 에서 칸에 든다(워커 유무와 같은 순서).
+         *          풀은 주인이 넘긴다 — 엔진과 게임 프레임워크가 서비스를 찾는 창구가 달라(`engine::` · `game::`) 이 공용 헤더는 어느 쪽도 고르지 않는다.
          */
-        void launch( string_view taskName )
+        void launch( string_view taskName, TaskManager* pTaskManager )
         {
             if ( _listInFlightJob.empty() == false )
                 (void)complete(); // 수확하지 않고 다시 넘기는 자리 — 결과는 칸에 들고 증표는 여기서 쓸 데가 없다
@@ -175,8 +174,8 @@ namespace sw
             const uint32 jobCount = static_cast<uint32>( _listInFlightJob.size() );
             if ( jobCount == 0 )
                 return;
-            const bool   bWorkers  = engine::areEngineServicesBound();
-            const uint32 laneLimit = bWorkers ? engine::getSubsystem<TaskManager>().getWorkerCount() + 1 : 1;
+            const bool   bWorkers  = pTaskManager != nullptr;
+            const uint32 laneLimit = bWorkers ? pTaskManager->getWorkerCount() + 1 : 1;
             const uint32 laneCount = MathUtil::max( 1u, MathUtil::min( jobCount, laneLimit ) );
             _pSolver->prepareBatch( _listInFlightJob, laneCount );
             _listLane.resize( laneCount );
@@ -197,7 +196,7 @@ namespace sw
                 }
                 return;
             }
-            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+            TaskManager& taskManager = *pTaskManager;
             for ( LaneTask& lane : _listLane )
             {
                 TaskHandle task = taskManager.emplaceTask( taskName, SW_DELEGATE_METHOD( TaskDelegate, &LaneTask::run, &lane ) );
@@ -205,7 +204,7 @@ namespace sw
                 taskManager.submitWithoutWake( task );
             }
             taskManager.wakeSleepingWorkers( laneCount );
-            _bLaunchedTasks = SW_TRUE;
+            _pLaunchedTaskManager = pTaskManager;
         }
 
         /** @brief 넘긴 일을 기다리고(주인 스레드) 결과를 칸에 옮깁니다. 취소한 요청의 결과는 버립니다. 돌려준 증표가 "워커가 읽지 않는다" 의 증거입니다. */
@@ -302,10 +301,10 @@ namespace sw
         /** @brief 워커에 넘긴 태스크가 있으면 모두 끝날 때까지 기다립니다(인라인으로 푼 묶음은 기다릴 것이 없다). */
         void waitLaunchedTasks()
         {
-            if ( _bLaunchedTasks == SW_FALSE )
+            if ( _pLaunchedTaskManager == nullptr )
                 return;
-            engine::getSubsystem<TaskManager>().waitStage( _stage, "PathRequestQueue" );
-            _bLaunchedTasks = SW_FALSE;
+            _pLaunchedTaskManager->waitStage( _stage, "PathRequestQueue" );
+            _pLaunchedTaskManager = nullptr;
         }
 
     private:
@@ -319,6 +318,6 @@ namespace sw
         TSolver*                               _pSolver;
         uint64 _completedCount                 SW_GUARDED_BY( _lock );
         mutable SpinLock                       _lock;
-        uint8                                  _bLaunchedTasks : 1;
+        TaskManager*                           _pLaunchedTaskManager; ///< 태스크를 넘긴 풀 — 기다릴 곳(넘긴 것이 없거나 인라인으로 풀었으면 nullptr)
     };
 } // namespace sw

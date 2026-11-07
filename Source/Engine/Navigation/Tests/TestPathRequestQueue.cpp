@@ -67,7 +67,7 @@ SW_TEST_CASE( PathRequestQueueTest, ResultIsReadyOnlyAfterComplete )
     SW_REQUIRE_TRUE( handle.isValid() );
     SW_EXPECT_TRUE( queue.getState( handle ) == sw::PathRequestState::Pending );
 
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     SW_EXPECT_EQUAL( 1u, solver._preparedCount );
     SW_EXPECT_TRUE( queue.getState( handle ) == sw::PathRequestState::Pending ); // 그 자리에서 풀었어도 칸에는 아직 들지 않았다
     DoublingJob job;
@@ -94,7 +94,7 @@ SW_TEST_CASE( PathRequestQueueTest, CancelledRequestsNeverDeliver )
     const sw::PathRequestHandle beforeLaunch = queue.request( makeJob( 1 ) );
     queue.cancel( beforeLaunch );
     const sw::PathRequestHandle afterLaunch = queue.request( makeJob( 2 ) );
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     SW_EXPECT_EQUAL( 1u, solver._preparedCount ); // 버린 요청은 넘기지 않았다
     queue.cancel( afterLaunch );
     (void)queue.complete();
@@ -121,7 +121,7 @@ SW_TEST_CASE( PathRequestQueueTest, ReusedSlotRejectsOldHandle )
     SW_EXPECT_EQUAL( first._slot, second._slot ); // 같은 칸을 다시 쓴다
     SW_EXPECT_TRUE( first._generation != second._generation );
 
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     (void)queue.complete();
     DoublingJob job;
     SW_EXPECT_TRUE( queue.takeResult( first, job ) == sw::PathRequestState::Unknown );
@@ -137,9 +137,9 @@ SW_TEST_CASE( PathRequestQueueTest, RelaunchHarvestsThePreviousBatch )
     DoublingSolver              solver;
     DoublingQueue               queue{ solver };
     const sw::PathRequestHandle first = queue.request( makeJob( 5 ) );
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     const sw::PathRequestHandle second = queue.request( makeJob( 6 ) );
-    queue.launch( "Test" ); // 앞 묶음을 수확한 뒤 둘째를 넘긴다
+    queue.launch( "Test", nullptr ); // 앞 묶음을 수확한 뒤 둘째를 넘긴다
     SW_EXPECT_TRUE( queue.getState( first ) == sw::PathRequestState::Ready );
     SW_EXPECT_TRUE( queue.getState( second ) == sw::PathRequestState::Pending );
     (void)queue.complete();
@@ -154,10 +154,10 @@ SW_TEST_CASE( PathRequestQueueTest, ClearDropsEveryRequest )
     DoublingSolver              solver;
     DoublingQueue               queue{ solver };
     const sw::PathRequestHandle ready = queue.request( makeJob( 7 ) );
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     (void)queue.complete();
     const sw::PathRequestHandle inFlight = queue.request( makeJob( 8 ) );
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     const sw::PathRequestHandle queued = queue.request( makeJob( 9 ) );
 
     (void)queue.clear();
@@ -167,7 +167,7 @@ SW_TEST_CASE( PathRequestQueueTest, ClearDropsEveryRequest )
     SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
     // 비운 뒤에도 줄은 다시 쓴다.
     const sw::PathRequestHandle fresh = queue.request( makeJob( 10 ) );
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     (void)queue.complete();
     DoublingJob job;
     SW_REQUIRE_TRUE( queue.takeResult( fresh, job ) == sw::PathRequestState::Ready );
@@ -186,7 +186,7 @@ SW_TEST_CASE( PathRequestQueueTest, EveryHandleGetsItsOwnResult )
     {
         listHandle.push_back( queue.request( makeJob( query ) ) );
     }
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     (void)queue.complete();
     SW_EXPECT_TRUE( solver._laneCount >= 1u );
     for ( size_t index = 0; index < listHandle.size(); ++index )

@@ -49,7 +49,7 @@ SW_TEST_CASE( GridPathSolverTest, QueuedPathsMatchSynchronousPaths )
         listTarget.push_back( target );
         listHandle.push_back( queue.request( std::move( job ) ) );
     }
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     (void)queue.complete();
 
     sw::GridPathfinder pathfinder;
@@ -82,7 +82,7 @@ SW_TEST_CASE( GridPathSolverTest, BlockedStartReportsNoPath )
     request._from                      = sw::float3{ 6.5f, 0.0f, 6.5f }; // 벽 칸
     request._target                    = sw::float3{ 0.5f, 0.0f, 0.5f };
     const sw::PathRequestHandle handle = queue.request( std::move( request ) );
-    queue.launch( "Test" );
+    queue.launch( "Test", nullptr );
     (void)queue.complete();
     sw::GridPathJob job;
     SW_REQUIRE_TRUE( queue.takeResult( handle, job ) == sw::PathRequestState::Ready );

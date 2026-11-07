@@ -47,8 +47,8 @@ namespace sw
 
     private:
         void explode( GameObject& owner );
-        /** @brief @p center 에서 반경 안 다른 오브젝트에 거리 감쇠 피해 · 파괴 오브젝트에 폭발 피해를 줍니다(게임 스레드, 틱 밖). */
-        void applyRadialDamage( GameObjectManager& manager, const float3& center ) const;
+        /** @brief 터진 자리(`_blastCenter`)에서 반경 안 다른 오브젝트에 거리 감쇠 피해 · 파괴 오브젝트에 폭발 피해를 줍니다(게임 스레드, 틱 밖). */
+        void applyRadialDamage( GameObjectManager& manager ) const;
 
     private:
         PROPERTY( Category = "Barrel", DisplayName = "Health", Min = 0.0 )
@@ -70,6 +70,7 @@ namespace sw
 
         int32          _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 스텝 수(-1 이면 아직 세지 않음)
         FixedStepTimer _clock;
+        float3         _blastCenter; ///< 터진 자리 — 틱 뒤 `applyRadialDamage` 가 읽는다(틱 뒤 일은 캡처 없이 핸들로 다시 찾는다)
     };
 } // namespace sw
 

@@ -5,11 +5,13 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommand.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -1538,7 +1540,7 @@ namespace sw
 
     void RTSWorld::applyPathResults()
     {
-        _pathQueue.launch( "RTSPath" );
+        _pathQueue.launch( "RTSPath", game::findSubsystem<TaskManager>() );
         (void)_pathQueue.complete(); // 격자는 걸음 안에서만 바뀌고 그 뒤에 풀므로 격자 쪽에 증표를 넘길 데가 없다
         // 유닛 순서(슬롯 순서)로 적용한다 — 결과는 요청 순서 · 레인과 상관없이 같고, 적용 순서도 늘 같다(결정적).
         for ( RTSUnit& unit : _listUnit )

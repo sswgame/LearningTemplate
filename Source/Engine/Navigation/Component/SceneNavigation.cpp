@@ -690,7 +690,7 @@ namespace sw
         const NavMeshWriteAccess access = completeNavMeshReads();
         if ( bAnything == false || _pManager == nullptr )
         {
-            _pathQueue.launch( "NavPathQuery" );
+            _pathQueue.launch( "NavPathQuery", engine::areEngineServicesBound() ? &engine::getSubsystem<TaskManager>() : nullptr );
             return;
         }
         // 플레이 중이면 표면이 맡은 종류를 마련한다(처음 쓸 때 — 쿠킹본이 맞으면 읽고 아니면 베이크한다).
@@ -721,7 +721,7 @@ namespace sw
         applyLinkStates( access );
         NavTileRebaker::launchTileBakes( _listRuntime, _settings._maxConcurrentTileBakeCount );
         syncAgentsIntoCrowds();
-        _pathQueue.launch( "NavPathQuery" );
+        _pathQueue.launch( "NavPathQuery", engine::areEngineServicesBound() ? &engine::getSubsystem<TaskManager>() : nullptr );
         launchCrowdUpdates( deltaTime );
     }
 
