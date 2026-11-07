@@ -136,88 +136,43 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 테이블 전체를 읽는다(저장소 스레드), 결과를 바꿔 넣는다(서비스 스레드). */
-    class RemoteConfig::ReloadJob final : public IServiceStoreJob
+    ServiceStoreRead<map<string, RemoteConfig::Entry>> RemoteConfig::readTable( IServiceStoreConnection& connection )
     {
-    public:
-        explicit ReloadJob( RemoteConfig* pConfig )
-            : _mapEntry{}
-            , _pConfig{ pConfig }
-            , _result{ ServiceStoreResult::Ok }
+        ServiceStoreRead<map<string, Entry>> read;
+        string                               cursor;
+        while ( true )
         {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            string cursor;
-            while ( true )
+            vector<ServiceRecord> listRecord;
+            read._result = connection.listRecords( getTable(), string_view{}, cursor, RemoteConfigInternal::kListPageSize, false, listRecord );
+            if ( read._result != ServiceStoreResult::Ok )
+                return read;
+            for ( const ServiceRecord& record : listRecord )
             {
-                vector<ServiceRecord> listRecord;
-                _result = connection.listRecords( getTable(), string_view{}, cursor, RemoteConfigInternal::kListPageSize, false, listRecord );
-                if ( _result != ServiceStoreResult::Ok )
-                    return;
-                for ( const ServiceRecord& record : listRecord )
-                {
-                    Entry entry;
-                    if ( RemoteConfigInternal::decodeRecord( record._bytes, entry._value ) == false )
-                        continue; // 깨진 줄은 없는 것으로 — complete 가 경고하지 않는다(저장소 스레드), 운영 도구가 본다
-                    entry._version         = record._version;
-                    _mapEntry[record._key] = std::move( entry );
-                }
-                if ( static_cast<int32>( listRecord.size() ) < RemoteConfigInternal::kListPageSize )
-                    return;
-                cursor = listRecord.back()._key;
+                Entry entry;
+                if ( RemoteConfigInternal::decodeRecord( record._bytes, entry._value ) == false )
+                    continue; // 깨진 줄은 없는 것으로 — 완료가 경고하지 않는다(저장소 스레드), 운영 도구가 본다
+                entry._version           = record._version;
+                read._value[record._key] = std::move( entry );
             }
+            if ( static_cast<int32>( listRecord.size() ) < RemoteConfigInternal::kListPageSize )
+                return read;
+            cursor = listRecord.back()._key;
         }
+    }
 
-        void complete() override { _pConfig->onReloadCompleted( _result, isCancelled(), _mapEntry ); }
-
-    private:
-        map<string, Entry> _mapEntry;
-        RemoteConfig*      _pConfig;
-        ServiceStoreResult _result;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 값 하나를 버전 조건 + 감사 줄로 쓴다. */
-    class RemoteConfig::SetJob final : public IServiceStoreJob
+    ServiceStoreRead<uint64> RemoteConfig::writeValue( IServiceStoreConnection& connection, const string& key, const RemoteConfigValue& value, const ServiceAuditEntry& audit,
+                                                       uint64 expectedVersion )
     {
-    public:
-        SetJob( RemoteConfig* pConfig, string key, const RemoteConfigValue& value, const ServiceAuditEntry& audit, uint64 expectedVersion )
-            : _key{ std::move( key ) }
-            , _value{ value }
-            , _audit{ audit }
-            , _pConfig{ pConfig }
-            , _expectedVersion{ expectedVersion }
-            , _commitVersion{ 0 }
-            , _result{ ServiceStoreResult::Ok }
-        {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            ServiceTransaction transaction;
-            transaction.put( getTable(), _key, RemoteConfigInternal::encodeRecord( _value ), _expectedVersion );
-            // 같은 버전 위의 같은 키 바꾸기는 같은 감사 키 — 재시도가 줄을 둘 만들지 않는다
-            ServiceAuditLog::stageEntry( transaction, _audit, _expectedVersion, HashUtil::computeStringHash64( _key.data(), _key.size(), false ) );
-            ServiceCommitInfo info;
-            _result        = connection.commit( transaction, &info );
-            _commitVersion = info._commitVersion;
-        }
-
-        void complete() override { _pConfig->onSetCompleted( _result, _key, _value, _commitVersion ); }
-
-    private:
-        string             _key;
-        RemoteConfigValue  _value;
-        ServiceAuditEntry  _audit;
-        RemoteConfig*      _pConfig;
-        uint64             _expectedVersion;
-        uint64             _commitVersion;
-        ServiceStoreResult _result;
-    };
+        ServiceTransaction transaction;
+        transaction.put( getTable(), key, RemoteConfigInternal::encodeRecord( value ), expectedVersion );
+        // 같은 버전 위의 같은 키 바꾸기는 같은 감사 키 — 재시도가 줄을 둘 만들지 않는다
+        ServiceAuditLog::stageEntry( transaction, audit, expectedVersion, HashUtil::computeStringHash64( key.data(), key.size(), false ) );
+        ServiceCommitInfo        info;
+        ServiceStoreRead<uint64> write;
+        write._result = connection.commit( transaction, &info );
+        write._value  = info._commitVersion;
+        return write;
+    }
 } // namespace sw
 
 namespace sw
@@ -225,7 +180,7 @@ namespace sw
     RemoteConfig::RemoteConfig()
         : _mapEntry{}
         , _snapshotHash{ 0 }
-        , _pendingWorkCount{ 0 }
+        , _store{}
         , _lastReloadResult{ ServiceStoreResult::Ok }
         , _lastSetResult{ ServiceStoreResult::Ok }
     {
@@ -236,8 +191,11 @@ namespace sw
 
     void RemoteConfig::requestReload( IServiceStore& store )
     {
-        ++_pendingWorkCount;
-        store.submit( sw::make_unique<ReloadJob>( this ) );
+        _store.bindStore( &store ); // 부르는 쪽이 저장소를 넘긴다 — 같은 저장소다
+        _store.submit( []( IServiceStoreConnection& connection )
+        { return readTable( connection ); },
+                       [this]( ServiceStoreRead<map<string, Entry>>& read, ServiceStoreCompletion completion )
+        { onReloadCompleted( read._result, completion.isCancelled(), read._value ); } );
     }
 
     void RemoteConfig::submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )
@@ -251,8 +209,11 @@ namespace sw
         }
         const auto   entryIt         = _mapEntry.find( key );
         const uint64 expectedVersion = entryIt == _mapEntry.end() ? ServiceRecord::kAbsentVersion : entryIt->second._version;
-        ++_pendingWorkCount;
-        store.submit( sw::make_unique<SetJob>( this, string{ key }, value, audit, expectedVersion ) );
+        _store.bindStore( &store );
+        _store.submit( [name = string{ key }, value, audit, expectedVersion]( IServiceStoreConnection& connection )
+        { return writeValue( connection, name, value, audit, expectedVersion ); },
+                       [this, name = string{ key }, value]( const ServiceStoreRead<uint64>& write )
+        { onSetCompleted( write._result, name, value, write._value ); } );
     }
 
     bool RemoteConfig::findInteger( string_view key, int64& outValue ) const
@@ -439,7 +400,6 @@ namespace sw
 
     void RemoteConfig::onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry )
     {
-        --_pendingWorkCount;
         _lastReloadResult = result;
         if ( result != ServiceStoreResult::Ok )
         {
@@ -454,7 +414,6 @@ namespace sw
 
     void RemoteConfig::onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version )
     {
-        --_pendingWorkCount;
         _lastSetResult = result;
         if ( result != ServiceStoreResult::Ok )
             return;

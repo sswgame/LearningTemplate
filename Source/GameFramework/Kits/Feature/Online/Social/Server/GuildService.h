@@ -31,6 +31,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -168,15 +169,14 @@ namespace sw
 
         void  takeCompletions( vector<GuildCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
         void  pollNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.moveAllTo( outListNotification ); }
-        int32 getPendingCount() const { return _pendingCount; }
+        int32 getPendingCount() const { return _store.getOpenCount(); }
 
         /** @brief 이름 규칙을 검사합니다. 1~24바이트이고, 올바른 UTF-8 이며, 제어 문자가 없고, 앞뒤 공백이 없어야 합니다. */
         static bool isValidName( string_view name );
 
-        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome );
-
     private:
+        /** @brief 저장소 일의 완료입니다. */
+        void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome );
         void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs );
 
     private:
@@ -184,8 +184,7 @@ namespace sw
         EventBuffer<SocialNotification>  _notificationBuffer;
         DelegateSlot<GuildEventDelegate> _onEvent;
         vector<int64>                    _listLevelExperience; ///< 레벨 2 부터의 누적 경험치이다. 데이터(서버 설정)가 원본이다
-        IServiceStore*                   _pStore;
         const ILedgerPolicy*             _pLedgerPolicy;
-        int32                            _pendingCount;
+        ServiceStoreTracker              _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

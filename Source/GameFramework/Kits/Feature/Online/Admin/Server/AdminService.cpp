@@ -12,61 +12,6 @@
 #include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief GM 명령 하나의 저장소 왕복입니다. */
-        class AdminCommandJob final : public IServiceStoreJob
-        {
-        public:
-            AdminCommandJob( AdminService* pService, const AdminCommand& command, uint64 callID )
-                : _command{ command }
-                , _reply{}
-                , _outcome{ AdminOutcome::fail( OnlineError::kUnavailable ) }
-                , _pService{ pService }
-                , _callID{ callID }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _outcome = AdminStoreLogic::execute( connection, _command, _reply ); }
-            void complete() override { _pService->completeCall( _callID, _outcome, _reply ); }
-
-        private:
-            AdminCommand  _command;
-            AdminReply    _reply;
-            AdminOutcome  _outcome; ///< 저장 로직의 결과이다. 공통 범주면 `_reply` 는 뜻이 없다
-            AdminService* _pService;
-            uint64        _callID;
-        };
-
-        /** @brief 첫 관리자 넣기입니다. */
-        class AdminSeedJob final : public IServiceStoreJob
-        {
-        public:
-            AdminSeedJob( AdminService* pService, AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
-                : _pService{ pService }
-                , _accountID{ accountID }
-                , _nowMs{ nowMs }
-                , _role{ role }
-                , _result{ AdminOutcome::fail( OnlineError::kUnavailable ) }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = AdminStoreLogic::seedRole( connection, _accountID, _role, _nowMs.count() ); }
-            void complete() override { _pService->completeSeed( _result, getCompletion() ); }
-
-        private:
-            AdminService*    _pService;
-            AccountID        _accountID;
-            UnixMilliseconds _nowMs;
-            AdminRole        _role;
-            AdminOutcome     _result;
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -74,8 +19,6 @@ namespace sw
         : _localCalls{}
         , _mapCallToExtra{}
         , _settings{}
-        , _pStore{ nullptr }
-        , _pendingSeedCount{ 0 }
     {
         setReady( false );
     }
@@ -92,7 +35,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsStore", "AdminService needs a store" );
             return false;
         }
-        _pStore   = pStore;
+        _store.bindStore( pStore );
         _settings = settings;
         initializeCalls( settings._pMetricRegistry, "admin" );
         setReady( true );
@@ -102,15 +45,14 @@ namespace sw
     void AdminService::shutdown()
     {
         // 넘긴 점검과 공지 명령은 서버 디렉터리 키트의 저장 완료 뒤에 끝나므로 회수할 때마다 그 완료도 회수한다
-        ServiceStoreUtil::flushUntilIdle(
-            _pStore, [this]()
-        { return _calls.isEmpty() && _localCalls.isEmpty() && _pendingSeedCount <= 0; }, [this]()
+        _store.flushUntilIdle( [this]()
+        { return getOpenWorkCount() == 0; }, [this]()
         { pollForwardedCompletions(); } );
         _calls.abandonAll();
         _localCalls.clear();
         _mapCallToExtra.clear();
         setReady( false );
-        _pStore = nullptr;
+        _store.bindStore( nullptr );
     }
 
     void AdminService::submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, ReplyDelegate onReply )
@@ -141,7 +83,7 @@ namespace sw
         command._method     = method;
 
         AdminOutcome refused{ AdminResult::Ok };
-        if ( _pStore == nullptr )
+        if ( _store.hasStore() == false )
             refused = AdminOutcome::fail( OnlineError::kUnavailable );
         else if ( adminID == kInvalidAccountID )
             refused = AdminOutcome::fail( OnlineError::kUnauthenticated );
@@ -152,16 +94,24 @@ namespace sw
             respondCall( callID, refused, AdminReply{} );
             return;
         }
-        _pStore->submit( make_unique<AdminCommandJob>( this, command, callID ) );
+        _store.submit( [command]( IServiceStoreConnection& connection )
+        {
+            ServiceStoreCallResult<AdminOutcome, AdminReply> done;
+            done._outcome = AdminStoreLogic::execute( connection, command, done._reply );
+            return done;
+        }, [this, callID]( ServiceStoreCallResult<AdminOutcome, AdminReply>& done )
+        { completeCall( callID, done._outcome, done._reply ); } );
     }
 
     void AdminService::seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
     {
-        const bool bInvalidSeed = _pStore == nullptr || accountID == kInvalidAccountID || role == AdminRole::None || role >= AdminRole::Count;
+        const bool bInvalidSeed = _store.hasStore() == false || accountID == kInvalidAccountID || role == AdminRole::None || role >= AdminRole::Count;
         if ( bInvalidSeed )
             return;
-        ++_pendingSeedCount;
-        _pStore->submit( make_unique<AdminSeedJob>( this, accountID, role, nowMs ) );
+        _store.submit( [accountID, role, nowMs]( IServiceStoreConnection& connection )
+        { return AdminStoreLogic::seedRole( connection, accountID, role, nowMs.count() ); },
+                       [this]( AdminOutcome result, ServiceStoreCompletion completion )
+        { completeSeed( result, completion ); } );
     }
 
     void AdminService::update( UnixMilliseconds nowMs )
@@ -350,7 +300,6 @@ namespace sw
 
     void AdminService::completeSeed( AdminOutcome result, ServiceStoreCompletion completion )
     {
-        --_pendingSeedCount;
         if ( result != AdminResult::Ok && completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류가 아니다
             SW_LOG_ERROR_ID( "AdminService.AdminServiceCouldNotSeed", "AdminService could not seed the first administrator (result %#, error %#)", getEnumName( result._result ), static_cast<int32>( result._errorCode ) );
     }

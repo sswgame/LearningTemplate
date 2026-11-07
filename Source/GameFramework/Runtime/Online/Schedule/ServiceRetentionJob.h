@@ -12,8 +12,10 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRetention.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -51,21 +53,17 @@ namespace sw
 
         /** @brief 마지막으로 끝난 회차가 지운 레코드 수입니다(테스트 · 진단). */
         int64 getLastDeletedCount() const { return _lastDeletedCount; }
-        bool  isRunning() const { return _bPending == SW_TRUE; }
+        bool  isRunning() const { return _sweepJob.isRunning(); }
 
     private:
-        class SweepJob;
-
         void onSweepCompleted( vector<ServiceRetentionRule> listRule, ServiceStoreResult result, int64 deletedCount );
 
     private:
         vector<ServiceRetentionRule> _listRule;
         ServiceRetentionJobConfig    _settings;
-        ScheduledRun                 _run;
-        IServiceStore*               _pStore;
         ServiceScheduler*            _pScheduler;
         int64                        _lastDeletedCount;
-        uint8                        _bPending;
-        uint8                        _bRunHeld;
+        ServicePeriodicJob           _sweepJob; ///< 주기 없이 예약 회차로만 돈다
+        ServiceStoreTracker          _store;    ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

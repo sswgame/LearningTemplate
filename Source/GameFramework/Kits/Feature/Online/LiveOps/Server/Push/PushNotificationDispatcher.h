@@ -21,6 +21,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -105,18 +106,20 @@ namespace sw
 
         const PushDispatcherStats& getStats() const { return _stats; }
         int32                      getInFlightCount() const { return static_cast<int32>( _mapDelivery.size() ); }
-        int32                      getPendingWorkCount() const { return _pendingWorkCount; }
+        int32                      getPendingWorkCount() const { return _store.getOpenCount(); }
         bool                       hasProvider( string_view providerID ) const { return findProvider( providerID ) != nullptr; }
 
         static string makeDeviceKey( AccountID accountID, string_view providerID, string_view token );
         static string makeAccountPrefix( AccountID accountID );
 
-        /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
+    private:
+        /** @brief 기기 등록 · 해지(@p bytes 가 비었다) 일을 맡깁니다. */
+        void submitWrite( AccountID accountID, string&& key, vector<uint8>&& bytes, uint64 requestTag );
+        /** @brief 저장소 일의 완료입니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsOutcome result );
         void applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs );
 
-    private:
         struct Delivery
         {
             PushNotificationMessage _message{};
@@ -139,8 +142,7 @@ namespace sw
         EventBuffer<PushDeviceCompletion>  _completionBuffer;
         TokenBucketMap                     _accountBucketMap;
         PushDispatcherStats                _stats;
-        IServiceStore*                     _pStore;
         IDAllocator<uint64>                _deliveryIDAllocator;
-        int32                              _pendingWorkCount;
+        ServiceStoreTracker                _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

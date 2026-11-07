@@ -31,9 +31,13 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
+    struct LoginCallInput;
+    struct LoginMaintenanceInput;
     struct LoginRevocationEntry;
     struct LoginStoreResult;
 
@@ -153,19 +157,12 @@ namespace sw
         bool               isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
         /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기도 포함합니다. */
-        int32                       getPendingCount() const { return _pendingCount + static_cast<int32>( _listPendingVerification.size() ); }
+        int32                       getPendingCount() const { return _store.getOpenCount() + static_cast<int32>( _listPendingVerification.size() ); }
         const LoginTicketAuthority& getTicketAuthority() const { return _ticketAuthority; }
         const LoginServiceConfig&   getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
         /** @brief 이 프로세스에 접속해 있는 계정의 현재 세션 id 입니다. 없으면 0입니다. */
         uint64 findOnlineSessionID( AccountID accountID ) const;
-
-        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 부르며 바인딩과 게임은 부르지 않습니다. */
-        void applyCompletion( LoginCompletion&& completion, const LoginStoreResult& outcome );
-        /** @brief 철회 대기열을 읽은 작업의 `complete` 가 호출합니다. 읽은 항목의 비밀을 풀어 제공자에 철회를 맡깁니다. */
-        void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs );
-        /** @brief 완료가 할 일이 없는 작업(대기열 항목 지우기)의 `complete` 가 호출합니다. */
-        void recordStoreWorkDone() { --_pendingCount; }
 
     private:
         /** @brief 외부 제공자의 확인을 기다리는 요청입니다. */
@@ -200,6 +197,15 @@ namespace sw
                                         const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag );
         void         finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
         void         removeOfflineIdentities();
+        /** @brief 요청 하나의 저장 일을 맡깁니다. 완료가 `applyCompletion` 으로 간다. */
+        void submitCall( LoginCallInput&& input );
+        /** @brief 끊김 · 세션 다시 읽기 · 탈퇴 정리 일을 맡깁니다. 응답이 없다. */
+        void                  submitMaintenance( LoginMaintenanceInput&& input );
+        static LoginCallInput makeCallInput( LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs );
+        /** @brief 저장 일의 완료입니다. 밀려남, 오프라인, 끊김, 온라인, 이벤트 순서로 적용합니다. */
+        void applyCompletion( LoginCompletion&& completion, const LoginStoreResult& outcome );
+        /** @brief 철회 대기열 읽기의 완료입니다. 읽은 항목의 비밀을 풀어 제공자에 철회를 맡깁니다. */
+        void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs );
 
     private:
         EventBuffer<LoginEvent>                  _eventBuffer;
@@ -216,13 +222,11 @@ namespace sw
         unordered_map<uint64, AccountIdentity>   _mapAccountToIdentity;     ///< 접속해 있는 계정의 신원이다. 디렉터리가 쓴다
         unordered_map<string, uint64>            _mapNameKeyToAccount;      ///< 소문자 이름에서 계정으로 가는 맵이다. 접속해 있는 계정만 담는다
         TokenBucketMap                           _mapClientToAttemptBucket; ///< 시도 제한이다. 원격 주소 해시마다 버킷을 둔다
-        IServiceStore*                           _pStore;
         ILoginCrypto*                            _pCrypto;
         const RemoteConfig*                      _pRemoteConfig;
         const LoginSecretVault*                  _pSecretVault;
-        UnixMilliseconds                         _nextRevocationScanMs;
         size_t                                   _refreshCursor;
-        int32                                    _pendingCount;
-        uint8                                    _bRevocationScanInFlight;
+        ServicePeriodicJob                       _revocationScanJob; ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
+        ServiceStoreTracker                      _store;             ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

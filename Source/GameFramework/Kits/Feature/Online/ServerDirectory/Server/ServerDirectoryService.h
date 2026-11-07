@@ -23,17 +23,18 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
+#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRegistryReader.h"
-#include "GameFramework/Runtime/Online/Service/ServiceReloadSchedule.h"
+#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
     class EphemeralStoreRouter;
     class IServiceStore;
     class ServerBus;
-    class ServerDirectoryWriteJob;
 
     /** @brief 서버 디렉터리 설정입니다. */
     struct ServerDirectoryServiceConfig
@@ -134,7 +135,7 @@ namespace sw
         void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
 
         uint64 getStatusRevision() const { return _statusRevision; }
-        int32  getPendingCount() const { return _pendingCount; }
+        int32  getPendingCount() const { return _store.getOpenCount(); }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs );
@@ -147,7 +148,7 @@ namespace sw
         ServerRegistryReader* findReader( string_view kind ) const;
         /** @brief 아는 종류 · 맞는 지역의 배정입니다(`assignServer` 가 먼저 가린다). */
         ServerAssignment pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs );
-        void             submitWrite( unique_ptr<ServerDirectoryWriteJob> work );
+        void             submitWrite( ServiceAuditedWrite&& work, uint64 requestTag );
 
     private:
         vector<unique_ptr<ServerRegistryReader>> _listReader;
@@ -158,8 +159,8 @@ namespace sw
         ServerDirectoryDependencies              _dependencies;
         uint64                                   _lastVisibleHash;
         uint64                                   _statusRevision;
-        int32                                    _pendingCount;
-        ServiceReloadSchedule                    _reloadSchedule; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
+        ServicePeriodicJob                       _reloadJob; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
+        ServiceStoreTracker                      _store;     ///< 저장소에 맡긴 일의 앞이다
         uint8                                    _bStatusChanged;
     };
 } // namespace sw

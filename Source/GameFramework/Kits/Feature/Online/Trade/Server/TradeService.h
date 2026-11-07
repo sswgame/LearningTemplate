@@ -19,9 +19,12 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
+    struct TradeCallInput;
+
     class IServiceStore;
 
     /** @brief 거래 서비스의 작업 종류입니다. */
@@ -80,17 +83,20 @@ namespace sw
         void takeCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
         void pollUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.moveAllTo( outListUpdate ); }
 
-        int32 getPendingCount() const { return _pendingCount; }
+        int32 getPendingCount() const { return _store.getOpenCount(); }
 
-        /** @brief 시한 처리가 저장소 실패로 졌습니다. 작업의 `complete` 가 호출합니다. */
-        void retryExpiry( uint64 tradeID, UnixMilliseconds nowMs );
         /** @brief 이 서비스가 보고 있는 열린 거래 수입니다(시한 감시 대상). 서버 종료 드레인이 끝나기를 기다린다. */
         int32                     getOpenTradeCount() const { return static_cast<int32>( _mapTradeToDeadline.size() ); }
         const TradeServiceConfig& getSettings() const { return _settings; }
-        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
 
     private:
+        static TradeCallInput makeCallInput( TradeOperation operation, uint64 requestTag, UnixMilliseconds nowMs );
+        /** @brief 거래 일 하나를 맡깁니다. 완료가 `applyCompletion` 으로 간다. */
+        void submitCall( TradeCallInput&& input );
+        /** @brief 저장소 일의 완료입니다. */
+        void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
+        /** @brief 시한 처리가 저장소 실패로 졌습니다. 시한을 다시 넣는다. */
+        void retryExpiry( uint64 tradeID, UnixMilliseconds nowMs );
         void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag );
         void trackTrade( const TradeSnapshot& snapshot );
 
@@ -99,11 +105,10 @@ namespace sw
         EventBuffer<TradeSnapshot>   _updateBuffer;
         unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래에서 시한으로 가는 맵이다
         TradeServiceConfig           _settings;
-        IServiceStore*               _pStore;
         const ITradePolicy*          _pPolicy;
         const ILedgerPolicy*         _pLedgerPolicy;
         uint64                       _serverID;
         uint64                       _nextSeed;
-        int32                        _pendingCount;
+        ServiceStoreTracker          _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

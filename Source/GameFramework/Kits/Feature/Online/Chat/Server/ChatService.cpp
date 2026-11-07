@@ -13,7 +13,6 @@
 #include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 #include <algorithm>
 
@@ -51,80 +50,136 @@ namespace sw
             static uint16 toMethod( bool bWhisper ) { return bWhisper ? ChatMethod::Whisper::kID : ChatMethod::Send::kID; }
         };
 
-        /** @brief 제재 상태를 읽는 작업입니다. */
-        class ChatSanctionJob final : public IServiceStoreJob
+        /** @brief 제재 상태 읽기가 완료로 넘기는 값입니다. */
+        struct ChatSanctionResult
         {
-        public:
-            ChatSanctionJob( ChatService* pService, AccountID accountID, UnixMilliseconds nowMs )
-                : _pService{ pService }
-                , _accountID{ accountID }
-                , _nowMs{ nowMs }
-                , _muteUntilMs{ 0 }
-                , _bReadOk{ SW_FALSE }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                ServiceSanctionState     state;
-                const ServiceStoreResult result = ServiceSanction::readState( connection, _accountID, state );
-                if ( result != ServiceStoreResult::Ok )
-                    return;
-                if ( ServiceSanction::isActive( state, ServiceSanctionKind::ChatMute, _nowMs.count() ) )
-                    _muteUntilMs = state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )];
-                _bReadOk = SW_TRUE;
-            }
-
-            void complete() override { _pService->applySanction( _accountID, _muteUntilMs, _bReadOk == SW_TRUE, _nowMs ); }
-
-        private:
-            ChatService*     _pService;
-            AccountID        _accountID;
-            UnixMilliseconds _nowMs;
-            int64            _muteUntilMs;
-            uint8            _bReadOk;
+            int64 _muteUntilMs{ 0 };
+            uint8 _bReadOk{ SW_FALSE };
         };
 
-        /** @brief 쌓인 기록을 한 트랜잭션으로 쓰고, 정리할 채널이 있으면 보존 기간이 지난 기록을 지웁니다. */
-        class ChatHistoryWriteJob final : public IServiceStoreJob
+        /** @brief 기록 쓰기가 완료로 넘기는 값입니다. */
+        struct ChatHistoryWriteResult
         {
-        public:
-            ChatHistoryWriteJob( ChatService* pService, vector<ChatMessage>&& listMessage, vector<string>&& listTrimChannel, int64 trimBeforeMs )
-                : _listMessage{ std::move( listMessage ) }
-                , _listTrimChannel{ std::move( listTrimChannel ) }
-                , _pService{ pService }
-                , _trimBeforeMs{ trimBeforeMs }
-                , _rejectedCount{ 0 }
-                , _bCommitted{ SW_FALSE }
+            int32 _rejectedCount{ 0 }; ///< 기록 레코드를 쓰지 못해 뺀 메시지 수이다
+            uint8 _bCommitted{ SW_FALSE };
+        };
+
+        /** @brief 기록 읽기가 완료로 넘기는 값입니다. */
+        struct ChatHistoryReadResult
+        {
+            vector<ChatMessage> _listMessage{};
+            string              _nextCursor{};
+            ChatOutcome         _result{ ChatOutcome::fail( OnlineError::kUnavailable ) };
+        };
+
+        /** @brief 저장소 스레드에서 도는 채팅 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
+        struct ChatStoreRun
+        {
+            static ChatSanctionResult readSanction( IServiceStoreConnection& connection, AccountID accountID, UnixMilliseconds nowMs )
             {
+                ChatSanctionResult       read;
+                ServiceSanctionState     state;
+                const ServiceStoreResult result = ServiceSanction::readState( connection, accountID, state );
+                if ( result != ServiceStoreResult::Ok )
+                    return read;
+                if ( ServiceSanction::isActive( state, ServiceSanctionKind::ChatMute, nowMs.count() ) )
+                    read._muteUntilMs = state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )];
+                read._bReadOk = SW_TRUE;
+                return read;
             }
 
-            void run( IServiceStoreConnection& connection ) override
+            /** @brief 쌓인 기록을 한 트랜잭션으로 쓰고, 정리할 채널이 있으면 보존 기간이 지난 기록을 지웁니다. */
+            static ChatHistoryWriteResult writeHistory( IServiceStoreConnection& connection, const vector<ChatMessage>& listMessage, const vector<string>& listTrimChannel, int64 trimBeforeMs )
             {
-                ServiceTransaction transaction;
-                for ( const ChatMessage& message : _listMessage )
+                ChatHistoryWriteResult write;
+                ServiceTransaction     transaction;
+                for ( const ChatMessage& message : listMessage )
                 {
                     vector<uint8> bytes;
                     if ( ChatProtocol::encodeRecord( message, bytes ) == false )
                     {
-                        ++_rejectedCount; // 쓰기가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
+                        ++write._rejectedCount; // 쓰기가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
                         continue;
                     }
                     transaction.put( ChatServiceInternal::getHistoryTable(), ChatServiceInternal::makeHistoryKey( message ), std::move( bytes ) );
                 }
                 const bool bCommitted = transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
-                _bCommitted           = bCommitted ? SW_TRUE : SW_FALSE;
-
-                for ( const string& channelID : _listTrimChannel )
+                write._bCommitted     = bCommitted ? SW_TRUE : SW_FALSE;
+                for ( const string& channelID : listTrimChannel )
                 {
-                    trimChannel( connection, channelID );
+                    trimChannel( connection, channelID, trimBeforeMs );
                 }
+                return write;
             }
 
-            void complete() override { _pService->applyHistoryWrite( _bCommitted == SW_TRUE, static_cast<int32>( _listMessage.size() ) - _rejectedCount, _rejectedCount, getCompletion() ); }
+            /** @brief 기록을 최근 것부터 읽습니다. 커서는 앞 응답의 마지막 키이며 그보다 이전 기록부터 읽습니다. 손상된 영속 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
+            static ChatHistoryReadResult readHistory( IServiceStoreConnection& connection, const string& channelID, const string& cursor, int32 maxCount )
+            {
+                ChatHistoryReadResult read;
+                vector<ServiceRecord> listRecord;
+                if ( connection.listRecords( ChatServiceInternal::getHistoryTable(), channelID + "/", cursor, maxCount, true, listRecord ) != ServiceStoreResult::Ok )
+                    return read;
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    ChatMessage message;
+                    if ( ChatProtocol::decodeRecord( record._key, record._bytes, message ) == false )
+                    {
+                        read._listMessage.clear();
+                        return read;
+                    }
+                    read._listMessage.push_back( std::move( message ) );
+                }
+                if ( static_cast<int32>( listRecord.size() ) == maxCount )
+                    read._nextCursor = listRecord.back()._key;
+                read._result = ChatResult::Ok;
+                return read;
+            }
+
+            /**
+             * @brief 신고한 메시지와 그 앞 기록을 읽어 신고 레코드(`ServiceReportStore`)로 남깁니다.
+             * @details 기록 키는 고정 폭 16진이라 순번을 하나 올린 키가 신고한 메시지 바로 다음 키입니다. 그 키를 커서로 내림차순으로 읽으면 첫 레코드가 신고한 메시지입니다.
+             *          첫 레코드가 그 메시지가 아니면 기록에 아직 없거나 지워진 것이므로 NotFound 입니다. 문맥 줄은 오래된 것부터 담아 마지막 줄이 신고 대상입니다.
+             */
+            static ChatOutcome writeReport( IServiceStoreConnection& connection, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs )
+            {
+                using Internal                   = ChatServiceInternal;
+                const string          messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
+                const string          cursorKey  = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, static_cast<uint64>( request._sequence ) + 1 );
+                vector<ServiceRecord> listRecord;
+                if ( connection.listRecords( Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord ) != ServiceStoreResult::Ok )
+                    return ChatOutcome::fail( OnlineError::kUnavailable );
+                if ( listRecord.empty() || listRecord.front()._key != messageKey )
+                    return ChatResult::NotFound;
+                ServiceReport report;
+                for ( auto recordIt = listRecord.rbegin(); recordIt != listRecord.rend(); ++recordIt )
+                {
+                    ChatMessage message;
+                    if ( ChatProtocol::decodeRecord( recordIt->_key, recordIt->_bytes, message ) == false )
+                        return ChatOutcome::fail( OnlineError::kUnavailable ); // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
+                    ServiceReportLine& line = report._listLine.emplace_back();
+                    line._senderName        = std::move( message._senderName );
+                    line._text              = std::move( message._text );
+                    line._senderID          = message._senderID;
+                    line._sentMs            = message._sentMs;
+                }
+                report._targetID = report._listLine.back()._senderID;
+                if ( report._targetID == reporterID )
+                    return ChatOutcome::fail( OnlineError::kInvalidRequest ); // 자기 메시지는 신고하지 않는다
+                report._category   = "chat";
+                report._context    = request._channelID;
+                report._reason     = request._reason;
+                report._reporterID = reporterID;
+                report._createdMs  = nowMs.count();
+                ServiceTransaction transaction;
+                if ( ServiceReportStore::stageOpen( transaction, report, uniqueID ) == false )
+                    return ChatOutcome::fail( OnlineError::kInvalidRequest );
+                if ( connection.commit( transaction ) == ServiceStoreResult::Ok )
+                    return ChatResult::Ok;
+                return ChatOutcome::fail( OnlineError::kUnavailable );
+            }
 
         private:
-            void trimChannel( IServiceStoreConnection& connection, const string& channelID ) const
+            static void trimChannel( IServiceStoreConnection& connection, const string& channelID, int64 trimBeforeMs )
             {
                 vector<ServiceRecord> listOld;
                 const string          prefix = channelID + "/";
@@ -135,148 +190,13 @@ namespace sw
                 {
                     uint64 sentMs = 0;
                     if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size(), ServiceKeyUtil::kHexWidth ), sentMs ) == false ||
-                         static_cast<int64>( sentMs ) >= _trimBeforeMs )
+                         static_cast<int64>( sentMs ) >= trimBeforeMs )
                         break; // 키 순서가 시간 순서이므로 첫 새 기록에서 멈춘다
                     trim.erase( ChatServiceInternal::getHistoryTable(), record._key, record._version );
                 }
                 if ( trim.isEmpty() == false )
                     (void)connection.commit( trim ); // 정리는 다음 기회에 다시 해도 되므로 Conflict 와 Unavailable 은 버린다
             }
-
-        private:
-            vector<ChatMessage> _listMessage;
-            vector<string>      _listTrimChannel;
-            ChatService*        _pService;
-            int64               _trimBeforeMs;
-            int32               _rejectedCount; ///< 기록 레코드를 쓰지 못해 뺀 메시지 수이다
-            uint8               _bCommitted;
-        };
-
-        /** @brief 기록을 최근 것부터 읽는 작업입니다. 커서는 앞 응답의 마지막 키이며 그보다 이전 기록부터 읽습니다. */
-        class ChatHistoryReadJob final : public IServiceStoreJob
-        {
-        public:
-            ChatHistoryReadJob( ChatService* pService, string&& channelID, string&& cursor, int32 maxCount, uint64 requestTag )
-                : _listMessage{}
-                , _channelID{ std::move( channelID ) }
-                , _cursor{ std::move( cursor ) }
-                , _nextCursor{}
-                , _pService{ pService }
-                , _requestTag{ requestTag }
-                , _maxCount{ maxCount }
-                , _result{ ChatOutcome::fail( OnlineError::kUnavailable ) }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                vector<ServiceRecord> listRecord;
-                if ( connection.listRecords( ChatServiceInternal::getHistoryTable(), _channelID + "/", _cursor, _maxCount, true, listRecord ) != ServiceStoreResult::Ok )
-                    return;
-                for ( const ServiceRecord& record : listRecord )
-                {
-                    ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( record._key, record._bytes, message ) == false )
-                    {
-                        _listMessage.clear(); // 손상된 영속 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다
-                        return;
-                    }
-                    _listMessage.push_back( std::move( message ) );
-                }
-                if ( static_cast<int32>( listRecord.size() ) == _maxCount )
-                    _nextCursor = listRecord.back()._key;
-                _result = ChatResult::Ok;
-            }
-
-            void complete() override { _pService->applyHistoryRead( _requestTag, _result, std::move( _listMessage ), std::move( _nextCursor ) ); }
-
-        private:
-            vector<ChatMessage> _listMessage;
-            string              _channelID;
-            string              _cursor;
-            string              _nextCursor;
-            ChatService*        _pService;
-            uint64              _requestTag;
-            int32               _maxCount;
-            ChatOutcome         _result;
-        };
-
-        /**
-         * @brief 신고한 메시지와 그 앞 기록을 읽어 신고 레코드(`ServiceReportStore`)로 남기는 작업입니다.
-         * @details 기록 키는 고정 폭 16진이라 순번을 하나 올린 키가 신고한 메시지 바로 다음 키입니다. 그 키를 커서로 내림차순으로 읽으면 첫 레코드가 신고한 메시지입니다.
-         *          첫 레코드가 그 메시지가 아니면 기록에 아직 없거나 지워진 것이므로 NotFound 입니다. 문맥 줄은 오래된 것부터 담아 마지막 줄이 신고 대상입니다.
-         */
-        class ChatReportJob final : public IServiceStoreJob
-        {
-        public:
-            ChatReportJob( ChatService* pService, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs, uint64 requestTag )
-                : _request{ request }
-                , _pService{ pService }
-                , _reporterID{ reporterID }
-                , _uniqueID{ uniqueID }
-                , _nowMs{ nowMs }
-                , _requestTag{ requestTag }
-                , _result{ ChatOutcome::fail( OnlineError::kUnavailable ) }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                using Internal                   = ChatServiceInternal;
-                const string          messageKey = Internal::makeHistoryKey( _request._channelID, _request._sentMs, _request._serverID, _request._sequence );
-                const string          cursorKey  = Internal::makeHistoryKey( _request._channelID, _request._sentMs, _request._serverID, static_cast<uint64>( _request._sequence ) + 1 );
-                vector<ServiceRecord> listRecord;
-                if ( connection.listRecords( Internal::getHistoryTable(), _request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord ) !=
-                     ServiceStoreResult::Ok )
-                    return;
-                if ( listRecord.empty() || listRecord.front()._key != messageKey )
-                {
-                    _result = ChatResult::NotFound;
-                    return;
-                }
-                ServiceReport report;
-                for ( auto recordIt = listRecord.rbegin(); recordIt != listRecord.rend(); ++recordIt )
-                {
-                    ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( recordIt->_key, recordIt->_bytes, message ) == false )
-                        return; // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
-                    ServiceReportLine& line = report._listLine.emplace_back();
-                    line._senderName        = std::move( message._senderName );
-                    line._text              = std::move( message._text );
-                    line._senderID          = message._senderID;
-                    line._sentMs            = message._sentMs;
-                }
-                report._targetID = report._listLine.back()._senderID;
-                if ( report._targetID == _reporterID )
-                {
-                    _result = ChatOutcome::fail( OnlineError::kInvalidRequest ); // 자기 메시지는 신고하지 않는다
-                    return;
-                }
-                report._category   = "chat";
-                report._context    = _request._channelID;
-                report._reason     = _request._reason;
-                report._reporterID = _reporterID;
-                report._createdMs  = _nowMs.count();
-                ServiceTransaction transaction;
-                if ( ServiceReportStore::stageOpen( transaction, report, _uniqueID ) == false )
-                {
-                    _result = ChatOutcome::fail( OnlineError::kInvalidRequest );
-                    return;
-                }
-                if ( connection.commit( transaction ) == ServiceStoreResult::Ok )
-                    _result = ChatResult::Ok;
-            }
-
-            void complete() override { _pService->applyReport( _requestTag, _result ); }
-
-        private:
-            ChatReportRequest _request;
-            ChatService*      _pService;
-            AccountID         _reporterID;
-            uint64            _uniqueID;
-            UnixMilliseconds  _nowMs;
-            uint64            _requestTag;
-            ChatOutcome       _result;
         };
 
     } // namespace
@@ -300,7 +220,7 @@ namespace sw
         , _serverTopic{}
         , _sequence{ 0 }
         , _reportSequence{ 0 }
-        , _pendingStoreCount{ 0 }
+        , _store{}
         , _bHistoryWriting{ SW_FALSE }
     {
     }
@@ -318,9 +238,10 @@ namespace sw
             return false;
         }
         _dependencies = dependencies;
-        _findOwner    = dependencies._pPresence != nullptr ? dependencies._pPresence->openFindOwner() : Subscription{};
-        _settings     = settings;
-        _serverTopic  = ChatProtocol::makeServerTopic( dependencies._serverID );
+        _store.bindStore( dependencies._pStore );
+        _findOwner   = dependencies._pPresence != nullptr ? dependencies._pPresence->openFindOwner() : Subscription{};
+        _settings    = settings;
+        _serverTopic = ChatProtocol::makeServerTopic( dependencies._serverID );
         // 정규화(건너뛸 글자)는 금칙어 거르개와 도배 방지기가 함께 쓴다 — 데이터라 없으면 서비스가 서지 않는다.
         ChatTextNormalizer normalizer;
         if ( normalizer.loadFromFile( settings._ignoredCharactersPath ) == false )
@@ -343,10 +264,9 @@ namespace sw
 
     void ChatService::shutdown()
     {
-        ServiceStoreUtil::flushUntilIdle( _dependencies._pStore, [this]()
-        { return _pendingStoreCount <= 0; } );
-        if ( _pendingStoreCount > 0 )
-            SW_LOG_ERROR_ID( "ChatService.ChatServiceShutDownStore", "ChatService shut down with %# store works still pending", _pendingStoreCount );
+        _store.flushUntilIdle();
+        if ( _store.isIdle() == false )
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceShutDownStore", "ChatService shut down with %# store works still pending", _store.getOpenCount() );
         // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
         _findOwner.reset();
         _mapAccountToMember.clear();
@@ -354,6 +274,7 @@ namespace sw
         _mapPresenceRequestToWhisper.clear();
         _listHistoryQueue.clear();
         _dependencies = ChatServiceDependencies{};
+        _store.bindStore( nullptr );
     }
 
     int32 ChatService::getLocalMemberCount( string_view channelID ) const
@@ -386,13 +307,14 @@ namespace sw
         if ( member._bSanctionReading == SW_TRUE )
             return;
         member._bSanctionReading = SW_TRUE;
-        ++_pendingStoreCount;
-        _dependencies._pStore->submit( make_unique<ChatSanctionJob>( this, accountID, nowMs ) );
+        _store.submit( [accountID, nowMs]( IServiceStoreConnection& connection )
+        { return ChatStoreRun::readSanction( connection, accountID, nowMs ); },
+                       [this, accountID, nowMs]( const ChatSanctionResult& read )
+        { applySanction( accountID, read._muteUntilMs, read._bReadOk == SW_TRUE, nowMs ); } );
     }
 
     void ChatService::applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs )
     {
-        --_pendingStoreCount;
         const auto memberIt = _mapAccountToMember.find( accountID );
         if ( memberIt == _mapAccountToMember.end() )
             return; // 그사이 떠났다
@@ -752,7 +674,7 @@ namespace sw
 
     void ChatService::update( UnixMilliseconds nowMs )
     {
-        const bool bNothingToFlush = _dependencies._pStore == nullptr || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
+        const bool bNothingToFlush = _store.hasStore() == false || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
         if ( bNothingToFlush )
             return;
         const size_t        takeCount = MathUtil::min( _listHistoryQueue.size(), static_cast<size_t>( _settings._historyFlushMax ) );
@@ -765,14 +687,17 @@ namespace sw
             if ( bTrim && VectorUtil::contains( listTrimChannel, message._channelID ) == false )
                 listTrimChannel.push_back( message._channelID );
         }
-        _bHistoryWriting = SW_TRUE;
-        ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteJob>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs.count() - _settings._historyRetentionMs ) );
+        _bHistoryWriting         = SW_TRUE;
+        const int32 messageCount = static_cast<int32>( listMessage.size() );
+        _store.submit( [listMessage = std::move( listMessage ), listTrimChannel = std::move( listTrimChannel ), trimBeforeMs = nowMs.count() - _settings._historyRetentionMs](
+                           IServiceStoreConnection& connection )
+        { return ChatStoreRun::writeHistory( connection, listMessage, listTrimChannel, trimBeforeMs ); },
+                       [this, messageCount]( const ChatHistoryWriteResult& write, ServiceStoreCompletion completion )
+        { applyHistoryWrite( write._bCommitted == SW_TRUE, messageCount - write._rejectedCount, write._rejectedCount, completion ); } );
     }
 
     void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion )
     {
-        --_pendingStoreCount;
         _bHistoryWriting = SW_FALSE;
         if ( bCommitted == false && completion.isCancelled() == false ) // 종료 때문에 취소된 쓰기는 경고하지 않는다(기록은 어느 쪽이든 버려진다)
             SW_LOG_WARNING_ID( "ChatService.ChatServiceChatHistoryRecords", "ChatService: %# chat history records were not stored (store unavailable) - they are dropped", messageCount );
@@ -810,13 +735,14 @@ namespace sw
             completeSimple( ChatMethod::History::kID, requestTag, ChatResult::NotMember );
             return;
         }
-        ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatHistoryReadJob>( this, string( channelID ), string( cursor ), maxCount, requestTag ) );
+        _store.submit( [channel = string( channelID ), from = string( cursor ), maxCount]( IServiceStoreConnection& connection )
+        { return ChatStoreRun::readHistory( connection, channel, from, maxCount ); },
+                       [this, requestTag]( ChatHistoryReadResult& read )
+        { applyHistoryRead( requestTag, read._result, std::move( read._listMessage ), std::move( read._nextCursor ) ); } );
     }
 
     void ChatService::applyHistoryRead( uint64 requestTag, ChatOutcome result, vector<ChatMessage>&& listMessage, string&& nextCursor )
     {
-        --_pendingStoreCount;
         ChatCompletion completion;
         completion._method      = ChatMethod::History::kID;
         completion._requestTag  = requestTag;
@@ -860,13 +786,14 @@ namespace sw
         }
         ++_reportSequence;
         const uint64 uniqueID = ( _dependencies._serverID << 32 ) | _reportSequence;
-        ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatReportJob>( this, request, accountID, uniqueID, nowMs, requestTag ) );
+        _store.submit( [request, accountID, uniqueID, nowMs]( IServiceStoreConnection& connection )
+        { return ChatStoreRun::writeReport( connection, request, accountID, uniqueID, nowMs ); },
+                       [this, requestTag]( ChatOutcome result )
+        { applyReport( requestTag, result ); } );
     }
 
     void ChatService::applyReport( uint64 requestTag, ChatOutcome result )
     {
-        --_pendingStoreCount;
         completeSimple( ChatMethod::Report::kID, requestTag, result );
     }
 } // namespace sw

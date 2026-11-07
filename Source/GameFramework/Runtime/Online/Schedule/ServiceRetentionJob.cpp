@@ -3,60 +3,49 @@
 #include "GameFramework/Runtime/Online/Schedule/ServiceRetentionJob.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {
-    /** @brief 규칙 사본을 저장소 스레드에서 쓸고, 커서가 움직인 사본을 서비스 스레드로 돌려줍니다. */
-    class ServiceRetentionJob::SweepJob final : public IServiceStoreJob
+    namespace
     {
-    public:
-        SweepJob( ServiceRetentionJob* pJob, vector<ServiceRetentionRule> listRule, int64 nowMs )
-            : _listRule{ std::move( listRule ) }
-            , _pJob{ pJob }
-            , _nowMs{ nowMs }
-            , _deletedCount{ 0 }
-            , _result{ ServiceStoreResult::Ok }
+        /** @brief 쓸기 한 회차가 완료로 넘기는 값입니다. 커서가 움직인 규칙 사본을 서비스 스레드로 돌려준다. */
+        struct ServiceRetentionSweepResult
         {
-        }
+            vector<ServiceRetentionRule> _listRule{};
+            vector<string>               _listFailedTable{}; ///< 쓸지 못한 테이블이다. 완료가 취소가 아닐 때만 오류로 남긴다
+            int64                        _deletedCount{ 0 };
+            ServiceStoreResult           _result{ ServiceStoreResult::Ok };
+        };
 
-        void run( IServiceStoreConnection& connection ) override
+        /** @brief 규칙 사본을 저장소 스레드에서 쓸습니다. 한 테이블이 실패해도 다른 테이블은 이어서 쓴다. */
+        ServiceRetentionSweepResult sweepRules( IServiceStoreConnection& connection, vector<ServiceRetentionRule> listRule, int64 nowMs, const ServiceRetentionJobConfig& settings )
         {
-            for ( ServiceRetentionRule& rule : _listRule )
+            ServiceRetentionSweepResult sweep;
+            for ( ServiceRetentionRule& rule : listRule )
             {
                 ServiceRetentionReport   report;
-                const ServiceStoreResult swept = ServiceRetention::sweep( connection, rule, _nowMs, _pJob->_settings._maxScanPerRule, _pJob->_settings._maxDeletePerRule, report );
-                _deletedCount += report._deletedCount;
+                const ServiceStoreResult swept = ServiceRetention::sweep( connection, rule, nowMs, settings._maxScanPerRule, settings._maxDeletePerRule, report );
+                sweep._deletedCount += report._deletedCount;
                 if ( report._deletedCount > 0 )
                     SW_LOG_INFO_ID( "ServiceRetentionJob.RetentionSweptTableDeleted", "Retention swept table '%#': deleted %# of %# scanned", rule._table.c_str(), report._deletedCount, report._scannedCount );
                 if ( swept != ServiceStoreResult::Ok )
                 {
-                    if ( isCancelled() == false ) // 종료 때문에 취소된 일은 오류로 남기지 않는다(취소 표시는 run 앞에 선다)
-                        SW_LOG_ERROR_ID( "ServiceRetentionJob.RetentionSweepTableFailed", "Retention sweep of table '%#' failed", rule._table.c_str() );
-                    _result = swept; // 다른 테이블은 이어서 쓴다
+                    sweep._listFailedTable.push_back( string( rule._table.c_str() ) );
+                    sweep._result = swept;
                 }
             }
+            sweep._listRule = std::move( listRule );
+            return sweep;
         }
-
-        void complete() override { _pJob->onSweepCompleted( std::move( _listRule ), _result, _deletedCount ); }
-
-    private:
-        vector<ServiceRetentionRule> _listRule;
-        ServiceRetentionJob*         _pJob;
-        int64                        _nowMs;
-        int64                        _deletedCount;
-        ServiceStoreResult           _result;
-    };
+    } // namespace
 
     ServiceRetentionJob::ServiceRetentionJob()
         : _listRule{}
         , _settings{}
-        , _run{}
-        , _pStore{ nullptr }
         , _pScheduler{ nullptr }
         , _lastDeletedCount{ 0 }
-        , _bPending{ SW_FALSE }
-        , _bRunHeld{ SW_FALSE }
+        , _sweepJob{}
+        , _store{}
     {
     }
 
@@ -77,7 +66,7 @@ namespace sw
                 return false;
             }
         }
-        _pStore     = pStore;
+        _store.bindStore( pStore );
         _pScheduler = pScheduler;
         _settings   = settings;
         _listRule   = std::move( listRule );
@@ -95,31 +84,41 @@ namespace sw
 
     void ServiceRetentionJob::shutdown()
     {
-        if ( _pStore != nullptr )
-            ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
-            { return _bPending == SW_FALSE; } );
-        _pStore     = nullptr;
+        _store.flushUntilIdle();
+        _store.bindStore( nullptr );
         _pScheduler = nullptr;
         _listRule.clear();
     }
 
     void ServiceRetentionJob::onScheduledRun( const ScheduledRun& run )
     {
-        if ( _pStore == nullptr || _bPending == SW_TRUE )
+        if ( _store.hasStore() == false || _sweepJob.isRunning() )
             return;
-        _run      = run;
-        _bRunHeld = SW_TRUE;
-        _bPending = SW_TRUE;
-        _pStore->submit( make_unique<SweepJob>( this, _listRule, run._occurrenceMs.count() ) );
+        _sweepJob.holdRun( run );
+        if ( _sweepJob.tryStart( run._occurrenceMs ) == false )
+            return;
+        _store.submit( [listRule = _listRule, nowMs = run._occurrenceMs.count(), settings = _settings]( IServiceStoreConnection& connection )
+        { return sweepRules( connection, listRule, nowMs, settings ); },
+                       [this]( ServiceRetentionSweepResult& sweep, ServiceStoreCompletion completion )
+        {
+            if ( completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류로 남기지 않는다
+            {
+                for ( const string& table : sweep._listFailedTable )
+                {
+                    SW_LOG_ERROR_ID( "ServiceRetentionJob.RetentionSweepTableFailed", "Retention sweep of table '%#' failed", table.c_str() );
+                }
+            }
+            onSweepCompleted( std::move( sweep._listRule ), sweep._result, sweep._deletedCount );
+        } );
     }
 
     void ServiceRetentionJob::onSweepCompleted( vector<ServiceRetentionRule> listRule, ServiceStoreResult result, int64 deletedCount )
     {
         _listRule         = std::move( listRule ); // 커서를 이어받는다
         _lastDeletedCount = deletedCount;
-        _bPending         = SW_FALSE;
-        if ( _bRunHeld == SW_TRUE && _pScheduler != nullptr )
-            _pScheduler->completeRun( _run, result == ServiceStoreResult::Ok );
-        _bRunHeld = SW_FALSE;
+        _sweepJob.finish();
+        ScheduledRun run;
+        if ( _sweepJob.takeHeldRun( run ) && _pScheduler != nullptr )
+            _pScheduler->completeRun( run, result == ServiceStoreResult::Ok );
     }
 } // namespace sw

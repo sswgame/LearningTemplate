@@ -38,245 +38,167 @@ namespace sw
                 key += platform;
                 return key;
             }
+        };
+    } // namespace
 
-            /** @brief 로그인 요청 하나를 저장소 스레드에서 실행하고 결과를 서비스에 돌려줍니다. 입력은 모두 복사해 보관합니다. */
-            class LoginJob final : public IServiceStoreJob
+    /** @brief 로그인 요청 하나의 입력입니다. 저장소 스레드가 읽는 값 복사이고, 돈 뒤 비밀(비밀번호 · 장치 비밀 · 외부 주체)을 지운다. */
+    struct LoginCallInput
+    {
+        LoginCredential   _credential{};
+        LoginSessionToken _token{};
+        hashed_string     _serverID{};
+        string            _provider{};
+        string            _subject{};
+        string            _displayNameHint{};
+        string            _storeURL{};
+        vector<uint8>     _listSealedLinkSecret{}; ///< 외부 로그인이 준 연동 비밀(이미 암호화됨). 없으면 비어 있다
+        uint64            _accountID{ 0 };
+        uint64            _requestTag{ 0 };
+        UnixMilliseconds  _nowMs{ 0 };
+        LoginOperation    _operation{ LoginOperation::Login };
+        LoginRevokeReason _revokeReason{ LoginRevokeReason::Administrative };
+        uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize]{};
+        uint8             _bUpdateRecommended{ SW_FALSE };
+    };
+
+    /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리의 입력입니다. 완료가 없고 부작용만 있습니다. */
+    struct LoginMaintenanceInput
+    {
+        vector<LoginSessionRef> _listOnline{};
+        uint64                  _disconnectedSessionID{ 0 };
+        UnixMilliseconds        _nowMs{ 0 };
+        int32                   _purgeCount{ 0 };
+    };
+
+    namespace
+    {
+        /** @brief 로그인 요청 · 정리 일이 완료로 넘기는 값입니다. */
+
+        struct LoginCallResult
+        {
+            LoginCompletion  _completion{};
+            LoginStoreResult _outcome{};
+        };
+
+        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
+        struct LoginStoreRun
+        {
+            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
+                                            LoginCallInput& inoutInput )
             {
-            public:
-                LoginCredential   _credential;
-                LoginSessionToken _token;
-                hashed_string     _serverID;
-                string            _provider;
-                string            _subject;
-                string            _displayNameHint;
-                string            _storeURL;
-                vector<uint8>     _listSealedLinkSecret; ///< 외부 로그인이 준 연동 비밀(이미 암호화됨). 없으면 비어 있다
-                uint64            _accountID;
-                LoginRevokeReason _revokeReason;
-                uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
-                uint8             _bUpdateRecommended;
-
-                LoginJob( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs )
-                    : _credential{}
-                    , _token{}
-                    , _serverID{}
-                    , _provider{}
-                    , _subject{}
-                    , _displayNameHint{}
-                    , _storeURL{}
-                    , _listSealedLinkSecret{}
-                    , _accountID{ 0 }
-                    , _revokeReason{ LoginRevokeReason::Administrative }
-                    , _arrDeviceSecret{}
-                    , _bUpdateRecommended{ SW_FALSE }
-                    , _outcome{}
-                    , _completion{}
-                    , _settings{ settings }
-                    , _pService{ pService }
-                    , _pCrypto{ pCrypto }
-                    , _nowMs{ nowMs }
+                LoginCallInput& input = inoutInput;
+                LoginCallResult done;
+                done._completion._operation  = input._operation;
+                done._completion._requestTag = input._requestTag;
+                LoginCompletion& completion  = done._completion;
+                LoginStoreLogic  logic{ connection, crypto, settings, authority, done._outcome };
+                const int64      nowMs = input._nowMs.count();
+                switch ( input._operation )
                 {
-                    _completion._operation  = operation;
-                    _completion._requestTag = requestTag;
-                }
-
-                void run( IServiceStoreConnection& connection ) override
-                {
-                    LoginStoreLogic logic{ connection, *_pCrypto, _settings, _pService->getTicketAuthority(), _outcome };
-                    switch ( _completion._operation )
+                    case LoginOperation::Register:
                     {
-                        case LoginOperation::Register:
-                        {
-                            uint64 accountID                   = 0;
-                            _completion._result                = logic.registerAccount( _credential, &accountID );
-                            _completion._identity._accountID   = accountID;
-                            _completion._identity._displayName = _credential._loginName;
-                            break;
-                        }
-                        case LoginOperation::Login:
-                        {
-                            _completion._result = logic.login( _credential, _nowMs.count(), _completion._grant );
-                            break;
-                        }
-                        case LoginOperation::GuestLogin:
-                        {
-                            _completion._result = logic.guestLogin( _arrDeviceSecret, _nowMs.count(), _completion._grant );
-                            break;
-                        }
-                        case LoginOperation::PlatformLogin:
-                        {
-                            _completion._result = logic.platformLogin( _provider, _subject, _displayNameHint, &_listSealedLinkSecret, _nowMs.count(), _completion._grant );
-                            break;
-                        }
-                        case LoginOperation::Resume:
-                        {
-                            _completion._result = logic.resumeSession( _token, _nowMs.count(), _completion._grant );
-                            break;
-                        }
-                        case LoginOperation::Validate:
-                        {
-                            _completion._result = logic.validateSession( _token, _nowMs.count(), _completion._identity, &_completion._grant._revokeReason );
-                            break;
-                        }
-                        case LoginOperation::Logout:
-                        {
-                            _completion._result = logic.logout( _token, _nowMs.count() );
-                            break;
-                        }
-                        case LoginOperation::IssueGameTicket:
-                        {
-                            _completion._result = logic.issueGameTicket( _token, _serverID, _nowMs.count(), _completion._ticket );
-                            break;
-                        }
-                        case LoginOperation::Revoke:
-                        {
-                            _completion._result = logic.revokeAccountSessions( _accountID, _revokeReason, _nowMs.count() );
-                            break;
-                        }
-                        case LoginOperation::LinkCredential:
-                        {
-                            _completion._result = logic.linkCredential( _token, _credential, _nowMs.count(), _completion._identity );
-                            break;
-                        }
-                        case LoginOperation::LinkPlatform:
-                        {
-                            _completion._result = logic.linkPlatform( _token, _provider, _subject, &_listSealedLinkSecret, _nowMs.count(), _completion._identity );
-                            break;
-                        }
-                        case LoginOperation::UnlinkPlatform:
-                        {
-                            _completion._result = logic.unlinkPlatform( _token, _provider, _nowMs.count() );
-                            break;
-                        }
-                        case LoginOperation::ListLinks:
-                        {
-                            _completion._result = logic.listLinks( _token, _nowMs.count(), _completion._linkSummary );
-                            break;
-                        }
-                        case LoginOperation::RequestDeletion:
-                        {
-                            _completion._result = logic.requestDeletion( _token, _nowMs.count(), _completion._grant._deletionDueMs );
-                            break;
-                        }
-                        case LoginOperation::CancelDeletion:
-                        {
-                            _completion._result = logic.cancelDeletion( _token, _nowMs.count() );
-                            break;
-                        }
+                        uint64 accountID                  = 0;
+                        completion._result                = logic.registerAccount( input._credential, &accountID );
+                        completion._identity._accountID   = accountID;
+                        completion._identity._displayName = input._credential._loginName;
+                        break;
                     }
-                    if ( _completion._result == LoginResult::Ok && _bUpdateRecommended == SW_TRUE )
+                    case LoginOperation::Login:
                     {
-                        _completion._grant._bUpdateRecommended = SW_TRUE;
-                        _completion._grant._storeURL           = _storeURL;
+                        completion._result = logic.login( input._credential, nowMs, completion._grant );
+                        break;
                     }
-                    // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
-                    _credential._password.clear();
-                    _subject.clear();
-                    Memory::wipe( _arrDeviceSecret, sizeof( _arrDeviceSecret ) );
+                    case LoginOperation::GuestLogin:
+                    {
+                        completion._result = logic.guestLogin( input._arrDeviceSecret, nowMs, completion._grant );
+                        break;
+                    }
+                    case LoginOperation::PlatformLogin:
+                    {
+                        completion._result = logic.platformLogin( input._provider, input._subject, input._displayNameHint, &input._listSealedLinkSecret, nowMs, completion._grant );
+                        break;
+                    }
+                    case LoginOperation::Resume:
+                    {
+                        completion._result = logic.resumeSession( input._token, nowMs, completion._grant );
+                        break;
+                    }
+                    case LoginOperation::Validate:
+                    {
+                        completion._result = logic.validateSession( input._token, nowMs, completion._identity, &completion._grant._revokeReason );
+                        break;
+                    }
+                    case LoginOperation::Logout:
+                    {
+                        completion._result = logic.logout( input._token, nowMs );
+                        break;
+                    }
+                    case LoginOperation::IssueGameTicket:
+                    {
+                        completion._result = logic.issueGameTicket( input._token, input._serverID, nowMs, completion._ticket );
+                        break;
+                    }
+                    case LoginOperation::Revoke:
+                    {
+                        completion._result = logic.revokeAccountSessions( input._accountID, input._revokeReason, nowMs );
+                        break;
+                    }
+                    case LoginOperation::LinkCredential:
+                    {
+                        completion._result = logic.linkCredential( input._token, input._credential, nowMs, completion._identity );
+                        break;
+                    }
+                    case LoginOperation::LinkPlatform:
+                    {
+                        completion._result = logic.linkPlatform( input._token, input._provider, input._subject, &input._listSealedLinkSecret, nowMs, completion._identity );
+                        break;
+                    }
+                    case LoginOperation::UnlinkPlatform:
+                    {
+                        completion._result = logic.unlinkPlatform( input._token, input._provider, nowMs );
+                        break;
+                    }
+                    case LoginOperation::ListLinks:
+                    {
+                        completion._result = logic.listLinks( input._token, nowMs, completion._linkSummary );
+                        break;
+                    }
+                    case LoginOperation::RequestDeletion:
+                    {
+                        completion._result = logic.requestDeletion( input._token, nowMs, completion._grant._deletionDueMs );
+                        break;
+                    }
+                    case LoginOperation::CancelDeletion:
+                    {
+                        completion._result = logic.cancelDeletion( input._token, nowMs );
+                        break;
+                    }
                 }
+                if ( completion._result == LoginResult::Ok && input._bUpdateRecommended == SW_TRUE )
+                {
+                    completion._grant._bUpdateRecommended = SW_TRUE;
+                    completion._grant._storeURL           = input._storeURL;
+                }
+                // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
+                input._credential._password.clear();
+                input._subject.clear();
+                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
+                return done;
+            }
 
-                void complete() override { _pService->applyCompletion( std::move( _completion ), _outcome ); }
-
-            private:
-                LoginStoreResult   _outcome;
-                LoginCompletion    _completion;
-                LoginServiceConfig _settings; ///< 복사한 값이다. 서비스 설정이 바뀌어도 이 작업은 맡길 때의 값으로 실행한다
-                LoginService*      _pService;
-                ILoginCrypto*      _pCrypto;
-                UnixMilliseconds   _nowMs;
-            };
-
-            /** @brief 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 작업입니다. 읽은 항목은 서비스가 비밀을 풀어 제공자에 철회를 맡깁니다. */
-            class LoginRevocationScanJob final : public IServiceStoreJob
+            static LoginStoreResult runMaintenance( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
+                                                    const LoginMaintenanceInput& input )
             {
-            public:
-                LoginRevocationScanJob( LoginService* pService, int32 maxCount, UnixMilliseconds nowMs )
-                    : _listEntry{}
-                    , _pService{ pService }
-                    , _maxCount{ maxCount }
-                    , _nowMs{ nowMs }
-                    , _bReadOk{ SW_FALSE }
-                {
-                }
-
-                void run( IServiceStoreConnection& connection ) override
-                {
-                    _bReadOk = LoginStoreLogic::listRevocations( connection, _maxCount, _listEntry ) == ServiceStoreResult::Ok ? SW_TRUE : SW_FALSE;
-                }
-
-                void complete() override { _pService->applyRevocationScan( std::move( _listEntry ), _bReadOk == SW_TRUE, _nowMs ); }
-
-            private:
-                vector<LoginRevocationEntry> _listEntry;
-                LoginService*                _pService;
-                int32                        _maxCount;
-                UnixMilliseconds             _nowMs;
-                uint8                        _bReadOk;
-            };
-
-            /** @brief 철회가 끝난 대기열 항목 하나를 지우는 작업입니다. 지우지 못하면 다음 읽기가 같은 철회를 다시 한다(제공자는 이미 무효인 토큰을 받아들인다). */
-            class LoginRevocationEraseJob final : public IServiceStoreJob
-            {
-            public:
-                LoginRevocationEraseJob( LoginService* pService, string key )
-                    : _key{ std::move( key ) }
-                    , _pService{ pService }
-                {
-                }
-
-                void run( IServiceStoreConnection& connection ) override { (void)LoginStoreLogic::eraseRevocation( connection, _key ); }
-                void complete() override { _pService->recordStoreWorkDone(); }
-
-            private:
-                string        _key;
-                LoginService* _pService;
-            };
-
-            /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리 작업입니다. 완료가 없고 부작용만 있습니다. */
-            class LoginMaintenanceJob final : public IServiceStoreJob
-            {
-            public:
-                vector<LoginSessionRef> _listOnline;
-                uint64                  _disconnectedSessionID;
-                int32                   _purgeCount;
-
-                LoginMaintenanceJob( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, UnixMilliseconds nowMs )
-                    : _listOnline{}
-                    , _disconnectedSessionID{ 0 }
-                    , _purgeCount{ 0 }
-                    , _outcome{}
-                    , _settings{ settings }
-                    , _pService{ pService }
-                    , _pCrypto{ pCrypto }
-                    , _nowMs{ nowMs }
-                {
-                }
-
-                void run( IServiceStoreConnection& connection ) override
-                {
-                    LoginStoreLogic logic{ connection, *_pCrypto, _settings, _pService->getTicketAuthority(), _outcome };
-                    if ( _disconnectedSessionID != 0 )
-                        logic.markDisconnected( _disconnectedSessionID, _nowMs.count() );
-                    if ( _listOnline.empty() == false )
-                        logic.refreshSessions( _listOnline, _nowMs.count() );
-                    if ( _purgeCount > 0 )
-                        (void)logic.purgeDueDeletions( _nowMs.count(), _purgeCount );
-                }
-
-                void complete() override
-                {
-                    LoginCompletion none;
-                    none._requestTag = 0; // 요청 태그 0은 완료 목록에 쌓지 않는다(applyCompletion)
-                    _pService->applyCompletion( std::move( none ), _outcome );
-                }
-
-            private:
-                LoginStoreResult   _outcome;
-                LoginServiceConfig _settings;
-                LoginService*      _pService;
-                ILoginCrypto*      _pCrypto;
-                UnixMilliseconds   _nowMs;
-            };
+                LoginStoreResult outcome;
+                LoginStoreLogic  logic{ connection, crypto, settings, authority, outcome };
+                if ( input._disconnectedSessionID != 0 )
+                    logic.markDisconnected( input._disconnectedSessionID, input._nowMs.count() );
+                if ( input._listOnline.empty() == false )
+                    logic.refreshSessions( input._listOnline, input._nowMs.count() );
+                if ( input._purgeCount > 0 )
+                    (void)logic.purgeDueDeletions( input._nowMs.count(), input._purgeCount );
+                return outcome;
+            }
         };
     } // namespace
 } // namespace sw
@@ -298,23 +220,22 @@ namespace sw
         , _mapAccountToIdentity{}
         , _mapNameKeyToAccount{}
         , _mapClientToAttemptBucket{}
-        , _pStore{ nullptr }
         , _pCrypto{ nullptr }
         , _pRemoteConfig{ nullptr }
         , _pSecretVault{ nullptr }
-        , _nextRevocationScanMs{ 0 }
         , _refreshCursor{ 0 }
-        , _pendingCount{ 0 }
-        , _bRevocationScanInFlight{ SW_FALSE }
+        , _revocationScanJob{}
+        , _store{}
     {
     }
 
     void LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
                                    const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
-        _pStore   = pStore;
+        _store.bindStore( pStore );
         _pCrypto  = pCrypto;
         _settings = settings;
+        _revocationScanJob.setPeriod( settings._revocationScanMs );
         _ticketAuthority.initialize( pCrypto, arrTicketMasterKey );
         _mapClientToAttemptBucket.initialize( settings._attemptBurst, settings._attemptRefillMs, kMaxTrackedClientCount );
     }
@@ -330,11 +251,11 @@ namespace sw
         _registeredPlatformProvider.clear();
         _eventBuffer.clear();
         _remoteRevokeBuffer.clear();
-        _pStore                  = nullptr;
-        _pCrypto                 = nullptr;
-        _pRemoteConfig           = nullptr;
-        _pSecretVault            = nullptr;
-        _bRevocationScanInFlight = SW_FALSE;
+        _store.bindStore( nullptr );
+        _pCrypto       = nullptr;
+        _pRemoteConfig = nullptr;
+        _pSecretVault  = nullptr;
+        _revocationScanJob.finish();
     }
 
     bool LoginService::registerPlatformProvider( IPlatformLoginProvider* pProvider )
@@ -389,10 +310,12 @@ namespace sw
                     const PendingRevocation& pending = _listPendingRevocation[pendingIndex];
                     if ( pending._pProvider != pProvider || pending._revocationID != revocation._revocationID )
                         continue;
-                    if ( revocation._bUnavailable == SW_FALSE && _pStore != nullptr )
+                    if ( revocation._bUnavailable == SW_FALSE && _store.hasStore() )
                     {
-                        ++_pendingCount;
-                        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationEraseJob>( this, pending._queueKey ) );
+                        // 지우지 못하면 다음 읽기가 같은 철회를 다시 한다(제공자는 이미 무효인 토큰을 받아들인다)
+                        _store.submit( [key = pending._queueKey]( IServiceStoreConnection& connection )
+                        { (void)LoginStoreLogic::eraseRevocation( connection, key ); },
+                                       []() {} );
                     }
                     _listPendingRevocation.erase( _listPendingRevocation.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
                     break; // 제공자에 닿지 못했으면 대기열에 남아 다음 읽기가 다시 한다
@@ -400,19 +323,22 @@ namespace sw
             }
         }
         const bool bSecretsReadable = _pSecretVault != nullptr && _pSecretVault->isReady();
-        const bool bMayScan         = bAnyRevoker && bSecretsReadable && _bRevocationScanInFlight == SW_FALSE && _listPendingRevocation.empty() && _pStore != nullptr;
-        if ( bMayScan == false || nowMs < _nextRevocationScanMs )
+        const bool bMayScan         = bAnyRevoker && bSecretsReadable && _listPendingRevocation.empty() && _store.hasStore();
+        if ( bMayScan == false || _revocationScanJob.tryStart( nowMs ) == false )
             return;
-        _nextRevocationScanMs    = nowMs + _settings._revocationScanMs;
-        _bRevocationScanInFlight = SW_TRUE;
-        ++_pendingCount;
-        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationScanJob>( this, _settings._revocationBatchSize, nowMs ) );
+        const int32 maxCount = _settings._revocationBatchSize;
+        _store.submit( [maxCount]( IServiceStoreConnection& connection )
+        {
+            ServiceStoreRead<vector<LoginRevocationEntry>> read;
+            read._result = LoginStoreLogic::listRevocations( connection, maxCount, read._value );
+            return read;
+        }, [this, nowMs]( ServiceStoreRead<vector<LoginRevocationEntry>>& read )
+        { applyRevocationScan( std::move( read._value ), read.isOk(), nowMs ); } );
     }
 
     void LoginService::applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs )
     {
-        --_pendingCount;
-        _bRevocationScanInFlight = SW_FALSE;
+        _revocationScanJob.finish();
         if ( bReadOk == false || _pSecretVault == nullptr )
             return; // 저장소에 문제가 있으므로 다음 주기에 다시 읽는다
         for ( LoginRevocationEntry& entry : listEntry )
@@ -450,10 +376,9 @@ namespace sw
 
     void LoginService::seedAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Register, requestTag, nowMs );
-        work->_credential                               = credential;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::Register, requestTag, nowMs );
+        input._credential    = credential;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
@@ -470,12 +395,11 @@ namespace sw
             pushImmediate( LoginOperation::Login, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Login, requestTag, nowMs );
-        work->_credential                               = credential;
-        work->_bUpdateRecommended                       = buildGrant._bUpdateRecommended;
-        work->_storeURL                                 = buildGrant._storeURL;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input      = makeCallInput( LoginOperation::Login, requestTag, nowMs );
+        input._credential         = credential;
+        input._bUpdateRecommended = buildGrant._bUpdateRecommended;
+        input._storeURL           = buildGrant._storeURL;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
@@ -493,13 +417,11 @@ namespace sw
             pushImmediate( LoginOperation::GuestLogin, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::GuestLogin, requestTag, nowMs );
-        Memory::copy( work->_arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
-        work->_bUpdateRecommended = buildGrant._bUpdateRecommended;
-        work->_storeURL           = buildGrant._storeURL;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::GuestLogin, requestTag, nowMs );
+        Memory::copy( input._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
+        input._bUpdateRecommended = buildGrant._bUpdateRecommended;
+        input._storeURL           = buildGrant._storeURL;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
@@ -534,58 +456,49 @@ namespace sw
             pushImmediate( LoginOperation::Resume, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Resume, requestTag, nowMs );
-        work->_token                                    = token;
-        work->_bUpdateRecommended                       = buildGrant._bUpdateRecommended;
-        work->_storeURL                                 = buildGrant._storeURL;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input      = makeCallInput( LoginOperation::Resume, requestTag, nowMs );
+        input._token              = token;
+        input._bUpdateRecommended = buildGrant._bUpdateRecommended;
+        input._storeURL           = buildGrant._storeURL;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::validateSession( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Validate, requestTag, nowMs );
-        work->_token = token;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::Validate, requestTag, nowMs );
+        input._token         = token;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::logout( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Logout, requestTag, nowMs );
-        work->_token                                    = token;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::Logout, requestTag, nowMs );
+        input._token         = token;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::IssueGameTicket, requestTag, nowMs );
-        work->_token    = token;
-        work->_serverID = serverID;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::IssueGameTicket, requestTag, nowMs );
+        input._token         = token;
+        input._serverID      = serverID;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Revoke, requestTag, nowMs );
-        work->_accountID                                = accountID;
-        work->_revokeReason                             = reason;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::Revoke, requestTag, nowMs );
+        input._accountID     = accountID;
+        input._revokeReason  = reason;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::linkCredential( const LoginSessionToken& token, const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::LinkCredential, requestTag, nowMs );
-        work->_token      = token;
-        work->_credential = credential;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::LinkCredential, requestTag, nowMs );
+        input._token         = token;
+        input._credential    = credential;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, UnixMilliseconds nowMs, uint64 requestTag )
@@ -595,57 +508,49 @@ namespace sw
 
     void LoginService::unlinkPlatform( const LoginSessionToken& token, string_view provider, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::UnlinkPlatform, requestTag, nowMs );
-        work->_token    = token;
-        work->_provider = string( provider );
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::UnlinkPlatform, requestTag, nowMs );
+        input._token         = token;
+        input._provider      = string( provider );
+        submitCall( std::move( input ) );
     }
 
     void LoginService::listLinks( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::ListLinks, requestTag, nowMs );
-        work->_token = token;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::ListLinks, requestTag, nowMs );
+        input._token         = token;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::requestDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::RequestDeletion, requestTag, nowMs );
-        work->_token = token;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::RequestDeletion, requestTag, nowMs );
+        input._token         = token;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::cancelDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::CancelDeletion, requestTag, nowMs );
-        work->_token = token;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginCallInput input = makeCallInput( LoginOperation::CancelDeletion, requestTag, nowMs );
+        input._token         = token;
+        submitCall( std::move( input ) );
     }
 
     void LoginService::purgeDueDeletions( UnixMilliseconds nowMs, int32 maxCount )
     {
         if ( maxCount <= 0 )
             return;
-        unique_ptr<LoginServiceInternal::LoginMaintenanceJob> work = make_unique<LoginServiceInternal::LoginMaintenanceJob>( this, _pCrypto, _settings, nowMs );
-        work->_purgeCount                                          = maxCount;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginMaintenanceInput input;
+        input._nowMs      = nowMs;
+        input._purgeCount = maxCount;
+        submitMaintenance( std::move( input ) );
     }
 
     void LoginService::markDisconnected( uint64 sessionID, UnixMilliseconds nowMs )
     {
-        unique_ptr<LoginServiceInternal::LoginMaintenanceJob> work = make_unique<LoginServiceInternal::LoginMaintenanceJob>( this, _pCrypto, _settings, nowMs );
-        work->_disconnectedSessionID                               = sessionID;
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        LoginMaintenanceInput input;
+        input._nowMs                 = nowMs;
+        input._disconnectedSessionID = sessionID;
+        submitMaintenance( std::move( input ) );
     }
 
     void LoginService::refreshOnlineSessions( UnixMilliseconds nowMs, int32 maxCount )
@@ -659,15 +564,15 @@ namespace sw
             listOnline.push_back( LoginSessionRef{ accountID, sessionID, LoginRevokeReason::None } );
         }
         VectorUtil::sort( listOnline, LoginServiceInternal::SessionRefLess{} );
-        unique_ptr<LoginServiceInternal::LoginMaintenanceJob> work       = make_unique<LoginServiceInternal::LoginMaintenanceJob>( this, _pCrypto, _settings, nowMs );
-        const int32                                           checkCount = MathUtil::min( maxCount, static_cast<int32>( listOnline.size() ) );
+        LoginMaintenanceInput input;
+        input._nowMs           = nowMs;
+        const int32 checkCount = MathUtil::min( maxCount, static_cast<int32>( listOnline.size() ) );
         for ( int32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )
         {
-            work->_listOnline.push_back( listOnline[( _refreshCursor + static_cast<size_t>( checkIndex ) ) % listOnline.size()] );
+            input._listOnline.push_back( listOnline[( _refreshCursor + static_cast<size_t>( checkIndex ) ) % listOnline.size()] );
         }
         _refreshCursor = ( _refreshCursor + static_cast<size_t>( checkCount ) ) % listOnline.size();
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        submitMaintenance( std::move( input ) );
     }
 
     void LoginService::recordRevokedElsewhere( AccountID accountID, uint64 sessionID, LoginRevokeReason reason )
@@ -701,9 +606,41 @@ namespace sw
         return onlineIt == _mapAccountToSession.end() ? 0 : onlineIt->second;
     }
 
+    void LoginService::submitCall( LoginCallInput&& input )
+    {
+        ILoginCrypto*               pCrypto    = _pCrypto;
+        const LoginTicketAuthority* pAuthority = &_ticketAuthority; // 저장소 스레드는 읽기만 한다
+        _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
+        { return LoginStoreRun::runCall( connection, *pCrypto, settings, *pAuthority, input ); },
+                       [this]( LoginCallResult& done )
+        { applyCompletion( std::move( done._completion ), done._outcome ); } );
+    }
+
+    void LoginService::submitMaintenance( LoginMaintenanceInput&& input )
+    {
+        ILoginCrypto*               pCrypto    = _pCrypto;
+        const LoginTicketAuthority* pAuthority = &_ticketAuthority;
+        _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection )
+        { return LoginStoreRun::runMaintenance( connection, *pCrypto, settings, *pAuthority, input ); },
+                       [this]( const LoginStoreResult& outcome )
+        {
+            LoginCompletion none;
+            none._requestTag = 0; // 요청 태그 0은 완료 목록에 쌓지 않는다(applyCompletion)
+            applyCompletion( std::move( none ), outcome );
+        } );
+    }
+
+    LoginCallInput LoginService::makeCallInput( LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs )
+    {
+        LoginCallInput input;
+        input._operation  = operation;
+        input._requestTag = requestTag;
+        input._nowMs      = nowMs;
+        return input;
+    }
+
     void LoginService::applyCompletion( LoginCompletion&& completion, const LoginStoreResult& outcome )
     {
-        --_pendingCount;
         for ( const LoginSessionRef& revoked : outcome._listRevoked )
         {
             const auto onlineIt = _mapAccountToSession.find( revoked._accountID );
@@ -839,26 +776,24 @@ namespace sw
             pushImmediate( pending._operation, pending._requestTag, result, LoginGrant{} );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginJob> work =
-            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, pending._operation, pending._requestTag, pending._nowMs );
-        work->_token              = pending._token;
-        work->_provider           = pending._provider;
-        work->_subject            = verification._subject;
-        work->_displayNameHint    = verification._displayName;
-        work->_bUpdateRecommended = pending._bUpdateRecommended;
-        work->_storeURL           = pending._storeURL;
+        LoginCallInput input      = makeCallInput( pending._operation, pending._requestTag, pending._nowMs );
+        input._token              = pending._token;
+        input._provider           = pending._provider;
+        input._subject            = verification._subject;
+        input._displayNameHint    = verification._displayName;
+        input._bUpdateRecommended = pending._bUpdateRecommended;
+        input._storeURL           = pending._storeURL;
         if ( verification._linkSecret.empty() == false )
         {
             // 연동 비밀은 암호화해서만 저장한다. 도구가 없거나 암호화에 실패하면 비밀을 버린다(로그인은 성공이다 — 탈퇴 때 철회할 것이 없을 뿐이다).
-            const bool bSealed = _pSecretVault != nullptr && _pSecretVault->isReady() && _pSecretVault->seal( verification._linkSecret, pending._provider, work->_listSealedLinkSecret );
+            const bool bSealed = _pSecretVault != nullptr && _pSecretVault->isReady() && _pSecretVault->seal( verification._linkSecret, pending._provider, input._listSealedLinkSecret );
             if ( bSealed == false )
             {
-                work->_listSealedLinkSecret.clear();
+                input._listSealedLinkSecret.clear();
                 SW_LOG_ERROR_ID( "LoginService.LoginProviderGaveLink", "login provider '%#' gave a link secret but the secret vault is not available - it is not stored", pending._provider.c_str() );
             }
         }
-        ++_pendingCount;
-        _pStore->submit( std::move( work ) );
+        submitCall( std::move( input ) );
     }
 
     void LoginService::removeOfflineIdentities()

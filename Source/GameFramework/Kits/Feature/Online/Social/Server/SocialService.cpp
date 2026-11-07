@@ -137,24 +137,35 @@ namespace sw
         };
 
         /** @brief 관계 바꾸기 하나를 처리합니다. 이름으로 신청했으면 이름 인덱스를 읽고, 두 줄과 두 개수를 읽어 규칙으로 정한 뒤 버전 조건으로 씁니다. 충돌이 나면 다시 읽고 다시 시도합니다. */
-        class SocialLinkJob final : public IServiceStoreJob
+        struct SocialLinkResult
+        {
+            SocialLinkDecision _decision{};
+            AccountID          _otherID{ kInvalidAccountID }; ///< 이름으로 신청했으면 찾은 계정이다
+        };
+
+        class SocialLinkStoreRun final
         {
         public:
-            SocialLinkJob( SocialService* pService, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID,
-                           string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
+            SocialLinkStoreRun( const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs )
                 : _decision{}
                 , _displayName{ displayName }
-                , _pService{ pService }
                 , _pNameIndex{ pNameIndex }
                 , _accountID{ accountID }
                 , _otherID{ otherID }
                 , _nowMs{ nowMs }
-                , _requestTag{ requestTag }
                 , _operation{ operation }
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override
+            /** @brief 저장소 스레드에서 관계를 바꾸고 결정과 상대 계정을 넘깁니다. 한 번 쓰고 버린다. */
+            SocialLinkResult run( IServiceStoreConnection& connection )
+            {
+                runAttempts( connection );
+                return SocialLinkResult{ _decision, _otherID };
+            }
+
+        private:
+            void runAttempts( IServiceStoreConnection& connection )
             {
                 if ( _displayName.empty() == false && resolveName( connection ) == false )
                     return;
@@ -174,9 +185,6 @@ namespace sw
                 _decision._result = SocialOutcome::fail( OnlineError::kBusy );
             }
 
-            void complete() override { _pService->applyLinkChange( _requestTag, _accountID, _otherID, _decision ); }
-
-        private:
             /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
             [[nodiscard]] bool resolveName( IServiceStoreConnection& connection )
             {
@@ -245,53 +253,34 @@ namespace sw
         private:
             SocialLinkDecision       _decision;
             string                   _displayName;
-            SocialService*           _pService;
             const IAccountNameIndex* _pNameIndex;
             AccountID                _accountID;
             AccountID                _otherID;
             UnixMilliseconds         _nowMs;
-            uint64                   _requestTag;
             SocialLinkOperation      _operation;
         };
 
-        /** @brief 한 계정의 관계를 모두 읽는 작업입니다. */
-        class SocialLoadJob final : public IServiceStoreJob
+        /** @brief 한 계정의 관계를 모두 읽습니다. 읽지 못한 줄은 건너뛴다. */
+        struct SocialStoreRun
         {
-        public:
-            SocialLoadJob( SocialService* pService, AccountID accountID, uint64 requestTag )
-                : _listLink{}
-                , _pService{ pService }
-                , _accountID{ accountID }
-                , _requestTag{ requestTag }
-                , _bReadOk{ SW_FALSE }
+            static ServiceStoreRead<vector<SocialLink>> readLinks( IServiceStoreConnection& connection, AccountID accountID )
             {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                vector<ServiceRecord> listRecord;
-                const string          prefix = ServiceKeyUtil::makeHex64( _accountID ) + "/";
-                if ( connection.listRecords( SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord ) != ServiceStoreResult::Ok )
-                    return;
+                ServiceStoreRead<vector<SocialLink>> read;
+                vector<ServiceRecord>                listRecord;
+                const string                         prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
+                read._result                                = connection.listRecords( SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord );
+                if ( read._result != ServiceStoreResult::Ok )
+                    return read;
                 for ( const ServiceRecord& record : listRecord )
                 {
                     SocialLink link;
                     const bool bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), link._otherID ) &&
                                          SocialServiceInternal::decodeLink( record._bytes, link._state, link._sinceMs );
                     if ( bParsed )
-                        _listLink.push_back( link );
+                        read._value.push_back( link );
                 }
-                _bReadOk = SW_TRUE;
+                return read;
             }
-
-            void complete() override { _pService->applyLinksLoaded( _accountID, _requestTag, _bReadOk == SW_TRUE, std::move( _listLink ) ); }
-
-        private:
-            vector<SocialLink> _listLink;
-            SocialService*     _pService;
-            AccountID          _accountID;
-            uint64             _requestTag;
-            uint8              _bReadOk;
         };
     } // namespace
 } // namespace sw
@@ -306,7 +295,7 @@ namespace sw
         , _notificationBuffer{}
         , _dependencies{}
         , _queryIDAllocator{}
-        , _pendingCount{ 0 }
+        , _store{}
     {
     }
 
@@ -319,7 +308,8 @@ namespace sw
     {
         SW_ASSERT( dependencies._pStore != nullptr );
         _dependencies = dependencies;
-        _replyOwner   = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
+        _store.bindStore( dependencies._pStore );
+        _replyOwner = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
     }
 
     void SocialService::shutdown()
@@ -329,6 +319,7 @@ namespace sw
         _mapQuery.clear();
         _mapAccountToLocal.clear();
         _dependencies = SocialServiceDependencies{};
+        _store.bindStore( nullptr );
     }
 
     void SocialService::update( UnixMilliseconds nowMs )
@@ -366,13 +357,16 @@ namespace sw
     void SocialService::submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
     {
         (void)ensureLocal( accountID ); // 항목을 있게만 한다 — 쓰는 쪽은 저마다 다시 찾는다
-        ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SocialLinkJob>( this, _dependencies._pNameIndex, operation, accountID, otherID, displayName, nowMs, requestTag ) );
+        _store.submit( [pNameIndex = _dependencies._pNameIndex, operation, accountID, otherID, name = string( displayName ), nowMs]( IServiceStoreConnection& connection )
+        {
+            SocialLinkStoreRun runner{ pNameIndex, operation, accountID, otherID, name, nowMs };
+            return runner.run( connection );
+        }, [this, requestTag, accountID]( const SocialLinkResult& done )
+        { applyLinkChange( requestTag, accountID, done._otherID, done._decision ); } );
     }
 
     void SocialService::applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision )
     {
-        --_pendingCount;
         SocialCompletion completion;
         completion._requestTag = requestTag;
         completion._otherID    = otherID;
@@ -408,7 +402,6 @@ namespace sw
 
     void SocialService::applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink )
     {
-        --_pendingCount;
         const auto localIt = _mapAccountToLocal.find( accountID );
         if ( localIt != _mapAccountToLocal.end() )
         {
@@ -546,8 +539,10 @@ namespace sw
     void SocialService::startLoad( AccountID accountID, uint64 requestTag )
     {
         _mapAccountToLocal[accountID]._bLoading = SW_TRUE;
-        ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SocialLoadJob>( this, accountID, requestTag ) );
+        _store.submit( [accountID]( IServiceStoreConnection& connection )
+        { return SocialStoreRun::readLinks( connection, accountID ); },
+                       [this, accountID, requestTag]( ServiceStoreRead<vector<SocialLink>>& read )
+        { applyLinksLoaded( accountID, requestTag, read.isOk(), std::move( read._value ) ); } );
     }
 
     void SocialService::reloadIfLocal( AccountID accountID )

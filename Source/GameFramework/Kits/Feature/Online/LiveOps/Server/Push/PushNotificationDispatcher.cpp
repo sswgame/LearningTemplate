@@ -43,157 +43,86 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정의 기기 목록을 읽는 작업입니다. 알림 하나에 해당합니다. */
-    class PushDeviceReadJob final : public IServiceStoreJob
+    namespace
     {
-    public:
-        PushDeviceReadJob( PushNotificationDispatcher* pDispatcher, AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs )
-            : _listDevice{}
-            , _message{ message }
-            , _pDispatcher{ pDispatcher }
-            , _accountID{ accountID }
-            , _nowMs{ nowMs }
+        /** @brief 저장소 스레드에서 도는 푸시 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
+        struct PushStoreRun
         {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            vector<ServiceRecord> listRecord;
-            if ( PushNotificationDispatcherInternal::listDevices( connection, _accountID, listRecord ) != ServiceStoreResult::Ok )
-                return; // 저장소에 문제가 있으므로 이 알림은 버린다. 배달은 최대 한 번이다
-            for ( const ServiceRecord& record : listRecord )
+            /** @brief 계정의 기기 목록을 읽습니다. 저장소에 문제가 있거나 손상된 레코드가 있으면 빈 목록이다 — 이 알림은 버린다(배달은 최대 한 번이다). */
+            static vector<PushDeviceRegistration> readDevices( IServiceStoreConnection& connection, AccountID accountID )
             {
-                PushDeviceRegistration registration;
-                if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
-                {
-                    _listDevice.clear(); // 손상된 영속 레코드는 건너뛰지 않는다. 저장소 문제와 같이 이 알림을 버린다
-                    return;
-                }
-                _listDevice.push_back( std::move( registration ) );
-            }
-        }
-
-        void complete() override { _pDispatcher->applyDevices( _accountID, _message, std::move( _listDevice ), _nowMs ); }
-
-    private:
-        vector<PushDeviceRegistration> _listDevice;
-        PushNotificationMessage        _message;
-        PushNotificationDispatcher*    _pDispatcher;
-        AccountID                      _accountID;
-        UnixMilliseconds               _nowMs;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 토픽 알림의 표를 "없어야 한다" 조건으로 쓰는 작업입니다. 쓰면 이 서버가 보낼 차례이고, 이미 있으면(Conflict) 다른 서버가 보냈다. */
-    class PushTopicClaimJob final : public IServiceStoreJob
-    {
-    public:
-        PushTopicClaimJob( PushNotificationDispatcher* pDispatcher, string claimKey, string topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
-            : _claimKey{ std::move( claimKey ) }
-            , _topic{ std::move( topic ) }
-            , _message{ message }
-            , _pDispatcher{ pDispatcher }
-            , _nowMs{ nowMs }
-            , _result{ ServiceStoreResult::Unavailable }
-        {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            ServiceTransaction transaction;
-            transaction.put( PushNotificationDispatcherInternal::getTopicClaimTable(), _claimKey, vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
-            _result = connection.commit( transaction );
-        }
-
-        void complete() override { _pDispatcher->applyTopicClaim( _topic, _message, _result, _nowMs ); }
-
-    private:
-        string                      _claimKey;
-        string                      _topic;
-        PushNotificationMessage     _message;
-        PushNotificationDispatcher* _pDispatcher;
-        UnixMilliseconds            _nowMs;
-        ServiceStoreResult          _result;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)과 해지를 한 트랜잭션으로 쓰는 작업입니다. */
-    class PushDeviceWriteJob final : public IServiceStoreJob
-    {
-    public:
-        vector<uint8>               _bytes; ///< 등록할 기기 레코드이다. 해지일 때는 비어 있다
-        string                      _key;
-        PushNotificationDispatcher* _pDispatcher;
-        AccountID                   _accountID;
-        uint64                      _requestTag;
-        LiveOpsOutcome              _result;
-        uint8                       _bErase;
-
-        PushDeviceWriteJob()
-            : _bytes{}
-            , _key{}
-            , _pDispatcher{ nullptr }
-            , _accountID{ kInvalidAccountID }
-            , _requestTag{ 0 }
-            , _result{ LiveOpsOutcome::fail( OnlineError::kUnavailable ) }
-            , _bErase{ SW_FALSE }
-        {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            using Internal             = PushNotificationDispatcherInternal;
-            const hashed_string& table = Internal::getDeviceTable();
-            ServiceTransaction   transaction;
-            if ( _bErase != SW_FALSE )
-            {
-                ServiceRecord            current;
-                const ServiceStoreResult readResult = connection.readRecord( table, _key, current );
-                if ( readResult == ServiceStoreResult::NotFound )
-                {
-                    _result = LiveOpsResult::NotFound;
-                    return;
-                }
-                if ( readResult != ServiceStoreResult::Ok )
-                    return;
-                transaction.erase( table, _key, current._version );
-            }
-            else
-            {
-                vector<ServiceRecord> listRecord;
-                if ( Internal::listDevices( connection, _accountID, listRecord ) != ServiceStoreResult::Ok )
-                    return;
-                bool          bReplacing  = false;
-                const string* pOldestKey  = nullptr;
-                int64         oldestMs    = 0;
-                int32         deviceCount = 0;
+                vector<PushDeviceRegistration> listDevice;
+                vector<ServiceRecord>          listRecord;
+                if ( PushNotificationDispatcherInternal::listDevices( connection, accountID, listRecord ) != ServiceStoreResult::Ok )
+                    return listDevice;
                 for ( const ServiceRecord& record : listRecord )
                 {
-                    ++deviceCount;
-                    bReplacing = bReplacing || record._key == _key;
                     PushDeviceRegistration registration;
                     if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
-                        return; // 손상된 영속 레코드는 건너뛰지 않고 이 쓰기를 Unavailable 로 끝낸다
-                    if ( record._key != _key && ( pOldestKey == nullptr || registration._registeredMs < oldestMs ) )
                     {
-                        pOldestKey = &record._key;
-                        oldestMs   = registration._registeredMs;
+                        listDevice.clear();
+                        return listDevice;
                     }
+                    listDevice.push_back( std::move( registration ) );
                 }
-                const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
-                if ( bEvictOldestDevice )
-                    transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
-                transaction.put( table, _key, _bytes );
+                return listDevice;
             }
-            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsOutcome::fail( OnlineError::kUnavailable );
-        }
 
-        void complete() override { _pDispatcher->applyWrite( _requestTag, _result ); }
-    };
+            /** @brief 토픽 알림의 표를 "없어야 한다" 조건으로 씁니다. 쓰면 이 서버가 보낼 차례이고, 이미 있으면(Conflict) 다른 서버가 보냈다. */
+            static ServiceStoreResult claimTopic( IServiceStoreConnection& connection, const string& claimKey )
+            {
+                ServiceTransaction transaction;
+                transaction.put( PushNotificationDispatcherInternal::getTopicClaimTable(), claimKey, vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+                return connection.commit( transaction );
+            }
+
+            /** @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)이나 해지(@p bytes 가 비었다)를 한 트랜잭션으로 씁니다. */
+            static LiveOpsOutcome writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const vector<uint8>& bytes )
+            {
+                using Internal             = PushNotificationDispatcherInternal;
+                const hashed_string& table = Internal::getDeviceTable();
+                ServiceTransaction   transaction;
+                if ( bytes.empty() )
+                {
+                    ServiceRecord            current;
+                    const ServiceStoreResult readResult = connection.readRecord( table, key, current );
+                    if ( readResult == ServiceStoreResult::NotFound )
+                        return LiveOpsResult::NotFound;
+                    if ( readResult != ServiceStoreResult::Ok )
+                        return LiveOpsOutcome::fail( OnlineError::kUnavailable );
+                    transaction.erase( table, key, current._version );
+                }
+                else
+                {
+                    vector<ServiceRecord> listRecord;
+                    if ( Internal::listDevices( connection, accountID, listRecord ) != ServiceStoreResult::Ok )
+                        return LiveOpsOutcome::fail( OnlineError::kUnavailable );
+                    bool          bReplacing  = false;
+                    const string* pOldestKey  = nullptr;
+                    int64         oldestMs    = 0;
+                    int32         deviceCount = 0;
+                    for ( const ServiceRecord& record : listRecord )
+                    {
+                        ++deviceCount;
+                        bReplacing = bReplacing || record._key == key;
+                        PushDeviceRegistration registration;
+                        if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
+                            return LiveOpsOutcome::fail( OnlineError::kUnavailable ); // 손상된 영속 레코드는 건너뛰지 않고 이 쓰기를 Unavailable 로 끝낸다
+                        if ( record._key != key && ( pOldestKey == nullptr || registration._registeredMs < oldestMs ) )
+                        {
+                            pOldestKey = &record._key;
+                            oldestMs   = registration._registeredMs;
+                        }
+                    }
+                    const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
+                    if ( bEvictOldestDevice )
+                        transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
+                    transaction.put( table, key, bytes );
+                }
+                return connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsOutcome{ LiveOpsResult::Ok } : LiveOpsOutcome::fail( OnlineError::kUnavailable );
+            }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
@@ -205,16 +134,15 @@ namespace sw
         , _completionBuffer{}
         , _accountBucketMap{}
         , _stats{}
-        , _pStore{ nullptr }
         , _deliveryIDAllocator{}
-        , _pendingWorkCount{ 0 }
+        , _store{}
     {
     }
 
     void PushNotificationDispatcher::initialize( IServiceStore* pStore, const PushDispatcherConfig& settings )
     {
         SW_ASSERT( pStore != nullptr );
-        _pStore = pStore;
+        _store.bindStore( pStore );
         _accountBucketMap.initialize( settings._accountBurst, settings._accountRefillIntervalMs, static_cast<size_t>( settings._maxTrackedAccountCount ) );
     }
 
@@ -253,13 +181,15 @@ namespace sw
     bool PushNotificationDispatcher::notifyAccount( AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         int64 retryAfterMs = 0;
-        if ( _pStore == nullptr || _accountBucketMap.tryConsume( accountID, nowMs.count(), retryAfterMs ) == false )
+        if ( _store.hasStore() == false || _accountBucketMap.tryConsume( accountID, nowMs.count(), retryAfterMs ) == false )
         {
             ++_stats._rateLimitedCount;
             return false;
         }
-        ++_pendingWorkCount;
-        _pStore->submit( make_unique<PushDeviceReadJob>( this, accountID, message, nowMs ) );
+        _store.submit( [accountID]( IServiceStoreConnection& connection )
+        { return PushStoreRun::readDevices( connection, accountID ); },
+                       [this, accountID, message, nowMs]( vector<PushDeviceRegistration>& listDevice )
+        { applyDevices( accountID, message, std::move( listDevice ), nowMs ); } );
         return true;
     }
 
@@ -285,18 +215,19 @@ namespace sw
 
     void PushNotificationDispatcher::notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
-        if ( _pStore == nullptr || ServiceTransaction::isValidKey( claimKey ) == false )
+        if ( _store.hasStore() == false || ServiceTransaction::isValidKey( claimKey ) == false )
         {
             ++_stats._topicSkippedCount;
             return;
         }
-        ++_pendingWorkCount;
-        _pStore->submit( make_unique<PushTopicClaimJob>( this, string( claimKey ), string( topic ), message, nowMs ) );
+        _store.submit( [key = string( claimKey )]( IServiceStoreConnection& connection )
+        { return PushStoreRun::claimTopic( connection, key ); },
+                       [this, topicName = string( topic ), message, nowMs]( ServiceStoreResult result )
+        { applyTopicClaim( topicName, message, result, nowMs ); } );
     }
 
     void PushNotificationDispatcher::applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs )
     {
-        --_pendingWorkCount;
         if ( result != ServiceStoreResult::Ok )
         {
             ++_stats._topicSkippedCount; // Conflict 는 다른 서버가 이미 보냈다는 뜻이다
@@ -308,7 +239,6 @@ namespace sw
 
     void PushNotificationDispatcher::applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs )
     {
-        --_pendingWorkCount;
         for ( PushDeviceRegistration& device : listDevice )
         {
             if ( findProvider( device._providerID ) == nullptr )
@@ -398,49 +328,44 @@ namespace sw
     {
         // 길이 상한(토큰 · 언어)은 `PushDeviceRegistration` 의 `PROPERTY( MaxCount )` 가 원본이다. 요청 본문 읽기(고정 배치형)와 레코드 쓰기(`encodeDevice`)가 막으므로 여기 다시 적지 않는다.
         const bool bValid = accountID != kInvalidAccountID && PushLimit::isValidProviderID( registration._providerID ) && registration._token.empty() == false;
-        if ( bValid == false || _pStore == nullptr )
+        if ( bValid == false || _store.hasStore() == false )
         {
             if ( requestTag != 0 )
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<PushDeviceWriteJob> work = make_unique<PushDeviceWriteJob>();
-        if ( LiveOpsProtocol::encodeDevice( registration, work->_bytes ) == false )
+        vector<uint8> bytes;
+        if ( LiveOpsProtocol::encodeDevice( registration, bytes ) == false )
         {
             if ( requestTag != 0 )
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work->_key         = makeDeviceKey( accountID, registration._providerID, registration._token );
-        work->_pDispatcher = this;
-        work->_accountID   = accountID;
-        work->_requestTag  = requestTag;
-        ++_pendingWorkCount;
-        _pStore->submit( std::move( work ) );
+        submitWrite( accountID, makeDeviceKey( accountID, registration._providerID, registration._token ), std::move( bytes ), requestTag );
     }
 
     void PushNotificationDispatcher::unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag )
     {
-        const bool bInvalidUnregister = PushLimit::isValidProviderID( providerID ) == false || token.empty() || _pStore == nullptr;
+        const bool bInvalidUnregister = PushLimit::isValidProviderID( providerID ) == false || token.empty() || _store.hasStore() == false;
         if ( bInvalidUnregister )
         {
             if ( requestTag != 0 )
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<PushDeviceWriteJob> work = make_unique<PushDeviceWriteJob>();
-        work->_key                          = makeDeviceKey( accountID, providerID, token );
-        work->_pDispatcher                  = this;
-        work->_accountID                    = accountID;
-        work->_requestTag                   = requestTag;
-        work->_bErase                       = SW_TRUE;
-        ++_pendingWorkCount;
-        _pStore->submit( std::move( work ) );
+        submitWrite( accountID, makeDeviceKey( accountID, providerID, token ), vector<uint8>{}, requestTag ); // 빈 몸은 해지다
+    }
+
+    void PushNotificationDispatcher::submitWrite( AccountID accountID, string&& key, vector<uint8>&& bytes, uint64 requestTag )
+    {
+        _store.submit( [accountID, key = std::move( key ), bytes = std::move( bytes )]( IServiceStoreConnection& connection )
+        { return PushStoreRun::writeDevice( connection, accountID, key, bytes ); },
+                       [this, requestTag]( LiveOpsOutcome result )
+        { applyWrite( requestTag, result ); } );
     }
 
     void PushNotificationDispatcher::applyWrite( uint64 requestTag, LiveOpsOutcome result )
     {
-        --_pendingWorkCount;
         if ( requestTag != 0 )
             _completionBuffer.push( PushDeviceCompletion{ requestTag, result } );
     }

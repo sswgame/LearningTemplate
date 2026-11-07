@@ -152,3 +152,23 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 } // namespace sw
+
+namespace sw
+{
+    ServiceStoreResult ServiceAuditedWrite::commit( IServiceStoreConnection& connection ) const
+    {
+        ServiceRecord            current;
+        const ServiceStoreResult readResult = connection.readRecord( _table, _key, current );
+        if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
+            return ServiceStoreResult::Unavailable;
+        if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
+            return ServiceStoreResult::NotFound;
+        ServiceTransaction transaction;
+        if ( _bytes.empty() )
+            transaction.erase( _table, _key, current._version );
+        else
+            transaction.put( _table, _key, _bytes, current._version );
+        ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
+        return connection.commit( transaction ) == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+    }
+} // namespace sw

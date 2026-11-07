@@ -13,6 +13,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -49,5 +50,6 @@ namespace sw
         vector<AccountClientReply> _listReplyScratch;
         OnlineSession*             _pClaimSession; ///< 응답이 올 때 경제 클라이언트를 찾는 세션이다. 세션은 게임 인스턴스의 것이고 이 객체보다 오래 산다
         int32                      _selfMailSentCount;
+        ServiceStoreTracker        _localStore; ///< 로컬 서버 저장소에 맡긴 일이다(세션이 빌려준다)
     };
 } // namespace sw

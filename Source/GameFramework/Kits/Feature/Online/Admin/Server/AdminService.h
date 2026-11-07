@@ -102,6 +102,8 @@ namespace sw
         void  completeCall( uint64 callID, AdminOutcome outcome, AdminReply& inoutReply );
         void  completeSeed( AdminOutcome result, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
+        /** @brief 종료 드레인이 기다리는 일 수입니다 — 원격 · 같은 프로세스 호출과 저장소에 맡긴 일. */
+        int32 getOpenWorkCount() const { return getPendingCallCount() + _store.getOpenCount(); }
 
     private:
         void startCall( uint64 callID, AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs );
@@ -121,7 +123,5 @@ namespace sw
         LocalCallTable                        _localCalls;
         unordered_map<uint64, AdminCallExtra> _mapCallToExtra; ///< 응답을 기다리는 명령의 칸이다
         AdminServiceConfig                    _settings;
-        IServiceStore*                        _pStore;
-        int32                                 _pendingSeedCount;
     };
 } // namespace sw

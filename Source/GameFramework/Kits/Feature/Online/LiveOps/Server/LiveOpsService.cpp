@@ -37,97 +37,35 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이벤트 테이블을 읽는 작업입니다. */
-    class LiveOpsReloadJob final : public IServiceStoreJob
+    /** @brief 이벤트 테이블을 읽습니다. 손상된 영속 레코드는 건너뛰지 않는다 — 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다. */
+    struct LiveOpsStoreRun
     {
-    public:
-        LiveOpsReloadJob( LiveOpsService* pService, UnixMilliseconds nowMs )
-            : _listEvent{}
-            , _pService{ pService }
-            , _nowMs{ nowMs }
-            , _bReadOk{ SW_FALSE }
+        static ServiceStoreRead<vector<LiveEventDef>> readEvents( IServiceStoreConnection& connection )
         {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            vector<ServiceRecord> listRecord;
-            if ( connection.listRecords( LiveOpsServiceInternal::getEventTable(), "", "", LiveOpsLimit::kMaxEventCount, false, listRecord ) != ServiceStoreResult::Ok )
-                return;
+            ServiceStoreRead<vector<LiveEventDef>> read;
+            vector<ServiceRecord>                  listRecord;
+            read._result = connection.listRecords( LiveOpsServiceInternal::getEventTable(), "", "", LiveOpsLimit::kMaxEventCount, false, listRecord );
+            if ( read._result != ServiceStoreResult::Ok )
+                return read;
             for ( const ServiceRecord& record : listRecord )
             {
-                // 손상된 영속 레코드는 건너뛰지 않는다. 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다
                 LiveEventDef definition;
                 if ( LiveOpsProtocol::decodeEvent( record._key, record._bytes, definition ) == false )
-                    return;
+                {
+                    read._result = ServiceStoreResult::Invalid;
+                    return read;
+                }
                 // 이벤트 정의는 고정 배치형 코덱이 없어 상한을 읽기가 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
                 if ( LiveEventRules::isValid( definition ) == false )
                 {
                     SW_LOG_ERROR_ID( "LiveOpsService.LiveOpsEventRecordBreaks", "LiveOps event record '%#' breaks the event rules", record._key );
-                    return;
+                    read._result = ServiceStoreResult::Invalid;
+                    return read;
                 }
-                _listEvent.push_back( std::move( definition ) );
+                read._value.push_back( std::move( definition ) );
             }
-            _bReadOk = SW_TRUE;
+            return read;
         }
-
-        void complete() override { _pService->applyReload( std::move( _listEvent ), _bReadOk == SW_TRUE, _nowMs ); }
-
-    private:
-        vector<LiveEventDef> _listEvent;
-        LiveOpsService*      _pService;
-        UnixMilliseconds     _nowMs;
-        uint8                _bReadOk;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 이벤트 하나의 쓰기나 지우기를 감사 기록과 함께 한 트랜잭션으로 처리합니다. 버전 조건을 쓰므로 그사이 바뀌었으면 Unavailable 이며 다시 하면 됩니다. */
-    class LiveOpsWriteJob final : public IServiceStoreJob
-    {
-    public:
-        ServiceAuditEntry _auditEntry;
-        vector<uint8>     _bytes; ///< 비어 있으면 지우기이다
-        string            _key;
-        NetIdempotencyKey _auditUnique;
-        LiveOpsService*   _pService;
-        uint64            _requestTag;
-        LiveOpsOutcome    _result;
-
-        LiveOpsWriteJob()
-            : _auditEntry{}
-            , _bytes{}
-            , _key{}
-            , _auditUnique{ NetIdempotencyKey::makeRandom() }
-            , _pService{ nullptr }
-            , _requestTag{ 0 }
-            , _result{ LiveOpsOutcome::fail( OnlineError::kUnavailable ) }
-        {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            const hashed_string&     table = LiveOpsServiceInternal::getEventTable();
-            ServiceRecord            current;
-            const ServiceStoreResult readResult = connection.readRecord( table, _key, current );
-            if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
-                return;
-            if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
-            {
-                _result = LiveOpsResult::NotFound;
-                return;
-            }
-            ServiceTransaction transaction;
-            if ( _bytes.empty() )
-                transaction.erase( table, _key, current._version );
-            else
-                transaction.put( table, _key, _bytes, current._version );
-            ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsOutcome::fail( OnlineError::kUnavailable ); // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
-        }
-
-        void complete() override { _pService->applyWrite( _requestTag, _result ); }
     };
 } // namespace sw
 
@@ -140,8 +78,8 @@ namespace sw
         , _completionBuffer{}
         , _dependencies{}
         , _lastOpenHash{ 0 }
-        , _pendingCount{ 0 }
-        , _reloadSchedule{}
+        , _reloadJob{}
+        , _store{}
         , _bStateChanged{ SW_FALSE }
     {
     }
@@ -155,35 +93,37 @@ namespace sw
     {
         SW_ASSERT( dependencies._pStore != nullptr );
         _dependencies = dependencies;
-        _reloadSchedule.request();
+        _store.bindStore( dependencies._pStore );
+        _reloadJob.setPeriod( LiveOpsBus::kReloadPeriodMs );      // 첫 틱에 한 번 읽는다
         _lastOpenHash = computeOpenHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다
     }
 
     void LiveOpsService::shutdown()
     {
+        _store.bindStore( nullptr ); // 남은 일은 조립이 저장소 드레인으로 거둔다(예전과 같이 여기서 기다리지 않는다)
         _dependencies._pBus = nullptr;
     }
 
     void LiveOpsService::update( UnixMilliseconds nowMs )
     {
-        if ( _dependencies._pStore == nullptr )
+        if ( _store.hasStore() == false )
             return;
-        if ( _reloadSchedule.shouldStart( nowMs, LiveOpsBus::kReloadPeriodMs ) )
+        if ( _reloadJob.tryStart( nowMs ) )
             startReload( nowMs );
         markIfChanged( nowMs ); // 시작, 끝, 회차 경계는 다시 읽지 않아도 열린 이벤트 목록이 바뀐다
     }
 
     void LiveOpsService::startReload( UnixMilliseconds nowMs )
     {
-        _reloadSchedule.markStarted( nowMs );
-        ++_pendingCount;
-        _dependencies._pStore->submit( make_unique<LiveOpsReloadJob>( this, nowMs ) );
+        _store.submit( []( IServiceStoreConnection& connection )
+        { return LiveOpsStoreRun::readEvents( connection ); },
+                       [this, nowMs]( ServiceStoreRead<vector<LiveEventDef>>& read )
+        { applyReload( std::move( read._value ), read.isOk(), nowMs ); } );
     }
 
     void LiveOpsService::applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs )
     {
-        --_pendingCount;
-        _reloadSchedule.markFinished();
+        _reloadJob.finish();
         if ( bReadOk == false )
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listEvent = std::move( listEvent );
@@ -360,20 +300,19 @@ namespace sw
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<LiveOpsWriteJob> work = make_unique<LiveOpsWriteJob>();
-        if ( LiveOpsProtocol::encodeEvent( definition, work->_bytes ) == false )
+        ServiceAuditedWrite work;
+        if ( LiveOpsProtocol::encodeEvent( definition, work._bytes ) == false )
         {
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work->_key                 = definition._eventID;
-        work->_auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action  = "liveops.event.put";
-        work->_auditEntry._subject = "liveops/" + definition._eventID;
-        work->_auditEntry._memo    = string( memo );
-        work->_auditEntry._timeMs  = nowMs.count();
-        work->_requestTag          = requestTag;
-        submitWrite( std::move( work ) );
+        work._key                 = definition._eventID;
+        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        work._auditEntry._action  = "liveops.event.put";
+        work._auditEntry._subject = "liveops/" + definition._eventID;
+        work._auditEntry._memo    = string( memo );
+        work._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( work ), requestTag );
     }
 
     void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -421,31 +360,36 @@ namespace sw
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<LiveOpsWriteJob> work = make_unique<LiveOpsWriteJob>();
-        work->_key                       = string( eventID );
-        work->_auditEntry._actor         = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action        = "liveops.event.remove";
-        work->_auditEntry._subject       = "liveops/" + work->_key;
-        work->_auditEntry._memo          = string( memo );
-        work->_auditEntry._timeMs        = nowMs.count();
-        work->_requestTag                = requestTag;
-        submitWrite( std::move( work ) );
+        ServiceAuditedWrite work;
+        work._key                 = string( eventID );
+        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        work._auditEntry._action  = "liveops.event.remove";
+        work._auditEntry._subject = "liveops/" + work._key;
+        work._auditEntry._memo    = string( memo );
+        work._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( work ), requestTag );
     }
 
-    void LiveOpsService::submitWrite( unique_ptr<LiveOpsWriteJob> work )
+    void LiveOpsService::submitWrite( ServiceAuditedWrite&& work, uint64 requestTag )
     {
-        work->_pService = this;
-        ++_pendingCount;
-        _dependencies._pStore->submit( std::move( work ) );
+        work._table = LiveOpsServiceInternal::getEventTable();
+        _store.submit( [work = std::move( work )]( IServiceStoreConnection& connection )
+        { return work.commit( connection ); },
+                       [this, requestTag]( ServiceStoreResult result )
+        {
+            const LiveOpsOutcome outcome = result == ServiceStoreResult::Ok       ? LiveOpsOutcome{ LiveOpsResult::Ok }
+                                         : result == ServiceStoreResult::NotFound ? LiveOpsOutcome{ LiveOpsResult::NotFound }
+                                                                                  : LiveOpsOutcome::fail( OnlineError::kUnavailable );
+            applyWrite( requestTag, outcome );
+        } );
     }
 
     void LiveOpsService::applyWrite( uint64 requestTag, LiveOpsOutcome result )
     {
-        --_pendingCount;
         _completionBuffer.push( LiveOpsCompletion{ requestTag, result } );
         if ( result != LiveOpsResult::Ok )
             return;
-        _reloadSchedule.request(); // 이 서버는 다음 tick 에 다시 읽고 알린다
+        _reloadJob.request(); // 이 서버는 다음 tick 에 다시 읽고 알린다
         if ( _dependencies._pBus != nullptr )
             (void)LiveOpsBus::kChangedTopic.publish( *_dependencies._pBus, LiveOpsChanged{} ); // 실패는 발행이 로그로 남겼다. 다른 서버는 주기로 다시 읽는다
     }

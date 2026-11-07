@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Network/Message/NetRequest.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -77,5 +78,25 @@ namespace sw
          */
         [[nodiscard]] static ServiceStoreResult listEntries( IServiceStoreConnection& connection, string_view subjectPrefix, string_view cursor, int32 maxCount,
                                                              vector<ServiceAuditEntry>& outListEntry, string& outNextCursor );
+    };
+
+    /**
+     * @struct ServiceAuditedWrite
+     * @brief 운영 표(라이브 이벤트 · 점검 · 공지)의 레코드 하나를 쓰거나 지우고 감사 줄을 같은 트랜잭션에 넣는 일입니다.
+     * @details 라이브 운영과 서버 디렉터리가 같은 작업 클래스(읽고 → 버전 조건으로 쓰기/지우기 → 감사 줄)를 따로 적었다. 저장소 스레드에서 `commit` 하나로 돈다.
+     */
+    struct SW_GF_API ServiceAuditedWrite
+    {
+        ServiceAuditEntry _auditEntry{};
+        vector<uint8>     _bytes{}; ///< 비어 있으면 지우기이다
+        string            _key{};
+        hashed_string     _table{};
+        NetIdempotencyKey _auditUnique{ NetIdempotencyKey::makeRandom() };
+
+        /**
+         * @brief 읽은 버전을 조건으로 쓰거나 지우고 감사 줄을 넣어 커밋합니다.
+         * @return Ok · NotFound(지울 레코드가 없다) · Unavailable(닿지 못했거나 그사이 바뀌었다 — Conflict 도 "다시 하라" 는 뜻이라 여기로 모은다)
+         */
+        [[nodiscard]] ServiceStoreResult commit( IServiceStoreConnection& connection ) const;
     };
 } // namespace sw

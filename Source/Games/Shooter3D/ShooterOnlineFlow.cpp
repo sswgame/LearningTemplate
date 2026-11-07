@@ -21,40 +21,6 @@ namespace sw
 {
     namespace
     {
-        /** @brief 저장소에 금화 우편 하나를 넣는 작업입니다(서버 키트 없이 기반의 우편 표만 쓴다). */
-        class ShooterSelfMailJob final : public IServiceStoreJob
-        {
-        public:
-            ShooterSelfMailJob( ShooterOnlineFlow* pFlow, ServiceMailMessage message )
-                : _message{ std::move( message ) }
-                , _pFlow{ pFlow }
-                , _bSent{ SW_FALSE }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                ServiceTransaction transaction;
-                string             mailKey;
-                bool               bReplayed = false;
-                const bool         bStaged   = ServiceMail::stageSend( connection, _message, transaction, mailKey, bReplayed ) == LedgerResult::Ok;
-                _bSent                       = bStaged && connection.commit( transaction ) == ServiceStoreResult::Ok ? SW_TRUE : SW_FALSE;
-            }
-
-            void complete() override
-            {
-                if ( _bSent == SW_TRUE )
-                    _pFlow->recordSelfMailSent();
-                else
-                    SW_LOG_ERROR_ID( "Shooter.OnlineSelfMailFailed", "[Shooter] the self mail could not be written to the local server store" );
-            }
-
-        private:
-            ServiceMailMessage _message;
-            ShooterOnlineFlow* _pFlow;
-            uint8              _bSent;
-        };
-
         /** @brief 개발 명령과 감시 값입니다. 세션과 흐름은 게임 범위에서 찾습니다. */
         struct ShooterOnlineFlowInternal
         {
@@ -181,6 +147,7 @@ namespace sw
         : _listReplyScratch{}
         , _pClaimSession{ nullptr }
         , _selfMailSentCount{ 0 }
+        , _localStore{}
     {
     }
 
@@ -242,7 +209,22 @@ namespace sw
         message._recipientAccountID = accountID;
         message._createdMs          = nowMs;
         message._expiryAction       = ServiceMail::getDefaultExpiryAction( message._fundingHolder );
-        pStore->submit( make_unique<ShooterSelfMailJob>( this, std::move( message ) ) );
+        // 서버 키트 없이 기반의 우편 표만 써서 금화 우편 하나를 넣는다
+        _localStore.bindStore( pStore );
+        _localStore.submit( [message = std::move( message )]( IServiceStoreConnection& connection )
+        {
+            ServiceTransaction transaction;
+            string             mailKey;
+            bool               bReplayed = false;
+            const bool         bStaged   = ServiceMail::stageSend( connection, message, transaction, mailKey, bReplayed ) == LedgerResult::Ok;
+            return bStaged && connection.commit( transaction ) == ServiceStoreResult::Ok;
+        }, [this]( bool bSent )
+        {
+            if ( bSent )
+                recordSelfMailSent();
+            else
+                SW_LOG_ERROR_ID( "Shooter.OnlineSelfMailFailed", "[Shooter] the self mail could not be written to the local server store" );
+        } );
         return true;
     }
 } // namespace sw

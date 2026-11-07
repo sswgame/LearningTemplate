@@ -75,116 +75,56 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 점검과 공지 두 테이블을 읽는 작업입니다. */
-    class ServerDirectoryReloadJob final : public IServiceStoreJob
+    /** @brief 점검과 공지 두 테이블을 읽은 값입니다. */
+    struct ServerDirectoryTables
     {
-    public:
-        ServerDirectoryReloadJob( ServerDirectoryService* pService, UnixMilliseconds nowMs )
-            : _listMaintenance{}
-            , _listNotice{}
-            , _pService{ pService }
-            , _nowMs{ nowMs }
-            , _bReadOk{ SW_FALSE }
-        {
-        }
+        vector<MaintenanceWindow>   _listMaintenance{};
+        vector<ServiceAnnouncement> _listNotice{};
+    };
 
-        void run( IServiceStoreConnection& connection ) override
+    /** @brief 점검과 공지 두 테이블을 읽습니다. 손상된 영속 레코드는 건너뛰지 않는다 — 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다. */
+    struct ServerDirectoryStoreRun
+    {
+        static ServiceStoreRead<ServerDirectoryTables> readTables( IServiceStoreConnection& connection )
         {
             using Internal = ServerDirectoryServiceInternal;
-            vector<ServiceRecord> listRecord;
-            if ( connection.listRecords( Internal::getMaintenanceTable(), "", "", Internal::kMaxMaintenanceRow, false, listRecord ) != ServiceStoreResult::Ok )
-                return;
+            ServiceStoreRead<ServerDirectoryTables> read;
+            vector<ServiceRecord>                   listRecord;
+            read._result = connection.listRecords( Internal::getMaintenanceTable(), "", "", Internal::kMaxMaintenanceRow, false, listRecord );
+            if ( read._result != ServiceStoreResult::Ok )
+                return read;
             for ( const ServiceRecord& record : listRecord )
             {
-                // 손상된 영속 레코드는 건너뛰지 않는다. 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다
                 MaintenanceWindow window;
-                if ( ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window ) == false )
-                    return;
-                if ( Internal::isValidWindow( window ) == false )
-                {
+                const bool        bDecoded = ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window );
+                if ( bDecoded && Internal::isValidWindow( window ) == false )
                     SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceRecord", "Server directory maintenance record '%#' breaks the write rules", record._key );
-                    return;
+                if ( bDecoded == false || Internal::isValidWindow( window ) == false )
+                {
+                    read._result = ServiceStoreResult::Invalid;
+                    return read;
                 }
-                _listMaintenance.push_back( std::move( window ) );
+                read._value._listMaintenance.push_back( std::move( window ) );
             }
             listRecord.clear();
-            if ( connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxNoticeCount * 4, false, listRecord ) != ServiceStoreResult::Ok )
-                return;
+            read._result = connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxNoticeCount * 4, false, listRecord );
+            if ( read._result != ServiceStoreResult::Ok )
+                return read;
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceAnnouncement notice;
-                if ( ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice ) == false )
-                    return;
-                if ( Internal::isValidNotice( notice ) == false )
-                {
+                const bool          bDecoded = ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice );
+                if ( bDecoded && Internal::isValidNotice( notice ) == false )
                     SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryNoticeRecord", "Server directory notice record '%#' breaks the write rules", record._key );
-                    return;
+                if ( bDecoded == false || Internal::isValidNotice( notice ) == false )
+                {
+                    read._result = ServiceStoreResult::Invalid;
+                    return read;
                 }
-                _listNotice.push_back( std::move( notice ) );
+                read._value._listNotice.push_back( std::move( notice ) );
             }
-            _bReadOk = SW_TRUE;
+            return read;
         }
-
-        void complete() override { _pService->applyReload( std::move( _listMaintenance ), std::move( _listNotice ), _bReadOk == SW_TRUE, _nowMs ); }
-
-    private:
-        vector<MaintenanceWindow>   _listMaintenance;
-        vector<ServiceAnnouncement> _listNotice;
-        ServerDirectoryService*     _pService;
-        UnixMilliseconds            _nowMs;
-        uint8                       _bReadOk;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 점검이나 공지 변경 하나를 처리합니다. 레코드 쓰기(또는 지우기)와 감사 기록을 한 트랜잭션으로 씁니다. 버전 조건을 쓰므로 그사이 바뀌었으면 Unavailable 이며 다시 하면 됩니다. */
-    class ServerDirectoryWriteJob final : public IServiceStoreJob
-    {
-    public:
-        ServiceAuditEntry       _auditEntry;
-        vector<uint8>           _bytes; ///< 비어 있으면 지우기이다
-        string                  _key;
-        hashed_string           _table;
-        NetIdempotencyKey       _auditUnique;
-        ServerDirectoryService* _pService;
-        uint64                  _requestTag;
-        ServerDirectoryOutcome  _result;
-
-        ServerDirectoryWriteJob()
-            : _auditEntry{}
-            , _bytes{}
-            , _key{}
-            , _table{}
-            , _auditUnique{ NetIdempotencyKey::makeRandom() }
-            , _pService{ nullptr }
-            , _requestTag{ 0 }
-            , _result{ ServerDirectoryOutcome::fail( OnlineError::kUnavailable ) }
-        {
-        }
-
-        void run( IServiceStoreConnection& connection ) override
-        {
-            ServiceRecord            current;
-            const ServiceStoreResult readResult = connection.readRecord( _table, _key, current );
-            if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
-                return;
-            if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
-            {
-                _result = ServerDirectoryResult::NotFound;
-                return;
-            }
-            ServiceTransaction transaction;
-            if ( _bytes.empty() )
-                transaction.erase( _table, _key, current._version );
-            else
-                transaction.put( _table, _key, _bytes, current._version );
-            ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-            const ServiceStoreResult commitResult = connection.commit( transaction );
-            _result                               = commitResult == ServiceStoreResult::Ok ? ServerDirectoryResult::Ok : ServerDirectoryOutcome::fail( OnlineError::kUnavailable ); // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
-        }
-
-        void complete() override { _pService->applyWrite( _requestTag, _result ); }
     };
 } // namespace sw
 
@@ -199,8 +139,8 @@ namespace sw
         , _dependencies{}
         , _lastVisibleHash{ 0 }
         , _statusRevision{ 0 }
-        , _pendingCount{ 0 }
-        , _reloadSchedule{}
+        , _reloadJob{}
+        , _store{}
         , _bStatusChanged{ SW_FALSE }
     {
     }
@@ -220,7 +160,8 @@ namespace sw
             unique_ptr<ServerRegistryReader>& reader = _listReader.emplace_back( make_unique<ServerRegistryReader>() );
             reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs );
         }
-        _reloadSchedule.request();
+        _store.bindStore( dependencies._pStore );
+        _reloadJob.setPeriod( settings._reloadPeriodMs );               // 첫 틱에 한 번 읽는다
         _lastVisibleHash = computeVisibleHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다. 처음 읽은 내용이 있을 때부터 알린다
     }
 
@@ -231,34 +172,35 @@ namespace sw
             reader->shutdown();
         }
         _listReader.clear();
+        _store.bindStore( nullptr ); // 남은 일은 조립이 저장소 드레인으로 거둔다(예전과 같이 여기서 기다리지 않는다)
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
     }
 
     void ServerDirectoryService::update( UnixMilliseconds nowMs )
     {
-        if ( _dependencies._pStore == nullptr || _dependencies._pRouter == nullptr )
+        if ( _store.hasStore() == false || _dependencies._pRouter == nullptr )
             return;
         for ( unique_ptr<ServerRegistryReader>& reader : _listReader )
         {
             reader->update( nowMs );
         }
-        if ( _reloadSchedule.shouldStart( nowMs, _settings._reloadPeriodMs ) )
+        if ( _reloadJob.tryStart( nowMs ) )
             startReload( nowMs );
         markStatusIfChanged( nowMs ); // 기간 경계(공지 시작과 끝, 점검 시작과 끝)는 다시 읽지 않아도 보이는 내용이 바뀐다
     }
 
     void ServerDirectoryService::startReload( UnixMilliseconds nowMs )
     {
-        _reloadSchedule.markStarted( nowMs );
-        ++_pendingCount;
-        _dependencies._pStore->submit( make_unique<ServerDirectoryReloadJob>( this, nowMs ) );
+        _store.submit( []( IServiceStoreConnection& connection )
+        { return ServerDirectoryStoreRun::readTables( connection ); },
+                       [this, nowMs]( ServiceStoreRead<ServerDirectoryTables>& read )
+        { applyReload( std::move( read._value._listMaintenance ), std::move( read._value._listNotice ), read.isOk(), nowMs ); } );
     }
 
     void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
     {
-        --_pendingCount;
-        _reloadSchedule.markFinished();
+        _reloadJob.finish();
         if ( bReadOk == false )
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listMaintenance = std::move( listMaintenance );
@@ -269,7 +211,7 @@ namespace sw
 
     void ServerDirectoryService::notifyChanged()
     {
-        _reloadSchedule.request();
+        _reloadJob.request();
     }
 
     bool ServerDirectoryService::takeStatusChange()
@@ -437,21 +379,20 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
-        if ( ServerDirectoryProtocol::encodeMaintenance( window, work->_bytes ) == false )
+        ServiceAuditedWrite work;
+        if ( ServerDirectoryProtocol::encodeMaintenance( window, work._bytes ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work->_table               = Internal::getMaintenanceTable();
-        work->_key                 = window._scope;
-        work->_auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action  = "sd.maintenance.set";
-        work->_auditEntry._subject = "sd/" + window._scope;
-        work->_auditEntry._memo    = string( memo );
-        work->_auditEntry._timeMs  = nowMs.count();
-        work->_requestTag          = requestTag;
-        submitWrite( std::move( work ) );
+        work._table               = Internal::getMaintenanceTable();
+        work._key                 = window._scope;
+        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        work._auditEntry._action  = "sd.maintenance.set";
+        work._auditEntry._subject = "sd/" + window._scope;
+        work._auditEntry._memo    = string( memo );
+        work._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( work ), requestTag );
     }
 
     void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -462,16 +403,15 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
-        work->_table                             = Internal::getMaintenanceTable();
-        work->_key                               = string( scope );
-        work->_auditEntry._actor                 = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action                = "sd.maintenance.clear";
-        work->_auditEntry._subject               = "sd/" + string( scope );
-        work->_auditEntry._memo                  = string( memo );
-        work->_auditEntry._timeMs                = nowMs.count();
-        work->_requestTag                        = requestTag;
-        submitWrite( std::move( work ) );
+        ServiceAuditedWrite work;
+        work._table               = Internal::getMaintenanceTable();
+        work._key                 = string( scope );
+        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        work._auditEntry._action  = "sd.maintenance.clear";
+        work._auditEntry._subject = "sd/" + string( scope );
+        work._auditEntry._memo    = string( memo );
+        work._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( work ), requestTag );
     }
 
     void ServerDirectoryService::postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
@@ -482,35 +422,33 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
-        if ( ServerDirectoryProtocol::encodeNotice( notice, work->_bytes ) == false )
+        ServiceAuditedWrite work;
+        if ( ServerDirectoryProtocol::encodeNotice( notice, work._bytes ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work->_table               = Internal::getNoticeTable();
-        work->_key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
-        work->_auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action  = "sd.notice.post";
-        work->_auditEntry._subject = "sd/notice/" + work->_key;
-        work->_auditEntry._after   = notice._text;
-        work->_auditEntry._timeMs  = nowMs.count();
-        work->_requestTag          = requestTag;
-        submitWrite( std::move( work ) );
+        work._table               = Internal::getNoticeTable();
+        work._key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
+        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        work._auditEntry._action  = "sd.notice.post";
+        work._auditEntry._subject = "sd/notice/" + work._key;
+        work._auditEntry._after   = notice._text;
+        work._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( work ), requestTag );
     }
 
     void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        using Internal                           = ServerDirectoryServiceInternal;
-        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
-        work->_table                             = Internal::getNoticeTable();
-        work->_key                               = ServiceKeyUtil::makeHex64( noticeID );
-        work->_auditEntry._actor                 = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action                = "sd.notice.remove";
-        work->_auditEntry._subject               = "sd/notice/" + work->_key;
-        work->_auditEntry._timeMs                = nowMs.count();
-        work->_requestTag                        = requestTag;
-        submitWrite( std::move( work ) );
+        using Internal = ServerDirectoryServiceInternal;
+        ServiceAuditedWrite work;
+        work._table               = Internal::getNoticeTable();
+        work._key                 = ServiceKeyUtil::makeHex64( noticeID );
+        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        work._auditEntry._action  = "sd.notice.remove";
+        work._auditEntry._subject = "sd/notice/" + work._key;
+        work._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( work ), requestTag );
     }
 
     void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -553,20 +491,25 @@ namespace sw
         }
     }
 
-    void ServerDirectoryService::submitWrite( unique_ptr<ServerDirectoryWriteJob> work )
+    void ServerDirectoryService::submitWrite( ServiceAuditedWrite&& work, uint64 requestTag )
     {
-        work->_pService = this;
-        ++_pendingCount;
-        _dependencies._pStore->submit( std::move( work ) );
+        _store.submit( [work = std::move( work )]( IServiceStoreConnection& connection )
+        { return work.commit( connection ); },
+                       [this, requestTag]( ServiceStoreResult result )
+        {
+            const ServerDirectoryOutcome outcome = result == ServiceStoreResult::Ok       ? ServerDirectoryOutcome{ ServerDirectoryResult::Ok }
+                                                 : result == ServiceStoreResult::NotFound ? ServerDirectoryOutcome{ ServerDirectoryResult::NotFound }
+                                                                                          : ServerDirectoryOutcome::fail( OnlineError::kUnavailable );
+            applyWrite( requestTag, outcome );
+        } );
     }
 
     void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryOutcome result )
     {
-        --_pendingCount;
         _completionBuffer.push( ServerDirectoryCompletion{ requestTag, result } );
         if ( result != ServerDirectoryResult::Ok )
             return;
-        _reloadSchedule.request(); // 이 서버는 다음 tick 에 다시 읽고 알린다
+        _reloadJob.request(); // 이 서버는 다음 tick 에 다시 읽고 알린다
         if ( _dependencies._pBus != nullptr )
             (void)ServerDirectoryBus::kChangedTopic.publish( *_dependencies._pBus, ServerDirectoryChanged{} ); // 실패는 발행이 로그로 남겼다. 다른 서버는 주기로 다시 읽는다
     }

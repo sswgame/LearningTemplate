@@ -21,14 +21,15 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
+#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
-#include "GameFramework/Runtime/Online/Service/ServiceReloadSchedule.h"
+#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
     class IServiceStore;
-    class LiveOpsWriteJob;
     class RemoteConfig;
     class ServerBus;
 
@@ -106,7 +107,7 @@ namespace sw
         /** @brief 주기적인 다시 읽기와 경계 판정을 합니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
         void update( UnixMilliseconds nowMs );
         /** @brief 다른 서버가 바꿨음을 버스로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
-        void notifyChanged() { _reloadSchedule.request(); }
+        void notifyChanged() { _reloadJob.request(); }
         /** @brief 열린 이벤트 목록이 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
         [[nodiscard]] bool takeStateChange();
         /**
@@ -133,7 +134,7 @@ namespace sw
         void takeCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         const vector<LiveEventDef>& getEvents() const { return _listEvent; }
-        int32                       getPendingCount() const { return _pendingCount; }
+        int32                       getPendingCount() const { return _store.getOpenCount(); }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
@@ -154,7 +155,7 @@ namespace sw
         string              resolveValue( const string& value ) const;
         bool                isKillSwitchOff() const;
         const LiveEventDef* findEvent( string_view eventID ) const;
-        void                submitWrite( unique_ptr<LiveOpsWriteJob> work );
+        void                submitWrite( ServiceAuditedWrite&& work, uint64 requestTag );
 
     private:
         vector<LiveEventDef>           _listEvent;
@@ -163,8 +164,8 @@ namespace sw
         EventBuffer<LiveOpsCompletion> _completionBuffer;
         LiveOpsDependencies            _dependencies;
         uint64                         _lastOpenHash;
-        int32                          _pendingCount;
-        ServiceReloadSchedule          _reloadSchedule; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
+        ServicePeriodicJob             _reloadJob; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
+        ServiceStoreTracker            _store;     ///< 저장소에 맡긴 일의 앞이다
         uint8                          _bStateChanged;
     };
 } // namespace sw

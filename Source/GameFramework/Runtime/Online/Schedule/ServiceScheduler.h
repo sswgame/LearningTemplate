@@ -17,6 +17,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -91,7 +92,7 @@ namespace sw
         void completeRun( const ScheduledRun& run, bool bSucceeded );
 
         /** @brief 저장소에 요청해 아직 회수하지 않은 작업의 수입니다. */
-        int32 getPendingWorkCount() const { return _pendingWorkCount; }
+        int32 getPendingWorkCount() const { return _store.getOpenCount(); }
 
         /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 -1. */
         static int64                computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );
@@ -99,9 +100,6 @@ namespace sw
         static const hashed_string& getTable(); ///< "service_schedule"
 
     private:
-        class ClaimJob;
-        class FinishJob;
-
         /** @brief 차지 일의 결과입니다. */
         enum class ClaimResult : uint8
         {
@@ -121,14 +119,24 @@ namespace sw
             uint8                _bClaimPending{ SW_FALSE };
         };
 
-        void onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult result, uint64 runToken, int64 retryAtMs );
-        void onWorkCompleted() { --_pendingWorkCount; }
+        /** @brief 차지 일이 완료로 넘기는 값입니다. */
+        struct ClaimReport
+        {
+            uint64      _runToken{ 0 };
+            int64       _retryAtMs{ 0 };
+            ClaimResult _result{ ClaimResult::Retry };
+        };
+
+        /** @brief 회차 하나를 차지해 봅니다(저장소 스레드). */
+        static ClaimReport claimOccurrence( IServiceStoreConnection& connection, const string& jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs, int64 leaseMs );
+        /** @brief 차지한 회차의 끝을 적습니다(저장소 스레드, 버전 조건 — 이어받긴 레코드는 건드리지 않는다). */
+        static ServiceStoreResult writeFinish( IServiceStoreConnection& connection, const ScheduledRun& run, uint64 serverID, bool bSucceeded, int64 nowMs );
+        void                      onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult result, uint64 runToken, int64 retryAtMs );
 
     private:
-        vector<Job>      _listJob;
-        IServiceStore*   _pStore;
-        uint64           _serverID;
-        UnixMilliseconds _lastTickMs;
-        int32            _pendingWorkCount;
+        vector<Job>         _listJob;
+        uint64              _serverID;
+        UnixMilliseconds    _lastTickMs;
+        ServiceStoreTracker _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

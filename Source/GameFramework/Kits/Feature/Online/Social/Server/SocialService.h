@@ -27,6 +27,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -115,13 +116,12 @@ namespace sw
 
         void  takeCompletions( vector<SocialCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
         void  pollNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.moveAllTo( outListNotification ); }
-        int32 getPendingCount() const { return _pendingCount; }
-
-        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision );
-        void applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink );
+        int32 getPendingCount() const { return _store.getOpenCount(); }
 
     private:
+        /** @brief 저장소 일의 완료입니다. */
+        void applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision );
+        void applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink );
         struct LocalAccount
         {
             vector<SocialLink>   _listLink{};
@@ -166,6 +166,6 @@ namespace sw
         SocialServiceDependencies              _dependencies;
         Subscription                           _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         IDAllocator<uint64>                    _queryIDAllocator;
-        int32                                  _pendingCount;
+        ServiceStoreTracker                    _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

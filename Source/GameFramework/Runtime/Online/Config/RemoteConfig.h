@@ -19,6 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -126,7 +127,7 @@ namespace sw
         /** @brief 클라이언트 쪽에서 받은 번들로 값을 모두 바꿉니다. 깨졌으면 false 이고 바꾸지 않습니다. */
         [[nodiscard]] bool readClientSnapshot( BitReader& reader );
 
-        int32              getPendingWorkCount() const { return _pendingWorkCount; }
+        int32              getPendingWorkCount() const { return _store.getOpenCount(); }
         ServiceStoreResult getLastReloadResult() const { return _lastReloadResult; }
         ServiceStoreResult getLastSetResult() const { return _lastSetResult; }
         int32              getValueCount() const { return static_cast<int32>( _mapEntry.size() ); }
@@ -139,9 +140,6 @@ namespace sw
         static int32 computeRolloutBucket( string_view flag, uint64 accountID );
 
     private:
-        class ReloadJob;
-        class SetJob;
-
         struct Entry
         {
             RemoteConfigValue _value{};
@@ -152,12 +150,17 @@ namespace sw
         void         recomputeSnapshotHash();
         void         onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry );
         void         onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version );
+        /** @brief 테이블 전체를 읽습니다(저장소 스레드). */
+        static ServiceStoreRead<map<string, Entry>> readTable( IServiceStoreConnection& connection );
+        /** @brief 값 하나를 버전 조건 + 감사 줄로 씁니다(저장소 스레드). 값은 커밋 버전이다. */
+        static ServiceStoreRead<uint64> writeValue( IServiceStoreConnection& connection, const string& key, const RemoteConfigValue& value, const ServiceAuditEntry& audit,
+                                                    uint64 expectedVersion );
 
     private:
-        map<string, Entry> _mapEntry;
-        uint64             _snapshotHash;
-        int32              _pendingWorkCount;
-        ServiceStoreResult _lastReloadResult;
-        ServiceStoreResult _lastSetResult;
+        map<string, Entry>  _mapEntry;
+        uint64              _snapshotHash;
+        ServiceStoreTracker _store; ///< 저장소에 맡긴 일의 앞이다(`requestReload` · `submitSet` 이 넘긴 저장소)
+        ServiceStoreResult  _lastReloadResult;
+        ServiceStoreResult  _lastSetResult;
     };
 } // namespace sw

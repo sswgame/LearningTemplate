@@ -203,20 +203,26 @@ namespace sw
             }
         };
 
-        /** @brief 길드 요청 하나를 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. */
-        class GuildJob final : public IServiceStoreJob
+        /** @brief 길드 요청 하나를 저장소 스레드에서 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. 한 번 쓰고 버린다. */
+        class GuildStoreRun final
         {
         public:
-            GuildJob( GuildService* pService, const GuildRequest& request, uint64 requestTag )
+            GuildStoreRun( const GuildRequest& request, const ILedgerPolicy* pLedgerPolicy )
                 : _request{ request }
                 , _outcome{}
-                , _pService{ pService }
-                , _pLedgerPolicy{ pService->getLedgerPolicy() }
-                , _requestTag{ requestTag }
+                , _pLedgerPolicy{ pLedgerPolicy }
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override
+            /** @brief 요청을 처리하고 결과를 넘깁니다. */
+            GuildResult run( IServiceStoreConnection& connection )
+            {
+                runAttempts( connection );
+                return std::move( _outcome );
+            }
+
+        private:
+            void runAttempts( IServiceStoreConnection& connection )
             {
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
@@ -238,9 +244,6 @@ namespace sw
                 _outcome._result = SocialOutcome::fail( OnlineError::kBusy );
             }
 
-            void complete() override { _pService->applyOutcome( _request, _requestTag, std::move( _outcome ) ); }
-
-        private:
             /** @brief 규칙 실패를 처리합니다. 결과를 적고 Invalid 를 반환하며 다시 시도하지 않습니다. */
             ServiceStoreResult fail( SocialOutcome result )
             {
@@ -798,9 +801,7 @@ namespace sw
         private:
             GuildRequest         _request;
             GuildResult          _outcome;
-            GuildService*        _pService;
             const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
-            uint64               _requestTag;
         };
     } // namespace
 } // namespace sw
@@ -812,22 +813,21 @@ namespace sw
         , _notificationBuffer{}
         , _onEvent{}
         , _listLevelExperience{}
-        , _pStore{ nullptr }
         , _pLedgerPolicy{ nullptr }
-        , _pendingCount{ 0 }
+        , _store{}
     {
     }
 
     void GuildService::initialize( IServiceStore* pStore )
     {
         SW_ASSERT( pStore != nullptr );
-        _pStore = pStore;
+        _store.bindStore( pStore );
     }
 
     void GuildService::shutdown()
     {
-        _pStore        = nullptr;
-        _pLedgerPolicy = nullptr; // 이벤트 칸은 건 쪽이 구독을 놓아 비운다
+        _store.bindStore( nullptr ); // 남은 일은 조립이 저장소 드레인으로 거둔다(예전과 같이 여기서 기다리지 않는다)
+        _pLedgerPolicy = nullptr;    // 이벤트 칸은 건 쪽이 구독을 놓아 비운다
     }
 
     bool GuildService::isValidName( string_view name )
@@ -850,8 +850,12 @@ namespace sw
 
     void GuildService::submit( const GuildRequest& request, uint64 requestTag )
     {
-        ++_pendingCount;
-        _pStore->submit( sw::make_unique<GuildJob>( this, request, requestTag ) );
+        _store.submit( [request, pLedgerPolicy = _pLedgerPolicy]( IServiceStoreConnection& connection )
+        {
+            GuildStoreRun runner{ request, pLedgerPolicy };
+            return runner.run( connection );
+        }, [this, request, requestTag]( GuildResult& outcome )
+        { applyOutcome( request, requestTag, std::move( outcome ) ); } );
     }
 
     void GuildService::attachAccount( AccountID accountID, UnixMilliseconds nowMs )
@@ -908,7 +912,6 @@ namespace sw
 
     void GuildService::applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome )
     {
-        --_pendingCount;
         const bool bServerOperation = request._operation == GuildOperation::Attach || request._operation == GuildOperation::AddExperience;
         if ( bServerOperation == false )
         {

@@ -37,6 +37,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -184,16 +185,16 @@ namespace sw
 
         int32 getLocalMemberCount( string_view channelID ) const;
         /** @brief 맡겨 두고 끝나지 않은 작업(저장, 접속 상태 찾기)의 수입니다. */
-        int32 getPendingCount() const { return _pendingStoreCount + static_cast<int32>( _mapPresenceRequestToWhisper.size() ); }
+        int32 getPendingCount() const { return _store.getOpenCount() + static_cast<int32>( _mapPresenceRequestToWhisper.size() ); }
         int32 getQueuedHistoryCount() const { return static_cast<int32>( _listHistoryQueue.size() ); }
 
-        /** @brief 저장 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
+    private:
+        /** @brief 저장 일의 완료입니다. */
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
         void applyHistoryRead( uint64 requestTag, ChatOutcome result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion );
         void applyReport( uint64 requestTag, ChatOutcome result );
 
-    private:
         struct PendingSend
         {
             string           _channelID{};
@@ -256,7 +257,7 @@ namespace sw
         string                                   _serverTopic;
         uint32                                   _sequence;
         uint32                                   _reportSequence; ///< 신고 키의 고유 값(서버 id 와 섞는다)
-        int32                                    _pendingStoreCount;
+        ServiceStoreTracker                      _store;          ///< 저장소에 맡긴 일의 앞이다(기록 · 제재 · 신고)
         uint8                                    _bHistoryWriting;
     };
 } // namespace sw
