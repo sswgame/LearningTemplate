@@ -1,9 +1,9 @@
 /**
  * @file EconomyClient.h
  * @brief 경제 키트의 클라이언트입니다. 잔액 캐시를 보관합니다.
- * @details - 성공 응답의 잔액을 캐시에 넣는다. 지갑 전체 응답은 스냅샷이고 구매와 지급 응답은 바뀐 것만 담는다. 다른 키트(거래, 우편, GM)의 응답에 포함된 잔액도 게임이 `applyBalances` 로 넘긴다.
+ * @details - 성공 응답의 잔액을 캐시에 넣는다. 지갑 전체 응답은 스냅샷이고 구매와 지급 응답은 바뀐 것만 담는다. 다른 키트(거래, 우편, GM)가 옮긴 잔액은 서버가 알림으로 보낸다 — 게임이 옮기지 않는다.
  *          - **로컬 지갑은 원장의 읽기 사본이다.** 온라인 게임은 `Wallet::add`, `trySpend`, `charge` 를 부르지 않고 `applyLedgerBalances( wallet )` 로만 맞춘다. 서버가 원본이기 때문이다.
- *          - 요청 없이 바뀐 잔액(GM 지급 · 회수, 환불 회수)은 서버가 알림(`EconomyMethod::BalanceChanged`)으로 보내며, 받으면 캐시를 그 값으로 덮는다.
+ *          - 다른 키트 · 운영이 바꾼 잔액(우편 수령 · 만료 반환, 거래 정산, GM 지급 · 회수, 환불 회수)은 서버가 알림(`EconomyMethod::BalanceChanged`)으로 보내며, 받으면 캐시를 그 값으로 덮는다.
  *          - 구매와 지급을 재시도할 때는 **같은** 멱등 키를 쓴다. 응답의 `_idempotencyKey` 를 다시 넘기며, 새 키는 새 구매로 취급한다.
  *          - 요청은 `call<EconomyMethod::Purchase>( request, onReply, key )` 이고 규칙은 `OnlineProtocolClient` 에 있다.
  */

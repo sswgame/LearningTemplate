@@ -20,6 +20,7 @@ namespace sw
         , _pTradeService{ nullptr }
         , _pDirectory{ nullptr }
         , _pPresence{ nullptr }
+        , _pBalanceNotice{ nullptr }
         , _nowMs{ 0 }
     {
         setReady( false );
@@ -134,7 +135,10 @@ namespace sw
         for ( const TradeCompletion& completion : _listCompletionScratch )
         {
             if ( completion._snapshot._state == TradeState::Settled && completion._ledger._listHolderBalance.empty() == false )
+            {
                 _mapTradeToLedger[completion._snapshot._tradeID] = completion._ledger;
+                notifySettledBalances( completion._ledger );
+            }
             const auto callIt = _mapCallToAccount.find( completion._requestTag );
             if ( callIt == _mapCallToAccount.end() )
                 continue;
@@ -210,6 +214,22 @@ namespace sw
         TradeReply reply;
         reply._result = result._result;
         (void)finishCall( callID, result, reply );
+    }
+
+    void TradeServer::notifySettledBalances( const LedgerTransferResult& ledger )
+    {
+        if ( _pBalanceNotice == nullptr )
+            return;
+        unordered_map<AccountID, vector<LedgerBalance>> mapAccountToBalance;
+        for ( const LedgerTransferResult::HolderBalance& holderBalance : ledger._listHolderBalance )
+        {
+            if ( holderBalance._holder._kind == LedgerHolderKind::Account )
+                mapAccountToBalance[holderBalance._holder._accountID].push_back( holderBalance._balance );
+        }
+        for ( const auto& [accountID, listBalance] : mapAccountToBalance )
+        {
+            _pBalanceNotice->notifyBalancesChanged( accountID, listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 정산 잔액을 옮기지 않는다
+        }
     }
 
     void TradeServer::collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )

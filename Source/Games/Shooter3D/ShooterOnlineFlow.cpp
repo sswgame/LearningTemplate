@@ -145,7 +145,6 @@ namespace sw
 {
     ShooterOnlineFlow::ShooterOnlineFlow()
         : _listReplyScratch{}
-        , _pClaimSession{ nullptr }
         , _selfMailSentCount{ 0 }
         , _localStore{}
     {
@@ -179,7 +178,6 @@ namespace sw
 
     void ShooterOnlineFlow::requestClaimAll( OnlineSession& session )
     {
-        _pClaimSession = &session;
         (void)session.get<MailboxClient>().call<MailboxMethod::ClaimAll>( OnlineReplyDelegate<MailboxMethod::ClaimAll>::create<&ShooterOnlineFlow::onClaimAll>( this ) );
     }
 
@@ -190,8 +188,6 @@ namespace sw
             SW_LOG_WARNING_ID( "Shooter.OnlineClaimFailed", "[Shooter] online mail claim failed (error %#, result %#)", result._errorCode, static_cast<int32>( result._reply._result ) );
             return;
         }
-        // 수령 응답의 잔액을 지갑으로 넘기는 일은 지금 게임 몫이다. 서버가 잔액 변경 알림을 내게 되면 이 줄이 사라진다(`docs/NEXT.md` 온라인 코어).
-        _pClaimSession->get<EconomyClient>().applyBalances( result._reply._listBalance, false );
     }
 
     bool ShooterOnlineFlow::sendSelfMailOnLocalServer( OnlineSession& session, int64 amount, int64 nowMs )

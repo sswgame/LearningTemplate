@@ -2,7 +2,7 @@
  * @file ShooterOnlineFlow.h
  * @brief Shooter3D 의 온라인 흐름입니다. 세션(`OnlineSession`)으로 로그인 → 우편 목록 → 모두 받기 → 지갑 맞추기를 잇는 게임 쪽 코드이자, 게임이 온라인 키트를 어떻게 쓰는지 보여 주는 견본입니다.
  * @details 게임이 쓰는 것은 세션 하나와 키트 클라이언트의 `call<>` 뿐입니다. 연결 · 틱 · 키트 묶기는 세션이 맡습니다.
- *          우편 수령 응답의 잔액을 경제 클라이언트로 넘기는 일은 지금 게임 몫입니다(`EconomyClient::applyBalances`).
+ *          우편 수령으로 바뀐 잔액은 서버가 잔액 변경 알림으로 보내 지갑(`EconomyClient`)이 스스로 맞는다 — 게임은 응답의 잔액을 옮기지 않습니다.
  *          화면은 아직 없고 개발 명령(`shooter.online.*`)과 감시 값(`Shooter3D.Online*`)으로 시나리오가 끝단을 판정합니다(`automation/onlinesession.scenario.xml`).
  */
 #pragma once
@@ -48,7 +48,6 @@ namespace sw
 
     private:
         vector<AccountClientReply> _listReplyScratch;
-        OnlineSession*             _pClaimSession; ///< 응답이 올 때 경제 클라이언트를 찾는 세션이다. 세션은 게임 인스턴스의 것이고 이 객체보다 오래 산다
         int32                      _selfMailSentCount;
         ServiceStoreTracker        _localStore; ///< 로컬 서버 저장소에 맡긴 일이다(세션이 빌려준다)
     };

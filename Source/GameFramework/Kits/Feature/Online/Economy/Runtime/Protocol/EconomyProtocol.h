@@ -245,7 +245,7 @@ namespace sw
         using Purchase         = Method<MethodName::Purchase, EconomyPurchaseRequest, EconomyPurchaseReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using RedeemReceipt    = Method<MethodName::RedeemReceipt, EconomyRedeemRequest, EconomyRedeemReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using WithdrawPurchase = Method<MethodName::WithdrawPurchase, EconomyWithdrawRequest, EconomyWithdrawReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다. 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다
-        using BalanceChanged   = Push<PushName::BalanceChanged, EconomyBalanceChanged>;                                                                        ///< 요청 없이 잔액이 바뀌었다(GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
+        using BalanceChanged   = Push<PushName::BalanceChanged, EconomyBalanceChanged>;                                                                        ///< 이 키트의 요청 밖에서 잔액이 바뀌었다(우편 수령, 거래 정산, GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
     };
 } // namespace sw
 

@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
@@ -38,6 +39,8 @@ namespace sw
         /** @brief 넘긴 객체는 빌려 씁니다. @p pPresence 는 서버가 여러 대일 때만 넘기며, 없으면 nullptr 이고 서버가 한 대입니다. */
         void initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
         void shutdown();
+        /** @brief 정산으로 바뀐 잔액을 알릴 창구(경제 키트)를 겁니다. 빌려 쓰며 없으면 알리지 않는다. */
+        void setBalanceNotice( IBalanceChangedListener* pBalanceNotice ) { _pBalanceNotice = pBalanceNotice; }
 
         // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다.
         void handleCall( OnlineServerCall<TradeMethod::Invite> call, const OnlineCallContext& context, const TradeInviteRequest& request );
@@ -67,6 +70,8 @@ namespace sw
         void        respondImmediately( uint64 callID, TradeOutcome result );
         void        onPresenceFound( const AccountPresenceResult& found );
         static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
+        /** @brief 정산으로 바뀐 잔액을 계정마다 알립니다(경제 키트의 `BalanceChanged`). */
+        void notifySettledBalances( const LedgerTransferResult& ledger );
 
     private:
         unordered_map<uint64, AccountID>            _mapCallToAccount; ///< 응답을 기다리는 호출의 계정이다. 정산 잔액을 그 계정 몫만 싣는다
@@ -79,7 +84,8 @@ namespace sw
         TradeService*                               _pTradeService;
         const IAccountDirectory*                    _pDirectory;
         IAccountPresence*                           _pPresence;
-        Subscription                                _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        IBalanceChangedListener*                    _pBalanceNotice; ///< 정산 잔액을 두 당사자의 지갑에 알린다(`setBalanceNotice`)
+        Subscription                                _findOwner;      ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         UnixMilliseconds                            _nowMs;
     };
 } // namespace sw

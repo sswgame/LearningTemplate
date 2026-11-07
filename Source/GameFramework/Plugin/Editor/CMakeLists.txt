@@ -4,7 +4,6 @@
 # ==============================================================================
 
 add_subdirectory(GameplayTools)
-add_subdirectory(AdminLogin)
 add_subdirectory(MeshModifiers)
 add_subdirectory(CameraPresets)
 add_subdirectory(CharacterEditor)

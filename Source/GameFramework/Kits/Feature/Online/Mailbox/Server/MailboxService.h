@@ -52,7 +52,7 @@ namespace sw
         int64                    _noticeIntervalMs{ 1000 };  ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
         int32                    _noticeBatchCount{ 32 };    ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
         IAccountPresence*        _pPresence{ nullptr };      ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버가 하나면 null 이다
-        IBalanceChangedListener* _pBalanceNotice{ nullptr }; ///< 만료로 보낸 쪽에 돌려준 재화의 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이다
+        IBalanceChangedListener* _pBalanceNotice{ nullptr }; ///< 수령 · 만료 반환으로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이다
         IOfflinePushSender*      _pOfflinePush{ nullptr };   ///< 접속하지 않은 계정의 기기 푸시이다(라이브 운영 키트). 없으면 오프라인 계정에는 알리지 않는다
     };
 } // namespace sw
@@ -107,6 +107,8 @@ namespace sw
         void submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns );
         void onNoticePresenceFound( const AccountPresenceResult& result );
         void sendOfflinePush( AccountID accountID );
+        /** @brief 수령으로 바뀐 잔액을 그 계정에 알립니다(경제 키트의 `BalanceChanged`). 경제 키트가 없으면 하지 않는다. */
+        void notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply );
 
     private:
         vector<ServiceMailCampaign>           _listCampaign;

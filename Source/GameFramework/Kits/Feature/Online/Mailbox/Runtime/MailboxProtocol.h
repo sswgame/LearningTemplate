@@ -4,7 +4,7 @@
  * @details 메서드마다 요청과 응답 타입이 있어 메서드가 쓰지 않는 칸이 없다. 본문은 고정 배치형(B)이고 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          결과는 두 층이다. 업무 결과(`MailboxResult`)는 응답의 `_result` 이고, 로그인 없음 · 깨진 요청 · 충돌 · 일시 장애는 공통 범주(`OnlineError`)로 `OnlineResult::_errorCode` 에 온다.
  *          캠페인 우편의 키는 `campaign/<id 16진>` 이다. 개인 우편의 키는 받는 계정의 16진 문자열로 시작하므로 겹치지 않는다.
- *          수령 응답의 잔액은 게임이 경제 클라이언트(`EconomyClient::applyBalances`)로 넘긴다. 키트끼리는 서로 모른다.
+ *          수령으로 바뀐 잔액은 서버가 경제 키트의 잔액 변경 알림(`EconomyMethod::BalanceChanged`)으로도 보내 지갑(`EconomyClient`)이 스스로 맞는다. 응답의 잔액은 표시용이다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -129,7 +129,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
-        vector<LedgerBalance> _listBalance{}; ///< 바뀐 잔액이다. 게임이 EconomyClient::applyBalances 로 넘긴다
+        vector<LedgerBalance> _listBalance{}; ///< 바뀐 잔액이다. 지갑은 같은 값을 잔액 변경 알림으로 받는다
         PROPERTY()
         int32 _claimedCount{ 0 };
         PROPERTY()

@@ -212,6 +212,14 @@ namespace sw
         }
     }
 
+    void MailboxService::notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply )
+    {
+        const bool bNothingChanged = outcome.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotice == nullptr;
+        if ( bNothingChanged )
+            return;
+        _settings._pBalanceNotice->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
+    }
+
     void MailboxService::onNoticePresenceFound( const AccountPresenceResult& result )
     {
         const auto noticeIt = _mapPresenceRequestToNotice.find( result._requestID );
@@ -267,8 +275,12 @@ namespace sw
             ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply> done;
             done._outcome = MailboxStoreCall::run( TMethod{}, connection, request, input, done._reply );
             return done;
-        }, [this, call]( const ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply>& done )
-        { (void)finish( call, done._outcome, done._reply ); } ); // 모르는 표지는 호출 표가 경고한다
+        }, [this, call, accountID = context._accountID]( const ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply>& done )
+        {
+            if constexpr ( std::is_same_v<typename TMethod::Reply, MailboxClaimReply> )
+                notifyClaimedBalances( accountID, done._outcome, done._reply );
+            (void)finish( call, done._outcome, done._reply ); // 모르는 표지는 호출 표가 경고한다
+        } );
     }
 
     void MailboxService::handleCall( OnlineServerCall<MailboxMethod::List> call, const OnlineCallContext& context, const MailboxListRequest& request )
