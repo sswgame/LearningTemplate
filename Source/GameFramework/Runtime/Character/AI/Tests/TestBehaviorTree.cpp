@@ -523,3 +523,20 @@ SW_TEST_CASE( BehaviorMoveToTest, LosingTheTargetStopsTheMover )
     SW_EXPECT_EQUAL( 1u, mover._stopCount );
     SW_EXPECT_TRUE( mover._status == NavMoveStatus::Idle );
 }
+
+/** @brief [BlackboardTest] 디버거 줄: 칸 이름은 이름순, 값은 종류에 맞는 글이다 */
+SW_TEST_CASE( BlackboardTest, KeysAndTextForTheDebugger )
+{
+    Blackboard blackboard;
+    blackboard.setInt( "zeta", 3 );
+    blackboard.setBool( "alpha", true );
+    blackboard.setObject( "mid", 42 );
+    vector<hashed_string> listKey;
+    blackboard.collectKeys( listKey );
+    SW_REQUIRE_EQUAL( size_t( 3 ), listKey.size() );
+    SW_EXPECT_TRUE( listKey[0] == hashed_string( "alpha" ) );
+    SW_EXPECT_TRUE( listKey[2] == hashed_string( "zeta" ) );
+    SW_EXPECT_EQUAL( string( "true" ), blackboard.findValue( "alpha" )->formatText() );
+    SW_EXPECT_EQUAL( string( "3" ), blackboard.findValue( "zeta" )->formatText() );
+    SW_EXPECT_EQUAL( string( "#42" ), blackboard.findValue( "mid" )->formatText() );
+}

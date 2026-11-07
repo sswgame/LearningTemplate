@@ -2,6 +2,9 @@
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     float32 BlackboardValue::computeNumeric() const
@@ -21,6 +24,38 @@ namespace sw
                 return 0.0f;
         }
         return 0.0f;
+    }
+
+    string BlackboardValue::formatText() const
+    {
+        switch ( _type )
+        {
+            case BlackboardValueType::Float:
+                return to_string( _float );
+            case BlackboardValueType::Int:
+                return to_string( _int );
+            case BlackboardValueType::Bool:
+                return _int != 0 ? string( "true" ) : string( "false" );
+            case BlackboardValueType::Vector:
+                return "(" + to_string( _vector._x ) + ", " + to_string( _vector._y ) + ", " + to_string( _vector._z ) + ")";
+            case BlackboardValueType::Object:
+                return "#" + to_string( _object );
+            case BlackboardValueType::None:
+                return string( "-" );
+        }
+        return string( "-" );
+    }
+
+    void Blackboard::collectKeys( vector<hashed_string>& outListKey ) const
+    {
+        outListKey.clear();
+        for ( const auto& [key, value] : _mapValue )
+        {
+            (void)value;
+            outListKey.push_back( key );
+        }
+        VectorUtil::sort( outListKey, []( const hashed_string& left, const hashed_string& right )
+        { return string_view( left.c_str() ) < string_view( right.c_str() ); } );
     }
 
     Blackboard::Blackboard()

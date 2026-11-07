@@ -3,7 +3,9 @@
  * @brief AI 의 메모장입니다. 이름으로 값(실수, 정수, 참거짓, 위치, 오브젝트 id)을 저장하고, 행동 트리의 조건과 작업이 읽고 씁니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -38,6 +40,8 @@ namespace sw
 
         /** @brief 비교에 쓰는 수치입니다. 참거짓과 오브젝트는 0 이 아니면 1 입니다. */
         float32 computeNumeric() const;
+        /** @brief 디버거가 보이는 글입니다(종류에 맞는 값 — `1.5` · `true` · `(1, 2, 3)` · `#id`). */
+        string formatText() const;
     };
 } // namespace sw
 
@@ -93,6 +97,8 @@ namespace sw
         [[nodiscard]] std::optional<uint64> getObject( const hashed_string& key ) const;
         const BlackboardValue*              findValue( const hashed_string& key ) const;
         uint32                              getRevision() const { return _revision; }
+        /** @brief 칸 이름을 이름순으로 @p outListKey 에 채웁니다(먼저 비운다). 디버거가 읽는다. */
+        void collectKeys( vector<hashed_string>& outListKey ) const;
 
     private:
         BlackboardValue& acquireValue( const hashed_string& key, BlackboardValueType type );

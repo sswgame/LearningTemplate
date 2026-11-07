@@ -8,9 +8,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /** @brief 이동 요청의 상태입니다. */
+    ENUM()
     enum class NavMoveStatus : uint8
     {
         Idle = 0, ///< 목적지가 없다.
