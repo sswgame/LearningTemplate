@@ -169,6 +169,7 @@ namespace sw
         , _bInitialized{ SW_FALSE }
         , _bFreshGame{ SW_FALSE }
         , _bWeather{ SW_FALSE }
+        , _bOpenAtBeginPlay{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -213,6 +214,9 @@ namespace sw
         Component::onBeginPlay();
         // 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         setTickGroup( TickGroup::PrePhysics );
+        // 디렉터 없는 씬(시연 · 시험)만 데이터로 연다 — 디렉터가 있으면 그 설정으로 디렉터가 연다.
+        if ( _bOpenAtBeginPlay == SW_TRUE && initialize( SessionStateSettings{} ) == SessionStateInitResult::Refused )
+            SW_LOG_ERROR_ID( "SessionState.OpenAtBeginPlayRefused", "SessionState: could not open with default settings at begin play" );
     }
 
     void SessionStateComponent::onTick( float32 deltaTime )

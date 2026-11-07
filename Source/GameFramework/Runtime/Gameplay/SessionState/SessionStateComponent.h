@@ -85,7 +85,7 @@ namespace sw
      *            같은 그룹에서 동시에 실행되어 데이터 경쟁이 생긴다. 그래서 찾는 함수도 `findOnOwner`(같은 오브젝트) 하나뿐이다.
      *          - **알림**: 시계 알림은 이 컴포넌트가 틱마다 꺼내서 `getClockEvents` 로 내준다. 다음 틱 처음에 비운다. 지갑, 일지, 평판의 알림 버퍼는
      *            게임(화면)이 소유한다. 참조해서 쓰는 키트는 알림을 꺼내지 않고 상태(`QuestLog::getStatus` 등)를 본다.
-     *          - **여는 쪽**: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
+     *          - **여는 쪽**: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 디렉터가 없는 씬(시연 · 시험)은 `_bOpenAtBeginPlay` 로 기본 설정으로 연다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
      *            `isFreshGame()` 일 때만 넣는다. 복원한 판 위에 시작값이 중복으로 쌓이지 않게 하기 위해서다.
      *          - **세이브**: `writeState` 는 상태마다 구간 하나(`StateIO::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다.
      *            게임 인스턴스가 생성자에서 `getStateSnapshot().registerStatefulComponent<SessionStateComponent>()` 로 스냅샷에 등록한다.
@@ -181,6 +181,8 @@ namespace sw
         uint8                   _bInitialized : 1;
         uint8                   _bFreshGame   : 1;
         uint8                   _bWeather     : 1; ///< 날씨 카탈로그로 열었는지 여부
-        uint8                   _reserved     : 5;
+        PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
+        uint8 _bOpenAtBeginPlay : 1;
+        uint8 _reserved         : 4;
     };
 } // namespace sw

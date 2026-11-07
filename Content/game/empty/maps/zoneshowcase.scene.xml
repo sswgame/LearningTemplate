@@ -24,7 +24,7 @@
 		<entity id="3" name="Session">
 			<GameObject _schemaVersion="0" _name="Session" _bActive="true">
 				<_listComponent>
-					<SessionStateComponent />
+					<SessionStateComponent _bOpenAtBeginPlay="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

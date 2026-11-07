@@ -19,7 +19,7 @@ namespace sw
     class GameplayContext
     {
     public:
-        static constexpr uint32 kMaxSlot = 8; ///< 실행기 하나가 채우는 칸은 한 자릿수다
+        static constexpr uint32 kMaxSlot = 16; ///< 실행기 하나가 채우는 칸 수의 상한 — 지역 처리기가 AI 대상에 9 칸(위치 · 태그 · 대상 · 출처 · 플래그 읽기/쓰기 · 블랙보드 읽기/쓰기 · 동작 값)을 채운다. 표는 스택에 있어 커도 할당이 없다
 
         /** @brief 칸 @p TSlot 을 @p pValue 로 정합니다. 이미 있으면 바꿉니다. */
         template <typename TSlot>
