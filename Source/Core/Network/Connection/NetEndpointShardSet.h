@@ -57,6 +57,7 @@ namespace sw
         NetConnectionState getConnectionState( int32 connectionID ) const override;
         [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const override;
         NetAddress         getConnectionAddress( int32 connectionID ) const override;
+        uint64             getConnectionPrincipal( int32 connectionID ) const override;
         int32              getConnectedCount() const override;
         /** @brief 샤드 하나(클라이언트)면 그 엔드포인트의 번호, 샤드 여럿(서버)이면 -1 입니다. */
         int32 getClientIndex() const override;

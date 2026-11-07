@@ -150,6 +150,13 @@ namespace sw
         return pShard != nullptr ? pShard->getConnectionAddress( localConnectionID ) : NetAddress{};
     }
 
+    uint64 NetEndpointShardSet::getConnectionPrincipal( int32 connectionID ) const
+    {
+        int32              localConnectionID = -1;
+        const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
+        return pShard != nullptr ? pShard->getConnectionPrincipal( localConnectionID ) : 0;
+    }
+
     int32 NetEndpointShardSet::getConnectedCount() const
     {
         int32 connectedCount = 0;

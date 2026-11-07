@@ -24,10 +24,11 @@ namespace sw
         static constexpr uint8 kMMO             = NetMessageRange::kFramework + 3 * NetMessageRange::kSize; ///< GF_NetMMO
         static constexpr uint8 kDestruction     = NetMessageRange::kFramework + 4 * NetMessageRange::kSize; ///< GF_NetDestruction
         static constexpr uint8 kPairedAnimation = NetMessageRange::kFramework + 5 * NetMessageRange::kSize; ///< GF_NetPairedAnimation
+        static constexpr uint8 kRemoteCall      = NetMessageRange::kFramework + 6 * NetMessageRange::kSize; ///< GF_NetClientServer 의 반사 함수 호출(`RemoteCall.h`) — 마지막 키트 영역이다
 
-        static_assert( kPairedAnimation + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
+        static_assert( kRemoteCall + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
         // 첫 바이트는 와이어 형식이다. 값이 바뀌면 다른 빌드와 통신할 수 없으므로, 바꾸려면 프로토콜 버전을 올려야 한다.
-        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMMO == 0x40 && kDestruction == 0x50 && kPairedAnimation == 0x60,
+        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMMO == 0x40 && kDestruction == 0x50 && kPairedAnimation == 0x60 && kRemoteCall == 0x70,
                        "network kit message ranges are wire format" );
     };
 } // namespace sw

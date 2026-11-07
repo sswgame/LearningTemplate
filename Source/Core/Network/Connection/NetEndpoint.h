@@ -204,6 +204,11 @@ namespace sw
         virtual NetConnectionState getConnectionState( int32 connectionID ) const                               = 0;
         [[nodiscard]] virtual bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const = 0;
         virtual NetAddress         getConnectionAddress( int32 connectionID ) const                             = 0;
+        /**
+         * @brief 서버에서 접속 인증기가 이 연결에 지정한 주체(로그인 계정, `INetConnectAuthenticator::findSessionSecret`)입니다. 자격 없이 붙은 연결 · 클라이언트는 0 입니다.
+         * @details 게임 서버가 연결을 계정에 잇는 유일한 길이다 — 클라이언트가 보낸 이름 · 번호로 계정을 고르지 않는다(남의 계정을 주장할 수 있다).
+         */
+        virtual uint64 getConnectionPrincipal( int32 connectionID ) const = 0;
         /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)입니다. 연결 전이거나 서버면 -1 입니다. */
         virtual int32 getClientIndex() const                                     = 0;
         virtual int32 getConnectedCount() const                                  = 0;
@@ -325,7 +330,7 @@ namespace sw
         bool   isDebugHoldAnnounced() const SW_EXCLUDES_LOCK( _mutex );
         uint64 getRejectedPacketCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 서버에서 인증기가 이 연결에 지정한 주체(로그인 계정)를 반환합니다. 없으면 0 입니다. */
-        uint64 getConnectionPrincipal( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex );
+        uint64 getConnectionPrincipal( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 복호, 증명, 키 확인에 실패해 버린 패킷 수입니다(진단과 테스트용). */
         uint64 getAuthenticationFailureCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 재전송 방지 윈도우가 버린 패킷 수입니다. */

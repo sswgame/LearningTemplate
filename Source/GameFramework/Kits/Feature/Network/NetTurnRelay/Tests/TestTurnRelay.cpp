@@ -44,6 +44,7 @@ namespace
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
         bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
         NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
+        uint64             getConnectionPrincipal( int32 ) const override { return 0; }
         int32              getClientIndex() const override { return -1; }
         int32              getConnectedCount() const override { return 0; }
         void               collectConnected( vector<int32>& ) const override {}
