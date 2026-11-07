@@ -60,6 +60,7 @@ namespace sw
         , _nextHandleID{ 0 }
         , _listLockDepth{ 0 }
         , _blockedHealthDecreaseCount{ 0 }
+        , _pExecutingContext{ nullptr }
         , _bHasPendingRemoval{ SW_FALSE }
         , _bRefreshingOngoingTags{ SW_FALSE }
         , _abilitySetID{}
@@ -1103,6 +1104,20 @@ namespace sw
         const bool bHealth = name == _healthAttribute;
         if ( bHealth || name == _maxHealthAttribute )
             notifyHealthChanged( false );
+        // 쓰러졌다 — 래그돌 · 절단에 치명 신호를 낸다(`deliverFatalHit`). 맞힌 자리는 즉시 이펙트의 컨텍스트가 실은 것이고, 없으면(주기 피해 · 코드가 깎음) 바디 없는 신호다.
+        const bool bDied = bHealth && oldValue > 0.0f && newValue <= 0.0f;
+        if ( bDied )
+        {
+            HitInfo hit;
+            if ( _pExecutingContext != nullptr && _pExecutingContext->_bHasHit == SW_TRUE )
+            {
+                GameObject*        pOwner   = getOwner();
+                GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                hit                         = _pExecutingContext->_hit;
+                hit._pInstigator            = pManager != nullptr ? pManager->resolveGameObject( _pExecutingContext->_instigator ) : nullptr;
+            }
+            deliverFatalHit( hit );
+        }
         const bool bDamageTaken = bHealth && newValue < oldValue && _bShowDamageNumbers;
         if ( bDamageTaken )
             spawnDamageNumber( oldValue - newValue );
@@ -1432,12 +1447,16 @@ namespace sw
         const float32 stackScale     = static_cast<float32>( MathUtil::max( 1, stackCount ) );
         float32       totalMagnitude = 0.0f;
         const uint32  blockedBefore  = _blockedHealthDecreaseCount;
+        // 이 이펙트로 체력이 0 에 닿으면 맞힌 자리로 치명 신호를 낸다(`notifyAttributeChanged`). 이펙트 안에서 다른 이펙트를 걸면 그 컨텍스트로 바뀌었다가 돌아온다.
+        const AbilityEffectContext* pOuterContext = _pExecutingContext;
+        _pExecutingContext                        = &spec._context;
         for ( const EvaluatedModifier& modifier : listModifier )
         {
             applyModifierToBase( modifier, stackScale, spec );
             if ( modifier._op == AttributeModOp::Add )
                 totalMagnitude += modifier._magnitude * stackScale;
         }
+        _pExecutingContext = pOuterContext;
         // 결정: 무적이 체력 내림을 막은 피격은 맞은 것이 아니므로 즉시 큐(피격 섬광 · 소리)를 내지 않는다 — 언리얼 Lyra 의 `Gameplay.DamageImmunity` 가 이펙트를 막아 큐도 안 나가는 것과 같은 결과다.
         if ( _blockedHealthDecreaseCount != blockedBefore )
             return;

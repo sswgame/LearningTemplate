@@ -46,6 +46,31 @@ namespace sw
                     pStats->takeDamage( amount, instigator );
             } );
         }
+
+        /**
+         * @brief 틱 중의 맞음을 틱 직후로 미룹니다. 맞음 정보(바디 · 방향 · 충격량)를 함께 넘겨, 미룬 맞음으로 쓰러져도 래그돌 · 절단에 치명 신호가 간다.
+         * @details 때린 쪽 포인터는 틱 직후에 핸들로 다시 찾는다(그 사이 지워졌으면 nullptr).
+         */
+        void enqueueStatsHit( GameObject* pOwner, const HitInfo& hit )
+        {
+            GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            if ( pManager == nullptr )
+                return;
+            const uint64           objectID   = pOwner->getObjectID();
+            const GameObjectHandle instigator = hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{};
+            HitInfo                deferred   = hit;
+            deferred._pInstigator             = nullptr;
+            pManager->deferPostTick( [pManager, objectID, instigator, deferred]()
+            {
+                GameObject*         pObj   = pManager->findGameObjectByID( objectID );
+                UnitStatsComponent* pStats = pObj != nullptr ? pObj->getComponent<UnitStatsComponent>() : nullptr;
+                if ( pStats == nullptr )
+                    return;
+                HitInfo resolved      = deferred;
+                resolved._pInstigator = pManager->resolveGameObject( instigator );
+                pStats->onHitReceived( resolved );
+            } );
+        }
     } // namespace
 } // namespace sw
 
@@ -110,17 +135,24 @@ namespace sw
             enqueueStatsMutation( pOwner, amount, false, instigator );
             return;
         }
-        applyTakeDamage( amount, instigator );
+        // 맞음 정보가 없는 피해(투사체 · 게임 코드)로 쓰러져도 치명 신호를 낸다 — 바디가 없어 래그돌은 충격량 없이 넘어가고 절단은 자르지 않는다.
+        if ( applyTakeDamage( amount, instigator ) )
+            deliverFatalHit( HitInfo{} );
     }
 
     void UnitStatsComponent::onHitReceived( const HitInfo& hit )
     {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
+        {
+            enqueueStatsHit( pOwner, hit ); // 틱 직후 같은 함수로 다시 들어온다
+            return;
+        }
         HealthSourceComponent::onHitReceived( hit );
-        const int32 amount       = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
-        const bool  bAliveBefore = _bIsDead == false;
-        takeDamage( amount, hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{} );
-        // 이 맞음으로 쓰러졌으면 래그돌 · 절단에 치명 신호를 낸다. 틱 안이라 피해를 미뤘으면(`enqueueStatsMutation`) 맞음 정보가 남지 않아 신호도 없다.
-        if ( bAliveBefore && _bIsDead )
+        const int32 amount = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
+        // 이 맞음으로 쓰러졌으면 래그돌 · 절단에 치명 신호를 낸다.
+        if ( applyTakeDamage( amount, hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{} ) )
             deliverFatalHit( hit );
     }
 
@@ -141,16 +173,16 @@ namespace sw
         return _damageAppliedMulticast.add( delegate );
     }
 
-    void UnitStatsComponent::applyTakeDamage( int32 amount, GameObjectHandle instigator )
+    bool UnitStatsComponent::applyTakeDamage( int32 amount, GameObjectHandle instigator )
     {
         const bool bCannotTakeDamage = ( _bIsDead || _invincibilityTime > 0.0f );
         if ( bCannotTakeDamage )
-            return;
+            return false;
 
         // 방어 공식은 `DamageMath::applyArmor` 하나다(액션 룸의 적도 같은 공식을 쓴다). 고정 방어를 빼고 최소 1을 보장한다. 0 이하의 피해는 맞지 않은 것으로 본다(언리얼 `ApplyDamage` 도 0 을 버린다).
         const int32 actualDamage = static_cast<int32>( DamageMath::applyArmor( static_cast<float32>( amount ), static_cast<float32>( _defense ), 0.0f, 1.0f ) );
         if ( actualDamage <= 0 )
-            return;
+            return false;
 
         if ( DepletingValue::take( _hp, actualDamage )._bDepleted == SW_TRUE )
         {
@@ -176,6 +208,7 @@ namespace sw
         notifyHealthChanged( false );
         if ( _bShowDamageNumbers )
             spawnDamageNumber( actualDamage );
+        return _bIsDead;
     }
 
     void UnitStatsComponent::applyHeal( int32 amount )

@@ -428,6 +428,7 @@ namespace sw
         uint64                                                                                          _nextHandleID;
         uint32                                                                                          _listLockDepth;
         uint32                                                                                          _blockedHealthDecreaseCount; ///< 무적이 체력 내림을 막은 횟수(`guardHealthBaseChange`) — `executeSpec` 이 앞뒤를 견줘 막힌 피격의 즉시 큐를 거른다
+        const AbilityEffectContext*                                                                     _pExecutingContext;          ///< 지금 적용 중인 즉시 이펙트의 컨텍스트(`executeSpec` 안만). 체력이 0 에 닿으면 그 맞힌 자리로 치명 신호를 낸다
         uint8                                                                                           _bHasPendingRemoval;
         uint8                                                                                           _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
 

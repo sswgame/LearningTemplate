@@ -34,7 +34,10 @@ namespace sw
          * @param instigator 피해를 낸 쪽(쏘거나 휘두른 오브젝트). 이벤트에 그대로 실린다. 모르면 무효 핸들
          */
         void takeDamage( int32 amount, GameObjectHandle instigator = GameObjectHandle{} );
-        /** @brief 근접 판정의 맞음(`MeleeHit::sweep`)을 피해로 바꿉니다. 피해는 기본 피해 × 히트 존 배율을 반올림한 값이고 때린 쪽은 맞음의 공격자입니다. */
+        /**
+         * @brief 근접 판정의 맞음(`MeleeHit::sweep`)을 피해로 바꿉니다. 피해는 기본 피해 × 히트 존 배율을 반올림한 값이고 때린 쪽은 맞음의 공격자입니다.
+         * @details 이 맞음으로 쓰러지면 치명 신호를 다시 보낸다(`deliverFatalHit`). 틱 중(구조 동결)이면 맞음 정보째 틱 직후로 미뤄 같은 함수로 다시 들어온다.
+         */
         void onHitReceived( const HitInfo& hit ) override;
         /** @brief HP 를 @p amount 만큼(최대 HP 까지) 채웁니다. 인스펙터가 인자 칸과 실행 단추로 부른다(에디터 전용 감싼 함수를 두지 않는다). */
         FUNCTION( Category = "Actions", DisplayName = "Heal", CallInEditor )
@@ -71,9 +74,9 @@ namespace sw
         const float3& getDamageNumberOffset() const { return _damageNumberOffset; }
 
     private:
-        /** @brief 피해를 지금 적용하고, 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 경로입니다. */
-        void applyTakeDamage( int32 amount, GameObjectHandle instigator );
-        void applyHeal( int32 amount );
+        /** @brief 피해를 지금 적용하고, 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 경로입니다. 이 피해로 쓰러졌으면 true 입니다. */
+        [[nodiscard]] bool applyTakeDamage( int32 amount, GameObjectHandle instigator );
+        void               applyHeal( int32 amount );
         /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 가 true 일 때). */
         void spawnDamageNumber( int32 amount );
 

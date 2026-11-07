@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -112,11 +113,18 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) 컨텍스트와 스펙. 적용 한 번에 해당한다(언리얼의 `FGameplayEffectContext`, `FGameplayEffectSpec`)
     // ------------------------------------------------------------------------------
-    /** @brief 누가 무엇으로 걸었는지 담습니다. 핸들이므로 프레임을 넘겨서 보관해도 안전합니다. */
+    /**
+     * @brief 누가 무엇으로 걸었는지 담습니다. 핸들이므로 프레임을 넘겨서 보관해도 안전합니다.
+     * @details 맞힌 자리(`_hit` — 바디 · 방향 · 충격량)는 언리얼 `FGameplayEffectContext` 의 HitResult 자리다. 이 이펙트로 쓰러지면 래그돌 · 절단에 보낼 치명 신호가 이 값을 쓴다.
+     *          보관해도 안전하도록 `_hit._pInstigator` 는 비워 두고, 쓸 때 `_instigator` 로 다시 찾는다(`AbilityEffectSpec::setHit`).
+     */
     struct AbilityEffectContext
     {
-        GameObjectHandle _instigator{};   ///< 건 쪽(어빌리티의 주인)
-        GameObjectHandle _effectCauser{}; ///< 실제로 맞힌 것(투사체, 함정). 알 수 없으면 건 쪽과 같다
+        GameObjectHandle _instigator{};        ///< 건 쪽(어빌리티의 주인)
+        GameObjectHandle _effectCauser{};      ///< 실제로 맞힌 것(투사체, 함정). 알 수 없으면 건 쪽과 같다
+        HitInfo          _hit{};               ///< 맞힌 자리. `_bHasHit` 가 SW_FALSE 면 뜻이 없다
+        uint8            _bHasHit{ SW_FALSE }; ///< 맞힌 자리가 있는지(근접 · 탄의 피해). 주기 피해 · 비용은 없다
+        uint8            _arrReserved[3]{};
     };
 } // namespace sw
 
@@ -143,6 +151,13 @@ namespace sw
         float32 computeDuration() const;
         /** @brief SetByCaller 수를 넣습니다. 같은 이름이 있으면 덮어씁니다. */
         void setSetByCallerMagnitude( const hashed_string& name, float32 magnitude ) { _mapSetByCaller.insert_or_assign( name, magnitude ); }
+        /** @brief 맞힌 자리를 싣습니다(근접 · 탄이 맞은 순간). 때린 쪽 포인터는 버리고 컨텍스트의 핸들을 쓴다. */
+        void setHit( const HitInfo& hit )
+        {
+            _context._hit              = hit;
+            _context._hit._pInstigator = nullptr;
+            _context._bHasHit          = SW_TRUE;
+        }
         /** @brief SetByCaller 수를 찾습니다. 넣지 않은 이름이면 비어 있습니다(부르는 쪽이 없음을 정한다). */
         [[nodiscard]] std::optional<float32> getSetByCallerMagnitude( const hashed_string& name ) const;
         /** @brief 쏜 쪽 어트리뷰트 스냅샷을 찾습니다. 없으면 false 를 반환하고 @p outValue 는 바뀌지 않습니다. */

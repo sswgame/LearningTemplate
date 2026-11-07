@@ -2,6 +2,7 @@
 
 #include "Games/AbilityArena/ArenaAbilities.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
@@ -41,6 +42,20 @@ namespace sw
             if ( pTarget != nullptr && spec.isValid() )
             {
                 spec.setSetByCallerMagnitude( "Damage", *damage );
+                // 맞힌 자리 — 휘두른 쪽에서 대상 쪽으로. 이 일격으로 쓰러지면 치명 신호가 그 방향을 쓴다.
+                const GameObject*     pSelfObject   = pAbilitySystem->getOwner();
+                const GameObject*     pTargetObject = pTarget->getOwner();
+                const SceneComponent* pFrom         = pSelfObject != nullptr ? pSelfObject->getPrimarySceneComponent() : nullptr;
+                const SceneComponent* pTo           = pTargetObject != nullptr ? pTargetObject->getPrimarySceneComponent() : nullptr;
+                if ( pFrom != nullptr && pTo != nullptr )
+                {
+                    HitInfo      hit;
+                    const float3 offset = pTo->getWorldPosition() - pFrom->getWorldPosition();
+                    hit._point          = pTo->getWorldPosition();
+                    hit._direction      = offset.getLengthSquared() > 1.0e-12f ? offset.normalize() : float3{};
+                    hit._damage         = *damage;
+                    spec.setHit( hit );
+                }
                 (void)applyEffectSpecToTarget( spec, pTarget ); // 무적(BlockedTag)이면 걸리지 않는다
             }
         }

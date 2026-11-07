@@ -65,10 +65,19 @@ namespace sw
             static constexpr int32 kTeamEnemy  = 0; ///< `ProjectileState::_team` — 적이 쏜 탄
             static constexpr int32 kTeamPlayer = 1; ///< 플레이어 편이 쏜 탄
 
-            /** @brief 맞은 유닛 @p target 에 짐의 스펙을 틱 뒤(게임 스레드)에 겁니다. 대상은 다른 워커가 틱하고 있을 수 있다. 무적이면 이펙트의 BlockedTag 가 막는다. */
-            static void applyCargo( GameObjectManager& manager, GameObjectHandle target, const AbilityEffectSpec& spec, const AbilityEffectSpec& extraSpec )
+            /**
+             * @brief 맞은 유닛 @p target 에 짐의 스펙을 틱 뒤(게임 스레드)에 겁니다. 대상은 다른 워커가 틱하고 있을 수 있다. 무적이면 이펙트의 BlockedTag 가 막는다.
+             * @details 맞은 자리(탄이 닿은 점 · 나는 방향)를 피해 스펙에 싣는다 — 이 탄으로 쓰러지면 치명 신호가 그 방향을 쓴다(`AbilityEffectSpec::setHit`).
+             */
+            static void applyCargo( GameObjectManager& manager, GameObjectHandle target, const AbilityEffectSpec& cargoSpec, const AbilityEffectSpec& extraSpec, const ProjectileEvent& event )
             {
                 GameObjectManager* pManager = &manager;
+                AbilityEffectSpec  spec     = cargoSpec;
+                HitInfo            hit;
+                hit._point     = event._hit._position;
+                hit._normal    = event._hit._normal;
+                hit._direction = event._projectile.getSpeed() > 1.0e-6f ? event._projectile._velocity.normalize() : float3{};
+                spec.setHit( hit );
                 manager.executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, target, spec, extraSpec]()
                 {
                     GameObject*       pTarget        = pManager->resolveGameObject( target );
@@ -657,7 +666,7 @@ namespace sw
                 for ( const ProjectileCargo& cargo : _listProjectileCargo )
                 {
                     if ( cargo._projectileID == projectileID )
-                        ArenaGameModeComponentInternal::applyCargo( *pManager, _listUnitView[static_cast<size_t>( event._hit._other )]._object, cargo._spec, cargo._extraSpec );
+                        ArenaGameModeComponentInternal::applyCargo( *pManager, _listUnitView[static_cast<size_t>( event._hit._other )]._object, cargo._spec, cargo._extraSpec, event );
                 }
             }
             if ( event._projectile._bAlive == SW_FALSE )
