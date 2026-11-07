@@ -126,9 +126,11 @@ namespace sw
 
     /** @brief `AssetRef<MeshAssetFormat>` 은 메시 캐시로 간다(GPU 수명 때문에 공유 캐시와 합치지 않았다 — `SharedAssetCache.h` 머리말). */
     template <>
-    struct AssetRefCache<MeshAssetFormat>
+    struct SW_API AssetRefCache<MeshAssetFormat>
     {
-        static shared_ptr<Mesh> acquire( string_view path ) { return MeshCache::acquire( path ); }
-        static MeshHandle       request( string_view path ) { return MeshCache::request( path ); }
+        /** @brief `.mesh` 경로는 메시 캐시, 내장 도형 이름(`MeshAssetFormat::kArrBuiltinName`)은 공유 내장 도형(`MeshUtil::acquirePrimitive`)입니다. */
+        static shared_ptr<Mesh> acquire( string_view path );
+        /** @brief `.mesh` 경로를 비동기로 요청합니다. 내장 도형은 읽을 파일이 없어 요청하지 않는다 — 오류를 남기고 빈 핸들이다(`acquire` 로 받는다). */
+        static MeshHandle request( string_view path );
     };
 } // namespace sw

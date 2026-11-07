@@ -23,6 +23,7 @@
 namespace sw
 {
     struct TileMapXMLData;
+    class Material;
     class SceneComponent;
     class SpriteInstanceBatch;
     class ValidationContext;
@@ -103,7 +104,7 @@ namespace sw
         const TileSetAsset& getTileSet() const;
 
         void setTileMapPath( string_view path ) { _tileMapPath = string( path ); }
-        void setMaterialPath( string_view path ) { _materialPath = string( path ); }
+        void setMaterialPath( string_view path ) { _materialPath = path; }
         void setSorting( const hashed_string& layerName, int32 orderInLayer );
         void setGenerateColliders( bool bGenerate ) { _bGenerateColliders = bGenerate; }
 
@@ -132,9 +133,8 @@ namespace sw
 
         PROPERTY( Category = "Tile Map", DisplayName = "Tile Map", Tooltip = "Tile map XML whose tile layer is drawn" )
         AssetRef<TileMapXMLData> _tileMapPath;
-        PROPERTY( Category = "Tile Map", DisplayName = "Material", AssetPath, AssetType = "Material",
-                  Tooltip = "Sprite material for the tiles (point filter or lit). Empty uses the engine default tile map material" )
-        string _materialPath; ///< 비면 엔진 기본 에셋 표의 `_tileMapMaterial` 이다
+        PROPERTY( Category = "Tile Map", DisplayName = "Material", Tooltip = "Sprite material for the tiles (point filter or lit). Empty uses the engine default tile map material" )
+        AssetRef<Material> _materialPath; ///< 비면 엔진 기본 에셋 표의 `_tileMapMaterial` 이다
         PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml", Validate = validateSortingLayer )
         hashed_string _sortingLayer;
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer", Min = -32767.0, Max = 32767.0 )

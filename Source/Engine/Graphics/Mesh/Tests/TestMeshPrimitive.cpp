@@ -5,7 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
@@ -359,4 +362,37 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
     SW_REQUIRE_TRUE( listVertex.size() >= 12u );
     SW_EXPECT_TRUE( listVertex[0]._arrColor[0] != listVertex[6]._arrColor[0] || listVertex[0]._arrColor[1] != listVertex[6]._arrColor[1] ||
                     listVertex[0]._arrColor[2] != listVertex[6]._arrColor[2] );
+}
+
+/**
+ * @brief [MeshPrimitiveTest] 메시 칸(`AssetRef<MeshAssetFormat>`)은 메시 종류의 내장 이름을 받고 그 이름은 모두 만들 수 있는 도형이다 — 다른 철자 · 모르는 이름은 폴백 없이 로드 오류다
+ * @details 내장 이름 표는 메시 종류(`MeshAssetFormat::kArrBuiltinName`) 한 벌이고 `MeshUtil` 이 같은 표로 만든다. 머티리얼 칸은 내장 이름이 없어, 빈 이름의 옛 철자 `None`
+ *          (`hashed_string` 이 빈 이름을 그렇게 썼다)도 머티리얼이 아니라 로드 오류다.
+ */
+SW_TEST_CASE( MeshPrimitiveTest, MeshReferenceTakesBuiltinShapesOnly )
+{
+    for ( const sw::string_view name : sw::MeshAssetFormat::kArrBuiltinName )
+    {
+        sw::AssetRef<sw::MeshAssetFormat> mesh;
+        mesh = name;
+        SW_EXPECT_TRUE_MSG( mesh == name && mesh.isBuiltin(), sw::string( "built-in mesh name is not taken: " ) + sw::string( name ) );
+        SW_EXPECT_TRUE_MSG( sw::MeshUtil::createPrimitive( name ) != nullptr, sw::string( "built-in mesh name makes no shape: " ) + sw::string( name ) );
+    }
+
+    sw::AssetRef<sw::MeshAssetFormat> mesh;
+    mesh = "common/models/crate.mesh";
+    SW_EXPECT_FALSE( mesh.isBuiltin() );
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    mesh = "cube";
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    mesh = "Rect";
+    SW_EXPECT_TRUE( mesh == "common/models/crate.mesh" );
+
+    sw::AssetRef<sw::Material> material;
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    material = "None";
+    SW_EXPECT_TRUE( material.empty() );
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    material = "Cube";
+    SW_EXPECT_TRUE( material.empty() );
 }

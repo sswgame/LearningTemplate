@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 
 namespace sw
 {

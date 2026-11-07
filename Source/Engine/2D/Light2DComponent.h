@@ -8,11 +8,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class Texture2D;
+
     /**
      * @enum Light2DBlendStyle
      * @brief 2D 빛이 다른 2D 빛과 섞이는 방식입니다(유니티 Light 2D 의 Blend Style 자리). 값은 셰이더 `SW_LIGHT2D_BLEND_*` 와 같습니다.
@@ -61,8 +64,8 @@ namespace sw
          * @brief 빛 텍스처(쿠키) 경로를 정합니다. 비면 쿠키가 없습니다. 텍스처는 바깥 반경의 정사각형을 덮고 원뿔 방향(로컬 +X)이 텍스처의 +U 다(유니티 Sprite Light 2D 의 자리).
          * @details 빛 색에 텍스처 rgb 를 곱한다. 한 프레임에 쓰는 쿠키는 `shaderslot::kLight2DCookieCellCount` 개까지다 — 넘는 쿠키는 오류를 남기고 쿠키 없이 그린다.
          */
-        void          setCookieTexturePath( hashed_string path ) { _cookieTexturePath = path; }
-        hashed_string getCookieTexturePath() const override { return _cookieTexturePath; }
+        void          setCookieTexturePath( string_view path ) { _cookieTexturePath = path; }
+        hashed_string getCookieTexturePath() const override { return _cookieTexturePath.empty() ? hashed_string{} : hashed_string( _cookieTexturePath.c_str() ); }
 
     protected:
         void writeGPULightKindFields( GPULight& outLight ) const override;
@@ -89,9 +92,8 @@ namespace sw
         float32 _shadowSoftness;
         PROPERTY( Category = "Light", DisplayName = "Blend Style", Tooltip = "How this light combines with the other 2D lights" )
         Light2DBlendStyle _blendStyle;
-        PROPERTY( Category = "Light", DisplayName = "Cookie Texture", AssetPath, AssetType = "Texture",
-                  Tooltip = "Texture multiplied into the light color; it covers the outer radius square, +U along the cone direction" )
-        hashed_string _cookieTexturePath;
+        PROPERTY( Category = "Light", DisplayName = "Cookie Texture", Tooltip = "Texture multiplied into the light color; it covers the outer radius square, +U along the cone direction" )
+        AssetRef<Texture2D> _cookieTexturePath;
     };
 } // namespace sw
 

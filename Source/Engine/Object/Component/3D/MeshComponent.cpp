@@ -73,13 +73,13 @@ namespace sw
 
     void MeshComponent::setMaterialPath( string_view path )
     {
-        _materialPath = hashed_string( string{ path }.c_str() );
+        _materialPath = path;
         resolveRenderAssets();
     }
 
     void MeshComponent::resolveMaterialAsset()
     {
-        const hashed_string path = _materialPath.empty() ? getDefaultMaterialPath() : _materialPath;
+        const hashed_string path = _materialPath.empty() ? getDefaultMaterialPath() : hashed_string( _materialPath.c_str() );
         if ( path == _requestedMaterialPath || engine::areEngineServicesBound() == false )
             return;
         _requestedMaterialPath = path;
@@ -452,7 +452,7 @@ namespace sw
 
     void MeshComponent::setMeshID( string_view meshID )
     {
-        _meshID = string{ meshID };
+        _meshID = meshID;
         resolveRuntimeMesh();
     }
 

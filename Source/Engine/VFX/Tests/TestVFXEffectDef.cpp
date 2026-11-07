@@ -37,7 +37,7 @@ namespace
         {
             VFXEmitterDef emitter;
             emitter._name                 = string( name );
-            emitter._texturePath          = "game/vfx/spark.png";
+            emitter._texturePath          = "game/vfx/spark.dds";
             emitter._maxParticles         = 64;
             emitter._duration             = 1.0f;
             emitter._spawnRate            = 10.0f;
@@ -100,7 +100,7 @@ namespace
             return xml;
         }
 
-        static constexpr string_view kValidAttributes = "_name=\"Sparks\" _texturePath=\"game/vfx/spark.png\" _blendMode=\"Additive\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" "
+        static constexpr string_view kValidAttributes = "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _blendMode=\"Additive\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" "
                                                         "_lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\" _velocityMin=\"-1, 2, -1\" _velocityMax=\"1, 4, 1\" _gravity=\"0, -9.8, 0\"";
 
         [[nodiscard]] static bool writeScratchFile( const string& path, string_view text ) { return FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
@@ -132,7 +132,7 @@ SW_TEST_CASE( VFXEffectDefTest, VariantMergesEmittersByName )
     string parent = "<VFXEffectDef><_listEmitter>";
     for ( const utf8* pName : { "Sparks", "Smoke" } )
     {
-        string       one   = Util::makeEffectXml( string( "_name=\"" ) + pName + "\" _texturePath=\"game/vfx/spark.png\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" );
+        string       one   = Util::makeEffectXml( string( "_name=\"" ) + pName + "\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" );
         const size_t first = one.find( "<VFXEmitterDef " );
         const size_t last  = one.find( "</VFXEmitterDef>" ) + string_view( "</VFXEmitterDef>" ).size();
         parent += one.substr( first, last - first );
@@ -288,7 +288,7 @@ SW_TEST_CASE( VFXEffectDefTest, EachBrokenFieldFailsValidation )
     Util::expectRejected( "mesh on billboard", []( VFXEmitterDef& emitter )
     { emitter._mesh._meshID = "Cube"; } );
     Util::expectRejected( "material on billboard", []( VFXEmitterDef& emitter )
-    { emitter._mesh._materialPath = "game/m.material.xml"; } );
+    { emitter._mesh._materialPath = "game/m.material"; } );
     Util::expectRejected( "no particles", []( VFXEmitterDef& emitter )
     { emitter._maxParticles = 0; } );
     Util::expectRejected( "one particle ribbon", []( VFXEmitterDef& emitter )
@@ -411,7 +411,7 @@ SW_TEST_CASE( VFXEffectDefTest, MeshModeRules )
     noMesh._mesh._meshID.clear();
     SW_EXPECT_FALSE( noMesh.validate( "test" ) );
     VFXEmitterDef withTexture = Util::makeMeshEmitter();
-    withTexture._texturePath  = "game/vfx/spark.png";
+    withTexture._texturePath  = "game/vfx/spark.dds";
     SW_EXPECT_FALSE( withTexture.validate( "test" ) );
 }
 
@@ -516,7 +516,7 @@ SW_TEST_CASE( VFXEffectDefTest, PoolTooSmallWarnsButLoads )
     SW_EXPECT_LOG( "VFXEffectDef.VFXEmitterMayNeed" );
     const string path = test::makeScratchPath( "pool.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile(
-        path, Util::makeEffectXml( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.png\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
+        path, Util::makeEffectXml( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
     VFXEffectDef effect;
     SW_EXPECT_TRUE( effect.loadFromDiskFile( path ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );

@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
@@ -274,5 +275,23 @@ namespace sw
         const string_view relativePath = assetID.view();
         (void)reloadShared( relativePath ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
         invalidateDerivedCaches();          // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
+    }
+} // namespace sw
+
+namespace sw
+{
+    shared_ptr<Mesh> AssetRefCache<MeshAssetFormat>::acquire( string_view path )
+    {
+        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? MeshUtil::acquirePrimitive( path ) : MeshCache::acquire( path );
+    }
+
+    MeshHandle AssetRefCache<MeshAssetFormat>::request( string_view path )
+    {
+        if ( MeshAssetFormat::kAssetType.isBuiltinName( path ) )
+        {
+            SW_LOG_ERROR_ID( "MeshCache.BuiltinRequested", "Built-in mesh '%#' has no file to request - acquire it instead", path );
+            return {};
+        }
+        return MeshCache::request( path );
     }
 } // namespace sw

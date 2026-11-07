@@ -15,10 +15,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -108,10 +112,10 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset path or built-in shape id of each particle (required for Mesh render mode)" )
-        string _meshID{};
-        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "Material of the particle meshes; empty uses the scene default" )
-        string _materialPath{};
+        PROPERTY( Tooltip = "Mesh asset path or built-in shape id of each particle (required for Mesh render mode)" )
+        AssetRef<MeshAssetFormat> _meshID{};
+        PROPERTY( Tooltip = "Material of the particle meshes; empty uses the scene default" )
+        AssetRef<Material> _materialPath{};
 
         /**
          * @brief 메시 입자는 CPU · GPU 둘 다 돈다. GPU 는 배치의 인스턴스 구간에 행렬을 쓰고 컬링이 간접 인자를 만든다(`VFXGPUSimulation`).
@@ -257,8 +261,8 @@ namespace sw
         string _name{};
         PROPERTY( Tooltip = "Shape each particle draws as" )
         VFXRenderMode _renderMode{ VFXRenderMode::Billboard };
-        PROPERTY( AssetPath, AssetType = "Texture", Tooltip = "Particle texture (required for Billboard and Ribbon, must be empty for Mesh)" )
-        string _texturePath{};
+        PROPERTY( Tooltip = "Particle texture (required for Billboard and Ribbon, must be empty for Mesh)" )
+        AssetRef<Texture2D> _texturePath{};
         PROPERTY( Tooltip = "How particle colour blends with the scene (Billboard and Ribbon; Mesh uses its material)" )
         VFXBlendMode _blendMode{ VFXBlendMode::Alpha };
         PROPERTY( Tooltip = "Mesh and material of each particle (Mesh render mode only)" )
@@ -333,7 +337,7 @@ namespace sw
      * @code
      *     <VFXEffectDef>
      *       <_listEmitter>
-     *         <VFXEmitterDef _name="Sparks" _texturePath="game/vfx/spark.png" _blendMode="Additive" _maxParticles="64" _duration="1"
+     *         <VFXEmitterDef _name="Sparks" _texturePath="game/vfx/spark.dds" _blendMode="Additive" _maxParticles="64" _duration="1"
      *                        _spawnRate="40" _lifetimeMin="0.4" _lifetimeMax="0.8" _velocityMin="-1, 2, -1" _velocityMax="1, 4, 1" _gravity="0, -9.8, 0">
      *           <_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.1"/><FloatCurveKey _time="1" _value="0"/></_listKey></_sizeOverLife>
      *           ...

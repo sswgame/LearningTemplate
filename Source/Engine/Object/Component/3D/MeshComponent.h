@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
@@ -22,6 +23,8 @@ namespace sw
 {
     class GameObject;
     class GameObjectManager;
+    struct MeshAssetFormat;
+
     class Material;
     class MaterialInstance;
     class Mesh;
@@ -69,7 +72,7 @@ namespace sw
         /** @brief 저장되는 메시 id 를 바꾸고 곧바로 해석합니다(프리미티브 이름 또는 `.mesh` 에셋 경로). */
         void setMeshID( string_view meshID );
         /** @brief 저장되는 메시 id 입니다(프리미티브 이름 또는 `.mesh` 에셋 경로). 비어 있으면 타입의 기본입니다. */
-        const string& getMeshID() const { return _meshID; }
+        const string& getMeshID() const { return _meshID.path(); }
 
         /** @brief 메시를 설정합니다. 저장되지 않는 런타임 지정이며, 메시 id 가 바뀔 때까지 유지됩니다. */
         void setMesh( shared_ptr<Mesh> mesh );
@@ -90,7 +93,7 @@ namespace sw
          */
         void setMaterialPath( string_view path );
         /** @brief 저장되는 머티리얼 에셋 경로입니다. 비어 있으면 씬 기본 머티리얼입니다. */
-        hashed_string getMaterialPath() const { return _materialPath; }
+        hashed_string getMaterialPath() const { return _materialPath.empty() ? hashed_string{} : hashed_string( _materialPath.c_str() ); }
         /**
          * @brief `_materialPath`(비어 있으면 타입의 기본 `getDefaultMaterialPath`)의 머티리얼을 캐시에서 잡아 등록합니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다.
          * @details 로드는 값만 채우므로 시작(`onBeginPlay`), 씬 초기화, 프로퍼티 편집, 세터가 이 함수를 부른다(`resolveRuntimeMesh` 와 같은 역할이다).
@@ -306,15 +309,18 @@ namespace sw
         MeshHandle                   _meshLoad; ///< 읽는 중인 메시 에셋 로드다(저장하지 않는다). 끝나면 `applyMeshLoad` 가 놓는다
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;
-        /** @brief 저장되는 메시 id 입니다. */
-        PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path" )
-        string _meshID;
-        /** @brief 저장되는 머티리얼 참조입니다. */
-        PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default" )
-        hashed_string _materialPath;
-        hashed_string _acquiredMaterialPath;  ///< 캐시에서 잡아 둔 경로다(저장하지 않는다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이 경로로 해제한다
-        hashed_string _requestedMaterialPath; ///< 마지막으로 해석한 요청 경로다(저장하지 않는다). 누락 머티리얼로 대체한 뒤에도 같은 요청을 다시 시도하거나 경고하지 않는다
-        hashed_string _resolvedMeshID;        ///< `_mesh` 가 어느 메시 id 의 것인지 나타낸다(저장하지 않는다). 현재 id 와 다르면 다시 잡는다
+        /** @brief 저장되는 메시 id 입니다(`.mesh` 경로나 내장 도형 이름 — 메시 종류의 `MeshAssetFormat::kArrBuiltinName`). */
+        PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", Tooltip = "Mesh asset path or built-in shape name" )
+        AssetRef<MeshAssetFormat> _meshID;
+        /**
+         * @brief 저장되는 머티리얼 참조입니다. 비면 씬 기본 머티리얼이다.
+         * @details 예전에는 `hashed_string` 이라 빈 값이 `"None"` 으로 저장됐다 — 그 글은 머티리얼이 아니므로 이제 로드 오류다(데이터는 빈 글로 옮겼다).
+         */
+        PROPERTY( Category = "Rendering", DisplayName = "Material", Tooltip = "Material asset; empty uses the scene default" )
+        AssetRef<Material> _materialPath;
+        hashed_string      _acquiredMaterialPath;  ///< 캐시에서 잡아 둔 경로다(저장하지 않는다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이 경로로 해제한다
+        hashed_string      _requestedMaterialPath; ///< 마지막으로 해석한 요청 경로다(저장하지 않는다). 누락 머티리얼로 대체한 뒤에도 같은 요청을 다시 시도하거나 경고하지 않는다
+        hashed_string      _resolvedMeshID;        ///< `_mesh` 가 어느 메시 id 의 것인지 나타낸다(저장하지 않는다). 현재 id 와 다르면 다시 잡는다
         PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Units = m )
         float32 _boundsRadius;
         PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )

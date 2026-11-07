@@ -6,13 +6,13 @@
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/EnumNameTable.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
 namespace sw
 {
@@ -329,24 +329,18 @@ namespace sw
      * @brief 프리미티브 id 를 공유 캐시 키 하나로 바꿉니다. 모르면 nullptr 입니다.
      * @details 만들기와 공유 캐시가 **같은 판정**을 써야 합니다. id 는 표의 철자 그대로만 받는다 — 별칭(`Rect` · `Ground`)과 대소문자 무시는
      *          같은 기하를 여러 철자로 적게 해 캐시 자리와 배치를 가르므로 두지 않는다. 빈 id 는 큐브다(기본 메시).
+     *          이름 표는 메시 종류의 내장 이름(`MeshAssetFormat::kArrBuiltinName`) 한 벌이다 — 타입 있는 메시 칸이 받는 이름과 여기서 만드는 이름이 갈라지지 않는다.
      */
     static const utf8* canonicalPrimitiveIDVal( string_view meshID )
     {
-        static constexpr NamedValue<const utf8*> kArrPrimitive[] = {
-            {      "Cube",       "Cube"},
-            {      "Quad",       "Quad"},
-            {    "Sprite",     "Sprite"},
-            {     "Plane",      "Plane"},
-            {    "Sphere",     "Sphere"},
-            {  "Cylinder",   "Cylinder"},
-            {   "Capsule",    "Capsule"},
-            {      "Cone",       "Cone"},
-            {"GrassClump", "GrassClump"},
-        };
         if ( meshID.empty() )
             return "Cube";
-        const utf8* pKey = nullptr;
-        return NamedValueUtil::find( kArrPrimitive, meshID, pKey ) ? pKey : nullptr;
+        for ( const string_view name : MeshAssetFormat::kArrBuiltinName )
+        {
+            if ( name == meshID )
+                return name.data(); // 표의 글은 문자열 리터럴이라 끝에 0 이 있다
+        }
+        return nullptr;
     }
 
     shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor )

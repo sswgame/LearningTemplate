@@ -467,7 +467,7 @@ namespace sw
             if ( mesh == nullptr )
             {
                 // 대신 그릴 메시를 고르지 않는다 — 이 방출기는 그리지 않고(시뮬레이션은 돈다) 원인을 남긴다.
-                SW_LOG_ERROR_ID( "VFXComponent.VFXEmitterMeshCould", "VFX '%#': emitter '%#' mesh '%#' could not be acquired - the emitter is not drawn", _effectPath.c_str(), def._name, def._mesh._meshID );
+                SW_LOG_ERROR_ID( "VFXComponent.VFXEmitterMeshCould", "VFX '%#': emitter '%#' mesh '%#' could not be acquired - the emitter is not drawn", _effectPath.c_str(), def._name, def._mesh._meshID.c_str() );
                 continue;
             }
             MeshEmitter& meshEmitter = _listMeshEmitter[emitterIndex];
@@ -479,7 +479,7 @@ namespace sw
             if ( bGPUWritten && VFXComponentInternal::isGPUMeshBlendSupported( meshEmitter._material->getMaterial() ) == false )
             {
                 SW_LOG_ERROR_ID( "VFXComponent.VFXEmitterSimulatesGPU", "VFX '%#': emitter '%#' simulates on the GPU but material '%#' is not opaque - GPU mesh particles need an opaque material; the emitter is not drawn",
-                                 _effectPath.c_str(), def._name, def._mesh._materialPath );
+                                 _effectPath.c_str(), def._name, def._mesh._materialPath.c_str() );
                 meshEmitter._material->release();
                 meshEmitter._material.reset();
                 continue;
@@ -503,7 +503,7 @@ namespace sw
             const VFXEmitterDef& def = getEmitterDef( emitterIndex );
             if ( def._renderMode != VFXRenderMode::Mesh )
                 continue;
-            listLoad[emitterIndex] = VFXComponentInternal::requestMesh( def._mesh._meshID );
+            listLoad[emitterIndex] = VFXComponentInternal::requestMesh( def._mesh._meshID.path() );
             bAllArrived            = bAllArrived && listLoad[emitterIndex].isLoading() == false;
         }
         _listMeshLoad = std::move( listLoad );

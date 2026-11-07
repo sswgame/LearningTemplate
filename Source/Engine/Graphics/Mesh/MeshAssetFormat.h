@@ -75,8 +75,14 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
+        /**
+         * @brief 파일이 아니라 엔진이 만드는 내장 도형의 이름입니다(`MeshUtil::createPrimitive` 가 이 표의 철자 그대로만 받는다). 메시 칸(`AssetRef<MeshAssetFormat>`)은 `.mesh` 경로나 이 이름을 받는다.
+         * @details 언리얼은 내장 도형을 엔진 콘텐츠의 에셋(`/Engine/BasicShapes/Cube`)으로 두고 Godot 은 `PrimitiveMesh` 리소스로 둔다(기억에 의존) — 여기는 파일이 없어 종류가 이름을 가진다.
+         */
+        static constexpr string_view kArrBuiltinName[] = { "Cube", "Quad", "Sprite", "Plane", "Sphere", "Cylinder", "Capsule", "Cone", "GrassClump" };
         /** @brief 이 에셋 종류입니다(등록은 `MeshAssetFormat.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "MeshAssetFormat", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr AssetTypeDef kAssetType =
+            AssetTypeDef{ "MeshAssetFormat", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} }.withBuiltinNames( kArrBuiltinName );
 
         /** @brief 경로가 메시 에셋(`.mesh`)을 가리키는지 확인합니다. 내장 도형 이름("Cube" 등)은 해당하지 않습니다. */
         static bool isMeshAssetPath( string_view path );

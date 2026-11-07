@@ -10,6 +10,7 @@
 #include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -270,7 +271,7 @@ namespace sw
         batch->setSorting( _sortingLayer, _orderInLayer );
         batch->setOwnerComponent( this );
         // 칸이 비면 엔진 기본 타일맵 머티리얼(픽셀 아트 스프라이트)이다(값의 기준은 엔진 기본 에셋 표).
-        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._tileMapMaterial.get() : _materialPath;
+        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._tileMapMaterial.get() : _materialPath.path();
         if ( batch->initialize( *pManager, getTileSet().getAtlasPath(), count, materialPath, getTileSet().getNormalAtlasPath() ) == false )
             return false;
         pBatch = std::move( batch );

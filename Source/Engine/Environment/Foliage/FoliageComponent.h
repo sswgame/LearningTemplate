@@ -14,6 +14,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Placement/PlacementRule.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -50,8 +51,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, AssetType = "Mesh" )
-        string _meshID{};
+        PROPERTY( Tooltip = "Mesh asset path or built-in shape name (GrassClump)" )
+        AssetRef<MeshAssetFormat> _meshID{};
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
         PROPERTY( Tooltip = "Section materials of a multi-material mesh (every mesh section once); empty draws a section-less mesh with the layer material" )

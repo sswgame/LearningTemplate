@@ -1137,7 +1137,7 @@ namespace sw
                 batch._bRibbon          = bRibbon ? SW_TRUE : SW_FALSE;
                 batch._source           = std::move( source );
                 batch._world            = world;
-                batch._texturePath      = hashed_string( def._texturePath );
+                batch._texturePath      = hashed_string( def._texturePath.c_str() );
                 batch._sizeScale        = sizeScale;
                 batch._bAdditive        = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
             }

@@ -34,6 +34,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
@@ -50,6 +51,7 @@ namespace sw
 
     class GameObjectManager;
     class IFracturePhysics;
+    class Material;
     class MeshComponent;
     class ValidationContext;
 
@@ -199,7 +201,7 @@ namespace sw
         bool hasAuthority() const { return _bAuthority; }
         void setAnchorMode( FractureAnchorMode mode ) { _anchorMode = mode; }
         void setProfilePath( string_view path ) { _profilePath = string{ path }; }
-        void setInteriorMaterialPath( const hashed_string& path ) { _interiorMaterialPath = path; }
+        void setInteriorMaterialPath( string_view path ) { _interiorMaterialPath = path; }
 
         // --- 네트워크(GF_NetClientServer 의 DestructionReplication 이 쓴다) ----------------------------------------------------------
 
@@ -327,8 +329,8 @@ namespace sw
     private:
         PROPERTY( Category = "Fracture", DisplayName = "Profile", AssetPath, Tooltip = "Destruction profile (*.destruction.xml); empty uses the engine default" )
         string _profilePath;
-        PROPERTY( Category = "Fracture", DisplayName = "Interior Material", AssetPath, AssetType = "Material", Tooltip = "Material of the cut faces; empty uses the outer one" )
-        hashed_string _interiorMaterialPath;
+        PROPERTY( Category = "Fracture", DisplayName = "Interior Material", Tooltip = "Material of the cut faces; empty uses the outer one" )
+        AssetRef<Material> _interiorMaterialPath;
         PROPERTY( Category = "Fracture", DisplayName = "Static Layer", Tooltip = "Physics layer of pieces still attached to the anchors", Validate = validateStaticLayer )
         hashed_string _staticLayer;
         PROPERTY( Category = "Fracture", DisplayName = "Chunk Layer", Tooltip = "Physics layer of falling chunks that keep collision", Validate = validateChunkLayer )

@@ -50,7 +50,7 @@ namespace sw::editor
         {
             VFXPreviewEmitterRow& row = _listEmitterRow.emplace_back();
             row._name                 = emitter._name;
-            row._texturePath          = emitter._texturePath;
+            row._texturePath          = emitter._texturePath.path();
             row._maxParticles         = emitter._maxParticles;
             row._bAdditive            = emitter._blendMode == VFXBlendMode::Additive;
             row._bLooping             = emitter._bLooping;

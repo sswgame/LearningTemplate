@@ -471,7 +471,7 @@ namespace sw
         {
             for ( const FoliageMesh& foliageMesh : _listLayer[layerIndex]._listMesh )
             {
-                listLayerLoad[layerIndex].push_back( FoliageComponentInternal::requestMesh( foliageMesh._meshID ) );
+                listLayerLoad[layerIndex].push_back( FoliageComponentInternal::requestMesh( foliageMesh._meshID.path() ) );
                 bAllArrived = bAllArrived && listLayerLoad[layerIndex].back().isLoading() == false;
             }
         }

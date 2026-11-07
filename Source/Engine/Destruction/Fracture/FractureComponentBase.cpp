@@ -13,6 +13,7 @@
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -1145,7 +1146,7 @@ namespace sw
 
         // 배율이 상태를 시작할 때와 같으면 미리 지은 잎 셰이프를 그대로 쓴다. 남은 잎은 바디를 만들며 짓는다.
         prepareLeafPoints( _objectScale );
-        _renderUnits.create( *pOwner, *_asset, resolveIntactMesh(), _interiorMaterialPath );
+        _renderUnits.create( *pOwner, *_asset, resolveIntactMesh(), _interiorMaterialPath.empty() ? hashed_string{} : hashed_string( _interiorMaterialPath.c_str() ) );
         _bFractured = SW_TRUE;
         _bPoseDirty = SW_TRUE;
     }
