@@ -16,6 +16,20 @@ namespace sw
     struct GPULight;
 
     /**
+     * @brief 빛 종류입니다(게임 코드가 GPU 칸 상수 `shaderslot::kLightType*` 를 모르고 빛을 종류별로 찾는다). 값은 셰이더의 종류 값과 같다 — `LightComponent.cpp` 가 맞는지 컴파일에서 본다.
+     * @details 컴포넌트 레지스트리의 칸 번호가 이 값이다(`LightComponent::getRegistryIndex`).
+     */
+    enum class LightKind : uint8
+    {
+        Directional = 0,
+        Point,
+        Spot,
+        Point2D,
+        Global2D,
+        Freeform2D,
+    };
+
+    /**
      * @class LightComponent
      * @brief 빛 하나의 공통 부분입니다. 종류(방향광 · 점광 · 스포트)는 파생이 정하고, 레지스트리와 수집이 그 종류로 나눕니다.
      * @details 언리얼 `ULightComponent` 의 자리입니다. 색 · 세기의 세터 · 등록과 해제 · 위치 · 방향 함수는 여기 하나입니다. 새 종류는 파생
@@ -39,6 +53,10 @@ namespace sw
 
         /** @brief 빛 종류입니다(`shaderslot::kLightType*`). 레지스트리와 수집이 이것으로 나눕니다. */
         uint32 getLightType() const { return _lightType; }
+        /** @brief 빛 종류입니다(게임 코드용 — GPU 칸 상수 대신). */
+        LightKind getLightKind() const { return static_cast<LightKind>( _lightType ); }
+        /** @brief 컴포넌트 레지스트리에서 @p kind 의 빛이 든 칸 번호입니다(`ComponentRegistry::getAll<LightComponent>( 칸 )`). */
+        static constexpr uint32 getRegistryIndex( LightKind kind ) { return static_cast<uint32>( kind ); }
 
         /** @brief 빛 색입니다. */
         const float3& getColor() const { return _color; }

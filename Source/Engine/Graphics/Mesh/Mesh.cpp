@@ -172,6 +172,30 @@ namespace sw
         setVertices( std::move( listCopy ) );
     }
 
+    void Mesh::setBuildVertices( const vector<MeshBuildVertex>& listVertex )
+    {
+        vector<RHIVertex> listRHIVertex;
+        listRHIVertex.reserve( listVertex.size() );
+        for ( const MeshBuildVertex& source : listVertex )
+        {
+            RHIVertex vertex{};
+            vertex._arrPosition[0] = source._position._x;
+            vertex._arrPosition[1] = source._position._y;
+            vertex._arrPosition[2] = source._position._z;
+            vertex._arrNormal[0]   = source._normal._x;
+            vertex._arrNormal[1]   = source._normal._y;
+            vertex._arrNormal[2]   = source._normal._z;
+            vertex._arrUv[0]       = source._uv._x;
+            vertex._arrUv[1]       = source._uv._y;
+            vertex._arrColor[0]    = source._color._x;
+            vertex._arrColor[1]    = source._color._y;
+            vertex._arrColor[2]    = source._color._z;
+            vertex._arrColor[3]    = source._color._w;
+            listRHIVertex.push_back( vertex );
+        }
+        setVertices( std::move( listRHIVertex ) );
+    }
+
     void Mesh::setVertices( vector<RHIVertex>&& listVertex )
     {
         computeTangents( listVertex );

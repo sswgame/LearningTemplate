@@ -14,6 +14,7 @@
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -109,7 +110,7 @@ namespace sw
         shared_ptr<const InteractionCatalog> _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
         const InteractionDef*                _pDef;
         AssetReloadWatch<InteractionCatalog> _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        uint32                               _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(`GPUInstanceHighlight::pack`)
+        InstanceHighlight                    _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(같으면 다시 옮기지 않는다)
         atomic<uint32>                       _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
         atomic<uint8>                        _bHighlightRequested;
         uint8                                _bHasOverride;

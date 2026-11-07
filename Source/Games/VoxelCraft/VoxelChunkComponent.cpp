@@ -3,7 +3,7 @@
 #include "Games/VoxelCraft/VoxelChunkComponent.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Mesh/MeshBuildVertex.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
@@ -16,24 +16,8 @@ namespace sw
     {
         struct VoxelChunkComponentInternal
         {
-            /** @brief 키트 정점 → 엔진 정점입니다(같은 네 속성). */
-            static RHIVertex toRHIVertex( const VoxelMeshVertex& source )
-            {
-                RHIVertex vertex{};
-                vertex._arrPosition[0] = source._position._x;
-                vertex._arrPosition[1] = source._position._y;
-                vertex._arrPosition[2] = source._position._z;
-                vertex._arrNormal[0]   = source._normal._x;
-                vertex._arrNormal[1]   = source._normal._y;
-                vertex._arrNormal[2]   = source._normal._z;
-                vertex._arrUv[0]       = source._uv._x;
-                vertex._arrUv[1]       = source._uv._y;
-                vertex._arrColor[0]    = source._color._x;
-                vertex._arrColor[1]    = source._color._y;
-                vertex._arrColor[2]    = source._color._z;
-                vertex._arrColor[3]    = source._color._w;
-                return vertex;
-            }
+            /** @brief 키트 정점 → 메시를 짓는 정점입니다(같은 네 속성). GPU 정점 칸으로 옮기는 일은 메시가 한다(`Mesh::setBuildVertices`). */
+            static MeshBuildVertex toBuildVertex( const VoxelMeshVertex& source ) { return MeshBuildVertex{ source._position, source._normal, source._uv, source._color }; }
 
             /** @brief 메시 컴포넌트 하나에 정점을 옮겨 담습니다(비면 숨긴다). */
             static void applyVertices( MeshComponent* pMeshComponent, const vector<VoxelMeshVertex>& listVertex )
@@ -45,16 +29,16 @@ namespace sw
                     pMeshComponent->setVisible( false );
                     return;
                 }
-                vector<RHIVertex> listRHIVertex;
-                listRHIVertex.reserve( listVertex.size() );
+                vector<MeshBuildVertex> listBuildVertex;
+                listBuildVertex.reserve( listVertex.size() );
                 for ( const VoxelMeshVertex& vertex : listVertex )
                 {
-                    listRHIVertex.push_back( toRHIVertex( vertex ) );
+                    listBuildVertex.push_back( toBuildVertex( vertex ) );
                 }
                 shared_ptr<Mesh> mesh = Mesh::create();
                 if ( mesh == nullptr )
                     return;
-                mesh->setVertices( std::move( listRHIVertex ) );
+                mesh->setBuildVertices( listBuildVertex );
                 pMeshComponent->setMesh( mesh );
                 pMeshComponent->setVisible( true );
             }

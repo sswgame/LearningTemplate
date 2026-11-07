@@ -9,8 +9,18 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+
+namespace sw
+{
+    // 게임 코드의 빛 종류(`LightKind`)와 셰이더의 종류 값(`shaderslot::kLightType*`)은 한 값이다 — 레지스트리 칸 번호를 둘이 함께 쓴다.
+    static_assert( static_cast<uint32>( LightKind::Directional ) == shaderslot::kLightTypeDirectional && static_cast<uint32>( LightKind::Point ) == shaderslot::kLightTypePoint &&
+                       static_cast<uint32>( LightKind::Spot ) == shaderslot::kLightTypeSpot && static_cast<uint32>( LightKind::Point2D ) == shaderslot::kLightTypePoint2D &&
+                       static_cast<uint32>( LightKind::Global2D ) == shaderslot::kLightTypeGlobal2D && static_cast<uint32>( LightKind::Freeform2D ) == shaderslot::kLightTypeFreeform2D,
+                   "LightKind 는 셰이더의 빛 종류 값과 같아야 한다" );
+} // namespace sw
 
 namespace sw
 {

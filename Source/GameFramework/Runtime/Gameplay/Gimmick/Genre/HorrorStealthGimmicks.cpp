@@ -5,7 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -245,7 +244,7 @@ namespace sw
         // 빛은 씬의 컴포넌트 레지스트리가 종류별 칸으로 든다(`LightComponent::onRegister`). 씬을 훑지 않고 오브젝트마다 컴포넌트를 세 번 찾지 않는다.
         // 칸 번호가 곧 빛 종류라 그 칸의 항목은 그 타입이다. 활성(`isActive`)은 소유 오브젝트의 계층 활성을 함께 본다.
         const ComponentRegistry& registry = manager.getComponentRegistry();
-        for ( const LightComponent* pLight : registry.getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
+        for ( const LightComponent* pLight : registry.getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Directional ) ) )
         {
             const DirectionalLightComponent* pSun = static_cast<const DirectionalLightComponent*>( pLight );
             if ( pSun->isPendingDestroy() || pSun->isActive() == false )
@@ -254,7 +253,7 @@ namespace sw
             if ( bOcclusion == false || Internal::isOccluded( manager, position, toward, ignoreObjectID, pSun->getOwner()->getObjectID() ) == false )
                 exposure += pSun->getIntensity();
         }
-        for ( const LightComponent* pLight : registry.getAll<LightComponent>( shaderslot::kLightTypePoint ) )
+        for ( const LightComponent* pLight : registry.getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Point ) ) )
         {
             const PointLightComponent* pPoint            = static_cast<const PointLightComponent*>( pLight );
             const bool                 bPointLightActive = pPoint->isPendingDestroy() == false && pPoint->isActive() && pPoint->getRadius() > 0.0f;
@@ -266,7 +265,7 @@ namespace sw
             if ( bBlocked == false )
                 exposure += pPoint->getIntensity() * falloff * falloff;
         }
-        for ( const LightComponent* pLight : registry.getAll<LightComponent>( shaderslot::kLightTypeSpot ) )
+        for ( const LightComponent* pLight : registry.getAll<LightComponent>( LightComponent::getRegistryIndex( LightKind::Spot ) ) )
         {
             const SpotLightComponent* pSpot            = static_cast<const SpotLightComponent*>( pLight );
             const bool                bSpotLightActive = pSpot->isPendingDestroy() == false && pSpot->isActive() && pSpot->getRadius() > 0.0f;

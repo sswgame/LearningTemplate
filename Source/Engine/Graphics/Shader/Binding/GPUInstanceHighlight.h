@@ -10,15 +10,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Presentation/InstanceHighlight.h"
+
 namespace sw
 {
-    /** @brief 강조 방식입니다. 값은 셰이더 `kHighlightStyle*`(instance_data.hlsli) 와 같습니다(상위 바이트). */
-    enum class InstanceHighlightStyle : uint8
-    {
-        None = 0, ///< 강조 없음
-        Outline,  ///< 보이는 곳에만 외곽선(깊이 테스트 — 상호작용 대상)
-        Sense,    ///< 벽 너머에서도 보이는 외곽선(깊이 테스트 없음 — 감각 모드)
-    };
+    // 방식(`InstanceHighlightStyle`)은 표현 폴더에 있다 — 게임 코드가 GPU 칸을 모르고 강조를 정한다(`Engine/Presentation/InstanceHighlight.h`).
 
     /**
      * @struct GPUInstanceHighlight
@@ -36,6 +32,8 @@ namespace sw
             const uint32 blue  = static_cast<uint32>( MathUtil::saturate( color._z ) * 255.0f + 0.5f );
             return red | ( green << 8 ) | ( blue << 16 ) | ( static_cast<uint32>( style ) << 24 );
         }
+        /** @brief 강조 하나를 담습니다(렌더러의 인스턴스 수집이 부른다). */
+        static uint32 pack( const InstanceHighlight& highlight ) { return pack( highlight._style, highlight._color ); }
         /** @brief 담긴 방식입니다. */
         static InstanceHighlightStyle getStyle( uint32 packed ) { return static_cast<InstanceHighlightStyle>( packed >> 24 ); }
     };

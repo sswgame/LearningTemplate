@@ -15,7 +15,6 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -42,7 +41,7 @@ namespace sw
         , _customData1{}
         , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
-        , _highlight{ 0 }
+        , _highlight{}
         , _appearSeconds{ kDefaultAppearSeconds }
         , _appearance{ 1.0f }
         , _appearanceRate{ 0.0f }
@@ -513,10 +512,10 @@ namespace sw
 
     void MeshComponent::setHighlight( InstanceHighlightStyle style, const float3& color )
     {
-        const uint32 packed = GPUInstanceHighlight::pack( style, color );
-        if ( _highlight == packed )
+        const InstanceHighlight highlight{ style, color };
+        if ( _highlight == highlight )
             return;
-        _highlight = packed;
+        _highlight = highlight;
         markRenderStateDirty();
     }
 

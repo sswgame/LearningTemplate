@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -29,8 +30,6 @@ namespace sw
     class MaterialInstance;
     class Mesh;
     class PrimitiveRegistry;
-
-    enum class InstanceHighlightStyle : uint8; // 정의는 GPUInstanceHighlight.h — 값으로만 받는다
 
     /**
      * @class MeshComponent
@@ -171,8 +170,8 @@ namespace sw
          *          불투명 배치만 그린다(반투명 메시는 강조 패스가 보지 않는다).
          */
         void setHighlight( InstanceHighlightStyle style, const float3& color );
-        /** @brief `setHighlight` 로 정한 값(`GPUInstanceHighlight::pack`, 0 이면 없음)입니다. */
-        uint32 getHighlight() const { return _highlight; }
+        /** @brief `setHighlight` 로 정한 값입니다. GPU 칸으로 담는 일은 렌더러가 한다(`GPUInstanceHighlight::pack`). */
+        const InstanceHighlight& getHighlight() const { return _highlight; }
 
         /** @brief 바운드 반지름(메시 공간)의 최솟값을 설정합니다. 메시가 아는 경계보다 작으면 메시의 값이 쓰이므로 키우기만 합니다. */
         void setBoundsRadius( float32 radius );
@@ -339,8 +338,8 @@ namespace sw
         float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
         uint32 _sortKey;
-        /** @brief 강조(`GPUInstanceHighlight::pack`, 0 = 없음)입니다. 저장하지 않습니다. */
-        uint32 _highlight;
+        /** @brief 강조(방식 None = 없음)입니다. 저장하지 않습니다. */
+        InstanceHighlight _highlight;
         PROPERTY( Category = "Rendering", DisplayName = "Appear Seconds", Tooltip = "Dither fade-in time after the mesh finishes loading (and for beginAppearance/beginDisappearance); 0 shows it at once", Min = 0.0, Max = 5.0, Units = s )
         float32 _appearSeconds;
         float32 _appearance;     ///< 등장 비율(0 ~ 1, 저장하지 않음). `getAppearance`

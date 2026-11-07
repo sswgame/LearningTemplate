@@ -9,11 +9,11 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

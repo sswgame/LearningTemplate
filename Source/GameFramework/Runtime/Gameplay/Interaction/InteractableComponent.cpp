@@ -6,11 +6,11 @@
 
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
@@ -34,7 +34,7 @@ namespace sw
         , _pCatalog{}
         , _pDef{ nullptr }
         , _catalogReload{}
-        , _appliedHighlight{ 0 }
+        , _appliedHighlight{}
         , _completedCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
         , _bHasOverride{ SW_FALSE }
@@ -114,10 +114,10 @@ namespace sw
                                              : request == InteractionHighlight::Sense   ? InstanceHighlightStyle::Sense
                                                                                         : InstanceHighlightStyle::None;
         const float3                 color   = pDef != nullptr ? pDef->_highlightColor : float3{};
-        const uint32                 packed  = GPUInstanceHighlight::pack( style, color );
-        if ( packed == _appliedHighlight )
+        const InstanceHighlight      applied{ style, color };
+        if ( applied == _appliedHighlight )
             return;
-        _appliedHighlight  = packed;
+        _appliedHighlight  = applied;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;

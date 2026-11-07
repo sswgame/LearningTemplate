@@ -389,7 +389,7 @@ namespace sw
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = pMeshComp->getSpriteInstanceData();
         candidate._customData           = pMeshComp->getInstanceCustomData();
-        candidate._highlight            = pMeshComp->getHighlight();
+        candidate._highlight            = GPUInstanceHighlight::pack( pMeshComp->getHighlight() ); // 담는 법은 렌더러가 안다
         candidate._skinSlot             = pMeshComp->getSkinSlot();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
         candidate._appearance           = pMeshComp->getAppearance();

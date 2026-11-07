@@ -33,7 +33,9 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
 kExtensions = (".h", ".cpp", ".inl")
-kUIInclude = re.compile(r'^\s*#\s*include\s+"(Engine/(?:UI|Audio|Renderer)/[^"]+|[^"]*/Client/[^"]+)"', re.M)
+# GPU 칸 배치(`Engine/Graphics/RHI` · `Engine/Graphics/Shader` — 정점 · 인스턴스 · 빛 종류 칸)도 게임 코드가 직접 쓰지 않는다 — 게임 쪽 형식(`MeshBuildVertex` ·
+# `InstanceHighlight` · `LightKind`)을 쓰고 GPU 칸으로 옮기는 일은 엔진 · 렌더러가 한다(`refactor_layers.md` 5 · 16 번).
+kUIInclude = re.compile(r'^\s*#\s*include\s+"(Engine/(?:UI|Audio|Renderer|Graphics/RHI|Graphics/Shader)/[^"]+|[^"]*/Client/[^"]+)"', re.M)
 kClientGuard = re.compile(r'^\s*#\s*(?:if|ifdef|elif)\b[^\n]*SW_WITH_CLIENT_CODE', re.M)
 kScanRoots = ("Source/GameFramework/", "Source/Games/")
 kSkipParts = ("/Plugin/Editor/", "/Client/", "/Editor/")  # 테스트도 서버 구성(Dev)이 짓는다 — 보지 않을 까닭이 없다

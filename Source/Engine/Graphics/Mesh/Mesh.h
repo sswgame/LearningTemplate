@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Mesh/MeshBuildVertex.h"
 #include "Engine/Graphics/RHI/RHIDeviceBuffer.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -251,6 +252,8 @@ namespace sw
          */
         void setVertices( const vector<RHIVertex>& listVertex );
         void setVertices( vector<RHIVertex>&& listVertex );
+        /** @brief 게임 코드의 정점(`MeshBuildVertex`)으로 `setVertices` 와 같이 설정합니다 — GPU 정점 칸으로 옮기는 일은 여기 하나다. */
+        void setBuildVertices( const vector<MeshBuildVertex>& listVertex );
         /**
          * @brief 탄젠트가 이미 들어 있는 정점 배열을 그대로 설정합니다(`.mesh` 를 읽은 값, 다른 메시의 사본).
          * @details 임포트가 `computeTangents` 로 구해 파일에 실은 값이다. 런타임이 로드마다 다시 구하지 않는다(언리얼 · 유니티가 임포트 때 MikkTSpace 를 베이크하는 것과 같다).
