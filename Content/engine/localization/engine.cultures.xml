@@ -1,8 +1,24 @@
 <CultureTable>
+	<numberingSystems>
+		<numberingSystem id="latn" digits="0123456789" />
+		<numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩" />
+		<numberingSystem id="arabext" digits="۰۱۲۳۴۵۶۷۸۹" />
+	</numberingSystems>
+	<currencies>
+		<currency code="USD" symbol="$" digits="2" />
+		<currency code="EUR" symbol="€" digits="2" />
+		<currency code="GBP" symbol="£" digits="2" />
+		<currency code="JPY" symbol="¥" digits="0" />
+		<currency code="KRW" symbol="₩" digits="0" />
+		<currency code="CNY" symbol="¥" digits="2" />
+		<currency code="TWD" symbol="NT$" digits="2" />
+		<currency code="PLN" symbol="zł" digits="2" />
+		<currency code="RUB" symbol="₽" digits="2" />
+		<currency code="SAR" symbol="SAR" digits="2" />
+	</currencies>
 	<cultures>
 		<culture code="ar"
 		         nativeName="العربية"
-		         pluralRule="arabic"
 		         rightToLeft="true"
 		         digits="arab"
 		         decimalSeparator="٫"
@@ -10,6 +26,7 @@
 		         percentPattern="#٪؜"
 		         currencyCode="SAR"
 		         currencyPattern="¤ #">
+			<pluralRules zero="n = 0" one="n = 1" two="n = 2" few="n % 100 = 3..10" many="n % 100 = 11..99" />
 			<datePatterns short="d‏/M‏/y" medium="dd‏/MM‏/y" long="d MMMM y" />
 			<timePatterns short="h:mm a" medium="h:mm:ss a" />
 			<monthNames>
@@ -50,14 +67,14 @@
 				<item>Noto Sans</item>
 			</fonts>
 		</culture>
-		<culture code="de"
+		<culture code="de" digits="latn"
 		         nativeName="Deutsch"
-		         pluralRule="english"
 		         decimalSeparator=","
 		         groupSeparator="."
 		         percentPattern="# %"
 		         currencyCode="EUR"
 		         currencyPattern="# ¤">
+			<pluralRules one="i = 1 and v = 0" />
 			<datePatterns short="dd.MM.yy" medium="dd.MM.y" long="d. MMMM y" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -99,8 +116,6 @@
 		</culture>
 		<culture code="en"
 		         nativeName="English"
-		         pluralRule="english"
-		         ordinalRule="english"
 		         rightToLeft="false"
 		         digits="latn"
 		         decimalSeparator="."
@@ -108,6 +123,8 @@
 		         percentPattern="#%"
 		         currencyCode="USD"
 		         currencyPattern="¤#">
+			<pluralRules one="i = 1 and v = 0" />
+			<ordinalRules one="n % 10 = 1 and n % 100 != 11" two="n % 10 = 2 and n % 100 != 12" few="n % 10 = 3 and n % 100 != 13" />
 			<datePatterns short="M/d/yy" medium="MMM d, y" long="MMMM d, y" />
 			<timePatterns short="h:mm a" medium="h:mm:ss a" />
 			<monthNames>
@@ -155,14 +172,14 @@
 				<item>pm</item>
 			</dayPeriods>
 		</culture>
-		<culture code="es"
+		<culture code="es" digits="latn"
 		         nativeName="Español"
-		         pluralRule="english"
 		         decimalSeparator=","
 		         groupSeparator="."
 		         percentPattern="# %"
 		         currencyCode="EUR"
 		         currencyPattern="# ¤">
+			<pluralRules one="n = 1" />
 			<datePatterns short="d/M/yy" medium="d MMM y" long="d 'de' MMMM 'de' y" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -204,7 +221,6 @@
 		</culture>
 		<culture code="fa"
 		         nativeName="فارسی"
-		         pluralRule="persian"
 		         rightToLeft="true"
 		         digits="arabext"
 		         decimalSeparator="٫"
@@ -212,6 +228,7 @@
 		         percentPattern="#٪"
 		         currencyCode="IRR"
 		         currencyPattern="# ¤">
+			<pluralRules one="i = 0 or n = 1" />
 			<datePatterns short="y/M/d" medium="d MMM y" long="d MMMM y" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -252,15 +269,15 @@
 				<item>Noto Sans</item>
 			</fonts>
 		</culture>
-		<culture code="fr"
+		<culture code="fr" digits="latn"
 		         nativeName="Français"
-		         pluralRule="french"
-		         ordinalRule="french"
 		         decimalSeparator=","
 		         groupSeparator=" "
 		         percentPattern="# %"
 		         currencyCode="EUR"
 		         currencyPattern="# ¤">
+			<pluralRules one="i = 0,1" />
+			<ordinalRules one="n = 1" />
 			<datePatterns short="dd/MM/y" medium="d MMM y" long="d MMMM y" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -302,7 +319,6 @@
 		</culture>
 		<culture code="he"
 		         nativeName="עברית"
-		         pluralRule="hebrew"
 		         rightToLeft="true"
 		         digits="latn"
 		         decimalSeparator="."
@@ -310,6 +326,7 @@
 		         percentPattern="#%"
 		         currencyCode="ILS"
 		         currencyPattern="# ¤">
+			<pluralRules one="i = 1 and v = 0 or i = 0 and v != 0" two="i = 2 and v = 0" />
 			<datePatterns short="d.M.y" medium="d בMMM y" long="d בMMMM y" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -350,7 +367,8 @@
 				<item>Noto Sans</item>
 			</fonts>
 		</culture>
-		<culture code="ja" nativeName="日本語" pluralRule="none" currencyCode="JPY" currencyPattern="¤#">
+		<culture code="ja" digits="latn" nativeName="日本語" currencyCode="JPY" currencyPattern="¤#">
+			<pluralRules />
 			<datePatterns short="y/MM/dd" medium="y/MM/dd" long="y年M月d日" />
 			<timePatterns short="H:mm" medium="H:mm:ss" />
 			<monthNames>
@@ -392,7 +410,8 @@
 				<item>Noto Sans</item>
 			</fonts>
 		</culture>
-		<culture code="ko" nativeName="한국어" pluralRule="none" currencyCode="KRW" currencyPattern="¤#">
+		<culture code="ko" digits="latn" nativeName="한국어" currencyCode="KRW" currencyPattern="¤#">
+			<pluralRules />
 			<datePatterns short="yy. M. d." medium="y. M. d." long="y년 M월 d일" />
 			<timePatterns short="a h:mm" medium="a h:mm:ss" />
 			<monthNames>
@@ -434,14 +453,14 @@
 				<item>Noto Sans</item>
 			</fonts>
 		</culture>
-		<culture code="pl"
+		<culture code="pl" digits="latn"
 		         nativeName="Polski"
-		         pluralRule="polish"
 		         decimalSeparator=","
 		         groupSeparator=" "
 		         percentPattern="#%"
 		         currencyCode="PLN"
 		         currencyPattern="# ¤">
+			<pluralRules one="i = 1 and v = 0" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14" many="v = 0 and i != 1 and i % 10 = 0..1 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 12..14" />
 			<datePatterns short="d.MM.y" medium="d MMM y" long="d MMMM y" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -487,14 +506,14 @@
 		         nativeName="[Ƥşḗŭḓǿ Ḿīřřǿřḗḓ]"
 		         rightToLeft="true"
 		         pseudo="mirrored" />
-		<culture code="ru"
+		<culture code="ru" digits="latn"
 		         nativeName="Русский"
-		         pluralRule="russian"
 		         decimalSeparator=","
 		         groupSeparator=" "
 		         percentPattern="# %"
 		         currencyCode="RUB"
 		         currencyPattern="# ¤">
+			<pluralRules one="v = 0 and i % 10 = 1 and i % 100 != 11" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14" many="v = 0 and i % 10 = 0 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 11..14" />
 			<datePatterns short="dd.MM.y" medium="d MMM y 'г'." long="d MMMM y 'г'." />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>
@@ -534,7 +553,8 @@
 				<item>Arial</item>
 			</fonts>
 		</culture>
-		<culture code="zh" nativeName="简体中文" pluralRule="none" currencyCode="CNY" currencyPattern="¤#">
+		<culture code="zh" digits="latn" nativeName="简体中文" currencyCode="CNY" currencyPattern="¤#">
+			<pluralRules />
 			<datePatterns short="y/M/d" medium="y年M月d日" long="y年M月d日" />
 			<timePatterns short="HH:mm" medium="HH:mm:ss" />
 			<monthNames>

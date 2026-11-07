@@ -19,177 +19,19 @@ namespace sw
     {
         struct CultureInfoInternal
         {
-            static PluralCategory selectNone( const PluralOperands& /*operands*/ ) { return PluralCategory::Other; }
-
-            static PluralCategory selectEnglish( const PluralOperands& operands )
-            {
-                const bool bOne = operands._integerDigits == 1 && operands._visibleFractionCount == 0;
-                return bOne ? PluralCategory::One : PluralCategory::Other;
-            }
-
-            static PluralCategory selectFrench( const PluralOperands& operands )
-            {
-                const bool bOne = operands._integerDigits == 0 || operands._integerDigits == 1;
-                return bOne ? PluralCategory::One : PluralCategory::Other;
-            }
-
-            static PluralCategory selectRussian( const PluralOperands& operands )
-            {
-                if ( operands._visibleFractionCount != 0 )
-                    return PluralCategory::Other;
-                const int64 mod10  = operands._integerDigits % 10;
-                const int64 mod100 = operands._integerDigits % 100;
-                if ( mod10 == 1 && mod100 != 11 )
-                    return PluralCategory::One;
-                const bool bFew = 2 <= mod10 && mod10 <= 4 && ( 12 <= mod100 && mod100 <= 14 ) == false;
-                if ( bFew )
-                    return PluralCategory::Few;
-                return PluralCategory::Many;
-            }
-
-            static PluralCategory selectPolish( const PluralOperands& operands )
-            {
-                if ( operands._visibleFractionCount != 0 )
-                    return PluralCategory::Other;
-                const int64 integer = operands._integerDigits;
-                const int64 mod10   = integer % 10;
-                const int64 mod100  = integer % 100;
-                if ( integer == 1 )
-                    return PluralCategory::One;
-                const bool bFew = 2 <= mod10 && mod10 <= 4 && ( 12 <= mod100 && mod100 <= 14 ) == false;
-                if ( bFew )
-                    return PluralCategory::Few;
-                return PluralCategory::Many;
-            }
-
-            static PluralCategory selectCzech( const PluralOperands& operands )
-            {
-                if ( operands._visibleFractionCount != 0 )
-                    return PluralCategory::Many;
-                if ( operands._integerDigits == 1 )
-                    return PluralCategory::One;
-                if ( 2 <= operands._integerDigits && operands._integerDigits <= 4 )
-                    return PluralCategory::Few;
-                return PluralCategory::Other;
-            }
-
-            static PluralCategory selectArabic( const PluralOperands& operands )
-            {
-                if ( operands._visibleFractionCount != 0 && operands._fractionDigits != 0 )
-                    return PluralCategory::Other;
-                const int64 integer = operands._integerDigits;
-                const int64 mod100  = integer % 100;
-                if ( integer == 0 )
-                    return PluralCategory::Zero;
-                if ( integer == 1 )
-                    return PluralCategory::One;
-                if ( integer == 2 )
-                    return PluralCategory::Two;
-                if ( 3 <= mod100 && mod100 <= 10 )
-                    return PluralCategory::Few;
-                if ( 11 <= mod100 && mod100 <= 99 )
-                    return PluralCategory::Many;
-                return PluralCategory::Other;
-            }
-
-            /** @brief 히브리어입니다(CLDR). one: 정수 1 이거나 정수 0 의 소수, two: 정수 2, 나머지 other. */
-            static PluralCategory selectHebrew( const PluralOperands& operands )
-            {
-                const bool bWhole = operands._visibleFractionCount == 0;
-                if ( bWhole && operands._integerDigits == 1 )
-                    return PluralCategory::One;
-                if ( bWhole == false && operands._integerDigits == 0 )
-                    return PluralCategory::One;
-                if ( bWhole && operands._integerDigits == 2 )
-                    return PluralCategory::Two;
-                return PluralCategory::Other;
-            }
-
-            /** @brief 페르시아어입니다(CLDR "i = 0 or n = 1"). 정수 부분이 0 이거나 정확히 1 이면 one, 나머지 other. */
-            static PluralCategory selectPersian( const PluralOperands& operands )
-            {
-                const bool bExactOne = operands._integerDigits == 1 && operands._fractionDigits == 0;
-                const bool bOne      = operands._integerDigits == 0 || bExactOne;
-                return bOne ? PluralCategory::One : PluralCategory::Other;
-            }
-
-            /** @brief 영어 서수입니다. one: 1 · 21 · 101 (11 제외), two: 2 · 22 (12 제외), few: 3 · 23 (13 제외). */
-            static PluralCategory selectOrdinalEnglish( const PluralOperands& operands )
-            {
-                const int64 mod10  = operands._integerDigits % 10;
-                const int64 mod100 = operands._integerDigits % 100;
-                if ( mod10 == 1 && mod100 != 11 )
-                    return PluralCategory::One;
-                if ( mod10 == 2 && mod100 != 12 )
-                    return PluralCategory::Two;
-                if ( mod10 == 3 && mod100 != 13 )
-                    return PluralCategory::Few;
-                return PluralCategory::Other;
-            }
-
-            /** @brief 프랑스어 서수입니다. one: 1 (1er), 나머지 other (2e …). */
-            static PluralCategory selectOrdinalFrench( const PluralOperands& operands )
-            {
-                return operands._integerDigits == 1 ? PluralCategory::One : PluralCategory::Other;
-            }
-
-            struct RuleRow
-            {
-                const utf8*    _pName;
-                PluralRuleFunc _pRule;
-            };
-
-            static constexpr RuleRow kArrOrdinalRule[] = {
-                {   "none",           &selectNone},
-                {"english", &selectOrdinalEnglish},
-                { "french",  &selectOrdinalFrench},
-            };
-
             /** @brief 통화 패턴에서 통화 기호 자리를 가리키는 `¤`(U+00A4) 의 UTF-8 입니다. */
             static constexpr const utf8* kCurrencySign = "\xC2\xA4";
-
-            static constexpr RuleRow kArrRule[] = {
-                {   "none",    &selectNone},
-                {"english", &selectEnglish},
-                { "french",  &selectFrench},
-                {"russian", &selectRussian},
-                { "polish",  &selectPolish},
-                {  "czech",   &selectCzech},
-                { "arabic",  &selectArabic},
-                { "hebrew",  &selectHebrew},
-                {"persian", &selectPersian},
-            };
 
             static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
             static_assert( SW_COUNT_OF( kArrCategoryName ) == static_cast<size_t>( PluralCategory::Count ), "kArrCategoryName must name every PluralCategory" );
 
-            /** @brief 규칙 이름의 함수입니다. 모르는 이름이면 nullptr 입니다. */
-            static PluralRuleFunc findRule( string_view ruleName )
-            {
-                for ( const RuleRow& row : kArrRule )
-                {
-                    if ( ruleName == row._pName )
-                        return row._pRule;
-                }
-                return nullptr;
-            }
-
-            /** @brief 서수 규칙 이름의 함수입니다(`selectordinal`). 모르는 이름이면 nullptr 입니다. */
-            static PluralRuleFunc findOrdinalRule( string_view ruleName )
-            {
-                for ( const RuleRow& row : kArrOrdinalRule )
-                {
-                    if ( ruleName == row._pName )
-                        return row._pRule;
-                }
-                return nullptr;
-            }
-
             /** @brief 문화권 요소의 속성 이름입니다(`code` 는 문화권 코드, 나머지는 덮어쓰는 값). */
-            static constexpr string_view kArrCultureAttribute[] = { "code", "parent", "nativeName", "pluralRule", "ordinalRule", "rightToLeft", "digits", "decimalSeparator",
+            static constexpr string_view kArrCultureAttribute[] = { "code", "parent", "nativeName", "rightToLeft", "digits", "decimalSeparator",
                                                                     "groupSeparator", "percentPattern", "currencyCode", "currencyPattern", "pseudo" };
-            /** @brief 문화권 요소의 자식 요소 이름입니다(패턴 묶음 둘과 문자열 목록 넷). */
-            static constexpr string_view kArrCultureChild[] = { "datePatterns", "timePatterns", "monthNames", "monthAbbreviations", "dayPeriods", "fonts" };
+            /** @brief 문화권 요소의 자식 요소 이름입니다(규칙 묶음 둘, 패턴 묶음 둘과 문자열 목록 넷). */
+            static constexpr string_view kArrCultureChild[] = { "pluralRules", "ordinalRules", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations", "dayPeriods", "fonts" };
+            /** @brief 표 루트의 자식 요소 이름입니다(숫자 체계 · 통화는 없어도 된다 — 앞서 읽은 파일의 것을 쓴다). */
+            static constexpr string_view kArrTablePart[] = { "numberingSystems", "currencies", "cultures" };
 
             template <size_t N>
             static bool isListed( const string_view ( &arrName )[N], string_view name )
@@ -222,21 +64,6 @@ namespace sw
                     }
                 }
                 return false;
-            }
-
-            /** @brief 숫자 체계의 숫자 0 의 코드 포인트입니다. 숫자 1 ~ 9 는 그 뒤에 이어진다. */
-            static uint32 getDigitZeroCodePoint( NumeralSystem numeralSystem )
-            {
-                switch ( numeralSystem )
-                {
-                    case NumeralSystem::Latin:
-                        return '0';
-                    case NumeralSystem::ArabicIndic:
-                        return 0x0660u;
-                    case NumeralSystem::ExtendedArabicIndic:
-                        return 0x06F0u;
-                }
-                return '0';
             }
 
             /**
@@ -318,26 +145,35 @@ namespace sw
                     outTarget = string{ entry.getAttributeText( pFieldName ) };
             }
 
-            /** @brief 복수형 규칙 이름 필드(적힌 것만)를 규칙 함수로 풀어 덮어씁니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool applyRuleField( const XMLNode& entry, const utf8* pFieldName, PluralRuleFunc ( *pFindRule )( string_view ), string& outRuleName, PluralRuleFunc& outRule,
-                                                      string& outError )
+            /**
+             * @brief 규칙 묶음 요소(`<pluralRules one="…" few="…"/>`, 적힌 것만)로 @p outRules 를 통째로 바꿉니다. 부모의 규칙은 섞지 않는다 — 범주 하나만 물려받으면 규칙이 겹친다.
+             * @details 속성 이름이 범주 키워드이고 값이 CLDR 규칙 글이다. 빈 요소는 "모든 수가 other" 다(일본어 · 한국어 · 중국어). 모르는 범주 · 틀린 글이면 false 입니다.
+             */
+            [[nodiscard]] static bool applyRuleSet( const XMLNode& entry, const utf8* pElementName, PluralRuleSet& outRules, string& outError )
             {
-                if ( entry.findAttribute( pFieldName ) == nullptr )
+                const XMLNode rules = entry.findChild( pElementName );
+                if ( rules.isValid() == false )
                     return true;
-                const string   ruleName{ entry.getAttributeText( pFieldName ) };
-                PluralRuleFunc pRule = pFindRule( ruleName );
-                if ( pRule == nullptr )
+                if ( rules.findChild().isValid() )
                 {
-                    outError = string( "unknown " ) + pFieldName + " '" + ruleName + "'";
+                    outError = string( pElementName ) + " take attributes only";
                     return false;
                 }
-                outRuleName = ruleName;
-                outRule     = pRule;
+                PluralRuleSet ruleSet;
+                for ( XMLAttribute attribute = rules.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    if ( ruleSet.compileRule( attribute.getName(), attribute.getValue(), outError ) == false )
+                    {
+                        outError = string( pElementName ) + ": " + outError;
+                        return false;
+                    }
+                }
+                outRules = std::move( ruleSet );
                 return true;
             }
 
-            /** @brief 글쓰기 방향 · 숫자 체계 · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool applyScriptFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
+            /** @brief 글쓰기 방향 · 숫자 체계(@p mapNumberingSystem 의 id) · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool applyScriptFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo, string& outError )
             {
                 std::optional<bool> bRightToLeft;
                 if ( entry.readOptionalAttribute( "rightToLeft", bRightToLeft ) == false )
@@ -350,17 +186,14 @@ namespace sw
                 if ( entry.findAttribute( "digits" ) != nullptr )
                 {
                     const string digitsName{ entry.getAttributeText( "digits" ) };
-                    if ( digitsName == "latn" )
-                        inoutInfo._numeralSystem = NumeralSystem::Latin;
-                    else if ( digitsName == "arab" )
-                        inoutInfo._numeralSystem = NumeralSystem::ArabicIndic;
-                    else if ( digitsName == "arabext" )
-                        inoutInfo._numeralSystem = NumeralSystem::ExtendedArabicIndic;
-                    else
+                    const auto   systemIt = mapNumberingSystem.find( digitsName );
+                    if ( systemIt == mapNumberingSystem.end() )
                     {
-                        outError = "unknown digits '" + digitsName + "' (latn, arab, arabext)";
+                        outError = "unknown digits '" + digitsName + "' (declare it in <numberingSystems>)";
                         return false;
                     }
+                    inoutInfo._numberingSystem = digitsName;
+                    inoutInfo._listDigit       = systemIt->second;
                 }
                 if ( entry.findAttribute( "pseudo" ) != nullptr )
                 {
@@ -420,7 +253,7 @@ namespace sw
             }
 
             /** @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
-            [[nodiscard]] static bool applyFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
+            [[nodiscard]] static bool applyFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo, string& outError )
             {
                 string unknownName;
                 if ( findUnknownName( entry, unknownName ) )
@@ -430,11 +263,11 @@ namespace sw
                 }
 
                 applyStringField( entry, "nativeName", inoutInfo._nativeName );
-                if ( applyRuleField( entry, "pluralRule", &findRule, inoutInfo._pluralRuleName, inoutInfo._pPluralRule, outError ) == false )
+                if ( applyRuleSet( entry, "pluralRules", inoutInfo._pluralRules, outError ) == false )
                     return false;
-                if ( applyRuleField( entry, "ordinalRule", &findOrdinalRule, inoutInfo._ordinalRuleName, inoutInfo._pOrdinalRule, outError ) == false )
+                if ( applyRuleSet( entry, "ordinalRules", inoutInfo._ordinalRules, outError ) == false )
                     return false;
-                if ( applyScriptFields( entry, inoutInfo, outError ) == false )
+                if ( applyScriptFields( entry, mapNumberingSystem, inoutInfo, outError ) == false )
                     return false;
                 applyStringField( entry, "decimalSeparator", inoutInfo._decimalSeparator );
                 applyStringField( entry, "groupSeparator", inoutInfo._groupSeparator );
@@ -442,6 +275,89 @@ namespace sw
                 applyStringField( entry, "currencyCode", inoutInfo._currencyCode );
                 applyStringField( entry, "currencyPattern", inoutInfo._currencyPattern );
                 return applyPatternAndListFields( entry, inoutInfo, outError );
+            }
+
+            /**
+             * @brief `<numberingSystems><numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩"/></numberingSystems>` 를 @p inoutMap 에 얹습니다(같은 id 는 바꾼다). 요소가 없으면 그대로 true 입니다.
+             * @details CLDR numberingSystems.xml 의 numeric 체계 모양이다. 글자는 꼭 10 개(0 ~ 9 순서)이고, 한 글자가 여러 바이트여도 된다(UTF-8).
+             */
+            [[nodiscard]] static bool readNumberingSystems( const XMLNode& systems, map<string, vector<string>>& inoutMap, string& outError )
+            {
+                if ( systems.isValid() == false )
+                    return true;
+                vector<string> listFileID;
+                for ( XMLNode system = systems.findChild(); system.isValid(); system = system.findNextSibling() )
+                {
+                    const string id{ system.getAttributeText( "id" ) };
+                    const string digits{ system.getAttributeText( "digits" ) };
+                    if ( string_view{ system.getName() } != "numberingSystem" || id.empty() )
+                    {
+                        outError = "<numberingSystems> holds only <numberingSystem id=\"…\" digits=\"…\"> elements";
+                        return false;
+                    }
+                    if ( VectorUtil::contains( listFileID, id ) )
+                    {
+                        outError = "numbering system '" + id + "' is written twice";
+                        return false;
+                    }
+                    listFileID.push_back( id );
+                    vector<string> listDigit;
+                    size_t         offset = 0;
+                    while ( offset < digits.size() )
+                    {
+                        const size_t start = offset;
+                        (void)StringUtil::decodeUTF8( digits, offset ); // 글자 하나만큼 옮긴다 — 값은 쓰지 않는다
+                        listDigit.push_back( digits.substr( start, offset - start ) );
+                    }
+                    if ( listDigit.size() != CultureInfo::kDigitCount )
+                    {
+                        outError = "numbering system '" + id + "' must have exactly 10 digits";
+                        return false;
+                    }
+                    inoutMap[id] = std::move( listDigit );
+                }
+                return true;
+            }
+
+            /** @brief `<currencies><currency code="KRW" symbol="₩" digits="0"/></currencies>` 를 @p inoutList 에 얹습니다(같은 코드는 바꾼다). 세 속성은 모두 필수입니다. */
+            [[nodiscard]] static bool readCurrencies( const XMLNode& currencies, vector<CurrencyInfo>& inoutList, string& outError )
+            {
+                if ( currencies.isValid() == false )
+                    return true;
+                vector<string> listFileCode;
+                for ( XMLNode entry = currencies.findChild(); entry.isValid(); entry = entry.findNextSibling() )
+                {
+                    CurrencyInfo currency;
+                    currency._code   = string{ entry.getAttributeText( "code" ) };
+                    currency._symbol = string{ entry.getAttributeText( "symbol" ) };
+                    std::optional<int32> digits;
+                    const bool           bShape = string_view{ entry.getName() } == "currency" && currency._code.empty() == false && currency._symbol.empty() == false &&
+                                        entry.readOptionalAttribute( "digits", digits ) && digits.has_value() && 0 <= *digits && *digits <= 4;
+                    if ( bShape == false )
+                    {
+                        outError = "<currencies> holds only <currency code=\"…\" symbol=\"…\" digits=\"0..4\"> elements";
+                        return false;
+                    }
+                    if ( VectorUtil::contains( listFileCode, currency._code ) )
+                    {
+                        outError = "currency '" + currency._code + "' is written twice";
+                        return false;
+                    }
+                    listFileCode.push_back( currency._code );
+                    currency._minorDigitCount = static_cast<uint8>( *digits );
+                    bool bReplaced            = false;
+                    for ( CurrencyInfo& existing : inoutList )
+                    {
+                        if ( existing._code == currency._code )
+                        {
+                            existing  = currency;
+                            bReplaced = true;
+                        }
+                    }
+                    if ( bReplaced == false )
+                        inoutList.push_back( std::move( currency ) );
+                }
+                return true;
             }
 
             /** @brief 문화권 요소 하나를 풀어 본 결과입니다. */
@@ -479,7 +395,7 @@ namespace sw
              * @param mapExisting 이미 테이블에 있는 문화권입니다. 부모가 이 파일 안에 없을 때만 부모로 씁니다.
              */
             [[nodiscard]] static ResolveResult resolveEntry( const XMLNode& entry, const vector<string>& listFileCode, const map<string, CultureInfo>& mapExisting,
-                                                             map<string, CultureInfo>& inoutMapResolved, string& outError )
+                                                             const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& inoutMapResolved, string& outError )
             {
                 const string rawCode{ entry.getAttributeText( "code" ) };
                 const string code = CultureTable::normalizeCode( rawCode );
@@ -502,9 +418,9 @@ namespace sw
                     else
                         return ResolveResult::Deferred;
                 }
-                else if ( entry.findAttribute( "pluralRule" ) == nullptr )
+                else if ( entry.findChild( "pluralRules" ).isValid() == false || entry.findAttribute( "digits" ) == nullptr )
                 {
-                    outError = "culture '" + rawCode + "' has no parent and no pluralRule";
+                    outError = "culture '" + rawCode + "' has no parent, so it needs <pluralRules> (empty when every number is other) and digits";
                     return ResolveResult::Failed;
                 }
                 info._code       = code;
@@ -513,7 +429,7 @@ namespace sw
                 if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo" ) == nullptr )
                     info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
                 string fieldError;
-                if ( applyFields( entry, info, fieldError ) == false )
+                if ( applyFields( entry, mapNumberingSystem, info, fieldError ) == false )
                 {
                     outError = "culture '" + rawCode + "': " + fieldError;
                     return ResolveResult::Failed;
@@ -523,7 +439,8 @@ namespace sw
             }
 
             /** @brief @p cultures 의 문화권을 모두 풉니다. 부모가 먼저 해석되도록 몇 바퀴 돕니다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환입니다. */
-            [[nodiscard]] static bool resolveAll( const XMLNode& cultures, const map<string, CultureInfo>& mapExisting, map<string, CultureInfo>& outMapResolved, string& outError )
+            [[nodiscard]] static bool resolveAll( const XMLNode& cultures, const map<string, CultureInfo>& mapExisting, const map<string, vector<string>>& mapNumberingSystem,
+                                                  map<string, CultureInfo>& outMapResolved, string& outError )
             {
                 vector<XMLNode> listPending;
                 vector<string>  listFileCode; // 파일에 적힌 코드(부모가 이 파일 안에 있는지 판정한다)
@@ -534,7 +451,7 @@ namespace sw
                     vector<XMLNode> listNext;
                     for ( const XMLNode& entry : listPending )
                     {
-                        const ResolveResult result = resolveEntry( entry, listFileCode, mapExisting, outMapResolved, outError );
+                        const ResolveResult result = resolveEntry( entry, listFileCode, mapExisting, mapNumberingSystem, outMapResolved, outError );
                         if ( result == ResolveResult::Failed )
                             return false;
                         if ( result == ResolveResult::Deferred )
@@ -604,8 +521,7 @@ namespace sw
         : _code{}
         , _parentCode{}
         , _nativeName{}
-        , _pluralRuleName{ "none" }
-        , _ordinalRuleName{ "none" }
+        , _numberingSystem{ "latn" }
         , _decimalSeparator{ "." }
         , _groupSeparator{ "," }
         , _percentPattern{ "#%" }
@@ -620,9 +536,10 @@ namespace sw
         , _listMonthAbbreviation{}
         , _listDayPeriod{}
         , _listFont{}
-        , _pPluralRule{ CultureInfoInternal::findRule( "none" ) }
-        , _pOrdinalRule{ CultureInfoInternal::findOrdinalRule( "none" ) }
-        , _numeralSystem{ NumeralSystem::Latin }
+        , _listDigit{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
+        , _pluralRules{}
+        , _ordinalRules{}
+        , _pCurrencyList{}
         , _pseudoMode{ PseudoLocaleMode::None }
         , _bRightToLeft{ SW_FALSE }
     {
@@ -630,21 +547,22 @@ namespace sw
 
     PluralCategory CultureInfo::selectPlural( const PluralOperands& operands ) const
     {
-        return _pPluralRule != nullptr ? _pPluralRule( operands ) : PluralCategory::Other;
+        return _pluralRules.select( operands );
     }
 
     PluralCategory CultureInfo::selectOrdinal( const PluralOperands& operands ) const
     {
-        return _pOrdinalRule != nullptr ? _pOrdinalRule( operands ) : PluralCategory::Other;
+        return _ordinalRules.select( operands );
     }
 
     void CultureInfo::appendDigits( string& inoutText, string_view asciiDigits ) const
     {
+        SW_ASSERT( _listDigit.size() == kDigitCount && "the culture table reads exactly ten digits per numbering system" );
         for ( const utf8 character : asciiDigits )
         {
             const bool bDigit = '0' <= character && character <= '9';
-            if ( bDigit && _numeralSystem != NumeralSystem::Latin )
-                StringUtil::appendUTF8( inoutText, CultureInfoInternal::getDigitZeroCodePoint( _numeralSystem ) + static_cast<uint32>( character - '0' ) );
+            if ( bDigit )
+                inoutText.append( _listDigit[static_cast<size_t>( character - '0' )] );
             else
                 inoutText.push_back( character );
         }
@@ -736,9 +654,9 @@ namespace sw
     string CultureInfo::formatCurrency( float64 amount, string_view currencyCode ) const
     {
         const string_view   code      = currencyCode.empty() ? string_view( _currencyCode ) : currencyCode;
-        const CurrencyInfo* pCurrency = CurrencyInfo::findCurrency( code );
+        const CurrencyInfo* pCurrency = findCurrency( code );
         const uint32        digits    = pCurrency != nullptr ? pCurrency->_minorDigitCount : 2u;
-        const string        symbol    = pCurrency != nullptr ? string( pCurrency->_pSymbol ) : string( code );
+        const string        symbol    = pCurrency != nullptr ? pCurrency->_symbol : string( code );
         string              number    = formatDecimal( amount, digits, digits );
         const bool          bNegative = number.empty() == false && number.front() == '-';
         if ( bNegative )
@@ -763,6 +681,18 @@ namespace sw
             ++position;
         }
         return text;
+    }
+
+    const CurrencyInfo* CultureInfo::findCurrency( string_view code ) const
+    {
+        if ( _pCurrencyList == nullptr )
+            return nullptr;
+        for ( const CurrencyInfo& currency : *_pCurrencyList )
+        {
+            if ( currency._code == code )
+                return &currency;
+        }
+        return nullptr;
     }
 
     string_view CultureInfo::findDatePattern( string_view styleName ) const
@@ -916,25 +846,44 @@ namespace sw
             }
             return false;
         }
-        const XMLNode cultures           = root.findChild( "cultures" );
-        const bool    bRootHasOtherParts = root.getFirstAttribute().isValid() || cultures.findNextSibling().isValid() || cultures.getFirstAttribute().isValid();
-        if ( cultures.isValid() == false || bRootHasOtherParts )
+        const XMLNode cultures = root.findChild( "cultures" );
+        string        unknownPart;
+        for ( XMLNode part = root.findChild(); part.isValid() && unknownPart.empty(); part = part.findNextSibling() )
+        {
+            if ( CultureInfoInternal::isListed( CultureInfoInternal::kArrTablePart, string_view{ part.getName() } ) == false )
+                unknownPart = part.getName();
+        }
+        const bool bBadRoot = cultures.isValid() == false || root.getFirstAttribute().isValid() || cultures.getFirstAttribute().isValid() || unknownPart.empty() == false;
+        if ( bBadRoot )
         {
             if ( pOutError != nullptr )
-                *pOutError = string( sourceName ) + ": root must be <CultureTable><cultures><culture code=\"…\" …/>…</cultures></CultureTable>";
+                *pOutError = string( sourceName ) + ": root must be <CultureTable>[<numberingSystems>][<currencies>]<cultures><culture code=\"…\" …/>…</cultures></CultureTable>" +
+                             ( unknownPart.empty() ? string{} : " (unknown <" + unknownPart + ">)" );
             return false;
         }
 
-        map<string, CultureInfo> mapResolved;
-        if ( CultureInfoInternal::resolveAll( cultures, _mapCulture, mapResolved, error ) == false )
+        // 숫자 체계 · 통화를 먼저 사본에 얹는다 — 문화권이 id 로 가리키고, 어느 하나라도 틀리면 표를 바꾸지 않는다.
+        map<string, vector<string>> mapNumberingSystem = _mapNumberingSystem;
+        vector<CurrencyInfo>        listCurrency       = _pCurrencyList != nullptr ? *_pCurrencyList : vector<CurrencyInfo>{};
+        map<string, CultureInfo>    mapResolved;
+        const bool                  bRead = CultureInfoInternal::readNumberingSystems( root.findChild( "numberingSystems" ), mapNumberingSystem, error ) &&
+                           CultureInfoInternal::readCurrencies( root.findChild( "currencies" ), listCurrency, error ) &&
+                           CultureInfoInternal::resolveAll( cultures, _mapCulture, mapNumberingSystem, mapResolved, error );
+        if ( bRead == false )
         {
             if ( pOutError != nullptr )
                 *pOutError = string( sourceName ) + ": " + error;
             return false;
         }
+        _mapNumberingSystem = std::move( mapNumberingSystem );
+        _pCurrencyList      = make_shared<const vector<CurrencyInfo>>( std::move( listCurrency ) );
         for ( auto& [code, info] : mapResolved )
         {
             _mapCulture[code] = std::move( info );
+        }
+        for ( auto& [code, info] : _mapCulture )
+        {
+            info._pCurrencyList = _pCurrencyList; // 앞서 읽은 문화권도 새 통화를 본다
         }
         return true;
     }
@@ -974,6 +923,25 @@ namespace sw
             candidate = makeParentCode( candidate );
         }
         return nullptr;
+    }
+
+    const CurrencyInfo* CultureTable::findCurrency( string_view code ) const
+    {
+        if ( _pCurrencyList == nullptr )
+            return nullptr;
+        for ( const CurrencyInfo& currency : *_pCurrencyList )
+        {
+            if ( currency._code == code )
+                return &currency;
+        }
+        return nullptr;
+    }
+
+    void CultureTable::clear()
+    {
+        _mapCulture.clear();
+        _mapNumberingSystem.clear();
+        _pCurrencyList.reset();
     }
 
     void CultureTable::collectCultureCodes( vector<string>& outListCode ) const

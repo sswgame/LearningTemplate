@@ -9,7 +9,6 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/CultureInfo.h"
-#include "Engine/Localization/CurrencyInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -154,13 +153,91 @@ SW_TEST_CASE( CurrencyFormatTest, SkeletonOverridesCultureCurrency )
     SW_EXPECT_EQUAL( sw::string( "1.234,00 €" ), Internal::format( "de", "{p, number, ::currency/EUR}", amount ) );
     SW_EXPECT_EQUAL( sw::string( "XYZ1,234.00" ), Internal::format( "en", "{p, number, ::currency/XYZ}", amount ) );
 
-    const sw::CurrencyInfo* pWon    = sw::CurrencyInfo::findCurrency( "KRW" );
-    const sw::CurrencyInfo* pDollar = sw::CurrencyInfo::findCurrency( "USD" );
+    const sw::CultureTable  cultures = Internal::loadCultures();
+    const sw::CurrencyInfo* pWon     = cultures.findCurrency( "KRW" );
+    const sw::CurrencyInfo* pDollar  = cultures.findCurrency( "USD" );
     SW_REQUIRE_NOT_NULL( pWon );
     SW_REQUIRE_NOT_NULL( pDollar );
     SW_EXPECT_EQUAL( uint8( 0 ), pWon->_minorDigitCount );
     SW_EXPECT_EQUAL( uint8( 2 ), pDollar->_minorDigitCount );
-    SW_EXPECT_NULL( sw::CurrencyInfo::findCurrency( "XYZ" ) );
+    SW_EXPECT_NULL( cultures.findCurrency( "XYZ" ) );
+}
+
+/**
+ * @brief [CultureDataTest] 복수형 규칙은 CLDR 규칙 글이다 — 옛 코드 규칙(러시아어 · 폴란드어 · 아랍어 · 히브리어 · 페르시아어 · 체코어)과 같은 범주를 고른다
+ */
+SW_TEST_CASE( CultureDataTest, PluralRuleTextSelectsTheCldrCategory )
+{
+    const sw::CultureTable cultures = LocalizationFormatsTestInternal::loadCultures();
+    const auto             plural   = [&cultures]( sw::string_view code, const sw::PluralOperands& operands )
+    {
+        const sw::CultureInfo* pCulture = cultures.findCulture( code );
+        return pCulture != nullptr ? sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( operands ) ) : "missing";
+    };
+    using Operands = sw::PluralOperands;
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "ru", Operands::makeInteger( 21 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "few" ), sw::string( plural( "ru", Operands::makeInteger( 22 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "many" ), sw::string( plural( "ru", Operands::makeInteger( 12 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "ru", Operands::makeDecimal( 1.5, 1 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "many" ), sw::string( plural( "pl", Operands::makeInteger( 5 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "few" ), sw::string( plural( "pl", Operands::makeInteger( 24 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "zero" ), sw::string( plural( "ar", Operands::makeInteger( 0 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "few" ), sw::string( plural( "ar", Operands::makeInteger( 103 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "many" ), sw::string( plural( "ar", Operands::makeInteger( 111 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "ar", Operands::makeDecimal( 3.5, 1 ) ) ) ); // 범위는 정수만 받는다
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "he", Operands::makeDecimal( 0.5, 1 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "two" ), sw::string( plural( "he", Operands::makeInteger( 2 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "fa", Operands::makeDecimal( 1.0, 1 ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "en", Operands::makeDecimal( 1.0, 1 ) ) ) ); // v = 1 이라 one 이 아니다
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "ko", Operands::makeInteger( 1 ) ) ) );
+}
+
+/**
+ * @brief [CultureDataTest] 언어 하나는 데이터 한 장이다 — 새 숫자 체계 · 통화 · 복수형 규칙을 표에 더하면 코드 없이 형식이 선다(힌디어 데바나가리 숫자 · INR)
+ */
+SW_TEST_CASE( CultureDataTest, NewLanguageIsOneDataSheet )
+{
+    sw::CultureTable table;
+    sw::string       error;
+    SW_REQUIRE_TRUE_MSG( table.loadFromXMLText( R"XML(<CultureTable>
+  <numberingSystems><numberingSystem id="deva" digits="०१२३४५६७८९" /></numberingSystems>
+  <currencies><currency code="INR" symbol="₹" digits="2" /></currencies>
+  <cultures>
+    <culture code="hi" digits="deva" nativeName="हिन्दी" currencyCode="INR" currencyPattern="¤#"><pluralRules one="i = 0 or n = 1" /></culture>
+  </cultures>
+</CultureTable>)XML",
+                                                "hi.cultures.xml", &error ),
+                         error.c_str() );
+    const sw::CultureInfo* pHindi = table.findCulture( "hi" );
+    SW_REQUIRE_NOT_NULL( pHindi );
+    SW_EXPECT_EQUAL( sw::string( "१,२३४" ), pHindi->formatInteger( 1234 ) );
+    SW_EXPECT_EQUAL( sw::string( "₹१२.५०" ), pHindi->formatCurrency( 12.5, {} ) );
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( sw::CultureInfo::getPluralKeyword( pHindi->selectPlural( sw::PluralOperands::makeDecimal( 0.5, 1 ) ) ) ) );
+}
+
+/**
+ * @brief [CultureDataTest] 틀린 문화권 데이터는 읽기 오류이고 표는 그대로다 — 규칙 글 · 범주 · 숫자 체계 · 통화 · 뿌리 문화권의 필수 칸
+ */
+SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
+{
+    const auto rejects = []( sw::string_view xml, sw::string_view expectedWord )
+    {
+        sw::CultureTable table;
+        sw::string       error;
+        const bool       bLoaded = table.loadFromXMLText( xml, "bad.cultures.xml", &error );
+        SW_EXPECT_FALSE( bLoaded );
+        SW_EXPECT_TRUE_MSG( error.find( expectedWord ) != sw::string::npos, error.c_str() );
+        SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
+    };
+    constexpr const utf8* kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="i = = 1" /></culture></cultures></CultureTable>)", "one rule" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules other="n = 1" /></culture></cultures></CultureTable>)", "unknown plural category" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn"><pluralRules one="e = 0" /></culture></cultures></CultureTable>)", "operand" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", "pluralRules" );
+    rejects( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="thai"><pluralRules /></culture></cultures></CultureTable>)", "thai" );
+    rejects( R"(<CultureTable><numberingSystems><numberingSystem id="short" digits="012" /></numberingSystems><cultures /></CultureTable>)", "10 digits" );
+    rejects( R"(<CultureTable><currencies><currency code="KRW" symbol="₩" /></currencies><cultures /></CultureTable>)", "currency" );
+    rejects( R"(<CultureTable><calendars /><cultures /></CultureTable>)", "calendars" );
 }
 
 /**

@@ -6,7 +6,7 @@
  *          - `{n, number}`, `{n, number, integer}`, `{n, number, percent}`, `{n, number, currency}`(문화권의 기본 통화), `{n, number, ::currency/USD}`(통화 지정)
  *          - `{d, date, short|medium|long}`, `{d, time, short|medium|long}`. 시간대를 아는 값(`addUnixTime`)은 time 의 `long` 이 `UTC+9` 같은 오프셋을 붙인다.
  *          - `{n, plural, offset:1 =0 {없음} one {# 개} other {# 개}}`. `#` 은 (값 - offset) 을 문화권 숫자로 쓰며, `=N` 이 범주보다 앞선다.
- *          - `{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}`. 서수 범주는 문화권의 `ordinalRule` 이 고른다(offset 은 없다).
+ *          - `{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}`. 서수 범주는 문화권의 `<ordinalRules>`(CLDR 규칙 글)가 고른다(offset 은 없다).
  *          - `{g, select, female {그녀} male {그} other {그들}}`
  *          - 작은따옴표: `''` 는 `'` 하나, `'{'` 처럼 `{` `}` (복수형 안에서는 `#`) 앞의 따옴표는 다음 따옴표까지 글자 그대로(ICU DOUBLE_OPTIONAL).
  *          `spellout` 은 없다. plural · selectordinal · select 에는 `other` 가 반드시 있어야 한다(ICU 와 같다).

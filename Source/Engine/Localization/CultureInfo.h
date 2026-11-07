@@ -1,8 +1,8 @@
 /**
  * @file CultureInfo.h
- * @brief 문화권(culture) 데이터와 그 테이블(`*.cultures.xml`)을 정의합니다. 복수형 규칙, 숫자와 날짜 형식, 쓰기 방향, 폰트 대체 목록을 담습니다.
- * @details 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록은 데이터이고, 코드는 이름으로 고르는 복수형 규칙 표(`CultureInfo.cpp`)만 가진다.
- *          ICU 와 CLDR 를 들이지 않고 그 형식의 부분 집합을 따른다(패턴 기호는 y, M, d, H, h, m, s, a).
+ * @brief 문화권(culture) 데이터와 그 테이블(`*.cultures.xml`)을 정의합니다. 복수형 규칙, 숫자 체계, 통화, 숫자와 날짜 형식, 쓰기 방향, 폰트 대체 목록을 담습니다.
+ * @details 문화권의 모든 내용(복수형 · 서수 규칙 글, 숫자 글자, 통화 기호와 소수 자리, 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록)은 데이터다 — 언어 하나를 더하는 일은 표에 `<culture>` 한 장이다.
+ *          코드는 CLDR 형식의 부분 집합을 읽고 쓸 뿐이다(복수형 규칙 문법 `PluralRules.h`, 날짜 패턴 기호 y, M, d, H, h, m, s, a, z). ICU 는 들이지 않는다.
  */
 #pragma once
 #include "Core/Container/map.h"
@@ -10,9 +10,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Localization/CurrencyInfo.h"
+#include "Engine/Localization/PluralRules.h"
 
 namespace sw
 {
@@ -35,14 +38,6 @@ namespace sw
         Accented, ///< 악센트를 붙이고 길이를 늘리고 괄호로 감쌉니다. 잘림과 하드코딩 텍스트를 찾는 용도입니다(`qps-ploc`).
         Mirrored  ///< 위 처리에 더해 오른쪽에서 왼쪽 표시 문자로 감쌉니다. RTL 배치를 확인하는 용도입니다(`qps-plocm`).
     };
-
-    /** @brief 숫자를 어떤 숫자 글자로 쓰는지 정합니다(`digits`: `latn`, `arab`, `arabext`). */
-    enum class NumeralSystem : uint8
-    {
-        Latin = 0,
-        ArabicIndic,        ///< U+0660..U+0669(아랍어)
-        ExtendedArabicIndic ///< U+06F0..U+06F9(페르시아어 · 우르두어)
-    };
 } // namespace sw
 
 namespace sw
@@ -63,12 +58,6 @@ namespace sw
         /** @brief 소수 @p visibleFractionCount 자리로 보일 실수의 피연산자를 만듭니다. */
         static PluralOperands makeDecimal( float64 value, uint32 visibleFractionCount );
     };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 복수형 규칙 하나입니다. 데이터(`pluralRule` · `ordinalRule`)가 이름으로 고르며, 고를 수 있는 이름은 `CultureInfo.cpp` 의 규칙 표에 있는 것뿐입니다. */
-    using PluralRuleFunc = PluralCategory ( * )( const PluralOperands& operands );
 } // namespace sw
 
 namespace sw
@@ -99,30 +88,33 @@ namespace sw
      */
     struct SW_API CultureInfo
     {
-        string           _code;       ///< 원본 철자(`ko_kr`)
-        string           _parentCode; ///< 물려받는 문화권(없으면 빈 값)
-        string           _nativeName; ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
-        string           _pluralRuleName;
-        string           _ordinalRuleName;
-        string           _decimalSeparator;
-        string           _groupSeparator;
-        string           _percentPattern;  ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
-        string           _currencyCode;    ///< 이 문화권의 기본 통화(ISO 4217, `KRW`)입니다.
-        string           _currencyPattern; ///< `#` 위치에 숫자가, `¤` 위치에 통화 기호가 들어갑니다(`¤#`, `# ¤`).
-        string           _dateShort;
-        string           _dateMedium;
-        string           _dateLong;
-        string           _timeShort;
-        string           _timeMedium;
-        vector<string>   _listMonthName;         ///< 12 개이며 날짜 패턴의 `MMMM` 에 씁니다.
-        vector<string>   _listMonthAbbreviation; ///< 12 개이며 `MMM` 에 씁니다.
-        vector<string>   _listDayPeriod;         ///< 2 개(오전, 오후)이며 `a` 에 씁니다.
-        vector<string>   _listFont;              ///< 폰트 대체 목록입니다(패밀리 이름이며 앞이 우선). UI 폰트 렌더러가 읽습니다.
-        PluralRuleFunc   _pPluralRule;
-        PluralRuleFunc   _pOrdinalRule;
-        NumeralSystem    _numeralSystem;
-        PseudoLocaleMode _pseudoMode;
-        uint8            _bRightToLeft : 1;
+        /** @brief 숫자 글자 수입니다(0 ~ 9). */
+        static constexpr uint32 kDigitCount = 10;
+
+        string                                 _code;            ///< 원본 철자(`ko_kr`)
+        string                                 _parentCode;      ///< 물려받는 문화권(없으면 빈 값)
+        string                                 _nativeName;      ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
+        string                                 _numberingSystem; ///< 숫자 체계 id(`latn` · `arab` — 표의 `<numberingSystems>`)
+        string                                 _decimalSeparator;
+        string                                 _groupSeparator;
+        string                                 _percentPattern;  ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
+        string                                 _currencyCode;    ///< 이 문화권의 기본 통화(ISO 4217, `KRW`)입니다.
+        string                                 _currencyPattern; ///< `#` 위치에 숫자가, `¤` 위치에 통화 기호가 들어갑니다(`¤#`, `# ¤`).
+        string                                 _dateShort;
+        string                                 _dateMedium;
+        string                                 _dateLong;
+        string                                 _timeShort;
+        string                                 _timeMedium;
+        vector<string>                         _listMonthName;         ///< 12 개이며 날짜 패턴의 `MMMM` 에 씁니다.
+        vector<string>                         _listMonthAbbreviation; ///< 12 개이며 `MMM` 에 씁니다.
+        vector<string>                         _listDayPeriod;         ///< 2 개(오전, 오후)이며 `a` 에 씁니다.
+        vector<string>                         _listFont;              ///< 폰트 대체 목록입니다(패밀리 이름이며 앞이 우선). UI 폰트 렌더러가 읽습니다.
+        vector<string>                         _listDigit;             ///< 숫자 체계의 글자 0 ~ 9(10 개, UTF-8 한 글자씩)
+        PluralRuleSet                          _pluralRules;           ///< 복수형(`plural`) 규칙(`<pluralRules>`)
+        PluralRuleSet                          _ordinalRules;          ///< 서수(`selectordinal`) 규칙(`<ordinalRules>`)
+        shared_ptr<const vector<CurrencyInfo>> _pCurrencyList;         ///< 표의 통화 목록(`<currencies>`). 표가 문화권을 읽을 때 걸어 준다
+        PseudoLocaleMode                       _pseudoMode;
+        uint8                                  _bRightToLeft : 1;
 
         CultureInfo();
 
@@ -145,9 +137,11 @@ namespace sw
         string formatPercent( float64 ratio ) const;
         /**
          * @brief 금액을 통화 패턴으로 씁니다. 소수 자리는 통화가 정합니다(KRW · JPY 0, USD · EUR 2).
-         * @param currencyCode ISO 4217 코드이며 비우면 이 문화권의 기본 통화입니다. 모르는 코드는 기호 자리에 코드를 쓰고 소수 2 자리입니다.
+         * @param currencyCode ISO 4217 코드이며 비우면 이 문화권의 기본 통화입니다. 표에 없는 코드는 기호 자리에 코드를 쓰고 소수 2 자리입니다(ICU 가 모르는 통화를 쓰는 방식).
          */
         string formatCurrency( float64 amount, string_view currencyCode ) const;
+        /** @brief 표의 통화입니다(대소문자 구분). 없으면 nullptr 입니다. */
+        const CurrencyInfo* findCurrency( string_view code ) const;
         /** @brief 날짜와 시각을 CLDR 패턴(`y`, `M`, `d`, `H`, `h`, `m`, `s`, `a`, 작은따옴표 텍스트)으로 씁니다. */
         string formatDateTime( const TextDateTime& value, string_view pattern ) const;
         /** @brief `short`, `medium`, `long` 날짜 패턴입니다. 모르는 이름이면 빈 값입니다. */
@@ -170,7 +164,21 @@ namespace sw
     /**
      * @class CultureTable
      * @brief 문화권 테이블(`*.cultures.xml`)입니다. 부모를 따라 필드를 물려받고, 지역이 붙은 코드(`ko_kr`)는 없으면 언어(`ko`)로 찾습니다.
-     * @details 모르는 필드, 모르는 복수형 규칙, 없는 부모, 부모 순환은 로드 오류다. 형식은 `<CultureTable><cultures><culture code="ko" parent="" nativeName="한국어" pluralRule="other" …><monthNames><item>1월</item>…</monthNames></culture></cultures></CultureTable>` 이다(패턴은 `<datePatterns short="…" medium="…" long="…" />`).
+     * @details 형식(CLDR 의 numberingSystems · currencyData · plurals 를 한 파일에 모은 모양):
+     * @code
+     *     <CultureTable>
+     *         <numberingSystems><numberingSystem id="latn" digits="0123456789"/><numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩"/></numberingSystems>
+     *         <currencies><currency code="KRW" symbol="₩" digits="0"/></currencies>
+     *         <cultures>
+     *             <culture code="ru" nativeName="Русский" digits="latn" …>
+     *                 <pluralRules one="v = 0 and i % 10 = 1 and i % 100 != 11" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14" many="…"/>
+     *                 <monthNames><item>…</item></monthNames>
+     *             </culture>
+     *         </cultures>
+     *     </CultureTable>
+     * @endcode
+     *          부모가 없는 문화권은 `<pluralRules>`(비어 있으면 모든 수가 other)와 `digits` 가 꼭 있어야 한다. 모르는 필드 · 범주 · 숫자 체계, 틀린 규칙 글, 글자가 10 개가 아닌 숫자 체계,
+     *          겹친 id · 코드, 없는 부모, 부모 순환은 로드 오류이고 표는 그대로 남는다. 숫자 체계와 통화는 앞서 읽은 파일의 것도 쓰고, 같은 id 는 바꾼다.
      */
     class SW_API CultureTable
     {
@@ -202,10 +210,14 @@ namespace sw
         void collectCultureCodes( vector<string>& outListCode ) const;
         /** @brief 문화권 수입니다. */
         size_t getCultureCount() const { return _mapCulture.size(); }
+        /** @brief 표의 통화입니다(대소문자 구분). 없으면 nullptr 입니다. */
+        const CurrencyInfo* findCurrency( string_view code ) const;
         /** @brief 비웁니다. */
-        void clear() { _mapCulture.clear(); }
+        void clear();
 
     private:
-        map<string, CultureInfo> _mapCulture;
+        map<string, CultureInfo>               _mapCulture;
+        map<string, vector<string>>            _mapNumberingSystem; ///< 숫자 체계 id → 글자 0 ~ 9
+        shared_ptr<const vector<CurrencyInfo>> _pCurrencyList;      ///< 문화권이 나눠 든다(읽을 때마다 새 목록으로 바꿔 건다)
     };
 } // namespace sw
