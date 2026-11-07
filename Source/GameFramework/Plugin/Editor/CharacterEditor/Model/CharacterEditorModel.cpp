@@ -5,9 +5,11 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -557,10 +559,11 @@ namespace sw::editor
         _bClipNamesLoaded = SW_TRUE;
         if ( _paths._animationSet.empty() )
             return;
-        AnimationSet animationSet;
-        if ( animationSet.loadFromAsset( AssetID{ string_view( _paths._animationSet.c_str() ) } ) == false )
-            return;                                                        // 셋이 까닭을 남겼다
-        for ( const AnimationSetEntry& entry : animationSet.getEntries() ) // 표는 이름순이다
+        // 런타임과 같은 공유 캐시의 한 벌을 읽는다(사본을 읽지 않는다).
+        const shared_ptr<const AnimationSet> pAnimationSet = SharedAssetCache<AnimationSet>::acquire( string_view( _paths._animationSet.c_str() ) );
+        if ( pAnimationSet == nullptr )
+            return;                                                          // 셋이 까닭을 남겼다
+        for ( const AnimationSetEntry& entry : pAnimationSet->getEntries() ) // 표는 이름순이다
         {
             _listClipName.push_back( hashed_string( string_view{ entry._name } ) );
         }

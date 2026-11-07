@@ -93,6 +93,7 @@ namespace sw
     class SW_GF_API BehaviorTreeAsset : public XMLCatalog<BehaviorTreeAsset>
     {
         friend class XMLCatalog<BehaviorTreeAsset>;
+        friend struct AssetTypeLoader;
 
     public:
         /**
@@ -105,8 +106,6 @@ namespace sw
 
         BehaviorTreeAsset();
 
-        /** @brief 리소스 경로의 트리를 읽습니다. `_base` 를 펼치고 하위 트리를 읽을 때 부모와 하위 파일을 리소스에서 찾습니다. 없으면 false 입니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 글을 읽습니다. 부모와 하위 파일은 리소스에서 찾습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 글을 읽습니다. 부모와 하위 파일을 @p source 에서 찾습니다(테스트 · 도구). */
@@ -117,7 +116,13 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "BehaviorTree"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+
+        /**
+         * @brief 리소스 경로의 트리를 읽습니다. `_base` 를 펼치고 하위 트리를 읽을 때 부모와 하위 파일을 리소스에서 찾습니다. 없으면 false 입니다.
+         * @details 베이스(`XMLCatalog`)의 보호된 읽기를 가리는 자기 읽기라 공개하면 사본을 읽는 길이 다시 열린다 — 종류의 로더(공유 캐시)만 부른다.
+         */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        uint32             loadRoot( const XMLNode& root, string_view sourceName );
 
     private:
         BehaviorTree            _tree;

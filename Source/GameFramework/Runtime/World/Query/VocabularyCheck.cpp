@@ -9,6 +9,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -50,14 +51,14 @@ namespace sw
                 world.set<GameFlagsWriteSlot>( &flags );
 
                 // 1) 행동 트리: 경보가 꺼져 있으면 켠다.
-                BehaviorTreeAsset tree;
-                if ( tree.loadFromAsset( AssetID{ folder + "/guard.bt.xml" } ) == false )
+                const shared_ptr<const BehaviorTreeAsset> pTree = SharedAssetCache<BehaviorTreeAsset>::acquire( folder + "/guard.bt.xml" );
+                if ( pTree == nullptr )
                 {
                     outReply = "the behavior tree could not be read (see the log)";
                     return false;
                 }
                 BehaviorTreeRunner runner;
-                runner.initialize( &tree.getTree() );
+                runner.initialize( &pTree->getTree() );
                 runner.setGameplayContext( world );
                 Blackboard blackboard;
                 (void)runner.tick( blackboard, nullptr, 0.0f ); // 결과는 플래그로 본다
