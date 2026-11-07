@@ -167,3 +167,34 @@ SW_TEST_CASE( ConditionExprTest, CallsInOneExpressionRollApart )
     SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
     SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
 }
+
+/** @brief [ConditionExprTest] 동작 추적: 꺼져 있으면 남지 않고, 켜면 이름 · 결과 · 시작 표시가 고정 용량 고리에 남는다(넘으면 오래된 것이 밀린다) */
+SW_TEST_CASE( ConditionExprTest, ActionTraceRecordsCalls )
+{
+    TestValues    values;
+    ActionContext context;
+    context._world.set<TestValuesSlot>( &values );
+    GameActionCall call;
+    SW_REQUIRE_TRUE( GameActionCall::compileText( "test.count", "test", call ) );
+
+    ActionTrace::setEnabled( false );
+    ActionTrace::clear();
+    (void)call.invoke( context );
+    vector<ActionTraceEntry> listEntry;
+    ActionTrace::collect( listEntry );
+    SW_EXPECT_TRUE( listEntry.empty() );
+
+    ActionTrace::setEnabled( true );
+    for ( uint32 index = 0; index < ActionTrace::kCapacity + 3; ++index )
+    {
+        (void)call.invoke( context );
+    }
+    ActionTrace::setEnabled( false );
+    ActionTrace::collect( listEntry );
+    SW_REQUIRE_EQUAL( size_t( ActionTrace::kCapacity ), listEntry.size() );
+    SW_EXPECT_EQUAL( string( "test.count" ), string( listEntry.back()._arrName ) );
+    SW_EXPECT_TRUE( listEntry.back()._result == ActionResult::Succeeded );
+    SW_EXPECT_EQUAL( uint64( ActionTrace::kCapacity + 3 ), listEntry.back()._sequence );
+    SW_EXPECT_EQUAL( uint64( 4 ), listEntry.front()._sequence );
+    ActionTrace::clear();
+}

@@ -2,11 +2,15 @@
 
 #include "Engine/Gameplay/ActionRegistry.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"
 
 namespace sw
@@ -187,6 +191,130 @@ namespace sw
 
     ActionResult GameActionCall::invoke( ActionContext& context ) const
     {
-        return _pEntry != nullptr ? _pEntry->_function( context, _pParams.get() ) : ActionResult::Failed;
+        if ( _pEntry == nullptr )
+            return ActionResult::Failed;
+        const ActionResult result = _pEntry->_function( context, _pParams.get() );
+        if ( ActionTrace::isEnabled() )
+            ActionTrace::record( *_pEntry, context, result );
+        return result;
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct ActionTraceInternal
+        {
+            static constexpr uint32 kSectionLines = 24; ///< 섹션 하나가 쓰는 줄의 상한
+
+            struct TraceState
+            {
+                mutex            _mutex{};
+                ActionTraceEntry _arrEntry[ActionTrace::kCapacity] SW_GUARDED_BY( _mutex ){};
+                uint64 _count    SW_GUARDED_BY( _mutex ){ 0 };
+                atomic<bool>     _bEnabled{ false };
+            };
+
+            static TraceState& getState()
+            {
+                static TraceState s_state;
+                return s_state;
+            }
+
+            /** @brief `action.trace on|off|clear` — 범용 Action 추적(HUD 섹션 `action`). */
+            static bool runTrace( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                if ( listArgument[0] == "clear" )
+                {
+                    ActionTrace::clear();
+                    outReply = "action.trace cleared";
+                    return true;
+                }
+                bool bEnabled = false;
+                if ( StringUtil::tryParseBool( listArgument[0], bEnabled ) == false )
+                    return false;
+                ActionTrace::setEnabled( bEnabled );
+                outReply = bEnabled ? "action.trace on" : "action.trace off";
+                return true;
+            }
+
+            /** @brief HUD 섹션 `action` — 최근 동작 호출(늦은 것부터): 이름 · 결과 · 시작/중단. */
+            static void writeSection( DebugHUDSectionWriter& writer )
+            {
+                if ( ActionTrace::isEnabled() == false )
+                {
+                    writer.addLine( "trace", "off (action.trace on)" );
+                    return;
+                }
+                vector<ActionTraceEntry> listEntry;
+                ActionTrace::collect( listEntry );
+                if ( listEntry.empty() )
+                    writer.addLine( "trace", "on, no call yet" );
+                uint32 lineCount = 0;
+                for ( auto it = listEntry.rbegin(); it != listEntry.rend() && lineCount < kSectionLines; ++it, ++lineCount )
+                {
+                    string value = string( it->_arrName ) + " " + getEnumName( it->_result );
+                    if ( it->_bAborted == SW_TRUE )
+                        value += " (aborted)";
+                    else if ( it->_bJustStarted == SW_TRUE )
+                        value += " (started)";
+                    writer.addLine( "#" + to_string( it->_sequence ), value );
+                }
+            }
+        };
+    } // namespace
+
+    void ActionTrace::setEnabled( bool bEnabled )
+    {
+        ActionTraceInternal::getState()._bEnabled.store( bEnabled, std::memory_order_relaxed );
+    }
+
+    bool ActionTrace::isEnabled()
+    {
+        return ActionTraceInternal::getState()._bEnabled.load( std::memory_order_relaxed );
+    }
+
+    void ActionTrace::record( const ActionEntry& entry, const ActionContext& context, ActionResult result )
+    {
+        ActionTraceInternal::TraceState& state = ActionTraceInternal::getState();
+        ScopedLock<mutex>                lock{ state._mutex };
+        ActionTraceEntry&                slot = state._arrEntry[state._count % kCapacity];
+        slot                                  = ActionTraceEntry{};
+        const string_view name                = entry._pName != nullptr ? string_view( entry._pName ) : string_view{};
+        const size_t      length              = name.size() < ActionTraceEntry::kNameCapacity - 1 ? name.size() : ActionTraceEntry::kNameCapacity - 1;
+        for ( size_t index = 0; index < length; ++index )
+        {
+            slot._arrName[index] = name[index];
+        }
+        slot._sequence     = ++state._count;
+        slot._result       = result;
+        slot._bJustStarted = context._bJustStarted;
+        slot._bAborted     = context._bAborted;
+    }
+
+    void ActionTrace::collect( vector<ActionTraceEntry>& outListEntry )
+    {
+        outListEntry.clear();
+        ActionTraceInternal::TraceState& state = ActionTraceInternal::getState();
+        ScopedLock<mutex>                lock{ state._mutex };
+        const uint64                     count = state._count < kCapacity ? state._count : kCapacity;
+        for ( uint64 index = state._count - count; index < state._count; ++index )
+        {
+            outListEntry.push_back( state._arrEntry[index % kCapacity] );
+        }
+    }
+
+    void ActionTrace::clear()
+    {
+        ActionTraceInternal::TraceState& state = ActionTraceInternal::getState();
+        ScopedLock<mutex>                lock{ state._mutex };
+        state._count = 0;
+    }
+
+    SW_DEV_COMMAND( ActionTraceCommand, "action.trace", "action.trace on|off|clear",
+                    "Record every game action call (dialogue, schedule, reward, behavior tree) for the action debugger (hud.print action)", &ActionTraceInternal::runTrace );
+    SW_DEBUG_HUD_SECTION( action, "action", "Action calls", 260, DebugHUDSectionFlag::kNone, &ActionTraceInternal::writeSection );
 } // namespace sw

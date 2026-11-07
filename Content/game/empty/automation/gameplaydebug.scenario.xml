@@ -9,6 +9,8 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/gimmickshowcase.scene.xml"/>
 	<Wait frames="30"/>
 	<DevCommand line="debug.target clear"/>
+	<!-- 범용 Action 추적: 켜 두고 끝에서 본다(이 무대가 동작을 부르지 않으면 "on, no call yet" — 섹션은 그래도 돈다) -->
+	<DevCommand line="action.trace on"/>
 	<!-- 기믹: 스텝 번호, 노드마다 켜진 출력 · 입력 포트, 최근 출력 전이 -->
 	<DevCommand line="hud.print gimmick"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[gimmick] step: " atLeast="1"/>
@@ -28,5 +30,10 @@
 	<DevCommand line="hud.print movement"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[movement] target: " atLeast="1"/>
 	<DevCommand line="movement.history off"/>
+	<DevCommand line="hud.print action"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[action] " atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[action] trace: off" count="0"/>
+	<DevCommand line="action.trace off"/>
+	<DevCommand line="action.trace clear"/>
 	<Pass/>
 </Scenario>
