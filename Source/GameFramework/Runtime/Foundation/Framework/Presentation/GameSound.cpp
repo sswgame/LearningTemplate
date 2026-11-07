@@ -64,6 +64,13 @@ namespace sw
         IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
         return pPlayer != nullptr ? pPlayer->postEventAt( eventName, position ) : 0;
     }
+
+    void GameSound::setObjectParameter( const GameObject& object, const hashed_string& name, float32 value )
+    {
+        IGameSoundPlayer* pPlayer = IGameSoundPlayer::find();
+        if ( pPlayer != nullptr )
+            pPlayer->setObjectParameter( object, name, value );
+    }
 } // namespace sw
 
 namespace sw

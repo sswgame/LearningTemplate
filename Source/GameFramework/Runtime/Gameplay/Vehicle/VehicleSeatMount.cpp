@@ -157,7 +157,9 @@ namespace sw
             (void)pRider->addComponent<RiderDownWatcherComponent>();
 
         pRider->setKeptWhenParentDestroyed( true ); // 소켓으로 붙어도 탈것의 일부가 아니다 — 탈것이 사라지면 내린다
-        seat._occupant = pRider->getHandle();
+        seat._occupant        = pRider->getHandle();
+        seat._seatInVehicle   = socketInVehicle; // 탑승 가속감의 기울임이 이 위에 얹힌다
+        seat._rideSampleCount = 0;
         if ( seat.isDriverSeat() )
         {
             seat._occupantController        = TComponentHandle<ControllerComponent>{ pController };

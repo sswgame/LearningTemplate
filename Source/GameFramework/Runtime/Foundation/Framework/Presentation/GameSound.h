@@ -46,6 +46,11 @@ namespace sw
          * @details 한 번 쓰는 에미터를 만들어 그 위치에 두고, 소리가 끝나면 엔진이 지운다.
          */
         static GameSoundPlayingID postEventAt( const hashed_string& eventName, const float3& position );
+        /**
+         * @brief @p object 에 붙은 소리 자리(에미터) 모두에 파라미터 값을 겁니다. 반복 소리(탈것의 바람 · 마찰음)를 게임 값으로 움직입니다(언리얼 `SetFloatParameter` · Wwise RTPC 의 게임 오브젝트 범위).
+         * @details 게임 스레드에서 부른다. 창구가 없으면(전용 서버 · 헤드리스) 아무것도 하지 않는다.
+         */
+        static void setObjectParameter( const GameObject& object, const hashed_string& name, float32 value );
     };
 } // namespace sw
 

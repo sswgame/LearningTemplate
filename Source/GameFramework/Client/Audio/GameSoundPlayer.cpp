@@ -4,7 +4,9 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IGameSoundPlayer.h"
@@ -68,6 +70,12 @@ namespace sw
                 const AudioPlayingID playingID = pEngine->postEvent( eventName, emitterID );
                 pEngine->removeEmitter( emitterID );
                 return playingID;
+            }
+
+            void setObjectParameter( const GameObject& object, const hashed_string& name, float32 value ) override
+            {
+                object.forEachComponentOfType<AudioEmitterComponent>( [&name, value]( AudioEmitterComponent* pEmitter )
+                { pEmitter->setParameter( name, value ); } );
             }
 
         private:

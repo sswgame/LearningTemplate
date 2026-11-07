@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    class GameObject;
+
     /** @brief 재생 하나의 번호입니다(오디오 엔진의 재생 id 와 같은 값). 내지 않았으면 0 입니다. */
     using GameSoundPlayingID = uint64;
 
@@ -33,6 +35,8 @@ namespace sw
         virtual void               unloadEvents( string_view path )                                      = 0;
         virtual GameSoundPlayingID postEvent( const hashed_string& eventName )                           = 0;
         virtual GameSoundPlayingID postEventAt( const hashed_string& eventName, const float3& position ) = 0;
+        /** @brief @p object 의 소리 자리(에미터) 모두에 이 파라미터 값을 겁니다. 반복 소리(바람 · 마찰 · 엔진)의 크기 · 음높이를 게임 값이 움직입니다. */
+        virtual void setObjectParameter( const GameObject& object, const hashed_string& name, float32 value ) = 0;
 
         /** @brief 등록된 창구입니다. 클라이언트 전용 소스가 없으면(전용 서버) nullptr 입니다. */
         [[nodiscard]] static IGameSoundPlayer* find();

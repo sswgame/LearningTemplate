@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Character/Socket/SocketBindingComponent.h"
@@ -243,4 +244,49 @@ SW_TEST_CASE( MountMovementTest, InputAmountPicksTheGait )
     SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.7f, false ) == MountGait::Trot );
     SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 1.0f, false ) == MountGait::Canter );
     SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.7f, true ) == MountGait::Gallop );
+}
+
+/** @brief [VehicleSeatTest] 탑승 가속감 곡선: 가속도를 거슬러 기운다(급정거 → 앞, 가속 → 뒤, 오른쪽 가속 → 왼쪽), 최대 기울기에서 자른다 */
+SW_TEST_CASE( VehicleSeatTest, RideFeelLeansAgainstTheAcceleration )
+{
+    RideFeelSettings feel;
+    feel._leanPerAcceleration = 0.02f;
+    feel._maxLean             = 0.3f;
+    const float2 braking      = feel.computeLean( float3{ 0.0f, 0.0f, -10.0f } );
+    SW_EXPECT_NEAR( 0.2f, braking._x, 1e-5f ); // 앞으로 숙인다
+    SW_EXPECT_NEAR( 0.0f, braking._y, 1e-5f );
+    SW_EXPECT_NEAR( -0.2f, feel.computeLean( float3{ 0.0f, 0.0f, 10.0f } )._x, 1e-5f );  // 가속은 뒤로
+    SW_EXPECT_NEAR( 0.2f, feel.computeLean( float3{ 10.0f, 0.0f, 0.0f } )._y, 1e-5f );   // 오른쪽으로 돌면 왼쪽으로
+    SW_EXPECT_NEAR( 0.3f, feel.computeLean( float3{ 0.0f, 0.0f, -100.0f } )._x, 1e-5f ); // 자른다
+}
+
+/** @brief [VehicleSeatTest] 좌석이 탈것의 급정거를 재어(앞 가속 −) 탑승자를 앞으로 기울이고, 내리면 잰 값을 비운다 */
+SW_TEST_CASE( VehicleSeatTest, SeatMeasuresBrakingAndLeansTheRiderForward )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    constexpr float32 kStep    = 1.0f / 60.0f;
+    float32           position = 0.0f;
+    float32           speed    = 10.0f;
+    for ( int32 stepIndex = 0; stepIndex < 30; ++stepIndex ) // 10 m/s 로 +Z 를 달린다
+    {
+        position += speed * kStep;
+        rig._pVehicleRoot->setLocalPosition( float3{ 0.0f, 0.0f, position } );
+        rig.tick();
+    }
+    SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration()._z, 0.5f );
+    for ( int32 stepIndex = 0; stepIndex < 24; ++stepIndex ) // −20 m/s² 로 선다
+    {
+        speed = MathUtil::max( 0.0f, speed - 20.0f * kStep );
+        position += speed * kStep;
+        rig._pVehicleRoot->setLocalPosition( float3{ 0.0f, 0.0f, position } );
+        rig.tick();
+    }
+    SW_EXPECT_TRUE( rig._pSeat->getRideAcceleration()._z < -15.0f );
+    SW_EXPECT_TRUE( rig._pSeat->getRiderLean()._x > 0.2f ); // 앞으로
+    SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRiderLean()._y, 1e-3f );
+
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
+    rig.tick();
+    SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration()._z, 1e-6f );
 }
