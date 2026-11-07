@@ -1603,8 +1603,14 @@ namespace sw
             if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
             {
                 const string cachePath = getVulkanPipelineCachePath();
-                if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
-                     FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                // 새 파이프라인이 없던 실행은 같은 바이트다 — 다시 쓰지 않는다. 드라이버가 같은 내용에 다른 바이트를 내면 지금처럼 쓴다.
+                vector<uint8> listSavedData;
+                const bool    bUnchanged = FileUtil::exists( cachePath ) && FileUtil::readFile( cachePath, listSavedData ) && listSavedData.size() == dataSize &&
+                                        Memory::compare( listSavedData.data(), listCacheData.data(), dataSize ) == 0;
+                if ( bUnchanged )
+                    SW_LOG_INFO_ID( "Vulkan.PipelineCacheUnchanged", "Pipeline cache unchanged (%# bytes) - not saved.", static_cast<uint32>( dataSize ) );
+                else if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
+                          FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
                     SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
