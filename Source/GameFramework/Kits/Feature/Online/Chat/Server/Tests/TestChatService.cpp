@@ -175,11 +175,11 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        ChatResult join( AccountID accountID, string_view channelID = kWorld )
+        ChatOutcome join( AccountID accountID, string_view channelID = kWorld )
         {
             const uint64 tag = _nextTag++;
             _service.joinChannel( accountID, channelID, UnixMilliseconds{ kNowMs }, tag );
-            return take( tag )._reply._result;
+            return take( tag )._result;
         }
 
         ChatCompletion send( AccountID accountID, string_view text, string_view channelID = kWorld, int64 nowMs = kNowMs )
@@ -203,7 +203,7 @@ namespace
             return take( tag );
         }
 
-        ChatResult report( AccountID accountID, const ChatMessage& message, string_view reason = "abuse", int64 nowMs = kNowMs )
+        ChatOutcome report( AccountID accountID, const ChatMessage& message, string_view reason = "abuse", int64 nowMs = kNowMs )
         {
             ChatReportRequest request;
             request._channelID = message._channelID;
@@ -213,7 +213,7 @@ namespace
             request._sequence  = message._sequence;
             const uint64 tag   = _nextTag++;
             _service.reportMessage( accountID, request, UnixMilliseconds{ nowMs }, tag );
-            return take( tag )._reply._result;
+            return take( tag )._result;
         }
 
         vector<ChatDelivery> takeDeliveries()
@@ -275,8 +275,8 @@ SW_TEST_CASE( ChatServiceTest, JoinAndLeaveRules )
     MemoryServiceDatabase database;
     ChatFixture           rig( database, nullptr, kServerA );
 
-    SW_EXPECT_TRUE( rig.join( kAlice, "Bad Channel" ) == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.join( kAlice, "nope.kr" ) == ChatResult::Invalid );
+    SW_EXPECT_TRUE( rig.join( kAlice, "Bad Channel" ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.join( kAlice, "nope.kr" ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.join( kAlice, "guild.1" ) == ChatResult::NotJoinable );
     SW_EXPECT_TRUE( rig.join( kAlice, "party.1" ) == ChatResult::NotJoinable );
     SW_EXPECT_TRUE( rig.join( 99 ) == ChatResult::TargetOffline );
@@ -290,12 +290,12 @@ SW_TEST_CASE( ChatServiceTest, JoinAndLeaveRules )
         SW_REQUIRE_TRUE( rig.join( kAlice, "custom.room" + to_string( index ) ) == ChatResult::Ok );
     }
     SW_EXPECT_TRUE( rig.join( kAlice, "custom.over" ) == ChatResult::TooManyChannels );
-    SW_EXPECT_TRUE( rig._service.addMember( kAlice, "whisper.x", UnixMilliseconds{ kNowMs } ) == ChatResult::Invalid ); // 서버 시스템도 귓속말 채널은 못 넣는다
+    SW_EXPECT_TRUE( rig._service.addMember( kAlice, "whisper.x", UnixMilliseconds{ kNowMs } ).hasError( OnlineError::kInvalidRequest ) ); // 서버 시스템도 귓속말 채널은 못 넣는다
 
     rig._service.leaveChannel( kAlice, "guild.1", 50 );
-    SW_EXPECT_TRUE( rig.take( 50 )._reply._result == ChatResult::NotJoinable );
+    SW_EXPECT_TRUE( rig.take( 50 )._result == ChatResult::NotJoinable );
     rig._service.leaveChannel( kAlice, kWorld, 51 );
-    SW_EXPECT_TRUE( rig.take( 51 )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.take( 51 )._result == ChatResult::Ok );
     SW_EXPECT_EQUAL( 0, rig._service.getLocalMemberCount( kWorld ) );
     SW_EXPECT_TRUE( rig.join( kAlice, "custom.over" ) == ChatResult::Ok );
 }
@@ -309,24 +309,24 @@ SW_TEST_CASE( ChatServiceTest, SendDeliversToMembers )
     SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
 
     const ChatCompletion sent = rig.send( kAlice, "hello" );
-    SW_EXPECT_TRUE( sent._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( sent._result == ChatResult::Ok );
     SW_EXPECT_EQUAL( ChatMethod::Send::kID, sent._method );
-    SW_EXPECT_EQUAL( string( "hello" ), sent._reply._message._text );
-    SW_EXPECT_EQUAL( string( "user11" ), sent._reply._message._senderName );
-    SW_EXPECT_EQUAL( kNowMs, sent._reply._message._sentMs );
-    SW_EXPECT_EQUAL( kServerA, sent._reply._message._serverID );
-    SW_EXPECT_TRUE( sent._reply._message._kind == ChatChannelKind::World );
+    SW_EXPECT_EQUAL( string( "hello" ), sent._message._text );
+    SW_EXPECT_EQUAL( string( "user11" ), sent._message._senderName );
+    SW_EXPECT_EQUAL( kNowMs, sent._message._sentMs );
+    SW_EXPECT_EQUAL( kServerA, sent._message._serverID );
+    SW_EXPECT_TRUE( sent._message._kind == ChatChannelKind::World );
 
     const vector<ChatDelivery> listDelivery = rig.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 2 ), listDelivery.size() ); // 보낸 사람도 받는다 — 다른 창이 같은 채널을 볼 수 있다
     SW_EXPECT_EQUAL( string( "hello" ), listDelivery[1]._message._text );
 
-    SW_EXPECT_TRUE( rig.send( kCarol, "x" )._reply._result == ChatResult::NotMember );
-    SW_EXPECT_TRUE( rig.send( 99, "x" )._reply._result == ChatResult::NotMember );
-    SW_EXPECT_TRUE( rig.send( kAlice, "x", "custom.none" )._reply._result == ChatResult::NotMember );
-    SW_EXPECT_TRUE( rig.send( kAlice, "" )._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.send( kAlice, string( static_cast<size_t>( ChatLimit::kMaxTextSize ) + 1, 'x' ) )._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.send( kAlice, "bad\xFF" )._reply._result == ChatResult::Invalid );
+    SW_EXPECT_TRUE( rig.send( kCarol, "x" )._result == ChatResult::NotMember );
+    SW_EXPECT_TRUE( rig.send( 99, "x" )._result == ChatResult::NotMember );
+    SW_EXPECT_TRUE( rig.send( kAlice, "x", "custom.none" )._result == ChatResult::NotMember );
+    SW_EXPECT_TRUE( rig.send( kAlice, "" )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.send( kAlice, string( static_cast<size_t>( ChatLimit::kMaxTextSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.send( kAlice, "bad\xFF" )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.takeDeliveries().empty() );
 }
 
@@ -339,15 +339,15 @@ SW_TEST_CASE( ChatServiceTest, MuteBlocksSending )
     SW_EXPECT_TRUE( rig._service.addMember( kAlice, kWorld, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok );
 
     const ChatCompletion muted = rig.send( kAlice, "hi" );
-    SW_EXPECT_TRUE( muted._reply._result == ChatResult::Muted );
-    SW_EXPECT_EQUAL( int64( 5000 ), muted._reply._retryAfterMs );
+    SW_EXPECT_TRUE( muted._result == ChatResult::Muted );
+    SW_EXPECT_EQUAL( int64( 5000 ), muted._retryAfterMs );
     SW_EXPECT_TRUE( rig.takeDeliveries().empty() );
-    SW_EXPECT_TRUE( rig.send( kAlice, "hi", kWorld, kNowMs + 5000 )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.send( kAlice, "hi", kWorld, kNowMs + 5000 )._result == ChatResult::Ok );
 
     ChatTestUtil::muteUntil( database, kAlice, kNowMs + 90000 );
-    SW_EXPECT_TRUE( rig.send( kAlice, "again", kWorld, kNowMs + 5001 )._reply._result == ChatResult::Ok ); // 캐시가 아직 살아 있다
+    SW_EXPECT_TRUE( rig.send( kAlice, "again", kWorld, kNowMs + 5001 )._result == ChatResult::Ok ); // 캐시가 아직 살아 있다
     rig._service.refreshSanction( kAlice );
-    SW_EXPECT_TRUE( rig.send( kAlice, "after", kWorld, kNowMs + 5002 )._reply._result == ChatResult::Muted );
+    SW_EXPECT_TRUE( rig.send( kAlice, "after", kWorld, kNowMs + 5002 )._result == ChatResult::Muted );
 }
 
 /** @brief [ChatServiceTest] 제재를 읽는 도중 GM 이 바꾸면 그 읽기(이전 값)를 믿지 않고 다시 읽는다 — 금지 직후 말이 새지 않는다 */
@@ -360,7 +360,7 @@ SW_TEST_CASE( ChatServiceTest, RefreshDuringSanctionReadReadsAgain )
 
     ChatTestUtil::muteUntil( database, kAlice, kNowMs + 5000 );
     rig._service.refreshSanction( kAlice );
-    SW_EXPECT_TRUE( rig.take( 7 )._reply._result == ChatResult::Muted );
+    SW_EXPECT_TRUE( rig.take( 7 )._result == ChatResult::Muted );
     SW_EXPECT_TRUE( rig.takeDeliveries().empty() );
 }
 
@@ -379,8 +379,8 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
     rig._service.takeCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 1 ), listCompletion.size() );
     SW_EXPECT_EQUAL( uint64( 3 ), listCompletion[0]._requestTag );
-    SW_EXPECT_TRUE( listCompletion[0]._reply._result == ChatResult::RateLimited );
-    SW_EXPECT_EQUAL( settings._pendingSendRetryAfterMs, listCompletion[0]._reply._retryAfterMs );
+    SW_EXPECT_TRUE( listCompletion[0]._result == ChatResult::RateLimited );
+    SW_EXPECT_EQUAL( settings._pendingSendRetryAfterMs, listCompletion[0]._retryAfterMs );
     rig.pump();
     listCompletion.clear();
     rig._service.takeCompletions( listCompletion );
@@ -389,12 +389,12 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
     database.armFault( ServiceStoreFault::RejectRead );
     SW_EXPECT_TRUE( rig._service.addMember( kBob, kWorld, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok ); // 읽기가 진다
     rig._service.sendMessage( kBob, kWorld, "x", UnixMilliseconds{ kNowMs }, 4 );
-    SW_EXPECT_TRUE( rig.take( 4 )._reply._result == ChatResult::Unavailable ); // 막을 수 있는지 모르면 내보내지 않는다
+    SW_EXPECT_TRUE( rig.take( 4 )._result.hasError( OnlineError::kUnavailable ) ); // 막을 수 있는지 모르면 내보내지 않는다
 
     SW_EXPECT_TRUE( rig._service.addMember( kCarol, kWorld, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok );
     rig._service.sendMessage( kCarol, kWorld, "y", UnixMilliseconds{ kNowMs }, 5 );
     rig._service.removeAccount( kCarol );
-    SW_EXPECT_TRUE( rig.take( 5 )._reply._result == ChatResult::Unavailable );
+    SW_EXPECT_TRUE( rig.take( 5 )._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 2, rig._service.getLocalMemberCount( kWorld ) );
 }
 
@@ -414,21 +414,21 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 
     const ChatCompletion masked = rig.send( kAlice, "a badword b" );
-    SW_EXPECT_TRUE( masked._reply._result == ChatResult::Ok );
-    SW_EXPECT_EQUAL( string( "a ******* b" ), masked._reply._message._text );
+    SW_EXPECT_TRUE( masked._result == ChatResult::Ok );
+    SW_EXPECT_EQUAL( string( "a ******* b" ), masked._message._text );
 
-    SW_EXPECT_TRUE( rig.send( kAlice, "one" )._reply._result == ChatResult::Ok );
-    SW_EXPECT_TRUE( rig.send( kAlice, "one" )._reply._result == ChatResult::Repeated );
-    SW_EXPECT_TRUE( rig.send( kAlice, "two" )._reply._result == ChatResult::Ok ); // 반복 거절은 몫을 쓰지 않는다
+    SW_EXPECT_TRUE( rig.send( kAlice, "one" )._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.send( kAlice, "one" )._result == ChatResult::Repeated );
+    SW_EXPECT_TRUE( rig.send( kAlice, "two" )._result == ChatResult::Ok ); // 반복 거절은 몫을 쓰지 않는다
     const ChatCompletion limited = rig.send( kAlice, "three" );
-    SW_EXPECT_TRUE( limited._reply._result == ChatResult::RateLimited );
-    SW_EXPECT_TRUE( limited._reply._retryAfterMs > 0 );
+    SW_EXPECT_TRUE( limited._result == ChatResult::RateLimited );
+    SW_EXPECT_TRUE( limited._retryAfterMs > 0 );
 
     MemoryServiceDatabase rejectDatabase;
     settings._filterMode = ChatFilterMode::Reject;
     ChatFixture rejecting( rejectDatabase, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rejecting.join( kAlice ) == ChatResult::Ok );
-    SW_EXPECT_TRUE( rejecting.send( kAlice, "a badword b" )._reply._result == ChatResult::Rejected );
+    SW_EXPECT_TRUE( rejecting.send( kAlice, "a badword b" )._result == ChatResult::Rejected );
     SW_EXPECT_TRUE( rejecting.takeDeliveries().empty() );
 }
 
@@ -441,13 +441,13 @@ SW_TEST_CASE( ChatServiceTest, BlockedSenderIsSilentlyDropped )
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
 
-    SW_EXPECT_TRUE( rig.send( kAlice, "hi" )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.send( kAlice, "hi" )._result == ChatResult::Ok );
     const vector<ChatDelivery> listChannel = rig.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 1 ), listChannel.size() );
     SW_EXPECT_EQUAL( kAlice, listChannel[0]._recipientID );
 
     const ChatCompletion whispered = rig.whisper( kAlice, kBob, "psst" );
-    SW_EXPECT_TRUE( whispered._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( whispered._result == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.takeDeliveries().empty() );
 }
 
@@ -456,14 +456,14 @@ SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
 {
     MemoryServiceDatabase database;
     ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
-    SW_EXPECT_TRUE( rig.whisper( kAlice, kAlice, "x" )._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.whisper( kAlice, kInvalidAccountID, "x" )._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.whisper( kAlice, 99, "x" )._reply._result == ChatResult::TargetOffline );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, kAlice, "x" )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, kInvalidAccountID, "x" )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, 99, "x" )._result == ChatResult::TargetOffline );
 
     const ChatCompletion whispered = rig.whisper( kAlice, kBob, "psst" );
-    SW_EXPECT_TRUE( whispered._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( whispered._result == ChatResult::Ok );
     SW_EXPECT_EQUAL( ChatMethod::Whisper::kID, whispered._method );
-    SW_EXPECT_TRUE( whispered._reply._message._kind == ChatChannelKind::Whisper );
+    SW_EXPECT_TRUE( whispered._message._kind == ChatChannelKind::Whisper );
     const vector<ChatDelivery> listDelivery = rig.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 1 ), listDelivery.size() );
     SW_EXPECT_EQUAL( kBob, listDelivery[0]._recipientID );
@@ -471,8 +471,8 @@ SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
     rig.flush();
     const string channelID = ChatChannelID::makeWhisper( kAlice, kBob );
     SW_EXPECT_EQUAL( channelID, ChatChannelID::makeWhisper( kBob, kAlice ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), rig.history( kBob, channelID )._reply._listHistory.size() );
-    SW_EXPECT_TRUE( rig.history( kCarol, channelID )._reply._result == ChatResult::NotMember ); // 제삼자는 읽지 못한다
+    SW_EXPECT_EQUAL( size_t( 1 ), rig.history( kBob, channelID )._listHistory.size() );
+    SW_EXPECT_TRUE( rig.history( kCarol, channelID )._result == ChatResult::NotMember ); // 제삼자는 읽지 못한다
 }
 
 /** @brief [ChatServiceTest] 서버 둘: 채널 말은 버스로 그 채널 멤버가 있는 서버에 간다. 낸 서버는 다시 받지 않고, 멤버가 모두 나가면 구독을 푼다 */
@@ -487,7 +487,7 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
     rigA.pump();
     rigB.pump();
 
-    SW_EXPECT_TRUE( rigA.send( kAlice, "hello" )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rigA.send( kAlice, "hello" )._result == ChatResult::Ok );
     rigA.pump();
     const vector<ChatDelivery> listA = rigA.takeDeliveries();
     const vector<ChatDelivery> listB = rigB.takeDeliveries();
@@ -498,7 +498,7 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
 
     rigB._service.removeAccount( kBob );
     rigB.pump();
-    SW_EXPECT_TRUE( rigA.send( kAlice, "again" )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rigA.send( kAlice, "again" )._result == ChatResult::Ok );
     rigA.pump();
     SW_EXPECT_TRUE( rigB.takeDeliveries().empty() );
 }
@@ -520,7 +520,7 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
     SW_REQUIRE_EQUAL( size_t( 1 ), rigA._presence._listFind.size() );
     SW_EXPECT_EQUAL( 1, rigA._service.getPendingCount() );
     rigA._presence.answer( kServerB );
-    SW_EXPECT_TRUE( rigA.take( 1 )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rigA.take( 1 )._result == ChatResult::Ok );
     const vector<ChatDelivery> listB = rigB.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 1 ), listB.size() );
     SW_EXPECT_EQUAL( kBob, listB[0]._recipientID );
@@ -528,17 +528,17 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
     rigA._service.sendWhisper( kAlice, kBob, "gone", UnixMilliseconds{ kNowMs }, 2 );
     rigA.pump();
     rigA._presence.answer( 0 );
-    SW_EXPECT_TRUE( rigA.take( 2 )._reply._result == ChatResult::TargetOffline );
+    SW_EXPECT_TRUE( rigA.take( 2 )._result == ChatResult::TargetOffline );
     rigA._service.sendWhisper( kAlice, kBob, "self", UnixMilliseconds{ kNowMs }, 3 );
     rigA.pump();
     rigA._presence.answer( kServerA );
-    SW_EXPECT_TRUE( rigA.take( 3 )._reply._result == ChatResult::TargetOffline );
+    SW_EXPECT_TRUE( rigA.take( 3 )._result == ChatResult::TargetOffline );
 
     rigB._policy._listBlocked.push_back( make_pair( kBob, kAlice ) );
     rigA._service.sendWhisper( kAlice, kBob, "blocked", UnixMilliseconds{ kNowMs }, 4 );
     rigA.pump();
     rigA._presence.answer( kServerB );
-    SW_EXPECT_TRUE( rigA.take( 4 )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rigA.take( 4 )._result == ChatResult::Ok );
     SW_EXPECT_TRUE( rigB.takeDeliveries().empty() );
 }
 
@@ -549,7 +549,7 @@ SW_TEST_CASE( ChatServiceTest, SanctionChangeOverBusRefreshes )
     LocalServerBusHub     hub;
     ChatFixture           rig( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
-    SW_EXPECT_TRUE( rig.send( kAlice, "before" )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.send( kAlice, "before" )._result == ChatResult::Ok );
 
     ChatTestUtil::muteUntil( database, kAlice, kNowMs + 5000 );
     LocalServerBus         gmTransport( &hub, kServerB );
@@ -558,7 +558,7 @@ SW_TEST_CASE( ChatServiceTest, SanctionChangeOverBusRefreshes )
     changed._accountID = kAlice;
     SW_REQUIRE_TRUE( ServiceSanctionBus::kChangedTopic.publish( gmBus, changed ) );
     rig.pump();
-    SW_EXPECT_TRUE( rig.send( kAlice, "after" )._reply._result == ChatResult::Muted );
+    SW_EXPECT_TRUE( rig.send( kAlice, "after" )._result == ChatResult::Muted );
 }
 
 /** @brief [ChatServiceTest] 기록: update 가 쓰고, 최근 것부터 읽으며, 커서로 이어 읽고 끝이면 커서가 빈다. 들어가지 않은 채널 · 틀린 요청은 거절한다 */
@@ -569,28 +569,28 @@ SW_TEST_CASE( ChatServiceTest, HistoryPagesNewestFirst )
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     for ( int32 index = 0; index < 5; ++index )
     {
-        SW_REQUIRE_TRUE( rig.send( kAlice, "m" + to_string( index ), kWorld, kNowMs + index )._reply._result == ChatResult::Ok );
+        SW_REQUIRE_TRUE( rig.send( kAlice, "m" + to_string( index ), kWorld, kNowMs + index )._result == ChatResult::Ok );
     }
     SW_EXPECT_EQUAL( 5, rig._service.getQueuedHistoryCount() );
-    SW_EXPECT_TRUE( rig.history( kAlice )._reply._listHistory.empty() ); // 아직 쓰지 않았다
+    SW_EXPECT_TRUE( rig.history( kAlice )._listHistory.empty() ); // 아직 쓰지 않았다
 
     rig.flush();
     SW_EXPECT_EQUAL( 0, rig._service.getQueuedHistoryCount() );
     const ChatCompletion first = rig.history( kAlice, kWorld, "", 3 );
-    SW_REQUIRE_EQUAL( size_t( 3 ), first._reply._listHistory.size() );
-    SW_EXPECT_EQUAL( string( "m4" ), first._reply._listHistory[0]._text );
-    SW_EXPECT_EQUAL( string( "m2" ), first._reply._listHistory[2]._text );
-    SW_EXPECT_FALSE( first._reply._nextCursor.empty() );
+    SW_REQUIRE_EQUAL( size_t( 3 ), first._listHistory.size() );
+    SW_EXPECT_EQUAL( string( "m4" ), first._listHistory[0]._text );
+    SW_EXPECT_EQUAL( string( "m2" ), first._listHistory[2]._text );
+    SW_EXPECT_FALSE( first._nextCursor.empty() );
 
-    const ChatCompletion second = rig.history( kAlice, kWorld, first._reply._nextCursor, 3 );
-    SW_REQUIRE_EQUAL( size_t( 2 ), second._reply._listHistory.size() );
-    SW_EXPECT_EQUAL( string( "m1" ), second._reply._listHistory[0]._text );
-    SW_EXPECT_TRUE( second._reply._nextCursor.empty() );
+    const ChatCompletion second = rig.history( kAlice, kWorld, first._nextCursor, 3 );
+    SW_REQUIRE_EQUAL( size_t( 2 ), second._listHistory.size() );
+    SW_EXPECT_EQUAL( string( "m1" ), second._listHistory[0]._text );
+    SW_EXPECT_TRUE( second._nextCursor.empty() );
 
-    SW_EXPECT_TRUE( rig.history( kBob )._reply._result == ChatResult::NotMember );
-    SW_EXPECT_TRUE( rig.history( kAlice, kWorld, "", 0 )._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.history( kAlice, kWorld, "", ChatLimit::kMaxHistoryPage + 1 )._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( rig.history( kAlice, "Bad Channel" )._reply._result == ChatResult::Invalid );
+    SW_EXPECT_TRUE( rig.history( kBob )._result == ChatResult::NotMember );
+    SW_EXPECT_TRUE( rig.history( kAlice, kWorld, "", 0 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.history( kAlice, kWorld, "", ChatLimit::kMaxHistoryPage + 1 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.history( kAlice, "Bad Channel" )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [ChatServiceTest] 기록 정리: 정리 차례의 메시지가 나오면 보존 기간이 지난 기록을 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
@@ -606,23 +606,23 @@ SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
     ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 
-    SW_EXPECT_TRUE( rig.send( kAlice, "old" )._reply._result == ChatResult::Ok ); // 순번 1
+    SW_EXPECT_TRUE( rig.send( kAlice, "old" )._result == ChatResult::Ok ); // 순번 1
     rig.flush();
     const int64 laterMs = kNowMs + 2000;
-    SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._reply._result == ChatResult::Ok ); // 순번 2 — 정리 차례다
+    SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._result == ChatResult::Ok ); // 순번 2 — 정리 차례다
     rig.flush( laterMs );
     const ChatCompletion trimmed = rig.history( kAlice );
-    SW_REQUIRE_EQUAL( size_t( 1 ), trimmed._reply._listHistory.size() );
-    SW_EXPECT_EQUAL( string( "new" ), trimmed._reply._listHistory[0]._text );
+    SW_REQUIRE_EQUAL( size_t( 1 ), trimmed._listHistory.size() );
+    SW_EXPECT_EQUAL( string( "new" ), trimmed._listHistory[0]._text );
 
     database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.send( kAlice, "lost", kWorld, laterMs )._reply._result == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.send( kAlice, "lost", kWorld, laterMs )._result == ChatResult::Ok );
     rig.flush( laterMs );
-    SW_EXPECT_EQUAL( size_t( 1 ), rig.history( kAlice )._reply._listHistory.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig.history( kAlice )._listHistory.size() );
 
     for ( int32 index = 0; index < 3; ++index )
     {
-        SW_EXPECT_TRUE( rig.send( kAlice, "q" + to_string( index ), kWorld, laterMs + index )._reply._result == ChatResult::Ok );
+        SW_EXPECT_TRUE( rig.send( kAlice, "q" + to_string( index ), kWorld, laterMs + index )._result == ChatResult::Ok );
     }
     SW_EXPECT_EQUAL( 2, rig._service.getQueuedHistoryCount() );
 }
@@ -637,17 +637,17 @@ SW_TEST_CASE( ChatServiceTest, ReportCapturesContext )
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
 
-    const ChatMessage before = rig.send( kAlice, "context", kWorld, kNowMs )._reply._message;
-    const ChatMessage target = rig.send( kAlice, "abusive", kWorld, kNowMs + 1 )._reply._message;
-    const ChatMessage mine   = rig.send( kBob, "mine", kWorld, kNowMs + 2 )._reply._message;
+    const ChatMessage before = rig.send( kAlice, "context", kWorld, kNowMs )._message;
+    const ChatMessage target = rig.send( kAlice, "abusive", kWorld, kNowMs + 1 )._message;
+    const ChatMessage mine   = rig.send( kBob, "mine", kWorld, kNowMs + 2 )._message;
     SW_EXPECT_TRUE( rig.report( kBob, target ) == ChatResult::NotFound ); // 아직 쓰지 않았다 — 도배 몫을 하나 쓴다
 
     rig.flush();
     SW_EXPECT_TRUE( rig.report( kCarol, target ) == ChatResult::NotMember );
-    SW_EXPECT_TRUE( rig.report( kBob, target, "Bad Reason!" ) == ChatResult::Invalid );
+    SW_EXPECT_TRUE( rig.report( kBob, target, "Bad Reason!" ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.report( kBob, target ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.report( kBob, target ) == ChatResult::RateLimited );
-    SW_EXPECT_TRUE( rig.report( kBob, mine, "abuse", kNowMs + settings._reportRefillIntervalMs ) == ChatResult::Invalid );
+    SW_EXPECT_TRUE( rig.report( kBob, mine, "abuse", kNowMs + settings._reportRefillIntervalMs ).hasError( OnlineError::kInvalidRequest ) );
 
     vector<ServiceReport> listReport;
     string                nextCursor;

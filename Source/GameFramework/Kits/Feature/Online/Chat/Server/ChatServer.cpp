@@ -95,9 +95,9 @@ namespace sw
 
         _listCompletionScratch.clear();
         _pService->takeCompletions( _listCompletionScratch );
-        for ( const ChatCompletion& completion : _listCompletionScratch )
+        for ( ChatCompletion& completion : _listCompletionScratch )
         {
-            (void)completeCall( completion._requestTag, completion._reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
+            respondCompletion( completion ); // 연결이 그사이 닫혔으면 호스트가 버린다
         }
 
         _listDeliveryScratch.clear();
@@ -109,6 +109,34 @@ namespace sw
                 continue;                                                                   // write 가 범위 밖 값을 로그에 남겼다
             (void)host.sendPush( delivery._recipientID, ChatMethod::Message::kKind, body ); // 그사이 떠난 계정이면 버린다
         }
+    }
+
+    void ChatServer::respondCompletion( ChatCompletion& completion )
+    {
+        const uint64       callID  = completion._requestTag;
+        const ChatOutcome& outcome = completion._result;
+        if ( completion._method == ChatMethod::Send::kID || completion._method == ChatMethod::Whisper::kID )
+        {
+            ChatSendReply reply;
+            reply._message      = std::move( completion._message );
+            reply._retryAfterMs = completion._retryAfterMs;
+            reply._result       = outcome._result;
+            (void)finishCall( callID, outcome, reply );
+            return;
+        }
+        if ( completion._method == ChatMethod::History::kID )
+        {
+            ChatHistoryReply reply;
+            reply._listHistory = std::move( completion._listHistory );
+            reply._nextCursor  = std::move( completion._nextCursor );
+            reply._result      = outcome._result;
+            (void)finishCall( callID, outcome, reply );
+            return;
+        }
+        ChatResultReply reply; // Join · Leave · Report
+        reply._retryAfterMs = completion._retryAfterMs;
+        reply._result       = outcome._result;
+        (void)finishCall( callID, outcome, reply );
     }
 
     void ChatServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )

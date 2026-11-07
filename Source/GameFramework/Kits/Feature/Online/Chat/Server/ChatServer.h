@@ -50,6 +50,10 @@ namespace sw
         void onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
+        /** @brief 완료 하나를 그 메서드의 응답 타입(`_method`)으로 끝냅니다. 공통 범주면 공통 오류입니다. */
+        void respondCompletion( ChatCompletion& completion );
+
+    private:
         void flushServiceOutput( OnlineServiceHost& host );
 
     private:

@@ -26,9 +26,6 @@ namespace sw
     class SW_KIT_API ChatClient final : public OnlineProtocolClient<ChatClient, ChatProtocol>
     {
     public:
-        using Reply         = OnlineResult<ChatReply>;
-        using ReplyDelegate = Delegate<void( const Reply& )>;
-
         ChatClient();
 
         /** @brief 메시지 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(메시지를 서로 가져가는 일을 막는다). */

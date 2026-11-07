@@ -41,13 +41,13 @@ namespace sw
         _retryAfterMs = 0;
         if ( text.empty() )
         {
-            _lastResult = ChatResult::Invalid;
+            _lastResult = ChatOutcome::fail( OnlineError::kInvalidRequest );
             ++_revision;
             return false;
         }
         if ( _pClient == nullptr )
         {
-            _lastResult = ChatResult::Unavailable;
+            _lastResult = ChatOutcome::fail( OnlineError::kUnavailable );
             ++_revision;
             return false;
         }
@@ -55,7 +55,7 @@ namespace sw
         ChatSendRequest request;
         request._channelID = string( channelID );
         request._text      = string( text );
-        (void)_pClient->call<ChatMethod::Send>( request, ChatClient::ReplyDelegate::create<&ChatLogModel::onSendReply>( this ) );
+        (void)_pClient->call<ChatMethod::Send>( request, OnlineReplyDelegate<ChatMethod::Send>::create<&ChatLogModel::onSendReply>( this ) );
         return true;
     }
 
@@ -67,10 +67,9 @@ namespace sw
         ++_revision;
     }
 
-    void ChatLogModel::onSendReply( const ChatClient::Reply& reply )
+    void ChatLogModel::onSendReply( const OnlineResult<ChatSendReply>& reply )
     {
-        // 공통 오류(`_errorCode`)가 있으면 서버가 아닌 클라이언트가 `_result` 를 그에 대응하는 값으로 채워 온다.
-        _lastResult   = reply._reply._result;
+        _lastResult   = reply._errorCode != OnlineError::kOk ? ChatOutcome::fail( reply._errorCode ) : ChatOutcome{ reply._reply._result };
         _retryAfterMs = reply._reply._retryAfterMs;
         ++_revision;
     }

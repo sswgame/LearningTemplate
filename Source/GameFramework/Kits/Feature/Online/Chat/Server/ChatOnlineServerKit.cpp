@@ -47,10 +47,11 @@ namespace sw
             {
                 if ( _pService == nullptr )
                     return;
-                const string     channelID = makeChannelID( kind, groupID );
-                const ChatResult result    = _pService->addMember( accountID, channelID, nowMs );
+                const string      channelID = makeChannelID( kind, groupID );
+                const ChatOutcome result    = _pService->addMember( accountID, channelID, nowMs );
                 if ( result != ChatResult::Ok )
-                    SW_LOG_WARNING_ID( "ChatOnlineServerKit.ChatAccountNotAdded", "Chat: account %# was not added to %# (%#)", accountID, channelID.c_str(), static_cast<int32>( result ) );
+                    SW_LOG_WARNING_ID( "ChatOnlineServerKit.ChatAccountNotAdded", "Chat: account %# was not added to %# (result %#, error %#)", accountID, channelID.c_str(), static_cast<int32>( result._result ),
+                                       static_cast<int32>( result._errorCode ) );
             }
 
             void removeGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID ) override

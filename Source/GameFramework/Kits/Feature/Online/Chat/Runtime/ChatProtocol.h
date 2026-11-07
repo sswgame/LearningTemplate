@@ -2,9 +2,9 @@
  * @file ChatProtocol.h
  * @brief 채팅 키트의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kChat`), 요청과 응답 본문, 메시지 형식, 서버 버스 주제를 정의하며 클라이언트와 서버가 함께 씁니다.
  * @details - 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
- *            응답 본문(`ChatReply`)은 업무 결과(`ChatResult`, 거래와 경제 키트도 같다), 기다릴 시간(ms), 메서드별 필드로 이루어진다.
+ *            응답은 메서드마다 따로이다(`ChatResultReply` · `ChatSendReply` · `ChatHistoryReply`). 업무 결과(`ChatResult`)는 도메인 값만이고, 기다릴 시간(ms)이 함께 온다.
  *            말하기와 귓속말은 필터를 거친 메시지를 되울림으로 돌려주고, 기록은 메시지 목록과 다음 커서를 돌려준다.
- *            공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 공통 범주 표(`kArrCommonResult`)로 이를 결과에 맞춘다.
+ *            공통 범주(`OnlineError`)는 로그인 없음, 범위 밖 요청, 일시 장애, 버전이다.
  *          - 메시지 형식(`ChatMessage`) 하나를 알림, 서버 간 버스, 기록 레코드가 함께 쓴다. 알림은 B 이고,
  *            버스(배포 중 빌드가 섞인다)와 기록 레코드(저장소에 남아 다른 빌드가 읽는다)는 자기 기술형(A, `BinarySerializer`)이다.
  *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 버전은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
@@ -140,21 +140,41 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모든 메서드의 응답입니다. 로직의 완료 큐가 이 형식 하나로 답하므로 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 와 `_retryAfterMs` 만 의미가 있습니다. */
+    /** @brief 결과만 있는 응답입니다(들어가기 · 나오기 · 신고). */
     REFLECT()
-    struct ChatReply
+    struct ChatResultReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = ChatLimit::kMaxHistoryPage )
-        vector<ChatMessage> _listHistory{}; ///< History 의 결과이며 최근 것부터 담는다. 상한은 `ChatLimit::kMaxHistoryPage` 와 같다
         PROPERTY()
-        ChatMessage _message{}; ///< Send 와 Whisper 의 결과이다. 필터를 거친 메시지(되울림)이다
-        PROPERTY( MaxCount = ChatProtocol::kMaxCursorSize )
-        string _nextCursor{}; ///< History 의 다음 커서이다. 비어 있으면 끝이다
+        int64 _retryAfterMs{ 0 }; ///< 신고가 `RateLimited` 일 때 기다릴 시간(ms)이다
+        PROPERTY()
+        ChatResult _result{ ChatResult::Ok };
+    };
+
+    /** @brief 보내기 · 귓속말의 응답입니다. */
+    REFLECT()
+    struct ChatSendReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        ChatMessage _message{}; ///< 필터를 거친 메시지(되울림)이다. `Ok` 일 때만 값이 있다
         PROPERTY()
         int64 _retryAfterMs{ 0 }; ///< Muted, RateLimited, Repeated 일 때 기다릴 시간(ms)이다
         PROPERTY()
         ChatResult _result{ ChatResult::Ok };
+    };
+
+    /** @brief 기록 읽기(`History`)의 응답입니다. */
+    REFLECT()
+    struct ChatHistoryReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = ChatLimit::kMaxHistoryPage )
+        vector<ChatMessage> _listHistory{}; ///< 최근 것부터 담는다. 상한은 `ChatLimit::kMaxHistoryPage` 와 같다
+        PROPERTY( MaxCount = ChatProtocol::kMaxCursorSize )
+        string _nextCursor{}; ///< 다음 커서이다. 비어 있으면 끝이다
+        PROPERTY()
+        ChatResult _result{ ChatResult::Ok }; ///< 멤버가 아니면 `NotMember`
     };
 } // namespace sw
 
@@ -163,13 +183,13 @@ namespace sw
     /** @brief Chat 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct ChatMethod : OnlineMethodTable<ChatMethodName, OnlineMethodRange::kChat, ChatPushName>
     {
-        using Join    = Method<MethodName::Join, ChatChannelRequest, ChatReply>;
-        using Leave   = Method<MethodName::Leave, ChatChannelRequest, ChatReply>;
-        using Send    = Method<MethodName::Send, ChatSendRequest, ChatReply>;       ///< 거른 메시지(되울림)를 돌려준다
-        using Whisper = Method<MethodName::Whisper, ChatWhisperRequest, ChatReply>; ///< 거른 메시지를 돌려준다
-        using History = Method<MethodName::History, ChatHistoryRequest, ChatReply>; ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
-        using Report  = Method<MethodName::Report, ChatReportRequest, ChatReply>;   ///< 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
-        using Message = Push<PushName::Message, ChatMessage>;                       ///< 메시지 하나이다. 채널 메시지나 귓속말이다
+        using Join    = Method<MethodName::Join, ChatChannelRequest, ChatResultReply>;
+        using Leave   = Method<MethodName::Leave, ChatChannelRequest, ChatResultReply>;
+        using Send    = Method<MethodName::Send, ChatSendRequest, ChatSendReply>;          ///< 거른 메시지(되울림)를 돌려준다
+        using Whisper = Method<MethodName::Whisper, ChatWhisperRequest, ChatSendReply>;    ///< 거른 메시지를 돌려준다
+        using History = Method<MethodName::History, ChatHistoryRequest, ChatHistoryReply>; ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
+        using Report  = Method<MethodName::Report, ChatReportRequest, ChatResultReply>;    ///< 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
+        using Message = Push<PushName::Message, ChatMessage>;                              ///< 메시지 하나이다. 채널 메시지나 귓속말이다
     };
 } // namespace sw
 
@@ -185,16 +205,6 @@ namespace sw
         using Table        = OnlineProtocolTable<ChatMethod, OnlineMethodList<ChatMethod::Join, ChatMethod::Leave, ChatMethod::Send, ChatMethod::Whisper, ChatMethod::History, ChatMethod::Report>, OnlinePushList<ChatMethod::Message>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = ChatResult;
-
-        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
-        static constexpr OnlineErrorResult<ChatResult> kArrCommonResult[] = {
-            { OnlineError::kInvalidRequest, ChatResult::Invalid },
-            { OnlineError::kUnavailable, ChatResult::Unavailable },
-            { OnlineError::kUnauthenticated, ChatResult::NotSignedIn },
-            { OnlineError::kRateLimited, ChatResult::RateLimited, true },
-            { OnlineError::kVersionMismatch, ChatResult::UpdateRequired },
-            { OnlineError::kUpdateRequired, ChatResult::UpdateRequired },
-        };
 
         static const OnlineProtocolEntry kOnlineEntry;         ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxCursorSize = 128; ///< 기록 키의 상한이다. 채널 id 뒤에 `/` 와 16진 문자열 셋이 붙는다

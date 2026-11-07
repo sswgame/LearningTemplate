@@ -426,7 +426,7 @@ namespace sw
             {
                 ChatChannelRequest request;
                 request._channelID = step._text;
-                (void)_chatClient.call<ChatMethod::Join>( request, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
+                callKit<ChatMethod::Join>( _chatClient, request );
                 return true;
             }
             case LoadBotAction::ChatSend:
@@ -434,7 +434,7 @@ namespace sw
                 ChatSendRequest request;
                 request._channelID = step._text;
                 request._text      = expandText( step._secondText );
-                (void)_chatClient.call<ChatMethod::Send>( request, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
+                callKit<ChatMethod::Send>( _chatClient, request );
                 return true;
             }
             case LoadBotAction::ChatHistory:
@@ -442,7 +442,7 @@ namespace sw
                 ChatHistoryRequest request;
                 request._channelID = step._text;
                 request._maxCount  = step._count;
-                (void)_chatClient.call<ChatMethod::History>( request, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
+                callKit<ChatMethod::History>( _chatClient, request );
                 return true;
             }
             case LoadBotAction::SocialPresence:

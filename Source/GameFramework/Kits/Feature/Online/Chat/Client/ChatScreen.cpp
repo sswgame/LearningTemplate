@@ -51,9 +51,37 @@ namespace sw
         return handle;
     }
 
-    string ChatScreen::makeStatusText( ChatResult result, int64 retryAfterMs )
+    string ChatScreen::makeStatusText( const ChatOutcome& outcome, int64 retryAfterMs )
     {
-        switch ( result )
+        switch ( outcome._errorCode )
+        {
+            case OnlineError::kOk:
+            {
+                break;
+            }
+            case OnlineError::kInvalidRequest:
+            {
+                return "Message is empty or not valid";
+            }
+            case OnlineError::kUnauthenticated:
+            {
+                return "Sign in to chat";
+            }
+            case OnlineError::kVersionMismatch:
+            case OnlineError::kUpdateRequired:
+            {
+                return "Update the game to chat";
+            }
+            case OnlineError::kRateLimited:
+            {
+                return "Too fast, try again soon";
+            }
+            default:
+            {
+                return "Chat is not available right now";
+            }
+        }
+        switch ( outcome._result )
         {
             case ChatResult::Ok:
             {
@@ -87,25 +115,9 @@ namespace sw
             {
                 return "That player is offline";
             }
-            case ChatResult::Invalid:
-            {
-                return "Message is empty or not valid";
-            }
-            case ChatResult::Unavailable:
-            {
-                return "Chat is not available right now";
-            }
             case ChatResult::TooManyChannels:
             {
                 return "Too many channels";
-            }
-            case ChatResult::NotSignedIn:
-            {
-                return "Sign in to chat";
-            }
-            case ChatResult::UpdateRequired:
-            {
-                return "Update the game to chat";
             }
             case ChatResult::NotFound:
             {

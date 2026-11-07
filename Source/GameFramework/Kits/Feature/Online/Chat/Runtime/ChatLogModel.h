@@ -40,18 +40,19 @@ namespace sw
         void update();
         /**
          * @brief @p channelID 에 @p text 를 보냅니다. 요청을 보냈으면 true 이고 결과는 `getLastResult` 로 옵니다.
-         * @details 글이 비었으면 보내지 않고 `Invalid`, 클라이언트가 없으면 `Unavailable` 로 끝나고 false 입니다 — 둘 다 `getLastResult` 에 남아 화면이 이유를 보인다.
+         * @details 글이 비었으면 보내지 않고 `kInvalidRequest`, 클라이언트가 없으면 `kUnavailable` 공통 범주로 끝나고 false 입니다 — 둘 다 `getLastResult` 에 남아 화면이 이유를 보인다.
          */
         [[nodiscard]] bool send( string_view channelID, string_view text );
 
         // 클라이언트의 메시지와 응답이 들어오는 길입니다. 시험도 같은 길로 값을 넣습니다.
         void appendMessage( const ChatMessage& message );
-        void onSendReply( const ChatClient::Reply& reply );
+        void onSendReply( const OnlineResult<ChatSendReply>& reply );
 
         const deque<ChatMessage>& getLines() const { return _listLine; }
-        ChatResult                getLastResult() const { return _lastResult; }
-        int64                     getRetryAfterMs() const { return _retryAfterMs; }
-        uint64                    getRevision() const { return _revision; }
+        /** @brief 마지막 보내기 결과입니다. 공통 범주(로그인 · 장애 · 버전 · 빈 글)는 `_errorCode` 로 온다. */
+        const ChatOutcome& getLastResult() const { return _lastResult; }
+        int64              getRetryAfterMs() const { return _retryAfterMs; }
+        uint64             getRevision() const { return _revision; }
 
     private:
         deque<ChatMessage>  _listLine;
@@ -60,6 +61,6 @@ namespace sw
         ChatClient*         _pClient;
         uint64              _revision;
         int64               _retryAfterMs;
-        ChatResult          _lastResult;
+        ChatOutcome         _lastResult;
     };
 } // namespace sw

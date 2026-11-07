@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Report/ServiceReport.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
@@ -32,14 +33,17 @@ namespace sw
         Repeated,      ///< 같은 글을 반복했다
         Rejected,      ///< 금칙어이다. 거절 방식일 때 나온다
         TargetOffline, ///< 귓속말 상대가 없다
-        Invalid,       ///< 빈 글이거나 상한을 넘었거나 잘못된 UTF-8 이거나 규칙에 맞지 않는 채널 id 이다
-        Unavailable,   ///< 저장소, 캐시, 전송을 쓸 수 없다
         TooManyChannels,
-        NotSignedIn,    ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
-        NotFound,       ///< 신고한 메시지가 기록에 없다(아직 쓰이지 않았거나 보존 기간이 지났다)
+        NotFound, ///< 신고한 메시지가 기록에 없다(아직 쓰이지 않았거나 보존 기간이 지났다)
         Count
     };
+
+    /**
+     * @brief 채팅 결과입니다. 업무 결과(`ChatResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 빈 글 · 상한 초과 · 잘못된 UTF-8 · 규칙 밖 채널 id 는 `kInvalidRequest`, 저장소 · 캐시 · 전송 장애는 `kUnavailable`, 로그인 없음은 `kUnauthenticated` 이다.
+     *          서버 로직 · 클라이언트 모델(`ChatLogModel`)이 같은 형식을 쓴다.
+     */
+    using ChatOutcome = OnlineOutcome<ChatResult>;
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
     ENUM( Count = Count )
