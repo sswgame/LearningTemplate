@@ -72,15 +72,23 @@ namespace sw
     {
     }
 
-    std::optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const
+    std::optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const
     {
         for ( const AbsolutePath& root : input._listIncludeRoot )
         {
-            const std::optional<AbsolutePath> found = readInclude( FileUtil::joinPath( root.str(), includeName ), outBytes );
+            const string                      candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root.str(), includeName ) );
+            const std::optional<AbsolutePath> found     = readInclude( candidate, outBytes );
             if ( found.has_value() )
                 return found;
+            if ( isAbsentCandidate( candidate ) )
+                outListAbsentCandidate.push_back( candidate );
         }
         return std::nullopt;
+    }
+
+    bool ShaderIncludeResolver::isAbsentCandidate( string_view candidatePath )
+    {
+        return FileUtil::isAbsolutePath( candidatePath ) && FileUtil::exists( candidatePath ) == false;
     }
 
     std::optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const

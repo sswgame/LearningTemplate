@@ -78,7 +78,7 @@ namespace sw
                         return E_FAIL;
 
                     vector<uint8>                     bytes;
-                    const std::optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes );
+                    const std::optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes, _listIncludedFile ); // 앞자리의 없던 후보도 의존이다(가림)
                     if ( found.has_value() == false || bytes.empty() )
                         return E_FAIL;
 
@@ -88,7 +88,7 @@ namespace sw
                     Memory::copy( pHeap, bytes.data(), bytes.size() );
                     *ppData = pHeap;
                     *pBytes = static_cast<UINT>( bytes.size() );
-                    _listIncludedFile.push_back( found->str() ); // 읽은 파일만 적는다(찾지 못한 후보나 못 읽은 것은 컴파일 결과에 닿지 않았다)
+                    _listIncludedFile.push_back( found->str() ); // 읽은 파일 — 앞자리의 없던 후보는 `findInclude` 가 적었다
                     return S_OK;
                 }
 
@@ -327,15 +327,21 @@ namespace sw
                     *ppIncludeSource = nullptr;
                     // DXC 는 include 폴더마다 후보 이름을 물어본다 - 없는 후보는 오류 로그 없이 실패로 돌려줘 다음 폴더로 넘어가게 한다.
                     vector<uint8>                     bytes;
-                    const std::optional<AbsolutePath> found = _resolver.readInclude( StringUtil::utf16ToUTF8( pFilename ), bytes );
+                    const string                      candidate = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
+                    const std::optional<AbsolutePath> found     = _resolver.readInclude( candidate, bytes );
                     if ( found.has_value() == false )
+                    {
+                        // 없던 후보도 의존이다 — 검색 순서의 앞자리에 같은 이름이 생기면 다음 컴파일은 그것을 연다(가림). 쿠킹 스탬프가 "없어야 한다" 로 적는다.
+                        if ( ShaderIncludeResolver::isAbsentCandidate( candidate ) )
+                            _listIncludedFile.push_back( candidate );
                         return E_FAIL;
+                    }
                     DxcComPtr<IDxcBlobEncoding> blob;
                     const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, dxcAddressOf( blob ) );
                     if ( FAILED( hr ) )
                         return hr;
                     *ppIncludeSource = blob.Detach();
-                    _listIncludedFile.push_back( found->str() ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
+                    _listIncludedFile.push_back( found->str() ); // DXC 가 찾아 읽은 이름이다
                     return S_OK;
                 }
 

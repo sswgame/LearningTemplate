@@ -83,10 +83,14 @@ namespace sw
         {
             /**
              * @brief 쿠킹 스탬프 헤더입니다. **버전을 올리면 스탬프가 모두 불일치가 되어 한 번 전부 다시 쿠킹합니다.**
-             * @details 5판: 소스(`.hlsl`)마다 컴파일이 연 헤더와 그 내용 해시를 적는다(4판은 모든 `.hlsli` 를 줄마다 적었다). 옛 판은 읽지 않고 낡음으로 본다.
-             *          판정은 소스 내용 해시, 소스별 헤더 해시, 도구 지문 줄(키 `kToolchainKey`, `ShaderCookStamp::getToolchainFingerprint`)이다.
+             * @details 6판: 소스(`.hlsl`)마다 컴파일의 include 해석이 기댄 파일을 적는다 — 연 헤더는 내용 해시, 찾아봤지만 없던 앞자리 후보는 `kAbsentHash`(5판은 연 헤더만 적어
+             *          앞자리에 같은 이름이 새로 생겨 가려지는 것을 못 잡았다). 옛 판은 읽지 않고 낡음으로 본다.
+             *          판정은 소스 내용 해시, 소스별 의존 해시, 도구 지문 줄(키 `kToolchainKey`, `ShaderCookStamp::getToolchainFingerprint`)이다.
              */
-            static constexpr string_view kCookStampHeader{ "SWCOOK 5" };
+            static constexpr string_view kCookStampHeader{ "SWCOOK 6" };
+
+            /** @brief "이 자리에 파일이 없어야 한다" 는 의존 해시입니다. 내용 해시(`ContentHash`)는 읽은 파일에 0 을 내지 않는다(0 은 못 읽음). */
+            static constexpr uint64 kAbsentHash = 0;
 
             /** @brief 스탬프에서 도구 지문 줄의 키입니다. 소스 키는 '@' 로 시작하지 않습니다. */
             static constexpr string_view kToolchainKey{ "@toolchain" };
@@ -95,7 +99,7 @@ namespace sw
             static constexpr utf8 kDependencySeparator{ '?' };
 
             /** @brief 컴파일 캐시 옆 의존 기록의 첫 줄입니다(`ShaderCookStamp::writeIncludeRecord`). */
-            static constexpr string_view kIncludeRecordHeader{ "SWDEPS 2 " }; // 뒤에 짝 바이트코드의 내용 해시(16 hex)가 붙는다
+            static constexpr string_view kIncludeRecordHeader{ "SWDEPS 3 " }; // 뒤에 짝 바이트코드의 내용 해시(16 hex)가 붙는다. 3판: 없던 후보 줄(해시 `kAbsentHash`)이 든다
 
             /** @brief 스탬프의 16자리 hex 를 uint64 로 바꿉니다. 형식이 맞지 않으면 0이며 불일치로 처리합니다. */
             static uint64 parseHex64( string_view hex )
@@ -448,12 +452,13 @@ namespace sw
                         continue;
                     for ( const string& header : includedIter->second )
                     {
-                        // 컴파일이 방금 읽은 파일이다. 키로 못 바꾸거나 읽지 못하면 그 헤더의 변경을 영영 못 잡으므로 조용히 빼지 않고 멈춘다.
-                        const string headerKey  = makeHeaderKey( listHeaderRoot, header );
-                        const uint64 headerHash = ContentHash::computeFile( header );
-                        if ( headerKey.empty() || headerHash == 0 )
+                        // 컴파일이 방금 읽은 파일이거나 찾아봤지만 없던 앞자리 후보다. 키로 못 바꾸거나 읽지 못하면 그 변경(가림 포함)을 영영 못 잡으므로 조용히 빼지 않고 멈춘다.
+                        const bool   bAbsent    = FileUtil::exists( header ) == false;
+                        const string headerKey  = bAbsent ? makeAbsentHeaderKey( listHeaderRoot, header ) : makeHeaderKey( listHeaderRoot, header );
+                        const uint64 headerHash = bAbsent ? kAbsentHash : ContentHash::computeFile( header );
+                        if ( headerKey.empty() || ( bAbsent == false && headerHash == kAbsentHash ) )
                         {
-                            SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp4", "Failed to write the cook stamp: the header '%#' opened by '%#' is not under a shader include root or cannot be read", header.c_str(), source._absPath.c_str() );
+                            SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookStamp4", "Failed to write the cook stamp: the include dependency '%#' of '%#' is not under a shader include root or cannot be read", header.c_str(), source._absPath.c_str() );
                             return false;
                         }
                         string dependencyLine = formatHex64( headerHash ) + " " + source._key;
@@ -487,6 +492,89 @@ namespace sw
                     stampCache._mapStamp.clear();
                 }
                 return true;
+            }
+
+            /** @brief 의존 하나(@p path, 기록한 해시 @p recordedHash)가 지금도 같으면 true 입니다 — 없던 후보는 지금도 없어야 하고, 연 헤더는 내용이 같아야 한다. */
+            static bool isDependencyCurrent( const string& path, uint64 recordedHash )
+            {
+                if ( recordedHash == kAbsentHash )
+                    return FileUtil::exists( path ) == false;
+                return ContentHash::computeFile( path ) == recordedHash;
+            }
+
+            /** @brief `/` 로 나뉜 절대 경로 @p path 의 `.` 구간을 빼고 `..` 구간을 앞 구간과 함께 지웁니다(글만 본다). 맨 앞을 넘어 올라가면 빈 글입니다. */
+            static string foldDotSegments( const string& path )
+            {
+                vector<string_view> listPart;
+                const string_view   text{ path };
+                size_t              begin = 0;
+                while ( begin <= text.size() )
+                {
+                    const size_t      end  = text.find( '/', begin );
+                    const string_view part = text.substr( begin, end == string_view::npos ? string_view::npos : end - begin );
+                    if ( part == ".." )
+                    {
+                        if ( listPart.size() <= 1 )
+                            return string{};
+                        listPart.pop_back();
+                    }
+                    else if ( part != "." && ( part.empty() == false || listPart.empty() ) )
+                    {
+                        listPart.push_back( part );
+                    }
+                    if ( end == string_view::npos )
+                        break;
+                    begin = end + 1;
+                }
+                string folded;
+                for ( size_t index = 0; index < listPart.size(); ++index )
+                {
+                    if ( index > 0 )
+                        folded += '/';
+                    folded += listPart[index];
+                }
+                return folded;
+            }
+
+            /**
+             * @brief 없던 후보 @p absPath 의 헤더 키입니다(`makeHeaderKey` 의 짝). 있는 가장 가까운 조상을 실제 경로로 풀고 나머지 구간을 그대로 잇는다(없는 파일은 실제 경로가 없다).
+             * @details 컴파일러가 묻는 후보에는 `./` · `../` 가 섞일 수 있어(포함한 파일의 폴더 기준 이름) 먼저 글로 접는다 — 없는 자리는 파일 시스템이 풀어 주지 못한다.
+             * @return 루트 위로 올라가는 `..` 이거나 어느 루트 아래도 아니면 빈 글입니다 — 부르는 쪽이 오류로 멈춘다.
+             */
+            static string makeAbsentHeaderKey( const vector<HeaderRoot>& listRoot, string_view absPath )
+            {
+                string         existing = foldDotSegments( FileUtil::normalizeSeparators( absPath ) );
+                vector<string> listTail;
+                while ( existing.empty() == false && FileUtil::exists( existing ) == false )
+                {
+                    const string name = FileUtil::getFileNamePart( existing );
+                    if ( name.empty() )
+                        return string{};
+                    listTail.push_back( name );
+                    const string parent = FileUtil::normalizeSeparators( FileUtil::getDirectoryPart( existing ) );
+                    if ( parent == existing )
+                        return string{};
+                    existing = parent;
+                }
+                string canonical;
+                if ( existing.empty() || FileUtil::makeCanonicalPath( existing, canonical ) == false )
+                    return string{};
+                string resolved = FileUtil::normalizeSeparators( canonical );
+                for ( size_t index = listTail.size(); index > 0; --index )
+                {
+                    resolved += "/";
+                    resolved += listTail[index - 1];
+                }
+                const string lower = StringUtil::toLower( resolved.c_str() );
+                for ( const HeaderRoot& root : listRoot )
+                {
+                    const bool bInside = FileUtil::startsWithPathComponent( lower, root._lowerDir ) && root._lowerDir.size() < lower.size();
+                    if ( bInside == false )
+                        continue;
+                    const string relative = resolved.substr( root._lowerDir.size() + 1 );
+                    return root._domain.empty() ? relative : root._domain + ":" + relative;
+                }
+                return string{};
             }
 
             /** @brief 문제 한 줄을 서식으로 만들어 더합니다. */
@@ -543,15 +631,15 @@ namespace sw
                         appendProblem( outListProblem, "%#/%#: source changed but '%#' was not cooked again", label, source._key, shaderFolder );
                         continue;
                     }
-                    // 소스가 열었던 헤더만 본다. 이 소스와 상관없는 헤더가 바뀐 것은 문제가 아니다.
+                    // 소스의 include 해석이 기댄 파일만 본다(연 헤더와 없던 앞자리 후보). 이 소스와 상관없는 헤더가 바뀐 것은 문제가 아니다.
                     const auto dependencyIter = stamped._mapDependency.find( source._key );
                     if ( dependencyIter == stamped._mapDependency.end() )
                         continue;
                     for ( const StampDependency& dependency : dependencyIter->second )
                     {
                         const string headerPath = resolveHeaderKey( resolver, shadersDir, dependency._headerKey );
-                        if ( headerPath.empty() || ContentHash::computeFile( headerPath ) != dependency._hash )
-                            appendProblem( outListProblem, "%#/%#: header '%#' changed or is gone but '%#' was not cooked again", label, source._key, dependency._headerKey, shaderFolder );
+                        if ( headerPath.empty() || isDependencyCurrent( headerPath, dependency._hash ) == false )
+                            appendProblem( outListProblem, "%#/%#: header '%#' changed, is gone or now hides another, but '%#' was not cooked again", label, source._key, dependency._headerKey, shaderFolder );
                     }
                 }
                 for ( const auto& [key, hash] : stamped._mapSourceHash )
@@ -712,13 +800,14 @@ namespace sw
         if ( sourceHash == 0 )
             return 0;
         // 헤더마다 경로까지 섞는다. 같은 내용의 두 헤더가 서로를 지우지 않게, 헤더 하나를 **다른 파일로 바꾸기만** 해도 값이 달라지게 한다.
-        // 더하기로 합쳐 목록 순서와 무관하다.
+        // 더하기로 합쳐 목록 순서와 무관하다. 없던 후보는 "없음" 자체가 값이다 — 그 자리에 헤더가 생기면(가림) 내용 해시가 들어와 지문이 바뀐다.
         uint64 combined = 0;
         for ( const string& header : listIncludedFile )
         {
-            const uint64 headerHash = ContentHash::computeFile( header );
-            if ( headerHash == 0 )
-                return 0; // 읽지 못하는 헤더가 있으면 같은 지문이 나올 수 없다 — 부르는 쪽이 낡음으로 본다
+            const bool   bAbsent    = FileUtil::exists( header ) == false;
+            const uint64 headerHash = bAbsent ? ShaderCookStampInternal::kAbsentHash : ContentHash::computeFile( header );
+            if ( bAbsent == false && headerHash == ShaderCookStampInternal::kAbsentHash )
+                return 0; // 있는데 읽지 못하는 헤더가 있으면 같은 지문이 나올 수 없다 — 부르는 쪽이 낡음으로 본다
             const string norm = StringUtil::toLower( FileUtil::normalizeSeparators( header ).c_str() );
             combined += HashUtil::computeStringHash64( norm, false, headerHash );
         }
@@ -734,8 +823,9 @@ namespace sw
         text += '\n';
         for ( const string& header : listIncludedFile )
         {
-            const uint64 headerHash = ContentHash::computeFile( header );
-            if ( headerHash == 0 )
+            const bool   bAbsent    = FileUtil::exists( header ) == false; // 없던 앞자리 후보 — "없어야 한다" 로 적는다
+            const uint64 headerHash = bAbsent ? ShaderCookStampInternal::kAbsentHash : ContentHash::computeFile( header );
+            if ( bAbsent == false && headerHash == ShaderCookStampInternal::kAbsentHash )
             {
                 SW_LOG_WARNING_ID( "ShaderCooker.CouldNotHashHeader", "Could not hash the header '%#' for the include record '%#'", header.c_str(), string( recordPath ).c_str() );
                 return false;
@@ -778,8 +868,8 @@ namespace sw
                 return false; // 형식이 틀렸다 — 믿지 않는다
             const string headerPath{ line.substr( 17 ) };
             const uint64 recorded = ShaderCookStampInternal::parseHex64( line.substr( 0, 16 ) );
-            if ( recorded == 0 || ContentHash::computeFile( headerPath ) != recorded )
-                return false; // 바뀌었거나 없어졌거나 읽지 못한다
+            if ( ShaderCookStampInternal::isDependencyCurrent( headerPath, recorded ) == false )
+                return false; // 바뀌었거나 없어졌거나 읽지 못하거나, 없던 자리에 헤더가 생겼다(가림)
             listHeader.push_back( headerPath );
         }
         outListIncludedFile = std::move( listHeader );
@@ -835,13 +925,13 @@ namespace sw
         if ( stampedSourceHash != sourceHash )
             return false;
 
-        // 이 소스가 연 헤더만 본다. 없어졌거나 읽지 못하거나 내용이 다르면 낡음이다.
+        // 이 소스의 include 해석이 기댄 파일만 본다. 연 헤더가 없어졌거나 읽지 못하거나 내용이 다르면, 없던 앞자리 후보에 헤더가 생겼으면(가림) 낡음이다.
         vector<string> listHeaderPath;
         listHeaderPath.reserve( listDependency.size() );
         for ( const Internal::StampDependency& dependency : listDependency )
         {
             string headerPath = Internal::resolveHeaderKey( resolver, shadersDir, dependency._headerKey );
-            if ( headerPath.empty() || ContentHash::computeFile( headerPath ) != dependency._hash )
+            if ( headerPath.empty() || Internal::isDependencyCurrent( headerPath, dependency._hash ) == false )
                 return false;
             listHeaderPath.push_back( std::move( headerPath ) );
         }

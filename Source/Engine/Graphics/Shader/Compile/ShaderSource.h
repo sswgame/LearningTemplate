@@ -120,8 +120,13 @@ namespace sw
 
         /** @brief include 루트 도메인입니다(검색 순서 — engine, common). */
         [[nodiscard]] const vector<ShaderIncludeRootDomain>& getRootDomains() const { return _listRootDomain; }
-        /** @brief 이름 그대로 적힌 include @p includeName 을 @p input 의 검색 순서로 찾아 읽습니다(FXC — 이름만 준다). 못 찾으면 빈 값입니다. */
-        [[nodiscard]] std::optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const;
+        /**
+         * @brief 이름 그대로 적힌 include @p includeName 을 @p input 의 검색 순서로 찾아 읽습니다(FXC — 이름만 준다). 못 찾으면 빈 값입니다.
+         * @param outListAbsentCandidate 찾은 자리보다 앞에서 찾아봤지만 없던 후보(절대 경로)를 뒤에 붙입니다 — 거기에 헤더가 생기면 가려지므로 의존이다(`ShaderCompileResult::_listIncludedFile`).
+         */
+        [[nodiscard]] std::optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const;
+        /** @brief @p candidatePath 가 없는 자리를 가리키는 절대 경로이면 true 입니다(include 처리기가 없던 후보를 의존으로 적을지 정한다). */
+        [[nodiscard]] static bool isAbsentCandidate( string_view candidatePath );
         /**
          * @brief 컴파일러가 고른 후보 경로 @p candidatePath 를 읽습니다(DXC — 검색 폴더마다 후보를 묻는다). 엄격한 절대 경로인 정규 파일만 받습니다. 없는 후보는 로그 없이 빈 값입니다(다음 폴더로 넘어간다).
          */

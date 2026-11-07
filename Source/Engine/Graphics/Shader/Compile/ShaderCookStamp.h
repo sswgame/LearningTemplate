@@ -154,8 +154,8 @@ namespace sw
          * @details 판정은 스탬프를 쓰는 쪽(`writeCookStamp`)과 같은 수집 규칙 · 같은 해시다 — 규칙이 한 언어에만 있으므로 "두 언어가 같은 규칙인가" 를 볼 게이트가 없다.
          *          보는 것: 바이너리 폴더 · 스탬프 · 스탬프 판 · 도구 지문(스탬프의 `kToolchainKey` 줄), 스탬프에 빠진 · 바뀐 · 남은 소스, 소스마다 스탬프에 적힌 헤더가 지금도 같은지,
          *          바이너리가 하나라도 있는지, 리플렉션 매니페스트가 있는지와 매니페스트에 없는 바이너리(쿠커 레시피가 늘었는데 다시 베이크하지 않은 것). 소스가 없는 도메인은 건너뛴다.
-         *          shortcut: 헤더는 컴파일러가 **먼저 찾은 하나**만 적힌다. 소스가 그대로인데 앞 순위 루트(자기 폴더 → engine → common)에 같은 이름의 헤더가 새로 생겨 가려지는 경우는
-         *          이 판정이 못 잡는다 — `findShadowedHeaders` 가 같은 이름을 오류로 막아 두므로 거기서 걸린다.
+         *          스탬프에는 컴파일러가 찾아봤지만 없던 앞자리 후보도 "없어야 한다" 로 적혀 있어(`ShaderCompileResult::_listIncludedFile`), 소스가 그대로인데 앞 순위 자리
+         *          (포함한 파일의 폴더 → 자기 shaders → engine → common)에 같은 이름의 헤더가 새로 생겨 가리면 낡음이다. `findShadowedHeaders` 는 그 위에 같은 이름 자체를 오류로 막는다.
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
         static void verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, const vector<string>& listDomain, vector<string>& outListProblem );
