@@ -263,7 +263,7 @@ namespace sw
         float32           _impulse{ 0.0f };          ///< 맞은 바디에 줄 충격량 크기(뉴턴초)
         int32             _bodyIndex{ -1 };          ///< 래그돌이나 히트박스의 바디 번호(물리 에셋 순서). 없으면 -1
         bool              _bIs2D{ false };           ///< 2D 물리 씬에서 맞았으면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bFatal{ false };          ///< 때린 쪽이 이 타격으로 죽는다고 판정했다는 뜻이다(절단과 래그돌 전환의 신호) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bFatal{ false };          ///< 이 타격으로 죽는다는 판정이다(절단과 래그돌 전환의 신호). 체력을 가진 쪽이 쓰러짐을 정하면 치명 사본을 다시 보낸다(게임 프레임워크 `HealthSourceComponent::deliverFatalHit`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

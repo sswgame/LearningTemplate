@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 해골 적의 절단 — 아레나의 다섯째 보통 적(_listEnemyKind 의 SkeletonMinion, 오브젝트 이름도 프리셋)은 절단이 붙은 사람형이다.
+  맞음은 게임의 총알 길과 같이 치명 표시 없이 보낸다(개발 명령 combat.hit). 쓰러짐은 적의 체력(ShooterEnemyComponent)이 정하고 치명 신호를 같은 오브젝트에 다시 보낸다
+  (HealthSourceComponent::deliverFatalHit) — 래그돌이 넘어가고 절단이 맞은 영역을 떼어 낸다.
+  ① 쓰러뜨리지 못한 맞음은 자르지 않는다. ② 왼팔 뼈의 치명 맞음 → 영역 하나가 잘리고 SkeletonMinion_Arm_L 조각이 생겨 바닥까지 떨어진다. 영역에 피가 오른다.
+  ③ 시체가 걷히면(시체 시간 3 초) 조각도 함께 사라진다 — 웨이브 동안 조각이 쌓이지 않는다. 값으로 판정한다(골든 없음).
+  자동 플레이는 끈다(플레이어가 해골을 먼저 쓰러뜨리면 ①이 흔들린다). 감독은 시작 예산 4 · 분당 16 으로 다섯째 적을 몇 초 안에 세운다.
+  실행: App -scenario=game/shooter3d/automation/dismemberment.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.dismemberment" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<WaitUntil watch="Object.Exists" target="SkeletonMinion" equals="1" timeoutSeconds="30"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="combat.hit SkeletonMinion upperarm.l 1"/>
+	<Wait frames="2"/>
+	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
+	<Expect watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="0"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="combat.hit SkeletonMinion upperarm.l 100000"/>
+	<WaitUntil watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="1" timeoutFrames="5"/>
+	<Expect watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="1"/>
+	<Expect watch="Dismemberment.RegionBlood" target="SkeletonMinion" key="Arm_L" atLeast="0.99"/>
+	<Expect watch="Dismemberment.RegionBlood" target="SkeletonMinion" key="Head" atMost="0.01"/>
+	<WaitUntil watch="Object.Y" target="SkeletonMinion_Arm_L" atMost="0.5" timeoutSeconds="5"/>
+
+	<WaitUntil watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="0" timeoutSeconds="8"/>
+	<Pass/>
+</Scenario>

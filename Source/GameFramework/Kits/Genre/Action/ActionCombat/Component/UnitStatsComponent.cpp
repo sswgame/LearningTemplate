@@ -116,8 +116,12 @@ namespace sw
     void UnitStatsComponent::onHitReceived( const HitInfo& hit )
     {
         HealthSourceComponent::onHitReceived( hit );
-        const int32 amount = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
+        const int32 amount       = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
+        const bool  bAliveBefore = _bIsDead == false;
         takeDamage( amount, hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{} );
+        // 이 맞음으로 쓰러졌으면 래그돌 · 절단에 치명 신호를 낸다. 틱 안이라 피해를 미뤘으면(`enqueueStatsMutation`) 맞음 정보가 남지 않아 신호도 없다.
+        if ( bAliveBefore && _bIsDead )
+            deliverFatalHit( hit );
     }
 
     void UnitStatsComponent::heal( int32 amount )

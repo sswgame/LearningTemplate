@@ -115,6 +115,8 @@ namespace sw
         void stopPartialRagdoll();
         /** @brief 바디가 가라앉았는지입니다(래그돌 상태에서 모든 바디가 `_settleSpeed` 보다 느리게 `_settleSeconds` 동안). */
         bool isSettled() const { return _bSettled; }
+        /** @brief 치명 표시가 달린 맞음(`HitInfo::_bFatal`)에서 래그돌로 넘어가는지입니다. 쓰러짐을 치명 신호로 넘기는 쪽(체력 원천)이 데이터를 확인할 때 씁니다. */
+        bool isRagdollOnFatalHit() const { return _bRagdollOnFatalHit; }
         /**
          * @brief 기상입니다. 오브젝트를 골반 아래로 옮겨 기상 클립(엎드림이나 누움에 따라)의 첫 자세에 맞추고, 래그돌 자세에서 그 클립으로 섞어 돌아갑니다.
          * @return 래그돌이 아니거나 기상 클립이 없으면 false 를 반환합니다.

@@ -228,7 +228,7 @@ namespace sw
         , _pRegionTable{}
         , _surfaceState{}
         , _listSeveredRegion{}
-        , _lastPiece{}
+        , _listPiece{}
         , _bTableLoaded{ false }
     {
         setCanEverTick( false );
@@ -238,6 +238,20 @@ namespace sw
     {
         Component::onBeginPlay();
         loadRegionTable();
+    }
+
+    void DismembermentComponent::onEndPlay()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        for ( const GameObjectHandle& piece : _listPiece )
+        {
+            GameObject* pPiece = pManager != nullptr ? pManager->resolveGameObject( piece ) : nullptr;
+            if ( pPiece != nullptr && pPiece->isPendingDestroy() == false )
+                pManager->destroyGameObject( pPiece );
+        }
+        _listPiece.clear();
+        Component::onEndPlay();
     }
 
     void DismembermentComponent::onPropertyChanged( hashed_string propertyName )
@@ -395,7 +409,7 @@ namespace sw
                 pDraw->setMaterialPath( pUnit->getMaterialPath().c_str() );
             else
                 pDraw->setMaterial( pUnit->getMaterial() );
-            _lastPiece = pPiece->getHandle();
+            _listPiece.push_back( pPiece->getHandle() );
         }
 
         // 4) 그 영역 뼈의 래그돌 바디를 끈다. 보이지 않는 바디가 남아 부딪히지 않게 하려는 것이다.

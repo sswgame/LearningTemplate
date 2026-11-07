@@ -39,7 +39,7 @@
 			<RagdollComponent _componentName="RagdollComponent"
 			                  _bActive="true"
 			                  _physicsAssetPath="common/characters/quadshell/quadshell.physics.xml"
-			                  _bRagdollOnFatalHit="false"
+			                  _bRagdollOnFatalHit="true"
 			                  _bAutoGetUp="false" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"

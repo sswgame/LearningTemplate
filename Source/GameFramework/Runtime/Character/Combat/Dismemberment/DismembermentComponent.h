@@ -48,6 +48,8 @@ namespace sw
         virtual ~DismembermentComponent() override = default;
 
         void onBeginPlay() override;
+        /** @brief 떨어뜨린 조각을 지웁니다. 조각은 몸(시체)과 함께 사라진다 — 적을 걷는 게임(웨이브)에서 조각이 쌓이지 않는다(언리얼 고어 조각의 수명을 시체에 묶는 자리). */
+        void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
         void onHitReceived( const HitInfo& hit ) override;
@@ -65,8 +67,8 @@ namespace sw
         hashed_string findRegionOfBone( const hashed_string& bone ) const;
         /** @brief 잘린 영역들입니다. */
         const vector<hashed_string>& getSeveredRegions() const { return _listSeveredRegion; }
-        /** @brief 마지막으로 띄운 조각 오브젝트입니다. */
-        GameObjectHandle getLastPiece() const { return _lastPiece; }
+        /** @brief 띄운 조각 오브젝트들입니다(자른 순서). 이 컴포넌트가 끝날 때 함께 지운다. */
+        const vector<GameObjectHandle>& getPieces() const { return _listPiece; }
         /** @brief 표면 상태(영역 × 채널)를 반환합니다. 머티리얼 파라미터가 읽는 값입니다. */
         const CharacterSurfaceState& getSurfaceState() const { return _surfaceState; }
         /** @brief 잘린 영역에 올리는 표면 채널 이름입니다. */
@@ -101,7 +103,7 @@ namespace sw
         shared_ptr<const FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
         CharacterSurfaceState       _surfaceState;
         vector<hashed_string>       _listSeveredRegion;
-        GameObjectHandle            _lastPiece;
+        vector<GameObjectHandle>    _listPiece;
         bool                        _bTableLoaded;
     };
 } // namespace sw

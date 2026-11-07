@@ -61,5 +61,12 @@ namespace sw
          * @details 주인이 없거나 체력이 없는 주인이면 알리지 않습니다. 같은 스레드에서 바로 보내므로 받는 쪽은 자기 상태만 고칩니다.
          */
         void notifyHealthChanged( bool bReset ) const;
+        /**
+         * @brief 이 맞음으로 쓰러졌다고 정했을 때 부릅니다. 같은 오브젝트의 다른 컴포넌트에 치명 표시(`HitInfo::_bFatal`)를 단 사본을 다시 보냅니다.
+         * @details 엔진은 체력을 몰라 때린 쪽(무기 레이캐스트 · 근접 판정)은 치명인지 모른다. 쓰러짐을 정하는 쪽이 체력 원천이라 치명 신호도 여기서 낸다 —
+         *          래그돌 전환(`RagdollComponent::_bRagdollOnFatalHit`) · 절단(`DismembermentComponent`)이 같은 신호 하나로 움직인다. 언리얼에서 체력 컴포넌트의
+         *          죽음 이벤트에 래그돌 · 절단을 묶는 자리다. 자기 자신에게는 다시 보내지 않고, 이미 치명 표시가 달린 맞음이면 보내지 않는다.
+         */
+        void deliverFatalHit( const HitInfo& hit );
     };
 } // namespace sw

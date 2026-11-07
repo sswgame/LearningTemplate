@@ -613,7 +613,7 @@ namespace sw
         const uint8                   kindIndex   = request._bElite == SW_TRUE ? kEliteKindIndex : static_cast<uint8>( request._slot % static_cast<uint32>( _listEnemyKind.size() ) );
         const ShooterEnemyKind&       kind        = kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[kindIndex];
         const uint32                  seed        = static_cast<uint32>( _pacingSeed ) * 7919u + request._slot;
-        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, "Enemy" );
+        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, kind._preset.c_str() ); // 이름은 종류의 외형 프리셋(QuadShell · SkeletonMinion) - 시나리오 · 로그가 종류로 찾는다
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pEnemy == nullptr )
@@ -666,7 +666,7 @@ namespace sw
             return;
         }
         const ShooterEnemyKind&       kind        = replica._kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[replica._kindIndex];
-        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, "Enemy" );
+        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, kind._preset.c_str() ); // 이름은 서버 쪽과 같은 종류의 프리셋
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pEnemy == nullptr )

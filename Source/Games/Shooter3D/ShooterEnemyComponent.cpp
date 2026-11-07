@@ -202,15 +202,14 @@ namespace sw
         HealthSourceComponent::onHitReceived( hit );
         if ( applyDamage( hit._damage * hit._damageMultiplier ) == false )
             return;
-        // 쓰러졌다 — 래그돌로 넘기고 맞은 바디에 맞은 방향의 충격량을 준다. 래그돌이 없는 프리팹은 데이터 오류다(쓰러짐 클립만 돈다).
-        GameObject*       pOwner   = getOwner();
-        RagdollComponent* pRagdoll = pOwner != nullptr ? pOwner->getComponent<RagdollComponent>() : nullptr;
-        if ( pRagdoll == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyNoRagdollComponentCannot", "Enemy '%#' has no RagdollComponent - it cannot collapse into a ragdoll", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
-            return;
-        }
-        pRagdoll->startRagdoll( hit._direction * hit._impulse, hit._bodyIndex );
+        // 쓰러졌다 — 치명 신호를 같은 오브젝트에 다시 보낸다. 래그돌(`_bRagdollOnFatalHit`)이 맞은 바디에 맞은 방향의 충격량을 주며 넘어가고,
+        // 절단이 있는 적(해골)은 맞은 영역을 잘라 낸다. 래그돌이 없는 프리팹은 데이터 오류다(쓰러짐 클립만 돈다).
+        const GameObject*       pOwner   = getOwner();
+        const RagdollComponent* pRagdoll = pOwner != nullptr ? pOwner->getComponent<RagdollComponent>() : nullptr;
+        if ( pRagdoll == nullptr || pRagdoll->isRagdollOnFatalHit() == false )
+            SW_LOG_ERROR_ID( "ShooterEnemyComponent.EnemyNoRagdollComponentCannot", "Enemy '%#' has no RagdollComponent with _bRagdollOnFatalHit - it cannot collapse into a ragdoll",
+                             pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+        deliverFatalHit( hit );
     }
 
     HealthReading ShooterEnemyComponent::getHealthReading() const

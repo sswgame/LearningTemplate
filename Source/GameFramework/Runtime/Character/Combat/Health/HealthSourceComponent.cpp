@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
 
+#include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -51,5 +52,24 @@ namespace sw
         else
             event._kind = HealthChangeKind::Changed;
         HealthListenerComponent::broadcast( *pOwner, event );
+    }
+
+    void HealthSourceComponent::deliverFatalHit( const HitInfo& hit )
+    {
+        // 이미 치명 표시가 달린 맞음이면 다른 컴포넌트도 그 표시로 받았다 — 두 번 보내지 않는다.
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || hit._bFatal )
+            return;
+        HitInfo fatal = hit;
+        fatal._bFatal = true;
+        // 받는 쪽이 오브젝트를 만들 수 있어(절단 조각) 목록을 베껴 돈다 — `CharacterRayHit::deliverHit` 와 같은 거름.
+        const vector<Component*> listTarget( pOwner->getComponents().begin(), pOwner->getComponents().end() );
+        for ( Component* pComponent : listTarget )
+        {
+            const bool bSkipTarget = pComponent == nullptr || pComponent == this || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
+            if ( bSkipTarget )
+                continue;
+            pComponent->onHitReceived( fatal );
+        }
     }
 } // namespace sw

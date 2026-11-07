@@ -1,0 +1,40 @@
+<!-- Shooter3D 해골 적(KayKit 해골 미니언) — 생물 적(quadshell)과 같은 규칙 · AI · 이동에 사람형 리그 · 그래프 · 알림 · 물리 에셋을 얹고 절단을 더한다.
+     몸 영역 표(skeleton_warrior.fit.xml)는 KayKit 해골 리그 41 뼈의 표라 미니언 몸에도 맞는다. 쓰러뜨린 맞음이 머리 · 팔 뼈에 들면 그 영역이 떨어진다
+     (ShooterEnemyComponent 가 쓰러짐을 정하고 HealthSourceComponent::deliverFatalHit 으로 래그돌 · 절단에 치명 신호를 다시 보낸다). -->
+<Prefab formatVersion="0" _base="game/shooter3d/prefabs/quadshell.prefab.xml" name="Skeleton">
+	<PrefabOverrides>
+		<Override key="SkeletalAnimatorComponent#0">
+			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_minion/skeleton_minion.animset.xml" _initialState="Spawn_Ground_Skeletons" />
+		</Override>
+		<Override key="AnimationNotifyComponent#0">
+			<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_minion/skeleton_minion.notifies.xml" />
+		</Override>
+		<Override key="RagdollComponent#0">
+			<RagdollComponent _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" />
+		</Override>
+		<Add after="RagdollComponent#0">
+			<DismembermentComponent _componentName="DismembermentComponent" _bActive="true" _regionTablePath="common/characters/skeleton_warrior/skeleton_warrior.fit.xml">
+				<_listSeverableRegion>
+					<item>Head</item>
+					<item>Arm_L</item>
+					<item>Arm_R</item>
+				</_listSeverableRegion>
+			</DismembermentComponent>
+		</Add>
+		<Override key="CharacterAppearanceComponent#0">
+			<CharacterAppearanceComponent _presetID="SkeletonMinion" _bMergeParts="true" />
+		</Override>
+		<Override key="WidgetComponent#0">
+			<WidgetComponent _worldOffset="0,2.45,0" />
+		</Override>
+		<Override key="ShooterEnemyComponent#0">
+			<ShooterEnemyComponent _radius="0.45" _height="2" _reach="1.7" />
+		</Override>
+		<Override key="NavMeshAgentComponent#0">
+			<NavMeshAgentComponent _radius="0.45" _stoppingDistance="1.45" />
+		</Override>
+		<Override key="ShooterBodyMovementComponent#0">
+			<ShooterBodyMovementComponent _radius="0.45" />
+		</Override>
+	</PrefabOverrides>
+</Prefab>

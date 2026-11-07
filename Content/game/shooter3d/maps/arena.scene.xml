@@ -619,6 +619,7 @@
 							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell" />
 							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite" />
 							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell" />
+							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/skeleton.prefab.xml" _preset="SkeletonMinion" />
 						</_listEnemyKind>
 						<_eliteEnemyKind _prefab="game/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite" />
 						<_listSpawnPoint>
