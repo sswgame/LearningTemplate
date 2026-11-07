@@ -1,7 +1,10 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
@@ -347,4 +350,27 @@ SW_TEST_CASE( FractureGraphTest, IsValidExplainsWhatIsWrong )
     FractureGraph badLeaf = base;
     badLeaf._leafCount    = 3;
     SW_EXPECT_EQUAL( reasonOf( badLeaf ), string( "root must hold every leaf" ) );
+}
+
+/**
+ * @brief [DestructionProfileTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽기는 쥔 객체를 제자리에서 바꾸는지 검증(`InPlace` — 파괴 오브젝트는 다시 읽은 횟수로 상태를 다시 시작한다)
+ */
+SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadsInPlace )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    id = test::ScopedScratchDomain::makeID( "concrete.destruction.xml" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "concrete.destruction.xml" ), R"(<DestructionProfile density="3"/>)" ) );
+
+    const shared_ptr<const DestructionProfile> pHeld  = SharedAssetCache<DestructionProfile>::acquire( id );
+    const shared_ptr<const DestructionProfile> pAgain = SharedAssetCache<DestructionProfile>::acquire( id );
+    SW_REQUIRE_TRUE( pHeld != nullptr );
+    SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
+    SW_EXPECT_NEAR( 3.0f, pHeld->_density, 0.0001f );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "concrete.destruction.xml" ), R"(<DestructionProfile density="5"/>)" ) );
+    const uint32 reloadsBefore = SharedAssetCache<DestructionProfile>::getReloadCount();
+    SW_REQUIRE_TRUE( SharedAssetCache<DestructionProfile>::reloadShared( id ) );
+    SW_EXPECT_EQUAL( reloadsBefore + 1, SharedAssetCache<DestructionProfile>::getReloadCount() );
+    SW_EXPECT_NEAR( 5.0f, pHeld->_density, 0.0001f ); // 쥔 쪽이 같은 객체에서 새 값을 본다
+    SW_EXPECT_TRUE( SharedAssetCache<DestructionProfile>::acquire( id ).get() == pHeld.get() );
 }

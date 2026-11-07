@@ -1,9 +1,13 @@
 // TileSetTest — 타일셋(.tileset.xml): 규칙 타일의 이웃 해석 · 애니메이션 타일 · 맵의 타일 레이어 왕복 · 읽기 오류. 디바이스 없음(nogpu).
 #include "pch.h"
 
+#include "Core/Container/string.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -158,4 +162,34 @@ SW_TEST_CASE_EACH( TileSetTest, MalformedTileLayerIsALoadError, kArrBadTileLayer
     SW_EXPECT_LOG( "TileMap.InvalidTileLayer" );
     sw::TileMapXMLData map;
     SW_EXPECT_FALSE_MSG( map.loadFromXML( param ), param );
+}
+
+/**
+ * @brief [TileSetTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽으면 쥔 쪽은 옛 타일셋을 지키며 다시 받은 쪽은 새 타일셋을 받는지 검증
+ * @details 맵이 칸마다 지은 브러시 번호가 제자리에서 바뀐 브러시 목록과 어긋나지 않게 떼어 낸다(`Detach`) — 렌더러는 다시 읽은 횟수를 보고 새 객체로 다시 짓는다.
+ */
+SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
+{
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string                    id = sw::test::ScopedScratchDomain::makeID( "ground.tileset.xml" ).str();
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "ground.tileset.xml" ), kTileSetXML ) );
+
+    const sw::shared_ptr<const sw::TileSetAsset> pHeld  = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    const sw::shared_ptr<const sw::TileSetAsset> pAgain = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    SW_REQUIRE_TRUE( pHeld != nullptr );
+    SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
+    SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f );
+
+    sw::string   changed = kTileSetXML;
+    const size_t at      = changed.find( "tileSize=\"1\"" );
+    SW_REQUIRE_TRUE( at != sw::string::npos );
+    changed.replace( at, sw::string_view( "tileSize=\"1\"" ).size(), "tileSize=\"2\"" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "ground.tileset.xml" ), changed ) );
+    SW_REQUIRE_TRUE( sw::SharedAssetCache<sw::TileSetAsset>::reloadShared( id ) );
+    SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
+
+    const sw::shared_ptr<const sw::TileSetAsset> pFresh = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    SW_REQUIRE_TRUE( pFresh != nullptr );
+    SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
+    SW_EXPECT_NEAR( 2.0f, pFresh->getTileSize(), 0.0001f );
 }

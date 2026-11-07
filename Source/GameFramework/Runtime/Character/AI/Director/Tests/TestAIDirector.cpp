@@ -1,7 +1,10 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
@@ -474,4 +477,36 @@ SW_TEST_CASE( AIDirectorProfileTest, CollectsEveryEncounterIDOnce )
     SW_EXPECT_EQUAL( 1, rig._profile.findPhaseIndex( hashed_string( "Peak" ) ) );
     SW_EXPECT_EQUAL( -1, rig._profile.findPhaseIndex( hashed_string( "Nothing" ) ) );
     SW_EXPECT_EQUAL( 2, rig._profile.findSignalIndex( hashed_string( "low" ) ) );
+}
+
+/**
+ * @brief [AIDirectorProfileTest] 같은 경로는 GameFramework 모듈 캐시의 같은 객체이고, 다시 읽으면 쥔 쪽(감독)은 옛 프로필을 지키며 다시 받은 쪽은 새 프로필을 받는지 검증
+ * @details 감독이 국면 · 풀 번호로 읽으므로 떼어 낸다(`Detach`) — 한 판은 받은 객체로 끝까지 돈다.
+ */
+SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    id = test::ScopedScratchDomain::makeID( "arena.director.xml" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "arena.director.xml" ), DirectorRig::kProfileXML ) );
+
+    const shared_ptr<const AIDirectorProfile> pHeld  = SharedAssetCache<AIDirectorProfile>::acquire( id );
+    const shared_ptr<const AIDirectorProfile> pAgain = SharedAssetCache<AIDirectorProfile>::acquire( id );
+    SW_REQUIRE_TRUE( pHeld != nullptr );
+    SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
+    const int32 peak = pHeld->findPhaseIndex( hashed_string( "Peak" ) );
+    SW_REQUIRE_TRUE( peak >= 0 );
+    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
+
+    string       changed = DirectorRig::kProfileXML;
+    const size_t at      = changed.find( "<Phase id=\"Peak\" spawnScale=\"2\">" );
+    SW_REQUIRE_TRUE( at != string::npos );
+    changed.replace( at, string_view( "<Phase id=\"Peak\" spawnScale=\"2\">" ).size(), "<Phase id=\"Peak\" spawnScale=\"3\">" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "arena.director.xml" ), changed ) );
+    SW_REQUIRE_TRUE( SharedAssetCache<AIDirectorProfile>::reloadShared( id ) );
+    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
+
+    const shared_ptr<const AIDirectorProfile> pFresh = SharedAssetCache<AIDirectorProfile>::acquire( id );
+    SW_REQUIRE_TRUE( pFresh != nullptr );
+    SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
+    SW_EXPECT_NEAR( 3.0f, pFresh->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
 }
