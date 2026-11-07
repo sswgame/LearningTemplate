@@ -82,6 +82,17 @@ namespace sw
          * @brief 마운트된 팩 전체에서 가상 상대 경로의 파일이 있는지 확인합니다.
          */
         bool hasFile( string_view relativePath ) const;
+        /**
+         * @brief 패치 팩(도메인 없이 전체 경로로 담은 팩 — 패치 사슬 · 모드)이 전체 경로 @p relativePath 를 가지면 true 입니다. 패치 팩이 없으면 잠금 없이 false 다.
+         * @details 낱개 파일을 먼저 읽는 구성(소스 구성 · 붙인 디스크 도메인)에서 리소스 입구(`AssetIO`)가 패치 팩을 낱개 파일보다 먼저 보게 하는 질의다 —
+         *          언리얼 pak 이 낱개 파일 위에 서고(`FPakPlatformFile`), Godot 의 `load_resource_pack( replace_files )` 가 `res://` 를 덮는 것과 같은 자리다.
+         *          그러지 않으면 소스 구성에서 모드의 덮어쓰기가 조용히 빠진다.
+         */
+        bool hasPatchFile( string_view relativePath ) const;
+        /** @brief 패치 팩이 하나라도 마운트돼 있으면 true 입니다(잠금 없음). 소스 구성의 모든 읽기가 이것으로 패치 질의를 건너뛴다. */
+        bool hasPatchPacks() const { return _patchPackCount.load( std::memory_order_acquire ) != 0; }
+        /** @brief 마운트된 팩 가운데 가장 높은 우선순위입니다. 팩이 없으면 0 입니다. 그 위에 올릴 팩(모드)의 우선순위를 정할 때 씁니다. */
+        int32 getTopPriority() const;
 
         /**
          * @brief 마운트된 팩 전체에서 @p relativeFolder 바로 아래 항목(하위 폴더 안은 빼고)의 리소스 경로를 @p outListPath 뒤에 덧붙입니다.
@@ -167,13 +178,16 @@ namespace sw
          * @param outPathInPack 그 팩 안의 경로(사본 - 도메인 없는 키는 찾는 동안 만든 전체 키에서 나온다)
          */
         shared_ptr<PackReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string& outPathInPack ) const;
+        /** @brief 목록이 바뀐 뒤 패치 팩 수(`_patchPackCount`)를 다시 셉니다. 목록을 바꾸는 곳마다 잠금 안에서 부른다. */
+        void refreshPatchPackCount() SW_REQUIRES_LOCK( _vfsMutex );
 
     private:
         mutable mutex                        _vfsMutex;
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
         DLCEntitlementDelegate               _dlcValidator;
-        atomic<ContentSource>                _contentSource; ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
-        PackPatchTrust                       _patchTrust;    ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
+        atomic<ContentSource>                _contentSource;  ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
+        atomic<uint32>                       _patchPackCount; ///< 도메인 없는 팩 수(`hasPatchFile` 이 모든 리소스 읽기에서 잠금 없이 0 을 본다). 목록을 바꿀 때 잠금 안에서 다시 센다
+        PackPatchTrust                       _patchTrust;     ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
     };
 
     SW_SERVICE_SLOT( PackManager, Optional );

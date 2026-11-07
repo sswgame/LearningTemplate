@@ -143,3 +143,33 @@ SW_TEST_CASE( PackManagerTest, PackOutsideTheSearchPriorityNeedsAnExplicitPriori
     SW_EXPECT_FALSE( packs.mountPack( dlc ) );
     SW_EXPECT_TRUE( packs.mountPack( dlc, 1 ) ); // 밝힌 우선순위로는 붙는다
 }
+
+// 도메인 팩이 하나도 없는 구성(소스 구성의 모드)에서도 패치 팩의 전체 경로 항목을 찾는다 — 예전에는 붙은 도메인 팩이 없는 도메인의 키를 도메인 없는 키로만 다뤄 놓쳤다.
+SW_TEST_CASE( PackManagerTest, PatchPackAloneAnswersItsFullPaths )
+{
+    using Internal    = TestPackManagerInternal;
+    const string root = test::makeScratchPath( "Packs" );
+    const string mod  = FileUtil::joinPath( root, "mod.pack" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( Internal::writePack( mod, {
+    },
+                                          { { "mods/lantern/data/lantern.xml", "lamp" }, { "game/empty/data/welcome.xml", "modded" } } ) );
+
+    PackManager packs;
+    SW_EXPECT_FALSE( packs.hasPatchPacks() );
+    SW_EXPECT_EQUAL( 0, packs.getTopPriority() );
+    SW_REQUIRE_TRUE( packs.mountPatchPack( mod, 3000, {} ) );
+    SW_EXPECT_TRUE( packs.hasPatchPacks() );
+    SW_EXPECT_EQUAL( 3000, packs.getTopPriority() );
+    SW_EXPECT_EQUAL( string( "lamp" ), Internal::read( packs, "mods/lantern/data/lantern.xml" ) );
+    SW_EXPECT_EQUAL( string( "modded" ), Internal::read( packs, "game/empty/data/welcome.xml" ) );
+    SW_EXPECT_TRUE( packs.hasPatchFile( "game/empty/data/welcome.xml" ) );
+    SW_EXPECT_FALSE( packs.hasPatchFile( "data/welcome.xml" ) ); // 패치 질의는 전체 경로만 본다
+    vector<string> listEntry;
+    packs.collectFolderEntries( "mods/lantern/data", listEntry );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listEntry.size() );
+
+    SW_REQUIRE_TRUE( packs.unmountPack( mod ) );
+    SW_EXPECT_FALSE( packs.hasPatchPacks() );
+    SW_EXPECT_FALSE( packs.hasFile( "mods/lantern/data/lantern.xml" ) );
+}

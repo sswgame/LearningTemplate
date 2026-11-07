@@ -216,6 +216,35 @@ namespace sw
                 return false;
             }
 
+            /** @brief 도메인 없는 팩(패치 팩)의 수입니다. 잠금은 부르는 쪽이 쥡니다. */
+            static uint32 countPatchPacks( const vector<MountedPack>& listMountedPack )
+            {
+                uint32 count = 0;
+                for ( const MountedPack& mounted : listMountedPack )
+                {
+                    if ( mounted._domainName.empty() && mounted._pReader != nullptr )
+                        ++count;
+                }
+                return count;
+            }
+
+            /**
+             * @brief 패치 팩(도메인 없음)만 전체 경로 @p relativePath 로 찾아 `visit` 을 부릅니다. 더 높은 패치가 지운 경로는 그 아래에서 찾지 않습니다. 잠금은 부르는 쪽이 쥡니다.
+             */
+            template <typename VisitFn>
+            static bool visitPatchPacksWithFullKey( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
+            {
+                const uint64 pathHash  = HashUtil::computeStringHash64( relativePath );
+                const size_t packLimit = findRemovingPackIndex( listMountedPack, pathHash );
+                for ( size_t packIndex = 0; packIndex < packLimit; ++packIndex )
+                {
+                    const MountedPack& mounted = listMountedPack[packIndex];
+                    if ( mounted._domainName.empty() && mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath ) )
+                        return true;
+                }
+                return false;
+            }
+
             /**
              * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다. 방문자가 true 를 반환하면 멈춥니다. 잠금은 부르는 쪽이 쥡니다.
              * @details 도메인이 붙은 키(`engine/…` · `game/empty/…`)는 그대로 찾는다(`visitPacksWithFullKey`). 도메인 없는 키(`textures/x.dds`)는 도메인 팩의 우선순위 순서로
@@ -236,6 +265,11 @@ namespace sw
                             return visitPacksWithFullKey( listMountedPack, relativePath, visit );
                     }
                 }
+                // 붙은 도메인 팩이 없는 도메인의 키(`mods/<id>/…`, 소스 구성의 `game/empty/…`)는 패치 팩(전체 경로로 담는다)에서 그대로 찾는다.
+                // 예전에는 이 키가 도메인 없는 키로만 다뤄져 도메인 팩이 하나도 없으면 패치 팩의 항목을 찾지 못했다. 도메인 팩은 보지 않는다 — 그 항목은 도메인을 뗀 경로라
+                // 도메인 없는 키가 다른 도메인의 항목에 맞는다.
+                if ( visitPatchPacksWithFullKey( listMountedPack, relativePath, visit ) )
+                    return true;
                 // 도메인 없는 키 - 도메인 팩마다(우선순위 순, 한 도메인 한 번) 전체 키로 찾는다.
                 vector<string> listTriedDomain;
                 for ( const MountedPack& mounted : listMountedPack )
@@ -261,6 +295,7 @@ namespace sw
         , _listMountedPack{}
         , _dlcValidator{}
         , _contentSource{ kBuildContentSource }
+        , _patchPackCount{ 0 }
     {
     }
 
@@ -275,6 +310,8 @@ namespace sw
         _listMountedPack = std::move( other._listMountedPack );
         _dlcValidator    = std::move( other._dlcValidator );
         _contentSource.store( other._contentSource.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        _patchPackCount.store( PackManagerInternal::countPatchPacks( _listMountedPack ), std::memory_order_release );
+        other._patchPackCount.store( 0, std::memory_order_release );
     }
 
     PackManager& PackManager::operator=( PackManager&& other ) noexcept
@@ -285,6 +322,8 @@ namespace sw
             _listMountedPack = std::move( other._listMountedPack );
             _dlcValidator    = std::move( other._dlcValidator );
             _contentSource.store( other._contentSource.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            refreshPatchPackCount();
+            other._patchPackCount.store( 0, std::memory_order_release );
         }
         return *this;
     }
@@ -372,6 +411,7 @@ namespace sw
 
             // 우선순위 내림차순으로 정렬한다(높은 priority 가 앞)
             VectorUtil::stableSort( _listMountedPack, Descending<&MountedPack::_priority>{} );
+            refreshPatchPackCount();
         }
 
         SW_LOG_INFO_ID( "PackManager.MountedResourcePackPriority", "Mounted resource pack: %# (Priority: %#)", normalizedPath, effectivePriority );
@@ -392,6 +432,7 @@ namespace sw
                 {
                     it->_pReader->close();
                     _listMountedPack.erase( it );
+                    refreshPatchPackCount();
                     bUnmounted = true;
                     break;
                 }
@@ -411,6 +452,7 @@ namespace sw
                 mounted._pReader->close();
         }
         _listMountedPack.clear();
+        refreshPatchPackCount();
     }
 
     bool PackManager::hasFile( string_view relativePath ) const
@@ -542,6 +584,27 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _vfsMutex };
         return _listMountedPack.size();
+    }
+
+    bool PackManager::hasPatchFile( string_view relativePath ) const
+    {
+        if ( relativePath.empty() || _patchPackCount.load( std::memory_order_acquire ) == 0 )
+            return false;
+        ScopedLock<mutex> lock{ _vfsMutex };
+        return PackManagerInternal::visitPatchPacksWithFullKey( _listMountedPack, relativePath,
+                                                                []( const MountedPack&, uint64, string_view )
+        { return true; } );
+    }
+
+    int32 PackManager::getTopPriority() const
+    {
+        ScopedLock<mutex> lock{ _vfsMutex };
+        return _listMountedPack.empty() ? 0 : _listMountedPack.front()._priority; // 우선순위 내림차순이다(`mountReader`)
+    }
+
+    void PackManager::refreshPatchPackCount()
+    {
+        _patchPackCount.store( PackManagerInternal::countPatchPacks( _listMountedPack ), std::memory_order_release );
     }
 
     bool PackManager::scanAndMountPacks( string_view packsDirectory )

@@ -97,6 +97,18 @@ namespace sw
             const bool         bDiskDomain  = engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( relativePath );
             if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
             {
+                // 0. 패치 팩(모드의 덮어쓰기)은 낱개 파일 위에 선다(`PackManager::hasPatchFile`) — 팩만 읽는 구성은 아래 2 의 우선순위가 이미 그렇다.
+                if ( pPackManager != nullptr && pPackManager->hasPatchPacks() )
+                {
+                    string       patchedPackPath;
+                    const string patchedKey = FileUtil::normalizePath( relativePath );
+                    if ( pPackManager->hasPatchFile( patchedKey ) && readFromPack( *pPackManager, patchedKey, patchedPackPath ) )
+                    {
+                        if ( pOutAbsPath != nullptr )
+                            *pOutAbsPath = "[" + FileUtil::getFileNamePart( patchedPackPath ) + "]:" + patchedKey;
+                        return true;
+                    }
+                }
                 const std::optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
                 const string                      loosePath = looseFile.has_value() ? looseFile->str() : string{};
                 if ( loosePath.empty() == false && ContentFileSource::getCurrent().isFile( loosePath ) )

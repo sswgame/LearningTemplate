@@ -210,6 +210,25 @@ namespace sw
         return reloadedCount;
     }
 
+    uint32 AssetManager::reloadChangedPaths( const vector<string>& listAssetID, vector<string>& outListStale )
+    {
+        const vector<AssetCacheBase*> listCache     = getAllAssetCache();
+        uint32                        reloadedCount = 0;
+        for ( const string& assetID : listAssetID )
+        {
+            for ( AssetCacheBase* pCache : listCache )
+            {
+                if ( pCache->isCached( assetID ) == false )
+                    continue;
+                if ( pCache->reloadComposed( assetID ) )
+                    ++reloadedCount;
+                else
+                    outListStale.push_back( assetID );
+            }
+        }
+        return reloadedCount;
+    }
+
     Subscription AssetManager::registerAssetCache( AssetCacheBase* pCache, AssetCacheReloadFunction pReload )
     {
         // nullptr · 같은 종류 이름은 목록이 거절하고 로그로 남긴다(빈 구독).
