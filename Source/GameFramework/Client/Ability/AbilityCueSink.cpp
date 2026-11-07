@@ -18,17 +18,13 @@ namespace sw
 {
     /**
      * @class AbilityCueSink
-     * @brief 어빌리티 게임플레이 큐의 연출(프리팹 · 소리)을 내는 클라이언트 쪽 모듈 서브시스템입니다(`IAbilityCueSink`). 상태가 없다.
+     * @brief 어빌리티 게임플레이 큐의 연출(프리팹 · 소리)을 냅니다(`IAbilityCueSink`). 상태가 없다.
      * @details 이름 해시가 함수 서명 글이라 익명 이름공간이 아닌 `sw` 에 둔다. 전용 서버는 이 소스를 짓지 않아 창구가 없다.
      */
-    class AbilityCueSink final : public ISubsystem, public IAbilityCueSink
+    class AbilityCueSink final : public IAbilityCueSink
     {
     public:
-        static constexpr const utf8* kSubsystemName = "AbilityCueSink";
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        static constexpr const utf8* kModulePartName = "AbilityCueSink";
 
         void presentCue( GameObjectManager& manager, const AbilityPresentationDef& presentation, const float3& position ) override
         {
@@ -55,5 +51,5 @@ namespace sw
         }
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, AbilityCueSink, IAbilityCueSink );
+    SW_MODULE_PART( Engine, AbilityCueSink, IAbilityCueSink );
 } // namespace sw

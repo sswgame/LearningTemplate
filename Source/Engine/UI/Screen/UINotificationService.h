@@ -61,7 +61,7 @@ namespace sw
      *          **들어오기 · 나가기.** 항목 위젯은 불투명도 0 으로 붙고 `kFadeSeconds` 동안 1 로 올라온다. 시간이 다 되면 보이는 목록(자리 계산, `getVisibleCount`)에서는 바로 빠지고
      *          위젯은 같은 시간 동안 0 으로 사라진 뒤 지운다(화면은 사라지는 항목까지 없어져야 닫는다). 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지운다.
      */
-    class SW_API UINotificationService final : public ISubsystem, public IPlayerNoticeSink
+    class SW_API UINotificationService final : public ISubsystem
     {
     public:
         // 화면 · 항목 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments` 의 `_notifications` · `_notificationEntry`).
@@ -83,7 +83,9 @@ namespace sw
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
         void post( const UINotificationDef& desc );
         /** @brief 게임 코드의 알림을 올립니다(`IPlayerNoticeSink`). 힌트는 종류 Hint · 우선순위 1 로 쌓인 알림보다 먼저 보인다. */
-        void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind ) override;
+        void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind );
+        /** @brief 게임 코드의 알림을 받는 자리(`IPlayerNoticeSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
+        IPlayerNoticeSink& getNoticeSink() { return _noticeSink; }
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */
@@ -136,6 +138,23 @@ namespace sw
         void removeEntryWidget( WidgetID widget );
 
     private:
+        /** @class NoticeSink @brief `postNotice` 로 넘기는 `IPlayerNoticeSink` 입니다. 서비스가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 서비스와 같다). */
+        class NoticeSink final : public IPlayerNoticeSink
+        {
+        public:
+            explicit NoticeSink( UINotificationService& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind ) override { _owner.postNotice( text, durationSeconds, kind ); }
+
+        private:
+            UINotificationService& _owner;
+        };
+
+    private:
+        NoticeSink          _noticeSink;
         vector<Entry>       _listVisible;        ///< 보이는 알림입니다(위부터).
         vector<Entry>       _listQueued;         ///< 기다리는 알림입니다.
         vector<FadingEntry> _listFading;         ///< 사라지는 중인 항목의 위젯입니다.

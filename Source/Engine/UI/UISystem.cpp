@@ -164,7 +164,10 @@ namespace sw
 namespace sw
 {
     UISystem::UISystem()
-        : _listScreen{}
+        : _inputCaptureQuery{ *this }
+        , _layerVisibility{ *this }
+        , _engineUIDriver{ *this }
+        , _listScreen{}
         , _pDocumentCache{ nullptr }
         , _pStyleSheetCache{ nullptr }
         , _documentReloadedSubscription{}
@@ -1104,8 +1107,9 @@ namespace sw
     {
         UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
         build._pStartupParts->_pUISystem = &uiSystem;
-        build._pStartupParts->_pUIDriver = &uiSystem;
-        const bool bExposed              = scope.expose<IInputCaptureQuery>( uiSystem ) && scope.expose<IUILayerVisibility>( uiSystem ) && scope.expose<IEngineUIDriver>( uiSystem );
+        build._pStartupParts->_pUIDriver = &uiSystem.getEngineUIDriver();
+        const bool bExposed              = scope.exposeMember<IInputCaptureQuery>( uiSystem, uiSystem.getInputCaptureQuery() ) && scope.exposeMember<IUILayerVisibility>( uiSystem, uiSystem.getLayerVisibility() ) &&
+                              scope.exposeMember<IEngineUIDriver>( uiSystem, uiSystem.getEngineUIDriver() );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

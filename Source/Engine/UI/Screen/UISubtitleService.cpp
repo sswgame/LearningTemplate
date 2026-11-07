@@ -34,7 +34,8 @@ namespace sw
 namespace sw
 {
     UISubtitleService::UISubtitleService()
-        : _pUI{ nullptr }
+        : _subtitleSink{ *this }
+        , _pUI{ nullptr }
         , _updateSubscription{}
         , _listActive{}
         , _listQueued{}
@@ -241,7 +242,8 @@ namespace sw
     SW_ENGINE_SERVICE_SUBSYSTEM( UISubtitleService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
-        const bool bExposed = scope.expose<ISubtitleSink>( scope.emplaceSubsystem<UISubtitleService>() );
+        UISubtitleService& service  = scope.emplaceSubsystem<UISubtitleService>();
+        const bool         bExposed = scope.exposeMember<ISubtitleSink>( service, service.getSubtitleSink() );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

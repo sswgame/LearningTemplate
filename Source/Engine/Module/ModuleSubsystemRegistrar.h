@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 namespace sw
@@ -86,6 +87,29 @@ namespace sw
                 return moduleScope.template publishPart<TOne>( subsystem, subsystem.getPublishedPart() );
         }
     };
+
+    /**
+     * @class ModulePartSubsystem
+     * @brief 세울 일이 없는 창구 구현 @p TPart 하나를 멤버로 들고 공개하는 모듈 서브시스템입니다(`SW_MODULE_PART`). 이름은 @p TPart 의 `kModulePartName` 입니다.
+     * @details 창구 구현이 `ISubsystem` 과 인터페이스를 함께 상속하지 않게(다중 상속 금지 — 린트 `cpp-shape`) 수명 짝을 맡는다. 세우거나 내릴 일이 있으면 제 서브시스템을 두고
+     *          `getPublishedPart` 로 구현을 낸다(`OpenSSLNetSecuritySubsystem`).
+     */
+    template <class TPart>
+    class ModulePartSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = TPart::kModulePartName;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 공개할 구현입니다(`ModuleSubsystemRegistration::publishOne`). */
+        TPart& getPublishedPart() { return _part; }
+
+    private:
+        TPart _part;
+    };
 } // namespace sw
 
 /**
@@ -97,4 +121,14 @@ namespace sw
     static const ::sw::ModuleSubsystemRegistration<TSubsystem, __VA_ARGS__> sw_moduleSubsystem_##TSubsystem \
     {                                                                                                       \
         ::sw::ModuleSubsystemScope::targetScope                                                             \
+    }
+
+/**
+ * @brief 창구 구현 @p TPart(서브시스템이 아니다 — 인터페이스 하나만 잇는다)를 이 이미지의 모듈 서브시스템으로 등록하고 나머지 타입으로 공개합니다(`ModulePartSubsystem`).
+ * @details 예: `SW_MODULE_PART( Engine, HUDViewModelBinder, IHUDViewModelBinder );` — .cpp 의 `namespace sw` 안(함수 밖)에 둔다.
+ */
+#define SW_MODULE_PART( targetScope, TPart, ... )                                                                       \
+    static const ::sw::ModuleSubsystemRegistration<::sw::ModulePartSubsystem<TPart>, __VA_ARGS__> sw_modulePart_##TPart \
+    {                                                                                                                   \
+        ::sw::ModuleSubsystemScope::targetScope                                                                         \
     }

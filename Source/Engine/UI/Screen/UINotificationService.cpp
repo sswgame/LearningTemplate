@@ -61,7 +61,8 @@ namespace sw
     } // namespace
 
     UINotificationService::UINotificationService()
-        : _listVisible{}
+        : _noticeSink{ *this }
+        , _listVisible{}
         , _listQueued{}
         , _listFading{}
         , _pUI{ nullptr }
@@ -325,7 +326,8 @@ namespace sw
     SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
-        const bool bExposed = scope.expose<IPlayerNoticeSink>( scope.emplaceSubsystem<UINotificationService>() );
+        UINotificationService& service  = scope.emplaceSubsystem<UINotificationService>();
+        const bool             bExposed = scope.exposeMember<IPlayerNoticeSink>( service, service.getNoticeSink() );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

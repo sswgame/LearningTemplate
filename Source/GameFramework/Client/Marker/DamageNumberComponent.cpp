@@ -188,20 +188,16 @@ namespace sw
 
     /**
      * @class DamageNumberSpawner
-     * @brief 게임 코드의 피해 숫자 창구(`IDamageNumberSink`)를 이 컴포넌트로 잇는 클라이언트 쪽 모듈 서브시스템입니다. 상태가 없다.
+     * @brief 게임 코드의 피해 숫자 창구(`IDamageNumberSink`)를 이 컴포넌트로 잇는 클라이언트 쪽 모듈 창구입니다(`SW_MODULE_PART`). 상태가 없다.
      * @details 이름 해시가 함수 서명 글이라 익명 이름공간이 아닌 `sw` 에 둔다. 전용 서버는 이 소스를 짓지 않아 창구가 없다.
      */
-    class DamageNumberSpawner final : public ISubsystem, public IDamageNumberSink
+    class DamageNumberSpawner final : public IDamageNumberSink
     {
     public:
-        static constexpr const utf8* kSubsystemName = "DamageNumberSpawner";
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        static constexpr const utf8* kModulePartName = "DamageNumberSpawner";
 
         void spawnDamageNumber( GameObjectManager& manager, const float3& position, int32 value ) override { DamageNumberComponent::spawnNumber( manager, position, value ); }
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, DamageNumberSpawner, IDamageNumberSink );
+    SW_MODULE_PART( Engine, DamageNumberSpawner, IDamageNumberSink );
 } // namespace sw

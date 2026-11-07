@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -45,24 +46,37 @@ namespace sw
             }
         };
 
-        /** @brief `<Tip text="원문"/>` 들을 읽습니다. `text` 가 없거나 빈 팁은 읽기 오류입니다(조용히 건너뛰지 않는다). */
-        [[nodiscard]] bool readTips( const XMLNode& root, string_view sourceName, vector<string>& outListTip )
+        /** @struct TipList @brief 팁 파일의 표 읽기 대상입니다(`XMLCatalogReader` — 모르는 원소도 읽기 오류다). */
+        struct TipList
         {
-            bool bValid = true;
-            for ( XMLNode node = root.findChild( "Tip" ); node; node = node.findNextSibling( "Tip" ) )
+            vector<string> _listTip;
+
+            /** @brief `<Tip text="원문"/>` 하나를 읽습니다. `text` 가 없거나 빈 팁은 읽기 오류입니다(조용히 건너뛰지 않는다). */
+            bool readTip( const XMLNode& node, string_view sourceName )
             {
                 const utf8* pText = node.findAttribute( "text" );
                 if ( pText == nullptr || pText[0] == '\0' )
                 {
                     SW_LOG_ERROR_ID( "LoadingScreen.TipNeedsNonEmpty", "%#: <Tip> needs a non-empty text", sourceName );
-                    bValid = false;
-                    continue;
+                    return false;
                 }
-                outListTip.push_back( pText );
+                _listTip.push_back( pText );
+                return true;
             }
-            if ( bValid == false )
-                outListTip.clear();
-            return bValid;
+        };
+
+        /** @brief 팁 파일 루트 @p root 를 읽습니다. 틀린 원소가 하나라도 있으면 목록을 비우고 false 입니다. */
+        [[nodiscard]] bool readTips( const XMLNode& root, string_view sourceName, vector<string>& outListTip )
+        {
+            TipList list;
+            using Element                          = XMLCatalogElement<TipList>;
+            static constexpr Element kArrElement[] = {
+                Element::of<&TipList::readTip>( "Tip" ).uncounted(), // 팁이 없는 파일도 맞다 — 팁 위젯을 접는다
+            };
+            if ( XMLCatalogReader::readInDocumentOrder( list, root, sourceName, kArrElement ).isClean() == false )
+                return false;
+            outListTip = std::move( list._listTip );
+            return true;
         }
     } // namespace
 } // namespace sw
@@ -70,7 +84,8 @@ namespace sw
 namespace sw
 {
     LoadingScreenController::LoadingScreenController()
-        : _settings{}
+        : _loadingScreenPort{ *this }
+        , _settings{}
         , _currentTip{}
         , _pUISystem{ nullptr }
         , _loadingScreen{ kInvalidUIScreenHandle }

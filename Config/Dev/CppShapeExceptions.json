@@ -1,0 +1,11 @@
+{
+    "_comment": "Scripts/lint/CppShape.py 의 예외. 규칙마다 '경로|클래스' → 까닭이다.",
+    "multipleBase": {
+        "Source/Core/Container/pair.h|CompressedPair": "빈 기반 최적화(EBO) — 빈 타입 칸이 바이트를 먹지 않게 하는 표준 기법이다. 멤버로 들면 [[no_unique_address]] 가 MSVC 에서 듣지 않는다",
+        "Source/Core/Container/pair.h|pair": "둘 다 빈 타입인 쌍의 특수화 — CompressedPair 와 같은 빈 기반 최적화다",
+        "Source/Engine/UI/Accessibility/Windows/UiaAccessibilityBridge.cpp|Element": "UI Automation COM 요소 — 한 객체가 QueryInterface 로 여러 제공자 인터페이스를 내야 하는 플랫폼 형식이다",
+        "Source/Engine/Navigation/INavMesh.h|INavMesh": "역할 인터페이스(타일 · 질의 · 바꾸기 · 디버그)를 묶은 순수 인터페이스 — 쓰는 쪽은 한 역할만 받아 스레드 규칙을 형식으로 막는다(IPhysicsScene 과 같은 모양)",
+        "Source/Engine/Physics/IPhysicsScene.h|IPhysicsScene": "역할 인터페이스(바디 · 관절 · 캐릭터 · 질의 · 차 · 소프트 바디 · 부력)를 묶은 순수 인터페이스 — 차원 트레이트가 없는 역할은 빈 타입으로 갈린다",
+        "Source/Engine/Profiling/IProfilerBackend.h|IProfilerBackend": "역할 인터페이스(메모리 출력 · GPU 타임라인)를 묶은 순수 인터페이스 — RHI 는 GPU 타임라인 역할만 받는다"
+    }
+}

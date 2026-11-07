@@ -84,7 +84,7 @@ namespace sw
      *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
      *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
      */
-    class SW_API UISystem final : public ISubsystem, public IInputCaptureQuery, public IUILayerVisibility, public IEngineUIDriver
+    class SW_API UISystem final : public ISubsystem
     {
     public:
         UISystem();
@@ -116,9 +116,9 @@ namespace sw
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         /** @brief 입력을 UI 이벤트로 처리합니다(게임 틱 앞). 순서는 뗀 입력 해제, UI 맵 갱신, 입력 방식 결정, 포인터, 액션, 텍스트 포커스, 닫기 요청 적용입니다. */
         void processInput( float32 deltaSeconds );
-        // IEngineUIDriver — 엔진 루프가 UI 헤더 없이 부르는 프레임 단계다. 서지 않았으면 아무 일도 하지 않는다.
-        void processFrameInput( float32 unscaledDeltaSeconds ) override;
-        void updateFrame( const EngineUIFrame& frame ) override;
+        // 엔진 루프가 UI 헤더 없이 부르는 프레임 단계다(`IEngineUIDriver` — `getEngineUIDriver`). 서지 않았으면 아무 일도 하지 않는다.
+        void processFrameInput( float32 unscaledDeltaSeconds );
+        void updateFrame( const EngineUIFrame& frame );
         /**
          * @brief 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리합니다(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
          * @details 레이아웃은 화면 트리마다 `UILayoutPass::update( 트리, makeLayoutContext() )` 로 돌린다. 화면마다 뷰포트(UI 단위) 전체가 루트 사각형이다.
@@ -240,10 +240,10 @@ namespace sw
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달이나 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 컨트롤러가 의도를 0 으로 둡니다). */
         bool isGameInputBlocked() const;
-        // IInputCaptureQuery — 게임 코드가 UI 를 모르고 묻는 창구다. 서지 않았으면 모두 false 다(전용 서버).
-        [[nodiscard]] bool isGameInputCaptured() const override;
-        [[nodiscard]] bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const override;
-        [[nodiscard]] bool isCursorCaptured() const override;
+        // 게임 코드가 UI 를 모르고 묻는 창구다(`IInputCaptureQuery` — `getInputCaptureQuery`). 서지 않았으면 모두 false 다(전용 서버).
+        [[nodiscard]] bool isGameInputCaptured() const;
+        [[nodiscard]] bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const;
+        [[nodiscard]] bool isCursorCaptured() const;
         /** @brief Loading 레이어 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중인 화면은 제외). 자동화의 "씬 플레이 중" 판정은 이 값이 false 가 된 뒤에 합니다. */
         bool isLoadingScreenShown() const;
         /**
@@ -251,7 +251,7 @@ namespace sw
          * @details 게임 update 가 돌지 않는 동안(에디터 멈춤, Simulate) 호스트가 켠다. 그 화면을 닫을 게임 코드가 돌지 않으므로, 그리면 편집 화면을 덮은 채 남기 때문이다
          *          (언리얼 에디터 뷰포트도 PIE 전에는 UMG 위젯이 없다).
          */
-        void setOnScreenSuppressed( bool bSuppressed ) override { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
+        void setOnScreenSuppressed( bool bSuppressed ) { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
         bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
         /**
          * @brief 레이어 집합 @p layers 의 화면을 숨기는 요청을 하나 겁니다(포토 모드의 "UI 없이 보기" 같은 곳). 요청은 레이어마다 세어 쌓이므로 둘이 같은 레이어를 숨겨도 하나를 풀 때 다시 보이지 않습니다.
@@ -259,9 +259,16 @@ namespace sw
          *          요청 뒤에 열린 화면도 숨깁니다. 엔진은 레이어 가시성 기능만 주고 어느 레이어를 숨길지는 거는 쪽의 데이터가 정합니다(Godot `CanvasLayer.visible`, 언리얼 `AHUD::bShowHUD`, 유니티 `Canvas.enabled`).
          *          건 쪽이 같은 집합으로 `removeLayerHideRequest` 를 꼭 부릅니다.
          */
-        void addLayerHideRequest( UILayerMask layers ) override;
+        void addLayerHideRequest( UILayerMask layers );
         /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. 건 적 없는 레이어를 풀면 단언으로 멈춥니다. */
-        void removeLayerHideRequest( UILayerMask layers ) override;
+        void removeLayerHideRequest( UILayerMask layers );
+        /**
+         * @brief 이 시스템이 공개하는 창구들입니다 — 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`).
+         * @details `IInputCaptureQuery` 는 게임 코드의 입력 판정, `IUILayerVisibility` 는 레이어 숨김 요청, `IEngineUIDriver` 는 엔진 루프의 프레임 단계다.
+         */
+        IInputCaptureQuery& getInputCaptureQuery() { return _inputCaptureQuery; }
+        IUILayerVisibility& getLayerVisibility() { return _layerVisibility; }
+        IEngineUIDriver&    getEngineUIDriver() { return _engineUIDriver; }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
         /**
@@ -370,6 +377,56 @@ namespace sw
         void refreshActiveScreen();
 
     private:
+        /** @class InputCaptureQuery @brief `IInputCaptureQuery` 를 시스템의 같은 이름 함수로 넘깁니다(수명은 시스템과 같다). */
+        class InputCaptureQuery final : public IInputCaptureQuery
+        {
+        public:
+            explicit InputCaptureQuery( const UISystem& owner )
+                : _owner{ owner }
+            {
+            }
+
+            [[nodiscard]] bool isGameInputCaptured() const override { return _owner.isGameInputCaptured(); }
+            [[nodiscard]] bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const override { return _owner.isActionCaptured( inputMap, action ); }
+            [[nodiscard]] bool isCursorCaptured() const override { return _owner.isCursorCaptured(); }
+
+        private:
+            const UISystem& _owner;
+        };
+
+        /** @class LayerVisibility @brief `IUILayerVisibility` 를 시스템의 같은 이름 함수로 넘깁니다(수명은 시스템과 같다). */
+        class LayerVisibility final : public IUILayerVisibility
+        {
+        public:
+            explicit LayerVisibility( UISystem& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void addLayerHideRequest( UILayerMask layers ) override { _owner.addLayerHideRequest( layers ); }
+            void removeLayerHideRequest( UILayerMask layers ) override { _owner.removeLayerHideRequest( layers ); }
+
+        private:
+            UISystem& _owner;
+        };
+
+        /** @class EngineUIDriver @brief `IEngineUIDriver` 를 시스템의 같은 이름 함수로 넘깁니다(수명은 시스템과 같다). */
+        class EngineUIDriver final : public IEngineUIDriver
+        {
+        public:
+            explicit EngineUIDriver( UISystem& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void processFrameInput( float32 unscaledDeltaSeconds ) override { _owner.processFrameInput( unscaledDeltaSeconds ); }
+            void updateFrame( const EngineUIFrame& frame ) override { _owner.updateFrame( frame ); }
+            void setOnScreenSuppressed( bool bSuppressed ) override { _owner.setOnScreenSuppressed( bSuppressed ); }
+
+        private:
+            UISystem& _owner;
+        };
+
         /** @struct SwitchScreen @brief 화면 스위치 하나가 연 화면입니다. 스위치 이름(등록할 때의 이름 사본)으로 찾아, 모듈이 다시 올라와도 같은 화면을 이어 갑니다. */
         struct SwitchScreen
         {
@@ -377,6 +434,9 @@ namespace sw
             UIScreenHandle _screen{ kInvalidUIScreenHandle };
         };
 
+        InputCaptureQuery            _inputCaptureQuery;              ///< 공개 창구(`getInputCaptureQuery`)
+        LayerVisibility              _layerVisibility;                ///< 공개 창구(`getLayerVisibility`)
+        EngineUIDriver               _engineUIDriver;                 ///< 공개 창구(`getEngineUIDriver`)
         vector<unique_ptr<UIScreen>> _listScreen;                     ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
         UIDocumentCache*             _pDocumentCache;                 ///< 문서 캐시(서브시스템 `UIDocuments` — 기동이 찾는다)
         UIStyleSheetCache*           _pStyleSheetCache;               ///< 스타일 시트 캐시(서브시스템 `UIStyleSheets` — 기동이 찾는다)

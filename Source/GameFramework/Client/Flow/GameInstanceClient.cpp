@@ -30,7 +30,7 @@ namespace sw
         class GameInstanceClient final : public IGameInstanceClientHook
         {
         public:
-            ILoadingScreen* emplaceLoadingScreen( SubsystemScope& gameScope ) override { return &gameScope.emplaceSubsystem<LoadingScreenController>(); }
+            ILoadingScreen* emplaceLoadingScreen( SubsystemScope& gameScope ) override { return &gameScope.emplaceSubsystem<LoadingScreenController>().getLoadingScreen(); }
 
             void bindSessionCommands( GameSceneFlow& flow ) override
             {

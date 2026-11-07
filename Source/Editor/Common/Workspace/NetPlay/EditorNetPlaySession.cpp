@@ -235,7 +235,8 @@ namespace sw::editor
     }
 
     EditorNetPlaySession::EditorNetPlaySession()
-        : _listProcess{}
+        : _processes{ *this }
+        , _listProcess{}
         , _listStoppingProcess{}
         , _pStopJob{ make_unique<EditorNetPlayStopJob>() }
         , _listLogLine{}

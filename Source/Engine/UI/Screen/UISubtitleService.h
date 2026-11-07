@@ -45,7 +45,7 @@ namespace sw
      *          `gv_subtitleSize`(0, 1, 2)는 문서에 적힌 글 크기에 0.85, 1, 1.3 을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
      *          텍스트는 이미 현지화한 것을 받는다(대화 러너와 음성 이벤트가 해석한다). 게임 스레드에서만 쓴다.
      */
-    class SW_API UISubtitleService final : public ISubsystem, public ISubtitleSink
+    class SW_API UISubtitleService final : public ISubsystem
     {
     public:
         /** @brief 동시에 보이는 줄 수입니다. */
@@ -75,8 +75,8 @@ namespace sw
          * @return 줄 번호(1 부터)입니다.
          */
         uint32 post( string_view speaker, string_view text, float32 durationSeconds = 0.0f );
-        /** @brief 줄을 올립니다(`ISubtitleSink` — 게임 코드의 대화 진행은 읽기 시간(0), 시퀀서 자막은 구간 길이를 준다). */
-        void postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) override { (void)post( speaker, text, durationSeconds ); }
+        /** @brief 자막을 받는 자리(`ISubtitleSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
+        ISubtitleSink& getSubtitleSink() { return _subtitleSink; }
         /**
          * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간입니다.
          * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDef::_subtitleSpeakerKey`)다.
@@ -110,6 +110,26 @@ namespace sw
         void applySlot( UIScreen& screen, uint32 slot, const UISubtitleLine* pLine, float32 sizeScale, float32 backgroundOpacity );
 
     private:
+        /**
+         * @class SubtitleSink
+         * @brief 줄을 올리는 `ISubtitleSink` 입니다(게임 코드의 대화 진행은 읽기 시간(0), 시퀀서 자막은 구간 길이를 준다). 서비스가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 서비스와 같다).
+         */
+        class SubtitleSink final : public ISubtitleSink
+        {
+        public:
+            explicit SubtitleSink( UISubtitleService& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) override { (void)_owner.post( speaker, text, durationSeconds ); }
+
+        private:
+            UISubtitleService& _owner;
+        };
+
+    private:
+        SubtitleSink           _subtitleSink;
         UISystem*              _pUI;                     ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr — `post` 는 쌓기만 한다)
         Subscription           _updateSubscription;      ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
         vector<UISubtitleLine> _listActive;              ///< 보이는 줄입니다(오래된 것이 앞).

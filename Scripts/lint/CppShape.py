@@ -3,7 +3,7 @@
 """
 Scripts/lint/CppShape.py
 
-C++ 모양 규칙 중 컴파일러가 보지 않는 여덟을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
+C++ 모양 규칙 중 컴파일러가 보지 않는 아홉을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
 **왜 형식이 아니라 린트인가.** 여섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
 1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
@@ -22,6 +22,11 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 여덟을 본다. 규칙 문
    손 종류 상수(`NetKitMessageRange::kX + n`), 손 마스크(`1u << ( NetXMessage::kY - … )`), 종류 손 디스패치(`context._kind ==`)는 마스크에서 종류를 빠뜨리거나
    메시지를 더하고 와이어 버전을 올리지 않는 결함을 다시 낸다(2026-11-07 — 16 곳). 표가 마스크 · 디스패치 · 와이어 해시를 낸다.
 
+9. 기반 클래스는 하나(사용자 2026-11-08 — 다중 상속은 최소로): 서브시스템이 창구 인터페이스를 함께 상속하지 않고 구현을 멤버로 들어 건다
+   (`SubsystemScope::exposeMember` · 모듈 창구 `SW_MODULE_PART` · `getPublishedPart`). `std::enable_shared_from_this` 는 세지 않는다(표준 믹스인).
+   예외는 `Config/Dev/CppShapeExceptions.json` 의 `multipleBase` 에 `경로|클래스` → 까닭으로 적는다(플랫폼 COM · 빈 기반 최적화 · 역할 인터페이스 묶음).
+   전체 실행(`--all`)은 더는 없는 예외 자리도 위반으로 센다.
+
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
 
@@ -29,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import json
 import re
 import sys
 from pathlib import Path
@@ -45,6 +51,8 @@ kOnlineKitFolder = "Source/GameFramework/Kits/Feature/Online/"
 kOnlineCoreFolder = "Source/GameFramework/Kits/Feature/Online/OnlineCore/"  # 프로토콜 표의 기반(OnlineProtocolService)이 사는 곳 — 기반은 인터페이스를 잇는다
 kOnlineInterfacePattern = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)\b")
 kAccessKeywords = ("public", "protected", "private")
+kExceptionsPath = "Config/Dev/CppShapeExceptions.json"
+kUncountedBases = ("enable_shared_from_this",)  # 표준 믹스인 — 상속 계층이 아니다
 
 
 # ------------------------------------------------------------------------------
@@ -200,11 +208,25 @@ def classifyStatement(statement: str, className: str) -> str | None:
 
 
 class ClassInfo:
-    def __init__(self, name: str, isStruct: bool, line: int) -> None:
+    def __init__(self, name: str, isStruct: bool, line: int, bases: list[str] | None = None) -> None:
         self.name = name
         self.isStruct = isStruct
         self.line = line
+        self.bases = bases or []  # 기반 클래스 이름(꺾쇠 인자를 지운 것)
         self.items: list[tuple[str, str, int, str]] = []  # (종류, 접근, 줄, 문장)
+
+
+def parseBases(afterName: str) -> list[str]:
+    """클래스 이름 뒤 글(`final : public A, private B`)에서 기반 이름 목록을 꺼냅니다. 꺾쇠 인자는 이미 지워져 있다."""
+    match = re.search(r"(?<!:):(?!:)(.*)$", afterName, re.S)
+    if match is None:
+        return []
+    listBase = []
+    for part in match.group(1).split(","):
+        name = re.sub(r"\b(public|protected|private|virtual)\b", "", part).strip()
+        if name:
+            listBase.append(name)
+    return listBase
 
 
 def lineOf(text: str, index: int) -> int:
@@ -224,7 +246,7 @@ def parseClass(code: str, start: int, end: int, info: ClassInfo, outClasses: lis
             match = kTypeHead.search(typeHead)
             if match and "(" not in typeHead[:match.start()] and match.group(1).startswith(("class", "struct", "union")) and "=" not in typeHead[match.end():]:
                 close = matchBrace(code, index)
-                nested = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index))
+                nested = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index), parseBases(typeHead[match.end():]))
                 parseClass(code, index + 1, close, nested, outClasses)
                 outClasses.append(nested)
                 index = close + 1
@@ -284,7 +306,7 @@ def parseScope(code: str, start: int, end: int, outClasses: list[ClassInfo]) -> 
             match = kTypeHead.search(typeHead)
             close = matchBrace(code, index)
             if match and match.group(1).startswith(("class", "struct", "union")) and "(" not in typeHead[:match.start()] and "=" not in typeHead[match.end():] and match.group(2):
-                info = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index))
+                info = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index), parseBases(typeHead[match.end():]))
                 parseClass(code, index + 1, close, info, outClasses)
                 outClasses.append(info)
             elif re.search(r"\bnamespace\b[^()]*$|\bextern\s*$", head.strip() and head or ""):
@@ -482,12 +504,44 @@ def checkNetMessageTable(code: str, relative: str) -> list[tuple[int, str]]:
     return listProblem
 
 
+@functools.lru_cache(maxsize=1)
+def loadMultipleBaseExceptions(projectRoot: str) -> dict[str, str]:
+    """`경로|클래스` → 까닭. 파일이 없으면 오류로 멈춘다(예외 목록은 필수 데이터다)."""
+    return json.loads((Path(projectRoot) / kExceptionsPath).read_text(encoding="utf-8"))["multipleBase"]
+
+
+def checkMultipleBases(info: ClassInfo, relative: str, exceptions: dict[str, str]) -> list[tuple[int, str]]:
+    """기반이 둘 이상인 클래스를 찾는다 — 서브시스템 · 구현은 창구를 멤버로 들어 건다(`exposeMember` · `SW_MODULE_PART`)."""
+    counted = [base for base in info.bases if not base.endswith(kUncountedBases)]
+    if len(counted) < 2 or f"{relative}|{info.name}" in exceptions:
+        return []
+    return [(info.line, f"`{info.name}` 의 기반이 {len(counted)} 개다({', '.join(counted)}) — 기반은 하나다. 창구 인터페이스는 구현을 멤버로 들어 건다"
+                        f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {kExceptionsPath} 의 multipleBase 에 까닭과 함께 적는다")]
+
+
+def findStaleMultipleBaseExceptions(projectRoot: Path) -> list[str]:
+    """더는 다중 기반이 아닌(또는 사라진) 예외 자리 — 전체 실행에서만 센다."""
+    listProblem = []
+    for key in loadMultipleBaseExceptions(str(projectRoot)):
+        relative, className = key.split("|", 1)
+        path = projectRoot / relative
+        found = False
+        if path.exists():
+            code = stripCode(path.read_text(encoding="utf-8-sig", errors="ignore"))
+            found = any(info.name == className and len([b for b in info.bases if not b.endswith(kUncountedBases)]) >= 2 for info in collectClasses(code))
+        if not found:
+            listProblem.append(f"{kExceptionsPath}: 예외 `{key}` 는 더는 다중 기반이 아니다 — 줄을 지운다")
+    return listProblem
+
+
 def inspectFile(path: Path, relative: str) -> list[str]:
     raw = path.read_text(encoding="utf-8-sig", errors="ignore")
     code = stripCode(raw)
     rawLines = raw.splitlines()
     listProblem: list[tuple[int, str]] = []
+    exceptions = loadMultipleBaseExceptions(str(Path(__file__).resolve().parents[2]))
     for info in collectClasses(code):
+        listProblem += checkMultipleBases(info, relative, exceptions)
         listProblem += checkDeclarationOrder(info)
         listProblem += checkBoolFlags(info, rawLines)
         listProblem += checkBitFieldRuns(info, rawLines)
@@ -534,6 +588,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         listFile = [str(path) for path in (projectRoot / "Source").rglob("*") if path.suffix in (".h", ".cpp")]
     listViolation = checkCppShape(projectRoot, listFile)
+    if not args.files:
+        listViolation += findStaleMultipleBaseExceptions(projectRoot)
     if args.summary:
         counts: dict[str, int] = {}
         for line in listViolation:

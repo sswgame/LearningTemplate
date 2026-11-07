@@ -22,13 +22,14 @@ namespace sw
 {
     SceneRHISubsystem::SceneRHISubsystem( const RHISubsystem& rhiSubsystem )
         : _rhiSubsystem{ rhiSubsystem }
+        , _renderBinding{ rhiSubsystem }
     {
     }
 
     SubsystemInitResult SceneRHISubsystem::initializeSubsystem()
     {
         IRHIDevice* const pDevice = &_rhiSubsystem.findRHI()->getDevice();
-        engine::getSubsystem<SceneManager>().setRenderBinding( this );
+        engine::getSubsystem<SceneManager>().setRenderBinding( &_renderBinding );
         bindAssetCaches( pDevice );
         return SubsystemInitResult::Succeeded;
     }
@@ -48,12 +49,12 @@ namespace sw
         bindAssetCaches( nullptr );
     }
 
-    void SceneRHISubsystem::flushRenderThread()
+    void SceneRHISubsystem::SceneRenderBinding::flushRenderThread()
     {
         _rhiSubsystem.findRHI()->getDevice().flushRenderThread();
     }
 
-    void SceneRHISubsystem::bindSceneDefaults( Scene& scene )
+    void SceneRHISubsystem::SceneRenderBinding::bindSceneDefaults( Scene& scene )
     {
         GameObjectManager* const pObjectManager = scene.getObjectManager();
         if ( pObjectManager == nullptr )

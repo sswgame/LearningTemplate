@@ -29,23 +29,13 @@ namespace sw
 
     /**
      * @class EngineRenderDriver
-     * @brief `IEngineRenderDriver` 의 구현입니다.
+     * @brief `IEngineRenderDriver` 의 구현입니다. 수명은 `EngineRenderDriverSubsystem` 이 맡는다(서브시스템과 창구를 함께 상속하지 않는다 — 린트 `cpp-shape`).
      */
-    class EngineRenderDriver final : public ISubsystem, public IEngineRenderDriver
+    class EngineRenderDriver final : public IEngineRenderDriver
     {
     public:
-        static constexpr const utf8* kSubsystemName      = "EngineRenderDriver";
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU;
-
-        /** @param startupScope 기동 범위입니다. 백엔드 교체가 그 컬렉션의 단계를 내리고 다시 세웁니다. 이 서브시스템의 주인이라 먼저 사라지지 않습니다. */
+        /** @param startupScope 기동 범위입니다. 백엔드 교체가 그 컬렉션의 단계를 내리고 다시 세웁니다. 이 드라이버를 든 서브시스템의 주인이라 먼저 사라지지 않습니다. */
         EngineRenderDriver( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem );
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask   getSubsystemHost() const override;
-        /** @brief 받은 렌더 스레드 단계(그 아래 렌더러 · RHI)보다 늦게 서고 먼저 내린다 — 공장이 세 단계를 받아 든다(`EngineRegistrationList::findLifetimeMismatch`). */
-        span<const utf8* const> getSubsystemDependencies() const override;
 
         void                                         onStartupFinished() override;
         void                                         onShutdownBegin() override;
@@ -93,5 +83,32 @@ namespace sw
         FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
         Subscription            _mainWindowLifecycleSubscription;
+    };
+
+    /**
+     * @class EngineRenderDriverSubsystem
+     * @brief `EngineRenderDriver` 를 멤버로 들고 기동 범위의 수명 짝을 맡는 서브시스템입니다. 기동이 그 멤버를 `IEngineRenderDriver` 로 건다(`SubsystemScope::exposeMember`).
+     */
+    class EngineRenderDriverSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName      = "EngineRenderDriver";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU;
+
+        /** @brief 인자는 `EngineRenderDriver` 의 것입니다. */
+        EngineRenderDriverSubsystem( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem );
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask   getSubsystemHost() const override;
+        /** @brief 받은 렌더 스레드 단계(그 아래 렌더러 · RHI)보다 늦게 서고 먼저 내린다 — 공장이 세 단계를 받아 든다(`EngineRegistrationList::findLifetimeMismatch`). */
+        span<const utf8* const> getSubsystemDependencies() const override;
+
+        /** @brief 공개할 드라이버입니다. */
+        EngineRenderDriver& getDriver() { return _driver; }
+
+    private:
+        EngineRenderDriver _driver;
     };
 } // namespace sw

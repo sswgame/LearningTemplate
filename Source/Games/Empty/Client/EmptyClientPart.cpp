@@ -65,18 +65,14 @@ namespace sw
         unique_ptr<EmptyRenderDemo> _renderDemo; ///< 렌더 확장 시연의 등록 수명 — 사라지면 flush 한 뒤 등록이 풀린다(핫 리로드 때 남지 않는다)
     };
 
-    /** @class EmptyClientPartFactory @brief 빈 게임의 클라이언트 전용 부분을 만드는 모듈 서브시스템입니다. 이름 해시가 함수 서명 글이라 `sw` 에 둔다. */
-    class EmptyClientPartFactory final : public ISubsystem, public IGameClientPartFactory
+    /** @class EmptyClientPartFactory @brief 빈 게임의 클라이언트 전용 부분을 만드는 모듈 창구입니다(`SW_MODULE_PART`). 이름 해시가 함수 서명 글이라 `sw` 에 둔다. */
+    class EmptyClientPartFactory final : public IGameClientPartFactory
     {
     public:
-        static constexpr const utf8* kSubsystemName = "EmptyClientPartFactory";
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        static constexpr const utf8* kModulePartName = "EmptyClientPartFactory";
 
         unique_ptr<IGameClientPart> createClientPart() override { return make_unique<EmptyClientPart>(); }
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, EmptyClientPartFactory, IGameClientPartFactory );
+    SW_MODULE_PART( Engine, EmptyClientPartFactory, IGameClientPartFactory );
 } // namespace sw
