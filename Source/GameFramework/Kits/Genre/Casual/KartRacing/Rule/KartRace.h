@@ -37,6 +37,8 @@ namespace sw
     class Archive;
     class KartGhost;
     class KartTrack;
+    class ProjectileCatalog;
+    struct ProjectileDef;
 
     /** @brief 경기 설정입니다. */
     struct KartRaceSettings
@@ -148,9 +150,10 @@ namespace sw
 
     /**
      * @class KartRace
-     * @brief 한 경기를 진행합니다. 트랙과 아이템 카탈로그는 빌려 쓰므로 경기보다 오래 살아야 합니다.
+     * @brief 한 경기를 진행합니다. 트랙과 아이템 · 탄 카탈로그는 빌려 쓰므로 경기보다 오래 살아야 합니다.
+     * @details 카탈로그는 생성 인자로 받는다(기체 대전과 같은 길 — 경기가 게임 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 그대로 연다).
      * @code
-     *     race.initialize( settings, &track, &items );
+     *     if ( race.initialize( settings, &track, &items, &projectiles ) == false ) { ... } // 아이템의 탄이 탄 카탈로그에 없다
      *     race.addRacer( kartSettings, false ); // 사람
      *     race.addRacer( kartSettings, true );  // AI
      *     race.start();
@@ -167,7 +170,11 @@ namespace sw
 
         KartRace();
 
-        void initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog );
+        /**
+         * @brief 경기를 엽니다. 아이템이 없는 경기는 두 카탈로그 모두 nullptr 이어도 됩니다.
+         * @return 날거나 놓이는 아이템의 탄(`KartItemDef::_projectileID`)이 탄 카탈로그에 없으면 오류를 남기고 false 입니다. 그 아이템은 써도 나가지 않습니다.
+         */
+        [[nodiscard]] bool initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog );
         /** @brief 차를 추가하고 차 번호를 반환합니다(`Waiting` 단계에서만 가능합니다). 실패하면 -1 입니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
         int32 addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI );
         void  setRacerAI( int32 racer, const KartAISettings& settings );
@@ -214,24 +221,27 @@ namespace sw
         const KartRacer* findRacer( int32 racer ) const;
         /** @brief @p place 등(1부터)인 차의 번호를 반환합니다. 없으면 -1 입니다. */
         int32 findRacerAtPlace( int32 place ) const;
-        /** @brief 날아가거나 놓인 아이템입니다(공통 발사체, 정의 id 가 아이템 id). 평면(XZ)에서 돌고 높이는 트랙을 따른다. */
+        /** @brief 날아가거나 놓인 아이템입니다(공통 발사체. 운동 값은 아이템의 탄 정의이고, 정의 id 는 반응을 찾는 아이템 id 다). 평면(XZ)에서 돌고 높이는 트랙을 따른다. */
         const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
         bool                           isItemBoxActive( int32 boxIndex ) const;
         const KartTrack*               getTrack() const { return _pTrack; }
         void                           drainEvents( vector<KartRaceEvent>& outListEvent );
 
     private:
-        bool               isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }
-        bool               isKnownItem( const hashed_string& itemID ) const; ///< 빈 id 이거나 카탈로그에 있는 아이템인지 반환한다(상태 읽기에서 쓴다)
-        ArcadeVehicleInput resolveInput( int32 racer, bool& outUseItem );
-        void               updateProgress( int32 racer );
-        void               completeLap( int32 racer );
-        void               finishRacer( int32 racer );
-        float32            computeProgress( const KartRacer& kart ) const;
-        void               updateItemBoxes( float32 deltaTime );
-        void               updateProjectiles( float32 deltaTime );
-        void               explode( const ProjectileState& projectile, const KartItemDef& def );
-        int32              pickRedShellTarget( int32 owner ) const;
+        bool isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }
+        bool isKnownItem( const hashed_string& itemID ) const; ///< 빈 id 이거나 카탈로그에 있는 아이템인지 반환한다(상태 읽기에서 쓴다)
+        /** @brief 날거나 놓이는 아이템 @p item 의 탄 정의입니다. 탄 카탈로그가 없거나 그 탄이 없거나 탄을 쓰지 않는 종류면 nullptr 입니다. */
+        const ProjectileDef* findItemProjectile( const KartItemDef& item ) const;
+        ArcadeVehicleInput   resolveInput( int32 racer, bool& outUseItem );
+        void                 updateProgress( int32 racer );
+        void                 completeLap( int32 racer );
+        void                 finishRacer( int32 racer );
+        float32              computeProgress( const KartRacer& kart ) const;
+        void                 updateItemBoxes( float32 deltaTime );
+        void                 updateProjectiles( float32 deltaTime );
+        /** @brief 1등 공격이 터집니다. 범위는 탄의 폭발 반지름(`ProjectileState::_blastRadius`)이고 맞은 차의 반응은 @p def 입니다. */
+        void  explode( const ProjectileState& projectile, const KartItemDef& def );
+        int32 pickRedShellTarget( int32 owner ) const;
         /** @brief 아직 들어오지 않은 차 중 가장 앞선 차의 번호를 반환합니다. 없으면 -1 입니다. */
         int32 findLeaderInRace() const;
         void  updatePlaces();
@@ -251,6 +261,7 @@ namespace sw
         FixedStepTimer             _timer;
         const KartTrack*           _pTrack;
         const KartItemCatalog*     _pItemCatalog;
+        const ProjectileCatalog*   _pProjectileCatalog;
         KartGhost*                 _pGhost;
         float32                    _raceTime;
         Countdown                  _countdown;

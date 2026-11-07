@@ -35,7 +35,11 @@ namespace sw
         LeaderShell ///< 1등을 쫓아가 터진다(파란 껍질). 터질 때 둘레의 차도 맞는다
     };
 
-    /** @brief 아이템 정의 하나입니다. 종류마다 쓰는 값만 읽습니다. */
+    /**
+     * @brief 아이템 정의 하나입니다. 종류마다 쓰는 값만 읽습니다.
+     * @details 날아가거나 놓이는 아이템(바나나 · 껍질 · 1등 공격)의 속력 · 수명 · 반지름 · 유도 · 폭발 반지름은 `projectile` 이 가리키는 탄 정의(`ProjectileCatalog`)다.
+     *          아이템에는 맞은 뒤의 반응(회전 · 감속 · 방어막 뚫기)과 쓰는 법(종류)만 남는다 — 같은 탄을 여러 아이템이 나누고 탄 변형은 탄 항목 `_base` 로 적는다.
+     */
     REFLECT()
     struct KartItemDef
     {
@@ -43,14 +47,8 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string _id{};
-        PROPERTY( Min = 0.0 )
-        float32 _speed{ 45.0f }; ///< 껍질의 속력(m/초)
-        PROPERTY( Min = 0.0 )
-        float32 _lifetime{ 6.0f }; ///< 껍질과 바나나가 남는 시간이다(0 이면 바나나는 맞을 때까지 남는다)
-        PROPERTY( Min = 0.0 )
-        float32 _radius{ 1.2f }; ///< 맞는 반지름이다(차의 반지름을 더해서 판정한다)
-        PROPERTY( Min = 0.0 )
-        float32 _turnRate{ 3.0f }; ///< 유도 껍질의 회전 속도(라디안/초)
+        PROPERTY( Name = "projectile" )
+        hashed_string _projectileID{}; ///< 날아가거나 놓이는 종류의 탄 정의 id(`ProjectileCatalog`). 탄의 속력 0 은 놓인 채 남고, 수명 0 은 맞을 때까지 남는다
         PROPERTY( Name = "spin", Min = 0.0 )
         float32 _spinTime{ 1.2f }; ///< 맞은 차가 도는 시간이다(조작 불가)
         PROPERTY( Min = 0.0 )
@@ -59,12 +57,13 @@ namespace sw
         float32 _boostTime{ 1.5f }; ///< Booster 의 부스트 시간
         PROPERTY( Name = "shield", Min = 0.0 )
         float32 _shieldTime{ 8.0f }; ///< Shield 가 남는 시간
-        PROPERTY( Min = 0.0 )
-        float32 _blastRadius{ 0.0f }; ///< 터질 때 함께 맞는 반지름이다(LeaderShell)
         PROPERTY( Required )
         KartItemKind _kind{ KartItemKind::Banana };
         PROPERTY()
         bool _bIgnoresShield{ false }; ///< 방어막을 뚫는다
+
+        /** @brief 탄으로 날거나 놓이는 종류(바나나 · 껍질 · 1등 공격)인지 나타냅니다. 이 종류는 `projectile` 을 적어야 합니다. */
+        bool isProjectile() const { return _kind != KartItemKind::Booster && _kind != KartItemKind::Shield; }
     };
 } // namespace sw
 

@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 
 #include <cstring>
 #include <limits>
@@ -22,15 +23,23 @@
 namespace
 {
     constexpr const utf8* kKartItemsXML = R"(<KartItemCatalog>
-  <Item id="banana" kind="Banana" lifetime="0" radius="1.2" spin="1" hitSpeedScale="0.5"/>
-  <Item id="green" kind="GreenShell" speed="45" lifetime="1" radius="1.2" spin="1"/>
-  <Item id="red" kind="RedShell" speed="45" lifetime="3" turnRate="10"/>
-  <Item id="blue" kind="LeaderShell" speed="45" lifetime="3" blastRadius="4" ignoresShield="true"/>
+  <Item id="banana" kind="Banana" projectile="banana_peel" spin="1" hitSpeedScale="0.5"/>
+  <Item id="green" kind="GreenShell" projectile="green_shell" spin="1"/>
+  <Item id="red" kind="RedShell" projectile="red_shell"/>
+  <Item id="blue" kind="LeaderShell" projectile="blue_shell" ignoresShield="true"/>
   <Item id="boost" kind="Booster" boost="2"/>
   <Item id="shield" kind="Shield" shield="5"/>
   <RankTable from="1" to="1"><Entry item="banana"/></RankTable>
   <RankTable from="2" to="4"><Entry item="green" weight="1"/><Entry item="red" weight="3"/></RankTable>
 </KartItemCatalog>)";
+
+    // 아이템이 가리키는 탄(운동은 탄, 반응은 아이템). 카트는 평면에서 돌아 중력이 없고 사거리 대신 수명으로 끝난다. 유도는 도/초다(10 rad/s ≈ 573°/s, 3 rad/s ≈ 172°/s).
+    constexpr const utf8* kKartProjectileXML = R"(<ProjectileCatalog>
+  <Projectile id="banana_peel" speed="0" lifetime="0" range="0" radius="1.2" gravityScale="0"/>
+  <Projectile id="green_shell" speed="45" lifetime="1" range="0" radius="1.2" gravityScale="0"/>
+  <Projectile id="red_shell" speed="45" lifetime="3" range="0" radius="1.2" homingRate="572.9578" gravityScale="0"/>
+  <Projectile id="blue_shell" speed="45" lifetime="3" range="0" radius="1.2" homingRate="171.8873" blastRadius="4" gravityScale="0"/>
+</ProjectileCatalog>)";
 
     constexpr float32 kKartTolerance = 1.0e-3f;
 
@@ -89,6 +98,7 @@ namespace
     {
         sw::KartTrack                 _track{};
         sw::KartItemCatalog           _items{};
+        sw::ProjectileCatalog         _projectiles{};
         sw::KartRaceSettings          _settings{};
         sw::KartRace                  _race{};
         sw::vector<sw::KartRaceEvent> _listEvent{};
@@ -96,14 +106,21 @@ namespace
         KartRaceTest()
         {
             SW_REQUIRE_TRUE( _items.loadFromXMLText( kKartItemsXML, "KartTest" ) );
+            SW_REQUIRE_TRUE( _projectiles.loadFromXMLText( kKartProjectileXML, "KartTest" ) );
             _settings._countdownTime = 0.0f;
             _settings._bRubberBand   = SW_FALSE;
+        }
+
+        /** @brief @p race 를 이 판의 트랙 · 카탈로그로 엽니다(@p pTrack 이 비면 이 판의 트랙). */
+        void initializeRace( sw::KartRace& race, const sw::KartRaceSettings& settings, const sw::KartTrack* pTrack = nullptr )
+        {
+            SW_REQUIRE_TRUE( race.initialize( settings, pTrack != nullptr ? pTrack : &_track, &_items, &_projectiles ) );
         }
 
         void open( const sw::KartTrackDef& def, int32 racerCount, bool bAILast = false )
         {
             SW_REQUIRE_TRUE( _track.initialize( def ) );
-            _race.initialize( _settings, &_track, &_items );
+            initializeRace( _race, _settings );
             for ( int32 index = 0; index < racerCount; ++index )
             {
                 SW_EXPECT_EQUAL( index, _race.addRacer( sw::ArcadeVehicleSettings{}, bAILast && index == racerCount - 1 ) );
@@ -348,7 +365,7 @@ SW_TEST_CASE( KartTrackTest, RefusesUnusableDefinitions )
     SW_EXPECT_NEAR( 0.0f, track.getLength(), kKartTolerance );
 
     sw::KartRace race;
-    race.initialize( sw::KartRaceSettings{}, &track, nullptr );
+    SW_EXPECT_TRUE( race.initialize( sw::KartRaceSettings{}, &track, nullptr, nullptr ) ); // 아이템이 없는 경기다
     SW_EXPECT_EQUAL( -1, race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
 }
 
@@ -717,7 +734,7 @@ SW_TEST_CASE_F( KartRaceTest, GhostReplaysSamePath )
     def._listBoostPad.push_back( pad );
 
     SW_REQUIRE_TRUE( _track.initialize( def ) );
-    _race.initialize( _settings, &_track, &_items );
+    initializeRace( _race, _settings );
     SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     sw::KartGhost ghost;
     _race.startGhostRecording( 0, &ghost ); // 출발 전에 건다
@@ -755,7 +772,7 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     _settings._countdownTime = 0.25f;
     _settings._step          = 0.1f;
-    _race.initialize( _settings, &_track, &_items );
+    initializeRace( _race, _settings );
     _race.start();
     SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, _race.getPhase() );
     SW_EXPECT_EQUAL( 0, _race.update( 0.0f ) );
@@ -779,7 +796,7 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     SW_EXPECT_NEAR( 0.1f, _race.getRaceTime(), kKartTolerance );
 
     sw::KartRace noTrack;
-    noTrack.initialize( _settings, nullptr, nullptr );
+    SW_EXPECT_TRUE( noTrack.initialize( _settings, nullptr, nullptr, nullptr ) );
     SW_EXPECT_EQUAL( -1, noTrack.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     SW_EXPECT_TRUE( noTrack.findRacer( 0 ) == nullptr );
     SW_EXPECT_EQUAL( -1, noTrack.findRacerAtPlace( 1 ) );
@@ -1012,7 +1029,7 @@ SW_TEST_CASE_F( KartRaceTest, PressesLatchUntilNextStep )
 SW_TEST_CASE_F( KartRaceTest, ItemUseAndShield )
 {
     SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
-    _race.initialize( _settings, &_track, &_items );
+    initializeRace( _race, _settings );
     SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     _race.giveItem( 0, "boost" );
     SW_EXPECT_FALSE( _race.useItem( 0 ) ); // 아직 시작 전
@@ -1048,6 +1065,45 @@ SW_TEST_CASE_F( KartRaceTest, ItemUseAndShield )
     SW_EXPECT_TRUE( racer( 0 )._shieldTime.isActive() ); // 뚫었으니 방어막은 그대로다
 
     SW_EXPECT_FALSE( _race.applyHit( 9, -1, hit ) );
+}
+
+/**
+ * @brief [KartRaceTest] 날거나 놓이는 아이템의 운동은 탄 카탈로그의 탄이다. 탄을 적지 않은 아이템은 카탈로그가 받지 않고, 탄 카탈로그에 없는 탄은 경기를 열 때 알리며 써도 나가지 않고 아이템이 남는다
+ */
+SW_TEST_CASE_F( KartRaceTest, ItemsFlyByTheirProjectile )
+{
+    SW_EXPECT_LOG( "KartItems.ItemNeedsProjectile" );
+    SW_EXPECT_LOG( "KartRace.ItemProjectileMissing" );
+    sw::KartItemCatalog broken;
+    SW_REQUIRE_TRUE( broken.loadFromXMLText( R"(<KartItemCatalog>
+  <Item id="bare" kind="GreenShell"/>
+  <Item id="lost" kind="GreenShell" projectile="ghost_shell"/>
+  <Item id="boost" kind="Booster" boost="2"/>
+</KartItemCatalog>)",
+                                             "KartTest" ) );
+    SW_EXPECT_TRUE( broken.find( "bare" ) == nullptr );
+    SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
+    SW_EXPECT_FALSE( _race.initialize( _settings, &_track, &broken, &_projectiles ) );
+    SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
+    _race.start();
+    _race.giveItem( 0, "lost" );
+    SW_EXPECT_FALSE( _race.useItem( 0 ) );
+    SW_EXPECT_EQUAL( sw::hashed_string( "lost" ), racer( 0 )._itemID );
+    SW_EXPECT_TRUE( _race.getProjectiles().empty() );
+    _race.giveItem( 0, "boost" ); // 탄을 쓰지 않는 아이템은 그대로 된다
+    SW_EXPECT_TRUE( _race.useItem( 0 ) );
+
+    // 탄의 값이 운동을 정한다: 녹색 껍질은 탄의 속력 45 로 날고 탄의 반지름만큼 앞에서 나간다.
+    SW_REQUIRE_TRUE( _race.initialize( _settings, &_track, &_items, &_projectiles ) );
+    SW_REQUIRE_EQUAL( 0, _race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
+    _race.start();
+    _race.giveItem( 0, "green" );
+    SW_REQUIRE_TRUE( _race.useItem( 0 ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), _race.getProjectiles().size() );
+    SW_EXPECT_NEAR( 45.0f, _race.getProjectiles()[0].getSpeed(), kKartTolerance );
+    SW_EXPECT_NEAR( 1.2f, _race.getProjectiles()[0]._radius, kKartTolerance );
+    SW_EXPECT_NEAR( 1.0f, _race.getProjectiles()[0]._lifetime, kKartTolerance );
+    SW_EXPECT_TRUE( _race.getProjectiles()[0]._defID == sw::hashed_string( "green" ) ); // 반응은 아이템이 정한다
 }
 
 /**
@@ -1200,7 +1256,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemBoxesRespawn )
     sw::KartRaceSettings noItems = _settings;
     noItems._bItems              = SW_FALSE;
     sw::KartRace plain;
-    plain.initialize( noItems, &_track, &_items );
+    initializeRace( plain, noItems );
     SW_REQUIRE_EQUAL( 0, plain.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     plain.start();
     plain.placeRacer( 0, boxPosition, 0.0f );
@@ -1238,7 +1294,7 @@ SW_TEST_CASE_F( KartRaceTest, RubberBandScale )
     sw::KartRaceSettings off = _settings;
     off._bRubberBand         = SW_FALSE;
     sw::KartRace plain;
-    plain.initialize( off, &_track, &_items );
+    initializeRace( plain, off );
     (void)plain.addRacer( sw::ArcadeVehicleSettings{}, false );
     (void)plain.addRacer( sw::ArcadeVehicleSettings{}, true );
     plain.start();
@@ -1279,7 +1335,7 @@ SW_TEST_CASE_F( KartRaceTest, StateRoundTripContinuesSameRace )
     _race.writeState( written );
 
     sw::KartRace restored;
-    restored.initialize( _settings, &_track, &_items );
+    initializeRace( restored, _settings );
     (void)restored.addRacer( sw::ArcadeVehicleSettings{}, false );
     (void)restored.addRacer( sw::ArcadeVehicleSettings{}, false );
     sw::Archive reading( written.getData(), written.getSize() );
@@ -1299,7 +1355,7 @@ SW_TEST_CASE_F( KartRaceTest, StateRoundTripContinuesSameRace )
     SW_EXPECT_NEAR( _race.getRaceTime(), restored.getRaceTime(), kKartTolerance );
 
     sw::KartRace solo;
-    solo.initialize( _settings, &_track, &_items );
+    initializeRace( solo, _settings );
     (void)solo.addRacer( sw::ArcadeVehicleSettings{}, false );
     sw::Archive readingAgain( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( solo.readState( readingAgain ) );
@@ -1318,7 +1374,7 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesCheckpointOutsideTrack )
     sw::KartTrack noGates;
     SW_REQUIRE_TRUE( noGates.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     sw::KartRace other;
-    other.initialize( _settings, &noGates, &_items );
+    initializeRace( other, _settings, &noGates );
     SW_REQUIRE_EQUAL( 0, other.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( reading ) );

@@ -121,6 +121,11 @@ namespace sw
             KartItemDef def;
             if ( XMLFields::readFields( node, def, sourceName ) == false )
                 continue; // 오류는 readFields 가 남겼고, 그 아이템만 빠진다
+            if ( def.isProjectile() && def._projectileID.empty() )
+            {
+                SW_LOG_ERROR_ID( "KartItems.ItemNeedsProjectile", "%#: <Item id=\"%#\"> flies or is dropped and needs projectile=\"...\" (a ProjectileCatalog id) - skipped", sourceName, def._id.c_str() );
+                continue;
+            }
             add( def );
             ++loadedCount;
         }

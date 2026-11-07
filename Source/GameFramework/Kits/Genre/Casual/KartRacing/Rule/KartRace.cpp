@@ -10,6 +10,8 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -180,6 +182,7 @@ namespace sw
         , _timer{}
         , _pTrack{ nullptr }
         , _pItemCatalog{ nullptr }
+        , _pProjectileCatalog{ nullptr }
         , _pGhost{ nullptr }
         , _raceTime{ 0.0f }
         , _countdown{}
@@ -191,11 +194,12 @@ namespace sw
     {
     }
 
-    void KartRace::initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog )
+    bool KartRace::initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog )
     {
-        _settings     = settings;
-        _pTrack       = pTrack;
-        _pItemCatalog = pItemCatalog;
+        _settings           = settings;
+        _pTrack             = pTrack;
+        _pItemCatalog       = pItemCatalog;
+        _pProjectileCatalog = pProjectileCatalog;
         _random.setSeed( settings._seed );
         _timer = FixedStepTimer{ settings._step, 0.25f };
         _listRacer.clear();
@@ -214,6 +218,24 @@ namespace sw
         _firstFinishTime = -1.0f;
         _finishedCount   = 0;
         _phase           = MatchPhase::Waiting;
+        if ( pItemCatalog == nullptr )
+            return true;
+        // 날거나 놓이는 아이템은 탄 정의가 운동을 정한다. 없는 탄은 여기서 한 번 알리고, 그 아이템은 써도 나가지 않는다(`useItem`).
+        bool bComplete = true;
+        for ( const KartItemDef& item : pItemCatalog->getAll() )
+        {
+            if ( item.isProjectile() == false || findItemProjectile( item ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "KartRace.ItemProjectileMissing", "Kart item '%#' points at projectile '%#' that is not in the projectile catalog - the item does nothing", item._id.c_str(),
+                             item._projectileID.c_str() );
+            bComplete = false;
+        }
+        return bComplete;
+    }
+
+    const ProjectileDef* KartRace::findItemProjectile( const KartItemDef& item ) const
+    {
+        return _pProjectileCatalog != nullptr && item.isProjectile() ? _pProjectileCatalog->find( item._projectileID ) : nullptr;
     }
 
     int32 KartRace::addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI )
@@ -577,24 +599,24 @@ namespace sw
         const KartItemDef* pItem = kart._itemID.empty() ? nullptr : _pItemCatalog->find( kart._itemID );
         if ( pItem == nullptr )
             return false;
+        const ProjectileDef* pProjectile = findItemProjectile( *pItem );
+        if ( pItem->isProjectile() && pProjectile == nullptr )
+            return false; // 없는 탄은 `initialize` 가 알렸다. 아이템은 그대로 든다
         kart._itemID       = hashed_string{};
         kart._itemHeldTime = 0.0f;
         pushEvent( KartRaceEvent::Kind::ItemUsed, racer, -1, static_cast<int32>( pItem->_kind ), _raceTime );
         _eventBuffer.getLast()._itemID = pItem->_id;
 
-        // 아이템은 공통 발사체다. 아이템 표가 탄 정의를 대신한다(속력 · 회전 · 반지름 · 수명 · 폭발 반지름).
-        const float3    forward  = kart._motor.computeForward();
-        const float3&   position = kart._motor.getPosition();
-        ProjectileState projectile;
-        projectile._defID       = pItem->_id;
-        projectile._owner       = racer;
-        projectile._velocity    = float3{ forward._x, 0.0f, forward._z } * pItem->_speed;
-        projectile._lifetime    = pItem->_lifetime;
-        projectile._turnRate    = pItem->_turnRate;
-        projectile._radius      = pItem->_radius;
-        projectile._blastRadius = pItem->_blastRadius;
-        const float32 launch    = _settings._kartRadius + pItem->_radius + 0.5f;
-        projectile._position    = float3{ position._x + forward._x * launch, position._y, position._z + forward._z * launch };
+        // 아이템은 공통 발사체다. 운동(속력 · 유도 · 반지름 · 수명 · 폭발 반지름)은 아이템의 탄 정의이고, 정의 id 는 반응을 찾는 아이템 id 다.
+        // 수정자가 없어 탄 값 그대로라 쓸 때 푼다. 평면(법선 Y)에 묶여 −Y 중력은 의미가 없으므로 넘기지 않는다.
+        const float3    forward    = kart._motor.computeForward();
+        const float3&   position   = kart._motor.getPosition();
+        const float3    flat       = float3{ forward._x, 0.0f, forward._z };
+        ProjectileState projectile = pProjectile != nullptr ? ProjectileState::launch( ResolvedShot::resolve( *pProjectile, {}, {} ), position, flat, 0.0f ) : ProjectileState{};
+        projectile._defID          = pItem->_id;
+        projectile._owner          = racer;
+        const float32 launch       = _settings._kartRadius + projectile._radius + 0.5f;
+        projectile._position       = float3{ position._x + forward._x * launch, position._y, position._z + forward._z * launch };
         switch ( pItem->_kind )
         {
             case KartItemKind::Banana:
@@ -714,7 +736,7 @@ namespace sw
 
     void KartRace::explode( const ProjectileState& projectile, const KartItemDef& def )
     {
-        const float32 reach = def._blastRadius + _settings._kartRadius;
+        const float32 reach = projectile._blastRadius + _settings._kartRadius;
         for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
         {
             const int32 racer    = static_cast<int32>( racerIndex );
