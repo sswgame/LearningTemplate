@@ -88,18 +88,6 @@ namespace sw
 #endif
             }
 
-            static bool validateResize( const AutomationStep& step, string& outError )
-            {
-                AutomationResizeWindowParams params;
-                return step.readFields( params, outError );
-            }
-
-            static bool validateNoAttribute( const AutomationStep& step, string& outError )
-            {
-                AutomationNoParams params;
-                return step.readFields( params, outError );
-            }
-
             /** @brief 창을 최소화하거나(@p bMinimized) 되돌립니다. 최소화 중에도 시나리오 프레임은 돈다(자동화 실행의 페이싱이 최소화보다 앞선다 — `FramePacer`). */
             static bool setMinimized( AutomationStepContext& runner, const AutomationStep& step, bool bMinimized )
             {
@@ -150,9 +138,8 @@ namespace sw
         return true;
     }
 
-    SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
-                        false );
-    SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationEnvironmentStepsInternal::validateResize, false );
-    SW_AUTOMATION_STEP( minimizeWindow, "MinimizeWindow", &AutomationEnvironmentStepsInternal::runMinimize, &AutomationEnvironmentStepsInternal::validateNoAttribute, false );
-    SW_AUTOMATION_STEP( restoreWindow, "RestoreWindow", &AutomationEnvironmentStepsInternal::runRestore, &AutomationEnvironmentStepsInternal::validateNoAttribute, false );
+    SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationStep::validateFields<AutomationResizeWindowParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( minimizeWindow, "MinimizeWindow", &AutomationEnvironmentStepsInternal::runMinimize, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( restoreWindow, "RestoreWindow", &AutomationEnvironmentStepsInternal::runRestore, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{} );
 } // namespace sw

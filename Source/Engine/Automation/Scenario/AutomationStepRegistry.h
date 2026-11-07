@@ -35,6 +35,55 @@ namespace sw
     using AutomationStepHoldFunction = AutomationStepHold ( * )( AutomationStepContext& context, const AutomationStep& step, InputManager& input );
 
     /**
+     * @struct AutomationStepOptions
+     * @brief 단계 등록의 선택 항목입니다. 없으면 씬 틱 뒤에 돌고 준비 · 차례 함수와 벽시계 몫이 없습니다. 조합마다 매크로를 두지 않으려는 자리입니다(C++17 이라 지정 초기화 대신 잇는 함수).
+     */
+    struct AutomationStepOptions
+    {
+        AutomationStepPrepareFunction _pPrepare{ nullptr };
+        AutomationStepHoldFunction    _pHold{ nullptr };
+        float32                       _wallSeconds{ 0.0f };
+        bool                          _bBeforeInput{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — C++17 비트필드는 기본값을 둘 수 없다
+        bool                          _bUsesDesktop{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — C++17 비트필드는 기본값을 둘 수 없다
+
+        /** @brief 검사를 지난 단계를 시작할 때 준비합니다(`AutomationStepRegistration::_pPrepare`). */
+        [[nodiscard]] constexpr AutomationStepOptions withPrepare( AutomationStepPrepareFunction pPrepare ) const
+        {
+            AutomationStepOptions options = *this;
+            options._pPrepare             = pPrepare;
+            return options;
+        }
+        /** @brief 씬 틱 뒤 차례에 지금 돌릴지 묻습니다(`AutomationStepRegistration::_pHold`). */
+        [[nodiscard]] constexpr AutomationStepOptions withHold( AutomationStepHoldFunction pHold ) const
+        {
+            AutomationStepOptions options = *this;
+            options._pHold                = pHold;
+            return options;
+        }
+        /** @brief 그 프레임의 입력 재생 전에 돕니다(`AutomationStepRegistration::_bBeforeInput`). */
+        [[nodiscard]] constexpr AutomationStepOptions withBeforeInput() const
+        {
+            AutomationStepOptions options = *this;
+            options._bBeforeInput         = true;
+            return options;
+        }
+        /** @brief 데스크톱 전역 상태를 읽거나 씁니다(`AutomationStepRegistration::_bUsesDesktop`). */
+        [[nodiscard]] constexpr AutomationStepOptions withDesktop() const
+        {
+            AutomationStepOptions options = *this;
+            options._bUsesDesktop         = true;
+            return options;
+        }
+        /** @brief 단계 하나가 시나리오 벽시계 상한에 @p wallSeconds 초를 더합니다(`AutomationStepRegistration::_wallSeconds`). */
+        [[nodiscard]] constexpr AutomationStepOptions withWallBudget( float32 wallSeconds ) const
+        {
+            AutomationStepOptions options = *this;
+            options._wallSeconds          = wallSeconds;
+            return options;
+        }
+    };
+
+    /**
      * @struct AutomationStepRegistration
      * @brief 등록 항목 하나입니다. 문자열과 함수는 등록한 이미지의 정적 저장소에 있습니다. 엔진 단계(`Tap`, `Expect` 등)도 같은 모양으로 등록합니다.
      */
@@ -47,16 +96,22 @@ namespace sw
         AutomationStepHoldFunction     _pHold;        ///< nullptr 이면 차례가 오면 늘 돌립니다.
         bool                           _bBeforeInput; ///< 참이면 그 프레임의 입력 재생 전에 돕니다(액션 계층 주입). 거짓이면 씬 틱 뒤에 돕니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
-         * @brief 참이면 데스크톱 전역 상태(OS 커서 클립 · 전경 창 · 화면)를 읽거나 쓰는 단계입니다(`SW_AUTOMATION_STEP_DESKTOP`).
+         * @brief 참이면 데스크톱 전역 상태(OS 커서 클립 · 전경 창 · 화면)를 읽거나 쓰는 단계입니다(`AutomationStepOptions::withDesktop`).
          * @details 이런 단계는 겹쳐 도는 다른 프로세스의 창과 서로 방해하므로 혼합 입력(`input="mixed"`) 시나리오에서만 쓸 수 있고, 그 시나리오가 `<타깃>_Desktop` 에서 혼자 돈다
          *          (`AutomationStepValidation::validateDesktopSteps`).
          */
         bool _bUsesDesktop{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
-         * @brief 이 단계 하나가 시나리오의 벽시계 상한에 더하는 초입니다(`SW_AUTOMATION_STEP_WITH_WALL_BUDGET`). 0 이면 더하지 않는다.
+         * @brief 이 단계 하나가 시나리오의 벽시계 상한에 더하는 초입니다(`AutomationStepOptions::withWallBudget`). 0 이면 더하지 않는다.
          * @details 단계 하나가 몇 초씩 드는 종류(백엔드 교체)가 쓴다 — 상한이 그 수에 맞게 는다(`AutomationRunner::computeWallLimitSeconds`).
          */
         float32 _wallSeconds{ 0.0f };
+
+        /** @brief `SW_AUTOMATION_STEP` 의 몸통입니다. */
+        [[nodiscard]] static AutomationStepRegistration make( const utf8* pKind, AutomationStepFunction pRun, AutomationStepValidateFunction pValidate, const AutomationStepOptions& options )
+        {
+            return AutomationStepRegistration{ pKind, pRun, pValidate, options._pPrepare, options._pHold, options._bBeforeInput, options._bUsesDesktop, options._wallSeconds };
+        }
 
         /**
          * @brief 실행 없이 시계만 붙잡는 단계(`WaitUntil` · `EditorWaitSettled`)면 true 입니다.
@@ -174,39 +229,19 @@ namespace sw
     };
 } // namespace sw
 
-/** @brief 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
-#define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, bBeforeInput )                                                              \
-    static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, nullptr, nullptr, bBeforeInput }; \
-    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                   \
-    {                                                                                                                               \
-        &sw_automationStep_##id                                                                                                     \
-    }
-
 /**
- * @brief 데스크톱 전역 상태(OS 커서 클립 · 전경 창 · 화면 · 클립보드)를 읽거나 쓰는 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안).
- * @details `SW_AUTOMATION_STEP` 와 같되 `_bUsesDesktop` 이 참입니다. 이 단계를 쓴 시나리오가 `input="mixed"` 가 아니면 단계 검증이 거절합니다.
+ * @brief 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 모양이 다른 단계도 이 매크로 하나이고, 다른 점은 @p options 에만 적습니다.
+ * @details @p pValidate 는 스키마 구조체만 읽으면 되는 단계라면 `&AutomationStep::validateFields<TParams>` 입니다(모르는 속성 · 필수 · 범위가 `PROPERTY` 에서 나온다). 의미 검사가 더 있을 때만 함수를 씁니다.
+ * @code
+ *     SW_AUTOMATION_STEP( controlMount, "Mount", &runMount, &AutomationStep::validateFields<MountStepParams>, AutomationStepOptions{} );
+ *     SW_AUTOMATION_STEP( runnerPress, "Press", nullptr, &validateSlotStep, AutomationStepOptions{}.withPrepare( &prepareSlotStep ) );
+ * @endcode
  */
-#define SW_AUTOMATION_STEP_DESKTOP( id, pKind, pRun, pValidate, bBeforeInput )                                                            \
-    static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, nullptr, nullptr, bBeforeInput, true }; \
-    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                         \
-    {                                                                                                                                     \
-        &sw_automationStep_##id                                                                                                           \
-    }
-
-/** @brief 준비 · 차례 함수까지 든 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 엔진 단계(입력 · 조건 기다리기 · 스크린샷 확인)가 씁니다. */
-#define SW_AUTOMATION_STEP_WITH_HOOKS( id, pKind, pRun, pValidate, pPrepare, pHold, bBeforeInput )                                 \
-    static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, pPrepare, pHold, bBeforeInput }; \
-    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                  \
-    {                                                                                                                              \
-        &sw_automationStep_##id                                                                                                    \
-    }
-
-/** @brief `SW_AUTOMATION_STEP_WITH_HOOKS` 와 같되 단계 하나마다 시나리오 벽시계 상한에 @p wallSeconds 초를 더합니다(백엔드 교체처럼 단계 하나가 몇 초 드는 종류). */
-#define SW_AUTOMATION_STEP_WITH_WALL_BUDGET( id, pKind, pRun, pValidate, pPrepare, pHold, wallSeconds )                                         \
-    static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, pPrepare, pHold, false, false, wallSeconds }; \
-    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                               \
-    {                                                                                                                                           \
-        &sw_automationStep_##id                                                                                                                 \
+#define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, options )                                                                                     \
+    static const ::sw::AutomationStepRegistration sw_automationStep_##id = ::sw::AutomationStepRegistration::make( pKind, pRun, pValidate, options ); \
+    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                                     \
+    {                                                                                                                                                 \
+        &sw_automationStep_##id                                                                                                                       \
     }
 
 /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */

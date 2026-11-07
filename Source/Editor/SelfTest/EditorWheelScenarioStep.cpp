@@ -67,7 +67,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::run, &EditorWheelStepInternal::validate, &EditorWheelStepInternal::prepare, nullptr,
-                                   false );
+    SW_AUTOMATION_STEP( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::run, &EditorWheelStepInternal::validate, AutomationStepOptions{}.withPrepare( &EditorWheelStepInternal::prepare ) );
     SW_AUTOMATION_STEP_VALIDATOR( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::validate );
 } // namespace sw::editor

@@ -114,18 +114,6 @@ namespace sw
     {
         struct AutomationFrameStatsSteps
         {
-            static bool validateBegin( const AutomationStep& step, string& outError )
-            {
-                AutomationNoParams params;
-                return step.readFields( params, outError );
-            }
-
-            static bool validateEnd( const AutomationStep& step, string& outError )
-            {
-                AutomationFileStepParams params;
-                return step.readFields( params, outError );
-            }
-
             static bool runBegin( AutomationStepContext& context, const AutomationStep& step )
             {
                 (void)step;
@@ -154,6 +142,6 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_STEP( frameStatsBegin, "BeginFrameStats", &AutomationFrameStatsSteps::runBegin, &AutomationFrameStatsSteps::validateBegin, false );
-    SW_AUTOMATION_STEP( frameStatsEnd, "EndFrameStats", &AutomationFrameStatsSteps::runEnd, &AutomationFrameStatsSteps::validateEnd, false );
+    SW_AUTOMATION_STEP( frameStatsBegin, "BeginFrameStats", &AutomationFrameStatsSteps::runBegin, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( frameStatsEnd, "EndFrameStats", &AutomationFrameStatsSteps::runEnd, &AutomationStep::validateFields<AutomationFileStepParams>, AutomationStepOptions{} );
 } // namespace sw

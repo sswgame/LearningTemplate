@@ -78,12 +78,6 @@ namespace sw
                        checkDurationChoice( step, params._interval, params._intervalSeconds, "interval", "intervalSeconds", outError );
             }
 
-            static bool validatePressOrRelease( const AutomationStep& step, string& outError )
-            {
-                AutomationActionButtonParams params;
-                return step.readFields( params, outError );
-            }
-
             static bool validateAxis( const AutomationStep& step, string& outError )
             {
                 AutomationActionAxisParams params;
@@ -270,10 +264,8 @@ namespace sw
     } // namespace
 
     // 액션 단계는 입력 단계처럼 시작할 때 가상 입력으로 옮겨진다(프레임에 할 일이 없다).
-    SW_AUTOMATION_STEP_WITH_HOOKS( actionTap, "Action", nullptr, &AutomationActionStepsInternal::validateAction, &AutomationActionStepsInternal::prepareAction, nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( actionPress, "ActionPress", nullptr, &AutomationActionStepsInternal::validatePressOrRelease, &AutomationActionStepsInternal::preparePressOrRelease,
-                                   nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( actionRelease, "ActionRelease", nullptr, &AutomationActionStepsInternal::validatePressOrRelease,
-                                   &AutomationActionStepsInternal::preparePressOrRelease, nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( actionAxis, "ActionAxis", nullptr, &AutomationActionStepsInternal::validateAxis, &AutomationActionStepsInternal::prepareAxis, nullptr, false );
+    SW_AUTOMATION_STEP( actionTap, "Action", nullptr, &AutomationActionStepsInternal::validateAction, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::prepareAction ) );
+    SW_AUTOMATION_STEP( actionPress, "ActionPress", nullptr, &AutomationStep::validateFields<AutomationActionButtonParams>, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::preparePressOrRelease ) );
+    SW_AUTOMATION_STEP( actionRelease, "ActionRelease", nullptr, &AutomationStep::validateFields<AutomationActionButtonParams>, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::preparePressOrRelease ) );
+    SW_AUTOMATION_STEP( actionAxis, "ActionAxis", nullptr, &AutomationActionStepsInternal::validateAxis, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::prepareAxis ) );
 } // namespace sw

@@ -124,12 +124,6 @@ namespace sw
                 return true;
             }
 
-            static bool validatePossessStep( const AutomationStep& step, string& outError )
-            {
-                ControlPossessStepParams params;
-                return step.readFields( params, outError );
-            }
-
             /** @brief 조종자 오브젝트가 폰을 쥐게 한다(`pawn` 이 없으면 놓게). */
             static bool runPossessStep( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -163,6 +157,6 @@ namespace sw
     } // namespace
 
     // 행동 층 단계는 그 프레임의 입력 재생 · 조종 시스템 전에 돈다 — 그 프레임의 의도부터 바뀐다.
-    SW_AUTOMATION_STEP( controlIntent, "Intent", &ControlAutomationStepsInternal::runIntentStep, &ControlAutomationStepsInternal::validateIntentStep, true );
-    SW_AUTOMATION_STEP( controlPossess, "Possess", &ControlAutomationStepsInternal::runPossessStep, &ControlAutomationStepsInternal::validatePossessStep, true );
+    SW_AUTOMATION_STEP( controlIntent, "Intent", &ControlAutomationStepsInternal::runIntentStep, &ControlAutomationStepsInternal::validateIntentStep, AutomationStepOptions{}.withBeforeInput() );
+    SW_AUTOMATION_STEP( controlPossess, "Possess", &ControlAutomationStepsInternal::runPossessStep, &AutomationStep::validateFields<ControlPossessStepParams>, AutomationStepOptions{}.withBeforeInput() );
 } // namespace sw

@@ -229,5 +229,5 @@ namespace sw
     } // namespace
 
     // 키트 단계도 엔진 단계와 같은 레지스트리에 제 .cpp 가 올린다(언리얼 Functional Test 의 게임 쪽 액션과 같은 자리). 씬 틱 뒤에 돈다 — 다음 틱의 탈것이 회복한 스태미나를 본다.
-    SW_AUTOMATION_STEP( westernFeedHorse, "FeedHorse", &WesternHorseStepsInternal::runFeedHorse, &WesternHorseStepsInternal::validateFeedHorse, false );
+    SW_AUTOMATION_STEP( westernFeedHorse, "FeedHorse", &WesternHorseStepsInternal::runFeedHorse, &WesternHorseStepsInternal::validateFeedHorse, AutomationStepOptions{} );
 } // namespace sw

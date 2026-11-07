@@ -82,18 +82,6 @@ namespace sw
                 return pObject;
             }
 
-            static bool validateMountStep( const AutomationStep& step, string& outError )
-            {
-                MountStepParams params;
-                return step.readFields( params, outError );
-            }
-
-            static bool validateDismountStep( const AutomationStep& step, string& outError )
-            {
-                DismountStepParams params;
-                return step.readFields( params, outError );
-            }
-
             /** @brief 이름의 오브젝트의 폰입니다. 없으면 실패를 적고 nullptr 입니다. */
             static PawnComponent* findPawn( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
@@ -144,9 +132,9 @@ namespace sw
     } // namespace
 
     // 시간 감기는 씬 틱 뒤에 돈다 — 감은 시각의 알림은 다음 틱의 디렉터 · 일정이 받는다.
-    SW_AUTOMATION_STEP( worldAdvanceGameTime, "AdvanceGameTime", &GameplayAutomationStepsInternal::runAdvanceGameTime, &GameplayAutomationStepsInternal::validateAdvanceGameTime, false );
+    SW_AUTOMATION_STEP( worldAdvanceGameTime, "AdvanceGameTime", &GameplayAutomationStepsInternal::runAdvanceGameTime, &GameplayAutomationStepsInternal::validateAdvanceGameTime, AutomationStepOptions{} );
 
     // 탈것 단계는 씬 틱 뒤(틱 밖)에 돈다 — `VehicleSeatComponent` 은 틱 안에서 부르지 않는다.
-    SW_AUTOMATION_STEP( controlMount, "Mount", &GameplayAutomationStepsInternal::runMountStep, &GameplayAutomationStepsInternal::validateMountStep, false );
-    SW_AUTOMATION_STEP( controlDismount, "Dismount", &GameplayAutomationStepsInternal::runDismountStep, &GameplayAutomationStepsInternal::validateDismountStep, false );
+    SW_AUTOMATION_STEP( controlMount, "Mount", &GameplayAutomationStepsInternal::runMountStep, &AutomationStep::validateFields<MountStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( controlDismount, "Dismount", &GameplayAutomationStepsInternal::runDismountStep, &AutomationStep::validateFields<DismountStepParams>, AutomationStepOptions{} );
 } // namespace sw

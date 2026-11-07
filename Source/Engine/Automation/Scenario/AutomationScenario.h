@@ -91,6 +91,13 @@ namespace sw
         {
             return readFieldsOf( &outParams, *TParams::StaticType(), outError, listHandRead );
         }
+        /** @brief 스키마 구조체를 읽을 수 있는지만 보는 검사 함수입니다(`AutomationStepValidateFunction`). 의미 검사가 없는 단계의 등록이 이 함수를 가리킵니다. */
+        template <typename TParams>
+        [[nodiscard]] static bool validateFields( const AutomationStep& step, string& outError )
+        {
+            TParams params;
+            return step.readFields( params, outError );
+        }
         /** @brief 검사를 지난 단계의 스키마 구조체입니다(실행 함수가 읽는다). 시작 때 검사한 값이라 실패하면 단언합니다. */
         template <typename TParams>
         [[nodiscard]] TParams readValidatedFields( std::initializer_list<string_view> listHandRead = {} ) const

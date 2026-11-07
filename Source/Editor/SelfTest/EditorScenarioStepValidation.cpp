@@ -86,18 +86,6 @@ namespace sw::editor
         return step.readFields( params, outError ) && Internal::checkAnchor( step, params._anchor, outError ) && Internal::checkModifiers( step, params._mods, outError );
     }
 
-    bool EditorScenarioStepValidation::validateText( const AutomationStep& step, string& outError )
-    {
-        EditorTextParams params;
-        return step.readFields( params, outError );
-    }
-
-    bool EditorScenarioStepValidation::validateSelfTest( const AutomationStep& step, string& outError )
-    {
-        EditorSelfTestParams params;
-        return step.readFields( params, outError );
-    }
-
     bool EditorScenarioStepValidation::validateDrag( const AutomationStep& step, string& outError )
     {
         using Internal = EditorScenarioStepValidationInternal;
@@ -141,18 +129,6 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorScenarioStepValidation::validateExpectObject( const AutomationStep& step, string& outError )
-    {
-        EditorExpectObjectParams params;
-        return step.readFields( params, outError );
-    }
-
-    bool EditorScenarioStepValidation::validateDockLayout( const AutomationStep& step, string& outError )
-    {
-        EditorDockLayoutParams params;
-        return step.readFields( params, outError );
-    }
-
     bool EditorScenarioStepValidation::validateCapture( const AutomationStep& step, string& outError )
     {
         EditorCaptureParams params;
@@ -164,21 +140,15 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorScenarioStepValidation::validateWaitSettled( const AutomationStep& step, string& outError )
-    {
-        EditorNoParams params;
-        return step.readFields( params, outError );
-    }
-
     // 에디터 모듈이 올라오지 않은 프로세스도 이 단계들의 속성을 검사할 수 있게, 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.
     SW_AUTOMATION_STEP_VALIDATOR( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepValidation::validateClick );
     SW_AUTOMATION_STEP_VALIDATOR( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepValidation::validateDrag );
     SW_AUTOMATION_STEP_VALIDATOR( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepValidation::validateHover );
-    SW_AUTOMATION_STEP_VALIDATOR( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepValidation::validateText );
+    SW_AUTOMATION_STEP_SCHEMA( editorText, EditorScenarioStepValidation::kTextKind, EditorTextParams );
     SW_AUTOMATION_STEP_VALIDATOR( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepValidation::validateKey );
-    SW_AUTOMATION_STEP_VALIDATOR( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepValidation::validateExpectObject );
-    SW_AUTOMATION_STEP_VALIDATOR( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepValidation::validateDockLayout );
+    SW_AUTOMATION_STEP_SCHEMA( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, EditorExpectObjectParams );
+    SW_AUTOMATION_STEP_SCHEMA( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, EditorDockLayoutParams );
     SW_AUTOMATION_STEP_VALIDATOR( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorScenarioStepValidation::validateCapture );
-    SW_AUTOMATION_STEP_VALIDATOR( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepValidation::validateSelfTest );
-    SW_AUTOMATION_STEP_VALIDATOR( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, &EditorScenarioStepValidation::validateWaitSettled );
+    SW_AUTOMATION_STEP_SCHEMA( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, EditorSelfTestParams );
+    SW_AUTOMATION_STEP_SCHEMA( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, EditorNoParams );
 } // namespace sw::editor

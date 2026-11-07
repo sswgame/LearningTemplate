@@ -80,12 +80,6 @@ namespace sw
                 return true;
             }
 
-            static bool validateLayoutDump( const AutomationStep& step, string& outError )
-            {
-                AutomationFileStepParams params;
-                return step.readFields( params, outError );
-            }
-
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
             static bool runLayoutDump( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -109,9 +103,8 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIScenarioStepsInternal::isLoadingScreenBlocking );
-    SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &UIScenarioStepsInternal::validateLayoutDump,
-                        false );
-    SW_AUTOMATION_STEP( uiExpect, UIScenarioSteps::kExpectUIKind, &UIScenarioStepsInternal::runExpectUI, &UIScenarioSteps::validateExpectUI, false );
+    SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &AutomationStep::validateFields<AutomationFileStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( uiExpect, UIScenarioSteps::kExpectUIKind, &UIScenarioStepsInternal::runExpectUI, &UIScenarioSteps::validateExpectUI, AutomationStepOptions{} );
 } // namespace sw
 
 namespace sw

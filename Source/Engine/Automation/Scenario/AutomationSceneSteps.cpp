@@ -39,18 +39,6 @@ namespace sw
                 }
             };
 
-            static bool validateLoadScene( const AutomationStep& step, string& outError )
-            {
-                AutomationLoadSceneParams params;
-                return step.readFields( params, outError );
-            }
-
-            static bool validateSequenceStep( const AutomationStep& step, string& outError )
-            {
-                AutomationSequenceStepParams params;
-                return step.readFields( params, outError );
-            }
-
             static bool runNothing( AutomationStepContext& context, const AutomationStep& step )
             {
                 (void)context;
@@ -117,9 +105,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_STEP_WITH_HOOKS( sceneLoadScene, "LoadScene", &AutomationSceneStepsInternal::runNothing, &AutomationSceneStepsInternal::validateLoadScene, nullptr,
-                                   &AutomationSceneStepsInternal::holdLoadScene, false );
-    SW_AUTOMATION_STEP( scenePlaySequence, "PlaySequence", &AutomationSceneStepsInternal::runPlaySequence, &AutomationSceneStepsInternal::validateSequenceStep, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( sceneWaitSequence, "WaitSequence", &AutomationSceneStepsInternal::runNothing, &AutomationSceneStepsInternal::validateSequenceStep,
-                                   nullptr, &AutomationSceneStepsInternal::holdWaitSequence, false );
+    SW_AUTOMATION_STEP( sceneLoadScene, "LoadScene", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateFields<AutomationLoadSceneParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdLoadScene ) );
+    SW_AUTOMATION_STEP( scenePlaySequence, "PlaySequence", &AutomationSceneStepsInternal::runPlaySequence, &AutomationStep::validateFields<AutomationSequenceStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( sceneWaitSequence, "WaitSequence", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateFields<AutomationSequenceStepParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdWaitSequence ) );
 } // namespace sw

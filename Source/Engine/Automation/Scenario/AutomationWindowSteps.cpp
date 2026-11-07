@@ -36,18 +36,6 @@ namespace sw
     {
         struct AutomationWindowStepsInternal
         {
-            static bool validateMessage( const AutomationStep& step, string& outError )
-            {
-                AutomationWindowMessageParams params;
-                return step.readFields( params, outError );
-            }
-
-            static bool validateClip( const AutomationStep& step, string& outError )
-            {
-                AutomationCursorClipParams params;
-                return step.readFields( params, outError );
-            }
-
             static bool validateCapture( const AutomationStep& step, string& outError )
             {
                 AutomationFileStepParams params;
@@ -371,8 +359,8 @@ namespace sw
 #endif
     }
 
-    SW_AUTOMATION_STEP( windowAppSuspend, "SimulateAppSuspend", &AutomationWindowStepsInternal::runAppSuspend, &AutomationWindowStepsInternal::validateAppSuspend, false );
-    SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationWindowStepsInternal::validateMessage, false );
-    SW_AUTOMATION_STEP_DESKTOP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationWindowStepsInternal::validateClip, false );
-    SW_AUTOMATION_STEP_DESKTOP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, false );
+    SW_AUTOMATION_STEP( windowAppSuspend, "SimulateAppSuspend", &AutomationWindowStepsInternal::runAppSuspend, &AutomationWindowStepsInternal::validateAppSuspend, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationStep::validateFields<AutomationWindowMessageParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationStep::validateFields<AutomationCursorClipParams>, AutomationStepOptions{}.withDesktop() );
+    SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, AutomationStepOptions{}.withDesktop() );
 } // namespace sw

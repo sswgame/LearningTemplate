@@ -108,3 +108,6 @@ namespace sw
     {                                                                                                           \
         &sw_automationStepValidator_##id                                                                        \
     }
+
+/** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateFields<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
+#define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )

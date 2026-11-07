@@ -207,18 +207,10 @@ namespace sw::editor
 
         // 단계 등록의 검사 함수(`AutomationStepValidateFunction`)입니다.
         static bool validateClick( const AutomationStep& step, string& outError );
-        static bool validateText( const AutomationStep& step, string& outError );
         static bool validateDrag( const AutomationStep& step, string& outError );
         static bool validateHover( const AutomationStep& step, string& outError );
         /** @brief 속성 이름 · 필수 · 누름 방식 · 키 조합의 낱말 모양을 봅니다. 키 이름이 ImGui 이름인지는 단계의 준비 함수가 봅니다(이 파일은 ImGui 를 모른다). */
         static bool validateKey( const AutomationStep& step, string& outError );
-        /** @brief 속성 이름 · 필수 · 수 형식을 봅니다. `component` 가 아는 컴포넌트 타입인지는 타입 레지스트리(에디터 서비스)가 있어야 알 수 있어 단계의 준비 함수가 봅니다. */
-        static bool validateExpectObject( const AutomationStep& step, string& outError );
-        /** @brief `pattern`(에디터 자체 테스트 이름 패턴, `*` · 쉼표) 하나만 받습니다. */
-        static bool validateSelfTest( const AutomationStep& step, string& outError );
-        static bool validateDockLayout( const AutomationStep& step, string& outError );
         static bool validateCapture( const AutomationStep& step, string& outError );
-        /** @brief 속성을 받지 않습니다(시한은 벽시계 `kSettleTimeoutWallSeconds`). */
-        static bool validateWaitSettled( const AutomationStep& step, string& outError );
     };
 } // namespace sw::editor
