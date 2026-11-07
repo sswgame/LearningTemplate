@@ -2,7 +2,7 @@
 
 #include "Core/Process/ProcessEnvironment.h"
 
-#if !defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_POSIX )
     #include <cstdlib>
 
 namespace sw

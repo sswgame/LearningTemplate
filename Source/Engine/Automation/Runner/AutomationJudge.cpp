@@ -424,8 +424,10 @@ namespace sw
         // Linux 는 골든을 따로 둔다 - 편집기 기본 글꼴이 OS 마다 달라 배치가 다르고, 지금 도는 곳이 소프트웨어 렌더러(lavapipe)다.
 #if defined( SW_PLATFORM_LINUX )
         static constexpr const utf8* kGoldenPlatformTag = ".linux";
-#else
+#elif defined( SW_PLATFORM_WINDOWS )
         static constexpr const utf8* kGoldenPlatformTag = "";
+#else
+    #error "Unsupported platform"
 #endif
         const string    goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + kGoldenPlatformTag + ".ppm";
         vector<uint8>   listBytes;

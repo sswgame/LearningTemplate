@@ -28,6 +28,8 @@
     #include <fcntl.h>
     #include <sys/stat.h>
     #include <unistd.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -253,8 +255,10 @@ namespace sw
         // 공유를 막지 않는다(`_SH_DENYNO`) — POSIX `fopen` 과 같다. `_wfopen_s` 는 배타적으로 열어, 엔진이 쓰는 동안 그 로그 파일을
         // 다른 프로그램(편집기 · tail · 테스트)이 열지 못한다.
         pFile = _wfsopen( widePath.c_str(), arrWideMode, _SH_DENYNO );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         pFile = fopen( pFilePath, pMode );
+#else
+    #error "Unsupported platform"
 #endif
         return pFile;
     }
@@ -304,8 +308,10 @@ namespace sw
 
         // 2) POSIX 방식을 모르는 파일 시스템(FAT · exFAT · 일부 네트워크 드라이브) · 오래된 Windows.
         return MoveFileExW( wideSource.c_str(), wideTarget.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) != FALSE;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return std::rename( pSourcePath, pTargetPath ) == 0;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -313,8 +319,10 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return true;
-#else
+#elif defined( SW_PLATFORM_LINUX )
         return PlatformFileUtilInternal::findTrashFolder().empty() == false;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -341,7 +349,7 @@ namespace sw
         operation.pFrom  = listWideChar.data();
         operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
         return SHFileOperationW( &operation ) == 0 && operation.fAnyOperationsAborted == FALSE;
-#else
+#elif defined( SW_PLATFORM_LINUX )
         const string trashFolder = PlatformFileUtilInternal::findTrashFolder();
         if ( trashFolder.empty() || PlatformFileUtilInternal::ensureFolders( trashFolder + "/files" ) == false || PlatformFileUtilInternal::ensureFolders( trashFolder + "/info" ) == false )
             return false;
@@ -351,6 +359,8 @@ namespace sw
                 return false;
         }
         return true;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -361,8 +371,10 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         return _fseeki64( pFile, offset, origin ) == 0;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return fseeko( pFile, static_cast<off_t>( offset ), origin ) == 0;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -373,8 +385,10 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         return _ftelli64( pFile );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return static_cast<int64>( ftello( pFile ) );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -405,7 +419,7 @@ namespace sw
         if ( hFile == INVALID_HANDLE_VALUE )
             return kInvalidNativeFileHandle;
         return static_cast<NativeFileHandle>( reinterpret_cast<intptr_t>( hFile ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         int32 fileDescriptor{ -1 };
         do
         {
@@ -421,6 +435,8 @@ namespace sw
             return kInvalidNativeFileHandle;
         }
         return static_cast<NativeFileHandle>( fileDescriptor );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -437,7 +453,7 @@ namespace sw
         if ( hFile == INVALID_HANDLE_VALUE )
             return kInvalidNativeFileHandle;
         return static_cast<NativeFileHandle>( reinterpret_cast<intptr_t>( hFile ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         int32 fileDescriptor{ -1 };
         do
         {
@@ -446,6 +462,8 @@ namespace sw
         if ( fileDescriptor < 0 )
             return kInvalidNativeFileHandle;
         return static_cast<NativeFileHandle>( fileDescriptor );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -461,12 +479,14 @@ namespace sw
             DWORD written{ 0 };
             if ( WriteFile( reinterpret_cast<HANDLE>( static_cast<intptr_t>( handle ) ), pCursor, static_cast<DWORD>( chunkBytes ), &written, nullptr ) == FALSE || written == 0 )
                 return false;
-#else
+#elif defined( SW_PLATFORM_POSIX )
             const ssize_t written = ::write( static_cast<int32>( handle ), pCursor, chunkBytes );
             if ( written < 0 && errno == EINTR )
                 continue;
             if ( written <= 0 )
                 return false;
+#else
+    #error "Unsupported platform"
 #endif
             pCursor += written;
             size -= static_cast<size_t>( written );
@@ -480,8 +500,10 @@ namespace sw
             return;
 #if defined( SW_PLATFORM_WINDOWS )
         CloseHandle( reinterpret_cast<HANDLE>( static_cast<intptr_t>( handle ) ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         ::close( static_cast<int32>( handle ) );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -494,11 +516,13 @@ namespace sw
         if ( GetFileSizeEx( reinterpret_cast<HANDLE>( static_cast<intptr_t>( handle ) ), &size ) == FALSE )
             return kInvalidOffset;
         return static_cast<int64>( size.QuadPart );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         struct stat fileStat{};
         if ( fstat( static_cast<int32>( handle ), &fileStat ) != 0 )
             return kInvalidOffset;
         return static_cast<int64>( fileStat.st_size );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -537,7 +561,7 @@ namespace sw
             }
             if ( GetOverlappedResult( hFile, &overlapped, &readBytes, TRUE ) == FALSE )
                 return GetLastError() == ERROR_HANDLE_EOF;
-#else
+#elif defined( SW_PLATFORM_POSIX )
             ssize_t readBytes{ -1 };
             do
             {
@@ -545,6 +569,8 @@ namespace sw
             } while ( readBytes < 0 && errno == EINTR );
             if ( readBytes < 0 )
                 return false;
+#else
+    #error "Unsupported platform"
 #endif
             if ( readBytes == 0 )
                 return true; // 파일 끝

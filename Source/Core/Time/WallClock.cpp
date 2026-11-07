@@ -20,8 +20,10 @@ namespace sw
         std::tm           calendar{};
 #if defined( SW_PLATFORM_WINDOWS )
         const bool bConverted = localtime_s( &calendar, &timeSeconds ) == 0;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         const bool bConverted = localtime_r( &timeSeconds, &calendar ) != nullptr;
+#else
+    #error "Unsupported platform"
 #endif
         if ( bConverted == false )
             return false;

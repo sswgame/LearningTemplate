@@ -66,10 +66,12 @@ namespace sw
                     }
                 }
             }
-#else
+#elif defined( SW_PLATFORM_POSIX )
             static void probeAdapter( HardwareDetectionResult& /*result*/ )
             {
             }
+#else
+    #error "Unsupported platform"
 #endif
         };
     } // namespace
@@ -98,6 +100,8 @@ namespace sw
         const int64 pageSize  = static_cast<int64>( sysconf( _SC_PAGE_SIZE ) );
         if ( pageCount > 0 && pageSize > 0 )
             result._systemMemoryMb = static_cast<uint32>( ( pageCount / 1024 ) * pageSize / 1024 );
+#else
+    #error "Unsupported platform"
 #endif
         HardwareDetectionInternal::probeAdapter( result );
         if ( gv_emulatedGPUMemoryMb > 0 )

@@ -36,8 +36,10 @@ namespace sw
             static constexpr const utf8* kPlatformText =
 #if defined( SW_PLATFORM_WINDOWS )
                 "windows";
-#else
+#elif defined( SW_PLATFORM_LINUX )
                 "linux";
+#else
+    #error "Unsupported platform"
 #endif
 
             static OnlineSessionInfo makeInfo( const GameSettings& settings )

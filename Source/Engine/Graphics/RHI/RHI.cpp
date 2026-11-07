@@ -422,7 +422,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         return RHIBackend::Vulkan;
 #else
-        return RHIBackend::OpenGL;
+    #error "Unsupported platform"
 #endif
     }
 

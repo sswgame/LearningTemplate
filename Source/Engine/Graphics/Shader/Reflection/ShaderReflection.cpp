@@ -21,8 +21,10 @@ namespace sw
             case ShaderTargetFormat::DXIL_D3D12:
 #if defined( SW_PLATFORM_WINDOWS )
                 return ShaderReflectionUtil::reflectDx( bytecode, targetFormat );
-#else
+#elif defined( SW_PLATFORM_POSIX )
                 return {};
+#else
+    #error "Unsupported platform"
 #endif
             case ShaderTargetFormat::SPIRV_Vulkan:
             case ShaderTargetFormat::SPIRV_OpenGL:

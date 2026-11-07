@@ -95,6 +95,8 @@ namespace sw
                 }
                 return 1;
             }
+#else
+    #error "Unsupported platform"
 #endif
         };
     } // namespace
@@ -153,6 +155,8 @@ namespace sw
         dl_iterate_phdr( &Internal::visitLibrary, &query );
         if ( query._bFound )
             result = query._result;
+#else
+    #error "Unsupported platform"
 #endif
         return result;
     }

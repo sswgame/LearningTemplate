@@ -70,8 +70,10 @@ namespace sw
                 request._tlsTrustFile = listArgument.size() == 7 ? listArgument[6] : "";
 #if defined( SW_PLATFORM_WINDOWS )
                 request._platform = "windows";
-#else
+#elif defined( SW_PLATFORM_LINUX )
                 request._platform = "linux";
+#else
+    #error "Unsupported platform"
 #endif
                 request._timeoutMilliseconds = kTimeoutMilliseconds;
                 NetConnectCredentials credentials;

@@ -8,9 +8,11 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #include <arpa/inet.h>
     #include <netinet/in.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw

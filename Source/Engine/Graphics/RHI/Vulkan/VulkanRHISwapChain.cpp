@@ -209,11 +209,7 @@ namespace sw
         SW_LOG_ERROR_ID( "Vulkan.UnknownVulkanWSIKind", "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
         return false;
 #else
-        (void)instance;
-        (void)pWindowHandle;
-        (void)pDisplayHandle;
-        (void)wsiKind;
-        return false;
+    #error "Unsupported platform"
 #endif
     }
 

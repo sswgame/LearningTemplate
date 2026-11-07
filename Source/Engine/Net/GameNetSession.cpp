@@ -42,8 +42,10 @@ namespace sw
             /** @brief 리눅스만 한 포트를 `SO_REUSEPORT` 로 나눌 수 있습니다(`UDPPortSharing::ReusePort`). */
 #if defined( SW_PLATFORM_LINUX )
             static constexpr bool kbCanSharePort = true;
-#else
+#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
             static constexpr bool kbCanSharePort = false;
+#else
+    #error "Unsupported platform"
 #endif
             /**
              * @brief 샤드 배치가 열 수 있는 모양인가입니다. 틀리면 오류 로그와 false 입니다(다른 배치로 대신 열지 않는다).

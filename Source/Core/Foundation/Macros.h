@@ -27,9 +27,11 @@
 #if defined( SW_PLATFORM_WINDOWS )
     /** @brief MSVC 확장 디버거 브레이크입니다(cl · clang-cl). */
     #define SW_DEBUG_BREAK() __debugbreak()
-#else
+#elif defined( SW_PLATFORM_POSIX )
     /** @brief Clang/GCC 트랩입니다. */
     #define SW_DEBUG_BREAK() __builtin_trap()
+#else
+    #error "Unsupported platform"
 #endif
 
 // ------------------------------------------------------------------------------
@@ -38,9 +40,11 @@
 #if defined( SW_PLATFORM_WINDOWS )
     /** @brief MSVC 확장 함수 시그니처 문자열입니다(cl · clang-cl). */
     #define SW_FUNCTION_SIGNATURE __FUNCSIG__
-#else
+#elif defined( SW_PLATFORM_POSIX )
     /** @brief Clang/GCC 의 함수 시그니처 문자열입니다(__PRETTY_FUNCTION__). */
     #define SW_FUNCTION_SIGNATURE __PRETTY_FUNCTION__
+#else
+    #error "Unsupported platform"
 #endif
 
 // ------------------------------------------------------------------------------
@@ -153,13 +157,15 @@ namespace sw::internal
         /** @brief 진입점은 GetProcAddress 로만 찾으므로 dllimport 를 쓰지 않습니다. */
         #define SW_MODULE_API
     #endif
-#else
+#elif defined( SW_PLATFORM_POSIX )
     /** @brief ELF · Mach-O 에서는 기본 visibility 로 내보냅니다. */
     #define SW_API                 __attribute__( ( visibility( "default" ) ) )
     /** @brief 명시적 인스턴스화 선언도 기본 visibility 로 둡니다(숨긴 visibility 로 선언한 참조는 다른 이미지에서 풀리지 않는다). */
     #define SW_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
     /** @brief 모듈 심볼도 기본 visibility 로 내보냅니다. */
     #define SW_MODULE_API          __attribute__( ( visibility( "default" ) ) )
+#else
+    #error "Unsupported platform"
 #endif
 
 // ------------------------------------------------------------------------------
@@ -399,13 +405,15 @@ namespace sw
     #define SW_NOINLINE __declspec( noinline )
     /** @brief 이 포인터가 다른 포인터와 겹치지 않는다(no alias)고 컴파일러에 알려 줍니다. */
     #define SW_RESTRICT __restrict
-#else
+#elif defined( SW_PLATFORM_POSIX )
     /** @brief 강제 인라인 힌트입니다(Clang/GCC). */
     #define SW_INLINE   inline __attribute__( ( always_inline ) )
     /** @brief 인라인 금지 힌트입니다. */
     #define SW_NOINLINE __attribute__( ( noinline ) )
     /** @brief 이 포인터가 다른 포인터와 겹치지 않는다(no alias)고 컴파일러에 알려 줍니다. */
     #define SW_RESTRICT __restrict__
+#else
+    #error "Unsupported platform"
 #endif
 
 // ------------------------------------------------------------------------------
@@ -416,17 +424,21 @@ namespace sw
         #include <emmintrin.h>
         /** @brief x64 PAUSE 명령입니다(MSVC intrinsic). */
         #define SW_CPU_PAUSE() _mm_pause()
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         /** @brief x64 PAUSE — Clang/GCC 내장 함수입니다. */
         #define SW_CPU_PAUSE() __builtin_ia32_pause()
+    #else
+        #error "Unsupported platform"
     #endif
 #elif defined( SW_ARM64 )
     #if defined( SW_PLATFORM_WINDOWS )
         /** @brief arm64 YIELD 명령입니다(MSVC intrinsic). */
         #define SW_CPU_PAUSE() __yield()
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         /** @brief arm64 YIELD — 인라인 어셈블리입니다. */
         #define SW_CPU_PAUSE() asm volatile( "yield" ::: "memory" )
+    #else
+        #error "Unsupported platform"
     #endif
 #endif
 

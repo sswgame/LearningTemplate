@@ -63,8 +63,10 @@ SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailabilit
     SW_EXPECT_TRUE( sw::AutomationPerBackend::parseBackendList( "all", listBackend, error ) );
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::vector<sw::string> listExpectedAll{ "dx11", "dx12", "vk", "gl" };
-#else
+#elif defined( SW_PLATFORM_LINUX )
     const sw::vector<sw::string> listExpectedAll{ "vk", "gl" };
+#else
+    #error "Unsupported platform"
 #endif
     SW_EXPECT_TRUE( listBackend == listExpectedAll );
 

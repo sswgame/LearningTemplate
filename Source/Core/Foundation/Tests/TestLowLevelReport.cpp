@@ -13,8 +13,10 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <io.h>
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #include <unistd.h> // dup · dup2 · close
+#else
+    #error "Unsupported platform"
 #endif
 
 using namespace sw;
@@ -54,8 +56,10 @@ namespace
         {
 #if defined( SW_PLATFORM_WINDOWS )
             return _dup( descriptor );
-#else
+#elif defined( SW_PLATFORM_POSIX )
             return dup( descriptor );
+#else
+    #error "Unsupported platform"
 #endif
         }
 
@@ -63,8 +67,10 @@ namespace
         {
 #if defined( SW_PLATFORM_WINDOWS )
             (void)_dup2( source, target );
-#else
+#elif defined( SW_PLATFORM_POSIX )
             (void)dup2( source, target );
+#else
+    #error "Unsupported platform"
 #endif
         }
 
@@ -72,8 +78,10 @@ namespace
         {
 #if defined( SW_PLATFORM_WINDOWS )
             (void)_close( descriptor );
-#else
+#elif defined( SW_PLATFORM_POSIX )
             (void)close( descriptor );
+#else
+    #error "Unsupported platform"
 #endif
         }
 
@@ -81,8 +89,10 @@ namespace
         {
 #if defined( SW_PLATFORM_WINDOWS )
             return _fileno( pFile );
-#else
+#elif defined( SW_PLATFORM_POSIX )
             return fileno( pFile );
+#else
+    #error "Unsupported platform"
 #endif
         }
 

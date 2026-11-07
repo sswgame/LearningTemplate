@@ -322,7 +322,7 @@ namespace sw
                 return collectStringArray( itArgs->value( jsonkey::kArgsForceInclude, nlohmann::json{} ) );
             }
 
-#if !defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_POSIX )
             static bool isMsvcCompatArg( const string& arg, const ParserConfig& config )
             {
                 if ( arg == config._flagFmsCompatibility || arg == config._flagFmsExtensions )
@@ -424,7 +424,7 @@ namespace sw
                 return false;
         }
 
-#if !defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_POSIX )
         // clang_flags 를 읽고 검사한 뒤에 지운다 — 앞에서 지우면 빈 접두사(`_flagFmsCompatVersionPrefix`)가 모든 인자와 맞아 목록이 통째로 빈다.
         ParserConfigInternal::eraseMsvcCompatArgs( _listBaseArg, *this );
 #endif

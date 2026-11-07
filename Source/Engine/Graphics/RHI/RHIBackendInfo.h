@@ -164,8 +164,10 @@ namespace sw
                 return false;
 #if defined( SW_PLATFORM_WINDOWS )
             return true;
-#else
+#elif defined( SW_PLATFORM_POSIX )
             return pInfo->_bWindowsOnly == false;
+#else
+    #error "Unsupported platform"
 #endif
         }
 

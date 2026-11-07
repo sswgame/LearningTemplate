@@ -8,6 +8,8 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include <sched.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -34,8 +36,10 @@ namespace sw
     #endif
                 const RTL_CRITICAL_SECTION* pLoaderLock = *reinterpret_cast<RTL_CRITICAL_SECTION* const*>( pPeb + kPebLoaderLockOffset );
                 return pLoaderLock != nullptr && reinterpret_cast<uintptr_t>( pLoaderLock->OwningThread ) == static_cast<uintptr_t>( GetCurrentThreadId() );
-#else
+#elif defined( SW_PLATFORM_POSIX )
                 return false;
+#else
+    #error "Unsupported platform"
 #endif
             }
 
@@ -97,6 +101,8 @@ namespace sw
         CPU_ZERO( &set );
         if ( sched_getaffinity( 0, sizeof( set ), &set ) == 0 )
             count = static_cast<uint32>( CPU_COUNT( &set ) );
+#else
+    #error "Unsupported platform"
 #endif
         if ( count == 0 )
             count = std::thread::hardware_concurrency();

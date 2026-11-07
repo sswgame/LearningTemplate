@@ -30,7 +30,7 @@ Core folders are tiers: `Common` → `Concurrency` · `Math` → `Memory` → `C
 
 | Question | Ask with | Never |
 | --- | --- | --- |
-| Platform / architecture | `SW_PLATFORM_WINDOWS` · `SW_PLATFORM_LINUX`, `SW_X64` · `SW_ARM64` | `_WIN32`, `__linux__` |
+| Platform / architecture | `SW_PLATFORM_WINDOWS` · `SW_PLATFORM_LINUX` · `SW_PLATFORM_ANDROID` · `SW_PLATFORM_WEB` · `SW_PLATFORM_POSIX`, `SW_X64` · `SW_ARM64` | `_WIN32`, `__linux__` |
 | Compiler | `SW_COMPILER_CLANG` (clang-cl included) · `SW_COMPILER_MSVC` (cl.exe only) · `SW_COMPILER_GCC` | `_MSC_VER`, `__clang__` |
 | Build target | `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE` · `sw::build::kTargetName`, only in `.cpp` bodies | gating reflection declarations or a header's class layout on them |
 

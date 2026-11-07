@@ -512,7 +512,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         return kLinux;
 #else
-        return kAll;
+    #error "Unsupported platform"
 #endif
     }
 } // namespace sw

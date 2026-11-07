@@ -81,8 +81,10 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 
 #if defined( SW_PLATFORM_WINDOWS ) // 플랫폼은 CMake 의 SW_PLATFORM_* 로 묻는다 (Core/Foundation/TargetMacroCheck.h)
     #define SW_MODULE_ENGINE_STAMP_EXPORT __declspec( dllexport )
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #define SW_MODULE_ENGINE_STAMP_EXPORT __attribute__( ( visibility( \"default\" ) ) )
+#else
+    #error \"Unsupported platform\"
 #endif
 
 extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@swStampModuleName@[];

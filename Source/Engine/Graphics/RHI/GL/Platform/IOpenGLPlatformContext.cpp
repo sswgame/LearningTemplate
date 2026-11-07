@@ -11,6 +11,8 @@
     #if defined( SW_WITH_WAYLAND )
         #include "Engine/Graphics/RHI/GL/Platform/EGLPlatformContext.h"
     #endif
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -44,8 +46,7 @@ namespace sw
         SW_LOG_ERROR_ID( "OpenGL.OpenGLLinuxNeedsX112", "OpenGL on Linux needs an X11 window (GLX) or, in a build with SW_ENABLE_WAYLAND, a Wayland window (EGL)" );
         return nullptr;
 #else
-        SW_LOG_ERROR_ID( "OpenGL.PlatformNoOpenGLContext", "This platform has no OpenGL context implementation." );
-        return nullptr;
+    #error "Unsupported platform"
 #endif
     }
 } // namespace sw

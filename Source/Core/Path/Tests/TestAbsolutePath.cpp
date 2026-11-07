@@ -16,7 +16,7 @@ SW_TEST_CASE( AbsolutePathTest, RejectsRelativeAndHalfAbsolute )
     SW_EXPECT_FALSE( AbsolutePath::tryMake( "x/y" ).has_value() );
 }
 
-#if !defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_WINDOWS )
 SW_TEST_CASE( AbsolutePathTest, WindowsShapes )
 {
     SW_EXPECT_TRUE( AbsolutePath::isStrictAbsolute( "C:/a" ) );
@@ -29,22 +29,26 @@ SW_TEST_CASE( AbsolutePathTest, WindowsShapes )
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( string( "C:/Work/Out" ), path->str() ); // 구분자만 맞추고 대소문자는 그대로
 }
-#else
+#elif defined( SW_PLATFORM_POSIX )
 SW_TEST_CASE( AbsolutePathTest, PosixShapes )
 {
     SW_EXPECT_TRUE( AbsolutePath::isStrictAbsolute( "/a" ) );
     SW_EXPECT_FALSE( AbsolutePath::isStrictAbsolute( "C:/a" ) );
 }
+#else
+    #error "Unsupported platform"
 #endif
 
 SW_TEST_CASE( AbsolutePathTest, ResolveJoinsRelativeToTheGivenBase )
 {
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_POSIX )
     const std::optional<AbsolutePath> base     = AbsolutePath::tryMake( "/work" );
     const string                      expected = "/work/out/a.log";
-#else
+#elif defined( SW_PLATFORM_WINDOWS )
     const std::optional<AbsolutePath> base     = AbsolutePath::tryMake( "C:/work" );
     const string                      expected = "C:/work/out/a.log";
+#else
+    #error "Unsupported platform"
 #endif
     SW_REQUIRE_TRUE( base.has_value() );
     const std::optional<AbsolutePath> relative = AbsolutePath::tryResolve( "out/a.log", *base );

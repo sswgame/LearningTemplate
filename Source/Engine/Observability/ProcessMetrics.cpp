@@ -13,6 +13,8 @@
     #include "Core/File/FileUtil.h"
 
     #include <sys/resource.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -83,8 +85,10 @@ namespace sw
         if ( outPeakResidentBytes < outResidentBytes )
             outPeakResidentBytes = outResidentBytes;
         return true;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return false;
+#else
+    #error "Unsupported platform"
 #endif
     }
 } // namespace sw

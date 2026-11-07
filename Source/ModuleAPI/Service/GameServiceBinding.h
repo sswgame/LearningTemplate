@@ -20,8 +20,10 @@
     #else
         #define SW_GAMESERVICE_API
     #endif
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #define SW_GAMESERVICE_API __attribute__( ( visibility( "default" ) ) )
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw

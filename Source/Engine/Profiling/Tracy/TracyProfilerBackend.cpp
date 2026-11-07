@@ -146,7 +146,7 @@ namespace sw
                 findClientFunction( hClient, "___tracy_emit_gpu_zone_begin", api._pfnGPUZoneBegin );
                 findClientFunction( hClient, "___tracy_emit_gpu_time", api._pfnGPUTime );
                 findClientFunction( hClient, "___tracy_emit_gpu_zone_end", api._pfnGPUZoneEnd );
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
                 api._pfnConnected      = &___tracy_connected;
                 api._pfnZoneBegin      = &___tracy_emit_zone_begin;
                 api._pfnZoneEnd        = &___tracy_emit_zone_end;
@@ -160,6 +160,8 @@ namespace sw
                 api._pfnGPUZoneBegin   = &___tracy_emit_gpu_zone_begin;
                 api._pfnGPUTime        = &___tracy_emit_gpu_time;
                 api._pfnGPUZoneEnd     = &___tracy_emit_gpu_zone_end;
+    #else
+        #error "Unsupported platform"
     #endif
                 // 한 칸이라도 비면(다른 판의 DLL) 쓰지 않는다 — 계측 지점마다 칸을 검사하지 않기 위해서다.
                 api._bLoaded = api.hasEveryFunction();

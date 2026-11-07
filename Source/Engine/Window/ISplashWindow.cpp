@@ -45,8 +45,10 @@ namespace sw
     #else
         return nullptr;
     #endif
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return nullptr;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -70,8 +72,10 @@ namespace sw
         }
         // X11 스플래시는 `XOpenDisplay( nullptr )` 로 연결한다 — `DISPLAY` 가 없으면 열 수 없다(순수 Wayland 세션에서 X11 을 골랐을 때).
         return ProcessEnvironment::tryReadNonEmpty( "DISPLAY", display );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return false;
+#else
+    #error "Unsupported platform"
 #endif
     }
 

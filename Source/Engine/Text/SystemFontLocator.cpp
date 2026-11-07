@@ -73,6 +73,8 @@ namespace sw
         string home;
         if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) )
             SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( home, ".local/share/fonts" ) );
+#else
+    #error "Unsupported platform"
 #endif
         return listDirectory;
     }

@@ -337,10 +337,12 @@ SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
     SW_EXPECT_TRUE( other == sw::RHIBackend::DirectX11 );
     SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::Vulkan, other ) );
     SW_EXPECT_TRUE( other == sw::RHIBackend::DirectX12 );
-#else
+#elif defined( SW_PLATFORM_LINUX )
     SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::Vulkan, other ) );
     SW_EXPECT_TRUE( other == sw::RHIBackend::OpenGL );
     SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::OpenGL, other ) );
     SW_EXPECT_TRUE( other == sw::RHIBackend::Vulkan );
+#else
+    #error "Unsupported platform"
 #endif
 }

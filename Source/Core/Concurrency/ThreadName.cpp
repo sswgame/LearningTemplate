@@ -8,6 +8,8 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/PlatformOSHeaders.h"
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -34,6 +36,8 @@ namespace sw
             ++length;
         }
         pthread_setname_np( pthread_self(), arrShort );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -68,8 +72,10 @@ namespace sw
         }
         pOutName[length] = '\0';
         return length > 0;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return false;
+#else
+    #error "Unsupported platform"
 #endif
     }
 } // namespace sw

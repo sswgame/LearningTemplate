@@ -6,6 +6,8 @@
     #include "Core/Network/Transport/Windows/IocpStreamTransport.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Network/Transport/Linux/EpollStreamTransport.h"
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -17,7 +19,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         return make_unique<EpollStreamTransport>();
 #else
-        return nullptr;
+    #error "Unsupported platform"
 #endif
     }
 } // namespace sw

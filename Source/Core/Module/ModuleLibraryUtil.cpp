@@ -91,8 +91,10 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return "";
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return "lib";
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -100,8 +102,10 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return ".dll";
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return ".so";
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -116,8 +120,10 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return FileUtil::replaceExtension( libraryPath, ".pdb" );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return FileUtil::replaceExtension( libraryPath, ".debug" );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -199,7 +205,7 @@ namespace sw
         if ( hModule == nullptr )
             SW_LOG_WARNING_ID( "ModuleLibraryUtil.LoadLibraryFailedWin32Error", "LoadLibrary failed for %# (Win32 error %#)", libraryPath.c_str(), static_cast<uint32>( GetLastError() ) ); // 126 의존 DLL 없음, 1114 DllMain 실패 등
         return hModule;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         void* const pHandle = dlopen( libraryPath.c_str(), RTLD_NOW | RTLD_LOCAL );
         if ( pHandle == nullptr )
         {
@@ -207,6 +213,8 @@ namespace sw
             SW_LOG_WARNING_ID( "ModuleLibraryUtil.DlopenFailed", "dlopen failed for %#: %#", libraryPath.c_str(), ( pReason != nullptr ) ? pReason : "(no reason)" );
         }
         return pHandle;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -217,8 +225,10 @@ namespace sw
         const string name{ libraryName };
 #if defined( SW_PLATFORM_WINDOWS )
         return LoadLibraryExW( StringUtil::utf8ToUTF16( name.c_str() ).c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return dlopen( name.c_str(), RTLD_NOW | RTLD_LOCAL );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -232,8 +242,10 @@ namespace sw
         if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, StringUtil::utf8ToUTF16( name.c_str() ).c_str(), &hModule ) == FALSE )
             return nullptr;
         return hModule;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return dlopen( name.c_str(), RTLD_NOW | RTLD_NOLOAD | RTLD_NODELETE );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -245,8 +257,10 @@ namespace sw
         const string symbolNameNt( symbolName );
 #if defined( SW_PLATFORM_WINDOWS )
         return reinterpret_cast<void*>( GetProcAddress( static_cast<HMODULE>( pHandle ), symbolNameNt.c_str() ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return dlsym( pHandle, symbolNameNt.c_str() );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -257,8 +271,10 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         FreeLibrary( static_cast<HMODULE>( pHandle ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         dlclose( pHandle );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -315,6 +331,8 @@ namespace sw
             dlclose( pDependency );
             ++pinnedCount;
         }
+#else
+    #error "Unsupported platform"
 #endif
         return pinnedCount;
     }
@@ -349,10 +367,12 @@ namespace sw
             }
         }
         return nullptr;
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         (void)pHandle; // 리눅스는 import 테이블에서 바인딩을 읽을 수 없다. 부르는 쪽이 심볼로 판단한다.
         (void)dependencyFileName;
         return nullptr;
+    #else
+        #error "Unsupported platform"
     #endif
     }
 

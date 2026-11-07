@@ -273,8 +273,10 @@ namespace sw
         SW_LOG_ERROR_ID( "Window.SWWINDOWBACKENDWayland", "SW_WINDOW_BACKEND=wayland but this build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON)" );
         return nullptr;
     #endif
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return nullptr;
+#else
+    #error "Unsupported platform"
 #endif
     }
 } // namespace sw

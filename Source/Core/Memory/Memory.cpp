@@ -148,11 +148,13 @@ namespace sw
 #if defined( SW_SHIPPING )
     #if defined( SW_PLATFORM_WINDOWS )
         return _aligned_malloc( size, align );
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         void* pRawPtr{ nullptr };
         if ( posix_memalign( &pRawPtr, align, size ) != 0 )
             return nullptr;
         return pRawPtr;
+    #else
+        #error "Unsupported platform"
     #endif
 #else // SW_SHIPPING
       // 헤더와 정렬 여유를 더하다 오버플로하면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
@@ -164,10 +166,12 @@ namespace sw
 
     #if defined( SW_PLATFORM_WINDOWS )
         void* pRawPtr = _aligned_malloc( totalSize, align );
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         void* pRawPtr{ nullptr };
         if ( posix_memalign( &pRawPtr, align, totalSize ) != 0 )
             pRawPtr = nullptr;
+    #else
+        #error "Unsupported platform"
     #endif
 
         if ( pRawPtr == nullptr )
@@ -190,8 +194,10 @@ namespace sw
 #if defined( SW_SHIPPING )
     #if defined( SW_PLATFORM_WINDOWS )
         _aligned_free( pPtr );
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         ::free( pPtr );
+    #else
+        #error "Unsupported platform"
     #endif
 #else // SW_SHIPPING
         void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
@@ -202,8 +208,10 @@ namespace sw
         }
     #if defined( SW_PLATFORM_WINDOWS )
         _aligned_free( pRawPtr );
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
         ::free( pRawPtr );
+    #else
+        #error "Unsupported platform"
     #endif
 #endif // SW_SHIPPING
     }

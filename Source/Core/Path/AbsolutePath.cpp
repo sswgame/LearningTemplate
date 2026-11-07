@@ -6,7 +6,7 @@ namespace sw
 {
     namespace
     {
-#if !defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_WINDOWS )
         bool isSeparator( utf8 ch )
         {
             return ch == '/' || ch == '\\';
@@ -22,14 +22,16 @@ namespace sw
         if ( path.empty() || path.find( '\0' ) != string_view::npos )
             return false;
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_POSIX )
         return path[0] == '/';
-#else
+#elif defined( SW_PLATFORM_WINDOWS )
         const bool bDriveLetter = ( 'a' <= path[0] && path[0] <= 'z' ) || ( 'A' <= path[0] && path[0] <= 'Z' );
         if ( bDriveLetter )
             return path.size() >= 3 && path[1] == ':' && isSeparator( path[2] ); // `C:foo` 는 드라이브 상대다
         // UNC: 구분자 둘 뒤에 서버 이름이 온다. 구분자 하나(`\foo`)는 드라이브 없는 루트라 거절한다.
         return path.size() >= 3 && isSeparator( path[0] ) && isSeparator( path[1] ) && isSeparator( path[2] ) == false;
+#else
+    #error "Unsupported platform"
 #endif
     }
 

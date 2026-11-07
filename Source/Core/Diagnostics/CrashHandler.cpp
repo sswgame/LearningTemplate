@@ -117,8 +117,10 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         _lock_file( stderr );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         flockfile( stderr );
+#else
+    #error "Unsupported platform"
 #endif
         s_bStderrHeld.store( true );
         while ( true )
@@ -240,8 +242,10 @@ namespace sw
         CrashHandlerProcessHook::writeHangDump( *this );
 #if defined( SW_PLATFORM_WINDOWS )
         const uint64 processID = static_cast<uint64>( GetCurrentProcessId() );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         const uint64 processID = static_cast<uint64>( ::getpid() );
+#else
+    #error "Unsupported platform"
 #endif
         writeContextFile( pReason, nullptr, processID, 0 );
     }

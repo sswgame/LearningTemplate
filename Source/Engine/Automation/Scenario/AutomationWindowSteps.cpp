@@ -314,7 +314,7 @@ namespace sw
                 SW_LOG_INFO_ID( "AutomationWindowSteps.WindowCaptureXWindows", "[Scenario] window capture %#x%# (%# windows) -> %#", width, height, static_cast<int32>( context._listRect.size() ), path.c_str() );
                 return true;
             }
-#else
+#elif defined( SW_PLATFORM_POSIX )
             /** @brief 포커스 밖의 창 메시지 · 커서 클립 · 화면 찍기를 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
             static bool runUnsupported( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -330,6 +330,8 @@ namespace sw
             }
             static bool runClip( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runCapture( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+#else
+    #error "Unsupported platform"
 #endif
         };
     } // namespace
@@ -339,8 +341,10 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         const HWND hwnd = AutomationWindowStepsInternal::findWindowHandle();
         return hwnd != nullptr && AutomationWindowStepsInternal::bringToForeground( hwnd );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return false;
+#else
+    #error "Unsupported platform"
 #endif
     }
 

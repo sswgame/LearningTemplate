@@ -15,9 +15,11 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <shellapi.h>
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #include <csignal>
     #include <unistd.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 /**
@@ -28,8 +30,10 @@ SW_TEST_CASE( ProcessTest, LaunchAndReadOutput )
     sw::Process proc;
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "echo", "SW_PROCESS_TEST_OUTPUT" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "echo", { "SW_PROCESS_TEST_OUTPUT" } );
+#else
+    #error "Unsupported platform"
 #endif
 
     const bool bLaunched = proc.launch( cmd );
@@ -56,8 +60,10 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
     // 셸 문법(`&&`)이 필요하면 셸을 실행 파일로 적고 셸 줄을 인자 하나로 준다 — `Process` 는 셸을 거치지 않는다.
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "echo LINE1 && echo LINE2" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "sh", { "-c", "echo LINE1 && echo LINE2" } );
+#else
+    #error "Unsupported platform"
 #endif
 
     sw::vector<sw::string> listLines;
@@ -106,9 +112,11 @@ SW_TEST_CASE( ProcessTest, TerminateProcess )
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand cmd              = sw::ProcessCommand::fromSearchPath( "ping.exe", { "127.0.0.1", "-n", "10" } );
     const int32              expectedExitCode = 99;
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand cmd              = sw::ProcessCommand::fromSearchPath( "sleep", { "10" } );
     const int32              expectedExitCode = 128 + SIGKILL;
+#else
+    #error "Unsupported platform"
 #endif
 
     SW_REQUIRE_TRUE( proc.launch( cmd ) );
@@ -133,8 +141,10 @@ SW_TEST_CASE( ProcessTest, TerminateEndsGrandchildren )
     sw::Process proc;
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "ping", "127.0.0.1", "-n", "20" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "sh", { "-c", "sleep 20; :" } ); // `; :` — 셸이 sleep 으로 바뀌지(exec) 않고 손자로 띄운다
+#else
+    #error "Unsupported platform"
 #endif
     SW_REQUIRE_TRUE( proc.launch( cmd ) );
     const sw::Stopwatch watch;
@@ -160,8 +170,10 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
 
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "exit", "7" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "sh", { "-c", "exit 7" } );
+#else
+    #error "Unsupported platform"
 #endif
 
     SW_REQUIRE_TRUE( proc.launch( cmd ) );
@@ -200,10 +212,12 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     HANDLE hForeignWrite       = nullptr;
     SW_REQUIRE_TRUE( CreatePipe( &hForeignRead, &hForeignWrite, &inheritable, 0 ) != FALSE );
     const sw::ProcessCommand longCommand = sw::ProcessCommand::fromSearchPath( "ping.exe", { "127.0.0.1", "-n", "4" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     int32 arrForeignFd[2] = { -1, -1 };
     SW_REQUIRE_TRUE( pipe( arrForeignFd ) == 0 );
     const sw::ProcessCommand longCommand = sw::ProcessCommand::fromSearchPath( "sleep", { "3" } );
+#else
+    #error "Unsupported platform"
 #endif
 
     sw::Process child;
@@ -218,12 +232,14 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     const BOOL bRead     = ReadFile( hForeignRead, &byte, 1, &readCount, nullptr );
     CloseHandle( hForeignRead );
     SW_EXPECT_TRUE( bRead == FALSE || readCount == 0 );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     close( arrForeignFd[1] );
     utf8          byte      = 0;
     const ssize_t readCount = read( arrForeignFd[0], &byte, 1 );
     close( arrForeignFd[0] );
     SW_EXPECT_EQUAL( static_cast<ssize_t>( 0 ), readCount );
+#else
+    #error "Unsupported platform"
 #endif
     const int64 elapsedMilli = stopwatch.getElapsedMilliseconds();
 
@@ -247,8 +263,10 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     options._workingDirectory = sw::FileUtil::getDirectoryPart( markerPath );
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "ping.exe 127.0.0.1 -n 2 > nul & echo done> detached_marker.txt" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "sh", { "-c", "sleep 1; echo done > detached_marker.txt" } );
+#else
+    #error "Unsupported platform"
 #endif
 
     const sw::Stopwatch stopwatch;
@@ -280,8 +298,10 @@ SW_TEST_CASE( ProcessTest, StandardInputPipeReachesTheChild )
     sw::Process process;
 #if defined( SW_PLATFORM_WINDOWS )
     SW_REQUIRE_TRUE( process.launch( sw::ProcessCommand::fromSearchPath( "findstr.exe", { "x" } ), options ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     SW_REQUIRE_TRUE( process.launch( sw::ProcessCommand::fromSearchPath( "grep", { "x" } ), options ) );
+#else
+    #error "Unsupported platform"
 #endif
     SW_REQUIRE_TRUE( process.writeInput( "axb\nccc\n" ) );
     process.closeInput();
@@ -350,7 +370,7 @@ SW_TEST_CASE( ProcessTest, WindowsCommandLineRoundTripsThroughTheArgumentSplitte
  * @brief POSIX 자식은 셸 없이 인자를 한 글자도 바뀌지 않고 받는다 — `$` `;` `&` 도 글자 그대로다
  * @details `printf '%s\n' <인자…>` 를 띄워 한 줄에 인자 하나씩 되읽는다. 예전에는 `sh -c` 가 명령 글을 다시 해석했다.
  */
-#if !defined( SW_PLATFORM_WINDOWS ) // Windows 는 위 케이스가 CommandLineToArgvW 로 본다
+#if defined( SW_PLATFORM_POSIX ) // Windows 는 위 케이스가 CommandLineToArgvW 로 본다
 SW_TEST_CASE( ProcessTest, PosixChildReceivesArgumentsUnchanged )
 {
     const sw::vector<sw::string> listArgument = makeTrickyProcessArguments();
@@ -395,8 +415,10 @@ SW_TEST_CASE( ProcessTest, EnvironmentOverrideReachesOnlyTheChild )
     options._listEnvironment.push_back( sw::ProcessEnvironmentEntry{ kName, "from-option" } );
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "cmd.exe", { "/c", "echo", "%SW_PROCESS_TEST_ENV_OVERRIDE%" } );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     const sw::ProcessCommand command = sw::ProcessCommand::fromSearchPath( "printenv", { kName } );
+#else
+    #error "Unsupported platform"
 #endif
     sw::Process process;
     SW_REQUIRE_TRUE( process.launch( command, options ) );

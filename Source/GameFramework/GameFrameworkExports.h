@@ -18,9 +18,11 @@
         #define SW_GF_API
         #define SW_GF_API_EXTERN_TEMPLATE
     #endif
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #define SW_GF_API                 __attribute__( ( visibility( "default" ) ) )
     #define SW_GF_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
+#else
+    #error "Unsupported platform"
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -52,12 +54,14 @@
         #define SW_KIT_SERVER_API
         #define SW_KIT_SERVER_API_EXTERN_TEMPLATE
     #endif
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #define SW_KIT_API                        __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_API_EXTERN_TEMPLATE        __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_CLIENT_API                 __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_SERVER_API                 __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_SERVER_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
+#else
+    #error "Unsupported platform"
 #endif
 
 // `registerGameFrameworkTypes()` 는 두지 않는다. GameFramework 의 리플렉션 타입은

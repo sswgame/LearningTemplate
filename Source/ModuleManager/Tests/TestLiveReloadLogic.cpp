@@ -142,8 +142,10 @@ namespace
         {
 #if defined( SW_PLATFORM_WINDOWS )
             return ModuleLibraryUtil::loadSystemLibrary( "kernel32.dll" );
-#else
+#elif defined( SW_PLATFORM_LINUX )
             return ModuleLibraryUtil::loadSystemLibrary( "libc.so.6" );
+#else
+    #error "Unsupported platform"
 #endif
         }
 

@@ -36,8 +36,10 @@ namespace sw
                 if ( libraryPath.has_value() == false || FileUtil::isRegularFile( libraryPath->str() ) == false )
                     return nullptr; // 설치하지 않았다 - 로드 실패 경고를 내지 않는다
                 return ModuleLibraryUtil::loadLibraryAt( *libraryPath );
-#else
+#elif defined( SW_PLATFORM_POSIX )
                 return ModuleLibraryUtil::loadSystemLibrary( libraryName );
+#else
+    #error "Unsupported platform"
 #endif
             }
 

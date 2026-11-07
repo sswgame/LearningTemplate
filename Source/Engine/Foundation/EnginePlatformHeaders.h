@@ -26,4 +26,6 @@
     #if __has_include( <dxcapi.h> )
         #define SW_HAS_DXC_API 1
     #endif
+#else
+    #error "Unsupported platform"
 #endif

@@ -134,7 +134,7 @@ namespace sw
             {
                 return ptr.Get();
             }
-    #else
+    #elif defined( SW_PLATFORM_POSIX )
             template <typename T>
             using DxcComPtr = CComPtr<T>;
 
@@ -149,6 +149,8 @@ namespace sw
             {
                 return ptr;
             }
+    #else
+        #error "Unsupported platform"
     #endif
 #endif
 
@@ -701,7 +703,7 @@ namespace sw
                 Internal::saveToCacheIfEnabled( cachePath, result );
             return result;
         }
-#else
+#elif defined( SW_PLATFORM_POSIX )
         // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 위 블록이 통째로
         // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
         // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
@@ -712,6 +714,8 @@ namespace sw
             result._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";
             return result;
         }
+#else
+    #error "Unsupported platform"
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )

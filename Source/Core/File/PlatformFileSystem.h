@@ -44,15 +44,19 @@ namespace sw
         static constexpr bool kPathsAreCaseInsensitive =
 #if defined( SW_PLATFORM_WINDOWS )
             true;
-#else
+#elif defined( SW_PLATFORM_POSIX )
             false;
+#else
+    #error "Unsupported platform"
 #endif
         /** @brief 이 플랫폼의 경로 구분자입니다(Windows `\`, POSIX `/`). */
         static constexpr utf8 kNativeSeparator =
 #if defined( SW_PLATFORM_WINDOWS )
             '\\';
-#else
+#elif defined( SW_PLATFORM_POSIX )
             '/';
+#else
+    #error "Unsupported platform"
 #endif
 
         /** @brief @p path 가 가리키는 것을 묻습니다(링크는 따라간다). 없거나 못 읽으면 false 입니다. */

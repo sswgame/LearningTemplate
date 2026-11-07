@@ -8,7 +8,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>
     #include <WS2tcpip.h>
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #include <arpa/inet.h>
     #include <cerrno>
     #include <fcntl.h>
@@ -18,6 +18,8 @@
     #include <sys/socket.h>
     #include <sys/uio.h>
     #include <unistd.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -31,11 +33,13 @@ namespace sw
             using SocketLength                           = int32;
             static constexpr NativeSocket kNativeInvalid = INVALID_SOCKET;
             static bool                   isWouldBlock() { return WSAGetLastError() == WSAEWOULDBLOCK; } // WSAECONNRESET(ICMP 도달 불가)은 오류로 — 다음 데이터그램을 계속 본다
-#else
+#elif defined( SW_PLATFORM_POSIX )
             using NativeSocket                           = int32;
             using SocketLength                           = socklen_t;
             static constexpr NativeSocket kNativeInvalid = -1;
             static bool                   isWouldBlock() { return errno == EAGAIN || errno == EWOULDBLOCK; }
+#else
+    #error "Unsupported platform"
 #endif
             static NativeSocket toNative( uint64 socketHandle ) { return static_cast<NativeSocket>( socketHandle ); }
         };
@@ -53,8 +57,10 @@ namespace sw
             return WSAStartup( MAKEWORD( 2, 2 ), &data ) == 0;
         }();
         return kbInitialized;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return true;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -69,7 +75,7 @@ namespace sw
         const PlatformSocketUtilInternal::NativeSocket native = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
         if ( native == PlatformSocketUtilInternal::kNativeInvalid )
             return kInvalidSocket;
-#if !defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_POSIX )
         if ( sharing == UDPPortSharing::ReusePort )
         {
             const int32 reuse = 1;
@@ -96,9 +102,11 @@ namespace sw
         BOOL  bReportReset  = FALSE;
         DWORD bytesReturned = 0;
         (void)WSAIoctl( native, _WSAIOW( IOC_VENDOR, 12 ), &bReportReset, sizeof( bReportReset ), nullptr, 0, &bytesReturned, nullptr, nullptr );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         const int32 flags = fcntl( native, F_GETFL, 0 );
         bOk               = bOk && flags >= 0 && fcntl( native, F_SETFL, flags | O_NONBLOCK ) == 0;
+#else
+    #error "Unsupported platform"
 #endif
         if ( bOk == false )
         {
@@ -114,8 +122,10 @@ namespace sw
             return;
 #if defined( SW_PLATFORM_WINDOWS )
         closesocket( PlatformSocketUtilInternal::toNative( socketHandle ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
         close( PlatformSocketUtilInternal::toNative( socketHandle ) );
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -160,7 +170,7 @@ namespace sw
                 break;
         }
         return sentCount;
-#else
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         sockaddr_in arrAddress[kMaxBatch]{};
         iovec       arrVector[kMaxBatch]{};
         mmsghdr     arrMessage[kMaxBatch]{};
@@ -183,6 +193,8 @@ namespace sw
             sentCount += sent;
         }
         return sentCount;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -201,7 +213,7 @@ namespace sw
                 ++receivedCount; // 오류는 건너뛰고 다음 데이터그램을 본다(단건 받기와 같다)
         }
         return receivedCount;
-#else
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         sockaddr_in arrAddress[kMaxBatch]{};
         iovec       arrVector[kMaxBatch]{};
         mmsghdr     arrMessage[kMaxBatch]{};
@@ -223,6 +235,8 @@ namespace sw
             pEntries[index]._size = static_cast<int32>( arrMessage[index].msg_len );
         }
         return received;
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -235,11 +249,13 @@ namespace sw
         pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
         pollEntry.events = POLLRDNORM;
         return WSAPoll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLRDNORM | POLLERR | POLLHUP ) ) != 0;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         pollfd pollEntry{};
         pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
         pollEntry.events = POLLIN;
         return poll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLIN | POLLERR | POLLHUP ) ) != 0;
+#else
+    #error "Unsupported platform"
 #endif
     }
 

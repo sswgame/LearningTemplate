@@ -266,13 +266,15 @@ namespace sw
             }
 
             /**
-             * @brief 이 플랫폼의 파일 시스템이 대소문자를 구분하는지입니다. Linux 만 구분합니다 — Windows 는 소문자로 이어도 같은 폴더라 새 경로를 디스크 표기에 맞출 일이 없습니다.
-             * @details `findLooseFile` 의 `SW_PLATFORM_LINUX` 재시도와 같은 기준입니다. `toDiskPath` 는 이 값으로 분기해 Windows 에서도 같은 코드가 컴파일됩니다.
+             * @brief 이 플랫폼의 파일 시스템이 대소문자를 구분하는지입니다. POSIX 쪽은 구분합니다 — Windows 는 소문자로 이어도 같은 폴더라 새 경로를 디스크 표기에 맞출 일이 없습니다.
+             * @details `findLooseFile` 의 `SW_PLATFORM_POSIX` 재시도와 같은 기준입니다. `toDiskPath` 는 이 값으로 분기해 Windows 에서도 같은 코드가 컴파일됩니다.
              */
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_POSIX )
             static constexpr bool kCaseSensitiveFileSystem = true;
-#else
+#elif defined( SW_PLATFORM_WINDOWS )
             static constexpr bool kCaseSensitiveFileSystem = false;
+#else
+    #error "Unsupported platform"
 #endif
 
             /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키를 줍니다. */
@@ -559,7 +561,7 @@ namespace sw
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFile, domainRoot, keyUnderRoot ) )
         {
             found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, {} );
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_POSIX )
             // 대소문자를 가리는 파일시스템: 소문자 키로 못 찾았으면 원래 표기로 다시 찾는다.
             if ( found.empty() && lowerFile != resourceID )
             {
@@ -584,7 +586,7 @@ namespace sw
         {
             const vector<string>& listAssetFolder = AssetPathsInternal::getTable( state )._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
             found                                 = AssetPathsInternal::tryResolveAmong( listAssetFolder, lowerFile, {} );
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_POSIX )
             if ( found.empty() && lowerFile != resourceID )
                 found = AssetPathsInternal::tryResolveAmong( listAssetFolder, resourceID, {} );
 #endif

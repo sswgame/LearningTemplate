@@ -329,10 +329,12 @@ namespace sw
             const string& regularName = pSystemFamily->_windowsRegular;
             const string& boldName    = pSystemFamily->_windowsBold;
             const uint32  faceIndex   = pSystemFamily->_windowsFaceIndex;
-#else
+#elif defined( SW_PLATFORM_LINUX )
             const string& regularName = pSystemFamily->_linuxRegular;
             const string& boldName    = pSystemFamily->_linuxBold;
             const uint32  faceIndex   = pSystemFamily->_linuxFaceIndex;
+#else
+    #error "Unsupported platform"
 #endif
             const bool    bWantsBold = static_cast<uint16>( weight ) >= static_cast<uint16>( FontWeight::SemiBold );
             const bool    bUseBold   = bWantsBold && boldName.empty() == false;

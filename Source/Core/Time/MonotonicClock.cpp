@@ -4,8 +4,10 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #include <time.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -35,8 +37,10 @@ namespace sw
             return static_cast<int64>( frequency.QuadPart );
         }();
         return s_countsPerSecond;
-#else
+#elif defined( SW_PLATFORM_POSIX )
         return constant::time::kNanosecondsPerSecond; // Linux 는 readCounter 가 이미 나노초다
+#else
+    #error "Unsupported platform"
 #endif
     }
 
@@ -68,11 +72,13 @@ namespace sw
                 }
             }
             Sleep( static_cast<DWORD>( ( remaining + 999999 ) / constant::time::kNanosecondsPerMillisecond ) );
-#else
+#elif defined( SW_PLATFORM_POSIX )
             timespec request{};
             request.tv_sec  = static_cast<time_t>( remaining / constant::time::kNanosecondsPerSecond );
             request.tv_nsec = static_cast<decltype( request.tv_nsec )>( remaining % constant::time::kNanosecondsPerSecond );
             (void)clock_nanosleep( CLOCK_MONOTONIC, 0, &request, nullptr ); // 신호에 깨면 루프가 남은 시간을 다시 측정한다
+#else
+    #error "Unsupported platform"
 #endif
         }
     }

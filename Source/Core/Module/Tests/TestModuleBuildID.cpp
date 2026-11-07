@@ -8,8 +8,10 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#else
+#elif defined( SW_PLATFORM_LINUX )
     #include <gnu/libc-version.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 using namespace sw;
@@ -75,11 +77,13 @@ SW_TEST_CASE( ModuleBuildIDTest, AddressInsideAnotherModuleNamesThatModule )
     SW_REQUIRE_TRUE( system.isValid() );
     SW_EXPECT_TRUE( system._id != executable._id );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( system._modulePath, ".dll", true ), system._modulePath );
-#else
+#elif defined( SW_PLATFORM_LINUX )
     // libc 함수 중 새니타이저가 가로채지 않는 것을 고른다 — ASan · TSan 은 fflush · malloc 같은 함수를 실행 파일에 정적으로 든 런타임에서
     // 가로채므로, 그 주소는 libc 가 아니라 실행 파일 안이다.
     const ModuleBuildID system = ModuleBuildID::find( reinterpret_cast<const void*>( &gnu_get_libc_version ) );
     SW_EXPECT_FALSE( system._modulePath.empty() );
     SW_EXPECT_FALSE( FileUtil::pathsEqualNormalized( system._modulePath, executable._modulePath ) );
+#else
+    #error "Unsupported platform"
 #endif
 }

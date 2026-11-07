@@ -14,6 +14,8 @@
     #include <dpapi.h>
 #elif defined( SW_PLATFORM_LINUX )
     #include <sys/stat.h>
+#else
+    #error "Unsupported platform"
 #endif
 
 namespace sw
@@ -33,9 +35,11 @@ namespace sw
                 outBytes.assign( output.pbData, output.pbData + output.cbData );
                 LocalFree( output.pbData );
                 return true;
-#else
+#elif defined( SW_PLATFORM_LINUX )
                 outBytes.assign( pKey, pKey + keySize );
                 return true;
+#else
+    #error "Unsupported platform"
 #endif
             }
 
@@ -52,11 +56,13 @@ namespace sw
                 SecureZeroMemory( output.pbData, output.cbData );
                 LocalFree( output.pbData );
                 return bSized;
-#else
+#elif defined( SW_PLATFORM_LINUX )
                 if ( bytes.size() != static_cast<size_t>( keySize ) )
                     return false;
                 std::memcpy( pOutKey, bytes.data(), static_cast<size_t>( keySize ) );
                 return true;
+#else
+    #error "Unsupported platform"
 #endif
             }
 
@@ -65,8 +71,10 @@ namespace sw
 #if defined( SW_PLATFORM_LINUX )
                 if ( ::chmod( path.c_str(), S_IRUSR | S_IWUSR ) != 0 )
                     SW_LOG_WARNING_ID( "LocalDeviceKeyProvider.CouldNotRestrictLocal", "Could not restrict the local store key file to its owner: %#", path.c_str() );
-#else
+#elif defined( SW_PLATFORM_WINDOWS )
                 (void)path; // DPAPI 가 이미 이 사용자에게만 풀린다
+#else
+    #error "Unsupported platform"
 #endif
             }
         };

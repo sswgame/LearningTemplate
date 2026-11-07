@@ -45,9 +45,11 @@ SW_TEST_CASE( RHISurfaceSwapTest, FailedRecreateFailsTheSwapThatNeedsIt )
     SW_EXPECT_FALSE( sw::RHI::recreateSurfaceForSwap( &surface, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL ) );
     SW_EXPECT_FALSE( sw::RHI::recreateSurfaceForSwap( &surface, sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan ) );
     SW_EXPECT_EQUAL( 2u, surface._recreateCount );
-#else
+#elif defined( SW_PLATFORM_LINUX )
     SW_EXPECT_TRUE( sw::RHI::recreateSurfaceForSwap( &surface, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL ) );
     SW_EXPECT_EQUAL( 0u, surface._recreateCount );
+#else
+    #error "Unsupported platform"
 #endif
 }
 

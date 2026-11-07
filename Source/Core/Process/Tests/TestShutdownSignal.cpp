@@ -8,8 +8,10 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#else
+#elif defined( SW_PLATFORM_POSIX )
     #include <csignal>
+#else
+    #error "Unsupported platform"
 #endif
 
 using namespace sw;
@@ -38,9 +40,11 @@ SW_TEST_CASE( ShutdownSignalTest, TerminateSignalSetsTheFlag )
 #if defined( SW_PLATFORM_WINDOWS )
     SW_EXPECT_TRUE( ShutdownSignal::dispatchConsoleControlForTest( CTRL_BREAK_EVENT ) );
     SW_EXPECT_TRUE( ShutdownSignal::getRequestedCause() == ShutdownCause::Interrupt );
-#else
+#elif defined( SW_PLATFORM_POSIX )
     SW_EXPECT_EQUAL( 0, std::raise( SIGTERM ) );
     SW_EXPECT_TRUE( ShutdownSignal::getRequestedCause() == ShutdownCause::Terminate );
+#else
+    #error "Unsupported platform"
 #endif
     ShutdownSignal::uninstall();
     ShutdownSignal::resetForTest();

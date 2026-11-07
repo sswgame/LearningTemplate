@@ -32,6 +32,8 @@
     #include <xcb/xcb.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
+#else
+    #error "Unsupported platform"
 #endif
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -184,8 +186,10 @@ namespace sw
             SW_LOG_ERROR_ID( "Vulkan.VulkanWindowsNeedsWin32", "Vulkan on Windows needs a Win32 surface" );
             return false;
         }
-#else
+#elif defined( SW_PLATFORM_POSIX )
         _pHWnd = desc._pWindowHandle; // 종류별 읽기는 `createSurface` 의 `_wsiKind` 가 고른다(`_surfaceKind` 에서 정한다)
+#else
+    #error "Unsupported platform"
 #endif
         _pDisplayHandle = desc._pWindowDisplay;
         _surfaceKind    = desc._surfaceKind;
@@ -910,6 +914,8 @@ namespace sw
             SW_LOG_ERROR_ID( "Vulkan.InstallLibxcb1DevLibx11", "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
             return false;
         }
+#else
+    #error "Unsupported platform"
 #endif
         if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );

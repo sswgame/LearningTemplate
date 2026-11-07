@@ -3,7 +3,7 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Process/ShutdownSignal.h"
 
-#if !defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_POSIX )
     #include <signal.h>
     #include <unistd.h>
 

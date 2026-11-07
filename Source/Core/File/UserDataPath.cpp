@@ -63,7 +63,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         const string directory = Internal::makeUnderEnvironment( "XDG_DATA_HOME", ".local/share", "swengine", gameName );
 #else
-        const string directory;
+    #error "Unsupported platform"
 #endif
         if ( directory.empty() )
             Internal::failUnknownUserFolder();
@@ -80,7 +80,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         const string directory = Internal::makeUnderEnvironment( "XDG_CONFIG_HOME", ".config", "swengine", gameName );
 #else
-        const string directory;
+    #error "Unsupported platform"
 #endif
         if ( directory.empty() )
             Internal::failUnknownUserFolder();
