@@ -15,9 +15,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/TicketQueryLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
-#include "GameFramework/Runtime/Online/Security/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/Security/Tests/FakeNetSecurityProvider.h"
 
 using namespace sw;

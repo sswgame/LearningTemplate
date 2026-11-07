@@ -5,7 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
-#include "GameFramework/Runtime/Online/Identity/ConnectAdmission.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
 
 namespace sw
 {

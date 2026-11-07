@@ -7,10 +7,10 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
-#include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
-#include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Config/LiveEventControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 

@@ -7,8 +7,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Report/ServiceReport.h"
 #include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

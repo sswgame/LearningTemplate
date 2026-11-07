@@ -21,8 +21,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/StoreReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
-#include "GameFramework/Runtime/Online/Security/JSONWebToken.h"
 
 #include <optional>
 

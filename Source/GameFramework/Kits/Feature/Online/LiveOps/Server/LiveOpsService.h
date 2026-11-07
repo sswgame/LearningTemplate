@@ -21,9 +21,9 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Config/LiveEventControl.h"
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
 #include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 

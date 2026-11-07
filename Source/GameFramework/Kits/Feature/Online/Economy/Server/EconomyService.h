@@ -32,10 +32,10 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
-#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 

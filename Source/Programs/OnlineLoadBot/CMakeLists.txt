@@ -7,6 +7,8 @@
 # 1) 기대는 키트 — 온라인 클라이언트 키트 모두와 같은 기능의 서버 키트(한 프로세스 서버 조립 `LoadBotLocalServer`). 하나라도 꺼져 있으면 짓지 않는다.
 # ------------------------------------------------------------------------------
 set(swLoadBotKit
+	# 서버 키트의 공통 기반(서버 전용 코어) — 모듈을 이 순서로 올리므로 서버 키트보다 앞이다
+	GF_Server_OnlineCore
 	GF_Account GF_Server_Account
 	GF_Chat GF_Server_Chat
 	GF_Leaderboard GF_Server_Leaderboard

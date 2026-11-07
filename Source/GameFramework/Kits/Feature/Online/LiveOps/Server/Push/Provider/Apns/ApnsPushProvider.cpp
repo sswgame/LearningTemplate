@@ -10,8 +10,8 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
-#include "GameFramework/Runtime/Online/HTTP/HTTP2Client.h"
-#include "GameFramework/Runtime/Online/Security/JSONWebToken.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Client.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
 
 namespace sw
 {

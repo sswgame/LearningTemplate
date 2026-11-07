@@ -17,8 +17,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
-#include "GameFramework/Runtime/Online/Identity/ConnectAdmission.h"
 
 namespace sw
 {

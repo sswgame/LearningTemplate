@@ -8,6 +8,9 @@
             "_name": "GameFramework"
         },
         {
+            "_name": "GF_Server_OnlineCore"
+        },
+        {
             "_name": "GF_Chat"
         }
     ],

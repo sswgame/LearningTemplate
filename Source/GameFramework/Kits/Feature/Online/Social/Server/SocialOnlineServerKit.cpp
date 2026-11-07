@@ -1,11 +1,11 @@
 #include "pch.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Identity/GroupChannelMembership.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"

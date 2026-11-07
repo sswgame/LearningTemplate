@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
-#include "GameFramework/Runtime/Online/Identity/ConnectAdmission.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
 
 using namespace sw;
 

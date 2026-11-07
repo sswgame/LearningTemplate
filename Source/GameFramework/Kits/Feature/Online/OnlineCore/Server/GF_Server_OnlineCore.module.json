@@ -1,0 +1,19 @@
+{
+    "_name": "GF_Server_OnlineCore",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "온라인 서버 코어 — 키트 서버의 공통 기반(프로토콜 서비스 기반 · 호출 표 · 지표), 접속 상태 · 알림 중계, 원장 감사 · 잔액 변경 창구, 우편 캠페인, 멱등 기록, 서버 디렉터리 제어 · 서버 목록 읽기, 라이브 이벤트 제어, 외부 HTTP/2 · 서비스 계정 토큰 · JWT, 제공자 파일. 클라이언트 바이너리에 싣지 않는다(서버 온라인 조사 P10). 같은 프로세스 로컬 서버(OnlineSession)가 쓰는 조립 · 저장소 · 캐시 · 예약 · 버스는 GameFramework 에 남는다(언리얼 리슨 서버와 같은 자리)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}
