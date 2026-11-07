@@ -24,19 +24,9 @@ namespace sw
         return ServiceRecordUtil::readCache( bytes, kSocialPresenceRecordVersion, outPresence );
     }
 
-    SocialResult SocialProtocol::fromErrorCode( uint16 errorCode )
-    {
-        static constexpr OnlineErrorResult<SocialResult> kArrErrorResult[] = {
-            {             OnlineError::kOk,          SocialResult::Ok},
-            {OnlineError::kUnauthenticated, SocialResult::NotSignedIn},
-            { OnlineError::kInvalidRequest,     SocialResult::Invalid},
-            {       OnlineError::kConflict,    SocialResult::Conflict},
-        };
-        return OnlineError::toResult( errorCode, kArrErrorResult, SocialResult::Unavailable );
-    }
 } // namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry SocialProtocol::kOnlineEntry{ "Social", SocialMethod{}, SocialProtocol::MessageTypes{} };
+    const OnlineProtocolEntry SocialProtocol::kOnlineEntry{ "Social", SocialProtocol::Table{} };
 } // namespace sw

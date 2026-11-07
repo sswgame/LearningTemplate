@@ -789,7 +789,7 @@ namespace sw
                                                                 PartyLobbyLimit::kInviteTTLMs ) );
                 PartyLobbyNotification notification;
                 notification._recipientID       = request._targetID;
-                notification._pushKind          = MatchmakingMethod::kPushPartyInvite;
+                notification._pushKind          = MatchmakingMethod::PartyInvited::kKind;
                 notification._invite._partyID   = request._partyID;
                 notification._invite._inviterID = request._actorID;
                 _notificationBuffer.push( std::move( notification ) );
@@ -902,7 +902,7 @@ namespace sw
         {
             PartyLobbyNotification notification;
             notification._recipientID = memberID;
-            notification._pushKind    = MatchmakingMethod::kPushParty;
+            notification._pushKind    = MatchmakingMethod::Party::kKind;
             notification._party       = party;
             _notificationBuffer.push( std::move( notification ) );
         }
@@ -910,7 +910,7 @@ namespace sw
             return;
         PartyLobbyNotification removed;
         removed._recipientID    = removedID;
-        removed._pushKind       = MatchmakingMethod::kPushParty;
+        removed._pushKind       = MatchmakingMethod::Party::kKind;
         removed._party._partyID = party._partyID; // 멤버가 비어 있으면 이 파티에서 빠진 것이다
         _notificationBuffer.push( std::move( removed ) );
     }
@@ -921,7 +921,7 @@ namespace sw
         {
             PartyLobbyNotification notification;
             notification._recipientID = member._accountID;
-            notification._pushKind    = MatchmakingMethod::kPushLobby;
+            notification._pushKind    = MatchmakingMethod::Lobby::kKind;
             notification._lobby       = lobby;
             _notificationBuffer.push( std::move( notification ) );
         }
@@ -929,7 +929,7 @@ namespace sw
             return;
         PartyLobbyNotification removed;
         removed._recipientID    = removedID;
-        removed._pushKind       = MatchmakingMethod::kPushLobby;
+        removed._pushKind       = MatchmakingMethod::Lobby::kKind;
         removed._lobby._lobbyID = lobby._lobbyID;
         _notificationBuffer.push( std::move( removed ) );
     }

@@ -13,74 +13,8 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct SocialServerInternal
-        {
-            static SocialLinkOperation toLinkOperation( uint16 method, bool bAccept )
-            {
-                switch ( method )
-                {
-                    case SocialMethod::kRemoveFriend:
-                        return SocialLinkOperation::Remove;
-                    case SocialMethod::kBlock:
-                        return SocialLinkOperation::Block;
-                    case SocialMethod::kUnblock:
-                        return SocialLinkOperation::Unblock;
-                    case SocialMethod::kRespondFriend:
-                        return bAccept ? SocialLinkOperation::Accept : SocialLinkOperation::Decline;
-                    default:
-                        return SocialLinkOperation::Request;
-                }
-            }
-
-            static GuildOperation toGuildOperation( uint16 method )
-            {
-                switch ( method )
-                {
-                    case SocialMethod::kGuildCreate:
-                        return GuildOperation::Create;
-                    case SocialMethod::kGuildInvite:
-                        return GuildOperation::Invite;
-                    case SocialMethod::kGuildAccept:
-                        return GuildOperation::Accept;
-                    case SocialMethod::kGuildLeave:
-                        return GuildOperation::Leave;
-                    case SocialMethod::kGuildKick:
-                        return GuildOperation::Kick;
-                    case SocialMethod::kGuildSetRole:
-                        return GuildOperation::SetRole;
-                    case SocialMethod::kGuildSetNotice:
-                        return GuildOperation::SetNotice;
-                    case SocialMethod::kGuildDeposit:
-                        return GuildOperation::Deposit;
-                    case SocialMethod::kGuildWithdraw:
-                        return GuildOperation::Withdraw;
-                    case SocialMethod::kGuildStorage:
-                        return GuildOperation::ListStorage;
-                    case SocialMethod::kGuildSetJoinPolicy:
-                        return GuildOperation::SetJoinPolicy;
-                    case SocialMethod::kGuildApply:
-                        return GuildOperation::Apply;
-                    case SocialMethod::kGuildApplications:
-                        return GuildOperation::ListApplications;
-                    case SocialMethod::kGuildApprove:
-                        return GuildOperation::Approve;
-                    case SocialMethod::kGuildReject:
-                        return GuildOperation::Reject;
-                    default:
-                        return GuildOperation::Get;
-                }
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SocialServer::SocialServer()
-        : _pendingTable{}
-        , _listSocialScratch{}
+        : _listSocialScratch{}
         , _listGuildScratch{}
         , _listNotificationScratch{}
         , _listJoinedAccount{}
@@ -90,23 +24,27 @@ namespace sw
         , _pHost{ nullptr }
         , _listBusSubscription{}
     {
+        setReady( false );
     }
 
-    void SocialServer::initialize( SocialService* pSocialService, GuildService* pGuildService, IAccountPresence* pPresence )
+    void SocialServer::initialize( SocialService* pSocialService, GuildService* pGuildService, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
         _pSocialService = pSocialService;
         _pGuildService  = pGuildService;
         _pPresence      = pPresence;
+        initializeCalls( pMetricRegistry, "social" );
+        setReady( pSocialService != nullptr && pGuildService != nullptr );
     }
 
     void SocialServer::shutdown()
     {
         _listBusSubscription.clear();
-        _pendingTable.clear();
+        _calls.clear();
         _pHost          = nullptr;
         _pSocialService = nullptr;
         _pGuildService  = nullptr;
         _pPresence      = nullptr;
+        setReady( false );
     }
 
     void SocialServer::onHostShutdown( OnlineServiceHost& host )
@@ -116,83 +54,178 @@ namespace sw
         _pHost = nullptr;
     }
 
-    const OnlineProtocolEntry& SocialServer::getProtocol() const
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::RequestFriend> call, const OnlineCallContext& context, const SocialAccountRequest& request )
     {
-        return SocialProtocol::kOnlineEntry;
+        _pSocialService->changeLink( SocialLinkOperation::Request, context._accountID, request._otherID, context._nowMs, call._callID );
     }
 
-    void SocialServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::RequestFriendByName> call, const OnlineCallContext& context, const SocialTextRequest& request )
     {
-        using Internal = SocialServerInternal;
-        if ( _pSocialService == nullptr || _pGuildService == nullptr )
-        {
-            (void)host.respondError( context._token, OnlineError::kUnavailable );
-            return;
-        }
-        SocialRequest request;
-        const bool    bKnownMethod = SocialMethod::isLinkChange( context._method ) || SocialMethod::isGuild( context._method ) ||
-                                  context._method == SocialMethod::kListLinks || context._method == SocialMethod::kSetPresence ||
-                                  context._method == SocialMethod::kFriendPresence;
-        if ( bKnownMethod == false )
-        {
-            (void)host.respondError( context._token, OnlineError::kNotFound );
-            return;
-        }
-        if ( SocialProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
-        }
-        const uint64           requestTag = _pendingTable.add( context._token );
-        const AccountID        selfID     = context._accountID;
-        const UnixMilliseconds nowMs      = context._nowMs;
-        if ( context._method == SocialMethod::kRequestFriendByName )
-        {
-            _pSocialService->requestFriendByName( selfID, request._text, nowMs, requestTag );
-            return;
-        }
-        if ( SocialMethod::isLinkChange( context._method ) )
-        {
-            _pSocialService->changeLink( Internal::toLinkOperation( context._method, request._bAccept == SW_TRUE ), selfID, request._otherID, nowMs, requestTag );
-            return;
-        }
-        if ( SocialMethod::isGuild( context._method ) )
-        {
-            GuildRequest guildRequest;
-            guildRequest._text      = std::move( request._text );
-            guildRequest._accountID = selfID;
-            guildRequest._targetID  = request._otherID;
-            guildRequest._guildID   = request._guildID;
-            guildRequest._nowMs     = nowMs;
-            guildRequest._role      = request._role;
-            guildRequest._operation = Internal::toGuildOperation( context._method );
-            guildRequest._assetID   = std::move( request._assetID );
-            guildRequest._amount    = request._amount;
-            guildRequest._bOpen     = request._bOpen;
-            if ( context._idempotencyKey.isValid() ) // 창고 이동의 분개 키이다. 없으면 길드 로직이 Invalid 로 끝낸다
-                guildRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( selfID ), context._idempotencyKey._high,
-                                                                                  context._idempotencyKey._low );
-            _pGuildService->submit( guildRequest, requestTag );
-            return;
-        }
-        switch ( context._method )
-        {
-            case SocialMethod::kListLinks:
-            {
-                _pSocialService->listLinks( selfID, requestTag );
-                break;
-            }
-            case SocialMethod::kSetPresence:
-            {
-                _pSocialService->setPresence( selfID, request._status, request._text, nowMs, requestTag );
-                break;
-            }
-            default:
-            {
-                _pSocialService->queryFriendPresence( selfID, requestTag );
-                break;
-            }
-        }
+        _pSocialService->requestFriendByName( context._accountID, request._text, context._nowMs, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::RespondFriend> call, const OnlineCallContext& context, const SocialRespondRequest& request )
+    {
+        const SocialLinkOperation operation = request._bAccept == SW_TRUE ? SocialLinkOperation::Accept : SocialLinkOperation::Decline;
+        _pSocialService->changeLink( operation, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::RemoveFriend> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        _pSocialService->changeLink( SocialLinkOperation::Remove, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::Block> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        _pSocialService->changeLink( SocialLinkOperation::Block, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::Unblock> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        _pSocialService->changeLink( SocialLinkOperation::Unblock, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::ListLinks> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        _pSocialService->listLinks( context._accountID, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::SetPresence> call, const OnlineCallContext& context, const SocialPresenceRequest& request )
+    {
+        _pSocialService->setPresence( context._accountID, request._status, request._text, context._nowMs, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::FriendPresence> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        _pSocialService->queryFriendPresence( context._accountID, call._callID );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildCreate> call, const OnlineCallContext& context, const SocialTextRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._text = request._text;
+        submitGuild( call._callID, context, GuildOperation::Create, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildInvite> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Invite, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildAccept> call, const OnlineCallContext& context, const GuildIDRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._guildID = request._guildID;
+        submitGuild( call._callID, context, GuildOperation::Accept, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildLeave> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::Leave, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildKick> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Kick, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildSetRole> call, const OnlineCallContext& context, const GuildRoleRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        guildRequest._role     = request._role;
+        submitGuild( call._callID, context, GuildOperation::SetRole, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildSetNotice> call, const OnlineCallContext& context, const SocialTextRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._text = request._text;
+        submitGuild( call._callID, context, GuildOperation::SetNotice, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildGet> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::Get, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildDeposit> call, const OnlineCallContext& context, const GuildAssetRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._assetID = request._assetID;
+        guildRequest._amount  = request._amount;
+        submitGuild( call._callID, context, GuildOperation::Deposit, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildWithdraw> call, const OnlineCallContext& context, const GuildAssetRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._assetID = request._assetID;
+        guildRequest._amount  = request._amount;
+        submitGuild( call._callID, context, GuildOperation::Withdraw, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildStorage> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::ListStorage, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildSetJoinPolicy> call, const OnlineCallContext& context, const GuildJoinPolicyRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._bOpen = request._bOpen;
+        submitGuild( call._callID, context, GuildOperation::SetJoinPolicy, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildApply> call, const OnlineCallContext& context, const GuildIDRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._guildID = request._guildID;
+        submitGuild( call._callID, context, GuildOperation::Apply, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildApplications> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::ListApplications, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildApprove> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Approve, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildReject> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Reject, guildRequest );
+    }
+
+    void SocialServer::submitGuild( uint64 callID, const OnlineCallContext& context, GuildOperation operation, GuildRequest& inoutRequest )
+    {
+        inoutRequest._accountID = context._accountID;
+        inoutRequest._nowMs     = context._nowMs;
+        inoutRequest._operation = operation;
+        if ( context._idempotencyKey.isValid() ) // 창고 이동의 분개 키이다. 없으면 길드 로직이 Invalid 로 끝낸다
+            inoutRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( context._accountID ), context._idempotencyKey._high,
+                                                                              context._idempotencyKey._low );
+        _pGuildService->submit( inoutRequest, callID );
     }
 
     void SocialServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -202,6 +235,7 @@ namespace sw
         if ( _pSocialService == nullptr || _pGuildService == nullptr )
             return;
         _pSocialService->update( nowMs );
+        _calls.publishPendingCount();
         for ( const AccountID accountID : _listJoinedAccount )
         {
             _pGuildService->attachAccount( accountID, nowMs ); // 길드 멤버면 MemberAttached 이벤트가 길드 채널에 넣는다
@@ -217,7 +251,7 @@ namespace sw
             reply._otherID      = completion._otherID;
             reply._listLink     = std::move( completion._listLink );
             reply._listPresence = std::move( completion._listPresence );
-            respond( host, completion._requestTag, reply );
+            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
         }
 
         _listGuildScratch.clear();
@@ -229,7 +263,7 @@ namespace sw
             reply._guild           = std::move( completion._info );
             reply._listStorage     = std::move( completion._listStorage );
             reply._listApplication = std::move( completion._listApplication );
-            respond( host, completion._requestTag, reply );
+            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
         }
         sendNotifications( host );
     }
@@ -265,14 +299,6 @@ namespace sw
         _listBusSubscription.push_back( host.subscribeServerBus( SocialBus::kPresenceTopic.getName(), this ) );
     }
 
-    void SocialServer::respond( OnlineServiceHost& host, uint64 requestTag, const SocialReply& reply )
-    {
-        NetRequestToken token;
-        if ( _pendingTable.take( requestTag, token ) == false )
-            return;                                                            // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
-        (void)host.respondReply<SocialProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
-    }
-
     void SocialServer::sendNotifications( OnlineServiceHost& host )
     {
         _listNotificationScratch.clear();
@@ -283,7 +309,7 @@ namespace sw
             BitWriter body;
             if ( SocialProtocol::MessageTypes::write( body, notification ) == false )
                 continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
-            if ( host.sendPush( notification._recipientID, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
+            if ( host.sendPush( notification._recipientID, SocialMethod::Notification::kKind, body ) == false && _pPresence != nullptr )
                 (void)_pPresence->sendRemotePush( notification._recipientID, SocialPushName::Notification, notification ); // 다른 서버에 접속해 있다
         }
         _listNotificationScratch.clear();

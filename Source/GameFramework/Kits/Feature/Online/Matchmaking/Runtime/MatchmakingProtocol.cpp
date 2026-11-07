@@ -48,18 +48,9 @@ namespace sw
         return ServiceKeyUtil::parseHex64( text, outID );
     }
 
-    MatchmakingResult MatchmakingProtocol::fromErrorCode( uint16 errorCode )
-    {
-        static constexpr OnlineErrorResult<MatchmakingResult> kArrErrorResult[] = {
-            {            OnlineError::kOk,       MatchmakingResult::Ok},
-            {OnlineError::kInvalidRequest,  MatchmakingResult::Invalid},
-            {      OnlineError::kConflict, MatchmakingResult::Conflict},
-        };
-        return OnlineError::toResult( errorCode, kArrErrorResult, MatchmakingResult::Unavailable );
-    }
 } // namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry MatchmakingProtocol::kOnlineEntry{ "Matchmaking", MatchmakingMethod{}, MatchmakingProtocol::MessageTypes{} };
+    const OnlineProtocolEntry MatchmakingProtocol::kOnlineEntry{ "Matchmaking", MatchmakingProtocol::Table{} };
 } // namespace sw

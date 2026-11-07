@@ -82,7 +82,7 @@ namespace sw
                 _pGroupChannels = context._kits.find<IGroupChannelMembership>();
                 if ( _pGroupChannels != nullptr )
                     _guildEventSubscription = _guildService.bindEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
-                _socialServer.initialize( &_socialService, &_guildService, context._kits.find<IAccountPresence>() );
+                _socialServer.initialize( &_socialService, &_guildService, context._kits.find<IAccountPresence>(), context._pMetricRegistry );
                 return true;
             }
 

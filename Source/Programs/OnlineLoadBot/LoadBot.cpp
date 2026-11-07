@@ -368,7 +368,7 @@ namespace sw
                     return;
                 }
                 _awaitKind = AwaitKind::Response;
-                (void)_socialClient.requestFriend( pOther->getAccountID(), SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                (void)_socialClient.call<SocialMethod::RequestFriend>( SocialAccountRequest{ pOther->getAccountID() }, SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
                 return;
             }
             default:
@@ -447,8 +447,10 @@ namespace sw
             }
             case LoadBotAction::SocialPresence:
             {
-                (void)_socialClient.setPresence( LoadBotInternal::findStatus( step._text ), step._secondText,
-                                                 SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                SocialPresenceRequest request;
+                request._status = LoadBotInternal::findStatus( step._text );
+                request._text   = step._secondText;
+                (void)_socialClient.call<SocialMethod::SetPresence>( request, SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
                 return true;
             }
             case LoadBotAction::LeaderboardTop:
@@ -469,13 +471,16 @@ namespace sw
             }
             case LoadBotAction::MatchmakingQueue:
             {
-                (void)_matchmakingClient.joinQueue( step._text, region, MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
+                MatchmakingModeRequest request;
+                request._modeID = step._text;
+                request._region = region;
+                (void)_matchmakingClient.call<MatchmakingMethod::QueueJoin>( request, MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
                 return true;
             }
             case LoadBotAction::PartyCreate:
             {
                 // 요청 id 는 쓰지 않는다 — 결과는 onMatchmakingReply 로 온다
-                (void)_matchmakingClient.createParty( MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
+                (void)_matchmakingClient.call<MatchmakingMethod::PartyCreate>( MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
                 return true;
             }
             case LoadBotAction::LiveOpsState:
@@ -560,7 +565,7 @@ namespace sw
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
-                (void)_socialClient.respondFriend( notification._otherID, true, SocialClient::ReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
+                (void)_socialClient.call<SocialMethod::RespondFriend>( SocialRespondRequest{ notification._otherID, SW_TRUE }, SocialClient::ReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
         }
     }
 

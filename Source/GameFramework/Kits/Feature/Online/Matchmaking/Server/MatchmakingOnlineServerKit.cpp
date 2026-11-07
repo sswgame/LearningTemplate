@@ -97,7 +97,7 @@ namespace sw
                     _partyLobby.shutdown(); // 실패한 start 는 `stop` 이 보지 않으므로 세운 파티 · 로비를 여기서 내린다
                     return false;
                 }
-                _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, context._kits.find<IAccountPresence>() ); // 배정 구독 · 시한은 서버가 돈다
+                _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, context._kits.find<IAccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
                 _server.setReconnectGrace( _reconnectGraceMs );
                 _server.setGroupChannels( context._kits.find<IGroupChannelMembership>() );
                 return true;

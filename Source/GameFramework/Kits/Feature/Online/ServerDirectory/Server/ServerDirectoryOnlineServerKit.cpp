@@ -51,7 +51,7 @@ namespace sw
                 dependencies._pRouter = context._pRouter;
                 dependencies._pBus    = context._pBus;
                 _service.initialize( dependencies, _settings );
-                _server.initialize( &_service );
+                _server.initialize( &_service, context._pMetricRegistry );
                 return true;
             }
 

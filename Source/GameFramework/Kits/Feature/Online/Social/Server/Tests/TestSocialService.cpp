@@ -389,8 +389,8 @@ SW_TEST_CASE( SocialServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = SocialResult::Ok;
     SocialReply unavailable;
     unavailable._result = SocialResult::Unavailable;
-    rig.expectRetryReachesService( SocialMethod::kRequestFriend, unavailable, finished );
+    rig.expectRetryReachesService( SocialMethod::RequestFriend::kID, unavailable, finished );
     SocialReply conflict;
     conflict._result = SocialResult::Conflict;
-    rig.expectRetryReachesService( SocialMethod::kRequestFriend, conflict, finished );
+    rig.expectRetryReachesService( SocialMethod::RequestFriend::kID, conflict, finished );
 }
