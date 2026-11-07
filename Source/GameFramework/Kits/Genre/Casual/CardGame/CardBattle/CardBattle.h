@@ -14,6 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -149,10 +150,11 @@ namespace sw
         /** @brief 턴을 마칩니다. 손을 버리고, 적이 의도를 실행하고, 살아 있으면 다음 턴을 시작합니다(방어 초기화, 에너지, 뽑기). */
         void endTurn();
 
-        /** @brief 덱의 정의 id(카드 번호 순), 더미 넷, 적, 난수, 체력, 방어, 에너지, 턴, 단계를 씁니다. 카탈로그와 설정은 `initialize` 에서 받으므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 카탈로그에 없는 정의 id, 음수이거나 최대를 넘는 값, 덱과 맞지 않는 더미(빠지거나 겹친 카드)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 덱의 정의 id(카드 번호 순), 더미 넷, 적, 난수, 체력, 방어, 에너지, 턴, 단계를 씁니다. 카탈로그와 설정은 `initialize` 에서 받으므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 카탈로그에 없는 정의 id, 음수이거나 최대를 넘는 값, 덱과 맞지 않는 더미(빠지거나 겹친 카드)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         const CardBattleCardDef* getCardDef( const Card& card ) const;
         const CardPile&          getDrawPile() const { return _drawPile; }

@@ -131,42 +131,39 @@ namespace sw
             pChunk->_bDirty = SW_FALSE;
     }
 
-    void VoxelWorld::writeState( Archive& outArchive ) const
+    void VoxelWorld::serializeState( StateIO& io )
     {
-        outArchive << _chunkCountX;
-        outArchive << _chunkCountZ;
-        for ( const VoxelChunk& chunk : _listChunk )
+        io.expect( _chunkCountX );
+        io.expect( _chunkCountZ );
+        if ( io.isWriting() )
         {
-            // 구간 수를 먼저 세지 않고 끝에 길이 0인 구간을 넣어 닫는다.
-            size_t index = 0;
-            while ( index < chunk._listBlock.size() )
+            // 구간 수를 먼저 세지 않고 끝에 길이 0인 구간을 넣어 닫는다. 런 길이 부호는 방향마다 할 일이 달라 갈린다.
+            for ( const VoxelChunk& chunk : _listChunk )
             {
-                const VoxelBlockIndex block = chunk._listBlock[index];
-                uint32                run   = 1;
-                while ( index + run < chunk._listBlock.size() && chunk._listBlock[index + run] == block )
+                size_t index = 0;
+                while ( index < chunk._listBlock.size() )
                 {
-                    ++run;
+                    VoxelBlockIndex block = chunk._listBlock[index];
+                    uint32          run   = 1;
+                    while ( index + run < chunk._listBlock.size() && chunk._listBlock[index + run] == block )
+                    {
+                        ++run;
+                    }
+                    io.value( block );
+                    io.value( run );
+                    index += run;
                 }
-                outArchive << block;
-                outArchive << run;
-                index += run;
+                VoxelBlockIndex closeBlock = kVoxelAirBlock;
+                uint32          closeRun   = 0;
+                io.value( closeBlock );
+                io.value( closeRun );
             }
-            outArchive << kVoxelAirBlock;
-            outArchive << uint32( 0 );
+            return;
         }
-    }
-
-    bool VoxelWorld::readState( Archive& archive )
-    {
-        int32 chunkCountX = 0;
-        int32 chunkCountZ = 0;
-        archive >> chunkCountX;
-        archive >> chunkCountZ;
-        const bool bInvalidChunkHeader = archive.isError() || chunkCountX != _chunkCountX || chunkCountZ != _chunkCountZ || _pCatalog == nullptr;
-        if ( bInvalidChunkHeader )
-            return false;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
         const size_t       blockLimit = _pCatalog->getBlocks().size(); // 0은 공기이고 1부터 카탈로그 순서이다
-        vector<VoxelChunk> listChunk( _listChunk.size() );
+        vector<VoxelChunk> listChunk( _listChunk.size() );             // 사본 대신 새 목록에 읽는다 — 옛 청크는 어차피 버린다
         for ( VoxelChunk& chunk : listChunk )
         {
             chunk._listBlock.reserve( static_cast<size_t>( kVoxelChunkVolume ) );
@@ -174,18 +171,18 @@ namespace sw
             {
                 VoxelBlockIndex block = kVoxelAirBlock;
                 uint32          run   = 0;
-                archive >> block;
-                archive >> run;
-                if ( archive.isError() || static_cast<size_t>( block ) > blockLimit )
-                    return false;
+                io.value( block );
+                io.value( run );
+                if ( io.check( static_cast<size_t>( block ) <= blockLimit ) == false )
+                    return;
                 if ( run == 0 )
                     break;
-                if ( chunk._listBlock.size() + run > static_cast<size_t>( kVoxelChunkVolume ) )
-                    return false;
+                if ( io.check( chunk._listBlock.size() + run <= static_cast<size_t>( kVoxelChunkVolume ) ) == false )
+                    return;
                 chunk._listBlock.insert( chunk._listBlock.end(), run, block );
             }
-            if ( chunk._listBlock.size() != static_cast<size_t>( kVoxelChunkVolume ) )
-                return false;
+            if ( io.check( chunk._listBlock.size() == static_cast<size_t>( kVoxelChunkVolume ) ) == false )
+                return;
         }
         for ( size_t chunkIndex = 0; chunkIndex < listChunk.size(); ++chunkIndex )
         {
@@ -193,7 +190,6 @@ namespace sw
             listChunk[chunkIndex]._bDirty   = SW_TRUE;
         }
         _listChunk = std::move( listChunk );
-        return true;
     }
 
     void VoxelWorld::markAllChunksDirty()

@@ -107,31 +107,22 @@ namespace sw
         return _pCatalog->getPlayerSettings()._baseCarryWeight + ( pBackpack != nullptr ? pBackpack->_capacity : 0.0f );
     }
 
-    void BattleRoyaleLoadout::writeState( Archive& outArchive ) const
+    void BattleRoyaleLoadout::serializeState( StateIO& io )
     {
-        for ( const BattleRoyaleArmorSlot* pSlot : { &_helmet, &_vest } )
-        {
-            StateIO::writeName( outArchive, pSlot->_pDef != nullptr ? pSlot->_pDef->_id : hashed_string{} );
-            outArchive << pSlot->_durability;
-        }
-        StateIO::writeName( outArchive, _backpackID );
-    }
-
-    bool BattleRoyaleLoadout::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 헬멧, 조끼 순서로 읽는다. 방어구는 그 슬롯의 것이어야 한다
-        BattleRoyaleArmorSlot arrSlot[2] = {};
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        // 헬멧, 조끼 순서로 놓는다. 방어구는 그 슬롯의 것이어야 한다
+        BattleRoyaleArmorSlot* arrSlot[2] = { &_helmet, &_vest };
         for ( int32 slotIndex = 0; slotIndex < 2; ++slotIndex )
         {
-            BattleRoyaleArmorSlot& slot = arrSlot[slotIndex];
-            hashed_string          armorID;
-            if ( StateIO::readName( archive, armorID ) == false )
-                return false;
-            archive >> slot._durability;
-            if ( archive.isError() )
-                return false;
+            BattleRoyaleArmorSlot& slot    = *arrSlot[slotIndex];
+            hashed_string          armorID = slot._pDef != nullptr ? slot._pDef->_id : hashed_string{};
+            io.value( armorID );
+            io.value( slot._durability );
+            if ( io.isWriting() )
+                continue;
+            if ( io.isOk() == false )
+                return;
             if ( armorID.empty() )
             {
                 slot = BattleRoyaleArmorSlot{};
@@ -141,17 +132,14 @@ namespace sw
             const bool bHelmetSlot   = slotIndex == 0;
             const bool bSlotMatches  = slot._pDef != nullptr && ( slot._pDef->_slot == BattleRoyaleCatalog::getHelmetSlotName() ) == bHelmetSlot;
             const bool bDurableValid = 0.0f < slot._durability && slot._durability <= ( slot._pDef != nullptr ? slot._pDef->_durability : 0.0f );
-            if ( bSlotMatches == false || bDurableValid == false )
-                return false;
+            if ( io.check( bSlotMatches && bDurableValid ) == false )
+                return;
         }
-        hashed_string backpackID;
-        if ( StateIO::readName( archive, backpackID ) == false )
-            return false;
-        if ( backpackID.empty() == false && _pCatalog->findBackpack( backpackID ) == nullptr )
-            return false;
-        _helmet     = arrSlot[0];
-        _vest       = arrSlot[1];
-        _backpackID = backpackID;
-        return true;
+        io.value( _backpackID );
+        if ( io.isReading() )
+        {
+            io.check( _backpackID.empty() || _pCatalog->findBackpack( _backpackID ) != nullptr );
+        }
     }
+
 } // namespace sw

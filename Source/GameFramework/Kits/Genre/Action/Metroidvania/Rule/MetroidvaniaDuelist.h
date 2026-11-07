@@ -12,6 +12,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
@@ -91,10 +93,11 @@ namespace sw
         const ResourceGauge& getStamina() const { return _stamina; }
         ResourceGauge&       getStamina() { return _stamina; }
 
-        /** @brief 체력(`CombatHealth`), 지구력(`ResourceGauge`), 시각, 패리를 누른 시각, 반격 창, 받는 피해 배율, 막기를 씁니다. 카탈로그 규칙은 `initialize` 에서 받은 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 체력(`CombatHealth`), 지구력(`ResourceGauge`), 시각, 패리를 누른 시각, 반격 창, 받는 피해 배율, 막기를 씁니다. 카탈로그 규칙은 `initialize` 에서 받은 것이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         const MetroidvaniaCatalog* _pCatalog;

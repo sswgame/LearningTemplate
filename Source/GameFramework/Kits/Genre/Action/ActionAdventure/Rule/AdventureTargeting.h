@@ -14,6 +14,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
@@ -85,10 +86,11 @@ namespace sw
         bool                    isEvading() const { return _evade.isActive(); }
         bool                    isInvulnerable() const { return _invulnerable.isActive(); }
 
-        /** @brief 표적 선택 상태(표적, 숨은 시간), 표적 위치, 회피, 무적 남은 시간, 몸놀림 상태, 버튼 누름 여부를 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 표적 선택 상태(표적, 숨은 시간), 표적 위치, 회피, 무적 남은 시간, 몸놀림 상태, 버튼 누름 여부를 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         void refreshTargetPosition( const vector<LockOnCandidate>& listCandidate );

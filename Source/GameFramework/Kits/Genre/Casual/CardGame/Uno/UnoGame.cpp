@@ -367,70 +367,39 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void UnoGame::writeState( Archive& outArchive ) const
+    void UnoGame::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listHand.size() );
-        for ( const CardPile& hand : _listHand )
+        io.expect( static_cast<uint32>( _listHand.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( CardPile& hand : _listHand )
         {
-            hand.writeState( outArchive );
+            io.value( hand );
         }
-        _drawPile.writeState( outArchive );
-        _discardPile.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _currentPlayer;
-        outArchive << _direction;
-        outArchive << _pendingDraw;
-        outArchive << _unoTarget;
-        outArchive << _winner;
-        outArchive << static_cast<uint8>( _color );
-    }
-
-    bool UnoGame::readState( Archive& archive )
-    {
-        uint32 handCount = 0;
-        archive >> handCount;
-        if ( archive.isError() || handCount != _listHand.size() )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정은 사본도 그대로 가지고 있다.
-        UnoGame game = *this;
-        for ( CardPile& hand : game._listHand )
-        {
-            if ( hand.readState( archive ) == false )
-                return false;
-        }
-        const bool bPilesRead = game._drawPile.readState( archive ) && game._discardPile.readState( archive );
-        if ( bPilesRead == false || StateIO::readRandom( archive, game._random ) == false )
-            return false;
-        uint8 color = 0;
-        archive >> game._currentPlayer;
-        archive >> game._direction;
-        archive >> game._pendingDraw;
-        archive >> game._unoTarget;
-        archive >> game._winner;
-        archive >> color;
-        const int32 count           = static_cast<int32>( handCount );
-        const bool  bPlayerValid    = 0 <= game._currentPlayer && game._currentPlayer < count;
-        const bool  bDirectionValid = game._direction == 1 || game._direction == -1;
-        const bool  bTargetValid    = -1 <= game._unoTarget && game._unoTarget < count && -1 <= game._winner && game._winner < count;
-        const bool  bColorValid     = color <= static_cast<uint8>( UnoColor::Wild );
+        io.value( _drawPile );
+        io.value( _discardPile );
+        io.value( _random );
+        io.value( _currentPlayer );
+        io.value( _direction );
+        io.value( _pendingDraw );
+        io.value( _unoTarget );
+        io.value( _winner );
+        io.enumValue( _color, UnoColor::Wild );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        const int32 handCount = static_cast<int32>( _listHand.size() );
         // 쌓인 벌칙은 덱을 넘지 못한다 — 쌓는 동안에는 뽑지 않아 카드가 돌아오지 않는다. 터무니없는 값은 `_pendingDraw += amount` 를 넘친다.
-        const bool bPendingValid    = 0 <= game._pendingDraw && game._pendingDraw <= UnoGameInternal::kDeckCardCount;
-        const bool bInvalidUnoState = archive.isError() || bPlayerValid == false || bDirectionValid == false || bTargetValid == false || bColorValid == false || bPendingValid == false;
-        if ( bInvalidUnoState )
-            return false;
+        if ( io.check( 0 <= _currentPlayer && _currentPlayer < handCount && ( _direction == 1 || _direction == -1 ) && -1 <= _unoTarget && _unoTarget < handCount && -1 <= _winner && _winner < handCount && 0 <= _pendingDraw && _pendingDraw <= UnoGameInternal::kDeckCardCount ) == false )
+            return;
         // 이긴 사람은 손패를 다 낸 사람이다.
-        if ( game._winner >= 0 && game._listHand[static_cast<size_t>( game._winner )].isEmpty() == false )
-            return false;
-        vector<const CardPile*> listPile{ &game._drawPile, &game._discardPile };
-        for ( const CardPile& hand : game._listHand )
+        io.check( _winner < 0 || _listHand[static_cast<size_t>( _winner )].isEmpty() );
+        vector<const CardPile*> listPile{ &_drawPile, &_discardPile };
+        for ( const CardPile& hand : _listHand )
         {
             listPile.push_back( &hand );
         }
-        if ( UnoGameInternal::arePilesFromDeck( listPile ) == false )
-            return false;
-        game._color = static_cast<UnoColor>( color );
-        game._eventBuffer.clear();
-        *this = std::move( game );
-        return true;
+        io.check( UnoGameInternal::arePilesFromDeck( listPile ) );
+        _eventBuffer.clear();
     }
+
 } // namespace sw

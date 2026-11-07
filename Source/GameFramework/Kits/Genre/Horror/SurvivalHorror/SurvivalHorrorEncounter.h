@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
@@ -78,10 +80,9 @@ namespace sw
         /**
          * @brief 괴물 id, 조사자(속도, 번호, 체력, 정신력, 의지, 힘, 빠짐), 차례(`TurnOrder`), 난수, 남은 강인함, 턴 수, 결과를 씁니다.
          *        괴물 정의와 성공 눈은 `initialize` 에서 받으므로 저장하지 않습니다(괴물 id 는 같은 괴물인지 확인하려고 저장합니다).
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 괴물로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나, 괴물이 다르거나, 조사자 · 차례 · 강인함 · 결과가 서로 맞지 않으면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 괴물로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나, 괴물이 다르거나, 조사자 · 차례 · 강인함 · 결과가 서로 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         SurvivalHorrorEncounterState              getState() const { return _state; }
         int32                                     getMonsterToughness() const { return _monsterToughness; }

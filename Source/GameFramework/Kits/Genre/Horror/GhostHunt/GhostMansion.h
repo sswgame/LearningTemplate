@@ -15,6 +15,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
@@ -137,13 +138,10 @@ namespace sw
         /**
          * @brief 싸움(`GhostEncounter`), 난수, 부(방, 가구, 체력, 시간, 상태), 뒤진 가구, 지금 방, 시드를 씁니다.
          *        카탈로그, 빌린 방 그래프, 열쇠 가방, 지갑, 플래그(밝힌 방과 연 문)는 저장하지 않고(주인이 저장합니다), 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 부와 가구의 수가 다르면 false 를 반환하고 상태는 그대로입니다.
+         *        부의 체력(잡힌 부는 0, 나머지는 정의의 최대까지), 없는 방과 가구도 거절합니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 부와 가구의 수가 다르면 false 를 반환하고 상태는 그대로입니다.
-         * @details 부의 체력(잡힌 부는 0, 나머지는 정의의 최대까지), 없는 방과 가구도 거절합니다.
-         */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         GhostEncounter&           getEncounter() { return _encounter; }
         const GhostEncounter&     getEncounter() const { return _encounter; }

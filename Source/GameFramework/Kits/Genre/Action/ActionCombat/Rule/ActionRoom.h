@@ -13,6 +13,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
@@ -207,13 +208,10 @@ namespace sw
         /**
          * @brief 종류, 클리어, 공격, 대시, 무적 남은 시간, 이번 싸움의 종 id를 씁니다(보스 최대 체력 같은 수치는 정의가 가지고 있습니다). 적(위치, 체력, 사격 시간, 종 인덱스, 생존)과 투사체도 씁니다.
          *        위치 정보(`ActionRoomSite`)는 게임이 `setSite` 로 설정하는 값이고 충돌 레이어는 생성자에서 정하는 값이라 싣지 않습니다.
-         */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 종 정의는 지금의 카탈로그 서비스에서 다시 찾습니다. 카탈로그에 없는 종이거나 체력이 그 종의 최대를 넘거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 종 정의는 지금의 카탈로그 서비스에서 다시 찾습니다. 카탈로그에 없는 종이거나 체력이 그 종의 최대를 넘거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          *        상태를 바꿔도 룸 이벤트(게이트, 클리어)는 내지 않습니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 룸에 있는 적 하나입니다. 수치는 그 종의 정의(`_listMonsterDef[_defIndex]`)에서 읽습니다. */

@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -60,12 +62,13 @@ namespace sw
         int32                getStateFrame() const { return _stateFrame; }
         int32                getFacing() const { return _facing; }
 
-        /** @brief 패턴 id, 상태 id, 상태 안의 프레임, 바라보는 쪽, 들어선 프레임 표시를 씁니다. 패턴 정의는 카탈로그의 것이라 id 만 싣습니다. */
-        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief 패턴 id, 상태 id, 상태 안의 프레임, 바라보는 쪽, 들어선 프레임 표시를 씁니다. 패턴 정의는 카탈로그의 것이라 id 만 싣습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 패턴은 연결한 카탈로그에서 id 로 찾습니다. 패턴이 있는데 카탈로그가 없거나, 없는 패턴이나 상태이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
         /** @brief 패턴을 찾을 카탈로그를 빌립니다. `readState` 하기 전에 연결해야 합니다(카탈로그는 이 객체보다 오래 삽니다). */
         void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 패턴은 연결한 카탈로그에서 id 로 찾습니다. 패턴이 있는데 카탈로그가 없거나, 없는 패턴이나 상태이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void                         enterState( int32 stateIndex );

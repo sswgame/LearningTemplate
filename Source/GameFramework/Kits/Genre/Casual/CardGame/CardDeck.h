@@ -10,6 +10,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
@@ -129,10 +131,11 @@ namespace sw
         Card                getTop() const { return _listCard.empty() ? Card{} : _listCard.back(); }
         const vector<Card>& getCards() const { return _listCard; }
 
-        /** @brief 장수와, 카드마다 번호, 무늬, 숫자를 맨 아래부터 씁니다. 카드 게임 키트 상태에서 더미 하나에 해당합니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 빈 카드, 겹친 번호가 있으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 장수와, 카드마다 번호, 무늬, 숫자를 맨 아래부터 씁니다. 카드 게임 키트 상태에서 더미 하나에 해당합니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 빈 카드, 겹친 번호가 있으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         vector<Card> _listCard; ///< [0] 이 맨 아래이고 끝이 맨 위이다

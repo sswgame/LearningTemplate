@@ -396,41 +396,25 @@ namespace sw
         _bInsideDirt = SW_FALSE;
     }
 
-    void ActionPlatformerBody::writeState( Archive& outArchive ) const
+    void ActionPlatformerBody::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint8>( _mode );
-        _motor.writeState( outArchive );
-        outArchive << _position;
-        outArchive << _velocity;
-        outArchive << _anchor;
-        outArchive << _ropeLength;
-        StateIO::writeCountdown( outArchive, _drillSearchTimer );
-        outArchive << _bInsideDirt;
+        io.enumValue( _mode, ActionMoveMode::Drill );
+        if ( io.isOk() == false )
+            return;
+        // 기반 몸의 설정은 모드가 정하므로(활공이면 활공 설정) 설정을 먼저 적용한 뒤 몸의 값을 읽는다.
+        if ( io.isReading() )
+        {
+            _motor.setSettings( makeMotorSettings( _mode == ActionMoveMode::Glide ) );
+            _events = 0;
+        }
+        io.value( _motor );
+        io.value( _position );
+        io.value( _velocity );
+        io.value( _anchor );
+        io.value( _ropeLength );
+        io.value( _drillSearchTimer );
+        io.flag( _bInsideDirt );
+        io.check( 0.0f <= _ropeLength );
     }
 
-    bool ActionPlatformerBody::readState( Archive& archive )
-    {
-        uint8 mode = 0;
-        archive >> mode;
-        if ( archive.isError() || mode > static_cast<uint8>( ActionMoveMode::Drill ) )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 기반 몸의 설정은 모드가 정하므로(활공이면 활공 설정) 설정을 먼저 적용한 뒤 몸의 값을 읽는다.
-        ActionPlatformerBody restored = *this;
-        restored._mode                = static_cast<ActionMoveMode>( mode );
-        restored._motor.setSettings( makeMotorSettings( restored._mode == ActionMoveMode::Glide ) );
-        if ( restored._motor.readState( archive ) == false )
-            return false;
-        archive >> restored._position;
-        archive >> restored._velocity;
-        archive >> restored._anchor;
-        archive >> restored._ropeLength;
-        const bool bTimerRead = StateIO::readCountdown( archive, restored._drillSearchTimer );
-        archive >> restored._bInsideDirt;
-        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        restored._events = 0;
-        *this            = std::move( restored );
-        return true;
-    }
 } // namespace sw

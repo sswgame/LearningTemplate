@@ -188,35 +188,12 @@ namespace sw
         return false;
     }
 
-    void MetroidvaniaAbilitySet::writeState( Archive& outArchive ) const
+    void MetroidvaniaAbilitySet::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listAbility.size() );
-        for ( const hashed_string& abilityID : _listAbility )
-        {
-            StateIO::writeName( outArchive, abilityID );
-        }
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.nameList( _listAbility, [this]( const hashed_string& abilityID )
+        { return _pCatalog->findAbility( abilityID ) != nullptr && VectorUtil::contains( _listAbility, abilityID ) == false; } );
     }
 
-    bool MetroidvaniaAbilitySet::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        uint32 abilityCount = 0;
-        if ( archive.readCount( 4, abilityCount ) == false )
-            return false;
-        vector<hashed_string> listAbility;
-        listAbility.reserve( abilityCount );
-        for ( uint32 entry = 0; entry < abilityCount; ++entry )
-        {
-            hashed_string abilityID;
-            if ( StateIO::readName( archive, abilityID ) == false )
-                return false;
-            const bool bDuplicate = VectorUtil::contains( listAbility, abilityID );
-            if ( _pCatalog->findAbility( abilityID ) == nullptr || bDuplicate )
-                return false;
-            listAbility.push_back( abilityID );
-        }
-        _listAbility = std::move( listAbility );
-        return true;
-    }
 } // namespace sw

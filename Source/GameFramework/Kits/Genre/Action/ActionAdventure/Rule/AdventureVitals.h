@@ -11,6 +11,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
@@ -139,10 +140,11 @@ namespace sw
         const ResourceGauge& getStamina() const { return _stamina; }
         bool                 isMagicUpgraded() const { return _bMagicUpgraded == SW_TRUE; }
 
-        /** @brief 하트 수, 조각 수, 두 배 마법, 체력(`CombatHealth`), 마력과 지구력(`ResourceGauge`)을 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다. 체력 최대값은 하트 수로 다시 계산합니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 하트 수가 설정 범위 밖이거나, 체력 · 마력 · 지구력이 그 최대를 넘거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 하트 수, 조각 수, 두 배 마법, 체력(`CombatHealth`), 마력과 지구력(`ResourceGauge`)을 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다. 체력 최대값은 하트 수로 다시 계산합니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 하트 수가 설정 범위 밖이거나, 체력 · 마력 · 지구력이 그 최대를 넘거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 하트 수에 맞춰 체력 최대값을 다시 설정하고 체력을 가득 채웁니다. 하트 수가 범위 안이면 실패하지 않습니다. */

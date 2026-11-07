@@ -88,40 +88,21 @@ namespace sw
         return true;
     }
 
-    void CardPile::writeState( Archive& outArchive ) const
+    void CardPile::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listCard.size() );
-        for ( const Card& card : _listCard )
-        {
-            outArchive << card._id;
-            outArchive << card._suit;
-            outArchive << card._rank;
-        }
-    }
-
-    bool CardPile::readState( Archive& archive )
-    {
-        uint32 cardCount = 0;
         // 카드마다 번호(2) + 무늬(1) + 숫자(1)
-        if ( archive.readCount( 4, cardCount ) == false )
-            return false;
-        vector<Card> listCard( cardCount, Card{} );
-        for ( Card& card : listCard )
+        io.list( _listCard, 4, [&]( Card& card )
         {
-            archive >> card._id;
-            archive >> card._suit;
-            archive >> card._rank;
+            io.value( card._id );
+            io.value( card._suit );
+            io.value( card._rank );
+        } );
+        if ( io.isReading() && io.isOk() )
+        {
+            // 더미에는 빈 카드가 들어가지 않는다. 겹친 번호는 `takeByID` 가 앞의 것만 찾아 뒤의 것이 남는다.
+            io.check( arePilesValid( { this }, []( const Card& card )
+            { return card.isValid(); } ) );
         }
-        if ( archive.isError() )
-            return false;
-        // 더미에는 빈 카드가 들어가지 않는다. 겹친 번호는 `takeByID` 가 앞의 것만 찾아 뒤의 것이 남는다.
-        CardPile pile;
-        pile._listCard = std::move( listCard );
-        if ( arePilesValid( { &pile }, []( const Card& card )
-        { return card.isValid(); } ) == false )
-            return false;
-        _listCard = std::move( pile._listCard );
-        return true;
     }
 
     bool CardPile::isStandardCard( const Card& card )

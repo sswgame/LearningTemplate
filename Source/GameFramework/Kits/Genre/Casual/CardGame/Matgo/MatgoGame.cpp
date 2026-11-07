@@ -462,81 +462,50 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void MatgoGame::writeState( Archive& outArchive ) const
+    void MatgoGame::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listPlayer.size() );
+        io.expect( static_cast<uint32>( _listPlayer.size() ) );
+        if ( io.isOk() == false )
+            return;
         for ( size_t player = 0; player < _listPlayer.size(); ++player )
         {
-            const MatgoPlayer& entry = _listPlayer[player];
-            entry._hand.writeState( outArchive );
-            entry._captured.writeState( outArchive );
-            outArchive << entry._goCount;
-            outArchive << entry._scoreAtLastGo;
-            outArchive << _listSettlement[player];
-        }
-        _floor.writeState( outArchive );
-        _drawPile.writeState( outArchive );
-        outArchive << _currentPlayer;
-        outArchive << _winner;
-        outArchive << static_cast<uint8>( _phase );
-    }
-
-    bool MatgoGame::readState( Archive& archive )
-    {
-        uint32 playerCount = 0;
-        archive >> playerCount;
-        if ( archive.isError() || playerCount != _listPlayer.size() )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정은 사본도 그대로 가지고 있다.
-        MatgoGame game = *this;
-        for ( size_t player = 0; player < game._listPlayer.size(); ++player )
-        {
-            MatgoPlayer& entry = game._listPlayer[player];
-            if ( entry._hand.readState( archive ) == false || entry._captured.readState( archive ) == false )
-                return false;
-            archive >> entry._goCount;
-            archive >> entry._scoreAtLastGo;
-            archive >> game._listSettlement[player];
+            MatgoPlayer& entry = _listPlayer[player];
+            io.value( entry._hand );
+            io.value( entry._captured );
+            io.value( entry._goCount );
+            io.value( entry._scoreAtLastGo );
+            io.value( _listSettlement[player] );
             // 고는 한 차례에 한 번이라 손패 수를 넘지 못한다. 터무니없는 고 횟수는 `computePayout` 의 시프트를 넘친다.
-            const bool bGoValid = 0 <= entry._goCount && entry._goCount <= _settings._handSize && 0 <= entry._scoreAtLastGo;
-            if ( archive.isError() || bGoValid == false )
-                return false;
+            if ( io.check( 0 <= entry._goCount && entry._goCount <= _settings._handSize && 0 <= entry._scoreAtLastGo ) == false )
+                return;
         }
-        if ( game._floor.readState( archive ) == false || game._drawPile.readState( archive ) == false )
-            return false;
-        uint8 phase = 0;
-        archive >> game._currentPlayer;
-        archive >> game._winner;
-        archive >> phase;
-        const int32 count              = static_cast<int32>( playerCount );
-        const bool  bPlayerValid       = 0 <= game._currentPlayer && game._currentPlayer < count;
-        const bool  bWinnerValid       = -1 <= game._winner && game._winner < count;
-        const bool  bPhaseInRange      = phase <= static_cast<uint8>( MatgoPhase::Finished );
-        const bool  bInvalidMatgoState = archive.isError() || bPlayerValid == false || bWinnerValid == false || bPhaseInRange == false;
-        if ( bInvalidMatgoState )
-            return false;
-        game._phase = static_cast<MatgoPhase>( phase );
+        io.value( _floor );
+        io.value( _drawPile );
+        io.value( _currentPlayer );
+        io.value( _winner );
+        io.enumValue( _phase, MatgoPhase::Finished );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        const int32 playerCount = static_cast<int32>( _listPlayer.size() );
+        io.check( 0 <= _currentPlayer && _currentPlayer < playerCount && -1 <= _winner && _winner < playerCount );
 
         // 이긴 사람과 정산은 끝난 판에만 있고, 정산은 받은 쪽과 낸 쪽의 합이 0 이다(`finishGame`).
         int64 settlementSum = 0;
         bool  bSettled      = false;
-        for ( const int32 settlement : game._listSettlement )
+        for ( const int32 settlement : _listSettlement )
         {
             settlementSum += settlement;
             bSettled = bSettled || settlement != 0;
         }
-        const bool              bFinished    = game._phase == MatgoPhase::Finished;
-        const bool              bResultValid = settlementSum == 0 && ( bFinished || ( game._winner < 0 && bSettled == false ) );
-        vector<const CardPile*> listPile{ &game._floor, &game._drawPile };
-        for ( const MatgoPlayer& entry : game._listPlayer )
+        io.check( settlementSum == 0 && ( _phase == MatgoPhase::Finished || ( _winner < 0 && bSettled == false ) ) );
+        vector<const CardPile*> listPile{ &_floor, &_drawPile };
+        for ( const MatgoPlayer& entry : _listPlayer )
         {
             listPile.push_back( &entry._hand );
             listPile.push_back( &entry._captured );
         }
-        if ( bResultValid == false || CardPile::arePilesValid( listPile, &HwatuDeck::isDeckCard ) == false )
-            return false;
-        game._eventBuffer.clear();
-        *this = std::move( game );
-        return true;
+        io.check( CardPile::arePilesValid( listPile, &HwatuDeck::isDeckCard ) );
+        _eventBuffer.clear();
     }
+
 } // namespace sw

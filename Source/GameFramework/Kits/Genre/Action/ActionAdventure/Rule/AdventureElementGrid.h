@@ -19,6 +19,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
@@ -137,10 +138,11 @@ namespace sw
         int32  getHeight() const { return _grid.getHeight(); }
         uint32 getStepCount() const { return _grid.getStepCount(); }
 
-        /** @brief 기반 격자의 칸, 바람, 고정 스텝, 스텝 수를 씁니다. 설정과 규칙 테이블은 `initialize` 에서 받은 것이라 싣지 않고, 알림은 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 격자 크기가 다르거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 기반 격자의 칸, 바람, 고정 스텝, 스텝 수를 씁니다. 설정과 규칙 테이블은 `initialize` 에서 받은 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 격자 크기가 다르거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 설정 값으로 규칙 테이블을 만듭니다. 내용은 `default.elements.xml` 과 같고, 재질 번호는 `AdventureMaterial` 입니다. */

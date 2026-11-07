@@ -43,27 +43,17 @@ namespace sw
         return pArea->_listGroup.data() + groupIndex;
     }
 
-    void JRPGEncounterWalker::writeState( Archive& outArchive ) const
+    void JRPGEncounterWalker::serializeState( StateIO& io )
     {
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _counter.getStepsSinceEncounter();
-        outArchive << _counter.getTotalSteps();
+        int32 stepsSinceEncounter = _counter.getStepsSinceEncounter();
+        int32 totalSteps          = _counter.getTotalSteps();
+        io.value( _random );
+        io.value( stepsSinceEncounter );
+        io.value( totalSteps );
+        if ( io.isReading() && io.isOk() )
+        {
+            io.check( _counter.restore( stepsSinceEncounter, totalSteps ) );
+        }
     }
 
-    bool JRPGEncounterWalker::readState( Archive& archive )
-    {
-        GameRandom random;
-        int32      stepsSinceEncounter = 0;
-        int32      totalSteps          = 0;
-        if ( StateIO::readRandom( archive, random ) == false )
-            return false;
-        archive >> stepsSinceEncounter;
-        archive >> totalSteps;
-        StepEncounterCounter counter;
-        if ( archive.isOk() == false || counter.restore( stepsSinceEncounter, totalSteps ) == false )
-            return false;
-        _random  = random;
-        _counter = counter;
-        return true;
-    }
 } // namespace sw

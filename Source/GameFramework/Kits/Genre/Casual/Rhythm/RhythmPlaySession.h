@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
 
@@ -138,11 +140,10 @@ namespace sw
 
         /**
          * @brief 레인마다 판정 위치와 누르고 있는 롱노트, 등급별 판정 수, 입력 기록, 점수, 정확도 합, 라이프, 지금 시각, 콤보, 놓침, 판정 수, 상태를 씁니다.
-         * @details 채보와 판정기는 빌린 것이라 저장하지 않는다(채보 정의가 카탈로그 id 를 가지고 있지 않다). 같은 채보인지는 노트 수와 레인 수로 확인한다. 설정은 `initialize` 에서 받고, 이벤트는 읽을 때 비운다.
+         *        채보와 판정기는 빌린 것이라 저장하지 않는다(채보 정의가 카탈로그 id 를 가지고 있지 않다). 같은 채보인지는 노트 수와 레인 수로 확인한다. 설정은 `initialize` 에서 받고, 이벤트는 읽을 때 비운다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 채보나 판정 창의 수가 다르거나, 판정 수가 맞지 않거나, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 채보나 판정 창의 수가 다르거나, 판정 수가 맞지 않거나, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         /** @brief 정확도(%)를 반환합니다. 판정마다 가중치(Miss 는 0)의 평균이며, 판정이 없으면 100 입니다. */
         float32 computeAccuracy() const;

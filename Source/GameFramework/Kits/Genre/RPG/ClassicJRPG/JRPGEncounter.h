@@ -8,6 +8,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -35,10 +37,11 @@ namespace sw
         const JRPGEncounterGroup* step( const hashed_string& areaID );
         /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때나 성수를 썼을 때 호출합니다). */
         void restartGrace() { _counter.restartGrace(); }
-        /** @brief 난수, 조우 뒤 걸음, 총 걸음을 씁니다. 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 난수, 조우 뒤 걸음, 총 걸음을 씁니다. 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         int32 getStepsSinceEncounter() const { return _counter.getStepsSinceEncounter(); }
         int32 getTotalSteps() const { return _counter.getTotalSteps(); }

@@ -69,35 +69,14 @@ namespace sw
         return static_cast<int32>( increase + 0.5f );
     }
 
-    void ScavengerQuota::writeState( Archive& outArchive ) const
+    void ScavengerQuota::serializeState( StateIO& io )
     {
-        outArchive << _quota;
-        outArchive << _fulfilled;
-        outArchive << _daysLeft;
-        outArchive << _cycle;
-        outArchive << _bGameOver;
+        io.value( _quota );
+        io.value( _fulfilled );
+        io.value( _daysLeft );
+        io.value( _cycle );
+        io.flag( _bGameOver );
+        io.check( 1 <= _quota && 0 <= _fulfilled && 0 <= _daysLeft && 0 <= _cycle );
     }
 
-    bool ScavengerQuota::readState( Archive& archive )
-    {
-        int32 quota     = 0;
-        int32 fulfilled = 0;
-        int32 daysLeft  = 0;
-        int32 cycle     = 0;
-        uint8 bGameOver = SW_FALSE;
-        archive >> quota;
-        archive >> fulfilled;
-        archive >> daysLeft;
-        archive >> cycle;
-        archive >> bGameOver;
-        const bool bValid = archive.isOk() && 1 <= quota && 0 <= fulfilled && 0 <= daysLeft && 0 <= cycle && bGameOver <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        _quota     = quota;
-        _fulfilled = fulfilled;
-        _daysLeft  = daysLeft;
-        _cycle     = cycle;
-        _bGameOver = bGameOver;
-        return true;
-    }
 } // namespace sw

@@ -197,81 +197,41 @@ namespace sw
         return _pCatalog != nullptr ? _pCatalog->getRules()._currency : MetroidvaniaRules{}._currency;
     }
 
-    void MetroidvaniaDeathRestState::writeState( Archive& outArchive ) const
+    void MetroidvaniaDeathRestState::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listKill.size() );
-        for ( const MetroidvaniaKillRecord& kill : _listKill )
-        {
-            StateIO::writeName( outArchive, kill._spawnID );
-            outArchive << kill._bBoss;
-        }
-        StateIO::writeName( outArchive, _corpse._area );
-        outArchive << _corpse._position;
-        outArchive << _corpse._currency;
-        outArchive << _corpse._bActive;
-        StateIO::writeName( outArchive, _respawnSite );
-        outArchive << _lostCurrency;
-        outArchive << _flaskCharges;
-        outArchive << _flaskMaxCharges;
-        outArchive << _flaskPotencyLevel;
-    }
-
-    bool MetroidvaniaDeathRestState::readState( Archive& archive )
-    {
-        uint32 killCount = 0;
         // 처치마다 위치 id(4) + 보스(1) 바이트 이상
-        if ( archive.readCount( 5, killCount ) == false )
-            return false;
-        vector<MetroidvaniaKillRecord> listKill( killCount );
-        for ( MetroidvaniaKillRecord& kill : listKill )
+        io.list( _listKill, 5, [&]( MetroidvaniaKillRecord& kill )
         {
-            if ( StateIO::readName( archive, kill._spawnID ) == false )
-                return false;
-            archive >> kill._bBoss;
-            if ( archive.isError() || kill._bBoss > SW_TRUE )
-                return false;
-        }
+            io.value( kill._spawnID );
+            io.flag( kill._bBoss );
+        } );
+        if ( io.isOk() == false )
+            return;
         // 같은 위치를 두 번 쓰러뜨릴 수는 없다.
-        for ( size_t index = 1; index < listKill.size(); ++index )
+        for ( size_t index = 1; io.isReading() && index < _listKill.size(); ++index )
         {
             for ( size_t previous = 0; previous < index; ++previous )
             {
-                if ( listKill[previous]._spawnID == listKill[index]._spawnID )
-                    return false;
+                io.check( _listKill[previous]._spawnID != _listKill[index]._spawnID );
             }
         }
-        MetroidvaniaCorpse corpse;
-        hashed_string      respawnSite;
-        int32              lostCurrency      = 0;
-        int32              flaskCharges      = 0;
-        int32              flaskMaxCharges   = 0;
-        int32              flaskPotencyLevel = 0;
-        if ( StateIO::readName( archive, corpse._area ) == false )
-            return false;
-        archive >> corpse._position;
-        archive >> corpse._currency;
-        archive >> corpse._bActive;
-        if ( StateIO::readName( archive, respawnSite ) == false )
-            return false;
-        archive >> lostCurrency;
-        archive >> flaskCharges;
-        archive >> flaskMaxCharges;
-        archive >> flaskPotencyLevel;
-        // 되살아날 곳은 쉬는 지점이어야 한다. 시체 위치가 NaN 이면 거리 비교가 거짓이라 어디서든 되찾는다.
-        const MetroidvaniaSiteDef* pSite   = respawnSite.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findSite( respawnSite );
-        const bool                 bSiteOk = respawnSite.empty() || ( pSite != nullptr && pSite->_bRest );
-        const bool                 bValid  = archive.isOk() && bSiteOk && 0 <= corpse._currency && corpse._bActive <= SW_TRUE &&
-                            0 <= lostCurrency && 0 <= flaskCharges && flaskCharges <= flaskMaxCharges && 0 <= flaskPotencyLevel;
-        if ( bValid == false )
-            return false;
-        _listKill          = std::move( listKill );
-        _corpse            = corpse;
-        _respawnSite       = respawnSite;
-        _lostCurrency      = lostCurrency;
-        _flaskCharges      = flaskCharges;
-        _flaskMaxCharges   = flaskMaxCharges;
-        _flaskPotencyLevel = flaskPotencyLevel;
-        _eventBuffer.clear();
-        return true;
+        io.value( _corpse._area );
+        io.value( _corpse._position );
+        io.value( _corpse._currency );
+        io.flag( _corpse._bActive );
+        io.value( _respawnSite );
+        io.value( _lostCurrency );
+        io.value( _flaskCharges );
+        io.value( _flaskMaxCharges );
+        io.value( _flaskPotencyLevel );
+        if ( io.isReading() )
+        {
+            // 되살아날 곳은 쉬는 지점이어야 한다. 시체 위치가 NaN 이면 거리 비교가 거짓이라 어디서든 되찾는다.
+            const MetroidvaniaSiteDef* pSite = _respawnSite.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findSite( _respawnSite );
+            io.check( _respawnSite.empty() || ( pSite != nullptr && pSite->_bRest ) );
+            io.check( 0 <= _corpse._currency && 0 <= _lostCurrency && 0 <= _flaskCharges && _flaskCharges <= _flaskMaxCharges && 0 <= _flaskPotencyLevel );
+            _eventBuffer.clear();
+        }
     }
+
 } // namespace sw

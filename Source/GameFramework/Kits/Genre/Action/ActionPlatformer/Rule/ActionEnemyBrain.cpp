@@ -107,40 +107,21 @@ namespace sw
         return &_pPattern->_listState[static_cast<size_t>( _stateIndex )];
     }
 
-    void ActionEnemyBrain::writeState( Archive& outArchive ) const
+    void ActionEnemyBrain::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _pPattern != nullptr ? _pPattern->_id : hashed_string{} );
-        StateIO::writeName( outArchive, getStateID() );
-        outArchive << _stateFrame;
-        outArchive << _facing;
-        outArchive << _bEntered;
+        io.reference( _pPattern, [this]( const hashed_string& id )
+        { return _pCatalog != nullptr ? _pCatalog->findPattern( id ) : nullptr; } );
+        hashed_string stateID = io.isWriting() ? getStateID() : hashed_string{};
+        io.value( stateID );
+        io.value( _stateFrame );
+        io.value( _facing );
+        io.flag( _bEntered );
+        io.check( 0 <= _stateFrame && ( _facing == -1 || _facing == 1 ) );
+        if ( io.isReading() )
+        {
+            _stateIndex = _pPattern != nullptr && stateID.empty() == false ? _pPattern->findStateIndex( stateID ) : -1;
+            io.check( stateID.empty() || _stateIndex >= 0 ); // 이름이 있는데 찾지 못하면 다른 데이터의 바이트다
+        }
     }
 
-    bool ActionEnemyBrain::readState( Archive& archive )
-    {
-        hashed_string patternID;
-        hashed_string stateID;
-        int32         stateFrame = 0;
-        int32         facing     = 1;
-        uint8         bEntered   = SW_FALSE;
-        const bool    bNameRead  = StateIO::readName( archive, patternID ) && StateIO::readName( archive, stateID );
-        archive >> stateFrame;
-        archive >> facing;
-        archive >> bEntered;
-        const bool bValid = bNameRead && archive.isOk() && 0 <= stateFrame && ( facing == -1 || facing == 1 ) && bEntered <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        const ActionPatternDef* pPattern   = patternID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findPattern( patternID );
-        const int32             stateIndex = pPattern != nullptr && stateID.empty() == false ? pPattern->findStateIndex( stateID ) : -1;
-        // 이름이 있는데 찾지 못하면 다른 데이터의 바이트다
-        const bool bResolved = ( patternID.empty() || pPattern != nullptr ) && ( stateID.empty() || stateIndex >= 0 );
-        if ( bResolved == false )
-            return false;
-        _pPattern   = pPattern;
-        _stateIndex = stateIndex;
-        _stateFrame = stateFrame;
-        _facing     = facing;
-        _bEntered   = bEntered;
-        return true;
-    }
 } // namespace sw

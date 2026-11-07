@@ -7,6 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 
@@ -44,10 +46,11 @@ namespace sw
         /** @brief 주기 @p cycleIndex(0부터)를 채운 뒤의 늘어나는 양을 계산합니다. 무작위 값 r 은 호출하는 쪽이 넘깁니다(테스트와 화면 예고용). */
         int32 computeIncrease( int32 cycleIndex, float32 randomValue ) const;
 
-        /** @brief 할당량, 채운 양, 남은 날, 주기, 게임 오버를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 할당량, 채운 양, 남은 날, 주기, 게임 오버를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         int32 getQuota() const { return _quota; }
         int32 getFulfilled() const { return _fulfilled; }

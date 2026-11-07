@@ -143,51 +143,25 @@ namespace sw
         }
     }
 
-    void OverworldTileMover::writeState( Archive& outArchive ) const
+    void OverworldTileMover::serializeState( StateIO& io )
     {
-        StateIO::writeInt2( outArchive, _tile );
-        _loco.writeState( outArchive );
-        outArchive << string_view( _pendingWarpMap );
-        StateIO::writeInt2( outArchive, _pendingWarpSpawn );
+        io.value( _tile );
+        io.value( _loco );
+        io.value( _pendingWarpMap );
+        io.value( _pendingWarpSpawn );
         // 조우 셈은 조우 칸 걸음 수만 싣는다(주기 판정은 그것만 본다, 유예 0). 바이트는 예전 `uint32` 칸 그대로다.
-        outArchive << static_cast<uint32>( _encounterSteps.getTotalSteps() );
-        outArchive << static_cast<uint8>( _bMoved );
-        outArchive << static_cast<uint8>( _bWarpPending );
-        outArchive << static_cast<uint8>( _bEncounterPending );
-        outArchive << static_cast<uint8>( _bInteractPending );
-        outArchive << static_cast<uint8>( _bInputEnabled );
-    }
-
-    bool OverworldTileMover::readState( Archive& archive )
-    {
-        OverworldTileMover restored = *this;
-        StateIO::readInt2( archive, restored._tile );
-        if ( restored._loco.readState( archive ) == false )
-            return false;
-        archive >> restored._pendingWarpMap;
-        StateIO::readInt2( archive, restored._pendingWarpSpawn );
-        uint32 encounterSteps = 0;
-        archive >> encounterSteps;
-        if ( encounterSteps > static_cast<uint32>( StepEncounterCounter::kNoEncounterYet ) ||
-             restored._encounterSteps.restore( StepEncounterCounter::kNoEncounterYet, static_cast<int32>( encounterSteps ) ) == false )
-            return false;
-        uint8 arrFlag[5]{ SW_FALSE, SW_FALSE, SW_FALSE, SW_FALSE, SW_FALSE };
-        for ( uint8& flag : arrFlag )
+        uint32 encounterSteps = static_cast<uint32>( _encounterSteps.getTotalSteps() );
+        io.value( encounterSteps );
+        if ( io.isReading() )
         {
-            archive >> flag;
-            if ( flag > SW_TRUE )
-                return false;
+            io.check( encounterSteps <= static_cast<uint32>( StepEncounterCounter::kNoEncounterYet ) && _encounterSteps.restore( StepEncounterCounter::kNoEncounterYet, static_cast<int32>( encounterSteps ) ) );
         }
-        const bool bWarpWithoutMap = arrFlag[1] == SW_TRUE && restored._pendingWarpMap.empty();
-        if ( archive.isError() || bWarpWithoutMap )
-            return false;
-        restored._bMoved            = arrFlag[0];
-        restored._bWarpPending      = arrFlag[1];
-        restored._bEncounterPending = arrFlag[2];
-        restored._bInteractPending  = arrFlag[3];
-        restored._bInputEnabled     = arrFlag[4];
-        *this                       = std::move( restored );
-        return true;
+        SW_STATE_BITFLAG( io, _bMoved );
+        SW_STATE_BITFLAG( io, _bWarpPending );
+        SW_STATE_BITFLAG( io, _bEncounterPending );
+        SW_STATE_BITFLAG( io, _bInteractPending );
+        SW_STATE_BITFLAG( io, _bInputEnabled );
+        io.check( _bWarpPending == SW_FALSE || _pendingWarpMap.empty() == false );
     }
 
     bool OverworldTileMover::tryStep( int32 deltaX, int32 deltaY )

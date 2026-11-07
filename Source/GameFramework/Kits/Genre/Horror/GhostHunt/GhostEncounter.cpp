@@ -371,96 +371,49 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void GhostEncounter::writeState( Archive& outArchive ) const
+    void GhostEncounter::serializeState( StateIO& io )
     {
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << static_cast<uint32>( _listGhost.size() );
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.value( _random );
+        // 유령마다 이름(4) + 위치, 도망 방향(24) + 체력, 시간, 번호(12) + 상태(1) 이상
+        io.list( _listGhost, 41, [&]( GhostInstance& ghost )
+        {
+            io.reference( ghost._pDef, [this]( const hashed_string& ghostID )
+            { return _pCatalog->findGhost( ghostID ); } );
+            io.value( ghost._position );
+            io.value( ghost._fleeDirection );
+            io.value( ghost._hp );
+            io.value( ghost._timer );
+            io.value( ghost._id );
+            io.enumValue( ghost._state, GhostState::Caught );
+            if ( io.isReading() && io.check( ghost._pDef != nullptr ) )
+            {
+                // 잡힌 유령의 체력은 0 이고, 체력이 0 이면 잡힌 것이다. 도망 방향은 단위 벡터이거나 0 이다.
+                const bool bHpValid = ghost._state == GhostState::Caught ? ghost._hp == 0.0f : ( 0.0f < ghost._hp && ghost._hp <= ghost._pDef->_hp );
+                io.check( bHpValid && ghost._fleeDirection.getLengthSquared() <= 1.01f && ghost._id != 0 );
+            }
+        } );
+        io.value( _strobeCharge );
+        io.value( _surgeGauge );
+        io.value( _suctionTarget );
+        io.value( _nextGhostID );
+        io.value( _vacuumStage );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        const int32 lastStage = static_cast<int32>( _pCatalog->getVacuum()._listStagePower.size() ) - 1;
+        io.check( 0 <= _vacuumStage && _vacuumStage <= MathUtil::max( 0, lastStage ) && 0.0f <= _strobeCharge && _strobeCharge <= _pCatalog->getFlashlight()._strobeChargeTime && 0.0f <= _surgeGauge && _surgeGauge <= 1.0f );
+        io.check( VectorUtil::findDuplicateBy<&GhostInstance::_id>( _listGhost ) == nullptr );
+        // 흡입 대상은 흡입 중인 유령 하나이고, 흡입 중인 유령은 대상뿐이다(짝이 없으면 `update` 가 건너뛰어 영영 멈춘다). 다음 번호는 있는 번호와 겹치지 않는다.
+        bool bTargetFound = _suctionTarget == 0;
         for ( const GhostInstance& ghost : _listGhost )
         {
-            StateIO::writeName( outArchive, ghost._pDef->_id );
-            outArchive << ghost._position;
-            outArchive << ghost._fleeDirection;
-            outArchive << ghost._hp;
-            StateIO::writeCountdown( outArchive, ghost._timer );
-            outArchive << ghost._id;
-            outArchive << static_cast<uint8>( ghost._state );
-        }
-        outArchive << _strobeCharge;
-        outArchive << _surgeGauge;
-        outArchive << _suctionTarget;
-        outArchive << _nextGhostID;
-        outArchive << _vacuumStage;
-    }
-
-    bool GhostEncounter::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        GameRandom random = _random;
-        uint32     count  = 0;
-        // 유령마다 이름(4) + 위치, 도망 방향(24) + 체력, 시간, 번호(12) + 상태(1) 이상
-        if ( StateIO::readRandom( archive, random ) == false || archive.readCount( 41, count ) == false )
-            return false;
-        vector<GhostInstance> listGhost( count );
-        for ( GhostInstance& ghost : listGhost )
-        {
-            hashed_string ghostID;
-            uint8         state = 0;
-            if ( StateIO::readName( archive, ghostID ) == false )
-                return false;
-            ghost._pDef = _pCatalog->findGhost( ghostID );
-            archive >> ghost._position;
-            archive >> ghost._fleeDirection;
-            archive >> ghost._hp;
-            const bool bTimerRead = StateIO::readCountdown( archive, ghost._timer );
-            archive >> ghost._id;
-            archive >> state;
-            const bool bValid = bTimerRead && archive.isOk() && ghost._pDef != nullptr && state <= static_cast<uint8>( GhostState::Caught );
-            if ( bValid == false )
-                return false;
-            ghost._state       = static_cast<GhostState>( state );
-            const bool bCaught = ghost._state == GhostState::Caught;
-            // 잡힌 유령의 체력은 0 이고, 체력이 0 이면 잡힌 것이다. 도망 방향은 단위 벡터이거나 0 이다.
-            const bool bHpInvalid    = bCaught ? ghost._hp != 0.0f : ( ghost._hp <= 0.0f || ghost._hp > ghost._pDef->_hp );
-            const bool bFleeTooLong  = ghost._fleeDirection.getLengthSquared() > 1.01f;
-            const bool bGhostInvalid = bHpInvalid || bFleeTooLong || ghost._id == 0;
-            if ( bGhostInvalid )
-                return false;
-        }
-        float32 strobeCharge  = 0.0f;
-        float32 surgeGauge    = 0.0f;
-        uint32  suctionTarget = 0;
-        uint32  nextGhostID   = 1;
-        int32   vacuumStage   = 0;
-        archive >> strobeCharge;
-        archive >> surgeGauge;
-        archive >> suctionTarget;
-        archive >> nextGhostID;
-        archive >> vacuumStage;
-        const int32 lastStage   = static_cast<int32>( _pCatalog->getVacuum()._listStagePower.size() ) - 1;
-        const bool  bOutOfRange = vacuumStage < 0 || vacuumStage > MathUtil::max( 0, lastStage ) || strobeCharge < 0.0f || strobeCharge > _pCatalog->getFlashlight()._strobeChargeTime ||
-                                 surgeGauge < 0.0f || surgeGauge > 1.0f;
-        if ( archive.isError() || bOutOfRange || VectorUtil::findDuplicateBy<&GhostInstance::_id>( listGhost ) != nullptr )
-            return false;
-        // 흡입 대상은 흡입 중인 유령 하나이고, 흡입 중인 유령은 대상뿐이다(짝이 없으면 `update` 가 건너뛰어 영영 멈춘다). 다음 번호는 있는 번호와 겹치지 않는다.
-        bool bTargetFound = suctionTarget == 0;
-        for ( const GhostInstance& ghost : listGhost )
-        {
-            const bool bTarget = ghost._id == suctionTarget;
-            if ( bTarget != ( ghost._state == GhostState::Sucking ) || ghost._id >= nextGhostID )
-                return false;
+            const bool bTarget = ghost._id == _suctionTarget;
+            io.check( bTarget == ( ghost._state == GhostState::Sucking ) && ghost._id < _nextGhostID );
             bTargetFound = bTargetFound || bTarget;
         }
-        if ( bTargetFound == false )
-            return false;
-        _random        = random;
-        _listGhost     = std::move( listGhost );
-        _strobeCharge  = strobeCharge;
-        _surgeGauge    = surgeGauge;
-        _suctionTarget = suctionTarget;
-        _nextGhostID   = nextGhostID;
-        _vacuumStage   = vacuumStage;
+        io.check( bTargetFound );
         _eventBuffer.clear();
-        return true;
     }
+
 } // namespace sw

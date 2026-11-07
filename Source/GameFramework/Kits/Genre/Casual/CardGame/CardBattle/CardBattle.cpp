@@ -259,100 +259,50 @@ namespace sw
         startTurn();
     }
 
-    void CardBattle::writeState( Archive& outArchive ) const
+    void CardBattle::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listDefIndex.size() );
-        for ( const int32 defIndex : _listDefIndex )
-        {
-            StateIO::writeName( outArchive, _pCatalog->getAt( static_cast<size_t>( defIndex ) )._id );
-        }
-        _drawPile.writeState( outArchive );
-        _hand.writeState( outArchive );
-        _discardPile.writeState( outArchive );
-        _exhaustPile.writeState( outArchive );
-        outArchive << static_cast<uint32>( _enemy._listIntent.size() );
-        for ( const CardBattleEffect& intent : _enemy._listIntent )
-        {
-            outArchive << static_cast<uint8>( intent._kind );
-            outArchive << intent._amount;
-        }
-        outArchive << _enemy._hp;
-        outArchive << _enemy._block;
-        outArchive << _enemy._intentIndex;
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _playerHP;
-        outArchive << _playerBlock;
-        outArchive << _energy;
-        outArchive << _turn;
-        outArchive << static_cast<uint8>( _phase );
-    }
-
-    bool CardBattle::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 설정은 사본도 그대로 가지고 있다.
-        CardBattle battle   = *this;
-        uint32     defCount = 0;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
         // 카드마다 정의 id 이름(4) 이상
-        if ( archive.readCount( 4, defCount ) == false )
-            return false;
-        battle._listDefIndex.assign( defCount, -1 );
-        for ( int32& defIndex : battle._listDefIndex )
+        io.list( _listDefIndex, 4, [&]( int32& defIndex )
         {
-            hashed_string defID;
-            if ( StateIO::readName( archive, defID ) == false )
-                return false;
-            defIndex = _pCatalog->findIndex( defID );
-            if ( defIndex < 0 )
-                return false;
-        }
-        const bool bPilesRead = battle._drawPile.readState( archive ) && battle._hand.readState( archive ) && battle._discardPile.readState( archive ) &&
-                                battle._exhaustPile.readState( archive );
-        if ( bPilesRead == false )
-            return false;
-
-        uint32 intentCount = 0;
+            hashed_string defID = io.isWriting() ? _pCatalog->getAt( static_cast<size_t>( defIndex ) )._id : hashed_string{};
+            io.value( defID );
+            if ( io.isReading() )
+            {
+                defIndex = _pCatalog->findIndex( defID );
+                io.check( defIndex >= 0 );
+            }
+        } );
+        io.value( _drawPile );
+        io.value( _hand );
+        io.value( _discardPile );
+        io.value( _exhaustPile );
         // 의도마다 종류(1) + 양(4)
-        if ( archive.readCount( 5, intentCount ) == false )
-            return false;
-        battle._enemy._listIntent.assign( intentCount, CardBattleEffect{} );
-        for ( CardBattleEffect& intent : battle._enemy._listIntent )
+        io.list( _enemy._listIntent, 5, [&]( CardBattleEffect& intent )
         {
-            uint8 kind = 0;
-            archive >> kind;
-            archive >> intent._amount;
-            // 음수 공격은 `endTurn` 의 빼기가 더하기로 뒤집혀 체력과 방어를 채운다
-            if ( kind > static_cast<uint8>( CardBattleEffectKind::Energy ) || intent._amount < 0 )
-                return false;
-            intent._kind = static_cast<CardBattleEffectKind>( kind );
-        }
-        archive >> battle._enemy._hp;
-        archive >> battle._enemy._block;
-        archive >> battle._enemy._intentIndex;
-        if ( StateIO::readRandom( archive, battle._random ) == false )
-            return false;
-        uint8 phase = 0;
-        archive >> battle._playerHP;
-        archive >> battle._playerBlock;
-        archive >> battle._energy;
-        archive >> battle._turn;
-        archive >> phase;
-        const bool bEnemyValid         = 0 <= battle._enemy._hp && 0 <= battle._enemy._block && 0 <= battle._enemy._intentIndex;
-        const bool bPlayerValid        = 0 <= battle._playerHP && battle._playerHP <= _settings._playerHP && 0 <= battle._playerBlock && 0 <= battle._energy && 0 <= battle._turn;
-        const bool bInvalidBattleState = archive.isError() || phase > static_cast<uint8>( CardBattlePhase::Lost ) || bEnemyValid == false || bPlayerValid == false;
-        if ( bInvalidBattleState )
-            return false;
-        battle._phase = static_cast<CardBattlePhase>( phase );
+            io.enumValue( intent._kind, CardBattleEffectKind::Energy );
+            io.value( intent._amount );
+            io.check( 0 <= intent._amount ); // 음수 공격은 `endTurn` 의 빼기가 더하기로 뒤집혀 체력과 방어를 채운다
+        } );
+        io.value( _enemy._hp );
+        io.value( _enemy._block );
+        io.value( _enemy._intentIndex );
+        io.value( _random );
+        io.value( _playerHP );
+        io.value( _playerBlock );
+        io.value( _energy );
+        io.value( _turn );
+        io.enumValue( _phase, CardBattlePhase::Lost );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        io.check( 0 <= _enemy._hp && 0 <= _enemy._block && 0 <= _enemy._intentIndex );
+        io.check( 0 <= _playerHP && _playerHP <= _settings._playerHP && 0 <= _playerBlock && 0 <= _energy && 0 <= _turn );
         // 끝난 판은 끝난 이유가 값에 남는다(이긴 적 없는데 이겼다고 적은 바이트를 받지 않는다).
-        const bool bPhaseValid = ( battle._phase != CardBattlePhase::Won || battle._enemy._hp == 0 ) && ( battle._phase != CardBattlePhase::Lost || battle._playerHP == 0 );
-        const bool bPilesValid = battle._hand.getCount() <= _settings._handLimit &&
-                                 CardBattleInternal::arePilesExactlyDeck( { &battle._drawPile, &battle._hand, &battle._discardPile, &battle._exhaustPile }, battle._listDefIndex.size() );
-        if ( bPhaseValid == false || bPilesValid == false )
-            return false;
-        *this = std::move( battle );
-        return true;
+        io.check( ( _phase != CardBattlePhase::Won || _enemy._hp == 0 ) && ( _phase != CardBattlePhase::Lost || _playerHP == 0 ) );
+        io.check( _hand.getCount() <= _settings._handLimit && CardBattleInternal::arePilesExactlyDeck( { &_drawPile, &_hand, &_discardPile, &_exhaustPile }, _listDefIndex.size() ) );
     }
+
 } // namespace sw
 
 namespace sw

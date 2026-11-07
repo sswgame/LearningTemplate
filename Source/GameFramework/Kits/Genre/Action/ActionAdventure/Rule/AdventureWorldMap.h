@@ -13,6 +13,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -97,10 +98,11 @@ namespace sw
         AdventureWorldMap();
 
         void resetState();
-        /** @brief 탑 · 사당 진행과 증표를 씁니다(탑이 드러낸 지역은 그래프가 따로 저장합니다). */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 이어 갑니다. 카탈로그와 맞지 않거나 값이 틀리면 바꾸지 않고 false 입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 탑 · 사당 진행과 증표를 씁니다(탑이 드러낸 지역은 그래프가 따로 저장합니다).
+         *        `writeState` 의 바이트로 이어 갑니다. 카탈로그와 맞지 않거나 값이 틀리면 바꾸지 않고 false 입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 탑을 깨웁니다. 지역의 방을 드러내고, 새로 드러난 수를 반환합니다. 탑이 아니거나 이미 깨운 탑이면 −1 을 반환합니다. */
         int32 activateTower( const hashed_string& towerID, AreaGraph& areaGraph );

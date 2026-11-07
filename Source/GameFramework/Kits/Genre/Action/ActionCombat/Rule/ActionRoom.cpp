@@ -468,93 +468,55 @@ namespace sw
         };
     }
 
-    void ActionRoom::writeState( Archive& outArchive ) const
+    void ActionRoom::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint8>( _kind );
-        outArchive << static_cast<uint8>( _bCleared );
-        StateIO::writeCountdown( outArchive, _attackCooldown );
-        StateIO::writeCountdown( outArchive, _dashCooldown );
-        StateIO::writeCountdown( outArchive, _invulnerable );
-        outArchive << static_cast<uint32>( _listMonsterDef.size() );
-        for ( const MonsterDef& def : _listMonsterDef )
-        {
-            outArchive << string_view( def._id );
-        }
-        outArchive << static_cast<uint32>( _listActor.size() );
-        for ( const Actor& actor : _listActor )
-        {
-            outArchive << actor._position;
-            outArchive << actor._hp;
-            StateIO::writeCountdown( outArchive, actor._attackTimer );
-            outArchive << actor._defIndex;
-            outArchive << static_cast<uint8>( actor._bAlive );
-        }
-        _projectiles.writeState( outArchive );
-    }
-
-    bool ActionRoom::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 위치 정보와 충돌 레이어는 사본이 그대로 가지고 있다.
-        ActionRoom restored = *this;
-        uint8      kind     = 0;
-        uint8      bCleared = SW_FALSE;
-        archive >> kind;
-        archive >> bCleared;
-        const bool bTimerRead = StateIO::readCountdown( archive, restored._attackCooldown ) &&
-                                StateIO::readCountdown( archive, restored._dashCooldown ) && StateIO::readCountdown( archive, restored._invulnerable );
-        const bool bHeadValid = bTimerRead && archive.isOk() && kind <= static_cast<uint8>( ActionRoomKind::Boss ) && bCleared <= SW_TRUE;
-        if ( bHeadValid == false )
-            return false;
-        restored._kind     = static_cast<ActionRoomKind>( kind );
-        restored._bCleared = bCleared;
+        io.enumValue( _kind, ActionRoomKind::Boss );
+        SW_STATE_BITFLAG( io, _bCleared );
+        io.value( _attackCooldown );
+        io.value( _dashCooldown );
+        io.value( _invulnerable );
 
         // 종 정의는 id 로 다시 찾는다. 같은 순서로 추가하므로 적의 종 인덱스가 그대로 맞는다.
-        uint32 defCount = 0;
-        if ( archive.readCount( 4, defCount ) == false )
-            return false;
-        restored._listMonsterDef.clear();
-        restored._listMonsterShot.clear();
+        uint32 defCount = static_cast<uint32>( _listMonsterDef.size() );
+        io.count( 4, defCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
+        {
+            _listMonsterDef.clear();
+            _listMonsterShot.clear();
+        }
         for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
         {
-            hashed_string monsterID;
-            if ( StateIO::readName( archive, monsterID ) == false )
-                return false;
-            if ( restored.getOrCreateMonsterDef( monsterID ) != static_cast<int32>( defIndex ) )
-                return false;
+            hashed_string monsterID = io.isWriting() ? _listMonsterDef[defIndex]._id : hashed_string{};
+            io.value( monsterID );
+            if ( io.isReading() && ( io.isOk() == false || io.check( getOrCreateMonsterDef( monsterID ) == static_cast<int32>( defIndex ) ) == false ) )
+                return;
         }
 
-        uint32 actorCount = 0;
         // 적마다 위치(8) + 체력(4) + 사격 시간(4) + 종 인덱스(2) + 생존(1) 바이트
-        if ( archive.readCount( 19, actorCount ) == false )
-            return false;
-        restored._listActor.assign( actorCount, Actor{} );
-        for ( Actor& actor : restored._listActor )
+        io.list( _listActor, 19, [&]( Actor& actor )
         {
-            uint8 bAlive = SW_FALSE;
-            archive >> actor._position;
-            archive >> actor._hp;
-            if ( StateIO::readCountdown( archive, actor._attackTimer ) == false )
-                return false;
-            archive >> actor._defIndex;
-            archive >> bAlive;
-            if ( archive.isError() || actor._defIndex >= defCount || bAlive > SW_TRUE )
-                return false;
-            const bool bActorValid = 0.0f <= actor._hp && actor._hp <= static_cast<float32>( restored._listMonsterDef[actor._defIndex]._stats._maxHP );
-            if ( bActorValid == false )
-                return false;
-            actor._bAlive = bAlive;
-        }
+            io.value( actor._position );
+            io.value( actor._hp );
+            io.value( actor._attackTimer );
+            io.value( actor._defIndex );
+            SW_STATE_BITFLAG( io, actor._bAlive );
+            if ( io.check( actor._defIndex < defCount ) )
+            {
+                io.check( 0.0f <= actor._hp && actor._hp <= static_cast<float32>( _listMonsterDef[actor._defIndex]._stats._maxHP ) );
+            }
+        } );
 
         // 탄 수치(유한 · 음수 아닌 반지름 · 수명)는 시뮬레이션이 보고, 룸 평면과 피해는 여기서 본다.
-        if ( restored._projectiles.readState( archive ) == false )
-            return false;
-        for ( const ProjectileState& projectile : restored._projectiles.getProjectiles() )
+        io.value( _projectiles );
+        if ( io.isReading() )
         {
-            const bool bProjectileValid = 0.0f <= projectile._damage && projectile._position._z == 0.0f && projectile._velocity._z == 0.0f;
-            if ( bProjectileValid == false )
-                return false;
+            for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
+            {
+                io.check( 0.0f <= projectile._damage && projectile._position._z == 0.0f && projectile._velocity._z == 0.0f );
+            }
         }
-        *this = std::move( restored );
-        return true;
     }
+
 } // namespace sw

@@ -18,6 +18,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -218,10 +219,11 @@ namespace sw
         [[nodiscard]] bool declareStop( int32 player );
         [[nodiscard]] bool applyAction( int32 player, const CardAction& action );
 
-        /** @brief 사람마다 손패, 먹은 패, 고, 정산과 바닥, 더미, 차례, 이긴 사람, 단계를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 덱에 없거나 겹친 패, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 사람마다 손패, 먹은 패, 고, 정산과 바닥, 더미, 차례, 이긴 사람, 단계를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 덱에 없거나 겹친 패, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 먹은 패의 점수를 계산합니다. 상태가 없습니다. */
         static HwatuScore computeScore( const CardPile& captured, const MatgoSettings& settings );

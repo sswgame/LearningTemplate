@@ -16,6 +16,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -137,13 +138,12 @@ namespace sw
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<GhostEvent>& outListEvent );
 
-        /** @brief 난수, 유령(정의 id, 위치, 도망 방향, 체력, 상태 시간, 번호, 상태), 스트로브 충전, 서지, 흡입 대상, 다음 번호, 강화 단계를 씁니다. 카탈로그는 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 카탈로그에 없는 유령이면 false 를 반환하고 상태는 그대로입니다.
-         * @details 체력(잡힌 유령은 0, 나머지는 정의의 최대까지), 번호(0 이 아니고 겹치지 않으며 다음 번호보다 작다), 게이지와 강화 단계의 범위, 흡입 대상과 흡입 중 유령의 짝도 봅니다.
+         * @brief 난수, 유령(정의 id, 위치, 도망 방향, 체력, 상태 시간, 번호, 상태), 스트로브 충전, 서지, 흡입 대상, 다음 번호, 강화 단계를 씁니다. 카탈로그는 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 카탈로그에 없는 유령이면 false 를 반환하고 상태는 그대로입니다.
+         *        체력(잡힌 유령은 0, 나머지는 정의의 최대까지), 번호(0 이 아니고 겹치지 않으며 다음 번호보다 작다), 게이지와 강화 단계의 범위, 흡입 대상과 흡입 중 유령의 짝도 봅니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         const GhostInstance*         findGhost( uint32 ghostID ) const;
         const vector<GhostInstance>& getGhosts() const { return _listGhost; }

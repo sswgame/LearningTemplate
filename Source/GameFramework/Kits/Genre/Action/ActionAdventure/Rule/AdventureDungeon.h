@@ -18,6 +18,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -262,10 +263,9 @@ namespace sw
         /**
          * @brief 던전마다 id, 진행(열쇠, 지도, 나침반), 장치(남은 시간, 켜진 횃불 수, 활성)를 씁니다.
          *        열린 문, 상자, 장치 플래그는 빌려 온 `GameFlags` 의 것이라 싣지 않습니다. 카탈로그는 `initialize` 에서 받은 것을 쓰고, 알림은 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 카탈로그에 없는 던전이거나 장치 수가 다르거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 카탈로그에 없는 던전이거나 장치 수가 다르거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 장치 하나의 지금 상태입니다. */

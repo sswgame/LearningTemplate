@@ -6,6 +6,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
 
@@ -60,10 +62,11 @@ namespace sw
         void setFacingFromDelta( int32 dx, int32 dy );
         /** @brief 이동 입력을 받을 수 있는지 반환합니다. */
         bool canAcceptMoveInput() const;
-        /** @brief 상태, 바라보는 방향, 상태 타이머의 남은 시간을 씁니다. `OverworldTileMover` 의 상태 안에 실립니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 상태, 바라보는 방향, 상태 타이머의 남은 시간을 씁니다. `OverworldTileMover` 의 상태 안에 실립니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         LocomotionState _state;

@@ -12,6 +12,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleGear.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
@@ -144,13 +146,10 @@ namespace sw
          * @brief 판(`MatchState`), 자기장(`BattleRoyaleZone`), 난수, 고정 걸음, 시간, 다음 보급 상자 인덱스를 씁니다. 사람마다 체력, 부활 진행(붙은 팀원과 진행량), 가방(`Inventory`),
          *        장비, 위치, 팀, 처치, 기절시킨 수, 기절시킨 사람, 살리는 대상도 쓰고, 보급 상자도 씁니다. 카탈로그 세 개와 지형은 `initialize` 에서 받은 것이라 싣지 않고,
          *        알림은 읽을 때 비웁니다.
-         */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 사람은 카탈로그 설정으로 다시 만든 뒤 값을 읽습니다(`initialize` 한 판에서 읽어야 합니다).
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 사람은 카탈로그 설정으로 다시 만든 뒤 값을 읽습니다(`initialize` 한 판에서 읽어야 합니다).
          *        사람 수가 판의 참가자 수와 다르거나, 없는 팀이거나, 아이템 슬롯 수가 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         bool isValidPlayer( int32 player ) const { return player >= 0 && player < static_cast<int32>( _listPlayer.size() ); }

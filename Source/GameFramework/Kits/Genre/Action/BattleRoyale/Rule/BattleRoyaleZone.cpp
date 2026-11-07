@@ -214,31 +214,28 @@ namespace sw
 
     // 세이브(Archive)는 넷 스냅숏 코덱의 바이트를 그대로 싣는다(같은 상태를 두 형식으로 따로 쓰지 않는다).
     // 넷 코덱은 시드를 양쪽이 같다고 보고 난수를 싣지 않는다. 그래서 다음 원을 같은 수열로 고를 수 있도록 난수 상태만 뒤에 붙인다.
-    void BattleRoyaleZone::writeState( Archive& outArchive ) const
+    void BattleRoyaleZone::serializeState( StateIO& io )
     {
-        BitWriter writer;
-        if ( writeState( writer ) == false )
-        {
-            outArchive.setError();
-            return;
-        }
-        const vector<uint8>& bytes = writer.getBytes();
-        outArchive.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
-        StateIO::writeRandom( outArchive, _random );
-    }
-
-    bool BattleRoyaleZone::readState( Archive& archive )
-    {
+        // 세이브는 넷 코덱의 바이트를 길이가 붙은 본문으로 싣는다 — 한 상태의 칸 순서는 넷 코덱 한 곳이 정한다.
         vector<uint8> bytes;
-        GameRandom    random = _random;
-        if ( archive.readSection( bytes ) == false || StateIO::readRandom( archive, random ) == false )
-            return false;
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( readState( reader ) == false ) // 넷 코덱으로 읽는다(임시 객체에 읽어서 끝까지 맞을 때만 바꾼다)
-            return false;
-        _random = random;
-        _eventBuffer.clear();
-        return true;
+        if ( io.isWriting() )
+        {
+            BitWriter writer;
+            if ( writeState( writer ) == false )
+            {
+                io.fail();
+                return;
+            }
+            bytes = writer.getBytes();
+        }
+        io.value( bytes );
+        io.value( _random );
+        if ( io.isReading() && io.isOk() )
+        {
+            BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+            io.check( readState( reader ) );
+            _eventBuffer.clear();
+        }
     }
 
     bool BattleRoyaleZone::isCenterAllowed( const float2& center, float32 radius ) const

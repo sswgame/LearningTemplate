@@ -49,57 +49,30 @@ namespace sw
         return true;
     }
 
-    void PartyItemSpawner::writeState( Archive& outArchive ) const
+    void PartyItemSpawner::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listInstance.size() );
+        // 놓인 것마다 위치(12) + 이름(4) + 나이(4) + 번호(4)
+        io.list( _listInstance, 24, [&]( PartyItemInstance& instance )
+        {
+            io.value( instance._position );
+            io.value( instance._itemID );
+            io.value( instance._age );
+            io.value( instance._serial );
+            io.check( findItem( instance._itemID ) != nullptr && 0.0f <= instance._age && 1 <= instance._serial );
+        } );
+        io.check( _listInstance.size() <= static_cast<size_t>( _settings._maxActive ) );
+        io.value( _random );
+        io.value( _spawnTimer );
+        io.value( _nextSerial );
+        io.check( 1 <= _nextSerial );
+        if ( io.isWriting() )
+            return;
+        // 번호는 하나씩 오르므로 놓인 것은 모두 다음 번호보다 작다. 어기면 새 아이템이 같은 번호를 받는다.
         for ( const PartyItemInstance& instance : _listInstance )
         {
-            outArchive << instance._position;
-            StateIO::writeName( outArchive, instance._itemID );
-            outArchive << instance._age;
-            outArchive << instance._serial;
+            io.check( instance._serial < _nextSerial );
         }
-        StateIO::writeRandom( outArchive, _random );
-        StateIO::writeCountdown( outArchive, _spawnTimer );
-        outArchive << _nextSerial;
-    }
-
-    bool PartyItemSpawner::readState( Archive& archive )
-    {
-        uint32 instanceCount = 0;
-        // 놓인 것마다 위치(12) + 이름(4) + 나이(4) + 번호(4)
-        if ( archive.readCount( 24, instanceCount ) == false || instanceCount > static_cast<uint32>( _settings._maxActive ) )
-            return false;
-        vector<PartyItemInstance> listInstance( instanceCount, PartyItemInstance{} );
-        for ( PartyItemInstance& instance : listInstance )
-        {
-            archive >> instance._position;
-            if ( StateIO::readName( archive, instance._itemID ) == false || findItem( instance._itemID ) == nullptr )
-                return false;
-            archive >> instance._age;
-            archive >> instance._serial;
-            if ( archive.isError() || instance._age < 0.0f || instance._serial < 1 )
-                return false;
-        }
-        GameRandom random     = _random;
-        Countdown  spawnTimer = {};
-        int32      nextSerial = 0;
-        const bool bRead      = StateIO::readRandom( archive, random ) && StateIO::readCountdown( archive, spawnTimer );
-        archive >> nextSerial;
-        if ( bRead == false || archive.isError() || nextSerial < 1 )
-            return false;
-        // 번호는 하나씩 오르므로 놓인 것은 모두 다음 번호보다 작다. 어기면 새 아이템이 같은 번호를 받는다.
-        for ( const PartyItemInstance& instance : listInstance )
-        {
-            if ( instance._serial >= nextSerial )
-                return false;
-        }
-        _listInstance = std::move( listInstance );
-        _random       = random;
-        _spawnTimer   = spawnTimer;
-        _nextSerial   = nextSerial;
         _eventBuffer.clear();
-        return true;
     }
 
     float32 PartyItemSpawner::rollInterval()

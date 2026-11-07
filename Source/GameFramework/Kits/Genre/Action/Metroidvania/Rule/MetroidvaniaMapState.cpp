@@ -199,51 +199,24 @@ namespace sw
         }
     }
 
-    void MetroidvaniaMapState::writeState( Archive& outArchive ) const
+    void MetroidvaniaMapState::serializeState( StateIO& io )
     {
-        for ( const vector<hashed_string>* pListID : { &_listRegionMap, &_listSite, &_listPickup } )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        // 산 지도, 연 지점, 주운 것 순서로 놓는다. 모두 카탈로그에 있고 겹치지 않아야 한다. 읽은 뒤 유도 상태는 `restoreSaveState` 가 다시 만든다.
+        vector<hashed_string> listRegionMap = _listRegionMap;
+        vector<hashed_string> listSite      = _listSite;
+        vector<hashed_string> listPickup    = _listPickup;
+        io.nameList( listRegionMap, [&]( const hashed_string& id )
+        { return _pCatalog->findRegionMap( id ) != nullptr && VectorUtil::contains( listRegionMap, id ) == false; } );
+        io.nameList( listSite, [&]( const hashed_string& id )
+        { return _pCatalog->findSite( id ) != nullptr && VectorUtil::contains( listSite, id ) == false; } );
+        io.nameList( listPickup, [&]( const hashed_string& id )
+        { return _pCatalog->findPickup( id ) != nullptr && VectorUtil::contains( listPickup, id ) == false; } );
+        if ( io.isReading() && io.isOk() )
         {
-            outArchive << static_cast<uint32>( pListID->size() );
-            for ( const hashed_string& id : *pListID )
-            {
-                StateIO::writeName( outArchive, id );
-            }
+            restoreSaveState( listRegionMap, listSite, listPickup );
         }
     }
 
-    bool MetroidvaniaMapState::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 산 지도, 연 지점, 주운 것 순서로 읽는다. 모두 카탈로그에 있고 겹치지 않아야 한다
-        vector<hashed_string> listRegionMap;
-        vector<hashed_string> listSite;
-        vector<hashed_string> listPickup;
-        for ( int32 listIndex = 0; listIndex < 3; ++listIndex )
-        {
-            vector<hashed_string>& listID  = listIndex == 0 ? listRegionMap : ( listIndex == 1 ? listSite : listPickup );
-            uint32                 idCount = 0;
-            if ( archive.readCount( 4, idCount ) == false )
-                return false;
-            listID.reserve( idCount );
-            for ( uint32 entry = 0; entry < idCount; ++entry )
-            {
-                hashed_string id;
-                if ( StateIO::readName( archive, id ) == false )
-                    return false;
-                bool bKnown = false;
-                if ( listIndex == 0 )
-                    bKnown = _pCatalog->findRegionMap( id ) != nullptr;
-                else if ( listIndex == 1 )
-                    bKnown = _pCatalog->findSite( id ) != nullptr;
-                else
-                    bKnown = _pCatalog->findPickup( id ) != nullptr;
-                if ( bKnown == false || VectorUtil::contains( listID, id ) )
-                    return false;
-                listID.push_back( id );
-            }
-        }
-        restoreSaveState( listRegionMap, listSite, listPickup );
-        return true;
-    }
 } // namespace sw

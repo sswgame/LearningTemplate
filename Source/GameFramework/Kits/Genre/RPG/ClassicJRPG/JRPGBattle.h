@@ -12,6 +12,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -194,15 +196,14 @@ namespace sw
          */
         [[nodiscard]] bool tryFlee();
         void               pollEvents( vector<JRPGBattleEvent>& outListEvent );
-        /** @brief 적, 이번 라운드 명령, 방어, 턴 순서, 난수, 보상, 콤보, 라운드, 도망 횟수, 결과를 씁니다. 파티, 카탈로그, 판정, 타이밍 입력, 설정은 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief 전투가 빌려 쓸 파티를 연결합니다. 새 전투에 `readState` 하기 전에 호출해야 합니다(파티는 `JRPGParty::readState` 로 따로 읽습니다). `start` 도 파티를 연결합니다. */
-        void bindParty( JRPGParty* pParty ) { _pParty = pParty; }
         /**
-         * @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 적이거나, 명령 수가 연결한 파티의 멤버 수와 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         * @brief 적, 이번 라운드 명령, 방어, 턴 순서, 난수, 보상, 콤보, 라운드, 도망 횟수, 결과를 씁니다. 파티, 카탈로그, 판정, 타이밍 입력, 설정은 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 적이거나, 명령 수가 연결한 파티의 멤버 수와 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          *        시작 전 전투는 파티를 연결하지 않아도 됩니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
+        /** @brief 전투가 빌려 쓸 파티를 연결합니다. 새 전투에 `readState` 하기 전에 호출해야 합니다(파티는 `JRPGParty::readState` 로 따로 읽습니다). `start` 도 파티를 연결합니다. */
+        void bindParty( JRPGParty* pParty ) { _pParty = pParty; }
 
         /** @brief DQ 식 물리 피해를 계산합니다. */
         static int32 computePhysicalDamage( int32 attack, int32 defense, GameRandom& random );

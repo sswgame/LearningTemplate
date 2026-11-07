@@ -12,6 +12,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -82,10 +84,11 @@ namespace sw
         /** @brief 세이브에서 복원합니다(그래프의 방문과 발견은 `AreaGraph::restoreState` 로 따로 복원합니다). 지도를 산 지역은 다시 드러냅니다. */
         void restoreSaveState( const vector<hashed_string>& listRegionMap, const vector<hashed_string>& listSite, const vector<hashed_string>& listPickup );
 
-        /** @brief 산 지도, 연 지점, 주운 것을 씁니다. 방문과 발견은 빌려 온 `AreaGraph` 의 것이고 카탈로그는 `initialize` 에서 받은 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다(지도를 산 지역은 그래프에 다시 드러냅니다). 카탈로그에 없는 id 이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 산 지도, 연 지점, 주운 것을 씁니다. 방문과 발견은 빌려 온 `AreaGraph` 의 것이고 카탈로그는 `initialize` 에서 받은 것이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다(지도를 산 지역은 그래프에 다시 드러냅니다). 카탈로그에 없는 id 이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         const MetroidvaniaCatalog* _pCatalog;

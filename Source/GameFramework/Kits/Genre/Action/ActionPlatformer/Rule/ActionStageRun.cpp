@@ -162,72 +162,30 @@ namespace sw
         _listSecretPending.clear();
     }
 
-    void ActionStageRun::writeState( Archive& outArchive ) const
+    void ActionStageRun::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _pStage != nullptr ? _pStage->_id : hashed_string{} );
-        outArchive << static_cast<uint8>( _state );
-        outArchive << _elapsed;
-        outArchive << _lives;
-        outArchive << _checkpointIndex;
-        outArchive << _hitCount;
-        outArchive << _deathCount;
-        outArchive << static_cast<uint32>( _listSecretCommitted.size() );
-        for ( const hashed_string& secretID : _listSecretCommitted )
-        {
-            StateIO::writeName( outArchive, secretID );
-        }
-        outArchive << static_cast<uint32>( _listSecretPending.size() );
-        for ( const hashed_string& secretID : _listSecretPending )
-        {
-            StateIO::writeName( outArchive, secretID );
-        }
-    }
-
-    bool ActionStageRun::readState( Archive& archive )
-    {
-        hashed_string stageID;
-        uint8         state = 0;
-        if ( StateIO::readName( archive, stageID ) == false )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다.
-        ActionStageRun restored = *this;
-        restored._pStage        = stageID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findStage( stageID );
-        if ( stageID.empty() == false && restored._pStage == nullptr )
-            return false;
-        archive >> state;
-        archive >> restored._elapsed;
-        archive >> restored._lives;
-        archive >> restored._checkpointIndex;
-        archive >> restored._hitCount;
-        archive >> restored._deathCount;
-        const int32 checkpointCount = restored._pStage != nullptr ? static_cast<int32>( restored._pStage->_listCheckpoint.size() ) : 0;
-        const bool  bHeadValid      = archive.isOk() && state <= static_cast<uint8>( ActionStageState::GameOver ) && 0.0f <= restored._elapsed && 0 <= restored._lives &&
-                              -1 <= restored._checkpointIndex && restored._checkpointIndex < checkpointCount && 0 <= restored._hitCount && 0 <= restored._deathCount;
+        io.reference( _pStage, [this]( const hashed_string& id )
+        { return _pCatalog != nullptr ? _pCatalog->findStage( id ) : nullptr; } );
+        io.enumValue( _state, ActionStageState::GameOver );
+        io.value( _elapsed );
+        io.value( _lives );
+        io.value( _checkpointIndex );
+        io.value( _hitCount );
+        io.value( _deathCount );
+        const int32 checkpointCount = _pStage != nullptr ? static_cast<int32>( _pStage->_listCheckpoint.size() ) : 0;
         // 시작한 판은 스테이지가 있어야 한다. 없으면 다음 `reachCheckpoint` · `collectSecret` · `die` 가 빈 정의를 읽는다.
-        const bool bStageMissing = state != static_cast<uint8>( ActionStageState::NotStarted ) && restored._pStage == nullptr;
-        if ( bHeadValid == false || bStageMissing )
-            return false;
-        restored._state = static_cast<ActionStageState>( state );
-
+        if ( io.check( 0.0f <= _elapsed && 0 <= _lives && -1 <= _checkpointIndex && _checkpointIndex < checkpointCount && 0 <= _hitCount && 0 <= _deathCount &&
+                       ( _state == ActionStageState::NotStarted || _pStage != nullptr ) ) == false )
+            return;
         // 확정한 비밀, 지닌 비밀 순서로 읽는다. 비밀은 이 스테이지의 것이고 두 목록을 통틀어 한 번만 있어야 한다(겹치면 수집 점수가 1 을 넘는다).
-        restored._listSecretCommitted.clear();
-        restored._listSecretPending.clear();
-        for ( int32 listIndex = 0; listIndex < 2; ++listIndex )
+        if ( io.isReading() )
         {
-            vector<hashed_string>& listSecret  = listIndex == 0 ? restored._listSecretCommitted : restored._listSecretPending;
-            uint32                 secretCount = 0;
-            if ( archive.readCount( 4, secretCount ) == false )
-                return false;
-            for ( uint32 secretIndex = 0; secretIndex < secretCount; ++secretIndex )
-            {
-                hashed_string secretID;
-                const bool    bSecretValid = StateIO::readName( archive, secretID ) && restored._pStage != nullptr && VectorUtil::contains( restored._pStage->_listSecret, secretID ) && restored.isSecretFound( secretID ) == false;
-                if ( bSecretValid == false )
-                    return false;
-                listSecret.push_back( secretID );
-            }
+            _listSecretPending.clear();
         }
-        *this = std::move( restored );
-        return true;
+        const auto isNewSecret = [this]( const hashed_string& secretID )
+        { return _pStage != nullptr && VectorUtil::contains( _pStage->_listSecret, secretID ) && isSecretFound( secretID ) == false; };
+        io.nameList( _listSecretCommitted, isNewSecret );
+        io.nameList( _listSecretPending, isNewSecret );
     }
+
 } // namespace sw

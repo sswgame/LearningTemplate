@@ -17,6 +17,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -131,10 +132,11 @@ namespace sw
         /** @brief 쌓인 이벤트를 꺼내지 않고 버립니다. 이벤트를 쓰지 않는 쪽에서 받을 목록을 만들어 복사하지 않게 하려는 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 
-        /** @brief 놓인 아이템(위치, 정의 id, 나이, 번호), 난수, 다음 아이템까지 남은 시간, 다음 번호를 씁니다. 정의와 규칙은 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 모르는 아이템 id, `_maxActive` 를 넘는 수, 음수 나이, 범위 밖 번호이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 놓인 아이템(위치, 정의 id, 나이, 번호), 난수, 다음 아이템까지 남은 시간, 다음 번호를 씁니다. 정의와 규칙은 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 모르는 아이템 id, `_maxActive` 를 넘는 수, 음수 나이, 범위 밖 번호이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         const PartyItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<PartyItemInstance>& getInstances() const { return _listInstance; }

@@ -121,32 +121,14 @@ namespace sw
         }
     }
 
-    void AdventureTargeting::writeState( Archive& outArchive ) const
+    void AdventureTargeting::serializeState( StateIO& io )
     {
-        _selector.writeState( outArchive );
-        outArchive << _targetPosition;
-        StateIO::writeCountdown( outArchive, _evade );
-        StateIO::writeCountdown( outArchive, _invulnerable );
-        outArchive << static_cast<uint8>( _state );
-        outArchive << _bHeld;
+        io.value( _selector );
+        io.value( _targetPosition );
+        io.value( _evade );
+        io.value( _invulnerable );
+        io.enumValue( _state, AdventureTargetingState::SideHopRight );
+        io.flag( _bHeld );
     }
 
-    bool AdventureTargeting::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정은 사본이 그대로 가지고 있다.
-        AdventureTargeting restored = *this;
-        uint8              state    = 0;
-        if ( restored._selector.readState( archive ) == false )
-            return false;
-        archive >> restored._targetPosition;
-        const bool bTimerRead = StateIO::readCountdown( archive, restored._evade ) && StateIO::readCountdown( archive, restored._invulnerable );
-        archive >> state;
-        archive >> restored._bHeld;
-        const bool bValid = bTimerRead && archive.isOk() && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        restored._state = static_cast<AdventureTargetingState>( state );
-        *this           = std::move( restored );
-        return true;
-    }
 } // namespace sw

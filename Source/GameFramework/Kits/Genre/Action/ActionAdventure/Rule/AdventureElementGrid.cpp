@@ -292,18 +292,14 @@ namespace sw
         return _grid.computeStateHash();
     }
 
-    void AdventureElementGrid::writeState( Archive& outArchive ) const
+    void AdventureElementGrid::serializeState( StateIO& io )
     {
-        _grid.writeState( outArchive );
+        io.value( _grid ); // 격자가 크기 불일치와 깨진 데이터를 스스로 거절한다
+        if ( io.isReading() )
+        {
+            _listGridEvent.clear();
+            _listEvent.clear();
+        }
     }
 
-    bool AdventureElementGrid::readState( Archive& archive )
-    {
-        // 격자가 크기 불일치와 깨진 데이터를 스스로 거절하므로 그대로 둔다.
-        if ( _grid.readState( archive ) == false )
-            return false;
-        _listGridEvent.clear();
-        _listEvent.clear();
-        return true;
-    }
 } // namespace sw

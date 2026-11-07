@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -92,12 +94,13 @@ namespace sw
         int32                 getSecretPendingCount() const { return static_cast<int32>( _listSecretPending.size() ); }
         const ActionStageDef* getStage() const { return _pStage; }
 
-        /** @brief 스테이지 id, 판 상태, 경과 시간, 목숨, 체크포인트 인덱스, 피격, 죽은 수, 확정한 것, 지닌 비밀을 씁니다. 스테이지 정의는 카탈로그의 것이라 id 만 싣습니다. */
-        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief 스테이지 id, 판 상태, 경과 시간, 목숨, 체크포인트 인덱스, 피격, 죽은 수, 확정한 것, 지닌 비밀을 씁니다. 스테이지 정의는 카탈로그의 것이라 id 만 싣습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 스테이지는 연결한 카탈로그에서 id 로 찾습니다. 카탈로그가 없거나, 없는 스테이지, 비밀, 체크포인트이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
         /** @brief 스테이지를 찾을 카탈로그를 빌립니다. 새 객체에 `readState` 하기 전에 연결해야 합니다(`start` 도 연결합니다). */
         void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 스테이지는 연결한 카탈로그에서 id 로 찾습니다. 카탈로그가 없거나, 없는 스테이지, 비밀, 체크포인트이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void commitSecrets();

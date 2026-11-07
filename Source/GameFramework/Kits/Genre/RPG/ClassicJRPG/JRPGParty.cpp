@@ -274,113 +274,65 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void JRPGParty::writeState( Archive& outArchive ) const
+    void JRPGParty::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listMember.size() );
-        for ( const JRPGMember& member : _listMember )
-        {
-            StateIO::writeName( outArchive, member._id );
-            StateIO::writeName( outArchive, member._classID );
-            outArchive << string_view( member._name );
-            outArchive << static_cast<uint32>( member._listSpell.size() );
-            for ( const hashed_string& spellID : member._listSpell )
-            {
-                StateIO::writeName( outArchive, spellID );
-            }
-            outArchive << static_cast<uint32>( member._listManual.size() );
-            for ( const JRPGManualProgress& progress : member._listManual )
-            {
-                StateIO::writeName( outArchive, progress._manualID );
-                outArchive << progress._proficiency;
-            }
-            // 장비는 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
-            const vector<EquipmentSlot>& listSlot = member._equipment.getSlots();
-            outArchive << static_cast<uint32>( listSlot.size() );
-            for ( const EquipmentSlot& slot : listSlot )
-            {
-                StateIO::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemID );
-            }
-            member._level.writeState( outArchive );
-            for ( const int32 stat : member._arrStat )
-            {
-                outArchive << stat;
-            }
-            outArchive << member._hp;
-            outArchive << member._mp;
-            outArchive << member._inner;
-        }
-    }
-
-    bool JRPGParty::readState( Archive& archive )
-    {
-        uint32 memberCount = 0;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
         // 멤버마다 id, 직업, 이름(12) + 주문, 비급, 슬롯 수(12) + 레벨(20) + 능력치(28) + HP, MP, 내공(12) 바이트 이상
-        const bool bInvalidPartyData = _pCatalog == nullptr || archive.readCount( 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers );
-        if ( bInvalidPartyData )
-            return false;
-        vector<JRPGMember> listMember( memberCount );
-        for ( JRPGMember& member : listMember )
+        io.list( _listMember, 84, [&]( JRPGMember& member )
         {
-            uint32     count     = 0;
-            const bool bHeadRead = StateIO::readName( archive, member._id ) && StateIO::readName( archive, member._classID );
-            if ( bHeadRead == false )
-                return false;
-            archive >> member._name;
-            if ( archive.readCount( 4, count ) == false )
-                return false;
-            member._listSpell.resize( count );
-            for ( hashed_string& spellID : member._listSpell )
-            {
-                if ( StateIO::readName( archive, spellID ) == false )
-                    return false;
-            }
+            io.value( member._id );
+            io.value( member._classID );
+            io.value( member._name );
+            io.list( member._listSpell );
             // 비급마다 이름(4) + 숙련(4) 바이트
-            if ( archive.readCount( 8, count ) == false )
-                return false;
-            member._listManual.resize( count );
-            for ( JRPGManualProgress& progress : member._listManual )
+            io.list( member._listManual, 8, [&]( JRPGManualProgress& progress )
             {
-                if ( StateIO::readName( archive, progress._manualID ) == false )
-                    return false;
-                archive >> progress._proficiency;
-            }
-
-            member._equipment.initialize( _pItemCatalog, _equipLayout );
-            if ( archive.readCount( 4, count ) == false || count != member._equipment.getSlots().size() )
-                return false;
-            for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
+                io.value( progress._manualID );
+                io.value( progress._proficiency );
+            } );
+            // 장비는 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
+            if ( io.isReading() )
             {
-                hashed_string itemID;
-                if ( StateIO::readName( archive, itemID ) == false )
-                    return false;
-                if ( itemID.empty() )
-                    continue;
-                InventorySlot item;
-                item._itemID = itemID;
-                item._count  = 1;
-                vector<InventorySlot> listRemoved;
-                const hashed_string&  slotName = member._equipment.getSlots()[slotIndex]._name;
-                if ( member._equipment.equip( slotName, item, listRemoved ) != EquipResult::Ok )
-                    return false;
+                member._equipment.initialize( _pItemCatalog, _equipLayout );
             }
-
-            if ( member._level.readState( archive ) == false )
-                return false;
+            const size_t slotTotal = member._equipment.getSlots().size();
+            uint32       slotCount = static_cast<uint32>( slotTotal );
+            io.count( 4, slotCount );
+            if ( io.check( slotCount == slotTotal ) == false )
+                return;
+            for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
+            {
+                const EquipmentSlot& slot   = member._equipment.getSlots()[slotIndex];
+                hashed_string        itemID = slot._item.isEmpty() ? hashed_string{} : slot._item._itemID;
+                io.value( itemID );
+                if ( io.isReading() && io.isOk() && itemID.empty() == false )
+                {
+                    InventorySlot item;
+                    item._itemID = itemID;
+                    item._count  = 1;
+                    vector<InventorySlot> listRemoved;
+                    if ( io.check( member._equipment.equip( slot._name, item, listRemoved ) == EquipResult::Ok ) == false )
+                        return;
+                }
+            }
+            io.value( member._level );
             for ( int32& stat : member._arrStat )
             {
-                archive >> stat;
+                io.value( stat );
             }
-            archive >> member._hp;
-            archive >> member._mp;
-            archive >> member._inner;
-            if ( archive.isError() || member.isStateValid( *_pCatalog ) == false )
-                return false;
-        }
-        if ( VectorUtil::findDuplicateBy<&JRPGMember::_id>( listMember ) != nullptr )
-            return false;
-        _listMember = std::move( listMember );
+            io.value( member._hp );
+            io.value( member._mp );
+            io.value( member._inner );
+            if ( io.isReading() && io.isOk() )
+            {
+                io.check( member.isStateValid( *_pCatalog ) );
+            }
+        } );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        io.check( _listMember.size() <= static_cast<size_t>( kMaxMembers ) && VectorUtil::findDuplicateBy<&JRPGMember::_id>( _listMember ) == nullptr );
         _eventBuffer.clear();
-        return true;
     }
 
     bool JRPGParty::canUseSpell( int32 memberIndex, const hashed_string& spellID ) const

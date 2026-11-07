@@ -6,6 +6,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 
@@ -50,10 +52,11 @@ namespace sw
         const VoxelHotbarSlot& getSelectedSlot() const { return getSlot( _selectedIndex ); }
         int32                  countBlock( VoxelBlockIndex block ) const;
 
-        /** @brief 슬롯마다 블록과 개수, 그리고 고른 슬롯을 씁니다. 핫 리로드와 세이브에 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 슬롯이나 개수가 범위 밖이거나 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 슬롯마다 블록과 개수, 그리고 고른 슬롯을 씁니다. 핫 리로드와 세이브에 씁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 슬롯이나 개수가 범위 밖이거나 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         VoxelHotbarSlot _arrSlot[kSlotCount];

@@ -233,150 +233,72 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void RhythmPlaySession::writeState( Archive& outArchive ) const
+    void RhythmPlaySession::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _pChart != nullptr ? _pChart->getNotes().size() : 0 );
-        outArchive << static_cast<uint32>( _listLane.size() );
-        for ( const LaneQueue& lane : _listLane )
-        {
-            outArchive << static_cast<uint32>( lane._cursor );
-            outArchive << lane._holdingNote;
-        }
-        outArchive << static_cast<uint32>( _listGradeCount.size() );
-        for ( const int32 gradeCount : _listGradeCount )
-        {
-            outArchive << gradeCount;
-        }
-        outArchive << static_cast<uint32>( _listInputRecord.size() );
-        for ( const RhythmInputRecord& record : _listInputRecord )
-        {
-            outArchive << record._time;
-            outArchive << record._lane;
-            outArchive << record._bPress;
-        }
-        outArchive << _score;
-        outArchive << _accuracyWeightSum;
-        outArchive << _life;
-        outArchive << _now;
-        outArchive << _combo;
-        outArchive << _maxCombo;
-        outArchive << _missCount;
-        outArchive << _judgedCount;
-        outArchive << static_cast<uint8>( _state );
-    }
-
-    bool RhythmPlaySession::readState( Archive& archive )
-    {
-        if ( _pChart == nullptr )
-            return false;
-        const vector<RhythmNote>& listNote  = _pChart->getNotes();
-        uint32                    noteCount = 0;
-        uint32                    laneCount = 0;
-        archive >> noteCount;
-        archive >> laneCount;
+        if ( io.check( _pChart != nullptr ) == false )
+            return;
         // 같은 채보(노트 수와 레인 수)로 `initialize` 한 판이어야 한다. 레인 대기열은 채보에서 다시 만든 것을 쓴다.
-        const bool bChartMismatch = archive.isError() || noteCount != listNote.size() || laneCount != _listLane.size();
-        if ( bChartMismatch )
-            return false;
-        vector<LaneQueue> listLane  = _listLane;
-        int64             cursorSum = 0;
-        for ( size_t laneIndex = 0; laneIndex < listLane.size(); ++laneIndex )
+        io.expect( static_cast<uint32>( _pChart != nullptr ? _pChart->getNotes().size() : 0 ) );
+        io.expect( static_cast<uint32>( _listLane.size() ) );
+        if ( io.isOk() == false )
+            return;
+        int64 cursorSum = 0;
+        for ( LaneQueue& lane : _listLane )
         {
-            LaneQueue& lane   = listLane[laneIndex];
-            uint32     cursor = 0;
-            archive >> cursor;
-            archive >> lane._holdingNote;
-            if ( archive.isError() || cursor > lane._listNoteIndex.size() || lane._holdingNote < -1 )
-                return false;
+            uint32 cursor = static_cast<uint32>( lane._cursor );
+            io.value( cursor );
+            io.value( lane._holdingNote );
+            if ( io.isWriting() )
+                continue;
+            if ( io.check( cursor <= lane._listNoteIndex.size() && -1 <= lane._holdingNote ) == false )
+                return;
             // 누르고 있는 노트는 이 레인에서 방금 머리를 판정한 롱노트이다(`pressInternal`). 보통 노트나 아직 안 온 노트를 들면 끝 판정만 공짜로 받는다.
-            if ( lane._holdingNote >= 0 )
-            {
-                const bool bHoldingValid = cursor > 0 && lane._listNoteIndex[cursor - 1] == lane._holdingNote && listNote[static_cast<size_t>( lane._holdingNote )]._bLong == SW_TRUE;
-                if ( bHoldingValid == false )
-                    return false;
-            }
+            if ( lane._holdingNote >= 0 && io.check( cursor > 0 && lane._listNoteIndex[cursor - 1] == lane._holdingNote && _pChart->getNotes()[static_cast<size_t>( lane._holdingNote )]._bLong == SW_TRUE ) == false )
+                return;
             lane._cursor = cursor;
             cursorSum += cursor;
         }
-
-        uint32 gradeCount = 0;
-        archive >> gradeCount;
-        if ( archive.isError() || gradeCount != _listGradeCount.size() )
-            return false;
-        vector<int32> listGradeCount( gradeCount, 0 );
-        int64         gradeSum = 0;
-        for ( int32& count : listGradeCount )
+        io.expect( static_cast<uint32>( _listGradeCount.size() ) );
+        int64 gradeSum = 0;
+        for ( int32& gradeCount : _listGradeCount )
         {
-            archive >> count;
-            if ( count < 0 )
-                return false;
-            gradeSum += count;
+            io.value( gradeCount );
+            io.check( 0 <= gradeCount );
+            gradeSum += gradeCount;
         }
-
-        uint32 recordCount = 0;
         // 입력마다 시각(4) + 레인(4) + 누름(1)
-        if ( archive.readCount( 9, recordCount ) == false )
-            return false;
-        vector<RhythmInputRecord> listInputRecord( recordCount, RhythmInputRecord{} );
-        for ( RhythmInputRecord& record : listInputRecord )
+        io.list( _listInputRecord, 9, [&]( RhythmInputRecord& record )
         {
-            archive >> record._time;
-            archive >> record._lane;
-            archive >> record._bPress;
-            if ( archive.isError() || record._bPress > SW_TRUE || record._lane < 0 || laneCount <= static_cast<uint32>( record._lane ) )
-                return false;
-        }
-
-        int64   score             = 0;
-        float64 accuracyWeightSum = 0.0;
-        float32 life              = 0.0f;
-        float32 now               = 0.0f;
-        int32   combo             = 0;
-        int32   maxCombo          = 0;
-        int32   missCount         = 0;
-        int32   judgedCount       = 0;
-        uint8   state             = 0;
-        archive >> score;
-        archive >> accuracyWeightSum;
-        archive >> life;
-        archive >> now;
-        archive >> combo;
-        archive >> maxCombo;
-        archive >> missCount;
-        archive >> judgedCount;
-        archive >> state;
-        const bool bInvalidSessionState = archive.isError() || state > static_cast<uint8>( RhythmPlayState::Failed ) || combo < 0 || combo > maxCombo;
-        if ( bInvalidSessionState )
-            return false;
+            io.value( record._time );
+            io.value( record._lane );
+            io.flag( record._bPress );
+            io.check( 0 <= record._lane && static_cast<size_t>( record._lane ) < _listLane.size() );
+        } );
+        io.value( _score );
+        io.value( _accuracyWeightSum );
+        io.value( _life );
+        io.value( _now );
+        io.value( _combo );
+        io.value( _maxCombo );
+        io.value( _missCount );
+        io.value( _judgedCount );
+        io.enumValue( _state, RhythmPlayState::Failed );
+        if ( io.isWriting() || io.check( 0 <= _combo && _combo <= _maxCombo ) == false )
+            return;
         // 판정 하나는 창 하나나 놓침 하나에 들어가고, 머리를 지난 노트마다 판정이 있었다. 합이 맞지 않으면 판정 없이 지나간 노트나 공짜 점수이다.
-        const bool bCountsValid = 0 <= missCount && judgedCount <= _pChart->getJudgmentCount() && gradeSum + missCount == judgedCount && cursorSum <= judgedCount && maxCombo <= judgedCount;
+        io.check( 0 <= _missCount && _judgedCount <= _pChart->getJudgmentCount() && gradeSum + _missCount == _judgedCount && cursorSum <= _judgedCount && _maxCombo <= _judgedCount );
         // 정확도 합은 판정마다 0..1 을 더한 값이고 라이프는 `applyJudgment` 가 0..최대로 자른다.
-        const bool bProgressValid = 0.0 <= accuracyWeightSum && accuracyWeightSum <= static_cast<float64>( judgedCount ) && 0.0f <= life && life <= _settings._maxLife;
+        io.check( 0.0 <= _accuracyWeightSum && _accuracyWeightSum <= static_cast<float64>( _judgedCount ) && 0.0f <= _life && _life <= _settings._maxLife );
         // 끝난 판은 끝난 이유가 값에 남는다.
-        const bool bStateValid = ( state != static_cast<uint8>( RhythmPlayState::Cleared ) || judgedCount == _pChart->getJudgmentCount() ) && ( state != static_cast<uint8>( RhythmPlayState::Failed ) || life == 0.0f );
+        io.check( ( _state != RhythmPlayState::Cleared || _judgedCount == _pChart->getJudgmentCount() ) && ( _state != RhythmPlayState::Failed || _life == 0.0f ) );
         // 깎는 창이 없으면 점수는 음수가 되지 못한다.
         bool bHasPenaltyWindow = false;
         for ( const TimingWindow& window : _pJudge->getWindows() )
         {
             bHasPenaltyWindow = bHasPenaltyWindow || window._score < 0;
         }
-        const bool bScoreValid = 0 <= score || bHasPenaltyWindow;
-        if ( bCountsValid == false || bProgressValid == false || bStateValid == false || bScoreValid == false )
-            return false;
-        _listLane          = std::move( listLane );
-        _listGradeCount    = std::move( listGradeCount );
-        _listInputRecord   = std::move( listInputRecord );
-        _score             = score;
-        _accuracyWeightSum = accuracyWeightSum;
-        _life              = life;
-        _now               = now;
-        _combo             = combo;
-        _maxCombo          = maxCombo;
-        _missCount         = missCount;
-        _judgedCount       = judgedCount;
-        _state             = static_cast<RhythmPlayState>( state );
+        io.check( 0 <= _score || bHasPenaltyWindow );
         _eventBuffer.clear();
-        return true;
     }
 
     float32 RhythmPlaySession::computeAccuracy() const

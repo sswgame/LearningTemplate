@@ -12,6 +12,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
@@ -171,10 +173,11 @@ namespace sw
         /** @brief 쓰러진 자리를 @p partyIndex 의 개체로 채웁니다(`NeedsSwitch` 다음에 호출합니다). */
         [[nodiscard]] bool switchFainted( int32 side, int32 partyIndex );
         void               pollEvents( vector<MonsterBattleEvent>& outListEvent );
-        /** @brief 양쪽(개체, 능력 변화, 정한 행동, 나선 개체, 교체 대기), 턴 순서, 난수, 잡은 개체, 날씨, 도망 횟수, 결과, 야생 여부를 씁니다. 카탈로그와 상성표는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 종, 기술, 성격, 날씨이거나 값이 범위 밖이거나(쓸 수 없는 행동, 교체할 개체가 없는 교체 대기 등) 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 양쪽(개체, 능력 변화, 정한 행동, 나선 개체, 교체 대기), 턴 순서, 난수, 잡은 개체, 날씨, 도망 횟수, 결과, 야생 여부를 씁니다. 카탈로그와 상성표는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 종, 기술, 성격, 날씨이거나 값이 범위 밖이거나(쓸 수 없는 행동, 교체할 개체가 없는 교체 대기 등) 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 피해 공식입니다. 단계마다 내림하고, 상성이 0이 아니면 최소 1 입니다. */
         static int32 computeDamage( const MonsterDamageInput& input );

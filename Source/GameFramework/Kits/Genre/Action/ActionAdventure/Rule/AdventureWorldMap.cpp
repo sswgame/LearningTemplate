@@ -79,44 +79,30 @@ namespace sw
         _completedShrineCount = 0;
     }
 
-    void AdventureWorldMap::writeState( Archive& outArchive ) const
+    void AdventureWorldMap::serializeState( StateIO& io )
     {
-        outArchive << _orbCount;
-        outArchive << static_cast<uint32>( _listActivated.size() );
+        io.value( _orbCount );
+        io.check( 0 <= _orbCount );
+        io.expect( static_cast<uint32>( _listActivated.size() ) );
+        if ( io.isOk() == false )
+            return;
+        int32 completedCount = 0;
         for ( size_t index = 0; index < _listActivated.size(); ++index )
         {
-            outArchive << _listActivated[index];
-            outArchive << _listCompleted[index];
-        }
-    }
-
-    bool AdventureWorldMap::readState( Archive& archive )
-    {
-        int32  orbCount = 0;
-        uint32 count    = 0;
-        archive >> orbCount;
-        if ( archive.isError() || orbCount < 0 || archive.readCount( 2, count ) == false || count != _listActivated.size() )
-            return false;
-        vector<uint8> listActivated( count, SW_FALSE );
-        vector<uint8> listCompleted( count, SW_FALSE );
-        int32         completedCount = 0;
-        for ( uint32 index = 0; index < count; ++index )
-        {
-            archive >> listActivated[index];
-            archive >> listCompleted[index];
+            io.value( _listActivated[index] );
+            io.value( _listCompleted[index] );
+            if ( io.isWriting() )
+                continue;
             // 마친 사당은 찾은 것이고, 사당만 마칠 수 있다
             const bool bShrine = _catalog.getAt( index )._kind == AdventureLandmarkKind::Shrine;
-            const bool bValid  = archive.isError() == false && listActivated[index] <= SW_TRUE && listCompleted[index] <= SW_TRUE &&
-                                ( listCompleted[index] == SW_FALSE || ( bShrine && listActivated[index] == SW_TRUE ) );
-            if ( bValid == false )
-                return false;
-            completedCount += listCompleted[index];
+            if ( io.check( _listActivated[index] <= SW_TRUE && _listCompleted[index] <= SW_TRUE && ( _listCompleted[index] == SW_FALSE || ( bShrine && _listActivated[index] == SW_TRUE ) ) ) == false )
+                return;
+            completedCount += _listCompleted[index];
         }
-        _listActivated        = std::move( listActivated );
-        _listCompleted        = std::move( listCompleted );
-        _orbCount             = orbCount;
-        _completedShrineCount = completedCount;
-        return true;
+        if ( io.isReading() )
+        {
+            _completedShrineCount = completedCount;
+        }
     }
 
     int32 AdventureWorldMap::activateTower( const hashed_string& towerID, AreaGraph& areaGraph )

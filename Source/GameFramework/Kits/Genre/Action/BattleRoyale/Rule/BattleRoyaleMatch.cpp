@@ -422,139 +422,77 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void BattleRoyaleMatch::writeState( Archive& outArchive ) const
+    void BattleRoyaleMatch::serializeState( StateIO& io )
     {
-        _matchState.writeState( outArchive );
-        _zone.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        StateIO::writeStepTimer( outArchive, _stepTimer );
-        outArchive << _time;
-        outArchive << _nextSupplyDrop;
-        outArchive << static_cast<uint32>( _listPlayer.size() );
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.value( _matchState );
+        io.value( _zone );
+        io.value( _random );
+        io.value( _stepTimer );
+        io.value( _time );
+        io.value( _nextSupplyDrop );
+        io.check( 0.0f <= _time && 0 <= _nextSupplyDrop );
+        uint32 playerCount = static_cast<uint32>( _listPlayer.size() );
+        // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 위치(8) + 정수 4개(16) 바이트 이상
+        io.count( 36, playerCount );
+        if ( io.check( playerCount == static_cast<uint32>( _matchState.getParticipantCount() ) ) == false )
+            return;
+        if ( io.isReading() )
+        {
+            _listPlayer.clear();
+            _listPlayer.resize( playerCount );
+            _eventBuffer.clear();
+        }
+        const int32 playerLimit = static_cast<int32>( playerCount );
         for ( size_t index = 0; index < _listPlayer.size(); ++index )
         {
-            const BattleRoyalePlayer& player = _listPlayer[index];
-            outArchive << player._team;
-            player._combatHealth.writeState( outArchive );
-            player._revive.writeState( outArchive ); // 부활 진행(붙은 팀원과 붙은 순서, 진행량, 시계)
-            player._inventory.writeState( outArchive );
-            player._loadout.writeState( outArchive );
-            outArchive << player._position;
-            outArchive << player._kills;
-            outArchive << player._knocks;
-            outArchive << player._downedBy;
-            outArchive << player._revivingTarget;
-        }
-        outArchive << static_cast<uint32>( _listSupplyDrop.size() );
-        for ( const BattleRoyaleSupplyDrop& drop : _listSupplyDrop )
-        {
-            outArchive << static_cast<uint32>( drop._listItem.size() );
-            for ( const BattleRoyaleGroundItem& item : drop._listItem )
+            BattleRoyalePlayer& player = _listPlayer[index];
+            int32               team   = player._team;
+            io.value( team );
+            if ( io.isReading() && io.check( _matchState.findTeam( team ) != nullptr && initializePlayer( player, team, static_cast<int32>( index ) ) ) == false )
+                return;
+            io.value( player._combatHealth );
+            io.value( player._revive ); // 부활 진행(붙은 팀원과 붙은 순서, 진행량, 시계)
+            if ( io.isOk() == false )
+                return;
+            if ( io.isReading() )
             {
-                outArchive << item._position;
-                StateIO::writeName( outArchive, item._itemID );
-                outArchive << item._count;
-                outArchive << item._spotIndex;
+                // 붙은 팀원은 모두 이 판의 사람 번호여야 한다.
+                int32 knownReviverCount = 0;
+                for ( uint32 reviver = 0; reviver < playerCount; ++reviver )
+                {
+                    knownReviverCount += player._revive.hasParticipant( reviver ) ? 1 : 0;
+                }
+                if ( io.check( knownReviverCount == player._revive.getParticipantCount() ) == false )
+                    return;
             }
-            outArchive << drop._position;
-            outArchive << drop._time;
+            io.value( player._inventory );
+            io.value( player._loadout );
+            io.value( player._position );
+            io.value( player._kills );
+            io.value( player._knocks );
+            io.value( player._downedBy );
+            io.value( player._revivingTarget );
+            if ( io.check( 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy && player._downedBy < playerLimit && -1 <= player._revivingTarget && player._revivingTarget < playerLimit ) == false )
+                return;
         }
-    }
-
-    bool BattleRoyaleMatch::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 지역 변수에 읽고 끝까지 맞으면 바꾼다. 카탈로그와 지형은 그대로 둔다.
-        MatchState       matchState     = _matchState;
-        BattleRoyaleZone zone           = _zone;
-        GameRandom       random         = _random;
-        FixedStepTimer   stepTimer      = _stepTimer;
-        float32          time           = 0.0f;
-        int32            nextSupplyDrop = 0;
-        uint32           playerCount    = 0;
-        const bool       bHeadRead      = matchState.readState( archive ) && zone.readState( archive ) && StateIO::readRandom( archive, random ) &&
-                               StateIO::readStepTimer( archive, stepTimer );
-        archive >> time;
-        archive >> nextSupplyDrop;
-        // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 위치(8) + 정수 4개(16) 바이트 이상
-        const bool bHeadValid = bHeadRead && archive.isOk() && 0.0f <= time && 0 <= nextSupplyDrop && archive.readCount( 36, playerCount ) &&
-                                playerCount == static_cast<uint32>( matchState.getParticipantCount() );
-        if ( bHeadValid == false )
-            return false;
-
-        const int32                playerLimit = static_cast<int32>( playerCount );
-        vector<BattleRoyalePlayer> listPlayer( playerCount );
-        for ( size_t index = 0; index < listPlayer.size(); ++index )
-        {
-            BattleRoyalePlayer& player = listPlayer[index];
-            int32               team   = -1;
-            archive >> team;
-            if ( archive.isError() || matchState.findTeam( team ) == nullptr )
-                return false;
-            if ( initializePlayer( player, team, static_cast<int32>( index ) ) == false )
-                return false;
-            if ( player._combatHealth.readState( archive ) == false || player._revive.readState( archive ) == false )
-                return false;
-            // 붙은 팀원은 모두 이 판의 사람 번호여야 한다.
-            int32 knownReviverCount = 0;
-            for ( uint32 reviver = 0; reviver < playerCount; ++reviver )
-            {
-                knownReviverCount += player._revive.hasParticipant( reviver ) ? 1 : 0;
-            }
-            if ( knownReviverCount != player._revive.getParticipantCount() )
-                return false;
-            if ( player._inventory.readState( archive ) == false || player._loadout.readState( archive ) == false )
-                return false;
-            archive >> player._position;
-            archive >> player._kills;
-            archive >> player._knocks;
-            archive >> player._downedBy;
-            archive >> player._revivingTarget;
-            const bool bPlayerValid = archive.isOk() && 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy &&
-                                      player._downedBy < playerLimit && -1 <= player._revivingTarget && player._revivingTarget < playerLimit;
-            if ( bPlayerValid == false )
-                return false;
-        }
-
-        uint32 dropCount = 0;
         // 상자마다 무더기 수(4) + 위치(8) + 시각(4) 바이트 이상
-        if ( archive.readCount( 16, dropCount ) == false )
-            return false;
-        vector<BattleRoyaleSupplyDrop> listSupplyDrop( dropCount );
-        for ( BattleRoyaleSupplyDrop& drop : listSupplyDrop )
+        io.list( _listSupplyDrop, 16, [&]( BattleRoyaleSupplyDrop& drop )
         {
-            uint32 itemCount = 0;
             // 무더기마다 위치(8) + 이름(4) + 개수(4) + 지점(4) 바이트
-            if ( archive.readCount( 20, itemCount ) == false )
-                return false;
-            drop._listItem.resize( itemCount );
-            for ( BattleRoyaleGroundItem& item : drop._listItem )
+            io.list( drop._listItem, 20, [&]( BattleRoyaleGroundItem& item )
             {
-                archive >> item._position;
-                if ( StateIO::readName( archive, item._itemID ) == false )
-                    return false;
-                archive >> item._count;
-                archive >> item._spotIndex;
-                if ( archive.isError() || item._count <= 0 )
-                    return false;
-            }
-            archive >> drop._position;
-            archive >> drop._time;
-            const bool bDropValid = archive.isOk() && 0.0f <= drop._time;
-            if ( bDropValid == false )
-                return false;
-        }
-
-        _matchState     = std::move( matchState );
-        _zone           = std::move( zone );
-        _random         = random;
-        _stepTimer      = stepTimer;
-        _time           = time;
-        _nextSupplyDrop = nextSupplyDrop;
-        _listPlayer     = std::move( listPlayer );
-        _listSupplyDrop = std::move( listSupplyDrop );
-        _eventBuffer.clear();
-        return true;
+                io.value( item._position );
+                io.value( item._itemID );
+                io.value( item._count );
+                io.value( item._spotIndex );
+                io.check( item._count > 0 );
+            } );
+            io.value( drop._position );
+            io.value( drop._time );
+            io.check( 0.0f <= drop._time );
+        } );
     }
+
 } // namespace sw

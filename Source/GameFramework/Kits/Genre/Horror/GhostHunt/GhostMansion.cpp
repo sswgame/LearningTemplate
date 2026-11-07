@@ -361,87 +361,54 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void GhostMansion::writeState( Archive& outArchive ) const
+    void GhostMansion::serializeState( StateIO& io )
     {
-        _encounter.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << static_cast<uint32>( _listBoo.size() );
-        for ( const HidingGhostRuntime& boo : _listBoo )
+        io.value( _encounter );
+        io.value( _random );
+        io.expect( static_cast<uint32>( _listBoo.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
-            StateIO::writeName( outArchive, boo._room );
-            StateIO::writeName( outArchive, boo._furniture );
-            outArchive << boo._hp;
-            StateIO::writeCountdown( outArchive, boo._timer );
-            outArchive << static_cast<uint8>( boo._state );
+            HidingGhostRuntime& boo = _listBoo[booIndex];
+            io.value( boo._room );
+            io.value( boo._furniture );
+            io.value( boo._hp );
+            io.value( boo._timer );
+            io.enumValue( boo._state, HidingGhostState::Caught );
+            if ( io.isReading() && io.isOk() )
+            {
+                // 잡힌 부의 체력은 0 이고, 나머지는 정의의 최대까지이다. 방과 가구는 있는 것이어야 한다.
+                const bool bHpValid    = boo._state == HidingGhostState::Caught ? boo._hp == 0.0f : ( 0.0f < boo._hp && boo._hp <= _pCatalog->getBoos()[booIndex]._hp );
+                const bool bPlaceValid = isKnownRoom( boo._room ) && ( boo._furniture.empty() || _pCatalog->findFurniture( boo._furniture ) != nullptr );
+                if ( io.check( bHpValid && bPlaceValid ) == false )
+                    return;
+            }
         }
-        outArchive << static_cast<uint32>( _listSearched.size() );
-        for ( const uint8 bSearched : _listSearched )
+        io.expect( static_cast<uint32>( _listSearched.size() ) );
+        for ( uint8& bSearched : _listSearched )
         {
-            outArchive << bSearched;
+            io.flag( bSearched );
         }
-        StateIO::writeName( outArchive, _currentRoom );
-        outArchive << _seed;
-        outArchive << static_cast<uint32>( _listPendingKeyRoom.size() );
-        for ( const hashed_string& roomID : _listPendingKeyRoom )
+        io.value( _currentRoom );
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, roomID );
+            io.check( isKnownRoom( _currentRoom ) );
+        }
+        io.value( _seed );
+        io.list( _listPendingKeyRoom, 4, [&]( hashed_string& roomID )
+        {
+            io.value( roomID );
+            if ( io.isReading() )
+            {
+                io.check( _pCatalog->findRoom( roomID ) != nullptr );
+            }
+        } );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
+            _listGhostEvent.clear();
         }
     }
 
-    bool GhostMansion::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 빌린 포인터는 사본도 그대로 가지고 있다.
-        GhostMansion restored = *this;
-        uint32       booCount = 0;
-        // 부마다 이름 둘(8) + 체력, 시간(8) + 상태(1) 이상
-        const bool bHeadRead =
-            restored._encounter.readState( archive ) && StateIO::readRandom( archive, restored._random ) && archive.readCount( 17, booCount );
-        if ( bHeadRead == false || booCount != _listBoo.size() )
-            return false;
-        for ( size_t booIndex = 0; booIndex < restored._listBoo.size(); ++booIndex )
-        {
-            HidingGhostRuntime& boo       = restored._listBoo[booIndex];
-            uint8               state     = 0;
-            const bool          bNameRead = StateIO::readName( archive, boo._room ) && StateIO::readName( archive, boo._furniture );
-            if ( bNameRead == false )
-                return false;
-            archive >> boo._hp;
-            const bool bTimerRead = StateIO::readCountdown( archive, boo._timer );
-            archive >> state;
-            const bool bInvalidBooState = bTimerRead == false || archive.isError() || state > static_cast<uint8>( HidingGhostState::Caught );
-            if ( bInvalidBooState )
-                return false;
-            boo._state = static_cast<HidingGhostState>( state );
-            // 잡힌 부의 체력은 0 이고, 나머지는 정의의 최대까지이다. 방과 가구는 있는 것이어야 한다(`readState` 가 맞은 뒤 카탈로그는 사본도 같다).
-            const bool bHpInvalid    = boo._state == HidingGhostState::Caught ? boo._hp != 0.0f : ( boo._hp <= 0.0f || boo._hp > _pCatalog->getBoos()[booIndex]._hp );
-            const bool bPlaceInvalid = isKnownRoom( boo._room ) == false || ( boo._furniture.empty() == false && _pCatalog->findFurniture( boo._furniture ) == nullptr );
-            if ( bHpInvalid || bPlaceInvalid )
-                return false;
-        }
-        uint32 searchedCount = 0;
-        if ( archive.readCount( 1, searchedCount ) == false || searchedCount != _listSearched.size() )
-            return false;
-        for ( uint8& bSearched : restored._listSearched )
-        {
-            archive >> bSearched;
-            if ( bSearched > SW_TRUE )
-                archive.setError();
-        }
-        if ( StateIO::readName( archive, restored._currentRoom ) == false || isKnownRoom( restored._currentRoom ) == false )
-            return false;
-        archive >> restored._seed;
-        uint32 pendingCount = 0;
-        if ( archive.isError() || archive.readCount( 4, pendingCount ) == false )
-            return false;
-        restored._listPendingKeyRoom.assign( pendingCount, hashed_string{} );
-        for ( hashed_string& roomID : restored._listPendingKeyRoom )
-        {
-            if ( StateIO::readName( archive, roomID ) == false || _pCatalog->findRoom( roomID ) == nullptr )
-                return false;
-        }
-        restored._eventBuffer.clear();
-        restored._listGhostEvent.clear();
-        *this = std::move( restored );
-        return true;
-    }
 } // namespace sw

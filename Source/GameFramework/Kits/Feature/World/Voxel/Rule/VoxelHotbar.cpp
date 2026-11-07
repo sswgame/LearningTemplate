@@ -14,37 +14,16 @@ namespace sw
     {
     }
 
-    void VoxelHotbar::writeState( Archive& outArchive ) const
+    void VoxelHotbar::serializeState( StateIO& io )
     {
-        for ( const VoxelHotbarSlot& slot : _arrSlot )
+        for ( VoxelHotbarSlot& slot : _arrSlot )
         {
-            outArchive << slot._block;
-            outArchive << slot._count;
+            io.value( slot._block );
+            io.value( slot._count );
+            io.check( 0 <= slot._count && slot._count <= kMaxStack );
         }
-        outArchive << _selectedIndex;
-    }
-
-    bool VoxelHotbar::readState( Archive& archive )
-    {
-        VoxelHotbarSlot arrSlot[kSlotCount];
-        for ( VoxelHotbarSlot& slot : arrSlot )
-        {
-            archive >> slot._block;
-            archive >> slot._count;
-            if ( slot._count < 0 || slot._count > kMaxStack )
-                archive.setError();
-        }
-        int32 selectedIndex = 0;
-        archive >> selectedIndex;
-        const bool bSelectedValid = 0 <= selectedIndex && selectedIndex < kSlotCount;
-        if ( archive.isError() || bSelectedValid == false )
-            return false;
-        for ( int32 slotIndex = 0; slotIndex < kSlotCount; ++slotIndex )
-        {
-            _arrSlot[slotIndex] = arrSlot[slotIndex];
-        }
-        _selectedIndex = selectedIndex;
-        return true;
+        io.value( _selectedIndex );
+        io.check( 0 <= _selectedIndex && _selectedIndex < kSlotCount );
     }
 
     int32 VoxelHotbar::addBlock( VoxelBlockIndex block, int32 count )

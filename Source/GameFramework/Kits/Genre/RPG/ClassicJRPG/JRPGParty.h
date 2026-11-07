@@ -12,6 +12,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
@@ -138,10 +140,11 @@ namespace sw
         /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이거나 0 이하이면 아무것도 하지 않습니다. */
         void addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount );
         void pollEvents( vector<JRPGPartyEvent>& outListEvent );
-        /** @brief 멤버(직업, 이름, 주문, 비급 숙련, 장비 아이템 id, 레벨, 능력치, HP/MP, 내공)를 씁니다. 가방과 지갑은 빌려 온 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 직업이나 아이템이거나, 장비 슬롯 수가 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(카탈로그와 슬롯 구성은 `initialize` 에서 받은 것입니다). */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 멤버(직업, 이름, 주문, 비급 숙련, 장비 아이템 id, 레벨, 능력치, HP/MP, 내공)를 씁니다. 가방과 지갑은 빌려 온 것이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 직업이나 아이템이거나, 장비 슬롯 수가 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(카탈로그와 슬롯 구성은 `initialize` 에서 받은 것입니다).
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 이 주문이나 초식을 쓸 수 있는지 반환합니다(배웠거나, 비급 숙련이 그 단계에 닿았으면 true 입니다). */
         bool  canUseSpell( int32 memberIndex, const hashed_string& spellID ) const;

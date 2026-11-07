@@ -13,6 +13,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
@@ -129,10 +131,9 @@ namespace sw
         /**
          * @brief 이동 모드, 기반 몸(`PlatformerMotor2D`), 갈고리와 드릴의 위치, 속도, 밧줄 끝, 길이, 드릴 찾기 시간, 흙 안 표시를 씁니다.
          *        설정은 `initialize` 에서 받은 것이라 싣지 않습니다(활공이면 활공 설정을 다시 적용합니다). 지형은 `update` 의 인자이고, 이번 틱의 사건 비트도 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 기반 몸에 적용할 설정을 만듭니다. 활공이면 낙하 속도 상한과 중력을 줄인 설정입니다. */

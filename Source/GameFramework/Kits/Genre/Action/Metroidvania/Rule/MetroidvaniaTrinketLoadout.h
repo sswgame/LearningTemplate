@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -66,10 +68,11 @@ namespace sw
         int32                        getNotchCount() const { return _notchCount; }
         const vector<hashed_string>& getEquipped() const { return _listEquipped; }
 
-        /** @brief 가진 부적, 낀 부적(낀 순서), 슬롯 수를 씁니다. 카탈로그는 `initialize` 에서 받은 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 카탈로그에 없는 부적이거나 가지지 않은 부적을 끼었거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 가진 부적, 낀 부적(낀 순서), 슬롯 수를 씁니다. 카탈로그는 `initialize` 에서 받은 것이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 카탈로그에 없는 부적이거나 가지지 않은 부적을 끼었거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         const MetroidvaniaCatalog* _pCatalog;

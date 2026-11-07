@@ -183,39 +183,24 @@ namespace sw
         return static_cast<int32>( _health.getHealth() + 0.5f );
     }
 
-    void AdventureVitals::writeState( Archive& outArchive ) const
+    void AdventureVitals::serializeState( StateIO& io )
     {
-        outArchive << _heartCount;
-        outArchive << _heartPieceCount;
-        outArchive << _bMagicUpgraded;
-        _health.writeState( outArchive );
-        _magic.writeState( outArchive );
-        _stamina.writeState( outArchive );
+        io.value( _heartCount );
+        io.value( _heartPieceCount );
+        io.flag( _bMagicUpgraded );
+        if ( io.check( 1 <= _heartCount && _heartCount <= _settings._maxHeartCount && 0 <= _heartPieceCount && _heartPieceCount < _settings._piecesPerHeart ) == false )
+            return;
+        if ( io.isReading() && io.check( resetHealth() ) == false ) // 체력 최대값은 하트 수가 정한다. 현재 값은 아래에서 읽는다
+            return;
+        io.value( _health );
+        io.value( _magic );
+        io.value( _stamina );
+        if ( io.isOk() == false )
+            return;
+        // 값은 하트 수와 그릇이 정한 최대를 넘지 못하고, 두 배 마법을 받지 않았으면 마법 보너스가 없다(기반 값들은 자기 최대를 보지 않는다).
+        io.check( _health.getHealth() <= static_cast<float32>( getMaxHealthQuarters() ) && _magic.getValue() <= _magic.getMax() &&
+                  _stamina.getValue() <= _stamina.getMax() && 0.0f <= _magic.getMaxBonus() && 0.0f <= _stamina.getMaxBonus() &&
+                  _stamina.getMaxBonus() <= _settings._staminaVesselMax + 0.001f && ( _bMagicUpgraded == SW_TRUE || _magic.getMaxBonus() <= 0.0f ) );
     }
 
-    bool AdventureVitals::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정은 사본이 그대로 가지고 있다.
-        AdventureVitals restored = *this;
-        archive >> restored._heartCount;
-        archive >> restored._heartPieceCount;
-        archive >> restored._bMagicUpgraded;
-        const bool bHeadValid = archive.isOk() && 1 <= restored._heartCount && restored._heartCount <= _settings._maxHeartCount && 0 <= restored._heartPieceCount &&
-                                restored._heartPieceCount < _settings._piecesPerHeart && restored._bMagicUpgraded <= SW_TRUE;
-        if ( bHeadValid == false )
-            return false;
-        if ( restored.resetHealth() == false ) // 체력 최대값은 하트 수가 정한다. 현재 값은 아래에서 읽는다
-            return false;
-        const bool bBodyRead = restored._health.readState( archive ) && restored._magic.readState( archive ) && restored._stamina.readState( archive );
-        if ( bBodyRead == false )
-            return false;
-        // 값은 하트 수와 그릇이 정한 최대를 넘지 못하고, 두 배 마법을 받지 않았으면 마법 보너스가 없다(기반 값들은 자기 최대를 보지 않는다).
-        const bool bConsistent = restored._health.getHealth() <= static_cast<float32>( restored.getMaxHealthQuarters() ) && restored._magic.getValue() <= restored._magic.getMax() &&
-                                 restored._stamina.getValue() <= restored._stamina.getMax() && 0.0f <= restored._magic.getMaxBonus() && 0.0f <= restored._stamina.getMaxBonus() &&
-                                 restored._stamina.getMaxBonus() <= _settings._staminaVesselMax + 0.001f && ( restored._bMagicUpgraded == SW_TRUE || restored._magic.getMaxBonus() <= 0.0f );
-        if ( bConsistent == false )
-            return false;
-        *this = std::move( restored );
-        return true;
-    }
 } // namespace sw

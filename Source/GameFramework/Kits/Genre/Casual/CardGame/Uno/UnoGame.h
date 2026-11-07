@@ -14,6 +14,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -140,10 +141,11 @@ namespace sw
         [[nodiscard]] bool callUno( int32 caller );
         [[nodiscard]] bool applyAction( int32 player, const CardAction& action );
 
-        /** @brief 손패, 뽑을 더미, 버린 더미, 난수, 차례, 방향, 쌓인 벌칙, 우노 대상, 이긴 사람, 색을 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 덱에 없거나 겹친 카드, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 손패, 뽑을 더미, 버린 더미, 난수, 차례, 방향, 쌓인 벌칙, 우노 대상, 이긴 사람, 색을 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 덱에 없거나 겹친 카드, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 지금 낼 수 있는 카드인지 반환합니다. 색, 값, 와일드를 따지며, 벌칙이 쌓였으면 쌓을 수 있는 카드만 낼 수 있습니다. */
         bool isPlayable( const Card& card ) const;

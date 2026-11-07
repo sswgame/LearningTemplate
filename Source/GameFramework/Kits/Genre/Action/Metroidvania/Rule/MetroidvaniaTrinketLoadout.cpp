@@ -120,54 +120,17 @@ namespace sw
         return VectorUtil::contains( _listEquipped, charmID );
     }
 
-    void MetroidvaniaTrinketLoadout::writeState( Archive& outArchive ) const
+    void MetroidvaniaTrinketLoadout::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listOwned.size() );
-        for ( const hashed_string& charmID : _listOwned )
-        {
-            StateIO::writeName( outArchive, charmID );
-        }
-        outArchive << static_cast<uint32>( _listEquipped.size() );
-        for ( const hashed_string& charmID : _listEquipped )
-        {
-            StateIO::writeName( outArchive, charmID );
-        }
-        outArchive << _notchCount;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        // 가진 것, 낀 것 순서로 놓는다. 둘 다 카탈로그의 부적이고 겹치지 않으며, 낀 것은 가진 것이어야 한다
+        io.nameList( _listOwned, [this]( const hashed_string& charmID )
+        { return _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( _listOwned, charmID ) == false; } );
+        io.nameList( _listEquipped, [this]( const hashed_string& charmID )
+        { return _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( _listEquipped, charmID ) == false && VectorUtil::contains( _listOwned, charmID ); } );
+        io.value( _notchCount );
+        io.check( 0 <= _notchCount );
     }
 
-    bool MetroidvaniaTrinketLoadout::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 가진 것, 낀 것 순서로 읽는다. 둘 다 카탈로그의 부적이고 겹치지 않으며, 낀 것은 가진 것이어야 한다
-        vector<hashed_string> listOwned;
-        vector<hashed_string> listEquipped;
-        for ( int32 listIndex = 0; listIndex < 2; ++listIndex )
-        {
-            vector<hashed_string>& listCharm  = listIndex == 0 ? listOwned : listEquipped;
-            uint32                 charmCount = 0;
-            if ( archive.readCount( 4, charmCount ) == false )
-                return false;
-            listCharm.reserve( charmCount );
-            for ( uint32 entry = 0; entry < charmCount; ++entry )
-            {
-                hashed_string charmID;
-                if ( StateIO::readName( archive, charmID ) == false )
-                    return false;
-                const bool bOwnedIfEquipped = listIndex == 0 || VectorUtil::contains( listOwned, charmID );
-                const bool bValid           = _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( listCharm, charmID ) == false && bOwnedIfEquipped;
-                if ( bValid == false )
-                    return false;
-                listCharm.push_back( charmID );
-            }
-        }
-        int32 notchCount = 0;
-        archive >> notchCount;
-        if ( archive.isError() || notchCount < 0 )
-            return false;
-        _listOwned    = std::move( listOwned );
-        _listEquipped = std::move( listEquipped );
-        _notchCount   = notchCount;
-        return true;
-    }
 } // namespace sw

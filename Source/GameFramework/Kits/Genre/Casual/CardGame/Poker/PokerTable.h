@@ -12,6 +12,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -148,10 +149,11 @@ namespace sw
         /** @brief 중계로 받은 행동을 적용합니다(`_kind` 는 PokerActionKind 이고 `_amount` 를 함께 씁니다). */
         [[nodiscard]] bool applyAction( int32 seat, const CardAction& action );
 
-        /** @brief 자리(홀 카드, 칩, 낸 칩, 상태 표시), 지난 팟, 덱, 보드, 버튼, 차례, 베팅, 스트리트를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 자리 수가 다르거나, 음수 칩, 트럼프에 없거나 겹친 카드, 다섯 장을 넘는 보드, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 자리(홀 카드, 칩, 낸 칩, 상태 표시), 지난 팟, 덱, 보드, 버튼, 차례, 베팅, 스트리트를 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 자리 수가 다르거나, 음수 칩, 트럼프에 없거나 겹친 카드, 다섯 장을 넘는 보드, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         int32            getSeatCount() const { return static_cast<int32>( _listSeat.size() ); }
         const PokerSeat& getSeat( int32 seat ) const { return _listSeat[static_cast<size_t>( seat )]; }

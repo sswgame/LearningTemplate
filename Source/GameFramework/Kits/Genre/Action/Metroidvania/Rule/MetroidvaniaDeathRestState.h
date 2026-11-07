@@ -14,6 +14,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -137,10 +139,9 @@ namespace sw
         /**
          * @brief 처치 기록, 시체, 되살아날 지점, 잃은 통화, 물약(충전, 최대, 회복 단계)을 씁니다. 통화 잔액은 빌려 온 지갑의 것이고 카탈로그는 `initialize` 에서 받은 것이라
          *        싣지 않으며, 알림은 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 쉬는 지점이 아닌 되살아날 지점, 겹친 처치 위치, 깨진 시체 위치이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 쉬는 지점이 아닌 되살아날 지점, 겹친 처치 위치, 깨진 시체 위치이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         void          refreshWorld( CombatHealth& combatHealth );

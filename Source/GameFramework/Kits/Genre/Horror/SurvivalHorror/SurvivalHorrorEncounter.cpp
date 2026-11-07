@@ -176,62 +176,29 @@ namespace sw
         return _state == expected;
     }
 
-    void SurvivalHorrorEncounter::writeState( Archive& outArchive ) const
+    void SurvivalHorrorEncounter::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _monster._id );
-        outArchive << static_cast<uint32>( _listInvestigator.size() );
-        for ( const SurvivalHorrorInvestigator& investigator : _listInvestigator )
+        io.expect( _monster._id );
+        // 조사자마다 속도, 번호, 체력, 정신력, 의지, 힘(24) + 빠짐(1)
+        io.list( _listInvestigator, 25, [&]( SurvivalHorrorInvestigator& investigator )
         {
-            outArchive << investigator._speed;
-            outArchive << investigator._actorID;
-            outArchive << investigator._health;
-            outArchive << investigator._sanity;
-            outArchive << investigator._will;
-            outArchive << investigator._strength;
-            outArchive << investigator._bDefeated;
+            io.value( investigator._speed );
+            io.value( investigator._actorID );
+            io.value( investigator._health );
+            io.value( investigator._sanity );
+            io.value( investigator._will );
+            io.value( investigator._strength );
+            io.flag( investigator._bDefeated );
+        } );
+        io.value( _turnOrder );
+        io.value( _random );
+        io.value( _monsterToughness );
+        io.value( _turnCount );
+        io.enumValue( _state, SurvivalHorrorEncounterState::Defeat );
+        if ( io.isReading() && io.isOk() )
+        {
+            io.check( hasValidActorIDs( _listInvestigator ) && isStateConsistent() );
         }
-        _turnOrder.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _monsterToughness;
-        outArchive << _turnCount;
-        outArchive << static_cast<uint8>( _state );
     }
 
-    bool SurvivalHorrorEncounter::readState( Archive& archive )
-    {
-        hashed_string monsterID;
-        uint32        count = 0;
-        // 조사자마다 속도, 번호, 체력, 정신력, 의지, 힘(24) + 빠짐(1)
-        const bool bHeadRead = StateIO::readName( archive, monsterID ) && archive.readCount( 25, count );
-        if ( bHeadRead == false || monsterID != _monster._id )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 괴물 정의와 성공 눈은 사본도 그대로 가지고 있다.
-        SurvivalHorrorEncounter restored = *this;
-        restored._listInvestigator.assign( count, SurvivalHorrorInvestigator{} );
-        for ( SurvivalHorrorInvestigator& investigator : restored._listInvestigator )
-        {
-            archive >> investigator._speed;
-            archive >> investigator._actorID;
-            archive >> investigator._health;
-            archive >> investigator._sanity;
-            archive >> investigator._will;
-            archive >> investigator._strength;
-            archive >> investigator._bDefeated;
-            if ( archive.isError() || investigator._bDefeated > SW_TRUE )
-                return false;
-        }
-        uint8      state     = 0;
-        const bool bPartRead = restored._turnOrder.readState( archive ) && StateIO::readRandom( archive, restored._random );
-        archive >> restored._monsterToughness;
-        archive >> restored._turnCount;
-        archive >> state;
-        const bool bValid = bPartRead && archive.isOk() && state <= static_cast<uint8>( SurvivalHorrorEncounterState::Defeat );
-        if ( bValid == false )
-            return false;
-        restored._state = static_cast<SurvivalHorrorEncounterState>( state );
-        if ( hasValidActorIDs( restored._listInvestigator ) == false || restored.isStateConsistent() == false )
-            return false;
-        *this = std::move( restored );
-        return true;
-    }
 } // namespace sw

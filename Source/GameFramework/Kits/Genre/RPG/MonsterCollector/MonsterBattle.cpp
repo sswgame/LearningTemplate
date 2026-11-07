@@ -762,97 +762,59 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void MonsterBattle::writeState( Archive& outArchive ) const
+    void MonsterBattle::serializeState( StateIO& io )
     {
-        for ( const Side& side : _arrSide )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        for ( Side& side : _arrSide )
         {
-            outArchive << static_cast<uint32>( side._listMonster.size() );
-            for ( const MonsterInstance& monster : side._listMonster )
+            io.list( side._listMonster, MonsterInstance::kStateMinBytes, [&]( MonsterInstance& monster )
             {
-                monster.writeState( outArchive );
-            }
-            for ( const int32 stage : side._arrStage )
-            {
-                outArchive << stage;
-            }
-            outArchive << side._action._ballMultiplier;
-            outArchive << side._action._index;
-            outArchive << static_cast<uint8>( side._action._kind );
-            outArchive << side._activeIndex;
-            outArchive << static_cast<uint8>( side._bNeedsSwitch ? SW_TRUE : SW_FALSE );
-        }
-        _turnOrder.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        _captured.writeState( outArchive );
-        StateIO::writeName( outArchive, _weatherID );
-        outArchive << _weatherTurns;
-        outArchive << _escapeAttempts;
-        outArchive << static_cast<uint8>( _result );
-        outArchive << static_cast<uint8>( _bWild ? SW_TRUE : SW_FALSE );
-    }
-
-    bool MonsterBattle::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그와 상성표는 사본이 그대로 가지고 있다.
-        MonsterBattle restored = *this;
-        for ( Side& side : restored._arrSide )
-        {
-            uint32 monsterCount = 0;
-            if ( archive.readCount( MonsterInstance::kStateMinBytes, monsterCount ) == false )
-                return false;
-            side._listMonster.assign( monsterCount, MonsterInstance{} );
-            for ( MonsterInstance& monster : side._listMonster )
-            {
-                if ( monster.readState( archive ) == false || monster.isKnownTo( *_pCatalog ) == false )
-                    return false;
-            }
+                io.value( monster );
+                if ( io.isReading() && io.isOk() )
+                {
+                    io.check( monster.isKnownTo( *_pCatalog ) );
+                }
+            } );
             for ( int32& stage : side._arrStage )
             {
-                archive >> stage;
-                if ( ( kMinStage <= stage && stage <= kMaxStage ) == false )
-                    return false;
+                io.value( stage );
+                io.check( kMinStage <= stage && stage <= kMaxStage );
             }
-            uint8 kind         = 0;
-            uint8 bNeedsSwitch = SW_FALSE;
-            archive >> side._action._ballMultiplier;
-            archive >> side._action._index;
-            archive >> kind;
-            archive >> side._activeIndex;
-            archive >> bNeedsSwitch; // bool 칸에 바로 읽으면 2 같은 바이트가 그대로 들어가 미정의 동작이다
-            const bool bValid = archive.isOk() && kind <= static_cast<uint8>( MonsterActionKind::Run ) && bNeedsSwitch <= SW_TRUE;
-            if ( bValid == false )
-                return false;
-            side._action._kind = static_cast<MonsterActionKind>( kind );
-            side._bNeedsSwitch = bNeedsSwitch == SW_TRUE;
+            io.value( side._action._ballMultiplier );
+            io.value( side._action._index );
+            io.enumValue( side._action._kind, MonsterActionKind::Run );
+            io.value( side._activeIndex );
+            uint8 bNeedsSwitch = side._bNeedsSwitch ? SW_TRUE : SW_FALSE; // bool 칸에 바로 읽으면 2 같은 바이트가 그대로 들어가 미정의 동작이다
+            io.flag( bNeedsSwitch );
+            if ( io.isOk() == false )
+                return;
+            if ( io.isReading() )
+            {
+                side._bNeedsSwitch = bNeedsSwitch == SW_TRUE;
+            }
         }
-
-        uint8 outcome = 0;
-        uint8 bWild   = SW_FALSE;
-        if ( restored._turnOrder.readState( archive ) == false || StateIO::readRandom( archive, restored._random ) == false )
-            return false;
-        if ( restored._captured.readState( archive ) == false || StateIO::readName( archive, restored._weatherID ) == false )
-            return false;
-        archive >> restored._weatherTurns;
-        archive >> restored._escapeAttempts;
-        archive >> outcome;
-        archive >> bWild;
+        io.value( _turnOrder );
+        io.value( _random );
+        io.value( _captured );
+        io.value( _weatherID );
+        io.value( _weatherTurns );
+        io.value( _escapeAttempts );
+        io.enumValue( _result, MonsterBattleResult::Escaped );
+        uint8 bWild = _bWild ? SW_TRUE : SW_FALSE;
+        io.flag( bWild );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _bWild = bWild == SW_TRUE;
         // 날씨가 없으면 턴도 0 이고, 있으면 남은 턴이거나 끝없음(-1)이다.
-        const bool bWeatherValid  = restored._weatherID.empty() ? restored._weatherTurns == 0 : ( _pCatalog->findWeather( restored._weatherID ) != nullptr && ( restored._weatherTurns == -1 || restored._weatherTurns > 0 ) );
-        const bool bCapturedValid = restored._captured._speciesID.empty() ? outcome != static_cast<uint8>( MonsterBattleResult::Captured ) : restored._captured.isKnownTo( *_pCatalog );
-        const bool bValid         = archive.isOk() && bWeatherValid && bCapturedValid && outcome <= static_cast<uint8>( MonsterBattleResult::Escaped ) && bWild <= SW_TRUE && restored._escapeAttempts >= 0;
-        if ( bValid == false )
-            return false;
-        restored._result = static_cast<MonsterBattleResult>( outcome );
-        restored._bWild  = bWild == SW_TRUE;
+        io.check( _weatherID.empty() ? _weatherTurns == 0 : ( _pCatalog->findWeather( _weatherID ) != nullptr && ( _weatherTurns == -1 || _weatherTurns > 0 ) ) );
+        io.check( _captured._speciesID.empty() ? _result != MonsterBattleResult::Captured : _captured.isKnownTo( *_pCatalog ) );
+        io.check( 0 <= _escapeAttempts );
         for ( int32 side = 0; side < kSideCount; ++side )
         {
-            if ( restored.isSideStateValid( side ) == false )
-                return false;
+            io.check( isSideStateValid( side ) );
         }
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        _eventBuffer.clear();
     }
+
 } // namespace sw

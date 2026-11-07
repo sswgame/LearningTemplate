@@ -68,29 +68,12 @@ namespace sw
         return _state == LocomotionState::Idle;
     }
 
-    void PlayerLocomotion::writeState( Archive& outArchive ) const
+    void PlayerLocomotion::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint8>( _state );
-        outArchive << static_cast<uint8>( _facing );
-        StateIO::writeCountdown( outArchive, _stateTimer );
+        io.enumValue( _state, LocomotionState::Interact );
+        io.enumValue( _facing, FacingDir::Up );
+        io.value( _stateTimer );
+        io.check( _state == LocomotionState::Idle || _stateTimer.isActive() ); // 남은 시간 없는 걸음은 깨어날 길이 없다
     }
 
-    bool PlayerLocomotion::readState( Archive& archive )
-    {
-        uint8     state  = 0;
-        uint8     facing = 0;
-        Countdown stateTimer;
-        archive >> state;
-        archive >> facing;
-        if ( StateIO::readCountdown( archive, stateTimer ) == false )
-            return false;
-        const bool bValid = archive.isOk() && state <= static_cast<uint8>( LocomotionState::Interact ) && facing <= static_cast<uint8>( FacingDir::Up );
-        const bool bBusy  = state != static_cast<uint8>( LocomotionState::Idle );
-        if ( bValid == false || ( bBusy && stateTimer.isActive() == false ) ) // 남은 시간 없는 걸음은 깨어날 길이 없다
-            return false;
-        _state      = static_cast<LocomotionState>( state );
-        _facing     = static_cast<FacingDir>( facing );
-        _stateTimer = stateTimer;
-        return true;
-    }
 } // namespace sw

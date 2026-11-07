@@ -11,6 +11,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 
@@ -52,10 +54,11 @@ namespace sw
 
         const vector<hashed_string>& getAbilities() const { return _listAbility; }
 
-        /** @brief 얻은 능력 id(얻은 순서)를 씁니다. 카탈로그와 기본 몸 설정은 `initialize` 에서 받은 것이고 능력 플래그는 빌려 온 `GameFlags` 의 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다(몸에 적용하는 것은 호출하는 쪽이 `applyToMotor` 로 합니다). 카탈로그에 없는 능력이거나 겹친 능력이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 얻은 능력 id(얻은 순서)를 씁니다. 카탈로그와 기본 몸 설정은 `initialize` 에서 받은 것이고 능력 플래그는 빌려 온 `GameFlags` 의 것이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다(몸에 적용하는 것은 호출하는 쪽이 `applyToMotor` 로 합니다). 카탈로그에 없는 능력이거나 겹친 능력이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 능력의 `<Motor>` 에 쓸 수 있는 이름인지 반환합니다(카탈로그가 읽을 때 오타를 알립니다). */
         static bool isMotorSettingName( const hashed_string& name );

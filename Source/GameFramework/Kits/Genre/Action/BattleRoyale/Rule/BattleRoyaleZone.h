@@ -10,6 +10,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -99,11 +101,12 @@ namespace sw
         [[nodiscard]] bool writeState( BitWriter& writer ) const;
         /** @brief 네트워크용으로 `writeState` 가 쓴 값을 읽습니다. 값이 범위를 넘으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( BitReader& reader );
-        /** @brief 세이브(`Archive`)에 넷 코덱(`writeState( BitWriter& )`)의 바이트를 길이가 붙은 본문으로 싣고 난수 상태를 붙입니다. 설정과 지형은 `initialize` 에서 받은 것이고, 알림은 읽을 때 비웁니다.
-         *  넷 코덱이 쓰지 못하면 아무것도 싣지 않고 @p outArchive 를 오류 상태로 둡니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState( Archive& )` 가 쓴 값을 읽습니다. 본문이 잘렸거나 넷 코덱이 거절하면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 세이브(`Archive`)에 넷 코덱(`writeState( BitWriter& )`)의 바이트를 길이가 붙은 본문으로 싣고 난수 상태를 붙입니다. 설정과 지형은 `initialize` 에서 받은 것이고, 알림은 읽을 때 비웁니다.
+         *        넷 코덱이 쓰지 못하면 아무것도 싣지 않고 @p outArchive 를 오류 상태로 둡니다.
+         *        `writeState( Archive& )` 가 쓴 값을 읽습니다. 본문이 잘렸거나 넷 코덱이 거절하면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         const float2&         getCenter() const { return _center; }
         float32               getRadius() const { return _radius; }

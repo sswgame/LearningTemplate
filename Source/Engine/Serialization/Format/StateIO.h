@@ -34,6 +34,14 @@ namespace sw
         struct HasSerializeState<T, std::void_t<decltype( std::declval<T&>().serializeState( std::declval<StateIO&>() ) )>> : std::true_type
         {
         };
+        template <typename T, typename = void>
+        struct HasHandState : std::false_type
+        {
+        };
+        template <typename T>
+        struct HasHandState<T, std::void_t<decltype( std::declval<const T&>().writeState( std::declval<Archive&>() ) )>> : std::true_type
+        {
+        };
     } // namespace StateIOInternal
 
     /**
@@ -78,6 +86,18 @@ namespace sw
             if constexpr ( StateIOInternal::HasSerializeState<T>::value )
             {
                 inoutValue.serializeState( *this );
+            }
+            else if constexpr ( StateIOInternal::HasHandState<T>::value )
+            {
+                // shortcut: 아직 손으로 짝지은 형식이 남은 동안의 다리다, 전수 이전이 끝나면 이 갈래를 지운다.
+                if ( isReading() )
+                {
+                    check( inoutValue.readState( _archive ) );
+                }
+                else
+                {
+                    inoutValue.writeState( _archive );
+                }
             }
             else if constexpr ( std::is_base_of_v<DeterministicRandom32, T> )
             {
@@ -150,7 +170,7 @@ namespace sw
 
         /** @brief 읽는 중이고 @p bCondition 이 거짓이면 거절합니다. 지금까지 맞으면 true 입니다. 쓰는 중에는 늘 true 입니다. */
         bool check( bool bCondition );
-        /** @brief 지금 읽기를 거절합니다. 읽는 중에만 부릅니다. */
+        /** @brief 지금 읽기 · 쓰기를 실패로 남깁니다. */
         void fail() { _archive.setError(); }
 
         /** @brief 개수 하나입니다. 읽을 때 원소마다 적어도 @p minBytesPerElement 바이트라 남은 바이트로 담을 수 없는 개수를 거절합니다. @p inoutCount 는 쓸 값을 넣어 부릅니다. */
@@ -187,6 +207,36 @@ namespace sw
             constexpr bool bLengthPrefixed = std::is_same_v<T, hashed_string> || std::is_same_v<T, string>;
             list( inoutList, bLengthPrefixed ? uint32( sizeof( uint32 ) ) : uint32( sizeof( T ) ), [this]( T& entry )
             { value( entry ); } );
+        }
+
+        /** @brief 이름 목록입니다. 읽을 때 하나씩 @p isValid( id ) 로 보고 뒤에 붙이므로, @p isValid 는 지금까지 붙은 목록(겹침, 앞 목록과의 관계)을 볼 수 있습니다. */
+        template <typename TValid>
+        void nameList( vector<hashed_string>& inoutList, TValid&& isValid )
+        {
+            uint32 nameCount = static_cast<uint32>( inoutList.size() );
+            count( sizeof( uint32 ), nameCount );
+            if ( isOk() == false )
+            {
+                return;
+            }
+            if ( isReading() )
+            {
+                inoutList.clear();
+                inoutList.reserve( nameCount );
+            }
+            for ( uint32 index = 0; index < nameCount; ++index )
+            {
+                hashed_string id = isWriting() ? inoutList[index] : hashed_string{};
+                value( id );
+                if ( isReading() )
+                {
+                    if ( isOk() == false || check( isValid( id ) ) == false )
+                    {
+                        return;
+                    }
+                    inoutList.push_back( id );
+                }
+            }
         }
 
         /** @brief 정의 포인터 ↔ id 입니다. 없으면 빈 이름으로 놓입니다. 읽을 때 @p find( id ) 가 찾지 못하면 거절합니다. */
@@ -323,7 +373,6 @@ namespace sw
  * @details 호출부(`ComponentStateStore`, 테스트, 다른 형식)는 이름을 그대로 부르고, 본문은 `serializeState` 하나뿐이다.
  */
 #define SW_DECLARE_STATE_IO()                               \
-    void serializeState( ::sw::StateIO& io );               \
     void writeState( ::sw::Archive& outArchive ) const      \
     {                                                       \
         ::sw::StateIO::writeObject( *this, outArchive );    \
@@ -331,14 +380,14 @@ namespace sw
     [[nodiscard]] bool readState( ::sw::Archive& archive )  \
     {                                                       \
         return ::sw::StateIO::readAtomic( *this, archive ); \
-    }
+    }                                                       \
+    void serializeState( ::sw::StateIO& io )
 
 /**
  * @def SW_DECLARE_STATE_IO_IN_PLACE
  * @brief `SW_DECLARE_STATE_IO` 의 사본 없는 판입니다. 사본을 만들 수 없는 형식(참조 칸, 컴포넌트)과 사본 비용이 문제인 경로만 씁니다. `serializeState` 가 지역 변수에 읽어 끝까지 맞으면 대입합니다.
  */
 #define SW_DECLARE_STATE_IO_IN_PLACE()                       \
-    void serializeState( ::sw::StateIO& io );                \
     void writeState( ::sw::Archive& outArchive ) const       \
     {                                                        \
         ::sw::StateIO::writeObject( *this, outArchive );     \
@@ -346,7 +395,8 @@ namespace sw
     [[nodiscard]] bool readState( ::sw::Archive& archive )   \
     {                                                        \
         return ::sw::StateIO::readInPlace( *this, archive ); \
-    }
+    }                                                        \
+    void serializeState( ::sw::StateIO& io )
 
 /** @brief 비트필드 깃발 하나입니다(`uint8 _bX : 1` 은 참조로 받을 수 없다). 0 · 1 밖을 거절합니다. */
 #define SW_STATE_BITFLAG( io, field )                              \

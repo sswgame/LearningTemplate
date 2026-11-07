@@ -7,6 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
@@ -83,13 +85,12 @@ namespace sw
         /** @brief 번호가 @p block 인 블록 수를 반환합니다. 테스트와 디버그에 씁니다. */
         uint32 countBlocks( VoxelBlockIndex block ) const;
 
-        /** @brief 청크마다 같은 블록이 이어지는 구간(번호와 길이)으로 블록을 씁니다. 핫 리로드와 세이브에 씁니다. 지형이 대부분 공기와 돌이라 결과가 작습니다. */
-        void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 가 쓴 바이트로 블록을 복원하고 모든 청크를 다시 메싱할 것으로 표시합니다. 같은 청크 수와 카탈로그로 `initialize` 한 뒤에 부릅니다.
-         * @return 청크 수가 다르거나, 카탈로그에 없는 블록 번호가 있거나, 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다.
+         * @brief 청크마다 같은 블록이 이어지는 구간(번호와 길이)으로 블록을 씁니다. 핫 리로드와 세이브에 씁니다. 지형이 대부분 공기와 돌이라 결과가 작습니다.
+         *        `writeState` 가 쓴 바이트로 블록을 복원하고 모든 청크를 다시 메싱할 것으로 표시합니다. 같은 청크 수와 카탈로그로 `initialize` 한 뒤에 부릅니다.
+         *        @return 청크 수가 다르거나, 카탈로그에 없는 블록 번호가 있거나, 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO_IN_PLACE();
 
     private:
         VoxelChunk* findChunkMutable( int32 chunkX, int32 chunkZ );
