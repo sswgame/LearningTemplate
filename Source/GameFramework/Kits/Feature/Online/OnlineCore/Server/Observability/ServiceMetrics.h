@@ -1,6 +1,6 @@
 /**
  * @file ServiceMetrics.h
- * @brief 서비스 하나의 표준 지표입니다. `service_requests_total{service,method,result}`, `service_request_seconds{service,method}`, `service_store_pending{service}` 를 둡니다.
+ * @brief 서비스 하나의 표준 지표입니다. `service_requests_total{service,method,result}`, `service_request_seconds{service,method}`, `service_store_pending{service}` · `service_store_pending_peak{service}` 를 둡니다.
  * @details 메서드와 결과 이름은 서비스가 등록 때 넘기는 닫힌 집합이다(라벨에 계정 id 나 추적 id 를 넣지 않는다). 레지스트리(`Engine/Observability/MetricRegistry`)가
  *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 측정한다 — 서버 호출 표(`OnlineServerCallTable`)가 받은 시각을 들고 응답할 때 `observeRequest` 를 부른다.
  */
@@ -56,6 +56,7 @@ namespace sw
         void observeRequest( int32 methodIndex, int32 resultIndex, int64 receivedNanoseconds );
         /** @brief 공통 범주 @p errorCode 로 끝난 요청 하나를 셉니다. 표에 없는 코드는 `internal` 로 셉니다. */
         void observeError( int32 methodIndex, uint16 errorCode, int64 receivedNanoseconds );
+        /** @brief 기다리는 호출 수를 씁니다. 실행 중 최대치도 `service_store_pending_peak` 에 남깁니다 — 호출 표의 저장 모양(선형 · 색인)을 고를 근거가 이 값이다. */
         void setPendingStoreWorkCount( int32 pendingCount );
 
     private:
@@ -78,6 +79,8 @@ namespace sw
         vector<MetricCounter*>   _listRequestCounter; ///< 메서드 × 결과
         vector<MetricHistogram*> _listLatency;        ///< 메서드
         MetricGauge*             _pPending;
+        MetricGauge*             _pPendingPeak;
+        int32                    _pendingPeakCount;
         int32                    _methodCount;
         int32                    _resultCount;
         int32                    _errorResultBase; ///< 공통 범주 라벨의 첫 결과 번호(`initializeWithErrors`). 없으면 음수이고 `observeError` 는 지연만 잰다

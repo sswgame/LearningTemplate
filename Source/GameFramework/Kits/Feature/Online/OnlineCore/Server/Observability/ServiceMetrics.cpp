@@ -44,6 +44,8 @@ namespace sw
         : _listRequestCounter{}
         , _listLatency{}
         , _pPending{ nullptr }
+        , _pPendingPeak{ nullptr }
+        , _pendingPeakCount{ 0 }
         , _methodCount{ 0 }
         , _resultCount{ 0 }
         , _errorResultBase{ -1 }
@@ -74,18 +76,21 @@ namespace sw
     {
         _listRequestCounter.clear();
         _listLatency.clear();
-        _pPending        = nullptr;
-        _methodCount     = 0;
-        _resultCount     = 0;
-        _errorResultBase = -1;
+        _pPending         = nullptr;
+        _pPendingPeak     = nullptr;
+        _pendingPeakCount = 0;
+        _methodCount      = 0;
+        _resultCount      = 0;
+        _errorResultBase  = -1;
         if ( pRegistry == nullptr )
             return;
         _methodCount                    = static_cast<int32>( listMethodName.size() );
         _resultCount                    = static_cast<int32>( listResultName.size() );
         const vector<float64> listBound = MetricRegistry::makeLatencyBounds();
         vector<MetricLabel>   listLabel( 1 );
-        listLabel[0] = MetricLabel{ "service", pServiceName };
-        _pPending    = pRegistry->registerGauge( "service_store_pending", "Store works submitted and not yet completed", listLabel );
+        listLabel[0]  = MetricLabel{ "service", pServiceName };
+        _pPending     = pRegistry->registerGauge( "service_store_pending", "Store works submitted and not yet completed", listLabel );
+        _pPendingPeak = pRegistry->registerGauge( "service_store_pending_peak", "Most store works pending at once since start", listLabel );
         for ( const string& methodName : listMethodName )
         {
             listLabel.resize( 2 );
@@ -119,5 +124,10 @@ namespace sw
     {
         if ( _pPending != nullptr )
             _pPending->set( static_cast<float64>( pendingCount ) );
+        if ( pendingCount <= _pendingPeakCount )
+            return;
+        _pendingPeakCount = pendingCount;
+        if ( _pPendingPeak != nullptr )
+            _pPendingPeak->set( static_cast<float64>( pendingCount ) );
     }
 } // namespace sw
