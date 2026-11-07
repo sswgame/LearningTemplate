@@ -192,7 +192,11 @@ namespace sw
         void update( UnixMilliseconds nowMs );
 
         // 답은 서비스가 부르며 한 번만 보낼 수 있다. 이미 답했거나 끝난 요청이면 false 를 반환한다.
-        bool respondOk( const NetRequestToken& token, const BitWriter& body, NetResponseRetention retention = NetResponseRetention::Remember );
+        /**
+         * @brief 이미 쓴 몸으로 성공 응답합니다. 키트 응답 형식이 있으면 `respondReply` 를 쓴다 — 몸을 먼저 써야 하는 서버(계정 키트)만 이 길을 쓰고 보존을 응답 형식의 판정으로 넘긴다.
+         * @param retention 기본값을 두지 않는다 — 부르는 쪽이 결과가 다시 시도할 것인지 정한다(`NetResponseRetention`).
+         */
+        bool respondOk( const NetRequestToken& token, const BitWriter& body, NetResponseRetention retention );
         /**
          * @brief @p message 를 키트 메시지 목록 @p TMessages 로 써서 성공 응답으로 보냅니다. 범위 밖 값이 있어 쓰지 못하면 `kInternal` 오류로 응답합니다.
          * @details 쓰기가 범위 밖 값을 로그에 남기며, 고칠 곳은 그 값을 만든 서버 코드입니다. 결과 칸(`_result`)이 없는 메시지(상태 · 목록)를 보내는 길이며, 멱등 키가 있으면 응답을 기억합니다.

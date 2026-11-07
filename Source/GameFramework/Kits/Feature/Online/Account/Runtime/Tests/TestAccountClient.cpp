@@ -135,7 +135,7 @@ namespace
                     continue;
                 }
                 const auto bodyIt = _mapMethodToBody.find( held._method );
-                (void)host.respondOk( held._token, AccountClientTestUtil::toWriter( bodyIt != _mapMethodToBody.end() ? bodyIt->second : vector<uint8>{} ) );
+                (void)host.respondOk( held._token, AccountClientTestUtil::toWriter( bodyIt != _mapMethodToBody.end() ? bodyIt->second : vector<uint8>{} ), NetResponseRetention::Remember );
             }
             _listHeld.clear();
         }

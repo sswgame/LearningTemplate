@@ -73,7 +73,7 @@ namespace sw::test
                 (void)host.respondError( context._token, OnlineError::kConflict );
                 return;
             }
-            (void)host.respondOk( context._token, BitWriter{} );
+            (void)host.respondOk( context._token, BitWriter{}, NetResponseRetention::Remember );
         }
     };
 

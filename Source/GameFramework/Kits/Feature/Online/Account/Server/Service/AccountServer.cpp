@@ -346,6 +346,8 @@ namespace sw
             }
         }
         const bool bOk = completion._result == LoginResult::Ok;
+        // 응답 형식 셋의 보존 판정은 결과 하나가 정한다(`AccountProtocol::isRetryable`) — 다시 시도할 결과를 기억하면 같은 키의 재시도가 같은 답만 받는다.
+        const NetResponseRetention retention = AccountProtocol::isRetryable( completion._result ) ? NetResponseRetention::Forget : NetResponseRetention::Remember;
         if ( bWritten == false )
         {
             // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 respondMessage 를 쓰지 않고 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
@@ -368,7 +370,7 @@ namespace sw
                 {
                     // 그사이 이 연결이 닫혔으므로 세션은 재접속 유예로 둔다.
                     _pLoginService->markDisconnected( completion._grant._token._sessionID, _nowMs );
-                    (void)host.respondOk( call._token, body );
+                    (void)host.respondOk( call._token, body, retention );
                     return;
                 }
             }
@@ -379,7 +381,7 @@ namespace sw
         const bool bPresenceRefresh = bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end();
         if ( bPresenceRefresh )
             _presence.noteOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
-        (void)host.respondOk( call._token, body );
+        (void)host.respondOk( call._token, body, retention );
         if ( bOk && completion._operation == LoginOperation::Logout )
         {
             for ( auto sessionIt = _mapAccountToSession.begin(); sessionIt != _mapAccountToSession.end(); ++sessionIt )

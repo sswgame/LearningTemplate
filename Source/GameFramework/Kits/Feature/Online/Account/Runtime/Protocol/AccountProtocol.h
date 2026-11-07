@@ -181,6 +181,9 @@ namespace sw
         LoginGrant _grant{};
         PROPERTY()
         LoginResult _result{ LoginResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과인지입니다(`AccountProtocol::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const;
     };
 } // namespace sw
 
@@ -195,6 +198,9 @@ namespace sw
         NetGameTicket _ticket{};
         PROPERTY()
         LoginResult _result{ LoginResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과인지입니다(`AccountProtocol::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const;
     };
 } // namespace sw
 
@@ -209,6 +215,9 @@ namespace sw
         AccountLinkSummary _summary{};
         PROPERTY()
         LoginResult _result{ LoginResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과인지입니다(`AccountProtocol::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const;
     };
 } // namespace sw
 
@@ -270,5 +279,27 @@ namespace sw
                                                 AccountRevokedPush, AccountUpdateDetail>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+
+        /**
+         * @brief @p result 가 같은 멱등 키로 다시 시도할 결과(저장소 · 제공자 일시 장애, 시간이 지나면 풀리는 잠금 · 제한)인지입니다.
+         * @details 서버는 이 결과를 멱등 응답으로 기억하지 않는다(`NetResponseRetention::Forget`) — 기억하면 같은 키의 재시도가 서비스에 닿지 못하고 같은 답을 받는다. 응답 형식 셋이 함께 쓴다.
+         */
+        [[nodiscard]] static constexpr bool isRetryable( LoginResult result )
+        {
+            return result == LoginResult::StoreUnavailable || result == LoginResult::ProviderUnavailable || result == LoginResult::RateLimited || result == LoginResult::AccountLocked;
+        }
     };
+
+    inline bool AccountGrantReply::isRetryable() const
+    {
+        return AccountProtocol::isRetryable( _result );
+    }
+    inline bool AccountTicketReply::isRetryable() const
+    {
+        return AccountProtocol::isRetryable( _result );
+    }
+    inline bool AccountLinkReply::isRetryable() const
+    {
+        return AccountProtocol::isRetryable( _result );
+    }
 } // namespace sw

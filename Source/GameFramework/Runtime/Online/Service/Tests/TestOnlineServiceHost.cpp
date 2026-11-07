@@ -100,14 +100,14 @@ namespace
                 case Internal::kEcho:
                 {
                     answer.writeVarUint( body.readVarUint() );
-                    (void)host.respondOk( context._token, answer );
+                    (void)host.respondOk( context._token, answer, NetResponseRetention::Remember );
                     break;
                 }
                 case Internal::kLogin:
                 {
                     const AccountID accountID = body.readVarUint();
                     if ( host.bindAccount( context._connection, accountID ) )
-                        (void)host.respondOk( context._token, answer );
+                        (void)host.respondOk( context._token, answer, NetResponseRetention::Remember );
                     else
                         (void)host.respondError( context._token, OnlineError::kConflict );
                     break;
@@ -125,7 +125,7 @@ namespace
                 default:
                 {
                     answer.writeVarUint( context._accountID );
-                    (void)host.respondOk( context._token, answer );
+                    (void)host.respondOk( context._token, answer, NetResponseRetention::Remember );
                     break;
                 }
             }
@@ -138,7 +138,7 @@ namespace
                 return;
             for ( const NetRequestToken& token : _listLateToken )
             {
-                _listLateAnswer.push_back( host.respondOk( token, BitWriter{} ) ? SW_TRUE : SW_FALSE );
+                _listLateAnswer.push_back( host.respondOk( token, BitWriter{}, NetResponseRetention::Remember ) ? SW_TRUE : SW_FALSE );
             }
             _listLateToken.clear();
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
@@ -831,9 +831,9 @@ SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseA
     client._client.shutdown();
     rig.step( 4 );
     SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
-    SW_EXPECT_TRUE( rig._host.respondOk( held, BitWriter{} ) );                           // 처리는 끝났다(멱등 기억은 남는다) — 닫힌 연결이라 엔드포인트가 보내지 않는다
-    SW_EXPECT_FALSE( rig._host.respondOk( held, BitWriter{} ) );                          // 한 번만
-    SW_EXPECT_TRUE( orphan._bAnswered && orphan._status == NetRequestStatus::Cancelled ); // 클라이언트는 내릴 때 끝냈다
+    SW_EXPECT_TRUE( rig._host.respondOk( held, BitWriter{}, NetResponseRetention::Remember ) );  // 처리는 끝났다(멱등 기억은 남는다) — 닫힌 연결이라 엔드포인트가 보내지 않는다
+    SW_EXPECT_FALSE( rig._host.respondOk( held, BitWriter{}, NetResponseRetention::Remember ) ); // 한 번만
+    SW_EXPECT_TRUE( orphan._bAnswered && orphan._status == NetRequestStatus::Cancelled );        // 클라이언트는 내릴 때 끝냈다
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, UnbindAccountClosesTheConnectionAndTellsEveryService )

@@ -171,10 +171,10 @@ namespace
         }
 
         /** @brief 맨 요청 하나를 보내고 답을 받습니다. 몸은 쓴 그대로 간다. */
-        RawResponseSink sendRaw( int32 index, uint16 method, const BitWriter& body )
+        RawResponseSink sendRaw( int32 index, uint16 method, const BitWriter& body, const NetRequestOptions& options = NetRequestOptions{} )
         {
             RawResponseSink sink;
-            (void)getClient( index ).sendRequest( method, body, NetRequestOptions{}, OnlineResponseDelegate::create<&RawResponseSink::onResponse>( &sink ) );
+            (void)getClient( index ).sendRequest( method, body, options, OnlineResponseDelegate::create<&RawResponseSink::onResponse>( &sink ) );
             pump();
             SW_EXPECT_EQUAL( 1, sink._count );
             return sink;
@@ -189,6 +189,17 @@ namespace
             const vector<uint8> listByte( static_cast<size_t>( byteCount ), uint8( 0xFF ) );
             BitWriter           writer;
             writer.writeBytes( listByte.data(), byteCount );
+            return writer;
+        }
+
+        /** @brief 정상 로그인 몸입니다. */
+        static BitWriter makeLogin( string_view name )
+        {
+            AccountLoginRequest request;
+            request._loginName = string( name );
+            request._password  = kPassword;
+            BitWriter writer;
+            SW_EXPECT_TRUE( AccountProtocol::MessageTypes::write( writer, request ) );
             return writer;
         }
 
@@ -595,4 +606,26 @@ SW_TEST_CASE( AccountServerTest, GameTicketNeedsASession )
     const AccountClientReply reply = rig.take( client );
     SW_EXPECT_TRUE( reply._result == LoginResult::Ok );
     SW_EXPECT_TRUE( reply._ticket._expiresAtMs > kNowMs );
+}
+
+/** @brief [AccountServerTest] 다시 시도할 결과는 멱등 응답으로 기억하지 않는다 — 저장소 오류 뒤 같은 키의 재시도가 서비스에 닿아 로그인된다. 판정은 `AccountProtocol::isRetryable` 하나다 */
+SW_TEST_CASE( AccountServerTest, RetryableResultReachesTheServiceAgain )
+{
+    SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::StoreUnavailable ) );
+    SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::ProviderUnavailable ) );
+    SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::RateLimited ) );
+    SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::AccountLocked ) );
+    SW_EXPECT_FALSE( AccountProtocol::isRetryable( LoginResult::Ok ) );
+    SW_EXPECT_FALSE( AccountProtocol::isRetryable( LoginResult::WrongCredentials ) );
+    SW_EXPECT_TRUE( ( AccountGrantReply{ LoginGrant{}, LoginResult::ProviderUnavailable } ).isRetryable() );
+
+    AccountServerRig  rig;
+    const int32       client    = rig.addClient();
+    const AccountID   accountID = rig.registerAccount( client, "alice_01" );
+    NetRequestOptions options;
+    options._idempotencyKey = NetIdempotencyKey::makeRandom();
+    rig._pRig->_database.armFault( ServiceStoreFault::RejectRead );
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.sendRaw( client, AccountMethod::kLogin, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kOk, rig.sendRaw( client, AccountMethod::kLogin, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode ); // 기억했다면 같은 오류다
+    SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }
