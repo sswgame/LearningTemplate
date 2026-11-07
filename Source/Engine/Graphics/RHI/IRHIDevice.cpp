@@ -479,9 +479,14 @@ namespace sw
         _bSoftwareAdapter = SW_FALSE;
         if ( engine::areEngineServicesBound() )
         {
-            bool bCLIVSync{ false };
-            if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::VSYNC, bCLIVSync ) )
+            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+            bool                      bCLIVSync{ false };
+            if ( commandLine.getArgument( CommandLineArgument::VSYNC, bCLIVSync ) )
                 swapChainDesc._bVSync = bCLIVSync;
+            // 시나리오 재생은 시간을 프레임마다 고정해 흘리므로 모니터 주사율에 묶을 까닭이 없다 — 지켜보는 실행도 기계가 내는 만큼 빨리 돈다(언리얼 `-benchmark` · 유니티 배치 실행과 같다).
+            // `-vsync` 를 적으면 그 값이 이긴다. 녹화(`-scenario-record`)는 사람이 실시간으로 하므로 그대로다.
+            else if ( commandLine.isArgumentProvided( CommandLineArgument::SCENARIO ) )
+                swapChainDesc._bVSync = false;
         }
         // 채택값을 디바이스에 되돌려 적는다. 프레젠트 경로(`RenderThread`)가 이것을 읽는다.
         _bPreferredVSync = swapChainDesc._bVSync;

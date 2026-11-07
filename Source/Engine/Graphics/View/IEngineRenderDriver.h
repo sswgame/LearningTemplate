@@ -63,8 +63,8 @@ namespace sw
 
         /** @brief 시나리오 실행의 사진 준비를 켭니다(`RenderThread::setScenarioCaptureEnabled`). */
         virtual void setScenarioCaptureEnabled( bool bEnabled ) = 0;
-        /** @brief Present 를 건너뜁니다(무인 실행, `RenderThread::setPresentSkipped`). */
-        virtual void setPresentSkipped( bool bSkipped ) = 0;
+        /** @brief 그린 프레임 @p interval 개마다 하나만 내보냅니다(0 = 내보내지 않음 — 무인 실행, `RenderThread::setPresentInterval`). */
+        virtual void setPresentInterval( uint32 interval ) = 0;
         /** @brief 씬 @p pManager 의 주 화면 캡처까지 남은 일 수입니다(`CaptureReadiness::countPendingWork`). */
         [[nodiscard]] virtual uint32 countPendingCaptureWork( const GameObjectManager* pManager ) const = 0;
     };

@@ -229,6 +229,8 @@ namespace sw
         , _screenshotWaitStartMicroseconds{ 0 }
         , _budgetFrameCounter{ 0 }
         , _bScenarioCaptureEnabled{ false }
+        , _presentInterval{ 1u }
+        , _presentFrameCounter{ 0 }
         , _scenePendingMutex{}
         , _arrScenePending{}
         , _scenePendingCount{ 0 }
@@ -728,7 +730,9 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.Present" );
             // VSync 는 **디바이스가 채택한 값**이다. 여기 true 를 고정해 두면 EngineConfig 의
             // `_window._bVSync` 와 CLI `-vsync` 가 둘 다 무시되고 프레임이 모니터 주사율에 묶인다.
-            _pDevice->endFrame( _pDevice->isVSyncEnabled(), _bPresentSkipped.load( std::memory_order_acquire ) == false );
+            const uint32 presentInterval = _presentInterval.load( std::memory_order_acquire );
+            _presentFrameCounter         = presentInterval == 0 ? 0 : ( _presentFrameCounter + 1 ) % presentInterval;
+            _pDevice->endFrame( _pDevice->isVSyncEnabled(), presentInterval != 0 && _presentFrameCounter == 0 );
         }
         // 외부 프로파일러(Tracy)의 렌더 스레드 프레임 경계다. 주 프레임(게임 스레드)과 주기가 달라 이름을 따로 둔다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();

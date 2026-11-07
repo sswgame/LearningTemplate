@@ -44,6 +44,13 @@ namespace sw
         constexpr string_view kStageResetSceneName = "AutomationStageReset";
     } // namespace
 
+    /**
+     * @brief `-gv_scenarioPresentInterval=<N>`: 지켜보는 시나리오(창이 보이는 실행)가 그린 프레임 N 개마다 하나만 화면에 내보낸다(1 = 매 프레임) — 시나리오 배속.
+     * @details 그리기 · 사진 · 판정은 매 프레임 그대로이고 내보내기(DWM 합성 · VSync 대기)만 준다. 표시 경로를 보는 시나리오(`present="true"`)는 늘 매 프레임이다.
+     *          게임 시간 배율(`gv_timeScale`)은 프레임마다 흘리는 시간을 바꿔 대기 프레임 · 골든이 달라지므로 배속으로 쓰지 않는다(언리얼 `-benchmark` · 유니티 `captureFramerate` 도 시간은 고정하고 루프만 빨리 돈다).
+     */
+    SW_GLOBAL_VARIABLE( int32, gv_scenarioPresentInterval, 1, "Watched scenario runs present one of every N drawn frames (1 = every frame) - scenario fast-forward" );
+
     AutomationSession::AutomationSession()
         : _pRunner{ nullptr }
         , _pChain{ nullptr }
@@ -138,9 +145,12 @@ namespace sw
     {
         if ( _pRenderDriver == nullptr || _pRunner == nullptr )
             return;
-        // 보는 사람이 없으면 내보내지 않는다(그림 · 사진은 같다). 표시 경로를 보는 시나리오는 내보낸다. 지켜보는 실행(-unattended 없음)은 늘 보인다.
-        const bool bPresentSkipped = _bUnattended && _pRunner->getScenario().getTestOptions()._bPresents == false;
-        _pRenderDriver->setPresentSkipped( bPresentSkipped );
+        // 보는 사람이 없으면 내보내지 않는다(그림 · 사진은 같다). 표시 경로를 보는 시나리오는 매 프레임 내보낸다. 지켜보는 실행(-unattended 없음)은 늘 보이고
+        // `gv_scenarioPresentInterval` 프레임마다 내보낸다(배속 — `begin` 이 1 이상인지 확인했다).
+        const bool   bPresents       = _pRunner->getScenario().getTestOptions()._bPresents;
+        const bool   bPresentSkipped = _bUnattended && bPresents == false;
+        const uint32 presentInterval = bPresentSkipped ? 0u : ( bPresents ? 1u : static_cast<uint32>( gv_scenarioPresentInterval ) );
+        _pRenderDriver->setPresentInterval( presentInterval );
         // 무인 실행은 창도 띄우지 않는다(App 이 띄우지 않았다 — 언리얼 -RenderOffScreen). 내보내는 단계만 메인 창을 보이고, 다음 단계가 다시 정한다.
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         if ( _bUnattended && pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
@@ -149,6 +159,11 @@ namespace sw
 
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
     {
+        if ( gv_scenarioPresentInterval < 1 )
+        {
+            SW_LOG_ERROR_ID( "AutomationSession.PresentIntervalInvalid", "[Scenario] gv_scenarioPresentInterval=%# must be 1 or more (1 = present every frame)", gv_scenarioPresentInterval );
+            return false;
+        }
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
         if ( const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )

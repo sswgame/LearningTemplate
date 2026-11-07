@@ -130,10 +130,10 @@ namespace sw
             _pRenderThread->setScenarioCaptureEnabled( bEnabled );
     }
 
-    void EngineRenderDriver::setPresentSkipped( const bool bSkipped )
+    void EngineRenderDriver::setPresentInterval( const uint32 interval )
     {
         if ( _pRenderThread != nullptr )
-            _pRenderThread->setPresentSkipped( bSkipped );
+            _pRenderThread->setPresentInterval( interval );
     }
 
     uint32 EngineRenderDriver::countPendingCaptureWork( const GameObjectManager* pManager ) const

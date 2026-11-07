@@ -156,7 +156,7 @@ namespace sw
         bool _bRequiresEditor{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         /**
          * @brief 무인 실행(`-unattended`)에서도 그린 프레임을 화면에 내보내는 시나리오입니다(루트 `present="true"`). 표시 경로 자체(스왑체인 획득 · 표시 · 크기 · 최소화)를 보는 시나리오가 쓴다.
-         * @details 무인 실행은 기본으로 내보내지 않는다(`RenderThread::setPresentSkipped` — 언리얼 -RenderOffScreen 자리). 그 길만 도는 체인은 표시 경로를 한 번도 지나지 않는다.
+         * @details 무인 실행은 기본으로 내보내지 않는다(`RenderThread::setPresentInterval( 0 )` — 언리얼 -RenderOffScreen 자리). 그 길만 도는 체인은 표시 경로를 한 번도 지나지 않는다.
          */
         bool _bPresents{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         /**

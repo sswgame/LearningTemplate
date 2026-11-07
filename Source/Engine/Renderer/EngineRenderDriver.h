@@ -59,7 +59,7 @@ namespace sw
         [[nodiscard]] std::optional<ProcessExitCode> findCaptureExitCode() const override;
         [[nodiscard]] bool                           applyPendingBackendChange() override;
         void                                         setScenarioCaptureEnabled( bool bEnabled ) override;
-        void                                         setPresentSkipped( bool bSkipped ) override;
+        void                                         setPresentInterval( uint32 interval ) override;
         [[nodiscard]] uint32                         countPendingCaptureWork( const GameObjectManager* pManager ) const override;
 
     private:

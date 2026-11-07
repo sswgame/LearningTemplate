@@ -125,10 +125,11 @@ namespace sw
         /** @brief 자동화 시나리오 동안 Present 캡처를 켜 둡니다(`<Screenshot>` 이 화면에 나간 이미지를 캡처합니다). 게임 스레드에서 부릅니다. */
         void setScenarioCaptureEnabled( bool bEnabled ) { _bScenarioCaptureEnabled.store( bEnabled, std::memory_order_release ); }
         /**
-         * @brief 그린 프레임을 화면에 내보내지 않게 합니다(무인 시나리오 — 언리얼 자동화의 `-RenderOffScreen` 자리). 게임 스레드에서 부릅니다.
-         * @details 그리기 · Present 캡처(사진은 캡처 사본에서 읽는다)는 그대로라 그림이 바뀌지 않고, 내보내기(DWM 합성 대기)만 빠진다 — 편집기 체인 92 → 64 초(Release).
+         * @brief 그린 프레임 @p interval 개마다 하나만 화면에 내보냅니다(0 = 내보내지 않음 — 무인 시나리오, 언리얼 자동화의 `-RenderOffScreen` 자리 · 1 = 매 프레임 · N = 지켜보는 시나리오의 배속). 게임 스레드에서 부릅니다.
+         * @details 그리기 · Present 캡처(사진은 캡처 사본에서 읽는다)는 매 프레임 그대로라 그림이 바뀌지 않고, 내보내기(DWM 합성 · VSync 대기)만 준다 — 편집기 체인 92 → 64 초(Release, 0).
+         *          세는 쪽은 렌더 스레드다(게임 스레드가 프레임마다 켜고 끄면 한 프레임 늦게 도는 렌더 스레드와 어긋난다).
          */
-        void setPresentSkipped( bool bSkipped ) { _bPresentSkipped.store( bSkipped, std::memory_order_release ); }
+        void setPresentInterval( uint32 interval ) { _presentInterval.store( interval, std::memory_order_release ); }
 
         /**
          * @brief 다음에 그리는 프레임의 이미지를 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM 입니다. 어느 스레드에서 불러도 됩니다.
@@ -225,14 +226,15 @@ namespace sw
         StopSource                             _stop;          ///< 렌더 스레드를 멈추라는 신호(다시 시작하면 새 원천으로 바꾼다)
         atomic<bool>                           _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
-        uint8        _bLastImmediateSubmit : 1;
-        uint8        _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.
-        uint32       _screenshotFrameCounter;          ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
-        uint32       _screenshotShotCount;             ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
-        int64        _screenshotWaitStartMicroseconds; ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
-        uint32       _budgetFrameCounter;              ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
-        atomic<bool> _bScenarioCaptureEnabled;         ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
-        atomic<bool> _bPresentSkipped{ false };        ///< 그린 프레임을 화면에 내보내지 않는다(`setPresentSkipped` — 무인 시나리오)
+        uint8          _bLastImmediateSubmit : 1;
+        uint8          _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.
+        uint32         _screenshotFrameCounter;          ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
+        uint32         _screenshotShotCount;             ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
+        int64          _screenshotWaitStartMicroseconds; ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
+        uint32         _budgetFrameCounter;              ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
+        atomic<bool>   _bScenarioCaptureEnabled;         ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
+        atomic<uint32> _presentInterval;                 ///< 그린 프레임 몇 개마다 하나를 내보내는가(`setPresentInterval` — 0 = 내보내지 않음)
+        uint32         _presentFrameCounter;             ///< 내보내기 간격을 세는 렌더 스레드의 그린 프레임 수
         /** @brief 지난 프레임에 그린 씬 하나의 빠뜨린 배치 수입니다(`findPendingMaterialPSOBatchCount`). */
         struct ScenePendingJob
         {
