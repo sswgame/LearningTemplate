@@ -5,9 +5,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
-#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Asset/Cook/PackReachability.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Content/Pack/PackConfig.h"
 
 using namespace sw;

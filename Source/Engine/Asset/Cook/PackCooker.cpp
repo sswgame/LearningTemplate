@@ -12,7 +12,6 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackReachability.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
@@ -20,6 +19,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Content/Pack/PackWriter.h"

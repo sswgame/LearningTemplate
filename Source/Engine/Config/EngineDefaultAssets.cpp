@@ -4,9 +4,9 @@
 
 #include "Core/Foundation/BuildInfo.h"
 
-#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"

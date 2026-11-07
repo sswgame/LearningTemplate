@@ -6,7 +6,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/Cook/AssetCookRoot.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Physics/IPhysicsScene.h"

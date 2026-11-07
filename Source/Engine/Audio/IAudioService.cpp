@@ -11,13 +11,13 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Scene/SceneManager.h"
 
