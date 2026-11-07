@@ -643,3 +643,14 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
     SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.sendRaw( kBobSlot, TradeMethod::kLock, TradeServerTestUtil::makeJunk( 4 ) )._errorCode ); // 몸을 읽기 전에 막는다
     SW_EXPECT_EQUAL( 1, rig._tradeService.getOpenTradeCount() );
 }
+
+/** @brief [TradeServerTest] 다시 시도할 결과(저장소 일시 장애 — `TradeReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 거래 명령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+SW_TEST_CASE( TradeServerTest, RetryableReplyReachesTheServiceAgain )
+{
+    test::ReplyRetentionRig<TradeProtocol, TradeReply> rig;
+    TradeReply                                         finished;
+    finished._result = TradeResult::Ok;
+    TradeReply unavailable;
+    unavailable._result = TradeResult::Unavailable;
+    rig.expectRetryReachesService( TradeMethod::kInvite, unavailable, finished );
+}

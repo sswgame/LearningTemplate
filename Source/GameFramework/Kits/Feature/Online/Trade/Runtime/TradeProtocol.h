@@ -158,6 +158,9 @@ namespace sw
         vector<TradeBalance> _listBalance{}; ///< 상한은 양쪽 항목 수(`TradeConstant::kMaxLegsPerSide` 의 두 배)이다
         PROPERTY()
         TradeResult _result{ TradeResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과(저장소 일시 장애)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
+        [[nodiscard]] bool isRetryable() const { return _result == TradeResult::Unavailable; }
     };
 } // namespace sw
 

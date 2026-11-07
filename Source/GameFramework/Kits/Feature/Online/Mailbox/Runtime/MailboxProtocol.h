@@ -145,6 +145,9 @@ namespace sw
         int32 _claimedCount{ 0 };
         PROPERTY()
         MailboxResult _result{ MailboxResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과(버전 충돌 · 일시 장애)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
+        [[nodiscard]] bool isRetryable() const { return _result == MailboxResult::Busy || _result == MailboxResult::Unavailable; }
     };
 } // namespace sw
 

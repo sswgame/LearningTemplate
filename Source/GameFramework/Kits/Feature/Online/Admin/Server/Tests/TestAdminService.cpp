@@ -4,12 +4,14 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
 #include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
 using namespace sw;
@@ -496,4 +498,18 @@ SW_TEST_CASE( AdminServiceTest, ShutdownDrainsForwardedCalls )
     rig._service.shutdown();
     SW_EXPECT_TRUE( rig.take()._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCallCount() );
+}
+
+/** @brief [AdminServiceTest] 다시 시도할 결과(버전 충돌 · 일시 장애 — `AdminReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 지급 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+SW_TEST_CASE( AdminServiceTest, RetryableReplyReachesTheServiceAgain )
+{
+    test::ReplyRetentionRig<AdminProtocol, AdminReply> rig;
+    AdminReply                                         finished;
+    finished._result = AdminResult::Ok;
+    AdminReply busy;
+    busy._result = AdminResult::Busy;
+    rig.expectRetryReachesService( AdminMethod::kAdjustAsset, busy, finished );
+    AdminReply unavailable;
+    unavailable._result = AdminResult::Unavailable;
+    rig.expectRetryReachesService( AdminMethod::kAdjustAsset, unavailable, finished );
 }

@@ -763,8 +763,7 @@ namespace sw
 
     void EconomyService::completeCall( uint64 callID, const EconomyReply& reply )
     {
-        // 다시 시도할 결과는 요청 층이 기억하지 않는다 — 기억하면 같은 키의 재시도가 서비스에 닿지 못하고 같은 대기를 받는다. 모르는 id 는 표가 경고한다.
-        (void)_calls.finish( callID, reply, reply.isRetryable() ? NetResponseRetention::Forget : NetResponseRetention::Remember );
+        (void)_calls.finish( callID, reply ); // 다시 시도할 결과(EconomyReply::isRetryable)는 표가 기억하지 않게 응답한다. 모르는 id 는 표가 경고한다
     }
 } // namespace sw
 

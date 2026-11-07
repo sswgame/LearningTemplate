@@ -195,22 +195,26 @@ namespace sw
         bool respondOk( const NetRequestToken& token, const BitWriter& body, NetResponseRetention retention = NetResponseRetention::Remember );
         /**
          * @brief @p message 를 키트 메시지 목록 @p TMessages 로 써서 성공 응답으로 보냅니다. 범위 밖 값이 있어 쓰지 못하면 `kInternal` 오류로 응답합니다.
-         * @details 쓰기가 범위 밖 값을 로그에 남기며, 고칠 곳은 그 값을 만든 서버 코드입니다. 키트 서버가 응답 메시지를 보내는 길은 이것 하나입니다.
-         * @param retention 다시 시도할 결과(대기 · 충돌 · 일시 장애)면 `Forget` — 같은 멱등 키의 재시도가 서비스에 다시 닿는다(`NetResponseRetention`).
+         * @details 쓰기가 범위 밖 값을 로그에 남기며, 고칠 곳은 그 값을 만든 서버 코드입니다. 결과 칸(`_result`)이 없는 메시지(상태 · 목록)를 보내는 길이며, 멱등 키가 있으면 응답을 기억합니다.
+         *          키트 결과가 있는 응답은 `respondReply` 로 보낸다 — 다시 시도할 결과를 기억하지 않는 규칙이 그쪽에 있다.
          * @return 메시지를 썼으면 true 입니다. 연결이 그사이 닫혀 응답이 버려졌어도 true 입니다.
          */
         template <typename TMessages, typename TMessage>
-        bool respondMessage( const NetRequestToken& token, const TMessage& message, NetResponseRetention retention = NetResponseRetention::Remember )
+        bool respondMessage( const NetRequestToken& token, const TMessage& message )
         {
-            BitWriter body;
-            if ( TMessages::write( body, message ) == false )
-            {
-                (void)respondError( token, OnlineError::kInternal );
-                return false;
-            }
-            (void)respondOk( token, body, retention );
-            return true;
+            return writeAndRespond<TMessages>( token, message, NetResponseRetention::Remember );
         }
+        /**
+         * @brief 키트 응답 @p reply(결과 칸 `_result` 와 `isRetryable()` 을 가진다)를 성공 응답으로 보냅니다. 쓰기 규칙은 `respondMessage` 와 같습니다.
+         * @details `reply.isRetryable()` 이면(대기 · 충돌 · 일시 장애 — 같은 멱등 키로 다시 시도하라는 결과) 응답을 기억하지 않아(`NetResponseRetention::Forget`) 재시도가 서비스에 다시 닿는다.
+         *          재시도 대상은 키트가 응답 형식의 멤버로 정하고, 서버는 그 판정을 여기 한 곳에서만 쓴다 — 키트마다 손으로 넘기면 빠뜨린 키트의 재시도가 영원히 같은 답을 받는다.
+         */
+        template <typename TMessages, typename TReply>
+        bool respondReply( const NetRequestToken& token, const TReply& reply )
+        {
+            return writeAndRespond<TMessages>( token, reply, reply.isRetryable() ? NetResponseRetention::Forget : NetResponseRetention::Remember );
+        }
+        /** @brief 공통 오류로 응답합니다. 다시 시도할 오류(`OnlineError::isRetryable`)는 멱등 키가 있어도 기억하지 않습니다. */
         bool respondError( const NetRequestToken& token, uint16 errorCode, const BitWriter* pDetail = nullptr );
 
         // 계정과 연결을 잇는다. 계정 키트가 로그인과 재접속 때 부른다.
@@ -280,7 +284,20 @@ namespace sw
          * @brief `[kVersionMismatch u16][서버 스키마 해시 u64]` 로 답합니다. 둘 다 리틀 엔디언 고정 형식입니다.
          * @details `respondError` 는 자세한 몸을 `BitWriter` 로 받아 비트 배치를 그 형식에 맡깁니다. 이 답은 어느 빌드도 바이트로 읽어야 하므로 `LittleEndianUtil` 로 직접 씁니다.
          */
-        void                  respondVersionMismatch( const NetRequestToken& token );
+        void respondVersionMismatch( const NetRequestToken& token );
+        /** @brief `respondMessage` · `respondReply` 의 몸입니다. 쓰지 못하면 `kInternal` 오류로 응답하고 false 입니다. */
+        template <typename TMessages, typename TMessage>
+        bool writeAndRespond( const NetRequestToken& token, const TMessage& message, NetResponseRetention retention )
+        {
+            BitWriter body;
+            if ( TMessages::write( body, message ) == false )
+            {
+                (void)respondError( token, OnlineError::kInternal );
+                return false;
+            }
+            (void)respondOk( token, body, retention );
+            return true;
+        }
         IOnlineServerService* findService( uint16 method ) const;
         bool                  sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
         void                  dispatchServerBusMessage( const ServerBusMessage& message );

@@ -4,10 +4,12 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
 using namespace sw;
@@ -205,4 +207,18 @@ SW_TEST_CASE( MailboxServiceTest, NeedsStore )
     SW_EXPECT_LOG( "MailboxService.MailboxServiceNeedsStore" );
     MailboxService service;
     SW_EXPECT_FALSE( service.initialize( nullptr, MailboxServiceConfig{} ) );
+}
+
+/** @brief [MailboxServiceTest] 다시 시도할 결과(버전 충돌 · 일시 장애 — `MailboxReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 수령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+SW_TEST_CASE( MailboxServiceTest, RetryableReplyReachesTheServiceAgain )
+{
+    test::ReplyRetentionRig<MailboxProtocol, MailboxReply> rig;
+    MailboxReply                                           finished;
+    finished._result = MailboxResult::Ok;
+    MailboxReply busy;
+    busy._result = MailboxResult::Busy;
+    rig.expectRetryReachesService( MailboxMethod::kClaim, busy, finished );
+    MailboxReply unavailable;
+    unavailable._result = MailboxResult::Unavailable;
+    rig.expectRetryReachesService( MailboxMethod::kClaim, unavailable, finished );
 }

@@ -408,7 +408,8 @@ namespace sw
         LittleEndianUtil::appendUint16( _responseBytes, errorCode );
         if ( pDetail != nullptr )
             _responseBytes.insert( _responseBytes.end(), pDetail->getBytes().begin(), pDetail->getBytes().begin() + pDetail->getByteCount() );
-        return _requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ) );
+        const NetResponseRetention retention = OnlineError::isRetryable( errorCode ) ? NetResponseRetention::Forget : NetResponseRetention::Remember; // 다시 하라는 오류를 기억하면 같은 키의 재시도가 같은 오류만 받는다
+        return _requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ), retention );
     }
 
     bool OnlineServiceHost::bindAccount( StreamConnectionHandle connection, AccountID accountID )

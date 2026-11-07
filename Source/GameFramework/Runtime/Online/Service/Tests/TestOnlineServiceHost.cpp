@@ -37,6 +37,7 @@ namespace
         static constexpr uint16 kSecure = 3; ///< 로그인 필요
         static constexpr uint16 kLate   = 4; ///< 로그인 필요 — 다음 서비스 틱에 답한다
         static constexpr uint16 kCount  = 5; ///< 로그인 필요 — 처리기를 센다(멱등)
+        static constexpr uint16 kFail   = 6; ///< 로그인 필요 — 서비스의 `_failErrorCode` 로 오류 응답한다(멱등 오류 보존)
     };
 
     using Internal = OnlineServiceHostTestInternal;
@@ -68,7 +69,8 @@ namespace
         OnlineServiceExposure      _exposure{ OnlineServiceExposure::Player }; ///< 테스트가 바꾼다(GM 리슨 테스트)
         int32                      _handledCount{ 0 };
         int32                      _hostShutdownCount{ 0 };
-        int32                      _cacheReplyCountAtHostShutdown{ -1 }; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
+        uint16                     _failErrorCode{ OnlineError::kUnavailable }; ///< `kFail` 메서드가 내는 오류(테스트가 바꾼다)
+        int32                      _cacheReplyCountAtHostShutdown{ -1 };        ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
         uint8                      _bReadCacheOnTick : 1;
         uint8                      _bHoldLateAnswers : 1; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
         explicit FakeOnlineService( const OnlineProtocolEntry& protocol )
@@ -113,6 +115,11 @@ namespace
                 case Internal::kLate:
                 {
                     _listLateToken.push_back( context._token );
+                    break;
+                }
+                case Internal::kFail:
+                {
+                    (void)host.respondError( context._token, _failErrorCode );
                     break;
                 }
                 default:
@@ -893,6 +900,27 @@ SW_TEST_CASE( OnlineServiceHostTest, RetryWithTheSameIdempotencyKeyRunsTheHandle
     SW_EXPECT_TRUE( rig.call( client, Internal::kRangeB + Internal::kCount, 0, options )._status == NetRequestStatus::Ok );
     SW_EXPECT_TRUE( rig.call( client, Internal::kRangeB + Internal::kCount, 0, options )._status == NetRequestStatus::Ok );
     SW_EXPECT_EQUAL( before + 1, rig._serviceB._handledCount );
+}
+
+/** @brief [OnlineServiceHostTest] 다시 시도할 공통 오류(`OnlineError::isRetryable` — 일시 장애)는 기억하지 않아 같은 키의 재시도가 서비스에 다시 닿고, 끝난 오류는 기억한다 */
+SW_TEST_CASE( OnlineServiceHostTest, RetryableErrorIsNotRememberedForTheSameKey )
+{
+    HostRig    rig;
+    ClientSide client( rig._network, rig.getPort() );
+    rig._listClient.push_back( &client );
+    rig.step( 10 );
+    (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 11 );
+    NetRequestOptions options;
+    options._idempotencyKey = NetIdempotencyKey::makeRandom();
+    const int32 before      = rig._serviceB._handledCount;
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.call( client, Internal::kRangeB + Internal::kFail, 0, options )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.call( client, Internal::kRangeB + Internal::kFail, 0, options )._errorCode );
+    SW_EXPECT_EQUAL( before + 2, rig._serviceB._handledCount ); // 일시 장애는 기억하지 않았다
+
+    rig._serviceB._failErrorCode = OnlineError::kForbidden;
+    SW_EXPECT_EQUAL( OnlineError::kForbidden, rig.call( client, Internal::kRangeB + Internal::kFail, 0, options )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kForbidden, rig.call( client, Internal::kRangeB + Internal::kFail, 0, options )._errorCode );
+    SW_EXPECT_EQUAL( before + 3, rig._serviceB._handledCount ); // 끝난 오류는 기억한 답이다
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingService )

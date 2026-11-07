@@ -64,8 +64,8 @@ namespace sw
     /**
      * @class ServiceServerCallTable
      * @brief 서비스 하나의 대기 요청 표입니다.
-     * @tparam TReply        응답 메시지입니다. 결과 열거형 칸 `_result` 가 있어야 합니다(지표의 결과 번호).
-     * @tparam TMessageTypes 호스트 경로의 응답을 쓰는 키트 메시지 목록입니다(`OnlineServiceHost::respondMessage`).
+     * @tparam TReply        응답 메시지입니다. 결과 열거형 칸 `_result`(지표의 결과 번호)와 재시도 판정 `isRetryable()` 이 있어야 합니다.
+     * @tparam TMessageTypes 호스트 경로의 응답을 쓰는 키트 메시지 목록입니다(`OnlineServiceHost::respondReply`).
      * @tparam TExtra        키트가 요청마다 더 드는 칸입니다. 기본 생성할 수 있어야 합니다.
      */
     template <typename TReply, typename TMessageTypes, typename TExtra = ServiceCallNoExtra>
@@ -96,10 +96,10 @@ namespace sw
                 return origin;
             }
 
-            void respond( const TReply& reply, NetResponseRetention retention ) const
+            void respond( const TReply& reply ) const
             {
                 if ( _pHost != nullptr )
-                    (void)_pHost->respondMessage<TMessageTypes>( _token, reply, retention ); // 연결이 그사이 닫혔으면 호스트가 버린다
+                    (void)_pHost->respondReply<TMessageTypes>( _token, reply ); // 다시 시도할 결과는 기억하지 않는다. 연결이 그사이 닫혔으면 호스트가 버린다
                 else if ( _onReply.isBound() )
                     _onReply( reply );
             }
@@ -154,9 +154,9 @@ namespace sw
 
         /**
          * @brief 호출을 표에서 빼고 @p reply 로 응답한 뒤 지표를 셉니다. 모르는 id 면 경고(`ServiceServerCallTable.UnknownCall`)를 남기고 false 입니다.
-         * @param retention 다시 시도할 결과면 `Forget` 입니다(`NetResponseRetention`).
+         * @details `reply.isRetryable()` 이면 요청 층이 응답을 기억하지 않아 같은 멱등 키의 재시도가 서비스에 다시 닿는다(`OnlineServiceHost::respondReply`).
          */
-        bool finish( uint64 callID, const TReply& reply, NetResponseRetention retention = NetResponseRetention::Remember )
+        bool finish( uint64 callID, const TReply& reply )
         {
             for ( size_t callIndex = 0; callIndex < _listCall.size(); ++callIndex )
             {
@@ -164,7 +164,7 @@ namespace sw
                     continue;
                 const Call call = _listCall[callIndex];
                 _listCall.erase( _listCall.begin() + static_cast<ptrdiff_t>( callIndex ) );
-                call._origin.respond( reply, retention );
+                call._origin.respond( reply );
                 _metrics.observeRequest( call._methodIndex, static_cast<int32>( reply._result ), call._receivedNanoseconds );
                 return true;
             }

@@ -104,6 +104,9 @@ namespace sw
         int64 _score{ 0 }; ///< kSubmitScore 에서 적용한 뒤의 값이다
         PROPERTY()
         LeaderboardResult _result{ LeaderboardResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과(일시 장애 · 경합)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
+        [[nodiscard]] bool isRetryable() const { return _result == LeaderboardResult::Unavailable || _result == LeaderboardResult::Conflict; }
     };
 } // namespace sw
 

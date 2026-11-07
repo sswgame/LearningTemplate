@@ -67,7 +67,7 @@ namespace sw
             {
                 LeaderboardReply reply;
                 reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다. 클라이언트가 낼 수 있는 보드가 아니면 거절한다
-                (void)host.respondMessage<LeaderboardProtocol::MessageTypes>( context._token, reply );
+                (void)host.respondReply<LeaderboardProtocol::MessageTypes>( context._token, reply );
                 return;
             }
         }
@@ -155,7 +155,7 @@ namespace sw
             reply._listStat        = std::move( completion._listStat );
             reply._listAchievement = std::move( completion._listAchievement );
             reply._listProgress    = std::move( completion._listProgress );
-            (void)host.respondMessage<LeaderboardProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
+            (void)host.respondReply<LeaderboardProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
         }
 
         _listUnlockScratch.clear();

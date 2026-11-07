@@ -243,7 +243,7 @@ namespace sw
 
     void TradeServer::respond( OnlineServiceHost& host, const NetRequestToken& token, const TradeReply& reply )
     {
-        (void)host.respondMessage<TradeProtocol::MessageTypes>( token, reply );
+        (void)host.respondReply<TradeProtocol::MessageTypes>( token, reply );
     }
 
     void TradeServer::collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )

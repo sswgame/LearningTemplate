@@ -152,6 +152,9 @@ namespace sw
         AccountID _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
         PROPERTY()
         SocialResult _result{ SocialResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과(일시 장애 · 경합)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
+        [[nodiscard]] bool isRetryable() const { return _result == SocialResult::Unavailable || _result == SocialResult::Conflict; }
     };
 } // namespace sw
 

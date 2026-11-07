@@ -48,7 +48,7 @@ namespace
                 SW_EXPECT_TRUE( EconomyProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok );
                 _listRedeem.push_back( request );
             }
-            (void)host.respondMessage<EconomyProtocol::MessageTypes>( context._token, _reply, _reply.isRetryable() ? NetResponseRetention::Forget : NetResponseRetention::Remember ); // 진짜 서비스와 같은 규칙
+            (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, _reply ); // 진짜 서비스와 같은 규칙
         }
     };
 

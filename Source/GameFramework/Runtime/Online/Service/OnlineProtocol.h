@@ -126,6 +126,9 @@ namespace sw
         static constexpr uint16 kFeatureDisabled = 10; ///< 원격 기능 플래그가 껐다
         static constexpr uint16 kInternal        = 255;
 
+        /** @brief 같은 멱등 키로 다시 시도할 오류(`kRateLimited` · `kUnavailable`)인지입니다. 서버는 이 오류를 멱등 응답으로 기억하지 않는다(`OnlineServiceHost::respondError`). */
+        static constexpr bool isRetryable( uint16 errorCode ) { return errorCode == kRateLimited || errorCode == kUnavailable; }
+
         /**
          * @brief @p errorCode 를 키트 테이블 @p arrRow 에서 찾아 키트 결과로 바꿉니다. 테이블에 없으면 @p fallback 입니다.
          * @details 결과 열거형과 테이블, 기본값(대개 `Unavailable`)은 키트가 가진다. 키트마다 받는 코드가 다르기 때문이다.

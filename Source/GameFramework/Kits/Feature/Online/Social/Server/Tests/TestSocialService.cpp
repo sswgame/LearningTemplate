@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 #include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
@@ -12,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
 using namespace sw;
@@ -377,4 +379,18 @@ SW_TEST_CASE( SocialServiceTest, PresenceExpiresWithoutRefresh )
 
     world._clock.advanceMilliseconds( kTTLMs + 1 ); // 더 연장하지 않는다
     SW_EXPECT_TRUE( other.queryPresence( kBob )[0]._status == SocialPresenceStatus::Offline );
+}
+
+/** @brief [SocialServiceTest] 다시 시도할 결과(일시 장애 · 경합 — `SocialReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 관계 바꾸기 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+SW_TEST_CASE( SocialServiceTest, RetryableReplyReachesTheServiceAgain )
+{
+    test::ReplyRetentionRig<SocialProtocol, SocialReply> rig;
+    SocialReply                                          finished;
+    finished._result = SocialResult::Ok;
+    SocialReply unavailable;
+    unavailable._result = SocialResult::Unavailable;
+    rig.expectRetryReachesService( SocialMethod::kRequestFriend, unavailable, finished );
+    SocialReply conflict;
+    conflict._result = SocialResult::Conflict;
+    rig.expectRetryReachesService( SocialMethod::kRequestFriend, conflict, finished );
 }

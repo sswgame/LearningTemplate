@@ -6,12 +6,14 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
 using namespace sw;
@@ -798,4 +800,18 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
 
     rig._service.setScheduler( nullptr );
     scheduler.shutdown();
+}
+
+/** @brief [LeaderboardServiceTest] 다시 시도할 결과(일시 장애 · 경합 — `LeaderboardReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 점수 제출 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+SW_TEST_CASE( LeaderboardServiceTest, RetryableReplyReachesTheServiceAgain )
+{
+    test::ReplyRetentionRig<LeaderboardProtocol, LeaderboardReply> rig;
+    LeaderboardReply                                               finished;
+    finished._result = LeaderboardResult::Ok;
+    LeaderboardReply unavailable;
+    unavailable._result = LeaderboardResult::Unavailable;
+    rig.expectRetryReachesService( LeaderboardMethod::kSubmitScore, unavailable, finished );
+    LeaderboardReply conflict;
+    conflict._result = LeaderboardResult::Conflict;
+    rig.expectRetryReachesService( LeaderboardMethod::kSubmitScore, conflict, finished );
 }

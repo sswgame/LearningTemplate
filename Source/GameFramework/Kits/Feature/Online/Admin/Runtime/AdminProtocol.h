@@ -266,6 +266,9 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE };
         uint8 _bRevokeSessions{ SW_FALSE }; ///< 서버 안에서만 쓴다. 정지나 영구 정지가 걸렸다는 뜻이며 `PROPERTY` 가 아니어서 와이어에 싣지 않는다
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과(버전 충돌 · 일시 장애)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
+        [[nodiscard]] bool isRetryable() const { return _result == AdminResult::Busy || _result == AdminResult::Unavailable; }
     };
 } // namespace sw
 
