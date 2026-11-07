@@ -335,6 +335,19 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 `setTickGroup` 59 곳 — 물리 앞 생산 · 물리 뒤 소비(디렉터 PrePhysics → 뷰 PostUpdate 22 곳, 이동 · 탈것 PrePhysics, 물리 결과를 읽는 PostPhysics)는 그룹의 원래 뜻이라 그대로. 같은 물리 단계 안 오브젝트 사이 순서를 그룹으로 낸 것은 2D 카메라 사슬(따라가기 → `PixelPerfectCamera` PostPhysics → `ParallaxLayer` PostUpdate)과 3D 카메라 사슬(`CameraDirector` PostPhysics → `CameraManager` PostUpdate)이다 — 사슬이 그룹 수를 넘으면 서브틱 선행 조건으로 옮긴다(지금은 두 칸에 맞는다).
 
+**씬 서비스 · 자체 스레드 · 폴링 판정(2026-11-08).** 도구 고르는 기준은 [CppStyle](agents/CppStyle.md) "Parallel and async — which tool where" 다.
+
+| 자리 | 판정 |
+|---|---|
+| `MeshLODSystem` · `TextureStreamingSystem` · `SceneAudio`(에미터 자리) | `runParallelByCost` — 칸마다 고르고 공유 쓰기(`setLODIndex` · 머티리얼 맵 · 오디오 엔진 명령)는 게임 스레드가 목록 순서로. LOD → 스트리밍 사슬은 데이터 의존이 아니다(둘 다 뷰만 읽는다) — 스테이지를 두지 않는다. 오디오 가림 레이캐스트는 물리 씬 한 스레드 계약이라 직렬(프레임에 16 개 상한) |
+| `FoliageComponent` 레이어 · `FoliageTerrainFollower` | 레이어는 스테이지 + 태스크 대신 병렬 for. 따라가기는 바뀐 폴리지만 다시 짓고 그 안이 이미 병렬(레이어 · 후보 판정)이라 바깥은 그대로 |
+| `SceneVFXProvider` | 그대로 — 렌더러 싱크에 모아 넣는 일이고 입자 진행은 컴포넌트 틱이다 |
+| `NetObjectTable` · `SceneNetLink` | 프레임 일이 없다(찾기 표 · 연결 고리) |
+| 자체 스레드 | `ServerPoseOverlay` 만 태스크로 옮겼다(때가 된 읽기 하나를 게임 스레드가 낸다). 조사표의 `MaterialCache` · `EditorService` 는 스레드 번호만 쓴다. 나머지 27 곳은 OS 를 막고 기다리는 곳이라 `Config/Dev/ThreadOwners.json` 에 까닭과 함께 두고 린트가 지킨다 |
+| 태스크 결과를 잠들며 묻던 곳 | `ServerPoseOverlay`(4 Hz 잠자기) · `AssetHotReload::shutdown`(임포트 취소 대기) · `EditorNetPlaySession::stopAndWait`(합치기 대기) → 태스크 · 스테이지 완료 대기(`EditorBackgroundTask::waitAndTake`) |
+| 시간을 재야 하는 잠자기(그대로) | 프레임 · 틱 맞춤(`FramePacer` · `App` 멈춤 틱 · `ServerApp` 둘 · `LoadBotMain`), GPU 펜스 · 장치(`RHITransferUtil` · `OpenGLRHIDevice` · `WebGPURHIDevice` · `RHIBackendSwitcher` TDR 흉내), 소켓 · 망(`DebugChannel` 둘 · `NetTransport` 둘 · `NetEndpoint` · `IocpStreamTransport` · `BlockingHTTPClient` · `RespEphemeralStore` · `AccountTicketConnect` · `DelayedStreamTransport`), 프로세스 · 파이프(`EditorNetPlaySession` 끝남 기다리기 · `updateUntil` · `TestRunner` 둘 · `AutomationPerBackend`), 감시 · 크래시(`AutomationHangWatch` 둘 · `CrashHandler` · `PosixCrashHandler` · `WindowsCrashHandler` · `FrameStall`), 재시도 · 물러서기(`FileUtil` · `ModuleShadowCopy` · `LockFreeObjectPool` · `PlatformFileUtil` 느린 IO 흉내 · `WindowsStandardInputReader`), 종료 한 번의 완료 거두기(`ServiceStoreUtil` · `LocalStoreChannel` — 완료를 부르는 쪽이 펌프해 넘기는 계약이다) |
+| 스테이지 · 연쇄 자리 | `RenderGraph` 레벨 스테이지는 High 줄이 필요해 그대로(파일 주석). `AudioClip` 디코드는 에셋 로드 스테이지, `RenderThread` 스크린샷 쓰기는 완료를 우편함 콜백으로 알려 이미 연쇄다. `AsyncFileIO` 전달은 자기 스테이지 |
+
 ### 데이터 구동 구조 후보 판별 (2026-11-08)
 
 **기준:** 숫자 리터럴(위 "데이터 기반 값" 절)이 아니라 **내용 · 정책을 코드가 정하는 모양**을, 앞으로 내용이 늘어날 연쇄 기준으로 고른다. 형식 · 프로토콜 · 수학 표(RHI 형식, DDS, 오디오 DSP 계수, 다운믹스 행렬, HTTP/2)는 코드에 둔다 — 바뀌는 까닭이 내용이 아니라 명세다. 이름으로 원소를 고르는 XML 읽기(카탈로그 리더)도 데이터를 읽는 쪽이라 그대로다.

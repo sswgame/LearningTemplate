@@ -1,4 +1,4 @@
-> 질문: C++ 본문(분기 · 반복 · 생성자 · 타입 · 문자열 · 병렬 안전)은 어떻게 쓰는가?
+> 질문: C++ 본문(분기 · 반복 · 생성자 · 타입 · 문자열 · 병렬 안전 · 병렬 · 비동기 도구 고르기)은 어떻게 쓰는가?
 > 독자: C++ 본문을 쓰거나 고치는 사람.
 > 결론: `.clang-format` 을 따르고, 불리언은 `== false` 로 비교하고, 생성자에서만 필드를 초기화하며, 반복문에는 항상 중괄호를 쓴다. 공유 가변 상태에 쓰지 않는다.
 
@@ -59,3 +59,21 @@ Anything that may run in parallel (job system, cooker, ticks, test processes) sh
 - **Ticks, services, workers** do not read mutable global or singleton state; pass what they need in. A tick touches only its own object — where cross-object and scene-wide work goes is in [TickPlacement](TickPlacement.md). A worker body touches pointers and scratch slots, not containers another worker may resize.
 - A job-style interface declares what it reads and writes as pure virtuals with no default (`getPoseAccess`).
 - **Lazy initialization** is a function-local static (`static const Loader s_loader = makeLoader();`) or `std::call_once`, never a bare `static bool s_bTried` checked by an `if` (two threads both pass it). The same goes for check-then-fill of a static or file-scope variable; a main-thread-only site says so in a comment.
+
+## Parallel and async — which tool where
+
+Pick by the shape of the work, not by today's object count (a scene grows; the shape is what stays). APIs: `Source/Core/Task/TaskManager.h`, `Engine/Foundation/EngineParallel.h`. Commercial equivalents: Unreal `ParallelFor` · Task Graph prerequisites · `FRunnable`, Unity `IJobParallelFor` · `JobHandle.CombineDependencies` · `Thread`.
+
+| Work | Tool | Shape |
+| --- | --- | --- |
+| N independent items inside one step (per mesh, per emitter, per layer) | `engine::runParallelByCost( count, body )` | The body reads shared input and writes only its own slot `out[index]`. Writes to anything shared (a map, an engine command queue, a sibling component, a registry that is not lock-free) happen afterwards on the calling thread, in list order — the result stays identical to the serial run (`MeshLODSystem::update`, `SceneAudio::updateEmitters`). Use `engine::runParallel( count, threshold, body )` only when the per-item cost is known. |
+| A fork-join you are about to write as `createStage` + one `emplaceTask` per item + `waitStage` | `runParallelByCost` instead | The caller helps, there is no node per item, and no "task could not be created, run it here" fallback (`FoliageComponent::computeAllLayerInstances`). |
+| Work that outlives the frame that started it, with an owner that waits for it at shutdown or cancel | `emplaceTask` + `addToStage( _ownerStage, … )` before `submit`; the owner waits with `waitStage( stage, owner )` | One long-lived stage per owner (`AssetStreamingQueue`, `SceneManager::_loadStage`, `EditorBackgroundTask::_jobStage`). Never `waitAll` — it waits for other owners' work too. |
+| B needs A's result | `whenAll( { a, … }, continuation )` or `a.then( … )` | The order is a graph edge, not a loop that asks `isCompleted`. |
+| A site that needs a background result before it can go on (shutdown, stop) | Wait on the stage (`EditorBackgroundTask::waitAndTake`) | Never `take` + sleep in a loop — the wait helps run tasks and returns the moment the work ends. |
+| Something that must happen every N ms (poll a server, retry) | The frame loop submits one task when the interval passed and the previous one finished (`isStageComplete`) — `ServerPoseOverlay::schedulePoll` | Not a thread that sleeps between polls. |
+| Waiting on the OS: socket, file I/O completion, file watch, stdin, child process exit or pipe, driver-serial PSO compile, DB driver call, `getaddrinfo`, crash reporting, the render thread | Own thread (`sw::thread` or `DedicatedWorker<T>`) | The file goes into `Config/Dev/ThreadOwners.json` with its reason; `py -3 -m Scripts thread-owners` (commit hook) stops any other thread. Blocking a pool worker for long starves the frame. |
+
+- **Workers read, the owner writes.** A body must not resize a container another body reads, take a lock the waiting caller may already hold (the caller helps run other tasks while it waits — `SceneAudio` releases its registration lock before its parallel step), or read a dirty transform (`ensureWorldCache` writes): flush first when `hasDirtySceneTransforms()`.
+- **Say why it is safe.** Every parallel body carries a comment naming what it reads, the only slot it writes, and where the shared write happens.
+- **Sleep only for real time.** A sleep loop is allowed when it waits on a device or the OS (frame pacing, a GPU fence without an event, a process without an exit event, a backoff before retrying a locked file). A loop that sleeps while asking whether a task finished becomes a completion chain (stage, `whenAll`, callback).
