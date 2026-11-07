@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -52,6 +53,15 @@ namespace sw::editor
         /** @brief @p pScene 의 효과입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
         [[nodiscard]] static VFXComponent* findSubject( Scene* pScene );
 
+        /**
+         * @brief 읽은 효과 파일이 그 뒤에 바뀌었으면(카탈로그 편집기의 저장 · 바깥 편집) true 를 돌려주고 새 도장을 기억합니다. 패널은 true 면 다시 읽고 다시 건다(자동 갱신).
+         * @details 저장 뒤 Reload 를 누르던 왕복을 없앤다(언리얼 Niagara · 유니티 파티클 미리보기는 저장하면 그 자리에서 바뀐다). 파일 감시 사건이 아니라 도장 비교라
+         *          에디터 밖의 저장도 같은 길이다. shortcut: 창이 열린 동안 프레임마다 파일 하나의 stat 이다 — 미리보기 창이 여럿이 되면 감시 사건(`AssetHotReload`)으로 옮긴다.
+         */
+        [[nodiscard]] bool pollFileChanged();
+        /** @brief @p diskPath 의 도장이 @p inoutStamp 와 다르면 true 이고 @p inoutStamp 를 새 도장으로 바꿉니다. 파일이 없으면 false 입니다(지운 파일은 다시 읽을 것이 없다). */
+        [[nodiscard]] static bool updateFileStamp( string_view diskPath, FileStamp& inoutStamp );
+
         const vector<VFXPreviewEmitterRow>& getEmitterRows() const { return _listEmitterRow; }
         const string&                       getStatus() const { return _status; }
 
@@ -59,5 +69,7 @@ namespace sw::editor
         vector<VFXPreviewEmitterRow> _listEmitterRow;
         string                       _previewEffectPath; ///< 미리보기 효과에 건 효과 경로(비면 다음 `syncEffect` 가 다시 건다)
         string                       _status;
+        string                       _loadedDiskPath; ///< 읽은 효과의 디스크 경로(자동 갱신이 도장을 본다). 풀지 못했으면 비어 있다
+        FileStamp                    _loadedStamp;    ///< 읽을 때의 도장
     };
 } // namespace sw::editor

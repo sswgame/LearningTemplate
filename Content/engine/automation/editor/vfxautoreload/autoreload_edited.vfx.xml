@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VFX 미리보기 자동 갱신 시나리오의 저장한 효과 — 연기 방출기를 지웠다(불꽃 하나). 카탈로그 편집기의 저장 대신 asset.overwriteScratch 가 이 글로 덮어쓴다. -->
+<VFXEffectDef>
+	<_listEmitter>
+		<VFXEmitterDef _name="Sparks" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
+		               _maxParticles="128" _duration="1" _spawnRate="60" _lifetimeMin="0.6" _lifetimeMax="1"
+		               _velocityMin="-1.5, 2, -1.5" _velocityMax="1.5, 4, 1.5" _gravity="0, -6, 0">
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.5" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.2" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="3" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="1.8" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.6" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.5" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.2" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

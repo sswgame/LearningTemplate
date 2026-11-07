@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -62,6 +63,16 @@ namespace sw::editor
                 return pPanel != nullptr && pPanel->readDocumentIsWatchAsset( outValue );
             }
 
+            /** @brief 효과 파일이 바뀌어 창이 스스로 다시 읽은 횟수입니다(감시 값 `Editor.VFXPreviewAutoReloadCount`). */
+            [[nodiscard]] static bool readAutoReloadCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const VFXPreviewPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getAutoReloadCount() );
+                return true;
+            }
+
             [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VFXPreviewPanel* pPanel = findOpenPanel();
@@ -82,12 +93,15 @@ namespace sw::editor
                          &VFXPreviewPanelInternal::readParticleCount );
     SW_AUTOMATION_WATCH( editorVFXPreviewDocumentIsWatchAsset, "Editor.VFXPreviewDocumentIsWatchAsset",
                          "1 when the effect open in the VFX Preview panel is gv_editorWatchAsset and it loaded", &VFXPreviewPanelInternal::readDocumentIsWatchAsset );
+    SW_AUTOMATION_WATCH( editorVFXPreviewAutoReloadCount, "Editor.VFXPreviewAutoReloadCount", "Times the VFX Preview panel re-read its effect because the file changed on disk",
+                         &VFXPreviewPanelInternal::readAutoReloadCount );
     SW_AUTOMATION_WATCH( editorVFXPreviewSceneFrames, "Editor.VFXPreviewSceneFrames", "Frames the VFX Preview panel asked the renderer to draw its preview scene",
                          &VFXPreviewPanelInternal::readPreviewSceneFrames );
 
     VFXPreviewPanel::VFXPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
+        , _autoReloadCount{ 0 }
     {
     }
 
@@ -104,6 +118,15 @@ namespace sw::editor
             return;
         }
 
+        // 효과 파일이 바뀌었으면(카탈로그 편집기의 저장) 다시 읽고 다시 건다 — Reload 를 누르지 않아도 된다.
+        if ( _model.pollFileChanged() )
+        {
+            // 공유 캐시를 먼저 새 글로 다시 읽는다(감시 사건이 뒤늦게 와도 같은 저장을 두 번 읽지 않게 도장을 남긴다) — 그래야 다시 연 문서와 다시 건 효과가 새 정의다.
+            editor::getSubsystem<AssetHotReload>().applySavedAsset( getLoadedAssetPath() );
+            reloadDocument();
+            _model.requestResync();
+            ++_autoReloadCount;
+        }
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
         {

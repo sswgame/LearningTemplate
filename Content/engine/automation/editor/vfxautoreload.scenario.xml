@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — VFX 미리보기 자동 갱신(S5): 사본(scratch/vfxautoreload)의 효과를 미리보기 창에 열면 방출기 둘로 재생한다.
+  그 파일을 저장한 글(autoreload_edited — 연기 방출기를 지웠다)로 덮어쓰면(카탈로그 편집기 · 바깥 편집기의 저장과 같은 원자적 쓰기) 창이 도장 변화를 보고
+  Reload 를 누르지 않아도 다시 읽고 다시 건다 — 자동 갱신 1 회, 재생 로그가 방출기 하나로 다시 나온다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/vfxautoreload.scenario.xml -unattended
+-->
+<Scenario name="editor.vfxautoreload" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/vfxautoreload" as="scratch/vfxautoreload"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/vfxautoreload/autoreload.vfx.xml"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus vfx_preview"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/vfxautoreload/autoreload.vfx.xml"/>
+	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
+	<EditorWaitSettled/>
+	<ExpectLog id="VFXPreview.Playing" contains="'scratch/vfxautoreload/autoreload.vfx.xml' (2 emitters)" count="1"/>
+	<Expect watch="Editor.VFXPreviewAutoReloadCount" equals="0"/>
+	<DevCommand line="asset.overwriteScratch scratch/vfxautoreload/autoreload_edited.vfx.xml scratch/vfxautoreload/autoreload.vfx.xml"/>
+	<WaitUntil watch="Editor.VFXPreviewAutoReloadCount" equals="1" timeoutWallSeconds="30"/>
+	<EditorWaitSettled/>
+	<ExpectLog id="VFXPreview.Playing" contains="'scratch/vfxautoreload/autoreload.vfx.xml' (1 emitters)" count="1"/>
+	<CaptureEditorUI file="vfxautoreload/panel.png"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

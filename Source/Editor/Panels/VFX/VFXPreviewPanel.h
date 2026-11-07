@@ -15,7 +15,7 @@ namespace sw::editor
      * @class VFXPreviewPanel
      * @brief 연 효과를 미리보기 씬의 오브젝트 하나(`VFXComponent`)로 재생하고, 방출기 목록과 살아 있는 입자 수를 보입니다.
      * @details **보기 전용**이다. 효과 파일은 데이터 종류(`vfx`)라 카탈로그 편집기가 고친다 — 같은 파일을 두 편집기가 쥐지 않게 이 창은 저장하지 않는다.
-     *          카탈로그 편집기에서 저장한 뒤 Reload 로 다시 읽는다. Data 종류 중 `*.vfx.xml` 만 문서로 받는다(`acceptsDocumentPath`).
+     *          카탈로그 편집기(또는 바깥)에서 저장하면 파일 도장이 바뀌고 이 창이 스스로 다시 읽어 다시 건다(`VFXPreviewModel::pollFileChanged`). Reload 는 손으로 다시 읽기다. Data 종류 중 `*.vfx.xml` 만 문서로 받는다(`acceptsDocumentPath`).
      */
     class VFXPreviewPanel : public EditorPreviewPanel
     {
@@ -36,6 +36,8 @@ namespace sw::editor
          * @details GPU 방출기의 살아 있는 수는 GPU 버퍼에만 있어 게임 스레드가 모른다 — 그린 것은 감시 값 `Editor.VFXPreviewSceneFrames` 와 캡처로 본다.
          */
         [[nodiscard]] bool findPreviewSpawnedParticleCount( uint64& outCount ) const;
+        /** @brief 효과 파일이 바뀌어 스스로 다시 읽은 횟수입니다(감시 값 `Editor.VFXPreviewAutoReloadCount`). */
+        uint32 getAutoReloadCount() const { return _autoReloadCount; }
 
     private:
         bool                acceptsDocumentPath( string_view assetPath ) const override;
@@ -47,5 +49,6 @@ namespace sw::editor
 
     private:
         VFXPreviewModel _model;
+        uint32          _autoReloadCount; ///< 파일이 바뀌어 다시 읽은 횟수
     };
 } // namespace sw::editor

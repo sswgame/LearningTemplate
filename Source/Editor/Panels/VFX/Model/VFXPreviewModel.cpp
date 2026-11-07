@@ -4,10 +4,14 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
+
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -32,6 +36,8 @@ namespace sw::editor
         : _listEmitterRow{}
         , _previewEffectPath{}
         , _status{}
+        , _loadedDiskPath{}
+        , _loadedStamp{}
     {
     }
 
@@ -39,6 +45,13 @@ namespace sw::editor
     {
         _listEmitterRow.clear();
         _previewEffectPath.clear();
+        // 자동 갱신이 볼 도장 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
+        const std::optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? std::optional<AbsolutePath>{ AbsolutePath{ string{ assetPath } } }
+                                                                                                 : editor::getSubsystem<AssetPaths>().toDiskPath( AssetID{ assetPath } );
+        _loadedDiskPath                            = diskPath.has_value() ? diskPath->str() : string{};
+        _loadedStamp                               = FileStamp{};
+        if ( _loadedDiskPath.empty() == false )
+            (void)updateFileStamp( _loadedDiskPath, _loadedStamp );
         // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).
         const shared_ptr<const VFXEffectDef> pEffect = SharedAssetCache<VFXEffectDef>::acquire( assetPath );
         if ( pEffect == nullptr )
@@ -57,6 +70,20 @@ namespace sw::editor
         }
         _status = "Loaded";
         return ToolAssetLoadResult::Loaded;
+    }
+
+    bool VFXPreviewModel::pollFileChanged()
+    {
+        return _loadedDiskPath.empty() == false && updateFileStamp( _loadedDiskPath, _loadedStamp );
+    }
+
+    bool VFXPreviewModel::updateFileStamp( string_view diskPath, FileStamp& inoutStamp )
+    {
+        FileStamp stamp{};
+        if ( FileUtil::getFileStamp( diskPath, stamp ) == false || stamp == inoutStamp )
+            return false;
+        inoutStamp = stamp;
+        return true;
     }
 
     void VFXPreviewModel::populateScene( Scene& scene )
