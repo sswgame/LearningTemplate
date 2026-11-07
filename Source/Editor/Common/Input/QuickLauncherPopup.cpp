@@ -107,38 +107,21 @@ namespace sw::editor
             static constexpr Color kGameObjectBadge{ 0.95f, 0.85f, 0.30f, 1.0f };
 
             /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 등록)이다. */
-            static Color getCategoryColor( const QuickLauncherItem& item )
+            static Color getCategoryColor( const EditorSearchItem& item )
             {
-                if ( item._category == "GameObject" )
+                if ( item._source == EditorSearchSource::SceneObject )
                     return kGameObjectBadge;
-                return EditorThemeUtil::getAssetTypeColor( item._kind );
-            }
-
-            /** @brief 검색어가 비면 모두, 아니면 제목 · 설명 · 종류 중 하나에 검색어가 든 항목만 @p outListFiltered 에 담습니다(대소문자 무시). */
-            static void filterItems( const vector<QuickLauncherItem>& listAllItem, const fixed_string<constant::buffer::kMax128>& search, vector<const QuickLauncherItem*>& outListFiltered )
-            {
-                outListFiltered.reserve( listAllItem.size() );
-                for ( const QuickLauncherItem& item : listAllItem )
-                {
-                    if ( search.empty() )
-                    {
-                        outListFiltered.push_back( &item );
-                        continue;
-                    }
-
-                    const bool bMatchesSearchText = StringUtil::stristr( item._title.c_str(), search.c_str() ) != nullptr || StringUtil::stristr( item._detail.c_str(), search.c_str() ) != nullptr ||
-                                                    StringUtil::stristr( item._category.c_str(), search.c_str() ) != nullptr;
-                    if ( bMatchesSearchText )
-                        outListFiltered.push_back( &item );
-                }
+                if ( item._source == EditorSearchSource::Asset )
+                    return EditorThemeUtil::getAssetTypeColor( item._kind );
+                return kDetailText; // 명령 · 창은 중립 회색(강조색은 데이터에만)
             }
 
             /** @brief 이번 목록의 가장 넓은 종류 표시의 너비입니다. 종류는 몇 가지뿐이라 바뀔 때만 측정한다. */
-            static float32 measureWidestBadge( const vector<const QuickLauncherItem*>& listFiltered )
+            static float32 measureWidestBadge( const vector<const EditorSearchItem*>& listFiltered )
             {
                 float32       widestBadgeWidth{ 0.0f };
                 const string* pMeasuredCategory{ nullptr };
-                for ( const QuickLauncherItem* pItem : listFiltered )
+                for ( const EditorSearchItem* pItem : listFiltered )
                 {
                     if ( pMeasuredCategory != nullptr && *pMeasuredCategory == pItem->_category )
                         continue;
@@ -154,7 +137,7 @@ namespace sw::editor
              * @brief 결과 줄 하나를 그립니다 — 선택 배경, 종류 배지, 제목, 설명. 긴 이름은 경로 열 앞에서, 긴 경로는 줄 끝에서 자른다.
              * @return 줄을 눌렀으면 true 입니다.
              */
-            static bool drawRow( const QuickLauncherItem& item, bool bSelected, const QuickLauncherRowLayout& layout )
+            static bool drawRow( const EditorSearchItem& item, bool bSelected, const QuickLauncherRowLayout& layout )
             {
                 ImVec2        cursor    = ImGui::GetCursorScreenPos();
                 ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
@@ -196,7 +179,8 @@ namespace sw::editor
     SW_AUTOMATION_CLOCK_HOLDER( quickLauncherIndexing, "QuickLauncherIndexing", &QuickLauncherPopup::isIndexing );
 
     QuickLauncherPopup::QuickLauncherPopup()
-        : _listAllItem{}
+        : _listItem{}
+        , _listTailItem{}
         , _fileIndexJob{}
         , _searchBuffer{}
         , _selectedIndex{ 0 }
@@ -248,27 +232,12 @@ namespace sw::editor
 
     void QuickLauncherPopup::rebuildIndex()
     {
-        _listAllItem.clear();
-
-        GameObjectManager* pObjects = editor::getActiveObjectManager();
-        if ( pObjects != nullptr )
-        {
-            // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
-            pObjects->forEachGameObject( [this]( GameObject* pObj )
-            {
-                const uint64      objID = pObj->getObjectID();
-                QuickLauncherItem item{};
-                item._category = "GameObject";
-                item._title    = string{ pObj->getName().c_str() };
-
-                StringBuilder<constant::buffer::kMax64> detailSb;
-                detailSb.appendFormat( "Scene GameObject (ID: %#)", objID );
-                item._detail         = string{ detailSb.view() };
-                item._targetObjectID = objID;
-                _listAllItem.push_back( std::move( item ) );
-            } );
-        }
-
+        // Quick Open 의 제공자 순서: 씬 오브젝트 → 에셋(색인이 오면 붙는다) → 명령 → 창(팔레트와 같은 제공자, 순서만 다르다)
+        _listItem.clear();
+        _listTailItem.clear();
+        EditorSearchSources::appendSceneObjects( _listItem );
+        EditorSearchSources::appendCommands( _listTailItem );
+        EditorSearchSources::appendPanels( _listTailItem );
         _fileIndexJob.request();
     }
 
@@ -277,40 +246,10 @@ namespace sw::editor
         vector<EditorAssetIndexEntry> listFileEntry;
         if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
             return;
-
-        for ( const EditorAssetIndexEntry& entry : listFileEntry )
-        {
-            QuickLauncherItem item{};
-            item._kind     = entry._kind;
-            item._category = entry._category;
-            item._title    = entry._title;
-            item._detail   = entry._detail;
-            item._path     = entry._path;
-            _listAllItem.push_back( std::move( item ) );
-        }
+        EditorSearchSources::appendAssets( listFileEntry, _listItem );
     }
 
-    void QuickLauncherPopup::executeItem( const QuickLauncherItem& item )
-    {
-        if ( item._category == "GameObject" )
-        {
-            GameObjectManager* pObjects = editor::getActiveObjectManager();
-            if ( pObjects == nullptr )
-                return;
-
-            GameObject* pFound = pObjects->findGameObjectByID( item._targetObjectID );
-            EditorSceneCommands::select( pFound, SelectionMode::Replace );
-            return;
-        }
-
-        // 콘텐츠 브라우저 더블클릭과 같이 연다 — 도구 패널이 있는 종류는 그 패널을, 여는 동작이 있는 종류(씬)는 그 동작을.
-        // 둘 다 없는 종류는 포커스만 옮긴다(인스펙터 · 콘텐츠 브라우저가 따라간다).
-        if ( EditorAssetCommands::openPath( item._path ) )
-            return;
-        EditorAssetCommands::focusPath( item._path );
-    }
-
-    bool QuickLauncherPopup::drawResults( const vector<const QuickLauncherItem*>& listFiltered, bool bIndexOutstanding )
+    bool QuickLauncherPopup::drawResults( const vector<const EditorSearchItem*>& listFiltered, bool bIndexOutstanding )
     {
         using Internal                          = QuickLauncherPopupInternal;
         const int32               filteredCount = static_cast<int32>( listFiltered.size() );
@@ -394,8 +333,12 @@ namespace sw::editor
         EditorWidgets::drawSearchField( "##qlSearch", _searchBuffer,
                                         SW_LOCKEY( "EdCommon", "QuickOpenHint" ), -1.0f, true );
 
-        vector<const QuickLauncherItem*> listFiltered;
-        QuickLauncherPopupInternal::filterItems( _listAllItem, _searchBuffer, listFiltered );
+        vector<const EditorSearchItem*> listFiltered;
+        // 에셋 색인이 오기 전에는 명령 · 창을 섞지 않는다 — 파일 이름을 치고 바로 누른 Enter 가 명령을 실행하지 않고 색인을 기다린다(`resolvePendingExecute`)
+        if ( bIndexOutstanding )
+            EditorSearchSources::filter( { &_listItem }, _searchBuffer.view(), listFiltered );
+        else
+            EditorSearchSources::filter( { &_listItem, &_listTailItem }, _searchBuffer.view(), listFiltered );
 
         const int32 filteredCount = static_cast<int32>( listFiltered.size() );
         bool        bExecute      = EditorWidgets::updateListSelection( _selectedIndex, filteredCount, false );
@@ -411,9 +354,14 @@ namespace sw::editor
         const bool bExecuteSelectedItem = bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount;
         if ( bExecuteSelectedItem )
         {
-            const QuickLauncherItem* pTarget = listFiltered[static_cast<size_t>( _selectedIndex )];
+            const EditorSearchItem* pTarget = listFiltered[static_cast<size_t>( _selectedIndex )];
             if ( pTarget != nullptr )
-                executeItem( *pTarget );
+            {
+                const EditorSearchItem item = *pTarget; // 실행이 목록을 다시 만들 수 있다 — 사본으로 부른다
+                close();
+                EditorSearchSources::execute( item );
+                return;
+            }
             close();
         }
     }

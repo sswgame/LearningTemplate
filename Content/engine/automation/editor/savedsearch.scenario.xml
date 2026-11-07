@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 콘텐츠 브라우저의 저장 검색 · 컬렉션과 한 검색 제공자(S3).
+  ① 검색 칸에 crate 를 치고 Save Search 로 이름 "Crates" 를 주면 저장 검색이 하나 생긴다(로컬 — 에디터 상태 폴더의 ContentBrowserCollectionStore.txt).
+     검색 칸을 비운 뒤 왼쪽의 Crates 를 누르면 검색 글이 돌아온다.
+  ② crate_medium.mesh 를 고른 채 New Collection 으로 "Level Kit" 를 만들면 고른 에셋이 바로 든다. 누르면 오른쪽에 그 컬렉션(에셋 1 개)이 펼쳐진다.
+  ③ Command Palette 도 에셋을 찾는다(Quick Open 과 같은 제공자) — crate_medium.mesh 를 치면 메시 줄이 나온다.
+  볼 그림: savedsearch/collections.png(왼쪽 Collections 구역: Crates · Level Kit (1), 오른쪽 컬렉션 줄), savedsearch/palette.png(팔레트의 [Mesh] crate_medium 줄).
+  실행: App -EnableEditor -scenario=engine/automation/editor/savedsearch.scenario.xml -unattended
+-->
+<Scenario name="editor.savedsearch" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus content_browser"/>
+	<EditorWaitSettled/>
+	<DevCommand line="content.open game/empty/models"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.ContentSavedSearchCount" equals="0"/>
+	<!-- ① 저장 검색 -->
+	<EditorClick mark="contentBrowser.search"/>
+	<EditorWaitSettled/>
+	<EditorText value="crate"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.saveSearch" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.saveSearch" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.collectionName"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorText value="Crates"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.collectionName.confirm" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.collectionName.confirm" state="Up"/>
+	<WaitUntil watch="Editor.ContentSavedSearchCount" equals="1" timeoutFrames="60"/>
+	<EditorClick mark="contentBrowser.search"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorKey key="Delete"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.savedSearch.Crates"/>
+	<EditorWaitSettled/>
+	<!-- ② 컬렉션 -->
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.newCollection" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.newCollection" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.collectionName"/>
+	<EditorText value="Level Kit"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.collectionName.confirm" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.collectionName.confirm" state="Up"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.collection.Level Kit"/>
+	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="1" timeoutFrames="60"/>
+	<CaptureEditorUI file="savedsearch/collections.png" maxMagentaFraction="0"/>
+	<EditorClick mark="contentBrowser.collection.close" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.collection.close" state="Up"/>
+	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="-1" timeoutFrames="60"/>
+	<!-- ③ 팔레트도 에셋을 찾는다 -->
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+Shift+P"/>
+	<EditorWaitSettled/>
+	<EditorText value="crate_medium.mesh"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="savedsearch/palette.png" maxMagentaFraction="0"/>
+	<EditorKey key="Escape"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

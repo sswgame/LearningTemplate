@@ -295,6 +295,25 @@ namespace sw::editor
                     pPanel->requestDeleteAsset( findTargetPath( target ) );
             }
 
+            [[nodiscard]] static bool readSavedSearchCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getSavedSearchCount() );
+                return true;
+            }
+
+            /** @brief 펼친 컬렉션의 에셋 수입니다. 펼친 컬렉션이 없으면 -1 입니다. */
+            [[nodiscard]] static bool readCollectionItemCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getActiveCollectionItemCount() );
+                return true;
+            }
+
             /** @brief 선택 밖 항목에서 메뉴를 열면 그 항목만 고릅니다(R2). */
             static void selectOnlyAsset( uint64 assetID )
             {
@@ -322,6 +341,10 @@ namespace sw::editor
                          &ContentBrowserPanelInternal::readThumbnailCacheCount );
     SW_AUTOMATION_WATCH( editorThumbnailFallbackGlyphCount, "Editor.ThumbnailFallbackGlyphCount",
                          "Content Browser tiles drawn last frame with the kind icon (kinds without a drawn thumbnail)", &ContentBrowserPanelInternal::readFallbackGlyphCount );
+    SW_AUTOMATION_WATCH( editorContentSavedSearchCount, "Editor.ContentSavedSearchCount", "Content Browser saved searches (local and shared)",
+                         &ContentBrowserPanelInternal::readSavedSearchCount );
+    SW_AUTOMATION_WATCH( editorContentCollectionItemCount, "Editor.ContentCollectionItemCount", "Assets of the collection the Content Browser shows (-1 when it shows a folder)",
+                         &ContentBrowserPanelInternal::readCollectionItemCount );
     SW_AUTOMATION_WATCH( editorReferenceCount, "Editor.ReferenceCount", "Text assets that name gv_editorWatchAsset (the reference index)",
                          &ContentBrowserPanelInternal::readReferenceCount );
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
@@ -485,8 +508,223 @@ namespace sw::editor
         , _bFocusRenameInput{ SW_FALSE }
         , _bContentVisible{ SW_FALSE }
         , _bOpenMoveConfirm{ SW_FALSE }
-        , _reservedFlags{ 0 }
+        , _bCollectionsLoaded{ SW_FALSE }
+        , _bOpenSaveSearch{ SW_FALSE }
+        , _bOpenNewCollection{ SW_FALSE }
+        , _bActiveCollectionShared{ SW_FALSE }
+        , _bNewEntryShared{ SW_FALSE }
+        , _reservedFlags2{ 0 }
+        , _collections{}
+        , _activeCollectionName{}
+        , _collectionNameBuffer{}
     {
+    }
+
+    int32 ContentBrowserPanel::getActiveCollectionItemCount() const
+    {
+        const ContentBrowserCollection* pCollection = _activeCollectionName.empty() ? nullptr : _collections.findCollection( _activeCollectionName, _bActiveCollectionShared == SW_TRUE );
+        return pCollection != nullptr ? static_cast<int32>( pCollection->_listAssetID.size() ) : -1;
+    }
+
+    void ContentBrowserPanel::saveCollections( bool bShared )
+    {
+        (void)_collections.saveFile( bShared ? ContentBrowserCollectionStore::getSharedFilePath() : ContentBrowserCollectionStore::getLocalFilePath(), bShared ); // 실패는 saveFile 이 알린다
+    }
+
+    void ContentBrowserPanel::drawCollectionsSection()
+    {
+        if ( _bCollectionsLoaded == SW_FALSE )
+        {
+            _collections.loadFiles( ContentBrowserCollectionStore::getLocalFilePath(), ContentBrowserCollectionStore::getSharedFilePath() );
+            _bCollectionsLoaded = SW_TRUE;
+        }
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EditorContentBrowser", "Collections" ) );
+
+        // 저장 검색 — 누르면 검색 글과 종류 필터를 다시 건다(하위 폴더까지 찾는다)
+        const ContentBrowserSavedSearch* pApplySearch = nullptr;
+        for ( const ContentBrowserSavedSearch& search : _collections.getSavedSearches() )
+        {
+            const string label = string( SW_EDITOR_ICON( "Filter" ) ) + "  " + search._name + ( search._bShared ? "  (shared)" : "" );
+            if ( ImGui::Selectable( label.c_str(), false ) )
+                pApplySearch = &search;
+            EditorWidgets::drawTooltip( search._searchText.c_str() );
+            ContentBrowserPanelInternal::recordMark( "contentBrowser.savedSearch.", search._name );
+        }
+        if ( pApplySearch != nullptr )
+        {
+            _searchBuffer.assign( pApplySearch->_searchText.c_str() );
+            ContentBrowserTypeFilter&               typeFilter = _model.getTypeFilter();
+            const vector<EditorAssetBrowserFilter>& listFilter = typeFilter.getFilters();
+            for ( uint32 filterIndex = 0; filterIndex < static_cast<uint32>( listFilter.size() ); ++filterIndex )
+            {
+                if ( pApplySearch->_typeFilterLabel.empty() ? filterIndex == 0 : pApplySearch->_typeFilterLabel == listFilter[filterIndex]._pLabel )
+                    typeFilter.select( filterIndex );
+            }
+            _activeCollectionName.clear();
+        }
+
+        // 컬렉션 — 누르면 오른쪽에 펼치고, 에셋을 놓으면 더한다(파일은 옮기지 않는다)
+        string addTargetName;
+        bool   bAddTargetShared = false;
+        string droppedAssetID;
+        for ( const ContentBrowserCollection& collection : _collections.getCollections() )
+        {
+            const bool   bActive = collection._name == _activeCollectionName && collection._bShared == ( _bActiveCollectionShared == SW_TRUE );
+            const string label   = formatToString( "%#  %# (%#)%#", SW_EDITOR_ICON( "Bookmark" ), collection._name, collection._listAssetID.size(), collection._bShared ? "  shared" : "" );
+            if ( ImGui::Selectable( label.c_str(), bActive ) )
+            {
+                _activeCollectionName    = collection._name;
+                _bActiveCollectionShared = collection._bShared ? SW_TRUE : SW_FALSE;
+            }
+            ContentBrowserPanelInternal::recordMark( "contentBrowser.collection.", collection._name );
+            if ( addTargetName.empty() && EditorWidgets::acceptAssetDrop( droppedAssetID ) )
+            {
+                addTargetName    = collection._name;
+                bAddTargetShared = collection._bShared;
+            }
+        }
+        if ( addTargetName.empty() == false && _collections.addToCollection( addTargetName, bAddTargetShared, droppedAssetID ) )
+            saveCollections( bAddTargetShared );
+
+        if ( _collections.getSavedSearches().empty() && _collections.getCollections().empty() )
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "NoCollections" ) );
+
+        const bool bSearchActive = EditorListFilter{ _searchBuffer.c_str() }.isActive();
+        ImGui::BeginDisabled( bSearchActive == false );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "SaveSearch" ) ) )
+        {
+            _collectionNameBuffer = _searchBuffer.c_str();
+            _bNewEntryShared      = SW_FALSE;
+            _bOpenSaveSearch      = SW_TRUE;
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "contentBrowser.saveSearch" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SaveSearchTooltip" ) );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "NewCollection" ) ) )
+        {
+            _collectionNameBuffer.clear();
+            _bNewEntryShared    = SW_FALSE;
+            _bOpenNewCollection = SW_TRUE;
+        }
+        EditorSelfTestMarks::record( "contentBrowser.newCollection" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NewCollectionTooltip" ) );
+        ImGui::Separator();
+    }
+
+    void ContentBrowserPanel::drawCollectionNamePopups()
+    {
+        constexpr const utf8* kSaveSearchPopup    = "Save Search##cb_saveSearch";
+        constexpr const utf8* kNewCollectionPopup = "New Collection##cb_newCollection";
+        if ( _bOpenSaveSearch == SW_TRUE )
+        {
+            EditorInputGUI::openPopup( kSaveSearchPopup );
+            _bOpenSaveSearch = SW_FALSE;
+        }
+        if ( _bOpenNewCollection == SW_TRUE )
+        {
+            EditorInputGUI::openPopup( kNewCollectionPopup );
+            _bOpenNewCollection = SW_FALSE;
+        }
+        for ( const utf8* pPopup : { kSaveSearchPopup, kNewCollectionPopup } )
+        {
+            if ( EditorWidgets::beginCenteredModal( pPopup ) == false )
+                continue;
+            const bool bSaveSearch = pPopup == kSaveSearchPopup;
+            (void)EditorWidgets::drawTextField( "Name###cb_collectionName", _collectionNameBuffer, -1.0f ); // 값은 칸이 바로 바꾼다
+            const bool bEntered = EditorInputGUI::wasEditKeyPressed( EditorEditKey::Enter );
+            EditorSelfTestMarks::record( "contentBrowser.collectionName" );
+            bool bShared = _bNewEntryShared == SW_TRUE;
+            if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "SharedWithTheProject" ), &bShared ) )
+                _bNewEntryShared = bShared ? SW_TRUE : SW_FALSE;
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SharedCollectionTooltip" ) );
+            ImGui::Separator();
+            const bool bNameValid = _collectionNameBuffer.empty() == false;
+            ImGui::BeginDisabled( bNameValid == false );
+            const bool bConfirmed = ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) || ( bEntered && bNameValid );
+            ImGui::EndDisabled();
+            EditorSelfTestMarks::record( "contentBrowser.collectionName.confirm" );
+            if ( bConfirmed )
+            {
+                const bool bSharedScope = _bNewEntryShared == SW_TRUE;
+                bool       bChanged     = false;
+                if ( bSaveSearch )
+                {
+                    const ContentBrowserTypeFilter& typeFilter = _model.getTypeFilter();
+                    const string                    typeLabel  = typeFilter.getSelectedIndex() == 0 ? string() : string( typeFilter.getSelectedLabel() );
+                    bChanged                                   = _collections.saveSearch( ContentBrowserSavedSearch{ string( _collectionNameBuffer.c_str() ), typeLabel, string( _searchBuffer.c_str() ), bSharedScope } );
+                }
+                else
+                {
+                    bChanged = _collections.createCollection( _collectionNameBuffer.c_str(), bSharedScope );
+                    // 고른 에셋이 있으면 새 컬렉션에 바로 넣는다(언리얼의 "Add to new collection")
+                    const string selectedID = editor::getSubsystem<AssetPaths>().toAssetID( _model.getSelectedAssetPath() );
+                    if ( bChanged && selectedID.empty() == false && FileUtil::isDirectory( _model.getSelectedAssetPath() ) == false )
+                        (void)_collections.addToCollection( _collectionNameBuffer.c_str(), bSharedScope, selectedID );
+                }
+                if ( bChanged )
+                    saveCollections( bSharedScope );
+                ImGui::CloseCurrentPopup();
+            }
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
+            if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) || EditorInputGUI::wasCancelPressed() )
+                ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+    }
+
+    void ContentBrowserPanel::drawCollectionView( const ContentBrowserCollection& collection )
+    {
+        ImGui::TextUnformatted( collection._name.c_str() );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "BackToFolders" ) ) )
+        {
+            _activeCollectionName.clear();
+            return;
+        }
+        EditorSelfTestMarks::record( "contentBrowser.collection.close" );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "DeleteCollection" ) ) )
+        {
+            const bool   bShared = collection._bShared;
+            const string name    = collection._name; // 지우는 원소를 가리키는 글로 비교하지 않게 먼저 복사한다
+            (void)_collections.removeCollection( name, bShared );
+            _activeCollectionName.clear();
+            saveCollections( bShared );
+            return;
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "DeleteCollectionTooltip" ) );
+        ImGui::Separator();
+        if ( collection._listAssetID.empty() )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "EmptyCollection" ) );
+            return;
+        }
+        string removeID;
+        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( collection._listAssetID.size() ); ++rowIndex )
+        {
+            const string& assetID = collection._listAssetID[rowIndex];
+            ImGui::PushID( static_cast<int32>( rowIndex ) );
+            // 옮기거나 지운 에셋은 회색과 이유 글로 남긴다 — 줄을 말없이 지우지 않는다
+            const bool bExists = editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).has_value();
+            if ( bExists )
+            {
+                ImGui::Selectable( assetID.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick );
+                if ( EditorInputGUI::wasItemDoubleClicked() )
+                    (void)EditorAssetCommands::openPath( assetID ); // 실패는 openPath 가 알린다
+                EditorWidgets::drawAssetDragSource( assetID.c_str() );
+            }
+            else
+            {
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "CollectionItemMissing", TextArgumentList().addText( "asset", assetID.c_str() ) ).c_str() );
+            }
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
+                removeID = assetID;
+            ImGui::PopID();
+        }
+        if ( removeID.empty() == false && _collections.removeFromCollection( collection._name, collection._bShared, removeID ) )
+            saveCollections( collection._bShared );
     }
 
     void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )
@@ -801,6 +1039,7 @@ namespace sw::editor
         drawAssetView();
         drawDeleteConfirmModal();
         drawMoveConfirmModal();
+        drawCollectionNamePopups();
         drawReferenceResults();
     }
 
@@ -962,6 +1201,7 @@ namespace sw::editor
         }
 
         ImGui::Separator();
+        drawCollectionsSection();
         EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdWidget", "Sources" ) );
 
         for ( const ContentBrowserRoot& root : _model.getRoots() )
@@ -1031,6 +1271,16 @@ namespace sw::editor
         assetsDesc._kind  = editor::EditorSectionKind::Child;
         assetsDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( assetsDesc );
+
+        // 펼친 컬렉션이 있으면 폴더 대신 그 에셋 줄을 보인다
+        const ContentBrowserCollection* pActiveCollection = _activeCollectionName.empty() ? nullptr : _collections.findCollection( _activeCollectionName, _bActiveCollectionShared == SW_TRUE );
+        if ( pActiveCollection != nullptr )
+        {
+            drawCollectionView( *pActiveCollection );
+            EditorChrome::endSection();
+            return;
+        }
+        _activeCollectionName.clear(); // 지운 컬렉션을 가리키지 않게
 
         drawBreadcrumbs();
         ImGui::Separator();

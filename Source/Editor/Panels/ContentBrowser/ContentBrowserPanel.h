@@ -10,6 +10,7 @@
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserModel.h"
 
 struct ImDrawList;
@@ -112,6 +113,10 @@ namespace sw::editor
         uint32 getThumbnailCacheCount() const { return _thumbnailCache.getCachedCount(); }
         /** @brief 지난 그리기에서 종류 아이콘으로 그린 타일 수를 반환합니다. 이미지 썸네일이 없는 종류가 해당합니다. */
         uint32 getFallbackGlyphCount() const { return _lastFallbackGlyphCount; }
+        /** @brief 저장 검색 수입니다(로컬 · 공유 합 — 감시 값 `Editor.ContentSavedSearchCount`). */
+        uint32 getSavedSearchCount() const { return static_cast<uint32>( _collections.getSavedSearches().size() ); }
+        /** @brief 펼친 컬렉션의 에셋 수입니다. 펼친 컬렉션이 없으면 -1 입니다(감시 값 `Editor.ContentCollectionItemCount`). */
+        int32 getActiveCollectionItemCount() const;
 
     private:
         // ------------------------------------------------------------------------------
@@ -155,6 +160,14 @@ namespace sw::editor
         void drawDeleteConfirmModal();
         /** @brief 끌어 놓은 옮기기의 확인 모달입니다 — 옮길 파일 수 · 고칠 참조 · 바깥 도메인 · 고칠 수 없는 참조를 보이고 확인을 받는다. */
         void drawMoveConfirmModal();
+        /** @brief 왼쪽의 저장 검색 · 컬렉션 구역입니다. 저장 검색을 누르면 검색 글 · 종류 필터를 다시 걸고, 컬렉션을 누르면 오른쪽에 펼친다. 컬렉션에 에셋을 놓으면 더한다. */
+        void drawCollectionsSection();
+        /** @brief 펼친 컬렉션의 에셋 줄입니다(폴더와 상관없다). 두 번 누르면 열고, Remove 는 컬렉션에서만 뺀다. */
+        void drawCollectionView( const ContentBrowserCollection& collection );
+        /** @brief 저장 검색 · 새 컬렉션 이름 창입니다(이름 · 공유 여부). */
+        void drawCollectionNamePopups();
+        /** @brief 바뀐 범위의 파일을 씁니다. */
+        void saveCollections( bool bShared );
         /** @brief 탭이 가려지거나 창이 접혀 내용을 그리지 않는 프레임입니다. 색인을 기다리지 않게 표시합니다. */
         void onPanelCollapsed() override;
         /** @brief 패널을 닫았습니다. 색인을 기다리지 않게 표시합니다. */
@@ -191,11 +204,19 @@ namespace sw::editor
         uint32                                  _fallbackGlyphCount;     /**< 이번 그리기에서 종류 아이콘으로 그린 타일 수 */
         uint32                                  _lastFallbackGlyphCount; /**< 지난 그리기의 값. 프로브가 읽는다 */
         ViewMode                                _viewMode;
-        uint8                                   _bOpenDeleteConfirm    : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다. 우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없기 때문이다 */
-        uint8                                   _bOpenReferenceResults : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
-        uint8                                   _bFocusRenameInput     : 1; /**< 다음 그리기에서 이름 입력란에 포커스를 준다 */
-        uint8                                   _bContentVisible       : 1; /**< 마지막 그리기에서 내용을 그렸다(가려진 탭 · 접힌 창 · 닫힌 패널이 아니다) */
-        uint8                                   _bOpenMoveConfirm      : 1; /**< 다음 그리기에서 옮기기 확인 모달을 연다(끌어 놓기 대상 위에서는 창 단위 팝업을 열 수 없다) */
-        [[maybe_unused]] uint8                  _reservedFlags         : 3;
+        uint8                                   _bOpenDeleteConfirm      : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다. 우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없기 때문이다 */
+        uint8                                   _bOpenReferenceResults   : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
+        uint8                                   _bFocusRenameInput       : 1; /**< 다음 그리기에서 이름 입력란에 포커스를 준다 */
+        uint8                                   _bContentVisible         : 1; /**< 마지막 그리기에서 내용을 그렸다(가려진 탭 · 접힌 창 · 닫힌 패널이 아니다) */
+        uint8                                   _bOpenMoveConfirm        : 1; /**< 다음 그리기에서 옮기기 확인 모달을 연다(끌어 놓기 대상 위에서는 창 단위 팝업을 열 수 없다) */
+        uint8                                   _bCollectionsLoaded      : 1; /**< 저장 검색 · 컬렉션 파일을 읽었다(첫 그리기) */
+        uint8                                   _bOpenSaveSearch         : 1; /**< 다음 그리기에서 저장 검색 이름 창을 연다 */
+        uint8                                   _bOpenNewCollection      : 1; /**< 다음 그리기에서 새 컬렉션 이름 창을 연다 */
+        uint8                                   _bActiveCollectionShared : 1; /**< 보고 있는 컬렉션이 공유 범위다 */
+        uint8                                   _bNewEntryShared         : 1; /**< 이름 창에서 공유 범위를 골랐다(프로젝트 파일 `Config/Editor/ContentCollections.txt`) */
+        [[maybe_unused]] uint8                  _reservedFlags2          : 6;
+        ContentBrowserCollectionStore           _collections;          /**< 저장 검색 · 컬렉션(로컬 · 공유) */
+        string                                  _activeCollectionName; /**< 오른쪽에 펼친 컬렉션. 비었으면 폴더 보기다 */
+        string                                  _collectionNameBuffer; /**< 저장 검색 · 새 컬렉션 이름 입력 */
     };
 } // namespace sw::editor

@@ -398,6 +398,11 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdButton.BackToFolders" source="Back to Folders">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdButton.BuildFailed" source="Build Failed">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
@@ -428,6 +433,11 @@
 				<item>Source/Editor/Panels/Scene/SceneViewPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdButton.DeleteCollection" source="Delete Collection">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdButton.Discard" source="Discard">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
@@ -441,6 +451,11 @@
 		<entry key="EdButton.FixAll" source="Fix All">
 			<origins>
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.NewCollection" source="New Collection">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.NewFolder" source="New Folder">
@@ -527,6 +542,11 @@
 		<entry key="EdButton.ResumeServer" source="Resume server">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.SaveSearch" source="Save Search">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.Simulate" source="Simulate">
@@ -1279,11 +1299,13 @@
 		<entry key="EdCommon.QuickOpenIndexing" source="Indexing assets...">
 			<origins>
 				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
+				<item>Source/Editor/Common/Input/CommandPalettePopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.QuickOpenNoMatches" source="No matching assets or game objects found.">
 			<origins>
 				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
+				<item>Source/Editor/Common/Input/CommandPalettePopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.RHIBackend" source="Current graphics RHI backend: {backend} ({fps} FPS)">
@@ -1817,6 +1839,11 @@
 		<entry key="EdFormat.Cmd" source="cmd: {actionCommand}">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.CollectionItemMissing" source="{asset} (moved or deleted)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.ComponentSAreNot"
@@ -2662,6 +2689,11 @@
 		<entry key="EdLabel.Sent" source="Sent">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.SharedWithTheProject" source="Shared with the project">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Show2DStickTriggerGauges" source="Show 2D Stick &amp; Trigger Gauges">
@@ -4326,6 +4358,7 @@
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Reset" source="Reset">
@@ -4362,6 +4395,7 @@
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Stop" source="Stop">
@@ -5627,6 +5661,21 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorContentBrowser.Collections" source="Collections">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.DeleteCollectionTooltip" source="Delete this collection. The assets stay where they are">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.EmptyCollection" source="This collection is empty. Drop assets on its name to add them.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorContentBrowser.Import"
 		       source="Import external files (textures, shaders, sounds, ...) into the current folder">
 			<origins>
@@ -5659,6 +5708,16 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorContentBrowser.NewCollectionTooltip" source="Make a collection - the selected asset goes in. Drop assets on a collection to add them">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.NoCollections" source="No saved searches or collections yet. Save a search or make a collection below.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorContentBrowser.NoDependencies" source="This asset names no other asset.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -5684,6 +5743,11 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorContentBrowser.SaveSearchTooltip" source="Keep the search text and the type filter under a name">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorContentBrowser.SearchHint" source="Search Content">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -5695,6 +5759,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorContentBrowser.SelectFolder" source="Select a folder">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.SharedCollectionTooltip" source="Shared entries are written to Config/Editor/ContentCollections.txt and committed with the project; the others stay on this machine">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>

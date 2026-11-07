@@ -1,9 +1,8 @@
 /**
  * @file QuickLauncherPopup.h
- * @brief 애셋 · 오브젝트를 빠르게 찾아 여는 런처 팝업입니다(Ctrl+P).
+ * @brief 애셋 · 오브젝트(그리고 명령 · 창)를 빠르게 찾아 여는 런처 팝업입니다(Ctrl+P).
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
@@ -11,27 +10,15 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/IEditorPopup.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-
-namespace sw::editor
-{
-    /** @brief 퀵 런처 검색 항목 */
-    struct QuickLauncherItem
-    {
-        EditorAssetType _kind{};   ///< 파일 항목의 애셋 종류. 게임 오브젝트 항목은 알 수 없음(빈 값)
-        string          _category; ///< 배지 문구 — 애셋 종류의 단수 이름(`EditorAssetTypeRegistration::_pDisplayName`) 또는 "GameObject"
-        string          _title;
-        string          _detail;
-        string          _path;
-        uint64          _targetObjectID{ 0 };
-    };
-} // namespace sw::editor
+#include "Editor/Common/Input/EditorSearchSources.h"
 
 namespace sw::editor
 {
     /**
      * @class QuickLauncherPopup
-     * @brief Ctrl+P 로 여는 애셋 · 게임 오브젝트 퍼지 검색 런처입니다.
+     * @brief Ctrl+P 로 여는 퍼지 검색 런처입니다 — 씬 오브젝트 · 에셋을 먼저, 명령 · 창을 뒤에 둔다.
+     * @details 항목은 Command Palette 와 같은 검색 제공자(`EditorSearchSources`)가 모은다 — 두 팝업은 진입점과 제공자 순서만 다르다.
+     *          에셋 색인이 오기 전에는 명령 · 창을 섞지 않는다(파일 이름을 치고 바로 누른 Enter 가 색인을 기다린다).
      */
     class QuickLauncherPopup : public IEditorPopup
     {
@@ -58,15 +45,15 @@ namespace sw::editor
 
     private:
         void rebuildIndex();
-        void executeItem( const QuickLauncherItem& item );
         void pollFileIndex();
         /** @brief 걸러 낸 결과 줄을 그립니다. 줄을 눌렀으면 그 줄을 고르고 true 를 반환합니다. 목록이 비면 색인 중인지에 따라 안내를 그립니다. */
-        bool drawResults( const vector<const QuickLauncherItem*>& listFiltered, bool bIndexOutstanding );
+        bool drawResults( const vector<const EditorSearchItem*>& listFiltered, bool bIndexOutstanding );
         /** @brief 목록이 오기 전에 누른 Enter 를 기억했다가 목록이 오면 실행으로 바꿉니다. @p bExecute 에 이번 프레임의 실행 요청을 받아 최종 값을 반환합니다. */
         [[nodiscard]] bool resolvePendingExecute( int32 filteredCount, bool bIndexOutstanding, bool bExecute );
 
     private:
-        vector<QuickLauncherItem>               _listAllItem;
+        vector<EditorSearchItem>                _listItem;     ///< 씬 오브젝트(열 때) · 에셋(색인이 오면 붙는다)
+        vector<EditorSearchItem>                _listTailItem; ///< 명령 · 창(색인이 온 뒤에만 거른다)
         EditorAssetIndexJob                     _fileIndexJob;
         fixed_string<constant::buffer::kMax128> _searchBuffer;
         int32                                   _selectedIndex;
