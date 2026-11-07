@@ -3,7 +3,7 @@
   스키닝 방식(SkeletalMeshComponent._skinningMethod, mesh_skin.hlsl) — 같은 기사 · 같은 클립 · 같은 프레임을 선형(skinningmethod)과 듀얼 쿼터니언(skinningmethod_dq)으로 찍어 견준다.
   DQ 갈래가 돌지 않으면(방식 깃발이 프레임 값 머리에 실리지 않거나 셰이더가 읽지 않으면) 두 장이 같아서 진다. DQ 본 행이 깨지면(부호 · 순서) 기사가 흩어져 둘째 판정이 진다.
   관절에서만 다르므로 차이는 작다 — 몸 둘레 영역의 일부 픽셀만 다르고(첫 판정), 기사 윤곽은 거의 같다(둘째 판정, 흩어지면 크게 다르다). 골든이 아니라 같은 실행의 두 장이다.
-  단일 본 · 비틀림 식은 단위 테스트(DualQuaternionTest)가 본다. 시계는 씬 재시작이라 두 씬의 같은 프레임이 같은 포즈다.
+  단일 본 · 비틀림 식은 단위 테스트(DualQuaternionTest)가 본다. 두 씬 모두 Idle 0.8 초에 재생 속도 0 으로 멈춘다 — 에셋 대기가 실제 시간이라 찍는 프레임이 달라도 포즈가 같다(남는 차이는 방식뿐).
   실행: App -scenario=game/empty/automation/skinningmethod.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.skinningmethod" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
