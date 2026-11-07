@@ -1,0 +1,21 @@
+{
+    "_listenAddress": "127.0.0.1",
+    "_gamePort": 17790,
+    "_servicePort": 17793,
+    "_listStore": [
+        {
+            "_name": "main",
+            "_driver": "postgres",
+            "_connection": "host=127.0.0.1 port=5432 dbname=shooter3d user=shooter3d",
+            "_secretEnvironment": "SW_SHOOTER3D_DB_PASSWORD"
+        }
+    ],
+    "_listCache": [
+        {
+            "_name": "main",
+            "_driver": "resp",
+            "_endpoint": "127.0.0.1:6379?prefix=shooter3d:",
+            "_secretEnvironment": "SW_SHOOTER3D_CACHE_PASSWORD"
+        }
+    ]
+}

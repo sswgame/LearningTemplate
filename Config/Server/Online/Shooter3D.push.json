@@ -1,0 +1,15 @@
+{
+    "providers": [
+        {
+            "kind": "fcm",
+            "serviceAccountEnvironment": "SW_SHOOTER3D_FCM_SERVICE_ACCOUNT"
+        },
+        {
+            "kind": "apns",
+            "keyEnvironment": "SW_SHOOTER3D_APNS_KEY",
+            "keyId": "SHOOTERKEY",
+            "teamId": "SHOOTERTEAM",
+            "topic": "com.example.shooter3d"
+        }
+    ]
+}

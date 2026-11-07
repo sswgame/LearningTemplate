@@ -19,6 +19,9 @@ set(swLoadBotKit
 	GF_Mailbox GF_Server_Mailbox
 	GF_Trade GF_Server_Trade
 	GF_Admin GF_Server_Admin
+	# 저장 드라이버 — 설정이 `postgres` · `sqlite` · `resp` 를 고르는 길과 그 테스트. 예전에는 봇도 게임도 싣지 않아 이 두 키트의 Tests/ 가 어느 실행에도 등록되지 않았다.
+	GF_SQLStore GF_Server_SQLStore
+	GF_Server_CacheStore
 )
 foreach(swKit IN LISTS swLoadBotKit)
 	if(NOT TARGET ${swKit})

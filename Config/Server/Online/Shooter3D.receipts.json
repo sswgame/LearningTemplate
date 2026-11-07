@@ -1,0 +1,26 @@
+{
+    "providers": [
+        {
+            "kind": "steam",
+            "appId": "480",
+            "keySecretEnvironment": "SW_SHOOTER3D_STEAM_KEY",
+            "buyerBinding": "linkedLogin",
+            "buyerLoginProvider": "steam"
+        },
+        {
+            "kind": "google",
+            "packageName": "com.example.shooter3d",
+            "serviceAccountEnvironment": "SW_SHOOTER3D_GOOGLE_SERVICE_ACCOUNT",
+            "buyerBinding": "accountToken"
+        },
+        {
+            "kind": "apple",
+            "issuerId": "00000000-0000-0000-0000-000000000000",
+            "keyId": "SHOOTERKEY",
+            "bundleId": "com.example.shooter3d",
+            "signingKeySecretEnvironment": "SW_SHOOTER3D_APPLE_SIGNING_KEY",
+            "rootCertificateFile": "Config/Server/Online/AppleRootCA-G3.pem",
+            "buyerBinding": "accountToken"
+        }
+    ]
+}

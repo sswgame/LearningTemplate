@@ -5,8 +5,8 @@
   py -3 -m Scripts online-local run --server-config <서버 설정 경로>   # 저장소 · 캐시 · 키트 · 제공자를 그 설정이 고른다(sqlite · postgres · resp 도 같은 길)
   py -3 -m Scripts online-local check <서버 로그> <클라이언트 로그>     # 이미 있는 두 로그만 판정한다
 
-설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)가 필요한 드라이버는
-그 키트를 짓는 구성(`Ninja-Release`)에서 돌린다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
+설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Shooter3D 매니페스트가 켠다(`_listModuleOverride`).
+`Config/Server/Online/Shooter3D.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
 판정: 클라이언트 로그에 로그인 줄과 우편 목록 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
 허용 줄: 개발 티켓 키 경고(기본 설정은 게임 접속 티켓을 쓰지 않아 주 키를 두지 않는다).
 """

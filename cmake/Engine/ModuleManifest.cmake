@@ -284,8 +284,9 @@ function(sw_selectGamePacks)
 	set_property(GLOBAL PROPERTY SW_GAME_PACKS ${swPacks})
 endfunction()
 
-# 함께 짓는 게임 팩(활성 게임이 아닌 것)의 매니페스트에서 의존 이름만 읽어 `SW_GAME_PACK_<게임>_DEPENDENCIES` 에 둔다.
+# 함께 짓는 게임 팩(활성 게임이 아닌 것)의 매니페스트에서 의존 이름과 켠 모듈을 읽어 `SW_GAME_PACK_<게임>_DEPENDENCIES` · `_ENABLED_OVERRIDES` 에 둔다.
 # 모듈 표(`SW_MODULE_NAMES`)에는 넣지 않는다 — 게임 모듈 이름은 모두 SWGame 이고, 이 빌드의 켜기/끄기 표는 활성 게임의 것이다.
+# 켠 모듈은 의존과 따로 둔다 — 의존은 게임이 링크하지만, 켠 모듈(서버 전용 저장 드라이버)은 짓고 올리기만 한다(언리얼 `.uproject` 의 Plugins 항목. 런타임 `appendGameSeeds` 와 같은 규칙).
 function(sw_readGamePackManifest MANIFEST_PATH GAME_NAME)
 	sw_requireJSONValue(swKind "${MANIFEST_PATH}" _kind)
 
@@ -295,6 +296,21 @@ function(sw_readGamePackManifest MANIFEST_PATH GAME_NAME)
 
 	sw_readManifestDependencies(swDependencyNames swIgnoredMinVersions "${MANIFEST_PATH}")
 	set_property(GLOBAL PROPERTY SW_GAME_PACK_${GAME_NAME}_DEPENDENCIES ${swDependencyNames})
+	sw_readManifestOverrides(swOverrideNames swOverrideValues "${MANIFEST_PATH}" "${swKind}")
+	set(swEnabledNames "")
+	set(swOverrideIndex 0)
+
+	foreach(swOverrideName IN LISTS swOverrideNames)
+		list(GET swOverrideValues ${swOverrideIndex} swOverrideValue)
+
+		if(swOverrideValue)
+			list(APPEND swEnabledNames ${swOverrideName})
+		endif()
+
+		math(EXPR swOverrideIndex "${swOverrideIndex} + 1")
+	endforeach()
+
+	set_property(GLOBAL PROPERTY SW_GAME_PACK_${GAME_NAME}_ENABLED_OVERRIDES ${swEnabledNames})
 endfunction()
 
 # 저장소의 매니페스트를 모두 읽는다. 고르지 않은 게임의 매니페스트는 읽지 않고, 함께 짓는 게임 팩(`SW_GAMES`)은 의존만 읽는다
@@ -666,7 +682,8 @@ function(sw_collectUnusedKits ACTIVE_LIST_VAR OUT_VAR)
 
 	foreach(swGame IN LISTS swGamePacks)
 		get_property(swPackDependencies GLOBAL PROPERTY SW_GAME_PACK_${swGame}_DEPENDENCIES)
-		list(APPEND swPending ${swPackDependencies})
+		get_property(swPackOverrides GLOBAL PROPERTY SW_GAME_PACK_${swGame}_ENABLED_OVERRIDES)
+		list(APPEND swPending ${swPackDependencies} ${swPackOverrides})
 	endforeach()
 
 	set(swReached "")

@@ -35,5 +35,14 @@
         "Server"
     ],
     "_bEnabledByDefault": true,
-    "_listModuleOverride": []
+    "_listModuleOverride": [
+        {
+            "_name": "GF_Server_CacheStore",
+            "_bEnabled": true
+        },
+        {
+            "_name": "GF_Server_SQLStore",
+            "_bEnabled": true
+        }
+    ]
 }
