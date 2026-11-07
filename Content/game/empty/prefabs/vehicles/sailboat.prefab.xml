@@ -1,0 +1,122 @@
+<Prefab formatVersion="0" name="Sailboat">
+	<!-- 돛배 — 선체 강체(6 m · 600 kg) + 폰툰 여섯(BuoyancyComponent — 폰툰마다 파도 높이를 받아 피칭 · 롤링) + BoatComponent(키 · 돛 · 방향별 물 저항)
+	     + 폰 · 조타(BoatHelmComponent) + 조타륜 운전석(선미). 선원은 갑판(선체 윗면, 로컬 y 0.35)을 걷는다 — 움직이는 발판과 같은 길(디딘 바디의 속도를 싣는다).
+	     돛 효율: 겉보기 바람이 선수와 이루는 각 0(순풍) 1 · π/2(옆바람) 0.8 · 3π/4 0.3 · π(역풍) 0. 노 젓는 배는 이 프리팹의 변형(rowboat.prefab.xml)이다. -->
+	<GameObject _schemaVersion="0" _name="Sailboat" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _localPosition="0,0.3,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachComponent="None"
+			                    _bodyType="Dynamic"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="600"
+			                    _linearDamping="0"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="false">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1,0.35,3"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,0.7,6"
+			               _attachOwner="None"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_orange.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="0,2.35,0.8"
+			               _localRotation="0,0,0"
+			               _localScale="0.12,4,0.12"
+			               _attachOwner="None"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_dark.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="0,2.5,-0.3"
+			               _localRotation="0,0,0"
+			               _localScale="0.04,3,2.1"
+			               _attachOwner="None"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_light.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="0,0.75,-2.3"
+			               _localRotation="0,0,0"
+			               _localScale="0.7,0.7,0.08"
+			               _attachOwner="None"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_dark.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<BuoyancyComponent _waterDensity="1000" _linearDrag="120">
+				<_listPontoon>
+					<BuoyancyPontoon _localPosition="0.7,-0.1,2.2" _radius="0.45" />
+					<BuoyancyPontoon _localPosition="-0.7,-0.1,2.2" _radius="0.45" />
+					<BuoyancyPontoon _localPosition="0.7,-0.1,0" _radius="0.45" />
+					<BuoyancyPontoon _localPosition="-0.7,-0.1,0" _radius="0.45" />
+					<BuoyancyPontoon _localPosition="0.7,-0.1,-2.2" _radius="0.45" />
+					<BuoyancyPontoon _localPosition="-0.7,-0.1,-2.2" _radius="0.45" />
+				</_listPontoon>
+			</BuoyancyComponent>
+			<BoatComponent _maxRudderAngle="0.6"
+			               _rudderForce="150"
+			               _rudderPosition="0,-0.3,-2.8"
+			               _engineThrust="0"
+			               _sailArea="30"
+			               _waterDrag="3000,3000,150"
+			               _yawDrag="2000">
+				<_sailEfficiency>
+					<_listKey>
+						<FloatCurveKey _time="0" _value="1" _interpolation="Linear" />
+						<FloatCurveKey _time="1.5708" _value="0.8" _interpolation="Linear" />
+						<FloatCurveKey _time="2.3562" _value="0.3" _interpolation="Linear" />
+						<FloatCurveKey _time="3.1416" _value="0" _interpolation="Linear" />
+					</_listKey>
+				</_sailEfficiency>
+			</BoatComponent>
+			<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+				<_listButton>
+					<item>Interact</item>
+				</_listButton>
+				<_listAnalog />
+			</PawnComponent>
+			<BoatHelmComponent />
+			<VehicleSeatComponent _socketName="None"
+			                      _riderPoseParameter="None"
+			                      _seatOffset="0,0.35,-2.7"
+			                      _exitOffset="0,0.4,-1.4"
+			                      _enterDistance="2.5"
+			                      _bDriverSeat="true" />
+			<VehicleExitComponent _exitButton="Interact" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

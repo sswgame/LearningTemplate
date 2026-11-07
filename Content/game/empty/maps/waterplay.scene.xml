@@ -99,10 +99,10 @@
 					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1" _blendMode="Opaque" />
 					<BuoyancyComponent _waterDensity="1000" _linearDrag="200">
 						<_listPontoon>
-							<BuoyancyPontoon _center="0.4,-0.3,0.4" _radius="0.35" />
-							<BuoyancyPontoon _center="-0.4,-0.3,0.4" _radius="0.35" />
-							<BuoyancyPontoon _center="0.4,-0.3,-0.4" _radius="0.35" />
-							<BuoyancyPontoon _center="-0.4,-0.3,-0.4" _radius="0.35" />
+							<BuoyancyPontoon _localPosition="0.4,-0.3,0.4" _radius="0.35" />
+							<BuoyancyPontoon _localPosition="-0.4,-0.3,0.4" _radius="0.35" />
+							<BuoyancyPontoon _localPosition="0.4,-0.3,-0.4" _radius="0.35" />
+							<BuoyancyPontoon _localPosition="-0.4,-0.3,-0.4" _radius="0.35" />
 						</_listPontoon>
 					</BuoyancyComponent>
 				</_listComponent>
