@@ -23,6 +23,8 @@
 
 **상태:** 5 차 작업자 Q1 ~ Q9 를 합쳐 `538c7ebdf6` 까지 Debug · Release · 서버가 통과했다. 6 차 작업자 R1 ~ R4 가 돌고 있고 R5 ~ R8 이 남았다. 규칙 · 범위는 `.claude/handoff/brief_round6.md`(Git 밖), 조사 문서는 `.claude/handoff/surveys/`. 통합 순서 R3 → R1 → R2 → R4 → R5 → R6 → R7 → R8, 합칠 때마다 빌드 · 시나리오 · 골든(그림을 눈으로 본 뒤)을 맞춘다.
 
+**작업자가 못 끝낸 것도 한다(사용자 지시 2026-11-07).** 보고의 "옮기지 못한 목록" 은 통합 때 그 자리에서 처리하거나 다음 작업자 범위에 넣는다 — 인계에 쌓아 두지 않는다.
+
 **1. 6 차 작업자 범위(요약 — 정본은 brief_round6.md).**
 - R1 성능 나머지(`refactor_performance.md` #2 · #3 · #5 · #9 · #10 · #11 · #13 · #15 · #17, 컴파일 #18 ~ #20).
 - R2 온라인: 응답 구조체 분리, 결과 열거형 축소, 계정 클라이언트를 `OnlineProtocolClient` 로, `isRetryable`, 서버 단계 4 · 5, `GF_Server_OnlineCore` 분리, `HTTPLink` 가 핸들 없이 있을 수 없게(통합에서 `HTTP2Client` 의 `setHandle` 누락을 고쳤다).
