@@ -21,6 +21,7 @@ if(SW_SHIPPING_BUILD)
 endif()
 
 sw_addExecutable(App ${APP_SOURCES})
+sw_applyTargetLayerGate(App app)
 if(WIN32)
 	# 실행 파일 아이콘(.rc). RC 컴파일러는 DetectToolchain 이 llvm-rc 로 정해 둔다. 리눅스에는 RC 가 없어 WIN32 안에서만 켠다.
 	enable_language(RC)

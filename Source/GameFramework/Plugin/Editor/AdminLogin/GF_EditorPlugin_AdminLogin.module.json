@@ -12,6 +12,9 @@
         },
         {
             "_name": "GF_Account"
+        },
+        {
+            "_name": "GF_EditorPlugin_Admin"
         }
     ],
     "_listPlatform": [

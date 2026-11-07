@@ -17,6 +17,7 @@ if("Renderer" IN_LIST SW_UNBUILT_ENGINE_FOLDERS)
 endif()
 
 add_library(DevTools SHARED ${DEVTOOLS_SOURCES})
+sw_applyTargetLayerGate(DevTools devtools)
 set_target_properties(DevTools PROPERTIES
 	FOLDER "Source/DevTools"
 	EXCLUDE_FROM_ALL ON)

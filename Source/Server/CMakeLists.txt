@@ -16,6 +16,7 @@ if(SW_SHIPPING_BUILD)
 endif()
 
 sw_addExecutable(Server ${SERVER_SOURCES})
+sw_applyTargetLayerGate(Server server)
 set_target_properties(Server PROPERTIES FOLDER "Source/Server")
 
 target_link_libraries(Server

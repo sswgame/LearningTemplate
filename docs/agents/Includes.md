@@ -22,6 +22,10 @@ Core folders are tiers: `Common` → `Concurrency` · `Math` → `Memory` → `C
 - A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
 - Tiers below `Log` get **no `Logger.h`**: their `.cpp` files build with `Core/pchLow.h`, so `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile. Report with `SW_LOW_LEVEL_*`.
 
+### Target gates
+
+`Source/` is the include root of every target, so include direction across targets is enforced by `#error` stubs placed first on the include path (`Scripts/generate/rules/TargetLayers.toml`, `sw_applyTargetLayerGate`): Core sees nothing above it, Engine sees no GameFramework · Editor · host, GameFramework base sees no kit. A kit, editor extension or game sees another module's headers only if that module is in the `_listDependency` closure of its manifest — add the dependency to the manifest, not an exception. Files with no owning module (`Kits/Feature/Network/NetKitMessageRange.h`) are shared.
+
 ### Platform, compiler, build target
 
 | Question | Ask with | Never |

@@ -72,6 +72,7 @@ function(sw_addCoreObjects TARGET_NAME PCH_ENTRY_NAME PCH_FILE)
 
 	# `Source/Core` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 Core 진입 헤더로 푼다.
 	sw_addPCHEntryDirectory(${TARGET_NAME} PRIVATE ${PCH_ENTRY_NAME} "Core/${PCH_FILE}")
+	sw_applyTargetLayerGate(${TARGET_NAME} core) # 타깃 경계 — Core 는 Engine 과 그 위를 보지 못한다
 	target_link_libraries(${TARGET_NAME} PUBLIC sw_public_source_includes)
 	target_link_libraries(${TARGET_NAME} PUBLIC sw_third_party_includes)
 

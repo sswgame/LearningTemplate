@@ -1,0 +1,20 @@
+# 타깃 경계 표 — 읽는 곳은 Scripts/generate/TargetLayers.py. `Source/` 가 모든 타깃의 include 루트라, 폴더 층 표(EngineLayers · EditorLayers)가 보지 못하는 타깃 사이 include 는
+# 헤더만 쓰면 컴파일 · 링크가 된다. 그래서 타깃마다 "보면 안 되는 경로" 를 적고 그 헤더마다 같은 경로의 #error 껍데기를 include 자리 맨 앞에 놓는다(EngineLayers 와 같은 틀).
+# 언리얼 Build.cs 가 선언한 모듈 폴더만 include 경로에 싣는 것과 같은 자리다(기억).
+#
+# [gate] 의 값은 `Source/` 기준 경로 접두어 목록이다. 없는 경로를 적으면 configure 가 멈춘다.
+# 키트 · 확장 · 게임은 아래 공통 게이트에 더해 매니페스트(`*.module.json` 의 `_listDependency` 전이 폐쇄) 밖 모듈의 헤더를 막는 모듈별 게이트(`module/<이름>`)를 받는다 — 표에 적지 않는다.
+[gate]
+core = ["Engine", "ModuleAPI", "DevTools", "Editor", "ModuleManager", "App", "Server", "GameFramework", "Games", "Programs"]
+engine = ["ModuleAPI", "DevTools", "Editor", "ModuleManager", "App", "Server", "GameFramework", "Games", "Programs"]
+devtools = ["ModuleAPI", "Editor", "ModuleManager", "App", "Server", "GameFramework", "Games", "Programs"]
+editor = ["ModuleManager", "App", "Server", "GameFramework", "Games", "Programs"]
+modulemanager = ["Editor", "App", "Server", "GameFramework", "Games", "Programs"]
+app = ["Editor", "Server", "GameFramework", "Games", "Programs"]
+server = ["App", "Editor", "GameFramework", "Games", "Programs"]
+gameframework = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Kits", "GameFramework/Plugin"]
+kit = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Plugin"]
+game = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Programs", "GameFramework/Plugin"]
+editorextension = ["ModuleManager", "App", "Server", "Games", "Programs"]
+# 전용 서버 구성은 렌더러 헤더를 읽지 않는다 — 렌더러와의 이음매는 `IEngineRenderDriver` 하나다. Server 타깃 구성의 모든 타깃이 더 받는다(`sw_applyTargetLayerGate`).
+serverbuild = ["Engine/Renderer"]

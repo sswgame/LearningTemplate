@@ -20,6 +20,7 @@ if(SW_SHIPPING_BUILD)
 endif()
 
 add_library(ModuleManager STATIC ${MODULE_HOST_SOURCES})
+sw_applyTargetLayerGate(ModuleManager modulemanager)
 set_target_properties(ModuleManager PROPERTIES FOLDER "Source/ModuleManager")
 target_link_libraries(ModuleManager
 	PUBLIC
