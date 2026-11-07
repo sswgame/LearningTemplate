@@ -61,9 +61,12 @@ kNamedDefinition = re.compile(r"\b(?:constexpr|const)\b[^=;()]*\bk[A-Z]\w*\s*(?:
 kFormatName = re.compile(r"\bk\w*(?:Version|Magic|Tag|Revision)\b")
 kReflectionMeta = re.compile(r"\b(?:PROPERTY|REFLECT|FUNCTION|ENUM|EVENT)\s*\(")
 kTableRow = re.compile(r"^\s*\{.*\}\s*,?\s*$")
+# 칸의 기본값: 선언(`float32 _speed{ 3.5f };`)과 생성자 초기화 목록(`, _speed{ 3.5f }`). 튜닝 값의 정본 자리다(PROPERTY · 설정 · 카탈로그 칸 —
+# Constants.md "Tuning values are data") — 칸 이름이 뜻을 말한다. 단 `-1` 은 '없음' 표지라 여기서도 센다.
+kFieldDefault = re.compile(r"^\s*(?!return\b)(?:[\w:<>,\*&]+\s+)+_\w+\s*(?:\{[^;{}]*\}|=\s*[^;=]+)\s*;|^\s*[:,]\s*_\w+\s*[{(][^;]*[})]\s*,?\s*$")
 # 뜻을 사람이 볼 장소(테스트 기대값 · 생성물 · 리플렉션 메타는 옮기지 않는다 — Constants.md "Literals that stay literal")
-kReviewPlaces = ("code", "named-definition", "table-row")
-# 래칫이 세는 장소. 이름 붙은 정의 · 표 줄 · 형식 번호는 이미 이름이나 표가 뜻을 말한다.
+kReviewPlaces = ("code", "named-definition", "table-row", "field-default")
+# 래칫이 세는 장소. 이름 붙은 정의 · 표 줄 · 형식 번호 · 칸 기본값은 이미 이름이나 표가 뜻을 말한다.
 kCountedPlace = "code"
 # 흔한 수학 값 — 0 · 1 · 2 · 절반은 이름이 뜻을 더하지 않는다(`kHalf = 0.5f` 는 별칭이다). 0.25 · 10 · 100 은 넣지 않는다: 튜닝과 섞인다.
 kCommonFloat = frozenset({0.0, 1.0, 2.0, 0.5})
@@ -119,14 +122,16 @@ class LiteralRow:
     line: int
     kind: str      # minus-one · float · hex · integer
     value: str
-    place: str     # generated · test · reflection-meta · table-row · named-definition · format · code
+    place: str     # generated · test · reflection-meta · format · named-definition · table-row · field-default · code
     meaning: str   # `-1` 의 뜻(그 밖은 빈 글)
     context: str
     common: bool   # 흔한 수학 값 · 모든 비트 마스크 · 비트 이동 폭 · 산술 `-1` — 래칫이 세지 않는다
 
     @property
     def counted(self) -> bool:
-        return self.place == kCountedPlace and not self.common
+        if self.common:
+            return False
+        return self.place == kCountedPlace or (self.place == "field-default" and self.kind == "minus-one")
 
     def toTsv(self) -> str:
         return "\t".join((self.path, str(self.line), self.kind, self.value, self.place, self.meaning, "common" if self.common else "", self.context.replace("\t", " ")))
@@ -146,6 +151,8 @@ def classifyPlace(relative: str, line: str) -> str:
         return "named-definition"
     if kTableRow.match(line) is not None:
         return "table-row"
+    if kFieldDefault.match(line) is not None:
+        return "field-default"
     return "code"
 
 
@@ -298,7 +305,7 @@ def lowerBaseline(baseline: dict[str, dict[str, int]], actual: dict[str, dict[st
 
 def printSummary(listRow: list[LiteralRow]) -> None:
     countByPlace: collections.Counter[tuple[str, str]] = collections.Counter((row.place, row.kind) for row in listRow)
-    listPlace = ("code", "named-definition", "format", "table-row", "reflection-meta", "test", "generated")
+    listPlace = ("code", "field-default", "named-definition", "format", "table-row", "reflection-meta", "test", "generated")
     print("## 장소 × 종류(리터럴 수)")
     print(f"{'place':<18}" + "".join(f"{kind:>11}" for kind in kKinds))
     for place in listPlace:
@@ -368,6 +375,11 @@ def runSelfCheck() -> int:
     expect(countedValues("    { 3.5f, 12, 0x10 },") == [], "an initializer table row is not counted")
     expect(countedValues("int32 _target = -1;") == ["-1"], "an index sentinel -1 is counted")
     expect(countedValues("io.check( 0 <= a && -1 <= b );") == ["-1"], "-1 after a logical operator is unary")
+    expect(countedValues("        float32 _walkSpeed{ 3.5f }; ///< 걷기 속도") == [], "a field default is the tuning value's home")
+    expect(countedValues("        , _walkSpeed{ 3.5f }") == [], "a constructor initializer is the PROPERTY default's home")
+    expect(countedValues("        int32 _target{ -1 };") == ["-1"], "a -1 field default is still a sentinel")
+    expect(countedValues("        pilot._heat = 3.5f;") == ["3.5f"], "assigning a member in a body is code")
+    expect(countedValues("        return _speed = 3.5f;") == ["3.5f"], "return is not a type")
     expect(countedValues("return a < b ? -1 : 1;") == [], "a sign ternary is arithmetic")
 
     # 래칫 판정 — 늘면 · 줄면 모두 멈추고, 옮긴 파일은 옛 기준선을 잇는다.

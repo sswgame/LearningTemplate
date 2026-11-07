@@ -12,24 +12,26 @@ namespace sw
     {
         struct CoasterTrainInternal
         {
-            static constexpr float32 kDropThreshold = 2.0f;  ///< 이만큼 넘게 내려가야 낙하로 센다(m)
-            static constexpr float32 kDropRecovery  = 1.0f;  ///< 바닥에서 이만큼 올라오면 낙하가 끝난 것이다(m)
-            static constexpr float32 kInversionUpY  = -0.2f; ///< 좌석 위의 y 가 이보다 작으면 뒤집힌 것이다
-            static constexpr float32 kUprightUpY    = 0.2f;  ///< 이보다 크면 바로 선 것이다
-            static constexpr uint8   kDrivenFlags   = CoasterSegmentFlag::kLift | CoasterSegmentFlag::kStation | CoasterSegmentFlag::kBooster;
+            static constexpr float32 kMinFixedStep     = 1.0f / 2000.0f; ///< 적분 간격 하한(s) — 더 짧으면 한 프레임이 수천 번의 적분이 된다
+            static constexpr float32 kMaxFixedStep     = 1.0f / 30.0f;   ///< 적분 간격 상한(s) — 더 길면 적분이 거칠어진다
+            static constexpr float32 kMaxStepCatchUp   = 0.25f;          ///< 한 프레임에 따라잡는 시간 상한(s) — 디버거 정지 같은 큰 프레임이 수천 번의 적분이 되지 않게
+            static constexpr float32 kOpenEndTolerance = 0.01f;          ///< 열린 코스의 끝에 닿았다고 보는 거리 여유(m)
+            static constexpr float32 kDropThreshold    = 2.0f;           ///< 이만큼 넘게 내려가야 낙하로 센다(m)
+            static constexpr float32 kDropRecovery     = 1.0f;           ///< 바닥에서 이만큼 올라오면 낙하가 끝난 것이다(m)
+            static constexpr float32 kInversionUpY     = -0.2f;          ///< 좌석 위의 y 가 이보다 작으면 뒤집힌 것이다
+            static constexpr float32 kUprightUpY       = 0.2f;           ///< 이보다 크면 바로 선 것이다
+            static constexpr uint8   kDrivenFlags      = CoasterSegmentFlag::kLift | CoasterSegmentFlag::kStation | CoasterSegmentFlag::kBooster;
 
             /** @brief 매개변수가 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(자르지 않는다). 적분 간격은 1/2000..1/30 초여야 한 프레임이 수천 번의 적분이 되지 않고 적분이 거칠어지지 않는다. 중력은 G 의 분모라 0 보다 커야 한다. */
             [[nodiscard]] static bool acceptParams( const CoasterPhysicsParams& params )
             {
-                const float32 minFixedStep = 1.0f / 2000.0f;
-                const float32 maxFixedStep = 1.0f / 30.0f;
-                const bool    bStepValid   = minFixedStep <= params._fixedStep && params._fixedStep <= maxFixedStep;
-                const bool    bNonNegative = 0.0f < params._gravity && 0.0f <= params._rollingResistance && 0.0f <= params._dragCoefficient && 0.0f <= params._liftSpeed &&
+                const bool bStepValid   = kMinFixedStep <= params._fixedStep && params._fixedStep <= kMaxFixedStep;
+                const bool bNonNegative = 0.0f < params._gravity && 0.0f <= params._rollingResistance && 0.0f <= params._dragCoefficient && 0.0f <= params._liftSpeed &&
                                           0.0f <= params._stationSpeed && 0.0f <= params._boosterSpeed && 0.0f <= params._boosterAcceleration && 0.0f <= params._brakeSpeed &&
                                           0.0f <= params._brakeDeceleration && 0.0f <= params._stallSpeed && 0.0f <= params._stallSeconds && 0.0f <= params._gForceWarmupSeconds;
                 if ( bStepValid && bNonNegative )
                     return true;
-                SW_LOG_ERROR_ID( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds", "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), gravity needs more than 0, the other constants need 0 or more", params._fixedStep, minFixedStep, maxFixedStep );
+                SW_LOG_ERROR_ID( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds", "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), gravity needs more than 0, the other constants need 0 or more", params._fixedStep, kMinFixedStep, kMaxFixedStep );
                 return false;
             }
 
@@ -111,7 +113,7 @@ namespace sw
         _previousVelocity     = float3{};
         _speed                = 0.0f;
         _elapsedTime          = 0.0f;
-        _stepTimer            = FixedStepTimer( _params._fixedStep, 0.25f ); // 큰 프레임(디버거 정지)이 수천 번의 적분이 되지 않게 한다
+        _stepTimer            = FixedStepTimer( _params._fixedStep, CoasterTrainInternal::kMaxStepCatchUp );
         _lapCount             = 0;
         _bHasPreviousVelocity = SW_FALSE;
         setDistance( startDistance );
@@ -267,7 +269,7 @@ namespace sw
 
             drop.observe( height, stats );
 
-            const bool bOpenEnd = track.isClosed() == false && train.getDistance() >= track.getLength() - 0.01f;
+            const bool bOpenEnd = track.isClosed() == false && train.getDistance() >= track.getLength() - CoasterTrainInternal::kOpenEndTolerance;
             if ( train.getLapCount() >= 1 || bOpenEnd )
             {
                 stats._bCompleted = SW_TRUE;
@@ -286,29 +288,31 @@ namespace sw
 
         stats._lapTime      = time;
         stats._averageSpeed = time > 0.0f ? travelled / time : 0.0f;
-        computeRatings( stats );
+        computeRatings( stats, params._ratingWeights );
         return stats;
     }
 
-    void CoasterRideAnalyzer::computeRatings( CoasterRideStats& inoutStats )
+    void CoasterRideAnalyzer::computeRatings( CoasterRideStats& inoutStats, const CoasterRatingWeights& weights )
     {
-        // 강도는 누르는 G, 띄우는 G, 옆 G, 속도로 정한다. 멀미는 옆 G, 뒤집힘, 강도로 정한다. 흥분은 속도, 에어타임, 뒤집힘, 낙하, 길이로 정하고
-        // 너무 센 강도(8 넘음)는 깎는다(타이쿤처럼 "너무 무서우면 안 탄다").
+        // 강도는 누르는 G, 띄우는 G, 옆 G, 속도로 정한다. 멀미는 옆 G, 뒤집힘, 에어타임, 강도로 정한다. 흥분은 속도, 에어타임, 뒤집힘, 낙하, 길이로 정하고
+        // 너무 센 강도는 깎는다(타이쿤처럼 "너무 무서우면 안 탄다"). 계수는 `CoasterRatingWeights`(데이터)다.
         CoasterRideStats& stats      = inoutStats;
         const float32     positiveG  = MathUtil::max( 0.0f, stats._maxVerticalG - 1.0f );
         const float32     negativeG  = MathUtil::max( 0.0f, -stats._minVerticalG );
         const float32     inversions = static_cast<float32>( stats._inversionCount );
         const float32     drops      = static_cast<float32>( stats._dropCount );
-        const float32     intensity  = positiveG * 0.9f + negativeG * 1.5f + stats._maxLateralG * 1.2f + stats._maxSpeed / 15.0f;
-        stats._intensity             = MathUtil::clamp( intensity, 0.0f, 10.0f );
-        const float32 nausea         = stats._maxLateralG * 1.5f + inversions * 1.0f + stats._airtime * 0.3f + stats._intensity * 0.25f;
-        stats._nausea                = MathUtil::clamp( nausea, 0.0f, 10.0f );
-        float32 excitement           = stats._maxSpeed / 10.0f + stats._airtime * 0.6f + inversions * 0.8f + drops * 0.3f + stats._maxDropHeight / 15.0f +
-                             stats._length / 400.0f;
-        if ( intensity > 8.0f )
-            excitement -= intensity - 8.0f;
+        const float32     intensity  = positiveG * weights._intensityPerPositiveG + negativeG * weights._intensityPerNegativeG + stats._maxLateralG * weights._intensityPerLateralG +
+                                  stats._maxSpeed / weights._intensitySpeedScale;
+        stats._intensity     = MathUtil::clamp( intensity, 0.0f, weights._maxRating );
+        const float32 nausea = stats._maxLateralG * weights._nauseaPerLateralG + inversions * weights._nauseaPerInversion + stats._airtime * weights._nauseaPerAirtime +
+                               stats._intensity * weights._nauseaPerIntensity;
+        stats._nausea      = MathUtil::clamp( nausea, 0.0f, weights._maxRating );
+        float32 excitement = stats._maxSpeed / weights._excitementSpeedScale + stats._airtime * weights._excitementPerAirtime + inversions * weights._excitementPerInversion +
+                             drops * weights._excitementPerDrop + stats._maxDropHeight / weights._excitementDropHeightScale + stats._length / weights._excitementLengthScale;
+        if ( intensity > weights._excitementIntensityLimit )
+            excitement -= intensity - weights._excitementIntensityLimit;
         if ( stats._bCompleted == SW_FALSE )
             excitement = 0.0f; // 한 바퀴를 못 도는 코스터는 운행할 수 없다
-        stats._excitement = MathUtil::clamp( excitement, 0.0f, 10.0f );
+        stats._excitement = MathUtil::clamp( excitement, 0.0f, weights._maxRating );
     }
 } // namespace sw

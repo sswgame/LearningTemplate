@@ -14,6 +14,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace sw
 {
@@ -21,8 +22,10 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr uint32 kMinRideStateBytes  = 64; ///< 놀이기구 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr uint32 kMinGuestStateBytes = 80; ///< 손님 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinRideStateBytes  = 64;      ///< 놀이기구 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinGuestStateBytes = 80;      ///< 손님 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr float32 kMinDivisor         = 1.0e-3f; ///< 걷는 시간 · 줄 방향 길이를 나눌 때 0 나누기를 막는 하한
+            static constexpr float32 kMinWalkSpeed       = 0.1f;    ///< 설정의 걷기 속도가 0 이어도 걷는 시간이 무한이 되지 않게 하는 하한(m/s)
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -279,7 +282,7 @@ namespace sw
         for ( const ParkRide& ride : _listRide )
         {
             if ( ride._bOpen == SW_TRUE )
-                costPerSecond += static_cast<float32>( ride._runningCostPerMinute ) / 60.0f;
+                costPerSecond += static_cast<float32>( ride._runningCostPerMinute ) / static_cast<float32>( constant::time::kSecondsPerMinute );
         }
         _runningCost.add( costPerSecond * deltaTime );
         const int32 runningCost = _runningCost.takeWhole();
@@ -295,10 +298,10 @@ namespace sw
 
     void ThemeParkSimulation::spawnGuests( float32 deltaTime )
     {
-        const float32 feeFactor    = MathUtil::max( 0.0f, 1.0f - static_cast<float32>( _settings._entryFee ) / 100.0f );
-        const float32 ratingFactor = 0.4f + static_cast<float32>( _parkRating ) / 1000.0f;
-        const float32 rideFactor   = _listRide.empty() ? 0.2f : 1.0f; // 놀이기구 없는 공원에는 거의 오지 않는다
-        _arrival.add( _settings._guestArrivalPerMinute / 60.0f * ratingFactor * feeFactor * rideFactor * deltaTime );
+        const float32 feeFactor    = MathUtil::max( 0.0f, 1.0f - static_cast<float32>( _settings._entryFee ) / _settings._noArrivalEntryFee );
+        const float32 ratingFactor = _settings._arrivalBaseFactor + static_cast<float32>( _parkRating ) / _settings._arrivalRatingScale;
+        const float32 rideFactor   = _listRide.empty() ? _settings._noRideArrivalFactor : 1.0f;
+        _arrival.add( _settings._guestArrivalPerMinute / static_cast<float32>( constant::time::kSecondsPerMinute ) * ratingFactor * feeFactor * rideFactor * deltaTime );
         while ( _arrival.takeOne() )
         {
             const int32   cash            = _settings._guestCashMin + static_cast<int32>( nextRandom() * static_cast<float32>( _settings._guestCashMax - _settings._guestCashMin ) );
@@ -330,21 +333,21 @@ namespace sw
                     ParkGuest* pGuest = findGuest( guestID );
                     if ( pGuest == nullptr )
                         continue;
-                    float32 fun      = 0.04f + ride._excitement * 0.025f;
-                    pGuest->_thought = ride._excitement >= 6.0f ? ParkGuestThought::GreatRide : ParkGuestThought::None;
+                    float32 fun      = _settings._rideFunBase + ride._excitement * _settings._rideFunPerExcitement;
+                    pGuest->_thought = ride._excitement >= _settings._greatRideExcitement ? ParkGuestThought::GreatRide : ParkGuestThought::None;
                     if ( ride._intensity < pGuest->_minIntensity )
                     {
-                        fun *= 0.5f;
+                        fun *= _settings._tameRideFunScale;
                         pGuest->_thought = ParkGuestThought::TooTame;
                     }
                     pGuest->_nausea = MathUtil::min( 1.0f, pGuest->_nausea + ride._nausea * _settings._nauseaPerRating );
                     if ( pGuest->_nausea > pGuest->_nauseaTolerance )
                     {
-                        fun -= 0.1f;
+                        fun -= _settings._sickFunPenalty;
                         pGuest->_thought = ParkGuestThought::Sick;
                     }
                     pGuest->_happiness = MathUtil::clamp( pGuest->_happiness + fun, 0.0f, 1.0f );
-                    pGuest->_energy    = MathUtil::max( 0.0f, pGuest->_energy - 0.04f );
+                    pGuest->_energy    = MathUtil::max( 0.0f, pGuest->_energy - _settings._rideEnergyCost );
                     ++pGuest->_rideCount;
                     pGuest->_position = ride._entrance;
                     pGuest->_state    = ParkGuestState::Walking;
@@ -398,7 +401,7 @@ namespace sw
                 case ParkGuestState::Leaving:
                 {
                     guest._walkTimer -= deltaTime;
-                    const float32 progress = 1.0f - guest._walkTimer / MathUtil::max( 1.0e-3f, guest._walkDuration );
+                    const float32 progress = 1.0f - guest._walkTimer / MathUtil::max( ThemeParkInternal::kMinDivisor, guest._walkDuration );
                     guest._position        = ThemeParkInternal::lerpPosition( guest._walkFrom, guest._walkTo, progress );
                     if ( guest._walkTimer > 0.0f )
                         break;
@@ -430,7 +433,7 @@ namespace sw
                     {
                         leaveQueue( guest );
                         guest._thought   = ParkGuestThought::QueueTooLong;
-                        guest._happiness = MathUtil::max( 0.0f, guest._happiness - 0.1f );
+                        guest._happiness = MathUtil::max( 0.0f, guest._happiness - _settings._queueGiveUpUnhappiness );
                         chooseNextRide( guest );
                         break;
                     }
@@ -443,7 +446,7 @@ namespace sw
                     }
                     float3        toGate = _settings._gatePosition - ride._entrance;
                     const float32 length = toGate.getLength();
-                    toGate               = length > 1.0e-3f ? toGate * ( 1.0f / length ) : float3{ 0.0f, 0.0f, -1.0f };
+                    toGate               = length > ThemeParkInternal::kMinDivisor ? toGate * ( 1.0f / length ) : float3{ 0.0f, 0.0f, -1.0f };
                     guest._position      = ride._entrance + toGate * ( _settings._queueSpacing * static_cast<float32>( lineIndex + 1 ) );
                     break;
                 }
@@ -469,7 +472,7 @@ namespace sw
             sendHome( guest, guest._thought );
             return;
         }
-        if ( guest._nausea > 0.95f )
+        if ( guest._nausea > _settings._leaveNausea )
         {
             sendHome( guest, ParkGuestThought::Sick );
             return;
@@ -477,7 +480,7 @@ namespace sw
 
         const int32      previousRide = guest._targetRideIndex;
         int32            bestRide     = constant::invalid_index::kInt32;
-        float32          bestScore    = -1.0e9f;
+        float32          bestScore    = std::numeric_limits<float32>::lowest();
         ParkGuestThought lastReject   = _listRide.empty() ? ParkGuestThought::NothingToRide : ParkGuestThought::None;
         for ( size_t rideIndex = 0; rideIndex < _listRide.size(); ++rideIndex )
         {
@@ -494,7 +497,7 @@ namespace sw
                 lastReject = ParkGuestThought::Sick;
                 continue;
             }
-            if ( static_cast<float32>( ride._price ) > computeRideValue( ride ) * 2.0f + 0.5f )
+            if ( static_cast<float32>( ride._price ) > computeRideValue( ride ) * _settings._fairPriceValueScale + _settings._fairPriceSlack )
             {
                 lastReject = ParkGuestThought::TooExpensive;
                 continue;
@@ -511,11 +514,11 @@ namespace sw
                 continue;
             }
 
-            float32 score = ride._excitement + nextRandom() * 1.5f;
+            float32 score = ride._excitement + nextRandom() * _settings._rideChoiceJitter;
             if ( ride._intensity < guest._minIntensity )
-                score -= 2.0f; // 시시하지만 탈 수는 있다
+                score -= _settings._tameRideChoicePenalty;
             if ( static_cast<int32>( rideIndex ) == previousRide )
-                score -= 1.5f; // 같은 것만 타지는 않는다
+                score -= _settings._repeatRideChoicePenalty;
             if ( score > bestScore )
             {
                 bestScore = score;
@@ -526,7 +529,7 @@ namespace sw
         if ( bestRide < 0 )
         {
             // 탈 것이 없으면 기분이 조금 상하고 둘러본다.
-            guest._happiness       = MathUtil::max( 0.0f, guest._happiness - 0.05f );
+            guest._happiness       = MathUtil::max( 0.0f, guest._happiness - _settings._nothingToRideUnhappiness );
             guest._thought         = lastReject == ParkGuestThought::None ? ParkGuestThought::NothingToRide : lastReject;
             guest._targetRideIndex = constant::invalid_index::kInt32;
             if ( lastReject == ParkGuestThought::OutOfCash )
@@ -550,7 +553,7 @@ namespace sw
     {
         guest._walkFrom     = guest._position;
         guest._walkTo       = destination;
-        guest._walkDuration = MathUtil::max( 0.5f, float3::getDistance( guest._position, destination ) / MathUtil::max( 0.1f, _settings._walkSpeed ) );
+        guest._walkDuration = MathUtil::max( _settings._minWalkSeconds, float3::getDistance( guest._position, destination ) / MathUtil::max( ThemeParkInternal::kMinWalkSpeed, _settings._walkSpeed ) );
         guest._walkTimer    = guest._walkDuration;
         guest._state        = ParkGuestState::Walking;
     }
@@ -590,12 +593,12 @@ namespace sw
             if ( ride._bOpen == SW_TRUE )
                 ++openRideCount;
         }
-        const float32 rideBonus  = static_cast<float32>( MathUtil::min( openRideCount, 8u ) ) * 25.0f;
+        const float32 rideBonus  = static_cast<float32>( MathUtil::min( openRideCount, _settings._ratedOpenRideCount ) ) * _settings._ratingPerOpenRide;
         const uint32  guestCount = getGuestCount();
         float32       rating     = 0.0f;
         if ( guestCount == 0 )
         {
-            rating = 400.0f + rideBonus;
+            rating = _settings._emptyParkRating + rideBonus;
         }
         else
         {
@@ -607,9 +610,10 @@ namespace sw
             }
             const float32 averageNausea = totalNausea / static_cast<float32>( guestCount );
             const float32 queueShare    = static_cast<float32>( countGuestsThinking( ParkGuestThought::QueueTooLong ) ) / static_cast<float32>( guestCount );
-            rating                      = 200.0f + getAverageHappiness() * 600.0f - averageNausea * 300.0f + rideBonus - queueShare * 100.0f;
+            rating                      = _settings._ratingBase + getAverageHappiness() * _settings._ratingPerHappiness - averageNausea * _settings._ratingPerNausea + rideBonus -
+                     queueShare * _settings._ratingPerQueueComplaint;
         }
-        _parkRating = static_cast<int32>( MathUtil::clamp( rating, 0.0f, 999.0f ) );
+        _parkRating = static_cast<int32>( MathUtil::clamp( rating, 0.0f, static_cast<float32>( kMaxParkRating ) ) );
     }
 
     ParkGuest* ThemeParkSimulation::findGuest( uint32 guestID )
@@ -688,7 +692,7 @@ namespace sw
         const uint32 guestCount = static_cast<uint32>( _listGuest.size() );
         // 운영비는 정수 부분을 걸음마다 빼 가 1 아래이다. 도착 누적은 공원이 차면 1 위로 쌓일 수 있다(`admitGuest` 가 정원에서 멈춘다).
         io.check( 0.0f <= _arrival._fraction && 0.0f <= _runningCost._fraction && _runningCost._fraction < 1.0f );
-        io.check( 0.0f <= _elapsedTime && 0 <= _parkRating && _parkRating <= 999 && 0 < _nextGuestID && guestCount <= _totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests );
+        io.check( 0.0f <= _elapsedTime && 0 <= _parkRating && _parkRating <= kMaxParkRating && 0 < _nextGuestID && guestCount <= _totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests );
         io.check( ThemeParkInternal::areLinksValid( _listRide, _listGuest, _nextGuestID ) );
     }
 

@@ -413,27 +413,48 @@ SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheFormula )
     stats._maxDropHeight  = 30.0f;
     stats._length         = 400.0f;
     stats._bCompleted     = SW_TRUE;
-    CoasterRideAnalyzer::computeRatings( stats );
+    CoasterRideAnalyzer::computeRatings( stats, CoasterRatingWeights{} );
     SW_EXPECT_NEAR( 6.5f, stats._intensity, 1.0e-4f );  // 2 x 0.9 + 1 x 1.5 + 1 x 1.2 + 30 / 15
     SW_EXPECT_NEAR( 5.425f, stats._nausea, 1.0e-4f );   // 1.5 + 2 + 0.3 + 6.5 x 0.25
     SW_EXPECT_NEAR( 8.8f, stats._excitement, 1.0e-4f ); // 3 + 0.6 + 1.6 + 0.6 + 2 + 1
 
     CoasterRideStats notCompleted = stats;
     notCompleted._bCompleted      = SW_FALSE;
-    CoasterRideAnalyzer::computeRatings( notCompleted );
+    CoasterRideAnalyzer::computeRatings( notCompleted, CoasterRatingWeights{} );
     SW_EXPECT_EQUAL( 0.0f, notCompleted._excitement );
 
     CoasterRideStats tooIntense = stats;
     tooIntense._maxVerticalG    = 6.0f; // 강도 9.2 - 흥분에서 1.2 를 깎는다
-    CoasterRideAnalyzer::computeRatings( tooIntense );
+    CoasterRideAnalyzer::computeRatings( tooIntense, CoasterRatingWeights{} );
     SW_EXPECT_NEAR( 9.2f, tooIntense._intensity, 1.0e-4f );
     SW_EXPECT_NEAR( 7.6f, tooIntense._excitement, 1.0e-4f );
 
     CoasterRideStats extreme = stats;
     extreme._maxVerticalG    = 50.0f;
     extreme._maxLateralG     = 50.0f;
-    CoasterRideAnalyzer::computeRatings( extreme );
+    CoasterRideAnalyzer::computeRatings( extreme, CoasterRatingWeights{} );
     SW_EXPECT_EQUAL( 10.0f, extreme._intensity );
     SW_EXPECT_EQUAL( 10.0f, extreme._nausea );
     SW_EXPECT_EQUAL( 0.0f, extreme._excitement ); // 강도가 지나치면 아래로 잘린다
+}
+
+/**
+ * @brief [CoasterTrainTest] 평가 계수는 데이터다: 계수를 바꾸면 같은 측정값의 평가가 그만큼 바뀌고, 위 끝도 계수를 따른다
+ */
+SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheWeights )
+{
+    CoasterRideStats stats;
+    stats._maxLateralG = 1.0f;
+    stats._maxSpeed    = 30.0f;
+    stats._bCompleted  = SW_TRUE;
+
+    CoasterRatingWeights weights;
+    weights._intensityPerLateralG = 2.0f;  // 기본 1.2
+    weights._intensitySpeedScale  = 10.0f; // 기본 15
+    CoasterRideAnalyzer::computeRatings( stats, weights );
+    SW_EXPECT_NEAR( 5.0f, stats._intensity, 1.0e-4f ); // 1 x 2 + 30 / 10
+
+    weights._maxRating = 4.0f;
+    CoasterRideAnalyzer::computeRatings( stats, weights );
+    SW_EXPECT_EQUAL( 4.0f, stats._intensity );
 }
