@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -81,8 +82,7 @@ namespace sw
             if ( pTarget != nullptr )
             {
                 result._targetID   = pTarget->_actorID;
-                result._healthLoss = MathUtil::min( pTarget->_health, _monster._damage );
-                pTarget->_health -= result._healthLoss;
+                result._healthLoss = DepletingValue::take( pTarget->_health, _monster._damage )._taken;
                 defeatIfBroken( *pTarget );
             }
             refreshState();
@@ -95,14 +95,13 @@ namespace sw
         result._horrorSuccesses = rollSuccesses( pInvestigator->_will );
         if ( result._horrorSuccesses == 0 )
         {
-            result._sanityLoss = MathUtil::min( pInvestigator->_sanity, _monster._horror );
-            pInvestigator->_sanity -= result._sanityLoss;
+            result._sanityLoss = DepletingValue::take( pInvestigator->_sanity, _monster._horror )._taken;
             defeatIfBroken( *pInvestigator );
         }
         if ( pInvestigator->_bDefeated == SW_FALSE )
         {
             result._combatSuccesses = rollSuccesses( pInvestigator->_strength );
-            _monsterToughness       = MathUtil::max( 0, _monsterToughness - result._combatSuccesses );
+            DepletingValue::take( _monsterToughness, result._combatSuccesses );
         }
         refreshState();
         return result;

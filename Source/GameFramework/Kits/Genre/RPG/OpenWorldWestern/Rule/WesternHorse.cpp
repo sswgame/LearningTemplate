@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -95,8 +96,8 @@ namespace sw
         if ( gameHours > 0.0f )
         {
             const float32 drain = ( _pDef->_coreDrainPerHour + ( _bGalloping != SW_FALSE ? _pDef->_gallopCoreDrainPerHour : 0.0f ) ) * gameHours;
-            _healthCore         = MathUtil::max( 0.0f, _healthCore - drain );
-            _staminaCore        = MathUtil::max( 0.0f, _staminaCore - drain );
+            DepletingValue::take( _healthCore, drain );
+            _staminaCore = MathUtil::max( 0.0f, _staminaCore - drain );
             _hoursSinceBrush += gameHours;
         }
         _bGalloping = SW_FALSE;

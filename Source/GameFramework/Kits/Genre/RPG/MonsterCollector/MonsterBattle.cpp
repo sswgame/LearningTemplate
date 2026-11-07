@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -492,8 +493,7 @@ namespace sw
     void MonsterBattle::applyDamage( int32 side, int32 amount, MonsterBattleEvent::Kind kind, const hashed_string& id )
     {
         MonsterInstance& target = getActiveMutable( side );
-        const int32      dealt  = MathUtil::clamp( amount, 0, target._hp );
-        target._hp -= dealt;
+        const int32      dealt  = DepletingValue::take( target._hp, amount )._taken;
         pushEvent( kind, side, dealt, id );
     }
 

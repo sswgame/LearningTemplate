@@ -431,6 +431,17 @@ def checkSharedTempInTests(code: str, relative: str) -> list[tuple[int, str]]:
     return [(lineOf(code, index), "테스트는 공용 임시 폴더 대신 test::makeScratchPath 를 쓴다")]
 
 
+kHandDepletion = re.compile(r"\b(_\w*(?:hp|health|durability|sanity)\w*)\s*(?:-=|=\s*MathUtil::max\(\s*0(?:\.0f)?\s*,\s*[\w.\->]*\1\s*-)", re.IGNORECASE)
+
+
+def checkHandDepletion(code: str, relative: str) -> list[tuple[int, str]]:
+    """게임 수치(체력 · 내구도 · 정신력)는 `DepletingValue::take` 로 깎는다 — 0 고정과 소진 판정을 손으로 적으면 곳마다 갈린다(음수 체력이 저장 검사에 걸린다)."""
+    isGameCode = relative.startswith(("Source/GameFramework/", "Source/Games/")) and "/Tests/" not in relative
+    if not isGameCode:
+        return []
+    return [(lineOf(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in kHandDepletion.finditer(code)]
+
+
 def inspectFile(path: Path, relative: str) -> list[str]:
     raw = path.read_text(encoding="utf-8-sig", errors="ignore")
     code = stripCode(raw)
@@ -445,6 +456,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
     listProblem += checkUtilBesideOwner(code, relative)
     listProblem += checkIncludesInsideBraces(raw, code)
     listProblem += checkSharedTempInTests(code, relative)
+    listProblem += checkHandDepletion(code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(listProblem))]
 
 

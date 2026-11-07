@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
@@ -1701,8 +1702,8 @@ namespace sw
 
     void RTSWorld::dealDamage( RTSUnit& attacker, RTSUnit& target )
     {
-        const float32 damage = MathUtil::max( _settings._minimumDamage, attacker._pDef->_damage - target._pDef->_armor );
-        target._hp -= damage;
+        const float32 damage    = MathUtil::max( _settings._minimumDamage, attacker._pDef->_damage - target._pDef->_armor );
+        const bool    bDepleted = DepletingValue::take( target._hp, damage )._bDepleted == SW_TRUE;
         if ( target._owner != kNoOwner )
         {
             RTSPlayer& owner = _listPlayer[static_cast<size_t>( target._owner )];
@@ -1716,7 +1717,7 @@ namespace sw
         const bool bShouldRetaliate = target.isMobile() && target._listOrder.empty() && target._attackTarget.isValid() == false && canAttack( target, attacker );
         if ( bShouldRetaliate )
             target._attackTarget = attacker._id;
-        if ( target._hp <= 0.0f )
+        if ( bDepleted )
             killUnit( target, attacker._id );
     }
 

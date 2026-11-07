@@ -11,6 +11,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/UI/Marker/DamageNumberComponent.h"
 
 namespace sw
@@ -146,10 +147,8 @@ namespace sw
         if ( actualDamage <= 0 )
             return;
 
-        _hp -= actualDamage;
-        if ( _hp <= 0 )
+        if ( DepletingValue::take( _hp, actualDamage )._bDepleted == SW_TRUE )
         {
-            _hp      = 0;
             _bIsDead = true;
         }
         else

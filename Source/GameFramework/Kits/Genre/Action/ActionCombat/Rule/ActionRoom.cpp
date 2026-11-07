@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -315,12 +316,8 @@ namespace sw
                 continue;
             // 방어 공식은 유닛 스탯과 같다(고정 방어를 빼고 최소 1을 보장한다). 같은 몬스터 정의를 두 곳이 다르게 읽지 않는다.
             const float32 defense = static_cast<float32>( _listMonsterDef[actor._defIndex]._stats._def );
-            actor._hp -= DamageMath::applyArmor( _settings._playerAttackDamage, defense, 0.0f, 1.0f );
-            if ( actor._hp <= 0.0f )
-            {
-                actor._hp     = 0.0f;
+            if ( DepletingValue::take( actor._hp, DamageMath::applyArmor( _settings._playerAttackDamage, defense, 0.0f, 1.0f ) )._bDepleted == SW_TRUE )
                 actor._bAlive = SW_FALSE;
-            }
         }
     }
 

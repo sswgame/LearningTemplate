@@ -8,6 +8,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -531,8 +532,7 @@ namespace sw
                 }
             }
         }
-        const int32 dealt = MathUtil::min( enemy._hp, bWeak ? static_cast<int32>( static_cast<float32>( damage ) * _settings._weaknessMultiplier ) : damage );
-        enemy._hp -= MathUtil::max( 0, dealt );
+        const int32 dealt = DepletingValue::take( enemy._hp, bWeak ? static_cast<int32>( static_cast<float32>( damage ) * _settings._weaknessMultiplier ) : damage )._taken;
         pushEvent( JRPGBattleEvent::Kind::Damage, false, memberIndex, enemyIndex, dealt );
 
         // 잠금은 한 타의 유형 하나마다 같은 유형의 잠금을 하나 깬다. 다 깨면 시전이 취소된다.
@@ -577,8 +577,7 @@ namespace sw
             pushEvent( JRPGBattleEvent::Kind::TimedBlock, true, enemyIndex, memberIndex );
             reduced = JRPGBattleInternal::applyReduction( reduced, _settings._timedBlockReduction );
         }
-        const int32 dealt = MathUtil::min( member._hp, MathUtil::max( 0, reduced ) );
-        member._hp -= dealt;
+        const int32 dealt = DepletingValue::take( member._hp, reduced )._taken;
         pushEvent( JRPGBattleEvent::Kind::Damage, true, enemyIndex, memberIndex, dealt );
         if ( member.isAlive() == false )
         {

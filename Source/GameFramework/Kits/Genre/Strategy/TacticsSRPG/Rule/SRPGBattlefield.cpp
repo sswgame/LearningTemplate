@@ -7,6 +7,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -511,8 +512,7 @@ namespace sw
         SRPGUnit* pUnit = findUnit( unitIndex );
         if ( pUnit == nullptr || pUnit->_bAlive == SW_FALSE )
             return false;
-        pUnit->_hp = MathUtil::max( 0, pUnit->_hp - MathUtil::max( 0, amount ) );
-        if ( pUnit->_hp > 0 )
+        if ( DepletingValue::take( pUnit->_hp, amount )._bDepleted == SW_FALSE )
             return false;
         pUnit->_bAlive = SW_FALSE;
         if ( _settings._turnMode == SRPGTurnMode::Individual )

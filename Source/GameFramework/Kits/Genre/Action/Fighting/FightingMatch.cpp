@@ -13,6 +13,7 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 
 namespace sw
 {
@@ -859,7 +860,7 @@ namespace sw
     void FightingMatch::applyDamage( int32 defender, int32 damage )
     {
         FighterRuntime& fighter = _arrFighter[defender];
-        fighter._health         = MathUtil::max( 0, fighter._health - damage );
+        DepletingValue::take( fighter._health, damage );
     }
 
     void FightingMatch::resolveHits()

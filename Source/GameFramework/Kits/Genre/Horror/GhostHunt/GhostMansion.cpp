@@ -8,6 +8,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -197,10 +198,8 @@ namespace sw
         HidingGhostRuntime& boo = _listBoo[static_cast<size_t>( booIndex )];
         if ( boo._state != HidingGhostState::Revealed || amount <= 0.0f )
             return false;
-        boo._hp -= amount;
-        if ( boo._hp > 0.0f )
+        if ( DepletingValue::take( boo._hp, amount )._bDepleted == SW_FALSE )
             return false;
-        boo._hp    = 0.0f;
         boo._state = HidingGhostState::Caught;
         pushEvent( GhostMansionEventKind::BooCaught, booID, boo._room );
         return true;

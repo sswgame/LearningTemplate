@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -1033,9 +1034,9 @@ namespace sw
                     break;
                 }
             }
-            victim._health -= damage;
+            const bool bDepleted = DepletingValue::take( victim._health, damage )._bDepleted == SW_TRUE;
             inoutDealt += damage;
-            if ( victim._health <= 0.0f && victim._bAlive == SW_TRUE )
+            if ( bDepleted && victim._bAlive == SW_TRUE )
             {
                 victim._bAlive = SW_FALSE;
                 pushEvent( ConquestEvent::Kind::UnitDied, victim._pDef->_id, victim._unitID, victim._team );
@@ -1044,12 +1045,11 @@ namespace sw
         }
         if ( target._bCommander == SW_TRUE )
         {
-            _commander._health -= baseDamage;
+            const bool bDepleted = DepletingValue::take( _commander._health, baseDamage )._bDepleted == SW_TRUE;
             inoutDealt += baseDamage;
-            if ( _commander._health <= 0.0f && _commander._bAlive == SW_TRUE )
+            if ( bDepleted && _commander._bAlive == SW_TRUE )
             {
                 _commander._bAlive = SW_FALSE;
-                _commander._health = 0.0f;
                 _commander._respawnTimer.start( rules._commanderRespawnTime );
                 pushEvent( ConquestEvent::Kind::CommanderDied, hashed_string(), 0, ConquestTeam::Player );
             }
@@ -1062,20 +1062,16 @@ namespace sw
         inoutDealt += damage;
         if ( site._gateHealth > 0.0f )
         {
-            site._gateHealth -= damage;
-            if ( site._gateHealth <= 0.0f )
+            if ( DepletingValue::take( site._gateHealth, damage )._bDepleted == SW_TRUE )
             {
-                site._gateHealth = 0.0f;
                 pushEvent( ConquestEvent::Kind::GateBroken, site._pDef->_id, 0, attacker );
             }
             return;
         }
         if ( site._wallHealth > 0.0f )
         {
-            site._wallHealth -= damage;
-            if ( site._wallHealth <= 0.0f )
+            if ( DepletingValue::take( site._wallHealth, damage )._bDepleted == SW_TRUE )
             {
-                site._wallHealth = 0.0f;
                 pushEvent( ConquestEvent::Kind::WallBroken, site._pDef->_id, 0, attacker );
             }
         }

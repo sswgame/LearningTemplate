@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -183,7 +184,7 @@ namespace sw
             {
                 const int32 absorbed = MathUtil::min( _enemy._block, effect._amount );
                 _enemy._block -= absorbed;
-                _enemy._hp = MathUtil::max( 0, _enemy._hp - ( effect._amount - absorbed ) );
+                DepletingValue::take( _enemy._hp, effect._amount - absorbed );
                 break;
             }
             case CardBattleEffectKind::Block:
@@ -243,7 +244,7 @@ namespace sw
             {
                 const int32 absorbed = MathUtil::min( _playerBlock, intent._amount );
                 _playerBlock -= absorbed;
-                _playerHP = MathUtil::max( 0, _playerHP - ( intent._amount - absorbed ) );
+                DepletingValue::take( _playerHP, intent._amount - absorbed );
             }
             else if ( intent._kind == CardBattleEffectKind::Block )
             {

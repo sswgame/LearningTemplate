@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
@@ -352,10 +353,8 @@ namespace sw
 
     void GhostEncounter::applySuctionDamage( GhostInstance& ghost, float32 damage )
     {
-        ghost._hp -= damage;
-        if ( ghost._hp > 0.0f )
+        if ( DepletingValue::take( ghost._hp, damage )._bDepleted == SW_FALSE )
             return;
-        ghost._hp = 0.0f;
         enterState( ghost, GhostState::Caught );
         _suctionTarget = 0;
         _surgeGauge    = 0.0f;

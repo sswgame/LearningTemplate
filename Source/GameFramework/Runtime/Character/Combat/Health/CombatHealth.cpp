@@ -7,6 +7,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -122,8 +123,7 @@ namespace sw
         if ( _state == CombatHealthState::Downed )
         {
             // 기절 중 — 실드 · 경직은 없다. 출혈 체력을 깎고, 설정이면 부활을 끊는다.
-            result._healthDamage = MathUtil::min( amount, _downedHealth );
-            _downedHealth -= result._healthDamage;
+            result._healthDamage = DepletingValue::take( _downedHealth, amount )._taken;
             if ( result._healthDamage > 0.0f )
                 pushEvent( CombatHealthEventType::Damaged, result._healthDamage, instigatorID );
             const bool bReviveInterrupted = amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE;
@@ -142,10 +142,8 @@ namespace sw
 
         // 실드가 먼저, 넘친 만큼 체력.
         const bool bHadShield  = _shield > 0.0f;
-        result._shieldAbsorbed = MathUtil::min( amount, _shield );
-        _shield -= result._shieldAbsorbed;
-        result._healthDamage = MathUtil::min( amount - result._shieldAbsorbed, _health );
-        _health -= result._healthDamage;
+        result._shieldAbsorbed = DepletingValue::take( _shield, amount )._taken;
+        result._healthDamage   = DepletingValue::take( _health, amount - result._shieldAbsorbed )._taken;
         if ( result._shieldAbsorbed + result._healthDamage > 0.0f )
             pushEvent( CombatHealthEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
         if ( bHadShield && _shield <= 0.0f )
@@ -224,8 +222,7 @@ namespace sw
                     finishRevive();
                 return;
             }
-            _downedHealth = MathUtil::max( 0.0f, _downedHealth - _settings._bleedoutRate * deltaTime );
-            if ( _downedHealth <= 0.0f )
+            if ( DepletingValue::take( _downedHealth, _settings._bleedoutRate * deltaTime )._bDepleted == SW_TRUE )
                 enterDead( _lastInstigatorID );
             return;
         }

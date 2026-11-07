@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
@@ -304,7 +305,7 @@ namespace sw
 
     void SurvivalHorrorSession::applyDamage( float32 amount )
     {
-        _health = MathUtil::max( 0.0f, _health - MathUtil::max( 0.0f, amount ) );
+        DepletingValue::take( _health, amount );
     }
 
     SurvivalHorrorSaveResult SurvivalHorrorSession::trySave()

@@ -8,6 +8,7 @@
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
@@ -65,8 +66,7 @@ namespace sw
             return result;
         result._absorbed = result._damage * pSlot->_pDef->_reduction;
         result._damage -= result._absorbed;
-        pSlot->_durability -= damage;
-        if ( pSlot->_durability <= 0.0f )
+        if ( DepletingValue::take( pSlot->_durability, damage )._bDepleted == SW_TRUE )
         {
             *pSlot          = BattleRoyaleArmorSlot{};
             result._bBroken = SW_TRUE;

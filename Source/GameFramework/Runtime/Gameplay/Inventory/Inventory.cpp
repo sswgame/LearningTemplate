@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -297,9 +298,9 @@ namespace sw
         InventorySlot& stack = _listSlot[static_cast<size_t>( slot )];
         if ( stack.isEmpty() || stack._durability <= 0.0f )
             return false;
-        stack._durability -= amount;
+        const bool bDepleted = DepletingValue::take( stack._durability, amount )._bDepleted == SW_TRUE;
         ++_revision;
-        if ( stack._durability > 0.0f )
+        if ( bDepleted == false )
             return false;
         stack = InventorySlot{};
         return true;
