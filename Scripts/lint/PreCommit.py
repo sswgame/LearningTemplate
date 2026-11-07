@@ -37,6 +37,7 @@ from lint.FrameIntern import checkFrameIntern  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
 from lint.PlatformChains import checkPlatformChains  # noqa: E402
 from lint.ServerUIIncludes import checkServerUIIncludes  # noqa: E402
+from generate.ClientOnlyTypes import checkClientOnlyTypes  # noqa: E402
 from lint.StateShape import checkStateShape  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
@@ -165,6 +166,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[ServerUIIncludes] FAIL — 서버 대상 게임 코드의 UI include {len(listServerUIProblem)}건")
         for line in listServerUIProblem:
             print(f"  - {line}")
+    # --- 클라이언트 전용 형식 이름 표(서버가 씬의 HUD · 마커를 조용히 건너뛰는 근거 — 소스와 어긋나면 서버가 모르는 형식 경고를 낸다)
+    listClientOnlyProblem = checkClientOnlyTypes(projectRoot)
+    if listClientOnlyProblem:
+        hasErrors = True
+        print(f"[ClientOnlyTypes] FAIL — {listClientOnlyProblem[0]}")
     # --- 프레임 함수 안의 리터럴 이름(정상 코드라 형식으로 막지 못한다 — FrameIntern.py 머리말)
     listFrameIntern = checkFrameIntern(projectRoot)
     if listFrameIntern:

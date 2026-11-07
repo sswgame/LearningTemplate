@@ -93,7 +93,9 @@ endif()
 
 set(SW_UNBUILT_ENGINE_FOLDERS "")
 if(SW_TARGET_TYPE STREQUAL "Server")
-	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Renderer")
+	# 전용 서버는 그리지도 화면을 띄우지도 않는다 — 렌더러는 `IEngineRenderDriver`, 런타임 UI 는 `IEngineUIDriver` 와 게임 코드의 창구(Engine/Presentation ·
+	# GameFramework 의 Presentation)로만 이어진다. 클라이언트 전용 소스(`Client/`)도 짓지 않는다(`SW_CLIENT_ONLY_SOURCE_PATTERNS`).
+	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Renderer" "UI")
 endif()
 
 if(SW_SHIPPING_BUILD)

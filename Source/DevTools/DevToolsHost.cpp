@@ -11,7 +11,6 @@
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 #include "DevTools/AssetReload/ContentFolderWatchService.h"
 #include "DevTools/Console/DevConsoleHost.h"
-#include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
@@ -29,6 +28,10 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+
+#if defined( SW_WITH_CLIENT_CODE )
+    #include "DevTools/DebugHUD/DebugHUD.h"
+#endif
 
 namespace sw
 {
@@ -107,8 +110,10 @@ namespace sw
         if ( parts._pUserSettings != nullptr )
             parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
         // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
+#if defined( SW_WITH_CLIENT_CODE )
         if ( parts._pUISystem != nullptr )
             (void)startup.emplaceSubsystem<DebugHUD>( *parts._pUISystem, parts._pUserSettings );
+#endif
     }
 
     void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
@@ -121,8 +126,12 @@ namespace sw
             if ( SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>() )
                 pServerPose->update( pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
         InputMap* const pShellMap = engine::getSubsystem<DebugKeyActions>().getInputMap(); // 호스트 루프가 처음 돌리기 전에는 nullptr
+#if defined( SW_WITH_CLIENT_CODE )
         if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
             pDebugHUD->update( pShellMap );
+#else
+        (void)pShellMap; // 디버그 HUD 는 런타임 UI 위에 그린다 — 전용 서버는 짓지 않는다
+#endif
         // 게임 창 콘솔 — 호스트가 이번 프레임의 디버그 키 액션을 갱신한 뒤다(App 루프가 `beginFrame` 뒤에 갱신한다).
         if ( _pConsole != nullptr )
             _pConsole->update( pShellMap );

@@ -6,8 +6,6 @@
 #include "Core/Container/UTF8Util.h"
 #include "Core/Log/Logger.h"
 
-#include "DevTools/Console/DevConsoleOverlay.h"
-
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 
@@ -66,15 +64,14 @@ namespace sw
         shutdown();
     }
 
-    bool DevConsoleController::initialize( InputManager* pInput, UISystem* pUI )
+    bool DevConsoleController::initialize( InputManager* pInput, unique_ptr<IDevConsoleView> view )
     {
         shutdown();
         _pInput = pInput;
         if ( _pInput != nullptr )
             _textInputSubscription =
                 _pInput->bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &DevConsoleController::onTextInput, this ), InputKeyboardFocus::DevConsole );
-        if ( pUI != nullptr )
-            _pWindow = make_unique<DevConsoleOverlay>( *pUI );
+        _pWindow = std::move( view );
         return _pWindow != nullptr;
     }
 

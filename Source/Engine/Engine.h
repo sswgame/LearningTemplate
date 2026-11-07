@@ -52,7 +52,7 @@ namespace sw
     class SceneManager;
     class TaskManager;
     class TypeRegistry;
-    class UISystem;
+    class IEngineUIDriver;
 
     /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`SubsystemHostMask`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
     enum class EngineHostRole : uint8
@@ -243,7 +243,7 @@ namespace sw
         /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */
         FontService* _pFontService;
         /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */
-        UISystem* _pUISystem;
+        IEngineUIDriver* _pUIDriver; ///< 런타임 UI 의 프레임 단계(없으면 nullptr — 전용 서버)
         /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 디버그 키 맵 · 관찰자 문맥이 쓴다. */
         InputManager* _pInputManager;
         /** @brief 서브시스템 `Audio` 의 오디오 서비스입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 갱신하고 플레이어 설정이 볼륨을 넣는다. */

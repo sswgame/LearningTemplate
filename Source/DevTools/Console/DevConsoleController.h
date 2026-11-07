@@ -15,10 +15,20 @@
 
 namespace sw
 {
-    class DevConsoleOverlay;
     class InputManager;
     class InputMap;
-    class UISystem;
+
+    /** @class IDevConsoleView @brief 콘솔의 그리는 쪽입니다(클라이언트의 런타임 UI 오버레이 `DevConsoleOverlay`). 서버는 그리는 쪽 없이 입력 · 시작 명령만 돈다. */
+    class IDevConsoleView
+    {
+    public:
+        virtual ~IDevConsoleView() = default;
+
+        /** @brief 콘솔을 보이거나 숨깁니다. */
+        virtual void setVisible( bool bVisible ) = 0;
+        /** @brief 그릴 줄(위에서 아래로)을 넘깁니다. @p listErrorFlag 가 0 이 아닌 줄은 오류 색, 마지막 줄(입력 줄)은 입력 색입니다. */
+        virtual void present( const vector<string>& listLine, const vector<uint8>& listErrorFlag ) = 0;
+    };
 
     /**
      * @class DevConsoleController
@@ -46,7 +56,7 @@ namespace sw
          * @brief @p pInput 에 콘솔용 글자 콜백을 등록하고, @p pUI 가 있으면 그 위에 그릴 오버레이를 둡니다.
          * @return 그릴 오버레이를 두었으면 true 입니다. 없어도 입력은 받습니다.
          */
-        [[nodiscard]] bool initialize( InputManager* pInput, UISystem* pUI );
+        [[nodiscard]] bool initialize( InputManager* pInput, unique_ptr<IDevConsoleView> view );
         /** @brief 글자 콜백을 해제하고 키보드 포커스를 게임에 돌려준 뒤 오버레이를 닫습니다. `InputManager` 보다 먼저 부릅니다. */
         void shutdown();
 
@@ -77,15 +87,15 @@ namespace sw
         bool hasConsoleActions( const InputMap& shellMap );
 
     private:
-        DevConsole                    _console;
-        string                        _inputLine;
-        string                        _pendingText; /**< 이번 프레임에 온 글자입니다(`update` 가 비웁니다). */
-        unique_ptr<DevConsoleOverlay> _pWindow;
-        InputManager*                 _pInput;
-        Subscription                  _textInputSubscription; ///< 입력 관리자의 콘솔 포커스 글자 칸 구독
-        uint8                         _bOpen             : 1;
-        uint8                         _bShellMapChecked  : 1; /**< 디버그 키 맵을 한 번 검사했는지 나타냅니다. */
-        uint8                         _bShellMapComplete : 1; /**< 검사한 디버그 키 맵에 콘솔 레이어와 액션이 모두 있었는지 나타냅니다. */
-        [[maybe_unused]] uint8        _reserved          : 5;
+        DevConsole                  _console;
+        string                      _inputLine;
+        string                      _pendingText; /**< 이번 프레임에 온 글자입니다(`update` 가 비웁니다). */
+        unique_ptr<IDevConsoleView> _pWindow;     ///< 그리는 쪽(없으면 nullptr — 전용 서버 · UI 없는 실행)
+        InputManager*               _pInput;
+        Subscription                _textInputSubscription; ///< 입력 관리자의 콘솔 포커스 글자 칸 구독
+        uint8                       _bOpen             : 1;
+        uint8                       _bShellMapChecked  : 1; /**< 디버그 키 맵을 한 번 검사했는지 나타냅니다. */
+        uint8                       _bShellMapComplete : 1; /**< 검사한 디버그 키 맵에 콘솔 레이어와 액션이 모두 있었는지 나타냅니다. */
+        [[maybe_unused]] uint8      _reserved          : 5;
     };
 } // namespace sw

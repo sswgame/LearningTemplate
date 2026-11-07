@@ -79,6 +79,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
@@ -92,8 +93,6 @@
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
-#include "Engine/UI/Screen/UISubtitleService.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -138,7 +137,7 @@ namespace sw
         , _pRenderDriver{ nullptr }
         , _pRHI{ nullptr }
         , _pFontService{ nullptr }
-        , _pUISystem{ nullptr }
+        , _pUIDriver{ nullptr }
         , _pInputManager{ nullptr }
         , _pAudioService{ nullptr }
         , _pSceneManager{ nullptr }
@@ -250,7 +249,7 @@ namespace sw
             _pAudioService              = startupParts._pAudio;
             _pSceneManager              = startupParts._pSceneManager;
             _pFontService               = startupParts._pFontService;
-            _pUISystem                  = startupParts._pUISystem;
+            _pUIDriver                  = startupParts._pUIDriver;
             _pRenderDriver              = startupParts._pRenderDriver;
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
@@ -369,7 +368,7 @@ namespace sw
         _pRenderDriver  = nullptr;
         _pRHI           = nullptr;
         _pFontService   = nullptr;
-        _pUISystem      = nullptr;
+        _pUIDriver      = nullptr;
         _pInputManager  = nullptr;
         _pAudioService  = nullptr;
         _pSceneManager  = nullptr;
@@ -452,8 +451,8 @@ namespace sw
         if ( _pInputManager != nullptr )
             _pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
-        if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
-            _pUISystem->processInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
+        if ( _pUIDriver != nullptr )
+            _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -545,22 +544,17 @@ namespace sw
 
     void Engine::updateRuntimeUI( const ViewportTarget& mainOutput, uint32 vpWidth, uint32 vpHeight )
     {
-        if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
-            return;
-        // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
-        const MainWindowSubsystem* const pWindowHost  = engine::findSubsystem<MainWindowSubsystem>();
-        const IWindow* const             pMainWindow  = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const float32                    contentScale = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
-        UIViewport                       viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
-        viewport._pointerOrigin                       = int2{ mainOutput._windowX, mainOutput._windowY }; // 백버퍼면 빈 출력이라 0 이다
-        // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
-        if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
-        {
-            vector<AudioSubtitleCue> listCue;
-            _pAudioService->getEngine().takeSubtitleCues( listCue );
-            engine::getSubsystem<UISubtitleService>().postAudioCues( listCue );
-        }
-        _pUISystem->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+        if ( _pUIDriver == nullptr )
+            return; // UI 를 짓지 않는 구성(전용 서버)
+        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow* const             pMainWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        EngineUIFrame                    frame{};
+        frame._width                = vpWidth;
+        frame._height               = vpHeight;
+        frame._pointerOrigin        = int2{ mainOutput._windowX, mainOutput._windowY };
+        frame._contentScale         = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
+        frame._unscaledDeltaSeconds = engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        _pUIDriver->updateFrame( frame );
     }
 
     void Engine::update( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )

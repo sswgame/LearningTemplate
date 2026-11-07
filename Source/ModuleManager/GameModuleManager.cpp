@@ -17,10 +17,10 @@
 #include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/UI/UISystem.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -65,7 +65,7 @@ namespace sw
         , _pWindow{ nullptr }
         , _pRenderDriver{ nullptr }
         , _pSceneManager{ nullptr }
-        , _pUISystem{ nullptr }
+        , _pUIDriver{ nullptr }
         , _listGameSavedState{}
         , _listGameScopeModule{}
         , _frameState{}
@@ -88,7 +88,7 @@ namespace sw
         // 프레임 경로가 매 프레임 전역 조회를 하지 않도록 여기서 한 번 읽는다. 서비스 테이블이 비어 있으면 그 일을 건너뛴다.
         const bool bServicesBound = engine::areEngineServicesBound();
         _pSceneManager            = bServicesBound ? engine::findSubsystem<SceneManager>() : nullptr;
-        _pUISystem                = bServicesBound ? engine::findSubsystem<UISystem>() : nullptr;
+        _pUIDriver                = bServicesBound ? engine::findSubsystem<IEngineUIDriver>() : nullptr;
 
         // 게임 인스턴스를 세우는 길은 구성마다 다르다(개발은 리로드 매니저의 "리로드 직후" 콜백, 배포는 정적 링크 테이블) — 이 클래스 cpp 의 `SW_WITH_DYNAMIC_MODULES` 구역.
         return startGameInstance();
@@ -131,8 +131,8 @@ namespace sw
             _pSceneManager->setWorldPlaying( true );
         // 게임 update 가 돌지 않는 동안(에디터 일시정지, Simulate)은 게임이 연 화면(로딩, HUD, 메뉴)을 그리지 않는다. 그 화면을 닫을 게임 코드가
         // 돌지 않으므로, 그리면 첫 Play 전까지 로딩 화면이 게임 뷰를 덮는다. 오프스크린 미리보기(UI Preview)는 그대로 그린다.
-        if ( _pUISystem != nullptr )
-            _pUISystem->setOnScreenSuppressed( _frameState._bGameplayActive == SW_FALSE );
+        if ( _pUIDriver != nullptr )
+            _pUIDriver->setOnScreenSuppressed( _frameState._bGameplayActive == SW_FALSE );
     }
 
     void GameModuleManager::updateGameFrame( float32 fixedDeltaTime, uint32 fixedStepCount, float32 deltaTime )

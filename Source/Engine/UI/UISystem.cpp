@@ -14,6 +14,8 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
+#include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -40,6 +42,7 @@
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/PauseMenuScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
+#include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/Style/UIStylePass.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
@@ -961,6 +964,30 @@ namespace sw
         return _pUserSettings;
     }
 
+    void UISystem::processFrameInput( const float32 unscaledDeltaSeconds )
+    {
+        if ( isInitialized() )
+            processInput( unscaledDeltaSeconds ); // 정지 메뉴의 탐색 반복은 실제 시간
+    }
+
+    void UISystem::updateFrame( const EngineUIFrame& frame )
+    {
+        if ( isInitialized() == false )
+            return;
+        // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
+        UIViewport viewport     = computeViewport( float2{ static_cast<float32>( frame._width ), static_cast<float32>( frame._height ) }, frame._contentScale );
+        viewport._pointerOrigin = frame._pointerOrigin; // 백버퍼면 빈 출력이라 0 이다
+        // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
+        IAudioService* const pAudio = engine::findSubsystem<IAudioService>();
+        if ( pAudio != nullptr && pAudio->isInitialized() )
+        {
+            vector<AudioSubtitleCue> listCue;
+            pAudio->getEngine().takeSubtitleCues( listCue );
+            engine::getSubsystem<UISubtitleService>().postAudioCues( listCue );
+        }
+        update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+    }
+
     void UISystem::addLayerHideRequest( UILayerMask layers )
     {
         _paintState.addLayerHideRequest( layers );
@@ -1059,7 +1086,8 @@ namespace sw
     {
         UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
         build._pStartupParts->_pUISystem = &uiSystem;
-        const bool bExposed              = scope.expose<IInputCaptureQuery>( uiSystem ) && scope.expose<IUILayerVisibility>( uiSystem );
+        build._pStartupParts->_pUIDriver = &uiSystem;
+        const bool bExposed              = scope.expose<IInputCaptureQuery>( uiSystem ) && scope.expose<IUILayerVisibility>( uiSystem ) && scope.expose<IEngineUIDriver>( uiSystem );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

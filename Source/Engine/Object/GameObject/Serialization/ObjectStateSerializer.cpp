@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ClientOnlyTypeTable.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/Reflection.h"
@@ -141,6 +142,9 @@ namespace sw
                 GameObject* pGameObject = static_cast<GameObject*>( pOuter );
                 if ( pGameObject == nullptr )
                     return false;
+                // 전용 서버가 짓지 않는 클라이언트 전용 형식(HUD · 마커 · 월드 위젯)은 서버에 할 일이 없다 — 만들지 않고 조용히 건너뛴다(서버는 씬을 다시 저장하지 않는다).
+                if ( ClientOnlyTypeTable::isClientOnlyTypeSkipped( element._typeName ) )
+                    return true;
                 MissingComponent* pMissing = pGameObject->addComponent<MissingComponent>();
                 if ( pMissing == nullptr )
                     return false;

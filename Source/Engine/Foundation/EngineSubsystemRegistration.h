@@ -49,6 +49,7 @@ namespace sw
     class SceneManager;
     class TelemetryService;
     class UISystem;
+    class IEngineUIDriver;
     class UserSettingsManager;
     struct HeadlessTaskState;
 
@@ -93,6 +94,7 @@ namespace sw
             FontService*              _pFontService{ nullptr };
             TelemetryService*         _pTelemetry{ nullptr };
             UISystem*                 _pUISystem{ nullptr };
+            IEngineUIDriver*          _pUIDriver{ nullptr }; ///< 엔진 루프의 UI 창구(`UISystem`). 서버는 UI 를 짓지 않아 비어 있다
             GameNetSession*           _pNetSession{ nullptr };
         };
 

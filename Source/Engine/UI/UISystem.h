@@ -20,6 +20,7 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/IInputCaptureQuery.h"
+#include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
@@ -83,7 +84,7 @@ namespace sw
      *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
      *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
      */
-    class SW_API UISystem final : public ISubsystem, public IInputCaptureQuery, public IUILayerVisibility
+    class SW_API UISystem final : public ISubsystem, public IInputCaptureQuery, public IUILayerVisibility, public IEngineUIDriver
     {
     public:
         UISystem();
@@ -115,6 +116,9 @@ namespace sw
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         /** @brief 입력을 UI 이벤트로 처리합니다(게임 틱 앞). 순서는 뗀 입력 해제, UI 맵 갱신, 입력 방식 결정, 포인터, 액션, 텍스트 포커스, 닫기 요청 적용입니다. */
         void processInput( float32 deltaSeconds );
+        // IEngineUIDriver — 엔진 루프가 UI 헤더 없이 부르는 프레임 단계다. 서지 않았으면 아무 일도 하지 않는다.
+        void processFrameInput( float32 unscaledDeltaSeconds ) override;
+        void updateFrame( const EngineUIFrame& frame ) override;
         /**
          * @brief 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리합니다(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
          * @details 레이아웃은 화면 트리마다 `UILayoutPass::update( 트리, makeLayoutContext() )` 로 돌린다. 화면마다 뷰포트(UI 단위) 전체가 루트 사각형이다.
@@ -247,7 +251,7 @@ namespace sw
          * @details 게임 update 가 돌지 않는 동안(에디터 멈춤, Simulate) 호스트가 켠다. 그 화면을 닫을 게임 코드가 돌지 않으므로, 그리면 편집 화면을 덮은 채 남기 때문이다
          *          (언리얼 에디터 뷰포트도 PIE 전에는 UMG 위젯이 없다).
          */
-        void setOnScreenSuppressed( bool bSuppressed ) { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
+        void setOnScreenSuppressed( bool bSuppressed ) override { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
         bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
         /**
          * @brief 레이어 집합 @p layers 의 화면을 숨기는 요청을 하나 겁니다(포토 모드의 "UI 없이 보기" 같은 곳). 요청은 레이어마다 세어 쌓이므로 둘이 같은 레이어를 숨겨도 하나를 풀 때 다시 보이지 않습니다.

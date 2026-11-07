@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/UIStressTestScreen.h"
+#include "Games/Empty/Client/UIStressTestScreen.h"
 
 #include "Core/Container/string.h"
 #include "Core/String/StringBuilder.h"

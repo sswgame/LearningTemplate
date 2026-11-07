@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/StressTestScene.h"
+#include "Games/Empty/Client/StressTestScene.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -2052,9 +2052,10 @@ namespace sw
         if ( gv_stressTestUiHangulGlyphs > 0 && pObjects != nullptr )
         {
             // 화면 마커는 주 씬 컴포넌트의 월드 점을 투영한다. 없으면 마커가 접혀 글리프를 하나도 만들지 않는다(격자 가운데인 원점에 둔다).
-            GameObject*      pObject = pObjects->createGameObject( hashed_string( "StressTestHangulText" ) );
-            SceneComponent*  pAnchor = ( pObject != nullptr ) ? pObject->addComponent<SceneComponent>() : nullptr;
-            WidgetComponent* pText   = ( pAnchor != nullptr ) ? pObject->addComponent<WidgetComponent>() : nullptr;
+            static const hashed_string s_hangulTextName( "StressTestHangulText" ); // 프레임 함수 안이라 이름은 한 번만 만든다
+            GameObject*                pObject = pObjects->createGameObject( s_hangulTextName );
+            SceneComponent*            pAnchor = ( pObject != nullptr ) ? pObject->addComponent<SceneComponent>() : nullptr;
+            WidgetComponent*           pText   = ( pAnchor != nullptr ) ? pObject->addComponent<WidgetComponent>() : nullptr;
             if ( pText != nullptr )
             {
                 unique_ptr<TextWidget> text = make_unique<TextWidget>();

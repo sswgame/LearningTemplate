@@ -15,6 +15,11 @@ sw_filterPlatformSources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Wind
 if("Renderer" IN_LIST SW_UNBUILT_ENGINE_FOLDERS)
 	list(FILTER DEVTOOLS_SOURCES EXCLUDE REGEX "/DevTools/Shader/") # 셰이더 라이브 리로드는 렌더러의 일이다(DevToolsHost 가 `build::kWithClientCode` 로 가른다)
 endif()
+if("UI" IN_LIST SW_UNBUILT_ENGINE_FOLDERS)
+	# 디버그 HUD 와 콘솔 오버레이는 런타임 UI 위에 그린다(DevToolsHost · DevConsoleHost 가 `SW_WITH_CLIENT_CODE` 로 가른다). 콘솔의 입력 · 시작 명령은 서버에도 선다.
+	list(FILTER DEVTOOLS_SOURCES EXCLUDE REGEX "/DevTools/DebugHUD/")
+	list(FILTER DEVTOOLS_SOURCES EXCLUDE REGEX "/DevTools/Console/DevConsoleOverlay\\.(cpp|h)$")
+endif()
 
 add_library(DevTools SHARED ${DEVTOOLS_SOURCES})
 sw_applyTargetLayerGate(DevTools devtools)

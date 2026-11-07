@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Empty/UIDemoScreen.h"
+#include "Games/Empty/Client/UIDemoScreen.h"
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
