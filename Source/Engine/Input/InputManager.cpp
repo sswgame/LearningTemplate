@@ -78,6 +78,7 @@ namespace sw
         , _listDevice{}
         , _pKeyboard{ nullptr }
         , _pMouse{ nullptr }
+        , _pTouch{ nullptr }
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
         , _listPolledEvent{}
@@ -138,6 +139,7 @@ namespace sw
         auto pMouse = make_unique<MouseDevice>();
         _pMouse     = pMouse.get();
         registerDevice( std::move( pMouse ) );
+        registerDevice( make_unique<TouchDevice>() ); // 하드웨어가 없는 플랫폼에서는 이벤트가 오지 않아 눌리지 않을 뿐이다
 
         // 3) 표준 게임패드 장치를 등록한다(플랫폼별 구현은 registerPlatformGamepads() 참고)
         registerPlatformGamepads();
@@ -276,6 +278,8 @@ namespace sw
             _pKeyboard = static_cast<KeyboardDevice*>( pDevice.get() );
         else if ( pDevice->getDeviceKind() == InputDeviceKind::Mouse && _pMouse == nullptr )
             _pMouse = static_cast<MouseDevice*>( pDevice.get() );
+        else if ( pDevice->getDeviceKind() == InputDeviceKind::Touch && _pTouch == nullptr )
+            _pTouch = static_cast<TouchDevice*>( pDevice.get() );
         else if ( pDevice->getDeviceKind() == InputDeviceKind::Gamepad && _pGamepad == nullptr )
             _pGamepad = static_cast<GamepadDevice*>( pDevice.get() );
 
@@ -296,6 +300,8 @@ namespace sw
             _pMouse = nullptr;
         if ( bWasGamepad )
             _pGamepad = nullptr;
+        if ( _pTouch == pDevice )
+            _pTouch = nullptr;
 
         for ( auto it = _listDevice.begin(); it != _listDevice.end(); ++it )
         {
@@ -651,6 +657,18 @@ namespace sw
                 if ( _pMouse != nullptr )
                     _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
+                break;
+            }
+
+            case RawInputEventType::TouchDown:
+            case RawInputEventType::TouchMove:
+            case RawInputEventType::TouchUp:
+            {
+                if ( _pTouch != nullptr )
+                {
+                    const bool bDown = rawEvent._type != RawInputEventType::TouchUp;
+                    _pTouch->setPointerState( rawEvent._payload._touchData._pointerIndex, rawEvent._payload._touchData._x, rawEvent._payload._touchData._y, bDown );
+                }
                 break;
             }
 

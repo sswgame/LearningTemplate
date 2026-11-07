@@ -425,6 +425,9 @@ namespace sw
                         case RawInputEventType::FocusLost:
                         case RawInputEventType::PointerEntered:
                         case RawInputEventType::PointerLeft:
+                        case RawInputEventType::TouchDown: // 시나리오에 터치 단계가 없다
+                        case RawInputEventType::TouchMove:
+                        case RawInputEventType::TouchUp:
                         {
                             // 조합 중 글자는 확정 뒤 TextInput 으로 다시 오고, 포커스 · 포인터 출입 · 패드 연결은 창과 장치의 상태라
                             // 시나리오 단계로 낼 뜻이 없다(실행기는 창을 가진 채 입력만 넣는다).

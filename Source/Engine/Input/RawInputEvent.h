@@ -48,7 +48,10 @@ namespace sw
         FocusLost,
         PointerEntered, ///< 포인터가 창 안으로 들어왔습니다. 값은 뒤에 덧붙입니다(리플레이 파일에 번호가 저장됩니다).
         PointerLeft,    ///< 포인터가 창 밖으로 나갔습니다.
-        MouseRawDelta   ///< 위치 없이 장치가 보고한 이동량(Win32 WM_INPUT)만 담습니다. 위치를 건드리지 않습니다.
+        MouseRawDelta,  ///< 위치 없이 장치가 보고한 이동량(Win32 WM_INPUT)만 담습니다. 위치를 건드리지 않습니다.
+        TouchDown,      ///< 손가락이 닿았습니다(`_touchData`). 값은 뒤에 덧붙입니다(리플레이 파일에 번호가 남는다).
+        TouchMove,      ///< 닿은 손가락이 움직였습니다.
+        TouchUp,        ///< 손가락이 떨어졌습니다.
     };
 
     /**
@@ -101,6 +104,13 @@ namespace sw
 
             struct
             {
+                int32  _x;
+                int32  _y;
+                uint16 _pointerIndex;
+            } _touchData;
+
+            struct
+            {
                 utf8 _arrUTF8[constant::buffer::kMax32];
             } _textData;
         } _payload{};
@@ -117,6 +127,18 @@ namespace sw
             , _frameFraction{ 0.0f }
             , _timeMicroseconds{ 0 }
             , _payload{} {}
+
+        /** @brief 손가락 이벤트입니다. @p type 은 `TouchDown` · `TouchMove` · `TouchUp` 입니다. */
+        static RawInputEvent makeTouch( RawInputEventType type, uint16 pointerIndex, int32 x, int32 y )
+        {
+            RawInputEvent event{};
+            event._type                             = type;
+            event._deviceKind                       = InputDeviceKind::Touch;
+            event._payload._touchData._x            = x;
+            event._payload._touchData._y            = y;
+            event._payload._touchData._pointerIndex = pointerIndex;
+            return event;
+        }
 
         static RawInputEvent makeKeyDown( Key key, uint16 vk = 0, bool bRepeat = false, uint8 modifierMask = 0 )
         {

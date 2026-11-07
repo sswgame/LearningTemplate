@@ -16,6 +16,7 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
+#include "Engine/Input/Devices/TouchDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputViewRect.h"
@@ -169,6 +170,7 @@ namespace sw
         IInputDevice*   getDevice( InputDeviceKind kind, uint32 deviceIndex = 0 ) const;
         KeyboardDevice* getKeyboard() const { return _pKeyboard; }
         MouseDevice*    getMouse() const { return _pMouse; }
+        TouchDevice*    getTouch() const { return _pTouch; }
         GamepadDevice*  getGamepad( uint32 deviceIndex = 0 ) const;
         /**
          * @brief 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. 읽기 전용입니다 — 켜고 끄기와 스틱은 입력 맵이 정합니다(`InputMap::getVirtualCursorStick`).
@@ -449,6 +451,7 @@ namespace sw
         vector<unique_ptr<IInputDevice>>          _listDevice;              /**< 등록된 모든 장치(키보드, 마우스, 게임패드 등)를 소유하는 목록입니다. */
         KeyboardDevice*                           _pKeyboard;               /**< 편의 API 용 캐시 포인터입니다. 소유는 _listDevice 가 합니다. */
         MouseDevice*                              _pMouse;                  /**< 편의 API 용 캐시 포인터입니다. */
+        TouchDevice*                              _pTouch;                  /**< 편의 API 용 캐시 포인터입니다. */
         GamepadDevice*                            _pGamepad;                /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */

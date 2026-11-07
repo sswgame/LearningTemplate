@@ -2,6 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Input/Devices/TouchDevice.h"
 #include "Engine/Input/IInputDevice.h"
 
 namespace sw
@@ -13,6 +14,7 @@ namespace sw
             static constexpr string_view kKeyPrefix     = "Key";
             static constexpr string_view kMousePrefix   = "Mouse";
             static constexpr string_view kGamepadPrefix = "Gamepad";
+            static constexpr string_view kTouchPrefix   = "Touch";
 
             /** @brief 열거자 이름으로 읽은 값이 실제로 그 이름인지 확인합니다. 리플렉션 조회는 모르는 이름에 기본값을 반환할 수 있기 때문입니다. */
             static bool isSameName( const utf8* pCanonical, string_view name ) { return pCanonical != nullptr && StringUtil::equals( string_view( pCanonical ), name ); }
@@ -45,6 +47,14 @@ namespace sw
             if ( button == MouseButton::Count || InputSlotInternal::isSameName( MouseButtonUtil::toName( button ), name ) == false )
                 return false;
             outSlot = InputSlot::fromMouseButton( button );
+            return true;
+        }
+        if ( StringUtil::equals( device, InputSlotInternal::kTouchPrefix ) )
+        {
+            int32 pointerIndex = 0;
+            if ( StringUtil::parseInt( name, pointerIndex ) == false || pointerIndex < 0 || pointerIndex >= static_cast<int32>( TouchDevice::kMaxPointerCount ) )
+                return false;
+            outSlot = InputSlot::fromTouch( static_cast<uint16>( pointerIndex ) );
             return true;
         }
         if ( StringUtil::startsWith( device, InputSlotInternal::kGamepadPrefix, true ) )
@@ -91,6 +101,11 @@ namespace sw
                 return text + "." + ( pName != nullptr ? pName : "" );
             }
             case InputDeviceKind::Touch:
+            {
+                utf8 arrDigit[constant::buffer::kMax16]{};
+                StringUtil::formatNumber( arrDigit, constant::buffer::kMax16, static_cast<uint32>( slot._controlIndex ) );
+                return string( InputSlotInternal::kTouchPrefix ) + "." + arrDigit;
+            }
             case InputDeviceKind::Custom:
             case InputDeviceKind::Count:
             {

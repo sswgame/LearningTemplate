@@ -48,6 +48,12 @@ namespace sw
             return InputSlot{ InputDeviceKind::Gamepad, padIndex, static_cast<uint16>( button ) };
         }
 
+        /** @brief 손가락 하나입니다(`TouchDevice`). @p pointerIndex 는 닿은 순서로 플랫폼 창이 매긴 번호입니다. */
+        static constexpr InputSlot fromTouch( uint16 pointerIndex ) noexcept
+        {
+            return InputSlot{ InputDeviceKind::Touch, 0, pointerIndex };
+        }
+
         static constexpr InputSlot fromCustom( InputDeviceKind kind, uint16 index, uint8 deviceIndex = 0 ) noexcept
         {
             return InputSlot{ kind, deviceIndex, index };
