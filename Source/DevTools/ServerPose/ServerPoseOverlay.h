@@ -1,7 +1,8 @@
 /**
  * @file DevTools/ServerPose/ServerPoseOverlay.h
  * @brief 권위 겹쳐 보기 — 서버가 가진 오브젝트 위치를 클라이언트 화면에 와이어프레임 고스트로 겹치고, 내 화면과 서버의 차이를 숫자로 알립니다(서버 디버깅 S6). **Shipping 에는 없습니다.**
- * @details 클라이언트가 `-gv_serverPoseOverlayPort=N -gv_serverPoseOverlayToken=T` 로 켜면 작업 스레드가 서버의 디버그 채널(`DebugChannel`)에 붙어 `scene.poses` 를 4 Hz 안팎으로 읽습니다.
+ * @details 클라이언트가 `-gv_serverPoseOverlayPort=N -gv_serverPoseOverlayToken=T` 로 켜면 게임 스레드가 4 Hz 안팎으로 읽기 태스크 하나를 내고(`TaskManager`, 낮은 우선순위),
+ *          그 태스크가 서버의 디버그 채널(`DebugChannel`)에 붙어 `scene.poses` 를 한 번 읽습니다. 앞 읽기가 끝나야 다음을 낸다(스테이지 완료) — 잠들며 도는 전용 스레드가 없다.
  *          게임 스레드의 `update` 는 최근 서버 포즈를 이름으로 로컬 씬의 오브젝트와 맞춰 차이(`AuthorityDelta`)를 구하고, 서버 위치에 고스트 상자를,
  *          어긋난 오브젝트에는 로컬 위치에서 고스트까지 선과 거리 글을 디버그 드로우 큐에 올립니다. 개발 명령 `net.serverOverlay` 가 같은 차이를 글로 알립니다.
  *          값은 서버가 **실제로 가진** 위치입니다(복제 키트가 마지막으로 알린 자세가 아니다) - 복제 지연 · 보간 · 예측 오차가 모두 이 차이로 보입니다.
@@ -10,15 +11,17 @@
  *          읽기는 `scene.poses` 명령의 글(`<이름> x y z [rot …] [box …]`)이라 파서와 비교(`parsePoses` · `writePoses` · `computeDeltas`)는 서버 없이 테스트합니다.
  */
 #pragma once
+#include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -26,6 +29,7 @@
 
 namespace sw
 {
+    class DebugChannelClient;
     class DebugDrawQueue;
     class GameObjectManager;
     class Scene;
@@ -74,7 +78,7 @@ namespace sw
     /**
      * @class ServerPoseOverlay
      * @brief 서버 포즈를 읽어 고스트를 겹치는 엔진 서비스입니다(`engine::findSubsystem<ServerPoseOverlay>()`). 서비스 범위가 소유하고, 게임 스레드가 `update` 를 부릅니다.
-     * @details 작업 스레드가 엔진 이미지의 코드라서 엔진은 이미지가 내려가기 전에 `shutdown` 으로 합류시킨다(범위가 사라질 때 소멸자도 한 번 더 부른다).
+     * @details 읽기 태스크가 엔진 이미지의 코드라서 엔진은 이미지가 내려가기 전에 `shutdown` 으로 그 태스크를 기다린다(범위가 사라질 때 소멸자도 한 번 더 부른다).
      */
     class SW_DEVTOOLS_API ServerPoseOverlay final : public ISubsystem
     {
@@ -82,7 +86,7 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "ServerPoseOverlay";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override { shutdown(); } // 작업 스레드를 합류시킨다
+        void                shutdownSubsystem() override { shutdown(); } // 도는 읽기 태스크를 기다린다
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         ServerPoseOverlay();
@@ -104,25 +108,29 @@ namespace sw
 
         /** @brief 게임 스레드의 프레임 한 번입니다. 켜져 있지 않으면(`gv_serverPoseOverlayPort` 0) 아무 일도 하지 않습니다. */
         void update( Scene* pScene, DebugDrawQueue& queue );
-        /** @brief 작업 스레드를 멈추고 합류합니다. 두 번 불러도 됩니다. */
+        /** @brief 도는 읽기 태스크를 기다리고 연결을 닫습니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 마지막 `update` 의 차이를 @p outText 에 씁니다. 서버 포즈를 한 번도 못 받았으면 false 입니다. */
         [[nodiscard]] bool describe( string& outText ) const;
 
     private:
-        void startPoller();
-        void runPoller( StopToken stopToken );
+        /** @brief 앞 읽기가 끝났고 다음 읽기 때가 됐으면 읽기 태스크 하나를 냅니다(게임 스레드). */
+        void schedulePoll();
+        /** @brief 읽기 태스크 본문입니다 — 붙어 있지 않으면 붙고, `scene.poses` 를 한 번 읽고, 다음 읽기 때를 적습니다. 한 번에 하나만 돈다(`schedulePoll`). */
+        void pollOnce();
 
     private:
         mutable mutex                         _mutex;
-        string _latestText                    SW_GUARDED_BY( _mutex );        ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
+        string _latestText                    SW_GUARDED_BY( _mutex );        ///< 읽기 태스크가 받은 최근 `scene.poses` 답(`_mutex`)
         string _parsedText                    SW_GUARDED_BY( _mutex );        ///< 마지막으로 파싱한 글(게임 스레드)
         ThreadRole                            _updateThread;                  ///< update 스레드 역할 — 풀어 둔 서버 자세는 update 를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
         vector<AuthorityPose> _listServerPose SW_GUARDED_BY( _updateThread ); ///< 게임 스레드
         vector<AuthorityPose> _listLocalPose  SW_GUARDED_BY( _updateThread ); ///< 로컬 이름 순 포즈(게임 스레드). 오브젝트 목록은 구조 세대가 바뀔 때만 다시 모으고 위치만 프레임마다 읽는다
         uint64 _localStructureGeneration      SW_GUARDED_BY( _updateThread ); ///< `_listLocalPose` 를 모은 때의 구조 세대(`GameObjectManager::getStructureGeneration`, 매니저끼리 겹치지 않는다)
         vector<AuthorityDelta> _listDelta     SW_GUARDED_BY( _mutex );        ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
-        sw::thread                            _thread;                        ///< 정지 요청은 스레드의 토큰으로 한다(`shutdown`)
+        int64 _nextPollNanoseconds            SW_GUARDED_BY( _mutex );        ///< 다음 읽기를 낼 때(단조 시계). 읽기 태스크가 끝날 때 적는다 — 붙지 못했으면 더 늦게
+        unique_ptr<DebugChannelClient>        _pClient;                       ///< 서버 연결. 읽기 태스크만 만진다(한 번에 하나, 스테이지 완료가 다음 태스크와의 순서를 세운다) — `shutdown` 은 기다린 뒤 닫는다
+        TaskStageHandle                       _pollStage;                     ///< 낸 읽기 태스크(게임 스레드가 낸다). 끝났으면 다음을 낼 수 있고, `shutdown` 이 이것만 기다린다
         uint8                                 _bStarted  : 1;
         [[maybe_unused]] uint8                _reserved  : 6;
         uint8                                 _bReceived : 1 SW_GUARDED_BY( _mutex ); ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)

@@ -9,6 +9,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
@@ -143,7 +144,9 @@ namespace sw
         , _listLocalPose{}
         , _localStructureGeneration{ 0 }
         , _listDelta{}
-        , _thread{}
+        , _nextPollNanoseconds{ 0 }
+        , _pClient{}
+        , _pollStage{}
         , _bStarted{ SW_FALSE }
         , _reserved{ 0 }
         , _bReceived{ SW_FALSE }
@@ -298,47 +301,53 @@ namespace sw
         }
     }
 
-    void ServerPoseOverlay::startPoller()
+    void ServerPoseOverlay::schedulePoll()
     {
-        _bStarted = SW_TRUE;
-        _thread   = sw::thread( &ServerPoseOverlay::runPoller, this );
+        // 잠들며 도는 전용 스레드 대신 때가 된 읽기 하나를 태스크로 낸다(언리얼 HTTP 모듈이 틱에서 요청을 내고 완료를 받는 것과 같은 모양).
+        // 읽기는 루프백 요청 하나라 워커를 길어야 요청 시한(`kRequestTimeoutMilli`)만 잡고, 낮은 우선순위라 프레임 일을 앞지르지 않는다.
+        TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+        if ( taskManager.isStageComplete( _pollStage ) == false )
+            return; // 앞 읽기가 아직 돈다 — 겹쳐 내지 않는다(연결은 한 태스크만 만진다)
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( MonotonicClock::nowNanoseconds() < _nextPollNanoseconds )
+                return;
+        }
+        TaskHandle handle = taskManager.emplaceTask( "ServerPosePoll", SW_DELEGATE_METHOD( TaskDelegate, &ServerPoseOverlay::pollOnce, this ) );
+        handle.setPriority( TaskPriority::Low );
+        taskManager.addToStage( _pollStage, handle, "ServerPosePoll" ); // 제출 전에 넣는다
+        handle.submit();
     }
 
-    void ServerPoseOverlay::runPoller( StopToken stopToken )
+    void ServerPoseOverlay::pollOnce()
     {
-        DebugChannelClient client;
-        while ( stopToken.isStopRequested() == false )
+        if ( _pClient == nullptr )
+            _pClient = make_unique<DebugChannelClient>();
+        int64 delayNanoseconds = ServerPoseOverlayInternal::kPollIntervalNanoseconds;
+        if ( _pClient->isConnected() == false &&
+             _pClient->connect( NetAddress::makeLoopback( static_cast<uint16>( gv_serverPoseOverlayPort ) ), gv_serverPoseOverlayToken, ServerPoseOverlayInternal::kRequestTimeoutMilli ) == false )
+            delayNanoseconds = ServerPoseOverlayInternal::kReconnectNanoseconds;
+        string     body;
+        const bool bReceived = _pClient->isConnected() && _pClient->request( "scene.poses", ServerPoseOverlayInternal::kRequestTimeoutMilli, body );
+        if ( _pClient->isConnected() && bReceived == false )
+            _pClient->disconnect();
+        ScopedLock<mutex> lock{ _mutex };
+        if ( bReceived )
         {
-            int64 sleepNanoseconds = ServerPoseOverlayInternal::kPollIntervalNanoseconds;
-            if ( client.isConnected() == false &&
-                 client.connect( NetAddress::makeLoopback( static_cast<uint16>( gv_serverPoseOverlayPort ) ), gv_serverPoseOverlayToken, ServerPoseOverlayInternal::kRequestTimeoutMilli ) == false )
-                sleepNanoseconds = ServerPoseOverlayInternal::kReconnectNanoseconds;
-            string body;
-            if ( client.isConnected() )
-            {
-                if ( client.request( "scene.poses", ServerPoseOverlayInternal::kRequestTimeoutMilli, body ) )
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    _latestText = body;
-                    _bReceived  = SW_TRUE;
-                }
-                else
-                {
-                    client.disconnect();
-                }
-            }
-            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + sleepNanoseconds );
+            _latestText = std::move( body );
+            _bReceived  = SW_TRUE;
         }
-        client.disconnect();
+        _nextPollNanoseconds = MonotonicClock::nowNanoseconds() + delayNanoseconds;
     }
 
     void ServerPoseOverlay::shutdown()
     {
-        if ( _thread.joinable() ) // 이미지가 내려가기 전에 합류한다
-        {
-            _thread.request_stop();
-            _thread.join();
-        }
+        // 도는 읽기는 이미지가 내려가기 전에 끝낸다 — 요청 시한이 있어 길어야 그만큼이다.
+        if ( _pollStage.isValid() )
+            engine::getSubsystem<TaskManager>().waitStage( _pollStage, "ServerPoseOverlay::shutdown" );
+        if ( _pClient != nullptr )
+            _pClient->disconnect();
+        _pClient.reset();
         _bStarted = SW_FALSE;
     }
 
@@ -349,9 +358,10 @@ namespace sw
             return;
         if ( _bStarted == SW_FALSE )
         {
-            startPoller();
+            _bStarted = SW_TRUE;
             SW_LOG_INFO_ID( "ServerPoseOverlay.AuthorityGhostPollingServer", "Authority ghost polling the server debug channel on 127.0.0.1:%#", gv_serverPoseOverlayPort );
         }
+        schedulePoll();
         GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         if ( pManager == nullptr )
             return;
