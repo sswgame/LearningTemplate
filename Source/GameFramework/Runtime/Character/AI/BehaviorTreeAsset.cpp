@@ -167,7 +167,7 @@ namespace sw
             switch ( data._type )
             {
                 case BehaviorNodeKind::Selector:
-                    return _tree.addSelector( parent, name.c_str(), data._fields.find<BehaviorSelectorParams>()->_bReactive );
+                    return _tree.addSelector( parent, name.c_str(), data._params.find<BehaviorSelectorParams>()->_bReactive );
                 case BehaviorNodeKind::Sequence:
                     return _tree.addSequence( parent, name.c_str() );
                 case BehaviorNodeKind::Inverter:
@@ -175,21 +175,21 @@ namespace sw
                 case BehaviorNodeKind::ForceSuccess:
                     return _tree.addForceSuccess( parent );
                 case BehaviorNodeKind::Repeat:
-                    return _tree.addRepeat( parent, data._fields.find<BehaviorRepeatParams>()->_count );
+                    return _tree.addRepeat( parent, data._params.find<BehaviorRepeatParams>()->_count );
                 case BehaviorNodeKind::Cooldown:
-                    return _tree.addCooldown( parent, data._fields.find<BehaviorTimedParams>()->_seconds );
+                    return _tree.addCooldown( parent, data._params.find<BehaviorTimedParams>()->_seconds );
                 case BehaviorNodeKind::TimeLimit:
-                    return _tree.addTimeLimit( parent, data._fields.find<BehaviorTimedParams>()->_seconds );
+                    return _tree.addTimeLimit( parent, data._params.find<BehaviorTimedParams>()->_seconds );
                 case BehaviorNodeKind::Wait:
-                    return _tree.addWait( parent, data._fields.find<BehaviorTimedParams>()->_seconds );
+                    return _tree.addWait( parent, data._params.find<BehaviorTimedParams>()->_seconds );
                 case BehaviorNodeKind::MoveTo:
                 {
-                    const BehaviorMoveToParams* pParams = data._fields.find<BehaviorMoveToParams>();
+                    const BehaviorMoveToParams* pParams = data._params.find<BehaviorMoveToParams>();
                     return _tree.addMoveTo( parent, hashed_string( pParams->_key ), pParams->_repathDistance );
                 }
                 case BehaviorNodeKind::BlackboardCondition:
                 {
-                    const BehaviorConditionDecoratorParams* pParams = data._fields.find<BehaviorConditionDecoratorParams>();
+                    const BehaviorConditionDecoratorParams* pParams = data._params.find<BehaviorConditionDecoratorParams>();
                     ConditionExpr                           condition;
                     if ( ConditionExpr::compile( pParams->_test, _sourceName, condition ) )
                         return _tree.addConditionDecorator( parent, name.c_str(), condition, pParams->_abort );
@@ -198,14 +198,14 @@ namespace sw
                 case BehaviorNodeKind::Condition:
                 {
                     ConditionExpr condition;
-                    if ( ConditionExpr::compile( data._fields.find<BehaviorConditionParams>()->_test, _sourceName, condition ) )
+                    if ( ConditionExpr::compile( data._params.find<BehaviorConditionParams>()->_test, _sourceName, condition ) )
                         return _tree.addCondition( parent, name.c_str(), condition );
                     break;
                 }
                 case BehaviorNodeKind::Action:
                 {
                     // 동작 이름이 있는지는 런타임만 본다 — 편집기는 아직 안 만든 동작의 트리도 연다(`BehaviorTreeEditModel::collectIssues`).
-                    const string&            task   = data._fields.find<BehaviorActionParams>()->_task;
+                    const string&            task   = data._params.find<BehaviorActionParams>()->_task;
                     const ActionEntry* const pEntry = ActionRegistry::find( task );
                     if ( pEntry != nullptr && data._actionParams.isValid() )
                         return _tree.addAction( parent, name.c_str(), GameActionCall::make( *pEntry, data._actionParams ) );
@@ -213,7 +213,7 @@ namespace sw
                     break;
                 }
                 case BehaviorNodeKind::SubTree:
-                    return _tree.addSubTreeSlot( parent, name.c_str(), hashed_string( data._fields.find<BehaviorSubTreeParams>()->_slot ) );
+                    return _tree.addSubTreeSlot( parent, name.c_str(), hashed_string( data._params.find<BehaviorSubTreeParams>()->_slot ) );
             }
             inoutbValid = false;
             return -1;
@@ -239,7 +239,7 @@ namespace sw
                 return false; // 칸이 틀린 노드는 뜻을 모른다 - 스키마 값을 믿고 더하지 않는다
             if ( type == BehaviorNodeKind::SubTree )
             {
-                const BehaviorSubTreeParams* pParams = data._fields.find<BehaviorSubTreeParams>();
+                const BehaviorSubTreeParams* pParams = data._params.find<BehaviorSubTreeParams>();
                 if ( pParams->_tree.empty() == pParams->_slot.empty() )
                 {
                     SW_LOG_ERROR_ID( "BehaviorTreeAsset.SubTreeNeedsOne", "%#: <SubTree> needs exactly one of tree / slot", _sourceName );
@@ -319,7 +319,7 @@ namespace sw
     void BehaviorTreeXML::resetNodeFields( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData )
     {
         inoutData._type         = type;
-        inoutData._fields       = InstancedStruct( BehaviorTreeAssetInternal::findFieldsOps( type ) );
+        inoutData._params       = InstancedStruct( BehaviorTreeAssetInternal::findFieldsOps( type ) );
         inoutData._actionParams = InstancedStruct{};
         inoutData._listRawParam.clear();
     }
@@ -332,10 +332,10 @@ namespace sw
         inoutData._name      = string( node.getAttributeText( "name" ) );
         if ( type != BehaviorNodeKind::Action )
         {
-            return XMLFields::readFields( node, inoutData._fields.getInstance(), *inoutData._fields.getType(), sourceName, { "id", "name" } );
+            return XMLFields::readFields( node, inoutData._params.getInstance(), *inoutData._params.getType(), sourceName, { "id", "name" } );
         }
-        bool                     bValid = XMLFields::readFields( node, inoutData._fields.getInstance(), *inoutData._fields.getType(), sourceName, {}, &Internal::isNotTaskField );
-        const ActionEntry* const pEntry = ActionRegistry::find( inoutData._fields.find<BehaviorActionParams>()->_task );
+        bool                     bValid = XMLFields::readFields( node, inoutData._params.getInstance(), *inoutData._params.getType(), sourceName, {}, &Internal::isNotTaskField );
+        const ActionEntry* const pEntry = ActionRegistry::find( inoutData._params.find<BehaviorActionParams>()->_task );
         if ( pEntry != nullptr )
         {
             inoutData._actionParams = InstancedStruct( *pEntry->_pParamsOps );
@@ -356,7 +356,7 @@ namespace sw
         if ( data._name.empty() == false )
             node.appendAttribute( "name", string_view{ data._name } );
         const InstancedStruct defaults( BehaviorTreeAssetInternal::findFieldsOps( data._type ) );
-        XMLFields::writeFields( node, data._fields.getInstance(), defaults.getInstance(), *data._fields.getType() );
+        XMLFields::writeFields( node, data._params.getInstance(), defaults.getInstance(), *data._params.getType() );
         if ( data._actionParams.isValid() )
         {
             const InstancedStruct defaultParams( *data._actionParams.getOps() );
@@ -370,7 +370,7 @@ namespace sw
 
     void BehaviorTreeXML::selectTask( BehaviorTreeNodeData& inoutData, string_view task )
     {
-        BehaviorActionParams* const pParams = inoutData._fields.find<BehaviorActionParams>();
+        BehaviorActionParams* const pParams = inoutData._params.find<BehaviorActionParams>();
         if ( pParams == nullptr )
             return;
         pParams->_task = string( task );

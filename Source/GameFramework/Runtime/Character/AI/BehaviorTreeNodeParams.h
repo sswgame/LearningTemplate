@@ -143,12 +143,12 @@ namespace sw
         string _value{};
     };
 
-    /** @brief 노드 하나의 칸입니다. `_fields` 는 종류의 스키마 값이고, `_actionParams` 는 작업의 동작 칸입니다. */
+    /** @brief 노드 하나의 칸입니다. `_params` 는 종류의 스키마 값이고, `_actionParams` 는 작업의 동작 칸입니다. */
     struct SW_GF_API BehaviorTreeNodeData
     {
         string                   _inheritID{}; ///< 파일의 `id`. `_base` 트리에서 이 노드를 짚는 열쇠(`InheritKey`)
         string                   _name{};      ///< 표시 이름. 비면 종류 이름이다
-        InstancedStruct          _fields{};
+        InstancedStruct          _params{};
         InstancedStruct          _actionParams{};
         vector<BehaviorRawParam> _listRawParam{};
         BehaviorNodeKind         _type{ BehaviorNodeKind::Sequence };

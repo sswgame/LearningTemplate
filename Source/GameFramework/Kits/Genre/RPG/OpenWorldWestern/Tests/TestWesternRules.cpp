@@ -113,7 +113,7 @@ namespace
         }
 
         /** @brief 쌓인 알림을 꺼내 @p kind 의 수를 셉니다. */
-        int32 drainCount( sw::WesternLawEvent::Kind kind )
+        int32 popCount( sw::WesternLawEvent::Kind kind )
         {
             sw::vector<sw::WesternLawEvent> listEvent;
             _law.pollEvents( listEvent );
@@ -168,7 +168,7 @@ namespace
 
         WesternHorseTest() { SW_REQUIRE_TRUE( _horse.initialize( &_catalog, "steady", 7 ) ); }
 
-        int32 drainCount( sw::WesternHorse& horse, sw::WesternHorseEvent::Kind kind )
+        int32 popCount( sw::WesternHorse& horse, sw::WesternHorseEvent::Kind kind )
         {
             sw::vector<sw::WesternHorseEvent> listEvent;
             horse.pollEvents( listEvent );
@@ -278,11 +278,11 @@ SW_TEST_CASE_F( WesternLawTest, CrimeNumbersAndUnwitnessedCrimes )
     SW_EXPECT_EQUAL( uint32( 0 ), _law.commitCrime( "theft", "nowhere", sw::float3{}, {}, _sight, false ) );
 
     SW_EXPECT_EQUAL( uint32( 1 ), commit( "theft", {} ) );
-    SW_EXPECT_EQUAL( 1, drainCount( sw::WesternLawEvent::Kind::Unwitnessed ) );
+    SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::Unwitnessed ) );
 
     _sight._listBlind.push_back( 9 );
     SW_EXPECT_EQUAL( uint32( 2 ), commit( "theft", { makeWitness( 9, true ) } ) ); // 보안관이어도 못 보면 없는 일이다
-    SW_EXPECT_EQUAL( 1, drainCount( sw::WesternLawEvent::Kind::Unwitnessed ) );
+    SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::Unwitnessed ) );
 
     _law.update( 100.0f );
     SW_EXPECT_EQUAL( 0, _law.getBounty( _region ) );
@@ -308,7 +308,7 @@ SW_TEST_CASE_F( WesternLawTest, CitizensReportOnceAfterReportTime )
     SW_EXPECT_EQUAL( 5, _law.getBounty( _region ) );
     SW_EXPECT_EQUAL( 1, _law.getWantedLevel( _region ) );
     SW_EXPECT_EQUAL( 0, _law.countPendingReports() );
-    SW_EXPECT_EQUAL( 1, drainCount( sw::WesternLawEvent::Kind::Reported ) );
+    SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::Reported ) );
 }
 
 /**
@@ -350,11 +350,11 @@ SW_TEST_CASE_F( WesternLawTest, MaskedBountyAndWantedlessCrime )
 SW_TEST_CASE_F( WesternLawTest, SilencingWitnesses )
 {
     commit( "theft", { makeWitness( 1, false ), makeWitness( 2, false ) } );
-    (void)drainCount( sw::WesternLawEvent::Kind::Witnessed );
+    (void)popCount( sw::WesternLawEvent::Kind::Witnessed );
     SW_EXPECT_TRUE( _law.silenceWitness( 1 ) );
-    SW_EXPECT_EQUAL( 0, drainCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
+    SW_EXPECT_EQUAL( 0, popCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
     SW_EXPECT_TRUE( _law.silenceWitness( 2 ) );
-    SW_EXPECT_EQUAL( 1, drainCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
+    SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
     SW_EXPECT_FALSE( _law.silenceWitness( 2 ) );
     _law.update( 100.0f );
     SW_EXPECT_EQUAL( 0, _law.getBounty( _region ) );
@@ -368,9 +368,9 @@ SW_TEST_CASE_F( WesternLawTest, SilencingWitnesses )
 
     commit( "theft", { makeWitness( 5, false ) } );
     commit( "theft", { makeWitness( 5, false ) } );
-    (void)drainCount( sw::WesternLawEvent::Kind::Witnessed );
+    (void)popCount( sw::WesternLawEvent::Kind::Witnessed );
     SW_EXPECT_TRUE( _law.silenceWitness( 5 ) );
-    SW_EXPECT_EQUAL( 2, drainCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
+    SW_EXPECT_EQUAL( 2, popCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
     SW_EXPECT_EQUAL( 0, _law.countPendingReports() );
 }
 
@@ -380,15 +380,15 @@ SW_TEST_CASE_F( WesternLawTest, SilencingWitnesses )
 SW_TEST_CASE_F( WesternLawTest, WantedStopsAtRegionMaxWithoutEvent )
 {
     commit( "murder", { makeWitness( 1, true ) } );
-    SW_EXPECT_EQUAL( 1, drainCount( sw::WesternLawEvent::Kind::WantedRaised ) );
+    SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::WantedRaised ) );
     commit( "murder", { makeWitness( 1, true ) } );
     SW_EXPECT_EQUAL( 3, _law.getWantedLevel( _region ) ); // 2 + 2 를 상한 3 으로
-    SW_EXPECT_EQUAL( 1, drainCount( sw::WesternLawEvent::Kind::WantedRaised ) );
+    SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::WantedRaised ) );
 
     commit( "murder", { makeWitness( 1, true ) } );
     SW_EXPECT_EQUAL( 3, _law.getWantedLevel( _region ) );
     SW_EXPECT_EQUAL( 153, _law.getBounty( _region ) );
-    SW_EXPECT_EQUAL( 0, drainCount( sw::WesternLawEvent::Kind::WantedRaised ) );
+    SW_EXPECT_EQUAL( 0, popCount( sw::WesternLawEvent::Kind::WantedRaised ) );
 }
 
 /**
@@ -584,7 +584,7 @@ SW_TEST_CASE_F( WesternHorseTest, BondLevelsUnlockAbilities )
     SW_EXPECT_EQUAL( 2, _horse.getBondLevel() );
     SW_EXPECT_TRUE( _horse.hasAbility( "rear" ) );
     SW_EXPECT_NEAR( 110.0f, _horse.getStamina().getMax(), kWesternTolerance );
-    SW_EXPECT_EQUAL( 1, drainCount( _horse, sw::WesternHorseEvent::Kind::AbilityUnlocked ) );
+    SW_EXPECT_EQUAL( 1, popCount( _horse, sw::WesternHorseEvent::Kind::AbilityUnlocked ) );
 
     _horse.addBondExperience( 1000.0f );
     SW_EXPECT_EQUAL( 3, _horse.getBondLevel() );
@@ -593,7 +593,7 @@ SW_TEST_CASE_F( WesternHorseTest, BondLevelsUnlockAbilities )
     SW_EXPECT_TRUE( _horse.hasAbility( "piaffe" ) );
     SW_EXPECT_NEAR( 120.0f, _horse.getStamina().getMax(), kWesternTolerance ); // 보너스는 그 단계의 값이고 쌓이지 않는다
     SW_EXPECT_NEAR( 105.0f, _horse.getHealth().getMax(), kWesternTolerance );
-    SW_EXPECT_EQUAL( 2, drainCount( _horse, sw::WesternHorseEvent::Kind::AbilityUnlocked ) );
+    SW_EXPECT_EQUAL( 2, popCount( _horse, sw::WesternHorseEvent::Kind::AbilityUnlocked ) );
 
     _horse.addBondExperience( 1000.0f );
     SW_EXPECT_EQUAL( 3, _horse.getBondLevel() );
@@ -676,12 +676,12 @@ SW_TEST_CASE_F( WesternHorseTest, GallopDrainsAndExhausts )
 
     SW_EXPECT_FALSE( _horse.gallop( 10.0f ) );
     SW_EXPECT_TRUE( _horse.getStamina().isExhausted() );
-    SW_EXPECT_EQUAL( 1, drainCount( _horse, sw::WesternHorseEvent::Kind::Exhausted ) );
+    SW_EXPECT_EQUAL( 1, popCount( _horse, sw::WesternHorseEvent::Kind::Exhausted ) );
     _horse.update( 0.0f, 1.0f );
     SW_EXPECT_NEAR( 82.0f, _horse.getStaminaCore(), kWesternTolerance ); // 바닥에 닿은 걸음까지는 달렸다
 
     SW_EXPECT_FALSE( _horse.gallop( 1.0f ) );
-    SW_EXPECT_EQUAL( 0, drainCount( _horse, sw::WesternHorseEvent::Kind::Exhausted ) );
+    SW_EXPECT_EQUAL( 0, popCount( _horse, sw::WesternHorseEvent::Kind::Exhausted ) );
     _horse.update( 0.0f, 1.0f );
     SW_EXPECT_NEAR( 80.0f, _horse.getStaminaCore(), kWesternTolerance ); // 달리지 못한 걸음
     SW_EXPECT_TRUE( _horse.getStamina().isExhausted() );
@@ -716,10 +716,10 @@ SW_TEST_CASE_F( WesternHorseTest, FearBuildsAndThrowsRider )
     SW_REQUIRE_TRUE( wild.initialize( &_catalog, "wild", 3 ) );
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Rearing, wild.frighten( 1.0f ) ); // 탄 사람이 없다
     SW_EXPECT_NEAR( 0.0f, wild.getFear(), kWesternTolerance );
-    SW_EXPECT_EQUAL( 1, drainCount( wild, sw::WesternHorseEvent::Kind::Spooked ) );
+    SW_EXPECT_EQUAL( 1, popCount( wild, sw::WesternHorseEvent::Kind::Spooked ) );
     wild.setRidden( true );
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Bucked, wild.frighten( 1.0f ) );
-    SW_EXPECT_EQUAL( 1, drainCount( wild, sw::WesternHorseEvent::Kind::ThrewRider ) );
+    SW_EXPECT_EQUAL( 1, popCount( wild, sw::WesternHorseEvent::Kind::ThrewRider ) );
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Rearing, wild.frighten( 1.0f ) ); // 이미 떨어뜨렸다
 
     sw::WesternHorse tame;

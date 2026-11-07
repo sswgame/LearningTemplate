@@ -278,7 +278,7 @@ namespace sw::editor
                 // 캔버스 안의 위젯 좌표는 캔버스 좌표다 — 화면 좌표로 바꿔 적는다(시나리오가 노드를 누르고 Ctrl 로 둘째를 고른다).
                 const ImVec2 nameMin = ed::CanvasToScreen( ImGui::GetItemRectMin() );
                 const ImVec2 nameMax = ed::CanvasToScreen( ImGui::GetItemRectMax() );
-                EditorSelfTestMarks::noteRect( ( "animationGraph.node." + node._name ).c_str(), float2{ nameMin.x, nameMin.y }, float2{ nameMax.x, nameMax.y } );
+                EditorSelfTestMarks::recordRect( ( "animationGraph.node." + node._name ).c_str(), float2{ nameMin.x, nameMin.y }, float2{ nameMax.x, nameMax.y } );
             }
             bool bLinkedIn  = false;
             bool bLinkedOut = false;

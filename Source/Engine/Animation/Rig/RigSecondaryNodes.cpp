@@ -101,16 +101,16 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk                    = reader.readFields( _fields ); // 범위(비율 0..1, 스텝 > 0 등)는 PROPERTY 가 본다
+                bool bOk                    = reader.readFields( _params ); // 범위(비율 0..1, 스텝 > 0 등)는 PROPERTY 가 본다
                 bOk                         = reader.readNameList( "bones", _listBoneName, true ) && bOk;
-                _settings._stiffness        = _fields._stiffness;
-                _settings._damping          = _fields._damping;
-                _settings._axisPull         = _fields._axisPull;
-                _settings._gravityScale     = _fields._gravityScale;
-                _settings._particleRadius   = _fields._particleRadius;
-                _settings._fixedStep        = _fields._fixedStep;
-                _settings._maxSubStep       = _fields._maxSubsteps;
-                _settings._teleportDistance = _fields._teleportDistance;
+                _settings._stiffness        = _params._stiffness;
+                _settings._damping          = _params._damping;
+                _settings._axisPull         = _params._axisPull;
+                _settings._gravityScale     = _params._gravityScale;
+                _settings._particleRadius   = _params._particleRadius;
+                _settings._fixedStep        = _params._fixedStep;
+                _settings._maxSubStep       = _params._maxSubsteps;
+                _settings._teleportDistance = _params._teleportDistance;
                 // "gravity" 는 적었는지가 뜻이다 — 적으면 월드 중력 대신 그 값(덮어쓰기), 없으면 월드 중력 × gravity_scale.
                 _settings._gravityOverride     = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식이다. "gravity" 를 읽었는지 구분한다.
                 bOk                            = reader.readFloat3( "gravity", _settings._gravityOverride, false ) && bOk;
@@ -195,7 +195,7 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 const vector<RigSpringCollider>& listShared = context._pInstance->getSharedColliders();
-                const bool                       bShared    = _fields._bUseSharedColliders && listShared.empty() == false;
+                const bool                       bShared    = _params._bUseSharedColliders && listShared.empty() == false;
                 if ( bShared == false && _listTargetCollider.empty() )
                 {
                     _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
@@ -225,7 +225,7 @@ namespace sw
             void reset() override { _chain.reset(); }
 
         private:
-            RigSpringChainParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigSpringChainParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct ColliderSpec
             {
                 RigSpringCollider _collider{};
@@ -265,8 +265,8 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk               = reader.readFields( _fields ); // 1..180 도는 PROPERTY 가 본다
-                _radius                = _fields._radiusDegrees * MathUtil::kDegreeToRadian;
+                bool bOk               = reader.readFields( _params ); // 1..180 도는 PROPERTY 가 본다
+                _radius                = _params._radiusDegrees * MathUtil::kDegreeToRadian;
                 const RigXMLList poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {
@@ -314,7 +314,7 @@ namespace sw
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _fields._driver, _driver ) == false )
+                if ( context.findBone( _params._driver, _driver ) == false )
                     return false;
                 _driverReference = context._pSkeleton->getBone( _driver )._referencePose._rotation;
                 for ( DriverPose& pose : _listPose )
@@ -396,7 +396,7 @@ namespace sw
             }
 
         private:
-            RigPoseDriverParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigPoseDriverParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct CorrectiveBone
             {
                 quaternion    _rotation{};

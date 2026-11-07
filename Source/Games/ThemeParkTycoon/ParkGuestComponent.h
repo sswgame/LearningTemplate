@@ -16,7 +16,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다.
      * @details 손님 수가 줄면 남는 칸은 숨깁니다(오브젝트를 만들고 지우지 않는 풀). 탄 손님 · 떠난 손님도 숨깁니다.
      */
-    REFLECT( Category = "ThemePark", DisplayName = "Park Guest View", Tooltip = "Follows one guest of the park director's simulation" )
+    REFLECT( Category = "ThemePark", DisplayName = "Park Guest View", Tooltip = "Follows one guest of the park gameMode's simulation" )
     class ParkGuestComponent : public Component
     {
     public:

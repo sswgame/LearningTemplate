@@ -48,7 +48,7 @@ namespace sw
     {
     public:
         /** @brief `handleResponse` 의 결과입니다. */
-        enum class Outcome : uint8
+        enum class ResponseResult : uint8
         {
             None = 0,  ///< 이 객체의 토큰 요청에 대한 응답이 아니다
             Granted,   ///< 새 토큰을 받았다
@@ -75,7 +75,7 @@ namespace sw
          */
         [[nodiscard]] bool request( UnixMilliseconds now );
         /** @brief 응답이 이 객체의 토큰 요청의 것이면 처리합니다(아니면 `None`). 받은 토큰은 `getToken` 으로 읽는다. */
-        Outcome handleResponse( const HTTPClientResponse& response, UnixMilliseconds now );
+        ResponseResult handleResponse( const HTTPClientResponse& response, UnixMilliseconds now );
         /** @brief 거절된 토큰을 버립니다. 다음에 `hasValidToken` 이 false 가 되어 새로 받는다. */
         void invalidate();
 

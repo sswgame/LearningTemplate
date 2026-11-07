@@ -21,7 +21,7 @@ namespace sw
      * @details 모델은 Kenney City Kit (Suburban)입니다. 집은 단계(0..7)마다 더 큰 집 모델로 바뀌고 빈 땅은 낮은 울타리입니다. 밭 · 조각상은 색 상자이고
      *          집이 아니면 단계가 모습을 바꾸지 않습니다. 건물 종류가 바뀌면(허물고 다른 것을 지었다) 디렉터가 오브젝트를 바꿔 세웁니다.
      */
-    REFLECT( Category = "CityBuilder", DisplayName = "Nile Building View", Tooltip = "Shows one building of the Nile director city" )
+    REFLECT( Category = "CityBuilder", DisplayName = "Nile Building View", Tooltip = "Shows one building of the Nile gameMode city" )
     class NileBuildingComponent : public Component
     {
     public:

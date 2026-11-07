@@ -102,7 +102,7 @@ namespace sw
             /** @brief 한 번의 훑기 상태입니다. 담은 집합과 읽을 차례(글 에셋)를 든다. */
             struct Walker
             {
-                const AssetReferenceFields&     _fields;
+                const AssetReferenceFields&     _params;
                 const PackCookRules&            _rules;
                 const PackReachFiles&           _files;
                 const IPackReachSource&         _source;
@@ -119,7 +119,7 @@ namespace sw
 
                 Walker( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, unordered_set<string>& setIncluded,
                         unordered_set<string>& setReferencedExcluded )
-                    : _fields{ params }
+                    : _params{ params }
                     , _rules{ rules }
                     , _files{ files }
                     , _source{ source }
@@ -211,10 +211,10 @@ namespace sw
                 void followReferences( string_view text, const string& referrer )
                 {
                     vector<AssetReference> listReference;
-                    _fields.extract( text, AssetReferenceFields::syntaxOf( referrer ), listReference );
+                    _params.extract( text, AssetReferenceFields::syntaxOf( referrer ), listReference );
                     for ( const AssetReference& reference : listReference )
                     {
-                        if ( _setUnfollowedField.contains( reference._field ) || _fields.isChecked( reference._path ) == false )
+                        if ( _setUnfollowedField.contains( reference._field ) || _params.isChecked( reference._path ) == false )
                             continue;
                         const size_t after  = reference._offset + reference._length;
                         const bool   bEntry = after < text.size() && text[after] == '#';
@@ -507,7 +507,7 @@ namespace sw
                         if ( _files._setPackable.contains( normalized ) )
                             include( normalized, CatalogReach::Whole ); // 곁 파일은 선택 파일이다 — 없으면 넘어간다
                     }
-                    if ( _fields.isTextAsset( assetID ) == false )
+                    if ( _params.isTextAsset( assetID ) == false )
                         return;
                     string text;
                     if ( _source.readText( assetID, text ) == false )

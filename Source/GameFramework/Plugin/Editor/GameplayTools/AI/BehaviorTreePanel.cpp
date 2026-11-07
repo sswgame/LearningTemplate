@@ -376,17 +376,17 @@ namespace sw::editor
         if ( display != BehaviorTreeNames::toString( node._type ) )
             ImGui::TextUnformatted( display.c_str() );
         // 캔버스의 한 줄 요약. 칸은 종류의 스키마 값에 있다.
-        if ( const BehaviorConditionDecoratorParams* pDecorator = node._fields.find<BehaviorConditionDecoratorParams>(); pDecorator != nullptr )
+        if ( const BehaviorConditionDecoratorParams* pDecorator = node._params.find<BehaviorConditionDecoratorParams>(); pDecorator != nullptr )
             ImGui::TextDisabled( "%s", pDecorator->_test.c_str() );
-        else if ( const BehaviorConditionParams* pCondition = node._fields.find<BehaviorConditionParams>(); pCondition != nullptr )
+        else if ( const BehaviorConditionParams* pCondition = node._params.find<BehaviorConditionParams>(); pCondition != nullptr )
             ImGui::TextDisabled( "%s", pCondition->_test.c_str() );
-        else if ( const BehaviorTimedParams* pTimed = node._fields.find<BehaviorTimedParams>(); pTimed != nullptr )
+        else if ( const BehaviorTimedParams* pTimed = node._params.find<BehaviorTimedParams>(); pTimed != nullptr )
             ImGui::TextDisabled( "%.2f s", pTimed->_seconds );
-        else if ( const BehaviorRepeatParams* pRepeat = node._fields.find<BehaviorRepeatParams>(); pRepeat != nullptr )
+        else if ( const BehaviorRepeatParams* pRepeat = node._params.find<BehaviorRepeatParams>(); pRepeat != nullptr )
             ImGui::TextDisabled( "x%d", pRepeat->_count );
-        else if ( const BehaviorMoveToParams* pMove = node._fields.find<BehaviorMoveToParams>(); pMove != nullptr )
+        else if ( const BehaviorMoveToParams* pMove = node._params.find<BehaviorMoveToParams>(); pMove != nullptr )
             ImGui::TextDisabled( "-> %s", pMove->_key.c_str() );
-        else if ( const BehaviorSubTreeParams* pSubTree = node._fields.find<BehaviorSubTreeParams>(); pSubTree != nullptr )
+        else if ( const BehaviorSubTreeParams* pSubTree = node._params.find<BehaviorSubTreeParams>(); pSubTree != nullptr )
             ImGui::TextDisabled( "%s", pSubTree->_tree.empty() ? pSubTree->_slot.c_str() : pSubTree->_tree.c_str() );
         if ( bActive )
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Success" ) ), "running" );
@@ -674,7 +674,7 @@ namespace sw::editor
 
         // 칸은 스키마와 등록에서 온다 — 칸이나 동작을 더해도 이 패널을 고치지 않는다.
         _bGridEdited                      = SW_FALSE;
-        const BehaviorActionParams* pTask = node._fields.find<BehaviorActionParams>();
+        const BehaviorActionParams* pTask = node._params.find<BehaviorActionParams>();
         if ( pTask != nullptr )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );
@@ -696,8 +696,8 @@ namespace sw::editor
         else
         {
             EditorPropertyGridTarget target{};
-            target._pInstance = node._fields.getInstance();
-            target._pType     = node._fields.getType();
+            target._pInstance = node._params.getInstance();
+            target._pType     = node._params.getType();
             target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &BehaviorTreePanel::onGridEdited, this );
             _grid.drawProperties( target, nullptr, {} );
         }

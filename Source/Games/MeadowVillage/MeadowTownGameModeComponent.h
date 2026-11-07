@@ -42,7 +42,7 @@ namespace sw
      * @details 상태는 마을 하나(구간 'CTWN'), 부탁 일지 · 호감도(공유 평판의 세력 `creature.<종>`) · 지갑은 공유 상태에 있다. 시작 배치(풀 두 칸)는
      *          공유 일지에 서식지 수를 알리므로 새 판일 때만 놓는다. `Interact`(E)로 생물과 대화한다(하루 한 번 — 키트가 막는다).
      */
-    REFLECT( Category = "Meadow", DisplayName = "Meadow Town Director", Tooltip = "Runs the creature town kit on the shared game state behind the farm director" )
+    REFLECT( Category = "Meadow", DisplayName = "Meadow Town Director", Tooltip = "Runs the creature town kit on the shared game state behind the farm gameMode" )
     class MeadowTownGameModeComponent : public GameModeComponent
     {
     public:

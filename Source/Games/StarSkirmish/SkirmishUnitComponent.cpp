@@ -214,7 +214,7 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &readViewLagMax );
+    SW_AUTOMATION_WATCH( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the gameMode's unit position", &readViewLagMax );
 } // namespace sw
 
 namespace sw

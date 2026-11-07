@@ -182,10 +182,10 @@ namespace sw
 namespace sw
 {
     /** @brief 값 하나를 버전 조건 + 감사 줄로 쓴다. */
-    class RemoteConfig::SetWork final : public IServiceStoreJob
+    class RemoteConfig::SetJob final : public IServiceStoreJob
     {
     public:
-        SetWork( RemoteConfig* pConfig, string key, const RemoteConfigValue& value, const ServiceAuditEntry& audit, uint64 expectedVersion )
+        SetJob( RemoteConfig* pConfig, string key, const RemoteConfigValue& value, const ServiceAuditEntry& audit, uint64 expectedVersion )
             : _key{ std::move( key ) }
             , _value{ value }
             , _audit{ audit }
@@ -252,7 +252,7 @@ namespace sw
         const auto   entryIt         = _mapEntry.find( key );
         const uint64 expectedVersion = entryIt == _mapEntry.end() ? ServiceRecord::kAbsentVersion : entryIt->second._version;
         ++_pendingWorkCount;
-        store.submit( sw::make_unique<SetWork>( this, string{ key }, value, audit, expectedVersion ) );
+        store.submit( sw::make_unique<SetJob>( this, string{ key }, value, audit, expectedVersion ) );
     }
 
     bool RemoteConfig::findInteger( string_view key, int64& outValue ) const

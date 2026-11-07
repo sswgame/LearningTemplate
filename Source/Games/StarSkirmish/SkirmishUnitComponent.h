@@ -61,7 +61,7 @@ namespace sw
      * @details 모델은 디렉터가 스폰할 때 겁니다(유닛 종류마다 정해져 있다). 움직이는 유닛은 움직인 쪽을 보고(키트 모델의 앞이 +Z) 멈추면 마지막 방향을 지킵니다.
      *          유닛이 죽거나 안개에 가려지면 디렉터가 오브젝트를 지웁니다.
      */
-    REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Unit View", Tooltip = "Follows one unit of the skirmish director match" )
+    REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Unit View", Tooltip = "Follows one unit of the skirmish gameMode match" )
     class SkirmishUnitComponent : public Component
     {
     public:

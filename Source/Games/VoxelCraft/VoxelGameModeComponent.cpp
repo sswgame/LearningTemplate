@@ -200,7 +200,7 @@ namespace sw
         {
             if ( pCatalog->findBlockIndex( *pBlockID ) != kVoxelAirBlock )
                 continue;
-            SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the director's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
+            SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the gameMode's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
             bBlocksKnown = false;
         }
         if ( bBlocksKnown == false )

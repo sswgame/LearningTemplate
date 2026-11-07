@@ -90,15 +90,15 @@ namespace sw
 
                 // 위치 · 회전 고르기는 변환 복사만 받는다 — 위치 · 회전 제약은 공통 칸만 읽는다(그 키를 적으면 모르는 키다).
                 if ( _mode != Mode::CopyTransform )
-                    return reader.readFields( static_cast<RigConstraintParams&>( _fields ) );
-                if ( reader.readFields( _fields ) == false )
+                    return reader.readFields( static_cast<RigConstraintParams&>( _params ) );
+                if ( reader.readFields( _params ) == false )
                     return false;
-                _bPosition = _fields._bPosition ? SW_TRUE : SW_FALSE;
-                _bRotation = _fields._bRotation ? SW_TRUE : SW_FALSE;
+                _bPosition = _params._bPosition ? SW_TRUE : SW_FALSE;
+                _bRotation = _params._bRotation ? SW_TRUE : SW_FALSE;
                 return true;
             }
 
-            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _fields._bone, _bone ) && context.findTarget( _fields._target, _target ); }
+            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _params._bone, _bone ) && context.findTarget( _params._target, _target ); }
 
             void evaluate( RigEvaluateContext& context ) override
             {
@@ -106,13 +106,13 @@ namespace sw
                 RigConstraintNodesInternal::RigidTransform target{};
                 if ( context._pInstance->resolveTarget( _target, pose, target._position, target._rotation ) == false )
                     return;
-                if ( _fields._bMaintainOffset && _bCaptured == SW_FALSE )
+                if ( _params._bMaintainOffset && _bCaptured == SW_FALSE )
                 {
                     _offset    = RigConstraintNodesInternal::makeRelative( target, RigConstraintNodesInternal::readBone( pose, _bone ) );
                     _bCaptured = SW_TRUE;
                 }
                 const RigConstraintNodesInternal::RigidTransform desired =
-                    _fields._bMaintainOffset ? RigConstraintNodesInternal::compose( target, _offset ) : target;
+                    _params._bMaintainOffset ? RigConstraintNodesInternal::compose( target, _offset ) : target;
                 if ( _bRotation == SW_TRUE )
                     pose.setModelRotation( _bone, desired._rotation );
                 if ( _bPosition == SW_TRUE )
@@ -123,7 +123,7 @@ namespace sw
             void reset() override { _bCaptured = SW_FALSE; }
 
         private:
-            RigCopyTransformParams                     _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigCopyTransformParams                     _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             RigConstraintNodesInternal::RigidTransform _offset{};
             uint32                                     _bone{ 0 };
             uint32                                     _target{ 0 };
@@ -154,19 +154,19 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                const bool bOk = reader.readFields( _fields ) && reader.readNameList( "parents", _listParentName, true );
-                if ( bOk && _fields._initial >= _listParentName.size() )
+                const bool bOk = reader.readFields( _params ) && reader.readNameList( "parents", _listParentName, true );
+                if ( bOk && _params._initial >= _listParentName.size() )
                 {
                     reader.fail( "'initial' is out of range of 'parents'" );
                     return false;
                 }
-                _activeParent = _fields._initial;
+                _activeParent = _params._initial;
                 return bOk;
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _fields._bone, _bone ) == false )
+                if ( context.findBone( _params._bone, _bone ) == false )
                     return false;
                 _listParent.clear();
                 for ( const hashed_string& name : _listParentName )
@@ -209,10 +209,10 @@ namespace sw
                     _bSwitchPending                                       = SW_FALSE;
                 }
                 RigConstraintNodesInternal::RigidTransform relative = _offset;
-                if ( _fields._settleSeconds > 0.0f )
+                if ( _params._settleSeconds > 0.0f )
                 {
-                    _settleElapsed      = MathUtil::min( _settleElapsed + context._deltaSeconds, _fields._settleSeconds );
-                    const float32 ratio = _settleElapsed / _fields._settleSeconds;
+                    _settleElapsed      = MathUtil::min( _settleElapsed + context._deltaSeconds, _params._settleSeconds );
+                    const float32 ratio = _settleElapsed / _params._settleSeconds;
                     const float32 eased = ratio * ratio * ( 3.0f - 2.0f * ratio );
                     relative._position  = float3::lerp( _offset._position, float3::Zero, eased );
                     relative._rotation  = quaternion::slerp( _offset._rotation, quaternion::Identity, eased );
@@ -232,7 +232,7 @@ namespace sw
             }
 
         private:
-            RigParentSwitchParams                      _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigParentSwitchParams                      _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             vector<hashed_string>                      _listParentName{};
             vector<uint32>                             _listParent{};
             RigConstraintNodesInternal::RigidTransform _offset{};
@@ -254,8 +254,8 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                const bool bOk = reader.readFields( _fields ); // 음수 아님은 PROPERTY( Min ) 가 본다
-                if ( bOk && _fields._max < _fields._min )
+                const bool bOk = reader.readFields( _params ); // 음수 아님은 PROPERTY( Min ) 가 본다
+                if ( bOk && _params._max < _params._min )
                 {
                     reader.fail( "'min' must not be above 'max'" );
                     return false;
@@ -263,7 +263,7 @@ namespace sw
                 return bOk;
             }
 
-            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _fields._bone, _bone ) && context.findTarget( _fields._target, _target ); }
+            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _params._bone, _bone ) && context.findTarget( _params._target, _target ); }
 
             void evaluate( RigEvaluateContext& context ) override
             {
@@ -276,7 +276,7 @@ namespace sw
                 const float32 distance = offset.getLength();
                 if ( distance < MathUtil::kEpsilon )
                     return;
-                const float32 clamped = MathUtil::clamp( distance, _fields._min, _fields._max );
+                const float32 clamped = MathUtil::clamp( distance, _params._min, _params._max );
                 if ( clamped != distance )
                     pose.setModelPosition( _bone, targetPosition + offset * ( clamped / distance ) );
             }
@@ -284,7 +284,7 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
 
         private:
-            RigDistanceParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigDistanceParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             uint32            _bone{ 0 };
             uint32            _target{ 0 };
         };
@@ -299,12 +299,12 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                return reader.readFields( _fields );
+                return reader.readFields( _params );
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _fields._bone, _bone ) == false )
+                if ( context.findBone( _params._bone, _bone ) == false )
                     return false;
                 _reference = context._pSkeleton->getBone( _bone )._referencePose._rotation;
                 return true;
@@ -315,8 +315,8 @@ namespace sw
                 RigPoseBuffer&   pose  = *context._pPose;
                 const quaternion delta = ( RigIKSolver::makeInverse( _reference ) * pose.getLocalRotation( _bone ) ).normalize();
                 const float3     euler = delta.getEulerAngles() * MathUtil::kRadianToDegree;
-                const float3     clamped{ MathUtil::clamp( euler._x, _fields._minDegrees._x, _fields._maxDegrees._x ), MathUtil::clamp( euler._y, _fields._minDegrees._y, _fields._maxDegrees._y ),
-                                      MathUtil::clamp( euler._z, _fields._minDegrees._z, _fields._maxDegrees._z ) };
+                const float3     clamped{ MathUtil::clamp( euler._x, _params._minDegrees._x, _params._maxDegrees._x ), MathUtil::clamp( euler._y, _params._minDegrees._y, _params._maxDegrees._y ),
+                                      MathUtil::clamp( euler._z, _params._minDegrees._z, _params._maxDegrees._z ) };
                 if ( clamped == euler )
                     return;
                 pose.setLocalRotation( _bone, ( _reference * quaternion::makeFromYawPitchRoll( clamped * MathUtil::kDegreeToRadian ) ).normalize() );
@@ -325,7 +325,7 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
 
         private:
-            RigLimitRotationParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigLimitRotationParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             quaternion             _reference{};
             uint32                 _bone{ 0 };
         };
@@ -344,8 +344,8 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk               = reader.readFields( _fields );
-                _axis                  = _fields._axis.normalize();
+                bool bOk               = reader.readFields( _params );
+                _axis                  = _params._axis.normalize();
                 const RigXMLList bones = reader.readArray( "bones", true );
                 for ( size_t index = 0; bOk && bones.isValid() && index < bones.size(); ++index )
                 {
@@ -368,7 +368,7 @@ namespace sw
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
-                if ( context.findBone( _fields._source, _source ) == false )
+                if ( context.findBone( _params._source, _source ) == false )
                     return false;
                 _sourceReference = context._pSkeleton->getBone( _source )._referencePose._rotation;
                 _ancestorWeight  = 0.0f;
@@ -416,7 +416,7 @@ namespace sw
             }
 
         private:
-            RigTwistDistributionParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigTwistDistributionParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct TwistBone
             {
                 hashed_string _name{};
@@ -446,8 +446,8 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                const bool bOk = reader.readFields( _fields );
-                if ( bOk && ( _fields._scale._x < 0.0f || _fields._scale._y < 0.0f || _fields._scale._z < 0.0f ) )
+                const bool bOk = reader.readFields( _params );
+                if ( bOk && ( _params._scale._x < 0.0f || _params._scale._y < 0.0f || _params._scale._z < 0.0f ) )
                 {
                     reader.fail( "'scale' must not be negative" );
                     return false;
@@ -455,20 +455,20 @@ namespace sw
                 return bOk;
             }
 
-            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _fields._bone, _bone ); }
+            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _params._bone, _bone ); }
 
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer& pose  = *context._pPose;
                 BoneTransform  local = pose.getLocal( _bone );
-                local._scale         = float3::multiply( local._scale, _fields._scale );
+                local._scale         = float3::multiply( local._scale, _params._scale );
                 pose.setLocal( _bone, local );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
 
         private:
-            RigScaleBoneParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
+            RigScaleBoneParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             uint32             _bone{ 0 };
         };
 

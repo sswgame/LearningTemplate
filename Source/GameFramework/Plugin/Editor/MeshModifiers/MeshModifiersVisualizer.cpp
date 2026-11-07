@@ -552,7 +552,7 @@ namespace sw::editor
                     if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._origin + handle._direction * 0.9f, args._canvasPos, args._canvasSize, screen ) == false )
                         continue;
                     const string key = string( "meshmodifiers.handle.move." ) + to_string( handle._axis );
-                    EditorSelfTestMarks::noteRect( key.c_str(), float2{ screen.x - kMarkHalfSize, screen.y - kMarkHalfSize }, float2{ screen.x + kMarkHalfSize, screen.y + kMarkHalfSize } );
+                    EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kMarkHalfSize, screen.y - kMarkHalfSize }, float2{ screen.x + kMarkHalfSize, screen.y + kMarkHalfSize } );
                 }
             }
 

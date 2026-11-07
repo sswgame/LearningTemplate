@@ -140,7 +140,7 @@ namespace sw
 
     private:
         class ReloadJob;
-        class SetWork;
+        class SetJob;
 
         struct Entry
         {

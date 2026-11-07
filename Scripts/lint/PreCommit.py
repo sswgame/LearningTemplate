@@ -31,6 +31,7 @@ from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
+from lint.NamingWords import checkNamingWords  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -117,6 +118,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[CMakePathCase] FAIL — 대소문자만 다른 CMake 경로 {len(listCaseViolation)}건(Linux 구성이 선다)")
         for line in listCaseViolation:
             print(f"  - {line}")
+
+    # --- 표에 없는 함수 앞 단어 · 형식 끝 단어(업계 용어인지는 형식이 말하지 못한다)
+    listNamingProblem = checkNamingWords(projectRoot)
+    if listNamingProblem:
+        hasErrors = True
+        print(f"[NamingWords] FAIL — 표에 없는 이름 단어 {len(listNamingProblem)}건")
+        for problem in listNamingProblem:
+            print(f"  - {problem}")
 
     # --- 참조 0 인 컴포넌트 · 감시 값 · 개발 명령(쓰는 곳은 형식이 말하지 못한다 — FeatureReferences.py 머리말) ---------------
     listFeatureProblem = checkFeatureReferences(projectRoot)

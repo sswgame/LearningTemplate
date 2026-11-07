@@ -58,9 +58,9 @@ namespace sw::editor
                 const BehaviorTreeEditNode*             pRoot      = authored.find( authored.getRootID() );
                 const BehaviorTreeEditNode*             pCondition = pRoot != nullptr && pRoot->_listChild.size() == 1 ? authored.find( pRoot->_listChild[0] ) : nullptr;
                 const BehaviorTreeEditNode*             pMove      = pCondition != nullptr && pCondition->_listChild.size() == 1 ? authored.find( pCondition->_listChild[0] ) : nullptr;
-                const BehaviorSelectorParams*           pSelector  = pRoot != nullptr ? pRoot->_fields.find<BehaviorSelectorParams>() : nullptr;
-                const BehaviorConditionDecoratorParams* pDecorator = pCondition != nullptr ? pCondition->_fields.find<BehaviorConditionDecoratorParams>() : nullptr;
-                const BehaviorMoveToParams*             pMoveTo    = pMove != nullptr ? pMove->_fields.find<BehaviorMoveToParams>() : nullptr;
+                const BehaviorSelectorParams*           pSelector  = pRoot != nullptr ? pRoot->_params.find<BehaviorSelectorParams>() : nullptr;
+                const BehaviorConditionDecoratorParams* pDecorator = pCondition != nullptr ? pCondition->_params.find<BehaviorConditionDecoratorParams>() : nullptr;
+                const BehaviorMoveToParams*             pMoveTo    = pMove != nullptr ? pMove->_params.find<BehaviorMoveToParams>() : nullptr;
                 const bool                              bFields    = pSelector != nullptr && pSelector->_bReactive && pRoot->_name == "Root" && pDecorator != nullptr && pDecorator->_test == "blackboard(Threat) > 2" &&
                                      pDecorator->_abort == BehaviorAbortMode::LowerPriority && pMoveTo != nullptr && pMoveTo->_key == "Goal" && pMoveTo->_repathDistance == 0.5f;
                 context.expect( bFields, "the node fields were not read through the schema" );

@@ -165,10 +165,10 @@ namespace sw
 namespace sw
 {
     /** @brief 차지한 회차의 끝을 적는다(버전 조건 — 이어받긴 레코드는 건드리지 않는다). */
-    class ServiceScheduler::FinishWork final : public IServiceStoreJob
+    class ServiceScheduler::FinishJob final : public IServiceStoreJob
     {
     public:
-        FinishWork( ServiceScheduler* pScheduler, const ScheduledRun& run, uint64 serverID, bool bSucceeded, int64 nowMs )
+        FinishJob( ServiceScheduler* pScheduler, const ScheduledRun& run, uint64 serverID, bool bSucceeded, int64 nowMs )
             : _run{ run }
             , _pScheduler{ pScheduler }
             , _serverID{ serverID }
@@ -276,7 +276,7 @@ namespace sw
         if ( _pStore == nullptr )
             return;
         ++_pendingWorkCount;
-        _pStore->submit( sw::make_unique<FinishWork>( this, run, _serverID, bSucceeded, _lastTickMs.count() ) );
+        _pStore->submit( sw::make_unique<FinishJob>( this, run, _serverID, bSucceeded, _lastTickMs.count() ) );
     }
 
     int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs )

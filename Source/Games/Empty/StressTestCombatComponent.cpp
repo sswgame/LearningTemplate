@@ -125,12 +125,12 @@ namespace sw
         outListObject.push_back( pSword->getHandle() );
 
         // 연출 오브젝트가 프레임 순서대로 전투 연출을 진행합니다.
-        GameObject*                pDirector = pObjects->createGameObject( hashed_string( "CombatDirector" ) );
-        StressTestCombatComponent* pCombat   = pDirector->addComponent<StressTestCombatComponent>();
+        GameObject*                pGameMode = pObjects->createGameObject( hashed_string( "CombatDirector" ) );
+        StressTestCombatComponent* pCombat   = pGameMode->addComponent<StressTestCombatComponent>();
         pCombat->_enemy                      = pEnemy->getHandle();
         pCombat->_sword                      = pSword->getHandle();
         pCombat->_shooterRange               = settings._combatShooterRange;
-        outListObject.push_back( pDirector->getHandle() );
+        outListObject.push_back( pGameMode->getHandle() );
     }
 
     void StressTestCombatComponent::followHandSocket( GameObjectManager& manager, GameObject& enemy, GameObject& sword ) const

@@ -244,7 +244,7 @@ namespace sw
         {
             if ( pCatalog->findAbilitySet( *pSetID ) != nullptr )
                 continue;
-            SW_LOG_ERROR_ID( "ArenaGameMode.DirectorAbilitySetNot", "[Arena] the director's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
+            SW_LOG_ERROR_ID( "ArenaGameMode.DirectorAbilitySetNot", "[Arena] the gameMode's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
             bSetsKnown = false;
         }
         if ( bSetsKnown == false )

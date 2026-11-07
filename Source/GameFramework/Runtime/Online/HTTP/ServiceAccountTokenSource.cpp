@@ -130,11 +130,11 @@ namespace sw
         return true;
     }
 
-    ServiceAccountTokenSource::Outcome ServiceAccountTokenSource::handleResponse( const HTTPClientResponse& response, UnixMilliseconds now )
+    ServiceAccountTokenSource::ResponseResult ServiceAccountTokenSource::handleResponse( const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = ServiceAccountTokenSourceInternal;
         if ( _requestID == 0 || response._requestID != _requestID )
-            return Outcome::None;
+            return ResponseResult::None;
         _requestID = 0;
         JSONDocument document;
         string       token;
@@ -146,12 +146,12 @@ namespace sw
             Memory::set( _accessToken.data(), 0, _accessToken.size() );
             _accessToken = std::move( token );
             _expiresMs   = now.count() + expiresInSec * constant::time::kMillisecondsPerSecond;
-            return Outcome::Granted;
+            return ResponseResult::Granted;
         }
         SW_LOG_WARNING_ID( "ServiceAccountTokenSource.AccessTokenRequestService", "The access token request of service account '%#' failed (status %#)", _credentials._clientEmail.c_str(), response._statusCode );
         // 서버 오류 · 한도 · 전송 실패(그리고 읽을 수 없는 성공 응답)는 곧 나아질 수 있고, 그 밖의 4xx 는 키나 범위가 틀린 것이라 다시 해도 같다.
         const bool bRetryable = response.isSuccess() || response.isTransientFailure();
-        return bRetryable ? Outcome::Retryable : Outcome::Rejected;
+        return bRetryable ? ResponseResult::Retryable : ResponseResult::Rejected;
     }
 
     void ServiceAccountTokenSource::invalidate()

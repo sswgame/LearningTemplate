@@ -100,7 +100,7 @@ namespace sw
 
     private:
         class ClaimJob;
-        class FinishWork;
+        class FinishJob;
 
         /** @brief 차지 일의 결과입니다. */
         enum class ClaimResult : uint8

@@ -177,7 +177,7 @@ namespace sw
         bool _bAutoPlay;
 
         PROPERTY( Category = "Director", DisplayName = "Tick After",
-                  Tooltip = "Run this director's rules after the director on that object (cross-object order; same-object order is the component order)" )
+                  Tooltip = "Run this gameMode's rules after the gameMode on that object (cross-object order; same-object order is the component order)" )
         GameObjectHandle _tickAfter;
 
         vector<GameObjectHandle> _listSpawned;

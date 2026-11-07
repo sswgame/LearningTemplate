@@ -79,7 +79,7 @@ namespace sw::editor
                 const ImRect  strip   = bDocked ? pWindow->DC.DockTabItemRect : pWindow->TitleBarRect();
                 const float32 left    = bDocked ? ImMax( strip.Min.x, strip.Max.x - padding.x * 2.0f - size ) : strip.Max.x - padding.x - size;
                 const float32 top     = strip.Min.y + padding.y;
-                EditorSelfTestMarks::noteRect( ( string{ "panel.close." } + pTitle ).c_str(), float2{ left, top }, float2{ left + size, top + size } );
+                EditorSelfTestMarks::recordRect( ( string{ "panel.close." } + pTitle ).c_str(), float2{ left, top }, float2{ left + size, top + size } );
             }
 
             /**

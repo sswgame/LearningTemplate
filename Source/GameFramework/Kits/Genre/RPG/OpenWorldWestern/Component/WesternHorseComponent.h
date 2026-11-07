@@ -61,7 +61,7 @@ namespace sw
         void applyPendingState();
 
     private:
-        PROPERTY( Category = "Horse", DisplayName = "Director", Tooltip = "Object with the western director whose catalog has this breed" )
+        PROPERTY( Category = "Horse", DisplayName = "Director", Tooltip = "Object with the western gameMode whose catalog has this breed" )
         GameObjectHandle _gameMode;
         PROPERTY( Category = "Horse", DisplayName = "Breed", Tooltip = "<Horse id> in the western catalog" )
         hashed_string _breed;

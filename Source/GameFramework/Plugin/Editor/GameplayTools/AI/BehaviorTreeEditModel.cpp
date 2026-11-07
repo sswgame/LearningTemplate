@@ -246,7 +246,7 @@ namespace sw::editor
             return {};
         if ( pNode->_name.empty() == false )
             return pNode->_name;
-        const BehaviorActionParams* pAction = pNode->_fields.find<BehaviorActionParams>();
+        const BehaviorActionParams* pAction = pNode->_params.find<BehaviorActionParams>();
         if ( pAction != nullptr && pAction->_task.empty() == false )
             return pAction->_task;
         return string{ BehaviorTreeNames::toString( pNode->_type ) };
@@ -278,29 +278,29 @@ namespace sw::editor
                 else if ( ConditionExpr::tryCompile( text, expr, error ) == false )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, error } );
             };
-            if ( const BehaviorActionParams* pAction = node._fields.find<BehaviorActionParams>(); pAction != nullptr )
+            if ( const BehaviorActionParams* pAction = node._params.find<BehaviorActionParams>(); pAction != nullptr )
             {
                 if ( pAction->_task.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Pick a task" } );
                 else if ( ActionRegistry::find( pAction->_task ) == nullptr )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string{ "No action named '" } + pAction->_task + "' is registered - the game would not load this tree" } );
             }
-            if ( const BehaviorConditionParams* pCondition = node._fields.find<BehaviorConditionParams>(); pCondition != nullptr )
+            if ( const BehaviorConditionParams* pCondition = node._params.find<BehaviorConditionParams>(); pCondition != nullptr )
                 addConditionIssue( pCondition->_test );
-            if ( const BehaviorConditionDecoratorParams* pDecorator = node._fields.find<BehaviorConditionDecoratorParams>(); pDecorator != nullptr )
+            if ( const BehaviorConditionDecoratorParams* pDecorator = node._params.find<BehaviorConditionDecoratorParams>(); pDecorator != nullptr )
                 addConditionIssue( pDecorator->_test );
-            if ( const BehaviorMoveToParams* pMove = node._fields.find<BehaviorMoveToParams>(); pMove != nullptr )
+            if ( const BehaviorMoveToParams* pMove = node._params.find<BehaviorMoveToParams>(); pMove != nullptr )
             {
                 if ( pMove->_key.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Set a blackboard key" } );
                 if ( pMove->_repathDistance < 0.0f )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "The repath distance must not be negative" } );
             }
-            if ( const BehaviorTimedParams* pTimed = node._fields.find<BehaviorTimedParams>(); pTimed != nullptr && pTimed->_seconds < 0.0f )
+            if ( const BehaviorTimedParams* pTimed = node._params.find<BehaviorTimedParams>(); pTimed != nullptr && pTimed->_seconds < 0.0f )
                 outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Seconds must not be negative" } );
-            if ( const BehaviorRepeatParams* pRepeat = node._fields.find<BehaviorRepeatParams>(); pRepeat != nullptr && pRepeat->_count < 0 )
+            if ( const BehaviorRepeatParams* pRepeat = node._params.find<BehaviorRepeatParams>(); pRepeat != nullptr && pRepeat->_count < 0 )
                 outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "The repeat count must not be negative" } );
-            if ( const BehaviorSubTreeParams* pSubTree = node._fields.find<BehaviorSubTreeParams>(); pSubTree != nullptr && pSubTree->_tree.empty() == pSubTree->_slot.empty() )
+            if ( const BehaviorSubTreeParams* pSubTree = node._params.find<BehaviorSubTreeParams>(); pSubTree != nullptr && pSubTree->_tree.empty() == pSubTree->_slot.empty() )
                 outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "A SubTree needs exactly one of tree / slot" } );
         }
     }

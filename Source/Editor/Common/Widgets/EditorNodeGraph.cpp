@@ -303,7 +303,7 @@ namespace sw::editor
         const ImVec2                           pinMax = ed::CanvasToScreen( ImGui::GetItemRectMax() );
         fixed_string<constant::buffer::kMax64> markName;
         formatstring( markName.data(), markName.capacity(), "%#.pin.%#", _markScope.c_str(), _listFramePin.back()._pinID );
-        EditorSelfTestMarks::noteRect( markName.c_str(), float2{ pinMin.x, pinMin.y }, float2{ pinMax.x, pinMax.y } );
+        EditorSelfTestMarks::recordRect( markName.c_str(), float2{ pinMin.x, pinMin.y }, float2{ pinMax.x, pinMax.y } );
     }
 
     void EditorNodeGraph::applyViewRequests()

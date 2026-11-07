@@ -140,7 +140,7 @@ namespace sw
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr || pState->isInitialized() == false )
         {
-            SW_LOG_ERROR_ID( "FarmVillageGameMode.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village gameMode after the farm gameMode) - the villagers stay home" );
             return false;
         }
         _pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( _scheduleDataPath );

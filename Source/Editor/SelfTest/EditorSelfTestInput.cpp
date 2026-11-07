@@ -238,7 +238,7 @@ namespace sw::editor
         EditorSelfTestInputInternal::record( *pState, pKey, mark );
     }
 
-    void EditorSelfTestMarks::noteRect( const utf8* pKey, const float2& min, const float2& max )
+    void EditorSelfTestMarks::recordRect( const utf8* pKey, const float2& min, const float2& max )
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findRecordingState( pKey );
         if ( pState == nullptr )

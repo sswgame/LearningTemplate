@@ -108,14 +108,14 @@ namespace sw
         /** @brief 대기 중인 항목을 모두 꺼내 outList 뒤에 붙이고, 꺼낸 개수를 반환합니다. */
         uint32 popAll( vector<T>& outList )
         {
-            uint32 drainCount = 0;
+            uint32 popCount = 0;
             T      item{};
             while ( dequeue( item ) )
             {
                 outList.push_back( std::move( item ) );
-                ++drainCount;
+                ++popCount;
             }
-            return drainCount;
+            return popCount;
         }
 
         /** @brief 대기 중인 항목을 최대 maxCount 개까지 꺼내 버퍼에 담고, 꺼낸 개수를 반환합니다. */
@@ -124,14 +124,14 @@ namespace sw
             if ( pOutBuffer == nullptr || maxCount == 0 )
                 return 0;
 
-            uint32 drainCount = 0;
-            while ( drainCount < maxCount )
+            uint32 popCount = 0;
+            while ( popCount < maxCount )
             {
-                if ( dequeue( pOutBuffer[drainCount] ) == false )
+                if ( dequeue( pOutBuffer[popCount] ) == false )
                     break;
-                ++drainCount;
+                ++popCount;
             }
-            return drainCount;
+            return popCount;
         }
 
         /** @brief 남은 요소를 모두 꺼내 버립니다. */

@@ -83,8 +83,8 @@ namespace sw::editor
                     return;
                 static const utf8* const arrAxisName[3] = { "x", "y", "z" };
                 const string             key            = formatToString( "collider.handle.%#.%#%#", handle._shapeIndex, arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
-                EditorSelfTestMarks::noteRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize },
-                                               float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
+                EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize },
+                                                 float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
             }
 
             /** @brief 지금 끌고 있는 손잡이로 셰이프를 고칩니다. 바뀌었으면 true 입니다. */

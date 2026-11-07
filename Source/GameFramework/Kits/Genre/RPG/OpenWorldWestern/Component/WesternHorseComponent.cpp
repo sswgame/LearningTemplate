@@ -122,7 +122,7 @@ namespace sw
         const utf8*                     pName     = pOwner != nullptr ? pOwner->getName().c_str() : "?";
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternCatalog", "[Western] horse '%#' has no western catalog - %#", pName, pGameMode == nullptr ? "Director does not point at a western director" : "the director did not start" );
+            SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternCatalog", "[Western] horse '%#' has no western catalog - %#", pName, pGameMode == nullptr ? "Director does not point at a western gameMode" : "the gameMode did not start" );
             return false;
         }
         if ( pMount == nullptr )

@@ -168,6 +168,11 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 | 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진 것이다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/ContentModules.py`, 씬을 고친 뒤에는 다음 configure 가 본다) | 언리얼 .uproject Plugins |
 | 게임 한 판의 규칙 · 상태 컴포넌트는 `GameMode`(`<게임>GameModeComponent`). `Director` 는 페이싱 감독(AI Director) · 카메라 연출에만. 오브젝트 위의 차지할 수 있는 슬롯은 `SmartObject`, 장비는 `Equipment`(동사 `equip` 은 그대로) | 언리얼 AGameModeBase · Smart Objects, Lyra Equipment |
 | 데이터 묶음: Def 여러 개를 담은 파일은 `<X>Catalog` 이고 XML 루트도 클래스 이름이다. `Table` 은 가중 추첨 · 구간 표와 StringTable 에만, `Set` 은 GAS 이름과 한 에셋 안의 이름 → 항목 묶음에만, 코드 등록 표는 `Registry` | 한 이름 |
+| 쌓인 일을 끝낼 때까지 막는 일은 `flush`(언리얼 `FlushRenderingCommands`), 큐를 꺼내 처리하는 일은 `poll`, 꺼내 넘기는 일은 `take`. `drain` 은 서버 드레인(운영 용어)과 게임 수치 소모에만 | 언리얼 · 쿠버네티스 |
+| 기록은 `record`(`note` 아님), 지우기는 `remove` · `clear` · `untrack`(`forget` 아님), 결과 채택은 `apply` · `attach`(`adopt` 아님), 허가는 `allow` · `accept`(`admit` 은 손님 입장 게임 말만) | 낱말 한 벌 |
+| 형식 끝말: 리플렉션으로 읽는 칸 묶음은 `Params`(`Fields` 는 칸 자체를 다루는 도구 이름만), 비동기 일 하나는 `Job`(`Work` 아님), 결과는 `Result`(`Outcome` · `Verdict` 아님), 테스트 조립은 `Fixture`(`Rig` 은 애니메이션 리그만) | 낱말 한 벌 |
+| `Reply` 는 키트 응답 본문, `OnlineResponse` 는 전송 봉투다 — 다른 개념이라 합치지 않는다. `Since` 는 시간을 세는 칸(`_timeSinceShot`)에만 | 뜻이 다르다 |
+| 새 함수 앞 단어 · 형식 끝 단어는 `Config/Dev/NamingWords.json` 에 먼저 올린다(`py -3 -m Scripts naming-words`, 커밋 훅이 본다) | 이름은 형식으로 막지 못한다 |
 | 저작 정의는 `Def` 하나(`Definition` 은 쓰지 않는다). 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식, 외부 형식 · 프로토콜 · 물리 · 렌더 API 의 자기 용어에만 | 저장소 다수 |
 | 읽기 · 쓰기 동사는 원본 종류를 이름에 넣고 짝을 맞춘다: `loadFromAsset`(에셋 id) · `loadFromFile`/`saveToFile`(OS 경로) · `loadFromXMLText`/`saveToXMLText`(글). `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라 값에만. GameObject 는 `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile · SpawnActor/DestroyActor |
 | 에디터 창 하나의 상태 · 명령은 `<창>Model`. `Document` 는 메모리에 든 파일 내용(SceneDocument · XMLDocument)에만 | Qt Model/View |
