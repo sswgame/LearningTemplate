@@ -47,6 +47,27 @@ namespace sw
     {
         struct CharacterAppearanceComponentInternal
         {
+            /**
+             * @brief 유닛 공간(뼈가 사는 공간)의 컴포넌트입니다 — 스켈레탈 메시가 있으면 그것이고, 없으면 주 컴포넌트입니다.
+             * @details 몸 메시는 캡슐(주 컴포넌트) 아래에 오프셋을 두고 붙기도 한다(모래에 빠짐 · 앉은 자리 보정). 소켓을 주 컴포넌트 공간으로 읽으면 그 오프셋을 잃어
+             *          모자 같은 소켓 부품이 몸을 따라가지 않았다. 언리얼에서 부착물이 메시 컴포넌트에 붙는 것과 같은 자리다.
+             */
+            static const SceneComponent* findUnitScene( const GameObject& object )
+            {
+                const SkeletalMeshComponent* pMesh = object.getComponent<SkeletalMeshComponent>();
+                return pMesh != nullptr ? static_cast<const SceneComponent*>( pMesh ) : object.getPrimarySceneComponent();
+            }
+
+            /** @brief 유닛 공간의 변환 @p inUnit 을 @p holder 의 주 컴포넌트 공간으로 옮깁니다(소켓 바인딩은 주 컴포넌트를 따른다). */
+            static float4x4 toHolderSpace( const GameObject& holder, const float4x4& inUnit )
+            {
+                const SceneComponent* pPrimary = holder.getPrimarySceneComponent();
+                const SceneComponent* pUnit    = findUnitScene( holder );
+                if ( pPrimary == nullptr || pUnit == nullptr || pUnit == pPrimary )
+                    return inUnit;
+                return inUnit * pUnit->getWorldMatrix() * pPrimary->getWorldMatrix().invert();
+            }
+
             static bool isSamePart( const ResolvedPart& part, const hashed_string& owner, const hashed_string& partName, const hashed_string& asset, const hashed_string& material )
             {
                 return part._owner == owner && part._partName == partName && part._asset == asset && part._material == material;
@@ -623,7 +644,7 @@ namespace sw
         for ( uint32 unitIndex = 0; unitIndex < _rig.getUnitCount(); ++unitIndex )
         {
             const GameObject*     pObject = findUnitObject( *pManager, unitIndex );
-            const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            const SceneComponent* pScene  = pObject != nullptr ? CharacterAppearanceComponentInternal::findUnitScene( *pObject ) : nullptr;
             if ( pScene == nullptr )
                 break;
             listUnitWorld.push_back( pScene->getWorldMatrix() );
@@ -1090,11 +1111,12 @@ namespace sw
             spawned._holderUnit            = unitIndex;
             const hashed_string socketName = part._placement._listSocket.empty() ? hashed_string{} : part._placement._listSocket[0];
             // 같은 holder 와 소켓이면 위치만 고친다. 다시 붙이면 되돌아가기 블렌드가 끊기기 때문이다.
-            const bool bSameSocketBinding = pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == pHolder->getHandle() && pBinding->getSocketName() == socketName;
+            const bool     bSameSocketBinding = pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == pHolder->getHandle() && pBinding->getSocketName() == socketName;
+            const float4x4 inHolder           = CharacterAppearanceComponentInternal::toHolderSpace( *pHolder, inUnit );
             if ( bSameSocketBinding )
-                pBinding->updateSocketTransform( inUnit );
+                pBinding->updateSocketTransform( inHolder );
             else
-                (void)pBinding->bindToSocket( pHolder, socketName, inUnit ); // 못 붙이면 바인딩이 그대로이고 다음 갱신이 다시 붙인다
+                (void)pBinding->bindToSocket( pHolder, socketName, inHolder ); // 못 붙이면 바인딩이 그대로이고 다음 갱신이 다시 붙인다
         }
     }
 
@@ -1282,7 +1304,7 @@ namespace sw
             float4x4                inUnit;
             uint32                  unitIndex = AppearanceSocketRig::kNoUnit;
             if ( pBinding != nullptr && _rig.computePlacement( _state.getResolved()._listPart[spawned._partIndex]._placement, _bodyBones, inUnit, unitIndex ) )
-                pBinding->updateSocketTransform( inUnit );
+                pBinding->updateSocketTransform( CharacterAppearanceComponentInternal::toHolderSpace( *getOwner(), inUnit ) );
         }
     }
 
