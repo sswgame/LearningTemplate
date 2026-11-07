@@ -4,8 +4,6 @@
         "LocomotionWarpingComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
         "MeleeHitboxComponent": "ActionCombat 키트는 어떤 게임도 싣지 않아 데이터 배치가 없다(unfinished_survey K1) - 그 시연 게임을 세울 때 놓는다",
         "MotionWarpingComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
-        "NavMeshLinkComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
-        "NavMeshObstacleComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
         "PoseRetargetComponent": "아직 어떤 씬 · 프리팹 · 코드에도 놓이지 않았다. 시연 씬이나 게임에 놓는 일이 남았다(2026-11-07, 기능 배치 일감)",
         "UnitStatsComponent": "ActionCombat 키트는 어떤 게임도 싣지 않아 데이터 배치가 없다(unfinished_survey K1) - 그 시연 게임을 세울 때 놓는다"
     },

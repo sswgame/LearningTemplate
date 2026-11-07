@@ -1,0 +1,111 @@
+<Scene formatVersion="2" name="NavLinks">
+	<!-- 내비 시나리오(automation/navlinks)의 무대 — 바닥(Y 0)과 2 m 높고 4 m 떨어진 단(Y 2)은 내비메시로 이어지지 않는다. JumpLink(NavMeshLinkComponent, 종류 Jump)가 바닥 끝과 단 끝을 잇고,
+	     Barrier(NavMeshObstacleComponent, 상자)가 Start 와 Goal 사이를 뚫어 길이 돌아간다. 언리얼 NavLink Proxy · 동적 장애물, 유니티 NavMeshLink · NavMeshObstacle(Carve)의 자리.
+	     Walker 의 에이전트(Humanoid)가 내비메시를 굽게 한다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,14,-14" _localRotation="0.8,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="10,0.5,5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="20,1,10" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Platform">
+			<GameObject _schemaVersion="0" _name="Platform" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,1.5,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="5,0.5,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="10,1,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="NavigationSurface">
+			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
+				<_listComponent>
+					<NavMeshSurfaceComponent _geometrySource="Both" _boundsHalfExtents="0,0,0">
+						<_listAgentType>
+							<item>Humanoid</item>
+						</_listAgentType>
+						<_listExcludeTag />
+					</NavMeshSurfaceComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="JumpLink">
+			<GameObject _schemaVersion="0" _name="JumpLink" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshLinkComponent _startOffset="0,0,0" _endOffset="0,2,5" _width="1" _areaName="" _linkType="Jump" _bBidirectional="true" _bLinkEnabled="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Barrier">
+			<GameObject _schemaVersion="0" _name="Barrier" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0.5,-2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshObstacleComponent _shape="Box" _halfExtents="3,1,0.5" _center="0,0,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Start">
+			<GameObject _schemaVersion="0" _name="Start" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,-4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Goal">
+			<GameObject _schemaVersion="0" _name="Goal" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="PlatformGoal">
+			<GameObject _schemaVersion="0" _name="PlatformGoal" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,2,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Walker">
+			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-8,0,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="Humanoid" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0.4" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="SteerOnly" _bUpdateRotation="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  내비 링크 · 장애물(maps/navlinks) — 경로 감시 값(Nav.PathLength · Nav.PathLinkCount, 대상 → key 오브젝트)으로 판정한다(골든 없음).
+  ① Barrier(NavMeshObstacleComponent)가 Start(Z -4.5)와 Goal(Z 0.5) 사이를 뚫어 길이 곧은 5 m 보다 길다(옆으로 돈다). ② Barrier 를 치우면(object.place) 뚫린 타일을 다시 구워 곧은 길이 된다.
+  ③ 바닥에서 단(PlatformGoal, Y 2)까지는 JumpLink(NavMeshLinkComponent) 하나를 건너야 끝까지 간다.
+  실행: App -scenario=game/empty/automation/navlinks.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.navlinks" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/navlinks.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Nav.PathLength" target="Start" key="Goal" atLeast="6" timeoutSeconds="5"/>
+
+	<DevCommand line="object.place Barrier 20 0.5 -2"/>
+	<WaitUntil watch="Nav.PathLength" target="Start" key="Goal" atMost="5.3" timeoutSeconds="5"/>
+
+	<WaitUntil watch="Nav.PathLinkCount" target="Goal" key="PlatformGoal" equals="1" timeoutSeconds="5"/>
+	<Pass/>
+</Scenario>
