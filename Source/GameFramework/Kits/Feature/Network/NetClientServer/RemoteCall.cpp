@@ -193,6 +193,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     RemoteCallServer::RemoteCallServer()
         : _targets{}
+        , _mapSession{}
         , _stats{}
         , _messageWriter{}
         , _listArgumentScratch{}
@@ -202,9 +203,10 @@ namespace sw
 
     bool RemoteCallServer::registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID )
     {
-        if ( pInstance == nullptr || _targets.findTarget( targetID ) != nullptr )
+        if ( pInstance == nullptr || targetID == RemoteCallTargets::kSessionTargetID || _targets.findTarget( targetID ) != nullptr )
         {
-            SW_LOG_ERROR_ID( "RemoteCall.ServerTargetRefused", "Remote call target %# (%#) was not registered - the instance is null or the id is already taken", targetID, type._name.c_str() );
+            SW_LOG_ERROR_ID( "RemoteCall.ServerTargetRefused", "Remote call target %# (%#) was not registered - the instance is null, the id is the session id 0 or already taken", targetID,
+                             type._name.c_str() );
             return false;
         }
         if ( RemoteCallTargets::checkContract( type, FunctionNetRole::Server ) == false )
@@ -218,11 +220,47 @@ namespace sw
         _targets._mapTarget.erase( targetID );
     }
 
+    bool RemoteCallServer::registerSessionTarget( int32 connectionID, const TypeInfo& type, void* pInstance )
+    {
+        if ( pInstance == nullptr || hasSessionTarget( connectionID ) )
+        {
+            SW_LOG_ERROR_ID( "RemoteCall.SessionTargetRefused", "Remote call session of connection %# (%#) was not registered - the instance is null or the connection already has one", connectionID,
+                             type._name.c_str() );
+            return false;
+        }
+        if ( RemoteCallTargets::checkContract( type, FunctionNetRole::Server ) == false )
+            return false;
+        _mapSession[connectionID] = RemoteCallTargets::Target{ &type, pInstance, connectionID };
+        return true;
+    }
+
+    void RemoteCallServer::unregisterSessionTarget( int32 connectionID )
+    {
+        _mapSession.erase( connectionID );
+    }
+
+    const RemoteCallTargets::Target* RemoteCallServer::findCallTarget( uint32 targetID, int32 connectionID ) const
+    {
+        if ( targetID != RemoteCallTargets::kSessionTargetID )
+            return _targets.findTarget( targetID );
+        const auto iter = _mapSession.find( connectionID );
+        return iter != _mapSession.end() ? &iter->second : nullptr;
+    }
+
     bool RemoteCallServer::callClient( uint32 targetID, string_view functionName, const vector<ReflectedValue>& listArg )
     {
-        const RemoteCallTargets::Target* pTarget         = _targets.findTarget( targetID );
-        const FunctionInfo*              pFunction       = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, functionName ) : nullptr;
-        const bool                       bClientFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false );
+        return sendClientCall( _targets.findTarget( targetID ), targetID, functionName, listArg );
+    }
+
+    bool RemoteCallServer::callSession( int32 connectionID, string_view functionName, const vector<ReflectedValue>& listArg )
+    {
+        return sendClientCall( findCallTarget( RemoteCallTargets::kSessionTargetID, connectionID ), RemoteCallTargets::kSessionTargetID, functionName, listArg );
+    }
+
+    bool RemoteCallServer::sendClientCall( const RemoteCallTargets::Target* pTarget, uint32 targetID, string_view functionName, const vector<ReflectedValue>& listArg )
+    {
+        const FunctionInfo* pFunction       = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, functionName ) : nullptr;
+        const bool          bClientFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false );
         if ( _pPeers == nullptr || bClientFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listArgumentScratch ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ClientCallRefused", "Remote call to client function '%#' on target %# was not sent - no such target or Client function, or an argument cannot travel as text",
@@ -244,7 +282,7 @@ namespace sw
         RemoteCallInternal::ReadCall call;
         if ( RemoteCallInternal::readCall( body, call, _listArgumentScratch ) == false )
             return NetHandleResult::Malformed;
-        const RemoteCallTargets::Target* pTarget = _targets.findTarget( call._targetID );
+        const RemoteCallTargets::Target* pTarget = findCallTarget( call._targetID, context._connectionID );
         if ( pTarget == nullptr )
         {
             sendRejected( context._connectionID, call._sequence, RemoteCallError::UnknownTarget );
@@ -306,6 +344,7 @@ namespace sw
     void RemoteCallServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
+        _mapSession.erase( connectionID );
         for ( auto iter = _targets._mapTarget.begin(); iter != _targets._mapTarget.end(); )
         {
             if ( iter->second._ownerConnectionID == connectionID )

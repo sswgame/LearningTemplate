@@ -218,6 +218,25 @@ SW_TEST_CASE( RemoteCallTest, RegistrationChecksTheContract )
     SW_EXPECT_FALSE( server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 ) );
 }
 
+/** @brief [RemoteCallTest] 세션 대상(id 0)은 연결마다 하나다 — 클라이언트가 서버 번호를 몰라도 양쪽이 서로 부르고, 연결이 닫히면 지워진다. */
+SW_TEST_CASE( RemoteCallTest, SessionTargetIsPerConnection )
+{
+    RemoteCallTestRig rig;
+    SW_REQUIRE_TRUE( rig._server.registerSessionTarget( rig._connectionID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar ) );
+    SW_REQUIRE_TRUE( rig._client.registerTarget( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), "attackTarget",
+                                                     { ReflectedValue::make( int32{ 3 } ), ReflectedValue::make( int32{ 5 } ) } ) );
+    SW_EXPECT_TRUE( rig._server.callSession( rig._connectionID, "receiveHealth", { ReflectedValue::make( int32{ 77 } ) } ) );
+    rig.pumpUntilDelivered();
+    SW_EXPECT_EQUAL( 3, rig._serverAvatar._lastTargetID );
+    SW_EXPECT_EQUAL( 77, rig._clientAvatar._shownHealth );
+
+    SW_EXPECT_LOG( "RemoteCall.ServerTargetRefused" );
+    SW_EXPECT_FALSE( rig._server.registerTarget( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    rig._server.onConnectionClosed( rig._connectionID, NetDisconnectReason::Timeout );
+    SW_EXPECT_FALSE( rig._server.hasSessionTarget( rig._connectionID ) );
+}
+
 /** @brief [RemoteCallTest] 연결이 닫히면 그 연결이 주인인 대상이 지워진다(같은 슬롯의 다음 연결이 물려받지 않는다). */
 SW_TEST_CASE( RemoteCallTest, ClosedConnectionDropsItsTargets )
 {

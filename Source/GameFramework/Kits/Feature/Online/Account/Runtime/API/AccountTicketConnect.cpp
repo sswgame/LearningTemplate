@@ -12,6 +12,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
@@ -92,6 +93,10 @@ namespace sw
                     connector.shutdown();
                     return true;
                 }
+                // 기동 때 연 세션처럼(`GameInstance::initialize`) 씬 매니저에 넷 링크를 건다 — 걸지 않으면 씬의 네트워크 컴포넌트가 늦게 연 세션을 찾지 못한다.
+                SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
+                if ( pSceneManager != nullptr )
+                    pSceneManager->setNetLink( pSession->makeNetLink() );
                 outReply = "ticketconnect: connecting to " + listArgument[4] + " with the account ticket";
                 return true;
             }

@@ -4,6 +4,8 @@
  * @details 언리얼 RPC(`UFUNCTION( Server, Reliable, WithValidation )`)와 Godot `@rpc` 의 자리이다(기억에 의존). 손으로 메시지를 짜지 않고 반사 함수 하나가 곧 원격 함수다.
  *          - **대상**: 호출은 대상 id(게임이 정한 32 비트 수) 하나를 가리킨다. 서버는 대상마다 "주인 연결" 을 적어 두고, 그 연결만 그 대상의 `Server` 함수를 부를 수 있다
  *            (언리얼의 소유 연결 규칙). 대상이 없거나 이미 사라졌으면 거절 알림(`Rejected`)을 돌려준다.
+ *          - **세션 대상**: id 0(`RemoteCallTargets::kSessionTargetID`)은 "이 연결의 세션 객체" 다 — 언리얼 PlayerController 의 자리. 서버는 연결마다 하나를 두고
+ *            (`registerSessionTarget`), 클라이언트는 자기 것 하나를 0 으로 등록한다. 그래서 서버가 정한 번호를 클라이언트가 먼저 알 필요 없이 양쪽이 서로 부른다.
  *          - **역할**: 서버는 `Server` 함수만 받고, 클라이언트는 `Client` · `Multicast` 함수만 받는다. 다른 역할의 함수를 부르는 연결은 결함이거나 조작이라 끊는다.
  *          - **신뢰**: `Reliable` 이면 신뢰 순서 채널, 아니면 비신뢰 채널로 보낸다(비신뢰는 조각나지 않아 1 KB 안에 들어야 한다). `Reliable` 함수가 비신뢰로 오면 끊는다(보내는 쪽 규칙을 어겼다).
  *          - **검증**: `Validate` 함수는 같은 인자의 `bool validate<함수 이름>( … )` 반사 함수를 짝으로 가진다(`applyDamage` → `validateApplyDamage`).
@@ -101,6 +103,9 @@ namespace sw
             int32           _ownerConnectionID{ -1 }; ///< 서버 — 이 대상의 `Server` 함수를 부를 수 있는 연결. 클라이언트는 쓰지 않는다
         };
 
+        /** @brief 연결의 세션 객체를 가리키는 id 입니다. `registerTarget` 으로는 등록하지 못합니다(서버는 `registerSessionTarget`). */
+        static constexpr uint32 kSessionTargetID = 0;
+
         unordered_map<uint32, Target> _mapTarget{};
 
         const Target* findTarget( uint32 targetID ) const;
@@ -122,8 +127,9 @@ namespace sw
      * @code
      *     (void)server.initialize( &peers );
      *     _subscription = router.registerHandler( &server );
-     *     if ( server.registerTarget( avatarID, *ValeAvatar::StaticType(), &avatar, connectionID ) == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
-     *     (void)server.callClient( avatarID, "receiveProfile", { ReflectedValue::make( level ) } );
+     *     if ( server.registerTarget( creatureID, *Creature::StaticType(), &creature, connectionID ) == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
+     *     (void)server.registerSessionTarget( connectionID, *ValeAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
+     *     (void)server.callSession( connectionID, "receiveProfile", { ReflectedValue::make( level ) } );
      * @endcode
      */
     class SW_KIT_API RemoteCallServer : public NetTableHandler<RemoteCallServer, NetRemoteCallMessage::Table, NetRemoteCallMessage::Call>
@@ -134,35 +140,49 @@ namespace sw
         void initialize( INetPeers* pPeers ) { _pPeers = pPeers; }
         /**
          * @brief 대상을 등록합니다. 연결 @p ownerConnectionID 만 이 대상의 `Server` 함수를 부를 수 있습니다.
-         * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::checkContract`), 인스턴스가 없거나, 같은 id 가 이미 있으면 오류를 남기고 false 입니다
+         * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::checkContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 false 입니다
          */
         [[nodiscard]] bool registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID );
         void               unregisterTarget( uint32 targetID );
         /**
-         * @brief 대상의 주인 클라이언트에게 `Client` 함수를 부릅니다. 채널은 함수의 `Reliable` 이 정합니다.
+         * @brief 연결 @p connectionID 의 세션 대상(id 0)을 등록합니다. 그 연결이 id 0 으로 부르면 이 대상이 받습니다.
+         * @return 계약을 어기거나, 인스턴스가 없거나, 그 연결의 세션이 이미 있으면 오류를 남기고 false 입니다
+         */
+        [[nodiscard]] bool registerSessionTarget( int32 connectionID, const TypeInfo& type, void* pInstance );
+        void               unregisterSessionTarget( int32 connectionID );
+        /**
+         * @brief 대상의 주인 클라이언트에게 `Client` 함수를 부릅니다. 채널은 함수의 `Reliable` 이 정합니다. 클라이언트에서도 같은 id 의 대상이 받습니다.
          * @return 대상이 없거나, 그 이름의 `Client` 함수가 없거나, 인자를 글로 싣지 못하거나, 보내지 못하면 오류를 남기고 false 입니다
          */
         [[nodiscard]] bool callClient( uint32 targetID, string_view functionName, const vector<ReflectedValue>& listArg );
+        /** @brief 연결의 세션 대상에서 `Client` 함수를 부릅니다 — 클라이언트의 id 0 대상이 받습니다. 실패는 `callClient` 와 같습니다. */
+        [[nodiscard]] bool callSession( int32 connectionID, string_view functionName, const vector<ReflectedValue>& listArg );
 
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
-        /** @brief 그 연결이 주인인 대상을 지웁니다(같은 연결 ID 를 다음 연결이 다시 쓴다). */
+        /** @brief 그 연결이 주인인 대상과 그 연결의 세션을 지웁니다(같은 연결 ID 를 다음 연결이 다시 쓴다). */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         const RemoteCallStats& getStats() const { return _stats; }
         bool                   hasTarget( uint32 targetID ) const { return _targets.findTarget( targetID ) != nullptr; }
+        bool                   hasSessionTarget( int32 connectionID ) const { return _mapSession.find( connectionID ) != _mapSession.end(); }
 
     private:
+        /** @brief 호출이 가리키는 대상입니다. id 0 은 그 연결의 세션입니다. */
+        const RemoteCallTargets::Target* findCallTarget( uint32 targetID, int32 connectionID ) const;
+        /** @brief `Client` 함수 호출 하나를 @p target 의 주인에게 보냅니다. */
+        [[nodiscard]] bool sendClientCall( const RemoteCallTargets::Target* pTarget, uint32 targetID, string_view functionName, const vector<ReflectedValue>& listArg );
         /** @brief 거절 알림을 보내고 셉니다. */
         void sendRejected( int32 connectionID, uint32 sequence, RemoteCallError error );
         /** @brief 규칙을 어긴 연결을 끊고 셉니다. */
         void disconnectViolator( int32 connectionID, string_view functionName, const utf8* pWhy );
 
     private:
-        RemoteCallTargets _targets;
-        RemoteCallStats   _stats;
-        NetMessageWriter  _messageWriter;
-        vector<string>    _listArgumentScratch;
-        INetPeers*        _pPeers;
+        RemoteCallTargets                               _targets;
+        unordered_map<int32, RemoteCallTargets::Target> _mapSession; ///< 연결마다 세션 대상(id 0)
+        RemoteCallStats                                 _stats;
+        NetMessageWriter                                _messageWriter;
+        vector<string>                                  _listArgumentScratch;
+        INetPeers*                                      _pPeers;
     };
 } // namespace sw
 
