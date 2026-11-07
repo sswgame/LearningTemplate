@@ -24,10 +24,15 @@ namespace sw
 {
     bool CharacterLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        *this = CharacterLODSettings{};
         XMLDocument document;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "CharacterLODSettings", root ) != XMLRootStatus::Found )
+        return loadFromRoot( XMLReadUtil::parseRoot( document, xml, sourceLabel, "CharacterLODSettings", root ), root, sourceLabel );
+    }
+
+    bool CharacterLODSettings::loadFromRoot( XMLRootStatus status, const XMLNode& root, string_view sourceLabel )
+    {
+        *this = CharacterLODSettings{};
+        if ( status != XMLRootStatus::Found )
         {
             SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsMalformed", "Character LOD settings '%#': malformed XML (expected a <CharacterLODSettings> root)", sourceLabel );
             return false;
@@ -47,7 +52,9 @@ namespace sw
             *this = CharacterLODSettings{};
             return false;
         }
-        return loadFromXMLText( text, assetID.view() );
+        XMLDocument document;
+        XMLNode     root;
+        return loadFromRoot( XMLReadUtil::parseResourceRoot( document, text, assetID, "CharacterLODSettings", root ), root, assetID.view() );
     }
 
     const CharacterLODSettings& CharacterLODSettings::getDefault()

@@ -44,7 +44,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite", "Could not read sprite clip '%#'", path );
             return false;
         }
-        return loadFromXMLText( text, path );
+        return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool SpriteClipAsset::loadFromDiskFile( string_view diskPath )
@@ -64,9 +64,13 @@ namespace sw
 
     bool SpriteClipAsset::loadFromXMLText( const string& text, string_view sourceLabel )
     {
-        const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값은 오류다(`readConfigXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), text, label.c_str() ) && resolveLoadedValues( sourceLabel ) )
+        return loadComposed( text, sourceLabel, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool SpriteClipAsset::loadComposed( string_view text, string_view sourceLabel, const ResourceContext& context )
+    {
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값은 오류다(`readComposedXMLDocument` 가 로그로 알린다).
+        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), text, sourceLabel, context ) && resolveLoadedValues( sourceLabel ) )
             return true;
         clear();
         return false;
@@ -82,10 +86,7 @@ namespace sw
     bool SpriteClipAsset::loadFromXMLText( string_view xml )
     {
         clear();
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, "<sprite clip text>" ) && resolveLoadedValues( "<sprite clip text>" ) )
-            return true;
-        clear();
-        return false;
+        return loadComposed( xml, "<sprite clip text>", ResourceContext::forType( *StaticType() ) );
     }
 
     SpriteClipAsset::SpriteClipAsset() = default;

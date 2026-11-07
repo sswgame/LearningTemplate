@@ -21,6 +21,15 @@
 
 namespace sw
 {
+    enum class XMLRootStatus : uint8;
+
+    class XMLNode;
+
+    struct ResourceContext;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 비즘이 받는 자음 단서입니다. 모음 비즘과 단서 없는 비즘은 `None` 입니다. */
     ENUM()
     enum class LipSyncConsonant : uint8
@@ -108,6 +117,8 @@ namespace sw
     private:
         /** @brief 리소스 경로의 표를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<LipSyncSettings>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
     };
 
     /**
@@ -151,6 +162,10 @@ namespace sw
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 음성 경로의 트랙 경로입니다(`a/line.wav` → `a/line.visemes.xml`). */
         static string makePathForAudio( string_view audioPath );
+
+    private:
+        /** @brief 찾은 루트를 읽습니다. 글 입구(`loadFromXMLText`)와 리소스 입구(`loadFromAsset` — `XMLReadUtil::parseResourceRoot` 로 층 · 다시 읽기 기록 · 접속 대조를 받는다)가 함께 쓴다. */
+        [[nodiscard]] bool loadFromRoot( XMLRootStatus status, const XMLNode& root, string_view sourceLabel );
     };
 } // namespace sw
 

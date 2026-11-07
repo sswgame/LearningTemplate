@@ -12,6 +12,8 @@ Scripts/lint/CommonShapes.py
 4. 스키마만 읽는 한 줄 검사 함수: `AutomationStep::validateFields<TParams>` 가 맡는다.
 5. 캔버스 지우기 손 구간: `ed::BeginDelete`. `EditorNodeGraph::collectRemovals` 가 맡는다.
 6. 저장 글 칸 · 부모 차이 손 저장: `string _savedText` 는 `EditorDocumentState`, `DataInheritance::makeDelta` 는 `ResourceComposer::saveDelta` 가 맡는다.
+7. id 를 버리는 리소스 입구: `loadFromAsset` · `loadFromFile( const AssetID& )` 가 글을 읽은 뒤 id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다).
+   id 를 싣는 길(`ResourceContext::withAsset` · `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나야 한다.
 
 예외는 `Config/Dev/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
 `py -3 -m Scripts common-shapes [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
@@ -47,6 +49,9 @@ kOneLineValidatorPattern = re.compile(r"bool\s+(?:\w+::)?\w+\(\s*const Automatio
 kCanvasDeletePattern = re.compile(r"\bed::BeginDelete\(")
 kSavedTextPattern = re.compile(r"^\s*string\s+_savedText\s*;", re.M)
 kMakeDeltaPattern = re.compile(r"\bDataInheritance::makeDelta\(")
+kAssetEntrancePattern = re.compile(r"\b(\w+::(?:loadFromAsset|loadFromFile))\(\s*const AssetID& \w+[^)]*\)\s*(?:const\s*)?\{")
+kReadTextAssetPattern = re.compile(r"\bAssetIO::readTextAsset\(")
+kAssetCarrierPattern = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
 
 
 def findClosingBrace(code: str, openIndex: int) -> int:
@@ -75,6 +80,17 @@ def findSameSpellingSwitches(code: str) -> list[str]:
     return listEnum
 
 
+def findIdDroppingEntrances(code: str) -> list[str]:
+    """글을 읽은 뒤 id 를 싣지 않는 리소스 입구(`형식::함수`)를 돌려준다."""
+    listEntrance: list[str] = []
+    for match in kAssetEntrancePattern.finditer(code):
+        body = code[match.end() - 1:findClosingBrace(code, match.end() - 1)]
+        readMatch = kReadTextAssetPattern.search(body)
+        if readMatch and not kAssetCarrierPattern.search(body, readMatch.end()):
+            listEntrance.append(match.group(1))
+    return listEntrance
+
+
 def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
     """글 하나의 (규칙, 예외 열쇠, 설명) 들을 돌려준다."""
     code = kCommentPattern.sub("", text)
@@ -96,6 +112,8 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
         listViolation.append(("savedText", path, "저장 글 칸 — EditorDocumentState"))
     if kMakeDeltaPattern.search(code):
         listViolation.append(("makeDelta", path, "부모 차이 손 저장 — ResourceComposer::saveDelta"))
+    for entrance in findIdDroppingEntrances(code):
+        listViolation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 리소스 입구({entrance}) — ResourceContext::withAsset · parseResourceText · parseResourceRoot"))
     return listViolation
 
 
@@ -148,6 +166,10 @@ def runSelfCheck() -> None:
     assert [v[0] for v in collectViolations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
     assert collectViolations("Source/A/a.cpp", "// ed::BeginDelete()\nint x;") == []
     assert [v[0] for v in collectViolations("Source/A/a.cpp", "if ( ed::BeginDelete() )")] == ["canvasDelete"]
+    dropping = "bool A::loadFromAsset( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return loadFromXMLText( text, assetID.view() );\n}"
+    carrying = dropping.replace("loadFromXMLText( text, assetID.view() )", "loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) )")
+    assert findIdDroppingEntrances(dropping) == ["A::loadFromAsset"], findIdDroppingEntrances(dropping)
+    assert findIdDroppingEntrances(carrying) == []
 
 
 def main(argv: Sequence[str] | None = None) -> int:

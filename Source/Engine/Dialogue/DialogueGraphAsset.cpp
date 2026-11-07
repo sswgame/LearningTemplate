@@ -49,7 +49,7 @@ namespace sw
             SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue", "Could not read dialogue graph '%#'", path );
             return false;
         }
-        return readText( text, path );
+        return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool DialogueGraphAsset::loadFromDiskFile( string_view diskPath )
@@ -66,7 +66,7 @@ namespace sw
             SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue2", "Could not read dialogue graph file '%#'", diskPath );
             return false;
         }
-        return readText( text, diskPath );
+        return readText( text, diskPath, ResourceContext::forType( *StaticType() ) );
     }
 
     bool DialogueGraphAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -78,17 +78,16 @@ namespace sw
 
     bool DialogueGraphAsset::loadFromXMLText( string_view xmlView )
     {
-        return readText( xmlView, "<dialogue graph text>" );
+        return readText( xmlView, "<dialogue graph text>", ResourceContext::forType( *StaticType() ) );
     }
 
-    bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel )
+    bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel, const ResourceContext& context )
     {
         _listNode.clear();
         _listLink.clear();
         _listComment.clear();
-        const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readConfigXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) && validateFile( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readComposedXMLDocument` 가 로그로 알린다).
+        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validateFile( sourceLabel ) )
             return true;
         _listNode.clear();
         _listLink.clear();

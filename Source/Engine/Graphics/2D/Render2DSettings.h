@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class XMLDocument;
     class XMLNode;
 
     /**
@@ -121,6 +122,8 @@ namespace sw
         static string_view getEngineSettingsPath() { return "engine/data/render2d.xml"; }
 
     private:
+        /** @brief 읽은 문서(조건을 푼 글)를 설정으로 옮깁니다. 글 입구와 리소스 입구가 함께 쓴다. 실패하면 설정은 바뀌지 않습니다. */
+        [[nodiscard]] bool loadFromDocument( const XMLDocument& doc, string_view sourceName );
         /** @brief `<TransparencySort mode axis>` 하나를 읽습니다. 모르는 속성 · 열거자, 길이 0 인 축이면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool readTransparencySort( const XMLNode& node, string_view sourceName );
         /** @brief `<SortingLayers>` 의 `<Layer name>` 들을 차례로 붙입니다. 모르는 요소 · 이름 없음 · 같은 이름 둘이면 오류를 남기고 false 입니다. */

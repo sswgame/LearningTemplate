@@ -21,6 +21,11 @@
 
 namespace sw
 {
+    struct ResourceContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct LiveLinkFaceLayout
      * @brief 패킷의 판 번호와 채널 순서입니다(데이터, 엔진 기본은 `engine/animation/livelinkface.xml` — 연결 표의 `_layoutPath` 가 가리킨다).
@@ -41,6 +46,8 @@ namespace sw
         /** @brief XML 을 읽고 검사합니다(채널이 비었거나 겹치면 오류). 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 채널 번호입니다. 없으면 -1 입니다. */
         int32 findChannelIndex( const hashed_string& channel ) const;
     };
@@ -105,6 +112,8 @@ namespace sw
          */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout );
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID, LiveLinkFaceLayout& outLayout );
+        /** @brief 합친 글을 읽고 배치 표를 대조합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context, LiveLinkFaceLayout& outLayout );
     };
 } // namespace sw
 

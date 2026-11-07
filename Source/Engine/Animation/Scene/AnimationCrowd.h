@@ -25,6 +25,11 @@
 
 namespace sw
 {
+    enum class XMLRootStatus : uint8;
+} // namespace sw
+
+namespace sw
+{
     class AnimationClip;
     class Mesh;
     class Skeleton;
@@ -83,6 +88,8 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
     private:
+        /** @brief 찾은 루트를 읽습니다. 글 입구(`loadFromXMLText`)와 리소스 입구(`loadFromAsset` — `XMLReadUtil::parseResourceRoot` 로 층 · 다시 읽기 기록 · 접속 대조를 받는다)가 함께 쓴다. */
+        [[nodiscard]] bool loadFromRoot( XMLRootStatus status, const XMLNode& root, string_view sourceLabel );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
     };
 } // namespace sw

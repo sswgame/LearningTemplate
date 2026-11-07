@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class XMLDocument;
     class XMLNode;
 
     /**
@@ -188,6 +189,8 @@ namespace sw
     private:
         /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<TileSetAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 읽은 문서(조건을 푼 글)를 타일셋으로 옮깁니다. 글 입구와 리소스 입구가 함께 쓴다. */
+        [[nodiscard]] bool loadFromDocument( const XMLDocument& doc, string_view sourceName );
         /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 @p bRequired 일 때 오류입니다. */
         [[nodiscard]] bool parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
         /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(이름이 겹치는지 이 타일셋의 지금 브러시와 견준다). 잘못되었으면 오류를 남기고 false 입니다. */

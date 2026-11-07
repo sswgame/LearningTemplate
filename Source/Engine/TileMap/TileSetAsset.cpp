@@ -88,7 +88,14 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.TileSetNotFound", "Tile set '%#' not found", path );
             return false;
         }
-        return loadFromXMLText( text, path );
+        // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
+        XMLDocument doc;
+        if ( doc.parseResourceText( text, assetID ) == false )
+        {
+            SW_LOG_ERROR_ID( "TileSet.ParseFailed", "%#", doc.getLastError() );
+            return false;
+        }
+        return loadFromDocument( doc, path );
     }
 
     bool TileSetAsset::parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const
@@ -135,12 +142,18 @@ namespace sw
 
     bool TileSetAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
+        // 데이터 문서 길로 읽는다 — 조건(`_when`)을 푼다. 예전의 `parse` 는 조건을 풀지 않았다.
         XMLDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
+        if ( doc.parseData( xmlText, sourceName ) == false )
         {
             SW_LOG_ERROR_ID( "TileSet.ParseFailed", "%#", doc.getLastError() );
             return false;
         }
+        return loadFromDocument( doc, sourceName );
+    }
+
+    bool TileSetAsset::loadFromDocument( const XMLDocument& doc, string_view sourceName )
+    {
         const XMLNode root = doc.getRoot( "TileSet" );
         if ( root.isValid() == false )
         {

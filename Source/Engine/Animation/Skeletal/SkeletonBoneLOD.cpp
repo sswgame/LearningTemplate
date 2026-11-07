@@ -14,6 +14,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -104,7 +105,14 @@ namespace sw
             _listCoreBone.clear();
             return false;
         }
-        return loadFromXMLText( text, path );
+        // 리소스 id 로 합친다 — 부모 · 조건에 더해 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
+        _listLevel.clear();
+        _listCoreBone.clear();
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( text, path, ResourceContext::forSchema( &SkeletonBoneLOD::makeInheritanceSchema ).withAsset( assetID ), flatText, bComposed ) == false )
+            return false;
+        return parseFlat( bComposed ? string_view{ flatText } : string_view{ text }, path );
     }
 
     bool SkeletonBoneLOD::parseRoot( const XMLNode& root, string_view sourceLabel )

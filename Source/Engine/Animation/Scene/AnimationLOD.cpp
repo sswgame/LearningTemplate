@@ -12,15 +12,20 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
     bool AnimationLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool AnimationLODSettings::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         *this = AnimationLODSettings{};
-        const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) && validate( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
+        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validate( sourceLabel ) )
             return true;
         *this = AnimationLODSettings{};
         return false;
@@ -36,7 +41,7 @@ namespace sw
             *this = AnimationLODSettings{};
             return false;
         }
-        return loadFromXMLText( text, path );
+        return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AnimationLODSettings::validate( string_view sourceLabel ) const

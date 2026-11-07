@@ -72,7 +72,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence", "Could not read sequence '%#'", path );
             return false;
         }
-        return readText( text, path );
+        return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool SequenceAsset::loadFromDiskFile( string_view diskPath )
@@ -87,7 +87,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence2", "Could not read sequence file '%#'", diskPath );
             return false;
         }
-        return readText( text, diskPath );
+        return readText( text, diskPath, ResourceContext::forType( *StaticType() ) );
     }
 
     bool SequenceAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -99,16 +99,15 @@ namespace sw
 
     bool SequenceAsset::loadFromXMLText( string_view xmlView )
     {
-        return readText( xmlView, "<sequence text>" );
+        return readText( xmlView, "<sequence text>", ResourceContext::forType( *StaticType() ) );
     }
 
-    bool SequenceAsset::readText( string_view xml, string_view sourceLabel )
+    bool SequenceAsset::readText( string_view xml, string_view sourceLabel, const ResourceContext& context )
     {
         // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
         *this = SequenceAsset{};
-        const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) == false || validateFile( sourceLabel ) == false )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
+        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) == false || validateFile( sourceLabel ) == false )
         {
             *this = SequenceAsset{};
             return false;

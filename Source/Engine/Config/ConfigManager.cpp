@@ -16,6 +16,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -119,6 +120,16 @@ namespace sw
         }
         const XMLNode root = XMLSerializer::findDocumentRoot( document, typeInfo );
         return root.isValid() && readConfigXMLElement( pInstance, typeInfo, root, pSourceLabel );
+    }
+
+    bool ConfigManager::readComposedXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, string_view sourceLabel, const ResourceContext& context )
+    {
+        string flatText;
+        bool   bComposed = false; // 펼칠 것이 없으면 flatText 는 빈 채로 남고 글을 그대로 읽는다
+        if ( ResourceComposer::compose( documentXML, sourceLabel, context, flatText, bComposed ) == false )
+            return false;
+        const string label{ sourceLabel };
+        return readConfigXMLDocument( pInstance, typeInfo, bComposed ? string_view{ flatText } : documentXML, label.c_str() );
     }
 
     bool ConfigManager::readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const utf8* pSourceLabel )

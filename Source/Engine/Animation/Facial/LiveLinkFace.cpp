@@ -9,6 +9,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
@@ -124,9 +125,13 @@ namespace sw
 {
     bool LiveLinkFaceLayout::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool LiveLinkFaceLayout::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         *this = LiveLinkFaceLayout{};
-        const string label{ sourceLabel };
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) == false )
+        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) == false )
         {
             *this = LiveLinkFaceLayout{};
             return false;
@@ -158,7 +163,7 @@ namespace sw
             *this = LiveLinkFaceLayout{};
             return false;
         }
-        return loadFromXMLText( text, path );
+        return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     int32 LiveLinkFaceLayout::findChannelIndex( const hashed_string& channel ) const
@@ -173,10 +178,14 @@ namespace sw
 
     bool LiveLinkFaceMapping::loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ), outLayout );
+    }
+
+    bool LiveLinkFaceMapping::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context, LiveLinkFaceLayout& outLayout )
+    {
         *this     = LiveLinkFaceMapping{};
         outLayout = LiveLinkFaceLayout{};
-        const string label{ sourceLabel };
-        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) == false )
+        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) == false )
         {
             *this = LiveLinkFaceMapping{};
             return false;
@@ -230,7 +239,7 @@ namespace sw
             outLayout = LiveLinkFaceLayout{};
             return false;
         }
-        return loadFromXMLText( text, path, outLayout );
+        return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ), outLayout );
     }
 
     bool LiveLinkFacePacket::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout, LiveLinkFaceFrame& outFrame, string& outError )

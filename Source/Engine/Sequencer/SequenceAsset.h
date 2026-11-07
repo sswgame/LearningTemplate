@@ -19,6 +19,11 @@
 
 namespace sw
 {
+    struct ResourceContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
      * @details 프레임 번호는 파일에서 오므로 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
@@ -263,7 +268,7 @@ namespace sw
 
     private:
         /** @brief 읽은 본문(@p xml)을 이 에셋에 채우고 의미를 봅니다. 파일 경로와 문자열 경로가 모이는 지점이며, 틀리면 빈 에셋이 남습니다. */
-        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 프레임 번호의 범위 · 순서와 종류 · 채널 수를 봅니다. 어긋난 곳마다 오류를 남깁니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
 

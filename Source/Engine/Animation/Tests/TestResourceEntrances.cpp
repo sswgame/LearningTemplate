@@ -8,6 +8,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -15,6 +17,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Rendering/MeshLODSettings.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -121,6 +124,35 @@ SW_TEST_CASE( ResourceEntranceTest, ReadingByIDRecordsTheComposition )
     SceneDocument scene{};
     SW_REQUIRE_TRUE( scene.loadXML( sceneID ) );
     SW_EXPECT_TRUE( Util::isRecorded( sceneID ) );
+}
+
+/**
+ * @brief [ResourceEntranceTest] 설정 문서 길(`ConfigManager::readComposedXMLDocument`)과 루트 찾기 길(`XMLReadUtil::parseResourceRoot`)로 읽는 형식도 id 로 읽으면 기록된다
+ * @details 예전에는 이 형식들의 `loadFromAsset` 이 글을 읽은 뒤 id 없이 글 입구로 넘겨 층 · 다시 읽기 · 접속 대조를 조용히 받지 못했다(린트 `common-shapes` 의 assetEntrance 가 그 모양을 막는다).
+ */
+SW_TEST_CASE( ResourceEntranceTest, SettingsAndRootFormatsRecordTheComposition )
+{
+    const ScopedScratchDomain domain;
+    const XEntranceScope      scope;
+
+    Util::write( domain, "a.meshlod.xml", string( R"(<MeshLODSettings _refineHysteresis="0.1" _skinnedBoundsScale="1.2">)" ) + Util::kWhen + "</MeshLODSettings>" );
+    const AssetID   meshLODID = ScopedScratchDomain::makeID( "a.meshlod.xml" );
+    MeshLODSettings meshLOD;
+    SW_REQUIRE_TRUE( meshLOD.loadFromAsset( meshLODID ) );
+    SW_EXPECT_TRUE( Util::isRecorded( meshLODID ) );
+
+    Util::write( domain, "a.livelinkface.xml", string( R"(<LiveLinkFaceLayout _packetVersion="6"><_listChannel><item>JawOpen</item></_listChannel>)" ) + Util::kWhen + "</LiveLinkFaceLayout>" );
+    const AssetID      layoutID = ScopedScratchDomain::makeID( "a.livelinkface.xml" );
+    LiveLinkFaceLayout layout;
+    SW_REQUIRE_TRUE( layout.loadFromAsset( layoutID ) );
+    SW_EXPECT_TRUE( Util::isRecorded( layoutID ) );
+
+    Util::write( domain, "a.visemes.xml", string( R"(<VisemeTrack _frameRate="30"><_listViseme><item>AA</item></_listViseme><_listFrame><Frame>0.5</Frame></_listFrame>)" ) + Util::kWhen + "</VisemeTrack>" );
+    const AssetID trackID = ScopedScratchDomain::makeID( "a.visemes.xml" );
+    VisemeTrack   track;
+    SW_REQUIRE_TRUE( track.loadFromAsset( trackID ) );
+    SW_EXPECT_EQUAL( 1u, track.getFrameCount() );
+    SW_EXPECT_TRUE( Util::isRecorded( trackID ) );
 }
 
 /** @brief [ResourceEntranceTest] 글 입구는 id 가 없어 기록을 남기지 않는다 — 같은 글을 id 로 읽은 것과 갈린다 */

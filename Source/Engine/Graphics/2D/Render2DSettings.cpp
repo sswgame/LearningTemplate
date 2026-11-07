@@ -41,18 +41,31 @@ namespace sw
             SW_LOG_ERROR_ID( "Render2DSettings.DRenderSettingsNot", "2D render settings '%#' not found", path );
             return false;
         }
-        return loadFromXMLText( text, path );
-    }
-
-    bool Render2DSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
-    {
-        using Internal = Render2DSettingsInternal;
+        // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
         XMLDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
+        if ( doc.parseResourceText( text, assetID ) == false )
         {
             SW_LOG_ERROR_ID( "Render2DSettings.ParseFailed", "%#", doc.getLastError() );
             return false;
         }
+        return loadFromDocument( doc, path );
+    }
+
+    bool Render2DSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
+    {
+        // 데이터 문서 길로 읽는다 — 조건(`_when`)을 푼다. 예전의 `parse` 는 조건을 풀지 않았다.
+        XMLDocument doc;
+        if ( doc.parseData( xmlText, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "Render2DSettings.ParseFailed", "%#", doc.getLastError() );
+            return false;
+        }
+        return loadFromDocument( doc, sourceName );
+    }
+
+    bool Render2DSettings::loadFromDocument( const XMLDocument& doc, string_view sourceName )
+    {
+        using Internal     = Render2DSettingsInternal;
         const XMLNode root = doc.getRoot( "Render2DSettings" );
         if ( root.isValid() == false )
         {

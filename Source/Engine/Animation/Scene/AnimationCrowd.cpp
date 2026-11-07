@@ -55,10 +55,15 @@ namespace sw
 {
     bool AnimationCrowdSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        *this = AnimationCrowdSettings{};
         XMLDocument document;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "AnimationCrowdSettings", root ) != XMLRootStatus::Found )
+        return loadFromRoot( XMLReadUtil::parseRoot( document, xml, sourceLabel, "AnimationCrowdSettings", root ), root, sourceLabel );
+    }
+
+    bool AnimationCrowdSettings::loadFromRoot( XMLRootStatus status, const XMLNode& root, string_view sourceLabel )
+    {
+        *this = AnimationCrowdSettings{};
+        if ( status != XMLRootStatus::Found )
         {
             SW_LOG_ERROR_ID( "AnimationCrowd.AnimationCrowdSettingsMalformed", "Animation crowd settings '%#': malformed XML (expected an <AnimationCrowdSettings> root)", sourceLabel );
             return false;
@@ -79,7 +84,9 @@ namespace sw
             *this = AnimationCrowdSettings{};
             return false;
         }
-        return loadFromXMLText( text, path );
+        XMLDocument document;
+        XMLNode     root;
+        return loadFromRoot( XMLReadUtil::parseResourceRoot( document, text, assetID, "AnimationCrowdSettings", root ), root, path );
     }
 
     bool AnimationCrowdSettings::parseRoot( const XMLNode& root, string_view sourceLabel )

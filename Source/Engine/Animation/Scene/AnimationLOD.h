@@ -20,6 +20,11 @@
 
 namespace sw
 {
+    struct ResourceContext;
+} // namespace sw
+
+namespace sw
+{
     class SkeletonBoneLOD;
 } // namespace sw
 
@@ -142,6 +147,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 단계가 비지 않았고, `_minScreenSize` 가 줄어드는 순이며, 마지막이 0 인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 화면 크기의 주기 단계입니다. 표가 비었으면 0 입니다. */

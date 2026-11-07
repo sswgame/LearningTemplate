@@ -10,15 +10,20 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
     bool MeshLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool MeshLODSettings::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         *this = MeshLODSettings{};
-        const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고 모르는 속성 · 범위 밖 숫자는 오류다(`readConfigXMLDocument` 가 알린다). 두 값 모두 필수다(0 은 읽지 못한 값).
-        const bool bRead = ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() );
+        // 키는 대소문자까지 맞아야 하고 모르는 속성 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 알린다). 두 값 모두 필수다(0 은 읽지 못한 값).
+        const bool bRead = ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context );
         if ( bRead && _refineHysteresis > 0.0f && _skinnedBoundsScale >= 1.0f )
             return true;
         SW_LOG_ERROR_ID( "MeshLODSettings.Invalid", "Mesh LOD settings '%#' need _refineHysteresis > 0 and _skinnedBoundsScale >= 1", sourceLabel );
@@ -35,7 +40,7 @@ namespace sw
             *this = MeshLODSettings{};
             return false;
         }
-        return loadFromXMLText( text, assetID.view() );
+        return loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     const MeshLODSettings& MeshLODSettings::getDefault()

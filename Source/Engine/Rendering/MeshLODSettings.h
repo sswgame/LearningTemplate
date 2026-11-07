@@ -14,6 +14,11 @@
 
 namespace sw
 {
+    struct ResourceContext;
+} // namespace sw
+
+namespace sw
+{
     /** @struct MeshLODSettings @brief 메시 LOD · 경계 정책 표입니다(엔진 기본 데이터 하나 — 처음 물을 때 읽는다). */
     REFLECT()
     struct SW_API MeshLODSettings
@@ -29,6 +34,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 엔진 기본 표(`EngineDefaultAssets::_meshLODSettings`)를 한 번 읽어 돌려줍니다. 읽지 못하면 오류로 멈춘다(값이 없으면 단계 · 컬링이 정해지지 않는다). */
         static const MeshLODSettings& getDefault();
     };

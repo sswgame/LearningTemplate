@@ -21,6 +21,8 @@ namespace sw
 {
     class Texture2D;
 
+    struct ResourceContext;
+
     /**
      * @struct SpriteClipFrame
      * @brief 클립의 프레임 하나입니다. 아틀라스 안의 UV 사각형과 보여 줄 시간을 담습니다.
@@ -209,5 +211,7 @@ namespace sw
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
         /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromAsset` · `loadFromDiskFile`)의 공통 단계입니다. */
         [[nodiscard]] bool loadFromXMLText( const string& text, string_view sourceLabel );
+        /** @brief 합친 글을 클립으로 옮깁니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면(`loadFromFile`) @p context 에 `withAsset` 이 실린다. */
+        [[nodiscard]] bool loadComposed( string_view text, string_view sourceLabel, const ResourceContext& context );
     };
 } // namespace sw
