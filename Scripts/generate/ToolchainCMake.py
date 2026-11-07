@@ -13,9 +13,9 @@ Scripts/generate/ToolchainCMake.py
 **키 목록을 여기서도 들지 않는다** — JSON 에 있는 키를 그대로 `SW_TOOLCHAIN_<KEY 대문자>` 로 찍는다.
 `Environment.py` 가 키를 하나 더하면 CMake 에서 바로 쓸 수 있다.
 
-(`FindLlvmBin.cmake` 와 `VcpkgPortsToolchain.cmake` 는 그대로 둔다 — 그 둘은 vcpkg 가 **별도 CMake
-프로세스**로 불러서 우리 빌드 디렉터리가 없는 상태에서도 성립해야 한다. 그래서 저장소 루트의 JSON 을
-`sw_requireJsonValue`(`cmake/Config/JsonValue.cmake`)로 직접 읽는 코드가 거기 있는 것이다.)
+(`FindLlvmBin.cmake` 는 그대로 둔다 — vcpkg 오버레이 생성(`VcpkgTriplets.cmake`)이 `project()` 앞에서 불러
+이 생성 파일이 아직 없을 때도 성립해야 한다. 그래서 저장소 루트의 JSON 을 `sw_requireJsonValue`(`cmake/Config/JsonValue.cmake`)로
+직접 읽는 코드가 거기 있는 것이다.)
 
 Usage:
   python Scripts/generate/ToolchainCMake.py <output_cmake_file>

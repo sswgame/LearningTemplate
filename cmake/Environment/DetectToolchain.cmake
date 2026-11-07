@@ -103,7 +103,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 			set(CMAKE_C_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang" CACHE FILEPATH "C 컴파일러" FORCE)
 			set(CMAKE_CXX_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang++" CACHE FILEPATH "CXX 컴파일러" FORCE)
 			# vcpkg 포트도 같은 clang 으로 짓는다 — 매니페스트 설치는 이 구성의 환경(CC/CXX)을 물려받는 자식 프로세스다. 비어 있으면 시스템 GCC 로 지어
-			# DirectXTex 가 OpenMP 판으로 서고, 그것을 쓰는 이 clang(libomp 없음)의 구성이 `Could NOT find OpenMP_C` 로 선다(Windows 는 VcpkgPortsToolchain 이 같은 일을 한다).
+			# DirectXTex 가 OpenMP 판으로 서고, 그것을 쓰는 이 clang(libomp 없음)의 구성이 `Could NOT find OpenMP_C` 로 선다(Windows 는 생성한 포트 툴체인 — VcpkgTriplets.cmake — 이 같은 일을 한다).
 			set(ENV{CC} "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang")
 			set(ENV{CXX} "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang++")
 			message(STATUS "[DetectToolchain] Using clang from ${SW_TOOLCHAIN_LLVM_PATH}/bin")

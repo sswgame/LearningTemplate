@@ -12,8 +12,7 @@
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
       },
       "environment": {
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg"
+        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
       }
     },
     {

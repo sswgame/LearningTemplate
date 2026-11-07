@@ -2,7 +2,7 @@
 # `TSAN_OPTIONS=suppressions=<이 파일>` 로 건다.
 #
 # 우리 코드의 경쟁은 억제하지 않는다 — 아래 줄은 고칠 수 없는 서드파티 내부뿐이다. 원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 TSan 구성에서 트리플릿 `x64-linux-tsan`
-# (cmake/Modules/Toolchain/VcpkgTsan)이 -fsanitize=thread 로 지어 그 동기화가 보인다. 계측 안 된 라이브러리를 억제로 덮지 말 것 —
+# (cmake/Modules/Toolchain/Vcpkg/VcpkgTriplets.cmake 의 x64-linux-tsan)이 -fsanitize=thread 로 지어 그 동기화가 보인다. 계측 안 된 라이브러리를 억제로 덮지 말 것 —
 # `race:` 는 보고의 두 스택 **어느 프레임**과도 맞춰서, 라이브러리 잡 함수(`JPH::JobSystem::Job::Execute` 등)를 억제하면 그 잡 안에서
 # 불리는 엔진 콜백(접촉 리스너 등)의 진짜 경쟁까지 가려진다. 줄을 더해야 하면 가장 좁은 함수 하나로, 바로 위에 이유와 날짜를 적는다.
 

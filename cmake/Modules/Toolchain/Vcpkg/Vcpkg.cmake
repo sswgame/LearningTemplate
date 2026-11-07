@@ -17,6 +17,7 @@
 # ==============================================================================
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/PythonUtils.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/LoadConfigConstants.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/VcpkgTriplets.cmake")
 
 # ------------------------------------------------------------------------------
 # 0) sw_vcpkgHashFileNormalized — 줄끝(CRLF/LF)을 같게 보고 파일 내용의 SHA256 을 구한다
@@ -62,27 +63,17 @@ function(sw_vcpkgComputeManifestHash OUT_VAR)
         endif()
     endforeach()
 
-    file(GLOB swOverlayTripletFiles
-        "${swSrcDir}/cmake/Modules/Toolchain/Vcpkg/*.cmake"
-    )
+    # 생성한 오버레이(triplet · 포트 툴체인 · 컴파일 규칙 — 4 절이 이 함수보다 먼저 만든다). 포트 ABI 와 같은 입력이다.
+    file(GLOB swOverlayTripletFiles "${VCPKG_OVERLAY_TRIPLETS}/*.cmake")
     list(SORT swOverlayTripletFiles)
 
     foreach(tripletFile IN LISTS swOverlayTripletFiles)
-        get_filename_component(tripletName "${tripletFile}" NAME)
-
-        # 실제 패키지 빌드에 영향을 주는 타겟 트립릿 파일(*-windows.cmake, *-linux.cmake, *-osx.cmake)만 스탬프 해시에 포함
-        if(NOT tripletName MATCHES "-(windows|linux)\\.cmake$")
-            continue()
-        endif()
-
-        if(EXISTS "${tripletFile}")
-            sw_vcpkgHashFileNormalized("${tripletFile}" hTriplet)
-            string(APPEND hash "${hTriplet}")
-        endif()
+        sw_vcpkgHashFileNormalized("${tripletFile}" hTriplet)
+        string(APPEND hash "${hTriplet}")
     endforeach()
 
     # 리눅스 포트 컴파일러(DetectToolchain 이 건 CC · CXX)도 설치를 가른다 — 바뀌면 다시 계획해야 옛 컴파일러(시스템 GCC)로 지은 포트가 남지 않는다.
-    # Windows 는 포트 툴체인 파일(VcpkgPortsToolchain)이 컴파일러를 정하고 환경 CC 는 프리셋 · 재구성마다 달라 넣지 않는다.
+    # Windows 는 생성한 포트 툴체인(VcpkgTriplets.cmake)이 컴파일러를 정하고 환경 CC 는 프리셋 · 재구성마다 달라 넣지 않는다.
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         string(APPEND hash "|cc=$ENV{CC}|cxx=$ENV{CXX}")
     endif()
@@ -347,16 +338,12 @@ if(NOT DEFINED ENV{VCPKG_BINARY_SOURCES} OR "$ENV{VCPKG_BINARY_SOURCES}" STREQUA
     message(STATUS "[vcpkg] VCPKG_BINARY_SOURCES not set in the environment — using ${swSrcDir}/build/vcpkg_cache")
 endif()
 
-# 오버레이 triplet(clang-cl 포트 빌드)도 프리셋은 환경 변수로만 넘긴다. 같은 까닭으로 재구성에서 빠지면 vcpkg 가 기본 triplet(MSVC)으로
-# 공유 설치 폴더의 포트 전체를 다시 깔고(ABI 가 달라진다), DirectXTex 는 OpenMP 를 요구하는 판으로 바뀌어 다른 워크트리의 구성이
-# `Could NOT find OpenMP_C` 로 선다(2026-10-18 통합에서 확인). 처음 구성의 값을 캐시에 박아 모든 재구성이 같은 triplet 을 쓰게 한다.
-if("${VCPKG_OVERLAY_TRIPLETS}" STREQUAL "")
-    if(NOT "$ENV{VCPKG_OVERLAY_TRIPLETS}" STREQUAL "")
-        set(VCPKG_OVERLAY_TRIPLETS "$ENV{VCPKG_OVERLAY_TRIPLETS}" CACHE STRING "vcpkg 오버레이 triplet 경로(들)" FORCE)
-    else()
-        set(VCPKG_OVERLAY_TRIPLETS "${swSrcDir}/cmake/Modules/Toolchain/Vcpkg" CACHE STRING "vcpkg 오버레이 triplet 경로(들)" FORCE)
-    endif()
-endif()
+# 오버레이 triplet 은 구성마다 빌드 폴더에 생성한다(VcpkgTriplets.cmake — 포트 ABI 가 풀린 도구 · 플래그만 보게). 재구성(ninja 의
+# `--regenerate-during-build` · `cmake -S -B`)도 이 줄을 지나 같은 폴더를 가리킨다 — 빠지면 vcpkg 가 기본 triplet(MSVC)으로 공유 설치 폴더의
+# 포트 전체를 다시 깐다(2026-10-18). 환경 변수 VCPKG_OVERLAY_TRIPLETS 는 vcpkg 실행 파일도 읽으므로 비운다(다른 오버레이가 섞이지 않게).
+sw_vcpkgWriteOverlayTriplets(swGeneratedTripletDir)
+set(VCPKG_OVERLAY_TRIPLETS "${swGeneratedTripletDir}" CACHE STRING "vcpkg 오버레이 triplet 경로(생성)" FORCE)
+unset(ENV{VCPKG_OVERLAY_TRIPLETS})
 
 file(GLOB swVcpkgOverlayPorts "${swSrcDir}/ThirdParty/*/vcpkg-port")
 
