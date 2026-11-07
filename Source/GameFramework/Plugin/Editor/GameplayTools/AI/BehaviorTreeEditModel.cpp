@@ -4,9 +4,12 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Gameplay/BehaviorTreeSchema.h"
 #include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -43,6 +46,7 @@ namespace sw::editor
         _listNode.clear();
         _rootID = -1;
         _nextID = 1;
+        _baseID.clear();
     }
 
     const BehaviorTreeEditNode* BehaviorTreeEditModel::find( int32 id ) const
@@ -355,7 +359,7 @@ namespace sw::editor
 
     bool BehaviorTreeEditModel::parse( string_view xmlText, string& outError )
     {
-        // shortcut: `_base` 를 펼쳐 연다 - 저장하면 차이가 아니라 펼친 글이 된다. 물려받은 칸 표시가 필요해지면 `DataInheritance::makeDelta` 로 저장한다.
+        // `_base` 를 펼쳐 연다. 부모 id 는 들고 있다가 저장이 부모와의 차이로 쓴다(`makeSaveText`).
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
         if ( ResourceComposer::compose( xmlText, "BehaviorTreeEditModel", ResourceContext::forSchema( &BehaviorTreeSchema::make ), flatText, bComposed ) == false )
@@ -394,8 +398,41 @@ namespace sw::editor
             if ( next.parseNode( first, -1, 0, outError ) < 0 )
                 return false;
         }
-        *this = std::move( next );
+        next._baseID = DataInheritance::findBasePath( xmlText );
+        *this        = std::move( next );
         outError.clear();
+        return true;
+    }
+
+    bool BehaviorTreeEditModel::makeSaveText( string& outText, string& outError ) const
+    {
+        const string fullText = write();
+        if ( _baseID.empty() )
+        {
+            outText = fullText;
+            return true;
+        }
+        string                parentText;
+        BehaviorTreeEditModel parent;
+        if ( AssetIO::readTextAsset( AssetID{ _baseID }, parentText ) == false || parent.parse( parentText, outError ) == false )
+        {
+            outError = "The base tree '" + _baseID + "' could not be read - not saved";
+            return false;
+        }
+        string deltaText;
+        if ( DataInheritance::makeDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, deltaText ) == false )
+        {
+            outError = "The difference from the base tree could not be made - see the log";
+            return false;
+        }
+        BehaviorTreeEditModel reread;
+        string                rereadError;
+        if ( reread.parse( deltaText, rereadError ) == false || reread.write() != fullText )
+        {
+            outError = "The edit cannot be written as a difference from base '" + _baseID + "' (a node without an id changed, or a field the base writes was removed) - not saved";
+            return false;
+        }
+        outText = std::move( deltaText );
         return true;
     }
 

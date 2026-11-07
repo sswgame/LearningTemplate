@@ -58,6 +58,15 @@ namespace sw::editor
         [[nodiscard]] bool parse( string_view xmlText, string& outError );
         /** @brief 파일 글로 씁니다(`<BehaviorTree>` 루트, 노드마다 한 줄, 탭 들여쓰기). 루트가 없으면 빈 `<BehaviorTree/>` 입니다. */
         string write() const;
+        /**
+         * @brief 파일에 쓸 글을 만듭니다. 부모(`_base`)를 가리키던 글에서 읽었으면 부모와의 차이(`DataInheritance::makeDelta`, 노드 `id` 가 열쇠)이고, 아니면 `write` 와 같습니다.
+         * @details 차이를 다시 읽어 같은 트리가 나올 때만 차이를 돌려줍니다 — 열쇠(`id`) 없는 노드를 고친 편집처럼 차이로 적을 수 없으면 false 이고 @p outError 에 이유를 둔다(부모를 끊지 않는다).
+         */
+        [[nodiscard]] bool makeSaveText( string& outText, string& outError ) const;
+        /** @brief 읽은 글이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
+        const string& getBaseID() const { return _baseID; }
+        /** @brief 부모를 정합니다. 되돌리기가 펼친 글로 복원한 모델에 문서의 부모를 다시 단다. */
+        void setBaseID( string_view baseID ) { _baseID = string{ baseID }; }
 
         int32                       getRootID() const { return _rootID; }
         uint32                      getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
@@ -113,5 +122,6 @@ namespace sw::editor
         vector<BehaviorTreeEditNode> _listNode{};
         int32                        _rootID{ -1 };
         int32                        _nextID{ 1 };
+        string                       _baseID{}; ///< 읽은 글의 `_base`. `makeSaveText` 가 부모와의 차이로 쓴다
     };
 } // namespace sw::editor

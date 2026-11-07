@@ -153,7 +153,15 @@ namespace sw::editor
         _model.collectIssues( _listIssue );
         if ( _listIssue.empty() == false )
             SW_LOG_WARNING_ID( "BehaviorTreePanel.SavingBehaviorTreeProblems", "Saving behavior tree '%#' with %# problems - the game will not load it until they are fixed", path.c_str(), _listIssue.size() );
-        if ( FileUtil::writeTextFile( diskPath->str(), _model.write() ) == false )
+        string saveText;
+        string saveError;
+        if ( _model.makeSaveText( saveText, saveError ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
+        {
+            _statusText = saveError;
+            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeVariantNotSaved", "Behavior tree '%#' was not saved: %#", path.c_str(), saveError.c_str() );
+            return false;
+        }
+        if ( FileUtil::writeTextFile( diskPath->str(), saveText ) == false )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );
@@ -172,13 +180,15 @@ namespace sw::editor
 
     void BehaviorTreePanel::applyDocumentText( string_view text )
     {
-        string error;
+        string       error;
+        const string baseID = _model.getBaseID(); // 되돌리기 글은 펼친 한 벌이다 — 문서의 부모는 그대로 둬야 저장이 차이로 쓴다
         if ( _model.parse( text, error ) == false )
         {
             // 되돌리기 글은 이 창이 쓴 XML 이다. 읽지 못하면 결함이므로 알리고 지금 모델을 둔다.
             SW_LOG_WARNING_ID( "BehaviorTreePanel.BehaviorTreeUndoSnapshot", "Behavior tree undo snapshot could not be read: %#", error.c_str() );
             return;
         }
+        _model.setBaseID( baseID );
         _selectedID     = -1;
         _bLayoutPending = SW_TRUE;
         _nodeGraph.requestContentFit();
