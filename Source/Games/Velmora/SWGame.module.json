@@ -1,0 +1,30 @@
+{
+    "_name": "SWGame",
+    "_version": "1.0.0",
+    "_kind": "Game",
+    "_description": "Velmora — 오픈월드 싱글 액션 어드벤처 수직 슬라이스: 지역 진입 · 봉화 · 지역 전투(홀 · 보스) · 퀘스트 보상 · 야영지 저장 · 확장 팩(velmora_tidecaves) 세이브 승계. GF_ActionAdventure 의 몸, GF_ActionCombat 의 액션 룸, GF_ModSupport 의 덮어쓰기 층을 조합한다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ActionAdventure"
+        },
+        {
+            "_name": "GF_ActionCombat"
+        },
+        {
+            "_name": "GF_ModSupport"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true,
+    "_listModuleOverride": []
+}

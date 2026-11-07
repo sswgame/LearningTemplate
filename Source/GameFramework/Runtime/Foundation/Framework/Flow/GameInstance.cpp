@@ -5,8 +5,11 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -45,6 +48,37 @@ namespace sw
         {
             /** @brief 게임 상태 세이브 슬롯의 형식 버전입니다(봉투에 적힌다). 스냅샷 봉투(`GameStateSnapshot`)의 바이트 형식을 바꾸면 올린다. */
             static constexpr uint32 kSaveSlotFormatVersion = 1;
+
+            /** @brief `game.save [슬롯]` · `game.load [슬롯]` 의 몸통입니다. 슬롯을 비우면 기본 슬롯입니다. 맡기기만 하고 끝은 감시 값 `Save.Written` · `Save.Loaded` 로 본다. */
+            template <bool bSave>
+            static bool runSlotCommand( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() > 1 )
+                    return false;
+                GameInstance* const pInstance = GameInstance::findRunningInstance();
+                const string_view   slot      = listArgument.empty() ? string_view{} : string_view( listArgument[0] );
+                const utf8* const   pVerb     = bSave ? "game.save" : "game.load";
+                if ( pInstance == nullptr )
+                {
+                    outReply = formatToString( "%#: no game is running", pVerb );
+                    return true;
+                }
+                const bool bQueued = bSave ? pInstance->saveGameToSlot( slot ) : pInstance->loadGameFromSlot( slot );
+                outReply           = formatToString( "%#: %# '%#'", pVerb, bQueued ? "queued" : "refused", slot.empty() ? string_view( "<default>" ) : slot );
+                return true;
+            }
+
+            template <bool bWritten>
+            [[nodiscard]] static bool readSlotCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const GameInstance* const pInstance = GameInstance::findRunningInstance();
+                if ( pInstance == nullptr )
+                    return false;
+                const SaveSlotCounts& counts = pInstance->getSaveSlotCounts();
+                outValue                     = static_cast<float64>( bWritten ? counts._written : counts._loaded );
+                return true;
+            }
         };
     } // namespace
 
@@ -66,6 +100,7 @@ namespace sw
         , _pAutosave{}
         , _loadedAudioEvents{}
         , _listSlotRequest{}
+        , _saveSlotCounts{}
         , _bStarted{ SW_FALSE }
         , _bDerivedEntered{ SW_FALSE }
         , _bSecuritySet{ SW_FALSE }
@@ -495,6 +530,8 @@ namespace sw
     {
         if ( completion._result != LocalStoreResult::Ok )
             SW_LOG_ERROR_ID( "GameInstance.SaveSlotCouldNot", "Save slot '%#' could not be written (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+        else
+            ++_saveSlotCounts._written;
         SaveGameSavedEvent event{};
         event._slot     = completion._slot;
         event._bSuccess = completion._result == LocalStoreResult::Ok;
@@ -527,9 +564,20 @@ namespace sw
         {
             bLoaded = restoreSnapshot( SerializePurpose::SaveGame, completion._bytes );
         }
+        if ( bLoaded )
+            ++_saveSlotCounts._loaded;
         SaveGameLoadedEvent event{};
         event._slot     = completion._slot;
         event._bSuccess = bLoaded;
         GameEventUtil::send( event );
     }
+
+    // 세이브 메뉴 자리의 개발 명령 — 시나리오가 플레이어의 "저장 · 불러오기" 를 같은 창구(`saveGameToSlot` · `loadGameFromSlot`)로 부른다. 메뉴 화면은 아직 없다.
+    SW_DEV_COMMAND( GameSave, "game.save", "game.save [slot]", "Save the scene and game state to a save slot (empty: the default slot of gamesettings)",
+                    &GameInstanceInternal::runSlotCommand<true> );
+    SW_DEV_COMMAND( GameLoad, "game.load", "game.load [slot]", "Load the scene and game state from a save slot (empty: the default slot of gamesettings)",
+                    &GameInstanceInternal::runSlotCommand<false> );
+
+    SW_AUTOMATION_WATCH( saveWritten, "Save.Written", "Game state save slots written successfully by the running game", &GameInstanceInternal::readSlotCount<true> );
+    SW_AUTOMATION_WATCH( saveLoaded, "Save.Loaded", "Game state save slots read and restored successfully by the running game", &GameInstanceInternal::readSlotCount<false> );
 } // namespace sw

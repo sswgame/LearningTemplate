@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  확장 팩을 끈 판 복구 두 번 기동 ② — 확장 팩 없이 기동해 ① 의 세이브(velmora/release, 확장 지역 x -12 에 선 판)를 부른다.
+  그 자리는 지금 표의 어느 지역도 아니므로 디렉터가 경고를 남기고 일어설 지역(난롯마을)의 자리(0, 0)로 옮긴다 — 판은 거절되지 않고 이어지며, 다시 걸을 수 있다.
+  CTest 항목 Scenario.velmora.sequence.release 가 ① → ② 를 잇는다.
+-->
+<Scenario name="game.velmora.release.2" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Expect watch="Mods.ActiveCount" equals="0"/>
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<DevCommand line="game.load velmora/release"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait frames="3"/>
+	<ExpectLog id="Velmora.PlayerOutsideRegions" count="1"/>
+	<Expect watch="Velmora.PlayerX" near="0" tolerance="0.05"/>
+	<Expect watch="Velmora.Region" is="hearth"/>
+	<Expect watch="Velmora.Phase" equals="0"/>
+	<Expect watch="Quest.Status" target="ember_oath" is="Active"/>
+	<!-- 다시 걸을 수 있다 — 동쪽으로 1 초 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<Wait seconds="1.1"/>
+	<Expect watch="Velmora.PlayerX" near="6" tolerance="0.2"/>
+	<Pass/>
+</Scenario>

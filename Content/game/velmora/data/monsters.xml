@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  벨모라의 몬스터(MonsterCatalog — 게임의 필수 데이터, 액션 룸이 종 id 로 찾는다). atk 는 닿은 피해이고 단위는 4분의 1 하트다(디렉터가 몸에 그대로 준다).
+  제자리 적이다(speed 0) — 판정이 결정적이다. 쏘지 않아 탄 카탈로그가 필요 없다. 보상은 지역 클리어가 진행시키는 퀘스트가 준다(처치 드롭은 쓰지 않는다).
+  확장 팩이 층으로 종을 더한다.
+-->
+<MonsterCatalog>
+	<Monster id="ember_imp" name="Ember Imp" archetype="MeleePatrol">
+		<Stats hp="50" maxHP="50" atk="2" def="4" speed="0" radius="0.5" invincibility="0"/>
+	</Monster>
+	<Monster id="ashen_warden" name="Ashen Warden" archetype="ChargerRush">
+		<Stats hp="120" maxHP="120" atk="4" def="4" speed="0" radius="0.7" invincibility="0"/>
+	</Monster>
+</MonsterCatalog>

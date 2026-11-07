@@ -225,6 +225,9 @@
 	<Catalog root="SpawnTable">
 		<Entry name="Entry" key="id"/>
 	</Catalog>
+	<Catalog root="VelmoraRegionCatalog">
+		<Entry name="Region" key="id"/>
+	</Catalog>
 	<Catalog root="WeaponCatalog">
 		<Entry name="Weapon" key="id">
 			<Field name="Modifier" key="field"/>

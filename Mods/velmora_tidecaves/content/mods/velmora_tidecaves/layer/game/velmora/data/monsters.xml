@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 확장 팩 Tidecaves 의 몬스터 층 — 보스 한 종을 더한다(제자리, 공격 30 으로 네 번에 쓰러진다). -->
+<MonsterCatalog>
+	<Monster id="brine_lurker" name="Brine Lurker" archetype="ChargerRush">
+		<Stats hp="120" maxHP="120" atk="4" def="4" speed="0" radius="0.7" invincibility="0"/>
+	</Monster>
+</MonsterCatalog>

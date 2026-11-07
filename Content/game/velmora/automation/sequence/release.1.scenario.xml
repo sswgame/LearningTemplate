@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  확장 팩을 끈 판 복구 두 번 기동 ① — 확장 팩 velmora_tidecaves 를 켜고 서쪽 확장 지역(tidecaves, x -12)에 들어선 채로 슬롯 velmora/release 에 저장하고 끝낸다.
+  ② release.2 가 확장 팩 없이 기동해 이 세이브를 부른다 — 플레이어가 표에 없는 자리에 서 있으니 일어설 지역의 자리로 옮겨 판을 잇는다.
+  CTest 항목 Scenario.velmora.sequence.release 가 ① → ② 를 잇는다.
+-->
+<Scenario name="game.velmora.release.1" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_modList" value="velmora_tidecaves"/>
+	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/>
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<ActionAxis name="Move" x="-1" seconds="2"/>
+	<Wait seconds="2.1"/>
+	<Expect watch="Velmora.Region" is="tidecaves"/>
+	<Expect watch="Velmora.PlayerX" near="-12" tolerance="0.2"/>
+	<DevCommand line="game.save velmora/release"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Pass/>
+</Scenario>

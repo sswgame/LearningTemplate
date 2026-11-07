@@ -112,6 +112,8 @@ namespace sw
         bool addHeartPiece();
         /** @brief 하트 그릇 하나를 얻고 체력을 가득 채웁니다. 이미 최대면 false 를 반환합니다. */
         bool addHeartContainer();
+        /** @brief 쓰러진 뒤(또는 쉬는 자리에서) 체력을 가득 채워 다시 섭니다. 하트 수 · 조각 · 마법 · 스태미나는 그대로입니다. 죽은 체력은 `heal` 이 채우지 않는다. */
+        [[nodiscard]] bool revive() { return resetHealth(); }
 
         [[nodiscard]] bool trySpendMagic( float32 amount ) { return _magic.trySpend( amount ); }
         void               restoreMagic( float32 amount ) { _magic.restore( amount ); }

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  오픈월드 싱글 수직 슬라이스 한 판 — 지역 진입 → 탐험(봉화) → 야영지(체크포인트) → 지역 전투(홀 → 보스) → 퀘스트 보상 → 저장 → 다른 곳으로 걸은 뒤 불러오기.
+  플레이어와 같은 입력 맵 액션(Move · Velmora.Use · Velmora.Attack)과 세이브 메뉴 자리의 개발 명령(game.save · game.load)만 쓴다(테스트 전용 경로 없음).
+  자리: 난롯마을(0,0)에서 시작 — 6 m/s 로 동쪽 2 초(고사리숲 x 12) → 1.333 초(x 20) → 북 0.667 초(봉화 20,4) → 남 1.333 초(야영지 20,-4) → 북 0.667 초(z 0)
+        → 동 1.75 초(x 30.5, 재의 요새에 들어서 게이트가 닫힌다). 도깨비(31.7) 두 번, 파수꾼(32.1) 네 번(공격 34 - 방어 4 = 30).
+  감시 값: Velmora.Phase(0 탐험, 1 홀, 2 보스 대기, 3 보스) · Velmora.Region · Velmora.Respawn · Velmora.PlayerX/Z · Velmora.Hearts · Velmora.Health(4분의 1 하트)
+          · Velmora.Alive · Velmora.Falls · Quest.Status · Session.Money · Autosave.LastCheckpoint · Save.Written · Save.Loaded.
+  실행: ctest -R Scenario.velmora (SW_ACTIVE_GAME=Velmora 또는 SW_GAMES 에 Velmora) · App -game=Velmora -scenario=game/velmora/automation/vale.scenario.xml -unattended
+-->
+<Scenario name="game.velmora.vale" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<Expect watch="Quest.Status" target="ember_oath" is="Active"/>
+	<Expect watch="Velmora.Phase" equals="0"/>
+	<Expect watch="Velmora.Hearts" equals="3"/>
+	<Expect watch="Velmora.Health" equals="12"/>
+	<Expect watch="Session.Money" equals="0"/>
+	<!-- 동쪽 고사리숲으로 — 진입이 퀘스트 첫 단계(Enter fernwood)를 센다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<ActionAxis name="Move" x="1" seconds="2"/>
+	<Wait seconds="2.1"/>
+	<Expect watch="Velmora.Region" is="fernwood"/>
+	<Expect watch="Velmora.PlayerX" near="12" tolerance="0.2"/>
+	<!-- 봉화(20,4)에서 불을 켠다 -->
+	<ActionAxis name="Move" x="1" seconds="1.3333"/>
+	<Wait seconds="1.45"/>
+	<ActionAxis name="Move" y="1" seconds="0.6667"/>
+	<Wait seconds="0.8"/>
+	<Expect watch="Velmora.PlayerX" near="20" tolerance="0.2"/>
+	<Expect watch="Velmora.PlayerZ" near="4" tolerance="0.2"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Use"/>
+	<Wait frames="2"/>
+	<ExpectLog id="Velmora.BeaconLit" count="1"/>
+	<!-- 야영지(20,-4)에서 쉰다 — 일어설 지역이 고사리숲이 되고 자동 저장 체크포인트가 된다 -->
+	<ActionAxis name="Move" y="-1" seconds="1.3333"/>
+	<Wait seconds="1.45"/>
+	<Expect watch="Velmora.PlayerZ" near="-4" tolerance="0.2"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Use"/>
+	<Wait frames="2"/>
+	<ExpectLog id="Velmora.Rested" count="1"/>
+	<Expect watch="Velmora.Respawn" is="fernwood"/>
+	<WaitUntil watch="Autosave.LastCheckpoint" is="fernwood_camp" timeoutFrames="30"/>
+	<!-- 재의 요새로 — 들어서면 게이트가 닫히고 홀이 열린다 -->
+	<ActionAxis name="Move" y="1" seconds="0.6667"/>
+	<Wait seconds="0.8"/>
+	<ActionAxis name="Move" x="1" seconds="1.75"/>
+	<Wait seconds="1.9"/>
+	<Expect watch="Velmora.Region" is="cinderhold"/>
+	<Expect watch="Velmora.Phase" equals="1"/>
+	<Expect watch="Velmora.Alive" equals="1"/>
+	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<WaitUntil watch="Velmora.Phase" equals="2" timeoutFrames="60"/>
+	<ExpectLog id="Velmora.HallCleared" count="1"/>
+	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
+	<Expect watch="Velmora.Alive" equals="1"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<WaitUntil watch="Velmora.Phase" equals="0" timeoutFrames="60"/>
+	<ExpectLog id="Velmora.RegionCleared" count="1"/>
+	<!-- 보상: 퀘스트가 끝나 금 50 · 하트 그릇 하나(가득 찬다) -->
+	<WaitUntil watch="Quest.Status" target="ember_oath" is="Completed" timeoutFrames="30"/>
+	<Expect watch="Session.Money" equals="50"/>
+	<Expect watch="Velmora.Hearts" equals="4"/>
+	<Expect watch="Velmora.Health" equals="16"/>
+	<Expect watch="Velmora.Falls" equals="0"/>
+	<Record watch="Velmora.PlayerX"/>
+	<!-- 저장하고 서쪽으로 걸은 뒤 불러온다 — 자리 · 진행 · 지갑 · 몸 · 일어설 지역이 저장한 때로 돌아온다 -->
+	<DevCommand line="game.save velmora/vale"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<ActionAxis name="Move" x="-1" seconds="1"/>
+	<Wait seconds="1.1"/>
+	<Expect watch="Velmora.Region" is="fernwood"/>
+	<DevCommand line="game.load velmora/vale"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait frames="3"/>
+	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
+	<Expect watch="Velmora.Region" is="cinderhold"/>
+	<Expect watch="Velmora.Phase" equals="0"/> <!-- 깬 지역이라 다시 들어서도 게이트가 닫히지 않는다 -->
+	<Expect watch="Quest.Status" target="ember_oath" is="Completed"/>
+	<Expect watch="Session.Money" equals="50"/>
+	<Expect watch="Velmora.Hearts" equals="4"/>
+	<Expect watch="Velmora.Respawn" is="fernwood"/>
+	<Pass/>
+</Scenario>

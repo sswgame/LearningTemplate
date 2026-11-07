@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  확장 팩 세이브 승계 두 번 기동 ② — 확장 팩 velmora_tidecaves 를 켜고 기동해(지역 · 퀘스트 · 몬스터 표에 층으로 항목이 더해진다) ① 의 세이브(velmora/carry)를 불러 잇는다.
+  기본 진행(ember_oath 완료 · 금 50 · 하트 4)이 그대로이고, 서쪽으로 7 초(6 m/s, x 30.5 → -11.5) 걸어 확장 지역 tidecaves 에 들어서면 확장 퀘스트(tide_whispers — 선행 ember_oath)를 받고
+  보스(소금물 잠복자, x -13.1 — 1.6 m 서쪽)를 네 번 쳐 끝낸다(금 +80). 서쪽으로 걸었으니 바라보는 쪽이 서쪽이다.
+  CTest 항목 Scenario.velmora.sequence.carry 가 ① → ② 를 잇는다.
+-->
+<Scenario name="game.velmora.carry.2" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_modList" value="velmora_tidecaves"/>
+	<ExpectLog id="ModSession.Applied" contains="Mods applied: 1 [velmora_tidecaves@1.0.0#" atLeast="1"/>
+	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/>
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<Expect watch="Quest.Status" target="tide_whispers" is="NotStarted"/>
+	<DevCommand line="game.load velmora/carry"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
+	<Wait frames="3"/>
+	<!-- 기본 판이 그대로 이어진다 -->
+	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
+	<Expect watch="Quest.Status" target="ember_oath" is="Completed"/>
+	<Expect watch="Quest.Status" target="tide_whispers" is="NotStarted"/>
+	<Expect watch="Session.Money" equals="50"/>
+	<Expect watch="Velmora.Hearts" equals="4"/>
+	<!-- 서쪽 확장 지역으로 — 들어서면 확장 퀘스트를 받고 보스가 나온다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<ActionAxis name="Move" x="-1" seconds="7"/>
+	<Wait seconds="7.1"/>
+	<Expect watch="Velmora.Region" is="tidecaves"/>
+	<Expect watch="Velmora.PlayerX" near="-11.5" tolerance="0.25"/>
+	<Expect watch="Quest.Status" target="tide_whispers" is="Active"/>
+	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
+	<Expect watch="Velmora.Alive" equals="1"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<WaitUntil watch="Quest.Status" target="tide_whispers" is="Completed" timeoutFrames="60"/>
+	<Expect watch="Session.Money" equals="130"/>
+	<Expect watch="Velmora.Phase" equals="0"/>
+	<Pass/>
+</Scenario>

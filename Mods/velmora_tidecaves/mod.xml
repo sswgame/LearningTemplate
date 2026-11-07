@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Velmora 확장 팩(DLC) "Tidecaves" — 서쪽 바닷가 동굴 지역 하나 · 보스 하나 · 퀘스트 하나를 기본 표 셋에 덮어쓰기 층으로 더한다(<Layer>).
+  층 파일은 content/mods/velmora_tidecaves/layer/<기본 리소스 id> 이고 원본을 부모로 항목만 적는다 — 다른 확장 팩이 같은 표에 얹어도 서로를 지우지 않는다.
+  기본 판의 세이브를 그대로 잇는다(퀘스트 tide_whispers 는 기본 퀘스트 ember_oath 를 끝낸 판에서 받는다). 이 팩을 끈 판을 불러도 기본 진행은 이어진다.
+  소스 모드다(content/ 아래 낱개 파일) — 개발 실행이 시작 때 팩으로 묶어 올린다. 배포는 묶은 content.pack 만 받는다.
+  켜기: App -game=Velmora -gv_modList=velmora_tidecaves (시나리오 game/velmora/automation/sequence/carry.2)
+-->
+<Mod id="velmora_tidecaves" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0">
+	<Layer path="game/velmora/data/regions.xml"/>
+	<Layer path="game/velmora/data/quests.xml"/>
+	<Layer path="game/velmora/data/monsters.xml"/>
+</Mod>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  벨모라 골짜기의 지역(VelmoraRegionCatalog — 게임의 필수 데이터). 평면(x, z) 위 사각 경계이고 겹치지 않는다(맞닿는 것은 된다). 동쪽으로 셋이 이어진다.
+  - hearth(난롯마을, 시작): 들어서면 퀘스트 ember_oath 를 받는다. 야영지가 있다.
+  - fernwood(고사리숲): 봉화 · 야영지. 탐험만 한다.
+  - cinderhold(재의 요새): 들어서면 게이트가 닫히고 홀(불씨 도깨비 하나) → 보스(잿빛 파수꾼)다. 적은 제자리라(speed 0) 닿은 피해가 들지 않는 자리에 둔다.
+    전투 자리는 시나리오가 걸어 멈추는 x 30.5 에서 1.2 · 1.6 m 앞이다(공격 34 - 방어 4 = 30: 도깨비 두 번, 파수꾼 네 번 — automation/vale).
+  확장 팩(Mods/velmora_tidecaves)이 이 표에 층으로 서쪽 지역 tidecaves 를 더한다.
+-->
+<VelmoraRegionCatalog>
+	<Region id="hearth" name="Hearthstead" min="-10,-8" max="10,8" respawn="0,0" startQuest="ember_oath">
+		<Camp id="hearth_camp" at="-3,3"/>
+	</Region>
+	<Region id="fernwood" name="Fernwood" min="10,-8" max="30,8" respawn="12,0">
+		<Beacon id="fernwood_beacon" at="20,4"/>
+		<Camp id="fernwood_camp" at="20,-4"/>
+	</Region>
+	<Region id="cinderhold" name="Cinderhold" min="30,-8" max="50,8" respawn="32,0">
+		<Hall monster="ember_imp" at="31.7,0"/>
+		<Boss monster="ashen_warden" at="32.1,0"/>
+	</Region>
+</VelmoraRegionCatalog>

@@ -34,6 +34,13 @@ namespace sw
     class GameObjectManager;
     class ItemCatalog;
 
+    /** @brief 이 인스턴스에서 끝난 게임 상태 세이브 슬롯 쓰기 · 읽기(복원까지) 중 성공한 수입니다. 감시 값 `Save.Written` · `Save.Loaded` 가 읽는다. */
+    struct SaveSlotCounts
+    {
+        uint32 _written{ 0 };
+        uint32 _loaded{ 0 };
+    };
+
     // ------------------------------------------------------------------------------
     // 1) GameInstance — 수명주기는 여기, 파생은 훅만
     //    파생은 configurePackConfig 과 on* 훅을 오버라이드한다(예: EmptyGame)
@@ -108,6 +115,13 @@ namespace sw
          * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false 입니다.
          */
         [[nodiscard]] bool loadGameFromSlot( string_view slot = {} );
+        /** @brief 이 인스턴스에서 성공한 세이브 슬롯 쓰기 · 읽기 수입니다. */
+        const SaveSlotCounts& getSaveSlotCounts() const { return _saveSlotCounts; }
+        /**
+         * @brief 지금 도는 인스턴스입니다(없으면 nullptr). 게임 스레드에서만 부른다.
+         * @details 인스턴스를 들지 않은 창구 — 세이브 메뉴 자리의 개발 명령(`game.save` · `game.load`)과 감시 값 — 가 세이브 슬롯을 부르는 자리다. 프로세스당 하나라 뜻이 하나다.
+         */
+        static GameInstance* findRunningInstance() { return _s_pRunningInstance; }
 
         // --------------------------------------------------------------------------
         // 게임 인스턴스 서브시스템
@@ -289,6 +303,7 @@ namespace sw
         unique_ptr<AutosaveManager>       _pAutosave;           ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
+        SaveSlotCounts                    _saveSlotCounts;      ///< 성공한 세이브 슬롯 쓰기 · 읽기 수
         uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
         uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
         uint8                             _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  확장 팩 세이브 승계 두 번 기동 ① — 확장 팩 없이 기본 퀘스트(ember_oath)를 끝내고 슬롯 velmora/carry 에 저장하고 끝낸다.
+  ② carry.2 가 확장 팩(velmora_tidecaves)을 켜고 다시 기동해 이 세이브를 불러 잇는다. 혼자 돌면 ② 의 전제를 만들 뿐이라 게임 체인은 이 폴더(sequence/)를 줍지 않는다.
+  CTest 항목 Scenario.velmora.sequence.carry 가 ① → ② 를 잇는다(Test/Scenario/RunStateDirPair.cmake). 세이브 슬롯은 사용자 데이터 폴더의 velmora/ 그룹이다.
+  길은 automation/vale 과 같다(자리 · 공격 수는 그 머리말).
+-->
+<Scenario name="game.velmora.carry.1" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
+	<Expect watch="Mods.ActiveCount" equals="0"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<ActionAxis name="Move" x="1" seconds="3.3333"/>
+	<Wait seconds="3.45"/>
+	<ActionAxis name="Move" y="1" seconds="0.6667"/>
+	<Wait seconds="0.8"/>
+	<Action name="Velmora.Use"/>
+	<Wait frames="2"/>
+	<ExpectLog id="Velmora.BeaconLit" count="1"/>
+	<ActionAxis name="Move" y="-1" seconds="0.6667"/>
+	<Wait seconds="0.8"/>
+	<ActionAxis name="Move" x="1" seconds="1.75"/>
+	<Wait seconds="1.9"/>
+	<Expect watch="Velmora.Phase" equals="1"/>
+	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="180"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="Velmora.Attack"/>
+	<WaitUntil watch="Quest.Status" target="ember_oath" is="Completed" timeoutFrames="60"/>
+	<Expect watch="Session.Money" equals="50"/>
+	<DevCommand line="game.save velmora/carry"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  확장 팩 Tidecaves 의 지역 층 — 기본 표(game/velmora/data/regions.xml)를 부모로 지역 하나를 더한다. 난롯마을(hearth) 서쪽에 맞닿는다.
+  보스만 있는 지역이다: 들어서면 게이트가 닫히고 보스 대기 뒤 소금물 잠복자가 나온다. 자리는 시나리오가 걸어 멈추는 x -11.5 에서 1.6 m 서쪽이다(automation/sequence/carry.2).
+-->
+<VelmoraRegionCatalog>
+	<Region id="tidecaves" name="Tidecaves" min="-40,-8" max="-10,8" respawn="-12,0" startQuest="tide_whispers">
+		<Boss monster="brine_lurker" at="-13.1,0"/>
+	</Region>
+</VelmoraRegionCatalog>

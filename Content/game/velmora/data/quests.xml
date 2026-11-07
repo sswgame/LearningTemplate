@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  벨모라의 퀘스트(QuestCatalog — 공유 퀘스트 일지). 목표의 종류는 디렉터가 알리는 일이다: Enter(지역) · Light(봉화) · Clear(지역) · Defeat(보스 종).
+  끝 단계의 보상 값: gold(지갑의 기본 통화) · heart(하트 그릇). 확장 팩이 층으로 퀘스트를 더한다.
+-->
+<QuestCatalog>
+	<Quest id="ember_oath" name="The Ember Oath">
+		<Stage id="reach" next="light" text="Walk east into Fernwood"><Objective kind="Enter" target="fernwood"/></Stage>
+		<Stage id="light" next="warden" text="Light the Fernwood beacon"><Objective kind="Light" target="fernwood_beacon"/></Stage>
+		<Stage id="warden" next="done" text="Defeat the Ashen Warden in Cinderhold"><Objective kind="Defeat" target="ashen_warden"/></Stage>
+		<Stage id="done" complete="true"><Reward gold="50" heart="1"/></Stage>
+	</Quest>
+</QuestCatalog>

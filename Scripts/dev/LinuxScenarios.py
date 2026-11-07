@@ -47,7 +47,7 @@ FONT_FILE = 'LiberationSans-Regular.ttf'  # 카탈로그가 찾는 Linux 글꼴(
 XVFB_DEBS = ('git-lfs xvfb xserver-common x11-xkb-utils xkb-data libxfont2 libfontenc1 libunwind8 libxkbfile1 libxtst6 libgl1 libgl1-mesa-dri '
              'libtirpc3t64 libxshmfence1 libpixman-1-0 libxcvt0 libglvnd0 libgbm1 libepoxy0 libxau6 libxdmcp6').split()
 SCREEN = '2560x1440x24'  # 체인의 큰 창이 화면 안에 들어오고, 실제 포인터가 창 밖 가운데에 머문다
-ALL_CHAINS = ('editor empty abilityarena frontiertown harvestvalley meadowvillage nilecity pixeltown shooter3d starskirmish themepark voxelcraft wildwest '
+ALL_CHAINS = ('editor empty abilityarena frontiertown harvestvalley meadowvillage nilecity pixeltown shooter3d starskirmish themepark velmora voxelcraft wildwest '
               'abilityarena.editor harvestvalley.editor shooter3d.editor themepark.editor').split()
 PARALLEL_CHAINS = 4  # lavapipe 가 코어를 나눠 쓰므로 많이 띄우면 벽시계 시한을 넘긴다
 WALL_SCALE = '4'  # 소프트웨어 렌더링이라 벽시계 시한을 늘린다(gv_scenarioWallScale)

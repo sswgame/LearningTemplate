@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 확장 팩 Tidecaves 의 퀘스트 층 — 기본 퀘스트 ember_oath 를 끝낸 판에서 Tidecaves 에 들어서면 받는다. -->
+<QuestCatalog>
+	<Quest id="tide_whispers" name="Whispers Under the Tide" requires="ember_oath">
+		<Stage id="lurker" next="done" text="Defeat the Brine Lurker in the Tidecaves"><Objective kind="Defeat" target="brine_lurker"/></Stage>
+		<Stage id="done" complete="true"><Reward gold="80"/></Stage>
+	</Quest>
+</QuestCatalog>

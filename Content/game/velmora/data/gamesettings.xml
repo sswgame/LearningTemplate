@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Velmora 팩의 설정 — 시작 맵은 골짜기 씬 하나다. 기본 세이브 슬롯은 `game.save` 를 슬롯 없이 부를 때 쓴다(세이브 메뉴 자리). -->
+<GameSettings>
+  <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 -->
+  <Engine _windowTitle="Velmora" />
+  <startMap>game/velmora/maps/vale.scene.xml</startMap>
+  <defaultSaveSlot>velmora/slot0</defaultSaveSlot>
+  <autosaveSettings>game/velmora/data/autosave.xml</autosaveSettings>
+  <inputMap path="common/input/base.input.xml"/>
+  <inputMap path="common/input/move.input.xml"/>
+  <inputMap path="game/velmora/data/velmora.input.xml"/>
+</GameSettings>

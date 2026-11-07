@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Velmora 입력 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄: base · move) 위에 얹힌다. 디렉터는 키를 묻지 않고 액션 이름만 묻는다. 걷기는 공통 `Move` 축이다.
+-->
+<InputMap>
+	<!-- 지역 전투: 공격 · 대시 -->
+	<action name="Velmora.Attack" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="Velmora.Dash" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+	<!-- 곁의 봉화를 켜거나 야영지에서 쉰다 -->
+	<action name="Velmora.Use" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>
