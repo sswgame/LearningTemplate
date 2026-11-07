@@ -1,0 +1,54 @@
+<Scene formatVersion="2" name="KitDemoActionPlatformer">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="15,3,-20"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="12"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<ActionPlatformerDemoComponent _componentName="ActionPlatformerDemoComponent"
+					                               _bActive="true"
+					                               _catalogPath="game/empty/data/kitdemo/demo.actionplatformer.xml"
+					                               _stageID="demo-1"
+					                               _startPosition="1.5,1.6"
+					                               _goalX="27"
+					                               _fallY="-3"
+					                               _pickupRadius="0.6">
+						<_listTerrainRow>
+							<item>..............................</item>
+							<item>..............................</item>
+							<item>..............................</item>
+							<item>..............................</item>
+							<item>..............................</item>
+							<item>##########..##################</item>
+						</_listTerrainRow>
+						<_listCheckpointX>
+							<item>15</item>
+						</_listCheckpointX>
+						<_listSecretPosition>
+							<item>6,1.5</item>
+						</_listSecretPosition>
+					</ActionPlatformerDemoComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

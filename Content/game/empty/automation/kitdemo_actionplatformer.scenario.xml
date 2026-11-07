@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 완결 루프 — 액션 플랫포머 키트(GF_ActionPlatformer)의 스테이지 한 판: 시작 → 비밀 줍기 → 구덩이 뛰어넘기 → 체크포인트 → 골 → 결과(점수 · 등급).
+  플레이어와 같은 입력(Move 축을 내는 D 키, 입력 맵 액션 KitDemo.Jump 를 내는 Space)으로만 움직인다.
+  씬: 바닥 윗면 y 1, 구덩이 x 10..12, 비밀 (6, 1.5), 체크포인트 x 15, 골 x 27. 달리기 7 m/s, 점프 높이 3.2 · 정점 0.38 초(PlatformerSettings 기본).
+  감시 값: KitDemo.Platformer.State(0 시작 전, 1 진행, 2 깸, 3 게임 오버) · .Checkpoint(-1 시작점) · .Secrets · .Lives · .Score(0..100) · .PlayerX · .PlayerY.
+  실행: ctest -R Scenario.game.empty.kitdemo_actionplatformer
+-->
+<Scenario name="game.empty.kitdemo_actionplatformer" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kitdemo_actionplatformer.scene.xml"/>
+	<WaitUntil watch="KitDemo.Platformer.State" equals="1" timeoutFrames="120"/>
+	<!-- 바닥에 내려앉는다(몸 가운데 y = 1 + 0.45) -->
+	<WaitUntil watch="KitDemo.Platformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
+	<Expect watch="KitDemo.Platformer.Lives" equals="3"/>
+	<Expect watch="KitDemo.Platformer.Checkpoint" equals="-1"/>
+	<!-- 오른쪽으로 달린다 — 길 위의 비밀을 줍는다 -->
+	<Press slot="Key.D"/>
+	<WaitUntil watch="KitDemo.Platformer.Secrets" equals="1" timeoutFrames="120"/>
+	<!-- 구덩이 앞에서 점프(정점 가까이 누른다) -->
+	<WaitUntil watch="KitDemo.Platformer.PlayerX" atLeast="8.4" timeoutFrames="120"/>
+	<Press slot="Key.Space"/>
+	<Wait seconds="0.35"/>
+	<Release slot="Key.Space"/>
+	<!-- 건너편 체크포인트 — 지닌 비밀이 확정된다 -->
+	<WaitUntil watch="KitDemo.Platformer.Checkpoint" equals="0" timeoutFrames="180"/>
+	<Expect watch="KitDemo.Platformer.Lives" equals="3"/>
+	<!-- 골 -->
+	<WaitUntil watch="KitDemo.Platformer.State" equals="2" timeoutFrames="300"/>
+	<Release slot="Key.D"/>
+	<Expect watch="KitDemo.Platformer.Lives" equals="3"/>
+	<Expect watch="KitDemo.Platformer.Secrets" equals="1"/>
+	<Expect watch="KitDemo.Platformer.Score" atLeast="90"/>
+	<ExpectLog id="KitDemo.PlatformerSecret" count="1"/>
+	<ExpectLog id="KitDemo.PlatformerCheckpoint" count="1"/>
+	<ExpectLog id="KitDemo.PlatformerCleared" count="1"/>
+	<Record watch="KitDemo.Platformer.Score"/>
+	<Record watch="KitDemo.Platformer.PlayerX"/>
+	<Pass/>
+</Scenario>
