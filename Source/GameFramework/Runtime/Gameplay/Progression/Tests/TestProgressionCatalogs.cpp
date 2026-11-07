@@ -14,7 +14,7 @@ using namespace sw;
 SW_TEST_CASE( ProgressionCatalogsTest, StatReadsKindNameAndMax )
 {
     StatCatalog catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Stats><Stat id="kills" kind="Counter" max="9999"/><Stat id="best" name="Best Score" kind="Max"/></Stats>)", "stats" ) );
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<StatCatalog><Stat id="kills" kind="Counter" max="9999"/><Stat id="best" name="Best Score" kind="Max"/></StatCatalog>)", "stats" ) );
     const StatDef* pKills = catalog.findStat( hashed_string( "kills" ) );
     SW_REQUIRE_NOT_NULL( pKills );
     SW_EXPECT_TRUE( pKills->_name == "kills" );

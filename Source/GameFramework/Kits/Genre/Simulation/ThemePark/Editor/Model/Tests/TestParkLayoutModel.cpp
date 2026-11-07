@@ -14,7 +14,7 @@ namespace
     struct ParkLayoutModelTestUtil
     {
         /** @brief 실제 데이터(`coasters.xml` 의 family)와 같은 회로입니다 — 끝이 스테이션 뒤에 와서 닫는 곡선이 접히지 않는다(접히면 빌더가 경고한다). */
-        static constexpr const utf8* kCoasters = R"(<CoasterCatalog>
+        static constexpr const utf8* kCoasters = R"(<CoasterLayoutCatalog>
   <Layout id="family" name="Little Dipper" startHeight="1">
     <Piece type="Station" length="10"/>
     <Piece type="LiftHill" length="16" height="8"/>
@@ -24,7 +24,7 @@ namespace
     <Piece type="TurnLeft" radius="10" angle="3.14159" bank="15"/>
     <Piece type="Brakes" length="8"/>
   </Layout>
-</CoasterCatalog>)";
+</CoasterLayoutCatalog>)";
 
         static constexpr const utf8* kCoaster = R"(<Coaster layout="family" x="90" z="0" heading="0" color="0.3,0.75,0.4,1" capacity="16" loadTime="15" cost="4000"/>)";
 

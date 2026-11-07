@@ -93,7 +93,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<BlockCatalog>` 루트 속성의 스키마입니다. */
+    /** @brief `<VoxelBlockCatalog>` 루트 속성의 스키마입니다. */
     REFLECT()
     struct VoxelBlockCatalogRootDef
     {
@@ -113,8 +113,8 @@ namespace sw
     /**
      * @class VoxelBlockCatalog
      * @brief 블록 카탈로그입니다. 아래 형식의 XML 을 읽습니다.
-     *        `<BlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" top="0" bottom="2" side="1" hardness="0.6"
-     *        color="1,1,1,1" solid="true" opaque="true" breakable="true" drop="dirt"/><Block id="dirt" name="Dirt" tile="2"/></BlockCatalog>`
+     *        `<VoxelBlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" top="0" bottom="2" side="1" hardness="0.6"
+     *        color="1,1,1,1" solid="true" opaque="true" breakable="true" drop="dirt"/><Block id="dirt" name="Dirt" tile="2"/></VoxelBlockCatalog>`
      * @details 블록 번호는 읽은 순서대로 1부터 붙으며 최대 255입니다. 면은 `tile` 하나(여섯 면이 같다)로 적거나 `top` · `bottom` · `side` 셋을 모두 적습니다.
      *          둘을 섞거나 셋 중 하나를 빼면 다른 면 값으로 채우지 않고 그 블록을 넣지 않는 오류입니다. 칸 번호는 아틀라스 안이어야 합니다.
      */
@@ -149,7 +149,7 @@ namespace sw
         int32 getTileTexels() const { return _tileTexels; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "BlockCatalog"; ///< 루트 요소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "VoxelBlockCatalog"; ///< 루트 요소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief `<Block>` 하나를 스키마와 면 칸으로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadBlock( const XMLNode& node, string_view sourceName );

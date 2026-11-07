@@ -4,7 +4,7 @@
      (원본은 textures_raw/blocks.png, Kenney Voxel Pack 타일을 이 순서로 모은 것 — credits.md).
      hardness 는 맨손으로 부수는 데 걸리는 초, color 는 정점 색으로 곱해지는 틴트 "r,g,b,a"(알파 < 1 이면 반투명 메시로 간다).
      drop 은 부수면 얻는 블록이다(없으면 자기 자신). -->
-<BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="128">
+<VoxelBlockCatalog atlasColumns="4" atlasRows="4" tileTexels="128">
   <Block id="grass" name="Grass" top="0" bottom="2" side="1" hardness="0.6" drop="dirt"/>
   <Block id="dirt" name="Dirt" tile="2" hardness="0.5"/>
   <Block id="stone" name="Stone" tile="3" hardness="1.5" drop="cobblestone"/>
@@ -19,4 +19,4 @@
   <Block id="snow" name="Snow" tile="13" hardness="0.3"/>
   <Block id="coal_ore" name="Coal Ore" tile="14" hardness="2.0"/>
   <Block id="iron_ore" name="Iron Ore" tile="15" hardness="2.5"/>
-</BlockCatalog>
+</VoxelBlockCatalog>

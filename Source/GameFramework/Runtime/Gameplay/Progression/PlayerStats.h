@@ -81,7 +81,7 @@ namespace sw
         const vector<StatDef>& getStats() const { return _listStat; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "Stats"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "StatCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
     private:

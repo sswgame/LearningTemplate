@@ -473,13 +473,13 @@ namespace sw
 {
     /**
      * @class CameraPresetCatalog
-     * @brief `<CameraPresets>` XML 의 프리셋과 블렌드 표입니다.
+     * @brief `<CameraPresetCatalog>` XML 의 프리셋과 블렌드 표입니다.
      * @code
-     *     <CameraPresets>
+     *     <CameraPresetCatalog>
      *         <DefaultBlend curve="SmoothStep" duration="0.5"/>
      *         <Preset id="orbit"> ... </Preset>
      *         <Blend from="topdown" to="orbit" curve="Cut"/>
-     *     </CameraPresets>
+     *     </CameraPresetCatalog>
      * @endcode
      * @details 모르는 속성, 원소, 열거자 이름과 범위 밖 값은 오류이고 그 프리셋 · 블렌드 줄을 넣지 않는다.
      */
@@ -503,7 +503,7 @@ namespace sw
         void                 setDefaultBlend( const BlendCurveDef& blend ) { _defaultBlend = blend; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "CameraPresets"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "CameraPresetCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
     private:

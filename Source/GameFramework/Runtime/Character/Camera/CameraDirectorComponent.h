@@ -31,7 +31,7 @@ namespace sw
 
     /**
      * @class CameraDirectorComponent
-     * @brief 프리셋 카탈로그(`<CameraPresets>` XML)를 읽고, 켠 프리셋을 대상에 맞춰 계산하고 블렌드, 감쇠, 흔들림을 거쳐 같은 오브젝트의 카메라에 씁니다.
+     * @brief 프리셋 카탈로그(`<CameraPresetCatalog>` XML)를 읽고, 켠 프리셋을 대상에 맞춰 계산하고 블렌드, 감쇠, 흔들림을 거쳐 같은 오브젝트의 카메라에 씁니다.
      * @details **카메라에는 틱 뒤에 쓴다.** `TickGroup::PostPhysics` 에서는 입력만 읽고, 포즈 계산과 쓰기는 틱 뒤 게임 스레드로 미룬다(`executeOrDeferPostTick`).
      *          틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦은 위치를 따라간다.
      *          1인칭 프리셋이면 손에 든 총이 시점보다 한 프레임 앞서 흔들린다.
@@ -171,7 +171,7 @@ namespace sw
         [[nodiscard]] bool applyPendingState();
 
     private:
-        PROPERTY( Category = "Camera", DisplayName = "Presets", AssetPath, Tooltip = "Camera preset XML (<CameraPresets>)" )
+        PROPERTY( Category = "Camera", DisplayName = "Presets", AssetPath, Tooltip = "Camera preset XML (<CameraPresetCatalog>)" )
         string _catalogPath;
         PROPERTY( Category = "Camera", DisplayName = "Initial Preset", Tooltip = "Preset active at begin play; empty uses the first preset" )
         hashed_string _initialPreset;

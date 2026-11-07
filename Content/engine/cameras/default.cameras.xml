@@ -1,5 +1,5 @@
 <!-- 카메라 프리셋 예시 — CameraPresetCatalog 가 읽는다. 각(pitch · yaw · fieldOfViewY)은 라디안, 거리는 m, 시간은 s 다. -->
-<CameraPresets>
+<CameraPresetCatalog>
     <DefaultBlend curve="SmoothStep" duration="0.5"/>
 
     <Preset id="topdown">
@@ -35,4 +35,4 @@
     <!-- 1인칭으로 들어가고 나올 때는 끊어 바꾼다(머리 안을 지나가는 블렌드를 보이지 않는다). -->
     <Blend from="*" to="firstperson" curve="Cut"/>
     <Blend from="firstperson" to="*" curve="Cut"/>
-</CameraPresets>
+</CameraPresetCatalog>

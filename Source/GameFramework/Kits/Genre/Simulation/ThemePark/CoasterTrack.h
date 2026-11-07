@@ -227,7 +227,7 @@ namespace sw
 {
     /**
      * @class CoasterLayoutCatalog
-     * @brief `<CoasterCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
+     * @brief `<CoasterLayoutCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
      * @details 조각 하나라도 틀리면(모르는 종류 · 범위 밖 값) 그 레이아웃 전체를 넣지 않는 오류다 — 조각을 빼고 이으면 다른 트랙이 된다.
      */
     class SW_KIT_API CoasterLayoutCatalog : public GameCatalog<CoasterLayoutDef, XMLCatalog<CoasterLayoutCatalog>>
@@ -241,7 +241,7 @@ namespace sw
         CoasterLayoutCatalog();
 
     private:
-        static constexpr const utf8* kXMLRootName = "CoasterCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
+        static constexpr const utf8* kXMLRootName = "CoasterLayoutCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief `<Layout>` 과 그 `<Piece>` 를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadLayout( const XMLNode& node, string_view sourceName );

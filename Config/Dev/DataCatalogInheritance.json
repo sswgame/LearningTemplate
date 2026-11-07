@@ -82,7 +82,7 @@
             ]
         },
         {
-            "root": "CameraPresets",
+            "root": "CameraPresetCatalog",
             "listEntry": [
                 {
                     "name": "Preset",
@@ -107,9 +107,9 @@
         { "root": "SocketSet", "listEntry": [ { "name": "Socket", "key": "name" }, { "name": "VirtualBone", "key": "name" } ] },
         { "root": "SocketKinds", "listEntry": [ { "name": "Kind", "key": "name" } ] },
         { "root": "AnimationNotifies", "listEntry": [ { "name": "Notify", "key": "name" }, { "name": "FootContact", "key": "notify" } ] },
-        { "root": "BlockCatalog", "listEntry": [ { "name": "Block", "key": "id" } ] },
+        { "root": "VoxelBlockCatalog", "listEntry": [ { "name": "Block", "key": "id" } ] },
         { "root": "CityCatalog", "listEntry": [ { "name": "Building", "key": "id" }, { "name": "Good", "key": "id" } ] },
-        { "root": "CoasterCatalog", "listEntry": [ { "name": "Layout", "key": "id" } ] },
+        { "root": "CoasterLayoutCatalog", "listEntry": [ { "name": "Layout", "key": "id" } ] },
         { "root": "CreatureLifeCatalog", "listEntry": [ { "name": "Habitat", "key": "id" }, { "name": "Species", "key": "id" } ] },
         { "root": "CropCatalog", "listEntry": [ { "name": "Crop", "key": "id" } ] },
         { "root": "Interactions", "listEntry": [ { "name": "Interaction", "key": "id" }, { "name": "SmartObject", "key": "id" } ] },
@@ -120,7 +120,7 @@
         { "root": "ReputationCatalog", "listEntry": [ { "name": "Faction", "key": "id" } ] },
         { "root": "Schedules", "listEntry": [ { "name": "Place", "key": "id" }, { "name": "Spot", "key": "id" }, { "name": "Interrupt", "key": "id" }, { "name": "Appointment", "key": "id" }, { "name": "Archetype", "key": "id" }, { "name": "NPC", "key": "id" }, { "name": "Event", "key": "id" } ] },
         { "root": "ShopCatalog", "listEntry": [ { "name": "Shop", "key": "id", "listField": [ { "name": "Stock", "key": "item" } ] } ] },
-        { "root": "SkirmishUnitModels", "listEntry": [ { "name": "Model", "key": "id" } ] },
+        { "root": "SkirmishUnitModelCatalog", "listEntry": [ { "name": "Model", "key": "id" } ] },
         { "root": "SpawnTable", "listEntry": [ { "name": "Entry", "key": "id" } ] },
         { "root": "WeaponCatalog", "listEntry": [ { "name": "Weapon", "key": "id", "listField": [ { "name": "Modifier", "key": "field" } ] } ] },
         { "root": "UIStyleSheet", "listEntry": [ { "name": "Variable", "key": "_name" }, { "name": "TypeVariation", "key": "_name" }, { "name": "Rule", "key": "_selector", "listField": [ { "name": "_font" } ] } ] },
