@@ -141,7 +141,6 @@ namespace sw
         Kind          _kind{ Kind::Departed };
     };
 
-    SW_GF_API const utf8* toString( ScheduleEvent::Kind kind );
 } // namespace sw
 
 namespace sw

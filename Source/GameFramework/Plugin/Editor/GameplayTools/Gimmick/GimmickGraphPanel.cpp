@@ -27,6 +27,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphBridge.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -73,20 +74,6 @@ namespace sw::editor
                         return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Actuator" ) );
                 }
                 return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Text" ) );
-            }
-
-            static const utf8* getCategoryName( GimmickNodeCategory category )
-            {
-                switch ( category )
-                {
-                    case GimmickNodeCategory::Sensor:
-                        return "Sensor";
-                    case GimmickNodeCategory::Operator:
-                        return "Operator";
-                    case GimmickNodeCategory::Actuator:
-                        return "Actuator";
-                }
-                return "";
             }
 
             static string makeMark( string_view prefix, string_view name )
@@ -251,7 +238,7 @@ namespace sw::editor
             const GimmickNodeCategory arrCategory[] = { GimmickNodeCategory::Sensor, GimmickNodeCategory::Operator, GimmickNodeCategory::Actuator };
             for ( const GimmickNodeCategory category : arrCategory )
             {
-                ImGui::TextDisabled( "%s", GimmickGraphPanelInternal::getCategoryName( category ) );
+                ImGui::TextDisabled( "%s", getEnumName( category ) );
                 for ( const GimmickNodeKind& kind : game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry().getKinds() )
                 {
                     if ( kind._category != category )
@@ -464,7 +451,7 @@ namespace sw::editor
         const vector<GimmickNodeKind>& listRegistryKind = game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry().getKinds();
         for ( size_t kindIndex = 0; kindIndex < listRegistryKind.size(); ++kindIndex )
         {
-            listKind.push_back( EditorGraphNodeKind{ listRegistryKind[kindIndex]._name.c_str(), GimmickGraphPanelInternal::getCategoryName( listRegistryKind[kindIndex]._category ),
+            listKind.push_back( EditorGraphNodeKind{ listRegistryKind[kindIndex]._name.c_str(), getEnumName( listRegistryKind[kindIndex]._category ),
                                                      static_cast<uint32>( kindIndex ) } );
         }
         uint32 kindID{ 0 };

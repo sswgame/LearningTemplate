@@ -62,9 +62,6 @@ namespace sw::editor
          */
         [[nodiscard]] bool takeViewportPose( const float2& imageSize, CameraPresetViewportPose& outPose );
 
-        /** @brief 프리셋 모드의 표시 이름입니다. */
-        [[nodiscard]] static const utf8* getModeName( CameraPresetMode mode );
-
     private:
         shared_ptr<const CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(읽기 전에는 빈 표)
         int32                                 _selectedIndex;

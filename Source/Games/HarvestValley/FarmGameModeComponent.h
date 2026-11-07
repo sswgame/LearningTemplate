@@ -62,6 +62,7 @@ namespace sw
 namespace sw
 {
     /** @brief 손에 든 도구입니다. */
+    ENUM()
     enum class FarmTool : uint8
     {
         Hoe = 0,     ///< 갈기.

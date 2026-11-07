@@ -15,11 +15,14 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 노드가 회로에서 맡는 역할입니다. 센서는 바깥(씬이나 테스트)이 값을 넣고, 액추에이터는 바깥이 상태를 읽어서 오브젝트에 적용합니다. */
+    ENUM()
     enum class GimmickNodeCategory : uint8
     {
         Sensor = 0,

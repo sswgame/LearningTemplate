@@ -14,6 +14,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class JSONValue;
@@ -22,6 +24,7 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 표정이 다른 표정(눈 깜박임 · 시선 · 입)을 어떻게 누르는지입니다. VRM 1.0 의 overrideBlink · overrideLookAt · overrideMouth 입니다. */
+    ENUM()
     enum class VrmExpressionOverride : uint8
     {
         None,
@@ -30,6 +33,7 @@ namespace sw::editor
     };
 
     /** @brief 1인칭 카메라에서 메시를 보일지입니다. VRM 의 firstPersonFlag(0.x) · meshAnnotations.type(1.0) 입니다. */
+    ENUM()
     enum class VrmFirstPersonMode : uint8
     {
         Auto,            ///< 머리에 묶인 부분만 1인칭에서 숨긴다

@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -110,27 +111,6 @@ namespace sw
                         return "image unit";
                     case GlNamespace::Other:
                         return "?";
-                }
-            }
-
-            static const utf8* kindName( ShaderBindingKind kind )
-            {
-                switch ( kind )
-                {
-                    case ShaderBindingKind::ConstantBuffer:
-                        return "ConstantBuffer";
-                    case ShaderBindingKind::Texture:
-                        return "Texture";
-                    case ShaderBindingKind::Sampler:
-                        return "Sampler";
-                    case ShaderBindingKind::StructuredBuffer:
-                        return "StructuredBuffer";
-                    case ShaderBindingKind::RwStructuredBuffer:
-                        return "RwStructuredBuffer";
-                    case ShaderBindingKind::RwTexture:
-                        return "RwTexture";
-                    case ShaderBindingKind::Unknown:
-                        return "Unknown";
                 }
             }
 
@@ -458,7 +438,7 @@ namespace sw
                         continue;
 
                     if ( Internal::kindMatches( pReserved->_kind, reflected._kind, _targetFormat ) == false )
-                        report( reflected._name, string( "종류가 계약과 다릅니다 — 기대 " ) + Internal::kindName( pReserved->_kind ) + ", 리플렉션 " + Internal::kindName( reflected._kind ) );
+                        report( reflected._name, string( "종류가 계약과 다릅니다 — 기대 " ) + getEnumName( pReserved->_kind ) + ", 리플렉션 " + getEnumName( reflected._kind ) );
 
                     const ShaderReservedLocation& expected = _bVulkan ? pReserved->_vulkan : ( _bOpenGl ? pReserved->_opengl : ( _bDx12 ? pReserved->_dx12 : pReserved->_dx11 ) );
                     if ( expected._bDeclared == false )
@@ -553,7 +533,7 @@ namespace sw
                     else if ( Internal::vulkanRangeAcceptsKind( rangeClass, reflected._kind ) == false )
                     {
                         report( reflected._name, string( "binding " ) + to_string( reflected._bindPoint ) + " 은 " + Internal::registerClassLetter( rangeClass ) + " 범위인데 리소스 종류가 " +
-                                                     Internal::kindName( reflected._kind ) + " 입니다" );
+                                                     getEnumName( reflected._kind ) + " 입니다" );
                     }
                 }
                 else if ( reflected._space == bindless::kVkTextureSet )

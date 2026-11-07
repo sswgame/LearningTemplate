@@ -11,6 +11,7 @@
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <algorithm>
 
@@ -42,50 +43,6 @@ namespace sw::editor
                 else
                     formatstring( text.data(), text.capacity(), "%# .. %# %#", Fmt( low, Format().precision( 2 ) ), Fmt( high, Format().precision( 2 ) ), pUnit );
                 return string{ text.view() };
-            }
-
-            static const utf8* getContainerName( AudioContainerType container )
-            {
-                switch ( container )
-                {
-                    case AudioContainerType::Random:
-                        return "Random";
-                    case AudioContainerType::Sequence:
-                        return "Sequence";
-                    case AudioContainerType::Layer:
-                        return "Layer";
-                }
-                return "?";
-            }
-
-            static const utf8* getStealName( AudioStealPolicy steal )
-            {
-                switch ( steal )
-                {
-                    case AudioStealPolicy::Reject:
-                        return "Reject";
-                    case AudioStealPolicy::Oldest:
-                        return "Oldest";
-                    case AudioStealPolicy::Quietest:
-                        return "Quietest";
-                    case AudioStealPolicy::Farthest:
-                        return "Farthest";
-                }
-                return "?";
-            }
-
-            static const utf8* getVirtualName( AudioVirtualMode mode )
-            {
-                switch ( mode )
-                {
-                    case AudioVirtualMode::Virtualize:
-                        return "Virtualize";
-                    case AudioVirtualMode::Stop:
-                        return "Stop";
-                    case AudioVirtualMode::KeepReal:
-                        return "KeepReal";
-                }
-                return "?";
             }
 
             static float32 computeUsage( uint32 count, uint32 limit )
@@ -128,13 +85,13 @@ namespace sw::editor
             radius += ")";
             outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldRadius" ), radius } );
         }
-        outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldContainer" ), string{ Internal::getContainerName( eventDesc._container ) } } );
+        outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldContainer" ), string{ getEnumName( eventDesc._container ) } } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldClipCount" ), to_string( static_cast<uint32>( eventDesc._listClip.size() ) ) } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldMaxInstances" ),
                                                   eventDesc._maxInstances == 0 ? string{ "-" } : to_string( eventDesc._maxInstances ) } );
-        outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldSteal" ), string{ Internal::getStealName( eventDesc._steal ) } } );
+        outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldSteal" ), string{ getEnumName( eventDesc._steal ) } } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldPriority" ), to_string( eventDesc._priority ) } );
-        outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldVirtual" ), string{ Internal::getVirtualName( eventDesc._virtual ) } } );
+        outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldVirtual" ), string{ getEnumName( eventDesc._virtual ) } } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldCooldown" ), Internal::formatRange( eventDesc._cooldownSeconds, eventDesc._cooldownSeconds, "s" ) } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldFade" ),
                                                   Internal::formatFade( static_cast<float64>( eventDesc._fadeInSeconds ), static_cast<float64>( eventDesc._fadeOutSeconds ) ) } );

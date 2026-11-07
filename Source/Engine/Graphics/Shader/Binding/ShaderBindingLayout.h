@@ -12,10 +12,12 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     /// @brief 슬롯이 가리키는 리소스 종류입니다.
+    ENUM()
     enum class ShaderBindingKind : uint8
     {
         ConstantBuffer,

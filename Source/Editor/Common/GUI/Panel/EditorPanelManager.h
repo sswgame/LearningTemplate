@@ -13,6 +13,8 @@
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
 } // namespace sw
@@ -21,6 +23,7 @@ namespace sw::editor
 {
 
     /** @brief 에디터 패널의 카테고리입니다. */
+    ENUM()
     enum class EditorPanelCategory : uint8
     {
         Core = 0, // Hierarchy, Inspector, Scene, Game, Console, Profiler, ContentBrowser

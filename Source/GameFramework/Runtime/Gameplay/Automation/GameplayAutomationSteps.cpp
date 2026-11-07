@@ -19,6 +19,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationParams.h"
@@ -93,26 +94,6 @@ namespace sw
                 return step.readFields( params, outError );
             }
 
-            static const utf8* toText( MountResult result )
-            {
-                switch ( result )
-                {
-                    case MountResult::Mounted:
-                        return "Mounted";
-                    case MountResult::SeatTaken:
-                        return "SeatTaken";
-                    case MountResult::TooFar:
-                        return "TooFar";
-                    case MountResult::NoSocket:
-                        return "NoSocket";
-                    case MountResult::NotPossessed:
-                        return "NotPossessed";
-                    case MountResult::NoVehiclePawn:
-                        return "NoVehiclePawn";
-                }
-                return "Unknown";
-            }
-
             /** @brief 이름의 오브젝트의 폰입니다. 없으면 실패를 적고 nullptr 입니다. */
             static PawnComponent* findPawn( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
@@ -147,7 +128,7 @@ namespace sw
                 }
                 const MountResult result = VehicleSeatComponent::mount( *pRider, *pSeat );
                 if ( result != MountResult::Mounted )
-                    runner.recordFailure( step, "'" + riderName + "' could not mount '" + vehicleName + "': " + toText( result ) );
+                    runner.recordFailure( step, "'" + riderName + "' could not mount '" + vehicleName + "': " + getEnumName( result ) );
                 return true;
             }
 

@@ -16,25 +16,14 @@
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 namespace sw::editor
 {
     namespace
     {
         struct EditorExtensionRegistryDumpInternal
         {
-            static const utf8* getCategoryName( EditorPanelCategory category )
-            {
-                switch ( category )
-                {
-                    case EditorPanelCategory::Core:
-                        return "Core";
-                    case EditorPanelCategory::Tool:
-                        return "Tool";
-                    case EditorPanelCategory::Custom:
-                        return "Custom";
-                }
-            }
-
             /** @brief 레지스트리의 id 를 순서대로 한 줄씩 남깁니다. */
             template <typename TRegistration>
             static void dumpIDs()
@@ -65,7 +54,7 @@ namespace sw::editor
         // 패널은 등록 줄이 아니라 매니저가 만든 인스턴스를 본다 — 메뉴에 보이는 제목까지 같이 남긴다.
         for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
         {
-            SW_LOG_INFO_ID( "EditorExtensionRegistryDump.EditorExtensionRegistryPanel", "EditorExtensionRegistry|panel|%#|%#|%#", entry._id.c_str(), EditorExtensionRegistryDumpInternal::getCategoryName( entry._category ),
+            SW_LOG_INFO_ID( "EditorExtensionRegistryDump.EditorExtensionRegistryPanel", "EditorExtensionRegistry|panel|%#|%#|%#", entry._id.c_str(), getEnumName( entry._category ),
                             entry._title.c_str() );
         }
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorPopupRegistration>();

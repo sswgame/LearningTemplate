@@ -151,32 +151,6 @@ namespace sw
         return "unknown";
     }
 
-    const utf8* toString( ScheduleEvent::Kind kind )
-    {
-        switch ( kind )
-        {
-            case ScheduleEvent::Kind::Departed:
-                return "Departed";
-            case ScheduleEvent::Kind::Arrived:
-                return "Arrived";
-            case ScheduleEvent::Kind::ActivityStarted:
-                return "ActivityStarted";
-            case ScheduleEvent::Kind::ActivityEnded:
-                return "ActivityEnded";
-            case ScheduleEvent::Kind::Interrupted:
-                return "Interrupted";
-            case ScheduleEvent::Kind::Resumed:
-                return "Resumed";
-            case ScheduleEvent::Kind::AppointmentMet:
-                return "AppointmentMet";
-            case ScheduleEvent::Kind::AppointmentBroken:
-                return "AppointmentBroken";
-            case ScheduleEvent::Kind::Snapped:
-                return "Snapped";
-        }
-        return "Unknown";
-    }
-
     void ScheduleSystem::collectLiveSystems( vector<const ScheduleSystem*>& outListSystem )
     {
         ScheduleSystemRegistry* const pRegistry = game::findSubsystem<ScheduleSystemRegistry>();

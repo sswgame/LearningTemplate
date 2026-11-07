@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
@@ -111,27 +112,4 @@ namespace sw::editor
         return true;
     }
 
-    const utf8* CameraPresetModel::getModeName( CameraPresetMode mode )
-    {
-        switch ( mode )
-        {
-            case CameraPresetMode::Fixed:
-                return "Fixed";
-            case CameraPresetMode::OrthoTopDown:
-                return "OrthoTopDown";
-            case CameraPresetMode::Orbit:
-                return "Orbit";
-            case CameraPresetMode::Follow:
-                return "Follow";
-            case CameraPresetMode::FirstPerson:
-                return "FirstPerson";
-            case CameraPresetMode::ThirdPerson:
-                return "ThirdPerson";
-            case CameraPresetMode::FollowXY:
-                return "FollowXY";
-            case CameraPresetMode::Dolly:
-                return "Dolly";
-        }
-        return "?";
-    }
 } // namespace sw::editor

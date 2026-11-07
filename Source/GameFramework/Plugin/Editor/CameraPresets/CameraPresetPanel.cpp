@@ -17,6 +17,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <imgui.h>
 
@@ -102,7 +103,7 @@ namespace sw::editor
             {
                 const CameraPresetDef& preset    = catalog.getAt( index );
                 const bool             bSelected = static_cast<int32>( index ) == _model.getSelectedIndex();
-                const string           label     = string( preset._id.c_str() ) + "  [" + CameraPresetModel::getModeName( preset._view._mode ) + "]";
+                const string           label     = string( preset._id.c_str() ) + "  [" + getEnumName( preset._view._mode ) + "]";
                 if ( ImGui::Selectable( label.c_str(), bSelected ) )
                     _model.selectPreset( index );
                 EditorSelfTestMarks::record( ( string( "camerapreset.row." ) + preset._id.c_str() ).c_str() ); // 시나리오가 행을 고른다(editor/camerapresets)

@@ -18,6 +18,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -345,36 +346,6 @@ namespace sw::editor
                 {
                     (void)target.appendChild( "item", index );
                 }
-            }
-
-            static string_view makeOverrideName( VrmExpressionOverride value )
-            {
-                switch ( value )
-                {
-                    case VrmExpressionOverride::None:
-                        return "None";
-                    case VrmExpressionOverride::Block:
-                        return "Block";
-                    case VrmExpressionOverride::Blend:
-                        return "Blend";
-                }
-                return "None";
-            }
-
-            static string_view makeFirstPersonModeName( VrmFirstPersonMode value )
-            {
-                switch ( value )
-                {
-                    case VrmFirstPersonMode::Auto:
-                        return "Auto";
-                    case VrmFirstPersonMode::Both:
-                        return "Both";
-                    case VrmFirstPersonMode::ThirdPersonOnly:
-                        return "ThirdPersonOnly";
-                    case VrmFirstPersonMode::FirstPersonOnly:
-                        return "FirstPersonOnly";
-                }
-                return "Auto";
             }
 
             /** @brief 0.x 의 humanoid 를 읽습니다. */
@@ -810,9 +781,9 @@ namespace sw::editor
                     entry.appendAttribute( "_name", string_view{ expression._name } );
                     entry.appendAttribute( "_bPreset", makeBoolName( expression._bPreset == SW_TRUE ) );
                     entry.appendAttribute( "_bBinary", makeBoolName( expression._bBinary == SW_TRUE ) );
-                    entry.appendAttribute( "_overrideBlink", makeOverrideName( expression._overrideBlink ) );
-                    entry.appendAttribute( "_overrideLookAt", makeOverrideName( expression._overrideLookAt ) );
-                    entry.appendAttribute( "_overrideMouth", makeOverrideName( expression._overrideMouth ) );
+                    entry.appendAttribute( "_overrideBlink", string_view{ getEnumName( expression._overrideBlink ) } );
+                    entry.appendAttribute( "_overrideLookAt", string_view{ getEnumName( expression._overrideLookAt ) } );
+                    entry.appendAttribute( "_overrideMouth", string_view{ getEnumName( expression._overrideMouth ) } );
                     const XMLNode listBind = entry.appendChild( "_listBind" );
                     for ( const VrmExpressionBind& bind : expression._listBind )
                     {
@@ -1020,7 +991,7 @@ namespace sw::editor
             {
                 const XMLNode entry = list.appendChild( "VrmFirstPersonMesh" );
                 entry.appendAttribute( "_mesh", string_view{ mesh._mesh } );
-                entry.appendAttribute( "_mode", Internal::makeFirstPersonModeName( mesh._mode ) );
+                entry.appendAttribute( "_mode", string_view{ getEnumName( mesh._mode ) } );
             }
         }
         Internal::writeExpressions( root, def );

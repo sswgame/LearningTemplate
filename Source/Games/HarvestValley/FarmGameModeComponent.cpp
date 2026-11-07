@@ -59,22 +59,6 @@ namespace sw
 
             /** @brief 공유 시계의 계절 이름입니다(시계 설정과 작물 카탈로그가 함께 씁니다). */
             static vector<hashed_string> makeSeasons() { return { hashed_string( "Spring" ), hashed_string( "Summer" ), hashed_string( "Fall" ), hashed_string( "Winter" ) }; }
-
-            static const utf8* toToolName( FarmTool tool )
-            {
-                switch ( tool )
-                {
-                    case FarmTool::Hoe:
-                        return "Hoe";
-                    case FarmTool::WateringCan:
-                        return "WateringCan";
-                    case FarmTool::Seeds:
-                        return "Seeds";
-                    case FarmTool::Hand:
-                        return "Hand";
-                }
-                return "?";
-            }
         };
 
         [[nodiscard]] bool readFarmerX( const FarmGameModeComponent& director, float64& outValue )
@@ -580,7 +564,7 @@ namespace sw
                 _tool = kArrTool[toolIndex];
                 if ( isAutoPlayOn() == false )
                 {
-                    SW_LOG_INFO_ID( "FarmGameMode.Tool", "[Farm] tool: %#", Internal::toToolName( _tool ) );
+                    SW_LOG_INFO_ID( "FarmGameMode.Tool", "[Farm] tool: %#", getEnumName( _tool ) );
                     getSoundQueue().queueEvent( Internal::kEventSelect );
                 }
             }
@@ -685,7 +669,7 @@ namespace sw
             ++_toolUseCount;
         }
         else if ( isAutoPlayOn() == false )
-            SW_LOG_INFO_ID( "FarmGameMode.ToolUsed", "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
+            SW_LOG_INFO_ID( "FarmGameMode.ToolUsed", "[Farm] %# at (%#, %#): %#", getEnumName( _tool ), x, y, getEnumName( result ) );
     }
 
     int32 FarmGameModeComponent::shipAllProduce()
@@ -805,7 +789,7 @@ namespace sw
         [[maybe_unused]] const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         SW_LOG_INFO_ID( "FarmGameMode.YGoldGStamina", "[Farm] %# %# Y%# %#:%# · gold %#G · stamina %#/%# · tool %# · seed %# x%# · crops %# (ready %#)", clock.getSeasonName().c_str(),
                         clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pState->getWallet().getBalance( _shipment.getCurrency() ), _stamina, _maxStamina,
-                        FarmGameModeComponentInternal::toToolName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pState->getInventory().getItemCount( getSelectedSeed() ),
+                        getEnumName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pState->getInventory().getItemCount( getSelectedSeed() ),
                         _field.getCropCount(), _field.getReadyCount() );
     }
 
