@@ -1,7 +1,7 @@
 /**
  * @file MechCatalog.h
  * @brief 기체 대전의 데이터입니다. 기체(근, 중, 원거리 분류, 랭크, 코스트, 체력, 속도, 부스트, 다운치, 록온), 형태(변형)와 무기 슬롯, 분류 보정, 스킬을 담습니다.
- * @details 주무기의 탄창, 재장전은 기반 `WeaponCatalog`, 그 탄의 피해 · 탄속 · 사거리는 기반 `ProjectileCatalog` 에 있고, 근접 콤보 단마다의 발생, 경직, 캔슬 창은 기반 `MoveCatalog` 의 id 로 가리킨다.
+ * @details 주무기의 탄창, 재장전은 기반 `WeaponCatalog`, 주무기 · 특수기 탄의 피해 · 탄속 · 사거리는 기반 `ProjectileCatalog` 에 있고, 근접 콤보 단마다의 발생, 경직, 캔슬 창은 기반 `MoveCatalog` 의 id 로 가리킨다.
  *          여기에는 "어느 기체가 어느 무기와 기술을 몇 단으로 가지는가"와 기체 대전에만 있는 수치(다운치, 유도, 넉백, 쿨다운)만 둔다.
  *          정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readFields` 가 읽는다.
  */
@@ -42,7 +42,7 @@ namespace sw
     {
         Shot = 0, ///< 주무기이며 기반 `WeaponDef`(탄창, 재장전, 연사)를 쓴다
         Melee,    ///< 근접이며 `MoveCatalog` 기술 목록이 콤보 단이 된다(1단, 2단, ...)
-        Special   ///< 특수기이며 슬롯 자체의 피해, 탄속, 쿨다운을 쓴다
+        Special   ///< 특수기이며 슬롯의 탄(`ProjectileCatalog`)을 쿨다운마다 한 발 쏜다
     };
 
     /** @brief 스킬이 켜지는 조건입니다. */
@@ -55,7 +55,10 @@ namespace sw
         OnRespawn    ///< 다시 나올 때 켠다
     };
 
-    /** @brief 무기 슬롯 하나입니다. 시간은 초, 거리는 m, 각속도는 도/초입니다. Melee · Special 은 `range` 를 반드시 적습니다(Shot 은 무기의 사거리를 씁니다). */
+    /**
+     * @brief 무기 슬롯 하나입니다. 시간은 초, 거리는 m, 각속도는 도/초입니다. Melee 는 `range` 를, Special 은 `projectile` 을 반드시 적습니다.
+     * @details 날아가는 것(피해 · 탄속 · 사거리 · 중력)은 탄 정의(Shot 은 무기의 기본 탄, Special 은 `projectile`)이고, 슬롯은 맞은 뒤의 반응(다운치 · 넉백 · 경직)과 쏘는 법(유도 더하기 · 쿨다운)만 가진다.
+     */
     REFLECT()
     struct MechWeaponSlotDef
     {
@@ -65,20 +68,18 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Name = "weapon" )
         hashed_string _weaponID{}; ///< Shot 일 때 `WeaponCatalog` 의 id
+        PROPERTY( Name = "projectile" )
+        hashed_string _projectileID{}; ///< Special 일 때 `ProjectileCatalog` 의 id(탄속 0 이면 사거리 안을 바로 맞히는 광선)
         PROPERTY( Name = "moves" )
         vector<hashed_string> _listMoveID{}; ///< Melee 일 때 콤보 단마다의 `MoveCatalog` id(개수가 콤보 단수다, 속성 `moves`)
-        PROPERTY( Min = 0.0 )
-        float32 _damage{ 0.0f }; ///< Special 의 피해(Shot 은 무기, Melee 는 기술의 피해를 쓴다)
         PROPERTY( Name = "down", Min = 0.0 )
         float32 _downValue{ 10.0f }; ///< 한 번 맞힐 때 쌓는 다운치
         PROPERTY( Min = 0.0 )
         float32 _knockback{ 0.0f }; ///< 맞은 쪽을 밀어내는 거리
         PROPERTY( Min = 0.0 )
-        float32 _range{ 0.0f }; ///< Melee 의 닿는 거리, Special 의 사거리
-        PROPERTY( Name = "speed", Min = 0.0 )
-        float32 _projectileSpeed{ 0.0f }; ///< Special 의 탄속(0이면 즉시 맞는 광선)
+        float32 _range{ 0.0f }; ///< Melee 의 닿는 거리(Shot · Special 은 탄의 사거리를 쓴다)
         PROPERTY( Min = 0.0 )
-        float32 _homing{ 0.0f }; ///< 록온 대상 쪽으로 꺾는 최대 각속도(0이면 곧게 간다). Shot 은 이 값을 탄의 유도(`ProjectileDef::_homingRate`)에 더한다
+        float32 _homing{ 0.0f }; ///< 록온 대상 쪽으로 꺾는 최대 각속도(0이면 곧게 간다). Shot · Special 모두 이 값을 탄의 유도(`ProjectileDef::_homingRate`)에 더한다
         PROPERTY( Min = 0.0 )
         float32 _cooldown{ 0.0f }; ///< Special 의 재사용 대기 시간
         PROPERTY( Name = "stagger", Min = 0.0 )

@@ -17,13 +17,18 @@ namespace sw
     {
         struct MechCatalogInternal
         {
-            /** @brief `<Weapon>` 하나를 읽습니다. Melee · Special 은 `range` 를 적어야 합니다(종류에 따라 다른 기본값을 두지 않는다). */
+            /** @brief `<Weapon>` 하나를 읽습니다. Melee 는 `range` 를, Special 은 `projectile` 을 적어야 합니다(종류에 따라 다른 기본값을 두지 않는다). */
             [[nodiscard]] static bool readWeapon( const XMLNode& node, string_view sourceName, MechWeaponSlotDef& outSlot )
             {
                 bool bValid = XMLFields::readFields( node, outSlot, sourceName );
-                if ( outSlot._kind != MechWeaponKind::Shot && node.findAttribute( "range" ) == nullptr )
+                if ( outSlot._kind == MechWeaponKind::Melee && node.findAttribute( "range" ) == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "MechCatalog.WeaponIdKindMelee", "%#: <Weapon id=\"%#\"> of kind Melee or Special needs range=\"...\"", sourceName, outSlot._id.c_str() );
+                    SW_LOG_ERROR_ID( "MechCatalog.WeaponIdKindMelee", "%#: <Weapon id=\"%#\"> of kind Melee needs range=\"...\"", sourceName, outSlot._id.c_str() );
+                    bValid = false;
+                }
+                if ( outSlot._kind == MechWeaponKind::Special && outSlot._projectileID.empty() )
+                {
+                    SW_LOG_ERROR_ID( "MechCatalog.SpecialNeedsProjectile", "%#: <Weapon id=\"%#\"> of kind Special needs projectile=\"...\" (a ProjectileCatalog id)", sourceName, outSlot._id.c_str() );
                     bValid = false;
                 }
                 return bValid;

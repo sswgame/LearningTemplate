@@ -22,9 +22,11 @@ namespace
   <Weapon id="rifle" projectile="beam" accepts="Ammo.Beam" fireInterval="0.1" reloadTime="0.2" minSpread="0" maxSpread="0" spreadPerShot="0" magazineSize="3" maxReserveAmmo="3"/>
 </WeaponCatalog>)";
 
-    // 주무기의 탄(무기와 탄은 따로 적고 무기가 받음 조건으로 고른다). 광선이라 중력을 받지 않는다.
+    // 주무기의 탄(무기와 탄은 따로 적고 무기가 받음 조건으로 고른다)과 특수기의 탄(슬롯이 `projectile` 로 가리킨다). 광선 · 미사일은 중력을 받지 않는다. `flat` 은 사거리가 없어 특수기가 받지 않는다.
     constexpr const utf8* kMechProjectileXML = R"(<ProjectileCatalog>
   <Projectile id="beam" tags="Ammo.Beam" damage="10" range="100" speed="0" gravityScale="0"/>
+  <Projectile id="missile" tags="Ammo.Missile" damage="20" range="100" speed="10" gravityScale="0"/>
+  <Projectile id="flat" tags="Ammo.Missile" damage="20" range="0" speed="10" gravityScale="0"/>
 </ProjectileCatalog>)";
 
     constexpr const utf8* kMechMoveXML = R"(<MoveCatalog>
@@ -37,7 +39,7 @@ namespace
   <Class id="Far" down="2"/>
   <Mech id="gunner" name="Gunner" cost="300" hp="100" down="100" downRecovery="0" downTime="1" wakeInvulnerable="1" boostRegen="0" overheatPenalty="0" dashSpeed="20" dashTime="0.1" dashCost="25" jumpCost="15" jumpSpeed="10" hoverPerSecond="30">
     <Weapon id="rifle" kind="Shot" weapon="rifle" down="10" stagger="0.2" knockback="1"/>
-    <Weapon id="missile" kind="Special" damage="20" speed="10" range="100" homing="90" cooldown="1" down="0" stagger="0"/>
+    <Weapon id="missile" kind="Special" projectile="missile" homing="90" cooldown="1" down="0" stagger="0"/>
     <Weapon id="saber" kind="Melee" moves="slash1,slash2" range="2" down="0"/>
   </Mech>
   <Mech id="brawler" name="Brawler" class="Near" cost="300" hp="100" down="100" downTime="1" boostRegen="0">
@@ -50,8 +52,10 @@ namespace
   </Mech>
   <Mech id="flyer" name="Flyer" cost="300" hp="100" transformTime="1" skillSlots="1" boostRegen="0">
     <Mode id="ms" speed="9"><Weapon id="rifle" kind="Shot" weapon="rifle"/></Mode>
-    <Mode id="jet" speed="20"><Weapon id="missile" kind="Special" damage="20" speed="10" range="100" down="0"/></Mode>
+    <Mode id="jet" speed="20"><Weapon id="missile" kind="Special" projectile="missile" down="0"/></Mode>
   </Mech>
+  <Mech id="ghostspecial" name="GhostSpecial" cost="100"><Weapon id="x" kind="Special" projectile="ghost"/></Mech>
+  <Mech id="flatspecial" name="FlatSpecial" cost="100"><Weapon id="x" kind="Special" projectile="flat"/></Mech>
   <Mech id="ghostgun" name="GhostGun" cost="100"><Weapon id="x" kind="Shot" weapon="ghost"/></Mech>
   <Mech id="ghostmove" name="GhostMove" cost="100"><Weapon id="x" kind="Melee" moves="ghost" range="1"/></Mech>
   <Mech id="nomoves" name="NoMoves" cost="100"><Weapon id="x" kind="Melee" range="1"/></Mech>
@@ -79,13 +83,13 @@ namespace
     constexpr size_t kMechPositionsSize    = 48; ///< 위치, 속도, 앞, 대시 방향
     constexpr size_t kMechTimersSize       = 12; ///< 대시, 경직, 변형 쿨다운
     constexpr size_t kMechInputSize        = 20; ///< 이동 둘, 스킬 슬롯, 깃발 여덟
-    // `ProjectileSimulation::writeState` 의 탄 하나(빈 정의 이름 4, 위치 12, 속도 12 뒤에 실수 11 개, id, 반응 번호, 정수 6 개, 깃발). 특수기 탄은 정의 이름이 비어 있다
-    constexpr size_t kMechProjectileSize        = 105;
-    constexpr size_t kMechProjectileVelocity    = 16;
-    constexpr size_t kMechProjectileRange       = 44;
-    constexpr size_t kMechProjectileRestitution = 68;
-    constexpr size_t kMechProjectilePayload     = 76;
-    constexpr size_t kMechProjectileOwner       = 80;
+    // `ProjectileSimulation::writeState` 의 탄 하나(정의 이름 길이 4 + "missile" 7, 위치 12, 속도 12 뒤에 실수 11 개, id, 반응 번호, 정수 6 개, 깃발). 특수기 탄의 정의 이름은 슬롯의 탄이다
+    constexpr size_t kMechProjectileSize        = 112;
+    constexpr size_t kMechProjectileVelocity    = 23;
+    constexpr size_t kMechProjectileRange       = 51;
+    constexpr size_t kMechProjectileRestitution = 75;
+    constexpr size_t kMechProjectilePayload     = 83;
+    constexpr size_t kMechProjectileOwner       = 87;
 
     /** @brief 카탈로그와 판 하나입니다. 팀은 A(0), B(1)로 시작합니다. */
     struct MechArenaRulesTest
@@ -758,6 +762,8 @@ SW_TEST_CASE_F( MechArenaRulesTest, BrokenPilotConfigsAreRefused )
     SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "gunner" ), hashed_string( "ghostgun" ) } ) );                       // 덱 뒤의 기체도 본다
     SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "ghostmove" ) } ) );
     SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "nomoves" ) } ) );
+    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "ghostspecial" ) } ) ); // 특수기의 탄이 탄 카탈로그에 없다
+    SW_EXPECT_EQUAL( -1, addPilot( 0, float3{}, { hashed_string( "flatspecial" ) } ) );  // 특수기의 탄에 사거리가 없다
     SW_EXPECT_EQUAL( 0, _world.getPilotCount() );
 
     MechArenaWorld  noCatalog; // initialize 전에는 받지 않는다
@@ -966,7 +972,7 @@ SW_TEST_CASE( MechArenaTest, CatalogReadsMechsAndSkills )
     const vector<MechWeaponSlotDef>& listWeapon = pGunner->_listMode[0]._listWeapon;
     SW_REQUIRE_EQUAL( size_t( 3 ), listWeapon.size() );
     SW_EXPECT_TRUE( listWeapon[1]._kind == MechWeaponKind::Special );
-    SW_EXPECT_NEAR( 10.0f, listWeapon[1]._projectileSpeed, kMechTolerance );
+    SW_EXPECT_TRUE( listWeapon[1]._projectileID == hashed_string( "missile" ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listWeapon[2]._listMoveID.size() );
     SW_EXPECT_TRUE( listWeapon[2]._listMoveID[1] == hashed_string( "slash2" ) );
 
@@ -991,11 +997,12 @@ SW_TEST_CASE( MechArenaTest, CatalogReadsMechsAndSkills )
 }
 
 /**
- * @brief [MechArenaTest] 범위 없는 근접 · 특수기, 형태와 섞인 속도, 형태 밖 무기, 모르는 원소 · 분류는 오류로 그 원소를 버린다. 결함: 형태 밖 무기를 말없이 버렸다
+ * @brief [MechArenaTest] 범위 없는 근접 · 탄 없는 특수기, 형태와 섞인 속도, 형태 밖 무기, 모르는 원소 · 분류는 오류로 그 원소를 버린다. 결함: 형태 밖 무기를 말없이 버렸다
  */
 SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenElements )
 {
     SW_EXPECT_LOG( "MechCatalog.WeaponIdKindMelee" );
+    SW_EXPECT_LOG( "MechCatalog.SpecialNeedsProjectile" );
     SW_EXPECT_LOG( "MechCatalog.MechIdErrorsNot" );
     SW_EXPECT_LOG( "MechCatalog.MechIdSpeedBelongs" );
     SW_EXPECT_LOG( "MechCatalog.MechWeaponOutsideMode" );
@@ -1006,6 +1013,7 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenElements )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MechCatalog>
   <Mech id="good" name="Good"/>
   <Mech id="norange" name="A"><Weapon id="x" kind="Melee" moves="m"/></Mech>
+  <Mech id="noprojectile" name="D"><Weapon id="x" kind="Special" cooldown="1"/></Mech>
   <Mech id="speedy" name="B" speed="3"><Mode id="ms"/></Mech>
   <Mech id="mixed" name="C"><Mode id="ms"/><Weapon id="x" kind="Shot"/></Mech>
   <Class id="Space" melee="2"/>

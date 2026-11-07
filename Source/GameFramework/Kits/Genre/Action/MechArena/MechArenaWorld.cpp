@@ -11,6 +11,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -652,6 +653,12 @@ namespace sw
                     const ProjectileDef* pProjectile = pWeapon != nullptr && _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID ) : nullptr;
                     bComplete                        = pProjectile != nullptr && pWeapon->accepts( *pProjectile );
                 }
+                if ( slot._kind == MechWeaponKind::Special )
+                {
+                    // 특수기의 탄은 사거리가 있어야 한다 — 광선은 사거리 안을 맞히고, 날아가는 탄은 판 밖에 닿기 전에 끝난다(상태 읽기도 사거리 없는 탄을 받지 않는다).
+                    const ProjectileDef* pProjectile = _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( slot._projectileID ) : nullptr;
+                    bComplete                        = pProjectile != nullptr && pProjectile->_range > 0.0f;
+                }
                 if ( slot._kind == MechWeaponKind::Melee )
                 {
                     bComplete = _pMoveCatalog != nullptr && slot._listMoveID.empty() == false;
@@ -875,15 +882,14 @@ namespace sw
         const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
-        // 특수기는 슬롯이 곧 탄 정의다(키트 데이터). 중력은 받지 않는다.
-        ProjectileState projectile;
-        projectile._velocity = direction * slot._projectileSpeed;
-        projectile._damage   = slot._damage;
-        projectile._range    = slot._range;
-        projectile._turnRate = MathUtil::toRadian( slot._homing );
-        projectile._owner    = pilotIndex;
-        projectile._team     = pilot._team;
-        projectile._target   = target;
+        // 탄 값은 슬롯이 가리키는 탄 정의다(주무기와 같은 탄 표). 탄이 있는지는 `isMechDataComplete` 가 장착 때 봤다.
+        // 수정자가 없어 탄 값 그대로라 쏠 때 푼다(쿨다운이 있어 드물다). 유도는 주무기처럼 탄의 유도에 슬롯의 유도를 더한다.
+        const ProjectileDef& def        = *_pProjectileCatalog->find( slot._projectileID );
+        ProjectileState      projectile = ProjectileState::launch( ResolvedShot::resolve( def, {}, {} ), origin, direction, _settings._gravity );
+        projectile._turnRate += MathUtil::toRadian( slot._homing );
+        projectile._owner  = pilotIndex;
+        projectile._team   = pilot._team;
+        projectile._target = target;
         launch( pilotIndex, slotIndex, direction, projectile, slot );
     }
 
