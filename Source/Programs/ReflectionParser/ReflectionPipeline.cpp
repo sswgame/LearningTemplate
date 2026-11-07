@@ -672,9 +672,6 @@ namespace sw
         vector<string> listLine;
         for ( const string& inputFile : _pOptions->_listInputFile )
         {
-            // 테스트 폴더의 형식은 콘텐츠가 쓰지 않고 테스트를 싣는 구성에만 지어진다 - 넣으면 구성마다(Shipping 은 테스트가 없다) 저장소의 표가 갈린다.
-            if ( FileUtil::normalizeSeparators( inputFile ).find( "/Tests/" ) != string::npos )
-                continue;
             GeneratedStamp stamp;
             // 빠진 입력의 칸을 "경로가 아니다" 로 보면 끊어진 경로를 못 잡는다 - 쓰지 않는다.
             if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )

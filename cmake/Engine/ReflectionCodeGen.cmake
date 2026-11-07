@@ -389,6 +389,11 @@ endfunction()
 # 낡음은 `App --check-asset-refs`(ToolCheckAssetRefs)가 리플렉션과 표를 대조해 잡는다.
 # ------------------------------------------------------------------------------
 function(sw_addAssetReferenceFieldList)
+	# 배포 구성은 개발 전용 소스(`SW_DEV_ONLY_SOURCE_PATTERNS` — Tests/ · Dev/)를 짓지 않아 그 형식의 칸을 모른다 — 표를 다시 쓰면 그 칸이 빠져 구성마다 표가 갈린다.
+	# 표는 개발 구성(검사 `ToolCheckAssetRefs` 가 도는 곳)만 쓴다.
+	if(SW_SHIPPING_BUILD)
+		return()
+	endif()
 	get_property(listEntry GLOBAL PROPERTY SW_ASSET_REFERENCE_FIELD_LISTS)
 	if(NOT listEntry)
 		return()
