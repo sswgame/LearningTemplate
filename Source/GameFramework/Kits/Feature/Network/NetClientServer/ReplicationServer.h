@@ -31,11 +31,19 @@ namespace sw
 
     class INetPeers;
 
+    /** @brief 연결 하나에 보낼 엔티티 하나 — 월드 목록(`NetSnapshot::_listEntity`, id 순) 안의 번호와 이번 스냅샷의 우선도입니다. */
+    struct NetRelevantEntity
+    {
+        uint32  _worldIndex{ 0 };
+        float32 _priority{ 0.0f };
+    };
+
     /**
      * @class IReplicationPolicy
      * @brief 무엇을 누구에게 얼마나 먼저 보낼지 정하는 정책입니다. 게임마다 교체합니다.
      * @details 배틀로얄은 거리, 비대칭 대전은 시야와 역할을 기준으로 하고, 기체 대전은 전부 보낸다.
-     * @warning 서버에 `setTaskManager` 를 지정하면 두 함수가 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
+     * @warning 서버에 `setTaskManager` 를 지정하면 const 함수들이 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
+     *          상태를 바꾸는 준비는 `prepareSnapshots`(게임 스레드, 나눠 돌기 전 한 번)에서만 한다.
      *          읽는 게임 상태는 스냅샷을 보내는 동안 바뀌지 않아야 하며, 보통 틱 끝에 보내므로 이 조건이 지켜진다.
      */
     class SW_KIT_API IReplicationPolicy
@@ -78,6 +86,17 @@ namespace sw
             outPriority = computePriority( connectionID, entity );
             return true;
         }
+        /**
+         * @brief 이번 틱 스냅샷을 보내기 전에 한 번 불립니다(게임 스레드, `ReplicationServer::sendSnapshots` 가 연결을 나눠 돌기 전). 연결이 함께 쓰는 표를 세운다.
+         * @param listWorldEntity 이번 틱 월드 엔티티(id 오름차순, `ReplicationServer::endTick` 이 정렬했다)
+         */
+        virtual void prepareSnapshots( const vector<NetEntityState>& listWorldEntity ) { (void)listWorldEntity; }
+        /**
+         * @brief 연결 하나에 보낼 엔티티를 월드 목록 차례(번호 오름차순)로 @p outList 에 지우고 채웁니다.
+         * @details 기본은 모든 엔티티에 `evaluateEntity` 를 묻는다(엔티티 × 연결). 관찰자마다 보이는 목록을 아는 정책은 그 목록만 돌게 재정의한다(`InterestReplicationPolicy`).
+         *          재정의한 결과는 기본 구현과 같아야 한다 — 차례 · 우선도가 같으면 스냅샷 바이트가 같다(테스트 `InterestReplicationPolicyTest` 가 바이트로 대조한다).
+         */
+        virtual void collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const;
     };
 } // namespace sw
 
@@ -129,7 +148,7 @@ namespace sw
          * @brief 복제를 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
          * @details 거절된 서버는 호스트가 없는 서버와 같다. `sendSnapshots` 가 아무것도 보내지 않는다.
          */
-        [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy = nullptr );
+        [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationServerConfig& settings, IReplicationPolicy* pPolicy = nullptr );
         void               beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
@@ -199,11 +218,12 @@ namespace sw
         /** @brief 작업 스레드 하나가 스냅샷 하나를 만드는 데 쓰는 스크래치 버퍼입니다. 틱마다 다시 사용합니다. */
         struct SnapshotScratch
         {
-            NetSnapshot      _filtered{}; ///< 클라이언트 하나에 관련된 엔티티
-            vector<uint32>   _listOrderEntity{};
-            vector<int32>    _listOrder{};   ///< 위 순서를 `_filtered` 의 인덱스로 바꾼 것
-            vector<uint8>    _listCurrent{}; ///< `_filtered` 의 항목마다 `writeDelta` 가 낸 결과(`NetSnapshot::kEntity*`)
-            NetMessageWriter _messageWriter{};
+            NetSnapshot               _filtered{}; ///< 클라이언트 하나에 관련된 엔티티
+            vector<uint32>            _listOrderEntity{};
+            vector<int32>             _listOrder{};    ///< 위 순서를 `_filtered` 의 인덱스로 바꾼 것
+            vector<uint8>             _listCurrent{};  ///< `_filtered` 의 항목마다 `writeDelta` 가 낸 결과(`NetSnapshot::kEntity*`)
+            vector<NetRelevantEntity> _listRelevant{}; ///< 정책이 고른 이 연결의 엔티티(`IReplicationPolicy::collectRelevantEntities`)
+            NetMessageWriter          _messageWriter{};
         };
 
         ClientState& acquireClient( int32 connectionID );
@@ -219,7 +239,7 @@ namespace sw
         NetSnapshot                         _world;
         ReplicationServerConfig             _settings;
         INetPeers*                          _pHost;
-        const IReplicationPolicy*           _pPolicy;
+        IReplicationPolicy*                 _pPolicy; ///< 틱마다 `prepareSnapshots` 를 부르므로 const 가 아니다
         IReplicationPolicy                  _defaultPolicy;
         NetParallelFor                      _parallel;
         NetParallelScratch<SnapshotScratch> _snapshotScratch;       ///< 스레드마다 하나씩 둔다

@@ -33,7 +33,18 @@ namespace sw
     {
     }
 
-    bool ReplicationServer::initialize( INetPeers* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy )
+    void IReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const
+    {
+        outList.clear();
+        for ( size_t worldIndex = 0; worldIndex < listWorldEntity.size(); ++worldIndex )
+        {
+            float32 priority{ 0.0f };
+            if ( evaluateEntity( connectionID, listWorldEntity[worldIndex], priority ) )
+                outList.push_back( NetRelevantEntity{ static_cast<uint32>( worldIndex ), priority } );
+        }
+    }
+
+    bool ReplicationServer::initialize( INetPeers* pHost, const ReplicationServerConfig& settings, IReplicationPolicy* pPolicy )
     {
         // 실패하면 호스트 없는 서버로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -142,6 +153,7 @@ namespace sw
         {
             _listClientScratch[index] = &_listClient[static_cast<size_t>( _listConnectionScratch[index] )];
         }
+        _pPolicy->prepareSnapshots( _world._listEntity ); // 연결이 함께 쓰는 정책 표 — 나눠 돌기 전에 게임 스레드에서 한 번
         _snapshotScratch.prepare( _parallel );
         _pRangeConnection = _listConnectionScratch.data();
         _ppRangeClient    = _listClientScratch.data();
@@ -167,12 +179,13 @@ namespace sw
         filtered._firstMissingInputTick = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다. 입력은 전송 전에 게임 스레드가 넣었다
         NetPrioritizer& prioritizer     = client._prioritizer;
         prioritizer.beginAccumulate();
-        size_t relevantCount = 0;
-        for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
+        size_t                     relevantCount = 0;
+        vector<NetRelevantEntity>& listRelevant  = scratch._listRelevant;
+        _pPolicy->collectRelevantEntities( connectionID, _world._listEntity, listRelevant ); // 월드는 여러 워커가 함께 읽는다. 차례는 월드 차례(id 순)다
+        for ( const NetRelevantEntity& relevant : listRelevant )
         {
-            float32 priority{ 0.0f };
-            if ( _pPolicy->evaluateEntity( connectionID, entity, priority ) == false )
-                continue;
+            const NetEntityState& entity   = _world._listEntity[relevant._worldIndex];
+            const float32         priority = relevant._priority;
             if ( relevantCount < filtered._listEntity.size() )
                 filtered._listEntity[relevantCount] = entity;
             else

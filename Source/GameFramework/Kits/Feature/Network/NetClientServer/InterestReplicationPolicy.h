@@ -11,7 +11,6 @@
 #pragma once
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -51,15 +50,22 @@ namespace sw
         bool    isRelevant( int32 connectionID, const NetEntityState& entity ) const override;
         float32 computePriority( int32 connectionID, const NetEntityState& entity ) const override;
         bool    evaluateEntity( int32 connectionID, const NetEntityState& entity, float32& outPriority ) const override;
+        /** @brief 자리를 알리지 않은 엔티티의 월드 번호를 모읍니다(연결마다 월드 전체를 돌지 않게, 틱마다 한 번). */
+        void prepareSnapshots( const vector<NetEntityState>& listWorldEntity ) override;
+        /**
+         * @brief 관찰자의 보이는 목록(id 순)과 자리 없는 엔티티 목록만 돌아 월드 차례로 합칩니다 — 엔티티 × 연결이던 일이 (보이는 수 + 자리 없는 수) × 연결이 된다.
+         * @details 결과는 기본 구현(모든 엔티티에 `evaluateEntity`)과 같다: 보이는 목록에 남아 있어도 자리를 지운 엔티티는 자리 없는 엔티티로 한 번만 든다.
+         */
+        void collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const override;
 
         int32 getVisibleCount( int32 connectionID ) const;
 
     private:
         struct Observer
         {
-            unordered_set<uint32> _uniqueVisible{};
-            float3                _center{ 0.0f, 0.0f, 0.0f };
-            uint8                 _bActive{ SW_FALSE };
+            vector<uint32> _listVisible{}; ///< 보이는 엔티티 id(오름차순, 겹치지 않음 — 월드 목록과 같은 차례라 합치기만 한다)
+            float3         _center{ 0.0f, 0.0f, 0.0f };
+            uint8          _bActive{ SW_FALSE };
         };
 
         const Observer* findObserver( int32 connectionID ) const;
@@ -69,6 +75,8 @@ namespace sw
         unordered_map<uint32, float3> _mapPosition; ///< 자리를 알린 엔티티
         vector<Observer>              _listObserver;
         vector<SlotHandle>            _listKeyScratch;
-        vector<uint32>                _listLeaveScratch;
+        vector<uint32>                _listEnterScratch;
+        vector<uint32>                _listMergeScratch;
+        vector<uint32>                _listUnpositionedIndex; ///< 이번 틱 월드에서 자리를 알리지 않은 엔티티의 번호(오름차순, `prepareSnapshots`)
     };
 } // namespace sw

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/InterestReplicationPolicy.h"
 
+#include <algorithm>
+
 namespace sw
 {
     InterestReplicationPolicy::InterestReplicationPolicy()
@@ -9,7 +11,9 @@ namespace sw
         , _mapPosition{}
         , _listObserver{}
         , _listKeyScratch{}
-        , _listLeaveScratch{}
+        , _listEnterScratch{}
+        , _listMergeScratch{}
+        , _listUnpositionedIndex{}
     {
     }
 
@@ -61,24 +65,25 @@ namespace sw
         {
             if ( observer._bActive == SW_FALSE )
                 continue;
-            // 1) 사라졌거나 나가는 반경 밖으로 간 엔티티를 뺀다.
-            _listLeaveScratch.clear();
-            for ( const uint32 entityID : observer._uniqueVisible )
+            // 1) 사라졌거나 나가는 반경 밖으로 간 엔티티를 뺀다(차례는 그대로).
+            const auto leaveIt = std::remove_if( observer._listVisible.begin(), observer._listVisible.end(), [this, &observer]( uint32 entityID )
             {
                 const auto positionIt = _mapPosition.find( entityID );
-                if ( positionIt == _mapPosition.end() || _interest.isOutsideLeaveRadius( observer._center, positionIt->second ) )
-                    _listLeaveScratch.push_back( entityID );
-            }
-            for ( const uint32 entityID : _listLeaveScratch )
-            {
-                observer._uniqueVisible.erase( entityID );
-            }
-            // 2) 들어오는 반경 안의 엔티티를 더한다(이미 보이면 그대로).
+                return positionIt == _mapPosition.end() || _interest.isOutsideLeaveRadius( observer._center, positionIt->second );
+            } );
+            observer._listVisible.erase( leaveIt, observer._listVisible.end() );
+            // 2) 들어오는 반경 안의 엔티티를 더한다(이미 보이면 그대로) — 정렬해 합쳐 id 오름차순 · 겹침 없음을 지킨다.
             _interest.queryEntering( observer._center, _listKeyScratch );
+            _listEnterScratch.clear();
             for ( const SlotHandle key : _listKeyScratch )
             {
-                observer._uniqueVisible.insert( NetInterestGrid::getEntityID( key ) );
+                _listEnterScratch.push_back( NetInterestGrid::getEntityID( key ) );
             }
+            std::sort( _listEnterScratch.begin(), _listEnterScratch.end() );
+            _listMergeScratch.clear();
+            std::set_union( observer._listVisible.begin(), observer._listVisible.end(), _listEnterScratch.begin(),
+                            std::unique( _listEnterScratch.begin(), _listEnterScratch.end() ), std::back_inserter( _listMergeScratch ) );
+            observer._listVisible.swap( _listMergeScratch );
         }
     }
 
@@ -96,7 +101,7 @@ namespace sw
         if ( _mapPosition.find( entity._entityID ) == _mapPosition.end() )
             return true;
         const Observer* pObserver = findObserver( connectionID );
-        return pObserver != nullptr && pObserver->_uniqueVisible.find( entity._entityID ) != pObserver->_uniqueVisible.end();
+        return pObserver != nullptr && std::binary_search( pObserver->_listVisible.begin(), pObserver->_listVisible.end(), entity._entityID );
     }
 
     float32 InterestReplicationPolicy::computePriority( int32 connectionID, const NetEntityState& entity ) const
@@ -118,7 +123,7 @@ namespace sw
             return true;
         }
         const Observer* pObserver = findObserver( connectionID );
-        if ( pObserver == nullptr || pObserver->_uniqueVisible.find( entity._entityID ) == pObserver->_uniqueVisible.end() )
+        if ( pObserver == nullptr || std::binary_search( pObserver->_listVisible.begin(), pObserver->_listVisible.end(), entity._entityID ) == false )
             return false;
         outPriority = 1.0f / ( 1.0f + float3::getHorizontalDistance( pObserver->_center, positionIt->second ) * 0.1f );
         return true;
@@ -127,6 +132,54 @@ namespace sw
     int32 InterestReplicationPolicy::getVisibleCount( int32 connectionID ) const
     {
         const Observer* pObserver = findObserver( connectionID );
-        return pObserver != nullptr ? static_cast<int32>( pObserver->_uniqueVisible.size() ) : 0;
+        return pObserver != nullptr ? static_cast<int32>( pObserver->_listVisible.size() ) : 0;
+    }
+
+    void InterestReplicationPolicy::prepareSnapshots( const vector<NetEntityState>& listWorldEntity )
+    {
+        _listUnpositionedIndex.clear();
+        for ( size_t worldIndex = 0; worldIndex < listWorldEntity.size(); ++worldIndex )
+        {
+            SW_ASSERT( worldIndex == 0 || listWorldEntity[worldIndex - 1]._entityID < listWorldEntity[worldIndex]._entityID ); // 합치기가 기대는 차례(endTick 이 정렬한다)
+            if ( _mapPosition.find( listWorldEntity[worldIndex]._entityID ) == _mapPosition.end() )
+                _listUnpositionedIndex.push_back( static_cast<uint32>( worldIndex ) );
+        }
+    }
+
+    void InterestReplicationPolicy::collectRelevantEntities( int32 connectionID, const vector<NetEntityState>& listWorldEntity, vector<NetRelevantEntity>& outList ) const
+    {
+        outList.clear();
+        const Observer* pObserver          = findObserver( connectionID );
+        size_t          unpositionedCursor = 0;
+        // 자리 없는 엔티티를 @p worldIndex 앞까지 차례로 넣는다(우선도 1 — `evaluateEntity` 와 같다).
+        auto flushUnpositionedBefore = [&]( uint32 worldIndex )
+        {
+            while ( unpositionedCursor < _listUnpositionedIndex.size() && _listUnpositionedIndex[unpositionedCursor] < worldIndex )
+            {
+                outList.push_back( NetRelevantEntity{ _listUnpositionedIndex[unpositionedCursor], 1.0f } );
+                ++unpositionedCursor;
+            }
+        };
+        if ( pObserver != nullptr )
+        {
+            // 보이는 id 와 월드 목록이 둘 다 id 오름차순이다 — 월드 쪽 자리는 앞으로만 간다.
+            auto worldIt = listWorldEntity.begin();
+            for ( const uint32 entityID : pObserver->_listVisible )
+            {
+                worldIt = std::lower_bound( worldIt, listWorldEntity.end(), entityID, []( const NetEntityState& entity, uint32 id )
+                { return entity._entityID < id; } );
+                if ( worldIt == listWorldEntity.end() )
+                    break;
+                if ( worldIt->_entityID != entityID )
+                    continue; // 이번 틱 월드에 없는 엔티티
+                const auto positionIt = _mapPosition.find( entityID );
+                if ( positionIt == _mapPosition.end() )
+                    continue; // 자리를 지운 엔티티는 자리 없는 엔티티로 든다(`prepareSnapshots`)
+                const uint32 worldIndex = static_cast<uint32>( worldIt - listWorldEntity.begin() );
+                flushUnpositionedBefore( worldIndex );
+                outList.push_back( NetRelevantEntity{ worldIndex, 1.0f / ( 1.0f + float3::getHorizontalDistance( pObserver->_center, positionIt->second ) * 0.1f ) } );
+            }
+        }
+        flushUnpositionedBefore( static_cast<uint32>( listWorldEntity.size() ) );
     }
 } // namespace sw
