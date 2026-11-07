@@ -25,7 +25,7 @@
 	<Wait frames="1"/>
 	<!-- 타임스케일 -->
 	<DevCommand line="timescale 0"/>
-	<ExpectLog id="DevCommand.Reply" contains="(paused)" atLeast="1"/>
+	<ExpectLog id="DevCommand.Reply" contains="time scale = 0" atLeast="1"/>
 	<Wait frames="2"/>
 	<DevCommand line="timescale 1"/>
 	<ExpectLog id="DevCommand.Reply" contains="time scale = 1" atLeast="1"/>

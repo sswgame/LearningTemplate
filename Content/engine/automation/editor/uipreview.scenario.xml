@@ -113,7 +113,7 @@
 	<EditorWaitSettled/>
 	<EditorHover release="true"/>
 	<EditorWaitSettled/>
-	<Expect watch="Editor.UIPreviewHoveredFocusable" equals="0"/>
+	<WaitUntil watch="Editor.UIPreviewHoveredFocusable" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.nav.down"/>
 	<WaitUntil watch="Editor.UIPreviewFocusedOrdinal" atLeast="0" timeoutFrames="60"/>

@@ -39,6 +39,21 @@ namespace
             return listByte;
         }
 
+        /** @brief 색이 한 직선 위에서 변하는 4x4 입니다. 고정 모드 인코더는 끝점 둘로 직선 하나만 나타낸다 — x · y 로 따로 변하는 색은 원래 멀어진다. */
+        static vector<uint8> makeLineGradient()
+        {
+            vector<uint8> listByte( 16 * 4 );
+            for ( uint32 index = 0; index < 16; ++index )
+            {
+                uint8* pPixel = listByte.data() + index * 4;
+                pPixel[0]     = static_cast<uint8>( 40 + index * 10 );
+                pPixel[1]     = static_cast<uint8>( 200 - index * 8 );
+                pPixel[2]     = static_cast<uint8>( 100 + index * 5 );
+                pPixel[3]     = static_cast<uint8>( 255 - index * 6 );
+            }
+            return listByte;
+        }
+
         static uint32 readBits( const uint8* pBlock, uint32 bitOffset, uint32 bitCount )
         {
             uint32 value = 0;
@@ -123,7 +138,7 @@ namespace
  */
 SW_TEST_CASE( TextureBlockEncoderTest, ASTCBlockDecodesNearTheSource )
 {
-    const vector<uint8> listSource = TextureBlockEncoderTestUtil::makeGradient();
+    const vector<uint8> listSource = TextureBlockEncoderTestUtil::makeLineGradient();
     vector<uint8>       listBlock;
     SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( RHIFormat::ASTC_4x4_UNORM, listSource.data(), 4, 4, listBlock ) );
     SW_REQUIRE_EQUAL( size_t( 16 ), listBlock.size() );
@@ -145,7 +160,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, ASTCBlockDecodesNearTheSource )
             {
                 const int32 decoded = TextureBlockEncoderTestUtil::decodeASTC( listBlock.data(), x, y, channel );
                 const int32 source  = listSource[( y * 4 + x ) * 4 + channel];
-                SW_EXPECT_TRUE_MSG( MathUtil::abs( decoded - source ) <= 70, "ASTC pixel is far from the source" );
+                SW_EXPECT_TRUE_MSG( MathUtil::abs( decoded - source ) <= 30, "ASTC pixel is far from the source" );
             }
         }
     }

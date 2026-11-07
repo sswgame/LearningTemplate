@@ -56,13 +56,22 @@ namespace
             }
         }
 
+        /** @brief 보낸 것이 상대에게 닿을 만큼 망을 돌립니다. */
+        void pumpUntilDelivered()
+        {
+            for ( int32 step = 0; step < 8; ++step )
+            {
+                pump();
+            }
+        }
+
         /** @brief 서버 틱 @p tick 의 스냅샷을 보내 클라이언트가 받게 합니다(소유자 상태 없이 시계만 맞춘다). */
         void sendSnapshot( uint32 tick )
         {
             _server.beginTick( tick );
             _server.endTick();
             _server.sendSnapshots();
-            pump();
+            pumpUntilDelivered();
         }
 
         static ControlIntent makeIntent()
@@ -87,7 +96,7 @@ SW_TEST_CASE( ReplicationIntentTest, IntentAndClaimsRoundTrip )
     listSentClaim.push_back( MeleeHitClaim{ 1, 7 } );
     listSentClaim.push_back( MeleeHitClaim{ 1, 9 } );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, sent, listSentClaim ) );
-    rig.pump();
+    rig.pumpUntilDelivered();
 
     rig._server.beginTick( 10 );
     ControlIntent         received;
@@ -111,7 +120,7 @@ SW_TEST_CASE( ReplicationIntentTest, RepeatedInputClearsTriggersAndClaims )
     vector<MeleeHitClaim>    listSentClaim;
     listSentClaim.push_back( MeleeHitClaim{ 1, 7 } );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), listSentClaim ) );
-    rig.pump();
+    rig.pumpUntilDelivered();
     rig._server.beginTick( 10 );
     ControlIntent         received;
     bool                  bExact = false;
@@ -151,7 +160,7 @@ SW_TEST_CASE( ReplicationIntentTest, ViewTickIsClampedOnTheServerClock )
     const vector<MeleeHitClaim> listNoClaim;
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), listNoClaim ) );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 2, ReplicationIntentTestRig::makeIntent(), listNoClaim ) );
-    rig.pump();
+    rig.pumpUntilDelivered();
 
     rig._server.beginTick( 501 );
     ControlIntent         received;

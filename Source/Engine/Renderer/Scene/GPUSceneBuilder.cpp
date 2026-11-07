@@ -75,6 +75,8 @@ namespace sw
 
     void GPUSkinPaletteCollector::collect( const AnimationSystem& animation, GPUSceneSnapshot& inoutSnapshot )
     {
+        // 게임 시계는 스킨이 없는 씬에도 흐른다 — 머티리얼 시간 · 구름 · 자동 노출이 이 값을 읽는다. VAT 는 군중 시계 그대로다(인스턴스 시간 오프셋이 이 시계 기준이다).
+        inoutSnapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
         if ( animation.getUnitCount() == 0 && inoutSnapshot._listSkinPalette.empty() )
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.skinPalettes" );
@@ -102,8 +104,6 @@ namespace sw
         _paletteRowCountHint               = listRow->size();
         inoutSnapshot._pListSkinPaletteRow = std::move( listRow );
         inoutSnapshot._pListMorphWeight    = std::move( listWeight );
-        // VAT 시계는 군중 시계 그대로다(인스턴스 시간 오프셋이 이 시계 기준이다).
-        inoutSnapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
     }
 } // namespace sw
 

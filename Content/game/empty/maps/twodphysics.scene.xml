@@ -143,7 +143,7 @@
 							</PhysicsShapeDesc2D>
 						</_listShape>
 					</RigidBody2DComponent>
-					<Joint2DComponent _localPosition="-1.5,4,0"
+					<Joint2DComponent _localPosition="-1.5,0,0"
 					                  _localRotation="0,0,0"
 					                  _localScale="1,1,1"
 					                  _attachOwner="None"
