@@ -18,6 +18,7 @@ namespace sw
 {
     struct RHIVertex;
 
+    class SkeletalMeshComponent;
     class ValidationContext;
 
     /** @brief 천 격자의 어느 정점을 오브젝트에 고정하는가입니다. */
@@ -45,6 +46,12 @@ namespace sw
      *          이웃 면의 합, UV 는 격자 0..1, 정점 색 1). 머티리얼은 그 메시 컴포넌트가 정한다. 메시는 동적(`Mesh::setDynamic`)이라 업로드 큐를 거치지 않고
      *          씬 정점 풀이 그 구간만 올린다(정점 버퍼를 프레임마다 만들지 않는다). 메시 컴포넌트가 없으면 그리지 않는다(물리만 — 물리 디버그 그리기로 보인다).
      * @note 프레임마다 정점 (열 − 1) × (행 − 1) × 12 개를 풀의 새 구간으로 올린다(기본 11 × 11 은 1200 개). 옛 구간은 앞 프레임이 끝난 뒤 돌아간다.
+     *
+     *          **LOD**: 조상 스켈레탈 메시의 애니메이션 LOD 등급(`AnimationLODState::_lodGrade` — 그래프 · 리그 노드의 `max_lod` 와 같은 한 축)으로 반복 수를 낮추고
+     *          (`_listLODIterationCount`), `_maxLOD` 를 넘으면 천을 내린다. 내린 동안은 고정 자세에 걸린 쉬는 격자(`makeRestVertices`)를 그린다 — 언리얼 Chaos Cloth 가
+     *          시뮬레이션을 끈 LOD 에서 스킨 메시를 그리는 것과 같은 자리다(그쪽은 LOD 마다 시뮬레이션 메시를 따로 두고, 반복 수는 LOD 와 따로다 — 기억에 의존한 비교).
+     *          여기서는 격자가 하나라 LOD 는 반복 수와 켜고 끄기만 바꾼다. 다시 켜면 지금 고정 자세에서 새로 만든다(스킨이면 그 프레임에 스킨 위치에 바로 둔다) —
+     *          옛 정점에서 이어 가면 내린 동안 옮겨 간 고정점이 천을 잡아채 튄다. 스켈레탈 메시 조상이 없는 천은 등급 0 이다.
      */
     REFLECT( Category = "Physics", DisplayName = "Cloth", Tooltip = "Grid soft body hanging from this object; pinned vertices follow the transform", Meta = "Icon=Physics" )
     class SW_API ClothComponent : public PhysicsComponent
@@ -77,6 +84,21 @@ namespace sw
          */
         [[nodiscard]] bool makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<RHIVertex>& outListVertex ) const;
 
+        /** @brief LOD 를 정합니다(`_maxLOD` · `_listLODIterationCount`, 클래스 설명의 LOD). 다음 물리 프레임부터 따릅니다. */
+        void setLOD( int32 maxLOD, const vector<uint32>& listLODIterationCount );
+        /** @brief LOD 등급 @p lodGrade 에서 천을 시뮬레이션하는지입니다(`_maxLOD` 가 음수면 모든 등급). */
+        bool isSimulatedAtLOD( uint8 lodGrade ) const { return _maxLOD < 0 || static_cast<int32>( lodGrade ) <= _maxLOD; }
+        /** @brief LOD 등급 @p lodGrade 의 반복 수입니다. 등급 0 은 `_iterationCount`, 등급 g 는 `_listLODIterationCount[g - 1]`(목록 끝을 넘으면 마지막 값)이고 1..32 로 자릅니다. */
+        uint32 computeLODIterationCount( uint8 lodGrade ) const;
+        /** @brief 조상 스켈레탈 메시의 LOD 등급입니다. 스켈레탈 메시 조상이 없으면 0 입니다. */
+        uint8 readLODGrade() const;
+        /** @brief 천을 내린 LOD 에서 쓰는 정점입니다 — 격자의 쉬는 자세(`makeSoftBodyDesc` 의 정점)를 월드 자세 @p position · @p rotation 으로 옮긴 것(`getVertices` 순서)입니다. */
+        void makeRestVertices( const float3& position, const quaternion& rotation, vector<float3>& outListVertex ) const;
+        /** @brief LOD 로 천을 내려 쉬는 격자를 그리고 있는지입니다. */
+        bool isLODSuspended() const { return _bLODSuspended == SW_TRUE; }
+        /** @brief 지금 소프트 바디에 준 반복 수입니다(천이 없으면 0). */
+        uint32 getAppliedIterationCount() const { return _appliedIterationCount; }
+
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         /** @brief 스텝이 끝난 정점 위치를 읽어 둡니다. */
@@ -97,8 +119,14 @@ namespace sw
         void computePinSkinWeights( uint32 column, PhysicsSoftBodySkinnedVertex& outSkinned ) const;
 
     private:
+        /** @brief 이 오브젝트부터 조상으로 올라가 처음 만난 스켈레탈 메시입니다(본 · LOD 등급을 읽는다). 없으면 nullptr 입니다. */
+        const SkeletalMeshComponent* findSkeletalMesh() const;
         /** @brief 이 오브젝트부터 조상으로 올라가 처음 만난 스켈레탈 메시의 본 @p boneName 의 월드 행렬입니다. 없으면 false 입니다. */
         [[nodiscard]] bool findBoneWorld( const hashed_string& boneName, float4x4& outBoneWorld ) const;
+        /** @brief 이번 등급의 반복 수를 소프트 바디에 줍니다(바뀐 때만). */
+        void applyLODIterationCount( ScenePhysics& physics, uint8 lodGrade );
+        /** @brief `_listLODIterationCount` 의 값이 1..32 인지 봅니다. */
+        void validateLOD( ValidationContext& context ) const;
         /** @brief `_listPinBone` 순서대로 본 월드 행렬을 채웁니다. 하나라도 없으면 false 입니다. */
         [[nodiscard]] bool findPinBoneWorlds( vector<float4x4>& outListBoneWorld ) const;
         /** @brief 스킨 구속에 이번 뼈 자세를 줍니다. @p bHardSkinAll 이면 스킨 위치에 바로 둡니다(만든 프레임). */
@@ -140,9 +168,16 @@ namespace sw
         uint32 _iterationCount;
         PROPERTY( Category = "Simulation", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
+        PROPERTY( Category = "LOD", Tooltip = "Highest animation LOD grade of the ancestor skeletal mesh that still simulates the cloth (-1: every grade). Above it the cloth shows its rest grid" )
+        int32 _maxLOD;
+        PROPERTY( Category = "LOD", Tooltip = "Solver iterations from LOD grade 1 upward (grade 0 uses Iteration Count; past the end the last entry holds; empty: Iteration Count at every grade)", Validate = validateLOD )
+        vector<uint32> _listLODIterationCount;
 
-        vector<float3>        _listVertex; ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다)
+        vector<float3>        _listVertex; ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다). LOD 로 내린 동안은 쉬는 격자다
         PhysicsSoftBodyHandle _softBody;
-        uint8                 _bPinBoneErrorReported; ///< 설정 오류(본 없음 · 스켈레탈 메시 덮어쓰기)를 이미 냈다(본을 바꾸면 다시 낸다)
+        uint32                _appliedIterationCount;     ///< 지금 소프트 바디에 준 반복 수(천이 없으면 0)
+        uint8                 _bPinBoneErrorReported : 1; ///< 설정 오류(본 없음 · 스켈레탈 메시 덮어쓰기)를 이미 냈다(본을 바꾸면 다시 낸다)
+        uint8                 _bLODSuspended         : 1; ///< LOD 등급이 `_maxLOD` 를 넘어 천을 내렸다
+        uint8                 _reserved              : 6;
     };
 } // namespace sw

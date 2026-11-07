@@ -57,10 +57,86 @@ namespace sw
         , _vertexRadius{ 0.01f }
         , _iterationCount{ 5 }
         , _layer{}
+        , _maxLOD{ -1 }
+        , _listLODIterationCount{}
         , _listVertex{}
         , _softBody{}
+        , _appliedIterationCount{ 0 }
         , _bPinBoneErrorReported{ SW_FALSE }
+        , _bLODSuspended{ SW_FALSE }
+        , _reserved{ 0 }
     {
+    }
+
+    void ClothComponent::setLOD( int32 maxLOD, const vector<uint32>& listLODIterationCount )
+    {
+        _maxLOD                = maxLOD;
+        _listLODIterationCount = listLODIterationCount;
+    }
+
+    uint32 ClothComponent::computeLODIterationCount( uint8 lodGrade ) const
+    {
+        const uint32 count = lodGrade == 0 || _listLODIterationCount.empty() ? _iterationCount
+                                                                             : _listLODIterationCount[MathUtil::min( static_cast<size_t>( lodGrade ) - 1u, _listLODIterationCount.size() - 1u )];
+        return MathUtil::clamp( count, 1u, 32u ); // 범위 밖은 `validateLOD` 가 알린다 — 솔버는 0 반복을 받지 않는다
+    }
+
+    const SkeletalMeshComponent* ClothComponent::findSkeletalMesh() const
+    {
+        // 이 오브젝트부터 부모로 올라가며 처음 만난 스켈레탈 메시(헤어 카드 · 망토 오브젝트를 캐릭터의 자식으로 두면 그 캐릭터의 메시다).
+        const SkeletalMeshComponent* pSkeletal = nullptr;
+        for ( const GameObject* pObject = getOwner(); pObject != nullptr && pSkeletal == nullptr; pObject = pObject->getParent() )
+        {
+            pSkeletal = pObject->getComponent<SkeletalMeshComponent>();
+        }
+        return pSkeletal;
+    }
+
+    uint8 ClothComponent::readLODGrade() const
+    {
+        const SkeletalMeshComponent* pSkeletal = findSkeletalMesh();
+        return pSkeletal != nullptr ? pSkeletal->getAnimationLODState()._lodGrade : 0;
+    }
+
+    void ClothComponent::makeRestVertices( const float3& position, const quaternion& rotation, vector<float3>& outListVertex ) const
+    {
+        // 격자는 `makeSoftBodyDesc` 와 같다(윗변 가운데가 자세 자리, 아래로 −Y).
+        outListVertex.clear();
+        if ( _columnCount < 2 || _rowCount < 2 )
+            return;
+        const float4x4 pose  = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
+        const float32  stepX = _width / static_cast<float32>( _columnCount - 1 );
+        const float32  stepY = _height / static_cast<float32>( _rowCount - 1 );
+        outListVertex.reserve( static_cast<size_t>( _columnCount ) * _rowCount );
+        for ( uint32 row = 0; row < _rowCount; ++row )
+        {
+            for ( uint32 column = 0; column < _columnCount; ++column )
+            {
+                const float3 local{ static_cast<float32>( column ) * stepX - _width * 0.5f, -static_cast<float32>( row ) * stepY, 0.0f };
+                outListVertex.push_back( float3::transform( local, pose ) );
+            }
+        }
+    }
+
+    void ClothComponent::applyLODIterationCount( ScenePhysics& physics, uint8 lodGrade )
+    {
+        IPhysicsScene3D* const pScene = physics.getScene3D();
+        const uint32           count  = computeLODIterationCount( lodGrade );
+        if ( pScene == nullptr || _softBody.isValid() == false || count == _appliedIterationCount )
+            return;
+        pScene->setSoftBodyIterationCount( _softBody, count );
+        _appliedIterationCount = count;
+    }
+
+    void ClothComponent::validateLOD( ValidationContext& context ) const
+    {
+        for ( const uint32 count : _listLODIterationCount )
+        {
+            if ( count >= 1u && count <= 32u )
+                continue;
+            context.addError( string( "_listLODIterationCount has a value outside 1..32 - solver iterations must be 1 to 32" ) );
+            return;
+        }
     }
 
     void ClothComponent::setPinMode( ClothPinMode pinMode )
@@ -78,14 +154,10 @@ namespace sw
 
     bool ClothComponent::findBoneWorld( const hashed_string& boneName, float4x4& outBoneWorld ) const
     {
-        // 이 오브젝트부터 부모로 올라가며 처음 만난 스켈레탈 메시가 마지막으로 구한 모델 공간 본 행렬 × 그 컴포넌트의 월드 행렬
-        // (헤어 카드 · 망토 오브젝트를 캐릭터의 자식으로 두면 목 · 등 본을 따른다). 천을 그리는 메시는 이 오브젝트의 스켈레탈이 아닌 메시 컴포넌트다.
-        const SkeletalMeshComponent* pSkeletal = nullptr;
-        for ( const GameObject* pObject = getOwner(); pObject != nullptr && pSkeletal == nullptr; pObject = pObject->getParent() )
-        {
-            pSkeletal = pObject->getComponent<SkeletalMeshComponent>();
-        }
-        float4x4 boneModel;
+        // 조상 스켈레탈 메시가 마지막으로 구한 모델 공간 본 행렬 × 그 컴포넌트의 월드 행렬(망토 오브젝트를 캐릭터의 자식으로 두면 목 · 등 본을 따른다).
+        // 천을 그리는 메시는 이 오브젝트의 스켈레탈이 아닌 메시 컴포넌트다.
+        const SkeletalMeshComponent* pSkeletal = findSkeletalMesh();
+        float4x4                     boneModel;
         if ( pSkeletal == nullptr || pSkeletal->findBoneModelTransform( boneName, boneModel ) == false )
             return false;
         outBoneWorld = boneModel * pSkeletal->getWorldMatrix(); // 행-벡터 규격: 로컬 다음 부모
@@ -266,15 +338,28 @@ namespace sw
             releasePhysics( physics );
             return;
         }
+        // LOD: 등급이 `_maxLOD` 를 넘으면 천을 내리고 고정 자세의 쉬는 격자를 그린다. 돌아오면 아래에서 지금 자세로 새로 만든다(옛 정점에서 잇지 않는다).
+        const uint8 lodGrade = readLODGrade();
+        if ( isSimulatedAtLOD( lodGrade ) == false )
+        {
+            releasePhysics( physics );
+            _bLODSuspended = SW_TRUE;
+            makeRestVertices( position, rotation, _listVertex );
+            return;
+        }
+        _bLODSuspended      = SW_FALSE;
         const bool bSkinned = isSkinnedPin();
         if ( _softBody.isValid() == false )
         {
-            _softBody = pScene->createSoftBody( makeSoftBodyDesc( position, rotation, physics.resolveLayer( _layer ) ) );
+            _softBody              = pScene->createSoftBody( makeSoftBodyDesc( position, rotation, physics.resolveLayer( _layer ) ) );
+            _appliedIterationCount = _softBody.isValid() ? _iterationCount : 0u;
+            applyLODIterationCount( physics, lodGrade );
             // 스킨 — 만든 프레임에 뼈 자세를 한 번 바로 둔다(스킨 위치로 곧장). 다음 프레임부터는 구속이 끌어당긴다.
             if ( bSkinned && _softBody.isValid() )
                 applySkinningPose( physics, true );
             return;
         }
+        applyLODIterationCount( physics, lodGrade );
         if ( bSkinned )
         {
             applySkinningPose( physics, false );
@@ -362,6 +447,11 @@ namespace sw
     void ClothComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
         (void)alpha;
+        if ( _bLODSuspended == SW_TRUE )
+        {
+            updateRenderMesh(); // LOD 로 내린 동안의 쉬는 격자(`beginPhysicsFrame` 이 채웠다)
+            return;
+        }
         const IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr && _softBody.isValid() )
         {
@@ -405,7 +495,9 @@ namespace sw
             if ( pScene != nullptr )
                 pScene->destroySoftBody( _softBody );
         }
-        _softBody = PhysicsSoftBodyHandle{};
+        _softBody              = PhysicsSoftBodyHandle{};
+        _appliedIterationCount = 0;
+        _bLODSuspended         = SW_FALSE;
         _listVertex.clear();
     }
 

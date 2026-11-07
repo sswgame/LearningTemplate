@@ -295,6 +295,20 @@ namespace sw
         _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 
+    void JoltSoftBodySet::setIterationCount( PhysicsSoftBodyHandle softBody, uint32 iterationCount )
+    {
+        const Record* pRecord = _softBodies.get( softBody.getSlot() );
+        if ( pRecord == nullptr || iterationCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodyIterationCount", "Soft body iteration count %# is not 1 or more, or the handle is stale", iterationCount );
+            return;
+        }
+        JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), pRecord->_bodyID );
+        if ( lock.Succeeded() == false )
+            return;
+        static_cast<JPH::SoftBodyMotionProperties*>( lock.GetBody().GetMotionProperties() )->SetNumIterations( iterationCount ); // 다음 스텝부터다
+    }
+
     void JoltSoftBodySet::drawDebug( IPhysicsDebugRenderer& renderer ) const
     {
         const float4 color{ 0.3f, 0.9f, 0.9f, 1.0f };

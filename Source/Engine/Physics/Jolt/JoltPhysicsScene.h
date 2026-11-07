@@ -233,6 +233,7 @@ namespace sw
         bool                  getSoftBodyVertices( PhysicsSoftBodyHandle softBody, vector<float3>& outListPosition ) const override;
         void                  setSoftBodyPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation ) override;
         void                  setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll ) override;
+        void                  setSoftBodyIterationCount( PhysicsSoftBodyHandle softBody, uint32 iterationCount ) override;
 
         [[nodiscard]] bool applyBuoyancy( PhysicsBodyHandle body, const PhysicsBuoyancyDesc& desc, float32 deltaSeconds ) override;
 

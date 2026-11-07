@@ -42,6 +42,11 @@ namespace sw
          *          @p bHardSkinAll 이면 모든 스킨 정점을 스킨 위치에 바로 둔다(순간이동 · 처음 프레임). 수가 다르면 오류를 남기고 아무것도 하지 않는다. 자는 바디는 깨운다.
          */
         virtual void setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll ) = 0;
+        /**
+         * @brief 스텝마다 구속을 푸는 반복 수를 바꿉니다(천 LOD). 1 이상이어야 합니다 — 0 이거나 무효 핸들이면 오류를 남기고 아무것도 하지 않습니다.
+         * @details 정점 · 구속은 그대로 두고 다음 스텝부터 반복 수만 바뀐다(Jolt `SoftBodyMotionProperties::SetNumIterations`). 다시 만들지 않으므로 튀지 않는다.
+         */
+        virtual void setSoftBodyIterationCount( PhysicsSoftBodyHandle softBody, uint32 iterationCount ) = 0;
     };
 } // namespace sw
 

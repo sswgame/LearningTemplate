@@ -1298,6 +1298,11 @@ namespace sw
         _softBodies.setSkinningPose( softBody, listJointWorld, bHardSkinAll );
     }
 
+    void JoltPhysicsScene::setSoftBodyIterationCount( PhysicsSoftBodyHandle softBody, uint32 iterationCount )
+    {
+        _softBodies.setIterationCount( softBody, iterationCount );
+    }
+
 } // namespace sw
 
 namespace sw
