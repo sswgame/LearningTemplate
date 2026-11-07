@@ -1,4 +1,4 @@
-// SurfaceKindTable — 엔진 팩의 표면 종류 표가 모든 물리 재질을 덮고, 틀린 표(빈 표 · 겹친 이름 · 표에 없는 물 종류 · 수명 없는 발자국)는 로드 때 거절한다(nogpu).
+// SurfaceKindTable — 엔진 팩의 표면 종류 표가 모든 물리 재질을 덮고, 틀린 표(빈 표 · 겹친 이름 · 표에 없는 물 종류 · 틀린 발자국 도장 · 변형 격자 칸 없음)는 로드 때 거절한다(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -29,7 +29,13 @@ SW_TEST_CASE( SurfaceKindTest, ShippedTableCoversPhysicsMaterials )
     const SurfaceKindDef* pSnow = pTable->findKind( "Snow" );
     SW_REQUIRE_NOT_NULL( pSnow );
     SW_EXPECT_TRUE( pSnow->hasFootprints() );
-    SW_EXPECT_TRUE( pSnow->_footprintLifetime > 0.0f );
+    SW_EXPECT_TRUE( pSnow->_footprint._fillSpeed > 0.0f );
+    // 눈은 모래보다 깊고 느리게 메워진다(종류마다 도장 데이터 — 코드에 지형 이름이 없다).
+    const SurfaceKindDef* pSand = pTable->findKind( "Sand" );
+    SW_REQUIRE_NOT_NULL( pSand );
+    SW_EXPECT_TRUE( pSnow->_footprint._depth > pSand->_footprint._depth );
+    SW_EXPECT_TRUE( pSnow->_footprint._fillSpeed < pSand->_footprint._fillSpeed );
+    SW_EXPECT_TRUE( pTable->_deformResolution > 0 && pTable->_deformExtent > 0.0f && pTable->_deformDepthRange >= pSnow->_footprint._depth );
     SW_EXPECT_TRUE( pSnow->_moveScale < 1.0f );
 }
 
@@ -42,19 +48,24 @@ namespace
     };
 
     const BrokenSurfaceKindTable kArrBrokenSurfaceKindTable[] = {
-        {                                                                                                                                                                    R"(<SurfaceKindTable _waterKind="Water" _footprintCapacity="8"><_listKind></_listKind></SurfaceKindTable>)","Surface.KindTableEmpty"                                                                                                                                                                                                                                                                                         },
-        {                                                                      R"(<SurfaceKindTable _waterKind="Water" _footprintCapacity="8"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="water" _footstep="w"/></_listKind></SurfaceKindTable>)",
-         "Surface.KindDuplicate"                                                                                                                                                                                                                                                                                    },
-        {                                                                                                                    R"(<SurfaceKindTable _waterKind="Lake" _footprintCapacity="8"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/></_listKind></SurfaceKindTable>)", "Surface.WaterKindUnknown"},
-        {R"(<SurfaceKindTable _waterKind="Water" _footprintCapacity="8"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Snow" _footstep="snow" _footprintPrefab="engine/prefabs/surface/footprint_snow.prefab.xml"/></_listKind></SurfaceKindTable>)",
-         "Surface.FootprintLifetimeMissing"                                                                                                                                                                                                                                                                         },
-        {                                                                                                    R"(<SurfaceKindTable _waterKind="Water" _footprintCapacity="8"><_listKind><SurfaceKindDef _name="Water" _footstep="water" _moveScale="5"/></_listKind></SurfaceKindTable>)",
-         "Serialization.ValueOutOfRange"                                                                                                                                                                                                                                                                            },
+        {                                                                                                                                                                                             R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind></_listKind></SurfaceKindTable>)","Surface.KindTableEmpty"                                                                                                                                                                                                                                                                                                                                                            },
+        {                                                                                               R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="water" _footstep="w"/></_listKind></SurfaceKindTable>)",
+         "Surface.KindDuplicate"                                                                                                                                                                                                                                                                                                                                                       },
+        {                                                                                                                                             R"(<SurfaceKindTable _waterKind="Lake" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/></_listKind></SurfaceKindTable>)", "Surface.WaterKindUnknown"},
+        {                   R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Snow" _footstep="snow"><_footprint _shape="Print" _size="0.1,0.2" _depth="0.05"/></SurfaceKindDef></_listKind></SurfaceKindTable>)",
+         "Surface.StampFillMissing"                                                                                                                                                                                                                                                                                                                                                    },
+        {                                                                                                                             R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water" _moveScale="5"/></_listKind></SurfaceKindTable>)",
+         "Serialization.ValueOutOfRange"                                                                                                                                                                                                                                                                                                                                               },
+        {                                  R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Mud" _footstep="mud"><_footprint _depth="0.05" _fillSpeed="0.01"/></SurfaceKindDef></_listKind></SurfaceKindTable>)",
+         "Surface.StampSizeMissing"                                                                                                                                                                                                                                                                                                                                                    },
+        {R"(<SurfaceKindTable _waterKind="Water" _deformResolution="64" _deformExtent="8" _deformDepthRange="0.1"><_listKind><SurfaceKindDef _name="Water" _footstep="water"/><SurfaceKindDef _name="Mud" _footstep="mud"><_footprint _size="0.1,0.2" _depth="0.05" _rimHeight="0.01" _fillSpeed="0.01"/></SurfaceKindDef></_listKind></SurfaceKindTable>)",
+         "Surface.StampRimHalf"                                                                                                                                                                                                                                                                                                                                                        },
     };
 } // namespace
 
 /**
- * @brief [SurfaceKindTest] 틀린 표는 로드 시점에 오류다 — 빈 표, 겹친 이름(대소문자 무시), 표에 없는 물 종류, 수명 없는 발자국, 범위 밖 이동 계수. 실패하면 표가 비어 코드 폴백이 없다
+ * @brief [SurfaceKindTest] 틀린 표는 로드 시점에 오류다 — 빈 표, 겹친 이름(대소문자 무시), 표에 없는 물 종류, 메워지지 않는 · 크기 없는 · 테두리 반쪽 발자국 도장, 범위 밖 이동 계수.
+ *        실패하면 표가 비어 코드 폴백이 없다
  */
 SW_TEST_CASE_EACH( SurfaceKindTest, BrokenTableIsRejectedAtLoad, kArrBrokenSurfaceKindTable )
 {

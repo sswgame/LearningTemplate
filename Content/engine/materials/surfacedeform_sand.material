@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 모래 지면 — 표면 변형 층을 읽는 지면(surfacedeform.material)에 주황 격자(크기 가늠용)를 얹는다. -->
+<MaterialDef formatVersion="0" name="SurfaceDeformSand" _base="engine/materials/surfacedeform.material">
+	<_properties>
+		<item name="_color" defaultValue="1.0 0.92 0.78 1.0" />
+		<item name="_roughness" defaultValue="0.95" />
+		<item name="_albedoMap" assetPath="engine/textures/prototype/grid_orange.dds" />
+	</_properties>
+</MaterialDef>

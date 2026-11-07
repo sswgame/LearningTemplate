@@ -25,6 +25,12 @@ namespace sw
 
     bool EnvironmentUtil::findViewPosition( GameObjectManager& manager, float3& outPosition )
     {
+        float3 forward{};
+        return findView( manager, outPosition, forward );
+    }
+
+    bool EnvironmentUtil::findView( GameObjectManager& manager, float3& outPosition, float3& outForward )
+    {
         const CameraRegistry& registry = manager.getCameraRegistry();
         CameraComponent*      pCamera  = registry.selectCamera( CameraRole::Game );
         if ( pCamera == nullptr && registry.getAll().empty() == false )
@@ -32,6 +38,7 @@ namespace sw
         if ( pCamera == nullptr )
             return false;
         outPosition = pCamera->getCameraPosition();
+        outForward  = pCamera->getCameraForward();
         return true;
     }
 

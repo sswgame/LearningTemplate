@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  발걸음 → 표면 반응(Footstep 알림 → SurfaceQuery → SurfaceFootprintSystem) — 무대 maps/surfaceinteraction. Walker 는 제자리 걷기(Walking_A)라 object.place 로 옮긴다.
-  ① 돌 위(-3,0): 발걸음은 Stone 으로 세고 발자국은 없다. ② 눈 위: Snow 로 세고 양발이 발자국을 놓는다. 눈 패드의 서른두 자리를 돌며 발자국을 쌓는다.
-  ③ 반복 주행(세 바퀴 더): 놓은 수(FootprintPlaced)가 용량(default.surfacekinds.xml _footprintCapacity 96)을 넘어도 오브젝트 수(FootprintObjects)는 96 이하.
-  ④ 수명(Snow 30 초)이 지나면 살아 있는 발자국은 0. ⑤ 디딘 표면의 이동 계수: 눈 0.8(Surface.MoveScale).
-  사진 surface_footprints.ppm 은 밝은 눈 패드 위 어두운 발자국 줄을 눈으로 본다(골든 없음).
+  발걸음 → 표면 반응(Footstep 알림 → SurfaceQuery → SurfaceFootprintSystem → 표면 변형 층 SurfaceDeformSystem) — 무대 maps/surfaceinteraction. Walker 는 제자리 걷기(Walking_A)라 object.place 로 옮긴다.
+  ① 돌 위(-3,0): 발걸음은 Stone 으로 세고 발자국은 없다. ② 눈 위: Snow 로 세고 양발이 눈 종류의 발자국 도장(default.surfacekinds.xml Snow <_footprint> 깊이 0.07 m)을 찍는다.
+  눈 패드의 서른두 자리를 돌며 자국을 쌓는다. ③ 겹쳐 찍어도 더 깊어지지 않는다(꺼짐은 깊은 쪽 하나 — 눈 패드 둘레의 가장 깊은 자국이 0.07 m 를 넘지 않는다).
+  ④ 메워짐: 눈 도장은 0.003 m/s 라 23 초 남짓이면 눈 패드 둘레가 평평하다(모래 패드의 깔때기 Whirl 은 붙잡혀 있어 둘레를 눈 패드로 좁혀 본다). ⑤ 디딘 표면의 이동 계수: 눈 0.8(Surface.MoveScale).
+  사진 surface_footprints.ppm 은 밝은 눈 지면(SnowGround)이 발자국 자리마다 꺼져 그늘진 줄을 눈으로 본다(골든 없음).
   실행: App -scenario=game/empty/automation/surfacefootprint.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.surfacefootprint" fixedDelta="0.0166667" timeoutFrames="12000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -15,12 +15,15 @@
 	<WaitUntil watch="Surface.FootstepCount" key="Stone" atLeast="2" timeoutSeconds="5"/>
 	<Expect watch="Surface.LastFootstep" is="Stone"/>
 	<Expect watch="Surface.FootprintPlaced" equals="0"/>
+	<Wait frames="1"/>
 
 	<DevCommand line="object.place Walker 0 0.05 -2.4"/>
 	<WaitUntil watch="Surface.FootstepCount" key="Snow" atLeast="2" timeoutSeconds="5"/>
 	<Expect watch="Surface.GroundKind" target="Walker" is="Snow"/>
 	<Expect watch="Surface.MoveScale" target="Walker" near="0.8" tolerance="0.01"/>
-	<Expect watch="Surface.FootprintCount" atLeast="2"/>
+	<Expect watch="Surface.FootprintPlaced" atLeast="2"/>
+	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atLeast="0.05"/>
+	<Wait frames="1"/>
 	<DevCommand line="object.place Walker -1.2 0.05 -1.8"/>
 	<Wait frames="60"/>
 	<DevCommand line="object.place Walker -1.2 0.05 -1.2"/>
@@ -87,205 +90,12 @@
 	<Wait frames="60"/>
 	<Screenshot file="surface_footprints.ppm"/>
 	<Expect watch="Surface.FootprintPlaced" atLeast="40"/>
-	<Expect watch="Surface.FootprintObjects" atMost="96"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -1.2 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker -0.4 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 0.4 0.05 2.4"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 -0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 0"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 0.6"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 1.2"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 1.8"/>
-	<Wait frames="30"/>
-	<DevCommand line="object.place Walker 1.2 0.05 2.4"/>
-	<Wait frames="30"/>
-	<Expect watch="Surface.FootprintPlaced" atLeast="97"/>
-	<Expect watch="Surface.FootprintObjects" atMost="96"/>
-	<Expect watch="Surface.FootprintCount" atMost="96"/>
+	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atLeast="0.05"/>
+	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atMost="0.0705"/>
+	<Wait frames="1"/>
 
 	<DevCommand line="object.place Walker -3 0.05 0"/>
-	<WaitUntil watch="Surface.FootprintCount" equals="0" timeoutSeconds="35"/>
-	<Expect watch="Surface.FootprintObjects" atMost="96"/>
+	<WaitUntil watch="Surface.DeformDeepestNear" key="0 0 3.2" equals="0" timeoutSeconds="35"/>
+	<Expect watch="Surface.LastFootstep" is="Stone"/>
 	<Pass/>
 </Scenario>

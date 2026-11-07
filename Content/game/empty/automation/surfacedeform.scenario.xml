@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  표면 변형 층(SurfaceDeformSystem) — 무대 maps/surfaceinteraction 의 모래 지면(SandGround, surfacedeform_sand.material).
+  ① 깔때기 Whirl(SurfaceStampComponent Hold, Funnel 지름 1.6 m · 깊이 0.14 m · 홈 셋 · 1.5 rad/s): 붙잡힌 도장 하나가 있고 그 둘레가 0.08 m 넘게 꺼져 있다.
+  ② 끌린 자국 Dragger(Trail, 너비 0.25 m · 깊이 0.05 m · 0.004 m/s): object.place 로 0.2 m 씩 x 6.6 → 9.4(z -2.2), 다시 z -2.2 → -0.6(x 9.4)으로 끌면 두 갈래 띠가 0.04 m 넘게 꺼지고
+     띠 사이(7.6, -1.4)는 평평하다. ③ 5 초 뒤: 띠는 0.02 m 메워져 0.035 m 아래로 얕아지고(0.004 m/s), 붙잡힌 깔때기는 그대로 깊다.
+  사진 surface_deform.ppm 은 주황 모래 지면에 ㄱ 자 띠(테두리가 솟아 밝은 가장자리)와 나선 홈 셋의 깔때기를 눈으로 본다(골든 없음). 충돌 · 내비는 바뀌지 않는다.
+  실행: App -scenario=game/empty/automation/surfacedeform.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.surfacedeform" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceinteraction.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Expect watch="Surface.DeformHeld" equals="1"/>
+	<Expect watch="Surface.DeformDeepestNear" key="8.6 1.6 0.9" atLeast="0.08"/>
+	<Wait frames="1"/>
+
+	<DevCommand line="object.place Dragger 6.8 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 7.0 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 7.2 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 7.4 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 7.6 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 7.8 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 8.0 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 8.2 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 8.4 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 8.6 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 8.8 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.0 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.2 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -2.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -2.0"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -1.8"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -1.6"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -1.4"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -1.2"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -1.0"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -0.8"/>
+	<Wait frames="2"/>
+	<DevCommand line="object.place Dragger 9.4 0 -0.6"/>
+	<Wait frames="4"/>
+	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atLeast="0.04"/>
+	<Expect watch="Surface.DeformDepth" key="9.4 -1.2" atLeast="0.04"/>
+	<Expect watch="Surface.DeformDepth" key="7.6 -1.4" near="0" tolerance="0.001"/>
+	<Expect watch="Surface.DeformStamps" atLeast="20"/>
+	<Screenshot file="surface_deform.ppm"/>
+
+	<Wait frames="300"/>
+	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atMost="0.035"/>
+	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atLeast="0.02"/>
+	<Expect watch="Surface.DeformHeld" equals="1"/>
+	<Expect watch="Surface.DeformDeepestNear" key="8.6 1.6 0.9" atLeast="0.08"/>
+	<Pass/>
+</Scenario>

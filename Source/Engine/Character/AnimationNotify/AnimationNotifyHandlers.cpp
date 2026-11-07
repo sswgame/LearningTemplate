@@ -123,7 +123,7 @@ namespace sw
             /**
              * @class FootstepHandler
              * @brief 발 소켓 아래를 공통 표면 질의(`SurfaceQuery`)로 읽어 소리 경로의 `{surface}` 를 그 종류의 발소리 분류로 바꾸고, 씬의 발걸음 반응
-             *        (`SurfaceFootprintSystem` — 종류마다 세기 · 눈 발자국)에 알립니다. 높이장 · 충돌은 고치지 않습니다.
+             *        (`SurfaceFootprintSystem` — 종류마다 세기 · 그 종류의 발자국 도장)에 알립니다. 높이장 · 충돌은 고치지 않습니다.
              */
             class FootstepHandler final : public IAnimationNotifyHandler
             {
@@ -156,7 +156,7 @@ namespace sw
                     // 발자국 방향은 몸의 앞(루트의 +Z)이다 — 발 뼈의 축은 리그마다 다르다.
                     float4x4 root;
                     (void)context._component.findSocketWorldTransform( hashed_string{}, root ); // 빈 이름은 루트 변환을 담고 false 다(선언 설명)
-                    pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( *pTable, *sample._pKind, sample._point, YawUtil::fromWorld( root ) );
+                    pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( *sample._pKind, sample._point, YawUtil::fromWorld( root ) );
                     record( context, sample._pKind->_name, sample._point, sample._objectID, AnimationNotifyPhase::Instant );
                 }
 

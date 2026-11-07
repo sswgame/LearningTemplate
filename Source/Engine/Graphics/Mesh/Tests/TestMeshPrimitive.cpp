@@ -75,7 +75,7 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
  */
 SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
 {
-    for ( const utf8* pMeshID : { "Cube", "Sphere", "Cylinder", "Capsule", "Plane", "Quad", "Cone" } )
+    for ( const utf8* pMeshID : { "Cube", "Sphere", "Cylinder", "Capsule", "Plane", "PlaneDense", "Quad", "Cone" } )
     {
         const sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::acquirePrimitive( pMeshID );
         SW_REQUIRE_NOT_NULL( mesh );
@@ -337,7 +337,7 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
  */
 SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked )
 {
-    const utf8* const arrID[] = { "Cube", "Quad", "Sprite", "Plane", "Sphere", "Cylinder", "Capsule", "Cone" };
+    const utf8* const arrID[] = { "Cube", "Quad", "Sprite", "Plane", "PlaneDense", "Sphere", "Cylinder", "Capsule", "Cone" };
     for ( const utf8* pID : arrID )
     {
         const sw::shared_ptr<sw::Mesh> acquired = sw::MeshUtil::acquirePrimitive( pID );
@@ -362,6 +362,33 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
     SW_REQUIRE_TRUE( listVertex.size() >= 12u );
     SW_EXPECT_TRUE( listVertex[0]._arrColor[0] != listVertex[6]._arrColor[0] || listVertex[0]._arrColor[1] != listVertex[6]._arrColor[1] ||
                     listVertex[0]._arrColor[2] != listVertex[6]._arrColor[2] );
+}
+
+/**
+ * @brief [MeshPrimitiveTest] 촘촘한 바닥 평면(PlaneDense)은 평면과 같은 한 변 1 의 +Y 면이고, 정점 간격이 1 / kDensePlaneSegmentCount 다
+ * @details 표면 변형 층(`surface_deform.hlsl`)은 정점을 내려 자국을 그린다 — 정점이 성기면 발자국이 칸 사이로 빠져 보이지 않는다.
+ */
+SW_TEST_CASE( MeshPrimitiveTest, DensePlaneIsAFinelySplitFloor )
+{
+    const sw::shared_ptr<sw::Mesh> dense = sw::MeshUtil::createPrimitive( "PlaneDense" );
+    SW_REQUIRE_NOT_NULL( dense.get() );
+    const float32 step    = 1.0f / static_cast<float32>( sw::MeshUtil::kDensePlaneSegmentCount );
+    float32       minX    = 1.0f;
+    float32       maxX    = -1.0f;
+    uint32        notUp   = 0;
+    uint32        offGrid = 0;
+    for ( const sw::RHIVertex& vertex : dense->getVertices() )
+    {
+        minX = sw::MathUtil::min( minX, vertex._arrPosition[0] );
+        maxX = sw::MathUtil::max( maxX, vertex._arrPosition[0] );
+        notUp += vertex._arrNormal[1] < 0.999f || sw::MathUtil::abs( vertex._arrPosition[1] ) > 1e-6f ? 1u : 0u;
+        const float32 cells = ( vertex._arrPosition[0] + 0.5f ) / step;
+        offGrid += sw::MathUtil::abs( cells - sw::MathUtil::round( cells ) ) > 1e-3f ? 1u : 0u;
+    }
+    SW_EXPECT_NEAR( -0.5f, minX, 1e-5f );
+    SW_EXPECT_NEAR( 0.5f, maxX, 1e-5f );
+    SW_EXPECT_EQUAL( 0u, notUp );
+    SW_EXPECT_EQUAL( 0u, offGrid );
 }
 
 /**

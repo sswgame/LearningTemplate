@@ -360,6 +360,8 @@ namespace sw
             pMesh = createSpriteQuad();
         else if ( canonical == "Plane" )
             pMesh = createPlane();
+        else if ( canonical == "PlaneDense" )
+            pMesh = createPlane( kDensePlaneSegmentCount );
         else if ( canonical == "Sphere" )
             pMesh = createSphere();
         else if ( canonical == "Cylinder" )

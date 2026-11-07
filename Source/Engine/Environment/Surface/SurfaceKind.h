@@ -1,6 +1,6 @@
 /**
  * @file SurfaceKind.h
- * @brief 표면 종류 표입니다. 바닥이 무엇인지(눈 · 모래 · 돌 · 물)와 그 표면이 캐릭터에게 하는 일(발소리 분류 · 이동 계수 · 발자국)을 한 곳에 둡니다.
+ * @brief 표면 종류 표입니다. 바닥이 무엇인지(눈 · 모래 · 돌 · 물)와 그 표면이 캐릭터에게 하는 일(발소리 분류 · 이동 계수 · 발자국 도장)을 한 곳에 둡니다.
  * @details 표면 종류의 이름은 물리 재질 이름과 같다(`physicssettings.xml` 의 `_listMaterial`) — 콜라이더는 재질을, 지형 레이어는 그 레이어가 뜻하는 재질
  *          (`TerrainLayer::_physicsMaterial`)을, 물은 표의 `_waterKind` 를 낸다(`SurfaceQuery`). 언리얼 `UPhysicalMaterial::SurfaceType` · 랜드스케이프 레이어의
  *          물리 재질과 같은 자리다 — 형식(콜라이더 · 높이장 · 물)마다 데이터를 합치지 않고, 각 형식이 재질 이름 하나를 내는 어댑터가 된다.
@@ -9,12 +9,16 @@
  *
  *          XML 예(`ReflectedXMLFile`):
  *          @code
- *          <SurfaceKindTable _waterKind="Water" _footprintCapacity="128">
+ *          <SurfaceKindTable _waterKind="Water" _deformResolution="512" _deformExtent="16" _deformDepthRange="0.15">
  *            <_listKind>
- *              <SurfaceKindDef _name="Snow" _footstep="snow" _moveScale="0.85" _footprintPrefab="engine/environment/footprint_snow.prefab.xml" _footprintLifetime="40"/>
+ *              <SurfaceKindDef _name="Snow" _footstep="snow" _moveScale="0.85">
+ *                <_footprint _shape="Print" _size="0.14,0.28" _depth="0.06" _fillSpeed="0.0025"/>
+ *              </SurfaceKindDef>
  *            </_listKind>
  *          </SurfaceKindTable>
  *          @endcode
+ *          발자국은 표면 변형 층(`SurfaceDeformSystem`)의 도장이다 — 눈 전용 오브젝트가 없고, 어느 종류든 `_footprint` 를 적으면 자국이 남는다.
+ *          변형 층의 격자 크기 · 창 너비 · 깊이 범위도 이 표가 정한다(지면 머티리얼이 읽는 텍스처 하나).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -25,8 +29,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Environment/Surface/SurfaceStamp.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -42,13 +46,11 @@ namespace sw
         hashed_string _footstep{};
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Multiplier on the requested walk speed while standing on this surface (not the physics friction; resistances take the smallest)" )
         float32 _moveScale{ 1.0f };
-        PROPERTY( Tooltip = "Prefab placed where a foot lands (empty: this surface keeps no footprints)" )
-        DataPath _footprintPrefab;
-        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds a footprint stays before it is taken back (game time)" )
-        float32 _footprintLifetime{ 0.0f };
+        PROPERTY( Tooltip = "Stamp a foot leaves on the surface deform layer (no depth and no rim: this surface keeps no footprints)" )
+        SurfaceStampDef _footprint;
 
         /** @brief 발자국을 남기는 표면인지입니다. */
-        bool hasFootprints() const { return _footprintPrefab.isSet(); }
+        bool hasFootprints() const { return _footprint.isSet(); }
     };
 } // namespace sw
 
@@ -57,7 +59,8 @@ namespace sw
     /**
      * @class SurfaceKindTable
      * @brief 표면 종류 표입니다. 엔진 기본 에셋 표의 `_surfaceKinds` 경로 하나를 공유 캐시로 읽습니다(`findDefault`).
-     * @details 읽을 때 모르는 칸 · 범위 밖 값은 `ReflectedXMLFile` 이, 빈 표 · 이름 없음 · 겹친 이름 · 표에 없는 물 종류 · 수명 없는 발자국은 `finishLoad` 가 오류로 낸다.
+     * @details 읽을 때 모르는 칸 · 범위 밖 값은 `ReflectedXMLFile` 이, 빈 표 · 이름 없음 · 겹친 이름 · 표에 없는 물 종류 · 틀린 발자국 도장(`SurfaceStampDef::validate`)은
+     *          `finishLoad` 가 오류로 낸다.
      */
     REFLECT()
     struct SW_API SurfaceKindTable
@@ -65,13 +68,14 @@ namespace sw
         REFLECT_BODY();
         friend struct AssetTypeLoader;
 
-        /** @brief 발자국 용량의 상한입니다(씬마다 남는 발자국 수 — 고정 용량 링). */
-        static constexpr uint32 kMaxFootprintCapacity = 4096;
-
         PROPERTY( Required, Tooltip = "Surface kind a foot reports when it stands in water deeper than zero" )
         hashed_string _waterKind{};
-        PROPERTY( Min = 1, Max = kMaxFootprintCapacity, Tooltip = "Footprints a scene keeps at once; the oldest is reused when full" )
-        uint32 _footprintCapacity{ 1 };
+        PROPERTY( Required, Min = 16, Max = 2048, Tooltip = "Texels along each side of the surface deform layer (one texture the ground materials read)" )
+        uint32 _deformResolution{ 0 };
+        PROPERTY( Required, Min = 1.0, Units = m, Tooltip = "Side of the square window the surface deform layer covers ahead of the camera" )
+        float32 _deformExtent{ 0.0f };
+        PROPERTY( Required, Min = 0.01, Units = m, Tooltip = "Deepest sink and highest rim the deform texture can hold; deeper stamps clamp to it" )
+        float32 _deformDepthRange{ 0.0f };
         PROPERTY( Tooltip = "Surface kinds; one per physics material" )
         vector<SurfaceKindDef> _listKind;
 

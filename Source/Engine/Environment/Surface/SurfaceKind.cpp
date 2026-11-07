@@ -32,7 +32,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Surface.KindTableEmpty", "%#: no surface kinds in <_listKind>", path );
             bOk = false;
         }
-        // 칸 · 범위(이동 계수 0..1, 수명 >= 0, 용량 1..4096)는 PROPERTY 가 정본이고 `loadDesc` 가 본다. 여기서는 칸 사이의 규칙만 본다.
+        // 칸 · 범위(이동 계수 0..1, 도장 칸 >= 0, 변형 격자 크기)는 PROPERTY 가 정본이고 `loadDesc` 가 본다. 여기서는 칸 사이의 규칙만 본다.
         for ( size_t kindIndex = 0; kindIndex < _listKind.size(); ++kindIndex )
         {
             const SurfaceKindDef& kind = _listKind[kindIndex];
@@ -44,12 +44,8 @@ namespace sw
                     bOk = false;
                 }
             }
-            // 발자국을 남기는데 수명이 0 이면 놓자마자 거둔다 — 빠뜨린 칸이다.
-            if ( kind.hasFootprints() && kind._footprintLifetime <= 0.0f )
-            {
-                SW_LOG_ERROR_ID( "Surface.FootprintLifetimeMissing", "%#: surface kind '%#' places footprints but has no _footprintLifetime", path, kind._name.c_str() );
+            if ( kind._footprint.validate( path, kind._name.view() ) == false )
                 bOk = false;
-            }
         }
         if ( bOk && findKind( _waterKind ) == nullptr )
         {

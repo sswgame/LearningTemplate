@@ -60,6 +60,8 @@ namespace sw
          * @note 면은 로컬 `y = 0` 이고 노멀은 +Y 입니다. 노멀은 정점이 가지고 있습니다.
          */
         static shared_ptr<Mesh> createPlane( uint32 segmentCount = 8 );
+        /** @brief 내장 도형 "PlaneDense" 의 분할 수입니다 — 표면 변형 층(발자국 · 바퀴 자국)을 정점으로 내리는 지면이라 한 변 4 m 에서 칸이 3 cm 쯤이다. */
+        static constexpr uint32 kDensePlaneSegmentCount = 128;
         /**
          * @brief 원점 중심 UV 구입니다(지름 1).
          * @param stackCount 위아래 분할 수(최소 2), @param sliceCount 둘레 분할 수(최소 3).
@@ -82,7 +84,7 @@ namespace sw
 
         /**
          * @brief 프리미티브 id 로 내장 도형을 새로 만듭니다.
-         * @details 비었거나 "Cube" 면 큐브, "Quad" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane" 면 바닥 평면,
+         * @details 비었거나 "Cube" 면 큐브, "Quad" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane" 면 바닥 평면, "PlaneDense" 면 촘촘한 바닥 평면(`kDensePlaneSegmentCount`),
          *          "Sphere", "Cylinder", "Capsule", "Cone" 은 각각의 곡면 도형, "GrassClump" 는 풀 한 포기입니다. 철자 그대로만 받고(별칭 · 대소문자 무시 없음) 모르면 nullptr 입니다.
          *          씬 XML 의 `_meshID` 와 벤치의 도형 섞기가 같은 이름을 씁니다. 정점 색은 @p vertexColor 입니다(기본 흰색이며 게임이 쓰는 색입니다).
          */

@@ -2,7 +2,9 @@
 	<!-- 표면 상호작용 무대(automation/surface*.scenario.xml) — 왼쪽부터 돌(지붕 반쪽) · 눈 · 물웅덩이(얕은 곳 0.3 m · 깊은 곳 1.5 m) · 모래 함몰 구역.
 	     걷는 해골(Walker)은 제자리 걷기(Walking_A, 발 알림 FootL · FootR)라 시나리오가 object.place 로 자리를 옮긴다.
 	     표면 질의(SurfaceQuery)가 패드의 물리 재질 · 물 깊이로 종류를 고르고, 눈은 발자국(SurfaceFootprintSystem)을, 날씨 · 물은 젖음 · 씻김(SurfaceExposureComponent)을,
-	     모래 구역은 함몰 · 감속 · 탈출(SinkingSandZoneComponent)을 낸다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent). -->
+	     모래 구역은 함몰 · 감속 · 탈출(SinkingSandZoneComponent)을 낸다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent).
+	     표면 변형 층(SurfaceDeformSystem): 눈 · 모래 패드 위의 촘촘한 지면(SnowGround · SandGround — PlaneDense + surfacedeform_*.material + SurfaceDeformMeshComponent)이
+	     발자국 · 끌린 자국(Dragger — SurfaceStampComponent Trail) · 깔때기(Whirl — Hold, 홈이 돈다)로 꺼진다. 패드 상자는 그 아래로 내려 두었다(꺼진 지면이 상자 윗면에 가리지 않게). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -55,7 +57,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,-0.04,0" _localRotation="0,0,0" _localScale="4,0.42,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" _blendMode="Opaque" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -100,7 +102,7 @@
 							</PhysicsShapeDesc3D>
 						</_listShape>
 					</RigidBodyComponent>
-					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,-0.08,0" _localRotation="0,0,0" _localScale="4,0.34,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" _blendMode="Opaque" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -144,6 +146,42 @@
 					<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
 					<GroundSurfaceComponent _probeLength="0.6" />
 					<SurfaceExposureComponent _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="SnowGround">
+			<GameObject _schemaVersion="0" _name="SnowGround" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_snow.material" _boundsRadius="4" _blendMode="Opaque" />
+					<SurfaceDeformMeshComponent />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="SandGround">
+			<GameObject _schemaVersion="0" _name="SandGround" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="4,1,6" _attachOwner="None" _attachComponent="None" _meshID="PlaneDense" _materialPath="engine/materials/surfacedeform_sand.material" _boundsRadius="4" _blendMode="Opaque" />
+					<SurfaceDeformMeshComponent />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Whirl">
+			<GameObject _schemaVersion="0" _name="Whirl" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="8.6,0,1.6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SurfaceStampComponent _mode="Hold" _trailStep="0.1" _trailBreak="2">
+						<_stamp _shape="Funnel" _size="1.6,0" _depth="0.14" _rimHeight="0.03" _rimWidth="0.2" _fillSpeed="0.05" _spinSpeed="1.5" _armCount="3" />
+					</SurfaceStampComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Dragger">
+			<GameObject _schemaVersion="0" _name="Dragger" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="6.6,0,-2.2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SurfaceStampComponent _mode="Trail" _trailStep="0.1" _trailBreak="1">
+						<_stamp _shape="Trail" _size="0.25,0.25" _depth="0.05" _rimHeight="0.015" _rimWidth="0.06" _fillSpeed="0.004" />
+					</SurfaceStampComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
