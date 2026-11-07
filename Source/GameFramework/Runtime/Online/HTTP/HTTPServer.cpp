@@ -88,7 +88,7 @@ namespace sw
             const auto        peerIt = _mapPeer.find( ready._handle.packed() );
             if ( peerIt == _mapPeer.end() )
                 continue; // 그새 끊겼다
-            const bool bWritten = peerIt->second->_link.writePlain( *_transport.get(), bytes.data(), bytes.size() );
+            const bool bWritten = peerIt->second->_link->writePlain( *_transport.get(), bytes.data(), bytes.size() );
             _transport->close( ready._handle, bWritten ? StreamCloseMode::Graceful : StreamCloseMode::Abort );
         }
     }
@@ -105,12 +105,12 @@ namespace sw
             return;
         ScopedLock<mutex> lock{ _mutex };
         unique_ptr<Peer>  peer = make_unique<Peer>();
-        if ( peer->_link.initialize( _settings->_pTLSContext ) == false )
+        peer->_link            = HTTPLink::open( handle, _settings->_pTLSContext );
+        if ( peer->_link == nullptr )
         {
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }
-        peer->_link.setHandle( handle );
         peer->_parser.reset( HTTPMessageKind::Request, _settings->_maxRequestBodyBytes );
         _mapPeer[handle.packed()] = std::move( peer );
     }
@@ -123,7 +123,7 @@ namespace sw
             return;
         Peer& peer = *peerIt->second;
         peer._plainBytes.clear();
-        if ( peer._link.readReceived( *_transport.get(), pData, size, peer._plainBytes ) == false )
+        if ( peer._link->readReceived( *_transport.get(), pData, size, peer._plainBytes ) == false )
         {
             _transport->close( handle, StreamCloseMode::Abort );
             return;

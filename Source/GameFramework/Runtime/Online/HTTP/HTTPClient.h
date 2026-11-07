@@ -80,7 +80,8 @@ namespace sw
 
         struct Call
         {
-            HTTPLink              _link{};
+            unique_ptr<HTTPLink>  _link{};        ///< 연결을 맺은 뒤에 연다(`connectLocked`). 그 전에는 비어 있다
+            ITLSContext*          _pTLSContext{}; ///< 링크를 열 때 쓸 TLS 맥락(평문이면 nullptr)
             HTTPMessageParser     _parser{};
             vector<uint8>         _requestBytes{};
             vector<uint8>         _plainBytes{};

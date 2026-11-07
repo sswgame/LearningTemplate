@@ -7,22 +7,27 @@
 
 namespace sw
 {
-    HTTPLink::HTTPLink()
+    HTTPLink::HTTPLink( StreamConnectionHandle handle, unique_ptr<ITLSSession> tlsSession )
         : _cipherBytes{}
-        , _tlsSession{}
-        , _handle{}
+        , _tlsSession{ std::move( tlsSession ) }
+        , _handle{ handle }
     {
     }
 
     HTTPLink::~HTTPLink() = default;
 
-    bool HTTPLink::initialize( ITLSContext* pTLSContext )
+    unique_ptr<HTTPLink> HTTPLink::open( StreamConnectionHandle handle, ITLSContext* pTLSContext )
     {
-        _tlsSession.reset();
-        if ( pTLSContext == nullptr )
-            return true;
-        _tlsSession = pTLSContext->createSession();
-        return _tlsSession != nullptr;
+        if ( handle.isValid() == false )
+            return nullptr;
+        unique_ptr<ITLSSession> tlsSession;
+        if ( pTLSContext != nullptr )
+        {
+            tlsSession = pTLSContext->createSession();
+            if ( tlsSession == nullptr )
+                return nullptr;
+        }
+        return make_unique<HTTPLink>( handle, std::move( tlsSession ) );
     }
 
     bool HTTPLink::writePlain( IStreamTransport& transport, const uint8* pData, size_t size )

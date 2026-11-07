@@ -114,11 +114,7 @@ namespace sw
         call->_deadline       = _clock.nowMilliseconds() + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
         call->_parser.reset( HTTPMessageKind::Response, _settings->_maxResponseBodyBytes );
         HTTPClientRequest::write( request, url, call->_requestBytes );
-        if ( call->_link.initialize( pTLSContext ) == false )
-        {
-            failImmediately( requestID, "could not create a TLS session" );
-            return requestID;
-        }
+        call->_pTLSContext = pTLSContext;
         if ( NetAddress::parse( url._host, url._port, call->_address ) )
         {
             connectLocked( std::move( call ) );
@@ -144,7 +140,13 @@ namespace sw
             finishLocked( *call, "could not connect" );
             return;
         }
-        call->_link.setHandle( handle );
+        call->_link = HTTPLink::open( handle, call->_pTLSContext );
+        if ( call->_link == nullptr )
+        {
+            _transport->close( handle, StreamCloseMode::Abort );
+            finishLocked( *call, "could not create a TLS session" );
+            return;
+        }
         _mapCall[handle.packed()] = std::move( call );
     }
 
@@ -258,7 +260,7 @@ namespace sw
             return;
         Call& call    = *callIt->second;
         call._bOpened = SW_TRUE;
-        if ( call._link.writePlain( *_transport.get(), call._requestBytes.data(), call._requestBytes.size() ) == false )
+        if ( call._link->writePlain( *_transport.get(), call._requestBytes.data(), call._requestBytes.size() ) == false )
         {
             finishLocked( call, "could not send the request" );
             _transport->close( handle, StreamCloseMode::Abort );
@@ -274,9 +276,9 @@ namespace sw
             return;
         Call& call = *callIt->second;
         call._plainBytes.clear();
-        if ( call._link.readReceived( *_transport.get(), pData, size, call._plainBytes ) == false )
+        if ( call._link->readReceived( *_transport.get(), pData, size, call._plainBytes ) == false )
         {
-            finishLocked( call, call._link.getFailureText() );
+            finishLocked( call, call._link->getFailureText() );
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }

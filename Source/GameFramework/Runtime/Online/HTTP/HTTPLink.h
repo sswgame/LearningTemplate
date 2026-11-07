@@ -2,7 +2,9 @@
  * @file HTTPLink.h
  * @brief HTTP 연결 하나의 바이트 경로입니다. 스트림 핸들과 선택적 TLS 세션으로 이루어집니다.
  *        평문을 네트워크로 보내고(TLS 면 세션을 거쳐) 받은 바이트를 평문으로 복호화합니다. 클라이언트와 서버가 같이 씁니다.
- * @details 스레드 안전하지 않다. 주인(`HTTPClient`, `HTTPServer`)이 잠금을 잡고 부른다.
+ * @details 스레드 안전하지 않다. 주인(`HTTPClient`, `HTTP2Client`, `HTTPServer`)이 잠금을 잡고 부른다.
+ *          링크는 연결 핸들을 받아야 생긴다(`open`). 핸들을 나중에 넣던 모양(`setHandle`)은 빠뜨려도 컴파일되어 HTTP/2 전송이 모두 졌다 —
+ *          주인은 연결 전에는 링크 없이(`unique_ptr` 빈 값) TLS 맥락만 들고, 연결을 맺거나 받은 자리에서 링크를 연다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -26,15 +28,18 @@ namespace sw
     class SW_GF_API HTTPLink
     {
     public:
-        HTTPLink();
+        /** @brief @p tlsSession 이 비면 평문 링크입니다. 보통은 `open` 으로 만든다. */
+        HTTPLink( StreamConnectionHandle handle, unique_ptr<ITLSSession> tlsSession );
         ~HTTPLink();
 
         HTTPLink( const HTTPLink& )            = delete;
         HTTPLink& operator=( const HTTPLink& ) = delete;
 
-        /** @brief @p pTLSContext 가 있으면 세션을 만든다(실패하면 false). 핸들은 연결을 맺거나 받은 뒤 `setHandle` 로 넣는다. */
-        [[nodiscard]] bool initialize( ITLSContext* pTLSContext );
-        void               setHandle( StreamConnectionHandle handle ) { _handle = handle; }
+        /**
+         * @brief 맺거나 받은 연결 @p handle 의 링크를 엽니다. @p pTLSContext 가 있으면 TLS 세션을 만들고, 만들지 못하면 nullptr 입니다.
+         * @details 연결이 없으면 링크도 없다 — 핸들이 무효면 nullptr 입니다.
+         */
+        [[nodiscard]] static unique_ptr<HTTPLink> open( StreamConnectionHandle handle, ITLSContext* pTLSContext );
         /** @brief 평문을 연결에 싣습니다(TLS 핸드셰이크 전이면 세션이 모았다가 보낸다). */
         [[nodiscard]] bool writePlain( IStreamTransport& transport, const uint8* pData, size_t size );
         /** @brief 받은 바이트를 평문으로 복호화해 @p outPlainBytes 뒤에 붙입니다. TLS 실패면 false. */
@@ -54,8 +59,8 @@ namespace sw
         [[nodiscard]] bool flushCiphertext( IStreamTransport& transport );
 
     private:
-        vector<uint8>           _cipherBytes;
-        unique_ptr<ITLSSession> _tlsSession;
-        StreamConnectionHandle  _handle;
+        vector<uint8>                _cipherBytes;
+        unique_ptr<ITLSSession>      _tlsSession;
+        const StreamConnectionHandle _handle;
     };
 } // namespace sw

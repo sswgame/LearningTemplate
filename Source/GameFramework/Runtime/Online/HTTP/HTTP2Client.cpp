@@ -142,16 +142,15 @@ namespace sw
         if ( pSession->_state == SessionState::Ready && sendWaitingLocked( *pSession ) == false )
         {
             failSessionLocked( *pSession, "could not send the request" );
-            _transport->close( pSession->_handle, StreamCloseMode::Abort );
+            _transport->close( pSession->getHandle(), StreamCloseMode::Abort );
         }
         return requestID;
     }
 
     HTTP2Client::Session* HTTP2Client::createSessionLocked( const HTTPAddress& url, ITLSContext* pTLSContext, string_view key )
     {
-        unique_ptr<Session> session = make_unique<Session>();
-        if ( session->_link.initialize( pTLSContext ) == false )
-            return nullptr;
+        unique_ptr<Session> session      = make_unique<Session>();
+        session->_pTLSContext            = pTLSContext;
         session->_sessionID              = _sessionIDAllocator.allocate();
         session->_key                    = string( key );
         session->_host                   = url._host;
@@ -184,8 +183,12 @@ namespace sw
         const StreamConnectionHandle handle = _transport->connect( session._address );
         if ( handle.isValid() == false )
             return false;
-        session._handle = handle;
-        session._link.setHandle( handle );
+        session._link = HTTPLink::open( handle, session._pTLSContext );
+        if ( session._link == nullptr )
+        {
+            _transport->close( handle, StreamCloseMode::Abort ); // TLS 세션을 만들지 못했다
+            return false;
+        }
         session._state                       = SessionState::Connecting;
         _mapHandleToSession[handle.packed()] = session._sessionID;
         return true;
@@ -247,7 +250,7 @@ namespace sw
 
     bool HTTP2Client::establishLocked( Session& session )
     {
-        if ( session._link.getNegotiatedProtocol() != kALPNProtocol )
+        if ( session._link->getNegotiatedProtocol() != kALPNProtocol )
         {
             failSessionLocked( session, "server did not negotiate h2" );
             return false;
@@ -279,7 +282,7 @@ namespace sw
     {
         bool bWritten = true;
         if ( session._outBytes.empty() == false )
-            bWritten = session._link.writePlain( *_transport.get(), session._outBytes.data(), session._outBytes.size() );
+            bWritten = session._link->writePlain( *_transport.get(), session._outBytes.data(), session._outBytes.size() );
         session._outBytes.clear();
         collectLocked( session );
         return bWritten;
@@ -321,8 +324,8 @@ namespace sw
         const auto     keyIt   = _mapKeyToSession.find( session._key );
         if ( keyIt != _mapKeyToSession.end() && keyIt->second == sessionID )
             _mapKeyToSession.erase( keyIt );
-        if ( session._handle.isValid() )
-            _mapHandleToSession.erase( session._handle.packed() );
+        if ( session.getHandle().isValid() )
+            _mapHandleToSession.erase( session.getHandle().packed() );
         _mapSession.erase( sessionIt );
     }
 
@@ -386,7 +389,7 @@ namespace sw
                 if ( session->_connection != nullptr && pumpLocked( *session ) == false )
                 {
                     failSessionLocked( *session, "could not send the request" );
-                    listClose.push_back( session->_handle );
+                    listClose.push_back( session->getHandle() );
                 }
             }
         }
@@ -435,7 +438,7 @@ namespace sw
         if ( pSession == nullptr )
             return;
         pSession->_state = SessionState::Handshaking;
-        if ( pSession->_link.flushHandshake( *_transport.get() ) == false )
+        if ( pSession->_link->flushHandshake( *_transport.get() ) == false )
         {
             failSessionLocked( *pSession, "could not start the TLS handshake" );
             _transport->close( handle, StreamCloseMode::Abort );
@@ -450,13 +453,13 @@ namespace sw
             return;
         Session& session = *pSession;
         session._plainBytes.clear();
-        if ( session._link.readReceived( *_transport.get(), pData, size, session._plainBytes ) == false )
+        if ( session._link->readReceived( *_transport.get(), pData, size, session._plainBytes ) == false )
         {
-            failSessionLocked( session, session._link.getFailureText() );
+            failSessionLocked( session, session._link->getFailureText() );
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }
-        const bool bHandshakeDone = session._state == SessionState::Handshaking && session._link.isEstablished();
+        const bool bHandshakeDone = session._state == SessionState::Handshaking && session._link->isEstablished();
         if ( bHandshakeDone && establishLocked( session ) == false )
         {
             _transport->close( handle, StreamCloseMode::Abort );

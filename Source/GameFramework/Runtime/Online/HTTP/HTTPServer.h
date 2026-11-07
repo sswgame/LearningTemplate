@@ -73,10 +73,10 @@ namespace sw
     private:
         struct Peer
         {
-            HTTPLink          _link{};
-            HTTPMessageParser _parser{};
-            vector<uint8>     _plainBytes{};
-            uint8             _bComplete{ SW_FALSE };
+            unique_ptr<HTTPLink> _link{}; ///< 연결을 받은 자리에서 연다(`onStreamOpened`)
+            HTTPMessageParser    _parser{};
+            vector<uint8>        _plainBytes{};
+            uint8                _bComplete{ SW_FALSE };
         };
 
         struct ReadyRequest

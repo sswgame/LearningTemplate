@@ -100,7 +100,8 @@ namespace sw
         /** @brief 호스트 · 포트 하나의 연결입니다. */
         struct Session
         {
-            HTTPLink                                     _link{};
+            unique_ptr<HTTPLink>                         _link{};        ///< 연결을 맺은 뒤에 연다(`connectSessionLocked`). 연결 핸들은 링크만 든다
+            ITLSContext*                                 _pTLSContext{}; ///< 링크를 열 때 쓸 TLS 맥락
             unique_ptr<HTTP2Connection>                  _connection{};
             vector<Pending>                              _listWaiting{}; ///< 연결이 설 때까지 기다리는 요청
             unordered_map<uint64, MonotonicMilliseconds> _mapDeadline{}; ///< 끝나지 않은 요청(기다리는 것 + 날아가는 것)의 시한
@@ -109,11 +110,13 @@ namespace sw
             string                                       _key{};
             string                                       _host{};
             NetAddress                                   _address{};
-            StreamConnectionHandle                       _handle{};
             uint64                                       _sessionID{ 0 };
             SessionState                                 _state{ SessionState::Resolving };
             ResolveState                                 _resolveState{ ResolveState::Pending };
             uint8                                        _bAccepting{ SW_TRUE }; ///< 새 요청을 받는가 — 실패 · GOAWAY 뒤에는 꺼진다
+
+            /** @brief 연결 핸들입니다. 아직 연결하지 않았으면(이름 해석 중) 무효 핸들입니다. */
+            StreamConnectionHandle getHandle() const { return _link != nullptr ? _link->getHandle() : StreamConnectionHandle{}; }
         };
 
         /** @brief 잠금 안에서 부릅니다. 호스트의 연결을 만들고(숫자 주소면 바로 연결, 이름이면 해석을 맡긴다) 돌려줍니다. 연결하지 못하면 nullptr. */

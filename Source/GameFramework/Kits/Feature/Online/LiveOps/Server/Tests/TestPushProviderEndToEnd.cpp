@@ -93,8 +93,8 @@ namespace
             (void)remote;
             (void)bAccepted;
             unique_ptr<Peer> peer = make_unique<Peer>();
-            SW_EXPECT_TRUE( peer->_link.initialize( _tlsContext.get() ) );
-            peer->_link.setHandle( handle );
+            peer->_link           = HTTPLink::open( handle, _tlsContext.get() );
+            SW_REQUIRE_TRUE( peer->_link != nullptr );
             _mapPeer[handle.packed()] = std::move( peer );
         }
 
@@ -104,11 +104,11 @@ namespace
             if ( peerIt == _mapPeer.end() )
                 return;
             Peer& peer = *peerIt->second;
-            SW_EXPECT_TRUE_MSG( peer._link.readReceived( *_transport, pData, size, peer._inBytes ), peer._link.getFailureText() );
+            SW_EXPECT_TRUE_MSG( peer._link->readReceived( *_transport, pData, size, peer._inBytes ), peer._link->getFailureText() );
             vector<uint8> outBytes;
             processFrames( peer, outBytes );
             if ( outBytes.empty() == false )
-                SW_EXPECT_TRUE( peer._link.writePlain( *_transport, outBytes.data(), outBytes.size() ) );
+                SW_EXPECT_TRUE( peer._link->writePlain( *_transport, outBytes.data(), outBytes.size() ) );
         }
 
         void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override
@@ -126,7 +126,7 @@ namespace
 
         struct Peer
         {
-            HTTPLink                      _link{};
+            unique_ptr<HTTPLink>          _link{};
             HpackDecoder                  _decoder{};
             vector<uint8>                 _inBytes{};
             unordered_map<uint32, Stream> _mapStream{};
