@@ -17,7 +17,7 @@
 			               _bVisible="true" />
 			<CoasterCarComponent _componentName="CoasterCarComponent"
 			                     _bActive="true"
-			                     _director="0"
+			                     _gameMode="0"
 			                     _coasterIndex="-1"
 			                     _carIndex="0"
 			                     _carSpacing="2.4" />

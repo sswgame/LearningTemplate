@@ -22,6 +22,8 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
 
+#include <optional>
+
 namespace sw
 {
     struct ControlIntent;
@@ -139,7 +141,12 @@ namespace sw
          * @brief 그 틱의 입력을 꺼냅니다. 아직 도착하지 않았으면 가장 최근 입력을 반복하고 @p outbExact 를 false 로 둡니다. 받은 입력이 하나도 없으면 false 를 반환합니다.
          * @details 그 틱까지는 처리한 것으로 본다. 그 틱 이전의 입력은 더 받지 않고, 스냅샷의 확인 틱도 다음 틱으로 넘어간다.
          */
-        [[nodiscard]] bool popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
+        /**
+         * @brief 이 연결에서 받아 둔 가장 오래된 입력 틱입니다. 없으면 비어 있습니다.
+         * @details 클라이언트는 접속 전에도 틱을 세므로 첫 입력의 틱을 서버가 미리 알 수 없다. 조종을 맡을 때 여기서 시작한다.
+         */
+        [[nodiscard]] std::optional<uint32> findOldestInputTick( int32 connectionID ) const;
+        [[nodiscard]] bool                  popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
         /**
          * @brief `popInput` 의 바이트를 의도와 근접 맞음 주장으로 읽습니다. 클라이언트의 `ReplicationClient::sendIntent` 와 짝입니다.
          * @details 되풀이한 입력(@p outbExact 가 false)이면 발동 비트 · 발동 순간의 시선 · 주장을 지웁니다 — 한 번 누름 · 한 번 맞음이 두 번 되지 않게. 받은 입력이 없거나 깨졌으면 false 이고

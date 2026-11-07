@@ -89,7 +89,7 @@
 					</FirstPersonCameraComponent>
 					<VoxelPlayerComponent _componentName="VoxelPlayerComponent"
 					                      _bActive="true"
-					                      _director="5"
+					                      _gameMode="5"
 					                      _reachDistance="6"
 					                      _placeInterval="0.25"
 					                      _startYaw="0.6"

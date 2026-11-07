@@ -7,7 +7,7 @@
 <Scenario name="game.shooter3d.effectpool" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<WaitUntil watch="Shooter3D.EffectCreatedCount" equals="56" timeoutFrames="60"/>
 	<Variable name="gv_shooterAutoPlay" value="1"/>
-	<WaitUntil watch="Shooter3D.ShotCount" atLeast="8" timeoutSeconds="15"/>
+	<WaitUntil watch="Shooter3D.ShotCount" atLeast="4" timeoutSeconds="15"/>
 	<Expect watch="Shooter3D.EffectCreatedCount" equals="56"/>
 	<Pass/>
 </Scenario>

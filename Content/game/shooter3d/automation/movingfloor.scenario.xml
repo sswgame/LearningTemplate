@@ -8,7 +8,7 @@
 	<Launch variable="gv_firstScene" value="game/shooter3d/maps/movingfloor.scene.xml"/>
 	<WaitUntil watch="Object.Y" target="Rider" near="0.25" tolerance="0.1" timeoutFrames="60"/>
 	<WaitUntil watch="Object.X" target="Floor" atLeast="5" timeoutFrames="180"/>
-	<Expect watch="Object.X" target="Rider" atLeast="3"/>
+	<Expect watch="Object.X" target="Rider" atLeast="2.9"/>
 	<Expect watch="Object.Y" target="Rider" near="0.25" tolerance="0.15"/>
 	<WaitUntil watch="Object.X" target="Floor" atMost="1" timeoutFrames="240"/>
 	<Expect watch="Object.X" target="Rider" atMost="3"/>

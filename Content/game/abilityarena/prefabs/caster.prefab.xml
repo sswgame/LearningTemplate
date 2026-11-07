@@ -81,7 +81,7 @@
 			                          _bIgnoreFromBuild="true" />
 			<ArenaUnitComponent _componentName="ArenaUnitComponent"
 			                    _bActive="true"
-			                    _director="0"
+			                    _gameMode="0"
 			                    _kind="Caster"
 			                    _facingMode="ControlYaw"
 			                    _unitRadius="0.5" />

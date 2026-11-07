@@ -242,6 +242,19 @@ namespace sw
         return nullptr;
     }
 
+    std::optional<uint32> NetInputReceiveBuffer::findOldestTick() const
+    {
+        if ( _listEntry.hasNewest() == false )
+            return std::nullopt;
+        const uint32 newestTick = _listEntry.getNewestTick();
+        for ( uint32 tick = MathUtil::max( _windowFirst, _listEntry.computeOldestTick() ); tick <= newestTick; ++tick )
+        {
+            if ( _listEntry.find( tick ) != nullptr )
+                return tick;
+        }
+        return std::nullopt;
+    }
+
     bool NetInputReceiveBuffer::canStore( uint32 tick ) const
     {
         const bool bInWindow      = _windowFirst <= tick && tick < _windowEnd;

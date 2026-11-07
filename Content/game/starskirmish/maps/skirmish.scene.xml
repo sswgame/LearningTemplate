@@ -92,7 +92,7 @@
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="false" />
-					<SkirmishDragComponent _componentName="SkirmishDragComponent" _bActive="true" _director="5" />
+					<SkirmishDragComponent _componentName="SkirmishDragComponent" _bActive="true" _gameMode="5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -41,7 +41,7 @@
 			                        _bActive="true" />
 			<FarmVillagerComponent _componentName="FarmVillagerComponent"
 			                       _bActive="true"
-			                       _director="0"
+			                       _gameMode="0"
 			                       _npcIndex="-1"
 			                       _heightOffset="0" />
 		</_listComponent>

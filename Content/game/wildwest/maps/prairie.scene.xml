@@ -302,7 +302,7 @@
 					                            _resumeGallopRatio="0.3" />
 					<WesternHorseComponent _componentName="WesternHorseComponent"
 					                        _bActive="true"
-					                        _director="9"
+					                        _gameMode="9"
 					                        _breed="morgan"
 					                        _seed="7"
 					                        _gameHoursPerSecond="0.0166667" />
@@ -413,7 +413,7 @@
 					                            _resumeGallopRatio="0.3" />
 					<WesternHorseComponent _componentName="WesternHorseComponent"
 					                        _bActive="true"
-					                        _director="9"
+					                        _gameMode="9"
 					                        _breed="mustang"
 					                        _seed="11"
 					                        _gameHoursPerSecond="0.0166667" />

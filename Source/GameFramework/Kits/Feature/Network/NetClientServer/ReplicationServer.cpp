@@ -277,6 +277,13 @@ namespace sw
         return client._input.read( reader );
     }
 
+    std::optional<uint32> ReplicationServer::findOldestInputTick( int32 connectionID ) const
+    {
+        if ( connectionID < 0 || connectionID >= static_cast<int32>( _listClient.size() ) )
+            return std::nullopt;
+        return _listClient[static_cast<size_t>( connectionID )]._input.findOldestTick();
+    }
+
     bool ReplicationServer::popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact )
     {
         outbExact = false;
@@ -297,10 +304,11 @@ namespace sw
             const float32 oldestViewTick  = MathUtil::max( 0.0f, newestViewTick - static_cast<float32>( _settings._maxViewLagTicks ) );
             client._viewTick              = MathUtil::clamp( claimedViewTick, oldestViewTick, newestViewTick );
         }
-        // 이 틱까지는 다 썼다. 더 받지 않고, 확인 틱이 넘어가므로 클라이언트도 다시 싣지 않는다.
-        client._input.setWindow( tick + 1u, NetInputReceiveBuffer::kNoWindowEnd );
+        // 아직 받은 입력이 없으면 쓴 틱도 없다 — 여기서 창을 밀면 호출자가 같은 틱을 다시 물을 때 첫 입력을 영영 꺼내지 못한다.
         if ( client._bHasInput == SW_FALSE )
             return false;
+        // 이 틱까지는 다 썼다. 더 받지 않고, 확인 틱이 넘어가므로 클라이언트도 다시 싣지 않는다.
+        client._input.setWindow( tick + 1u, NetInputReceiveBuffer::kNoWindowEnd );
         outInputBuffer = client._lastInput;
         return true;
     }

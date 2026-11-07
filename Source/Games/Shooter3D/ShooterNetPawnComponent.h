@@ -66,6 +66,8 @@ namespace sw
         static constexpr uint32 kPawnTypeID = 1;
         /** @brief 적의 복제 엔티티 타입입니다. */
         static constexpr uint32 kEnemyTypeID = 2;
+        /** @brief 조종을 맡고 아직 입력을 받지 못했다. 클라이언트 입력 틱은 1 부터다. */
+        static constexpr uint32 kInputTickUnknown = 0;
 
         ShooterNetPawnComponent();
         ~ShooterNetPawnComponent() override;

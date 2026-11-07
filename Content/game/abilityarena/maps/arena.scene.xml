@@ -23,7 +23,7 @@
 					                 _bOrthographic="false" />
 					<FollowCameraComponent _componentName="FollowCameraComponent"
 					                      _bActive="true"
-					                      _director="334"
+					                      _gameMode="334"
 					                      _offset="0,15,-11"
 					                      _minFarPlane="120" />
 				</_listComponent>

@@ -15,7 +15,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<FlatRideComponent _componentName="FlatRideComponent" _bActive="true" _director="0" _rideIndex="-1" _spin="0" />
+			<FlatRideComponent _componentName="FlatRideComponent" _bActive="true" _gameMode="0" _rideIndex="-1" _spin="0" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

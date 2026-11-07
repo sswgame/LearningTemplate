@@ -72,7 +72,7 @@
 			                    _bHideWhenDead="true" />
 			<ShooterEnemyComponent _componentName="ShooterEnemyComponent"
 			                       _bActive="true"
-			                       _director="0"
+			                       _gameMode="0"
 			                       _radius="1.39"
 			                       _height="1.33"
 			                       _reach="1.35"

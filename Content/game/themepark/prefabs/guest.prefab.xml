@@ -17,7 +17,7 @@
 			               _bVisible="false" />
 			<ParkGuestComponent _componentName="ParkGuestComponent"
 			                    _bActive="true"
-			                    _director="0"
+			                    _gameMode="0"
 			                    _guestIndex="-1"
 			                    _heightOffset="0.45" />
 		</_listComponent>

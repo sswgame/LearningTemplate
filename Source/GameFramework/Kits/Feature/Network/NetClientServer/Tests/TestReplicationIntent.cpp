@@ -113,6 +113,35 @@ SW_TEST_CASE( ReplicationIntentTest, IntentAndClaimsRoundTrip )
     SW_EXPECT_EQUAL( uint64{ 9 }, listClaim[1]._targetID );
 }
 
+/** @brief [ReplicationIntentTest] 첫 입력이 오기 전에 꺼내 봐도 창이 밀리지 않는다 — 서버는 입력이 올 때까지 같은 틱을 다시 묻는다. */
+SW_TEST_CASE( ReplicationIntentTest, PopBeforeFirstInputKeepsTheWindow )
+{
+    ReplicationIntentTestRig rig;
+    rig._server.beginTick( 10 );
+    ControlIntent         received;
+    bool                  bExact = false;
+    vector<MeleeHitClaim> listClaim;
+    SW_EXPECT_FALSE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
+
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), {} ) );
+    rig.pumpUntilDelivered();
+    SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
+    SW_EXPECT_TRUE( bExact );
+    SW_EXPECT_TRUE( received.wasTriggered( 2 ) );
+}
+
+/** @brief [ReplicationIntentTest] 첫 입력의 틱은 1 이 아닐 수 있다(접속 전에도 틱을 센다) — 받은 가장 오래된 틱을 알려 준다. */
+SW_TEST_CASE( ReplicationIntentTest, OldestInputTickFollowsTheFirstReceived )
+{
+    ReplicationIntentTestRig rig;
+    SW_EXPECT_FALSE( rig._server.findOldestInputTick( rig._connectionID ).has_value() );
+    SW_REQUIRE_TRUE( rig._client.sendIntent( 40, ReplicationIntentTestRig::makeIntent(), {} ) );
+    rig.pumpUntilDelivered();
+    const std::optional<uint32> oldestTick = rig._server.findOldestInputTick( rig._connectionID );
+    SW_REQUIRE_TRUE( oldestTick.has_value() );
+    SW_EXPECT_EQUAL( 40u, *oldestTick );
+}
+
 /** @brief [ReplicationIntentTest] 되풀이한 입력은 눌림과 시선만 잇고 발동과 주장을 지운다 — 한 번 맞음이 두 번 되지 않게. */
 SW_TEST_CASE( ReplicationIntentTest, RepeatedInputClearsTriggersAndClaims )
 {

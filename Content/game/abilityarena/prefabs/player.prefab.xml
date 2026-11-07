@@ -64,7 +64,7 @@
 			</PawnComponent>
 			<ArenaUnitComponent _componentName="ArenaUnitComponent"
 			                    _bActive="true"
-			                    _director="0"
+			                    _gameMode="0"
 			                    _kind="Player"
 			                    _facingMode="MoveDirection"
 			                    _unitRadius="0.5" />

@@ -15,7 +15,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
-			<FarmCropComponent _componentName="FarmCropComponent" _bActive="true" _director="0" _tileIndex="-1" />
+			<FarmCropComponent _componentName="FarmCropComponent" _bActive="true" _gameMode="0" _tileIndex="-1" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

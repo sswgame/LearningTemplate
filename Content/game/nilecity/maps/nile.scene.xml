@@ -74,7 +74,7 @@
 					               _bVisible="false" />
 					<NileCursorComponent _componentName="NileCursorComponent"
 					                     _bActive="true"
-					                     _director="4"
+					                     _gameMode="4"
 					                     _height="0.1"
 					                     _thickness="0.12" />
 				</_listComponent>

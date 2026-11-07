@@ -90,7 +90,7 @@
 					                         _attachOwner="None"
 					                         _attachComponent="None"
 					                         _bRepeat="true" />
-					<TownWalkerViewComponent _director="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
+					<TownWalkerViewComponent _gameMode="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
 					<PawnComponent _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"

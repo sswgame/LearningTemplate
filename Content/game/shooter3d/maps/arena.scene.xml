@@ -583,7 +583,7 @@
 					                        _documentPath="game/shooter3d/ui/hud.ui.xml" />
 					<ShooterPlayerComponent _componentName="ShooterPlayerComponent"
 					                        _bActive="true"
-					                        _director="51"
+					                        _gameMode="51"
 					                        _spawnPosition="0,0,-16"
 					                        _bodyPrefab="game/shooter3d/prefabs/player_body.prefab.xml"
 					                        _eyeHeight="1.6"

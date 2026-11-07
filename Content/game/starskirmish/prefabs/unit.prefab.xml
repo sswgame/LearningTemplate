@@ -15,7 +15,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
-			<SkirmishUnitComponent _componentName="SkirmishUnitComponent" _bActive="true" _director="0" _airHeight="2.5" />
+			<SkirmishUnitComponent _componentName="SkirmishUnitComponent" _bActive="true" _gameMode="0" _airHeight="2.5" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

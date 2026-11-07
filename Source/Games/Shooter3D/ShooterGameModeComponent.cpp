@@ -275,6 +275,10 @@ namespace sw
         if ( step > 0.0f && _bReplica == SW_TRUE )
         {
             updateReplicaEnemies();
+            // 복제 쪽도 자동 플레이 조종자를 세운다 — 그 의도가 서버로 가는 입력이다.
+            GameObjectManager* pManager = getObjectManager();
+            if ( pManager != nullptr && _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 ) )
+                syncAutoPlayPossession( *pManager );
             return;
         }
         if ( step > 0.0f )

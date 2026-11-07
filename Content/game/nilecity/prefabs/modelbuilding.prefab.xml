@@ -15,7 +15,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="false" />
-			<NileBuildingComponent _componentName="NileBuildingComponent" _bActive="true" _director="0" _buildingIndex="-1" />
+			<NileBuildingComponent _componentName="NileBuildingComponent" _bActive="true" _gameMode="0" _buildingIndex="-1" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

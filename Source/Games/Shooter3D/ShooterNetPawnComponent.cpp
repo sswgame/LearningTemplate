@@ -118,7 +118,7 @@ namespace sw
         , _pendingTriggerPitch{ 0.0f }
         , _pendingTriggered{ 0 }
         , _tick{ 0 }
-        , _nextInputTick{ 1 }
+        , _nextInputTick{ kInputTickUnknown }
         , _reconciledTick{ 0 }
         , _rewoundShotCount{ 0 }
         , _rewoundHitCount{ 0 }
@@ -190,7 +190,7 @@ namespace sw
         }
         _accumulator    = 0.0f;
         _tick           = 0;
-        _nextInputTick  = 1;
+        _nextInputTick  = kInputTickUnknown;
         _reconciledTick = 0;
         _controllerID   = -1;
         pMovement->setNetDriven( true );
@@ -273,17 +273,28 @@ namespace sw
         if ( bControllerGone )
         {
             _controllerID  = listConnection.empty() ? -1 : listConnection.front();
-            _nextInputTick = 1;
+            _nextInputTick = kInputTickUnknown;
             if ( pRemote != nullptr )
             {
                 pRemote->clearReceived();
                 pRemote->setNextInputTick( _nextInputTick );
             }
         }
+        // 클라이언트는 접속 전에도 틱을 센다 — 조종을 맡은 뒤 처음 받은 틱에서 시작한다.
+        if ( _controllerID >= 0 && _nextInputTick == kInputTickUnknown )
+        {
+            const std::optional<uint32> oldestTick = _server.findOldestInputTick( _controllerID );
+            if ( oldestTick.has_value() )
+            {
+                _nextInputTick = *oldestTick;
+                if ( pRemote != nullptr )
+                    pRemote->setNextInputTick( _nextInputTick );
+            }
+        }
         ControlIntent intent;
         bool          bExact    = false;
         uint32        inputTick = 0;
-        const bool    bHasInput = _controllerID >= 0 && _server.popIntent( _controllerID, _nextInputTick, intent, bExact, _listClaim );
+        const bool    bHasInput = _nextInputTick != kInputTickUnknown && _server.popIntent( _controllerID, _nextInputTick, intent, bExact, _listClaim );
         if ( bHasInput )
         {
             inputTick = _nextInputTick;
