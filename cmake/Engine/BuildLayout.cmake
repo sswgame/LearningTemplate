@@ -7,12 +7,18 @@
 # 그래서 타깃 규칙(UnbuiltSources · TargetCompileRules · ModuleTargets · TestTargets …)보다 먼저 include 해야 한다.
 
 # ------------------------------------------------------------------------------
-# 플랫폼 · 구성 이름 — 매니페스트(_listPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
+# 플랫폼 · 구성 이름 — 매니페스트(_listExcludedPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
 # ------------------------------------------------------------------------------
 if(WIN32)
 	set(sw_platform_name "Windows")
-else()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(sw_platform_name "Linux")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+	set(sw_platform_name "Android")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	set(sw_platform_name "Web")
+else()
+	message(FATAL_ERROR "[Platform] unknown CMAKE_SYSTEM_NAME '${CMAKE_SYSTEM_NAME}' (one of Windows, Linux, Android, Emscripten)")
 endif()
 if(SW_SHIPPING_BUILD)
 	set(sw_configuration_name "Shipping")

@@ -15,11 +15,15 @@
  */
 #pragma once
 // ------------------------------------------------------------------------------
-// 1) 플랫폼 — Windows / Linux 중 정확히 하나(macOS 는 지원하지 않는다)
+// 1) 플랫폼 — Windows / Linux / Android / Web 중 정확히 하나(macOS 는 지원하지 않는다). SW_PLATFORM_POSIX 는 Windows 가 아닌 셋에 함께 켜진다.
 // ------------------------------------------------------------------------------
 
-#if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_LINUX ) ) != 1
-    #error "Exactly one of SW_PLATFORM_WINDOWS / SW_PLATFORM_LINUX must be defined (cmake/Modules/Platform via sw_global_options)."
+#if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_LINUX ) + defined( SW_PLATFORM_ANDROID ) + defined( SW_PLATFORM_WEB ) ) != 1
+    #error "Exactly one of SW_PLATFORM_WINDOWS / SW_PLATFORM_LINUX / SW_PLATFORM_ANDROID / SW_PLATFORM_WEB must be defined (cmake/Modules/Platform via sw_global_options)."
+#endif
+
+#if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_POSIX ) ) != 1
+    #error "SW_PLATFORM_POSIX must be defined exactly on the non-Windows platforms (cmake/Modules/Platform via sw_global_options)."
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS ) && !defined( _WIN32 )
@@ -30,8 +34,16 @@
     #error "SW_PLATFORM_WINDOWS requires an MSVC-ABI toolchain (cl or clang-cl, _MSC_VER); MinGW is not supported."
 #endif
 
-#if defined( SW_PLATFORM_LINUX ) && !defined( __linux__ )
-    #error "SW_PLATFORM_LINUX is defined but the compiler does not target Linux (__linux__)."
+#if defined( SW_PLATFORM_LINUX ) && ( !defined( __linux__ ) || defined( __ANDROID__ ) )
+    #error "SW_PLATFORM_LINUX is defined but the compiler does not target desktop Linux (__linux__ without __ANDROID__)."
+#endif
+
+#if defined( SW_PLATFORM_ANDROID ) && !defined( __ANDROID__ )
+    #error "SW_PLATFORM_ANDROID is defined but the compiler does not target Android (__ANDROID__)."
+#endif
+
+#if defined( SW_PLATFORM_WEB ) && !defined( __EMSCRIPTEN__ )
+    #error "SW_PLATFORM_WEB is defined but the compiler does not target Emscripten (__EMSCRIPTEN__)."
 #endif
 
 // ------------------------------------------------------------------------------

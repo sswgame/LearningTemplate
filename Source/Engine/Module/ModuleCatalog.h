@@ -35,12 +35,14 @@ namespace sw
         EditorExtension, ///< 에디터 확장(`GF_EditorPlugin_<이름>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다
     };
 
-    /** @brief 모듈이 도는 플랫폼 비트입니다(매니페스트 `_listPlatform` 의 낱말이 열거자 이름이다). */
+    /** @brief 모듈이 도는 플랫폼 비트입니다(매니페스트 `_listExcludedPlatform` 의 낱말이 열거자 이름이다). */
     ENUM()
     enum class ModulePlatform : uint8
     {
         Windows = 1 << 0,
         Linux   = 1 << 1,
+        Android = 1 << 2,
+        Web     = 1 << 3,
     };
 
     /** @brief 모듈이 들어가는 빌드 구성 비트입니다(Dev = 배포본이 아닌 모든 구성. 매니페스트 `_listConfiguration` 의 낱말이 열거자 이름이다). */
@@ -142,8 +144,8 @@ namespace sw
         string _description;
         PROPERTY( Tooltip = "Modules that load first" )
         vector<ModuleDependencyFile> _listDependency;
-        PROPERTY( Tooltip = "Platforms the module is built for: Windows, Linux (at least one)" )
-        vector<ModulePlatform> _listPlatform;
+        PROPERTY( Tooltip = "Platforms the module is not built for: Windows, Linux, Android, Web (the default is every platform)" )
+        vector<ModulePlatform> _listExcludedPlatform;
         PROPERTY( Tooltip = "Build configurations the module is built for: Dev, Shipping (at least one)" )
         vector<ModuleConfiguration> _listConfiguration;
         PROPERTY( Tooltip = "Executables that load the module: Client, Server (at least one)" )

@@ -72,7 +72,7 @@ namespace
         static constexpr const utf8* kValid = R"({
             "_name": "GF_Kit", "_version": "1.2.3", "_kind": "Kit", "_description": "desc",
             "_listDependency": [ { "_name": "GameFramework", "_minVersion": "1.0.0" } ],
-            "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client", "Server" ],
+            "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client", "Server" ],
             "_bEnabledByDefault": false })";
     };
     using Util = ModuleCatalogTestUtil;
@@ -116,7 +116,7 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesAManifest )
     SW_EXPECT_TRUE( manifest._kind == ModuleKind::Kit );
     SW_EXPECT_EQUAL( 2u, manifest._version._minor );
     SW_EXPECT_FALSE( manifest._bEnabledByDefault );
-    SW_EXPECT_EQUAL( 3, static_cast<int32>( manifest._platformMask ) );
+    SW_EXPECT_EQUAL( 15, static_cast<int32>( manifest._platformMask ) ); // 적지 않으면 네 플랫폼 전부다
     SW_EXPECT_EQUAL( 1, static_cast<int32>( manifest._configurationMask ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, manifest._listDependency.size() );
     SW_EXPECT_TRUE( manifest._listDependency[0]._name == "GameFramework" );
@@ -138,13 +138,13 @@ SW_TEST_CASE( ModuleCatalogTest, BrokenManifestsNameTheProblem )
     Util::expectParseError( R"({ "_version": "1.0.0" })", "_name is missing" );
     Util::expectParseError( R"({ "_name": "M", "_version": "x" })", "_version must be" );
     Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0" })", "_kind is missing" );
-    Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0", "_kind": "Kit" })", "_listPlatform" );
-    Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0", "_kind": "Kit", "_listPlatform": ["Linux"] })", "_listConfiguration" );
-    Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0", "_kind": "Kit", "_listPlatform": ["Linux"], "_listConfiguration": ["Dev"] })", "_listTarget" );
+    Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0", "_kind": "Kit" })", "_listConfiguration" );
+    Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0", "_kind": "Kit", "_listConfiguration": ["Dev"] })", "_listTarget" );
+    Util::expectParseError( R"({ "_name": "M", "_version": "1.0.0", "_kind": "Kit", "_listExcludedPlatform": ["Windows", "Linux", "Android", "Web"] })", "leaves no platform" );
     // 오타는 조용히 지나가지 않는다.
     Util::expectParseError( R"({ "_name": "M", "_versoin": "1.0.0" })", "_versoin" );
 
-    const string common = R"("_version": "1.0.0", "_listPlatform": ["Linux"], "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
+    const string common = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
     Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "M" } ], )" + common + " }", "names the module itself" );
     Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "" } ], )" + common + " }", "has no name" );
     Util::expectParseError( R"({ "_name": "M", "_kind": "Kit", "_listDependency": [ { "_name": "D", "_minVersion": "x" } ], )" + common + " }", "bad _minVersion" );
@@ -152,11 +152,31 @@ SW_TEST_CASE( ModuleCatalogTest, BrokenManifestsNameTheProblem )
     Util::expectParseError( R"({ "_name": "M", "_kind": "Game", "_listModuleOverride": [ { "_name": "" } ], )" + common + " }", "module override" );
 }
 
+// 플랫폼은 "기본 전부 + 뺄 것" 이다. 에디터 종류는 적지 않아도 데스크톱 전용이다(CMake `sw_readManifestPlatforms` 와 같다).
+SW_TEST_CASE( ModuleCatalogTest, PlatformMaskIsEveryPlatformMinusExcluded )
+{
+    const auto parseMask = []( const string& text )
+    {
+        ModuleManifest manifest;
+        string         error;
+        SW_EXPECT_TRUE_MSG( ModuleCatalog::parseManifest( text, {}, manifest, error ), error.c_str() );
+        return static_cast<int32>( manifest._platformMask );
+    };
+    const string common   = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
+    const int32  kDesktop = static_cast<int32>( ModulePlatform::Windows ) | static_cast<int32>( ModulePlatform::Linux );
+
+    SW_EXPECT_EQUAL( static_cast<int32>( ModulePlatform::Windows ),
+                     parseMask( R"({ "_name": "RHI_DX", "_kind": "RHI", "_listExcludedPlatform": ["Linux", "Android", "Web"], )" + common + " }" ) );
+    SW_EXPECT_EQUAL( kDesktop, parseMask( R"({ "_name": "EditorModule", "_kind": "Editor", )" + common + " }" ) );
+    SW_EXPECT_EQUAL( kDesktop | static_cast<int32>( ModulePlatform::Android ) | static_cast<int32>( ModulePlatform::Web ),
+                     parseMask( R"({ "_name": "GF_Kit", "_kind": "Kit", )" + common + " }" ) );
+}
+
 // 에디터 확장은 Dev 전용이고 에디터에 의존한다(CMake 검사와 같다).
 SW_TEST_CASE( ModuleCatalogTest, EditorExtensionsMustBeDevAndNeedTheEditor )
 {
-    Util::expectParseError( R"({ "_name": "E", "_version": "1.0.0", "_kind": "EditorExtension", "_listPlatform": ["Linux"], "_listConfiguration": ["Dev", "Shipping"], "_listTarget": ["Client"] })", "Dev only" );
-    Util::expectParseError( R"({ "_name": "E", "_version": "1.0.0", "_kind": "EditorExtension", "_listPlatform": ["Linux"], "_listConfiguration": ["Dev"], "_listTarget": ["Client"] })", "must list" );
+    Util::expectParseError( R"({ "_name": "E", "_version": "1.0.0", "_kind": "EditorExtension", "_listConfiguration": ["Dev", "Shipping"], "_listTarget": ["Client"] })", "Dev only" );
+    Util::expectParseError( R"({ "_name": "E", "_version": "1.0.0", "_kind": "EditorExtension", "_listConfiguration": ["Dev"], "_listTarget": ["Client"] })", "must list" );
 }
 
 SW_TEST_CASE( ModuleCatalogTest, DuplicateNamesAreRefused )

@@ -11,10 +11,6 @@
             "_name": "GF_Admin"
         }
     ],
-    "_listPlatform": [
-        "Windows",
-        "Linux"
-    ],
     "_listConfiguration": [
         "Dev",
         "Shipping"

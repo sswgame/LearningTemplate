@@ -12,13 +12,15 @@ include("${CMAKE_CURRENT_LIST_DIR}/Architecture/DetectArchitecture.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Architecture/ARM64.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Architecture/X64.cmake")
 
-# 지원 플랫폼은 Windows · Linux 둘이다. macOS 는 지원하지 않는다 — 플랫폼 매크로(SW_PLATFORM_*)를 정할 모듈이 없으므로 여기서 멈춘다.
+# 플랫폼은 Windows · Linux · Android · Web 넷이다(Android · Web 은 앞문만 있고 백엔드는 아직 없다). macOS 는 지원하지 않는다 — 플랫폼 매크로(SW_PLATFORM_*)를 정할 모듈이 없으므로 여기서 멈춘다.
 if(APPLE)
-	message(FATAL_ERROR "[Platform] macOS is not a supported platform. The engine builds on Windows and Linux only.")
+	message(FATAL_ERROR "[Platform] macOS is not a supported platform. The engine targets Windows, Linux, Android and Web.")
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/Platform/Linux.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Platform/Windows.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Platform/Android.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Platform/Web.cmake")
 
 include("${CMAKE_CURRENT_LIST_DIR}/Compiler/Clang.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Compiler/GCC.cmake")

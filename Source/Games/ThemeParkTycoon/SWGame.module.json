@@ -11,10 +11,6 @@
             "_name": "GF_ThemePark"
         }
     ],
-    "_listPlatform": [
-        "Windows",
-        "Linux"
-    ],
     "_listConfiguration": [
         "Dev",
         "Shipping"

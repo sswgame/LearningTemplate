@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
@@ -27,26 +28,26 @@ namespace
             , _model{}
         {
             SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( _folder ) );
-            const utf8* const pOtherPlatform = ModuleCatalog::getCurrentPlatform() == ModulePlatform::Windows ? "\"Linux\"" : "\"Windows\"";
-            writeManifest( config::kTargetGameModule, "Game", "\"Windows\", \"Linux\"", "" );
-            writeManifest( "GF_Base", "Kit", "\"Windows\", \"Linux\"", "" );
-            writeManifest( "GF_Child", "Kit", "\"Windows\", \"Linux\"", R"(, "_listDependency": [ { "_name": "GF_Base" } ])" );
-            writeManifest( "GF_Off", "Kit", "\"Windows\", \"Linux\"", R"(, "_bEnabledByDefault": false)" );
-            writeManifest( "GF_OtherPlatform", "Kit", pOtherPlatform, "" );
+            const string excludeHere = string( R"(, "_listExcludedPlatform": [ ")" ) + build::kPlatformName + "\" ]";
+            writeManifest( config::kTargetGameModule, "Game", "" );
+            writeManifest( "GF_Base", "Kit", "" );
+            writeManifest( "GF_Child", "Kit", R"(, "_listDependency": [ { "_name": "GF_Base" } ])" );
+            writeManifest( "GF_Off", "Kit", R"(, "_bEnabledByDefault": false)" );
+            writeManifest( "GF_OtherPlatform", "Kit", excludeHere.c_str() );
             _model.reloadFrom( _folder );
             SW_EXPECT_TRUE_MSG( _model.getLoadError().empty(), _model.getLoadError().c_str() );
         }
 
-        static string makeManifestText( const utf8* pName, const utf8* pKind, const utf8* pPlatforms, const utf8* pExtra )
+        static string makeManifestText( const utf8* pName, const utf8* pKind, const utf8* pExtra )
         {
-            return string( "{ \"_name\": \"" ) + pName + "\", \"_version\": \"1.0.0\", \"_kind\": \"" + pKind + "\", \"_listPlatform\": [ " + pPlatforms +
-                   " ], \"_listConfiguration\": [ \"Dev\" ], \"_listTarget\": [ \"Client\", \"Server\" ]" + pExtra + " }";
+            return string( "{ \"_name\": \"" ) + pName + "\", \"_version\": \"1.0.0\", \"_kind\": \"" + pKind + "\"," +
+                   " \"_listConfiguration\": [ \"Dev\" ], \"_listTarget\": [ \"Client\", \"Server\" ]" + pExtra + " }";
         }
 
-        void writeManifest( const utf8* pName, const utf8* pKind, const utf8* pPlatforms, const utf8* pExtra ) const
+        void writeManifest( const utf8* pName, const utf8* pKind, const utf8* pExtra ) const
         {
             const string path = FileUtil::joinPath( _folder, string( pName ) + ModuleCatalog::kManifestExtension );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, makeManifestText( pName, pKind, pPlatforms, pExtra ) ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, makeManifestText( pName, pKind, pExtra ) ) );
         }
     };
 } // namespace

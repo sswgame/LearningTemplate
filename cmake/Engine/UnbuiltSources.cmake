@@ -79,7 +79,7 @@ function(sw_excludeSourcesIncludingPrefix LIST_VAR)
 	set(${LIST_VAR} ${listKept} PARENT_SCOPE)
 endfunction()
 
-# 플랫폼 폴더 규칙 — 저장소 기준 경로에 `Windows/` 가 든 소스는 Windows 에서만, `Linux/` 는 리눅스에서만, `Posix/` 는 Windows 가 아닌 곳에서만 짓는다.
+# 플랫폼 폴더 규칙 — 저장소 기준 경로에 `Windows/` · `Linux/` · `Android/` · `Web/` 이 든 소스는 그 플랫폼에서만, `Posix/` 는 Windows 가 아닌 곳에서만 짓는다.
 # 고르지 않은 것은 목록에서 빼고 "이 구성이 짓지 않는 소스" 로 적는다. (경로를 저장소 기준으로 보는 이유: 저장소를 담은 상위 폴더 이름에 걸리지 않게.)
 # 지금은 Core 만 쓴다 — Engine 의 플랫폼 폴더 .cpp 는 파일 안 `#if` 로 비어 있는 채 모든 플랫폼에서 컴파일된다.
 function(sw_filterPlatformSources LIST_VAR)
@@ -91,6 +91,10 @@ function(sw_filterPlatformSources LIST_VAR)
 		if(relativePath MATCHES "(^|/)Windows/" AND NOT WIN32)
 			set(isBuilt OFF)
 		elseif(relativePath MATCHES "(^|/)Linux/" AND NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+			set(isBuilt OFF)
+		elseif(relativePath MATCHES "(^|/)Android/" AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+			set(isBuilt OFF)
+		elseif(relativePath MATCHES "(^|/)Web/" AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 			set(isBuilt OFF)
 		elseif(relativePath MATCHES "(^|/)Posix/" AND WIN32)
 			set(isBuilt OFF)

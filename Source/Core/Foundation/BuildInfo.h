@@ -17,7 +17,7 @@ namespace sw::build
 {
     /** @brief 빌드 구성 이름입니다("Debug" · "Release" · "Shipping"). */
     inline constexpr const utf8* kConfigName = SW_BUILD_CONFIG_NAME;
-    /** @brief 플랫폼 이름입니다("Windows" · "Linux"). */
+    /** @brief 플랫폼 이름입니다("Windows" · "Linux" · "Android" · "Web"). */
     inline constexpr const utf8* kPlatformName = SW_PLATFORM_NAME;
     /** @brief 빌드 타깃 종류 이름입니다("Game" · "Client" · "Server"). CMake `SW_TARGET_TYPE` 이 정합니다. */
     inline constexpr const utf8* kTargetName = SW_TARGET_NAME;

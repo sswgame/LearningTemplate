@@ -468,6 +468,9 @@ namespace sw
             _listBaseArg.emplace_back( "-DSW_PLATFORM_WINDOWS" );
 #elif defined( SW_PLATFORM_LINUX )
             _listBaseArg.emplace_back( "-DSW_PLATFORM_LINUX" );
+            _listBaseArg.emplace_back( "-DSW_PLATFORM_POSIX" );
+#else
+    #error "ReflectionParser runs on a desktop host (Windows or Linux)"
 #endif
 #if defined( SW_X64 )
             _listBaseArg.emplace_back( "-DSW_X64" );

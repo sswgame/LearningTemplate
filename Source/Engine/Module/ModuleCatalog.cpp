@@ -31,11 +31,40 @@ namespace sw
                 return mask;
             }
 
+            /** @brief 매니페스트 낱말이자 CMake `sw_platform_name` 과 같은 플랫폼 이름입니다. */
+            static const utf8* getPlatformName( const ModulePlatform platform )
+            {
+                switch ( platform )
+                {
+                    case ModulePlatform::Windows:
+                        return "Windows";
+                    case ModulePlatform::Linux:
+                        return "Linux";
+                    case ModulePlatform::Android:
+                        return "Android";
+                    case ModulePlatform::Web:
+                        return "Web";
+                }
+                return "unknown";
+            }
+
+            /**
+             * @brief 모듈이 도는 플랫폼 비트입니다. 기본은 전부이고 `_listExcludedPlatform` 이 뺍니다(플랫폼 하나를 더할 때 매니페스트 87 개를 고치지 않는다).
+             * @details 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 적지 않아도 Android · Web 에서 빠집니다. CMake `sw_readManifestPlatforms` 와 같은 규칙입니다.
+             */
+            static uint8 computePlatformMask( const ModuleManifestFile& file )
+            {
+                constexpr uint8 kDesktop     = static_cast<uint8>( ModulePlatform::Windows ) | static_cast<uint8>( ModulePlatform::Linux );
+                constexpr uint8 kAll         = kDesktop | static_cast<uint8>( ModulePlatform::Android ) | static_cast<uint8>( ModulePlatform::Web );
+                const bool      bDesktopOnly = file._kind == ModuleKind::Editor || file._kind == ModuleKind::EditorExtension;
+                return static_cast<uint8>( ( bDesktopOnly ? kDesktop : kAll ) & ~toMask( file._listExcludedPlatform ) );
+            }
+
             /** @brief 모듈이 이 플랫폼 · 구성 · 대상에 없으면 그 이유, 있으면 빈 문자열입니다(CMake 이유 글과 같다). */
             static string findUnavailableReason( const ModuleManifest& manifest, const ModuleResolveContext& context )
             {
                 if ( ( manifest._platformMask & static_cast<uint8>( context._platform ) ) == 0 )
-                    return context._platform == ModulePlatform::Windows ? "not available on Windows" : "not available on Linux";
+                    return string( "not available on " ) + getPlatformName( context._platform );
                 if ( ( manifest._configurationMask & static_cast<uint8>( context._configuration ) ) == 0 )
                     return context._configuration == ModuleConfiguration::Dev ? "not built for Dev" : "not built for Shipping";
                 if ( ( manifest._targetMask & context._targetMask ) == 0 )
@@ -116,12 +145,12 @@ namespace sw
                 inoutManifest._kind        = file._kind;
                 inoutManifest._description = file._description;
 
-                inoutManifest._platformMask      = toMask( file._listPlatform );
+                inoutManifest._platformMask      = computePlatformMask( file );
                 inoutManifest._configurationMask = toMask( file._listConfiguration );
                 inoutManifest._targetMask        = toMask( file._listTarget );
                 if ( inoutManifest._platformMask == 0 )
                 {
-                    outError = errorContext + ": _listPlatform must list Windows and/or Linux";
+                    outError = errorContext + ": _listExcludedPlatform leaves no platform";
                     return false;
                 }
                 if ( inoutManifest._configurationMask == 0 )
@@ -540,8 +569,14 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return ModulePlatform::Windows;
-#else
+#elif defined( SW_PLATFORM_LINUX )
         return ModulePlatform::Linux;
+#elif defined( SW_PLATFORM_ANDROID )
+        return ModulePlatform::Android;
+#elif defined( SW_PLATFORM_WEB )
+        return ModulePlatform::Web;
+#else
+    #error "Unsupported platform"
 #endif
     }
 

@@ -10,7 +10,7 @@
 # 같은 매니페스트를 C++ 로 해석해 견준다.
 #
 # 켜짐 = (프로젝트 `SWGame.module.json` 의 `_listModuleOverride` 에 있으면 그 값, 없으면 `_bEnabledByDefault`)
-# 그리고 이 플랫폼(`_listPlatform`) · 구성(`_listConfiguration` — Dev | Shipping)에 있음
+# 그리고 이 플랫폼(`_listExcludedPlatform` 에 없음) · 구성(`_listConfiguration` — Dev | Shipping)에 있음
 # 그리고 이 빌드 타깃(`SW_TARGET_TYPE` — Game 은 Client · Server 둘 다)이 `_listTarget`(Client | Server)과 겹침. 프로젝트는 늘 켜져 있다.
 # 그리고 (`SW_BUILD_UNUSED_KITS=OFF` 이면) 키트는 켜진 비키트 모듈이나 함께 짓는 게임 팩(`SW_GAMES`)에서 의존으로 닿음 — 이 조건만 빌드 쪽에 있고, 뺀 키트는 매니페스트도 복사하지 않는다.
 # 켜진 모듈의 의존은 있어야 하고 · 켜져 있어야 하고 · `_minVersion` 이상이어야 하며 · 순환이 없어야 한다 — 아니면 구성이 선다.
@@ -25,7 +25,7 @@ endif()
 include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 
 # 매니페스트 키(런타임 `ModuleCatalogInternal` 과 같은 표).
-set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
+set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listExcludedPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
 
 # 종류 · 플랫폼 · 구성 · 대상 낱말은 런타임 열거형(`Source/Engine/Module/ModuleCatalog.h` 의 `ModuleKind` · `ModulePlatform` ·
 # `ModuleConfiguration` · `ModuleTarget`)의 열거자 이름이 정본이다 — 매니페스트를 리플렉션으로 읽는 C++ 이 받는 낱말이 곧 그 이름이라,
@@ -93,6 +93,28 @@ function(sw_readManifestWords OUT_VAR MANIFEST_PATH KEY LABEL ALLOWED_WORDS)
 	endforeach()
 
 	set(${OUT_VAR} ${swValues} PARENT_SCOPE)
+endfunction()
+
+# 모듈이 도는 플랫폼을 OUT_VAR 에 낸다. 기본은 전부고, 선택 키 `_listExcludedPlatform` 이 뺀다(플랫폼 하나를 더할 때 매니페스트를 고치지 않는다, 언리얼 `PlatformDenyList` 와 같다 — 기억).
+# 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 Android · Web 을 적지 않아도 빠진다. 런타임 `ModuleCatalog::computePlatformMask` 와 같은 규칙.
+function(sw_readManifestPlatforms OUT_VAR MANIFEST_PATH KIND)
+	set(swPlatforms ${SW_MODULE_PLATFORMS})
+	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listExcludedPlatform)
+
+	if(DEFINED swCount)
+		sw_readManifestWords(swExcluded "${MANIFEST_PATH}" _listExcludedPlatform platform "${SW_MODULE_PLATFORMS}")
+		list(REMOVE_ITEM swPlatforms ${swExcluded})
+	endif()
+
+	if(KIND STREQUAL "Editor" OR KIND STREQUAL "EditorExtension")
+		list(REMOVE_ITEM swPlatforms Android Web)
+	endif()
+
+	if(NOT swPlatforms)
+		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: _listExcludedPlatform leaves no platform")
+	endif()
+
+	set(${OUT_VAR} ${swPlatforms} PARENT_SCOPE)
 endfunction()
 
 # 선택 키 `_listDependency` 를 이름(OUT_NAMES) · 최소 버전(OUT_MIN_VERSIONS, 기본 0.0.0)으로 읽는다.
@@ -175,7 +197,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown _kind '${swKind}' (one of ${SW_MODULE_KINDS})")
 	endif()
 
-	sw_readManifestWords(swPlatforms "${MANIFEST_PATH}" _listPlatform platform "${SW_MODULE_PLATFORMS}")
+	sw_readManifestPlatforms(swPlatforms "${MANIFEST_PATH}" ${swKind})
 	sw_readManifestWords(swConfigurations "${MANIFEST_PATH}" _listConfiguration configuration "${SW_MODULE_CONFIGURATIONS}")
 	sw_readManifestWords(swTargets "${MANIFEST_PATH}" _listTarget target "${SW_MODULE_TARGETS}")
 

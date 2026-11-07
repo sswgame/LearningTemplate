@@ -46,7 +46,7 @@ function(sw_checkRHIBackendName TEXT)
 endfunction()
 
 # 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(sw_platform_name)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
-# 플랫폼은 그 백엔드 모듈의 매니페스트(_listPlatform)가 원본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
+# 플랫폼은 그 백엔드 모듈의 매니페스트(_listExcludedPlatform)가 원본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
 # 아니라 플랫폼 칸을 본다 — 이 확인이 없으면 그 플랫폼에 없는 백엔드를 고른 Engine 이 백엔드 없이 링크된다.
 function(sw_resolveShippingRHIBackend TEXT OUT_VAR)
 	sw_checkRHIBackendName("${TEXT}")
@@ -55,7 +55,7 @@ function(sw_resolveShippingRHIBackend TEXT OUT_VAR)
 	get_property(listPlatform GLOBAL PROPERTY SW_MODULE_${moduleName}_PLATFORMS)
 	if(NOT sw_platform_name IN_LIST listPlatform)
 		message(FATAL_ERROR "[RHI] SW_SHIPPING_RHI_BACKEND=${TEXT}: ${backendName} is not available on ${sw_platform_name} "
-			"(${moduleName}.module.json _listPlatform: ${listPlatform})")
+			"(${moduleName}.module.json _listExcludedPlatform leaves: ${listPlatform})")
 	endif()
 	set(${OUT_VAR} ${backendName} PARENT_SCOPE)
 endfunction()

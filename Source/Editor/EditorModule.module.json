@@ -4,10 +4,6 @@
     "_kind": "Editor",
     "_description": "인게임 에디터 모듈(Dev 전용, -EnableEditor 로 올린다)",
     "_listDependency": [],
-    "_listPlatform": [
-        "Windows",
-        "Linux"
-    ],
     "_listConfiguration": [
         "Dev"
     ],
