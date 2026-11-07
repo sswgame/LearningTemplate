@@ -342,7 +342,7 @@ namespace sw
         uint32 _firstMorphWeight{ 0 }; ///< `GPUSceneSnapshot::_pListMorphWeight` 안에서 이 메시의 모프 가중치가 시작하는 위치
         uint32 _morphWeightCount{ 0 }; ///< 모프 가중치 수(0이면 모프 없음)
         /// @brief 본 세 행이 듀얼 쿼터니언(실수부 · 허수부 · 스케일)이다. 아니면 행렬 세 열이다(`SkinningMethod`, mesh_skin.hlsl 가 인스턴스마다 고른다).
-        uint8 _bDualQuaternion : 1 { 0 };
+        uint8 _bDualQuaternion{ SW_FALSE };
     };
 } // namespace sw
 

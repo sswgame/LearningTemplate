@@ -52,7 +52,7 @@ namespace sw
                             uint32 lodIndex, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight, SkinningMethod method )
         {
             GPUSkinPalette entry{};
-            entry._bDualQuaternion = method == SkinningMethod::DualQuaternion ? 1 : 0;
+            entry._bDualQuaternion = method == SkinningMethod::DualQuaternion ? SW_TRUE : SW_FALSE;
             entry._mesh            = mesh;
             entry._skinSlot        = skinSlot;
             entry._lodIndex        = lodIndex;
@@ -72,7 +72,7 @@ namespace sw
             // 뼈마다 push_back 세 번이던 것을 한 번에 늘리고 포인터로 쓴다.
             inoutListRow.resize( inoutListRow.size() + listPalette.size() * 3 );
             float4* pRow = inoutListRow.data() + entry._firstRow;
-            if ( entry._bDualQuaternion != 0 )
+            if ( entry._bDualQuaternion == SW_TRUE )
             {
                 for ( const float4x4& matrix : listPalette )
                 {
