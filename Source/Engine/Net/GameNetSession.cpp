@@ -591,7 +591,7 @@ namespace sw
             }
             else if ( event._kind == NetEndpointEvent::Kind::Disconnected && phase == EventPhase::Running )
             {
-                SW_LOG_WARNING_ID( "GameNetSession.NetSessionLostServer", "Net session lost the server %# (%#)", _serverAddress.toString(), toString( event._reason ) );
+                SW_LOG_WARNING_ID( SW_LOG_ID_NET_SESSION_LOST_SERVER, "Net session lost the server %# (%#)", _serverAddress.toString(), toString( event._reason ) );
             }
             else if ( event._kind == NetEndpointEvent::Kind::Disconnected )
             {

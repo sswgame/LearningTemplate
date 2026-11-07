@@ -112,7 +112,7 @@ namespace sw::editor
                 {
                     ImGui::BeginDisabled( session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
-                        (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
+                        (void)session.start( session.getSettings(), {} ); // 실패 이유는 세션이 로그에 남긴다
                     ImGui::EndDisabled();
                     EditorSelfTestMarks::record( "toolbar.netPlay" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStart" ) );

@@ -79,7 +79,7 @@ namespace sw::editor
         int32                   _processID{ 0 };
         int32                   _exitCode{ 0 };
         bool                    _bRunning{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                    _bConnected{ false };  ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bConnected{ false };  ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼고 그 뒤 서버를 잃지 않았다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -141,8 +141,12 @@ namespace sw::editor
         EditorNetPlaySession( const EditorNetPlaySession& )            = delete;
         EditorNetPlaySession& operator=( const EditorNetPlaySession& ) = delete;
 
-        /** @brief 프로세스들을 실행합니다. 이미 실행 중이거나 하나라도 실행하지 못하면 이미 실행한 것을 종료하고 false 를 반환합니다. 이유는 로그에 남습니다. */
-        [[nodiscard]] bool start( const EditorNetPlaySettings& settings );
+        /**
+         * @brief 프로세스들을 실행합니다. 이미 실행 중이거나 하나라도 실행하지 못하면 이미 실행한 것을 종료하고 false 를 반환합니다. 이유는 로그에 남습니다.
+         * @param firstScenePath 비어 있지 않으면 모든 프로세스(서버 · 호스트 · 클라이언트)가 팩 설정의 시작 씬 대신 이 씬으로 시작합니다(`-gv_firstScene`).
+         *        언리얼 PIE 의 별도 서버가 편집 중인 레벨을 여는 것에 해당한다(기억에 의존). 비우면 게임의 시작 씬이다.
+         */
+        [[nodiscard]] bool start( const EditorNetPlaySettings& settings, string_view firstScenePath );
         /**
          * @brief 서버 하나만 멈춘 채(`-gv_serverStartPaused=1`) 띄우고 `intent.play <파일>` 을 겁니다(서버 디버깅 S7 되감기 · O7 운영에서 개발로).
          * @details 클라이언트는 없다. 서버가 틱 0 에서 멈춰 있으므로 부른 쪽이 `sendServerCommand( "step N" )` 으로 목표 틱까지 정확히 진행한다.
@@ -191,7 +195,7 @@ namespace sw::editor
         bool isRunning() const override { return _listProcess.empty() == false; }
         /** @brief `requestStop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직 끝나지 않았으면 true 입니다. 이 동안 `isRunning` 은 거짓이고 `start` 는 거절한다. */
         bool isStopping() const { return _stopPhase != StopPhase::Idle; }
-        /** @brief 서버에 연결되었다고 로그에 남긴 클라이언트 수입니다. `Net session connected to` 줄을 센 값이며, 프로브와 테스트가 접속 여부를 이 값으로 확인합니다. */
+        /** @brief 지금 서버에 붙어 있다고 마지막으로 알린 클라이언트 수입니다. `Net session connected to` 줄이 켜고 서버를 잃은 줄(`GameNetSession.NetSessionLostServer`)이 끕니다. 프로브와 테스트가 접속 여부를 이 값으로 확인합니다. */
         int32 getConnectedClientCount() const;
         /** @brief 패널과 툴바가 편집하는 다음 세션의 구성입니다. `start` 는 받은 구성을 따로 복사해서 씁니다. */
         EditorNetPlaySettings& getSettings() { return _pendingSettings; }

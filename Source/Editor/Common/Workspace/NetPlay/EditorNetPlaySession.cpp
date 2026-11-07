@@ -385,7 +385,7 @@ namespace sw::editor
         settings._mode                 = EditorNetMode::DedicatedServer;
         settings._clientCount          = 0; // 클라이언트 없이 서버 하나만 — 의도 재생이 폰을 움직이고 에디터는 그 서버만 본다
         _bReplayServer                 = SW_TRUE;
-        const bool bStarted            = start( settings );
+        const bool bStarted            = start( settings, {} );
         _bReplayServer                 = SW_FALSE;
         if ( bStarted == false )
             return false;
@@ -399,7 +399,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorNetPlaySession::start( const EditorNetPlaySettings& settings )
+    bool EditorNetPlaySession::start( const EditorNetPlaySettings& settings, string_view firstScenePath )
     {
         if ( isRunning() )
         {
@@ -455,6 +455,10 @@ namespace sw::editor
         vector<string> listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
                                            formatToString( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks ), "-gv_framePacing=FullSpeed" };
         listClientArgument.insert( listClientArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
+        // 모든 프로세스가 같은 씬으로 시작한다 — 서버와 클라이언트가 다른 씬을 열면 복제할 것이 맞지 않는다.
+        const string firstSceneArgument = firstScenePath.empty() ? string{} : "-gv_firstScene=" + string( firstScenePath );
+        if ( firstSceneArgument.empty() == false )
+            listClientArgument.push_back( firstSceneArgument );
 
         // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.
         // `App` 창은 띄우는 순서대로 나란히 놓는다. 리슨 호스트가 첫 위치이고, 전용 서버는 창이 없다.
@@ -476,12 +480,16 @@ namespace sw::editor
                                                "-gv_debugChannelToken=" + _debugChannelToken, formatToString( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks ) };
             if ( _bReplayServer )
                 listServerArgument.push_back( "-gv_serverStartPaused=1" );
+            if ( firstSceneArgument.empty() == false )
+                listServerArgument.push_back( firstSceneArgument );
             bLaunched = launchChild( "Server", serverPath, std::move( listServerArgument ), makeTracePath( "server" ) );
         }
         else
         {
             vector<string> listHostArgument{ "-gv_netListenPort=" + port, "-gv_standardInputCommands=1" };
             listHostArgument.insert( listHostArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
+            if ( firstSceneArgument.empty() == false )
+                listHostArgument.push_back( firstSceneArgument );
             const vector<string> listWindowArgument = makeWindowArguments( settings, windowIndex++ );
             listHostArgument.insert( listHostArgument.end(), listWindowArgument.begin(), listWindowArgument.end() );
             bLaunched = launchChild( "Host", clientPath, std::move( listHostArgument ), makeTracePath( "host" ) );
@@ -577,6 +585,8 @@ namespace sw::editor
                 SW_LOG_WRITE( level, pID, "[%#] %#", child._label, parsed._message );
                 if ( processIndex > 0 && parsed._id == SW_LOG_ID_NET_SESSION_CONNECTED )
                     child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
+                else if ( processIndex > 0 && parsed._id == SW_LOG_ID_NET_SESSION_LOST_SERVER )
+                    child._bConnected = false; // 서버가 끊었다(합성 대조 거절 · 시한) — 붙은 수가 줄어야 시나리오가 끊김을 기다린다
             }
             else
             {

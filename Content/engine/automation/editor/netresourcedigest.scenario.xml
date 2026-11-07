@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오: 접속 뒤 합성 대조(GameNetSessionMessage::kResourceDigest, ResourceDigestComparer). 전용 서버와 App 클라이언트 1 을
+  resourcecondition 씬으로 띄운다(netplay.start 의 scene= 인자가 모든 프로세스에 -gv_firstScene 을 준다). 씬의 상호작용 표는 layer.Night 이면
+  사거리가 바뀐다(game/empty/automation/resourcecondition/table.interactions.xml). layer 축은 함께 쓰는 축(Shared)이라 대조에 오른다.
+  1. 붙은 뒤 서버와 클라이언트는 같은 태그로 같은 표를 읽어 해시가 같다. 끊기지 않는다(유예보다 오래 기다린 뒤에도 붙어 있다).
+  2. 클라이언트만 데이터 레이어 Night 를 켠다(netplay.command client1). 클라이언트가 표를 다시 읽고 바뀐 해시를 보낸다.
+     서버는 유예(gv_netResourceDigestGraceSeconds, 기본 5 초) 뒤에도 다르면 그 연결을 끊고 Net.ResourceDigestMismatch 를 남긴다.
+  3. 클라이언트는 서버를 잃었다고 남기고(GameNetSession.NetSessionLostServer) 붙은 수 감시 값이 0 이 된다.
+  자식의 오류 줄은 에디터 로그에 경고로 옮겨진다(EditorNetPlaySession) — 아래 ExpectLog 가 그 줄을 센다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/netresourcedigest.scenario.xml -unattended
+-->
+<Scenario name="editor.netresourcedigest" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<AllowLog id="Server.ServerBehindDroppedTicks" reason="전용 서버는 백엔드 넷 · 클라이언트와 함께 같은 기계에서 돌아 부하가 걸린 틱이 늦을 수 있다(netplay 와 같은 까닭)"/>
+	<WaitUntil watch="Editor.NetPlayProcessCount" equals="0" timeoutFrames="60"/>
+	<DevCommand line="netplay.start dedicated 1 scene=game/empty/automation/resourcecondition/resourcecondition.scene.xml"/>
+	<WaitUntil watch="Editor.NetPlayProcessCount" equals="2" timeoutFrames="60"/>
+	<DevCommand line="netplay.wait 1 120"/>
+	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<!-- 같은 합성이면 유예가 지나도 붙어 있다. netplay.profile 7 은 벽시계 7 초 동안 이 프레임을 붙잡는다(기본 유예 5 초보다 길다).
+	     프레임은 실시간보다 빨리 돌아 게임 초로는 다른 프로세스의 시간을 재지 못한다 -->
+	<DevCommand line="netplay.profile 7"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.NetPlayConnectedClients" equals="1"/>
+	<DevCommand line="netplay.command client1 scene.layer Night on"/>
+	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="0" timeoutWallSeconds="30"/>
+	<ExpectLog id="Net.ResourceDigestMismatch" contains="composed" atLeast="1"/>
+	<ExpectLog id="GameNetSession.NetSessionLostServer" atLeast="1"/>
+	<DevCommand line="netplay.stop"/>
+	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
+	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
+	<Pass/>
+</Scenario>

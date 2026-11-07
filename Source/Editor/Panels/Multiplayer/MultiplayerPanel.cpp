@@ -27,6 +27,8 @@ namespace sw::editor
     {
         struct MultiplayerPanelInternal
         {
+            /** @brief `netplay.start` 의 씬 인자 머리입니다(`scene=game/…/a.scene.xml`). */
+            static constexpr string_view kSceneArgumentPrefix = "scene=";
             /** @brief `netplay.wait` 의 기본 시한(초)입니다. */
             static constexpr int32 kDefaultWaitSeconds = 60;
 
@@ -58,7 +60,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 감시 값 `Editor.NetPlayConnectedClients` — 서버에 붙었다고 알린 클라이언트 수입니다. */
+            /** @brief 감시 값 `Editor.NetPlayConnectedClients` — 지금 서버에 붙어 있다고 알린 클라이언트 수입니다(서버를 잃은 클라이언트는 빠진다). */
             [[nodiscard]] static bool readConnectedClients( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();
@@ -66,7 +68,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `netplay.start [dedicated|listen] [<플레이어 수>]` — 구성을 고치고 세션을 시작합니다. */
+            /** @brief `netplay.start [dedicated|listen] [<플레이어 수>] [scene=<리소스 경로>]` — 구성을 고치고 세션을 시작합니다. 씬을 주면 모든 프로세스가 그 씬으로 시작합니다(구성에 남지 않는다). */
             static bool runStart( const vector<string>& listArgument, string& outReply )
             {
                 EditorNetPlaySession* pSession = findSession();
@@ -77,8 +79,16 @@ namespace sw::editor
                 }
                 EditorNetPlaySettings& settings = pSession->getSettings();
                 settings._mode                  = settings._mode == EditorNetMode::Standalone ? EditorNetMode::DedicatedServer : settings._mode;
+                string firstScenePath;
                 for ( const string& argument : listArgument )
                 {
+                    if ( StringUtil::startsWith( argument, kSceneArgumentPrefix ) )
+                    {
+                        firstScenePath = argument.substr( kSceneArgumentPrefix.size() );
+                        if ( firstScenePath.empty() )
+                            return false;
+                        continue;
+                    }
                     int32      playerCount          = 0;
                     const bool bPlayerCountArgument = StringUtil::parseInt( argument, playerCount ) && 1 <= playerCount && playerCount <= EditorNetModeCombo::kMaxPlayerCount;
                     if ( argument == "dedicated" )
@@ -90,7 +100,7 @@ namespace sw::editor
                     else
                         return false;
                 }
-                const bool bStarted = pSession->start( pSession->getSettings() );
+                const bool bStarted = pSession->start( pSession->getSettings(), firstScenePath );
                 outReply            = bStarted ? "multiplayer session started on UDP port " + to_string( pSession->getPort() ) : "multiplayer session did not start (see the log)";
                 return true;
             }
@@ -169,9 +179,9 @@ namespace sw::editor
     SW_AUTOMATION_WALL_WATCH( editorNetPlayObjectHashReports, "Editor.NetPlayObjectHashReports",
                               "state.objectline replies received from the session's processes so far (remember it, send the command, wait until it differs)",
                               &MultiplayerPanelInternal::readObjectHashReports );
-    SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server",
+    SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server and have not lost it since",
                          &MultiplayerPanelInternal::readConnectedClients );
-    SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>]", "Start the editor's multi-process play session",
+    SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>] [scene=<resource path>]", "Start the editor's multi-process play session",
                     &MultiplayerPanelInternal::runStart );
     SW_DEV_COMMAND( NetPlayStop, "netplay.stop", "netplay.stop", "Stop every process of the multi-process play session and merge their traces",
                     &MultiplayerPanelInternal::runStop );

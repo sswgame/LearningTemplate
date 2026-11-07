@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오: 저장이 리소스 조건(_when)을 지킨다(ResourceComposer::saveText 가 restoreConditions 를 지난다).
+  문서(resourcesave/resourcesave.animgraph.xml)의 전이 101 은 quality.low 이면 빠진다. 편집기 사본은 지금 태그로 푼 값을 들어
+  그대로 쓰면 조건이 사라지고 푼 값이 파일에 박힌다. 그래서 두 태그에서 저장하고 다른 태그로 다시 읽어 조건이 남았는지 값으로 본다.
+  1. quality high 로 열면 전이 둘(조건 거짓). 저장한다.
+  2. quality low 로 바꿔 Load 하면 전이 하나여야 한다. 둘이면 high 에서의 저장이 조건을 지웠다.
+  3. low 에서 저장한다(사본에는 전이 101 이 없다). quality high 로 되돌려 Load 하면 전이 둘이어야 한다. 하나면 참인 조건이 뺀 원소를 저장이 지웠다.
+  문서는 실행마다 새 사본(scratch/resourcesave, Scratch)에 쓴다. 추적 중인 원본에 쓰면 백엔드별 체인이 같은 파일을 동시에 고친다(animgraphedit 와 같은 까닭).
+  판정은 감시 값 Editor.AnimationGraphLinkCount 이다. 그림은 보지 않는다(골든 없음).
+  실행: App -EnableEditor -scenario=engine/automation/editor/resourcesave.scenario.xml -unattended
+-->
+<Scenario name="editor.resourcesave" fixedDelta="0.0166667" timeoutFrames="1100" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/resourcesave" as="scratch/resourcesave"/>
+	<EditorWaitSettled/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="settings.apply graphics.quality=high"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus animation_graph"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/resourcesave/resourcesave.animgraph.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="animationGraph.save"/>
+	<EditorWaitSettled/>
+	<DevCommand line="settings.apply graphics.quality=low"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="animationGraph.load"/>
+	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="1" timeoutFrames="90"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="animationGraph.save"/>
+	<EditorWaitSettled/>
+	<DevCommand line="settings.apply graphics.quality=high"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="animationGraph.load"/>
+	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2" timeoutFrames="90"/>
+	<Expect watch="Editor.GraphNodeCount" equals="2"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>
