@@ -5,8 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
-#include "Engine/Environment/Fog/FogComponent.h"
-#include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -102,15 +100,15 @@ namespace sw
         collectSceneLights( &activeScene, packet._listLight, &_listShadowLightIndex, &packet._listLightProbe, &packet._listLightCookie, &packet._listRealtimeProbe );
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
-        packet._bHasSky                         = ( pActiveObjects != nullptr && SkyComponent::findSky( *pActiveObjects, packet._sky ) ) ? SW_TRUE : SW_FALSE;
+        packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
         return lights;
     }
 
     void RenderPacketSceneCollector::applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera )
     {
-        // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
+        // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(`SceneEnvironmentProvider`).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
-        packet._bHasFog                         = ( pActiveObjects != nullptr && FogComponent::findFog( *pActiveObjects, camera.getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
+        packet._bHasFog                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceFog( camera.getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
         // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
         _gpuSceneBuilder->setTransparentSortAxis( engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( camera.isOrthographic(), camera.getCameraForward() ) );
     }
@@ -167,7 +165,7 @@ namespace sw
         // 주 화면과 같은 단계다(`RenderPacketBuilder::populateScene`). 안개는 카메라 컴포넌트가 아니라 시점 위치로 고른다.
         const RenderPacketKeyLights lights   = collectLights( outPacket, scene );
         const GameObjectManager*    pObjects = scene.getObjectManager();
-        outPacket._bHasFog                   = ( pObjects != nullptr && FogComponent::findFog( *pObjects, outPacket._cameraPos, outPacket._fog ) ) ? SW_TRUE : SW_FALSE;
+        outPacket._bHasFog                   = ( pObjects != nullptr && pObjects->findServiceFog( outPacket._cameraPos, outPacket._fog ) ) ? SW_TRUE : SW_FALSE;
         populateShadows( outPacket, lights );
         updateLODViews( outPacket, scene );
         _gpuSceneBuilder->setGPUInstanceLODEnabled( false );

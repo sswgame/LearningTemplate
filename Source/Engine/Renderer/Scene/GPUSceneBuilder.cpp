@@ -34,7 +34,7 @@
 #include "Engine/Rendering/MeshInstanceBatch.h"
 #include "Engine/Rendering/MeshLODSystem.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/VFX/VFXComponent.h"
+#include "Engine/VFX/SceneVFXProvider.h"
 
 // GPUSkinPaletteCollector
 namespace sw
@@ -1091,57 +1091,43 @@ namespace sw
         _transparentSorter.setAxis( axis );
     }
 
+    /** @brief 씬 서비스가 낸 입자를 스냅샷에 싣습니다(`GPUSceneBuilder::populateParticleBatches`). */
+    struct GPUSceneBuilderParticleSink final : public ISceneParticleSink
+    {
+        GPUSceneBuilder&         _builder;
+        const PrimitiveRegistry& _primitives;
+
+        GPUSceneBuilderParticleSink( GPUSceneBuilder& builder, const PrimitiveRegistry& primitives )
+            : _builder{ builder }
+            , _primitives{ primitives }
+        {
+        }
+
+        void addCPUParticles( const shared_ptr<const vector<GPUParticle>>& pListParticle, const SceneParticleBatchDesc& desc ) override { addBatch( GPUParticleBatch::Source{ pListParticle }, desc ); }
+        void addGPUParticles( const VFXGPUEmitterRequest& request, const SceneParticleBatchDesc& desc ) override { addBatch( GPUParticleBatch::Source{ request }, desc ); }
+        void addGPUMeshEmitter( const VFXGPUEmitterRequest& request, const MeshInstanceBatch& batch, const float4x4& world, const float32 meshRadius ) override
+        {
+            _builder.appendVFXMeshEmitter( request, batch, world, meshRadius, _primitives );
+        }
+
+        void addBatch( GPUParticleBatch::Source source, const SceneParticleBatchDesc& desc )
+        {
+            GPUParticleBatch& batch = _builder._snapshot._listParticleBatch.emplace_back();
+            batch._bRibbon          = desc._bRibbon;
+            batch._source           = std::move( source );
+            batch._world            = desc._world;
+            batch._texturePath      = desc._texturePath;
+            batch._sizeScale        = desc._sizeScale;
+            batch._bAdditive        = desc._bAdditive;
+        }
+    };
+
     void GPUSceneBuilder::populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos )
     {
         _snapshot.clearParticles();
-        vector<GPUParticleBatch>& listBatch = _snapshot._listParticleBatch;
-        for ( const VFXComponent* pVFX : objects.getComponentRegistry().getAll<VFXComponent>() )
-        {
-            const bool bHidden = pVFX->isPendingDestroy() || pVFX->isActive() == false;
-            if ( bHidden )
-                continue;
-            const float4x4 world     = pVFX->getWorldMatrix();
-            const float32  sizeScale = world.getMaximumAxisScale();
-            for ( uint32 emitterIndex = 0; emitterIndex < pVFX->getEmitterCount(); ++emitterIndex )
-            {
-                // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VFXComponent`). 띠는 이웃 둘이 있어야 한 마디다.
-                // GPU 방출기는 입자 수를 GT 가 모른다 — 재생 중이면 싣고, 그릴 입자 수(띠는 마디 수)는 컴퓨트가 간접 인자에 쓴다.
-                const VFXEmitterDef& def     = pVFX->getEmitterDef( emitterIndex );
-                const bool           bRibbon = def._renderMode == VFXRenderMode::Ribbon;
-                const bool           bGPU    = pVFX->getEmitterSimulationTarget( emitterIndex ) == VFXSimulationTarget::GPU;
-                if ( def._renderMode == VFXRenderMode::Mesh )
-                {
-                    // GPU 메시 방출기는 그리기가 아니라 인스턴스 칸 목록을 싣는다 — 컴퓨트가 그 칸에 쓰고 메시 경로가 그린다.
-                    if ( bGPU )
-                        appendVFXMeshEmitter( *pVFX, emitterIndex, objects.getPrimitiveRegistry() );
-                    continue;
-                }
-                GPUParticleBatch::Source source{};
-                if ( bGPU )
-                {
-                    const VFXGPUEmitterRequest* pRequest = pVFX->findEmitterGPURequest( emitterIndex );
-                    if ( pRequest == nullptr )
-                        continue;
-                    source = *pRequest;
-                }
-                else
-                {
-                    const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVFX->getEmitterParticles( emitterIndex );
-                    const size_t                                 minParticles   = bRibbon ? 2u : 1u;
-                    const bool                                   bNothingToDraw = pListParticle == nullptr || pListParticle->size() < minParticles;
-                    if ( bNothingToDraw )
-                        continue;
-                    source = pListParticle;
-                }
-                GPUParticleBatch& batch = listBatch.emplace_back();
-                batch._bRibbon          = bRibbon ? SW_TRUE : SW_FALSE;
-                batch._source           = std::move( source );
-                batch._world            = world;
-                batch._texturePath      = hashed_string( def._texturePath.c_str() );
-                batch._sizeScale        = sizeScale;
-                batch._bAdditive        = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
-            }
-        }
+        vector<GPUParticleBatch>&   listBatch = _snapshot._listParticleBatch;
+        GPUSceneBuilderParticleSink sink{ *this, objects.getPrimitiveRegistry() };
+        objects.collectServiceParticles( sink );
         if ( listBatch.empty() )
             return;
 
@@ -1162,21 +1148,18 @@ namespace sw
                                               vector_reference<const GPUTransparentSortKey>( _listScratchParticleKey ), _snapshot._listParticleSlot );
     }
 
-    void GPUSceneBuilder::appendVFXMeshEmitter( const VFXComponent& vfx, uint32 emitterIndex, const PrimitiveRegistry& primitives )
+    void GPUSceneBuilder::appendVFXMeshEmitter( const VFXGPUEmitterRequest& request, const MeshInstanceBatch& batch, const float4x4& world, const float32 meshRadius, const PrimitiveRegistry& primitives )
     {
-        const VFXGPUEmitterRequest* pRequest = vfx.findEmitterGPURequest( emitterIndex );
-        const MeshInstanceBatch*    pBatch   = vfx.findEmitterMeshBatch( emitterIndex );
-        const bool                  bNoBatch = pRequest == nullptr || pBatch == nullptr || pBatch->isRegistered() == false;
-        if ( bNoBatch )
+        if ( batch.isRegistered() == false )
             return;
-        SW_ASSERT( pBatch->getInstanceWriter() == MeshInstanceWriter::GPU );
+        SW_ASSERT( batch.getInstanceWriter() == MeshInstanceWriter::GPU );
         // 프리미티브 번호 → 후보 → 인스턴스 칸. 두 표는 마지막 메시 수집(이번 프레임이거나, 바뀐 것이 없어 건너뛴 프레임이면 지난 것 — 발행된 인스턴스와 같다)의 것이다.
         // 투명 꼬리의 칸은 뷰마다 다시 놓이므로 받지 않는다(GPU 메시는 불투명 머티리얼만 — `MeshInstanceWriter`).
         const uint32               meshCount   = static_cast<uint32>( primitives.getAll().size() );
         const uint32               opaqueCount = _snapshot.getOpaqueInstanceCount();
-        const uint32               firstSlot   = meshCount + pBatch->getFirstEntrySlot();
-        shared_ptr<vector<uint32>> pListSlot   = make_shared<vector<uint32>>( pBatch->getCount(), constant::invalid_index::kUint32 );
-        for ( uint32 entryIndex = 0; entryIndex < pBatch->getCount(); ++entryIndex )
+        const uint32               firstSlot   = meshCount + batch.getFirstEntrySlot();
+        shared_ptr<vector<uint32>> pListSlot   = make_shared<vector<uint32>>( batch.getCount(), constant::invalid_index::kUint32 );
+        for ( uint32 entryIndex = 0; entryIndex < batch.getCount(); ++entryIndex )
         {
             const uint32 primitiveSlot  = firstSlot + entryIndex;
             const uint32 candidateIndex = primitiveSlot < _listPrimitiveToCandidate.size() ? _listPrimitiveToCandidate[primitiveSlot] : kInvalidCandidateIndex;
@@ -1184,12 +1167,11 @@ namespace sw
             if ( instanceSlot < opaqueCount )
                 ( *pListSlot )[entryIndex] = instanceSlot;
         }
-        const float4x4     world   = vfx.getWorldMatrix();
         GPUVFXMeshEmitter& emitter = _snapshot._listVFXMeshEmitter.emplace_back();
-        emitter._request           = *pRequest;
+        emitter._request           = request;
         emitter._pListInstanceSlot = std::move( pListSlot );
         emitter._world             = world;
-        emitter._meshRadius        = vfx.getEmitterMeshRadius( emitterIndex );
+        emitter._meshRadius        = meshRadius;
         emitter._sizeScale         = world.getMaximumAxisScale();
     }
 

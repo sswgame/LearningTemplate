@@ -534,6 +534,14 @@ namespace sw
         void applyPreviewPolicy( const ScenePreviewPolicy& policy );
         /** @brief 모든 씬 서비스가 디버그 선을 그립니다(`ISceneService::drawDebug`, `SceneDebugDraw` 가 씬 틱 뒤에 부른다). */
         void drawServiceDebug( DebugDrawQueue& queue );
+        /** @brief 모든 씬 서비스가 @p phase 자리의 라이트 원소를 붙입니다(`ISceneService::contributeLights`). */
+        void collectServiceLights( SceneLightPhase phase, vector<GPULight>& inoutList ) const;
+        /** @brief 모든 씬 서비스가 입자 그리기를 냅니다(`ISceneService::contributeParticles`). */
+        void collectServiceParticles( ISceneParticleSink& sink ) const;
+        /** @brief 이 씬의 하늘입니다. 맡은 서비스가 없거나 하늘이 없으면 false 입니다(`ISceneService::contributeSky`). */
+        [[nodiscard]] bool findServiceSky( SkyGradient& outGradient ) const;
+        /** @brief @p viewPosition 에서 보는 안개입니다. 없으면 false 입니다(`ISceneService::contributeFog`). */
+        [[nodiscard]] bool findServiceFog( const float3& viewPosition, FogSettings& outSettings ) const;
 
         /**
          * @brief GameObject 를 지연 삭제 큐에 넣습니다.

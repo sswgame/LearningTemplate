@@ -59,7 +59,9 @@ namespace sw
     class PrimitiveRegistry;
     class Scene;
     class ScenePrimitive;
-    class VFXComponent;
+    class MeshInstanceBatch;
+    struct GPUSceneBuilderParticleSink;
+    struct VFXGPUEmitterRequest;
 
     /**
      * @class GPUSceneBuilder
@@ -67,6 +69,8 @@ namespace sw
      */
     class SW_API GPUSceneBuilder
     {
+        friend struct GPUSceneBuilderParticleSink;
+
     public:
         /**
          * @brief 프리미티브가 이 수 이상이면 전체 수집의 채우기를 잡으로 나눕니다.
@@ -531,15 +535,15 @@ namespace sw
         /** @brief 불투명 인덱스 테이블과 투명 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
         /**
-         * @brief 씬의 `VFXComponent` 가 낸 입자로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
+         * @brief 씬 서비스가 낸 입자(`ISceneParticleSink`, VFX 는 `SceneVFXProvider`)로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
          * @details 정렬 규칙은 메시 투명 후보와 같다(`GPUTransparentSorter::makeTransparentSortKey` · `isDrawnBefore`, 깊이는 방출기 위치). 입자가 없는 방출기는 싣지 않는다.
          *          메시 투명 배치(발행된 꼬리)와 비교해 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
          */
         void populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos );
         /**
-         * @brief GPU 메시 방출기 하나(`GPUVFXMeshEmitter`)를 싣습니다 — 배치 항목마다 이번에 발행된 인스턴스 칸을 찾는다(불투명 구간만). 재생 중이 아니거나 배치가 없으면 싣지 않습니다.
+         * @brief GPU 메시 방출기 하나(`GPUVFXMeshEmitter`)를 싣습니다 — 배치 항목마다 이번에 발행된 인스턴스 칸을 찾는다(불투명 구간만). 배치가 등록되지 않았으면 싣지 않습니다.
          */
-        void appendVFXMeshEmitter( const VFXComponent& vfx, uint32 emitterIndex, const PrimitiveRegistry& primitives );
+        void appendVFXMeshEmitter( const VFXGPUEmitterRequest& request, const MeshInstanceBatch& batch, const float4x4& world, float32 meshRadius, const PrimitiveRegistry& primitives );
         /** @brief 입자 그리기마다 @p eye · @p axis 의 정렬 키를 채우고 그리는 순서로 정렬합니다. 키의 후보 번호 칸은 `_listParticleBatch` 의 번호입니다. */
         void fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const;
         /**

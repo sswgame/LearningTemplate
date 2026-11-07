@@ -19,6 +19,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -29,7 +30,21 @@ namespace sw
 {
     class DebugDrawQueue;
     class GameObjectManager;
+    class ISceneParticleSink;
+    struct FogSettings;
+    struct GPULight;
     struct ScenePreviewPolicy;
+    struct SkyGradient;
+
+    /**
+     * @brief 기능이 씬 라이트 목록에 원소를 붙이는 자리입니다(`GameObjectManager::collectServiceLights`). 값의 순서가 목록의 순서입니다 — 상한을 넘으면 뒤에서부터 잘리므로 순서가 곧 뜻입니다.
+     *        라이트 컴포넌트 → `Particles` → 프로브 볼륨 · 반사 프로브 → `ShadowOccluders` 입니다(`collectSceneLights`).
+     */
+    enum class SceneLightPhase : uint8
+    {
+        Particles,       ///< 라이트 컴포넌트 뒤 · 프로브 앞(파티클 라이트)
+        ShadowOccluders, ///< 맨 뒤(2D 그림자 가림막) — 넘치면 빛보다 먼저 빠진다
+    };
 
     /**
      * @class ISceneService
@@ -52,6 +67,30 @@ namespace sw
         virtual void applyPreviewPolicy( const ScenePreviewPolicy& policy ) { (void)policy; }
         /** @brief 씬 틱 뒤 디버그 선을 그립니다(`SceneDebugDraw`). 켜고 끄는 전역 변수는 그 기능의 .cpp 에 둔다. */
         virtual void drawDebug( DebugDrawQueue& queue ) { (void)queue; }
+
+        // 렌더 기여 — 렌더러(층 7)가 기능 컴포넌트를 이름으로 알지 않게 모든 서비스에 같은 부름을 돌린다(게임 스레드, 패킷을 채울 때 씬 · 뷰마다 한 번). 언리얼 `FSceneViewExtension` 과 같은 자리다.
+        // 새 렌더 기능은 자기 폴더의 씬 서비스가 이것을 구현한다 — 렌더러 본문을 고치지 않는다.
+        /** @brief @p phase 자리에 자기 GPU 라이트 원소를 붙입니다. */
+        virtual void contributeLights( SceneLightPhase phase, vector<GPULight>& inoutList ) const
+        {
+            (void)phase;
+            (void)inoutList;
+        }
+        /** @brief 이번 프레임의 입자 그리기를 냅니다. */
+        virtual void contributeParticles( ISceneParticleSink& sink ) const { (void)sink; }
+        /** @brief 이 씬의 하늘을 맡으면 값을 쓰고 true 입니다. */
+        [[nodiscard]] virtual bool contributeSky( SkyGradient& outGradient ) const
+        {
+            (void)outGradient;
+            return false;
+        }
+        /** @brief @p viewPosition 에서 보는 안개를 맡으면 값을 쓰고 true 입니다. */
+        [[nodiscard]] virtual bool contributeFog( const float3& viewPosition, FogSettings& outSettings ) const
+        {
+            (void)viewPosition;
+            (void)outSettings;
+            return false;
+        }
 
         /** @brief 씬 서비스는 만들 때(매니저의 생성자) 선다 — 따로 세울 것이 없으면 그대로 둔다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

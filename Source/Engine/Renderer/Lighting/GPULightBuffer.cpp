@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/2D/ShadowCaster2DComponent.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -18,7 +17,6 @@
 #include "Engine/Rendering/ReflectionProbeComponent.h"
 #include "Engine/Rendering/SpotLightComponent.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/VFX/VFXComponent.h"
 
 namespace sw
 {
@@ -193,11 +191,7 @@ namespace sw
         }
 
         // 파티클 라이트(점광, 그림자 없음)는 라이트 컴포넌트 뒤 · 2D 가림막 앞에 붙는다. 그리드는 종류를 묻지 않고 같은 목록에서 만든다(LightGrid).
-        for ( const VFXComponent* pVFX : registry.getAll<VFXComponent>() )
-        {
-            if ( pVFX != nullptr && pVFX->isPendingDestroy() == false )
-                pVFX->appendGPULights( outList );
-        }
+        pScene->getObjectManager()->collectServiceLights( SceneLightPhase::Particles, outList );
 
         // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다. 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
         // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
@@ -228,11 +222,7 @@ namespace sw
         }
 
         // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting_2d.hlsli).
-        for ( const ShadowCaster2DComponent* pCaster : registry.getAll<ShadowCaster2DComponent>() )
-        {
-            if ( pCaster != nullptr && pCaster->isActive() )
-                pCaster->appendGPUShadowSegments( outList );
-        }
+        pScene->getObjectManager()->collectServiceLights( SceneLightPhase::ShadowOccluders, outList );
     }
 
     uint32 GPULightBuffer::selectGPULightSlotCount( LightGridProducer producer, uint32 requestedSlotCount )

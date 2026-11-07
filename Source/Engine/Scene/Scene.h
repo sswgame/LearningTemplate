@@ -146,42 +146,6 @@ namespace sw
         /** @brief 활성 게임 카메라를 반환합니다. */
         CameraComponent* getActiveGameCamera() const;
 
-        /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
-        void setEntityPrefabPath( uint64 objectID, string_view prefabPath );
-        /** @brief 엔티티의 데이터 레이어를 바꿉니다(에디터). 다음 저장에 적힙니다. 인스턴스 멤버는 바꾸지 않고 false 입니다 — 레이어는 파일의 엔티티에 붙는다. */
-        [[nodiscard]] bool setEntityDataLayers( uint64 objectID, vector<string> listLayer );
-
-        /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
-        void setSceneSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
-        /** @brief 씬 파일에서 읽은 월드 설정입니다. */
-        const SceneSettings& getSceneSettings() const { return _sceneSettings; }
-
-        /** @brief 씬 이름을 반환합니다. */
-        const string& getName() const { return _name; }
-        /** @brief 마지막 로드/저장 경로(리소스 상대 또는 절대)를 반환합니다. */
-        const string& getSourcePath() const { return _sourcePath; }
-        /** @brief 씬이 소유한 GameObjectManager 를 반환합니다. */
-        GameObjectManager* getObjectManager() const { return _objectManager.get(); }
-        /** @brief 만들 때 받은 엔진 서비스 묶음입니다. */
-        const SceneEngineServices& getEngineServices() const { return _services; }
-        /** @brief 씬 기본 머티리얼입니다(MaterialCache 에서 빌린 포인터, 소유하지 않음). */
-        Material* getMaterial() const { return _pMaterial; }
-        /** @brief 활성 게임 카메라를 반환합니다. */
-        CameraComponent* getActiveGameCamera() const;
-
-        /**
-         * @brief 씬의 주광입니다. 없으면 nullptr 이고, 렌더러가 기본값으로 폴백합니다.
-         * @details 카메라와 달리 캐시하지 않고 그때그때 찾습니다(빛 레지스트리만 봅니다). 프레임당 한 번만 불리고
-         *          (RenderFramePacket 을 채울 때) 라이트는 보통 한두 개입니다.
-         */
-        class DirectionalLightComponent* findActiveDirectionalLight() const;
-        /**
-         * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 첫 방향광(등록 순서). 없으면 nullptr 입니다.
-         * @details 그림자 행렬을 만드는 쪽(`Engine` · `FrameRenderer`)과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이
-         *          **둘 다 이것을 부릅니다.** 주의: 둘이 따로 고르면 첫 방향광이 그림자를 끄고 뒤의 빛이 켤 때 행렬은 비고 플래그는 뒤의
-         *          빛에 붙어, 그림자를 드리우는 빛에 그림자가 지지 않는다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
-         */
-        class DirectionalLightComponent* findShadowCastingDirectionalLight() const;
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 반환합니다(없으면 빈 문자열). */
         string_view getEntityPrefabPath( uint64 objectID ) const;
         /** @brief 씬 인스턴스 앵커면 넣은 씬의 리소스 id 입니다(없으면 빈 문자열). */
