@@ -239,7 +239,7 @@ namespace sw
         TileSetContent loaded;
         if ( parseDocument( doc, path, loaded ) == false )
             return false;
-        return adoptContent( std::move( loaded ), path );
+        return applyContent( std::move( loaded ), path );
     }
 
     bool TileSetAsset::parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual )
@@ -271,10 +271,10 @@ namespace sw
         TileSetContent loaded;
         if ( parseContent( xmlText, sourceName, loaded ) == false )
             return false;
-        return adoptContent( std::move( loaded ), sourceName );
+        return applyContent( std::move( loaded ), sourceName );
     }
 
-    bool TileSetAsset::adoptContent( TileSetContent&& loaded, string_view sourceName )
+    bool TileSetAsset::applyContent( TileSetContent&& loaded, string_view sourceName )
     {
         // 형식 뒤의 규칙은 한 곳(`collectIssues`)이 판정한다 — 에디터가 브러시 옆에 보이는 문제와 같은 목록이다.
         vector<TileSetIssue> listIssue;

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from common.ExitCode import ExitCode
+from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
 from net.NetPairRun import _stop, _waitForText
 
@@ -97,7 +98,7 @@ def _send(process: subprocess.Popen, line: str) -> None:
 def _run(argument: argparse.Namespace) -> int:
     root = getProjectRoot()
     binDir = root / "build" / argument.preset / "Bin"
-    clientExe = binDir / ("App.exe" if sys.platform == "win32" else "App")
+    clientExe = binDir / executableName("App")
     if not clientExe.exists():
         print(f"[lockstep-pair] FAIL: {clientExe} does not exist - build the '{argument.preset}' preset first")
         return int(ExitCode.CheckInvalid)

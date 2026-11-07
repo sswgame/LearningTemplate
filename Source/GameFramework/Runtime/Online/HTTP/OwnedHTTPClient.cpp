@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/OwnedHTTPClient.h"
+#include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

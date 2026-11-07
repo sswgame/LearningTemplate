@@ -46,8 +46,8 @@ namespace sw::editor
         _listEmitterRow.clear();
         _previewEffectPath.clear();
         // 자동 갱신이 볼 도장 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
-        const std::optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? std::optional<AbsolutePath>{ AbsolutePath{ string{ assetPath } } }
-                                                                                                 : editor::getSubsystem<AssetPaths>().toDiskPath( AssetID{ assetPath } );
+        const std::optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
+                                                                                                 : editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         _loadedDiskPath                            = diskPath.has_value() ? diskPath->str() : string{};
         _loadedStamp                               = FileStamp{};
         if ( _loadedDiskPath.empty() == false )

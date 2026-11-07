@@ -571,8 +571,8 @@ namespace sw
                     const bool bInside = FileUtil::startsWithPathComponent( lower, root._lowerDir ) && root._lowerDir.size() < lower.size();
                     if ( bInside == false )
                         continue;
-                    const string relative = resolved.substr( root._lowerDir.size() + 1 );
-                    return root._domain.empty() ? relative : root._domain + ":" + relative;
+                    const string relative{ resolved.substr( root._lowerDir.size() + 1 ) };
+                    return root._domain.empty() ? relative : string{ root._domain + ":" + relative };
                 }
                 return string{};
             }

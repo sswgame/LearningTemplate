@@ -159,6 +159,9 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+
+        /** @brief 다시 시도할 업무 결과가 없다(스토어 대기는 지급에서만 난다 — `EconomyRedeemReply::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 
     /** @brief 내역(`GetHistory`)의 응답입니다. */
@@ -170,6 +173,9 @@ namespace sw
         vector<EconomyHistoryEntry> _listHistory{};
         PROPERTY( MaxCount = EconomyProtocol::kMaxCursorSize )
         string _nextCursor{};
+
+        /** @brief 다시 시도할 업무 결과가 없다(스토어 대기는 지급에서만 난다 — `EconomyRedeemReply::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 
     /** @brief 구매(`Purchase`)의 응답입니다. */
@@ -183,6 +189,9 @@ namespace sw
         EconomyResult _result{ EconomyResult::Ok };
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE }; ///< 같은 멱등 키의 지난 결과이다
+
+        /** @brief 다시 시도할 업무 결과가 없다(스토어 대기는 지급에서만 난다 — `EconomyRedeemReply::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 
     /** @brief 영수증 지급(`RedeemReceipt`)의 응답입니다. */
@@ -219,6 +228,9 @@ namespace sw
         EconomyResult _result{ EconomyResult::Ok };
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE }; ///< 같은 거래의 지난 결과이다
+
+        /** @brief 다시 시도할 업무 결과가 없다(스토어 대기는 지급에서만 난다 — `EconomyRedeemReply::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 } // namespace sw
 

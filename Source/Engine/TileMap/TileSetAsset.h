@@ -249,7 +249,7 @@ namespace sw
         /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<TileSetAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 형식 뒤의 규칙(`collectIssues`)을 보고 통과하면 내용을 들인다. 실패하면 오류를 남기고 내용은 바뀌지 않는다. */
-        [[nodiscard]] bool adoptContent( TileSetContent&& loaded, string_view sourceName );
+        [[nodiscard]] bool applyContent( TileSetContent&& loaded, string_view sourceName );
         /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 오류입니다. 값의 규칙(셀 범위 · fps)은 `collectIssues` 가 본다. */
         [[nodiscard]] static bool parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual );
         /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(형식만 — 이름 겹침 · 셀 범위는 `collectIssues`). 잘못되었으면 오류를 남기고 false 입니다. */

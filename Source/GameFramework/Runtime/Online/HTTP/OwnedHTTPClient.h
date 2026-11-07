@@ -21,7 +21,7 @@ namespace sw
      * @class OwnedHTTPClient
      * @brief `HTTPClient` 와 TLS 컨텍스트의 소유자입니다. 서비스 스레드 하나에서 씁니다.
      */
-    class SW_KIT_SERVER_API OwnedHTTPClient
+    class SW_GF_API OwnedHTTPClient
     {
     public:
         /** @param clock 요청 시한을 재는 단조 시계입니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */

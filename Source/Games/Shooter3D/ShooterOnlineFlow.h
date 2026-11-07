@@ -67,8 +67,8 @@ namespace sw
 
     private:
         void onClaimAll( const OnlineResult<MailboxClaimReply>& result );
-        void onScoreSubmitted( const OnlineResult<LeaderboardReply>& result );
-        void onTopKills( const OnlineResult<LeaderboardReply>& result );
+        void onScoreSubmitted( const OnlineResult<LeaderboardSubmitReply>& result );
+        void onTopKills( const OnlineResult<LeaderboardEntriesReply>& result );
         /** @brief 매칭 클라이언트의 배정 알림을 꺼냅니다. 처음 부를 때 알림 표를 받습니다. */
         void pollMatches( OnlineSession& session );
 

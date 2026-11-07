@@ -4,7 +4,7 @@
 <StatCatalog>
 	<Stat id="enemies_killed" kind="Counter" name="Enemies Killed" max="1000000"/>
 	<Stat id="best_wave" kind="Max" name="Best Wave"/>
-	<Achievement id="first_blood" name="First Blood" stat="enemies_killed" threshold="1"/>
-	<Achievement id="bone_collector" name="Bone Collector" stat="enemies_killed" threshold="25"/>
-	<Achievement id="third_wave" name="Holding the Line" stat="best_wave" threshold="3"/>
+	<Achievement id="first_blood" name="First Blood" statID="enemies_killed" threshold="1"/>
+	<Achievement id="bone_collector" name="Bone Collector" statID="enemies_killed" threshold="25"/>
+	<Achievement id="third_wave" name="Holding the Line" statID="best_wave" threshold="3"/>
 </StatCatalog>

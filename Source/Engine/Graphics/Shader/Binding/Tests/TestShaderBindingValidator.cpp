@@ -93,6 +93,7 @@ namespace
                 case ShaderTargetFormat::DXIL_D3D12:
                     return reserved._dx12;
                 case ShaderTargetFormat::SPIRV_Vulkan:
+                case ShaderTargetFormat::WGSL_WebGPU: // WGSL 은 Vulkan SPIR-V 에서 옮긴다(Tint) — 자리도 같다
                     return reserved._vulkan;
                 case ShaderTargetFormat::SPIRV_OpenGL:
                     return reserved._opengl;

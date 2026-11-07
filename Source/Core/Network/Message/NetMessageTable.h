@@ -53,11 +53,18 @@ namespace sw
     {
         static constexpr uint8 kRangeBase = RangeBase;
 
+        /** @brief 메시지 @p TOne 이 이 표에 있는지 봅니다. */
+        template <typename TOne>
+        static constexpr bool contains()
+        {
+            return ( std::is_same_v<TOne, TMessage> || ... );
+        }
+
         /** @brief 메시지 @p TOne 의 종류 바이트입니다. */
         template <typename TOne>
         static constexpr uint8 kindOf()
         {
-            static_assert( ( std::is_same_v<TOne, TMessage> || ... ), "the message is not in this table" );
+            static_assert( contains<TOne>(), "the message is not in this table" );
             static_assert( hasUniqueOffsets(), "two messages of a table share a kind" );
             return static_cast<uint8>( RangeBase + TOne::kOffset );
         }
@@ -66,7 +73,7 @@ namespace sw
         template <typename... TSubset>
         static constexpr uint16 makeMask()
         {
-            static_assert( ( ( std::is_same_v<TSubset, TMessage> || ... ) && ... ), "every message of the mask must be in this table" );
+            static_assert( ( contains<TSubset>() && ... ), "every message of the mask must be in this table" ); // 두 팩을 한 접기에 넣으면 함께 펼쳐진다 — 안쪽을 함수로 뗀다
             return static_cast<uint16>( ( 0u | ... | ( 1u << TSubset::kOffset ) ) );
         }
 

@@ -57,6 +57,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "Engine/EngineFrameHooks.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -348,6 +349,20 @@ namespace sw
             void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         private:
+            /** @brief 표의 방문자 — 종류 하나를 세션의 `receive` 오버로드로 넘긴다(지역 클래스는 템플릿 멤버를 가질 수 없어 여기 둔다). */
+            struct ReceiveVisitor
+            {
+                GameNetSession&          _session;
+                const NetMessageContext& _context;
+                BitReader&               _body;
+
+                template <typename TMessage>
+                NetHandleResult visit()
+                {
+                    return _session.receive( TMessage{}, _context, _body );
+                }
+            };
+
             GameNetSession& _owner;
             GameNetRole     _role;
         };

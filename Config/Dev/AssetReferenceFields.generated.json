@@ -350,6 +350,17 @@
       ]
     },
     {
+      "owner": "GF_Housing",
+      "listField": [
+        "_ghostBlockedPrefab",
+        "_ghostPlaceablePrefab",
+        "_partCatalog",
+        "ghostBlockedPrefab",
+        "ghostPlaceablePrefab",
+        "partCatalog"
+      ]
+    },
+    {
       "owner": "GameFramework",
       "listField": [
         "_aiControllerPrefab",
@@ -376,6 +387,7 @@
         "_skeleton",
         "_sound",
         "_startMap",
+        "_statCatalog",
         "_tablePath",
         "_titleScene",
         "_tree",
@@ -405,6 +417,7 @@
         "sound",
         "sprite",
         "startMap",
+        "statCatalog",
         "tablePath",
         "titleScene",
         "tree"

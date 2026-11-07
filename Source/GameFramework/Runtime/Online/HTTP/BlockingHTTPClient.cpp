@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/BlockingHTTPClient.h"
+#include "GameFramework/Runtime/Online/HTTP/BlockingHTTPClient.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"

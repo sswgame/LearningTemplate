@@ -27,6 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from common.ExitCode import ExitCode
+from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
 from net.NetPairRun import _stop, _waitForText
 
@@ -154,7 +155,7 @@ def _runOnce(argument: argparse.Namespace, clientExe: Path, outDir: Path, port: 
 
 def _run(argument: argparse.Namespace) -> int:
     root = getProjectRoot()
-    clientExe = root / "build" / argument.preset / "Bin" / ("App.exe" if sys.platform == "win32" else "App")
+    clientExe = root / "build" / argument.preset / "Bin" / executableName("App")
     if not clientExe.exists():
         print(f"[telemetry-local] FAIL: {clientExe} does not exist - build the '{argument.preset}' preset first")
         return int(ExitCode.CheckInvalid)

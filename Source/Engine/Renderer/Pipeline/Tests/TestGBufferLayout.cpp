@@ -19,7 +19,7 @@ SW_TEST_CASE( GBufferLayoutTest, ShaderVersionMatchesTheLayout )
     string text;
     SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ "engine/shaders/binding_output.hlsli" }, text ) );
     constexpr string_view kDefine = "#define SW_GBUFFER_LAYOUT_VERSION ";
-    const size_t          at      = text.find( kDefine );
+    const size_t          at      = text.find( kDefine.data(), 0, kDefine.size() );
     SW_REQUIRE_TRUE( at != string::npos );
     const size_t lineEnd = text.find( '\n', at );
     string_view  number  = string_view( text ).substr( at + kDefine.size(), lineEnd - at - kDefine.size() );

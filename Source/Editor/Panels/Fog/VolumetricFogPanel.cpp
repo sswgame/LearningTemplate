@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"

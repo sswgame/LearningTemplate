@@ -28,7 +28,7 @@ namespace sw
      * @class BlockingHTTPClient
      * @brief `IHTTPClient` 를 구현해 요청 하나를 `HTTPClient` 로 보내고 응답을 기다립니다.
      */
-    class SW_KIT_SERVER_API BlockingHTTPClient final : public IHTTPClient
+    class SW_GF_API BlockingHTTPClient final : public IHTTPClient
     {
     public:
         BlockingHTTPClient();

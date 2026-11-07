@@ -696,18 +696,6 @@ namespace sw
 
     NetHandleResult GameNetSession::EngineMessageHandler::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        struct ReceiveVisitor
-        {
-            GameNetSession&          _session;
-            const NetMessageContext& _context;
-            BitReader&               _body;
-
-            template <typename TMessage>
-            NetHandleResult visit()
-            {
-                return _session.receive( TMessage{}, _context, _body );
-            }
-        };
         ReceiveVisitor visitor{ _owner, context, body };
         return GameNetSessionMessage::Table::dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled );
     }

@@ -4,6 +4,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/PackManager.h"

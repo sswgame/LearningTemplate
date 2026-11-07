@@ -172,7 +172,7 @@ namespace sw
                 return true;
             }
 
-            static void onQueueJoined( const OnlineResult<MatchmakingReply>& result )
+            static void onQueueJoined( const OnlineResult<MatchmakingTicketReply>& result )
             {
                 if ( result.isOk() )
                     SW_LOG_INFO_ID( "Shooter.OnlineQueued", "[Shooter] online queue joined (ticket %#)", result._reply._ticketID );
@@ -299,7 +299,7 @@ namespace sw
         (void)session.get<LeaderboardClient>().call<LeaderboardMethod::SubmitScore>( request, OnlineReplyDelegate<LeaderboardMethod::SubmitScore>::create<&ShooterOnlineFlow::onScoreSubmitted>( this ) );
     }
 
-    void ShooterOnlineFlow::onScoreSubmitted( const OnlineResult<LeaderboardReply>& result )
+    void ShooterOnlineFlow::onScoreSubmitted( const OnlineResult<LeaderboardSubmitReply>& result )
     {
         if ( result.isOk() == false )
         {
@@ -319,7 +319,7 @@ namespace sw
         (void)session.get<LeaderboardClient>().call<LeaderboardMethod::GetTop>( request, OnlineReplyDelegate<LeaderboardMethod::GetTop>::create<&ShooterOnlineFlow::onTopKills>( this ) );
     }
 
-    void ShooterOnlineFlow::onTopKills( const OnlineResult<LeaderboardReply>& result )
+    void ShooterOnlineFlow::onTopKills( const OnlineResult<LeaderboardEntriesReply>& result )
     {
         if ( result.isOk() == false )
         {

@@ -68,7 +68,7 @@ namespace sw
         PROPERTY()
         string _name{}; ///< 표시 이름(없으면 id)
         PROPERTY( Required )
-        hashed_string _stat{}; ///< 문턱을 보는 통계 id
+        hashed_string _statID{}; ///< 문턱을 보는 통계 id
         PROPERTY( Min = 0.0 )
         float64 _threshold{ 0.0 };
     };

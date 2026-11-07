@@ -184,7 +184,7 @@ namespace sw::editor
         {
             ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone || session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
-                (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
+                (void)session.start( session.getSettings(), string_view{} ); // 실패 이유는 세션이 로그에 남긴다
             EditorSelfTestMarks::record( "multiplayer.play" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Play" ) );
             ImGui::EndDisabled();

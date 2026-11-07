@@ -56,13 +56,19 @@ namespace sw
 {
     bool ModSupportSettings::parseXMLText( string_view text, string_view sourceName, ModSupportSettings& outSettings )
     {
-        using Internal = ModSupportSettingsInternal;
+        // 데이터 문서 길로 읽는다 — 조건(`_when`)을 푼다.
         XMLDocument doc;
-        if ( doc.parse( text, sourceName ) == false )
+        if ( doc.parseData( text, sourceName ) == false )
         {
             SW_LOG_ERROR_ID( "ModSupportSettings.NotXML", "Mod support settings '%#' could not be parsed: %#", sourceName, doc.getLastError() );
             return false;
         }
+        return parseDocument( doc, sourceName, outSettings );
+    }
+
+    bool ModSupportSettings::parseDocument( const XMLDocument& doc, string_view sourceName, ModSupportSettings& outSettings )
+    {
+        using Internal     = ModSupportSettingsInternal;
         const XMLNode root = doc.getRoot( kRootElement );
         if ( root.isValid() == false )
         {
@@ -109,7 +115,14 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSupportSettings.NotFound", "Mod support settings '%#' could not be read", assetID.view() );
             return false;
         }
-        return parseXMLText( text, assetID.view(), outSettings );
+        // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `parseXMLText` 는 id 가 없다).
+        XMLDocument doc;
+        if ( doc.parseResourceText( text, assetID ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModSupportSettings.NotXML", "Mod support settings '%#' could not be parsed: %#", assetID.view(), doc.getLastError() );
+            return false;
+        }
+        return parseDocument( doc, assetID.view(), outSettings );
     }
 
     bool ModSupportSettings::isOverridable( string_view assetID ) const

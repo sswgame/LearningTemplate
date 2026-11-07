@@ -11,8 +11,8 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Apns/ApnsPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fcm/FcmPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/OwnedHTTP2Client.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw

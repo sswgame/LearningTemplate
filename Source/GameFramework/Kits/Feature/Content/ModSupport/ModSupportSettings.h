@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class XMLDocument;
     class XMLNode;
 
     /**
@@ -39,6 +40,8 @@ namespace sw
 
         /** @brief 설정 글을 읽습니다. 모르는 원소 · 빠진 칸 · 0 인 한계 · 끝이 `/` 가 아니거나 정규형이 아닌 접두면 이유를 오류로 남기고 false 입니다. */
         [[nodiscard]] static bool parseXMLText( string_view text, string_view sourceName, ModSupportSettings& outSettings );
+        /** @brief 읽은 문서(조건을 푼 글)를 설정으로 옮깁니다. 글 입구와 리소스 입구가 함께 쓴다. */
+        [[nodiscard]] static bool parseDocument( const XMLDocument& doc, string_view sourceName, ModSupportSettings& outSettings );
         /** @brief 리소스 @p assetID 의 설정을 읽습니다(데이터 종류의 로더). */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, ModSupportSettings& outSettings );
 

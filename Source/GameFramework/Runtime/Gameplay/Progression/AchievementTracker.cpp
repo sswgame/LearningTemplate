@@ -45,9 +45,9 @@ namespace sw
         }
         for ( const AchievementDef& achievement : pCatalog->getAchievements() )
         {
-            if ( pCatalog->findStat( achievement._stat ) == nullptr )
+            if ( pCatalog->findStat( achievement._statID ) == nullptr )
             {
-                SW_LOG_ERROR_ID( "AchievementTracker.UnknownStat", "Achievement '%#' watches stat '%#', which the stat catalog does not define", achievement._id.c_str(), achievement._stat.c_str() );
+                SW_LOG_ERROR_ID( "AchievementTracker.UnknownStat", "Achievement '%#' watches stat '%#', which the stat catalog does not define", achievement._id.c_str(), achievement._statID.c_str() );
                 return false;
             }
         }
@@ -95,7 +95,7 @@ namespace sw
             SW_LOG_WARNING_ID( "AchievementTracker.PlatformRefusedStat", "Platform '%#' refused stat '%#'", _pPlatform->getStoreName(), change._id.c_str() );
         for ( const AchievementDef& achievement : _pCatalog->getAchievements() )
         {
-            const bool bWatched = achievement._stat == change._id;
+            const bool bWatched = achievement._statID == change._id;
             if ( bWatched && isUnlocked( achievement._id ) == false && Internal::isPastThreshold( change._kind, change._newValue, achievement._threshold ) )
                 unlock( achievement );
         }
