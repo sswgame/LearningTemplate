@@ -74,9 +74,7 @@ namespace sw::editor
     {
         if ( _pClient == nullptr )
         {
-            AdminReply reply;
-            reply._result = AdminResult::Unavailable;
-            AdminCommandProviderInternal::deliver( onReply, method, key, OnlineError::kUnavailable, reply );
+            AdminCommandProviderInternal::deliver( onReply, method, key, OnlineError::kUnavailable, AdminReply{} );
             return;
         }
         (void)_pClient->sendCommand( method, request, key, onReply ); // 요청 번호는 응답 콜백이 받는다
@@ -137,27 +135,28 @@ namespace sw::editor
             }
         }
 
-        reply._result = execute( method, request, reply );
-        if ( bMutating && reply._result == AdminResult::Ok )
+        const AdminOutcome outcome = execute( method, request, reply );
+        reply._result              = outcome._result;
+        if ( bMutating && outcome == AdminResult::Ok )
         {
             RecordedReply recorded;
             recorded._key   = usedKey;
             recorded._reply = reply;
             _listRecorded.push_back( std::move( recorded ) );
         }
-        AdminCommandProviderInternal::deliver( onReply, method, usedKey, 0, reply );
+        AdminCommandProviderInternal::deliver( onReply, method, usedKey, outcome._errorCode, outcome.isFailed() ? AdminReply{} : reply ); // 서버와 같이 공통 범주는 오류 코드로만 간다
     }
 
-    AdminResult FakeAdminProvider::execute( uint16 method, const AdminRequest& request, AdminReply& outReply )
+    AdminOutcome FakeAdminProvider::execute( uint16 method, const AdminRequest& request, AdminReply& outReply )
     {
         const AdminRole required = AdminProtocol::getRequiredRole( method, request._sanctionKind );
         if ( AdminCommandProviderInternal::isRoleAtLeast( _actingRole, required ) == false )
-            return AdminResult::Forbidden;
+            return AdminOutcome::fail( OnlineError::kForbidden );
         if ( AdminMethod::isMutating( method ) )
         {
             const bool bMemoValid = request._memo.empty() == false && static_cast<int32>( request._memo.size() ) <= AdminProtocol::kMaxMemoSize;
             if ( bMemoValid == false )
-                return AdminResult::InvalidRequest;
+                return AdminOutcome::fail( OnlineError::kInvalidRequest );
         }
         if ( method == AdminMethod::LookupAccount::kID )
             return executeLookup( request, outReply );
@@ -167,10 +166,10 @@ namespace sw::editor
             return executeSanction( request, outReply );
         if ( method == AdminMethod::ListAudit::kID )
             return executeListAudit( request, outReply );
-        return AdminResult::Unavailable; // 우편, 캠페인, 권한은 서버 저장소가 필요하다
+        return AdminOutcome::fail( OnlineError::kUnavailable ); // 우편, 캠페인, 권한은 서버 저장소가 필요하다
     }
 
-    AdminResult FakeAdminProvider::executeLookup( const AdminRequest& request, AdminReply& outReply ) const
+    AdminOutcome FakeAdminProvider::executeLookup( const AdminRequest& request, AdminReply& outReply ) const
     {
         const FakeAdminAccount* pFound = nullptr;
         if ( request._accountID != kInvalidAccountID )
@@ -198,14 +197,14 @@ namespace sw::editor
         return AdminResult::Ok;
     }
 
-    AdminResult FakeAdminProvider::executeAdjust( const AdminRequest& request, AdminReply& outReply )
+    AdminOutcome FakeAdminProvider::executeAdjust( const AdminRequest& request, AdminReply& outReply )
     {
         FakeAdminAccount* pAccount = findMutableAccount( request._accountID );
         if ( pAccount == nullptr )
             return AdminResult::UnknownAccount;
         // 서버와 같은 규칙이다(`AdminStoreLogic`) - 예전에는 길이만 봐 서버가 거절할 자산 이름이 메모리 제공자에서는 잔액이 되었다.
         if ( LedgerUtil::isValidAssetID( request._assetID ) == false || request._amount == 0 )
-            return AdminResult::InvalidRequest;
+            return AdminOutcome::fail( OnlineError::kInvalidRequest );
         // 부호를 뒤집지 않고 비교한다 - INT64_MIN 의 부호 반전은 정의되지 않은 동작이다.
         if ( request._amount > kMaxAdjustAmount || request._amount < -kMaxAdjustAmount )
             return AdminResult::CapExceeded;
@@ -234,14 +233,14 @@ namespace sw::editor
         return AdminResult::Ok;
     }
 
-    AdminResult FakeAdminProvider::executeSanction( const AdminRequest& request, AdminReply& outReply )
+    AdminOutcome FakeAdminProvider::executeSanction( const AdminRequest& request, AdminReply& outReply )
     {
         FakeAdminAccount* pAccount = findMutableAccount( request._accountID );
         if ( pAccount == nullptr )
             return AdminResult::UnknownAccount;
         // `==` 로는 Count 너머의 값이 지나 제재 칸 밖을 읽고 썼다.
         if ( request._untilMs < 0 || static_cast<uint8>( request._sanctionKind ) >= static_cast<uint8>( ServiceSanctionKind::Count ) )
-            return AdminResult::InvalidRequest;
+            return AdminOutcome::fail( OnlineError::kInvalidRequest );
 
         const int32 kindIndex = static_cast<int32>( request._sanctionKind );
         const int64 before    = pAccount->_sanction._arrUntilMs[kindIndex];
@@ -258,7 +257,7 @@ namespace sw::editor
         return AdminResult::Ok;
     }
 
-    AdminResult FakeAdminProvider::executeListAudit( const AdminRequest& request, AdminReply& outReply ) const
+    AdminOutcome FakeAdminProvider::executeListAudit( const AdminRequest& request, AdminReply& outReply ) const
     {
         const int32 limit = request._maxCount > 0 && request._maxCount <= AdminProtocol::kMaxListCount ? request._maxCount : AdminProtocol::kMaxListCount;
         // 최근 기록이 먼저 온다.

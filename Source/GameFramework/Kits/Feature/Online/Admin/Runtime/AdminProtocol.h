@@ -75,19 +75,20 @@ namespace sw
     ENUM( Count = Count )
     enum class AdminResult : uint8
     {
-        Ok = 0,
-        NotSignedIn,
-        Forbidden,      ///< 등급이 부족하거나 자기 등급을 바꾸려 했다
-        InvalidRequest, ///< 본문, 메모, 멱등 키, 상한이 규칙에 맞지 않는다
+        Ok = 0, ///< 0 이어야 한다 — 멱등 기록이 결과 한 바이트(`Ok`)를 저장소에 남긴다(`AdminStoreLogic::execute`)
         UnknownAccount,
         InsufficientFunds, ///< 회수가 잔액보다 크다. 환불 회수가 아니면 음수가 되지 않게 막는다
         CapExceeded,
-        Busy,
-        Unavailable,
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
-        NotFound,       ///< 처리하려는 대상(열린 신고, 공지, 점검)이 없다
+        NotFound, ///< 처리하려는 대상(열린 신고, 공지, 점검)이 없다
         Count
     };
+
+    /**
+     * @brief GM 명령의 결과입니다. 업무 결과(`AdminResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 등급 부족 · 모르는 명령은 `kForbidden`, 본문 · 메모 · 멱등 키 · 상한 위반은 `kInvalidRequest`, 버전 충돌이 상한을 넘으면 `kBusy`, 저장소 장애는 `kUnavailable`,
+     *          로그인 없음은 `kUnauthenticated` 이다. 서버 로직, 같은 프로세스 호출, 에디터 도구가 같은 형식을 쓴다.
+     */
+    using AdminOutcome = OnlineOutcome<AdminResult>;
 } // namespace sw
 
 namespace sw
@@ -226,9 +227,6 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE };
         uint8 _bRevokeSessions{ SW_FALSE }; ///< 서버 안에서만 쓴다. 정지나 영구 정지가 걸렸다는 뜻이며 `PROPERTY` 가 아니어서 와이어에 싣지 않는다
-
-        /** @brief 같은 멱등 키로 다시 시도할 결과(버전 충돌 · 일시 장애)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
-        [[nodiscard]] bool isRetryable() const { return _result == AdminResult::Busy || _result == AdminResult::Unavailable; }
     };
 } // namespace sw
 
@@ -283,18 +281,6 @@ namespace sw
         using Table        = OnlineProtocolTable<AdminMethod, OnlineMethodList<AdminMethod::LookupAccount, AdminMethod::AdjustAsset, AdminMethod::SetSanction, AdminMethod::SendMail, AdminMethod::BulkMail, AdminMethod::CreateCampaign, AdminMethod::ListAudit, AdminMethod::SetRole, AdminMethod::ListReports, AdminMethod::ResolveReport, AdminMethod::SetMaintenance, AdminMethod::ClearMaintenance, AdminMethod::PostNotice, AdminMethod::RemoveNotice, AdminMethod::ListLiveEvents, AdminMethod::PutLiveEvent, AdminMethod::RemoveLiveEvent>, OnlinePushList<>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = AdminResult;
-
-        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
-        static constexpr OnlineErrorResult<AdminResult> kArrCommonResult[] = {
-            { OnlineError::kUnauthenticated, AdminResult::NotSignedIn },
-            { OnlineError::kForbidden, AdminResult::Forbidden },
-            { OnlineError::kInvalidRequest, AdminResult::InvalidRequest },
-            { OnlineError::kUnavailable, AdminResult::Unavailable },
-            { OnlineError::kBusy, AdminResult::Busy },
-            { OnlineError::kConflict, AdminResult::Busy, true },
-            { OnlineError::kVersionMismatch, AdminResult::UpdateRequired },
-            { OnlineError::kUpdateRequired, AdminResult::UpdateRequired },
-        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxBulkCount       = 12;

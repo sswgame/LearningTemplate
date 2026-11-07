@@ -260,15 +260,16 @@ namespace sw::editor
     string AdminToolSession::makeReplyLine( const AdminClient::Reply& reply )
     {
         StringBuilder<constant::buffer::kMax128> line;
-        line.appendFormat( "%#: %#", AdminToolModel::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
-        if ( reply._errorCode != 0 )
-            line.appendFormat( " (error %#)", reply._errorCode );
+        if ( reply._errorCode != OnlineError::kOk )
+            line.appendFormat( "%#: error %#", AdminToolModel::getMethodName( reply._method ), reply._errorCode ); // 공통 범주(권한 · 형식 · 장애)는 업무 결과가 없다
+        else
+            line.appendFormat( "%#: %#", AdminToolModel::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
         return string( line.view() );
     }
 
     void AdminToolSession::rejectLocally( uint16 method )
     {
-        _lastResult    = AdminResult::InvalidRequest;
+        _lastResult    = AdminOutcome::fail( OnlineError::kInvalidRequest );
         _lastMethod    = method;
         _bLastReplayed = SW_FALSE;
         _statusLine    = string( AdminToolModel::getMethodName( method ) ) + ": InvalidRequest (the duration must be zero or a positive number that fits)";
@@ -280,14 +281,14 @@ namespace sw::editor
         if ( _pendingCount > 0 )
             --_pendingCount;
         ++_completedCount;
-        _lastResult    = reply._reply._result;
+        _lastResult    = reply._errorCode != OnlineError::kOk ? AdminOutcome::fail( reply._errorCode ) : AdminOutcome{ reply._reply._result };
         _lastMethod    = reply._method;
         _bLastReplayed = reply._reply._bReplayed == SW_TRUE;
 
         _statusLine = makeReplyLine( reply );
         SW_LOG_INFO_ID( "Admin.CommandResult", "Admin command %#", _statusLine.c_str() );
 
-        if ( reply._reply._result != AdminResult::Ok )
+        if ( _lastResult != AdminResult::Ok )
             return;
         storeResult( reply );
         // 새로 고침은 결과 칸을 덮지 않는 길로 보낸다. 예전에는 같은 길이라 지급 뒤의 상태 줄 · 결과 · 재전송 표시가 조회의 것이 되어 GM 이 명령의 답을 보지 못했다.
@@ -313,7 +314,7 @@ namespace sw::editor
         ++_completedCount;
         const string line = makeReplyLine( reply );
         SW_LOG_INFO_ID( "Admin.CommandResult", "Admin command %#", line.c_str() );
-        if ( reply._reply._result == AdminResult::Ok )
+        if ( reply._errorCode == OnlineError::kOk && reply._reply._result == AdminResult::Ok )
             storeResult( reply );
         else
             _statusLine += " - refresh failed: " + line; // 명령은 끝났고 화면이 낡았다는 뜻이다

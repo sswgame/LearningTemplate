@@ -66,7 +66,7 @@ namespace sw
     class SW_KIT_SERVER_API AdminService final : public OnlineProtocolService<AdminService, AdminProtocol>
     {
     public:
-        using LocalCallTable = OnlineLocalCallTable<AdminReply>;
+        using LocalCallTable = OnlineLocalCallTable<OnlineResult<AdminReply>>; ///< 같은 프로세스의 호출도 원격과 같은 모양(공통 범주는 `_errorCode`)으로 받는다
         using ReplyDelegate  = LocalCallTable::ReplyDelegate;
 
         AdminService();
@@ -99,22 +99,23 @@ namespace sw
         void                  onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
 
         /** @brief 작업의 `complete` 가 호출합니다. */
-        void  completeCall( uint64 callID, AdminReply& inoutReply );
-        void  completeSeed( AdminResult result, ServiceStoreCompletion completion );
+        void  completeCall( uint64 callID, AdminOutcome outcome, AdminReply& inoutReply );
+        void  completeSeed( AdminOutcome result, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
 
     private:
         void startCall( uint64 callID, AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs );
         /** @brief 호출을 @p reply 로 끝냅니다. 같은 프로세스 호출이면 델리게이트로, 호스트 호출이면 표(공통 범주 · 보존 · 지표)로 갑니다. */
-        void finishCall( uint64 callID, const AdminReply& reply );
+        /** @brief 호출을 끝냅니다. 원격이면 공통 범주는 `finishCall`, 같은 프로세스면 `OnlineResult` 로 답합니다. */
+        void respondCall( uint64 callID, const AdminOutcome& outcome, const AdminReply& reply );
         /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 회수한다. */
         [[nodiscard]] bool forwardDirectoryCall( uint64 callID, const AdminCallExtra& pending );
         /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */
-        [[nodiscard]] bool forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminReply& inoutReply );
+        [[nodiscard]] bool forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminOutcome& inoutOutcome, AdminReply& inoutReply );
         /** @brief 넘긴 키트(서버 디렉터리, 라이브 운영)의 완료를 거두어 응답합니다. */
         void pollForwardedCompletions();
         /** @brief 넘긴 명령 하나를 그 결과로 끝냅니다. */
-        void finishForwardedCall( uint64 callID, AdminResult result );
+        void finishForwardedCall( uint64 callID, AdminOutcome result );
 
     private:
         LocalCallTable                        _localCalls;

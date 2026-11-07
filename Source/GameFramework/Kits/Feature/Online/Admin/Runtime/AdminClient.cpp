@@ -29,9 +29,8 @@ namespace sw
         if ( AdminProtocol::Table::visitMethod( method, visitor ) )
             return visitor._requestID;
         Reply reply;
-        reply._method        = method;
-        reply._errorCode     = OnlineError::kInvalidRequest;
-        reply._reply._result = AdminResult::InvalidRequest;
+        reply._method    = method;
+        reply._errorCode = OnlineError::kInvalidRequest;
         if ( onReply.isBound() )
             onReply( reply );
         return 0;

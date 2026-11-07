@@ -25,17 +25,19 @@ namespace sw
             AdminCommandJob( AdminService* pService, const AdminCommand& command, uint64 callID )
                 : _command{ command }
                 , _reply{}
+                , _outcome{ AdminOutcome::fail( OnlineError::kUnavailable ) }
                 , _pService{ pService }
                 , _callID{ callID }
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { (void)AdminStoreLogic::execute( connection, _command, _reply ); } // 결과는 _reply 에 담겨 complete 가 돌려준다
-            void complete() override { _pService->completeCall( _callID, _reply ); }
+            void run( IServiceStoreConnection& connection ) override { _outcome = AdminStoreLogic::execute( connection, _command, _reply ); }
+            void complete() override { _pService->completeCall( _callID, _outcome, _reply ); }
 
         private:
             AdminCommand  _command;
             AdminReply    _reply;
+            AdminOutcome  _outcome; ///< 저장 로직의 결과이다. 공통 범주면 `_reply` 는 뜻이 없다
             AdminService* _pService;
             uint64        _callID;
         };
@@ -49,7 +51,7 @@ namespace sw
                 , _accountID{ accountID }
                 , _nowMs{ nowMs }
                 , _role{ role }
-                , _result{ AdminResult::Unavailable }
+                , _result{ AdminOutcome::fail( OnlineError::kUnavailable ) }
             {
             }
 
@@ -61,7 +63,7 @@ namespace sw
             AccountID        _accountID;
             UnixMilliseconds _nowMs;
             AdminRole        _role;
-            AdminResult      _result;
+            AdminOutcome     _result;
         };
     } // namespace
 } // namespace sw
@@ -138,17 +140,16 @@ namespace sw
         command._nowMs      = nowMs.count();
         command._method     = method;
 
-        AdminReply refused;
-        refused._result = AdminResult::Ok;
+        AdminOutcome refused{ AdminResult::Ok };
         if ( _pStore == nullptr )
-            refused._result = AdminResult::Unavailable;
+            refused = AdminOutcome::fail( OnlineError::kUnavailable );
         else if ( adminID == kInvalidAccountID )
-            refused._result = AdminResult::NotSignedIn;
+            refused = AdminOutcome::fail( OnlineError::kUnauthenticated );
         else if ( methodIndex < 0 )
-            refused._result = AdminResult::Forbidden; // 모르는 명령이므로 누구도 가질 수 없는 등급이 필요하다
-        if ( refused._result != AdminResult::Ok )
+            refused = AdminOutcome::fail( OnlineError::kForbidden ); // 모르는 명령이므로 누구도 가질 수 없는 등급이 필요하다
+        if ( refused != AdminResult::Ok )
         {
-            finishCall( callID, refused );
+            respondCall( callID, refused, AdminReply{} );
             return;
         }
         _pStore->submit( make_unique<AdminCommandJob>( this, command, callID ) );
@@ -176,7 +177,7 @@ namespace sw
         update( nowMs );
     }
 
-    void AdminService::completeCall( uint64 callID, AdminReply& inoutReply )
+    void AdminService::completeCall( uint64 callID, AdminOutcome outcome, AdminReply& inoutReply )
     {
         const auto extraIt = _mapCallToExtra.find( callID );
         if ( extraIt == _mapCallToExtra.end() )
@@ -185,40 +186,46 @@ namespace sw
             return;
         }
         const AdminCallExtra pending              = extraIt->second; // 알림 · 넘기기가 표를 건드려도 칸이 남게 복사한다
-        const bool           bLookupWithDirectory = pending._method == AdminMethod::LookupAccount::kID && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr;
+        const bool           bLookupWithDirectory = pending._method == AdminMethod::LookupAccount::kID && outcome == AdminResult::Ok && _settings._pDirectory != nullptr;
         if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
             inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
-        const bool bRevoke = inoutReply._result == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
+        const bool bRevoke = outcome == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
         if ( bRevoke && _settings._pSessionControl != nullptr )
         {
             const string_view reasonCode = inoutReply._sanction._reasonCode.empty() ? string_view( "sanction.suspended" ) : string_view( inoutReply._sanction._reasonCode );
             _settings._pSessionControl->revokeAccountSessions( pending._targetID, reasonCode, pending._nowMs );
         }
-        const bool bForwardToDirectory = AdminMethod::isDirectoryMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
+        const bool bForwardToDirectory = AdminMethod::isDirectoryMethod( pending._method ) && outcome == AdminResult::Ok;
         if ( bForwardToDirectory )
         {
             if ( forwardDirectoryCall( callID, pending ) )
                 return; // 서버 디렉터리 키트의 완료가 응답한다
-            inoutReply._result = AdminResult::Unavailable;
+            outcome = AdminOutcome::fail( OnlineError::kUnavailable );
         }
-        const bool bForwardToLiveOps = AdminMethod::isLiveEventMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
-        if ( bForwardToLiveOps && forwardLiveEventCall( callID, pending, inoutReply ) )
+        const bool bForwardToLiveOps = AdminMethod::isLiveEventMethod( pending._method ) && outcome == AdminResult::Ok;
+        if ( bForwardToLiveOps && forwardLiveEventCall( callID, pending, outcome, inoutReply ) )
             return; // 라이브 운영 키트의 완료가 응답한다
-        const bool bBalanceChanged = pending._method == AdminMethod::AdjustAsset::kID && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
+        const bool bBalanceChanged = pending._method == AdminMethod::AdjustAsset::kID && outcome == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
         if ( bBalanceChanged && _settings._pBalanceNotice != nullptr )
             _settings._pBalanceNotice->notifyBalancesChanged( pending._targetID, inoutReply._listBalance ); // 대상 계정이 접속해 있으면 지갑이 바로 맞는다
-        const bool bSanctionChanged = pending._method == AdminMethod::SetSanction::kID && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
+        const bool bSanctionChanged = pending._method == AdminMethod::SetSanction::kID && outcome == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
         if ( bSanctionChanged && _settings._pBus != nullptr )
             (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
-        finishCall( callID, inoutReply );
+        respondCall( callID, outcome, inoutReply );
     }
 
-    void AdminService::finishCall( uint64 callID, const AdminReply& reply )
+    void AdminService::respondCall( uint64 callID, const AdminOutcome& outcome, const AdminReply& reply )
     {
         _mapCallToExtra.erase( callID );
         if ( LocalCallTable::isLocal( callID ) )
-            (void)_localCalls.finish( callID, reply );
-        else if ( OnlineProtocolService::completeCall( callID, reply ) == false ) // 모르는 번호를 조용히 넘기지 않는다
+        {
+            OnlineResult<AdminReply> local; // 원격 클라이언트가 받는 것과 같은 모양이다 — 공통 범주는 `_errorCode`
+            local._errorCode = outcome._errorCode;
+            if ( outcome.isFailed() == false )
+                local._reply = reply;
+            (void)_localCalls.finish( callID, local );
+        }
+        else if ( finishCall( callID, outcome, reply ) == false ) // 모르는 번호를 조용히 넘기지 않는다
             _calls.warnUnknownCall( callID );
     }
 
@@ -270,12 +277,12 @@ namespace sw
         }
     }
 
-    bool AdminService::forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminReply& inoutReply )
+    bool AdminService::forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminOutcome& inoutOutcome, AdminReply& inoutReply )
     {
         ILiveEventControl* const pControl = _settings._pLiveEventControl;
         if ( pControl == nullptr )
         {
-            inoutReply._result = AdminResult::Unavailable;
+            inoutOutcome = AdminOutcome::fail( OnlineError::kUnavailable );
             return false;
         }
         const AdminRequest& request = pending._request;
@@ -299,11 +306,11 @@ namespace sw
         return true;
     }
 
-    void AdminService::finishForwardedCall( uint64 callID, AdminResult result )
+    void AdminService::finishForwardedCall( uint64 callID, AdminOutcome result )
     {
         AdminReply reply;
-        reply._result = result;
-        finishCall( callID, reply );
+        reply._result = result._result;
+        respondCall( callID, result, reply );
     }
 
     void AdminService::pollForwardedCompletions()
@@ -314,11 +321,11 @@ namespace sw
             _settings._pLiveEventControl->takeControlCompletions( listLiveCompletion );
             for ( const LiveEventControlCompletion& completion : listLiveCompletion )
             {
-                AdminResult result = AdminResult::Unavailable;
+                AdminOutcome result = AdminOutcome::fail( OnlineError::kUnavailable );
                 if ( completion._result == LiveEventControlResult::Ok )
                     result = AdminResult::Ok;
                 else if ( completion._result == LiveEventControlResult::Invalid )
-                    result = AdminResult::InvalidRequest;
+                    result = AdminOutcome::fail( OnlineError::kInvalidRequest );
                 else if ( completion._result == LiveEventControlResult::NotFound )
                     result = AdminResult::NotFound;
                 finishForwardedCall( completion._requestTag, result );
@@ -330,21 +337,21 @@ namespace sw
         _settings._pDirectoryControl->takeControlCompletions( listCompletion );
         for ( const ServerDirectoryControlCompletion& completion : listCompletion )
         {
-            AdminResult result = AdminResult::Unavailable;
+            AdminOutcome result = AdminOutcome::fail( OnlineError::kUnavailable );
             if ( completion._result == ServerDirectoryControlResult::Ok )
                 result = AdminResult::Ok;
             else if ( completion._result == ServerDirectoryControlResult::Invalid )
-                result = AdminResult::InvalidRequest;
+                result = AdminOutcome::fail( OnlineError::kInvalidRequest );
             else if ( completion._result == ServerDirectoryControlResult::NotFound )
                 result = AdminResult::NotFound;
             finishForwardedCall( completion._requestTag, result );
         }
     }
 
-    void AdminService::completeSeed( AdminResult result, ServiceStoreCompletion completion )
+    void AdminService::completeSeed( AdminOutcome result, ServiceStoreCompletion completion )
     {
         --_pendingSeedCount;
         if ( result != AdminResult::Ok && completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류가 아니다
-            SW_LOG_ERROR_ID( "AdminService.AdminServiceCouldNotSeed", "AdminService could not seed the first administrator (%#)", getEnumName( result ) );
+            SW_LOG_ERROR_ID( "AdminService.AdminServiceCouldNotSeed", "AdminService could not seed the first administrator (result %#, error %#)", getEnumName( result._result ), static_cast<int32>( result._errorCode ) );
     }
 } // namespace sw

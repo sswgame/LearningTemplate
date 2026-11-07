@@ -112,7 +112,7 @@ SW_TEST_CASE( AdminToolSessionTest, FailedCommandDoesNotRefresh )
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
     const int32 completedBefore = session.getCompletedCount();
     session.requestAdjust( AdminToolSessionTestUtil::kOther, "cur.gold", 1, false, "" ); // 메모 없음
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( completedBefore + 1, session.getCompletedCount() );
     SW_EXPECT_EQUAL( AccountID( AdminToolSessionTestUtil::kPlayer ), session.getLookupAccountID() );
 }
@@ -130,20 +130,20 @@ SW_TEST_CASE( AdminToolSessionTest, BadDurationsAreRefusedBeforeSending )
     const int32 completedBefore = session.getCompletedCount();
 
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, -1, "gm.notice", "ticket" );
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( AdminMethod::SetSanction::kID, session.getLastMethod() );
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, std::numeric_limits<int64>::max(), "gm.notice", "ticket" );
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( completedBefore, session.getCompletedCount() ); // 제공자에 닿지 않았다
     SW_EXPECT_EQUAL( 0, session.getPendingCount() );
     SW_EXPECT_EQUAL( untilMs, session.getLookup()._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] );
 
     session.requestSetMaintenance( "all", "maintenance.default", -5, "ticket" );
     SW_EXPECT_EQUAL( AdminMethod::SetMaintenance::kID, session.getLastMethod() );
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     session.requestPostNotice( 1, "text", 0, -5, "ticket" );
     SW_EXPECT_EQUAL( AdminMethod::PostNotice::kID, session.getLastMethod() );
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( completedBefore, session.getCompletedCount() );
 }
 
@@ -174,7 +174,7 @@ SW_TEST_CASE( AdminToolSessionTest, ServerOnlyCommandsReportUnavailable )
     AdminToolSession session;
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
     session.requestPostNotice( 1, "text", 0, 60, "ticket" );
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::Unavailable );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( string( "ServerDirectory: Unavailable" ), session.getStatusLine() );
     session.requestReports( true );
     SW_EXPECT_TRUE( session.getReports().empty() );
@@ -190,7 +190,7 @@ SW_TEST_CASE( AdminToolSessionTest, LiveProviderWithoutClientAnswersUnavailable 
     session.useLiveClient( nullptr );
     SW_EXPECT_TRUE( session.getProvider().isLive() );
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
-    SW_EXPECT_TRUE( session.getLastResult() == AdminResult::Unavailable );
+    SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 0, session.getPendingCount() );
     SW_EXPECT_TRUE( session.getStatusLine().find( "error" ) != string::npos ); // 오류 코드를 보인다
 

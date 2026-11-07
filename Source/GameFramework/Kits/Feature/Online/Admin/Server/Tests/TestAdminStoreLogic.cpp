@@ -57,8 +57,8 @@ SW_TEST_CASE( AdminStoreLogicTest, ViewerCannotAdjustAssets )
     Fixture      fixture;
     const uint64 hashBefore = fixture.database.computeContentHash();
     AdminReply   reply;
-    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kViewer, 100, 1 ), reply ) == AdminResult::Forbidden );
-    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kPlayer, 100, 2 ), reply ) == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kViewer, 100, 1 ), reply ).hasError( OnlineError::kForbidden ) );
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kPlayer, 100, 2 ), reply ).hasError( OnlineError::kForbidden ) );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
 }
 
@@ -94,9 +94,9 @@ SW_TEST_CASE( AdminStoreLogicTest, MutationsNeedMemoAndKey )
     AdminReply   reply;
     AdminCommand noMemo = makeAdjust( kOperator, 10, 7 );
     noMemo._request._memo.clear();
-    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, noMemo, reply ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, noMemo, reply ).hasError( OnlineError::kInvalidRequest ) );
     AdminCommand noKey = makeAdjust( kOperator, 10, 0 );
     noKey._keyHigh     = 0;
-    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, noKey, reply ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, noKey, reply ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
 }

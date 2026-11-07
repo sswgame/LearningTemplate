@@ -109,11 +109,11 @@ namespace sw::editor
             NetIdempotencyKey _key{};
         };
 
-        AdminResult       execute( uint16 method, const AdminRequest& request, AdminReply& outReply );
-        AdminResult       executeLookup( const AdminRequest& request, AdminReply& outReply ) const;
-        AdminResult       executeAdjust( const AdminRequest& request, AdminReply& outReply );
-        AdminResult       executeSanction( const AdminRequest& request, AdminReply& outReply );
-        AdminResult       executeListAudit( const AdminRequest& request, AdminReply& outReply ) const;
+        AdminOutcome      execute( uint16 method, const AdminRequest& request, AdminReply& outReply );
+        AdminOutcome      executeLookup( const AdminRequest& request, AdminReply& outReply ) const;
+        AdminOutcome      executeAdjust( const AdminRequest& request, AdminReply& outReply );
+        AdminOutcome      executeSanction( const AdminRequest& request, AdminReply& outReply );
+        AdminOutcome      executeListAudit( const AdminRequest& request, AdminReply& outReply ) const;
         void              appendAudit( const utf8* pAction, const AdminRequest& request, string_view before, string_view after );
         int64             getNowMs() const { return _nowMs; }
         FakeAdminAccount* findMutableAccount( AccountID accountID );

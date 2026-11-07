@@ -52,12 +52,12 @@ namespace
         }
 
         /** @brief 명령 하나를 보내고 결과를 돌려줍니다. 답은 정확히 한 번이어야 합니다. */
-        static AdminResult send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
+        static AdminOutcome send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
         {
             ReplyRecorder recorder;
             provider.sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
             SW_EXPECT_EQUAL( 1, recorder._count );
-            return recorder._last._reply._result;
+            return recorder._last._errorCode != OnlineError::kOk ? AdminOutcome::fail( recorder._last._errorCode ) : AdminOutcome{ recorder._last._reply._result };
         }
 
         static int64 findGold( const FakeAdminProvider& provider )
@@ -102,30 +102,30 @@ SW_TEST_CASE( FakeAdminProviderTest, RolesGateCommands )
     lookup._accountID = FakeAdminProvider::kSeedPlayerID;
 
     provider.setActingRole( AdminRole::None );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::LookupAccount::kID, lookup ) == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::LookupAccount::kID, lookup ).hasError( OnlineError::kForbidden ) );
 
     provider.setActingRole( AdminRole::Viewer );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::LookupAccount::kID, lookup ) == AdminResult::Ok );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1 ) ) == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1 ) ).hasError( OnlineError::kForbidden ) );
 
     provider.setActingRole( AdminRole::Support );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::ChatMute, kNowMs + 1000 ) ) == AdminResult::Ok );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Suspend, kNowMs + 1000 ) ) == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Suspend, kNowMs + 1000 ) ).hasError( OnlineError::kForbidden ) );
 
     provider.setActingRole( AdminRole::Operator );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Ban, kNowMs + 1000 ) ) == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Ban, kNowMs + 1000 ) ).hasError( OnlineError::kForbidden ) );
 
     provider.setActingRole( AdminRole::Super );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Ban, kNowMs + 1000 ) ) == AdminResult::Ok );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, 0xFFFF, lookup ) == AdminResult::Forbidden ); // 모르는 메서드는 누구도 못 한다
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, 0xFFFF, lookup ).hasError( OnlineError::kForbidden ) ); // 모르는 메서드는 누구도 못 한다
 }
 
 SW_TEST_CASE( FakeAdminProviderTest, MutatingCommandsNeedAMemo )
 {
     FakeAdminProvider provider{ kNowMs };
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1, "" ) ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1, "" ) ).hasError( OnlineError::kInvalidRequest ) );
     const string tooLong( static_cast<size_t>( AdminProtocol::kMaxMemoSize ) + 1, 'm' );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1, tooLong ) ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1, tooLong ) ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( int64( 100 ), FakeAdminProviderTestUtil::findGold( provider ) );
     SW_EXPECT_TRUE( provider.getAuditLog().empty() );
 }
@@ -151,7 +151,7 @@ SW_TEST_CASE( FakeAdminProviderTest, RevokeStopsAtTheBalanceUnlessRefund )
 SW_TEST_CASE( FakeAdminProviderTest, AmountLimits )
 {
     FakeAdminProvider provider{ kNowMs };
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 0 ) ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 0 ) ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( FakeAdminProvider::kMaxAdjustAmount + 1 ) ) == AdminResult::CapExceeded );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( -FakeAdminProvider::kMaxAdjustAmount - 1 ) ) == AdminResult::CapExceeded );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( std::numeric_limits<int64>::min() ) ) == AdminResult::CapExceeded );
@@ -165,9 +165,9 @@ SW_TEST_CASE( FakeAdminProviderTest, AssetIDFollowsTheServerRule )
     FakeAdminProvider provider{ kNowMs };
     AdminRequest      request = FakeAdminProviderTestUtil::makeAdjust( 5 );
     request._assetID          = "Bad Asset";
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, request ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, request ).hasError( OnlineError::kInvalidRequest ) );
     request._assetID = "";
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, request ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, request ).hasError( OnlineError::kInvalidRequest ) );
     request._assetID = "cur.silver";
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, request ) == AdminResult::Ok ); // 없던 자산의 줄이 생긴다
     SW_EXPECT_EQUAL( size_t( 2 ), provider.findAccount( FakeAdminProvider::kSeedPlayerID )->_listBalance.size() );
@@ -191,7 +191,7 @@ SW_TEST_CASE( FakeAdminProviderTest, IdempotencyKeyReplaysTheFirstReply )
     SW_EXPECT_EQUAL( 2, provider.getRecordedKeyCount() );
 
     const NetIdempotencyKey failedKey = NetIdempotencyKey::makeRandom();
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1, "" ), failedKey ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1, "" ), failedKey ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::AdjustAsset::kID, FakeAdminProviderTestUtil::makeAdjust( 1 ), failedKey ) == AdminResult::Ok );
 }
 
@@ -209,10 +209,10 @@ SW_TEST_CASE( FakeAdminProviderTest, SanctionRules )
     SW_EXPECT_EQUAL( int64( 0 ), pAccount->_sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::Ban )] );
     SW_EXPECT_EQUAL( string( "gm.notice" ), pAccount->_sanction._reasonCode ); // 결함: 사유 없는 해제가 앞의 사유를 지웠다(서버는 남긴다)
 
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Suspend, -1 ) ) == AdminResult::InvalidRequest );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Count, 1 ) ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Suspend, -1 ) ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( ServiceSanctionKind::Count, 1 ) ).hasError( OnlineError::kInvalidRequest ) );
     // 결함: `== Count` 만 보아 그 너머의 값이 제재 칸 밖을 읽고 썼다.
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( static_cast<ServiceSanctionKind>( 200 ), 1 ) ) == AdminResult::InvalidRequest );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::SetSanction::kID, FakeAdminProviderTestUtil::makeSanction( static_cast<ServiceSanctionKind>( 200 ), 1 ) ).hasError( OnlineError::kInvalidRequest ) );
 }
 
 SW_TEST_CASE( FakeAdminProviderTest, AuditRecordsChangesNewestFirst )
@@ -254,8 +254,8 @@ SW_TEST_CASE( FakeAdminProviderTest, CommandsThatNeedTheServerAreUnavailable )
     FakeAdminProvider provider{ kNowMs };
     AdminRequest      notice;
     notice._memo = "ticket";
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::PostNotice::kID, notice ) == AdminResult::Unavailable );
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::ListLiveEvents::kID, AdminRequest{} ) == AdminResult::Unavailable );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::PostNotice::kID, notice ).hasError( OnlineError::kUnavailable ) );
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::ListLiveEvents::kID, AdminRequest{} ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 0, provider.getRecordedKeyCount() );
 }
 
@@ -270,6 +270,6 @@ SW_TEST_CASE( FakeAdminProviderTest, LiveProviderWithoutAClientAnswersUnavailabl
     ReplyRecorder       recorder;
     live.sendCommand( AdminMethod::LookupAccount::kID, AdminRequest{}, NetIdempotencyKey{}, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
     SW_EXPECT_EQUAL( 1, recorder._count );
-    SW_EXPECT_TRUE( recorder._last._reply._result == AdminResult::Unavailable );
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, recorder._last._errorCode );
     SW_EXPECT_TRUE( live.isLive() );
 }

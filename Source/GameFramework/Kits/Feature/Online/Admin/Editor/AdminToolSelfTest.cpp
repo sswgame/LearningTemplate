@@ -76,7 +76,7 @@ namespace sw::editor
                 context.expect( session.hasLookup() && AdminToolSelfTestInternal::findGold( session.getLookup() ) == 100, "seed account should start with 100 gold" );
 
                 session.requestAdjust( playerID, "cur.gold", 50, false, "" );
-                context.expect( session.getLastResult() == AdminResult::InvalidRequest, "a grant without a memo must be rejected" );
+                context.expect( session.getLastResult().hasError( OnlineError::kInvalidRequest ), "a grant without a memo must be rejected" );
                 session.requestAdjust( playerID, "cur.gold", 50, false, "selftest" );
                 context.expect( session.getLastResult() == AdminResult::Ok && AdminToolSelfTestInternal::findGold( session.getLookup() ) == 150,
                                 "a grant should raise the refreshed balance" );
@@ -91,7 +91,7 @@ namespace sw::editor
 
                 session.getFakeProvider().setActingRole( AdminRole::Viewer );
                 session.requestAdjust( playerID, "cur.gold", 1, false, "selftest" );
-                context.expect( session.getLastResult() == AdminResult::Forbidden, "a viewer must not be able to grant" );
+                context.expect( session.getLastResult().hasError( OnlineError::kForbidden ), "a viewer must not be able to grant" );
                 return EditorSelfTestStep::Done;
             }
 
