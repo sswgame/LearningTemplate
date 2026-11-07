@@ -493,12 +493,17 @@ namespace sw
             SW_LOG_WARNING_ID( "SceneManager.SceneSaveNoActive", "Scene save: no active scene" );
             return false;
         }
+        // 단계별 시간(비동기 저장 판단 — DesignBacklog "비동기 · 병렬"): 스냅숏(`serialize`)은 게임 스레드에 남고, 그 뒤 `base` · `write` 는 독립 값(`SceneDocument`)만 읽어 워커로 옮길 수 있는 몫이다.
         SceneDocument doc{};
-        if ( pScene->serializeToDocument( doc ) == false )
-            return false;
+        {
+            ScopedTimer serializeTimer{ "Scene.save.serialize" };
+            if ( pScene->serializeToDocument( doc ) == false )
+                return false;
+        }
         doc._sourcePath = sourceID.empty() ? pScene->getSourcePath() : sourceID;
         if ( doc._baseScenePath.empty() )
         {
+            ScopedTimer writeTimer{ "Scene.save.write" };
             if ( doc.saveToFile( absPath ) == false )
                 return false;
         }
@@ -507,10 +512,20 @@ namespace sw
             // 씬 상속: 부모를 같은 길로 지어 다시 쓴 것과의 차이만 적는다 — 손으로 쓴 부모 글과 비교하면 값이 같아도 모두 다르게 나온다.
             SceneDocument parentSource{};
             SceneDocument parent{};
-            Scene         parentScene{ "SceneSave.Base", pScene->getEngineServices() };
-            parentScene.setBuildAllDataLayers();
-            const bool bParentMade = parentSource.loadXML( AssetID{ doc._baseScenePath } ) && parentScene.instantiate( parentSource ) && parentScene.serializeToDocument( parent );
-            if ( bParentMade == false || doc.saveXMLDelta( absPath, parent ) == false )
+            bool          bParentMade = false;
+            {
+                ScopedTimer parentTimer{ "Scene.save.base" };
+                Scene       parentScene{ "SceneSave.Base", pScene->getEngineServices() };
+                parentScene.setBuildAllDataLayers();
+                bParentMade = parentSource.loadXML( AssetID{ doc._baseScenePath } ) && parentScene.instantiate( parentSource ) && parentScene.serializeToDocument( parent );
+            }
+            bool bWritten = false;
+            if ( bParentMade )
+            {
+                ScopedTimer writeTimer{ "Scene.save.write" };
+                bWritten = doc.saveXMLDelta( absPath, parent );
+            }
+            if ( bWritten == false )
             {
                 SW_LOG_ERROR_ID( "SceneManager.SceneBaseNotSaved", "Scene '%#' could not be saved as a difference from '%#' - nothing is written", doc._name, doc._baseScenePath );
                 return false;

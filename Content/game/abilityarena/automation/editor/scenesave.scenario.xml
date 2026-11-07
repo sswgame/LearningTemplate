@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AbilityArena 에디터 측정 시나리오 — 큰 씬(arena, 저장소에서 가장 큰 씬 글) 저장의 단계별 시간. 비동기 저장(스냅숏 분리)을 할지 정하는 값이다.
+  같은 씬을 세 번 다른 이름으로 저장하고, 단계마다 ScopedTimer 줄(GameTimer.Ms)이 세 번씩 나오는지 본다:
+  'Scene.save.serialize'(게임 스레드에 남는 스냅숏) · 'Scene.save.write'(XML 생성 · 파일 쓰기 — 워커로 옮길 수 있는 몫).
+  판정(통합 담당): Release 로 3 번 돌려 write 중앙값이 16 ms(한 프레임)를 넘고 serialize 보다 크면 write 를 워커로 옮긴다. 아니면 값을 DesignBacklog 판단 절에 적고 닫는다.
+  에디터 단계를 쓰므로 게임 체인이 줍지 않게 하위 폴더 editor/ 에 둔다.
+  실행: App -EnableEditor -game=AbilityArena -scenario=game/abilityarena/automation/editor/scenesave.scenario.xml -unattended
+-->
+<Scenario name="game.abilityarena.scenesave" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="scene.open game/abilityarena/maps/arena.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.saveAs {out}/scenesave_1.scene.xml"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.saveAs {out}/scenesave_2.scene.xml"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.saveAs {out}/scenesave_3.scene.xml"/>
+	<EditorWaitSettled/>
+	<ExpectLog id="GameTimer.Ms" contains="'Scene.save.serialize'" count="3"/>
+	<ExpectLog id="GameTimer.Ms" contains="'Scene.save.write'" count="3"/>
+	<Pass/>
+</Scenario>
