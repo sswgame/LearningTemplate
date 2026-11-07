@@ -162,6 +162,7 @@ namespace sw
                 }
 
                 PackCookParams params;
+                params._projectRoot  = ProcessRoots::get()._project.str(); // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
                 params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 params._cookedDir    = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다

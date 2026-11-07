@@ -85,6 +85,69 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct PackAlwaysCookRule
+     * @brief 참조가 없어도 담는 파일의 이름 붙은 묶음입니다(언리얼 Primary Asset Rules 의 `AlwaysCook` · Directories to Always Cook).
+     * @details 코드가 이름으로 읽는 것(엔진 기본 에셋 · 설정, 시나리오, 종류 경로 규칙으로 찾는 데이터)처럼 참조 칸으로 닿지 않는 파일만 적는다. 이 묶음의 파일은 뿌리라 그 참조도 따라간다.
+     *          패턴은 리소스 id(`engine/…` · `game/<팩>/…`)에 `StringUtil::matchesPathPattern` 으로 맞춘다.
+     */
+    REFLECT()
+    struct SW_API PackAlwaysCookRule
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name; ///< 묶음 이름 — 왜 참조로 닿지 않는지를 이름으로 적는다(로그 · 문서용)
+
+        PROPERTY( Required )
+        vector<string> _listPattern; ///< 리소스 id 패턴(`game/*/maps/**`)
+    };
+
+    /**
+     * @struct PackRequiredDataPath
+     * @brief 게임 설정 `<RequiredData kind pack>` 의 종류 하나가 팩 안에서 차지하는 자리(`data/items.xml` · 폴더 `data/appearance`)입니다.
+     * @details 런타임은 종류 등록 줄의 경로 규칙으로 자리를 만든다(`GamePackDataUtil::tryMakeKindPath`). 팩 쿠킹은 게임 · 키트 모듈을 올리기 전에 돌아 그 등록을 보지 못하므로
+     *          같은 자리를 데이터로 적는다(`DataCatalogInheritance.json` 과 같은 까닭). 둘이 같은지는 `PackCookRulesTest.RequiredDataPathsMatchTheKindRegistry` 가 본다.
+     */
+    REFLECT()
+    struct SW_API PackRequiredDataPath
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _kind; ///< 데이터 종류 이름(`SW_ASSET_TYPE` 의 이름 — `items`)
+
+        PROPERTY( Required )
+        string _path; ///< 팩 루트 기준 자리(파일이면 그 파일, 폴더면 그 아래 전부)
+    };
+
+    /**
+     * @struct PackCookRules
+     * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachability`).
+     * @details 담는 것은 뿌리(항상 담기 묶음 · 게임 설정의 필수 데이터)에서 참조 칸(`AssetReferenceFields`)과 곁 파일(`SW_ASSET_COMPANION`)을 따라 닿는 파일이다.
+     *          언리얼 쿠커가 맵 · Primary Asset 에서 참조된 패키지만 쿠킹하는 것과 같다. 닿는 참조가 가리키는 파일이 없으면 쿠킹 오류다(조용히 빼지 않는다).
+     */
+    REFLECT()
+    struct SW_API PackCookRules
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        vector<PackAlwaysCookRule> _listAlwaysCook; ///< 참조가 없어도 담는 묶음(뿌리)
+
+        PROPERTY( Required )
+        string _gameSettingsPath; ///< 게임 팩 루트 기준 게임 설정 파일(`data/gamesettings.xml`) — 그 `<RequiredData>` 가 다른 팩의 데이터를 뿌리로 더한다
+
+        PROPERTY( Required )
+        vector<PackRequiredDataPath> _listRequiredData; ///< 필수 데이터 종류의 팩 안 자리. 게임 설정이 이 표에 없는 종류를 적으면 쿠킹 오류다
+
+        PROPERTY( Required )
+        vector<string> _listUnfollowedField; ///< 따라가지 않는 경로 칸 — 런타임이 읽지 않는 개발 도구 입력(현지화 수집 뿌리 `assetRoots`)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct PackConfig
      * @brief `Config/Engine/PackConfig.json` 이 담는 팩 쿠킹 설정입니다. 파일 머리말 참고.
      * @details `ConfigBaseLayer` 라 파일이 모든 키를 적는다(`ConfigFileSchemaTest`).
@@ -120,5 +183,8 @@ namespace sw
 
         PROPERTY( Required )
         vector<PackExcludeRule> _listRule; ///< 이름 붙은 제외 규칙
+
+        PROPERTY( Required )
+        PackCookRules _cookRules; ///< 담을 뿌리 규칙 — 제외를 지난 파일 가운데 뿌리에서 참조로 닿는 것만 담는다
     };
 } // namespace sw

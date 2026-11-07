@@ -1,8 +1,12 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Content/Pack/PackConfig.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -48,4 +52,23 @@ SW_TEST_CASE( GameSettingsTest, SkipsTheEngineElement )
     sw::PackEngineSettings engineSettings;
     SW_REQUIRE_TRUE( engineSettings.loadFromXMLText( xml, "probe" ) );
     SW_EXPECT_EQUAL( sw::string( "Probe Game" ), engineSettings._windowTitle );
+}
+
+/**
+ * @brief [GameSettingsTest] 팩 쿠킹 규칙의 필수 데이터 자리(`PackConfig::_cookRules._listRequiredData`)는 종류 등록 줄의 규칙(`tryMakeKindPath`)과 같다
+ * @details 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 등록 줄을 보지 못해 같은 자리를 데이터로 적는다. 둘이 어긋나면 배포 팩에 필수 데이터가 빠지거나 엉뚱한 것이 든다.
+ */
+SW_TEST_CASE( GameSettingsTest, CookRequiredDataPathsMatchTheKindRegistry )
+{
+    sw::PackConfig   config;
+    const sw::string path = sw::FileUtil::joinPath( sw::ProcessRoots::get()._project.str(), sw::PackConfig::kConfigPath );
+    SW_REQUIRE_TRUE( sw::ConfigManager::readConfigFile( config, path ) == sw::ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( config._cookRules._listRequiredData.empty() == false );
+    for ( const sw::PackRequiredDataPath& entry : config._cookRules._listRequiredData )
+    {
+        sw::string kindPath;
+        sw::string error;
+        SW_REQUIRE_TRUE( sw::GamePackDataUtil::tryMakeKindPath( "common", entry._kind, kindPath, error ) );
+        SW_EXPECT_EQUAL( sw::FileUtil::joinPath( "common", entry._path ), kindPath );
+    }
 }

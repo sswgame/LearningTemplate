@@ -52,5 +52,22 @@
       "_listExcludePattern": [],
       "_bRecursive": true
     }
-  ]
+  ],
+  "_cookRules": {
+    "_listAlwaysCook": [
+      { "_name": "EngineContent_ReadByLiteralPath", "_listPattern": [ "engine/**" ] },
+      { "_name": "GameData_FoundByKindPathRule", "_listPattern": [ "game/*/data/**" ] },
+      { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ] },
+      { "_name": "GameScenarios_RunByName", "_listPattern": [ "game/*/automation/**" ] },
+      { "_name": "InputUIPipelineDialogue_ReadByName", "_listPattern": [ "game/*/input/**", "game/*/ui/**", "game/*/pipeline/**", "game/*/dialogue/**", "common/input/**", "common/ui/**" ] },
+      { "_name": "CommonSql_ReadByLiteralPath", "_listPattern": [ "common/sql/**" ] },
+      { "_name": "UnitModels_JoinedFromName", "_listPattern": [ "game/nilecity/models/**", "game/starskirmish/models/**" ] }
+    ],
+    "_gameSettingsPath": "data/gamesettings.xml",
+    "_listRequiredData": [
+      { "_kind": "items", "_path": "data/items.xml" },
+      { "_kind": "appearance", "_path": "data/appearance" }
+    ],
+    "_listUnfollowedField": [ "assetRoots" ]
+  }
 }

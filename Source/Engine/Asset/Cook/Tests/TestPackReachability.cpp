@@ -1,0 +1,230 @@
+#include "pch.h"
+
+#include "Core/Container/unordered_map.h"
+#include "Core/File/ProcessRoots.h"
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Asset/Cook/AssetCompanion.h"
+#include "Engine/Asset/Cook/PackReachability.h"
+#include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Content/Pack/PackConfig.h"
+
+using namespace sw;
+
+// PackReachabilityTest — 쓰는 것만 담는 쿠킹의 고르기: 뿌리(항상 담기 · 필수 데이터)에서 참조 칸 · 부모(`_base`) · 곁 파일을 따라가고, 빠진 참조는 오류다.
+// 칸 목록은 저장소의 표(Config/Dev/AssetReferenceFields*.json)를 그대로 읽고, 파일은 메모리에 둔다(nogpu).
+
+namespace
+{
+    struct PackReachabilityTestUtil
+    {
+        /** @brief 메모리의 글 에셋입니다. 글이 없는 파일(텍스처 · 메시)은 목록에만 있다. */
+        class MemorySource final : public IPackReachSource
+        {
+        public:
+            unordered_map<string, string> _mapText;
+
+            bool readText( const string& assetID, string& outText ) const override
+            {
+                const auto itText = _mapText.find( assetID );
+                if ( itText == _mapText.end() )
+                    return false;
+                outText = itText->second;
+                return true;
+            }
+        };
+
+        static bool loadRepositoryFields( AssetReferenceFields& outFields ) { return outFields.load( ProcessRoots::get()._project.str() ); }
+
+        /** @brief 맵 폴더를 항상 담고, 필수 데이터로 외형 폴더 · 아이템 파일을 아는 규칙입니다. */
+        static PackCookRules makeRules()
+        {
+            PackCookRules       rules;
+            PackAlwaysCookRule& maps = rules._listAlwaysCook.emplace_back();
+            maps._name               = "Maps";
+            maps._listPattern.push_back( "game/*/maps/**" );
+            rules._gameSettingsPath          = "data/gamesettings.xml";
+            PackRequiredDataPath& items      = rules._listRequiredData.emplace_back();
+            items._kind                      = "items";
+            items._path                      = "data/items.xml";
+            PackRequiredDataPath& appearance = rules._listRequiredData.emplace_back();
+            appearance._kind                 = "appearance";
+            appearance._path                 = "data/appearance";
+            rules._listUnfollowedField.push_back( "assetRoots" );
+            return rules;
+        }
+
+        /** @brief 글 에셋 하나를 담을 수 있는 파일로 더합니다. */
+        static void addText( PackReachFiles& ioFiles, MemorySource& ioSource, const string& assetID, string text )
+        {
+            ioFiles._setPackable.insert( assetID );
+            ioFiles._setExisting.insert( assetID );
+            ioSource._mapText.try_emplace( assetID, std::move( text ) );
+        }
+
+        /** @brief 글이 없는 파일 하나를 담을 수 있는 파일로 더합니다. */
+        static void addBinary( PackReachFiles& ioFiles, const string& assetID )
+        {
+            ioFiles._setPackable.insert( assetID );
+            ioFiles._setExisting.insert( assetID );
+        }
+
+        /** @brief 게임 `game/x` 하나와 그 설정(필수 데이터 @p requiredData 줄)을 둡니다. */
+        static void addGame( PackReachFiles& ioFiles, MemorySource& ioSource, string_view requiredData )
+        {
+            ioFiles._listGameDomain.push_back( "game/x" );
+            addText( ioFiles, ioSource, "game/x/data/gamesettings.xml", string( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap>" ) + string( requiredData ) + "</GameSettings>" );
+        }
+    };
+    using Util = PackReachabilityTestUtil;
+} // namespace
+
+/** @brief [PackReachabilityTest] 뿌리(맵)에서 메시 · 머티리얼 · 부모(`_base`) · 텍스처까지 따라가고, 아무도 가리키지 않는 파일은 담지 않는다. 메시 곁의 파쇄도 담긴다 */
+SW_TEST_CASE( PackReachabilityTest, FollowsReferencesFromTheRoots )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", R"(<Scene><Entity mesh="common/models/a.mesh" material="common/materials/a.material"/></Scene>)" );
+    Util::addText( files, source, "common/materials/a.material",
+                   R"(<MaterialDesc _base="engine/materials/base.material"><_properties><item assetPath="common/textures/a.dds" name="_albedoMap"/></_properties></MaterialDesc>)" );
+    Util::addText( files, source, "engine/materials/base.material", R"(<MaterialDesc><_properties><item assetPath="engine/textures/white.dds" name="_albedoMap"/></_properties></MaterialDesc>)" );
+    Util::addBinary( files, "common/models/a.mesh" );
+    Util::addBinary( files, "common/models/a.fracture" );
+    Util::addBinary( files, "common/textures/a.dds" );
+    Util::addBinary( files, "engine/textures/white.dds" );
+    Util::addBinary( files, "common/textures/unused.dds" );
+    Util::addBinary( files, "common/models/unused.mesh" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
+    for ( const utf8* pIncluded : { "game/x/data/gamesettings.xml", "game/x/maps/a.scene.xml", "common/models/a.mesh", "common/materials/a.material", "engine/materials/base.material",
+                                    "common/textures/a.dds", "engine/textures/white.dds" } )
+    {
+        SW_EXPECT_TRUE( result._setIncluded.contains( string( pIncluded ) ) );
+    }
+    SW_EXPECT_TRUE( AssetCompanionRegistry::hasRule( "MeshFracture" ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/a.fracture" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/textures/unused.dds" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/models/unused.mesh" ) ) );
+    SW_EXPECT_EQUAL( 1u, result._rootCount ); // 맵 하나 — 게임 설정은 필수 데이터의 출발점이라 담지만 뿌리 수는 그 줄(여기는 없다)로 센다
+}
+
+/** @brief [PackReachabilityTest] 닿는 참조가 어디에도 없는 파일을 가리키면 조용히 빼지 않고 쿠킹 오류다 */
+SW_TEST_CASE( PackReachabilityTest, MissingReferenceStopsTheCook )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", R"(<Scene><Entity mesh="common/models/gone.mesh"/></Scene>)" );
+
+    SW_EXPECT_LOG( "PackReachability.MissingReference" );
+    PackReachResult result;
+    SW_EXPECT_FALSE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
+}
+
+/** @brief [PackReachabilityTest] 제외 규칙이 뺀 원본(셰이더 원본 — 쿠킹본은 스테이징)을 가리키는 참조는 빠진 것이 아니고, 담지도 않는다 */
+SW_TEST_CASE( PackReachabilityTest, ExcludedSourceIsNotMissing )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", R"(<Scene><Entity material="game/x/materials/a.material"/></Scene>)" );
+    Util::addText( files, source, "game/x/materials/a.material", R"(<MaterialDesc shaderPath="engine/shaders/lit.hlsl"/>)" );
+    files._setExisting.insert( "engine/shaders/lit.hlsl" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/materials/a.material" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "engine/shaders/lit.hlsl" ) ) );
+}
+
+/** @brief [PackReachabilityTest] 항상 담기 묶음은 참조가 없어도 담고 그 참조도 따라간다. 묶음 밖에서 아무도 가리키지 않는 같은 폴더의 파일은 담지 않는다 */
+SW_TEST_CASE( PackReachabilityTest, AlwaysCookRulesAreRoots )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addText( files, source, "engine/data/defaults.xml", R"(<Defaults><Item material="common/materials/default.material"/></Defaults>)" );
+    Util::addText( files, source, "common/materials/default.material", R"(<MaterialDesc/>)" );
+    Util::addText( files, source, "common/materials/other.material", R"(<MaterialDesc/>)" );
+
+    PackCookRules       rules  = Util::makeRules();
+    PackAlwaysCookRule& engine = rules._listAlwaysCook.emplace_back();
+    engine._name               = "EngineContent";
+    engine._listPattern.push_back( "engine/**" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, rules, files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "engine/data/defaults.xml" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/materials/default.material" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/materials/other.material" ) ) );
+    SW_EXPECT_EQUAL( 1u, result._rootCount );
+}
+
+/** @brief [PackReachabilityTest] 게임 설정의 `<RequiredData kind pack>` 이 그 팩의 자리(폴더면 그 아래 전부)를 뿌리로 더하고, 적지 않은 종류는 담지 않는다 */
+SW_TEST_CASE( PackReachabilityTest, RequiredDataAddsTheNamedKindOnly )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, R"(<RequiredData kind="appearance" pack="common"/>)" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
+    Util::addText( files, source, "common/data/appearance/itemvisuals.xml", R"(<Visuals><Part mesh="common/models/knight.mesh"/></Visuals>)" );
+    Util::addText( files, source, "common/data/appearance/slots.xml", "<Slots/>" );
+    Util::addText( files, source, "common/data/items.xml", "<Items/>" );
+    Util::addBinary( files, "common/models/knight.mesh" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/data/appearance/itemvisuals.xml" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/data/appearance/slots.xml" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/data/items.xml" ) ) );
+}
+
+/** @brief [PackReachabilityTest] 표에 없는 필수 데이터 종류는 자리를 모르므로 쿠킹 오류다 */
+SW_TEST_CASE( PackReachabilityTest, UnknownRequiredDataKindIsAnError )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, R"(<RequiredData kind="quests" pack="common"/>)" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
+
+    SW_EXPECT_LOG( "PackReachability.RequiredDataKindUnknown" );
+    PackReachResult result;
+    SW_EXPECT_FALSE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
+}
+
+/** @brief [PackReachabilityTest] 따라가지 않는 칸(현지화 수집 뿌리 `assetRoots`)이 가리키는 폴더는 담지 않는다 — 런타임이 읽지 않는 도구 입력이다 */
+SW_TEST_CASE( PackReachabilityTest, UnfollowedFieldsAreNotFollowed )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
+    Util::addText( files, source, "game/x/data/x.locproject.xml", "<LocalizationProject><assetRoots><item>common/props</item></assetRoots></LocalizationProject>" );
+    Util::addBinary( files, "common/props/crate.mesh" );
+
+    PackCookRules       rules = Util::makeRules();
+    PackAlwaysCookRule& data  = rules._listAlwaysCook.emplace_back();
+    data._name                = "GameData";
+    data._listPattern.push_back( "game/*/data/**" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, rules, files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/data/x.locproject.xml" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/props/crate.mesh" ) ) );
+}
