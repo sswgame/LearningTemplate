@@ -36,6 +36,7 @@ from lint.EditorViewIncludes import checkEditorViewIncludes  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.FrameIntern import checkFrameIntern  # noqa: E402
+from lint.TickSceneWalk import checkTickSceneWalk  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
 from lint.PlatformChains import checkPlatformChains  # noqa: E402
 from lint.ServerUIIncludes import checkServerUIIncludes  # noqa: E402
@@ -186,6 +187,13 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[FrameIntern] FAIL — 프레임 함수 안의 리터럴 이름 {len(listFrameIntern)}건")
         for problem in listFrameIntern:
+            print(f"  - {problem}")
+    # --- 틱에서 닿는 씬 전체 순회(순회는 틱 밖에서는 정상 코드라 형식으로 막지 못한다 — TickSceneWalk.py 머리말)
+    listTickSceneWalk = checkTickSceneWalk(projectRoot)
+    if listTickSceneWalk:
+        hasErrors = True
+        print(f"[TickSceneWalk] FAIL — 틱에서 씬 전체를 도는 곳 {len(listTickSceneWalk)}건")
+        for problem in listTickSceneWalk:
             print(f"  - {problem}")
 
     # --- 참조 0 인 컴포넌트 · 감시 값 · 개발 명령(쓰는 곳은 형식이 말하지 못한다 — FeatureReferences.py 머리말) ---------------

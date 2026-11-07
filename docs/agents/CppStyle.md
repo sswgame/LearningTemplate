@@ -56,6 +56,6 @@ Anything that may run in parallel (job system, cooker, ticks, test processes) sh
 - **Tests** never write to `Bin`, a fixed file name or a fixed port: use a per-run temporary path and bind sockets to port 0.
 - **Asset importers**: `importSource` is `const` and stateless, and returns its result per file. A source that needs another's result declares that order as data. Editor asset code adds no mutable `static` and no global cache.
 - **Cook and import** produce the same bytes serially or in parallel: each job writes its own result slot, and a serial pass merges the slots in a fixed order.
-- **Ticks, services, workers** do not read mutable global or singleton state; pass what they need in. A worker body touches pointers and scratch slots, not containers another worker may resize.
+- **Ticks, services, workers** do not read mutable global or singleton state; pass what they need in. A tick touches only its own object — where cross-object and scene-wide work goes is in [TickPlacement](TickPlacement.md). A worker body touches pointers and scratch slots, not containers another worker may resize.
 - A job-style interface declares what it reads and writes as pure virtuals with no default (`getPoseAccess`).
 - **Lazy initialization** is a function-local static (`static const Loader s_loader = makeLoader();`) or `std::call_once`, never a bare `static bool s_bTried` checked by an `if` (two threads both pass it). The same goes for check-then-fill of a static or file-scope variable; a main-thread-only site says so in a comment.

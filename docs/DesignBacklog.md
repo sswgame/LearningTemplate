@@ -308,6 +308,33 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 재발 막기: 자체 스레드는 허용 목록(데이터) 밖이면 린트가 멈추고, 틱 안 씬 전체 순회는 린트가 알린다. `Box2DWorkerPool` 은 허용 목록에 까닭과 함께 둔다 — Box2D 솔버는 워커 수만큼 태스크를 한꺼번에 넣고 0 번이 아닌 태스크가 바쁘게 기다려 공유 풀에서는 교착한다(파일 머리말).
 
+**틱 구조 판정(9 차 W3a, 2026-11-08):** 규칙은 [TickPlacement](agents/TickPlacement.md), 재발은 린트 `tick-scene-walk`(틱에서 호출을 따라가 씬 순회에 닿으면 멈춘다 — 예외는 `Config/Dev/TickSceneWalkExceptions.json`).
+
+틱 안 씬 순회 14 개 — 집계가 컴포넌트 파일 안의 `forEachComponentOfType` 를 받는 쪽 없이 셌다. 틱에서 실제로 닿는 것은 7 곳이었다.
+
+| 컴포넌트 | 판정 | 처리 |
+|---|---|---|
+| SessionState(날씨 파도 · 표면 노출 · 지역이 틱에서 `findFirstOpen`) | 씬 전체 + `getComponent`, 틱마다 벡터 | `ComponentRegistry` 등록 목록 |
+| Killcam(사격 판정이 `findInScene`) | 순서 없는 타입 버킷의 "첫 것" | 등록 목록(등록 순서) |
+| PairedAnimation(시작이 역할 보유자를 찾음) | `getAllGameObjects` | 등록 목록 |
+| TickedPathMover ← ShooterNetPawn | 넷 폰이 틱에서 바닥 전부에 써 넣음(경합) | 씬 값 하나(`ControlSystem::publishServerTick`) + 서브틱 선행 조건 |
+| ZoneVolume | 볼륨마다 컨트롤러 · 강체 전부(Z × N) | 프레임에 한 번 짓는 격자(`ZoneOccupantIndex`) |
+| ExplosiveBarrel(`ShooterGimmicks`) | 틱(워커)에서 남의 파괴 조각에 씀 | 남의 것은 틱 뒤로. 씬 순회는 폭발 순간 한 번이라 예외(까닭: 대상이 "반경 안 무엇이든") |
+| ShooterPlayer → Killcam | 위 Killcam 과 같다 | 같다 |
+| FirstPersonCamera · CharacterAppearance · Interactable · VisualSinkReaction · FadeOut · VoxelChunk | 자기 오브젝트 순회(`pOwner->forEachComponentOfType`) | 문제 아님 |
+| ValeWorld · SkirmishUnit · ShooterPlayer(개발 명령) | 개발 명령 · 감시 값(틱 밖) | 문제 아님 |
+
+틱 뒤 지연 큐(`executeOrDeferPostTickOnComponent` · `deferPostTickOnComponent` 45 곳 · 34 파일, `executeOrDeferPostTick` · `deferPostTick` 29 곳 — 조사 집계 32 곳은 일반 판의 정의 · 래퍼를 함께 셌다) — 순서 맞추기로 미룬 것은 1 곳이었다.
+
+| 분류 | 곳 | 판정 |
+|---|---|---|
+| 순서 맞추기(같은 큐 안 다른 미룬 일 뒤를 바람 — 큐 순서는 워커 순서) | VisualSinkReaction | 고침: PostPhysics 틱에서 바로(지역 처리 = ApplyPrePhysics 뒤) |
+| 구조 변경 · 등록부 바꿈(만들기 · 지우기 · 붙이기 · 떼기 · 프리미티브 다시 짓기) | Terrain · WaterBody ×3 · Foliage ×2 · TileMapRenderer · PropScatter · CharacterAppearance ×5 · VoxelChunk · Grabber · MountInteraction · VehicleExit · RiderDownWatcher · WesternHorseMount · WildWest(말 타기 · 증서 · 휘파람) · ShooterNetPawn(원격 빙의) · ControllerComponent · GimmickCircuit(스폰) · DamageNumber · HealthBar · AbilityCueSink · Arena(스폰) | 그대로 |
+| 남의 오브젝트 쓰기(피해 · 애니메이터 · 태그 · 빛 · 몸 켜기) | GimmickDamageUtil · UnitStats ×2 · Ability ×2 · ShooterEnemy ×2 · Interactor ×3 · GenreGimmickUtil ×2 · Platformer · HorrorStealth · GimmickCircuit(빛 · 켜기) · PairedAnimation · PairedAnimationNet ×2 · ExplosiveBarrel · StressTestCombat · Sequence(바인딩) | 그대로 |
+| 게임 스레드 전용(물리 질의 · 카메라 등록부 · 렌더 상태 · 능력 이벤트 · 공유 씬 서비스 쓰기) | GroundSurface · SurfaceStamp · SurfaceDeformMesh · SurfaceExposure · ZoneVolume · ZoneContact · JumpEscape · CameraDirector · CameraManager · PixelPerfectCamera · ActivatorVolume · GameMode · ShooterPlayer · VoxelPlayer · VoxelHighlight · ShooterNetPawn(주장) · MeleeHitbox · VehicleSeat · AnimationNotify · WildWest(HUD · 법 시야) | 그대로. 다음 단계: 틱마다 통째로 미루는 타입(표면 셋 · 지역 둘 · 반응)은 등록 목록을 한 곳에서 도는 씬 서비스 · 프레임 시스템으로 — 지금은 N 개가 게임 스레드에서 직렬이다 |
+
+`setTickGroup` 59 곳 — 물리 앞 생산 · 물리 뒤 소비(디렉터 PrePhysics → 뷰 PostUpdate 22 곳, 이동 · 탈것 PrePhysics, 물리 결과를 읽는 PostPhysics)는 그룹의 원래 뜻이라 그대로. 같은 물리 단계 안 오브젝트 사이 순서를 그룹으로 낸 것은 2D 카메라 사슬(따라가기 → `PixelPerfectCamera` PostPhysics → `ParallaxLayer` PostUpdate)과 3D 카메라 사슬(`CameraDirector` PostPhysics → `CameraManager` PostUpdate)이다 — 사슬이 그룹 수를 넘으면 서브틱 선행 조건으로 옮긴다(지금은 두 칸에 맞는다).
+
 ### 데이터 구동 구조 후보 판별 (2026-11-08)
 
 **기준:** 숫자 리터럴(위 "데이터 기반 값" 절)이 아니라 **내용 · 정책을 코드가 정하는 모양**을, 앞으로 내용이 늘어날 연쇄 기준으로 고른다. 형식 · 프로토콜 · 수학 표(RHI 형식, DDS, 오디오 DSP 계수, 다운믹스 행렬, HTTP/2)는 코드에 둔다 — 바뀌는 까닭이 내용이 아니라 명세다. 이름으로 원소를 고르는 XML 읽기(카탈로그 리더)도 데이터를 읽는 쪽이라 그대로다.

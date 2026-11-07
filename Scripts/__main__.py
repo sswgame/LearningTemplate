@@ -65,6 +65,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("common-shapes", "lint.CommonShapes", "공통 기반을 두고 손으로 적은 모양 검사(--self-check)"),
     Subcommand("shader-kill-order", "lint.ShaderKillOrder", "픽셀 버리기(clip · discard) 뒤의 미분 읽기 검사(--self-check)"),
     Subcommand("frame-intern", "lint.FrameIntern", "틱 · 갱신 · 칠하기 함수 안의 리터럴 hashed_string 을 찾는다(--self-check)"),
+    Subcommand("tick-scene-walk", "lint.TickSceneWalk", "컴포넌트 틱에서 닿는 씬 전체 순회를 찾는다(--self-check)"),
     Subcommand("feature-refs", "lint.FeatureReferences", "컴포넌트 · 감시 값 · 개발 명령의 참조 0 검사(--self-check)"),
     Subcommand("cmake-path-case", "lint.CMakePathCase", "CMake include · add_subdirectory 경로의 대소문자 검사"),
     Subcommand("format-includes", "lint.Format:mainFormatIncludes", "include 순서 · 중복 자동 수정(--check 는 검사만)"),

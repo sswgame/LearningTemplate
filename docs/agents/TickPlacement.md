@@ -1,0 +1,37 @@
+> 질문: 컴포넌트가 프레임마다 할 일은 어디에 두는가 — 주 틱 · 서브틱과 선행 조건 · 일괄 틱 · 프레임 시스템 · 틱 뒤 큐 · 등록 목록?
+> 독자: `onTick` 을 쓰거나, 다른 오브젝트 · 씬 전체를 보는 일을 프레임에 더하는 사람.
+> 결론: 틱은 자기 오브젝트만 읽고 쓴다. 찾기는 `ComponentRegistry`, 오브젝트 사이 순서는 서브틱 선행 조건, 같은 타입이 많으면 일괄 틱, 씬 전체를 한 번 봐야 하는 일은 프레임 시스템, 구조 변경 · 남의 오브젝트 쓰기만 틱 뒤 큐다. 틱에서 닿는 씬 전체 순회는 린트(`tick-scene-walk`)가 멈춘다.
+
+## How a frame runs
+
+The frame order lives in one table, `Engine/Object/GameObject/Tick/SceneFrameStepList.xxx`. The parts that matter here:
+
+| Step | Runs | Sees |
+| --- | --- | --- |
+| `FrameSystems` | `ISceneFrameSystem::runBeforeTick`, game thread or declared-safe worker lanes | structure is not frozen; may create objects |
+| `TickPrePhysics` | PrePhysics · DuringPhysics component ticks, **one object per worker** (`SceneTickScheduler`) | last frame's physics |
+| `ApplyPrePhysics` | deferred structural changes → in-tick transform writes → **post-tick queue** (`executeOrDeferPostTick*`) | game thread, serial |
+| `Physics` | rigid bodies, overlaps | |
+| `TickPostPhysics` | PostPhysics · PostUpdate ticks, one object per worker | this frame's physics and everything `ApplyPrePhysics` wrote |
+| `ApplyPostPhysics` | the same drain for the late groups | |
+
+Inside a group the scheduler forks once over objects: all items of one object run on one worker in (phase, priority, attach) order; **objects run in no defined order**. Items with a sub-tick prerequisite run after the group's default path, in stages.
+
+## Where a job goes
+
+Ask in this order. Stop at the first yes.
+
+1. **It reads and writes only its own object** → the component's `onTick` (or a sub-tick when it needs a different group or phase than the main tick). This is the default and the only place that scales with object count for free.
+2. **It must run after another object's tick in the same frame** → a sub-tick with a prerequisite: `registerSubTick( group, id )` + `addSubTickPrerequisite( id, other.getTickHandle() )` (Unreal `AddTickPrerequisiteComponent`). If the producer is one per scene, the scene owner publishes its handle and the readers bind it (`ControlSystem::setServerTickSource` → `TickedPathMoverComponent`). A change made during a tick takes effect after the tick, so a late-bound prerequisite orders the next frame onward.
+   - Use a **tick group** only for its meaning relative to physics: PrePhysics/DuringPhysics produce what physics and animation consume this frame; PostPhysics/PostUpdate read this frame's physics and everything `ApplyPrePhysics` applied (Unreal `TG_PrePhysics` … `TG_PostUpdateWork`). A producer-early / consumer-late split across physics is a fine use of groups; moving a component to a later group only to come after a peer in the same physics phase is not — that is a prerequisite.
+   - Phases (`TickPhase`) order items **inside one object**. They do not order objects.
+3. **It finds other components** (the scene's session state, the first killcam, the role holders) → `ComponentRegistry`: register in `onRegister`/`onUnregister`, read `getAll<T>()`. Lock-free reads, registration order, cost = count of that type. Never `forEachGameObject` + `getComponent`, and not `forEachComponentOfType` either (shared lock, no order) on a frame path.
+4. **Many components of one type do the same work** → a tick batch: `SW_REGISTER_TICK_BATCH( Type )` after `onTick` in the `.cpp` (`TickBatchRegistry.h`). The registry keeps that type's (component, object) pairs contiguous and calls one non-virtual function per range — the entry to a later SoA layout (Unreal Mass processor, Unity `IJobEntity`). Only exact types whose object has that one tick item in the group take the batch path.
+5. **It has to look at the whole scene once per frame** (an index, an aggregate, all pawns' intents) → an `ISceneFrameSystem` attached by the first user and removed by the last (`ControlSystem`, `InteractionSpatialIndex`, `ZoneOccupantIndex`). Declare reads and writes in `getFrameAccess`; set `_bLaneSafe` only when it touches nothing else. When the per-frame work must stay after the ticks, the system only marks itself stale in `runBeforeTick` and builds on the first query of the frame (`ZoneOccupantIndex`). Many readers share one build — never one scene walk per reader (that is N × scene).
+6. **It changes structure or writes another object** (create, destroy, re-parent, attach/detach, register a primitive, apply damage to someone else, change another object's animator) → the post-tick queue, `executeOrDeferPostTickOnComponent( *this, … )` (re-resolved by handle) or `executeOrDeferPostTick`. It runs on the game thread right after the group, before physics for the early groups.
+   - **Do not defer to get an order.** The queue runs in insertion order, and insertion order is worker order. If a deferred job must run after another deferred job, both are in the wrong place: read in a later group (`VisualSinkReactionComponent` reads zone results from PostPhysics) or make the reader a prerequisite-ordered sub-tick.
+   - Physics queries, camera registry, render state and the ability system's event dispatch are game-thread work today; they also go through the queue. When a type defers its whole tick every frame, the next step is a scene service or frame system that walks its registered components in one place.
+
+## What the lint checks
+
+`py -3 -m Scripts tick-scene-walk` (run by the commit hook) follows calls from every `onTick` / `onSubTick` — same-class helpers, `self.` calls inside deferred lambdas, `…Internal::` helpers and `Class::function` calls across files — and fails when one reaches a manager's `forEachGameObject`, `forEachComponent`, `forEachComponentOfType` or `getAllGameObjects`. Own-object walks (`pOwner->forEachComponentOfType`) are fine. A justified exception goes in `Config/Dev/TickSceneWalkExceptions.json` as `path::Class::function` with the reason; an exception that no longer matches fails too. Virtual hooks (`GameModeComponent` sub-ticks calling a derived `updateGame`) and member calls through other pointers are not followed — the rule above still applies to them.
