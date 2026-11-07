@@ -1951,6 +1951,21 @@
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.MoveAssetCount" source="Move {assetCount} file(s) to {destination}">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.MoveFixesReferrers" source="{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.MoveRefused" source="Cannot move: {reason}">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.MoveToRecycleBin" source="Move '{file}' to the Recycle Bin?">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -3969,6 +3984,11 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.UsedOutsideTheMovedFilesBy" source="Used outside the moved files by:">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdText.Validate" source="Validate">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
@@ -4237,6 +4257,11 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVerb.Move" source="Move">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Play" source="Play">

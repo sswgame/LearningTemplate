@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
@@ -84,15 +85,57 @@ namespace sw::editor
         return EditorAssetFileCommands::duplicateAsset( sourceAbs, outAssetAbs );
     }
 
-    bool ContentBrowserFileActions::moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorReferenceIndex& inoutIndex, string& outDestinationAbs )
+    bool ContentBrowserFileActions::collectMovesToFolder( string_view sourceAbs, string_view folderAbs, vector<EditorAssetMove>& outListMove, string& outFailure )
     {
+        outListMove.clear();
+        if ( FileUtil::isDirectory( sourceAbs ) )
+            return EditorAssetFileCommands::collectFolderMoves( sourceAbs, folderAbs, outListMove, outFailure );
         const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
         if ( FileUtil::pathsEqualNormalized( destinationAbs, sourceAbs ) )
+        {
+            outFailure = "it is already in that folder";
             return false;
-        uint32 fixedFileCount{ 0 };
-        if ( EditorAssetFileCommands::moveAsset( sourceAbs, destinationAbs, inoutIndex, fixedFileCount ) == false )
+        }
+        outListMove.push_back( EditorAssetMove{ string( sourceAbs ), destinationAbs } );
+        return true;
+    }
+
+    bool ContentBrowserFileActions::planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan )
+    {
+        vector<EditorAssetMove> listMove;
+        string                  failure;
+        if ( collectMovesToFolder( sourceAbs, folderAbs, listMove, failure ) == false )
+        {
+            outPlan          = EditorAssetMovePlan{};
+            outPlan._failure = failure;
             return false;
-        outDestinationAbs = destinationAbs;
+        }
+        return EditorAssetFileCommands::planAssetMoves( listMove, index, outPlan );
+    }
+
+    bool ContentBrowserFileActions::moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorReferenceIndex& inoutIndex, string& outDestinationAbs )
+    {
+        vector<EditorAssetMove> listMove;
+        string                  failure;
+        if ( collectMovesToFolder( sourceAbs, folderAbs, listMove, failure ) == false )
+        {
+            SW_LOG_WARNING_ID( "ContentBrowserFileActions.NothingMoved", "Nothing was moved - %#", failure );
+            return false;
+        }
+        const bool          bFolder = FileUtil::isDirectory( sourceAbs );
+        EditorAssetMovePlan plan;
+        if ( EditorAssetFileCommands::applyAssetMoves( listMove, inoutIndex, plan ) == false )
+            return false; // 이유와 되돌림은 applyAssetMoves 가 알렸다
+        outDestinationAbs = bFolder ? FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) ) : listMove.front()._destinationAbs;
+        if ( bFolder )
+        {
+            // 파일은 모두 옮겼다 — 빈 폴더 나무만 남았을 때만 지운다(`removeDirectory` 는 재귀라, 그 사이 누가 넣은 파일이 있으면 지우지 않고 둔다)
+            vector<string> listLeftFile;
+            const bool     bListed = FileUtil::collectFiles( sourceAbs, "", listLeftFile, true );
+            if ( bListed == false || listLeftFile.empty() == false || FileUtil::removeDirectory( sourceAbs ) == false )
+                SW_LOG_WARNING_ID( "ContentBrowserFileActions.SourceFolderKept", "Moved every file of '%#' but kept the folder (not empty or could not be removed)",
+                                   FileUtil::getFileNamePart( sourceAbs ) );
+        }
         return true;
     }
 

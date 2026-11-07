@@ -16,6 +16,30 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 옮기기 하나입니다(디스크 경로). 이름 바꾸기도 같은 폴더 안의 옮기기다. */
+    struct EditorAssetMove
+    {
+        string _sourceAbs;
+        string _destinationAbs;
+    };
+
+    /**
+     * @brief 옮기기 묶음의 계획과 결과입니다. 미리보기(`planAssetMoves`)와 적용(`applyAssetMoves`)이 같은 형식을 채운다.
+     * @details 바깥 도메인 목록은 옮기는 묶음 밖에서 이 묶음을 적은 파일의 도메인(`game/<팩>` · `common` …)이다 — 게임 전용 에셋을 `common` 으로 옮기기 전에
+     *          다른 팩이 이미 쓰는지, 공통 에셋을 한 팩 아래로 옮기면 다른 팩이 깨지는지를 확인 대화상자가 보인다.
+     */
+    struct EditorAssetMovePlan
+    {
+        vector<EditorAssetMove> _listMove;            ///< 정규화한 옮기기(폴더는 그 안의 파일마다 하나)
+        vector<string>          _listOldID;           ///< 옮기기마다 지금 리소스 id
+        vector<string>          _listNewID;           ///< 옮기기마다 새 리소스 id
+        vector<string>          _listReferrerID;      ///< 글을 고칠 참조 파일(지금 id)
+        vector<string>          _listUnfixedReferrer; ///< 경로 칸 밖에서 옮기는 에셋을 적은 파일 — 하나라도 있으면 옮기지 않는다
+        vector<string>          _listOutsideDomain;   ///< 묶음 밖 참조 파일의 도메인
+        string                  _failure;             ///< 옮길 수 없거나 지면 그 이유. 비었으면 계획대로 된다
+        uint32                  _fixedFileCount{ 0 }; ///< 적용한 뒤 글을 고친 파일 수
+    };
+
     /**
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
@@ -50,6 +74,23 @@ namespace sw::editor
          * @return 대상이 이미 있거나, 이름이 규칙에 맞지 않거나, 역색인이 아직이면 아무것도 하지 않고 false 입니다(이유를 알린다).
          */
         [[nodiscard]] static bool moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount );
+        /**
+         * @brief 옮기기 묶음을 디스크를 건드리지 않고 계획합니다 — 이름 규칙 · 겹침 · 역색인 · 경로 칸 목록을 확인하고, 고칠 참조 파일과 고칠 수 없는 참조(칸 밖)를 모은다.
+         * @return 그대로 적용할 수 있으면 true. false 면 `_failure` 에 이유가 있다(고칠 수 없는 참조가 하나라도 있으면 false — 반쯤 고친 상태를 만들지 않는다).
+         */
+        [[nodiscard]] static bool planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan );
+        /**
+         * @brief 옮기기 묶음을 트랜잭션으로 적용합니다. 계획을 다시 세우고, 고칠 글을 모두 미리 만든 뒤 파일을 옮기고 글을 쓴다.
+         * @details 옮기기나 쓰기가 하나라도 지면(잠긴 파일 · 읽기 전용) 쓴 글을 원래대로, 옮긴 파일을 거꾸로 되돌린다. 되돌리지 못한 파일은 이름을 오류 로그와 알림에 남긴다.
+         *          언리얼의 에셋 이동이 리다이렉터를 남기는 자리에서, 이 엔진은 경로 하나로 가리키므로 참조 글을 같은 트랜잭션에서 고친다.
+         * @return 다 옮기고 고쳤으면 true(`_fixedFileCount`). false 면 디스크는 시작 상태이거나, 아니면 남은 목록이 로그에 있다.
+         */
+        [[nodiscard]] static bool applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan );
+        /**
+         * @brief 폴더 @p sourceFolderAbs 를 @p destinationParentAbs 아래로 옮기는 파일 옮기기 목록을 만듭니다(폴더 안 모든 파일, 하위 폴더 구조 그대로).
+         * @return 자기 안으로 옮기기 · 이미 있는 대상 · 빈 폴더면 false 이고 @p outFailure 에 이유입니다. 옮긴 뒤 빈 원본 폴더 지우기는 부른 쪽이 한다.
+         */
+        [[nodiscard]] static bool collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs, vector<EditorAssetMove>& outListMove, string& outFailure );
         /** @brief 에셋을 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. */
         [[nodiscard]] static bool moveToTrash( string_view absolutePath );
         /** @brief 에셋 파일을 삭제합니다. */

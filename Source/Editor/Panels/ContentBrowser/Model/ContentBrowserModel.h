@@ -191,6 +191,23 @@ namespace sw::editor
         bool          isRenaming( const AssetEntry& entry ) const;
         /** @brief 에셋을 @p folderAbs 로 옮기고 참조를 고칩니다. 역색인이 따라오기 전이면 `commitRename` 처럼 미룬다. */
         [[nodiscard]] bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs );
+        /**
+         * @brief 끌어 놓은 에셋 · 폴더의 옮기기를 확인 대기로 둡니다. 창이 미리보기(옮길 파일 수 · 고칠 참조 · 바깥 도메인 · 고칠 수 없는 참조)를 보이고 확인을 받는다.
+         * @details 언리얼 콘텐츠 브라우저가 놓을 때 Move Here 를 묻는 자리다. 계획은 역색인이 따라온 뒤에 세운다(`updateMoveRequest`).
+         */
+        void requestMoveToFolder( string_view sourceAbs, string_view folderAbs );
+        /** @brief 확인을 기다리는 옮기기가 있으면 true 입니다. */
+        bool hasMoveRequest() const { return _moveRequestSourceAbs.empty() == false; }
+        /** @brief 역색인이 따라왔고 아직 계획하지 않았으면 계획합니다. 확인 대화상자가 그릴 때마다 부른다. 계획했으면 true 입니다. */
+        bool updateMoveRequest();
+        /** @brief 계획한 옮기기의 미리보기입니다(`updateMoveRequest` 가 true 일 때만 뜻이 있다). */
+        const EditorAssetMovePlan& getMoveRequestPlan() const { return _moveRequestPlan; }
+        /** @brief 확인을 기다리는 옮기기의 대상 폴더(디스크 경로)입니다. */
+        const string& getMoveRequestFolderPath() const { return _moveRequestFolderAbs; }
+        /** @brief 계획한 옮기기를 적용합니다(트랜잭션 — 지면 되돌린다). */
+        bool confirmMoveRequest();
+        /** @brief 기다리던 옮기기를 버립니다. */
+        void cancelMoveRequest();
         /** @brief 지울 에셋을 정합니다. 확인은 창이 받는다. */
         void          requestDeleteAsset( string_view absolutePath ) { _fileActions.requestDelete( absolutePath ); }
         const string& getPendingDeletePath() const { return _fileActions.getPendingDeletePath(); }
@@ -244,13 +261,16 @@ namespace sw::editor
         string                        _selectedFolderAbs;
         vector<ContentBrowserCrumb>   _listCrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
         string                        _selectedAssetAbs;
-        string                        _importFolderAbs; /**< 임포트 대화상자를 연 때의 폴더 */
-        ContentBrowserHistory         _history;         /**< 뒤로 가기 · 앞으로 가기 이력 */
-        ContentBrowserFileActions     _fileActions;     /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
-        ContentBrowserMoveQueue       _pendingMoves;    /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
-        ContentBrowserReferenceSearch _referenceSearch; /**< 마지막 참조 찾기의 결과(색인은 `AssetHotReload` 의 것) */
-        ContentBrowserImportQueue     _importQueue;     /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */
-        ContentBrowserTypeFilter      _typeFilter;      /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */
+        string                        _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
+        ContentBrowserHistory         _history;              /**< 뒤로 가기 · 앞으로 가기 이력 */
+        ContentBrowserFileActions     _fileActions;          /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
+        ContentBrowserMoveQueue       _pendingMoves;         /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
+        string                        _moveRequestSourceAbs; /**< 확인을 기다리는 끌어 놓기의 원본(파일 · 폴더). 비었으면 없다 */
+        string                        _moveRequestFolderAbs; /**< 그 대상 폴더 */
+        EditorAssetMovePlan           _moveRequestPlan;      /**< 그 계획(미리보기) */
+        ContentBrowserReferenceSearch _referenceSearch;      /**< 마지막 참조 찾기의 결과(색인은 `AssetHotReload` 의 것) */
+        ContentBrowserImportQueue     _importQueue;          /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */
+        ContentBrowserTypeFilter      _typeFilter;           /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */
         EditorFolderListingJob        _folderJob;
         ContentBrowserFolderCache     _folderCache;             /**< 폴더 트리의 하위 폴더. 그릴 때마다 디스크를 읽지 않도록 캐시한다 */
         uint64                        _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
@@ -259,5 +279,6 @@ namespace sw::editor
         uint8                         _bShowAllPacks            : 1; /**< 게임 팩을 모두 보인다. 끄면 활성 팩 하나만 보인다 */
         uint8                         _bShowAllPacksInitialized : 1; /**< 환경설정의 기본값을 한 번 읽었다. 그 뒤에는 툴바가 정한다 */
         uint8                         _bListingRecursive        : 1; /**< 지금 목록에 하위 폴더의 파일까지 포함한다(검색 중) */
+        uint8                         _bMoveRequestPlanned      : 1; /**< 확인을 기다리는 옮기기의 계획을 세웠다(역색인이 따라온 뒤) */
     };
 } // namespace sw::editor

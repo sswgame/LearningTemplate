@@ -59,6 +59,8 @@ namespace sw::editor
 
             /** @brief 삭제 확인 모달의 팝업 이름입니다. OpenPopup 과 BeginPopupModal 이 같은 문자열을 써야 합니다. */
             static constexpr const utf8* kDeleteConfirmPopupName = "Delete Asset##ConfirmDeleteAsset";
+            /** @brief 옮기기 확인 모달의 팝업 이름입니다. */
+            static constexpr const utf8* kMoveConfirmPopupName = "Move Assets##ConfirmMoveAssets";
 
             /** @brief 참조 삭제 경고 문구와 참조 조회 ID 문구의 색입니다. */
             static constexpr Color kReferrerWarningText{ 1.0f, 0.7f, 0.25f, 1.0f };
@@ -482,6 +484,7 @@ namespace sw::editor
         , _bOpenReferenceResults{ SW_FALSE }
         , _bFocusRenameInput{ SW_FALSE }
         , _bContentVisible{ SW_FALSE }
+        , _bOpenMoveConfirm{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
     }
@@ -570,9 +573,87 @@ namespace sw::editor
         string assetID;
         if ( EditorWidgets::acceptAssetDrop( assetID ) == false )
             return;
-        const std::optional<AbsolutePath> assetPath = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
-        if ( assetPath.has_value() )
-            (void)_model.moveAssetToFolder( assetPath->str(), folderAbs ); // 실패는 moveAsset 이 알린다
+        // 파일이면 그 파일, 폴더(폴더 타일도 끌기 원본이다)면 그 폴더 — 옮기기 전에 확인 대화상자가 계획을 보인다(언리얼 Move Here)
+        const AssetPaths&           assetPaths = editor::getSubsystem<AssetPaths>();
+        std::optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( assetID );
+        if ( sourcePath.has_value() == false )
+        {
+            const std::optional<AbsolutePath> folderPath = assetPaths.toDiskPath( assetID );
+            if ( folderPath.has_value() && FileUtil::isDirectory( folderPath->str() ) )
+                sourcePath = folderPath;
+        }
+        if ( sourcePath.has_value() == false )
+            return;
+        _model.requestMoveToFolder( sourcePath->str(), folderAbs );
+        _bOpenMoveConfirm = SW_TRUE;
+    }
+
+    void ContentBrowserPanel::drawMoveConfirmModal()
+    {
+        if ( _bOpenMoveConfirm == SW_TRUE )
+        {
+            EditorInputGUI::openPopup( ContentBrowserPanelInternal::kMoveConfirmPopupName );
+            _bOpenMoveConfirm = SW_FALSE;
+        }
+        if ( EditorWidgets::beginCenteredModal( ContentBrowserPanelInternal::kMoveConfirmPopupName ) == false )
+            return;
+        if ( _model.hasMoveRequest() == false )
+        {
+            ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+            return;
+        }
+
+        const bool                 bPlanned = _model.updateMoveRequest();
+        const EditorAssetMovePlan& plan     = _model.getMoveRequestPlan();
+        const bool                 bCanMove = bPlanned && plan._failure.empty();
+        if ( bPlanned == false )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TheReferenceIndexIsStillBuilding" ) );
+        }
+        else if ( plan._failure.empty() == false )
+        {
+            // 색만으로 알리지 않는다 — 왜 옮길 수 없는지 글로 적는다
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s",
+                                SW_LOCKEYFORMAT( "EdFormat", "MoveRefused", TextArgumentList().addText( "reason", plan._failure.c_str() ) ).c_str() );
+            for ( const string& unfixed : plan._listUnfixedReferrer )
+                ImGui::BulletText( "%s", unfixed.c_str() );
+        }
+        else
+        {
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveAssetCount",
+                                                     TextArgumentList()
+                                                         .addInteger( "assetCount", static_cast<int64>( plan._listMove.size() ) )
+                                                         .addText( "destination", editor::getSubsystem<AssetPaths>().toAssetID( _model.getMoveRequestFolderPath() ).c_str() ) )
+                                        .c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveFixesReferrers", TextArgumentList().addInteger( "referrerCount", static_cast<int64>( plan._listReferrerID.size() ) ) ).c_str() );
+            if ( plan._listOutsideDomain.empty() == false )
+            {
+                // 게임 전용 에셋을 common 으로, 공통 에셋을 한 팩 아래로 옮길 때 누가 쓰는지 본다
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "UsedOutsideTheMovedFilesBy" ) );
+                for ( const string& domain : plan._listOutsideDomain )
+                    ImGui::BulletText( "%s", domain.c_str() );
+            }
+        }
+        ImGui::Separator();
+        ImGui::BeginDisabled( bCanMove == false );
+        const bool bConfirmed = ImGui::Button( SW_LOCKEY( "EdVerb", "Move" ) );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "contentBrowser.move.confirm" );
+        if ( bConfirmed )
+        {
+            (void)_model.confirmMoveRequest(); // 실패는 applyAssetMoves 가 알린다(되돌리고 남은 것을 적는다)
+            ImGui::CloseCurrentPopup();
+        }
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
+        const bool bCanceled = ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) );
+        EditorSelfTestMarks::record( "contentBrowser.move.cancel" );
+        if ( bCanceled || EditorInputGUI::wasCancelPressed() )
+        {
+            _model.cancelMoveRequest();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 
     void ContentBrowserPanel::drawRenameField( float32 width )
@@ -719,6 +800,7 @@ namespace sw::editor
         ImGui::SameLine();
         drawAssetView();
         drawDeleteConfirmModal();
+        drawMoveConfirmModal();
         drawReferenceResults();
     }
 
@@ -1070,9 +1152,9 @@ namespace sw::editor
                     drawAssetContextMenu( entry );
                     if ( EditorInputGUI::wasItemDoubleClicked() )
                         _model.openAsset( entry );
-                    if ( entry._bIsDirectory == false )
-                        EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
-                    else
+                    // 폴더도 끌기 원본이다(폴더째 옮기기 — 언리얼 콘텐츠 브라우저와 같다). 폴더는 놓을 자리이기도 하다
+                    EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
+                    if ( entry._bIsDirectory )
                         acceptAssetDrop( entry._absolutePath );
 
                     ImDrawList*       pDrawList = ImGui::GetWindowDrawList();
@@ -1136,9 +1218,9 @@ namespace sw::editor
                         ImGui::SetTooltip( "%s", statusText.c_str() );
                     ContentBrowserPanelInternal::recordMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
-                    if ( entry._bIsDirectory == false )
-                        EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
-                    else
+                    // 폴더도 끌기 원본이다(타일 보기와 같다)
+                    EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
+                    if ( entry._bIsDirectory )
                         acceptAssetDrop( entry._absolutePath );
                     if ( _model.isRenaming( entry ) )
                     {

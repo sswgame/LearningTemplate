@@ -108,6 +108,108 @@ namespace sw::editor
                 (void)FileUtil::tryRemoveFile( destinationAbs ); // 원본이 남았으니 사본을 회수한다 — 실패해도 원본은 그대로다
                 return false;
             }
+
+            /** @brief 참조 파일 하나에 쓸 글입니다. 적용 전에 모두 만들고, 쓰기가 하나라도 지면 `_originalText` 로 되돌린다. */
+            struct PreparedRewrite
+            {
+                string _referrerID;  ///< 옮긴 뒤의 리소스 id(참조자도 함께 옮기면 새 id)
+                string _referrerAbs; ///< 옮긴 뒤의 디스크 경로
+                string _originalText;
+                string _rewrittenText;
+            };
+
+            /** @brief 리소스 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
+            static string getDomainOf( string_view assetID )
+            {
+                const size_t firstSlash = assetID.find( '/' );
+                if ( firstSlash == string_view::npos )
+                    return string( assetID );
+                const string_view head = assetID.substr( 0, firstSlash );
+                if ( head != "game" && head != "dlc" )
+                    return string( head );
+                const size_t secondSlash = assetID.find( '/', firstSlash + 1 );
+                return string( assetID.substr( 0, secondSlash == string_view::npos ? assetID.size() : secondSlash ) );
+            }
+
+            static void appendUnique( vector<string>& inoutList, string_view value )
+            {
+                for ( const string& existing : inoutList )
+                {
+                    if ( existing == value )
+                        return;
+                }
+                inoutList.push_back( string( value ) );
+            }
+
+            /** @brief @p id 가 옮기는 원본이면 그 새 id, 아니면 그대로입니다. */
+            static string mapMovedID( const EditorAssetMovePlan& plan, string_view id )
+            {
+                for ( size_t index = 0; index < plan._listOldID.size(); ++index )
+                {
+                    if ( plan._listOldID[index] == id )
+                        return plan._listNewID[index];
+                }
+                return string( id );
+            }
+
+            /**
+             * @brief 참조 파일마다 옮긴 뒤 쓸 글을 만듭니다. 경로 칸 밖에서 옮기는 에셋을 적은 곳(고칠 수 없는 참조)은 @p inoutPlan 의 목록에 남긴다.
+             * @return 읽지 못한 참조 파일이 있으면 false 입니다(`_failure` 에 이유).
+             */
+            [[nodiscard]] static bool prepareRewrites( const AssetReferenceFields& params, const EditorReferenceIndex& index, EditorAssetMovePlan& inoutPlan,
+                                                       vector<PreparedRewrite>& outListRewrite )
+            {
+                vector<AssetReferenceRewriteRule> listRule;
+                for ( size_t moveIndex = 0; moveIndex < inoutPlan._listOldID.size(); ++moveIndex )
+                {
+                    const vector<AssetReferenceRewriteRule> listMoveRule = params.makeRewriteRules( inoutPlan._listOldID[moveIndex], inoutPlan._listNewID[moveIndex], false );
+                    listRule.insert( listRule.end(), listMoveRule.begin(), listMoveRule.end() );
+                }
+                // 참조자 파일 목록(지금 id) — 파일 하나가 여러 원본을 적어도 한 번 고친다
+                vector<string> listReferrerID;
+                for ( const string& oldID : inoutPlan._listOldID )
+                {
+                    vector<EditorAssetReference> listReference;
+                    index.findReferrers( oldID, listReference );
+                    for ( const EditorAssetReference& reference : listReference )
+                        appendUnique( listReferrerID, reference._referrerPath );
+                }
+                for ( const string& referrerID : listReferrerID )
+                {
+                    const std::optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
+                    PreparedRewrite                   rewrite{};
+                    if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), rewrite._originalText ) == false )
+                    {
+                        inoutPlan._failure = formatToString( "could not read the referencing file '%#'", referrerID );
+                        return false;
+                    }
+                    rewrite._referrerID    = mapMovedID( inoutPlan, referrerID );
+                    const bool bMovedToo   = rewrite._referrerID != referrerID;
+                    rewrite._referrerAbs   = referrerFile->str();
+                    rewrite._rewrittenText = rewrite._originalText;
+                    if ( bMovedToo )
+                    {
+                        for ( const EditorAssetMove& move : inoutPlan._listMove )
+                        {
+                            if ( FileUtil::pathsEqualNormalized( move._sourceAbs, rewrite._referrerAbs ) )
+                                rewrite._referrerAbs = move._destinationAbs;
+                        }
+                    }
+                    else
+                    {
+                        appendUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
+                    }
+                    if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::syntaxOf( referrerID ), listRule ) == 0 )
+                    {
+                        // 역색인은 글에서 경로 모양을 찾고, 고치기는 경로 칸만 본다 — 칸 밖(주석)이거나 목록에 없는 칸이다. 고치지 못한 참조를 남기고 옮기지 않는다.
+                        inoutPlan._listUnfixedReferrer.push_back( referrerID );
+                        continue;
+                    }
+                    inoutPlan._listReferrerID.push_back( referrerID );
+                    outListRewrite.push_back( std::move( rewrite ) );
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -228,75 +330,228 @@ namespace sw::editor
         return FileUtil::copyFile( sourceAbs, outAssetAbs );
     }
 
-    bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount )
+    bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan )
     {
-        outFixedFileCount             = 0;
-        const string source           = FileUtil::normalizeSeparators( sourceAbs );
-        const string destination      = FileUtil::normalizeSeparators( destinationAbs );
-        const string oldID            = editor::getSubsystem<AssetPaths>().toAssetID( source );
-        const string newID            = editor::getSubsystem<AssetPaths>().toAssetID( destination );
-        const bool   bInvalidAssetIDs = oldID.empty() || newID.empty() || oldID == newID;
-        if ( bInvalidAssetIDs )
-            return false;
-        if ( isValidAssetName( FileUtil::getFileNamePart( destination ) ) == false )
+        outPlan = EditorAssetMovePlan{};
+        if ( listMove.empty() )
         {
-            SW_LOG_WARNING_ID( "EditorAssetFileCommands.NotResourceNameUse", "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( destination ) );
+            outPlan._failure = "nothing to move";
             return false;
         }
-        if ( FileUtil::exists( destination ) )
+        if ( index.isReady() == false )
         {
-            SW_LOG_WARNING_ID( "EditorAssetFileCommands.AlreadyExistsNothingMoved", "'%#' already exists - nothing was moved", newID );
+            outPlan._failure = "the reference index is still building - try again in a moment";
             return false;
         }
-        if ( inoutIndex.isReady() == false )
+        const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
+        for ( const EditorAssetMove& move : listMove )
         {
-            SW_LOG_WARNING_ID( "EditorAssetFileCommands.ReferenceIndexStillBuilding", "The reference index is still building - try again in a moment" );
-            return false;
+            EditorAssetMove normalized{ FileUtil::normalizeSeparators( move._sourceAbs ), FileUtil::normalizeSeparators( move._destinationAbs ) };
+            const string    oldID = assetPaths.toAssetID( normalized._sourceAbs );
+            const string    newID = assetPaths.toAssetID( normalized._destinationAbs );
+            if ( oldID.empty() || newID.empty() || oldID == newID )
+            {
+                outPlan._failure = formatToString( "'%#' cannot move to '%#' (outside the resource tree or the same place)", normalized._sourceAbs, normalized._destinationAbs );
+                return false;
+            }
+            if ( isValidAssetName( FileUtil::getFileNamePart( normalized._destinationAbs ) ) == false )
+            {
+                outPlan._failure = formatToString( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                return false;
+            }
+            if ( FileUtil::exists( normalized._destinationAbs ) || EditorAssetFileCommandsInternal::mapMovedID( outPlan, oldID ) != oldID )
+            {
+                outPlan._failure = formatToString( "'%#' already exists or is moved twice - nothing was moved", newID );
+                return false;
+            }
+            for ( const string& plannedNewID : outPlan._listNewID )
+            {
+                if ( plannedNewID == newID )
+                {
+                    outPlan._failure = formatToString( "two assets would move to '%#' - nothing was moved", newID );
+                    return false;
+                }
+            }
+            outPlan._listMove.push_back( std::move( normalized ) );
+            outPlan._listOldID.push_back( oldID );
+            outPlan._listNewID.push_back( newID );
         }
         // 고치는 규칙은 커밋 전 검사 · move-asset · 참조 검사와 같은 칸 목록이다 — 글을 찾아 바꾸지 않고 경로 칸의 값만 바꾼다. 목록이 없으면 옮기지 않는다(고치지 못한 참조를 남기지 않게).
         AssetReferenceFields params;
         if ( params.load( ProcessRoots::get()._project.str() ) == false )
+        {
+            outPlan._failure = formatToString( "could not read %#", AssetReferenceFields::kConfigFile );
             return false;
-        const vector<AssetReferenceRewriteRule> listRule = params.makeRewriteRules( oldID, newID, false );
+        }
+        vector<EditorAssetFileCommandsInternal::PreparedRewrite> listRewrite;
+        if ( EditorAssetFileCommandsInternal::prepareRewrites( params, index, outPlan, listRewrite ) == false )
+            return false;
+        if ( outPlan._listUnfixedReferrer.empty() == false )
+        {
+            outPlan._failure = formatToString( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or add the field, nothing was moved",
+                                               outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kConfigFile, outPlan._listUnfixedReferrer.front() );
+            return false;
+        }
+        return true;
+    }
 
-        vector<EditorAssetReference> listReference;
-        inoutIndex.findReferrers( oldID, listReference );
-        if ( EditorAssetFileCommandsInternal::moveFile( source, destination ) == false )
+    bool EditorAssetFileCommands::applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan )
+    {
+        // 계획을 다시 세운다 — 미리보기와 적용 사이(확인 대화상자)에 파일이 바뀌었을 수 있다. 쓸 글은 모두 미리 만들고 나서 디스크를 바꾼다.
+        if ( planAssetMoves( listMove, inoutIndex, outPlan ) == false )
+        {
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
             return false;
+        }
+        AssetReferenceFields params;
+        if ( params.load( ProcessRoots::get()._project.str() ) == false )
+            return false;
+        EditorAssetMovePlan                                      rewritePlan = outPlan;
+        vector<EditorAssetFileCommandsInternal::PreparedRewrite> listRewrite;
+        rewritePlan._listReferrerID.clear();
+        rewritePlan._listOutsideDomain.clear();
+        if ( EditorAssetFileCommandsInternal::prepareRewrites( params, inoutIndex, rewritePlan, listRewrite ) == false || rewritePlan._listUnfixedReferrer.empty() == false )
+        {
+            outPlan._failure = rewritePlan._failure.empty() ? string( "a referencing file changed while moving" ) : rewritePlan._failure;
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.NothingMoved", "Nothing was moved - %#", outPlan._failure );
+            return false;
+        }
+
+        // ① 파일을 옮긴다. 하나라도 지면 옮긴 것을 거꾸로 되돌린다.
+        size_t movedCount = 0;
+        for ( ; movedCount < outPlan._listMove.size(); ++movedCount )
+        {
+            const EditorAssetMove& move = outPlan._listMove[movedCount];
+            if ( FileUtil::ensureParentDirectoryExists( move._destinationAbs ) == false || EditorAssetFileCommandsInternal::moveFile( move._sourceAbs, move._destinationAbs ) == false )
+                break;
+        }
+        bool bFailed = movedCount < outPlan._listMove.size();
+        if ( bFailed )
+            outPlan._failure = formatToString( "could not move '%#' (locked or read-only?)", outPlan._listOldID[movedCount] );
+
+        // ② 참조 파일을 쓴다. 하나라도 지면 쓴 것을 원래 글로 되돌린다.
+        size_t writtenCount = 0;
+        if ( bFailed == false )
+        {
+            for ( ; writtenCount < listRewrite.size(); ++writtenCount )
+            {
+                const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[writtenCount];
+                if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._rewrittenText ) == false )
+                {
+                    bFailed          = true;
+                    outPlan._failure = formatToString( "could not write the referencing file '%#' (locked or read-only?)", rewrite._referrerID );
+                    break;
+                }
+            }
+        }
+
+        if ( bFailed )
+        {
+            // 되돌리기: 글 먼저(옮긴 참조자는 새 자리에 있다), 그다음 파일을 거꾸로. 되돌리지 못한 것은 이름을 남긴다 — 반쯤 고친 상태를 말없이 두지 않는다.
+            vector<string> listStuck;
+            for ( size_t index = 0; index < writtenCount; ++index )
+            {
+                if ( FileUtil::writeTextFile( listRewrite[index]._referrerAbs, listRewrite[index]._originalText ) == false )
+                    listStuck.push_back( listRewrite[index]._referrerID );
+            }
+            for ( size_t index = movedCount; index > 0; --index )
+            {
+                const EditorAssetMove& move = outPlan._listMove[index - 1];
+                if ( EditorAssetFileCommandsInternal::moveFile( move._destinationAbs, move._sourceAbs ) == false )
+                    listStuck.push_back( outPlan._listNewID[index - 1] );
+            }
+            if ( listStuck.empty() )
+            {
+                SW_LOG_WARNING_ID( "EditorAssetFileCommands.MoveRolledBack", "Move rolled back - %#. Nothing changed on disk", outPlan._failure );
+            }
+            else
+            {
+                string stuckText;
+                for ( const string& stuck : listStuck )
+                    stuckText += ( stuckText.empty() ? "" : ", " ) + stuck;
+                SW_LOG_ERROR_ID( "EditorAssetFileCommands.MoveIncomplete", "Move failed (%#) and %# file(s) could not be put back - fix by hand: %#", outPlan._failure, listStuck.size(),
+                                 stuckText );
+            }
+            EditorContext* pContext = editor::findSubsystem<EditorContext>();
+            if ( pContext != nullptr )
+                pContext->getSubsystem<EditorNotificationManager>().push( "Move failed", outPlan._failure, listStuck.empty() ? NotificationKind::Warning : NotificationKind::Error );
+            const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+            for ( size_t index = 0; index < outPlan._listOldID.size(); ++index )
+            {
+                inoutIndex.refreshFile( resourceRoot, outPlan._listOldID[index] );
+                inoutIndex.refreshFile( resourceRoot, outPlan._listNewID[index] );
+            }
+            return false;
+        }
 
         const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-        inoutIndex.refreshFile( resourceRoot, oldID );
-        inoutIndex.refreshFile( resourceRoot, newID );
-
-        // 참조자는 파일마다 한 번 고친다(한 파일이 여러 줄에서 적을 수 있다).
-        const string* pPreviousReferrer = nullptr;
-        for ( const EditorAssetReference& reference : listReference )
+        for ( size_t index = 0; index < outPlan._listOldID.size(); ++index )
         {
-            if ( pPreviousReferrer != nullptr && *pPreviousReferrer == reference._referrerPath )
-                continue;
-            pPreviousReferrer                              = &reference._referrerPath;
-            const string                      referrerID   = reference._referrerPath == oldID ? newID : reference._referrerPath;
-            const std::optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
-            string                            referrerText;
-            if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), referrerText ) == false )
-                continue;
-            const string& referrerAbs = referrerFile->str();
-            if ( params.rewrite( referrerText, AssetReferenceFields::syntaxOf( referrerID ), listRule ) == 0 )
-            {
-                // 역색인은 글에서 경로 모양을 찾고, 고치기는 경로 칸만 본다 — 칸 밖(주석)이거나 목록에 없는 칸이다. 칸이면 목록에 더한다.
-                SW_LOG_WARNING_ID( "EditorAssetFileCommands.ReferenceOutsideField", "'%#' names '%#' outside a path field of %# - it was not changed", referrerID, oldID,
-                                   AssetReferenceFields::kConfigFile );
-                continue;
-            }
-            if ( FileUtil::writeTextFile( referrerAbs, referrerText ) == false )
-            {
-                SW_LOG_WARNING_ID( "EditorAssetFileCommands.CouldNotFixReference", "Could not fix the reference in '%#' - it still names '%#'", referrerID, oldID );
-                continue;
-            }
-            ++outFixedFileCount;
-            inoutIndex.refreshFile( resourceRoot, referrerID );
+            inoutIndex.refreshFile( resourceRoot, outPlan._listOldID[index] );
+            inoutIndex.refreshFile( resourceRoot, outPlan._listNewID[index] );
         }
-        SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", oldID, newID, outFixedFileCount );
+        for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
+            inoutIndex.refreshFile( resourceRoot, rewrite._referrerID );
+        outPlan._fixedFileCount = static_cast<uint32>( listRewrite.size() );
+        if ( outPlan._listMove.size() == 1 )
+            SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", outPlan._listOldID.front(), outPlan._listNewID.front(), outPlan._fixedFileCount );
+        else
+            SW_LOG_INFO_ID( "Asset.MovedSet", "Moved %# asset(s) (first '%#' to '%#') and fixed %# referencing file(s)", outPlan._listMove.size(), outPlan._listOldID.front(),
+                            outPlan._listNewID.front(), outPlan._fixedFileCount );
+        return true;
+    }
+
+    bool EditorAssetFileCommands::collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs, vector<EditorAssetMove>& outListMove, string& outFailure )
+    {
+        outListMove.clear();
+        const string source      = FileUtil::normalizeSeparators( sourceFolderAbs );
+        const string destination = FileUtil::joinPath( destinationParentAbs, FileUtil::getFileNamePart( source ) );
+        if ( FileUtil::isDirectory( source ) == false )
+        {
+            outFailure = formatToString( "'%#' is not a folder", source );
+            return false;
+        }
+        // 폴더를 자기 안으로 옮기면 끝없이 깊어진다
+        const string sourcePrefix = source + "/";
+        if ( FileUtil::pathsEqualNormalized( destination, source ) || StringUtil::startsWith( FileUtil::normalizeSeparators( destination ), sourcePrefix ) )
+        {
+            outFailure = formatToString( "'%#' cannot move into itself", FileUtil::getFileNamePart( source ) );
+            return false;
+        }
+        if ( FileUtil::exists( destination ) )
+        {
+            outFailure = formatToString( "'%#' already exists - nothing was moved", destination );
+            return false;
+        }
+        vector<string> listFile;
+        if ( FileUtil::collectFiles( source, "", listFile, true ) == false )
+        {
+            outFailure = formatToString( "could not list '%#'", source );
+            return false;
+        }
+        for ( const string& fileAbs : listFile )
+        {
+            const string normalized = FileUtil::normalizeSeparators( fileAbs );
+            outListMove.push_back( EditorAssetMove{ normalized, destination + normalized.substr( source.size() ) } );
+        }
+        if ( outListMove.empty() )
+        {
+            outFailure = formatToString( "'%#' is empty - nothing to move", FileUtil::getFileNamePart( source ) );
+            return false;
+        }
+        return true;
+    }
+
+    bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount )
+    {
+        outFixedFileCount = 0;
+        EditorAssetMovePlan plan;
+        if ( applyAssetMoves( {
+                                  EditorAssetMove{ string( sourceAbs ), string( destinationAbs ) }
+        },
+                              inoutIndex, plan ) == false )
+            return false; // 이유는 applyAssetMoves 가 알렸다(옮기기 전 거절 · 되돌림 · 되돌리지 못한 목록)
+        outFixedFileCount = plan._fixedFileCount;
         return true;
     }
 

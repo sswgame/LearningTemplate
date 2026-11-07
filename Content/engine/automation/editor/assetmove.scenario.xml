@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 콘텐츠 브라우저의 폴더 · 묶음 옮기기(S3). 테스트 폴더 engine/automation/editor/assetmove 를 실행마다 scratch/assetmove 로 복사해 사본에만 쓴다.
+  pack/ 에는 probe.material 과 detail/probe_detail.material 이 있고 assetmove.scene.xml 이 둘을 쓴다. target/ 에는 keep.material 이 있다.
+  ① 폴더 타일 pack 을 폴더 타일 target 위에 놓으면 확인 대화상자가 계획을 보인다(옮길 파일 2, 고칠 참조 파일 1). Move 를 누르면 두 파일이 target/pack/ 으로 가고
+     씬의 두 칸이 같은 트랜잭션에서 고쳐진다(Asset.MovedSet). 빈 원본 폴더는 지워진다.
+  ② refuse/noted.material 은 notes.scene.xml 이 주석(경로 칸 밖)에서 적는다. refuse 폴더를 target 에 놓으면 대화상자가 거절 이유(outside a path field)와
+     그 파일 이름을 빨간 글로 보이고 Move 가 꺼져 있다 — Cancel 로 닫으면 아무것도 옮기지 않는다.
+  쓰기 실패 되돌리기는 잠긴 파일이 있어야 해 시나리오가 만들 수 없다 — applyAssetMoves 의 되돌림 경로는 로그 id EditorAssetFileCommands.MoveRolledBack · MoveIncomplete 로 본다.
+  볼 그림: assetmove/confirm.png(파일 2 · 참조 1 · 바깥 도메인 목록), assetmove/refused.png(빨간 이유 글, 꺼진 Move).
+  실행: App -EnableEditor -scenario=engine/automation/editor/assetmove.scenario.xml -unattended
+-->
+<Scenario name="editor.assetmove" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/assetmove" as="scratch/assetmove"/>
+	<EditorWaitSettled/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/pack/probe.material"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus content_browser"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
+	<DevCommand line="content.open scratch/assetmove"/>
+	<EditorWaitSettled/>
+	<!-- ① 폴더째 옮기기 -->
+	<EditorDrag mark="contentBrowser.asset.pack" toMark="contentBrowser.asset.target"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="assetmove/confirm.png" maxMagentaFraction="0"/>
+	<EditorClick mark="contentBrowser.move.confirm" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.move.confirm" state="Up"/>
+	<EditorWaitSettled/>
+	<ExpectLog id="Asset.MovedSet" contains="Moved 2 asset(s)" count="1"/>
+	<ExpectLog id="Asset.MovedSet" contains="fixed 1 referencing file(s)" count="1"/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/pack/probe.material"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/pack/detail/probe_detail.material"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
+	<!-- ② 경로 칸 밖(주석)에서 적힌 에셋이 든 폴더는 옮기지 않는다 — 고치지 못한 참조를 남기지 않는다 -->
+	<EditorWaitSettled/>
+	<EditorDrag mark="contentBrowser.asset.refuse" toMark="contentBrowser.asset.target"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="assetmove/refused.png" maxMagentaFraction="0"/>
+	<EditorClick mark="contentBrowser.move.cancel" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.move.cancel" state="Up"/>
+	<EditorWaitSettled/>
+	<ExpectLog id="Asset.MovedSet" count="1"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/refuse/noted.material"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

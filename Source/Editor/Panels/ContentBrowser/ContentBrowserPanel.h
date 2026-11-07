@@ -153,6 +153,8 @@ namespace sw::editor
         void drawAssetContextMenu( const AssetEntry& entry );
         /** @brief 삭제 확인 모달을 그립니다. `requestDeleteAsset` 이 이 모달을 엽니다. */
         void drawDeleteConfirmModal();
+        /** @brief 끌어 놓은 옮기기의 확인 모달입니다 — 옮길 파일 수 · 고칠 참조 · 바깥 도메인 · 고칠 수 없는 참조를 보이고 확인을 받는다. */
+        void drawMoveConfirmModal();
         /** @brief 탭이 가려지거나 창이 접혀 내용을 그리지 않는 프레임입니다. 색인을 기다리지 않게 표시합니다. */
         void onPanelCollapsed() override;
         /** @brief 패널을 닫았습니다. 색인을 기다리지 않게 표시합니다. */
@@ -193,6 +195,7 @@ namespace sw::editor
         uint8                                   _bOpenReferenceResults : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
         uint8                                   _bFocusRenameInput     : 1; /**< 다음 그리기에서 이름 입력란에 포커스를 준다 */
         uint8                                   _bContentVisible       : 1; /**< 마지막 그리기에서 내용을 그렸다(가려진 탭 · 접힌 창 · 닫힌 패널이 아니다) */
-        [[maybe_unused]] uint8                  _reservedFlags         : 4;
+        uint8                                   _bOpenMoveConfirm      : 1; /**< 다음 그리기에서 옮기기 확인 모달을 연다(끌어 놓기 대상 위에서는 창 단위 팝업을 열 수 없다) */
+        [[maybe_unused]] uint8                  _reservedFlags         : 3;
     };
 } // namespace sw::editor

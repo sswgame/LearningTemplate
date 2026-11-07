@@ -1,0 +1,8 @@
+<Scene formatVersion="2" name="AssetMoveNotes">
+	<!-- 경로 칸 밖(주석)에서 에셋을 적은 파일: engine/automation/editor/assetmove/refuse/noted.material — 옮기기는 이 글을 고치지 못하므로 refuse 폴더를 옮기지 않는다 -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+	</entities>
+</Scene>

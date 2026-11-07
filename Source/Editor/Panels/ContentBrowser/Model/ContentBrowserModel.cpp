@@ -150,6 +150,9 @@ namespace sw::editor
         , _history{}
         , _fileActions{}
         , _pendingMoves{}
+        , _moveRequestSourceAbs{}
+        , _moveRequestFolderAbs{}
+        , _moveRequestPlan{}
         , _referenceSearch{}
         , _importQueue{}
         , _typeFilter{}
@@ -161,6 +164,7 @@ namespace sw::editor
         , _bShowAllPacks{ SW_FALSE }
         , _bShowAllPacksInitialized{ SW_FALSE }
         , _bListingRecursive{ SW_FALSE }
+        , _bMoveRequestPlanned{ SW_FALSE }
     {
     }
 
@@ -512,6 +516,46 @@ namespace sw::editor
             return false;
         selectAfterFileChange( destinationAbs );
         return true;
+    }
+
+    void ContentBrowserModel::requestMoveToFolder( string_view sourceAbs, string_view folderAbs )
+    {
+        _moveRequestSourceAbs = FileUtil::normalizeSeparators( sourceAbs );
+        _moveRequestFolderAbs = FileUtil::normalizeSeparators( folderAbs );
+        _moveRequestPlan      = EditorAssetMovePlan{};
+        _bMoveRequestPlanned  = SW_FALSE;
+    }
+
+    bool ContentBrowserModel::updateMoveRequest()
+    {
+        if ( hasMoveRequest() == false )
+            return false;
+        if ( _bMoveRequestPlanned == SW_TRUE )
+            return true;
+        const EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
+        if ( pIndex == nullptr )
+            return false;                                                                                                             // 역색인이 마지막 변경을 따라오면 계획한다 — 낡은 색인으로 세운 계획은 고칠 참조를 빠뜨린다
+        (void)ContentBrowserFileActions::planMoveToFolder( _moveRequestSourceAbs, _moveRequestFolderAbs, *pIndex, _moveRequestPlan ); // 옮길 수 없으면 `_failure` 를 창이 보인다
+        _bMoveRequestPlanned = SW_TRUE;
+        return true;
+    }
+
+    bool ContentBrowserModel::confirmMoveRequest()
+    {
+        const string sourceAbs = _moveRequestSourceAbs;
+        const string folderAbs = _moveRequestFolderAbs;
+        cancelMoveRequest();
+        if ( sourceAbs.empty() )
+            return false;
+        return moveAssetToFolder( sourceAbs, folderAbs ); // 적용 때 계획을 다시 세운다(확인을 기다리는 사이 파일이 바뀌었을 수 있다)
+    }
+
+    void ContentBrowserModel::cancelMoveRequest()
+    {
+        _moveRequestSourceAbs.clear();
+        _moveRequestFolderAbs.clear();
+        _moveRequestPlan     = EditorAssetMovePlan{};
+        _bMoveRequestPlanned = SW_FALSE;
     }
 
     bool ContentBrowserModel::confirmDeleteAsset()
