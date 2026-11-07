@@ -647,8 +647,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="52" name="ViewCamera">
-			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+		<!-- 화면 카메라 — PlayerCamera(Game)의 카메라 매니저가 뷰 타깃 ViewCamera(Custom, 디렉터가 프리셋 firstperson · orbit · killcam 으로 움직인다)의 포즈 · 렌즈 · 후처리를 받아 그린다
+		     (언리얼 PlayerCameraManager 가 뷰 타깃의 시점을 받는 구조). 시점 프리셋이 폰을 따라가므로 PlayerController 는 빙의 때 뷰 타깃을 폰으로 옮기지 않는다(_bManageViewTarget false). -->
+		<entity id="120" name="PlayerCamera">
+			<GameObject _schemaVersion="0" _name="PlayerCamera" _bActive="true">
 				<_listComponent>
 					<CameraComponent _componentName="CameraComponent"
 					                 _bActive="true"
@@ -664,6 +666,35 @@
 					                 _orthoHeight="10"
 					                 _priority="10"
 					                 _role="Game"
+					                 _bOrthographic="false" />
+					<CameraManagerComponent _componentName="CameraManagerComponent" _bActive="true" _viewTarget="52" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="121" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="52" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,1.6,-16"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="1.3089969"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Custom"
 					                 _bOrthographic="false" />
 					<CameraDirectorComponent _componentName="CameraDirectorComponent"
 					                         _bActive="true"

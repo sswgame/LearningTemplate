@@ -13,6 +13,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -127,7 +128,10 @@ namespace sw
                 return pScene != nullptr ? pScene->getObjectManager() : nullptr;
             }
 
-            /** @brief 게임 시점 카메라(`CameraRole::Game`)를 모는 첫 디렉터입니다. @p bInPhotoMode 이면 포토 모드가 켜진 것만 봅니다. */
+            /**
+             * @brief 화면 시점을 모는 첫 디렉터입니다 — 게임 시점 카메라(`CameraRole::Game`)에 있거나, 플레이어 카메라 매니저의 뷰 타깃(Custom 카메라)에 있는 것. @p bInPhotoMode 이면 포토 모드가 켜진 것만 봅니다.
+             * @details 매니저가 있는 게임(Shooter3D · WildWest)은 디렉터가 뷰 타깃에 있고 매니저가 그 포즈를 화면 카메라로 옮긴다(언리얼 PlayerCameraManager 의 뷰 타깃).
+             */
             static CameraDirectorComponent* findDirector( bool bInPhotoMode )
             {
                 GameObjectManager* pManager = findActiveManager();
@@ -135,9 +139,10 @@ namespace sw
                     return nullptr;
                 for ( CameraDirectorComponent* pDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
                 {
-                    const GameObject*      pOwner  = pDirector->getOwner();
-                    const CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
-                    if ( pCamera == nullptr || pCamera->getRole() != CameraRole::Game )
+                    const GameObject*      pOwner      = pDirector->getOwner();
+                    const CameraComponent* pCamera     = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+                    const bool             bDrivesView = pCamera != nullptr && ( pCamera->getRole() == CameraRole::Game || CameraManagerComponent::isViewTarget( *pManager, pOwner->getHandle() ) );
+                    if ( bDrivesView == false )
                         continue;
                     if ( bInPhotoMode && pDirector->isInPhotoMode() == false )
                         continue;

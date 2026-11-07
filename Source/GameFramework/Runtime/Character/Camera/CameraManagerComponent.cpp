@@ -205,6 +205,16 @@ namespace sw
         return nullptr;
     }
 
+    bool CameraManagerComponent::isViewTarget( const GameObjectManager& manager, const GameObjectHandle& object )
+    {
+        for ( const CameraManagerComponent* pCameraManager : manager.getComponentRegistry().getAll<CameraManagerComponent>() )
+        {
+            if ( pCameraManager != nullptr && pCameraManager->isPendingDestroy() == false && pCameraManager->getViewTarget() == object )
+                return true;
+        }
+        return false;
+    }
+
     void CameraManagerComponent::updateCamera( float32 deltaTime )
     {
         _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );

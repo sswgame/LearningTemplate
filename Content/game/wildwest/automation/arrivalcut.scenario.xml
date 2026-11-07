@@ -3,6 +3,7 @@
   WildWest 마을 도착 컷 — 기수가 마을 앞(TownArrival, X 40, 반지름 2.5)에 닿으면 시퀀스 트리거(SequenceTriggerComponent — 거리로 재므로 말 탄 기수도 닿는다)가
   ArrivalDirector 의 시퀀스를 한 번 튼다. 컷은 CinematicCameraComponent 가 받아 화면을 컷 카메라로 바꾸고, 끝나면 게임 카메라(디렉터)로 끊어 돌아온다.
   ① 시작 자리에서는 틀지 않는다. ② 닿으면 화면이 ArrivalCutA → ArrivalCutB 로 바뀐다(두 장이 다르다). ③ 끝나면 GameCamera 다. ④ 다시 닿아도 다시 틀지 않는다(한 번).
+  화면 카메라(GameCamera)는 카메라 매니저가 뷰 타깃(GameplayView — 디렉터)의 자리에 둔다. 컷 프리롤의 대기 뷰가 그 매니저에 닿는다.
   두 장은 같은 실행에서 찍어 서로만 견준다(골든 없음) — 컷 카메라가 다르니 시간이 끼어도 차이는 카메라가 낸다.
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/arrivalcut.scenario.xml -unattended
 -->
@@ -11,12 +12,16 @@
 	<Wait frames="30"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Camera.FrameObject" is="GameCamera"/>
+	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="none"/>
 	<Expect watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="0"/>
 
 	<DevCommand line="teleport Player 40 0.05 0"/>
 	<WaitUntil watch="Object.Property" target="TownArrival" key="SequenceTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
+	<!-- 프리롤(10 프레임)에 대기 뷰가 플레이어의 카메라 매니저(GameCamera)로 가고, 컷이 오면 풀린다 -->
+	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="ArrivalCutA" timeoutFrames="20"/>
 	<WaitUntil watch="Camera.FrameObject" is="ArrivalCutA" timeoutSeconds="2"/>
+	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="none" timeoutFrames="4"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutA"/>
 	<Wait frames="8"/>
 	<Screenshot file="wildwest/arrival_a.ppm" waitForSettle="false"/>

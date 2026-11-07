@@ -93,6 +93,8 @@ namespace sw
         static void findCamerasByRole( const GameObjectManager& manager, CameraRole role, vector<CameraComponent*>& outListCamera );
         /** @brief 로컬 플레이어 @p playerIndex 의 매니저입니다. 없으면 nullptr 입니다. */
         static CameraManagerComponent* findForPlayer( const GameObjectManager& manager, uint32 playerIndex );
+        /** @brief 어느 플레이어의 매니저든 @p object 를 뷰 타깃으로 보고 있으면 true 입니다. 화면 시점을 모는 디렉터가 Custom 카메라에 있을 때(뷰 타깃) 그것을 찾는 쪽(사진 모드)이 씁니다. */
+        static bool isViewTarget( const GameObjectManager& manager, const GameObjectHandle& object );
 
         /** @brief 시간을 흘려 이번 포즈를 쓰도록 합니다(틱 안이면 틱 뒤로 미루고, 틱 밖이면 바로 쓴다). */
         void updateCamera( float32 deltaTime );

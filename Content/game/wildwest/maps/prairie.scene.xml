@@ -3,6 +3,8 @@
 		<_cellGrid _cellSize="16" _loadingRadius="32" />
 	</SceneSettings>
 	<entities>
+		<!-- 화면 카메라 — GameCamera(Game)의 카메라 매니저가 뷰 타깃 GameplayView(Custom, 디렉터가 기수를 내려다보는 직교 시점으로 움직인다)를 받아 그린다(언리얼 PlayerCameraManager 의 뷰 타깃).
+		     말에 타면 빙의가 말로 가지만 시점은 디렉터가 기수를 따라가므로 PlayerController 는 뷰 타깃을 폰으로 옮기지 않는다(_bManageViewTarget false). -->
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
@@ -21,6 +23,28 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
+					<CameraManagerComponent _componentName="CameraManagerComponent" _bActive="true" _viewTarget="114" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="114" name="GameplayView">
+			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,20,-15"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="18"
+					                 _priority="0"
+					                 _role="Custom"
+					                 _bOrthographic="true" />
 					<CameraDirectorComponent _componentName="CameraDirectorComponent"
 					                         _bActive="true"
 					                         _catalogPath="game/wildwest/data/prairie.cameras.xml"
@@ -29,6 +53,13 @@
 					                         _bReadInput="false">
 						<_listGroupTarget />
 					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="115" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<PlayerControllerComponent _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -457,7 +488,7 @@
 					                           _bAutoPlay="false"
 					                           _westernDataPath="game/wildwest/data/western.xml"
 					                           _player="4"
-					                           _cameraRig="1"
+					                           _cameraRig="114"
 					                           _whistleButton="West.Whistle"
 					                           _useButton="West.Use"
 					                           _weatherDataPath="game/wildwest/data/prairie.weather.xml"
