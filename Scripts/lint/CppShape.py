@@ -40,7 +40,7 @@ kSkipFolders = ("ThirdParty", "graphify-out", "Generated", ".gen.")
 kBoolFlagExempt = "NOLINT(sw-bool-flag)"
 kOnlineTableExempt = "NOLINT(sw-online-table)"
 kOnlineKitFolder = "Source/GameFramework/Kits/Feature/Online/"
-kOnlineInterfacePattern = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)")
+kOnlineInterfacePattern = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)\b")
 kAccessKeywords = ("public", "protected", "private")
 
 

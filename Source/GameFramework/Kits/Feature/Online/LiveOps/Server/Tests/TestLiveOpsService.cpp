@@ -4,6 +4,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsClient.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
@@ -296,4 +297,19 @@ SW_TEST_CASE( LiveOpsServiceTest, JsonRoundTrip )
 
     rig._service.putEventJSON( "{ not json", kGM, "m", UnixMilliseconds{ kStartMs }, 7 );
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Invalid );
+}
+
+/** @brief [LiveOpsServiceTest] 클라이언트의 이벤트 캐시는 열린 이벤트 응답만 고친다. 기기 등록 응답(빈 목록)이 캐시를 지우지 않는다 */
+SW_TEST_CASE( LiveOpsServiceTest, DeviceReplyKeepsTheEventCache )
+{
+    LiveOpsClient client;
+    LiveOpsReply  stateReply;
+    stateReply._listEvent.emplace_back()._kind = "double_xp";
+    client.onCallSucceeded( LiveOpsMethod::GetLiveState{}, LiveOpsStateRequest{}, stateReply );
+    SW_EXPECT_TRUE( client.hasEventKind( "double_xp" ) );
+    const uint64 revision = client.getRevision();
+
+    client.onCallSucceeded( LiveOpsMethod::RegisterDevice{}, PushDeviceRegistration{}, LiveOpsReply{} );
+    SW_EXPECT_TRUE( client.hasEventKind( "double_xp" ) );
+    SW_EXPECT_EQUAL( revision, client.getRevision() );
 }
