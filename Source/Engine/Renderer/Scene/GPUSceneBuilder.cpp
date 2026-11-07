@@ -1084,6 +1084,7 @@ namespace sw
     {
         // 옮겨지는 것은 GPUSceneSnapshot 이 가진 것 **모두이고 그것뿐**이다. 복사다. 퍼뮤테이션 테이블은 GT 가
         // 계속 늘려 가는 기준이라 빼앗아 가면 다음 프레임의 인덱스가 0부터 다시 매겨진다.
+        // 인스턴스 · 배치 · 퍼뮤테이션 목록은 공유 값이라 포인터만 옮겨 간다 — 배치는 고친 프레임에만 새 목록이 된다(`GPUSceneSnapshot::editBatches`).
         outSnapshot          = _snapshot;
         _snapshot._bCPUDirty = SW_FALSE;
     }

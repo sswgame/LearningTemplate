@@ -407,10 +407,10 @@ namespace sw
         _pActiveView = &_state._mainView;
     }
 
-    bool FramePassExecutor::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const
+    bool FramePassExecutor::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
     {
         // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
-        if ( batch._bDeformRefused != SW_FALSE )
+        if ( binding._bDeformRefused != SW_FALSE )
             return false;
         if ( FrameRendererUtil::filtersBatchesByMaterial( passType ) == false )
             return true;
@@ -1833,11 +1833,11 @@ namespace sw
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
 
-    void FramePassExecutor::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
+    void FramePassExecutor::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso )
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t5).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
-        if ( batch._materialBuffer == 0 || batch._materialSRV == kInvalidDescriptorIndex )
+        if ( binding._materialBuffer == 0 || binding._materialSRV == kInvalidDescriptorIndex )
         {
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
             // 폴백은 **이 PSO 셰이더의 레이아웃**(stride · 텍스처 인덱스 필드)으로 만든 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
@@ -1862,8 +1862,8 @@ namespace sw
             }
             return;
         }
-        context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSRV );
-        context._drawMaterialCount = batch._materialCount;
+        context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, binding._materialBuffer, binding._materialSRV );
+        context._drawMaterialCount = binding._materialCount;
     }
 
     void FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
@@ -1965,7 +1965,8 @@ namespace sw
         uint32       groupCount = 1;
         if ( state._bMerge == false )
             return groupCount;
-        const GPUMeshBatch& head = state._batches[batchIndex];
+        const GPUMeshBatch&        head        = state._batches[batchIndex];
+        const GPUMeshBatchBinding& headBinding = state._bindings[batchIndex];
         while ( orderIndex + groupCount < batchCount )
         {
             const uint32 nextBatchIndex = ( state._pOrder != nullptr ) ? ( *state._pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
@@ -1973,7 +1974,7 @@ namespace sw
             const bool bParticleInside = bDrawsParticles && state._particleSlotCursor < state._listParticleSlot.size() &&
                                          state._listParticleSlot[state._particleSlotCursor]._drawPosition <= orderIndex + groupCount;
             const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-            if ( bGroupEnds || isSameDrawGroup( state._pso, state._passType, drawMode, head, state._batches[nextBatchIndex] ) == false )
+            if ( bGroupEnds || isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
                 break;
             ++groupCount;
         }
@@ -1991,9 +1992,10 @@ namespace sw
                 inoutState._boundPSO          = 0;
                 inoutState._boundVertexBuffer = 0;
             }
-            const uint32        batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
-            const GPUMeshBatch& head             = inoutState._batches[batchIndex];
-            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._indexBuffer == 0 || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head ) == false;
+            const uint32               batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
+            const GPUMeshBatch&        head             = inoutState._batches[batchIndex];
+            const GPUMeshBatchBinding& headBinding      = inoutState._bindings[batchIndex];
+            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head, headBinding ) == false;
             if ( bHeadNotDrawable )
             {
                 ++orderIndex;
@@ -2002,7 +2004,7 @@ namespace sw
             const uint32 groupCount = countDrawGroup( inoutState, drawMode, orderIndex, bDrawsParticles );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            if ( drawBatchGroup( context, inoutState, drawMode, head, inoutState._batchOffset + batchIndex, groupCount ) )
+            if ( drawBatchGroup( context, inoutState, drawMode, head, headBinding, inoutState._batchOffset + batchIndex, groupCount ) )
                 ++inoutState._drawCallCount;
             orderIndex += groupCount;
         }
@@ -2032,6 +2034,8 @@ namespace sw
         state._pso      = pso;
         state._boundPSO = pso;
         state._batches  = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
+        state._bindings = bTransparentPass ? _state._gpuScene.getTransparentBatchBindings() : _state._gpuScene.getOpaqueBatchBindings();
+        SW_ASSERT( state._bindings.size() == state._batches.size() );
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", state._batches.size() );
 
@@ -2079,7 +2083,7 @@ namespace sw
 
     bool FramePassExecutor::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const
     {
-        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatch::canShareMaterialBinding`).
+        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatchBinding::canShareMaterialBinding`).
         const ShaderBindingLayout* pLayout = _psoManager.findLayout( batchPSO );
         if ( pLayout == nullptr )
             return false;
@@ -2093,21 +2097,21 @@ namespace sw
     }
 
     bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
-                                             const GPUMeshBatch& other ) const
+                                             const GPUMeshBatchBinding& headBinding, const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const
     {
-        const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._indexBuffer == 0 || other.hasDrawSlots() == false || drawsBatchInPass( passType, other ) == false;
+        const bool bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || drawsBatchInPass( passType, other, otherBinding ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
         // 정점 · 인덱스 버퍼는 짝이다(풀의 둘, 아니면 메시의 둘) — 정점 버퍼가 같으면 인덱스 버퍼도 같다.
-        if ( other._vertexBuffer != head._vertexBuffer || _psoManager.psoForBatch( pso, other, drawMode ) != _psoManager.psoForBatch( pso, head, drawMode ) )
+        if ( otherBinding._vertexBuffer != headBinding._vertexBuffer || _psoManager.psoForBatch( pso, other, drawMode ) != _psoManager.psoForBatch( pso, head, drawMode ) )
             return false;
         // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
-        const bool bCbDiffers = other._materialCb != head._materialCb;
-        return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
+        const bool bCbDiffers = otherBinding._materialCb != headBinding._materialCb;
+        return GPUMeshBatchBinding::canShareMaterialBinding( headBinding, otherBinding, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
     }
 
-    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, uint32 argIndex,
-                                            uint32 groupCount )
+    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head,
+                                            const GPUMeshBatchBinding& headBinding, uint32 argIndex, uint32 groupCount )
     {
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
@@ -2133,16 +2137,16 @@ namespace sw
                 context._pCmd->setVertexBuffer( constant::render::kInstanceSlotStreamSlot, inoutState._slotStream, constant::render::kInstanceSlotStreamStride, 0 );
         }
         // 정점 · 인덱스 풀 하나라 PSO 가 그대로면 다시 걸지 않는다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다. 둘은 짝이라 정점 버퍼로만 바뀜을 본다.
-        if ( head._vertexBuffer != inoutState._boundVertexBuffer )
+        if ( headBinding._vertexBuffer != inoutState._boundVertexBuffer )
         {
-            RHIMeshVertexStreams::bind( *context._pCmd, head._vertexBuffer, head._attributeOffset, head._mesh->getVertexFormat() );
-            context._pCmd->setIndexBuffer( head._indexBuffer, sizeof( uint32 ), 0 );
-            inoutState._boundVertexBuffer = head._vertexBuffer;
+            RHIMeshVertexStreams::bind( *context._pCmd, headBinding._vertexBuffer, headBinding._attributeOffset, head._mesh->getVertexFormat() );
+            context._pCmd->setIndexBuffer( headBinding._indexBuffer, sizeof( uint32 ), 0 );
+            inoutState._boundVertexBuffer = headBinding._vertexBuffer;
         }
 
         // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
-        registerMaterialBuffer( context, head, batchPSO );
-        bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSRV );
+        registerMaterialBuffer( context, headBinding, batchPSO );
+        bindForDraw( context, batchPSO, headBinding._materialCb, headBinding._arrMaterialTexSRV );
         context._pCmd->drawIndexedIndirect( inoutState._argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), groupCount );
         return true;
     }

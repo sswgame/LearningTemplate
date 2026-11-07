@@ -31,6 +31,7 @@
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
+#include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 
 namespace sw
@@ -94,7 +95,7 @@ namespace sw
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
-        bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const;
+        bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
 
         // ------------------------------------------------------------------------------
         // 3) 뷰 패스 상수(셋업의 주 시점 시드와 추가 뷰 기록이 함께 쓴다)
@@ -170,6 +171,7 @@ namespace sw
         struct BatchDrawState
         {
             vector_reference<const GPUMeshBatch>               _batches{};
+            vector_reference<const GPUMeshBatchBinding>        _bindings{}; ///< `_batches` 와 같은 구간의 렌더 쪽 값(`GPUScene::getOpaqueBatchBindings`)
             vector_reference<const GPUTransparentParticleSlot> _listParticleSlot{};
             const vector<uint32>*                              _pOrder{ nullptr }; ///< 추가 뷰의 투명 패스가 도는 배치 순서(없으면 배치 번호 순서)
             RHIPipelineStateHandle                             _pso{ 0 };
@@ -294,7 +296,7 @@ namespace sw
          */
         void registerLightBuffer( FramePassContext& context );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
-        void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
+        void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
         void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
         /**
@@ -310,13 +312,15 @@ namespace sw
         /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
         bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
         /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
-        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatch& other ) const;
+        bool isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
+                              const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const;
         /**
          * @brief 묶음 하나를 그립니다 — 바뀐 배치 PSO 를 걸고(그때 정점 슬롯이 비므로 인스턴스 슬롯 스트림 · 메시 스트림도 다시 건다), 바뀐 정점 버퍼만 다시 걸고,
          *        머티리얼 바인딩 뒤 간접 인자 @p argIndex 부터 @p groupCount 개를 부릅니다.
          * @return 그렸으면 true 입니다. 그 보기 모드의 머티리얼 변형이 없으면(만들 때 오류를 남겼다) 그리지 않고 false 입니다.
          */
-        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, uint32 argIndex, uint32 groupCount );
+        bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, const GPUMeshBatch& head, const GPUMeshBatchBinding& headBinding,
+                             uint32 argIndex, uint32 groupCount );
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */

@@ -67,7 +67,7 @@ namespace sw
     uint32 GPUMeshMorphPool::baseOf( const Mesh* pMesh ) const
     {
         // 결과 구간은 디스패치가 채울 때만 내준다. 버퍼를 못 만들어 디스패치되지 않는 구간을 내주면 정점 셰이더가 비어 있는 결과를 읽는다 —
-        // kInvalidBase 를 받은 배치는 그리지 않는다(GPUMeshBatch::_bDeformRefused). 레스트 포즈로 대신 그리지 않는다.
+        // kInvalidBase 를 받은 배치는 그리지 않는다(GPUMeshBatchBinding::_bDeformRefused). 레스트 포즈로 대신 그리지 않는다.
         const auto morphIt = _mapMorphEntry.find( pMesh );
         if ( morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase )
             return isDispatchable() ? morphIt->second._base : kInvalidBase;

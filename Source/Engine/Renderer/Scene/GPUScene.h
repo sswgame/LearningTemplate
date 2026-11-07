@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
@@ -191,6 +192,18 @@ namespace sw
         vector_reference<const GPUMeshBatch> getOpaqueBatches() const { return _snapshot.getOpaqueBatches(); }
         /** @brief 투명 배치 구간(모든 배치의 뒤쪽)을 반환합니다. */
         vector_reference<const GPUMeshBatch> getTransparentBatches() const { return _snapshot.getTransparentBatches(); }
+        /** @brief 모든 배치의 렌더 쪽 값(`GPUMeshBatchBinding`)입니다. `getAllBatches` 와 같은 번호 · 같은 길이입니다. */
+        const vector<GPUMeshBatchBinding>& getBatchBindings() const { return _listBatchBinding; }
+        /** @brief 불투명 배치 구간의 렌더 쪽 값입니다(`getOpaqueBatches` 와 같은 구간). */
+        vector_reference<const GPUMeshBatchBinding> getOpaqueBatchBindings() const
+        {
+            return vector_reference<const GPUMeshBatchBinding>( _listBatchBinding ).first( _snapshot.getOpaqueBatchCount() );
+        }
+        /** @brief 투명 배치 구간의 렌더 쪽 값입니다(`getTransparentBatches` 와 같은 구간). */
+        vector_reference<const GPUMeshBatchBinding> getTransparentBatchBindings() const
+        {
+            return vector_reference<const GPUMeshBatchBinding>( _listBatchBinding ).subspan( _snapshot.getOpaqueBatchCount() );
+        }
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들(인스턴스 칸 목록)을 반환합니다. */
@@ -317,6 +330,8 @@ namespace sw
         void ensureLODStateBuffers( IRHIDevice* pDevice, uint32 instanceCount );
         /** @brief 간접 인자의 시작 인스턴스입니다. 컬링이 가시 목록을 만드는 프레임은 가시 구간의 시작, 아니면 인스턴스 구간의 시작입니다. */
         uint32 computeStartInstance( const GPUMeshBatch& batch ) const;
+        /** @brief 렌더 쪽 값을 배치 수만큼 기본값으로 다시 깝니다(스냅샷을 받거나 비울 때). */
+        void resetBatchBindings();
         /** @brief 항등 인스턴스 슬롯 스트림을 가시 칸 수(@p slotCount) 이상으로 확보합니다. */
         void ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 slotCount );
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
@@ -325,6 +340,11 @@ namespace sw
     private:
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
         GPUSceneSnapshot _snapshot;
+        /**
+         * @brief 배치마다의 렌더 쪽 값입니다(`_snapshot` 의 배치와 같은 번호). 스냅샷을 받을 때마다 기본값으로 다시 깔고(`applyCPUSnapshot`) upload 가 채운다.
+         * @details 예전에는 받은 배치 사본에 덧썼다 — 프레임마다 새 사본이 왔으므로 다시 까는 것이 같은 수명이다.
+         */
+        vector<GPUMeshBatchBinding> _listBatchBinding;
         /// @brief 셰이더 경로에서 머티리얼 데이터 GPU 버퍼를 찾는 맵입니다(RT 영속, 스냅샷 교체와 무관).
         unordered_map<string, GPUMaterialGroupBuffer> _mapMaterialGroupBuffer;
         vector<uint8>                                 _listMaterialScratch;

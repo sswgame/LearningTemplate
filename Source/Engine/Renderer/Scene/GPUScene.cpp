@@ -27,21 +27,25 @@ namespace sw
              * @details 머티리얼의 GPU 자원은 렌더 스레드만 만든다 — 게임 스레드는 불변 사본만 실어 보낸다(`MaterialRenderProxy`). 원소 업로드(g_SwMaterials)는
              *          사본의 바이트를 직접 읽으므로 원소마다 상수 버퍼를 만들지 않는다. 상수 버퍼는 배치가 고르는 머리 원소의 것뿐이다.
              */
-            static void bindBatchMaterialResources( IRHIDevice* pDevice, vector_reference<GPUMeshBatch> listBatch, const vector<GPUMaterialGroup>& listGroup )
+            static void bindBatchMaterialResources( IRHIDevice* pDevice, const vector<GPUMeshBatch>& listBatch, vector<GPUMeshBatchBinding>& inoutListBinding,
+                                                    const vector<GPUMaterialGroup>& listGroup )
             {
-                for ( GPUMeshBatch& batch : listBatch )
+                SW_ASSERT( listBatch.size() == inoutListBinding.size() );
+                for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
                 {
-                    const bool bHasElement = batch._materialGroup < listGroup.size() && batch._materialIndex < listGroup[batch._materialGroup]._listEntry.size();
+                    const GPUMeshBatch& batch       = listBatch[batchIndex];
+                    const bool          bHasElement = batch._materialGroup < listGroup.size() && batch._materialIndex < listGroup[batch._materialGroup]._listEntry.size();
                     if ( bHasElement == false )
                         continue;
                     const MaterialRenderBinding& binding = listGroup[batch._materialGroup]._listEntry[batch._materialIndex]._binding;
                     if ( binding.isValid() == false )
                         continue;
-                    batch._materialCb = binding._proxy->sync( pDevice, binding._data );
+                    GPUMeshBatchBinding& gpu = inoutListBinding[batchIndex];
+                    gpu._materialCb          = binding._proxy->sync( pDevice, binding._data );
                     // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처는 사본이 이미 얹었다.
                     for ( uint32 slot = 0; slot < shaderslot::kMaterialTextureCount; ++slot )
                     {
-                        batch._arrMaterialTexSRV[slot] = binding._data->_arrTextureSRV[slot];
+                        gpu._arrMaterialTexSRV[slot] = binding._data->_arrTextureSRV[slot];
                     }
                 }
             }
@@ -54,7 +58,8 @@ namespace sw
     void GPUScene::clear()
     {
         // 스냅샷이 든 소유(메시 · 머티리얼 · 인스턴스)를 여기서 놓는다. 디바이스보다 먼저 불러야 한다(Graphics/README "소유와 수명" 4).
-        _snapshot             = GPUSceneSnapshot{};
+        _snapshot = GPUSceneSnapshot{};
+        resetBatchBindings();
         _indirectCommandCount = 0;
         _bBatchTablesDirty    = SW_TRUE;
     }
@@ -70,36 +75,42 @@ namespace sw
 
     void GPUScene::assignMorphBases( const GPUMeshMorphPool& pool )
     {
-        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        const vector<GPUMeshBatch>& listBatch = _snapshot.getAllBatches();
+        for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
         {
+            const GPUMeshBatch&  batch = listBatch[batchIndex];
+            GPUMeshBatchBinding& gpu   = _listBatchBinding[batchIndex];
             // 구간 · LOD 배치도 메시 시작 그대로다 — 인덱스가 메시 안 번호라 셰이더의 로컬 번호가 곧 메시 안 번호다(binding.hlsli MorphPool::computeElement).
             const uint32 meshBase = pool.baseOf( batch._mesh.get() );
-            if ( batch._morphVertexBase != meshBase )
+            if ( gpu._morphVertexBase != meshBase )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
-            batch._morphVertexBase = meshBase;
+            gpu._morphVertexBase = meshBase;
             // 모프가 필요한데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않고 이 배치를 거른다.
             // 스킨 메시는 결과가 칸마다라 인스턴스 단위로 거른다(칸 표에 없는 칸의 정점 셰이더가 NaN 위치로 버린다, binding.hlsli MorphPool::loadVertex).
             // VAT 메시는 모프 풀이 아니라 VAT 풀이 판정한다(assignVertexAnimationBases).
             const Mesh* pMesh        = batch._mesh.get();
             const bool  bNeedsDeform = pMesh != nullptr && pMesh->findVertexAnimation() == nullptr && pMesh->hasSkin() == false && pMesh->isGPUMorphEnabled();
-            batch._bDeformRefused    = ( bNeedsDeform && meshBase == GPUMeshMorphPool::kInvalidBase ) ? SW_TRUE : SW_FALSE;
+            gpu._bDeformRefused      = ( bNeedsDeform && meshBase == GPUMeshMorphPool::kInvalidBase ) ? SW_TRUE : SW_FALSE;
         }
     }
 
     void GPUScene::assignVertexAnimationBases( const GPUVertexAnimationPool& pool )
     {
-        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        const vector<GPUMeshBatch>& listBatch = _snapshot.getAllBatches();
+        for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
         {
-            const uint32 base = pool.baseOf( batch._mesh.get() );
-            if ( batch._vertexAnimationBase != base )
+            const GPUMeshBatch&  batch = listBatch[batchIndex];
+            GPUMeshBatchBinding& gpu   = _listBatchBinding[batchIndex];
+            const uint32         base  = pool.baseOf( batch._mesh.get() );
+            if ( gpu._vertexAnimationBase != base )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
-            batch._vertexAnimationBase = base;
+            gpu._vertexAnimationBase = base;
             // VAT 가 있는데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 바인드 포즈로 대신 그리지 않고 이 배치를 거른다.
             const Mesh*                pMesh       = batch._mesh.get();
             const MeshVertexAnimation* pAnimation  = ( pMesh != nullptr ) ? pMesh->findVertexAnimation() : nullptr;
             const bool                 bNeedsTable = pAnimation != nullptr && pAnimation->isEmpty() == false;
             if ( bNeedsTable && base == GPUVertexAnimationPool::kInvalidBase )
-                batch._bDeformRefused = SW_TRUE;
+                gpu._bDeformRefused = SW_TRUE;
         }
     }
 
@@ -116,12 +127,12 @@ namespace sw
         // RT 에서만 하는 두 가지: 머티리얼 사본을 프록시의 상수 버퍼에 올리고, 메시를 GPU 에 올린다(정점 풀, 풀 밖이면 initRHI).
         {
             SW_PROFILE_SCOPE( "RT.GPUScene.bindMaterials" );
-            GPUSceneInternal::bindBatchMaterialResources( pDevice, _snapshot.getMutableBatches(), _snapshot._listMaterialGroup );
+            GPUSceneInternal::bindBatchMaterialResources( pDevice, _snapshot.getAllBatches(), _listBatchBinding, _snapshot._listMaterialGroup );
         }
         updateVertexPool( pDevice );
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
         uploadMaterialGroups( pDevice );
-        // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 위에서 덧쓴 GPU 필드를 따로 옮겨 적을 사본이 없다.
+        // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 렌더 쪽 값(`_listBatchBinding`)도 한 벌이다.
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 재업로드를 생략한다. **간접 인자는 예외다.**
         // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안에는 매 프레임 0 으로 되돌려 놓아야 한다.
@@ -194,25 +205,28 @@ namespace sw
             }
         }
         SW_PROFILE_SCOPE( "RT.GPUScene.uploadMeshes" );
-        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        const vector<GPUMeshBatch>& listBatch = _snapshot.getAllBatches();
+        for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
         {
+            const GPUMeshBatch&                batch     = listBatch[batchIndex];
+            GPUMeshBatchBinding&               gpu       = _listBatchBinding[batchIndex];
             const RHIMeshVertexFormat          format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
             const GPUMeshVertexPool&           pool      = _arrVertexPool[static_cast<size_t>( format )];
             const GPUMeshVertexPool::Placement placement = pool.placementOf( batch._mesh.get() );
             if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && pool.getVertexBuffer() != 0 )
             {
-                batch._vertexBuffer    = pool.getVertexBuffer();
-                batch._attributeOffset = pool.getAttributeOffset();
-                batch._indexBuffer     = pool.getIndexBuffer();
-                batch._baseVertex      = placement._baseVertex;
-                batch._firstIndex      = placement._firstIndex + batch._sectionFirstIndex;
+                gpu._vertexBuffer    = pool.getVertexBuffer();
+                gpu._attributeOffset = pool.getAttributeOffset();
+                gpu._indexBuffer     = pool.getIndexBuffer();
+                gpu._baseVertex      = placement._baseVertex;
+                gpu._firstIndex      = placement._firstIndex + batch._sectionFirstIndex;
                 continue;
             }
             // 풀 밖(풀을 껐거나 못 든 메시) — 자기 정점 · 인덱스 버퍼로 그린다. 구간의 첫 인덱스부터.
-            batch._vertexBuffer = 0;
-            batch._indexBuffer  = 0;
-            batch._baseVertex   = 0;
-            batch._firstIndex   = batch._sectionFirstIndex;
+            gpu._vertexBuffer = 0;
+            gpu._indexBuffer  = 0;
+            gpu._baseVertex   = 0;
+            gpu._firstIndex   = batch._sectionFirstIndex;
             if ( batch._mesh == nullptr )
                 continue;
             // 만드는 쪽은 하나다 — 게임 스레드가 넘기기 전에 만든 스냅샷이면(동적 메시 밖) 여기서 다시 만들지 않는다. 없으면 그 쪽이 실패했다(그쪽이 이미 알렸다).
@@ -221,9 +235,9 @@ namespace sw
             {
                 if ( batch._mesh->isRHIValid() )
                 {
-                    batch._vertexBuffer    = batch._mesh->getVertexBuffer();
-                    batch._attributeOffset = batch._mesh->getAttributeStreamOffset();
-                    batch._indexBuffer     = batch._mesh->getIndexBuffer();
+                    gpu._vertexBuffer    = batch._mesh->getVertexBuffer();
+                    gpu._attributeOffset = batch._mesh->getAttributeStreamOffset();
+                    gpu._indexBuffer     = batch._mesh->getIndexBuffer();
                 }
                 else
                     SW_LOG_ERROR_ONCE_ID( "GPUScene.MeshNotCreatedBeforeHandoff", "A mesh in the snapshot has no vertex buffer although the upload queue owns its creation - it is not drawn" );
@@ -231,9 +245,9 @@ namespace sw
             }
             if ( batch._mesh->initRHI( pDevice ) )
             {
-                batch._vertexBuffer    = batch._mesh->getVertexBuffer();
-                batch._attributeOffset = batch._mesh->getAttributeStreamOffset();
-                batch._indexBuffer     = batch._mesh->getIndexBuffer();
+                gpu._vertexBuffer    = batch._mesh->getVertexBuffer();
+                gpu._attributeOffset = batch._mesh->getAttributeStreamOffset();
+                gpu._indexBuffer     = batch._mesh->getIndexBuffer();
             }
         }
     }
@@ -337,15 +351,16 @@ namespace sw
         _listScratchBatchInfo.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            const GPUMeshBatch& infoBatch                        = _snapshot.getAllBatches()[argIndex];
+            const GPUMeshBatch&        infoBatch                 = _snapshot.getAllBatches()[argIndex];
+            const GPUMeshBatchBinding& infoBinding               = _listBatchBinding[argIndex];
             _listScratchBatchInfo[argIndex]._instanceBase        = infoBatch._instanceBase;
             _listScratchBatchInfo[argIndex]._instanceCount       = infoBatch._instanceCount;
             _listScratchBatchInfo[argIndex]._visibleBase         = infoBatch._visibleBase;
             _listScratchBatchInfo[argIndex]._lodLevelCount       = infoBatch._lodLevelCount;
             _listScratchBatchInfo[argIndex]._lodScreenSize       = infoBatch._lodScreenSize;
-            _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
-            _listScratchBatchInfo[argIndex]._baseVertex          = infoBatch._baseVertex;
-            _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;
+            _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBinding._morphVertexBase;
+            _listScratchBatchInfo[argIndex]._baseVertex          = infoBinding._baseVertex;
+            _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBinding._vertexAnimationBase;
             const Mesh* pBatchMesh                               = infoBatch._mesh.get();
             const bool  bHasBounds                               = pBatchMesh != nullptr && pBatchMesh->getVertexCount() > 0;
             _listScratchBatchInfo[argIndex]._localBoundsCenter   = bHasBounds ? pBatchMesh->getLocalBoundsCenter() : float3{};
@@ -382,8 +397,8 @@ namespace sw
             const bool bGPUCounts = ( _bGPUFillsIndirectCounts != SW_FALSE ) && ( bPreserve == false );
             cmd._instanceCount    = bGPUCounts ? 0u : _snapshot.getAllBatches()[argIndex]._instanceCount;
             // 인덱스 풀 안의 시작과 메시의 정점 풀 시작. 인덱스는 메시 안 번호다(SV_VertexID 가 baseVertex 를 포함하는지는 API 마다 다르다: binding.hlsli).
-            cmd._startIndexLocation = _snapshot.getAllBatches()[argIndex]._firstIndex;
-            cmd._baseVertexLocation = static_cast<int32>( _snapshot.getAllBatches()[argIndex]._baseVertex );
+            cmd._startIndexLocation = _listBatchBinding[argIndex]._firstIndex;
+            cmd._baseVertexLocation = static_cast<int32>( _listBatchBinding[argIndex]._baseVertex );
             // 배치의 가시 구간 시작. 인스턴스 슬롯 스트림(슬롯 1)의 원소를 그만큼 건너뛴다. 셰이더는 SV_InstanceID 를 쓰지 않으므로
             // "SPIR-V InstanceIndex 는 포함하고 DX 는 안 한다" 는 차이에 기대지 않는다. 입력 어셈블러의 인스턴스 스텝
             // 스트림은 네 API 모두 startInstance 부터 읽는다.
@@ -507,10 +522,10 @@ namespace sw
             pair.second._slot.release( pDevice );
         }
         _mapMaterialGroupBuffer.clear();
-        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        for ( GPUMeshBatchBinding& gpu : _listBatchBinding )
         {
-            batch._materialBuffer = 0;
-            batch._materialSRV    = kInvalidDescriptorIndex;
+            gpu._materialBuffer = 0;
+            gpu._materialSRV    = kInvalidDescriptorIndex;
         }
         // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 손으로 풀어 쓰면 뷰 하나를 빠뜨려도 컴파일은 통과한다.
         _instances.release( pDevice );
@@ -524,12 +539,12 @@ namespace sw
             pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
         _instanceSlotStream         = 0;
         _instanceSlotStreamCapacity = 0;
-        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        for ( GPUMeshBatchBinding& gpu : _listBatchBinding )
         {
-            batch._vertexBuffer = 0; // 풀을 놓았다. 다음 upload 가 다시 정한다
-            batch._indexBuffer  = 0;
-            batch._baseVertex   = 0;
-            batch._firstIndex   = 0;
+            gpu._vertexBuffer = 0; // 풀을 놓았다. 다음 upload 가 다시 정한다
+            gpu._indexBuffer  = 0;
+            gpu._baseVertex   = 0;
+            gpu._firstIndex   = 0;
         }
         for ( GPUCullViewResources& view : _listCullView )
         {
@@ -557,6 +572,13 @@ namespace sw
     {
         // 바꿔치기다. 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GPUScene.h 참고).
         std::swap( _snapshot, snapshot );
+        resetBatchBindings();
+    }
+
+    void GPUScene::resetBatchBindings()
+    {
+        // 렌더 쪽 값은 받은 배치마다 기본값에서 다시 채운다 — 예전에 프레임마다 새 배치 사본이 기본값으로 오던 것과 같은 수명이다(배치 목록이 같아도).
+        _listBatchBinding.assign( _snapshot.getAllBatches().size(), GPUMeshBatchBinding{} );
     }
 
     uint32 GPUScene::computeMaterialGroupStride( const GPUMaterialGroup& group )
@@ -639,17 +661,20 @@ namespace sw
             listResolved[groupIndex]._elementCount = static_cast<uint32>( group._listEntry.size() );
         }
 
-        for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
+        const vector<GPUMeshBatch>& listBatch = _snapshot.getAllBatches();
+        for ( size_t batchIndex = 0; batchIndex < listBatch.size(); ++batchIndex )
         {
-            batch._materialBuffer = 0;
-            batch._materialSRV    = kInvalidDescriptorIndex;
-            batch._materialCount  = 0;
+            const GPUMeshBatch&  batch = listBatch[batchIndex];
+            GPUMeshBatchBinding& gpu   = _listBatchBinding[batchIndex];
+            gpu._materialBuffer        = 0;
+            gpu._materialSRV           = kInvalidDescriptorIndex;
+            gpu._materialCount         = 0;
             if ( batch._materialGroup == kInvalidMaterialGroup || batch._materialGroup >= groupCount )
                 continue;
             const ResolvedGroup& resolved = listResolved[batch._materialGroup];
-            batch._materialBuffer         = resolved._buffer;
-            batch._materialSRV            = resolved._srv;
-            batch._materialCount          = resolved._elementCount;
+            gpu._materialBuffer           = resolved._buffer;
+            gpu._materialSRV              = resolved._srv;
+            gpu._materialCount            = resolved._elementCount;
         }
     }
 
