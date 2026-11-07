@@ -392,3 +392,21 @@ SW_TEST_CASE( ResourceRemapTest, MalformedTablesAreRejected )
     string remapped;
     SW_EXPECT_FALSE( ResourceRemap::resolve( "a", remapped ) );
 }
+
+/** @brief [ResourceCompositionTest] 접속 대조는 이 프로세스가 로드 축 · 층에 기대 합성한 리소스만 본다 — 같은 해시는 통과, 다른 해시는 어긋남, 모르는 id 는 대조하지 않는다 */
+SW_TEST_CASE( ResourceCompositionTest, DigestMismatchComparesOnlyKnownCompositions )
+{
+    const XTestTagScope   scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    const AssetID         id{ "testproject/data/digest.xml" };
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)";
+    string                flatText;
+    bool                  bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
+    SW_REQUIRE_TRUE( bComposed );
+
+    SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( flatText ) } ) );
+    // 상대가 품질 high 로 합성했다 — 같은 파일이 다른 값이다.
+    const string highText = XTestUtil::resolve( kText, ResourceTagTiming::Load, XTestUtil::makeTags( { "quality.high" } ) );
+    SW_EXPECT_TRUE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( highText ) } ) );
+    SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ "testproject/data/never-composed.xml", 1 } ) );
+}

@@ -24,6 +24,7 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include <algorithm>
 
@@ -444,16 +445,17 @@ namespace sw
             }
             _listenPort = _listShard.front()->_transport->getLocalAddress()._port;
         }
-        else
+        // 엔진 영역은 역할마다 맡는 종류가 다르다(클라이언트: 서버 틱 · 종료 통지, 서버: 합성 해시). 키트 · 게임 영역과 겹치지 않으므로 거절되면 이 라우터를 다른 누가 엔진 영역에 썼다는 결함이다.
+        _engineMessageHandler.setRole( params._role );
+        _routerSubscription = _router.registerHandler( &_engineMessageHandler );
+        if ( _routerSubscription.isActive() == false )
         {
-            // 엔진 영역의 서버 틱은 클라이언트만 받는다 — 키트 · 게임 영역과 겹치지 않으므로 거절되면 이 라우터를 다른 누가 엔진 영역에 썼다는 결함이다.
-            _routerSubscription = _router.registerHandler( &_engineMessageHandler );
-            if ( _routerSubscription.isActive() == false )
-            {
-                SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot3", "Net session could not claim the engine message range - another handler holds it" );
-                shutdown();
-                return false;
-            }
+            SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot3", "Net session could not claim the engine message range - another handler holds it" );
+            shutdown();
+            return false;
+        }
+        if ( bServer == false )
+        {
             _serverAddress = params._serverAddress;
             _credentials   = params._credentials;
             _bTicketBound  = bHasTicket ? SW_TRUE : SW_FALSE;
@@ -636,8 +638,63 @@ namespace sw
         return true;
     }
 
+    uint16 GameNetSession::EngineMessageHandler::getMessageKindMask() const
+    {
+        const auto bit = []( uint8 kind )
+        { return static_cast<uint16>( 1u << ( kind - NetMessageRange::kEngine ) ); };
+        if ( _role == GameNetRole::Server )
+            return bit( GameNetSessionMessage::kResourceDigest );
+        return static_cast<uint16>( bit( GameNetSessionMessage::kServerTick ) | bit( GameNetSessionMessage::kShutdownNotice ) );
+    }
+
+    void GameNetSession::EngineMessageHandler::onConnectionOpened( int32 connectionID )
+    {
+        if ( _role == GameNetRole::Client )
+            _owner.sendResourceDigest( connectionID );
+    }
+
+    void GameNetSession::sendResourceDigest( int32 connectionID )
+    {
+        vector<ResourceDigestEntry> listEntry;
+        ResourceComposition::collectDigest( listEntry );
+        int32 sentCount = 0;
+        for ( const ResourceDigestEntry& entry : listEntry )
+        {
+            if ( static_cast<int32>( entry._assetID.size() ) > GameNetSessionMessage::kMaxDigestIDBytes )
+            {
+                SW_LOG_ERROR_ID( "GameNetSession.DigestIDTooLong", "Resource id '%#' is longer than %# bytes - its composition is not compared with the server", entry._assetID, GameNetSessionMessage::kMaxDigestIDBytes );
+                continue;
+            }
+            BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kResourceDigest );
+            writer.writeBlob( reinterpret_cast<const uint8*>( entry._assetID.data() ), static_cast<int32>( entry._assetID.size() ) );
+            writer.writeVarUint( entry._hash );
+            if ( _tickWriter.send( _peers, connectionID, NetChannelType::ReliableOrdered ) )
+                ++sentCount;
+        }
+        SW_LOG_INFO_ID( "GameNetSession.DigestSent", "Net session sent %# resource composition digest(s) to the server", sentCount );
+    }
+
     NetHandleResult GameNetSession::handleEngineMessage( const NetMessageContext& context, BitReader& body )
     {
+        if ( context._kind == GameNetSessionMessage::kResourceDigest )
+        {
+            vector<uint8> listIDByte;
+            if ( body.readBlob( listIDByte, GameNetSessionMessage::kMaxDigestIDBytes ) == false )
+                return NetHandleResult::Malformed;
+            ResourceDigestEntry entry;
+            entry._assetID = string( reinterpret_cast<const utf8*>( listIDByte.data() ), listIDByte.size() );
+            entry._hash    = body.readVarUint();
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
+            if ( ResourceComposition::isDigestMismatch( entry ) )
+            {
+                // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/ResourceStructure.md` 의 네트워크).
+                SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
+                                 context._connectionID, entry._assetID );
+                _peers.disconnect( context._connectionID );
+            }
+            return NetHandleResult::Handled;
+        }
         if ( context._kind == GameNetSessionMessage::kShutdownNotice )
         {
             const uint32 reasonValue  = static_cast<uint32>( body.readBits( 8 ) );

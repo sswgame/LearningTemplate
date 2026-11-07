@@ -63,6 +63,11 @@ namespace sw
         static void takePendingReload( vector<string>& outListAssetID );
         /** @brief 접속 대조 목록입니다(비우고 채웁니다. id 순). */
         static void collectDigest( vector<ResourceDigestEntry>& outListEntry );
+        /**
+         * @brief 상대가 보낸 한 줄(@p entry)이 이 프로세스의 합성과 다르면 true 입니다. 이 프로세스가 그 리소스를 로드 축 · 층에 기대 합성하지 않았으면 false 입니다(대조할 것이 없다).
+         * @details 서버가 읽지 않는 리소스(전용 서버의 시각 효과)는 대조하지 않는다 — 서버가 든 게임플레이 데이터만 갈린다. 그래서 품질 축이 시각 값만 바꾸면 접속이 되고, 시뮬레이션 값을 바꾸면 거절된다.
+         */
+        [[nodiscard]] static bool isDigestMismatch( const ResourceDigestEntry& entry );
         /** @brief 합성 결과의 해시입니다(대조 양쪽이 같은 함수를 쓴다). */
         [[nodiscard]] static uint64 hashText( string_view text );
         /** @brief 기록을 모두 지웁니다(엔진 종료 · 테스트). */

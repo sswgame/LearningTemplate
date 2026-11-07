@@ -235,6 +235,14 @@ namespace sw
         { return lhs._assetID < rhs._assetID; } );
     }
 
+    bool ResourceComposition::isDigestMismatch( const ResourceDigestEntry& entry )
+    {
+        ResourceCompositionInternal::State& state = ResourceCompositionInternal::getState();
+        ScopedLock<mutex>                   lock{ state._mutex };
+        const auto                          it = state._mapRecord.find( entry._assetID );
+        return it != state._mapRecord.end() && it->second._hash != entry._hash;
+    }
+
     uint64 ResourceComposition::hashText( string_view text )
     {
         return HashUtil::computeStringHash64( text.data(), text.size(), false );

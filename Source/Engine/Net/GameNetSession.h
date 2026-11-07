@@ -142,6 +142,12 @@ namespace sw
         static constexpr uint8 kServerTick     = NetMessageRange::kEngine + 0x00; ///< 서버 → 모두(비신뢰 순서). 방금 끝낸 서버 틱 번호(varuint)
         static constexpr uint8 kShutdownNotice = NetMessageRange::kEngine + 0x01; ///< 서버 → 모두(신뢰 순서). 서버가 내려가기 시작한다 — 사유(1 바이트 `GameShutdownReason`) + 기다려 주는 시간(varuint 초)
         /**
+         * @brief 클라이언트 → 서버(신뢰 순서). 접속하자마자 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`).
+         * @details 서버가 같은 리소스를 다르게 합성했으면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
+         */
+        static constexpr uint8 kResourceDigest   = NetMessageRange::kEngine + 0x02;
+        static constexpr int32 kMaxDigestIDBytes = 512; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
+        /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
          */
@@ -301,26 +307,35 @@ namespace sw
 
         /**
          * @class EngineMessageHandler
-         * @brief 엔진 영역의 처리기(`INetMessageHandler`)입니다 — 클라이언트만 엔진 영역의 서버 틱 · 종료 통지를 받는다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 라우터에 단다(수명은 세션과 같다).
+         * @brief 엔진 영역의 처리기(`INetMessageHandler`)입니다 — 클라이언트는 서버 틱 · 종료 통지를 받고 접속하자마자 합성 해시를 보내며, 서버는 합성 해시를 받는다.
+         *        세션이 그 인터페이스를 상속하지 않고 이 멤버를 라우터에 단다(수명은 세션과 같다). 맡는 종류는 단기 전에 역할로 정한다(`setRole`).
          */
         class EngineMessageHandler final : public INetMessageHandler
         {
         public:
             explicit EngineMessageHandler( GameNetSession& owner )
                 : _owner{ owner }
+                , _role{ GameNetRole::None }
             {
             }
 
+            /** @brief 라우터에 달기 전에 역할을 정합니다 — 맡는 종류가 역할마다 다르다. */
+            void            setRole( GameNetRole role ) { _role = role; }
             uint8           getMessageRangeBase() const override { return NetMessageRange::kEngine; }
-            uint16          getMessageKindMask() const override { return static_cast<uint16>( ( 1u << ( GameNetSessionMessage::kServerTick - NetMessageRange::kEngine ) ) | ( 1u << ( GameNetSessionMessage::kShutdownNotice - NetMessageRange::kEngine ) ) ); }
+            uint16          getMessageKindMask() const override;
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleEngineMessage( context, body ); }
+            /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */
+            void onConnectionOpened( int32 connectionID ) override;
 
         private:
             GameNetSession& _owner;
+            GameNetRole     _role;
         };
 
         /** @brief 엔진 영역 메시지 하나를 처리합니다(`EngineMessageHandler::handleNetMessage`). */
         NetHandleResult handleEngineMessage( const NetMessageContext& context, BitReader& body );
+        /** @brief 로드 축 조건 · 층에 기댄 합성 목록(`ResourceComposition::collectDigest`)을 한 줄씩 @p connectionID 에 보냅니다(클라이언트 → 서버). */
+        void sendResourceDigest( int32 connectionID );
 
         /** @brief 샤드 하나의 소켓을 열고 (건 데코레이터로 감싼) 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
         unique_ptr<Shard> createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex );
