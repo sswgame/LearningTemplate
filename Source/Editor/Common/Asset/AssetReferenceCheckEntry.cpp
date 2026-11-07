@@ -14,9 +14,9 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Asset/AssetReferenceFields.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"

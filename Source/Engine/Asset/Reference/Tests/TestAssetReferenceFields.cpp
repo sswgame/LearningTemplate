@@ -5,10 +5,9 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Asset/AssetReferenceFields.h"
+#include "Engine/Asset/Reference/AssetReferenceFields.h"
 
 using namespace sw;
-using namespace sw::editor;
 
 namespace
 {

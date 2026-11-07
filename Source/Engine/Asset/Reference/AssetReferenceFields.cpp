@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Asset/AssetReferenceFields.h"
+#include "Engine/Asset/Reference/AssetReferenceFields.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -14,7 +14,7 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
 
-namespace sw::editor
+namespace sw
 {
     namespace
     {
@@ -125,9 +125,9 @@ namespace sw::editor
             }
         };
     } // namespace
-} // namespace sw::editor
+} // namespace sw
 
-namespace sw::editor
+namespace sw
 {
     void AssetIDSet::addFile( string_view assetID )
     {
@@ -244,12 +244,17 @@ namespace sw::editor
         return _setField.find( string( name ) ) != _setField.end();
     }
 
+    bool AssetReferenceFields::isTextAsset( string_view assetID ) const
+    {
+        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        return std::any_of( _listTextExtension.begin(), _listTextExtension.end(), [&lowered]( const string& extension )
+        { return StringUtil::endsWith( lowered, extension ); } );
+    }
+
     bool AssetReferenceFields::isReferrer( string_view assetID ) const
     {
-        const string lowered    = AssetReferenceFieldsInternal::normalizePath( assetID );
-        const bool   bExtension = std::any_of( _listTextExtension.begin(), _listTextExtension.end(), [&lowered]( const string& extension )
-          { return StringUtil::endsWith( lowered, extension ); } );
-        if ( bExtension == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) )
+        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        if ( isTextAsset( lowered ) == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) )
             return false;
         const string wrapped = "/" + lowered;
         return std::none_of( _listImported.begin(), _listImported.end(), [&wrapped]( const AssetImportedFolder& folder )
@@ -609,4 +614,4 @@ namespace sw::editor
         }
         return rewriteCount;
     }
-} // namespace sw::editor
+} // namespace sw
