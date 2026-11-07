@@ -10,6 +10,8 @@ Scripts/lint/FeatureReferences.py
 - 컴포넌트: `REFLECT` 가 붙은 `*Component`(폴더 `Tests/` 제외). 참조 = `Content` 글 파일의 그 이름, 코드(`Tests/` 제외)의 `addComponent<이름>`, 그 이름을 기반으로 삼은 클래스.
 - 감시 값: `SW_AUTOMATION_*WATCH`. 참조 = 시나리오의 `watch="이름"`, 등록 줄 밖 코드 · 스크립트의 `"이름"` 글자.
 - 개발 명령: `SW_DEV_COMMAND`. 참조 = 시나리오 `line="…"` 의 낱말, 등록 줄 밖 코드 · 스크립트 글자의 첫 낱말.
+- 등록 없는 명령 함수: 명령 모양(`static bool f( const vector<string>&, string& )`)의 함수가 그 파일에서 정의 말고 한 번도 불리지 않으면 위반이다 —
+  `*DevCommands.cpp` 를 기능 파일로 합칠 때(165e16647c) `SW_DEV_COMMAND` 줄만 빠져 치트 명령 아홉이 함수만 남았는데, 익명 구조체의 static 멤버는 컴파일러가 경고하지 않는다.
 
 예외는 데이터 한 곳(`Config/Dev/FeatureReferenceExceptions.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
 
@@ -43,6 +45,7 @@ kBasePattern = re.compile(r'^\s*(?:class|struct)\s+(?:SW_\w+\s+)?\w+\b[^;{(]*?:\
 kAddComponentPattern = re.compile(r'addComponent<\s*(?:\w+::)*(\w+Component)\s*>')
 kWatchPattern = re.compile(r'SW_AUTOMATION_(?:WALL_|COMPONENT_|GETTER_)?WATCH\(\s*\w+\s*,\s*"([\w.]+)"[^;]*?\)\s*;?', re.S)
 kCommandPattern = re.compile(r'SW_DEV_COMMAND\(\s*\w+\s*,\s*"([\w.]+)".*?\)\s*;', re.S)
+kCommandRunnerPattern = re.compile(r'static\s+bool\s+(\w+)\(\s*const\s+vector<string>&\s*\w+\s*,\s*string&\s*\w+\s*\)')
 kWatchUsePattern = re.compile(r'\bwatch="([^"]+)"')
 kCommandLinePattern = re.compile(r'\bline="([^"]+)"')
 kWordPattern = re.compile(r'[A-Za-z_]\w*')
@@ -165,6 +168,11 @@ def findProblems(sources: Sources, exceptions: Exceptions) -> list[str]:
         if name not in setCommandReference and name not in exceptions.dictCommand:
             listProblem.append(f"{path}: 개발 명령 {name} 를 자동화가 부르지 않는다 — 시나리오로 잇거나 {kConfigPath} 에 까닭을 적는다")
     listProblem += checkExceptionsTable("개발 명령", dictCommand, setCommandReference, exceptions.dictCommand)
+    for path, text in sorted(sources.dictHeader.items()):
+        for match in kCommandRunnerPattern.finditer(text):
+            name = match.group(1)
+            if len(re.findall(rf"\b{name}\b", text)) < 2:
+                listProblem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
     return listProblem
 
 
@@ -211,18 +219,22 @@ def runSelfCheck() -> None:
     sources.dictHeader["Source/A/W.cpp"] = ('SW_AUTOMATION_WATCH( a, "A.Read", "tip", &read );\nSW_AUTOMATION_WALL_WATCH( b,\n "A.Unread", "tip", &read );\n'
                                             'SW_DEV_COMMAND( c, "cmd.used", "cmd.used", "tip", &run );\nSW_DEV_COMMAND( d, "cmd.alone", "cmd.alone <x>",\n "tip", &run );\n'
                                             'SW_DEV_COMMAND( e, "cmd.sent", "cmd.sent", "tip", &run );\nvoid g() { send( "cmd.sent 1" ); }\n')
+    sources.dictHeader["Source/A/Cmd.cpp"] = ('struct I { static bool runLost( const vector<string>& listArgument, string& outReply ) { return true; }\n'
+                                              ' static bool runKept( const vector<string>& listArgument, string& outReply ) { return true; } };\n'
+                                              'SW_DEV_COMMAND( k, "cmd.kept", "cmd.kept", "tip", &I::runKept );\n')
     sources.dictContent["Content/x.scene.xml"] = "<UsedComponent/>\n"
-    sources.dictContent["Content/x.scenario.xml"] = '<Expect watch="A.Read" equals="1"/>\n<DevCommand line="netplay.command clients cmd.used 3"/>\n'
+    sources.dictContent["Content/x.scenario.xml"] = '<Expect watch="A.Read" equals="1"/>\n<DevCommand line="netplay.command clients cmd.used 3"/>\n<DevCommand line="cmd.kept"/>\n'
 
     empty = Exceptions({}, {}, {}, {})
     listProblem = findProblems(sources, empty)
-    assert len(listProblem) == 3, listProblem
+    assert len(listProblem) == 4, listProblem
+    assert any("runLost" in line for line in listProblem)
     assert any("LonelyComponent" in line for line in listProblem)
     assert any("A.Unread" in line for line in listProblem)
     assert any("cmd.alone" in line for line in listProblem)
 
     # 예외: 까닭과 함께면 받고, 낡은 줄은 위반이다.
-    assert findProblems(sources, Exceptions({"Source/A": "x"}, {}, {"A.Unread": "x"}, {"cmd.alone": "x"})) == []
+    assert [line for line in findProblems(sources, Exceptions({"Source/A": "x"}, {}, {"A.Unread": "x"}, {"cmd.alone": "x"})) if "runLost" not in line] == []
     listStale = findProblems(sources, Exceptions({}, {"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, {"A.Unread": "x"}, {"cmd.alone": "x"}))
     assert sum("까닭이 비었다" in line for line in listStale) == 1, listStale
     assert sum("이제 참조가 있다" in line for line in listStale) == 1, listStale
