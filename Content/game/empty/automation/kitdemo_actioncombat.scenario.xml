@@ -18,7 +18,7 @@
 	<WaitUntil watch="KitDemo.Combat.Alive" equals="1" timeoutFrames="60"/>
 	<!-- 왼쪽으로 0.1 초(0.4 m) 걸어 돌아서고 왼쪽 졸개를 두 번 친다 -->
 	<ActionAxis name="Move" x="-1" seconds="0.1"/>
-	<Wait seconds="0.2"/>
+	<Wait seconds="0.4"/> <!-- 이동 축은 기다리지 않는다 — 앞 공격에서 쿨다운(0.28 초)이 지나야 다음 공격이 든다(0.2 초면 첫 공격이 먹혔다) -->
 	<Expect watch="KitDemo.Combat.PlayerX" near="-0.4" tolerance="0.1"/>
 	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="KitDemo.Attack"/>

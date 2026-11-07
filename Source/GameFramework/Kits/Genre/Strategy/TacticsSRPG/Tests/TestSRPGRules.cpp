@@ -758,7 +758,7 @@ SW_TEST_CASE_F( SRPGRulesTest, ThreatCells )
 }
 
 /**
- * @brief [SRPGRulesTest] 페이즈: 팀의 모두가 끝나면 다음 팀으로, 한 바퀴 돌면 다음 턴으로 간다. 살아 있는 유닛이 없는 팀은 건너뛴다
+ * @brief [SRPGRulesTest] 페이즈: 팀의 모두가 끝나면 다음 팀으로, 한 바퀴 돌면 다음 턴으로 간다. 살아 있는 유닛이 없는 팀은 건너뛰고, 승부가 나면(한 팀만 남음) 넘기지 않는다
  */
 SW_TEST_CASE_F( SRPGRulesTest, PhaseFlow )
 {
@@ -794,9 +794,10 @@ SW_TEST_CASE_F( SRPGRulesTest, PhaseFlow )
 
     SW_EXPECT_TRUE( _field.applyDamage( third, 99999, first ) );
     SW_EXPECT_TRUE( _field.applyDamage( enemy, 99999, first ) );
-    _field.endPhase(); // 적과 제3세력이 없다 — 바로 내 차례, 다음 턴
+    SW_EXPECT_TRUE( _field.isBattleDecided() );
+    _field.endPhase(); // 적과 제3세력이 없다 — 승부가 났으니 페이즈 · 턴이 넘어가지 않는다(전에는 한 바퀴 돌아 턴 3 이 된 뒤에 승리를 판정했다)
     SW_EXPECT_EQUAL( sw::SRPGTeam::Player, _field.getPhaseTeam() );
-    SW_EXPECT_EQUAL( 3, _field.getTurn() );
+    SW_EXPECT_EQUAL( 2, _field.getTurn() );
 
     sw::SRPGBattlefield onlyEnemy;
     onlyEnemy.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
@@ -835,8 +836,9 @@ SW_TEST_CASE_F( SRPGRulesTest, IndividualTurns )
     const int32 victim   = survivor == first ? second : first;
     SW_EXPECT_TRUE( _field.applyDamage( victim, 99999, survivor ) );
     _field.endUnitAction( survivor );
-    SW_EXPECT_EQUAL( survivor, _field.getActiveUnit() ); // 혼자 남았다
-    SW_EXPECT_EQUAL( 3, _field.getTurn() );
+    SW_EXPECT_TRUE( _field.isBattleDecided() );
+    SW_EXPECT_EQUAL( survivor, _field.getActiveUnit() ); // 혼자 남았다 — 승부가 나 차례 · 턴이 넘어가지 않는다
+    SW_EXPECT_EQUAL( 2, _field.getTurn() );
 }
 
 /**

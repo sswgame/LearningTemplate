@@ -254,6 +254,8 @@ namespace sw
         int32 computeAptitude( const SRPGUnit& unit, const int2& cell ) const;
         /** @brief 그 팀의 살아 있는 유닛 수를 반환합니다. */
         int32 countAlive( SRPGTeam team ) const;
+        /** @brief 승부가 났으면(살아 있는 유닛이 있는 팀이 하나 이하) true 입니다. 그 뒤로는 페이즈 · 차례 · 턴이 넘어가지 않는다(전멸 즉시 끝 — 파이어 엠블렘 · XCOM 과 같다). */
+        bool isBattleDecided() const;
 
         SRPGUnit*               findUnit( int32 unitIndex );
         const SRPGUnit*         findUnit( int32 unitIndex ) const;

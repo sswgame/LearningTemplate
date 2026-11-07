@@ -240,6 +240,9 @@ namespace sw
 
     void SRPGBattlefield::advancePhase()
     {
+        // 승부가 났으면 넘기지 않는다 — 빈 팀 페이즈를 건너뛰다 한 바퀴 돌아 턴이 오른 뒤에 승리를 판정했다(kitdemo_tactics).
+        if ( isBattleDecided() )
+            return;
         int32 team = static_cast<int32>( _phaseTeam );
         for ( int32 step = 0; step < kSRPGTeamCount; ++step )
         {
@@ -257,8 +260,21 @@ namespace sw
         }
     }
 
+    bool SRPGBattlefield::isBattleDecided() const
+    {
+        int32 aliveTeamCount = 0;
+        for ( int32 teamIndex = 0; teamIndex < kSRPGTeamCount; ++teamIndex )
+        {
+            if ( countAlive( static_cast<SRPGTeam>( teamIndex ) ) > 0 )
+                ++aliveTeamCount;
+        }
+        return aliveTeamCount <= 1;
+    }
+
     void SRPGBattlefield::activateNextUnit()
     {
+        if ( isBattleDecided() )
+            return; // 페이즈 진행과 같은 규칙 — 승부가 난 뒤로는 차례 · 턴이 넘어가지 않는다
         _activeUnit = constant::invalid_index::kInt32;
         while ( _turnOrder.getActorCount() > 0 )
         {
