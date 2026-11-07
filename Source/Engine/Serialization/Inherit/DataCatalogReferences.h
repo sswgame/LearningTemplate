@@ -14,6 +14,7 @@
  *         <Reference owner="Room" attribute="ghosts" target="Ghost"/>             <!-- 목록(쉼표 · 공백 · 세미콜론) -->
  *         <Reference owner="Class/Learn" attribute="spell" target="Spell"/>       <!-- 항목의 자식 원소 -->
  *         <Reference owner="Site" attribute="garrison" target="Unit" named="true"/> <!-- `id:수` 꼴 -->
+ *         <Reference owner="Quest/Stage" attribute="next" target="Stage" inEntry="true"/> <!-- 같은 퀘스트 안의 단계 -->
  *         <Unique owner="Ghost" attribute="id"/>                                    <!-- 한 파일 안에서 겹치면 오류 -->
  *       </Catalog>
  *     </DataCatalogReferenceTable>
@@ -42,6 +43,7 @@ namespace sw
         string         _targetKey;          ///< 가리키는 원소의 id 속성(기본 `id`)
         bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bOptional{ false }; ///< 깨져도 경고만 한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 

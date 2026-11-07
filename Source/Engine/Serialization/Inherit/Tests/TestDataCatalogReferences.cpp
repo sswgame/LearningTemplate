@@ -120,3 +120,16 @@ SW_TEST_CASE( DataCatalogReferencesTest, UniqueRowRejectsDuplicates )
     DataCatalogReferenceRules broken;
     SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<DataCatalogReferenceTable><Catalog root="A"><Unique owner="X" attribute="id" target="Y"/></Catalog></DataCatalogReferenceTable>)", "table" ) );
 }
+
+/** @brief [DataCatalogReferencesTest] 항목 안 참조(`inEntry`)는 같은 항목의 자식에서만 찾는다 — 다른 항목에 같은 id 가 있어도 통과하지 않는다 */
+SW_TEST_CASE( DataCatalogReferencesTest, InEntryReferencesStayInTheEntry )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( R"(<DataCatalogReferenceTable><Catalog root="Quests">
+  <Reference owner="Quest/Stage" attribute="next" target="Stage" inEntry="true"/>
+</Catalog></DataCatalogReferenceTable>)",
+                                            "table" ) );
+    SW_EXPECT_TRUE( validateText( rules, R"(<Quests><Quest id="q"><Stage id="a" next="b"/><Stage id="b"/></Quest></Quests>)" ) );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_FALSE( validateText( rules, R"(<Quests><Quest id="q"><Stage id="a" next="b"/></Quest><Quest id="r"><Stage id="b"/></Quest></Quests>)" ) );
+}

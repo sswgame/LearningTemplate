@@ -5,6 +5,7 @@
   <Catalog root> 는 카탈로그 XML 루트, <Reference> 한 줄이 "owner 원소의 attribute 값은 루트의 자식 target 원소의 id 다" 입니다.
   owner 는 루트의 자식(항목)부터 값을 적은 원소까지를 '/' 로 잇습니다(Class/Learn). 값은 쉼표 · 세미콜론 · 공백으로 나눈 목록이고, named="true" 면 `id:수` 꼴의 콜론 앞이 id 입니다.
   targetKey 는 가리키는 원소의 id 속성(기본 id)입니다. 깨진 필수 참조는 로드 · 쿠킹 실패입니다. optional="true" 는 이 파일 밖에서 채워질 수 있는 연결에만 둡니다(경고만).
+  inEntry="true" 면 target 을 루트가 아니라 같은 항목(owner 의 첫 원소)의 자식에서 찾습니다(퀘스트 안의 단계).
   <Unique owner attribute> 는 owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류인 줄입니다(코드가 같은 id 를 교체로 받는 카탈로그의 파일 오타를 막는다).
 -->
 <DataCatalogReferenceTable>
@@ -19,6 +20,17 @@
 		<Unique owner="Ability" attribute="id"/>
 		<Unique owner="AbilitySet" attribute="id"/>
 		<Unique owner="AbilityPresentation" attribute="tag"/>
+	</Catalog>
+	<Catalog root="QuestCatalog">
+		<Reference owner="Quest/Stage" attribute="next" target="Stage" inEntry="true"/>
+		<Reference owner="Quest/Stage/Branch" attribute="next" target="Stage" inEntry="true"/>
+	</Catalog>
+	<Catalog root="SkillTreeCatalog">
+		<Reference owner="Tree/Skill" attribute="requires" target="Skill" inEntry="true" named="true"/>
+	</Catalog>
+	<Catalog root="RTSCatalog">
+		<Reference owner="Unit" attribute="producedBy" target="Unit"/>
+		<Reference owner="Unit" attribute="requires" target="Unit"/>
 	</Catalog>
 	<Catalog root="GhostHunt">
 		<Reference owner="Room" attribute="ghosts" target="Ghost"/>

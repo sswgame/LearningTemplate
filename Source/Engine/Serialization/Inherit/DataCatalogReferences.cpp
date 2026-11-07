@@ -39,7 +39,7 @@ namespace sw
             [[nodiscard]] static bool readRule( const XMLNode& row, string_view rootName, string_view sourceName, DataCatalogReferenceRule& outRule )
             {
                 const bool                   bUnique           = StringUtil::equals( row.getName(), kUniqueElement );
-                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional" };
+                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional", "inEntry" };
                 static constexpr const utf8* kArrUniqueKnown[] = { "owner", "attribute" };
                 bool                         bValid            = true;
                 for ( XMLAttribute attribute = row.getFirstAttribute(); attribute; attribute = attribute.getNext() )
@@ -71,6 +71,7 @@ namespace sw
                 }
                 bValid = readFlag( row, "named", sourceName, outRule._bNamed ) && bValid;
                 bValid = readFlag( row, "optional", sourceName, outRule._bOptional ) && bValid;
+                bValid = readFlag( row, "inEntry", sourceName, outRule._bInEntry ) && bValid;
                 return bValid;
             }
 
@@ -89,6 +90,19 @@ namespace sw
                     if ( token.empty() == false )
                         visit( token );
                 }
+            }
+
+            /** @brief @p parent 의 자식 중 규칙의 대상 원소의 id 를 @p outListID 에 정렬해 담습니다(먼저 비운다). */
+            static void collectIDs( const XMLNode& parent, const DataCatalogReferenceRule& rule, vector<string_view>& outListID )
+            {
+                outListID.clear();
+                for ( XMLNode target = parent.findChild( rule._target.c_str() ); target.isValid(); target = target.findNextSibling( rule._target.c_str() ) )
+                {
+                    const string_view id = target.getAttributeText( rule._targetKey.c_str() );
+                    if ( id.empty() == false )
+                        outListID.push_back( id );
+                }
+                std::sort( outListID.begin(), outListID.end() );
             }
 
             /** @brief @p node 아래에서 경로 @p listPath 의 @p depth 번째 원소부터 따라가 끝 원소마다 @p visit 를 부릅니다. */
@@ -201,17 +215,14 @@ namespace sw
                 bValid = validateUnique( root, rule, sourceName ) && bValid;
                 continue;
             }
-            // 가리킬 수 있는 id — 정렬해 두고 이진 검색한다(항목 수십 · 수백).
+            // 가리킬 수 있는 id — 정렬해 두고 이진 검색한다(항목 수십 · 수백). 항목 안 참조(`inEntry`)는 항목마다 다시 모은다.
             vector<string_view> listTargetID;
-            for ( XMLNode target = root.findChild( rule._target.c_str() ); target.isValid(); target = target.findNextSibling( rule._target.c_str() ) )
-            {
-                const string_view id = target.getAttributeText( rule._targetKey.c_str() );
-                if ( id.empty() == false )
-                    listTargetID.push_back( id );
-            }
-            std::sort( listTargetID.begin(), listTargetID.end() );
+            if ( rule._bInEntry == false )
+                Internal::collectIDs( root, rule, listTargetID );
             for ( XMLNode entry = root.findChild( rule._listOwnerPath[0].c_str() ); entry.isValid(); entry = entry.findNextSibling( rule._listOwnerPath[0].c_str() ) )
             {
+                if ( rule._bInEntry )
+                    Internal::collectIDs( entry, rule, listTargetID );
                 const string_view entryID   = entry.getAttributeText( "id" );
                 const string_view ownerName = entryID.empty() ? string_view{ entry.getName() } : entryID;
                 const auto        checkNode = [&]( const XMLNode& owner )

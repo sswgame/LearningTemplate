@@ -1180,7 +1180,7 @@ SW_TEST_CASE( SkillTreeCatalogTest, ReportsBrokenSkills )
     SW_EXPECT_LOG( "SkillTree.SkillInvalidRequirement" );
     SW_EXPECT_LOG( "SkillTree.SkillInvalidFieldsSkipped" );
     SW_EXPECT_LOG( "SkillTree.SkillDuplicateSkipped" );
-    SW_EXPECT_LOG( "SkillTree.SkillRequiresUnknown" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "SkillTree.SkillNeverLearnable" );
 
     sw::SkillTreeCatalog  catalog;
@@ -1191,7 +1191,7 @@ SW_TEST_CASE( SkillTreeCatalogTest, ReportsBrokenSkills )
   <Skill id="base" maxRank="9"/>
   <Skill id="orphan" requires="missing:1"/>
 </Tree></SkillTreeCatalog>)";
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrokenXML, "MonsterHuntTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( kBrokenXML, "MonsterHuntTest" ) ); // 없는 선행 스킬(missing)로 로드는 실패다 — 읽은 트리의 판정은 그대로 본다
     const sw::SkillTreeDef* pTree = catalog.find( "t" );
     SW_REQUIRE_TRUE( pTree != nullptr );
     SW_REQUIRE_EQUAL( size_t( 3 ), pTree->_listSkill.size() ); // base · plain · orphan
@@ -1271,7 +1271,7 @@ SW_TEST_CASE( MonsterHuntCatalogTest, ReportsBrokenElements )
   <Contract id="broken"><Step id="s"><Clue id="c" radius="-1"/></Step></Contract>
   <Mystery/>
 </MonsterHuntCatalog>)";
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrokenXML, "MonsterHuntTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( kBrokenXML, "MonsterHuntTest" ) ); // 없는 약점(ghost_item)으로 로드는 실패다 — 읽은 항목의 판정은 그대로 본다
     SW_EXPECT_TRUE( catalog.findAlchemy( "dry_oil" ) == nullptr );
     SW_EXPECT_TRUE( catalog.findAlchemy( "good_bomb" ) != nullptr );
     SW_EXPECT_TRUE( catalog.findMonster( "too_deep" ) == nullptr );

@@ -117,14 +117,7 @@ namespace sw
             }
             tree._listSkill.push_back( skill );
         }
-        for ( const SkillDef& skill : tree._listSkill )
-        {
-            for ( const SkillRequirement& requirement : skill._listRequirement )
-            {
-                if ( tree.findSkill( requirement._skillID ) == nullptr )
-                    SW_LOG_WARNING_ID( "SkillTree.SkillRequiresUnknown", "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
-            }
-        }
+        // 없는 선행 스킬은 참조 표(`engine/settings/datacatalogreferences.xml` — 같은 트리 안)가 오류로 알리고 로드를 멈춘다(예전에는 경고만 하고 영원히 못 배우는 스킬이 섰다).
         for ( const hashed_string& skillID : tree.collectUnlearnableSkills() )
         {
             SW_LOG_ERROR_ID( "SkillTree.SkillNeverLearnable", "%#: skill '%#' of tree '%#' can never be learned (missing, unreachable or circular requirements)", sourceName, skillID.c_str(), tree._id.c_str() );

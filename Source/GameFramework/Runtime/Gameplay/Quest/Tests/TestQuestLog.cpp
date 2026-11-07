@@ -258,18 +258,17 @@ SW_TEST_CASE_F( QuestLogTest, BrokenSaveIsRefused )
     SW_EXPECT_TRUE( _log.getStatus( "intro" ) == QuestStatus::Completed );
 }
 
-/** @brief [QuestLogTest] 카탈로그 검사: 없는 단계 · 끝나지 못하는 단계는 알리고, 단계 없는 퀘스트와 같은 id 의 단계는 넣지 않는다 */
+/** @brief [QuestLogTest] 카탈로그 검사: 없는 단계로 가면 로드가 실패하고(참조 표), 끝나지 못하는 단계는 알리고, 단계 없는 퀘스트와 같은 id 의 단계는 넣지 않는다 */
 SW_TEST_CASE( QuestCatalogTest, ReportsBrokenQuests )
 {
-    SW_EXPECT_LOG( "QuestCatalog.QuestStageGoesUnknown" );
-    SW_EXPECT_LOG( "QuestCatalog.QuestBranchGoesUnknown" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" ); // 다음 단계 · 갈래 둘
     SW_EXPECT_LOG( "QuestCatalog.QuestStageDeadEnd" );
     SW_EXPECT_LOG( "QuestCatalog.QuestNoStages" );
     SW_EXPECT_LOG( "QuestCatalog.QuestDuplicateStage" );
     SW_EXPECT_LOG( "QuestCatalog.QuestInvalidFieldsSkipped" );
 
     QuestCatalog catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<QuestCatalog>
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<QuestCatalog>
   <Quest id="next"><Stage id="a" next="gone"/></Quest>
   <Quest id="branch"><Stage id="a"><Branch choice="x" next="gone"/></Stage></Quest>
   <Quest id="deadEnd"><Stage id="a"/></Quest>
