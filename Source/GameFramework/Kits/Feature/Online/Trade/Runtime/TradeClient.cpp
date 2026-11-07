@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
@@ -46,7 +48,7 @@ namespace sw
 
     uint64 TradeClient::confirm( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        const int32  sideIndex    = _snapshot._tradeID == tradeID ? _snapshot.findSideIndex( _accountID ) : -1;
+        const int32  sideIndex    = _snapshot._tradeID == tradeID ? _snapshot.findSideIndex( _accountID ) : constant::invalid_index::kInt32;
         const uint32 ownRevision  = sideIndex >= 0 ? _snapshot._arrSide[sideIndex]._offerRevision : 0;
         const uint32 peerRevision = sideIndex >= 0 ? _snapshot._arrSide[1 - sideIndex]._offerRevision : 0;
         return confirmSeen( tradeID, ownRevision, peerRevision, key );

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -29,15 +30,15 @@ namespace sw
         {
             _bucketSize = bucketSize;
             _topology   = GridTopology{ ( gridWidth + bucketSize - 1 ) / bucketSize, ( gridHeight + bucketSize - 1 ) / bucketSize };
-            _listHead.assign( static_cast<size_t>( _topology.getCellCount() ), -1 );
+            _listHead.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
             _listNext.clear();
         }
 
         /** @brief 비우고 슬롯 @p slotCount 개를 받을 준비를 합니다. 이어서 살아 있는 슬롯마다 `insert` 를 부릅니다. */
         void beginRebuild( size_t slotCount )
         {
-            std::fill( _listHead.begin(), _listHead.end(), -1 );
-            _listNext.assign( slotCount, -1 );
+            std::fill( _listHead.begin(), _listHead.end(), constant::invalid_index::kInt32 );
+            _listNext.assign( slotCount, constant::invalid_index::kInt32 );
         }
         /** @brief 슬롯 @p slot 을 @p cell(격자 셀)이 속한 버킷에 넣습니다. 격자 밖 셀은 가장자리 버킷에 넣습니다. */
         void insert( int32 slot, const int2& cell )

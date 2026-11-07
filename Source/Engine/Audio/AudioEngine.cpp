@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -998,7 +999,7 @@ namespace sw
         }
 
         // 음악 레이어와 스팅어는 정해진 렌더 프레임에 샘플 단위로 시작한다. 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
-        const bool bScheduled = slot._musicSegment != -1;
+        const bool bScheduled = slot._musicSegment != constant::invalid_index::kInt32;
         uint32     delay      = 0;
         float64    skipFrames = 0.0;
         if ( bScheduled )
@@ -1022,7 +1023,7 @@ namespace sw
 
     uint32 AudioEngine::resolveBusIndex( const hashed_string& bus ) const
     {
-        int32 busIndex = bus.empty() ? -1 : _pMixer->findBusIndex( bus );
+        int32 busIndex = bus.empty() ? constant::invalid_index::kInt32 : _pMixer->findBusIndex( bus );
         if ( busIndex < 0 )
             busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kSFX ) );
         if ( busIndex < 0 )
@@ -1385,13 +1386,13 @@ namespace sw
     int32 AudioEngine::resolveAttenuationIndex( const hashed_string& name ) const
     {
         if ( name.empty() )
-            return -1;
+            return constant::invalid_index::kInt32;
         for ( size_t attenuationIndex = 0; attenuationIndex < _listAttenuation.size(); ++attenuationIndex )
         {
             if ( _listAttenuation[attenuationIndex]._name == name )
                 return static_cast<int32>( attenuationIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 AudioEngine::allocateInstance()
@@ -1405,13 +1406,13 @@ namespace sw
                 return static_cast<int32>( instanceIndex );
             }
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 AudioEngine::findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const
     {
         outLiveCount      = 0;
-        int32 victimIndex = -1;
+        int32 victimIndex = constant::invalid_index::kInt32;
         for ( size_t instanceIndex = 0; instanceIndex < _listInstance.size(); ++instanceIndex )
         {
             const EventInstance& instance                = _listInstance[instanceIndex];

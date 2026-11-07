@@ -4,6 +4,7 @@
  * @details 테스트, 리플레이, 절차 생성이 같은 결과를 되풀이하게 한다. 수열 · 씨앗 규칙(0 거절)은 `DeterministicRandom32` 하나다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
@@ -38,10 +39,10 @@ namespace sw
                 total += weight > 0.0f ? weight : 0.0f;
             }
             if ( total <= 0.0f )
-                return -1;
+                return constant::invalid_index::kInt32;
             float32 roll  = nextFloat() * total;
             int32   index = 0;
-            int32   last  = -1;
+            int32   last  = constant::invalid_index::kInt32;
             for ( const auto& element : list )
             {
                 const float32 weight = static_cast<float32>( getWeight( element ) );
@@ -73,7 +74,7 @@ namespace sw
                 total += weight > 0 ? weight : 0;
             }
             if ( total <= 0 )
-                return -1;
+                return constant::invalid_index::kInt32;
             int32 roll  = nextInt( 0, total - 1 );
             int32 index = 0;
             for ( const auto& element : list )
@@ -87,7 +88,7 @@ namespace sw
                 }
                 ++index;
             }
-            return -1;
+            return constant::invalid_index::kInt32;
         }
 
         /** @brief Fisher-Yates 로 섞습니다. 뒤에서부터 [0, i] 의 한 위치와 바꾸며, `nextInt` 를 원소 수 - 1 번 부릅니다. */

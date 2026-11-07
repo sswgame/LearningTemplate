@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountInteractionComponent.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -12,7 +14,7 @@ namespace sw
 {
     MountInteractionComponent::MountInteractionComponent()
         : _interactButton{ "Interact" }
-        , _interactIndex{ -1 }
+        , _interactIndex{ constant::invalid_index::kInt32 }
     {
         setCanEverTick( true );
     }
@@ -23,7 +25,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _interactIndex              = pPawn != nullptr ? pPawn->findButton( _interactButton ) : -1;
+        _interactIndex              = pPawn != nullptr ? pPawn->findButton( _interactButton ) : constant::invalid_index::kInt32;
     }
 
     void MountInteractionComponent::onTick( float32 deltaTime )

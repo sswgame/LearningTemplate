@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -139,7 +140,7 @@ namespace sw
             vector<hashed_string>            _listEffectName{};
             hashed_string                    _name{};
             AudioDownmix                     _downmix{}; ///< 3 채널 이상인 버스가 두 채널 버스로 갈 때의 행렬이다(두 채널 버스는 비어 있다).
-            int32                            _parentIndex{ -1 };
+            int32                            _parentIndex{ constant::invalid_index::kInt32 };
             float32                          _volumeDb{ 0.0f };
             float32                          _volumeOffsetDb{ 0.0f };
             float32                          _duckDb{ 0.0f }; ///< 덕들 가운데 가장 깊은 눌림(dB, 0 이하)

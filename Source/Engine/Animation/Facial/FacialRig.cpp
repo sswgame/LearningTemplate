@@ -3,6 +3,7 @@
 #include "Engine/Animation/Facial/FacialRig.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -151,7 +152,7 @@ namespace sw
             if ( _listExpression[poseIndex]._name == name )
                 return static_cast<int32>( poseIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 FacialRig::findVisemeIndex( const hashed_string& name ) const
@@ -161,7 +162,7 @@ namespace sw
             if ( _listViseme[poseIndex]._name == name )
                 return static_cast<int32>( poseIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 } // namespace sw
 

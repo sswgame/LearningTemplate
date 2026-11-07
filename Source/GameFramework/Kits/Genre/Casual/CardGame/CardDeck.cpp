@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -65,7 +66,7 @@ namespace sw
             if ( _listCard[index]._id == cardID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void CardPile::shuffle( GameRandom& random )

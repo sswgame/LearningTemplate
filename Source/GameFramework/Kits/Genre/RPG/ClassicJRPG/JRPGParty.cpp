@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -46,7 +47,7 @@ namespace sw
             if ( progress._manualID == manualID )
                 return progress._proficiency;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool JRPGMember::isStateValid( const JRPGCatalog& catalog ) const
@@ -99,7 +100,7 @@ namespace sw
         const JRPGClassDef* pClass           = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
         const bool          bCannotAddMember = pClass == nullptr || memberID.empty() || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0;
         if ( bCannotAddMember )
-            return -1;
+            return constant::invalid_index::kInt32;
 
         JRPGMember member;
         member._id      = memberID;
@@ -183,7 +184,7 @@ namespace sw
         if ( gold > 0 && _pWallet != nullptr )
         {
             _pWallet->add( Wallet::getDefaultCurrency(), gold );
-            pushEvent( JRPGPartyEvent::Kind::GoldGained, -1, static_cast<int32>( gold ) );
+            pushEvent( JRPGPartyEvent::Kind::GoldGained, constant::invalid_index::kInt32, static_cast<int32>( gold ) );
         }
         const int32 aliveCount = countAlive();
         if ( aliveCount <= 0 || exp <= 0 )
@@ -211,7 +212,7 @@ namespace sw
             member._hp = member.getStat( JRPGStat::MaxHP );
             member._mp = member.getStat( JRPGStat::MaxMP );
         }
-        pushEvent( JRPGPartyEvent::Kind::Rested, -1, static_cast<int32>( price ) );
+        pushEvent( JRPGPartyEvent::Kind::Rested, constant::invalid_index::kInt32, static_cast<int32>( price ) );
         return true;
     }
 
@@ -398,7 +399,7 @@ namespace sw
             if ( _listMember[static_cast<size_t>( index )]._id == memberID )
                 return index;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void JRPGParty::growOneLevel( int32 memberIndex, const JRPGClassDef& classDef )

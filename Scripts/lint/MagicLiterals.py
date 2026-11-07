@@ -50,8 +50,8 @@ kBaselinePath = "Config/Dev/MagicLiteralBaseline.json"
 kSourceExtensions = (".h", ".cpp", ".inl")
 kKinds = ("minus-one", "float", "integer", "hex")
 
-# 단항 `-1`(뺄셈 `x - 1` 은 아니다): 앞이 여는 괄호 · 쉼표 · 대입 · 비교 · return · 삼항 · 중괄호다.
-kMinusOne = re.compile(r"(?:(?<=[(,=<>?:{\[])|(?<=return)|(?<=\breturn ))\s*-\s*1\b(?![.\deEfFxX'])")
+# 단항 `-1`(뺄셈 `x - 1` 은 아니다): 앞이 여는 괄호 · 쉼표 · 대입 · 비교 · return · 삼항 · 중괄호 · 논리 연산(`&& -1 <= x`)이다.
+kMinusOne = re.compile(r"(?:(?<=[(,=<>?:{\[])|(?<=&&)|(?<=\|\|)|(?<=return)|(?<=\breturn ))\s*-\s*1\b(?![.\deEfFxX'])")
 kFloat = re.compile(r"(?<![\w.])\d+\.\d*(?:[eE][+-]?\d+)?[fF]?(?![\w.])|(?<![\w.])\d+[eE][+-]?\d+[fF]?(?![\w.])")
 kHex = re.compile(r"(?<![\w.])0[xX][0-9A-Fa-f']+[uUlL]*(?![\w.])")
 # 앞이 `\` 면 문자 상수의 탈출(`L'\0'` — stripCode 는 접두 붙은 문자 상수를 지우지 못한다)이라 수가 아니다.
@@ -96,6 +96,8 @@ kMeaningRule: tuple[MeaningRule, ...] = (
                 "인덱스 표지 — 이름 붙은 표지(invalid_index 값)나 optional 로"),
     MeaningRule("not-yet-known", re.compile(r"\w*(?:Last|First|Prev|Previous|Next|Nanoseconds|Seconds|Milliseconds|Time|Hour|Day|Frame|Tick|Round|Code|Number)\w*\s*(?:=|==|!=|\{)\s*-\s*1\b"),
                 "아직 모름 · 아직 없음 — optional 로(첫 값과 표지가 겹치지 않게)"),
+    MeaningRule("direction", re.compile(r"\?\s*1\s*:\s*-\s*1\b|\?\s*-\s*1\s*:\s*[01]\b|-\s*1\s*:\s*[01]\b|\bclamp\s*\([^;]*-\s*1\s*,\s*1\b|nextInt\s*\(\s*-\s*1\b"),
+                "부호 · 방향 삼항(`? 1 : -1`), -1 ~ 1 범위 — 산술이다(옮기지 않는다)"),
     MeaningRule("not-found-return", re.compile(r"\breturn\s+-\s*1\s*;|\?[^;]*:\s*-\s*1\b"),
                 "찾지 못함 반환 — 함수가 optional · bool + 출력 인자 · 이름 붙은 표지를 돌려주게"),
     MeaningRule("direction", re.compile(r"\b(?:Vec\d|Vector\d|Point\d?|[Dd]irection|[Aa]xis|[Ss]ign|[Ss]cale|[Ss]tep|[Dd]elta|[Oo]ffset|dir)\w*(?:\s+\w+)?\s*[({=][^;]*-\s*1\b|\*\s*-\s*1\b"),
@@ -365,6 +367,8 @@ def runSelfCheck() -> int:
     expect(countedValues("static constexpr float32 kSpeed = 3.5f;") == [], "a named definition is not counted")
     expect(countedValues("    { 3.5f, 12, 0x10 },") == [], "an initializer table row is not counted")
     expect(countedValues("int32 _target = -1;") == ["-1"], "an index sentinel -1 is counted")
+    expect(countedValues("io.check( 0 <= a && -1 <= b );") == ["-1"], "-1 after a logical operator is unary")
+    expect(countedValues("return a < b ? -1 : 1;") == [], "a sign ternary is arithmetic")
 
     # 래칫 판정 — 늘면 · 줄면 모두 멈추고, 옮긴 파일은 옛 기준선을 잇는다.
     baseline = {"Source/A.cpp": {"float": 2}, "Source/Old.cpp": {"hex": 1}}

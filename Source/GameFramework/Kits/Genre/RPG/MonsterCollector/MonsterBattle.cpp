@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -737,7 +738,7 @@ namespace sw
             if ( listMonster[static_cast<size_t>( index )].isFainted() == false )
                 return index;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void MonsterBattle::setResult( MonsterBattleResult outcome )

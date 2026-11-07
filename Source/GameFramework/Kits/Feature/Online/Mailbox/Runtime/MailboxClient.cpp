@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
 namespace sw
@@ -37,7 +39,7 @@ namespace sw
             if ( _listMail[mailIndex]._mailKey == mailKey )
                 return static_cast<int32>( mailIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void MailboxClient::onCallSucceeded( MailboxMethod::List, const MailboxListRequest& request, const MailboxListReply& reply )

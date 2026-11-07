@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/MonsterHuntContract.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -159,8 +160,8 @@ namespace sw
     int32 MonsterHuntInvestigation::computeOpenOrder() const
     {
         if ( isSolved() )
-            return -1;
-        int32 openOrder = -1;
+            return constant::invalid_index::kInt32;
+        int32 openOrder = constant::invalid_index::kInt32;
         for ( const MonsterHuntClueDef& clue : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._listClue )
         {
             if ( isFoundInternal( clue._id ) == false && ( openOrder < 0 || clue._order < openOrder ) )

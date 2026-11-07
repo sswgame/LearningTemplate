@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -72,7 +73,7 @@ namespace sw
         vector<hashed_string>      _listQueue{}; ///< 훈련 대기열이다(비용은 넣을 때 냈다)
         float32                    _cycleProgress{ 0.0f };
         float32                    _trainProgress{ 0.0f };
-        int32                      _siteIndex{ -1 };
+        int32                      _siteIndex{ constant::invalid_index::kInt32 };
         int32                      _workers{ 0 };
     };
 } // namespace sw
@@ -88,8 +89,8 @@ namespace sw
         Countdown              _attackCooldown{};
         float32                _holdX{ 0.0f }; ///< 대기 명령을 받은 위치이다
         float32                _damageDealt{ 0.0f };
-        int32                  _unitID{ -1 };
-        int32                  _squadSlot{ -1 }; ///< 지휘관 부대 안의 슬롯 번호이다(0 은 바로 뒤). 부대가 아니면 -1
+        int32                  _unitID{ constant::invalid_index::kInt32 };
+        int32                  _squadSlot{ constant::invalid_index::kInt32 }; ///< 지휘관 부대 안의 슬롯 번호이다(0 은 바로 뒤). 부대가 아니면 -1
         ConquestTeam           _team{ ConquestTeam::Neutral };
         ConquestOrder          _order{ ConquestOrder::Follow };
         uint8                  _bAlive{ SW_TRUE };
@@ -217,8 +218,8 @@ namespace sw
         struct Target
         {
             float32 _x{ 0.0f };
-            int32   _unitIndex{ -1 };
-            int32   _siteIndex{ -1 };
+            int32   _unitIndex{ constant::invalid_index::kInt32 };
+            int32   _siteIndex{ constant::invalid_index::kInt32 };
             uint8   _bCommander{ SW_FALSE };
 
             bool isValid() const { return _unitIndex >= 0 || _siteIndex >= 0 || _bCommander == SW_TRUE; }

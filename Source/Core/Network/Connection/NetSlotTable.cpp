@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetSlotTable.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 namespace sw
@@ -35,7 +36,7 @@ namespace sw
     int32 NetSlotTable::findByAddress( const NetAddress& address ) const
     {
         const auto iter = _mapSlotByAddress.find( makeAddressKey( address ) );
-        return iter != _mapSlotByAddress.end() ? iter->second : -1;
+        return iter != _mapSlotByAddress.end() ? iter->second : constant::invalid_index::kInt32;
     }
 
     void NetSlotTable::bindAddress( int32 slotIndex, const NetAddress& address )
@@ -58,7 +59,7 @@ namespace sw
             if ( _listSlot[index]._state == NetConnectionState::Disconnected )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 NetSlotTable::countConnected() const

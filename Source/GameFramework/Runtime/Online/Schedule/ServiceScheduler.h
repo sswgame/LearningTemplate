@@ -113,8 +113,8 @@ namespace sw
         {
             ScheduleDef          _definition{};
             ScheduledJobFunction _function{};
-            int64                _handledOccurrenceMs{ -1 }; ///< 이 서버가 돌았거나 끝난 것을 본 마지막 회차
-            int64                _retryOccurrenceMs{ -1 };   ///< `_retryAtMs` 가 가리키는 회차
+            int64                _handledOccurrenceMs{ constant::invalid_index::kInt64 }; ///< 이 서버가 돌았거나 끝난 것을 본 마지막 회차
+            int64                _retryOccurrenceMs{ constant::invalid_index::kInt64 };   ///< `_retryAtMs` 가 가리키는 회차
             int64                _retryAtMs{ 0 };
             uint8                _bClaimPending{ SW_FALSE };
         };

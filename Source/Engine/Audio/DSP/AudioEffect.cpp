@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/DSP/AudioEffect.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioClip.h"
@@ -851,7 +852,7 @@ namespace sw
             if ( name == hashed_string( _pTypeInfo->_pParameter[parameterIndex]._pName ) )
                 return static_cast<int32>( parameterIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void IAudioEffect::setParameter( uint32 parameterIndex, float32 value )

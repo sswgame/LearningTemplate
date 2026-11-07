@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -55,7 +56,7 @@ namespace sw
     {
         struct DamageRecord
         {
-            int32   _attacker{ -1 };
+            int32   _attacker{ constant::invalid_index::kInt32 };
             float32 _time{ 0.0f };
         };
 
@@ -63,7 +64,7 @@ namespace sw
         vector<DamageRecord> _listDamage{};
         Countdown            _respawnTimer{};
         float32              _damageDealt{ 0.0f };
-        int32                _team{ -1 };
+        int32                _team{ constant::invalid_index::kInt32 };
         int32                _kills{ 0 };
         int32                _deaths{ 0 };
         int32                _assists{ 0 };
@@ -89,9 +90,9 @@ namespace sw
             ScoreChanged,   ///< _team 은 팀이고, _value 는 새 점수이다
             MatchEnded      ///< _team 은 이긴 팀이다(-1 이면 무승부)
         };
-        int32 _participant{ -1 };
-        int32 _other{ -1 };
-        int32 _team{ -1 };
+        int32 _participant{ constant::invalid_index::kInt32 };
+        int32 _other{ constant::invalid_index::kInt32 };
+        int32 _team{ constant::invalid_index::kInt32 };
         int32 _value{ 0 };
         Kind  _kind{ Kind::PhaseChanged };
     };

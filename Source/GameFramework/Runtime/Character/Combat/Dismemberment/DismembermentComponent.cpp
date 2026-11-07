@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Combat/Dismemberment/DismembermentComponent.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -392,7 +393,7 @@ namespace sw
             if ( listRegion[regionIndex]._name == region )
                 return static_cast<int32>( regionIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     hashed_string DismembermentComponent::findRegionOfBone( const hashed_string& bone ) const

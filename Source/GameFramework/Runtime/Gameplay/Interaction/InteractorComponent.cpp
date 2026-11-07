@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractorComponent.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -119,7 +120,7 @@ namespace sw
         , _keepDistanceScale{ 1.25f }
         , _session{}
         , _resumeState{}
-        , _montageStep{ -1 }
+        , _montageStep{ constant::invalid_index::kInt32 }
         , _pairedSessionID{ 0 }
         , _prompt{}
         , _listCandidate{}
@@ -442,14 +443,14 @@ namespace sw
             if ( event == InteractionSessionEvent::Cancelled )
             {
                 InteractorComponentInternal::restoreMontage( owner, _resumeState );
-                _montageStep = -1;
+                _montageStep = constant::invalid_index::kInt32;
                 deferPairedAnimationAbort( manager );
             }
             if ( event == InteractionSessionEvent::Completed )
             {
                 // 페어드 애니메이션은 상호작용이 끝나도 자기 타임라인 끝까지 간다.
                 _resumeState     = hashed_string{};
-                _montageStep     = -1;
+                _montageStep     = constant::invalid_index::kInt32;
                 _pairedSessionID = 0;
                 finishSession( manager, owner );
             }

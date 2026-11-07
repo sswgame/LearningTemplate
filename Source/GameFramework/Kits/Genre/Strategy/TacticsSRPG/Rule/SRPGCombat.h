@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -26,12 +27,12 @@ namespace sw
     /** @brief 한 번의 타격 예측입니다. 쏘는 쪽이 -1 이면 없는 타격입니다. */
     struct SRPGStrikePreview
     {
-        int32 _attacker{ -1 };
-        int32 _weapon{ -1 };
-        int32 _defender{ -1 }; ///< 실제로 맞는 쪽이다(지원 방어이면 대신 맞는 아군)
-        int32 _hit{ 0 };       ///< 명중률(0..100)
-        int32 _crit{ 0 };      ///< 크리티컬 확률(0..100)
-        int32 _damage{ 0 };    ///< 크리티컬이 아닐 때의 피해
+        int32 _attacker{ constant::invalid_index::kInt32 };
+        int32 _weapon{ constant::invalid_index::kInt32 };
+        int32 _defender{ constant::invalid_index::kInt32 }; ///< 실제로 맞는 쪽이다(지원 방어이면 대신 맞는 아군)
+        int32 _hit{ 0 };                                    ///< 명중률(0..100)
+        int32 _crit{ 0 };                                   ///< 크리티컬 확률(0..100)
+        int32 _damage{ 0 };                                 ///< 크리티컬이 아닐 때의 피해
         int32 _critDamage{ 0 };
 
         bool isValid() const { return _attacker >= 0; }
@@ -47,8 +48,8 @@ namespace sw
         SRPGStrikePreview         _attack{};
         SRPGStrikePreview         _supportAttack{};
         SRPGStrikePreview         _counter{}; ///< 방어자가 살아남을 때의 반격이다
-        int32                     _defender{ -1 };
-        int32                     _supportDefender{ -1 }; ///< 대신 맞는 아군이다(없으면 -1)
+        int32                     _defender{ constant::invalid_index::kInt32 };
+        int32                     _supportDefender{ constant::invalid_index::kInt32 }; ///< 대신 맞는 아군이다(없으면 -1)
         SRPGWeaponStatus          _status{ SRPGWeaponStatus::InvalidTarget };
     };
 } // namespace sw

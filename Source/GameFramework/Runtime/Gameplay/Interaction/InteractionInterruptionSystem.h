@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -61,7 +62,7 @@ namespace sw
         struct Active
         {
             uint64 _targetObjectID{ 0 };
-            int32  _npcIndex{ -1 };
+            int32  _npcIndex{ constant::invalid_index::kInt32 };
         };
 
         int32 resolveNPC( const GameObject& target ) const;

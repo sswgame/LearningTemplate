@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -113,7 +114,7 @@ namespace sw
         {
             // 레인마다 다음 일 하나를 보고 가장 이른 것부터 처리해, 콤보 순서가 시각 순이 되게 한다.
             RhythmPlaySessionInternal::DueKind dueKind = RhythmPlaySessionInternal::DueKind::None;
-            int32                              dueLane = -1;
+            int32                              dueLane = constant::invalid_index::kInt32;
             float32                            dueTime = 0.0f;
             for ( size_t laneIndex = 0; laneIndex < _listLane.size(); ++laneIndex )
             {
@@ -174,7 +175,7 @@ namespace sw
                 case RhythmPlaySessionInternal::DueKind::TailComplete:
                 {
                     const int32 noteIndex = lane._holdingNote;
-                    lane._holdingNote     = -1;
+                    lane._holdingNote     = constant::invalid_index::kInt32;
                     const bool bNoWindow  = _pJudge->getWindows().empty();
                     applyJudgment( noteIndex, bNoWindow ? nullptr : &_pJudge->getWindows().front(), 0.0f, true );
                     break;
@@ -220,7 +221,7 @@ namespace sw
         if ( queue._holdingNote < 0 )
             return;
         const int32 noteIndex = queue._holdingNote;
-        queue._holdingNote    = -1;
+        queue._holdingNote    = constant::invalid_index::kInt32;
         // 끝보다 먼저 뗐다. 끝 시각에 판정하고, 창 밖으로 이르면 Miss 이다.
         const RhythmNote&  note   = _pChart->getNotes()[static_cast<size_t>( noteIndex )];
         const TimingResult result = _pJudge->judge( computeTargetEndTime( note ), time );

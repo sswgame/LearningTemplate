@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickNodeRegistry.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
@@ -457,7 +458,7 @@ namespace sw
                             if ( pState[0] >= totalSteps )
                             {
                                 pState[0] = totalSteps;
-                                pState[1] = -1;
+                                pState[1] = constant::invalid_index::kInt32;
                                 bArrive   = true;
                                 pState[2] = pauseSteps;
                             }
@@ -667,7 +668,7 @@ namespace sw
             if ( _listInput[index] == name )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 GimmickNodeKind::findOutput( const hashed_string& name ) const
@@ -677,7 +678,7 @@ namespace sw
             if ( _listOutput[index] == name )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 GimmickNodeKind::findParam( const hashed_string& name ) const
@@ -687,7 +688,7 @@ namespace sw
             if ( _listParam[index]._name == name )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     SubsystemInitResult GimmickNodeRegistrySubsystem::initializeSubsystem()

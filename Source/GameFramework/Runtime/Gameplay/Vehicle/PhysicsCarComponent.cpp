@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Vehicle/PhysicsCarComponent.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/WheeledVehicleComponent.h"
@@ -14,7 +16,7 @@ namespace sw
     PhysicsCarComponent::PhysicsCarComponent()
         : _handBrakeButton{ "HandBrake" }
         , _reverseSpeed{ 0.5f }
-        , _handBrakeIndex{ -1 }
+        , _handBrakeIndex{ constant::invalid_index::kInt32 }
     {
         setCanEverTick( true );
     }
@@ -25,7 +27,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _handBrakeIndex             = pPawn != nullptr ? pPawn->findButton( _handBrakeButton ) : -1;
+        _handBrakeIndex             = pPawn != nullptr ? pPawn->findButton( _handBrakeButton ) : constant::invalid_index::kInt32;
     }
 
     PhysicsCarInput PhysicsCarComponent::toCarInput( const ControlIntent& intent, const float3& carForward, float32 forwardSpeed, float32 reverseSpeed,

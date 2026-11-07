@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -64,7 +65,7 @@ namespace sw
             if ( _listDevice[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     uint32 AdventureDungeonCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -290,7 +291,7 @@ namespace sw
     {
         const AdventureDungeonDef* pDungeon = nullptr;
         DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
+        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : constant::invalid_index::kInt32;
         if ( pRuntime == nullptr || index < 0 )
             return false;
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
@@ -306,7 +307,7 @@ namespace sw
     {
         const AdventureDungeonDef* pDungeon = nullptr;
         DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
+        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : constant::invalid_index::kInt32;
         if ( pRuntime == nullptr || index < 0 )
             return;
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
@@ -322,7 +323,7 @@ namespace sw
     {
         const AdventureDungeonDef* pDungeon = nullptr;
         DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
+        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : constant::invalid_index::kInt32;
         if ( pRuntime == nullptr || index < 0 )
             return false;
         const AdventureDeviceDef& def                = pDungeon->_listDevice[static_cast<size_t>( index )];

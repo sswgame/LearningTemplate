@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -149,7 +150,7 @@ namespace sw
         float32               _knockbackTaken{ 1.0f }; ///< Heavy 동안 받는 밀림 배율
         float32               _knockbackDealt{ 1.0f };
         int32                 _combo{ 0 };
-        int32                 _lastHitter{ -1 };
+        int32                 _lastHitter{ constant::invalid_index::kInt32 };
         uint8                 _bPounding{ SW_FALSE };
         uint8                 _bSuperBounce{ SW_FALSE };
         uint8                 _bShield{ SW_FALSE };
@@ -178,8 +179,8 @@ namespace sw
         };
         hashed_string _grade{};
         hashed_string _itemID{};
-        int32         _player{ -1 };
-        int32         _other{ -1 };
+        int32         _player{ constant::invalid_index::kInt32 };
+        int32         _other{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::Landed };
     };

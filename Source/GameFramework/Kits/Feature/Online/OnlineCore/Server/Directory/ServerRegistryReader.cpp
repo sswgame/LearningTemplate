@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
 
@@ -130,7 +132,7 @@ namespace sw
 
     bool ServerRegistryReader::pickServer( const ServerSelectionQuery& query, UnixMilliseconds nowMs, ServerStatus& outStatus )
     {
-        int32 index = -1;
+        int32 index = constant::invalid_index::kInt32;
         if ( ServerSelection::pickServer( _listSnapshot, query, nowMs.count(), index ) == false )
             return false;
         ServerStatus& picked = _listSnapshot[static_cast<size_t>( index )];

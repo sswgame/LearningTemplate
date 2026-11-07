@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -100,7 +101,7 @@ namespace sw
         float3           _walkTo{};
         uint32           _id{ 0 };
         int32            _cash{ 0 };
-        int32            _targetRideIndex{ -1 }; ///< 걷거나 줄 선 놀이기구이다(없으면 -1)
+        int32            _targetRideIndex{ constant::invalid_index::kInt32 }; ///< 걷거나 줄 선 놀이기구이다(없으면 -1)
         uint32           _rideCount{ 0 };
         float32          _happiness{ 0.7f };    ///< 0..1 범위
         float32          _nausea{ 0.0f };       ///< 0..1 범위

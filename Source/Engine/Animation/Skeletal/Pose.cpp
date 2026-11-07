@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Skeletal/Pose.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -117,7 +118,7 @@ namespace sw
     {
         uint32  boneCount   = MathUtil::kMaxUInt32;
         float32 totalWeight = 0.0f;
-        int32   firstPose   = -1;
+        int32   firstPose   = constant::invalid_index::kInt32;
         for ( uint32 poseIndex = 0; poseIndex < poseCount; ++poseIndex )
         {
             if ( pWeight[poseIndex] <= 0.0f )

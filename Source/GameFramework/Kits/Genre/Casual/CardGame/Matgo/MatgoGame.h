@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -143,7 +144,7 @@ namespace sw
             Stop,         ///< `_value` 는 받을 점수이다(진 사람 한 명당이고, 고스톱이면 첫 패자 기준이다)
             Nagari
         };
-        int32  _player{ -1 };
+        int32  _player{ constant::invalid_index::kInt32 };
         int32  _value{ 0 };
         uint16 _cardID{ Card::kNoCard };
         Kind   _kind{ Kind::Played };

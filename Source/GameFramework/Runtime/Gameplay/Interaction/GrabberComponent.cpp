@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Interaction/GrabberComponent.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -87,7 +88,7 @@ namespace sw
         , _reach{ 1.5f }
         , _throwSpeed{ 0.0f }
         , _fallback{}
-        , _grabIndex{ -1 }
+        , _grabIndex{ constant::invalid_index::kInt32 }
         , _listTagged{}
     {
         setCanEverTick( true );
@@ -99,7 +100,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr && _grabButton.empty() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : -1;
+        _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : constant::invalid_index::kInt32;
         if ( _grabButton.empty() == false && _grabIndex < 0 )
             SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );

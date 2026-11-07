@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -115,7 +116,7 @@ namespace sw
             if ( isSolid( x, y, z ) )
                 return y;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool VoxelWorld::isChunkDirty( int32 chunkX, int32 chunkZ ) const

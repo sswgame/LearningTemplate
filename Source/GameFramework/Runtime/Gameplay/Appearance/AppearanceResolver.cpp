@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
@@ -167,7 +168,7 @@ namespace sw
                     if ( entry._owner == owner && bUsable )
                         return static_cast<int32>( index );
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
 
             static hashed_string getDefaultState( const ItemVisualDef& visual ) { return visual._defaultState; }
@@ -369,7 +370,7 @@ namespace sw
                                           ResolvedAppearance& out )
             {
                 const bool  bHitOff    = entry._pRequest != nullptr && VectorUtil::contains( entry._pRequest->_listDetachedPart, part._name );
-                const int32 breakIndex = part._breakStage.empty() ? -1 : visual.findDamageStageIndex( part._breakStage );
+                const int32 breakIndex = part._breakStage.empty() ? constant::invalid_index::kInt32 : visual.findDamageStageIndex( part._breakStage );
                 const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
                 if ( bHitOff && part._bBreakable == SW_FALSE )
                     addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' is not breakable - detach request ignored", part._name.c_str() );
@@ -605,7 +606,7 @@ namespace sw
                     applyCustomization( *pSchema, normalized, inoutEntry._owner, entryIndex, database, inoutListEntry, listExtraVisual, out );
                 }
                 const Entry entry      = inoutListEntry[static_cast<size_t>( entryIndex )];
-                int32       stageIndex = -1;
+                int32       stageIndex = constant::invalid_index::kInt32;
                 if ( pRequest != nullptr )
                 {
                     stageIndex = visual.computeDamageStageIndex( AppearanceResolver::snapDamage( pRequest->_damage ) );
@@ -617,14 +618,14 @@ namespace sw
                 {
                     Entry extra  = entry;
                     extra._state = getDefaultState( *pExtraVisual );
-                    emitParts( *pExtraVisual, extra, -1, listDecision, out );
+                    emitParts( *pExtraVisual, extra, constant::invalid_index::kInt32, listDecision, out );
                 }
             }
 
             /** @brief 1 단계입니다. 몸 항목을 넣고 캐릭터 꾸미기를 적용합니다. */
             static void addBodyEntries( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
             {
-                int32                bodyIndex = -1;
+                int32                bodyIndex = constant::invalid_index::kInt32;
                 const ItemVisualDef* pBody     = database.getVisuals().findVisual( spec._bodyVisual );
                 if ( pBody != nullptr )
                 {
@@ -695,7 +696,7 @@ namespace sw
                         continue;
                     for ( const hashed_string& slot : pOccupancy->_listSlot )
                     {
-                        const int32 otherIndex = slot == occupier._owner ? -1 : findEntry( inoutListEntry, slot, true );
+                        const int32 otherIndex = slot == occupier._owner ? constant::invalid_index::kInt32 : findEntry( inoutListEntry, slot, true );
                         if ( otherIndex < 0 )
                             continue;
                         inoutListEntry[static_cast<size_t>( otherIndex )]._bHidden = SW_TRUE;

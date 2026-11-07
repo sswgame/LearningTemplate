@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -129,7 +130,7 @@ namespace sw
             if ( batch._itemID == itemID && batch._daysLeft >= 0 )
                 return batch._daysLeft;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 IngredientStock::getBatchCount( const hashed_string& itemID ) const

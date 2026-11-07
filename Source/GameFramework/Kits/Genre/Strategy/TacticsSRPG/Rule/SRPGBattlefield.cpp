@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -57,7 +58,7 @@ namespace sw
         , _topology{}
         , _land{}
         , _turn{ 0 }
-        , _activeUnit{ -1 }
+        , _activeUnit{ constant::invalid_index::kInt32 }
         , _phaseTeam{ SRPGTeam::Player }
     {
     }
@@ -76,7 +77,7 @@ namespace sw
         _listUnit.clear();
         _eventBuffer.clear();
         _turn       = 0;
-        _activeUnit = -1;
+        _activeUnit = constant::invalid_index::kInt32;
         _phaseTeam  = SRPGTeam::Player;
     }
 
@@ -105,18 +106,18 @@ namespace sw
     int32 SRPGBattlefield::addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel )
     {
         if ( _pCatalog == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         SRPGUnit unit;
         unit._pDef   = _pCatalog->findUnit( unitID );
         unit._pPilot = _pCatalog->findPilot( pilotID );
         if ( unit._pDef == nullptr || unit._pPilot == nullptr )
         {
             SW_LOG_WARNING_ID( "SRPGBattlefield.CannotPlaceUnitPilot", "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         const bool bCannotPlaceUnit = isInside( cell ) == false || findUnitAt( cell ) >= 0 || computeTerrainCost( unit, cell ) < 0;
         if ( bCannotPlaceUnit )
-            return -1;
+            return constant::invalid_index::kInt32;
         unit._cell = cell;
         unit._team = team;
         unit._pilotLevel.setLevel( _pCatalog->getPilotCurve(), pilotLevel );
@@ -154,7 +155,7 @@ namespace sw
     void SRPGBattlefield::beginBattle()
     {
         _turn       = 0;
-        _activeUnit = -1;
+        _activeUnit = constant::invalid_index::kInt32;
         if ( _settings._turnMode == SRPGTurnMode::Individual )
         {
             _turnOrder.initialize( TurnOrderMode::Rounds, _random.nextUint() );
@@ -170,7 +171,7 @@ namespace sw
             return;
         }
         _turn = 1;
-        pushEvent( SRPGEvent{ -1, -1, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
+        pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
         for ( int32 team = 0; team < kSRPGTeamCount; ++team )
         {
             if ( countAlive( static_cast<SRPGTeam>( team ) ) > 0 )
@@ -234,7 +235,7 @@ namespace sw
             if ( unit._team == team && unit._bAlive == SW_TRUE )
                 resetUnitTurn( unit );
         }
-        pushEvent( SRPGEvent{ -1, -1, _turn, SRPGEvent::Kind::PhaseStarted, team } );
+        pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::PhaseStarted, team } );
     }
 
     void SRPGBattlefield::advancePhase()
@@ -246,7 +247,7 @@ namespace sw
             if ( team == 0 )
             {
                 ++_turn;
-                pushEvent( SRPGEvent{ -1, -1, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
+                pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
             }
             if ( countAlive( static_cast<SRPGTeam>( team ) ) > 0 )
             {
@@ -258,7 +259,7 @@ namespace sw
 
     void SRPGBattlefield::activateNextUnit()
     {
-        _activeUnit = -1;
+        _activeUnit = constant::invalid_index::kInt32;
         while ( _turnOrder.getActorCount() > 0 )
         {
             const int32 unitIndex = _turnOrder.next();
@@ -266,7 +267,7 @@ namespace sw
             if ( _turnOrder.getRound() > _turn )
             {
                 _turn = _turnOrder.getRound();
-                pushEvent( SRPGEvent{ -1, -1, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
+                pushEvent( SRPGEvent{ constant::invalid_index::kInt32, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::TurnStarted, SRPGTeam::Player } );
             }
             if ( pUnit == nullptr || pUnit->_bAlive == SW_FALSE )
             {
@@ -276,7 +277,7 @@ namespace sw
             resetUnitTurn( *pUnit );
             _activeUnit = unitIndex;
             _phaseTeam  = pUnit->_team;
-            pushEvent( SRPGEvent{ unitIndex, -1, _turn, SRPGEvent::Kind::UnitTurnStarted, pUnit->_team } );
+            pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, _turn, SRPGEvent::Kind::UnitTurnStarted, pUnit->_team } );
             return;
         }
     }
@@ -390,7 +391,7 @@ namespace sw
         unit._bMoved      = SW_TRUE;
         if ( _settings._bMoveDodge == SW_TRUE )
             unit._dodge = MathUtil::min( _settings._dodgeMax, steps * _settings._dodgePerCell );
-        pushEvent( SRPGEvent{ unitIndex, -1, steps, SRPGEvent::Kind::Moved, unit._team } );
+        pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, steps, SRPGEvent::Kind::Moved, unit._team } );
         return true;
     }
 
@@ -424,7 +425,7 @@ namespace sw
                 GridReachability::collectRangeCells( stand, weapon._minRange, weapon._maxRange, _topology._width, _topology._height, listRange );
                 for ( const int2& cell : listRange )
                 {
-                    if ( _cellMarks.visit( _topology.toIndex( cell ), -1 ) )
+                    if ( _cellMarks.visit( _topology.toIndex( cell ), constant::invalid_index::kInt32 ) )
                         outListCell.push_back( cell );
                 }
             }
@@ -535,9 +536,9 @@ namespace sw
         if ( bCannotGrantXP )
             return;
         if ( pUnit->_pilotLevel.addXP( _pCatalog->getPilotCurve(), amount ) > 0 )
-            pushEvent( SRPGEvent{ unitIndex, -1, pUnit->_pilotLevel.getLevel(), SRPGEvent::Kind::PilotLevelUp, pUnit->_team } );
+            pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, pUnit->_pilotLevel.getLevel(), SRPGEvent::Kind::PilotLevelUp, pUnit->_team } );
         if ( pUnit->_unitLevel.addXP( _pCatalog->getUnitCurve(), amount ) > 0 )
-            pushEvent( SRPGEvent{ unitIndex, -1, pUnit->_unitLevel.getLevel(), SRPGEvent::Kind::UnitLevelUp, pUnit->_team } );
+            pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, pUnit->_unitLevel.getLevel(), SRPGEvent::Kind::UnitLevelUp, pUnit->_team } );
     }
 
     void SRPGBattlefield::pollEvents( const ConsumerLease& lease, vector<SRPGEvent>& outListEvent )
@@ -638,7 +639,7 @@ namespace sw
         unit._pDef     = _pCatalog->findUnit( targetUnitID );
         unit._unitLevel.setLevel( _pCatalog->getUnitCurve(), 1 );
         refillUnit( unit );
-        pushEvent( SRPGEvent{ unitIndex, -1, 0, SRPGEvent::Kind::Developed, unit._team } );
+        pushEvent( SRPGEvent{ unitIndex, constant::invalid_index::kInt32, 0, SRPGEvent::Kind::Developed, unit._team } );
         return true;
     }
 
@@ -659,7 +660,7 @@ namespace sw
             if ( _listUnit[index]._bAlive == SW_TRUE && _listUnit[index]._cell == cell )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 SRPGBattlefield::computeAptitude( const SRPGUnit& unit, const int2& cell ) const
@@ -696,7 +697,7 @@ namespace sw
 
     int32 SRPGBattlefield::computeNearestHostileDistance( const SRPGUnit& unit, const int2& cell ) const
     {
-        int32 nearest = -1;
+        int32 nearest = constant::invalid_index::kInt32;
         for ( const SRPGUnit& other : getUnits() )
         {
             if ( other._bAlive == SW_FALSE || isHostile( unit._team, other._team ) == false )

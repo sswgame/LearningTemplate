@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -142,8 +143,8 @@ namespace sw
         , _deck{}
         , _board{}
         , _settings{}
-        , _button{ -1 }
-        , _currentSeat{ -1 }
+        , _button{ constant::invalid_index::kInt32 }
+        , _currentSeat{ constant::invalid_index::kInt32 }
         , _currentBet{ 0 }
         , _lastRaiseSize{ 0 }
         , _street{ PokerStreet::HandOver }
@@ -174,7 +175,7 @@ namespace sw
             _listSeat[seat]._stack = listStack[seat];
         }
         _button      = static_cast<int32>( listStack.size() ) - 1;
-        _currentSeat = -1;
+        _currentSeat = constant::invalid_index::kInt32;
         _street      = PokerStreet::HandOver;
         _eventBuffer.clear();
         _listLastPot.clear();
@@ -218,7 +219,7 @@ namespace sw
             if ( bCanActOnly == false || canAct( seat ) )
                 return seat;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void PokerTable::commitChips( int32 seat, int32 amount )
@@ -280,7 +281,7 @@ namespace sw
             }
         }
         _street      = PokerStreet::Preflop;
-        _currentSeat = -1;
+        _currentSeat = constant::invalid_index::kInt32;
         afterAction( bigBlindSeat );
         return true;
     }
@@ -292,7 +293,7 @@ namespace sw
             return false;
         PokerSeat&  pokerSeat = _listSeat[static_cast<size_t>( seat )];
         const int32 toCall    = _currentBet - pokerSeat._committed;
-        int32       raiseTo   = -1;
+        int32       raiseTo   = constant::invalid_index::kInt32;
         switch ( kind )
         {
             case PokerActionKind::Fold:
@@ -372,7 +373,7 @@ namespace sw
     void PokerTable::afterAction( int32 seat )
     {
         int32 liveCount = 0;
-        int32 liveSeat  = -1;
+        int32 liveSeat  = constant::invalid_index::kInt32;
         for ( int32 index = 0; index < getSeatCount(); ++index )
         {
             const PokerSeat& pokerSeat = _listSeat[static_cast<size_t>( index )];
@@ -425,7 +426,7 @@ namespace sw
         _currentBet    = 0;
         _lastRaiseSize = _settings._bigBlind;
         dealBoard( street == PokerStreet::Flop ? 3 : 1 );
-        _eventBuffer.push( PokerEvent{ -1, static_cast<int32>( street ), PokerEvent::Kind::Street } );
+        _eventBuffer.push( PokerEvent{ constant::invalid_index::kInt32, static_cast<int32>( street ), PokerEvent::Kind::Street } );
     }
 
     void PokerTable::dealBoard( int32 count )
@@ -486,7 +487,7 @@ namespace sw
                 _eventBuffer.push( PokerEvent{ seat, pokerSeat._won, PokerEvent::Kind::Win } );
         }
         _street      = PokerStreet::HandOver;
-        _currentSeat = -1;
+        _currentSeat = constant::invalid_index::kInt32;
     }
 
     void PokerTable::finishUncontested( int32 winnerSeat )
@@ -504,7 +505,7 @@ namespace sw
         winner._stack += winner._won;
         _eventBuffer.push( PokerEvent{ winnerSeat, winner._won, PokerEvent::Kind::Win } );
         _street      = PokerStreet::HandOver;
-        _currentSeat = -1;
+        _currentSeat = constant::invalid_index::kInt32;
     }
 
     void PokerTable::pollEvents( vector<PokerEvent>& outListEvent )
@@ -567,7 +568,7 @@ namespace sw
         io.enumValue( _street, PokerStreet::HandOver );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        io.check( -1 <= _button && _button < seatCount && -1 <= _currentSeat && _currentSeat < seatCount );
+        io.check( constant::invalid_index::kInt32 <= _button && _button < seatCount && constant::invalid_index::kInt32 <= _currentSeat && _currentSeat < seatCount );
         io.check( 0 <= _currentBet && _currentBet <= chipTotal && 0 <= _lastRaiseSize && static_cast<int64>( _currentBet ) + _lastRaiseSize <= std::numeric_limits<int32>::max() );
         // 쇼다운은 홀 둘과 보드를 고정 크기 배열에 담는다(`finishShowdown`) — 보드가 다섯을 넘으면 스택을 넘어 쓴다.
         if ( io.check( _board.getCount() <= PokerTableInternal::kBoardCount ) == false )

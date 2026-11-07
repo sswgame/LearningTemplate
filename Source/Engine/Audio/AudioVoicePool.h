@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -33,13 +34,13 @@ namespace sw
         float32          _audibility{ 0.0f }; ///< 이번 블록 목표 게인(버스 페이더는 넣지 않는다)
         float32          _distance{ 0.0f };
         uint32           _busIndex{ 0 };
-        int32            _attenuationIndex{ -1 }; ///< 감쇠 테이블 번호다(-1 = 2D).
-        int32            _instanceIndex{ -1 };    ///< 이벤트 인스턴스(-1 = 클립 재생)
+        int32            _attenuationIndex{ constant::invalid_index::kInt32 }; ///< 감쇠 테이블 번호다(-1 = 2D).
+        int32            _instanceIndex{ constant::invalid_index::kInt32 };    ///< 이벤트 인스턴스(-1 = 클립 재생)
         int32            _priority{ 50 };
-        int32            _musicSegment{ -1 }; ///< 음악 레이어의 구간이다(-1 = 음악 아님).
-        int32            _musicLayer{ -1 };   ///< 음악 레이어 번호다.
-        float32          _musicGain{ 1.0f };  ///< 파라미터로 페이드하는 레이어 게인이다.
-        uint64           _startFrame{ 0 };    ///< 음악에서 소리가 시작할 렌더 프레임이다. 클립이 늦게 와도 박을 지킨다.
+        int32            _musicSegment{ constant::invalid_index::kInt32 }; ///< 음악 레이어의 구간이다(-1 = 음악 아님).
+        int32            _musicLayer{ constant::invalid_index::kInt32 };   ///< 음악 레이어 번호다.
+        float32          _musicGain{ 1.0f };                               ///< 파라미터로 페이드하는 레이어 게인이다.
+        uint64           _startFrame{ 0 };                                 ///< 음악에서 소리가 시작할 렌더 프레임이다. 클립이 늦게 와도 박을 지킨다.
         AudioVirtualMode _virtualMode{ AudioVirtualMode::Virtualize };
         bool             _bLoop{ SW_FALSE };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool             _bInUse{ false };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

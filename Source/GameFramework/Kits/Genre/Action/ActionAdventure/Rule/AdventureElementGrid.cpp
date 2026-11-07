@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureElementGrid.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
@@ -57,12 +58,12 @@ namespace sw
         , _grid{}
         , _listGridEvent{}
         , _listEvent{}
-        , _burningStatus{ -1 }
-        , _chargedStatus{ -1 }
-        , _updraftFlag{ -1 }
-        , _fireStimulus{ -1 }
-        , _iceStimulus{ -1 }
-        , _electricStimulus{ -1 }
+        , _burningStatus{ constant::invalid_index::kInt32 }
+        , _chargedStatus{ constant::invalid_index::kInt32 }
+        , _updraftFlag{ constant::invalid_index::kInt32 }
+        , _fireStimulus{ constant::invalid_index::kInt32 }
+        , _iceStimulus{ constant::invalid_index::kInt32 }
+        , _electricStimulus{ constant::invalid_index::kInt32 }
     {
     }
 

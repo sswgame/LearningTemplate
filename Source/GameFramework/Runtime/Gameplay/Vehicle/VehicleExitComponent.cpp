@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleExitComponent.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -13,7 +15,7 @@ namespace sw
 {
     VehicleExitComponent::VehicleExitComponent()
         : _exitButton{ "Exit" }
-        , _exitIndex{ -1 }
+        , _exitIndex{ constant::invalid_index::kInt32 }
     {
         setCanEverTick( true );
     }
@@ -24,7 +26,7 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _exitIndex                  = pPawn != nullptr ? pPawn->findButton( _exitButton ) : -1;
+        _exitIndex                  = pPawn != nullptr ? pPawn->findButton( _exitButton ) : constant::invalid_index::kInt32;
     }
 
     void VehicleExitComponent::onTick( float32 deltaTime )

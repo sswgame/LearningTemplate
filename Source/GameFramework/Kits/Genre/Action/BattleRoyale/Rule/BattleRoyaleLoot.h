@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -33,7 +34,7 @@ namespace sw
         float2        _position{};
         hashed_string _itemID{};
         int32         _count{ 0 };
-        int32         _spotIndex{ -1 }; ///< 나온 지점(보급 상자면 −1)
+        int32         _spotIndex{ constant::invalid_index::kInt32 }; ///< 나온 지점(보급 상자면 −1)
     };
 } // namespace sw
 

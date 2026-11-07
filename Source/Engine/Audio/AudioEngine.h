@@ -17,6 +17,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -320,7 +321,7 @@ namespace sw
             const AudioEventDef*                _pDesc{ nullptr };
             uint64                              _lastPostFrame{ 0 };
             uint32                              _sequenceCursor{ 0 };
-            int32                               _lastRandomIndex{ -1 };
+            int32                               _lastRandomIndex{ constant::invalid_index::kInt32 };
             bool                                _bPostedOnce{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 

@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetEndpointShardSet.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -52,7 +53,7 @@ namespace sw
 
     NetEndpoint* NetEndpointShardSet::findShard( int32 connectionID, int32& outLocalConnectionID ) const
     {
-        outLocalConnectionID = -1;
+        outLocalConnectionID = constant::invalid_index::kInt32;
         if ( connectionID < 0 || _connectionStride < 1 )
             return nullptr;
         const int32 shardIndex = connectionID / _connectionStride;
@@ -64,33 +65,33 @@ namespace sw
 
     bool NetEndpointShardSet::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
-        int32        localConnectionID = -1;
+        int32        localConnectionID = constant::invalid_index::kInt32;
         NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->sendMessage( localConnectionID, channel, pData, size );
     }
 
     bool NetEndpointShardSet::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
     {
-        int32        localConnectionID = -1;
+        int32        localConnectionID = constant::invalid_index::kInt32;
         NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->sendNotifiedMessage( localConnectionID, pData, size, tag );
     }
 
     int32 NetEndpointShardSet::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
     {
-        int32              exceptLocalID = -1;
+        int32              exceptLocalID = constant::invalid_index::kInt32;
         const NetEndpoint* pExceptShard  = findShard( exceptID, exceptLocalID );
         int32              sentCount     = 0;
         for ( NetEndpoint* pShard : _listShard )
         {
-            sentCount += pShard->broadcast( channel, pData, size, pShard == pExceptShard ? exceptLocalID : -1 );
+            sentCount += pShard->broadcast( channel, pData, size, pShard == pExceptShard ? exceptLocalID : constant::invalid_index::kInt32 );
         }
         return sentCount;
     }
 
     void NetEndpointShardSet::disconnect( int32 connectionID )
     {
-        int32        localConnectionID = -1;
+        int32        localConnectionID = constant::invalid_index::kInt32;
         NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         if ( pShard != nullptr )
             pShard->disconnect( localConnectionID );
@@ -131,28 +132,28 @@ namespace sw
 
     NetConnectionState NetEndpointShardSet::getConnectionState( int32 connectionID ) const
     {
-        int32              localConnectionID = -1;
+        int32              localConnectionID = constant::invalid_index::kInt32;
         const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr ? pShard->getConnectionState( localConnectionID ) : NetConnectionState::Disconnected;
     }
 
     bool NetEndpointShardSet::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
     {
-        int32              localConnectionID = -1;
+        int32              localConnectionID = constant::invalid_index::kInt32;
         const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->getConnectionStats( localConnectionID, outStats );
     }
 
     NetAddress NetEndpointShardSet::getConnectionAddress( int32 connectionID ) const
     {
-        int32              localConnectionID = -1;
+        int32              localConnectionID = constant::invalid_index::kInt32;
         const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr ? pShard->getConnectionAddress( localConnectionID ) : NetAddress{};
     }
 
     uint64 NetEndpointShardSet::getConnectionPrincipal( int32 connectionID ) const
     {
-        int32              localConnectionID = -1;
+        int32              localConnectionID = constant::invalid_index::kInt32;
         const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr ? pShard->getConnectionPrincipal( localConnectionID ) : 0;
     }
@@ -169,7 +170,7 @@ namespace sw
 
     int32 NetEndpointShardSet::getClientIndex() const
     {
-        return getShardCount() == 1 ? _listShard.front()->getClientIndex() : -1;
+        return getShardCount() == 1 ? _listShard.front()->getClientIndex() : constant::invalid_index::kInt32;
     }
 
     void NetEndpointShardSet::collectConnected( vector<int32>& outListConnection ) const
@@ -193,7 +194,7 @@ namespace sw
 
     bool NetEndpointShardSet::isConnectionSaturated( int32 connectionID ) const
     {
-        int32              localConnectionID = -1;
+        int32              localConnectionID = constant::invalid_index::kInt32;
         const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->isConnectionSaturated( localConnectionID );
     }

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -136,12 +137,12 @@ namespace sw
     {
         const bool bClaimLand = _pLand != nullptr && _landOwner != LandRegistry::kNoOwner && ride._footprintSize._x > 0.0f && ride._footprintSize._z > 0.0f;
         if ( bClaimLand && _pLand->claimWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize, true ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
         {
             if ( bClaimLand )
                 _pLand->releaseWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         ParkRide built = ride;
         built._listQueue.clear();
@@ -172,7 +173,7 @@ namespace sw
             ParkGuest* pGuest = findGuest( guestID );
             if ( pGuest != nullptr )
             {
-                pGuest->_targetRideIndex = -1;
+                pGuest->_targetRideIndex = constant::invalid_index::kInt32;
                 chooseNextRide( *pGuest );
             }
         }
@@ -365,7 +366,7 @@ namespace sw
                     continue;
                 if ( pGuest->_cash < ride._price )
                 {
-                    pGuest->_targetRideIndex = -1; // 이미 줄에서 뺐다
+                    pGuest->_targetRideIndex = constant::invalid_index::kInt32; // 이미 줄에서 뺐다
                     sendHome( *pGuest, ParkGuestThought::OutOfCash );
                     continue;
                 }
@@ -475,7 +476,7 @@ namespace sw
         }
 
         const int32      previousRide = guest._targetRideIndex;
-        int32            bestRide     = -1;
+        int32            bestRide     = constant::invalid_index::kInt32;
         float32          bestScore    = -1.0e9f;
         ParkGuestThought lastReject   = _listRide.empty() ? ParkGuestThought::NothingToRide : ParkGuestThought::None;
         for ( size_t rideIndex = 0; rideIndex < _listRide.size(); ++rideIndex )
@@ -527,7 +528,7 @@ namespace sw
             // 탈 것이 없으면 기분이 조금 상하고 둘러본다.
             guest._happiness       = MathUtil::max( 0.0f, guest._happiness - 0.05f );
             guest._thought         = lastReject == ParkGuestThought::None ? ParkGuestThought::NothingToRide : lastReject;
-            guest._targetRideIndex = -1;
+            guest._targetRideIndex = constant::invalid_index::kInt32;
             if ( lastReject == ParkGuestThought::OutOfCash )
             {
                 sendHome( guest, ParkGuestThought::OutOfCash );
@@ -559,7 +560,7 @@ namespace sw
         if ( guest._state == ParkGuestState::Queuing )
             leaveQueue( guest );
         guest._thought         = thought;
-        guest._targetRideIndex = -1;
+        guest._targetRideIndex = constant::invalid_index::kInt32;
         startWalking( guest, _settings._gatePosition );
         guest._state = ParkGuestState::Leaving;
     }
@@ -671,7 +672,7 @@ namespace sw
             io.value( guest._queueTime );
             io.enumValue( guest._state, ParkGuestState::Left );
             io.enumValue( guest._thought, ParkGuestThought::NothingToRide );
-            io.check( -1 <= guest._targetRideIndex && guest._targetRideIndex < rideCount && 0.0f <= guest._happiness && guest._happiness <= 1.0f && 0.0f <= guest._nausea && guest._nausea <= 1.0f && 0.0f <= guest._energy && guest._energy <= 1.0f &&
+            io.check( constant::invalid_index::kInt32 <= guest._targetRideIndex && guest._targetRideIndex < rideCount && 0.0f <= guest._happiness && guest._happiness <= 1.0f && 0.0f <= guest._nausea && guest._nausea <= 1.0f && 0.0f <= guest._energy && guest._energy <= 1.0f &&
                       0 < guest._id && 0 <= guest._cash && guest._minIntensity <= guest._maxIntensity && 0.0f <= guest._walkDuration && 0.0f <= guest._queueTime );
         } );
         io.value( _stepTimer );

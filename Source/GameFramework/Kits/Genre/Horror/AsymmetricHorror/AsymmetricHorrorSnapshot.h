@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -89,7 +90,7 @@ namespace sw
         PROPERTY()
         uint32 _tick{ 0 };
         PROPERTY( Min = -1, Max = 255 )
-        int32 _killerCarrying{ -1 };
+        int32 _killerCarrying{ constant::invalid_index::kInt32 };
         PROPERTY()
         MatchPhase _phase{ MatchPhase::Waiting };
         PROPERTY( Min = 0, Max = 1 )

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -141,7 +142,7 @@ namespace sw
         , _countdown{}
         , _bestLapTime{ 0.0f }
         , _firstFinishTime{ -1.0f }
-        , _ghostRacer{ -1 }
+        , _ghostRacer{ constant::invalid_index::kInt32 }
         , _finishedCount{ 0 }
         , _phase{ MatchPhase::Waiting }
     {
@@ -164,7 +165,7 @@ namespace sw
         if ( pTrack != nullptr )
             _listItemBoxTimer.resize( pTrack->getItemBoxPositions().size() );
         _pGhost     = nullptr;
-        _ghostRacer = -1;
+        _ghostRacer = constant::invalid_index::kInt32;
         _raceTime   = 0.0f;
         _countdown.clear();
         _bestLapTime     = 0.0f;
@@ -195,7 +196,7 @@ namespace sw
     {
         const bool bCannotAddRacer = _phase != MatchPhase::Waiting || _pTrack == nullptr || _pTrack->isValid() == false;
         if ( bCannotAddRacer )
-            return -1;
+            return constant::invalid_index::kInt32;
         _listRacer.emplace_back();
         KartRacer& kart    = _listRacer.back();
         kart._baseSettings = vehicleSettings;
@@ -244,7 +245,7 @@ namespace sw
         if ( _countdown.isActive() == false )
         {
             _phase = MatchPhase::InProgress;
-            pushEvent( KartRaceEvent::Kind::RaceStarted, -1, -1, 0, 0.0f );
+            pushEvent( KartRaceEvent::Kind::RaceStarted, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0, 0.0f );
         }
     }
 
@@ -282,7 +283,7 @@ namespace sw
             if ( _countdown.isActive() == false )
             {
                 _phase = MatchPhase::InProgress;
-                pushEvent( KartRaceEvent::Kind::RaceStarted, -1, -1, 0, 0.0f );
+                pushEvent( KartRaceEvent::Kind::RaceStarted, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0, 0.0f );
             }
             return;
         }
@@ -308,7 +309,7 @@ namespace sw
             kart._previousPosition = kart._motor.getPosition();
             kart._motor.update( input, deltaTime );
             if ( _pTrack->applyBoostPad( kart._motor, kart._lastBoostPad ) )
-                pushEvent( KartRaceEvent::Kind::BoostPad, racer, -1, kart._lastBoostPad, _raceTime );
+                pushEvent( KartRaceEvent::Kind::BoostPad, racer, constant::invalid_index::kInt32, kart._lastBoostPad, _raceTime );
             kart._motor.discardEvents(); // 경기는 차 이벤트를 쓰지 않으므로 쌓이지 않게 비운다
 
             kart._spinTime.update( deltaTime );
@@ -376,7 +377,7 @@ namespace sw
         {
             ++kart._nextCheckpoint;
             bPassedForward = true;
-            pushEvent( KartRaceEvent::Kind::CheckpointPassed, racer, -1, kart._nextCheckpoint, _raceTime );
+            pushEvent( KartRaceEvent::Kind::CheckpointPassed, racer, constant::invalid_index::kInt32, kart._nextCheckpoint, _raceTime );
         }
         while ( bPassedForward == false && kart._nextCheckpoint > 0 && _pTrack->computeGateCrossing( kart._nextCheckpoint, kart._previousPosition, position ) < 0 )
         {
@@ -389,7 +390,7 @@ namespace sw
             if ( kart._nextCheckpoint >= checkpointCount )
                 completeLap( racer );
             else
-                pushEvent( KartRaceEvent::Kind::CheckpointMissed, racer, -1, kart._nextCheckpoint, _raceTime );
+                pushEvent( KartRaceEvent::Kind::CheckpointMissed, racer, constant::invalid_index::kInt32, kart._nextCheckpoint, _raceTime );
         }
         else if ( bCrossedFinishBackward )
         {
@@ -412,7 +413,7 @@ namespace sw
                     _bestLapTime = other._bestLapTime > 0.0f && ( _bestLapTime <= 0.0f || other._bestLapTime < _bestLapTime ) ? other._bestLapTime : _bestLapTime;
                 }
             }
-            pushEvent( KartRaceEvent::Kind::LapRevoked, racer, -1, kart._lap, _raceTime );
+            pushEvent( KartRaceEvent::Kind::LapRevoked, racer, constant::invalid_index::kInt32, kart._lap, _raceTime );
         }
 
         // 역주행: 트랙 방향 속도가 계속 음수이면 역주행이다.
@@ -424,7 +425,7 @@ namespace sw
             if ( kart._bWrongWay == SW_FALSE && kart._wrongWayTime >= _settings._wrongWayDelay )
             {
                 kart._bWrongWay = SW_TRUE;
-                pushEvent( KartRaceEvent::Kind::WrongWay, racer, -1, 1, _raceTime );
+                pushEvent( KartRaceEvent::Kind::WrongWay, racer, constant::invalid_index::kInt32, 1, _raceTime );
             }
         }
         else
@@ -433,7 +434,7 @@ namespace sw
             if ( alongSpeed > _settings._wrongWaySpeed && kart._bWrongWay == SW_TRUE )
             {
                 kart._bWrongWay = SW_FALSE;
-                pushEvent( KartRaceEvent::Kind::WrongWay, racer, -1, 0, _raceTime );
+                pushEvent( KartRaceEvent::Kind::WrongWay, racer, constant::invalid_index::kInt32, 0, _raceTime );
             }
         }
         kart._progress = computeProgress( kart );
@@ -449,11 +450,11 @@ namespace sw
             const float32 lapTime = _raceTime - kart._lapStartTime;
             kart._listLapTime.push_back( lapTime );
             kart._bestLapTime = kart._bestLapTime <= 0.0f ? lapTime : MathUtil::min( kart._bestLapTime, lapTime );
-            pushEvent( KartRaceEvent::Kind::LapCompleted, racer, -1, kart._lap, lapTime );
+            pushEvent( KartRaceEvent::Kind::LapCompleted, racer, constant::invalid_index::kInt32, kart._lap, lapTime );
             if ( _bestLapTime <= 0.0f || lapTime < _bestLapTime )
             {
                 _bestLapTime = lapTime;
-                pushEvent( KartRaceEvent::Kind::NewBestLap, racer, -1, kart._lap, lapTime );
+                pushEvent( KartRaceEvent::Kind::NewBestLap, racer, constant::invalid_index::kInt32, kart._lap, lapTime );
             }
         }
         ++kart._lap;
@@ -464,9 +465,9 @@ namespace sw
             finishRacer( racer );
             return;
         }
-        pushEvent( KartRaceEvent::Kind::LapStarted, racer, -1, kart._lap, _raceTime );
+        pushEvent( KartRaceEvent::Kind::LapStarted, racer, constant::invalid_index::kInt32, kart._lap, _raceTime );
         if ( kart._lap == _pTrack->getLapCount() )
-            pushEvent( KartRaceEvent::Kind::FinalLap, racer, -1, kart._lap, _raceTime );
+            pushEvent( KartRaceEvent::Kind::FinalLap, racer, constant::invalid_index::kInt32, kart._lap, _raceTime );
     }
 
     void KartRace::finishRacer( int32 racer )
@@ -481,7 +482,7 @@ namespace sw
             _firstFinishTime = _raceTime;
         if ( _pGhost != nullptr && racer == _ghostRacer )
             _pGhost->setFinishTime( _raceTime );
-        pushEvent( KartRaceEvent::Kind::Finished, racer, -1, kart._finishPlace, _raceTime );
+        pushEvent( KartRaceEvent::Kind::Finished, racer, constant::invalid_index::kInt32, kart._finishPlace, _raceTime );
     }
 
     float32 KartRace::computeProgress( const KartRacer& kart ) const
@@ -526,7 +527,7 @@ namespace sw
                         itemID             = pItem->_id;
                     }
                 }
-                pushEvent( KartRaceEvent::Kind::ItemBoxTaken, static_cast<int32>( racerIndex ), -1, static_cast<int32>( boxIndex ), _raceTime );
+                pushEvent( KartRaceEvent::Kind::ItemBoxTaken, static_cast<int32>( racerIndex ), constant::invalid_index::kInt32, static_cast<int32>( boxIndex ), _raceTime );
                 _eventBuffer.getLast()._itemID = itemID;
                 break;
             }
@@ -557,7 +558,7 @@ namespace sw
             return false; // 없는 탄은 `initialize` 가 알렸다. 아이템은 그대로 든다
         kart._itemID       = hashed_string{};
         kart._itemHeldTime = 0.0f;
-        pushEvent( KartRaceEvent::Kind::ItemUsed, racer, -1, static_cast<int32>( pItem->_kind ), _raceTime );
+        pushEvent( KartRaceEvent::Kind::ItemUsed, racer, constant::invalid_index::kInt32, static_cast<int32>( pItem->_kind ), _raceTime );
         _eventBuffer.getLast()._itemID = pItem->_id;
 
         // 아이템은 공통 발사체다. 운동(속력 · 유도 · 반지름 · 수명 · 폭발 반지름)은 아이템의 탄 정의이고, 정의 id 는 반응을 찾는 아이템 id 다.
@@ -620,7 +621,7 @@ namespace sw
             if ( _listRacer[static_cast<size_t>( racer )]._bFinished == SW_FALSE )
                 return racer;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 KartRace::pickRedShellTarget( int32 owner ) const
@@ -646,7 +647,7 @@ namespace sw
         LockOnSelector selector;
         selector.setSettings( lockSettings );
         const uint64 picked = selector.pickBest( shooter._motor.getPosition(), shooter._motor.computeForward(), listCandidate );
-        return picked == 0 ? -1 : static_cast<int32>( picked - 1 );
+        return picked == 0 ? constant::invalid_index::kInt32 : static_cast<int32>( picked - 1 );
     }
 
     void KartRace::updateProjectiles( float32 deltaTime )
@@ -753,7 +754,7 @@ namespace sw
                 const bool bAnnounce = kart._place != 0 && _phase == MatchPhase::InProgress;
                 kart._place          = newPlace;
                 if ( bAnnounce )
-                    pushEvent( KartRaceEvent::Kind::PlaceChanged, _listPlaceOrder[static_cast<size_t>( place )], -1, newPlace, _raceTime );
+                    pushEvent( KartRaceEvent::Kind::PlaceChanged, _listPlaceOrder[static_cast<size_t>( place )], constant::invalid_index::kInt32, newPlace, _raceTime );
             }
         }
     }
@@ -812,11 +813,11 @@ namespace sw
                 continue;
             kart._bFinished   = SW_TRUE;
             kart._finishPlace = ++_finishedCount;
-            pushEvent( KartRaceEvent::Kind::Finished, racer, -1, kart._finishPlace, 0.0f );
+            pushEvent( KartRaceEvent::Kind::Finished, racer, constant::invalid_index::kInt32, kart._finishPlace, 0.0f );
         }
         _phase = MatchPhase::Ended;
         updatePlaces();
-        pushEvent( KartRaceEvent::Kind::RaceEnded, findRacerAtPlace( 1 ), -1, 0, _raceTime );
+        pushEvent( KartRaceEvent::Kind::RaceEnded, findRacerAtPlace( 1 ), constant::invalid_index::kInt32, 0, _raceTime );
     }
 
     const KartRacer* KartRace::findRacer( int32 racer ) const
@@ -827,7 +828,7 @@ namespace sw
     int32 KartRace::findRacerAtPlace( int32 place ) const
     {
         if ( place < 1 || place > static_cast<int32>( _listPlaceOrder.size() ) )
-            return -1;
+            return constant::invalid_index::kInt32;
         return _listPlaceOrder[static_cast<size_t>( place - 1 )];
     }
 
@@ -906,7 +907,7 @@ namespace sw
             return;
         if ( io.isReading() )
         {
-            _listPlaceOrder.assign( placeCount, -1 );
+            _listPlaceOrder.assign( placeCount, constant::invalid_index::kInt32 );
         }
         for ( int32& racer : _listPlaceOrder )
         {

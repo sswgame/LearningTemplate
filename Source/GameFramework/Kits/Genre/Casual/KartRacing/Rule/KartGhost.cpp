@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/FourCcUtil.h"
@@ -175,7 +176,7 @@ namespace sw
         , _pGhost{ nullptr }
         , _pTrack{ nullptr }
         , _frameIndex{ 0 }
-        , _lastBoostPad{ -1 }
+        , _lastBoostPad{ constant::invalid_index::kInt32 }
     {
     }
 
@@ -184,7 +185,7 @@ namespace sw
         _pGhost       = pGhost;
         _pTrack       = pTrack;
         _frameIndex   = 0;
-        _lastBoostPad = -1;
+        _lastBoostPad = constant::invalid_index::kInt32;
         _motor.setSettings( settings );
         _motor.setGround( pTrack );
         if ( pGhost != nullptr )

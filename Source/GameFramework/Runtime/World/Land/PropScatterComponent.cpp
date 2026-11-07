@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/World/Land/PropScatterComponent.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
@@ -49,10 +50,10 @@ namespace sw
             totalWeight += model._weight > 0.0f ? model._weight : 0.0f;
         }
         if ( totalWeight <= 0.0f )
-            return -1;
+            return constant::invalid_index::kInt32;
         // 누적 비중의 경계보다 작으면 그 모델 — 비중 0.45 · 0.35 · 0.2 면 0.45 · 0.8 이 경계다.
         float32 cumulative = 0.0f;
-        int32   lastIndex  = -1;
+        int32   lastIndex  = constant::invalid_index::kInt32;
         for ( int32 modelIndex = 0; modelIndex < static_cast<int32>( listModel.size() ); ++modelIndex )
         {
             const float32 weight = listModel[static_cast<size_t>( modelIndex )]._weight;

@@ -97,7 +97,7 @@ namespace sw
     {
         hashed_string    _buildID{};
         float3           _target{};
-        int2             _buildCell{ -1, -1 };
+        int2             _buildCell{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 };
         RTSUnitID        _targetUnit{};
         const FlowField* _pFlowField{ nullptr }; ///< 무리 이동에 쓴다. 월드가 빌려 준 흐름장이며 명령이 끝나면 돌려준다
         float32          _arriveRadius{ 0.0f };  ///< 무리 이동에 쓴다. 목표에서 이 거리 안이면 도착한 것으로 본다(모두가 한 점에 설 수는 없다)
@@ -141,8 +141,8 @@ namespace sw
         const RTSUnitDef*    _pDef{ nullptr };
         float3               _position{};
         float3               _rallyPoint{};
-        float3               _moveGoal{};     ///< 지금 다가가는 위치(경로를 다시 구할지 판단하는 기준)
-        int2                 _cell{ -1, -1 }; ///< 건물과 자원이 쓴다. 왼쪽 아래 셀이다
+        float3               _moveGoal{};                                                               ///< 지금 다가가는 위치(경로를 다시 구할지 판단하는 기준)
+        int2                 _cell{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 건물과 자원이 쓴다. 왼쪽 아래 셀이다
         RTSUnitID            _id{};
         RTSUnitID            _attackTarget{};   ///< 지금 공격하는 유닛(명령이나 자동 선택)
         RTSUnitID            _gatherTarget{};   ///< 채취하는 자원 또는 정제소
@@ -156,7 +156,7 @@ namespace sw
         float32              _productionTimer{ 0.0f };
         float32              _gatherTimer{ 0.0f };
         Countdown            _repathTimer{};
-        int32                _owner{ -1 }; ///< -1 이면 주인이 없다(자원)
+        int32                _owner{ constant::invalid_index::kInt32 }; ///< -1 이면 주인이 없다(자원)
         int32                _resourceLeft{ 0 };
         int32                _cargoAmount{ 0 };
         int32                _supplyReserved{ 0 }; ///< 건물이 쓴다. 생산 중인 유닛이 쓸 보급
@@ -214,7 +214,7 @@ namespace sw
         float3        _position{};
         RTSUnitID     _unit{};
         RTSUnitID     _other{}; ///< 죽음 이벤트에서 죽인 유닛
-        int32         _player{ -1 };
+        int32         _player{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::UnitCreated };
     };

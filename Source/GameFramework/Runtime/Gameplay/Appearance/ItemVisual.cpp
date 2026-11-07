@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -445,12 +446,12 @@ namespace sw
             if ( _listDamageStage[index]._name == name )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 ItemVisualDef::computeDamageStageIndex( float32 damage ) const
     {
-        int32 stageIndex = -1;
+        int32 stageIndex = constant::invalid_index::kInt32;
         for ( size_t index = 0; index < _listDamageStage.size(); ++index )
         {
             if ( _listDamageStage[index]._threshold <= damage )

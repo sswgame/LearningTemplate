@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Rig/RigInstance.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -176,7 +177,7 @@ namespace sw
             if ( _listTargetDef[index]._name == name )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void RigInstance::setExternalTarget( uint32 targetIndex, const RigTargetValue& value )
@@ -192,7 +193,7 @@ namespace sw
         const int32 bone = _listTargetBone[targetIndex];
         if ( bone == kExternalBone )
             return false;
-        outBone           = bone == kModelOriginBone ? -1 : bone;
+        outBone           = bone == kModelOriginBone ? constant::invalid_index::kInt32 : bone;
         outCombinedOffset = _listTargetOffset[targetIndex];
         return true;
     }

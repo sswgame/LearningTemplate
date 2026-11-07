@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDeathRestState.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -130,10 +131,10 @@ namespace sw
                                                     ItemStackList& outDrops )
     {
         if ( _pCatalog == nullptr || isSpawnAlive( spawnID ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         const MetroidvaniaEnemyDef* pEnemy = _pCatalog->findEnemy( enemyID );
         if ( pEnemy == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         MetroidvaniaKillRecord record;
         record._spawnID = spawnID;
         record._bBoss   = pEnemy->_bBoss ? SW_TRUE : SW_FALSE;

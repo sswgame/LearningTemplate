@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -135,9 +136,9 @@ namespace sw
     /** @brief 타일셋 내용의 규칙 위반 하나입니다(`TileSetContent::collectIssues`). 읽기는 이것을 오류로 남기고, 에디터는 그 브러시 · 규칙 옆에 보인다. */
     struct TileSetIssue
     {
-        string _message{};        ///< 영어 한 문장
-        int32  _brushIndex{ -1 }; ///< 문제가 난 브러시 번호(타일셋 전체의 문제면 -1)
-        int32  _ruleIndex{ -1 };  ///< 문제가 난 규칙 번호(브러시 자체 · 기본 모습이면 -1)
+        string _message{};                                     ///< 영어 한 문장
+        int32  _brushIndex{ constant::invalid_index::kInt32 }; ///< 문제가 난 브러시 번호(타일셋 전체의 문제면 -1)
+        int32  _ruleIndex{ constant::invalid_index::kInt32 };  ///< 문제가 난 규칙 번호(브러시 자체 · 기본 모습이면 -1)
     };
 
     /**

@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioMusicPlayer.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioMusic.h"
@@ -21,7 +22,7 @@ namespace sw
             startSegment = 0;
         _playback._segment        = startSegment;
         _playback._segmentStart   = voices.getMusicClock();
-        _playback._pendingSegment = -1;
+        _playback._pendingSegment = constant::invalid_index::kInt32;
         scheduleSegment( voices, startSegment, voices.getMusicClock(), fadeSeconds );
     }
 
@@ -41,8 +42,8 @@ namespace sw
     void AudioMusicPlayer::reset()
     {
         _playback._pDesc.reset();
-        _playback._segment        = -1;
-        _playback._pendingSegment = -1;
+        _playback._segment        = constant::invalid_index::kInt32;
+        _playback._pendingSegment = constant::invalid_index::kInt32;
     }
 
     uint64 AudioMusicPlayer::computeSyncFrame( uint64 now, AudioMusicSync sync ) const
@@ -168,7 +169,7 @@ namespace sw
         {
             _playback._segment        = _playback._pendingSegment;
             _playback._segmentStart   = _playback._pendingFrame;
-            _playback._pendingSegment = -1;
+            _playback._pendingSegment = constant::invalid_index::kInt32;
         }
 
         // 루프하지 않는 구간이다. 다음 구간이 있으면 끝에 연결하고, 없으면 끝나면 멈춘다.
@@ -180,7 +181,7 @@ namespace sw
                 if ( segment._next.empty() == false )
                     scheduleTransition( voices, segment._next, true );
                 else if ( now >= _playback._segmentStart + _playback._pDesc->computeSegmentFrames( static_cast<uint32>( _playback._segment ) ) )
-                    _playback._segment = -1;
+                    _playback._segment = constant::invalid_index::kInt32;
             }
         }
 

@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -37,8 +38,8 @@ namespace sw
     struct [[nodiscard]] GimmickStateLoad
     {
         GimmickStateMatch _match{ GimmickStateMatch::Mismatch };
-        int32             _changedNode{ -1 }; ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) -1
-        bool              _bApplied{ false }; ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        int32             _changedNode{ constant::invalid_index::kInt32 }; ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) -1
+        bool              _bApplied{ false };                              ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -47,10 +48,10 @@ namespace sw
     /** @brief 노드 출력이 바뀐 일 하나입니다(런타임 기믹 디버거가 읽는다 — `GimmickCircuit::collectRecentTransitions`). */
     struct GimmickOutputTransition
     {
-        uint32 _stepIndex{ 0 };  ///< 바뀐 스텝(그 스텝을 실행하기 전의 번호)
-        int32  _node{ -1 };      ///< 노드 순서 번호
-        uint32 _beforeBits{ 0 }; ///< 바뀌기 전 출력 비트
-        uint32 _afterBits{ 0 };  ///< 바뀐 뒤 출력 비트
+        uint32 _stepIndex{ 0 };                          ///< 바뀐 스텝(그 스텝을 실행하기 전의 번호)
+        int32  _node{ constant::invalid_index::kInt32 }; ///< 노드 순서 번호
+        uint32 _beforeBits{ 0 };                         ///< 바뀌기 전 출력 비트
+        uint32 _afterBits{ 0 };                          ///< 바뀐 뒤 출력 비트
     };
 } // namespace sw
 

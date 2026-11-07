@@ -54,6 +54,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetChallenge.h"
@@ -118,7 +119,7 @@ namespace sw
             Connected = 0,
             Disconnected
         };
-        int32               _connectionID{ -1 };
+        int32               _connectionID{ constant::invalid_index::kInt32 };
         NetDisconnectReason _reason{ NetDisconnectReason::None };
         Kind                _kind{ Kind::Connected };
     };
@@ -129,8 +130,8 @@ namespace sw
     /** @brief `connectAsync` 의 결과입니다. */
     struct NetConnectResult
     {
-        NetDisconnectReason _reason{ NetDisconnectReason::None }; ///< None 이면 연결됐다
-        int32               _clientIndex{ -1 };                   ///< 서버가 준 자기 번호(연결됐을 때)
+        NetDisconnectReason _reason{ NetDisconnectReason::None };            ///< None 이면 연결됐다
+        int32               _clientIndex{ constant::invalid_index::kInt32 }; ///< 서버가 준 자기 번호(연결됐을 때)
 
         bool isConnected() const { return _reason == NetDisconnectReason::None; }
     };
@@ -141,7 +142,7 @@ namespace sw
     /** @brief `NetInbound` 에 든 메시지 하나입니다. 바이트는 `NetInbound::_bytes` 의 [_offset, _offset + _size) 범위이고, 첫 바이트가 메시지 종류입니다. */
     struct NetInboundMessage
     {
-        int32          _connectionID{ -1 };
+        int32          _connectionID{ constant::invalid_index::kInt32 };
         int32          _offset{ 0 };
         int32          _size{ 0 };
         NetChannelType _channel{ NetChannelType::ReliableOrdered };
@@ -196,8 +197,8 @@ namespace sw
          */
         [[nodiscard]] virtual bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) = 0;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다(-1 이면 제외 없음). 반환값은 보낸 수입니다. */
-        virtual int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) = 0;
-        virtual void  disconnect( int32 connectionID )                                                         = 0;
+        virtual int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) = 0;
+        virtual void  disconnect( int32 connectionID )                                                                                      = 0;
         /** @brief 쌓인 연결 사건과 받은 메시지를 모두 꺼냅니다(`NetEndpoint::pollInbound` 와 같은 약속 — 사건이 메시지보다 앞에 온다). */
         virtual void               pollInbound( NetInbound& outInbound )                                        = 0;
         virtual bool               isServer() const                                                             = 0;
@@ -293,7 +294,7 @@ namespace sw
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) SW_EXCLUDES_LOCK( _mutex ) override;
+        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 @p outTable 에 더합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindTally`).
          * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 더한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
@@ -397,7 +398,7 @@ namespace sw
         {
             NetAddress _from{};
             float64    _nowSeconds{ 0.0 };
-            int32      _slotIndex{ -1 }; ///< 보낸 주소의 슬롯(없으면 무효)
+            int32      _slotIndex{ constant::invalid_index::kInt32 }; ///< 보낸 주소의 슬롯(없으면 무효)
             uint64     _valueA{ 0 };
             uint64     _valueB{ 0 };
         };

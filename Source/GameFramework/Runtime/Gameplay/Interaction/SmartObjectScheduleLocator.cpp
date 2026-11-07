@@ -5,6 +5,7 @@
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -150,7 +151,7 @@ namespace sw
 
         vector<Candidate> listCandidate;
         collectCandidates( request._objectKind, listCandidate );
-        int32   bestIndex    = -1;
+        int32   bestIndex    = constant::invalid_index::kInt32;
         float32 bestDistance = 0.0f;
         for ( int32 candidateIndex = 0; candidateIndex < static_cast<int32>( listCandidate.size() ); ++candidateIndex )
         {

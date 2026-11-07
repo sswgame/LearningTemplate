@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -37,15 +38,15 @@ namespace sw
         PROPERTY( Min = 0, Max = 255 )
         int32 _team{ 0 };
         PROPERTY( Min = -1, Max = 255 )
-        int32 _mechIndex{ -1 }; ///< 카탈로그 인덱스
+        int32 _mechIndex{ constant::invalid_index::kInt32 }; ///< 카탈로그 인덱스
         PROPERTY( Min = 0, Max = 255 )
         int32 _mode{ 0 };
         PROPERTY( Min = 0, Max = 4095 )
         int32 _magazineAmmo{ 0 }; ///< 지금 형태 첫 주무기의 탄창
         PROPERTY( Min = -1, Max = 255 )
-        int32 _lockTarget{ -1 };
+        int32 _lockTarget{ constant::invalid_index::kInt32 };
         PROPERTY( Min = -1, Max = 255 )
-        int32 _comboStage{ -1 };
+        int32 _comboStage{ constant::invalid_index::kInt32 };
         PROPERTY()
         uint32 _activeSkillMask{ 0 }; ///< 켜진 스킬 슬롯 비트
         PROPERTY()
@@ -69,7 +70,7 @@ namespace sw
         PROPERTY( Step = 0.01, Min = "-_arenaHalfSize, 0, -_arenaHalfSize", Max = "_arenaHalfSize, _ceiling, _arenaHalfSize" )
         float3 _position{};
         PROPERTY( Min = -1, Max = 255 )
-        int32 _owner{ -1 };
+        int32 _owner{ constant::invalid_index::kInt32 };
     };
 } // namespace sw
 
@@ -96,7 +97,7 @@ namespace sw
         PROPERTY( MaxCount = kMaxListSize )
         vector<MechProjectileSnapshot> _listProjectile{};
         PROPERTY( Min = -1, Max = 255 )
-        int32 _winningTeam{ -1 };
+        int32 _winningTeam{ constant::invalid_index::kInt32 };
         PROPERTY()
         MatchPhase _phase{ MatchPhase::Waiting };
     };

@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -99,8 +100,8 @@ namespace sw
         Countdown           _noiseRemaining{};
         float3              _vaultExit{};
         int32               _hookStage{ 0 }; ///< 걸린 횟수이다(이번 걸림의 단계)
-        int32               _activityTarget{ -1 };
-        int32               _participant{ -1 };
+        int32               _activityTarget{ constant::invalid_index::kInt32 };
+        int32               _participant{ constant::invalid_index::kInt32 };
         SurvivorState       _state{ SurvivorState::Healthy };
         SurvivorActivity    _activity{ SurvivorActivity::None };
         uint8               _bStruggling{ SW_FALSE };
@@ -126,9 +127,9 @@ namespace sw
         Countdown                        _stunRemaining{};
         Countdown                        _busyRemaining{}; ///< 판자 부수기, 넘기, 사물함 뒤지기 중이다
         Countdown                        _abilityCooldown{};
-        int32                            _carrying{ -1 };
-        int32                            _breakingPallet{ -1 };
-        int32                            _participant{ -1 };
+        int32                            _carrying{ constant::invalid_index::kInt32 };
+        int32                            _breakingPallet{ constant::invalid_index::kInt32 };
+        int32                            _participant{ constant::invalid_index::kInt32 };
         uint8                            _bVaulting{ SW_FALSE };
 
         bool canAct() const { return _stunRemaining.isActive() == false && _busyRemaining.isActive() == false; }
@@ -206,8 +207,8 @@ namespace sw
         };
         float3  _position{};
         float32 _value{ 0.0f };
-        int32   _actor{ -1 };
-        int32   _target{ -1 };
+        int32   _actor{ constant::invalid_index::kInt32 };
+        int32   _target{ constant::invalid_index::kInt32 };
         Kind    _kind{ Kind::Hit };
     };
 } // namespace sw

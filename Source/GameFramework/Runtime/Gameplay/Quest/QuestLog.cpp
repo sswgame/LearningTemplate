@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -202,7 +203,7 @@ namespace sw
         progress._bAwaitingChoice = SW_FALSE;
         progress._listCount.assign( pStage->_listObjective.size(), 0 );
         const bool bHasReward = pStage->_reward._items.isEmpty() == false || pStage->_reward._values.isEmpty() == false || pStage->_reward._listAction.empty() == false;
-        pushEvent( QuestEvent::Kind::StageEntered, progress, -1, 0, bHasReward ? &pStage->_reward : nullptr );
+        pushEvent( QuestEvent::Kind::StageEntered, progress, constant::invalid_index::kInt32, 0, bHasReward ? &pStage->_reward : nullptr );
         for ( const GameActionCall& call : pStage->_reward._listAction )
         {
             ActionContext context;

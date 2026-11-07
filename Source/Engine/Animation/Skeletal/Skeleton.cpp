@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -87,10 +88,10 @@ namespace sw
     {
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. 읽을 때 걸러 낸다.
         const int32 boneCount = static_cast<int32>( _listBone.size() );
-        if ( parentIndex < -1 || boneCount <= parentIndex )
+        if ( parentIndex < constant::invalid_index::kInt32 || boneCount <= parentIndex )
         {
             SW_LOG_ERROR_ID( "Skeleton.BoneRejectedParentIndex", "Bone '%#' rejected: parent index %# is not an already-added bone (bone count %#)", name.c_str(), parentIndex, boneCount );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
 
         SkeletonBone bone{};
@@ -137,7 +138,7 @@ namespace sw
             if ( _listBone[boneIndex]._name == name )
                 return static_cast<int32>( boneIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void Skeleton::clear()

@@ -19,6 +19,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
@@ -127,7 +128,7 @@ namespace sw
         [[nodiscard]] int32 findMethodIndex( uint64 callID ) const
         {
             const auto found = _mapCall.find( callID );
-            return found != _mapCall.end() ? found->second._methodIndex : -1;
+            return found != _mapCall.end() ? found->second._methodIndex : constant::invalid_index::kInt32;
         }
 
         /** @brief 기다리는 호출 수를 지표 `service_store_pending` 에 씁니다. 서비스가 틱마다 부릅니다. */

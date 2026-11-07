@@ -3,6 +3,7 @@
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -31,7 +32,7 @@ namespace sw
         float32          plantedDistance   = 0.0f;
         float32          plantedSeconds    = 0.0f;
         float3           previousPosition  = float3{};
-        int32            previousPlantBone = -1;
+        int32            previousPlantBone = constant::invalid_index::kInt32;
         for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
         {
             pose.setToReference( skeleton );

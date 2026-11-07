@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -254,7 +255,7 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _level{ 1 };
         PROPERTY( Name = "input", Min = -1 )
-        int32 _inputID{ -1 }; ///< `AbilityComponent::kNoInputID` 와 같은 값
+        int32 _inputID{ constant::invalid_index::kInt32 }; ///< `AbilityComponent::kNoInputID` 와 같은 값
     };
 } // namespace sw
 

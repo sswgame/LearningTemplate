@@ -3,6 +3,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -29,7 +30,7 @@ namespace sw
             static shared_ptr<const Skeleton> createImplicitSkeleton()
             {
                 shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
-                (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{} );
+                (void)skeleton->addBone( hashed_string( "root" ), constant::invalid_index::kInt32, BoneTransform{} );
                 skeleton->setPartial( true ); // 외형을 입기 전 · 전용 서버의 자리다 — 클립과 리더의 본이 없는 것이 정상이다
                 return skeleton;
             }
@@ -98,7 +99,7 @@ namespace sw
     {
         const shared_ptr<Mesh>& mesh = _owner.getMesh();
         if ( mesh == nullptr || mesh->getLODCount() <= 1 )
-            return -1;
+            return constant::invalid_index::kInt32;
         return static_cast<int32>( _owner.getLODIndex() );
     }
 
@@ -619,7 +620,7 @@ namespace sw
     int32 SkeletalMeshComponent::findMorphTargetIndex( const hashed_string& targetName ) const
     {
         const Mesh* pMesh = getRawMesh();
-        return ( pMesh != nullptr ) ? pMesh->findMorphTargetIndex( targetName ) : -1;
+        return ( pMesh != nullptr ) ? pMesh->findMorphTargetIndex( targetName ) : constant::invalid_index::kInt32;
     }
 
     void SkeletalMeshComponent::setMorphWeight( uint32 targetIndex, float32 weight )

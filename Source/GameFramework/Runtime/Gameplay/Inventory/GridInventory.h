@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -34,7 +35,7 @@ namespace sw
     struct GridItem
     {
         hashed_string _itemID{};
-        int32         _instanceID{ -1 }; ///< 놓을 때 받는 번호(다시 쓰지 않음)
+        int32         _instanceID{ constant::invalid_index::kInt32 }; ///< 놓을 때 받는 번호(다시 쓰지 않음)
         int32         _count{ 0 };
         int32         _x{ 0 };
         int32         _y{ 0 };
@@ -65,7 +66,7 @@ namespace sw
         void               clear();
 
         /** @brief 이 아이템을 이 위치와 방향으로 놓을 수 있는지 판정합니다. @p ignoreInstanceID 의 셀은 빈 것으로 취급합니다(옮기기에 씁니다). */
-        bool canPlace( const hashed_string& itemID, int32 x, int32 y, bool bRotated, int32 ignoreInstanceID = -1 ) const;
+        bool canPlace( const hashed_string& itemID, int32 x, int32 y, bool bRotated, int32 ignoreInstanceID = constant::invalid_index::kInt32 ) const;
         /** @brief 빈 위치를 찾습니다. 회전하지 않은 쪽을 먼저, 위에서 아래로, 왼쪽에서 오른쪽으로 찾습니다. */
         [[nodiscard]] bool findFreeSpot( const hashed_string& itemID, int32& outX, int32& outY, bool& outRotated ) const;
         /** @brief 이 위치에 새로 놓습니다. 겹치지 않으며, 받은 번호를 반환합니다. 못 놓으면 -1 입니다. */

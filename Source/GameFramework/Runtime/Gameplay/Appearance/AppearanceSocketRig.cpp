@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/CharacterDataCache.h"
@@ -25,7 +26,7 @@ namespace sw
                     if ( part._owner.empty() && part.isSkinnedFollower() )
                         return static_cast<int32>( partIndex );
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
         };
     } // namespace
@@ -82,7 +83,7 @@ namespace sw
         , _listUnitPart{}
         , _listPartUnit{}
     {
-        (void)_rigidBones.addBone( hashed_string( AppearanceSocketRigInternal::kRigidRootBone ), -1, float4x4::Identity );
+        (void)_rigidBones.addBone( hashed_string( AppearanceSocketRigInternal::kRigidRootBone ), constant::invalid_index::kInt32, float4x4::Identity );
     }
 
     bool AppearanceSocketRig::rebuild( const ResolvedAppearance& resolved, const CharacterBoneArray& bodyBindBones, IAppearanceSocketSource& source, string* pOutError )

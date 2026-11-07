@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -82,8 +83,8 @@ namespace sw
         };
         hashed_string _grade{};
         float32       _offset{ 0.0f }; ///< 누른 시각에서 판정 시각을 뺀 값이다(Miss 는 0)
-        int32         _noteIndex{ -1 };
-        int32         _lane{ -1 };
+        int32         _noteIndex{ constant::invalid_index::kInt32 };
+        int32         _lane{ constant::invalid_index::kInt32 };
         int32         _combo{ 0 };
         Kind          _kind{ Kind::Judged };
         uint8         _bTail{ SW_FALSE }; ///< 롱노트 끝 판정이다
@@ -172,7 +173,7 @@ namespace sw
         {
             vector<int32> _listNoteIndex{}; ///< 그 레인의 노트(시각 순)
             size_t        _cursor{ 0 };     ///< 아직 머리를 판정하지 않은 첫 노트이다
-            int32         _holdingNote{ -1 };
+            int32         _holdingNote{ constant::invalid_index::kInt32 };
         };
 
         float32                computeTargetTime( const RhythmNote& note ) const { return note._time + _settings._globalOffset; }

@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -15,6 +16,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 #include <algorithm>
 
 namespace sw
@@ -116,7 +118,7 @@ namespace sw
     int32 ReputationState::computeTierIndex( const FactionDef* pFaction, int32 value )
     {
         if ( pFaction == nullptr || pFaction->_listTier.empty() )
-            return -1;
+            return constant::invalid_index::kInt32;
         int32 tierIndex = 0;
         for ( size_t index = 0; index < pFaction->_listTier.size(); ++index )
         {

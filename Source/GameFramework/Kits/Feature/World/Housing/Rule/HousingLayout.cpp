@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -50,9 +51,9 @@ namespace sw
                     case HousingPartLayer::Structure:
                         return level + 1;
                     case HousingPartLayer::Furniture:
-                        return -1;
+                        return constant::invalid_index::kInt32;
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
 
             /** @brief @p layer 의 부품이 @p other 층의 칸과 겹칠 수 없으면 true 입니다(바닥끼리, 구조물 · 가구끼리). */

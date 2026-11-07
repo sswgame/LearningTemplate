@@ -3,6 +3,7 @@
 #include "Engine/Animation/Facial/LipSync.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -307,7 +308,7 @@ namespace sw
             if ( _listViseme[visemeIndex]._name == name )
                 return static_cast<int32>( visemeIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void VisemeTrack::sample( float32 time, vector<float32>& outListWeight ) const

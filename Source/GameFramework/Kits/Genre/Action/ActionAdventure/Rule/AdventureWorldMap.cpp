@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWorldMap.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -113,7 +115,7 @@ namespace sw
         const int32 index                = _catalog.findIndex( towerID );
         const bool  bTowerNotActivatable = index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Tower || _listActivated[static_cast<size_t>( index )] == SW_TRUE;
         if ( bTowerNotActivatable )
-            return -1;
+            return constant::invalid_index::kInt32;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         return areaGraph.discoverRegion( _catalog.getAt( static_cast<size_t>( index ) )._region );
     }

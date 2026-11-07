@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 
@@ -195,7 +196,7 @@ namespace sw
         const float3 end = from + ray._direction * best;
         if ( _blockers.raycast( from, end, _ownerID, blocker ) == false || isTarget( blocker._objectID ) )
             return bFound;
-        outHit._other    = -1;
+        outHit._other    = constant::invalid_index::kInt32;
         outHit._position = blocker._point;
         outHit._normal   = ray._direction * -1.0f; // 질의가 법선을 주지 않는다 — 튕기지 않는 탄이라 쓰지 않는다
         outHit._kind     = ProjectileHitKind::Surface;

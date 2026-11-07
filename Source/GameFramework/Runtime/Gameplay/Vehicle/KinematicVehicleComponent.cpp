@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Environment/Surface/SurfaceKind.h"
@@ -81,9 +82,9 @@ namespace sw
         , _motor{}
         , _ground{}
         , _listFrameEvent{}
-        , _driftIndex{ -1 }
-        , _boostIndex{ -1 }
-        , _jumpIndex{ -1 }
+        , _driftIndex{ constant::invalid_index::kInt32 }
+        , _boostIndex{ constant::invalid_index::kInt32 }
+        , _jumpIndex{ constant::invalid_index::kInt32 }
         , _bReady{ false }
     {
         setCanEverTick( true );
@@ -98,9 +99,9 @@ namespace sw
         _bReady                     = false;
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        _driftIndex                 = pPawn != nullptr ? pPawn->findButton( _driftButton ) : -1;
-        _boostIndex                 = pPawn != nullptr ? pPawn->findButton( _boostButton ) : -1;
-        _jumpIndex                  = pPawn != nullptr ? pPawn->findButton( _jumpButton ) : -1;
+        _driftIndex                 = pPawn != nullptr ? pPawn->findButton( _driftButton ) : constant::invalid_index::kInt32;
+        _boostIndex                 = pPawn != nullptr ? pPawn->findButton( _boostButton ) : constant::invalid_index::kInt32;
+        _jumpIndex                  = pPawn != nullptr ? pPawn->findButton( _jumpButton ) : constant::invalid_index::kInt32;
         const SceneComponent* pRoot = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pOwner == nullptr || pRoot == nullptr )
             return;

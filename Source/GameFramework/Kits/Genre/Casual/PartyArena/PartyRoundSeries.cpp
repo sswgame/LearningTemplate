@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -46,7 +47,7 @@ namespace sw
         if ( _series.initialize( _seriesSettings ) == false || _series.start( playerCount ) == false )
             return false;
         _eventBuffer.clear();
-        pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, 0, 0 );
+        pushEvent( PartySeriesEvent::Kind::RoundStarted, constant::invalid_index::kInt32, 0, 0 );
         return true;
     }
 
@@ -69,7 +70,7 @@ namespace sw
             pushEvent( PartySeriesEvent::Kind::SeriesWon, getWinner(), getTotal( getWinner() ), 0 );
             return true;
         }
-        pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, getRoundNumber(), 0 );
+        pushEvent( PartySeriesEvent::Kind::RoundStarted, constant::invalid_index::kInt32, getRoundNumber(), 0 );
         return true;
     }
 

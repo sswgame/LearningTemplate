@@ -27,6 +27,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -152,7 +153,7 @@ namespace sw
 
         struct Request
         {
-            int32  _connectionID{ -1 };
+            int32  _connectionID{ constant::invalid_index::kInt32 };
             uint32 _netID{ 0 };
         };
 

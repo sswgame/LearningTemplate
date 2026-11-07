@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
@@ -282,17 +283,17 @@ namespace sw
         if ( pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "ActionRoom.MonsterNoMonsterCatalogRegistered", "Monster '%#': no MonsterCatalog is registered as a game service - the action room does not spawn it", monsterID.c_str() );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         const MonsterDef* pFound = pCatalog->findMonster( monsterID );
         if ( pFound == nullptr )
         {
             SW_LOG_ERROR_ID( "Action.RoomMonsterNotInCatalog", "Monster '%#' is not in the monster catalog - the action room does not spawn it", monsterID.c_str() );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         vector<ResolvedShot> listShot;
         if ( ActionRoomInternal::resolveShots( *pFound, listShot ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         _listMonsterDef.push_back( *pFound );
         _listMonsterShot.push_back( std::move( listShot ) );
         return static_cast<int32>( _listMonsterDef.size() - 1 );

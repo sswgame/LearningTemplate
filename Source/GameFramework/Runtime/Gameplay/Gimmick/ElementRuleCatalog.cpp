@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Content/AssetID.h"
@@ -60,7 +61,7 @@ namespace sw
         if ( existing >= 0 )
             return existing;
         if ( static_cast<int32>( _listFlag.size() ) >= kMaxFlagCount )
-            return -1;
+            return constant::invalid_index::kInt32;
         _listFlag.push_back( id );
         return static_cast<int32>( _listFlag.size() ) - 1;
     }
@@ -68,14 +69,14 @@ namespace sw
     int32 ElementRuleCatalog::addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag )
     {
         if ( findMaterial( id ) >= 0 || static_cast<int32>( _listMaterial.size() ) >= kMaxMaterialCount )
-            return -1;
+            return constant::invalid_index::kInt32;
         ElementMaterialDef material;
         material._id = id;
         for ( const hashed_string& flagName : listFlag )
         {
             const int32 flag = findFlag( flagName );
             if ( flag < 0 )
-                return -1;
+                return constant::invalid_index::kInt32;
             material._flags |= 1u << static_cast<uint32>( flag );
         }
         _listMaterial.push_back( material );
@@ -102,7 +103,7 @@ namespace sw
     int32 ElementRuleCatalog::addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps )
     {
         if ( findStatus( id ) >= 0 || static_cast<int32>( _listStatus.size() ) >= kMaxStatusCount )
-            return -1;
+            return constant::invalid_index::kInt32;
         ElementStatusDef status;
         status._id    = id;
         status._kind  = kind;
@@ -140,7 +141,7 @@ namespace sw
             if ( _listFlag[index] == id )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 ElementRuleCatalog::findMaterial( const hashed_string& id ) const
@@ -150,7 +151,7 @@ namespace sw
             if ( _listMaterial[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 ElementRuleCatalog::findStatus( const hashed_string& id ) const
@@ -160,7 +161,7 @@ namespace sw
             if ( _listStatus[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 ElementRuleCatalog::findStimulus( const hashed_string& id ) const
@@ -170,7 +171,7 @@ namespace sw
             if ( _listStimulus[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool ElementRuleCatalog::hasFlag( int32 material, int32 flag ) const
@@ -203,7 +204,7 @@ namespace sw
     bool ElementRuleCatalog::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleCatalog::*pFind )( const hashed_string& ) const,
                                         int32& outIndex, string_view sourceName ) const
     {
-        outIndex = -1;
+        outIndex = constant::invalid_index::kInt32;
         if ( name.empty() ) // 적지 않으면 "없음"(-1)
             return true;
         outIndex = ( this->*pFind )( name );

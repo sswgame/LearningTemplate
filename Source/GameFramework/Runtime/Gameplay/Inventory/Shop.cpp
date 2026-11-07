@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -31,7 +32,7 @@ namespace sw
                     if ( runtime._listSaturatedItem[index] == itemID )
                         return static_cast<int32>( index );
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
         };
     } // namespace
@@ -392,10 +393,10 @@ namespace sw
         const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         const int32 stockIndex = findStockIndex( *pShop, itemID );
         if ( stockIndex < 0 )
-            return -1;
+            return constant::invalid_index::kInt32;
         const int32 basePrice = computeBasePrice( pShop->_listStock[static_cast<size_t>( stockIndex )] );
         return ShopInternal::roundPrice( static_cast<float32>( basePrice ) * pShop->_buyMultiplier * pRuntime->_buyModifier );
     }
@@ -468,7 +469,7 @@ namespace sw
             if ( shop._listStock[index]._itemID == itemID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 ShopState::computeBasePrice( const ShopStockDef& stock ) const

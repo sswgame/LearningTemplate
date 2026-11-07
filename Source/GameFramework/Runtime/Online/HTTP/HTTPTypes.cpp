@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -28,7 +29,7 @@ namespace sw
             static int32 findHexValue( utf8 ch )
             {
                 uint32 value = 0;
-                return HexDigitUtil::tryParseDigit( ch, value ) ? static_cast<int32>( value ) : -1;
+                return HexDigitUtil::tryParseDigit( ch, value ) ? static_cast<int32>( value ) : constant::invalid_index::kInt32;
             }
 
             /** @brief @p bytes 에서 "\r\n" 의 위치입니다(없으면 npos). */
@@ -65,7 +66,7 @@ namespace sw
                 int64 value = 0;
                 for ( const utf8 ch : text )
                 {
-                    const int32 digit = base == 16 ? findHexValue( ch ) : ( '0' <= ch && ch <= '9' ? ch - '0' : -1 );
+                    const int32 digit = base == 16 ? findHexValue( ch ) : ( '0' <= ch && ch <= '9' ? ch - '0' : constant::invalid_index::kInt32 );
                     if ( digit < 0 )
                         return false;
                     value = value * base + digit;

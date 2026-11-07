@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -19,7 +20,7 @@ namespace sw
         , _listSecretPending{}
         , _elapsed{ 0.0f }
         , _lives{ 0 }
-        , _checkpointIndex{ -1 }
+        , _checkpointIndex{ constant::invalid_index::kInt32 }
         , _hitCount{ 0 }
         , _deathCount{ 0 }
         , _state{ ActionStageState::NotStarted }
@@ -45,7 +46,7 @@ namespace sw
         _listSecretPending.clear();
         _elapsed         = 0.0f;
         _lives           = _pStage->_lives;
-        _checkpointIndex = -1;
+        _checkpointIndex = constant::invalid_index::kInt32;
         _hitCount        = 0;
         _deathCount      = 0;
         _state           = ActionStageState::Playing;

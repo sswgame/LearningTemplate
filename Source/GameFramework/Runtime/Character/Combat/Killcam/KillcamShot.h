@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -108,8 +109,8 @@ namespace sw
     {
         float3       _position{};
         float3       _lookAt{};
-        float3       _bullet{};       ///< 연출 속 탄의 자리
-        int32        _hitIndex{ -1 }; ///< 멈춘(또는 다음) 명중 번호
+        float3       _bullet{};                                    ///< 연출 속 탄의 자리
+        int32        _hitIndex{ constant::invalid_index::kInt32 }; ///< 멈춘(또는 다음) 명중 번호
         KillcamPhase _phase{ KillcamPhase::Follow };
     };
 

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -866,7 +867,7 @@ namespace sw
         if ( preloadClip( desc._clipName ) == false )
         {
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _animationSetPath.c_str() );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         LayerState layer{};
         layer._desc = desc;
@@ -1246,7 +1247,7 @@ namespace sw
         else
         {
             layer._listBoneWeight.assign( boneCount, layer._desc._maskRootBone.empty() ? 1.0f : 0.0f );
-            const int32 maskRoot = layer._desc._maskRootBone.empty() ? -1 : skeleton.findBoneIndex( layer._desc._maskRootBone );
+            const int32 maskRoot = layer._desc._maskRootBone.empty() ? constant::invalid_index::kInt32 : skeleton.findBoneIndex( layer._desc._maskRootBone );
             if ( layer._desc._maskRootBone.empty() == false && maskRoot < 0 )
                 SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerMaskBone", "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
             // 부모가 앞에 있으므로 한 번 훑으면 마스크 본의 자손이 모두 1 이 된다.

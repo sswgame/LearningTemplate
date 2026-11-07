@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
@@ -67,7 +68,7 @@ namespace sw
         vector<uint8>           _decompressScratch{}; ///< 받은 봉투를 푼 본문.
         NetAddress              _remote{};
         StreamConnectionHandle  _handle{};
-        atomic<int64>           _roundTripNanoseconds{ -1 };
+        atomic<int64>           _roundTripNanoseconds{ constant::invalid_index::kInt64 };
         atomic<int32>           _pendingBytes{ 0 };                      ///< 큐에 쌓였지만 아직 pump 가 넘기지 않은 본문 바이트.
         StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 엔드포인트가 연결을 끊은 이유(ProtocolError, SendQueueOverflow, SecurityFailure). 전송이 알려 주는 이유보다 우선한다.
         uint8                   _bAccepted{ SW_FALSE };
@@ -460,7 +461,7 @@ namespace sw
     float64 StreamMessageEndpoint::getRoundTripSeconds( StreamConnectionHandle handle ) const
     {
         const shared_ptr<Connection> connection  = findConnection( handle );
-        const int64                  nanoseconds = connection != nullptr ? connection->_roundTripNanoseconds.load( std::memory_order_relaxed ) : -1;
+        const int64                  nanoseconds = connection != nullptr ? connection->_roundTripNanoseconds.load( std::memory_order_relaxed ) : constant::invalid_index::kInt64;
         return nanoseconds >= 0 ? static_cast<float64>( nanoseconds ) * 1.0e-9 : -1.0;
     }
 

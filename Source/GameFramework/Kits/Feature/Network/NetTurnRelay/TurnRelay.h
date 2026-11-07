@@ -16,6 +16,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/SecureUtil.h"
@@ -79,9 +80,9 @@ namespace sw
     /** @brief 방의 자리 하나입니다. */
     struct TurnSeat
     {
-        uint32 _token{ 0 };           ///< 다시 들어올 때 내는 값. 서버가 정한다
-        int32  _connectionID{ -1 };   ///< -1이면 끊긴 상태이다. 자리는 남는다
-        int32  _sentActionCount{ 0 }; ///< 서버가 이 자리의 연결에 보낸 행동 수. 그다음 행동부터 이어서 보낸다
+        uint32 _token{ 0 };                                      ///< 다시 들어올 때 내는 값. 서버가 정한다
+        int32  _connectionID{ constant::invalid_index::kInt32 }; ///< -1이면 끊긴 상태이다. 자리는 남는다
+        int32  _sentActionCount{ 0 };                            ///< 서버가 이 자리의 연결에 보낸 행동 수. 그다음 행동부터 이어서 보낸다
         uint8  _bTaken{ SW_FALSE };
     };
 } // namespace sw
@@ -92,7 +93,7 @@ namespace sw
     struct TurnAction
     {
         vector<uint8> _buffer{};
-        int32         _seat{ -1 };
+        int32         _seat{ constant::invalid_index::kInt32 };
     };
 } // namespace sw
 
@@ -158,8 +159,8 @@ namespace sw
         };
         vector<uint8>    _buffer{};
         uint32           _roomID{ 0 };
-        int32            _seat{ -1 };
-        int32            _index{ -1 };
+        int32            _seat{ constant::invalid_index::kInt32 };
+        int32            _index{ constant::invalid_index::kInt32 };
         TurnRejectReason _reason{ TurnRejectReason::NotYourTurn };
         Kind             _kind{ Kind::Joined };
     };
@@ -216,7 +217,7 @@ namespace sw
         struct PendingMessage
         {
             vector<uint8> _buffer{};
-            int32         _connectionID{ -1 };
+            int32         _connectionID{ constant::invalid_index::kInt32 };
         };
 
         TurnRoom*          findRoomMutable( uint32 roomID );
@@ -265,7 +266,7 @@ namespace sw
 
         void initialize( INetPeers* pHost );
         /** @brief 방에 들어갑니다. 자리가 -1이면 빈 자리 어디든 받습니다. 전에 받은 토큰이 있으면 그 자리로 돌아갑니다. 다른 방이면 지난 방의 행동 · 토큰 · 자리 · 시작 표시를 잊습니다. */
-        void join( uint32 roomID, int32 seat = -1 );
+        void join( uint32 roomID, int32 seat = constant::invalid_index::kInt32 );
         /** @brief 행동을 보내고 행동 번호를 반환합니다. 거절 알림에 이 번호가 붙습니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 -1 을 반환합니다. */
         int32 submitAction( const vector<uint8>& buffer );
         // 표의 메시지 — 클라이언트가 받는 메시지는 입장, 적용, 거절, 시작, 거부이다. 모두 방 id 로 시작한다

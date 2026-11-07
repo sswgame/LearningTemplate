@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -558,7 +559,7 @@ namespace sw
             if ( _listDataLayer[layerIndex]._name == name )
                 return static_cast<int32>( layerIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool TileMapXMLData::addDataLayer( string_view name, int32 defaultValue )
@@ -615,7 +616,7 @@ namespace sw
 
     bool TileMapXMLData::mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const
     {
-        vector<int32> listPaletteToBrush( _listPaletteName.size(), -1 );
+        vector<int32> listPaletteToBrush( _listPaletteName.size(), constant::invalid_index::kInt32 );
         bool          bAllKnown = true;
         for ( size_t paletteIndex = 0; paletteIndex < _listPaletteName.size(); ++paletteIndex )
         {

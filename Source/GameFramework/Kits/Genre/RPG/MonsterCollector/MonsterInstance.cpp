@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -50,13 +51,13 @@ namespace sw
     int32 MonsterInstance::findMoveSlot( const hashed_string& moveID ) const
     {
         if ( moveID.empty() )
-            return -1;
+            return constant::invalid_index::kInt32;
         for ( int32 slot = 0; slot < kMoveSlotCount; ++slot )
         {
             if ( _arrMove[slot]._moveID == moveID )
                 return slot;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void MonsterInstance::serializeState( StateIO& io )
@@ -252,7 +253,7 @@ namespace sw
         const MonsterMoveDef* pMove = catalog.findMove( moveID );
         if ( pMove == nullptr || inoutMonster.findMoveSlot( moveID ) >= 0 )
             return false;
-        int32 targetSlot = -1;
+        int32 targetSlot = constant::invalid_index::kInt32;
         for ( int32 slot = 0; slot < MonsterInstance::kMoveSlotCount; ++slot )
         {
             if ( inoutMonster._arrMove[slot].isEmpty() )

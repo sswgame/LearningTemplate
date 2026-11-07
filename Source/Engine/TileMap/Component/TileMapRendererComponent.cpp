@@ -2,6 +2,7 @@
 
 #include "Engine/TileMap/Component/TileMapRendererComponent.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
@@ -363,7 +364,7 @@ namespace sw
     int32 TileMapRendererComponent::getDisplayedCell( int32 x, int32 y ) const
     {
         const TileVisual* pVisual = getTileSet().resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
-        return ( pVisual != nullptr ) ? pVisual->computeCellAt( _elapsedSeconds ) : -1;
+        return ( pVisual != nullptr ) ? pVisual->computeCellAt( _elapsedSeconds ) : constant::invalid_index::kInt32;
     }
 
     float3 TileMapRendererComponent::computeCellCenter( int32 x, int32 y ) const

@@ -27,6 +27,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -404,7 +405,7 @@ namespace sw
         {
             unique_ptr<NetEmulationTransport> _pEmulation{};
             NetAddress                        _address{};
-            int32                             _worldIndex{ -1 };
+            int32                             _worldIndex{ constant::invalid_index::kInt32 };
         };
 
         Link* createLink( int32 worldIndex );

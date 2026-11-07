@@ -3,6 +3,7 @@
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 
@@ -173,7 +174,7 @@ namespace sw
             if ( _listChannel[channelIndex] == channel )
                 return static_cast<int32>( channelIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool LiveLinkFaceMapping::loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -281,7 +282,7 @@ namespace sw
 
     bool RigBindContext::findBone( const hashed_string& name, uint32& outBone ) const
     {
-        const int32 boneIndex = ( _pSkeleton != nullptr ) ? _pSkeleton->findBoneIndex( name ) : -1;
+        const int32 boneIndex = ( _pSkeleton != nullptr ) ? _pSkeleton->findBoneIndex( name ) : constant::invalid_index::kInt32;
         if ( boneIndex < 0 )
         {
             SW_LOG_ERROR_ID( "Rig.RigUnknownBone", "Rig '%#': unknown bone '%#'", _label, name.c_str() );
@@ -293,7 +294,7 @@ namespace sw
 
     bool RigBindContext::findTarget( const hashed_string& name, uint32& outTarget ) const
     {
-        const int32 targetIndex = ( _pInstance != nullptr ) ? _pInstance->findTargetIndex( name ) : -1;
+        const int32 targetIndex = ( _pInstance != nullptr ) ? _pInstance->findTargetIndex( name ) : constant::invalid_index::kInt32;
         if ( targetIndex < 0 )
         {
             SW_LOG_ERROR_ID( "Rig.RigUnknownTarget", "Rig '%#': unknown target '%#'", _label, name.c_str() );

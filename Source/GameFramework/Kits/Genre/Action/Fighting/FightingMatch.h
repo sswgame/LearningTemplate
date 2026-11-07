@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -143,7 +144,7 @@ namespace sw
         };
 
         hashed_string _moveID{};
-        int32         _player{ -1 }; ///< 이벤트와 관련된 플레이어(공격하거나 발동한 쪽)
+        int32         _player{ constant::invalid_index::kInt32 }; ///< 이벤트와 관련된 플레이어(공격하거나 발동한 쪽)
         int32         _value{ 0 };
         Kind          _kind{ Kind::MoveStarted };
     };
@@ -192,13 +193,13 @@ namespace sw
         PROPERTY( Min = 0 )
         int32 _hitstop{ 0 }; ///< 맞은 쪽의 히트스톱(때린 쪽은 타임라인이 가지고 있다)
         PROPERTY( Min = -1 )
-        int32 _moveIndex{ -1 }; ///< 지금 쓰는 기술(`_pDef->_listMove` 인덱스)
+        int32 _moveIndex{ constant::invalid_index::kInt32 }; ///< 지금 쓰는 기술(`_pDef->_listMove` 인덱스)
         PROPERTY( Min = -1 )
-        int32 _bufferedMove{ -1 };
+        int32 _bufferedMove{ constant::invalid_index::kInt32 };
         PROPERTY( Min = 0 )
         int32 _bufferedAge{ 0 };
         PROPERTY( Min = -1 )
-        int32 _stanceIndex{ -1 };
+        int32 _stanceIndex{ constant::invalid_index::kInt32 };
         PROPERTY( Min = 0 )
         int32 _stanceFrames{ 0 };
         PROPERTY( Min = 0 )

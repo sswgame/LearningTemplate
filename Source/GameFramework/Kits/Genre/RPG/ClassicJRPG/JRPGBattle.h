@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -154,8 +155,8 @@ namespace sw
             Defeat
         };
         hashed_string _id{};
-        int32         _actor{ -1 };
-        int32         _target{ -1 };
+        int32         _actor{ constant::invalid_index::kInt32 };
+        int32         _target{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::Attack };
         bool          _bEnemyActor{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

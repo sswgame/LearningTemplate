@@ -4,6 +4,7 @@
 
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
@@ -188,8 +189,8 @@ namespace sw
                 outListError.push_back( where + ": unknown target node '" + wire._toNode.c_str() + "'" );
             const GimmickNodeKind* pFromKind = fromNode >= 0 ? _listNode[static_cast<size_t>( fromNode )]._pKind : nullptr;
             const GimmickNodeKind* pToKind   = toNode >= 0 ? _listNode[static_cast<size_t>( toNode )]._pKind : nullptr;
-            const int32            fromPort  = pFromKind != nullptr ? pFromKind->findOutput( wire._fromPort ) : -1;
-            const int32            toPort    = pToKind != nullptr ? pToKind->findInput( wire._toPort ) : -1;
+            const int32            fromPort  = pFromKind != nullptr ? pFromKind->findOutput( wire._fromPort ) : constant::invalid_index::kInt32;
+            const int32            toPort    = pToKind != nullptr ? pToKind->findInput( wire._toPort ) : constant::invalid_index::kInt32;
             if ( pFromKind != nullptr && fromPort < 0 )
                 outListError.push_back( where + ": unknown output '" + wire._fromPort.c_str() + "' (outputs: " + Internal::joinNames( pFromKind->_listOutput ) + ")" );
             if ( pToKind != nullptr && toPort < 0 )
@@ -437,7 +438,7 @@ namespace sw
             if ( _listNode[nodeIndex]._id == id )
                 return static_cast<int32>( nodeIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     float32 GimmickCircuit::getActuatorValue( int32 node ) const
@@ -544,12 +545,12 @@ namespace sw
     {
         // 1) 짝짓기: 저장 노드마다 같은 id 의 회로 노드를 찾는다. 노드 순서가 그대로인 흔한 경우는 같은 번호를 먼저 본다.
         GimmickStateLoad result;
-        vector<int32>    listSavedIndex( _listNode.size(), -1 ); // 회로 노드마다 짝인 저장 노드 번호
+        vector<int32>    listSavedIndex( _listNode.size(), constant::invalid_index::kInt32 ); // 회로 노드마다 짝인 저장 노드 번호
         uint32           droppedCount = 0;
         for ( size_t savedIndex = 0; savedIndex < state._listNode.size(); ++savedIndex )
         {
             const GimmickNodeState& saved     = state._listNode[savedIndex];
-            int32                   nodeIndex = -1;
+            int32                   nodeIndex = constant::invalid_index::kInt32;
             const bool              bSameSlot = savedIndex < _listNode.size() && _listNode[savedIndex]._id.getHash() == saved._id;
             if ( bSameSlot )
             {

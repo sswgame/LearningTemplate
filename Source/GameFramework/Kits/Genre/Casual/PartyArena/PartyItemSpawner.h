@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -89,7 +90,7 @@ namespace sw
         };
         hashed_string _itemID{};
         int32         _serial{ 0 };
-        int32         _player{ -1 };
+        int32         _player{ constant::invalid_index::kInt32 };
         Kind          _kind{ Kind::Spawned };
     };
 } // namespace sw

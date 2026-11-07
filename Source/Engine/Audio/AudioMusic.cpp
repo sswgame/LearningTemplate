@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/AudioMusic.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Content/AssetID.h"
@@ -121,7 +123,7 @@ namespace sw
             if ( _listSegment[segmentIndex]._name == name )
                 return static_cast<int32>( segmentIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     const AudioMusicTransitionDef* AudioMusicDef::findTransition( const hashed_string& from, const hashed_string& to ) const

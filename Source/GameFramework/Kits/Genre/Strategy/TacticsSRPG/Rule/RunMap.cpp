@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -142,11 +143,11 @@ namespace sw
         _columnCount = settings._columnCount;
         _current     = kStart;
         _listNode.clear();
-        _listCell.assign( static_cast<size_t>( _floorCount * _columnCount ), -1 );
+        _listCell.assign( static_cast<size_t>( _floorCount * _columnCount ), constant::invalid_index::kInt32 );
 
         // 길을 아래에서 위로 긋는다. 마지막 층 바로 아래까지 긋는다. 첫 두 길은 서로 다른 열에서 시작한다.
         const int32 lastFloor  = _floorCount - 1;
-        int32       firstStart = -1;
+        int32       firstStart = constant::invalid_index::kInt32;
         for ( int32 pathIndex = 0; pathIndex < settings._pathCount; ++pathIndex )
         {
             int32      column               = random.nextInt( 0, _columnCount - 1 );
@@ -215,7 +216,7 @@ namespace sw
         {
             for ( int32 column = 0; column < _columnCount; ++column )
             {
-                const int32 index = _listCell.empty() ? -1 : _listCell[static_cast<size_t>( column )];
+                const int32 index = _listCell.empty() ? constant::invalid_index::kInt32 : _listCell[static_cast<size_t>( column )];
                 if ( index >= 0 )
                     outListNode.push_back( index );
             }
@@ -269,7 +270,7 @@ namespace sw
         // 칸의 번호는 고를 수 있는 노드가 되어 `_current` 로 들어간다. 노드 밖이면 다음 조회가 범위 밖을 읽는다.
         for ( const int32 cell : _listCell )
         {
-            io.check( -1 <= cell && cell < nodeCount );
+            io.check( constant::invalid_index::kInt32 <= cell && cell < nodeCount );
         }
         for ( const RunNode& node : _listNode )
         {

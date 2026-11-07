@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -113,14 +115,14 @@ namespace sw
             if ( _listNode[index]._screen == screen && _listNode[index]._widget == widget )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void UIAccessibilityTree::appendTree( const WidgetTree& tree, uint32 screen, WidgetID focusedWidget, UIAccessibilitySnapshot& inoutSnapshot )
     {
         Widget* pRoot = tree.getRoot();
         if ( pRoot != nullptr )
-            UIAccessibilityTreeInternal::visit( *pRoot, -1, screen, focusedWidget, inoutSnapshot );
+            UIAccessibilityTreeInternal::visit( *pRoot, constant::invalid_index::kInt32, screen, focusedWidget, inoutSnapshot );
     }
 
     string UIAccessibilityTree::collectLabel( Widget& root )

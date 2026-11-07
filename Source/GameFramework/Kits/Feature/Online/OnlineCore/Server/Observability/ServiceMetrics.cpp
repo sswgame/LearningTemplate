@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Observability/ServiceMetrics.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"
@@ -48,7 +49,7 @@ namespace sw
         , _pendingPeakCount{ 0 }
         , _methodCount{ 0 }
         , _resultCount{ 0 }
-        , _errorResultBase{ -1 }
+        , _errorResultBase{ constant::invalid_index::kInt32 }
     {
     }
 
@@ -69,7 +70,7 @@ namespace sw
             if ( ServiceMetricsInternal::kArrErrorLabel[index]._errorCode == errorCode )
                 labelIndex = index;
         }
-        observeRequest( methodIndex, _errorResultBase >= 0 ? _errorResultBase + labelIndex : -1, receivedNanoseconds );
+        observeRequest( methodIndex, _errorResultBase >= 0 ? _errorResultBase + labelIndex : constant::invalid_index::kInt32, receivedNanoseconds );
     }
 
     void ServiceMetrics::initializeWithNames( MetricRegistry* pRegistry, const utf8* pServiceName, const vector<string>& listMethodName, const vector<string>& listResultName )
@@ -81,7 +82,7 @@ namespace sw
         _pendingPeakCount = 0;
         _methodCount      = 0;
         _resultCount      = 0;
-        _errorResultBase  = -1;
+        _errorResultBase  = constant::invalid_index::kInt32;
         if ( pRegistry == nullptr )
             return;
         _methodCount                    = static_cast<int32>( listMethodName.size() );

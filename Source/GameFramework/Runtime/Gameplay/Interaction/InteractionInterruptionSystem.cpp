@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionInterruptionSystem.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -43,7 +45,7 @@ namespace sw
     int32 InteractionInterruptionSystem::resolveNPC( const GameObject& target ) const
     {
         if ( _pSchedule == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         if ( _pResolver != nullptr )
             return _pResolver( *_pSchedule, target );
         return _pSchedule->findNPCIndex( target.getName() );

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -71,7 +72,7 @@ namespace sw
                 const int32 buildingCount = static_cast<int32>( listBuilding.size() );
                 for ( const CityTile& tile : listTile )
                 {
-                    const bool bIndexValid = -1 <= tile._buildingIndex && tile._buildingIndex < buildingCount && ( tile._buildingIndex < 0 || listBuilding[static_cast<size_t>( tile._buildingIndex )]._bAlive != SW_FALSE );
+                    const bool bIndexValid = constant::invalid_index::kInt32 <= tile._buildingIndex && tile._buildingIndex < buildingCount && ( tile._buildingIndex < 0 || listBuilding[static_cast<size_t>( tile._buildingIndex )]._bAlive != SW_FALSE );
                     // 도로 위에는 건물을 짓지 못한다(`placeBuilding`).
                     const bool bRoadValid = tile._bRoad <= SW_TRUE && -1 <= tile._roadComponent && ( tile._bRoad == SW_FALSE || tile._buildingIndex < 0 );
                     if ( bIndexValid == false || bRoadValid == false )
@@ -234,7 +235,7 @@ namespace sw
     int32 CitySimulation::getRoadComponent( const int2& tile ) const
     {
         const CityTile* pTile = findTile( tile._x, tile._y );
-        return pTile != nullptr ? pTile->_roadComponent : -1;
+        return pTile != nullptr ? pTile->_roadComponent : constant::invalid_index::kInt32;
     }
 
     // ------------------------------------------------------------------------------
@@ -309,7 +310,7 @@ namespace sw
         (void)_land.claimRect( x, y, x + pDef->_size - 1, y + pDef->_size - 1, true ); // 위에서 타일마다 확인했다
 
         // 허문 슬롯을 다시 쓴다. 타일이 가리키는 번호가 바뀌지 않도록 목록에서 지우지 않는다.
-        int32 index = -1;
+        int32 index = constant::invalid_index::kInt32;
         for ( size_t buildingIndex = 0; buildingIndex < _listBuilding.size(); ++buildingIndex )
         {
             if ( _listBuilding[buildingIndex]._bAlive == SW_FALSE )
@@ -364,7 +365,7 @@ namespace sw
         {
             for ( int32 dx = 0; dx < building._pDef->_size; ++dx )
             {
-                _listTile[static_cast<size_t>( _topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex = -1;
+                _listTile[static_cast<size_t>( _topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex = constant::invalid_index::kInt32;
             }
         }
         _land.releaseRect( building._origin._x, building._origin._y, building._origin._x + building._pDef->_size - 1, building._origin._y + building._pDef->_size - 1 );
@@ -411,7 +412,7 @@ namespace sw
     {
         for ( CityTile& tile : _listTile )
         {
-            tile._roadComponent = -1;
+            tile._roadComponent = constant::invalid_index::kInt32;
         }
         // 도로 조각마다 너비 우선 탐색을 한다. 큐는 길 찾기와 같은 재사용 스크래치를 쓰고, 조각 번호가 타일의 "봤다" 표시를 겸한다.
         int32 component = 0;
@@ -424,7 +425,7 @@ namespace sw
                     continue;
                 seed._roadComponent = component;
                 _roadSearch.begin( _topology.getCellCount() );
-                _roadSearch.visit( _topology.toIndex( x, y ), -1 );
+                _roadSearch.visit( _topology.toIndex( x, y ), constant::invalid_index::kInt32 );
                 while ( _roadSearch.hasNext() )
                 {
                     const int32 index = _roadSearch.popNext();
@@ -695,7 +696,7 @@ namespace sw
 
     int32 CitySimulation::findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const
     {
-        int32 best         = -1;
+        int32 best         = constant::invalid_index::kInt32;
         int32 bestDistance = 1 << 30;
         for ( int32 buildingIndex = 0; buildingIndex < static_cast<int32>( _listBuilding.size() ); ++buildingIndex )
         {
@@ -727,7 +728,7 @@ namespace sw
         // 타일 표시, 부모, 큐는 재사용 스크래치에 둔다. 일꾼을 내보낼 때마다 W x H 를 새로 할당하지 않기 위해서다.
         const int32 goal = _topology.toIndex( to );
         _roadSearch.begin( _topology.getCellCount() );
-        _roadSearch.visit( _topology.toIndex( from ), -1 );
+        _roadSearch.visit( _topology.toIndex( from ), constant::invalid_index::kInt32 );
         while ( _roadSearch.hasNext() )
         {
             const int32 index = _roadSearch.popNext();
@@ -1016,13 +1017,13 @@ namespace sw
         else if ( _pWallet != nullptr && income < wages )
             _pWallet->charge( _settings._currency, wages - income );
         _monthIncome = income - wages;
-        _eventBuffer.push( CityEvent{ _monthIncome, -1, CityEvent::Kind::MonthEnded } );
+        _eventBuffer.push( CityEvent{ _monthIncome, constant::invalid_index::kInt32, CityEvent::Kind::MonthEnded } );
 
         if ( bNewYear )
         {
             // 범람: 해마다 다르다(40 % ... 100 %). 범람원 농장의 다음 한 해 생산량을 정한다.
             _floodFertility = _random.nextRange( 0.4f, 1.0f );
-            _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), -1, CityEvent::Kind::Flood } );
+            _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), constant::invalid_index::kInt32, CityEvent::Kind::Flood } );
         }
     }
 
@@ -1139,7 +1140,7 @@ namespace sw
             io.enumValue( walker._service, CityService::Count );
             io.flag( walker._bReturning );
             io.flag( walker._bAlive );
-            if ( io.check( -1 <= walker._homeBuilding && walker._homeBuilding < buildingCount && -1 <= walker._targetBuilding && walker._targetBuilding < buildingCount && 0 <= walker._cargoAmount ) && io.isReading() )
+            if ( io.check( constant::invalid_index::kInt32 <= walker._homeBuilding && walker._homeBuilding < buildingCount && constant::invalid_index::kInt32 <= walker._targetBuilding && walker._targetBuilding < buildingCount && 0 <= walker._cargoAmount ) && io.isReading() )
             {
                 io.check( CitySimulationInternal::isWalkerValid( walker, _listBuilding, _topology ) );
             }

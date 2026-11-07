@@ -3,6 +3,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -150,7 +151,7 @@ namespace sw
             if ( _listTarget[index]._name == name )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool RigAsset::loadFromXMLText( string_view xml, string_view sourceLabel )

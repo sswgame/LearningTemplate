@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -91,7 +92,7 @@ namespace sw
         , _notifyTrack{}
         , _listCurve{}
         , _duration{ 0.0f }
-        , _rootMotionTrack{ -1 }
+        , _rootMotionTrack{ constant::invalid_index::kInt32 }
         , _codecID{ AnimationCodecID::Raw }
         , _bLoop{ SW_TRUE }
     {
@@ -334,7 +335,7 @@ namespace sw
         } );
 
         const bool bCodecKnown    = codecValue < static_cast<uint32>( AnimationCodecID::Count );
-        const bool bRootInRange   = _rootMotionTrack >= -1 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
+        const bool bRootInRange   = _rootMotionTrack >= constant::invalid_index::kInt32 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
         const bool bValidHeader   = _duration >= 0.0f;
         const bool bMalformedClip = reader.isFullyRead() == false || bCodecKnown == false || bRootInRange == false || bValidHeader == false;
         if ( bMalformedClip )

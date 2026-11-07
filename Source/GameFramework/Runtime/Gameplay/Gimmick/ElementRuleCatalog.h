@@ -26,6 +26,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -182,16 +183,16 @@ namespace sw
      */
     struct ElementStimulusRule
     {
-        hashed_string _event{};            ///< 바뀐 셀마다 내는 알림 이름
-        int32         _material{ -1 };     ///< 조건: 이 재질
-        int32         _flag{ -1 };         ///< 조건: 이 플래그가 있는 재질
-        int32         _status{ -1 };       ///< 조건: 이 상태가 있어야 함
-        int32         _without{ -1 };      ///< 조건: 이 상태가 없어야 함
-        int32         _setMaterial{ -1 };  ///< 동작: 재질을 바꾼다
-        int32         _addStatus{ -1 };    ///< 동작: 상태를 붙인다
-        int32         _removeStatus{ -1 }; ///< 동작: 상태를 제거한다
-        int32         _floodStatus{ -1 };  ///< 동작: 이 셀에서 `_floodThrough` 플래그 재질로 이어진(네 이웃) 셀 모두에 상태를 붙인다
-        int32         _floodThrough{ -1 };
+        hashed_string _event{};                                         ///< 바뀐 셀마다 내는 알림 이름
+        int32         _material{ constant::invalid_index::kInt32 };     ///< 조건: 이 재질
+        int32         _flag{ constant::invalid_index::kInt32 };         ///< 조건: 이 플래그가 있는 재질
+        int32         _status{ constant::invalid_index::kInt32 };       ///< 조건: 이 상태가 있어야 함
+        int32         _without{ constant::invalid_index::kInt32 };      ///< 조건: 이 상태가 없어야 함
+        int32         _setMaterial{ constant::invalid_index::kInt32 };  ///< 동작: 재질을 바꾼다
+        int32         _addStatus{ constant::invalid_index::kInt32 };    ///< 동작: 상태를 붙인다
+        int32         _removeStatus{ constant::invalid_index::kInt32 }; ///< 동작: 상태를 제거한다
+        int32         _floodStatus{ constant::invalid_index::kInt32 };  ///< 동작: 이 셀에서 `_floodThrough` 플래그 재질로 이어진(네 이웃) 셀 모두에 상태를 붙인다
+        int32         _floodThrough{ constant::invalid_index::kInt32 };
     };
 } // namespace sw
 
@@ -212,11 +213,11 @@ namespace sw
     {
         hashed_string        _event{};
         hashed_string        _stepsParam{}; ///< Expire 에서 쓰는 재질 수치 이름
-        int32                _status{ -1 };
-        int32                _material{ -1 };    ///< Convert 에서 쓰는, 이웃의 재질
-        int32                _setMaterial{ -1 }; ///< Expire, Convert 에서 쓰는, 바뀔 재질
-        int32                _toFlag{ -1 };      ///< Spread 에서 쓰는, 옮겨 붙는 재질의 플래그
-        int32                _after{ 1 };        ///< Spread 에서 쓰는 값. 상태가 이만큼 오래돼야 옮긴다
+        int32                _status{ constant::invalid_index::kInt32 };
+        int32                _material{ constant::invalid_index::kInt32 };    ///< Convert 에서 쓰는, 이웃의 재질
+        int32                _setMaterial{ constant::invalid_index::kInt32 }; ///< Expire, Convert 에서 쓰는, 바뀔 재질
+        int32                _toFlag{ constant::invalid_index::kInt32 };      ///< Spread 에서 쓰는, 옮겨 붙는 재질의 플래그
+        int32                _after{ 1 };                                     ///< Spread 에서 쓰는 값. 상태가 이만큼 오래돼야 옮긴다
         ElementStepRuleKind  _kind{ ElementStepRuleKind::Spread };
         ElementSpreadPattern _pattern{ ElementSpreadPattern::Neighbors4 };
         uint8                _bCrosswind{ SW_FALSE };

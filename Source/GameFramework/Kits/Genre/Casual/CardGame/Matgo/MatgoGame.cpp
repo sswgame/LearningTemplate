@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -83,7 +84,7 @@ namespace sw
         , _drawPile{}
         , _settings{}
         , _currentPlayer{ 0 }
-        , _winner{ -1 }
+        , _winner{ constant::invalid_index::kInt32 }
         , _phase{ MatgoPhase::Finished }
     {
     }
@@ -143,7 +144,7 @@ namespace sw
         _floor         = layout._floor;
         _drawPile      = layout._drawPile;
         _currentPlayer = layout._firstPlayer;
-        _winner        = -1;
+        _winner        = constant::invalid_index::kInt32;
         _phase         = MatgoPhase::Play;
         _listSettlement.clear();
         _listSettlement.resize( _listPlayer.size(), 0 );
@@ -267,7 +268,7 @@ namespace sw
             if ( other == player )
                 continue;
             CardPile& captured  = _listPlayer[static_cast<size_t>( other )]._captured;
-            int32     bestIndex = -1;
+            int32     bestIndex = constant::invalid_index::kInt32;
             // 홑피를 먼저 뺏고, 없으면 쌍피를 뺏는다.
             for ( int32 index = 0; index < captured.getCount(); ++index )
             {
@@ -319,8 +320,8 @@ namespace sw
         if ( areHandsEmpty() )
         {
             _phase  = MatgoPhase::Finished;
-            _winner = -1;
-            _eventBuffer.push( MatgoEvent{ -1, 0, Card::kNoCard, MatgoEvent::Kind::Nagari } );
+            _winner = constant::invalid_index::kInt32;
+            _eventBuffer.push( MatgoEvent{ constant::invalid_index::kInt32, 0, Card::kNoCard, MatgoEvent::Kind::Nagari } );
             return;
         }
         _currentPlayer = ( player + 1 ) % getPlayerCount();

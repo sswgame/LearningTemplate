@@ -7,6 +7,7 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
@@ -53,7 +54,7 @@ namespace sw
 
         struct LoopbackHandleSlot
         {
-            int32  _linkIndex{ -1 };
+            int32  _linkIndex{ constant::invalid_index::kInt32 };
             uint32 _generation{ 1 };
             uint8  _side{ 0 };
             uint8  _bUsed{ SW_FALSE };
@@ -171,7 +172,7 @@ namespace sw
                 if ( bConnectRefused )
                 {
                     // 실제 전송처럼 핸들은 주고 다음 pollIO 에 ConnectFailed 로 닫는다.
-                    _listSlot[handle._index]._linkIndex = -1;
+                    _listSlot[handle._index]._linkIndex = constant::invalid_index::kInt32;
                     pushEventLocked( LoopbackEvent{ {}, remote, handle, StreamCloseReason::ConnectFailed, LoopbackEventKind::Closed, SW_FALSE } );
                     return handle;
                 }
@@ -310,7 +311,7 @@ namespace sw
                     _listSlot.push_back( LoopbackHandleSlot{} );
                 LoopbackHandleSlot& slot = _listSlot[index];
                 slot._bUsed              = SW_TRUE;
-                slot._linkIndex          = -1;
+                slot._linkIndex          = constant::invalid_index::kInt32;
                 return StreamConnectionHandle::make( index, slot._generation );
             }
 
@@ -321,7 +322,7 @@ namespace sw
                 LoopbackHandleSlot& slot      = _listSlot[handle._index];
                 const int32         linkIndex = slot._linkIndex;
                 slot._bUsed                   = SW_FALSE;
-                slot._linkIndex               = -1;
+                slot._linkIndex               = constant::invalid_index::kInt32;
                 ++slot._generation;
                 if ( slot._generation == 0 )
                     slot._generation = 1;

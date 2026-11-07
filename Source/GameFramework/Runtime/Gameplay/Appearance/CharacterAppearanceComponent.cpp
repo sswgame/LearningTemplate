@@ -6,6 +6,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/2D/SpriteComponent.h"
@@ -341,7 +342,7 @@ namespace sw
         , _fitResultRevision{ 0 }
         , _assembleCount{ 0 }
         , _seenFitReloadStamp{ 0 }
-        , _bodyPart{ -1 }
+        , _bodyPart{ constant::invalid_index::kInt32 }
         , _bPartsVisible{ true }
         , _bAssembleScheduled{ SW_FALSE }
         , _bStarted{ SW_FALSE }
@@ -996,7 +997,7 @@ namespace sw
         vector<uint8>       listPartCovered( _state.getResolved()._listPart.size(), SW_FALSE );
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
-            int32 matched = -1;
+            int32 matched = constant::invalid_index::kInt32;
             for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
             {
                 const ResolvedPart& candidate  = _state.getResolved()._listPart[partIndex];
@@ -1332,7 +1333,7 @@ namespace sw
         const CharacterLODSettings*          _pLODSettings{ nullptr };
         uint64                               _bakeKey{ 0 };
         uint64                               _mergedKey{ 0 };
-        int32                                _bodyPart{ -1 };
+        int32                                _bodyPart{ constant::invalid_index::kInt32 };
         bool                                 _bPreview{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                                 _bBakeCached{ false }; ///< 구운 메시를 캐시에서 받았다(굽지 않는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         // 입력이자 결과

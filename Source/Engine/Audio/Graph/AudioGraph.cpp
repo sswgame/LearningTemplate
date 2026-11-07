@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/Graph/AudioGraph.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioClip.h"
@@ -167,7 +168,7 @@ namespace sw
             if ( name == hashed_string( typeInfo._pParameter[parameterIndex]._pName ) )
                 return static_cast<int32>( parameterIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 } // namespace sw
 

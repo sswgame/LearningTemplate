@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Accessibility/Windows/UiaAccessibilityBridge.h"
 
+#include "Core/Foundation/Constants.h"
+
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Memory/Memory.h"
 
@@ -78,7 +80,7 @@ namespace sw
             /** @brief 노드 @p index 의 자식 중 첫째(@p bFirst)나 마지막입니다. 없으면 -1. 루트 아래는 @p index 가 -1 입니다. */
             static int32 findChild( const UIAccessibilitySnapshot& snapshot, int32 parent, bool bFirst )
             {
-                int32 found = -1;
+                int32 found = constant::invalid_index::kInt32;
                 for ( size_t index = 0; index < snapshot._listNode.size(); ++index )
                 {
                     if ( snapshot._listNode[index]._parent != parent )
@@ -99,7 +101,7 @@ namespace sw
                     if ( snapshot._listNode[static_cast<size_t>( index )]._parent == parent )
                         return index;
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
 
             class Element;
@@ -300,13 +302,13 @@ namespace sw
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
                     if ( pSnapshot == nullptr )
                         return makeElementNotAvailable();
-                    int32 target = -1;
+                    int32 target = constant::invalid_index::kInt32;
                     if ( _bRoot )
                     {
                         if ( direction == NavigateDirection_FirstChild )
-                            target = findChild( *pSnapshot, -1, true );
+                            target = findChild( *pSnapshot, constant::invalid_index::kInt32, true );
                         else if ( direction == NavigateDirection_LastChild )
-                            target = findChild( *pSnapshot, -1, false );
+                            target = findChild( *pSnapshot, constant::invalid_index::kInt32, false );
                         else
                             return S_OK; // 루트의 부모와 이웃은 호스트(창)가 답한다
                     }
@@ -335,7 +337,7 @@ namespace sw
                             }
                             case NavigateDirection_PreviousSibling:
                             {
-                                target = findSibling( *pSnapshot, self, -1 );
+                                target = findSibling( *pSnapshot, self, constant::invalid_index::kInt32 );
                                 break;
                             }
                             case NavigateDirection_FirstChild:
@@ -389,7 +391,7 @@ namespace sw
                         return S_OK;
                     }
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
-                    const int32                    node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : -1;
+                    const int32                    node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : constant::invalid_index::kInt32;
                     if ( node < 0 || hwnd == nullptr )
                         return makeElementNotAvailable();
                     const float4&     bounds   = pSnapshot->_listNode[static_cast<size_t>( node )]._bounds;
@@ -521,7 +523,7 @@ namespace sw
                 [[nodiscard]] bool copyInfo( AccessibleInfo& outInfo )
                 {
                     const UIAccessibilitySnapshot* pSnapshot = _pCore->findSnapshot();
-                    const int32                    node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : -1;
+                    const int32                    node      = pSnapshot != nullptr ? pSnapshot->findNode( _screen, _widget ) : constant::invalid_index::kInt32;
                     if ( node < 0 )
                         return false;
                     outInfo = pSnapshot->_listNode[static_cast<size_t>( node )]._info;

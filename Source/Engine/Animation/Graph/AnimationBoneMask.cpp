@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Graph/AnimationGraphParams.h"
@@ -148,7 +149,7 @@ namespace sw
         outListWeight.assign( boneCount, 0.0f );
         // 본마다 그 본에서 시작하는 root 의 가중치다(-1 은 root 가 아님).
         vector<float32> listRootWeight( boneCount, -1.0f );
-        vector<int32>   listSingleBone( _listEntry.size(), -1 );
+        vector<int32>   listSingleBone( _listEntry.size(), constant::invalid_index::kInt32 );
         for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
             const AnimationBoneMaskEntry& entry     = _listEntry[entryIndex];

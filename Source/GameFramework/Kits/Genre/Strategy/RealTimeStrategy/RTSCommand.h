@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
@@ -47,7 +48,7 @@ namespace sw
         float3            _target{};
         RTSUnitID         _targetID{};
         hashed_string     _defID{}; ///< Build 는 건물, Train 은 유닛 카탈로그 id
-        int2              _cell{ -1, -1 };
+        int2              _cell{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 };
         RTSCommandKind    _kind{ RTSCommandKind::Smart };
         uint8             _bQueue{ SW_FALSE };      ///< 명령 대기열 뒤에 붙인다(쉬프트)
         uint8             _bAttackMove{ SW_FALSE }; ///< GroupMove 가 공격 이동이다

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
@@ -115,8 +116,8 @@ namespace sw
      */
     struct NetDeliveryNotice
     {
-        uint32            _tag{ 0 };           ///< 보낼 때 단 값(키트가 정한다 — MMO 는 서버 틱).
-        int32             _connectionID{ -1 }; ///< 보낸 연결. 연결 하나(`NetConnection`)는 모르므로 엔드포인트가 채운다.
+        uint32            _tag{ 0 };                                        ///< 보낼 때 단 값(키트가 정한다 — MMO 는 서버 틱).
+        int32             _connectionID{ constant::invalid_index::kInt32 }; ///< 보낸 연결. 연결 하나(`NetConnection`)는 모르므로 엔드포인트가 채운다.
         uint8             _kind{ 0 };
         NetDeliveryResult _result{ NetDeliveryResult::Delivered };
     };

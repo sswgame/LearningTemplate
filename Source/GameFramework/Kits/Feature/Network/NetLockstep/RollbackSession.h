@@ -16,6 +16,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -156,10 +157,10 @@ namespace sw
         /** @brief 상대 하나에게서 받은 정보입니다. */
         struct PeerState
         {
-            int32 _ackedLocalFrame{ -1 }; ///< 그 상대가 빈틈없이 받은 내 입력의 마지막 프레임. 그다음 프레임부터 보낸다
-            int32 _reportedFrame{ -1 };   ///< 그 상대가 알린 자기 프레임 중 가장 새로운 것. -1이면 아직 못 받았다
-            int32 _localAdvantage{ 0 };   ///< 그 알림을 받을 때의 내 프레임에서 알린 프레임을 뺀 값
-            int32 _remoteAdvantage{ 0 };  ///< 그 상대가 알린, 나에 대한 상대의 이점
+            int32 _ackedLocalFrame{ constant::invalid_index::kInt32 }; ///< 그 상대가 빈틈없이 받은 내 입력의 마지막 프레임. 그다음 프레임부터 보낸다
+            int32 _reportedFrame{ constant::invalid_index::kInt32 };   ///< 그 상대가 알린 자기 프레임 중 가장 새로운 것. -1이면 아직 못 받았다
+            int32 _localAdvantage{ 0 };                                ///< 그 알림을 받을 때의 내 프레임에서 알린 프레임을 뺀 값
+            int32 _remoteAdvantage{ 0 };                               ///< 그 상대가 알린, 나에 대한 상대의 이점
         };
 
         void receiveInput( int32 player, int32 frame, uint8 input );

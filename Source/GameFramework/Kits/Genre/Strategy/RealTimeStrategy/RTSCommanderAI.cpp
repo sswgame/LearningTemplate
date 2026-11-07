@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -27,7 +28,7 @@ namespace sw
         , _settings{}
         , _pWorld{ nullptr }
         , _thinkTimer{}
-        , _player{ -1 }
+        , _player{ constant::invalid_index::kInt32 }
         , _attackWaveCount{ 0 }
     {
     }

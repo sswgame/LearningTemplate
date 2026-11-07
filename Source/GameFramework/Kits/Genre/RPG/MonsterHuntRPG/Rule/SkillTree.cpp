@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
@@ -148,13 +149,13 @@ namespace sw
     int32 SkillTreeState::findIndex( const hashed_string& skillID ) const
     {
         if ( _pTree == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         for ( size_t index = 0; index < _pTree->_listSkill.size(); ++index )
         {
             if ( _pTree->_listSkill[index]._id == skillID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 SkillTreeState::getRank( const hashed_string& skillID ) const

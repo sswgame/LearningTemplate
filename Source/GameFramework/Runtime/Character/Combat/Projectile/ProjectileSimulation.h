@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -87,7 +88,7 @@ namespace sw
         float3            _position{};
         float3            _normal{ 0.0f, 1.0f, 0.0f }; ///< 표면의 바깥 법선(튕김에 쓴다)
         hashed_string     _surface{};                  ///< 표면 이름(맞음 표를 찾는다). 비어도 된다
-        int32             _other{ -1 };
+        int32             _other{ constant::invalid_index::kInt32 };
         ProjectileHitKind _kind{ ProjectileHitKind::Target };
     };
 

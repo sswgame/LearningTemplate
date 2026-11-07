@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -181,8 +182,8 @@ namespace sw
         int64 purchaseMs        = 0;
         if ( StringUtil::parseInt64( Internal::readText( root, "purchaseTimeMillis" ), purchaseMs ) )
             outFacts._purchaseTimeMs = purchaseMs;
-        int32      purchaseState        = -1;
-        int32      purchaseType         = -1;
+        int32      purchaseState        = constant::invalid_index::kInt32;
+        int32      purchaseType         = constant::invalid_index::kInt32;
         int32      acknowledgementState = 1;
         const bool bPurchaseStateOk     = root.readOptionalInto( "purchaseState", purchaseState );
         const bool bPurchaseTypeOk      = root.readOptionalInto( "purchaseType", purchaseType );

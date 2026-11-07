@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -29,7 +30,7 @@ namespace sw
         _shapeLookup = shapeLookup;
         _topology    = GridTopology( width, height );
         _listItem.clear();
-        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), -1 );
+        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
         ++_revision;
         return true;
     }
@@ -39,7 +40,7 @@ namespace sw
         if ( width < _topology._width || height < _topology._height )
             return false;
         _topology = GridTopology( width, height );
-        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), -1 );
+        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
         for ( const GridItem& item : _listItem )
         {
             stampItem( item, item._instanceID );
@@ -51,7 +52,7 @@ namespace sw
     void GridInventory::clear()
     {
         _listItem.clear();
-        _listCell.assign( _listCell.size(), -1 );
+        _listCell.assign( _listCell.size(), constant::invalid_index::kInt32 );
         ++_revision;
     }
 
@@ -105,7 +106,7 @@ namespace sw
         GridItemShape shape;
         const bool    bCannotAddItem = findShape( itemID, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemID, x, y, bRotated ) == false;
         if ( bCannotAddItem )
-            return -1;
+            return constant::invalid_index::kInt32;
         GridItem item;
         item._itemID     = itemID;
         item._instanceID = _nextInstanceID++;
@@ -194,7 +195,7 @@ namespace sw
         GridItem& item = _listItem[static_cast<size_t>( itemIndex )];
         if ( canPlace( item._itemID, x, y, bRotated, instanceID ) == false )
             return false;
-        stampItem( item, -1 );
+        stampItem( item, constant::invalid_index::kInt32 );
         item._x        = x;
         item._y        = y;
         item._bRotated = bRotated ? SW_TRUE : SW_FALSE;
@@ -214,7 +215,7 @@ namespace sw
     int32 GridInventory::findInstanceAt( int32 x, int32 y ) const
     {
         if ( _topology.isInside( x, y ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         return _listCell[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
@@ -263,7 +264,7 @@ namespace sw
             if ( _listItem[itemIndex]._instanceID == instanceID )
                 return static_cast<int32>( itemIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void GridInventory::computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const
@@ -291,7 +292,7 @@ namespace sw
 
     void GridInventory::eraseItemAt( size_t itemIndex )
     {
-        stampItem( _listItem[itemIndex], -1 );
+        stampItem( _listItem[itemIndex], constant::invalid_index::kInt32 );
         _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( itemIndex ) );
     }
 
@@ -308,7 +309,7 @@ namespace sw
             if ( io.check( 0 <= width && 0 <= height && io.getArchive().hasBytesAvailable( cellCount * 4 ) ) == false )
                 return;
             _topology = GridTopology( width, height );
-            _listCell.assign( static_cast<size_t>( cellCount ), -1 );
+            _listCell.assign( static_cast<size_t>( cellCount ), constant::invalid_index::kInt32 );
             ++_revision;
         }
         for ( int32& cell : _listCell )

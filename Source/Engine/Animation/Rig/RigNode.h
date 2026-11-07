@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -64,7 +65,7 @@ namespace sw
     {
         float3     _position{};
         quaternion _rotation{};
-        int32      _relativeBone{ -1 }; ///< 0 이상이면 값이 이 본 기준의 상대 변환이며, 평가할 때 현재 그 본에 적용한다.
+        int32      _relativeBone{ constant::invalid_index::kInt32 }; ///< 0 이상이면 값이 이 본 기준의 상대 변환이며, 평가할 때 현재 그 본에 적용한다.
         uint8      _bValid{ SW_FALSE };
     };
 } // namespace sw

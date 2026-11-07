@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -76,8 +77,8 @@ namespace sw
         hashed_string _to{};
         hashed_string _kind{};     ///< `Door`, `Passage`, `Vent` … 게임이 정한다
         ConditionExpr _requires{}; ///< 읽을 때 컴파일한 플래그 조건식. 비면 늘 열려 있다
-        int32         _fromIndex{ -1 };
-        int32         _toIndex{ -1 };
+        int32         _fromIndex{ constant::invalid_index::kInt32 };
+        int32         _toIndex{ constant::invalid_index::kInt32 };
         uint8         _bOneWay{ SW_FALSE };           ///< `_from` → `_to` 로만 지난다
         uint8         _bInvalidCondition{ SW_FALSE }; ///< 조건식이 문법에 맞지 않았다. 늘 잠기며 읽을 때 한 번만 경고한다
     };

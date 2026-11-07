@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
@@ -108,8 +109,8 @@ namespace sw
     /** @brief 커밋 결과를 담는 구조체입니다. */
     struct ServiceCommitInfo
     {
-        uint64 _commitVersion{ 0 };  ///< Ok 일 때 이 커밋이 쓴 레코드들의 새 버전
-        int32  _conflictIndex{ -1 }; ///< Conflict 일 때 어긋난 쓰기 번호(`getWrites` 순서). 알 수 없으면 -1 이다(SQL 직렬화 실패)
+        uint64 _commitVersion{ 0 };                               ///< Ok 일 때 이 커밋이 쓴 레코드들의 새 버전
+        int32  _conflictIndex{ constant::invalid_index::kInt32 }; ///< Conflict 일 때 어긋난 쓰기 번호(`getWrites` 순서). 알 수 없으면 -1 이다(SQL 직렬화 실패)
     };
 } // namespace sw
 

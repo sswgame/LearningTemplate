@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/LogContext.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
@@ -129,7 +130,7 @@ namespace sw
                     if ( commitResult == SQLResult::SerializationFailure )
                     {
                         result              = ServiceStoreResult::Conflict; // PostgreSQL 은 COMMIT 에서 직렬화 실패를 낼 수 있으며, 이때는 적용되지 않은 것이다
-                        info._conflictIndex = -1;
+                        info._conflictIndex = constant::invalid_index::kInt32;
                         info._commitVersion = 0;
                     }
                     else if ( commitResult != SQLResult::Ok )
@@ -196,7 +197,7 @@ namespace sw
                         if ( result != SQLResult::Ok )
                         {
                             if ( result == SQLResult::Constraint || result == SQLResult::SerializationFailure )
-                                outInfo._conflictIndex = -1;
+                                outInfo._conflictIndex = constant::invalid_index::kInt32;
                             return toStoreResult( result );
                         }
                         if ( bMatched == false )

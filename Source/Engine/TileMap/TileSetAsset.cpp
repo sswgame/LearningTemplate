@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
@@ -136,7 +137,7 @@ namespace sw
     int32 TileVisual::computeCellAt( float32 seconds ) const
     {
         if ( _listFrameCell.empty() )
-            return -1;
+            return constant::invalid_index::kInt32;
         if ( isAnimated() == false )
             return _listFrameCell[0];
         const float32 frame = MathUtil::floor( MathUtil::max( seconds, 0.0f ) * _framesPerSecond );
@@ -154,27 +155,27 @@ namespace sw
             if ( _listBrush[brushIndex]._name == name )
                 return static_cast<int32>( brushIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void TileSetContent::collectIssues( vector<TileSetIssue>& outListIssue ) const
     {
         using Internal = TileSetAssetInternal;
         if ( _columnCount < 1 || _rowCount < 1 )
-            outListIssue.push_back( TileSetIssue{ formatToString( "the atlas grid %#x%# needs at least one column and one row", _columnCount, _rowCount ), -1, -1 } );
+            outListIssue.push_back( TileSetIssue{ formatToString( "the atlas grid %#x%# needs at least one column and one row", _columnCount, _rowCount ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
         if ( _tileSize <= 0.0f )
-            outListIssue.push_back( TileSetIssue{ formatToString( "tileSize %# must be positive", _tileSize ), -1, -1 } );
+            outListIssue.push_back( TileSetIssue{ formatToString( "tileSize %# must be positive", _tileSize ), constant::invalid_index::kInt32, constant::invalid_index::kInt32 } );
         for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
         {
             const TileBrush& brush = _listBrush[brushIndex];
             const int32      index = static_cast<int32>( brushIndex );
             if ( brush._name.empty() )
-                outListIssue.push_back( TileSetIssue{ formatToString( "brush %# has no name", index ), index, -1 } );
+                outListIssue.push_back( TileSetIssue{ formatToString( "brush %# has no name", index ), index, constant::invalid_index::kInt32 } );
             else if ( findBrush( brush._name ) != index )
-                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' is listed twice", brush._name.view() ), index, -1 } );
+                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' is listed twice", brush._name.view() ), index, constant::invalid_index::kInt32 } );
             if ( brush._navCost < 1 )
-                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' navCost must be 1 to 255", brush._name.view() ), index, -1 } );
-            Internal::collectVisualIssues( *this, brush._defaultVisual, index, -1, outListIssue );
+                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' navCost must be 1 to 255", brush._name.view() ), index, constant::invalid_index::kInt32 } );
+            Internal::collectVisualIssues( *this, brush._defaultVisual, index, constant::invalid_index::kInt32, outListIssue );
             for ( size_t ruleIndex = 0; ruleIndex < brush._listRule.size(); ++ruleIndex )
             {
                 Internal::collectVisualIssues( *this, brush._listRule[ruleIndex]._visual, index, static_cast<int32>( ruleIndex ), outListIssue );

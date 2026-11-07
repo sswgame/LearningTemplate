@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -199,11 +200,11 @@ namespace sw
         ++_fleeAttempts;
         if ( _random.nextFloat() < chance )
         {
-            pushEvent( JRPGBattleEvent::Kind::Fled, false, -1, -1, _fleeAttempts );
+            pushEvent( JRPGBattleEvent::Kind::Fled, false, constant::invalid_index::kInt32, constant::invalid_index::kInt32, _fleeAttempts );
             _result = JRPGBattleResult::Fled;
             return true;
         }
-        pushEvent( JRPGBattleEvent::Kind::FleeFailed, false, -1, -1, _fleeAttempts );
+        pushEvent( JRPGBattleEvent::Kind::FleeFailed, false, constant::invalid_index::kInt32, constant::invalid_index::kInt32, _fleeAttempts );
         for ( JRPGCommand& command : _listCommand )
         {
             command = JRPGCommand{};
@@ -423,7 +424,7 @@ namespace sw
         if ( pSpell->_manualID.empty() == false && pSpell->_proficiencyGain > 0 )
         {
             _pParty->addProficiency( memberIndex, pSpell->_manualID, pSpell->_proficiencyGain );
-            pushEvent( JRPGBattleEvent::Kind::ProficiencyGained, false, memberIndex, -1, pSpell->_proficiencyGain, pSpell->_manualID );
+            pushEvent( JRPGBattleEvent::Kind::ProficiencyGained, false, memberIndex, constant::invalid_index::kInt32, pSpell->_proficiencyGain, pSpell->_manualID );
         }
     }
 
@@ -482,7 +483,7 @@ namespace sw
             const int32         basePower = pSpell != nullptr ? pSpell->_power : 0;
             const int32         power     = basePower * ( remaining + 1 ) / ( enemy._lockTotal + 1 );
             enemy._listLock.clear();
-            pushEvent( JRPGBattleEvent::Kind::CastReleased, true, enemyIndex, -1, power, pEnemy->_castSpellID );
+            pushEvent( JRPGBattleEvent::Kind::CastReleased, true, enemyIndex, constant::invalid_index::kInt32, power, pEnemy->_castSpellID );
             const int32 scaled = power * ( 100 + pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Intellect )] ) / 100;
             for ( int32 memberIndex = 0; memberIndex < _pParty->getMemberCount(); ++memberIndex )
             {
@@ -497,7 +498,7 @@ namespace sw
             enemy._castTurnsLeft = pEnemy->_castTurns;
             enemy._listLock      = pEnemy->_listLock;
             enemy._lockTotal     = static_cast<int32>( enemy._listLock.size() );
-            pushEvent( JRPGBattleEvent::Kind::CastStarted, true, enemyIndex, -1, enemy._lockTotal, pEnemy->_castSpellID );
+            pushEvent( JRPGBattleEvent::Kind::CastStarted, true, enemyIndex, constant::invalid_index::kInt32, enemy._lockTotal, pEnemy->_castSpellID );
             return;
         }
 
@@ -593,7 +594,7 @@ namespace sw
         if ( amount <= 0 )
             return;
         _comboPoints = MathUtil::min( _settings._comboMax, _comboPoints + amount );
-        pushEvent( JRPGBattleEvent::Kind::ComboPoints, false, -1, -1, _comboPoints );
+        pushEvent( JRPGBattleEvent::Kind::ComboPoints, false, constant::invalid_index::kInt32, constant::invalid_index::kInt32, _comboPoints );
     }
 
     void JRPGBattle::addInner( int32 memberIndex, int32 amount )
@@ -623,7 +624,7 @@ namespace sw
             if ( _listEnemy[static_cast<size_t>( enemyIndex )].isAlive() )
                 return enemyIndex;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void JRPGBattle::finishIfDecided()
@@ -633,7 +634,7 @@ namespace sw
         if ( _pParty->countAlive() == 0 )
         {
             _result = JRPGBattleResult::Defeat;
-            pushEvent( JRPGBattleEvent::Kind::Defeat, false, -1, -1 );
+            pushEvent( JRPGBattleEvent::Kind::Defeat, false, constant::invalid_index::kInt32, constant::invalid_index::kInt32 );
             return;
         }
         if ( findLivingEnemy( 0 ) >= 0 )
@@ -648,7 +649,7 @@ namespace sw
         }
         _result           = JRPGBattleResult::Victory;
         const int64 share = _pParty->distributeRewards( _rewardExp, _rewardGold );
-        pushEvent( JRPGBattleEvent::Kind::Victory, false, -1, -1, static_cast<int32>( share ) );
+        pushEvent( JRPGBattleEvent::Kind::Victory, false, constant::invalid_index::kInt32, constant::invalid_index::kInt32, static_cast<int32>( share ) );
     }
 
     void JRPGBattle::pushEvent( JRPGBattleEvent::Kind kind, bool bEnemyActor, int32 actor, int32 target, int32 value, const hashed_string& id )

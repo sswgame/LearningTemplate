@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -301,7 +302,7 @@ namespace sw
         if ( rules._saveMode == SurvivalHorrorSaveMode::InkRibbon )
         {
             // 가방에서 처음 찾은 SaveItem 하나를 쓴다(놓은 순서이므로 결정적이다).
-            int32 ribbonInstance = -1;
+            int32 ribbonInstance = constant::invalid_index::kInt32;
             for ( const GridItem& item : _pInventory->getItems() )
             {
                 const SurvivalHorrorItemDef* pDef = _pCatalog->findItem( item._itemID );

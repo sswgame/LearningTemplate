@@ -7,6 +7,7 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -77,7 +78,7 @@ namespace sw
         LevelProgress _level{};
         float32       _busyMinutes{ 0.0f }; ///< 지금 일이 끝나기까지 남은 시간(분)
         int64         _dailyWage{ 0 };
-        int32         _taskCustomer{ -1 }; ///< 맡은 손님 id 이다(-1 이면 쉬는 중)
+        int32         _taskCustomer{ constant::invalid_index::kInt32 }; ///< 맡은 손님 id 이다(-1 이면 쉬는 중)
         StaffRole     _role{ StaffRole::Cook };
         uint8         _bHired{ SW_TRUE };
     };
@@ -106,7 +107,7 @@ namespace sw
         float32       _eatRemaining{ 0.0f };
         int64         _price{ 0 }; ///< 주문할 때의 메뉴 가격
         int32         _id{ 0 };
-        int32         _seat{ -1 };
+        int32         _seat{ constant::invalid_index::kInt32 };
         int32         _quality{ 0 }; ///< 받은 요리의 품질이다(0 이면 아직 받지 못함)
         CustomerState _state{ CustomerState::Queued };
         uint8         _bServing{ SW_FALSE }; ///< 서버가 나르는 중이다
@@ -123,7 +124,7 @@ namespace sw
         hashed_string _station{}; ///< 레시피의 조리 스테이션이다(비어 있으면 아무 데서나 한다)
         float32       _remaining{ 0.0f };
         int32         _customerID{ 0 };
-        int32         _cook{ -1 }; ///< 맡은 요리사이다(-1 이면 기다리는 중)
+        int32         _cook{ constant::invalid_index::kInt32 }; ///< 맡은 요리사이다(-1 이면 기다리는 중)
         int32         _quality{ 0 };
         uint8         _bReady{ SW_FALSE };
     };
@@ -177,7 +178,7 @@ namespace sw
         };
         hashed_string _id{};
         int64         _value{ 0 };
-        int32         _customerID{ -1 };
+        int32         _customerID{ constant::invalid_index::kInt32 };
         Kind          _kind{ Kind::CustomerArrived };
     };
 } // namespace sw

@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -126,7 +127,7 @@ namespace sw
     int32 TurnOrder::next()
     {
         if ( _listCombatant.empty() )
-            return -1;
+            return constant::invalid_index::kInt32;
         if ( _mode == TurnOrderMode::Timeline )
             return popTimeline( _listCombatant );
         if ( _listRoundQueue.empty() )

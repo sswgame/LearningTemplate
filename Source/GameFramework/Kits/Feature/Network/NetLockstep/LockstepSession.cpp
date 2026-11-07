@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetTypes.h"
@@ -155,7 +156,7 @@ namespace sw
 
     bool LockstepSession::evaluateChecksum( uint32 tick, const vector<int64>& listChecksum )
     {
-        int64 expected = -1;
+        int64 expected = constant::invalid_index::kInt64;
         for ( int32 player = 0; player < _playerCount; ++player )
         {
             if ( isPresentAt( player, tick ) == false )
@@ -184,7 +185,7 @@ namespace sw
         if ( pListChecksum == nullptr )
         {
             pListChecksum = &_listTickChecksum.acquire( tick );
-            pListChecksum->assign( static_cast<size_t>( _playerCount ), -1 );
+            pListChecksum->assign( static_cast<size_t>( _playerCount ), constant::invalid_index::kInt32 );
         }
         ( *pListChecksum )[static_cast<size_t>( player )] = static_cast<int64>( checksum );
         if ( evaluateChecksum( tick, *pListChecksum ) )

@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -111,7 +112,7 @@ namespace sw
             Street, ///< `_amount` 는 새 스트리트(PokerStreet)이다
             Win     ///< `_seat` 와 `_amount` 를 쓰며, `_amount` 는 받은 칩이다
         };
-        int32 _seat{ -1 };
+        int32 _seat{ constant::invalid_index::kInt32 };
         int32 _amount{ 0 };
         Kind  _kind{ Kind::Blind };
     };

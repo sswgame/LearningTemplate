@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 
@@ -127,7 +128,7 @@ namespace sw
         static constexpr int32 toIndex( uint16 method )
         {
             const int32 index = static_cast<int32>( method ) - static_cast<int32>( kFirstMethod );
-            return 0 <= index && index < kCount ? index : -1;
+            return 0 <= index && index < kCount ? index : constant::invalid_index::kInt32;
         }
 
         static_assert( OnlineMethodRange::isInRange( static_cast<uint16>( kFirstMethod + kCount - 1 ), RangeBase ) &&

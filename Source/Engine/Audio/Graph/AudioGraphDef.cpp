@@ -3,6 +3,7 @@
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
@@ -236,6 +237,6 @@ namespace sw
             if ( _listNode[nodeIndex]._name == name )
                 return static_cast<int32>( nodeIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 } // namespace sw

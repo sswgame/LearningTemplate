@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -56,8 +57,8 @@ namespace sw
                 const SRPGSettings& settings  = field.getSettings();
                 const SRPGUnit*     pDefender = field.findUnit( defenderIndex );
                 if ( settings._bSupportDefense == SW_FALSE || pDefender == nullptr )
-                    return -1;
-                int32 bestIndex = -1;
+                    return constant::invalid_index::kInt32;
+                int32 bestIndex = constant::invalid_index::kInt32;
                 int32 bestHP    = 0;
                 for ( int32 index = 0; index < static_cast<int32>( field.getUnits().size() ); ++index )
                 {
@@ -261,8 +262,8 @@ namespace sw
     {
         const SRPGUnit* pDefender = field.findUnit( defenderIndex );
         if ( pDefender == nullptr || pDefender->_bAlive == SW_FALSE )
-            return -1;
-        int32 bestWeapon   = -1;
+            return constant::invalid_index::kInt32;
+        int32 bestWeapon   = constant::invalid_index::kInt32;
         int32 bestExpected = -1;
         for ( int32 weaponIndex = 0; weaponIndex < static_cast<int32>( pDefender->_listWeapon.size() ); ++weaponIndex )
         {

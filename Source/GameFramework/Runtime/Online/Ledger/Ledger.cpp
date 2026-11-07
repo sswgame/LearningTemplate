@@ -5,6 +5,7 @@
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -30,8 +31,8 @@ namespace sw
                 string       _holderKey{};
                 string       _assetID{};
                 int64        _delta{ 0 };
-                int32        _firstDebitIndex{ -1 };  ///< 이 보유자가 보낸 첫 다리(모자람 보고)
-                int32        _firstCreditIndex{ -1 }; ///< 이 보유자가 받은 첫 다리(상한 보고)
+                int32        _firstDebitIndex{ constant::invalid_index::kInt32 };  ///< 이 보유자가 보낸 첫 다리(모자람 보고)
+                int32        _firstCreditIndex{ constant::invalid_index::kInt32 }; ///< 이 보유자가 받은 첫 다리(상한 보고)
             };
 
             static LedgerResult finish( LedgerTransferResult& outOutcome, LedgerResult result )
@@ -135,7 +136,7 @@ namespace sw
 
             static LedgerResult validate( const LedgerTransferRequest& request, int32& outFailedPostingIndex )
             {
-                outFailedPostingIndex        = -1;
+                outFailedPostingIndex        = constant::invalid_index::kInt32;
                 const int32 postingCount     = static_cast<int32>( request._listPosting.size() );
                 const bool  bCountOk         = 1 <= postingCount && postingCount <= LedgerConstant::kMaxPostingCount;
                 const bool  bKeyOk           = LedgerUtil::isValidJournalKey( request._journalKey );

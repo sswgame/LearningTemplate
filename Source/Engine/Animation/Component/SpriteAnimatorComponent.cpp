@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -365,7 +366,7 @@ namespace sw
         _currentAnimation = state.c_str();
         _bRepeat          = _graphPlayer.getPlayer().isCurrentLooping() ? SW_TRUE : SW_FALSE;
         _bRootWarned      = SW_FALSE;
-        _currentFrame     = -1; // 새 구간의 첫 프레임을 스프라이트에 넘기게 한다
+        _currentFrame     = constant::invalid_index::kInt32; // 새 구간의 첫 프레임을 스프라이트에 넘기게 한다
     }
 
     SpriteComponent* SpriteAnimatorComponent::findSprite() const

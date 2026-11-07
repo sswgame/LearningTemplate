@@ -137,12 +137,12 @@ namespace sw
         XMLWriter                   writer{ xml };
         writer.beginElement( "AreaGraph" );
         ScavengerFacilityInternal::writeArea( writer, "outside", 0, "Outside", 0, 0 );
-        ScavengerFacilityInternal::writeArea( writer, "ship", 0, "Ship", -1, 0 );
+        ScavengerFacilityInternal::writeArea( writer, "ship", 0, "Ship", constant::invalid_index::kInt32, 0 );
         if ( moon._bCompany == false )
         {
             _roomCount = random.nextInt( settings._minRooms, settings._maxRooms );
             vector<int32> listDepth( static_cast<size_t>( _roomCount ), 0 );
-            vector<int32> listParent( static_cast<size_t>( _roomCount ), -1 );
+            vector<int32> listParent( static_cast<size_t>( _roomCount ), constant::invalid_index::kInt32 );
             for ( int32 room = 1; room < _roomCount; ++room )
             {
                 listParent[static_cast<size_t>( room )] = random.nextInt( 0, room - 1 );
@@ -154,7 +154,7 @@ namespace sw
             }
 
             ScavengerFacilityInternal::writeShipLink( writer );
-            ScavengerFacilityInternal::writeLink( writer, -1, 0, "MainEntrance", false );
+            ScavengerFacilityInternal::writeLink( writer, constant::invalid_index::kInt32, 0, "MainEntrance", false );
             for ( int32 room = 1; room < _roomCount; ++room )
             {
                 const bool bLocked = random.nextChance( settings._lockedChance );
@@ -180,7 +180,7 @@ namespace sw
             const int32 exitCount = MathUtil::min( settings._fireExits, static_cast<int32>( listExitCandidate.size() ) );
             for ( int32 exitIndex = 0; exitIndex < exitCount; ++exitIndex )
             {
-                ScavengerFacilityInternal::writeLink( writer, -1, listExitCandidate[static_cast<size_t>( exitIndex )], "FireExit", false );
+                ScavengerFacilityInternal::writeLink( writer, constant::invalid_index::kInt32, listExitCandidate[static_cast<size_t>( exitIndex )], "FireExit", false );
             }
         }
         else

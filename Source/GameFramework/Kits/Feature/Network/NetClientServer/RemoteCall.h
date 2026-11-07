@@ -20,6 +20,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetConnection.h"
@@ -100,7 +101,7 @@ namespace sw
         {
             const TypeInfo* _pType{ nullptr };
             void*           _pInstance{ nullptr };
-            int32           _ownerConnectionID{ -1 }; ///< 서버 — 이 대상의 `Server` 함수를 부를 수 있는 연결. 클라이언트는 쓰지 않는다
+            int32           _ownerConnectionID{ constant::invalid_index::kInt32 }; ///< 서버 — 이 대상의 `Server` 함수를 부를 수 있는 연결. 클라이언트는 쓰지 않는다
         };
 
         /** @brief 연결의 세션 객체를 가리키는 id 입니다. `registerTarget` 으로는 등록하지 못합니다(서버는 `registerSessionTarget`). */

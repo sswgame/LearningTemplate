@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -196,7 +197,7 @@ namespace sw
 
             struct Avatar
             {
-                int32   _connectionID{ -1 };
+                int32   _connectionID{ constant::invalid_index::kInt32 };
                 uint32  _entityID{ 0 };
                 float32 _x{ 0.0f };
                 float32 _z{ 0.0f };
@@ -205,7 +206,7 @@ namespace sw
             /** @brief 연결 하나가 마지막으로 보낸 이동 입력입니다. */
             struct PendingMove
             {
-                int32  _connectionID{ -1 };
+                int32  _connectionID{ constant::invalid_index::kInt32 };
                 uint32 _clientTick{ 0 };
                 float2 _move{ 0.0f, 0.0f };
                 bool   _bHasInput{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

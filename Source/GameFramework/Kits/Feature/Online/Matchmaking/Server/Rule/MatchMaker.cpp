@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
@@ -133,7 +134,7 @@ namespace sw
                 const int32        ratingGap    = std::abs( ticket.computeAverageRating() - request._averageRating );
                 const bool         bRegionRelax = nowMs - ticket._enqueuedMs >= _definition._regionRelaxMs;
                 const bool         bRegionOk    = bRegionRelax || ticket._region == request._region;
-                int32              team         = -1;
+                int32              team         = constant::invalid_index::kInt32;
                 for ( size_t teamIndex = 0; teamIndex < request._listOpenSlot.size() && team < 0; ++teamIndex )
                 {
                     if ( request._listOpenSlot[teamIndex] >= memberCount )
@@ -298,7 +299,7 @@ namespace sw
         {
             const MatchTicket& ticket   = _listTicket[static_cast<size_t>( ticketIndex )];
             const int32        size     = static_cast<int32>( ticket._listMember.size() );
-            int32              bestTeam = -1;
+            int32              bestTeam = constant::invalid_index::kInt32;
             for ( int32 team = 0; team < _definition._teamCount; ++team )
             {
                 const bool bRoom  = static_cast<int32>( outMatch._listTeam[static_cast<size_t>( team )]._listMember.size() ) + size <= _definition._teamSize;

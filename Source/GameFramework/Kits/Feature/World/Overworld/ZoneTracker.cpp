@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 
 namespace sw
 {
@@ -30,7 +31,7 @@ namespace sw
 
     ZoneTracker::ZoneTracker()
         : _listZone{}
-        , _activeIndex{ -1 }
+        , _activeIndex{ constant::invalid_index::kInt32 }
     {
     }
 
@@ -49,7 +50,7 @@ namespace sw
     void ZoneTracker::clear()
     {
         _listZone.clear();
-        _activeIndex = -1;
+        _activeIndex = constant::invalid_index::kInt32;
     }
 
     void ZoneTracker::setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height, string_view tagText )

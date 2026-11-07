@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -102,7 +103,7 @@ namespace sw
 
     int32 ActionTerrainGrid::findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const
     {
-        int32   bestIndex    = -1;
+        int32   bestIndex    = constant::invalid_index::kInt32;
         float32 bestDistance = 0.0f;
         for ( size_t index = 0; index < _listGrapplePoint.size(); ++index )
         {

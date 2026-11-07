@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -37,8 +38,8 @@ namespace sw
         , _invulnerable{}
         , _reviveElapsed{ 0.0f }
         , _reviveSpeedScale{ 1.0f }
-        , _reviverID{ -1 }
-        , _lastInstigatorID{ -1 }
+        , _reviverID{ constant::invalid_index::kInt32 }
+        , _lastInstigatorID{ constant::invalid_index::kInt32 }
         , _downCount{ 0 }
         , _state{ LifeState::Alive }
         , _bReviving{ SW_FALSE }
@@ -86,9 +87,9 @@ namespace sw
         _invulnerable.clear();
         _reviveElapsed    = 0.0f;
         _reviveSpeedScale = 1.0f;
-        _reviverID        = -1;
+        _reviverID        = constant::invalid_index::kInt32;
         _bReviving        = SW_FALSE;
-        _lastInstigatorID = -1;
+        _lastInstigatorID = constant::invalid_index::kInt32;
     }
 
     void HealthStateMachine::setMaxHealth( float32 maxHealth, bool bFill )
@@ -101,7 +102,7 @@ namespace sw
             const float32 healed = maxHealth - _health;
             _health              = maxHealth;
             if ( healed > 0.0f )
-                pushEvent( HealthEventType::Healed, healed, -1 );
+                pushEvent( HealthEventType::Healed, healed, constant::invalid_index::kInt32 );
             return;
         }
         _health = MathUtil::min( _health, maxHealth );
@@ -193,7 +194,7 @@ namespace sw
         const float32 healed = MathUtil::min( amount, _settings._maxHealth - _health );
         _health += healed;
         if ( healed > 0.0f )
-            pushEvent( HealthEventType::Healed, healed, -1 );
+            pushEvent( HealthEventType::Healed, healed, constant::invalid_index::kInt32 );
         return healed;
     }
 
@@ -241,7 +242,7 @@ namespace sw
             {
                 _poise                = _settings._poiseMax;
                 _timeSincePoiseDamage = 0.0f;
-                pushEvent( HealthEventType::PoiseRecovered, 0.0f, -1 );
+                pushEvent( HealthEventType::PoiseRecovered, 0.0f, constant::invalid_index::kInt32 );
             }
             return;
         }
@@ -271,7 +272,7 @@ namespace sw
         if ( isReviving() == false )
             return;
         _bReviving        = SW_FALSE;
-        _reviverID        = -1;
+        _reviverID        = constant::invalid_index::kInt32;
         _reviveSpeedScale = 1.0f;
         if ( _settings._bKeepReviveProgress == SW_FALSE )
             _reviveElapsed = 0.0f;
@@ -314,7 +315,7 @@ namespace sw
         _downedHealth = _settings._downedHealth;
         _poiseBreak.clear();
         _reviveElapsed = 0.0f;
-        _reviverID     = -1;
+        _reviverID     = constant::invalid_index::kInt32;
         _bReviving     = SW_FALSE;
         ++_downCount;
         pushEvent( HealthEventType::Downed, 0.0f, instigatorID );
@@ -327,7 +328,7 @@ namespace sw
         _shield       = 0.0f;
         _downedHealth = 0.0f;
         _poiseBreak.clear();
-        _reviverID = -1;
+        _reviverID = constant::invalid_index::kInt32;
         _bReviving = SW_FALSE;
         pushEvent( HealthEventType::Died, 0.0f, instigatorID );
     }
@@ -344,7 +345,7 @@ namespace sw
         _timeSincePoiseDamage = 0.0f;
         _reviveElapsed        = 0.0f;
         _reviveSpeedScale     = 1.0f;
-        _reviverID            = -1;
+        _reviverID            = constant::invalid_index::kInt32;
         _bReviving            = SW_FALSE;
         _invulnerable.extendTo( _settings._invulnerableAfterRevive );
         pushEvent( HealthEventType::Revived, _health, reviverID );

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>
@@ -49,7 +50,7 @@ namespace sw
     {
         const unordered_map<uint32, int32>& mapChild = _listNode[static_cast<size_t>( nodeIndex )]._mapChild;
         const auto                          childIt  = mapChild.find( codepoint );
-        return childIt != mapChild.end() ? childIt->second : -1;
+        return childIt != mapChild.end() ? childIt->second : constant::invalid_index::kInt32;
     }
 
     int32 ChatWordFilter::initialize( const vector<string>& listWord, ChatFilterMode mode, const ChatTextNormalizer& normalizer )

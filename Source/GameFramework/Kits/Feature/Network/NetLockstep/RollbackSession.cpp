@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetLockstep/RollbackSession.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
@@ -27,7 +28,7 @@ namespace sw
         , _playerCount{ 0 }
         , _localPlayer{ 0 }
         , _frame{ 0 }
-        , _pendingRollbackFrame{ -1 }
+        , _pendingRollbackFrame{ constant::invalid_index::kInt32 }
         , _rollbackCount{ 0 }
         , _resimulatedFrameCount{ 0 }
         , _stallCount{ 0 }
@@ -69,7 +70,7 @@ namespace sw
         _listPeer.assign( static_cast<size_t>( _playerCount ), peer );
         _listNewFrameScratch.clear();
         _frame                 = 0;
-        _pendingRollbackFrame  = -1;
+        _pendingRollbackFrame  = constant::invalid_index::kInt32;
         _rollbackCount         = 0;
         _resimulatedFrameCount = 0;
         _stallCount            = 0;
@@ -229,7 +230,7 @@ namespace sw
         if ( _pendingRollbackFrame >= 0 )
         {
             rollbackTo( _pendingRollbackFrame );
-            _pendingRollbackFrame = -1;
+            _pendingRollbackFrame = constant::invalid_index::kInt32;
         }
         // 너무 앞서면 기다린다. 예측이 길수록 되감기가 길어지고 화면이 튀기 때문이다.
         for ( int32 player = 0; player < _playerCount; ++player )
@@ -271,7 +272,7 @@ namespace sw
         const bool bForgedPlayerNumber = _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1;
         if ( bForgedPlayerNumber )
             return NetHandleResult::Handled;
-        int32 ackedLocalFrame = -1;
+        int32 ackedLocalFrame = constant::invalid_index::kInt32;
         int32 advantage       = 0;
         for ( int32 index = 0; index < _playerCount; ++index )
         {

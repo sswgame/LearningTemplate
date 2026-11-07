@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -83,7 +84,7 @@ namespace sw
     {
         float32 _moveX{ 0.0f }; ///< 이동 방향(월드 XZ, 길이 1 이하)
         float32 _moveZ{ 0.0f };
-        int32   _skillSlot{ -1 }; ///< 수동 스킬 슬롯(−1이면 없음)
+        int32   _skillSlot{ constant::invalid_index::kInt32 }; ///< 수동 스킬 슬롯(−1이면 없음)
         uint8   _bDash{ SW_FALSE };
         uint8   _bJump{ SW_FALSE };
         uint8   _bHover{ SW_FALSE }; ///< 공중에서 누르고 있으면 부유한다(부스트를 소비한다)
@@ -149,8 +150,8 @@ namespace sw
         };
         hashed_string _id{};
         float32       _value{ 0.0f };
-        int32         _pilot{ -1 };
-        int32         _other{ -1 };
+        int32         _pilot{ constant::invalid_index::kInt32 };
+        int32         _other{ constant::invalid_index::kInt32 };
         Kind          _kind{ Kind::Fired };
     };
 } // namespace sw
@@ -186,8 +187,8 @@ namespace sw
         int32                       _deckIndex{ 0 };     ///< 지금 장착한 덱 슬롯. 격추된 동안은 격추된 슬롯이다(무기 상태가 이 기체의 것이고 그 참가자의 부활을 기다린다)
         int32                       _nextDeckIndex{ 0 }; ///< 다음 출격에 탈 덱 슬롯(`requestMechSwap`). 출격할 때 `_deckIndex` 가 된다
         int32                       _mode{ 0 };
-        int32                       _comboStage{ -1 }; ///< 근접 콤보의 지금 단(−1이면 근접 중이 아님)
-        int32                       _meleeSlot{ -1 };
+        int32                       _comboStage{ constant::invalid_index::kInt32 }; ///< 근접 콤보의 지금 단(−1이면 근접 중이 아님)
+        int32                       _meleeSlot{ constant::invalid_index::kInt32 };
         int32                       _kills{ 0 };
         int32                       _deaths{ 0 };
         MechPilotState              _state{ MechPilotState::Waiting };

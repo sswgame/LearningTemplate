@@ -3,12 +3,13 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -138,7 +139,7 @@ namespace sw
         const ConquestBuildingDef* pDef = _pCatalog != nullptr ? _pCatalog->findBuilding( buildingID ) : nullptr;
         if ( pDef == nullptr )
             return ConquestResult::UnknownDef;
-        int32 siteIndex = -1;
+        int32 siteIndex = constant::invalid_index::kInt32;
         for ( size_t index = 0; index < _listSite.size(); ++index )
         {
             if ( _listSite[index]._pDef->_id == siteID )
@@ -211,7 +212,7 @@ namespace sw
     {
         const ConquestUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( unitID ) : nullptr;
         if ( pDef == nullptr || team == ConquestTeam::Neutral )
-            return -1;
+            return constant::invalid_index::kInt32;
         ConquestUnit unit;
         unit._pDef      = pDef;
         unit._x         = x;
@@ -220,7 +221,7 @@ namespace sw
         unit._unitID    = _nextUnitID++;
         unit._team      = team;
         unit._order     = order;
-        unit._squadSlot = team == ConquestTeam::Player ? getSquadSize() : -1;
+        unit._squadSlot = team == ConquestTeam::Player ? getSquadSize() : constant::invalid_index::kInt32;
         _listUnit.push_back( unit );
         return unit._unitID;
     }
@@ -308,7 +309,7 @@ namespace sw
             if ( io.isWriting() || io.check( unit._pDef != nullptr && unit._bAlive == SW_TRUE ) == false )
                 return;
             // 걸음 끝에 죽은 병사를 지우므로 상태에 든 병사는 살아 있다.
-            const bool bSquadValid   = unit._squadSlot >= -1 && ( unit._team == ConquestTeam::Player || unit._squadSlot == -1 );
+            const bool bSquadValid   = unit._squadSlot >= constant::invalid_index::kInt32 && ( unit._team == ConquestTeam::Player || unit._squadSlot == constant::invalid_index::kInt32 );
             const bool bPlantedValid = unit._bPlanted == SW_FALSE || unit._pDef->_siegeRole == ConquestSiegeRole::Ladder;
             io.check( unit._team != ConquestTeam::Neutral && 0.0f < unit._health && unit._health <= unit._pDef->_health && unit._unitID >= 1 && bSquadValid && bPlantedValid );
         } );
@@ -973,7 +974,7 @@ namespace sw
 
     int32 ConquestWorld::findHomeSiteIndex() const
     {
-        int32 home = -1;
+        int32 home = constant::invalid_index::kInt32;
         for ( int32 siteIndex = 0; siteIndex < static_cast<int32>( _listSite.size() ); ++siteIndex )
         {
             const ConquestSite& site = _listSite[static_cast<size_t>( siteIndex )];

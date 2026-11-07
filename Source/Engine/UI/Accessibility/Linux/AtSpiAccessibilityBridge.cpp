@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Accessibility/Linux/AtSpiAccessibilityBridge.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_ATSPI )
@@ -52,7 +53,7 @@ namespace sw
             struct Target
             {
                 bool  _bRoot{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                int32 _node{ -1 };
+                int32 _node{ constant::invalid_index::kInt32 };
             };
 
             string makeNodePath( const AccessibleNode& node )
@@ -448,7 +449,7 @@ namespace sw
             {
                 vector<int32>                  list;
                 const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
-                const int32                    parent    = target._bRoot ? -1 : target._node;
+                const int32                    parent    = target._bRoot ? constant::invalid_index::kInt32 : target._node;
                 for ( size_t index = 0; index < pSnapshot->_listNode.size(); ++index )
                 {
                     if ( pSnapshot->_listNode[index]._parent == parent )
@@ -636,7 +637,7 @@ namespace sw
                     }
                     else
                     {
-                        dbus_int32_t index = -1;
+                        dbus_int32_t index = constant::invalid_index::kInt32;
                         dbus_message_get_args( pMessage, nullptr, DBUS_TYPE_INT32, &index, DBUS_TYPE_INVALID );
                         if ( 0 <= index && index < static_cast<dbus_int32_t>( children.size() ) )
                             appendNodeRef( &iter, children[static_cast<size_t>( index )] );
@@ -646,7 +647,7 @@ namespace sw
                 }
                 else if ( member == "GetIndexInParent" )
                 {
-                    int32 position = -1;
+                    int32 position = constant::invalid_index::kInt32;
                     if ( target._bRoot == false )
                     {
                         const int32                    parent    = nodeOf( target )._parent;
@@ -772,7 +773,7 @@ namespace sw
                 if ( target._bRoot )
                     return replyError( pMessage, DBUS_ERROR_UNKNOWN_METHOD, "the application root has no actions" );
                 const AccessibleNode& node  = nodeOf( target );
-                dbus_int32_t          index = -1;
+                dbus_int32_t          index = constant::invalid_index::kInt32;
                 dbus_message_get_args( pMessage, nullptr, DBUS_TYPE_INT32, &index, DBUS_TYPE_INVALID );
                 DBusMessage*    pRep = dbus_message_new_method_return( pMessage );
                 DBusMessageIter iter;

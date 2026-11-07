@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -203,7 +204,7 @@ namespace sw
         , _stepTimer{}
         , _time{ 0.0f }
         , _land{}
-        , _winningTeam{ -1 }
+        , _winningTeam{ constant::invalid_index::kInt32 }
         , _landRevision{ 0 }
     {
     }
@@ -236,7 +237,7 @@ namespace sw
         _buckets.initialize( _grid.getWidth(), _grid.getHeight(), _settings._bucketSize );
         _stepTimer   = FixedStepTimer{ _settings._fixedStep, 0.25f };
         _time        = 0.0f;
-        _winningTeam = -1;
+        _winningTeam = constant::invalid_index::kInt32;
         return true;
     }
 
@@ -1782,7 +1783,7 @@ namespace sw
             player._bDefeated = SW_TRUE;
             pushEvent( RTSEvent::Kind::PlayerDefeated, static_cast<int32>( index ), RTSUnitID{}, hashed_string{} );
         }
-        int32       aliveTeam  = -1;
+        int32       aliveTeam  = constant::invalid_index::kInt32;
         int32       aliveCount = 0;
         const int32 teamCount  = _vision.getTeamCount();
         for ( int32 team = 0; team < teamCount; ++team )

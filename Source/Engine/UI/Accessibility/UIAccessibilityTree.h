@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -23,10 +24,10 @@ namespace sw
     /** @brief 접근성 트리의 노드 하나입니다. */
     struct AccessibleNode
     {
-        WidgetID       _widget{ kInvalidWidgetID }; ///< 위젯 번호입니다(화면 트리 안에서 유일).
-        uint32         _screen{ 0 };                ///< 위젯이 속한 화면 핸들입니다(`UIScreenHandle`, 0 은 화면 없음).
-        int32          _parent{ -1 };               ///< 가장 가까운 노드 조상의 목록 번호입니다(-1 이면 접근성 루트 바로 아래).
-        float4         _bounds{};                   ///< 화면 사각형입니다(x, y, 너비, 높이, UI 단위·뷰포트 원점 기준).
+        WidgetID       _widget{ kInvalidWidgetID };                ///< 위젯 번호입니다(화면 트리 안에서 유일).
+        uint32         _screen{ 0 };                               ///< 위젯이 속한 화면 핸들입니다(`UIScreenHandle`, 0 은 화면 없음).
+        int32          _parent{ constant::invalid_index::kInt32 }; ///< 가장 가까운 노드 조상의 목록 번호입니다(-1 이면 접근성 루트 바로 아래).
+        float4         _bounds{};                                  ///< 화면 사각형입니다(x, y, 너비, 높이, UI 단위·뷰포트 원점 기준).
         AccessibleInfo _info{};
     };
 } // namespace sw
@@ -37,12 +38,12 @@ namespace sw
     struct SW_API UIAccessibilitySnapshot
     {
         vector<AccessibleNode> _listNode{};
-        int32                  _focusedNode{ -1 }; ///< 포커스 위젯의 노드 번호입니다(없으면 -1).
+        int32                  _focusedNode{ constant::invalid_index::kInt32 }; ///< 포커스 위젯의 노드 번호입니다(없으면 -1).
 
         void clear()
         {
             _listNode.clear();
-            _focusedNode = -1;
+            _focusedNode = constant::invalid_index::kInt32;
         }
         /** @brief (화면, 위젯)의 노드 번호입니다. 없으면 -1 입니다. */
         int32 findNode( uint32 screen, WidgetID widget ) const;

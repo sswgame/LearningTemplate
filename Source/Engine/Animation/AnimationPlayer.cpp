@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/AnimationPlayer.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -123,7 +124,7 @@ namespace sw
 
     int32 AnimationSyncGroup::synchronize( AnimationPlayer* const* ppPlayer, const float32* pWeight, uint32 count )
     {
-        int32   leaderIndex  = -1;
+        int32   leaderIndex  = constant::invalid_index::kInt32;
         float32 leaderWeight = -1.0f;
         for ( uint32 index = 0; index < count; ++index )
         {

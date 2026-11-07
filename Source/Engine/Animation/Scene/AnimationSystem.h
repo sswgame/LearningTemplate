@@ -189,7 +189,7 @@ namespace sw
          * @brief 지금 그리는 메시 LOD 단계입니다(`MeshComponent::getLODIndex`). 메시가 LOD 를 가지지 않으면 -1 입니다. 값이 있으면 본 LOD 단계는 화면 크기 임계값이 아니라 이 단계를 따릅니다 —
          *        임계값의 정본은 메시 단계 하나이고 본 LOD 표(`SkeletonBoneLOD`)는 단계마다 어느 본을 쓰는지만 정합니다(메시 단계 수가 더 많으면 마지막 본 단계).
          */
-        virtual int32 findMeshLODIndex() const { return -1; }
+        virtual int32 findMeshLODIndex() const { return constant::invalid_index::kInt32; }
         /** @brief 본 LOD 마스크 단계 수입니다(손 표 또는 메시 LOD 에서 지은 것 — `SkeletalMeshComponent::findBoneLODMask`). 메시 LOD n 은 마스크 단계 n 을 씁니다(마지막을 넘으면 마지막). */
         virtual uint32 getBoneLODMaskCount() const { return 0; }
         /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */

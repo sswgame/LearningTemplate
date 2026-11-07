@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -39,11 +40,11 @@ namespace sw
         Inventory           _inventory{};
         BattleRoyaleLoadout _loadout{};
         float2              _position{};
-        int32               _team{ -1 };
+        int32               _team{ constant::invalid_index::kInt32 };
         int32               _kills{ 0 };
-        int32               _knocks{ 0 };          ///< 기절시킨 수
-        int32               _downedBy{ -1 };       ///< 기절시킨 사람(출혈사와 전멸 처치의 귀속 대상)
-        int32               _revivingTarget{ -1 }; ///< 지금 살리고 있는 팀원
+        int32               _knocks{ 0 };                                       ///< 기절시킨 수
+        int32               _downedBy{ constant::invalid_index::kInt32 };       ///< 기절시킨 사람(출혈사와 전멸 처치의 귀속 대상)
+        int32               _revivingTarget{ constant::invalid_index::kInt32 }; ///< 지금 살리고 있는 팀원
 
         bool isAlive() const { return _healthMachine.isAlive(); }
         bool isDowned() const { return _healthMachine.isDowned(); }
@@ -81,9 +82,9 @@ namespace sw
             MatchEnded         ///< _team 이 이긴 팀(−1이면 무승부)
         };
         float2 _position{};
-        int32  _player{ -1 };
-        int32  _other{ -1 };
-        int32  _team{ -1 };
+        int32  _player{ constant::invalid_index::kInt32 };
+        int32  _other{ constant::invalid_index::kInt32 };
+        int32  _team{ constant::invalid_index::kInt32 };
         int32  _value{ 0 };
         Kind   _kind{ Kind::PlayerDowned };
     };

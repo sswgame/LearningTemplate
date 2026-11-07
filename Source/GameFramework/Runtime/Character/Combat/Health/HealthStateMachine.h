@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
@@ -100,7 +101,7 @@ namespace sw
     struct HealthEvent
     {
         float32         _amount{ 0.0f };
-        int32           _instigatorID{ -1 };
+        int32           _instigatorID{ constant::invalid_index::kInt32 };
         HealthEventType _type{ HealthEventType::Damaged };
     };
 } // namespace sw
@@ -183,7 +184,7 @@ namespace sw
          */
         bool ignoresDamage() const { return _state == LifeState::Dead || isInvulnerable() || isDamageImmune(); }
         /** @brief 상태를 가리지 않고 죽입니다. 낙사, 존 밖, 갈고리 희생에 씁니다. 이미 죽었으면 아무 일도 없습니다. */
-        void kill( int32 instigatorID = -1 );
+        void kill( int32 instigatorID = constant::invalid_index::kInt32 );
         void resetDownCount() { _downCount = 0; }
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<HealthEvent>& outListEvent );

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -80,7 +81,7 @@ namespace sw
         hashed_string      _questID{};
         hashed_string      _stageID{};
         const QuestReward* _pReward{ nullptr };
-        int32              _objective{ -1 };
+        int32              _objective{ constant::invalid_index::kInt32 };
         int32              _value{ 0 };
         Kind               _kind{ Kind::Started };
     };
@@ -156,7 +157,7 @@ namespace sw
         /** @brief 지금 단계의 필수 목표를 다 했으면 다음 단계로 넘깁니다. */
         void  tryAdvance( QuestProgress& progress );
         int32 applyNotify( const hashed_string& kind, const hashed_string& target, int32 value, bool bAbsolute );
-        void  pushEvent( QuestEvent::Kind kind, const QuestProgress& progress, int32 objective = -1, int32 value = 0, const QuestReward* pReward = nullptr );
+        void  pushEvent( QuestEvent::Kind kind, const QuestProgress& progress, int32 objective = constant::invalid_index::kInt32, int32 value = 0, const QuestReward* pReward = nullptr );
 
     private:
         vector<QuestProgress>   _listProgress;

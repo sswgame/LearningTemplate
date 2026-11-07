@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -308,7 +309,7 @@ namespace sw
     int32 KartTrack::findBoostPadAt( const float3& position ) const
     {
         if ( _listBoostPad.empty() )
-            return -1;
+            return constant::invalid_index::kInt32;
         const KartTrackProjection projection = project( position );
         for ( size_t padIndex = 0; padIndex < _listBoostPad.size(); ++padIndex )
         {
@@ -318,12 +319,12 @@ namespace sw
             if ( along <= pad._def._length * 0.5f && side <= pad._def._width * 0.5f )
                 return static_cast<int32>( padIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool KartTrack::applyBoostPad( KinematicVehicleMotor& motor, int32& inoutLastPad ) const
     {
-        const int32 pad  = motor.isAirborne() ? -1 : findBoostPadAt( motor.getPosition() );
+        const int32 pad  = motor.isAirborne() ? constant::invalid_index::kInt32 : findBoostPadAt( motor.getPosition() );
         const bool  bNew = pad >= 0 && pad != inoutLastPad;
         if ( motor.isAirborne() == false )
             inoutLastPad = pad;

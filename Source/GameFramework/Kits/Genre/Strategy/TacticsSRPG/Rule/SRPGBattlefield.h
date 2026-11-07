@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -106,8 +107,8 @@ namespace sw
         int32                        _hp{ 0 };
         int32                        _en{ 0 };
         int32                        _morale{ 100 };
-        int32                        _dodge{ 0 };        ///< 이동 회피로 쌓인 값
-        int32                        _rosterIndex{ -1 }; ///< 캠페인 명단의 슬롯이다(없으면 -1)
+        int32                        _dodge{ 0 };                                     ///< 이동 회피로 쌓인 값
+        int32                        _rosterIndex{ constant::invalid_index::kInt32 }; ///< 캠페인 명단의 슬롯이다(없으면 -1)
         SRPGTeam                     _team{ SRPGTeam::Player };
         uint8                        _bAlive{ SW_TRUE };
         uint8                        _bMoved{ SW_FALSE };
@@ -139,8 +140,8 @@ namespace sw
             Developed        ///< `_unit` 이 개발되었다
         };
 
-        int32    _unit{ -1 };
-        int32    _other{ -1 };
+        int32    _unit{ constant::invalid_index::kInt32 };
+        int32    _other{ constant::invalid_index::kInt32 };
         int32    _value{ 0 };
         Kind     _kind{ Kind::TurnStarted };
         SRPGTeam _team{ SRPGTeam::Player };

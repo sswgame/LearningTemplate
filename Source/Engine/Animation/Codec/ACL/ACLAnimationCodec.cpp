@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Codec/ACL/ACLAnimationCodec.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
@@ -95,7 +96,7 @@ namespace sw
         {
             acl::track_desc_transformf desc{};
             desc.output_index   = trackIndex;
-            const int32 parent  = trackIndex < rawClip._listTrackParent.size() ? rawClip._listTrackParent[trackIndex] : -1;
+            const int32 parent  = trackIndex < rawClip._listTrackParent.size() ? rawClip._listTrackParent[trackIndex] : constant::invalid_index::kInt32;
             desc.parent_index   = parent >= 0 ? static_cast<uint32_t>( parent ) : acl::k_invalid_track_index;
             desc.precision      = settings._precision;
             desc.shell_distance = settings._shellDistance;

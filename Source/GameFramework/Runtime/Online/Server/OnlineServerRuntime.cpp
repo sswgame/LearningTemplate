@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"
@@ -237,7 +238,7 @@ namespace sw
         string                              _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
         ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
         UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
-        int32                               _healthCheckIndex{ -1 };
+        int32                               _healthCheckIndex{ constant::invalid_index::kInt32 };
         uint8                               _bRegistered{ SW_FALSE };
         explicit Parts( const IClock& clock )
             : _clock{ clock }

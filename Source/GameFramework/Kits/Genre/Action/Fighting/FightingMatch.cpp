@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
@@ -76,7 +77,7 @@ namespace sw
         , _eventBuffer{}
         , _listHitboxScratch{}
         , _frame{ 0 }
-        , _lastRoundWinner{ -1 }
+        , _lastRoundWinner{ constant::invalid_index::kInt32 }
     {
     }
 
@@ -93,7 +94,7 @@ namespace sw
         _settings = settings;
         _eventBuffer.clear();
         _frame                                 = 0;
-        _lastRoundWinner                       = -1;
+        _lastRoundWinner                       = constant::invalid_index::kInt32;
         const FighterDef* arrDef[kPlayerCount] = { &fighter0, &fighter1 };
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
@@ -133,10 +134,10 @@ namespace sw
         fighter._health            = fighter._pDef != nullptr ? fighter._pDef->_health : 1;
         fighter._stateFrames       = 0;
         fighter._hitstop           = 0;
-        fighter._moveIndex         = -1;
-        fighter._bufferedMove      = -1;
+        fighter._moveIndex         = constant::invalid_index::kInt32;
+        fighter._bufferedMove      = constant::invalid_index::kInt32;
         fighter._bufferedAge       = 0;
-        fighter._stanceIndex       = -1;
+        fighter._stanceIndex       = constant::invalid_index::kInt32;
         fighter._stanceFrames      = 0;
         fighter._heatFrames        = 0;
         fighter._sidestepSign      = 0;
@@ -206,7 +207,7 @@ namespace sw
         if ( state != FighterState::Attacking )
         {
             fighter._timeline.cancel();
-            fighter._moveIndex = -1;
+            fighter._moveIndex = constant::invalid_index::kInt32;
         }
         if ( state != FighterState::Neutral && state != FighterState::Blockstun )
             fighter._guard = GuardStance::None;
@@ -245,7 +246,7 @@ namespace sw
                     --fighter._stanceFrames;
                     if ( fighter._stanceFrames <= 0 )
                     {
-                        fighter._stanceIndex  = -1;
+                        fighter._stanceIndex  = constant::invalid_index::kInt32;
                         fighter._stanceFrames = 0; // `_stanceFrames` 설정이 0 이면 여기서 −1 이 되어 저장이 범위 밖으로 실패한다
                         fighter._posture      = FighterPosture::Standing;
                     }
@@ -448,7 +449,7 @@ namespace sw
     {
         FighterRuntime&    fighter     = _arrFighter[player];
         const FighterMove* pMove       = fighter.findCurrentMove();
-        const int32        stanceIndex = pMove != nullptr && pMove->_enterStance.empty() == false ? fighter._pDef->findStanceIndex( pMove->_enterStance ) : -1;
+        const int32        stanceIndex = pMove != nullptr && pMove->_enterStance.empty() == false ? fighter._pDef->findStanceIndex( pMove->_enterStance ) : constant::invalid_index::kInt32;
         enterState( player, fighter._bAirborne == SW_TRUE ? FighterState::Jump : FighterState::Neutral, 0 );
         fighter._stanceIndex  = stanceIndex;
         fighter._stanceFrames = stanceIndex >= 0 ? _settings._stanceFrames : 0;
@@ -521,7 +522,7 @@ namespace sw
     int32 FightingMatch::findCompletedMove( int32 player, bool bBufferCandidates ) const
     {
         const FighterRuntime& fighter   = _arrFighter[player];
-        int32                 bestIndex = -1;
+        int32                 bestIndex = constant::invalid_index::kInt32;
         for ( size_t index = 0; index < fighter._pDef->_listMove.size(); ++index )
         {
             const int32        moveIndex = static_cast<int32>( index );
@@ -554,9 +555,9 @@ namespace sw
         fighter._state        = FighterState::Attacking;
         fighter._stateFrames  = 0;
         fighter._guard        = GuardStance::None;
-        fighter._bufferedMove = -1;
+        fighter._bufferedMove = constant::invalid_index::kInt32;
         fighter._bufferedAge  = 0;
-        fighter._stanceIndex  = -1;
+        fighter._stanceIndex  = constant::invalid_index::kInt32;
         fighter._stanceFrames = 0;
         if ( fighter._bAirborne == SW_FALSE )
             fighter._posture = move.allowsPosture( FighterPosture::Crouching ) && fighter._posture == FighterPosture::Crouching ? FighterPosture::Crouching
@@ -597,7 +598,7 @@ namespace sw
             {
                 ++fighter._bufferedAge;
                 if ( fighter._bufferedAge > _settings._inputBufferFrames )
-                    fighter._bufferedMove = -1;
+                    fighter._bufferedMove = constant::invalid_index::kInt32;
                 else if ( isMoveAllowed( player, fighter._bufferedMove ) )
                     moveIndex = fighter._bufferedMove;
             }
@@ -617,7 +618,7 @@ namespace sw
         {
             enterState( player, FighterState::Sidestep, fighter._pDef->_sidestepFrames );
             fighter._sidestepSign = 1;
-            fighter._stanceIndex  = -1;
+            fighter._stanceIndex  = constant::invalid_index::kInt32;
             fighter._posture      = FighterPosture::Standing;
             pushEvent( FightingEvent::Kind::Sidestep, player, 1 );
             return;
@@ -626,9 +627,9 @@ namespace sw
         {
             enterState( player, FighterState::Sidestep, fighter._pDef->_sidestepFrames );
             fighter._sidestepSign = -1;
-            fighter._stanceIndex  = -1;
+            fighter._stanceIndex  = constant::invalid_index::kInt32;
             fighter._posture      = FighterPosture::Standing;
-            pushEvent( FightingEvent::Kind::Sidestep, player, -1 );
+            pushEvent( FightingEvent::Kind::Sidestep, player, constant::invalid_index::kInt32 );
             return;
         }
         if ( bFloor && fighter._inputBuffer.isCompleted( fighter._pDef->_jump, fighter._side ) )
@@ -637,7 +638,7 @@ namespace sw
             enterState( player, FighterState::Jump, 0 );
             fighter._bAirborne   = SW_TRUE;
             fighter._posture     = FighterPosture::Airborne;
-            fighter._stanceIndex = -1;
+            fighter._stanceIndex = constant::invalid_index::kInt32;
             fighter._velocityY   = 4.0f * fighter._pDef->_jumpHeight / frames;
             fighter._gravity     = 8.0f * fighter._pDef->_jumpHeight / ( frames * frames );
             fighter._carryX      = fighter._dirX * fighter._pDef->_jumpDistance / frames;
@@ -649,7 +650,7 @@ namespace sw
         if ( FightingMatchInternal::isCrouchDirection( relative ) )
         {
             fighter._posture     = FighterPosture::Crouching;
-            fighter._stanceIndex = -1;
+            fighter._stanceIndex = constant::invalid_index::kInt32;
             fighter._guard       = relative == 3 ? GuardStance::None : GuardStance::Crouching;
         }
         else
@@ -934,7 +935,7 @@ namespace sw
         applyDamage( defender, damage );
         fighter._timeline.registerContact( false );
         other._hitstop      = frameData._hitstop;
-        other._bufferedMove = -1;
+        other._bufferedMove = constant::invalid_index::kInt32;
         ++other._comboHits;
 
         const bool bWallSplat = frameData._bWallSplat == SW_TRUE && isNearWall( defender ) && other._bWallSplatUsed == SW_FALSE;
@@ -990,7 +991,7 @@ namespace sw
         enterState( defender, FighterState::ThrowBreak, _settings._throwBreakFrames );
         other._breakButtons    = move._breakButtons;
         other._bThrowAttempted = SW_FALSE;
-        other._bufferedMove    = -1;
+        other._bufferedMove    = constant::invalid_index::kInt32;
         fighter._timeline.registerContact( false );
         fighter._state       = FighterState::Throwing;
         fighter._stateFrames = MathUtil::max( 1, frameData._recovery );
@@ -1098,7 +1099,7 @@ namespace sw
     int32 FightingMatch::getMatchWinner() const
     {
         if ( _series.isFinished() == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         return _series.getWinner() == RoundSeries::kNoWinner ? kDraw : _series.getWinner();
     }
 

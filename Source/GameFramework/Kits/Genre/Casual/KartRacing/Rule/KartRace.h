@@ -16,6 +16,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -105,7 +106,7 @@ namespace sw
         int32                    _nextCheckpoint{ 0 }; ///< 이번 바퀴에 지난 체크포인트 수
         int32                    _place{ 0 };
         int32                    _finishPlace{ 0 }; ///< 확정 순위이다(0 은 아직 정해지지 않음)
-        int32                    _lastBoostPad{ -1 };
+        int32                    _lastBoostPad{ constant::invalid_index::kInt32 };
         uint8                    _bAI{ SW_FALSE };
         uint8                    _bFinished{ SW_FALSE };
         uint8                    _bWrongWay{ SW_FALSE };
@@ -139,8 +140,8 @@ namespace sw
         };
         hashed_string _itemID{};
         float32       _time{ 0.0f };
-        int32         _racer{ -1 };
-        int32         _other{ -1 };
+        int32         _racer{ constant::invalid_index::kInt32 };
+        int32         _other{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::RaceStarted };
     };

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -103,7 +105,7 @@ namespace sw
     int32 SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel )
     {
         if ( catalog.findUnit( unitID ) == nullptr || catalog.findPilot( pilotID ) == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         SRPGRosterEntry entry;
         entry._unitID  = unitID;
         entry._pilotID = pilotID;

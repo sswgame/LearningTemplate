@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -51,7 +52,7 @@ namespace sw
             SeriesWon         ///< `_player` 는 우승한 사람이다
         };
         hashed_string _roundID{};
-        int32         _player{ -1 };
+        int32         _player{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         int32         _points{ 0 };
         Kind          _kind{ Kind::RoundStarted };

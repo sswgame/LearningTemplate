@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
@@ -111,7 +112,7 @@ namespace sw
         , _nextDebuggerPollTime{ 0.0 }
         , _protocolID{ 0 }
         , _updateDepth{ 0 }
-        , _clientIndex{ -1 }
+        , _clientIndex{ constant::invalid_index::kInt32 }
         , _receiveCursor{ 0 }
         , _bServer{ SW_FALSE }
         , _bConnectPending{ SW_FALSE }
@@ -140,7 +141,7 @@ namespace sw
             _authenticationFailureCount = 0;
             _replayRejectedCount        = 0;
             _mismatchLogCount           = 0;
-            _clientIndex                = -1;
+            _clientIndex                = constant::invalid_index::kInt32;
             _bServer                    = SW_FALSE;
             _bHasCredentials            = SW_FALSE;
             _bDebugHold                 = SW_FALSE;
@@ -360,7 +361,7 @@ namespace sw
             return;
         _bConnectPending = SW_FALSE;
         FinishedConnect finished{
-            std::move( _connectPromise ), NetConnectResult{ reason, reason == NetDisconnectReason::None ? _clientIndex : -1 }
+            std::move( _connectPromise ), NetConnectResult{ reason, reason == NetDisconnectReason::None ? _clientIndex : constant::invalid_index::kInt32 }
         };
         _listFinished.push_back( std::move( finished ) );
     }
@@ -1078,7 +1079,7 @@ namespace sw
         if ( bWasVisible )
             pushEvent( NetEndpointEvent{ slotIndex, reason, NetEndpointEvent::Kind::Disconnected } );
         if ( _bServer == SW_FALSE )
-            _clientIndex = -1;
+            _clientIndex = constant::invalid_index::kInt32;
     }
 
     bool NetEndpoint::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )

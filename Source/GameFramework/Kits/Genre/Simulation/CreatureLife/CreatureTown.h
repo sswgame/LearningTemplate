@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -109,11 +110,11 @@ namespace sw
     struct TownCreature
     {
         hashed_string _speciesID{};
-        vector<int32> _listAbilityUse{}; ///< 종의 `_listAbility` 와 같은 순서이며 오늘 쓴 횟수이다
-        int32         _habitat{ -1 };    ///< 머무는 서식지 번호이다(`HabitatInstance::_id` 이며 사라졌으면 -1)
-        int32         _house{ -1 };      ///< 사는 집의 index 이다(없으면 -1)
-        int32         _lastTalkDay{ -1 };
-        int32         _lastGiftDay{ -1 };
+        vector<int32> _listAbilityUse{};                           ///< 종의 `_listAbility` 와 같은 순서이며 오늘 쓴 횟수이다
+        int32         _habitat{ constant::invalid_index::kInt32 }; ///< 머무는 서식지 번호이다(`HabitatInstance::_id` 이며 사라졌으면 -1)
+        int32         _house{ constant::invalid_index::kInt32 };   ///< 사는 집의 index 이다(없으면 -1)
+        int32         _lastTalkDay{ constant::invalid_index::kInt32 };
+        int32         _lastGiftDay{ constant::invalid_index::kInt32 };
         int32         _arrivalDay{ 0 };
     };
 } // namespace sw

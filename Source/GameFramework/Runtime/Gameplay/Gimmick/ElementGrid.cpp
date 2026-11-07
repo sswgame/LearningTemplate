@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -175,7 +176,7 @@ namespace sw
             }
             // 너비 우선으로 이어진 셀(네 이웃, 이웃 순서 고정)에 상태를 붙인다. 이웃 순서가 고정이므로 알림 순서도 항상 같다.
             _floodSearch.begin( _topology.getCellCount() );
-            _floodSearch.visit( toIndex( cell ), -1 );
+            _floodSearch.visit( toIndex( cell ), constant::invalid_index::kInt32 );
             while ( _floodSearch.hasNext() )
             {
                 const int32 index   = _floodSearch.popNext();

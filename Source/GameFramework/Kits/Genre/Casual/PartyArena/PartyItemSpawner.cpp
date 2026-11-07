@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -150,7 +151,7 @@ namespace sw
 
     bool PartyItemSpawner::tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem )
     {
-        int32   bestIndex  = -1;
+        int32   bestIndex  = constant::invalid_index::kInt32;
         float32 bestDistSq = radius * radius;
         for ( size_t index = 0; index < _listInstance.size(); ++index )
         {

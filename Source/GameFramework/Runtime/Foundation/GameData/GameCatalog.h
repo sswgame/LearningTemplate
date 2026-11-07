@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/hashed_string.h"
@@ -36,11 +37,11 @@ namespace sw
         int32 add( const TDef& def )
         {
             if ( def._id.empty() )
-                return -1;
+                return constant::invalid_index::kInt32;
             if ( _mapIndex.find( def._id ) != _mapIndex.end() )
             {
                 SW_LOG_ERROR_ID( "GameCatalog.DuplicateID", "id '%#' is defined twice - the later definition is ignored", def._id.c_str() );
-                return -1;
+                return constant::invalid_index::kInt32;
             }
             const uint32 index = static_cast<uint32>( _listDef.size() );
             _listDef.push_back( def );
@@ -69,7 +70,7 @@ namespace sw
         int32 findIndex( const hashed_string& id ) const
         {
             const auto mapIter = _mapIndex.find( id );
-            return mapIter != _mapIndex.end() ? static_cast<int32>( mapIter->second ) : -1;
+            return mapIter != _mapIndex.end() ? static_cast<int32>( mapIter->second ) : constant::invalid_index::kInt32;
         }
 
         /** @brief 조건에 맞는 첫 정의입니다. 씨앗 아이템으로 작물 찾기처럼 보조 키로 찾을 때 씁니다. */

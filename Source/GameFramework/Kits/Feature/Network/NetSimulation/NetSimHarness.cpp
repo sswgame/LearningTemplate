@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -295,11 +296,11 @@ namespace sw
     {
         SW_ASSERT( _bStepping == false && "NetSimHarness::addClient called from inside step" );
         if ( _pServer == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         const int32 worldIndex = _nextWorldIndex;
         Link*       pLink      = createLink( worldIndex );
         if ( pLink == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         ++_nextWorldIndex;
         applyLinkConditions( worldIndex, conditions );
         unique_ptr<NetSimWorld> pWorld = createWorld( NetSimRole::Client, worldIndex, *pLink );
@@ -343,7 +344,7 @@ namespace sw
             pTarget = _pServer.get();
         else if ( worldIndex > 0 )
             pTarget = findClient( worldIndex );
-        if ( worldIndex != -1 && pTarget == nullptr )
+        if ( worldIndex != constant::invalid_index::kInt32 && pTarget == nullptr )
             return false;
         if ( _pServer != nullptr )
             _pServer->_bInputFocus = SW_FALSE;
@@ -365,7 +366,7 @@ namespace sw
             if ( pWorld->_bInputFocus )
                 return pWorld->getWorldIndex();
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void NetSimHarness::applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions )
@@ -468,7 +469,7 @@ namespace sw
     int32 NetSimHarness::stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks )
     {
         if ( pPredicate == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         for ( uint32 index = 0; index <= maxTicks; ++index )
         {
             if ( pPredicate( *this, pContext ) )

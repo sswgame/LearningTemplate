@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 #include "Core/Serialization/BitStream.h"
@@ -166,7 +167,7 @@ namespace sw
             [[nodiscard]] static bool isMeleeStateValid( const MechPilot& pilot )
             {
                 if ( pilot._comboStage < 0 )
-                    return pilot._meleeSlot == -1 && pilot._melee.isPlaying() == false;
+                    return pilot._meleeSlot == constant::invalid_index::kInt32 && pilot._melee.isPlaying() == false;
                 const MechDef*                   pMech      = pilot.getMech();
                 const vector<MechWeaponSlotDef>& listWeapon = pMech->_listMode[static_cast<size_t>( pilot._mode )]._listWeapon;
                 const int32                      slotInMode = pilot._meleeSlot - pMech->computeSlotOffset( pilot._mode );
@@ -227,7 +228,7 @@ namespace sw
             {
                 const int32 ownerTeam = _world.isValidPilot( projectile._owner ) ? _world._listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
                 const Ray   ray{ from, segment / length };
-                int32       hitPilot    = -1;
+                int32       hitPilot    = constant::invalid_index::kInt32;
                 float32     hitDistance = length;
                 for ( int32 other = 0; other < _world.getPilotCount(); ++other )
                 {
@@ -330,29 +331,29 @@ namespace sw
         const bool bPilotRejected = _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechID.empty() || config._team < 0 ||
                                     config._team >= static_cast<int32>( _listTeamName.size() );
         if ( bPilotRejected )
-            return -1;
+            return constant::invalid_index::kInt32;
         MechPilot pilot;
         int32     deckCost = 0;
         for ( const hashed_string& mechID : config._listMechID )
         {
             const MechDef* pMech = _pMechCatalog->findMech( mechID );
             if ( pMech == nullptr || pMech->_listMode.empty() || isMechDataComplete( *pMech ) == false )
-                return -1;
+                return constant::invalid_index::kInt32;
             // 기체를 바꿀 때마다 체력과 부스트를 다시 짜므로(equipMech) 덱의 모든 기체가 지금 범위 안이어야 한다(거절 사유는 각 initialize 가 남긴다).
             HealthStateMachine probeHealthMachine;
             ResourceGauge      probeBoost;
             if ( probeHealthMachine.initialize( makeMechHealthMachine( *pMech ) ) == false || probeBoost.initialize( makeMechBoost( *pMech ) ) == false )
-                return -1;
+                return constant::invalid_index::kInt32;
             deckCost += pMech->_cost;
             pilot._listDeckMech.push_back( pMech );
         }
         if ( _pMechCatalog->getDeckCostLimit() > 0 && deckCost > _pMechCatalog->getDeckCostLimit() )
-            return -1;
+            return constant::invalid_index::kInt32;
         for ( const hashed_string& skillID : config._listSkillID )
         {
             const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillID );
             if ( pSkill == nullptr )
-                return -1; // 오타 하나로 스킬 슬롯이 말없이 당겨지지 않게 거절한다(상태 읽기도 없는 스킬을 거절한다)
+                return constant::invalid_index::kInt32; // 오타 하나로 스킬 슬롯이 말없이 당겨지지 않게 거절한다(상태 읽기도 없는 스킬을 거절한다)
             pilot._listSkill.push_back( pSkill );
         }
         pilot._listSkillRemaining.resize( pilot._listSkill.size() );
@@ -366,7 +367,7 @@ namespace sw
         if ( equipMech( _listPilot.back(), index ) == false )
         {
             _listPilot.pop_back();
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         return index;
     }
@@ -438,7 +439,7 @@ namespace sw
             return MechSwapResult::OverCost;
         // 장착은 출격할 때 바뀐다. 여기서 `_deckIndex` 를 바꾸면 스냅샷이 새 기체의 슬롯 번호로 옛 기체의 무기 목록을 읽어 목록 밖을 읽었다.
         target._nextDeckIndex = deckIndex;
-        pushEvent( MechArenaEvent::Kind::MechSwapped, pilot, -1, static_cast<float32>( deckIndex ), target._listDeckMech[static_cast<size_t>( deckIndex )]->_id );
+        pushEvent( MechArenaEvent::Kind::MechSwapped, pilot, constant::invalid_index::kInt32, static_cast<float32>( deckIndex ), target._listDeckMech[static_cast<size_t>( deckIndex )]->_id );
         return MechSwapResult::Ok;
     }
 
@@ -534,7 +535,7 @@ namespace sw
                 retirePilot( pilot );
             }
             _projectiles.clear();
-            pushEvent( MechArenaEvent::Kind::MatchEnded, -1, _match.getWinningTeam(), 0.0f, hashed_string{} );
+            pushEvent( MechArenaEvent::Kind::MatchEnded, constant::invalid_index::kInt32, _match.getWinningTeam(), 0.0f, hashed_string{} );
         }
     }
 
@@ -542,8 +543,8 @@ namespace sw
     {
         pilot._state = MechPilotState::Retired;
         pilot._melee.cancel();
-        pilot._comboStage   = -1;
-        pilot._meleeSlot    = -1;
+        pilot._comboStage   = constant::invalid_index::kInt32;
+        pilot._meleeSlot    = constant::invalid_index::kInt32;
         pilot._bMeleeQueued = SW_FALSE;
     }
 
@@ -655,8 +656,8 @@ namespace sw
         pilot._dashRemaining.clear();
         pilot._staggerRemaining.clear();
         pilot._transformCooldown.clear();
-        pilot._comboStage   = -1;
-        pilot._meleeSlot    = -1;
+        pilot._comboStage   = constant::invalid_index::kInt32;
+        pilot._meleeSlot    = constant::invalid_index::kInt32;
         pilot._bMeleeQueued = SW_FALSE;
         pilot._bGrounded    = pilot._position._y <= 0.0f ? SW_TRUE : SW_FALSE;
         pilot._melee.cancel();
@@ -664,7 +665,7 @@ namespace sw
         if ( bRespawn == false )
             return;
         pilot._healthMachine.setInvulnerable( _settings._respawnInvulnerable );
-        pushEvent( MechArenaEvent::Kind::Respawned, pilotIndex, -1, static_cast<float32>( pilot._deckIndex ), pilot.getMech()->_id );
+        pushEvent( MechArenaEvent::Kind::Respawned, pilotIndex, constant::invalid_index::kInt32, static_cast<float32>( pilot._deckIndex ), pilot.getMech()->_id );
         triggerSkills( pilotIndex, MechSkillTrigger::OnRespawn );
     }
 
@@ -716,14 +717,14 @@ namespace sw
     {
         const MechModeDef* pMode = pilot.getMode();
         if ( pMode == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         const int32 offset = pilot.getMech()->computeSlotOffset( pilot._mode );
         for ( size_t index = 0; index < pMode->_listWeapon.size(); ++index )
         {
             if ( pMode->_listWeapon[index]._kind == kind )
                 return offset + static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool MechArenaWorld::isTargetable( int32 pilot ) const
@@ -815,7 +816,7 @@ namespace sw
         {
             // 즉시 탄(광선)은 사거리 안에서 가장 가까운 적을 맞힌다.
             const Ray ray{ origin, direction };
-            int32     hitPilot    = -1;
+            int32     hitPilot    = constant::invalid_index::kInt32;
             float32   hitDistance = projectile._range;
             for ( int32 other = 0; other < getPilotCount(); ++other )
             {
@@ -879,18 +880,18 @@ namespace sw
         target._healthMachine.discardEvents();
         if ( result._bIgnored == SW_TRUE )
             return;
-        const int32 victimParticipant   = target._listParticipant.empty() ? -1 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
+        const int32 victimParticipant   = target._listParticipant.empty() ? constant::invalid_index::kInt32 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
         const int32 attackerParticipant = bAttacker && _listPilot[static_cast<size_t>( attacker )]._listParticipant.empty() == false
                                             ? _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )]
-                                            : -1;
+                                            : constant::invalid_index::kInt32;
         _match.reportDamage( attackerParticipant, victimParticipant, result._healthDamage );
         pushEvent( MechArenaEvent::Kind::Hit, victim, attacker, result._healthDamage, hashed_string{} );
 
         if ( result._bDied == SW_TRUE )
         {
             target._state        = MechPilotState::Destroyed;
-            target._comboStage   = -1;
-            target._meleeSlot    = -1;
+            target._comboStage   = constant::invalid_index::kInt32;
+            target._meleeSlot    = constant::invalid_index::kInt32;
             target._bMeleeQueued = SW_FALSE;
             target._velocity     = float3{};
             target._dashRemaining.clear();
@@ -917,8 +918,8 @@ namespace sw
                 target._staggerRemaining.extendTo( staggerTime );
                 target._dashRemaining.clear();
                 target._melee.cancel();
-                target._comboStage   = -1;
-                target._meleeSlot    = -1;
+                target._comboStage   = constant::invalid_index::kInt32;
+                target._meleeSlot    = constant::invalid_index::kInt32;
                 target._bMeleeQueued = SW_FALSE;
             }
             if ( knockback > 0.0f )
@@ -934,8 +935,8 @@ namespace sw
                 target._state = MechPilotState::Down;
                 target._dashRemaining.clear();
                 target._melee.cancel();
-                target._comboStage   = -1;
-                target._meleeSlot    = -1;
+                target._comboStage   = constant::invalid_index::kInt32;
+                target._meleeSlot    = constant::invalid_index::kInt32;
                 target._bMeleeQueued = SW_FALSE;
                 pushEvent( MechArenaEvent::Kind::Downed, victim, attacker, 0.0f, hashed_string{} );
                 triggerSkills( victim, MechSkillTrigger::OnDown );
@@ -957,7 +958,7 @@ namespace sw
         pilot._listSkillRemaining[index].start( pSkill->_duration );
         pilot._listSkillCooldown[index].start( pSkill->_cooldown );
         pilot._listSkillSpent[index] = SW_TRUE;
-        pushEvent( MechArenaEvent::Kind::SkillStarted, pilotIndex, -1, pSkill->_duration, pSkill->_id );
+        pushEvent( MechArenaEvent::Kind::SkillStarted, pilotIndex, constant::invalid_index::kInt32, pSkill->_duration, pSkill->_id );
     }
 
     void MechArenaWorld::triggerSkills( int32 pilotIndex, MechSkillTrigger trigger )
@@ -1004,9 +1005,9 @@ namespace sw
             entry._boostHeat     = pilot._boost.getRatio();
             entry._downRatio     = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._healthMachine.getPoise() / pMech->_downMax ) : 0.0f;
             entry._team          = pilot._team;
-            entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ) : -1;
+            entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ) : constant::invalid_index::kInt32;
             entry._mode          = pilot._mode;
-            entry._lockTarget    = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : -1;
+            entry._lockTarget    = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : constant::invalid_index::kInt32;
             entry._comboStage    = pilot._comboStage;
             entry._state         = pilot._state;
             entry._bOverheated   = pilot._boost.isOverheated() ? SW_TRUE : SW_FALSE;
@@ -1147,7 +1148,7 @@ namespace sw
             return;
         if ( io.isReading() )
         {
-            pilot._listParticipant.assign( participantCount, -1 );
+            pilot._listParticipant.assign( participantCount, constant::invalid_index::kInt32 );
         }
         for ( int32& participant : pilot._listParticipant )
         {
@@ -1211,7 +1212,7 @@ namespace sw
             // 기상: 다운치는 가득 찬 채로 일어나고 잠시 무적이다.
             pilot._state = MechPilotState::Active;
             pilot._healthMachine.setInvulnerable( pMech->_wakeInvulnerable );
-            pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
+            pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, constant::invalid_index::kInt32, pMech->_wakeInvulnerable, hashed_string{} );
         }
         pilot._staggerRemaining.update( deltaTime );
         pilot._transformCooldown.update( deltaTime );
@@ -1239,7 +1240,7 @@ namespace sw
                     pilot._mode = ( pilot._mode + 1 ) % static_cast<int32>( pMech->_listMode.size() );
                     pilot._transformCooldown.start( pMech->_transformTime );
                     pilot._dashRemaining.clear();
-                    pushEvent( MechArenaEvent::Kind::Transformed, pilotIndex, -1, static_cast<float32>( pilot._mode ), pilot.getMode()->_id );
+                    pushEvent( MechArenaEvent::Kind::Transformed, pilotIndex, constant::invalid_index::kInt32, static_cast<float32>( pilot._mode ), pilot.getMode()->_id );
                 }
                 stepMelee( pilotIndex, MechArenaWorldInternal::isPressed( input._bMelee, previous._bMelee ) );
                 if ( pilot._comboStage < 0 )
@@ -1253,7 +1254,7 @@ namespace sw
         pilot._boost.update( deltaTime );
         const bool bOverheated = pilot._boost.isOverheated();
         if ( bOverheated && pilot._bWasOverheated == SW_FALSE )
-            pushEvent( MechArenaEvent::Kind::Overheated, pilotIndex, -1, 0.0f, hashed_string{} );
+            pushEvent( MechArenaEvent::Kind::Overheated, pilotIndex, constant::invalid_index::kInt32, 0.0f, hashed_string{} );
         pilot._bWasOverheated = bOverheated ? SW_TRUE : SW_FALSE;
         pilot._previousInput  = input;
     }
@@ -1387,7 +1388,7 @@ namespace sw
             pilot._meleeSlot    = slotIndex;
             pilot._bMeleeHit    = SW_FALSE;
             pilot._bMeleeQueued = SW_FALSE;
-            pushEvent( MechArenaEvent::Kind::ComboAdvanced, pilotIndex, -1, 0.0f, pMove->_id );
+            pushEvent( MechArenaEvent::Kind::ComboAdvanced, pilotIndex, constant::invalid_index::kInt32, 0.0f, pMove->_id );
         }
         else
         {
@@ -1406,7 +1407,7 @@ namespace sw
                 pilot._comboStage   = nextStage;
                 pilot._bMeleeHit    = SW_FALSE;
                 pilot._bMeleeQueued = SW_FALSE;
-                pushEvent( MechArenaEvent::Kind::ComboAdvanced, pilotIndex, -1, static_cast<float32>( nextStage ), pNext->_id );
+                pushEvent( MechArenaEvent::Kind::ComboAdvanced, pilotIndex, constant::invalid_index::kInt32, static_cast<float32>( nextStage ), pNext->_id );
             }
             else
             {
@@ -1414,8 +1415,8 @@ namespace sw
                 if ( pilot._melee.getPhase() == MovePhase::Finished )
                 {
                     pilot._melee.cancel();
-                    pilot._comboStage   = -1;
-                    pilot._meleeSlot    = -1;
+                    pilot._comboStage   = constant::invalid_index::kInt32;
+                    pilot._meleeSlot    = constant::invalid_index::kInt32;
                     pilot._bMeleeQueued = SW_FALSE;
                     return;
                 }
@@ -1426,7 +1427,7 @@ namespace sw
             return;
         const MechWeaponSlotDef& slot   = pilot.getMode()->_listWeapon[static_cast<size_t>( pilot._meleeSlot - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
         const MechDef*           pMech  = pilot.getMech();
-        int32                    target = -1;
+        int32                    target = constant::invalid_index::kInt32;
         float32                  best   = MathUtil::kMaxFloat;
         for ( int32 other = 0; other < getPilotCount(); ++other )
         {
@@ -1462,7 +1463,7 @@ namespace sw
             Countdown& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
             pilot._listSkillCooldown[static_cast<size_t>( index )].update( deltaTime );
             if ( remaining.update( deltaTime ) )
-                pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
+                pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, constant::invalid_index::kInt32, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
         }
         const int32 slot                       = pilot._input._skillSlot;
         const bool  bPressedManual             = slot >= 0 && slot < count && slot != pilot._previousInput._skillSlot;

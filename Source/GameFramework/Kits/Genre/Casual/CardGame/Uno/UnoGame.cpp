@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -69,8 +70,8 @@ namespace sw
         , _currentPlayer{ 0 }
         , _direction{ 1 }
         , _pendingDraw{ 0 }
-        , _unoTarget{ -1 }
-        , _winner{ -1 }
+        , _unoTarget{ constant::invalid_index::kInt32 }
+        , _winner{ constant::invalid_index::kInt32 }
         , _color{ UnoColor::Red }
     {
     }
@@ -161,8 +162,8 @@ namespace sw
         _currentPlayer = layout._firstPlayer;
         _direction     = 1;
         _pendingDraw   = 0;
-        _unoTarget     = -1;
-        _winner        = -1;
+        _unoTarget     = constant::invalid_index::kInt32;
+        _winner        = constant::invalid_index::kInt32;
         _color         = layout._color;
         _eventBuffer.clear();
         return true;
@@ -213,7 +214,7 @@ namespace sw
                 (void)_discardPile.drawInto( _drawPile, _discardPile.getCount() );
                 _drawPile.shuffle( _random );
                 _discardPile.push( top );
-                _eventBuffer.push( UnoEvent{ -1, _drawPile.getCount(), Card::kNoCard, UnoEvent::Kind::Reshuffled } );
+                _eventBuffer.push( UnoEvent{ constant::invalid_index::kInt32, _drawPile.getCount(), Card::kNoCard, UnoEvent::Kind::Reshuffled } );
             }
             Card card;
             if ( _drawPile.draw( card ) == false )
@@ -242,8 +243,8 @@ namespace sw
         if ( bIllegalWildDrawFour )
             return false; // 지금 색이 있으면 +4 를 낼 수 없다
 
-        _unoTarget = -1;              // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
-        (void)hand.removeAt( index ); // 뺀 카드는 위에서 읽어 둔 card 이다
+        _unoTarget = constant::invalid_index::kInt32; // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
+        (void)hand.removeAt( index );                 // 뺀 카드는 위에서 읽어 둔 card 이다
         _discardPile.push( card );
         _eventBuffer.push( UnoEvent{ player, 0, card._id, UnoEvent::Kind::Played } );
         _color = bWild ? chosenColor : static_cast<UnoColor>( card._suit );
@@ -311,7 +312,7 @@ namespace sw
     {
         if ( _winner >= 0 || player != _currentPlayer )
             return false;
-        _unoTarget        = -1;
+        _unoTarget        = constant::invalid_index::kInt32;
         const int32 count = _pendingDraw > 0 ? _pendingDraw : 1;
         const int32 drawn = drawInto( player, count );
         _pendingDraw      = 0;
@@ -326,7 +327,7 @@ namespace sw
         if ( bCannotCallUno )
             return false;
         const int32 target = _unoTarget;
-        _unoTarget         = -1;
+        _unoTarget         = constant::invalid_index::kInt32;
         if ( getHand( target ).getCount() != 1 )
             return false;
         if ( caller == target )

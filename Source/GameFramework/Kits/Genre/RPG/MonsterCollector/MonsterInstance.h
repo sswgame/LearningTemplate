@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -126,7 +127,7 @@ namespace sw
         static int32 gainExp( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, int64 amount, vector<MonsterGrowthEvent>& outListEvent );
         /** @brief 기술을 배웁니다. 빈 슬롯이 있으면 거기에, 없으면 @p replaceSlot 을 바꿉니다(−1이면 실패). 이미 아는 기술도 실패합니다. */
         [[nodiscard]] static bool learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveID,
-                                             int32 replaceSlot = -1 );
+                                             int32 replaceSlot = constant::invalid_index::kInt32 );
         /**
          * @brief 맞는 진화 분기의 종을 반환합니다. 없으면 빈 이름을 반환합니다.
          * @param itemID 비어 있으면 레벨업 진화(레벨과 친밀도 조건만 있는 분기)를, 비어 있지 않으면 그 아이템 분기를 봅니다.

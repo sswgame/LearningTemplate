@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelection.h"
 
+#include "Core/Foundation/Constants.h"
+
 namespace sw
 {
     namespace
@@ -31,7 +33,7 @@ namespace sw
 
     bool ServerSelection::pickServer( const vector<ServerStatus>& listStatus, const ServerSelectionQuery& query, int64 nowMs, int32& outIndex )
     {
-        int32 bestIndex       = -1;
+        int32 bestIndex       = constant::invalid_index::kInt32;
         bool  bBestSameRegion = false;
         int64 bestFill        = 0;
         for ( int32 index = 0; index < static_cast<int32>( listStatus.size() ); ++index )

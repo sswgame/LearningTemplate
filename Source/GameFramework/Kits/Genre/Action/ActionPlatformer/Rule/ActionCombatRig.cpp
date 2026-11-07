@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatRig.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 
@@ -52,7 +53,7 @@ namespace sw
         , _gun{}
         , _projectiles{}
         , _eventBuffer{}
-        , _comboIndex{ -1 }
+        , _comboIndex{ constant::invalid_index::kInt32 }
         , _attackBufferFrames{ 0 }
         , _parryFrames{ 0 }
         , _hitstopFrames{ 0 }
@@ -93,7 +94,7 @@ namespace sw
         _timeline.cancel();
         _projectiles.clear();
         _eventBuffer.clear();
-        _comboIndex         = -1;
+        _comboIndex         = constant::invalid_index::kInt32;
         _attackBufferFrames = 0;
         _parryFrames        = 0;
         _hitstopFrames      = 0;
@@ -201,7 +202,7 @@ namespace sw
             if ( _timeline.isPlaying() == false )
             {
                 pushEvent( ActionCombatEventKind::ComboEnded, hashed_string{}, _comboIndex + 1 );
-                _comboIndex = -1;
+                _comboIndex = constant::invalid_index::kInt32;
             }
         }
 
@@ -297,7 +298,7 @@ namespace sw
         io.value( _hitstopFrames );
         io.expect( _bGunEquipped );
         const int32 comboMoveCount = _pCombo != nullptr ? static_cast<int32>( _pCombo->_listMove.size() ) : 0;
-        if ( io.check( -1 <= _comboIndex && _comboIndex < comboMoveCount && 0 <= _attackBufferFrames && 0 <= _parryFrames && 0 <= _hitstopFrames ) == false )
+        if ( io.check( constant::invalid_index::kInt32 <= _comboIndex && _comboIndex < comboMoveCount && 0 <= _attackBufferFrames && 0 <= _parryFrames && 0 <= _hitstopFrames ) == false )
             return;
         io.value( _gun );
         // 탄 수치 · id(다음 id 아래여야 새 탄과 겹치지 않는다)는 시뮬레이션이 보고, 편은 여기서 본다.

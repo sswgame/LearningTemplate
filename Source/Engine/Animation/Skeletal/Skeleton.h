@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -37,7 +38,7 @@ namespace sw
         PROPERTY( Required, Tooltip = "Bone name" )
         hashed_string _name;
         PROPERTY( Required, Tooltip = "Index of the parent bone, an earlier bone in the list (-1: root)" )
-        int32 _parentIndex{ -1 };
+        int32 _parentIndex{ constant::invalid_index::kInt32 };
         /** @brief 부모 기준 레퍼런스(바인드) 로컬 변환입니다. */
         PROPERTY( Required, Tooltip = "Reference (bind) local transform from the parent" )
         BoneTransform _referencePose{};

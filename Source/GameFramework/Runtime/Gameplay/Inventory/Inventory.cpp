@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -227,7 +228,7 @@ namespace sw
     {
         const bool bInvalidSplitRequest = isValidSlot( slot ) == false || count <= 0 || _listSlot[static_cast<size_t>( slot )]._count <= count;
         if ( bInvalidSplitRequest )
-            return -1;
+            return constant::invalid_index::kInt32;
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             if ( _listSlot[index].isEmpty() )
@@ -239,7 +240,7 @@ namespace sw
                 return static_cast<int32>( index );
             }
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void Inventory::sortSlots()
@@ -360,7 +361,7 @@ namespace sw
             if ( _listSlot[index].isEmpty() == false && _listSlot[index]._itemID == itemID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 Inventory::countEmptySlots() const

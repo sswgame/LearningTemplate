@@ -6,6 +6,7 @@
  *          호출한 시각이다. 너무 일찍 누르면(창 밖) 패리가 아니라 그냥 맞는다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -79,7 +80,7 @@ namespace sw
          * @brief 공격이 지금 닿았음을 알립니다. 패리 창, 막기, 맞기 순서로 판정합니다.
          * @param poiseDamage 강인도 피해(막으면 반만 들어가고 패리하면 없다)
          */
-        MetroidvaniaDefenseOutcome receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID = -1 );
+        MetroidvaniaDefenseOutcome receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID = constant::invalid_index::kInt32 );
         /**
          * @brief 내가 @p target 을 칠 때의 피해를 계산합니다. 패리 직후(반격 창)이거나 상대 강인도가 무너졌으면 반격 배율을 곱하고, 반격 창은 그 한 번으로 닫힙니다.
          */

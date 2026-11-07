@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionEnemyBrain.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -12,7 +14,7 @@ namespace sw
     ActionEnemyBrain::ActionEnemyBrain()
         : _pPattern{ nullptr }
         , _pCatalog{ nullptr }
-        , _stateIndex{ -1 }
+        , _stateIndex{ constant::invalid_index::kInt32 }
         , _stateFrame{ 0 }
         , _facing{ 1 }
         , _bEntered{ SW_FALSE }
@@ -22,12 +24,12 @@ namespace sw
     bool ActionEnemyBrain::initialize( const ActionPatternDef* pPattern, int32 facing )
     {
         setFacing( facing );
-        const int32 startIndex = pPattern != nullptr ? pPattern->findStateIndex( pPattern->_start ) : -1;
+        const int32 startIndex = pPattern != nullptr ? pPattern->findStateIndex( pPattern->_start ) : constant::invalid_index::kInt32;
         if ( startIndex < 0 )
         {
             // 첫 상태로 대신 시작하지 않는다. 실패하면 앞 패턴의 진행도 남기지 않는다.
             _pPattern   = nullptr;
-            _stateIndex = -1;
+            _stateIndex = constant::invalid_index::kInt32;
             _stateFrame = 0;
             _bEntered   = SW_FALSE;
             return false;
@@ -47,7 +49,7 @@ namespace sw
         if ( _bEntered == SW_FALSE )
         {
             ++_stateFrame;
-            int32 targetIndex = -1;
+            int32 targetIndex = constant::invalid_index::kInt32;
             if ( pState->_onNear.empty() == false && playerDistance <= pState->_nearRange )
                 targetIndex = _pPattern->findStateIndex( pState->_onNear );
             const bool bShouldAdvanceToNextState = targetIndex < 0 && pState->_next.empty() == false && _stateFrame >= pState->_frames;
@@ -119,7 +121,7 @@ namespace sw
         io.check( 0 <= _stateFrame && ( _facing == -1 || _facing == 1 ) );
         if ( io.isReading() )
         {
-            _stateIndex = _pPattern != nullptr && stateID.empty() == false ? _pPattern->findStateIndex( stateID ) : -1;
+            _stateIndex = _pPattern != nullptr && stateID.empty() == false ? _pPattern->findStateIndex( stateID ) : constant::invalid_index::kInt32;
             io.check( stateID.empty() || _stateIndex >= 0 ); // 이름이 있는데 찾지 못하면 다른 데이터의 바이트다
         }
     }

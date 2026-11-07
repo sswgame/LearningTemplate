@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -221,10 +222,10 @@ namespace sw
     int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs )
     {
         if ( nowMs < 0 )
-            return -1;
+            return constant::invalid_index::kInt64;
         const int64 minuteOffsetMs = static_cast<int64>( definition._minuteOfDay ) * ServiceSchedulerInternal::kMinuteMs;
         const int64 dayIndex       = ServiceSchedulerInternal::floorDivide( nowMs, ServiceSchedulerInternal::kDayMs );
-        int64       occurrenceMs   = -1;
+        int64       occurrenceMs   = constant::invalid_index::kInt64;
         switch ( definition._kind )
         {
             case ScheduleKind::Daily:
@@ -246,7 +247,7 @@ namespace sw
             case ScheduleKind::Window:
             {
                 const bool bInside = definition._windowStartMs <= nowMs && nowMs < definition._windowEndMs;
-                occurrenceMs       = bInside ? definition._windowStartMs : -1;
+                occurrenceMs       = bInside ? definition._windowStartMs : constant::invalid_index::kInt64;
                 break;
             }
             case ScheduleKind::Interval:
@@ -255,7 +256,7 @@ namespace sw
                 break;
             }
         }
-        return occurrenceMs >= 0 ? occurrenceMs : -1;
+        return occurrenceMs >= 0 ? occurrenceMs : constant::invalid_index::kInt32;
     }
 
     bool ServiceScheduler::isValidDefinition( const ScheduleDef& definition )

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
@@ -348,7 +349,7 @@ namespace sw
         const auto memberIt = _mapAccountToMember.find( accountID );
         if ( memberIt == _mapAccountToMember.end() )
             return;
-        memberIt->second._sanctionReadMs   = -1;
+        memberIt->second._sanctionReadMs   = constant::invalid_index::kInt32;
         memberIt->second._bSanctionChanged = memberIt->second._bSanctionReading;
     }
 

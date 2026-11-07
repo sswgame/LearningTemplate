@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetConnection.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetFlowLog.h"
 #include "Core/Serialization/BitStream.h"
@@ -226,7 +227,7 @@ namespace sw
         sent._bNoticeSettled = SW_TRUE;
         for ( int32 index = 0; index < sent._notifiedCount; ++index )
         {
-            _listDeliveryNotice.push_back( NetDeliveryNotice{ sent._arrNotifiedTag[index], -1, sent._arrNotifiedKind[index], result } );
+            _listDeliveryNotice.push_back( NetDeliveryNotice{ sent._arrNotifiedTag[index], constant::invalid_index::kInt32, sent._arrNotifiedKind[index], result } );
         }
     }
 
@@ -442,7 +443,7 @@ namespace sw
                 break;
             QueuedUnreliable& expired = _listOutgoingUnreliable.front();
             if ( expired._bNotified == SW_TRUE )
-                _listDeliveryNotice.push_back( NetDeliveryNotice{ expired._noticeTag, -1, expired._buffer[0], NetDeliveryResult::Lost } ); // 싣지도 못했다
+                _listDeliveryNotice.push_back( NetDeliveryNotice{ expired._noticeTag, constant::invalid_index::kInt32, expired._buffer[0], NetDeliveryResult::Lost } ); // 싣지도 못했다
             recycleBuffer( expired._buffer );
             _listOutgoingUnreliable.pop_front();
             ++_stats._expiredUnreliableCount;

@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Content/AssetID.h"
@@ -53,7 +54,7 @@ namespace sw
             if ( isFree( slot ) && _def._listSlot[static_cast<size_t>( slot )]._tags.hasAllTags( requiredTags ) )
                 return slot;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 SmartObjectSlots::findSlotOf( uint64 claimantID ) const
@@ -63,7 +64,7 @@ namespace sw
             if ( _listClaimant[static_cast<size_t>( slot )] == claimantID )
                 return slot;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     uint64 SmartObjectSlots::getClaimant( int32 slot ) const

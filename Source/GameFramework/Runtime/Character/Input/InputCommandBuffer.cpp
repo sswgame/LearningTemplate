@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Input/InputCommandBuffer.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -253,7 +254,7 @@ namespace sw
             return false;
         // 마지막 단계는 이번 틱에, 앞 단계들은 거꾸로 `_maxGap` 안에서.
         int32 framesAgo      = 0;
-        int32 laterFrame     = -1;
+        int32 laterFrame     = constant::invalid_index::kInt32;
         uint8 laterDirection = 0;
         for ( size_t stepIndex = command._listStep.size(); stepIndex > 0; --stepIndex )
         {

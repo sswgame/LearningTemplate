@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -92,7 +93,7 @@ namespace sw
             GameOver
         };
         hashed_string _id{};
-        int32         _player{ -1 };
+        int32         _player{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::Routed };
         uint8         _bIndoor{ SW_FALSE };

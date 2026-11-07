@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -38,7 +39,7 @@ namespace sw
         struct Lent
         {
             Scene* _pScene{ nullptr };
-            int32  _worldIndex{ -1 };
+            int32  _worldIndex{ constant::invalid_index::kInt32 };
             uint32 _sceneKey{ 0 };
         };
 

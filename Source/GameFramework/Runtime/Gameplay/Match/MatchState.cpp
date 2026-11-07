@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -18,7 +19,7 @@ namespace sw
         , _settings{}
         , _elapsed{ 0.0f }
         , _phaseTime{ 0.0f }
-        , _winningTeam{ -1 }
+        , _winningTeam{ constant::invalid_index::kInt32 }
         , _phase{ MatchPhase::Waiting }
     {
     }
@@ -31,7 +32,7 @@ namespace sw
         _eventBuffer.clear();
         _elapsed     = 0.0f;
         _phaseTime   = 0.0f;
-        _winningTeam = -1;
+        _winningTeam = constant::invalid_index::kInt32;
         _phase       = MatchPhase::Waiting;
     }
 
@@ -48,7 +49,7 @@ namespace sw
     int32 MatchState::addParticipant( int32 team, const hashed_string& role, int32 respawnCost )
     {
         if ( isValidTeam( team ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         MatchParticipant participant;
         participant._team        = team;
         participant._role        = role;
@@ -63,7 +64,7 @@ namespace sw
             return;
         _phase     = phase;
         _phaseTime = 0.0f;
-        pushEvent( MatchEvent::Kind::PhaseChanged, -1, -1, -1, static_cast<int32>( phase ) );
+        pushEvent( MatchEvent::Kind::PhaseChanged, constant::invalid_index::kInt32, constant::invalid_index::kInt32, constant::invalid_index::kInt32, static_cast<int32>( phase ) );
     }
 
     void MatchState::start()
@@ -102,7 +103,7 @@ namespace sw
             if ( participant._respawnTimer.isActive() == false )
             {
                 participant._bAlive = SW_TRUE;
-                pushEvent( MatchEvent::Kind::Respawned, static_cast<int32>( index ), -1, participant._team, 0 );
+                pushEvent( MatchEvent::Kind::Respawned, static_cast<int32>( index ), constant::invalid_index::kInt32, participant._team, 0 );
             }
         }
         if ( _settings._timeLimit > 0.0f && _phaseTime >= _settings._timeLimit )
@@ -185,7 +186,7 @@ namespace sw
             return;
         target._bEliminated = SW_TRUE;
         target._bAlive      = SW_FALSE;
-        pushEvent( MatchEvent::Kind::ParticipantEliminated, participant, -1, target._team, 0 );
+        pushEvent( MatchEvent::Kind::ParticipantEliminated, participant, constant::invalid_index::kInt32, target._team, 0 );
         if ( countStanding( target._team ) == 0 )
             eliminateTeam( target._team );
         resolveEndConditions();
@@ -212,7 +213,7 @@ namespace sw
             remaining += other._bEliminated ? 0 : 1;
         }
         target._placement = remaining + 1;
-        pushEvent( MatchEvent::Kind::TeamEliminated, -1, -1, team, target._placement );
+        pushEvent( MatchEvent::Kind::TeamEliminated, constant::invalid_index::kInt32, constant::invalid_index::kInt32, team, target._placement );
     }
 
     void MatchState::addScore( int32 team, int32 amount )
@@ -231,7 +232,7 @@ namespace sw
     {
         if ( _phase == MatchPhase::Ended )
             return;
-        int32 standingTeam  = -1;
+        int32 standingTeam  = constant::invalid_index::kInt32;
         int32 standingCount = 0;
         for ( size_t index = 0; index < _listTeam.size(); ++index )
         {
@@ -249,14 +250,14 @@ namespace sw
         }
         const bool bLastTeamStanding = standingCount == 1 && ( _settings._bLastTeamStandingWins || bAnyCostLoss ) && _listTeam.size() > 1;
         if ( standingCount == 0 )
-            endMatch( -1 );
+            endMatch( constant::invalid_index::kInt32 );
         else if ( bLastTeamStanding )
             endMatch( standingTeam );
     }
 
     void MatchState::finishByScore()
     {
-        int32 bestTeam  = -1;
+        int32 bestTeam  = constant::invalid_index::kInt32;
         int32 bestScore = 0;
         bool  bTie      = false;
         for ( size_t index = 0; index < _listTeam.size(); ++index )
@@ -277,18 +278,18 @@ namespace sw
                 bTie = true;
             }
         }
-        endMatch( bTie ? -1 : bestTeam );
+        endMatch( bTie ? constant::invalid_index::kInt32 : bestTeam );
     }
 
     void MatchState::endMatch( int32 winningTeam )
     {
         if ( _phase == MatchPhase::Ended )
             return;
-        _winningTeam = isValidTeam( winningTeam ) ? winningTeam : -1;
+        _winningTeam = isValidTeam( winningTeam ) ? winningTeam : constant::invalid_index::kInt32;
         if ( _winningTeam >= 0 )
             _listTeam[static_cast<size_t>( _winningTeam )]._placement = 1;
         setPhase( MatchPhase::Ended );
-        pushEvent( MatchEvent::Kind::MatchEnded, -1, -1, _winningTeam, 0 );
+        pushEvent( MatchEvent::Kind::MatchEnded, constant::invalid_index::kInt32, constant::invalid_index::kInt32, _winningTeam, 0 );
     }
 
     const MatchTeam* MatchState::findTeam( int32 team ) const
@@ -366,7 +367,7 @@ namespace sw
         io.value( _phaseTime );
         io.value( _winningTeam );
         io.enumValue( _phase, MatchPhase::Ended );
-        io.check( -1 <= _winningTeam && _winningTeam < static_cast<int32>( _listTeam.size() ) );
+        io.check( constant::invalid_index::kInt32 <= _winningTeam && _winningTeam < static_cast<int32>( _listTeam.size() ) );
         if ( io.isReading() )
         {
             _eventBuffer.clear();

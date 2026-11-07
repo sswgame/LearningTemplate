@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -142,7 +143,7 @@ namespace sw
             return link._toIndex;
         if ( link._toIndex == fromIndex && link._bOneWay == SW_FALSE )
             return link._fromIndex;
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool AreaGraph::isUnlocked( const AreaLink& link, const GameFlags& flags ) const
@@ -237,7 +238,7 @@ namespace sw
         listParent.resize( _catalog.getCount(), -2 ); // −2 = 아직, −1 = 출발
         vector<int32> listQueue;
         listQueue.reserve( _catalog.getCount() );
-        listParent[static_cast<size_t>( fromIndex )] = -1;
+        listParent[static_cast<size_t>( fromIndex )] = constant::invalid_index::kInt32;
         listQueue.push_back( fromIndex );
         for ( size_t head = 0; head < listQueue.size(); ++head )
         {

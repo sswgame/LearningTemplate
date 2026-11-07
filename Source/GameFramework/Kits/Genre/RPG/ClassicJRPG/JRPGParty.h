@@ -7,6 +7,7 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -92,7 +93,7 @@ namespace sw
             Revived            ///< 교회에서 부활했다. `_value` 는 낸 돈
         };
         hashed_string _id{};
-        int32         _memberIndex{ -1 };
+        int32         _memberIndex{ constant::invalid_index::kInt32 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::LevelUp };
     };

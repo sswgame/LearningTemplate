@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorMatch.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
@@ -66,8 +67,8 @@ namespace sw
         , _pCatalog{ nullptr }
         , _collapseRemaining{}
         , _completedGeneratorCount{ 0 }
-        , _survivorTeam{ -1 }
-        , _killerTeam{ -1 }
+        , _survivorTeam{ constant::invalid_index::kInt32 }
+        , _killerTeam{ constant::invalid_index::kInt32 }
         , _tick{ 0 }
         , _bStarted{ SW_FALSE }
         , _bGatesPowered{ SW_FALSE }
@@ -104,8 +105,8 @@ namespace sw
         _timer = FixedStepTimer( _settings._fixedStep, 0.25f );
         _collapseRemaining.clear();
         _completedGeneratorCount = 0;
-        _survivorTeam            = -1;
-        _killerTeam              = -1;
+        _survivorTeam            = constant::invalid_index::kInt32;
+        _killerTeam              = constant::invalid_index::kInt32;
         _tick                    = 0;
         _bStarted                = SW_FALSE;
         _bGatesPowered           = SW_FALSE;
@@ -128,7 +129,7 @@ namespace sw
     int32 AsymmetricHorrorMatch::addSurvivor( const float3& position )
     {
         if ( _pCatalog == nullptr || _bStarted == SW_TRUE )
-            return -1;
+            return constant::invalid_index::kInt32;
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         const int32                  index = static_cast<int32>( _listSurvivor.size() );
 
@@ -152,9 +153,9 @@ namespace sw
 
         AsymmetricHorrorSurvivor survivor;
         if ( survivor._healthMachine.initialize( healthMachine ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         if ( survivor._healing.initialize( heal, &_pCatalog->getJudge(), GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * AsymmetricHorrorMatchInternal::kHealSeedMix ) ) == false )
-            return -1;
+            return constant::invalid_index::kInt32;
         survivor._position = float3{ position._x, 0.0f, position._z };
         _listSurvivor.push_back( survivor );
         return index;
@@ -168,7 +169,7 @@ namespace sw
     int32 AsymmetricHorrorMatch::addGenerator( const float3& position )
     {
         if ( _pCatalog == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         AsymmetricHorrorGenerator generator;
         generator._position = float3{ position._x, 0.0f, position._z };
         _listGenerator.push_back( generator );
@@ -176,7 +177,7 @@ namespace sw
         if ( configureGenerator( index, false ) == false )
         {
             _listGenerator.pop_back(); // 수리 규칙이 범위 밖이면 발전기를 세우지 않는다
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         return index;
     }
@@ -205,14 +206,14 @@ namespace sw
     int32 AsymmetricHorrorMatch::addLocker( const float3& position )
     {
         _listLocker.push_back( float3{ position._x, 0.0f, position._z } );
-        _listLockerOccupant.push_back( -1 );
+        _listLockerOccupant.push_back( constant::invalid_index::kInt32 );
         return static_cast<int32>( _listLocker.size() ) - 1;
     }
 
     int32 AsymmetricHorrorMatch::addGate( const float3& position )
     {
         if ( _pCatalog == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         InteractionConfig            config;
         config._duration        = rules._endgame._gateTime;
@@ -221,7 +222,7 @@ namespace sw
         gate._position    = float3{ position._x, 0.0f, position._z };
         const int32 index = static_cast<int32>( _listGate.size() );
         if ( gate._progress.initialize( config, nullptr, GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * AsymmetricHorrorMatchInternal::kGateSeedMix ) ) == false )
-            return -1; // 규칙의 문 시간이 범위 밖이다 - initialize 가 이유를 남겼다
+            return constant::invalid_index::kInt32; // 규칙의 문 시간이 범위 밖이다 - initialize 가 이유를 남겼다
         _listGate.push_back( gate );
         return index;
     }
@@ -619,7 +620,7 @@ namespace sw
         target._state = SurvivorState::Escaped;
         _match.eliminate( target._participant );
         _match.addScore( _survivorTeam, 1 );
-        pushEvent( AsymmetricHorrorEvent::Kind::Escaped, survivor, -1, bThroughHatch ? 1.0f : 0.0f, target._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::Escaped, survivor, constant::invalid_index::kInt32, bThroughHatch ? 1.0f : 0.0f, target._position );
         awardScore( target._score, "Escape", 1.0f );
         resolveEnd();
         return true;
@@ -661,7 +662,7 @@ namespace sw
             return KillerAttackResult::NotReady;
         const AsymmetricHorrorKillerDef& def    = *_killer._pDef;
         const float32                    minDot = MathUtil::cos( def._lungeAngle * 0.5f );
-        int32                            victim = -1;
+        int32                            victim = constant::invalid_index::kInt32;
         float32                          best   = MathUtil::kMaxFloat;
         for ( int32 index = 0; index < getSurvivorCount(); ++index )
         {
@@ -685,7 +686,7 @@ namespace sw
         if ( victim < 0 )
         {
             _killer._attackCooldown.start( def._missCooldown );
-            pushEvent( AsymmetricHorrorEvent::Kind::Missed, -1, -1, 0.0f, _killer._position );
+            pushEvent( AsymmetricHorrorEvent::Kind::Missed, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0.0f, _killer._position );
             return KillerAttackResult::Missed;
         }
 
@@ -693,19 +694,19 @@ namespace sw
         leaveActivity( victim );
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
-        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         target._healthMachine.discardEvents();
         awardScore( _killer._score, "Hit", 1.0f );
         if ( target._healthMachine.isDowned() )
         {
             target._state = SurvivorState::Dying;
             releaseHealers( victim, true );
-            pushEvent( AsymmetricHorrorEvent::Kind::Downed, victim, -1, 0.0f, target._position );
+            pushEvent( AsymmetricHorrorEvent::Kind::Downed, victim, constant::invalid_index::kInt32, 0.0f, target._position );
             return KillerAttackResult::Downed;
         }
         target._state = SurvivorState::Injured;
         target._hasteRemaining.start( _pCatalog->getRules()._hitHasteTime );
-        pushEvent( AsymmetricHorrorEvent::Kind::Hit, victim, -1, 0.0f, target._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::Hit, victim, constant::invalid_index::kInt32, 0.0f, target._position );
         return KillerAttackResult::Hit;
     }
 
@@ -723,7 +724,7 @@ namespace sw
         target._wiggleProgress = 0.0f;
         target._position       = _killer._position;
         _killer._carrying      = survivor;
-        pushEvent( AsymmetricHorrorEvent::Kind::PickedUp, survivor, -1, 0.0f, target._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::PickedUp, survivor, constant::invalid_index::kInt32, 0.0f, target._position );
         return true;
     }
 
@@ -738,7 +739,7 @@ namespace sw
             return false;
         const int32               survivor = _killer._carrying;
         AsymmetricHorrorSurvivor& target   = _listSurvivor[static_cast<size_t>( survivor )];
-        _killer._carrying                  = -1;
+        _killer._carrying                  = constant::invalid_index::kInt32;
         target._position                   = position;
         target._hookStage += 1;
         target._hookTimer    = 0.0f;
@@ -771,7 +772,7 @@ namespace sw
         gen._progress.setProgress( progress );
         gen._bKicked = SW_TRUE;
         awardScore( _killer._score, "Kick", 1.0f );
-        pushEvent( AsymmetricHorrorEvent::Kind::GeneratorKicked, -1, generator, progress, gen._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::GeneratorKicked, constant::invalid_index::kInt32, generator, progress, gen._position );
         return true;
     }
 
@@ -799,7 +800,7 @@ namespace sw
         _killer._busyRemaining.start( _pCatalog->getRules()._window._killerTime );
         _killer._busyExit  = AsymmetricHorrorMatchInternal::computeVaultExit( _killer._position, frame._position );
         _killer._bVaulting = SW_TRUE;
-        pushEvent( AsymmetricHorrorEvent::Kind::Vaulted, -1, window, 0.0f, frame._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::Vaulted, constant::invalid_index::kInt32, window, 0.0f, frame._position );
         return true;
     }
 
@@ -822,7 +823,7 @@ namespace sw
         releaseHealers( occupant, true );
         while ( target._healthMachine.isAlive() )
         {
-            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         }
         target._healthMachine.discardEvents();
         target._state          = SurvivorState::Carried;
@@ -831,7 +832,7 @@ namespace sw
         _killer._carrying      = occupant;
         awardScore( _killer._score, "LockerGrab", 1.0f );
         pushEvent( AsymmetricHorrorEvent::Kind::LockerGrab, occupant, locker, 0.0f, position );
-        pushEvent( AsymmetricHorrorEvent::Kind::PickedUp, occupant, -1, 0.0f, position );
+        pushEvent( AsymmetricHorrorEvent::Kind::PickedUp, occupant, constant::invalid_index::kInt32, 0.0f, position );
         return true;
     }
 
@@ -843,12 +844,12 @@ namespace sw
             return false;
         _bHatchOpen   = SW_FALSE;
         _bHatchClosed = SW_TRUE;
-        pushEvent( AsymmetricHorrorEvent::Kind::HatchClosed, -1, -1, 0.0f, _hatchPosition );
+        pushEvent( AsymmetricHorrorEvent::Kind::HatchClosed, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0.0f, _hatchPosition );
         if ( _bGatesPowered == SW_FALSE )
         {
             // 해치를 닫으면 탈출구에 전원이 들어오고 붕괴가 시작된다.
             _bGatesPowered = SW_TRUE;
-            pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, -1, -1, 0.0f, _hatchPosition );
+            pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0.0f, _hatchPosition );
         }
         startCollapse();
         return true;
@@ -897,7 +898,7 @@ namespace sw
             {
                 (void)target._healing.leave( static_cast<uint32>( healer ) );
                 doctor._activity       = SurvivorActivity::None;
-                doctor._activityTarget = -1;
+                doctor._activityTarget = constant::invalid_index::kInt32;
             }
         }
         if ( bResetProgress )
@@ -938,13 +939,13 @@ namespace sw
             target._state = SurvivorState::Healthy;
         }
         target._healthMachine.discardEvents();
-        pushEvent( AsymmetricHorrorEvent::Kind::Healed, -1, patient, static_cast<float32>( target._state ), target._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::Healed, constant::invalid_index::kInt32, patient, static_cast<float32>( target._state ), target._position );
     }
 
     void AsymmetricHorrorMatch::restoreInjured( AsymmetricHorrorSurvivor& survivor )
     {
         survivor._healthMachine.respawn();
-        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, constant::invalid_index::kInt32 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         survivor._healthMachine.discardEvents();
         survivor._state          = SurvivorState::Injured;
         survivor._wiggleProgress = 0.0f;
@@ -959,14 +960,14 @@ namespace sw
         leaveActivity( survivorIndex );
         releaseHealers( survivorIndex, true );
         if ( _killer._carrying == survivorIndex )
-            _killer._carrying = -1;
-        survivor._healthMachine.kill( -1 );
+            _killer._carrying = constant::invalid_index::kInt32;
+        survivor._healthMachine.kill( constant::invalid_index::kInt32 );
         survivor._healthMachine.discardEvents();
         survivor._state    = SurvivorState::Sacrificed;
         survivor._bBledOut = bBledOut ? SW_TRUE : SW_FALSE;
         _match.reportKill( survivor._participant, _killer._participant );
         awardScore( _killer._score, "Sacrifice", 1.0f );
-        pushEvent( AsymmetricHorrorEvent::Kind::Sacrificed, survivorIndex, -1, bBledOut ? 1.0f : 0.0f, survivor._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::Sacrificed, survivorIndex, constant::invalid_index::kInt32, bBledOut ? 1.0f : 0.0f, survivor._position );
         resolveEnd();
     }
 
@@ -1002,7 +1003,7 @@ namespace sw
             case SurvivorActivity::InLocker:
             {
                 if ( target >= 0 && target < static_cast<int32>( _listLockerOccupant.size() ) )
-                    _listLockerOccupant[static_cast<size_t>( target )] = -1;
+                    _listLockerOccupant[static_cast<size_t>( target )] = constant::invalid_index::kInt32;
                 break;
             }
             case SurvivorActivity::Vaulting:
@@ -1016,7 +1017,7 @@ namespace sw
             }
         }
         survivor._activity       = SurvivorActivity::None;
-        survivor._activityTarget = -1;
+        survivor._activityTarget = constant::invalid_index::kInt32;
     }
 
     void AsymmetricHorrorMatch::dropCarried( bool bStunKiller, float32 stunTime )
@@ -1024,7 +1025,7 @@ namespace sw
         const int32 survivorIndex = _killer._carrying;
         if ( isValidSurvivor( survivorIndex ) == false )
             return;
-        _killer._carrying                  = -1;
+        _killer._carrying                  = constant::invalid_index::kInt32;
         AsymmetricHorrorSurvivor& survivor = _listSurvivor[static_cast<size_t>( survivorIndex )];
         restoreInjured( survivor );
         survivor._position = _killer._position;
@@ -1036,13 +1037,13 @@ namespace sw
     {
         _killer._stunRemaining.extendTo( seconds );
         _killer._busyRemaining.clear();
-        _killer._breakingPallet = -1;
+        _killer._breakingPallet = constant::invalid_index::kInt32;
         if ( _killer._bVaulting == SW_TRUE )
         {
             _killer._position  = _killer._busyExit;
             _killer._bVaulting = SW_FALSE;
         }
-        pushEvent( AsymmetricHorrorEvent::Kind::KillerStunned, -1, -1, seconds, _killer._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::KillerStunned, constant::invalid_index::kInt32, constant::invalid_index::kInt32, seconds, _killer._position );
     }
 
     void AsymmetricHorrorMatch::startCollapse()
@@ -1051,7 +1052,7 @@ namespace sw
             return;
         _bCollapseStarted = SW_TRUE;
         _collapseRemaining.start( _pCatalog->getRules()._endgame._collapseTime );
-        pushEvent( AsymmetricHorrorEvent::Kind::CollapseStarted, -1, -1, _collapseRemaining.getRemaining(), float3{} );
+        pushEvent( AsymmetricHorrorEvent::Kind::CollapseStarted, constant::invalid_index::kInt32, constant::invalid_index::kInt32, _collapseRemaining.getRemaining(), float3{} );
     }
 
     void AsymmetricHorrorMatch::resolveEnd()
@@ -1066,10 +1067,10 @@ namespace sw
             escaped += survivor._state == SurvivorState::Escaped ? 1 : 0;
         }
         // 희생이 많으면 살인마, 탈출이 많으면 생존자가 이기고, 같으면 무승부이다.
-        const int32 winner = sacrificed > escaped ? _killerTeam : ( escaped > sacrificed ? _survivorTeam : -1 );
+        const int32 winner = sacrificed > escaped ? _killerTeam : ( escaped > sacrificed ? _survivorTeam : constant::invalid_index::kInt32 );
         _bEndReported      = SW_TRUE;
         _match.endMatch( winner );
-        pushEvent( AsymmetricHorrorEvent::Kind::MatchEnded, -1, escaped, static_cast<float32>( sacrificed ), float3{} );
+        pushEvent( AsymmetricHorrorEvent::Kind::MatchEnded, constant::invalid_index::kInt32, escaped, static_cast<float32>( sacrificed ), float3{} );
     }
 
     void AsymmetricHorrorMatch::syncHealthState( AsymmetricHorrorSurvivor& survivor )
@@ -1133,7 +1134,7 @@ namespace sw
             target._noiseRadius              = MathUtil::max( target._noiseRadius, radius );
             target._noiseRemaining.start( _settings._fixedStep * 2.0f );
         }
-        pushEvent( AsymmetricHorrorEvent::Kind::Noise, survivor, -1, radius, position );
+        pushEvent( AsymmetricHorrorEvent::Kind::Noise, survivor, constant::invalid_index::kInt32, radius, position );
     }
 
     void AsymmetricHorrorMatch::makeSnapshot( AsymmetricHorrorSnapshot& outSnapshot ) const
@@ -1276,7 +1277,7 @@ namespace sw
         const MatchParticipant* pKillerEntry    = _match.findParticipant( _killer._participant );
         const bool              bMatchInvalid   = bStarted ? ( _match.findTeam( _survivorTeam ) == nullptr || _match.findTeam( _killerTeam ) == nullptr || _survivorTeam == _killerTeam || pKillerEntry == nullptr || pKillerEntry->_team != _killerTeam ||
                                                 ( _bEndReported == SW_TRUE ) != isEnded() )
-                                                           : ( _survivorTeam != -1 || _killerTeam != -1 || _killer._participant != -1 || _bEndReported == SW_TRUE );
+                                                           : ( _survivorTeam != constant::invalid_index::kInt32 || _killerTeam != constant::invalid_index::kInt32 || _killer._participant != constant::invalid_index::kInt32 || _bEndReported == SW_TRUE );
         const bool              bEndgameInvalid = ( _bHatchOpen == SW_TRUE && ( _bHatchPlaced == SW_FALSE || _bHatchClosed == SW_TRUE ) ) || ( _bCollapseStarted == SW_FALSE && _collapseRemaining.isActive() );
         if ( bMatchInvalid || bEndgameInvalid )
             return false;
@@ -1334,7 +1335,7 @@ namespace sw
                     break;
             }
             const MatchParticipant* pEntry        = _match.findParticipant( survivor._participant );
-            const bool              bEntryInvalid = bStarted ? ( pEntry == nullptr || pEntry->_team != _survivorTeam ) : survivor._participant != -1;
+            const bool              bEntryInvalid = bStarted ? ( pEntry == nullptr || pEntry->_team != _survivorTeam ) : survivor._participant != constant::invalid_index::kInt32;
             const bool              bCarryInvalid = ( survivor._state == SurvivorState::Carried ) != ( _killer._carrying == index );
             if ( bBodyValid == false || bEntryInvalid || bCarryInvalid || survivor._hookStage > rules._hook._stages )
                 return false;
@@ -1342,7 +1343,7 @@ namespace sw
             const int32 target = survivor._activityTarget;
             if ( survivor._activity == SurvivorActivity::None )
             {
-                if ( target != -1 )
+                if ( target != constant::invalid_index::kInt32 )
                     return false;
                 continue;
             }
@@ -1416,7 +1417,7 @@ namespace sw
         for ( size_t index = 0; index < _listLockerOccupant.size(); ++index )
         {
             const int32 occupant = _listLockerOccupant[index];
-            if ( occupant == -1 )
+            if ( occupant == constant::invalid_index::kInt32 )
                 continue;
             const bool bInvalid = isValidSurvivor( occupant ) == false || _listSurvivor[static_cast<size_t>( occupant )]._activity != SurvivorActivity::InLocker || _listSurvivor[static_cast<size_t>( occupant )]._activityTarget != static_cast<int32>( index );
             if ( bInvalid )
@@ -1490,7 +1491,7 @@ namespace sw
         for ( uint32 index = 0; index < lockerCount && io.isOk(); ++index )
         {
             float3 position = io.isWriting() ? _listLocker[index] : float3{};
-            int32  occupant = io.isWriting() ? _listLockerOccupant[index] : -1;
+            int32  occupant = io.isWriting() ? _listLockerOccupant[index] : constant::invalid_index::kInt32;
             io.value( position );
             io.value( occupant );
             if ( io.isReading() )
@@ -1564,7 +1565,7 @@ namespace sw
         io.value( killer._breakingPallet );
         io.value( killer._participant );
         io.flag( killer._bVaulting );
-        io.check( -1 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) && -1 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) );
+        io.check( constant::invalid_index::kInt32 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) && constant::invalid_index::kInt32 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) );
     }
 
     void AsymmetricHorrorMatch::step( float32 deltaTime )
@@ -1599,9 +1600,9 @@ namespace sw
         {
             const int32 pallet                              = _killer._breakingPallet;
             _listPalletState[static_cast<size_t>( pallet )] = PalletState::Broken;
-            _killer._breakingPallet                         = -1;
+            _killer._breakingPallet                         = constant::invalid_index::kInt32;
             awardScore( _killer._score, "BreakPallet", 1.0f );
-            pushEvent( AsymmetricHorrorEvent::Kind::PalletBroken, -1, pallet, 0.0f, _listPallet[static_cast<size_t>( pallet )] );
+            pushEvent( AsymmetricHorrorEvent::Kind::PalletBroken, constant::invalid_index::kInt32, pallet, 0.0f, _listPallet[static_cast<size_t>( pallet )] );
         }
         if ( _killer._bVaulting == SW_TRUE )
         {
@@ -1628,7 +1629,7 @@ namespace sw
             {
                 survivor._position       = survivor._vaultExit;
                 survivor._activity       = SurvivorActivity::None;
-                survivor._activityTarget = -1;
+                survivor._activityTarget = constant::invalid_index::kInt32;
                 releaseFarHealers( survivorIndex );
             }
         }
@@ -1655,7 +1656,7 @@ namespace sw
                     survivor._wiggleProgress += deltaTime / rules._hook._wiggleTime;
                 if ( survivor._wiggleProgress >= 1.0f )
                 {
-                    pushEvent( AsymmetricHorrorEvent::Kind::WiggledFree, survivorIndex, -1, 0.0f, survivor._position );
+                    pushEvent( AsymmetricHorrorEvent::Kind::WiggledFree, survivorIndex, constant::invalid_index::kInt32, 0.0f, survivor._position );
                     dropCarried( true, rules._hook._wiggleStunTime );
                 }
                 break;
@@ -1683,7 +1684,7 @@ namespace sw
                         return;
                     }
                     survivor._struggleIdle = 0.0f;
-                    pushEvent( AsymmetricHorrorEvent::Kind::HookStageAdvanced, survivorIndex, -1, static_cast<float32>( survivor._hookStage ), survivor._position );
+                    pushEvent( AsymmetricHorrorEvent::Kind::HookStageAdvanced, survivorIndex, constant::invalid_index::kInt32, static_cast<float32>( survivor._hookStage ), survivor._position );
                 }
                 break;
             }
@@ -1750,12 +1751,12 @@ namespace sw
             if ( target._activity == SurvivorActivity::Repairing && target._activityTarget == generatorIndex )
             {
                 target._activity       = SurvivorActivity::None;
-                target._activityTarget = -1;
+                target._activityTarget = constant::invalid_index::kInt32;
             }
         }
         generator._bKicked = SW_FALSE;
         ++_completedGeneratorCount;
-        pushEvent( AsymmetricHorrorEvent::Kind::GeneratorCompleted, -1, generatorIndex, static_cast<float32>( _completedGeneratorCount ), generator._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::GeneratorCompleted, constant::invalid_index::kInt32, generatorIndex, static_cast<float32>( _completedGeneratorCount ), generator._position );
         if ( _completedGeneratorCount < _pCatalog->getRules()._generatorsRequired || _bGatesPowered == SW_TRUE )
             return;
         _bGatesPowered = SW_TRUE;
@@ -1770,7 +1771,7 @@ namespace sw
             if ( _listSurvivor[static_cast<size_t>( survivor )]._activity == SurvivorActivity::Repairing )
                 leaveActivity( survivor );
         }
-        pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, -1, -1, 0.0f, generator._position );
+        pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0.0f, generator._position );
     }
 
     void AsymmetricHorrorMatch::stepGates( float32 deltaTime )
@@ -1789,10 +1790,10 @@ namespace sw
                 if ( target._activity == SurvivorActivity::OpeningGate && target._activityTarget == index )
                 {
                     target._activity       = SurvivorActivity::None;
-                    target._activityTarget = -1;
+                    target._activityTarget = constant::invalid_index::kInt32;
                 }
             }
-            pushEvent( AsymmetricHorrorEvent::Kind::GateOpened, -1, index, 0.0f, gate._position );
+            pushEvent( AsymmetricHorrorEvent::Kind::GateOpened, constant::invalid_index::kInt32, index, 0.0f, gate._position );
             startCollapse();
         }
     }
@@ -1813,7 +1814,7 @@ namespace sw
         if ( bShouldOpenHatch )
         {
             _bHatchOpen = SW_TRUE;
-            pushEvent( AsymmetricHorrorEvent::Kind::HatchOpened, -1, -1, 0.0f, _hatchPosition );
+            pushEvent( AsymmetricHorrorEvent::Kind::HatchOpened, constant::invalid_index::kInt32, constant::invalid_index::kInt32, 0.0f, _hatchPosition );
         }
         if ( _bCollapseStarted == SW_FALSE || _collapseRemaining.isActive() == false )
             return;
@@ -1846,19 +1847,19 @@ namespace sw
             {
                 case InteractionEvent::Kind::SkillCheckStarted:
                 {
-                    pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckStarted, actor, -1, event._value, position );
+                    pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckStarted, actor, constant::invalid_index::kInt32, event._value, position );
                     break;
                 }
                 case InteractionEvent::Kind::SkillCheckSucceeded:
                 {
-                    pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckResult, actor, -1, 1.0f, position );
+                    pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckResult, actor, constant::invalid_index::kInt32, 1.0f, position );
                     if ( isValidSurvivor( actor ) )
                         awardScore( _listSurvivor[static_cast<size_t>( actor )]._score, "SkillCheck", 1.0f );
                     break;
                 }
                 case InteractionEvent::Kind::SkillCheckFailed:
                 {
-                    pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckResult, actor, -1, 0.0f, position );
+                    pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckResult, actor, constant::invalid_index::kInt32, 0.0f, position );
                     if ( event._bNoise == SW_TRUE )
                         makeNoise( actor, _pCatalog->getRules()._generator._noiseRadius, position );
                     break;

@@ -2,6 +2,8 @@
 
 #include "Engine/TileMap/TileGridUtil.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw
@@ -104,7 +106,7 @@ namespace sw
             {
                 const int32 neighborY = ( side == 0 ) ? y - 1 : y + 1;
                 const int32 lineY     = ( side == 0 ) ? y : y + 1;
-                int32       runStart  = -1;
+                int32       runStart  = constant::invalid_index::kInt32;
                 for ( int32 x = 0; x <= width; ++x )
                 {
                     const bool bEdge = x < width && Internal::isSolid( listSolid, width, height, x, y ) &&
@@ -118,7 +120,7 @@ namespace sw
                             int2{       x,              lineY},
                             int2{       0, side == 0 ? -1 : 1}
                         } );
-                        runStart = -1;
+                        runStart = constant::invalid_index::kInt32;
                     }
                 }
             }
@@ -130,7 +132,7 @@ namespace sw
             {
                 const int32 neighborX = ( side == 0 ) ? x - 1 : x + 1;
                 const int32 lineX     = ( side == 0 ) ? x : x + 1;
-                int32       runStart  = -1;
+                int32       runStart  = constant::invalid_index::kInt32;
                 for ( int32 y = 0; y <= height; ++y )
                 {
                     const bool bEdge = y < height && Internal::isSolid( listSolid, width, height, x, y ) &&
@@ -144,7 +146,7 @@ namespace sw
                             int2{             lineX,        y},
                             int2{side == 0 ? -1 : 1,        0}
                         } );
-                        runStart = -1;
+                        runStart = constant::invalid_index::kInt32;
                     }
                 }
             }

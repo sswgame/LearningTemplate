@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -48,10 +49,10 @@ namespace sw
     /** @brief 한 차례의 결과입니다. */
     struct SurvivalHorrorTurnResult
     {
-        int32 _actorID{ -1 };
-        int32 _targetID{ -1 };       ///< 괴물 차례에서 맞은 조사자
-        int32 _horrorSuccesses{ 0 }; ///< 조사자 차례의 공포 판정 성공 수
-        int32 _combatSuccesses{ 0 }; ///< 조사자 차례의 전투 판정 성공 수이며 괴물에게 준 피해와 같다
+        int32 _actorID{ constant::invalid_index::kInt32 };
+        int32 _targetID{ constant::invalid_index::kInt32 }; ///< 괴물 차례에서 맞은 조사자
+        int32 _horrorSuccesses{ 0 };                        ///< 조사자 차례의 공포 판정 성공 수
+        int32 _combatSuccesses{ 0 };                        ///< 조사자 차례의 전투 판정 성공 수이며 괴물에게 준 피해와 같다
         int32 _sanityLoss{ 0 };
         int32 _healthLoss{ 0 };
     };

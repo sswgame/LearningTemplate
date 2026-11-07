@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -29,7 +30,7 @@ namespace sw
                     if ( listName[nameIndex] == name )
                         return static_cast<int32>( nameIndex );
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
         };
     } // namespace

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
@@ -80,7 +81,7 @@ namespace sw
             if ( _listStamp.size() < count )
             {
                 _listStamp.resize( count, 0u );
-                _listParent.resize( count, -1 );
+                _listParent.resize( count, constant::invalid_index::kInt32 );
             }
             ++_generation;
             if ( _generation == 0u )

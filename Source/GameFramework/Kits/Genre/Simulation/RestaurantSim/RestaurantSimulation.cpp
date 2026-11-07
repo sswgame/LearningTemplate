@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -162,7 +163,7 @@ namespace sw
         for ( KitchenOrder& order : _listOrder )
         {
             if ( order._cook == staffIndex )
-                order._cook = -1; // 남은 시간은 다음 요리사가 이어받는다
+                order._cook = constant::invalid_index::kInt32; // 남은 시간은 다음 요리사가 이어받는다
         }
         const int32 customerIndex = findCustomerIndex( staff._taskCustomer );
         if ( customerIndex >= 0 && staff._role != StaffRole::Cook )
@@ -172,7 +173,7 @@ namespace sw
             customer._bCheckingOut       = SW_FALSE;
         }
         staff._bHired       = SW_FALSE;
-        staff._taskCustomer = -1;
+        staff._taskCustomer = constant::invalid_index::kInt32;
         staff._busyMinutes  = 0.0f;
         return true;
     }
@@ -237,7 +238,7 @@ namespace sw
         for ( StaffMember& staff : _listStaff )
         {
             staff._busyMinutes  = 0.0f;
-            staff._taskCustomer = -1;
+            staff._taskCustomer = constant::invalid_index::kInt32;
         }
     }
 
@@ -256,7 +257,7 @@ namespace sw
     {
         const CustomerTypeDef* pType = _pCatalog != nullptr ? _pCatalog->findCustomerType( typeID ) : nullptr;
         if ( pType == nullptr )
-            return -1;
+            return constant::invalid_index::kInt32;
         RestaurantCustomer customer;
         customer._typeID   = typeID;
         customer._id       = _nextCustomerID++;
@@ -278,7 +279,7 @@ namespace sw
             else if ( customer._state == CustomerState::Queued || customer._state == CustomerState::WaitingFood )
             {
                 customer._state = CustomerState::Left;
-                customer._seat  = -1;
+                customer._seat  = constant::invalid_index::kInt32;
                 ++_today._unservedAtClose;
             }
         }
@@ -287,7 +288,7 @@ namespace sw
         for ( StaffMember& staff : _listStaff )
         {
             staff._busyMinutes  = 0.0f;
-            staff._taskCustomer = -1;
+            staff._taskCustomer = constant::invalid_index::kInt32;
             if ( staff._bHired == SW_FALSE )
                 continue;
             _today._wages += staff._dailyWage;
@@ -312,7 +313,7 @@ namespace sw
         for ( const IngredientSpoilage& spoilage : _listSpoilageScratch )
         {
             _pendingSpoilageCost += spoilage._cost;
-            _eventBuffer.push( RestaurantEvent{ spoilage._itemID, spoilage._count, -1, RestaurantEvent::Kind::IngredientSpoiled } );
+            _eventBuffer.push( RestaurantEvent{ spoilage._itemID, spoilage._count, constant::invalid_index::kInt32, RestaurantEvent::Kind::IngredientSpoiled } );
         }
         _market.advanceDay();
         rollMarketPrices();
@@ -378,7 +379,7 @@ namespace sw
             io.flag( order._bReady );
             // 기다리는 주문과 조리 중인 주문의 남은 시간은 음수가 아니다. 다 된 주문만 걸음만큼 넘긴 값이 남는다. 다 되면 요리사를 풀어 준다.
             const bool bProgressValid = order._bReady == SW_FALSE ? 0.0f <= order._remaining : order._cook < 0;
-            if ( io.check( -1 <= order._cook && order._cook < staffCount && 0 <= order._quality && bProgressValid ) == false )
+            if ( io.check( constant::invalid_index::kInt32 <= order._cook && order._cook < staffCount && 0 <= order._quality && bProgressValid ) == false )
                 return;
             if ( io.isReading() )
             {
@@ -607,10 +608,10 @@ namespace sw
             if ( order._remaining > 0.0f )
                 continue;
             order._bReady      = SW_TRUE;
-            cook._taskCustomer = -1;
+            cook._taskCustomer = constant::invalid_index::kInt32;
             _eventBuffer.push( RestaurantEvent{ order._dishID, order._quality, order._customerID, RestaurantEvent::Kind::DishCooked } );
             grantXP( cook, _settings._cookXP );
-            order._cook = -1;
+            order._cook = constant::invalid_index::kInt32;
         }
 
         // 손님이 먹는다.
@@ -633,7 +634,7 @@ namespace sw
             if ( staff._busyMinutes > 0.0f )
                 continue;
             const int32 customerIndex = findCustomerIndex( staff._taskCustomer );
-            staff._taskCustomer       = -1;
+            staff._taskCustomer       = constant::invalid_index::kInt32;
             staff._busyMinutes        = 0.0f;
             if ( customerIndex < 0 )
                 continue;
@@ -701,7 +702,7 @@ namespace sw
         {
             if ( customer._state != CustomerState::Queued )
                 continue;
-            int32 freeSeat = -1;
+            int32 freeSeat = constant::invalid_index::kInt32;
             for ( int32 seat = 0; seat < _settings._seatCount && freeSeat < 0; ++seat )
             {
                 bool bTaken = false;
@@ -846,7 +847,7 @@ namespace sw
         if ( _pWallet != nullptr )
             _pWallet->add( getCurrency(), customer._price + tip );
         customer._state = CustomerState::Paid;
-        customer._seat  = -1;
+        customer._seat  = constant::invalid_index::kInt32;
         pushSatisfaction( satisfaction );
         const int32 reputationDelta = static_cast<int32>( MathUtil::round( ( satisfaction * 2.0f - 1.0f ) * static_cast<float32>( _settings._reputationPerServe ) ) );
         if ( reputationDelta != 0 )
@@ -868,7 +869,7 @@ namespace sw
         {
             if ( staff._taskCustomer == customer._id )
             {
-                staff._taskCustomer = -1;
+                staff._taskCustomer = constant::invalid_index::kInt32;
                 staff._busyMinutes  = 0.0f;
             }
         }
@@ -884,7 +885,7 @@ namespace sw
             ++_today._noChoice;
         }
         customer._state = CustomerState::Left;
-        customer._seat  = -1;
+        customer._seat  = constant::invalid_index::kInt32;
         _eventBuffer.push( RestaurantEvent{ customer._typeID, bWalkout ? 1 : 0, customer._id, RestaurantEvent::Kind::CustomerLeft } );
     }
 
@@ -901,7 +902,7 @@ namespace sw
         if ( _pStaffCurve == nullptr || amount <= 0 )
             return;
         if ( staff._level.addXP( *_pStaffCurve, amount ) > 0 )
-            _eventBuffer.push( RestaurantEvent{ staff._name, staff._level.getLevel(), -1, RestaurantEvent::Kind::StaffLevelUp } );
+            _eventBuffer.push( RestaurantEvent{ staff._name, staff._level.getLevel(), constant::invalid_index::kInt32, RestaurantEvent::Kind::StaffLevelUp } );
     }
 
     void RestaurantSimulation::rollMarketPrices()
@@ -926,7 +927,7 @@ namespace sw
             if ( _listCustomer[static_cast<size_t>( customerIndex )]._id == customerID )
                 return customerIndex;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 RestaurantSimulation::findIdleStaff( StaffRole role ) const
@@ -938,7 +939,7 @@ namespace sw
             if ( bStaffAvailable )
                 return staffIndex;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 RestaurantSimulation::findBestCookLevel() const

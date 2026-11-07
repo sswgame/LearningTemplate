@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -136,7 +137,7 @@ namespace sw
             if ( _listMove[index]._frame._id == moveID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     int32 FighterDef::findStanceIndex( const hashed_string& stance ) const
@@ -146,7 +147,7 @@ namespace sw
             if ( _listStance[index] == stance )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     // ------------------------------------------------------------------------------

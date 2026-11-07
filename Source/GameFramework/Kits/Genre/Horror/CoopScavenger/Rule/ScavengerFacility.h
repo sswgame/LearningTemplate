@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -31,8 +32,8 @@ namespace sw
         float32       _weight{ 0.0f };
         int32         _uid{ 0 };
         int32         _value{ 0 };
-        int32         _bodyOf{ -1 }; ///< 시신이면 그 사람의 번호이다
-        int32         _day{ -1 };    ///< 우주선에 실은 날이다(전멸 손실과 기록에 쓴다)
+        int32         _bodyOf{ constant::invalid_index::kInt32 }; ///< 시신이면 그 사람의 번호이다
+        int32         _day{ constant::invalid_index::kInt32 };    ///< 우주선에 실은 날이다(전멸 손실과 기록에 쓴다)
         uint8         _bTwoHanded{ SW_FALSE };
 
         bool isBody() const { return _bodyOf >= 0; }

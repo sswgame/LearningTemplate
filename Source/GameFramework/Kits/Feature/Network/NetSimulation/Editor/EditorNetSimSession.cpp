@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
@@ -108,7 +109,7 @@ namespace sw::editor
 
     int32 EditorNetSimSession::getInputFocus() const
     {
-        return _pHarness != nullptr ? _pHarness->getInputFocus() : -1;
+        return _pHarness != nullptr ? _pHarness->getInputFocus() : constant::invalid_index::kInt32;
     }
 
     void EditorNetSimSession::collectWorldIndices( vector<int32>& outListWorldIndex ) const

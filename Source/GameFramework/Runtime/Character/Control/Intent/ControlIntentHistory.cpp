@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntentHistory.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 
@@ -35,7 +36,7 @@ namespace sw
 
     void ControlIntentHistory::record( uint32 tick, const TComponentHandle<PawnComponent>& pawn, const hashed_string& pawnName, const ControlIntent& intent )
     {
-        int32                                              trackIndex = -1;
+        int32                                              trackIndex = constant::invalid_index::kInt32;
         const unordered_map<uint64, int32>::const_iterator found      = _mapComponentIDToTrack.find( pawn.componentID() );
         if ( found != _mapComponentIDToTrack.end() )
         {
@@ -206,7 +207,7 @@ namespace sw
             if ( _listTrack[trackIndex]._pawnName == pawnName )
                 return static_cast<int32>( trackIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     const ControlIntent* ControlIntentHistory::findIntent( int32 trackIndex, uint32 tick ) const

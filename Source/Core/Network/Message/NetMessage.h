@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -39,7 +40,7 @@ namespace sw
         BitWriter&         begin( uint8 kind );
         [[nodiscard]] bool send( INetPeers& peers, int32 connectionID, NetChannelType channel ) const;
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( INetPeers& peers, NetChannelType channel, int32 exceptID = -1 ) const;
+        int32 broadcast( INetPeers& peers, NetChannelType channel, int32 exceptID = constant::invalid_index::kInt32 ) const;
         /** @brief 상대 모두에게 보냅니다. 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게 보냅니다. 반환값은 보낸 수이며, 락스텝이나 롤백처럼 모두가 같은 메시지를 나눌 때 씁니다. */
         int32 sendToPeers( INetPeers& peers, NetChannelType channel ) const;
 
@@ -69,7 +70,7 @@ namespace sw
     {
         const uint8*   _pMessage{ nullptr }; ///< 처리기 호출 동안만 유효하다.
         int32          _messageSize{ 0 };
-        int32          _connectionID{ -1 };
+        int32          _connectionID{ constant::invalid_index::kInt32 };
         NetChannelType _channel{ NetChannelType::ReliableOrdered };
         uint8          _kind{ 0 };
     };
@@ -138,7 +139,7 @@ namespace sw
     struct NetReceivedMessage
     {
         vector<uint8>  _buffer{};
-        int32          _connectionID{ -1 };
+        int32          _connectionID{ constant::invalid_index::kInt32 };
         NetChannelType _channel{ NetChannelType::ReliableOrdered };
     };
 } // namespace sw

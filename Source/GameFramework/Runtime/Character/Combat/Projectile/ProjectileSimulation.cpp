@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -122,7 +123,7 @@ namespace sw
                         --projectile._bounceLeft;
                         projectile._velocity = constrain( float3::reflect( projectile._velocity, hit._normal ) * projectile._restitution, planeNormal );
                         projectile._position = hit._position + hit._normal * kBounceLift;
-                        projectile._lastHit  = -1;
+                        projectile._lastHit  = constant::invalid_index::kInt32;
                         pushEvent( outListEvent, projectile, hit, ProjectileEvent::Kind::Bounced );
                         return;
                     }
@@ -168,10 +169,10 @@ namespace sw
         , _restitution{ 1.0f }
         , _id{ 0 }
         , _payload{ 0 }
-        , _owner{ -1 }
-        , _team{ -1 }
-        , _target{ -1 }
-        , _lastHit{ -1 }
+        , _owner{ constant::invalid_index::kInt32 }
+        , _team{ constant::invalid_index::kInt32 }
+        , _target{ constant::invalid_index::kInt32 }
+        , _lastHit{ constant::invalid_index::kInt32 }
         , _pierceLeft{ 0 }
         , _bounceLeft{ 0 }
         , _bAlive{ SW_TRUE }
@@ -206,7 +207,7 @@ namespace sw
         _velocity   = _velocity * -speedScale;
         _damage     = _damage * damageScale;
         _team       = team;
-        _lastHit    = -1;
+        _lastHit    = constant::invalid_index::kInt32;
         _bReflected = SW_TRUE;
     }
 

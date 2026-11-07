@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -76,8 +77,8 @@ namespace sw
         , _topology{}
         , _land{}
         , _nextHabitatID{ 1 }
-        , _lastAttractKey{ -1 }
-        , _appealTier{ -1 }
+        , _lastAttractKey{ constant::invalid_index::kInt32 }
+        , _appealTier{ constant::invalid_index::kInt32 }
     {
     }
 
@@ -101,8 +102,8 @@ namespace sw
         _listOpenRequest.clear();
         _eventBuffer.clear();
         _nextHabitatID  = 1;
-        _lastAttractKey = -1;
-        _appealTier     = -1;
+        _lastAttractKey = constant::invalid_index::kInt32;
+        _appealTier     = constant::invalid_index::kInt32;
         updateAppealTier();
         _eventBuffer.clear(); // 처음 단계는 알리지 않는다
         return true;
@@ -281,7 +282,7 @@ namespace sw
         const CreatureAbilityDef* pAbility = _pCatalog->findAbility( abilityID );
         if ( pSpecies == nullptr || pAbility == nullptr )
             return CreatureAbilityResult::NotKnown;
-        int32 abilitySlot = -1;
+        int32 abilitySlot = constant::invalid_index::kInt32;
         for ( int32 slot = 0; slot < static_cast<int32>( pSpecies->_listAbility.size() ); ++slot )
         {
             if ( pSpecies->_listAbility[static_cast<size_t>( slot )] == abilityID )
@@ -318,7 +319,7 @@ namespace sw
     {
         const bool bCannotPlaceHouse = _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false || _land.isUsable( x, y ) == false;
         if ( bCannotPlaceHouse )
-            return -1;
+            return constant::invalid_index::kInt32;
         CreatureHouse house;
         house._tile     = int2{ x, y };
         house._capacity = MathUtil::max( 1, capacity );
@@ -358,7 +359,7 @@ namespace sw
             if ( creature._house >= 0 )
                 continue;
             const int2 anchor       = computeCreatureAnchor( creature );
-            int32      bestHouse    = -1;
+            int32      bestHouse    = constant::invalid_index::kInt32;
             int32      bestDistance = 0;
             for ( int32 houseIndex = 0; houseIndex < static_cast<int32>( _listHouse.size() ); ++houseIndex )
             {
@@ -512,7 +513,7 @@ namespace sw
                         instance._listTile  = listTile;
                         instance._origin    = int2{ originX, originY };
                         instance._rotation  = rotation;
-                        instance._id        = -1;
+                        instance._id        = constant::invalid_index::kInt32;
                         listMatch.push_back( instance );
                         break; // 이 서식지의 셀은 이제 차지됐다
                     }
@@ -546,7 +547,7 @@ namespace sw
             for ( TownCreature& creature : _listCreature )
             {
                 if ( creature._habitat == old._id )
-                    creature._habitat = -1;
+                    creature._habitat = constant::invalid_index::kInt32;
             }
         }
         for ( HabitatInstance& match : listMatch )
@@ -609,7 +610,7 @@ namespace sw
             if ( _listCreature[static_cast<size_t>( creatureIndex )]._speciesID == speciesID )
                 return creatureIndex;
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     bool CreatureTown::hasRoom( const HabitatInstance& instance ) const
@@ -683,7 +684,7 @@ namespace sw
             return;
         const vector<TownAppealTier>& listTier = _pCatalog->getAppeal()._listTier;
         const float32                 score    = computeAppealScore();
-        int32                         tier     = -1;
+        int32                         tier     = constant::invalid_index::kInt32;
         for ( int32 tierIndex = 0; tierIndex < static_cast<int32>( listTier.size() ); ++tierIndex )
         {
             if ( score >= listTier[static_cast<size_t>( tierIndex )]._minScore )
@@ -744,7 +745,7 @@ namespace sw
             {
                 io.check( 0 <= useCount );
             }
-            io.check( -1 <= creature._habitat && -1 <= creature._lastTalkDay && -1 <= creature._lastGiftDay && 0 <= creature._arrivalDay );
+            io.check( constant::invalid_index::kInt32 <= creature._habitat && constant::invalid_index::kInt32 <= creature._lastTalkDay && constant::invalid_index::kInt32 <= creature._lastGiftDay && 0 <= creature._arrivalDay );
         } );
         // 집마다 사는 수(4) + 셀(8) + 정원(4) 이상
         io.list( _listHouse, 16, [&]( CreatureHouse& house )
@@ -810,7 +811,7 @@ namespace sw
                     return false;
             }
             const bool bHabitatValid = creature._habitat < 0 || findHabitat( creature._habitat ) != nullptr;
-            const bool bHouseValid   = -1 <= creature._house && creature._house < houseCount;
+            const bool bHouseValid   = constant::invalid_index::kInt32 <= creature._house && creature._house < houseCount;
             if ( bHabitatValid == false || bHouseValid == false )
                 return false;
             if ( creature._house >= 0 && VectorUtil::contains( _listHouse[static_cast<size_t>( creature._house )]._listResident, creature._speciesID ) == false )

@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioMixer.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioTypes.h"
@@ -112,7 +113,7 @@ namespace sw
             if ( _listBusState[busIndex]._name == name )
                 return static_cast<int32>( busIndex );
         }
-        return -1;
+        return constant::invalid_index::kInt32;
     }
 
     void AudioMixer::setBusUserVolume( uint32 busIndex, float32 volume )

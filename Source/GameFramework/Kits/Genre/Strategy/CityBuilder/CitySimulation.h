@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -85,8 +86,8 @@ namespace sw
     /** @brief 타일 하나입니다. */
     struct CityTile
     {
-        int32       _buildingIndex{ -1 };
-        int32       _roadComponent{ -1 }; ///< 이어진 도로끼리 같은 번호를 가진다(도로가 아니면 -1)
+        int32       _buildingIndex{ constant::invalid_index::kInt32 };
+        int32       _roadComponent{ constant::invalid_index::kInt32 }; ///< 이어진 도로끼리 같은 번호를 가진다(도로가 아니면 -1)
         int16       _desirability{ 0 };
         CityTerrain _terrain{ CityTerrain::Grass };
         uint8       _bRoad{ SW_FALSE };
@@ -101,8 +102,8 @@ namespace sw
         ItemStackList          _stock{};
         const CityBuildingDef* _pDef{ nullptr };
         int2                   _origin{};
-        int2                   _accessTile{ -1, -1 }; ///< 붙어 있는 도로 타일이다(없으면 -1)
-        float32                _efficiency{ 0.0f };   ///< 배정된 일꾼 수 / 필요한 일꾼 수이다(일꾼이 필요 없는 건물은 길만 있으면 1)
+        int2                   _accessTile{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 붙어 있는 도로 타일이다(없으면 -1)
+        float32                _efficiency{ 0.0f };                                                             ///< 배정된 일꾼 수 / 필요한 일꾼 수이다(일꾼이 필요 없는 건물은 길만 있으면 1)
         float32                _walkerTimer{ 0.0f };
         float32                _productionProgress{ 0.0f };
         float32                _arrServiceTime[static_cast<int32>( CityService::Count )]{};
@@ -129,11 +130,11 @@ namespace sw
         vector<int2>   _listVisited{}; ///< 돌아다니며 지난 타일이다(되도록 새 길로 가게 하려는 용도)
         hashed_string  _cargoGood{};
         int2           _tile{};
-        int2           _previousTile{ -1, -1 };
+        int2           _previousTile{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 };
         int2           _nextTile{};
         float32        _progress{ 0.0f };
-        int32          _homeBuilding{ -1 };
-        int32          _targetBuilding{ -1 };
+        int32          _homeBuilding{ constant::invalid_index::kInt32 };
+        int32          _targetBuilding{ constant::invalid_index::kInt32 };
         int32          _stepsLeft{ 0 };
         int32          _cargoAmount{ 0 };
         CityWalkerKind _kind{ CityWalkerKind::Service };
@@ -157,7 +158,7 @@ namespace sw
             GoodsDelivered
         };
         int32 _value{ 0 }; ///< 달 끝은 번 돈, 진화는 새 단계, 범람은 비옥함(%)이다
-        int32 _building{ -1 };
+        int32 _building{ constant::invalid_index::kInt32 };
         Kind  _kind{ Kind::MonthEnded };
     };
 } // namespace sw

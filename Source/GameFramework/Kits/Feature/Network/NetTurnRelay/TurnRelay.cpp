@@ -4,6 +4,7 @@
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -32,7 +33,7 @@ namespace sw
             /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 -1 입니다. */
             static int32 findReturningSeat( const TurnRoom& room, uint32 token )
             {
-                int32 seatIndex = -1;
+                int32 seatIndex = constant::invalid_index::kInt32;
                 for ( size_t index = 0; index < room._listSeat.size() && token != 0; ++index )
                 {
                     if ( room._listSeat[index]._bTaken && room._listSeat[index]._token == token )
@@ -53,7 +54,7 @@ namespace sw
                     if ( room._listSeat[index]._bTaken == SW_FALSE )
                         return static_cast<int32>( index );
                 }
-                return -1;
+                return constant::invalid_index::kInt32;
             }
         };
     } // namespace
@@ -347,7 +348,7 @@ namespace sw
         if ( reader.readBlob( actionBuffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
             return false;
         TurnRoom*        pRoom  = findRoomMutable( roomID );
-        int32            seat   = -1;
+        int32            seat   = constant::invalid_index::kInt32;
         TurnRejectReason reason = TurnRejectReason::UnknownRoom;
         if ( pRoom != nullptr )
         {
@@ -425,7 +426,7 @@ namespace sw
                 TurnSeat& seat = room._listSeat[index];
                 if ( seat._connectionID != connectionID )
                     continue;
-                seat._connectionID = -1; // 자리와 토큰은 남긴다
+                seat._connectionID = constant::invalid_index::kInt32; // 자리와 토큰은 남긴다
                 TurnRelayEvent event;
                 event._kind   = TurnRelayEvent::Kind::SeatLeft;
                 event._roomID = room._roomID;
@@ -449,7 +450,7 @@ namespace sw
         , _pHost{ nullptr }
         , _roomID{ 0 }
         , _token{ 0 }
-        , _seat{ -1 }
+        , _seat{ constant::invalid_index::kInt32 }
         , _nextSubmitID{ 0 }
         , _bStarted{ SW_FALSE }
         , _messageWriter{}
@@ -467,7 +468,7 @@ namespace sw
         {
             _listAction.clear();
             _token    = 0;
-            _seat     = -1;
+            _seat     = constant::invalid_index::kInt32;
             _bStarted = SW_FALSE;
         }
         _roomID           = roomID;
@@ -484,7 +485,7 @@ namespace sw
         if ( static_cast<int32>( buffer.size() ) > NetTurnRelayMessage::kMaxActionBytes )
         {
             SW_LOG_ERROR_ID( "TurnRelay.TurnActionBytesExceeds", "Turn action of %# bytes exceeds the relay limit of %# bytes - not sent", buffer.size(), NetTurnRelayMessage::kMaxActionBytes );
-            return -1;
+            return constant::invalid_index::kInt32;
         }
         const int32 submitID = _nextSubmitID++;
         BitWriter&  writer   = _messageWriter.begin( NetTurnRelayMessage::kAction );

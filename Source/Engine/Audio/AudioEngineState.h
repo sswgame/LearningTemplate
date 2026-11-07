@@ -8,6 +8,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -76,13 +77,13 @@ namespace sw
     struct AudioBusStatus
     {
         hashed_string _name{};
-        int32         _parentIndex{ -1 };  ///< 부모 버스의 번호(`AudioEngine::getBusStatuses` 목록 안). master 는 -1
-        float32       _volumeDb{ 0.0f };   ///< 데이터 볼륨(dB)
-        float32       _userVolume{ 1.0f }; ///< 사용자 볼륨(선형, [0, 1])
-        float32       _gain{ 0.0f };       ///< 페이더 게인(선형) — 데이터 × 사용자 × 스냅샷 × 음소거 · 솔로
-        float32       _peak{ 0.0f };       ///< 마지막 블록 출력 피크(절댓값 최대)
-        bool          _bMuted{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool          _bSolo{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        int32         _parentIndex{ constant::invalid_index::kInt32 }; ///< 부모 버스의 번호(`AudioEngine::getBusStatuses` 목록 안). master 는 -1
+        float32       _volumeDb{ 0.0f };                               ///< 데이터 볼륨(dB)
+        float32       _userVolume{ 1.0f };                             ///< 사용자 볼륨(선형, [0, 1])
+        float32       _gain{ 0.0f };                                   ///< 페이더 게인(선형) — 데이터 × 사용자 × 스냅샷 × 음소거 · 솔로
+        float32       _peak{ 0.0f };                                   ///< 마지막 블록 출력 피크(절댓값 최대)
+        bool          _bMuted{ SW_FALSE };                             ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool          _bSolo{ false };                                 ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -104,12 +105,12 @@ namespace sw
     /** @brief 오디오 스레드가 가진 적응형 음악의 재생 위치입니다. 구간 전환 예약을 함께 담습니다. */
     struct AudioMusicPlayback
     {
-        shared_ptr<const AudioMusicDef> _pDesc{};              ///< 지금 음악이다.
-        AudioPlayingID                  _playingID{ 0 };       ///< 음악의 재생 id 다.
-        uint64                          _segmentStart{ 0 };    ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
-        uint64                          _pendingFrame{ 0 };    ///< 예약된 전환의 렌더 프레임이다.
-        int32                           _segment{ -1 };        ///< 지금 구간이다(-1 = 없음).
-        int32                           _pendingSegment{ -1 }; ///< 예약된 다음 구간이다(-1 = 없음).
+        shared_ptr<const AudioMusicDef> _pDesc{};                                           ///< 지금 음악이다.
+        AudioPlayingID                  _playingID{ 0 };                                    ///< 음악의 재생 id 다.
+        uint64                          _segmentStart{ 0 };                                 ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
+        uint64                          _pendingFrame{ 0 };                                 ///< 예약된 전환의 렌더 프레임이다.
+        int32                           _segment{ constant::invalid_index::kInt32 };        ///< 지금 구간이다(-1 = 없음).
+        int32                           _pendingSegment{ constant::invalid_index::kInt32 }; ///< 예약된 다음 구간이다(-1 = 없음).
 
         /** @brief @p renderedFrameCount 시각의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
         AudioMusicStatus makeStatus( uint64 renderedFrameCount ) const;
