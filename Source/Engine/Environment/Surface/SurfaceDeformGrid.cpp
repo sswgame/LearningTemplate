@@ -103,7 +103,7 @@ namespace sw
     {
         if ( isReady() == false || def.isSet() == false )
             return;
-        const float32 reach  = def.computeReach( length );
+        const float32 reach  = def.computeInfluenceRadius( length );
         const int32   extent = static_cast<int32>( _resolution );
         const int32   minX   = MathUtil::max( toWorldCell( centerX - reach ) - _originCellX, 0 );
         const int32   minZ   = MathUtil::max( toWorldCell( centerZ - reach ) - _originCellZ, 0 );
@@ -193,7 +193,7 @@ namespace sw
         return activeCount;
     }
 
-    float32 SurfaceDeformGrid::findDeepest() const
+    float32 SurfaceDeformGrid::computeMaxDepth() const
     {
         float32 deepest = 0.0f;
         for ( uint32 z = _activeRect._minZ; z < _activeRect._maxZ; ++z )
@@ -206,7 +206,7 @@ namespace sw
         return deepest;
     }
 
-    float32 SurfaceDeformGrid::findDeepestNear( float32 centerX, float32 centerZ, float32 halfSize ) const
+    float32 SurfaceDeformGrid::computeMaxDepthNear( float32 centerX, float32 centerZ, float32 halfSize ) const
     {
         if ( isReady() == false || _activeRect.isEmpty() )
             return 0.0f;

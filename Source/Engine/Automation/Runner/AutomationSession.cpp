@@ -453,7 +453,7 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
         IEngineRenderDriver* const pRenderDriver = engine.getRenderDriver();
         const bool                 bKeepGoing    = commandLine.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
-        _owner._bUnattended                      = MainWindowSubsystem::isUnwatched( commandLine ); // 지켜보는 무인 실행은 보이고 내보낸다
+        _owner._bUnattended                      = MainWindowSubsystem::shouldRenderOffScreen( commandLine ); // 지켜보는 무인 실행은 보이고 내보낸다
         const bool bScenario                     = commandLine.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
         const bool bStarted                      = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
         if ( bStarted && pRenderDriver != nullptr )

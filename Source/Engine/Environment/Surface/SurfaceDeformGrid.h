@@ -66,9 +66,9 @@ namespace sw
         /** @brief 높이가 0 이 아닌 칸 수입니다. */
         uint32 countActiveTexels() const;
         /** @brief 가장 깊은 꺼짐(m, 0 이상)입니다. */
-        float32 findDeepest() const;
+        float32 computeMaxDepth() const;
         /** @brief 월드 (@p centerX, @p centerZ) 둘레 한 변 2 × @p halfSize 정사각형 안에서 가장 깊은 꺼짐(m, 0 이상)입니다(창 밖 칸은 0). */
-        float32 findDeepestNear( float32 centerX, float32 centerZ, float32 halfSize ) const;
+        float32 computeMaxDepthNear( float32 centerX, float32 centerZ, float32 halfSize ) const;
 
         /** @brief 텍스처로 보낼 칸이 있는지입니다. */
         bool             hasDirtyRect() const { return _dirtyRect.isEmpty() == false; }

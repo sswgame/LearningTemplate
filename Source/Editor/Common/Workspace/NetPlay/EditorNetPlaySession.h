@@ -207,7 +207,7 @@ namespace sw::editor
         int32                      getProcessCount() const { return static_cast<int32>( _listProcess.size() ); }
         EditorNetPlayProcessStatus getProcessStatus( int32 processIndex ) const;
         /** @brief 동기화 탭의 모델이 받는 창구(`IEditorNetPlayProcesses`)입니다. 세션이 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`). */
-        IEditorNetPlayProcesses& getProcesses() { return _processes; }
+        IEditorNetPlayProcesses& getNetPlayProcesses() { return _processes; }
         /** @brief 패널 필터용 최근 줄입니다. `update` 가 채웁니다. */
         const vector<EditorNetPlayLogLine>& getLogLines() const { return _listLogLine; }
         /** @brief 지난 `stop` 이 합친 트레이스 경로입니다. 없으면 빈 문자열입니다. */

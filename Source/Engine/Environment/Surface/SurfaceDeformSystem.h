@@ -7,7 +7,7 @@
  *
  *          도장 API(지역 프로필의 반응 · 발걸음 · 도장 컴포넌트가 부른다, 모두 게임 스레드):
  *          - 한 번 찍기: `stamp`(한 점 · 요), `stampSegment`(두 점을 잇는 띠 — 끌린 자국 · 바퀴 자국은 지난 자리 → 이번 자리를 프레임마다 찍는다).
- *          - 붙잡기: `holdStamp` → `moveHeldStamp` → `releaseStamp`. 붙잡은 도장은 프레임마다 다시 찍혀 메워지지 않고(파묻힘 테두리 · 깔때기),
+ *          - 붙잡기: `addPersistentStamp` → `movePersistentStamp` → `removePersistentStamp`. 붙잡은 도장은 프레임마다 다시 찍혀 메워지지 않고(파묻힘 테두리 · 깔때기),
  *            `_spinSpeed` 로 홈이 돈다. 놓으면 남은 자국이 자기 속도로 메워진다.
  *          격자 크기 · 창 너비 · 깊이 범위는 표면 종류 표(`SurfaceKindTable::_deformResolution` · `_deformExtent` · `_deformDepthRange`)다. 창은 처음 찍을 때 생기고
  *          카메라 앞(`kFocusAheadRatio`)을 따라 창 너비의 일부(`kRecenterRatio`)만큼 벗어나면 칸 단위로 옮겨 간다.
@@ -62,18 +62,18 @@ namespace sw
         /** @brief 도장 @p def 를 @p from → @p to 띠로 한 번 찍습니다(Trail 의 길이가 두 점 사이 거리다). 두 점이 같으면 `stamp` 와 같다. */
         void stampSegment( const SurfaceStampDef& def, const float3& from, const float3& to );
         /** @brief 도장 @p def 를 붙잡아 @p point 에 둡니다. 놓을 때까지 프레임마다 다시 찍힌다. 찍지 못하는 자리(서버 · 빈 도장 · 표 없음)는 빈 핸들입니다. */
-        [[nodiscard]] SurfaceStampHandle holdStamp( const SurfaceStampDef& def, const float3& point, float32 yaw );
+        [[nodiscard]] SurfaceStampHandle addPersistentStamp( const SurfaceStampDef& def, const float3& point, float32 yaw );
         /** @brief 붙잡은 도장을 옮깁니다. 놓았거나 씬을 비워 사라진 핸들이면 아무것도 하지 않고 false 입니다(부르는 쪽이 다시 붙잡는다). */
-        [[nodiscard]] bool moveHeldStamp( SurfaceStampHandle handle, const float3& point, float32 yaw );
+        [[nodiscard]] bool movePersistentStamp( SurfaceStampHandle handle, const float3& point, float32 yaw );
         /** @brief 붙잡은 도장을 놓습니다. 남은 자국은 메워진다. 멱등입니다. */
-        void releaseStamp( SurfaceStampHandle handle );
+        void removePersistentStamp( SurfaceStampHandle handle );
 
         /** @brief 월드 (@p x, @p z) 의 변형 높이(m, 음수 = 꺼짐)입니다. 창 밖이나 찍은 적이 없으면 0 이다. */
         float32 findHeightAt( float32 x, float32 z ) const { return _grid.findHeightAt( x, z ); }
         /** @brief 이 씬에서 찍은 도장 수입니다(누적 — 한 번 찍기 · 띠 · 붙잡기). */
         uint32 getStampCount() const { return _stampCount; }
         /** @brief 지금 붙잡힌 도장 수입니다. */
-        uint32 getHeldCount() const;
+        uint32 getPersistentStampCount() const;
         /** @brief 높이 격자입니다(감시 값 · 테스트가 읽는다). */
         const SurfaceDeformGrid& getGrid() const { return _grid; }
 
@@ -86,7 +86,7 @@ namespace sw
 
     private:
         /** @brief 붙잡은 도장 하나입니다. */
-        struct HeldStamp
+        struct PersistentStamp
         {
             SurfaceStampDef _def;
             float3          _point;
@@ -96,29 +96,29 @@ namespace sw
             uint8           _bInUse   : 1;
             uint8           _reserved : 7;
 
-            HeldStamp();
+            PersistentStamp();
         };
 
         /** @brief 찍을 수 있는지 보고, 격자가 없으면 표면 종류 표의 크기로 만듭니다(창은 카메라 앞, 카메라가 없으면 @p point). 찍을 수 없으면 false 입니다. */
-        [[nodiscard]] bool prepareGrid( const SurfaceStampDef& def, const float3& point );
+        [[nodiscard]] bool ensureGrid( const SurfaceStampDef& def, const float3& point );
         /** @brief 너비 @p extent 인 창이 따라갈 자리(카메라 앞, 월드 x · z)입니다. 카메라가 없으면 false 입니다. */
-        [[nodiscard]] bool findFocus( float32 extent, float2& outFocus ) const;
+        [[nodiscard]] bool computeWindowCenter( float32 extent, float2& outFocus ) const;
         /** @brief @p handle 이 가리키는 붙잡은 도장입니다. 놓았거나 빈 핸들이면 nullptr 입니다. */
-        HeldStamp* findHeld( SurfaceStampHandle handle );
+        PersistentStamp* findPersistentStamp( SurfaceStampHandle handle );
         /** @brief 텍스처를 만들거나 바뀐 칸만 보냅니다. 에셋 서비스가 없으면(CPU 테스트) 격자만 남는다. */
         void uploadTexture();
         /** @brief 텍스처를 놓습니다. */
         void releaseTexture();
 
     private:
-        GameObjectManager* _pManager;
-        SurfaceDeformGrid  _grid;
-        vector<HeldStamp>  _listHeld;
-        vector<uint8>      _listTexelByte; ///< 보낼 칸의 RGBA8(다시 쓰는 버퍼)
-        string             _texturePath;
-        float32            _depthRange;
-        uint32             _stampCount;
-        uint32             _bindingRevision;
-        uint32             _heldGeneration; ///< 붙잡을 때마다 오른다 — 씬을 비워도 되돌리지 않아 옛 핸들이 새 도장에 닿지 않는다
+        GameObjectManager*      _pManager;
+        SurfaceDeformGrid       _grid;
+        vector<PersistentStamp> _listPersistentStamp;
+        vector<uint8>           _listTexelByte; ///< 보낼 칸의 RGBA8(다시 쓰는 버퍼)
+        string                  _texturePath;
+        float32                 _depthRange;
+        uint32                  _stampCount;
+        uint32                  _bindingRevision;
+        uint32                  _persistentStampGeneration; ///< 붙잡을 때마다 오른다 — 씬을 비워도 되돌리지 않아 옛 핸들이 새 도장에 닿지 않는다
     };
 } // namespace sw

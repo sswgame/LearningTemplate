@@ -85,7 +85,7 @@ namespace sw
         /** @brief 게임 코드의 알림을 올립니다(`IPlayerNoticeSink`). 힌트는 종류 Hint · 우선순위 1 로 쌓인 알림보다 먼저 보인다. */
         void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind );
         /** @brief 게임 코드의 알림을 받는 자리(`IPlayerNoticeSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
-        IPlayerNoticeSink& getNoticeSink() { return _noticeSink; }
+        IPlayerNoticeSink& getPlayerNoticeSink() { return _noticeSink; }
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */

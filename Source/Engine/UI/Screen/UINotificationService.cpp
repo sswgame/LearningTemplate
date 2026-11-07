@@ -327,7 +327,7 @@ namespace sw
     {
         (void)build;
         UINotificationService& service  = scope.emplaceSubsystem<UINotificationService>();
-        const bool             bExposed = scope.exposeMember<IPlayerNoticeSink>( service, service.getNoticeSink() );
+        const bool             bExposed = scope.exposeMember<IPlayerNoticeSink>( service, service.getPlayerNoticeSink() );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

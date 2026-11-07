@@ -287,7 +287,7 @@ namespace sw::editor
             const bool bWaiting = _model.isWaitingForHistory( sourceIndex, processIndex );
             ImGui::BeginDisabled( status._bRunning == false || bWaiting );
             if ( ImGui::Button( status._label.c_str() ) )
-                (void)_model.requestClientHistory( session.getProcesses(), MultiplayerSyncTabInternal::getCompare(), sourceIndex, processIndex ); // 실패는 모델이 알린다
+                (void)_model.requestClientHistory( session.getNetPlayProcesses(), MultiplayerSyncTabInternal::getCompare(), sourceIndex, processIndex ); // 실패는 모델이 알린다
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncClient" ) );
             ImGui::PopID();
@@ -376,7 +376,7 @@ namespace sw::editor
     void MultiplayerSyncTab::drawTab( const MultiplayerTabContext& /*context*/ )
     {
         const int64 timeoutMilliseconds = MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds();
-        _model.poll( MultiplayerSyncTabInternal::getSession().getProcesses(), MultiplayerSyncTabInternal::getCompare(), timeoutMilliseconds );
+        _model.poll( MultiplayerSyncTabInternal::getSession().getNetPlayProcesses(), MultiplayerSyncTabInternal::getCompare(), timeoutMilliseconds );
         // 어느 줄의 이력을 읽을지 — 씬 줄(`scene`) 말고 키트가 더한 줄(`destruction` · `rollback`)도 같은 비교를 탄다. 읽는 단추를 누를 때 이 이름을 쓴다.
         if ( _arrChannelName.empty() )
             _arrChannelName = MultiplayerSyncTabInternal::getCompare().getHashChannel().c_str();
@@ -408,7 +408,7 @@ namespace sw::editor
         }
         // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
         if ( ImGui::Button( SW_LOCKEY( "EdText", "WhichObjectsDiffer" ) ) )
-            _model.startObjectCompare( MultiplayerSyncTabInternal::getSession().getProcesses(), compare, timeoutMilliseconds );
+            _model.startObjectCompare( MultiplayerSyncTabInternal::getSession().getNetPlayProcesses(), compare, timeoutMilliseconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )
         {

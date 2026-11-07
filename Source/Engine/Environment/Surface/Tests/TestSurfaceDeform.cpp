@@ -56,7 +56,7 @@ SW_TEST_CASE( SurfaceStampTest, PrintSinksInsideAndRaisesItsRim )
     SW_EXPECT_TRUE( def.computeHeight( 0.15f, 0.0f, 0.0f, 0.0f ) >= 0.0f );          // 너비 밖(반 너비 0.1)
     SW_EXPECT_NEAR( 0.01f, def.computeHeight( 0.125f, 0.0f, 0.0f, 0.0f ), 1.0e-4f ); // 테두리 가운데(가장자리 + 폭 절반)
     SW_EXPECT_NEAR( 0.0f, def.computeHeight( 1.0f, 1.0f, 0.0f, 0.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR( 0.2f + 0.05f, def.computeReach( 0.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.2f + 0.05f, def.computeInfluenceRadius( 0.0f ), 1.0e-6f );
 }
 
 /**
@@ -94,7 +94,7 @@ SW_TEST_CASE( SurfaceDeformGridTest, StampsSinkOverlapAndFillBack )
     const SurfaceStampDef def = SurfaceDeformTestUtil::makePrint();
     grid.applyStamp( def, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f );
     SW_EXPECT_TRUE( grid.findHeightAt( 0.0f, 0.0f ) < -0.04f );
-    SW_EXPECT_TRUE( grid.findDeepest() > 0.04f );
+    SW_EXPECT_TRUE( grid.computeMaxDepth() > 0.04f );
     SW_EXPECT_TRUE( grid.countActiveTexels() > 0 );
     SW_EXPECT_TRUE( grid.hasDirtyRect() );
 
@@ -109,7 +109,7 @@ SW_TEST_CASE( SurfaceDeformGridTest, StampsSinkOverlapAndFillBack )
     grid.fill( 3.5f );
     SW_EXPECT_NEAR( 0.0f, grid.findHeightAt( 0.0f, 0.0f ), 1.0e-6f );
     SW_EXPECT_EQUAL( 0u, grid.countActiveTexels() );
-    SW_EXPECT_NEAR( 0.0f, grid.findDeepest(), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, grid.computeMaxDepth(), 1.0e-6f );
 }
 
 /**
@@ -134,8 +134,8 @@ SW_TEST_CASE( SurfaceDeformGridTest, RecenterKeepsMarksInWorldPlace )
     SW_EXPECT_NEAR( -2.0f, grid.getOrigin()._x, 1.0e-5f );
     SW_EXPECT_FALSE( grid.recenter( 2.01f, 0.0f ) ); // 한 칸이 안 되면 그대로다
     // 둘레 찾기는 그 사각형 안 자국만 본다.
-    SW_EXPECT_NEAR( -kept, grid.findDeepestNear( 1.0f, 1.0f, 0.5f ), 1.0e-6f );
-    SW_EXPECT_NEAR( 0.0f, grid.findDeepestNear( 4.0f, -3.0f, 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR( -kept, grid.computeMaxDepthNear( 1.0f, 1.0f, 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, grid.computeMaxDepthNear( 4.0f, -3.0f, 0.5f ), 1.0e-6f );
 }
 
 /**
@@ -171,29 +171,29 @@ SW_TEST_CASE( SurfaceDeformSystemTest, HeldStampStaysUntilReleased )
     GameObjectManager        manager;
     SurfaceDeformSystem&     deform = manager.getSubsystem<SurfaceDeformSystem>();
     const SurfaceStampDef    funnel = SurfaceDeformTestUtil::makeFunnel();
-    const SurfaceStampHandle handle = deform.holdStamp( funnel, float3{ 3.0f, 0.0f, -2.0f }, 0.0f );
+    const SurfaceStampHandle handle = deform.addPersistentStamp( funnel, float3{ 3.0f, 0.0f, -2.0f }, 0.0f );
     SW_REQUIRE_TRUE( handle.isValid() );
-    SW_EXPECT_EQUAL( 1u, deform.getHeldCount() );
+    SW_EXPECT_EQUAL( 1u, deform.getPersistentStampCount() );
     for ( uint32 frame = 0; frame < 120; ++frame )
     {
         deform.update( 1.0f / 60.0f );
     }
     // 2 초 지나도(메움 0.5 m/s 면 0.6 초에 평평) 붙잡은 깔때기는 깊다 — 가운데 칸은 홈 사이 둔덕이어도 0.3 × 0.95 × 0.7 m 보다 깊다.
     SW_EXPECT_TRUE( deform.findHeightAt( 3.0f, -2.0f ) < -0.19f );
-    SW_EXPECT_TRUE( deform.moveHeldStamp( handle, float3{ 3.5f, 0.0f, -2.0f }, 0.0f ) );
+    SW_EXPECT_TRUE( deform.movePersistentStamp( handle, float3{ 3.5f, 0.0f, -2.0f }, 0.0f ) );
 
-    deform.releaseStamp( handle );
-    SW_EXPECT_EQUAL( 0u, deform.getHeldCount() );
-    SW_EXPECT_FALSE( deform.moveHeldStamp( handle, float3{ 3.0f, 0.0f, -2.0f }, 0.0f ) );
+    deform.removePersistentStamp( handle );
+    SW_EXPECT_EQUAL( 0u, deform.getPersistentStampCount() );
+    SW_EXPECT_FALSE( deform.movePersistentStamp( handle, float3{ 3.0f, 0.0f, -2.0f }, 0.0f ) );
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
         deform.update( 1.0f / 60.0f );
     }
     SW_EXPECT_EQUAL( 0u, deform.getGrid().countActiveTexels() ); // 0.3 m · 0.5 m/s → 0.6 초
 
-    const SurfaceStampHandle again = deform.holdStamp( funnel, float3{ 3.0f, 0.0f, -2.0f }, 0.0f );
+    const SurfaceStampHandle again = deform.addPersistentStamp( funnel, float3{ 3.0f, 0.0f, -2.0f }, 0.0f );
     deform.onSceneCleared();
-    SW_EXPECT_FALSE( deform.moveHeldStamp( again, float3{ 3.0f, 0.0f, -2.0f }, 0.0f ) );
+    SW_EXPECT_FALSE( deform.movePersistentStamp( again, float3{ 3.0f, 0.0f, -2.0f }, 0.0f ) );
     SW_EXPECT_EQUAL( 0u, deform.getStampCount() );
 }
 

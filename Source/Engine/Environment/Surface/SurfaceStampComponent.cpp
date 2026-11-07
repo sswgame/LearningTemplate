@@ -34,7 +34,7 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            releaseStamp( *pManager );
+            removePersistentStamp( *pManager );
     }
 
     void SurfaceStampComponent::onTick( float32 deltaTime )
@@ -49,7 +49,7 @@ namespace sw
 
     void SurfaceStampComponent::onUnregister( GameObjectManager& manager )
     {
-        releaseStamp( manager );
+        removePersistentStamp( manager );
         Component::onUnregister( manager );
     }
 
@@ -59,7 +59,7 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && pOwner->isActiveInHierarchy() == false )
-            releaseStamp( *pManager );
+            removePersistentStamp( *pManager );
     }
 
     void SurfaceStampComponent::applyStamp( GameObjectManager& manager )
@@ -81,8 +81,8 @@ namespace sw
         if ( _mode == SurfaceStampMode::Hold )
         {
             // 씬을 비워 변형 층이 도장을 잃었으면 옮기기가 거짓이다 — 다시 붙잡는다.
-            if ( _held.isValid() == false || deform.moveHeldStamp( _held, point, yaw ) == false )
-                _held = deform.holdStamp( _stamp, point, yaw );
+            if ( _held.isValid() == false || deform.movePersistentStamp( _held, point, yaw ) == false )
+                _held = deform.addPersistentStamp( _stamp, point, yaw );
             return;
         }
         if ( _bHasLastPoint == SW_FALSE )
@@ -102,10 +102,10 @@ namespace sw
         _lastPoint = point;
     }
 
-    void SurfaceStampComponent::releaseStamp( GameObjectManager& manager )
+    void SurfaceStampComponent::removePersistentStamp( GameObjectManager& manager )
     {
         if ( _held.isValid() )
-            manager.getSubsystem<SurfaceDeformSystem>().releaseStamp( _held );
+            manager.getSubsystem<SurfaceDeformSystem>().removePersistentStamp( _held );
         _held          = SurfaceStampHandle{};
         _bHasLastPoint = SW_FALSE;
     }

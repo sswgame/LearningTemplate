@@ -104,7 +104,7 @@ namespace sw
         return 0.0f;
     }
 
-    float32 SurfaceStampDef::computeReach( float32 length ) const
+    float32 SurfaceStampDef::computeInfluenceRadius( float32 length ) const
     {
         switch ( _shape )
         {

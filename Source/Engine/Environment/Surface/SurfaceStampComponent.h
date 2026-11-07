@@ -53,7 +53,7 @@ namespace sw
         /** @brief 오브젝트 자리로 도장을 찍거나 옮깁니다(틱 뒤 게임 스레드). */
         void applyStamp( GameObjectManager& manager );
         /** @brief 붙잡은 도장을 놓고 지나온 길을 끊습니다. */
-        void releaseStamp( GameObjectManager& manager );
+        void removePersistentStamp( GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Stamp", DisplayName = "Stamp", Tooltip = "Shape, size, depth, rim, fill speed and spin of the stamp" )

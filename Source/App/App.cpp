@@ -243,8 +243,8 @@ namespace sw
 
         // 준비가 끝났다. 스플래시 창을 닫고 메인 창을 화면에 띄운다.
         splash.dismiss();
-        // 보는 사람이 있으면(무인이 아니거나, 무인이어도 지켜보는 표시가 있으면) 창을 띄운다 — `MainWindowSubsystem::isUnwatched`.
-        if ( MainWindowSubsystem::isUnwatched( *_launch.getEngine().getCommandLineManager() ) == false )
+        // 보는 사람이 있으면(무인이 아니거나, 무인이어도 지켜보는 표시가 있으면) 창을 띄운다 — `MainWindowSubsystem::shouldRenderOffScreen`.
+        if ( MainWindowSubsystem::shouldRenderOffScreen( *_launch.getEngine().getCommandLineManager() ) == false )
             _pWindow->showWindow( true );
 
         logStartupPhases( timings );

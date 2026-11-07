@@ -106,7 +106,7 @@ namespace sw
         span<const utf8* const> getSubsystemDependencies() const override;
 
         /** @brief 공개할 드라이버입니다. */
-        EngineRenderDriver& getDriver() { return _driver; }
+        EngineRenderDriver& getRenderDriver() { return _driver; }
 
     private:
         EngineRenderDriver _driver;

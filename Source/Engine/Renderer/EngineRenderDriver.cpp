@@ -313,7 +313,7 @@ namespace sw
         if ( build._pStartupSetup->_bRenderer == false )
             return;
         EngineRenderDriverSubsystem& subsystem = scope.emplaceSubsystem<EngineRenderDriverSubsystem>( scope.getScope(), scope.get<RHISubsystem>(), scope.get<FrameRendererSubsystem>(), scope.get<RenderThreadSubsystem>() );
-        EngineRenderDriver&          driver    = subsystem.getDriver();
+        EngineRenderDriver&          driver    = subsystem.getRenderDriver();
         const bool                   bExposed  = scope.exposeMember<IEngineRenderDriver>( subsystem, driver );
         SW_ASSERT( bExposed );
         (void)bExposed;

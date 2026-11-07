@@ -72,12 +72,12 @@ namespace sw
          */
         float32 computeHeight( float32 right, float32 forward, float32 length, float32 phase ) const;
         /** @brief 도장 중심에서 바뀌는 칸이 있을 수 있는 가장 먼 거리(m)입니다(테두리 포함). 격자가 이 반경 안만 훑는다. */
-        float32 computeReach( float32 length ) const;
+        float32 computeInfluenceRadius( float32 length ) const;
     };
 
     /**
      * @struct SurfaceStampHandle
-     * @brief 붙잡은 도장(`SurfaceDeformSystem::holdStamp`) 하나를 가리킵니다. 기본값은 아무것도 가리키지 않는다(`isValid`).
+     * @brief 붙잡은 도장(`SurfaceDeformSystem::addPersistentStamp`) 하나를 가리킵니다. 기본값은 아무것도 가리키지 않는다(`isValid`).
      * @details 번호와 세대를 함께 들어, 놓은 칸을 다른 도장이 다시 쓴 뒤 옛 핸들로 옮기거나 놓아도 새 도장에 닿지 않는다.
      */
     struct SW_API SurfaceStampHandle

@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    bool MainWindowSubsystem::isUnwatched( const CommandLineManager& commandLine )
+    bool MainWindowSubsystem::shouldRenderOffScreen( const CommandLineManager& commandLine )
     {
         if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) == false )
             return false;

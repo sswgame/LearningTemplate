@@ -267,7 +267,7 @@ namespace sw
          * @details `IInputCaptureQuery` 는 게임 코드의 입력 판정, `IUILayerVisibility` 는 레이어 숨김 요청, `IEngineUIDriver` 는 엔진 루프의 프레임 단계다.
          */
         IInputCaptureQuery& getInputCaptureQuery() { return _inputCaptureQuery; }
-        IUILayerVisibility& getLayerVisibility() { return _layerVisibility; }
+        IUILayerVisibility& getUILayerVisibility() { return _layerVisibility; }
         IEngineUIDriver&    getEngineUIDriver() { return _engineUIDriver; }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
@@ -435,7 +435,7 @@ namespace sw
         };
 
         InputCaptureQuery            _inputCaptureQuery;              ///< 공개 창구(`getInputCaptureQuery`)
-        LayerVisibility              _layerVisibility;                ///< 공개 창구(`getLayerVisibility`)
+        LayerVisibility              _layerVisibility;                ///< 공개 창구(`getUILayerVisibility`)
         EngineUIDriver               _engineUIDriver;                 ///< 공개 창구(`getEngineUIDriver`)
         vector<unique_ptr<UIScreen>> _listScreen;                     ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
         UIDocumentCache*             _pDocumentCache;                 ///< 문서 캐시(서브시스템 `UIDocuments` — 기동이 찾는다)

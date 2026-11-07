@@ -1108,7 +1108,7 @@ namespace sw
         UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
         build._pStartupParts->_pUISystem = &uiSystem;
         build._pStartupParts->_pUIDriver = &uiSystem.getEngineUIDriver();
-        const bool bExposed              = scope.exposeMember<IInputCaptureQuery>( uiSystem, uiSystem.getInputCaptureQuery() ) && scope.exposeMember<IUILayerVisibility>( uiSystem, uiSystem.getLayerVisibility() ) &&
+        const bool bExposed              = scope.exposeMember<IInputCaptureQuery>( uiSystem, uiSystem.getInputCaptureQuery() ) && scope.exposeMember<IUILayerVisibility>( uiSystem, uiSystem.getUILayerVisibility() ) &&
                               scope.exposeMember<IEngineUIDriver>( uiSystem, uiSystem.getEngineUIDriver() );
         SW_ASSERT( bExposed );
         (void)bExposed;

@@ -63,7 +63,7 @@ namespace sw
                 const SurfaceDeformSystem* pSystem = findSystem( query );
                 if ( pSystem == nullptr )
                     return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().findDeepest() ) );
+                outValue.setNumber( static_cast<float64>( pSystem->getGrid().computeMaxDepth() ) );
                 return true;
             }
 
@@ -77,7 +77,7 @@ namespace sw
                     outValue.setText( "key must be 'x z r' (world meters, r >= 0)" );
                     return false;
                 }
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().findDeepestNear( arrArea[0], arrArea[1], arrArea[2] ) ) );
+                outValue.setNumber( static_cast<float64>( pSystem->getGrid().computeMaxDepthNear( arrArea[0], arrArea[1], arrArea[2] ) ) );
                 return true;
             }
 
@@ -97,7 +97,7 @@ namespace sw
                 const SurfaceDeformSystem* pSystem = findSystem( query );
                 if ( pSystem == nullptr )
                     return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getHeldCount() ) );
+                outValue.setNumber( static_cast<float64>( pSystem->getPersistentStampCount() ) );
                 return true;
             }
         };
@@ -119,7 +119,7 @@ namespace sw
 {
     SW_SCENE_SERVICE( SurfaceDeformSystem, FlushEnd )
 
-    SurfaceDeformSystem::HeldStamp::HeldStamp()
+    SurfaceDeformSystem::PersistentStamp::PersistentStamp()
         : _def{}
         , _point{}
         , _yaw{ 0.0f }
@@ -133,13 +133,13 @@ namespace sw
     SurfaceDeformSystem::SurfaceDeformSystem( GameObjectManager& manager )
         : _pManager{ &manager }
         , _grid{}
-        , _listHeld{}
+        , _listPersistentStamp{}
         , _listTexelByte{}
         , _texturePath{}
         , _depthRange{ 0.0f }
         , _stampCount{ 0 }
         , _bindingRevision{ 0 }
-        , _heldGeneration{ 0 }
+        , _persistentStampGeneration{ 0 }
     {
     }
 
@@ -153,7 +153,7 @@ namespace sw
         if ( _grid.isReady() == false )
             return;
         float2 focus;
-        if ( findFocus( _grid.getExtent(), focus ) )
+        if ( computeWindowCenter( _grid.getExtent(), focus ) )
         {
             const float32 halfExtent = _grid.getExtent() * 0.5f;
             const float2  origin     = _grid.getOrigin();
@@ -163,7 +163,7 @@ namespace sw
                 ++_bindingRevision;
         }
         _grid.fill( deltaTime );
-        for ( HeldStamp& held : _listHeld )
+        for ( PersistentStamp& held : _listPersistentStamp )
         {
             if ( held._bInUse == SW_FALSE )
                 continue;
@@ -177,7 +177,7 @@ namespace sw
     {
         releaseTexture();
         _grid = SurfaceDeformGrid{};
-        _listHeld.clear();
+        _listPersistentStamp.clear();
         _depthRange = 0.0f;
         _stampCount = 0;
         ++_bindingRevision;
@@ -185,7 +185,7 @@ namespace sw
 
     void SurfaceDeformSystem::stamp( const SurfaceStampDef& def, const float3& point, float32 yaw )
     {
-        if ( prepareGrid( def, point ) == false )
+        if ( ensureGrid( def, point ) == false )
             return;
         _grid.applyStamp( def, point._x, point._z, yaw, 0.0f, 0.0f );
         ++_stampCount;
@@ -201,39 +201,39 @@ namespace sw
             stamp( def, to, 0.0f );
             return;
         }
-        if ( prepareGrid( def, to ) == false )
+        if ( ensureGrid( def, to ) == false )
             return;
         // 띠의 앞은 from → to 다(요 규칙 YawUtil: atan2( x, z )).
         _grid.applyStamp( def, ( from._x + to._x ) * 0.5f, ( from._z + to._z ) * 0.5f, MathUtil::atan2( deltaX, deltaZ ), length, 0.0f );
         ++_stampCount;
     }
 
-    SurfaceStampHandle SurfaceDeformSystem::holdStamp( const SurfaceStampDef& def, const float3& point, float32 yaw )
+    SurfaceStampHandle SurfaceDeformSystem::addPersistentStamp( const SurfaceStampDef& def, const float3& point, float32 yaw )
     {
-        if ( prepareGrid( def, point ) == false )
+        if ( ensureGrid( def, point ) == false )
             return SurfaceStampHandle{};
         uint32 slot = 0;
-        while ( slot < _listHeld.size() && _listHeld[slot]._bInUse == SW_TRUE )
+        while ( slot < _listPersistentStamp.size() && _listPersistentStamp[slot]._bInUse == SW_TRUE )
         {
             ++slot;
         }
-        if ( slot == _listHeld.size() )
-            _listHeld.emplace_back();
-        HeldStamp& held  = _listHeld[slot];
-        held._def        = def;
-        held._point      = point;
-        held._yaw        = yaw;
-        held._age        = 0.0f;
-        held._generation = ++_heldGeneration;
-        held._bInUse     = SW_TRUE;
+        if ( slot == _listPersistentStamp.size() )
+            _listPersistentStamp.emplace_back();
+        PersistentStamp& held = _listPersistentStamp[slot];
+        held._def             = def;
+        held._point           = point;
+        held._yaw             = yaw;
+        held._age             = 0.0f;
+        held._generation      = ++_persistentStampGeneration;
+        held._bInUse          = SW_TRUE;
         _grid.applyStamp( def, point._x, point._z, yaw, 0.0f, 0.0f );
         ++_stampCount;
         return SurfaceStampHandle{ slot, held._generation };
     }
 
-    bool SurfaceDeformSystem::moveHeldStamp( SurfaceStampHandle handle, const float3& point, float32 yaw )
+    bool SurfaceDeformSystem::movePersistentStamp( SurfaceStampHandle handle, const float3& point, float32 yaw )
     {
-        HeldStamp* pHeld = findHeld( handle );
+        PersistentStamp* pHeld = findPersistentStamp( handle );
         if ( pHeld == nullptr )
             return false;
         pHeld->_point = point;
@@ -241,17 +241,17 @@ namespace sw
         return true;
     }
 
-    void SurfaceDeformSystem::releaseStamp( SurfaceStampHandle handle )
+    void SurfaceDeformSystem::removePersistentStamp( SurfaceStampHandle handle )
     {
-        HeldStamp* pHeld = findHeld( handle );
+        PersistentStamp* pHeld = findPersistentStamp( handle );
         if ( pHeld != nullptr )
             pHeld->_bInUse = SW_FALSE;
     }
 
-    uint32 SurfaceDeformSystem::getHeldCount() const
+    uint32 SurfaceDeformSystem::getPersistentStampCount() const
     {
         uint32 heldCount = 0;
-        for ( const HeldStamp& held : _listHeld )
+        for ( const PersistentStamp& held : _listPersistentStamp )
         {
             heldCount += held._bInUse == SW_TRUE ? 1u : 0u;
         }
@@ -266,7 +266,7 @@ namespace sw
         return float4{ origin._x, origin._y, 1.0f / _grid.getExtent(), _depthRange };
     }
 
-    bool SurfaceDeformSystem::prepareGrid( const SurfaceStampDef& def, const float3& point )
+    bool SurfaceDeformSystem::ensureGrid( const SurfaceStampDef& def, const float3& point )
     {
         // 변형은 보이는 것만이다 — 그리는 것이 없는 전용 서버는 격자를 두지 않는다.
         if ( build::kWithClientCode == false || def.isSet() == false )
@@ -278,7 +278,7 @@ namespace sw
             return false; // 표를 읽지 못한 까닭은 findDefault 가 남겼다
         // 창은 카메라 앞이다. 카메라가 없는 씬(헤드리스 테스트)은 처음 찍은 자리를 창 가운데에 둔다 — 그 뒤로 카메라가 생기면 따라간다.
         float2 focus;
-        if ( findFocus( pTable->_deformExtent, focus ) == false )
+        if ( computeWindowCenter( pTable->_deformExtent, focus ) == false )
             focus = float2{ point._x, point._z };
         _grid.reset( pTable->_deformResolution, pTable->_deformExtent, focus._x, focus._y );
         _depthRange = pTable->_deformDepthRange;
@@ -286,7 +286,7 @@ namespace sw
         return true;
     }
 
-    bool SurfaceDeformSystem::findFocus( float32 extent, float2& outFocus ) const
+    bool SurfaceDeformSystem::computeWindowCenter( float32 extent, float2& outFocus ) const
     {
         float3 position;
         float3 forward;
@@ -300,11 +300,11 @@ namespace sw
         return true;
     }
 
-    SurfaceDeformSystem::HeldStamp* SurfaceDeformSystem::findHeld( SurfaceStampHandle handle )
+    SurfaceDeformSystem::PersistentStamp* SurfaceDeformSystem::findPersistentStamp( SurfaceStampHandle handle )
     {
-        if ( handle.isValid() == false || handle._slot >= _listHeld.size() )
+        if ( handle.isValid() == false || handle._slot >= _listPersistentStamp.size() )
             return nullptr;
-        HeldStamp& held = _listHeld[handle._slot];
+        PersistentStamp& held = _listPersistentStamp[handle._slot];
         return held._bInUse == SW_TRUE && held._generation == handle._generation ? &held : nullptr;
     }
 
