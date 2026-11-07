@@ -2007,6 +2007,12 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdFormat.MaskMissingBones"
+		       source="Not in the skeleton: {bones}. The game drops this mask until they are fixed.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdFormat.Max"
 		       source="{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}">
 			<origins>
@@ -3047,6 +3053,11 @@
 		<entry key="EdSection.Sections" source="Sections">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.SkeletonView" source="Skeleton view">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSection.State" source="State">
@@ -4820,6 +4831,11 @@
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdWidget.Skeleton" source="Skeleton">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdWidget.Sources" source="Sources">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -5001,6 +5017,45 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorAnimationGraph.MaskNoSkeletonHint"
+		       source="Enter a skeleton to see the weight of every bone and paint it.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.MaskPickBoneHint" source="Pick a bone above to paint its weight.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.MaskSkeletonTip"
+		       source="Skeleton to check and paint this mask against. It is not saved in the graph.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.MaskSourceBone" source="Set on this bone only.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.MaskSourceInherited" source="Inherited from a parent bone.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.MaskSourceNone"
+		       source="No entry reaches this bone, so its weight is 0.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.MaskSourceSubtree"
+		       source="Set on this bone and spread to its children.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorAnimationGraph.NoBoneMasksHint"
 		       source="No bone masks. A mask chooses the bones a layer affects and how strongly.">
 			<origins>
@@ -5013,10 +5068,38 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorAnimationGraph.PaintBone" source="Paint bone">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PaintBoneTip"
+		       source="Set this weight on this bone only. Its children keep their weight.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PaintSubtree" source="Paint subtree">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PaintSubtreeTip"
+		       source="Set this weight on the bone and every child bone.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorAnimationGraph.PlayTip"
 		       source="Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.ResetBoneTip"
+		       source="Remove this bone's entries so it takes its parent's weight again.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAnimationGraph.SaveTip" source="Write the graph and its node layout to the asset file.">

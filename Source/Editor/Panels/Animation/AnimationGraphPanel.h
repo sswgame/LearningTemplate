@@ -45,6 +45,10 @@ namespace sw::editor
         uint32 getLayerCount() const { return static_cast<uint32>( _graph._listLayer.size() ); }
         /** @brief 본 마스크 수를 반환합니다. 프로브 `Editor.AnimationGraphBoneMaskCount` 가 읽습니다. */
         uint32 getBoneMaskCount() const { return static_cast<uint32>( _graph._listBoneMask.size() ); }
+        /** @brief 모든 본 마스크의 항목 수입니다. 프로브 `Editor.AnimationGraphMaskEntryCount` 가 읽습니다(칠하기 · 초기화가 바꾼다). */
+        uint32 countBoneMaskEntries() const;
+        /** @brief 레이어 탭 계층 보기의 본 줄 수입니다. 프로브 `Editor.AnimationGraphMaskBoneRowCount` 가 읽습니다. */
+        uint32 getMaskBoneRowCount() const { return _layerEditor.getBoneRowCount(); }
 
     private:
         using GraphNode = NodeType;

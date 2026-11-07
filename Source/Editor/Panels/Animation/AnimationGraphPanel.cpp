@@ -555,6 +555,16 @@ namespace sw::editor
         return count;
     }
 
+    uint32 AnimationGraphPanel::countBoneMaskEntries() const
+    {
+        uint32 count{ 0 };
+        for ( const AnimationBoneMaskDef& mask : _graph._listBoneMask )
+        {
+            count += static_cast<uint32>( mask._listEntry.size() );
+        }
+        return count;
+    }
+
     void AnimationGraphPanel::drawGraphInspector()
     {
         drawStateInspector();

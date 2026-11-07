@@ -658,6 +658,9 @@
 		<entry key="EdFormat.LastError" text="마지막 오류: {error}" sourceHash="efc82ee1082a3a9f" />
 		<entry key="EdFormat.LastResult" text="마지막 결과: {lastInvokeResult}" sourceHash="64defb75f9d6dbcb" />
 		<entry key="EdFormat.LeftTrigger" text="왼쪽 트리거:  {leftTrigger}" sourceHash="137aed7ac4d6901d" />
+		<entry key="EdFormat.MaskMissingBones"
+		       text="스켈레톤에 없는 본: {bones}. 고치기 전까지 게임은 이 마스크를 버립니다."
+		       sourceHash="23ca8132c9ad0405" />
 		<entry key="EdFormat.Max"
 		       text="{name}  {blend, select, additive {가산} other {알파}}{looping, select, yes {  반복} other {}}  최대 {maxParticles}  {texturePath}"
 		       sourceHash="c4dbe4d688875299" />
@@ -952,6 +955,7 @@
 		<entry key="EdSection.ResourceCatalogSummary" text="리소스 카탈로그 요약" sourceHash="4ff989f238561472" />
 		<entry key="EdSection.Scenarios" text="시나리오" sourceHash="ee0ed65dc7b709d4" />
 		<entry key="EdSection.Sections" text="구역" sourceHash="0337d90cf703df0d" />
+		<entry key="EdSection.SkeletonView" text="스켈레톤 보기" sourceHash="60cd3f9c211db7e3" />
 		<entry key="EdSection.State" text="상태" sourceHash="ae239213b7c70376" />
 		<entry key="EdSection.TaskManagerConcurrency" text="작업 관리자 · 동시성" sourceHash="63eb50539c2674ce" />
 		<entry key="EdSection.Timeline" text="타임라인" sourceHash="680fc90489553ed6" />
@@ -1412,6 +1416,7 @@
 		<entry key="EdWidget.SceneInstance" text="씬 인스턴스" sourceHash="14c03ba06f91f6b6" />
 		<entry key="EdWidget.Shader" text="셰이더" sourceHash="31243d825582cde8" />
 		<entry key="EdWidget.Simulating" text="시뮬레이트 중" sourceHash="7ee10555e35ef898" />
+		<entry key="EdWidget.Skeleton" text="스켈레톤" sourceHash="73c6ad85b7235b4e" />
 		<entry key="EdWidget.Sources" text="소스" sourceHash="91e3a47599412f51" />
 		<entry key="EdWidget.Speaker" text="화자" sourceHash="2176770969da5882" />
 		<entry key="EdWidget.Starting" text="시작 중" sourceHash="4c60317e4731da19" />
@@ -1487,15 +1492,47 @@
 		<entry key="EditorAnimationGraph.LoadTip"
 		       text="저장하지 않은 편집을 버리고 디스크에서 그래프를 다시 읽습니다."
 		       sourceHash="5358af2088461a47" />
+		<entry key="EditorAnimationGraph.MaskNoSkeletonHint"
+		       text="스켈레톤을 적으면 본마다 가중치를 보고 칠할 수 있습니다."
+		       sourceHash="9a9cc609fd98a7de" />
+		<entry key="EditorAnimationGraph.MaskPickBoneHint"
+		       text="위에서 본을 고르면 가중치를 칠할 수 있습니다."
+		       sourceHash="860eb2473c82940f" />
+		<entry key="EditorAnimationGraph.MaskSkeletonTip"
+		       text="이 마스크를 맞춰 보고 칠할 스켈레톤입니다. 그래프에 저장하지 않습니다."
+		       sourceHash="34b9b59e32d903d6" />
+		<entry key="EditorAnimationGraph.MaskSourceBone"
+		       text="이 본 하나에만 적었습니다."
+		       sourceHash="0e3dbd43e9c2e8ee" />
+		<entry key="EditorAnimationGraph.MaskSourceInherited"
+		       text="부모 본에서 물려받은 값입니다."
+		       sourceHash="53bc8d2890e4b444" />
+		<entry key="EditorAnimationGraph.MaskSourceNone"
+		       text="이 본에 닿는 항목이 없어 가중치가 0 입니다."
+		       sourceHash="e61d23db46c0b23f" />
+		<entry key="EditorAnimationGraph.MaskSourceSubtree"
+		       text="이 본에 적었고 자식 본에 퍼집니다."
+		       sourceHash="c14e89fb8672d1f2" />
 		<entry key="EditorAnimationGraph.NoBoneMasksHint"
 		       text="본 마스크가 없습니다. 마스크는 레이어가 움직일 본과 그 세기를 고릅니다."
 		       sourceHash="888759dd27ba65f1" />
 		<entry key="EditorAnimationGraph.NoLayersHint"
 		       text="레이어가 없습니다. 레이어는 상태 기계 포즈 위에 클립 하나를 마스크의 본에만 얹습니다."
 		       sourceHash="d3b284b2eeded9f9" />
+		<entry key="EditorAnimationGraph.PaintBone" text="본만 칠하기" sourceHash="563b01fcb748dc1b" />
+		<entry key="EditorAnimationGraph.PaintBoneTip"
+		       text="이 본에만 가중치를 줍니다. 자식 본은 제 값을 지킵니다."
+		       sourceHash="8c0559e28a88dfd2" />
+		<entry key="EditorAnimationGraph.PaintSubtree" text="자손까지 칠하기" sourceHash="b01771e4eb42c451" />
+		<entry key="EditorAnimationGraph.PaintSubtreeTip"
+		       text="이 본과 모든 자식 본에 이 가중치를 줍니다."
+		       sourceHash="81a2e4ab3dae98e7" />
 		<entry key="EditorAnimationGraph.PlayTip"
 		       text="진입 상태부터 0.75초마다 다음 상태로 넘어가며 그래프를 미리 봅니다. 전이 순서를 확인할 때 씁니다."
 		       sourceHash="38f8576556cd8583" />
+		<entry key="EditorAnimationGraph.ResetBoneTip"
+		       text="이 본의 항목을 지워 다시 부모의 값을 물려받게 합니다."
+		       sourceHash="dc2f1a33a21c7684" />
 		<entry key="EditorAnimationGraph.SaveTip"
 		       text="그래프와 노드 배치를 애셋 파일에 씁니다."
 		       sourceHash="a992bf7ef254f73c" />

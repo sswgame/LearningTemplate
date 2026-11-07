@@ -4,15 +4,19 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Animation/Model/AnimationGraphLayerEdit.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
@@ -40,7 +44,27 @@ namespace sw::editor
                 EditorWidgets::drawPropertyRowLabel( pLabel );
             }
 
-            /** @brief 목록 순서를 한 항목 옮깁니다. @p index 와 @p index + @p step 이 범위 안이어야 합니다. */
+            /** @brief 계층 보기가 보이는 본 줄 수입니다(그 아래는 스크롤). */
+            static constexpr float32 kBoneTreeLines = 12.0f;
+            /** @brief 가중치 막대의 폭(글자 칸)입니다. */
+            static constexpr float32 kWeightBarColumns = 4.0f;
+
+            /** @brief 출처를 한 문장으로 풉니다(줄의 툴팁 · 고른 본의 설명). */
+            static const utf8* describeSource( BoneMaskWeightSource source )
+            {
+                switch ( source )
+                {
+                    case BoneMaskWeightSource::None:
+                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceNone" );
+                    case BoneMaskWeightSource::Inherited:
+                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceInherited" );
+                    case BoneMaskWeightSource::Subtree:
+                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceSubtree" );
+                    case BoneMaskWeightSource::Bone:
+                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceBone" );
+                }
+                return "";
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -51,6 +75,12 @@ namespace sw::editor
         : _mapEditBuffer{}
         , _selectedLayer{ -1 }
         , _selectedMask{ -1 }
+        , _skeletonPath{}
+        , _pSkeleton{}
+        , _listBoneRow{}
+        , _listMissingBone{}
+        , _selectedBone{}
+        , _paintWeight{ 1.0f }
     {
     }
 
@@ -58,6 +88,7 @@ namespace sw::editor
     {
         _selectedLayer = -1;
         _selectedMask  = -1;
+        _selectedBone  = hashed_string{};
         _mapEditBuffer.clear();
     }
 
@@ -288,6 +319,7 @@ namespace sw::editor
         ImGui::PushID( "maskDetail" );
         drawMaskSourceRows( inoutGraph, mask, pEdit );
         drawMaskEntries( mask, pEdit );
+        drawMaskHierarchy( mask, pEdit );
         ImGui::PopID();
         return pEdit;
     }
@@ -442,6 +474,123 @@ namespace sw::editor
             pInoutEdit = "Edit Bone Mask";
         }
         EditorSelfTestMarks::record( "animationGraph.mask.addBone" );
+        ImGui::EndDisabled();
+    }
+
+    void AnimationGraphLayerEditor::applySkeletonPath()
+    {
+        const string_view path( _skeletonPath.c_str() );
+        _selectedBone = hashed_string{};
+        // 읽지 못하면 공유 캐시가 이유를 남긴다 — 계층 보기는 비우고 안내 글을 보인다(빈 스켈레톤으로 보이지 않는다).
+        _pSkeleton = path.empty() ? nullptr : SharedAssetCache<Skeleton>::acquire( path );
+    }
+
+    void AnimationGraphLayerEditor::drawBoneRow( const BoneMaskBoneRow& row, uint32 rowIndex )
+    {
+        using Internal = AnimationGraphLayerEditorInternal;
+        ImGui::PushID( static_cast<int32>( rowIndex ) );
+        const float32 indent    = ImGui::GetStyle().IndentSpacing * static_cast<float32>( row._depth );
+        const float32 barWidth  = EditorChrome::measureColumns( Internal::kWeightBarColumns );
+        const ImVec2  start     = ImGui::GetCursorScreenPos();
+        const float32 height    = ImGui::GetTextLineHeight();
+        const float32 barTop    = start.y + height * 0.2f;
+        const float32 barBottom = start.y + height * 0.8f;
+        // 가중치 막대는 데이터라 강조색이다(바탕 칸 위에 값만큼). 이름은 이 본의 항목이면 본문 색, 물려받았거나 닿지 않으면 흐린 색이다.
+        ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+        pDrawList->AddRectFilled( ImVec2( start.x, barTop ), ImVec2( start.x + barWidth, barBottom ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "FrameBg" ) ) );
+        if ( row._weight > 0.0f )
+            pDrawList->AddRectFilled( ImVec2( start.x, barTop ), ImVec2( start.x + barWidth * row._weight, barBottom ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) ) );
+        const bool                              bExplicit = row._source == BoneMaskWeightSource::Subtree || row._source == BoneMaskWeightSource::Bone;
+        const int32                             percent   = static_cast<int32>( MathUtil::round( row._weight * 100.0f ) );
+        fixed_string<constant::buffer::kMax128> label;
+        formatstring( label.data(), label.capacity(), "%#  %#%%", row._bone.c_str(), percent );
+        ImGui::SetCursorScreenPos( ImVec2( start.x + barWidth + ImGui::GetStyle().ItemSpacing.x + indent, start.y ) );
+        if ( bExplicit == false )
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "TextMuted" ) ) );
+        if ( ImGui::Selectable( label.c_str(), _selectedBone == row._bone ) )
+            _selectedBone = row._bone;
+        if ( bExplicit == false )
+            ImGui::PopStyleColor();
+        EditorWidgets::drawTooltip( Internal::describeSource( row._source ) );
+        Internal::recordIndexedMark( "animationGraph.mask.bone", rowIndex );
+        ImGui::PopID();
+    }
+
+    void AnimationGraphLayerEditor::drawMaskHierarchy( AnimationBoneMaskDef& inoutMask, const utf8*& pInoutEdit )
+    {
+        using Internal = AnimationGraphLayerEditorInternal;
+        ImGui::SeparatorText( SW_LOCKEY( "EdSection", "SkeletonView" ) );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdWidget", "Skeleton" ), SW_LOCKEY( "EditorAnimationGraph", "MaskSkeletonTip" ) );
+        if ( EditorWidgets::drawAssetPathField( "##maskSkeleton", _skeletonPath, "*.skeleton.xml", ".skeleton.xml", "animationGraph.mask.skeleton" )._bDeactivatedAfterEdit )
+            applySkeletonPath();
+        if ( _pSkeleton == nullptr )
+        {
+            _listBoneRow.clear();
+            _listMissingBone.clear();
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationGraph", "MaskNoSkeletonHint" ) );
+            return;
+        }
+        BoneMaskHierarchy::build( *_pSkeleton, inoutMask, _listBoneRow, _listMissingBone );
+        // 스켈레톤에 없는 본은 런타임이 마스크를 버리는 오류다 — 색만이 아니라 이름과 함께 알린다.
+        if ( _listMissingBone.empty() == false )
+        {
+            string names;
+            for ( const hashed_string& bone : _listMissingBone )
+            {
+                if ( names.empty() == false )
+                    names += ", ";
+                names += bone.c_str();
+            }
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) );
+            ImGui::TextWrapped( "%s", SW_LOCKEYFORMAT( "EdFormat", "MaskMissingBones", TextArgumentList().addText( "bones", names.c_str() ) ).c_str() );
+            ImGui::PopStyleColor();
+        }
+        const float32 treeHeight = ImGui::GetTextLineHeightWithSpacing() * Internal::kBoneTreeLines;
+        if ( ImGui::BeginChild( "##maskBones", ImVec2( 0.0f, treeHeight ), ImGuiChildFlags_Borders ) )
+        {
+            for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _listBoneRow.size() ); ++rowIndex )
+            {
+                drawBoneRow( _listBoneRow[rowIndex], rowIndex );
+            }
+        }
+        ImGui::EndChild();
+
+        const BoneMaskBoneRow* pSelected = nullptr;
+        for ( const BoneMaskBoneRow& row : _listBoneRow )
+        {
+            if ( row._bone == _selectedBone )
+                pSelected = &row;
+        }
+        if ( pSelected == nullptr )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationGraph", "MaskPickBoneHint" ) );
+            return;
+        }
+        ImGui::TextUnformatted( pSelected->_bone.c_str() );
+        ImGui::SameLine();
+        ImGui::TextDisabled( "%s", Internal::describeSource( pSelected->_source ) );
+        // 프리셋의 항목은 그 파일이 원본이다 — 칠하면 저장할 때 버려지므로 보이기만 한다.
+        ImGui::BeginDisabled( inoutMask._filePath.empty() == false );
+        Internal::drawRowLabel( SW_LOCKEY( "EdWidget", "Weight" ) );
+        ImGui::SliderFloat( "##paintWeight", &_paintWeight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+        EditorSelfTestMarks::record( "animationGraph.mask.paintWeight" );
+        if ( ImGui::Button( SW_LOCKEY( "EditorAnimationGraph", "PaintSubtree" ) ) && BoneMaskHierarchy::paintWeight( inoutMask, _selectedBone, _paintWeight, true ) )
+            pInoutEdit = "Paint Bone Mask";
+        EditorSelfTestMarks::record( "animationGraph.mask.paintSubtree" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "PaintSubtreeTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAnimationGraph", "PaintBone" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EditorAnimationGraph", "PaintBone" ) ) && BoneMaskHierarchy::paintWeight( inoutMask, _selectedBone, _paintWeight, false ) )
+            pInoutEdit = "Paint Bone Mask";
+        EditorSelfTestMarks::record( "animationGraph.mask.paintBone" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "PaintBoneTip" ) );
+        const bool bHasEntry = pSelected->_source == BoneMaskWeightSource::Subtree || pSelected->_source == BoneMaskWeightSource::Bone;
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
+        ImGui::BeginDisabled( bHasEntry == false );
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Reset" ), "Reset##maskBone" ) ) && BoneMaskHierarchy::resetBone( inoutMask, _selectedBone ) )
+            pInoutEdit = "Reset Bone Mask Bone";
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "animationGraph.mask.resetBone" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ResetBoneTip" ) );
         ImGui::EndDisabled();
     }
 } // namespace sw::editor

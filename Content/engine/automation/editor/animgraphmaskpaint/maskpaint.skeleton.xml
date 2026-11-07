@@ -1,0 +1,20 @@
+<Skeleton>
+	<_listBone>
+		<SkeletonBone _name="root" _parentIndex="-1">
+			<_referencePose _translation="0,0,0" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="spine" _parentIndex="0">
+			<_referencePose _translation="0,1,0" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="arm" _parentIndex="1">
+			<_referencePose _translation="0.3,0.4,0" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="hand" _parentIndex="2">
+			<_referencePose _translation="0.3,0,0" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="head" _parentIndex="1">
+			<_referencePose _translation="0,0.5,0" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+	</_listBone>
+	<_listAttachment />
+</Skeleton>

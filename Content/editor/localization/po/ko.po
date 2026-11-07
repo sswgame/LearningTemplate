@@ -1943,6 +1943,11 @@ msgctxt "EdFormat.LeftTrigger"
 msgid "Left Trigger:  {leftTrigger}"
 msgstr "왼쪽 트리거:  {leftTrigger}"
 
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdFormat.MaskMissingBones"
+msgid "Not in the skeleton: {bones}. The game drops this mask until they are fixed."
+msgstr "스켈레톤에 없는 본: {bones}. 고치기 전까지 게임은 이 마스크를 버립니다."
+
 #: Source/Editor/Panels/VFX/VFXPreviewPanel.cpp
 msgctxt "EdFormat.Max"
 msgid "{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}"
@@ -2916,6 +2921,11 @@ msgstr "시나리오"
 msgctxt "EdSection.Sections"
 msgid "Sections"
 msgstr "구역"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdSection.SkeletonView"
+msgid "Skeleton view"
+msgstr "스켈레톤 보기"
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EdSection.State"
@@ -4631,6 +4641,11 @@ msgctxt "EdWidget.Simulating"
 msgid "Simulating"
 msgstr "시뮬레이트 중"
 
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EdWidget.Skeleton"
+msgid "Skeleton"
+msgstr "스켈레톤"
+
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EdWidget.Sources"
 msgid "Sources"
@@ -4798,6 +4813,41 @@ msgid "Reload the graph from disk, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 디스크에서 그래프를 다시 읽습니다."
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskNoSkeletonHint"
+msgid "Enter a skeleton to see the weight of every bone and paint it."
+msgstr "스켈레톤을 적으면 본마다 가중치를 보고 칠할 수 있습니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskPickBoneHint"
+msgid "Pick a bone above to paint its weight."
+msgstr "위에서 본을 고르면 가중치를 칠할 수 있습니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskSkeletonTip"
+msgid "Skeleton to check and paint this mask against. It is not saved in the graph."
+msgstr "이 마스크를 맞춰 보고 칠할 스켈레톤입니다. 그래프에 저장하지 않습니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskSourceBone"
+msgid "Set on this bone only."
+msgstr "이 본 하나에만 적었습니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskSourceInherited"
+msgid "Inherited from a parent bone."
+msgstr "부모 본에서 물려받은 값입니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskSourceNone"
+msgid "No entry reaches this bone, so its weight is 0."
+msgstr "이 본에 닿는 항목이 없어 가중치가 0 입니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.MaskSourceSubtree"
+msgid "Set on this bone and spread to its children."
+msgstr "이 본에 적었고 자식 본에 퍼집니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 msgctxt "EditorAnimationGraph.NoBoneMasksHint"
 msgid "No bone masks. A mask chooses the bones a layer affects and how strongly."
 msgstr "본 마스크가 없습니다. 마스크는 레이어가 움직일 본과 그 세기를 고릅니다."
@@ -4807,10 +4857,35 @@ msgctxt "EditorAnimationGraph.NoLayersHint"
 msgid "No layers. A layer plays one clip over the state machine pose, on the bones of its mask."
 msgstr "레이어가 없습니다. 레이어는 상태 기계 포즈 위에 클립 하나를 마스크의 본에만 얹습니다."
 
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.PaintBone"
+msgid "Paint bone"
+msgstr "본만 칠하기"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.PaintBoneTip"
+msgid "Set this weight on this bone only. Its children keep their weight."
+msgstr "이 본에만 가중치를 줍니다. 자식 본은 제 값을 지킵니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.PaintSubtree"
+msgid "Paint subtree"
+msgstr "자손까지 칠하기"
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.PaintSubtreeTip"
+msgid "Set this weight on the bone and every child bone."
+msgstr "이 본과 모든 자식 본에 이 가중치를 줍니다."
+
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EditorAnimationGraph.PlayTip"
 msgid "Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order."
 msgstr "진입 상태부터 0.75초마다 다음 상태로 넘어가며 그래프를 미리 봅니다. 전이 순서를 확인할 때 씁니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+msgctxt "EditorAnimationGraph.ResetBoneTip"
+msgid "Remove this bone's entries so it takes its parent's weight again."
+msgstr "이 본의 항목을 지워 다시 부모의 값을 물려받게 합니다."
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EditorAnimationGraph.SaveTip"

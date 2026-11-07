@@ -57,6 +57,16 @@ namespace sw::editor
             return readAnimationGraphCount( &AnimationGraphPanel::getBoneMaskCount, outValue );
         }
 
+        [[nodiscard]] bool readAnimationGraphMaskEntryCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readAnimationGraphCount( &AnimationGraphPanel::countBoneMaskEntries, outValue );
+        }
+
+        [[nodiscard]] bool readAnimationGraphMaskBoneRowCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readAnimationGraphCount( &AnimationGraphPanel::getMaskBoneRowCount, outValue );
+        }
+
         /** @brief `-gv_editorWatchObject` 오브젝트의 로컬 위치 X 입니다. 시퀀서 키 트랙 미리보기가 옮긴 값입니다. */
         [[nodiscard]] bool readObjectPositionX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -93,6 +103,10 @@ namespace sw::editor
                          &readAnimationGraphLayerCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphBoneMaskCount, "Editor.AnimationGraphBoneMaskCount", "Bone masks in the open animation graph document",
                          &readAnimationGraphBoneMaskCount );
+    SW_AUTOMATION_WATCH( editorAnimationGraphMaskEntryCount, "Editor.AnimationGraphMaskEntryCount", "Entries of every bone mask in the open animation graph document",
+                         &readAnimationGraphMaskEntryCount );
+    SW_AUTOMATION_WATCH( editorAnimationGraphMaskBoneRowCount, "Editor.AnimationGraphMaskBoneRowCount",
+                         "Bones the Layers tab skeleton view laid out for the selected bone mask (0 without a skeleton)", &readAnimationGraphMaskBoneRowCount );
     SW_AUTOMATION_WATCH( editorObjectPositionX, "Editor.ObjectPositionX", "Local position X of the object named by gv_editorWatchObject",
                          &readObjectPositionX );
     SW_AUTOMATION_WATCH( editorSequencerKeyFrameCount, "Editor.SequencerKeyFrameCount", "Key frames of the key track selected in the Sequencer panel",
