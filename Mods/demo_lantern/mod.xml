@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  시연 모드(GF_ModSupport) — 새 데이터 하나(mods/demo_lantern/data/lantern.xml)를 더하고 Empty 게임의 기본 리소스 하나(game/empty/data/mods/welcome.xml)를 덮어쓴다.
+  소스 모드다(content/ 아래 낱개 파일) — 개발 실행이 시작 때 팩으로 묶어 올린다. 배포는 묶은 content.pack 만 받는다.
+  켜기: App -gv_modList=demo_lantern (시나리오 game/empty/automation/modsupport.scenario.xml)
+-->
+<Mod id="demo_lantern" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0">
+	<Override path="game/empty/data/mods/welcome.xml"/>
+</Mod>

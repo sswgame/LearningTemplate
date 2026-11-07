@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Welcome text="Base game welcome"/>
+<!-- 모드가 덮어쓸 수 있는 기본 리소스의 시연(GF_ModSupport). 모드 없이 읽으면 위 글, 시연 모드(Mods/demo_lantern)를 켜면 모드의 글이다 — game/empty/automation/modsupport.scenario.xml -->

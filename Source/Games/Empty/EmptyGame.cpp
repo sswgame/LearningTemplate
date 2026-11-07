@@ -11,6 +11,10 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/GameConfig.h"
+
+#include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -35,6 +39,11 @@ namespace sw
         void onAfterStateDeserialize() override;
 
     private:
+        /**
+         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `Mods/demo_lantern`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
+         *        서버 구성에도 있다 — 서버도 같은 모드 구성으로 서야 클라이언트와 구성 해시가 맞는다.
+         */
+        unique_ptr<ModSession> _mods;
         /** @brief 클라이언트 전용 부분(벤치 · 렌더 확장 시연, `Client/EmptyClientPart.cpp`)입니다. 공장이 없는 구성(전용 서버)에는 nullptr 이다. */
         unique_ptr<IGameClientPart> _clientPart;
     };
@@ -43,7 +52,8 @@ namespace sw
 namespace sw
 {
     EmptyGame::EmptyGame()
-        : _clientPart{ nullptr }
+        : _mods{ nullptr }
+        , _clientPart{ nullptr }
     {
     }
 
@@ -51,6 +61,12 @@ namespace sw
 
     bool EmptyGame::onInitialize()
     {
+        // 모드는 시작 때 한 번 고정한다 — 첫 씬과 그 리소스를 읽기 전이라 덮어쓴 리소스를 쥔 캐시가 없다. 켠 모드가 없으면 아무것도 하지 않는다.
+        // 요청한 모드를 적용하지 못하면 게임을 띄우지 않는다(요청과 다른 구성으로 조용히 돌지 않는다).
+        _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
+        if ( _mods->applyForGame( game::getSubsystem<const GameConfig>()._packRoot.get() ) == false || getGameScope().bind( _mods.get() ) == false )
+            return false;
+
         if ( IGameClientPartFactory* const pFactory = game::findSubsystem<IGameClientPartFactory>() )
             _clientPart = pFactory->createClientPart();
         const bool bBenchRunning = _clientPart != nullptr && _clientPart->initialize();

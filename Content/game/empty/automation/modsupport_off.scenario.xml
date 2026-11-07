@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모드 지원 키트(GF_ModSupport) 음성 대조 — 모드 없이 시작하면 기본 리소스는 기본 글이고 모드 리소스는 없다. 체인에서는 modsupport 바로 뒤에 돈다:
+  앞 단계가 올린 모드 팩이 세션과 함께 내려갔는지(남으면 'Lantern mod welcome' 을 읽어 진다) 확인한다.
+  실행: App -scenario=game/empty/automation/modsupport_off.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.modsupport_off" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Mods.ActiveCount" equals="0" timeoutWallSeconds="10"/>
+	<DevCommand line="mod.status"/>
+	<ExpectLog id="DevCommand.Reply" contains="mods: 0 active []" atLeast="1"/>
+	<DevCommand line="mod.read game/empty/data/mods/welcome.xml"/>
+	<ExpectLog id="DevCommand.Reply" contains="Base game welcome" atLeast="1"/>
+	<DevCommand line="mod.read mods/demo_lantern/data/lantern.xml"/>
+	<ExpectLog id="DevCommand.Reply" contains="mod.read mods/demo_lantern/data/lantern.xml: not found" atLeast="1"/>
+	<Wait frames="1"/>
+	<Pass/>
+</Scenario>
