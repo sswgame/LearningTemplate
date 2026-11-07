@@ -181,7 +181,8 @@ namespace sw
         unordered_map<int32, RemoteCallTargets::Target> _mapSession; ///< 연결마다 세션 대상(id 0)
         RemoteCallStats                                 _stats;
         NetMessageWriter                                _messageWriter;
-        vector<string>                                  _listArgumentScratch;
+        vector<string>                                  _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
+        vector<string>                                  _listSendScratch;
         INetPeers*                                      _pPeers;
     };
 } // namespace sw
@@ -223,7 +224,8 @@ namespace sw
         RemoteCallTargets                   _targets;
         EventBuffer<RemoteCallRejectNotice> _rejections;
         NetMessageWriter                    _messageWriter;
-        vector<string>                      _listArgumentScratch;
+        vector<string>                      _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
+        vector<string>                      _listSendScratch;
         INetPeers*                          _pPeers;
         uint64                              _invokedCount;
         uint32                              _nextSequence;

@@ -196,7 +196,8 @@ namespace sw
         , _mapSession{}
         , _stats{}
         , _messageWriter{}
-        , _listArgumentScratch{}
+        , _listReceivedScratch{}
+        , _listSendScratch{}
         , _pPeers{ nullptr }
     {
     }
@@ -261,14 +262,14 @@ namespace sw
     {
         const FunctionInfo* pFunction       = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, functionName ) : nullptr;
         const bool          bClientFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false );
-        if ( _pPeers == nullptr || bClientFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listArgumentScratch ) == false )
+        if ( _pPeers == nullptr || bClientFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listSendScratch ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ClientCallRefused", "Remote call to client function '%#' on target %# was not sent - no such target or Client function, or an argument cannot travel as text",
                              functionName, targetID );
             return false;
         }
         NetChannelType channel = NetChannelType::ReliableOrdered;
-        if ( RemoteCallInternal::writeCall( _messageWriter, 0, targetID, *pFunction, _listArgumentScratch, channel ) == false )
+        if ( RemoteCallInternal::writeCall( _messageWriter, 0, targetID, *pFunction, _listSendScratch, channel ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ClientCallTooLarge", "Remote call to client function '%#' is %# bytes - an unreliable call must fit one %#-byte message", functionName,
                              _messageWriter.getByteCount(), NetConnection::kMaxSingleMessageSize );
@@ -280,7 +281,7 @@ namespace sw
     NetHandleResult RemoteCallServer::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
     {
         RemoteCallInternal::ReadCall call;
-        if ( RemoteCallInternal::readCall( body, call, _listArgumentScratch ) == false )
+        if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
             return NetHandleResult::Malformed;
         const RemoteCallTargets::Target* pTarget = findCallTarget( call._targetID, context._connectionID );
         if ( pTarget == nullptr )
@@ -315,7 +316,7 @@ namespace sw
             // 짝은 등록이 확인했다(`checkContract`) — 여기서 없으면 등록 뒤 모듈이 바뀐 것이라 부르지 않는다.
             const FunctionInfo* pValidator = RemoteCallTargets::findValidator( *pTarget->_pType, *pFunction );
             ReflectedValue      validatorResult;
-            const bool          bCalled = pValidator != nullptr && ReflectionInvoke::callWithText( *pValidator, pTarget->_pInstance, _listArgumentScratch, &validatorResult ) == ReflectCallResult::Ok;
+            const bool          bCalled = pValidator != nullptr && ReflectionInvoke::callWithText( *pValidator, pTarget->_pInstance, _listReceivedScratch, &validatorResult ) == ReflectCallResult::Ok;
             if ( bCalled == false )
             {
                 sendRejected( context._connectionID, call._sequence, RemoteCallError::ArgumentMismatch );
@@ -332,7 +333,7 @@ namespace sw
                 return NetHandleResult::Handled;
             }
         }
-        if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listArgumentScratch ) != ReflectCallResult::Ok )
+        if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listReceivedScratch ) != ReflectCallResult::Ok )
         {
             sendRejected( context._connectionID, call._sequence, RemoteCallError::ArgumentMismatch );
             return NetHandleResult::Handled;
@@ -380,7 +381,8 @@ namespace sw
         : _targets{}
         , _rejections{}
         , _messageWriter{}
-        , _listArgumentScratch{}
+        , _listReceivedScratch{}
+        , _listSendScratch{}
         , _pPeers{ nullptr }
         , _invokedCount{ 0 }
         , _nextSequence{ 1 }
@@ -409,7 +411,7 @@ namespace sw
     {
         const FunctionInfo* pFunction       = RemoteCallInternal::findFunction( type, functionName );
         const bool          bServerFunction = pFunction != nullptr && RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, true );
-        if ( _pPeers == nullptr || bServerFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listArgumentScratch ) == false )
+        if ( _pPeers == nullptr || bServerFunction == false || RemoteCallInternal::formatArguments( *pFunction, listArg, _listSendScratch ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ServerCallRefused", "Remote call to %#::%# was not sent - no such Server function, too many arguments, or an argument cannot travel as text",
                              type._name.c_str(), functionName );
@@ -417,7 +419,7 @@ namespace sw
         }
         const uint32   sequence = _nextSequence++;
         NetChannelType channel  = NetChannelType::ReliableOrdered;
-        if ( RemoteCallInternal::writeCall( _messageWriter, sequence, targetID, *pFunction, _listArgumentScratch, channel ) == false )
+        if ( RemoteCallInternal::writeCall( _messageWriter, sequence, targetID, *pFunction, _listSendScratch, channel ) == false )
         {
             SW_LOG_ERROR_ID( "RemoteCall.ServerCallTooLarge", "Remote call %# is %# bytes - an unreliable call must fit one %#-byte message", functionName, _messageWriter.getByteCount(),
                              NetConnection::kMaxSingleMessageSize );
@@ -430,7 +432,7 @@ namespace sw
     {
         (void)context;
         RemoteCallInternal::ReadCall call;
-        if ( RemoteCallInternal::readCall( body, call, _listArgumentScratch ) == false )
+        if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
             return NetHandleResult::Malformed;
         const RemoteCallTargets::Target* pTarget   = _targets.findTarget( call._targetID );
         const FunctionInfo*              pFunction = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, call._functionName ) : nullptr;
@@ -440,7 +442,7 @@ namespace sw
             SW_LOG_WARNING_ID( "RemoteCall.ClientCallDropped", "Remote call %# for target %# was dropped - no such target or Client function here", call._functionName.c_str(), call._targetID );
             return NetHandleResult::Handled;
         }
-        if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listArgumentScratch ) != ReflectCallResult::Ok )
+        if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listReceivedScratch ) != ReflectCallResult::Ok )
             return NetHandleResult::Malformed;
         ++_invokedCount;
         return NetHandleResult::Handled;
