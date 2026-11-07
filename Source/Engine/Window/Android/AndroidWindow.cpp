@@ -2,6 +2,7 @@
 
 #include "Engine/Window/Android/AndroidWindow.h"
 
+#include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Window/WindowPlatform.h"
@@ -21,6 +22,56 @@ namespace sw
         {
             static android_app*   s_pApp;
             static AndroidWindow* s_pWindow; ///< 명령 · 입력 콜백이 찾는 창(한 액티비티에 하나)
+
+            static constexpr int32  kEmptyGamepadSlot    = -1;
+            static constexpr uint32 kGamepadScanInterval = 60; ///< 패드 장치 대조 간격(메시지 처리 수 — 60 Hz 에서 1 초). JNI 왕복이라 프레임마다 하지 않는다
+
+            /** @brief 패드 · 조이스틱 입력 장치인지입니다(https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input — 출처 비트가 장치 종류를 모두 담는다). */
+            static bool isGamepadSource( int32 source )
+            {
+                return ( source & AINPUT_SOURCE_GAMEPAD ) == AINPUT_SOURCE_GAMEPAD || ( source & AINPUT_SOURCE_JOYSTICK ) == AINPUT_SOURCE_JOYSTICK;
+            }
+
+            /** @brief 지금 스레드를 JVM 에 붙입니다. 실패하면 nullptr 입니다(부른 쪽이 `DetachCurrentThread` 한다). */
+            static JNIEnv* attachThread()
+            {
+                if ( s_pApp == nullptr || s_pApp->activity == nullptr )
+                    return nullptr;
+                JNIEnv* pEnv = nullptr;
+                return s_pApp->activity->vm->AttachCurrentThread( &pEnv, nullptr ) == JNI_OK ? pEnv : nullptr;
+            }
+
+            /** @brief 지금 붙은 패드 · 조이스틱 입력 장치 번호를 @p outListId 에 담습니다(`InputDevice.getDeviceIds` · `getSources`). 못 읽으면 false 입니다. */
+            static bool readGamepadDeviceIds( vector<int32>& outListId )
+            {
+                outListId.clear();
+                JNIEnv* const pEnv = attachThread();
+                if ( pEnv == nullptr )
+                    return false;
+                const jclass    deviceC    = pEnv->FindClass( "android/view/InputDevice" );
+                const jmethodID getIds     = deviceC != nullptr ? pEnv->GetStaticMethodID( deviceC, "getDeviceIds", "()[I" ) : nullptr;
+                const jmethodID getDevice  = deviceC != nullptr ? pEnv->GetStaticMethodID( deviceC, "getDevice", "(I)Landroid/view/InputDevice;" ) : nullptr;
+                const jmethodID getSources = deviceC != nullptr ? pEnv->GetMethodID( deviceC, "getSources", "()I" ) : nullptr;
+                const jintArray arrId      = getIds != nullptr ? static_cast<jintArray>( pEnv->CallStaticObjectMethod( deviceC, getIds ) ) : nullptr;
+                const jsize     count      = arrId != nullptr ? pEnv->GetArrayLength( arrId ) : 0;
+                jint* const     pId        = arrId != nullptr ? pEnv->GetIntArrayElements( arrId, nullptr ) : nullptr;
+                for ( jsize index = 0; pId != nullptr && getDevice != nullptr && getSources != nullptr && index < count; ++index )
+                {
+                    const jobject device = pEnv->CallStaticObjectMethod( deviceC, getDevice, pId[index] );
+                    if ( device == nullptr )
+                        continue;
+                    if ( isGamepadSource( pEnv->CallIntMethod( device, getSources ) ) )
+                        outListId.push_back( static_cast<int32>( pId[index] ) );
+                    pEnv->DeleteLocalRef( device );
+                }
+                if ( pId != nullptr )
+                    pEnv->ReleaseIntArrayElements( arrId, pId, JNI_ABORT );
+                const bool bFailed = pEnv->ExceptionCheck() || getIds == nullptr;
+                if ( pEnv->ExceptionCheck() )
+                    pEnv->ExceptionClear();
+                s_pApp->activity->vm->DetachCurrentThread();
+                return bFailed == false;
+            }
 
             /** @brief 창이 서기 전의 명령 처리입니다 — 표면이 생겼는지만 본다(`waitForInitialSurface`). */
             static void onEarlyCommand( android_app* pApp, int32 command )
@@ -61,7 +112,41 @@ namespace sw
 
     AndroidWindow::AndroidWindow()
         : CallbackInputWindow{}
+        , _arrGamepadDeviceId{}
+        , _gamepadScanCountdown{ 0 }
     {
+        for ( int32& deviceId : _arrGamepadDeviceId )
+        {
+            deviceId = AndroidWindowInternal::kEmptyGamepadSlot;
+        }
+    }
+
+    string AndroidWindow::readIntentArguments()
+    {
+        // activity.getIntent().getStringExtra( "args" ) — https://developer.android.com/reference/android/content/Intent#getStringExtra(java.lang.String)
+        JNIEnv* const pEnv = AndroidWindowInternal::attachThread();
+        if ( pEnv == nullptr )
+            return {};
+        const jobject activity  = AndroidWindowInternal::s_pApp->activity->clazz;
+        const jobject intent    = pEnv->CallObjectMethod( activity, pEnv->GetMethodID( pEnv->GetObjectClass( activity ), "getIntent", "()Landroid/content/Intent;" ) );
+        const jstring extraName = pEnv->NewStringUTF( kIntentArgumentsExtra );
+        const jstring extra     = intent != nullptr ? static_cast<jstring>( pEnv->CallObjectMethod( intent, pEnv->GetMethodID( pEnv->GetObjectClass( intent ), "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;" ),
+                                                                                                    extraName ) )
+                                                    : nullptr;
+        string        arguments;
+        const utf8*   pText = extra != nullptr ? pEnv->GetStringUTFChars( extra, nullptr ) : nullptr;
+        if ( pText != nullptr )
+        {
+            arguments = pText;
+            pEnv->ReleaseStringUTFChars( extra, pText );
+        }
+        if ( pEnv->ExceptionCheck() )
+        {
+            pEnv->ExceptionClear();
+            SW_LOG_ERROR_ID( "AndroidWindow.IntentArgumentsFailed", "Android: reading the launch intent's '%#' extra threw - starting without a command line", kIntentArgumentsExtra );
+        }
+        AndroidWindowInternal::s_pApp->activity->vm->DetachCurrentThread();
+        return arguments;
     }
 
     AndroidWindow::~AndroidWindow()
@@ -131,7 +216,103 @@ namespace sw
         // 명령 · 입력 콜백이 이 안에서 불린다(같은 스레드) — 모인 입력은 바탕이 처리기로 넘긴다.
         if ( AndroidWindowInternal::pumpLooper( 0 ) == false )
             requestClose();
+        if ( _gamepadScanCountdown == 0 )
+        {
+            syncGamepadDevices();
+            _gamepadScanCountdown = AndroidWindowInternal::kGamepadScanInterval;
+        }
+        --_gamepadScanCountdown;
         return CallbackInputWindow::processMessages();
+    }
+
+    int32 AndroidWindow::findOrAssignGamepadSlot( int32 deviceId )
+    {
+        int32 emptySlot = AndroidWindowInternal::kEmptyGamepadSlot;
+        for ( uint32 slot = 0; slot < kPlatformGamepadSlotCount; ++slot )
+        {
+            if ( _arrGamepadDeviceId[slot] == deviceId )
+                return static_cast<int32>( slot );
+            if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot && _arrGamepadDeviceId[slot] == AndroidWindowInternal::kEmptyGamepadSlot )
+                emptySlot = static_cast<int32>( slot );
+        }
+        if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot )
+        {
+            SW_LOG_WARNING_ID( "AndroidWindow.GamepadSlotsFull", "Android: gamepad device %# has no free slot (%# slots) - its input is ignored", deviceId, kPlatformGamepadSlotCount );
+            return emptySlot;
+        }
+        _arrGamepadDeviceId[emptySlot] = deviceId;
+        PlatformInputEvent connected{};
+        connected._kind         = PlatformInputKind::GamepadConnected;
+        connected._pointerIndex = static_cast<uint16>( emptySlot );
+        queueInput( connected );
+        return emptySlot;
+    }
+
+    void AndroidWindow::syncGamepadDevices()
+    {
+        vector<int32> listPresentId;
+        if ( AndroidWindowInternal::readGamepadDeviceIds( listPresentId ) == false )
+            return; // 못 읽은 차례는 칸을 건드리지 않는다 — 없다고 보고 끊으면 붙은 패드가 끊긴다
+        for ( uint32 slot = 0; slot < kPlatformGamepadSlotCount; ++slot )
+        {
+            const int32 deviceId = _arrGamepadDeviceId[slot];
+            if ( deviceId == AndroidWindowInternal::kEmptyGamepadSlot || std::find( listPresentId.begin(), listPresentId.end(), deviceId ) != listPresentId.end() )
+                continue;
+            _arrGamepadDeviceId[slot] = AndroidWindowInternal::kEmptyGamepadSlot;
+            PlatformInputEvent disconnected{};
+            disconnected._kind         = PlatformInputKind::GamepadDisconnected;
+            disconnected._pointerIndex = static_cast<uint16>( slot );
+            queueInput( disconnected );
+        }
+        for ( const int32 deviceId : listPresentId )
+        {
+            (void)findOrAssignGamepadSlot( deviceId ); // 입력 전에 붙은 패드도 칸을 받는다(연결 알림)
+        }
+    }
+
+    bool AndroidWindow::queueGamepadKey( AInputEvent* pEvent )
+    {
+        if ( AndroidWindowInternal::isGamepadSource( AInputEvent_getSource( pEvent ) ) == false )
+            return false;
+        const int32 slot = findOrAssignGamepadSlot( AInputEvent_getDeviceId( pEvent ) );
+        if ( slot == AndroidWindowInternal::kEmptyGamepadSlot || AKeyEvent_getRepeatCount( pEvent ) > 0 )
+            return true; // 되풀이 키는 버튼 상태를 바꾸지 않는다
+        PlatformInputEvent input{};
+        input._kind         = AKeyEvent_getAction( pEvent ) == AKEY_EVENT_ACTION_UP ? PlatformInputKind::GamepadKeyUp : PlatformInputKind::GamepadKeyDown;
+        input._pointerIndex = static_cast<uint16>( slot );
+        input._keyCode      = AKeyEvent_getKeyCode( pEvent );
+        queueInput( input );
+        return true;
+    }
+
+    bool AndroidWindow::queueGamepadMotion( AInputEvent* pEvent )
+    {
+        if ( ( AInputEvent_getSource( pEvent ) & AINPUT_SOURCE_JOYSTICK ) != AINPUT_SOURCE_JOYSTICK )
+            return false;
+        const int32 slot = findOrAssignGamepadSlot( AInputEvent_getDeviceId( pEvent ) );
+        if ( slot == AndroidWindowInternal::kEmptyGamepadSlot )
+            return true;
+        const auto queueAxis = [this, slot]( int32 axis, float32 value )
+        {
+            PlatformInputEvent input{};
+            input._kind         = PlatformInputKind::GamepadAxis;
+            input._pointerIndex = static_cast<uint16>( slot );
+            input._keyCode      = axis;
+            input._wheel        = value;
+            queueInput( input );
+        };
+        const auto readAxis = [pEvent]( int32 axis )
+        { return AMotionEvent_getAxisValue( pEvent, axis, 0 ); };
+        queueAxis( AMOTION_EVENT_AXIS_X, readAxis( AMOTION_EVENT_AXIS_X ) );
+        queueAxis( AMOTION_EVENT_AXIS_Y, readAxis( AMOTION_EVENT_AXIS_Y ) );
+        queueAxis( AMOTION_EVENT_AXIS_Z, readAxis( AMOTION_EVENT_AXIS_Z ) );
+        queueAxis( AMOTION_EVENT_AXIS_RZ, readAxis( AMOTION_EVENT_AXIS_RZ ) );
+        // 방아쇠를 LTRIGGER/RTRIGGER 로 주는 패드와 BRAKE/GAS 로 주는 패드가 있다(위 문서) — 같은 뜻이라 큰 쪽 하나를 방아쇠 축으로 보낸다.
+        queueAxis( AMOTION_EVENT_AXIS_LTRIGGER, MathUtil::max( readAxis( AMOTION_EVENT_AXIS_LTRIGGER ), readAxis( AMOTION_EVENT_AXIS_BRAKE ) ) );
+        queueAxis( AMOTION_EVENT_AXIS_RTRIGGER, MathUtil::max( readAxis( AMOTION_EVENT_AXIS_RTRIGGER ), readAxis( AMOTION_EVENT_AXIS_GAS ) ) );
+        queueAxis( AMOTION_EVENT_AXIS_HAT_X, readAxis( AMOTION_EVENT_AXIS_HAT_X ) );
+        queueAxis( AMOTION_EVENT_AXIS_HAT_Y, readAxis( AMOTION_EVENT_AXIS_HAT_Y ) );
+        return true;
     }
 
     void* AndroidWindow::getNativeHandle() const
@@ -226,6 +407,8 @@ namespace sw
             return 0;
         if ( AInputEvent_getType( pEvent ) == AINPUT_EVENT_TYPE_KEY )
         {
+            if ( pWindow->queueGamepadKey( pEvent ) )
+                return 1; // 패드 장치의 키(얼굴 버튼 · D패드)는 패드 칸으로 간다 — 키보드 화살표로 섞이지 않는다
             const int32        action = AKeyEvent_getAction( pEvent );
             PlatformInputEvent input{};
             input._kind    = action == AKEY_EVENT_ACTION_UP ? PlatformInputKind::KeyUp : PlatformInputKind::KeyDown;
@@ -236,6 +419,8 @@ namespace sw
         }
         if ( AInputEvent_getType( pEvent ) != AINPUT_EVENT_TYPE_MOTION )
             return 0;
+        if ( pWindow->queueGamepadMotion( pEvent ) )
+            return 1;
         const int32  action      = AMotionEvent_getAction( pEvent );
         const int32  maskAction  = action & AMOTION_EVENT_ACTION_MASK;
         const size_t actionIndex = static_cast<size_t>( ( action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK ) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT );

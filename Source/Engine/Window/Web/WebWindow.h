@@ -25,6 +25,13 @@ namespace sw
         [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         void               destroy() override;
         NativeSurfaceKind  getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
+        /** @brief 캔버스는 Pointer Lock API 로 포인터를 잠근다(https://developer.mozilla.org/docs/Web/API/Pointer_Lock_API). 가두기(Confined)는 브라우저에 없다. */
+        [[nodiscard]] bool supportsPointerLock() const override { return true; }
+        /**
+         * @brief 포인터를 잠그거나 풉니다. 잠금은 사용자 입력 처리 안에서만 되므로 다음 입력 콜백까지 미뤄 청한다(`emscripten_request_pointerlock` 의 defer).
+         * @details 브라우저는 Esc 로 언제든 잠금을 푼다 — 풀리면 `pointerlockchange` 가 알리고, 입력 관리자는 다음 클릭에서 다시 청한다(데스크톱 창과 같은 규칙).
+         */
+        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override;
 
     protected:
         void* getNativeHandle() const override { return const_cast<utf8*>( kCanvasSelector ); }
@@ -46,11 +53,13 @@ namespace sw
         static EM_BOOL onResize( int eventType, const EmscriptenUiEvent* pEvent, void* pUserData );
         static EM_BOOL onVisibility( int eventType, const EmscriptenVisibilityChangeEvent* pEvent, void* pUserData );
         static EM_BOOL onFocus( int eventType, const EmscriptenFocusEvent* pEvent, void* pUserData );
+        static EM_BOOL onPointerLockChange( int eventType, const EmscriptenPointerlockChangeEvent* pEvent, void* pUserData );
 
     private:
         float32                _devicePixelRatio;
         uint8                  _bCallbacksBound : 1;
-        [[maybe_unused]] uint8 _reserved        : 7;
+        uint8                  _bPointerLocked  : 1; ///< 브라우저가 캔버스에 포인터를 잠갔다(`pointerlockchange` 가 정한다 — 요청이 아니라 결과)
+        [[maybe_unused]] uint8 _reserved        : 6;
     };
 } // namespace sw
 

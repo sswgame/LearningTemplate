@@ -44,6 +44,7 @@ namespace sw
         : CallbackInputWindow{}
         , _devicePixelRatio{ 1.0f }
         , _bCallbacksBound{ SW_FALSE }
+        , _bPointerLocked{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -120,6 +121,7 @@ namespace sw
         (void)emscripten_set_visibilitychange_callback( this, EM_TRUE, &WebWindow::onVisibility );
         (void)emscripten_set_focus_callback( EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_TRUE, &WebWindow::onFocus );
         (void)emscripten_set_blur_callback( EMSCRIPTEN_EVENT_TARGET_WINDOW, this, EM_TRUE, &WebWindow::onFocus );
+        (void)emscripten_set_pointerlockchange_callback( EMSCRIPTEN_EVENT_TARGET_DOCUMENT, this, EM_TRUE, &WebWindow::onPointerLockChange );
         _bCallbacksBound = SW_TRUE;
     }
 
@@ -131,9 +133,44 @@ namespace sw
         _bCallbacksBound = SW_FALSE;
     }
 
+    bool WebWindow::setPointerLock( WindowPointerLock lock )
+    {
+        if ( lock == WindowPointerLock::Released )
+        {
+            if ( _bPointerLocked != SW_FALSE )
+                (void)emscripten_exit_pointerlock();
+            return true;
+        }
+        if ( lock == WindowPointerLock::Confined )
+            return false; // 브라우저에는 가두기가 없다 — 입력 관리자가 한 번 알린다
+        if ( _bPointerLocked != SW_FALSE )
+            return true;
+        // 사용자 입력 처리 밖에서 청하면 브라우저가 거절한다 — defer 면 다음 입력 콜백 안에서 청한다(DEFERRED 도 받아들인 것이다).
+        // https://emscripten.org/docs/api_reference/html5.h.html#c.emscripten_request_pointerlock
+        const EMSCRIPTEN_RESULT result = emscripten_request_pointerlock( kCanvasSelector, EM_TRUE );
+        return result == EMSCRIPTEN_RESULT_SUCCESS || result == EMSCRIPTEN_RESULT_DEFERRED;
+    }
+
+    EM_BOOL WebWindow::onPointerLockChange( int eventType, const EmscriptenPointerlockChangeEvent* pEvent, void* pUserData )
+    {
+        (void)eventType;
+        static_cast<WebWindow*>( pUserData )->_bPointerLocked = pEvent->isActive ? SW_TRUE : SW_FALSE;
+        return EM_FALSE;
+    }
+
     EM_BOOL WebWindow::onMouse( int eventType, const EmscriptenMouseEvent* pEvent, void* pUserData )
     {
-        WebWindow* const   pWindow = static_cast<WebWindow*>( pUserData );
+        WebWindow* const pWindow = static_cast<WebWindow*>( pUserData );
+        if ( pWindow->_bPointerLocked != SW_FALSE && eventType == EMSCRIPTEN_EVENT_MOUSEMOVE )
+        {
+            // 잠긴 동안 위치는 서 있다 — 이동량(movementX/Y, CSS 픽셀)만 물리 픽셀로 넘긴다. 버튼 이벤트는 그대로 아래 길이다.
+            PlatformInputEvent relative{};
+            relative._kind      = PlatformInputKind::PointerRelative;
+            relative._relativeX = static_cast<float32>( pEvent->movementX ) * pWindow->_devicePixelRatio;
+            relative._relativeY = static_cast<float32>( pEvent->movementY ) * pWindow->_devicePixelRatio;
+            pWindow->queueInput( relative );
+            return EM_TRUE;
+        }
         PlatformInputEvent input{};
         input._x      = WebWindowInternal::toPixel( pEvent->targetX, pWindow->_devicePixelRatio );
         input._y      = WebWindowInternal::toPixel( pEvent->targetY, pWindow->_devicePixelRatio );
