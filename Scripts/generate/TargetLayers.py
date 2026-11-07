@@ -94,25 +94,39 @@ def findOwner(header: str, listFolder: list[str]) -> str | None:
 
 
 def writeGateStubs(stubDir: Path, gateName: str, listHeader: list[str], message: str) -> None:
-    """게이트 하나의 껍데기를 쓴다. 목록이 스탬프와 같으면 건드리지 않는다. 다르면 폴더째 다시 쓴다(사라진 헤더의 껍데기가 옮겨 온 헤더를 가리지 않게)."""
+    """게이트 하나의 껍데기를 맞춘다. 스탬프(문구 해시 + 지난 헤더 목록)와 대조해 **바뀐 껍데기만** 더하고 지운다.
+
+    헤더 하나가 늘거나 옮겨질 때마다 그 폴더를 막는 게이트 전부가 폴더째 지우고 다시 쓰면(게이트 101 개 · 껍데기 5 만여 개) 재구성 46 초 중 31 초가
+    이 생성기였다. 문구가 바뀌었거나 스탬프 · 폴더가 없을 때만 통째로 다시 쓴다(사라진 헤더의 껍데기가 옮겨 온 헤더를 가리지 않게 지우는 것은 같다).
+    """
     stubRoot = stubDir / gateName
     stampPath = stubDir / f"{gateName}.stamp"
     content = f"#error \"{message}\"\n"
-    digest = hashlib.sha256("\n".join([content, *listHeader]).encode("utf-8")).hexdigest()
-    if stampPath.is_file() and stubRoot.is_dir() and stampPath.read_text(encoding="utf-8") == digest:
+    contentDigest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    setPrevious: set[str] | None = None
+    if stampPath.is_file() and stubRoot.is_dir():
+        listStampLine = stampPath.read_text(encoding="utf-8").splitlines()
+        if listStampLine and listStampLine[0] == contentDigest:
+            setPrevious = set(listStampLine[1:])
+    if setPrevious is None:
+        if stubRoot.exists():
+            shutil.rmtree(stubRoot)
+        stubRoot.mkdir(parents=True)
+        setPrevious = set()
+    setCurrent = set(listHeader)
+    if setCurrent == setPrevious:
         return
-    if stubRoot.exists():
-        shutil.rmtree(stubRoot)
-    stubRoot.mkdir(parents=True)
+    for header in setPrevious - setCurrent:
+        (stubRoot / header).unlink(missing_ok=True)
     setFolder: set[Path] = set()
-    for header in listHeader:
+    for header in sorted(setCurrent - setPrevious):
         path = stubRoot / header
         if path.parent not in setFolder:
             path.parent.mkdir(parents=True, exist_ok=True)
             setFolder.add(path.parent)
         path.write_text(content, encoding="utf-8")
     stampPath.parent.mkdir(parents=True, exist_ok=True)
-    stampPath.write_text(digest, encoding="utf-8")
+    stampPath.write_text("\n".join([contentDigest, *sorted(setCurrent)]) + "\n", encoding="utf-8")
 
 
 def collectGates(sourceDir: Path, mapRule: dict[str, list[str]]) -> dict[str, tuple[list[str], str]]:
