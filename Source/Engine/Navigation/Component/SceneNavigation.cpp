@@ -687,7 +687,7 @@ namespace sw
         SW_MEMORY_SCOPE( Navigation );
         SW_PROFILE_SCOPE( "GT.Navigation.tick" );
         // ⓪ 지난 프레임에 넘긴 경로 질의를 수확한다 — 내비메시가 없어도 돈다(요청자는 `Failed` 결과를 받아야 기다림이 끝난다).
-        const NavMeshWriteAccess access = acquireNavMeshWriteAccess();
+        const NavMeshWriteAccess access = completeNavMeshReads();
         if ( bAnything == false || _pManager == nullptr )
         {
             _pathQueue.launch( "NavPathQuery" );
@@ -725,7 +725,7 @@ namespace sw
         launchCrowdUpdates( deltaTime );
     }
 
-    NavMeshWriteAccess SceneNavigation::acquireNavMeshWriteAccess()
+    NavMeshWriteAccess SceneNavigation::completeNavMeshReads()
     {
         waitCrowdUpdates();
         return NavMeshWriteAccess{ _pathQueue.complete() };
@@ -738,7 +738,7 @@ namespace sw
 
     void SceneNavigation::flushTileBakes()
     {
-        const NavMeshWriteAccess access = acquireNavMeshWriteAccess();
+        const NavMeshWriteAccess access = completeNavMeshReads();
         _tileRebaker.updateObstacles( _listRuntime, _listObstacle, getSettings()._obstacleMoveThreshold );
         // 그 자리에서 끝내는 길이다(테스트 · 쿠킹) — 메시를 기다린다. `Defer` 면 넘긴 영역이 남아 아래 반복이 끝나지 않는다.
         processDirtyAreas( NavMeshArrival::Wait );

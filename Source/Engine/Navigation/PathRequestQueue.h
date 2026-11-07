@@ -92,7 +92,7 @@ namespace sw
         ~PathRequestQueue()
         {
             // 워커가 비행 줄 · 풀이를 읽고 있다 — 끝날 때까지 놓지 않는다.
-            waitLaunched();
+            waitLaunchedTasks();
         }
 
         PathRequestQueue( const PathRequestQueue& )            = delete;
@@ -126,7 +126,7 @@ namespace sw
         {
             ScopedLock<SpinLock> lock{ _lock };
             if ( isLiveUnlocked( handle ) )
-                releaseSlotUnlocked( handle._slot );
+                freeSlotUnlocked( handle._slot );
         }
 
         /** @brief 요청의 상태입니다(아무 스레드). */
@@ -148,7 +148,7 @@ namespace sw
             if ( slot._state != PathRequestState::Ready )
                 return slot._state;
             outJob = std::move( slot._job );
-            releaseSlotUnlocked( handle._slot );
+            freeSlotUnlocked( handle._slot );
             return PathRequestState::Ready;
         }
 
@@ -211,7 +211,7 @@ namespace sw
         /** @brief 넘긴 일을 기다리고(주인 스레드) 결과를 칸에 옮깁니다. 취소한 요청의 결과는 버립니다. 돌려준 증표가 "워커가 읽지 않는다" 의 증거입니다. */
         [[nodiscard]] Fence complete()
         {
-            waitLaunched();
+            waitLaunchedTasks();
             if ( _listInFlightJob.empty() == false )
             {
                 ScopedLock<SpinLock> lock{ _lock };
@@ -239,7 +239,7 @@ namespace sw
             for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listSlot.size() ); ++slotIndex )
             {
                 if ( _listSlot[slotIndex]._state != PathRequestState::Unknown )
-                    releaseSlotUnlocked( slotIndex );
+                    freeSlotUnlocked( slotIndex );
             }
             _listPending.clear();
             return Fence{};
@@ -290,7 +290,7 @@ namespace sw
                    _listSlot[handle._slot]._state != PathRequestState::Unknown;
         }
 
-        void releaseSlotUnlocked( uint32 slotIndex ) SW_REQUIRES_LOCK( _lock )
+        void freeSlotUnlocked( uint32 slotIndex ) SW_REQUIRES_LOCK( _lock )
         {
             Slot& slot  = _listSlot[slotIndex];
             slot._job   = Job{};
@@ -300,7 +300,7 @@ namespace sw
         }
 
         /** @brief 워커에 넘긴 태스크가 있으면 모두 끝날 때까지 기다립니다(인라인으로 푼 묶음은 기다릴 것이 없다). */
-        void waitLaunched()
+        void waitLaunchedTasks()
         {
             if ( _bLaunchedTasks == SW_FALSE )
                 return;

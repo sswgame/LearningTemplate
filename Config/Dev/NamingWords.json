@@ -90,7 +90,8 @@
         "callAgent": "callServerFunction (2026-11-08 새 이름 검토)",
         "checkRegionMonsters": "validateRegionMonsters (2026-11-08 새 이름 검토)",
         "checkContract": "RemoteCall::validateRemoteCallContract (2026-11-08 새 이름 검토)",
-        "useSite": "interactWithSite (2026-11-08 새 이름 검토)"
+        "useSite": "interactWithSite (2026-11-08 새 이름 검토)",
+        "updateAgents": "SceneNavigation::syncAgentsIntoCrowds(④ 군중에 넣기) · launchCrowdUpdates(⑤ 워커로 진행) · completeFrameJob(⑥ FlushPostAnimation 앞에서 결과 쓰기)"
     },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",

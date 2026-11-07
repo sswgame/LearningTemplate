@@ -291,7 +291,7 @@ namespace sw
         /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). 갱신은 `Defer`, 그 자리에서 끝내는 `flushTileBakes` 는 `Wait` 다. */
         void processDirtyAreas( NavMeshArrival arrival );
         /** @brief 내비메시를 읽는 워커가 없게 합니다 — 군중 진행을 기다리고 경로 질의를 수확한다(결과가 칸에 든다). 그 증표로 타일을 바꾼다. 게임 스레드에서만 부릅니다. */
-        [[nodiscard]] NavMeshWriteAccess acquireNavMeshWriteAccess();
+        [[nodiscard]] NavMeshWriteAccess completeNavMeshReads();
         /** @brief ④ — 에이전트 요청 · 자리를 군중에 넣습니다(게임 스레드). */
         void syncAgentsIntoCrowds();
         /** @brief ⑤ — 에이전트가 있는 군중마다 진행을 워커 일로 넘깁니다(워커가 없으면 이 자리에서 진행한다). */
