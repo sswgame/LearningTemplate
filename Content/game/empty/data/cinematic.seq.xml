@@ -1,4 +1,4 @@
-<!-- 시네마틱 시나리오(automation/cinematic)의 컷 둘 — 프레임 30 에 CutA, 60 에 CutB, 86 에 끝나 게임 카메라로 0.5 초 섞어 나온다. 프리롤 10 프레임이 대기 뷰를 낸다(30 fps). -->
+<!-- 시네마틱 시나리오(automation/cinematic)의 컷 둘 — 프레임 30 에 CutA, 60 에 CutB(같은 프레임에 Actor 가 전사 외형으로), 86 에 끝나 게임 카메라로 0.5 초 섞어 나온다. 프리롤 10 프레임이 대기 뷰를 낸다(30 fps). -->
 <SequenceAsset _frameMin="0"
                _frameMax="100"
                _note="cinematic scenario: two camera cuts with preroll and a blend back to the game camera"
@@ -8,6 +8,7 @@
 	<_listItem>
 		<SequenceTrackItem _name="CutA" _targetObject="CutA" _start="30" _end="59" _kind="CameraCut" />
 		<SequenceTrackItem _name="CutB" _targetObject="CutB" _start="60" _end="86" _kind="CameraCut" />
+		<SequenceTrackItem _name="Armor" _targetObject="Actor" _start="60" _end="61" _kind="Appearance" _preset="SkeletonWarrior" />
 	</_listItem>
 	<_listTrack />
 </SequenceAsset>

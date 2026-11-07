@@ -4,6 +4,7 @@
   ① 플레이어 카메라는 매니저가 뷰 타깃(GameplayView) 자리에 둔다 — 씬에 적은 자리와 멀리 떨어져 있어 매니저가 돌지 않으면 진다.
   ② 프리롤에 대기 뷰가 CutA 로 올라 플레이어 매니저에 닿고, 컷이 오면 풀리며 화면이 CutA 다. ③ CutB 로 끊어 바뀐다(두 장이 다르다).
   ④ 끝나면 화면이 플레이어 카메라로 돌아오고 마지막 컷 자리에서 0.5 초 섞여 나온다(언리얼 Blend Out) — 섞는 동안은 타깃과 떨어져 있고, 끝나면 타깃에 닿는다.
+  ⑤ CutB 첫 프레임의 외형 항목이 Actor 를 SkeletonMinion 에서 SkeletonWarrior 로 바꾼다(SequenceAppearanceComponent — 엔진 시퀀서는 이벤트만 낸다).
   프레임: 시퀀스 30 fps · 고정 60 Hz 라 시퀀스 한 프레임이 틱 둘이다. 시한은 조건 대기로 둔다.
   실행: App -scenario=game/empty/automation/cinematic.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
@@ -18,6 +19,7 @@
 	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
 	<Expect watch="CameraManager.PendingCamera" target="GameCamera" is="none"/>
 	<Expect watch="Cinematic.CutCamera" target="Director" is="none"/>
+	<Expect watch="Appearance.Preset" target="Actor" is="SkeletonMinion"/>
 	<Wait frames="1"/>
 
 	<PlaySequence object="Director"/>
@@ -31,6 +33,7 @@
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="CutB" timeoutSeconds="1.5"/>
 	<WaitUntil watch="Camera.FrameObject" is="CutB" timeoutSeconds="1"/>
 	<Expect watch="Cinematic.CutCamera" target="Director" is="CutB"/>
+	<WaitUntil watch="Appearance.Preset" target="Actor" is="SkeletonWarrior" timeoutFrames="4"/>
 	<Wait frames="8"/>
 	<Screenshot file="cinematic_b.ppm"/>
 

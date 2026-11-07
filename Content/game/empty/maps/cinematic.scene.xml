@@ -1,6 +1,7 @@
 <Scene formatVersion="2" name="Cinematic">
 	<!-- 시네마틱 시나리오(automation/cinematic)의 무대 — 플레이어 카메라(GameCamera)는 카메라 매니저로 GameplayView 를 보고, Director 의 시퀀스가 CutA · CutB 로 화면을 덮었다가 돌려준다. 언리얼 PlayerCameraManager + Level Sequence Camera Cut 의 조립과 같다.
-	     컷 카메라와 뷰 타깃은 Custom 역할이라 직접 뽑히지 않는다. 색이 다른 상자 둘을 컷마다 다른 쪽에서 본다. -->
+	     컷 카메라와 뷰 타깃은 Custom 역할이라 직접 뽑히지 않는다. 색이 다른 상자 둘을 컷마다 다른 쪽에서 본다.
+	     가운데 해골(Actor)은 CutB 첫 프레임에 외형 항목으로 미니언에서 전사로 갈아입는다(Director 의 SequenceAppearanceComponent). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -39,6 +40,7 @@
 				<_listComponent>
 					<SequencePlayerComponent _sequencePath="game/empty/data/cinematic.seq.xml" _framesPerSecond="30" _bLoop="false" _bAutoPlay="false" />
 					<CinematicCameraComponent _localPlayerIndex="0" />
+					<SequenceAppearanceComponent />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -67,6 +69,15 @@
 			<GameObject _schemaVersion="0" _name="BoxRight" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localPosition="3,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="2.2" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Actor">
+			<GameObject _schemaVersion="0" _name="Actor" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _localPosition="0,0,1" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" />
+					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _presetID="SkeletonMinion" _seed="0" _bMergeParts="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

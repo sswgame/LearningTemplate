@@ -1,0 +1,14 @@
+<!-- WildWest 마을 도착 컷(maps/prairie.scene.xml 의 ArrivalDirector) — 프레임 10 에 기수 곁의 낮은 컷(ArrivalCutA), 45 에 마을을 내려다보는 넓은 컷(ArrivalCutB), 80 에 끝나 게임 카메라로 끊어 돌아온다(30 fps).
+     게임 카메라는 직교 시점이라 원근 컷에서 섞지 않고 끊는다(Blend Out 0). 프리롤 10 프레임이 대기 뷰를 낸다. -->
+<SequenceAsset _frameMin="0"
+               _frameMax="90"
+               _note="wildwest arrival cut: a low shot beside the rider, then a wide shot over the town"
+               _cameraBlendInSeconds="0"
+               _cameraBlendOutSeconds="0"
+               _cameraPrerollFrames="10">
+	<_listItem>
+		<SequenceTrackItem _name="Rider" _targetObject="ArrivalCutA" _start="10" _end="44" _kind="CameraCut" />
+		<SequenceTrackItem _name="Town" _targetObject="ArrivalCutB" _start="45" _end="80" _kind="CameraCut" />
+	</_listItem>
+	<_listTrack />
+</SequenceAsset>

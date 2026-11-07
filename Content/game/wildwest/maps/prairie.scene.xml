@@ -1181,5 +1181,82 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 마을 도착 컷 — 기수가 마을 앞(X 40)에 닿으면 TownArrival 이 ArrivalDirector 의 시퀀스(data/arrival.seq.xml)를 한 번 튼다. 컷 카메라 둘은 Custom 역할이라 직접 뽑히지 않고,
+		     시퀀스가 끝나면 화면이 GameCamera(디렉터의 내려다보는 직교 시점)로 돌아온다. 시나리오 automation/arrivalcut 이 본다. -->
+		<entity id="110" name="ArrivalCutA">
+			<GameObject _schemaVersion="0" _name="ArrivalCutA" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="38,2.2,-7"
+					                 _localRotation="0.12,0.55,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.8"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="18"
+					                 _priority="0"
+					                 _role="Custom"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="111" name="ArrivalCutB">
+			<GameObject _schemaVersion="0" _name="ArrivalCutB" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="58,16,-16"
+					                 _localRotation="0.75,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.8"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="18"
+					                 _priority="0"
+					                 _role="Custom"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="112" name="ArrivalDirector">
+			<GameObject _schemaVersion="0" _name="ArrivalDirector" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SequencePlayerComponent _componentName="SequencePlayerComponent"
+					                         _bActive="true"
+					                         _sequencePath="game/wildwest/data/arrival.seq.xml"
+					                         _framesPerSecond="30"
+					                         _bLoop="false"
+					                         _bAutoPlay="false" />
+					<CinematicCameraComponent _componentName="CinematicCameraComponent" _bActive="true" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="113" name="TownArrival">
+			<GameObject _schemaVersion="0" _name="TownArrival" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="40,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<SequenceTriggerComponent _componentName="SequenceTriggerComponent"
+					                          _bActive="true"
+					                          _activator="4"
+					                          _radius="2.5"
+					                          _bOnce="true"
+					                          _sequence="112" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>
