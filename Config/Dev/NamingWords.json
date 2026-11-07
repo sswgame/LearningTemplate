@@ -76,7 +76,10 @@
         "ArcadeVehicleComponent": "KinematicVehicleComponent",
         "ArcadeVehicleSettings": "KinematicVehicleSettings",
         "ArcadeVehicleInput": "KinematicVehicleInput",
-        "ArcadeVehicleEvent": "KinematicVehicleEvent"
+        "ArcadeVehicleEvent": "KinematicVehicleEvent",
+        "KartOffroadZoneDef": "KartSurfaceZoneDef(속도 배율 · 구름 저항 · 그립을 함께 가진 표면 구간)",
+        "_listOffroadZone": "_listSurfaceZone",
+        "sampleSpeedScale": "sampleSurface(VehicleSurface — 속도 배율 · 구름 저항 · 그립 배율)"
     },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",

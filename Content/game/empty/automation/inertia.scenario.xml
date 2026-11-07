@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  관성 이동과 탑승 가속감(maps/inertia.scene.xml) — 바디 없는 탈것(KinematicVehicleComponent)이 경사 중력 · 구름 저항(표면 종류) · 공기 저항을 질량으로 적분하는지,
+  좌석이 잰 가속도로 탑승자가 기우는지 값으로 본다.
+  ① 같은 페달 1 초: 평지 카트(KartFlat)가 돌 비탈을 오르는 카트(KartHill)보다 빠르다(오르막 감속 ≈ g·sin0.2 ≈ 1.9 m/s²).
+  ② 같은 기울기의 눈 · 빙판 비탈에 멈춰 놓인 썰매: 둘 다 내려가며 빨라지고(내리막 가속), 빙판(구름 저항 0.005)이 눈(0.06)보다 빠르고 멀리 간다.
+  ③ 탑승자를 태운 카트(LeanKart)가 가속하면 탑승자가 뒤로, 급정거하면 앞으로 기운다(Vehicle.RiderLean — 좌석 가속도 × 0.025 rad/(m/s²), 최대 0.35).
+  ④ 광산 수레(Minecart)는 레일 스플라인 위로 굴러 내려가 열린 끝에서 선다.
+  사진: 탑승자를 태우고 눈 비탈을 내려가는 썰매(inertia_sled.ppm — 골든은 통합에서 기록).
+  실행: ctest -R Scenario.game.empty.inertia
+-->
+<Scenario name="game.empty.inertia" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/inertia.scene.xml"/>
+	<!-- 탑승자는 승객석(조종을 넘기지 않는다)에 앉는다 -->
+	<Mount rider="SledRider" vehicle="SledSnow"/>
+	<Mount rider="Rider" vehicle="LeanKart"/>
+	<Expect watch="Pawn.Seat" target="Rider" is="LeanKart"/>
+	<Wait frames="1"/>
+	<!-- ① 같은 페달 — 의도는 월드 방향이다(KartHill 은 −Z 를 본다) -->
+	<Intent pawn="KartFlat" move="0,1" frames="60"/>
+	<Intent pawn="KartHill" move="0,-1" frames="60"/>
+	<Intent pawn="LeanKart" move="0,1" frames="90"/>
+	<Wait frames="40"/>
+	<!-- ③ 가속 중(18 m/s²) — 탑승자는 뒤로 -->
+	<Expect watch="Vehicle.RideAcceleration" target="LeanKart" atLeast="8"/>
+	<Expect watch="Vehicle.RiderLean" target="LeanKart" atMost="-0.15"/>
+	<Wait frames="20"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="KartFlat" atLeast="16.8"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="KartHill" atLeast="13"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="KartHill" atMost="16.4"/>
+	<Wait frames="31"/>
+	<!-- ③ 급정거(브레이크 40 m/s²) — 탑승자는 앞으로 -->
+	<Intent pawn="LeanKart" move="0,-1" frames="40"/>
+	<WaitUntil watch="Vehicle.RiderLean" target="LeanKart" atLeast="0.25" timeoutFrames="30"/>
+	<Expect watch="Vehicle.RideAcceleration" target="LeanKart" atMost="-20"/>
+	<!-- 탑승자를 태우고 눈 비탈을 내려가는 썰매 -->
+	<Screenshot file="inertia_sled.ppm" waitForSettle="false"/>
+	<Wait frames="1"/>
+	<!-- ② 내리막 가속 — 빙판 썰매가 6 m/s 에 닿을 때 눈 썰매는 더 느리다 -->
+	<WaitUntil watch="Vehicle.ForwardSpeed" target="SledIce" atLeast="6" timeoutFrames="600"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="SledSnow" atLeast="4"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="SledSnow" atMost="5.6"/>
+	<!-- ④ 레일 위로 내려가는 중 -->
+	<Expect watch="Vehicle.RailDistance" target="Minecart" atLeast="4"/>
+	<Expect watch="Object.X" target="Minecart" near="-20" tolerance="0.01"/>
+	<!-- ② 빙판이 눈보다 멀리 — 빙판 썰매가 비탈 아래 평지(z 40)에 닿을 때 눈 썰매는 뒤에 있다 -->
+	<WaitUntil watch="Object.Z" target="SledIce" atLeast="40" timeoutFrames="900"/>
+	<Expect watch="Object.Z" target="SledSnow" atLeast="15"/>
+	<Expect watch="Object.Z" target="SledSnow" atMost="37"/>
+	<Expect watch="Object.Y" target="SledIce" near="0" tolerance="0.05"/>
+	<!-- ④ 열린 레일 끝(50.6 m)에서 선다 -->
+	<WaitUntil watch="Vehicle.RailDistance" target="Minecart" atLeast="50.5" timeoutFrames="600"/>
+	<Wait frames="2"/>
+	<Expect watch="Vehicle.ForwardSpeed" target="Minecart" near="0" tolerance="0.01"/>
+	<Expect watch="Object.Y" target="Minecart" near="0.3" tolerance="0.05"/>
+	<Pass/>
+</Scenario>

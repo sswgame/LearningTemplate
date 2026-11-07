@@ -1,0 +1,191 @@
+<Scene formatVersion="2" name="Inertia">
+	<!-- 관성 이동 무대(automation/inertia.scenario.xml) — 같은 기울기(0.2 rad) 비탈 셋: 왼쪽부터 돌(HillRamp — 카트가 오른다) · 눈(SnowRamp) · 빙판(IceRamp).
+	     썰매 둘(SledSnow · SledIce)은 꼭대기에서 멈춘 채 놓여 경사 중력으로 내려가고 표면 종류 표의 구름 저항 · 그립(빙판 낮음, 눈 높음)이 갈린다. SledSnow 에는 탑승자(SledRider)가 앉는다.
+	     KartFlat 은 평지, KartHill 은 돌 비탈 아래에서 위로 같은 페달 — 오르막이 느리다. LeanKart 는 탑승자(Rider)를 태우고 달리다 급정거해 탑승자가 앞으로 기운다(좌석 가속도 → 기울임).
+	     Minecart 는 Rail 의 스플라인(레일 모듈) 위로 구른다. 튜닝은 common/data/vehicles/*.vehicle.xml. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera">
+			<GameObject _schemaVersion="0" _name="Camera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="2,16,-44" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,10,0" _localRotation="0.9,0.6,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.85" _intensity="1.3" _ambient="0.35" _shadowExtent="40" _shadowDistance="80" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="200,0.5,200" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0.5,0" _localRotation="0,0,0" _localScale="400,1,400" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Plane" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.866" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="HillRamp">
+			<GameObject _schemaVersion="0" _name="HillRamp" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-12,5.5,0" _localRotation="0.2,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2.5,0.5,30" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="SnowRamp">
+			<GameObject _schemaVersion="0" _name="SnowRamp" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-6,5.5,0" _localRotation="0.2,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Snow" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2.5,0.5,30" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Snow">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="IceRamp">
+			<GameObject _schemaVersion="0" _name="IceRamp" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,5.5,0" _localRotation="0.2,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Ice" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2.5,0.5,30" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Ice">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,1,60" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="31" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="SledSnow">
+			<GameObject _schemaVersion="0" _name="SledSnow" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-6,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<KinematicVehicleComponent _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
+					<VehicleSeatComponent _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="SledIce">
+			<GameObject _schemaVersion="0" _name="SledIce" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,11.15,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.15,0" _localRotation="0,0,0" _localScale="1,0.3,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<KinematicVehicleComponent _tuning="common/data/vehicles/sled.vehicle.xml" _bUsePhysicsGround="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="SledRider">
+			<GameObject _schemaVersion="0" _name="SledRider" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-5,11.2,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" _blendMode="Opaque" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="KartFlat">
+			<GameObject _schemaVersion="0" _name="KartFlat" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="8,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="KartHill">
+			<GameObject _schemaVersion="0" _name="KartHill" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-12,0.97,25" _localRotation="0,3.14159265,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="LeanKart">
+			<GameObject _schemaVersion="0" _name="LeanKart" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="16,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.3,0" _localRotation="0,0,0" _localScale="1.2,0.6,2" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml" _bUsePhysicsGround="true" />
+					<VehicleSeatComponent _seatOffset="0,0.6,0" _exitOffset="-1.5,0,0" _enterDistance="4" _bDriverSeat="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Rider">
+			<GameObject _schemaVersion="0" _name="Rider" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="17,0,-20" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.6,0" _localRotation="0,0,0" _localScale="0.45,1.2,0.35" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="0.7" _blendMode="Opaque" />
+					<PawnComponent _maxPitch="1.4" _bLockMouse="false">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Rail">
+			<GameObject _schemaVersion="0" _name="Rail" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-20,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,4.15,0" _localRotation="0.155,0,0" _localScale="0.3,0.1,50.6" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="26" _blendMode="Opaque" />
+					<SplineComponent _samplesPerSegment="16" _type="Linear" _bClosed="false">
+						<_listControlPoint>
+							<item>0,8,-25</item>
+							<item>0,0.3,25</item>
+						</_listControlPoint>
+					</SplineComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Minecart">
+			<GameObject _schemaVersion="0" _name="Minecart" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-20,8,-25" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<MeshComponent _localPosition="0,0.4,0" _localRotation="0,0,0" _localScale="1,0.8,1.4" _attachOwner="None" _attachComponent="SceneComponent#0" _meshID="Cube" _materialPath="engine/materials/defaultmaterial.material" _boundsRadius="1.5" _blendMode="Opaque" />
+					<KinematicVehicleComponent _tuning="common/data/vehicles/minecart.vehicle.xml" _rail="14" _bUsePhysicsGround="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
