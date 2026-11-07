@@ -25,5 +25,12 @@ namespace sw
          *         파일이 있는지는 보지 않습니다(읽는 쪽이 판단한다).
          */
         [[nodiscard]] static bool tryMakeKindPath( string_view packRoot, string_view kindLabel, string& outPath, string& outError );
+        /**
+         * @brief 종류 @p fromKind 의 파일 @p assetID 와 같은 팩에 있는 종류 @p toKind 의 파일 경로를 @p outPath 에 만듭니다(공원 배치 → 같은 팩의 코스터 레이아웃).
+         * @details 팩 루트는 @p assetID 에서 @p fromKind 의 접미를 뗀 것이다. 팩이 어디 있는지(`game/` 접두)는 보지 않는다 — 파일은 이미 그 경로에서 읽혔고, 두 종류가 같은 팩에
+         *          있다는 사실은 두 종류의 접두가 같다는 데이터로 확인한다. 그래서 테스트 도메인(`ScopedScratchDomain`)의 팩도 같은 규칙으로 풀린다.
+         * @return 종류가 없거나, 두 종류가 팩 안 파일 종류(`/…` 접미)가 아니거나, 접두가 다르거나, @p assetID 가 @p fromKind 의 접미로 끝나지 않으면 false 이고 @p outError 에 이유를 담습니다.
+         */
+        [[nodiscard]] static bool tryMakeSiblingKindPath( string_view assetID, string_view fromKind, string_view toKind, string& outPath, string& outError );
     };
 } // namespace sw

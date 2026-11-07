@@ -152,7 +152,7 @@ namespace sw
      * @brief 공원 배치 데이터 한 장입니다. 게임은 읽은 정의로 놀이기구를 만들기만 하며, 형식과 검증은 이 클래스가 한 곳에서 맡습니다.
      * @details 코스터 줄(`<Coaster layout="…">`)은 코스터 레이아웃 카탈로그에서 찾는다. 없는 레이아웃은 오류이고 건너뛴다.
      *          파일에서 읽는 길은 공유 캐시 하나다(`SharedAssetCache<ParkLayout>::acquire`) — 로더가 같은 팩의 코스터 카탈로그를 공유 캐시에서 받아 쥐고(`getCoasterLayouts`),
-     *          쓰는 쪽은 코스터 경로를 따로 적지 않는다(기준 하나 — 팩 경로 규칙 `GamePackDataUtil::tryMakeKindPath`). 테스트 · 에디터 미리 보기는 `loadFromXMLText` 에 카탈로그를 넘긴다.
+     *          쓰는 쪽은 코스터 경로를 따로 적지 않는다(기준 하나 — 같은 팩의 종류 파일 `GamePackDataUtil::tryMakeSiblingKindPath`). 테스트 · 에디터 미리 보기는 `loadFromXMLText` 에 카탈로그를 넘긴다.
      *          속성의 형식 · 필수 · 범위는 스키마 셋(`ParkLayoutRootDef` · `ParkFlatRideDef` · `ParkCoasterDef`)이 정하고 하나라도 어기면 로드가 실패한다.
      */
     class SW_KIT_API ParkLayout
@@ -178,7 +178,7 @@ namespace sw
     private:
         /**
          * @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 같은 팩의 코스터 카탈로그를 공유 캐시에서 먼저 받습니다. 놀이기구가 하나도 없으면 false 입니다.
-         * @details 종류의 로더(공유 캐시)만 부른다. 코스터 파일 이름을 다시 적지 않는다 — 배치 종류의 접미를 떼어 팩 루트를 얻고 코스터 종류의 등록 줄로 경로를 만든다.
+         * @details 종류의 로더(공유 캐시)만 부른다. 코스터 파일 이름을 다시 적지 않는다 — 같은 팩의 코스터 종류 파일이다(`GamePackDataUtil::tryMakeSiblingKindPath`).
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );

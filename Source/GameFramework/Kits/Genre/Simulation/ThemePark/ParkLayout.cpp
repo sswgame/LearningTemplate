@@ -5,7 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -26,17 +25,10 @@ namespace sw
     bool ParkLayout::loadFromAsset( const AssetID& assetID )
     {
         _pCoasterLayouts.reset();
-        const string&       layoutPath  = assetID.str();
-        const AssetTypeDef* pLayoutKind = AssetTypeRegistry::findType( kDataKind );
-        if ( pLayoutKind == nullptr || pLayoutKind->_pathRule._suffix.empty() || layoutPath.size() < pLayoutKind->_pathRule._suffix.size() )
-        {
-            SW_LOG_ERROR_ID( "ParkLayout.LayoutPathNotKind", "%#: the park layout path does not end with the '%#' kind suffix", layoutPath.c_str(), kDataKind );
-            return false;
-        }
-        const string_view packRoot = string_view( layoutPath ).substr( 0, layoutPath.size() - pLayoutKind->_pathRule._suffix.size() );
-        string            coasterPath;
-        string            error;
-        if ( GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
+        const string& layoutPath = assetID.str();
+        string        coasterPath;
+        string        error;
+        if ( GamePackDataUtil::tryMakeSiblingKindPath( layoutPath, kDataKind, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
         {
             SW_LOG_ERROR_ID( "ParkLayout.CoasterLayoutsNoPath", "%#: the coaster layouts have no path - %#", layoutPath.c_str(), error.c_str() );
             return false;
