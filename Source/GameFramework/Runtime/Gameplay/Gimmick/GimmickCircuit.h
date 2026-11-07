@@ -20,6 +20,11 @@
 
 namespace sw
 {
+    class DebugHUDSectionWriter;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 저장 상태가 이 회로와 맞는 정도입니다. 값이 클수록 약하게 맞습니다(`GimmickCircuit::loadState` 의 받아들이는 한계로 씁니다). */
     enum class GimmickStateMatch : uint8
     {
@@ -34,6 +39,18 @@ namespace sw
         GimmickStateMatch _match{ GimmickStateMatch::Mismatch };
         int32             _changedNode{ -1 }; ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) -1
         bool              _bApplied{ false }; ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 노드 출력이 바뀐 일 하나입니다(런타임 기믹 디버거가 읽는다 — `GimmickCircuit::collectRecentTransitions`). */
+    struct GimmickOutputTransition
+    {
+        uint32 _stepIndex{ 0 };  ///< 바뀐 스텝(그 스텝을 실행하기 전의 번호)
+        int32  _node{ -1 };      ///< 노드 순서 번호
+        uint32 _beforeBits{ 0 }; ///< 바뀌기 전 출력 비트
+        uint32 _afterBits{ 0 };  ///< 바뀐 뒤 출력 비트
     };
 } // namespace sw
 
@@ -110,6 +127,24 @@ namespace sw
         /** @brief 상태의 64 비트 해시입니다. 고정 배치형 바이트(`FixedLayout::write`)의 FNV-1a 입니다. 같은 입력이면 같은 값이 나오므로 결정성 검증과 비동기 감지에 씁니다. */
         uint64 computeStateHash() const;
 
+        /**
+         * @brief 최근 출력 전이(오래된 것부터)를 @p outListTransition 에 채웁니다(먼저 비운다). 고정 용량 `kTransitionCapacity` — 넘으면 오래된 것이 밀린다.
+         * @details 상태가 아니라 진단이다(저장 · 해시 · 롤백에 들지 않는다). 기록은 스텝이 이미 계산한 출력과 지난 출력을 비교할 뿐이라 비용이 노드당 비교 하나다.
+         */
+        void collectRecentTransitions( vector<GimmickOutputTransition>& outListTransition ) const;
+        /** @brief 노드 @p node 로 들어오는 입력 비트(지난 스텝 값)입니다. */
+        uint32 getPreviousInputBits( int32 node ) const { return _listNode[static_cast<size_t>( node )]._previousInputBits; }
+        /** @brief 센서 노드의 지금 수준 값입니다. */
+        float32 getSensorValue( int32 node ) const { return _listNode[static_cast<size_t>( node )]._sensorValue; }
+
+        /**
+         * @brief 런타임 기믹 디버거(HUD 섹션 `gimmick`)의 줄을 씁니다 — 읽기만 한다. 노드마다 켜진 출력 · 입력 포트 이름과 센서 · 액추에이터 값, 그 아래 최근 출력 전이(스텝 · 노드 · 전 → 후).
+         * @details 편집 패널(`GimmickGraphPanel`)은 저작 도구로 두고 실행 상태는 여기서 본다. 일시정지 · 한 스텝은 기존 플레이 제어를 쓴다(별도 실행 상태를 만들지 않는다).
+         */
+        void writeDebugLines( DebugHUDSectionWriter& writer, uint32 maxLines ) const;
+        /** @brief 최근 출력 전이 기록의 용량입니다. */
+        static constexpr uint32 kTransitionCapacity = 16;
+
         bool    isBuilt() const { return _listNode.empty() == false; }
         uint32  getStepIndex() const { return _stepIndex; }
         float32 getStepTime() const { return _stepTime; }
@@ -172,5 +207,7 @@ namespace sw
         FixedStepTimer            _timer;
         uint32                    _stepIndex;
         float32                   _stepTime;
+        GimmickOutputTransition   _arrTransition[kTransitionCapacity]; ///< 최근 출력 전이 고리(진단 — 상태가 아니다)
+        uint32                    _transitionCount;                    ///< 기록한 전이의 누계(고리의 다음 칸은 `% kTransitionCapacity`)
     };
 } // namespace sw

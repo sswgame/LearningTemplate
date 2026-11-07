@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 게임플레이 디버거(디버그 HUD 섹션)를 HUD 없이 한 번씩 돌려 줄을 로그(DebugHUD.PrintLine)로 본다 — 읽기만 하는 섹션이라 게임이 바뀌지 않는다.
+  무대 maps/gimmickshowcase: 회로가 도는 기믹들(움직이는 발판 · 횃불 문 …). debug.target 을 정하지 않으면 섹션마다 그 컴포넌트를 가진 첫 오브젝트를 보고,
+  이름을 정하면 그 오브젝트를 본다(그 컴포넌트가 없으면 첫 것으로 돌아간다 — 첫 줄 target 이 무엇을 보는지 적는다).
+  실행: App -scenario=game/empty/automation/gameplaydebug.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.gameplaydebug" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/gimmickshowcase.scene.xml"/>
+	<Wait frames="30"/>
+	<DevCommand line="debug.target clear"/>
+	<!-- 기믹: 스텝 번호, 노드마다 켜진 출력 · 입력 포트, 최근 출력 전이 -->
+	<DevCommand line="hud.print gimmick"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[gimmick] step: " atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[gimmick] target: none" count="0"/>
+	<!-- 이름으로 대상을 고른다 — 회로가 있는 ShowcaseLogic(횃불 둘 → 문) -->
+	<DevCommand line="debug.target ShowcaseLogic"/>
+	<DevCommand line="hud.print gimmick"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[gimmick] target: ShowcaseLogic" atLeast="1"/>
+	<DevCommand line="debug.target clear"/>
+	<Pass/>
+</Scenario>

@@ -2,6 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
+
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitDef.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickNodeRegistry.h"
@@ -168,6 +170,36 @@ SW_TEST_CASE( GimmickCircuitTest, SignalsFlowInOneStepInDependencyOrder )
     rig._circuit.step();
     SW_EXPECT_EQUAL( 2, rig._circuit.getIntState( rig._count, 0 ) );
     SW_EXPECT_EQUAL( 4u, rig._circuit.getStepIndex() );
+}
+
+// 런타임 디버거: 출력이 바뀐 스텝만 고정 용량 고리에 남고, 줄은 포트 이름으로 적힌다.
+SW_TEST_CASE( GimmickCircuitTest, RecentTransitionsAreRecordedAndCapped )
+{
+    GimmickFixture rig;
+    rig.build();
+    rig._circuit.setSensorValue( rig._sensor, 1.0f );
+    rig._circuit.step(); // s · g 가 켜진다
+    rig._circuit.step(); // 바뀐 것 없음
+    vector<GimmickOutputTransition> listTransition;
+    rig._circuit.collectRecentTransitions( listTransition );
+    SW_REQUIRE_TRUE( listTransition.size() >= 2 );
+    SW_EXPECT_EQUAL( 0u, listTransition[0]._stepIndex );
+    SW_EXPECT_EQUAL( 0u, listTransition[0]._beforeBits );
+    SW_EXPECT_EQUAL( 1u, listTransition[0]._afterBits );
+
+    for ( uint32 index = 0; index < GimmickCircuit::kTransitionCapacity * 2; ++index )
+    {
+        rig._circuit.setSensorValue( rig._sensor, ( index % 2 ) == 0 ? 0.0f : 1.0f );
+        rig._circuit.step();
+    }
+    rig._circuit.collectRecentTransitions( listTransition );
+    SW_EXPECT_EQUAL( size_t( GimmickCircuit::kTransitionCapacity ), listTransition.size() );
+
+    DebugHUDSectionWriter writer;
+    rig._circuit.writeDebugLines( writer, 64 );
+    SW_REQUIRE_TRUE( writer.getLineCount() > 3 );
+    SW_EXPECT_EQUAL( string( "step" ), writer.getLineAt( 0 )._label );
+    SW_EXPECT_EQUAL( string( "s (Sensor)" ), writer.getLineAt( 1 )._label );
 }
 
 // 정의 순서가 평가 순서가 아니다.

@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -14,6 +15,7 @@
 #include "Engine/Rendering/LightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
@@ -653,4 +655,38 @@ namespace sw
         manager.getComponentRegistry().remove<GimmickCircuitComponent>( this );
         Component::onUnregister( manager );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 런타임 기믹 디버거(HUD 섹션 `gimmick`)입니다. 대상은 `debug.target`, 없으면 활성 씬의 첫 회로입니다. */
+        struct GimmickDebugSectionInternal
+        {
+            static void writeGimmick( DebugHUDSectionWriter& writer )
+            {
+                const GameObjectManager* const       pManager = GameplayDebugTarget::findActiveObjectManager();
+                const GimmickCircuitComponent* const pCircuit = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<GimmickCircuitComponent>( *pManager ) : nullptr;
+                if ( pCircuit == nullptr )
+                {
+                    writer.addLine( "target", "none (no gimmick circuit in the active scene)" );
+                    return;
+                }
+                writer.addLine( "target", pCircuit->getOwner() != nullptr ? string( pCircuit->getOwner()->getName().c_str() ) : string( "?" ) );
+                for ( const string& error : pCircuit->getErrors() )
+                {
+                    writer.addLine( "error", error );
+                }
+                if ( pCircuit->getCircuit().isBuilt() == false )
+                {
+                    writer.addLine( "circuit", "not built (see the errors)" );
+                    return;
+                }
+                pCircuit->getCircuit().writeDebugLines( writer, GameplayDebugTarget::kMaxLines );
+            }
+        };
+    } // namespace
+
+    SW_DEBUG_HUD_SECTION( gimmick, "gimmick", "Gimmick circuit", 220, DebugHUDSectionFlag::kNone, &GimmickDebugSectionInternal::writeGimmick );
 } // namespace sw

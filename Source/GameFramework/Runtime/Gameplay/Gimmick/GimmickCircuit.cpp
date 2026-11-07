@@ -3,10 +3,12 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 
 #include "Core/Container/DependencyGraph.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -58,6 +60,8 @@ namespace sw
         , _timer{}
         , _stepIndex{ 0 }
         , _stepTime{ constant::time::kDefaultFixedStepSeconds }
+        , _arrTransition{}
+        , _transitionCount{ 0 }
     {
     }
 
@@ -71,7 +75,8 @@ namespace sw
         _listOrder.clear();
         _initialState = GimmickCircuitState{};
         _timer.reset();
-        _stepIndex = 0;
+        _stepIndex       = 0;
+        _transitionCount = 0;
     }
 
     bool GimmickCircuit::validate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
@@ -306,6 +311,12 @@ namespace sw
             GimmickNodeContext context  = makeContext( node );
             context._inputBits          = bBreaker ? node._previousInputBits : gatherInputs( node );
             node._pKind->_pStep( context );
+            if ( context._outputBits != node._outputBits )
+            {
+                // 진단 기록 — 고정 용량 고리(상태 · 해시에 들지 않는다).
+                _arrTransition[_transitionCount % kTransitionCapacity] = GimmickOutputTransition{ _stepIndex, static_cast<int32>( nodeIndex ), node._outputBits, context._outputBits };
+                ++_transitionCount;
+            }
             node._outputBits = context._outputBits;
             if ( bBreaker == false )
                 node._previousInputBits = context._inputBits;
@@ -326,6 +337,56 @@ namespace sw
             node._sensorImpulse = 0.0f;
         }
         ++_stepIndex;
+    }
+
+    void GimmickCircuit::writeDebugLines( DebugHUDSectionWriter& writer, uint32 maxLines ) const
+    {
+        // 켜진 비트를 포트 이름으로 — 비트 번호는 사람이 읽지 못한다.
+        const auto makePortNames = []( const vector<hashed_string>& listPort, uint32 bits ) -> string
+        {
+            string text;
+            for ( size_t port = 0; port < listPort.size() && port < 32; ++port )
+            {
+                if ( ( bits & ( 1u << static_cast<uint32>( port ) ) ) == 0 )
+                    continue;
+                if ( text.empty() == false )
+                    text += ",";
+                text += listPort[port].c_str();
+            }
+            return text.empty() ? string( "-" ) : text;
+        };
+        uint32 lineCount = 0;
+        writer.addLine( "step", to_string( _stepIndex ) );
+        for ( int32 node = 0; node < getNodeCount(); ++node )
+        {
+            if ( ++lineCount > maxLines )
+                break;
+            const GimmickNodeKind& kind  = getKind( node );
+            string                 value = "out " + makePortNames( kind._listOutput, getOutputBits( node ) ) + "  in " + makePortNames( kind._listInput, getPreviousInputBits( node ) );
+            if ( kind._category == GimmickNodeCategory::Sensor )
+                value += "  sensor " + to_string( getSensorValue( node ) );
+            if ( kind._floatStateCount > 0 )
+                value += "  value " + to_string( getActuatorValue( node ) );
+            writer.addLine( string( getNodeID( node ).c_str() ) + " (" + kind._name.c_str() + ")", value );
+        }
+        vector<GimmickOutputTransition> listTransition;
+        collectRecentTransitions( listTransition );
+        for ( auto it = listTransition.rbegin(); it != listTransition.rend() && ++lineCount <= maxLines; ++it )
+        {
+            const GimmickNodeKind& kind = getKind( it->_node );
+            writer.addLine( "step " + to_string( it->_stepIndex ), string( getNodeID( it->_node ).c_str() ) + " " + makePortNames( kind._listOutput, it->_beforeBits ) + " -> " +
+                                                                       makePortNames( kind._listOutput, it->_afterBits ) );
+        }
+    }
+
+    void GimmickCircuit::collectRecentTransitions( vector<GimmickOutputTransition>& outListTransition ) const
+    {
+        outListTransition.clear();
+        const uint32 count = _transitionCount < kTransitionCapacity ? _transitionCount : kTransitionCapacity;
+        for ( uint32 index = _transitionCount - count; index < _transitionCount; ++index )
+        {
+            outListTransition.push_back( _arrTransition[index % kTransitionCapacity] );
+        }
     }
 
     int32 GimmickCircuit::update( float32 deltaTime )
