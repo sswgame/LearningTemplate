@@ -36,11 +36,12 @@ namespace sw
 
             struct State
             {
-                mutex                         _mutex{};
-                vector<string>                _listLayerRoot{};
-                unordered_map<string, Record> _mapRecord{};
-                unordered_set<string>         _uniqueComposedID{};
-                vector<string>                _listPendingReload{};
+                mutex                                 _mutex{};
+                vector<string>                        _listLayerRoot{};
+                unordered_map<string, Record>         _mapRecord{};
+                unordered_map<string, vector<string>> _mapRemapTag{}; ///< 경로 교체가 물은 로드 축 태그(`noteRemap`)
+                unordered_set<string>                 _uniqueComposedID{};
+                vector<string>                        _listPendingReload{};
             };
 
             static State& getState()
@@ -139,15 +140,35 @@ namespace sw
         state._uniqueComposedID.insert( string{ assetID } );
     }
 
-    void ResourceComposition::notifyTagsChanged( const vector<string>& listChangedTag )
+    void ResourceComposition::noteRemap( string_view assetID, const vector<string>& listLoadTag )
     {
         ResourceCompositionInternal::State& state = ResourceCompositionInternal::getState();
         ScopedLock<mutex>                   lock{ state._mutex };
+        vector<string>&                     listTag = state._mapRemapTag[string{ assetID }];
+        for ( const string& tag : listLoadTag )
+        {
+            if ( VectorUtil::contains( listTag, tag ) == false )
+                listTag.push_back( tag );
+        }
+    }
+
+    void ResourceComposition::notifyTagsChanged( const vector<string>& listChangedTag )
+    {
+        ResourceCompositionInternal::State& state      = ResourceCompositionInternal::getState();
+        const auto                          isAffected = [&listChangedTag]( const vector<string>& listTag )
+        {
+            return VectorUtil::containsIf( listTag, [&listChangedTag]( const string& tag )
+            { return VectorUtil::contains( listChangedTag, tag ); } );
+        };
+        ScopedLock<mutex> lock{ state._mutex };
         for ( const auto& [assetID, record] : state._mapRecord )
         {
-            const bool bDepends = VectorUtil::containsIf( record._listLoadTag, [&listChangedTag]( const string& tag )
-            { return VectorUtil::contains( listChangedTag, tag ); } );
-            if ( bDepends )
+            if ( isAffected( record._listLoadTag ) )
+                ResourceCompositionInternal::addPending( state, assetID );
+        }
+        for ( const auto& [assetID, listTag] : state._mapRemapTag )
+        {
+            if ( isAffected( listTag ) )
                 ResourceCompositionInternal::addPending( state, assetID );
         }
     }
@@ -224,6 +245,7 @@ namespace sw
         ResourceCompositionInternal::State& state = ResourceCompositionInternal::getState();
         ScopedLock<mutex>                   lock{ state._mutex };
         state._mapRecord.clear();
+        state._mapRemapTag.clear();
         state._uniqueComposedID.clear();
         state._listPendingReload.clear();
     }

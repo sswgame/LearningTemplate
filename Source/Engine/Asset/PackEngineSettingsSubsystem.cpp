@@ -8,6 +8,8 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Inherit/ResourceRemap.h"
 
 namespace sw
 {
@@ -32,6 +34,12 @@ namespace sw
             return SubsystemInitResult::Failed;
         }
         SW_LOG_INFO_ID( "PackEngineSettings.LoadedTitle", "Loaded <%#> of %# (title '%#')", PackEngineSettings::kElementName, packRoot.c_str(), _settings->_windowTitle.c_str() );
+        // 덮어쓰기 층 · 경로 교체는 게임 데이터를 읽기 전에 선다(이 단계 뒤에 서는 창 · 사용자 설정 · UI · 게임이 읽는다). 틀리면 대신 쓸 것이 없으므로 기동을 멈춘다.
+        if ( ResourceLayers::setLayers( _settings->_listResourceLayer ) == false )
+            return SubsystemInitResult::Failed;
+        ResourceRemap::clear();
+        if ( _settings->_resourceRemap.isSet() && ResourceRemap::loadFromAsset( AssetID{ _settings->_resourceRemap.get() } ) == false )
+            return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
     }
 

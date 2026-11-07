@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  리소스 조건 — 표의 `<_when _if="quality.low">` · `<_when _if="layer.Night">` 가 바꾼 사거리가 표를 쥔 쪽에 닿는다(resourcecondition/table.interactions.xml).
+  품질은 옵션 메뉴와 같은 길(`settings.apply` → 핸들러 `resource.tag` → `quality` 축)로, 레이어는 `scene.layer` 로(`SceneDataLayerSubsystem` → `layer` 축) 바꾼다.
+  태그가 바뀌면 그 태그를 읽은 표만 다시 읽고(에셋 매니저의 프레임 단계 `reloadComposedDependents`), 대상은 다시 읽은 횟수를 보고 새 정의를 받는다.
+  판정은 쥔 쪽의 값이다(`Interaction.HeldMaxDistance`) — 캐시를 새로 읽으면 다시 읽기가 쥔 쪽에 닿지 않아도 새 값이 보여 거짓 통과다. 그림은 보지 않는다(골든 없음).
+  실행: ctest -R Scenario.game.empty.resourcecondition
+-->
+<Scenario name="game.empty.resourcecondition" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/automation/resourcecondition/resourcecondition.scene.xml"/>
+	<Wait frames="2"/>
+	<!-- 무인 실행의 설정은 스키마 기본값(high)이다 — 두 조건 모두 거짓 -->
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="3" timeoutFrames="120"/>
+	<Remember watch="Interaction.HeldDefinition" target="Probe" as="baseDefinition"/>
+	<DevCommand line="settings.apply graphics.quality=low"/>
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="5" timeoutFrames="120"/>
+	<!-- 쥔 정의가 바뀌었다(떼어 낸 다시 읽기 — 새 객체) -->
+	<Expect watch="Interaction.HeldDefinition" target="Probe" differsFrom="baseDefinition"/>
+	<Wait frames="1"/>
+	<DevCommand line="scene.layer Night on"/>
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="9" timeoutFrames="120"/>
+	<Wait frames="1"/>
+	<DevCommand line="scene.layer Night off"/>
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="5" timeoutFrames="120"/>
+	<Wait frames="1"/>
+	<DevCommand line="settings.apply graphics.quality=high"/>
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="3" timeoutFrames="120"/>
+	<Pass/>
+</Scenario>

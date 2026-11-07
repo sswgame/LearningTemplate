@@ -14,6 +14,7 @@
 #include "Engine/Content/CookJob.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceRemap.h"
 
 namespace sw
 {
@@ -62,12 +63,25 @@ namespace sw
          *          `readTextAsset` 와 `readBinaryAsset` 가 이 순서 하나를 씁니다 — 두 벌이면 한쪽만 고쳐 텍스트와
          *          바이너리가 다른 파일을 읽게 됩니다.
          */
+        /**
+         * @brief 경로 교체 표(`ResourceRemap`)가 지금 태그로 고른 id 입니다. 바꾸지 않으면 @p relativePath 그대로입니다. @p storage 는 바꾼 id 를 든다.
+         * @details 쿠킹 작업 안에서는 바꾸지 않는다 — 교체는 읽을 때 정하고, 쿠커가 기계의 언어로 다른 파일을 읽으면 쿠킹본이 기계마다 달라진다.
+         */
+        string_view remapForRead( string_view relativePath, string& storage )
+        {
+            if ( CookJob::findCurrent() != nullptr || ResourceRemap::resolve( relativePath, storage ) == false )
+                return relativePath;
+            return storage;
+        }
+
         template <typename DiskReadFn, typename PackReadFn>
-        [[nodiscard]] bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
+        [[nodiscard]] bool readResourceCommon( string_view requestedPath, string* pOutAbsPath,
                                                const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
         {
-            if ( relativePath.empty() || rejectsOSPath( relativePath ) )
+            if ( requestedPath.empty() || rejectsOSPath( requestedPath ) )
                 return false;
+            string            remappedPath;
+            const string_view relativePath = remapForRead( requestedPath, remappedPath );
             // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 바이너리 · 오디오)는 없는 것으로 친다 — 서버 팩에는 들어 있지도 않다.
             if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( relativePath ) )
                 return false;
@@ -207,11 +221,12 @@ namespace sw
 
     bool AssetIO::hasAsset( const AssetID& id )
     {
-        const string_view relativePath = id.view();
-        // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.
-        if ( relativePath.empty() || rejectsOSPath( relativePath ) )
+        // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — 경로 교체, OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.
+        if ( id.view().empty() || rejectsOSPath( id.view() ) )
             return false;
-        const bool bUnreadableHere = engine::getSubsystem<AssetPaths>().isExcludedForHost( relativePath ) || AssetPaths::hasParentDirectoryComponent( relativePath );
+        string            remappedPath;
+        const string_view relativePath    = remapForRead( id.view(), remappedPath );
+        const bool        bUnreadableHere = engine::getSubsystem<AssetPaths>().isExcludedForHost( relativePath ) || AssetPaths::hasParentDirectoryComponent( relativePath );
         if ( bUnreadableHere )
             return false;
 

@@ -7,10 +7,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Inherit/ResourceRemap.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -341,4 +343,52 @@ SW_TEST_CASE( ResourceCompositionTest, LoadTagDependentsAreReloadedAndDigested )
     ResourceComposition::takePendingReload( listPending );
     SW_EXPECT_TRUE( VectorUtil::contains( listPending, dependent.str() ) );
     SW_EXPECT_FALSE( VectorUtil::contains( listPending, plain.str() ) );
+}
+
+/** @brief [ResourceRemapTest] 같은 id 의 줄은 위에서부터 보고 처음 참인 줄의 파일을 읽는다. 리소스 입구(읽기 · 있는지 묻기)가 한 번 바꾸고, 로드 축 태그가 바뀌면 그 id 를 다시 읽는다 */
+SW_TEST_CASE( ResourceRemapTest, ReadsTheFirstMatchingTarget )
+{
+    const ScopedScratchDomain domain;
+    const XTestTagScope       scope{ XTestUtil::makeTags( { "locale.ko" } ) };
+    const AssetID             logo   = ScopedScratchDomain::makeID( "ui/logo.txt" );
+    const AssetID             logoKo = ScopedScratchDomain::makeID( "ui/logo_ko.txt" );
+    (void)domain.makeDiskFolder( "ui" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "ui/logo.txt" ), "base" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "ui/logo_ko.txt" ), "korean" ) );
+    const string table = "<ResourceRemap>"
+                         "<Remap id=\"" +
+                         logo.str() + "\" when=\"locale.ja\" to=\"" + logo.str() + ".ja\" />"
+                                                                                   "<Remap id=\"" +
+                         logo.str() + "\" when=\"locale.ko\" to=\"" + logoKo.str() + "\" />"
+                                                                                     "</ResourceRemap>";
+    SW_REQUIRE_TRUE( ResourceRemap::loadFromXMLText( table, "test" ) );
+
+    string text;
+    SW_REQUIRE_TRUE( AssetIO::readTextAsset( logo, text ) );
+    SW_EXPECT_EQUAL( string( "korean" ), text );
+    SW_EXPECT_TRUE( AssetIO::hasAsset( logo ) );
+
+    vector<string> listPending;
+    ResourceComposition::takePendingReload( listPending );
+    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "locale", "en" ) );
+    ResourceComposition::takePendingReload( listPending );
+    SW_EXPECT_TRUE( VectorUtil::contains( listPending, logo.str() ) );
+    SW_REQUIRE_TRUE( AssetIO::readTextAsset( logo, text ) );
+    SW_EXPECT_EQUAL( string( "base" ), text );
+    ResourceRemap::clear();
+}
+
+/** @brief [ResourceRemapTest] 빠진 칸 · 자기 자신으로 바꾸기 · 바꾼 것을 또 바꾸기 · 틀린 조건은 표 읽기 오류이고 앞의 표가 남는다 */
+SW_TEST_CASE( ResourceRemapTest, MalformedTablesAreRejected )
+{
+    SW_EXPECT_LOG( "ResourceRemap.MissingField" );
+    SW_EXPECT_FALSE( ResourceRemap::loadFromXMLText( R"(<ResourceRemap><Remap id="a" to="b" /></ResourceRemap>)", "test" ) );
+    SW_EXPECT_LOG( "ResourceRemap.SelfRemap" );
+    SW_EXPECT_FALSE( ResourceRemap::loadFromXMLText( R"(<ResourceRemap><Remap id="a" when="locale.ko" to="a" /></ResourceRemap>)", "test" ) );
+    SW_EXPECT_LOG( "ResourceRemap.Chained" );
+    SW_EXPECT_FALSE( ResourceRemap::loadFromXMLText( R"(<ResourceRemap><Remap id="a" when="locale.ko" to="b" /><Remap id="b" when="locale.ko" to="c" /></ResourceRemap>)", "test" ) );
+    SW_EXPECT_LOG( "ResourceCondition.Invalid2" );
+    SW_EXPECT_FALSE( ResourceRemap::loadFromXMLText( R"(<ResourceRemap><Remap id="a" when="colour.red" to="b" /></ResourceRemap>)", "test" ) );
+    string remapped;
+    SW_EXPECT_FALSE( ResourceRemap::resolve( "a", remapped ) );
 }

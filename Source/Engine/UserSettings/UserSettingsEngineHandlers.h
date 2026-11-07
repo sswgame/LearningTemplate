@@ -65,6 +65,7 @@ namespace sw
      *            `input.toggleMode`(param 은 액션, 값은 `hold`/`toggle`), `input.keyBinding`(키 바인딩 설정의 기본 대상)
      *          - `localization.language`(빈 값은 게임 기본 언어 그대로)
      *          - `display.windowMode`(`windowed`/`borderless`), `display.resolution`(`<너비>x<높이>`), `display.vsync`
+     *          - `resource.tag`(param 은 리소스 태그 축 — `graphics.quality` 가 `quality` 축을 켠다. 리소스의 `<_when _if="quality.low">` 가 읽는다)
      *          선택지 공급자: `localization.languages`(읽은 언어 목록), `display.resolutions`(기본 모니터가 내는 해상도 — 못 읽으면 스키마의 고정 선택지).
      */
     class SW_API UserSettingsEngineHandlers
@@ -113,8 +114,10 @@ namespace sw
         [[nodiscard]] bool applyWindowMode( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyResolution( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyVSync( const UserSettingApplyParams& context );
-        void               collectLanguages( vector<UserSettingOption>& outListOption );
-        void               collectResolutions( vector<UserSettingOption>& outListOption );
+        /** @brief 값을 리소스 태그 축 `param` 의 값으로 넣습니다(`ResourceTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
+        [[nodiscard]] static bool applyResourceTag( const UserSettingApplyParams& context );
+        void                      collectLanguages( vector<UserSettingOption>& outListOption );
+        void                      collectResolutions( vector<UserSettingOption>& outListOption );
         /** @brief `1920x1080` 형식의 글을 만듭니다. */
         static string formatResolution( int32 width, int32 height );
 

@@ -10,6 +10,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -69,6 +70,7 @@ namespace sw
         _listRegistration.push_back( registry.registerHandler( "display.resolution", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyResolution, this ),
                                                                SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isResolutionText ) ) );
         _listRegistration.push_back( registry.registerHandler( "display.vsync", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyVSync, this ) ) );
+        _listRegistration.push_back( registry.registerHandler( "resource.tag", SW_DELEGATE_FUNCTION( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyResourceTag ) ) );
         _listRegistration.push_back( registry.registerOptionProvider( "display.resolutions",
                                                                       SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineHandlers::collectResolutions, this ) ) );
         _listRegistration.push_back( registry.registerOptionProvider( "localization.languages",
@@ -340,6 +342,12 @@ namespace sw
         _displayRequest._bHasVSync = _displayRequest._bHasVSync || context._bDefault == false;
         _bDisplayDirty             = _bDisplayDirty || context._bStartup == false;
         return true;
+    }
+
+    bool UserSettingsEngineHandlers::applyResourceTag( const UserSettingApplyParams& context )
+    {
+        // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `ResourceTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.
+        return ResourceTags::setAxisValue( context._param, context._value );
     }
 
     void UserSettingsEngineHandlers::collectLanguages( vector<UserSettingOption>& outListOption )

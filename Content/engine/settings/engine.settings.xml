@@ -43,7 +43,7 @@
 	<Setting id="display.vsync" category="display" type="Bool" default="false" target="handler:display.vsync" text="settings.display.vsync"/>
 
 	<!-- 그래픽 — graphics.quality 가 아래 일곱을 프리셋으로 묶는다(아래 <Scalability>). -->
-	<Setting id="graphics.quality" category="graphics" type="Enum" default="high" text="settings.graphics.quality">
+	<Setting id="graphics.quality" category="graphics" type="Enum" default="high" target="handler:resource.tag" param="quality" text="settings.graphics.quality">
 		<Option value="low" text="settings.graphics.quality.low"/>
 		<Option value="medium" text="settings.graphics.quality.medium"/>
 		<Option value="high" text="settings.graphics.quality.high"/>

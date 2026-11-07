@@ -7,6 +7,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 
 namespace sw
 {
@@ -55,7 +56,15 @@ namespace sw
         VectorUtil::sort( _listGroup, []( const Group& lhs, const Group& rhs )
         { return lhs._listLayer.size() != rhs._listLayer.size() ? lhs._listLayer.size() < rhs._listLayer.size() : lhs._listLayer < rhs._listLayer; } );
         _bDirty = SW_FALSE;
+        publishLayerTags();
         applyGroups();
+    }
+
+    void SceneDataLayerSubsystem::publishLayerTags() const
+    {
+        vector<string> listActive;
+        collectActiveLayers( listActive );
+        (void)ResourceTags::setAxisValues( "layer", listActive ); // '.' 이 든 레이어 이름은 태그가 될 수 없다 — `ResourceTags` 가 오류로 남긴다
     }
 
     void SceneDataLayerSubsystem::update( float32 deltaTime )
@@ -73,6 +82,7 @@ namespace sw
         _uniqueActiveLayer.clear();
         _pScene = nullptr;
         _bDirty = SW_FALSE;
+        publishLayerTags();
     }
 
     bool SceneDataLayerSubsystem::setLayerActive( string_view name, const bool bActive )
@@ -88,6 +98,7 @@ namespace sw
         else
             _uniqueActiveLayer.erase( key );
         _bDirty = SW_TRUE;
+        publishLayerTags();
         return true;
     }
 
@@ -135,6 +146,7 @@ namespace sw
             _uniqueActiveLayer.insert( layer );
         }
         _bDirty = SW_FALSE;
+        publishLayerTags();
     }
 
     void SceneDataLayerSubsystem::applyGroups()
