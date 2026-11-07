@@ -38,7 +38,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Clip of this layer; as long as the segment" )
+        PROPERTY( AssetPath, Tooltip = "Clip of this layer; as long as the segment" )
         hashed_string _path{};
         PROPERTY( Tooltip = "Game parameter that drives this layer's volume; empty plays it always" )
         hashed_string _parameter{};

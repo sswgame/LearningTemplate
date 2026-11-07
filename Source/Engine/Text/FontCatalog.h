@@ -31,7 +31,7 @@ namespace sw
         FontWeight _weight{ FontWeight::Regular };
         PROPERTY( Tooltip = "Slant this face draws" )
         FontSlant _slant{ FontSlant::Upright };
-        PROPERTY( Tooltip = "Resource path of the font file (.ttf, .otf, .ttc)" )
+        PROPERTY( AssetPath, Tooltip = "Resource path of the font file (.ttf, .otf, .ttc)" )
         string _path{};
         PROPERTY( Min = 0, Tooltip = "Face index inside a collection file (.ttc); 0 otherwise" )
         uint32 _faceIndex{ 0 };

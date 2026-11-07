@@ -43,7 +43,7 @@ namespace sw
          * @details 읽을 때 적은 순서대로 그 파일의 첨부를 `_listAttachment` 앞에 합친다(`RenderPipelineAsset::mergeRenderPassAttachments`) — 렌더러는 합친 목록만 본다.
          *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다.
          */
-        PROPERTY( SkipIfEmpty )
+        PROPERTY( SkipIfEmpty, AssetPath )
         vector<string> _listRenderPassRef;
 
         /**
@@ -51,7 +51,7 @@ namespace sw
          * @details 모듈이 런타임에 고르는 셰이더는 쿠커가 미리 구워 두어야 하므로(Shipping 은 PSO 를 컴파일하지 못한다) 데이터로 선언한다. 쿠커는 각 경로의 VS · PS 를 define 없이
          *          굽고, 런타임은 여기 없는 경로를 요청한 모듈 패스를 오류로 막는다.
          */
-        PROPERTY( SkipIfEmpty )
+        PROPERTY( SkipIfEmpty, AssetPath )
         vector<string> _listExtensionShader;
     };
 } // namespace sw

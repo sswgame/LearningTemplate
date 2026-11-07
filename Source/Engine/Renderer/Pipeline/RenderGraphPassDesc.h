@@ -311,7 +311,7 @@ namespace sw
         vector<ResolvedAttachment> _listResolvedColorOutput;
 
         /** @brief HLSL 경로(engine/... 또는 common/...)입니다. 비면 FrameRenderer 가 패스 타입의 기본 셰이더를 씁니다. */
-        PROPERTY( SkipIfEmpty )
+        PROPERTY( SkipIfEmpty, AssetPath )
         string _shaderPath;
 
         /** @brief 정점 셰이더 진입점입니다. 비면 스테이지 기본값을 씁니다(`resolveEntryPoint`, getShaderStageInfo 테이블). */

@@ -33,7 +33,7 @@ namespace sw
 
         PROPERTY( Required )
         string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _path{};
         PROPERTY()
         string _set{};

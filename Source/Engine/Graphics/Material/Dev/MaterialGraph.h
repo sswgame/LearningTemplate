@@ -79,7 +79,7 @@ namespace sw
         vector<MaterialGraphLink> _listLink{};
         PROPERTY( Tooltip = "Settings and constants of unconnected pins; values left out keep the kind's default" )
         vector<MaterialGraphValue> _listValue{};
-        PROPERTY( Tooltip = "Asset of the node: the default texture of a texture parameter, the graph of a subgraph node" )
+        PROPERTY( AssetPath, Tooltip = "Asset of the node: the default texture of a texture parameter, the graph of a subgraph node" )
         string _assetPath{};
         PROPERTY( Tooltip = "Position on the editor canvas; the compiler does not read it" )
         float2 _position{ 0.0f, 0.0f };
