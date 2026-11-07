@@ -631,7 +631,7 @@ namespace sw::editor
             return false; // 이유는 toDiskPath 가 남겼다
         const string                      path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
         const std::optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
-        if ( stackFile.has_value() == false || _stack.saveFile( *stackFile ) == false )
+        if ( stackFile.has_value() == false || _stack.saveToFile( *stackFile ) == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path.c_str() );
             return false;
@@ -648,7 +648,7 @@ namespace sw::editor
         const std::optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( path.has_value() == false )
             return false;
-        if ( _stack.loadFile( path->str() ) == false )
+        if ( _stack.loadFromFile( path->str() ) == false )
         {
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierStackCould2", "Mesh modifier stack %# could not be read", path->c_str() );
             return false;

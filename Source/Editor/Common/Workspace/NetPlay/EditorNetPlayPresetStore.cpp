@@ -147,7 +147,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsChangedBefore", "Multiplayer presets were changed before a preset file was loaded - nothing written" );
             return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( _filePath ) == false || JSONSerializer::saveFile( _filePath, &file, *EditorNetPlayPresetFile::StaticType() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( _filePath ) == false || JSONSerializer::saveToFile( _filePath, &file, *EditorNetPlayPresetFile::StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetsCouldNot", "Multiplayer presets could not be saved to %#", _filePath );
             return false;

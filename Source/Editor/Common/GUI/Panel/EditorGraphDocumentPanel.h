@@ -10,7 +10,7 @@
  * 이유로 뼈대도 여기에 모읍니다.
  *
  * [애셋에 요구하는 것]
- * `AssetType` 은 `_listNode` 와 `_listLink` 를 가지고 `toXML()` 과 `parseXML()` 을 제공해야 합니다. 노드와 링크 타입은
+ * `AssetType` 은 `_listNode` 와 `_listLink` 를 가지고 `toXML()` 과 `loadFromXMLText()` 을 제공해야 합니다. 노드와 링크 타입은
  * 그 목록에서 추론하므로 애셋이 따로 별칭을 노출할 필요는 없습니다.
  * 패널은 애셋을 **통째로** 보관하고 있습니다(`_graph`). 노드와 링크만 따로 들면 캔버스에 없는 필드(애니메이션 그래프의 레이어와 본 마스크)가
  * 읽기 → 저장 · Undo 를 한 번 지날 때마다 조용히 사라집니다.
@@ -172,7 +172,7 @@ namespace sw::editor
         {
             AssetType restored;
             // 되돌리기 텍스트는 이 패널이 쓴 XML 이다. 읽지 못하면 결함이므로 알리고 기본 그래프로 둔다.
-            if ( text.empty() == false && restored.parseXML( text ) == false )
+            if ( text.empty() == false && restored.loadFromXMLText( text ) == false )
                 SW_LOG_WARNING_ID( "EditorGraphDocumentPanel.GraphUndoSnapshotCould", "Graph undo snapshot could not be read - showing the default graph" );
 
             _graph = std::move( restored );
@@ -250,7 +250,7 @@ namespace sw::editor
                 // 복사 버퍼는 이 편집기가 쓴 같은 종류의 XML 이다 — 읽지 못하면 결함이라 알리고 붙이지 않는다.
                 if ( EditorNodeGraph::readClipboard( getGraphClipboardKind(), text ) == false )
                     return;
-                if ( pasted.parseXML( text ) == false )
+                if ( pasted.loadFromXMLText( text ) == false )
                 {
                     SW_LOG_WARNING_ID( "EditorGraphDocumentPanel.ClipboardUnreadable", "Copied graph nodes could not be read - nothing pasted" );
                     return;

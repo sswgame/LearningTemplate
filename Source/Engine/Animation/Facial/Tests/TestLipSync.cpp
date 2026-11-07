@@ -191,7 +191,7 @@ SW_TEST_CASE( LipSyncTest, TrackRoundTripsThroughXMLAndAFile )
 {
     const VisemeTrack track = LipSyncTestUtil::makeTrack();
     VisemeTrack       parsed;
-    SW_REQUIRE_TRUE( parsed.parseXML( track.toXML(), "test" ) );
+    SW_REQUIRE_TRUE( parsed.loadFromXMLText( track.toXML(), "test" ) );
     SW_EXPECT_EQUAL( parsed._frameRate, track._frameRate );
     SW_EXPECT_TRUE( parsed._listViseme == track._listViseme );
     SW_EXPECT_TRUE( parsed._listWeight == track._listWeight );
@@ -201,7 +201,7 @@ SW_TEST_CASE( LipSyncTest, TrackRoundTripsThroughXMLAndAFile )
     SW_REQUIRE_TRUE( track.saveToFile( *path ) );
     string text;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path->str(), text ) );
-    SW_EXPECT_TRUE( parsed.parseXML( text, "test" ) );
+    SW_EXPECT_TRUE( parsed.loadFromXMLText( text, "test" ) );
     SW_EXPECT_EQUAL( parsed.getFrameCount(), 2u );
 }
 
@@ -211,17 +211,17 @@ SW_TEST_CASE( LipSyncTest, BrokenTrackIsAnErrorAndLeavesNothing )
     VisemeTrack track = LipSyncTestUtil::makeTrack();
     {
         SW_EXPECT_LOG( "LipSync.VisemeTrackFrameRate" );
-        SW_EXPECT_FALSE( track.parseXML( "<VisemeTrack _frameRate=\"0\"><_listViseme><item>sil</item></_listViseme><_listFrame><Frame>1</Frame></_listFrame></VisemeTrack>", "test" ) );
+        SW_EXPECT_FALSE( track.loadFromXMLText( "<VisemeTrack _frameRate=\"0\"><_listViseme><item>sil</item></_listViseme><_listFrame><Frame>1</Frame></_listFrame></VisemeTrack>", "test" ) );
         SW_EXPECT_EQUAL( track.getVisemeCount(), 0u );
         SW_EXPECT_EQUAL( track.getFrameCount(), 0u );
     }
     {
         SW_EXPECT_LOG( "LipSync.VisemeTrackNeedsFrameRate" );
-        SW_EXPECT_FALSE( track.parseXML( "<VisemeTrack _frameRate=\"30\"><_listViseme></_listViseme><_listFrame></_listFrame></VisemeTrack>", "test" ) );
+        SW_EXPECT_FALSE( track.loadFromXMLText( "<VisemeTrack _frameRate=\"30\"><_listViseme></_listViseme><_listFrame></_listFrame></VisemeTrack>", "test" ) );
     }
     {
         SW_EXPECT_LOG( "LipSync.VisemeTrackFrameMust" );
-        SW_EXPECT_FALSE( track.parseXML( "<VisemeTrack _frameRate=\"30\"><_listViseme><item>sil</item><item>aa</item></_listViseme><_listFrame><Frame>1</Frame></_listFrame></VisemeTrack>", "test" ) );
+        SW_EXPECT_FALSE( track.loadFromXMLText( "<VisemeTrack _frameRate=\"30\"><_listViseme><item>sil</item><item>aa</item></_listViseme><_listFrame><Frame>1</Frame></_listFrame></VisemeTrack>", "test" ) );
         SW_EXPECT_EQUAL( track.getVisemeCount(), 0u );
     }
 }

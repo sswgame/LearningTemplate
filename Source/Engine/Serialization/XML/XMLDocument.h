@@ -322,8 +322,8 @@ namespace sw
         [[nodiscard]] bool parseData( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
-        [[nodiscard]] bool loadFile( string_view absPath );
-        /** @brief `loadFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
+        [[nodiscard]] bool loadFromFile( string_view absPath );
+        /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
         [[nodiscard]] bool loadDataFile( string_view absPath );
 
         /**
@@ -354,7 +354,7 @@ namespace sw
         /** @brief 현재 문서를 XML 문자열로 직렬화합니다. */
         string saveToString() const;
         /** @brief 현재 문서를 절대 경로에 씁니다. */
-        [[nodiscard]] bool saveFile( string_view absPath ) const;
+        [[nodiscard]] bool saveToFile( string_view absPath ) const;
 
         // ------------------------------------------------------------------------------
         // 6) 문자열 유틸: escape, unescape

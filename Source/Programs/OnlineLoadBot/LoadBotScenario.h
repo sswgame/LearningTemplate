@@ -76,7 +76,7 @@ namespace sw
         uint32 _seed{ 1 };
 
         /** @brief 파일을 읽습니다. 실패하면 false 와 @p outError(경로 · 칸 이름). */
-        [[nodiscard]] static bool loadFile( string_view path, LoadBotScenario& outScenario, string& outError );
+        [[nodiscard]] static bool loadFromFile( string_view path, LoadBotScenario& outScenario, string& outError );
         [[nodiscard]] static bool loadText( string_view jsonText, LoadBotScenario& outScenario, string& outError );
     };
 } // namespace sw

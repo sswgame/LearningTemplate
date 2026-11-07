@@ -43,7 +43,7 @@ namespace sw
             {
                 const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigFile );
                 JSONDocument document;
-                if ( document.loadFile( path ) == false )
+                if ( document.loadFromFile( path ) == false )
                 {
                     SW_LOG_ERROR_ID( "SavedRetention.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
                     return false;

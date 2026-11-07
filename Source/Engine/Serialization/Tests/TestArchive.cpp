@@ -209,7 +209,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveMathTypesStreaming )
 }
 
 /**
- * @brief [ArchiveTest] 디스크 파일 저장/로드(saveFile 및 Archive(file, true)) 라운드트립
+ * @brief [ArchiveTest] 디스크 파일 저장/로드(saveToFile 및 Archive(file, true)) 라운드트립
  */
 SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
 {
@@ -220,7 +220,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
     writeArch << sw::string( "TempArchiveFilePayload" );
     writeArch << -999.5f;
 
-    SW_REQUIRE_TRUE( writeArch.saveFile( tempFilePath ) );
+    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( tempFilePath ) );
 
     sw::Archive readArch( tempFilePath, true );

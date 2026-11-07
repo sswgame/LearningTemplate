@@ -256,7 +256,7 @@ namespace sw
         /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 경고하고 부모 없는 한 벌로 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 파싱합니다. 루트가 `_base` 를 적었으면 부모를 합칩니다. */
-        [[nodiscard]] bool parseXML( string_view xml );
+        [[nodiscard]] bool loadFromXMLText( string_view xml );
         /** @brief XML 본문을 만듭니다. */
         string toXML() const;
         /** @brief 노드 이름 목록을 채웁니다. */

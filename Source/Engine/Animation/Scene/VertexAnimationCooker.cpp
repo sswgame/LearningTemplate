@@ -35,7 +35,7 @@ namespace sw
 
 namespace sw
 {
-    bool VertexAnimationCookList::parseXML( string_view xml, string_view sourceLabel )
+    bool VertexAnimationCookList::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = VertexAnimationCookList{};
         XMLDocument document;
@@ -61,7 +61,7 @@ namespace sw
             *this = VertexAnimationCookList{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool VertexAnimationCookList::parseRoot( const XMLNode& root, string_view sourceLabel )

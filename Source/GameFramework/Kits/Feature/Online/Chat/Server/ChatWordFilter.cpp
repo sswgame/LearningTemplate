@@ -121,7 +121,7 @@ namespace sw
         }
     }
 
-    bool ChatWordFilter::loadFile( string_view path, ChatFilterMode mode, const ChatTextNormalizer& normalizer )
+    bool ChatWordFilter::loadFromFile( string_view path, ChatFilterMode mode, const ChatTextNormalizer& normalizer )
     {
         string content;
         if ( FileUtil::readTextFile( path, content ) == false )

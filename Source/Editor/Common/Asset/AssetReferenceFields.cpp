@@ -152,7 +152,7 @@ namespace sw::editor
     {
         const string path = FileUtil::joinPath( projectRoot, kConfigFile );
         JSONDocument document;
-        if ( document.loadFile( path ) == false )
+        if ( document.loadFromFile( path ) == false )
         {
             SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigUnreadable", "Asset reference fields %# could not be read", path );
             return false;
@@ -205,7 +205,7 @@ namespace sw::editor
     {
         const string path = FileUtil::joinPath( projectRoot, kGeneratedFile );
         JSONDocument document;
-        if ( document.loadFile( path ) == false )
+        if ( document.loadFromFile( path ) == false )
         {
             SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedUnreadable", "Generated asset reference fields %# could not be read", path );
             return false;

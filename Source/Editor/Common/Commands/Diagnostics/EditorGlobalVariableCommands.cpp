@@ -54,7 +54,7 @@ namespace sw::editor
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 
-        return FileUtil::ensureParentDirectoryExists( filePath ) && doc.saveFile( filePath );
+        return FileUtil::ensureParentDirectoryExists( filePath ) && doc.saveToFile( filePath );
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const string& filePath )
@@ -62,7 +62,7 @@ namespace sw::editor
         GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
 
         XMLDocument doc;
-        if ( doc.loadFile( filePath ) == false )
+        if ( doc.loadFromFile( filePath ) == false )
             return false;
 
         XMLNode rootNode = doc.getRoot();

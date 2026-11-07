@@ -536,7 +536,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( bFavorite ? SW_LOCKEY( "EditorInspector", "RemoveFromFavorites" ) : SW_LOCKEY( "EditorInspector", "AddToFavorites" ) ) )
             {
                 (void)_pFavorites->toggle( favoriteKey );
-                (void)_pFavorites->saveFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveFile 이 경고한다
+                (void)_pFavorites->saveToFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveToFile 이 경고한다
             }
             ImGui::Separator();
         }

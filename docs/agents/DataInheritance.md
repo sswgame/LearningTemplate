@@ -42,7 +42,7 @@
 
 ## 새 형식을 올리는 법
 
-**리플렉션 형식(`ReflectedXMLFile::loadDesc` · `XMLSerializer::loadFile` 로 읽는 것).** 읽기는 이미 합친다. 할 일은 목록 원소의 이름 칸에 표시를 하는 것뿐이다. 본보기는 `RenderGraphPassDesc` 다.
+**리플렉션 형식(`ReflectedXMLFile::loadDesc` · `XMLSerializer::loadFromFile` 로 읽는 것).** 읽기는 이미 합친다. 할 일은 목록 원소의 이름 칸에 표시를 하는 것뿐이다. 본보기는 `RenderGraphPassDesc` 다.
 
 ```cpp
 REFLECT()

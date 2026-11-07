@@ -47,7 +47,7 @@ SW_TEST_CASE( SpriteClipModelTest, UndoTextKeepsAtlasSizeAndBorders )
     SW_REQUIRE_TRUE( model.commitSelectedFrameBorder() );
 
     SpriteClipAsset readBack;
-    SW_REQUIRE_TRUE( readBack.parseXML( model.captureText() ) );
+    SW_REQUIRE_TRUE( readBack.loadFromXMLText( model.captureText() ) );
     SW_EXPECT_NEAR( 256.0f, readBack._atlasPixelSize._x, 1e-3f );
     SW_REQUIRE_EQUAL( 1, readBack.getFrameCount() );
     SW_EXPECT_TRUE( readBack._listFrame[0].hasBorder() );

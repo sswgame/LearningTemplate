@@ -53,13 +53,13 @@ namespace sw
 
 namespace sw
 {
-    bool SkeletonBoneLOD::parseXML( string_view xml, string_view sourceLabel )
+    bool SkeletonBoneLOD::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         DataInheritanceResourceSource source;
-        return parseXML( xml, sourceLabel, source );
+        return loadFromXMLText( xml, sourceLabel, source );
     }
 
-    bool SkeletonBoneLOD::parseXML( string_view xml, string_view sourceLabel, IDataInheritanceSource& source )
+    bool SkeletonBoneLOD::loadFromXMLText( string_view xml, string_view sourceLabel, IDataInheritanceSource& source )
     {
         _listLevel.clear();
         _listCoreBone.clear();
@@ -103,7 +103,7 @@ namespace sw
             _listCoreBone.clear();
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool SkeletonBoneLOD::parseRoot( const XMLNode& root, string_view sourceLabel )

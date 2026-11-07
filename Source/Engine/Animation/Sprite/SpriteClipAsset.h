@@ -148,7 +148,7 @@ namespace sw
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 읽습니다. 구문이 틀렸거나, 모르는 속성 · 자식 · 읽지 못한 값이 있으면 false 이고 내용은 비어 있습니다. */
-        [[nodiscard]] bool parseXML( string_view xml );
+        [[nodiscard]] bool loadFromXMLText( string_view xml );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 내용을 비웁니다. */

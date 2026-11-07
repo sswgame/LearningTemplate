@@ -76,7 +76,7 @@ namespace sw::editor
         }
         const string text = document.saveToString();
         RigAsset     check;
-        if ( check.parseXML( text, sourceLabel ) == false )
+        if ( check.loadFromXMLText( text, sourceLabel ) == false )
             return false; // 다시 읽기가 이유를 남겼다
         outXMLText = text;
         return true;

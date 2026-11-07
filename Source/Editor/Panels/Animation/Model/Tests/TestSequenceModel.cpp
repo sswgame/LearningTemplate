@@ -124,7 +124,7 @@ SW_TEST_CASE( SequenceModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
     }
     SW_REQUIRE_EQUAL( SW_COUNT_OF( kArrSequenceItemKindInfo ), document._asset._listItem.size() );
     SequenceAsset readBack;
-    SW_REQUIRE_TRUE( readBack.parseXML( document._asset.toXML() ) );
+    SW_REQUIRE_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
     const SequenceTrackItem& spawn = readBack._listItem[static_cast<size_t>( SequenceItemKind::Spawn )];
     SW_EXPECT_TRUE( spawn._kind == SequenceItemKind::Spawn );
     SW_EXPECT_TRUE( spawn._prefab == "a.prefab.xml" );
@@ -163,7 +163,7 @@ SW_TEST_CASE( SequenceModelTest, DraftWithEmptyFieldsNeverEntersTheDocument )
     SW_EXPECT_TRUE( document.isDraftingItem() );
     SW_EXPECT_TRUE( document._asset.toXML() == snapshot );
     SequenceAsset readBack;
-    SW_EXPECT_TRUE( readBack.parseXML( document._asset.toXML() ) );
+    SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
 
     document._itemEdit._targetObject = "Spawned";
     SW_REQUIRE_EQUAL( 0, document.commitItemDraft() );
@@ -235,7 +235,7 @@ SW_TEST_CASE( SequenceModelTest, ClearingARequiredFieldIsRefusedAndRestored )
     SW_EXPECT_TRUE( document.commitItemEdit() );
     SW_EXPECT_TRUE( document._asset._listItem[0]._prefab == "b.prefab.xml" );
     SequenceAsset readBack;
-    SW_EXPECT_TRUE( readBack.parseXML( document._asset.toXML() ) );
+    SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
 }
 
 // 사본은 글 칸만 적용한다 - 칸을 고치는 사이 타임라인이 옮긴 구간을 옛 값으로 덮지 않는다.

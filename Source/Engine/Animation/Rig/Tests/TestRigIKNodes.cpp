@@ -102,7 +102,7 @@ namespace
         {
             const string         xml   = string( R"(<RigAsset><targets><item name="Goal" bone="goal" /><item name="Pole" bone="pole" /><item name="Anchor" bone="anchor" /></targets><nodes>)" ) + nodeLine + "</nodes></RigAsset>";
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->parseXML( xml, "test.rig.xml" ) == false )
+            if ( asset->loadFromXMLText( xml, "test.rig.xml" ) == false )
                 return false;
             return _instance.initialize( asset, _skeleton, nullptr, "test" );
         }
@@ -570,7 +570,7 @@ SW_TEST_CASE( RigIKChainTest, InstancesSharingAnAssetKeepTheirOwnState )
 {
     const string         xml   = string( R"(<RigAsset><nodes>)" ) + makeFootPlacement( R"(interp_speed="5")" ) + "</nodes></RigAsset>";
     shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-    SW_REQUIRE_TRUE( asset->parseXML( xml, "shared.rig.xml" ) );
+    SW_REQUIRE_TRUE( asset->loadFromXMLText( xml, "shared.rig.xml" ) );
 
     RigIKTest first;
     RigIKTest second;

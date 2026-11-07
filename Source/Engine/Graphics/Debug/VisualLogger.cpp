@@ -434,13 +434,13 @@ namespace sw
             writeFloats( node, "b", arrB, 3 );
             writeFloats( node, "color", arrColor, 4 );
         }
-        return document.saveFile( absPath.str(), 1 );
+        return document.saveToFile( absPath.str(), 1 );
     }
 
     bool VisualLogger::loadFromFile( string_view diskPath )
     {
         JSONDocument document;
-        if ( document.loadFile( diskPath ) == false )
+        if ( document.loadFromFile( diskPath ) == false )
         {
             SW_LOG_ERROR_ID( "VisualLogger.VisualLogCouldNot", "Visual log '%#' could not be read: %#", diskPath, document.getLastError().c_str() );
             return false;

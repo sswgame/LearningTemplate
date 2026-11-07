@@ -97,7 +97,7 @@ namespace sw
         hashed_string _fallbackViseme;
 
         /** @brief XML 을 읽고 검사합니다. 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 프레임 속도 · RMS 순서 · 대역 순서 · 비즘 수 · 대체 비즘을 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
@@ -134,7 +134,7 @@ namespace sw
         /** @brief 시각 @p time(초)의 비즘 가중치들입니다(두 프레임 사이 선형). @p outListWeight 는 비즘 수입니다. 끝을 지나면 모두 0 입니다. */
         void sample( float32 time, vector<float32>& outListWeight ) const;
 
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         string             toXML() const;
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;

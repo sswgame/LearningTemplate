@@ -1,7 +1,7 @@
 /**
  * @file RetargetProfileEdit.h
  * @brief 리타깃 프로파일 창의 이름 규칙입니다. ImGui 없이 값만 다룹니다.
- * @details 창이 만드는 모든 중간 상태는 `RetargetProfile::toXML` 이 쓴 글을 `parseXML` 이 다시 읽을 수 있어야 한다 — 되돌리기가 그 글로 돌아오기 때문이다.
+ * @details 창이 만드는 모든 중간 상태는 `RetargetProfile::toXML` 이 쓴 글을 `loadFromXMLText` 이 다시 읽을 수 있어야 한다 — 되돌리기가 그 글로 돌아오기 때문이다.
  *          본 목록이 빈 사슬과 겹친 사슬 이름은 다시 읽을 때 오류이므로 여기서 애초에 만들지 못하게 한다.
  */
 #pragma once

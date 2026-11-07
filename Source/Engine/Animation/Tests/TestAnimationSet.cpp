@@ -43,7 +43,7 @@ SW_TEST_CASE( AnimationSetTest, RoundTripsAndIgnoresNameCase )
     const string text = written.saveToString();
 
     AnimationSet read;
-    SW_REQUIRE_TRUE( read.parseXML( text, "<test>" ) );
+    SW_REQUIRE_TRUE( read.loadFromXMLText( text, "<test>" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, read.getEntries().size() );
     SW_EXPECT_EQUAL( string( "idle" ), read.getEntries()[0]._name ); // 이름순
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/bbbb.animclip" ), AnimationSetTestUtil::findPath( read, "WALK" ) );
@@ -68,7 +68,7 @@ SW_TEST_CASE( AnimationSetTest, BaseAndBorrowedClipsFlattenIntoOneTable )
                         "<clip name=\"farm_harvest\" set=\"" + otherID + "\" />" +                                       // 같은 이름을 빌린다
                         "<clip name=\"harvest\" set=\"" + otherID + "\" source=\"farm_harvest\" />" + "</AnimationSet>"; // 다른 이름으로 빌린다
     AnimationSet animationSet;
-    SW_REQUIRE_TRUE( animationSet.parseXML( text, "<test>" ) );
+    SW_REQUIRE_TRUE( animationSet.loadFromXMLText( text, "<test>" ) );
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/aaaa.animclip" ), AnimationSetTestUtil::findPath( animationSet, "idle" ) ); // 바탕 그대로
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/dddd.animclip" ), AnimationSetTestUtil::findPath( animationSet, "walk" ) );
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/cccc.animclip" ), AnimationSetTestUtil::findPath( animationSet, "farm_harvest" ) );
@@ -82,20 +82,20 @@ SW_TEST_CASE( AnimationSetTest, RejectsBrokenLines )
 {
     AnimationSet animationSet;
     SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
-    SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" set="y"/></AnimationSet>)", "<test>" ) );
-    SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" set="y"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "AnimationSet.DuplicateClip" );
-    SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a" path="x"/><clip name="A" path="y"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x"/><clip name="A" path="y"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "AnimationSet.NameHasPath" );
-    SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a/b" path="x"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a/b" path="x"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
-    SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" speed="2"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" speed="2"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_TRUE( animationSet.getEntries().empty() );
 
     const test::ScopedScratchDomain domain;
     const string                    base = AnimationSetTestUtil::writeBaseSet( domain, "base.animset.xml" );
     SW_EXPECT_LOG( "AnimationSet.ClipNotInSet" );
-    SW_EXPECT_FALSE( animationSet.parseXML( "<AnimationSet formatVersion=\"0\"><clip name=\"run\" set=\"" + base + "\"/></AnimationSet>", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( "<AnimationSet formatVersion=\"0\"><clip name=\"run\" set=\"" + base + "\"/></AnimationSet>", "<test>" ) );
 }
 
 /**
@@ -112,12 +112,12 @@ SW_TEST_CASE( AnimationSetTest, ChildRemovesAndReplacesBaseLines )
 
     const string text = "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\">" + "<clip name=\"idle\" _op=\"Remove\" />" + "<clip name=\"walk\" _op=\"Replace\" set=\"" + otherID + "\" source=\"sprint\" />" + "</AnimationSet>";
     AnimationSet animationSet;
-    SW_REQUIRE_TRUE( animationSet.parseXML( text, "<test>" ) );
+    SW_REQUIRE_TRUE( animationSet.loadFromXMLText( text, "<test>" ) );
     SW_EXPECT_TRUE( animationSet.findClipPath( hashed_string( "idle" ) ) == nullptr );
     SW_EXPECT_EQUAL( string( "common/models/_shared/clips/cccc.animclip" ), AnimationSetTestUtil::findPath( animationSet, "walk" ) );
 
     SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
-    SW_EXPECT_FALSE( animationSet.parseXML( "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\"><clip name=\"walk\" set=\"" + otherID + "\" source=\"sprint\" /></AnimationSet>", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\"><clip name=\"walk\" set=\"" + otherID + "\" source=\"sprint\" /></AnimationSet>", "<test>" ) );
 }
 
 /**

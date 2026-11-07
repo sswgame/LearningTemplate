@@ -47,7 +47,7 @@ namespace sw
     {
         const string_view assetPath = assetID.view();
         *this                       = NavMeshSettings{};
-        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsCouldNot", "Navigation settings could not be read or hold unknown keys: %#", assetPath );
             return false;

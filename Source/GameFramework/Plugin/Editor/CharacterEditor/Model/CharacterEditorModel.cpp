@@ -462,7 +462,7 @@ namespace sw::editor
         }
         const string                      assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
         const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        const bool                        bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveFile( writePath->str() );
+        const bool                        bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveToFile( writePath->str() );
         if ( bWritten == false )
         {
             _status = "Data preset could not be written to " + assetID;

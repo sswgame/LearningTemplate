@@ -1,6 +1,6 @@
 /**
  * @file ResourceComposer.h
- * @brief 리소스 글을 읽기 전에 합치는 한 길입니다. 모든 읽는 쪽(`XMLDocument::parseData` · `ReflectedXMLFile` · `XMLSerializer::loadFile` · `Material` · 프리팹 머리 · 팩 쿠커)이 이 함수를 지납니다.
+ * @brief 리소스 글을 읽기 전에 합치는 한 길입니다. 모든 읽는 쪽(`XMLDocument::parseData` · `ReflectedXMLFile` · `XMLSerializer::loadFromAsset` · `Material` · 프리팹 머리 · 팩 쿠커)이 이 함수를 지납니다.
  * @details 단계는 부모(`_base`) → 조건(`_when`) → 덮어쓰기 층입니다(`docs/ResourceStructure.md`). 지금은 부모 단계만 있고, 뒤의 두 단계는 `compose` 안 부모 단계 뒤에 더합니다 — 읽는 쪽은 고치지 않습니다.
  *          언리얼은 Device Profile · 팩 우선순위 · CDO 가 저마다의 길로 값을 얹고, Godot 은 기능 태그와 씬 상속이 따로다(기억에 의존). 여기는 차이를 얹는 일이 글 수준에서 한 함수를 지나므로
  *          읽는 코드가 변형을 모르고, 쿠킹본과 런타임이 같은 결과를 본다.

@@ -105,7 +105,7 @@ namespace sw
 
     bool RhythmChart::loadFromAsset( const AssetID& assetID )
     {
-        return GameDataXML::loadFile( *this, &RhythmChart::loadRoot, assetID, "Chart" );
+        return GameDataXML::loadFromFile( *this, &RhythmChart::loadRoot, assetID, "Chart" );
     }
 
     bool RhythmChart::loadFromXMLText( string_view xmlText, string_view sourceName )

@@ -34,7 +34,7 @@ namespace sw
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
         *this = GameSettings{};
-        return GameDataXML::loadFile( *this, &GameSettings::loadRoot, assetID, "GameSettings" );
+        return GameDataXML::loadFromFile( *this, &GameSettings::loadRoot, assetID, "GameSettings" );
     }
 
     bool GameSettings::loadFromXMLText( string_view xmlText, string_view sourceName )

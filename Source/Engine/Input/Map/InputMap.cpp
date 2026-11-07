@@ -2282,7 +2282,7 @@ namespace sw
         }
         if ( bAllWritten == false )
             return false;
-        if ( doc.saveFile( absPath.str() ) == false )
+        if ( doc.saveToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
             return false;
@@ -2381,7 +2381,7 @@ namespace sw
         XMLDocument doc;
         if ( fillSourceDocument( sourceIndex, doc ) == false )
             return false;
-        if ( doc.saveFile( absPath.str() ) == false )
+        if ( doc.saveToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
             return false;

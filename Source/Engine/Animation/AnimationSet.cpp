@@ -77,7 +77,7 @@ namespace sw
         return document.saveToString();
     }
 
-    bool AnimationSet::parseXML( string_view xml, string_view sourceLabel )
+    bool AnimationSet::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         _listEntry.clear();
         if ( parseChained( xml, sourceLabel, 0 ) )
@@ -96,7 +96,7 @@ namespace sw
             _listEntry.clear();
             return false;
         }
-        return parseXML( text, assetID.view() );
+        return loadFromXMLText( text, assetID.view() );
     }
 
     bool AnimationSet::loadChained( string_view path, uint32 depth )

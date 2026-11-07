@@ -47,7 +47,7 @@ namespace sw
     {
         if ( bReadMode )
         {
-            // 파일 입구는 디스크 경로만 받는다 — `saveFile` 이 쓴 곳과 같은 규칙이다. 리소스 id 는 부르는 쪽이 `AssetIO::readBinaryAsset`
+            // 파일 입구는 디스크 경로만 받는다 — `saveToFile` 이 쓴 곳과 같은 규칙이다. 리소스 id 는 부르는 쪽이 `AssetIO::readBinaryAsset`
             // 로 바이트를 읽어 버퍼 생성자로 넘긴다. 예전에는 디스크를 먼저 보고 없으면 리소스 id 로 다시 찾아, 두 종류의 경로가 한 입구로 들어왔다.
             const bool bLoaded = fileName.empty() == false && AssetIO::readBinaryFile( fileName, _bytes );
             if ( bLoaded )
@@ -96,7 +96,7 @@ namespace sw
         _offset    = 0;
     }
 
-    bool Archive::saveFile( string_view fileName ) const
+    bool Archive::saveToFile( string_view fileName ) const
     {
         if ( _bytes.empty() == false )
             return FileUtil::writeFile( fileName, _bytes.data(), _bytes.size() );

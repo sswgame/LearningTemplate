@@ -674,7 +674,7 @@ namespace sw::editor
     {
         SequenceAsset restored;
         // 읽지 못한 스냅숏으로 문서를 비우면 다음 저장이 내용을 잃는다 — 지금 문서를 그대로 둔다.
-        if ( text.empty() == false && restored.parseXML( text ) == false )
+        if ( text.empty() == false && restored.loadFromXMLText( text ) == false )
         {
             SW_LOG_WARNING_ID( "SequencerPanel.SequenceUndoSnapshotCould", "Sequence undo snapshot could not be read - keeping the current sequence" );
             return;

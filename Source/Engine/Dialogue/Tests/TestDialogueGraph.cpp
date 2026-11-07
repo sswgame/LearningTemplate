@@ -169,7 +169,7 @@ SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
     }
     const string       written = source.toXML();
     DialogueGraphAsset reread;
-    SW_REQUIRE_TRUE( reread.parseXML( written ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( written ) );
     SW_REQUIRE_EQUAL( static_cast<uint32>( source._listNode.size() ), static_cast<uint32>( reread._listNode.size() ) );
     for ( size_t nodeIndex = 0; nodeIndex < source._listNode.size(); ++nodeIndex )
     {
@@ -190,10 +190,10 @@ SW_TEST_CASE( DialogueGraphTest, MissingRequiredOrDuplicateIDIsRejected )
     SW_EXPECT_LOG( "Dialogue.NodeIDInvalid" ); // 노드 id 가 겹친다
     SW_EXPECT_LOG( "Config.KeyUnknown" );      // 옛 키 이름
     DialogueGraphAsset asset;
-    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
-    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode><_listLink><DialogueAssetLink _fromPin="102" _toPin="201" /></_listLink></DialogueGraphAsset>)" ) );
-    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /><DialogueAssetNode _id="1" _type="End" /></_listNode></DialogueGraphAsset>)" ) );
-    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><nodes><node id="1" type="Start" /></nodes><links /></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode><_listLink><DialogueAssetLink _fromPin="102" _toPin="201" /></_listLink></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /><DialogueAssetNode _id="1" _type="End" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><nodes><node id="1" type="Start" /></nodes><links /></DialogueGraphAsset>)" ) );
     SW_EXPECT_TRUE( asset._listNode.empty() );
     SW_EXPECT_TRUE( asset._listLink.empty() );
 }
@@ -228,7 +228,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
     const DialogueGraphAsset source = makeChoiceGraph();
 
     DialogueGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );
+    SW_EXPECT_TRUE( parsed.loadFromXMLText( source.toXML() ) );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( parsed._listNode.size() ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeKind::Choice );

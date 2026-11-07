@@ -153,7 +153,7 @@ namespace sw
         return -1;
     }
 
-    bool RigAsset::parseXML( string_view xml, string_view sourceLabel )
+    bool RigAsset::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         SW_MEMORY_SCOPE( Animation );
         clear();
@@ -187,7 +187,7 @@ namespace sw
             clear();
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool RigAsset::parseRoot( const XMLNode& root, string_view sourceLabel )

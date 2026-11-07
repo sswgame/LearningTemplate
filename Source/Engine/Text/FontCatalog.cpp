@@ -19,7 +19,7 @@ namespace sw
     {
         const string_view assetPath = assetID.view();
         *this                       = FontCatalogDesc{};
-        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "FontCatalog.FontCatalogCouldNot", "[Text] Font catalog could not be read or holds unknown keys: %#", assetPath );
             return false;

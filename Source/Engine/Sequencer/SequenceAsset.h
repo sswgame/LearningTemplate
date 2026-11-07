@@ -253,7 +253,7 @@ namespace sw
          * @details **실패하면 빈 에셋이 남는다.** 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 이전
          *          시퀀스가 새 시퀀스인 척한다.
          */
-        [[nodiscard]] bool parseXML( string_view xml );
+        [[nodiscard]] bool loadFromXMLText( string_view xml );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 종류의 특성 항목을 반환합니다. 테이블에 없는 값이면 nullptr 입니다. */

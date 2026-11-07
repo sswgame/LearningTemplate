@@ -53,7 +53,7 @@ namespace sw
 
 namespace sw
 {
-    bool AnimationCrowdSettings::parseXML( string_view xml, string_view sourceLabel )
+    bool AnimationCrowdSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = AnimationCrowdSettings{};
         XMLDocument document;
@@ -79,7 +79,7 @@ namespace sw
             *this = AnimationCrowdSettings{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool AnimationCrowdSettings::parseRoot( const XMLNode& root, string_view sourceLabel )

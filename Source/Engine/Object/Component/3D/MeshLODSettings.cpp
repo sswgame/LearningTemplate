@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    bool MeshLODSettings::parseXML( string_view xml, string_view sourceLabel )
+    bool MeshLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = MeshLODSettings{};
         const string label{ sourceLabel };
@@ -35,7 +35,7 @@ namespace sw
             *this = MeshLODSettings{};
             return false;
         }
-        return parseXML( text, assetID.view() );
+        return loadFromXMLText( text, assetID.view() );
     }
 
     const MeshLODSettings& MeshLODSettings::getDefault()

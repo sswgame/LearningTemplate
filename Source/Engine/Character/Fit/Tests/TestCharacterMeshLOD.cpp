@@ -79,8 +79,8 @@ SW_TEST_CASE( CharacterMeshLODTest, LevelsKeepSectionsAndOnlyTheirVertices )
     const uint32           sectionIndexCount = mesh->getSections()[0]._indexCount;
 
     CharacterLODSettings settings;
-    SW_REQUIRE_TRUE( settings.parseXML( R"(<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.01" screen_size="0.3" lock_border="true" permissive="false" prune="false"/><Level triangle_ratio="0.2" max_error="0.05" screen_size="0.1" lock_border="false" permissive="true" prune="false"/></CharacterLODSettings>)",
-                                        "test" ) );
+    SW_REQUIRE_TRUE( settings.loadFromXMLText( R"(<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.01" screen_size="0.3" lock_border="true" permissive="false" prune="false"/><Level triangle_ratio="0.2" max_error="0.05" screen_size="0.1" lock_border="false" permissive="true" prune="false"/></CharacterLODSettings>)",
+                                               "test" ) );
     SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *mesh, settings, {} ) );
     SW_REQUIRE_EQUAL( 3u, mesh->getLODCount() );
     SW_EXPECT_EQUAL( mesh->getLODVertices().size(), mesh->getLODSkinVertices().size() );
@@ -147,8 +147,8 @@ SW_TEST_CASE( CharacterMeshLODTest, SettingsRejectNonDecreasingLevels )
 {
     SW_EXPECT_LOG( "CharacterMeshLOD.SettingsLevelInvalid" );
     CharacterLODSettings settings;
-    SW_EXPECT_FALSE( settings.parseXML( R"(<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.01" screen_size="0.3" lock_border="true" permissive="false" prune="false"/><Level triangle_ratio="0.6" max_error="0.01" screen_size="0.1" lock_border="true" permissive="false" prune="false"/></CharacterLODSettings>)",
-                                        "test" ) );
+    SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.01" screen_size="0.3" lock_border="true" permissive="false" prune="false"/><Level triangle_ratio="0.6" max_error="0.01" screen_size="0.1" lock_border="true" permissive="false" prune="false"/></CharacterLODSettings>)",
+                                               "test" ) );
     SW_EXPECT_TRUE( settings._listLevel.empty() );
 }
 

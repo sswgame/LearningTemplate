@@ -170,7 +170,7 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), deltaText.empty() ? fullText : deltaText );
     }
 
-    bool AnimationGraphAsset::parseXML( string_view xmlView )
+    bool AnimationGraphAsset::loadFromXMLText( string_view xmlView )
     {
         clear();
         return parseText( xmlView, "<animation graph text>" );

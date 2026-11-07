@@ -286,7 +286,7 @@ namespace sw
         _sourcePath = diskPath;
         AssetLoadScope loadScope( "Scene", diskPath );
         XMLDocument    doc;
-        const bool     bRead = doc.loadFile( diskPath );
+        const bool     bRead = doc.loadFromFile( diskPath );
         vector<string> listChain;
         return readXMLSource( doc, bRead, string( diskPath ), loadScope, listChain );
     }
@@ -528,7 +528,7 @@ namespace sw
         XMLDocument xmlDoc;
         if ( buildXML( xmlDoc ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;
@@ -749,7 +749,7 @@ namespace sw
             SceneDocumentInternal::writeEntities( arch, cell._listSceneObjectNode );
         }
 
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && arch.saveFile( absPath.str() );
+        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && arch.saveToFile( absPath.str() );
         if ( bOk )
             SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                             static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );

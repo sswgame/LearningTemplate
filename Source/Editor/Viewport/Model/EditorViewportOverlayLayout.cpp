@@ -112,14 +112,14 @@ namespace sw::editor
         return state._dock == EditorOverlayDock::Left || state._dock == EditorOverlayDock::Right;
     }
 
-    bool EditorViewportOverlayLayout::saveFile( string_view absPath ) const
+    bool EditorViewportOverlayLayout::saveToFile( string_view absPath ) const
     {
         EditorViewportOverlayFile file;
         file._listBar = _listBar;
-        return JSONSerializer::saveFile( absPath, &file, *EditorViewportOverlayFile::StaticType() );
+        return JSONSerializer::saveToFile( absPath, &file, *EditorViewportOverlayFile::StaticType() );
     }
 
-    ConfigReadResult EditorViewportOverlayLayout::loadFile( string_view absPath )
+    ConfigReadResult EditorViewportOverlayLayout::loadFromFile( string_view absPath )
     {
         EditorViewportOverlayFile file;
         const ConfigReadResult    result = ConfigManager::readConfigFile( file, absPath );

@@ -501,13 +501,13 @@ namespace sw::editor
         return true;
     }
 
-    bool MeshModifierStack::saveFile( const AbsolutePath& absPath ) const
+    bool MeshModifierStack::saveToFile( const AbsolutePath& absPath ) const
     {
         const string text = makeJSONText( 2 );
         return FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( text.data() ), text.size() );
     }
 
-    bool MeshModifierStack::loadFile( string_view absolutePath )
+    bool MeshModifierStack::loadFromFile( string_view absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )

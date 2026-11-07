@@ -85,7 +85,7 @@ SW_TEST_CASE( RetargetProfileEditTest, APoseBoneIsListedOnce )
     SW_EXPECT_FALSE( RetargetProfileEdit::canAddPoseBone( listPose, hashed_string( "hip" ) ) );
 }
 
-// 본 목록이 빈 사슬은 `parseXML` 이 거절한다 — 만들 수 있으면 되돌리기가 그 글로 돌아올 때 프로필이 통째로 비었다.
+// 본 목록이 빈 사슬은 `loadFromXMLText` 이 거절한다 — 만들 수 있으면 되돌리기가 그 글로 돌아올 때 프로필이 통째로 비었다.
 SW_TEST_CASE( RetargetProfileEditTest, AChainIsMadeOnlyWithBonesOnBothSides )
 {
     vector<RetargetChain> listChain;
@@ -101,7 +101,7 @@ SW_TEST_CASE( RetargetProfileEditTest, AChainIsMadeOnlyWithBonesOnBothSides )
     profile.addChain( RetargetChain{ hashed_string( "Empty" ), {}, {}, SW_FALSE } );
     RetargetProfile reread;
     SW_EXPECT_LOG( "Rig.Rig" );
-    SW_EXPECT_FALSE( reread.parseXML( profile.toXML(), "empty chain" ) ); // 이 모양이 왜 막혔는지 그대로 적어 둔다
+    SW_EXPECT_FALSE( reread.loadFromXMLText( profile.toXML(), "empty chain" ) ); // 이 모양이 왜 막혔는지 그대로 적어 둔다
 }
 
 // 만든 사슬로 이룬 프로필은 쓴 글을 그대로 다시 읽는다 — 되돌리기의 전제다.
@@ -113,11 +113,11 @@ SW_TEST_CASE( RetargetProfileEditTest, ProfilesTheEditorBuildsRoundTripThroughXM
         RetargetPoseBone{ hashed_string( "shin" ), float3{ 1.0f, 2.0f, 3.0f } }
     } );
     RetargetProfile reread;
-    SW_REQUIRE_TRUE( reread.parseXML( profile.toXML(), "round trip" ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( profile.toXML(), "round trip" ) );
     SW_EXPECT_TRUE( reread.toXML() == profile.toXML() );
 
     RetargetProfile blank; // 새 문서는 아직 아무것도 묶이지 않았어도 되돌리기로 돌아온다
-    SW_REQUIRE_TRUE( reread.parseXML( blank.toXML(), "blank" ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( blank.toXML(), "blank" ) );
     SW_EXPECT_TRUE( reread.getChains().empty() );
 }
 

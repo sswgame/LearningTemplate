@@ -97,7 +97,7 @@ namespace sw
         RigAsset& operator=( RigAsset&& ) noexcept;
 
         /** @brief XML 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 모두 비웁니다. */

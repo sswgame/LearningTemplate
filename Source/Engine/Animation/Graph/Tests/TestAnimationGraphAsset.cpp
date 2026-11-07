@@ -40,7 +40,7 @@ namespace
         {
             SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "base.animgraph.xml" ), sw::string{ kBaseGraph } ) );
             const sw::string baseID = sw::test::ScopedScratchDomain::makeID( "base.animgraph.xml" ).str();
-            return outGraph.parseXML( "<AnimationGraphAsset _base=\"" + baseID + "\">" + pChildBody + "</AnimationGraphAsset>" );
+            return outGraph.loadFromXMLText( "<AnimationGraphAsset _base=\"" + baseID + "\">" + pChildBody + "</AnimationGraphAsset>" );
         }
     };
 } // namespace
@@ -51,7 +51,7 @@ namespace
 SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
 {
     sw::AnimationGraphAsset graph;
-    SW_REQUIRE_TRUE( graph.parseXML( kGraph ) );
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( kGraph ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, graph._listNode.size() );
     SW_EXPECT_EQUAL( int8{ 1 }, graph._listNode[0]._loopOverride );
     SW_EXPECT_EQUAL( int8{ -1 }, graph._listNode[1]._loopOverride );
@@ -76,10 +76,10 @@ SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
 SW_TEST_CASE( AnimationGraphAssetTest, WriteReadRoundTrips )
 {
     sw::AnimationGraphAsset graph;
-    SW_REQUIRE_TRUE( graph.parseXML( kGraph ) );
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( kGraph ) );
     const sw::string        written = graph.toXML();
     sw::AnimationGraphAsset reread;
-    SW_REQUIRE_TRUE( reread.parseXML( written ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( written ) );
     SW_EXPECT_EQUAL( written, reread.toXML() );
     SW_EXPECT_TRUE( written.find( "blend_mode=\"Crossfade\"" ) == sw::string::npos ); // 기본 전이 방식은 생략
     SW_EXPECT_TRUE( written.find( "op=\"GreaterEqual\"" ) != sw::string::npos );
@@ -95,9 +95,9 @@ SW_TEST_CASE( AnimationGraphAssetTest, RejectsFieldErrors )
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     sw::AnimationGraphAsset graph;
-    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"A\" colour=\"red\"/></nodes></AnimationGraphAsset>" ) );
-    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><nodes><node name=\"A\"/></nodes></AnimationGraphAsset>" ) );
-    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><layers><layer name=\"L\" clip=\"C\" weight=\"2\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"A\" colour=\"red\"/></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node name=\"A\"/></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><layers><layer name=\"L\" clip=\"C\" weight=\"2\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
 }
 
@@ -150,15 +150,15 @@ SW_TEST_CASE( AnimationGraphAssetTest, ChildClearsConditionAndReplacesLayer )
 SW_TEST_CASE( AnimationGraphAssetTest, LayerSlotRoundTripsAndNeedsOneSource )
 {
     sw::AnimationGraphAsset graph;
-    SW_REQUIRE_TRUE( graph.parseXML( kBaseGraph ) );
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( kBaseGraph ) );
     SW_EXPECT_TRUE( graph.findLayer( sw::hashed_string( "Upper" ) )->_slotName == sw::hashed_string( "UpperBody" ) );
     sw::AnimationGraphAsset reread;
-    SW_REQUIRE_TRUE( reread.parseXML( graph.toXML() ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( graph.toXML() ) );
     SW_EXPECT_TRUE( reread.findLayer( sw::hashed_string( "Upper" ) )->_slotName == sw::hashed_string( "UpperBody" ) );
 
     SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphRepeatsLayer" );
-    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><layers><layer name=\"L\" clip=\"C\" slot=\"S\" weight=\"1\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
-    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><layers><layer name=\"L\" weight=\"1\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><layers><layer name=\"L\" clip=\"C\" slot=\"S\" weight=\"1\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><layers><layer name=\"L\" weight=\"1\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
 }
 
 /**
@@ -225,13 +225,13 @@ SW_TEST_CASE( AnimationGraphAssetTest, ChildSetsOnlyLODGrades )
 
     const sw::string        written = graph.toXML();
     sw::AnimationGraphAsset reread;
-    SW_REQUIRE_TRUE( reread.parseXML( written ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( written ) );
     SW_EXPECT_EQUAL( written, reread.toXML() );
     SW_EXPECT_TRUE( written.find( "max_lod=\"1\"" ) != sw::string::npos );
 
     // 기본값(-1)은 쓰지 않는다 — LOD 를 적지 않은 그래프의 파일은 그대로다.
     sw::AnimationGraphAsset plain;
-    SW_REQUIRE_TRUE( plain.parseXML( kGraph ) );
+    SW_REQUIRE_TRUE( plain.loadFromXMLText( kGraph ) );
     SW_EXPECT_TRUE( plain.toXML().find( "max_lod" ) == sw::string::npos );
 }
 
@@ -242,6 +242,6 @@ SW_TEST_CASE( AnimationGraphAssetTest, RejectsMaxLODOnClipState )
 {
     SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeMaxLOD" );
     sw::AnimationGraphAsset graph;
-    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Idle\" max_lod=\"1\"/></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Idle\" max_lod=\"1\"/></nodes></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
 }

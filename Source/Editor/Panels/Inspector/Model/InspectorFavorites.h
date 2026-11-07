@@ -56,9 +56,9 @@ namespace sw::editor
         void fromText( string_view text );
 
         /** @brief 파일을 읽습니다. 파일이 없으면 빈 집합으로 두고 false 입니다(처음 실행이면 정상). */
-        [[nodiscard]] bool loadFile( string_view filePath );
+        [[nodiscard]] bool loadFromFile( string_view filePath );
         /** @brief 파일에 씁니다. 실패하면 경고하고 false 입니다. */
-        [[nodiscard]] bool saveFile( string_view filePath ) const;
+        [[nodiscard]] bool saveToFile( string_view filePath ) const;
         /** @brief 기본 저장 파일 경로입니다(에디터 상태 폴더의 `kFileName`). */
         static string getDefaultFilePath();
 

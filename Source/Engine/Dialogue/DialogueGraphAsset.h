@@ -177,7 +177,7 @@ namespace sw
         /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 읽습니다. 틀린 글이면 false 이고 그래프는 비어 있습니다. */
-        [[nodiscard]] bool parseXML( string_view xml );
+        [[nodiscard]] bool loadFromXMLText( string_view xml );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 노드 타입의 화면 이름을 반환합니다. 모르는 값이면 "Unknown" 입니다. */

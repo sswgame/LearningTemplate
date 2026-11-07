@@ -282,7 +282,7 @@ SW_TEST_CASE( SkeletonVariantTest, FilesRoundTrip )
     const string xml = merged.toXML();
     SW_EXPECT_TRUE( xml.find( "_inverseBind" ) == string::npos );
     Skeleton read;
-    SW_REQUIRE_TRUE( read.parseXML( xml, "test" ) );
+    SW_REQUIRE_TRUE( read.loadFromXMLText( xml, "test" ) );
     SW_EXPECT_EQUAL( 3u, read.getBoneCount() );
     SW_EXPECT_TRUE( read.isPartial() );
     SW_EXPECT_TRUE( read.findSocket( hashed_string( "Hand" ) ) != nullptr );
@@ -293,7 +293,7 @@ SW_TEST_CASE( SkeletonVariantTest, FilesRoundTrip )
     const string badXML = "<Skeleton><_listBone><SkeletonBone _name=\"a\" _parentIndex=\"-1\"><_referencePose _translation=\"0,0,0\" _rotation=\"0,0,0,1\" _scale=\"1,1,1\" /></SkeletonBone></_listBone><_listAttachment />"
                           "<_listSocket><SkeletonSocket _name=\"s\" _parentBone=\"nope\"><_localTransform _translation=\"0,0,0\" _rotation=\"0,0,0,1\" _scale=\"1,1,1\" /></SkeletonSocket></_listSocket></Skeleton>";
     SW_EXPECT_LOG( "Skeleton.SocketNamesUnknownBone" );
-    SW_EXPECT_FALSE( bad.parseXML( badXML, "test" ) );
+    SW_EXPECT_FALSE( bad.loadFromXMLText( badXML, "test" ) );
 }
 
 /**
@@ -367,8 +367,8 @@ SW_TEST_CASE( SkeletonVariantTest, CookFlattensToAPlainSkeleton )
 
     Skeleton fromSource;
     Skeleton fromCooked;
-    SW_REQUIRE_TRUE( fromSource.parseXML( variant.toXML(), "variant" ) );
-    SW_REQUIRE_TRUE( fromCooked.parseXML( flatText, "cooked" ) );
+    SW_REQUIRE_TRUE( fromSource.loadFromXMLText( variant.toXML(), "variant" ) );
+    SW_REQUIRE_TRUE( fromCooked.loadFromXMLText( flatText, "cooked" ) );
     SW_EXPECT_EQUAL( fromSource.getBoneCount(), fromCooked.getBoneCount() );
     SW_EXPECT_EQUAL( fromSource.getHierarchyHash( fromSource.getBoneCount() ), fromCooked.getHierarchyHash( fromSource.getBoneCount() ) );
     SW_EXPECT_TRUE( fromCooked.isAddedBone( fromCooked.getBoneCount() - 1 ) );

@@ -65,9 +65,9 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "SkeletonBoneLOD", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 을 읽습니다(`_base` 는 리소스에서 부모를 읽어 펼친다). 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief XML 을 읽습니다. `_base` 의 부모는 @p source 에서 읽습니다(테스트 · 쿠커). */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel, IDataInheritanceSource& source );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel, IDataInheritanceSource& source );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 

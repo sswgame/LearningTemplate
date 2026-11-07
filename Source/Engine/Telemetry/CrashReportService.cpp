@@ -102,7 +102,7 @@ namespace sw
 
             [[nodiscard]] static bool saveManifest( const string& bundleFolder, const JSONDocument& document )
             {
-                return document.saveFile( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ), 2 );
+                return document.saveToFile( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ), 2 );
             }
 
             static string readText( const string& path )

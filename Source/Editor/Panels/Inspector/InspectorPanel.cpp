@@ -120,7 +120,7 @@ namespace sw::editor
         // 저장 파일은 처음 그릴 때 읽는다. 패널을 만들 때는 에디터 상태 폴더가 아직 정해지지 않았을 수 있다.
         if ( _bFavoritesLoaded == SW_FALSE )
         {
-            (void)_favorites.loadFile( InspectorFavorites::getDefaultFilePath() ); // 없으면 빈 집합이다(처음 실행)
+            (void)_favorites.loadFromFile( InspectorFavorites::getDefaultFilePath() ); // 없으면 빈 집합이다(처음 실행)
             _bFavoritesLoaded = SW_TRUE;
         }
         _propertyGrid.setFavorites( &_favorites );

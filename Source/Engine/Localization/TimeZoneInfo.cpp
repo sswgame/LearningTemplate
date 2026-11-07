@@ -105,7 +105,7 @@ namespace sw
     bool TimeZoneTable::loadFromAsset( const AssetID& assetID )
     {
         *this = TimeZoneTable{};
-        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "TimeZoneTable.CannotRead", "[Localization] Time zone table could not be read or holds unknown keys: %#", assetID.view() );
             return false;

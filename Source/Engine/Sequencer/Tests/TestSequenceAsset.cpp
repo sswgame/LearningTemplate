@@ -61,7 +61,7 @@ SW_TEST_CASE( SequencerTest, KeyTrackSetKeyReplacesAndRemovesAcrossChannels )
 
 /**
  * @brief [SequencerTest] 파싱이 실패하면 애셋에 반쯤 남은 상태가 없다
- * @details parseXML 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 옛 시퀀스가 새 시퀀스인 척한다.
+ * @details loadFromXMLText 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 옛 시퀀스가 새 시퀀스인 척한다.
  */
 SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
 {
@@ -73,7 +73,7 @@ SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
     asset._note     = "previous sequence";
     asset._listItem.push_back( SequenceTrackItem{} );
 
-    SW_EXPECT_FALSE( asset.parseXML( "<SequenceAsset _frameMin=\"0\" this is not xml" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( "<SequenceAsset _frameMin=\"0\" this is not xml" ) );
     SW_EXPECT_TRUE( asset._listItem.empty() );
     SW_EXPECT_TRUE( asset._note.empty() );
     SW_EXPECT_EQUAL( 0, asset._frameMin );
@@ -90,10 +90,10 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersAreRejected )
     SW_EXPECT_LOG( "Sequence.FrameOutOfRange" );
     SW_EXPECT_LOG( "Sequence.FrameOrder" );
     SequenceAsset asset;
-    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="2147483647" _frameMax="0" />)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<SequenceAsset _frameMin="2147483647" _frameMax="0" />)" ) );
     SW_EXPECT_FALSE(
-        asset.parseXML( R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Wide" _start="2147483647" _end="-2147483648" /></_listItem></SequenceAsset>)" ) );
-    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="10" _frameMax="10" />)" ) );
+        asset.loadFromXMLText( R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Wide" _start="2147483647" _end="-2147483648" /></_listItem></SequenceAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<SequenceAsset _frameMin="10" _frameMax="10" />)" ) );
     SW_EXPECT_TRUE( asset._listItem.empty() );
     SW_EXPECT_EQUAL( 0, asset._frameMin );
     SW_EXPECT_EQUAL( 100, asset._frameMax );
@@ -141,14 +141,14 @@ SW_TEST_CASE( SequencerTest, ScenarioItemNeedsItsScenario )
     SW_EXPECT_FALSE( SequenceAsset::findItemKindInfo( SequenceItemKind::Event )->_bPlaysScenario );
 
     SequenceAsset asset;
-    SW_EXPECT_TRUE( asset.parseXML(
+    SW_EXPECT_TRUE( asset.loadFromXMLText(
         R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Demo" _scenario="game/empty/automation/loadscene.scenario.xml" _start="3" _end="3" _kind="Scenario" /></_listItem></SequenceAsset>)" ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, asset._listItem.size() );
     SW_EXPECT_EQUAL( string( "game/empty/automation/loadscene.scenario.xml" ), asset._listItem[0]._scenario );
 
     SW_EXPECT_LOG( "SequenceAsset.SequenceScenarioField" );
-    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Empty" _start="3" _end="3" _kind="Scenario" /></_listItem></SequenceAsset>)" ) );
-    SW_EXPECT_FALSE( asset.parseXML(
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Empty" _start="3" _end="3" _kind="Scenario" /></_listItem></SequenceAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText(
         R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Stray" _scenario="a.scenario.xml" _start="3" _end="3" _kind="Event" /></_listItem></SequenceAsset>)" ) );
     SW_EXPECT_TRUE( asset._listItem.empty() );
 }

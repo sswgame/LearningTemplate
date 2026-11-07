@@ -121,7 +121,7 @@ namespace sw
 
 namespace sw
 {
-    bool LiveLinkFaceLayout::parseXML( string_view xml, string_view sourceLabel )
+    bool LiveLinkFaceLayout::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = LiveLinkFaceLayout{};
         const string label{ sourceLabel };
@@ -157,7 +157,7 @@ namespace sw
             *this = LiveLinkFaceLayout{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     int32 LiveLinkFaceLayout::findChannelIndex( const hashed_string& channel ) const
@@ -170,7 +170,7 @@ namespace sw
         return -1;
     }
 
-    bool LiveLinkFaceMapping::parseXML( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )
+    bool LiveLinkFaceMapping::loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )
     {
         *this     = LiveLinkFaceMapping{};
         outLayout = LiveLinkFaceLayout{};
@@ -229,7 +229,7 @@ namespace sw
             outLayout = LiveLinkFaceLayout{};
             return false;
         }
-        return parseXML( text, path, outLayout );
+        return loadFromXMLText( text, path, outLayout );
     }
 
     bool LiveLinkFacePacket::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout, LiveLinkFaceFrame& outFrame, string& outError )

@@ -306,7 +306,7 @@ namespace sw
         VisemeTrack  track;
         string       trackText;
         bool         bStarted = false;
-        if ( AssetIO::readTextAsset( AssetID{ trackPath }, trackText ) && track.parseXML( trackText, trackPath ) )
+        if ( AssetIO::readTextAsset( AssetID{ trackPath }, trackText ) && track.loadFromXMLText( trackText, trackPath ) )
         {
             speakTrack( track );
             bStarted = true;

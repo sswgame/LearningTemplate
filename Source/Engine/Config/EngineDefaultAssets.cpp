@@ -39,7 +39,7 @@ namespace sw
         }
 
         // 파일에 없는 선택 칸은 멤버 초기값(스키마 기본값)이 그대로 남는다. 필수 칸은 초기값이 없으므로 아래에서 막는다.
-        if ( XMLSerializer::loadFile( AssetID{ path }, this, *pTypeInfo ) == false )
+        if ( XMLSerializer::loadFromAsset( AssetID{ path }, this, *pTypeInfo ) == false )
         {
             SW_LOG_ERROR_ID( "EngineDefaultAssets.EngineDefaultAssetsCouldNotRead", "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
             return false;

@@ -139,7 +139,7 @@ namespace sw
         float32 _nodeFadeSeconds{ 0.0f };
 
         /** @brief XML 을 읽고 검사합니다. 모르는 속성 · 자식 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 단계가 비지 않았고, `_minScreenSize` 가 줄어드는 순이며, 마지막이 0 인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */

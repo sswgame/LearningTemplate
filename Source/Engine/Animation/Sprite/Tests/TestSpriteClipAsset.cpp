@@ -57,7 +57,7 @@ SW_TEST_CASE( SpriteClipAssetTest, LoadClampsAndDropsRanges )
     clip._listAnimation[0]._listNotify.push_back( AnimationNotifyEvent{} );
 
     SpriteClipAsset loaded;
-    SW_REQUIRE_TRUE( loaded.parseXML( clip.toXML() ) );
+    SW_REQUIRE_TRUE( loaded.loadFromXMLText( clip.toXML() ) );
     SW_REQUIRE_EQUAL( size_t( 3 ), loaded._listAnimation.size() );
     SW_EXPECT_EQUAL( size_t( 1 ), loaded._listAnimation[0]._listNotify.size() );
     const SpriteClipAnimation* pTail = loaded.findAnimation( "tail" );
@@ -79,7 +79,7 @@ SW_TEST_CASE( SpriteClipAssetTest, DuplicateAnimationNameWarns )
     clip._listAnimation.push_back( SpriteClipTestUtil::makeAnimation( "run", 0, 2 ) );
     clip._listAnimation.push_back( SpriteClipTestUtil::makeAnimation( "run", 2, 2 ) );
     SpriteClipAsset loaded;
-    SW_REQUIRE_TRUE( loaded.parseXML( clip.toXML() ) );
+    SW_REQUIRE_TRUE( loaded.loadFromXMLText( clip.toXML() ) );
     const SpriteClipAnimation* pRun = loaded.findAnimation( "run" );
     SW_REQUIRE_NOT_NULL( pRun );
     SW_EXPECT_EQUAL( 0, pRun->_firstFrame );
@@ -117,16 +117,16 @@ SW_TEST_CASE( SpriteClipAssetTest, LoadRejectsNegativeValues )
     SpriteClipAsset negativeSize = SpriteClipTestUtil::makeClip( 1 );
     negativeSize._atlasPixelSize = float2{ -1.0f, 4.0f };
     SpriteClipAsset loaded;
-    SW_EXPECT_FALSE( loaded.parseXML( negativeSize.toXML() ) );
+    SW_EXPECT_FALSE( loaded.loadFromXMLText( negativeSize.toXML() ) );
     SW_EXPECT_EQUAL( 0, loaded.getFrameCount() );
 
     SpriteClipAsset negativeBorder                = SpriteClipTestUtil::makeClip( 1 );
     negativeBorder._listFrame[0]._borderPixels._w = -1.0f;
-    SW_EXPECT_FALSE( loaded.parseXML( negativeBorder.toXML() ) );
+    SW_EXPECT_FALSE( loaded.loadFromXMLText( negativeBorder.toXML() ) );
 
     SpriteClipAsset noAtlas                = SpriteClipTestUtil::makeClip( 1 );
     noAtlas._listFrame[0]._borderPixels._x = 3.0f;
-    SW_REQUIRE_TRUE( loaded.parseXML( noAtlas.toXML() ) );
+    SW_REQUIRE_TRUE( loaded.loadFromXMLText( noAtlas.toXML() ) );
     SW_EXPECT_FALSE( loaded._listFrame[0].hasBorder() );
 }
 

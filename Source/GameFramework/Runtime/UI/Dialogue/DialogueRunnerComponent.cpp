@@ -87,7 +87,7 @@ namespace sw
 
     bool DialogueRunnerComponent::loadGraphXML( string_view xmlContent )
     {
-        return _graph.parseXML( xmlContent ) && compileGraph();
+        return _graph.loadFromXMLText( xmlContent ) && compileGraph();
     }
 
     void DialogueRunnerComponent::setGraph( DialogueGraphAsset graph )

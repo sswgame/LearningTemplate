@@ -597,7 +597,7 @@ namespace sw
         return true;
     }
 
-    bool XMLDocument::loadFile( string_view absPath )
+    bool XMLDocument::loadFromFile( string_view absPath )
     {
         // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`AssetIO::readTextFile`).
         string text;
@@ -696,7 +696,7 @@ namespace sw
         return wrapLongElementLines( writer._result );
     }
 
-    bool XMLDocument::saveFile( string_view absPath ) const
+    bool XMLDocument::saveToFile( string_view absPath ) const
     {
         if ( absPath.empty() )
             return false;

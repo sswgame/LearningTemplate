@@ -83,7 +83,7 @@ namespace sw
         [[nodiscard]] string saveToString() const;
 
         /** @brief XML 을 읽고 `_base` · `set` 을 펼칩니다. 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 

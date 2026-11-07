@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    bool AnimationLODSettings::parseXML( string_view xml, string_view sourceLabel )
+    bool AnimationLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = AnimationLODSettings{};
         const string label{ sourceLabel };
@@ -36,7 +36,7 @@ namespace sw
             *this = AnimationLODSettings{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool AnimationLODSettings::validate( string_view sourceLabel ) const

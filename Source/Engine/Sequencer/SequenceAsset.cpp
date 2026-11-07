@@ -97,7 +97,7 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
-    bool SequenceAsset::parseXML( string_view xmlView )
+    bool SequenceAsset::loadFromXMLText( string_view xmlView )
     {
         return readText( xmlView, "<sequence text>" );
     }

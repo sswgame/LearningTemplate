@@ -50,7 +50,7 @@ namespace sw
          * @brief 텍스트 파일(한 줄에 낱말 하나, `#` 으로 시작하면 주석, UTF-8)을 읽어 `initialize` 합니다.
          * @return 파일을 읽지 못하면 false 를 반환하고 낱말 0개(거르지 않음)로 둡니다. 운영 서버는 기동할 때 이것을 오류로 다룹니다.
          */
-        [[nodiscard]] bool loadFile( string_view path, ChatFilterMode mode, const ChatTextNormalizer& normalizer );
+        [[nodiscard]] bool loadFromFile( string_view path, ChatFilterMode mode, const ChatTextNormalizer& normalizer );
 
         /** @brief @p text 를 거릅니다. Masked 이면 @p outText 가 가린 글이고, Clean 이면 원문 그대로이며, Rejected 나 InvalidText 이면 건드리지 않습니다. */
         ChatFilterVerdict apply( string_view text, string& outText ) const;

@@ -21,7 +21,7 @@ namespace sw::editor
         {
             const EditorCommandTextRegistration& registration = TextRegistry::getAt( index );
             EditorCommandTextTable               table;
-            if ( XMLSerializer::loadFile( AssetID{ registration._pAssetPath }, &table, *EditorCommandTextTable::StaticType() ) == false )
+            if ( XMLSerializer::loadFromAsset( AssetID{ registration._pAssetPath }, &table, *EditorCommandTextTable::StaticType() ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorCommand.TextCannotRead", "Editor command text '%#' could not be read strictly - its commands are not registered", registration._pAssetPath );
                 continue;

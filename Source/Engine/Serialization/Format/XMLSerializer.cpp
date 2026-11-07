@@ -1021,8 +1021,8 @@ namespace sw
         }
     }
 
-    bool XMLSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
-                                  const SerializeContext& context )
+    bool XMLSerializer::saveToFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+                                    const SerializeContext& context )
     {
         if ( absPath.empty() )
             return false;
@@ -1036,7 +1036,7 @@ namespace sw
         return FileUtil::writeTextFile( absPath, text );
     }
 
-    bool XMLSerializer::loadFile( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    bool XMLSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         string text;
         // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.

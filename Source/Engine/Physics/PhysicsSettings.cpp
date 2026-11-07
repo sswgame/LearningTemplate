@@ -18,7 +18,7 @@ namespace sw
     {
         const string_view assetPath = assetID.view();
         *this                       = PhysicsSettings{};
-        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsCouldNot", "Physics settings could not be read or hold unknown keys: %#", assetPath );
             return false;

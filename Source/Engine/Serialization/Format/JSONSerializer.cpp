@@ -21,7 +21,7 @@ namespace sw
     {
         struct JSONSerializerInternal
         {
-            /** @brief 빠진 필수 칸을 경로마다 알립니다. 하나도 없으면 true 입니다(엄격한 읽기 `deserialize` · `loadFile` 의 끝). */
+            /** @brief 빠진 필수 칸을 경로마다 알립니다. 하나도 없으면 true 입니다(엄격한 읽기 `deserialize` · `loadFromFile` 의 끝). */
             static bool reportMissingRequired( const JSONValue& root, const TypeInfo& typeInfo )
             {
                 vector<string> listMissing;
@@ -529,16 +529,16 @@ namespace sw
         }
     }
 
-    bool JSONSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
-                                   const SerializeContext& context )
+    bool JSONSerializer::saveToFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+                                     const SerializeContext& context )
     {
         JSONDocument doc;
         writeObject( doc.makeObject(), pInstance, typeInfo, context );
         const int32 indent = static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces );
-        return doc.saveFile( absPath, indent );
+        return doc.saveToFile( absPath, indent );
     }
 
-    bool JSONSerializer::loadFile( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    bool JSONSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         JSONDocument doc;
         if ( doc.loadResource( assetID ) == false )

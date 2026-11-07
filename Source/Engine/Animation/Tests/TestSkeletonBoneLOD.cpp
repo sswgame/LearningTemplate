@@ -132,7 +132,7 @@ SW_TEST_CASE( SkeletonBoneLODTest, CoreBonesSocketsAndTheirParentsAreKept )
     SW_REQUIRE_TRUE( skeleton.applyVariant( variant, base, "test" ) );
 
     SkeletonBoneLOD boneLOD;
-    SW_REQUIRE_TRUE( boneLOD.parseXML( R"(<SkeletonBoneLOD><coreBones><bone name="kneeIK"/></coreBones></SkeletonBoneLOD>)", "test" ) );
+    SW_REQUIRE_TRUE( boneLOD.loadFromXMLText( R"(<SkeletonBoneLOD><coreBones><bone name="kneeIK"/></coreBones></SkeletonBoneLOD>)", "test" ) );
     SW_EXPECT_EQUAL( 0u, boneLOD.getLevelCount() ); // 단계가 없으면 메시 LOD 에서 짓는다
     vector<uint8> requiredMask;
     SW_REQUIRE_TRUE( SkeletonBoneLOD::computeRequiredMask( skeleton, &boneLOD, {}, requiredMask, "test" ) );
@@ -163,12 +163,12 @@ SW_TEST_CASE( SkeletonBoneLODTest, HandWrittenLevelsMustNotRemoveCoreBones )
     {
         SW_EXPECT_LOG( "SkeletonBoneLOD.CoreBoneRemoved" );
         SkeletonBoneLOD boneLOD;
-        SW_EXPECT_FALSE( boneLOD.parseXML(
+        SW_EXPECT_FALSE( boneLOD.loadFromXMLText(
             R"(<SkeletonBoneLOD><coreBones><bone name="kneeIK"/></coreBones><levels><level max_screen_size="0.2"><remove><item>kneeIK</item></remove></level></levels></SkeletonBoneLOD>)", "test" ) );
         SW_EXPECT_EQUAL( 0u, boneLOD.getLevelCount() );
     }
     SkeletonBoneLOD boneLOD;
-    SW_REQUIRE_TRUE( boneLOD.parseXML( R"(<SkeletonBoneLOD><levels><level max_screen_size="0.2"><remove><item>hand</item></remove></level></levels></SkeletonBoneLOD>)", "test" ) );
+    SW_REQUIRE_TRUE( boneLOD.loadFromXMLText( R"(<SkeletonBoneLOD><levels><level max_screen_size="0.2"><remove><item>hand</item></remove></level></levels></SkeletonBoneLOD>)", "test" ) );
     vector<uint8>         requiredMask;
     vector<vector<uint8>> listMask;
     // 핵심 본이 없으면 손 표 그대로다.
@@ -191,8 +191,8 @@ SW_TEST_CASE( SkeletonBoneLODTest, VariantInheritsParentCoreBones )
     SkeletonBoneLODTestSource source;
     source.add( "a/base.bonelod.xml", R"(<SkeletonBoneLOD><coreBones><bone name="kneeIK"/><bone name="head"/></coreBones></SkeletonBoneLOD>)" );
     SkeletonBoneLOD boneLOD;
-    SW_REQUIRE_TRUE( boneLOD.parseXML( R"(<SkeletonBoneLOD _base="a/base.bonelod.xml"><coreBones><bone name="cape"/><bone name="head" _op="Remove"/></coreBones></SkeletonBoneLOD>)",
-                                       "a/variant.bonelod.xml", source ) );
+    SW_REQUIRE_TRUE( boneLOD.loadFromXMLText( R"(<SkeletonBoneLOD _base="a/base.bonelod.xml"><coreBones><bone name="cape"/><bone name="head" _op="Remove"/></coreBones></SkeletonBoneLOD>)",
+                                              "a/variant.bonelod.xml", source ) );
     const vector<hashed_string>& listCore = boneLOD.getCoreBones();
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listCore.size() ) );
     SW_EXPECT_TRUE( listCore[0] == hashed_string( "kneeIK" ) );

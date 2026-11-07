@@ -1084,7 +1084,7 @@ namespace sw
     bool Material::loadFromDiskFile( string_view diskPath )
     {
         XMLDocument doc;
-        if ( doc.loadFile( diskPath ) == false )
+        if ( doc.loadFromFile( diskPath ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
@@ -1095,7 +1095,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( saveToString() ) == false )
             return false;
-        return doc.saveFile( absPath.str() );
+        return doc.saveToFile( absPath.str() );
     }
 
     string Material::saveToString() const

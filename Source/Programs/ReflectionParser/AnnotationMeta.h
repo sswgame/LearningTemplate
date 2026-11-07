@@ -78,7 +78,7 @@ namespace sw
         ~AnnotationMeta() = default;
 
         /** @brief AnnotationMeta.txt 를 로드합니다. */
-        [[nodiscard]] bool loadFile( const string_view absPath );
+        [[nodiscard]] bool loadFromFile( const string_view absPath );
         /** @brief 파일이 로드되었는지 반환합니다. */
         bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 

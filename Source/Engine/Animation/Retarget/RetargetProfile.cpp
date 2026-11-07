@@ -104,7 +104,7 @@ namespace sw
         _translationMode = mode;
     }
 
-    bool RetargetProfile::parseXML( string_view xml, string_view sourceLabel )
+    bool RetargetProfile::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         clear();
         string flatText;
@@ -134,7 +134,7 @@ namespace sw
             clear();
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     string RetargetProfile::toXML() const

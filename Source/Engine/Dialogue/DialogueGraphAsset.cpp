@@ -76,7 +76,7 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
-    bool DialogueGraphAsset::parseXML( string_view xmlView )
+    bool DialogueGraphAsset::loadFromXMLText( string_view xmlView )
     {
         return readText( xmlView, "<dialogue graph text>" );
     }

@@ -113,7 +113,7 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `FacialRig.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "FacialRig", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 메시의 모프 타깃 이름에 없는 타깃, 스켈레톤에 없는 눈 본, 타깃과 같은 이름의 표정(커브가 둘 다 움직임)이 있으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const;

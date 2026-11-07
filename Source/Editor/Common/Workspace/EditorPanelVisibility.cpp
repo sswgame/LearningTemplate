@@ -6,12 +6,12 @@
 
 namespace sw::editor
 {
-    bool EditorPanelVisibility::saveFile( string_view absPath ) const
+    bool EditorPanelVisibility::saveToFile( string_view absPath ) const
     {
-        return JSONSerializer::saveFile( absPath, this, *StaticType() );
+        return JSONSerializer::saveToFile( absPath, this, *StaticType() );
     }
 
-    ConfigReadResult EditorPanelVisibility::loadFile( string_view absPath )
+    ConfigReadResult EditorPanelVisibility::loadFromFile( string_view absPath )
     {
         _mapOpen.clear();
         return ConfigManager::readConfigFile( *this, absPath );

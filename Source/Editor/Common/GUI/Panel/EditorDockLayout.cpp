@@ -314,7 +314,7 @@ namespace sw::editor
 
         // 처음 실행이면 파일이 없다(등록한 기본 가시성 그대로). 깨진 파일은 키와 함께 오류를 남기고 지금 상태로 둔다.
         EditorPanelVisibility  visibility;
-        const ConfigReadResult visibilityResult = visibility.loadFile( _panelVisibilityPath );
+        const ConfigReadResult visibilityResult = visibility.loadFromFile( _panelVisibilityPath );
         if ( visibilityResult != ConfigReadResult::Loaded )
         {
             if ( visibilityResult == ConfigReadResult::Invalid )
@@ -352,7 +352,7 @@ namespace sw::editor
                 visibility._mapOpen[entry._id] = entry._pInstance->isOpen();
             }
 
-            if ( visibility.saveFile( _panelVisibilityPath ) )
+            if ( visibility.saveToFile( _panelVisibilityPath ) )
                 SW_LOG_TRACE_ID( "EditorDockLayout.SavedPanelVisibility", "Saved panel visibility to %#", _panelVisibilityPath.c_str() );
             else
                 SW_LOG_WARNING_ID( "EditorDockLayout.FailedWritePanelVisibility", "Failed to write the panel visibility file: %#", _panelVisibilityPath.c_str() );

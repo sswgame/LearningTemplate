@@ -121,7 +121,7 @@ namespace sw::editor
         }
     }
 
-    bool InspectorFavorites::loadFile( string_view filePath )
+    bool InspectorFavorites::loadFromFile( string_view filePath )
     {
         _listKey.clear();
         if ( filePath.empty() )
@@ -133,7 +133,7 @@ namespace sw::editor
         return true;
     }
 
-    bool InspectorFavorites::saveFile( string_view filePath ) const
+    bool InspectorFavorites::saveToFile( string_view filePath ) const
     {
         if ( filePath.empty() )
             return false;

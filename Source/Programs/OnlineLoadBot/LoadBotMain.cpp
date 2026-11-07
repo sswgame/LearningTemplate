@@ -193,7 +193,7 @@ namespace sw
                 const bool bLocalServer = options._localServerPort >= 0;
 
                 LoadBotScenario scenario;
-                if ( LoadBotScenario::loadFile( options._scenarioPath, scenario, error ) == false || readLoad( options._loadPath, scenario, error ) == false )
+                if ( LoadBotScenario::loadFromFile( options._scenarioPath, scenario, error ) == false || readLoad( options._loadPath, scenario, error ) == false )
                 {
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", error );
                     return Exit::kExitUsage;

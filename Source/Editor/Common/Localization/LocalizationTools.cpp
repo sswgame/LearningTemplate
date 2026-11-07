@@ -479,7 +479,7 @@ namespace sw
         if ( StringUtil::endsWith( origin, DialogueGraphAsset::kExtension, true ) )
         {
             DialogueGraphAsset dialogue;
-            if ( dialogue.parseXML( fileText ) == false )
+            if ( dialogue.loadFromXMLText( fileText ) == false )
             {
                 gatherer.addIssue( origin, "dialogue cannot be parsed", true );
                 return;

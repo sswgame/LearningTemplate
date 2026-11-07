@@ -533,7 +533,7 @@ namespace sw
         return true;
     }
 
-    bool JSONDocument::loadFile( string_view absPath )
+    bool JSONDocument::loadFromFile( string_view absPath )
     {
         // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`AssetIO::readTextFile`).
         string text;
@@ -595,7 +595,7 @@ namespace sw
         return JSONDocumentInternal::dumpValue( _impl->root, indent );
     }
 
-    bool JSONDocument::saveFile( string_view absPath, int32 indent ) const
+    bool JSONDocument::saveToFile( string_view absPath, int32 indent ) const
     {
         if ( absPath.empty() )
             return false;

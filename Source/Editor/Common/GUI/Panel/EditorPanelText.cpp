@@ -33,7 +33,7 @@ namespace sw::editor
             {
                 EditorPanelTextTable table;
                 state._listRow.clear();
-                if ( XMLSerializer::loadFile( AssetID{ kPanelTextAsset }, &table, *EditorPanelTextTable::StaticType() ) == false )
+                if ( XMLSerializer::loadFromAsset( AssetID{ kPanelTextAsset }, &table, *EditorPanelTextTable::StaticType() ) == false )
                     SW_LOG_ERROR_ID( "EditorPanel.TextCannotRead", "Editor panel names '%#' could not be read strictly - tabs show their titles", kPanelTextAsset );
                 for ( EditorPanelText& row : table._listPanel )
                 {

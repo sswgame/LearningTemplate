@@ -11,7 +11,7 @@ namespace sw::editor
     bool EditorComponentIconTable::loadFromAsset( const AssetID& assetID )
     {
         *this = EditorComponentIconTable{};
-        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "EditorComponentIcon.TableCannotRead", "Component icon table could not be read strictly: %#", assetID.view() );
             return false;

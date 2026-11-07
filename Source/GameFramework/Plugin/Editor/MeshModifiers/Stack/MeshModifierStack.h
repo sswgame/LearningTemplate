@@ -68,9 +68,9 @@ namespace sw::editor
         /** @brief 저장 문서를 읽습니다. 문서가 틀리면 false 이고 스택은 비웁니다. 모르는 종류는 경고하고 건너뜁니다. */
         [[nodiscard]] bool readJSONText( string_view jsonText );
         /** @brief 절대 경로에 저장합니다. */
-        [[nodiscard]] bool saveFile( const AbsolutePath& absPath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 절대 경로에서 읽습니다. */
-        [[nodiscard]] bool loadFile( string_view absolutePath );
+        [[nodiscard]] bool loadFromFile( string_view absolutePath );
 
         /** @brief 메시 경로(`.../x.mesh`)에 맞는 사이드카 경로(`.../x.modifiers.json`)입니다. */
         static string makeSidecarPath( string_view meshPath );

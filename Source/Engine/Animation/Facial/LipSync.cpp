@@ -210,7 +210,7 @@ namespace sw
 
 namespace sw
 {
-    bool LipSyncSettings::parseXML( string_view xml, string_view sourceLabel )
+    bool LipSyncSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = LipSyncSettings{};
         const string label{ sourceLabel };
@@ -231,7 +231,7 @@ namespace sw
             *this = LipSyncSettings{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool LipSyncSettings::validate( string_view sourceLabel ) const
@@ -325,7 +325,7 @@ namespace sw
         }
     }
 
-    bool VisemeTrack::parseXML( string_view xml, string_view sourceLabel )
+    bool VisemeTrack::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = VisemeTrack{};
         XMLDocument document;
@@ -381,7 +381,7 @@ namespace sw
             *this = VisemeTrack{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     string VisemeTrack::toXML() const

@@ -28,9 +28,9 @@ namespace sw::editor
         map<string, bool> _mapOpen; ///< 패널 id(`EditorPanelEntry::_id`) → 열려 있는가
 
         /** @brief @p absPath 에 JSON 으로 씁니다(원자적). */
-        [[nodiscard]] bool saveFile( string_view absPath ) const;
+        [[nodiscard]] bool saveToFile( string_view absPath ) const;
         /** @brief @p absPath 에서 엄격하게 읽습니다. 없으면 `Missing`(로그 없음), 틀리면 `Invalid`(키와 함께 오류를 남겼다)입니다. */
-        [[nodiscard]] ConfigReadResult loadFile( string_view absPath );
+        [[nodiscard]] ConfigReadResult loadFromFile( string_view absPath );
         /** @brief @p panelID 를 적었으면 @p outOpen 에 담고 true 입니다. 적지 않았으면 false 이고 @p outOpen 은 그대로입니다. */
         [[nodiscard]] bool findOpen( string_view panelID, bool& outOpen ) const;
     };

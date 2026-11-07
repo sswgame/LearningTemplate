@@ -688,7 +688,7 @@ namespace sw
         if ( StringUtil::endsWith( diskPath, ".prefab.json", true ) )
         {
             JSONDocument doc;
-            const bool   bRead = doc.loadFile( diskPath );
+            const bool   bRead = doc.loadFromFile( diskPath );
             return readJSONSource( doc, bRead, string( diskPath ) );
         }
         if ( StringUtil::endsWith( diskPath, ".prefab.xml", true ) )
@@ -1035,7 +1035,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritten", "Prefab variant '%#' could not be written - '%#' is left as it was", _name, absPath.str() );
                 return false;
             }
-            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveToFile( absPath.str() ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML2", "Failed to write prefab XML: %#", absPath.str() );
                 return false;
@@ -1071,7 +1071,7 @@ namespace sw
         }
 
         // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveXML 과 같은 형태).
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveFile( absPath.str() );
+        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveToFile( absPath.str() );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML", "Failed to write prefab XML: %#", absPath.str() );
@@ -1172,7 +1172,7 @@ namespace sw
             arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || arch.saveFile( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || arch.saveToFile( absPath.str() ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabBinary", "Failed to write prefab binary: %#", absPath.str() );
             return false;

@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    bool FacialRig::parseXML( string_view xml, string_view sourceLabel )
+    bool FacialRig::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = FacialRig{};
         const string label{ sourceLabel };
@@ -64,7 +64,7 @@ namespace sw
             *this = FacialRig{};
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool FacialRig::validateFile( string_view sourceLabel ) const

@@ -77,7 +77,7 @@ namespace sw::editor
             return false;
         if ( FileUtil::writeTextFile( makeImguiINIPath( folder, name ), string( imguiINIText ) ) == false )
             return false;
-        return panelVisibility.saveFile( makeVisibilityPath( folder, name ) );
+        return panelVisibility.saveToFile( makeVisibilityPath( folder, name ) );
     }
 
     bool EditorLayoutStore::load( string_view folder, string_view name, string& outImguiINIText, EditorPanelVisibility& outPanelVisibility )
@@ -87,7 +87,7 @@ namespace sw::editor
         if ( FileUtil::readOptionalTextFile( imguiPath, outImguiINIText ) != OptionalFileRead::Read )
             return false;
         const string visibilityPath = makeVisibilityPath( folder, name );
-        if ( outPanelVisibility.loadFile( visibilityPath ) == ConfigReadResult::Invalid )
+        if ( outPanelVisibility.loadFromFile( visibilityPath ) == ConfigReadResult::Invalid )
         {
             outPanelVisibility._mapOpen.clear();
             SW_LOG_WARNING_ID( "EditorLayoutStore.LayoutCouldNotRead", "Layout '%#': could not read %# - panel visibility is left as it is", string( name ).c_str(), visibilityPath.c_str() );

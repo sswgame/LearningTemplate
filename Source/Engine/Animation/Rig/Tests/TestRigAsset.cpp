@@ -17,7 +17,7 @@ using namespace sw;
 SW_TEST_CASE( RigAssetTest, ReadsNodeFieldsAndItems )
 {
     RigAsset asset;
-    SW_REQUIRE_TRUE( asset.parseXML( R"(<RigAsset planar="true">
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( R"(<RigAsset planar="true">
         <targets>
             <item name="Grip" socket="Grip" unit="Weapon" space="hand.r" rotation="0,90,0" />
         </targets>
@@ -35,7 +35,7 @@ SW_TEST_CASE( RigAssetTest, ReadsNodeFieldsAndItems )
             <item type="Position" name="Follow" bone="weapon" target="Grip" maintain_offset="true" />
         </nodes>
     </RigAsset>)",
-                                     "good.rig.xml" ) );
+                                            "good.rig.xml" ) );
     SW_EXPECT_TRUE( asset.isPlanar() );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( asset.getTargets().size() ) );
     SW_EXPECT_TRUE( asset.getTargets()[0]._kind == RigTargetKind::Socket );
@@ -55,7 +55,7 @@ namespace
     {
         RigAsset     asset;
         const string xml = string( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>)" ) + pNodeLine + "</nodes></RigAsset>";
-        return asset.parseXML( xml, "bad.rig.xml" );
+        return asset.loadFromXMLText( xml, "bad.rig.xml" );
     }
 } // namespace
 
@@ -102,16 +102,16 @@ SW_TEST_CASE( RigAssetTest, RejectsUnknownEnumName )
 SW_TEST_CASE( RigAssetTest, RetargetProfileRoundTrips )
 {
     RetargetProfile profile;
-    SW_REQUIRE_TRUE( profile.parseXML( R"(<RetargetProfile source_skeleton="a.skeleton.xml" translation="Copy" map_same_names="true" height_ratio="1.25">
+    SW_REQUIRE_TRUE( profile.loadFromXMLText( R"(<RetargetProfile source_skeleton="a.skeleton.xml" translation="Copy" map_same_names="true" height_ratio="1.25">
         <root source="root" target="Root" />
         <pelvis source="hips" target="Hips" />
         <chains><item name="LeftArm" ik_goal="true"><source><item>upperarm.l</item></source><target><item>UpperArm_L</item></target></item></chains>
         <bone_map><item source="head" target="Head" /></bone_map>
         <target_pose><item bone="UpperArm_L" rotation="0,0,-40" /></target_pose>
     </RetargetProfile>)",
-                                       "a.retarget.xml" ) );
+                                              "a.retarget.xml" ) );
     RetargetProfile again;
-    SW_REQUIRE_TRUE( again.parseXML( profile.toXML(), "again.retarget.xml" ) );
+    SW_REQUIRE_TRUE( again.loadFromXMLText( profile.toXML(), "again.retarget.xml" ) );
     SW_EXPECT_TRUE( again.getTranslationMode() == RetargetTranslationMode::Copy );
     SW_EXPECT_TRUE( again.isMappingSameNames() );
     SW_EXPECT_NEAR( 1.25f, again.getHeightRatioOverride(), 1e-6f );
@@ -127,7 +127,7 @@ SW_TEST_CASE( RigAssetTest, RetargetRejectsNonPositiveHeightRatio )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
     RetargetProfile profile;
-    SW_EXPECT_FALSE( profile.parseXML( R"(<RetargetProfile height_ratio="0"><root source="a" target="b" /><pelvis source="c" target="d" /><chains /></RetargetProfile>)", "bad.retarget.xml" ) );
+    SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<RetargetProfile height_ratio="0"><root source="a" target="b" /><pelvis source="c" target="d" /><chains /></RetargetProfile>)", "bad.retarget.xml" ) );
 }
 
 /**
@@ -143,9 +143,9 @@ SW_TEST_CASE( RigAssetTest, ChildMergesNodesByName )
     </nodes></RigAsset>)" ) );
     const string baseID = test::ScopedScratchDomain::makeID( "base.rig.xml" ).str();
     RigAsset     asset;
-    SW_REQUIRE_TRUE( asset.parseXML( "<RigAsset _base=\"" + baseID + "\"><nodes><item name=\"Arm\" weight=\"0.25\" /><item name=\"Extra\" _op=\"Remove\" />"
-                                                                     "<item type=\"Position\" name=\"First\" bone=\"first\" target=\"Grip\" _before=\"Arm\" /></nodes></RigAsset>",
-                                     "child.rig.xml" ) );
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( "<RigAsset _base=\"" + baseID + "\"><nodes><item name=\"Arm\" weight=\"0.25\" /><item name=\"Extra\" _op=\"Remove\" />"
+                                                                            "<item type=\"Position\" name=\"First\" bone=\"first\" target=\"Grip\" _before=\"Arm\" /></nodes></RigAsset>",
+                                            "child.rig.xml" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( asset.getNodes().size() ) );
     SW_EXPECT_TRUE( asset.getNodes()[0]->getName() == hashed_string( "First" ) );
     SW_EXPECT_TRUE( asset.getNodes()[1]->getName() == hashed_string( "Arm" ) );
@@ -170,9 +170,9 @@ SW_TEST_CASE( RigAssetTest, RetargetChildMergesByKeys )
     </RetargetProfile>)" ) );
     const string    baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
     RetargetProfile profile;
-    SW_REQUIRE_TRUE( profile.parseXML( "<RetargetProfile _base=\"" + baseID + "\"><pelvis target=\"pelvis_b\" /><chains><item name=\"RightArm\"><target><item>e</item></target></item></chains>"
-                                                                              "<bone_map><item source=\"head\" target=\"head_b\" /></bone_map></RetargetProfile>",
-                                       "child.retarget.xml" ) );
+    SW_REQUIRE_TRUE( profile.loadFromXMLText( "<RetargetProfile _base=\"" + baseID + "\"><pelvis target=\"pelvis_b\" /><chains><item name=\"RightArm\"><target><item>e</item></target></item></chains>"
+                                                                                     "<bone_map><item source=\"head\" target=\"head_b\" /></bone_map></RetargetProfile>",
+                                              "child.retarget.xml" ) );
     const string written = profile.toXML();
     SW_EXPECT_TRUE( written.find( "pelvis_b" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "source=\"pelvis\"" ) != string::npos ); // 물려받음

@@ -222,11 +222,11 @@ namespace sw
         static void collectMissingRequired( const XMLNode& element, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix = string() );
 
         /** @brief XML 을 절대 경로에 씁니다. */
-        [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
-                                            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        [[nodiscard]] static bool saveToFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 절대 경로나 리소스 경로에서 XML 을 읽어 엄격하게 역직렬화합니다(`deserialize` 와 같은 규칙). */
-        [[nodiscard]] static bool loadFile( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo,
-                                            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo,
+                                                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         // ------------------------------------------------------------------------------
         // 5) Soft 역직렬화와 버전: orphan 수집, 루트 _schemaVersion

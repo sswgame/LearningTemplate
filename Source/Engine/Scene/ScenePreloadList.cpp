@@ -78,7 +78,7 @@ namespace sw
         {
             paths.pushBack().setString( path );
         }
-        return document.saveFile( diskPath, 2 );
+        return document.saveToFile( diskPath, 2 );
     }
 
     bool ScenePreloadList::read( const AssetID& assetID, vector<string>& outListPath )

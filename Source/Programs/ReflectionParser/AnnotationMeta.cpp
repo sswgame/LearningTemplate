@@ -56,7 +56,7 @@ namespace sw
             _mapKey.insert_or_assign( hash, std::move( binding ) );
     }
 
-    bool AnnotationMeta::loadFile( const string_view absPath )
+    bool AnnotationMeta::loadFromFile( const string_view absPath )
     {
         clear();
 

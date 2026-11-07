@@ -219,7 +219,7 @@ namespace sw
         return true;
     }
 
-    bool LoadBotScenario::loadFile( string_view path, LoadBotScenario& outScenario, string& outError )
+    bool LoadBotScenario::loadFromFile( string_view path, LoadBotScenario& outScenario, string& outError )
     {
         string text;
         if ( FileUtil::readTextFile( path, text ) == false )

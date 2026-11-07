@@ -274,7 +274,7 @@ namespace sw::editor
             return false;
         }
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const bool   bWritten   = prefabDocument.saveFile( prefabPath );
+        const bool   bWritten   = prefabDocument.saveToFile( prefabPath );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );

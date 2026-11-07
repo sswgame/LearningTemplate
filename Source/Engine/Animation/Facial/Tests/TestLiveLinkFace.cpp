@@ -181,14 +181,14 @@ SW_TEST_CASE( LiveLinkFaceTest, LayoutRejectsBadChannels )
     SW_EXPECT_LOG( "LiveLinkFace.LiveLinkFaceLayout" );
     SW_EXPECT_LOG( "LiveLinkFace.LiveLinkFaceLayout2" );
     LiveLinkFaceLayout layout{};
-    SW_EXPECT_TRUE( layout.parseXML( "<LiveLinkFaceLayout _packetVersion=\"6\"><_listChannel><item>A</item><item>B</item></_listChannel></LiveLinkFaceLayout>", "good" ) );
+    SW_EXPECT_TRUE( layout.loadFromXMLText( "<LiveLinkFaceLayout _packetVersion=\"6\"><_listChannel><item>A</item><item>B</item></_listChannel></LiveLinkFaceLayout>", "good" ) );
     SW_EXPECT_EQUAL( 6, layout._packetVersion );
     SW_EXPECT_EQUAL( 1, layout.findChannelIndex( hashed_string{ "B" } ) );
     SW_EXPECT_EQUAL( -1, layout.findChannelIndex( hashed_string{ "C" } ) );
 
-    SW_EXPECT_FALSE( layout.parseXML( "<LiveLinkFaceLayout _packetVersion=\"6\"><_listChannel><item>A</item><item>A</item></_listChannel></LiveLinkFaceLayout>", "duplicate" ) );
+    SW_EXPECT_FALSE( layout.loadFromXMLText( "<LiveLinkFaceLayout _packetVersion=\"6\"><_listChannel><item>A</item><item>A</item></_listChannel></LiveLinkFaceLayout>", "duplicate" ) );
     SW_EXPECT_TRUE( layout._listChannel.empty() );
-    SW_EXPECT_FALSE( layout.parseXML( "<LiveLinkFaceLayout _packetVersion=\"6\"/>", "empty" ) );
+    SW_EXPECT_FALSE( layout.loadFromXMLText( "<LiveLinkFaceLayout _packetVersion=\"6\"/>", "empty" ) );
 }
 
 /** @brief [LiveLinkFaceTest] 연결 표는 배치 표를 적어야 한다 — 기본 표로 물러서지 않는다 */
@@ -197,5 +197,5 @@ SW_TEST_CASE( LiveLinkFaceTest, MappingNeedsLayoutPath )
     SW_EXPECT_LOG( "LiveLinkFace.LiveLinkFaceMapping" );
     LiveLinkFaceMapping mapping{};
     LiveLinkFaceLayout  layout{};
-    SW_EXPECT_FALSE( mapping.parseXML( "<LiveLinkFaceMapping/>", "no layout", layout ) );
+    SW_EXPECT_FALSE( mapping.loadFromXMLText( "<LiveLinkFaceMapping/>", "no layout", layout ) );
 }

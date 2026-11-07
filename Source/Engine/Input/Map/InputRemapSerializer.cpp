@@ -53,7 +53,7 @@ namespace sw
         {
             bAllWritten = InputMapXML::writeAction( root, map, actionName ) && bAllWritten;
         }
-        return bAllWritten && doc.saveFile( filePath );
+        return bAllWritten && doc.saveToFile( filePath );
     }
 
     bool InputRemapSerializer::load( InputMap& map, string_view filePath )
@@ -63,7 +63,7 @@ namespace sw
 
         // 사용자 바인딩은 `save` 가 디스크에 쓴 플레이어 파일이다 — 리소스 id 가 아니므로 디스크 입구로 읽는다.
         XMLDocument doc;
-        if ( doc.loadFile( filePath ) == false )
+        if ( doc.loadFromFile( filePath ) == false )
             return false;
 
         const XMLNode root = doc.getRoot( "UserBindings" );

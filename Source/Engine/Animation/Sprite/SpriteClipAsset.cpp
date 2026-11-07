@@ -78,7 +78,7 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
-    bool SpriteClipAsset::parseXML( string_view xml )
+    bool SpriteClipAsset::loadFromXMLText( string_view xml )
     {
         clear();
         if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, "<sprite clip text>" ) && resolveLoadedValues( "<sprite clip text>" ) )

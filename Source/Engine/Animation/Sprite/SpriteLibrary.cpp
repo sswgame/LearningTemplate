@@ -22,10 +22,10 @@ namespace sw
             SW_LOG_ERROR_ID( "SpriteLibrary.CouldNotRead", "Sprite library '%#' could not be read", assetID.view() );
             return false;
         }
-        return parseXML( text, assetID.view() );
+        return loadFromXMLText( text, assetID.view() );
     }
 
-    bool SpriteLibrary::parseXML( string_view xml, string_view sourceLabel )
+    bool SpriteLibrary::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         clear();
         string flatText;

@@ -21,7 +21,7 @@ namespace sw
     {
     public:
         /** @brief 건너뛸 글자 파일을 읽습니다. 파일이 없거나 줄이 `U+XXXX` 가 아니면 오류를 남기고 false 이며 목록은 비어 있습니다. */
-        [[nodiscard]] bool loadFile( string_view path );
+        [[nodiscard]] bool loadFromFile( string_view path );
         /** @brief 건너뛸 글자를 바로 정합니다(테스트 · 도구). */
         void setIgnored( vector<uint32> listCodepoint );
 

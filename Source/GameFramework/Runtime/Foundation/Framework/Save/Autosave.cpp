@@ -59,7 +59,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool AutosaveSettings::loadFromAsset( const AssetID& assetID )
     {
-        return GameDataXML::loadFile( *this, &AutosaveSettings::loadRoot, assetID, "Autosave" );
+        return GameDataXML::loadFromFile( *this, &AutosaveSettings::loadRoot, assetID, "Autosave" );
     }
 
     bool AutosaveSettings::loadFromXMLText( string_view xmlText, string_view sourceName )

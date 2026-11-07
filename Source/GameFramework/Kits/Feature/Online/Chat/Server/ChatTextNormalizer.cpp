@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    bool ChatTextNormalizer::loadFile( string_view path )
+    bool ChatTextNormalizer::loadFromFile( string_view path )
     {
         _listIgnored.clear();
         string content;

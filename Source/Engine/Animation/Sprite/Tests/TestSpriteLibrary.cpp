@@ -28,7 +28,7 @@ namespace
 SW_TEST_CASE( SpriteLibraryTest, FindsLabelsAndResolvesBorders )
 {
     SpriteLibrary library;
-    SW_REQUIRE_TRUE( library.parseXML( kBaseLibrary, "<test>" ) );
+    SW_REQUIRE_TRUE( library.loadFromXMLText( kBaseLibrary, "<test>" ) );
     const SpriteLibraryLabel* pRun = library.findLabel( "Body", "Run" );
     SW_REQUIRE_TRUE( pRun != nullptr );
     SW_EXPECT_NEAR( 0.125f, pRun->_border._x, 1e-6f ); // 4 픽셀 / (0.5 × 64)
@@ -47,7 +47,7 @@ SW_TEST_CASE( SpriteLibraryTest, ChildChangesOnlyWhatItNames )
                                                               "<SpriteLibraryLabel _name=\"Idle\" _uvRect=\"0,0.5,0.5,0.5\" /><SpriteLibraryLabel _name=\"Run\" _op=\"Remove\" /></_listLabel></SpriteLibraryCategory>"
                                                               "<SpriteLibraryCategory _name=\"Head\"><_listLabel><SpriteLibraryLabel _name=\"Hat\" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>";
     SpriteLibrary library;
-    SW_REQUIRE_TRUE( library.parseXML( text, "<test>" ) );
+    SW_REQUIRE_TRUE( library.loadFromXMLText( text, "<test>" ) );
     SW_EXPECT_EQUAL( string( "engine/textures/test/quadrants.dds" ), library._atlasPath ); // 물려받음
     const SpriteLibraryLabel* pIdle = library.findLabel( "Body", "Idle" );
     SW_REQUIRE_TRUE( pIdle != nullptr );
@@ -61,13 +61,13 @@ SW_TEST_CASE( SpriteLibraryTest, RejectsBrokenFiles )
 {
     SpriteLibrary library;
     SW_EXPECT_LOG( "SpriteLibrary.NoAtlas" );
-    SW_EXPECT_FALSE( library.parseXML( R"(<SpriteLibrary />)", "<test>" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary />)", "<test>" ) );
     SW_EXPECT_LOG( "SpriteLibrary.LabelRepeated" );
-    SW_EXPECT_FALSE( library.parseXML( R"(<SpriteLibrary _atlasPath="a.dds"><_listCategory><SpriteLibraryCategory _name="B"><_listLabel><SpriteLibraryLabel _name="X" /><SpriteLibraryLabel _name="X" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>)", "<test>" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary _atlasPath="a.dds"><_listCategory><SpriteLibraryCategory _name="B"><_listLabel><SpriteLibraryLabel _name="X" /><SpriteLibraryLabel _name="X" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>)", "<test>" ) );
     SW_EXPECT_LOG( "SpriteLibrary.BorderNeedsAtlasSize" );
-    SW_EXPECT_FALSE( library.parseXML( R"(<SpriteLibrary _atlasPath="a.dds"><_listCategory><SpriteLibraryCategory _name="B"><_listLabel><SpriteLibraryLabel _name="X" _borderPixels="1,0,0,0" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>)", "<test>" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary _atlasPath="a.dds"><_listCategory><SpriteLibraryCategory _name="B"><_listLabel><SpriteLibraryLabel _name="X" _borderPixels="1,0,0,0" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>)", "<test>" ) );
     SW_EXPECT_LOG( "Config.KeyUnknown" );
-    SW_EXPECT_FALSE( library.parseXML( R"(<SpriteLibrary _atlasPath="a.dds" _colour="red" />)", "<test>" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary _atlasPath="a.dds" _colour="red" />)", "<test>" ) );
     SW_EXPECT_TRUE( library._listCategory.empty() );
 }
 
@@ -75,13 +75,13 @@ SW_TEST_CASE( SpriteLibraryTest, RejectsBrokenFiles )
 SW_TEST_CASE( SpriteLibraryTest, ClipFrameLabelsRoundTrip )
 {
     SpriteClipAsset clip;
-    SW_REQUIRE_TRUE( clip.parseXML( R"(<SpriteClipAsset><_listFrame><SpriteClipFrame _category="Body" _label="Idle" _durationMs="50" /><SpriteClipFrame _uvRect="0,0,1,1" /></_listFrame></SpriteClipAsset>)" ) );
+    SW_REQUIRE_TRUE( clip.loadFromXMLText( R"(<SpriteClipAsset><_listFrame><SpriteClipFrame _category="Body" _label="Idle" _durationMs="50" /><SpriteClipFrame _uvRect="0,0,1,1" /></_listFrame></SpriteClipAsset>)" ) );
     SW_EXPECT_TRUE( clip.usesLibrary() );
     SW_EXPECT_TRUE( clip._listFrame[0].usesLibrary() );
     SW_EXPECT_FALSE( clip._listFrame[1].usesLibrary() );
     const string    written = clip.toXML();
     SpriteClipAsset reread;
-    SW_REQUIRE_TRUE( reread.parseXML( written ) );
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( written ) );
     SW_EXPECT_TRUE( reread._listFrame[0]._label == "Idle" );
     SW_EXPECT_EQUAL( int32{ 50 }, reread._listFrame[0]._durationMs );
 
@@ -91,5 +91,5 @@ SW_TEST_CASE( SpriteLibraryTest, ClipFrameLabelsRoundTrip )
     SW_EXPECT_TRUE( plain.toXML().find( "_label" ) == string::npos );
 
     SW_EXPECT_LOG( "SpriteClip.SpriteClipLabelNeedsCategory" );
-    SW_EXPECT_FALSE( clip.parseXML( R"(<SpriteClipAsset><_listFrame><SpriteClipFrame _label="Idle" /></_listFrame></SpriteClipAsset>)" ) );
+    SW_EXPECT_FALSE( clip.loadFromXMLText( R"(<SpriteClipAsset><_listFrame><SpriteClipFrame _label="Idle" /></_listFrame></SpriteClipAsset>)" ) );
 }

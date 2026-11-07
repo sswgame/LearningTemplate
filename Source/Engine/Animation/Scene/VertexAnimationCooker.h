@@ -54,7 +54,7 @@ namespace sw
         vector<hashed_string> _listClip;     ///< `<clips><item>` 자식(칸이 아니다)
 
         /** @brief XML 을 읽습니다(가리키는 파일이 있는지도 봅니다). 틀리면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 클립 이름의 파일 경로입니다(셋의 표 — 애니메이터와 같은 규칙). 셋에 없으면 빈 글입니다. */

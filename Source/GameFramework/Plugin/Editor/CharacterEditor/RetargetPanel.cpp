@@ -236,9 +236,9 @@ namespace sw::editor
 
     void RetargetPanel::applyDocumentText( string_view text )
     {
-        // 글을 먼저 다른 프로필에 읽는다 — `parseXML` 은 실패하면 내용을 비우므로, 제자리에서 읽으면 되돌리기 한 번에 문서가 사라진다.
+        // 글을 먼저 다른 프로필에 읽는다 — `loadFromXMLText` 은 실패하면 내용을 비우므로, 제자리에서 읽으면 되돌리기 한 번에 문서가 사라진다.
         RetargetProfile restored;
-        if ( restored.parseXML( text, "retarget undo" ) == false )
+        if ( restored.loadFromXMLText( text, "retarget undo" ) == false )
         {
             _status = "This undo step could not be read - see the log";
             return;

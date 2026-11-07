@@ -299,7 +299,7 @@ namespace sw
         return bValid;
     }
 
-    bool Skeleton::parseXML( string_view xml, string_view sourceLabel )
+    bool Skeleton::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         clear();
         string flatText;
@@ -356,7 +356,7 @@ namespace sw
             clear();
             return false;
         }
-        return parseXML( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool Skeleton::rebuildFromLoaded( string_view sourceLabel )

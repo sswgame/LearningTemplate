@@ -71,7 +71,7 @@ namespace sw
         /** @brief 리소스 id 의 파일을 읽습니다. 읽지 못하면 오류를 남기고 false 이며 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 본문을 읽습니다(`_base` 를 펼칩니다). 모르는 칸 · 겹친 이름 · 음수 테두리 · 아틀라스 크기 없는 테두리는 오류이고 내용은 비어 있습니다. */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 분류 · 라벨의 프레임입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const SpriteLibraryLabel* findLabel( string_view category, string_view label ) const;
         /** @brief 내용을 비웁니다. */

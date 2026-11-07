@@ -207,7 +207,7 @@ namespace sw
             return FileUtil::exists( filePath ) == false || FileUtil::removeFile( filePath );
         if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
             return false;
-        return doc.saveFile( filePath );
+        return doc.saveToFile( filePath );
     }
 
     bool DebugKeyActions::loadUserBindings( InputMap& map, string_view filePath )
@@ -217,7 +217,7 @@ namespace sw
 
         // 플레이어 파일(`saveUserBindings` 가 디스크에 쓴 것)이라 디스크 입구로 읽는다.
         XMLDocument doc;
-        if ( doc.loadFile( filePath ) == false )
+        if ( doc.loadFromFile( filePath ) == false )
         {
             SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings", "Debug key user bindings '%#' could not be read - the default keys are used", filePath );
             return false;

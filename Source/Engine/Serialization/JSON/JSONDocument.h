@@ -287,7 +287,7 @@ namespace sw
         [[nodiscard]] bool tryParse( string_view jsonText );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
-        [[nodiscard]] bool loadFile( string_view absPath );
+        [[nodiscard]] bool loadFromFile( string_view absPath );
 
         /**
          * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 파싱합니다(낱개 파일 · 팩).
@@ -314,7 +314,7 @@ namespace sw
         /** @brief 현재 문서를 JSON 문자열로 직렬화합니다. indent 가 음수이면 한 줄로 만듭니다. */
         string dump( int32 indent = -1 ) const;
         /** @brief 현재 문서를 절대 경로에 씁니다. indent 가 음수이면 한 줄로 씁니다. */
-        [[nodiscard]] bool saveFile( string_view absPath, int32 indent = -1 ) const;
+        [[nodiscard]] bool saveToFile( string_view absPath, int32 indent = -1 ) const;
 
         // ------------------------------------------------------------------------------
         // 6) 문자열 유틸: 따옴표 안의 이스케이프

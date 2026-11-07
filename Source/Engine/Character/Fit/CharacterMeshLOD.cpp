@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    bool CharacterLODSettings::parseXML( string_view xml, string_view sourceLabel )
+    bool CharacterLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
         *this = CharacterLODSettings{};
         XMLDocument document;
@@ -47,7 +47,7 @@ namespace sw
             *this = CharacterLODSettings{};
             return false;
         }
-        return parseXML( text, assetID.view() );
+        return loadFromXMLText( text, assetID.view() );
     }
 
     const CharacterLODSettings& CharacterLODSettings::getDefault()

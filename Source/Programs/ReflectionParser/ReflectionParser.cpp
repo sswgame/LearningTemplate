@@ -63,7 +63,7 @@ namespace sw
                     return false;
                 }
 
-                if ( session._annotationMeta.loadFile( options._annotationMetaPath ) == false )
+                if ( session._annotationMeta.loadFromFile( options._annotationMetaPath ) == false )
                 {
                     SW_LOG_ERROR_ID( "ReflectionParser.FailedLoad", "Failed to load %#: %#", cli::kAnnotationMeta, options._annotationMetaPath );
                     return false;

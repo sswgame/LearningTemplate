@@ -276,7 +276,7 @@ namespace sw
         /**
          * @brief XML 본문을 읽습니다. 루트가 `<SkeletonVariant>` 이면 부모(`_base`)를 읽어 합칩니다. 형식이 틀리면(모르는 키, 빠진 키, 앞에 없는 부모, 모르는 본 이름) false 를 반환하고 내용은 비웁니다.
          */
-        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /**
          * @brief @p base 위에 @p variant 의 차이를 합쳐 이 스켈레톤으로 삼습니다. 부모의 본 번호는 그대로이고 더한 본은 뒤에 붙습니다.
          * @return 모르는 본을 고치거나, 있는 이름의 본 · 소켓을 더하거나, 골반 없이 ScaleByPelvisHeight 를 쓰면 오류를 남기고 내용을 비운 채 false 입니다.

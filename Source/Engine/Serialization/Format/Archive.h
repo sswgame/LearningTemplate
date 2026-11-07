@@ -84,7 +84,7 @@ namespace sw
         void setReadModeAndResetPosition( bool bReadMode );
 
         /** @brief 현재 버퍼 내용을 파일로 저장합니다. */
-        [[nodiscard]] bool saveFile( string_view fileName ) const;
+        [[nodiscard]] bool saveToFile( string_view fileName ) const;
 
         /** @brief 지정된 크기만큼 바이트를 씁니다. */
         void writeBytes( const void* pBuffer, uint64 byteSize );
