@@ -20,6 +20,8 @@ namespace sw
         , _appliedDepth{ 0.0f }
     {
         setCanEverTick( true );
+        // 지역 처리(틱 뒤 `ApplyPrePhysics`)가 이번 프레임에 올린 속성을 읽는다 — 물리 뒤 그룹이라 늘 그 뒤다.
+        setTickGroup( TickGroup::PostPhysics );
     }
 
     void VisualSinkReactionComponent::onTick( float32 deltaTime )
@@ -29,9 +31,8 @@ namespace sw
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 메시 자리 쓰기는 틱 뒤 게임 스레드에서 한다(속성은 이 프레임의 지역 처리 뒤 값이다).
-        pManager->executeOrDeferPostTickOnComponent( *this, []( VisualSinkReactionComponent& self, GameObjectManager& manager )
-        { self.applySinkDepth( manager ); } );
+        // 자기 오브젝트의 속성을 읽고 자기 메시만 옮긴다 — 틱 안에서 해도 된다(예전에는 틱 뒤 큐로 미뤄 지역 처리 뒤에 오기를 바랐지만, 같은 큐 안 순서는 워커 순서였다).
+        applySinkDepth( *pManager );
     }
 
     void VisualSinkReactionComponent::onEndPlay()
