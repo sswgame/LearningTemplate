@@ -306,7 +306,21 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 | 잠자기 · 폴링 38 곳 | 결과를 주기적으로 묻는다 | 완료 연쇄(`whenAll` · 스테이지 완료)로 |
 | 에디터 UI | 게임 스레드 | 위 MVVM → 입력 큐 → 출력 계약 |
 
-재발 막기: 자체 스레드는 허용 목록(데이터) 밖이면 린트가 멈추고, 틱 안 씬 전체 순회는 린트가 알린다.
+재발 막기: 자체 스레드는 허용 목록(데이터) 밖이면 린트가 멈추고, 틱 안 씬 전체 순회는 린트가 알린다. `Box2DWorkerPool` 은 허용 목록에 까닭과 함께 둔다 — Box2D 솔버는 워커 수만큼 태스크를 한꺼번에 넣고 0 번이 아닌 태스크가 바쁘게 기다려 공유 풀에서는 교착한다(파일 머리말).
+
+### 데이터 구동 구조 후보 판별 (2026-11-08)
+
+**기준:** 숫자 리터럴(위 "데이터 기반 값" 절)이 아니라 **내용 · 정책을 코드가 정하는 모양**을, 앞으로 내용이 늘어날 연쇄 기준으로 고른다. 형식 · 프로토콜 · 수학 표(RHI 형식, DDS, 오디오 DSP 계수, 다운믹스 행렬, HTTP/2)는 코드에 둔다 — 바뀌는 까닭이 내용이 아니라 명세다. 이름으로 원소를 고르는 XML 읽기(카탈로그 리더)도 데이터를 읽는 쪽이라 그대로다.
+
+| 우선 | 연쇄 · 자리 | 지금 | 데이터로 옮길 모양 |
+|---|---|---|---|
+| 1 | **게임 AI 행동** — `FarmAutoFarmerAIComponent`(case 16) · `ShooterEnemyComponent` · `ShooterEnemyAIControllerComponent` · `KartAI` · `ArenaAutoBattleAI` · `ArenaEnemyAI` · `HorseFollowAIController` · `SRPGCommanderAI` · `SkirmishUnitComponent` · `FarmVillagerComponent` | 행동 트리 런타임 · 에셋 · 에디터 패널이 있는데 데이터는 2 개(`guard.bt.xml` · `commander.bt.xml`)이고 게임 AI 는 컴포넌트 안 `switch` 상태 기계다 | 행동 트리 자산 + 코드가 내는 동작 어휘(이동 · 공격 · 능력 · 따라가기 · 일과)와 판단(블랙보드 · 지각). 언리얼 BT · StateTree 자리 — 새 적 · NPC 는 데이터만 더한다 |
+| 2 | **프리셋 · 가져오기 규칙 표** — `FractureSettings`(프리셋 switch) · `TextureImportConfig`(가져오기 규칙 표) · `Autosave`(정책 switch) · `InputMap`(기본 바인딩 표) | C++ 표 · switch | 프리셋 · 규칙 자산(`Config` 또는 `Content/engine/settings`), 읽지 못하면 오류 |
+| 3 | **문화권 정의** — `CultureInfo`(숫자 · 날짜 · 복수형 표가 코드) | 언어를 더할 때 C++ 를 고친다 | 문화권 데이터 파일(CLDR 모양) — 언어 추가가 데이터 한 장 |
+| 4 | **에디터 표시 표** — `EditorThemeUtil` 표 · `EditorViewportOverlays` · `ViewportInputOverlay` · `UIPreviewLogic` 기기 표 | 색 · 크기 · 기기 목록이 코드 | 테마 토큰(`Content/editor/theme/*.tokens.json`) · `uiresolutions.xml` 로 — 두 벌이면 하나로 |
+| 5 | **게임 규칙 수치** — 게임 모드 컴포넌트의 상태 `switch`(`WildWestGameModeComponent` 등)와 키트의 `-1` 613 · 실수 상수 | 일부는 PROPERTY 로 이미 편집된다 | 규칙 카탈로그 · PROPERTY 로(위 "데이터 기반 값" 절의 순서) |
+
+순서: 1 은 AI 이동 연쇄의 비동기 경로 요청(위 절)과 같은 동작 어휘를 쓰므로 함께 설계한다. 2 · 3 · 4 는 서로 독립이라 하나씩 옮기고, 옮긴 자리의 C++ 표는 지운다(두 벌 금지).
 
 ### 에디터 기능 · UX 고도화 후보 (코드 · Graphify · 공식 문서 대조 2026-11-07)
 
