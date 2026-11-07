@@ -43,6 +43,12 @@ namespace sw
         float32 _detailStrength{ 0.5f };
         PROPERTY( Tooltip = "Project the detail texture from three axes (cliffs do not stretch)" )
         bool _bTriplanar{ false };
+        /**
+         * @brief 이 레이어가 뜻하는 물리 재질 이름입니다(언리얼 랜드스케이프 레이어의 Physical Material). 표면 질의(`SurfaceQuery`)가 가장 무거운 레이어의 이 이름으로
+         *        표면 종류(발소리 · 이동 계수 · 발자국)를 고른다. 비면 지형 콜라이더의 재질이 그대로 표면이다 — 레이어가 뜻을 적지 않았다는 선언이다.
+         */
+        PROPERTY( Tooltip = "Physics material this layer stands for (footsteps, footprints, move scale). Empty: the terrain collider's material" )
+        hashed_string _physicsMaterial{};
     };
 } // namespace sw
 
@@ -214,6 +220,8 @@ namespace sw
         void setGeomorph( bool bGeomorph ) { _bGeomorph = bGeomorph ? SW_TRUE : SW_FALSE; }
         bool isGeomorph() const { return _bGeomorph == SW_TRUE; }
         void setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
+        /** @brief 레이어들입니다(스플랫 채널 순서). */
+        const vector<TerrainLayer>& getLayers() const { return _listLayer; }
 
     private:
         /** @brief 청크 하나입니다. 배치 하나와 현재 메시의 LOD, 이웃 LOD 를 담습니다. */

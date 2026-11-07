@@ -2,6 +2,7 @@
 	물리 설정 표 — 충돌 레이어(순서가 번호 0..31) · 레이어끼리의 충돌 · 물리 재질 · 중력 · 서브스텝(고정 스텝 길이는 EngineConfig._fixedDeltaTime 하나).
 	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex · findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
 	충돌 목록은 대칭으로 읽는다 — 한쪽에만 적어도 둘이 부딪힌다.
+	재질마다 표면 종류(engine/environment/default.surfacekinds.xml)가 있어야 한다 — 발소리 · 이동 계수 · 발자국이 재질 이름으로 종류를 찾는다.
 -->
 <PhysicsSettings _gravity="0,-9.81,0" _gravity2D="0,-9.81" _subStepCount2D="4">
 	<_listLayer>
@@ -57,5 +58,8 @@
 		<PhysicsMaterialDef _name="Ice" _friction="0.02" _restitution="0.05" _density="917" />
 		<PhysicsMaterialDef _name="Rubber" _friction="0.9" _restitution="0.8" _density="1100" />
 		<PhysicsMaterialDef _name="Flesh" _friction="0.6" _restitution="0" _density="1000" />
+		<PhysicsMaterialDef _name="Snow" _friction="0.35" _restitution="0" _density="400" />
+		<PhysicsMaterialDef _name="Sand" _friction="0.6" _restitution="0" _density="1600" />
+		<PhysicsMaterialDef _name="Mud" _friction="0.5" _restitution="0" _density="1700" />
 	</_listMaterial>
 </PhysicsSettings>
