@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -181,9 +182,29 @@ SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
         sw::ConfigManager manager;
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::ServerConfig>( serverText, filePath.c_str() ), filePath.c_str() );
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::OnlineServerConfig>( onlineText, filePath.c_str() ), filePath.c_str() );
+        // 비밀값은 환경 변수로만 온다 — 값이 아니라 설정의 짝이 맞는지 보는 테스트라 빈칸을 가짜 값으로 채운다.
+        const sw::ServerConfig& serverConfig = *manager.getConfig<sw::ServerConfig>();
+        sw::vector<sw::string>  listSecretName;
+        const auto              addSecret = [&listSecretName]( const sw::string& name )
+        {
+            if ( name.empty() == false && sw::ProcessEnvironment::isSet( name ) == false && sw::ProcessEnvironment::trySet( name, "test-secret" ) )
+                listSecretName.push_back( name );
+        };
+        for ( const sw::ServerStoreEntry& store : serverConfig._listStore )
+        {
+            addSecret( store._secretEnvironment );
+        }
+        for ( const sw::ServerCacheEntry& cache : serverConfig._listCache )
+        {
+            addSecret( cache._secretEnvironment );
+        }
         sw::OnlineServerRuntimeConfig settings;
         sw::string                    error;
         SW_EXPECT_TRUE_MSG( sw::OnlineServerRuntime::resolveStores( *manager.getConfig<sw::ServerConfig>(), *manager.getConfig<sw::OnlineServerConfig>(), settings, error ), error.c_str() );
+        for ( const sw::string& name : listSecretName )
+        {
+            (void)sw::ProcessEnvironment::tryUnset( name );
+        }
         ++pairCount;
     }
     SW_EXPECT_TRUE( pairCount > 0 );
