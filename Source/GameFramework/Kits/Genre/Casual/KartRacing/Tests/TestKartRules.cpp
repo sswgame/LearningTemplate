@@ -472,6 +472,7 @@ SW_TEST_CASE( KartItemsTest, RollsByPlace )
  */
 SW_TEST_CASE( KartItemsTest, ReportsBrokenTables )
 {
+    SW_EXPECT_LOG( "KartItems.ItemNeedsProjectile" ); // 탄을 적지 않은 날아가는 아이템은 받지 않는다
     SW_EXPECT_LOG( "KartItems.RankTableEntryNames" );
     SW_EXPECT_LOG( "KartItems.RankTableNeedsEntryChildren" );
     SW_EXPECT_LOG( "KartItems.RankTableNotLoadedSee" );
@@ -480,7 +481,8 @@ SW_TEST_CASE( KartItemsTest, ReportsBrokenTables )
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     constexpr const utf8* kBrokenXML = R"(<KartItemCatalog>
   <RankTable from="1" to="1"><Entry item="banana"/></RankTable>
-  <Item id="banana" kind="Banana"/>
+  <Item id="banana" kind="Banana" projectile="banana"/>
+  <Item id="noshot" kind="Banana"/>
   <RankTable from="2" to="2"><Entry item="ghost"/><Entry item="banana"/></RankTable>
   <RankTable from="3" to="3"/>
   <RankTable from="5" to="4"><Entry item="banana"/></RankTable>

@@ -415,7 +415,14 @@
         "_gruntAIPrefab",
         "_gruntPrefab",
         "_playerPrefab",
-        "_projectilePrefab"
+        "_projectilePrefab",
+        "autoBattleAIPrefab",
+        "casterAIPrefab",
+        "casterPrefab",
+        "gruntAIPrefab",
+        "gruntPrefab",
+        "playerPrefab",
+        "projectilePrefab"
       ]
     },
     {
@@ -481,7 +488,9 @@
       "owner": "game:FrontierTown",
       "listField": [
         "_tilePrefab",
-        "_unitPrefab"
+        "_unitPrefab",
+        "tilePrefab",
+        "unitPrefab"
       ]
     },
     {
@@ -491,17 +500,29 @@
         "_cropDataPath",
         "_cropPrefab",
         "_listDefaultGrowingModel",
+        "_listGrowingModel",
         "_readyModel",
         "_scheduleDataPath",
         "_soilPrefab",
-        "_villagerPrefab"
+        "_villagerPrefab",
+        "autoFarmerPrefab",
+        "cropDataPath",
+        "cropPrefab",
+        "listDefaultGrowingModel",
+        "listGrowingModel",
+        "readyModel",
+        "scheduleDataPath",
+        "soilPrefab",
+        "villagerPrefab"
       ]
     },
     {
       "owner": "game:MeadowVillage",
       "listField": [
         "_prefab",
-        "_tilePrefab"
+        "_tilePrefab",
+        "prefab",
+        "tilePrefab"
       ]
     },
     {
@@ -513,7 +534,14 @@
         "_groundPrefab",
         "_modelBuildingPrefab",
         "_roadPrefab",
-        "_walkerPrefab"
+        "_walkerPrefab",
+        "autoPlanPath",
+        "blockBuildingPrefab",
+        "cityDataPath",
+        "groundPrefab",
+        "modelBuildingPrefab",
+        "roadPrefab",
+        "walkerPrefab"
       ]
     },
     {
@@ -524,7 +552,13 @@
         "_pacingProfile",
         "_prefab",
         "_spawnTable",
-        "_tracerPrefab"
+        "_tracerPrefab",
+        "bodyPrefab",
+        "effectPrefab",
+        "pacingProfile",
+        "prefab",
+        "spawnTable",
+        "tracerPrefab"
       ]
     },
     {
@@ -534,7 +568,12 @@
         "_listCliffPrefab",
         "_unitDataPath",
         "_unitModelPath",
-        "_unitPrefab"
+        "_unitPrefab",
+        "commanderTreePath",
+        "listCliffPrefab",
+        "unitDataPath",
+        "unitModelPath",
+        "unitPrefab"
       ]
     },
     {
@@ -549,19 +588,31 @@
         "_railPrefab",
         "_rideEntrancePrefab",
         "_stationPrefab",
-        "_supportPrefab"
+        "_supportPrefab",
+        "carFrontPrefab",
+        "carPrefab",
+        "flatRidePrefab",
+        "guestPrefab",
+        "parkDataPath",
+        "pathPrefab",
+        "railPrefab",
+        "rideEntrancePrefab",
+        "stationPrefab",
+        "supportPrefab"
       ]
     },
     {
       "owner": "game:VoxelCraft",
       "listField": [
-        "_chunkPrefab"
+        "_chunkPrefab",
+        "chunkPrefab"
       ]
     },
     {
       "owner": "game:WildWest",
       "listField": [
-        "_westernDataPath"
+        "_westernDataPath",
+        "westernDataPath"
       ]
     }
   ]
