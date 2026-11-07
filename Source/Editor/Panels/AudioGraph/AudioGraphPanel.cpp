@@ -17,14 +17,10 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -46,8 +42,7 @@ namespace sw::editor
             /** @brief 창을 엽니다(명령 표의 실행 함수). */
             static void openPanel()
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<AudioGraphPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                (void)EditorPanelManager::getInEditorContext().setPanelOpen<AudioGraphPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
         };
     } // namespace
@@ -123,20 +118,18 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "SaveTip" ) );
 
-        IAudioService& audio       = editor::getSubsystem<IAudioService>(); // 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다)
-        const bool     bAudioReady = audio.isInitialized();
-        if ( bAudioReady )
-            _model.refreshPreview( audio.getEngine() );
+        const bool bAudioReady = AudioGraphModel::isPreviewAudioReady();
+        _model.refreshPreview();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) );
         ImGui::BeginDisabled( bAudioReady == false || isDocumentDirty() );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) )
-            _model.playPreview( audio.getEngine(), hashed_string( getLoadedAssetPath() ) );
+            _model.playPreview( hashed_string( getLoadedAssetPath() ) );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "PreviewTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) );
         ImGui::BeginDisabled( bAudioReady == false || _model.isPreviewPlaying() == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) )
-            _model.stopPreview( audio.getEngine() );
+            _model.stopPreview();
         ImGui::EndDisabled();
         if ( isDocumentDirty() )
         {

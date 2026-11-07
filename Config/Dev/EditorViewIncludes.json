@@ -17,6 +17,7 @@
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
+        "Source/Editor/Panels/AudioGraph/AudioGraphPanel",
         "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
         "Source/Editor/Panels/BugReport/BugReportPanel",
         "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
