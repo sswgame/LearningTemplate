@@ -268,8 +268,7 @@ namespace sw::editor
         , _prefixEnd{ -1 }
         , _sourceData{}
         , _listSourcePosition{}
-        , _listUndo{}
-        , _listRedo{}
+        , _history{}
         , _savedStackText{}
         , _meshPath{}
         , _sourceBounds{}
@@ -358,8 +357,7 @@ namespace sw::editor
         _stagePreviewIndex    = -1;
         _inputBounds          = MeshModifierBounds{};
         _selectedControlPoint = -1;
-        _listUndo.clear();
-        _listRedo.clear();
+        _history.clear();
         _savedStackText.clear();
         _bPreviewDirty      = SW_TRUE;
         _bStagePreviewDirty = SW_TRUE;
@@ -373,19 +371,14 @@ namespace sw::editor
 
     void MeshModifierSession::recordUndo()
     {
-        if ( _listUndo.size() >= kMaxUndoCount )
-            _listUndo.erase( _listUndo.begin() );
-        _listUndo.push_back( _stack.makeJSONText( -1 ) );
-        _listRedo.clear();
+        _history.record( _stack.makeJSONText( -1 ) );
     }
 
     bool MeshModifierSession::undo()
     {
-        if ( _listUndo.empty() )
+        string text = _stack.makeJSONText( -1 );
+        if ( _history.undo( text ) == false )
             return false;
-        _listRedo.push_back( _stack.makeJSONText( -1 ) );
-        const string text = std::move( _listUndo.back() );
-        _listUndo.pop_back();
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다. 실패해도 빈 스택이다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
         _bPreviewDirty = SW_TRUE;
@@ -394,11 +387,9 @@ namespace sw::editor
 
     bool MeshModifierSession::redo()
     {
-        if ( _listRedo.empty() )
+        string text = _stack.makeJSONText( -1 );
+        if ( _history.redo( text ) == false )
             return false;
-        _listUndo.push_back( _stack.makeJSONText( -1 ) );
-        const string text = std::move( _listRedo.back() );
-        _listRedo.pop_back();
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
         _bPreviewDirty = SW_TRUE;

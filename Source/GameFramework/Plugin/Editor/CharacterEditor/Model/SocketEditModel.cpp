@@ -36,8 +36,7 @@ namespace sw::editor
         , _kinds{}
         , _mirrorRules{}
         , _listBoneName{}
-        , _savedText{ _sockets.saveToXMLText() }
-        , _history{}
+        , _state{ _sockets.saveToXMLText() }
         , _mirrorAxis{ MirrorAxis::X }
     {
     }
@@ -47,9 +46,8 @@ namespace sw::editor
         SocketSet loaded;
         if ( loaded.loadFromXMLText( xmlText, sourceName, _kinds ) == false )
             return false;
-        _sockets   = std::move( loaded );
-        _savedText = _sockets.saveToXMLText();
-        _history.clear();
+        _sockets = std::move( loaded );
+        _state.reset( _sockets.saveToXMLText() );
         return true;
     }
 
@@ -67,22 +65,21 @@ namespace sw::editor
     void SocketEditModel::clear()
     {
         _sockets.clear();
-        _savedText = _sockets.saveToXMLText();
-        _history.clear();
+        _state.reset( _sockets.saveToXMLText() );
     }
 
-    bool SocketEditModel::saveToFile( const AbsolutePath& absPath )
+    bool SocketEditModel::saveDocument( const AbsolutePath& absPath )
     {
         // 부모(`_base`)를 가리키던 파일은 부모와의 차이로 쓴다 — 실패 이유는 `SocketSet::saveToFile` 이 알린다.
         if ( _sockets.saveToFile( absPath, _kinds ) == false )
             return false;
-        _savedText = _sockets.saveToXMLText(); // 더러움은 펼친 한 벌로 비교한다
+        _state.markSaved( _sockets.saveToXMLText() ); // 더러움은 펼친 한 벌로 비교한다
         return true;
     }
 
     bool SocketEditModel::isDirty() const
     {
-        return ( _sockets.saveToXMLText() == _savedText ) == false;
+        return _state.isDirty( _sockets.saveToXMLText() );
     }
 
     bool SocketEditModel::validate( vector<string>& outListIssue ) const
@@ -325,17 +322,17 @@ namespace sw::editor
 
     bool SocketEditModel::undo()
     {
-        return _history.undo( _sockets );
+        return _state.undo( _sockets );
     }
 
     bool SocketEditModel::redo()
     {
-        return _history.redo( _sockets );
+        return _state.redo( _sockets );
     }
 
     void SocketEditModel::recordUndo( string_view coalesceKey )
     {
-        _history.record( _sockets, coalesceKey );
+        _state.record( _sockets, coalesceKey );
     }
 
     bool SocketEditModel::copySocket( const hashed_string& name, SocketDef& outSocket, string& outError ) const

@@ -136,7 +136,7 @@ namespace sw::editor
 
     bool AudioEventBrowserPanel::saveDocument()
     {
-        return _edit.save();
+        return _edit.saveDocument();
     }
 
     void AudioEventBrowserPanel::syncDocumentDirty()

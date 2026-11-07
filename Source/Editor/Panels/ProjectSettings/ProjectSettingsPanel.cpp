@@ -174,7 +174,7 @@ namespace sw::editor
             if ( pPage->_bDirty == false )
                 continue;
             bool bApplied = false;
-            bAllSaved     = pPage->save( bApplied ) && bAllSaved;
+            bAllSaved     = pPage->saveDocument( bApplied ) && bAllSaved;
         }
         return bAllSaved;
     }
@@ -240,7 +240,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EdVerb", "Save" ), "Save" ) ) )
         {
             bool bApplied = false;
-            if ( page.save( bApplied ) )
+            if ( page.saveDocument( bApplied ) )
             {
                 _statusText = bApplied ? "Saved - the running host reloaded the file" : "Saved - applies on the next start";
                 refreshDirtyState();

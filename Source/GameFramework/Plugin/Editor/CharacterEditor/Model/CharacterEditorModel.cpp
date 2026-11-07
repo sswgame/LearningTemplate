@@ -130,7 +130,7 @@ namespace sw::editor
         if ( _bKindTableReady )
             return;
         _bKindTableReady = SW_TRUE;
-        _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
+        _reloadGuard.reset();
         SocketKindTable kinds;
         if ( kinds.loadDefault() == false )
             SW_LOG_WARNING_ID( "CharacterEditorModel.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
@@ -161,13 +161,13 @@ namespace sw::editor
         _status.clear();
         _selectedSocket  = hashed_string{};
         _bExternalChange = SW_FALSE;
-        _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
+        _reloadGuard.reset();
         return true;
     }
 
     void CharacterEditorModel::pollExternalChange( float64 nowSeconds )
     {
-        if ( _reloadGuard.pollExternalChange( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ) )
+        if ( _reloadGuard.pollExternalChange( nowSeconds ) )
             _bExternalChange = SW_TRUE;
         if ( _bExternalChange && _paths._socketPath.empty() )
             _bExternalChange = SW_FALSE; // 열어 둔 소켓 파일이 없으면 반영할 모델이 없다
@@ -183,21 +183,21 @@ namespace sw::editor
         if ( _sockets.isDirty() )
         {
             const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._socketPath.c_str() ) );
-            if ( writePath.has_value() == false || _sockets.saveToFile( *writePath ) == false )
+            if ( writePath.has_value() == false || _sockets.saveDocument( *writePath ) == false )
             {
                 _status = "Socket file could not be saved";
                 bSaved  = false;
             }
             else
             {
-                _reloadGuard.onSaved( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
+                _reloadGuard.onSaved( nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
                 SW_LOG_INFO_ID( "CharacterEditorModel.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
             }
         }
         if ( _pose.isDirty() )
         {
             const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._refPosePath.c_str() ) );
-            if ( writePath.has_value() == false || _pose.saveToFile( *writePath ) == false )
+            if ( writePath.has_value() == false || _pose.saveDocument( *writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
                 bSaved  = false;

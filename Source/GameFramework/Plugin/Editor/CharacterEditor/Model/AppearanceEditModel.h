@@ -12,7 +12,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"
+#include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
+
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 
 namespace sw
@@ -42,9 +43,9 @@ namespace sw::editor
         /** @brief 선택이 바뀔 때마다 오르는 번호입니다. 입혀 보기 결과를 다시 계산할지 가릴 때 씁니다(바뀌었을 수 있는 쪽으로 기웁니다). */
         uint32 getRevision() const { return _revision; }
         /** @brief 지금 상태를 "저장된 상태" 로 맞춥니다. 저장 뒤에 부릅니다. */
-        void markSaved() { _saved = _selection; }
+        void markSaved() { _state.markSaved( _selection ); }
         /** @brief 저장이 끝난 선택 @p saved 를 "저장된 상태" 로 맞춥니다 - 비동기 저장은 맡길 때의 선택을 넘긴다(그 사이 편집은 미저장으로 남는다). */
-        void markSaved( const AppearanceSelection& saved ) { _saved = saved; }
+        void markSaved( const AppearanceSelection& saved ) { _state.markSaved( saved ); }
         /** @brief 저장된 상태와 다르면 true 입니다. */
         bool isDirty() const;
 
@@ -110,9 +111,8 @@ namespace sw::editor
         static string makeKey( string_view kind, const hashed_string& target );
 
     private:
-        AppearanceSelection                      _selection;
-        AppearanceSelection                      _saved;
-        EditSnapshotHistory<AppearanceSelection> _history;
-        uint32                                   _revision;
+        AppearanceSelection                                           _selection;
+        EditorDocumentState<AppearanceSelection, AppearanceSelection> _state; ///< 저장한 선택 · 되돌리기
+        uint32                                                        _revision;
     };
 } // namespace sw::editor

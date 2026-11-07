@@ -12,11 +12,12 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
+
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Content/AssetID.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/ReferencePoseOverride.h"
 
 namespace sw::editor
@@ -66,7 +67,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool mirrorBone( const hashed_string& bone, const MirrorNameRules& rules, hashed_string& outMirrorBone, string& outError );
         void               setMirrorAxis( MirrorAxis axis ) { _override.setMirrorAxis( axis ); }
-        void               endContinuousEdit() { _history.endCoalescing(); }
+        void               endContinuousEdit() { _state.endCoalescing(); }
 
         // --- 읽기 · 쓰기 · 되돌리기 ----------------------------------------------------------------------------------
 
@@ -77,15 +78,15 @@ namespace sw::editor
         void   clear();
         string saveToXMLText() const { return _override.saveToXMLText(); }
         /** @brief 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath );
-        bool               isDirty() const { return ( _override.saveToXMLText() == _savedText ) == false; }
+        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath );
+        bool               isDirty() const { return _state.isDirty( _override.saveToXMLText() ); }
         /** @brief 편집을 버리고 마지막으로 읽거나 저장한 상태로 돌아갑니다(창의 "Don't Save"). 기록을 지웁니다. 그 글을 다시 읽지 못하면 그대로 두고 false 입니다. */
-        [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _savedText ), "(saved reference pose state)" ); }
+        [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _state.getSaved() ), "(saved reference pose state)" ); }
 
         [[nodiscard]] bool undo();
         [[nodiscard]] bool redo();
-        bool               canUndo() const { return _history.canUndo(); }
-        bool               canRedo() const { return _history.canRedo(); }
+        bool               canUndo() const { return _state.canUndo(); }
+        bool               canRedo() const { return _state.canRedo(); }
 
     private:
         /** @brief 본의 지금 값을 구합니다. 스켈레톤에 없으면 오류를 쓰고 false 입니다. */
@@ -96,7 +97,6 @@ namespace sw::editor
     private:
         Skeleton                                   _skeleton;
         ReferencePoseOverride                      _override;
-        string                                     _savedText;
-        EditSnapshotHistory<ReferencePoseOverride> _history;
+        EditorDocumentState<ReferencePoseOverride> _state; ///< 저장한 글 · 되돌리기
     };
 } // namespace sw::editor

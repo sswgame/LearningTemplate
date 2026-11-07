@@ -32,8 +32,7 @@ namespace sw::editor
     BonePoseEditModel::BonePoseEditModel()
         : _skeleton{}
         , _override{}
-        , _savedText{ _override.saveToXMLText() }
-        , _history{}
+        , _state{ _override.saveToXMLText() }
     {
     }
 
@@ -101,7 +100,7 @@ namespace sw::editor
             key += ":";
             key += bone.c_str();
         }
-        _history.record( _override, key );
+        _state.record( _override, key );
     }
 
     bool BonePoseEditModel::setTranslation( const hashed_string& bone, const float3& translation, bool bContinuous, string& outError )
@@ -193,9 +192,8 @@ namespace sw::editor
         ReferencePoseOverride loaded;
         if ( loaded.loadFromXMLText( xmlText, sourceName ) == false )
             return false;
-        _override  = std::move( loaded );
-        _savedText = _override.saveToXMLText();
-        _history.clear();
+        _override = std::move( loaded );
+        _state.reset( _override.saveToXMLText() );
         return true;
     }
 
@@ -212,12 +210,11 @@ namespace sw::editor
 
     void BonePoseEditModel::clear()
     {
-        _override  = ReferencePoseOverride{};
-        _savedText = _override.saveToXMLText();
-        _history.clear();
+        _override = ReferencePoseOverride{};
+        _state.reset( _override.saveToXMLText() );
     }
 
-    bool BonePoseEditModel::saveToFile( const AbsolutePath& absPath )
+    bool BonePoseEditModel::saveDocument( const AbsolutePath& absPath )
     {
         const string text = _override.saveToXMLText();
         if ( ResourceComposer::saveText( absPath.str(), text ) == false )
@@ -225,17 +222,17 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
             return false;
         }
-        _savedText = text;
+        _state.markSaved( text );
         return true;
     }
 
     bool BonePoseEditModel::undo()
     {
-        return _history.undo( _override );
+        return _state.undo( _override );
     }
 
     bool BonePoseEditModel::redo()
     {
-        return _history.redo( _override );
+        return _state.redo( _override );
     }
 } // namespace sw::editor

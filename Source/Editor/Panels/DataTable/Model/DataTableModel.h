@@ -42,7 +42,7 @@ namespace sw::editor
         void pollBackgroundJobs();
 
         /** @brief dirty 한 문서만 저장합니다. 둘 다 깨끗해졌으면 true 입니다. */
-        [[nodiscard]] bool save();
+        [[nodiscard]] bool saveDocument();
         /** @brief dirty 한 문서만 디스크의 내용으로 되돌립니다. */
         void revert();
         bool isLocalizationDirty() const { return _bLocalizationDirty; }

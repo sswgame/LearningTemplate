@@ -78,12 +78,10 @@ namespace sw::editor
 
     CatalogDocument::CatalogDocument()
         : _text{}
-        , _savedText{}
+        , _state{}
         , _error{}
         , _parsed{}
         , _listGroup{}
-        , _listUndo{}
-        , _listRedo{}
         , _bTextEditOpen{ SW_FALSE }
         , _inheritance{}
     {
@@ -91,10 +89,8 @@ namespace sw::editor
 
     bool CatalogDocument::load( string_view text )
     {
-        _text      = string( text );
-        _savedText = _text;
-        _listUndo.clear();
-        _listRedo.clear();
+        _text = string( text );
+        _state.reset( _text );
         _bTextEditOpen = SW_FALSE;
         rebuildFromText();
         return _parsed.isParsed();
@@ -102,7 +98,7 @@ namespace sw::editor
 
     void CatalogDocument::markSaved()
     {
-        _savedText     = _text;
+        _state.markSaved( _text );
         _bTextEditOpen = SW_FALSE;
     }
 
@@ -111,15 +107,15 @@ namespace sw::editor
         if ( isDirty() == false )
             return;
         pushUndo();
-        _text = _savedText;
+        _text = _state.getSaved();
         rebuildFromText();
     }
 
     void CatalogDocument::replaceSavedText( string_view text )
     {
         pushUndo();
-        _text      = string( text );
-        _savedText = _text;
+        _text = string( text );
+        _state.markSaved( _text );
         rebuildFromText();
     }
 
@@ -239,10 +235,7 @@ namespace sw::editor
 
     void CatalogDocument::pushUndo()
     {
-        _listUndo.push_back( _text );
-        if ( _listUndo.size() > kMaxUndoCount )
-            _listUndo.erase( _listUndo.begin() );
-        _listRedo.clear();
+        _state.record( _text );
         _bTextEditOpen = SW_FALSE;
     }
 
@@ -464,22 +457,16 @@ namespace sw::editor
 
     void CatalogDocument::undo()
     {
-        if ( _listUndo.empty() )
+        if ( _state.undo( _text ) == false )
             return;
-        _listRedo.push_back( _text );
-        _text = _listUndo.back();
-        _listUndo.pop_back();
         _bTextEditOpen = SW_FALSE;
         rebuildFromText();
     }
 
     void CatalogDocument::redo()
     {
-        if ( _listRedo.empty() )
+        if ( _state.redo( _text ) == false )
             return;
-        _listUndo.push_back( _text );
-        _text = _listRedo.back();
-        _listRedo.pop_back();
         _bTextEditOpen = SW_FALSE;
         rebuildFromText();
     }

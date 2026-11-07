@@ -57,7 +57,7 @@ namespace sw::editor
         void                 restore( string_view xmlText );
         [[nodiscard]] string captureText() const { return _graph.saveToXMLText(); }
         /** @brief 컴파일을 통과하면(하위 그래프는 검사 없이) @p diskPath 에 씁니다. 통과하지 못하면 쓰지 않고 false 입니다 — 생성물을 만들 수 없는 파일을 남기지 않는다. 생성은 저장 뒤 임포터가 한다. */
-        [[nodiscard]] bool save( const AbsolutePath& diskPath );
+        [[nodiscard]] bool saveDocument( const AbsolutePath& diskPath );
 
         [[nodiscard]] const MaterialGraphDef& getGraph() const { return _graph; }
         MaterialGraphDef&                     editGraph() { return _graph; }

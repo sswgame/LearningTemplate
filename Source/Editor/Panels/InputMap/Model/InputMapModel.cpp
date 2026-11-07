@@ -125,7 +125,7 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapModel::save()
+    bool InputMapModel::saveDocument()
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.

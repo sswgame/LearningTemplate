@@ -137,7 +137,7 @@ namespace sw::editor
     {
         const std::optional<AbsolutePath> writePath = getDocumentDiskPath(); // 읽은 그 자리
         string                            error;
-        if ( writePath.has_value() == false || _model.saveToFile( *writePath, error ) == false )
+        if ( writePath.has_value() == false || _model.saveDocument( *writePath, error ) == false )
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : error;
             return false;

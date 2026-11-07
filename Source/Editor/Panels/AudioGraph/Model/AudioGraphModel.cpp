@@ -55,7 +55,7 @@ namespace sw::editor
         _editGraph       = std::move( restored );
     }
 
-    bool AudioGraphModel::save( const AbsolutePath& diskPath ) const
+    bool AudioGraphModel::saveDocument( const AbsolutePath& diskPath ) const
     {
         return _editGraph.saveToAsset( diskPath );
     }

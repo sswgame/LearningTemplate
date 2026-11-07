@@ -16,9 +16,9 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
+#include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 
 namespace sw::editor
 {
@@ -61,13 +61,13 @@ namespace sw::editor
         /** @brief 현재 내용을 파일 형식으로 씁니다. */
         string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content ); }
         /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 false 이고 이유를 @p outError 에 담습니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath, string& outError );
+        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath, string& outError );
 
         // --- 조회 ----------------------------------------------------------------------------------------------------
 
         const PairedAnimationContentDef& getContent() const { return _content; }
         /** @brief 저장된 상태와 내용이 다르면 true 입니다. */
-        bool isDirty() const { return saveToXMLText() != _savedText; }
+        bool isDirty() const { return _state.isDirty( saveToXMLText() ); }
         /** @brief 지금 내용을 다시 읽어 규칙(런타임 검사)에 맞으면 true 입니다. 틀린 이유는 로그로 나갑니다. */
         bool isValid() const;
 
@@ -95,14 +95,14 @@ namespace sw::editor
         [[nodiscard]] bool setNotifyTime( uint32 notifyIndex, float32 time, bool bContinuous, string& outError );
         [[nodiscard]] bool setNotifyRole( uint32 notifyIndex, const hashed_string& role, string& outError );
         /** @brief 연속 편집을 끝냅니다. 다음 편집은 새 되돌리기 단계를 만듭니다. */
-        void endContinuousEdit() { _history.endCoalescing(); }
+        void endContinuousEdit() { _state.endCoalescing(); }
 
         // --- 되돌리기 ------------------------------------------------------------------------------------------------
 
         [[nodiscard]] bool undo();
         [[nodiscard]] bool redo();
-        bool               canUndo() const { return _history.canUndo(); }
-        bool               canRedo() const { return _history.canRedo(); }
+        bool               canUndo() const { return _state.canUndo(); }
+        bool               canRedo() const { return _state.canRedo(); }
 
         // --- 미리보기(한 시계) ---------------------------------------------------------------------------------------
 
@@ -128,8 +128,7 @@ namespace sw::editor
 
     private:
         PairedAnimationContentDef                      _content;
-        string                                         _savedText;
-        EditSnapshotHistory<PairedAnimationContentDef> _history;
+        EditorDocumentState<PairedAnimationContentDef> _state; ///< 저장한 글 · 되돌리기
         float32                                        _scrubTime;
     };
 } // namespace sw::editor

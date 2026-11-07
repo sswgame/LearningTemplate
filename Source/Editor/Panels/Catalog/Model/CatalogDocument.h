@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
@@ -35,7 +36,7 @@ namespace sw::editor
         };
 
         /** @brief 되돌리기 스택의 상한입니다. 넘으면 가장 오래된 것부터 버립니다. */
-        static constexpr size_t kMaxUndoCount = 64;
+        static constexpr size_t kMaxUndoCount = EditSnapshotHistory<string>::kMaxCount;
 
         CatalogDocument();
 
@@ -49,8 +50,8 @@ namespace sw::editor
         void replaceSavedText( string_view text );
 
         const string&         getText() const { return _text; }
-        const string&         getSavedText() const { return _savedText; }
-        bool                  isDirty() const { return _text != _savedText; }
+        const string&         getSavedText() const { return _state.getSaved(); }
+        bool                  isDirty() const { return _state.isDirty( _text ); }
         bool                  isParsed() const { return _parsed.isParsed(); }
         const string&         getError() const { return _error; }
         const CatalogXMLText& getParsed() const { return _parsed; }
@@ -128,8 +129,8 @@ namespace sw::editor
         /** @brief 문서 밖에서 고친 편집의 실패 이유를 남깁니다. */
         void setError( string_view error ) { _error = string( error ); }
 
-        bool canUndo() const { return _listUndo.empty() == false; }
-        bool canRedo() const { return _listRedo.empty() == false; }
+        bool canUndo() const { return _state.canUndo(); }
+        bool canRedo() const { return _state.canRedo(); }
         void undo();
         void redo();
 
@@ -143,14 +144,12 @@ namespace sw::editor
         [[nodiscard]] bool checkChildRow( int32 rowIndex );
 
     private:
-        string                 _text;
-        string                 _savedText;
-        string                 _error;
-        CatalogXMLText         _parsed;
-        vector<Group>          _listGroup;
-        vector<string>         _listUndo;
-        vector<string>         _listRedo;
-        uint8                  _bTextEditOpen : 1; ///< 글 상자 입력이 이어지는 중이다 — 이미 되돌리기 단계를 쌓았다
-        CatalogInheritanceView _inheritance;
+        string                      _text;
+        EditorDocumentState<string> _state; ///< 저장된 원문 · 되돌리기
+        string                      _error;
+        CatalogXMLText              _parsed;
+        vector<Group>               _listGroup;
+        uint8                       _bTextEditOpen : 1; ///< 글 상자 입력이 이어지는 중이다 — 이미 되돌리기 단계를 쌓았다
+        CatalogInheritanceView      _inheritance;
     };
 } // namespace sw::editor

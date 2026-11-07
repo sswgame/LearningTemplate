@@ -94,7 +94,7 @@ namespace sw::editor
     bool AudioGraphPanel::saveDocument()
     {
         const std::optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        if ( diskPath.has_value() == false || _model.save( *diskPath ) == false )
+        if ( diskPath.has_value() == false || _model.saveDocument( *diskPath ) == false )
             return false;
         syncDocumentUndoBaseline();
         return true;

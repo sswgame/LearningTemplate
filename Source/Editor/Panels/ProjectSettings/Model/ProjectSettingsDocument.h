@@ -6,6 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
+
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectedInstance.h"
 
@@ -51,7 +53,7 @@ namespace sw::editor
          * @details 저장하면 마지막으로 저장한 글을 바꿔 `isModified` 가 false 가 된다. 요소 모드는 그 요소만 바꾸고(없으면 루트 맨 앞에 넣는다),
          *          파일이 없거나 쓴 글을 다시 읽어 같은 값이 아니거나 필수 필드가 빠졌으면 쓰지 않고 false 다.
          */
-        [[nodiscard]] bool save();
+        [[nodiscard]] bool saveDocument();
 
         /** @brief 열려 있으면 true 입니다(인스턴스가 있다). */
         [[nodiscard]] bool isOpen() const { return _current.isValid(); }
@@ -100,7 +102,7 @@ namespace sw::editor
         string            _path;
         string            _elementName; ///< 비면 파일 전체(JSON), 있으면 XML 파일 안의 그 요소
 
-        string           _savedText; ///< 마지막으로 읽거나 저장한 차이 글
-        ConfigReadResult _readResult;
+        EditorDocumentState<string> _state; ///< 마지막으로 읽거나 저장한 차이 글
+        ConfigReadResult            _readResult;
     };
 } // namespace sw::editor

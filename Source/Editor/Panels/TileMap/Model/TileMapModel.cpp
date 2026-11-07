@@ -105,7 +105,7 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool TileMapModel::saveToFile()
+    bool TileMapModel::saveDocument()
     {
         if ( EditorToolAssetCommands::saveTileMap( _pathBuffer.c_str(), captureMapData() ) == false )
         {

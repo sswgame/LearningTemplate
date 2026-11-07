@@ -14,10 +14,11 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
+
 #include "Engine/Character/Socket/SocketSet.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"
 
 namespace sw::editor
 {
@@ -52,9 +53,9 @@ namespace sw::editor
         /** @brief 현재 내용을 XML 텍스트로 씁니다. */
         string saveToXMLText() const { return _sockets.saveToXMLText(); }
         /** @brief 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다(되돌리기 기록은 유지). */
-        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath );
+        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath );
         /** @brief 편집을 버리고 마지막으로 읽거나 저장한 상태로 돌아갑니다(창의 "Don't Save"). 기록을 지웁니다. 그 글을 다시 읽지 못하면 그대로 두고 false 입니다. */
-        [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _savedText ), "(saved socket state)" ); }
+        [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _state.getSaved() ), "(saved socket state)" ); }
 
         // --- 조회 ----------------------------------------------------------------------------------------------------
 
@@ -93,14 +94,14 @@ namespace sw::editor
          */
         [[nodiscard]] bool mirrorSocket( const hashed_string& name, hashed_string& outMirrorName, string& outError );
         /** @brief 연속 편집을 끝냅니다. 다음 편집은 새 되돌리기 단계를 만듭니다. */
-        void endContinuousEdit() { _history.endCoalescing(); }
+        void endContinuousEdit() { _state.endCoalescing(); }
 
         // --- 되돌리기 ------------------------------------------------------------------------------------------------
 
         [[nodiscard]] bool undo();
         [[nodiscard]] bool redo();
-        bool               canUndo() const { return _history.canUndo(); }
-        bool               canRedo() const { return _history.canRedo(); }
+        bool               canUndo() const { return _state.canUndo(); }
+        bool               canRedo() const { return _state.canRedo(); }
 
     private:
         /** @brief 편집 직전에 부릅니다. */
@@ -119,8 +120,7 @@ namespace sw::editor
         SocketKindTable                _kinds;
         MirrorNameRules                _mirrorRules;
         vector<hashed_string>          _listBoneName;
-        string                         _savedText;
-        EditSnapshotHistory<SocketSet> _history;
+        EditorDocumentState<SocketSet> _state; ///< 저장한 글 · 되돌리기
         MirrorAxis                     _mirrorAxis;
     };
 } // namespace sw::editor

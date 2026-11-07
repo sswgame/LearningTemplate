@@ -545,7 +545,7 @@ namespace sw::editor
 
     bool TileMapPanel::saveDocument()
     {
-        if ( _document.saveToFile() == false )
+        if ( _document.saveDocument() == false )
             return false;
         syncDocumentUndoBaseline();
         // 다른 경로로 저장했으면 그 파일이 열린 문서다 — 핫 리로드 · 최근 목록 · 되돌리기의 문서 경로가 옛 파일을 가리키지 않게 한다.

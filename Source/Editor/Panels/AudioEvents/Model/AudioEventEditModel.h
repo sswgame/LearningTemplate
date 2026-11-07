@@ -25,7 +25,7 @@ namespace sw::editor
         /** @brief 사본을 버리고 고치기를 끝냅니다. */
         void end();
         /** @brief 사본을 파일에 씁니다. 검사를 통과하지 못하면 쓰지 않고 표시도 그대로입니다. */
-        [[nodiscard]] bool save();
+        [[nodiscard]] bool saveDocument();
 
         bool isDirty() const { return _bDirty == SW_TRUE; }
         void markEdited() { _bDirty = SW_TRUE; }

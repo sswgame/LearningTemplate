@@ -84,7 +84,7 @@ namespace sw::editor
          * @brief 확정한 맵 경로에 리소스의 기본 바인딩(`<InputMap>`)을 씁니다.
          * @details 경로가 게임 설정 파일(`gamesettings.xml`)이면 입력 맵 묶음을 고치는 중이다. 액션은 그것을 마지막으로 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다.
          */
-        [[nodiscard]] bool save();
+        [[nodiscard]] bool saveDocument();
         /** @brief 경로가 맵 파일 하나가 아니라 게임의 입력 맵 묶음을 가리키면 true 입니다. */
         bool isBundlePath() const;
         /** @brief 액션을 정한 파일의 리소스 경로입니다. 파일에서 읽지 않은 액션이면 빈 글입니다. */

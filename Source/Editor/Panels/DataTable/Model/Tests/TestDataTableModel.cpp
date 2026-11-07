@@ -110,7 +110,7 @@ SW_TEST_CASE( DataTableModelTest, ReloadedListKeepsTheSelectionByPath )
     model.setGameDataFiles( { files._second, files._first } ); // 순서가 바뀌었다
     SW_EXPECT_EQUAL( 0, model.getSelectedGameDataIndex() );
     SW_EXPECT_TRUE( model.isGameDataDirty() );
-    SW_EXPECT_TRUE( model.save() );
+    SW_EXPECT_TRUE( model.saveDocument() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._second ) == "<Second b=\"9\"/>" );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
@@ -126,7 +126,7 @@ SW_TEST_CASE( DataTableModelTest, VanishedFileLeavesNothingSelectedAndKeepsTheEd
     model.setGameDataFiles( { files._first } );
     SW_EXPECT_EQUAL( -1, model.getSelectedGameDataIndex() );
     SW_EXPECT_TRUE( model.findSelectedGameDataFile() == nullptr );
-    SW_EXPECT_FALSE( model.save() ); // 쓸 곳이 없다 — 표시가 남아 저장 확인이 다시 묻는다
+    SW_EXPECT_FALSE( model.saveDocument() ); // 쓸 곳이 없다 — 표시가 남아 저장 확인이 다시 묻는다
     SW_EXPECT_TRUE( model.isGameDataDirty() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
@@ -147,7 +147,7 @@ SW_TEST_CASE( DataTableModelTest, SaveWritesAndRevertRestores )
     SW_EXPECT_TRUE( model.getGameDataLoadCount() > loadCount ); // 패널이 표를 다시 읽는다
 
     model.replaceGameDataRawText( "<First a=\"6\"/>" );
-    SW_EXPECT_TRUE( model.save() );
+    SW_EXPECT_TRUE( model.saveDocument() );
     SW_EXPECT_FALSE( model.isAnyDirty() );
     SW_EXPECT_FALSE( model.getGameDataDocument().isDirty() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"6\"/>" );
@@ -259,11 +259,11 @@ SW_TEST_CASE( DataTableModelTest, BrokenXMLIsNotSaved )
     model.selectGameDataFile( 0 );
     model.replaceGameDataRawText( "<First a=" );
     SW_EXPECT_FALSE( model.getGameDataDocument().isParsed() );
-    SW_EXPECT_FALSE( model.save() );
+    SW_EXPECT_FALSE( model.saveDocument() );
     SW_EXPECT_TRUE( model.isGameDataDirty() ); // 고친 글은 남는다 — 글 상자에서 고쳐 다시 저장한다
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
     model.replaceGameDataRawText( "<First a=\"2\"/>" );
-    SW_EXPECT_TRUE( model.save() );
+    SW_EXPECT_TRUE( model.saveDocument() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"2\"/>" );
 }
 

@@ -37,8 +37,7 @@ namespace sw::editor
 {
     PairedAnimationEditModel::PairedAnimationEditModel()
         : _content{}
-        , _savedText{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{} ) }
-        , _history{}
+        , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{} ) }
         , _scrubTime{ 0.0f }
     {
     }
@@ -48,9 +47,8 @@ namespace sw::editor
         PairedAnimationDef loaded;
         if ( loaded.loadFromXMLText( xmlText, sourceName ) == false )
             return false;
-        _content   = loaded.getContent();
-        _savedText = saveToXMLText();
-        _history.clear();
+        _content = loaded.getContent();
+        _state.reset( saveToXMLText() );
         _scrubTime = 0.0f;
         return true;
     }
@@ -66,7 +64,7 @@ namespace sw::editor
         return loadFromXMLText( text, absolutePath );
     }
 
-    bool PairedAnimationEditModel::saveToFile( const AbsolutePath& absPath, string& outError )
+    bool PairedAnimationEditModel::saveDocument( const AbsolutePath& absPath, string& outError )
     {
         if ( isValid() == false )
         {
@@ -79,7 +77,7 @@ namespace sw::editor
             outError = "The file could not be written";
             return false;
         }
-        _savedText = text;
+        _state.markSaved( text );
         return true;
     }
 
@@ -251,12 +249,12 @@ namespace sw::editor
 
     bool PairedAnimationEditModel::undo()
     {
-        return _history.undo( _content );
+        return _state.undo( _content );
     }
 
     bool PairedAnimationEditModel::redo()
     {
-        return _history.redo( _content );
+        return _state.redo( _content );
     }
 
     void PairedAnimationEditModel::setScrubTime( float32 seconds )
@@ -311,7 +309,7 @@ namespace sw::editor
 
     void PairedAnimationEditModel::recordUndo( string_view coalesceKey )
     {
-        _history.record( _content, coalesceKey );
+        _state.record( _content, coalesceKey );
     }
 
     bool PairedAnimationEditModel::isRoleIndexValid( uint32 roleIndex, string& outError ) const

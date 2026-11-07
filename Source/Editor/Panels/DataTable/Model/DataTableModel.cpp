@@ -62,7 +62,7 @@ namespace sw::editor
             _gameDataJob.request();
     }
 
-    bool DataTableModel::save()
+    bool DataTableModel::saveDocument()
     {
         if ( _bLocalizationDirty )
             saveLocalization();

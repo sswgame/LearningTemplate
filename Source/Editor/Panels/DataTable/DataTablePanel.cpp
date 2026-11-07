@@ -86,7 +86,7 @@ namespace sw::editor
     /** @brief 두 문서(로컬라이즈 · 게임 데이터)를 한 패널이 들기 때문에 모델이 dirty 한 쪽만 저장합니다. */
     bool DataTablePanel::saveDocument()
     {
-        const bool bSaved = _model.save();
+        const bool bSaved = _model.saveDocument();
         syncDocumentDirty();
         return bSaved;
     }

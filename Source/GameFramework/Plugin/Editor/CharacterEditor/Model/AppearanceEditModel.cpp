@@ -70,8 +70,7 @@ namespace sw::editor
 {
     AppearanceEditModel::AppearanceEditModel()
         : _selection{}
-        , _saved{}
-        , _history{}
+        , _state{}
         , _revision{ 0 }
     {
     }
@@ -79,14 +78,13 @@ namespace sw::editor
     void AppearanceEditModel::setSelection( const AppearanceSelection& selection )
     {
         _selection = selection;
-        _saved     = selection;
-        _history.clear();
+        _state.reset( selection );
         ++_revision;
     }
 
     bool AppearanceEditModel::isDirty() const
     {
-        return AppearanceEditModelInternal::isSameSelection( _selection, _saved ) == false;
+        return AppearanceEditModelInternal::isSameSelection( _selection, _state.getSaved() ) == false;
     }
 
     bool AppearanceEditModel::setSlotItem( const hashed_string& slot, const hashed_string& itemID )
@@ -246,13 +244,13 @@ namespace sw::editor
     bool AppearanceEditModel::undo()
     {
         ++_revision;
-        return _history.undo( _selection );
+        return _state.undo( _selection );
     }
 
     bool AppearanceEditModel::redo()
     {
         ++_revision;
-        return _history.redo( _selection );
+        return _state.redo( _selection );
     }
 
     bool AppearanceEditModel::loadFromPreset( const UserAppearancePresetStore& store, string_view name )
@@ -309,7 +307,7 @@ namespace sw::editor
         }
         if ( AppearanceEditModelInternal::isSameSelection( before, _selection ) )
             return false;
-        _history.record( before );
+        _state.record( before );
         ++_revision;
         return true;
     }
@@ -321,7 +319,7 @@ namespace sw::editor
 
     void AppearanceEditModel::recordUndo( string_view coalesceKey )
     {
-        _history.record( _selection, coalesceKey );
+        _state.record( _selection, coalesceKey );
         ++_revision;
     }
 

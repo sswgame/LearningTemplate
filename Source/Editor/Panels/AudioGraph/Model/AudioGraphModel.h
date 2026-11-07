@@ -59,7 +59,7 @@ namespace sw::editor
         /** @brief 되돌리기 · dirty 판정에 쓰는 사본의 글입니다. */
         string captureText() const { return _editGraph.saveToXMLText(); }
         /** @brief 검사를 통과하면 @p diskPath 에 쓰고 true 입니다. 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다). */
-        [[nodiscard]] bool save( const AbsolutePath& diskPath ) const;
+        [[nodiscard]] bool saveDocument( const AbsolutePath& diskPath ) const;
         /** @brief 저장된 @p path 의 파일을 2D 로 한 번 냅니다(버스 `ui`). 앞의 미리 듣기는 멈춘다. */
         void playPreview( AudioEngine& engine, const hashed_string& path );
         void stopPreview( AudioEngine& engine );

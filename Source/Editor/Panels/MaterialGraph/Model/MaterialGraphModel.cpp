@@ -76,7 +76,7 @@ namespace sw::editor
         rebuildPins();
     }
 
-    bool MaterialGraphModel::save( const AbsolutePath& diskPath )
+    bool MaterialGraphModel::saveDocument( const AbsolutePath& diskPath )
     {
         if ( MaterialGraphCompiler::isSubgraph( _graph ) == false )
         {

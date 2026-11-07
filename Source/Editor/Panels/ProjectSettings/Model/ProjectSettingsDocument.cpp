@@ -203,7 +203,7 @@ namespace sw::editor
         , _default{}
         , _path{}
         , _elementName{}
-        , _savedText{}
+        , _state{}
         , _readResult{ ConfigReadResult::Missing }
     {
     }
@@ -239,7 +239,7 @@ namespace sw::editor
         _readResult = ConfigReadResult::Missing;
         _path.clear();
         _elementName.clear();
-        _savedText.clear();
+        _state.reset( string{} );
     }
 
     ConfigReadResult ProjectSettingsDocument::readInto( void* pInstance, string_view fileText ) const
@@ -266,7 +266,7 @@ namespace sw::editor
         {
             resetToDefault();
             _readResult = ConfigReadResult::Missing;
-            _savedText  = makeDifferenceText();
+            _state.markSaved( makeDifferenceText() );
             return _readResult;
         }
         string fileText;
@@ -289,12 +289,12 @@ namespace sw::editor
             if ( result == ConfigReadResult::Missing )
                 resetToDefault();
             _readResult = result;
-            _savedText  = makeDifferenceText();
+            _state.markSaved( makeDifferenceText() );
             return _readResult;
         }
         _current    = std::move( fresh );
         _readResult = ConfigReadResult::Loaded;
-        _savedText  = makeDifferenceText();
+        _state.markSaved( makeDifferenceText() );
         return _readResult;
     }
 
@@ -423,7 +423,7 @@ namespace sw::editor
 
     bool ProjectSettingsDocument::isModified() const
     {
-        return _current.isValid() && makeDifferenceText() != _savedText;
+        return _current.isValid() && _state.isDirty( makeDifferenceText() );
     }
 
     bool ProjectSettingsDocument::saveElement( const string& elementText ) const
@@ -466,7 +466,7 @@ namespace sw::editor
         return FileUtil::writeTextFile( _path, newText );
     }
 
-    bool ProjectSettingsDocument::save()
+    bool ProjectSettingsDocument::saveDocument()
     {
         if ( _current.isValid() == false || isLoadFailed() )
             return false;
@@ -488,7 +488,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );
             return false;
         }
-        _savedText  = text;
+        _state.markSaved( text );
         _readResult = ConfigReadResult::Loaded;
         SW_LOG_INFO_ID( "ProjectSettings.ProjectSettingsSavedKey", "Project settings saved: %# key(s) -> %#", countNonDefaultKeys(), _path.c_str() );
         return true;

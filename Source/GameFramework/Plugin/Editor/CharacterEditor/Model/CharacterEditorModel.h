@@ -15,10 +15,11 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Workspace/Undo/SaveReloadGuard.h"
+
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BonePoseEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/FitCheckSummary.h"
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/SaveReloadGuard.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/SocketEditModel.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
@@ -220,7 +221,7 @@ namespace sw::editor
         SocketEditModel               _sockets;
         BonePoseEditModel             _pose;
         AppearanceEditModel           _appearance;
-        SaveReloadGuard               _reloadGuard;
+        SaveReloadGuard<SocketSet>    _reloadGuard;
         FitCheckSummary               _fit;
         shared_ptr<const ItemCatalog> _pItems; ///< 공유 캐시의 한 벌(게임이 쥔 아이템 카탈로그와 같은 객체)
         AppearanceDatabase            _database;

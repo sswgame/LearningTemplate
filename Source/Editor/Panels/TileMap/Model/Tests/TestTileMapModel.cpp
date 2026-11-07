@@ -592,7 +592,7 @@ SW_TEST_CASE( TileMapModelTest, SaveAndLoadRoundTripWithStatus )
         document.editPath()  = path.c_str();
         document.editErase() = true;
         (void)document.applyToolInput( Util::makeBrushInput( 1, 1 ) );
-        SW_REQUIRE_TRUE( document.saveToFile() );
+        SW_REQUIRE_TRUE( document.saveDocument() );
         SW_EXPECT_FALSE( document.getStatus().empty() );
     }
     TileMapModel document;

@@ -30,10 +30,10 @@ namespace sw::editor
             _bDirty = _document.isModified();
     }
 
-    bool ProjectSettingsPage::save( bool& outApplied )
+    bool ProjectSettingsPage::saveDocument( bool& outApplied )
     {
         outApplied = false;
-        if ( _document.save() == false )
+        if ( _document.saveDocument() == false )
             return false;
         _bDirty = false;
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다.

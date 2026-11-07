@@ -30,7 +30,7 @@ namespace sw::editor
         /** @brief 문서와 비교해 저장하지 않은 표시를 다시 정합니다. */
         void refreshDirty();
         /** @brief 파일에 쓰고 호스트에 알립니다. 호스트가 반영했으면 @p outApplied 가 true 입니다. 쓰지 못하면 false 이고 표시는 그대로입니다. */
-        [[nodiscard]] bool save( bool& outApplied );
+        [[nodiscard]] bool saveDocument( bool& outApplied );
         /** @brief 파일 내용으로 되돌립니다. 결과는 문서의 상태로 보입니다. */
         void revert();
         /** @brief 모든 값을 기본값으로 바꿉니다. 저장해야 파일에 씁니다. */

@@ -13,6 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/Undo/EditSnapshotHistory.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -39,8 +40,6 @@ namespace sw::editor
     public:
         static constexpr const utf8* kSubsystemName = "MeshModifierSession";
 
-        /** @brief 되돌리기 기록의 최대 수입니다. */
-        static constexpr size_t kMaxUndoCount = 64;
         /** @brief 미리보기 선을 그릴 최대 삼각형 수입니다. 넘으면 고르게 건너뜁니다. */
         static constexpr size_t kMaxPreviewTriangleCount = 20000;
         /** @brief 미리보기 시간 칸의 상한(초)입니다. 재생은 여기서 0 으로 되감습니다. */
@@ -68,8 +67,8 @@ namespace sw::editor
         [[nodiscard]] bool undo();
         /** @brief 되돌린 것을 다시 합니다. */
         [[nodiscard]] bool redo();
-        bool               canUndo() const { return _listUndo.empty() == false; }
-        bool               canRedo() const { return _listRedo.empty() == false; }
+        bool               canUndo() const { return _history.canUndo(); }
+        bool               canRedo() const { return _history.canRedo(); }
 
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. */
         void markDirty() { _bPreviewDirty = SW_TRUE; }
@@ -212,43 +211,42 @@ namespace sw::editor
         void restoreOriginalMesh();
 
     private:
-        MeshModifierStack          _stack;
-        shared_ptr<Mesh>           _gpuPreviewMesh;         ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
-        uint8                      _bGPUPreviewColored : 1; ///< GPU 미리보기 메시의 정점 색을 Paint 결과로 덮었다(칠하는 스택이 아니게 되면 원본 색으로 되돌린다)
-        uint8                      _bShadedPreview     : 1;
-        uint8                      _bPreviewDirty      : 1;
-        uint8                      _bStagePreviewDirty : 1;
-        uint8                      _bInputBoundsDirty  : 1;
-        uint8                      _bMirrorEditing     : 1;
-        uint8                      _bPreviewPlaying    : 1;
-        shared_ptr<Mesh>           _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
-        shared_ptr<Mesh>           _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
-        vector<float4>             _listGPUProgram;
-        int32                      _gpuBlockingIndex;
-        MeshModifierMesh           _previewMesh;
-        MeshModifierMesh           _stagePreviewMesh;      ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
-        MeshModifierMesh           _prefixMesh;            ///< 고른 모디파이어 앞까지 건 결과(앞부분 캐시, `updatePrefixCache`)
-        vector<MeshModifierBounds> _listPrefixInputBounds; ///< 앞부분을 거는 동안 모은 입력 상자(GPU 프로그램용)
-        vector<vector<float32>>    _listPrefixInputWeight; ///< 앞부분을 거는 동안 모은 모디파이어별 입력 가중치(GPU 프로그램의 정점별 세기 표)
-        string                     _prefixKey;             ///< 앞부분 모디파이어의 한 줄 저장 글(`MeshModifierStack::makePrefixJSONText`)
-        float4x4                   _prefixMeshToWorld;     ///< 앞부분을 건 메시 변환
-        float32                    _prefixTime;            ///< 앞부분을 건 미리보기 시간
-        int32                      _prefixEnd;             ///< 앞부분의 끝 번호(-1 이면 캐시 없음)
-        MeshAssetData              _sourceData;
-        vector<float3>             _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
-        vector<string>             _listUndo;
-        vector<string>             _listRedo;
-        string                     _savedStackText; ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준)
-        string                     _meshPath;
-        MeshModifierBounds         _sourceBounds;
-        GameObjectHandle           _target;
-        MeshModifierTextureSampler _textureSampler; ///< 텍스처 모디파이어가 읽는 이미지 캐시(`trySampleTexture`). 세션이 소유해 에디터마다 따로이고 세션과 함께 사라진다
-        ModifierInputs             _modifierInputs; ///< 모디파이어 평가에 넘기는 바깥 입력 창구(`getModifierInputs`)
-        float32                    _previewTime;
-        int32                      _selectedIndex;
-        MeshModifierBounds         _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`, 앞부분 캐시에서 센다)
-        int32                      _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
-        int32                      _selectedControlPoint;
-        uint32                     _mirrorAxis;
+        MeshModifierStack           _stack;
+        shared_ptr<Mesh>            _gpuPreviewMesh;         ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
+        uint8                       _bGPUPreviewColored : 1; ///< GPU 미리보기 메시의 정점 색을 Paint 결과로 덮었다(칠하는 스택이 아니게 되면 원본 색으로 되돌린다)
+        uint8                       _bShadedPreview     : 1;
+        uint8                       _bPreviewDirty      : 1;
+        uint8                       _bStagePreviewDirty : 1;
+        uint8                       _bInputBoundsDirty  : 1;
+        uint8                       _bMirrorEditing     : 1;
+        uint8                       _bPreviewPlaying    : 1;
+        shared_ptr<Mesh>            _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
+        shared_ptr<Mesh>            _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
+        vector<float4>              _listGPUProgram;
+        int32                       _gpuBlockingIndex;
+        MeshModifierMesh            _previewMesh;
+        MeshModifierMesh            _stagePreviewMesh;      ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
+        MeshModifierMesh            _prefixMesh;            ///< 고른 모디파이어 앞까지 건 결과(앞부분 캐시, `updatePrefixCache`)
+        vector<MeshModifierBounds>  _listPrefixInputBounds; ///< 앞부분을 거는 동안 모은 입력 상자(GPU 프로그램용)
+        vector<vector<float32>>     _listPrefixInputWeight; ///< 앞부분을 거는 동안 모은 모디파이어별 입력 가중치(GPU 프로그램의 정점별 세기 표)
+        string                      _prefixKey;             ///< 앞부분 모디파이어의 한 줄 저장 글(`MeshModifierStack::makePrefixJSONText`)
+        float4x4                    _prefixMeshToWorld;     ///< 앞부분을 건 메시 변환
+        float32                     _prefixTime;            ///< 앞부분을 건 미리보기 시간
+        int32                       _prefixEnd;             ///< 앞부분의 끝 번호(-1 이면 캐시 없음)
+        MeshAssetData               _sourceData;
+        vector<float3>              _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
+        EditSnapshotHistory<string> _history;            ///< 스택 글(JSON) 되돌리기
+        string                      _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준)
+        string                      _meshPath;
+        MeshModifierBounds          _sourceBounds;
+        GameObjectHandle            _target;
+        MeshModifierTextureSampler  _textureSampler; ///< 텍스처 모디파이어가 읽는 이미지 캐시(`trySampleTexture`). 세션이 소유해 에디터마다 따로이고 세션과 함께 사라진다
+        ModifierInputs              _modifierInputs; ///< 모디파이어 평가에 넘기는 바깥 입력 창구(`getModifierInputs`)
+        float32                     _previewTime;
+        int32                       _selectedIndex;
+        MeshModifierBounds          _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`, 앞부분 캐시에서 센다)
+        int32                       _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
+        int32                       _selectedControlPoint;
+        uint32                      _mirrorAxis;
     };
 } // namespace sw::editor

@@ -1086,7 +1086,7 @@ namespace sw::editor
 
     bool InputMapPanel::saveToFile()
     {
-        return _document.save();
+        return _document.saveDocument();
     }
 
     void InputMapPanel::syncDocumentDirty()
