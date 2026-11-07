@@ -18,19 +18,17 @@
 
 namespace sw
 {
-    /** @brief 순위표 업무 결과입니다. 응답 본문의 첫 값이며 와이어 값이므로 새 값은 끝에만 추가합니다. */
+    /**
+     * @brief 순위표 업무 결과입니다. 와이어 값이므로 새 값은 끝에만 추가합니다.
+     * @details 공통 범주(로그인 없음 · 범위 밖 요청 · 일시 장애 · 경합 · 버전)는 여기 두지 않고 `OnlineError` 로 온다(`OnlineResult::_errorCode`).
+     */
     ENUM( Count = Count )
     enum class LeaderboardResult : uint8
     {
         Ok = 0,
-        NotSignedIn,
-        Invalid,        ///< 범위나 id 규칙에 맞지 않는다
-        UnknownBoard,   ///< 등록하지 않은 보드이다
-        NotAllowed,     ///< 클라이언트가 낼 수 없는 보드이다
-        NotRanked,      ///< 이 기간에 점수가 없거나 시즌 밖이다
-        Unavailable,    ///< 저장소나 캐시를 쓸 수 없다. 다시 하면 된다
-        Conflict,       ///< 다시 해도 경합이 난다. 잠시 뒤에 시도한다
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        UnknownBoard, ///< 등록하지 않은 보드이다
+        NotAllowed,   ///< 클라이언트가 낼 수 없는 보드이다
+        NotRanked,    ///< 이 기간에 점수가 없거나 시즌 밖이다
         Count
     };
 } // namespace sw
@@ -137,7 +135,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 순위 한 줄입니다. 응답(`LeaderboardReply`)에 고정 배치형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
+    /** @brief 순위 한 줄입니다. 응답(`LeaderboardEntriesReply` · `LeaderboardSeasonReply`)에 고정 배치형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
     REFLECT()
     struct LeaderboardEntry
     {

@@ -342,6 +342,7 @@ namespace sw::test
     public:
         TReply _reply{};
         int32  _callCount{ 0 };
+        uint16 _errorCode{ OnlineError::kOk }; ///< `kOk` 가 아니면 `_reply` 대신 이 공통 범주로 답한다
 
         const OnlineProtocolEntry& getProtocol() const override { return TProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override
@@ -354,7 +355,10 @@ namespace sw::test
         {
             (void)body;
             ++_callCount;
-            (void)host.respondReply<typename TProtocol::MessageTypes>( context._token, _reply );
+            if ( _errorCode != OnlineError::kOk )
+                (void)host.respondError( context._token, _errorCode );
+            else
+                (void)host.respondReply<typename TProtocol::MessageTypes>( context._token, _reply );
         }
     };
 
@@ -396,9 +400,10 @@ namespace sw::test
         }
 
         /** @brief 서비스가 @p reply 로 답하게 두고 @p method 를 @p key 로 보내 응답까지 돌립니다. 그사이 서비스가 불린 수입니다(0 이면 서버가 기억한 답을 줬다). */
-        int32 send( uint16 method, const NetIdempotencyKey& key, const TReply& reply )
+        int32 send( uint16 method, const NetIdempotencyKey& key, const TReply& reply, uint16 errorCode = OnlineError::kOk )
         {
             _service._reply               = reply;
+            _service._errorCode           = errorCode;
             const int32       callsBefore = _service._callCount;
             NetRequestOptions options;
             options._idempotencyKey = key;
@@ -417,6 +422,19 @@ namespace sw::test
             SW_EXPECT_FALSE( finished.isRetryable() );
             const NetIdempotencyKey key = NetIdempotencyKey::makeRandom();
             SW_EXPECT_EQUAL( 1, send( method, key, retryable ) );
+            SW_EXPECT_EQUAL( 1, send( method, key, finished ) ); // 기억하지 않았으니 서비스가 다시 처리한다
+            SW_EXPECT_EQUAL( 0, send( method, key, finished ) ); // 끝난 결과는 기억한 답이다
+        }
+
+        /**
+         * @brief 다시 시도할 공통 범주 @p errorCode(일시 장애 · 충돌) 뒤의 같은 키 재시도는 서비스에 다시 닿고, @p finished(키트 업무 결과) 뒤의 재시도는 닿지 않는지 봅니다.
+         * @details 키트 결과 열거형에는 공통 범주가 없다. 재시도할 실패는 `fail` 길로만 나가므로 보존이 형식에서 나온다.
+         */
+        void expectFailureReachesService( uint16 method, uint16 errorCode, const TReply& finished )
+        {
+            SW_EXPECT_TRUE( OnlineError::isRetryable( errorCode ) );
+            const NetIdempotencyKey key = NetIdempotencyKey::makeRandom();
+            SW_EXPECT_EQUAL( 1, send( method, key, finished, errorCode ) );
             SW_EXPECT_EQUAL( 1, send( method, key, finished ) ); // 기억하지 않았으니 서비스가 다시 처리한다
             SW_EXPECT_EQUAL( 0, send( method, key, finished ) ); // 끝난 결과는 기억한 답이다
         }

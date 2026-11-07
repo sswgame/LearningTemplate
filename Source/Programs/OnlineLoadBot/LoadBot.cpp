@@ -458,7 +458,7 @@ namespace sw
                 LeaderboardTopRequest request;
                 request._boardID = step._text;
                 request._count   = step._count;
-                (void)_leaderboardClient.call<LeaderboardMethod::GetTop>( request, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
+                callKit<LeaderboardMethod::GetTop>( _leaderboardClient, request );
                 return true;
             }
             case LoadBotAction::LeaderboardAround:
@@ -466,7 +466,7 @@ namespace sw
                 LeaderboardAroundRequest request;
                 request._boardID = step._text;
                 request._radius  = step._count;
-                (void)_leaderboardClient.call<LeaderboardMethod::GetAround>( request, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
+                callKit<LeaderboardMethod::GetAround>( _leaderboardClient, request );
                 return true;
             }
             case LoadBotAction::MatchmakingQueue:

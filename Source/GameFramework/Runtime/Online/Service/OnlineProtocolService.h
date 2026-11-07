@@ -256,6 +256,24 @@ namespace sw
             return _calls.template respond<typename TProtocol::MessageTypes>( callID, reply, getResultIndex( reply ) );
         }
 
+        /** @brief 호출 번호 @p callID 를 공통 범주 @p errorCode 로 끝냅니다. 완료 큐처럼 메서드를 모르는 자리가 씁니다. 표에 없는 번호는 조용히 false 입니다. */
+        bool failCall( uint64 callID, uint16 errorCode )
+        {
+            if ( _calls.isOpen( callID ) == false )
+                return false;
+            return _calls.fail( callID, errorCode );
+        }
+
+        /**
+         * @brief 호출 번호 @p callID 를 저장 함수의 결과 @p outcome 으로 끝냅니다. 공통 범주면 `failCall`, 아니면 @p reply 입니다. 완료 큐로 답하는 키트가 씁니다.
+         * @details 키트 결과 열거형에 공통 범주를 두지 않는다 — 실패는 이 길로만 나가므로 보존 · 지표가 형식에서 나온다.
+         */
+        template <typename TResult, typename TReply>
+        bool finishCall( uint64 callID, const OnlineOutcome<TResult>& outcome, const TReply& reply )
+        {
+            return outcome.isFailed() ? failCall( callID, outcome._errorCode ) : completeCall( callID, reply );
+        }
+
         /** @brief 공통 범주 @p errorCode 로 끝냅니다. 저장소 완료가 부릅니다. */
         template <typename TMethod>
         bool fail( OnlineServerCall<TMethod> call, uint16 errorCode )

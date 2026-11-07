@@ -274,6 +274,8 @@ namespace sw
         }
 
         [[nodiscard]] bool isFailed() const { return _errorCode != OnlineError::kOk; }
+        /** @brief 공통 범주 @p errorCode 로 끝났는지입니다. */
+        [[nodiscard]] bool hasError( uint16 errorCode ) const { return _errorCode == errorCode; }
         [[nodiscard]] bool operator==( TResult result ) const { return isFailed() == false && _result == result; }
         [[nodiscard]] bool operator!=( TResult result ) const { return ( *this == result ) == false; }
     };

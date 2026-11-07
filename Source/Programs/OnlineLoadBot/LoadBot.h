@@ -98,10 +98,26 @@ namespace sw
         void               pollGameSession();
         void               stop();
 
+        /** @brief 키트 응답 처리기입니다(지연 · 오류만 본다). 응답 타입마다 하나가 생긴다 — 결과 칸이 없는 응답은 끝났으면 0 이다. */
+        template <typename TReply>
+        void onKitReply( const OnlineResult<TReply>& result )
+        {
+            if constexpr ( OnlineReplyHasResult<TReply>::value )
+                finishWithResult( result._errorCode, static_cast<uint8>( result._reply._result ) );
+            else
+                finishWithResult( result._errorCode, 0 );
+        }
+
+        /** @brief 키트 @p client 의 메서드 @p TMethod 를 부르고 응답을 `onKitReply` 로 받습니다. */
+        template <typename TMethod, typename TClient>
+        void callKit( TClient& client, const typename TMethod::Request& request )
+        {
+            (void)client.template call<TMethod>( request, OnlineReplyDelegate<TMethod>::template create<&LoadBot::onKitReply<typename TMethod::Reply>>( this ) );
+        }
+
         // 응답 처리기 — 키트마다 하나(지연 · 오류만 본다)
         void onChatReply( const ChatClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onSocialReply( const SocialClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onLeaderboardReply( const LeaderboardClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onMatchmakingReply( const MatchmakingClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onLiveOpsReply( const LiveOpsClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onDirectoryStatus( const OnlineResult<ServerDirectoryStatus>& result );

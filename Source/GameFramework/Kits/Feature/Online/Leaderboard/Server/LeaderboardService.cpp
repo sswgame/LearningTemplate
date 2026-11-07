@@ -241,7 +241,7 @@ namespace sw
             LeaderboardUpdate    _update{ LeaderboardUpdate::Best };
             LeaderboardOrder     _order{ LeaderboardOrder::Descending };
             LeaderboardOperation _operation{ LeaderboardOperation::Submit };
-            LeaderboardResult    _result{ LeaderboardResult::Unavailable };
+            LeaderboardOutcome   _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) };
             uint8                _bChanged{ SW_FALSE };
 
             void run( IServiceStoreConnection& connection ) override
@@ -274,7 +274,7 @@ namespace sw
                     if ( commitResult != ServiceStoreResult::Conflict )
                         return;
                 }
-                _result = LeaderboardResult::Conflict;
+                _result = LeaderboardOutcome::fail( OnlineError::kBusy );
             }
 
             void complete() override
@@ -321,7 +321,7 @@ namespace sw
                 , _pService{ pService }
                 , _accountID{ accountID }
                 , _requestTag{ requestTag }
-                , _result{ LeaderboardResult::Unavailable }
+                , _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) }
                 , _bCache{ static_cast<uint8>( bCache ? SW_TRUE : SW_FALSE ) }
             {
             }
@@ -360,7 +360,7 @@ namespace sw
             LeaderboardService*     _pService;
             AccountID               _accountID;
             uint64                  _requestTag;
-            LeaderboardResult       _result;
+            LeaderboardOutcome      _result;
             uint8                   _bCache;
         };
 
@@ -419,7 +419,7 @@ namespace sw
                 , _pService{ pService }
                 , _accountID{ accountID }
                 , _requestTag{ requestTag }
-                , _result{ LeaderboardResult::Unavailable }
+                , _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) }
             {
             }
 
@@ -447,7 +447,7 @@ namespace sw
             LeaderboardService*      _pService;
             AccountID                _accountID;
             uint64                   _requestTag;
-            LeaderboardResult        _result;
+            LeaderboardOutcome       _result;
         };
 
         /** @brief 업적 진행률을 읽는 작업입니다. 통계와 달성 기록을 읽어 등록한 업적(복사본)마다 한 줄을 만듭니다. */
@@ -460,7 +460,7 @@ namespace sw
                 , _pService{ pService }
                 , _accountID{ accountID }
                 , _requestTag{ requestTag }
-                , _result{ LeaderboardResult::Unavailable }
+                , _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) }
             {
             }
 
@@ -522,7 +522,7 @@ namespace sw
             LeaderboardService*         _pService;
             AccountID                   _accountID;
             uint64                      _requestTag;
-            LeaderboardResult           _result;
+            LeaderboardOutcome          _result;
         };
 
         /** @brief 계정 목록의 점수를 읽어 목록 안 순위를 매기는 작업입니다. */
@@ -537,7 +537,7 @@ namespace sw
                 , _periodID{ periodID }
                 , _requestTag{ requestTag }
                 , _order{ order }
-                , _result{ LeaderboardResult::Unavailable }
+                , _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) }
             {
             }
 
@@ -576,7 +576,7 @@ namespace sw
             uint64                   _periodID;
             uint64                   _requestTag;
             LeaderboardOrder         _order;
-            LeaderboardResult        _result;
+            LeaderboardOutcome       _result;
         };
 
         /** @brief 시즌 결과 하나를 읽는 작업입니다. 값은 점수와 순위입니다. */
@@ -589,7 +589,7 @@ namespace sw
                 , _pService{ pService }
                 , _requestTag{ requestTag }
                 , _seasonID{ seasonID }
-                , _result{ LeaderboardResult::Unavailable }
+                , _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) }
             {
                 _entry._accountID = accountID;
             }
@@ -610,7 +610,7 @@ namespace sw
                     return;
                 _entry._score = reader.readVarInt();
                 _entry._rank  = reader.readVarInt32();
-                _result       = reader.hasOverflowed() ? LeaderboardResult::Unavailable : LeaderboardResult::Ok;
+                _result       = reader.hasOverflowed() ? LeaderboardOutcome::fail( OnlineError::kUnavailable ) : LeaderboardResult::Ok;
             }
 
             void complete() override { _pService->applySeasonResult( _requestTag, _seasonID, _result, _entry ); }
@@ -621,7 +621,7 @@ namespace sw
             LeaderboardService* _pService;
             uint64              _requestTag;
             uint32              _seasonID;
-            LeaderboardResult   _result;
+            LeaderboardOutcome  _result;
         };
 
         /**
@@ -897,7 +897,7 @@ namespace sw
                             displayName.size() <= static_cast<size_t>( OnlineLimit::kMaxDisplayNameSize ) && accountID != kInvalidAccountID;
         if ( bValid == false )
         {
-            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardResult::Invalid );
+            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         const uint64 periodID = computePeriodID( *pBoard, nowMs );
@@ -931,7 +931,7 @@ namespace sw
                           -LeaderboardLimit::kMaxAbsScore <= value && value <= LeaderboardLimit::kMaxAbsScore;
         if ( bValid == false )
         {
-            pushCompletion( requestTag, LeaderboardOperation::StatChange, LeaderboardResult::Invalid );
+            pushCompletion( requestTag, LeaderboardOperation::StatChange, LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         unique_ptr<LeaderboardWriteJob> work = sw::make_unique<LeaderboardWriteJob>();
@@ -952,7 +952,7 @@ namespace sw
     }
 
     void LeaderboardService::applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                                              LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs )
+                                              LeaderboardOutcome result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         if ( requestTag != 0 )
@@ -1056,7 +1056,7 @@ namespace sw
         const bool            bRange = 0 <= offset && 1 <= count && count <= LeaderboardLimit::kMaxPage;
         if ( pBoard == nullptr || bRange == false )
         {
-            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::Invalid );
+            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         read._periodID = computePeriodID( *pBoard, nowMs );
@@ -1076,7 +1076,7 @@ namespace sw
         const bool            bRange = 0 <= radius && radius <= LeaderboardLimit::kMaxAround;
         if ( pBoard == nullptr || bRange == false )
         {
-            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::Invalid );
+            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         read._periodID = computePeriodID( *pBoard, nowMs );
@@ -1107,7 +1107,7 @@ namespace sw
         _mapReadyRequestToRead.erase( readIt );
         if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
         {
-            completeRead( read, LeaderboardResult::Unavailable );
+            completeRead( read, LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
             return;
         }
         const string rankKey = makeRankKey( read._boardID, read._periodID );
@@ -1159,7 +1159,7 @@ namespace sw
         {
             for ( const PendingRead& read : listWaiting )
             {
-                completeRead( read, LeaderboardResult::Unavailable );
+                completeRead( read, LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
             }
             return;
         }
@@ -1198,7 +1198,7 @@ namespace sw
         RankQuery& query = queryIt->second;
         if ( reply._result != EphemeralResult::Ok )
         {
-            completeRead( query._read, reply._result == EphemeralResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardResult::Unavailable );
+            completeRead( query._read, reply._result == EphemeralResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
             _mapQuery.erase( queryIt );
             return;
         }
@@ -1225,7 +1225,7 @@ namespace sw
         RankQuery& query = queryIt->second;
         if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
         {
-            completeRead( query._read, LeaderboardResult::Unavailable );
+            completeRead( query._read, LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
             _mapQuery.erase( queryIt );
             return;
         }
@@ -1287,7 +1287,7 @@ namespace sw
         _mapQuery.erase( queryIt );
     }
 
-    void LeaderboardService::completeRead( const PendingRead& read, LeaderboardResult result )
+    void LeaderboardService::completeRead( const PendingRead& read, LeaderboardOutcome result )
     {
         LeaderboardCompletion completion;
         completion._requestTag = read._requestTag;
@@ -1297,7 +1297,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void LeaderboardService::pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardResult result )
+    void LeaderboardService::pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardOutcome result )
     {
         if ( requestTag == 0 )
             return;
@@ -1364,7 +1364,7 @@ namespace sw
         return AccountStatLookup::Found;
     }
 
-    void LeaderboardService::applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat )
+    void LeaderboardService::applyStats( uint64 requestTag, LeaderboardOutcome result, vector<LeaderboardStat>&& listStat )
     {
         --_pendingCount;
         LeaderboardCompletion completion;
@@ -1381,7 +1381,7 @@ namespace sw
         _dependencies._pStore->submit( sw::make_unique<AchievementReadJob>( this, accountID, requestTag ) );
     }
 
-    void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement )
+    void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardOutcome result, vector<AchievementState>&& listAchievement )
     {
         --_pendingCount;
         LeaderboardCompletion completion;
@@ -1406,7 +1406,7 @@ namespace sw
         _dependencies._pStore->submit( sw::make_unique<AchievementProgressJob>( this, std::move( listDefinition ), accountID, requestTag ) );
     }
 
-    void LeaderboardService::applyAchievementProgress( uint64 requestTag, LeaderboardResult result, vector<AchievementProgress>&& listProgress )
+    void LeaderboardService::applyAchievementProgress( uint64 requestTag, LeaderboardOutcome result, vector<AchievementProgress>&& listProgress )
     {
         --_pendingCount;
         LeaderboardCompletion completion;
@@ -1427,7 +1427,7 @@ namespace sw
         }
         if ( listAccountID.empty() || listAccountID.size() > static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) )
         {
-            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardResult::Invalid );
+            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         vector<AccountID> listUnique = listAccountID;
@@ -1438,7 +1438,7 @@ namespace sw
             sw::make_unique<ScoresOfReadJob>( this, LeaderboardServiceInternal::makeScorePrefix( boardID, periodID ), std::move( listUnique ), pBoard->_order, periodID, requestTag ) );
     }
 
-    void LeaderboardService::applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardResult result, vector<LeaderboardEntry>&& listEntry )
+    void LeaderboardService::applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry )
     {
         --_pendingCount;
         LeaderboardCompletion completion;
@@ -1462,7 +1462,7 @@ namespace sw
         const LeaderboardDef* pBoard = findBoard( boardID );
         if ( pBoard == nullptr || pBoard->_reset != LeaderboardReset::Season )
         {
-            pushCompletion( requestTag, LeaderboardOperation::SeasonResult, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::Invalid );
+            pushCompletion( requestTag, LeaderboardOperation::SeasonResult, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         ++_pendingCount;
@@ -1470,7 +1470,7 @@ namespace sw
                                                                              seasonID, accountID, requestTag ) );
     }
 
-    void LeaderboardService::applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardResult result, const LeaderboardEntry& entry )
+    void LeaderboardService::applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardOutcome result, const LeaderboardEntry& entry )
     {
         --_pendingCount;
         LeaderboardCompletion completion;

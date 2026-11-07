@@ -2,7 +2,7 @@
  * @file LeaderboardProtocol.h
  * @brief 순위표 키트의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kLeaderboard`), 요청과 응답, 업적 알림의 형식을 정의합니다.
  * @details - 요청, 응답, 알림은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
- *            업무 결과는 응답 본문(`LeaderboardReply::_result`)에 담으며 경제, 우편함, 친구 키트도 같다. 오류 코드는 공통(`OnlineError`)만 쓴다.
+ *            메서드마다 응답 타입이 따로이다. 업무 결과는 응답의 `_result`(도메인 값만)이고, 범위 밖 요청 · 일시 장애 · 경합 · 로그인 없음은 공통 범주(`OnlineError`)로 온다.
  *          - 점수 제출(`SubmitScore`)은 보드 정의의 `_bClientSubmit` 이 켜진 보드만 받는다. 아니면 본문의 결과가 NotAllowed 이다.
  *          - 시즌 결과는 항목 하나(점수와 순위)와 기간 id(시즌 id)로 싣는다.
  */
@@ -106,28 +106,68 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모든 메서드의 응답입니다. 로직의 완료 하나(`LeaderboardCompletion`)에서 나오므로 메서드마다 쓰는 필드만 채웁니다. */
+    /** @brief 순위 목록의 응답입니다(`GetTop` · `GetAround` · `GetScoresOf`). */
     REFLECT()
-    struct LeaderboardReply
+    struct LeaderboardEntriesReply
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = LeaderboardLimit::kMaxScoresOfCount )
         vector<LeaderboardEntry> _listEntry{}; ///< 상한은 `LeaderboardLimit::kMaxScoresOfCount` 와 같다. 순위 조회는 `kMaxPage` 까지 담는다
-        PROPERTY( MaxCount = LeaderboardLimit::kMaxStatCount )
-        vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
-        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
-        vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
-        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
-        vector<AchievementProgress> _listProgress{}; ///< `GetAchievementProgress`. 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
         PROPERTY()
         uint64 _periodID{ 0 };
         PROPERTY()
-        int64 _score{ 0 }; ///< `SubmitScore` 에서 적용한 뒤의 값이다
-        PROPERTY()
-        LeaderboardResult _result{ LeaderboardResult::Ok };
+        LeaderboardResult _result{ LeaderboardResult::Ok }; ///< `UnknownBoard` · `NotRanked`(내 주변에서 내 점수가 없다)
+    };
 
-        /** @brief 같은 멱등 키로 다시 시도할 결과(일시 장애 · 경합)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
-        [[nodiscard]] bool isRetryable() const { return _result == LeaderboardResult::Unavailable || _result == LeaderboardResult::Conflict; }
+    /** @brief 내 통계(`GetStats`)의 응답입니다. */
+    REFLECT()
+    struct LeaderboardStatsReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxStatCount )
+        vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
+    };
+
+    /** @brief 점수 제출(`SubmitScore`)의 응답입니다. */
+    REFLECT()
+    struct LeaderboardSubmitReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int64 _score{ 0 }; ///< 적용한 뒤의 값이다
+        PROPERTY()
+        LeaderboardResult _result{ LeaderboardResult::Ok }; ///< `UnknownBoard` · `NotAllowed` · `NotRanked`(기간 밖)
+    };
+
+    /** @brief 달성한 업적(`GetAchievements`)의 응답입니다. */
+    REFLECT()
+    struct LeaderboardAchievementsReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
+        vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
+    };
+
+    /** @brief 업적 진행률(`GetAchievementProgress`)의 응답입니다. */
+    REFLECT()
+    struct LeaderboardProgressReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
+        vector<AchievementProgress> _listProgress{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
+    };
+
+    /** @brief 시즌 결과(`GetSeasonResult`)의 응답입니다. */
+    REFLECT()
+    struct LeaderboardSeasonReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        LeaderboardEntry _entry{}; ///< 내 점수와 순위이다. `Ok` 일 때만 값이 있다
+        PROPERTY()
+        uint64 _periodID{ 0 }; ///< 시즌 id 이다
+        PROPERTY()
+        LeaderboardResult _result{ LeaderboardResult::Ok }; ///< `UnknownBoard` · `NotRanked`(정산 전이거나 점수가 없었다)
     };
 } // namespace sw
 
@@ -136,15 +176,15 @@ namespace sw
     /** @brief Leaderboard 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct LeaderboardMethod : OnlineMethodTable<LeaderboardMethodName, OnlineMethodRange::kLeaderboard, LeaderboardPushName>
     {
-        using GetTop                 = Method<MethodName::GetTop, LeaderboardTopRequest, LeaderboardReply>;                                                   ///< 기간 id 와 항목 목록을 돌려준다
-        using GetAround              = Method<MethodName::GetAround, LeaderboardAroundRequest, LeaderboardReply>;                                             ///< 내 주변 항목을 나를 포함해 돌려준다
-        using GetStats               = Method<MethodName::GetStats, OnlineNoBody, LeaderboardReply>;                                                          ///< 내 통계 목록을 돌려준다
-        using SubmitScore            = Method<MethodName::SubmitScore, LeaderboardSubmitRequest, LeaderboardReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 적용한 뒤의 점수를 돌려준다. 다시 보내도 합산 보드에 두 번 들어가지 않는다. 클라이언트 제출이 켜진 보드만 받는다
-        using GetAchievements        = Method<MethodName::GetAchievements, OnlineNoBody, LeaderboardReply>;                                                   ///< 달성한 업적 목록을 돌려준다
-        using GetSeasonResult        = Method<MethodName::GetSeasonResult, LeaderboardSeasonRequest, LeaderboardReply>;                                       ///< 내 결과를 돌려준다. 없으면 NotRanked 이다
-        using GetScoresOf            = Method<MethodName::GetScoresOf, LeaderboardScoresRequest, LeaderboardReply>;                                           ///< 이번 기간 점수를 목록 안 순위로 돌려준다
-        using GetAchievementProgress = Method<MethodName::GetAchievementProgress, OnlineNoBody, LeaderboardReply>;                                            ///< 등록한 업적마다 진행률을 돌려준다. 숨긴 업적은 달성 전에 가린다
-        using Achievement            = Push<PushName::Achievement, AchievementState>;                                                                         ///< 업적 id 와 달성 시각을 보낸다
+        using GetTop                 = Method<MethodName::GetTop, LeaderboardTopRequest, LeaderboardEntriesReply>;                                                  ///< 기간 id 와 항목 목록을 돌려준다
+        using GetAround              = Method<MethodName::GetAround, LeaderboardAroundRequest, LeaderboardEntriesReply>;                                            ///< 내 주변 항목을 나를 포함해 돌려준다
+        using GetStats               = Method<MethodName::GetStats, OnlineNoBody, LeaderboardStatsReply>;                                                           ///< 내 통계 목록을 돌려준다
+        using SubmitScore            = Method<MethodName::SubmitScore, LeaderboardSubmitRequest, LeaderboardSubmitReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 적용한 뒤의 점수를 돌려준다. 다시 보내도 합산 보드에 두 번 들어가지 않는다. 클라이언트 제출이 켜진 보드만 받는다
+        using GetAchievements        = Method<MethodName::GetAchievements, OnlineNoBody, LeaderboardAchievementsReply>;                                             ///< 달성한 업적 목록을 돌려준다
+        using GetSeasonResult        = Method<MethodName::GetSeasonResult, LeaderboardSeasonRequest, LeaderboardSeasonReply>;                                       ///< 내 결과를 돌려준다. 없으면 NotRanked 이다
+        using GetScoresOf            = Method<MethodName::GetScoresOf, LeaderboardScoresRequest, LeaderboardEntriesReply>;                                          ///< 이번 기간 점수를 목록 안 순위로 돌려준다
+        using GetAchievementProgress = Method<MethodName::GetAchievementProgress, OnlineNoBody, LeaderboardProgressReply>;                                          ///< 등록한 업적마다 진행률을 돌려준다. 숨긴 업적은 달성 전에 가린다
+        using Achievement            = Push<PushName::Achievement, AchievementState>;                                                                               ///< 업적 id 와 달성 시각을 보낸다
     };
 } // namespace sw
 
@@ -160,17 +200,6 @@ namespace sw
         using Table        = OnlineProtocolTable<LeaderboardMethod, OnlineMethodList<LeaderboardMethod::GetTop, LeaderboardMethod::GetAround, LeaderboardMethod::GetStats, LeaderboardMethod::SubmitScore, LeaderboardMethod::GetAchievements, LeaderboardMethod::GetSeasonResult, LeaderboardMethod::GetScoresOf, LeaderboardMethod::GetAchievementProgress>, OnlinePushList<LeaderboardMethod::Achievement>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = LeaderboardResult;
-
-        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
-        static constexpr OnlineErrorResult<LeaderboardResult> kArrCommonResult[] = {
-            { OnlineError::kInvalidRequest, LeaderboardResult::Invalid },
-            { OnlineError::kUnavailable, LeaderboardResult::Unavailable },
-            { OnlineError::kBusy, LeaderboardResult::Conflict },
-            { OnlineError::kConflict, LeaderboardResult::Conflict, true },
-            { OnlineError::kUnauthenticated, LeaderboardResult::NotSignedIn },
-            { OnlineError::kVersionMismatch, LeaderboardResult::UpdateRequired },
-            { OnlineError::kUpdateRequired, LeaderboardResult::UpdateRequired },
-        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
     };

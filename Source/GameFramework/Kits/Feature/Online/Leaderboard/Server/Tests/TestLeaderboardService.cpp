@@ -299,11 +299,11 @@ SW_TEST_CASE( LeaderboardServiceTest, InvalidSubmitsAreRefused )
     const uint64 commitsBefore = world._database.getCommitCount();
 
     SW_EXPECT_TRUE( rig.submit( "nope", 1, 1 )._result == LeaderboardResult::UnknownBoard );
-    SW_EXPECT_TRUE( rig.submit( "best", kInvalidAccountID, 1 )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.submit( "best", 1, LeaderboardLimit::kMaxAbsScore + 1 )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.submit( "best", 1, -LeaderboardLimit::kMaxAbsScore - 1 )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.submit( "best", kInvalidAccountID, 1 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.submit( "best", 1, LeaderboardLimit::kMaxAbsScore + 1 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.submit( "best", 1, -LeaderboardLimit::kMaxAbsScore - 1 )._result.hasError( OnlineError::kInvalidRequest ) );
     const string longName( static_cast<size_t>( OnlineLimit::kMaxDisplayNameSize ) + 1, 'x' );
-    SW_EXPECT_TRUE( rig.submit( "best", 1, 1, kNowMs, longName )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.submit( "best", 1, 1, kNowMs, longName )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.submit( "season", 1, 1, kSeasonEndMs )._result == LeaderboardResult::NotRanked ); // 끝 시각은 시즌 밖이다
     SW_EXPECT_EQUAL( commitsBefore, world._database.getCommitCount() );
 
@@ -349,9 +349,9 @@ SW_TEST_CASE( LeaderboardServiceTest, TopReadsRanksScoresAndNames )
     SW_EXPECT_EQUAL( int64( 10 ), fastest._listEntry[0]._score );
 
     SW_EXPECT_TRUE( rig.top( "nope" )._result == LeaderboardResult::UnknownBoard );
-    SW_EXPECT_TRUE( rig.top( "best", -1, 5 )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.top( "best", 0, 0 )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.top( "best", 0, LeaderboardLimit::kMaxPage + 1 )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.top( "best", -1, 5 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.top( "best", 0, 0 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.top( "best", 0, LeaderboardLimit::kMaxPage + 1 )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [LeaderboardServiceTest] 주변 조회: 나를 포함해 위아래 반경이고 맨 위에서는 위가 잘린다. 점수가 없으면 NotRanked */
@@ -376,8 +376,8 @@ SW_TEST_CASE( LeaderboardServiceTest, AroundReadsNeighbours )
     SW_EXPECT_EQUAL( 1, topEdge._listEntry[0]._rank );
 
     SW_EXPECT_TRUE( rig.around( "best", 99, 1 )._result == LeaderboardResult::NotRanked );
-    SW_EXPECT_TRUE( rig.around( "best", 3, LeaderboardLimit::kMaxAround + 1 )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.around( "best", 3, -1 )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.around( "best", 3, LeaderboardLimit::kMaxAround + 1 )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.around( "best", 3, -1 )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [LeaderboardServiceTest] 같은 점수의 순서는 상위 · 주변 · 친구 조회 · 정산 모두 계정 id 오름차순이다 — 순위표의 2 등이 정산에서 1 등 보상을 받으면 안 된다 */
@@ -457,7 +457,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildFailureReportsThenRecovers )
     LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "best" );
     world._database.armFault( ServiceStoreFault::RejectRead );
-    SW_EXPECT_TRUE( restarted.top( "best" )._result == LeaderboardResult::Unavailable );
+    SW_EXPECT_TRUE( restarted.top( "best" )._result.hasError( OnlineError::kUnavailable ) );
     const LeaderboardCompletion recovered = restarted.top( "best" );
     SW_EXPECT_TRUE( recovered._result == LeaderboardResult::Ok );
     SW_EXPECT_EQUAL( size_t( 1 ), recovered._listEntry.size() );
@@ -470,7 +470,7 @@ SW_TEST_CASE( LeaderboardServiceTest, FailedWriteDoesNotReachRanks )
     LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     world._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.submit( "best", 1, 30 )._result == LeaderboardResult::Unavailable );
+    SW_EXPECT_TRUE( rig.submit( "best", 1, 30 )._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig.top( "best" )._listEntry.empty() );
 }
 
@@ -527,9 +527,9 @@ SW_TEST_CASE( LeaderboardServiceTest, StatsFeedLinkedBoards )
     SW_EXPECT_EQUAL( int64( 9 ), rig.stat( 1, "max_hit", 9, LeaderboardUpdate::Best )._score );
     SW_EXPECT_EQUAL( int64( 9 ), rig.stat( 1, "max_hit", 4, LeaderboardUpdate::Best )._score ); // 통계의 Best 는 큰 값이다
 
-    SW_EXPECT_TRUE( rig.stat( 1, "Bad Name", 1, LeaderboardUpdate::Sum )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.stat( kInvalidAccountID, "kills", 1, LeaderboardUpdate::Sum )._result == LeaderboardResult::Invalid );
-    SW_EXPECT_TRUE( rig.stat( 1, "kills", LeaderboardLimit::kMaxAbsScore + 1, LeaderboardUpdate::Sum )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.stat( 1, "Bad Name", 1, LeaderboardUpdate::Sum )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.stat( kInvalidAccountID, "kills", 1, LeaderboardUpdate::Sum )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.stat( 1, "kills", LeaderboardLimit::kMaxAbsScore + 1, LeaderboardUpdate::Sum )._result.hasError( OnlineError::kInvalidRequest ) );
 
     rig._service.readStats( 1, 77 );
     const LeaderboardCompletion stats = rig.take( 77 );
@@ -677,9 +677,9 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
     SW_EXPECT_EQUAL( size_t( 2 ), restarted.scoresOf( "best", vector<AccountID>{ 1, 3 } )._listEntry.size() );
 
     SW_EXPECT_TRUE( rig.scoresOf( "nope", vector<AccountID>{ 1 } )._result == LeaderboardResult::UnknownBoard );
-    SW_EXPECT_TRUE( rig.scoresOf( "best", vector<AccountID>{} )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.scoresOf( "best", vector<AccountID>{} )._result.hasError( OnlineError::kInvalidRequest ) );
     const vector<AccountID> listTooMany( static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) + 1, 1 );
-    SW_EXPECT_TRUE( rig.scoresOf( "best", listTooMany )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.scoresOf( "best", listTooMany )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [LeaderboardServiceTest] 정산: 순위와 점수를 남기고 구간대로 보상하며, 구간 밖은 결과만 남는다. 시즌 결과 조회의 오류 길도 본다 */
@@ -710,7 +710,7 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementRecordsRanksAndRewards )
 
     SW_EXPECT_TRUE( rig.seasonResult( "season", 1, 99 )._result == LeaderboardResult::NotRanked );
     SW_EXPECT_TRUE( rig.seasonResult( "nope", 1, 1 )._result == LeaderboardResult::UnknownBoard );
-    SW_EXPECT_TRUE( rig.seasonResult( "plain", 1, 1 )._result == LeaderboardResult::Invalid );
+    SW_EXPECT_TRUE( rig.seasonResult( "plain", 1, 1 )._result.hasError( OnlineError::kInvalidRequest ) );
 
     const SettlementSink unknownSeason = rig.settle( "season", 9 );
     SW_EXPECT_EQUAL( 1, unknownSeason._doneCount );
@@ -802,16 +802,12 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
     scheduler.shutdown();
 }
 
-/** @brief [LeaderboardServiceTest] 다시 시도할 결과(일시 장애 · 경합 — `LeaderboardReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 점수 제출 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+/** @brief [LeaderboardServiceTest] 다시 시도할 공통 범주(일시 장애 · 경합)는 요청 층이 기억하지 않아 같은 멱등 키의 점수 제출 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( LeaderboardServiceTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionFixture<LeaderboardProtocol, LeaderboardReply> rig;
-    LeaderboardReply                                                   finished;
+    test::ReplyRetentionFixture<LeaderboardProtocol, LeaderboardSubmitReply> rig;
+    LeaderboardSubmitReply                                                   finished;
     finished._result = LeaderboardResult::Ok;
-    LeaderboardReply unavailable;
-    unavailable._result = LeaderboardResult::Unavailable;
-    rig.expectRetryReachesService( LeaderboardMethod::SubmitScore::kID, unavailable, finished );
-    LeaderboardReply conflict;
-    conflict._result = LeaderboardResult::Conflict;
-    rig.expectRetryReachesService( LeaderboardMethod::SubmitScore::kID, conflict, finished );
+    rig.expectFailureReachesService( LeaderboardMethod::SubmitScore::kID, OnlineError::kUnavailable, finished );
+    rig.expectFailureReachesService( LeaderboardMethod::SubmitScore::kID, OnlineError::kBusy, finished );
 }

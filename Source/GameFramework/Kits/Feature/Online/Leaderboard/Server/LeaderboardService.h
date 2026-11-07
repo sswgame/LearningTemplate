@@ -29,6 +29,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"
 #include "GameFramework/Runtime/Online/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -65,7 +66,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 요청 하나의 완료입니다. */
+    /** @brief 로직의 결과입니다. 업무 결과(`LeaderboardResult`) 또는 공통 범주(`OnlineError` — 범위 밖 요청 · 일시 장애 · 경합)입니다. */
+    using LeaderboardOutcome = OnlineOutcome<LeaderboardResult>;
+
+    /** @brief 요청 하나의 완료입니다. 바인딩이 `_operation` 으로 메서드의 응답 타입을 고른다. */
     struct LeaderboardCompletion
     {
         vector<LeaderboardEntry>    _listEntry{};
@@ -75,7 +79,7 @@ namespace sw
         uint64                      _periodID{ 0 };
         uint64                      _requestTag{ 0 };
         int64                       _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
-        LeaderboardResult           _result{ LeaderboardResult::Ok };
+        LeaderboardOutcome          _result{ LeaderboardResult::Ok };
         LeaderboardOperation        _operation{ LeaderboardOperation::Submit };
     };
 } // namespace sw
@@ -179,15 +183,15 @@ namespace sw
 
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                              LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
-        void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
+                              LeaderboardOutcome result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
+        void applyStats( uint64 requestTag, LeaderboardOutcome result, vector<LeaderboardStat>&& listStat );
         void applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
-        void applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement );
-        void applyAchievementProgress( uint64 requestTag, LeaderboardResult result, vector<AchievementProgress>&& listProgress );
-        void applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardResult result, vector<LeaderboardEntry>&& listEntry );
-        void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardResult result, const LeaderboardEntry& entry );
+        void applyAchievements( uint64 requestTag, LeaderboardOutcome result, vector<AchievementState>&& listAchievement );
+        void applyAchievementProgress( uint64 requestTag, LeaderboardOutcome result, vector<AchievementProgress>&& listProgress );
+        void applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry );
+        void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardOutcome result, const LeaderboardEntry& entry );
         /** @brief 정산의 순위 읽기가 끝났습니다. 순위대로 정렬한 점수를 받아 첫 페이지를 맡깁니다. */
         void applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked );
         /** @brief 정산 페이지 하나가 끝났습니다. 다 썼으면 다음 페이지를, 실패했거나 끝이면 정산을 마칩니다. */
@@ -243,8 +247,8 @@ namespace sw
         void onRangeReply( const EphemeralReply& reply );
         void onNameReply( const EphemeralReply& reply );
         void finishQuery( uint64 queryID );
-        void completeRead( const PendingRead& read, LeaderboardResult result );
-        void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardResult result );
+        void completeRead( const PendingRead& read, LeaderboardOutcome result );
+        void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardOutcome result );
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
         /** @brief 정산 하나를 시작합니다. 순위 읽기 일을 맡깁니다. */
         void startSettlement( const LeaderboardDef& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );

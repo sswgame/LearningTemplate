@@ -60,7 +60,7 @@ namespace sw
         const LeaderboardDef* pBoard = _pService->findBoard( request._boardID );
         if ( pBoard == nullptr || pBoard->_bClientSubmit == false )
         {
-            LeaderboardReply reply;
+            LeaderboardSubmitReply reply;
             reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다. 클라이언트가 낼 수 있는 보드가 아니면 거절한다
             (void)respond( call, reply );
             return;
@@ -93,6 +93,68 @@ namespace sw
         _pService->readAchievementProgress( context._accountID, call._callID );
     }
 
+    void LeaderboardServer::respondCompletion( LeaderboardCompletion& completion )
+    {
+        const uint64              callID  = completion._requestTag;
+        const LeaderboardOutcome& outcome = completion._result;
+        switch ( completion._operation )
+        {
+            case LeaderboardOperation::Submit:
+            case LeaderboardOperation::StatChange:
+            {
+                LeaderboardSubmitReply reply;
+                reply._score  = completion._score;
+                reply._result = outcome._result;
+                (void)finishCall( callID, outcome, reply );
+                return;
+            }
+            case LeaderboardOperation::Top:
+            case LeaderboardOperation::Around:
+            case LeaderboardOperation::ScoresOf:
+            {
+                LeaderboardEntriesReply reply;
+                reply._listEntry = std::move( completion._listEntry );
+                reply._periodID  = completion._periodID;
+                reply._result    = outcome._result;
+                (void)finishCall( callID, outcome, reply );
+                return;
+            }
+            case LeaderboardOperation::Stats:
+            {
+                LeaderboardStatsReply reply;
+                reply._listStat = std::move( completion._listStat );
+                (void)finishCall( callID, outcome, reply );
+                return;
+            }
+            case LeaderboardOperation::Achievements:
+            {
+                LeaderboardAchievementsReply reply;
+                reply._listAchievement = std::move( completion._listAchievement );
+                (void)finishCall( callID, outcome, reply );
+                return;
+            }
+            case LeaderboardOperation::AchievementProgress:
+            {
+                LeaderboardProgressReply reply;
+                reply._listProgress = std::move( completion._listProgress );
+                (void)finishCall( callID, outcome, reply );
+                return;
+            }
+            case LeaderboardOperation::SeasonResult:
+            {
+                LeaderboardSeasonReply reply;
+                if ( completion._listEntry.empty() == false )
+                    reply._entry = completion._listEntry.front();
+                reply._periodID = completion._periodID;
+                reply._result   = outcome._result;
+                (void)finishCall( callID, outcome, reply );
+                return;
+            }
+        }
+        SW_ASSERT( false ); // switch 가 모든 작업을 덮는다(-Wswitch)
+        (void)failCall( callID, OnlineError::kInternal );
+    }
+
     void LeaderboardServer::onAccountJoined( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
@@ -117,15 +179,7 @@ namespace sw
         _pService->takeCompletions( _listCompletionScratch );
         for ( LeaderboardCompletion& completion : _listCompletionScratch )
         {
-            LeaderboardReply reply;
-            reply._result          = completion._result;
-            reply._periodID        = completion._periodID;
-            reply._score           = completion._score;
-            reply._listEntry       = std::move( completion._listEntry );
-            reply._listStat        = std::move( completion._listStat );
-            reply._listAchievement = std::move( completion._listAchievement );
-            reply._listProgress    = std::move( completion._listProgress );
-            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
+            respondCompletion( completion ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
         }
 
         _listUnlockScratch.clear();

@@ -1,7 +1,7 @@
 /**
  * @file LeaderboardClient.h
  * @brief 순위표 키트의 클라이언트입니다. 요청은 `call<LeaderboardMethod::GetTop>( request, onReply )` 이고, 이 클래스는 업적 달성 알림을 쌓아 둡니다.
- * @details - 요청 · 응답 규칙은 `OnlineProtocolClient` 에 있다. 업무 결과는 `_reply._result` 에, 전송 오류와 공통 오류는 `_errorCode` 에 있다.
+ * @details - 요청 · 응답 규칙은 `OnlineProtocolClient` 에 있다. 응답 타입은 메서드마다 따로이다(`LeaderboardMethod`). 업무 결과는 `_reply._result`(도메인 값만)에, 전송 오류와 공통 범주는 `_errorCode` 에 있다.
  *          - 점수 제출은 서버가 `_bClientSubmit` 이 켜진 보드만 받으며 아니면 NotAllowed 이다. 보통 점수는 서버 게임 로직이 낸다.
  */
 #pragma once
@@ -23,9 +23,6 @@ namespace sw
     class SW_KIT_API LeaderboardClient final : public OnlineProtocolClient<LeaderboardClient, LeaderboardProtocol>
     {
     public:
-        using Reply         = OnlineResult<LeaderboardReply>;
-        using ReplyDelegate = Delegate<void( const Reply& )>;
-
         LeaderboardClient();
 
         /** @brief 업적 달성 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
