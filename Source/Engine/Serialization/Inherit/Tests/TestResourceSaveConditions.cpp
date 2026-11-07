@@ -153,6 +153,16 @@ SW_TEST_CASE( ResourceSaveConditionTest, UnpairedElementsDependOnTheShape )
     SW_EXPECT_TRUE( Util::restore( R"(<Doc />)", R"(<Doc><_occlusion><_when _if="quality.high" v="1" /></_occlusion></Doc>)" ).find( "_occlusion" ) != string::npos );
 }
 
+/** @brief [ResourceSaveConditionTest] 조건 든 원소가 사본의 두 원소와 똑같이 닮으면 짐작하지 않고 저장을 거절한다 — 조건이 엉뚱한 원소에 붙으면 데이터가 조용히 틀어진다. */
+SW_TEST_CASE( ResourceSaveConditionTest, AmbiguousElementIsNotSaved )
+{
+    SW_EXPECT_LOG( "ResourceCondition.SaveAmbiguousElement" );
+    constexpr const utf8* kSource = R"(<Doc><item a="1"><_when _if="quality.low" a="2" /></item></Doc>)";
+    constexpr const utf8* kSaved  = R"(<Doc><item a="1" b="x" /><item a="1" b="y" /></Doc>)";
+    string                outText;
+    SW_EXPECT_FALSE( ResourceComposer::restoreConditions( kSaved, kSource, "test", XSaveConditionTestUtil::makeLow(), outText ) );
+}
+
 /** @brief [ResourceSaveConditionTest] 원본의 조건이 틀리거나 사본의 루트가 다르면 쓰지 않는다 — 조건을 잃는 저장보다 실패가 낫다 */
 SW_TEST_CASE( ResourceSaveConditionTest, BrokenConditionsAndOtherRootsAreNotSaved )
 {

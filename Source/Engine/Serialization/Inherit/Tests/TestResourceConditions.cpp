@@ -393,12 +393,33 @@ SW_TEST_CASE( ResourceRemapTest, MalformedTablesAreRejected )
     SW_EXPECT_FALSE( ResourceRemap::resolve( "a", remapped ) );
 }
 
+/** @brief [ResourceCompositionTest] 품질 · 언어에만 기댄 합성은 플레이어끼리 달라도 되어 접속 대조에 오르지 않고, 함께 쓰는 축이나 층에 기대면 오른다. */
+SW_TEST_CASE( ResourceCompositionTest, PerClientAxesAreNotCompared )
+{
+    const XTestTagScope scope{ XTestUtil::makeTags( { "quality.low", "feature.night" } ) };
+    const AssetID       localOnly{ "testproject/data/perclient-local.xml" };
+    const AssetID       shared{ "testproject/data/perclient-shared.xml" };
+    string              flatText;
+    bool                bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", localOnly.view(), ResourceContext::forDocument().withAsset( localOnly ), flatText, bComposed ) );
+    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="feature.night" a="2" /></Doc>)", shared.view(), ResourceContext::forDocument().withAsset( shared ), flatText, bComposed ) );
+    vector<ResourceDigestEntry> listEntry;
+    ResourceComposition::collectDigest( listEntry );
+    const auto hasEntry = [&listEntry]( const AssetID& assetID )
+    {
+        return VectorUtil::containsIf( listEntry, [&assetID]( const ResourceDigestEntry& entry )
+        { return entry._assetID == assetID.str(); } );
+    };
+    SW_EXPECT_FALSE( hasEntry( localOnly ) );
+    SW_EXPECT_TRUE( hasEntry( shared ) );
+}
+
 /** @brief [ResourceCompositionTest] 접속 대조는 이 프로세스가 로드 축 · 층에 기대 합성한 리소스만 본다 — 같은 해시는 통과, 다른 해시는 어긋남, 모르는 id 는 대조하지 않는다 */
 SW_TEST_CASE( ResourceCompositionTest, DigestMismatchComparesOnlyKnownCompositions )
 {
-    const XTestTagScope   scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    const XTestTagScope   scope{ XTestUtil::makeTags( { "feature.night" } ) };
     const AssetID         id{ "testproject/data/digest.xml" };
-    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)";
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="feature.night" a="2" /></Doc>)";
     string                flatText;
     bool                  bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
@@ -425,7 +446,7 @@ SW_TEST_CASE( ResourceCompositionTest, DigestComparesPlainCompositionsToo )
 /** @brief [ResourceCompositionTest] 번호 뒤의 합성만 나온다 — 접속 뒤에 새로 읽은 리소스와 태그로 바뀐 결과가 서버에 간다. 기대지 않은 합성은 보낼 줄이 아니다 */
 SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
 {
-    const XTestTagScope         scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    const XTestTagScope         scope{ XTestUtil::makeTags( { "feature.night" } ) };
     uint64                      revision = 0;
     vector<ResourceDigestEntry> listEntry;
     ResourceComposition::collectTagDependentChanges( revision, listEntry );
@@ -434,7 +455,7 @@ SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
 
     const AssetID         varying{ "testproject/data/since-varying.xml" };
     const AssetID         plain{ "testproject/data/since-plain.xml" };
-    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)";
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="feature.night" a="2" /></Doc>)";
     string                flatText;
     bool                  bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );

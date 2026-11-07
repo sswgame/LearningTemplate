@@ -11,6 +11,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 
 namespace sw
 {
@@ -34,8 +35,20 @@ namespace sw
                 {
                 }
 
-                /** @brief 로드 축 태그나 층에 기댔으면 true 입니다 — 프로세스마다 다를 수 있는 합성이다. */
-                [[nodiscard]] bool varies() const { return _listLoadTag.empty() == false || _bLayered == SW_TRUE; }
+                /**
+                 * @brief 플레이어끼리 달라지면 안 되는데 달라질 수 있는 합성이면 true 입니다(접속 대조에 올린다).
+                 * @details 품질 · 언어(`ResourceTagScope::PerClient`)에만 기댄 합성은 뺀다 — 머티리얼이 품질 조건을 쓴다고 그래픽 설정이 다른 손님을 끊으면 안 된다.
+                 */
+                [[nodiscard]] bool isComparedBetweenPeers() const
+                {
+                    if ( _bLayered == SW_TRUE )
+                        return true;
+                    return VectorUtil::containsIf( _listLoadTag, []( const string& tag )
+                    {
+                        const ResourceTagAxis* pAxis = ResourceTags::findAxisOfTag( tag );
+                        return pAxis == nullptr || pAxis->_scope == ResourceTagScope::Shared;
+                    } );
+                }
             };
 
             struct State
@@ -72,7 +85,7 @@ namespace sw
                         return; // 프레임마다 묻는 자리다 - 대개 여기서 끝난다
                     for ( const auto& [assetID, record] : state._mapRecord )
                     {
-                        if ( record._revision > inoutRevision && ( bVaryingOnly == false || record.varies() ) )
+                        if ( record._revision > inoutRevision && ( bVaryingOnly == false || record.isComparedBetweenPeers() ) )
                             outListEntry.push_back( ResourceDigestEntry{ assetID, record._hash } );
                     }
                     inoutRevision = state._revision;
@@ -240,7 +253,7 @@ namespace sw
             ScopedLock<mutex>                   lock{ state._mutex };
             for ( const auto& [assetID, record] : state._mapRecord )
             {
-                if ( record.varies() )
+                if ( record.isComparedBetweenPeers() )
                     outListEntry.push_back( ResourceDigestEntry{ assetID, record._hash } );
             }
         }

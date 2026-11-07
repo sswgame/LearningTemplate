@@ -301,7 +301,7 @@ namespace sw
             };
 
             /** @brief 원본 자식을 사본 자식과 짝짓습니다. 같은 이름 안에서 같은 값의 속성이 가장 많은 것이 짝이고, 그 이름이 양쪽에 하나뿐이면 값이 모두 달라도 짝이다. */
-            static void pairChildren( const vector<XMLNode>& listTarget, vector<SourceChild>& inoutListSource )
+            [[nodiscard]] static bool pairChildren( const vector<XMLNode>& listTarget, vector<SourceChild>& inoutListSource, string_view id )
             {
                 vector<uint8> listUsed( listTarget.size(), SW_FALSE );
                 const auto    countNamed = []( auto&& getNode, size_t count, string_view name )
@@ -324,6 +324,7 @@ namespace sw
                     const string_view name      = source._node.getName();
                     int32             bestIndex = -1;
                     uint32            bestScore = 0;
+                    uint8             bTied     = SW_FALSE;
                     const bool        bOnlyPair = countNamed( getTarget, listTarget.size(), name ) == 1u && countNamed( getSource, inoutListSource.size(), name ) == 1u;
                     const bool        bNoValues = source._node.getFirstAttribute().isValid() == false;
                     for ( size_t index = 0; index < listTarget.size(); ++index )
@@ -335,7 +336,18 @@ namespace sw
                         {
                             bestIndex = static_cast<int32>( index );
                             bestScore = score;
+                            bTied     = SW_FALSE;
                         }
+                        else if ( bestIndex >= 0 && score == bestScore )
+                        {
+                            bTied = SW_TRUE;
+                        }
+                    }
+                    // 조건이 엉뚱한 원소에 붙으면 데이터가 조용히 틀어진다 — 짐작하지 않고 저장을 거절한다.
+                    if ( bTied == SW_TRUE && hasConditions( source._node ) )
+                    {
+                        SW_LOG_ERROR_ID( "ResourceCondition.SaveAmbiguousElement", "'%#': <%#> holds a condition and matches several saved elements equally - not saved. Edit the conditions in the file", id, name );
+                        return false;
                     }
                     if ( bestIndex >= 0 )
                     {
@@ -343,6 +355,7 @@ namespace sw
                         listUsed[static_cast<size_t>( bestIndex )] = SW_TRUE;
                     }
                 }
+                return true;
             }
 
             /** @brief 짝이 없는 조건 든 원본 원소를 남기는가입니다. 목록 원소(같은 이름이 또 있거나 `item` · `_list…` 아래)는 지운 것이고, 차이 저장은 부모와 같아 빠진 것일 수 있다. */
@@ -418,7 +431,8 @@ namespace sw
                                            ? SW_TRUE
                                            : SW_FALSE;
                 }
-                pairChildren( listTarget, listSource );
+                if ( pairChildren( listTarget, listSource, id ) == false )
+                    return false;
                 const auto writeUnpairedBefore = [&]( size_t endIndex )
                 {
                     for ( size_t index = 0; index < endIndex; ++index )

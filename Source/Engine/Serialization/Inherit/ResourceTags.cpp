@@ -21,14 +21,14 @@ namespace sw
 
             /** @brief 축 표입니다. 순서는 오류 문장 · 편집기 목록의 순서입니다. */
             static constexpr ResourceTagAxis kArrAxis[] = {
-                {"platform", ResourceTagTiming::Cook, ResourceTagArity::Single, kArrPlatformValue, static_cast<uint32>( SW_COUNT_OF( kArrPlatformValue ) )},
-                {  "target", ResourceTagTiming::Cook, ResourceTagArity::Single,   kArrTargetValue,   static_cast<uint32>( SW_COUNT_OF( kArrTargetValue ) )},
-                { "quality", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0}, ///< 사용자 설정 `graphics.quality`(핸들러 `resource.tag`)
-                {  "locale", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0}, ///< 현지화의 지금 언어
-                {  "region", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0}, ///< 출시 지역(게임 코드가 넣는다)
-                {   "layer", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0}, ///< 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`)
-                { "feature", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0}, ///< 게임이 켜는 기능 태그(행사 · 계절)
-                {    "flag", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0}, ///< 게임 플래그를 리소스에 비추는 태그(게임 코드가 켠다)
+                {"platform", ResourceTagTiming::Cook, ResourceTagArity::Single, kArrPlatformValue, static_cast<uint32>( SW_COUNT_OF( kArrPlatformValue ) ),    ResourceTagScope::Shared},
+                {  "target", ResourceTagTiming::Cook, ResourceTagArity::Single,   kArrTargetValue,   static_cast<uint32>( SW_COUNT_OF( kArrTargetValue ) ),    ResourceTagScope::Shared},
+                { "quality", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0, ResourceTagScope::PerClient}, ///< 사용자 설정 `graphics.quality`(핸들러 `resource.tag`)
+                {  "locale", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0, ResourceTagScope::PerClient}, ///< 현지화의 지금 언어
+                {  "region", ResourceTagTiming::Load, ResourceTagArity::Single,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 출시 지역(게임 코드가 넣는다)
+                {   "layer", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`)
+                { "feature", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 게임이 켜는 기능 태그(행사 · 계절)
+                {    "flag", ResourceTagTiming::Load,  ResourceTagArity::Multi,           nullptr,                                                       0,    ResourceTagScope::Shared}, ///< 게임 플래그를 리소스에 비추는 태그(게임 코드가 켠다)
             };
 
             struct State

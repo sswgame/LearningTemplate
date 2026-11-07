@@ -35,6 +35,13 @@ namespace sw
         Multi,  ///< 값 여럿(켜진 데이터 레이어 · 기능 태그)
     };
 
+    /** @brief 축의 값이 플레이어마다 달라도 되는가입니다(접속 합성 대조가 본다). */
+    enum class ResourceTagScope : uint8
+    {
+        Shared,    ///< 모두 같아야 한다 — 다르면 판정이 어긋난다
+        PerClient, ///< 사용자 설정이다(품질 · 언어) — 달라도 대조하지 않는다. 판정 값은 이 축에 기대지 않는다
+    };
+
     /** @brief 축 하나의 정의입니다(`ResourceTags::findAxis`). */
     struct ResourceTagAxis
     {
@@ -43,6 +50,7 @@ namespace sw
         ResourceTagArity   _arity;
         const utf8* const* _ppValue;    ///< 닫힌 값 목록(nullptr 이면 값은 데이터가 정한다 — 품질 이름은 설정 스키마가 낸다)
         uint32             _valueCount; ///< `_ppValue` 의 수
+        ResourceTagScope   _scope;      ///< 플레이어마다 달라도 되는가
     };
 
     /**
