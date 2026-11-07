@@ -5,6 +5,7 @@
  *          목록을 따로 만들어 팔레트는 에셋을, Quick Open 은 명령 · 패널을 찾지 못했고 거르는 규칙도 달랐다(이어진 일치 우선 · 포함만).
  */
 #pragma once
+#include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -32,8 +33,31 @@ namespace sw::editor
         string             _category; ///< 배지 글 — 명령 분류 · "Panel" · "GameObject" · 에셋 종류 이름
         string             _title;
         string             _detail;
-        string             _key;           ///< 실행 열쇠 — 명령 id · 패널 id · 에셋 리소스 id
-        uint64             _objectID{ 0 }; ///< 씬 오브젝트 id
+        string             _key; ///< 실행 열쇠 — 명령 id · 패널 id · 에셋 리소스 id
+        /**
+         * @brief 칸 필터가 보는 값(`칸:값`) — 씬 오브젝트는 컴포넌트 유형(`type:MeshComponent`) · 태그(`tag:Enemy`) · 상태(`is:active` · `is:inactive`)를 갖는다.
+         * @details 검색어의 `칸:값` 낱말은 이 목록을 본다(`EditorSearchQuery`). 칸이 없는 항목(명령 · 패널 · 에셋)은 칸 필터가 있으면 빠진다.
+         */
+        vector<string> _listFacet;
+        uint64         _objectID{ 0 }; ///< 씬 오브젝트 id
+    };
+
+    /**
+     * @struct EditorSearchQuery
+     * @brief 검색어를 칸 필터(`type:` · `tag:` · `is:` 처럼 `칸:값` 낱말)와 나머지 글로 나눈 것입니다 — 통합 런타임 탐색(이름 · 유형 · 컴포넌트 · 상태 · 태그)의 문법입니다.
+     * @details 유니티 Hierarchy 검색의 `t:` · 언리얼 Outliner 필터와 같은 자리다. 칸 이름은 대소문자를 보지 않고, 값은 그 칸 값에 이어진 그대로 들어 있으면 맞다
+     *          (`type:mesh` 는 `MeshComponent` · `SkeletalMeshComponent` 를 모두 잡는다). 상태 `is:` 만 낱말 전체로 견준다(`active` 가 `inactive` 에 들어 있다).
+     *          칸 필터는 모두 맞아야 한다(그리고).
+     */
+    struct EditorSearchQuery
+    {
+        string                       _text;      ///< 칸이 아닌 낱말을 공백 하나로 이은 글(제목 · 분류 · 설명과 견준다)
+        vector<pair<string, string>> _listFacet; ///< (칸, 값) — 칸은 소문자
+
+        /** @brief @p pattern 을 나눕니다. `:` 앞뒤가 비지 않은 낱말이 칸 필터다. */
+        static EditorSearchQuery parse( string_view pattern );
+        /** @brief @p item 이 칸 필터를 모두 만족하면 true 입니다(칸 필터가 없으면 늘 true). */
+        bool matchesFacets( const EditorSearchItem& item ) const;
     };
 
     /**

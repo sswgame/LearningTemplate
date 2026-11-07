@@ -2,17 +2,23 @@
 
 #include "Engine/Rendering/MeshLODSystem.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Rendering/MeshLODSettings.h"
 #include "Engine/Rendering/MeshSectionComponent.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -93,6 +99,35 @@ namespace sw
         return screenSize;
     }
 
+    string MeshLODSystem::explainLOD( const MeshComponent& component ) const
+    {
+        const Mesh* pMesh = component.getRawMesh();
+        if ( pMesh == nullptr )
+            return "no mesh";
+        const float32 screenSize = computeScreenSize( component );
+        string        text       = "LOD " + to_string( component.getLODIndex() ) + "/" + to_string( pMesh->getLODCount() ) + " screen " + to_string( screenSize ) + " thresholds [";
+        for ( size_t lodIndex = 0; lodIndex < pMesh->getLODs().size(); ++lodIndex )
+        {
+            text += ( lodIndex == 0 ? "" : " " ) + to_string( pMesh->getLODs()[lodIndex]._screenSize );
+        }
+        text += "] by ";
+        // `update` 와 같은 순서로 누가 단계를 정하는지 가른다.
+        const int32 forcedLOD = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
+        if ( pMesh->getLODs().empty() )
+            text += "single";
+        else if ( castTo<MeshSectionComponent>( &component ) != nullptr )
+            text += "section";
+        else if ( _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false && isGPUSelectable( *pMesh, component.getSkinSlot() ) )
+            text += "gpu (strict pick " + to_string( pMesh->selectLOD( screenSize ) ) + ")";
+        else if ( forcedLOD >= 0 )
+            text += "forced " + to_string( forcedLOD );
+        else if ( _bViewsSet == SW_FALSE )
+            text += "views-not-set";
+        else
+            text += "cpu (strict pick " + to_string( pMesh->selectLOD( screenSize ) ) + ", refine hysteresis " + to_string( MeshLODSettings::getDefault()._refineHysteresis ) + ")";
+        return text;
+    }
+
     void MeshLODSystem::update( float32 deltaTime )
     {
         (void)deltaTime;
@@ -122,4 +157,94 @@ namespace sw
             component.setLODIndex( selectNextLOD( *pMesh, computeScreenSize( component ), component.getLODIndex() ) );
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief LOD 판정 확인 — 보기 모드 LODLevel 의 색을 숫자(지금 단계 · 화면 크기 · 임계값 · 고른 쪽)로 읽는다. */
+        struct MeshLODDiagnosticsInternal
+        {
+            /** @brief @p object 의 메시 컴포넌트마다 판정 한 줄을 @p outText 에 잇습니다. 메시 컴포넌트가 없으면 false 입니다. */
+            static bool describeObject( const GameObject& object, string& outText )
+            {
+                GameObjectManager* const pManager = object.getManager();
+                if ( pManager == nullptr )
+                    return false;
+                const MeshLODSystem& system = pManager->getSubsystem<MeshLODSystem>();
+                bool                 bFound = false;
+                for ( const Component* pComponent : object.getComponents() )
+                {
+                    const MeshComponent* pMesh = castTo<MeshComponent>( pComponent );
+                    if ( pMesh == nullptr )
+                        continue;
+                    outText += ( bFound ? "; " : "" ) + system.explainLOD( *pMesh );
+                    bFound = true;
+                }
+                return bFound;
+            }
+
+            /** @brief `lod.explain <오브젝트>` — 활성 씬에서 그 이름의 오브젝트를 찾아 메시마다 판정을 답한다. */
+            static bool runExplain( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                GameObjectManager* const pManager = engine::findActiveObjectManager();
+                const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
+                if ( pObject == nullptr )
+                {
+                    outReply = "lod.explain: no object '" + listArgument[0] + "' in the active scene";
+                    return false;
+                }
+                string text;
+                if ( describeObject( *pObject, text ) == false )
+                {
+                    outReply = "lod.explain: '" + listArgument[0] + "' has no mesh component";
+                    return false;
+                }
+                outReply = listArgument[0] + ": " + text;
+                SW_LOG_INFO_ID( "MeshLOD.Explain", "%#", outReply.c_str() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Mesh.LOD` — 대상 오브젝트의 메시마다 판정 한 줄(`MeshLODSystem::explainLOD`)입니다. */
+            [[nodiscard]] static bool readLOD( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject* pTarget = query.findTargetObject();
+                if ( pTarget == nullptr )
+                {
+                    outValue.setText( query.getTargetProblem() );
+                    return false;
+                }
+                string text;
+                if ( describeObject( *pTarget, text ) == false )
+                {
+                    outValue.setText( query.describeMissing( "mesh component" ) );
+                    return false;
+                }
+                outValue.setText( text );
+                return true;
+            }
+
+            /** @brief 감시 값 `Mesh.LODIndex` — 대상 오브젝트 첫 메시 컴포넌트의 지금 단계입니다. */
+            [[nodiscard]] static bool readLODIndex( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*    pTarget = query.findTargetObject();
+                const MeshComponent* pMesh   = pTarget != nullptr ? pTarget->getComponent<MeshComponent>() : nullptr;
+                if ( pMesh == nullptr )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "mesh component" ) );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pMesh->getLODIndex() ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( MeshLODExplain, "lod.explain", "lod.explain <object>",
+                    "Explain the LOD pick of an object's meshes: current level, screen size, thresholds and who picks (cpu, gpu, forced, section)", &MeshLODDiagnosticsInternal::runExplain );
+    SW_AUTOMATION_QUERY_WATCH( meshLOD, "Mesh.LOD", "LOD pick of the target's meshes: level, screen size, thresholds and who picks", &MeshLODDiagnosticsInternal::readLOD, true, false );
+    SW_AUTOMATION_QUERY_WATCH( meshLODIndex, "Mesh.LODIndex", "Current LOD level of the target's first mesh component", &MeshLODDiagnosticsInternal::readLODIndex, true, false );
 } // namespace sw

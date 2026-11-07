@@ -21,6 +21,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Gameplay/Progression/GrowthLog.h"
 
 namespace sw
 {
@@ -59,6 +60,10 @@ namespace sw
         int32 getSelectedUnit() const { return _selectedUnit; }
         int32 getEnemiesAlive() const { return _field.countAlive( SRPGTeam::Enemy ); }
         int32 getPlayersAlive() const { return _field.countAlive( SRPGTeam::Player ); }
+        /** @brief 성장 기록에 남은 레벨 오름 수입니다(감시 값 `KitDemo.Tactics.LevelUps`). */
+        int32 getLevelUps() const { return static_cast<int32>( _growthLog.countKind( GrowthEventKind::LevelUp ) ); }
+        /** @brief 전장 유닛의 지금 레벨 · 경험치와 최근 성장 기록을 씁니다(HUD 섹션 `tacticsgrowth` — 성장 디버거). */
+        void writeGrowthDebugLines( DebugHUDSectionWriter& writer ) const;
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -112,5 +117,6 @@ namespace sw
         int2                          _lastStep; ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
         int32                         _selectedUnit;
         TacticsDemoResult             _result;
+        GrowthLog                     _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
     };
 } // namespace sw

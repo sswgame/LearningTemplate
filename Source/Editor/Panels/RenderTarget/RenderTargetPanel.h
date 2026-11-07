@@ -72,6 +72,8 @@ namespace sw::editor
         bool hasProbedPixel() const { return _bProbedPixel != SW_FALSE; }
         /** @brief 마지막으로 읽은 픽셀 값입니다. */
         const float4& getProbedPixel() const { return _probedPixel; }
+        /** @brief 선택한 타깃에 쓰는 패스 수와 읽는 패스 수의 합입니다(생산자 · 소비자 표시 — 감시 값 `Editor.RenderTargetPassUses`). 선택이 없으면 0 입니다. */
+        uint32 getSelectedPassUseCount() const;
 
     private:
         /** @brief 레지스트리 세대가 바뀌었으면 목록을 다시 가져옵니다. */

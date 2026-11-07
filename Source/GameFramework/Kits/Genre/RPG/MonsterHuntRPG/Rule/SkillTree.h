@@ -20,6 +20,7 @@
 
 namespace sw
 {
+    class DebugHUDSectionWriter;
     class XMLNode;
 
     /** @brief 선행 조건 하나입니다. 그 스킬이 이 랭크 이상이어야 합니다. */
@@ -156,6 +157,11 @@ namespace sw
         /** @brief 랭크 1 이상인 스킬이 주는 어빌리티 id 목록입니다. */
         void                collectAbilities( vector<hashed_string>& outListAbility ) const;
         const SkillTreeDef* getTree() const { return _pTree; }
+        /**
+         * @brief 스킬 디버거 줄을 씁니다 — 머리 줄(남은 점수 · 쓴 점수), 스킬마다 `랭크/최대` 와 다음 랭크의 판정(`evaluateRankUp` 과 같은 순서)과 까닭의 값
+         *        (필요 레벨 · 쓴 점수/필요 · 빠진 선행 스킬:랭크 · 차지한 그룹 스킬 · 점수/비용). 이 상태를 가진 쪽(게임)이 자기 HUD 섹션에서 부른다 — 키트는 컴포넌트를 갖지 않는다.
+         */
+        void writeDebugLines( DebugHUDSectionWriter& writer, int32 characterLevel, uint32 maxLines ) const;
 
     private:
         int32 findIndex( const hashed_string& skillID ) const;

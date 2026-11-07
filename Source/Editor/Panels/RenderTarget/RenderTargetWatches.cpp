@@ -47,6 +47,11 @@ namespace sw::editor
                     outValue = pPanel->isDepthLinearized() ? 1.0 : 0.0;
                     break;
                 }
+                case 5:
+                {
+                    outValue = static_cast<float64>( pPanel->getSelectedPassUseCount() );
+                    break;
+                }
                 default:
                 {
                     if ( pPanel->hasProbedPixel() == false )
@@ -82,6 +87,11 @@ namespace sw::editor
         {
             return readRenderTargetPanelValue( 4, outValue );
         }
+
+        [[nodiscard]] bool readRenderTargetPassUses( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            return readRenderTargetPanelValue( 5, outValue );
+        }
     } // namespace
 
     SW_AUTOMATION_WALL_WATCH( editorRenderTargetSnapshotReady, "Editor.RenderTargetSnapshotReady", "1 when the Render Targets panel holds a CPU snapshot of the picked target",
@@ -95,4 +105,6 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorRenderTargetPixelRed, "Editor.RenderTargetPixelRed",
                          "First channel (depth for a depth target) of the pixel last read under the mouse in the Render Targets panel; no value before one is read",
                          &readRenderTargetPixelRed );
+    SW_AUTOMATION_WATCH( editorRenderTargetPassUses, "Editor.RenderTargetPassUses", "Passes that write plus passes that read the target the Render Targets panel shows (producers and consumers)",
+                         &readRenderTargetPassUses );
 } // namespace sw::editor

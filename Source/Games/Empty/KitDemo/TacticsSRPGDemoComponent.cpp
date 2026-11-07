@@ -7,12 +7,14 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 
 namespace sw
 {
@@ -74,6 +76,7 @@ namespace sw
         , _lastStep{}
         , _selectedUnit{ -1 }
         , _result{ TacticsDemoResult::Ongoing }
+        , _growthLog{}
     {
     }
 
@@ -121,6 +124,7 @@ namespace sw
         _selectedUnit = -1;
         _result       = TacticsDemoResult::Ongoing;
         _listEvent.clear();
+        _growthLog.clear();
         return true;
     }
 
@@ -205,12 +209,20 @@ namespace sw
     {
         _listEvent.clear();
         _field.pollEvents( _eventLease, _listEvent );
+        string cause; // 레벨 오름의 출처 — 같은 이벤트 묶음에서 그 앞의 명중 · 격파다(전장은 경험치를 그 자리에서 준다)
         for ( const SRPGEvent& event : _listEvent )
         {
             if ( event._kind == SRPGEvent::Kind::Destroyed )
                 SW_LOG_INFO_ID( "KitDemo.TacticsDestroyed", "[KitDemo] tactics: unit %# destroyed by %#", event._unit, event._other );
             else if ( event._kind == SRPGEvent::Kind::PhaseStarted )
                 SW_LOG_INFO_ID( "KitDemo.TacticsPhase", "[KitDemo] tactics: turn %# - %# phase", _field.getTurn(), static_cast<int32>( event._team ) );
+            if ( event._kind == SRPGEvent::Kind::Hit )
+                cause = "hit unit " + to_string( event._other );
+            else if ( event._kind == SRPGEvent::Kind::Destroyed )
+                cause = "destroyed unit " + to_string( event._unit );
+            const bool bLevelUp = event._kind == SRPGEvent::Kind::PilotLevelUp || event._kind == SRPGEvent::Kind::UnitLevelUp;
+            if ( bLevelUp )
+                _growthLog.record( GrowthEventKind::LevelUp, "unit " + to_string( event._unit ), event._kind == SRPGEvent::Kind::PilotLevelUp ? "pilot" : "unit", event._value, cause );
         }
         if ( _field.countAlive( SRPGTeam::Enemy ) == 0 )
         {
@@ -310,4 +322,47 @@ namespace sw
         _selectedUnit = selectedUnit;
         _result       = result;
     }
+
+    void TacticsSRPGDemoComponent::writeGrowthDebugLines( DebugHUDSectionWriter& writer ) const
+    {
+        const vector<SRPGUnit>& listUnit = _field.getUnits();
+        for ( size_t unitIndex = 0; unitIndex < listUnit.size(); ++unitIndex )
+        {
+            const SRPGUnit& unit  = listUnit[unitIndex];
+            string          value = unit._pDef != nullptr ? string( unit._pDef->_id.c_str() ) : string( "?" );
+            value += unit._bAlive == SW_TRUE ? "" : " (down)";
+            value += " pilot Lv " + to_string( unit._pilotLevel.getLevel() ) + " xp " + to_string( unit._pilotLevel.getXP() );
+            if ( _pCatalog != nullptr )
+                value += "/" + to_string( _pCatalog->getPilotCurve().getXPToNext( unit._pilotLevel.getLevel() ) );
+            value += ", unit Lv " + to_string( unit._unitLevel.getLevel() ) + " xp " + to_string( unit._unitLevel.getXP() );
+            if ( _pCatalog != nullptr )
+                value += "/" + to_string( _pCatalog->getUnitCurve().getXPToNext( unit._unitLevel.getLevel() ) );
+            writer.addLine( "unit " + to_string( unitIndex ), value );
+        }
+        const uint32 used = static_cast<uint32>( listUnit.size() );
+        _growthLog.writeDebugLines( writer, GameplayDebugTarget::kMaxLines > used ? GameplayDebugTarget::kMaxLines - used : 0u );
+    }
+
+    namespace
+    {
+        /** @brief 성장 디버거(HUD 섹션 `tacticsgrowth`) — 이 판 전장 유닛의 레벨 · 경험치 · 다음까지와 최근 레벨 오름의 출처. 읽기만 한다. */
+        struct TacticsGrowthDebugSectionInternal
+        {
+            static void writeGrowth( DebugHUDSectionWriter& writer )
+            {
+                const GameObjectManager* const        pManager  = GameplayDebugTarget::findActiveObjectManager();
+                const TacticsSRPGDemoComponent* const pDirector = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<TacticsSRPGDemoComponent>( *pManager ) : nullptr;
+                if ( pDirector == nullptr )
+                {
+                    writer.addLine( "target", "none (no tactics demo in the active scene)" );
+                    return;
+                }
+                pDirector->writeGrowthDebugLines( writer );
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_GETTER_WATCH( kitDemoTacticsLevelUps, "KitDemo.Tactics.LevelUps", "Level-ups left in the tactics demo growth log (pilot and unit)", TacticsSRPGDemoComponent,
+                                &TacticsSRPGDemoComponent::getLevelUps );
+    SW_DEBUG_HUD_SECTION( tacticsGrowth, "tacticsgrowth", "Tactics growth (levels, xp, sources)", 290, DebugHUDSectionFlag::kNone, &TacticsGrowthDebugSectionInternal::writeGrowth );
 } // namespace sw

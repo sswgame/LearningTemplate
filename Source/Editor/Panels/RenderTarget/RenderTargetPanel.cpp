@@ -91,6 +91,12 @@ namespace sw::editor
         return pSelected != nullptr && pSelected->_bDepth != SW_FALSE;
     }
 
+    uint32 RenderTargetPanel::getSelectedPassUseCount() const
+    {
+        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
+        return pSelected != nullptr ? static_cast<uint32>( pSelected->_listProducer.size() + pSelected->_listConsumer.size() ) : 0u;
+    }
+
     void RenderTargetPanel::releaseSnapshotTexture()
     {
         EditorContext* pContext = editor::findSubsystem<EditorContext>();
@@ -447,6 +453,21 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextDisabled( "%ux%u  %s", pSelected->_width, pSelected->_height,
                              FrameRendererUtil::attachmentFormatName( pSelected->_format ) );
+        // 생산자 · 소비자 · 수명(파이프라인 순서의 패스 번호) — 이 그림을 누가 쓰고 누가 읽는지로 그래픽 문제를 거슬러 찾는다.
+        const auto joinPasses = []( const vector<string>& listPass ) -> string
+        {
+            string joined;
+            for ( const string& pass : listPass )
+            {
+                joined += ( joined.empty() ? "" : ", " ) + pass;
+            }
+            return joined.empty() ? string( "-" ) : joined;
+        };
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Producers", TextArgumentList().addText( "passes", joinPasses( pSelected->_listProducer ) ) ).c_str() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Consumers", TextArgumentList().addText( "passes", joinPasses( pSelected->_listConsumer ) ) ).c_str() );
+        ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorRenderTarget", "Lifetime",
+                                                    TextArgumentList().addInteger( "firstPass", static_cast<int64>( pSelected->_firstPass ) ).addInteger( "lastPass", static_cast<int64>( pSelected->_lastPass ) ) )
+                                       .c_str() );
 
         const bool bDepth     = pSelected->_bDepth != SW_FALSE;
         const bool bDecodable = RenderTargetViewSettings::isDecodableFormat( pSelected->_format, bDepth );

@@ -58,5 +58,11 @@
 	<Expect watch="KitDemo.Tactics.Turn" equals="2"/>
 	<ExpectLog id="KitDemo.TacticsDestroyed" count="2"/>
 	<ExpectLog id="KitDemo.TacticsVictory" count="1"/>
+	<!-- 성장 디버거(HUD 섹션 tacticsgrowth): 기체 곡선이 10 xp 마다라 명중 · 격파로 레벨이 올랐고, 그 줄의 출처가 명중 · 격파다 -->
+	<Expect watch="KitDemo.Tactics.LevelUps" atLeast="1"/>
+	<DevCommand line="hud.print tacticsgrowth"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[tacticsgrowth] unit 0: " atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="LevelUp unit " atLeast="1"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="(no source)" count="0"/>
 	<Pass/>
 </Scenario>

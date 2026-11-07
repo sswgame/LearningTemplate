@@ -903,6 +903,52 @@ namespace sw
             listTarget.push_back( std::move( info ) );
         }
 
+        // 생산자 · 소비자 · 수명 — 패스의 입출력 이름을 실제 첨부로 풀어(꺼진 효과의 출력은 원본으로) 붙인다. 순서는 파이프라인 선언 순서다.
+        const vector<RenderGraphPassDesc>& listPass   = _pipelineResource.getDesc()._listPass;
+        const auto                         findTarget = [&]( const string& attachmentName ) -> RenderTargetInfo*
+        {
+            const hashed_string resolved = _state._mainView._transientPool.resolveName( hashed_string::findInterned( attachmentName ) );
+            for ( RenderTargetInfo& info : listTarget )
+            {
+                if ( resolved.empty() == false && info._name == resolved.c_str() )
+                    return &info;
+            }
+            return nullptr;
+        };
+        const auto markUse = []( RenderTargetInfo& info, int32 passIndex )
+        {
+            info._firstPass = info._firstPass < 0 ? passIndex : info._firstPass;
+            info._lastPass  = passIndex;
+        };
+        for ( int32 passIndex = 0; passIndex < static_cast<int32>( listPass.size() ); ++passIndex )
+        {
+            const RenderGraphPassDesc& pass = listPass[static_cast<size_t>( passIndex )];
+            for ( const string& input : pass._listInput )
+            {
+                if ( RenderTargetInfo* pInfo = findTarget( input ); pInfo != nullptr )
+                {
+                    pInfo->_listConsumer.push_back( pass._name );
+                    markUse( *pInfo, passIndex );
+                }
+            }
+            for ( const string& output : pass._listOutput )
+            {
+                if ( RenderTargetInfo* pInfo = findTarget( output ); pInfo != nullptr )
+                {
+                    pInfo->_listProducer.push_back( pass._name );
+                    markUse( *pInfo, passIndex );
+                }
+            }
+            if ( pass._depthAttachment.empty() == false )
+            {
+                if ( RenderTargetInfo* pInfo = findTarget( pass._depthAttachment ); pInfo != nullptr )
+                {
+                    pInfo->_listProducer.push_back( pass._name + " (depth)" );
+                    markUse( *pInfo, passIndex );
+                }
+            }
+        }
+
         // 이름순으로 정렬해 둔다. 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
         // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
         VectorUtil::sort( listTarget, []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )

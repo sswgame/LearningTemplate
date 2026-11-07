@@ -14,8 +14,11 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 namespace sw::editor
 {
@@ -89,8 +92,68 @@ namespace sw::editor
             item._title    = string{ pObj->getName().c_str() };
             item._detail   = formatToString( "Scene GameObject (ID: %#)", pObj->getObjectID() );
             item._objectID = pObj->getObjectID();
+            // 칸 필터(type: · tag: · is:)가 볼 값 — 이미 있는 데이터(컴포넌트 유형 · 태그 · 활성)만 싣는다.
+            for ( const Component* pComponent : pObj->getComponents() )
+            {
+                const TypeInfo* pType = pComponent != nullptr ? pComponent->getTypeInfo() : nullptr;
+                if ( pType != nullptr )
+                    item._listFacet.push_back( "type:" + string( pType->_name.c_str() ) );
+            }
+            for ( const TagID& tag : pObj->getTags().getTags() )
+            {
+                const utf8* pTagName = tag.getString();
+                if ( pTagName != nullptr )
+                    item._listFacet.push_back( string( "tag:" ) + pTagName );
+            }
+            item._listFacet.push_back( pObj->isActiveInHierarchy() ? "is:active" : "is:inactive" );
             inoutListItem.push_back( std::move( item ) );
         } );
+    }
+
+    EditorSearchQuery EditorSearchQuery::parse( string_view pattern )
+    {
+        EditorSearchQuery query;
+        size_t            start = 0;
+        while ( start < pattern.size() )
+        {
+            size_t end = pattern.find( ' ', start );
+            if ( end == string_view::npos )
+                end = pattern.size();
+            const string_view word  = pattern.substr( start, end - start );
+            const size_t      colon = word.find( ':' );
+            if ( colon != string_view::npos && colon > 0 && colon + 1 < word.size() )
+                query._listFacet.emplace_back( StringUtil::toLower( string( word.substr( 0, colon ) ) ), string( word.substr( colon + 1 ) ) );
+            else if ( word.empty() == false )
+                query._text += ( query._text.empty() ? "" : " " ) + string( word );
+            start = end + 1;
+        }
+        return query;
+    }
+
+    bool EditorSearchQuery::matchesFacets( const EditorSearchItem& item ) const
+    {
+        for ( const auto& [field, value] : _listFacet )
+        {
+            bool bMatched = false;
+            for ( const string& facet : item._listFacet )
+            {
+                const size_t colon = facet.find( ':' );
+                if ( colon == string::npos || StringUtil::toLower( facet.substr( 0, colon ) ) != field )
+                    continue;
+                // 상태(`is:`)는 낱말 전체로 견준다 — `active` 가 `inactive` 안에도 들어 있다. 나머지 칸은 이어진 일부로 견준다(`type:mesh`).
+                const string_view facetValue = string_view( facet ).substr( colon + 1 );
+                const bool        bWhole     = field == "is";
+                const bool        bHit       = bWhole ? StringUtil::toLower( string( facetValue ) ) == StringUtil::toLower( value ) : EditorSearchSources::containsIgnoreCase( facetValue, value );
+                if ( bHit )
+                {
+                    bMatched = true;
+                    break;
+                }
+            }
+            if ( bMatched == false )
+                return false;
+        }
+        return true;
     }
 
     void EditorSearchSources::appendAssets( const vector<EditorAssetIndexEntry>& listEntry, vector<EditorSearchItem>& inoutListItem )
@@ -112,12 +175,17 @@ namespace sw::editor
     {
         outListFiltered.clear();
         vector<const EditorSearchItem*> listScattered;
+        // 칸 필터(`type:` · `tag:` · `is:`)를 먼저 걸고, 남은 글로 기존 규칙(이어진 일치 먼저, 흩어진 일치 뒤)을 건다.
+        const EditorSearchQuery query = EditorSearchQuery::parse( pattern );
+        const string_view       text  = query._text;
         for ( const vector<EditorSearchItem>* pListItem : listSource )
             for ( const EditorSearchItem& item : *pListItem )
             {
-                if ( pattern.empty() || containsIgnoreCase( item._title, pattern ) || containsIgnoreCase( item._category, pattern ) || containsIgnoreCase( item._detail, pattern ) )
+                if ( query.matchesFacets( item ) == false )
+                    continue;
+                if ( text.empty() || containsIgnoreCase( item._title, text ) || containsIgnoreCase( item._category, text ) || containsIgnoreCase( item._detail, text ) )
                     outListFiltered.push_back( &item );
-                else if ( matchesScattered( item._title, pattern ) || matchesScattered( item._category, pattern ) || matchesScattered( item._detail, pattern ) )
+                else if ( matchesScattered( item._title, text ) || matchesScattered( item._category, text ) || matchesScattered( item._detail, text ) )
                     listScattered.push_back( &item );
             }
         outListFiltered.insert( outListFiltered.end(), listScattered.begin(), listScattered.end() );

@@ -7486,12 +7486,22 @@
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorRenderTarget.Consumers" source="Read by: {passes}">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorRenderTarget.DepthLabel" source="depth">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorRenderTarget.FormatNotReadable" source="This format cannot be read back.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.Lifetime" source="Used from pass {firstPass} to pass {lastPass} (pipeline order)">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>
@@ -7524,6 +7534,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorRenderTarget.PickTargetHint" source="Pick a render target on the left.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.Producers" source="Written by: {passes}">
 			<origins>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
 			</origins>

@@ -20,6 +20,8 @@
 	<!-- 고른 타깃의 스냅샷은 고른 뒤에 다시 읽는다 - 고름이 먼저 서고 스냅샷이 뒤에 선다 -->
 	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutWallSeconds="10"/>
 	<Expect watch="Editor.RenderTargetLinearized" equals="1"/>
+	<!-- 생산자 · 소비자: 깊이는 깊이를 쓰는 패스(프리패스 · G 버퍼)와 읽는 패스(조명 · 안개 …)가 있다 — 둘 이상 -->
+	<Expect watch="Editor.RenderTargetPassUses" atLeast="2"/>
 	<EditorWaitSettled/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.6"/>
 	<EditorWaitSettled/>
@@ -38,6 +40,9 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="renderTargets.channel.G"/>
 	<WaitUntil watch="Editor.RenderTargetChannel" equals="2" timeoutFrames="60"/>
+	<Expect watch="Editor.RenderTargetPassUses" atLeast="1"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="rendertargetview/passes.png" maxMagentaFraction="0"/>
 	<EditorWaitSettled/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.5"/>
 	<EditorWaitSettled/>

@@ -2614,10 +2614,12 @@
 		<entry key="EditorRenderTarget.ChannelTip"
 		       text="모든 채널을 보거나 한 채널을 회색조로 봅니다. RGBA 는 실시간 GPU 텍스처를, 한 채널은 CPU 스냅샷을 씁니다."
 		       sourceHash="c9586c7468528e2a" />
+		<entry key="EditorRenderTarget.Consumers" text="읽는 패스: {passes}" sourceHash="39d75cc91286cf17" />
 		<entry key="EditorRenderTarget.DepthLabel" text="깊이" sourceHash="75d8e97600b296ea" />
 		<entry key="EditorRenderTarget.FormatNotReadable"
 		       text="이 포맷은 다시 읽어 올 수 없습니다."
 		       sourceHash="64a9f8e6f23715e7" />
+		<entry key="EditorRenderTarget.Lifetime" text="패스 {firstPass} 부터 {lastPass} 까지 쓰입니다(파이프라인 순서)" sourceHash="b93871319673c4a4" />
 		<entry key="EditorRenderTarget.LinearLabel" text="선형" sourceHash="ac3191c5ecc66e60" />
 		<entry key="EditorRenderTarget.LinearizeTip"
 		       text="Near/Far 로 저장된 깊이를 뷰 거리로 되돌립니다. 원근 깊이는 1 근처에 몰려 있어 그대로 보면 거의 흰색입니다."
@@ -2634,6 +2636,7 @@
 		<entry key="EditorRenderTarget.PickTargetHint"
 		       text="왼쪽에서 렌더 타깃을 고릅니다."
 		       sourceHash="f1ed71875e751d75" />
+		<entry key="EditorRenderTarget.Producers" text="쓰는 패스: {passes}" sourceHash="3e9a645599b25e8c" />
 		<entry key="EditorRenderTarget.ReadingTarget" text="타깃을 읽는 중..." sourceHash="fd8a32343bfe23ad" />
 		<entry key="EditorRenderTarget.RefreshTip"
 		       text="선택한 타깃을 CPU 로 다시 읽어 옵니다. 채널 보기, 깊이 보기, 픽셀 값은 이 스냅샷을 쓰며, 읽는 동안 GPU 를 기다립니다."

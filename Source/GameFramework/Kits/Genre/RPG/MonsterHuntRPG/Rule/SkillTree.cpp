@@ -6,7 +6,9 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -201,6 +203,57 @@ namespace sw
         if ( _points < skill._cost )
             return SkillResult::NotEnoughPoints;
         return SkillResult::Ok;
+    }
+
+    void SkillTreeState::writeDebugLines( DebugHUDSectionWriter& writer, int32 characterLevel, uint32 maxLines ) const
+    {
+        if ( _pTree == nullptr )
+        {
+            writer.addLine( "skills", "no tree" );
+            return;
+        }
+        writer.addLine( string( "tree " ) + _pTree->_id.c_str(), "points " + to_string( _points ) + ", spent " + to_string( getSpentPoints() ) + ", level " + to_string( characterLevel ) );
+        uint32 written = 1;
+        for ( size_t index = 0; index < _pTree->_listSkill.size(); ++index )
+        {
+            if ( written >= maxLines )
+            {
+                writer.addLine( "...", to_string( static_cast<uint64>( _pTree->_listSkill.size() - index ) ) + " more" );
+                return;
+            }
+            const SkillDef&   skill  = _pTree->_listSkill[index];
+            const SkillResult result = evaluateRankUp( skill._id, characterLevel );
+            string            value  = to_string( _listRank[index] ) + "/" + to_string( skill._maxRank ) + " next: " + getEnumName( result );
+            switch ( result )
+            {
+                case SkillResult::LevelTooLow:
+                    value += " (needs level " + to_string( skill._requiredLevel ) + ")";
+                    break;
+                case SkillResult::TierLocked:
+                    value += " (spent " + to_string( getSpentPoints() ) + "/" + to_string( skill._requiredSpent ) + ")";
+                    break;
+                case SkillResult::RequirementMissing:
+                    for ( const SkillRequirement& requirement : skill._listRequirement )
+                    {
+                        if ( getRank( requirement._skillID ) < requirement._rank )
+                            value += string( " (needs " ) + requirement._skillID.c_str() + ":" + to_string( requirement._rank ) + ")";
+                    }
+                    break;
+                case SkillResult::GroupTaken:
+                    value += string( " (group " ) + skill._group.c_str() + ")";
+                    break;
+                case SkillResult::NotEnoughPoints:
+                    value += " (points " + to_string( _points ) + "/" + to_string( skill._cost ) + ")";
+                    break;
+                case SkillResult::Ok:
+                case SkillResult::UnknownSkill:
+                case SkillResult::MaxRank:
+                case SkillResult::RequiredByOther:
+                    break;
+            }
+            writer.addLine( skill._id.c_str(), value );
+            ++written;
+        }
     }
 
     SkillResult SkillTreeState::rankUp( const hashed_string& skillID, int32 characterLevel )

@@ -3,6 +3,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -1101,6 +1102,40 @@ SW_TEST_CASE_F( SkillTreeStateTest, RankUpChecksEveryCondition )
     SW_EXPECT_EQUAL( 10, _state.getPoints() );
     SW_EXPECT_EQUAL( 0, _state.getSpentPoints() );
     SW_EXPECT_EQUAL( sw::SkillResult::Ok, _state.rankUp( "base", 1 ) );
+}
+
+/**
+ * @brief [SkillTreeStateTest] 스킬 디버거 줄은 스킬마다 랭크와 다음 랭크의 판정을 그 까닭의 값(필요 레벨 · 빠진 선행 · 층 · 점수)과 함께 낸다 — 왜 해금되지 않는지를 판정 함수와 같은 순서로 보인다
+ */
+SW_TEST_CASE_F( SkillTreeStateTest, DebugLinesExplainWhyTheNextRankIsLocked )
+{
+    const auto findLine = []( const sw::DebugHUDSectionWriter& writer, sw::string_view label ) -> sw::string
+    {
+        for ( sw::uint32 index = 0; index < writer.getLineCount(); ++index )
+        {
+            if ( writer.getLineAt( index )._label == label )
+                return writer.getLineAt( index )._value;
+        }
+        return "(missing)";
+    };
+    _state.initialize( _catalog.find( "combat" ) );
+    _state.addPoints( 1 );
+    SW_REQUIRE_EQUAL( sw::SkillResult::Ok, _state.rankUp( "base", 1 ) );
+
+    sw::DebugHUDSectionWriter writer;
+    _state.writeDebugLines( writer, 2, 16 );
+    SW_EXPECT_EQUAL( sw::string( "points 0, spent 1, level 2" ), findLine( writer, "tree combat" ) );
+    SW_EXPECT_EQUAL( sw::string( "1/2 next: NotEnoughPoints (points 0/1)" ), findLine( writer, "base" ) );
+    SW_EXPECT_EQUAL( sw::string( "0/1 next: LevelTooLow (needs level 3)" ), findLine( writer, "power" ) );
+    SW_EXPECT_EQUAL( sw::string( "0/1 next: TierLocked (spent 1/2)" ), findLine( writer, "stance_a" ) );
+
+    sw::DebugHUDSectionWriter atLevel3;
+    _state.writeDebugLines( atLevel3, 3, 16 );
+    SW_EXPECT_EQUAL( sw::string( "0/1 next: RequirementMissing (needs base:2)" ), findLine( atLevel3, "power" ) );
+
+    sw::DebugHUDSectionWriter capped;
+    _state.writeDebugLines( capped, 3, 2 );
+    SW_EXPECT_EQUAL( sw::string( "3 more" ), findLine( capped, "..." ) );
 }
 
 /**

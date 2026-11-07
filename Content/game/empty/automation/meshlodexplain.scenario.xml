@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LOD 판정 확인(진단) — 보기 모드 LODLevel 이 색으로 보이는 것을 숫자로 읽는다: 지금 단계/단계 수 · 화면 크기 · 단계별 임계값 · 고른 쪽(cpu · gpu · forced · section · single).
+  무대 maps/cinematic: 상자(BoxLeft — 단계 하나)와 해골(Actor). 단계를 고정(-gv_meshLodForce)하면 단계가 여럿인 메시의 고른 쪽이 forced 다.
+  감시 값 Mesh.LOD(같은 한 줄) · Mesh.LODIndex 도 있다. 볼 값: 해골 줄의 단계 수 · 화면 크기 · 고른 쪽을 통합 실행 로그에서 확인한다.
+  실행: App -scenario=game/empty/automation/meshlodexplain.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.meshlodexplain" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/cinematic.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="2"/>
+	<!-- 단계가 하나인 메시는 single, 지금 단계는 0 -->
+	<Expect watch="Mesh.LODIndex" target="BoxLeft" equals="0"/>
+	<DevCommand line="lod.explain BoxLeft"/>
+	<ExpectLog id="MeshLOD.Explain" contains="BoxLeft: LOD 0/1 " count="1"/>
+	<ExpectLog id="MeshLOD.Explain" contains="by single" count="1"/>
+	<!-- 해골: 단계 수와 고른 쪽이 한 줄에 나온다(단계가 여럿이면 cpu · gpu, 하나면 single) -->
+	<DevCommand line="lod.explain Actor"/>
+	<ExpectLog id="MeshLOD.Explain" contains="Actor: LOD " count="1"/>
+	<Pass/>
+</Scenario>

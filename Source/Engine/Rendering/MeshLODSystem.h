@@ -9,6 +9,7 @@
  *          PreloadAndLOD P9 의 남은 일이다(셰이더).
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -80,6 +81,13 @@ namespace sw
          * @details 메시 하나의 판정이라 테스트가 뷰 없이 직접 부른다.
          */
         static uint32 selectNextLOD( const Mesh& mesh, float32 screenSize, uint32 currentLOD );
+        /**
+         * @brief 컴포넌트 하나의 LOD 판정을 한 줄로 설명합니다(LOD 판정 확인 — 개발 명령 `lod.explain` · 감시 값 `Mesh.LOD`).
+         * @details `LOD <지금>/<단계 수> screen <화면 크기> thresholds [<단계별 임계값>] by <고른 쪽>` — 고른 쪽은 forced(고정 단계) · views-not-set(뷰 없음, 원본) ·
+         *          gpu(GPU 컬링이 인스턴스마다 고른다 — 컴포넌트 단계는 쓰지 않는다) · cpu(화면 크기 + 고운 쪽 여유) · section(주 메시를 따른다) · single(단계가 하나)다.
+         *          보기 모드 LODLevel 이 색으로 보이는 것을 숫자로 확인한다.
+         */
+        string explainLOD( const MeshComponent& component ) const;
 
     private:
         GameObjectManager& _manager;
