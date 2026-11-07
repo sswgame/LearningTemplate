@@ -463,7 +463,7 @@ namespace sw
         const MatchTeam* pTeam = _match.findTeam( team );
         if ( pTeam == nullptr )
             return 0;
-        return pTeam->_bIgnoreCost == SW_TRUE ? -1 : pTeam->_costPool;
+        return pTeam->_bIgnoreCost == SW_TRUE ? kUnlimitedGauge : pTeam->_costPool;
     }
 
     float32 MechArenaWorld::computeModifier( int32 pilot, const hashed_string& name ) const

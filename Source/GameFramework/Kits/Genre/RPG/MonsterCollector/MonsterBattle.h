@@ -156,6 +156,7 @@ namespace sw
         static constexpr int32  kNonMovePriority = 7; ///< 교체, 볼, 도망의 우선도
         static constexpr int32  kParalysisChance = 25;
         static constexpr int32  kThawChance      = 20;
+        static constexpr int32  kEndlessWeather  = -1; ///< 끝나지 않는 날씨의 남은 턴(`getWeatherTurns`)
         static constexpr int32  kMaxSleepTurns   = 3;
 
         MonsterBattle();

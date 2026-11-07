@@ -53,7 +53,7 @@ namespace sw
     {
         if ( count <= 0 )
             return;
-        _listBatch.push_back( IngredientBatch{ itemID, unitCost, count, shelfLife > 0 ? shelfLife : -1 } );
+        _listBatch.push_back( IngredientBatch{ itemID, unitCost, count, shelfLife > 0 ? shelfLife : IngredientBatch::kNoExpiry } );
         sortBatches();
     }
 

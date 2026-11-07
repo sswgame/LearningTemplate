@@ -124,7 +124,7 @@ namespace sw
             return;
         }
         _weatherID    = weatherID;
-        _weatherTurns = turns > 0 ? turns : -1;
+        _weatherTurns = turns > 0 ? turns : kEndlessWeather;
         pushEvent( MonsterBattleEvent::Kind::WeatherStarted, kPlayerSide, _weatherTurns, weatherID );
     }
 
@@ -808,7 +808,7 @@ namespace sw
             return;
         _bWild = bWild == SW_TRUE;
         // 날씨가 없으면 턴도 0 이고, 있으면 남은 턴이거나 끝없음(-1)이다.
-        io.check( _weatherID.empty() ? _weatherTurns == 0 : ( _pCatalog->findWeather( _weatherID ) != nullptr && ( _weatherTurns == -1 || _weatherTurns > 0 ) ) );
+        io.check( _weatherID.empty() ? _weatherTurns == 0 : ( _pCatalog->findWeather( _weatherID ) != nullptr && ( _weatherTurns == kEndlessWeather || _weatherTurns > 0 ) ) );
         io.check( _captured._speciesID.empty() ? _result != MonsterBattleResult::Captured : _captured.isKnownTo( *_pCatalog ) );
         io.check( 0 <= _escapeAttempts );
         for ( int32 side = 0; side < kSideCount; ++side )

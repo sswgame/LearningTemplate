@@ -24,7 +24,9 @@ namespace sw
         hashed_string _itemID{};
         int64         _unitCost{ 0 }; ///< 한 개의 원가이다(결산의 재료비)
         int32         _count{ 0 };
-        int32         _daysLeft{ 0 }; ///< 0 이하가 되면 버린다(-1 이면 상하지 않는다)
+        int32         _daysLeft{ 0 }; ///< 0 이하가 되면 버린다(`kNoExpiry` 이면 상하지 않는다)
+
+        static constexpr int32 kNoExpiry = -1; ///< 상하지 않는 배치의 `_daysLeft`
     };
 } // namespace sw
 

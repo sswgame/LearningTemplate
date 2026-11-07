@@ -228,9 +228,10 @@ namespace sw
         friend class MechArenaProjectileQuery;
 
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHA" );
-        static constexpr uint32 kStateVersion = 3;
-        static constexpr uint32 kSlotStride   = 256; ///< 탄의 반응 번호에서 기체 번호와 슬롯을 가르는 폭(한 기체의 슬롯 수 상한)
+        static constexpr uint32 kStateTag       = FourCcUtil::make( "MCHA" );
+        static constexpr uint32 kStateVersion   = 3;
+        static constexpr uint32 kSlotStride     = 256; ///< 탄의 반응 번호에서 기체 번호와 슬롯을 가르는 폭(한 기체의 슬롯 수 상한)
+        static constexpr int32  kUnlimitedGauge = -1;  ///< 비용을 무시하는 팀의 `getTeamGauge`(게이지 상한 없음)
 
         MechArenaWorld();
 
@@ -279,7 +280,7 @@ namespace sw
         int32                          getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
         const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
         const MatchState&              getMatch() const { return _match; }
-        /** @brief 팀의 남은 전력 게이지입니다. */
+        /** @brief 팀의 남은 전력 게이지입니다. 비용을 무시하는 팀은 `kUnlimitedGauge` 입니다. */
         int32 getTeamGauge( int32 team ) const;
         /** @brief 켜진 스킬들의 배율 곱입니다("attack", "defense", "speed", "boostRegen", "downResist"). */
         float32 computeModifier( int32 pilot, const hashed_string& name ) const;

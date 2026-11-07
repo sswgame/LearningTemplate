@@ -90,6 +90,8 @@ namespace sw
 
         /** @brief 입력에 묶이지 않은 어빌리티의 입력 번호입니다. */
         static constexpr int32 kNoInputID = constant::invalid_index::kInt32;
+        /** @brief `removeActiveEffect` 에 주면 스택 수와 상관없이 이펙트를 통째로 지웁니다(0 이하는 모두 같은 뜻). */
+        static constexpr int32 kAllStacks = -1;
 
         AbilityComponent();
         ~AbilityComponent() override;
@@ -217,7 +219,7 @@ namespace sw
          * @brief 적용된 이펙트를 지웁니다. @p stacksToRemove 가 0 이하이면 통째로 지우고, 아니면 그만큼 스택을 줄입니다. 스택이 0 이 되면 이펙트를 지웁니다.
          * @return 무엇이든 바뀌었으면 true 입니다.
          */
-        [[nodiscard]] bool removeActiveEffect( ActiveEffectHandle handle, int32 stacksToRemove = -1 );
+        [[nodiscard]] bool removeActiveEffect( ActiveEffectHandle handle, int32 stacksToRemove = kAllStacks );
         /** @brief 에셋 태그나 부여 태그가 @p tags 와 일치하는 이펙트를 모두 지우고, 지운 수를 반환합니다. 정화와 디스펠에 씁니다. */
         int32 removeActiveEffectsWithTags( const TagContainer& tags );
         /** @brief 정의 id 가 @p effectID 인 활성 이펙트(지우는 중이 아닌 첫 것)의 핸들입니다. 없으면 무효입니다 — 스택 이펙트(가라앉음)는 대상에 하나라 이것으로 짚는다. */
