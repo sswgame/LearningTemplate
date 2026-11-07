@@ -4,12 +4,9 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 
-#include "Engine/Window/Linux/LinuxWindowBackend.h"
-#include "Engine/Window/Linux/Wayland/WaylandWindow.h"
-#include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
-#include "Engine/Window/Windows/Win32Window.h"
+#include "Engine/Window/WindowPlatform.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -306,27 +303,7 @@ namespace sw
 
     unique_ptr<IWindow> IWindow::createPlatformWindow()
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        return make_unique<Win32Window>();
-#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-        // 창 계층은 환경 변수 하나가 고른다(`SW_WINDOW_BACKEND` = x11 | wayland, 없으면 x11 — XWayland 데스크톱의 지금까지의 길). 모르는 값 · 짓지 않은 계층은 오류로 멈춘다.
-        // 읽는 곳은 스플래시 창과 같다(`tryReadLinuxWindowBackend`).
-        LinuxWindowBackend backend = LinuxWindowBackend::X11;
-        if ( tryReadLinuxWindowBackend( backend ) == false )
-            return nullptr;
-        if ( backend == LinuxWindowBackend::X11 )
-            return make_unique<X11Window>();
-    #if defined( SW_WITH_WAYLAND )
-        SW_LOG_INFO_ID( "Window.WindowBackendWaylandSW", "Window backend: Wayland (SW_WINDOW_BACKEND=wayland)" );
-        return make_unique<WaylandWindow>();
-    #else
-        SW_LOG_ERROR_ID( "Window.SWWINDOWBACKENDWayland", "SW_WINDOW_BACKEND=wayland but this build has no Wayland window layer (configure with -DSW_ENABLE_WAYLAND=ON)" );
-        return nullptr;
-    #endif
-#elif defined( SW_PLATFORM_POSIX )
-        return nullptr;
-#else
-    #error "Unsupported platform"
-#endif
+        const WindowPlatformFactory* const pFactory = WindowPlatform::find();
+        return pFactory != nullptr ? pFactory->_pfnCreateWindow() : nullptr;
     }
 } // namespace sw

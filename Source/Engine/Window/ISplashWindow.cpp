@@ -4,14 +4,10 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Window/Linux/LinuxWindowBackend.h"
-#include "Engine/Window/Linux/Wayland/WaylandSplashWindow.h"
-#include "Engine/Window/Linux/X11SplashWindow.h"
-#include "Engine/Window/Windows/Win32SplashWindow.h"
+#include "Engine/Window/WindowPlatform.h"
 
 namespace sw
 {
@@ -31,52 +27,14 @@ namespace sw
 
     unique_ptr<ISplashWindow> ISplashWindow::createPlatformSplash()
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        return make_unique<Win32SplashWindow>();
-#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-        // 메인 창과 같은 계층을 고른다(`SW_WINDOW_BACKEND`). 모르는 값이면 읽는 쪽이 오류를 남겼고 `isPlatformSupported` 가 false 라 여기 오지 않는다.
-        LinuxWindowBackend backend = LinuxWindowBackend::X11;
-        if ( tryReadLinuxWindowBackend( backend ) == false )
-            return nullptr;
-        if ( backend == LinuxWindowBackend::X11 )
-            return make_unique<X11SplashWindow>();
-    #if defined( SW_WITH_WAYLAND )
-        return make_unique<WaylandSplashWindow>();
-    #else
-        return nullptr;
-    #endif
-#elif defined( SW_PLATFORM_POSIX )
-        return nullptr;
-#else
-    #error "Unsupported platform"
-#endif
+        const WindowPlatformFactory* const pFactory = WindowPlatform::find();
+        return pFactory != nullptr ? pFactory->_pfnCreateSplash() : nullptr;
     }
 
     bool ISplashWindow::isPlatformSupported()
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        return true;
-#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-        LinuxWindowBackend backend = LinuxWindowBackend::X11;
-        if ( tryReadLinuxWindowBackend( backend ) == false )
-            return false;
-        string display;
-        if ( backend == LinuxWindowBackend::Wayland )
-        {
-    #if defined( SW_WITH_WAYLAND )
-            // Wayland 스플래시는 `wl_display_connect( nullptr )` 로 연결한다 — `WAYLAND_DISPLAY` 가 없으면 기본 소켓 이름을 찾지만, 메인 창과 같은 조건(변수 있음)으로 맞춘다.
-            return ProcessEnvironment::tryReadNonEmpty( "WAYLAND_DISPLAY", display );
-    #else
-            return false; // 이 빌드에 Wayland 창 계층이 없다(메인 창 생성이 오류로 알린다)
-    #endif
-        }
-        // X11 스플래시는 `XOpenDisplay( nullptr )` 로 연결한다 — `DISPLAY` 가 없으면 열 수 없다(순수 Wayland 세션에서 X11 을 골랐을 때).
-        return ProcessEnvironment::tryReadNonEmpty( "DISPLAY", display );
-#elif defined( SW_PLATFORM_POSIX )
-        return false;
-#else
-    #error "Unsupported platform"
-#endif
+        const WindowPlatformFactory* const pFactory = WindowPlatform::find();
+        return pFactory != nullptr && pFactory->_pfnIsSplashSupported();
     }
 
     void ISplashWindow::createScaledImage()

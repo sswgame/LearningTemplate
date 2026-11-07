@@ -17,9 +17,11 @@ namespace sw
     /** @brief 표면의 창 시스템입니다 — 같은 리눅스에서도 X11 과 Wayland 는 핸들의 뜻이 다르다(WSI 확장 · GL 문맥을 고르는 기준). */
     enum class NativeSurfaceKind : uint8
     {
-        Win32 = 0, ///< 핸들 HWND, 디스플레이 없음
-        X11,       ///< 핸들 X11 Window, 디스플레이 Display*
-        Wayland,   ///< 핸들 wl_surface*, 디스플레이 wl_display*
+        Win32 = 0,     ///< 핸들 HWND, 디스플레이 없음
+        X11,           ///< 핸들 X11 Window, 디스플레이 Display*
+        Wayland,       ///< 핸들 wl_surface*, 디스플레이 wl_display*
+        AndroidWindow, ///< 핸들 ANativeWindow*, 디스플레이 없음. 표면이 앱 수명 안에서 사라졌다 생긴다(`WindowLifecycleEvent`)
+        WebCanvas,     ///< 핸들 canvas 선택자 글(`const utf8*`), 디스플레이 없음
     };
 
     /**
@@ -40,7 +42,7 @@ namespace sw
 
         /** @brief 핸들 · 디스플레이가 어느 창 시스템의 것인지입니다. */
         virtual NativeSurfaceKind getSurfaceKind() const = 0;
-        /** @brief 네이티브 표면 핸들입니다(HWND, X11 Window, wl_surface*). */
+        /** @brief 네이티브 표면 핸들입니다(HWND, X11 Window, wl_surface*, ANativeWindow*, canvas 선택자). */
         virtual void* getSurfaceHandle() const = 0;
         /** @brief 네이티브 디스플레이 연결입니다(X11 Display*, wl_display*). 없으면 nullptr 입니다. */
         virtual void* getSurfaceDisplay() const = 0;
