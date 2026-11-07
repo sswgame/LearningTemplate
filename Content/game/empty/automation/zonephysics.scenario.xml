@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지역 효과 — 물리 필드와 물리 재질 입력(maps/zoneshowcase 의 ZeroG · IcePad · ThornBush).
+  ① 무중력 방(zones/zerog.zone.xml — 중력 배율 0): 걷는 사람은 부유(Floating)하며 떠 있고, 나무 상자도 떠 있다(강체에도 같은 필드).
+  ② 빙판: 물리 재질 Ice 가 Empty 층의 표면 종류 표에서 프로필(zones/ice.zone.xml)을 부른다 — 디딤 입력, 접지 0.05(전용 컴포넌트 없음).
+  ③ 가시덩굴: 물리 재질 Thorns 의 부딪힘 입력 — 붙어 선 사람은 0.5 초마다 찔리고(2 + 충격 세기 × 3), 깨지는 꽃병(Fragile)은 세게(4 m/s 넘게) 떨어지면 부서진다(경우 목록).
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zonephysics.scenario.xml -unattended
+-->
+<Scenario name="game.empty.zonephysics" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 60 1.5 0"/>
+	<DevCommand line="object.place FloatCrate 60.5 3 1"/>
+	<Wait frames="60"/>
+	<Expect watch="Zone.Sources" target="Walker" is="volume:ZeroG"/>
+	<Expect watch="Physics.Field" target="Walker" key="gravityScale" equals="0"/>
+	<Expect watch="Character.MovementMode" target="Walker" is="Floating"/>
+	<Expect watch="Object.Y" target="Walker" atLeast="1.3"/>
+	<Expect watch="Object.Y" target="FloatCrate" atLeast="2.7"/>
+	<Expect watch="Physics.Field" target="FloatCrate" key="gravityScale" equals="0"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 66 0.05 0"/>
+	<Wait frames="30"/>
+	<Expect watch="Surface.GroundKind" target="Walker" is="Ice"/>
+	<Expect watch="Zone.Sources" target="Walker" is="surface:Ice"/>
+	<Expect watch="Physics.Field" target="Walker" key="friction" near="0.05" tolerance="0.001"/>
+	<Expect watch="Character.MovementMode" target="Walker" is="Walking"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 71.6 0.05 0"/>
+	<Wait frames="70"/>
+	<Expect watch="Zone.Sources" target="Walker" is="surface:Thorns"/>
+	<Expect watch="Ability.Attribute" target="Walker" key="Health" atMost="96"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Vase 72.5 5 1"/>
+	<WaitUntil watch="Object.Exists" target="Vase" equals="0" timeoutSeconds="3"/>
+	<Pass/>
+</Scenario>

@@ -150,7 +150,9 @@ namespace sw
 
         bool               isValid() const { return _pEntry != nullptr; }
         const ActionEntry* getEntry() const { return _pEntry; }
-        const utf8*        getName() const { return _pEntry != nullptr ? _pEntry->_pName : ""; }
+        /** @brief 해석한 칸 구조체입니다(등록 줄의 칸 형식 — `getEntry()->_pParamsOps`). 읽은 뒤 참조를 검사하는 쪽(지역 프로필)이 쓴다. 빈 호출이면 nullptr 입니다. */
+        const void* getParams() const { return _pParams.get(); }
+        const utf8* getName() const { return _pEntry != nullptr ? _pEntry->_pName : ""; }
 
     private:
         const ActionEntry*     _pEntry;

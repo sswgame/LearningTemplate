@@ -162,6 +162,12 @@ namespace sw
             applyIncomingHealing( data );
     }
 
+    void CombatAttributeSet::postFatalDamage()
+    {
+        AttributeSet::postFatalDamage();
+        handleOutOfHealth( AttributeModCallbackData{} );
+    }
+
     void CombatAttributeSet::clampCombatValue( const hashed_string& name, float32& inoutValue ) const
     {
         const AbilityComponent* pAbilitySystem = getOwningAbilitySystem();

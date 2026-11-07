@@ -61,5 +61,6 @@
 		<PhysicsMaterialDef _name="Snow" _friction="0.35" _restitution="0" _density="400" />
 		<PhysicsMaterialDef _name="Sand" _friction="0.6" _restitution="0" _density="1600" />
 		<PhysicsMaterialDef _name="Mud" _friction="0.5" _restitution="0" _density="1700" />
+		<PhysicsMaterialDef _name="Thorns" _friction="0.8" _restitution="0" _density="900" />
 	</_listMaterial>
 </PhysicsSettings>

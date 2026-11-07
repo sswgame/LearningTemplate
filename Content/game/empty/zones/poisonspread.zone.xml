@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  살포된 독가스(변형 ②) — 유황 지대와 같은 할 일. 수명 · 퍼짐은 프리팹의 볼륨 칸(_lifetime · _growthRate)이 맡는다.
+-->
+<ZoneProfile _base="game/empty/zones/sulfur.zone.xml">
+	<_listModule>
+		<ZoneModuleDef _name="cough">
+			<_listParam>
+				<ZoneParamDef _name="key" _value="CoughingGas" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

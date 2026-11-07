@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty 의 어빌리티 카탈로그 — 지역 효과 시연(maps/zoneshowcase · surfaceinteraction)의 이펙트 · 어빌리티 · 세트.
+  지역 프로필(zones/*.zone.xml)은 이펙트를 정본으로 쓴다: 가라앉음은 머문 시간만큼 쌓이는 스택(SinkDepth · MoveSpeedScale 를 스택 수만큼 바꾼다),
+  감속은 MovementConstraint 가 읽는 속성(MoveSpeedScale), 상태는 태그(삼켜짐 · 끌려감 · 화상 · 중독). 저항 · 면역은 대상 쪽이다 —
+  화염 면역은 이펙트의 BlockedTag(State.Fireproof), 저항은 지역의 식이 대상 속성(FireResist)을 읽는다.
+  "ApplyEffects" 는 프레임워크 기본 클래스라 코드 없이 돈다(스킬 영역의 노바).
+-->
+<AbilityCatalog>
+
+  <!-- 가라앉음: 스택 하나에 0.1 m · 걷는 속도 −10%, 아홉 번까지(0.9 m · 10%). 탈출(JumpEscapeReactionComponent)이 스택을 줄인다. -->
+  <AbilityEffect id="GE_Sink" duration="Infinite" stacking="AggregateByTarget" stackLimit="9" refreshOnStack="true">
+    <Modifier attribute="SinkDepth" op="Add" magnitude="0.1"/>
+    <Modifier attribute="MoveSpeedScale" op="Multiply" magnitude="0.9"/>
+    <GrantedTag tag="State.Sinking"/>
+  </AbilityEffect>
+
+  <!-- 삼켜짐 — 움직이지 못하고 뛰어도 오르지 못한다. -->
+  <AbilityEffect id="GE_Engulfed" duration="Infinite">
+    <GrantedTag tag="State.Engulfed"/>
+    <GrantedTag tag="State.MoveBlocked"/>
+  </AbilityEffect>
+
+  <!-- 끌려감 — 사구 안쪽으로 넘은 동안(경고 · 당김은 지역의 다른 모듈). -->
+  <AbilityEffect id="GE_Dragged" duration="Infinite">
+    <GrantedTag tag="State.Dragged"/>
+  </AbilityEffect>
+
+  <!-- 늪의 감속 — 안에 있는 동안 걷는 속도 절반. -->
+  <AbilityEffect id="GE_SwampSlow" duration="Infinite">
+    <Modifier attribute="MoveSpeedScale" op="Multiply" magnitude="0.5"/>
+    <GrantedTag tag="State.Slowed"/>
+  </AbilityEffect>
+
+  <!-- 용암 화상 — 피해는 지역이 계산한 값(SetByCaller Data.Damage, 저항을 반영한 식). 화염 면역은 걸리지 않는다. -->
+  <AbilityEffect id="GE_LavaBurn" duration="Instant">
+    <Modifier attribute="IncomingDamage" op="Add" source="SetByCaller" name="Data.Damage"/>
+    <AssetTag tag="Effect.Damage.Fire"/>
+    <BlockedTag tag="State.Fireproof"/>
+  </AbilityEffect>
+
+  <!-- 불붙음 — 3 초 동안 1 초마다 2. 나와도 남는다. -->
+  <AbilityEffect id="GE_Burning" duration="HasDuration" seconds="3" period="1" executeOnApplication="false" stacking="AggregateByTarget" stackLimit="1" refreshOnStack="true">
+    <Modifier attribute="IncomingDamage" op="Add" magnitude="2"/>
+    <GrantedTag tag="State.Burning"/>
+    <BlockedTag tag="State.Fireproof"/>
+  </AbilityEffect>
+
+  <!-- 유황 중독 — 4 초 동안 1 초마다 3. 가스를 나와도 묻어 나간다(지역은 지우지 않는다). -->
+  <AbilityEffect id="GE_SulfurPoison" duration="HasDuration" seconds="4" period="1" executeOnApplication="false" stacking="AggregateByTarget" stackLimit="1" refreshOnStack="true">
+    <Modifier attribute="IncomingDamage" op="Add" magnitude="3"/>
+    <GrantedTag tag="State.Poisoned"/>
+  </AbilityEffect>
+
+  <!-- 가시 — 찔림 한 번(피해는 지역이 충격 세기로 계산한다). -->
+  <AbilityEffect id="GE_ThornPrick" duration="Instant">
+    <Modifier attribute="IncomingDamage" op="Add" source="SetByCaller" name="Data.Damage"/>
+    <AssetTag tag="Effect.Damage.Physical"/>
+  </AbilityEffect>
+
+  <!-- 버프 샘 — 안에 있는 동안 0.5 초마다 회복 5(나오면 지역이 지운다), 들어오면 10 초 가속(나와도 남는다). -->
+  <AbilityEffect id="GE_SpringRegen" duration="Infinite" period="0.5" executeOnApplication="false">
+    <Modifier attribute="IncomingHealing" op="Add" magnitude="5"/>
+    <GrantedTag tag="State.Regenerating"/>
+  </AbilityEffect>
+  <AbilityEffect id="GE_SpringHaste" duration="HasDuration" seconds="10">
+    <Modifier attribute="MoveSpeedScale" op="Multiply" magnitude="1.5"/>
+    <GrantedTag tag="State.Hasted"/>
+  </AbilityEffect>
+
+  <!-- 스킬 영역 — 영역이 노바를 주고 바로 발동한다. 노바는 5 초 강화 표식을 자기에게 건다. -->
+  <AbilityEffect id="GE_NovaMark" duration="HasDuration" seconds="5">
+    <GrantedTag tag="State.Empowered"/>
+  </AbilityEffect>
+  <Ability id="GA_ZoneNova" class="ApplyEffects">
+    <AbilityTag tag="Ability.Skill.Nova"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="selfEffect" text="GE_NovaMark"/>
+  </Ability>
+
+  <!-- 화염 면역 — 시연 시나리오가 ability.apply 로 건다(화염 정령은 세트의 태그로 가진다). -->
+  <AbilityEffect id="GE_Fireproof" duration="Infinite">
+    <GrantedTag tag="State.Fireproof"/>
+  </AbilityEffect>
+
+  <!-- ===================================================================== -->
+  <!-- 세트 — 지역 효과가 읽는 속성(SinkDepth · MoveSpeedScale · FireResist)을 Generic 세트로 둔다 -->
+  <!-- ===================================================================== -->
+
+  <AbilitySet id="ZoneWalker">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="100"/>
+      <Attribute name="MaxHealth" base="100"/>
+      <Attribute name="MoveSpeed" base="4"/>
+    </AttributeSet>
+    <AttributeSet class="Generic">
+      <Attribute name="SinkDepth" base="0"/>
+      <Attribute name="MoveSpeedScale" base="1"/>
+      <Attribute name="FireResist" base="0"/>
+    </AttributeSet>
+  </AbilitySet>
+
+  <!-- 화염 저항 절반 — 같은 용암이 반만 데운다(지역의 식 20 * (1 - target.FireResist)). -->
+  <AbilitySet id="ZoneResistant">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="100"/>
+      <Attribute name="MaxHealth" base="100"/>
+      <Attribute name="MoveSpeed" base="4"/>
+    </AttributeSet>
+    <AttributeSet class="Generic">
+      <Attribute name="SinkDepth" base="0"/>
+      <Attribute name="MoveSpeedScale" base="1"/>
+      <Attribute name="FireResist" base="0.5"/>
+    </AttributeSet>
+  </AbilitySet>
+
+  <!-- 화염 정령 — 화염 면역(태그)이라 용암 화상이 걸리지 않고, 내비 종류 Spirit 은 용암을 지난다. -->
+  <AbilitySet id="FireSpirit">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="100"/>
+      <Attribute name="MaxHealth" base="100"/>
+      <Attribute name="MoveSpeed" base="4"/>
+    </AttributeSet>
+    <AttributeSet class="Generic">
+      <Attribute name="SinkDepth" base="0"/>
+      <Attribute name="MoveSpeedScale" base="1"/>
+      <Attribute name="FireResist" base="1"/>
+    </AttributeSet>
+    <Tag tag="State.Fireproof"/>
+  </AbilitySet>
+
+</AbilityCatalog>

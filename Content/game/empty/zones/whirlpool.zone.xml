@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  소용돌이 — 사구 · 블랙홀 · 강물과 같은 모양이고 방향 종류와 식만 다르다: 회전(Swirl)으로 돌리고 중심으로 당긴다(세기는 깊이의 제곱).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="swirl" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="direction" _value="Swirl" />
+				<ZoneParamDef _name="strength" _value="6 * zoneDepth01" />
+				<ZoneParamDef _name="drag" _value="0.5" />
+				<ZoneParamDef _name="fluidDensity" _value="1" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="suck" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="direction" _value="ToCenter" />
+				<ZoneParamDef _name="strength" _value="10 * zoneDepth01 * zoneDepth01" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

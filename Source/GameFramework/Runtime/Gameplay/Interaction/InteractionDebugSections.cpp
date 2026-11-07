@@ -1,7 +1,7 @@
 /**
  * @file InteractionDebugSections.cpp
  * @brief 상호작용 · 공간 효과 진단(HUD 섹션 `interaction`)입니다 — 대상(하는 쪽)에게 보이는 상호작용마다 판정 결과(시작 가능 · 거부 사유)와 거리,
- *        그리고 효과 영역마다 걸 이펙트 · 안에 있는 개체 수. 읽기만 한다.
+ *        그리고 지역 볼륨마다 안에 있는 개체 수(지역의 위치 값 · 모듈은 섹션 `zone`). 읽기만 한다.
  * @details 판정은 `InteractableComponent::findBlockReason`(정의 · 꺼짐 · 쿨다운 · 필수 태그 · 금지 태그)과 같은 함수라 디버거와 실제 판정이 갈리지 않는다.
  *          거리는 정의의 최대 거리와 함께 보인다(각 · 시야는 고르는 쪽의 판정이라 여기서 다시 계산하지 않는다).
  */
@@ -14,10 +14,10 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityEffectVolumeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractorComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
 
 namespace sw
 {
@@ -61,9 +61,9 @@ namespace sw
                         writer.addLine( string( "use " ) + pObject->getName().c_str() + ( pDef != nullptr ? string( " (" ) + pDef->_id.c_str() + ")" : string{} ), value );
                         ++lineCount;
                     }
-                    if ( const AbilityEffectVolumeComponent* pVolume = pObject->getComponent<AbilityEffectVolumeComponent>() )
+                    if ( const ZoneVolumeComponent* pVolume = pObject->getComponent<ZoneVolumeComponent>() )
                     {
-                        writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getOccupantCount() ) + " inside" );
+                        writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getTracker().getOccupancies().size() ) + " inside" );
                         ++lineCount;
                     }
                 }

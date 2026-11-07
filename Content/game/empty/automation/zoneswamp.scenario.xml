@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지역 효과 — 늪(maps/zoneshowcase 의 Swamp, 프로필 zones/swamp.zone.xml, 볼륨 겹침 입력).
+  ① 걷는 사람이 들어오면 감속 이펙트(State.Slowed)와 1 초마다 가라앉음 스택, 진흙 · 감속이 이동 계수를 내린다(MovementConstraint → 컨트롤러), 외형이 같은 깊이로 내려간다.
+  ② NPC(AI 조종자)는 블랙보드 InHazard = 1 로 안다(판단 질의 — 모듈 에셋 npcavoid). ③ 나오면 이 출처의 이펙트가 모두 지워진다.
+  ④ 물체 대상 할 일: 열쇠(Item.Key)가 빠지면 제자리(KeyHome, x −2)로 돌아온다.
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zoneswamp.scenario.xml -unattended
+-->
+<Scenario name="game.empty.zoneswamp" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Zone.Sources" target="Walker" is="None"/>
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 0 0.05 0"/>
+	<Wait frames="70"/>
+	<Expect watch="Zone.Sources" target="Walker" is="volume:Swamp"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Slowed" equals="1"/>
+	<Expect watch="Ability.StackCount" target="Walker" key="GE_Sink" equals="2"/>
+	<Expect watch="Surface.MoveScale" target="Walker" atMost="0.5"/>
+	<Expect watch="Zone.SinkVisual" target="Walker" near="0.2" tolerance="0.01"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Villager 1 0.05 1"/>
+	<Wait frames="10"/>
+	<Expect watch="AI.Blackboard" target="Villager" key="InHazard" equals="1"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 0 0.05 -6"/>
+	<Wait frames="20"/>
+	<Expect watch="Zone.Sources" target="Walker" is="None"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Slowed" equals="0"/>
+	<Expect watch="Ability.StackCount" target="Walker" key="GE_Sink" equals="0"/>
+	<Expect watch="Zone.SinkVisual" target="Walker" equals="0"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place SwampKey 0 1 0"/>
+	<WaitUntil watch="Object.X" target="SwampKey" near="-2" tolerance="0.3" timeoutSeconds="3"/>
+	<Expect watch="Object.Z" target="SwampKey" near="-7" tolerance="0.3"/>
+	<Pass/>
+</Scenario>

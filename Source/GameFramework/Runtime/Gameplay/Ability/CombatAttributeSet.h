@@ -70,6 +70,8 @@ namespace sw
         void preAttributeBaseChange( const hashed_string& name, float32& inoutNewBase ) override;
         void postAttributeChange( const hashed_string& name, float32 oldValue, float32 newValue ) override;
         void postGameplayEffectExecute( const AttributeModCallbackData& data ) override;
+        /** @brief 즉사도 피해와 같은 쓰러짐(`State.Dead` · 어빌리티 취소 · 죽음 이벤트)을 냅니다. 건 쪽은 없다. */
+        void postFatalDamage() override;
 
     private:
         /** @brief 체력과 마나를 최대치 안으로, 최대치와 이동 속도를 0 이상으로 자릅니다. current 와 base 에 똑같이 적용합니다. */

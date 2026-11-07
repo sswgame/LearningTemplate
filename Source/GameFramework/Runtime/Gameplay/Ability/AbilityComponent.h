@@ -183,6 +183,13 @@ namespace sw
         static TagID getInvulnerableTag();
         /** @brief 주인이 무적 태그를 가졌으면 true 입니다. */
         bool isInvulnerable() const { return _ownedTagCounts.hasMatchingTag( getInvulnerableTag() ); }
+        /**
+         * @brief 즉사입니다 — 체력 어트리뷰트의 base 를 0 으로 쓰고, 체력을 가진 세트의 쓰러짐 규칙(`AttributeSet::postFatalDamage`)과 치명 신호(래그돌 · 절단)를 냅니다.
+         * @details 지역의 삼켜짐 · 용암 · 구덩이가 동작 `health.kill` 로 부른다. 무적이면 @p bIgnoreInvulnerable 이 아닌 한 막는다(기본은 무적을 존중 — 할 일의 칸으로 정한다).
+         *          피해 메타 어트리뷰트를 지나지 않으므로 방어 · 저항이 깎지 않는다(즉사는 저항 대상이 아니다).
+         * @return 쓰러졌으면 true 입니다. 체력 어트리뷰트가 없거나, 이미 0 이거나, 무적에 막혔으면 false 입니다.
+         */
+        bool applyFatalDamage( bool bIgnoreInvulnerable );
 
         // --------------------------------------------------------------------------
         // 4) 게임플레이 이펙트
@@ -213,6 +220,8 @@ namespace sw
         [[nodiscard]] bool removeActiveEffect( ActiveEffectHandle handle, int32 stacksToRemove = -1 );
         /** @brief 에셋 태그나 부여 태그가 @p tags 와 일치하는 이펙트를 모두 지우고, 지운 수를 반환합니다. 정화와 디스펠에 씁니다. */
         int32 removeActiveEffectsWithTags( const TagContainer& tags );
+        /** @brief 정의 id 가 @p effectID 인 활성 이펙트(지우는 중이 아닌 첫 것)의 핸들입니다. 없으면 무효입니다 — 스택 이펙트(가라앉음)는 대상에 하나라 이것으로 짚는다. */
+        ActiveEffectHandle findActiveEffectByID( const hashed_string& effectID ) const;
         /** @brief 적용된 이펙트를 찾습니다. 즉시 이펙트나 이미 해제된 이펙트는 nullptr 입니다. */
         const ActiveGameplayEffect* findActiveEffect( ActiveEffectHandle handle ) const;
         /** @brief 이펙트가 아직 걸려 있으면 true 입니다. */

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모래 함몰(기본 지형 프리셋 ①) — 머문 시간만큼 가라앉음 스택(GE_Sink: 0.5 초마다 하나, 0.1 m · 걷는 속도 −10%, 아홉 번까지)이 쌓이고,
+  가장 깊은 곳(SinkDepth ≥ 0.85)에 2 초 머물면 삼켜진다(GE_Engulfed — 움직이지 못한다). 나가면 이 출처의 이펙트를 모두 지운다.
+  외형 내리기 · 점프 탈출은 대상의 반응 컴포넌트(VisualSinkReactionComponent · JumpEscapeReactionComponent)가 속성 · 스택만 읽어 한다.
+  아래 흐름은 물리 필드(가라앉는 물체를 아래로 끈다). 변형: slowsand(느린 사구) · dune(중심 당김 · 즉사).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="sink" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Stay" />
+				<ZoneParamDef _name="interval" _value="0.5" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_Sink)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="engulf" _kind="Action" _condition="target.SinkDepth &gt;= 0.85">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Became" />
+				<ZoneParamDef _name="delay" _value="2" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_Engulfed)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="release" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Exit" />
+				<ZoneParamDef _name="do" _value="ability.removeEffect()" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="downflow" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="direction" _value="Uniform" />
+				<ZoneParamDef _name="axis" _value="0,-1,0" />
+				<ZoneParamDef _name="flowSpeed" _value="0.2" />
+				<ZoneParamDef _name="drag" _value="0.5" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="npcAvoid" _modulePath="game/empty/zones/npcavoid.zonemodule.xml" />
+	</_listModule>
+</ZoneProfile>

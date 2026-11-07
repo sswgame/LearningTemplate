@@ -1014,6 +1014,26 @@ namespace sw
         return true;
     }
 
+    bool AbilityComponent::applyFatalDamage( bool bIgnoreInvulnerable )
+    {
+        AttributeSet*  pAttributeSet = nullptr;
+        AttributeData* pData         = _healthAttribute.empty() ? nullptr : findAttributeDataMutable( _healthAttribute, &pAttributeSet );
+        if ( pData == nullptr || pData->_baseValue <= 0.0f )
+            return false;
+        if ( isInvulnerable() && bIgnoreInvulnerable == false )
+        {
+            ++_blockedHealthDecreaseCount;
+            return false;
+        }
+        // 무적을 넘는 즉사는 `guardHealthBaseChange` 를 지나지 않는다 — base 를 직접 쓰는 길은 이것 하나다.
+        float32 newBase = 0.0f;
+        pAttributeSet->preAttributeBaseChange( _healthAttribute, newBase );
+        pData->_baseValue = newBase;
+        recomputeAttribute( _healthAttribute );
+        pAttributeSet->postFatalDamage();
+        return true;
+    }
+
     TagID AbilityComponent::getInvulnerableTag()
     {
         return "State.Invulnerable"_tag;
@@ -1236,6 +1256,17 @@ namespace sw
         if ( spec.isValid() == false )
             return ActiveEffectHandle{};
         return applyGameplayEffectSpecToSelf( spec );
+    }
+
+    ActiveEffectHandle AbilityComponent::findActiveEffectByID( const hashed_string& effectID ) const
+    {
+        for ( const unique_ptr<ActiveGameplayEffect>& pActive : _listActiveEffect )
+        {
+            const bool bMatch = pActive != nullptr && pActive->_bPendingRemove == SW_FALSE && pActive->_spec.isValid() && pActive->_spec._pDef->_id == effectID;
+            if ( bMatch )
+                return pActive->_handle;
+        }
+        return ActiveEffectHandle{};
     }
 
     bool AbilityComponent::removeActiveEffect( ActiveEffectHandle handle, int32 stacksToRemove )

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지역 효과 — 용암(maps/zoneshowcase 의 LavaPool · LavaField, 프로필 zones/lava.zone.xml). 웅덩이는 액체(WaterBodyComponent _surfaceKind="Lava")라 잠김 입력이고,
+  Empty 층의 표면 종류 표가 Lava 에 프로필을 붙였다(전용 컴포넌트 없음).
+  ① 걷는 사람: 1 초마다 화상(식 20 × (1 − FireResist) = 20 + 불붙음), 진한 유체라 헤엄친다. ② 화염 정령(State.Fireproof): 경우 목록의 첫 경우(면역)라 체력이 그대로다.
+  ③ 나무 상자(Flammable): 경우 목록의 둘째 경우 — 재(ZoneAsh)로 바뀐다(프리팹 교체). ④ 내비 비용: LavaField 볼륨의 프로필이 Humanoid 는 막고(−1) Spirit 은 1 로 둔다 —
+  내비 마당에서 Humanoid 경로는 용암 띠를 돌아가고(13.3 m 이상) Spirit 경로는 가로지른다(12.6 m 이하).
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zonelava.scenario.xml -unattended
+-->
+<Scenario name="game.empty.zonelava" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Nav.AreaCost" key="Humanoid:Lava" equals="-1"/>
+	<Expect watch="Nav.AreaCost" key="Spirit:Lava" equals="1"/>
+	<WaitUntil watch="Nav.PathLength" target="HumanStart" key="NavGoal" atLeast="13.3" timeoutSeconds="10"/>
+	<WaitUntil watch="Nav.PathLength" target="SpiritStart" key="NavGoal" atMost="12.6" timeoutSeconds="10"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 22 -0.95 0"/>
+	<Wait frames="70"/>
+	<Expect watch="Zone.Sources" target="Walker" is="surface:Lava"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Burning" equals="1"/>
+	<Expect watch="Ability.Attribute" target="Walker" key="Health" atMost="62"/>
+	<Expect watch="Character.MovementMode" target="Walker" is="Swimming"/>
+	<Expect watch="Physics.Field" target="Walker" key="fluidDensity" near="3" tolerance="0.01"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 0 0.05 -6"/>
+	<DevCommand line="object.place Spirit 22 -0.95 1.5"/>
+	<Wait frames="130"/>
+	<Expect watch="Zone.Sources" target="Spirit" is="surface:Lava"/>
+	<Expect watch="Ability.Attribute" target="Spirit" key="Health" equals="100"/>
+	<Expect watch="Ability.HasTag" target="Spirit" key="State.Burning" equals="0"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Crate 22 0.5 -1.5"/>
+	<WaitUntil watch="Object.Exists" target="Crate" equals="0" timeoutSeconds="3"/>
+	<Expect watch="Object.Exists" target="ZoneAsh" equals="1"/>
+	<Pass/>
+</Scenario>

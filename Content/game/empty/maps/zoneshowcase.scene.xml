@@ -1,0 +1,595 @@
+<Scene formatVersion="2" name="ZoneShowcase">
+	<!-- 지역 효과 시연(automation/zone*.scenario.xml) — 지역 프로필(zones/*.zone.xml) 하나가 지형 하나다. 왼쪽부터 늪 · 사구 · 고요한 사구(배치 덮어쓰기) · 용암 웅덩이 · 바다 ·
+	     유황 분출구(독가스 살포) · 버프 샘 · 스킬 영역 · 즉사 구덩이 · 무중력 방 · 빙판 · 가시덩굴, 뒤쪽은 내비 마당(용암 띠). 입력은 넷이다 — 겹침(ZoneVolumeComponent),
+	     디딤 · 부딪힘 · 잠김(받는 쪽 ZoneContactComponent — 물리 재질 Ice · Thorns, 액체 종류 Lava · Sea 가 Empty 층의 표면 종류 표에서 프로필을 부른다).
+	     배우는 앞 마당에서 기다리고 시나리오가 object.place 로 옮긴다(걷는 사람 Walker · NPC Villager · 희생자 Victim · 화염 정령 Spirit, 물체는 상자 · 돌 · 열쇠 · 뗏목 · 꽃병). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="34,22,-30" _localRotation="0.55,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="40" _shadowDistance="80" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Session">
+			<GameObject _schemaVersion="0" _name="Session" _bActive="true">
+				<_listComponent>
+					<SessionStateComponent />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Plaza">
+			<GameObject _schemaVersion="0" _name="Plaza" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="35,-0.25,-7" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="40,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="80,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="60" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="KeyHome">
+			<GameObject _schemaVersion="0" _name="KeyHome" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-2,0.5,-7" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="SwampPad">
+			<GameObject _schemaVersion="0" _name="SwampPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Mud" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Mud">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Swamp">
+			<GameObject _schemaVersion="0" _name="Swamp" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/swamp.zone.xml" _shape="Box" _halfExtents="2,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="DunePad">
+			<GameObject _schemaVersion="0" _name="DunePad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="8,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Sand" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Sand">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Dune">
+			<GameObject _schemaVersion="0" _name="Dune" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/dune.zone.xml" _shape="Cylinder" _halfExtents="3,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="QuietDunePad">
+			<GameObject _schemaVersion="0" _name="QuietDunePad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="15,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Sand" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="3,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Sand">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="6,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="QuietDune">
+			<GameObject _schemaVersion="0" _name="QuietDune" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="15,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/dune.zone.xml" _shape="Cylinder" _halfExtents="3,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0">
+						<_listModuleOverride>
+							<ZoneModuleDef _name="npcAvoid" _op="Remove" />
+							<ZoneModuleDef _name="sink">
+								<_listParam>
+									<ZoneParamDef _name="interval" _value="1" />
+								</_listParam>
+							</ZoneModuleDef>
+						</_listModuleOverride>
+					</ZoneVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="LavaFloor">
+			<GameObject _schemaVersion="0" _name="LavaFloor" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="22,-1.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="LavaPool">
+			<GameObject _schemaVersion="0" _name="LavaPool" _bActive="true">
+				<_listComponent>
+					<WaterBodyComponent _localPosition="22,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _surfaceKind="Lava" _materialPath="engine/materials/water.material" _size="4,6" _cellSize="0.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="SeaFloor">
+			<GameObject _schemaVersion="0" _name="SeaFloor" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="29,-2.75,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2.5,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="5,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Sea">
+			<GameObject _schemaVersion="0" _name="Sea" _bActive="true">
+				<_listComponent>
+					<WaterBodyComponent _localPosition="29,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _surfaceKind="Sea" _materialPath="engine/materials/water.material" _size="5,6" _cellSize="0.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="SulfurPad">
+			<GameObject _schemaVersion="0" _name="SulfurPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="36,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="SulfurVent">
+			<GameObject _schemaVersion="0" _name="SulfurVent" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="36,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/sulfurvent.zone.xml" _shape="Box" _halfExtents="2,1.5,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="SpringPad">
+			<GameObject _schemaVersion="0" _name="SpringPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="42,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="Spring">
+			<GameObject _schemaVersion="0" _name="Spring" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="42,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/buffspring.zone.xml" _shape="Cylinder" _halfExtents="1.5,1.5,1.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="SkillPad">
+			<GameObject _schemaVersion="0" _name="SkillPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="48,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="SkillCircle">
+			<GameObject _schemaVersion="0" _name="SkillCircle" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="48,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/skillarea.zone.xml" _shape="Cylinder" _halfExtents="1.5,1.5,1.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="PitPad">
+			<GameObject _schemaVersion="0" _name="PitPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="54,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Pit">
+			<GameObject _schemaVersion="0" _name="Pit" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="54,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/deathpit.zone.xml" _shape="Box" _halfExtents="2,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="ZeroGPad">
+			<GameObject _schemaVersion="0" _name="ZeroGPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="60,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="ZeroG">
+			<GameObject _schemaVersion="0" _name="ZeroG" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="60,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/zerog.zone.xml" _shape="Box" _halfExtents="2,3,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="IcePad">
+			<GameObject _schemaVersion="0" _name="IcePad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="66,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Ice" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Ice">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="ThornFloor">
+			<GameObject _schemaVersion="0" _name="ThornFloor" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="71,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="ThornBush">
+			<GameObject _schemaVersion="0" _name="ThornBush" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="72.5,0.75,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Thorns" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.75,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Thorns">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="NavFloor">
+			<GameObject _schemaVersion="0" _name="NavFloor" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="20,-0.25,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="8,0.25,5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,0.5,10" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="LavaStrip">
+			<GameObject _schemaVersion="0" _name="LavaStrip" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="20,-0.24,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4.5" _blendMode="Opaque" />
+					<NavMeshModifierComponent _areaName="Lava" _bIgnoreFromBuild="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="LavaField">
+			<GameObject _schemaVersion="0" _name="LavaField" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="20,0,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/lava.zone.xml" _shape="Box" _halfExtents="1,1,3" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="HumanStart">
+			<GameObject _schemaVersion="0" _name="HumanStart" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="14,0,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="Humanoid" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0.4" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="SteerOnly" _bUpdateRotation="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="SpiritStart">
+			<GameObject _schemaVersion="0" _name="SpiritStart" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="14,0,12.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavMeshAgentComponent _agentType="Spirit" _maxSpeed="3" _maxAcceleration="12" _stoppingDistance="0.5" _radius="0.4" _separationWeight="2" _avoidanceQuality="Medium" _turnRate="8" _driveMode="SteerOnly" _bUpdateRotation="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="34" name="NavGoal">
+			<GameObject _schemaVersion="0" _name="NavGoal" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="26,0,12" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="35" name="Walker">
+			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="0,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<GroundSurfaceComponent _probeLength="0.6" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
+					<VisualSinkReactionComponent _attribute="SinkDepth" _scale="1" />
+					<JumpEscapeReactionComponent _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Character</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="36" name="Villager">
+			<GameObject _schemaVersion="0" _name="Villager" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="4,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<GroundSurfaceComponent _probeLength="0.6" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
+					<AIControllerComponent _turnRate="6" _arriveDistance="0.5" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Character</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="37" name="Victim">
+			<GameObject _schemaVersion="0" _name="Victim" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="8,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<GroundSurfaceComponent _probeLength="0.6" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Character</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="38" name="Spirit">
+			<GameObject _schemaVersion="0" _name="Spirit" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="12,0.05,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<MeshComponent _localPosition="0,0.9,0" _localRotation="0,0,0" _localScale="0.6,1.8,0.6" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
+					<MeshComponent _localPosition="0,1.95,0" _localRotation="0,0,0" _localScale="0.5,0.2,0.5" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.4" _blendMode="Opaque" />
+					<AbilityComponent _abilitySetID="FireSpirit" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<GroundSurfaceComponent _probeLength="0.6" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Character</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="39" name="SwampKey">
+			<GameObject _schemaVersion="0" _name="SwampKey" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-2,0.3,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Wood" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.15,0.1,0.3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.3,0.2,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.2" _touchDistance="0.15" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Item.Key</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="40" name="Crate">
+			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="16,0.4,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Wood" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.3,0.3,0.3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Flammable</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="41" name="StoneBlock">
+			<GameObject _schemaVersion="0" _name="StoneBlock" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="20,0.4,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.3,0.3,0.3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="42" name="Raft">
+			<GameObject _schemaVersion="0" _name="Raft" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="24,0.2,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Wood" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.6,0.15,0.6" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1.2,0.3,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" _blendMode="Opaque" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.3" _touchDistance="0.15" />
+					<VehicleSeatComponent />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="43" name="FloatCrate">
+			<GameObject _schemaVersion="0" _name="FloatCrate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="28,0.4,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Wood" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.3,0.3,0.3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="44" name="Vase">
+			<GameObject _schemaVersion="0" _name="Vase" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="32,0.3,-8" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="Default" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.2,0.3,0.2" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Default">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.4,0.6,0.4" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="0.6" _touchDistance="0.15" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>Fragile</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

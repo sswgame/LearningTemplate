@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  용암 — 1 초마다 화상. 피해는 식(20 × (1 − 화염 저항))이고, 같은 사건에 경우 목록이 처음 맞는 하나만 한다:
+  화염 면역(State.Fireproof) → 없음, 불붙는 물체(Flammable) → 재로 바뀜(프리팹 교체), 그 밖 → 화상 피해 + 불붙음(3 초).
+  면역은 이펙트의 BlockedTag 로도 막힌다(대상 쪽 계산 — 같은 장비가 용암 · 불화살에 함께 듣는다). 그을음(Dirt), 유체(밀도 3 — 떠오른다).
+  내비 비용(행위자 종류마다): 일반 NPC(Humanoid)는 통행 금지, 화염 정령(Spirit)은 보통 땅처럼 지난다(영역 표시는 바닥 기하의 NavMeshModifierComponent).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="burn" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Stay" />
+				<ZoneParamDef _name="interval" _value="1" />
+				<ZoneParamDef _name="damage" _value="20 * (1 - target.FireResist)" />
+			</_listParam>
+			<_listCase>
+				<ZoneCaseDef _name="immune" _condition="tag(State.Fireproof)" _do="" />
+				<ZoneCaseDef _name="ignite" _condition="tag(Flammable)" _do="object.replace(prefab=game/empty/prefabs/zoneash.prefab.xml)" />
+				<ZoneCaseDef _name="burn" _condition="" _do="ability.applyEffect(effect=GE_LavaBurn, setByCaller=Data.Damage, value=damage); ability.applyEffect(effect=GE_Burning)" />
+			</_listCase>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="scorch" _kind="SurfaceChannel" _condition="tag(State.Fireproof) == 0">
+			<_listParam>
+				<ZoneParamDef _name="channel" _value="Dirt" />
+				<ZoneParamDef _name="rate" _value="0.5" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="molten" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="fluidDensity" _value="3" />
+				<ZoneParamDef _name="drag" _value="3" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="humansAvoid" _kind="NavArea">
+			<_listParam>
+				<ZoneParamDef _name="area" _value="Lava" />
+				<ZoneParamDef _name="agents" _value="Humanoid" />
+				<ZoneParamDef _name="blocked" _value="1" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="spiritsPass" _kind="NavArea">
+			<_listParam>
+				<ZoneParamDef _name="area" _value="Lava" />
+				<ZoneParamDef _name="agents" _value="Spirit" />
+				<ZoneParamDef _name="cost" _value="1" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="npcAvoid" _modulePath="game/empty/zones/npcavoid.zonemodule.xml" />
+	</_listModule>
+</ZoneProfile>

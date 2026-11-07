@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모듈 에셋 — 독 피해. 안에 있는 동안 2 초마다 유황 중독(GE_SulfurPoison — 4 초, 나와도 묻어 나간다)을 다시 건다.
+  독 늪 = 늪의 모듈 + 이 모듈(두 프리셋의 다중 상속 대신 조합).
+-->
+<ZoneModuleDef _name="poison" _kind="Action">
+	<_listParam>
+		<ZoneParamDef _name="on" _value="Stay" />
+		<ZoneParamDef _name="interval" _value="2" />
+		<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_SulfurPoison)" />
+	</_listParam>
+</ZoneModuleDef>

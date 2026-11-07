@@ -1,0 +1,18 @@
+<!-- 재 무더기 — 용암 지역(zones/lava.zone.xml)의 경우 목록이 불붙는 물체(Flammable)를 이것으로 바꾼다(object.replace). 낮은 어두운 상자다. -->
+<Prefab formatVersion="0" name="ZoneAsh">
+	<GameObject _schemaVersion="0" _name="ZoneAsh" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0.05,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.6,0.1,0.6"
+			               _attachOwner="None"
+			               _attachComponent="None"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/prototypegrid_dark.material"
+			               _boundsRadius="0.5"
+			               _blendMode="Opaque" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

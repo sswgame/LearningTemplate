@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지역 효과 — 사구(maps/zoneshowcase 의 Dune · QuietDune, 프로필 zones/dune.zone.xml = sand.zone.xml 의 변형). 위치 값으로 단계가 갈린다.
+  ① 바깥(zoneDepth01 < 0.5 — 반지름 3 의 2.5 m 자리, 깊이 0.17)은 가라앉기만 하고 끌려감이 없다.
+  ② 안쪽으로 넘는 순간 끌려감(State.Dragged) + 경고(규칙 신호 sandWarnings) + 중심으로 당김(물리 필드 ToCenter — 걷지 않아도 중심으로 간다), 중심에 2 초 → 삼켜짐 → 즉사(무적을 넘는다).
+  ③ 다시 나오는 순간 끌려감 해제(조건 전환 Lost). NPC 는 InHazard 로 안다.
+  ④ 배치 덮어쓰기(③ 층): QuietDune 은 같은 프리셋에 npcAvoid 를 빼고 sink 간격만 1 초로 바꿨다 — 합친 모듈 목록 · 매개변수가 그렇고, 같은 시간에 쌓인 스택이 절반이다.
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zonedune.scenario.xml -unattended
+-->
+<Scenario name="game.empty.zonedune" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Zone.Modules" target="Dune" is="sink,engulf,release,downflow,npcAvoid,pull,dragged,freed,swallow"/>
+	<Expect watch="Zone.Modules" target="QuietDune" is="sink,engulf,release,downflow,pull,dragged,freed,swallow"/>
+	<Expect watch="Zone.Param" target="Dune" key="sink.interval" is="0.5"/>
+	<Expect watch="Zone.Param" target="QuietDune" key="sink.interval" is="1"/>
+	<Expect watch="Zone.Param" target="QuietDune" key="sink.on" is="Stay"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Victim 10.5 0.05 0"/>
+	<Wait frames="40"/>
+	<Expect watch="Zone.Sources" target="Victim" is="volume:Dune"/>
+	<Expect watch="Zone.Value" target="Victim" key="zoneDepth01" near="0.17" tolerance="0.05"/>
+	<Expect watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="0"/>
+	<Expect watch="Ability.StackCount" target="Victim" key="GE_Sink" atLeast="1"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Victim 9.2 0.05 0"/>
+	<Wait frames="5"/>
+	<Expect watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="1"/>
+	<Expect watch="Session.Flag" key="sandWarnings" atLeast="1"/>
+	<WaitUntil watch="Zone.Value" target="Victim" key="distanceToCenter" atMost="0.75" timeoutSeconds="3"/>
+	<WaitUntil watch="Ability.Attribute" target="Victim" key="Health" equals="0" timeoutSeconds="4"/>
+	<Expect watch="Ability.HasTag" target="Victim" key="State.Engulfed" equals="1"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Villager 9 0.05 -0.5"/>
+	<Wait frames="10"/>
+	<Expect watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="1"/>
+	<Expect watch="AI.Blackboard" target="Villager" key="InHazard" equals="1"/>
+	<Wait frames="1"/>
+	<DevCommand line="object.place Villager 10.8 0.05 -0.5"/>
+	<Wait frames="5"/>
+	<Expect watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="0"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Villager 17.5 0.05 0"/>
+	<Wait frames="130"/>
+	<Expect watch="Zone.Sources" target="Villager" is="volume:QuietDune"/>
+	<Expect watch="Ability.StackCount" target="Villager" key="GE_Sink" equals="3"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지역 효과 — 할 일 어휘(maps/zoneshowcase 의 Spring · SkillCircle · Pit). 지역은 이펙트 하나가 아니라 진입 · 체류 · 이탈마다 할 일 목록을 갖는다.
+  ① 버프 샘(zones/buffspring.zone.xml): 들어오면 회복(0.5 초마다 5)과 가속(10 초), 나가면 회복만 지운다(가속은 남는다).
+  ② 스킬 영역(zones/skillarea.zone.xml): 들어오면 노바를 주고 바로 발동한다 — 강화 표식(State.Empowered).
+  ③ 즉사 구덩이(zones/deathpit.zone.xml): 경우 목록 — 열쇠는 제자리(KeyHome)로 돌아오고, 그 밖은 즉사(체력 원천의 치명 판정 — State.Dead).
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zonebuffs.scenario.xml -unattended
+-->
+<Scenario name="game.empty.zonebuffs" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="1"/>
+	<DevCommand line="cheat.attribute Health 40"/>
+	<Wait frames="2"/>
+	<Expect watch="Ability.Attribute" target="Walker" key="Health" equals="40"/>
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 42 0.05 0"/>
+	<Wait frames="70"/>
+	<Expect watch="Zone.Sources" target="Walker" is="volume:Spring"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Regenerating" equals="1"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Hasted" equals="1"/>
+	<Expect watch="Ability.Attribute" target="Walker" key="Health" atLeast="50"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 48 0.05 0"/>
+	<Wait frames="10"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Regenerating" equals="0"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Hasted" equals="1"/>
+	<Expect watch="Zone.Sources" target="Walker" is="volume:SkillCircle"/>
+	<Expect watch="Ability.HasTag" target="Walker" key="State.Empowered" equals="1"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place Victim 54 0.05 0"/>
+	<DevCommand line="object.place SwampKey 54 1 1"/>
+	<Wait frames="10"/>
+	<Expect watch="Ability.Attribute" target="Victim" key="Health" equals="0"/>
+	<Expect watch="Ability.HasTag" target="Victim" key="State.Dead" equals="1"/>
+	<WaitUntil watch="Object.X" target="SwampKey" near="-2" tolerance="0.3" timeoutSeconds="3"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모듈 에셋 — NPC 판단 질의. 안에 있는 동안 대상 AI 의 블랙보드 InHazard = 1, 나가면 지운다(행동 트리 · 스케줄이 "지금 위험 지역인가" 를 이 키로 읽는다).
+  여러 프로필(늪 · 모래 · 용암)이 _modulePath 로 함께 쓴다. 배치가 _op="Remove" 로 빼면 NPC 가 반응하지 않는 자리가 된다.
+-->
+<ZoneModuleDef _name="npcAvoid" _kind="Blackboard">
+	<_listParam>
+		<ZoneParamDef _name="key" _value="InHazard" />
+		<ZoneParamDef _name="value" _value="1" />
+	</_listParam>
+</ZoneModuleDef>

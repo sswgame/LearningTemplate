@@ -315,9 +315,11 @@ namespace sw
         return true;
     }
 
-    bool SceneNavigation::findAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32& outCost, bool& outbAllowed )
+    bool SceneNavigation::findAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32& outCost, bool& outbAllowed ) const
     {
-        const NavMeshSettings& settings  = getSettings();
+        if ( _bSettingsLoaded == SW_FALSE )
+            return false;
+        const NavMeshSettings& settings  = _settings;
         const NavAgentTypeDef* pType     = settings.findAgentType( agentType );
         uint8                  areaIndex = 0;
         if ( pType == nullptr || settings.findAreaIndex( areaName, areaIndex ) == false )
@@ -794,7 +796,15 @@ namespace sw
                     outValue.setText( "no navmesh baked yet" );
                     return false;
                 }
-                if ( navigation.findPath( listAgentType.front(), pFrom->getWorldPosition(), pTo->getWorldPosition(), outPath ) != NavPathStatus::Complete )
+                // 대상이 내비 에이전트면 그 종류의 경로다(행위자 종류마다 영역 비용이 다르다 — 화염 정령은 용암을 지난다). 아니면 첫 베이크된 종류다.
+                const NavMeshAgentComponent* pAgent    = pStart->getComponent<NavMeshAgentComponent>();
+                const hashed_string          agentType = pAgent != nullptr ? pAgent->getAgentType() : listAgentType.front();
+                if ( pAgent != nullptr && navigation.findNavMesh( agentType ) == nullptr )
+                {
+                    outValue.setText( "the target's agent type has no navmesh baked yet" );
+                    return false;
+                }
+                if ( navigation.findPath( agentType, pFrom->getWorldPosition(), pTo->getWorldPosition(), outPath ) != NavPathStatus::Complete )
                 {
                     outValue.setText( "no complete path" );
                     return false;
@@ -812,6 +822,28 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Nav.AreaCost` 입니다. key `<에이전트 종류>:<영역>` 의 비용 배율이고, 통행 금지면 -1 입니다(지역 프로필의 내비 비용 모듈이 정한 값). */
+            [[nodiscard]] static bool readAreaCost( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const size_t colon = query._key.find( ':' );
+                if ( query._pManager == nullptr || colon == string_view::npos )
+                {
+                    outValue.setText( "key must be <agent type>:<area>" );
+                    return false;
+                }
+                float32             cost     = 0.0f;
+                bool                bAllowed = false;
+                const hashed_string agentType{ query._key.substr( 0, colon ) };
+                const hashed_string area{ query._key.substr( colon + 1 ) };
+                if ( query._pManager->getSubsystem<SceneNavigation>().findAgentAreaCost( agentType, area, cost, bAllowed ) == false )
+                {
+                    outValue.setText( "navigation settings not read yet, or unknown agent type or area" );
+                    return false;
+                }
+                outValue.setNumber( bAllowed ? static_cast<float64>( cost ) : -1.0 );
+                return true;
+            }
+
             /** @brief 감시 값 `Nav.PathLinkCount` 입니다. 그 경로가 건너는 오프 메시 링크 수입니다. */
             [[nodiscard]] static bool readPathLinkCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -824,6 +856,8 @@ namespace sw
         };
     } // namespace
 
+    SW_AUTOMATION_QUERY_WATCH( navAreaCost, "Nav.AreaCost", "Path cost multiplier of a navigation area for an agent type (key = <agent type>:<area>; empty agent = default); -1 when the area is closed to it",
+                               &SceneNavigationWatchesInternal::readAreaCost, false, true );
     SW_AUTOMATION_QUERY_WATCH( navPathLength, "Nav.PathLength", "Length (m) of the complete navmesh path from the target to the object named by key; absent without one",
                                &SceneNavigationWatchesInternal::readPathLength, true, true );
     SW_AUTOMATION_QUERY_WATCH( navPathLinkCount, "Nav.PathLinkCount", "Off-mesh links the navmesh path from the target to the object named by key crosses",

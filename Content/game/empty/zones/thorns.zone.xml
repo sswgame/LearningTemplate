@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  가시덩굴 — 부딪힘 입력(접촉). 0.5 초마다 찔림 피해 = 2 + 충격 세기 × 3. 깨지는 물체(Fragile)가 세게(4 m/s 넘게) 부딪히면 부서진다.
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="prick" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Stay" />
+				<ZoneParamDef _name="interval" _value="0.5" />
+				<ZoneParamDef _name="damage" _value="2 + impactSpeed * 3" />
+			</_listParam>
+			<_listCase>
+				<ZoneCaseDef _name="shatter" _condition="tag(Fragile) &amp;&amp; impactSpeed &gt; 4" _do="object.destroy" />
+				<ZoneCaseDef _name="prick" _condition="" _do="ability.applyEffect(effect=GE_ThornPrick, setByCaller=Data.Damage, value=damage)" />
+			</_listCase>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  늪 — 들어오면 감속(GE_SwampSlow), 1 초마다 가라앉음 스택, 진흙 채널(Dirt)이 묻고, 나가면 이 출처의 이펙트를 지운다.
+  물체 대상 할 일: 열쇠(Item.Key)가 빠지면 제자리(KeyHome)로 돌아온다. NPC 는 InHazard 키로 안다.
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="slow" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_SwampSlow)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="sink" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Stay" />
+				<ZoneParamDef _name="interval" _value="1" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_Sink)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="mud" _kind="SurfaceChannel">
+			<_listParam>
+				<ZoneParamDef _name="channel" _value="Dirt" />
+				<ZoneParamDef _name="rate" _value="0.3" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="release" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Exit" />
+				<ZoneParamDef _name="do" _value="ability.removeEffect()" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="keyReturn" _kind="Action" _condition="tag(Item.Key)">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="object.teleport(to=KeyHome)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="npcAvoid" _modulePath="game/empty/zones/npcavoid.zonemodule.xml" />
+	</_listModule>
+</ZoneProfile>

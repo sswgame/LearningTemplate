@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지역 효과 — 바다(maps/zoneshowcase 의 Sea, 프로필 zones/sea.zone.xml — 액체 종류 Sea 의 잠김 입력). 물리 필드: 유체 밀도 1.03 · 저항 1.2 · +x 해류 0.5 m/s.
+  ① 걷는 사람은 헤엄친다(이동 방식 Swimming)고 해류에 +x 로 떠밀린다. ② 물체는 자기 밀도로 갈린다 — 나무 상자는 뜨고(수면 근처), 돌은 가라앉는다(바닥 −2.5).
+  ③ 뗏목(좌석이 있는 탈것)도 물리 바디로 같은 필드를 받아 뜨고, 탈것 대상 할 일이 규칙 신호 afloatVehicles 를 올린다.
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zonesea.scenario.xml -unattended
+-->
+<Scenario name="game.empty.zonesea" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="1"/>
+	<DevCommand line="object.place Walker 28 -0.5 0"/>
+	<Wait frames="60"/>
+	<Expect watch="Zone.Sources" target="Walker" is="surface:Sea"/>
+	<Expect watch="Character.MovementMode" target="Walker" is="Swimming"/>
+	<Expect watch="Physics.Field" target="Walker" key="fluidDensity" near="1.03" tolerance="0.01"/>
+	<Expect watch="Physics.Field" target="Walker" key="flowSpeed" near="0.5" tolerance="0.01"/>
+	<Expect watch="Zone.Value" target="Walker" key="immersion" atLeast="0.5"/>
+	<WaitUntil watch="Object.X" target="Walker" atLeast="28.4" timeoutSeconds="4"/>
+
+	<Wait frames="1"/>
+	<DevCommand line="object.place FloatCrate 29 0.5 -1.5"/>
+	<DevCommand line="object.place StoneBlock 29 0.5 1.5"/>
+	<DevCommand line="object.place Raft 30 0.5 0"/>
+	<Wait frames="240"/>
+	<Expect watch="Object.Y" target="FloatCrate" atLeast="-0.6"/>
+	<Expect watch="Object.Y" target="StoneBlock" atMost="-2"/>
+	<Expect watch="Object.Y" target="Raft" atLeast="-0.4"/>
+	<Expect watch="Physics.Field" target="Raft" key="fluidDensity" near="1.03" tolerance="0.01"/>
+	<Expect watch="Session.Flag" key="afloatVehicles" atLeast="1"/>
+	<Pass/>
+</Scenario>

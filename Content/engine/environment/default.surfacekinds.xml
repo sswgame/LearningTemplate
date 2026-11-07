@@ -4,6 +4,8 @@
 	_footstep 은 발소리 경로의 {surface} 자리, _moveScale 은 걷는 속도 배율(물리 마찰이 아니다), _rollingResistance · _gripScale 은 바디 없는 탈것(KinematicVehicle)의 구름 저항 계수 · 옆 그립 배율, <_footprint> 도장이 있는 종류만 발자국을 남긴다 —
 	도장은 표면 변형 층(SurfaceDeformSystem)에 찍혀 지면 머티리얼(surface_deform.hlsl)이 꺼져 보이고 _fillSpeed 로 메워진다(눈은 깊고 느리게, 모래는 얕고 빠르게).
 	높이장 · 충돌은 고치지 않는다. 변형 층은 카메라 앞 _deformExtent m 정사각 창을 _deformResolution 칸(640 / 20 m = 3 cm)으로 나누고 _deformDepthRange m 까지 담는다.
+	_zoneProfile 은 그 표면에 디딘 · 닿은 · 잠긴 것에 거는 지역 프로필(*.zone.xml)이다. 엔진 표는 비워 두고 게임이 덮어쓰기 층으로 얹는다(Empty: layers/zones) —
+	프로필이 그 게임의 이펙트를 부르기 때문이다. Lava · Sea 는 액체(WaterBodyComponent _surfaceKind)가 내는 종류, Thorns 는 물리 재질이다.
 -->
 <SurfaceKindTable _waterKind="Water" _deformResolution="640" _deformExtent="20" _deformDepthRange="0.15">
 	<_listKind>
@@ -24,5 +26,8 @@
 			<_footprint _shape="Print" _size="0.13,0.28" _depth="0.04" _fillSpeed="0.002" />
 		</SurfaceKindDef>
 		<SurfaceKindDef _name="Water" _footstep="water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6" />
+		<SurfaceKindDef _name="Sea" _footstep="water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6" />
+		<SurfaceKindDef _name="Lava" _footstep="mud" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.5" />
+		<SurfaceKindDef _name="Thorns" _footstep="wood" _rollingResistance="0.02" _gripScale="1" _moveScale="0.8" />
 	</_listKind>
 </SurfaceKindTable>

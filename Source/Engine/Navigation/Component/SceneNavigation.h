@@ -195,8 +195,8 @@ namespace sw
          * @return 모르는 종류 · 영역이면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool setAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32 cost, bool bAllowed );
-        /** @brief 에이전트 종류의 영역 비용 · 통행입니다(`setAgentAreaCost` 를 반영한 값, 진단 · 테스트). 모르는 종류 · 영역이면 false 입니다. */
-        [[nodiscard]] bool findAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32& outCost, bool& outbAllowed );
+        /** @brief 에이전트 종류의 영역 비용 · 통행입니다(`setAgentAreaCost` 를 반영한 값, 진단 · 감시 값). 설정을 아직 읽지 않았거나 모르는 종류 · 영역이면 false 입니다. */
+        [[nodiscard]] bool findAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32& outCost, bool& outbAllowed ) const;
 
         /** @brief 베이크하는 중이거나 줄에 선 타일 수입니다. */
         uint32 getPendingTileCount() const;

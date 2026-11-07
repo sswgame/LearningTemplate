@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  유황 분출구(변형 ②) — 유황 지대 + 캐릭터가 들어올 때마다 그 자리에 독가스 구름(런타임 영역 프리팹 zonegas)을 뿌린다.
+-->
+<ZoneProfile _base="game/empty/zones/sulfur.zone.xml">
+	<_listModule>
+		<ZoneModuleDef _name="spread" _kind="Action" _condition="tag(Character)">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="object.spawn(prefab=game/empty/prefabs/zonegas.prefab.xml)" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

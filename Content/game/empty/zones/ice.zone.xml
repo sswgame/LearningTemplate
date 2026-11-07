@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  빙판 — 물리 필드의 접지 값(0.05). 걷는 속도가 요청으로 천천히 바뀌어 미끄러진다(걷는 속도 배율이 아니다).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="slip" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="friction" _value="0.05" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

@@ -12,6 +12,8 @@
         "Work": "Job"
     },
     "_bannedNames": {
+        "AbilityEffectVolumeComponent": "ZoneVolumeComponent(지역 프로필 *.zone.xml 의 할 일 모듈 — 이펙트 하나 · 진입/체류/이탈 정책이던 것)",
+        "SinkingSandZoneComponent": "ZoneVolumeComponent + 지역 프로필(가라앉음 스택 이펙트 · VisualSinkReactionComponent · JumpEscapeReactionComponent)",
         "CombatHealth": "HealthStateMachine(체력 상태 기계 — HealthState 는 서버 상태 점검이 쓴다)",
         "CombatHealthSettings": "HealthSettings",
         "CombatHealthState": "LifeState",
@@ -2001,6 +2003,7 @@
         "Processes",
         "Producer",
         "Product",
+        "Processor",
         "Profile",
         "Profiler",
         "Program",

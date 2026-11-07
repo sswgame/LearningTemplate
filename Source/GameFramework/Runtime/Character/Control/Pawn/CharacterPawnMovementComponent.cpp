@@ -91,11 +91,13 @@ namespace sw
         // 이펙트의 이동 제약(둔화 배율 · 속박/기절 · 점프 차단) — 이동기는 이 한 곳에서 읽는다(`MovementConstraint`).
         const MovementConstraint constraint = MovementConstraint::read( *pOwner );
         const float3             worldMove  = constraint._bMoveBlocked == SW_TRUE ? float3{} : intent.computeWorldMove();
-        const float32            speed      = ( intent.isDown( _sprintIndex ) ? _sprintSpeed : _walkSpeed ) * constraint._speedScale;
+        const float32            speed      = intent.isDown( _sprintIndex ) ? _sprintSpeed : _walkSpeed;
         const float3             target{ worldMove._x * speed, 0.0f, worldMove._z * speed };
         const bool               bHasTarget = target._x != 0.0f || target._z != 0.0f;
         _velocity                           = Internal::moveTowards( _velocity, target, ( bHasTarget ? _acceleration : _deceleration ) * deltaTime );
         pController->setMoveVelocity( _velocity );
+        // 둔화 배율은 컨트롤러의 이동 계수로 넘긴다 — 표면 · 지역 입구(`ZoneContactComponent`)가 같은 계약을 넘겨도 최솟값이라 두 번 곱하지 않는다.
+        pController->applyMoveScale( constraint._speedScale );
         if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() && constraint._bJumpBlocked == SW_FALSE )
             pController->jump( _jumpSpeed );
 

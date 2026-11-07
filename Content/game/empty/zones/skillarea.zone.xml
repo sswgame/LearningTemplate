@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스킬 영역 — 들어오면 노바 스킬을 주고(부여) 바로 발동한다(GA_ZoneNova → 5 초 강화 State.Empowered).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="grant" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="ability.grant(ability=GA_ZoneNova)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="cast" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="ability.activate(ability=GA_ZoneNova)" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

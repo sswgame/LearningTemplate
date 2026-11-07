@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  독 늪 — 늪의 모듈 + 독 피해 모듈(조합). 두 프리셋을 함께 물려받지 않는다: _base 는 늪 하나, 독은 모듈 에셋을 이름으로 더한다.
+-->
+<ZoneProfile _base="game/empty/zones/swamp.zone.xml">
+	<_listModule>
+		<ZoneModuleDef _name="poison" _modulePath="game/empty/zones/poisondamage.zonemodule.xml" />
+	</_listModule>
+</ZoneProfile>

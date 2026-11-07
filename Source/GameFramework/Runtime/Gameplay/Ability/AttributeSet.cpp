@@ -74,6 +74,10 @@ namespace sw
         (void)data;
     }
 
+    void AttributeSet::postFatalDamage()
+    {
+    }
+
     AttributeData* AttributeSet::findAttributeMutable( const hashed_string& name )
     {
         const auto mapIter = _mapAttribute.find( name );

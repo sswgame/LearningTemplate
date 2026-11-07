@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  바다 — 유체(밀도 1.03 — 사람은 헤엄치고 나무 상자는 뜨고 돌은 가라앉는다), 저항 1.2, +x 쪽 해류 0.5 m/s, 젖음(Wet).
+  탈것은 물리 바디로 같은 필드를 받는다(뗏목이 뜬다). 탈것 대상 할 일: 물에 든 탈것을 규칙 신호(afloatVehicles)로 알린다.
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="water" _kind="PhysicsField">
+			<_listParam>
+				<ZoneParamDef _name="direction" _value="Uniform" />
+				<ZoneParamDef _name="axis" _value="1,0,0" />
+				<ZoneParamDef _name="flowSpeed" _value="0.5" />
+				<ZoneParamDef _name="drag" _value="1.2" />
+				<ZoneParamDef _name="fluidDensity" _value="1.03" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="wet" _kind="SurfaceChannel">
+			<_listParam>
+				<ZoneParamDef _name="channel" _value="Wet" />
+				<ZoneParamDef _name="rate" _value="0.5" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="afloat" _kind="Action" _target="Vehicle">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="flag.add(flag=afloatVehicles)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="npcSwim" _kind="Blackboard">
+			<_listParam>
+				<ZoneParamDef _name="key" _value="Swimming" />
+				<ZoneParamDef _name="value" _value="immersion" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

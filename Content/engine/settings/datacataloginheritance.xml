@@ -77,6 +77,16 @@
 		</Field>
 		<Field name="_listUserParameter" key="_name"/>
 	</Document>
+	<Document root="ZoneModuleDef">
+		<Field name="_listParam" key="_name"/>
+		<Field name="_listCase" key="_name"/>
+	</Document>
+	<Document root="ZoneProfile">
+		<Field name="_listModule" key="_name">
+			<Field name="_listParam" key="_name"/>
+			<Field name="_listCase" key="_name"/>
+		</Field>
+	</Document>
 	<Catalog root="ItemCatalog">
 		<Entry name="Item" key="id">
 			<Field name="Stats"/>

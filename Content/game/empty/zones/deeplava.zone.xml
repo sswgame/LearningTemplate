@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  깊은 용암(변형 ②) — 용암 + 허리까지 잠기면(immersion ≥ 0.5) 즉사(무적 존중).
+-->
+<ZoneProfile _base="game/empty/zones/lava.zone.xml">
+	<_listModule>
+		<ZoneModuleDef _name="melt" _kind="Action" _condition="immersion &gt;= 0.5">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Became" />
+				<ZoneParamDef _name="do" _value="health.kill()" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

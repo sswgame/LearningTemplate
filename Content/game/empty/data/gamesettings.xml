@@ -2,7 +2,12 @@
 <!-- Empty 팩의 설정 — 기본 실기동이 여는 테스트 씬(배포본도 씬 로드 경로 SCN1 · 프리팹 GUID 해석을 거치게). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
-  <Engine _windowTitle="SWEngine" />
+  <!-- 덮어쓰기 층 layers/zones: 엔진 표면 종류 표에 지역 프로필(빙판 · 바다 · 용암 · 가시덩굴)을 얹는다 — 프로필이 이 게임의 이펙트를 부른다. -->
+  <Engine _windowTitle="SWEngine">
+    <_listResourceLayer>
+      <item>game/empty/layers/zones</item>
+    </_listResourceLayer>
+  </Engine>
   <startMap>game/empty/maps/editortest.scene.xml</startMap>
   <!-- 장르 키트 시연(maps/kitdemo_*)의 입력 — 기본 맵 · 걷기 축 · 시연 액션(docs/InputMapBundle.md). 다른 씬은 이 액션을 묻지 않는다. -->
   <inputMap path="common/input/base.input.xml"/>

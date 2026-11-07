@@ -2,7 +2,8 @@
 	<!-- 표면 상호작용 무대(automation/surface*.scenario.xml) — 왼쪽부터 돌(지붕 반쪽) · 눈 · 물웅덩이(얕은 곳 0.3 m · 깊은 곳 1.5 m) · 모래 함몰 구역.
 	     걷는 해골(Walker)은 제자리 걷기(Walking_A, 발 알림 FootL · FootR)라 시나리오가 object.place 로 자리를 옮긴다.
 	     표면 질의(SurfaceQuery)가 패드의 물리 재질 · 물 깊이로 종류를 고르고, 눈은 발자국(SurfaceFootprintSystem)을, 날씨 · 물은 젖음 · 씻김(SurfaceExposureComponent)을,
-	     모래 구역은 함몰 · 감속 · 탈출(SinkingSandZoneComponent)을 낸다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent).
+	     모래 구역은 지역 볼륨(ZoneVolumeComponent, 프로필 zones/sand.zone.xml — 가라앉음 스택 · 감속 · 삼켜짐)이고, 외형 내리기 · 점프 탈출은 걷는 해골의 반응 컴포넌트
+	     (VisualSinkReactionComponent · JumpEscapeReactionComponent)가 속성 · 스택만 읽어 한다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent).
 	     표면 변형 층(SurfaceDeformSystem): 눈 · 모래 패드 위의 촘촘한 지면(SnowGround · SandGround — PlaneDense + surfacedeform_*.material + SurfaceDeformMeshComponent)이
 	     발자국 · 끌린 자국(Dragger — SurfaceStampComponent Trail) · 깔때기(Whirl — Hold, 홈이 돈다)로 꺼진다. 패드 상자는 그 아래로 내려 두었다(꺼진 지면이 상자 윗면에 가리지 않게). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
@@ -132,7 +133,7 @@
 			<GameObject _schemaVersion="0" _name="Quicksand" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<SinkingSandZoneComponent _halfExtents="1.5,1,2.5" _sinkSpeed="0.2" _maxDepth="0.9" _moveScaleAtMaxDepth="0.1" _escapePerJump="0.3" _engulfSeconds="2" />
+					<ZoneVolumeComponent _zoneProfile="game/empty/zones/sand.zone.xml" _shape="Box" _halfExtents="1.5,1,2.5" _pullCenterOffset="0,0,0" _lifetime="0" _growthRate="0" _maxGrowth="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -146,6 +147,10 @@
 					<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
 					<GroundSurfaceComponent _probeLength="0.6" />
 					<SurfaceExposureComponent _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />
+					<AbilityComponent _abilitySetID="ZoneWalker" _healthAttribute="Health" _maxHealthAttribute="MaxHealth" _damageNumberOffset="0,2,0" _bShowDamageNumbers="false" />
+					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
+					<VisualSinkReactionComponent _attribute="SinkDepth" _scale="1" />
+					<JumpEscapeReactionComponent _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
 				</_listComponent>
 			</GameObject>
 		</entity>

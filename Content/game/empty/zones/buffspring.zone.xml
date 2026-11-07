@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  버프 샘 — 들어오면 회복(0.5 초마다 5, 나가면 지운다)과 가속(10 초, 나와도 남는다).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="regen" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_SpringRegen)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="haste" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_SpringHaste)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="release" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Exit" />
+				<ZoneParamDef _name="do" _value="ability.removeEffect(effect=GE_SpringRegen)" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

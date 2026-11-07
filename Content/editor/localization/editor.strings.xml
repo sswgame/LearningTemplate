@@ -600,6 +600,11 @@
 				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdButton.ZoneRevert" source="Revert">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.Advanced" source="Advanced">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
@@ -2807,6 +2812,36 @@
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdLabel.ZoneAdded" source="added here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneChanged" source="changed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneCondition" source="When">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneInherited" source="inherited">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneRemoved" source="removed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneReplaced" source="replaced here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdNetMode.DedicatedServer" source="Dedicated Server">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
@@ -3122,6 +3157,11 @@
 		<entry key="EdSection.ViewportHUD" source="Viewport HUD">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdSection.ZoneModules" source="Zone modules">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.AccentSwatches" source="Accent Swatches:">
@@ -4314,6 +4354,11 @@
 		       source="Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are">
 			<origins>
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdUndo.ZoneRevertModule" source="Revert zone module">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Apply" source="Apply">
@@ -9155,6 +9200,21 @@
 		       source="Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name.">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneNoProfile" source="Pick a zone profile (*.zone.xml) to see its modules.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneOverridesInvalid" source="The overrides do not apply to this profile - see the log for the module name.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneRevert" source="Drop this placement override and use the preset again.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorUIPreview.AnchorBottomCenter" source="Bottom Center">

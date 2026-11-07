@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  사구(변형 프리셋 ②) — 위치 값으로 단계가 갈린다. 바깥(zoneDepth01 < 0.5)은 가라앉기만, 안쪽으로 넘는 순간 끌려감 상태 + 경고(규칙 신호 sandWarnings) + 중심으로 당김(세기 = 8 × 깊이),
+  중심(distanceToCenter < 0.75)에 2 초 → 삼켜짐 → 즉사(무적을 넘는다), 다시 나오는 순간 끌려감 해제. 소용돌이 · 블랙홀 · 강물은 방향 종류와 식만 다르다(whirlpool).
+-->
+<ZoneProfile _base="game/empty/zones/sand.zone.xml">
+	<_listModule>
+		<ZoneModuleDef _name="sink" _condition="zoneDepth01 &lt; 0.5" />
+		<ZoneModuleDef _name="pull" _kind="PhysicsField" _condition="zoneDepth01 &gt;= 0.5">
+			<_listParam>
+				<ZoneParamDef _name="direction" _value="ToCenter" />
+				<ZoneParamDef _name="strength" _value="8 * zoneDepth01" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="dragged" _kind="Action" _condition="zoneDepth01 &gt;= 0.5">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Became" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_Dragged); flag.add(flag=sandWarnings)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="freed" _kind="Action" _condition="zoneDepth01 &gt;= 0.5">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Lost" />
+				<ZoneParamDef _name="do" _value="ability.removeEffect(effect=GE_Dragged)" />
+			</_listParam>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="swallow" _kind="Action" _condition="distanceToCenter &lt; 0.75">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Became" />
+				<ZoneParamDef _name="delay" _value="2" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_Engulfed); health.kill(ignoreInvulnerable=true)" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

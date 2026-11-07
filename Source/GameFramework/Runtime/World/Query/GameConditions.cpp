@@ -74,6 +74,34 @@ namespace sw
         };
     } // namespace
 
+    bool ActionValues::set( const hashed_string& name, float32 value )
+    {
+        for ( uint32 index = 0; index < _count; ++index )
+        {
+            if ( _arrName[index] == name )
+            {
+                _arrValue[index] = value;
+                return true;
+            }
+        }
+        if ( _count >= kCapacity )
+            return false;
+        _arrName[_count]  = name;
+        _arrValue[_count] = value;
+        ++_count;
+        return true;
+    }
+
+    std::optional<float32> ActionValues::find( const hashed_string& name ) const
+    {
+        for ( uint32 index = 0; index < _count; ++index )
+        {
+            if ( _arrName[index] == name )
+                return _arrValue[index];
+        }
+        return std::nullopt;
+    }
+
     uint32 GameConditions::makeSeed( int32 first, int32 second )
     {
         return GameHash::hashCoord( first, second, GameConditionsInternal::kChanceSalt );

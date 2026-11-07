@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  유황 지대 — 2 초마다 중독(모듈 에셋 poisondamage, 나와도 묻어 나간다), NPC 는 Coughing 키로 안다.
+  변형: sulfurvent(들어오면 독가스를 살포 — 런타임 영역 프리팹), poisonspread(살포된 가스 — 수명 · 퍼짐은 볼륨 칸).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="poison" _modulePath="game/empty/zones/poisondamage.zonemodule.xml" />
+		<ZoneModuleDef _name="cough" _kind="Blackboard">
+			<_listParam>
+				<ZoneParamDef _name="key" _value="Coughing" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

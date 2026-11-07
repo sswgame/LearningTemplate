@@ -117,6 +117,11 @@ namespace sw
          * @details 여기서 다른 어트리뷰트를 바꿔도 된다(`getOwningAbilitySystem()->setAttributeBaseValue`).
          */
         virtual void postGameplayEffectExecute( const AttributeModCallbackData& data );
+        /**
+         * @brief 즉사(`AbilityComponent::applyFatalDamage` — 지역의 삼켜짐 · 용암 · 구덩이)가 체력을 0 으로 쓴 직후에 불립니다. 체력을 가진 세트가 쓰러짐 규칙을 낸다.
+         * @details 피해 메타 어트리뷰트를 지나지 않는 쓰러짐이라 따로 훅을 둔다 — 세트마다 쓰러짐 처리(태그 · 이벤트)가 한 곳에 있게 한다. 기본 구현은 아무것도 하지 않는다.
+         */
+        virtual void postFatalDamage();
 
     private:
         /** @brief 쓸 수 있는 값을 찾습니다. 없으면 nullptr 입니다. 값을 쓰는 쪽은 `AbilityComponent` 뿐입니다. */

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  즉사 구역(구덩이) — 열쇠(Item.Key)는 제자리로 돌아오고, 그 밖은 즉사(무적을 넘는다 — 래그돌 · 절단이 같은 치명 신호로 따라온다).
+-->
+<ZoneProfile>
+	<_listModule>
+		<ZoneModuleDef _name="fall" _kind="Action">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Enter" />
+			</_listParam>
+			<_listCase>
+				<ZoneCaseDef _name="key" _condition="tag(Item.Key)" _do="object.teleport(to=KeyHome)" />
+				<ZoneCaseDef _name="fall" _condition="" _do="health.kill(ignoreInvulnerable=true)" />
+			</_listCase>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>

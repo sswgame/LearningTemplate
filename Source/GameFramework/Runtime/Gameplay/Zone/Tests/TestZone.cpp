@@ -1,0 +1,312 @@
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
+#include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneTracker.h"
+
+using namespace sw;
+
+// ZoneTest — 지역 효과의 처리 길(진입 · 체류 · 이탈 · 조건 전환 · 경우 목록 · 식 값 · 출처), 읽기 검사(모르는 종류 · 매개변수 · 참조), 배치 덮어쓰기(nogpu, 물리 없음).
+
+namespace
+{
+    /** @brief 어빌리티 컴포넌트를 가진 대상 하나와 시험 카탈로그입니다. */
+    struct ZoneFixture
+    {
+        GameObjectManager _manager;
+        AbilityCatalog    _catalog;
+        AbilityComponent* _pHero{ nullptr };
+
+        static inline const hashed_string kHealth{ "Health" };
+        static inline const hashed_string kBurn{ "Burn" };
+        static inline const hashed_string kFireResist{ "FireResist" };
+
+        ZoneFixture()
+        {
+            _pHero                        = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<AbilityComponent>();
+            unique_ptr<AttributeSet> pSet = make_unique<AttributeSet>();
+            pSet->defineAttribute( kHealth, 100.0f );
+            pSet->defineAttribute( hashed_string( "MaxHealth" ), 100.0f );
+            pSet->defineAttribute( kBurn, 0.0f );
+            pSet->defineAttribute( kFireResist, 0.25f );
+            (void)_pHero->addAttributeSet( std::move( pSet ) );
+            _pHero->setHealthAttributes( kHealth, hashed_string( "MaxHealth" ) );
+            _pHero->setCatalog( &_catalog );
+
+            AbilityEffectDef root;
+            root._id             = hashed_string( "GE_Test_Root" );
+            root._durationPolicy = EffectDurationPolicy::Infinite;
+            root._grantedTags.addTag( "State.MoveBlocked.Rooted"_tag );
+            (void)_catalog.addEffect( root );
+
+            AbilityEffectDef burn;
+            burn._id             = hashed_string( "GE_Test_Burn" );
+            burn._durationPolicy = EffectDurationPolicy::Instant;
+            AbilityEffectModifier modifier;
+            modifier._attribute       = kBurn;
+            modifier._op              = AttributeModOp::Add;
+            modifier._magnitudeSource = EffectMagnitudeSource::SetByCaller;
+            modifier._setByCallerName = hashed_string( "Data.Damage" );
+            burn._listModifier.push_back( modifier );
+            (void)_catalog.addEffect( burn );
+        }
+
+        GameObject& hero() { return *_pHero->getOwner(); }
+
+        static ZoneModuleDef makeModule( const utf8* pName, const utf8* pKind, std::initializer_list<std::pair<const utf8*, const utf8*>> listParam, const utf8* pCondition = "" )
+        {
+            ZoneModuleDef module;
+            module._name      = hashed_string( pName );
+            module._kind      = hashed_string( pKind );
+            module._condition = pCondition;
+            for ( const auto& param : listParam )
+            {
+                module._listParam.push_back( ZoneParamDef{ hashed_string( param.first ), string( param.second ) } );
+            }
+            return module;
+        }
+
+        /** @brief 대상을 한 프레임 안에 두고(위치 값 @p depth01) 처리합니다. */
+        void runInside( ZoneTracker& tracker, const ZoneCompiledProfile& profile, const utf8* pSource, float32 depth01, float32 deltaTime )
+        {
+            ZoneSample sample;
+            sample._zoneDepth01 = depth01;
+            tracker.beginFrame();
+            tracker.touch( hero(), sample );
+            tracker.finishFrame( _manager, profile, ActionSource{ hashed_string( pSource ), GameObjectHandle{} }, deltaTime );
+        }
+
+        void leave( ZoneTracker& tracker, const ZoneCompiledProfile& profile, const utf8* pSource )
+        {
+            tracker.beginFrame();
+            tracker.finishFrame( _manager, profile, ActionSource{ hashed_string( pSource ), GameObjectHandle{} }, 0.1f );
+        }
+    };
+} // namespace
+
+/** @brief [ZoneTest] 진입 할 일이 이펙트를 걸고(출처 volume:<이름>), 이탈 할 일이 그 출처의 것만 지운다 — 겹친 다른 영역의 효과는 남는다 */
+SW_TEST_CASE( ZoneTest, EnterAndExitActionsKeepTheirSource )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "root", "Action", {
+                                                                                  {"on",                                    "Enter"},
+                                                                                  {"do", "ability.applyEffect(effect=GE_Test_Root)"}
+    } ) );
+    profile._listModule.push_back( ZoneFixture::makeModule( "release", "Action", {
+                                                                                     {"on",                   "Exit"},
+                                                                                     {"do", "ability.removeEffect()"}
+    } ) );
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+    ZoneTracker swamp;
+    ZoneTracker bog;
+    fixture.runInside( swamp, compiled, "volume:Swamp", 1.0f, 0.1f );
+    fixture.runInside( bog, compiled, "volume:Bog", 1.0f, 0.1f );
+    SW_EXPECT_TRUE( MovementConstraint::read( fixture.hero() )._bMoveBlocked == SW_TRUE );
+    vector<AbilityEffectLogEntry> listLog;
+    fixture._pHero->collectEffectLog( listLog );
+    SW_REQUIRE_TRUE( listLog.empty() == false );
+    SW_EXPECT_TRUE( listLog[0]._sourceName == hashed_string( "volume:Swamp" ) );
+
+    fixture.runInside( swamp, compiled, "volume:Swamp", 1.0f, 0.1f ); // 남아 있으면 다시 걸지 않는다(진입은 한 번)
+    SW_EXPECT_EQUAL( 2u, fixture._pHero->getActiveEffectCount() );
+    fixture.leave( swamp, compiled, "volume:Swamp" );
+    SW_EXPECT_TRUE( MovementConstraint::read( fixture.hero() )._bMoveBlocked == SW_TRUE ); // 늪(Bog) 것은 남는다
+    SW_EXPECT_TRUE( swamp.findOccupancy( fixture.hero().getHandle() ) == nullptr );
+    fixture.leave( bog, compiled, "volume:Bog" );
+    SW_EXPECT_FALSE( MovementConstraint::read( fixture.hero() )._bMoveBlocked == SW_TRUE );
+}
+
+/** @brief [ZoneTest] 조건 전환 — 안쪽으로 넘는 순간(지연 뒤) 한 번, 다시 나오거나 나가는 순간 한 번. 체류 주기는 간격마다 */
+SW_TEST_CASE( ZoneTest, ConditionTransitionsFireOnceWithDelay )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "engulf", "Action", {
+                                                                                    {   "on",                                   "Became"},
+                                                                                    {"delay",                                        "1"},
+                                                                                    {   "do", "ability.applyEffect(effect=GE_Test_Root)"}
+    },
+                                                            "zoneDepth01 >= 0.5" ) );
+    profile._listModule.push_back( ZoneFixture::makeModule( "free", "Action", {
+                                                                                  {"on",                                      "Lost"},
+                                                                                  {"do", "ability.removeEffect(effect=GE_Test_Root)"}
+    },
+                                                            "zoneDepth01 >= 0.5" ) );
+    profile._listModule.push_back( ZoneFixture::makeModule( "tick", "Action", {
+                                                                                  {      "on",                                                                            "Stay"},
+                                                                                  {"interval",                                                                             "0.5"},
+                                                                                  {  "damage",                                                                               "1"},
+                                                                                  {      "do", "ability.applyEffect(effect=GE_Test_Burn, setByCaller=Data.Damage, value=damage)"}
+    } ) );
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+    ZoneTracker dune;
+    const auto  rooted = [&fixture]()
+    { return MovementConstraint::read( fixture.hero() )._bMoveBlocked == SW_TRUE; };
+
+    fixture.runInside( dune, compiled, "volume:Dune", 0.2f, 0.25f ); // 바깥: 체류 첫 프레임에 한 번
+    SW_EXPECT_FALSE( rooted() );
+    SW_EXPECT_NEAR( 1.0f, fixture._pHero->getAttributeValue( ZoneFixture::kBurn ).value_or( -1.0f ), 1.0e-4f );
+    fixture.runInside( dune, compiled, "volume:Dune", 0.8f, 0.5f ); // 안쪽 0.5 초 — 지연 1 초 전
+    SW_EXPECT_FALSE( rooted() );
+    fixture.runInside( dune, compiled, "volume:Dune", 0.8f, 0.5f ); // 1 초 — 한 번
+    SW_EXPECT_TRUE( rooted() );
+    fixture.runInside( dune, compiled, "volume:Dune", 0.2f, 0.5f ); // 다시 나오는 순간 해제
+    SW_EXPECT_FALSE( rooted() );
+    fixture.runInside( dune, compiled, "volume:Dune", 0.9f, 1.5f ); // 다시 넘고 지연을 채움
+    SW_EXPECT_TRUE( rooted() );
+    fixture.leave( dune, compiled, "volume:Dune" ); // 나가는 순간도 해제
+    SW_EXPECT_FALSE( rooted() );
+    // 체류 주기: 0.25 + 0.5 + 0.5 + 0.5 + 1.5 초를 0.5 초 간격으로 — 프레임마다 많아야 한 번(밀린 주기는 따라잡지 않는다).
+    SW_EXPECT_NEAR( 5.0f, fixture._pHero->getAttributeValue( ZoneFixture::kBurn ).value_or( -1.0f ), 1.0e-4f );
+}
+
+/** @brief [ZoneTest] 경우 목록은 처음 맞는 하나만 하고, 수치 칸의 식은 대상 속성을 읽는다(저항 0.25 → 20 × 0.75 = 15) */
+SW_TEST_CASE( ZoneTest, FirstMatchingCaseAndExpressionValues )
+{
+    ZoneFixture   fixture;
+    ZoneProfile   profile;
+    ZoneModuleDef burn = ZoneFixture::makeModule( "burn", "Action", {
+                                                                        {    "on",                        "Enter"},
+                                                                        {"damage", "20 * (1 - target.FireResist)"}
+    } );
+    burn._listCase.push_back( ZoneCaseDef{ hashed_string( "immune" ), "tag(State.Fireproof)", "", ZoneOverrideOp::Merge } );
+    burn._listCase.push_back( ZoneCaseDef{ hashed_string( "burn" ), "", "ability.applyEffect(effect=GE_Test_Burn, setByCaller=Data.Damage, value=damage)", ZoneOverrideOp::Merge } );
+    profile._listModule.push_back( burn );
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+    ZoneTracker lava;
+    fixture.runInside( lava, compiled, "surface:Lava", 1.0f, 0.1f );
+    SW_EXPECT_NEAR( 15.0f, fixture._pHero->getAttributeValue( ZoneFixture::kBurn ).value_or( -1.0f ), 1.0e-4f );
+
+    fixture.leave( lava, compiled, "surface:Lava" );
+    fixture._pHero->getOwnedTagCounts().updateCount( "State.Fireproof"_tag, 1 );
+    fixture.runInside( lava, compiled, "surface:Lava", 1.0f, 0.1f ); // 화염 면역 — 첫 경우가 맞아 아무것도 하지 않는다
+    SW_EXPECT_NEAR( 15.0f, fixture._pHero->getAttributeValue( ZoneFixture::kBurn ).value_or( -1.0f ), 1.0e-4f );
+}
+
+/** @brief [ZoneTest] 즉사는 무적을 존중하고(기본), 칸으로 넘을 수 있다 */
+SW_TEST_CASE( ZoneTest, KillRespectsInvulnerabilityUnlessTold )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "kill", "Action", {
+                                                                                  {"on",         "Enter"},
+                                                                                  {"do", "health.kill()"}
+    } ) );
+    ZoneCompiledProfile respectful;
+    SW_REQUIRE_TRUE( respectful.compile( profile, "test", &fixture._catalog ) );
+    profile._listModule[0] = ZoneFixture::makeModule( "kill", "Action", {
+                                                                            {"on",                                "Enter"},
+                                                                            {"do", "health.kill(ignoreInvulnerable=true)"}
+    } );
+    ZoneCompiledProfile ruthless;
+    SW_REQUIRE_TRUE( ruthless.compile( profile, "test", &fixture._catalog ) );
+
+    fixture._pHero->getOwnedTagCounts().updateCount( AbilityComponent::getInvulnerableTag(), 1 );
+    ZoneTracker pit;
+    fixture.runInside( pit, respectful, "volume:Pit", 1.0f, 0.1f );
+    SW_EXPECT_NEAR( 100.0f, fixture._pHero->getAttributeValue( ZoneFixture::kHealth ).value_or( -1.0f ), 1.0e-4f );
+    ZoneTracker abyss;
+    fixture.runInside( abyss, ruthless, "volume:Abyss", 1.0f, 0.1f );
+    SW_EXPECT_NEAR( 0.0f, fixture._pHero->getAttributeValue( ZoneFixture::kHealth ).value_or( -1.0f ), 1.0e-4f );
+    SW_EXPECT_TRUE( fixture._pHero->getHealthReading()._bDead == SW_TRUE );
+}
+
+/** @brief [ZoneTest] 읽기 검사 — 모르는 종류 · 매개변수 · 고르기 값 · 식, 카탈로그에 없는 이펙트는 로드 실패이고 프로필은 비어 있다 */
+SW_TEST_CASE( ZoneTest, LoadRejectsWhatItCannotRun )
+{
+    ZoneFixture         fixture;
+    ZoneCompiledProfile compiled;
+    const auto          compileOne = [&]( const ZoneModuleDef& module )
+    {
+        ZoneProfile profile;
+        profile._listModule.push_back( module );
+        return compiled.compile( profile, "test", &fixture._catalog );
+    };
+
+    SW_EXPECT_LOG( "Zone.ModuleKindUnknown" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "a", "NoSuchKind", {} ) ) );
+    SW_EXPECT_LOG( "Zone.ParamUnknown" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "b", "PhysicsField", {
+                                                                                   { "strenght", "1" }
+    } ) ) );
+    SW_EXPECT_LOG( "Zone.ChoiceInvalid" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "c", "PhysicsField", {
+                                                                                   { "direction", "Sideways" }
+    } ) ) );
+    SW_EXPECT_LOG( "ConditionExpr.Invalid" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "d", "PhysicsField", {
+                                                                                   { "strength", "4 *" }
+    } ) ) );
+    SW_EXPECT_LOG( "AbilityActions.UnknownEffect" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "e", "Action", {
+                                                                             { "do", "ability.applyEffect(effect=GE_Missing)" }
+    } ) ) );
+    SW_EXPECT_LOG( "Zone.ParamMissing" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "f", "Blackboard", {} ) ) );
+    SW_EXPECT_TRUE( compiled.isEmpty() );
+
+    SW_EXPECT_TRUE( compileOne( ZoneFixture::makeModule( "g", "PhysicsField", {
+                                                                                  {   "direction",        "ToCenter"},
+                                                                                  {    "strength", "6 * zoneDepth01"},
+                                                                                  {"gravityScale",               "0"}
+    } ) ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), compiled.getModules().size() );
+}
+
+/** @brief [ZoneTest] 배치 덮어쓰기 — 이름으로 칸 하나만 고치고, 빼고, 더한다. 없는 이름을 빼면 오류다 */
+SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
+{
+    ZoneProfile preset;
+    preset._listModule.push_back( ZoneFixture::makeModule( "sink", "Action", {
+                                                                                 {      "on",                "Stay"},
+                                                                                 {"interval",                "0.25"},
+                                                                                 {      "do", "flag.add(flag=sunk)"}
+    } ) );
+    preset._listModule.push_back( ZoneFixture::makeModule( "npcAvoid", "Blackboard", {
+                                                                                         { "key", "InDanger" }
+    } ) );
+
+    vector<ZoneModuleDef> listOverride;
+    listOverride.push_back( ZoneFixture::makeModule( "sink", "", {
+                                                                     { "interval", "1" }
+    } ) ); // 느린 사구: 칸 하나만
+    ZoneModuleDef removeAvoid;
+    removeAvoid._name = hashed_string( "npcAvoid" );
+    removeAvoid._op   = ZoneOverrideOp::Remove;
+    listOverride.push_back( removeAvoid );
+    listOverride.push_back( ZoneFixture::makeModule( "wet", "SurfaceChannel", {
+                                                                                  {"channel", "Wet"},
+                                                                                  {   "rate", "0.5"}
+    } ) );
+
+    ZoneProfile placed = preset;
+    SW_REQUIRE_TRUE( placed.applyOverrides( listOverride, "test" ) );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), placed._listModule.size() );
+    const ZoneModuleDef* pSink = placed.findModule( hashed_string( "sink" ) );
+    SW_REQUIRE_TRUE( pSink != nullptr );
+    SW_EXPECT_TRUE( pSink->_kind == hashed_string( "Action" ) );                               // 적지 않은 칸은 물려받는다
+    SW_EXPECT_EQUAL( string( "1" ), pSink->findParam( hashed_string( "interval" ) )->_value ); // 적은 칸만 바뀐다
+    SW_EXPECT_EQUAL( string( "Stay" ), pSink->findParam( hashed_string( "on" ) )->_value );
+    SW_EXPECT_TRUE( placed.findModule( hashed_string( "npcAvoid" ) ) == nullptr );
+    SW_EXPECT_TRUE( placed.findModule( hashed_string( "wet" ) ) != nullptr );
+
+    ZoneProfile           broken = preset;
+    vector<ZoneModuleDef> listBad{ removeAvoid, removeAvoid };
+    SW_EXPECT_LOG( "Zone.OverrideModuleMissing" );
+    SW_EXPECT_FALSE( broken.applyOverrides( listBad, "test" ) ); // 두 번째 빼기는 없는 이름이다
+}

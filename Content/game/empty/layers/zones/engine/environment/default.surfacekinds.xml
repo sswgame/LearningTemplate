@@ -1,0 +1,13 @@
+<!--
+	Empty 의 덮어쓰기 층 — 엔진 표면 종류 표(engine/environment/default.surfacekinds.xml)에 지역 프로필만 얹는다(종류 이름이 열쇠, 적은 칸만 바뀐다).
+	프로필은 이 게임의 이펙트(data/abilities.xml)를 부르므로 엔진 표가 아니라 게임 층에 둔다. 콜라이더 · 지형 레이어 · 액체가 이 종류를 내면 그 프로필이 돈다
+	(받는 쪽의 ZoneContactComponent — 디딤 · 부딪힘 · 잠김). 새 지형은 프로필 하나와 이 줄 하나다.
+-->
+<SurfaceKindTable>
+	<_listKind>
+		<SurfaceKindDef _name="Ice" _zoneProfile="game/empty/zones/ice.zone.xml" />
+		<SurfaceKindDef _name="Sea" _zoneProfile="game/empty/zones/sea.zone.xml" />
+		<SurfaceKindDef _name="Lava" _zoneProfile="game/empty/zones/lava.zone.xml" />
+		<SurfaceKindDef _name="Thorns" _zoneProfile="game/empty/zones/thorns.zone.xml" />
+	</_listKind>
+</SurfaceKindTable>

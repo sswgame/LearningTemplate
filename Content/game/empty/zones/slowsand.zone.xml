@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  느린 사구(변형 프리셋 ②) — 모래 함몰과 같고 가라앉음만 1 초마다(절반 빠르기). 바뀌는 칸 하나만 적는다.
+-->
+<ZoneProfile _base="game/empty/zones/sand.zone.xml">
+	<_listModule>
+		<ZoneModuleDef _name="sink">
+			<_listParam>
+				<ZoneParamDef _name="interval" _value="1" />
+			</_listParam>
+		</ZoneModuleDef>
+	</_listModule>
+</ZoneProfile>
