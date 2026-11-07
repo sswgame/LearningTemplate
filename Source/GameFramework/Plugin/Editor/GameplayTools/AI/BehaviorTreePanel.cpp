@@ -349,13 +349,10 @@ namespace sw::editor
 
         handleCanvasInteractions();
 
-        ed::NodeId  arrSelected[1];
-        const int32 selectedCount = ed::GetSelectedNodes( arrSelected, 1 );
-        _selectedID               = selectedCount > 0 ? static_cast<int32>( arrSelected[0].Get() ) : -1;
+        if ( _nodeGraph.findSelectedNode( _selectedID ) == false )
+            _selectedID = -1;
 
-        _nodeGraph.applyContentFitIfNeeded();
-        EditorNodeGraph::recordDrawnNodeCount( _model.getNodeCount() );
-        _nodeGraph.endCanvas();
+        _nodeGraph.finishCanvas( _model.getNodeCount() );
         ed::SetCurrentEditor( nullptr );
         EditorChrome::endSection();
     }
@@ -444,26 +441,17 @@ namespace sw::editor
         handleEditCommands(); // 잘라내기가 지우므로 아래 지우기 처리보다 먼저
 
         // 삭제: 노드는 그 아래까지 지우고, 링크만 지우는 것은 거절한다(링크를 끊으면 루트가 둘이 된다 - 노드를 지우거나 다른 부모로 이어 옮긴다).
-        if ( ed::BeginDelete() )
+        EditorGraphRemoval removal;
+        _nodeGraph.collectRemovals( removal, EditorGraphLinkRemoval::Reject );
+        if ( removal._rejectedLinkCount > 0 )
+            _statusText = "Links cannot be deleted - delete the node or link it to another parent";
+        for ( const int32 nodeID : removal._listNodeID )
         {
-            ed::LinkId linkID;
-            while ( ed::QueryDeletedLink( &linkID ) )
+            if ( _model.removeNode( nodeID ) )
             {
-                ed::RejectDeletedItem();
-                _statusText = "Links cannot be deleted - delete the node or link it to another parent";
+                _selectedID = -1;
+                markStructureChanged( "Delete Behavior Node" );
             }
-            ed::NodeId nodeID;
-            while ( ed::QueryDeletedNode( &nodeID ) )
-            {
-                if ( ed::AcceptDeletedItem() == false )
-                    continue;
-                if ( _model.removeNode( static_cast<int32>( nodeID.Get() ) ) )
-                {
-                    _selectedID = -1;
-                    markStructureChanged( "Delete Behavior Node" );
-                }
-            }
-            ed::EndDelete();
         }
     }
 
@@ -495,7 +483,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( SW_LOCKEY( "EdPlugin", "Duplicate" ) ) )
                 duplicateID = _selectedID;
             if ( ImGui::MenuItem( SW_LOCKEY( "EdPlugin", "Delete" ) ) )
-                ed::DeleteNode( toNodeID( _selectedID ) );
+                _nodeGraph.requestNodeDeletion( _selectedID );
             ImGui::EndPopup();
         }
         ed::Resume();
@@ -531,7 +519,7 @@ namespace sw::editor
             return;
         EditorNodeGraph::storeClipboard( BehaviorTreePanelInternal::kClipboardKind, _model.writeSubtree( targetID ) );
         if ( command == EditorGraphEditCommand::Cut )
-            ed::DeleteNode( toNodeID( targetID ) ); // 지우기는 아래 지우기 처리가 같은 프레임에 받는다
+            _nodeGraph.requestNodeDeletion( targetID ); // 지우기는 아래 지우기 처리가 같은 프레임에 받는다
     }
 
     int32 BehaviorTreePanel::addNodeFromSelection( BehaviorNodeKind type )

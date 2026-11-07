@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 
 using namespace sw;
@@ -79,4 +80,21 @@ SW_TEST_CASE( EditorNodeGraphRulesTest, MinimapFitsContentAndRoundTrips )
     SW_EXPECT_NEAR( 200.0f, back._y, TestEditorNodeGraphRulesInternal::kTolerance );
     SW_EXPECT_EQUAL( 3, EditorNodeGraphRules::findNearestNode( listRect, float2{ 170.0f, 240.0f } ) );
     SW_EXPECT_FALSE( EditorNodeGraphRules::fitMinimap( listRect, float2{}, float2{}, float2{ 0.0f, 120.0f }, transform ) );
+}
+
+/**
+ * @brief [EditorNodeGraphTest] 주석 지우기는 고른 id 만 지우고 지운 것이 있을 때만 참인지 검증
+ */
+SW_TEST_CASE( EditorNodeGraphTest, RemoveCommentsRemovesListedIDsOnly )
+{
+    vector<GraphCommentBox> listComment( 3 );
+    listComment[0]._id = 1;
+    listComment[1]._id = 2;
+    listComment[2]._id = 3;
+    SW_EXPECT_FALSE( EditorNodeGraph::removeComments( listComment, {} ) );
+    SW_EXPECT_FALSE( EditorNodeGraph::removeComments( listComment, { 9 } ) );
+    SW_EXPECT_TRUE( EditorNodeGraph::removeComments( listComment, { 2 } ) );
+    SW_REQUIRE_TRUE( listComment.size() == 2 );
+    SW_EXPECT_EQUAL( 1, listComment[0]._id );
+    SW_EXPECT_EQUAL( 3, listComment[1]._id );
 }

@@ -33,6 +33,24 @@ namespace sw::editor
         Paste,     ///< Ctrl+V
         Duplicate, ///< Ctrl+D
     };
+
+    /** @brief 캔버스가 링크 지우기 요청을 어떻게 받을지입니다. */
+    enum class EditorGraphLinkRemoval : uint8
+    {
+        Accept, ///< 받아들인다.
+        Reject, ///< 거절한다(행동 트리 — 링크를 끊으면 루트가 둘이 된다).
+    };
+
+    /** @brief 캔버스가 이번 프레임에 받아들인 지우기 요청입니다(`EditorNodeGraph::collectRemovals`). 묻는 동안 그래프를 고치지 않도록 모은 뒤 패널이 지웁니다. */
+    struct EditorGraphRemoval
+    {
+        vector<int32> _listLinkID{};           ///< 지운 링크 id
+        vector<int32> _listNodeID{};           ///< 지운 노드 id(주석 상자 빼고)
+        vector<int32> _listCommentID{};        ///< 지운 주석 상자의 `GraphCommentBox::_id`(노드 id 가 아니다)
+        uint32        _rejectedLinkCount{ 0 }; ///< 거절한 링크 수(`EditorGraphLinkRemoval::Reject`)
+
+        [[nodiscard]] bool isEmpty() const { return _listLinkID.empty() && _listNodeID.empty() && _listCommentID.empty(); }
+    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -45,6 +63,7 @@ namespace sw::editor
      *          판단은 ImGui 에 의존하지 않는 `EditorNodeGraphRules` 가 한다.
      *          확장 모듈은 imgui-node-editor 사본을 따로 가지므로(정적 링크) 캔버스 안에서 `ax::NodeEditor` 를 직접 호출하기 전에 자기 사본에도
      *          현재 편집기를 바인딩해야 한다. `EditorGraphDocumentPanel::beginGraphCanvas` 가 이 일을 한다.
+     *          지우기 요청 모으기 · 주석 더하기와 지우기 · 프레임 끝처럼 모든 그래프 패널에 같은 일은 이 클래스가 맡고(`collectRemovals` · `addRequestedComment` · `removeComments` · `finishCanvas`), 패널은 노드 그리기 · 링크 열거 · 모델 반영만 답한다. 문서 틀이 다른 패널(미리보기 · 컴포넌트 편집)도 멤버로 쓰므로 상속이 아니라 포함으로 나눈다.
      */
     class SW_EDITOR_API EditorNodeGraph
     {
@@ -53,6 +72,8 @@ namespace sw::editor
         static constexpr int32 kCommentNodeIDBase = 0x40000000;
         /** @brief 캔버스를 여는 최소 변 길이(픽셀)입니다. 노드 하나도 그릴 수 없는 크기에서는 열지 않습니다. */
         static constexpr float32 kMinCanvasExtent = 16.0f;
+        /** @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표)입니다. 노드 머리줄 하나쯤이라 원본과 사본이 함께 보인다(언리얼 Ctrl+W · 유니티 Ctrl+D 의 비켜 놓기). */
+        static constexpr float32 kDuplicateOffset = 40.0f;
         EditorNodeGraph();
         ~EditorNodeGraph();
         EditorNodeGraph( const EditorNodeGraph& )            = delete;
@@ -75,6 +96,22 @@ namespace sw::editor
          * @details 막대와 미니맵은 캔버스를 연 창의 자식 창이다 — 캔버스는 자기 자식 영역(`EditorSectionKind::Child`)에 두어야 한다(뒤에 오는 항목이 없어야 커서를 되돌리지 않아도 된다).
          */
         void endCanvas();
+        /** @brief 캔버스 프레임의 끝을 한 번에 합니다: 보기 맞춤(`applyContentFitIfNeeded`) → 노드 수 기록(`recordDrawnNodeCount`) → `endCanvas`. */
+        void finishCanvas( uint32 drawnNodeCount );
+
+        /**
+         * @brief 이번 프레임의 지우기 요청을 @p outDeletion 에 모읍니다(버퍼를 재사용하도록 비우고 채웁니다). 캔버스 안에서 프레임마다 부릅니다. 언리얼 `SGraphEditor` 의 삭제 명령이 스키마에 묻는 것과 같은 자리입니다(기억에 의존).
+         * @details 받아들인 항목만 담고 주석 상자는 따로 가릅니다 — 패널은 제 모델에서 지우기만 합니다. 노드 편집기 호출이 이 모듈의 사본에서 돌아 확장 모듈도 그대로 부를 수 있다.
+         */
+        void collectRemovals( EditorGraphRemoval& outDeletion, EditorGraphLinkRemoval linkRemoval = EditorGraphLinkRemoval::Accept );
+        /** @brief 노드 @p nodeID 를 지우라고 캔버스에 요청합니다. 지우기는 그 프레임의 `collectRemovals` 가 받습니다(잘라내기 · 메뉴의 Delete). */
+        void requestNodeDeletion( int32 nodeID );
+        /** @brief 고른 첫 노드의 id 입니다(주석 상자일 수 있다). 고른 노드가 없으면 false 입니다. */
+        [[nodiscard]] bool findSelectedNode( int32& outNodeID ) const;
+        /** @brief 상자 id 가 @p listCommentID 에 든 주석을 지웁니다(안의 노드는 남는다 — 언리얼 Comment 지우기와 같다). 지웠으면 true 입니다. */
+        static bool removeComments( vector<GraphCommentBox>& listComment, const vector<int32>& listCommentID );
+        /** @brief 보기 막대의 주석 단추가 낸 요청이면 새 상자를 @p listComment 에 더하고 true 입니다(id 는 가장 큰 id + 1). */
+        bool addRequestedComment( vector<GraphCommentBox>& listComment );
 
         /** @brief 노드를 엽니다(`ed::BeginNode`). 캔버스가 이번 프레임의 노드와 그 핀을 기억합니다 — 핀을 끌어 만든 노드에 링크를 잇는 데 씁니다. */
         void beginNode( int32 nodeID );

@@ -83,7 +83,7 @@ namespace sw::editor
         ObjectSnapshot beginEdit( GimmickCircuitComponent& circuit ) const;
         void           commitEdit( GimmickCircuitComponent& circuit, const ObjectSnapshot& before, const utf8* pLabel );
         void           editAddNode( GimmickCircuitComponent& circuit, const hashed_string& kind, const float2* pPosition );
-        void           editRemove( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const vector<int32>& listWire );
+        void           editRemove( GimmickCircuitComponent& circuit, const EditorGraphRemoval& removal );
         /** @brief 노드를 비켜 복제합니다(Ctrl+D · 붙여 넣기). 한 편집으로 남깁니다. */
         void editDuplicate( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const float2& offset );
         /** @brief 캔버스 단축키 Ctrl+C · X · V · D 를 받습니다. 복사 버퍼에는 노드 번호를 둔다 — 붙여 넣기는 같은 회로의 그 노드를 복제한다. */

@@ -36,8 +36,7 @@ namespace sw::editor
 
     void EditorGraphDocumentPanelBase::finishGraphCanvas( uint32 drawnNodeCount )
     {
-        EditorNodeGraph::recordDrawnNodeCount( drawnNodeCount );
-        _nodeGraph.endCanvas();
+        _nodeGraph.finishCanvas( drawnNodeCount );
         _bindModuleCopy( nullptr );
     }
 
@@ -55,50 +54,9 @@ namespace sw::editor
         }
     }
 
-    void EditorGraphDocumentPanelBase::requestNodeDeletion( int32 nodeID )
-    {
-        ed::DeleteNode( toNodeID( nodeID ) );
-    }
-
     float2 EditorGraphDocumentPanelBase::getCanvasNodePosition( int32 nodeID ) const
     {
         const ImVec2 position = ed::GetNodePosition( toNodeID( nodeID ) );
         return float2{ position.x, position.y };
-    }
-
-    bool EditorGraphDocumentPanelBase::beginCanvasDeletion()
-    {
-        return ed::BeginDelete();
-    }
-
-    bool EditorGraphDocumentPanelBase::takeDeletedLink( int32& outLinkID )
-    {
-        ed::LinkId linkID;
-        while ( ed::QueryDeletedLink( &linkID ) )
-        {
-            if ( ed::AcceptDeletedItem() == false )
-                continue;
-            outLinkID = static_cast<int32>( linkID.Get() );
-            return true;
-        }
-        return false;
-    }
-
-    bool EditorGraphDocumentPanelBase::takeDeletedNode( int32& outNodeID )
-    {
-        ed::NodeId nodeID;
-        while ( ed::QueryDeletedNode( &nodeID ) )
-        {
-            if ( ed::AcceptDeletedItem() == false )
-                continue;
-            outNodeID = static_cast<int32>( nodeID.Get() );
-            return true;
-        }
-        return false;
-    }
-
-    void EditorGraphDocumentPanelBase::endCanvasDeletion()
-    {
-        ed::EndDelete();
     }
 } // namespace sw::editor

@@ -54,9 +54,8 @@ namespace sw::editor
     private:
         MaterialGraphModel                   _model;
         EditorNodeGraph                      _nodeGraph;
-        vector<const MaterialGraphNodeKind*> _listKind;   ///< 등록표의 종류(노드 메뉴). 번호가 메뉴의 `_kindID` 다
-        vector<EditorGraphNodeKind>          _listMenu;   ///< 노드 메뉴
-        vector<int32>                        _listLinkID; ///< 이번 프레임에 캔버스가 지운 링크 id
-        vector<int32>                        _listNodeID; ///< 이번 프레임에 캔버스가 지운 노드 id
+        vector<const MaterialGraphNodeKind*> _listKind; ///< 등록표의 종류(노드 메뉴). 번호가 메뉴의 `_kindID` 다
+        vector<EditorGraphNodeKind>          _listMenu; ///< 노드 메뉴
+        EditorGraphRemoval                   _removal;  ///< 이번 프레임에 캔버스가 지운 것
     };
 } // namespace sw::editor

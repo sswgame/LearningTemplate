@@ -222,10 +222,9 @@ namespace sw::editor
         _nodeGraph.drawNodeIssues();
         handleCanvasInteractions();
         // 선택 노드 추적
-        ed::NodeId  selectedNodes[1];
-        const int32 count = ed::GetSelectedNodes( selectedNodes, 1 );
-        if ( count > 0 && EditorNodeGraph::isCommentNode( static_cast<int32>( selectedNodes[0].Get() ) ) == false ) // 주석 상자는 인스펙터가 없다
-            _selectedNodeID = static_cast<int32>( selectedNodes[0].Get() );
+        int32 selectedNodeID{ 0 };
+        if ( _nodeGraph.findSelectedNode( selectedNodeID ) && EditorNodeGraph::isCommentNode( selectedNodeID ) == false ) // 주석 상자는 인스펙터가 없다
+            _selectedNodeID = selectedNodeID;
 
         _nodeGraph.applyContentFitIfNeeded();
         cacheNodeLayout();

@@ -336,7 +336,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
                 duplicateGraphNodes( vector<int32>{ _selectedNodeID }, &AnimationGraphPanelInternal::linkNodes, &AnimationGraphPanelInternal::remapLink, "Duplicate Animation Graph Node" );
             if ( ImGui::MenuItem( SW_LOCKEY( "EdVerb", "Delete" ) ) )
-                ed::DeleteNode( toNodeID( _selectedNodeID ) );
+                requestNodeDeletion( _selectedNodeID );
             ImGui::EndPopup();
         }
         ed::Resume();

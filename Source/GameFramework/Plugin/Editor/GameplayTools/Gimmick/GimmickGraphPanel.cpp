@@ -44,8 +44,6 @@ namespace sw::editor
     {
         struct GimmickGraphPanelInternal
         {
-            /// @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표) — 문서 그래프 패널(`EditorGraphDocumentPanel`)과 같은 값.
-            static constexpr float32 kDuplicateOffset = 40.0f;
             /// @brief 그래프 복사 버퍼의 종류 열쇠 — 다른 그래프에는 붙지 않는다.
             static constexpr string_view kClipboardKind      = "GimmickGraph";
             static constexpr const utf8* kCanvasID           = "GimmickGraphCanvas";
@@ -165,17 +163,8 @@ namespace sw::editor
         _bSeedComments                       = SW_FALSE;
         if ( bRenamed )
             commitEdit( circuit, beginEdit( circuit ), "Rename Gimmick Comment" );
-        GraphCommentBox comment{};
-        if ( _nodeGraph.takeCommentRequest( comment._position, comment._size ) == false )
-            return;
-        int32 maxID{ 0 };
-        for ( const GraphCommentBox& existing : listComment )
-        {
-            maxID = MathUtil::max( maxID, existing._id );
-        }
-        comment._id = maxID + 1;
-        listComment.push_back( std::move( comment ) );
-        commitEdit( circuit, beginEdit( circuit ), "Add Gimmick Comment" );
+        if ( _nodeGraph.addRequestedComment( listComment ) )
+            commitEdit( circuit, beginEdit( circuit ), "Add Gimmick Comment" );
     }
 
     void GimmickGraphPanel::commitLayoutWhenReleased( GimmickCircuitComponent& circuit )
@@ -332,16 +321,10 @@ namespace sw::editor
 
         handleCanvasInteractions( circuit );
 
-        ed::NodeId  arrSelected[1];
-        const int32 selectedCount = ed::GetSelectedNodes( arrSelected, 1 );
-        if ( selectedCount > 0 )
-            _selectedNode = static_cast<int32>( arrSelected[0].Get() );
+        (void)_nodeGraph.findSelectedNode( _selectedNode ); // 아무것도 안 고르면 앞의 선택을 둔다
 
         commitLayoutWhenReleased( circuit );
-        _nodeGraph.applyContentFitIfNeeded();
-
-        EditorNodeGraph::recordDrawnNodeCount( static_cast<uint32>( _model.getNodes().size() ) );
-        _nodeGraph.endCanvas();
+        _nodeGraph.finishCanvas( static_cast<uint32>( _model.getNodes().size() ) );
         ed::SetCurrentEditor( nullptr );
         EditorChrome::endSection();
     }
@@ -462,26 +445,10 @@ namespace sw::editor
         handleEditCommands( circuit );
 
         // 삭제: 노드를 지우면 그 노드에 닿은 배선도 모델이 같이 지운다
-        vector<int32> listRemovedNode;
-        vector<int32> listRemovedWire;
-        if ( ed::BeginDelete() )
-        {
-            ed::LinkId linkID;
-            while ( ed::QueryDeletedLink( &linkID ) )
-            {
-                if ( ed::AcceptDeletedItem() )
-                    listRemovedWire.push_back( static_cast<int32>( linkID.Get() ) );
-            }
-            ed::NodeId nodeID;
-            while ( ed::QueryDeletedNode( &nodeID ) )
-            {
-                if ( ed::AcceptDeletedItem() )
-                    listRemovedNode.push_back( static_cast<int32>( nodeID.Get() ) );
-            }
-            ed::EndDelete();
-        }
-        if ( listRemovedNode.empty() == false || listRemovedWire.empty() == false )
-            editRemove( circuit, listRemovedNode, listRemovedWire );
+        EditorGraphRemoval removal;
+        _nodeGraph.collectRemovals( removal );
+        if ( removal.isEmpty() == false )
+            editRemove( circuit, removal );
     }
 
     bool GimmickGraphPanel::drawCommittedText( const utf8* pID, const string& current, string& outText, const utf8* /*pHint*/ )
@@ -601,7 +568,9 @@ namespace sw::editor
         }
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "DeleteNode" ) ) )
         {
-            editRemove( circuit, vector<int32>{ node._graphID }, vector<int32>{} );
+            EditorGraphRemoval removal;
+            removal._listNodeID.push_back( node._graphID );
+            editRemove( circuit, removal );
             return;
         }
         EditorSelfTestMarks::record( "gimmick.node.delete" );
@@ -684,7 +653,11 @@ namespace sw::editor
             ImGui::PopID();
         }
         if ( removeWireID != 0 )
-            editRemove( circuit, vector<int32>{}, vector<int32>{ removeWireID } );
+        {
+            EditorGraphRemoval removal;
+            removal._listLinkID.push_back( removeWireID );
+            editRemove( circuit, removal );
+        }
     }
 
     void GimmickGraphPanel::drawIssueSection( GimmickCircuitComponent& circuit )
@@ -735,7 +708,7 @@ namespace sw::editor
             return;
         if ( command == EditorGraphEditCommand::Duplicate )
         {
-            editDuplicate( circuit, listNode, float2{ GimmickGraphPanelInternal::kDuplicateOffset, GimmickGraphPanelInternal::kDuplicateOffset } );
+            editDuplicate( circuit, listNode, float2{ EditorNodeGraph::kDuplicateOffset, EditorNodeGraph::kDuplicateOffset } );
             return;
         }
         if ( command == EditorGraphEditCommand::Paste )
@@ -774,7 +747,15 @@ namespace sw::editor
         EditorNodeGraph::storeClipboard( GimmickGraphPanelInternal::kClipboardKind, std::move( text ) );
         if ( command != EditorGraphEditCommand::Cut )
             return;
-        editRemove( circuit, listNode, vector<int32>{} );
+        EditorGraphRemoval removal;
+        for ( const int32 graphID : listNode )
+        {
+            if ( EditorNodeGraph::isCommentNode( graphID ) )
+                removal._listCommentID.push_back( graphID - EditorNodeGraph::kCommentNodeIDBase );
+            else
+                removal._listNodeID.push_back( graphID );
+        }
+        editRemove( circuit, removal );
     }
 
     void GimmickGraphPanel::editDuplicate( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const float2& offset )
@@ -806,31 +787,23 @@ namespace sw::editor
         commitEdit( circuit, before, "Add Gimmick Node" );
     }
 
-    void GimmickGraphPanel::editRemove( GimmickCircuitComponent& circuit, const vector<int32>& listNode, const vector<int32>& listWire )
+    void GimmickGraphPanel::editRemove( GimmickCircuitComponent& circuit, const EditorGraphRemoval& removal )
     {
         const ObjectSnapshot before = beginEdit( circuit );
         bool                 bChanged{ false };
-        for ( const int32 wireID : listWire )
+        for ( const int32 wireID : removal._listLinkID )
         {
             bChanged = _model.removeWire( wireID ) || bChanged;
         }
-        for ( const int32 nodeID : listNode )
+        bChanged = EditorNodeGraph::removeComments( _model.getMutableComments(), removal._listCommentID ) || bChanged;
+        for ( const int32 nodeID : removal._listNodeID )
         {
-            if ( EditorNodeGraph::isCommentNode( nodeID ) )
-            {
-                // 상자만 지운다 — 안의 노드는 남는다(언리얼 Comment 지우기와 같다).
-                const size_t commentCount = _model.getMutableComments().size();
-                VectorUtil::removeIf( _model.getMutableComments(), [commentID = nodeID - EditorNodeGraph::kCommentNodeIDBase]( const GraphCommentBox& comment )
-                { return comment._id == commentID; } );
-                bChanged = _model.getMutableComments().size() != commentCount || bChanged;
-                continue;
-            }
             bChanged = _model.removeNode( nodeID ) || bChanged;
             if ( _selectedNode == nodeID )
                 _selectedNode = 0;
         }
         if ( bChanged )
-            commitEdit( circuit, before, listNode.empty() ? "Remove Gimmick Wire" : "Remove Gimmick Node" );
+            commitEdit( circuit, before, removal._listNodeID.empty() && removal._listCommentID.empty() ? "Remove Gimmick Wire" : "Remove Gimmick Node" );
     }
 
     void GimmickGraphPanel::editRemoveOrphanWires( GimmickCircuitComponent& circuit )

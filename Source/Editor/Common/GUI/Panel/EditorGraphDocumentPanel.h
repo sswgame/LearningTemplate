@@ -73,20 +73,11 @@ namespace sw::editor
         /** @brief 노드를 그린 직후(`endNode` 뒤)에 호출합니다. 놓을 위치가 예약된 노드이면 그 위치에 두고 고른 노드로 삼습니다. */
         void applyNodePlacement( int32 nodeID );
         /** @brief 캔버스에 노드 @p nodeID 를 지우라고 요청합니다. 지우기는 다음 `processCanvasDeletions` 가 목록에 반영합니다(잘라내기). */
-        void requestNodeDeletion( int32 nodeID );
+        void requestNodeDeletion( int32 nodeID ) { _nodeGraph.requestNodeDeletion( nodeID ); }
         /** @brief 이 패널 애셋 종류의 id 입니다(그래프 복사 버퍼의 열쇠 — 다른 종류의 그래프에는 붙지 않는다). */
         string getGraphClipboardKind() const { return string{ getDocumentKind().getID() }; }
         /** @brief 캔버스 안에서 노드 @p nodeID 의 캔버스 좌표입니다. */
         float2 getCanvasNodePosition( int32 nodeID ) const;
-
-        /** @brief 캔버스의 삭제 요청 구간을 엽니다. true 이면 `takeDeletedLink` · `takeDeletedNode` 뒤에 `endCanvasDeletion` 을 부릅니다. */
-        bool beginCanvasDeletion();
-        /** @brief 받아들인 다음 링크 삭제 요청의 링크 id 를 @p outLinkID 에 담고 true 입니다. 더 없으면 false 입니다. */
-        bool takeDeletedLink( int32& outLinkID );
-        /** @brief 받아들인 다음 노드 삭제 요청의 노드 id 를 @p outNodeID 에 담고 true 입니다. 더 없으면 false 입니다. */
-        bool takeDeletedNode( int32& outNodeID );
-        /** @brief `beginCanvasDeletion` 과 짝입니다. */
-        void endCanvasDeletion();
 
     protected:
         /** @brief 다음 그리기에서 위치를 정할 노드 하나입니다. */
@@ -143,12 +134,8 @@ namespace sw::editor
         {
             if ( _nodeGraph.drawComments( _graph._listComment, _nodeGraph.needsContentFit() ) )
                 notifyDocumentEdited( "Rename Graph Comment" );
-            GraphCommentBox comment{};
-            if ( _nodeGraph.takeCommentRequest( comment._position, comment._size ) == false )
-                return;
-            comment._id = nextItemID( _graph._listComment );
-            _graph._listComment.push_back( std::move( comment ) );
-            notifyDocumentEdited( "Add Graph Comment" );
+            if ( _nodeGraph.addRequestedComment( _graph._listComment ) )
+                notifyDocumentEdited( "Add Graph Comment" );
         }
 
         /** @brief 다음에 쓸 링크 ID 입니다. */
@@ -284,7 +271,7 @@ namespace sw::editor
         }
 
         /**
-         * @brief 캔버스의 삭제 요청(링크, 노드)을 목록에 반영합니다. `ed::BeginDelete` 구간 전체를 처리합니다.
+         * @brief 캔버스의 삭제 요청(링크, 노드)을 목록에 반영합니다. 요청은 `EditorNodeGraph::collectRemovals` 가 모읍니다.
          * @details 패널마다 다른 것은 "이 링크가 이 노드에 닿는가" 의 판단과 Undo 이름뿐이다.
          *          애니메이션은 노드 id 로, 대화는 핀 번호를 풀어서 판단한다. 노드를 지우면 그 노드에 닿은 링크도
          *          함께 지운다. 링크를 남기면 저장된 그래프에 없는 노드를 가리키게 된다.
@@ -295,27 +282,18 @@ namespace sw::editor
         void processCanvasDeletions( LinkTouchesNodeFn&& linkTouchesNode, OnNodeDeletedFn&& onNodeDeleted, const utf8* pDeleteLinkLabel,
                                      const utf8* pDeleteNodeLabel )
         {
-            if ( beginCanvasDeletion() == false )
-                return;
-
-            int32 id = 0;
-            while ( takeDeletedLink( id ) )
+            EditorGraphRemoval removal;
+            _nodeGraph.collectRemovals( removal );
+            for ( const int32 id : removal._listLinkID )
             {
                 VectorUtil::removeIf( _graph._listLink, [id]( const LinkType& link )
                 { return link._id == id; } );
                 notifyDocumentEdited( pDeleteLinkLabel );
             }
-
-            while ( takeDeletedNode( id ) )
+            if ( EditorNodeGraph::removeComments( _graph._listComment, removal._listCommentID ) )
+                notifyDocumentEdited( "Delete Graph Comment" );
+            for ( const int32 id : removal._listNodeID )
             {
-                if ( EditorNodeGraph::isCommentNode( id ) )
-                {
-                    const int32 commentID = id - EditorNodeGraph::kCommentNodeIDBase;
-                    VectorUtil::removeIf( _graph._listComment, [commentID]( const GraphCommentBox& comment )
-                    { return comment._id == commentID; } );
-                    notifyDocumentEdited( "Delete Graph Comment" );
-                    continue; // 상자만 지운다 — 안의 노드는 남는다(언리얼 Comment 지우기와 같다)
-                }
                 VectorUtil::removeIf( _graph._listNode, [id]( const NodeType& node )
                 { return node._id == id; } );
                 VectorUtil::removeIf( _graph._listLink, [id, &linkTouchesNode]( const LinkType& link )
@@ -323,7 +301,6 @@ namespace sw::editor
                 onNodeDeleted( id );
                 notifyDocumentEdited( pDeleteNodeLabel );
             }
-            endCanvasDeletion();
         }
 
     private:
@@ -363,7 +340,7 @@ namespace sw::editor
                 corner = float2{ MathUtil::min( corner._x, node._position._x ), MathUtil::min( corner._y, node._position._y ) };
             }
             // 복제는 원본 옆에 겹치지 않게(언리얼 Ctrl+W · 유니티 Ctrl+D 의 비켜 놓기), 붙여 넣기는 마우스 자리에.
-            const float2                    offset = bAtPosition ? anchor - corner : float2{ kDuplicateOffset, kDuplicateOffset };
+            const float2                    offset = bAtPosition ? anchor - corner : float2{ EditorNodeGraph::kDuplicateOffset, EditorNodeGraph::kDuplicateOffset };
             vector<std::pair<int32, int32>> listIDMap;
             int32                           newNodeID = nextNodeID();
             for ( NodeType& node : pieces._listNode )
@@ -396,9 +373,6 @@ namespace sw::editor
             _nodeGraph.clearSelectionOnNextDraw();
             notifyDocumentEdited( pLabel );
         }
-
-        /** @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표) — 노드 머리줄 하나쯤이라 원본과 사본이 함께 보인다. */
-        static constexpr float32 kDuplicateOffset = 40.0f;
 
     protected:
         AssetType _graph; /**< 편집 중인 애셋. 노드의 캔버스 위치는 cacheNodeLayout 이 담는다. */

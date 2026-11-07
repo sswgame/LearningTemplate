@@ -71,10 +71,9 @@ namespace sw::editor
 
     private:
         AudioGraphModel    _model;
-        EditorNodeGraph    _nodeGraph;  ///< 캔버스
-        EditorPropertyGrid _graphGrid;  ///< 그래프 설정(출력 · 길이)의 그리드
-        EditorPropertyGrid _nodeGrid;   ///< 고른 노드의 그리드
-        vector<int32>      _listLinkID; ///< 이번 프레임에 캔버스가 지운 링크 id(멤버로 두어 프레임마다 할당하지 않는다)
-        vector<int32>      _listNodeID; ///< 이번 프레임에 캔버스가 지운 노드 id
+        EditorNodeGraph    _nodeGraph; ///< 캔버스
+        EditorPropertyGrid _graphGrid; ///< 그래프 설정(출력 · 길이)의 그리드
+        EditorPropertyGrid _nodeGrid;  ///< 고른 노드의 그리드
+        EditorGraphRemoval _removal;   ///< 이번 프레임에 캔버스가 지운 것(멤버로 두어 프레임마다 할당하지 않는다)
     };
 } // namespace sw::editor

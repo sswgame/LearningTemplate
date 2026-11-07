@@ -443,6 +443,86 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorNodeGraph::addRequestedComment( vector<GraphCommentBox>& listComment )
+    {
+        GraphCommentBox comment{};
+        if ( takeCommentRequest( comment._position, comment._size ) == false )
+            return false;
+        int32 maxID{ 0 };
+        for ( const GraphCommentBox& existing : listComment )
+        {
+            maxID = MathUtil::max( maxID, existing._id );
+        }
+        comment._id = maxID + 1;
+        listComment.push_back( std::move( comment ) );
+        return true;
+    }
+
+    bool EditorNodeGraph::removeComments( vector<GraphCommentBox>& listComment, const vector<int32>& listCommentID )
+    {
+        const size_t countBefore = listComment.size();
+        VectorUtil::removeIf( listComment, [&listCommentID]( const GraphCommentBox& comment )
+        { return VectorUtil::contains( listCommentID, comment._id ); } );
+        return listComment.size() != countBefore;
+    }
+
+    void EditorNodeGraph::collectRemovals( EditorGraphRemoval& outDeletion, const EditorGraphLinkRemoval linkRemoval )
+    {
+        outDeletion._listLinkID.clear();
+        outDeletion._listNodeID.clear();
+        outDeletion._listCommentID.clear();
+        outDeletion._rejectedLinkCount = 0;
+        if ( ed::BeginDelete() )
+        {
+            ed::LinkId linkID;
+            while ( ed::QueryDeletedLink( &linkID ) )
+            {
+                if ( linkRemoval == EditorGraphLinkRemoval::Reject )
+                {
+                    ed::RejectDeletedItem();
+                    ++outDeletion._rejectedLinkCount;
+                }
+                else if ( ed::AcceptDeletedItem() )
+                {
+                    outDeletion._listLinkID.push_back( static_cast<int32>( linkID.Get() ) );
+                }
+            }
+            ed::NodeId nodeID;
+            while ( ed::QueryDeletedNode( &nodeID ) )
+            {
+                if ( ed::AcceptDeletedItem() == false )
+                    continue;
+                const int32 id = static_cast<int32>( nodeID.Get() );
+                if ( isCommentNode( id ) )
+                    outDeletion._listCommentID.push_back( id - kCommentNodeIDBase );
+                else
+                    outDeletion._listNodeID.push_back( id );
+            }
+        }
+        ed::EndDelete();
+    }
+
+    void EditorNodeGraph::requestNodeDeletion( const int32 nodeID )
+    {
+        ed::DeleteNode( toNodeID( nodeID ) );
+    }
+
+    bool EditorNodeGraph::findSelectedNode( int32& outNodeID ) const
+    {
+        ed::NodeId arrSelected[1];
+        if ( ed::GetSelectedNodes( arrSelected, 1 ) <= 0 )
+            return false;
+        outNodeID = static_cast<int32>( arrSelected[0].Get() );
+        return true;
+    }
+
+    void EditorNodeGraph::finishCanvas( const uint32 drawnNodeCount )
+    {
+        applyContentFitIfNeeded();
+        recordDrawnNodeCount( drawnNodeCount );
+        endCanvas();
+    }
+
     uint32 EditorNodeGraph::getDrawnCommentCount()
     {
         return getEditorState<EditorNodeGraphDrawnState>()._commentCount;

@@ -36,8 +36,6 @@ namespace sw::editor
     {
         struct AudioGraphPanelInternal
         {
-            /// @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표) — 문서 그래프 패널(`EditorGraphDocumentPanel`)과 같은 값.
-            static constexpr float32 kDuplicateOffset = 40.0f;
             /// @brief 그래프 복사 버퍼의 종류 열쇠 — 다른 그래프에는 붙지 않는다.
             static constexpr string_view kClipboardKind = "AudioGraph";
             /** @brief 핀 타입 하나(소리 신호)만 쓴다 — 어느 출력이든 어느 입력에 이을 수 있다. */
@@ -65,8 +63,7 @@ namespace sw::editor
         , _nodeGraph{}
         , _graphGrid{}
         , _nodeGrid{}
-        , _listLinkID{}
-        , _listNodeID{}
+        , _removal{}
     {
         _nodeGraph.setCommentsEnabled( true ); // 주석 상자는 그래프 파일에 실린다(`AudioGraphDef::_listComment`)
     }
@@ -206,7 +203,7 @@ namespace sw::editor
         _model.collectNodeNames( listNodeID, listName );
         if ( command == EditorGraphEditCommand::Duplicate )
         {
-            (void)_model.duplicateNodes( listName, float2{ AudioGraphPanelInternal::kDuplicateOffset, AudioGraphPanelInternal::kDuplicateOffset } );
+            (void)_model.duplicateNodes( listName, float2{ EditorNodeGraph::kDuplicateOffset, EditorNodeGraph::kDuplicateOffset } );
             return;
         }
         string text;
@@ -220,42 +217,17 @@ namespace sw::editor
             return;
         for ( const int32 nodeID : listNodeID )
         {
-            ed::DeleteNode( toNodeID( nodeID ) ); // 지우기는 applyCanvasDeletions 가 같은 프레임에 받는다
+            _nodeGraph.requestNodeDeletion( nodeID ); // 지우기는 applyCanvasDeletions 가 같은 프레임에 받는다
         }
     }
 
     void AudioGraphPanel::applyCanvasDeletions()
     {
-        // 캔버스가 지운 id 를 모두 모은 뒤에 모델이 지운다(묻는 동안 그래프를 고치지 않는다). 버퍼는 멤버로 두어 프레임마다 할당하지 않는다.
-        _listLinkID.clear();
-        _listNodeID.clear();
-        if ( ed::BeginDelete() )
-        {
-            ed::LinkId linkID;
-            while ( ed::QueryDeletedLink( &linkID ) )
-            {
-                if ( ed::AcceptDeletedItem() )
-                    _listLinkID.push_back( static_cast<int32>( linkID.Get() ) );
-            }
-            ed::NodeId nodeID;
-            while ( ed::QueryDeletedNode( &nodeID ) )
-            {
-                if ( ed::AcceptDeletedItem() == false )
-                    continue;
-                const int32 id = static_cast<int32>( nodeID.Get() );
-                if ( EditorNodeGraph::isCommentNode( id ) == false )
-                {
-                    _listNodeID.push_back( id );
-                    continue;
-                }
-                // 상자만 지운다 — 안의 노드는 남는다(언리얼 Comment 지우기와 같다).
-                VectorUtil::removeIf( _model.editGraph()._listComment, [commentID = id - EditorNodeGraph::kCommentNodeIDBase]( const GraphCommentBox& comment )
-                { return comment._id == commentID; } );
-                _model.markCommentsEdited( "Delete Audio Graph Comment" );
-            }
-        }
-        ed::EndDelete();
-        _model.applyDeletions( _listLinkID, _listNodeID );
+        // 캔버스가 지운 id 를 모두 모은 뒤에 모델이 지운다. 버퍼는 멤버로 두어 프레임마다 할당하지 않는다.
+        _nodeGraph.collectRemovals( _removal );
+        if ( EditorNodeGraph::removeComments( _model.editGraph()._listComment, _removal._listCommentID ) )
+            _model.markCommentsEdited( "Delete Audio Graph Comment" );
+        _model.applyDeletions( _removal._listLinkID, _removal._listNodeID );
     }
 
     void AudioGraphPanel::drawCanvas( float32 canvasWidth )
@@ -275,13 +247,8 @@ namespace sw::editor
         vector<GraphCommentBox>& listComment = _model.editGraph()._listComment;
         if ( _nodeGraph.drawComments( listComment, _nodeGraph.needsContentFit() ) )
             _model.markCommentsEdited( "Rename Audio Graph Comment" );
-        GraphCommentBox newComment{};
-        if ( _nodeGraph.takeCommentRequest( newComment._position, newComment._size ) )
-        {
-            newComment._id = nextItemID( listComment );
-            listComment.push_back( std::move( newComment ) );
+        if ( _nodeGraph.addRequestedComment( listComment ) )
             _model.markCommentsEdited( "Add Audio Graph Comment" );
-        }
 
         const AudioGraphDef& graph     = _model.getGraph();
         const uint32         nodeCount = static_cast<uint32>( graph._listNode.size() );
@@ -338,13 +305,11 @@ namespace sw::editor
                 _model.markCommentsEdited( "Move Audio Graph Comment", "audiograph.comment.move" );
         }
 
-        ed::NodeId arrSelected[1];
-        if ( ed::GetSelectedNodes( arrSelected, 1 ) > 0 )
-            _model.selectNodeByID( static_cast<int32>( arrSelected[0].Get() ) );
+        int32 selectedNodeID{ 0 };
+        if ( _nodeGraph.findSelectedNode( selectedNodeID ) )
+            _model.selectNodeByID( selectedNodeID );
 
-        _nodeGraph.applyContentFitIfNeeded();
-        EditorNodeGraph::recordDrawnNodeCount( static_cast<uint32>( graph._listNode.size() ) );
-        _nodeGraph.endCanvas();
+        _nodeGraph.finishCanvas( static_cast<uint32>( graph._listNode.size() ) );
         ed::SetCurrentEditor( nullptr );
         ImGui::EndChild();
     }
