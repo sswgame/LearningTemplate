@@ -27,7 +27,7 @@ namespace sw
     {
         uint64 hashText( const string& text )
         {
-            return text.empty() ? 0ull : static_cast<uint64>( hashed_string( text.c_str() ).getHash() );
+            return static_cast<uint64>( hashed_string::computeHash( text ) ); // 같은 값이다 — 프레임마다 서명을 만들 뿐이라 글을 표에 넣지 않는다(빈 글은 0)
         }
     } // namespace
 
