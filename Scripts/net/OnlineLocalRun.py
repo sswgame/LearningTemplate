@@ -1,5 +1,5 @@
 """
-온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 두 프로세스로 띄워 TLS 서비스 연결 · 로그인 · 우편함 호출을 끝까지 돌린다(온라인 조사 단계 1).
+온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 두 프로세스로 띄워 TLS 서비스 연결 · 로그인 · 우편함 호출 · 매칭 배정 · 순위표 제출과 조회를 끝까지 돌린다(온라인 조사 단계 1, K4).
 
   py -3 -m Scripts online-local run                                   # 기본: Shooter3D, 메모리 저장소
   py -3 -m Scripts online-local run --server-config <서버 설정 경로>   # 저장소 · 캐시 · 키트 · 제공자를 그 설정이 고른다(sqlite · postgres · resp 도 같은 길)
@@ -7,7 +7,8 @@
 
 설정은 코드가 만들지 않고 파일을 그대로 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`). 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Shooter3D 매니페스트가 켠다(`_listModuleOverride`).
 `Config/Server/Online/Shooter3D.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
-판정: 클라이언트 로그에 로그인 줄과 우편 목록 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
+매칭은 혼자 서는 모드(`arena_solo`)라 줄을 서면 바로 이 서버(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정된다. 순위표는 `arena_kills` 에 처치 수를 내고 상위 목록을 받는다.
+판정: 클라이언트 로그에 로그인 · 우편 목록 · 매칭 배정 · 점수 제출 · 상위 목록(1 항목) 줄이 있고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 가 없고, 서버가 종료 코드 0 으로 끝난다.
 허용 줄: 개발 티켓 키 경고(기본 설정은 게임 접속 티켓을 쓰지 않아 주 키를 두지 않는다).
 """
 
@@ -31,6 +32,9 @@ _kDefaultConfig = "Config/Server/Online/Shooter3D.json"
 _kListening = re.compile(r"Online services listening on port")
 _kLoggedIn = re.compile(r"online login done")
 _kMailList = re.compile(r"online mail list: \d+ mails")
+_kMatchFound = re.compile(r"online match found")
+_kScoreSubmitted = re.compile(r"online score submitted")
+_kTopScores = re.compile(r"online top scores: 1 entries")
 _kProblemLine = re.compile(r"\[(Error|Warning)\]")
 _kAllowedProblem = re.compile(r"no ticketKeySecretEnvironment")
 
@@ -51,6 +55,12 @@ def checkLogs(serverText: str, clientText: str) -> CheckResult:
         result.problems.append("the client log has no login line - the account kit call never finished")
     if _kMailList.search(clientText) is None:
         result.problems.append("the client log has no mail list line - the mailbox kit call never finished")
+    if _kMatchFound.search(clientText) is None:
+        result.problems.append("the client log has no match found line - the matchmaking kit did not assign the solo arena match")
+    if _kScoreSubmitted.search(clientText) is None:
+        result.problems.append("the client log has no score submitted line - the leaderboard kit did not take the score")
+    if _kTopScores.search(clientText) is None:
+        result.problems.append("the client log has no top scores line with one entry - the leaderboard kit did not return the submitted score")
     for name, text in (("server", serverText), ("client", clientText)):
         for line in text.splitlines():
             if _kProblemLine.search(line) and _kAllowedProblem.search(line) is None:
@@ -97,6 +107,12 @@ def _run(argument: argparse.Namespace) -> int:
             if _waitForText(clientLog, _kLoggedIn, argument.timeout, client):
                 _send(client, "shooter.online.listmail")
                 _waitForText(clientLog, _kMailList, argument.timeout, client)
+                _send(client, "shooter.online.match")
+                _waitForText(clientLog, _kMatchFound, argument.timeout, client)
+                _send(client, "shooter.online.submitkills 5")
+                if _waitForText(clientLog, _kScoreSubmitted, argument.timeout, client):
+                    _send(client, "shooter.online.topkills")
+                    _waitForText(clientLog, _kTopScores, argument.timeout, client)
             time.sleep(1.0)  # 늦게 나는 경고도 잡는다
         except OSError:
             print(f"[online-local] FAIL: the client exited before it took the commands (log: {clientLog})")
@@ -115,7 +131,7 @@ def _print(result: CheckResult, serverLog: Path, clientLog: Path) -> int:
         print(f"[online-local] FAIL: {problem}")
     print(f"[online-local] logs: {serverLog} {clientLog}")
     if result.bOk:
-        print("[online-local] OK: TLS service connection -> login -> mailbox call finished with no unexpected errors or warnings")
+        print("[online-local] OK: TLS service connection -> login -> mailbox -> match -> leaderboard finished with no unexpected errors or warnings")
         return int(ExitCode.Passed)
     return int(ExitCode.Violation)
 
@@ -123,7 +139,7 @@ def _print(result: CheckResult, serverLog: Path, clientLog: Path) -> int:
 def main(listArgument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts online-local", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
-    runParser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 우편 목록을 돈다")
+    runParser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 우편 목록 → 매칭 → 순위표를 돈다")
     runParser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     runParser.add_argument("--game", default="Shooter3D", help="게임 이름")
     runParser.add_argument("--server-config", default=_kDefaultConfig, help="서버 설정(옆 .online.json 과 함께) — 저장소 · 키트 · 제공자를 고른다")

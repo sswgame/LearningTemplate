@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 매칭 모드(MatchModeCatalog) — 서버 온라인 설정(Config/Server/Online/Shooter3D.online.json 의 matchmaking 키트)이 읽는다.
+     arena_solo: 혼자 줄을 서면 바로 판이 선다(팀 하나 · 한 명). 배정은 디렉터리에 등록한 게임 서버(_publicAddress 를 적은 같은 서버)로 간다. -->
+<MatchModeCatalog>
+	<Mode id="arena_solo" teamCount="1" teamSize="1" serverKind="game" maxWaitMs="60000"/>
+</MatchModeCatalog>

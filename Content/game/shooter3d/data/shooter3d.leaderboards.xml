@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 순위표(LeaderboardCatalog) — 서버 온라인 설정(Config/Server/Online/Shooter3D.online.json 의 leaderboard 키트)이 읽는다.
+     arena_kills 는 한 판의 처치 수, 가장 좋은 기록을 남긴다. 이 견본은 클라이언트 제출을 받는다(clientSubmit) - 판을 도는 것이 클라이언트라서다.
+     전용 서버가 판을 돌리게 되면 서버가 점수를 내고 clientSubmit 을 끈다(키트 정책 - 클라이언트 점수는 믿지 않는다). -->
+<LeaderboardCatalog>
+	<Board id="arena_kills" order="Descending" update="Best" reset="None" clientSubmit="true"/>
+</LeaderboardCatalog>

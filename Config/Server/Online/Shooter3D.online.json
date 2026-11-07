@@ -1,6 +1,7 @@
 {
     "_storeName": "local",
     "_cacheName": "local",
+    "_publicAddress": "127.0.0.1",
     "_listKit": [
         {
             "_name": "account",
@@ -29,7 +30,20 @@
             }
         },
         {
+            "_name": "leaderboard",
+            "_settings": {
+                "_catalog": "game/shooter3d/data/shooter3d.leaderboards.xml"
+            }
+        },
+        {
             "_name": "mailbox"
+        },
+        {
+            "_name": "matchmaking",
+            "_settings": {
+                "_catalog": "game/shooter3d/data/shooter3d.matchmodes.xml",
+                "_bGameServer": true
+            }
         }
     ]
 }

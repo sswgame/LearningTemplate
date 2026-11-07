@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 온라인 로그인 → 매칭 → 순위표(K4) — 프로세스 안 서버(Config/Server/Online/Shooter3D.json, 전용 서버와 같은 파일)에 붙어 값으로 본다.
+  매칭: 혼자 서는 모드 arena_solo(shooter3d.matchmodes.xml)에 줄을 서면 디렉터리에 등록한 이 서버(_publicAddress)로 배정 알림이 온다(OnlineMatchFound).
+  배정된 게임 서버 접속(접속 티켓 → UDP)은 두 프로세스 시나리오(py -3 -m Scripts net-pair run)가 본다.
+  순위표: 한 판의 처치 수를 arena_kills(shooter3d.leaderboards.xml, 가장 좋은 기록)에 내고 상위 목록을 받는다. 낮은 점수를 다시 내도 기록은 그대로다.
+  실행: App -game=Shooter3D -scenario=game/shooter3d/automation/onlinematch.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.onlinematch" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" requiresModule="GF_Server_Matchmaking">
+	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Expect watch="Online.SessionClientCount" atLeast="6"/>
+	<Expect watch="Shooter3D.OnlineMatchFound" equals="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="online.local.start Config/Server/Online/Shooter3D.json"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<Expect watch="Online.SessionState" equals="3"/>
+	<Wait frames="1"/>
+	<DevCommand line="shooter.online.login"/>
+	<WaitUntil watch="Shooter3D.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<DevCommand line="shooter.online.match"/>
+	<WaitUntil watch="Shooter3D.OnlineMatchFound" equals="1" timeoutSeconds="20"/>
+	<DevCommand line="shooter.online.submitkills 7"/>
+	<WaitUntil watch="Shooter3D.OnlineSubmittedScoreCount" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="shooter.online.submitkills 3"/>
+	<WaitUntil watch="Shooter3D.OnlineSubmittedScoreCount" equals="2" timeoutSeconds="10"/>
+	<DevCommand line="shooter.online.topkills"/>
+	<WaitUntil watch="Shooter3D.OnlineTopKillsCount" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Shooter3D.OnlineTopKillsScore" equals="7"/>
+	<Wait frames="1"/>
+	<DevCommand line="online.disconnect"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<Pass/>
+</Scenario>
