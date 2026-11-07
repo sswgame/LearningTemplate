@@ -1,14 +1,14 @@
 /**
  * @file ReflectionInvoke.h
  * @brief 타입을 모른 채 이름으로 함수를 부르고, 이벤트를 묶고 · 부릅니다(콘솔 명령 · 비주얼 스크립팅 · 기믹 배선 · 에디터).
- * @details 인자는 `ReflectValue`(타입 이름이 붙은 값) 목록입니다. 인자 자리마다 그 타입의 변환(`ReflectTypeOps`)이 값을 바꿔 넣으므로,
+ * @details 인자는 `ReflectedValue`(타입 이름이 붙은 값) 목록입니다. 인자 자리마다 그 타입의 변환(`ReflectTypeOps`)이 값을 바꿔 넣으므로,
  *          글 "35" 를 `int32` 인자에, `int32` 를 `float32` 인자에 넘길 수 있습니다. 빠진 뒤쪽 인자는 기본 인자로 채웁니다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -27,7 +27,7 @@ namespace sw
     };
 
     /** @brief 이벤트가 불릴 때 받는 쪽입니다. 인자는 이벤트 시그니처 순서대로, 각자 자기 타입 이름을 달고 옵니다. */
-    using ReflectEventHandler = Delegate<void( const vector<ReflectValue>& listArg )>;
+    using ReflectEventHandler = Delegate<void( const vector<ReflectedValue>& listArg )>;
 } // namespace sw
 
 namespace sw
@@ -36,7 +36,7 @@ namespace sw
     struct ReflectEventOps
     {
         Subscription ( *_pBind )( void* pEvent, const ReflectEventHandler& handler ); ///< 붙이고 그 구독을 돌려준다(구독이 사라지면 뗀다)
-        ReflectCallResult ( *_pBroadcast )( void* pEvent, const vector<ReflectValue>& listArg );
+        ReflectCallResult ( *_pBroadcast )( void* pEvent, const vector<ReflectedValue>& listArg );
         bool ( *_pIsBound )( const void* pEvent );
         const ReflectTypeOps* const* _ppParameterType; ///< 인자 자리마다 변환 표
         uint32                       _parameterCount;
@@ -54,14 +54,14 @@ namespace sw
         static constexpr uint32                kParameterCount                          = static_cast<uint32>( sizeof...( Args ) );
         static constexpr const ReflectTypeOps* kArrParameterType[sizeof...( Args ) + 1] = { &ReflectTypeOpsOf<std::decay_t<Args>>::kOps..., nullptr };
 
-        /** @brief 받는 쪽을 붙입니다. 인자는 값으로 복사해 `ReflectValue` 로 넘깁니다. */
+        /** @brief 받는 쪽을 붙입니다. 인자는 값으로 복사해 `ReflectedValue` 로 넘깁니다. */
         static Subscription bind( void* pEvent, const ReflectEventHandler& handler )
         {
             const auto adapter = [handler]( Args... args )
             {
-                vector<ReflectValue> listArg;
+                vector<ReflectedValue> listArg;
                 listArg.reserve( sizeof...( Args ) );
-                ( listArg.push_back( ReflectValue::make<std::decay_t<Args>>( args ) ), ... );
+                ( listArg.push_back( ReflectedValue::make<std::decay_t<Args>>( args ) ), ... );
                 handler( listArg );
             };
             return static_cast<EventType*>( pEvent )->add( Delegate<void( Args... )>::create( adapter ) );
@@ -69,7 +69,7 @@ namespace sw
 
         static bool isBound( const void* pEvent ) { return static_cast<const EventType*>( pEvent )->isBound(); }
 
-        static ReflectCallResult broadcast( void* pEvent, const vector<ReflectValue>& listArg )
+        static ReflectCallResult broadcast( void* pEvent, const vector<ReflectedValue>& listArg )
         {
             return broadcastWith( pEvent, listArg, std::index_sequence_for<Args...>{} );
         }
@@ -79,7 +79,7 @@ namespace sw
     private:
         /** @brief 인자마다 그 타입으로 바꾼 뒤 부릅니다. 하나라도 못 바꾸면 부르지 않습니다. */
         template <size_t... Index>
-        static ReflectCallResult broadcastWith( void* pEvent, const vector<ReflectValue>& listArg, std::index_sequence<Index...> )
+        static ReflectCallResult broadcastWith( void* pEvent, const vector<ReflectedValue>& listArg, std::index_sequence<Index...> )
         {
             if ( listArg.size() > sizeof...( Args ) )
                 return ReflectCallResult::TooManyArguments;
@@ -110,19 +110,19 @@ namespace sw
          * @param pInstance 정적 함수면 nullptr 이어도 됩니다
          * @param pOutResult 있으면 반환값을 담습니다(void 면 빈 값)
          */
-        static ReflectCallResult call( const FunctionInfo& function, void* pInstance, const vector<ReflectValue>& listArg, ReflectValue* pOutResult = nullptr );
+        static ReflectCallResult call( const FunctionInfo& function, void* pInstance, const vector<ReflectedValue>& listArg, ReflectedValue* pOutResult = nullptr );
         /** @brief 인자를 글로 받아 부릅니다(콘솔 명령). 글마다 그 인자 타입으로 읽습니다. */
-        static ReflectCallResult callWithText( const FunctionInfo& function, void* pInstance, const vector<string>& listArgText, ReflectValue* pOutResult = nullptr );
+        static ReflectCallResult callWithText( const FunctionInfo& function, void* pInstance, const vector<string>& listArgText, ReflectedValue* pOutResult = nullptr );
         /** @brief 타입 사슬에서 이름으로 함수를 찾아 부릅니다. 없으면 `NotBound` 입니다. */
-        static ReflectCallResult callByName( const TypeInfo& type, void* pInstance, const hashed_string& functionName, const vector<ReflectValue>& listArg,
-                                             ReflectValue* pOutResult = nullptr );
+        static ReflectCallResult callByName( const TypeInfo& type, void* pInstance, const hashed_string& functionName, const vector<ReflectedValue>& listArg,
+                                             ReflectedValue* pOutResult = nullptr );
         /** @brief 인자를 그 함수의 C++ 타입대로 바꿔 묶습니다(`call` 의 앞 절반). 호출기를 직접 부를 때 씁니다. */
-        static ReflectCallResult makeArguments( const FunctionInfo& function, const vector<ReflectValue>& listArg, TaskArgs& outArgs );
+        static ReflectCallResult makeArguments( const FunctionInfo& function, const vector<ReflectedValue>& listArg, TaskArgs& outArgs );
 
         /** @brief 이벤트에 받는 쪽을 붙이고 그 구독을 돌려줍니다(구독이 사라지면 뗀다. 이벤트를 가진 객체가 먼저 사라지면 무효). 표가 없으면 빈 구독입니다. */
         [[nodiscard]] static Subscription bindEvent( const EventInfo& event, void* pInstance, const ReflectEventHandler& handler );
         /** @brief 이벤트를 부릅니다 — 인자는 이벤트 타입대로 바꿉니다. */
-        static ReflectCallResult broadcastEvent( const EventInfo& event, void* pInstance, const vector<ReflectValue>& listArg );
+        static ReflectCallResult broadcastEvent( const EventInfo& event, void* pInstance, const vector<ReflectedValue>& listArg );
         /** @brief 붙은 받는 쪽이 하나라도 있으면 true 입니다. */
         static bool isEventBound( const EventInfo& event, const void* pInstance );
 

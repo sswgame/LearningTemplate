@@ -9,7 +9,7 @@
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
@@ -326,7 +326,7 @@ namespace sw::editor
         if ( SequenceTimelineUtil::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
             return false;
         float64 number{ 0.0 };
-        if ( ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
+        if ( ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
             return false;
         pOutArrValue[0] = static_cast<float32>( number );
         return true;

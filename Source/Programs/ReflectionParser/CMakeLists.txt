@@ -16,7 +16,7 @@ target_sources(ReflectionSchema INTERFACE
 		"${CMAKE_SOURCE_DIR}/Source/Engine/EngineMinimal.h"
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Foundation/EngineDefines.h"
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Foundation/Foundation.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectUnits.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionUnits.h"
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionAnnotationKeys.h"
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionConstants.h"
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionContainers.h"

@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 
 namespace sw
 {

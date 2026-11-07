@@ -1,0 +1,146 @@
+#include "pch.h"
+
+#include "Engine/Reflection/PropertyInfo.h"
+
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/Memory/MemoryBlock.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/hashed_string.h"
+
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Reflection/TypeRegistry.h"
+
+/**
+ * @file PropertyInfo.cpp
+ * @brief 프로퍼티의 리플렉션 정보입니다.
+ */
+namespace sw
+{
+    const string* PropertyInfo::findCustomMeta( const hashed_string& key ) const noexcept
+    {
+        return _metadata->findCustomMeta( key );
+    }
+
+    PropertyInfo::PropertyInfo() noexcept
+        : _containerWrapper{ nullptr }
+        , _nestedContainer{ nullptr }
+        , _onPropertyBoundChanged{}
+        , _pValueAccessor{ nullptr }
+        , _pRepNotify{ nullptr }
+        , _pValidate{ nullptr }
+        , _name{}
+        , _typeName{}
+        , _elementTypeName{}
+        , _keyTypeName{}
+        , _listAlias{}
+        , _metadata{}
+        , _cachedNameHash{ 0 }
+        , _bitOffset{ 0 }
+        , _containerKind{ ContainerKind::None }
+        , _bIsContainer{ SW_FALSE }
+        , _bIsBitField{ SW_FALSE }
+        , _reservedFlags{ 0 }
+        , _offset{ 0 }
+        , _bitMask{ MathUtil::kMaxUInt8 }
+    {
+    }
+
+    bool PropertyInfo::resolveBitField( size_t ownerSize, SetBitFunction pSetBit )
+    {
+        _bIsBitField = SW_TRUE;
+        _offset      = 0;
+        _bitOffset   = 0;
+        _bitMask     = 0; // 못 찾으면 읽기는 false 이고 쓰기는 무시한다
+        if ( pSetBit == nullptr || ownerSize == 0 )
+            return false;
+
+        // 그 타입이 요구할 수 있는 어떤 정렬보다 넉넉하게. 비트필드의 저장 단위(uint32, uint64)를 통째로 읽고 쓰는 코드가 나온다.
+        constexpr size_t kAlignment  = 64;
+        MemoryBlock      zeroedBlock = MemoryBlock::allocateAligned( ownerSize, kAlignment );
+        if ( zeroedBlock.isValid() == false )
+            return false;
+        uint8* pZeroed = zeroedBlock.getAs<uint8>();
+        Memory::set( pZeroed, 0, ownerSize );
+        pSetBit( pZeroed );
+
+        size_t changedByteCount = 0;
+        size_t changedByteIndex = 0;
+        for ( size_t byteIndex = 0; byteIndex < ownerSize; ++byteIndex )
+        {
+            if ( pZeroed[byteIndex] != 0 )
+            {
+                ++changedByteCount;
+                changedByteIndex = byteIndex;
+            }
+        }
+        const uint8 changedBits = ( changedByteCount == 1 ) ? pZeroed[changedByteIndex] : uint8{ 0 };
+        zeroedBlock.reset();
+
+        const bool bSingleBit = changedBits != 0 && ( changedBits & static_cast<uint8>( changedBits - 1 ) ) == 0;
+        if ( bSingleBit == false )
+        {
+            SW_LOG_ERROR_ID( "Reflection.BitFieldNotLocated", "Bit field '%#' could not be located (%# bytes changed) - it will read as false and ignore writes",
+                             _name.c_str(), static_cast<uint64>( changedByteCount ) );
+            return false;
+        }
+        _offset    = changedByteIndex;
+        _bitMask   = changedBits;
+        _bitOffset = static_cast<uint32>( changedByteIndex * 8 + MathUtil::countTrailingZeros( changedBits ) );
+        return true;
+    }
+
+    NestedContainerInfo PropertyInfo::getContainerShape() const
+    {
+        if ( _nestedContainer != nullptr )
+            return *_nestedContainer;
+
+        NestedContainerInfo flat{};
+        flat._kind            = _containerKind;
+        flat._typeName        = _typeName;
+        flat._elementTypeName = _elementTypeName;
+        flat._keyTypeName     = _keyTypeName;
+        flat._wrapper         = _containerWrapper;
+        return flat;
+    }
+
+    PropertyInfo::PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
+                                bool bIsContainer, ContainerKind containerKind,
+                                hashed_string elementTypeName, hashed_string keyTypeName,
+                                shared_ptr<IContainerWrapper> containerWrapper,
+                                hashed_string                 alias )
+        : _containerWrapper{ std::move( containerWrapper ) }
+        , _nestedContainer{ nullptr }
+        , _onPropertyBoundChanged{}
+        , _pValueAccessor{ nullptr }
+        , _pRepNotify{ nullptr }
+        , _pValidate{ nullptr }
+        , _name{ name }
+        , _typeName{ typeName }
+        , _elementTypeName{ elementTypeName }
+        , _keyTypeName{ keyTypeName }
+        , _listAlias{}
+        , _metadata{}
+        , _cachedNameHash{ 0 }
+        , _bitOffset{ 0 }
+        , _containerKind{ containerKind }
+        , _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
+        , _bIsBitField{ SW_FALSE }
+        , _reservedFlags{ 0 }
+        , _offset{ offset }
+        , _bitMask{ MathUtil::kMaxUInt8 }
+    {
+        if ( alias.empty() == false )
+            _listAlias.push_back( alias );
+    }
+} // namespace sw

@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
@@ -98,8 +98,8 @@ namespace sw
                 // 위에서 채널 0 에 키가 있음을 확인했다.
                 const float32 value = *track._listChannel[0].evaluate( frame );
                 // 그 타입이 담지 못하는 값(정수 범위 밖 · unorm 범위 밖)은 쓰지 않고 지금 값을 둔다.
-                (void)ReflectValueUtil::writeNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
-                                                     static_cast<float64>( value ) );
+                (void)ReflectedValueUtil::writeNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
+                                                       static_cast<float64>( value ) );
             }
 
             /** @brief 리그 슬롯 트랙의 가중치를 대상의 `PoseModifierComponent` 에 씁니다. 키나 슬롯 이름이 없으면 건드리지 않습니다. */
@@ -312,8 +312,8 @@ namespace sw
         const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( track._propertyPath.substr( dot + 1 ).c_str() ) );
         if ( pProperty == nullptr )
             return false;
-        const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( pProperty->_typeName );
-        if ( ReflectValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Number )
+        const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName );
+        if ( ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Number )
             return false;
         pOutComponent = pComponent;
         pOutProperty  = pProperty;

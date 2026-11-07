@@ -1,8 +1,8 @@
 /**
- * @file ReflectValue.h
+ * @file ReflectedValue.h
  * @brief 리플렉션 호출 · 이벤트가 주고받는 "타입 이름이 붙은 값" 하나와, 인자 타입마다 값을 바꾸는 표입니다.
  * @details `TaskValue` 는 담긴 타입을 모릅니다(크기만 압니다). 이름으로 함수를 부르는 쪽(콘솔 명령 · 비주얼 스크립팅 · 기믹 배선)은
- *          인자의 C++ 타입을 모르고 값을 넘기므로, 값에 타입 이름을 붙이고(`ReflectValue`) 인자 자리마다 그 이름을 보고 바꿉니다
+ *          인자의 C++ 타입을 모르고 값을 넘기므로, 값에 타입 이름을 붙이고(`ReflectedValue`) 인자 자리마다 그 이름을 보고 바꿉니다
  *          (`ReflectTypeOps::_pConvert`). 같은 타입이면 그대로, 숫자끼리는 형 변환, 글이면 그 타입으로 읽습니다.
  */
 #pragma once
@@ -90,7 +90,7 @@ namespace sw
 
 namespace sw
 {
-    struct ReflectValue;
+    struct ReflectedValue;
 
     /**
      * @brief 내장 타입이 값 하나로 어떻게 읽히는지의 갈래입니다. 숫자 · 글 · 불리언을 가르는 곳(스키마 이주 · UI 바인딩)이 타입 이름 목록 대신 이것만 봅니다.
@@ -104,8 +104,8 @@ namespace sw
         Other   ///< 그 밖(벡터 · 쿼터니언 · 행렬 · 핸들 · 성분이 여럿인 압축 타입 · atomic)
     };
 
-    /** @brief 리플렉션 값 · 내장 타입 표를 다루는 도우미입니다. 템플릿이 아닌 몸통은 `ReflectValue.cpp` 에 있습니다. */
-    struct SW_API ReflectValueUtil
+    /** @brief 리플렉션 값 · 내장 타입 표를 다루는 도우미입니다. 템플릿이 아닌 몸통은 `ReflectedValue.cpp` 에 있습니다. */
+    struct SW_API ReflectedValueUtil
     {
         /** @brief 내장 타입 자리의 갈래입니다(`ReflectBuiltinClass`). 범위 밖 자리는 Other 입니다. */
         static ReflectBuiltinClass getBuiltinClass( int32 builtinIndex );
@@ -136,14 +136,14 @@ namespace sw
          * @brief @p in 을 @p builtinIndex 내장 타입의 값으로 바꿉니다 — 숫자끼리 형 변환, 글은 읽기, 숫자는 글로.
          * @return 바꿀 수 없으면 false(@p outValue 는 그대로)
          */
-        [[nodiscard]] static bool convertToBuiltin( const ReflectValue& in, int32 builtinIndex, TaskValue& outValue );
+        [[nodiscard]] static bool convertToBuiltin( const ReflectedValue& in, int32 builtinIndex, TaskValue& outValue );
         /**
          * @brief @p in 을 열거형 @p enumTypeName 의 값으로 읽습니다 — 같은 열거형 · 정수(알려진 값만) · 이름 글.
          * @return 읽지 못하면 false
          */
-        [[nodiscard]] static bool readEnumValue( const ReflectValue& in, const hashed_string& enumTypeName, int64& outValue );
+        [[nodiscard]] static bool readEnumValue( const ReflectedValue& in, const hashed_string& enumTypeName, int64& outValue );
         /** @brief 사람이 읽는 글입니다. 내장 타입 · 열거형만 값이 보이고 나머지는 `<타입 이름>` 입니다. */
-        static string formatText( const ReflectValue& value );
+        static string formatText( const ReflectedValue& value );
         /**
          * @brief 기본 인자의 C++ 식(`1.0f` · `"idle"` · `Mode::Fast` · `{}`)을 변환이 읽는 글로 바꿉니다.
          * @param outbDefaultConstruct `{}` · `T()` · `T{}` 처럼 "기본값으로 만든다" 는 식이면 true(그때 글은 비어 있다)
@@ -157,13 +157,13 @@ namespace sw
     /**
      * @brief 타입 T 의 정규 이름입니다. 같은 T 는 어디서 물어도 같은 이름입니다.
      * @details 내장 타입은 표의 이름(`int32`), 나머지(열거형 · 구조체)는 컴파일러가 알려 주는 FQN(`sw::DamageEvent`)입니다.
-     *          `ReflectValue::make<T>` 와 인자 변환이 이 이름 하나로 "같은 타입인가" 를 답합니다.
+     *          `ReflectedValue::make<T>` 와 인자 변환이 이 이름 하나로 "같은 타입인가" 를 답합니다.
      */
     template <typename T>
     hashed_string getReflectTypeName()
     {
         if constexpr ( ReflectBuiltinOf<T>::kIndex >= 0 )
-            return ReflectValueUtil::getBuiltinTypeName( ReflectBuiltinOf<T>::kIndex );
+            return ReflectedValueUtil::getBuiltinTypeName( ReflectBuiltinOf<T>::kIndex );
         else
             return typeFqn<T>();
     }
@@ -176,24 +176,24 @@ namespace sw
      * @details 값은 그 타입의 `TaskValue` 입니다(인자 하나를 꺼낼 때 생성 호출기가 `args.get<T>` 로 그대로 읽는 꼴). 이름이 비면
      *          "값 없음" 이고, 인자 자리에 넘기면 그 인자 타입의 기본값이 됩니다.
      */
-    struct SW_API ReflectValue
+    struct SW_API ReflectedValue
     {
         hashed_string _typeName; ///< 담긴 값의 정규 타입 이름(`getReflectTypeName<T>`). 비면 값이 없다
         TaskValue     _value;
 
-        ReflectValue() = default;
-        ReflectValue( hashed_string typeName, TaskValue value );
+        ReflectedValue() = default;
+        ReflectedValue( hashed_string typeName, TaskValue value );
 
         /** @brief T 의 값을 담습니다. */
         template <typename T>
-        static ReflectValue make( T value )
+        static ReflectedValue make( T value )
         {
             using Stored = std::decay_t<T>;
-            return ReflectValue( getReflectTypeName<Stored>(), TaskValue{ Stored( std::move( value ) ) } );
+            return ReflectedValue( getReflectTypeName<Stored>(), TaskValue{ Stored( std::move( value ) ) } );
         }
 
         /** @brief 글을 담습니다(`string`). 인자 자리에서 그 타입으로 읽힙니다 — 콘솔 명령 · 기본 인자가 이 길입니다. */
-        static ReflectValue makeText( string_view text );
+        static ReflectedValue makeText( string_view text );
 
         /** @brief 값이 없으면 true 입니다. */
         bool isEmpty() const { return _typeName.empty() || _value.hasValue() == false; }
@@ -207,8 +207,8 @@ namespace sw
             return _value.getPtr<T>();
         }
 
-        /** @brief 사람이 읽는 글입니다(`ReflectValueUtil::formatText`). */
-        string toText() const { return ReflectValueUtil::formatText( *this ); }
+        /** @brief 사람이 읽는 글입니다(`ReflectedValueUtil::formatText`). */
+        string toText() const { return ReflectedValueUtil::formatText( *this ); }
     };
 } // namespace sw
 
@@ -224,7 +224,7 @@ namespace sw
          *        빈 @p in 은 이 타입의 기본값입니다.
          * @return 바꿀 수 없으면 false
          */
-        bool ( *_pConvert )( const ReflectValue& in, TaskValue& outValue );
+        bool ( *_pConvert )( const ReflectedValue& in, TaskValue& outValue );
     };
 } // namespace sw
 
@@ -234,7 +234,7 @@ namespace sw
     template <typename T>
     struct ReflectTypeOpsOf
     {
-        [[nodiscard]] static bool convert( const ReflectValue& in, TaskValue& outValue )
+        [[nodiscard]] static bool convert( const ReflectedValue& in, TaskValue& outValue )
         {
             if ( in.isEmpty() )
             {
@@ -252,11 +252,11 @@ namespace sw
                 return true;
             }
             if constexpr ( ReflectBuiltinOf<T>::kIndex >= 0 )
-                return ReflectValueUtil::convertToBuiltin( in, ReflectBuiltinOf<T>::kIndex, outValue );
+                return ReflectedValueUtil::convertToBuiltin( in, ReflectBuiltinOf<T>::kIndex, outValue );
             else if constexpr ( std::is_enum_v<T> )
             {
                 int64 raw{ 0 };
-                if ( ReflectValueUtil::readEnumValue( in, getReflectTypeName<T>(), raw ) == false )
+                if ( ReflectedValueUtil::readEnumValue( in, getReflectTypeName<T>(), raw ) == false )
                     return false;
                 outValue = TaskValue{ static_cast<T>( raw ) };
                 return true;

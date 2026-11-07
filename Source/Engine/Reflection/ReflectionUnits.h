@@ -1,5 +1,5 @@
 /**
- * @file ReflectUnits.h
+ * @file ReflectionUnits.h
  * @brief `PROPERTY( Units = … )` 가 받는 단위 표와 단위 사이 변환입니다(헤더 전용 — ReflectionParser 도 같은 표로 철자를 검사합니다).
  * @details 단위는 **저장된 값의 단위**입니다. 인스펙터는 그 단위로 보이고(라디안 · 비율은 도 · 백분율로 바꿔 보인다), 설정 · 콘솔이 다른 단위로
  *          적힌 글(`"150 cm"`)을 받으면 이 표로 저장 단위로 바꿉니다. 같은 차원끼리만 바뀝니다.

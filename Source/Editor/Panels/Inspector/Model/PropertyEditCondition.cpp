@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -30,8 +30,8 @@ namespace sw
                 outValue = expr._pEnum->readValueFromMemory( pValue );
                 return true;
             }
-            // 정수 · bool 판정은 내장 타입 표 한 곳(`ReflectValueUtil::readInteger`)이 한다 — 이름 목록을 여기 두지 않는다.
-            return ReflectValueUtil::readInteger( ReflectValueUtil::findBuiltinIndex( subject._typeName ), pValue, outValue );
+            // 정수 · bool 판정은 내장 타입 표 한 곳(`ReflectedValueUtil::readInteger`)이 한다 — 이름 목록을 여기 두지 않는다.
+            return ReflectedValueUtil::readInteger( ReflectedValueUtil::findBuiltinIndex( subject._typeName ), pValue, outValue );
         }
     } // namespace
 } // namespace sw

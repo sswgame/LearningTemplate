@@ -46,8 +46,8 @@ namespace sw
                 const hashed_string toName   = to._pType->_pGetTypeName();
                 if ( fromName == toName )
                     return true;
-                const int32 fromBuiltin = ReflectValueUtil::findBuiltinIndex( fromName );
-                const int32 toBuiltin   = ReflectValueUtil::findBuiltinIndex( toName );
+                const int32 fromBuiltin = ReflectedValueUtil::findBuiltinIndex( fromName );
+                const int32 toBuiltin   = ReflectedValueUtil::findBuiltinIndex( toName );
                 if ( toBuiltin == ReflectBuiltinIndex::kstring && 0 <= fromBuiltin )
                     return true;
                 return isNumericBuiltin( fromBuiltin ) && isNumericBuiltin( toBuiltin );
@@ -58,9 +58,9 @@ namespace sw
             {
                 if ( parameter.hasDefaultValue() == false )
                     return ReflectCallResult::MissingArgument;
-                bool               bDefaultConstruct = false;
-                const string       text              = ReflectValueUtil::normalizeDefaultLiteral( parameter._defaultValue, bDefaultConstruct );
-                const ReflectValue source            = bDefaultConstruct ? ReflectValue{} : ReflectValue::makeText( text );
+                bool                 bDefaultConstruct = false;
+                const string         text              = ReflectedValueUtil::normalizeDefaultLiteral( parameter._defaultValue, bDefaultConstruct );
+                const ReflectedValue source            = bDefaultConstruct ? ReflectedValue{} : ReflectedValue::makeText( text );
                 return parameter._pType->_pConvert( source, outValue ) ? ReflectCallResult::Ok : ReflectCallResult::ArgumentMismatch;
             }
         };
@@ -86,7 +86,7 @@ namespace sw
         }
     }
 
-    ReflectCallResult ReflectionInvoke::makeArguments( const FunctionInfo& function, const vector<ReflectValue>& listArg, TaskArgs& outArgs )
+    ReflectCallResult ReflectionInvoke::makeArguments( const FunctionInfo& function, const vector<ReflectedValue>& listArg, TaskArgs& outArgs )
     {
         const vector<FunctionParameterInfo>& listParameter = function._listParameter;
         if ( listArg.size() > listParameter.size() )
@@ -114,10 +114,10 @@ namespace sw
         return ReflectCallResult::Ok;
     }
 
-    ReflectCallResult ReflectionInvoke::call( const FunctionInfo& function, void* pInstance, const vector<ReflectValue>& listArg, ReflectValue* pOutResult )
+    ReflectCallResult ReflectionInvoke::call( const FunctionInfo& function, void* pInstance, const vector<ReflectedValue>& listArg, ReflectedValue* pOutResult )
     {
         if ( pOutResult != nullptr )
-            *pOutResult = ReflectValue{};
+            *pOutResult = ReflectedValue{};
         if ( function._invoker.isBound() == false )
             return ReflectCallResult::NotBound;
         if ( pInstance == nullptr && function._metadata->_bStatic == SW_FALSE )
@@ -130,23 +130,23 @@ namespace sw
 
         TaskValue result = function._invoker( pInstance, args );
         if ( pOutResult != nullptr && function._pReturnType != nullptr )
-            *pOutResult = ReflectValue( function._pReturnType->_pGetTypeName(), std::move( result ) );
+            *pOutResult = ReflectedValue( function._pReturnType->_pGetTypeName(), std::move( result ) );
         return ReflectCallResult::Ok;
     }
 
-    ReflectCallResult ReflectionInvoke::callWithText( const FunctionInfo& function, void* pInstance, const vector<string>& listArgText, ReflectValue* pOutResult )
+    ReflectCallResult ReflectionInvoke::callWithText( const FunctionInfo& function, void* pInstance, const vector<string>& listArgText, ReflectedValue* pOutResult )
     {
-        vector<ReflectValue> listArg;
+        vector<ReflectedValue> listArg;
         listArg.reserve( listArgText.size() );
         for ( const string& text : listArgText )
         {
-            listArg.push_back( ReflectValue::makeText( text ) );
+            listArg.push_back( ReflectedValue::makeText( text ) );
         }
         return call( function, pInstance, listArg, pOutResult );
     }
 
-    ReflectCallResult ReflectionInvoke::callByName( const TypeInfo& type, void* pInstance, const hashed_string& functionName, const vector<ReflectValue>& listArg,
-                                                    ReflectValue* pOutResult )
+    ReflectCallResult ReflectionInvoke::callByName( const TypeInfo& type, void* pInstance, const hashed_string& functionName, const vector<ReflectedValue>& listArg,
+                                                    ReflectedValue* pOutResult )
     {
         const FunctionInfo* pFunction = type.findMethodInHierarchy( functionName );
         if ( pFunction == nullptr )
@@ -161,7 +161,7 @@ namespace sw
         return event._pOps->_pBind( event.getEventPtr( pInstance ), handler );
     }
 
-    ReflectCallResult ReflectionInvoke::broadcastEvent( const EventInfo& event, void* pInstance, const vector<ReflectValue>& listArg )
+    ReflectCallResult ReflectionInvoke::broadcastEvent( const EventInfo& event, void* pInstance, const vector<ReflectedValue>& listArg )
     {
         if ( event._pOps == nullptr )
             return ReflectCallResult::NotBound;
@@ -206,14 +206,14 @@ namespace sw
         // 타입 정보는 주소가 고정이다(묘비). 함수는 부를 때마다 이름으로 찾는다 — 모듈을 다시 올리면 함수 목록이 새로 채워진다.
         const TypeInfo* pTargetType   = &targetType;
         const uint32    functionCount = pFunction->getParameterCount();
-        const auto      forward       = [pTargetType, functionName, pTarget, functionCount]( const vector<ReflectValue>& listArg )
+        const auto      forward       = [pTargetType, functionName, pTarget, functionCount]( const vector<ReflectedValue>& listArg )
         {
             const FunctionInfo* pCurrent = pTargetType->findMethodInHierarchy( functionName );
             if ( pCurrent == nullptr )
                 return;
-            const size_t               passCount = listArg.size() < functionCount ? listArg.size() : functionCount;
-            const vector<ReflectValue> listPass( listArg.begin(), listArg.begin() + static_cast<ptrdiff_t>( passCount ) );
-            const ReflectCallResult    result = call( *pCurrent, pTarget, listPass, nullptr );
+            const size_t                 passCount = listArg.size() < functionCount ? listArg.size() : functionCount;
+            const vector<ReflectedValue> listPass( listArg.begin(), listArg.begin() + static_cast<ptrdiff_t>( passCount ) );
+            const ReflectCallResult      result = call( *pCurrent, pTarget, listPass, nullptr );
             if ( result != ReflectCallResult::Ok )
                 SW_LOG_WARNING_ID( "ReflectionInvoke.EventBoundCallFailed", "Event-bound call '%#::%#' failed: %#", pTargetType->_fullyQualifiedName.c_str(), functionName.c_str(), getEnumName( result ) );
         };

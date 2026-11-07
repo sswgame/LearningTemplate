@@ -1,7 +1,7 @@
 /**
  * @file ReflectionAnnotationKeys.h
  * @brief 리플렉션 어노테이션 인자 키를 편집기에 알리는 선언입니다.
- * @details `AnnotationMeta.txt`(키와 철자), `ReflectUnits.h`(단위), `PredefinedContainerKind.xxx`(컨테이너 종류)를 옮긴 것이다. 만들던 생성기는 지웠다(3edb95697) —
+ * @details `AnnotationMeta.txt`(키와 철자), `ReflectionUnits.h`(단위), `PredefinedContainerKind.xxx`(컨테이너 종류)를 옮긴 것이다. 만들던 생성기는 지웠다(3edb95697) —
  *          키를 더하면 이 파일도 손으로 맞춘다(IDE 의 자동 완성만 영향을 받는다).
  *          편집기에서만 include 됩니다(`ReflectionIntellisense.h`). 빌드와 ReflectionParser 는 이 파일을 읽지 않습니다.
  */
@@ -215,7 +215,7 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey UIMin{};
         /** @brief float.UIMaxRange — `UIMax = 1.5`. */
         static constexpr AnnotationKey UIMax{};
-        /** @brief string.Units — `Units = "…"`. 저장된 값의 단위 — ReflectUnits.h 의 표(mm cm m km deg rad ms s min h percent ratio m/s km/h deg/s rad/s m/s2 Hz fps g kg N). 표에 없으면 파서 오류 */
+        /** @brief string.Units — `Units = "…"`. 저장된 값의 단위 — ReflectionUnits.h 의 표(mm cm m km deg rad ms s min h percent ratio m/s km/h deg/s rad/s m/s2 Hz fps g kg N). 표에 없으면 파서 오류 */
         static constexpr AnnotationKey Units{};
         /** @brief string.EditCondition — `EditCondition = "…"`. 다른 프로퍼티가 참일 때만 고친다: "bEnabled" · "!bLocked" · "mode == Orbit" · "mode != Off". 거짓이면 인스펙터가 막는다(EditConditionHides 면 숨긴다) */
         static constexpr AnnotationKey EditCondition{};
@@ -239,39 +239,39 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey Interp{};
         /** @brief string.Validate — `Validate = "…"`. 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다 */
         static constexpr AnnotationKey Validate{};
-        /** @brief 단위 — `Units = mm` (Length). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = mm` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey mm{};
-        /** @brief 단위 — `Units = cm` (Length). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = cm` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey cm{};
-        /** @brief 단위 — `Units = m` (Length). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = m` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey m{};
-        /** @brief 단위 — `Units = km` (Length). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = km` (Length). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey km{};
-        /** @brief 단위 — `Units = deg` (Angle). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = deg` (Angle). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey deg{};
-        /** @brief 단위 — `Units = rad` (Angle). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = rad` (Angle). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey rad{};
-        /** @brief 단위 — `Units = ms` (Time). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = ms` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey ms{};
-        /** @brief 단위 — `Units = s` (Time). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = s` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey s{};
-        /** @brief 단위 — `Units = min` (Time). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = min` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey min{};
-        /** @brief 단위 — `Units = h` (Time). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = h` (Time). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey h{};
-        /** @brief 단위 — `Units = percent` (Ratio). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = percent` (Ratio). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey percent{};
-        /** @brief 단위 — `Units = ratio` (Ratio). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = ratio` (Ratio). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey ratio{};
-        /** @brief 단위 — `Units = Hz` (Frequency). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = Hz` (Frequency). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey Hz{};
-        /** @brief 단위 — `Units = fps` (Frequency). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = fps` (Frequency). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey fps{};
-        /** @brief 단위 — `Units = g` (Mass). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = g` (Mass). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey g{};
-        /** @brief 단위 — `Units = kg` (Mass). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = kg` (Mass). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey kg{};
-        /** @brief 단위 — `Units = N` (Force). 단위 표는 ReflectUnits.h 의 kArrReflectUnit 입니다. */
+        /** @brief 단위 — `Units = N` (Force). 단위 표는 ReflectionUnits.h 의 kArrReflectUnit 입니다. */
         static constexpr AnnotationKey N{};
     };
 

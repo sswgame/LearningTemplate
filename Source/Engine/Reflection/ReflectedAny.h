@@ -1,5 +1,5 @@
 /**
- * @file ReflectAny.h
+ * @file ReflectedAny.h
  * @brief 다형 REFLECT 값을 담는 타입 태그 바이너리 블롭입니다(SerializeReference 스타일).
  *
  * @note `makeFrom` / `tryGetFrom` 의 **정의는 여기 없습니다.**
@@ -19,7 +19,7 @@ namespace sw
      * @brief 리플렉트 값을 (typeFqn + BinarySerializer 페이로드)로 저장합니다.
      * @details PROPERTY(Polymorphic)과 함께 씁니다. C# dynamic이 아니라 구체 TypeInfo만 허용합니다.
      */
-    struct SW_API ReflectAny
+    struct SW_API ReflectedAny
     {
         hashed_string _typeFqn;
         vector<uint8> _bytes;
@@ -28,23 +28,23 @@ namespace sw
         bool empty() const { return _typeFqn.empty() || _bytes.empty(); }
 
         /** @brief TypeInfo와 값 포인터로 ReflectAny를 만듭니다. */
-        static ReflectAny makeFrom( const TypeInfo& info, const void* pValue );
+        static ReflectedAny makeFrom( const TypeInfo& info, const void* pValue );
         /** @brief 저장된 값을 대상 TypeInfo로 꺼냅니다. */
         [[nodiscard]] bool tryGetFrom( const TypeInfo& info, void* pOut ) const;
 
-        /** @brief 리플렉트 타입 T 의 값으로 ReflectAny 를 만듭니다. */
+        /** @brief 리플렉트 타입 T 의 값으로 ReflectedAny 를 만듭니다. */
         template <typename T>
-        static ReflectAny make( const T& value )
+        static ReflectedAny make( const T& value )
         {
             if constexpr ( HasReflectStaticType<T>::value )
             {
                 const TypeInfo* pInfo = ReflectTypeTraits<T>::StaticType();
                 if ( pInfo == nullptr )
-                    return ReflectAny{};
+                    return ReflectedAny{};
                 return makeFrom( *pInfo, &value );
             }
             else
-                return ReflectAny{};
+                return ReflectedAny{};
         }
 
         /** @brief 저장된 값을 T로 꺼냅니다. */

@@ -19,7 +19,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectAny.h"
+#include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -627,7 +627,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `ReflectAny` 다형 칸에 담기는 값입니다. */
+    /** @brief `ReflectedAny` 다형 칸에 담기는 값입니다. */
     REFLECT()
     struct PolyPayloadA
     {
@@ -650,7 +650,7 @@ namespace sw
         string _albedo;
 
         PROPERTY( Polymorphic )
-        ReflectAny _payload;
+        ReflectedAny _payload;
     };
 } // namespace sw
 
@@ -701,7 +701,7 @@ namespace sw
         string _albedo;
 
         PROPERTY( Polymorphic = true )
-        ReflectAny _payload;
+        ReflectedAny _payload;
 
         /** @brief 별칭도 두 꼴을 다 받아야 합니다 — 별칭 `xmlAttribute` 가 단독 토큰으로만 등록되면 이 대입 꼴이 버려집니다. */
         PROPERTY( xmlAttribute = true )

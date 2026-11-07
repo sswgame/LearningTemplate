@@ -95,7 +95,7 @@ namespace sw
         static GameObject* findTarget( GameObjectManager* pManager, string_view name );
         /**
          * @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다(`_propertyPath` = "컴포넌트 타입.프로퍼티"). 못 찾거나 숫자가 아니면 false 입니다.
-         * @details 숫자 여부는 내장 타입 표의 갈래(`ReflectBuiltinClass::Number` — 정수 · 실수 · 성분이 하나인 압축 타입)로 가른다. 값은 `ReflectValueUtil::readNumber` · `writeNumber` 로만 읽고 쓴다.
+         * @details 숫자 여부는 내장 타입 표의 갈래(`ReflectBuiltinClass::Number` — 정수 · 실수 · 성분이 하나인 압축 타입)로 가른다. 값은 `ReflectedValueUtil::readNumber` · `writeNumber` 로만 읽고 쓴다.
          *          재생이 값을 쓰는 길과 에디터가 지금 값을 읽어 키로 찍는 길이 이 한 규칙을 쓴다(언리얼 `FTrackInstancePropertyBindings` 처럼 묶기는 런타임, 키 찍기는 편집기).
          */
         [[nodiscard]] static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty );

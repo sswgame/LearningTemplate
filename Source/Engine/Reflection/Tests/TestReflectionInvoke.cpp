@@ -59,15 +59,15 @@ SW_TEST_CASE( ReflectionInvokeTest, CallConvertsArgumentsAndFillsDefaults )
     SW_REQUIRE_NOT_NULL( pHeal );
 
     // 글 "10" → int32, 배율은 기본 인자 1.5f
-    sw::ReflectValue result;
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectValue::makeText( "10" ) }, &result ) == sw::ReflectCallResult::Ok );
+    sw::ReflectedValue result;
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectedValue::makeText( "10" ) }, &result ) == sw::ReflectCallResult::Ok );
     SW_EXPECT_EQUAL( 115, actor._hp );
     const int32* pResult = result.findValue<int32>();
     SW_REQUIRE_NOT_NULL( pResult );
     SW_EXPECT_EQUAL( 115, *pResult );
 
     // float64 4.0(소수부 없음) → int32, int32 2 → float32
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectValue::make( 4.0 ), sw::ReflectValue::make( int32{ 2 } ) }, &result ) ==
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectedValue::make( 4.0 ), sw::ReflectedValue::make( int32{ 2 } ) }, &result ) ==
                     sw::ReflectCallResult::Ok );
     SW_EXPECT_EQUAL( 123, actor._hp );
 
@@ -95,15 +95,15 @@ SW_TEST_CASE( ReflectionInvokeTest, EnumArgumentReadsNameValueAndDefault )
     SW_EXPECT_TRUE( sw::ReflectionInvoke::callWithText( *pSetStatus, &actor, { "Attacking" } ) == sw::ReflectCallResult::Ok );
     SW_EXPECT_TRUE( actor._status == sw::SampleStatus::Attacking );
 
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pSetStatus, &actor, { sw::ReflectValue::make( sw::SampleStatus::Idle ) } ) == sw::ReflectCallResult::Ok );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pSetStatus, &actor, { sw::ReflectedValue::make( sw::SampleStatus::Idle ) } ) == sw::ReflectCallResult::Ok );
     SW_EXPECT_TRUE( actor._status == sw::SampleStatus::Idle );
 
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pSetStatus, &actor, { sw::ReflectValue::make( int32{ 1 } ) } ) == sw::ReflectCallResult::Ok );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pSetStatus, &actor, { sw::ReflectedValue::make( int32{ 1 } ) } ) == sw::ReflectCallResult::Ok );
     SW_EXPECT_TRUE( actor._status == sw::SampleStatus::Moving );
 
     // 모르는 이름 · 모르는 값은 거절하고 값을 건드리지 않는다
     SW_EXPECT_TRUE( sw::ReflectionInvoke::callWithText( *pSetStatus, &actor, { "Flying" } ) == sw::ReflectCallResult::ArgumentMismatch );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pSetStatus, &actor, { sw::ReflectValue::make( int32{ 9 } ) } ) == sw::ReflectCallResult::ArgumentMismatch );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pSetStatus, &actor, { sw::ReflectedValue::make( int32{ 9 } ) } ) == sw::ReflectCallResult::ArgumentMismatch );
     SW_EXPECT_TRUE( actor._status == sw::SampleStatus::Moving );
 }
 
@@ -119,9 +119,9 @@ SW_TEST_CASE( ReflectionInvokeTest, CallRejectsArgumentsItCannotPass )
     SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, {} ) == sw::ReflectCallResult::MissingArgument );
     SW_EXPECT_TRUE( sw::ReflectionInvoke::callWithText( *pHeal, &actor, { "1", "2", "3" } ) == sw::ReflectCallResult::TooManyArguments );
     SW_EXPECT_TRUE( sw::ReflectionInvoke::callWithText( *pHeal, &actor, { "ten" } ) == sw::ReflectCallResult::ArgumentMismatch );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectValue::make( 2.5f ) } ) == sw::ReflectCallResult::ArgumentMismatch );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectValue::make( int64{ 1 } << 40 ) } ) == sw::ReflectCallResult::ArgumentMismatch );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, nullptr, { sw::ReflectValue::make( int32{ 1 } ) } ) == sw::ReflectCallResult::NullInstance );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectedValue::make( 2.5f ) } ) == sw::ReflectCallResult::ArgumentMismatch );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, &actor, { sw::ReflectedValue::make( int64{ 1 } << 40 ) } ) == sw::ReflectCallResult::ArgumentMismatch );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::call( *pHeal, nullptr, { sw::ReflectedValue::make( int32{ 1 } ) } ) == sw::ReflectCallResult::NullInstance );
     SW_EXPECT_EQUAL( 100, actor._hp );
 
     const sw::TypeInfo* pType = sw::InvokeDemoActor::StaticType();
@@ -165,10 +165,10 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
     const sw::EventInfo* pEvent = pType->findEventInHierarchy( "_onHpChanged" );
     SW_REQUIRE_NOT_NULL( pEvent );
 
-    sw::vector<sw::ReflectValue> listReceived;
-    uint32                       callCount    = 0;
-    sw::Subscription             subscription = sw::ReflectionInvoke::bindEvent( *pEvent, &actor,
-                                                                                 sw::ReflectEventHandler::create( [&listReceived, &callCount]( const sw::vector<sw::ReflectValue>& listArg )
+    sw::vector<sw::ReflectedValue> listReceived;
+    uint32                         callCount    = 0;
+    sw::Subscription               subscription = sw::ReflectionInvoke::bindEvent( *pEvent, &actor,
+                                                                                   sw::ReflectEventHandler::create( [&listReceived, &callCount]( const sw::vector<sw::ReflectedValue>& listArg )
     {
         listReceived = listArg;
         ++callCount;
@@ -193,15 +193,15 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
         nativeHp     = hp;
         nativeReason = reason;
     } ) );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::broadcastEvent( *pEvent, &actor, { sw::ReflectValue::makeText( "7" ), sw::ReflectValue::makeText( "trap" ) } ) ==
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::broadcastEvent( *pEvent, &actor, { sw::ReflectedValue::makeText( "7" ), sw::ReflectedValue::makeText( "trap" ) } ) ==
                     sw::ReflectCallResult::Ok );
     SW_EXPECT_EQUAL( 7, nativeHp );
     SW_EXPECT_EQUAL( sw::string( "trap" ), nativeReason );
     SW_EXPECT_EQUAL( 2u, callCount );
 
     // 인자가 맞지 않으면 아무도 부르지 않는다
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::broadcastEvent( *pEvent, &actor, { sw::ReflectValue::makeText( "7" ) } ) == sw::ReflectCallResult::MissingArgument );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::broadcastEvent( *pEvent, &actor, { sw::ReflectValue::makeText( "x" ), sw::ReflectValue::makeText( "y" ) } ) ==
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::broadcastEvent( *pEvent, &actor, { sw::ReflectedValue::makeText( "7" ) } ) == sw::ReflectCallResult::MissingArgument );
+    SW_EXPECT_TRUE( sw::ReflectionInvoke::broadcastEvent( *pEvent, &actor, { sw::ReflectedValue::makeText( "x" ), sw::ReflectedValue::makeText( "y" ) } ) ==
                     sw::ReflectCallResult::ArgumentMismatch );
     SW_EXPECT_EQUAL( 2u, callCount );
 

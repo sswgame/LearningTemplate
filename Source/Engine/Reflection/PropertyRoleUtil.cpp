@@ -6,7 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -51,7 +51,7 @@ namespace sw
             {
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return nullptr;
-                switch ( ReflectValueUtil::findBuiltinIndex( prop._typeName ) )
+                switch ( ReflectedValueUtil::findBuiltinIndex( prop._typeName ) )
                 {
                     case ReflectBuiltinIndex::kint8:
                         return &blend<int8>;

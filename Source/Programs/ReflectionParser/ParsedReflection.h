@@ -159,7 +159,7 @@ namespace sw
         string                       _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
         string                       _editCondition; ///< `EditCondition = "…"` — 식은 편집기 인스펙터(`PropertyEditCondition`)가 푼다
         string                       _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
-        string                       _units;         ///< `Units = m` — 단위 표(`ReflectUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
+        string                       _units;         ///< `Units = m` — 단위 표(`ReflectionUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
         vector<pair<string, string>> _listCustomMeta;
         string                       _containerType;
         string                       _elementTypeName;

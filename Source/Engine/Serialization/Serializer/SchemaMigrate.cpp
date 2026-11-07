@@ -8,7 +8,7 @@
 #include "Core/String/TagID.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
@@ -112,7 +112,7 @@ namespace sw
              */
             static bool isNumericTypeName( hashed_string typeName )
             {
-                const ReflectBuiltinClass builtinClass = ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( typeName ) );
+                const ReflectBuiltinClass builtinClass = ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( typeName ) );
                 return builtinClass == ReflectBuiltinClass::Bool || builtinClass == ReflectBuiltinClass::Number;
             }
 
@@ -502,7 +502,7 @@ namespace sw
         if ( SchemaMigrateInternal::isStringType( typeName ) )
         {
             // 캐스트할 C++ 타입의 내장 자리로 묻는다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다.
-            if ( ReflectValueUtil::findBuiltinIndex( typeName ) == ReflectBuiltinOf<hashed_string>::kIndex )
+            if ( ReflectedValueUtil::findBuiltinIndex( typeName ) == ReflectBuiltinOf<hashed_string>::kIndex )
             {
                 *static_cast<hashed_string*>( pValPtr ) =
                     hashed_string( stripped.data(), static_cast<uint32>( stripped.size() ) );

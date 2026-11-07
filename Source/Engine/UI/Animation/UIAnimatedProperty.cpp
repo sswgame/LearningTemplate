@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -119,7 +119,7 @@ namespace sw
             return false;
         }
         const PropertyInfo& leaf         = outProperty._path.getLeafProperty();
-        const int32         builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
+        const int32         builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
         const uint8         count        = leaf._bIsBitField == SW_TRUE ? 0 : UIAnimatedPropertyInternal::findComponentCount( builtinIndex );
         outProperty._kind                = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
         outProperty._componentCount      = count;

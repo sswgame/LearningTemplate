@@ -10,7 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -52,11 +52,11 @@ namespace sw
         {
             /**
              * @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸).
-             * @details 숫자 판정은 내장 타입 표 한 곳(`ReflectValueUtil::readNumber`)이 한다 — 성분이 하나인 압축 타입(half · unorm · snorm)도 범위를 본다.
+             * @details 숫자 판정은 내장 타입 표 한 곳(`ReflectedValueUtil::readNumber`)이 한다 — 성분이 하나인 압축 타입(half · unorm · snorm)도 범위를 본다.
              */
             [[nodiscard]] static bool readRangeNumber( const hashed_string& typeName, const ValueAddress value, float64& outValue )
             {
-                return ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( typeName ), value.get(), outValue );
+                return ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( typeName ), value.get(), outValue );
             }
 
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/SlotHandle.h"
@@ -299,7 +299,7 @@ namespace sw
                 }
                 else
                 {
-                    static_assert( std::is_same_v<T, float4x4>, "ReflectValue: 이 내장 타입의 글 서식이 없다 - formatBuiltin 에 분기를 더한다" );
+                    static_assert( std::is_same_v<T, float4x4>, "ReflectedValue: 이 내장 타입의 글 서식이 없다 - formatBuiltin 에 분기를 더한다" );
                     formatstring( buf.data(), buf.capacity(), "<%#>", "float4x4" );
                 }
                 return string( buf.c_str() );
@@ -317,7 +317,7 @@ namespace sw
                 }
                 else if constexpr ( kIsPackedValue<T> )
                 {
-                    static_assert( PackedValueTraits<T>::kComponentCount == 1, "ReflectValue: Number packed type must have one component" );
+                    static_assert( PackedValueTraits<T>::kComponentCount == 1, "ReflectedValue: Number packed type must have one component" );
                     outValue = static_cast<float64>( PackedValueTraits<T>::toFloats( *static_cast<const T*>( pValue ) )._arrValue[0] );
                     return true;
                 }
@@ -424,9 +424,9 @@ namespace sw
             static_assert( std::size( kArrBuiltinRow ) == ReflectBuiltinIndex::kCount, "kArrBuiltinRow must have one row per ReflectBuiltins.xxx type" );
 
             /** @brief 담긴 값을 숫자 · 글로 읽습니다. 내장 타입 · 열거형(이름 글)만 읽힙니다. */
-            [[nodiscard]] static bool readSourceValue( const ReflectValue& in, SourceValue& out )
+            [[nodiscard]] static bool readSourceValue( const ReflectedValue& in, SourceValue& out )
             {
-                const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( in._typeName );
+                const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( in._typeName );
                 if ( 0 <= builtinIndex )
                 {
                     kArrBuiltinRow[builtinIndex]._pReadSource( in._value.getRawPtr(), out );
@@ -456,56 +456,56 @@ namespace sw
 
 namespace sw
 {
-    ReflectValue::ReflectValue( hashed_string typeName, TaskValue value )
+    ReflectedValue::ReflectedValue( hashed_string typeName, TaskValue value )
         : _typeName{ typeName }
         , _value{ std::move( value ) }
     {
     }
 
-    ReflectValue ReflectValue::makeText( string_view text )
+    ReflectedValue ReflectedValue::makeText( string_view text )
     {
-        return ReflectValue( ReflectValueUtil::getBuiltinTypeName( ReflectBuiltinIndex::kstring ), TaskValue{ string( text ) } );
+        return ReflectedValue( ReflectedValueUtil::getBuiltinTypeName( ReflectBuiltinIndex::kstring ), TaskValue{ string( text ) } );
     }
 
-    const hashed_string& ReflectValueUtil::getBuiltinTypeName( const int32 builtinIndex )
+    const hashed_string& ReflectedValueUtil::getBuiltinTypeName( const int32 builtinIndex )
     {
         const auto& listName = ReflectValueInternal::getNameTable();
         SW_ASSERT( 0 <= builtinIndex && static_cast<size_t>( builtinIndex ) < listName.size() );
         return listName[static_cast<size_t>( builtinIndex )];
     }
 
-    ReflectBuiltinClass ReflectValueUtil::getBuiltinClass( const int32 builtinIndex )
+    ReflectBuiltinClass ReflectedValueUtil::getBuiltinClass( const int32 builtinIndex )
     {
         if ( builtinIndex < 0 || ReflectBuiltinIndex::kCount <= builtinIndex )
             return ReflectBuiltinClass::Other;
         return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._class;
     }
 
-    bool ReflectValueUtil::readNumber( const int32 builtinIndex, const void* pValue, float64& outValue )
+    bool ReflectedValueUtil::readNumber( const int32 builtinIndex, const void* pValue, float64& outValue )
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
         return pRow != nullptr && pRow->_pReadNumber( pValue, outValue );
     }
 
-    bool ReflectValueUtil::readInteger( const int32 builtinIndex, const void* pValue, int64& outValue )
+    bool ReflectedValueUtil::readInteger( const int32 builtinIndex, const void* pValue, int64& outValue )
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
         return pRow != nullptr && pRow->_pReadInteger( pValue, outValue );
     }
 
-    bool ReflectValueUtil::writeNumber( const int32 builtinIndex, void* pValue, const float64 value )
+    bool ReflectedValueUtil::writeNumber( const int32 builtinIndex, void* pValue, const float64 value )
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
         return pRow != nullptr && pRow->_pWriteNumber( pValue, value );
     }
 
-    string ReflectValueUtil::formatBuiltin( const int32 builtinIndex, const void* pValue )
+    string ReflectedValueUtil::formatBuiltin( const int32 builtinIndex, const void* pValue )
     {
         const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
         return pRow != nullptr ? pRow->_pFormat( pValue ) : string();
     }
 
-    int32 ReflectValueUtil::findBuiltinIndex( const hashed_string& typeName )
+    int32 ReflectedValueUtil::findBuiltinIndex( const hashed_string& typeName )
     {
         if ( typeName.empty() )
             return -1;
@@ -527,7 +527,7 @@ namespace sw
         return -1;
     }
 
-    bool ReflectValueUtil::convertToBuiltin( const ReflectValue& in, const int32 builtinIndex, TaskValue& outValue )
+    bool ReflectedValueUtil::convertToBuiltin( const ReflectedValue& in, const int32 builtinIndex, TaskValue& outValue )
     {
         if ( builtinIndex < 0 || ReflectBuiltinIndex::kCount <= builtinIndex )
             return false;
@@ -537,13 +537,13 @@ namespace sw
         return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._pConvertSource( source, outValue );
     }
 
-    bool ReflectValueUtil::readEnumValue( const ReflectValue& in, const hashed_string& enumTypeName, int64& outValue )
+    bool ReflectedValueUtil::readEnumValue( const ReflectedValue& in, const hashed_string& enumTypeName, int64& outValue )
     {
         const EnumInfo* pTarget = engine::getSubsystem<TypeRegistry>().findEnum( enumTypeName );
         if ( pTarget == nullptr )
             return false;
         // 다른 열거형의 값은 받지 않는다 — 숫자가 같아도 뜻이 다르다.
-        if ( ReflectValueUtil::findBuiltinIndex( in._typeName ) < 0 )
+        if ( ReflectedValueUtil::findBuiltinIndex( in._typeName ) < 0 )
         {
             const EnumInfo* pSource = engine::getSubsystem<TypeRegistry>().findEnum( in._typeName );
             if ( pSource != pTarget || in._value.getStoredSize() != pTarget->_size )
@@ -560,7 +560,7 @@ namespace sw
         return source._bInteger && pTarget->tryParseText( to_string( source._intValue ), outValue );
     }
 
-    string ReflectValueUtil::formatText( const ReflectValue& value )
+    string ReflectedValueUtil::formatText( const ReflectedValue& value )
     {
         if ( value.isEmpty() )
             return string();
@@ -580,7 +580,7 @@ namespace sw
         return text;
     }
 
-    string ReflectValueUtil::normalizeDefaultLiteral( string_view cppExpression, bool& outbDefaultConstruct )
+    string ReflectedValueUtil::normalizeDefaultLiteral( string_view cppExpression, bool& outbDefaultConstruct )
     {
         outbDefaultConstruct = false;
         string_view text     = StringUtil::trim( cppExpression );

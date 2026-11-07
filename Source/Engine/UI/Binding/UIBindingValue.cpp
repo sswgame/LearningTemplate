@@ -8,7 +8,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
@@ -346,7 +346,7 @@ namespace sw
     UIBindingValueKind UIBindingValue::classifyType( const hashed_string& typeName )
     {
         // 갈래는 내장 타입 표가 정한다(`ReflectBuiltinClass`) — 숫자 읽기 · 쓰기 표(`kArrNumberOps`)도 같은 갈래로 채워지므로 Number 인데 줄이 없는 타입은 없다.
-        switch ( ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( typeName ) ) )
+        switch ( ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( typeName ) ) )
         {
             case ReflectBuiltinClass::Bool:
                 return UIBindingValueKind::Bool;
@@ -426,7 +426,7 @@ namespace sw
         if ( leaf._bIsBitField == SW_TRUE )
             return UIBindingValue::makeBool( leaf.getValue<bool>( pOwner ) );
         const void* pValue       = leaf.getRawPtr( pOwner );
-        const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
+        const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
         return UIBindingValueInternal::getKindOps( path._kind ).pRead( leaf, ObjectAddress{ pOwner }, ValueAddress{ pValue }, builtinIndex );
     }
 
@@ -447,7 +447,7 @@ namespace sw
             return true;
         }
         void*       pValue       = leaf.getRawPtr( pOwner );
-        const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
+        const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
         return UIBindingValueInternal::getKindOps( path._kind ).pWrite( leaf, MutableObjectAddress{ pOwner }, MutableValueAddress{ pValue }, builtinIndex, value );
     }
 

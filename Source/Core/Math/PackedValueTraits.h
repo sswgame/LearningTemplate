@@ -1,7 +1,7 @@
 /**
  * @file PackedValueTraits.h
  * @brief 저장 전용 압축 타입을 실수 성분 묶음(`PackedFloats`)으로 푸는 한 곳의 정의 `PackedValueTraits<T>` 입니다.
- * @details 리플렉션 · 직렬화 · 에디터 인스펙터가 압축 타입을 **값**으로 다루는 길은 모두 이 특성을 지납니다. 글(`0.5,1,0.25`), 인자 변환(`ReflectValue`),
+ * @details 리플렉션 · 직렬화 · 에디터 인스펙터가 압축 타입을 **값**으로 다루는 길은 모두 이 특성을 지납니다. 글(`0.5,1,0.25`), 인자 변환(`ReflectedValue`),
  *          인스펙터 위젯이 타입마다 따로 분기를 갖지 않고 `toFloats` · `fromFloats` 만 부릅니다. 압축 타입을 `ReflectBuiltins.xxx` 에 더하고 여기에
  *          특수화를 빠뜨리면 글 처리기 등록(`SerializeContext::makeDefault`)이 컴파일되지 않습니다.
  *          - **성분 규칙**: `toFloats` 는 저장된 값을 정확히 나타내는 실수를 성분 순서대로 돌려주고, `fromFloats` 는 그 실수를 다시 같은 비트로 담습니다

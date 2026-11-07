@@ -5,7 +5,7 @@
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Reflection/ReflectAny.h"
+#include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
@@ -18,12 +18,12 @@ namespace sw
         {
             static void writeReflectAnyBinary( const void* pPtr, vector<uint8>& listBuf )
             {
-                const ReflectAny& any        = *static_cast<const ReflectAny*>( pPtr );
-                const string_view fqn        = any._typeFqn.view();
-                const uint32      nameLen    = static_cast<uint32>( fqn.size() );
-                const uint32      blobLen    = static_cast<uint32>( any._bytes.size() );
-                const uint8*      pNameBytes = reinterpret_cast<const uint8*>( &nameLen );
-                const uint8*      pBlobBytes = reinterpret_cast<const uint8*>( &blobLen );
+                const ReflectedAny& any        = *static_cast<const ReflectedAny*>( pPtr );
+                const string_view   fqn        = any._typeFqn.view();
+                const uint32        nameLen    = static_cast<uint32>( fqn.size() );
+                const uint32        blobLen    = static_cast<uint32>( any._bytes.size() );
+                const uint8*        pNameBytes = reinterpret_cast<const uint8*>( &nameLen );
+                const uint8*        pBlobBytes = reinterpret_cast<const uint8*>( &blobLen );
 
                 listBuf.reserve( listBuf.size() + sizeof( uint32 ) * 2 + fqn.size() + any._bytes.size() );
                 listBuf.insert( listBuf.end(), pNameBytes, pNameBytes + sizeof( uint32 ) );
@@ -35,8 +35,8 @@ namespace sw
 
             [[nodiscard]] static bool readReflectAnyBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
-                ReflectAny& any = *static_cast<ReflectAny*>( pPtr );
-                any             = ReflectAny{};
+                ReflectedAny& any = *static_cast<ReflectedAny*>( pPtr );
+                any               = ReflectedAny{};
                 if ( offset + sizeof( uint32 ) > size )
                     return false;
                 uint32 nameLen{ 0 };
@@ -61,7 +61,7 @@ namespace sw
 
             static string writeReflectAnyText( const void* pPtr )
             {
-                const ReflectAny& any = *static_cast<const ReflectAny*>( pPtr );
+                const ReflectedAny& any = *static_cast<const ReflectedAny*>( pPtr );
                 // 텍스트 표현은 `타입FQN|16진수 바이트` 한 줄이다(JSON 오브젝트로 풀지 않는다).
                 const string                             hex = HexUtil::encodeBytes( any._bytes.data(), any._bytes.size() );
                 StringBuilder<constant::buffer::kMax128> sb;
@@ -71,9 +71,9 @@ namespace sw
 
             [[nodiscard]] static bool readReflectAnyText( void* pPtr, string_view str )
             {
-                ReflectAny& any  = *static_cast<ReflectAny*>( pPtr );
-                any              = ReflectAny{};
-                const size_t bar = str.find( '|' );
+                ReflectedAny& any = *static_cast<ReflectedAny*>( pPtr );
+                any               = ReflectedAny{};
+                const size_t bar  = str.find( '|' );
                 if ( bar == string_view::npos )
                     return false;
                 // 찾기만 한다 — 바이너리 읽기(위)와 같다. 파일의 모르는 타입 이름을 전역 이름 표에 넣지 않는다.
@@ -87,19 +87,19 @@ namespace sw
 
 namespace sw
 {
-    ReflectAny ReflectAny::makeFrom( const TypeInfo& info, const void* pValue )
+    ReflectedAny ReflectedAny::makeFrom( const TypeInfo& info, const void* pValue )
     {
-        ReflectAny any;
+        ReflectedAny any;
         if ( pValue == nullptr )
             return any;
         // 바이너리로 싣지 못한 값은 빈 값으로 돌려준다. 반쯤 쓴 바이트를 담으면 꺼낼 때 값이 빠진다. 실패는 직렬화기가 알린다.
         if ( BinarySerializer::serialize( pValue, info, any._bytes ) == false )
-            return ReflectAny{};
+            return ReflectedAny{};
         any._typeFqn = info._fullyQualifiedName.empty() == false ? info._fullyQualifiedName : info._name;
         return any;
     }
 
-    bool ReflectAny::tryGetFrom( const TypeInfo& info, void* pOut ) const
+    bool ReflectedAny::tryGetFrom( const TypeInfo& info, void* pOut ) const
     {
         if ( pOut == nullptr || empty() )
             return false;
@@ -112,15 +112,15 @@ namespace sw
 
     void registerReflectAnyHandlers( SerializeContext& context )
     {
-        const hashed_string typeName( "sw::ReflectAny" );
+        const hashed_string typeName( "sw::ReflectedAny" );
         context.registerBinaryHandler( typeName, SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, ReflectAnyInternal::writeReflectAnyBinary ),
                                        SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, ReflectAnyInternal::readReflectAnyBinary ) );
         context.registerTextHandler( typeName, SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, ReflectAnyInternal::writeReflectAnyText ),
                                      SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, ReflectAnyInternal::readReflectAnyText ) );
-        context.registerBinaryHandler( hashed_string( "ReflectAny" ),
+        context.registerBinaryHandler( hashed_string( "ReflectedAny" ),
                                        SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, ReflectAnyInternal::writeReflectAnyBinary ),
                                        SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, ReflectAnyInternal::readReflectAnyBinary ) );
-        context.registerTextHandler( hashed_string( "ReflectAny" ),
+        context.registerTextHandler( hashed_string( "ReflectedAny" ),
                                      SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, ReflectAnyInternal::writeReflectAnyText ),
                                      SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, ReflectAnyInternal::readReflectAnyText ) );
     }

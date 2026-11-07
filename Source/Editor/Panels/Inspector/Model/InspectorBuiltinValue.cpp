@@ -66,7 +66,7 @@ namespace sw::editor
                     formatstring( pOutBuf, capacity, "%#", value.isValid() ? value.getString() : "(none)" );
                 else if constexpr ( std::is_same_v<T, OctahedralNormal> )
                 {
-                    // 편집 위젯(`Direction`)과 같은 방향으로 보여 준다. 글 직렬화가 쓰는 저장 좌표 (u, v) 는 `ReflectValue` 의 글이다.
+                    // 편집 위젯(`Direction`)과 같은 방향으로 보여 준다. 글 직렬화가 쓰는 저장 좌표 (u, v) 는 `ReflectedValue` 의 글이다.
                     const float3 direction = value.toNormal();
                     formatstring( pOutBuf, capacity, "(%#, %#, %#)", direction._x, direction._y, direction._z );
                 }

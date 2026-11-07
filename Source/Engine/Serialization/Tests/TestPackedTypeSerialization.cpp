@@ -8,7 +8,7 @@
 #include "Core/Task/TaskTypes.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include <cstring>
@@ -291,30 +291,30 @@ SW_TEST_CASE( PackedValueSerializationTest, ArgumentConversionReadsAndWritesPack
     SW_EXPECT_TRUE( ReflectBuiltinOf<OctahedralNormal>::kIndex == ReflectBuiltinIndex::kOctahedralNormal );
 
     // 글 -> half (숫자 글)
-    SW_EXPECT_TRUE( ReflectTypeOpsOf<half>::convert( ReflectValue::makeText( "0.5" ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<half>::convert( ReflectedValue::makeText( "0.5" ), converted ) );
     SW_EXPECT_EQUAL( half::fromFloat( 0.5f ).getBits(), converted.getValue<half>().getBits() );
     // float64 -> unorm8, 반올림하고 범위를 넘으면 거절한다.
-    SW_EXPECT_TRUE( ReflectTypeOpsOf<unorm8>::convert( ReflectValue::make( float64{ 0.5 } ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<unorm8>::convert( ReflectedValue::make( float64{ 0.5 } ), converted ) );
     SW_EXPECT_EQUAL( uint8{ 128 }, converted.getValue<unorm8>().getRaw() );
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<unorm8>::convert( ReflectValue::make( float64{ 5.0 } ), converted ) );
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<half>::convert( ReflectValue::make( float64{ 1.0e300 } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<unorm8>::convert( ReflectedValue::make( float64{ 5.0 } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<half>::convert( ReflectedValue::make( float64{ 1.0e300 } ), converted ) );
     // 글 -> half2, 개수가 맞아야 한다.
-    SW_EXPECT_TRUE( ReflectTypeOpsOf<half2>::convert( ReflectValue::makeText( "0.25, 0.5" ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<half2>::convert( ReflectedValue::makeText( "0.25, 0.5" ), converted ) );
     const float2 pair = converted.getValue<half2>().toFloat2();
     SW_EXPECT_EQUAL( 0.25f, pair._x );
     SW_EXPECT_EQUAL( 0.5f, pair._y );
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<half2>::convert( ReflectValue::makeText( "0.25" ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<half2>::convert( ReflectedValue::makeText( "0.25" ), converted ) );
     // 성분이 여럿인 타입은 숫자 하나를 받지 않는다.
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<unorm8x4>::convert( ReflectValue::make( float64{ 0.5 } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<unorm8x4>::convert( ReflectedValue::make( float64{ 0.5 } ), converted ) );
     // half -> float32 (성분 하나는 숫자로 읽힌다)
-    SW_EXPECT_TRUE( ReflectTypeOpsOf<float32>::convert( ReflectValue::make( half::fromFloat( 1.5f ) ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<float32>::convert( ReflectedValue::make( half::fromFloat( 1.5f ) ), converted ) );
     SW_EXPECT_EQUAL( 1.5f, converted.getValue<float32>() );
     // 무한대 half 는 숫자로 읽히지 않는다.
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<float32>::convert( ReflectValue::make( half::fromBits( 0x7C00u ) ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<float32>::convert( ReflectedValue::make( half::fromBits( 0x7C00u ) ), converted ) );
     // 글로 보이기
-    const string pairText = ReflectValue::make( half2::fromFloat2( float2{ 0.25f, 0.5f } ) ).toText();
+    const string pairText = ReflectedValue::make( half2::fromFloat2( float2{ 0.25f, 0.5f } ) ).toText();
     SW_EXPECT_EQUAL( string( "0.25, 0.5" ), pairText ); // 성분마다 가장 짧은 왕복 표기
-    const string unitText = ReflectValue::make( unorm8::fromRaw( 255 ) ).toText();
+    const string unitText = ReflectedValue::make( unorm8::fromRaw( 255 ) ).toText();
     SW_EXPECT_EQUAL( string( "1" ), unitText );
 }
 
@@ -352,12 +352,12 @@ SW_TEST_CASE( PackedValueSerializationTest, NumberListRejectsExtraAndMissingCell
  */
 SW_TEST_CASE( PackedValueSerializationTest, FloatArgumentConversionRejectsNonFiniteAndOutOfRange )
 {
-    TaskValue          converted;
-    const float64      infinity = std::numeric_limits<float64>::infinity();
-    const float64      nan      = std::numeric_limits<float64>::quiet_NaN();
-    const ReflectValue arrBad[] = { ReflectValue::make( infinity ), ReflectValue::make( -infinity ), ReflectValue::make( nan ),
-                                    ReflectValue::make( std::numeric_limits<float32>::infinity() ), ReflectValue::make( std::numeric_limits<float32>::quiet_NaN() ) };
-    for ( const ReflectValue& bad : arrBad )
+    TaskValue            converted;
+    const float64        infinity = std::numeric_limits<float64>::infinity();
+    const float64        nan      = std::numeric_limits<float64>::quiet_NaN();
+    const ReflectedValue arrBad[] = { ReflectedValue::make( infinity ), ReflectedValue::make( -infinity ), ReflectedValue::make( nan ),
+                                      ReflectedValue::make( std::numeric_limits<float32>::infinity() ), ReflectedValue::make( std::numeric_limits<float32>::quiet_NaN() ) };
+    for ( const ReflectedValue& bad : arrBad )
     {
         SW_EXPECT_FALSE( ReflectTypeOpsOf<int32>::convert( bad, converted ) );
         SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( bad, converted ) );
@@ -365,13 +365,13 @@ SW_TEST_CASE( PackedValueSerializationTest, FloatArgumentConversionRejectsNonFin
         SW_EXPECT_FALSE( ReflectTypeOpsOf<half>::convert( bad, converted ) );
     }
     // int64 범위 밖의 유한값은 정수가 아닌 숫자로만 읽혀 정수 자리가 거절하고, 실수 자리는 받는다.
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( ReflectValue::make( float64{ 1.0e300 } ), converted ) );
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( ReflectValue::make( float64{ 9223372036854775808.0 } ), converted ) );
-    SW_EXPECT_TRUE( ReflectTypeOpsOf<float64>::convert( ReflectValue::make( float32{ 1.0e30f } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( ReflectedValue::make( float64{ 1.0e300 } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( ReflectedValue::make( float64{ 9223372036854775808.0 } ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<float64>::convert( ReflectedValue::make( float32{ 1.0e30f } ), converted ) );
     // 범위 안의 정수 값은 그대로 받는다.
-    SW_EXPECT_TRUE( ReflectTypeOpsOf<int32>::convert( ReflectValue::make( float64{ -42.0 } ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<int32>::convert( ReflectedValue::make( float64{ -42.0 } ), converted ) );
     SW_EXPECT_EQUAL( int32{ -42 }, converted.getValue<int32>() );
-    SW_EXPECT_FALSE( ReflectTypeOpsOf<int32>::convert( ReflectValue::make( float64{ 0.5 } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<int32>::convert( ReflectedValue::make( float64{ 0.5 } ), converted ) );
 }
 
 /**
@@ -381,7 +381,7 @@ SW_TEST_CASE( PackedValueSerializationTest, FloatArgumentConversionRejectsNonFin
 SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
 {
     const auto classOf = []( const utf8* pName )
-    { return ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( hashed_string( pName ) ) ); };
+    { return ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ) ); };
     for ( const utf8* pName : { "int8", "uint64", "float32", "float64", "half", "unorm8", "unorm16", "snorm8", "snorm16" } )
     {
         SW_EXPECT_TRUE_MSG( classOf( pName ) == ReflectBuiltinClass::Number, pName );
@@ -394,7 +394,7 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
     SW_EXPECT_TRUE( classOf( "bool" ) == ReflectBuiltinClass::Bool );
     SW_EXPECT_TRUE( classOf( "string" ) == ReflectBuiltinClass::Text );
     SW_EXPECT_TRUE( classOf( "hashed_string" ) == ReflectBuiltinClass::Text );
-    SW_EXPECT_TRUE( ReflectValueUtil::getBuiltinClass( -1 ) == ReflectBuiltinClass::Other );
+    SW_EXPECT_TRUE( ReflectedValueUtil::getBuiltinClass( -1 ) == ReflectBuiltinClass::Other );
 }
 
 /**
@@ -404,24 +404,24 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
 SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 {
     const auto indexOf = []( const utf8* pName )
-    { return ReflectValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
+    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
     float64 number{ 0.0 };
     int64   integer{ 0 };
 
     // 실수 · 큰 uint64 는 값 그대로 숫자다.
     const float32 floatValue = 2.5f;
-    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "float32" ), &floatValue, number ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::readNumber( indexOf( "float32" ), &floatValue, number ) );
     SW_EXPECT_EQUAL( 2.5, number );
     const uint64 bigValue = 1ull << 63;
-    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "uint64" ), &bigValue, number ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::readNumber( indexOf( "uint64" ), &bigValue, number ) );
     SW_EXPECT_EQUAL( 9223372036854775808.0, number );
 
     // 성분이 하나인 압축 타입은 숫자다 - 범위 검사가 이제 이 값을 본다.
     const half halfValue = half::fromFloat( 0.75f );
-    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "half" ), &halfValue, number ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::readNumber( indexOf( "half" ), &halfValue, number ) );
     SW_EXPECT_EQUAL( 0.75, number );
     const unorm8 unitValue = unorm8::fromRaw( 255 );
-    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "unorm8" ), &unitValue, number ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::readNumber( indexOf( "unorm8" ), &unitValue, number ) );
     SW_EXPECT_EQUAL( 1.0, number );
 
     // 숫자가 아닌 갈래(bool · 글 · 성분이 여럿인 압축 타입)와 표 밖 자리는 읽지 않고 값을 그대로 둔다.
@@ -429,25 +429,25 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
     const bool   flag     = true;
     const string text     = "3";
     const half2  halfPair = half2::fromFloat2( float2{ 0.25f, 0.5f } );
-    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "bool" ), &flag, number ) );
-    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "string" ), &text, number ) );
-    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "half2" ), &halfPair, number ) );
-    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( -1, &floatValue, number ) );
-    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "float32" ), nullptr, number ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "bool" ), &flag, number ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "string" ), &text, number ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "half2" ), &halfPair, number ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( -1, &floatValue, number ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readNumber( indexOf( "float32" ), nullptr, number ) );
     SW_EXPECT_EQUAL( -1.0, number );
 
     // 정수판은 정수 · bool 만 읽는다. 실수 · 압축 타입은 소수부를 버리지 않게 거절한다.
     const int16 smallValue = -7;
-    SW_EXPECT_TRUE( ReflectValueUtil::readInteger( indexOf( "int16" ), &smallValue, integer ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::readInteger( indexOf( "int16" ), &smallValue, integer ) );
     SW_EXPECT_EQUAL( int64{ -7 }, integer );
-    SW_EXPECT_TRUE( ReflectValueUtil::readInteger( indexOf( "bool" ), &flag, integer ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::readInteger( indexOf( "bool" ), &flag, integer ) );
     SW_EXPECT_EQUAL( int64{ 1 }, integer );
-    SW_EXPECT_FALSE( ReflectValueUtil::readInteger( indexOf( "float32" ), &floatValue, integer ) );
-    SW_EXPECT_FALSE( ReflectValueUtil::readInteger( indexOf( "half" ), &halfValue, integer ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readInteger( indexOf( "float32" ), &floatValue, integer ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::readInteger( indexOf( "half" ), &halfValue, integer ) );
 
     // 글 갈래는 표의 서식으로 보인다(탐침 `Object.Property` 의 글).
-    SW_EXPECT_EQUAL( string( "3" ), ReflectValueUtil::formatBuiltin( indexOf( "string" ), &text ) );
-    SW_EXPECT_TRUE( ReflectValueUtil::formatBuiltin( -1, &text ).empty() );
+    SW_EXPECT_EQUAL( string( "3" ), ReflectedValueUtil::formatBuiltin( indexOf( "string" ), &text ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::formatBuiltin( -1, &text ).empty() );
 }
 
 /**
@@ -457,34 +457,34 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 SW_TEST_CASE( PackedValueSerializationTest, WriteNumberRoundsAndRejectsWhatTheTypeCannotHold )
 {
     const auto indexOf = []( const utf8* pName )
-    { return ReflectValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
+    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
 
     // 정수는 가장 가까운 정수로, 범위 밖은 거절하고 값을 그대로 둔다.
     int16 smallValue = 0;
-    SW_EXPECT_TRUE( ReflectValueUtil::writeNumber( indexOf( "int16" ), &smallValue, 2.6 ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::writeNumber( indexOf( "int16" ), &smallValue, 2.6 ) );
     SW_EXPECT_EQUAL( int16{ 3 }, smallValue );
-    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "int16" ), &smallValue, 40000.0 ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( indexOf( "int16" ), &smallValue, 40000.0 ) );
     SW_EXPECT_EQUAL( int16{ 3 }, smallValue );
     uint8 byteValue = 7;
-    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "uint8" ), &byteValue, -1.0 ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( indexOf( "uint8" ), &byteValue, -1.0 ) );
     SW_EXPECT_EQUAL( uint8{ 7 }, byteValue );
     // int64 의 상한(2^63)은 열린 끝이다 - float64 로는 max + 1 이 2^63 으로 접힌다.
     int64 wideValue = 0;
-    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "int64" ), &wideValue, 9223372036854775808.0 ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( indexOf( "int64" ), &wideValue, 9223372036854775808.0 ) );
 
     // 실수 · 성분이 하나인 압축 타입
     float32 floatValue = 0.0f;
-    SW_EXPECT_TRUE( ReflectValueUtil::writeNumber( indexOf( "float32" ), &floatValue, 1.25 ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::writeNumber( indexOf( "float32" ), &floatValue, 1.25 ) );
     SW_EXPECT_EQUAL( 1.25f, floatValue );
-    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "float32" ), &floatValue, 1.0e300 ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( indexOf( "float32" ), &floatValue, 1.0e300 ) );
     unorm8 unitValue = unorm8::fromRaw( 0 );
-    SW_EXPECT_TRUE( ReflectValueUtil::writeNumber( indexOf( "unorm8" ), &unitValue, 1.0 ) );
+    SW_EXPECT_TRUE( ReflectedValueUtil::writeNumber( indexOf( "unorm8" ), &unitValue, 1.0 ) );
     SW_EXPECT_EQUAL( uint8{ 255 }, unitValue.getRaw() );
-    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "unorm8" ), &unitValue, 2.0 ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( indexOf( "unorm8" ), &unitValue, 2.0 ) );
     SW_EXPECT_EQUAL( uint8{ 255 }, unitValue.getRaw() );
 
     // 숫자가 아닌 갈래는 쓰지 않는다.
     bool flag = false;
-    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "bool" ), &flag, 1.0 ) );
+    SW_EXPECT_FALSE( ReflectedValueUtil::writeNumber( indexOf( "bool" ), &flag, 1.0 ) );
     SW_EXPECT_FALSE( flag );
 }

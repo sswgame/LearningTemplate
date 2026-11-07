@@ -1,7 +1,7 @@
 /**
  * @file TypeFqn.h
  * @brief 타입의 FQN 을 컴파일러 함수 시그니처에서 뽑습니다(`typeFqn<T>`). 레지스트리 없이 쓰는 잎 헤더입니다.
- * @details `ReflectValue.h` 처럼 `TypeRegistry.h` 를 끌지 않는 헤더의 템플릿도 부른다 — 템플릿이 부르는 이름은 정의 앞에 선언돼 있어야 한다
+ * @details `ReflectedValue.h` 처럼 `TypeRegistry.h` 를 끌지 않는 헤더의 템플릿도 부른다 — 템플릿이 부르는 이름은 정의 앞에 선언돼 있어야 한다
  *          (Linux clang 의 2단계 이름 찾기, Windows 는 같은 규칙을 컴파일러 플래그로 지킨다).
  */
 #pragma once
