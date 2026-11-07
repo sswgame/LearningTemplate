@@ -36,35 +36,12 @@ namespace sw
             vertex._arrColor[3]    = 1.0f;
             return vertex;
         }
-
-        /** @brief 천 LOD 감시 값(시나리오 `game/empty/automation/clothlod`)입니다. 씬의 첫 천을 읽는다. */
-        struct ClothComponentWatchInternal
-        {
-            [[nodiscard]] static bool readIterationCount( const ClothComponent& cloth, float64& outValue )
-            {
-                outValue = static_cast<float64>( cloth.getAppliedIterationCount() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readSuspended( const ClothComponent& cloth, float64& outValue )
-            {
-                outValue = cloth.isLODSuspended() ? 1.0 : 0.0;
-                return true;
-            }
-
-            [[nodiscard]] static bool readGrade( const ClothComponent& cloth, float64& outValue )
-            {
-                outValue = static_cast<float64>( cloth.readLODGrade() );
-                return true;
-            }
-        };
     } // namespace
 
-    SW_AUTOMATION_COMPONENT_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent,
-                                   &ClothComponentWatchInternal::readIterationCount );
-    SW_AUTOMATION_COMPONENT_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent,
-                                   &ClothComponentWatchInternal::readSuspended );
-    SW_AUTOMATION_COMPONENT_WATCH( clothLODGrade, "Cloth.LODGrade", "Animation LOD grade the first cloth reads from its ancestor skeletal mesh", ClothComponent, &ClothComponentWatchInternal::readGrade );
+    // 천 LOD 감시 값(시나리오 `game/empty/automation/clothlod`) — 씬의 첫 천을 읽는다.
+    SW_AUTOMATION_GETTER_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent, &ClothComponent::getAppliedIterationCount );
+    SW_AUTOMATION_GETTER_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent, &ClothComponent::isLODSuspended );
+    SW_AUTOMATION_GETTER_WATCH( clothLODGrade, "Cloth.LODGrade", "Animation LOD grade the first cloth reads from its ancestor skeletal mesh", ClothComponent, &ClothComponent::readLODGrade );
 } // namespace sw
 
 namespace sw

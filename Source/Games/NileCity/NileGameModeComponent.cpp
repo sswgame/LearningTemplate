@@ -62,24 +62,6 @@ namespace sw
                 pMesh->setLocalScale( scale );
                 return pMesh;
             }
-
-            [[nodiscard]] static bool readPopulation( const NileGameModeComponent& director, float64& outValue )
-            {
-                outValue = static_cast<float64>( director.getPopulation() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readMoney( const NileGameModeComponent& director, float64& outValue )
-            {
-                outValue = static_cast<float64>( director.getMoney() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readMonth( const NileGameModeComponent& director, float64& outValue )
-            {
-                outValue = static_cast<float64>( director.getMonthCount() );
-                return true;
-            }
         };
     } // namespace
 
@@ -90,9 +72,9 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
 
-    SW_AUTOMATION_COMPONENT_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileGameModeComponent, &NileGameModeComponentInternal::readPopulation );
-    SW_AUTOMATION_COMPONENT_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", NileGameModeComponent, &NileGameModeComponentInternal::readMoney );
-    SW_AUTOMATION_COMPONENT_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileGameModeComponent, &NileGameModeComponentInternal::readMonth );
+    SW_AUTOMATION_GETTER_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileGameModeComponent, &NileGameModeComponent::getPopulation );
+    SW_AUTOMATION_GETTER_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", NileGameModeComponent, &NileGameModeComponent::getMoney );
+    SW_AUTOMATION_GETTER_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileGameModeComponent, &NileGameModeComponent::getMonthCount );
 } // namespace sw
 
 namespace sw

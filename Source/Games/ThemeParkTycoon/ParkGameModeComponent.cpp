@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/IInputCaptureQuery.h"
@@ -57,19 +57,9 @@ namespace sw
             }
 
             /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
-            [[nodiscard]] static bool readGuestCount( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readGuestCount( const ParkGameModeComponent& director, float64& outValue )
             {
-                const ParkGameModeComponent* pFound = nullptr;
-                if ( pManager == nullptr )
-                    return false;
-                pManager->forEachComponentOfType<ParkGameModeComponent>( [&pFound]( ParkGameModeComponent* pDirector )
-                {
-                    if ( pFound == nullptr )
-                        pFound = pDirector;
-                } );
-                if ( pFound == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pFound->getSimulation().getGuestCount() );
+                outValue = static_cast<float64>( director.getSimulation().getGuestCount() );
                 return true;
             }
         };
@@ -703,5 +693,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkGameModeComponentInternal::readGuestCount );
+    SW_AUTOMATION_COMPONENT_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", ParkGameModeComponent, &ParkGameModeComponentInternal::readGuestCount );
 } // namespace sw

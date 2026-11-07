@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -25,82 +25,14 @@ namespace sw
         constexpr uint32 kTownStateTag     = FourCcUtil::make( "TOWN" );
         constexpr uint32 kTownStateVersion = 1;
 
-        /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 마을 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
-        const TownGameModeComponent* findTownProbeGameMode( const GameObjectManager* pManager )
-        {
-            const TownGameModeComponent* pFound = nullptr;
-            if ( pManager != nullptr )
-            {
-                pManager->forEachComponentOfType<TownGameModeComponent>( [&pFound]( const TownGameModeComponent* pGameMode )
-                {
-                    if ( pFound == nullptr )
-                        pFound = pGameMode;
-                } );
-            }
-            return pFound;
-        }
-
-        [[nodiscard]] bool readHeroTileX( const GameObjectManager* pManager, float64& outValue )
-        {
-            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
-            if ( pGameMode == nullptr )
-                return false;
-            outValue = pGameMode->getHeroTileX();
-            return true;
-        }
-
-        [[nodiscard]] bool readHeroTileY( const GameObjectManager* pManager, float64& outValue )
-        {
-            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
-            if ( pGameMode == nullptr )
-                return false;
-            outValue = pGameMode->getHeroTileY();
-            return true;
-        }
-
-        [[nodiscard]] bool readHeroFacing( const GameObjectManager* pManager, float64& outValue )
-        {
-            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
-            if ( pGameMode == nullptr )
-                return false;
-            outValue = static_cast<float64>( pGameMode->getHeroFacing() );
-            return true;
-        }
-
-        [[nodiscard]] bool readTalking( const GameObjectManager* pManager, float64& outValue )
-        {
-            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
-            if ( pGameMode == nullptr )
-                return false;
-            outValue = pGameMode->isTalking() ? 1.0 : 0.0;
-            return true;
-        }
-
-        [[nodiscard]] bool readShownLineCount( const GameObjectManager* pManager, float64& outValue )
-        {
-            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
-            if ( pGameMode == nullptr )
-                return false;
-            outValue = pGameMode->getShownLineCount();
-            return true;
-        }
-
-        [[nodiscard]] bool readFinishedTalkCount( const GameObjectManager* pManager, float64& outValue )
-        {
-            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
-            if ( pGameMode == nullptr )
-                return false;
-            outValue = pGameMode->getFinishedTalkCount();
-            return true;
-        }
     } // namespace
 
-    SW_AUTOMATION_WATCH( townHeroTileX, "Town.HeroTileX", "Tile column of the hero", &readHeroTileX );
-    SW_AUTOMATION_WATCH( townHeroTileY, "Town.HeroTileY", "Tile row of the hero (rows grow down)", &readHeroTileY );
-    SW_AUTOMATION_WATCH( townHeroFacing, "Town.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", &readHeroFacing );
-    SW_AUTOMATION_WATCH( townTalking, "Town.Talking", "1 while a talk with a villager is open", &readTalking );
-    SW_AUTOMATION_WATCH( townShownLines, "Town.ShownLines", "Dialogue lines shown this session", &readShownLineCount );
-    SW_AUTOMATION_WATCH( townFinishedTalks, "Town.FinishedTalks", "Talks finished this session", &readFinishedTalkCount );
+    SW_AUTOMATION_GETTER_WATCH( townHeroTileX, "Town.HeroTileX", "Tile column of the hero", TownGameModeComponent, &TownGameModeComponent::getHeroTileX );
+    SW_AUTOMATION_GETTER_WATCH( townHeroTileY, "Town.HeroTileY", "Tile row of the hero (rows grow down)", TownGameModeComponent, &TownGameModeComponent::getHeroTileY );
+    SW_AUTOMATION_GETTER_WATCH( townHeroFacing, "Town.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", TownGameModeComponent, &TownGameModeComponent::getHeroFacing );
+    SW_AUTOMATION_GETTER_WATCH( townTalking, "Town.Talking", "1 while a talk with a villager is open", TownGameModeComponent, &TownGameModeComponent::isTalking );
+    SW_AUTOMATION_GETTER_WATCH( townShownLines, "Town.ShownLines", "Dialogue lines shown this session", TownGameModeComponent, &TownGameModeComponent::getShownLineCount );
+    SW_AUTOMATION_GETTER_WATCH( townFinishedTalks, "Town.FinishedTalks", "Talks finished this session", TownGameModeComponent, &TownGameModeComponent::getFinishedTalkCount );
 } // namespace sw
 
 namespace sw

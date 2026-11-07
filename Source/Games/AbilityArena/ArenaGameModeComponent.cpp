@@ -62,24 +62,6 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerShotCount( const ArenaGameModeComponent& gameMode, float64& outValue )
-            {
-                outValue = gameMode.getPlayerShotCount();
-                return true;
-            }
-
-            [[nodiscard]] static bool readKillCount( const ArenaGameModeComponent& gameMode, float64& outValue )
-            {
-                outValue = gameMode.getKillCount();
-                return true;
-            }
-
-            [[nodiscard]] static bool readPlayerControllerKind( const ArenaGameModeComponent& gameMode, float64& outValue )
-            {
-                outValue = gameMode.isPlayerDrivenByAI() ? 1.0 : 0.0;
-                return true;
-            }
-
             static constexpr int32 kTeamEnemy  = 0; ///< `ProjectileState::_team` — 적이 쏜 탄
             static constexpr int32 kTeamPlayer = 1; ///< 플레이어 편이 쏜 탄
 
@@ -175,9 +157,9 @@ namespace sw
 
     SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerX );
     SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerZ );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerShotCount );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readKillCount );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerControllerKind );
+    SW_AUTOMATION_GETTER_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", ArenaGameModeComponent, &ArenaGameModeComponent::getPlayerShotCount );
+    SW_AUTOMATION_GETTER_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponent::getKillCount );
+    SW_AUTOMATION_GETTER_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI", ArenaGameModeComponent, &ArenaGameModeComponent::isPlayerDrivenByAI );
 } // namespace sw
 
 namespace sw

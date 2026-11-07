@@ -83,12 +83,6 @@ namespace sw
             return true;
         }
 
-        [[nodiscard]] bool readFarmerTool( const FarmGameModeComponent& director, float64& outValue )
-        {
-            outValue = static_cast<float64>( director.getTool() );
-            return true;
-        }
-
         [[nodiscard]] bool readTilledCount( const FarmGameModeComponent& director, float64& outValue )
         {
             int32 tilledCount = 0;
@@ -110,11 +104,6 @@ namespace sw
             return true;
         }
 
-        [[nodiscard]] bool readFarmerControllerKind( const FarmGameModeComponent& director, float64& outValue )
-        {
-            outValue = director.isFarmerDrivenByAI() ? 1.0 : 0.0;
-            return true;
-        }
     } // namespace
 
     /**
@@ -125,10 +114,10 @@ namespace sw
     SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The auto farmer AI controller possesses the farmer" );
 
     SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmGameModeComponent, &readFarmerX );
-    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &readFarmerTool );
+    SW_AUTOMATION_GETTER_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &FarmGameModeComponent::getTool );
     SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmGameModeComponent, &readTilledCount );
     SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmGameModeComponent, &readCropCount );
-    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", FarmGameModeComponent, &readFarmerControllerKind );
+    SW_AUTOMATION_GETTER_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", FarmGameModeComponent, &FarmGameModeComponent::isFarmerDrivenByAI );
 } // namespace sw
 
 namespace sw

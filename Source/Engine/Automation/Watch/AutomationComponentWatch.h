@@ -36,14 +36,33 @@ namespace sw
             const TComponent* pComponent = findFirst<TComponent>( pManager );
             return pComponent != nullptr && TRead( *pComponent, outValue );
         }
+
+        /** @brief 첫 @p TComponent 의 인자 없는 const 게터(수 · bool · 열거) @p TGetter 값입니다. 컴포넌트가 없으면 값이 없습니다. */
+        template <typename TComponent, auto TGetter>
+        [[nodiscard]] static bool readGetter( const GameObjectManager* pManager, float64& outValue )
+        {
+            const TComponent* pComponent = findFirst<TComponent>( pManager );
+            if ( pComponent == nullptr )
+                return false;
+            outValue = static_cast<float64>( ( pComponent->*TGetter )() );
+            return true;
+        }
     };
 } // namespace sw
 
 /**
  * @brief 씬의 첫 @p TComponent 에서 수를 읽는 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p pRead 는 `bool ( const TComponent&, float64& )` 입니다.
  * @code
- *     static bool readKillCount( const ArenaGameModeComponent& gameMode, float64& outValue ) { outValue = gameMode.getKillCount(); return true; }
- *     SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &readKillCount );
+ *     static bool readStrideScale( const ShooterAvatarComponent& avatar, float64& outValue ) { if ( avatar.getStrideAppliedCount() == 0 ) return false; outValue = avatar.getLastStrideScale(); return true; }
+ *     SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale; absent until the rig is bound", ShooterAvatarComponent, &readStrideScale );
  * @endcode
  */
 #define SW_AUTOMATION_COMPONENT_WATCH( id, pName, pTooltip, TComponent, pRead ) SW_AUTOMATION_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::read<TComponent, pRead>))
+
+/**
+ * @brief 씬의 첫 @p TComponent 의 const 게터 하나를 그대로 읽는 감시 값을 등록합니다. 값을 가공하거나 "값 없음" 을 고르면 `SW_AUTOMATION_COMPONENT_WATCH` 를 씁니다.
+ * @code
+ *     SW_AUTOMATION_GETTER_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponent::getKillCount );
+ * @endcode
+ */
+#define SW_AUTOMATION_GETTER_WATCH( id, pName, pTooltip, TComponent, pGetter ) SW_AUTOMATION_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::readGetter<TComponent, pGetter>))

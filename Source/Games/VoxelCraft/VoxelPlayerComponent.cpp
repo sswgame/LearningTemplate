@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -69,54 +69,23 @@ namespace sw
                 return pBlock->_dropID.empty() ? block : catalog.findBlockIndex( pBlock->_dropID );
             }
 
-            /** @brief 씬의 첫 복셀 플레이어입니다. 감시 값에서만 쓰고, 프레임 경로에서는 쓰지 않습니다. */
-            static const VoxelPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
+            [[nodiscard]] static bool readWalkedDistance( const VoxelPlayerComponent& player, float64& outValue )
             {
-                const VoxelPlayerComponent* pFound = nullptr;
-                if ( pManager != nullptr )
-                {
-                    pManager->forEachComponentOfType<VoxelPlayerComponent>( [&pFound]( VoxelPlayerComponent* pPlayer )
-                    {
-                        if ( pFound == nullptr )
-                            pFound = pPlayer;
-                    } );
-                }
-                return pFound;
-            }
-
-            [[nodiscard]] static bool readWalkedDistance( const GameObjectManager* pManager, float64& outValue )
-            {
-                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                const float3 delta = pPlayer->getBody().getPosition() - pPlayer->getStartPosition();
+                const float3 delta = player.getBody().getPosition() - player.getStartPosition();
                 outValue           = static_cast<float64>( MathUtil::sqrt( delta._x * delta._x + delta._z * delta._z ) );
                 return true;
             }
 
-            [[nodiscard]] static bool readHotbarSlot( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readHotbarSlot( const VoxelPlayerComponent& player, float64& outValue )
             {
-                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = pPlayer->getHotbar().getSelectedIndex();
+                outValue = player.getHotbar().getSelectedIndex();
                 return true;
             }
 
-            [[nodiscard]] static bool readBrokenCount( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readControlYaw( const VoxelPlayerComponent& player, float64& outValue )
             {
-                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = pPlayer->getBrokenCount();
-                return true;
-            }
-
-            [[nodiscard]] static bool readControlYaw( const GameObjectManager* pManager, float64& outValue )
-            {
-                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                const GameObject*           pOwner  = pPlayer != nullptr ? pPlayer->getOwner() : nullptr;
-                const PawnComponent*        pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                const GameObject*    pOwner = player.getOwner();
+                const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPawn->getIntent()._controlYaw );
@@ -124,12 +93,11 @@ namespace sw
             }
 
             /** @brief 플레이어 폰을 누가 조종하는지 반환합니다. 0은 플레이어 조종자, 1은 자동 플레이 AI, −1은 아무도 조종하지 않는 경우입니다. */
-            [[nodiscard]] static bool readControllerKind( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readControllerKind( const VoxelPlayerComponent& player, float64& outValue )
             {
-                const VoxelPlayerComponent* pPlayer       = findFirstPlayer( pManager );
-                GameObject*                 pOwner        = pPlayer != nullptr ? pPlayer->getOwner() : nullptr;
-                GameObjectManager*          pOwnerManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-                const PawnComponent*        pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                GameObject*          pOwner        = player.getOwner();
+                GameObjectManager*   pOwnerManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const PawnComponent* pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr || pOwnerManager == nullptr )
                     return false;
                 Component* pController = pPawn->isPossessed() ? pOwnerManager->resolveComponent( pPawn->getController() ) : nullptr;
@@ -146,12 +114,11 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( voxelWalkedDistance, "VoxelCraft.WalkedDistance", "Horizontal distance of the player body from where it was first placed", &VoxelPlayerComponentInternal::readWalkedDistance );
-    SW_AUTOMATION_WATCH( voxelHotbarSlot, "VoxelCraft.HotbarSlot", "Selected hotbar slot (0-based)", &VoxelPlayerComponentInternal::readHotbarSlot );
-    SW_AUTOMATION_WATCH( voxelBrokenCount, "VoxelCraft.BrokenCount", "Blocks the player has broken", &VoxelPlayerComponentInternal::readBrokenCount );
-    SW_AUTOMATION_WATCH( voxelControlYaw, "VoxelCraft.ControlYaw", "Control yaw of the player pawn (radians)", &VoxelPlayerComponentInternal::readControlYaw );
-    SW_AUTOMATION_WATCH( voxelControllerKind, "VoxelCraft.ControllerKind", "Who possesses the player pawn: 0 player controller, 1 auto play AI, -1 nobody",
-                         &VoxelPlayerComponentInternal::readControllerKind );
+    SW_AUTOMATION_COMPONENT_WATCH( voxelWalkedDistance, "VoxelCraft.WalkedDistance", "Horizontal distance of the player body from where it was first placed", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readWalkedDistance );
+    SW_AUTOMATION_COMPONENT_WATCH( voxelHotbarSlot, "VoxelCraft.HotbarSlot", "Selected hotbar slot (0-based)", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readHotbarSlot );
+    SW_AUTOMATION_GETTER_WATCH( voxelBrokenCount, "VoxelCraft.BrokenCount", "Blocks the player has broken", VoxelPlayerComponent, &VoxelPlayerComponent::getBrokenCount );
+    SW_AUTOMATION_COMPONENT_WATCH( voxelControlYaw, "VoxelCraft.ControlYaw", "Control yaw of the player pawn (radians)", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readControlYaw );
+    SW_AUTOMATION_COMPONENT_WATCH( voxelControllerKind, "VoxelCraft.ControllerKind", "Who possesses the player pawn: 0 player controller, 1 auto play AI, -1 nobody", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readControllerKind );
 } // namespace sw
 
 namespace sw

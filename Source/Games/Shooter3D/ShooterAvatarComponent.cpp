@@ -8,7 +8,7 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -47,37 +47,12 @@ namespace sw
                 return ShooterAnimationParameter::kMoveIdle;
             }
 
-            /** @brief 시나리오 프로브가 보는 첫 몸입니다(드물게 불리므로 씬을 훑습니다). */
-            static const ShooterAvatarComponent* findFirstAvatar( const GameObjectManager* pManager )
-            {
-                const ShooterAvatarComponent* pFound = nullptr;
-                if ( pManager == nullptr )
-                    return pFound;
-                pManager->forEachComponentOfType<ShooterAvatarComponent>( [&pFound]( ShooterAvatarComponent* pAvatar )
-                {
-                    if ( pFound == nullptr )
-                        pFound = pAvatar;
-                } );
-                return pFound;
-            }
-
             /** @brief 첫 몸이 보폭 워핑 노드에 마지막으로 넣은 배율입니다. 리그가 아직 묶이지 않았으면 프로브가 없는 것으로 보고합니다. */
-            [[nodiscard]] static bool readStrideScale( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readStrideScale( const ShooterAvatarComponent& avatar, float64& outValue )
             {
-                const ShooterAvatarComponent* pAvatar = findFirstAvatar( pManager );
-                if ( pAvatar == nullptr || pAvatar->getStrideAppliedCount() == 0 )
+                if ( avatar.getStrideAppliedCount() == 0 )
                     return false;
-                outValue = static_cast<float64>( pAvatar->getLastStrideScale() );
-                return true;
-            }
-
-            /** @brief 첫 몸이 리그 준비 뒤 보폭 워핑 값을 넣은 프레임 수입니다. */
-            [[nodiscard]] static bool readStrideAppliedCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ShooterAvatarComponent* pAvatar = findFirstAvatar( pManager );
-                if ( pAvatar == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pAvatar->getStrideAppliedCount() );
+                outValue = static_cast<float64>( avatar.getLastStrideScale() );
                 return true;
             }
         };
@@ -270,8 +245,6 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale the first shooter body last gave its StrideWarping node (1 = clip as is); absent until the rig is bound",
-                         &ShooterAvatarComponentInternal::readStrideScale );
-    SW_AUTOMATION_WATCH( shooterStrideAppliedCount, "Shooter3D.StrideAppliedCount", "Frames the first shooter body gave its StrideWarping node a value (0 while the rig is not bound to the mesh)",
-                         &ShooterAvatarComponentInternal::readStrideAppliedCount );
+    SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale the first shooter body last gave its StrideWarping node (1 = clip as is); absent until the rig is bound", ShooterAvatarComponent, &ShooterAvatarComponentInternal::readStrideScale );
+    SW_AUTOMATION_GETTER_WATCH( shooterStrideAppliedCount, "Shooter3D.StrideAppliedCount", "Frames the first shooter body gave its StrideWarping node a value (0 while the rig is not bound to the mesh)", ShooterAvatarComponent, &ShooterAvatarComponent::getStrideAppliedCount );
 } // namespace sw

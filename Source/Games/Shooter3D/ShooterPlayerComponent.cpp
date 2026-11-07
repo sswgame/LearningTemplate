@@ -7,7 +7,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
@@ -114,77 +114,20 @@ namespace sw
                 return true;
             }
 
-            /** @brief 시나리오 프로브가 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑습니다). */
-            static const ShooterPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
-            {
-                const ShooterPlayerComponent* pFound = nullptr;
-                if ( pManager == nullptr )
-                    return pFound;
-                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&pFound]( ShooterPlayerComponent* pPlayer )
-                {
-                    if ( pFound == nullptr )
-                        pFound = pPlayer;
-                } );
-                return pFound;
-            }
-
-            /** @brief 첫 슈터 플레이어의 무기 번호입니다(0 소총, 1 산탄총, 2 권총). */
-            [[nodiscard]] static bool readWeaponIndex( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pPlayer->getWeaponIndex() );
-                return true;
-            }
-
             /** @brief 첫 슈터 플레이어의 지금 무기에 장전한 탄의 한 알 피해입니다(무기 · 탄 · 수정자 조합의 결과). */
-            [[nodiscard]] static bool readShotDamage( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readShotDamage( const ShooterPlayerComponent& player, float64& outValue )
             {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pPlayer->getCurrentWeapon().getShot()._damage );
-                return true;
-            }
-
-            /** @brief 첫 슈터 플레이어가 마지막으로 그리게 넘긴 탄도선의 두께입니다. 1 인칭 총에 가려 그림으로는 볼 수 없어 값으로 본다. */
-            [[nodiscard]] static bool readTracerWidth( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pPlayer->getLastTracerWidth() );
-                return true;
-            }
-
-            /** @brief 첫 슈터 플레이어가 쏜 발 수입니다(판을 다시 시작해도 이어 센다). */
-            [[nodiscard]] static bool readShotCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pPlayer->getShotCount() );
-                return true;
-            }
-
-            /** @brief 첫 슈터 플레이어의 발 가운데 적을 맞힌 발 수입니다. */
-            [[nodiscard]] static bool readEnemyHitCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pPlayer->getHitCount() );
+                outValue = static_cast<float64>( player.getCurrentWeapon().getShot()._damage );
                 return true;
             }
 
             /** @brief 첫 슈터 플레이어의 폰을 가진 조종자를 반환합니다. 0 은 플레이어, 1 은 AI(자동 플레이), -1 은 없음입니다(그 밖의 조종자도 -1). */
-            [[nodiscard]] static bool readControllerKind( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readControllerKind( const ShooterPlayerComponent& player, float64& outValue )
             {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                const GameObject*             pOwner  = pPlayer != nullptr ? pPlayer->getOwner() : nullptr;
-                const PawnComponent*          pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-                if ( pPawn == nullptr )
+                GameObject*          pOwner   = player.getOwner();
+                GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                if ( pPawn == nullptr || pManager == nullptr )
                     return false;
                 // 조종자 목록은 레지스트리에서 얻는다. 폰을 가진 것 하나를 찾는다.
                 outValue = -1.0;
@@ -197,16 +140,6 @@ namespace sw
                     else if ( castTo<AIControllerComponent>( pController ) != nullptr )
                         outValue = 1.0;
                 }
-                return true;
-            }
-
-            /** @brief 첫 슈터 플레이어가 살아 있으면 1 을 반환합니다. 쓰러지면 판을 다시 시작해 무기가 0 으로 돌아가므로 무기 단언의 전제입니다. */
-            [[nodiscard]] static bool readAlive( const GameObjectManager* pManager, float64& outValue )
-            {
-                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
-                if ( pPlayer == nullptr )
-                    return false;
-                outValue = pPlayer->isAlive() ? 1.0 : 0.0;
                 return true;
             }
         };
@@ -1173,17 +1106,13 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
-                         &ShooterPlayerComponentInternal::readWeaponIndex );
-    SW_AUTOMATION_WATCH( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerComponentInternal::readAlive );
-    SW_AUTOMATION_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerComponentInternal::readShotCount );
-    SW_AUTOMATION_WATCH( shooterShotDamage, "Shooter3D.ShotDamage", "Damage of one pellet of the projectile loaded in the first shooter player's weapon",
-                         &ShooterPlayerComponentInternal::readShotDamage );
-    SW_AUTOMATION_WATCH( shooterTracerWidth, "Shooter3D.TracerWidth", "Width of the last tracer the first shooter player drew (the projectile's trail)",
-                         &ShooterPlayerComponentInternal::readTracerWidth );
+    SW_AUTOMATION_GETTER_WATCH( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)", ShooterPlayerComponent, &ShooterPlayerComponent::getWeaponIndex );
+    SW_AUTOMATION_GETTER_WATCH( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", ShooterPlayerComponent, &ShooterPlayerComponent::isAlive );
+    SW_AUTOMATION_GETTER_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", ShooterPlayerComponent, &ShooterPlayerComponent::getShotCount );
+    SW_AUTOMATION_COMPONENT_WATCH( shooterShotDamage, "Shooter3D.ShotDamage", "Damage of one pellet of the projectile loaded in the first shooter player's weapon", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readShotDamage );
+    SW_AUTOMATION_GETTER_WATCH( shooterTracerWidth, "Shooter3D.TracerWidth", "Width of the last tracer the first shooter player drew (the projectile's trail)", ShooterPlayerComponent, &ShooterPlayerComponent::getLastTracerWidth );
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
-    SW_AUTOMATION_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerComponentInternal::readEnemyHitCount );
-    SW_AUTOMATION_WATCH( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none",
-                         &ShooterPlayerComponentInternal::readControllerKind );
+    SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
+    SW_AUTOMATION_COMPONENT_WATCH( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readControllerKind );
 } // namespace sw
