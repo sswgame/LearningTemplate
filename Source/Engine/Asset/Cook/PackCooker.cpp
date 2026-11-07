@@ -173,6 +173,7 @@ namespace sw
                 }
 
                 AssetCookRootRegistry::appendRoots( files._listCodeRoot );
+                files._automation = params._automationContent;
                 PackReachResult reach;
                 const bool      bReached = PackReachability::collect( fields, config._cookRules, files, source, reach );
                 logSelection( listCandidates, reach );

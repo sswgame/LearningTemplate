@@ -25,6 +25,13 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 이 쿠킹이 자동화 콘텐츠(시나리오 — `PackAlwaysCookRule::_bAutomationOnly`)를 담는가입니다. 쿠킹하는 구성에 실행기(`IAutomationRuntime`)가 있는지로 정한다. */
+    enum class PackAutomationContent : uint8
+    {
+        Excluded, ///< 자동화 없는 배포(`SW_ENABLE_AUTOMATION=OFF`) — 시나리오를 담지 않는다
+        Included, ///< 실행기가 있는 구성 — 시나리오를 뿌리로 담는다
+    };
+
     /** @brief 고르기가 글 에셋을 읽는 입구입니다. */
     class IPackReachSource
     {
@@ -37,10 +44,11 @@ namespace sw
     /** @struct PackReachFiles @brief 고르기의 파일 목록입니다. id 는 모두 정규화한 리소스 id(`FileUtil::normalizePath`)다. */
     struct PackReachFiles
     {
-        unordered_set<string> _setPackable;    ///< 담을 수 있는 파일(굽는 도메인의 파일 중 제외 규칙을 지난 것)
-        unordered_set<string> _setExisting;    ///< 있는 모든 파일(제외 규칙이 뺀 것 포함) — 빠진 참조와 뺀 원본을 가른다
-        vector<string>        _listGameDomain; ///< 굽는 게임 팩 도메인(`game/empty`) — 그 게임 설정이 필수 데이터 뿌리를 더한다
-        vector<string>        _listCodeRoot;   ///< 코드가 상수로 읽는 에셋(`AssetCookRootRegistry` — 쿠커가 채운다). 어디에도 없으면 빠진 참조와 같은 오류다
+        unordered_set<string> _setPackable;                                   ///< 담을 수 있는 파일(굽는 도메인의 파일 중 제외 규칙을 지난 것)
+        unordered_set<string> _setExisting;                                   ///< 있는 모든 파일(제외 규칙이 뺀 것 포함) — 빠진 참조와 뺀 원본을 가른다
+        vector<string>        _listGameDomain;                                ///< 굽는 게임 팩 도메인(`game/empty`) — 그 게임 설정이 필수 데이터 뿌리를 더한다
+        PackAutomationContent _automation{ PackAutomationContent::Excluded }; ///< 자동화 전용 묶음을 뿌리로 쓰는가
+        vector<string>        _listCodeRoot;                                  ///< 코드가 상수로 읽는 에셋(`AssetCookRootRegistry` — 쿠커가 채운다). 어디에도 없으면 빠진 참조와 같은 오류다
     };
 
     /** @struct PackReachResult @brief 고르기 결과입니다. */

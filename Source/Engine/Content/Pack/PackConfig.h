@@ -100,6 +100,9 @@ namespace sw
 
         PROPERTY( Required )
         vector<string> _listPattern; ///< 리소스 id 패턴(`game/*/maps/**`)
+
+        PROPERTY( Required )
+        bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(`SW_ENABLE_AUTOMATION=ON`)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
     };
 
     /**

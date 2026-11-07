@@ -116,6 +116,8 @@ namespace sw
                     {
                         for ( const PackAlwaysCookRule& rule : _rules._listAlwaysCook )
                         {
+                            if ( rule._bAutomationOnly && _files._automation == PackAutomationContent::Excluded )
+                                continue; // 자동화 없는 배포 - 시나리오는 읽히지 않는다
                             const bool bMatches = std::any_of( rule._listPattern.begin(), rule._listPattern.end(), [&assetID]( const string& pattern )
                             { return StringUtil::matchesPathPattern( pattern, assetID ); } );
                             if ( bMatches == false )
