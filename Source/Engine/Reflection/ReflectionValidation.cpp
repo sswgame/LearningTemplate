@@ -62,7 +62,38 @@ namespace sw
                 return false;
             }
 
-            static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth )
+            /**
+             * @brief 검증 한 번(`validateObject`) 동안 프로퍼티별 중첩 타입을 기억합니다. 시퀀스 원소마다 같은 프로퍼티의 타입을 레지스트리에서 다시 찾지 않게 한다.
+             * @details 호출 하나 안에서만 산다 — 등록 · 해제 무효화 계약이 필요 없다(`TypeInfo` 주소는 레지스트리 수명 동안 고정). 칸이 차면 레지스트리에서 찾는다.
+             *          측정: `ReflectionValidationTest.NestedElementCost`.
+             */
+            struct NestedTypeCache
+            {
+                static constexpr uint32 kCapacity = 32;
+
+                const PropertyInfo* _arrProperty[kCapacity]{};
+                const TypeInfo*     _arrType[kCapacity]{};
+                uint32              _count{ 0 };
+
+                const TypeInfo* find( const PropertyInfo& prop )
+                {
+                    for ( uint32 index = 0; index < _count; ++index )
+                    {
+                        if ( _arrProperty[index] == &prop )
+                            return _arrType[index];
+                    }
+                    const TypeInfo* pType = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop ) : findNestedType( prop._typeName );
+                    if ( _count < kCapacity )
+                    {
+                        _arrProperty[_count] = &prop;
+                        _arrType[_count]     = pType;
+                        ++_count;
+                    }
+                    return pType;
+                }
+            };
+
+            static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth, NestedTypeCache& cache )
             {
                 const bool bNothingToValidate = pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false;
                 if ( bNothingToValidate )
@@ -78,22 +109,20 @@ namespace sw
                     }
                     if ( prop._bIsBitField == SW_TRUE )
                         continue;
-                    const void* pValue = prop.getRawPtr( pInstance );
+                    const void*     pValue  = prop.getRawPtr( pInstance );
+                    const TypeInfo* pNested = cache.find( prop );
+                    if ( pNested == nullptr )
+                        continue;
                     if ( prop._bIsContainer == SW_FALSE )
                     {
-                        const TypeInfo* pNested = findNestedType( prop._typeName );
-                        if ( pNested != nullptr )
-                            validate( *pNested, pValue, context, depth + 1 );
+                        validate( *pNested, pValue, context, depth + 1, cache );
                         continue;
                     }
-                    const TypeInfo* pElement = findSequenceElementType( prop );
-                    if ( pElement == nullptr )
-                        continue;
                     ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                     const size_t               elementCount = pSequence->getSize( pValue );
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
-                        validate( *pElement, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1 );
+                        validate( *pNested, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1, cache );
                     }
                 }
 
@@ -186,7 +215,8 @@ namespace sw
 
     uint32 ReflectionValidation::validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context )
     {
-        return ReflectionValidationInternal::validate( type, pInstance, context, 0 );
+        ReflectionValidationInternal::NestedTypeCache cache;
+        return ReflectionValidationInternal::validate( type, pInstance, context, 0, cache );
     }
 
     bool ReflectionValidation::hasValidator( const TypeInfo& type )
