@@ -70,39 +70,20 @@ namespace sw
         return static_cast<RTSVisibility>( _listTeamCell[static_cast<size_t>( team )][static_cast<size_t>( _topology.toIndex( cell ) )] );
     }
 
-    void RTSVision::writeState( Archive& outArchive ) const
+    void RTSVision::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listTeamCell.size() );
-        for ( const vector<uint8>& listCell : _listTeamCell )
+        io.list( _listTeamCell, sizeof( uint32 ), [&]( vector<uint8>& listCell )
         {
-            outArchive << listCell;
-        }
-        outArchive << _repaintTimer._remaining;
-    }
-
-    bool RTSVision::readState( Archive& archive )
-    {
-        uint32 teamCount = 0;
-        if ( archive.isError() || archive.readCount( sizeof( uint32 ), teamCount ) == false )
-            return false;
-        vector<vector<uint8>> listTeamCell( teamCount );
-        for ( vector<uint8>& listCell : listTeamCell )
-        {
-            archive >> listCell;
-            if ( listCell.size() != static_cast<size_t>( _topology.getCellCount() ) )
-                archive.setError();
+            io.value( listCell );
+            if ( io.isWriting() )
+                return;
+            io.check( listCell.size() == static_cast<size_t>( _topology.getCellCount() ) );
             for ( const uint8 visibility : listCell )
             {
-                if ( visibility > static_cast<uint8>( RTSVisibility::Visible ) )
-                    archive.setError();
+                io.check( visibility <= static_cast<uint8>( RTSVisibility::Visible ) );
             }
-        }
-        float32 remaining = 0.0f;
-        archive >> remaining;
-        if ( archive.isError() )
-            return false;
-        _listTeamCell            = std::move( listTeamCell );
-        _repaintTimer._remaining = remaining;
-        return true;
+        } );
+        io.value( _repaintTimer );
     }
+
 } // namespace sw

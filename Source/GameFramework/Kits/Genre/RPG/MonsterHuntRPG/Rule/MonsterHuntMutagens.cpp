@@ -140,53 +140,33 @@ namespace sw
         return group >= 0 && group < getGroupCount() && slot >= 0 && slot < static_cast<int32>( _listGroup[static_cast<size_t>( group )]._listSkill.size() );
     }
 
-    void MonsterHuntMutagens::writeState( Archive& outArchive ) const
+    void MonsterHuntMutagens::serializeState( StateIO& io )
     {
-        outArchive << _characterLevel;
-        outArchive << static_cast<uint32>( _listGroup.size() );
-        for ( const Group& group : _listGroup )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.value( _characterLevel );
+        io.expect( static_cast<uint32>( _listGroup.size() ) );
+        vector<hashed_string> listSeenSkill;
+        for ( Group& group : _listGroup )
         {
-            outArchive << static_cast<uint32>( group._listSkill.size() );
-            for ( const hashed_string& skillID : group._listSkill )
+            io.expect( static_cast<uint32>( group._listSkill.size() ) );
+            if ( io.isOk() == false )
+                return;
+            for ( hashed_string& skillID : group._listSkill )
             {
-                StateIO::writeName( outArchive, skillID );
+                io.value( skillID );
+                if ( io.isWriting() || skillID.empty() )
+                    continue;
+                if ( io.check( VectorUtil::contains( listSeenSkill, skillID ) == false ) == false ) // `equipSkill` 의 `AlreadyEquipped` 와 같은 약속 — 겹치면 색 맞춤을 두 번 센다
+                    return;
+                listSeenSkill.push_back( skillID );
             }
-            StateIO::writeName( outArchive, group._mutagenID );
+            io.value( group._mutagenID );
+            if ( io.isReading() )
+            {
+                io.check( group._mutagenID.empty() || _pCatalog->findMutagen( group._mutagenID ) != nullptr );
+            }
         }
     }
 
-    bool MonsterHuntMutagens::readState( Archive& archive )
-    {
-        int32  characterLevel = 0;
-        uint32 count          = 0;
-        archive >> characterLevel;
-        // 그룹마다 슬롯 수(4) + 변이원(4) 바이트 이상
-        const bool bInvalidMutagenData = _pCatalog == nullptr || archive.isError() || archive.readCount( 8, count ) == false || count != _listGroup.size();
-        if ( bInvalidMutagenData )
-            return false;
-        vector<Group>         listGroup = _listGroup;
-        vector<hashed_string> listSeenSkill;
-        for ( Group& group : listGroup )
-        {
-            if ( archive.readCount( 4, count ) == false || count != group._listSkill.size() )
-                return false;
-            for ( hashed_string& skillID : group._listSkill )
-            {
-                if ( StateIO::readName( archive, skillID ) == false )
-                    return false;
-                if ( skillID.empty() )
-                    continue;
-                if ( VectorUtil::contains( listSeenSkill, skillID ) ) // `equipSkill` 의 `AlreadyEquipped` 와 같은 약속 — 겹치면 색 맞춤을 두 번 센다
-                    return false;
-                listSeenSkill.push_back( skillID );
-            }
-            if ( StateIO::readName( archive, group._mutagenID ) == false )
-                return false;
-            if ( group._mutagenID.empty() == false && _pCatalog->findMutagen( group._mutagenID ) == nullptr )
-                return false;
-        }
-        _characterLevel = characterLevel;
-        _listGroup      = std::move( listGroup );
-        return true;
-    }
 } // namespace sw

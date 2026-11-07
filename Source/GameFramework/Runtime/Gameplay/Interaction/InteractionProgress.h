@@ -12,6 +12,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -113,10 +115,11 @@ namespace sw
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 추가하고 비웁니다. */
         void pollEvents( vector<InteractionEvent>& outListEvent );
 
-        /** @brief 참가자, 난수, 시드, 진행량, 시계, 스킬 체크(대상, 남은 시간, 목표 시각, 대기), 끝남, 퇴행을 씁니다. 규칙과 판정기는 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 참가자가 규칙의 상한을 넘거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 참가자, 난수, 시드, 진행량, 시계, 스킬 체크(대상, 남은 시간, 목표 시각, 대기), 끝남, 퇴행을 씁니다. 규칙과 판정기는 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 참가자가 규칙의 상한을 넘거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         void addProgress( float32 delta );

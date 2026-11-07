@@ -135,28 +135,18 @@ namespace sw
         return 0.0f;
     }
 
-    void MonsterHuntCombat::writeState( Archive& outArchive ) const
+    void MonsterHuntCombat::serializeState( StateIO& io )
     {
-        _stamina.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _adrenaline;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.value( _stamina ); // 게이지 설정은 `initialize` 에서 받은 것이므로 값만 읽는다
+        io.value( _random );
+        io.value( _adrenaline );
+        // 상한 밖 · NaN 은 포인트 변환(`static_cast<int32>`)과 피해 배율을 깨뜨린다. NaN 은 비교가 거짓이라 `<` 로는 걸러지지 않는다.
+        if ( io.isReading() )
+        {
+            io.check( 0.0f <= _adrenaline && _adrenaline <= _pCatalog->getCombat()._adrenalineMax );
+        }
     }
 
-    bool MonsterHuntCombat::readState( Archive& archive )
-    {
-        ResourceGauge stamina = _stamina; // 게이지 설정은 `initialize` 에서 받은 것이므로 값만 읽는다
-        GameRandom    random;
-        float32       adrenaline = 0.0f;
-        if ( _pCatalog == nullptr || stamina.readState( archive ) == false || StateIO::readRandom( archive, random ) == false )
-            return false;
-        archive >> adrenaline;
-        // 상한 밖 · NaN 은 포인트 변환(`static_cast<int32>`)과 피해 배율을 깨뜨린다. NaN 은 비교가 거짓이라 `<` 로는 걸러지지 않는다.
-        const bool bAdrenalineValid = 0.0f <= adrenaline && adrenaline <= _pCatalog->getCombat()._adrenalineMax;
-        if ( archive.isError() || bAdrenalineValid == false )
-            return false;
-        _stamina    = stamina;
-        _random     = random;
-        _adrenaline = adrenaline;
-        return true;
-    }
 } // namespace sw

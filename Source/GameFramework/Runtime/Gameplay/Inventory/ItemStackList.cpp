@@ -16,40 +16,33 @@ namespace sw
     {
     }
 
-    void ItemStackList::writeState( Archive& outArchive ) const
+    void ItemStackList::serializeState( StateIO& io )
     {
         vector<hashed_string> listItem;
         getItemIDs( listItem );
         VectorUtil::sort( listItem, HashedStringLexicalLess{} );
-        outArchive << static_cast<uint32>( listItem.size() );
-        for ( const hashed_string& itemID : listItem )
+        uint32 itemCount = static_cast<uint32>( listItem.size() );
+        io.count( sizeof( uint32 ) + sizeof( int32 ), itemCount );
+        if ( io.isOk() == false )
+            return;
+        ItemStackList restored;
+        for ( uint32 index = 0; index < itemCount; ++index )
         {
-            StateIO::writeName( outArchive, itemID );
-            outArchive << getItemCount( itemID );
+            hashed_string itemID = io.isWriting() ? listItem[index] : hashed_string{};
+            int32         amount = io.isWriting() ? getItemCount( itemID ) : 0;
+            io.value( itemID );
+            io.value( amount );
+            if ( io.isWriting() )
+                continue;
+            // 쓰는 쪽은 아이템마다 한 줄을 쓴다. 겹친 줄을 합치면 int32 를 넘겨 음수 개수가 된다.
+            if ( io.check( itemID.empty() == false && amount > 0 && restored.getItemCount( itemID ) <= 0 ) == false )
+                return;
+            restored.addItem( itemID, amount );
         }
-    }
-
-    bool ItemStackList::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        if ( archive.readCount( sizeof( uint32 ) + sizeof( int32 ), count ) == false )
-            return false;
-        ItemStackList list;
-        for ( uint32 index = 0; index < count; ++index )
+        if ( io.isReading() )
         {
-            hashed_string itemID;
-            int32         itemCount = 0;
-            if ( StateIO::readName( archive, itemID ) == false )
-                return false;
-            archive >> itemCount;
-            // `writeState` 는 아이템마다 한 줄을 쓴다. 겹친 줄을 합치면 int32 를 넘겨 음수 개수가 된다.
-            const bool bInvalidStackRecord = archive.isError() || itemID.empty() || itemCount <= 0 || list.getItemCount( itemID ) > 0;
-            if ( bInvalidStackRecord )
-                return false;
-            list.addItem( itemID, itemCount );
+            _listStack = std::move( restored._listStack );
         }
-        _listStack = std::move( list._listStack );
-        return true;
     }
 
     void ItemStackList::addItem( const hashed_string& itemID, int32 count )

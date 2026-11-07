@@ -247,69 +247,33 @@ namespace sw
             --pEntry->_charges;
     }
 
-    void MonsterHuntAlchemy::writeState( Archive& outArchive ) const
+    void MonsterHuntAlchemy::serializeState( StateIO& io )
     {
-        _crafter.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listCharge.size() );
-        for ( const ChargeEntry& charge : _listCharge )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        const auto isKnownItem = [&]( const hashed_string& itemID )
+        { return io.isWriting() || _pCatalog->findAlchemy( itemID ) != nullptr; };
+        io.value( _crafter );
+        // 충전마다 이름(4) + 횟수(4) 바이트
+        io.list( _listCharge, 8, [&]( ChargeEntry& charge )
         {
-            StateIO::writeName( outArchive, charge._itemID );
-            outArchive << charge._charges;
-        }
-        outArchive << static_cast<uint32>( _listEffect.size() );
-        for ( const MonsterHuntActiveEffect& effect : _listEffect )
+            io.value( charge._itemID );
+            io.value( charge._charges );
+            io.check( isKnownItem( charge._itemID ) && 0 <= charge._charges );
+        } );
+        // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4) 바이트
+        io.list( _listEffect, 12, [&]( MonsterHuntActiveEffect& effect )
         {
-            StateIO::writeName( outArchive, effect._itemID );
-            StateIO::writeCountdown( outArchive, effect._remaining );
-            outArchive << effect._lockedToxicity;
-        }
-        StateIO::writeName( outArchive, _oilID );
-        outArchive << _floatingToxicity;
-        outArchive << _oilHits;
+            io.value( effect._itemID );
+            io.value( effect._remaining );
+            io.value( effect._lockedToxicity );
+            io.check( isKnownItem( effect._itemID ) && 0.0f <= effect._lockedToxicity ); // 음수는 총 독성을 깎고, NaN 은 독성 판정을 모두 통과시킨다
+        } );
+        io.value( _oilID );
+        io.value( _floatingToxicity );
+        io.value( _oilHits );
+        // 적중 횟수가 다하면 오일 이름도 지운다(`consumeOilHit`)
+        io.check( ( _oilID.empty() || isKnownItem( _oilID ) ) && _oilID.empty() == ( _oilHits == 0 ) && 0 <= _oilHits && 0.0f <= _floatingToxicity );
     }
 
-    bool MonsterHuntAlchemy::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그와 레시피 카탈로그는 사본이 그대로 가지고 있다.
-        MonsterHuntAlchemy restored = *this;
-        uint32             count    = 0;
-        // 충전마다 이름(4) + 횟수(4) 바이트
-        if ( restored._crafter.readState( archive ) == false || archive.readCount( 8, count ) == false )
-            return false;
-        restored._listCharge.assign( count, ChargeEntry{} );
-        for ( ChargeEntry& charge : restored._listCharge )
-        {
-            if ( StateIO::readName( archive, charge._itemID ) == false || _pCatalog->findAlchemy( charge._itemID ) == nullptr )
-                return false;
-            archive >> charge._charges;
-            if ( charge._charges < 0 )
-                return false;
-        }
-        // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4) 바이트
-        if ( archive.readCount( 12, count ) == false )
-            return false;
-        restored._listEffect.assign( count, MonsterHuntActiveEffect{} );
-        for ( MonsterHuntActiveEffect& effect : restored._listEffect )
-        {
-            const bool bHeadRead = StateIO::readName( archive, effect._itemID ) && StateIO::readCountdown( archive, effect._remaining );
-            if ( bHeadRead == false || _pCatalog->findAlchemy( effect._itemID ) == nullptr )
-                return false;
-            archive >> effect._lockedToxicity;
-            if ( ( 0.0f <= effect._lockedToxicity ) == false ) // 음수는 총 독성을 깎고, NaN 은 독성 판정을 모두 통과시킨다
-                return false;
-        }
-        if ( StateIO::readName( archive, restored._oilID ) == false )
-            return false;
-        archive >> restored._floatingToxicity;
-        archive >> restored._oilHits;
-        const bool bOilKnown  = restored._oilID.empty() || _pCatalog->findAlchemy( restored._oilID ) != nullptr;
-        const bool bOilPaired = restored._oilID.empty() == ( restored._oilHits == 0 ); // 적중 횟수가 다하면 오일 이름도 지운다(`consumeOilHit`)
-        const bool bValid     = archive.isOk() && bOilKnown && bOilPaired && 0 <= restored._oilHits && 0.0f <= restored._floatingToxicity;
-        if ( bValid == false )
-            return false;
-        *this = std::move( restored );
-        return true;
-    }
 } // namespace sw

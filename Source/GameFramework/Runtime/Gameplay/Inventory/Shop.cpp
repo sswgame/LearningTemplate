@@ -101,39 +101,20 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void Wallet::writeState( Archive& outArchive ) const
+    void Wallet::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listBalance.size() );
-        for ( const WalletBalance& balance : _listBalance )
-        {
-            StateIO::writeName( outArchive, balance._currency );
-            outArchive << balance._amount;
-        }
-    }
-
-    bool Wallet::readState( Archive& archive )
-    {
-        uint32 count = 0;
         // 통화마다 이름 길이(4) + 잔액(8) 이상
-        if ( archive.readCount( 12, count ) == false )
-            return false;
-        vector<WalletBalance> listBalance;
-        listBalance.reserve( count );
-        for ( uint32 index = 0; index < count; ++index )
+        io.list( _listBalance, 12, [&]( WalletBalance& balance )
         {
-            WalletBalance balance;
-            if ( StateIO::readName( archive, balance._currency ) == false )
-                return false;
-            archive >> balance._amount;
-            const bool bValid = archive.isOk() && balance._currency.empty() == false;
-            if ( bValid == false )
-                return false;
-            listBalance.push_back( balance );
+            io.value( balance._currency );
+            io.value( balance._amount );
+            io.check( balance._currency.empty() == false );
+        } );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
+            ++_revision;
         }
-        _listBalance = std::move( listBalance );
-        _eventBuffer.clear();
-        ++_revision;
-        return true;
     }
 
     int64 Wallet::getBalance( const hashed_string& currency ) const
@@ -501,97 +482,72 @@ namespace sw
         return shop.refusesCategory( pItem->_category ) || VectorUtil::contains( runtime._listExtraRefused, pItem->_category );
     }
 
-    void ShopState::writeState( Archive& outArchive ) const
+    void ShopState::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listRuntime.size() );
-        for ( const ShopRuntime& runtime : _listRuntime )
+        const auto serializeShop = [&]( ShopRuntime& shop )
         {
-            StateIO::writeName( outArchive, runtime._shopID );
-            outArchive << static_cast<uint32>( runtime._listStockCount.size() );
-            for ( const int32 count : runtime._listStockCount )
+            io.value( shop._shopID );
+            io.list( shop._listStockCount );
+            uint32 saturatedCount = static_cast<uint32>( shop._listSaturatedItem.size() );
+            io.count( 8, saturatedCount );
+            if ( io.isOk() == false )
+                return;
+            if ( io.isReading() )
             {
-                outArchive << count;
+                shop._listSaturatedItem.resize( saturatedCount );
+                shop._listSellFactor.resize( saturatedCount, 1.0f );
             }
-            outArchive << static_cast<uint32>( runtime._listSaturatedItem.size() );
-            for ( size_t index = 0; index < runtime._listSaturatedItem.size(); ++index )
+            for ( uint32 index = 0; index < saturatedCount; ++index )
             {
-                StateIO::writeName( outArchive, runtime._listSaturatedItem[index] );
-                outArchive << ( index < runtime._listSellFactor.size() ? runtime._listSellFactor[index] : 1.0f );
+                io.value( shop._listSaturatedItem[index] );
+                float32 sellFactor = index < shop._listSellFactor.size() ? shop._listSellFactor[index] : 1.0f;
+                io.value( sellFactor );
+                if ( io.isReading() )
+                {
+                    io.check( 0.0f <= sellFactor );
+                    shop._listSellFactor[index] = sellFactor;
+                }
             }
-            outArchive << static_cast<uint32>( runtime._listExtraRefused.size() );
-            for ( const hashed_string& category : runtime._listExtraRefused )
-            {
-                StateIO::writeName( outArchive, category );
-            }
-            outArchive << runtime._buyModifier;
-            outArchive << runtime._sellModifier;
-            outArchive << runtime._daysSinceRestock;
-        }
-    }
-
-    bool ShopState::readState( Archive& archive )
-    {
-        vector<ShopRuntime> listRuntime = _listRuntime;
-        uint32              shopCount   = 0;
+            io.list( shop._listExtraRefused );
+            io.value( shop._buyModifier );
+            io.value( shop._sellModifier );
+            io.value( shop._daysSinceRestock );
+            // `setPriceModifier` 가 음수 배율을 거절한다 — 상태 바이트도 같다. 음수 값은 팔 때 돈을 내게 하고 살 때 돈을 준다.
+            io.check( 0.0f <= shop._buyModifier && 0.0f <= shop._sellModifier && 0 <= shop._daysSinceRestock );
+        };
+        uint32 shopCount = static_cast<uint32>( _listRuntime.size() );
         // 가게마다 이름(4) + 개수 세 개(12) + 배율 두 개(8) + 날짜(4) 이상
-        if ( archive.readCount( 28, shopCount ) == false )
-            return false;
+        io.count( 28, shopCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isWriting() )
+        {
+            for ( ShopRuntime& runtime : _listRuntime )
+            {
+                serializeShop( runtime );
+            }
+            return;
+        }
         for ( uint32 shopIndex = 0; shopIndex < shopCount; ++shopIndex )
         {
             ShopRuntime saved;
-            uint32      count = 0;
-            if ( StateIO::readName( archive, saved._shopID ) == false || archive.readCount( 4, count ) == false )
-                return false;
-            saved._listStockCount.resize( count, 0 );
-            for ( int32& stockCount : saved._listStockCount )
-            {
-                archive >> stockCount;
-            }
-            if ( archive.readCount( 8, count ) == false )
-                return false;
-            saved._listSaturatedItem.resize( count );
-            saved._listSellFactor.resize( count, 1.0f );
-            for ( uint32 index = 0; index < count; ++index )
-            {
-                if ( StateIO::readName( archive, saved._listSaturatedItem[index] ) == false )
-                    return false;
-                archive >> saved._listSellFactor[index];
-            }
-            if ( archive.readCount( 4, count ) == false )
-                return false;
-            saved._listExtraRefused.resize( count );
-            for ( hashed_string& category : saved._listExtraRefused )
-            {
-                if ( StateIO::readName( archive, category ) == false )
-                    return false;
-            }
-            archive >> saved._buyModifier;
-            archive >> saved._sellModifier;
-            archive >> saved._daysSinceRestock;
-            // `setPriceModifier` 가 음수 배율을 거절한다 — 상태 바이트도 같다. 음수 값은 팔 때 돈을 내게 하고 살 때 돈을 준다.
-            bool bSellFactorValid = true;
-            for ( const float32 sellFactor : saved._listSellFactor )
-            {
-                bSellFactorValid = bSellFactorValid && 0.0f <= sellFactor;
-            }
-            const bool bPriceValid = 0.0f <= saved._buyModifier && 0.0f <= saved._sellModifier && bSellFactorValid && 0 <= saved._daysSinceRestock;
-            if ( archive.isError() || bPriceValid == false )
-                return false;
+            serializeShop( saved );
+            if ( io.isOk() == false )
+                return;
             // 카탈로그에서 지운 가게는 버리고, 재고 항목 수가 바뀐 가게는 깨진 것으로 본다. 재고는 정의 순서로 짝지어 복원한다
-            for ( ShopRuntime& runtime : listRuntime )
+            for ( ShopRuntime& runtime : _listRuntime )
             {
                 if ( runtime._shopID != saved._shopID )
                     continue;
-                if ( runtime._listStockCount.size() != saved._listStockCount.size() )
-                    return false;
+                if ( io.check( runtime._listStockCount.size() == saved._listStockCount.size() ) == false )
+                    return;
                 runtime = std::move( saved );
                 break;
             }
         }
-        _listRuntime = std::move( listRuntime );
         _eventBuffer.clear();
-        return true;
     }
+
 } // namespace sw
 
 namespace sw

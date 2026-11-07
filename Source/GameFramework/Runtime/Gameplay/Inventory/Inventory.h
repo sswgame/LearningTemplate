@@ -9,6 +9,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
 
@@ -95,10 +97,11 @@ namespace sw
         uint32             getRevision() const { return _revision; }
         const ItemCatalog* getCatalog() const { return _pCatalog; }
 
-        /** @brief 최대 무게와 슬롯별 아이템, 개수, 내구도, 외형 피해, 꾸미기 값, 떨어진 부품을 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 슬롯 수가 지금과 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 최대 무게와 슬롯별 아이템, 개수, 내구도, 외형 피해, 꾸미기 값, 떨어진 부품을 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 슬롯 수가 지금과 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         bool    isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }

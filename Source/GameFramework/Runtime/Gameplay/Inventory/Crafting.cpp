@@ -272,60 +272,46 @@ namespace sw
         }
     }
 
-    void Crafter::writeState( Archive& outArchive ) const
+    void Crafter::serializeState( StateIO& io )
     {
         vector<hashed_string> listLearned( _uniqueLearnedRecipe.begin(), _uniqueLearnedRecipe.end() );
         VectorUtil::sort( listLearned, []( const hashed_string& left, const hashed_string& right )
         {
             return string_view( left.c_str() ) < string_view( right.c_str() );
         } );
-        outArchive << static_cast<uint32>( listLearned.size() );
-        for ( const hashed_string& recipeID : listLearned )
+        io.list( listLearned );
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, recipeID );
+            _uniqueLearnedRecipe.clear();
+            for ( const hashed_string& recipeID : listLearned )
+            {
+                _uniqueLearnedRecipe.insert( recipeID );
+            }
         }
-        outArchive << static_cast<uint32>( _listJob.size() );
-        for ( const CraftJob& job : _listJob )
+        // 작업마다 이름(4) + 남은 시간(4) + 개수(4)
+        uint32 jobCount = static_cast<uint32>( _listJob.size() );
+        io.count( 12, jobCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, job._recipeID );
-            outArchive << job._remaining;
-            outArchive << job._count;
+            _listJob.clear();
+        }
+        for ( uint32 index = 0; index < jobCount; ++index )
+        {
+            CraftJob job = io.isWriting() ? _listJob[index] : CraftJob{};
+            io.value( job._recipeID );
+            io.value( job._remaining );
+            io.value( job._count );
+            if ( io.check( job._recipeID.empty() == false && 0.0f <= job._remaining && 0 < job._count ) == false )
+                return;
+            if ( io.isReading() )
+            {
+                _listJob.push_back( job );
+            }
         }
     }
 
-    bool Crafter::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        if ( archive.readCount( 4, count ) == false )
-            return false;
-        unordered_set<hashed_string> uniqueLearned;
-        for ( uint32 index = 0; index < count; ++index )
-        {
-            hashed_string recipeID;
-            if ( StateIO::readName( archive, recipeID ) == false )
-                return false;
-            uniqueLearned.insert( recipeID );
-        }
-        // 작업마다 이름(4) + 남은 시간(4) + 개수(4)
-        if ( archive.readCount( 12, count ) == false )
-            return false;
-        deque<CraftJob> listJob;
-        for ( uint32 index = 0; index < count; ++index )
-        {
-            CraftJob job;
-            if ( StateIO::readName( archive, job._recipeID ) == false )
-                return false;
-            archive >> job._remaining;
-            archive >> job._count;
-            const bool bValid = archive.isOk() && job._recipeID.empty() == false && 0.0f <= job._remaining && 0 < job._count;
-            if ( bValid == false )
-                return false;
-            listJob.push_back( job );
-        }
-        _uniqueLearnedRecipe = std::move( uniqueLearned );
-        _listJob             = std::move( listJob );
-        return true;
-    }
 } // namespace sw
 
 namespace sw

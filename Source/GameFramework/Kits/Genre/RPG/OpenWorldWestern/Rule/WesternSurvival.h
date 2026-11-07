@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 
@@ -81,10 +83,11 @@ namespace sw
         ResourceGauge&        getGauge( WesternCore core ) { return _arrGauge[static_cast<size_t>( core )]; }
         const ResourceGauge&  getGauge( WesternCore core ) const { return _arrGauge[static_cast<size_t>( core )]; }
         const vector<uint64>& getMarks() const { return _listMark; }
-        /** @brief 입은 옷, 표시한 대상, 게이지 세 개, 코어 세 개, 데드아이 단계, 켜짐 여부를 씁니다. 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 입은 옷, 표시한 대상, 게이지 세 개, 코어 세 개, 데드아이 단계, 켜짐 여부를 씁니다. 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         static constexpr size_t kCoreCount = static_cast<size_t>( WesternCore::Count );

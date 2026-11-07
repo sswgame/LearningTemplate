@@ -215,100 +215,57 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void WesternLawState::writeState( Archive& outArchive ) const
+    void WesternLawState::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listRecord.size() );
-        for ( const RegionRecord& record : _listRecord )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        // 기록마다 지역(4) + 안 보인 시간, 현상금, 수배(12) + 보는지(1) 바이트
+        io.list( _listRecord, 17, [&]( RegionRecord& record )
         {
-            StateIO::writeName( outArchive, record._regionID );
-            outArchive << record._unseenTime;
-            outArchive << record._bounty;
-            outArchive << record._wantedLevel;
-            outArchive << record._bSeenByLaw;
-        }
-        outArchive << static_cast<uint32>( _listPending.size() );
+            io.value( record._regionID );
+            io.value( record._unseenTime );
+            io.value( record._bounty );
+            io.value( record._wantedLevel );
+            io.flag( record._bSeenByLaw );
+            if ( io.isWriting() )
+                return;
+            const WesternRegionDef* pRegion = _pCatalog->findRegion( record._regionID );
+            if ( io.check( pRegion != nullptr ) == false )
+                return;
+            for ( const RegionRecord& earlier : _listRecord )
+            {
+                if ( &earlier == &record )
+                    break;
+                io.check( earlier._regionID != record._regionID ); // 찾기는 앞의 것만 돌려주어 뒤의 것은 조회되지 않은 채 식는다
+            }
+            // 안 보인 시간이 NaN 이면 식는 비교가 늘 거짓이라 수배가 영영 내려가지 않는다
+            io.check( 0.0f <= record._unseenTime && 0 <= record._bounty && 0 <= record._wantedLevel && record._wantedLevel <= pRegion->_maxWanted );
+        } );
+        // 대기마다 범죄와 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1) 바이트
+        io.list( _listPending, 25, [&]( PendingReport& report )
+        {
+            io.value( report._crimeID );
+            io.value( report._regionID );
+            io.value( report._witnessID );
+            io.value( report._incidentID );
+            io.value( report._remaining );
+            io.flag( report._bMasked );
+            if ( io.isReading() )
+            {
+                io.check( _pCatalog->findCrime( report._crimeID ) != nullptr && _pCatalog->findRegion( report._regionID ) != nullptr );
+            }
+        } );
+        io.value( _nextIncidentID );
+        io.flag( _bDisguised );
+        io.check( _nextIncidentID != 0 );
+        if ( io.isWriting() )
+            return;
         for ( const PendingReport& report : _listPending )
         {
-            StateIO::writeName( outArchive, report._crimeID );
-            StateIO::writeName( outArchive, report._regionID );
-            outArchive << report._witnessID;
-            outArchive << report._incidentID;
-            StateIO::writeCountdown( outArchive, report._remaining );
-            outArchive << report._bMasked;
-        }
-        outArchive << _nextIncidentID;
-        outArchive << _bDisguised;
-    }
-
-    bool WesternLawState::readState( Archive& archive )
-    {
-        uint32 recordCount = 0;
-        // 기록마다 지역(4) + 안 보인 시간, 현상금, 수배(12) + 보는지(1) 바이트
-        if ( _pCatalog == nullptr || archive.readCount( 17, recordCount ) == false )
-            return false;
-        vector<RegionRecord> listRecord( recordCount );
-        for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
-        {
-            RegionRecord& record = listRecord[recordIndex];
-            if ( StateIO::readName( archive, record._regionID ) == false )
-                return false;
-            const WesternRegionDef* pRegion = _pCatalog->findRegion( record._regionID );
-            if ( pRegion == nullptr )
-                return false;
-            for ( size_t earlier = 0; earlier < recordIndex; ++earlier )
-            {
-                if ( listRecord[earlier]._regionID == record._regionID ) // 찾기는 앞의 것만 돌려주어 뒤의 것은 조회되지 않은 채 식는다
-                    return false;
-            }
-            archive >> record._unseenTime;
-            archive >> record._bounty;
-            archive >> record._wantedLevel;
-            archive >> record._bSeenByLaw;
-            // 안 보인 시간이 NaN 이면 식는 비교가 늘 거짓이라 수배가 영영 내려가지 않는다
-            const bool bValid = archive.isOk() && 0.0f <= record._unseenTime && 0 <= record._bounty && 0 <= record._wantedLevel && record._wantedLevel <= pRegion->_maxWanted && record._bSeenByLaw <= SW_TRUE;
-            if ( bValid == false )
-                return false;
-        }
-
-        uint32 pendingCount = 0;
-        // 대기마다 범죄와 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1) 바이트
-        if ( archive.readCount( 25, pendingCount ) == false )
-            return false;
-        vector<PendingReport> listPending( pendingCount );
-        for ( PendingReport& report : listPending )
-        {
-            const bool bNamesRead         = StateIO::readName( archive, report._crimeID ) && StateIO::readName( archive, report._regionID );
-            const bool bInvalidReportData = bNamesRead == false || _pCatalog->findCrime( report._crimeID ) == nullptr || _pCatalog->findRegion( report._regionID ) == nullptr;
-            if ( bInvalidReportData )
-                return false;
-            archive >> report._witnessID;
-            archive >> report._incidentID;
-            if ( StateIO::readCountdown( archive, report._remaining ) == false )
-                return false;
-            archive >> report._bMasked;
-            if ( archive.isError() || report._bMasked > SW_TRUE )
-                return false;
-        }
-
-        uint32 nextIncidentID = 0;
-        uint8  bDisguised     = SW_FALSE;
-        archive >> nextIncidentID;
-        archive >> bDisguised;
-        const bool bInvalidLawState = archive.isError() || nextIncidentID == 0 || bDisguised > SW_TRUE;
-        if ( bInvalidLawState )
-            return false;
-        for ( const PendingReport& report : listPending )
-        {
             // 앞으로 붙일 번호와 같은 대기는 새 사건과 한 사건으로 묶여 함께 지워진다
-            if ( report._incidentID == 0 || report._incidentID >= nextIncidentID )
-                return false;
+            io.check( report._incidentID != 0 && report._incidentID < _nextIncidentID );
         }
-        _listRecord     = std::move( listRecord );
-        _listPending    = std::move( listPending );
-        _nextIncidentID = nextIncidentID;
-        _bDisguised     = bDisguised;
         _eventBuffer.clear();
-        return true;
     }
 
     WesternLawState::RegionRecord* WesternLawState::findRecordMutable( const hashed_string& regionID )

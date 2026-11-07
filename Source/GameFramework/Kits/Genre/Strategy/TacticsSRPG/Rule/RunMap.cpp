@@ -248,88 +248,37 @@ namespace sw
         return _current >= 0 && _listNode[static_cast<size_t>( _current )]._floor == _floorCount - 1;
     }
 
-    void RunMap::writeState( Archive& outArchive ) const
+    void RunMap::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listNode.size() );
-        for ( const RunNode& node : _listNode )
+        // 노드마다 이름(4) + 층과 열(8) + 이어진 수(4)
+        io.list( _listNode, 16, [&]( RunNode& node )
         {
-            StateIO::writeName( outArchive, node._kind );
-            outArchive << node._floor;
-            outArchive << node._column;
-            outArchive << static_cast<uint32>( node._listNext.size() );
-            for ( const int32 next : node._listNext )
+            io.value( node._kind );
+            io.value( node._floor );
+            io.value( node._column );
+            io.list( node._listNext, 4, [&]( int32& next )
             {
-                outArchive << next;
-            }
-        }
-        outArchive << static_cast<uint32>( _listCell.size() );
+                io.value( next );
+                io.check( 0 <= next && static_cast<size_t>( next ) < _listNode.size() );
+            } );
+        } );
+        io.list( _listCell );
+        io.value( _floorCount );
+        io.value( _columnCount );
+        io.value( _current );
+        const int32 nodeCount = static_cast<int32>( _listNode.size() );
+        io.check( 0 <= _floorCount && 0 <= _columnCount && static_cast<int64>( _floorCount ) * _columnCount == static_cast<int64>( _listCell.size() ) && kStart <= _current && _current < nodeCount );
+        if ( io.isWriting() )
+            return;
+        // 칸의 번호는 고를 수 있는 노드가 되어 `_current` 로 들어간다. 노드 밖이면 다음 조회가 범위 밖을 읽는다.
         for ( const int32 cell : _listCell )
         {
-            outArchive << cell;
+            io.check( -1 <= cell && cell < nodeCount );
         }
-        outArchive << _floorCount;
-        outArchive << _columnCount;
-        outArchive << _current;
+        for ( const RunNode& node : _listNode )
+        {
+            io.check( 0 <= node._floor && node._floor < _floorCount && 0 <= node._column && node._column < _columnCount );
+        }
     }
 
-    bool RunMap::readState( Archive& archive )
-    {
-        uint32 nodeCount = 0;
-        // 노드마다 이름(4) + 층과 열(8) + 이어진 수(4)
-        if ( archive.readCount( 16, nodeCount ) == false )
-            return false;
-        vector<RunNode> listNode( nodeCount );
-        for ( RunNode& node : listNode )
-        {
-            uint32 nextCount = 0;
-            if ( StateIO::readName( archive, node._kind ) == false )
-                return false;
-            archive >> node._floor;
-            archive >> node._column;
-            if ( archive.readCount( 4, nextCount ) == false )
-                return false;
-            node._listNext.resize( nextCount, 0 );
-            for ( int32& next : node._listNext )
-            {
-                archive >> next;
-                if ( next < 0 || static_cast<uint32>( next ) >= nodeCount )
-                    archive.setError();
-            }
-        }
-        uint32 cellCount = 0;
-        if ( archive.isError() || archive.readCount( 4, cellCount ) == false )
-            return false;
-        vector<int32> listCell( cellCount, -1 );
-        for ( int32& cell : listCell )
-        {
-            archive >> cell;
-        }
-        int32 floorCount  = 0;
-        int32 columnCount = 0;
-        int32 current     = kStart;
-        archive >> floorCount;
-        archive >> columnCount;
-        archive >> current;
-        const bool bValid = archive.isOk() && 0 <= floorCount && 0 <= columnCount && static_cast<int64>( floorCount ) * columnCount == static_cast<int64>( cellCount ) &&
-                            kStart <= current && current < static_cast<int32>( nodeCount );
-        if ( bValid == false )
-            return false;
-        // 칸의 번호는 고를 수 있는 노드가 되어 `_current` 로 들어간다. 노드 밖이면 다음 조회가 범위 밖을 읽는다.
-        for ( const int32 cell : listCell )
-        {
-            if ( cell < -1 || cell >= static_cast<int32>( nodeCount ) )
-                return false;
-        }
-        for ( const RunNode& node : listNode )
-        {
-            if ( node._floor < 0 || node._floor >= floorCount || node._column < 0 || node._column >= columnCount )
-                return false;
-        }
-        _listNode    = std::move( listNode );
-        _listCell    = std::move( listCell );
-        _floorCount  = floorCount;
-        _columnCount = columnCount;
-        _current     = current;
-        return true;
-    }
 } // namespace sw

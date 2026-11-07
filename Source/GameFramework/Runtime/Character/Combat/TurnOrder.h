@@ -11,6 +11,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
@@ -61,10 +63,11 @@ namespace sw
         /** @brief 이 번호의 행위자가 들어 있으면 true 입니다. 주인이 자기 명단과 맞는지 볼 때 씁니다. */
         [[nodiscard]] bool hasActor( int32 actorID ) const;
 
-        /** @brief 행위자 목록, 라운드 대기열, 난수, 라운드 번호, 모드를 씁니다. 행위자마다 속도, 게이지, id, 우선도, 동률 깨기 값을 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 데이터가 깨졌거나 번호가 겹치거나 대기열에 없는 행위자가 있으면 false 를 돌려주고 상태는 그대로 둡니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 행위자 목록, 라운드 대기열, 난수, 라운드 번호, 모드를 씁니다. 행위자마다 속도, 게이지, id, 우선도, 동률 깨기 값을 씁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 데이터가 깨졌거나 번호가 겹치거나 대기열에 없는 행위자가 있으면 false 를 돌려주고 상태는 그대로 둡니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         struct Combatant

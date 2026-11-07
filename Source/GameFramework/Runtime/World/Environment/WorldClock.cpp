@@ -198,33 +198,18 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void WorldClock::writeState( Archive& outArchive ) const
+    void WorldClock::serializeState( StateIO& io )
     {
-        outArchive << _day;
-        outArchive << _secondOfDay;
-        outArchive << _timeScale;
-        outArchive << _bPaused;
+        io.value( _day );
+        io.value( _secondOfDay );
+        io.value( _timeScale );
+        io.flag( _bPaused );
+        // NaN 은 비교가 모두 거짓이라 여기서 걸린다.
+        io.check( 0 <= _day && 0.0f <= _secondOfDay && _secondOfDay < _settings._secondsPerDay && 0.0f <= _timeScale );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
+        }
     }
 
-    bool WorldClock::readState( Archive& archive )
-    {
-        int32   day         = 0;
-        float32 secondOfDay = 0.0f;
-        float32 timeScale   = 1.0f;
-        uint8   bPaused     = SW_FALSE;
-        archive >> day;
-        archive >> secondOfDay;
-        archive >> timeScale;
-        archive >> bPaused;
-        // NaN 은 비교가 모두 거짓이라 여기서 걸린다.
-        const bool bValid = archive.isOk() && 0 <= day && 0.0f <= secondOfDay && secondOfDay < _settings._secondsPerDay && 0.0f <= timeScale && bPaused <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        _day         = day;
-        _secondOfDay = secondOfDay;
-        _timeScale   = timeScale;
-        _bPaused     = bPaused;
-        _eventBuffer.clear();
-        return true;
-    }
 } // namespace sw

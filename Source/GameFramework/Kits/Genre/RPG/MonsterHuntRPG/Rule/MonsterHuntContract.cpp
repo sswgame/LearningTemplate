@@ -229,81 +229,46 @@ namespace sw
         return _finalReward;
     }
 
-    void MonsterHuntInvestigation::writeState( Archive& outArchive ) const
+    void MonsterHuntInvestigation::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
-        outArchive << _stepIndex;
-        outArchive << static_cast<uint32>( _listFound.size() );
-        for ( const hashed_string& clueID : _listFound )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        hashed_string contractID = _pContract != nullptr ? _pContract->_id : hashed_string{};
+        io.value( contractID );
+        io.value( _stepIndex );
+        const MonsterHuntContractStepDef* pStep = nullptr;
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, clueID );
+            _pContract = _pCatalog->findContract( contractID );
+            if ( io.check( _pContract != nullptr && 0 <= _stepIndex && _stepIndex <= static_cast<int32>( _pContract->_listStep.size() ) ) == false )
+                return;
+            pStep = _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) ? &_pContract->_listStep[static_cast<size_t>( _stepIndex )] : nullptr;
+        }
+        io.nameList( _listFound, [&]( const hashed_string& clueID )
+        { return pStep != nullptr && VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ); } );
+        if ( io.isReading() )
+        {
+            // 찾은 단서는 지금 단계의 것이고 하나는 남아 있어야 한다. 다 찾은 단계에 멈춘 상태는 넘어갈 길이 없어 조사가 영영 끝나지 않는다.
+            io.check( pStep != nullptr ? _listFound.size() < pStep->_listClue.size() : _listFound.empty() );
+            _eventBuffer.clear();
         }
     }
 
-    bool MonsterHuntInvestigation::readState( Archive& archive )
+    void MonsterHuntHaggle::serializeState( StateIO& io )
     {
-        hashed_string contractID;
-        int32         stepIndex = 0;
-        uint32        count     = 0;
-        if ( _pCatalog == nullptr || StateIO::readName( archive, contractID ) == false )
-            return false;
-        const MonsterHuntContractDef* pContract = _pCatalog->findContract( contractID );
-        archive >> stepIndex;
-        const bool bInvalidContractData = pContract == nullptr || archive.isError() || archive.readCount( 4, count ) == false;
-        if ( bInvalidContractData )
-            return false;
-        const bool bStepInside = 0 <= stepIndex && stepIndex <= static_cast<int32>( pContract->_listStep.size() );
-        if ( bStepInside == false )
-            return false;
-        // 찾은 단서는 지금 단계의 것이고 하나는 남아 있어야 한다. 다 찾은 단계에 멈춘 상태는 넘어갈 길이 없어 조사가 영영 끝나지 않는다.
-        const MonsterHuntContractStepDef* pStep      = stepIndex < static_cast<int32>( pContract->_listStep.size() ) ? &pContract->_listStep[static_cast<size_t>( stepIndex )] : nullptr;
-        const bool                        bCountFits = pStep != nullptr ? count < pStep->_listClue.size() : count == 0;
-        if ( bCountFits == false )
-            return false;
-        vector<hashed_string> listFound( count );
-        for ( hashed_string& clueID : listFound )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        hashed_string contractID = _pContract != nullptr ? _pContract->_id : hashed_string{};
+        io.value( contractID );
+        io.value( _anger );
+        io.value( _offer );
+        io.value( _finalReward );
+        io.flag( _bClosed );
+        if ( io.isReading() )
         {
-            if ( StateIO::readName( archive, clueID ) == false || VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ) == false )
-                return false;
+            _pContract = _pCatalog->findContract( contractID );
+            io.check( _pContract != nullptr && 0.0f <= _anger && 0 <= _offer && 0 <= _finalReward );
         }
-        _pContract = pContract;
-        _stepIndex = stepIndex;
-        _listFound = std::move( listFound );
-        _eventBuffer.clear();
-        return true;
     }
 
-    void MonsterHuntHaggle::writeState( Archive& outArchive ) const
-    {
-        StateIO::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
-        outArchive << _anger;
-        outArchive << _offer;
-        outArchive << _finalReward;
-        outArchive << _bClosed;
-    }
-
-    bool MonsterHuntHaggle::readState( Archive& archive )
-    {
-        hashed_string contractID;
-        float32       anger       = 0.0f;
-        int32         offer       = 0;
-        int32         finalReward = 0;
-        uint8         bClosed     = SW_FALSE;
-        if ( _pCatalog == nullptr || StateIO::readName( archive, contractID ) == false )
-            return false;
-        const MonsterHuntContractDef* pContract = _pCatalog->findContract( contractID );
-        archive >> anger;
-        archive >> offer;
-        archive >> finalReward;
-        archive >> bClosed;
-        const bool bValid = pContract != nullptr && archive.isOk() && bClosed <= SW_TRUE && 0.0f <= anger && 0 <= offer && 0 <= finalReward;
-        if ( bValid == false )
-            return false;
-        _pContract   = pContract;
-        _anger       = anger;
-        _offer       = offer;
-        _finalReward = finalReward;
-        _bClosed     = bClosed;
-        return true;
-    }
 } // namespace sw

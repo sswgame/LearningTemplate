@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -61,10 +63,11 @@ namespace sw
         uint64 getTarget() const { return _target; }
         bool   hasTarget() const { return _target != 0; }
 
-        /** @brief 표적 · 숨은 시간을 씁니다. 설정은 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 표적 · 숨은 시간을 씁니다. 설정은 싣지 않습니다.
+         *        `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 앞 방향 기준 가로 각(도, 오른쪽 +)입니다. */

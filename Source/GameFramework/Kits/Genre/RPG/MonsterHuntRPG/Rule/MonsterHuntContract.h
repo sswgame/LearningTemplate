@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -80,10 +81,11 @@ namespace sw
         int32         getStepIndex() const { return _stepIndex; }
         hashed_string getStepID() const;
         void          pollEvents( vector<MonsterHuntInvestigationEvent>& outListEvent );
-        /** @brief 계약 id, 단계, 지금 단계에서 찾은 단서를 씁니다. 빌려 온 퀘스트 일지와 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 계약이 카탈로그에 없거나 단계가 계약 밖이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 계약 id, 단계, 지금 단계에서 찾은 단서를 씁니다. 빌려 온 퀘스트 일지와 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 계약이 카탈로그에 없거나 단계가 계약 밖이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 지금 단계에서 아직 못 찾은 단서의 가장 작은 순서를 반환합니다. 다 찾았으면 −1 을 반환합니다. */
@@ -138,10 +140,11 @@ namespace sw
         /** @brief 끝났으면 받을 보상을 반환합니다(끝나지 않았으면 0). */
         int32 getFinalReward() const { return _finalReward; }
         bool  isClosed() const { return _bClosed != SW_FALSE; }
-        /** @brief 계약 id, 화, 지금 제안, 받을 보상, 끝났는지를 씁니다. 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 계약이 카탈로그에 없거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 계약 id, 화, 지금 제안, 받을 보상, 끝났는지를 씁니다. 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 계약이 카탈로그에 없거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         const MonsterHuntCatalog*     _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그

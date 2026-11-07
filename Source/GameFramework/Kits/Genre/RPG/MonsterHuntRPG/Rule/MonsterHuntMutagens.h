@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -59,10 +60,11 @@ namespace sw
         void computeStats( StatBlock& outStats ) const;
         /** @brief 열린 슬롯에 끼운 스킬(능동 스킬 목록)을 반환합니다. */
         void collectEquippedSkills( vector<hashed_string>& outListSkill ) const;
-        /** @brief 캐릭터 레벨과 그룹마다 끼운 스킬과 변이원을 씁니다. 카탈로그(그룹 구성)는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 그룹이나 슬롯 수가 지금과 다르거나 모르는 변이원이거나 같은 스킬이 두 슬롯에 있거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 캐릭터 레벨과 그룹마다 끼운 스킬과 변이원을 씁니다. 카탈로그(그룹 구성)는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 그룹이나 슬롯 수가 지금과 다르거나 모르는 변이원이거나 같은 스킬이 두 슬롯에 있거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         struct Group

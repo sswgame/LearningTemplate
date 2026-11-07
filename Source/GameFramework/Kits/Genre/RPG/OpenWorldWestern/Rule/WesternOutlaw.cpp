@@ -269,68 +269,45 @@ namespace sw
         }
     }
 
-    void WesternOutlaw::writeState( Archive& outArchive ) const
+    void WesternOutlaw::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        _law.writeState( outArchive );
-        _survival.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listCarcass.size() );
-        for ( const WesternCarcass& carcass : _listCarcass )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.header( kStateTag, kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, carcass._animalID );
-            outArchive << carcass._ageHours << carcass._stars;
+            _law = WesternLawState{};
+            _law.initialize( _pCatalog );
+            _survival = WesternSurvival{};
+            if ( io.check( _survival.initialize( _pCatalog ) ) == false )
+                return;
+            _bClockSeen = SW_FALSE;
         }
-        outArchive << static_cast<uint32>( _listPelt.size() );
-        for ( const WesternPelt& pelt : _listPelt )
+        io.value( _law );
+        io.value( _survival );
+        const auto checkAnimal = [&]( const hashed_string& animalID )
         {
-            StateIO::writeName( outArchive, pelt._animalID );
-            outArchive << pelt._stars;
-        }
-        outArchive << _centsCarry;
+            if ( io.isReading() )
+            {
+                io.check( _pCatalog->findAnimal( animalID ) != nullptr );
+            }
+        };
+        io.list( _listCarcass, 1, [&]( WesternCarcass& carcass )
+        {
+            io.value( carcass._animalID );
+            checkAnimal( carcass._animalID );
+            io.value( carcass._ageHours );
+            io.value( carcass._stars );
+        } );
+        io.list( _listPelt, 1, [&]( WesternPelt& pelt )
+        {
+            io.value( pelt._animalID );
+            checkAnimal( pelt._animalID );
+            io.value( pelt._stars );
+        } );
+        io.value( _centsCarry );
     }
 
-    bool WesternOutlaw::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr || StateIO::readHeader( archive, kStateTag, kStateVersion ) == false )
-            return false;
-        // 끝까지 읽은 뒤에 한 번에 바꾼다 — 중간에 깨지면 지금 상태를 그대로 둔다.
-        WesternLawState law;
-        WesternSurvival survival;
-        law.initialize( _pCatalog );
-        if ( survival.initialize( _pCatalog ) == false || law.readState( archive ) == false || survival.readState( archive ) == false )
-            return false;
-        uint32 carcassCount = 0;
-        archive >> carcassCount;
-        if ( carcassCount > archive.getRemainingBytes() )
-            return false;
-        vector<WesternCarcass> listCarcass( carcassCount );
-        for ( WesternCarcass& carcass : listCarcass )
-        {
-            if ( StateIO::readName( archive, carcass._animalID ) == false || _pCatalog->findAnimal( carcass._animalID ) == nullptr )
-                return false;
-            archive >> carcass._ageHours >> carcass._stars;
-        }
-        uint32 peltCount = 0;
-        archive >> peltCount;
-        if ( peltCount > archive.getRemainingBytes() )
-            return false;
-        vector<WesternPelt> listPelt( peltCount );
-        for ( WesternPelt& pelt : listPelt )
-        {
-            if ( StateIO::readName( archive, pelt._animalID ) == false || _pCatalog->findAnimal( pelt._animalID ) == nullptr )
-                return false;
-            archive >> pelt._stars;
-        }
-        int32 centsCarry = 0;
-        archive >> centsCarry;
-        if ( archive.isOk() == false )
-            return false;
-        _law         = std::move( law );
-        _survival    = std::move( survival );
-        _listCarcass = std::move( listCarcass );
-        _listPelt    = std::move( listPelt );
-        _centsCarry  = centsCarry;
-        _bClockSeen  = SW_FALSE;
-        return true;
-    }
 } // namespace sw

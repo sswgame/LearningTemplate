@@ -14,6 +14,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -184,10 +185,11 @@ namespace sw
         hashed_string getPendingEntry() const;
         /** @brief 살아 있는 개체의 스폰 id 를 낸 순서로 @p outListSpawnID 에 채웁니다. */
         void collectAliveSpawnIDs( vector<uint32>& outListSpawnID ) const;
-        /** @brief 살아 있는 것, 항목별 수, 허용 태그, 난수, 예산, 시간, 골라 둔 것, 다음 id, 환불을 씁니다. 표는 `initialize` 의 것이라 싣지 않으며, 읽을 때 항목 수가 지금 표와 다르면 거절합니다. 알림은 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 테이블의 항목 수와 맞지 않거나 끝까지 읽지 못하면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 살아 있는 것, 항목별 수, 허용 태그, 난수, 예산, 시간, 골라 둔 것, 다음 id, 환불을 씁니다. 표는 `initialize` 의 것이라 싣지 않으며, 읽을 때 항목 수가 지금 표와 다르면 거절합니다. 알림은 읽을 때 비웁니다.
+         *        `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 테이블의 항목 수와 맞지 않거나 끝까지 읽지 못하면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 살아 있는 개체 하나입니다. */

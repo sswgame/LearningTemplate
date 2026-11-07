@@ -37,48 +37,35 @@ namespace sw
         return true;
     }
 
-    void FarmField::writeState( Archive& outArchive ) const
+    void FarmField::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        for ( const FarmTile& tile : _listTile )
+        io.expect( _topology._width );
+        io.expect( _topology._height );
+        if ( io.isOk() == false )
+            return;
+        for ( FarmTile& tile : _listTile )
         {
-            StateIO::writeName( outArchive, tile._cropID );
-            outArchive << tile._growth;
-            const uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
-                                                    ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
-            outArchive << flags;
+            if ( io.isReading() )
+            {
+                tile = FarmTile{};
+            }
+            io.value( tile._cropID );
+            io.value( tile._growth );
+            uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
+                                              ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
+            io.value( flags );
+            if ( io.check( flags <= 15u && 0 <= tile._growth ) == false )
+                return;
+            if ( io.isReading() )
+            {
+                tile._bTilled   = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
+                tile._bWatered  = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
+                tile._bReady    = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
+                tile._bWithered = ( flags & 8u ) != 0 ? SW_TRUE : SW_FALSE;
+                if ( io.check( isTileValid( tile ) ) == false )
+                    return;
+            }
         }
-    }
-
-    bool FarmField::readState( Archive& archive )
-    {
-        int32 width  = 0;
-        int32 height = 0;
-        archive >> width;
-        archive >> height;
-        const bool bFieldSizeMismatch = archive.isError() || width != _topology._width || height != _topology._height;
-        if ( bFieldSizeMismatch )
-            return false;
-        vector<FarmTile> listTile( _listTile.size() );
-        for ( FarmTile& tile : listTile )
-        {
-            uint8 flags = 0;
-            if ( StateIO::readName( archive, tile._cropID ) == false )
-                return false;
-            archive >> tile._growth;
-            archive >> flags;
-            if ( archive.isError() || flags > 15u || tile._growth < 0 )
-                return false;
-            tile._bTilled   = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
-            tile._bWatered  = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
-            tile._bReady    = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
-            tile._bWithered = ( flags & 8u ) != 0 ? SW_TRUE : SW_FALSE;
-            if ( isTileValid( tile ) == false )
-                return false;
-        }
-        _listTile = std::move( listTile );
-        return true;
     }
 
     bool FarmField::isTileValid( const FarmTile& tile ) const

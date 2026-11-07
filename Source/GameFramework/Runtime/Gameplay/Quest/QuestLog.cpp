@@ -335,55 +335,29 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void QuestLog::writeState( Archive& outArchive ) const
+    void QuestLog::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listProgress.size() );
-        for ( const QuestProgress& progress : _listProgress )
-        {
-            StateIO::writeName( outArchive, progress._questID );
-            StateIO::writeName( outArchive, progress._stageID );
-            outArchive << static_cast<uint32>( progress._listCount.size() );
-            for ( const int32 count : progress._listCount )
-            {
-                outArchive << count;
-            }
-            outArchive << progress._stageTime;
-            outArchive << progress._completedCount;
-            outArchive << static_cast<uint8>( progress._status );
-            outArchive << progress._bAwaitingChoice;
-        }
-    }
-
-    bool QuestLog::readState( Archive& archive )
-    {
-        uint32 progressCount = 0;
+        uint32 progressCount = static_cast<uint32>( _listProgress.size() );
         // 퀘스트마다 이름 두 개(8) + 목표 수(4) + 단계 시간(4) + 완료 횟수(4) + 상태(1) + 선택 대기(1) 이상
-        if ( archive.readCount( 22, progressCount ) == false )
-            return false;
-        vector<QuestProgress> listProgress;
-        listProgress.reserve( progressCount );
+        io.count( 22, progressCount );
+        if ( io.isOk() == false )
+            return;
+        vector<QuestProgress> listRestored;
         for ( uint32 progressIndex = 0; progressIndex < progressCount; ++progressIndex )
         {
-            QuestProgress progress;
-            uint32        objectiveCount = 0;
-            const bool    bHeadRead      = StateIO::readName( archive, progress._questID ) && StateIO::readName( archive, progress._stageID ) &&
-                                   archive.readCount( 4, objectiveCount );
-            if ( bHeadRead == false )
-                return false;
-            progress._listCount.resize( objectiveCount, 0 );
-            for ( int32& count : progress._listCount )
-            {
-                archive >> count;
-            }
-            uint8 status = 0;
-            archive >> progress._stageTime;
-            archive >> progress._completedCount;
-            archive >> status;
-            archive >> progress._bAwaitingChoice;
-            const bool bValid = archive.isOk() && status <= static_cast<uint8>( QuestStatus::Failed ) && progress._bAwaitingChoice <= SW_TRUE && progress._stageTime >= 0.0f && progress._completedCount >= 0;
-            if ( bValid == false )
-                return false;
-            progress._status       = static_cast<QuestStatus>( status );
+            QuestProgress  restored;
+            QuestProgress& progress = io.isWriting() ? _listProgress[progressIndex] : restored;
+            io.value( progress._questID );
+            io.value( progress._stageID );
+            io.list( progress._listCount );
+            io.value( progress._stageTime );
+            io.value( progress._completedCount );
+            io.enumValue( progress._status, QuestStatus::Failed );
+            io.flag( progress._bAwaitingChoice );
+            if ( io.check( progress._stageTime >= 0.0f && progress._completedCount >= 0 ) == false )
+                return;
+            if ( io.isWriting() )
+                continue;
             const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->find( progress._questID ) : nullptr;
             if ( _pCatalog != nullptr && pQuest == nullptr )
             {
@@ -392,10 +366,13 @@ namespace sw
             }
             if ( pQuest != nullptr )
                 reconcileWithDefinition( progress, *pQuest );
-            listProgress.push_back( std::move( progress ) );
+            listRestored.push_back( std::move( progress ) );
         }
-        _listProgress = std::move( listProgress );
-        _eventBuffer.clear();
-        return true;
+        if ( io.isReading() )
+        {
+            _listProgress = std::move( listRestored );
+            _eventBuffer.clear();
+        }
     }
+
 } // namespace sw

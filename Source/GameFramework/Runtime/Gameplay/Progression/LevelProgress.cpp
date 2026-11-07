@@ -130,27 +130,12 @@ namespace sw
         return toNext <= 0 ? 1.0f : static_cast<float32>( _xp ) / static_cast<float32>( toNext );
     }
 
-    void LevelProgress::writeState( Archive& outArchive ) const
+    void LevelProgress::serializeState( StateIO& io )
     {
-        outArchive << _xp;
-        outArchive << _totalXP;
-        outArchive << _level;
+        io.value( _xp );
+        io.value( _totalXP );
+        io.value( _level );
+        io.check( 0 <= _xp && _xp <= _totalXP && 1 <= _level );
     }
 
-    bool LevelProgress::readState( Archive& archive )
-    {
-        int64 xp      = 0;
-        int64 totalXP = 0;
-        int32 level   = 1;
-        archive >> xp;
-        archive >> totalXP;
-        archive >> level;
-        const bool bValid = archive.isOk() && 0 <= xp && xp <= totalXP && 1 <= level;
-        if ( bValid == false )
-            return false;
-        _xp      = xp;
-        _totalXP = totalXP;
-        _level   = level;
-        return true;
-    }
 } // namespace sw

@@ -12,6 +12,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
@@ -150,10 +152,11 @@ namespace sw
         float32                   getJumpSpeed() const;
         const PlatformerSettings& getSettings() const { return _settings; }
 
-        /** @brief 위치, 속도, 타이머, 남은 점프, 대시, 벽, 방향, 바닥, 사다리 오르기, 상승을 씁니다. 설정과 이번 스텝의 사건 비트는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 위치, 속도, 타이머, 남은 점프, 대시, 벽, 방향, 바닥, 사다리 오르기, 상승을 씁니다. 설정과 이번 스텝의 사건 비트는 싣지 않습니다.
+         *        `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         bool isBlocked( const PlatformTileMap& map, const float2& center, bool bFromAbove, float32 previousBottom ) const;

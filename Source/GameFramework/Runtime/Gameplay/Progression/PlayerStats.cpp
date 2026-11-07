@@ -178,46 +178,45 @@ namespace sw
         return true;
     }
 
-    void PlayerStats::writeState( Archive& outArchive ) const
+    void PlayerStats::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion );
+        io.header( PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion );
         // 카탈로그 순서대로 쓴다. 같은 값이면 같은 바이트가 나온다. 카탈로그에 없는 값은 애초에 보관하지 않는다.
-        uint32 count = 0;
-        if ( _pCatalog != nullptr )
+        uint32 statCount = 0;
+        if ( io.isWriting() && _pCatalog != nullptr )
         {
             for ( const StatDef& def : _pCatalog->getStats() )
             {
-                count += hasValue( def._id ) ? 1u : 0u;
+                statCount += hasValue( def._id ) ? 1u : 0u;
             }
         }
-        outArchive << count;
-        if ( _pCatalog == nullptr )
+        io.count( sizeof( uint32 ) + sizeof( float64 ), statCount );
+        if ( io.isOk() == false )
             return;
-        for ( const StatDef& def : _pCatalog->getStats() )
+        if ( io.isWriting() )
         {
-            if ( hasValue( def._id ) == false )
-                continue;
-            StateIO::writeName( outArchive, def._id );
-            outArchive << getValue( def._id );
+            if ( _pCatalog == nullptr )
+                return;
+            for ( const StatDef& def : _pCatalog->getStats() )
+            {
+                if ( hasValue( def._id ) == false )
+                    continue;
+                hashed_string id    = def._id;
+                float64       value = getValue( id );
+                io.value( id );
+                io.value( value );
+            }
+            return;
         }
-    }
-
-    bool PlayerStats::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        if ( StateIO::readHeader( archive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion ) == false ||
-             archive.readCount( sizeof( uint32 ) + sizeof( float64 ), count ) == false )
-            return false;
         unordered_map<hashed_string, float64> mapValue;
-        for ( uint32 index = 0; index < count; ++index )
+        for ( uint32 index = 0; index < statCount; ++index )
         {
             hashed_string id;
             float64       value = 0.0;
-            if ( StateIO::readName( archive, id ) == false )
-                return false;
-            archive >> value;
-            if ( archive.isError() )
-                return false;
+            io.value( id );
+            io.value( value );
+            if ( io.isOk() == false )
+                return;
             if ( _pCatalog == nullptr || _pCatalog->findStat( id ) == nullptr )
             {
                 SW_LOG_WARNING_ID( "PlayerStats.SavedStatNoDefinition", "Saved stat '%#' has no definition any more - dropped", id.c_str() );
@@ -226,7 +225,6 @@ namespace sw
             mapValue[id] = value;
         }
         _mapValue = std::move( mapValue );
-        return true;
     }
 
     bool PlayerStats::saveToFile( const AbsolutePath& absPath ) const

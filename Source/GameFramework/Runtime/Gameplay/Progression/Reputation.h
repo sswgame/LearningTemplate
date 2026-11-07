@@ -13,6 +13,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -141,10 +142,11 @@ namespace sw
          */
         int32 getTierIndex( const hashed_string& factionID ) const;
         void  pollEvents( vector<ReputationEvent>& outListEvent );
-        /** @brief 세력마다 id 와 값을 처음 만난 순서로 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 세력 id 가 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 세력마다 id 와 값을 처음 만난 순서로 씁니다.
+         *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 세력 id 가 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         struct Entry

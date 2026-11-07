@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
@@ -93,10 +94,11 @@ namespace sw
         float32              getActionCost( MonsterHuntAction action ) const;
         const ResourceGauge& getStamina() const { return _stamina; }
         ResourceGauge&       getStamina() { return _stamina; }
-        /** @brief 스태미나 게이지, 난수, 아드레날린을 씁니다. 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 스태미나 게이지, 난수, 아드레날린을 씁니다. 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         ResourceGauge             _stamina;

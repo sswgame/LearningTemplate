@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -65,10 +67,11 @@ namespace sw
         /** @brief 공격 속성 @p attackElement 가 그 괴물에게 주는 배율을 반환합니다(방어 속성 모두의 곱이며, 모르는 괴물이거나 상성 테이블이 없으면 1입니다). */
         float32 computeMultiplier( const hashed_string& monsterID, const hashed_string& attackElement ) const;
         void    pollEvents( vector<MonsterHuntBestiaryEvent>& outListEvent );
-        /** @brief 괴물마다 지식 단계와 처치 수를 씁니다. 카탈로그와 상성 테이블은 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 괴물이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 괴물마다 지식 단계와 처치 수를 씁니다. 카탈로그와 상성 테이블은 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 괴물이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         struct Entry

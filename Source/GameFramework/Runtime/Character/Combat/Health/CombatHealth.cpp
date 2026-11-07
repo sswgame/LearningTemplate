@@ -359,51 +359,31 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void CombatHealth::writeState( Archive& outArchive ) const
+    void CombatHealth::serializeState( StateIO& io )
     {
-        outArchive << _health;
-        outArchive << _shield;
-        outArchive << _downedHealth;
-        outArchive << _poise;
-        outArchive << _timeSinceDamage;
-        outArchive << _timeSincePoiseDamage;
-        StateIO::writeCountdown( outArchive, _poiseBreak );
-        StateIO::writeCountdown( outArchive, _invulnerable );
-        outArchive << _reviveElapsed;
-        outArchive << _reviveSpeedScale;
-        outArchive << _reviverID;
-        outArchive << _lastInstigatorID;
-        outArchive << _downCount;
-        outArchive << static_cast<uint8>( _state );
-        outArchive << _bReviving;
+        if ( io.isReading() )
+        {
+            CombatHealth restored;
+            restored._settings      = _settings;
+            restored._bDamageImmune = _bDamageImmune; // 개발 스위치는 상태가 아니다
+            *this                   = std::move( restored );
+        }
+        io.value( _health );
+        io.value( _shield );
+        io.value( _downedHealth );
+        io.value( _poise );
+        io.value( _timeSinceDamage );
+        io.value( _timeSincePoiseDamage );
+        io.value( _poiseBreak );
+        io.value( _invulnerable );
+        io.value( _reviveElapsed );
+        io.value( _reviveSpeedScale );
+        io.value( _reviverID );
+        io.value( _lastInstigatorID );
+        io.value( _downCount );
+        io.enumValue( _state, CombatHealthState::Dead );
+        io.flag( _bReviving );
+        io.check( 0.0f <= _health && _health <= _settings._maxHealth && 0.0f <= _shield && _shield <= _settings._maxShield && 0.0f <= _downedHealth && _downedHealth <= _settings._downedHealth && 0 <= _downCount );
     }
 
-    bool CombatHealth::readState( Archive& archive )
-    {
-        CombatHealth restored;
-        restored._settings      = _settings;
-        restored._bDamageImmune = _bDamageImmune; // 개발 스위치는 상태가 아니다
-        uint8 state             = 0;
-        archive >> restored._health;
-        archive >> restored._shield;
-        archive >> restored._downedHealth;
-        archive >> restored._poise;
-        archive >> restored._timeSinceDamage;
-        archive >> restored._timeSincePoiseDamage;
-        const bool bTimerRead = StateIO::readCountdown( archive, restored._poiseBreak ) && StateIO::readCountdown( archive, restored._invulnerable );
-        archive >> restored._reviveElapsed;
-        archive >> restored._reviveSpeedScale;
-        archive >> restored._reviverID;
-        archive >> restored._lastInstigatorID;
-        archive >> restored._downCount;
-        archive >> state;
-        archive >> restored._bReviving;
-        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._health && restored._health <= restored._settings._maxHealth && 0.0f <= restored._shield && restored._shield <= restored._settings._maxShield && 0.0f <= restored._downedHealth && restored._downedHealth <= restored._settings._downedHealth && 0 <= restored._downCount &&
-                            state <= static_cast<uint8>( CombatHealthState::Dead ) && restored._bReviving <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        restored._state = static_cast<CombatHealthState>( state );
-        *this           = std::move( restored );
-        return true;
-    }
 } // namespace sw

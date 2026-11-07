@@ -140,38 +140,20 @@ namespace sw
         return signalIndex >= 0 ? _listSignalValue[static_cast<size_t>( signalIndex )] : 0.0f;
     }
 
-    void AIDirectorIntensityModel::writeState( Archive& outArchive ) const
+    void AIDirectorIntensityModel::serializeState( StateIO& io )
     {
-        outArchive << _stress;
-        outArchive << _calmSeconds;
-        outArchive << static_cast<uint32>( _listSignalValue.size() );
-        for ( const float32 value : _listSignalValue )
+        io.value( _stress );
+        io.value( _calmSeconds );
+        io.expect( static_cast<uint32>( _listSignalValue.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( float32& value : _listSignalValue )
         {
-            outArchive << value;
-        }
-    }
-
-    bool AIDirectorIntensityModel::readState( Archive& archive )
-    {
-        float32 stress      = 0.0f;
-        float32 calmSeconds = 0.0f;
-        uint32  signalCount = 0;
-        archive >> stress;
-        archive >> calmSeconds;
-        if ( archive.readCount( 4, signalCount ) == false || signalCount != _listSignalValue.size() )
-            return false;
-        vector<float32> listSignalValue( signalCount, 0.0f );
-        for ( float32& value : listSignalValue )
-        {
-            archive >> value;
+            io.value( value );
         }
         // 스트레스는 0 ~ max, 평온 시간은 음수가 아니다 - 쓰는 쪽은 이 범위만 쓴다.
         const float32 maxStress = _pDef != nullptr ? _pDef->_max : 0.0f;
-        if ( archive.isError() || stress < 0.0f || stress > maxStress || calmSeconds < 0.0f )
-            return false;
-        _stress          = stress;
-        _calmSeconds     = calmSeconds;
-        _listSignalValue = std::move( listSignalValue );
-        return true;
+        io.check( 0.0f <= _stress && _stress <= maxStress && 0.0f <= _calmSeconds );
     }
+
 } // namespace sw

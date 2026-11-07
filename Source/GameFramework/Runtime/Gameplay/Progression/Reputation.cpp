@@ -205,38 +205,21 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void ReputationState::writeState( Archive& outArchive ) const
+    void ReputationState::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listEntry.size() );
-        for ( const Entry& entry : _listEntry )
+        // 세력마다 이름 길이(4) + 값(4) 이상
+        io.list( _listEntry, 8, [&]( Entry& entry )
         {
-            StateIO::writeName( outArchive, entry._factionID );
-            outArchive << entry._value;
+            io.value( entry._factionID );
+            io.value( entry._value );
+            io.check( entry._factionID.empty() == false );
+        } );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
         }
     }
 
-    bool ReputationState::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        // 세력마다 이름 길이(4) + 값(4) 이상
-        if ( archive.readCount( 8, count ) == false )
-            return false;
-        vector<Entry> listEntry;
-        listEntry.reserve( count );
-        for ( uint32 index = 0; index < count; ++index )
-        {
-            Entry entry;
-            if ( StateIO::readName( archive, entry._factionID ) == false )
-                return false;
-            archive >> entry._value;
-            if ( archive.isError() || entry._factionID.empty() )
-                return false;
-            listEntry.push_back( entry );
-        }
-        _listEntry = std::move( listEntry );
-        _eventBuffer.clear();
-        return true;
-    }
 } // namespace sw
 
 namespace sw

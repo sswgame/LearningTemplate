@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -111,10 +112,11 @@ namespace sw
         /** @brief 끝 노드(보스)에 도착했으면 true 입니다. */
         bool isFinished() const;
 
-        /** @brief 노드(층, 열, 종류, 이어진 노드), 노드 인덱스 테이블, 층 수, 열 수, 현재 위치를 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 노드(층, 열, 종류, 이어진 노드), 노드 인덱스 테이블, 층 수, 열 수, 현재 위치를 씁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         int32         getOrCreateNode( int32 floor, int32 column );

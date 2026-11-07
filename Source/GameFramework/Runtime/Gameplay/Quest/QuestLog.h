@@ -12,6 +12,7 @@
 
 #include "Engine/Gameplay/GameplayContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -129,14 +130,13 @@ namespace sw
         /** @brief 진행 중인 퀘스트의 id 목록입니다. 받은 순서입니다. */
         void collectActive( vector<hashed_string>& outListQuest ) const;
         void pollEvents( vector<QuestEvent>& outListEvent );
-        /** @brief 퀘스트마다 진행 상황(단계, 목표 개수, 단계 시간, 완료 횟수, 상태, 선택 대기)을 씁니다. */
-        void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
-         * @details 저장 뒤 데이터가 바뀌어도 일지는 열린다: 목표 수와 개수를 지금 단계에 맞추고, 지워진 단계의 진행 중 퀘스트는 실패로 둔다(다시 받을 수 있다).
-         *          카탈로그(`initialize`)에 없는 퀘스트는 경고를 남기고 버린다. 데이터에서 지운 퀘스트 하나가 일지 전체를 막지 않게 하기 위해서이다.
+         * @brief 퀘스트마다 진행 상황(단계, 목표 개수, 단계 시간, 완료 횟수, 상태, 선택 대기)을 씁니다.
+         *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         *        저장 뒤 데이터가 바뀌어도 일지는 열린다: 목표 수와 개수를 지금 단계에 맞추고, 지워진 단계의 진행 중 퀘스트는 실패로 둔다(다시 받을 수 있다).
+         *        카탈로그(`initialize`)에 없는 퀘스트는 경고를 남기고 버린다. 데이터에서 지운 퀘스트 하나가 일지 전체를 막지 않게 하기 위해서이다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         QuestProgress* findProgressMutable( const hashed_string& questID );

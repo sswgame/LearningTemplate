@@ -15,6 +15,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -149,13 +151,12 @@ namespace sw
         vector<ProjectileState>& accessProjectiles() { return _listProjectile; }
         uint32                   getNextID() const { return _nextID; }
 
-        /** @brief 다음 id 와 살아 있는 탄을 씁니다. 평면 법선은 설정이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 의 바이트로 탄을 바꿉니다. 깨진 바이트 · 범위 밖 값(음수 수명 · 거리, 0..1 밖의 반발, 다음 id 이상의 id, 유한하지 않은 값)이면 false 이고 그대로입니다.
-         * @details 쓰는 쪽 번호(쏜 쪽 · 대상 · 반응 번호)의 범위는 쓰는 쪽이 읽은 뒤 본다.
+         * @brief 다음 id 와 살아 있는 탄을 씁니다. 평면 법선은 설정이라 싣지 않습니다.
+         *        `writeState` 의 바이트로 탄을 바꿉니다. 깨진 바이트 · 범위 밖 값(음수 수명 · 거리, 0..1 밖의 반발, 다음 id 이상의 id, 유한하지 않은 값)이면 false 이고 그대로입니다.
+         *        쓰는 쪽 번호(쏜 쪽 · 대상 · 반응 번호)의 범위는 쓰는 쪽이 읽은 뒤 본다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         vector<ProjectileState> _listProjectile;

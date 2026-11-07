@@ -14,6 +14,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -207,10 +208,11 @@ namespace sw
         float32 getPoise() const { return _poise; }
         bool    isPoiseBroken() const { return _poiseBreak.isActive(); }
 
-        /** @brief 체력, 보호막, 다운, 강인도, 무적, 부활 진행, 상태를 씁니다. 설정은 `initialize` 의 것이고, 알림은 이미 일어난 일이라 싣지 않으며 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 체력, 보호막, 다운, 강인도, 무적, 부활 진행, 상태를 씁니다. 설정은 `initialize` 의 것이고, 알림은 이미 일어난 일이라 싣지 않으며 읽을 때 비웁니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 범위를 본 뒤의 설정으로 상태를 비웁니다(`initialize` 와 기본 생성자가 부른다). */

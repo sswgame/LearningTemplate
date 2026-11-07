@@ -16,6 +16,8 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -182,10 +184,11 @@ namespace sw
         const ArcadeVehicleSettings& getSettings() const { return _settings; }
         FixedStepTimer&              getTimer() { return _timer; }
 
-        /** @brief 고정 스텝의 남은 시간, 위치, 속도, 요, 드리프트, 부스트, 니트로, 공중 여부를 씁니다. 설정과 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 고정 스텝의 남은 시간, 위치, 속도, 요, 드리프트, 부스트, 니트로, 공중 여부를 씁니다. 설정과 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         float32 sampleHeight( float32 x, float32 z ) const;

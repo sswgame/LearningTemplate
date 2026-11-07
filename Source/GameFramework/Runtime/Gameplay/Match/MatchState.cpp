@@ -327,117 +327,50 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void MatchState::writeState( Archive& outArchive ) const
+    void MatchState::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listTeam.size() );
-        for ( const MatchTeam& team : _listTeam )
+        // 팀마다 이름(4) + 정수 세 개(12) + 플래그 두 개(2)
+        io.list( _listTeam, 18, [&]( MatchTeam& team )
         {
-            StateIO::writeName( outArchive, team._name );
-            outArchive << team._score;
-            outArchive << team._costPool;
-            outArchive << team._placement;
-            outArchive << team._bIgnoreCost;
-            outArchive << team._bEliminated;
-        }
-        outArchive << static_cast<uint32>( _listParticipant.size() );
-        for ( const MatchParticipant& participant : _listParticipant )
+            io.value( team._name );
+            io.value( team._score );
+            io.value( team._costPool );
+            io.value( team._placement );
+            io.flag( team._bIgnoreCost );
+            io.flag( team._bEliminated );
+        } );
+        // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯 개(24) + 플래그 두 개(2)
+        io.list( _listParticipant, 42, [&]( MatchParticipant& participant )
         {
-            StateIO::writeName( outArchive, participant._role );
-            outArchive << static_cast<uint32>( participant._listDamage.size() );
-            for ( const MatchParticipant::DamageRecord& record : participant._listDamage )
+            io.value( participant._role );
+            io.list( participant._listDamage, 8, [&]( MatchParticipant::DamageRecord& record )
             {
-                outArchive << record._attacker;
-                outArchive << record._time;
-            }
-            StateIO::writeCountdown( outArchive, participant._respawnTimer );
-            outArchive << participant._damageDealt;
-            outArchive << participant._team;
-            outArchive << participant._kills;
-            outArchive << participant._deaths;
-            outArchive << participant._assists;
-            outArchive << participant._respawnCost;
-            outArchive << participant._bAlive;
-            outArchive << participant._bEliminated;
+                io.value( record._attacker );
+                io.value( record._time );
+                // `reportKill` 이 이 번호로 참가자 목록을 그대로 찾는다. 범위 밖 번호는 목록 밖을 읽는다.
+                io.check( 0 <= record._attacker && record._attacker < static_cast<int32>( _listParticipant.size() ) );
+            } );
+            io.value( participant._respawnTimer );
+            io.value( participant._damageDealt );
+            io.value( participant._team );
+            io.value( participant._kills );
+            io.value( participant._deaths );
+            io.value( participant._assists );
+            io.value( participant._respawnCost );
+            io.flag( participant._bAlive );
+            io.flag( participant._bEliminated );
+            // 팀 없는 참가자는 `addParticipant` 가 만들지 않는다. −1 을 받으면 `reportKill` 이 팀 목록 밖을 읽는다.
+            io.check( 0 <= participant._team && participant._team < static_cast<int32>( _listTeam.size() ) );
+        } );
+        io.value( _elapsed );
+        io.value( _phaseTime );
+        io.value( _winningTeam );
+        io.enumValue( _phase, MatchPhase::Ended );
+        io.check( -1 <= _winningTeam && _winningTeam < static_cast<int32>( _listTeam.size() ) );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
         }
-        outArchive << _elapsed;
-        outArchive << _phaseTime;
-        outArchive << _winningTeam;
-        outArchive << static_cast<uint8>( _phase );
     }
 
-    bool MatchState::readState( Archive& archive )
-    {
-        uint32 teamCount = 0;
-        // 팀마다 이름(4) + 정수 세 개(12) + 플래그 두 개(2)
-        if ( archive.readCount( 18, teamCount ) == false )
-            return false;
-        vector<MatchTeam> listTeam( teamCount );
-        for ( MatchTeam& team : listTeam )
-        {
-            if ( StateIO::readName( archive, team._name ) == false )
-                return false;
-            archive >> team._score;
-            archive >> team._costPool;
-            archive >> team._placement;
-            archive >> team._bIgnoreCost;
-            archive >> team._bEliminated;
-            const bool bInvalidTeamFlags = archive.isError() || team._bIgnoreCost > SW_TRUE || team._bEliminated > SW_TRUE;
-            if ( bInvalidTeamFlags )
-                return false;
-        }
-        uint32 participantCount = 0;
-        // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯 개(24) + 플래그 두 개(2)
-        if ( archive.readCount( 42, participantCount ) == false )
-            return false;
-        vector<MatchParticipant> listParticipant( participantCount );
-        for ( MatchParticipant& participant : listParticipant )
-        {
-            uint32 damageCount = 0;
-            if ( StateIO::readName( archive, participant._role ) == false || archive.readCount( 8, damageCount ) == false )
-                return false;
-            participant._listDamage.resize( damageCount );
-            for ( MatchParticipant::DamageRecord& record : participant._listDamage )
-            {
-                archive >> record._attacker;
-                archive >> record._time;
-                // `reportKill` 이 이 번호로 참가자 목록을 그대로 찾는다. 범위 밖 번호는 목록 밖을 읽는다.
-                if ( record._attacker < 0 || record._attacker >= static_cast<int32>( participantCount ) )
-                    return false;
-            }
-            if ( StateIO::readCountdown( archive, participant._respawnTimer ) == false )
-                return false;
-            archive >> participant._damageDealt;
-            archive >> participant._team;
-            archive >> participant._kills;
-            archive >> participant._deaths;
-            archive >> participant._assists;
-            archive >> participant._respawnCost;
-            archive >> participant._bAlive;
-            archive >> participant._bEliminated;
-            // 팀 없는 참가자는 `addParticipant` 가 만들지 않는다. −1 을 받으면 `reportKill` 이 팀 목록 밖을 읽는다.
-            const bool bValid = archive.isOk() && 0 <= participant._team && participant._team < static_cast<int32>( teamCount ) && participant._bAlive <= SW_TRUE &&
-                                participant._bEliminated <= SW_TRUE;
-            if ( bValid == false )
-                return false;
-        }
-        float32 elapsed     = 0.0f;
-        float32 phaseTime   = 0.0f;
-        int32   winningTeam = -1;
-        uint8   phase       = 0;
-        archive >> elapsed;
-        archive >> phaseTime;
-        archive >> winningTeam;
-        archive >> phase;
-        const bool bValid = archive.isOk() && phase <= static_cast<uint8>( MatchPhase::Ended ) && -1 <= winningTeam && winningTeam < static_cast<int32>( teamCount );
-        if ( bValid == false )
-            return false;
-        _listTeam        = std::move( listTeam );
-        _listParticipant = std::move( listParticipant );
-        _elapsed         = elapsed;
-        _phaseTime       = phaseTime;
-        _winningTeam     = winningTeam;
-        _phase           = static_cast<MatchPhase>( phase );
-        _eventBuffer.clear();
-        return true;
-    }
 } // namespace sw

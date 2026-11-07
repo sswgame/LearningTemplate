@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
@@ -90,10 +92,11 @@ namespace sw
         int32                   getHeight() const { return _topology._height; }
         uint32                  getRevision() const { return _revision; }
 
-        /** @brief 크기, 셀, 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 크기, 셀, 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         [[nodiscard]] bool findShape( const hashed_string& itemID, GridItemShape& outShape ) const;

@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHonor.h"
@@ -94,10 +95,11 @@ namespace sw
         const WesternSurvival& getSurvival() const { return _survival; }
         bool                   isDisguised() const { return _law.isDisguised(); }
 
-        /** @brief 법 · 생존 · 사체 · 가죽 · 넘긴 센트를 씁니다. 지갑과 평판은 판 상태가 싣는다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌거나 모르는 동물이면 그대로 두고 false 입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 법 · 생존 · 사체 · 가죽 · 넘긴 센트를 씁니다. 지갑과 평판은 판 상태가 싣는다.
+         *        `writeState` 의 바이트로 바꿉니다. 깨졌거나 모르는 동물이면 그대로 두고 false 입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         [[nodiscard]] bool commitCrime( const WesternDeed& deed, const vector<WesternWitness>& listCandidate );

@@ -263,104 +263,69 @@ namespace sw
         _listProjectile.clear();
     }
 
-    void ProjectileSimulation::writeState( Archive& outArchive ) const
-    {
-        // 쓰는 쪽이 끝냈지만 아직 빼지 않은 탄(`removeDead` 전)은 싣지 않는다 — 읽기는 살아 있는 탄만 받는다.
-        uint32 aliveCount = 0;
-        for ( const ProjectileState& projectile : _listProjectile )
-        {
-            aliveCount += projectile._bAlive == SW_TRUE ? 1u : 0u;
-        }
-        outArchive << _nextID;
-        outArchive << aliveCount;
-        for ( const ProjectileState& projectile : _listProjectile )
-        {
-            if ( projectile._bAlive == SW_FALSE )
-                continue;
-            const uint8 flags = static_cast<uint8>( ( projectile._bAlive == SW_TRUE ? ProjectileSimulationInternal::kFlagAlive : 0u ) |
-                                                    ( projectile._bReflected == SW_TRUE ? ProjectileSimulationInternal::kFlagReflected : 0u ) );
-            StateIO::writeName( outArchive, projectile._defID );
-            outArchive << projectile._position;
-            outArchive << projectile._velocity;
-            outArchive << projectile._damage;
-            outArchive << projectile._age;
-            outArchive << projectile._travelled;
-            outArchive << projectile._lifetime;
-            outArchive << projectile._range;
-            outArchive << projectile._gravity;
-            outArchive << projectile._drag;
-            outArchive << projectile._turnRate;
-            outArchive << projectile._radius;
-            outArchive << projectile._blastRadius;
-            outArchive << projectile._restitution;
-            outArchive << projectile._id;
-            outArchive << projectile._payload;
-            outArchive << projectile._owner;
-            outArchive << projectile._team;
-            outArchive << projectile._target;
-            outArchive << projectile._lastHit;
-            outArchive << projectile._pierceLeft;
-            outArchive << projectile._bounceLeft;
-            outArchive << flags;
-        }
-    }
-
-    bool ProjectileSimulation::readState( Archive& archive )
+    void ProjectileSimulation::serializeState( StateIO& io )
     {
         using Internal = ProjectileSimulationInternal;
-        uint32 nextID  = 0;
-        uint32 count   = 0;
-        archive >> nextID;
-        // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 6 개(24) + 깃발(1) 바이트
-        if ( archive.isError() || nextID == 0 || archive.readCount( 105, count ) == false )
-            return false;
-        vector<ProjectileState> listProjectile( count );
-        for ( ProjectileState& projectile : listProjectile )
+        // 쓰는 쪽이 끝냈지만 아직 빼지 않은 탄(`removeDead` 전)은 싣지 않는다 — 읽기는 살아 있는 탄만 받는다.
+        uint32 projectileCount = 0;
+        for ( const ProjectileState& projectile : _listProjectile )
         {
-            uint8 flags = 0;
-            if ( StateIO::readName( archive, projectile._defID ) == false )
-                return false;
-            archive >> projectile._position;
-            archive >> projectile._velocity;
-            archive >> projectile._damage;
-            archive >> projectile._age;
-            archive >> projectile._travelled;
-            archive >> projectile._lifetime;
-            archive >> projectile._range;
-            archive >> projectile._gravity;
-            archive >> projectile._drag;
-            archive >> projectile._turnRate;
-            archive >> projectile._radius;
-            archive >> projectile._blastRadius;
-            archive >> projectile._restitution;
-            archive >> projectile._id;
-            archive >> projectile._payload;
-            archive >> projectile._owner;
-            archive >> projectile._team;
-            archive >> projectile._target;
-            archive >> projectile._lastHit;
-            archive >> projectile._pierceLeft;
-            archive >> projectile._bounceLeft;
-            archive >> flags;
-            const bool bFinite = Internal::isFinite( projectile._position ) && Internal::isFinite( projectile._velocity ) && MathUtil::isFinite( projectile._damage ) &&
-                                 MathUtil::isFinite( projectile._age ) && MathUtil::isFinite( projectile._travelled ) && MathUtil::isFinite( projectile._lifetime ) &&
-                                 MathUtil::isFinite( projectile._range ) && MathUtil::isFinite( projectile._gravity ) && MathUtil::isFinite( projectile._drag ) &&
-                                 MathUtil::isFinite( projectile._turnRate ) && MathUtil::isFinite( projectile._radius ) && MathUtil::isFinite( projectile._blastRadius ) &&
-                                 MathUtil::isFinite( projectile._restitution );
+            projectileCount += projectile._bAlive == SW_TRUE ? 1u : 0u;
+        }
+        io.value( _nextID );
+        io.check( _nextID != 0 );
+        // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 6 개(24) + 깃발(1) 바이트
+        io.count( 105, projectileCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
+        {
+            _listProjectile.clear();
+            _listProjectile.resize( projectileCount );
+        }
+        for ( ProjectileState& projectile : _listProjectile )
+        {
+            if ( io.isWriting() && projectile._bAlive == SW_FALSE )
+                continue;
+            uint8 flags = static_cast<uint8>( ( projectile._bAlive == SW_TRUE ? Internal::kFlagAlive : 0u ) | ( projectile._bReflected == SW_TRUE ? Internal::kFlagReflected : 0u ) );
+            io.value( projectile._defID );
+            io.value( projectile._position );
+            io.value( projectile._velocity );
+            io.value( projectile._damage );
+            io.value( projectile._age );
+            io.value( projectile._travelled );
+            io.value( projectile._lifetime );
+            io.value( projectile._range );
+            io.value( projectile._gravity );
+            io.value( projectile._drag );
+            io.value( projectile._turnRate );
+            io.value( projectile._radius );
+            io.value( projectile._blastRadius );
+            io.value( projectile._restitution );
+            io.value( projectile._id );
+            io.value( projectile._payload );
+            io.value( projectile._owner );
+            io.value( projectile._team );
+            io.value( projectile._target );
+            io.value( projectile._lastHit );
+            io.value( projectile._pierceLeft );
+            io.value( projectile._bounceLeft );
+            io.value( flags );
+            if ( io.isWriting() )
+                continue;
+            // 실수의 유한은 아카이브 읽기가 본다(`readFiniteFloats`).
             const bool bRange = 0.0f <= projectile._age && 0.0f <= projectile._travelled && 0.0f <= projectile._lifetime && 0.0f <= projectile._range &&
                                 ( projectile._range <= 0.0f || projectile._travelled <= projectile._range ) && 0.0f <= projectile._drag && 0.0f <= projectile._turnRate &&
                                 0.0f <= projectile._radius && 0.0f <= projectile._blastRadius && 0.0f <= projectile._restitution && projectile._restitution <= 1.0f;
             // 쓰는 때(걸음 사이)에는 끝난 탄이 빠져 있다 — 살아 있지 않은 탄은 깨진 바이트다.
-            const bool bCounts = 0 < projectile._id && projectile._id < nextID && 0 <= projectile._pierceLeft && 0 <= projectile._bounceLeft &&
+            const bool bCounts = 0 < projectile._id && projectile._id < _nextID && 0 <= projectile._pierceLeft && 0 <= projectile._bounceLeft &&
                                  ( flags & Internal::kFlagAlive ) != 0u && flags <= ( Internal::kFlagAlive | Internal::kFlagReflected );
-            if ( archive.isError() || bFinite == false || bRange == false || bCounts == false )
-                return false;
+            if ( io.check( bRange && bCounts ) == false )
+                return;
             projectile._previousPosition = projectile._position;
             projectile._bAlive           = ( flags & Internal::kFlagAlive ) != 0u ? SW_TRUE : SW_FALSE;
             projectile._bReflected       = ( flags & Internal::kFlagReflected ) != 0u ? SW_TRUE : SW_FALSE;
         }
-        _nextID         = nextID;
-        _listProjectile = std::move( listProjectile );
-        return true;
     }
+
 } // namespace sw

@@ -545,131 +545,68 @@ namespace sw
         _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
-    void SRPGBattlefield::writeState( Archive& outArchive ) const
+    void SRPGBattlefield::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        for ( const SRPGTerrainDef* pTerrain : _listTerrain )
+        io.expect( _topology._width );
+        io.expect( _topology._height );
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        for ( const SRPGTerrainDef*& pTerrain : _listTerrain )
         {
-            StateIO::writeName( outArchive, pTerrain != nullptr ? pTerrain->_id : hashed_string{} );
+            io.reference( pTerrain, [this]( const hashed_string& terrainID )
+            { return _pCatalog->findTerrain( terrainID ); } );
         }
-        outArchive << static_cast<uint32>( _listUnit.size() );
-        for ( const SRPGUnit& unit : _listUnit )
-        {
-            StateIO::writeName( outArchive, unit._pDef->_id );
-            StateIO::writeName( outArchive, unit._pPilot->_id );
-            outArchive << static_cast<uint32>( unit._listAmmo.size() );
-            for ( const int32 ammo : unit._listAmmo )
-            {
-                outArchive << ammo;
-            }
-            unit._pilotLevel.writeState( outArchive );
-            unit._unitLevel.writeState( outArchive );
-            StateIO::writeInt2( outArchive, unit._cell );
-            outArchive << unit._hp;
-            outArchive << unit._en;
-            outArchive << unit._morale;
-            outArchive << unit._dodge;
-            outArchive << unit._rosterIndex;
-            outArchive << static_cast<uint8>( unit._team );
-            outArchive << unit._bAlive;
-            outArchive << unit._bMoved;
-            outArchive << unit._bAttacked;
-            outArchive << unit._bActed;
-            outArchive << unit._bCommander;
-            outArchive << unit._bSupportUsed;
-        }
-        _turnOrder.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _turn;
-        outArchive << _activeUnit;
-        outArchive << static_cast<uint8>( _phaseTeam );
-    }
-
-    bool SRPGBattlefield::readState( Archive& archive )
-    {
-        int32 width  = 0;
-        int32 height = 0;
-        archive >> width;
-        archive >> height;
-        const bool bBattlefieldMismatch = archive.isError() || _pCatalog == nullptr || width != _topology._width || height != _topology._height;
-        if ( bBattlefieldMismatch )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 설정은 사본도 그대로 가지고 있다.
-        SRPGBattlefield restored = *this;
-        for ( const SRPGTerrainDef*& pTerrain : restored._listTerrain )
-        {
-            hashed_string terrainID;
-            if ( StateIO::readName( archive, terrainID ) == false )
-                return false;
-            pTerrain = terrainID.empty() ? nullptr : _pCatalog->findTerrain( terrainID );
-            if ( terrainID.empty() == false && pTerrain == nullptr )
-                return false;
-        }
-
-        uint32 unitCount = 0;
         // 유닛마다 이름 둘(8) + 탄 수(4) + 레벨 둘(40) + 셀(8) + HP, EN, 기력, 회피, 명단(20) + 팀, 비트 여섯(7)
-        if ( archive.readCount( 87, unitCount ) == false )
-            return false;
-        restored._listUnit.assign( unitCount, SRPGUnit{} );
-        for ( SRPGUnit& unit : restored._listUnit )
+        io.list( _listUnit, 87, [&]( SRPGUnit& unit )
         {
-            hashed_string unitID;
-            hashed_string pilotID;
-            uint32        ammoCount = 0;
-            const bool    bHeadRead =
-                StateIO::readName( archive, unitID ) && StateIO::readName( archive, pilotID ) && archive.readCount( 4, ammoCount );
-            if ( bHeadRead == false )
-                return false;
-            unit._pDef   = _pCatalog->findUnit( unitID );
-            unit._pPilot = _pCatalog->findPilot( pilotID );
-            if ( unit._pDef == nullptr || unit._pPilot == nullptr )
-                return false;
-            // 무기는 기체 정의의 순서로 다시 만든다. 탄 수가 그 무기 수와 같아야 한다.
-            restored.refillUnit( unit );
-            if ( ammoCount != unit._listAmmo.size() )
-                return false;
+            hashed_string unitID    = unit._pDef != nullptr ? unit._pDef->_id : hashed_string{};
+            hashed_string pilotID   = unit._pPilot != nullptr ? unit._pPilot->_id : hashed_string{};
+            uint32        ammoCount = static_cast<uint32>( unit._listAmmo.size() );
+            io.value( unitID );
+            io.value( pilotID );
+            io.count( 4, ammoCount );
+            if ( io.isReading() )
+            {
+                unit._pDef   = _pCatalog->findUnit( unitID );
+                unit._pPilot = _pCatalog->findPilot( pilotID );
+                if ( io.check( unit._pDef != nullptr && unit._pPilot != nullptr ) == false )
+                    return;
+                // 무기는 기체 정의의 순서로 다시 만든다. 탄 수가 그 무기 수와 같아야 한다.
+                refillUnit( unit );
+                if ( io.check( ammoCount == unit._listAmmo.size() ) == false )
+                    return;
+            }
             for ( int32& ammo : unit._listAmmo )
             {
-                archive >> ammo;
+                io.value( ammo );
             }
-            uint8      team       = 0;
-            const bool bLevelRead = unit._pilotLevel.readState( archive ) && unit._unitLevel.readState( archive );
-            StateIO::readInt2( archive, unit._cell );
-            archive >> unit._hp;
-            archive >> unit._en;
-            archive >> unit._morale;
-            archive >> unit._dodge;
-            archive >> unit._rosterIndex;
-            archive >> team;
-            archive >> unit._bAlive;
-            archive >> unit._bMoved;
-            archive >> unit._bAttacked;
-            archive >> unit._bActed;
-            archive >> unit._bCommander;
-            archive >> unit._bSupportUsed;
-            const bool bFlagValid = unit._bAlive <= SW_TRUE && unit._bMoved <= SW_TRUE && unit._bAttacked <= SW_TRUE && unit._bActed <= SW_TRUE &&
-                                    unit._bCommander <= SW_TRUE && unit._bSupportUsed <= SW_TRUE;
-            const bool bStatValid = 0 <= unit._hp && 0 <= unit._en && 0 <= unit._morale && 0 <= unit._dodge && -1 <= unit._rosterIndex;
-            const bool bValid     = bLevelRead && archive.isOk() && isInside( unit._cell ) && team < static_cast<uint8>( kSRPGTeamCount ) && bFlagValid && bStatValid;
-            if ( bValid == false )
-                return false;
-            unit._team = static_cast<SRPGTeam>( team );
+            io.value( unit._pilotLevel );
+            io.value( unit._unitLevel );
+            io.value( unit._cell );
+            io.value( unit._hp );
+            io.value( unit._en );
+            io.value( unit._morale );
+            io.value( unit._dodge );
+            io.value( unit._rosterIndex );
+            io.valueAs<uint8>( unit._team );
+            io.flag( unit._bAlive );
+            io.flag( unit._bMoved );
+            io.flag( unit._bAttacked );
+            io.flag( unit._bActed );
+            io.flag( unit._bCommander );
+            io.flag( unit._bSupportUsed );
+            io.check( 0 <= unit._hp && 0 <= unit._en && 0 <= unit._morale && 0 <= unit._dodge && -1 <= unit._rosterIndex && isInside( unit._cell ) && static_cast<uint8>( unit._team ) < static_cast<uint8>( kSRPGTeamCount ) );
+        } );
+        io.value( _turnOrder );
+        io.value( _random );
+        io.value( _turn );
+        io.value( _activeUnit );
+        io.valueAs<uint8>( _phaseTeam );
+        io.check( 0 <= _turn && -1 <= _activeUnit && _activeUnit < static_cast<int32>( _listUnit.size() ) && static_cast<uint8>( _phaseTeam ) < static_cast<uint8>( kSRPGTeamCount ) );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
         }
-
-        uint8      phaseTeam = 0;
-        const bool bPartRead = restored._turnOrder.readState( archive ) && StateIO::readRandom( archive, restored._random );
-        archive >> restored._turn;
-        archive >> restored._activeUnit;
-        archive >> phaseTeam;
-        const bool bValid = bPartRead && archive.isOk() && 0 <= restored._turn && -1 <= restored._activeUnit &&
-                            restored._activeUnit < static_cast<int32>( restored._listUnit.size() ) && phaseTeam < static_cast<uint8>( kSRPGTeamCount );
-        if ( bValid == false )
-            return false;
-        restored._phaseTeam = static_cast<SRPGTeam>( phaseTeam );
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
     }
 
     void SRPGBattlefield::collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitID ) const

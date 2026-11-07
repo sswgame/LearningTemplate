@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
@@ -109,10 +111,11 @@ namespace sw
         /** @brief 마지막 노드(보스)의 작전을 이겼는지 반환합니다. */
         bool isCleared() const { return _bFailed == SW_FALSE && _bInMission == SW_FALSE && _runMap.isFinished(); }
 
-        /** @brief 지도(`RunMap`), 명단(레벨 둘, 기체와 파일럿 id, 잃음 여부), 시드, 임무 중 여부, 실패 여부를 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 지도(`RunMap`), 명단(레벨 둘, 기체와 파일럿 id, 잃음 여부), 시드, 임무 중 여부, 실패 여부를 씁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         RunMap                  _runMap;

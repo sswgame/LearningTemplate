@@ -66,23 +66,11 @@ namespace sw
         _blackboard.setVector( getThreatKey(), event._position );
     }
 
-    void RTSCommanderAI::writeState( Archive& outArchive ) const
+    void RTSCommanderAI::serializeState( StateIO& io )
     {
-        outArchive << _thinkTimer._remaining;
-        outArchive << _attackWaveCount;
-    }
-
-    bool RTSCommanderAI::readState( Archive& archive )
-    {
-        float32 thinkTimer      = 0.0f;
-        int32   attackWaveCount = 0;
-        archive >> thinkTimer;
-        archive >> attackWaveCount;
-        if ( archive.isError() || attackWaveCount < 0 || MathUtil::isFinite( thinkTimer ) == false ) // 무한대 타이머는 AI 를 영영 세운다
-            return false;
-        _thinkTimer._remaining = thinkTimer;
-        _attackWaveCount       = attackWaveCount;
-        return true;
+        io.value( _thinkTimer ); // 무한대 타이머는 AI 를 영영 세우는데, 아카이브의 실수 읽기가 유한만 받는다
+        io.value( _attackWaveCount );
+        io.check( 0 <= _attackWaveCount );
     }
 
     RTSUnitID RTSCommanderAI::findDepot() const

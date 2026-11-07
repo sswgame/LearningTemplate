@@ -13,6 +13,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -116,10 +117,11 @@ namespace sw
         /** @brief 지금 쓸 수 있으면 true 입니다. 잠기지 않았고, 보통형이면 남은 양이 있어야 합니다. */
         bool canUse() const;
 
-        /** @brief 값, 최대 보너스, 재생 배율, 마지막 사용 뒤 경과, 과열 벌칙, 잠김을 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 값, 최대 보너스, 재생 배율, 마지막 사용 뒤 경과, 과열 벌칙, 잠김을 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 범위를 본 뒤의 설정으로 상태를 비웁니다(`initialize` 와 기본 생성자가 부른다). */

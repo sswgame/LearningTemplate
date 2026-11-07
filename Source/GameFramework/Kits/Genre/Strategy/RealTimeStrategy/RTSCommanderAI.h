@@ -8,6 +8,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
@@ -73,10 +75,11 @@ namespace sw
         /** @brief 행동 트리 실행기입니다(행동 트리 창의 활성 노드 표시가 읽는다). */
         const BehaviorTreeRunner& getRunner() const { return _runner; }
 
-        /** @brief 생각 간격 타이머와 공격 횟수를 씁니다. 행동 트리와 블랙보드는 쓰지 않으며, 읽은 쪽에서 트리를 처음부터 다시 고릅니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 생각 간격 타이머와 공격 횟수를 씁니다. 행동 트리와 블랙보드는 쓰지 않으며, 읽은 쪽에서 트리를 처음부터 다시 고릅니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         // 트리 데이터(`*.bt.xml`)가 이름으로 가리키는 작업입니다(`RTSCommanderAI.cpp` 끝의 `SW_GAME_ACTION` 줄이 `rts.*` 이름을 붙인다).
         static ActionResult taskDefend( ActionContext& context, const VocabularyNoParams& params );

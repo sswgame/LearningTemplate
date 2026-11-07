@@ -198,68 +198,36 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void WesternHorse::writeState( Archive& outArchive ) const
+    void WesternHorse::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _pDef != nullptr ? _pDef->_id : hashed_string{} );
-        outArchive << static_cast<uint32>( _listAbility.size() );
-        for ( const hashed_string& ability : _listAbility )
-        {
-            StateIO::writeName( outArchive, ability );
-        }
-        _health.writeState( outArchive );
-        _stamina.writeState( outArchive );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _healthCore;
-        outArchive << _staminaCore;
-        _bond.writeState( outArchive );
-        outArchive << _bondXPCarry;
-        outArchive << _fear;
-        outArchive << _hoursSinceBrush;
-        outArchive << _bRidden;
-        outArchive << _bGalloping;
-    }
-
-    bool WesternHorse::readState( Archive& archive )
-    {
-        hashed_string horseID;
-        if ( _pCatalog == nullptr || StateIO::readName( archive, horseID ) == false )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 품종이 다르면 사본을 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮어쓴다).
-        WesternHorse restored = *this;
-        const bool   bSameDef = _pDef != nullptr && _pDef->_id == horseID;
-        if ( bSameDef == false && restored.initialize( _pCatalog, horseID, 1 ) == false )
-            return false;
-        uint32 abilityCount = 0;
-        if ( archive.readCount( 4, abilityCount ) == false )
-            return false;
-        restored._listAbility.resize( abilityCount );
-        for ( hashed_string& ability : restored._listAbility )
-        {
-            if ( StateIO::readName( archive, ability ) == false )
-                return false;
-        }
-        const bool bGaugesRead = restored._health.readState( archive ) && restored._stamina.readState( archive ) &&
-                                 StateIO::readRandom( archive, restored._random );
-        if ( bGaugesRead == false )
-            return false;
-        archive >> restored._healthCore;
-        archive >> restored._staminaCore;
-        if ( restored._bond.readState( archive ) == false )
-            return false;
-        archive >> restored._bondXPCarry;
-        archive >> restored._fear;
-        archive >> restored._hoursSinceBrush;
-        archive >> restored._bRidden;
-        archive >> restored._bGalloping;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        hashed_string horseID = _pDef != nullptr ? _pDef->_id : hashed_string{};
+        io.value( horseID );
+        if ( io.isOk() == false )
+            return;
+        // 품종이 다르면 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮어쓴다).
+        if ( io.isReading() && ( _pDef == nullptr || _pDef->_id != horseID ) && io.check( initialize( _pCatalog, horseID, 1 ) ) == false )
+            return;
+        io.list( _listAbility );
+        io.value( _health );
+        io.value( _stamina );
+        io.value( _random );
+        io.value( _healthCore );
+        io.value( _staminaCore );
+        io.value( _bond );
+        io.value( _bondXPCarry );
+        io.value( _fear );
+        io.value( _hoursSinceBrush );
+        io.flag( _bRidden );
+        io.flag( _bGalloping );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
         // 비교는 NaN 에서 거짓이라 범위를 쓴 쪽이 NaN 도 거른다. 코어가 NaN 이면 회복 배율과 코어 감소가 영영 NaN 으로 남는다.
-        const bool bCoreValid = 0.0f <= restored._healthCore && restored._healthCore <= kCoreMax && 0.0f <= restored._staminaCore && restored._staminaCore <= kCoreMax;
-        const bool bValid     = archive.isOk() && bCoreValid && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._hoursSinceBrush &&
-                            0.0f <= restored._bondXPCarry && restored._bondXPCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
-        if ( bValid == false || restored.areAbilitiesUnlocked() == false )
-            return false;
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        io.check( 0.0f <= _healthCore && _healthCore <= kCoreMax && 0.0f <= _staminaCore && _staminaCore <= kCoreMax );
+        io.check( 0.0f <= _fear && 0.0f <= _hoursSinceBrush && 0.0f <= _bondXPCarry && _bondXPCarry < 1.0f && _bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() ) );
+        io.check( areAbilitiesUnlocked() );
+        _eventBuffer.clear();
     }
 
     bool WesternHorse::areAbilitiesUnlocked() const

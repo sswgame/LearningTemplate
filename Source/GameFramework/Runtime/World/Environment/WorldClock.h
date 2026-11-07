@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -123,10 +124,11 @@ namespace sw
         const WorldClockSettings& getSettings() const { return _settings; }
         bool                      isPaused() const { return _bPaused != SW_FALSE; }
         void                      pollEvents( vector<WorldClockEvent>& outListEvent );
-        /** @brief 날, 하루 안의 초, 배율, 멈춤을 씁니다. 설정(하루 길이와 계절)은 `initialize` 의 것이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 알림은 없습니다. 날이 음수이거나 시각이 지금 설정의 하루 밖이면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 날, 하루 안의 초, 배율, 멈춤을 씁니다. 설정(하루 길이와 계절)은 `initialize` 의 것이라 싣지 않습니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 알림은 없습니다. 날이 음수이거나 시각이 지금 설정의 하루 밖이면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief @p settings 의 시계에서 @p hour 시의 때를 반환합니다. 시계가 그 시각에 있을 때의 `getDayPhase` 와 같으며, 일정이 미래 시각을 판정할 때 씁니다. */
         static DayPhase computePhaseAt( const WorldClockSettings& settings, float32 hour );

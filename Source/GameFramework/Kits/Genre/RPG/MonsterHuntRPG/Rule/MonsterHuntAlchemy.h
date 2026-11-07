@@ -12,6 +12,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
@@ -88,10 +89,11 @@ namespace sw
         int32                                  getOilHits() const { return _oilHits; }
         const vector<MonsterHuntActiveEffect>& getActiveEffects() const { return _listEffect; }
         Crafter&                               getCrafter() { return _crafter; }
-        /** @brief 제작기, 남은 충전, 도는 효과(남은 시간과 묶인 독성), 바른 오일과 남은 적중 횟수, 떠 있는 독성을 씁니다. 카탈로그와 레시피 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 연금 아이템이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 제작기, 남은 충전, 도는 효과(남은 시간과 묶인 독성), 바른 오일과 남은 적중 횟수, 떠 있는 독성을 씁니다. 카탈로그와 레시피 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 연금 아이템이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         struct ChargeEntry

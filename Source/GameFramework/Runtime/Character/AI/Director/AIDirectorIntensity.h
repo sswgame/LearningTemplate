@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -70,10 +72,11 @@ namespace sw
         float32 getCalmSeconds() const override { return _calmSeconds; }
         float32 getSignal( const hashed_string& signalID ) const override;
         float32 getStress() const { return _stress; }
-        /** @brief 스트레스, 싸움 뒤 시간, 신호 값을 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 신호 수가 정의와 다르면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 스트레스, 싸움 뒤 시간, 신호 값을 씁니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 신호 수가 정의와 다르면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         int32   findSignalIndex( const hashed_string& signalID ) const;

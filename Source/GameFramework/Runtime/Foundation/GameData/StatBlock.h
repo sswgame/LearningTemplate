@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 #include <optional>
@@ -59,10 +61,11 @@ namespace sw
         bool                     isEmpty() const { return _listValue.empty(); }
         size_t                   getCount() const { return _listValue.size(); }
 
-        /** @brief 이름 → 값 목록(넣은 순서)을 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 이름 → 값 목록(넣은 순서)을 씁니다.
+         *        `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 고칠 값 칸입니다. 공개 `findValue`(읽기 전용, 없음은 std::nullopt)와 이름을 달리해 비 const 호출이 이쪽으로 잘못 가지 않게 한다. */

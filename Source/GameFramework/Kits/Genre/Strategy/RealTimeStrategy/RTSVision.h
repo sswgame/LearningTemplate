@@ -9,6 +9,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
@@ -49,10 +51,11 @@ namespace sw
         /** @brief 셀의 상태입니다. 팀이나 셀이 범위 밖이면 `Unexplored` 입니다. */
         RTSVisibility get( int32 team, const int2& cell ) const;
 
-        /** @brief 팀마다의 셀 상태와 다시 칠하기 타이머를 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽습니다. 셀 수가 지금 격자와 다르거나, 셀 값이 범위 밖이거나 데이터가 깨졌으면 false 이고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 팀마다의 셀 상태와 다시 칠하기 타이머를 씁니다.
+         *        `writeState` 가 쓴 바이트를 읽습니다. 셀 수가 지금 격자와 다르거나, 셀 값이 범위 밖이거나 데이터가 깨졌으면 false 이고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         vector<vector<uint8>> _listTeamCell; ///< 팀마다 셀의 RTSVisibility

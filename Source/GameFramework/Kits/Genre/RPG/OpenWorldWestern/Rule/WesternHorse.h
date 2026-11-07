@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -99,10 +101,11 @@ namespace sw
         const ResourceGauge&   getStamina() const { return _stamina; }
         const WesternHorseDef* getDef() const { return _pDef; }
         void                   pollEvents( vector<WesternHorseEvent>& outListEvent );
-        /** @brief 품종 id, 열린 능력, 체력, 스태미나 게이지, 난수, 코어, 유대(레벨 진행과 소수), 겁, 손질한 뒤 시간, 탔는지, 질주를 씁니다. 카탈로그는 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 품종이 카탈로그에 없거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(품종이 다르면 그 품종의 게이지 설정으로 바꿉니다). */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 품종 id, 열린 능력, 체력, 스태미나 게이지, 난수, 코어, 유대(레벨 진행과 소수), 겁, 손질한 뒤 시간, 탔는지, 질주를 씁니다. 카탈로그는 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 품종이 카탈로그에 없거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(품종이 다르면 그 품종의 게이지 설정으로 바꿉니다).
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         void    applyBondLevel( int32 level );

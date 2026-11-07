@@ -17,6 +17,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorIntensity.h"
@@ -159,17 +160,14 @@ namespace sw
         uint64 computeStateHash() const;
         /**
          * @brief 감독 상태를 씁니다. 태그는 'AIDR', 버전은 1 입니다.
-         * @details 시간, 단계, 순환, 긴장도, 고른 횟수, 난수, 프로필 구조, 풀, 항목, 기본 긴장도 모델, 스폰 감독을 싣는다.
-         *          핫 리로드와 세이브가 웨이브를 이어 가는 데 쓴다.
-         *          게임 긴장도 모델(`setIntensityModel`)과 추적과 쌓인 이벤트는 싣지 않는다.
+         *        시간, 단계, 순환, 긴장도, 고른 횟수, 난수, 프로필 구조, 풀, 항목, 기본 긴장도 모델, 스폰 감독을 싣는다.
+         *        핫 리로드와 세이브가 웨이브를 이어 가는 데 쓴다.
+         *        게임 긴장도 모델(`setIntensityModel`)과 추적과 쌓인 이벤트는 싣지 않는다.
+         *        `writeState` 의 바이트로 이어 갑니다. 먼저 같은 프로필과 테이블로 `initialize` 한 감독에 부릅니다.
+         *        프로필 구조(단계, 풀, 항목, 신호 수)가 다르거나 끝까지 읽지 못하면 false 를 반환하고 감독은 그대로이다. 이때 부른 쪽은 처음부터 돈다.
+         *        쌓인 이벤트와 추적은 비운다.
          */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 이어 갑니다. 먼저 같은 프로필과 테이블로 `initialize` 한 감독에 부릅니다.
-         * @details 프로필 구조(단계, 풀, 항목, 신호 수)가 다르거나 끝까지 읽지 못하면 false 를 반환하고 감독은 그대로이다. 이때 부른 쪽은 처음부터 돈다.
-         *          쌓인 이벤트와 추적은 비운다.
-         */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
         /**
          * @brief 판을 이어 가며 프로필을 @p pProfile 로 바꿉니다(핫 리로드 — 다시 읽어 떼어 낸 새 객체). 지금 상태를 쓰고 새 프로필로 묶은 뒤 그 상태를 읽는다(`writeState` · `readState`).
          * @details 국면 · 풀 · 항목 번호가 그대로 이어지므로 구조(국면 · 풀 · 항목 · 신호 수)가 같은 변경(수치 · 조건)만 받는다. 구조가 다르면 옛 프로필로 되돌리고 false 이며, 부른 쪽은 다음 시작에서 새 프로필을 쓴다.

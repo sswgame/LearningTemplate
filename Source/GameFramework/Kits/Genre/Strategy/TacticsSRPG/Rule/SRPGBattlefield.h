@@ -12,6 +12,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
@@ -228,10 +230,9 @@ namespace sw
          * @brief 크기, 셀마다 지형 정의 id, 유닛(기체와 파일럿 id, 탄, 레벨 둘, 셀, HP, EN, 기력, 회피, 명단 슬롯, 팀, 차례 비트), 차례(`TurnOrder`), 난수,
          *        턴, 활성 유닛, 페이즈 팀을 씁니다. 정의는 id 로 저장하고 읽을 때 카탈로그에서 찾습니다.
          *        무기 목록은 기체 정의에서 다시 만들고, 설정은 `initialize` 에서 받으므로 저장하지 않습니다. 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 같은 크기로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있으면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 같은 크기로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         // --- 개발 ---
         /** @brief 기체 레벨 조건을 채운 개발 분기를 모읍니다. 격파된 유닛은 분기가 없습니다. */

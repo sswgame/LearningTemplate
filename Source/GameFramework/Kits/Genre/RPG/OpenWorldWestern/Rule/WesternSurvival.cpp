@@ -206,63 +206,24 @@ namespace sw
         return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
     }
 
-    void WesternSurvival::writeState( Archive& outArchive ) const
+    void WesternSurvival::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listClothing.size() );
-        for ( const hashed_string& clothingID : _listClothing )
-        {
-            StateIO::writeName( outArchive, clothingID );
-        }
-        outArchive << static_cast<uint32>( _listMark.size() );
-        for ( const uint64 targetID : _listMark )
-        {
-            outArchive << targetID;
-        }
+        io.list( _listClothing );
+        io.list( _listMark );
         for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
         {
-            _arrGauge[coreIndex].writeState( outArchive );
-            outArchive << _arrCore[coreIndex];
+            io.value( _arrGauge[coreIndex] );
+            io.value( _arrCore[coreIndex] );
+            if ( io.check( 0.0f <= _arrCore[coreIndex] && _arrCore[coreIndex] <= kCoreMax ) == false )
+                return;
         }
-        outArchive << _deadEyeLevel;
-        outArchive << _bDeadEyeActive;
+        io.value( _deadEyeLevel );
+        io.flag( _bDeadEyeActive );
+        if ( io.isOk() )
+        {
+            // 표시는 켜 둔 동안 단계의 개수까지만 찍는다(`markTarget`). 단계를 읽은 뒤라야 상한을 안다.
+            io.check( 0 <= _deadEyeLevel && ( _bDeadEyeActive != SW_FALSE ? static_cast<int32>( _listMark.size() ) <= getMarkLimit() : _listMark.empty() ) );
+        }
     }
 
-    bool WesternSurvival::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 게이지 설정과 카탈로그는 사본이 그대로 가지고 있다.
-        WesternSurvival restored = *this;
-        uint32          count    = 0;
-        if ( archive.readCount( 4, count ) == false )
-            return false;
-        restored._listClothing.resize( count );
-        for ( hashed_string& clothingID : restored._listClothing )
-        {
-            if ( StateIO::readName( archive, clothingID ) == false )
-                return false;
-        }
-        if ( archive.readCount( 8, count ) == false )
-            return false;
-        restored._listMark.resize( count );
-        for ( uint64& targetID : restored._listMark )
-        {
-            archive >> targetID;
-        }
-        for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
-        {
-            if ( restored._arrGauge[coreIndex].readState( archive ) == false )
-                return false;
-            archive >> restored._arrCore[coreIndex];
-            const bool bCoreValid = 0.0f <= restored._arrCore[coreIndex] && restored._arrCore[coreIndex] <= kCoreMax;
-            if ( bCoreValid == false )
-                return false;
-        }
-        archive >> restored._deadEyeLevel;
-        archive >> restored._bDeadEyeActive;
-        // 표시는 켜 둔 동안 단계의 개수까지만 찍는다(`markTarget`). 단계를 읽은 뒤라야 상한을 안다.
-        const bool bMarksValid = restored._bDeadEyeActive != SW_FALSE ? static_cast<int32>( restored._listMark.size() ) <= restored.getMarkLimit() : restored._listMark.empty();
-        if ( archive.isError() || restored._bDeadEyeActive > SW_TRUE || restored._deadEyeLevel < 0 || bMarksValid == false )
-            return false;
-        *this = std::move( restored );
-        return true;
-    }
 } // namespace sw

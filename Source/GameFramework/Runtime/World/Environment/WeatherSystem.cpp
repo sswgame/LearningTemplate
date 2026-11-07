@@ -194,39 +194,22 @@ namespace sw
         return previous + ( current - previous ) * blend;
     }
 
-    void WeatherSystem::writeState( Archive& outArchive ) const
+    void WeatherSystem::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, getCurrent() );
-        StateIO::writeName( outArchive, getPrevious() );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _remaining;
-        outArchive << _transitionElapsed;
+        hashed_string currentID  = getCurrent();
+        hashed_string previousID = getPrevious();
+        io.value( currentID );
+        io.value( previousID );
+        io.value( _random );
+        io.value( _remaining );
+        io.value( _transitionElapsed );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _pCurrent  = currentID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->find( currentID );
+        _pPrevious = previousID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->find( previousID );
+        io.check( ( currentID.empty() || _pCurrent != nullptr ) && ( previousID.empty() || _pPrevious != nullptr ) );
     }
 
-    bool WeatherSystem::readState( Archive& archive )
-    {
-        hashed_string currentID;
-        hashed_string previousID;
-        GameRandom    random            = _random;
-        float32       remaining         = 0.0f;
-        float32       transitionElapsed = 0.0f;
-        const bool    bRead             = StateIO::readName( archive, currentID ) && StateIO::readName( archive, previousID ) && StateIO::readRandom( archive, random );
-        archive >> remaining;
-        archive >> transitionElapsed;
-        if ( bRead == false || archive.isError() )
-            return false;
-        const WeatherDef* pCurrent  = currentID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->find( currentID );
-        const WeatherDef* pPrevious = previousID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->find( previousID );
-        const bool        bKnown    = ( currentID.empty() || pCurrent != nullptr ) && ( previousID.empty() || pPrevious != nullptr );
-        if ( bKnown == false )
-            return false;
-        _pCurrent          = pCurrent;
-        _pPrevious         = pPrevious;
-        _random            = random;
-        _remaining         = remaining;
-        _transitionElapsed = transitionElapsed;
-        return true;
-    }
 } // namespace sw
 
 namespace sw

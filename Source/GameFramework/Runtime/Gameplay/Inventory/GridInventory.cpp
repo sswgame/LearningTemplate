@@ -295,67 +295,37 @@ namespace sw
         _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( itemIndex ) );
     }
 
-    void GridInventory::writeState( Archive& outArchive ) const
+    void GridInventory::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        outArchive << _nextInstanceID;
-        for ( const int32 cell : _listCell )
+        int32 width  = _topology._width;
+        int32 height = _topology._height;
+        io.value( width );
+        io.value( height );
+        io.value( _nextInstanceID );
+        if ( io.isReading() )
         {
-            outArchive << cell;
+            const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
+            if ( io.check( 0 <= width && 0 <= height && io.getArchive().hasBytesAvailable( cellCount * 4 ) ) == false )
+                return;
+            _topology = GridTopology( width, height );
+            _listCell.assign( static_cast<size_t>( cellCount ), -1 );
+            ++_revision;
         }
-        outArchive << static_cast<uint32>( _listItem.size() );
-        for ( const GridItem& item : _listItem )
+        for ( int32& cell : _listCell )
         {
-            StateIO::writeName( outArchive, item._itemID );
-            outArchive << item._instanceID;
-            outArchive << item._count;
-            outArchive << item._x;
-            outArchive << item._y;
-            outArchive << item._bRotated;
+            io.value( cell );
         }
+        // 아이템마다 이름(4) + 번호, 개수, 위치(16) + 회전 여부(1)
+        io.list( _listItem, 21, [&]( GridItem& item )
+        {
+            io.value( item._itemID );
+            io.value( item._instanceID );
+            io.value( item._count );
+            io.value( item._x );
+            io.value( item._y );
+            io.flag( item._bRotated );
+            io.check( 0 <= item._instanceID && item._instanceID < _nextInstanceID && 0 < item._count );
+        } );
     }
 
-    bool GridInventory::readState( Archive& archive )
-    {
-        int32 width          = 0;
-        int32 height         = 0;
-        int32 nextInstanceID = 0;
-        archive >> width;
-        archive >> height;
-        archive >> nextInstanceID;
-        const uint64 cellCount           = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        const bool   bInvalidGridArchive = archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 4 ) == false;
-        if ( bInvalidGridArchive )
-            return false;
-        vector<int32> listCell( static_cast<size_t>( cellCount ), -1 );
-        for ( int32& cell : listCell )
-        {
-            archive >> cell;
-        }
-        uint32 itemCount = 0;
-        // 아이템마다 이름(4) + 번호, 개수, 위치(16) + 회전 여부(1)
-        if ( archive.readCount( 21, itemCount ) == false )
-            return false;
-        vector<GridItem> listItem( itemCount );
-        for ( GridItem& item : listItem )
-        {
-            if ( StateIO::readName( archive, item._itemID ) == false )
-                return false;
-            archive >> item._instanceID;
-            archive >> item._count;
-            archive >> item._x;
-            archive >> item._y;
-            archive >> item._bRotated;
-            const bool bValid = archive.isOk() && 0 <= item._instanceID && item._instanceID < nextInstanceID && 0 < item._count && item._bRotated <= SW_TRUE;
-            if ( bValid == false )
-                return false;
-        }
-        _topology       = GridTopology( width, height );
-        _nextInstanceID = nextInstanceID;
-        _listCell       = std::move( listCell );
-        _listItem       = std::move( listItem );
-        ++_revision;
-        return true;
-    }
 } // namespace sw

@@ -377,56 +377,23 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void ArcadeVehicleMotor::writeState( Archive& outArchive ) const
+    void ArcadeVehicleMotor::serializeState( StateIO& io )
     {
-        StateIO::writeStepTimer( outArchive, _timer );
-        outArchive << _position;
-        outArchive << _velocity;
-        outArchive << _yaw;
-        outArchive << _driftCharge;
-        StateIO::writeCountdown( outArchive, _boost );
-        outArchive << _nitroGauge;
-        outArchive << _nitroCount;
-        outArchive << _driftDirection;
-        outArchive << _bAirborne;
+        io.value( _timer );
+        io.value( _position );
+        io.value( _velocity );
+        io.value( _yaw );
+        io.value( _driftCharge );
+        io.value( _boost );
+        io.value( _nitroGauge );
+        io.value( _nitroCount );
+        io.value( _driftDirection );
+        io.flag( _bAirborne );
+        io.check( 0 <= _nitroCount && -1 <= _driftDirection && _driftDirection <= 1 );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
+        }
     }
 
-    bool ArcadeVehicleMotor::readState( Archive& archive )
-    {
-        FixedStepTimer timer          = _timer;
-        float3         position       = {};
-        float3         velocity       = {};
-        float32        yaw            = 0.0f;
-        float32        driftCharge    = 0.0f;
-        Countdown      boost          = {};
-        float32        nitroGauge     = 0.0f;
-        int32          nitroCount     = 0;
-        int32          driftDirection = 0;
-        uint8          bAirborne      = SW_FALSE;
-        const bool     bTimerRead     = StateIO::readStepTimer( archive, timer );
-        archive >> position;
-        archive >> velocity;
-        archive >> yaw;
-        archive >> driftCharge;
-        const bool bBoostRead = StateIO::readCountdown( archive, boost );
-        archive >> nitroGauge;
-        archive >> nitroCount;
-        archive >> driftDirection;
-        archive >> bAirborne;
-        const bool bValid = bTimerRead && bBoostRead && archive.isOk() && 0 <= nitroCount && -1 <= driftDirection && driftDirection <= 1 && bAirborne <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        _timer          = timer;
-        _position       = position;
-        _velocity       = velocity;
-        _yaw            = yaw;
-        _driftCharge    = driftCharge;
-        _boost          = boost;
-        _nitroGauge     = nitroGauge;
-        _nitroCount     = nitroCount;
-        _driftDirection = driftDirection;
-        _bAirborne      = bAirborne;
-        _eventBuffer.clear();
-        return true;
-    }
 } // namespace sw

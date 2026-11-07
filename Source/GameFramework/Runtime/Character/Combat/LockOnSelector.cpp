@@ -127,22 +127,11 @@ namespace sw
         _hiddenTime = 0.0f;
     }
 
-    void LockOnSelector::writeState( Archive& outArchive ) const
+    void LockOnSelector::serializeState( StateIO& io )
     {
-        outArchive << _target;
-        outArchive << _hiddenTime;
+        io.value( _target );
+        io.value( _hiddenTime );
+        io.check( 0.0f <= _hiddenTime );
     }
 
-    bool LockOnSelector::readState( Archive& archive )
-    {
-        uint64  target     = 0;
-        float32 hiddenTime = 0.0f;
-        archive >> target;
-        archive >> hiddenTime;
-        if ( archive.isError() || ( 0.0f <= hiddenTime ) == false )
-            return false;
-        _target     = target;
-        _hiddenTime = hiddenTime;
-        return true;
-    }
 } // namespace sw

@@ -166,38 +166,18 @@ namespace sw
         { return IngredientStockInternal::makeExpiryKey( lhs ) < IngredientStockInternal::makeExpiryKey( rhs ); } );
     }
 
-    void IngredientStock::writeState( Archive& outArchive ) const
+    void IngredientStock::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listBatch.size() );
-        for ( const IngredientBatch& batch : _listBatch )
+        // 배치마다 이름(4) + 원가(8) + 개수, 남은 날(8)
+        io.list( _listBatch, 20, [&]( IngredientBatch& batch )
         {
-            StateIO::writeName( outArchive, batch._itemID );
-            outArchive << batch._unitCost;
-            outArchive << batch._count;
-            outArchive << batch._daysLeft;
-        }
+            io.value( batch._itemID );
+            io.value( batch._unitCost );
+            io.value( batch._count );
+            io.value( batch._daysLeft );
+            // 남은 날은 -1(상하지 않는다)이거나 양수이다. `advanceDay` 가 0 을 하루 줄이면 -1 이 되어 상하지 않는 배치로 바뀐다.
+            io.check( batch._itemID.empty() == false && 0 <= batch._unitCost && 0 <= batch._count && ( batch._daysLeft == -1 || batch._daysLeft > 0 ) );
+        } );
     }
 
-    bool IngredientStock::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        // 배치마다 이름(4) + 원가(8) + 개수, 남은 날(8)
-        if ( archive.readCount( 20, count ) == false )
-            return false;
-        vector<IngredientBatch> listBatch( count );
-        for ( IngredientBatch& batch : listBatch )
-        {
-            if ( StateIO::readName( archive, batch._itemID ) == false )
-                return false;
-            archive >> batch._unitCost;
-            archive >> batch._count;
-            archive >> batch._daysLeft;
-            // 남은 날은 -1(상하지 않는다)이거나 양수이다. `advanceDay` 가 0 을 하루 줄이면 -1 이 되어 상하지 않는 배치로 바뀐다.
-            const bool bDaysValid = batch._daysLeft == -1 || batch._daysLeft > 0;
-            if ( archive.isError() || batch._itemID.empty() || batch._unitCost < 0 || batch._count < 0 || bDaysValid == false )
-                return false;
-        }
-        _listBatch = std::move( listBatch );
-        return true;
-    }
 } // namespace sw

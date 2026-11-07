@@ -216,29 +216,15 @@ namespace sw
             _bLocked = SW_FALSE;
     }
 
-    void ResourceGauge::writeState( Archive& outArchive ) const
+    void ResourceGauge::serializeState( StateIO& io )
     {
-        outArchive << _value;
-        outArchive << _maxBonus;
-        outArchive << _regenScale;
-        outArchive << _timeSinceUse;
-        StateIO::writeCountdown( outArchive, _overheatPenalty );
-        outArchive << _bLocked;
+        io.value( _value );
+        io.value( _maxBonus );
+        io.value( _regenScale );
+        io.value( _timeSinceUse );
+        io.value( _overheatPenalty );
+        io.flag( _bLocked );
+        io.check( 0.0f <= _value && _value <= getMax() );
     }
 
-    bool ResourceGauge::readState( Archive& archive )
-    {
-        ResourceGauge restored = *this;
-        archive >> restored._value;
-        archive >> restored._maxBonus;
-        archive >> restored._regenScale;
-        archive >> restored._timeSinceUse;
-        const bool bTimerRead = StateIO::readCountdown( archive, restored._overheatPenalty );
-        archive >> restored._bLocked;
-        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._value && restored._value <= restored.getMax() && restored._bLocked <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        *this = restored;
-        return true;
-    }
 } // namespace sw

@@ -18,6 +18,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -76,10 +77,11 @@ namespace sw
         void clear();
         /** @brief 쌓인 변화를 넘겨 주고 비웁니다. */
         void pollEvents( vector<WalletEvent>& outListEvent );
-        /** @brief 통화마다 이름과 잔액을 처음 만난 순서로 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 통화 이름이 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다. 음수 잔액(빚)도 그대로 복원합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 통화마다 이름과 잔액을 처음 만난 순서로 씁니다.
+         *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 통화 이름이 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다. 음수 잔액(빚)도 그대로 복원합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         int64                        getBalance( const hashed_string& currency ) const;
         bool                         canAfford( const hashed_string& currency, int64 amount ) const { return amount <= getBalance( currency ); }
@@ -281,10 +283,11 @@ namespace sw
         hashed_string      getCurrency( const hashed_string& shopID ) const;
         const ShopRuntime* findRuntime( const hashed_string& shopID ) const;
 
-        /** @brief 가게마다 런타임 상태(가게 id, 재고, 시세, 사들이지 않는 분류, 가격 배율, 재입고 후 지난 날)를 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 가게마다 런타임 상태(가게 id, 재고, 시세, 사들이지 않는 분류, 가격 배율, 재입고 후 지난 날)를 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         ShopRuntime* findRuntime( const hashed_string& shopID );

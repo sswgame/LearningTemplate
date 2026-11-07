@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
@@ -103,10 +104,11 @@ namespace sw
         /** @brief 타일의 작물이 다 자라기까지의 비율(0..1)을 반환합니다. 작물이 없으면 0 입니다. */
         float32 computeGrowthRatio( int32 x, int32 y ) const;
 
-        /** @brief 타일마다 작물, 자람, 상태를 씁니다(핫 리로드와 세이브용). */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 타일을 복원합니다. 밭 크기가 다르거나, 카탈로그에 없는 작물, 규칙으로 나올 수 없는 타일이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그는 `initialize` 에서 받은 것을 씁니다). */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 타일마다 작물, 자람, 상태를 씁니다(핫 리로드와 세이브용).
+         *        `writeState` 가 쓴 바이트로 타일을 복원합니다. 밭 크기가 다르거나, 카탈로그에 없는 작물, 규칙으로 나올 수 없는 타일이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그는 `initialize` 에서 받은 것을 씁니다).
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         FarmTile* findTileMutable( int32 x, int32 y );

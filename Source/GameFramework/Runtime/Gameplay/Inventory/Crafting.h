@@ -14,6 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -160,10 +161,11 @@ namespace sw
 
         const deque<CraftJob>& getQueue() const { return _listJob; }
 
-        /** @brief 배운 레시피(이름 순)와 작업 대기열(레시피 id, 남은 시간, 개수)을 씁니다. 카탈로그와 재료 처리기는 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 배운 레시피(이름 순)와 작업 대기열(레시피 id, 남은 시간, 개수)을 씁니다. 카탈로그와 재료 처리기는 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         const RecipeCatalog*         _pCatalog;

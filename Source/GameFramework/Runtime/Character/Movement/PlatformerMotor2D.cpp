@@ -444,46 +444,27 @@ namespace sw
             _events |= PlatformerEvent::kTouchedHazard;
     }
 
-    void PlatformerMotor2D::writeState( Archive& outArchive ) const
+    void PlatformerMotor2D::serializeState( StateIO& io )
     {
-        outArchive << _position;
-        outArchive << _velocity;
-        StateIO::writeCountdown( outArchive, _coyote );
-        StateIO::writeCountdown( outArchive, _jumpBuffer );
-        StateIO::writeCountdown( outArchive, _wallLock );
-        StateIO::writeCountdown( outArchive, _dash );
-        StateIO::writeCountdown( outArchive, _dashCooldown );
-        StateIO::writeCountdown( outArchive, _dropThrough );
-        outArchive << _extraJumpsLeft;
-        outArchive << _airDashesLeft;
-        outArchive << _wallSide;
-        outArchive << _facing;
-        outArchive << _bGrounded;
-        outArchive << _bClimbing;
-        outArchive << _bRising;
+        io.value( _position );
+        io.value( _velocity );
+        io.value( _coyote );
+        io.value( _jumpBuffer );
+        io.value( _wallLock );
+        io.value( _dash );
+        io.value( _dashCooldown );
+        io.value( _dropThrough );
+        io.value( _extraJumpsLeft );
+        io.value( _airDashesLeft );
+        io.value( _wallSide );
+        io.value( _facing );
+        io.flag( _bGrounded );
+        io.flag( _bClimbing );
+        io.flag( _bRising );
+        if ( io.isReading() )
+        {
+            _events = 0;
+        }
     }
 
-    bool PlatformerMotor2D::readState( Archive& archive )
-    {
-        PlatformerMotor2D restored = *this;
-        archive >> restored._position;
-        archive >> restored._velocity;
-        const bool bTimerRead =
-            StateIO::readCountdown( archive, restored._coyote ) && StateIO::readCountdown( archive, restored._jumpBuffer ) &&
-            StateIO::readCountdown( archive, restored._wallLock ) && StateIO::readCountdown( archive, restored._dash ) &&
-            StateIO::readCountdown( archive, restored._dashCooldown ) && StateIO::readCountdown( archive, restored._dropThrough );
-        archive >> restored._extraJumpsLeft;
-        archive >> restored._airDashesLeft;
-        archive >> restored._wallSide;
-        archive >> restored._facing;
-        archive >> restored._bGrounded;
-        archive >> restored._bClimbing;
-        archive >> restored._bRising;
-        const bool bValid = bTimerRead && archive.isOk() && restored._bGrounded <= SW_TRUE && restored._bClimbing <= SW_TRUE && restored._bRising <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        restored._events = 0;
-        *this            = restored;
-        return true;
-    }
 } // namespace sw

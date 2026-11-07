@@ -11,6 +11,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
 
@@ -140,10 +142,11 @@ namespace sw
         /** @brief 쌓인 알림을 꺼내 돌려줍니다. 다음 `takeEvents` 까지 유효합니다(`EventBuffer::takeAll`). */
         [[nodiscard]] const vector<MatchEvent>& takeEvents() { return _eventBuffer.takeAll(); }
 
-        /** @brief 팀, 참가자, 경과 시간, 단계 시간, 승리 팀, 단계를 씁니다. 설정은 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 팀, 참가자, 경과 시간, 단계 시간, 승리 팀, 단계를 씁니다. 설정은 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         bool isValidParticipant( int32 participant ) const { return participant >= 0 && participant < static_cast<int32>( _listParticipant.size() ); }

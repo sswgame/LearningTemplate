@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -67,10 +69,11 @@ namespace sw
         int32                          getBatchCount( const hashed_string& itemID ) const;
         const vector<IngredientBatch>& getBatches() const { return _listBatch; }
 
-        /** @brief 배치(재료, 원가, 개수, 남은 날)를 씁니다. 빌린 창고는 저장하지 않습니다(주인이 저장합니다). */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 배치(재료, 원가, 개수, 남은 날)를 씁니다. 빌린 창고는 저장하지 않습니다(주인이 저장합니다).
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 배치 합이 인벤토리 개수를 넘으면 오래된 배치부터 줄입니다(밖에서 뺀 만큼). */

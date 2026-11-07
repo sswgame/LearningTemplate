@@ -180,55 +180,21 @@ namespace sw
         return HashUtil::mix32( _seed ^ HashUtil::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) );
     }
 
-    void SRPGCampaign::writeState( Archive& outArchive ) const
+    void SRPGCampaign::serializeState( StateIO& io )
     {
-        _runMap.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listRoster.size() );
-        for ( const SRPGRosterEntry& entry : _listRoster )
+        io.value( _runMap );
+        // 명단마다 레벨 둘(40) + 이름 둘(8) + 잃음(1)
+        io.list( _listRoster, 49, [&]( SRPGRosterEntry& entry )
         {
-            entry._pilotLevel.writeState( outArchive );
-            entry._unitLevel.writeState( outArchive );
-            StateIO::writeName( outArchive, entry._unitID );
-            StateIO::writeName( outArchive, entry._pilotID );
-            outArchive << entry._bLost;
-        }
-        outArchive << _seed;
-        outArchive << _bInMission;
-        outArchive << _bFailed;
+            io.value( entry._pilotLevel );
+            io.value( entry._unitLevel );
+            io.value( entry._unitID );
+            io.value( entry._pilotID );
+            io.flag( entry._bLost );
+        } );
+        io.value( _seed );
+        io.flag( _bInMission );
+        io.flag( _bFailed );
     }
 
-    bool SRPGCampaign::readState( Archive& archive )
-    {
-        RunMap runMap;
-        uint32 count = 0;
-        // 명단마다 레벨 둘(40) + 이름 둘(8) + 잃음(1)
-        if ( runMap.readState( archive ) == false || archive.readCount( 49, count ) == false )
-            return false;
-        vector<SRPGRosterEntry> listRoster( count );
-        for ( SRPGRosterEntry& entry : listRoster )
-        {
-            const bool bEntryRead = entry._pilotLevel.readState( archive ) && entry._unitLevel.readState( archive ) &&
-                                    StateIO::readName( archive, entry._unitID ) && StateIO::readName( archive, entry._pilotID );
-            if ( bEntryRead == false )
-                return false;
-            archive >> entry._bLost;
-            if ( archive.isError() || entry._bLost > SW_TRUE )
-                return false;
-        }
-        uint32 seed       = 0;
-        uint8  bInMission = SW_FALSE;
-        uint8  bFailed    = SW_FALSE;
-        archive >> seed;
-        archive >> bInMission;
-        archive >> bFailed;
-        const bool bInvalidCampaignFlags = archive.isError() || bInMission > SW_TRUE || bFailed > SW_TRUE;
-        if ( bInvalidCampaignFlags )
-            return false;
-        _runMap     = std::move( runMap );
-        _listRoster = std::move( listRoster );
-        _seed       = seed;
-        _bInMission = bInMission;
-        _bFailed    = bFailed;
-        return true;
-    }
 } // namespace sw

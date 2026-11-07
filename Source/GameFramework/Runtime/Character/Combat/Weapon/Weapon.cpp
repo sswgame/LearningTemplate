@@ -235,39 +235,20 @@ namespace sw
             _reserveAmmo = MathUtil::min( _def._maxReserveAmmo, _reserveAmmo + amount );
     }
 
-    void WeaponState::writeState( Archive& outArchive ) const
+    void WeaponState::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _def._id );
-        StateIO::writeName( outArchive, _shot._projectileID );
-        StateIO::writeRandom( outArchive, _random );
-        StateIO::writeCountdown( outArchive, _cooldown );
-        StateIO::writeCountdown( outArchive, _reload );
-        outArchive << _currentSpread;
-        outArchive << _magazineAmmo;
-        outArchive << _reserveAmmo;
+        io.expect( _def._id );
+        // 장전한 탄은 쓰는 쪽이 `loadProjectile` 로 먼저 맞춘다 — 다른 탄의 상태는 받지 않는다(탄 값이 들어맞지 않는다).
+        io.expect( _shot._projectileID );
+        io.value( _random );
+        io.value( _cooldown );
+        io.value( _reload );
+        io.value( _currentSpread );
+        io.value( _magazineAmmo );
+        io.value( _reserveAmmo );
+        io.check( 0 <= _magazineAmmo && 0 <= _reserveAmmo );
     }
 
-    bool WeaponState::readState( Archive& archive )
-    {
-        hashed_string defID;
-        hashed_string projectileID;
-        if ( StateIO::readName( archive, defID ) == false || defID != _def._id )
-            return false;
-        // 장전한 탄은 쓰는 쪽이 `loadProjectile` 로 먼저 맞춘다 — 다른 탄의 상태는 받지 않는다(탄 값이 들어맞지 않는다).
-        if ( StateIO::readName( archive, projectileID ) == false || projectileID != _shot._projectileID )
-            return false;
-        WeaponState restored = *this;
-        const bool  bRead    = StateIO::readRandom( archive, restored._random ) && StateIO::readCountdown( archive, restored._cooldown ) &&
-                           StateIO::readCountdown( archive, restored._reload );
-        archive >> restored._currentSpread;
-        archive >> restored._magazineAmmo;
-        archive >> restored._reserveAmmo;
-        const bool bValid = bRead && archive.isOk() && 0 <= restored._magazineAmmo && 0 <= restored._reserveAmmo;
-        if ( bValid == false )
-            return false;
-        *this = std::move( restored );
-        return true;
-    }
 } // namespace sw
 
 namespace sw

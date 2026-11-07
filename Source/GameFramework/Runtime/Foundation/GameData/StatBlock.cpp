@@ -112,32 +112,15 @@ namespace sw
         return loadedCount;
     }
 
-    void StatBlock::writeState( Archive& outArchive ) const
+    void StatBlock::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listValue.size() );
-        for ( const StatValue& value : _listValue )
+        // 칸마다 이름 길이(4) + 값(4) 이상
+        io.list( _listValue, 8, [&]( StatValue& value )
         {
-            StateIO::writeName( outArchive, value._name );
-            outArchive << value._value;
-        }
+            io.value( value._name );
+            io.value( value._value );
+            io.check( value._name.empty() == false );
+        } );
     }
 
-    bool StatBlock::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        // 칸마다 이름 길이(4) + 값(4) 이상
-        if ( archive.readCount( 8, count ) == false )
-            return false;
-        vector<StatValue> listValue( count );
-        for ( StatValue& value : listValue )
-        {
-            if ( StateIO::readName( archive, value._name ) == false )
-                return false;
-            archive >> value._value;
-            if ( archive.isError() || value._name.empty() )
-                return false;
-        }
-        _listValue = std::move( listValue );
-        return true;
-    }
 } // namespace sw

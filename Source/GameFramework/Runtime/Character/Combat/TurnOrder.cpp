@@ -164,66 +164,34 @@ namespace sw
         }
     }
 
-    void TurnOrder::writeState( Archive& outArchive ) const
+    void TurnOrder::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listCombatant.size() );
-        for ( const Combatant& actor : _listCombatant )
+        // 배우마다 속도 · 게이지 · id · 우선 · 동률깨기(20)
+        io.list( _listCombatant, 20, [&]( Combatant& actor )
         {
-            outArchive << actor._speed;
-            outArchive << actor._gauge;
-            outArchive << actor._actorID;
-            outArchive << actor._priority;
-            outArchive << actor._tieBreak;
-        }
-        outArchive << static_cast<uint32>( _listRoundQueue.size() );
-        for ( const int32 actorID : _listRoundQueue )
+            io.value( actor._speed );
+            io.value( actor._gauge );
+            io.value( actor._actorID );
+            io.value( actor._priority );
+            io.value( actor._tieBreak );
+            io.check( kMinSpeed <= actor._speed && 0.0f <= actor._gauge );
+        } );
+        if ( io.isReading() )
         {
-            outArchive << actorID;
+            io.check( VectorUtil::findDuplicateBy<&Combatant::_actorID>( _listCombatant ) == nullptr );
         }
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _round;
-        outArchive << static_cast<uint8>( _mode );
+        io.list( _listRoundQueue, 4, [&]( int32& actorID )
+        {
+            io.value( actorID );
+            if ( io.isReading() )
+            {
+                io.check( hasActor( actorID ) );
+            }
+        } );
+        io.value( _random );
+        io.value( _round );
+        io.enumValue( _mode, TurnOrderMode::Timeline );
+        io.check( 0 <= _round );
     }
 
-    bool TurnOrder::readState( Archive& archive )
-    {
-        TurnOrder restored = *this;
-        uint32    count    = 0;
-        // 배우마다 속도 · 게이지 · id · 우선 · 동률깨기(20)
-        if ( archive.readCount( 20, count ) == false )
-            return false;
-        restored._listCombatant.resize( count );
-        for ( Combatant& actor : restored._listCombatant )
-        {
-            archive >> actor._speed;
-            archive >> actor._gauge;
-            archive >> actor._actorID;
-            archive >> actor._priority;
-            archive >> actor._tieBreak;
-        }
-        if ( archive.isError() || VectorUtil::findDuplicateBy<&Combatant::_actorID>( restored._listCombatant ) != nullptr || archive.readCount( 4, count ) == false )
-            return false;
-        for ( const Combatant& actor : restored._listCombatant )
-        {
-            if ( actor._speed < kMinSpeed || actor._gauge < 0.0f )
-                return false;
-        }
-        restored._listRoundQueue.resize( count );
-        for ( int32& actorID : restored._listRoundQueue )
-        {
-            archive >> actorID;
-            if ( archive.isError() || restored.hasActor( actorID ) == false )
-                return false;
-        }
-        uint8      mode        = 0;
-        const bool bRandomRead = StateIO::readRandom( archive, restored._random );
-        archive >> restored._round;
-        archive >> mode;
-        const bool bValid = bRandomRead && archive.isOk() && 0 <= restored._round && mode <= static_cast<uint8>( TurnOrderMode::Timeline );
-        if ( bValid == false )
-            return false;
-        restored._mode = static_cast<TurnOrderMode>( mode );
-        *this          = std::move( restored );
-        return true;
-    }
 } // namespace sw

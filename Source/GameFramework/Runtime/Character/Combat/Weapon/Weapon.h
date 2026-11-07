@@ -17,6 +17,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
@@ -215,10 +216,11 @@ namespace sw
         bool                isReloading() const { return _reload.isActive(); }
         float32             getReloadRemaining() const { return _reload.getRemaining(); }
 
-        /** @brief 무기 정의 id, 장전한 탄 id, 난수, 쿨다운, 장전, 퍼짐, 탄창, 예비탄을 씁니다. 정의와 조합은 `equip` · `loadProjectile` 의 것이라 id 만 싣고, 읽을 때 지금 것과 id 가 다르면 거절합니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 무기 정의 id, 장전한 탄 id, 난수, 쿨다운, 장전, 퍼짐, 탄창, 예비탄을 씁니다. 정의와 조합은 `equip` · `loadProjectile` 의 것이라 id 만 싣고, 읽을 때 지금 것과 id 가 다르면 거절합니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         WeaponDef    _def;

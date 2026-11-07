@@ -59,82 +59,47 @@ namespace sw
         return -1;
     }
 
-    void MonsterInstance::writeState( Archive& outArchive ) const
+    void MonsterInstance::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _speciesID );
-        StateIO::writeName( outArchive, _natureID );
-        outArchive << string_view( _nickname );
+        io.value( _speciesID );
+        io.value( _natureID );
+        io.value( _nickname );
+        for ( MonsterMoveSlot& slot : _arrMove )
+        {
+            io.value( slot._moveID );
+            io.value( slot._pp );
+            io.value( slot._ppMax );
+        }
+        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
+        {
+            io.value( _arrIv[statIndex] );
+            io.value( _arrEv[statIndex] );
+            io.value( _arrStat[statIndex] );
+        }
+        io.value( _exp );
+        io.value( _level );
+        io.value( _hp );
+        io.value( _friendship );
+        io.value( _statusTurns );
+        io.enumValue( _status, MonsterStatus::Freeze );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        io.check( 1 <= _level && _level <= MonsterCollectorCatalog::kMaxLevel && 0 <= _exp && 0 <= _friendship && _friendship <= MonsterRules::kMaxFriendship && 0 <= _statusTurns && _statusTurns <= MonsterRules::kMaxStatusTurns );
         for ( const MonsterMoveSlot& slot : _arrMove )
         {
-            StateIO::writeName( outArchive, slot._moveID );
-            outArchive << slot._pp;
-            outArchive << slot._ppMax;
-        }
-        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
-        {
-            outArchive << _arrIv[statIndex];
-            outArchive << _arrEv[statIndex];
-            outArchive << _arrStat[statIndex];
-        }
-        outArchive << _exp;
-        outArchive << _level;
-        outArchive << _hp;
-        outArchive << _friendship;
-        outArchive << _statusTurns;
-        outArchive << static_cast<uint8>( _status );
-    }
-
-    bool MonsterInstance::readState( Archive& archive )
-    {
-        MonsterInstance restored;
-        const bool      bNamesRead = StateIO::readName( archive, restored._speciesID ) && StateIO::readName( archive, restored._natureID );
-        if ( bNamesRead == false )
-            return false;
-        archive >> restored._nickname;
-        for ( MonsterMoveSlot& slot : restored._arrMove )
-        {
-            if ( StateIO::readName( archive, slot._moveID ) == false )
-                return false;
-            archive >> slot._pp;
-            archive >> slot._ppMax;
-        }
-        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
-        {
-            archive >> restored._arrIv[statIndex];
-            archive >> restored._arrEv[statIndex];
-            archive >> restored._arrStat[statIndex];
-        }
-        uint8 status = 0;
-        archive >> restored._exp;
-        archive >> restored._level;
-        archive >> restored._hp;
-        archive >> restored._friendship;
-        archive >> restored._statusTurns;
-        archive >> status;
-        const bool bValid = archive.isOk() && 1 <= restored._level && restored._level <= MonsterCollectorCatalog::kMaxLevel &&
-                            status <= static_cast<uint8>( MonsterStatus::Freeze ) && 0 <= restored._exp && 0 <= restored._friendship && restored._friendship <= MonsterRules::kMaxFriendship &&
-                            0 <= restored._statusTurns && restored._statusTurns <= MonsterRules::kMaxStatusTurns;
-        if ( bValid == false )
-            return false;
-        for ( const MonsterMoveSlot& slot : restored._arrMove )
-        {
-            if ( slot._pp < 0 || slot._pp > slot._ppMax )
-                return false;
+            io.check( 0 <= slot._pp && slot._pp <= slot._ppMax );
         }
         int32 evTotal = 0;
         for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
         {
-            const int32 ev           = restored._arrEv[statIndex];
-            const bool  bStatInRange = 0 <= restored._arrIv[statIndex] && restored._arrIv[statIndex] <= MonsterRules::kMaxIv && 0 <= ev && ev <= MonsterRules::kMaxEvPerStat && restored._arrStat[statIndex] >= 1;
-            if ( bStatInRange == false )
-                return false;
+            const int32 ev = _arrEv[statIndex];
+            io.check( 0 <= _arrIv[statIndex] && _arrIv[statIndex] <= MonsterRules::kMaxIv && 0 <= ev && ev <= MonsterRules::kMaxEvPerStat && _arrStat[statIndex] >= 1 );
             evTotal += ev;
         }
-        if ( evTotal > MonsterRules::kMaxEvTotal || restored._hp < 0 || restored._hp > restored.getMaxHP() )
-            return false;
-        restored._status = static_cast<MonsterStatus>( status );
-        *this            = std::move( restored );
-        return true;
+        if ( io.isOk() )
+        {
+            io.check( evTotal <= MonsterRules::kMaxEvTotal && 0 <= _hp && _hp <= getMaxHP() );
+        }
     }
 
     bool MonsterInstance::isKnownTo( const MonsterCollectorCatalog& catalog ) const

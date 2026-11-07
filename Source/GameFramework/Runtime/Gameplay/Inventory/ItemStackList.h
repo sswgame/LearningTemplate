@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -55,10 +57,11 @@ namespace sw
         void                     getItemIDs( vector<hashed_string>& outListItem ) const;
         const vector<ItemStack>& getItems() const { return _listStack; }
 
-        /** @brief 아이템을 이름 순으로 씁니다. 같은 목록이면 추가한 순서와 상관없이 같은 바이트가 나옵니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 목록을 복원합니다. 데이터가 깨졌으면 false 를 반환하고 목록은 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 아이템을 이름 순으로 씁니다. 같은 목록이면 추가한 순서와 상관없이 같은 바이트가 나옵니다.
+         *        `writeState` 가 쓴 바이트로 목록을 복원합니다. 데이터가 깨졌으면 false 를 반환하고 목록은 바뀌지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         ItemStack* findStack( const hashed_string& itemID );

@@ -575,35 +575,71 @@ namespace sw
         return hash;
     }
 
-    void AIDirector::writeState( Archive& outArchive ) const
+    void AIDirector::serializeState( StateIO& io )
     {
         using Internal = AIDirectorInternal;
-        StateIO::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
-        const int32 phaseCount = _pProfile != nullptr ? static_cast<int32>( _pProfile->getPhases().size() ) : 0;
-        outArchive << phaseCount;
-        outArchive << _time;
-        outArchive << _phaseTime;
-        outArchive << _intensity;
-        outArchive << _phaseIndex;
-        outArchive << _cycle;
-        outArchive << _pickSerial;
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << static_cast<uint32>( _listPoolState.size() );
-        for ( const PoolState& state : _listPoolState )
+        if ( io.check( _pProfile != nullptr ) == false )
+            return;
+        io.header( Internal::kStateTag, Internal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        int32 phaseCount = _pProfile != nullptr ? static_cast<int32>( _pProfile->getPhases().size() ) : 0;
+        io.value( phaseCount );
+        io.value( _time );
+        io.value( _phaseTime );
+        io.value( _intensity );
+        io.value( _phaseIndex );
+        io.value( _cycle );
+        io.value( _pickSerial );
+        io.value( _random );
+        uint32 poolCount = static_cast<uint32>( _listPoolState.size() );
+        io.count( Internal::kPoolMinBytes, poolCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
         {
-            outArchive << state._timer;
-            outArchive << state._budget;
-            outArchive << state._lastPickTime;
-            outArchive << state._pendingIndex;
-            outArchive << static_cast<uint32>( state._listEncounter.size() );
-            for ( const EncounterState& encounter : state._listEncounter )
-            {
-                outArchive << encounter._lastTime;
-                outArchive << encounter._count;
-            }
+            const bool bShape = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= _phaseIndex && _phaseIndex < phaseCount && poolCount == _pProfile->getPools().size();
+            const bool bClock = _time >= 0.0f && _phaseTime >= 0.0f && _intensity >= 0.0f && _cycle >= 0;
+            if ( io.check( bShape && bClock ) == false )
+                return;
+            _listPoolState.clear();
+            _listPoolState.resize( poolCount );
         }
-        _builtinModel.writeState( outArchive );
-        _spawnDirector.writeState( outArchive );
+        for ( size_t poolIndex = 0; poolIndex < _listPoolState.size(); ++poolIndex )
+        {
+            PoolState& state = _listPoolState[poolIndex];
+            io.value( state._timer );
+            io.value( state._budget );
+            io.value( state._lastPickTime );
+            io.value( state._pendingIndex );
+            uint32 encounterCount = static_cast<uint32>( state._listEncounter.size() );
+            io.count( Internal::kEncounterBytes, encounterCount );
+            if ( io.isOk() == false )
+                return;
+            if ( io.isReading() )
+            {
+                if ( io.check( encounterCount == _pProfile->getPools()[poolIndex]._listEncounter.size() ) == false )
+                    return;
+                state._listEncounter.resize( encounterCount );
+            }
+            for ( EncounterState& encounter : state._listEncounter )
+            {
+                io.value( encounter._lastTime );
+                io.value( encounter._count );
+                io.check( 0 <= encounter._count );
+            }
+            if ( io.isReading() && io.check( state._timer >= 0.0f && state._budget >= 0.0f && state._budget <= _pProfile->getPools()[poolIndex]._maxBudget && state._pendingIndex >= -1 && state._pendingIndex < static_cast<int32>( encounterCount ) ) == false )
+                return;
+        }
+        // 태그 거르기는 단계가 정한다(싣지 않았다) — 읽기 전에 걸어야 실린 골라 둔 것을 그대로 받는다(뒤에 걸면 상한에 걸린 것을 비워 원본과 갈린다).
+        if ( io.isReading() )
+        {
+            _spawnDirector.setAllowedTags( _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )]._listSpawnTag );
+            _eventBuffer.clear();
+            _listTrace.clear();
+        }
+        io.value( _builtinModel );
+        io.value( _spawnDirector );
     }
 
     bool AIDirector::rebindProfile( const AIDirectorProfile* pProfile )
@@ -626,79 +662,4 @@ namespace sw
         return false;
     }
 
-    bool AIDirector::readState( Archive& archive )
-    {
-        using Internal = AIDirectorInternal;
-        if ( _pProfile == nullptr || StateIO::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
-            return false;
-        int32   phaseCount = 0;
-        float32 time       = 0.0f;
-        float32 phaseTime  = 0.0f;
-        float32 intensity  = 0.0f;
-        int32   phaseIndex = -1;
-        int32   cycle      = 0;
-        uint32  pickSerial = 0;
-        archive >> phaseCount;
-        archive >> time;
-        archive >> phaseTime;
-        archive >> intensity;
-        archive >> phaseIndex;
-        archive >> cycle;
-        archive >> pickSerial;
-        GameRandom random;
-        uint32     poolCount = 0;
-        if ( StateIO::readRandom( archive, random ) == false || archive.readCount( Internal::kPoolMinBytes, poolCount ) == false )
-            return false;
-        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
-        const bool                       bShape   = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= phaseIndex && phaseIndex < phaseCount && poolCount == listPool.size();
-        const bool                       bClock   = time >= 0.0f && phaseTime >= 0.0f && intensity >= 0.0f && cycle >= 0;
-        if ( bShape == false || bClock == false )
-            return false;
-        vector<PoolState> listPoolState( poolCount );
-        for ( size_t poolIndex = 0; poolIndex < listPoolState.size(); ++poolIndex )
-        {
-            PoolState& state = listPoolState[poolIndex];
-            archive >> state._timer;
-            archive >> state._budget;
-            archive >> state._lastPickTime;
-            archive >> state._pendingIndex;
-            uint32 encounterCount = 0;
-            if ( archive.readCount( Internal::kEncounterBytes, encounterCount ) == false || encounterCount != listPool[poolIndex]._listEncounter.size() )
-                return false;
-            state._listEncounter.resize( encounterCount );
-            for ( EncounterState& encounter : state._listEncounter )
-            {
-                archive >> encounter._lastTime;
-                archive >> encounter._count;
-                if ( encounter._count < 0 )
-                    return false;
-            }
-            const bool bPoolValid = state._timer >= 0.0f && state._budget >= 0.0f && state._budget <= listPool[poolIndex]._maxBudget && state._pendingIndex >= -1 &&
-                                    state._pendingIndex < static_cast<int32>( encounterCount );
-            if ( bPoolValid == false )
-                return false;
-        }
-        // 긴장도 모델 · 스폰 감독은 사본에 읽어 둘 다 맞을 때 바꾼다 — 반쯤 읽은 상태를 남기지 않는다.
-        // 태그 거르기는 단계가 정한다(싣지 않았다) — 읽기 전에 걸어야 실린 골라 둔 것을 그대로 받는다(뒤에 걸면 상한에 걸린 것을 비워 원본과 갈린다).
-        AIDirectorIntensityModel model   = _builtinModel;
-        SpawnDirector            spawner = _spawnDirector;
-        spawner.setAllowedTags( _pProfile->getPhases()[static_cast<size_t>( phaseIndex )]._listSpawnTag );
-        const bool bModel   = model.readState( archive );
-        const bool bSpawner = bModel && spawner.readState( archive );
-        if ( bSpawner == false || archive.isError() )
-            return false;
-        _time          = time;
-        _phaseTime     = phaseTime;
-        _intensity     = intensity;
-        _phaseIndex    = phaseIndex;
-        _cycle         = cycle;
-        _pickSerial    = pickSerial;
-        _random        = random;
-        _listPoolState = std::move( listPoolState );
-        _builtinModel  = std::move( model );
-        _spawnDirector = std::move( spawner );
-        _eventBuffer.clear();
-        _listTrace.clear();
-        return true;
-    }
 } // namespace sw

@@ -142,36 +142,25 @@ namespace sw
         return true;
     }
 
-    void MonsterHuntBestiary::writeState( Archive& outArchive ) const
+    void MonsterHuntBestiary::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listEntry.size() );
-        for ( const Entry& entry : _listEntry )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        // 괴물마다 이름(4) + 지식과 처치 수(8) 바이트
+        io.list( _listEntry, 12, [&]( Entry& entry )
         {
-            StateIO::writeName( outArchive, entry._monsterID );
-            outArchive << entry._knowledge;
-            outArchive << entry._killCount;
+            io.value( entry._monsterID );
+            io.value( entry._knowledge );
+            io.value( entry._killCount );
+            if ( io.isReading() )
+            {
+                io.check( _pCatalog->findMonster( entry._monsterID ) != nullptr && 0 <= entry._knowledge && 0 <= entry._killCount );
+            }
+        } );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
         }
     }
 
-    bool MonsterHuntBestiary::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        // 괴물마다 이름(4) + 지식과 처치 수(8) 바이트
-        if ( _pCatalog == nullptr || archive.readCount( 12, count ) == false )
-            return false;
-        vector<Entry> listEntry( count );
-        for ( Entry& entry : listEntry )
-        {
-            if ( StateIO::readName( archive, entry._monsterID ) == false || _pCatalog->findMonster( entry._monsterID ) == nullptr )
-                return false;
-            archive >> entry._knowledge;
-            archive >> entry._killCount;
-            const bool bValid = archive.isOk() && 0 <= entry._knowledge && 0 <= entry._killCount;
-            if ( bValid == false )
-                return false;
-        }
-        _listEntry = std::move( listEntry );
-        _eventBuffer.clear();
-        return true;
-    }
 } // namespace sw

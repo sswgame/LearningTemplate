@@ -14,6 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -141,9 +142,8 @@ namespace sw
         /** @brief 값이 바뀔 때 호출할 델리게이트를 등록하고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerChangeListener( const ChangeDelegate& listener );
 
-        void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. 카탈로그에 없는 id 의 값은 경고를 남기고 버립니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         [[nodiscard]] bool loadFromFile( string_view path );
 
