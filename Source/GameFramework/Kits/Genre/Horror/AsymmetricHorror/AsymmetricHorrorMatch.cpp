@@ -102,7 +102,7 @@ namespace sw
         _listLockerOccupant.clear();
         _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
-        _timer = FixedStepTimer( _settings._fixedStep, 0.25f );
+        _timer = FixedStepTimer( _settings._fixedStep, constant::time::kDefaultMaxFrameSeconds );
         _collapseRemaining.clear();
         _completedGeneratorCount = 0;
         _survivorTeam            = constant::invalid_index::kInt32;

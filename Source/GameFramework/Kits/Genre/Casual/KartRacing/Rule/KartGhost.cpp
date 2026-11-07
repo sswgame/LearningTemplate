@@ -191,7 +191,7 @@ namespace sw
         if ( pGhost != nullptr )
         {
             _motor.reset( pGhost->getStartPosition(), pGhost->getStartYaw() );
-            _timer = FixedStepTimer{ pGhost->getStep(), 0.25f };
+            _timer = FixedStepTimer{ pGhost->getStep(), constant::time::kDefaultMaxFrameSeconds };
         }
     }
 

@@ -235,7 +235,7 @@ namespace sw
         _vision.reset( _grid.getWidth(), _grid.getHeight() );
         _flowParams.clear();
         _buckets.initialize( _grid.getWidth(), _grid.getHeight(), _settings._bucketSize );
-        _stepTimer   = FixedStepTimer{ _settings._fixedStep, 0.25f };
+        _stepTimer   = FixedStepTimer{ _settings._fixedStep, constant::time::kDefaultMaxFrameSeconds };
         _time        = 0.0f;
         _winningTeam = constant::invalid_index::kInt32;
         return true;

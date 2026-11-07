@@ -313,7 +313,7 @@ namespace sw
         _listTeamName.clear();
         _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
-        _timer        = FixedStepTimer( _settings._fixedStep, 0.25f );
+        _timer        = FixedStepTimer( _settings._fixedStep, constant::time::kDefaultMaxFrameSeconds );
         _tick         = 0;
         _bStarted     = SW_FALSE;
         _bEndReported = SW_FALSE;

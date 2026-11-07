@@ -5,6 +5,7 @@
  *          엔진 프레임 루프의 시간 정책(가변 델타 상한 · 시간 배율)은 `FixedTimestep` 입니다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -23,7 +24,7 @@ namespace sw
     struct FixedStepTimer
     {
         float32 _step{ constant::time::kDefaultFixedStepSeconds };
-        float32 _maxFrameTime{ 0.25f };
+        float32 _maxFrameTime{ constant::time::kDefaultMaxFrameSeconds };
         float32 _accumulator{ 0.0f };
 
         constexpr FixedStepTimer() = default;

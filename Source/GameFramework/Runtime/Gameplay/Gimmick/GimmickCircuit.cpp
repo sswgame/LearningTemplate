@@ -91,7 +91,7 @@ namespace sw
         const size_t errorBase = outListError.size();
         clear();
         _stepTime = def.getStepTime() > 0.0f ? def.getStepTime() : constant::time::kDefaultFixedStepSeconds;
-        _timer    = FixedStepTimer( _stepTime, 0.25f );
+        _timer    = FixedStepTimer( _stepTime, constant::time::kDefaultMaxFrameSeconds );
 
         // 상태가 담을 수 있는 노드 수를 넘으면 다른 검증 전에 멈춘다(노드마다 할당하지 않는다).
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();

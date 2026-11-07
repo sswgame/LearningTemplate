@@ -69,6 +69,12 @@ namespace sw::constant::time
      * @details 예전에는 같은 `1.0f / 60.0f` 가 스무 곳에 따로 적혀 있었다. 기본을 바꾸면 결정적 재생 · 골든이 함께 바뀌므로 한 값으로 둔다.
      */
     inline constexpr float32 kDefaultFixedStepSeconds = 1.0f / 60.0f;
+    /**
+     * @brief 고정 스텝 시뮬레이션이 한 프레임에 따라잡는 시간의 기본 상한(s)입니다(`FixedStepTimer::_maxFrameTime`).
+     * @details 디버거 정지 · 로딩 같은 큰 프레임이 수천 번의 걸음이 되지 않게 자른다(유니티 `Time.maximumDeltaTime` 자리). 키트 열 곳이
+     *          같은 `0.25f` 를 따로 적고 있었다 — 빨리 감기처럼 더 받아야 하는 세계만 자기 값을 쓴다.
+     */
+    inline constexpr float32 kDefaultMaxFrameSeconds = 0.25f;
 } // namespace sw::constant::time
 
 namespace sw::constant::memory

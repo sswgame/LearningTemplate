@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Character/Movement/InertiaSettings.h"
@@ -14,7 +15,6 @@ namespace sw
         {
             static constexpr float32 kMinFixedStep     = 1.0f / 2000.0f; ///< 적분 간격 하한(s) — 더 짧으면 한 프레임이 수천 번의 적분이 된다
             static constexpr float32 kMaxFixedStep     = 1.0f / 30.0f;   ///< 적분 간격 상한(s) — 더 길면 적분이 거칠어진다
-            static constexpr float32 kMaxStepCatchUp   = 0.25f;          ///< 한 프레임에 따라잡는 시간 상한(s) — 디버거 정지 같은 큰 프레임이 수천 번의 적분이 되지 않게
             static constexpr float32 kOpenEndTolerance = 0.01f;          ///< 열린 코스의 끝에 닿았다고 보는 거리 여유(m)
             static constexpr float32 kDropThreshold    = 2.0f;           ///< 이만큼 넘게 내려가야 낙하로 센다(m)
             static constexpr float32 kDropRecovery     = 1.0f;           ///< 바닥에서 이만큼 올라오면 낙하가 끝난 것이다(m)
@@ -113,7 +113,7 @@ namespace sw
         _previousVelocity     = float3{};
         _speed                = 0.0f;
         _elapsedTime          = 0.0f;
-        _stepTimer            = FixedStepTimer( _params._fixedStep, CoasterTrainInternal::kMaxStepCatchUp );
+        _stepTimer            = FixedStepTimer( _params._fixedStep, constant::time::kDefaultMaxFrameSeconds );
         _lapCount             = 0;
         _bHasPreviousVelocity = SW_FALSE;
         setDistance( startDistance );

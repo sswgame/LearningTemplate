@@ -155,7 +155,7 @@ namespace sw
         _pItemCatalog       = pItemCatalog;
         _pProjectileCatalog = pProjectileCatalog;
         _random.setSeed( settings._seed );
-        _timer = FixedStepTimer{ settings._step, 0.25f };
+        _timer = FixedStepTimer{ settings._step, constant::time::kDefaultMaxFrameSeconds };
         _listRacer.clear();
         _projectiles = ProjectileSimulation{};
         _projectiles.setPlaneNormal( float3{ 0.0f, 1.0f, 0.0f } ); // 아이템은 수평으로 날고 높이는 트랙을 따른다

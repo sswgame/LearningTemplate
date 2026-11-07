@@ -175,7 +175,7 @@ namespace sw
         if ( _itemSpawner.initialize( item, seed ) == false )
             return false;
         _eventBuffer.clear();
-        _timer = FixedStepTimer( _settings._step, 0.25f );
+        _timer = FixedStepTimer( _settings._step, constant::time::kDefaultMaxFrameSeconds );
         _time  = 0.0f;
         return true;
     }
