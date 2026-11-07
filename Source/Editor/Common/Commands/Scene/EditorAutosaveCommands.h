@@ -37,8 +37,6 @@ namespace sw::editor
     {
         /** @brief 사본을 붙이는 리소스 도메인 이름입니다(`autosave/<씬 칸>/<세대>.scene.xml`). */
         static constexpr const utf8* kDomain = "autosave";
-        /** @brief 복구 창(`RecoveredWorkPanel`)의 패널 id 입니다. 후보가 있으면 기동 첫 프레임에 이 창을 연다. */
-        static constexpr const utf8* kRecoveryPanelID = "recovered_work";
 
         /** @brief 프레임마다 부릅니다 — 첫 프레임에 세션을 열고(잠금 · 복구 후보), 주기가 되면 사본을 쓰고, 복원이 끝난 씬의 소스를 돌린다. */
         static void tick();

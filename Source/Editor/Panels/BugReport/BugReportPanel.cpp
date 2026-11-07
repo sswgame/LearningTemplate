@@ -7,7 +7,6 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -20,14 +19,16 @@ namespace sw::editor
 
     BugReportPanel::BugReportPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
-        , _model{}
+        , _viewModel{}
+        , _viewState{}
+        , _note{}
     {
     }
 
     void BugReportPanel::drawRowActions( const BugReportRow& row )
     {
         if ( ImGui::SmallButton( SW_EDITOR_ICON( "FolderOpen" ) ) )
-            BugReportModel::showInFileExplorer( row );
+            BugReportViewModel::showInFileExplorer( row._directory );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "ShowInExplorer" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITOR_ICON( "Copy" ) ) );
         if ( ImGui::SmallButton( SW_EDITOR_ICON( "Copy" ) ) )
@@ -35,27 +36,30 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "CopyPath" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITOR_ICON( "Camera" ) ) );
         if ( ImGui::SmallButton( SW_EDITOR_ICON( "Camera" ) ) )
-            BugReportModel::goTo( row );
+            BugReportViewModel::goTo( row._directory );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "GoTo" ) );
     }
 
     void BugReportPanel::drawContent()
     {
-        _model.refreshIfDirty();
+        _viewModel.gather( _viewState );
 
-        (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _model.editNote(), 3, SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
+        (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _note, 3, SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
         EditorSelfTestMarks::record( "bugReport.note" );
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Bug" ), SW_LOCKEY( "EdButton", "CollectNow" ), "Collect Now" ) ) )
-            (void)_model.captureNow(); // 결과는 알림으로 알린다
+        {
+            if ( _viewModel.captureNow( _note ) ) // 결과는 알림으로 알린다
+                _note.clear();                    // 모은 메모는 info.txt 에 남았다
+        }
         EditorSelfTestMarks::record( "bugReport.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "Capture" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) )
-            _model.markDirty();
+            _viewModel.refresh();
 
         ImGui::Separator();
-        const vector<BugReportRow>& listRow = _model.getRows();
+        const vector<BugReportRow>& listRow = _viewState._listRow;
         if ( listRow.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorBugReport", "NoReports" ) );

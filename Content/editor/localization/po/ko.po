@@ -1034,19 +1034,19 @@ msgid "No saved layouts."
 msgstr "저장된 레이아웃이 없습니다."
 
 #: Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp
-#: Source/Editor/Panels/BugReport/Model/BugReportModel.cpp
+#: Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp
 msgctxt "EdCommon.NotifyBugReportFailed"
 msgid "The bug report could not be saved (see the log)"
 msgstr "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)"
 
 #: Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp
-#: Source/Editor/Panels/BugReport/Model/BugReportModel.cpp
+#: Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp
 msgctxt "EdCommon.NotifyBugReportSaved"
 msgid "Bug report saved"
 msgstr "버그 리포트를 저장했습니다"
 
 #: Source/Editor/Common/Commands/Diagnostics/EditorBugReportCommands.cpp
-#: Source/Editor/Panels/BugReport/Model/BugReportModel.cpp
+#: Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp
 msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
 msgstr "버그 리포트"

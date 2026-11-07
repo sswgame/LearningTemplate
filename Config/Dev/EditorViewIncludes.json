@@ -16,6 +16,8 @@
         "Editor/Common/Workspace/Asset/EditorAssetType.h": "에셋 종류 서술(IEditorPanel 이 쓴다)"
     },
     "_migratedViews": [
+        "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
+        "Source/Editor/Panels/BugReport/BugReportPanel",
         "Source/Editor/Panels/Scene/DataLayersPanel"
     ]
 }

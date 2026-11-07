@@ -2,13 +2,13 @@
  * @file BugReportPanel.h
  * @brief 버그 리포트 창입니다. 메모를 붙여 지금 상태를 `Saved/BugReports/<시각>/` 에 모으고, 지난 폴더를 열거나 경로를 복사하거나 그 위치로 돌아갑니다(언리얼 BugReport).
  * @details 모으기는 커맨드 `help.reportBug` 와 같은 `BugReport::makeInputs` → `BugReport::capture` 이고, 이 창은 메모 칸과 지난 폴더 목록만 더합니다.
- *          상태와 명령은 `BugReportModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 경로 복사만 한다.
+ *          줄은 `BugReportViewModel::gather` 가 모으고 명령도 그쪽이 받는다. 이 패널은 메모 편집 버퍼 · 그리기 · 경로 복사만 한다(MVVM 계약).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/BugReport/Model/BugReportModel.h"
+#include "Editor/Panels/BugReport/Model/BugReportViewModel.h"
 
 namespace sw::editor
 {
@@ -26,16 +26,14 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Bug Report"; }
         /** @brief 메모 필드 · 모으기 단추 · 폴더 목록을 그립니다. */
         void drawContent() override;
-        /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-
-        /** @brief 메모 · 폴더 줄과 모으기 명령입니다. */
-        BugReportModel& getModel() { return _model; }
 
     private:
         /** @brief 폴더 줄 @p row 의 단추(탐색기 · 경로 복사 · 그 위치로)를 그립니다. */
         static void drawRowActions( const BugReportRow& row );
 
     private:
-        BugReportModel _model;
+        BugReportViewModel _viewModel;
+        BugReportViewState _viewState; ///< 프레임마다 다시 채운다
+        string             _note;      ///< 메모 칸의 편집 버퍼(모으면 비운다)
     };
 } // namespace sw::editor

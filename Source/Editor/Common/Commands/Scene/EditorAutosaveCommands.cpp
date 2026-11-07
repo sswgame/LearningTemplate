@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -156,7 +157,7 @@ namespace sw::editor
                     if ( state._listRecoverable.empty() == false )
                     {
                         SW_LOG_WARNING_ID( "EditorAutosaveCommands.RecoveryOffered", "Autosave: the last editor session did not close - %# scene copy(ies) can be recovered (Window > Recovered Work)", state._listRecoverable.size() );
-                        editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( EditorAutosaveCommands::kRecoveryPanelID );
+                        editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kRecoveredWork.getView() );
                     }
                 }
                 if ( FileUtil::writeTextFile( lockPath, formatToString( "%#\n", Process::getCurrentProcessID() ) ) == false )

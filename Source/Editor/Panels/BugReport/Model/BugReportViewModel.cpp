@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/BugReport/Model/BugReportModel.h"
+#include "Editor/Panels/BugReport/Model/BugReportViewModel.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -23,7 +23,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct BugReportModelInternal
+        struct BugReportViewModelInternal
         {
             /** @brief BugReport 폴더들의 루트입니다(`BugReport::makeInputs` 가 쓰는 경로와 같다). */
             static string makeRoot()
@@ -33,36 +33,40 @@ namespace sw::editor
         };
     } // namespace
 
-    BugReportModel::BugReportModel()
+    BugReportViewModel::BugReportViewModel()
         : _listRow{}
-        , _note{}
         , _bRowsDirty{ SW_TRUE }
     {
     }
 
-    bool BugReportModel::captureNow()
+    void BugReportViewModel::gather( BugReportViewState& outState )
+    {
+        if ( _bRowsDirty )
+        {
+            _bRowsDirty = SW_FALSE;
+            readRows();
+        }
+        outState._listRow = _listRow;
+    }
+
+    bool BugReportViewModel::captureNow( const string& note )
     {
         string     directory;
-        const bool bCaptured         = BugReport::capture( BugReport::makeInputs( _note ), directory );
+        const bool bCaptured         = BugReport::capture( BugReport::makeInputs( note ), directory );
         _bRowsDirty                  = SW_TRUE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationKind::Success );
         else
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationKind::Error );
-        if ( bCaptured )
-            _note.clear(); // 모은 메모는 info.txt 에 남았다
         return bCaptured;
     }
 
-    void BugReportModel::refreshIfDirty()
+    void BugReportViewModel::readRows()
     {
-        if ( _bRowsDirty == false )
-            return;
-        _bRowsDirty = SW_FALSE;
         _listRow.clear();
         vector<string> listFolder;
-        if ( FileUtil::collectFolders( BugReportModelInternal::makeRoot(), listFolder, false ) == false )
+        if ( FileUtil::collectFolders( BugReportViewModelInternal::makeRoot(), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
         VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )
@@ -80,16 +84,16 @@ namespace sw::editor
         }
     }
 
-    void BugReportModel::showInFileExplorer( const BugReportRow& row )
+    void BugReportViewModel::showInFileExplorer( const string& directory )
     {
-        (void)EditorAssetFileCommands::showInFileExplorer( row._directory );
+        (void)EditorAssetFileCommands::showInFileExplorer( directory );
     }
 
-    void BugReportModel::goTo( const BugReportRow& row )
+    void BugReportViewModel::goTo( const string& directory )
     {
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         string        reply;
-        if ( pSceneManager == nullptr || BugReport::goTo( *pSceneManager, row._directory, reply ) == false )
+        if ( pSceneManager == nullptr || BugReport::goTo( *pSceneManager, directory, reply ) == false )
             SW_LOG_WARNING_ID( "BugReportPanel.BugReportGoFailed", "BugReport go to failed: %#", reply.c_str() );
         else
             SW_LOG_INFO_ID( "BugReportPanel.Reply", "%#", reply.c_str() );

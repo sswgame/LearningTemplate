@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/Autosave/RecoveredWorkPanel.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
@@ -20,36 +19,19 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct RecoveredWorkPanelInternal
-        {
-            /** @brief 사본을 쓴 지 얼마나 됐는지를 사람이 읽는 글로 냅니다("4 min ago"). 시각을 모르면 회색 대시입니다. */
-            static string formatAge( int64 savedTicks )
-            {
-                if ( savedTicks <= 0 )
-                    return string( "-" );
-                const int64 seconds = ( FileUtil::getCurrentFileWriteTime() - savedTicks ) / FileUtil::kFileTimeTicksPerSecond;
-                if ( seconds < 60 )
-                    return formatToString( "%# s ago", seconds < 0 ? 0 : seconds );
-                if ( seconds < 3600 )
-                    return formatToString( "%# min ago", seconds / 60 );
-                return formatToString( "%# h ago", seconds / 3600 );
-            }
-        };
-    } // namespace
-
     SW_EDITOR_PANEL( RecoveredWorkPanel, RecoveredWorkPanel::kPanelID, EditorPanelCategory::Tool, 2046 );
 
     RecoveredWorkPanel::RecoveredWorkPanel()
         : IEditorPanel( false ) // 후보가 있을 때 자동 저장이 연다
+        , _viewState{}
     {
     }
 
     void RecoveredWorkPanel::drawContent()
     {
-        const vector<EditorAutosaveEntry>& listEntry = EditorAutosaveCommands::getRecoverable();
-        if ( listEntry.empty() )
+        RecoveredWorkViewModel::gather( _viewState );
+        const vector<RecoveredWorkRow>& listRow = _viewState._listRow;
+        if ( listRow.empty() )
         {
             // 빈 칸은 틀을 두고 왜 비었는지 한 문장으로 말한다
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAutosave", "NothingToRecover" ) );
@@ -69,31 +51,30 @@ namespace sw::editor
         ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 150.0f * dpiScale );
         ImGui::TableHeadersRow();
 
-        uint32 restoreIndex = MathUtil::kMaxUInt32; // 그린 뒤에 적용한다(적용이 목록을 바꾼다)
+        uint32 restoreIndex = MathUtil::kMaxUInt32; // 그린 뒤에 부른다(명령이 목록을 바꾼다)
         uint32 discardIndex = MathUtil::kMaxUInt32;
-        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( listEntry.size() ); ++rowIndex )
+        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( listRow.size() ); ++rowIndex )
         {
-            const EditorAutosaveEntry& entry = listEntry[rowIndex];
+            const RecoveredWorkRow& row = listRow[rowIndex];
             ImGui::PushID( static_cast<int32>( rowIndex ) );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            ImGui::TextUnformatted( entry._sourceID.c_str() );
+            ImGui::TextUnformatted( row._sceneID.c_str() );
             ImGui::TableSetColumnIndex( 1 );
-            const string age = RecoveredWorkPanelInternal::formatAge( entry._savedTicks );
-            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( age.c_str() ).x );
-            ImGui::TextUnformatted( age.c_str() );
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( row._savedAge.c_str() ).x );
+            ImGui::TextUnformatted( row._savedAge.c_str() );
             ImGui::TableSetColumnIndex( 2 );
             fixed_string<constant::buffer::kMax32> copies;
-            formatstring( copies.data(), copies.capacity(), "%#", entry._generationCount );
+            formatstring( copies.data(), copies.capacity(), "%#", row._copyCount );
             ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( copies.c_str() ).x );
             ImGui::TextUnformatted( copies.c_str() );
             ImGui::TableSetColumnIndex( 3 );
-            if ( entry._refusal.empty() )
+            if ( row._refusal.empty() )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorAutosave", "CanRestore" ) );
             else
-                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "%s", entry._refusal.c_str() ); // 색과 함께 이유를 글로 적는다
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "%s", row._refusal.c_str() ); // 색과 함께 이유를 글로 적는다
             ImGui::TableSetColumnIndex( 4 );
-            ImGui::BeginDisabled( entry._refusal.empty() == false );
+            ImGui::BeginDisabled( row._refusal.empty() == false );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Restore" ) ) )
                 restoreIndex = rowIndex;
             ImGui::EndDisabled();
@@ -110,8 +91,8 @@ namespace sw::editor
         }
         ImGui::EndTable();
         if ( restoreIndex != MathUtil::kMaxUInt32 )
-            (void)EditorAutosaveCommands::restore( restoreIndex ); // 거절 이유는 restore 가 알린다
+            RecoveredWorkViewModel::restore( restoreIndex );
         else if ( discardIndex != MathUtil::kMaxUInt32 )
-            EditorAutosaveCommands::discard( discardIndex );
+            RecoveredWorkViewModel::discard( discardIndex );
     }
 } // namespace sw::editor
