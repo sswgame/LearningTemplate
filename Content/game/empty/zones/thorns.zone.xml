@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  가시덩굴 — 부딪힘 입력(접촉). 0.5 초마다 찔림 피해 = 2 + 충격 세기 × 3. 깨지는 물체(Fragile)가 세게(4 m/s 넘게) 부딪히면 부서진다.
+  가시덩굴 — 부딪힘 입력(접촉). 0.5 초마다 찔림 피해 = 2 + 충격 세기 × 3. 깨지는 물체(Fragile)가 세게(4 m/s 넘게) 부딪히는 순간 부서진다.
+  부서짐은 주기 일이 아니라 조건이 참이 되는 순간(Became)이다 — 물리 엔진의 예측 접촉으로 부딪히기 전에 들어오므로, 찔림 주기(0.5 초) 안의 경우로 두면 충돌 프레임이 주기 사이에 떨어져 놓쳤다.
 -->
 <ZoneProfile>
 	<_listModule>
@@ -9,11 +10,14 @@
 				<ZoneParamDef _name="on" _value="Stay" />
 				<ZoneParamDef _name="interval" _value="0.5" />
 				<ZoneParamDef _name="damage" _value="2 + impactSpeed * 3" />
+				<ZoneParamDef _name="do" _value="ability.applyEffect(effect=GE_ThornPrick, setByCaller=Data.Damage, value=damage)" />
 			</_listParam>
-			<_listCase>
-				<ZoneCaseDef _name="shatter" _condition="tag(Fragile) &amp;&amp; impactSpeed &gt; 4" _do="object.destroy" />
-				<ZoneCaseDef _name="prick" _condition="" _do="ability.applyEffect(effect=GE_ThornPrick, setByCaller=Data.Damage, value=damage)" />
-			</_listCase>
+		</ZoneModuleDef>
+		<ZoneModuleDef _name="shatter" _kind="Action" _condition="tag(Fragile) &amp;&amp; impactSpeed &gt; 4">
+			<_listParam>
+				<ZoneParamDef _name="on" _value="Became" />
+				<ZoneParamDef _name="do" _value="object.destroy" />
+			</_listParam>
 		</ZoneModuleDef>
 	</_listModule>
 </ZoneProfile>
