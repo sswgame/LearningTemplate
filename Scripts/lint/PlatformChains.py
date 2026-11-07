@@ -104,7 +104,8 @@ def readSources(projectRoot: Path) -> list[tuple[str, str]]:
     return listSource
 
 
-kCMakeDirective = re.compile(r"^\s*(if|elseif|else|endif)\s*\((.*)\)\s*(?:#.*)?$", re.I)
+# 여러 줄에 걸친 `if(` 도 사슬의 짝을 맞추려고 여는 줄만 본다 — 닫는 괄호가 없는 조건은 플랫폼 검사로 읽히지 않아 건너뛴다.
+kCMakeDirective = re.compile(r"^\s*(if|elseif|else|endif)\s*\((?:(.*)\)\s*(?:#.*)?$|(.*)$)", re.I)
 kCMakePlatformAtom = re.compile(
     r'^(?:NOT\s+)?(?:WIN32|UNIX|APPLE|ANDROID|EMSCRIPTEN|CMAKE_HOST_WIN32|CMAKE_HOST_UNIX|CMAKE_HOST_APPLE'
     r'|(?:CMAKE_SYSTEM_NAME|CMAKE_HOST_SYSTEM_NAME|sw_platform_name)\s+STREQUAL\s+"\w*")$')
@@ -130,7 +131,7 @@ def findCMakeProblemsInText(path: str, text: str) -> list[str]:
         if match is None:
             continue
         keyword = match.group(1).lower()
-        condition = match.group(2)
+        condition = match.group(2) if match.group(2) is not None else f"<multi-line> {match.group(3)}"
         if keyword == "if":
             stack.append([(keyword, condition, lineNumber)])
         elif keyword in ("elseif", "else"):
