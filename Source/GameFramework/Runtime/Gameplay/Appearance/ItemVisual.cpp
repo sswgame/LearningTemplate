@@ -218,7 +218,8 @@ namespace sw
                     return;
                 }
                 reportMisplacedAssetAttributes( node, part._kind, report, sourceName, inoutVisual._id );
-                part._asset = pickAsset( part._kind, part );
+                part._asset                 = pickAsset( part._kind, part );
+                const utf8* pAssetAttribute = getAssetAttribute( part._kind );
                 // 자기 리그는 자기 뼈를 움직인다 — 스킨드 부품이고 몸과 다른 자기 스켈레톤을 적어야 한다(몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다).
                 const bool bRigWithoutOwnSkeleton = part._rig.empty() == false && ( part._kind != AppearancePartKind::Skinned || part._skeleton.empty() );
                 if ( bRigWithoutOwnSkeleton )
