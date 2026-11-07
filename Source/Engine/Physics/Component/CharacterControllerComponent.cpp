@@ -272,6 +272,7 @@ namespace sw
             return;
         float3  moveVelocity{};
         float32 jumpSpeed = 0.0f;
+        bool    bLaunched = false;
         {
             ScopedLock<SpinLock> lock{ _commandLock };
             moveVelocity      = _moveVelocity;
@@ -294,6 +295,7 @@ namespace sw
                 jumpSpeed      = _pendingLaunch._y;
                 _airVelocity   = float3{ _pendingLaunch._x, 0.0f, _pendingLaunch._z };
                 _pendingLaunch = float3{};
+                bLaunched      = true;
             }
         }
         // 이동 계수는 걷는 몫(요청 · 루트 모션)에만 든다 — 면이 나르는 속도와 공중 관성은 환경 저항과 상관없다.
@@ -308,6 +310,10 @@ namespace sw
             _fieldVelocity = _fieldVelocity + ( float3{ field._flowVelocity._x, 0.0f, field._flowVelocity._z } - _fieldVelocity ) * MathUtil::saturate( field._drag * fixedDeltaTime );
         if ( _state._bGrounded )
             _fieldVelocity = _fieldVelocity * ( 1.0f - MathUtil::saturate( kFieldGroundDamping * field._friction * fixedDeltaTime ) );
+        // 직전 스텝을 디딘 채 끝냈으면 이번 스텝은 바닥이 실어 나른다(`moveCharacter` 가 바닥 속도를 더한다) — 떠날 때 이은 공중 관성을 함께 쓰면 두 번 실린다.
+        // 흔들리는 갑판에서 떴다 내렸다 할 때마다 그렇게 앞서 나가 선원이 배보다 빨리 가 떨어졌다(boat). 이번 스텝의 발사만 남긴다.
+        if ( _state._bGrounded && bLaunched == false )
+            _airVelocity = float3{};
         moveVelocity = _walkVelocity + _fieldVelocity + _frameSurfaceVelocity + _airVelocity;
         // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다(필드의 중력 배율 · 부력 · 가속 · 저항). 점프는 그 위에 덮는다.
         if ( _state._bGrounded && _verticalSpeed < 0.0f )

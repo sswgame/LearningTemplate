@@ -31,8 +31,9 @@
 	<Wait frames="31"/>
 	<!-- ③ 급정거(브레이크 40 m/s²) — 탑승자는 앞으로 -->
 	<Intent pawn="LeanKart" move="0,-1" frames="40"/>
-	<WaitUntil watch="Vehicle.RiderLean" target="LeanKart" atLeast="0.25" timeoutFrames="30"/>
-	<Expect watch="Vehicle.RideAcceleration" target="LeanKart" atMost="-20"/>
+	<!-- 기울기는 좌석 가속도(매끈하게 따라간다) × 0.025 라 기울기 0.25 인 순간의 가속도는 늘 −10 이다 — 가속도가 −20 아래로 간 뒤 기울기가 앞으로 큰지 본다 -->
+	<WaitUntil watch="Vehicle.RideAcceleration" target="LeanKart" atMost="-20" timeoutFrames="30"/>
+	<Expect watch="Vehicle.RiderLean" target="LeanKart" atLeast="0.25"/>
 	<!-- 탑승자를 태우고 눈 비탈을 내려가는 썰매 -->
 	<Screenshot file="inertia_sled.ppm" waitForSettle="false"/>
 	<Wait frames="1"/>

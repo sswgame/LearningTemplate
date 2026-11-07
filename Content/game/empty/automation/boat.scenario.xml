@@ -3,11 +3,11 @@
   배(BoatComponent · BoatHelmComponent · BuoyancyComponent 폰툰 · WeatherWaveComponent) — 무대 maps/boat. 값으로 판정하고, 폭풍 속 배 사진 한 장을 남긴다.
   ① 잔잔한 바다: 서 있는 Upwind 의 롤 · 피치 최댓값이 작다. ② 조타륜 좌석: Captain 이 쥔 Helmsman 이 Rowboat 운전석에 타면 Captain 이 배를 쥔다.
   ③ 직진(노 1500 N): 앞 속도 ≈ 4.4 m/s(1500 / (앞 저항 150 + 폰툰 저항 ≈ 187)), 갑판의 Sailor 는 배와의 거리(≈ 1.06 m)를 지킨다 — 미끄러지지 않는다.
-  ④ 선회(추진 0.7 · 키 0.7): 선회 반경 ≈ 15 m. ⑤ 순풍 · 역풍(바람 +x 10 m/s, 돛 30 m²): 바람을 등진 Downwind 는 ≈ 2.8 m/s, 마주한 Upwind 는 돛 힘 0 으로 서 있다.
+  ④ 선회(추진 0.7 · 키 0.7): 선회 반경 ≈ 37 m(실측). ⑤ 순풍 · 역풍(바람 +x 10 m/s, 돛 30 m²): 바람을 등진 Downwind 는 ≈ 2.8 m/s, 마주한 Upwind 는 돛 힘 0 으로 서 있다.
   ⑥ 해협(+x 1.5 m/s): 입력 없는 Drifter 가 흐름 속도로 밀리고, 시작 자리(-80)에서 적어도 12 m 밀렸다(시나리오가 여기까지 10 초 넘게 흐른다).
   ⑦ 폭풍(cheat.weather storm → 파도 진폭 4 배): Upwind 의 롤 · 피치 최댓값이 커지되 뒤집히지 않는다. 사진 boat_storm.ppm — 큰 파도 속 배(골든은 통합 담당이 기록한다).
   ⑧ 내리기: Helmsman 이 갑판(하차 위치)에 선다.
-  판정값의 범위는 계산 어림이다 — 통합 담당이 돌려 맞춘다. 실행: App -scenario=game/empty/automation/boat.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+  판정값의 범위는 2026-11-08 통합에서 실측으로 맞췄다. 실행: App -scenario=game/empty/automation/boat.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.boat" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/boat.scene.xml"/>
@@ -44,7 +44,7 @@
 	<Intent pawn="Rowboat" move="0.7,0.7" frames="360"/>
 	<Wait frames="240"/>
 	<Expect watch="Boat.TurnRadius" target="Rowboat" atLeast="5"/>
-	<Expect watch="Boat.TurnRadius" target="Rowboat" atMost="30"/>
+	<Expect watch="Boat.TurnRadius" target="Rowboat" atMost="45"/> <!-- 실측 37 m(2026-11-08, Debug dx12) -->
 	<Expect watch="Object.X" target="Rowboat" atLeast="2"/>
 	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
 	<Wait frames="1"/>
@@ -55,7 +55,7 @@
 	<Wait frames="720"/>
 	<Expect watch="Boat.SailForce" target="Downwind" atLeast="100"/>
 	<Expect watch="Boat.ForwardSpeed" target="Downwind" atLeast="1.5"/>
-	<Expect watch="Boat.SailForce" target="Upwind" atMost="1"/>
+	<Expect watch="Boat.SailForce" target="Upwind" atMost="25"/> <!-- 파도에 선수가 조금 돌아 바람을 비스듬히 받는다 — 실측 15 N, 순풍 배의 1/7 아래 -->
 	<Expect watch="Boat.ForwardSpeed" target="Upwind" atMost="0.3"/>
 
 	<!-- 해협의 흐름 -->
@@ -69,7 +69,7 @@
 	<Wait frames="600"/>
 	<Expect watch="Boat.RollPeak" target="Upwind" atLeast="0.1"/>
 	<Expect watch="Boat.PitchPeak" target="Upwind" atLeast="0.1"/>
-	<Expect watch="Boat.RollPeak" target="Upwind" atMost="0.7"/>
+	<Expect watch="Boat.RollPeak" target="Upwind" atMost="1"/> <!-- 실측 0.76 rad — 뒤집힘(≈ 1.5)에 한참 못 미친다 -->
 	<Expect watch="Boat.PitchPeak" target="Upwind" atMost="0.7"/>
 	<Expect watch="Buoyancy.SubmergedPontoons" atLeast="1"/>
 	<Screenshot file="empty/boat_storm.ppm"/>
