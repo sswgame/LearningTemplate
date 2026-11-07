@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WildWest 들기 — 기수의 GrabberComponent 가 폰의 의도 버튼 West.Carry(R)로 보급 상자(태그 West.Carryable)를 들고 다시 눌러 내려놓는다.
+  입력 맵 → 폰 의도 → 집기 컴포넌트(틱 뒤 일)를 실제 키 입력으로 지난다. ① 멀리서는 들지 않는다. ② 손 닿는 곳(1.5 m)에서 누르면 든다.
+  ③ 든 채로 옮기면 상자가 따라온다. ④ 다시 누르면 내려놓고 상자가 바닥에 떨어진다. 값으로 판정한다(골든 없음).
+  실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/carry.scenario.xml -unattended
+-->
+<Scenario name="game.wildwest.carry" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_wildWestAutoPlay" value="0"/>
+	<Wait frames="30"/>
+	<Expect watch="Grab.Held" target="Player" is="none"/>
+	<Press slot="Key.R"/>
+	<Wait frames="2"/>
+	<Release slot="Key.R"/>
+	<Wait frames="2"/>
+	<Expect watch="Grab.Held" target="Player" is="none"/>
+
+	<DevCommand line="teleport Player 48 0.05 -2.8"/>
+	<Wait frames="5"/>
+	<Press slot="Key.R"/>
+	<Wait frames="2"/>
+	<Release slot="Key.R"/>
+	<WaitUntil watch="Grab.Held" target="Player" is="SupplyCrate" timeoutFrames="10"/>
+
+	<DevCommand line="teleport Player 44 0.05 -6"/>
+	<WaitUntil watch="Object.DistanceTo" target="SupplyCrate" key="Player" atMost="1.6" timeoutFrames="10"/>
+	<Expect watch="Object.X" target="SupplyCrate" atMost="45"/>
+	<Wait frames="2"/>
+
+	<Press slot="Key.R"/>
+	<Wait frames="2"/>
+	<Release slot="Key.R"/>
+	<WaitUntil watch="Grab.Held" target="Player" is="none" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Y" target="SupplyCrate" atMost="0.3" timeoutSeconds="3"/>
+	<Expect watch="Object.X" target="SupplyCrate" atMost="45"/>
+	<Pass/>
+</Scenario>

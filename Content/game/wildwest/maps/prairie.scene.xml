@@ -27,6 +27,53 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 마을 앞 보급 상자 — 기수가 R(West.Carry)로 들고 다시 눌러 내려놓는다(automation/carry). 시작 자리 화면 밖이고 다른 시나리오의 순간이동 자리와 떨어져 있다. 층 Debris 라 든 동안 기수를 밀지 않는다. -->
+		<entity id="116" name="SupplyCrate">
+			<GameObject _schemaVersion="0" _name="SupplyCrate" _bActive="true" _bAlwaysLoaded="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="48,0.25,-4"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Debris"
+					                    _material="None"
+					                    _mass="8">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.25,0.25,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,0.5,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.45"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<TagComponent>
+						<_tags>
+							<_listTag>
+								<item>West.Carryable</item>
+							</_listTag>
+						</_tags>
+					</TagComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
 		<entity id="114" name="GameplayView">
 			<GameObject _schemaVersion="0" _name="GameplayView" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
@@ -209,6 +256,7 @@
 							<item>Interact</item>
 							<item>West.Whistle</item>
 							<item>West.Use</item>
+							<item>West.Carry</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
@@ -226,6 +274,18 @@
 					<MountInteractionComponent _componentName="MountInteractionComponent"
 					                           _bActive="true"
 					                           _interactButton="Interact" />
+					<GrabberComponent _componentName="GrabberComponent"
+					                  _bActive="true"
+					                  _holdOffset="0,1.2,0.8"
+					                  _grabButton="West.Carry"
+					                  _reach="1.5"
+					                  _throwSpeed="0">
+						<_grabbableTags>
+							<_listTag>
+								<item>West.Carryable</item>
+							</_listTag>
+						</_grabbableTags>
+					</GrabberComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

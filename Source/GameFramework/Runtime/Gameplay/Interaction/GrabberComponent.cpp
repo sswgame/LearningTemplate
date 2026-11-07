@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Interaction/GrabberComponent.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -13,6 +14,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -80,8 +82,81 @@ namespace sw
     GrabberComponent::GrabberComponent()
         : _holdOffset{ 0.0f, 1.0f, 0.6f }
         , _held{}
+        , _grabButton{}
+        , _grabbableTags{}
+        , _reach{ 1.5f }
+        , _throwSpeed{ 0.0f }
         , _fallback{}
+        , _grabIndex{ -1 }
+        , _listTagged{}
     {
+        setCanEverTick( true );
+    }
+
+    void GrabberComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        setTickGroup( TickGroup::PrePhysics );
+        const GameObject*    pOwner = getOwner();
+        const PawnComponent* pPawn  = pOwner != nullptr && _grabButton.empty() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
+        _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : -1;
+        if ( _grabButton.empty() == false && _grabIndex < 0 )
+            SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
+                             pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
+    }
+
+    void GrabberComponent::onTick( float32 deltaTime )
+    {
+        Component::onTick( deltaTime );
+        if ( _grabIndex < 0 )
+            return;
+        GameObject*          pOwner   = getOwner();
+        const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const bool           bNoPress = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _grabIndex ) == false;
+        if ( bNoPress )
+            return;
+        pManager->executeOrDeferPostTickOnComponent( *this, []( GrabberComponent& component )
+        { (void)component.toggleGrab(); } ); // 집을 것이 없으면 아무 일도 없다
+    }
+
+    GameObject* GrabberComponent::findNearestGrabbable()
+    {
+        GameObject*           pOwner   = getOwner();
+        GameObjectManager*    pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneComponent* pSelf    = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pManager == nullptr || pSelf == nullptr )
+            return nullptr;
+        // 후보는 태그 색인에서만 모은다(씬을 훑지 않는다 — 포탑 · 상호작용 고르기와 같다).
+        pManager->getTagIndex().findObjectsWithTags( _grabbableTags, _listTagged );
+        GameObject* pNearest     = nullptr;
+        float32     bestDistance = _reach;
+        for ( GameObject* pObject : _listTagged )
+        {
+            const SceneComponent* pOther = pObject != pOwner && pObject->isActiveInHierarchy() ? pObject->getPrimarySceneComponent() : nullptr;
+            if ( pOther == nullptr )
+                continue;
+            const float32 distance = float3::getDistance( pSelf->getWorldPosition(), pOther->getWorldPosition() );
+            if ( distance <= bestDistance )
+            {
+                bestDistance = distance;
+                pNearest     = pObject;
+            }
+        }
+        return pNearest;
+    }
+
+    bool GrabberComponent::toggleGrab()
+    {
+        if ( isHolding() )
+        {
+            const GameObject*     pOwner  = getOwner();
+            const SceneComponent* pSelf   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+            const float3          forward = pSelf != nullptr ? float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pSelf->getWorldMatrix() ).normalize() : float3{};
+            return throwHeld( forward * _throwSpeed );
+        }
+        GameObject* pTarget = findNearestGrabbable();
+        return pTarget != nullptr && grab( *pTarget );
     }
 
     IGrabPhysics& GrabberComponent::getBackend()

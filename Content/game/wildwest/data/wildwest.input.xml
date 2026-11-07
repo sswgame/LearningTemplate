@@ -10,5 +10,9 @@
 	<action name="West.Use" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="G"/>
 	</action>
+	<!-- 들기 · 내려놓기(기수의 GrabberComponent). E 는 공통 Interact(타기)라 겹치지 않게 따로 둔다 — 하프라이프 2 처럼 한 키로 들고 다시 눌러 놓는다. -->
+	<action name="West.Carry" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="R"/>
+	</action>
 	<remove name="Jump"/>
 </InputMap>
