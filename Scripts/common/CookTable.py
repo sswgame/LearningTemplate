@@ -60,6 +60,14 @@ class CookContractSpec:
         self.mapExcludedKindByTarget: dict[str, tuple[str, ...]] = {
             str(row["target"]): tuple(str(kind) for kind in row["kinds"]) for row in spec["target_excluded_asset_kinds"]
         }
+        #: 플랫폼 → 만들 수 있는 백엔드(건너갈 순서, 맨 앞이 기본).
+        self.mapBackendOrderByPlatform: dict[str, tuple[str, ...]] = {
+            str(row["platform"]): tuple(str(name) for name in row["backends"]) for row in spec["platform_rhi_backends"]
+        }
+        kBackendNames = {backend.name for backend in self.listBackend}
+        for platform, listName in self.mapBackendOrderByPlatform.items():
+            if not listName or any(name not in kBackendNames for name in listName):
+                raise ValueError(f"platform_rhi_backends '{platform}': 비었거나 rhi_backends 에 없는 이름이 있습니다 {listName}")
         defaultName = str(spec["default_rhi_backend"])
         self.defaultBackend: RhiBackendSpec = next(
             (backend for backend in self.listBackend if backend.name == defaultName), None

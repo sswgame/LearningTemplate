@@ -112,8 +112,9 @@ namespace sw
              */
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
-                const ShaderStageInfo& info = getShaderStageInfo( stage );
-                if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+                const ShaderStageInfo&              info    = getShaderStageInfo( stage );
+                const ShaderTargetFormatInfo* const pFormat = ShaderTargetFormatTable::find( targetFormat );
+                if ( pFormat != nullptr && pFormat->_tool == ShaderCompilerTool::Fxc )
                     return info._pProfileSm5 != nullptr ? info._pProfileSm5 : getShaderStageInfo( ShaderStage::Vertex )._pProfileSm5;
                 return info._pProfileSm6;
             }
@@ -385,75 +386,94 @@ namespace sw
                 return pCreateInstance;
             }
 
+            /** @brief Vulkan SPIR-V 인자입니다. */
+            static void appendSpirvVulkanArguments( vector<LPCWSTR>& listArgument )
+            {
+                // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::render::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
+                // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
+                static const wstring s_targetEnv = StringUtil::utf8ToUTF16(
+                    ( string( "-fspv-target-env=vulkan" ) + to_string( constant::render::kVulkanRequiredMajor ) + "." +
+                      to_string( constant::render::kVulkanRequiredMinor ) )
+                        .c_str() );
+                listArgument.push_back( L"-spirv" );
+                listArgument.push_back( s_targetEnv.c_str() );
+                listArgument.push_back( L"-fvk-use-dx-position-w" );
+                // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
+                // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
+                listArgument.push_back( L"-fvk-use-dx-layout" );
+                // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(binding_slots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
+                // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDevice.cpp)이 같은 값으로 만든다.
+                static const wstring s_bShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kBShift ).c_str() );
+                static const wstring s_tShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kTShift ).c_str() );
+                static const wstring s_uShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kUShift ).c_str() );
+                listArgument.push_back( L"-fvk-b-shift" );
+                listArgument.push_back( s_bShift.c_str() );
+                listArgument.push_back( L"0" );
+                listArgument.push_back( L"-fvk-t-shift" );
+                listArgument.push_back( s_tShift.c_str() );
+                listArgument.push_back( L"0" );
+                listArgument.push_back( L"-fvk-u-shift" );
+                listArgument.push_back( s_uShift.c_str() );
+                listArgument.push_back( L"0" );
+            }
+
+            /** @brief OpenGL SPIR-V 인자입니다. */
+            static void appendSpirvOpenGLArguments( vector<LPCWSTR>& listArgument )
+            {
+                listArgument.push_back( L"-spirv" );
+                listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
+                listArgument.push_back( L"-fvk-use-dx-position-w" );
+                listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유. 네 백엔드 원소 레이아웃 일치
+                listArgument.push_back( L"-fvk-b-shift" );
+                listArgument.push_back( L"16" );
+                listArgument.push_back( L"0" );
+                // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0)이 정한다. common.hlsli 의 OPENGL 용
+                // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트와 무관하다.
+                static const wstring s_uavShift = StringUtil::utf8ToUTF16( to_string( shaderslot::gl::kUAVBinding0 ).c_str() );
+                listArgument.push_back( L"-fvk-u-shift" );
+                listArgument.push_back( s_uavShift.c_str() );
+                listArgument.push_back( L"0" );
+            }
+
+            /** @brief 대상 형식 하나의 DXC 쪽 일입니다. 행 순서는 `ShaderTargetFormat` 과 같습니다. 새 대상은 이 표와 `ShaderTargetFormatTable` 에 한 줄씩이고, 후처리(GL 패치 · 앞으로의 Tint)도 여기에 적습니다. */
+            struct DxcTargetRow
+            {
+                ShaderTargetFormat _format;
+                LPCWSTR            _pBackendDefine;                             ///< 셰이더가 백엔드를 가르는 매크로
+                void ( *_pfnAppendArguments )( vector<LPCWSTR>& listArgument ); ///< 형식별 인자. 없으면 nullptr
+                void ( *_pfnPostProcess )( vector<uint8>& inoutBytecode );      ///< 나온 바이트코드 후처리. 없으면 nullptr
+                const utf8* _pLogName;                                          ///< 로그 이름
+                uint8       _bNativeBindless : 1;                               ///< 네이티브 bindless 텍스처 배열을 쓴다(common.hlsli SW_NATIVE_BINDLESS). DX12 는 t0 space1 무제한 배열(버퍼는 space0 슬롯), Vulkan 은 세트 1 배열(버퍼는 세트 0 의 시프트된 binding)
+            };
+
+            static const DxcTargetRow& getDxcTargetRow( ShaderTargetFormat format )
+            {
+                static const DxcTargetRow kArrDxcTargetRow[] = {
+                    {  ShaderTargetFormat::DXBC_D3D11,   L"DX11=1",                     nullptr,                  nullptr,                       "D3D11 (DXBC)", 0},
+                    {  ShaderTargetFormat::DXIL_D3D12,   L"DX12=1",                     nullptr,                  nullptr,             "D3D12 (DXIL Row-Major)", 1},
+                    {ShaderTargetFormat::SPIRV_Vulkan, L"VULKAN=1", &appendSpirvVulkanArguments,                  nullptr, "Vulkan (SPIR-V, Vulkan API target)", 1},
+                    {ShaderTargetFormat::SPIRV_OpenGL, L"OPENGL=1", &appendSpirvOpenGLArguments, &SPIRVOpenGLPatch::apply,          "OpenGL (SPIR-V vulkan1.1)", 0},
+                };
+                static_assert( std::size( kArrDxcTargetRow ) == static_cast<size_t>( ShaderTargetFormat::Count ), "kArrDxcTargetRow needs one row per ShaderTargetFormat" );
+                const size_t index = static_cast<size_t>( format );
+                SW_ASSERT( index < std::size( kArrDxcTargetRow ) && kArrDxcTargetRow[index]._format == format );
+                return kArrDxcTargetRow[index];
+            }
+
             /** @brief 타깃(SPIR-V 레이아웃 · 레지스터 시프트, 타깃 매크로)과 스테이지에 따른 DXC 인자를 더합니다. 넣는 글은 모두 정적 수명입니다. */
             static void appendDXCTargetArguments( const ShaderCompileDesc& desc, vector<LPCWSTR>& listArgument )
             {
-                if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                {
-                    // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::render::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
-                    // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
-                    static const wstring s_targetEnv = StringUtil::utf8ToUTF16(
-                        ( string( "-fspv-target-env=vulkan" ) + to_string( constant::render::kVulkanRequiredMajor ) + "." +
-                          to_string( constant::render::kVulkanRequiredMinor ) )
-                            .c_str() );
-                    listArgument.push_back( L"-spirv" );
-                    listArgument.push_back( s_targetEnv.c_str() );
-                    listArgument.push_back( L"-fvk-use-dx-position-w" );
-                    // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
-                    // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
-                    listArgument.push_back( L"-fvk-use-dx-layout" );
-                    // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(binding_slots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
-                    // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDevice.cpp)이 같은 값으로 만든다.
-                    static const wstring s_bShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kBShift ).c_str() );
-                    static const wstring s_tShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kTShift ).c_str() );
-                    static const wstring s_uShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kUShift ).c_str() );
-                    listArgument.push_back( L"-fvk-b-shift" );
-                    listArgument.push_back( s_bShift.c_str() );
-                    listArgument.push_back( L"0" );
-                    listArgument.push_back( L"-fvk-t-shift" );
-                    listArgument.push_back( s_tShift.c_str() );
-                    listArgument.push_back( L"0" );
-                    listArgument.push_back( L"-fvk-u-shift" );
-                    listArgument.push_back( s_uShift.c_str() );
-                    listArgument.push_back( L"0" );
-                }
-                else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                {
-                    listArgument.push_back( L"-spirv" );
-                    listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
-                    listArgument.push_back( L"-fvk-use-dx-position-w" );
-                    listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유. 네 백엔드 원소 레이아웃 일치
-                    listArgument.push_back( L"-fvk-b-shift" );
-                    listArgument.push_back( L"16" );
-                    listArgument.push_back( L"0" );
-                    // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0)이 정한다. common.hlsli 의 OPENGL 용
-                    // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트와 무관하다.
-                    static const wstring s_uavShift = StringUtil::utf8ToUTF16( to_string( shaderslot::gl::kUAVBinding0 ).c_str() );
-                    listArgument.push_back( L"-fvk-u-shift" );
-                    listArgument.push_back( s_uavShift.c_str() );
-                    listArgument.push_back( L"0" );
-                }
+                const DxcTargetRow& target = getDxcTargetRow( desc._targetFormat );
+                if ( target._pfnAppendArguments != nullptr )
+                    target._pfnAppendArguments( listArgument );
 
                 listArgument.push_back( L"-D" );
-                if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
+                listArgument.push_back( target._pBackendDefine );
+                if ( target._bNativeBindless != 0 )
                 {
-                    listArgument.push_back( L"DX12=1" );
-                    // 네이티브 bindless 텍스처(common.hlsli SW_NATIVE_BINDLESS): 텍스처만 무제한 배열(t0 space1)이고, 버퍼는
-                    // space0 슬롯이다(CB 는 루트 CBV, t · u 는 디스크립터 테이블). SM6.6 힙 직접 인덱싱(ResourceDescriptorHeap)은 쓰지 않는다.
                     listArgument.push_back( L"-D" );
                     listArgument.push_back( L"SW_BINDLESS=1" );
                 }
-                else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                {
-                    listArgument.push_back( L"VULKAN=1" );
-                    // 네이티브 bindless 텍스처는 세트 1 배열이다. 버퍼는 세트 0 의 슬롯(시프트된 binding)이다.
-                    listArgument.push_back( L"-D" );
-                    listArgument.push_back( L"SW_BINDLESS=1" );
-                }
-                else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                    listArgument.push_back( L"OPENGL=1" );
-                else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
-                    listArgument.push_back( L"DX11=1" );
                 if ( desc._stage == ShaderStage::Compute )
                 {
                     // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열 · 슬롯, binding.hlsli "텍스처 읽기" 절)의 스위치.
@@ -591,17 +611,12 @@ namespace sw
 
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
-                if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                    SPIRVOpenGLPatch::apply( outResult._bytecode );
+                if ( getDxcTargetRow( desc._targetFormat )._pfnPostProcess != nullptr )
+                    getDxcTargetRow( desc._targetFormat )._pfnPostProcess( outResult._bytecode );
                 outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
                 outResult._bSuccess         = true;
     #if defined( SW_DEBUG )
-                const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                                            ? "Vulkan (SPIR-V, Vulkan API target)"
-                                        : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                                            ? "OpenGL (SPIR-V vulkan1.1)"
-                                            : "D3D12 (DXIL Row-Major)";
-                SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", pFormatName );
+                SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", getDxcTargetRow( desc._targetFormat )._pLogName );
     #endif
                 return DxcResult::Compiled;
             }
@@ -696,8 +711,10 @@ namespace sw
 
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
 
+        const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
+        const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;
 #if defined( SW_PLATFORM_WINDOWS )
-        if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+        if ( bFxcTarget )
         {
             if ( Internal::compileDxbc( desc, resolver->getIncludeResolver(), *input, profile, result ) )
                 Internal::saveToCacheIfEnabled( cachePath, result );
@@ -708,7 +725,7 @@ namespace sw
         // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
         // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
         // 진짜 이유가 드러나지 않아 부르는 쪽이 환경 문제와 셰이더 문제를 구분하지 못한다.
-        if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+        if ( bFxcTarget )
         {
             result._bSuccess     = false;
             result._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";

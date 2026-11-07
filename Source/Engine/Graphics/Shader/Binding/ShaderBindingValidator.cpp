@@ -136,7 +136,8 @@ namespace sw
 
             static bool isSPIRV( ShaderTargetFormat target )
             {
-                return target == ShaderTargetFormat::SPIRV_Vulkan || target == ShaderTargetFormat::SPIRV_OpenGL;
+                const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatTable::find( target );
+                return pInfo != nullptr && pInfo->_bSpirv != 0;
             }
 
             /**

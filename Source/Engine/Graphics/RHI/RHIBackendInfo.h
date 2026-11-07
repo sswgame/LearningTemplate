@@ -6,6 +6,7 @@
  *          장치 모듈(`RHI_*`)도 이 헤더를 읽으므로 테이블은 `inline constexpr` 다(엔진 DLL 함수를 부르지 않는다).
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -13,6 +14,8 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Profiling/IProfilerGPUTimeline.h"
+
+#include "sw/config/CookContract.gen.h"
 
 namespace sw
 {
@@ -23,7 +26,6 @@ namespace sw
         const utf8*         _pName;        ///< 로그와 설정에 쓰는 이름(RHIBackend 열거자와 같다)
         ShaderTargetFormat  _shaderTarget; ///< 이 백엔드가 읽는 셰이더 바이트코드
         const utf8*         _pModuleName;  ///< 개발 빌드가 로드하는 장치 모듈 이름(`Bin/Modules/<이름>`)
-        bool                _bWindowsOnly; ///< Windows 에서만 만들 수 있다(D3D) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         ProfilerGraphicsAPI _profilerAPI;  ///< 외부 프로파일러에 알리는 GPU API 종류
         RHICapabilities     _capabilities; ///< 정적 능력 테이블. 디바이스가 있으면 `IRHIDevice::getCapabilities` 가 런타임 값으로 덮을 수 있다
     };
@@ -124,10 +126,10 @@ namespace sw
     struct RHIBackendInfoTable
     {
         static constexpr RHIBackendInfo kArrInfo[] = {
-            {RHIBackend::DirectX11, "DirectX11",   ShaderTargetFormat::DXBC_D3D11,   "RHI_DX11",  true, ProfilerGraphicsAPI::Direct3D11, RHIStaticCapabilities::makeDirectX11Capabilities()},
-            {RHIBackend::DirectX12, "DirectX12",   ShaderTargetFormat::DXIL_D3D12,   "RHI_DX12",  true, ProfilerGraphicsAPI::Direct3D12, RHIStaticCapabilities::makeDirectX12Capabilities()},
-            {   RHIBackend::Vulkan,    "Vulkan", ShaderTargetFormat::SPIRV_Vulkan, "RHI_Vulkan", false,     ProfilerGraphicsAPI::Vulkan,    RHIStaticCapabilities::makeVulkanCapabilities()},
-            {   RHIBackend::OpenGL,    "OpenGL", ShaderTargetFormat::SPIRV_OpenGL,     "RHI_GL", false,     ProfilerGraphicsAPI::OpenGl,    RHIStaticCapabilities::makeOpenGlCapabilities()},
+            {RHIBackend::DirectX11, "DirectX11",   ShaderTargetFormat::DXBC_D3D11,   "RHI_DX11", ProfilerGraphicsAPI::Direct3D11, RHIStaticCapabilities::makeDirectX11Capabilities()},
+            {RHIBackend::DirectX12, "DirectX12",   ShaderTargetFormat::DXIL_D3D12,   "RHI_DX12", ProfilerGraphicsAPI::Direct3D12, RHIStaticCapabilities::makeDirectX12Capabilities()},
+            {   RHIBackend::Vulkan,    "Vulkan", ShaderTargetFormat::SPIRV_Vulkan, "RHI_Vulkan",     ProfilerGraphicsAPI::Vulkan,    RHIStaticCapabilities::makeVulkanCapabilities()},
+            {   RHIBackend::OpenGL,    "OpenGL", ShaderTargetFormat::SPIRV_OpenGL,     "RHI_GL",     ProfilerGraphicsAPI::OpenGl,    RHIStaticCapabilities::makeOpenGlCapabilities()},
         };
 
         /** @brief 그 백엔드의 항목입니다. 열거 범위 밖 값이면 nullptr 입니다. */
@@ -156,27 +158,40 @@ namespace sw
     /** @brief 이 OS와 빌드의 백엔드 가용성과 정적 능력 테이블 조회입니다. 둘 다 `RHIBackendInfoTable` 을 읽습니다. */
     struct RHIAvailability
     {
-        /** @brief 이 OS/빌드에서 해당 백엔드를 만들 수 있으면 true 입니다. */
-        static bool isAvailable( RHIBackend backend ) noexcept
+        /** @brief 이 플랫폼에서 만들 수 있는 백엔드입니다(건너갈 순서, 맨 앞이 기본). 원본은 `Config/Engine/CookContract.json` 의 `platform_rhi_backends` 입니다. */
+        static span<const RHIBackend> getPlatformBackendOrder() noexcept
         {
-            const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
-            if ( pInfo == nullptr )
-                return false;
+#define SW_RHI_BACKEND_ORDER_ROW( Backend ) RHIBackend::Backend,
 #if defined( SW_PLATFORM_WINDOWS )
-            return true;
-#elif defined( SW_PLATFORM_POSIX )
-            return pInfo->_bWindowsOnly == false;
+            static constexpr RHIBackend kArrOrder[] = { SW_RHI_BACKEND_ORDER_Windows( SW_RHI_BACKEND_ORDER_ROW ) };
+#elif defined( SW_PLATFORM_LINUX )
+            static constexpr RHIBackend kArrOrder[] = { SW_RHI_BACKEND_ORDER_Linux( SW_RHI_BACKEND_ORDER_ROW ) };
+#elif defined( SW_PLATFORM_ANDROID )
+            static constexpr RHIBackend kArrOrder[] = { SW_RHI_BACKEND_ORDER_Android( SW_RHI_BACKEND_ORDER_ROW ) };
 #else
     #error "Unsupported platform"
 #endif
+#undef SW_RHI_BACKEND_ORDER_ROW
+            return kArrOrder;
         }
 
-        /** @brief 이 OS/빌드에서 @p current 말고 건너갈 백엔드입니다(DirectX 12 → DirectX 11 → Vulkan → OpenGL 순으로 처음 되는 것). 없으면 false 입니다. */
+        /** @brief 이 OS/빌드에서 해당 백엔드를 만들 수 있으면 true 입니다. */
+        static bool isAvailable( RHIBackend backend ) noexcept
+        {
+            for ( const RHIBackend candidate : getPlatformBackendOrder() )
+            {
+                if ( candidate == backend )
+                    return true;
+            }
+            return false;
+        }
+
+        /** @brief 이 OS/빌드에서 @p current 말고 건너갈 백엔드입니다(플랫폼 순서에서 처음 되는 것). 없으면 false 입니다. */
         [[nodiscard]] static bool findOtherBackend( RHIBackend current, RHIBackend& outBackend ) noexcept
         {
-            for ( const RHIBackend candidate : { RHIBackend::DirectX12, RHIBackend::DirectX11, RHIBackend::Vulkan, RHIBackend::OpenGL } )
+            for ( const RHIBackend candidate : getPlatformBackendOrder() )
             {
-                if ( candidate == current || isAvailable( candidate ) == false )
+                if ( candidate == current )
                     continue;
                 outBackend = candidate;
                 return true;

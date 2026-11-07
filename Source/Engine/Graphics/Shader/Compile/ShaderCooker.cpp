@@ -173,20 +173,9 @@ namespace sw
 
     string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )
     {
-        switch ( format )
-        {
-            case ShaderTargetFormat::DXBC_D3D11:
-                return ".dxbc";
-            case ShaderTargetFormat::DXIL_D3D12:
-                return ".dxil";
-            // 둘 다 SPIR-V 라 확장자가 같다. 따로 적어 두면 "우연히 같은 값"처럼 보여서, 한쪽만
-            // 바꾸는 실수가 나기 쉽다. 같이 묶어 같아야 한다는 것을 드러낸다.
-            case ShaderTargetFormat::SPIRV_Vulkan:
-            case ShaderTargetFormat::SPIRV_OpenGL:
-                return ".spv";
-            case ShaderTargetFormat::Count:
-                break;
-        }
+        const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatTable::find( format );
+        if ( pInfo != nullptr )
+            return pInfo->_pExtension;
         SW_FATAL( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
     }
 

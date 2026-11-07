@@ -417,13 +417,7 @@ namespace sw
 
     RHIBackend RHI::getDefaultPlatformBackend()
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        return RHIBackend::DirectX12;
-#elif defined( SW_PLATFORM_LINUX )
-        return RHIBackend::Vulkan;
-#else
-    #error "Unsupported platform"
-#endif
+        return RHIAvailability::getPlatformBackendOrder()[0];
     }
 
     ShaderTargetFormat RHI::getShaderTargetFormat( RHIBackend backend )

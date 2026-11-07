@@ -111,6 +111,53 @@ namespace sw
         Count
     };
 
+    /** @brief 그 형식을 내는 컴파일러입니다. */
+    enum class ShaderCompilerTool : uint8
+    {
+        Fxc, ///< d3dcompiler(SM5 프로파일, Windows 전용)
+        Dxc, ///< dxc(SM6 프로파일)
+    };
+
+    /** @brief 대상 형식 하나의 공통 사실입니다. DXC 인자 · 후처리는 컴파일러 안의 표(`ShaderCompilerInternal::kArrDxcTargetRow`)가 같은 순서로 든다. */
+    struct ShaderTargetFormatInfo
+    {
+        ShaderTargetFormat _format;
+        ShaderCompilerTool _tool;
+        const utf8*        _pExtension; ///< 쿠킹 바이너리 확장자. SPIR-V 둘은 같아야 한다
+        uint8              _bSpirv : 1;
+    };
+
+    /** @brief 형식 표입니다. 새 대상(WebGPU 의 SPIR-V → WGSL)은 여기와 컴파일러 표에 한 줄씩이다(언리얼 `IShaderFormat` 자리, 기억). */
+    struct ShaderTargetFormatTable
+    {
+        static constexpr ShaderTargetFormatInfo kArrRow[] = {
+            {  ShaderTargetFormat::DXBC_D3D11, ShaderCompilerTool::Fxc, ".dxbc", 0},
+            {  ShaderTargetFormat::DXIL_D3D12, ShaderCompilerTool::Dxc, ".dxil", 0},
+            {ShaderTargetFormat::SPIRV_Vulkan, ShaderCompilerTool::Dxc,  ".spv", 1},
+            {ShaderTargetFormat::SPIRV_OpenGL, ShaderCompilerTool::Dxc,  ".spv", 1},
+        };
+
+        /** @brief 형식의 행입니다. `Count` 이상이면 nullptr 입니다. */
+        static constexpr const ShaderTargetFormatInfo* find( ShaderTargetFormat format ) noexcept
+        {
+            return format < ShaderTargetFormat::Count ? &kArrRow[static_cast<size_t>( format )] : nullptr;
+        }
+
+        /** @brief 행이 열거 순서로 하나씩 있는지 봅니다. */
+        static constexpr bool isInEnumOrder() noexcept
+        {
+            size_t index = 0;
+            for ( const ShaderTargetFormatInfo& row : kArrRow )
+            {
+                if ( static_cast<size_t>( row._format ) != index )
+                    return false;
+                ++index;
+            }
+            return index == static_cast<size_t>( ShaderTargetFormat::Count );
+        }
+    };
+    static_assert( ShaderTargetFormatTable::isInEnumOrder(), "ShaderTargetFormatTable needs one row per ShaderTargetFormat, in enumerator order" );
+
     /**
      * @struct ShaderMacroDefine
      * @brief 셰이더 전처리 매크로 정의입니다(NAME=VALUE).
