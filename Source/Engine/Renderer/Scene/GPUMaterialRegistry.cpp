@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 namespace sw
@@ -62,6 +63,7 @@ namespace sw
         _mapShaderPathToGroup.clear();
         inoutSnapshot._pListShaderPermutation.reset();
         _mapPermutationToIndex.clear();
+        _bElementsChanged = SW_TRUE;
     }
 
     uint32 GPUMaterialRegistry::materialGroupFor( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot )
@@ -144,6 +146,7 @@ namespace sw
                 state._listEntryOwner.resize( elementIndex + 1 );
             state._listEntryOwner[elementIndex] = MaterialElementOwner{ material, instance }; // 소유가 키(생포인터)를 살려 둔다 — 회수 전에는 키가 가리키는 것이 사라지지 않는다
             state._mapEntryToIndex.emplace( key, elementIndex );
+            _bElementsChanged = SW_TRUE; // 새 원소의 사본은 비었다 — 이번 맞추기를 건너뛰지 않는다
         }
         state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
         state._lastKey                              = key;
@@ -207,6 +210,14 @@ namespace sw
 
     void GPUMaterialRegistry::refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot )
     {
+        // 입력은 맞추기 **전에** 읽는다 — 맞추는 중에 오른 번호(인스턴스가 부모의 레이아웃을 맞춤 · 묶음 값을 다시 패킹)는 다음 빌드가 한 번 더 맞춰 수렴한다.
+        // 뒤에 읽으면 앞 원소(부모)가 옛 사본을 든 채 건너뛸 수 있다.
+        const MaterialRenderInputs inputs = MaterialRenderInputs::capture();
+        if ( _bElementsChanged == SW_FALSE && inputs.isSame( _lastRefreshInputs ) )
+            return;
+        _bElementsChanged  = SW_FALSE;
+        _lastRefreshInputs = inputs;
+        SW_PROFILE_COUNT( "GT.Material.refreshBindings", 1 );
         const size_t groupCount = MathUtil::min( inoutSnapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
         for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {

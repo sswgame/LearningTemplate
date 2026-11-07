@@ -20,6 +20,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/Material/MaterialRenderVersion.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -89,7 +90,7 @@ namespace sw
         /** @brief 값을 바꿉니다. 묶은 모든 머티리얼이 다음 프레임에 따릅니다. 없는 이름이면 오류를 남기고 false 입니다. 같은 값이면 세대가 그대로입니다. */
         bool setValue( const hashed_string& name, const float4& value );
         /** @brief 값이 바뀔 때마다 오르는 세대입니다. */
-        [[nodiscard]] uint32 getGeneration() const { return _generation; }
+        [[nodiscard]] uint32 getGeneration() const { return _generation.get(); }
 
         /** @brief 값의 앞 @p componentCount 채널을 머티리얼 프로퍼티 값 글(`0.5 0.25`)로 씁니다. */
         [[nodiscard]] static string makePropertyText( const float4& value, uint32 componentCount );
@@ -101,7 +102,7 @@ namespace sw
             float4        _value;
         };
 
-        vector<Entry> _listEntry;
-        uint32        _generation;
+        vector<Entry>         _listEntry;
+        MaterialRenderVersion _generation; ///< 값이 바뀔 때마다 오른다 — 묶은 머티리얼이 다시 패킹하므로 렌더 값의 전역 번호도 오른다
     };
 } // namespace sw

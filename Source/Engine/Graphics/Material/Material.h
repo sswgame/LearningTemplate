@@ -14,6 +14,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
+#include "Engine/Graphics/Material/MaterialRenderVersion.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -255,7 +256,7 @@ namespace sw
          * @brief 렌더 값이 바뀔 때마다 오르는 세대입니다(바이트의 값 · 레이아웃 · 크기, 텍스처 슬롯).
          * @details 인스턴스는 부모 바이트의 복사본을 가지고 있어, 이 값이 바뀌면 다시 복사한다(`MaterialInstance::getRenderBinding`). 렌더 사본도 이 값으로 낡았는지 본다.
          */
-        uint32 getBufferGeneration() const { return _bufferGeneration; }
+        uint32 getBufferGeneration() const { return _bufferGeneration.get(); }
         /** @brief 이름으로 프로퍼티를 찾습니다. */
         const MaterialProperty* findProperty( hashed_string name ) const;
         /** @brief 이름으로 프로퍼티를 찾습니다. */
@@ -354,7 +355,7 @@ namespace sw
         shared_ptr<const MaterialRenderData> _renderData;                                                         /**< 마지막으로 만든 불변 사본(`getRenderBinding`). */
         uint32                               _renderDataGeneration;                                               /**< `_renderData` 를 만들 때의 `_bufferGeneration`. */
         uint32                               _elementStride;                                                      /**< g_SwMaterials 원소 stride(리플렉션). 0이면 구조 버퍼 머티리얼이 아니다. */
-        uint32                               _bufferGeneration;                                                   /**< 렌더 값(바이트, stride, 텍스처 슬롯)이 바뀔 때마다 오른다. 인스턴스 복사본과 렌더 사본이 낡았는지 확인한다. */
+        MaterialRenderVersion                _bufferGeneration;                                                   /**< 렌더 값(바이트, stride, 텍스처 슬롯)이 바뀔 때마다 오른다(`bump` — 전역 번호도 오른다, `MaterialRenderVersion`). 인스턴스 복사본과 렌더 사본이 낡았는지 확인한다. */
         uint32                               _shaderLayoutCacheGeneration;                                        /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
         RHIBackend                           _shaderLayoutBackend;                                                /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 의미가 있다. */
         IRHIDevice*                          _pRHIDevice;

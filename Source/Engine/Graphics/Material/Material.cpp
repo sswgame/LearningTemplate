@@ -70,7 +70,7 @@ namespace sw
         , _renderData{}
         , _renderDataGeneration{ 0 }
         , _elementStride{ 0 }
-        , _bufferGeneration{ 0 }
+        , _bufferGeneration{}
         , _shaderLayoutCacheGeneration{ 0 }
         , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
@@ -129,7 +129,7 @@ namespace sw
         constexpr uint32 kConstantBufferAlignment = 256u;
         const uint32     bufferSize               = MathUtil::align( MathUtil::max( static_cast<uint32>( _data._bytes.size() ), 1u ), kConstantBufferAlignment );
         _data._bytes.resize( bufferSize, 0 );
-        ++_bufferGeneration; // 크기를 256 정렬로 맞췄다
+        _bufferGeneration.bump(); // 크기를 256 정렬로 맞췄다
 
         if ( resolveTextureAssets( pRHI ) == false )
         {
@@ -245,7 +245,7 @@ namespace sw
                 if ( bNativeBindless )
                     setTextureParameter( hashed_string( prop._name.c_str() ), srv );
                 else
-                    ++_bufferGeneration; // 슬롯 바인딩 백엔드는 슬롯 목록만 바뀐다 — 렌더 사본이 그 목록을 싣는다
+                    _bufferGeneration.bump(); // 슬롯 바인딩 백엔드는 슬롯 목록만 바뀐다 — 렌더 사본이 그 목록을 싣는다
                 bChanged = true;
             }
             ++ordinal;
@@ -317,7 +317,7 @@ namespace sw
         _listBorrowedTexturePath.clear();
         _listMaterialTextureSRV.clear();
         _listMaterialTextureName.clear();
-        ++_bufferGeneration; // 슬롯 목록이 비었다 — 놓은 텍스처의 SRV 를 렌더 사본에 남기지 않는다
+        _bufferGeneration.bump(); // 슬롯 목록이 비었다 — 놓은 텍스처의 SRV 를 렌더 사본에 남기지 않는다
         for ( MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialPacking::isTextureType( prop._type ) == false || prop._assetPath.empty() )
@@ -434,7 +434,7 @@ namespace sw
     MaterialRenderBinding Material::getRenderBinding()
     {
         syncRenderState();
-        if ( _renderData == nullptr || _renderDataGeneration != _bufferGeneration )
+        if ( _renderData == nullptr || _renderDataGeneration != _bufferGeneration.get() )
         {
             shared_ptr<MaterialRenderData> data = sw::make_shared<MaterialRenderData>();
             data->_bytes                        = _data._bytes;
@@ -445,7 +445,7 @@ namespace sw
                 data->_arrTextureSRV[slot] = _listMaterialTextureSRV[slot];
             }
             _renderData           = std::move( data );
-            _renderDataGeneration = _bufferGeneration;
+            _renderDataGeneration = _bufferGeneration.get();
         }
         return MaterialRenderBinding{ _renderProxy, _renderData };
     }
@@ -564,6 +564,7 @@ namespace sw
         if ( _data._listProperty.empty() )
         {
             fillPropertiesFromSchema( *pSchemaCb );
+            _bufferGeneration.bump(); // 위에서 stride 가 바뀌었다 — 사본이 stride 를 싣는다(예전에는 다음 값 변경까지 옛 stride 사본이 남을 수 있었다)
             return true;
         }
         const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
@@ -580,7 +581,7 @@ namespace sw
     {
         _data._bytes.clear();
         _elementStride = 0;
-        ++_bufferGeneration;
+        _bufferGeneration.bump();
     }
 
     void Material::fillPropertiesFromSchema( const ShaderBufferInfo& schema )
@@ -699,7 +700,7 @@ namespace sw
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );
-        ++_bufferGeneration;
+        _bufferGeneration.bump();
     }
 
     bool Material::rebuildPackedBuffer()
@@ -772,7 +773,7 @@ namespace sw
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         if ( alignedTotal > _data._bytes.size() )
             _data._bytes.resize( alignedTotal, 0 );
-        ++_bufferGeneration;
+        _bufferGeneration.bump();
 
         _desc._listProperty = _data._listProperty;
         return bAllPacked;
@@ -847,7 +848,7 @@ namespace sw
             prop->_value = std::move( previousValue );
             return false;
         }
-        ++_bufferGeneration;
+        _bufferGeneration.bump();
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
@@ -867,7 +868,7 @@ namespace sw
         pProp->_value        = to_string( descIdx );
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
-        ++_bufferGeneration;
+        _bufferGeneration.bump();
         _desc._listProperty = _data._listProperty;
         return true;
     }
@@ -937,7 +938,7 @@ namespace sw
         pProp->_value = to_string( value );
         if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
             return false;
-        ++_bufferGeneration;
+        _bufferGeneration.bump();
         return true;
     }
 

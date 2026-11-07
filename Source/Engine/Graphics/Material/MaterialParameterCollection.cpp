@@ -103,7 +103,7 @@ namespace sw
 
     MaterialParameterCollection::MaterialParameterCollection( MaterialParameterCollectionDef desc )
         : _listEntry{}
-        , _generation{ 1 }
+        , _generation{ 1u }
     {
         _listEntry.reserve( desc._listParameter.size() );
         for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
@@ -130,7 +130,7 @@ namespace sw
         if ( bSame == false )
         {
             pEntry->_value = value;
-            ++_generation;
+            _generation.bump();
         }
         return true;
     }

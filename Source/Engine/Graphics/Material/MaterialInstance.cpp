@@ -129,13 +129,14 @@ namespace sw
         , _renderProxy{ MaterialRenderProxy::create() }
         , _renderData{}
         , _parentBufferGeneration{ 0 }
+        , _overrideRevision{}
+        , _renderDataOverrideRevision{ 0 }
         , _pTextureDevice{ nullptr }
         , _textureReloadGeneration{ 0 }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
-        , _bGPUDirty{ SW_TRUE }
         , _instReserved{ 0 }
     {
     }
@@ -213,13 +214,13 @@ namespace sw
         _pParentMaterial->syncRenderState();
         // 텍스처는 부모가 빌린 디바이스로 요청한다. 부모가 아직 초기화 전이면 디바이스가 없어 덮어쓴 텍스처를 미룬다(그동안 부모 텍스처가 보인다).
         IRHIDevice* pDevice = _pParentMaterial->getRHIDevice();
-        if ( pDevice != nullptr && syncTextureOverrides( pDevice ) )
-            _bGPUDirty = SW_TRUE;
+        // 텍스처 덮어쓰기의 새 SRV(다시 올림 · 비동기 로드 끝)는 텍스처 캐시의 세대가 알린다 — 장면 스냅샷도 그 세대를 함께 본다.
+        const bool bTextureChanged = pDevice != nullptr && syncTextureOverrides( pDevice );
         // 부모 값이 바뀌었으면(값 · 레이아웃 · 다시 로드 · 텍스처 슬롯) 사본도 낡았다. 덮어쓰기가 바뀔 때만 다시 만들면 덮어쓰지 않은 파라미터에서
         // 부모의 값 변경과 다시 맞춘 레이아웃을 놓친다.
-        if ( _parentBufferGeneration != _pParentMaterial->getBufferGeneration() )
-            _bGPUDirty = SW_TRUE;
-        if ( _bGPUDirty != SW_FALSE || _renderData == nullptr )
+        const bool bParentChanged   = _parentBufferGeneration != _pParentMaterial->getBufferGeneration();
+        const bool bOverrideChanged = _overrideRevision.get() != _renderDataOverrideRevision;
+        if ( bTextureChanged || bParentChanged || bOverrideChanged || _renderData == nullptr )
             rebuildRenderData( pDevice );
         return MaterialRenderBinding{ _renderProxy, _renderData };
     }
@@ -230,7 +231,7 @@ namespace sw
         data->_bytes                        = _pParentMaterial->getBuffer();
         data->_elementStride                = _pParentMaterial->getElementStride();
         _parentBufferGeneration             = _pParentMaterial->getBufferGeneration();
-        _bGPUDirty                          = SW_FALSE;
+        _renderDataOverrideRevision         = _overrideRevision.get();
         // 부모 바이트가 비었으면(레이아웃 오류 — 오류는 부모가 남겼다) 빈 사본이다. 렌더 스레드는 빈 바이트를 올리지 않는다.
         if ( data->_bytes.empty() == false )
         {
@@ -296,7 +297,7 @@ namespace sw
         pOverride->_text.clear();
         pOverride->_kind = kind;
         Memory::copy( pOverride->_arrValue, pValue, count * sizeof( float32 ) );
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
     }
 
     bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRHI )
@@ -354,7 +355,7 @@ namespace sw
             texture._acquiredPath.clear();
         }
         _pTextureDevice = nullptr;
-        _bGPUDirty      = SW_TRUE;
+        markRenderDirty();
     }
 
     uint32 MaterialInstance::findTextureSlot( hashed_string name ) const
@@ -410,7 +411,7 @@ namespace sw
         _qualityOverride = MaterialQualityLevel::Count;
         _bDefinesDirty   = SW_TRUE;
         MaterialPermutation::bumpPermutationGeneration();
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
     }
 
     void MaterialInstance::enableKeyword( hashed_string keyword )
@@ -418,7 +419,7 @@ namespace sw
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true );
         _bDefinesDirty = SW_TRUE;
         MaterialPermutation::bumpPermutationGeneration();
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
     }
 
     void MaterialInstance::disableKeyword( hashed_string keyword )
@@ -426,7 +427,7 @@ namespace sw
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false );
         _bDefinesDirty = SW_TRUE;
         MaterialPermutation::bumpPermutationGeneration();
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
     }
 
     void MaterialInstance::setParent( Material* pParentMaterial )
@@ -434,7 +435,7 @@ namespace sw
         _pParentMaterial = pParentMaterial;
         _bDefinesDirty   = SW_TRUE;
         MaterialPermutation::bumpPermutationGeneration();
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
     }
 
     void MaterialInstance::setParameter( hashed_string name, string_view value )
@@ -451,7 +452,7 @@ namespace sw
         }
         pOverride->_kind = ValueKind::Text;
         pOverride->_text = value;
-        _bGPUDirty       = SW_TRUE;
+        markRenderDirty();
     }
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
@@ -468,7 +469,7 @@ namespace sw
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
         // 원하는 경로만 적는다. 빌리고 돌려주는 것은 다음 getRenderBinding 이다(syncTextureOverrides).
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._name != name )
@@ -494,7 +495,7 @@ namespace sw
             _qualityOverride = level;
             _bDefinesDirty   = SW_TRUE;
             MaterialPermutation::bumpPermutationGeneration();
-            _bGPUDirty = SW_TRUE;
+            markRenderDirty();
         }
     }
 
@@ -503,7 +504,7 @@ namespace sw
         MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
         _bDefinesDirty = SW_TRUE;
         MaterialPermutation::bumpPermutationGeneration();
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
     }
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
@@ -775,7 +776,7 @@ namespace sw
         }
         if ( quality.has_value() )
             _qualityOverride = *quality;
-        _bGPUDirty = SW_TRUE;
+        markRenderDirty();
         return true;
     }
 

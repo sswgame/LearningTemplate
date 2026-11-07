@@ -11,6 +11,7 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Material/MaterialRenderVersion.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
@@ -73,6 +74,7 @@ namespace sw
         /**
          * @brief 모든 원소의 (프록시, 사본)을 지금 값으로 맞춥니다. 배치 구성을 그대로 둔 프레임에도 매 빌드 부릅니다(값만 바뀐 머티리얼이 있다).
          * @details 바뀌지 않은 머티리얼은 세대 비교 한 번으로 같은 사본을 돌려준다(`Material::getRenderBinding`). 렌더 스레드는 사본이 바뀐 원소만 올린다.
+         *          원소가 그대로이고 사본을 정하는 입력(`MaterialRenderInputs`)도 지난 맞추기 때와 같으면 통째로 건너뛴다 — 정지한 씬의 비용이 원소 수가 아니라 비교 한 번이다.
          */
         void refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot );
 
@@ -112,5 +114,9 @@ namespace sw
         unordered_map<uint64, uint32> _mapPermutationToIndex;
         /// @brief 빌드 번호입니다. 원소가 마지막으로 쓰인 시점을 측정하는 데만 씁니다(회수 판정).
         uint64 _buildCounter{ 0 };
+        /// @brief 마지막 `refreshMaterialBindings` 가 맞추기 전에 읽은 입력입니다. 같고 원소가 그대로면 다시 맞추지 않는다.
+        MaterialRenderInputs _lastRefreshInputs{};
+        /// @brief 지난 맞추기 뒤 사본이 빈 원소가 생겼다(새 원소 · 그룹 목록을 비움). 입력이 같아도 맞춘다.
+        uint8 _bElementsChanged{ SW_TRUE };
     };
 } // namespace sw

@@ -170,6 +170,8 @@ namespace sw
         void assignFloats( hashed_string name, ValueKind kind, const float32* pValue, uint32 count );
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
         void syncDescOverrides() const;
+        /** @brief 덮어쓰기가 바뀌었다 — 다음 `getRenderBinding` 이 사본을 다시 만들고, 렌더 값의 전역 번호가 오른다(`MaterialRenderVersion`). */
+        void markRenderDirty() { _overrideRevision.bump(); }
         /** @brief 부모 바이트에 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding`). */
         void rebuildRenderData( IRHIDevice* pDevice );
         /** @brief 부모의 매개변수 모양과 어긋난 스칼라 · 벡터 덮어쓰기를 알리고 지웁니다(`rebuildRenderData` 가 부모 초기화 뒤 게임 스레드에서 부른다). */
@@ -212,6 +214,12 @@ namespace sw
         shared_ptr<const MaterialRenderData> _renderData;
         /** @brief 사본을 만들 때의 부모 `getBufferGeneration()` 입니다. 다르면 부모 값이나 레이아웃이 바뀐 것이라 다시 만듭니다. */
         uint32 _parentBufferGeneration;
+        /**
+         * @brief 덮어쓰기(값 · 텍스처 · 키워드 · 품질 · 정의)가 바뀔 때마다 오르는 번호입니다(`markRenderDirty`). 사본을 만들 때의 값(`_renderDataOverrideRevision`)과 다르면 다시 만든다.
+         * @details 예전의 "사본이 낡았다" 깃발 자리다. 번호를 올리는 길이 `bump` 하나라 전역 번호를 빠뜨릴 수 없다(장면 스냅샷이 그 번호로 사본 맞추기를 건너뛴다).
+         */
+        MaterialRenderVersion _overrideRevision;
+        uint32                _renderDataOverrideRevision; ///< `_renderData` 를 만들 때의 `_overrideRevision`
         /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 반환할 때 씁니다(디바이스가 죽으면 clearRHI 가 비웁니다). */
         IRHIDevice* _pTextureDevice;
         /** @brief 덮어쓴 텍스처를 패킹할 때의 `TextureCache::getReloadGeneration()` 입니다. 다르면 다시 올라온 텍스처의 새 SRV 를 다시 패킹합니다. */
@@ -221,7 +229,6 @@ namespace sw
         mutable uint64         _cachedPermutationHash;
         mutable uint64         _parentPermutationHash;
         mutable uint8          _bDefinesDirty : 1;
-        uint8                  _bGPUDirty     : 1; ///< 덮어쓰기가 바뀌어 사본을 다시 만들어야 한다
-        [[maybe_unused]] uint8 _instReserved  : 6;
+        [[maybe_unused]] uint8 _instReserved  : 7;
     };
 } // namespace sw
