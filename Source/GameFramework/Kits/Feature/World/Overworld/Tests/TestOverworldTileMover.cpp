@@ -14,7 +14,7 @@ using namespace sw;
 namespace
 {
     /** @brief 가운데에 선 폰과 모두 걸을 수 있는 5 x 5 맵입니다. */
-    struct OverworldRig
+    struct OverworldFixture
     {
         static constexpr int32   kInteractButton = 0;
         static constexpr float32 kStepSeconds    = 0.1f;
@@ -22,7 +22,7 @@ namespace
         TileMap            _map;
         OverworldTileMover _mover;
 
-        OverworldRig()
+        OverworldFixture()
         {
             _map.resize( 5, 5 );
             for ( int32 y = 0; y < 5; ++y )
@@ -70,7 +70,7 @@ namespace
 
 SW_TEST_CASE( OverworldTileMoverTest, AxisMapsToOneTileAndYIsUp )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig.push( 0.0f, 1.0f );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
     SW_EXPECT_EQUAL( 1, rig._mover.getTileY() );
@@ -88,7 +88,7 @@ SW_TEST_CASE( OverworldTileMoverTest, AxisMapsToOneTileAndYIsUp )
 
 SW_TEST_CASE( OverworldTileMoverTest, DeadZoneAndUnfinishedStepIgnoreInput )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig.push( 0.4f, 0.4f );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileY() );
@@ -104,7 +104,7 @@ SW_TEST_CASE( OverworldTileMoverTest, DeadZoneAndUnfinishedStepIgnoreInput )
 
 SW_TEST_CASE( OverworldTileMoverTest, BlockedTileOnlyTurns )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig._map.setWalkable( 3, 2, false );
     rig.push( 1.0f, 0.0f );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
@@ -119,7 +119,7 @@ SW_TEST_CASE( OverworldTileMoverTest, BlockedTileOnlyTurns )
 
 SW_TEST_CASE( OverworldTileMoverTest, DisabledInputStillFinishesTheStep )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig.push( 1.0f, 0.0f );
     rig._mover.setInputEnabled( false );
     rig.finishStep(); // 화면 전환 중에도 걸음은 끝난다
@@ -130,11 +130,11 @@ SW_TEST_CASE( OverworldTileMoverTest, DisabledInputStillFinishesTheStep )
 
 SW_TEST_CASE( OverworldTileMoverTest, InteractWinsOverMoveAndIsConsumedOnce )
 {
-    OverworldRig  rig;
-    ControlIntent intent;
+    OverworldFixture rig;
+    ControlIntent    intent;
     intent._move = float2{ 1.0f, 0.0f };
-    intent.setButton( OverworldRig::kInteractButton, true, true );
-    rig._mover.update( 0.0f, intent, OverworldRig::kInteractButton );
+    intent.setButton( OverworldFixture::kInteractButton, true, true );
+    rig._mover.update( 0.0f, intent, OverworldFixture::kInteractButton );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
     SW_EXPECT_TRUE( rig._mover.getLocomotion().getState() == LocomotionState::Interact );
     SW_EXPECT_TRUE( rig._mover.consumeInteractRequest() );
@@ -149,7 +149,7 @@ SW_TEST_CASE( OverworldTileMoverTest, InteractWinsOverMoveAndIsConsumedOnce )
 // 결함: 걸음 시간 0 이면 타이머가 서지 않아 `Walk` 에 영원히 갇혀 다시는 입력을 받지 못했다.
 SW_TEST_CASE( OverworldTileMoverTest, ZeroStepTimeDoesNotLockTheWalker )
 {
-    OverworldRig               rig;
+    OverworldFixture           rig;
     OverworldTileMoverSettings settings = rig._mover.getSettings();
     settings._stepSeconds               = 0.0f;
     rig._mover.setSettings( settings );
@@ -160,8 +160,8 @@ SW_TEST_CASE( OverworldTileMoverTest, ZeroStepTimeDoesNotLockTheWalker )
 
 SW_TEST_CASE( OverworldTileMoverTest, WarpIsRequestedOnceAndWinsOverEncounter )
 {
-    OverworldRig rig;
-    TileWarp     warp{};
+    OverworldFixture rig;
+    TileWarp         warp{};
     warp._tileX       = 3;
     warp._tileY       = 2;
     warp._targetMap   = "maps/next.xml";
@@ -187,7 +187,7 @@ SW_TEST_CASE( OverworldTileMoverTest, WarpIsRequestedOnceAndWinsOverEncounter )
 
 SW_TEST_CASE( OverworldTileMoverTest, EncounterCountsOnlyEncounterTilesByPeriod )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig._mover.setPosition( 0, 2 );
     rig._map.setEncounter( 2, 2, true );
     rig._map.setEncounter( 3, 2, true );
@@ -198,7 +198,7 @@ SW_TEST_CASE( OverworldTileMoverTest, EncounterCountsOnlyEncounterTilesByPeriod 
     SW_EXPECT_TRUE( rig._mover.consumeEncounterRequest() );
     SW_EXPECT_FALSE( rig._mover.consumeEncounterRequest() );
 
-    OverworldRig off;
+    OverworldFixture off;
     off._mover.setEncounterRate( 0.0f );
     off._map.setEncounter( 3, 2, true );
     off._map.setEncounter( 4, 2, true );
@@ -209,29 +209,29 @@ SW_TEST_CASE( OverworldTileMoverTest, EncounterCountsOnlyEncounterTilesByPeriod 
 
 SW_TEST_CASE( OverworldTileMoverTest, StateRoundTripsMidStep )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig.push( 1.0f, 0.0f );
-    const vector<uint8> listSaved = OverworldRig::save( rig._mover );
+    const vector<uint8> listSaved = OverworldFixture::save( rig._mover );
 
-    OverworldRig restored;
-    Archive      reading( listSaved.data(), listSaved.size() );
+    OverworldFixture restored;
+    Archive          reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored._mover.readState( reading ) );
     SW_EXPECT_EQUAL( 3, restored._mover.getTileX() );
     SW_EXPECT_EQUAL( 2, restored._mover.getTileY() );
     SW_EXPECT_TRUE( restored._mover.getLocomotion().getState() == LocomotionState::Walk );
     SW_EXPECT_TRUE( restored._mover.getLocomotion().getFacing() == FacingDir::Right );
-    SW_EXPECT_TRUE( OverworldRig::save( restored._mover ) == listSaved );
+    SW_EXPECT_TRUE( OverworldFixture::save( restored._mover ) == listSaved );
 }
 
 // 결함: 꾸민 바이트의 워프 대기 + 빈 맵 경로를 받아 게임이 빈 경로로 맵을 옮기려 했다.
 SW_TEST_CASE( OverworldTileMoverTest, ForgedPendingWarpWithoutAMapIsRefused )
 {
-    OverworldRig     rig;
-    vector<uint8>    listBytes                 = OverworldRig::save( rig._mover );
+    OverworldFixture rig;
+    vector<uint8>    listBytes                 = OverworldFixture::save( rig._mover );
     constexpr size_t kFlagFromEnd              = 4; // 플래그 다섯(이동 · 워프 · 조우 · 상호작용 · 입력) 중 워프는 끝에서 넷째다
     listBytes[listBytes.size() - kFlagFromEnd] = SW_TRUE;
 
-    OverworldRig target;
+    OverworldFixture target;
     target._mover.setPosition( 1, 1 );
     Archive reading( listBytes.data(), listBytes.size() );
     SW_EXPECT_FALSE( target._mover.readState( reading ) );
@@ -240,12 +240,12 @@ SW_TEST_CASE( OverworldTileMoverTest, ForgedPendingWarpWithoutAMapIsRefused )
 
 SW_TEST_CASE( OverworldTileMoverTest, TruncatedOrBadFlagBytesLeaveTheStateAlone )
 {
-    OverworldRig rig;
+    OverworldFixture rig;
     rig._mover.setPosition( 4, 4 );
-    const vector<uint8> listSaved = OverworldRig::save( rig._mover );
+    const vector<uint8> listSaved = OverworldFixture::save( rig._mover );
 
-    OverworldRig target;
-    Archive      truncated( listSaved.data(), listSaved.size() - 1 );
+    OverworldFixture target;
+    Archive          truncated( listSaved.data(), listSaved.size() - 1 );
     SW_EXPECT_FALSE( target._mover.readState( truncated ) );
     SW_EXPECT_EQUAL( 2, target._mover.getTileX() );
 

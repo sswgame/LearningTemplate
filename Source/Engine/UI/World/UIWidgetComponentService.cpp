@@ -51,8 +51,8 @@ namespace sw
         // 위젯 컴포넌트가 이 서비스보다 오래 남을 수 있으므로 등록과 마커를 잊게 한다(그 뒤 소멸자가 이 서비스를 부르지 않게).
         for ( WidgetComponent* pComponent : _listComponent )
         {
-            _worldPointer.forgetComponent( *pComponent );
-            pComponent->forgetUIService();
+            _worldPointer.untrackComponent( *pComponent );
+            pComponent->removeUIService();
         }
         _listComponent.clear();
         // 화면 스택은 아직 있다(이것이 먼저 내려간다) — 마커 화면을 닫는다.
@@ -84,7 +84,7 @@ namespace sw
         {
             if ( _listComponent[index] == &component )
             {
-                _worldPointer.forgetComponent( component );
+                _worldPointer.untrackComponent( component );
                 _listComponent.erase( _listComponent.begin() + static_cast<ptrdiff_t>( index ) );
                 return;
             }
@@ -100,7 +100,7 @@ namespace sw
         {
             unique_ptr<CanvasPanel> root = make_unique<CanvasPanel>();
             root->setVisibility( WidgetVisibility::SelfHitTestInvisible ); // 빈 곳 클릭은 아래(게임)로 넘긴다
-            UIScreenDesc desc{};
+            UIScreenDef desc{};
             desc._layer       = UILayer::HUD;
             desc._bTakesFocus = false;
             desc._bShowCursor = false;
@@ -127,7 +127,7 @@ namespace sw
         if ( pRoot->getChildCount() == 0 )
         {
             _pUI->closeScreen( _markers.getScreen() );
-            _markers.forgetScreen();
+            _markers.removeScreen();
         }
     }
 

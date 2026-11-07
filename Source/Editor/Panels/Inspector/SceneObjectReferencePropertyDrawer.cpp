@@ -68,7 +68,7 @@ namespace sw::editor
                 bool                 bPicked = false;
                 if ( ImGui::Selectable( "(none)", pValue->isSet() == false ) )
                     bPicked = true;
-                EditorSelfTestMarks::note( "inspector.sceneref.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
+                EditorSelfTestMarks::record( "inspector.sceneref.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                 for ( const unique_ptr<Scene>& scene : sceneManager.getLoadedScenes() )
                 {
                     if ( scene == nullptr || scene->getObjectManager() == nullptr )
@@ -118,7 +118,7 @@ namespace sw::editor
                     }
                     ImGui::PopID();
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( ( "inspector.sceneref.choice." + choice._label ).c_str() );
+                        EditorSelfTestMarks::record( ( "inspector.sceneref.choice." + choice._label ).c_str() );
                 }
                 return bPicked;
             }

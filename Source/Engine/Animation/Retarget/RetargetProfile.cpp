@@ -178,23 +178,23 @@ namespace sw
         using Internal = RetargetProfileInternal;
         XMLDocument               document;
         const XMLNode             root = document.appendRoot( "RetargetProfile" );
-        RetargetProfileRootFields rootFields;
-        rootFields._sourceSkeleton = _sourceSkeletonPath;
-        rootFields._targetSkeleton = _targetSkeletonPath;
-        rootFields._translation    = _translationMode;
-        rootFields._bMapSameNames  = _bMapSameNames == SW_TRUE;
-        rootFields._heightRatio    = _heightRatioOverride;
-        XMLFields::writeFields( root, rootFields ); // 기본값과 같은 칸은 적지 않는다
+        RetargetProfileRootParams rootParams;
+        rootParams._sourceSkeleton = _sourceSkeletonPath;
+        rootParams._targetSkeleton = _targetSkeletonPath;
+        rootParams._translation    = _translationMode;
+        rootParams._bMapSameNames  = _bMapSameNames == SW_TRUE;
+        rootParams._heightRatio    = _heightRatioOverride;
+        XMLFields::writeFields( root, rootParams ); // 기본값과 같은 칸은 적지 않는다
         Internal::writePair( root.appendChild( "root" ), _sourceRoot, _targetRoot );
         Internal::writePair( root.appendChild( "pelvis" ), _sourcePelvis, _targetPelvis );
         const XMLNode chains = root.appendChild( "chains" );
         for ( const RetargetChain& chain : _listChain )
         {
             const XMLNode       entry = chains.appendChild( "item" );
-            RetargetChainFields chainFields;
-            chainFields._name    = chain._name;
-            chainFields._bIKGoal = chain._bIKGoal == SW_TRUE;
-            XMLFields::writeFields( entry, chainFields );
+            RetargetChainParams chainParams;
+            chainParams._name    = chain._name;
+            chainParams._bIKGoal = chain._bIKGoal == SW_TRUE;
+            XMLFields::writeFields( entry, chainParams );
             Internal::writeNames( entry.appendChild( "source" ), chain._listSourceBone );
             Internal::writeNames( entry.appendChild( "target" ), chain._listTargetBone );
         }
@@ -211,7 +211,7 @@ namespace sw
             const XMLNode targetPose = root.appendChild( "target_pose" );
             for ( const RetargetPoseBone& poseBone : _listTargetPose )
             {
-                XMLFields::writeFields( targetPose.appendChild( "item" ), RetargetPoseBoneFields{ poseBone._bone, poseBone._rotationDegrees } );
+                XMLFields::writeFields( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotationDegrees } );
             }
         }
         return document.saveToString();
@@ -226,11 +226,11 @@ namespace sw
     bool RetargetProfile::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
         RigXMLReader              reader( root, sourceLabel );
-        RetargetProfileRootFields rootFields;
-        bool                      bOk = reader.readFields( rootFields ); // 높이 비 > 0(적었을 때)은 PROPERTY( Min ) 가 본다
-        _sourceSkeletonPath           = rootFields._sourceSkeleton;
-        _targetSkeletonPath           = rootFields._targetSkeleton;
-        _translationMode              = rootFields._translation;
+        RetargetProfileRootParams rootParams;
+        bool                      bOk = reader.readFields( rootParams ); // 높이 비 > 0(적었을 때)은 PROPERTY( Min ) 가 본다
+        _sourceSkeletonPath           = rootParams._sourceSkeleton;
+        _targetSkeletonPath           = rootParams._targetSkeleton;
+        _translationMode              = rootParams._translation;
 
         const XMLNode    arrPair[2] = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
         const RigXMLList chains     = reader.readArray( "chains", true );
@@ -239,8 +239,8 @@ namespace sw
         bOk                         = reader.finish() && bOk;
         if ( bOk == false )
             return false;
-        _bMapSameNames       = rootFields._bMapSameNames ? SW_TRUE : SW_FALSE;
-        _heightRatioOverride = rootFields._heightRatio;
+        _bMapSameNames       = rootParams._bMapSameNames ? SW_TRUE : SW_FALSE;
+        _heightRatioOverride = rootParams._heightRatio;
 
         for ( size_t index = 0; boneMap.isValid() && index < boneMap.size(); ++index )
         {
@@ -255,9 +255,9 @@ namespace sw
         for ( size_t index = 0; targetPose.isValid() && index < targetPose.size(); ++index )
         {
             RigXMLReader           entryReader( targetPose.at( index ), sourceLabel );
-            RetargetPoseBoneFields poseFields;
-            bOk = entryReader.readFields( poseFields );
-            const RetargetPoseBone poseBone{ poseFields._bone, poseFields._rotation };
+            RetargetPoseBoneParams poseParams;
+            bOk = entryReader.readFields( poseParams );
+            const RetargetPoseBone poseBone{ poseParams._bone, poseParams._rotation };
             if ( ( entryReader.finish() && bOk ) == false )
                 return false;
             for ( const RetargetPoseBone& existing : _listTargetPose )
@@ -288,12 +288,12 @@ namespace sw
         {
             RigXMLReader        chainReader( chains.at( index ), sourceLabel );
             RetargetChain       chain{};
-            RetargetChainFields chainFields;
-            bOk            = chainReader.readFields( chainFields );
+            RetargetChainParams chainParams;
+            bOk            = chainReader.readFields( chainParams );
             bOk            = chainReader.readNameList( "source", chain._listSourceBone, true ) && bOk;
             bOk            = chainReader.readNameList( "target", chain._listTargetBone, true ) && bOk;
-            chain._name    = chainFields._name;
-            chain._bIKGoal = chainFields._bIKGoal ? SW_TRUE : SW_FALSE;
+            chain._name    = chainParams._name;
+            chain._bIKGoal = chainParams._bIKGoal ? SW_TRUE : SW_FALSE;
             if ( ( chainReader.finish() && bOk ) == false )
                 return false;
             for ( const RetargetChain& existing : _listChain )

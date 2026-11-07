@@ -50,6 +50,6 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
         /** @brief 디바이스가 이미 사라졌을 때 값만 잊습니다(destroy 를 부르면 해제 후 사용입니다). */
-        void forget() { *this = RHIConstantBuffer{}; }
+        void clear() { *this = RHIConstantBuffer{}; }
     };
 } // namespace sw

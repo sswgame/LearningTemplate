@@ -399,7 +399,7 @@ namespace sw
         return true;
     }
 
-    NetRequestServer::RequestAdmission NetRequestServer::admitRequest( StreamConnectionHandle handle, const RequestHeader& header )
+    NetRequestServer::RequestAdmission NetRequestServer::acceptRequest( StreamConnectionHandle handle, const RequestHeader& header )
     {
         RequestAdmission  admission;
         ScopedLock<mutex> lock{ _mutex };
@@ -467,7 +467,7 @@ namespace sw
             sendResponse( handle, header._requestID, NetRequestStatus::Malformed, nullptr, 0 ); // id 를 못 읽었으면 0 — 클라이언트는 시한으로 끝낸다
             return true;
         }
-        const RequestAdmission admission = admitRequest( handle, header );
+        const RequestAdmission admission = acceptRequest( handle, header );
         switch ( admission._action )
         {
             case RequestAdmission::Action::Dispatch:
@@ -503,7 +503,7 @@ namespace sw
             const auto foundCount = _mapInFlightCount.find( token._handle.packed() );
             if ( foundCount != _mapInFlightCount.end() && --foundCount->second <= 0 )
                 _mapInFlightCount.erase( foundCount );
-            if ( inFlight._bIdempotent == SW_TRUE && retention == NetResponseRetention::Forget )
+            if ( inFlight._bIdempotent == SW_TRUE && retention == NetResponseRetention::Discard )
             {
                 // 다시 시도할 결과다 — 기다리던 같은 키 요청은 이 응답을 받고, 키는 비워 다음 재시도를 처리기가 다시 받는다.
                 const auto found = _mapIdempotency.find( inFlight._scope );

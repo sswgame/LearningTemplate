@@ -206,17 +206,17 @@ namespace sw
         template <typename TMessages, typename TMessage>
         bool respondMessage( const NetRequestToken& token, const TMessage& message )
         {
-            return writeAndRespond<TMessages>( token, message, NetResponseRetention::Remember );
+            return writeAndRespond<TMessages>( token, message, NetResponseRetention::Keep );
         }
         /**
          * @brief 키트 응답 @p reply(결과 칸 `_result` 와 `isRetryable()` 을 가진다)를 성공 응답으로 보냅니다. 쓰기 규칙은 `respondMessage` 와 같습니다.
-         * @details `reply.isRetryable()` 이면(대기 · 충돌 · 일시 장애 — 같은 멱등 키로 다시 시도하라는 결과) 응답을 기억하지 않아(`NetResponseRetention::Forget`) 재시도가 서비스에 다시 닿는다.
+         * @details `reply.isRetryable()` 이면(대기 · 충돌 · 일시 장애 — 같은 멱등 키로 다시 시도하라는 결과) 응답을 기억하지 않아(`NetResponseRetention::Discard`) 재시도가 서비스에 다시 닿는다.
          *          재시도 대상은 키트가 응답 형식의 멤버로 정하고, 서버는 그 판정을 여기 한 곳에서만 쓴다 — 키트마다 손으로 넘기면 빠뜨린 키트의 재시도가 영원히 같은 답을 받는다.
          */
         template <typename TMessages, typename TReply>
         bool respondReply( const NetRequestToken& token, const TReply& reply )
         {
-            return writeAndRespond<TMessages>( token, reply, reply.isRetryable() ? NetResponseRetention::Forget : NetResponseRetention::Remember );
+            return writeAndRespond<TMessages>( token, reply, reply.isRetryable() ? NetResponseRetention::Discard : NetResponseRetention::Keep );
         }
         /** @brief 공통 오류로 응답합니다. 다시 시도할 오류(`OnlineError::isRetryable`)는 멱등 키가 있어도 기억하지 않습니다. */
         bool respondError( const NetRequestToken& token, uint16 errorCode, const BitWriter* pDetail = nullptr );

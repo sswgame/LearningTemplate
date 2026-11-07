@@ -105,7 +105,7 @@ namespace sw
         /** @brief (RHIRenderResource) 빌린 텍스처를 살아 있는 디바이스의 캐시에 돌려줍니다. */
         void releaseRHI( IRHIDevice* pRHI ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
-        void forgetRHI( IRHIDevice* pDevice ) override;
+        void clearRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 새 디바이스로 다시 초기화합니다(텍스처를 새로 빌린다). */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
         /** @brief 초기화 상태입니다(캐시의 줄이 잠금 아래에서 읽으므로 원자다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
@@ -194,7 +194,7 @@ namespace sw
         bool setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
-         * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). releaseRHI 와 forgetRHI 가 releaseTextureAssets 로 되돌린다.
+         * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). releaseRHI 와 clearRHI 가 releaseTextureAssets 로 되돌린다.
          *          못 읽은 텍스처는 엔진의 누락 텍스처 체커를 빌린다. 체커마저 못 읽으면 오류를 남기고 false 다(흰색으로 대신하지 않는다).
          */
         [[nodiscard]] bool resolveTextureAssets( IRHIDevice* pRHI );
@@ -237,13 +237,13 @@ namespace sw
         bool setScalarParameter( hashed_string name, float32 value );
 
         /** @brief 디스크립터를 반환합니다. */
-        const MaterialDesc& getDesc() const { return _desc; }
+        const MaterialDef& getDesc() const { return _desc; }
         /** @brief 디스크립터를 반환합니다. */
-        MaterialDesc& getDesc() { return _desc; }
+        MaterialDef& getDesc() { return _desc; }
         /** @brief 퍼뮤테이션 디스크립터를 반환합니다. */
-        const MaterialPermutationDesc& getPermutations() const { return _desc._permutations; }
+        const MaterialPermutationDef& getPermutations() const { return _desc._permutations; }
         /** @brief 퍼뮤테이션 디스크립터를 반환합니다. */
-        MaterialPermutationDesc& getPermutations() { return _desc._permutations; }
+        MaterialPermutationDef& getPermutations() { return _desc._permutations; }
         /** @brief 프로퍼티 목록을 반환합니다. */
         const vector<MaterialProperty>& getProperties() const { return _data._listProperty; }
         /** @brief 패킹된 상수 버퍼를 반환합니다. */
@@ -339,7 +339,7 @@ namespace sw
 
         /** @brief initialize 가 받은 에셋 경로입니다. 디바이스가 바뀌면 이 경로만으로 스스로 복원합니다. */
         string                               _assetPath;
-        MaterialDesc                         _desc;
+        MaterialDef                          _desc;
         MaterialData                         _data;
         atomic<uint8>                        _initState{ static_cast<uint8>( MaterialInitState::NotRequested ) }; /**< `MaterialInitState`. 캐시의 줄이 잠금 아래에서 읽는다. */
         shared_ptr<MaterialRenderProxy>      _renderProxy;                                                        /**< 렌더 스레드 쪽 객체(상수 버퍼). 렌더 스레드만 고친다. */

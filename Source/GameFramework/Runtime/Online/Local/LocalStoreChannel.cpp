@@ -99,7 +99,7 @@ namespace sw
         return false;
     }
 
-    void LocalStoreChannel::drain()
+    void LocalStoreChannel::flush()
     {
         // 완료 콜백이 잇는 쓰기(자동 저장의 슬롯 기록)까지 마치도록, 맡긴 일이 바닥날 때까지 완료를 넘기고 나서 닫는다. 종료 한 번의 대기라 폴링으로 둔다.
         while ( _store->getPendingCount() > 0 )

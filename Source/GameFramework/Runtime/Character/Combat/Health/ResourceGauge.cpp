@@ -16,7 +16,7 @@ namespace sw
         , _value{ 0.0f }
         , _maxBonus{ 0.0f }
         , _regenScale{ 1.0f }
-        , _sinceUse{ 0.0f }
+        , _timeSinceUse{ 0.0f }
         , _overheatPenalty{}
         , _bLocked{ SW_FALSE }
     {
@@ -148,9 +148,9 @@ namespace sw
             _overheatPenalty.update( deltaTime );
             return;
         }
-        _sinceUse += deltaTime;
+        _timeSinceUse += deltaTime;
         // 이번 걸음 중 지연이 끝난 뒤의 몫만 찬다(걸음 크기가 달라도 같은 결과).
-        const float32 regenTime = MathUtil::clamp( _sinceUse - _settings._regenDelay, 0.0f, deltaTime );
+        const float32 regenTime = MathUtil::clamp( _timeSinceUse - _settings._regenDelay, 0.0f, deltaTime );
         if ( regenTime <= 0.0f || _settings._regenRate <= 0.0f )
             return;
         const float32 amount = _settings._regenRate * _regenScale * regenTime;
@@ -174,8 +174,8 @@ namespace sw
 
     void ResourceGauge::refill()
     {
-        _value    = _settings._bOverheatMode == SW_TRUE ? 0.0f : getMax();
-        _sinceUse = _settings._regenDelay;
+        _value        = _settings._bOverheatMode == SW_TRUE ? 0.0f : getMax();
+        _timeSinceUse = _settings._regenDelay;
         _overheatPenalty.clear();
         _bLocked = SW_FALSE;
     }
@@ -204,7 +204,7 @@ namespace sw
 
     void ResourceGauge::markUsed()
     {
-        _sinceUse = 0.0f;
+        _timeSinceUse = 0.0f;
     }
 
     void ResourceGauge::releaseLockIfRecovered()
@@ -221,7 +221,7 @@ namespace sw
         outArchive << _value;
         outArchive << _maxBonus;
         outArchive << _regenScale;
-        outArchive << _sinceUse;
+        outArchive << _timeSinceUse;
         StateArchiveUtil::writeCountdown( outArchive, _overheatPenalty );
         outArchive << _bLocked;
     }
@@ -232,7 +232,7 @@ namespace sw
         archive >> restored._value;
         archive >> restored._maxBonus;
         archive >> restored._regenScale;
-        archive >> restored._sinceUse;
+        archive >> restored._timeSinceUse;
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._overheatPenalty );
         archive >> restored._bLocked;
         const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._value && restored._value <= restored.getMax() && restored._bLocked <= SW_TRUE;

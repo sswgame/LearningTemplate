@@ -235,7 +235,7 @@ namespace sw
         GameModeComponent::onEndPlay();
     }
 
-    void ShooterGameModeComponent::adoptReloadedProfile()
+    void ShooterGameModeComponent::applyReloadedProfile()
     {
         const uint32 reloadCount = SharedAssetCache<AIDirectorProfile>::getReloadCount();
         if ( reloadCount == _seenProfileReloadCount )
@@ -266,7 +266,7 @@ namespace sw
             updateEnemies();
             if ( _bPacingReady == SW_TRUE )
             {
-                adoptReloadedProfile();
+                applyReloadedProfile();
                 _director.update( step );
                 applyDirectorEvents();
             }
@@ -457,7 +457,7 @@ namespace sw
     void ShooterGameModeComponent::applyDirectorEvents()
     {
         _listDirectorEvent.clear();
-        _director.drainEvents( _listDirectorEvent );
+        _director.pollEvents( _listDirectorEvent );
         for ( const AIDirectorEvent& event : _listDirectorEvent )
         {
             switch ( event._kind )
@@ -648,7 +648,7 @@ namespace sw
         const float32 yaw = MathUtil::atan2( -position._x, -position._z );
         if ( pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed ) == false )
         {
-            // 체력 설정이 거절됐다(이유는 Vitality 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
+            // 체력 설정이 거절됐다(이유는 CombatHealth 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
             manager.destroyGameObject( pObject );
             if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
                 (void)_director.notifyDespawned( request._spawnID );

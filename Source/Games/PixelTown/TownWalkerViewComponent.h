@@ -35,7 +35,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the TownGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Walker", DisplayName = "Sprite Offset", Tooltip = "Sprite center from the feet (a 16x32 hero stands half a tile above its tile center)", Units = m )
         float2 _spriteOffset;
         PROPERTY( Category = "Walker", DisplayName = "Depth Per Unit Y", Tooltip = "Z per world unit of feet Y; positive draws higher characters behind lower ones" )

@@ -38,10 +38,10 @@ namespace sw
 namespace sw
 {
     /** @brief 이벤트 테이블을 읽는 작업입니다. */
-    class LiveOpsReloadWork final : public IServiceStoreWork
+    class LiveOpsReloadJob final : public IServiceStoreJob
     {
     public:
-        LiveOpsReloadWork( LiveOpsService* pService, UnixMilliseconds nowMs )
+        LiveOpsReloadJob( LiveOpsService* pService, UnixMilliseconds nowMs )
             : _listEvent{}
             , _pService{ pService }
             , _nowMs{ nowMs }
@@ -84,7 +84,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이벤트 하나의 쓰기나 지우기를 감사 기록과 함께 한 트랜잭션으로 처리합니다. 버전 조건을 쓰므로 그사이 바뀌었으면 Unavailable 이며 다시 하면 됩니다. */
-    class LiveOpsWriteWork final : public IServiceStoreWork
+    class LiveOpsWriteJob final : public IServiceStoreJob
     {
     public:
         ServiceAuditEntry _auditEntry;
@@ -95,7 +95,7 @@ namespace sw
         uint64            _requestTag;
         LiveOpsResult     _result;
 
-        LiveOpsWriteWork()
+        LiveOpsWriteJob()
             : _auditEntry{}
             , _bytes{}
             , _key{}
@@ -177,7 +177,7 @@ namespace sw
     {
         _reloadSchedule.markStarted( nowMs );
         ++_pendingCount;
-        _dependencies._pStore->submit( make_unique<LiveOpsReloadWork>( this, nowMs ) );
+        _dependencies._pStore->submit( make_unique<LiveOpsReloadJob>( this, nowMs ) );
     }
 
     void LiveOpsService::applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs )
@@ -360,7 +360,7 @@ namespace sw
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } );
             return;
         }
-        unique_ptr<LiveOpsWriteWork> work = make_unique<LiveOpsWriteWork>();
+        unique_ptr<LiveOpsWriteJob> work = make_unique<LiveOpsWriteJob>();
         if ( LiveOpsProtocol::encodeEvent( definition, work->_bytes ) == false )
         {
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
@@ -397,10 +397,10 @@ namespace sw
         }
     }
 
-    void LiveOpsService::drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion )
+    void LiveOpsService::takeControlCompletions( vector<LiveEventControlCompletion>& outListCompletion )
     {
         vector<LiveOpsCompletion> listCompletion;
-        _completionBuffer.drainTo( listCompletion );
+        _completionBuffer.moveAllTo( listCompletion );
         for ( const LiveOpsCompletion& completion : listCompletion )
         {
             LiveEventControlResult result = LiveEventControlResult::Unavailable;
@@ -421,18 +421,18 @@ namespace sw
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } );
             return;
         }
-        unique_ptr<LiveOpsWriteWork> work = make_unique<LiveOpsWriteWork>();
-        work->_key                        = string( eventID );
-        work->_auditEntry._actor          = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action         = "liveops.event.remove";
-        work->_auditEntry._subject        = "liveops/" + work->_key;
-        work->_auditEntry._memo           = string( memo );
-        work->_auditEntry._timeMs         = nowMs.count();
-        work->_requestTag                 = requestTag;
+        unique_ptr<LiveOpsWriteJob> work = make_unique<LiveOpsWriteJob>();
+        work->_key                       = string( eventID );
+        work->_auditEntry._actor         = ServiceAuditLog::makeOperatorActor( actorID );
+        work->_auditEntry._action        = "liveops.event.remove";
+        work->_auditEntry._subject       = "liveops/" + work->_key;
+        work->_auditEntry._memo          = string( memo );
+        work->_auditEntry._timeMs        = nowMs.count();
+        work->_requestTag                = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void LiveOpsService::submitWrite( unique_ptr<LiveOpsWriteWork> work )
+    void LiveOpsService::submitWrite( unique_ptr<LiveOpsWriteJob> work )
     {
         work->_pService = this;
         ++_pendingCount;

@@ -36,7 +36,7 @@ namespace sw
         if ( _bOpen == false )
             return;
         _host.update( nowSeconds );
-        _host.drainEvents( _listEvent );
+        _host.pollEvents( _listEvent );
         for ( const NetEndpointEvent& event : _listEvent )
         {
             if ( event._kind == NetEndpointEvent::Kind::Connected )

@@ -2,7 +2,7 @@
  * @file TradeService.h
  * @brief 거래 서비스입니다. 상태 기계는 저장소 위의 거래 레코드에서 동작하고, 요청마다 저장 작업 하나를 만듭니다. 서버 프로세스마다 하나입니다.
  * @details 저장 작업은 읽기, 상태 기계, 버전 조건 쓰기 순서로 진행하며 정산이면 원장 분개를 같은 커밋에 넣는다.
- *          - 서비스 스레드 하나에서 부른다. 결과는 요청 태그와 함께 `drainCompletions` 로, 바뀐 거래는 `drainUpdates` 로 회수한다. 바인딩이 두 당사자에게 알리며 다른 서버의 상대에게는 버스로 알린다.
+ *          - 서비스 스레드 하나에서 부른다. 결과는 요청 태그와 함께 `takeCompletions` 로, 바뀐 거래는 `pollUpdates` 로 회수한다. 바인딩이 두 당사자에게 알리며 다른 서버의 상대에게는 버스로 알린다.
  *          - 상태가 저장소에 있으므로 상대가 다른 서버에 접속해 있어도 그 서버의 서비스가 같은 레코드를 버전 조건으로 바꾼다. 주인 서버를 거치지 않는다.
  *          - 기동할 때 `recoverOwnedTrades` 가 이 서버가 연 열린 거래를 ServerRestart 로 닫는다. 아무것도 움직이지 않았으므로 안전하다.
  *          - 시한은 이 서비스가 본 거래의 마지막 변경 시각에 시한을 더한 값이다. 지나면 `tick` 이 닫기를 맡긴다. 다른 서버가 연 거래도 다음 신청 때 지연해서 닫힌다.
@@ -41,11 +41,11 @@ namespace sw
     /** @brief 끝난 요청 하나입니다. */
     struct TradeCompletion
     {
-        TradeSnapshot         _snapshot{};
-        LedgerTransferOutcome _ledger{}; ///< 정산 결과이다. 이동 뒤 잔액이며 게임이 미러에 넣는다
-        uint64                _requestTag{ 0 };
-        TradeResult           _result{ TradeResult::Ok };
-        TradeOperation        _operation{ TradeOperation::Invite };
+        TradeSnapshot        _snapshot{};
+        LedgerTransferResult _ledger{}; ///< 정산 결과이다. 이동 뒤 잔액이며 게임이 미러에 넣는다
+        uint64               _requestTag{ 0 };
+        TradeResult          _result{ TradeResult::Ok };
+        TradeOperation       _operation{ TradeOperation::Invite };
     };
 } // namespace sw
 
@@ -63,7 +63,7 @@ namespace sw
         /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
         void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
         void shutdown();
-        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `drainUpdates` 로 회수합니다. */
+        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `pollUpdates` 로 회수합니다. */
         void recoverOwnedTrades( UnixMilliseconds nowMs );
 
         void invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag );
@@ -77,8 +77,8 @@ namespace sw
         /** @brief 아는 거래의 시한을 확인합니다. */
         void update( UnixMilliseconds nowMs );
 
-        void drainCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
-        void drainUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.drainTo( outListUpdate ); }
+        void takeCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void pollUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.moveAllTo( outListUpdate ); }
 
         int32 getPendingCount() const { return _pendingCount; }
 

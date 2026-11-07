@@ -32,7 +32,7 @@ namespace sw::editor
         _bPlaying    = SW_TRUE;
         _holdSeconds = 0.0f;
         EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), graphPath );
-        noteTransition();
+        recordTransition();
     }
 
     void AnimationGraphPreviewModel::advance( const AnimationGraphAsset& graph, string_view graphPath )
@@ -83,10 +83,10 @@ namespace sw::editor
             _bPlaying = SW_FALSE;
         else
             EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), graphPath );
-        noteTransition();
+        recordTransition();
     }
 
-    void AnimationGraphPreviewModel::noteTransition()
+    void AnimationGraphPreviewModel::recordTransition()
     {
         const string current{ _previewPlayer.getCurrentStateName().c_str() };
         if ( current != _previewStateName && _previewStateName.empty() == false )

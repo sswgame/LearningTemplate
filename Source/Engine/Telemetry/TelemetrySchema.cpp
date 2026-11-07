@@ -110,8 +110,8 @@ namespace sw
             return false;
         }
         // 파일 하나는 통째로 받거나 통째로 버린다 — 반쯤 읽힌 스키마는 어느 사건이 빠졌는지 보이지 않는다.
-        TelemetrySchemaRootFields rootFields;
-        bool                      bValid    = XMLFields::readFields( root, rootFields, sourceName );
+        TelemetrySchemaRootParams rootParams;
+        bool                      bValid    = XMLFields::readFields( root, rootParams, sourceName );
         vector<TelemetryEventDef> listEvent = _listEvent;
         TelemetryPipelineConfig   settings  = _settings;
         bValid                              = XMLNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName ) && bValid;
@@ -156,7 +156,7 @@ namespace sw
             }
             listEvent.push_back( event );
         }
-        const int32 schemaVersion = rootFields._version;
+        const int32 schemaVersion = rootParams._version;
         if ( bValid == false )
             return false;
         _listEvent = std::move( listEvent );

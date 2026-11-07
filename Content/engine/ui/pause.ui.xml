@@ -1,5 +1,5 @@
 <UIDocument _schemaVersion="1">
-	<UIScreenDesc _bPausesGame="true" _defaultFocus="Resume" />
+	<UIScreenDef _bPausesGame="true" _defaultFocus="Resume" />
 	<_listAnimation>
 		<UIAnimation _name="Open">
 			<_listTrack>

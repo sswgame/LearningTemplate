@@ -100,7 +100,7 @@ namespace sw
         // 기기 등록 함수들이며 바인딩이 부른다. 완료는 요청 태그로 받고, 태그가 0이면 완료가 없다
         void registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag );
         void unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag );
-        void drainCompletions( vector<PushDeviceCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
+        void takeCompletions( vector<PushDeviceCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         const PushDispatcherStats& getStats() const { return _stats; }
         int32                      getInFlightCount() const { return static_cast<int32>( _mapDelivery.size() ); }

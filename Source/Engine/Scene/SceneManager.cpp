@@ -156,13 +156,13 @@ namespace sw
     Scene* SceneManager::createScene( string_view name )
     {
         SW_MEMORY_SCOPE( Scene );
-        return adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Loaded );
+        return applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Loaded );
     }
 
     Scene* SceneManager::createEmptyActiveScene( string_view name )
     {
         SW_MEMORY_SCOPE( Scene );
-        return adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Active );
+        return applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Active );
     }
 
     void SceneManager::closeActiveScene()
@@ -171,7 +171,7 @@ namespace sw
         Scene* const pPrevious = _pActiveScene;
         if ( pPrevious == nullptr )
             return;
-        // 씬을 바꿀 때(`adoptScene`)와 같은 순서 — 활성을 비우고 알린 뒤 내린다.
+        // 씬을 바꿀 때(`applyScene`)와 같은 순서 — 활성을 비우고 알린 뒤 내린다.
         activateScene( nullptr );
         ++_sceneGeneration;
         broadcastSceneObjectsInvalidated();
@@ -179,7 +179,7 @@ namespace sw
         garbageCollectUnusedAssets();
     }
 
-    Scene* SceneManager::adoptScene( unique_ptr<Scene> scene, SceneRole role )
+    Scene* SceneManager::applyScene( unique_ptr<Scene> scene, SceneRole role )
     {
         SW_MEMORY_SCOPE( Scene );
         Scene* const pScene = scene.get();
@@ -373,7 +373,7 @@ namespace sw
             ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name, slot->_services );
             newScene->setSourcePath( pathStr );
-            newScene->holdRegistration(); // 훅은 씬을 받는 게임 스레드가 부른다(`adoptScene`)
+            newScene->holdRegistration(); // 훅은 씬을 받는 게임 스레드가 부른다(`applyScene`)
             const bool bInstantiated = newScene->instantiate( doc, slot->_stop.getToken() );
             if ( bInstantiated == false && slot->_stop.isStopRequested() == false ) // 종료 신호로 멈춘 것은 실패가 아니다
                 SW_LOG_WARNING_ID( "SceneManager.CouldNotInstantiated", "[SceneLoad] '%#' could not be instantiated", pathStr );
@@ -494,7 +494,7 @@ namespace sw
         doc._sourcePath = sourceID.empty() ? pScene->getSourcePath() : sourceID;
         if ( doc._baseScenePath.empty() )
         {
-            if ( doc.saveXML( absPath ) == false )
+            if ( doc.saveToFile( absPath ) == false )
                 return false;
         }
         else
@@ -589,8 +589,8 @@ namespace sw
         if ( _pRHIDevice != nullptr )
             _pRHIDevice->waitIdle( RHIWaitIdleReason::SceneActivation ); // 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 머티리얼을 잡는다
 
-        // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `adoptScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
-        Scene* const pAdopted = adoptScene( std::move( pendingScene ), SceneRole::Active );
+        // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `applyScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
+        Scene* const pAdopted = applyScene( std::move( pendingScene ), SceneRole::Active );
         SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pAdopted->getName() );
         if ( _asyncLoad != nullptr )
             _asyncLoad->_promise.setValue( pAdopted );
@@ -641,7 +641,7 @@ namespace sw
     Scene* SceneManager::createPreviewScene( string_view name, const ScenePreviewPolicy& policy )
     {
         SW_MEMORY_SCOPE( Scene );
-        Scene* const pScene = adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Preview );
+        Scene* const pScene = applyScene( sw::make_unique<Scene>( name, _services ), SceneRole::Preview );
         (void)setPreviewPolicy( pScene, policy ); // 방금 넣은 미리보기 씬이라 늘 찾는다
         return pScene;
     }

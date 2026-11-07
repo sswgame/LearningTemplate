@@ -164,7 +164,7 @@ namespace sw::editor
         static bool isMinimapShown();
 
         /** @brief 이번 프레임에 그린 그래프의 노드 수를 기록합니다. 시나리오 프로브 `Editor.GraphNodeCount` 가 읽습니다. */
-        static void noteDrawnNodeCount( uint32 nodeCount );
+        static void recordDrawnNodeCount( uint32 nodeCount );
         /** @brief 가장 최근에 그린 그래프의 노드 수입니다. */
         static uint32 getDrawnNodeCount();
 

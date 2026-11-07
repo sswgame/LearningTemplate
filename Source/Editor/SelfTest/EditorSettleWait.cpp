@@ -20,7 +20,7 @@ namespace sw::editor
     {
     }
 
-    EditorSettleVerdict EditorSettleWait::advance( GameObjectManager* pActiveManager )
+    EditorSettleResult EditorSettleWait::advance( GameObjectManager* pActiveManager )
     {
         // 번호가 없거나(상태 저장소가 아직 없었다) 지금 번호보다 크면 상태 저장소가 새로 섰다 — 거기서 다시 기다린다.
         if ( _waitSerial == 0 || _waitSerial > EditorSelfTestInput::getSettleWaitSerial() )
@@ -30,7 +30,7 @@ namespace sw::editor
         }
         const EditorDockLayout* pDockLayout    = editor::findSubsystem<EditorDockLayout>();
         const bool              bScreenSettled = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
-                                    EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutSettledSince( _waitSerial );
+                                    EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutSettledAfter( _waitSerial );
         const bool        bSceneSettled  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
         const bool        bAssetsSettled = CaptureReadiness::countPendingWork( pActiveManager ) == 0;
         const utf8* const pPendingWork   = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다

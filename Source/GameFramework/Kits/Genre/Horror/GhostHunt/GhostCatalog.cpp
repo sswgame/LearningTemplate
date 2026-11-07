@@ -33,7 +33,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
         // 방이 가리키는 유령은 모두 읽은 뒤에 확인한다(방이 유령보다 앞에 적혀도 된다).
@@ -54,7 +54,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool GhostCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool GhostCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Flashlight" ) )
             return GameDataXML::readSetting( node, sourceName, _flashlight );

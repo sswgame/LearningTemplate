@@ -214,11 +214,11 @@ namespace sw
                 ISQLConnection& _connection;
             };
 
-            /** @brief `IServiceStoreWork` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 컨텍스트를 저장해 두었다가 워커의 `run` 과 서비스 스레드의 `complete` 에서 다시 적용합니다. */
+            /** @brief `IServiceStoreJob` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 컨텍스트를 저장해 두었다가 워커의 `run` 과 서비스 스레드의 `complete` 에서 다시 적용합니다. */
             class SQLServiceStoreJob final : public ISQLJob
             {
             public:
-                explicit SQLServiceStoreJob( unique_ptr<IServiceStoreWork> work )
+                explicit SQLServiceStoreJob( unique_ptr<IServiceStoreJob> work )
                     : _work{ std::move( work ) }
                 {
                     _work->bindLogContext( LogContext::getCurrent() );
@@ -240,7 +240,7 @@ namespace sw
                 }
 
             private:
-                unique_ptr<IServiceStoreWork> _work;
+                unique_ptr<IServiceStoreJob> _work;
             };
         };
     } // namespace
@@ -275,7 +275,7 @@ namespace sw
         return _pool.initialize( pDriver, settings, outError );
     }
 
-    void SQLServiceStore::submit( unique_ptr<IServiceStoreWork> work )
+    void SQLServiceStore::submit( unique_ptr<IServiceStoreJob> work )
     {
         _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( work ) ) );
     }

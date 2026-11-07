@@ -553,7 +553,7 @@ namespace sw
         return nullptr;
     }
 
-    void GPUScene::adoptCPUSnapshot( GPUSceneSnapshot& snapshot )
+    void GPUScene::applyCPUSnapshot( GPUSceneSnapshot& snapshot )
     {
         // 바꿔치기다. 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GPUScene.h 참고).
         std::swap( _snapshot, snapshot );

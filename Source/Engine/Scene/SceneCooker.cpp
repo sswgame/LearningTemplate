@@ -653,20 +653,20 @@ namespace sw
                 outputPath += '/';
             outputPath += outputID;
 
-            const CookOutcome outcome = store.cookFile( desc, outputID, outputPath, [&]()
+            const CookResult result = store.cookFile( desc, outputID, outputPath, [&]()
             { return SceneCookerInternal::cookScene( services, registry, scenePath, relativeScene, activePackRoot, outputPath ); } );
-            outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
-            tally.add( outcome );
+            outFailedCount += result == CookResult::Failed ? 1u : 0u;
+            tally.add( result );
 
             // 쿠킹한 씬마다 프리로드 목록을 옆에 굽는다(레벨 전환이 `PreloadSet` 으로 연다). 씬 쿠킹이 실패했거나 건너뛴 씬은 목록도 없다.
-            const bool bSceneWritten = outcome == CookOutcome::Cooked || outcome == CookOutcome::Reused;
+            const bool bSceneWritten = result == CookResult::Cooked || result == CookResult::Reused;
             if ( bSceneWritten == false )
                 continue;
-            const string      preloadID      = ScenePreloadList::makeListPath( outputID );
-            const string      preloadPath    = ScenePreloadList::makeListPath( outputPath );
-            const CookOutcome preloadOutcome = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
+            const string     preloadID      = ScenePreloadList::makeListPath( outputID );
+            const string     preloadPath    = ScenePreloadList::makeListPath( outputPath );
+            const CookResult preloadOutcome = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
             { return SceneCookerInternal::cookPreloadList( services, scenePath, preloadPath ); } );
-            outFailedCount += preloadOutcome == CookOutcome::Failed ? 1u : 0u;
+            outFailedCount += preloadOutcome == CookResult::Failed ? 1u : 0u;
         }
 
         SW_LOG_INFO_ID( "SceneCooker.SceneCookReusedDDC", "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );

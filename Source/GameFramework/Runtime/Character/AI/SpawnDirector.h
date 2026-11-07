@@ -52,7 +52,7 @@ namespace sw
 {
     /** @brief 스폰 표 루트(`<SpawnTable budgetPerMinute maxBudget startBudget refund>`)의 칸입니다. 표가 지금 값으로 채운 뒤 읽는다. */
     REFLECT()
-    struct SW_GF_API SpawnTableRootFields
+    struct SW_GF_API SpawnTableRootParams
     {
         REFLECT_BODY();
 
@@ -170,7 +170,7 @@ namespace sw
         /** @brief 게임 쪽 개체가 사라졌음을 알립니다. 모르는 id 이거나 이미 알린 id 면 false 입니다. */
         bool notifyDespawned( uint32 spawnID );
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void drainEvents( vector<SpawnEvent>& outListEvent );
+        void pollEvents( vector<SpawnEvent>& outListEvent );
 
         float32 getBudget() const { return _budget; }
         float32 getTime() const { return _time; }

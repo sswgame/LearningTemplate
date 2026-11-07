@@ -2,7 +2,7 @@
 
 #include "Engine/Audio/AudioMusic.h"
 
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    bool AudioMusicDesc::loadFromAsset( const AssetID& assetID )
+    bool AudioMusicDef::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();
         string            text;
@@ -24,9 +24,9 @@ namespace sw
         return loadFromXMLText( text, assetPath );
     }
 
-    bool AudioMusicDesc::loadFromXMLText( string_view xmlText, string_view sourceName )
+    bool AudioMusicDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        *this = AudioMusicDesc{};
+        *this = AudioMusicDef{};
         // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 구간은 이름이 열쇠이고 전환 규칙 · 레이어 목록은 통째로 바뀐다(규칙은 문서 표 `listDocument`).
         string flatText;
         bool   bComposed = false;
@@ -40,7 +40,7 @@ namespace sw
         return validate( sourceName );
     }
 
-    bool AudioMusicDesc::validate( string_view sourceName ) const
+    bool AudioMusicDef::validate( string_view sourceName ) const
     {
         bool bValid = true;
         if ( _listSegment.empty() )
@@ -60,8 +60,8 @@ namespace sw
         }
         for ( size_t segmentIndex = 0; segmentIndex < _listSegment.size(); ++segmentIndex )
         {
-            const AudioMusicSegmentDesc& segment = _listSegment[segmentIndex];
-            const utf8*                  pName   = segment._name.c_str();
+            const AudioMusicSegmentDef& segment = _listSegment[segmentIndex];
+            const utf8*                 pName   = segment._name.c_str();
             if ( segment._name.empty() )
             {
                 SW_LOG_ERROR_ID( "AudioMusic.SegmentNoName", "%#: segment %# has no name", sourceName, segmentIndex );
@@ -80,10 +80,10 @@ namespace sw
                 SW_LOG_ERROR_ID( "AudioMusic.SegmentNeedsLeastOne", "%#: segment '%#' needs at least one layer and one bar", sourceName, pName );
                 bValid = false;
             }
-            for ( const AudioMusicLayerDesc& layer : segment._listLayer )
+            for ( const AudioMusicLayerDef& layer : segment._listLayer )
             {
                 const bool bCurveMissing      = layer._parameter.empty() == false && layer._listPoint.empty();
-                const bool bInvalidMusicLayer = layer._path.empty() || bCurveMissing || AudioMixerDesc::isCurveSorted( layer._listPoint ) == false;
+                const bool bInvalidMusicLayer = layer._path.empty() || bCurveMissing || AudioMixerDef::isCurveSorted( layer._listPoint ) == false;
                 if ( bInvalidMusicLayer )
                 {
                     SW_LOG_ERROR_ID( "AudioMusic.SegmentLayerNoClip", "%#: segment '%#' has a layer with no clip, or a parameter with an empty or unordered curve", sourceName, pName );
@@ -97,7 +97,7 @@ namespace sw
             }
         }
         const hashed_string anyName( "*" );
-        for ( const AudioMusicTransitionDesc& transition : _listTransition )
+        for ( const AudioMusicTransitionDef& transition : _listTransition )
         {
             const bool bFromKnown = transition._from.empty() || transition._from == anyName || findSegmentIndex( transition._from ) >= 0;
             if ( bFromKnown == false || findSegmentIndex( transition._to ) < 0 )
@@ -109,7 +109,7 @@ namespace sw
         return bValid;
     }
 
-    int32 AudioMusicDesc::findSegmentIndex( const hashed_string& name ) const
+    int32 AudioMusicDef::findSegmentIndex( const hashed_string& name ) const
     {
         for ( size_t segmentIndex = 0; segmentIndex < _listSegment.size(); ++segmentIndex )
         {
@@ -119,11 +119,11 @@ namespace sw
         return -1;
     }
 
-    const AudioMusicTransitionDesc* AudioMusicDesc::findTransition( const hashed_string& from, const hashed_string& to ) const
+    const AudioMusicTransitionDef* AudioMusicDef::findTransition( const hashed_string& from, const hashed_string& to ) const
     {
-        const hashed_string             anyName( "*" );
-        const AudioMusicTransitionDesc* pAny = nullptr;
-        for ( const AudioMusicTransitionDesc& transition : _listTransition )
+        const hashed_string            anyName( "*" );
+        const AudioMusicTransitionDef* pAny = nullptr;
+        for ( const AudioMusicTransitionDef& transition : _listTransition )
         {
             if ( transition._to != to )
                 continue;
@@ -136,20 +136,20 @@ namespace sw
         return pAny;
     }
 
-    float64 AudioMusicDesc::computeFramesPerBeat( uint32 segmentIndex ) const
+    float64 AudioMusicDef::computeFramesPerBeat( uint32 segmentIndex ) const
     {
         const float32 segmentTempo = _listSegment[segmentIndex]._tempo;
         const float32 tempo        = segmentTempo > 0.0f ? segmentTempo : _tempo;
         return 60.0 / static_cast<float64>( tempo ) * static_cast<float64>( audio::kSampleRate );
     }
 
-    uint32 AudioMusicDesc::getBeatsPerBar( uint32 segmentIndex ) const
+    uint32 AudioMusicDef::getBeatsPerBar( uint32 segmentIndex ) const
     {
         const uint32 segmentBeats = _listSegment[segmentIndex]._beatsPerBar;
         return segmentBeats > 0 ? segmentBeats : _beatsPerBar;
     }
 
-    uint64 AudioMusicDesc::computeSegmentFrames( uint32 segmentIndex ) const
+    uint64 AudioMusicDef::computeSegmentFrames( uint32 segmentIndex ) const
     {
         const float64 frames = computeFramesPerBeat( segmentIndex ) * static_cast<float64>( getBeatsPerBar( segmentIndex ) ) *
                                static_cast<float64>( _listSegment[segmentIndex]._bars );
@@ -157,5 +157,5 @@ namespace sw
     }
 
     /** @brief 오디오 음악 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_ASSET_TYPE( AudioMusic, AssetTypeDef::makeDataFile( "audiomusic", AssetPathRule{ {}, {}, ".music.xml" }, AssetTypeLoader::of<AudioMusicDesc>() ) );
+    SW_ASSET_TYPE( AudioMusic, AssetTypeDef::makeDataFile( "audiomusic", AssetPathRule{ {}, {}, ".music.xml" }, AssetTypeLoader::of<AudioMusicDef>() ) );
 } // namespace sw

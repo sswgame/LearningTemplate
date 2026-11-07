@@ -54,7 +54,7 @@ namespace sw
         /** @brief 열려 있는 조이스틱 fd를 닫고 연결 해제 상태로 전환합니다. */
         void closeJoystick();
         /** @brief non-blocking read 로 대기 중인 js_event 를 모두 꺼내며 버튼과 축 상태를 갱신합니다. */
-        void drainJoystickEvents();
+        void pollJoystickEvents();
         /** @brief sysfs에서 같은 장치의 evdev 노드를 찾아 force-feedback fd를 엽니다. */
         void tryOpenForceFeedback();
         /** @brief force-feedback fd를 닫고 관련 상태를 리셋합니다. */

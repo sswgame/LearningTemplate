@@ -51,7 +51,7 @@ namespace sw
 namespace sw
 {
     AppearanceDatabase::AppearanceDatabase()
-        : _slotTable{}
+        : _slotCatalog{}
         , _sets{}
         , _visuals{}
         , _schemas{}
@@ -90,7 +90,7 @@ namespace sw
 
     void AppearanceDatabase::clear()
     {
-        _slotTable.clear();
+        _slotCatalog.clear();
         _sets.clear();
         _visuals.clear();
         _schemas.clear();
@@ -208,18 +208,18 @@ namespace sw
     {
         const utf8* pName = root.getName();
         ++_revision;
-        if ( StringUtil::equals( pName, "SlotTable" ) )
-            return _slotTable.loadFromNode( root, _report, sourceName );
+        if ( StringUtil::equals( pName, "SlotCatalog" ) )
+            return _slotCatalog.loadFromXML( root, _report, sourceName );
         if ( StringUtil::equals( pName, "EquipmentSetCatalog" ) )
-            return _sets.loadFromNode( root, _report, sourceName );
+            return _sets.loadFromXML( root, _report, sourceName );
         if ( StringUtil::equals( pName, "ItemVisualCatalog" ) )
-            return _visuals.loadFromNode( root, _report, sourceName );
+            return _visuals.loadFromXML( root, _report, sourceName );
         if ( StringUtil::equals( pName, "CustomizationSchemaCatalog" ) )
-            return _schemas.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "AppearanceRuleTable" ) )
-            return _rules.loadFromNode( root, _report, sourceName );
+            return _schemas.loadFromXML( root, _report, sourceName );
+        if ( StringUtil::equals( pName, "AppearanceRuleCatalog" ) )
+            return _rules.loadFromXML( root, _report, sourceName );
         if ( StringUtil::equals( pName, "CharacterAppearanceCatalog" ) )
-            return _presets.loadFromNode( root, _report, sourceName );
+            return _presets.loadFromXML( root, _report, sourceName );
         _report.addErrorWithID( "Appearance.RootUnknown", "%#: unknown appearance data root <%#>", sourceName, pName );
         return false;
     }
@@ -227,7 +227,7 @@ namespace sw
     bool AppearanceDatabase::finishLoad( const ItemCatalog* pItemCatalog, const vector<hashed_string>* pListKnownBodyRegion )
     {
         _pItemCatalog = pItemCatalog;
-        if ( _slotTable.getSlots().empty() )
+        if ( _slotCatalog.getSlots().empty() )
             _report.addErrorWithID( "Appearance.SlotTableMissing", "appearance data has no slot table" );
         validateSchemas();
         validateSets();
@@ -247,7 +247,7 @@ namespace sw
 
     bool AppearanceDatabase::isOwnerName( const hashed_string& name ) const
     {
-        if ( _slotTable.hasSlot( name ) )
+        if ( _slotCatalog.hasSlot( name ) )
             return true;
         for ( const CustomizationSchemaDef& schema : _schemas.getSchemas() )
         {
@@ -338,7 +338,7 @@ namespace sw
         {
             for ( const EquipmentSetPieceDef& piece : set._listPiece )
             {
-                if ( _slotTable.hasSlot( piece._slot ) == false )
+                if ( _slotCatalog.hasSlot( piece._slot ) == false )
                     _report.addErrorWithID( "Appearance.SlotUnknown", "set '%#' names unknown slot '%#'", set._id.c_str(), piece._slot.c_str() );
             }
             vector<hashed_string> listItem;
@@ -357,7 +357,7 @@ namespace sw
     {
         for ( const ItemVisualDef& visual : _visuals.getVisuals() )
         {
-            if ( visual._occupancy.empty() == false && _slotTable.findOccupancy( visual._occupancy ) == nullptr )
+            if ( visual._occupancy.empty() == false && _slotCatalog.findOccupancy( visual._occupancy ) == nullptr )
                 _report.addErrorWithID( "Appearance.OccupancyUnknown", "visual '%#' names unknown occupancy '%#'", visual._id.c_str(), visual._occupancy.c_str() );
             if ( visual._customization.empty() == false && _schemas.findSchema( visual._customization ) == nullptr )
                 _report.addErrorWithID( "Appearance.SchemaUnknown", "visual '%#' names unknown customization schema '%#'", visual._id.c_str(), visual._customization.c_str() );
@@ -385,7 +385,7 @@ namespace sw
             for ( const CustomizationParamDef& param : schema._listParameter )
             {
                 // 고르기가 추가하는 외형의 주인은 매개변수 이름이다. 슬롯 이름과 겹치면 규칙 대상과 소켓 접두어가 둘 다 가리키게 되어 모호해진다.
-                if ( _slotTable.hasSlot( param._name ) )
+                if ( _slotCatalog.hasSlot( param._name ) )
                     _report.addErrorWithID( "Appearance.ParameterNameIsSlot", "schema '%#' parameter '%#' has the name of a slot - owner names must be unique", schema._id.c_str(), param._name.c_str() );
                 for ( const CustomizationOptionDef& option : param._listOption )
                 {
@@ -494,7 +494,7 @@ namespace sw
             }
             for ( const CharacterAppearanceSlotDef& slot : preset._listSlot )
             {
-                if ( _slotTable.hasSlot( slot._slot ) == false )
+                if ( _slotCatalog.hasSlot( slot._slot ) == false )
                     _report.addErrorWithID( "Appearance.SlotUnknown", "%# equips unknown slot '%#'", where, slot._slot.c_str() );
                 if ( slot._visibleVisual.empty() == false && _visuals.findVisual( slot._visibleVisual ) == nullptr )
                     _report.addErrorWithID( "Appearance.VisualUnknown", "%# slot '%#' shows unknown visual '%#'", where, slot._slot.c_str(), slot._visibleVisual.c_str() );

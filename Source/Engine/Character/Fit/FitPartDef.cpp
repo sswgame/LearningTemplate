@@ -65,16 +65,16 @@ namespace sw
         _listHiddenRegion.clear();
         _listRing.clear();
         _listCorrective.clear();
-        FitPartRootFields rootFields;
-        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓인다
-        _layer   = rootFields._layer;
-        _profile = rootFields._profile;
+        FitPartRootParams rootParams;
+        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓인다
+        _layer   = rootParams._layer;
+        _profile = rootParams._profile;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Hide" ) )
             {
-                FitHideFields hide;
+                FitHideParams hide;
                 (void)reader.readFields( child, hide );
                 const hashed_string& region = hide._region;
                 if ( region.empty() == false )

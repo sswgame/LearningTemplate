@@ -29,7 +29,7 @@ namespace sw
         }
     }
 
-    void RHIGeometryBindings::forget( RHIBufferHandle buffer )
+    void RHIGeometryBindings::remove( RHIBufferHandle buffer )
     {
         for ( RHIBufferBinding& binding : _arrVertexSlot )
         {

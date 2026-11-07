@@ -35,11 +35,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터와 마을 사람 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignVillager( GameObjectHandle director, int32 npcIndex );
+        void assignVillager( GameObjectHandle gameMode, int32 npcIndex );
 
     private:
         PROPERTY( Category = "Villager", DisplayName = "Director", Tooltip = "Object with the FarmVillageGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Villager", DisplayName = "NPC Index", Tooltip = "Index of the schedule NPC this body follows" )
         int32 _npcIndex;
         PROPERTY( Category = "Villager", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )

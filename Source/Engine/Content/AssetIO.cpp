@@ -148,30 +148,30 @@ namespace sw
         // 찾지 못한 것도 입력이다(해시 0) — 그 파일이 생기면 다시 베이크한다.
         if ( bRead == false )
         {
-            CookJob::admitMissingRead( id );
+            CookJob::allowMissingRead( id );
             return false;
         }
-        return CookJob::admitRead( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+        return CookJob::allowRead( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool AssetIO::readTextFile( string_view filePath, string& outText )
     {
         if ( FileUtil::readTextFile( filePath, outText ) == false )
         {
-            CookJob::admitMissingDiskRead( filePath );
+            CookJob::allowMissingDiskRead( filePath );
             return false;
         }
-        return CookJob::admitDiskRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+        return CookJob::allowDiskRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool AssetIO::readBinaryFile( string_view filePath, vector<uint8>& outBytes )
     {
         if ( FileUtil::readFile( filePath, outBytes ) == false )
         {
-            CookJob::admitMissingDiskRead( filePath );
+            CookJob::allowMissingDiskRead( filePath );
             return false;
         }
-        return CookJob::admitDiskRead( filePath, outBytes.data(), outBytes.size() );
+        return CookJob::allowDiskRead( filePath, outBytes.data(), outBytes.size() );
     }
 
     bool AssetIO::readBinaryAsset( const AssetID& id, vector<uint8>& outBytes )
@@ -185,10 +185,10 @@ namespace sw
         { return packManager.readFile( key, outBytes ); } );
         if ( bRead == false )
         {
-            CookJob::admitMissingRead( id );
+            CookJob::allowMissingRead( id );
             return false;
         }
-        return CookJob::admitRead( id, outBytes.data(), outBytes.size() );
+        return CookJob::allowRead( id, outBytes.data(), outBytes.size() );
     }
 
     AsyncReadHandle AssetIO::readBinaryAssetAsync( const AssetID& id, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete )
@@ -197,7 +197,7 @@ namespace sw
         AsyncFileIO&      io           = engine::getSubsystem<AsyncFileIO>();
         AsyncReadHandle   handle;
         // 완료가 다른 스레드에서 오므로 쿠킹 작업의 입력으로 기록할 수 없다 — 쿠킹 중이면 걸지 않는다.
-        if ( CookJob::admitAsyncRead( id ) == false )
+        if ( CookJob::allowAsyncRead( id ) == false )
             return handle;
         // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
         (void)readResourceCommon(

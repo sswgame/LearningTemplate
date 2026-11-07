@@ -355,9 +355,9 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        // 아래 `forgetBufferInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
+        // 아래 `removeBufferInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
         _pDevice->requireRegistryMutableNow( "destroyBuffer" );
-        _pDevice->forgetBufferInRecordingStates( buffer );
+        _pDevice->removeBufferInRecordingStates( buffer );
 
         D3D11RHIDevice::BufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -1148,10 +1148,10 @@ namespace sw
     {
         if ( pso == 0 )
             return;
-        // 아래 `forgetPipelineStateInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
+        // 아래 `removePipelineStateInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
         _pDevice->requireRegistryMutableNow( "destroyPipelineState" );
         _pDevice->_pipelineStates.erase( pso );
-        _pDevice->forgetPipelineStateInRecordingStates( pso );
+        _pDevice->removePipelineStateInRecordingStates( pso );
     }
 
     RHIRenderPassHandle D3D11RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )

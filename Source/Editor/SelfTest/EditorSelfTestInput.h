@@ -23,14 +23,14 @@ namespace sw::editor
         uint32 _itemID{ 0 };
         uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
-        uint32 _stableSinceFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
+        uint32 _stableStartFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
         bool   _bClipped{ false };     ///< 사각형이 그린 창의 보이는 영역 밖이다(스크롤 아래). 누르면 다른 위젯이 받으므로 클릭 · 드래그 단계가 실패로 알린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /**
          * @brief 두 프레임 연속 같은 자리에 그려졌으면 true 입니다 — 입력 단계가 이때까지 시계를 붙잡는다(창이 열리며 자리를 잡는 중이면 기다린다).
          * @details 예전에는 그려지기만 하면 눌러, 시나리오마다 앞에 고정 대기(10 프레임 이상)를 두어 도킹 · 팝업이 자리 잡기를 기다렸다. Playwright 의 "stable" 확인과 같다.
          */
-        [[nodiscard]] bool isSettled() const { return _frame > _stableSinceFrame; }
+        [[nodiscard]] bool isSettled() const { return _frame > _stableStartFrame; }
     };
 } // namespace sw::editor
 
@@ -43,12 +43,12 @@ namespace sw::editor
     struct SW_EDITOR_API EditorSelfTestMarks
     {
         /** @brief 바로 앞에 그린 위젯(ImGui "last item")을 @p pKey 로 기록합니다. 테스트가 꺼져 있으면 아무것도 하지 않습니다. */
-        static void note( const utf8* pKey );
+        static void record( const utf8* pKey );
         /**
          * @brief `note` 와 같되, 바로 앞 위젯이 입력 칸 + 오른쪽 레이블 글이면 사각형을 입력 칸(`ImGui::CalcItemWidth()`)까지만 남깁니다.
          * @details 레이블이 붙은 위젯의 "last item" 은 레이블 글까지 덮어, 좁은 창에서 그 가운데가 레이블 글(눌러도 열리지 않는 곳) 위에 놓인다.
          */
-        static void noteInputFrame( const utf8* pKey );
+        static void recordInputFrame( const utf8* pKey );
         /** @brief 화면 픽셀 사각형(@p min 에서 @p max)을 @p pKey 로 기록합니다. 좌표를 변환해 그리는 캔버스(노드 그래프) 안의 위젯이 화면 좌표로 바꿔서 넘깁니다. */
         static void noteRect( const utf8* pKey, const float2& min, const float2& max );
         /** @brief 기록된 레이블을 찾습니다. 이번 프레임이나 지난 프레임에 기록된 것만 반환합니다. 없으면 false 입니다. */
@@ -108,7 +108,7 @@ namespace sw::editor
          */
         [[nodiscard]] static bool isKeyboardTargetSettled();
         /**
-         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutSettledSince` 에 넘깁니다.
+         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutSettledAfter` 에 넘깁니다.
          * @details 번호는 에디터가 다음에 여는 프레임에 찍힌다(`flushIntoImGui`). 앞 단계(개발 명령 · 입력 · 변수)는 이 호출 전에 다 돌았고, 그 요청은 다음 프레임이 열릴 때
          *          받아들여지므로, 이 번호 이상이 찍힌 프레임은 앞 단계를 모두 반영해 그린 화면이다 — 효과가 몇 프레임 뒤에 나오는지 세지 않는다.
          */
@@ -121,7 +121,7 @@ namespace sw::editor
          * @details 창 크기 바꾸기 · 레이아웃 재설정 · 패널 열기 뒤 도킹이 자리를 잡는 데 몇 프레임이 걸린다 — 시나리오가 그것을 고정 대기로 때우지 않게 한다(`EditorWaitSettled`).
          *          위젯 하나의 자리(`EditorSelfTestMark::isSettled`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
          */
-        [[nodiscard]] static bool isLayoutSettledSince( uint32 waitSerial );
+        [[nodiscard]] static bool isLayoutSettledAfter( uint32 waitSerial );
         /** @brief 창 배치 서명이 마지막으로 바뀐 까닭입니다(움직인 창 이름 등) — 자리 잡기 시한 초과를 알릴 때 붙인다. 표본이 없으면 빈 글입니다. */
         [[nodiscard]] static string describeLastLayoutChange();
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. 넣기 전에 키보드 대상을 표본으로 남긴다. */

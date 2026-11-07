@@ -196,10 +196,10 @@ namespace sw
         return TradeResult::Unavailable;
     }
 
-    TradeResult TradeStoreLogic::applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferOutcome& outLedger )
+    TradeResult TradeStoreLogic::applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferResult& outLedger )
     {
         using Internal = TradeStoreLogicInternal;
-        outLedger      = LedgerTransferOutcome{};
+        outLedger      = LedgerTransferResult{};
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             SessionRead       session;
@@ -214,8 +214,8 @@ namespace sw
 
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) )
             {
-                TradeSnapshot      closed;
-                const CloseOutcome outcome = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
+                TradeSnapshot     closed;
+                const CloseResult outcome = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
                 if ( outcome._bRetry )
                     continue;
                 if ( outcome._result != TradeResult::Ok )
@@ -285,8 +285,8 @@ namespace sw
             outSnapshot = session._snapshot;
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) == false )
                 return TradeResult::WrongState;
-            TradeSnapshot      closed;
-            const CloseOutcome outcome = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
+            TradeSnapshot     closed;
+            const CloseResult outcome = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
             if ( outcome._bRetry )
                 continue;
             if ( outcome._result != TradeResult::Ok )
@@ -314,8 +314,8 @@ namespace sw
             outSnapshot = session._snapshot;
             if ( session._snapshot.isClosed() )
                 return TradeResult::WrongState;
-            TradeSnapshot      closed;
-            const CloseOutcome outcome = commitClose( session, reason, nowMs, closed );
+            TradeSnapshot     closed;
+            const CloseResult outcome = commitClose( session, reason, nowMs, closed );
             if ( outcome._bRetry )
                 continue;
             if ( outcome._result != TradeResult::Ok )
@@ -352,8 +352,8 @@ namespace sw
                 }
                 if ( read != TradeResult::Ok )
                     return read;
-                TradeSnapshot      closed;
-                const CloseOutcome outcome = commitClose( session, TradeCloseReason::ServerRestart, nowMs, closed );
+                TradeSnapshot     closed;
+                const CloseResult outcome = commitClose( session, TradeCloseReason::ServerRestart, nowMs, closed );
                 if ( outcome._bRetry )
                     continue;
                 if ( outcome._result != TradeResult::Ok )
@@ -379,21 +379,21 @@ namespace sw
         return TradeResult::Ok;
     }
 
-    TradeStoreLogic::CloseOutcome TradeStoreLogic::commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed )
+    TradeStoreLogic::CloseResult TradeStoreLogic::commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed )
     {
         outClosed = session._snapshot;
         TradeStateMachine::close( outClosed, TradeState::Cancelled, reason, nowMs );
         ServiceTransaction transaction;
         if ( stageClose( session, outClosed, transaction ) == false )
-            return CloseOutcome{ TradeResult::Invalid, false };
+            return CloseResult{ TradeResult::Invalid, false };
         const ServiceStoreResult committed = _connection.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )
-            return CloseOutcome{ TradeResult::Ok, true };
-        return CloseOutcome{ committed == ServiceStoreResult::Ok ? TradeResult::Ok : TradeResult::Unavailable, false };
+            return CloseResult{ TradeResult::Ok, true };
+        return CloseResult{ committed == ServiceStoreResult::Ok ? TradeResult::Ok : TradeResult::Unavailable, false };
     }
 
     TradeResult TradeStoreLogic::stageSettlement( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& inoutNext, ServiceTransaction& inoutTransaction,
-                                                  SettlementStage& outStage, LedgerTransferOutcome& outLedger )
+                                                  SettlementStage& outStage, LedgerTransferResult& outLedger )
     {
         LedgerTransferRequest& request = outStage._request;
         if ( TradeStoreLogicInternal::makeJournalKey( tradeID, request._journalKey ) == false )

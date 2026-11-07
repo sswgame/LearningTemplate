@@ -100,7 +100,7 @@ namespace
     };
 
     /** @brief 센서 → And(B 는 비움) → 카운터 회로입니다. */
-    struct GimmickRig
+    struct GimmickFixture
     {
         GimmickNodeRegistry _registry;
         GimmickCircuitDef   _def;
@@ -109,7 +109,7 @@ namespace
         int32               _gate{ -1 };
         int32               _count{ -1 };
 
-        GimmickRig()
+        GimmickFixture()
         {
             GimmickTestKinds::registerAll( _registry );
             (void)_def.addNode( hashed_string( "s" ), hashed_string( "Sensor" ) );
@@ -148,7 +148,7 @@ namespace
 
 SW_TEST_CASE( GimmickCircuitTest, SignalsFlowInOneStepInDependencyOrder )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     rig.build();
     SW_EXPECT_TRUE( rig._circuit.isBuilt() );
     SW_EXPECT_EQUAL( 3, rig._circuit.getNodeCount() );
@@ -210,32 +210,32 @@ SW_TEST_CASE( GimmickCircuitTest, InvertedWireFlipsTheSignal )
 SW_TEST_CASE( GimmickCircuitTest, BrokenDefinitionsNameTheProblem )
 {
     {
-        GimmickRig rig;
+        GimmickFixture rig;
         (void)rig._def.addNode( hashed_string( "x" ), hashed_string( "NoSuchKind" ) );
         rig.expectRefused( "unknown node kind" );
     }
     {
-        GimmickRig rig;
+        GimmickFixture rig;
         (void)rig._def.addNode( hashed_string( "s" ), hashed_string( "Sensor" ) );
         rig.expectRefused( "duplicate node id" );
     }
     {
-        GimmickRig rig;
+        GimmickFixture rig;
         (void)rig._def.addNode( hashed_string{}, hashed_string( "Sensor" ) );
         rig.expectRefused( "has no id" );
     }
     {
-        GimmickRig rig;
+        GimmickFixture rig;
         SW_REQUIRE_TRUE( rig._def.addWire( "nobody.Out", "g.B" ) );
         rig.expectRefused( "unknown source node" );
     }
     {
-        GimmickRig rig;
+        GimmickFixture rig;
         SW_REQUIRE_TRUE( rig._def.addWire( "s.Nope", "g.B" ) );
         rig.expectRefused( "unknown output" );
     }
     {
-        GimmickRig rig;
+        GimmickFixture rig;
         SW_REQUIRE_TRUE( rig._def.addWire( "s.Out", "g.Nope" ) );
         rig.expectRefused( "unknown input" );
     }
@@ -244,19 +244,19 @@ SW_TEST_CASE( GimmickCircuitTest, BrokenDefinitionsNameTheProblem )
 SW_TEST_CASE( GimmickCircuitTest, ParametersAreCheckedAgainstTheKind )
 {
     {
-        GimmickRig      rig;
+        GimmickFixture  rig;
         GimmickNodeDef& node = rig._def.addNode( hashed_string( "r" ), hashed_string( "Ranged" ) );
         node.setParam( hashed_string( "Nope" ), "1" );
         rig.expectRefused( "unknown parameter" );
     }
     {
-        GimmickRig      rig;
+        GimmickFixture  rig;
         GimmickNodeDef& node = rig._def.addNode( hashed_string( "r" ), hashed_string( "Ranged" ) );
         node.setParam( hashed_string( "Amount" ), "oops" );
         rig.expectRefused( "is not a number" );
     }
     {
-        GimmickRig      rig;
+        GimmickFixture  rig;
         GimmickNodeDef& node = rig._def.addNode( hashed_string( "r" ), hashed_string( "Ranged" ) );
         node.setParam( hashed_string( "Amount" ), "-1" );
         rig.expectRefused( "amount must not be negative" ); // 초기화의 이유가 그대로 나온다
@@ -265,7 +265,7 @@ SW_TEST_CASE( GimmickCircuitTest, ParametersAreCheckedAgainstTheKind )
 
 SW_TEST_CASE( GimmickCircuitTest, ParameterValuesAreRead )
 {
-    GimmickRig      rig;
+    GimmickFixture  rig;
     GimmickNodeDef& node = rig._def.addNode( hashed_string( "r" ), hashed_string( "Ranged" ) );
     node.setParam( hashed_string( "Amount" ), "2.5" );
     rig.build();
@@ -282,7 +282,7 @@ SW_TEST_CASE( GimmickCircuitTest, ParameterValuesAreRead )
 // 지연 없는 고리는 값이 정해지지 않는다.
 SW_TEST_CASE( GimmickCircuitTest, LoopWithoutADelayIsRefusedWithItsNodes )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     (void)rig._def.addNode( hashed_string( "h" ), hashed_string( "And" ) );
     SW_REQUIRE_TRUE( rig._def.addWire( "g.Out", "h.A" ) );
     SW_REQUIRE_TRUE( rig._def.addWire( "h.Out", "g.B" ) );
@@ -292,7 +292,7 @@ SW_TEST_CASE( GimmickCircuitTest, LoopWithoutADelayIsRefusedWithItsNodes )
 // 지연이 고리를 끊고, 신호는 한 바퀴에 한 스텝씩 돈다.
 SW_TEST_CASE( GimmickCircuitTest, DelayBreaksTheLoopAndHoldsAStep )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     (void)rig._def.addNode( hashed_string( "d" ), hashed_string( "Delay" ) );
     SW_REQUIRE_TRUE( rig._def.addWire( "g.Out", "d.In" ) );
     SW_REQUIRE_TRUE( rig._def.addWire( "d.Out", "g.B", true ) ); // 지연된 자기 부정 — 켰다 껐다 한다
@@ -317,7 +317,7 @@ SW_TEST_CASE( GimmickCircuitTest, DelayBreaksTheLoopAndHoldsAStep )
 
 SW_TEST_CASE( GimmickCircuitTest, ImpulsesLastOneStep )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     rig.build();
     rig._circuit.addSensorImpulse( rig._sensor, 2.0f );
     rig._circuit.addSensorImpulse( rig._sensor, 3.0f );
@@ -331,7 +331,7 @@ SW_TEST_CASE( GimmickCircuitTest, ImpulsesLastOneStep )
 
 SW_TEST_CASE( GimmickCircuitTest, UpdateConsumesFixedSteps )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     rig.build();
     const float32 stepTime = rig._circuit.getStepTime();
     SW_EXPECT_EQUAL( 0, rig._circuit.update( stepTime * 0.5f ) );
@@ -355,7 +355,7 @@ SW_TEST_CASE( GimmickCircuitTest, UnbuiltCircuitDoesNothing )
 
 SW_TEST_CASE( GimmickCircuitTest, ResetReturnsToTheInitialState )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     rig.build();
     const uint64 initialHash = rig._circuit.computeStateHash();
     rig._circuit.setSensorValue( rig._sensor, 1.0f );
@@ -370,8 +370,8 @@ SW_TEST_CASE( GimmickCircuitTest, ResetReturnsToTheInitialState )
 // 같은 입력은 같은 상태다 — 재접속 · 저장 복원의 근거다.
 SW_TEST_CASE( GimmickCircuitTest, SameInputsSameHash )
 {
-    GimmickRig first;
-    GimmickRig second;
+    GimmickFixture first;
+    GimmickFixture second;
     first.build();
     second.build();
     for ( int32 step = 0; step < 8; ++step )
@@ -389,7 +389,7 @@ SW_TEST_CASE( GimmickCircuitTest, SameInputsSameHash )
 
 SW_TEST_CASE( GimmickCircuitTest, SavedStateRestoresExactly )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     rig.build();
     rig._circuit.setSensorValue( rig._sensor, 1.0f );
     rig._circuit.step();
@@ -410,14 +410,14 @@ SW_TEST_CASE( GimmickCircuitTest, SavedStateRestoresExactly )
 // 노드를 더한 판으로 옛 저장을 읽으면, 허락할 때만 짝 맞는 노드를 옮기고 새 노드는 처음 상태다.
 SW_TEST_CASE( GimmickCircuitTest, AddedNodeNeedsPermissionToLoad )
 {
-    GimmickRig older;
+    GimmickFixture older;
     older.build();
     older._circuit.setSensorValue( older._sensor, 1.0f );
     older._circuit.step();
     GimmickCircuitState saved;
     older._circuit.saveState( saved );
 
-    GimmickRig newer;
+    GimmickFixture newer;
     (void)newer._def.addNode( hashed_string( "extra" ), hashed_string( "Count" ) );
     newer.build();
     const GimmickStateLoad refused = newer._circuit.loadState( saved, GimmickStateMatch::Exact );
@@ -434,7 +434,7 @@ SW_TEST_CASE( GimmickCircuitTest, AddedNodeNeedsPermissionToLoad )
 // 같은 id 인데 종류가 다르면 어떤 허락으로도 옮기지 않고 그 노드를 알려 준다.
 SW_TEST_CASE( GimmickCircuitTest, ChangedNodeKindIsAMismatch )
 {
-    GimmickRig older;
+    GimmickFixture older;
     older.build();
     GimmickCircuitState saved;
     older._circuit.saveState( saved );
@@ -456,7 +456,7 @@ SW_TEST_CASE( GimmickCircuitTest, ChangedNodeKindIsAMismatch )
 
 SW_TEST_CASE( GimmickCircuitTest, DuplicateSavedIdIsAMismatch )
 {
-    GimmickRig rig;
+    GimmickFixture rig;
     rig.build();
     GimmickCircuitState saved;
     rig._circuit.saveState( saved );
@@ -471,7 +471,7 @@ SW_TEST_CASE( GimmickCircuitTest, DuplicateSavedIdIsAMismatch )
 
 SW_TEST_CASE( GimmickCircuitTest, ValidateBuildsNothing )
 {
-    GimmickRig     rig;
+    GimmickFixture rig;
     vector<string> listError;
     SW_EXPECT_TRUE( GimmickCircuit::validate( rig._def, rig._registry, listError ) );
     SW_EXPECT_TRUE( listError.empty() );

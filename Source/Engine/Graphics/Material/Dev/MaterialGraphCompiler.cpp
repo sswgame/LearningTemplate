@@ -260,7 +260,7 @@ namespace sw
                     const size_t issueCount = _listIssue.size();
                     for ( size_t nodeIndex = 0; nodeIndex < graph._listNode.size(); ++nodeIndex )
                     {
-                        const MaterialGraphNodeDesc& node = graph._listNode[nodeIndex];
+                        const MaterialGraphNodeDef& node = graph._listNode[nodeIndex];
                         if ( isNodeName( node._name ) == false )
                             report( scope, node._name, "BadName", "node name may hold only letters, digits, space, '_', '-' and '.'" );
                         if ( static_cast<size_t>( graph.findNodeIndex( node._name ) ) != nodeIndex )
@@ -308,7 +308,7 @@ namespace sw
                  * @brief 입력 핀 하나의 값입니다: 링크 → 노드 값(상수) → 등록의 기본값. 필수인데 아무것도 없으면 문제를 남기고 `Invalid` 입니다.
                  * @param defaultText 기본값 글. 비면 필수 핀이다
                  */
-                [[nodiscard]] Value resolveInput( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, string_view pin, MaterialGraphValueType type, string_view defaultText, string_view scope )
+                [[nodiscard]] Value resolveInput( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, string_view pin, MaterialGraphValueType type, string_view defaultText, string_view scope )
                 {
                     Value                    value;
                     const MaterialGraphLink* pLink = node.findLink( pin );
@@ -352,7 +352,7 @@ namespace sw
                 }
 
                 /** @brief `any` 핀들의 형식을 정합니다. 서로 다른 크기의 벡터가 섞이면 문제를 남깁니다. */
-                [[nodiscard]] MaterialGraphValueType resolveAny( const MaterialGraphNodeKind& kind, const vector<Value>& listInput, const MaterialGraphNodeDesc& node, string_view scope )
+                [[nodiscard]] MaterialGraphValueType resolveAny( const MaterialGraphNodeKind& kind, const vector<Value>& listInput, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     MaterialGraphValueType resolved = MaterialGraphValueType::Float;
                     for ( uint32 index = 0; index < kind.getInputCount(); ++index )
@@ -373,7 +373,7 @@ namespace sw
                 }
 
                 /** @brief 파라미터 노드의 머티리얼 칸을 올리고 칸 이름을 돌려줍니다. 같은 이름 · 같은 형식은 한 칸을 함께 쓴다. 문제가 있으면 빈 글입니다. */
-                [[nodiscard]] string registerParameter( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDesc& node, string_view scope )
+                [[nodiscard]] string registerParameter( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     const string localName = readSettingText( kind, node, "Parameter" );
                     if ( isIdentifier( localName ) == false || localName.front() != '_' || MaterialPacking::isPaddingMember( localName ) || localName == "_alphaCutoff" )
@@ -412,7 +412,7 @@ namespace sw
                     return name;
                 }
 
-                [[nodiscard]] static string readSettingText( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDesc& node, string_view name )
+                [[nodiscard]] static string readSettingText( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view name )
                 {
                     const MaterialGraphValue* pValue = node.findValue( name );
                     if ( pValue != nullptr )
@@ -422,7 +422,7 @@ namespace sw
                 }
 
                 /** @brief 수치 설정이 형식에 맞는지 봅니다(식에 쓰이지 않는 `Min` · `Default` 도 데이터의 오타를 잡는다). */
-                void checkNumericSettings( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDesc& node, string_view scope )
+                void checkNumericSettings( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     for ( uint32 index = 0; index < kind.getSettingCount(); ++index )
                     {
@@ -440,7 +440,7 @@ namespace sw
                 }
 
                 /** @brief 식의 `$핀` · `%설정` 을 펼칩니다. 모르는 이름은 등록의 잘못이라 문제를 남깁니다(단위 테스트가 모든 종류를 펼쳐 본다). */
-                [[nodiscard]] string expand( string_view expression, const MaterialGraphNodeKind& kind, const vector<string>& listInput, const vector<NamedValue>& listOutput, const string& parameterName, const MaterialGraphNodeDesc& node, string_view scope )
+                [[nodiscard]] string expand( string_view expression, const MaterialGraphNodeKind& kind, const vector<string>& listInput, const vector<NamedValue>& listOutput, const string& parameterName, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     string text;
                     for ( size_t position = 0; position < expression.size(); ++position )
@@ -498,7 +498,7 @@ namespace sw
                 }
 
                 /** @brief HLSL 조각 노드 하나를 펼칩니다. */
-                void emitSnippet( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, const MaterialGraphNodeKind& kind, string_view scope, NodeResult& outResult )
+                void emitSnippet( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, const MaterialGraphNodeKind& kind, string_view scope, NodeResult& outResult )
                 {
                     vector<Value> listValue;
                     bool          bAllRead = true;
@@ -552,7 +552,7 @@ namespace sw
                 }
 
                 /** @brief 출력 노드입니다 — 입력 핀 이름이 표면 칸입니다(`BaseColor` → `output._baseColor`). */
-                void emitOutput( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, const MaterialGraphNodeKind& kind, string_view scope )
+                void emitOutput( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, const MaterialGraphNodeKind& kind, string_view scope )
                 {
                     for ( uint32 index = 0; index < kind.getInputCount(); ++index )
                     {
@@ -577,7 +577,7 @@ namespace sw
 
                 /** @brief 하위 그래프 노드를 펼칩니다(언리얼 Material Function 처럼 호출이 아니라 펼침이다 — 칸 · 순열이 머티리얼 하나로 모인다). */
                 /** @brief 하위 그래프 · 층 노드가 가리키는 그래프(`_assetPath`)를 읽습니다. 경로 없음 · 순환 · 읽기 실패 · 하위 그래프가 아님은 문제를 남기고 false 입니다. */
-                [[nodiscard]] bool loadSubgraph( const MaterialGraphNodeDesc& node, string_view scope, MaterialGraphDef& outGraph )
+                [[nodiscard]] bool loadSubgraph( const MaterialGraphNodeDef& node, string_view scope, MaterialGraphDef& outGraph )
                 {
                     if ( node._assetPath.empty() )
                     {
@@ -610,7 +610,7 @@ namespace sw
                     return true;
                 }
 
-                void emitSubgraph( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, string_view scope, NodeResult& outResult )
+                void emitSubgraph( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, string_view scope, NodeResult& outResult )
                 {
                     MaterialGraphDef subgraph;
                     if ( loadSubgraph( node, scope, subgraph ) == false )
@@ -618,7 +618,7 @@ namespace sw
                     const MaterialGraphNodeKind* pInputKind = MaterialGraphNodeRegistry::find( "GraphInput" );
                     vector<NamedValue>           listArgument;
                     bool                         bAllRead = true;
-                    for ( const MaterialGraphNodeDesc& inner : subgraph._listNode )
+                    for ( const MaterialGraphNodeDef& inner : subgraph._listNode )
                     {
                         if ( inner._kind != pInputKind->getName() )
                             continue;
@@ -669,7 +669,7 @@ namespace sw
                 }
 
                 /** @brief 머티리얼 칸 하나를 더합니다. 같은 이름의 칸이 이미 있으면 문제를 남기고 false 입니다(층 칸은 노드 이름으로 정해져 겹치면 데이터의 잘못이다). */
-                [[nodiscard]] bool addLayerField( MaterialGraphField field, const MaterialGraphNodeDesc& node, string_view scope )
+                [[nodiscard]] bool addLayerField( MaterialGraphField field, const MaterialGraphNodeDef& node, string_view scope )
                 {
                     for ( const MaterialGraphField& existing : _listField )
                     {
@@ -685,7 +685,7 @@ namespace sw
                 }
 
                 /** @brief 층 마스크 식입니다: 핀 `Mask` 를 이었거나 값을 적었으면 그 값, 아니면 `MaskChannel` 이 고른 `_layerMask` 의 채널(처음 쓸 때 한 번 읽는다), `None` 이면 1 입니다. 문제면 빈 글입니다. */
-                [[nodiscard]] string makeLayerMask( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, const MaterialGraphNodeKind& kind, string_view scope )
+                [[nodiscard]] string makeLayerMask( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, const MaterialGraphNodeKind& kind, string_view scope )
                 {
                     if ( node.findLink( "Mask" ) != nullptr || node.findValue( "Mask" ) != nullptr )
                     {
@@ -726,7 +726,7 @@ namespace sw
                  *          자식 `.material` 이 0 을 적으면 층이 꺼진다. 켜고 끄기를 값으로 두어 셰이더 · PSO 가 하나다(언리얼은 층 보이기를 정적 스위치로 다시 컴파일하고,
                  *          유니티 HDRP Layered Lit 은 층 수가 키워드다 — 기억에 의존). 층 파일을 바꾸는 변형은 셰이더가 달라지므로 그래프 `_base` 로 한다.
                  */
-                void emitLayer( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, const MaterialGraphNodeKind& kind, string_view scope )
+                void emitLayer( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDef& node, const MaterialGraphNodeKind& kind, string_view scope )
                 {
                     if ( isIdentifier( node._name ) == false )
                     {
@@ -741,7 +741,7 @@ namespace sw
                     const MaterialGraphNodeKind* pInputKind = MaterialGraphNodeRegistry::find( "GraphInput" );
                     vector<NamedValue>           listArgument;
                     bool                         bAllRead = true;
-                    for ( const MaterialGraphNodeDesc& inner : layer._listNode )
+                    for ( const MaterialGraphNodeDef& inner : layer._listNode )
                     {
                         if ( inner._kind != pInputKind->getName() )
                             continue;
@@ -896,7 +896,7 @@ namespace sw
                     listResult.resize( graph._listNode.size() );
                     for ( const uint32 nodeIndex : order._listOrder )
                     {
-                        const MaterialGraphNodeDesc& node = graph._listNode[nodeIndex];
+                        const MaterialGraphNodeDef&  node = graph._listNode[nodeIndex];
                         const MaterialGraphNodeKind& kind = *MaterialGraphNodeRegistry::find( node._kind );
                         switch ( kind.getRole() )
                         {
@@ -1002,7 +1002,7 @@ namespace sw
     bool MaterialGraphCompiler::isSubgraph( const MaterialGraphDef& graph )
     {
         bool bGraphOutput = false;
-        for ( const MaterialGraphNodeDesc& node : graph._listNode )
+        for ( const MaterialGraphNodeDef& node : graph._listNode )
         {
             const MaterialGraphNodeKind* pKind = MaterialGraphNodeRegistry::find( node._kind );
             if ( pKind == nullptr )
@@ -1018,7 +1018,7 @@ namespace sw
     {
         string text;
         text.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Generated from " ).append( sourceName ).append( " by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->\n" );
-        text.append( "<MaterialDesc formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( shaderPath ).append( "\" alphaMode=\"Opaque\">\n\t<_properties>\n" );
+        text.append( "<MaterialDef formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( shaderPath ).append( "\" alphaMode=\"Opaque\">\n\t<_properties>\n" );
         for ( const MaterialGraphField& field : result._listField )
         {
             text.append( "\t\t<item name=\"" ).append( field._name ).append( "\" type=\"" ).append( field._propertyType ).append( "\"" );
@@ -1039,11 +1039,11 @@ namespace sw
         if ( result._bEmissive )
             text.append( "\t\t\t<item>MATERIAL_FORWARD_ONLY</item>\n" );
         text.append( "\t\t</_alwaysDefines>\n\t\t<_multiCompiles>\n\t\t\t<item name=\"FogMode\" selected=\"FOG_OFF\">\n\t\t\t\t<_options>\n\t\t\t\t\t<item>FOG_OFF</item>\n\t\t\t\t\t<item>FOG_LINEAR</item>\n\t\t\t\t\t<item>FOG_EXP</item>\n\t\t\t\t</_options>\n\t\t\t</item>\n\t\t</_multiCompiles>\n" );
-        text.append( "\t</_permutations>\n</MaterialDesc>\n" );
+        text.append( "\t</_permutations>\n</MaterialDef>\n" );
         return text;
     }
 
-    bool MaterialGraphCompiler::collectNodePins( const MaterialGraphNodeDesc& node, vector<MaterialGraphPinInfo>& outListInput, vector<MaterialGraphPinInfo>& outListOutput )
+    bool MaterialGraphCompiler::collectNodePins( const MaterialGraphNodeDef& node, vector<MaterialGraphPinInfo>& outListInput, vector<MaterialGraphPinInfo>& outListOutput )
     {
         outListInput.clear();
         outListOutput.clear();
@@ -1057,7 +1057,7 @@ namespace sw
             MaterialGraphDef subgraph;
             if ( subgraph.loadFromAsset( AssetID{ node._assetPath } ) == false )
                 return false;
-            for ( const MaterialGraphNodeDesc& inner : subgraph._listNode )
+            for ( const MaterialGraphNodeDef& inner : subgraph._listNode )
             {
                 const MaterialGraphNodeKind* pInnerKind = MaterialGraphNodeRegistry::find( inner._kind );
                 if ( pInnerKind == nullptr )

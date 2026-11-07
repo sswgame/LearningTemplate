@@ -216,7 +216,7 @@ namespace sw
         , _buckets{}
         , _listNeighborScratch{}
         , _listQueryScratch{}
-        , _flowFields{}
+        , _flowParams{}
         , _pCatalog{ nullptr }
         , _settings{}
         , _stepTimer{}
@@ -251,7 +251,7 @@ namespace sw
         _eventBuffer.clear();
         _listTerrainBlocked.assign( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), SW_FALSE );
         _vision.reset( _grid.getWidth(), _grid.getHeight() );
-        _flowFields.clear();
+        _flowParams.clear();
         _buckets.initialize( _grid.getWidth(), _grid.getHeight(), _settings._bucketSize );
         _stepTimer   = FixedStepTimer{ _settings._fixedStep, 0.25f };
         _time        = 0.0f;
@@ -506,15 +506,15 @@ namespace sw
         }
     }
 
-    void RTSWorld::drainEvents( const DrainLease& lease, vector<RTSEvent>& outListEvent )
+    void RTSWorld::pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( lease, outListEvent );
+        _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
     void RTSWorld::stepFixed( float32 deltaTime )
     {
         _time += deltaTime;
-        _flowFields.refreshStale( _grid );
+        _flowParams.refreshStale( _grid );
         recomputeSupply();
         rebuildBuckets();
         const size_t unitCount = _listUnit.size(); // 이번 걸음에 생긴 유닛은 다음 걸음부터 처리한다
@@ -754,7 +754,7 @@ namespace sw
     {
         if ( order._pFlowField != nullptr )
         {
-            _flowFields.release( order._pFlowField );
+            _flowParams.release( order._pFlowField );
             order._pFlowField = nullptr;
         }
         if ( order._type == RTSOrderType::Gather || order._type == RTSOrderType::Build )
@@ -949,7 +949,7 @@ namespace sw
             order._target       = target;
             order._arriveRadius = listUnit.size() > 1 ? arriveRadius : 0.0f;
             if ( bUseField && isGroundUnitCommand( *pUnit ) )
-                order._pFlowField = _flowFields.acquire( _grid, goalCell );
+                order._pFlowField = _flowParams.acquire( _grid, goalCell );
             (void)pushOrder( *pUnit, order, bQueue );
             ++issuedCount;
         }
@@ -1960,7 +1960,7 @@ namespace sw
         _listPlayer         = std::move( listPlayer );
         _vision             = std::move( vision );
         _eventBuffer.clear();
-        _flowFields.clear();
+        _flowParams.clear();
         _stepTimer   = stepTimer;
         _time        = time;
         _winningTeam = winningTeam;
@@ -1993,7 +1993,7 @@ namespace sw
             {
                 const bool bFlowField = listFlowFieldOrder[flowFieldOrderIndex++] != SW_FALSE;
                 if ( bFlowField && unit._bAlive != SW_FALSE )
-                    order._pFlowField = _flowFields.acquire( _grid, _grid.computeCell( order._target ) );
+                    order._pFlowField = _flowParams.acquire( _grid, _grid.computeCell( order._target ) );
             }
         }
     }

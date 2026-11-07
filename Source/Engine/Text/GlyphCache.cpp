@@ -77,7 +77,7 @@ namespace sw
                 uint32 evictedPage = 0;
                 if ( _atlas.evictLeastRecentlyUsedPage( frameIndex, evictedPage ) )
                 {
-                    forgetPage( evictedPage );
+                    removePage( evictedPage );
                     glyph._atlasGeneration = _atlas.getGeneration();
                     bAllocated             = _atlas.allocate( _scratchBitmap._width, _scratchBitmap._height, glyph._rect );
                 }
@@ -94,7 +94,7 @@ namespace sw
         return &inserted.first->second;
     }
 
-    void GlyphCache::forgetFace( FontFaceID face )
+    void GlyphCache::removeFace( FontFaceID face )
     {
         vector<uint64> listKey;
         for ( const auto& [key, glyph] : _mapGlyph )
@@ -109,7 +109,7 @@ namespace sw
         }
     }
 
-    void GlyphCache::forgetPage( uint32 page )
+    void GlyphCache::removePage( uint32 page )
     {
         vector<uint64> listKey;
         for ( const auto& [key, glyph] : _mapGlyph )

@@ -37,7 +37,7 @@ namespace sw
         /** @brief 읽기 스레드를 멈추고 기다립니다. 두 번 불러도 됩니다. */
         void stop() SW_REQUIRES_LOCK( _mutex );
         /** @brief 모인 줄을 @p outListLine 뒤에 옮깁니다(게임 스레드). */
-        void drainLines( vector<string>& outListLine );
+        void pollLines( vector<string>& outListLine );
 
     private:
         /** @brief 읽기 스레드 본문입니다. @p stopToken 이 정지를 받거나 입력이 닫히면 끝납니다. */

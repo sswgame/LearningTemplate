@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Appearance/SlotTable.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SlotCatalog.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -13,13 +13,13 @@
 
 namespace sw
 {
-    void SlotTable::clear()
+    void SlotCatalog::clear()
     {
         _listSlot.clear();
         _listOccupancy.clear();
     }
 
-    bool SlotTable::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool SlotCatalog::loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const uint32 errorCountBefore = static_cast<uint32>( report.getErrors().size() );
@@ -66,11 +66,11 @@ namespace sw
             }
         }
         if ( _listSlot.empty() )
-            report.addErrorWithID( "Appearance.SlotTableEmpty", "%#: <SlotTable> has no <Slot>", sourceName );
+            report.addErrorWithID( "Appearance.SlotTableEmpty", "%#: <SlotCatalog> has no <Slot>", sourceName );
         return report.getErrors().size() == errorCountBefore;
     }
 
-    int32 SlotTable::findSlotIndex( const hashed_string& slot ) const
+    int32 SlotCatalog::findSlotIndex( const hashed_string& slot ) const
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
@@ -80,12 +80,12 @@ namespace sw
         return -1;
     }
 
-    const SlotOccupancyDef* SlotTable::findOccupancy( const hashed_string& id ) const
+    const SlotOccupancyDef* SlotCatalog::findOccupancy( const hashed_string& id ) const
     {
         return VectorUtil::findBy<&SlotOccupancyDef::_id>( _listOccupancy, id );
     }
 
-    string SlotTable::makeEquipmentLayout() const
+    string SlotCatalog::makeEquipmentLayout() const
     {
         string layout;
         for ( const AppearanceSlotDef& slot : _listSlot )

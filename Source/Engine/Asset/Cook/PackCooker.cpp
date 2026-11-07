@@ -312,7 +312,7 @@ namespace sw
             }
 
             /**
-             * @brief 파일 하나를 읽어 팩에 담습니다. 디스크 읽기 입구(`AssetIO::readBinaryFile`)가 읽기와 작업 입력 기록(`CookJob::admitDiskRead`)을 함께 한다.
+             * @brief 파일 하나를 읽어 팩에 담습니다. 디스크 읽기 입구(`AssetIO::readBinaryFile`)가 읽기와 작업 입력 기록(`CookJob::allowDiskRead`)을 함께 한다.
              * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(리소스 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
              *          읽기 시간에는 입력 해시가 들어 있다.
              */
@@ -567,14 +567,14 @@ namespace sw
             const string packName   = makePackFileName( domain );
             const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
             // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
-            const string outputID     = FileUtil::joinPath( FileUtil::joinPath( "packs", desc._target ), packName );
-            CookJobDesc  domainDesc   = desc;
-            domainDesc._settingsHash  = PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection );
-            const CookOutcome outcome = store.cookFile( domainDesc, outputID, outputPath, [&]()
-            { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, selection, timing ); } );
-            if ( outcome == CookOutcome::Failed )
+            const string outputID    = FileUtil::joinPath( FileUtil::joinPath( "packs", desc._target ), packName );
+            CookJobDesc  domainDesc  = desc;
+            domainDesc._settingsHash = PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection );
+            const CookResult result  = store.cookFile( domainDesc, outputID, outputPath, [&]()
+             { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, selection, timing ); } );
+            if ( result == CookResult::Failed )
                 ++failedCount;
-            else if ( outcome != CookOutcome::Skipped )
+            else if ( result != CookResult::Skipped )
                 ++outPackCount;
         }
         PackCookerInternal::logSummary( outPackCount, failedCount, desc._target, totalWatch.getElapsedNanoseconds(),

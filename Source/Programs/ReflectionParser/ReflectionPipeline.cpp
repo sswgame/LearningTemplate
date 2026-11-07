@@ -26,7 +26,7 @@ namespace sw
         {
             /**
              * @brief 칸 이름 @p name 의 XML 속성 이름입니다 — `XMLFields::getAttributeName` 과 같은 규칙이다(직접 적은 이름은 그대로, `_` 를 떼고, 불리언 `_bX` 는 `x`).
-             * @details 파서는 엔진을 링크하지 않아 같은 규칙을 여기 둔다. 규칙을 바꾸면 둘을 함께 고친다(칸이 두 이름으로 생성 목록에 드는지 파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefFields.h` 가 본다).
+             * @details 파서는 엔진을 링크하지 않아 같은 규칙을 여기 둔다. 규칙을 바꾸면 둘을 함께 고친다(칸이 두 이름으로 생성 목록에 드는지 파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h` 가 본다).
              */
             static string makeXMLAttributeName( const string& name )
             {

@@ -327,7 +327,7 @@ namespace sw
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
         void workerLoop( uint32 workerID );
         /** @brief `clear` 가 큐에서 꺼낸 항목 하나를 실행하지 않고 놓습니다(노드는 참조를 해제하고, 티켓은 그룹을 닫습니다). */
-        void drainQueueItem( uintptr_t item );
+        void runQueueItem( uintptr_t item );
 
         // --- 태스크 만들기 · 의존성 ---
         /** @brief 노드를 꺼내 이름 · 실행 스레드를 적고, 태스크 안이면 그 태스크의 자식으로 연결하고, 활성 수를 올립니다. 만들지 못하면 nullptr 입니다. */
@@ -364,7 +364,7 @@ namespace sw
         /** @brief [start, end) 를 워커와 나눠 돌고 합류까지 기다립니다(`runParallel` · `runParallelByCost` 의 병렬 부분). 워커가 있어야 합니다. */
         void runParallelRange( uint32 start, uint32 end, const ParallelBlockDelegate& body );
         /** @brief 청크 사이에 High 큐를 비웁니다. 그룹을 실행하는 동안에도 렌더 패스 기록이 줄을 서지 않게 하기 위해서입니다. */
-        void drainHighQueueBetweenChunks();
+        void runHighQueueBetweenChunks();
         /** @brief 병렬 그룹의 티켓 하나를 처리합니다. 청크가 남아 있는 동안 가져와 실행하고 티켓을 닫습니다. */
         void runGroupTicket( ParallelGroup* pGroup );
         /**

@@ -91,7 +91,7 @@ namespace sw
         return kArrDependency;
     }
 
-    void UINotificationService::post( const UINotificationDesc& desc )
+    void UINotificationService::post( const UINotificationDef& desc )
     {
         if ( desc._text.empty() )
             return;
@@ -238,7 +238,7 @@ namespace sw
         UIDocumentCache&                        documents = engine::getSubsystem<UIDocumentCache>();
         string                                  error;
         const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( _pUI->getEngineDocuments()._notificationEntry, error );
-        vector<UIBindingDesc>                   listBinding;
+        vector<UIBindingDef>                    listBinding;
         unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
         if ( widget == nullptr )
         {

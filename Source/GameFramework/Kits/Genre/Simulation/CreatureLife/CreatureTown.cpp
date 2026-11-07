@@ -453,9 +453,9 @@ namespace sw
         updateAppealTier(); // 공유 평판의 감쇠는 주인이 날이 넘어갈 때 이미 처리했으므로, 매력도만 다시 본다
     }
 
-    void CreatureTown::drainEvents( vector<CreatureTownEvent>& outListEvent )
+    void CreatureTown::pollEvents( vector<CreatureTownEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     const hashed_string* CreatureTown::findObject( int32 x, int32 y ) const

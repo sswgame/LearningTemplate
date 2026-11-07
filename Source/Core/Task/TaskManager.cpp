@@ -324,7 +324,7 @@ namespace sw
             uintptr_t item{ 0 };
             while ( slot->_queue.steal( item ) )
             {
-                drainQueueItem( item );
+                runQueueItem( item );
             }
         }
         {
@@ -339,15 +339,15 @@ namespace sw
             uintptr_t item{ 0 };
             while ( _globalHighQueue.dequeue( item ) )
             {
-                drainQueueItem( item );
+                runQueueItem( item );
             }
             while ( _globalWorkerQueue.dequeue( item ) )
             {
-                drainQueueItem( item );
+                runQueueItem( item );
             }
             while ( _globalLowQueue.dequeue( item ) )
             {
-                drainQueueItem( item );
+                runQueueItem( item );
             }
         }
         _activeTaskCount.store( 0, std::memory_order_release );
@@ -357,7 +357,7 @@ namespace sw
         _completionBroadcast.notifyAll();
     }
 
-    void TaskManager::drainQueueItem( uintptr_t item )
+    void TaskManager::runQueueItem( uintptr_t item )
     {
         if ( item == 0 )
             return;
@@ -802,7 +802,7 @@ namespace sw
         wakeSleepingWorkers( ticketCount );
     }
 
-    void TaskManager::drainHighQueueBetweenChunks()
+    void TaskManager::runHighQueueBetweenChunks()
     {
         // 빈 큐의 size 는 위치 두 개를 읽는 것이라 청크마다 확인해도 비용이 거의 없다.
         if ( _globalHighQueue.empty() )
@@ -824,7 +824,7 @@ namespace sw
         {
             // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
             // 그 줄이 그대로 프레임 지연이 된다. 청크 하나(참여자당 4개)가 작으므로 기다리는 시간의 상한도 짧다.
-            drainHighQueueBetweenChunks();
+            runHighQueueBetweenChunks();
             const uint64 reservedStart = pGroup->_nextChunkStart.fetch_add( chunkSize, std::memory_order_relaxed );
             if ( reservedStart >= end )
                 break;

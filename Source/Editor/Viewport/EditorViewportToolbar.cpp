@@ -46,7 +46,7 @@ namespace sw::editor
             {
                 if ( EditorWidgets::drawIconToggle( pToggleID, pIcon, bEnabled, pToggleTooltip ) )
                     bEnabled = ( bEnabled == false );
-                EditorSelfTestMarks::note( pToggleMark );
+                EditorSelfTestMarks::record( pToggleMark );
 
                 EditorViewportToolbar::nextItem( bVertical );
                 // 폭은 가장 긴 값 글자 + 펼침 화살표다 — 고정 픽셀(60 · 65)은 글꼴이 바뀌자 "15 de" 로 잘렸다.
@@ -152,7 +152,7 @@ namespace sw::editor
             ImGui::BeginDisabled( pRenderer == nullptr );
             EditorChrome::setNextItemWidthColumns( 13.0f );
             const bool bOpen = ImGui::BeginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
-            EditorSelfTestMarks::note( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
+            EditorSelfTestMarks::record( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
             if ( bOpen )
             {
                 for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
@@ -162,7 +162,7 @@ namespace sw::editor
                     if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && pRenderer != nullptr )
                         pRenderer->setSceneViewMode( mode );
                     const string markKey = string( "viewport.viewMode." ) + StringUtil::toLower( pName );
-                    EditorSelfTestMarks::note( markKey.c_str() );
+                    EditorSelfTestMarks::record( markKey.c_str() );
                 }
                 ImGui::EndCombo();
             }
@@ -180,7 +180,7 @@ namespace sw::editor
                                                       SW_LOCKEY( "EdCommon", "View2D" ),
                                                       SW_LOCKEY( "EdCommon", "View3D" ) ) )
                 settings._bIs2DMode = ( settings._bIs2DMode == false );
-            EditorSelfTestMarks::note( "viewport.dimension" );
+            EditorSelfTestMarks::record( "viewport.dimension" );
         }
 
         nextItem( bVertical );
@@ -195,7 +195,7 @@ namespace sw::editor
         if ( EditorWidgets::drawIconToggle( "##hud", SW_EDITOR_ICON( "Chart" ), settings._bShowHUD,
                                             SW_LOCKEY( "EdCommon", "ViewportHUD" ) ) )
             settings._bShowHUD = ( settings._bShowHUD == false );
-        EditorSelfTestMarks::note( "viewport.hud" );
+        EditorSelfTestMarks::record( "viewport.hud" );
         EditorDebugHUDControls::drawSectionPopupOnRightClick( "##sceneHUDSections" );
         nextItem( bVertical );
         if ( EditorWidgets::drawIconToggle( "##grid", SW_EDITOR_ICON( "Grid" ), settings._bShowGrid, SW_LOCKEY( "EdCommon", "ViewportGrid" ) ) )
@@ -223,7 +223,7 @@ namespace sw::editor
                 settings._visualizerToggles.setOn( visualizer, bOn == false );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
-            EditorSelfTestMarks::note( mark.c_str() );
+            EditorSelfTestMarks::record( mark.c_str() );
             if ( visualizer._pIconName.isEmpty() )
                 EditorWidgets::drawTooltip( tooltip.c_str() );
             ImGui::PopID();

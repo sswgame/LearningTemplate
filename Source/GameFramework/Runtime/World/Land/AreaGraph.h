@@ -50,7 +50,7 @@ namespace sw
 
     /** @brief 방 사이 연결 한 줄(`<Link from to kind oneWay requires/>`)의 칸입니다. 조건(`requires`)은 조건 글이라 그래프가 푼다. */
     REFLECT()
-    struct SW_GF_API AreaLinkFields
+    struct SW_GF_API AreaLinkParams
     {
         REFLECT_BODY();
 
@@ -140,7 +140,7 @@ namespace sw
         /**
          * @brief `<Area>` 와 `<Link>` 를 가진 노드를 읽어 **더합니다**. 지우지는 않습니다. 다른 키트의 XML 안에 그래프를 함께 적을 때 쓰며, 더한 방 수를 반환합니다.
          */
-        uint32 loadFromNode( const XMLNode& node, string_view sourceName );
+        uint32 loadFromXML( const XMLNode& node, string_view sourceName );
         /** @brief 방에 들어갑니다. 방문과 발견이 되고 이웃 방도 발견됩니다. 처음 방문이면 true 이고, 없는 방은 false 입니다. */
         bool enterArea( const hashed_string& areaID );
         /** @brief 방을 지도에 드러냅니다. 지도 아이템과 힌트가 씁니다. 새로 드러났으면 true 입니다. */

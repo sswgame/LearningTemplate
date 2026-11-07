@@ -164,12 +164,12 @@ namespace sw
         void               update( UnixMilliseconds now ) final;
         void               pollCompletions( vector<ReceiptValidationResult>& outListResult ) final;
         void               pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) final;
-        void               forgetRefund( string_view transactionID ) final;
+        void               removeRefund( string_view transactionID ) final;
         bool               usesRefundCursor() const final { return true; }
         void               restoreRefundCursor( int64 lastReadMs ) final;
         [[nodiscard]] bool takeRefundCursor( int64& outLastReadMs ) final;
         void               confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) final;
-        void               pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome ) final;
+        void               pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome ) final;
         void               shutdown() final;
 
     protected:
@@ -233,7 +233,7 @@ namespace sw
         vector<ReceiptCall>                _listWaiting;
         vector<ReceiptValidationResult>    _listDone;
         vector<ReceiptRefundNotification>  _listRefund;
-        vector<ReceiptDeliveryOutcome>     _listDeliveryDone;
+        vector<ReceiptDeliveryResult>      _listDeliveryDone;
         unordered_set<string>              _uniqueSetNotifiedRefund;
         HTTPClient*                        _pHTTPClient;
         uint8                              _bRefundIncomplete : 1; ///< 지금 조회의 어느 쪽에 읽지 못한 것이 있었다

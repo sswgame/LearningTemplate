@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Animation/Graph/AnimationGraphFields.h"
+#include "Engine/Animation/Graph/AnimationGraphParams.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -39,21 +39,21 @@ namespace sw
                         bValid = false;
                         continue;
                     }
-                    AnimationBoneMaskEntryFields fields;
-                    if ( XMLFields::readFields( entryNode, fields, context ) == false || XMLNameCheck::reportUnknownChildren( entryNode, nullptr, 0, context ) == false )
+                    AnimationBoneMaskEntryParams params;
+                    if ( XMLFields::readFields( entryNode, params, context ) == false || XMLNameCheck::reportUnknownChildren( entryNode, nullptr, 0, context ) == false )
                     {
                         bValid = false;
                         continue;
                     }
-                    if ( fields._bone.empty() )
+                    if ( params._bone.empty() )
                     {
                         SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskItemNo", "%#: bone mask '%#' item %# has an empty 'bone'", context, pListKey, index );
                         bValid = false;
                         continue;
                     }
                     AnimationBoneMaskEntry entry{};
-                    entry._bone       = fields._bone;
-                    entry._weight     = fields._weight;
+                    entry._bone       = params._bone;
+                    entry._weight     = params._weight;
                     entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
                     inoutListEntry.push_back( entry );
                 }
@@ -134,10 +134,10 @@ namespace sw
             {
                 if ( entry._bPropagate != bPropagate )
                     continue;
-                AnimationBoneMaskEntryFields fields;
-                fields._bone   = entry._bone;
-                fields._weight = entry._weight;
-                XMLFields::writeFields( listNode.appendChild( AnimationBoneMaskInternal::kEntryTag ), fields );
+                AnimationBoneMaskEntryParams params;
+                params._bone   = entry._bone;
+                params._weight = entry._weight;
+                XMLFields::writeFields( listNode.appendChild( AnimationBoneMaskInternal::kEntryTag ), params );
             }
         }
     }

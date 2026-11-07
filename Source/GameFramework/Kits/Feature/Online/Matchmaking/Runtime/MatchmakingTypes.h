@@ -349,7 +349,7 @@ namespace sw
 {
     /** @brief 줄을 선 티켓이 끝난 이유입니다. 와이어 값입니다. */
     ENUM( Count = Count )
-    enum class MatchQueueOutcome : uint8
+    enum class MatchQueueResult : uint8
     {
         Found = 0,
         Timeout,   ///< 모드 시한을 넘었거나 권한 서버가 바뀌어 티켓을 잃었다. 다시 줄을 선다
@@ -384,6 +384,6 @@ namespace sw
         PROPERTY()
         uint16 _port{ 0 };
         PROPERTY()
-        MatchQueueOutcome _outcome{ MatchQueueOutcome::Found };
+        MatchQueueResult _result{ MatchQueueResult::Found };
     };
 } // namespace sw

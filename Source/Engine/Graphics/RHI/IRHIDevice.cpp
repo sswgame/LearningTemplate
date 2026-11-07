@@ -145,9 +145,9 @@ namespace sw
         SW_LOG_TRACE_ID( "RHI.WaitIdle", "waitIdle (%#)", getEnumName( reason ) );
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
-        const RenderThreadDrainFunction pfnDrain = _pfnRenderThreadDrain.load( std::memory_order_acquire );
-        if ( pfnDrain != nullptr && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
-            pfnDrain( _pRenderThreadDrainContext.load( std::memory_order_relaxed ) );
+        const RenderThreadFlushFunction pfnFlush = _pfnRenderThreadFlush.load( std::memory_order_acquire );
+        if ( pfnFlush != nullptr && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
+            pfnFlush( _pRenderThreadFlushContext.load( std::memory_order_relaxed ) );
         // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
         flushDeferredHandleReleases();
         waitIdleInternal();
@@ -221,26 +221,26 @@ namespace sw
         _memoryTracker->setDriverBudget( budget );
     }
 
-    void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID )
+    void IRHIDevice::setRenderThreadFlush( RenderThreadFlushFunction pfnFlush, void* pContext, std::thread::id renderThreadID )
     {
-        if ( pfnDrain != nullptr )
+        if ( pfnFlush != nullptr )
         {
-            _pRenderThreadDrainContext.store( pContext, std::memory_order_relaxed );
+            _pRenderThreadFlushContext.store( pContext, std::memory_order_relaxed );
             _renderThreadID.store( renderThreadID, std::memory_order_relaxed );
-            _pfnRenderThreadDrain.store( pfnDrain, std::memory_order_release );
+            _pfnRenderThreadFlush.store( pfnFlush, std::memory_order_release );
         }
         else
         {
-            _pfnRenderThreadDrain.store( nullptr, std::memory_order_release );
-            _pRenderThreadDrainContext.store( nullptr, std::memory_order_relaxed );
+            _pfnRenderThreadFlush.store( nullptr, std::memory_order_release );
+            _pRenderThreadFlushContext.store( nullptr, std::memory_order_relaxed );
             _renderThreadID.store( std::thread::id{}, std::memory_order_relaxed );
         }
         // 렌더 스레드 역할의 소유자도 여기서 정한다(Debug 가 역할 진입에서 스레드를 확인한다). 풀면 다음에 들어오는 스레드(종료 · 인라인 실행)가 받는다.
-        if ( pfnDrain != nullptr )
+        if ( pfnFlush != nullptr )
             _renderThread.bindToThread( renderThreadID );
         else
             _renderThread.unbind();
-        onRenderThreadRoleChanged( pfnDrain != nullptr ? renderThreadID : std::thread::id{} );
+        onRenderThreadRoleChanged( pfnFlush != nullptr ? renderThreadID : std::thread::id{} );
         // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 맞춘다.
         _pDeferredHandleQueue->_retiredFrameCount.store( _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire ), std::memory_order_release );
         flushDeferredHandleReleases();
@@ -254,7 +254,7 @@ namespace sw
         // (GPUScene 배치의 머티리얼 텍스처 SRV). 그래서 다음에 넘길 프레임(넘긴 수 + 1)이 끝난 뒤에 내린다 — 렌더 스레드가 쉬고 있어도 그렇다.
         const uint64 queuedFrameCount = _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire );
         const bool   bFrameInFlight   = queuedFrameCount != _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
-        const bool   bRenderThreadUp  = _pfnRenderThreadDrain.load( std::memory_order_acquire ) != nullptr;
+        const bool   bRenderThreadUp  = _pfnRenderThreadFlush.load( std::memory_order_acquire ) != nullptr;
         if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
         {
             ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
@@ -337,15 +337,15 @@ namespace sw
     {
         // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점에는 백엔드 자원이
         // 이미 없으므로 **돌려줄 수 없다.** 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
-        RHIRenderResource::forgetAllFor( this );
+        RHIRenderResource::clearAllFor( this );
     }
 
     IRHIDevice::IRHIDevice()
         : _pSurface{ nullptr }
         , _pTimestampProvider{ nullptr }
         , _pContextThreadBinding{ nullptr }
-        , _pfnRenderThreadDrain{ nullptr }
-        , _pRenderThreadDrainContext{ nullptr }
+        , _pfnRenderThreadFlush{ nullptr }
+        , _pRenderThreadFlushContext{ nullptr }
         , _renderThreadID{ std::thread::id{} }
         , _backBufferWidth{ 0 }
         , _backBufferHeight{ 0 }

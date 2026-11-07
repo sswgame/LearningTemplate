@@ -65,7 +65,7 @@ namespace sw
          * @details false 는 "아무것도 언로드하지 않았다"는 뜻이어야 합니다. 호스트가 상태를 저장하지 못했을 때(게임 상태 직렬화 실패) 씁니다.
          */
         using OnBeforeCommitBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
-        using DrainWorkersDelegate        = Delegate<void()>;
+        using FlushWorkersDelegate        = Delegate<void()>;
         /** @brief true 를 돌려주는 동안 리로드를 잡아 둡니다(`addReloadHold`). */
         using ReloadHoldDelegate = Delegate<bool()>;
 
@@ -176,7 +176,7 @@ namespace sw
          * @details TaskManager 만으로는 부족하다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로, 모듈 호스트가
          *          renderThread->waitIdle() 와 device.waitIdle() 을 여기에 연결해야 Present 훅이 실행 중인 라이브러리를 FreeLibrary 하지 않는다.
          */
-        [[nodiscard]] Subscription setDrainWorkers( DrainWorkersDelegate delegate );
+        [[nodiscard]] Subscription setFlushWorkers( FlushWorkersDelegate delegate );
 
         /** @brief DLL 그래프가 섞인 상태로 보고 이후 리로드를 막습니다. 프로세스를 다시 시작해야 합니다. */
         void markGraphBroken( string_view reason );
@@ -216,7 +216,7 @@ namespace sw
             AfterReload,
             ReloadFault,
             ValidateLibrary,
-            DrainWorkers,
+            FlushWorkers,
         };
         /** @brief 살아 있는 구독 하나 — 어느 모듈(배치 · 비우기는 빈 이름)의 어느 칸인지입니다. */
         struct CallbackRegistration
@@ -319,9 +319,9 @@ namespace sw
          * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
          */
-        bool drainTasksBeforeUnload();
-        /** @brief 렌더 · 태스크 워커를 비웁니다(`drainTasksBeforeUnload` 의 앞 절반 — 그 뒤에 이벤트 큐를 비운다). */
-        bool drainWorkersBeforeUnload();
+        bool flushTasksBeforeUnload();
+        /** @brief 렌더 · 태스크 워커를 비웁니다(`flushTasksBeforeUnload` 의 앞 절반 — 그 뒤에 이벤트 큐를 비운다). */
+        bool flushWorkersBeforeUnload();
         /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
         /** @brief @p listOrder(의존 순서)의 모듈마다 섀도 복사본을 준비합니다. 하나라도 실패하면 오류를 남기고 false 입니다(준비한 것은 @p outListPrepared 에 남아 있어 부르는 쪽이 버린다). */
@@ -352,7 +352,7 @@ namespace sw
         BuildNotice _buildNotice                         SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
         MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
-        DrainWorkersDelegate                             _drainWorkers;
+        FlushWorkersDelegate                             _flushWorkers;
         vector<CallbackRegistration>                     _listCallbackRegistration; ///< 살아 있는 칸 구독이 가리키는 칸
         IDAllocator<uint64>                              _callbackIDAllocator;      ///< 칸 구독 번호(0 은 빈 구독)
         DeferredLibraryUnloadQueue                       _deferredUnloadQueue;      ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)

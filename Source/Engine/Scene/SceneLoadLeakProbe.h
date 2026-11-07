@@ -39,7 +39,7 @@ namespace sw
         /** @brief 프레임마다 한 칸 진행합니다. 끝나면 판정을 로그로 남기고 `TagTotals` 창을 다시 엽니다. */
         void update( SceneManager& manager );
         /** @brief 마지막으로 끝난 측정의 판정입니다(`_bValid` 가 false 이면 아직 없다). */
-        const LeakCurveVerdict& getVerdict() const { return _verdict; }
+        const LeakCurveResult& getResult() const { return _result; }
 
     private:
         enum class Phase : uint8
@@ -68,6 +68,6 @@ namespace sw
         uint64                 _sumBlocks;     ///< 대조를 뺀 남은 블록 수의 누적 합
         TaskFuture<Scene*>     _loadFuture;
         vector<LeakCurvePoint> _listPoint;
-        LeakCurveVerdict       _verdict;
+        LeakCurveResult        _result;
     };
 } // namespace sw

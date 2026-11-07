@@ -111,7 +111,7 @@ namespace sw
 
     bool RhythmChart::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return GameDataXML::loadText( *this, &RhythmChart::loadRoot, xmlText, sourceName, "Chart" );
+        return GameDataXML::loadFromXMLText( *this, &RhythmChart::loadRoot, xmlText, sourceName, "Chart" );
     }
 
     float32 RhythmChart::convertBeatToSeconds( float32 beat ) const

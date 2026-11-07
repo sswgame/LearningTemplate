@@ -90,7 +90,7 @@ namespace sw
 
                 // 위치 · 회전 고르기는 변환 복사만 받는다 — 위치 · 회전 제약은 공통 칸만 읽는다(그 키를 적으면 모르는 키다).
                 if ( _mode != Mode::CopyTransform )
-                    return reader.readFields( static_cast<RigConstraintFields&>( _fields ) );
+                    return reader.readFields( static_cast<RigConstraintParams&>( _fields ) );
                 if ( reader.readFields( _fields ) == false )
                     return false;
                 _bPosition = _fields._bPosition ? SW_TRUE : SW_FALSE;
@@ -123,7 +123,7 @@ namespace sw
             void reset() override { _bCaptured = SW_FALSE; }
 
         private:
-            RigCopyTransformFields                     _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigCopyTransformParams                     _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             RigConstraintNodesInternal::RigidTransform _offset{};
             uint32                                     _bone{ 0 };
             uint32                                     _target{ 0 };
@@ -232,7 +232,7 @@ namespace sw
             }
 
         private:
-            RigParentSwitchFields                      _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigParentSwitchParams                      _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             vector<hashed_string>                      _listParentName{};
             vector<uint32>                             _listParent{};
             RigConstraintNodesInternal::RigidTransform _offset{};
@@ -284,7 +284,7 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
 
         private:
-            RigDistanceFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigDistanceParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             uint32            _bone{ 0 };
             uint32            _target{ 0 };
         };
@@ -325,7 +325,7 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
 
         private:
-            RigLimitRotationFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigLimitRotationParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             quaternion             _reference{};
             uint32                 _bone{ 0 };
         };
@@ -350,12 +350,12 @@ namespace sw
                 for ( size_t index = 0; bOk && bones.isValid() && index < bones.size(); ++index )
                 {
                     RigXMLReader        entryReader( bones.at( index ), reader.getContext() );
-                    RigBoneWeightFields entryFields;
-                    bOk = entryReader.readFields( entryFields );
+                    RigBoneWeightParams entryParams;
+                    bOk = entryReader.readFields( entryParams );
                     bOk = entryReader.finish() && bOk;
                     TwistBone entry{};
-                    entry._name   = entryFields._bone;
-                    entry._weight = entryFields._weight;
+                    entry._name   = entryParams._bone;
+                    entry._weight = entryParams._weight;
                     _listTwist.push_back( entry );
                 }
                 if ( bOk && ( _listTwist.empty() || _axis.getLengthSquared() < 0.5f ) )
@@ -416,7 +416,7 @@ namespace sw
             }
 
         private:
-            RigTwistDistributionFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigTwistDistributionParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct TwistBone
             {
                 hashed_string _name{};
@@ -468,7 +468,7 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
 
         private:
-            RigScaleBoneFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigScaleBoneParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             uint32             _bone{ 0 };
         };
 

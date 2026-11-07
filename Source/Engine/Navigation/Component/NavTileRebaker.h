@@ -54,7 +54,7 @@ namespace sw
          */
         void updateObstacles( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle, float32 moveThreshold );
         /** @brief 사라지는 장애물을 내비메시에서 뺍니다(다시 베이크 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다). */
-        void forgetObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
+        void untrackObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
         /** @brief 장애물 캐시 종류마다 쌓인 장애물 요청을 처리합니다(끝난 베이크 끼우기와 같은 자리 — 질의가 없는 동안). */
         static void updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds );
         /** @brief 새 캐시 종류에 지금 뚫고 있는 장애물을 모두 넣습니다(런타임을 처음 만들 때). */

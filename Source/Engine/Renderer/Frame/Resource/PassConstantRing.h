@@ -47,7 +47,7 @@ namespace sw
         /** @brief 슬롯을 디바이스에 돌려주고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. */
         void release( IRHIDevice* pDevice );
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다(destroy 를 부르면 해제 후 사용입니다). */
-        void forget();
+        void clear();
 
         /** @brief 프레임 시작: 커서를 1번 슬롯으로 되돌리고 고갈 경고 래치를 해제합니다. */
         void beginFrame();

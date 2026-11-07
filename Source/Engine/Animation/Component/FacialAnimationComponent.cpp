@@ -30,12 +30,12 @@ namespace sw
         struct FacialAnimationInternal
         {
             /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 -1 — 검증이 이미 알렸다). */
-            static void mapTargets( const SkeletalMeshComponent& unit, const FacialPose& pose, vector<int32>& outListIndex )
+            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<int32>& outListIndex )
             {
                 outListIndex.clear();
                 for ( const FacialTargetWeight& target : pose._listTarget )
                 {
-                    outListIndex.push_back( unit.findMorphTargetIndex( target._target ) );
+                    outListIndex.push_back( skeletalMesh.findMorphTargetIndex( target._target ) );
                 }
             }
 
@@ -70,9 +70,9 @@ namespace sw
         return _owner.isDrivingFace() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
     }
 
-    void FacialAnimationBinding::prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void FacialAnimationBinding::prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
-        (void)unit;
+        (void)skeletalMesh;
         (void)context;
         // 실시간 입력은 게임 스레드에서 표정 순서대로 옮겨 둔다 — 워커의 얼굴 단계는 이 값만 읽는다.
         const vector<FacialPose>& listExpression = _owner.getFacialRig().getExpressions();
@@ -87,32 +87,32 @@ namespace sw
         }
     }
 
-    void FacialAnimationBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void FacialAnimationBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
             _owner.advanceTime( context._deltaSeconds );
         else if ( phase == AnimationPhase::PostProcess )
-            _owner.applyFace( unit );
+            _owner.applyFace( skeletalMesh );
     }
 
-    void FacialAnimationBinding::finishAnimationFrame( SkeletalMeshComponent& unit )
+    void FacialAnimationBinding::finishAnimationFrame( SkeletalMeshComponent& skeletalMesh )
     {
         // 시선 목표를 모델 공간으로 옮겨 둔다(게임 스레드 — 트랜스폼을 읽는다). 다음 프레임의 후처리가 쓴다.
         if ( _owner._bLookAt == SW_TRUE )
         {
-            _owner._lookAtModel       = float3::transform( _owner._lookAtWorld, unit.getWorldMatrix().invert() );
+            _owner._lookAtModel       = float3::transform( _owner._lookAtWorld, skeletalMesh.getWorldMatrix().invert() );
             _owner._bLookAtModelReady = SW_TRUE;
         }
         // 같은 오브젝트의 애니메이터(표정 커브)를 다시 찾는다 — 컴포넌트가 붙고 떨어질 수 있다.
-        GameObject*                pOwner    = unit.getOwner();
+        GameObject*                pOwner    = skeletalMesh.getOwner();
         SkeletalAnimatorComponent* pAnimator = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         _owner._animator                     = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
     }
 
-    void FacialAnimationBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    void FacialAnimationBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
     {
-        if ( _owner._pUnit == &unit )
-            _owner._pUnit = nullptr;
+        if ( _owner._pSkeletalMesh == &skeletalMesh )
+            _owner._pSkeletalMesh = nullptr;
     }
 
     FacialAnimationComponent::FacialAnimationComponent()
@@ -133,7 +133,7 @@ namespace sw
         , _listTrackToRigViseme{}
         , _listScratchVisemeWeight{}
         , _animator{}
-        , _pUnit{ nullptr }
+        , _pSkeletalMesh{ nullptr }
         , _pBoundMesh{ nullptr }
         , _pBoundSkeleton{ nullptr }
         , _lookAtWorld{}
@@ -158,7 +158,7 @@ namespace sw
 
     FacialAnimationComponent::~FacialAnimationComponent()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
     }
 
@@ -177,9 +177,9 @@ namespace sw
 
     void FacialAnimationComponent::onEndPlay()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = nullptr;
+        _pSkeletalMesh = nullptr;
         Component::onEndPlay();
     }
 
@@ -230,18 +230,18 @@ namespace sw
 
     void FacialAnimationComponent::bindToUnit()
     {
-        GameObject*                pOwner    = getOwner();
-        SkeletalMeshComponent*     pUnit     = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        SkeletalAnimatorComponent* pAnimator = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        GameObject*                pOwner        = getOwner();
+        SkeletalMeshComponent*     pSkeletalMesh = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        SkeletalAnimatorComponent* pAnimator     = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         // 표정 커브를 낼 애니메이터 — 첫 평가부터 읽게 지금 찾는다(뒤에 붙으면 게임 스레드 마무리가 찾는다).
         _animator = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
-        if ( pUnit == _pUnit )
+        if ( pSkeletalMesh == _pSkeletalMesh )
             return;
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = pUnit;
-        if ( _pUnit != nullptr )
-            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
+        _pSkeletalMesh = pSkeletalMesh;
+        if ( _pSkeletalMesh != nullptr )
+            _bindingRegistration = _pSkeletalMesh->registerAnimationPhaseTask( &_binding );
         else if ( pOwner != nullptr )
             SW_LOG_WARNING_ID( "FacialAnimation.FacialAnimationNoSkeletalMeshComponent", "'%#': facial animation has no SkeletalMeshComponent on its object", pOwner->getName().c_str() );
     }
@@ -252,8 +252,8 @@ namespace sw
         if ( expressionIndex < 0 )
             return false;
         _listExpressionWeight[static_cast<size_t>( expressionIndex )] = weight;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
         return true;
     }
 
@@ -262,8 +262,8 @@ namespace sw
         if ( pSource == nullptr )
             return {};
         _pLiveSource = pSource;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
         return _liveSourceSubscriptions.issue( pSource );
     }
 
@@ -272,17 +272,17 @@ namespace sw
         if ( _pLiveSource != pSource )
             return;
         _pLiveSource = nullptr;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
     }
 
     void FacialAnimationComponent::setLookAtTarget( const float3& worldPosition )
     {
         _lookAtWorld = worldPosition;
         _bLookAt     = SW_TRUE;
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
         {
-            _lookAtModel       = float3::transform( worldPosition, _pUnit->getWorldMatrix().invert() );
+            _lookAtModel       = float3::transform( worldPosition, _pSkeletalMesh->getWorldMatrix().invert() );
             _bLookAtModelReady = SW_TRUE;
         }
     }
@@ -362,8 +362,8 @@ namespace sw
         {
             _listTrackToRigViseme.push_back( getFacialRig().findVisemeIndex( visemeName ) );
         }
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
     }
 
     void FacialAnimationComponent::speakSamples( vector<float32> listSample, uint32 sampleRate )
@@ -444,10 +444,10 @@ namespace sw
         }
     }
 
-    void FacialAnimationComponent::refreshBindings( const SkeletalMeshComponent& unit )
+    void FacialAnimationComponent::refreshBindings( const SkeletalMeshComponent& skeletalMesh )
     {
-        const Mesh*     pMesh     = unit.getRawMesh();
-        const Skeleton* pSkeleton = &unit.getSkeleton();
+        const Mesh*     pMesh     = skeletalMesh.getRawMesh();
+        const Skeleton* pSkeleton = &skeletalMesh.getSkeleton();
         if ( pMesh == _pBoundMesh && pSkeleton == _pBoundSkeleton )
             return;
         _pBoundMesh     = pMesh;
@@ -466,17 +466,17 @@ namespace sw
         _listExpressionTarget.resize( getFacialRig().getExpressions().size() );
         for ( size_t poseIndex = 0; poseIndex < getFacialRig().getExpressions().size(); ++poseIndex )
         {
-            FacialAnimationInternal::mapTargets( unit, getFacialRig().getExpressions()[poseIndex], _listExpressionTarget[poseIndex] );
+            FacialAnimationInternal::mapTargets( skeletalMesh, getFacialRig().getExpressions()[poseIndex], _listExpressionTarget[poseIndex] );
         }
         _listVisemeTarget.resize( getFacialRig().getVisemes().size() );
         for ( size_t poseIndex = 0; poseIndex < getFacialRig().getVisemes().size(); ++poseIndex )
         {
-            FacialAnimationInternal::mapTargets( unit, getFacialRig().getVisemes()[poseIndex], _listVisemeTarget[poseIndex] );
+            FacialAnimationInternal::mapTargets( skeletalMesh, getFacialRig().getVisemes()[poseIndex], _listVisemeTarget[poseIndex] );
         }
         _listBlinkTarget.clear();
         for ( const hashed_string& target : getFacialRig().getBlink()._listTarget )
         {
-            _listBlinkTarget.push_back( unit.findMorphTargetIndex( target ) );
+            _listBlinkTarget.push_back( skeletalMesh.findMorphTargetIndex( target ) );
         }
         _listEyeBone.clear();
         for ( const hashed_string& bone : getFacialRig().getGaze()._listEyeBone )
@@ -485,20 +485,20 @@ namespace sw
         }
     }
 
-    void FacialAnimationComponent::addPose( SkeletalMeshComponent& unit, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const
+    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const
     {
         if ( weight == 0.0f )
             return;
         for ( size_t targetIndex = 0; targetIndex < listTargetIndex.size() && targetIndex < pose._listTarget.size(); ++targetIndex )
         {
             if ( listTargetIndex[targetIndex] >= 0 )
-                unit.addMorphWeight( static_cast<uint32>( listTargetIndex[targetIndex] ), pose._listTarget[targetIndex]._weight * weight );
+                skeletalMesh.addMorphWeight( static_cast<uint32>( listTargetIndex[targetIndex] ), pose._listTarget[targetIndex]._weight * weight );
         }
     }
 
-    const SkeletalAnimatorComponent* FacialAnimationComponent::findAnimator( const SkeletalMeshComponent* pUnit ) const
+    const SkeletalAnimatorComponent* FacialAnimationComponent::findAnimator( const SkeletalMeshComponent* pSkeletalMesh ) const
     {
-        const GameObject* pOwner      = ( pUnit != nullptr ) ? pUnit->getOwner() : nullptr;
+        const GameObject* pOwner      = ( pSkeletalMesh != nullptr ) ? pSkeletalMesh->getOwner() : nullptr;
         const bool        bResolvable = _animator.isValid() && pOwner != nullptr && pOwner->getManager() != nullptr;
         return bResolvable ? pOwner->getManager()->resolveComponent( _animator ) : nullptr;
     }
@@ -515,7 +515,7 @@ namespace sw
 
     bool FacialAnimationComponent::isDrivingFace() const
     {
-        const SkeletalAnimatorComponent* pAnimator = findAnimator( _pUnit );
+        const SkeletalAnimatorComponent* pAnimator = findAnimator( _pSkeletalMesh );
         for ( size_t poseIndex = 0; poseIndex < getFacialRig().getExpressions().size(); ++poseIndex )
         {
             if ( computeExpressionWeight( poseIndex, pAnimator ) != 0.0f )
@@ -527,18 +527,18 @@ namespace sw
         return bSpeakingVisemes || bBlinking || bGazing;
     }
 
-    void FacialAnimationComponent::applyFace( SkeletalMeshComponent& unit )
+    void FacialAnimationComponent::applyFace( SkeletalMeshComponent& skeletalMesh )
     {
-        refreshBindings( unit );
+        refreshBindings( skeletalMesh );
         if ( isDrivingFace() == false )
             return;
 
         // 표정 — 명시 가중치 + 같은 오브젝트 애니메이터의 같은 이름 커브(애니메이터의 시간 단계가 이미 이번 프레임 커브를 냈다).
-        const SkeletalAnimatorComponent* pAnimator      = findAnimator( &unit );
+        const SkeletalAnimatorComponent* pAnimator      = findAnimator( &skeletalMesh );
         const vector<FacialPose>&        listExpression = getFacialRig().getExpressions();
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
         {
-            addPose( unit, _listExpressionTarget[poseIndex], listExpression[poseIndex], computeExpressionWeight( poseIndex, pAnimator ) );
+            addPose( skeletalMesh, _listExpressionTarget[poseIndex], listExpression[poseIndex], computeExpressionWeight( poseIndex, pAnimator ) );
         }
 
         // 립싱크 — 트랙이면 그 프레임의 비즘 가중치, 아니면 진폭이 대체 비즘을 연다.
@@ -552,7 +552,7 @@ namespace sw
                 const float32          openness      = LipSyncAnalyzer::computeOpenness( LipSyncAnalyzer::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ), lipSync );
                 const int32            visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme );
                 if ( visemeIndex >= 0 )
-                    addPose( unit, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )], openness );
+                    addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )], openness );
             }
             else
             {
@@ -561,7 +561,7 @@ namespace sw
                 {
                     const int32 visemeIndex = _listTrackToRigViseme[trackViseme];
                     if ( visemeIndex >= 0 )
-                        addPose( unit, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )],
+                        addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )],
                                  _listScratchVisemeWeight[trackViseme] );
                 }
             }
@@ -571,21 +571,21 @@ namespace sw
         for ( const int32 targetIndex : _listBlinkTarget )
         {
             if ( targetIndex >= 0 && _blinkAmount > 0.0f )
-                unit.addMorphWeight( static_cast<uint32>( targetIndex ), _blinkAmount );
+                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), _blinkAmount );
         }
 
-        applyGaze( unit );
+        applyGaze( skeletalMesh );
     }
 
-    void FacialAnimationComponent::applyGaze( SkeletalMeshComponent& unit )
+    void FacialAnimationComponent::applyGaze( SkeletalMeshComponent& skeletalMesh )
     {
         const bool bGazeUnavailable = _bLookAt == SW_FALSE || _bLookAtModelReady == SW_FALSE || _listEyeBone.empty();
         if ( bGazeUnavailable )
             return;
         const FacialGazeDef&    gaze       = getFacialRig().getGaze();
-        const vector<float4x4>& listModel  = unit.getModelSpaceTransforms();
-        const vector<int32>&    listParent = unit.getSkeleton().getParentIndices();
-        Pose&                   pose       = unit.getLocalPose();
+        const vector<float4x4>& listModel  = skeletalMesh.getModelSpaceTransforms();
+        const vector<int32>&    listParent = skeletalMesh.getSkeleton().getParentIndices();
+        Pose&                   pose       = skeletalMesh.getLocalPose();
         quaternion*             pRotation  = pose.getRotationData();
         const float32           maxAngle   = gaze._maxAngle;
         const quaternion        saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );

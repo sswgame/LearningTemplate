@@ -109,7 +109,7 @@ namespace sw::editor
             if ( pickedName.empty() == false && store.selectPreset( pickedName ) )
                 session.getSettings() = *store.findSelectedPreset();
         }
-        EditorSelfTestMarks::note( "multiplayer.preset" );
+        EditorSelfTestMarks::record( "multiplayer.preset" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Preset" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldComboEm" ) );
@@ -185,7 +185,7 @@ namespace sw::editor
             ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone || session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
                 (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
-            EditorSelfTestMarks::note( "multiplayer.play" );
+            EditorSelfTestMarks::record( "multiplayer.play" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Play" ) );
             ImGui::EndDisabled();
         }
@@ -193,7 +193,7 @@ namespace sw::editor
         {
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
                 session.requestStop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 연다. 경로는 아래 줄에도 남는다
-            EditorSelfTestMarks::note( "multiplayer.stop" );
+            EditorSelfTestMarks::record( "multiplayer.stop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "UDP", TextArgumentList().addInteger( "port", static_cast<int64>( session.getPort() ) ) ).c_str() );

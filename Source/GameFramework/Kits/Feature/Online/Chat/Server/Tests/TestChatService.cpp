@@ -90,7 +90,7 @@ namespace
     };
 
     /** @brief 서버 하나입니다. 영속 데이터와 버스 허브는 빌립니다. */
-    struct ChatRig
+    struct ChatFixture
     {
         MemoryServiceStore         _store;
         FakeDirectory              _directory;
@@ -101,7 +101,7 @@ namespace
         ChatService                _service;
         uint64                     _nextTag{ 1 };
 
-        ChatRig( MemoryServiceDatabase& database, LocalServerBusHub* pHub, uint64 serverID, ChatServiceConfig settings = ChatServiceConfig{} )
+        ChatFixture( MemoryServiceDatabase& database, LocalServerBusHub* pHub, uint64 serverID, ChatServiceConfig settings = ChatServiceConfig{} )
             : _store{ &database }
             , _directory{}
             , _policy{}
@@ -135,7 +135,7 @@ namespace
                 if ( _transport != nullptr )
                 {
                     vector<ChatBusTopicChange> listChange;
-                    _service.drainBusTopicChanges( listChange );
+                    _service.pollBusTopicChanges( listChange );
                     for ( const ChatBusTopicChange& change : listChange )
                     {
                         if ( change._bSubscribe == SW_TRUE )
@@ -167,7 +167,7 @@ namespace
         {
             pump();
             vector<ChatCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             if ( listCompletion.empty() )
                 return ChatCompletion{};
@@ -220,7 +220,7 @@ namespace
         {
             pump();
             vector<ChatDelivery> listDelivery;
-            _service.drainDeliveries( listDelivery );
+            _service.pollDeliveries( listDelivery );
             return listDelivery;
         }
     };
@@ -273,7 +273,7 @@ SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
 SW_TEST_CASE( ChatServiceTest, JoinAndLeaveRules )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA );
+    ChatFixture           rig( database, nullptr, kServerA );
 
     SW_EXPECT_TRUE( rig.join( kAlice, "Bad Channel" ) == ChatResult::Invalid );
     SW_EXPECT_TRUE( rig.join( kAlice, "nope.kr" ) == ChatResult::Invalid );
@@ -304,7 +304,7 @@ SW_TEST_CASE( ChatServiceTest, JoinAndLeaveRules )
 SW_TEST_CASE( ChatServiceTest, SendDeliversToMembers )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
 
@@ -334,7 +334,7 @@ SW_TEST_CASE( ChatServiceTest, SendDeliversToMembers )
 SW_TEST_CASE( ChatServiceTest, MuteBlocksSending )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
     ChatTestUtil::muteUntil( database, kAlice, kNowMs + 5000 );
     SW_EXPECT_TRUE( rig._service.addMember( kAlice, kWorld, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok );
 
@@ -354,7 +354,7 @@ SW_TEST_CASE( ChatServiceTest, MuteBlocksSending )
 SW_TEST_CASE( ChatServiceTest, RefreshDuringSanctionReadReadsAgain )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rig._service.addMember( kAlice, kWorld, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok ); // 읽기를 맡겼다. 메모리 저장소는 이미 읽었고 완료만 남았다
     rig._service.sendMessage( kAlice, kWorld, "leak", UnixMilliseconds{ kNowMs }, 7 );
 
@@ -370,20 +370,20 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
     MemoryServiceDatabase database;
     ChatServiceConfig     settings    = ChatTestUtil::makeOpenSettings();
     settings._maxPendingSendPerMember = 2;
-    ChatRig rig( database, nullptr, kServerA, settings );
+    ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig._service.addMember( kAlice, kWorld, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok );
     rig._service.sendMessage( kAlice, kWorld, "a", UnixMilliseconds{ kNowMs }, 1 );
     rig._service.sendMessage( kAlice, kWorld, "b", UnixMilliseconds{ kNowMs }, 2 );
     rig._service.sendMessage( kAlice, kWorld, "c", UnixMilliseconds{ kNowMs }, 3 );
     vector<ChatCompletion> listCompletion;
-    rig._service.drainCompletions( listCompletion );
+    rig._service.takeCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 1 ), listCompletion.size() );
     SW_EXPECT_EQUAL( uint64( 3 ), listCompletion[0]._requestTag );
     SW_EXPECT_TRUE( listCompletion[0]._reply._result == ChatResult::RateLimited );
     SW_EXPECT_EQUAL( settings._pendingSendRetryAfterMs, listCompletion[0]._reply._retryAfterMs );
     rig.pump();
     listCompletion.clear();
-    rig._service.drainCompletions( listCompletion );
+    rig._service.takeCompletions( listCompletion );
     SW_EXPECT_EQUAL( size_t( 2 ), listCompletion.size() );
 
     database.armFault( ServiceStoreFault::RejectRead );
@@ -410,7 +410,7 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
     settings._spam._refillIntervalMs = 1000;
     settings._spam._maxRepeatCount   = 1;
     settings._bannedWordsPath        = bannedPath;
-    ChatRig rig( database, nullptr, kServerA, settings );
+    ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 
     const ChatCompletion masked = rig.send( kAlice, "a badword b" );
@@ -426,7 +426,7 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
 
     MemoryServiceDatabase rejectDatabase;
     settings._filterMode = ChatFilterMode::Reject;
-    ChatRig rejecting( rejectDatabase, nullptr, kServerA, settings );
+    ChatFixture rejecting( rejectDatabase, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rejecting.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rejecting.send( kAlice, "a badword b" )._reply._result == ChatResult::Rejected );
     SW_EXPECT_TRUE( rejecting.takeDeliveries().empty() );
@@ -436,7 +436,7 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
 SW_TEST_CASE( ChatServiceTest, BlockedSenderIsSilentlyDropped )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
     rig._policy._listBlocked.push_back( make_pair( kBob, kAlice ) );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
@@ -455,7 +455,7 @@ SW_TEST_CASE( ChatServiceTest, BlockedSenderIsSilentlyDropped )
 SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rig.whisper( kAlice, kAlice, "x" )._reply._result == ChatResult::Invalid );
     SW_EXPECT_TRUE( rig.whisper( kAlice, kInvalidAccountID, "x" )._reply._result == ChatResult::Invalid );
     SW_EXPECT_TRUE( rig.whisper( kAlice, 99, "x" )._reply._result == ChatResult::TargetOffline );
@@ -480,8 +480,8 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
 {
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
-    ChatRig               rigA( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
-    ChatRig               rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rigA( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rigA.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rigB.join( kBob ) == ChatResult::Ok );
     rigA.pump();
@@ -508,8 +508,8 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
 {
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
-    ChatRig               rigA( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
-    ChatRig               rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rigA( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
     rigA._directory._listOnline = vector<AccountID>{ kAlice };
     rigB._directory._listOnline = vector<AccountID>{ kBob };
     rigA.pump();
@@ -547,7 +547,7 @@ SW_TEST_CASE( ChatServiceTest, SanctionChangeOverBusRefreshes )
 {
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
-    ChatRig               rig( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.send( kAlice, "before" )._reply._result == ChatResult::Ok );
 
@@ -565,7 +565,7 @@ SW_TEST_CASE( ChatServiceTest, SanctionChangeOverBusRefreshes )
 SW_TEST_CASE( ChatServiceTest, HistoryPagesNewestFirst )
 {
     MemoryServiceDatabase database;
-    ChatRig               rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     for ( int32 index = 0; index < 5; ++index )
     {
@@ -603,7 +603,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
     settings._historyTrimEvery     = 2;
     settings._historyRetentionMs   = 1000;
     settings._maxQueuedHistory     = 2;
-    ChatRig rig( database, nullptr, kServerA, settings );
+    ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 
     SW_EXPECT_TRUE( rig.send( kAlice, "old" )._reply._result == ChatResult::Ok ); // 순번 1
@@ -633,7 +633,7 @@ SW_TEST_CASE( ChatServiceTest, ReportCapturesContext )
     MemoryServiceDatabase database;
     ChatServiceConfig     settings = ChatTestUtil::makeOpenSettings();
     settings._reportBurst          = 2;
-    ChatRig rig( database, nullptr, kServerA, settings );
+    ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
 

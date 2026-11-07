@@ -137,10 +137,10 @@ namespace sw
 
     bool GoogleReceiptValidator::consumeAuthResponse( const HTTPClientResponse& response, UnixMilliseconds now )
     {
-        const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, now );
-        if ( outcome == ServiceAccountTokenSource::Outcome::None )
+        const ServiceAccountTokenSource::Outcome result = _tokenSource.handleResponse( response, now );
+        if ( result == ServiceAccountTokenSource::Outcome::None )
             return false;
-        flushWaiting( outcome == ServiceAccountTokenSource::Outcome::Granted, now );
+        flushWaiting( result == ServiceAccountTokenSource::Outcome::Granted, now );
         return true;
     }
 

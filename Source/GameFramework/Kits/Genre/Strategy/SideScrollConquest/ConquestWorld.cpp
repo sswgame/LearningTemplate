@@ -313,9 +313,9 @@ namespace sw
         _resource.addValue( resource, amount );
     }
 
-    void ConquestWorld::drainEvents( const DrainLease& lease, vector<ConquestEvent>& outListEvent )
+    void ConquestWorld::pollEvents( const ConsumerLease& lease, vector<ConquestEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( lease, outListEvent );
+        _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
     void ConquestWorld::writeState( Archive& outArchive ) const

@@ -319,7 +319,7 @@ namespace sw
         class DebugHUDScreen final : public UIScreen
         {
         public:
-            DebugHUDScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, WidgetID panel, WidgetID column )
+            DebugHUDScreen( const UIScreenDef& desc, unique_ptr<Widget> root, WidgetID panel, WidgetID column )
                 : UIScreen{ desc, std::move( root ) }
                 , _writer{}
                 , _listView{}
@@ -351,7 +351,7 @@ namespace sw
                 (void)panel->addChild( std::move( column ) );
                 (void)root->addChild( std::move( panel ) );
 
-                UIScreenDesc desc{};
+                UIScreenDef desc{};
                 desc._layer       = UILayer::Overlay;
                 desc._bTakesFocus = false;
                 desc._bShowCursor = false;
@@ -534,7 +534,7 @@ namespace sw
         class DebugHUDWindowScreen final : public UIScreen
         {
         public:
-            DebugHUDWindowScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+            DebugHUDWindowScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
                 : UIScreen{ desc, std::move( root ) }
                 , _listSectionName{}
                 , _listCheckBox{}

@@ -72,14 +72,14 @@ struct RenderGraphPassDesc
 ```cpp
 DataInheritanceSchema MaterialXML::makeInheritanceSchema()
 {
-    DataInheritanceSchema schema{ "MaterialDesc" };
+    DataInheritanceSchema schema{ "MaterialDef" };
     schema._listKeptAttribute.emplace_back( "formatVersion" );
     DataInheritanceSchema properties{ "_properties" };
     properties._keyAttribute = "name";
     schema._listField.push_back( std::move( properties ) );
     return schema;
 }
-SW_DATA_INHERITANCE_SCHEMA( MaterialDesc, &MaterialXML::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
+SW_DATA_INHERITANCE_SCHEMA( MaterialDef, &MaterialXML::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
 
 // 읽기
 string flatText;
@@ -250,7 +250,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | `_listRenderPassRef` | 부모 하나가 아니라 여러 파일을 섞는 믹스인이다. 단일 부모로 옮기면 첨부 묶음을 파이프라인마다 베껴야 한다. 합친 결과의 이름이 겹치면 오류인 것도 다르다(덮어쓰지 않는다) |
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다. 에디터 테마 토큰(`*.tokens.json`)은 파일이 자기 부모를 고르므로 `_base` 를 적고 키 표를 덮는다(`EditorThemeTokens`) |
 | 오디오 이벤트의 `_parentEvent` | 이벤트가 `_listEvent` 래퍼 안에 있어 카탈로그 규칙(루트 바로 아래 되풀이)에 맞지 않는다. 합치기는 `DataInheritance` 그대로이고 이벤트 하나를 가상의 문서로 넘긴다. 파일 합치기가 목록 원소의 `_base` 를 지우므로 이름이 다르다 |
-| `AudioEffectDesc` 목록 | 이름이 비면 종류 이름을 쓰는 규칙이라 열쇠가 비는 원소가 있다. 적으면 통째로 바뀐다 |
+| `AudioEffectDef` 목록 | 이름이 비면 종류 이름을 쓰는 규칙이라 열쇠가 비는 원소가 있다. 적으면 통째로 바뀐다 |
 
 | `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::mergeVariantText` 가 얹어 평평한 `<Skeleton>` 글을 낸다(쿠킹본에 `_base` 가 남지 않는다). 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
 

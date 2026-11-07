@@ -1,7 +1,7 @@
 /**
  * @file AdventureElementGrid.h
  * @brief 야생의 숨결의 화학 엔진입니다. 격자 셀(풀, 나무, 금속, 물, 얼음) 위에서 불, 전기, 얼음이 결정적으로 퍼지는 셀 자동자입니다.
- * @details 기반의 원소 규칙 테이블(`ElementRuleTable`)과 격자(`ElementGrid`) 위에 이 키트의 재질 열거형과 설정을 적용했다.
+ * @details 기반의 원소 규칙 테이블(`ElementRuleCatalog`)과 격자(`ElementGrid`) 위에 이 키트의 재질 열거형과 설정을 적용했다.
  *          규칙 테이블은 설정 값으로 만든다(기본표 `Content/common/data/elements/default.elements.xml` 을 바탕으로, 횃불은 뺐다).
  *          규칙은 한 스텝마다 스텝 시작 시점의 상태만 보고 정한 뒤 한꺼번에 바꾼다. 그래서 셀을 도는 순서가 결과를 바꾸지 않는다.
  *          - 불은 풀과 나무를 태운다. 탄 지 `_spreadDelaySteps` 스텝이 지나면 바람이 부는 쪽의 이웃(대각선 포함 한 칸)으로 옮겨 붙는다.
@@ -22,7 +22,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 
 namespace sw
 {
@@ -121,7 +121,7 @@ namespace sw
         /** @brief 시간을 흘려 고정 스텝을 진행하고, 진행한 스텝 수를 반환합니다. */
         int32 update( float32 deltaTime );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void drainEvents( vector<AdventureElementEvent>& outListEvent );
+        void pollEvents( vector<AdventureElementEvent>& outListEvent );
 
         bool isInside( const int2& cell ) const { return _grid.isInside( cell ); }
         bool isBurning( const int2& cell ) const;
@@ -148,7 +148,7 @@ namespace sw
 
     private:
         AdventureElementSettings      _settings;
-        ElementRuleTable              _table;
+        ElementRuleCatalog            _table;
         ElementGrid                   _grid;
         vector<ElementEvent>          _listGridEvent; ///< 격자 알림을 옮겨 담는 버퍼(재사용한다)
         vector<AdventureElementEvent> _listEvent;

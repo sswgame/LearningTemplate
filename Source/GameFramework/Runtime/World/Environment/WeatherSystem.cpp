@@ -30,10 +30,10 @@ namespace sw
     uint32 WeatherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
-        WeatherCatalogRootFields rootFields{ _transitionTime };
-        if ( XMLFields::readFields( root, rootFields, sourceName ) == false )
+        WeatherCatalogRootParams rootParams{ _transitionTime };
+        if ( XMLFields::readFields( root, rootParams, sourceName ) == false )
             return 0;
-        _transitionTime    = rootFields._transition;
+        _transitionTime    = rootParams._transition;
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
         {

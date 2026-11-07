@@ -204,10 +204,10 @@ namespace sw
         };
 
         /** @brief 길드 요청 하나를 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. */
-        class GuildWork final : public IServiceStoreWork
+        class GuildJob final : public IServiceStoreJob
         {
         public:
-            GuildWork( GuildService* pService, const GuildRequest& request, uint64 requestTag )
+            GuildJob( GuildService* pService, const GuildRequest& request, uint64 requestTag )
                 : _request{ request }
                 , _outcome{}
                 , _pService{ pService }
@@ -220,7 +220,7 @@ namespace sw
             {
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
-                    _outcome                        = GuildOutcome{};
+                    _outcome                        = GuildResult{};
                     const ServiceStoreResult result = runOnce( connection );
                     if ( result == ServiceStoreResult::Ok )
                     {
@@ -234,7 +234,7 @@ namespace sw
                         return;
                     }
                 }
-                _outcome         = GuildOutcome{};
+                _outcome         = GuildResult{};
                 _outcome._result = SocialResult::Conflict;
             }
 
@@ -743,8 +743,8 @@ namespace sw
                 transaction.requireVersion( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
                 if ( bDeposit ) // 길드 레코드 버전을 올려 해산의 "창고가 비었다" 확인과 겹치지 않게 한다
                     transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( info ), guildRecord._version );
-                LedgerTransferOutcome transferOutcome;
-                const LedgerResult    staged = Ledger::stageTransfer( connection, transfer, transaction, transferOutcome );
+                LedgerTransferResult transferOutcome;
+                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, transaction, transferOutcome );
                 if ( staged != LedgerResult::Ok )
                     return failLedger( staged );
                 if ( transferOutcome._bReplayed == SW_FALSE && connection.commit( transaction ) != ServiceStoreResult::Ok )
@@ -753,7 +753,7 @@ namespace sw
                     if ( resolved != LedgerResult::Ok )
                         return resolved == LedgerResult::Conflict ? ServiceStoreResult::Conflict : ServiceStoreResult::Unavailable;
                 }
-                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : transferOutcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : transferOutcome._listHolderBalance )
                 {
                     if ( holderBalance._holder == storage )
                     {
@@ -797,7 +797,7 @@ namespace sw
 
         private:
             GuildRequest         _request;
-            GuildOutcome         _outcome;
+            GuildResult          _outcome;
             GuildService*        _pService;
             const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
             uint64               _requestTag;
@@ -851,7 +851,7 @@ namespace sw
     void GuildService::submit( const GuildRequest& request, uint64 requestTag )
     {
         ++_pendingCount;
-        _pStore->submit( sw::make_unique<GuildWork>( this, request, requestTag ) );
+        _pStore->submit( sw::make_unique<GuildJob>( this, request, requestTag ) );
     }
 
     void GuildService::attachAccount( AccountID accountID, UnixMilliseconds nowMs )
@@ -906,7 +906,7 @@ namespace sw
         return level;
     }
 
-    void GuildService::applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome )
+    void GuildService::applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome )
     {
         --_pendingCount;
         const bool bServerOperation = request._operation == GuildOperation::Attach || request._operation == GuildOperation::AddExperience;

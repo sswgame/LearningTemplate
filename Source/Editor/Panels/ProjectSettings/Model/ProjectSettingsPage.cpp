@@ -39,7 +39,7 @@ namespace sw::editor
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용되지 않은 것이다.
         ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
-        outApplied                           = pConfigReload != nullptr && pConfigReload->reloadChangedFile( _absolutePath ) == ReloadOutcome::Reloaded;
+        outApplied                           = pConfigReload != nullptr && pConfigReload->reloadChangedFile( _absolutePath ) == ReloadResult::Reloaded;
         return true;
     }
 

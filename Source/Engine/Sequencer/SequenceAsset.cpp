@@ -157,12 +157,12 @@ namespace sw
                     SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNoItem", "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
                     break;
                 }
-                case SequenceItemFieldIssue::SpawnFields:
+                case SequenceItemFieldIssue::SpawnParams:
                 {
                     SW_LOG_ERROR_ID( "SequenceAsset.SequenceSpawnItemNeeds", "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
                     break;
                 }
-                case SequenceItemFieldIssue::PresetFields:
+                case SequenceItemFieldIssue::PresetParams:
                 {
                     SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNeedsBoth", "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
                     break;
@@ -204,9 +204,9 @@ namespace sw
             return SequenceItemFieldIssue::UnknownKind;
         // 스폰은 무엇을 어떤 이름으로 만들지가 필수다 — 빈 채로 두면 재생이 조용히 아무것도 만들지 않는다.
         if ( pKindInfo->_bSpawns && ( _prefab.empty() || _targetObject.empty() ) )
-            return SequenceItemFieldIssue::SpawnFields;
+            return SequenceItemFieldIssue::SpawnParams;
         if ( pKindInfo->_bNeedsPreset && ( _preset.empty() || _targetObject.empty() ) )
-            return SequenceItemFieldIssue::PresetFields;
+            return SequenceItemFieldIssue::PresetParams;
         // 시나리오 항목은 무엇을 재생할지가 필수다 — 빈 채로 두면 연출이 조용히 아무것도 부르지 않는다.
         if ( pKindInfo->_bPlaysScenario && _scenario.empty() )
             return SequenceItemFieldIssue::ScenarioMissing;

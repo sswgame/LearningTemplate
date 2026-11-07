@@ -412,7 +412,7 @@ namespace sw
         if ( bCannotFlinch )
             return;
         if ( _flinchLayer < 0 )
-            _flinchLayer = pAnimator->addLayer( AnimationLayerDesc{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
+            _flinchLayer = pAnimator->addLayer( AnimationLayerDef{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
         if ( _flinchLayer < 0 )
             return;
         pAnimator->restartLayer( static_cast<uint32>( _flinchLayer ) );

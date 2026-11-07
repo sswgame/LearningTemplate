@@ -62,8 +62,8 @@ namespace sw
             pushEvent( PartySeriesEvent::Kind::RoundRanked, player, rank, _series.getPlacementPoint( rank ) );
         }
         // 위에서 같은 조건을 확인했으므로 거절되지 않는다. 대기가 0 이라 끝나지 않으면 바로 다음 라운드이다.
-        const RoundSeriesOutcome outcome = _series.reportRound( listRoundScore );
-        if ( outcome == RoundSeriesOutcome::Finished )
+        const RoundSeriesResult result = _series.reportRound( listRoundScore );
+        if ( result == RoundSeriesResult::Finished )
         {
             pushEvent( PartySeriesEvent::Kind::SeriesWon, getWinner(), getTotal( getWinner() ), 0 );
             return true;
@@ -79,9 +79,9 @@ namespace sw
         return &_listRound[static_cast<size_t>( getRoundNumber() ) % _listRound.size()];
     }
 
-    void PartyRoundSeries::drainEvents( vector<PartySeriesEvent>& outListEvent )
+    void PartyRoundSeries::pollEvents( vector<PartySeriesEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     uint32 PartyRoundSeries::loadRoot( const XMLNode& root, string_view sourceName )

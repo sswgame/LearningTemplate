@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generated from game/empty/materials/matgraph/rim_glow.matgraph.xml by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->
-<MaterialDesc formatVersion="0" name="matgraph_rim_glow" shaderPath="game/empty/shaders/matgraph/matgraph_rim_glow_51edde95.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="matgraph_rim_glow" shaderPath="game/empty/shaders/matgraph/matgraph_rim_glow_51edde95.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_alphaCutoff" type="Range" defaultValue="0.5" min="0" max="1" group="Graph"/>
 		<item name="_tint" type="Color" defaultValue="0.2 0.4 0.9 1" bHdr="0" bSrgb="1" group="Graph"/>
@@ -24,4 +24,4 @@
 			</item>
 		</_multiCompiles>
 	</_permutations>
-</MaterialDesc>
+</MaterialDef>

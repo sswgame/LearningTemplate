@@ -51,7 +51,7 @@ namespace sw
         /** @brief 거래를 엽니다(Invited). @p seed 로 거래 id 를 만들며 겹치면 다음 값을 씁니다. 양쪽 활성 링크는 "없어야 함" 조건이며, 닫혔거나 시한이 지난 이전 거래는 이때 정리합니다. */
         TradeResult invite( AccountID fromID, AccountID toID, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot );
         /** @brief 명령 하나를 처리합니다. 둘 다 확정하면 같은 트랜잭션에서 정산합니다. 닫힌 거래의 확정을 재시도하면 그 결과를 돌려주며 Settled 이면 Ok 입니다. */
-        TradeResult applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferOutcome& outLedger );
+        TradeResult applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferResult& outLedger );
         /** @brief 시한이 지났으면 닫습니다(Timeout). 닫았으면 Ok 이고 아직이면 WrongState 입니다. */
         TradeResult closeIfIdle( uint64 tradeID, int64 nowMs, TradeSnapshot& outSnapshot );
         /** @brief 계정의 열린 거래를 @p reason 이유로 닫습니다. 떠남과 제재가 해당하며 없으면 NotFound 입니다. */
@@ -70,7 +70,7 @@ namespace sw
         };
 
         /** @brief 거래를 닫아 커밋한 결과입니다. `_bRetry` 이면 상대가 그사이 바꿨으므로 다시 읽고 다시 시도합니다. 아니면 `_result` 가 Ok 일 때 닫은 것입니다. */
-        struct CloseOutcome
+        struct CloseResult
         {
             TradeResult _result{ TradeResult::Ok };
             bool        _bRetry{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -85,13 +85,13 @@ namespace sw
 
         TradeResult readSession( uint64 tradeID, SessionRead& outSession );
         /** @brief 거래를 @p reason 이유로 Cancelled 로 닫아 커밋합니다. 닫은 스냅숏은 @p outClosed 에 담습니다. */
-        CloseOutcome commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed );
+        CloseResult commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed );
         /**
          * @brief 둘 다 확정한 거래의 정산 분개를 @p inoutTransaction 에 붙이고 @p inoutNext 를 닫습니다(Settled 또는 Failed).
          * @details 정산할 항목이 없으면 원장을 건드리지 않고 Settled 로 닫습니다. 잔액이나 상한이 모자라면 원장 부분을 붙이지 않고 Failed 로 닫습니다. Ok 가 아니면 호출부가 그 결과로 끝냅니다.
          */
         TradeResult stageSettlement( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& inoutNext, ServiceTransaction& inoutTransaction, SettlementStage& outStage,
-                                     LedgerTransferOutcome& outLedger );
+                                     LedgerTransferResult& outLedger );
         /** @brief 닫힌 거래를 트랜잭션에 붙이고 정산 감사 기록을 남깁니다(취소는 남기지 않습니다). 레코드를 못 쓰면 false 입니다. */
         [[nodiscard]] bool stageClosedTrade( const SessionRead& session, const TradeSnapshot& closed, uint64 tradeID, int64 nowMs, ServiceTransaction& inoutTransaction );
         /** @brief 닫힌 레코드, 활성 링크 지우기, 주인 인덱스 지우기를 트랜잭션에 붙입니다. 레코드를 못 쓰면 false 이며 호출부는 요청을 Invalid 로 끝냅니다. */

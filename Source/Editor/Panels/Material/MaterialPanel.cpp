@@ -314,7 +314,7 @@ namespace sw::editor
         // 글 단추 셋(다시 읽기 · 저장 · 선택에 적용)은 아이콘 단추 + 툴팁으로 줄인다(언리얼 머티리얼 에디터 툴바 · Godot 인스펙터 머리 줄과 같은 모양).
         if ( EditorCompactControls::drawIconButton( "##materialReload", SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EditorMaterial", "ReloadTip" ) ) )
             reloadDocument();
-        EditorSelfTestMarks::note( "material.reload" );
+        EditorSelfTestMarks::record( "material.reload" );
         ImGui::SameLine();
         if ( EditorCompactControls::drawIconButton( "##materialSave", SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EditorMaterial", "SaveTip" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
@@ -327,7 +327,7 @@ namespace sw::editor
         ImGui::SameLine();
         const float32 previewSide = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDPIScale();
         drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide }, false ); // 기즈모가 없다
-        EditorSelfTestMarks::note( "material.previewScene" );
+        EditorSelfTestMarks::record( "material.previewScene" );
 
         fixed_string<constant::buffer::kMax128>& name = _model.editName();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
@@ -379,7 +379,7 @@ namespace sw::editor
             bool                                    bChanged = MaterialPanelInternal::drawTypedProperty( *pProp );
             fixed_string<constant::buffer::kMax128> propertyMark;
             formatstring( propertyMark.data(), propertyMark.capacity(), "material.property.%s", pProp->_name.c_str() );
-            EditorSelfTestMarks::note( propertyMark.c_str() );
+            EditorSelfTestMarks::record( propertyMark.c_str() );
             // 기본값과 다른 행만 되돌리기 단추를 둔다 — 인스펙터와 같은 공용 단추라 모양 · 툴팁이 같다.
             if ( MaterialPanelInternal::isModified( *pProp ) )
             {
@@ -390,7 +390,7 @@ namespace sw::editor
                 }
                 fixed_string<constant::buffer::kMax128> resetMark;
                 formatstring( resetMark.data(), resetMark.capacity(), "material.reset.%s", pProp->_name.c_str() );
-                EditorSelfTestMarks::note( resetMark.c_str() );
+                EditorSelfTestMarks::record( resetMark.c_str() );
             }
             if ( bChanged )
             {
@@ -426,7 +426,7 @@ namespace sw::editor
         const float32               side   = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDPIScale();
         const ImVec2                minPos = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2( side, side ) );
-        EditorSelfTestMarks::note( "material.preview" );
+        EditorSelfTestMarks::record( "material.preview" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "PreviewTip" ) );
 
         ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
@@ -481,7 +481,7 @@ namespace sw::editor
             }
         }
 
-        _model.notePreviewDrawn( MaterialPreviewShading::computeMeanRedMinusBlue( inputs ) );
+        _model.recordPreviewDrawn( MaterialPreviewShading::computeMeanRedMinusBlue( inputs ) );
     }
 
     void MaterialPanel::populatePreviewScene( Scene& scene )

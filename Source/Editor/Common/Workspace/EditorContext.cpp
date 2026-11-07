@@ -76,7 +76,7 @@ namespace sw::editor
         EditorStateStore* const pStore       = findSubsystem<EditorStateStore>();
         TaskManager* const      pTaskManager = findSubsystem<TaskManager>();
         if ( pStore != nullptr && pTaskManager != nullptr )
-            pTaskManager->waitStage( pStore->get<EditorBackgroundWork>()._stage, "EditorContext::shutdown" ); // 중단은 앞서 올렸다(`requestBackgroundStop`) — 오래 걸리면 남은 태스크가 주기적으로 오류로 남는다
+            pTaskManager->waitStage( pStore->get<EditorBackgroundJob>()._stage, "EditorContext::shutdown" ); // 중단은 앞서 올렸다(`requestBackgroundStop`) — 오래 걸리면 남은 태스크가 주기적으로 오류로 남는다
         const uint64 waitMicroseconds = waitWatch.getElapsedMicroseconds();
 
         if ( findEditorScope() == &_scope )

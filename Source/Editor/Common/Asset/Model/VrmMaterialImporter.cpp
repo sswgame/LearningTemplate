@@ -77,7 +77,7 @@ namespace sw::editor
                 {          "_UvAnimRotation", 0.0f},
             };
             static_assert( sizeof( kArrVrm0Float ) / sizeof( kArrVrm0Float[0] ) == Vrm0FloatCount, "Vrm0FloatSlot 과 kArrVrm0Float 의 줄 수가 같아야 한다" );
-            /** @brief 화면 외곽선이 아닐 때의 외곽선 최대 거리입니다(`ToonMaterialDesc::_outlineMaxDistance` 의 초기값과 같은 "제한 없음"). */
+            /** @brief 화면 외곽선이 아닐 때의 외곽선 최대 거리입니다(`ToonMaterialDef::_outlineMaxDistance` 의 초기값과 같은 "제한 없음"). */
             static constexpr float32 kUnlimitedOutlineDistance = 1000.0f;
             /**
              * @brief 0.x 에서 알지만 옮기지 않는 실수 키와, 그 키가 효과 없는 값입니다. 다른 값이면 무시 목록에 남깁니다.
@@ -269,7 +269,7 @@ namespace sw::editor
              * @brief glTF 기본 머티리얼(baseColor, alphaMode, alphaCutoff, doubleSided, emissive)을 읽습니다. 1.0 의 MToon 과 0.x 의 평면 셰이더가 함께 씁니다.
              * @return alphaMode 를 모르면 false 입니다.
              */
-            [[nodiscard]] static bool readGltfBase( const JSONValue& gltfMaterial, ToonMaterialDesc& inoutDesc, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static bool readGltfBase( const JSONValue& gltfMaterial, ToonMaterialDef& inoutDesc, vector<string>* pOutListIgnored, string& outError )
             {
                 if ( gltfMaterial.isObject() == false )
                     return true;
@@ -296,7 +296,7 @@ namespace sw::editor
                     outError = "unknown alphaMode '" + alphaMode + "'";
                     return false;
                 }
-                // 적지 않은 칸은 `ToonMaterialDesc` 의 초기값(glTF 명세의 기본값)이다.
+                // 적지 않은 칸은 `ToonMaterialDef` 의 초기값(glTF 명세의 기본값)이다.
                 bool bTwoSided = inoutDesc._bTwoSided != SW_FALSE;
                 if ( readFloat( gltfMaterial, "alphaCutoff", inoutDesc._alphaCutoff, outError ) == false )
                     return false;
@@ -325,7 +325,7 @@ namespace sw::editor
             }
 
             /** @brief 그림자 없이 기본색 하나로 칠하는 평면 툰입니다. 언릿과 glTF 셰이더가 해당합니다. */
-            static void makeFlat( ToonMaterialDesc& inoutDesc )
+            static void makeFlat( ToonMaterialDef& inoutDesc )
             {
                 inoutDesc._shadeColor   = inoutDesc._baseColor;
                 inoutDesc._shadeTexture = inoutDesc._baseColorTexture;
@@ -464,7 +464,7 @@ namespace sw::editor
             }
 
             /** @brief 블렌드 모드와 컬 모드를 알파 모드 · 양면으로 옮깁니다. 지원하지 않는 값이면 false 입니다. */
-            [[nodiscard]] static bool applyVrm0BlendAndCull( const float32 ( &arrFloat )[Vrm0FloatCount], const string& context, ToonMaterialDesc& inoutDesc, string& outError )
+            [[nodiscard]] static bool applyVrm0BlendAndCull( const float32 ( &arrFloat )[Vrm0FloatCount], const string& context, ToonMaterialDef& inoutDesc, string& outError )
             {
                 const int32 blendMode = static_cast<int32>( arrFloat[Vrm0BlendMode] + 0.5f );
                 if ( blendMode == 0 )
@@ -490,7 +490,7 @@ namespace sw::editor
             }
 
             /** @brief 외곽선 모드 · 두께 · 최대 거리 · 빛 섞기를 옮깁니다. 지원하지 않는 모드면 false 입니다. */
-            [[nodiscard]] static bool applyVrm0Outline( const float32 ( &arrFloat )[Vrm0FloatCount], const string& context, ToonMaterialDesc& inoutDesc, string& outError )
+            [[nodiscard]] static bool applyVrm0Outline( const float32 ( &arrFloat )[Vrm0FloatCount], const string& context, ToonMaterialDef& inoutDesc, string& outError )
             {
                 // 외곽선에서 0.x 의 월드 두께는 cm 단위이고, 화면 두께는 NDC 의 1 % 단위이다(NDC 높이 2 가 화면 높이). 그래서 화면 높이 비율은 × 0.005 다.
                 const int32   outlineMode  = static_cast<int32>( arrFloat[Vrm0OutlineWidthMode] + 0.5f );
@@ -514,9 +514,9 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 읽은 색 · 텍스처 · 실수를 `ToonMaterialDesc` 에 옮깁니다 — 색 · 텍스처 칸, UV 애니메이션, 블렌드 · 컬, 음영 계단, 림, 외곽선. */
+            /** @brief 읽은 색 · 텍스처 · 실수를 `ToonMaterialDef` 에 옮깁니다 — 색 · 텍스처 칸, UV 애니메이션, 블렌드 · 컬, 음영 계단, 림, 외곽선. */
             [[nodiscard]] static bool applyVrm0Mtoon( const float4 ( &arrColor )[kVrm0ColorCount], const int32 ( &arrTexture )[kVrm0TextureCount], const float32 ( &arrFloat )[Vrm0FloatCount],
-                                                      const string& context, ToonMaterialDesc& inoutDesc, string& outError )
+                                                      const string& context, ToonMaterialDef& inoutDesc, string& outError )
             {
                 inoutDesc._baseColor              = arrColor[0];
                 inoutDesc._shadeColor             = arrColor[1];
@@ -572,11 +572,11 @@ namespace sw::editor
         return MathUtil::pow( ( value + 0.055f ) / 1.055f, 2.4f );
     }
 
-    bool VrmMaterialImporter::readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc,
+    bool VrmMaterialImporter::readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDef& outDesc,
                                                 vector<string>* pOutListIgnored, string& outError )
     {
         using Internal = VrmMaterialImporterInternal;
-        outDesc        = ToonMaterialDesc{};
+        outDesc        = ToonMaterialDef{};
         if ( materialProperty.isObject() == false )
         {
             outError = "materialProperties element is not an object";
@@ -616,10 +616,10 @@ namespace sw::editor
         return Internal::applyVrm0Mtoon( arrColor, arrTexture, arrFloat, context, outDesc, outError );
     }
 
-    bool VrmMaterialImporter::readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError )
+    bool VrmMaterialImporter::readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDef& outDesc, vector<string>* pOutListIgnored, string& outError )
     {
         using Internal       = VrmMaterialImporterInternal;
-        outDesc              = ToonMaterialDesc{};
+        outDesc              = ToonMaterialDef{};
         outDesc._name        = gltfMaterial.get( "name" ).asString();
         const string context = "VRM 1.0 material '" + outDesc._name + "'";
         if ( Internal::readGltfBase( gltfMaterial, outDesc, pOutListIgnored, outError ) == false )
@@ -638,7 +638,7 @@ namespace sw::editor
         if ( Internal::checkKeys( mtoon, Internal::kArrMtoon1Key, context + ": VRMC_materials_mtoon", outError ) == false )
             return false;
 
-        // 키가 없으면 `ToonMaterialDesc` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
+        // 키가 없으면 `ToonMaterialDef` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
         string_view invalidFactor;
         auto        readFactor = [&]( string_view key, float4& inoutColor ) -> bool
         {
@@ -706,7 +706,7 @@ namespace sw::editor
         return XMLNode{};
     }
 
-    string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate )
+    string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDef& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate )
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
@@ -718,7 +718,7 @@ namespace sw::editor
         XMLDocument document;
         if ( document.parse( templateText ) == false )
             return {};
-        const XMLNode root       = document.getRoot( "MaterialDesc" );
+        const XMLNode root       = document.getRoot( "MaterialDef" );
         const XMLNode properties = root.findChild( "_properties" );
         if ( root.isValid() == false || properties.isValid() == false )
             return {};

@@ -1,15 +1,15 @@
 <UIThemeCatalog _defaultTheme="default">
 	<_listTheme>
-		<UIThemeDesc _name="default">
+		<UIThemeDef _name="default">
 			<_listStyleSheet>
 				<item>engine/ui/styles/default.uistyle.xml</item>
 			</_listStyleSheet>
-		</UIThemeDesc>
-		<UIThemeDesc _name="highcontrast">
+		</UIThemeDef>
+		<UIThemeDef _name="highcontrast">
 			<_listStyleSheet>
 				<item>engine/ui/styles/default.uistyle.xml</item>
 				<item>engine/ui/styles/highcontrast.uistyle.xml</item>
 			</_listStyleSheet>
-		</UIThemeDesc>
+		</UIThemeDef>
 	</_listTheme>
 </UIThemeCatalog>

@@ -7,12 +7,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 
-#include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/Document/UIBindingDef.h"
 
 namespace sw
 {
     struct UIAnimation;
-    struct UIScreenDesc;
+    struct UIScreenDef;
 
     class Widget;
 
@@ -25,7 +25,7 @@ namespace sw
     struct SW_API UIDocumentWriter
     {
         /** @brief 화면 서술 @p desc, 스타일 시트 목록, 루트 위젯 @p root, 바인딩 식, 애니메이션으로 문서 텍스트를 만듭니다. 애니메이션은 필드를 모두 씁니다. */
-        static string write( const UIScreenDesc& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UIBindingDesc>& listBinding,
+        static string write( const UIScreenDef& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UIBindingDef>& listBinding,
                              const vector<UIAnimation>& listAnimation );
     };
 } // namespace sw

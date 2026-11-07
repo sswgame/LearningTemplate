@@ -316,7 +316,7 @@ namespace sw
                 return false;
             }
             window->showWindow( false );
-            if ( pWindowHost->adopt( window ) == false )
+            if ( pWindowHost->attach( window ) == false )
             {
                 SW_LOG_ERROR_ID( "App.MainWindowOwnerRefused", "The main window owner refused the platform window!" );
                 return false;
@@ -651,7 +651,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             InputManager& inputManager = engine::getSubsystem<InputManager>();
-            inputManager.noteNativeEvent( event );
+            inputManager.recordNativeEvent( event );
             if ( inputManager.shouldDropNativeEvent( event ) )
                 return false;
         }

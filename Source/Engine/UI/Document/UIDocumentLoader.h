@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/Document/UIBindingDef.h"
 
 namespace sw
 {
@@ -39,7 +39,7 @@ namespace sw
          * @param outListBinding 문서에서 분리한 바인딩 식을 위젯 번호와 함께 뒤에 붙입니다(실패하면 비웁니다).
          * @return 루트 위젯입니다. 실패하면(모르는 타입, 읽지 못한 값, 조각이 자기를 다시 부르는 경우) nullptr 를 반환하고 @p outError 를 채웁니다.
          */
-        [[nodiscard]] static unique_ptr<Widget> instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDesc>& outListBinding,
+        [[nodiscard]] static unique_ptr<Widget> instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding,
                                                              string& outError );
         /**
          * @brief 위젯 타입 @p type 의 기본값 인스턴스를 리플렉션 기본 생성자(`$ctor`)로 sw 할당자 블록에 만듭니다. 만들 수 없으면(추상 타입이거나 생성자가 없음) nullptr 입니다.

@@ -305,7 +305,7 @@ namespace sw::editor
         if ( EditorPlaySession::areSceneEditsHeld() )
         {
             SW_LOG_ERROR_ID( "EditorWorkspace.SceneEditedWhileScene", "The scene was edited while scene edits are held (a light probe bake) - the edit path did not ask EditorPlaySession::areSceneEditsAllowed" );
-            EditorPlaySession::noteSceneEditWhileHeld();
+            EditorPlaySession::recordSceneEditWhileHeld();
         }
         _bSceneDirty = SW_TRUE;
     }

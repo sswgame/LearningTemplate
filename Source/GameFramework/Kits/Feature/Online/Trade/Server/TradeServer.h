@@ -62,21 +62,21 @@ namespace sw
         /** @brief 응답을 씁니다. 범위 밖 값이 있어 쓰지 못하면(로그가 남는다) `kInternal` 로 답합니다. */
         void        respond( OnlineServiceHost& host, const NetRequestToken& token, const TradeReply& reply );
         void        onPresenceFound( const AccountPresenceResult& found );
-        static void collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
+        static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
 
     private:
-        unordered_map<uint64, PendingCall>           _mapTagToCall;
-        unordered_map<uint64, PendingLookup>         _mapLookupToCall;  ///< 접속 상태 관리자의 이름 찾기에서 신청으로 가는 맵이다
-        unordered_map<uint64, LedgerTransferOutcome> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액이다. 알림에 싣는다
-        vector<TradeCompletion>                      _listCompletionScratch;
-        vector<TradeSnapshot>                        _listUpdateScratch;
-        vector<AccountPresenceResult>                _listFound; ///< 접속 상태 관리자가 알린 찾기 결과이다. 다음 서비스 틱에 신청으로 이어 간다
-        vector<AccountPresenceResult>                _listFoundScratch;
-        TradeService*                                _pTradeService;
-        const IAccountDirectory*                     _pDirectory;
-        IAccountPresence*                            _pPresence;
-        Subscription                                 _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        uint64                                       _nextTag;
-        UnixMilliseconds                             _nowMs;
+        unordered_map<uint64, PendingCall>          _mapTagToCall;
+        unordered_map<uint64, PendingLookup>        _mapLookupToCall;  ///< 접속 상태 관리자의 이름 찾기에서 신청으로 가는 맵이다
+        unordered_map<uint64, LedgerTransferResult> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액이다. 알림에 싣는다
+        vector<TradeCompletion>                     _listCompletionScratch;
+        vector<TradeSnapshot>                       _listUpdateScratch;
+        vector<AccountPresenceResult>               _listFound; ///< 접속 상태 관리자가 알린 찾기 결과이다. 다음 서비스 틱에 신청으로 이어 간다
+        vector<AccountPresenceResult>               _listFoundScratch;
+        TradeService*                               _pTradeService;
+        const IAccountDirectory*                    _pDirectory;
+        IAccountPresence*                           _pPresence;
+        Subscription                                _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        uint64                                      _nextTag;
+        UnixMilliseconds                            _nowMs;
     };
 } // namespace sw

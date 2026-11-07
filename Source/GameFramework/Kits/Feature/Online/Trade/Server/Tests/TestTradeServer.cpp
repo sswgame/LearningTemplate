@@ -180,22 +180,22 @@ namespace
      * @brief 거래 서비스 + 바인딩 + 루프백 서버 + 세 계정의 연결입니다.
      * @details 서버를 먼저 내린다(저장소 → 호스트 → 남은 완료) — 완료가 서비스를 부르므로 서비스의 `shutdown` 은 그 뒤다.
      */
-    struct TradeServerRig
+    struct TradeServerFixture
     {
-        DefaultTradePolicy              _policy{};
-        RemoteConfig                    _remoteConfig{};
-        TradeService                    _tradeService{};
-        FakeTradeDirectory              _directory{};
-        FakeTradePresence               _presence{};
-        TradeServer                     _tradeServer{};
-        TradePushSink                   _arrSink[3]{};
-        TradeResponseSink               _response{};
-        unique_ptr<test::OnlineTestRig> _pRig{};
+        DefaultTradePolicy                  _policy{};
+        RemoteConfig                        _remoteConfig{};
+        TradeService                        _tradeService{};
+        FakeTradeDirectory                  _directory{};
+        FakeTradePresence                   _presence{};
+        TradeServer                         _tradeServer{};
+        TradePushSink                       _arrSink[3]{};
+        TradeResponseSink                   _response{};
+        unique_ptr<test::OnlineTestFixture> _pRig{};
 
         /** @brief @p bWithPresence 면 서버 여러 대의 모양이다(상대를 접속 상태 관리자에게도 묻는다). */
-        explicit TradeServerRig( bool bWithPresence = false, bool bWithRemoteConfig = false )
+        explicit TradeServerFixture( bool bWithPresence = false, bool bWithRemoteConfig = false )
         {
-            _pRig = make_unique<test::OnlineTestRig>( false );
+            _pRig = make_unique<test::OnlineTestFixture>( false );
             _tradeService.initialize( &_pRig->_server._store, &_policy, nullptr, kServerID, TradeServiceConfig{} );
             _tradeServer.initialize( &_tradeService, &_directory, bWithPresence ? &_presence : nullptr );
             _directory.add( "alice", kAlice );
@@ -218,7 +218,7 @@ namespace
             pump();
         }
 
-        ~TradeServerRig()
+        ~TradeServerFixture()
         {
             _pRig.reset();
             _tradeServer.shutdown();
@@ -250,7 +250,7 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.grant";
-            LedgerTransferOutcome outcome;
+            LedgerTransferResult outcome;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _pRig->_database, request, outcome ) == LedgerResult::Ok );
         }
 
@@ -367,8 +367,8 @@ namespace
 /** @brief [TradeServerTest] 신청: 응답은 신청한 쪽, 초대 알림은 받는 쪽에만 간다(신청한 쪽은 응답으로 안다) */
 SW_TEST_CASE( TradeServerTest, InvitePushesOnlyToThePeer )
 {
-    TradeServerRig   rig;
-    const TradeReply reply = rig.invite( kAliceSlot, "bob" );
+    TradeServerFixture rig;
+    const TradeReply   reply = rig.invite( kAliceSlot, "bob" );
     SW_EXPECT_TRUE( reply._result == TradeResult::Ok );
     SW_EXPECT_TRUE( reply._snapshot._state == TradeState::Invited );
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), reply._snapshot._tradeID );
@@ -385,7 +385,7 @@ SW_TEST_CASE( TradeServerTest, InvitePushesOnlyToThePeer )
 /** @brief [TradeServerTest] 찾지 못한 상대: 서버 한 대(접속 상태 없음)면 바로 PeerOffline 이다. 자기 자신 신청은 Invalid 다 */
 SW_TEST_CASE( TradeServerTest, UnknownPeerAndSelf )
 {
-    TradeServerRig rig;
+    TradeServerFixture rig;
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "nobody" )._result == TradeResult::PeerOffline );
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "" )._result == TradeResult::PeerOffline );
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "alice" )._result == TradeResult::Invalid );
@@ -395,8 +395,8 @@ SW_TEST_CASE( TradeServerTest, UnknownPeerAndSelf )
 /** @brief [TradeServerTest] 패킷: 메서드마다 깨진 · 빈 몸은 kInvalidRequest 이고 거래가 생기거나 바뀌지 않는다. 다른 타입의 몸도 같다. 모르는 메서드는 kNotFound 다 */
 SW_TEST_CASE( TradeServerTest, MalformedBodiesAreRefused )
 {
-    TradeServerRig rig;
-    const uint64   tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    TradeServerFixture rig;
+    const uint64       tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     rig.clearPushes();
     for ( const uint16 method : { TradeMethod::kInvite, TradeMethod::kRespond, TradeMethod::kSetOffer, TradeMethod::kLock, TradeMethod::kConfirm, TradeMethod::kCancel } )
     {
@@ -415,9 +415,9 @@ SW_TEST_CASE( TradeServerTest, MalformedBodiesAreRefused )
 /** @brief [TradeServerTest] 로그인하지 않은 연결은 호스트가 kUnauthenticated 로 막아 바인딩에 닿지 않는다 */
 SW_TEST_CASE( TradeServerTest, AnonymousConnectionIsRefused )
 {
-    TradeServerRig rig;
-    TradePushSink  anonymousSink;
-    const int32    anonymous = rig._pRig->_clients.connect( rig._pRig->_server._port, { &anonymousSink } );
+    TradeServerFixture rig;
+    TradePushSink      anonymousSink;
+    const int32        anonymous = rig._pRig->_clients.connect( rig._pRig->_server._port, { &anonymousSink } );
     rig.pump();
     TradeInviteRequest request;
     request._peerDisplayName = "bob";
@@ -429,7 +429,7 @@ SW_TEST_CASE( TradeServerTest, AnonymousConnectionIsRefused )
 /** @brief [TradeServerTest] 위조: 없는 거래는 NotFound, 남의 거래는 NotParty 이고, 음수 · 0 · 범위 밖 수량은 Invalid, 항목이 너무 많으면 TooManyLegs 다. 어느 것도 거래를 바꾸지 않는다 */
 SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
 {
-    TradeServerRig rig;
+    TradeServerFixture rig;
     rig.grant( kAlice, "cur.gold", 100 );
     const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
@@ -462,7 +462,7 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
 /** @brief [TradeServerTest] 낡은 확정: 본 버전이 지금 버전과 다르면 StaleOffer 이고 아무것도 옮기지 않는다(바꿔치기 사기) */
 SW_TEST_CASE( TradeServerTest, StaleConfirmMovesNothing )
 {
-    TradeServerRig rig;
+    TradeServerFixture rig;
     rig.grant( kAlice, "cur.gold", 100 );
     const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
@@ -481,7 +481,7 @@ SW_TEST_CASE( TradeServerTest, StaleConfirmMovesNothing )
 /** @brief [TradeServerTest] 정산: 양쪽을 옮기고, 응답에는 요청한 쪽, 닫힘 알림에는 각자의 이동 뒤 잔액만 실린다. 남의 잔액이 섞이지 않는다 */
 SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
 {
-    TradeServerRig rig;
+    TradeServerFixture rig;
     rig.grant( kAlice, "cur.gold", 100 );
     rig.grant( kBob, "cur.gem", 50 );
     const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
@@ -518,7 +518,7 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
 /** @brief [TradeServerTest] 제시가 바뀌면 두 당사자에게 갱신 알림이 가고, 거절하면 닫힘 알림과 이유가 간다 */
 SW_TEST_CASE( TradeServerTest, UpdatesAndClosePush )
 {
-    TradeServerRig rig;
+    TradeServerFixture rig;
     rig.grant( kAlice, "cur.gold", 100 );
     const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
@@ -542,8 +542,8 @@ SW_TEST_CASE( TradeServerTest, UpdatesAndClosePush )
 /** @brief [TradeServerTest] 계정이 떠나면 그 계정의 열린 거래를 닫고 상대에게 PartyLeft 로 알린다 */
 SW_TEST_CASE( TradeServerTest, LeavingClosesTheTrade )
 {
-    TradeServerRig rig;
-    const uint64   tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    TradeServerFixture rig;
+    const uint64       tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
     rig.clearPushes();
 
@@ -558,7 +558,7 @@ SW_TEST_CASE( TradeServerTest, LeavingClosesTheTrade )
 /** @brief [TradeServerTest] 서버 여러 대: 이 서버에 없는 이름은 접속 상태 관리자에게 묻고, 답이 오는 다음 틱에 응답한다. 못 찾으면 PeerOffline, 모르는 찾기 번호는 무시한다 */
 SW_TEST_CASE( TradeServerTest, PresenceLookupFinishesTheInvite )
 {
-    TradeServerRig     rig( true );
+    TradeServerFixture rig( true );
     TradeInviteRequest request;
     request._peerDisplayName = "elsewhere";
 
@@ -581,7 +581,7 @@ SW_TEST_CASE( TradeServerTest, PresenceLookupFinishesTheInvite )
 /** @brief [TradeServerTest] 찾기를 기다리는 사이 신청한 계정이 떠나면 신청을 거둔다 — 뒤늦은 답으로 떠난 계정의 거래가 열려 아무도 닫지 못하면 상대가 시한까지 "거래 중" 이 된다 */
 SW_TEST_CASE( TradeServerTest, LookupOfADepartedAccountOpensNothing )
 {
-    TradeServerRig     rig( true );
+    TradeServerFixture rig( true );
     TradeInviteRequest request;
     request._peerDisplayName = "elsewhere";
     (void)rig.send( kAliceSlot, TradeMethod::kInvite, request );
@@ -600,8 +600,8 @@ SW_TEST_CASE( TradeServerTest, LookupOfADepartedAccountOpensNothing )
 /** @brief [TradeServerTest] 상대가 이 서버에 연결돼 있지 않으면 알림을 접속 상태 관리자에게 넘긴다 */
 SW_TEST_CASE( TradeServerTest, PushForAnotherServerGoesThroughPresence )
 {
-    TradeServerRig   rig( true );
-    const TradeReply reply = rig.invite( kAliceSlot, "remote" );
+    TradeServerFixture rig( true );
+    const TradeReply   reply = rig.invite( kAliceSlot, "remote" );
     SW_EXPECT_TRUE( reply._result == TradeResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence._listRelayedAccount.size() );
     SW_EXPECT_EQUAL( kRemote, rig._presence._listRelayedAccount[0] );
@@ -610,8 +610,8 @@ SW_TEST_CASE( TradeServerTest, PushForAnotherServerGoesThroughPresence )
 /** @brief [TradeServerTest] 저장소 실패는 kUnavailable 이고 같은 요청을 다시 하면 된다 */
 SW_TEST_CASE( TradeServerTest, StoreFailureIsUnavailable )
 {
-    TradeServerRig rig;
-    const uint64   tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    TradeServerFixture rig;
+    const uint64       tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     rig._pRig->_database.armFault( ServiceStoreFault::RejectCommit );
     TradeRespondRequest request;
     request._tradeID = tradeID;
@@ -623,7 +623,7 @@ SW_TEST_CASE( TradeServerTest, StoreFailureIsUnavailable )
 /** @brief [TradeServerTest] 기능 플래그가 꺼지면 모든 요청이 kFeatureDisabled 이고 서비스에 닿지 않는다. 플래그가 없으면 기본은 켬이다 */
 SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
 {
-    TradeServerRig rig( false, true );
+    TradeServerFixture rig( false, true );
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "bob" )._result == TradeResult::Ok ); // 플래그 없음 = 켬
 
     RemoteConfigValue value;
@@ -647,8 +647,8 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
 /** @brief [TradeServerTest] 다시 시도할 결과(저장소 일시 장애 — `TradeReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 거래 명령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( TradeServerTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionRig<TradeProtocol, TradeReply> rig;
-    TradeReply                                         finished;
+    test::ReplyRetentionFixture<TradeProtocol, TradeReply> rig;
+    TradeReply                                             finished;
     finished._result = TradeResult::Ok;
     TradeReply unavailable;
     unavailable._result = TradeResult::Unavailable;

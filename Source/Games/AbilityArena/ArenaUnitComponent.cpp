@@ -18,7 +18,7 @@
 namespace sw
 {
     ArenaUnitComponent::ArenaUnitComponent()
-        : _director{}
+        : _gameMode{}
         , _kind{ ArenaUnitKind::Grunt }
         , _facingMode{ PawnFacingMode::ControlYaw }
         , _unitRadius{ 0.5f }
@@ -40,9 +40,9 @@ namespace sw
         _previousButtonDown = 0;
     }
 
-    void ArenaUnitComponent::assignDirector( GameObjectHandle director, const float3& facing )
+    void ArenaUnitComponent::assignGameMode( GameObjectHandle gameMode, const float3& facing )
     {
-        _director = director;
+        _gameMode = gameMode;
         _facing   = facing;
     }
 
@@ -66,12 +66,12 @@ namespace sw
         const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
-        const ArenaGameModeComponent* pDirector = GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const ArenaGameModeComponent* pGameMode = GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {
-            updateDeath( deltaTime, *pMesh, pDirector->getDeathLinger() );
+            updateDeath( deltaTime, *pMesh, pGameMode->getDeathLinger() );
             return;
         }
 
@@ -94,8 +94,8 @@ namespace sw
         if ( direction.getLengthSquared() > 0.0f && speed.has_value() )
             position = position + direction * ( *speed * deltaTime );
         if ( _kind != ArenaUnitKind::Player )
-            separateFromEnemies( *pDirector, position );
-        const float32 halfSize = pDirector->getArenaHalfSize();
+            separateFromEnemies( *pGameMode, position );
+        const float32 halfSize = pGameMode->getArenaHalfSize();
         position._x            = MathUtil::clamp( position._x, -halfSize, halfSize );
         position._z            = MathUtil::clamp( position._z, -halfSize, halfSize );
         pMesh->setLocalPosition( position );
@@ -130,10 +130,10 @@ namespace sw
         _previousButtonDown = intent._buttonDown;
     }
 
-    void ArenaUnitComponent::separateFromEnemies( const ArenaGameModeComponent& director, float3& inoutPosition ) const
+    void ArenaUnitComponent::separateFromEnemies( const ArenaGameModeComponent& gameMode, float3& inoutPosition ) const
     {
         const GameObjectHandle       self     = getOwner()->getHandle();
-        const vector<ArenaUnitView>& listView = director.getUnitViews();
+        const vector<ArenaUnitView>& listView = gameMode.getUnitViews();
         const ArenaUnitView*         pView    = listView.data();
         for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
         {

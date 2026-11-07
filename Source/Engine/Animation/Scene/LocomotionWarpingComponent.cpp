@@ -36,23 +36,23 @@ namespace sw
         return _owner.isOrientingPose() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
     }
 
-    void LocomotionWarpingBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void LocomotionWarpingBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
             _owner._lastDeltaSeconds = context._deltaSeconds;
         else if ( phase == AnimationPhase::PostProcess )
-            _owner.applyOrientation( unit );
+            _owner.applyOrientation( skeletalMesh );
     }
 
-    void LocomotionWarpingBinding::finishAnimationFrame( SkeletalMeshComponent& unit )
+    void LocomotionWarpingBinding::finishAnimationFrame( SkeletalMeshComponent& skeletalMesh )
     {
-        _owner.updateFromMovement( unit );
+        _owner.updateFromMovement( skeletalMesh );
     }
 
-    void LocomotionWarpingBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    void LocomotionWarpingBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
     {
-        if ( _owner._pUnit == &unit )
-            _owner._pUnit = nullptr;
+        if ( _owner._pSkeletalMesh == &skeletalMesh )
+            _owner._pSkeletalMesh = nullptr;
     }
 
     LocomotionWarpingComponent::LocomotionWarpingComponent()
@@ -64,7 +64,7 @@ namespace sw
         , _maxOrientationAngle{ 1.0f }
         , _listOrientationBone{}
         , _binding{ *this }
-        , _pUnit{ nullptr }
+        , _pSkeletalMesh{ nullptr }
         , _previousPosition{}
         , _measuredVelocity{}
         , _orientationAngle{ 0.0f }
@@ -95,27 +95,27 @@ namespace sw
 
     void LocomotionWarpingComponent::bindToUnit()
     {
-        GameObject*            pOwner = getOwner();
-        SkeletalMeshComponent* pUnit  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        if ( pUnit == _pUnit )
+        GameObject*            pOwner        = getOwner();
+        SkeletalMeshComponent* pSkeletalMesh = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pSkeletalMesh == _pSkeletalMesh )
             return;
         unbindFromUnit();
-        _pUnit = pUnit;
-        if ( _pUnit != nullptr )
-            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
+        _pSkeletalMesh = pSkeletalMesh;
+        if ( _pSkeletalMesh != nullptr )
+            _bindingRegistration = _pSkeletalMesh->registerAnimationPhaseTask( &_binding );
         _bHasPrevious = false;
     }
 
     void LocomotionWarpingComponent::unbindFromUnit()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = nullptr;
+        _pSkeletalMesh = nullptr;
     }
 
-    void LocomotionWarpingComponent::updateFromMovement( SkeletalMeshComponent& unit )
+    void LocomotionWarpingComponent::updateFromMovement( SkeletalMeshComponent& skeletalMesh )
     {
-        GameObject*     pOwner = unit.getOwner();
+        GameObject*     pOwner = skeletalMesh.getOwner();
         SceneComponent* pRoot  = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pRoot == nullptr )
             return;
@@ -162,14 +162,14 @@ namespace sw
         }
     }
 
-    void LocomotionWarpingComponent::applyOrientation( SkeletalMeshComponent& unit ) const
+    void LocomotionWarpingComponent::applyOrientation( SkeletalMeshComponent& skeletalMesh ) const
     {
         if ( isOrientingPose() == false )
             return;
         // 후처리 단계에서 읽는 것은 자기 유닛의 모델 공간(기본 포즈 단계가 끝난 값)뿐이라 위 유닛 의존 선언이 필요 없다. 쓴 로컬 포즈의 모델 공간은 후처리 끝에 유닛이 다시 구한다.
-        const Skeleton&         skeleton  = unit.getSkeleton();
-        const vector<float4x4>& listModel = unit.getModelSpaceTransforms();
-        Pose&                   pose      = unit.getLocalPose();
+        const Skeleton&         skeleton  = skeletalMesh.getSkeleton();
+        const vector<float4x4>& listModel = skeletalMesh.getModelSpaceTransforms();
+        Pose&                   pose      = skeletalMesh.getLocalPose();
         const float3            characterUp{ 0.0f, 1.0f, 0.0f };
         for ( const LocomotionOrientationBone& entry : _listOrientationBone )
         {

@@ -371,9 +371,9 @@ namespace sw
         }
     }
 
-    void AdventureDungeonState::drainEvents( vector<AdventureDungeonEvent>& outListEvent )
+    void AdventureDungeonState::pollEvents( vector<AdventureDungeonEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     const AdventureDungeonProgress* AdventureDungeonState::findProgress( const hashed_string& dungeonID ) const

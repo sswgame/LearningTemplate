@@ -575,9 +575,9 @@ namespace sw
         }
     }
 
-    void CitySimulation::drainEvents( const DrainLease& lease, vector<CityEvent>& outListEvent )
+    void CitySimulation::pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( lease, outListEvent );
+        _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
     void CitySimulation::stepFixed( float32 deltaTime )

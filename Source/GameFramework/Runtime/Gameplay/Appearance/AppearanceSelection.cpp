@@ -300,7 +300,7 @@ namespace sw
         // 슬롯의 기본값(지워졌거나 잠긴 아이템이 돌아갈 값)은 기준 프리셋의 것이다.
         CharacterAppearanceSpec baseSpec = current;
         const bool              bBaseKnown =
-            selection._basePresetID.empty() == false && database.getPresets().expand( selection._basePresetID, selection._seed, database.getSlotTable(), database.getSets(), database.getSchemas(), baseSpec );
+            selection._basePresetID.empty() == false && database.getPresets().expand( selection._basePresetID, selection._seed, database.getSlotCatalog(), database.getSets(), database.getSchemas(), baseSpec );
         if ( selection._basePresetID.empty() == false && bBaseKnown == false )
         {
             outReport._bUnknownBasePreset = SW_TRUE;
@@ -537,7 +537,7 @@ namespace sw
             return false;
 
         vector<hashed_string> listSlotName;
-        for ( const AppearanceSlotDef& slot : database.getSlotTable().getSlots() )
+        for ( const AppearanceSlotDef& slot : database.getSlotCatalog().getSlots() )
         {
             listSlotName.push_back( slot._name );
         }

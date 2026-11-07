@@ -61,7 +61,7 @@ namespace sw
         }
         if ( _budgetMilliseconds > 0.0f && _unitCostMicroseconds <= 0.0f )
         {
-            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsBudgetMilliseconds", "Animation LOD settings '%#': _budgetMilliseconds is set but _unitCostMicroseconds is not - the budget needs a modelled unit cost", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsBudgetMilliseconds", "Animation LOD settings '%#': _budgetMilliseconds is set but _unitCostMicroseconds is not - the budget needs a modelled skeletalMesh cost", sourceLabel );
             return false;
         }
         return true;

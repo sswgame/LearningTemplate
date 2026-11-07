@@ -4,20 +4,20 @@
 -->
 <AudioEventLibrary>
 	<_listEvent>
-		<AudioEventDesc _name="Select" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+		<AudioEventDef _name="Select" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
 				<AudioClipEntry _path="game/themepark/sounds/select_001.ogg" />
 			</_listClip>
-		</AudioEventDesc>
-		<AudioEventDesc _name="Built" _bus="ui" _priority="70" _maxInstances="2">
+		</AudioEventDef>
+		<AudioEventDef _name="Built" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
 				<AudioClipEntry _path="game/themepark/sounds/confirmation_001.ogg" />
 			</_listClip>
-		</AudioEventDesc>
-		<AudioEventDesc _name="Blocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
+		</AudioEventDef>
+		<AudioEventDef _name="Blocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
 			<_listClip>
 				<AudioClipEntry _path="game/themepark/sounds/error_001.ogg" />
 			</_listClip>
-		</AudioEventDesc>
+		</AudioEventDef>
 	</_listEvent>
 </AudioEventLibrary>

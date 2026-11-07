@@ -18,7 +18,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
-#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
@@ -61,12 +61,12 @@ namespace sw
     /** @brief 사람 하나입니다. */
     struct ScavengerCrewMember
     {
-        Vitality       _vitality{};
+        CombatHealth   _combatHealth{};
         ScavengerCarry _carry{};
         hashed_string  _areaID{};                   ///< 있는 곳이다(`ship`, `outside`, 시설 방)
         uint8          _bBodyRecovered{ SW_FALSE }; ///< 죽었고 시신이 우주선에 실렸다
 
-        bool isDead() const { return _vitality.isDead(); }
+        bool isDead() const { return _combatHealth.isDead(); }
     };
 } // namespace sw
 
@@ -172,7 +172,7 @@ namespace sw
         int32 computeSellValue() const;
         /** @brief 터미널 상점에서 삽니다(우주선 창고로 들어갑니다). */
         ShopResult buyFromTerminal( const hashed_string& itemID, int32 count );
-        void       drainEvents( vector<ScavengerEvent>& outListEvent );
+        void       pollEvents( vector<ScavengerEvent>& outListEvent );
 
         /**
          * @brief 사람(체력, 든 것, 위치, 시신), 우주선 고철, 할당량, 시설, 위협 감독 둘, 상점 시세, 난수, 위성 id, 시드, 내린 시간, 단계, 해 질 녘 알림을 씁니다.

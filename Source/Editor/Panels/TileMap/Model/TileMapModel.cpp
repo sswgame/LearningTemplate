@@ -105,7 +105,7 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool TileMapModel::saveXML()
+    bool TileMapModel::saveToFile()
     {
         if ( EditorToolAssetCommands::saveTileMap( _pathBuffer.c_str(), captureMapData() ) == false )
         {
@@ -582,7 +582,7 @@ namespace sw::editor
             }
             case PaintLayer::Warp:
             {
-                // 빈 대상은 같은 맵 워프다(`TileWarpFields::_map`). 대상이 비었다고 지우면 집어 온 같은 맵 워프를 칠할 때 도리어 지워졌다.
+                // 빈 대상은 같은 맵 워프다(`TileWarpParams::_map`). 대상이 비었다고 지우면 집어 온 같은 맵 워프를 칠할 때 도리어 지워졌다.
                 if ( _bErase == false )
                     return stampWarp( x, y, _warpTarget.c_str(), _warpTx, _warpTy );
                 return VectorUtil::removeIf( _map._listWarp, [x, y]( const TileMapXMLData::Warp& warp )

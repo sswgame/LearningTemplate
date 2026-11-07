@@ -141,7 +141,7 @@ namespace sw
         if ( _pService == nullptr )
             return;
         _listCompletionScratch.clear();
-        _pService->drainCompletions( _listCompletionScratch );
+        _pService->takeCompletions( _listCompletionScratch );
         for ( LeaderboardCompletion& completion : _listCompletionScratch )
         {
             NetRequestToken token;
@@ -159,7 +159,7 @@ namespace sw
         }
 
         _listUnlockScratch.clear();
-        _pService->drainAchievementUnlocks( _listUnlockScratch );
+        _pService->pollAchievementUnlocks( _listUnlockScratch );
         for ( const AchievementUnlock& unlock : _listUnlockScratch )
         {
             BitWriter body;

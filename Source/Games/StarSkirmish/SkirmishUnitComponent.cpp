@@ -51,7 +51,7 @@ namespace sw
 namespace sw
 {
     SkirmishUnitComponent::SkirmishUnitComponent()
-        : _director{}
+        : _gameMode{}
         , _airHeight{ 2.5f }
         , _footprintFill{ 0.9f }
         , _unitFill{ 1.6f }
@@ -73,9 +73,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void SkirmishUnitComponent::assignUnit( GameObjectHandle director, SlotHandle unitID, float32 modelWidth )
+    void SkirmishUnitComponent::assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth )
     {
-        _director   = director;
+        _gameMode   = gameMode;
         _unitID     = unitID;
         _modelWidth = modelWidth > 0.0f ? modelWidth : 1.0f;
         _pShownLook = nullptr;
@@ -144,8 +144,8 @@ namespace sw
         const bool               bNotMeasurable = pManager == nullptr || pMesh == nullptr || _bPlaced == SW_FALSE;
         if ( bNotMeasurable )
             return -1.0f;
-        const SkirmishGameModeComponent* pDirector = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _director );
-        const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitID ) : nullptr;
+        const SkirmishGameModeComponent* pGameMode = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _gameMode );
+        const RTSUnit*                   pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return -1.0f;
         const float3  shown = pMesh->getLocalPosition();
@@ -162,8 +162,8 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishGameModeComponent* pDirector = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _director );
-        const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitID ) : nullptr;
+        const SkirmishGameModeComponent* pGameMode = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _gameMode );
+        const RTSUnit*                   pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return;
 
@@ -198,7 +198,7 @@ namespace sw
         pMesh->setLocalPosition( position );
         pMesh->setLocalScale( scale );
         pMesh->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
-        const shared_ptr<MaterialInstance>& look = pDirector->findUnitLook( *pUnit, pDirector->isSelected( _unitID ) );
+        const shared_ptr<MaterialInstance>& look = pGameMode->findUnitLook( *pUnit, pGameMode->isSelected( _unitID ) );
         if ( look != nullptr && look.get() != _pShownLook )
         {
             pMesh->setMaterialInstance( look );

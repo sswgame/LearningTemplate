@@ -117,7 +117,7 @@ namespace sw
         Knockout
     };
 
-    /** @brief 대전 중에 일어난 일입니다. `drainEvents` 로 가져갑니다. 상태 저장에는 포함되지 않으며, 롤백으로 다시 돌릴 때 중복 이벤트는 게임이 걸러야 합니다. */
+    /** @brief 대전 중에 일어난 일입니다. `pollEvents` 로 가져갑니다. 상태 저장에는 포함되지 않으며, 롤백으로 다시 돌릴 때 중복 이벤트는 게임이 걸러야 합니다. */
     struct FightingEvent
     {
         enum class Kind : uint8
@@ -288,7 +288,7 @@ namespace sw
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 본문으로 상태를 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 본문이 잘렸거나 맞지 않으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
-        void               drainEvents( vector<FightingEvent>& outListEvent );
+        void               pollEvents( vector<FightingEvent>& outListEvent );
         /**
          * @brief 읽은 상태가 이 대전의 캐릭터 정의와 맞는지 봅니다(`REFLECT( Validate )`, 롤백과 세이브가 함께 씁니다).
          * @details 같은 캐릭터인지, 체력이 0 부터 정의의 최대 안인지, 화면 쪽이 ±1 인지, 기술 · 자세 인덱스가 정의 안인지, 재생 중인 타임라인의 프레임이 그 기술 안인지,

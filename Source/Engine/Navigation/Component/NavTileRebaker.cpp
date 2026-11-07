@@ -83,7 +83,7 @@ namespace sw
             _listObstacleArea.push_back( bounds );
     }
 
-    void NavTileRebaker::forgetObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime )
+    void NavTileRebaker::untrackObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime )
     {
         if ( obstacle._bCarved == SW_TRUE )
         {
@@ -128,7 +128,7 @@ namespace sw
             if ( NavMeshRuntime::isLive( *pObstacle ) == false )
             {
                 if ( pObstacle->_bCarved == SW_TRUE )
-                    forgetObstacle( *pObstacle, listRuntime );
+                    untrackObstacle( *pObstacle, listRuntime );
                 continue;
             }
             // 따르는 트랜스폼(칸의 변경 번호)도 모양도 그대로인 뚫린 장애물은 부피를 다시 만들지 않고 건너뛴다 — 정수 비교 하나다.

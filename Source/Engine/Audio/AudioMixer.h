@@ -1,11 +1,11 @@
 /**
  * @file AudioMixer.h
  * @brief 믹서 그래프의 실행 상태입니다. 버스마다 입력 버퍼, 페이더, 음소거와 솔로, 센드를 가지고 블록 하나를 처리합니다.
- * @details `AudioMixerDesc`(데이터)로 만들고, 오디오 스레드만 만진다. 블록은 다음 순서로 처리한다.
+ * @details `AudioMixerDef`(데이터)로 만들고, 오디오 스레드만 만진다. 블록은 다음 순서로 처리한다.
  *          `beginBlock` 을 호출하고, 보이스가 버스 입력에 더하고, `process` 가 처리 순서(보내는 쪽 먼저)대로 버스마다 페이더를 램프해 곱한다.
  *          그런 다음 센드 대상과 부모에 더하고 master 의 출력을 반환한다.
  *          페이더 게인 = 데이터 볼륨(dB) × 사용자 볼륨(설정 메뉴) × 스냅샷 오프셋(dB) × 음소거/솔로다.
- *          버스마다 채널 구성이 있다(`AudioBusDesc::_channels`): 출력 레이아웃이거나 두 채널이다. 이펙트는 버스의 레이아웃으로 만들고, 채널 수가 다른 버스로 갈 때만 `accumulateBus` 가 바꾼다.
+ *          버스마다 채널 구성이 있다(`AudioBusDef::_channels`): 출력 레이아웃이거나 두 채널이다. 이펙트는 버스의 레이아웃으로 만들고, 채널 수가 다른 버스로 갈 때만 `accumulateBus` 가 바꾼다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -16,7 +16,7 @@
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioDownmix.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
 
 namespace sw
@@ -39,7 +39,7 @@ namespace sw
          * @param layout 출력 채널 구성입니다(장치가 정합니다). `_channels` 가 `Output` 인 버스가 이 레이아웃이고, `Stereo` 인 버스는 두 채널입니다. 버스 입력은 여기서 채널 수만큼 한 번에 잡습니다.
          * @details 이펙트 종류가 버스의 레이아웃을 지원하지 않으면(종류 표의 지원 레이아웃) false 입니다(조용히 건너뛰지 않습니다).
          */
-        [[nodiscard]] bool initialize( const AudioMixerDesc& desc, AudioChannelLayout layout );
+        [[nodiscard]] bool initialize( const AudioMixerDef& desc, AudioChannelLayout layout );
 
         /** @brief 블록을 시작합니다. 모든 버스 입력을 0 으로 비웁니다. */
         void beginBlock( uint32 frameCount );
@@ -63,10 +63,10 @@ namespace sw
         AudioBlockView getBusInput( uint32 busIndex ) { return _listBusState[busIndex]._input.makeView( _blockFrameCount ); }
         /** @brief 출력(master)의 채널 구성입니다. */
         AudioChannelLayout getChannelLayout() const { return _layout; }
-        /** @brief 버스 하나의 채널 구성입니다(`AudioBusDesc::_channels` 를 출력 레이아웃으로 푼 값). 보이스는 이 레이아웃으로 패닝합니다. */
+        /** @brief 버스 하나의 채널 구성입니다(`AudioBusDef::_channels` 를 출력 레이아웃으로 푼 값). 보이스는 이 레이아웃으로 패닝합니다. */
         AudioChannelLayout getBusLayout( uint32 busIndex ) const { return _listBusState[busIndex]._layout; }
         /** @brief 데이터가 정한 보이스 상한과 들림 임계값을 반환합니다. */
-        const AudioMixerDesc& getDesc() const { return _desc; }
+        const AudioMixerDef& getDesc() const { return _desc; }
 
         /** @brief 사용자 볼륨(선형, [0, 1])을 정합니다. 설정 메뉴의 버스 볼륨입니다. */
         void setBusUserVolume( uint32 busIndex, float32 volume );
@@ -87,7 +87,7 @@ namespace sw
         /** @brief 센드 레벨(dB)을 바꿉니다. 그 센드가 없으면 false 입니다. */
         bool setSendLevelDb( uint32 busIndex, uint32 targetBusIndex, float32 levelDb );
 
-        /** @brief 버스의 이펙트를 이름(`AudioEffectDesc::getEffectName`)으로 찾습니다. 없으면 nullptr 입니다. */
+        /** @brief 버스의 이펙트를 이름(`AudioEffectDef::getEffectName`)으로 찾습니다. 없으면 nullptr 입니다. */
         IAudioEffect* findEffect( uint32 busIndex, const hashed_string& effectName ) const;
 
         /** @brief 이 블록에서 정한 버스 페이더 게인(선형)을 반환합니다. 데이터 × 사용자 × 스냅샷 × 음소거/솔로입니다. */
@@ -163,7 +163,7 @@ namespace sw
             }
         };
 
-        AudioMixerDesc     _desc;            /**< 만든 데이터입니다. 엔진이 보이스 상한과 임계값을 읽습니다. */
+        AudioMixerDef      _desc;            /**< 만든 데이터입니다. 엔진이 보이스 상한과 임계값을 읽습니다. */
         vector<Bus>        _listBusState;    /**< 버스입니다(데이터 순서). */
         vector<uint32>     _listOrder;       /**< 처리 순서입니다. */
         uint32             _masterIndex;     /**< master 버스 번호입니다. */

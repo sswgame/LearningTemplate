@@ -44,7 +44,7 @@ namespace sw
     class SW_API SettingsConfirmScreen : public UIScreen
     {
     public:
-        SettingsConfirmScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
+        SettingsConfirmScreen( const UIScreenDef& desc, unique_ptr<Widget> root );
         ~SettingsConfirmScreen() override;
 
         /** @brief 문서 @p documentPath 로 창을 열고 설정 @p settings 의 카운트다운을 붙입니다. 열지 못하면 무효 핸들입니다. */

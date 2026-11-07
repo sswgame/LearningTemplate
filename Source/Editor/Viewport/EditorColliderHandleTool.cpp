@@ -77,7 +77,7 @@ namespace sw::editor
             }
 
             /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`collider.handle.<셰이프>.<축><부호>`). */
-            static void noteHandle( const ColliderHandle& handle, const ImVec2& screen )
+            static void recordHandle( const ColliderHandle& handle, const ImVec2& screen )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
@@ -194,7 +194,7 @@ namespace sw::editor
             if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._position, args._canvasPos, args._canvasSize, screen ) == false )
                 continue;
             ++state._drawnHandleCount;
-            Internal::noteHandle( handle, screen );
+            Internal::recordHandle( handle, screen );
             const bool bActive = state._bDragging && handle._shapeIndex == state._active._shapeIndex && handle._axis == state._active._axis &&
                                  handle._sign == state._active._sign;
             const float32 dx                     = mouse.x - screen.x;

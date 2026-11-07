@@ -6,7 +6,7 @@
 
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 #include "Engine/Audio/DSP/AudioFFT.h"
@@ -518,7 +518,7 @@ namespace sw
         };
 
         /**
-         * @brief 컨볼루션 리버브입니다. 데이터의 임펄스 응답(`AudioEffectDesc::_impulse`, 실제 공간을 녹음한 클립)을 입력에 컨볼루션합니다.
+         * @brief 컨볼루션 리버브입니다. 데이터의 임펄스 응답(`AudioEffectDef::_impulse`, 실제 공간을 녹음한 클립)을 입력에 컨볼루션합니다.
          * @details 균일 분할 overlap-save 다. 임펄스 응답을 블록(256 프레임) 조각으로 나눠 조각마다 FFT(512)를 미리 해 두고, 블록마다 입력 FFT 하나를 주파수 영역 지연선에 넣어
          *          조각 수만큼 곱해 더한 뒤 역FFT 한다. 블록 하나(5.3 ms)를 모아 처리하므로 젖은 소리는 그만큼 늦는다(dry 는 늦지 않는다).
          *          젖은 채널은 LFE 를 뺀 채널이고, k 번째 젖은 채널은 임펄스 응답의 (k mod 응답 채널 수) 번째 채널을 쓴다(스테레오 응답이면 왼쪽 · 오른쪽이 번갈아).
@@ -784,21 +784,21 @@ namespace sw
             };
 
             template <AudioBiquadType TType>
-            static unique_ptr<IAudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout )
+            static unique_ptr<IAudioEffect> createFilter( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 (void)desc;
                 return make_unique<AudioFilterEffect>( typeInfo, layout, TType );
             }
 
             template <typename TEffect>
-            static unique_ptr<IAudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout )
+            static unique_ptr<IAudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 (void)desc;
                 return make_unique<TEffect>( typeInfo, layout );
             }
 
             /** @brief 컨볼루션 리버브를 만들고 데이터의 임펄스 응답을 읽습니다. 읽지 못하면 nullptr 입니다(오류는 `loadImpulse` 가 남깁니다). */
-            static unique_ptr<IAudioEffect> createConvolution( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout )
+            static unique_ptr<IAudioEffect> createConvolution( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout )
             {
                 unique_ptr<AudioConvolutionEffect> pEffect = make_unique<AudioConvolutionEffect>( typeInfo, layout );
                 if ( pEffect->loadImpulse( desc._impulse ) == false )
@@ -874,7 +874,7 @@ namespace sw
         return nullptr;
     }
 
-    unique_ptr<IAudioEffect> AudioEffectRegistry::createEffect( const AudioEffectDesc& desc, AudioChannelLayout layout )
+    unique_ptr<IAudioEffect> AudioEffectRegistry::createEffect( const AudioEffectDef& desc, AudioChannelLayout layout )
     {
         const AudioEffectTypeInfo* pTypeInfo = findType( desc._type );
         if ( pTypeInfo == nullptr )
@@ -890,7 +890,7 @@ namespace sw
         unique_ptr<IAudioEffect> pEffect = pTypeInfo->_pCreate( *pTypeInfo, desc, layout );
         if ( pEffect == nullptr )
             return nullptr;
-        for ( const AudioEffectParameterDesc& parameter : desc._listParameter )
+        for ( const AudioEffectParameterDef& parameter : desc._listParameter )
         {
             const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );
             if ( parameterIndex < 0 )

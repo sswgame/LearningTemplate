@@ -140,7 +140,7 @@ namespace sw::editor
         /**
          * @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다.
          * @details 씬을 바꾼 모든 편집이 지나는 한 곳이다(기록 · 되돌리기 · 개발 명령). 편집을 막는 작업(`EditorPlaySession::holdSceneEdits`) 중에 오면
-         *          편집 허용 답을 묻지 않은 경로가 씬을 바꾼 것이다 — 오류를 남기고 그 작업이 알게 한다(`EditorPlaySession::noteSceneEditWhileHeld`,
+         *          편집 허용 답을 묻지 않은 경로가 씬을 바꾼 것이다 — 오류를 남기고 그 작업이 알게 한다(`EditorPlaySession::recordSceneEditWhileHeld`,
          *          베이크는 결과를 버리고 멈춘다). 막는 작업 자신은 잠금을 푼 뒤에 표시한다.
          */
         void markSceneDirty();

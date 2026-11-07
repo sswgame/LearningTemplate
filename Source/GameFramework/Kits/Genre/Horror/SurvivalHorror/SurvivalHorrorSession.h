@@ -1,5 +1,5 @@
 /**
- * @file HorrorSession.h
+ * @file SurvivalHorrorSession.h
  * @brief 생존 공포 한 판을 진행합니다. 격자 가방, 아이템 상자, 조합, 탄약, 회복, 세이브 제한, 정신력(어둠과 괴물 목격이 환각과 조준 흔들림으로 이어진다), 손전등,
  *        열쇠 문(`AreaGraph` 조건), 다이얼 자물쇠, 순서 퍼즐, 문서, 단서 보드 추리를 다룹니다.
  * @details 시간은 `update` 로만 흐르고 난수를 쓰지 않는다(결정적). 지도는 게임이 가진 `AreaGraph` 를 빌려 쓴다(방문 상태는 그쪽에 남는다).
@@ -17,7 +17,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
@@ -33,7 +33,7 @@ namespace sw
 
     /** @brief 퍼즐, 자물쇠, 추리의 결과입니다. */
     ENUM()
-    enum class HorrorPuzzleResult : uint8
+    enum class SurvivalHorrorPuzzleResult : uint8
     {
         Solved = 0,
         Progress,      ///< 순서 퍼즐에서 맞는 한 걸음이다
@@ -45,7 +45,7 @@ namespace sw
     };
 
     /** @brief 세이브 결과입니다. */
-    enum class HorrorSaveResult : uint8
+    enum class SurvivalHorrorSaveResult : uint8
     {
         Ok = 0,
         NoSaveItem, ///< 잉크 리본이 없다
@@ -81,19 +81,19 @@ namespace sw
 namespace sw
 {
     /**
-     * @class HorrorSession
+     * @class SurvivalHorrorSession
      * @brief 플레이어 한 명의 생존 공포 상태입니다. 카탈로그와 지도는 빌려 쓰므로 이 객체보다 오래 살아야 합니다.
      * @details 정신력은 빛 없이 어둠에 있으면 초당 깎이고(`update( dt, bInDarkness )`), 괴물을 처음 보면 그 괴물의 양만큼, 다시 보면 배율만큼 깎인다.
      *          밝은 곳에서는 지연 뒤 천천히 찬다. 비율이 임계값 아래면 환각이고(게임은 가짜 괴물과 소리를 낸다), 조준 흔들림 배율은 1 + (1 - 비율) x 최대값이다.
      *          손전등은 켜 있는 동안 배터리를 쓰고, 다 되면 꺼진다. 그 뒤의 어둠은 다시 정신력을 깎는다.
      */
-    class SW_KIT_API HorrorSession
+    class SW_KIT_API SurvivalHorrorSession
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "HSES" );
         static constexpr uint32 kStateVersion = 1;
 
-        HorrorSession();
+        SurvivalHorrorSession();
 
         /**
          * @brief 새 판을 시작합니다. @p pAreaGraph 가 있으면 @p startArea 에 들어갑니다.
@@ -101,7 +101,7 @@ namespace sw
          *          격자 가방은 여기서 카탈로그의 모양과 규칙의 크기로 다시 연다. 이 함수를 호출하기 전에는 다른 함수를 호출하지 않는다.
          *          카탈로그가 없거나(대신 쓸 기본 규칙은 없다), 그래프에 없는 시작 방이거나, 정신력 · 배터리 게이지 · 격자 크기 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 세션은 그대로이다.
          */
-        [[nodiscard]] bool initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs, GridInventory& inventory,
+        [[nodiscard]] bool initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs, GridInventory& inventory,
                                        Inventory& itemBox );
 
         /** @brief 시간을 진행합니다. 손전등 배터리, 어둠에서의 정신력 감소, 밝은 곳에서의 회복을 처리합니다. */
@@ -124,7 +124,7 @@ namespace sw
         [[nodiscard]] bool tryUseItem( int32 instanceID );
         void               applyDamage( float32 amount );
         /** @brief 세이브합니다(타자기). 규칙의 제한(횟수, 잉크 리본)을 따릅니다. */
-        [[nodiscard]] HorrorSaveResult trySave();
+        [[nodiscard]] SurvivalHorrorSaveResult trySave();
 
         // ── 공포, 빛 ─────────────────────────────────────────────────────
         /** @brief 손전등을 켜고 끕니다. 배터리가 없으면 켜지지 않고 false 를 반환합니다. */
@@ -139,11 +139,11 @@ namespace sw
 
         // ── 퍼즐, 잠금, 지도 ─────────────────────────────────────────────
         /** @brief 가방의 열쇠로 자물쇠를 엽니다. 플래그를 세우고(`AreaGraph` 연결이 읽습니다), 정의에 따라 열쇠를 씁니다. */
-        HorrorPuzzleResult useKey( const hashed_string& lockID );
+        SurvivalHorrorPuzzleResult useKey( const hashed_string& lockID );
         /** @brief 다이얼 자물쇠에 번호를 넣습니다. */
-        HorrorPuzzleResult enterDialCode( const hashed_string& lockID, const vector<int32>& listDigit );
+        SurvivalHorrorPuzzleResult enterDialCode( const hashed_string& lockID, const vector<int32>& listDigit );
         /** @brief 순서 퍼즐의 다음 걸음을 누릅니다. 틀리면 처음부터 다시 합니다. */
-        HorrorPuzzleResult pressSequenceStep( const hashed_string& puzzleID, const hashed_string& step );
+        SurvivalHorrorPuzzleResult pressSequenceStep( const hashed_string& puzzleID, const hashed_string& step );
         /** @brief 지금 방에서 바로 이어진 방으로 갑니다. 잠긴 문이면 false 를 반환합니다. */
         [[nodiscard]] bool tryMoveTo( const hashed_string& areaID );
 
@@ -160,9 +160,9 @@ namespace sw
          * @brief 결론을 냅니다. 답이 맞고 필요한 연결이 보드에 모두 있어야 풀립니다(찍어서 맞히기를 막습니다).
          * @details 틀리면 정신력 벌칙을 받고, 규칙에 따라 보드의 연결을 모두 지운다. 필요한 단서를 아직 갖지 못했으면 벌칙 없이 `MissingItem` 을 반환한다.
          */
-        HorrorPuzzleResult submitDeduction( const hashed_string& deductionID, const hashed_string& answer );
+        SurvivalHorrorPuzzleResult submitDeduction( const hashed_string& deductionID, const hashed_string& answer );
 
-        void drainEvents( vector<SurvivalHorrorEvent>& outListEvent );
+        void pollEvents( vector<SurvivalHorrorEvent>& outListEvent );
 
         /**
          * @brief 정신력과 배터리 게이지, 본 괴물, 읽은 문서, 단서, 푼 퍼즐(이름 순), 다이얼 시도와 순서 진행(이름 순), 단서 연결, 현재 위치, 체력, 세이브 수,
@@ -172,15 +172,15 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 전이거나, 데이터가 깨졌거나, 범위 밖 값이나 카탈로그에 없는 id 가 있으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        const ResourceGauge&          getSanity() const { return _sanity; }
-        const ResourceGauge&          getBattery() const { return _battery; }
-        const vector<HorrorClueLink>& getClueLinks() const { return _listClueLink; }
-        const hashed_string&          getCurrentArea() const { return _currentArea; }
-        float32                       getHealth() const { return _health; }
-        bool                          isFlashlightOn() const { return _bFlashlightOn == SW_TRUE; }
-        bool                          isDead() const { return _health <= 0.0f; }
-        int32                         getSaveCount() const { return _saveCount; }
-        int32                         getWrongDeductionCount() const { return _wrongDeductionCount; }
+        const ResourceGauge&                  getSanity() const { return _sanity; }
+        const ResourceGauge&                  getBattery() const { return _battery; }
+        const vector<SurvivalHorrorClueLink>& getClueLinks() const { return _listClueLink; }
+        const hashed_string&                  getCurrentArea() const { return _currentArea; }
+        float32                               getHealth() const { return _health; }
+        bool                                  isFlashlightOn() const { return _bFlashlightOn == SW_TRUE; }
+        bool                                  isDead() const { return _health <= 0.0f; }
+        int32                                 getSaveCount() const { return _saveCount; }
+        int32                                 getWrongDeductionCount() const { return _wrongDeductionCount; }
 
     private:
         void pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value = 0.0f );
@@ -198,10 +198,10 @@ namespace sw
         unordered_set<hashed_string>        _uniqueSolvedPuzzle;
         unordered_map<hashed_string, int32> _mapDialAttempt;      ///< 다이얼 자물쇠별 틀린 횟수
         unordered_map<hashed_string, int32> _mapSequenceProgress; ///< 순서 퍼즐별로 맞힌 걸음 수
-        vector<HorrorClueLink>              _listClueLink;
+        vector<SurvivalHorrorClueLink>      _listClueLink;
         EventBuffer<SurvivalHorrorEvent>    _eventBuffer;
         hashed_string                       _currentArea;
-        const HorrorCatalog*                _pCatalog;
+        const SurvivalHorrorCatalog*        _pCatalog;
         GridInventory*                      _pInventory; ///< 격자 가방(빌림)
         Inventory*                          _pItemBox;   ///< 아이템 상자(빌림, 세계 보관함)
         GameFlags*                          _pFlags;     ///< 빌린 플래그

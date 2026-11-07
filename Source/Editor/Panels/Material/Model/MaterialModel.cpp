@@ -131,7 +131,7 @@ namespace sw::editor
         _previewMaterialPath = path;
     }
 
-    void MaterialModel::notePreviewDrawn( float32 redMinusBlue )
+    void MaterialModel::recordPreviewDrawn( float32 redMinusBlue )
     {
         _previewRedMinusBlue = redMinusBlue;
         _bPreviewDrawn       = SW_TRUE;

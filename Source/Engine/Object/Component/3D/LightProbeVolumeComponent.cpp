@@ -129,7 +129,7 @@ namespace sw
         return &_probeData;
     }
 
-    bool LightProbeVolumeComponent::adoptProbeData( LightProbeGrid&& grid, string_view path )
+    bool LightProbeVolumeComponent::applyProbeData( LightProbeGrid&& grid, string_view path )
     {
         string     error;
         const bool bValid   = grid.isValid( &error );

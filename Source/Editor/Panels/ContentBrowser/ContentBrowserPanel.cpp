@@ -88,12 +88,12 @@ namespace sw::editor
             static constexpr size_t kReferenceVisibleRowCount = 12;
 
             /** @brief 테스트가 켜져 있으면 바로 앞 위젯에 `<접두><이름>` 이름을 남깁니다. 꺼져 있으면 문자열을 만들지 않습니다. */
-            static void noteMark( const utf8* pPrefix, string_view name )
+            static void recordMark( const utf8* pPrefix, string_view name )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
                 const string key = string( pPrefix ) + string( name );
-                EditorSelfTestMarks::note( key.c_str() );
+                EditorSelfTestMarks::record( key.c_str() );
             }
 
             /** @brief 콘텐츠 브라우저 패널을 반환합니다. 없으면 nullptr 입니다. */
@@ -520,7 +520,7 @@ namespace sw::editor
         }
         ImGui::Separator();
         const bool bConfirmed = ImGui::Button( SW_LOCKEY( "EdVerb", "Delete" ) );
-        EditorSelfTestMarks::note( "contentBrowser.delete.confirm" );
+        EditorSelfTestMarks::record( "contentBrowser.delete.confirm" );
         if ( bConfirmed )
         {
             (void)confirmDeleteAsset(); // 실패는 moveToTrash 가 알린다(파일을 그대로 둔다)
@@ -586,7 +586,7 @@ namespace sw::editor
         }
         const bool bEntered = ImGui::InputText( "##cb_rename", _renameBuffer.data(), _renameBuffer.capacity(),
                                                 ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
-        EditorSelfTestMarks::note( "contentBrowser.rename" );
+        EditorSelfTestMarks::record( "contentBrowser.rename" );
         const bool bEscaped = EditorInputGUI::wasCancelPressed();
         if ( bEscaped )
         {
@@ -603,7 +603,7 @@ namespace sw::editor
             return;
         if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Folder" ), SW_LOCKEY( "EdButton", "NewFolder" ), "New Folder" ) ) )
             (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
-        EditorSelfTestMarks::note( "contentBrowser.add.folder" );
+        EditorSelfTestMarks::record( "contentBrowser.add.folder" );
         ImGui::Separator();
         StringBuilder<constant::buffer::kMax64> mark;
         vector<const EditorNewAssetTemplate*>   listTemplate;
@@ -614,7 +614,7 @@ namespace sw::editor
                 (void)_model.createNewAsset( *pTemplate ); // 실패는 createAsset 이 알린다
             mark.clear();
             mark.append( "contentBrowser.add." ).append( pTemplate->_pID );
-            EditorSelfTestMarks::note( mark.c_str() );
+            EditorSelfTestMarks::record( mark.c_str() );
         }
         ImGui::EndPopup();
     }
@@ -757,7 +757,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) )
             EditorInputGUI::openPopup( "##cb_add" );
-        EditorSelfTestMarks::note( "contentBrowser.add" );
+        EditorSelfTestMarks::record( "contentBrowser.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
         drawAddMenu();
 
@@ -834,7 +834,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "AllPacks" ) ) );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AllPacks" ), &bShowAllPacks ) )
             _model.setShowAllPacks( bShowAllPacks );
-        EditorSelfTestMarks::note( "contentBrowser.allPacks" );
+        EditorSelfTestMarks::record( "contentBrowser.allPacks" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AllPacks" ) );
     }
 
@@ -919,7 +919,7 @@ namespace sw::editor
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
-            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", editor::getSubsystem<AssetPaths>().toAssetID( absPath ) );
+            ContentBrowserPanelInternal::recordMark( "contentBrowser.folder.", editor::getSubsystem<AssetPaths>().toAssetID( absPath ) );
         acceptAssetDrop( absPath );
 
         if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )
@@ -1066,7 +1066,7 @@ namespace sw::editor
                     const ImVec2 cursor = ImGui::GetCursorScreenPos();
                     if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
                         _model.selectAsset( entry );
-                    ContentBrowserPanelInternal::noteMark( "contentBrowser.asset.", entry._name );
+                    ContentBrowserPanelInternal::recordMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
                     if ( EditorInputGUI::wasItemDoubleClicked() )
                         _model.openAsset( entry );
@@ -1134,7 +1134,7 @@ namespace sw::editor
                     }
                     if ( statusText.empty() == false && ImGui::IsItemHovered() )
                         ImGui::SetTooltip( "%s", statusText.c_str() );
-                    ContentBrowserPanelInternal::noteMark( "contentBrowser.asset.", entry._name );
+                    ContentBrowserPanelInternal::recordMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );

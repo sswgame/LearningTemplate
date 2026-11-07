@@ -2,7 +2,7 @@
  * @file LogContext.h
  * @brief 로그 문맥 — 지금 스레드가 처리하는 요청의 추적 id(128 비트)와 주체(계정 id)입니다. 문맥이 있는 스레드의 로그 줄에 `[trace=… acct=…]` 가 붙습니다.
  * @details 스레드 로컬이다(Java MDC · .NET `Activity.Current` 와 같은 자리). 비동기 경계(저장소 일 · 작업 큐)를 넘을 때는 넘기는 쪽이 `getCurrent()` 를
- *          복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreWork` 가 그 예). 게임 · 렌더 · 에디터 스레드는 문맥이 없어 줄이 바이트 하나
+ *          복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreJob` 가 그 예). 게임 · 렌더 · 에디터 스레드는 문맥이 없어 줄이 바이트 하나
  *          다르지 않다. 추적 id 는 W3C `traceparent` 의 trace-id 와 같은 크기다. 지표 라벨에는 추적 id · 계정 id 를 넣지 않는다.
  */
 #pragma once

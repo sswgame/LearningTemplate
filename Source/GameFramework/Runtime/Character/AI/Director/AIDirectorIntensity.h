@@ -77,7 +77,7 @@ namespace sw
 
     private:
         int32   findSignalIndex( const hashed_string& signalID ) const;
-        void    noteCombat();
+        void    recordCombat();
         float32 computeLevelFloor() const;
 
     private:

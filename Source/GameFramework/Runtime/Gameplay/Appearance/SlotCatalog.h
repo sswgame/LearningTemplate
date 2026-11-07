@@ -1,5 +1,5 @@
 /**
- * @file SlotTable.h
+ * @file SlotCatalog.h
  * @brief 슬롯 테이블입니다. 장비 슬롯의 이름과 받는 종류, 아이템이 차지하는 슬롯 그룹(로브는 상의와 하의, 양손 무기는 두 손)을 담습니다.
  */
 #pragma once
@@ -48,14 +48,14 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SlotTable
-     * @brief `<SlotTable><Slot name="Head"/><Slot name="MainHand" accept="Weapon"/><Occupancy id="TwoHanded" slots="MainHand,OffHand"/></SlotTable>` 형식으로 읽습니다.
+     * @class SlotCatalog
+     * @brief `<SlotCatalog><Slot name="Head"/><Slot name="MainHand" accept="Weapon"/><Occupancy id="TwoHanded" slots="MainHand,OffHand"/></SlotCatalog>` 형식으로 읽습니다.
      * @details `makeEquipmentLayout` 이 `Equipment::initialize` 에 넘길 슬롯 문자열을 만든다. 그래서 게임플레이 슬롯과 외형 슬롯이 한 테이블에서 나온다.
      */
-    class SW_GF_API SlotTable
+    class SW_GF_API SlotCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear();
 
         int32                            findSlotIndex( const hashed_string& slot ) const;

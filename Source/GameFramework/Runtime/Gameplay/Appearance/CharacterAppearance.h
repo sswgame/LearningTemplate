@@ -21,7 +21,7 @@ namespace sw
 {
     class CustomizationSchemaCatalog;
     class EquipmentSetCatalog;
-    class SlotTable;
+    class SlotCatalog;
     class XMLNode;
 
     /** @brief 프리셋의 꾸미기 값 하나입니다. 고정 값이거나 범위, 후보 목록입니다. 종류는 스키마가 정합니다. */
@@ -115,7 +115,7 @@ namespace sw
     class SW_GF_API CharacterAppearanceCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         /**
          * @brief `<CharacterAppearance>` 원소 하나(프리셋 에셋 파일 `*.appearance.xml` 의 루트)를 읽어 더합니다. 같은 id 가 있으면 바꿉니다(에디터가 다시 내보낸 파일).
          * @details 읽기 규칙은 카탈로그 파일의 원소와 같다. 오류는 @p report 에 남기고 그 프리셋은 더하지 않는다.
@@ -141,7 +141,7 @@ namespace sw
          * @brief 프리셋을 펼칩니다. 후보를 @p seed 로 뽑고(키마다 따로 섞으므로 매개변수를 하나 더해도 다른 값이 바뀌지 않음), 세트를 슬롯에 풀고,
          *        슬롯별 장비를 덮어씁니다. 레이어마다 세트, 슬롯 순서로 처리하므로 아래 레이어의 세트가 위 레이어의 슬롯을 덮습니다. 결정적이어서 같은 데이터와 같은 시드이면 같은 결과가 나옵니다.
          */
-        [[nodiscard]] bool expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
+        [[nodiscard]] bool expand( const hashed_string& id, uint32 seed, const SlotCatalog& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
                                    CharacterAppearanceSpec& outSpec ) const;
 
         /** @brief 시드와 키로 [0, count) 에서 하나를 뽑습니다. */

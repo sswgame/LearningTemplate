@@ -124,7 +124,7 @@ namespace sw
         return false;
     }
 
-    MeleeClaimVerdict MeleeSweepHistory::verify( uint64 attackerID, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius, MeleeHitParams* pOutParams ) const
+    MeleeClaimResult MeleeSweepHistory::verify( uint64 attackerID, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius, MeleeHitParams* pOutParams ) const
     {
         bool bAnySweep = false;
         for ( const SweepRecord& record : _listRecord )
@@ -137,21 +137,21 @@ namespace sw
                 continue;
             if ( pOutParams != nullptr )
                 *pOutParams = record._params;
-            return MeleeClaimVerdict::Confirmed;
+            return MeleeClaimResult::Confirmed;
         }
-        return bAnySweep ? MeleeClaimVerdict::OutOfBlade : MeleeClaimVerdict::NoSweep;
+        return bAnySweep ? MeleeClaimResult::OutOfBlade : MeleeClaimResult::NoSweep;
     }
 
-    MeleeClaimVerdict MeleeSweepHistory::claimHit( GameObject& attacker, GameObject& target, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius,
-                                                   vector<GameObjectHandle>& inoutListHitTarget ) const
+    MeleeClaimResult MeleeSweepHistory::claimHit( GameObject& attacker, GameObject& target, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius,
+                                                  vector<GameObjectHandle>& inoutListHitTarget ) const
     {
-        MeleeHitParams          params;
-        const MeleeClaimVerdict verdict = verify( attacker.getObjectID(), claim, targetCenter, targetRadius, &params );
-        if ( verdict != MeleeClaimVerdict::Confirmed )
-            return verdict;
+        MeleeHitParams         params;
+        const MeleeClaimResult result = verify( attacker.getObjectID(), claim, targetCenter, targetRadius, &params );
+        if ( result != MeleeClaimResult::Confirmed )
+            return result;
         const GameObjectHandle handle = target.getHandle();
         if ( VectorUtil::contains( inoutListHitTarget, handle ) )
-            return verdict; // 창에서 이미 맞았다 — 서버 스윕이 먼저 닿았다
+            return result; // 창에서 이미 맞았다 — 서버 스윕이 먼저 닿았다
         inoutListHitTarget.push_back( handle );
         HitInfo hit;
         hit._pInstigator = &attacker;
@@ -161,6 +161,6 @@ namespace sw
         hit._impulse     = params._impulse;
         hit._bIs2D       = params._bIs2D;
         CharacterRayHit::deliverHit( target, hit );
-        return verdict;
+        return result;
     }
 } // namespace sw

@@ -35,7 +35,7 @@ namespace sw
         };
 
         /** @brief 경제 요청 하나의 저장소 왕복입니다. 입력은 공개 필드에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘깁니다. */
-        class EconomyRequestWork final : public IServiceStoreWork
+        class EconomyRequestJob final : public IServiceStoreJob
         {
         public:
             EconomyPurchaseInput  _purchase;
@@ -44,7 +44,7 @@ namespace sw
             EconomyWithdrawInput  _withdraw;
             AccountID             _accountID;
 
-            EconomyRequestWork( EconomyService* pService, const EconomyServiceConfig& settings, uint64 callID, int32 methodIndex )
+            EconomyRequestJob( EconomyService* pService, const EconomyServiceConfig& settings, uint64 callID, int32 methodIndex )
                 : _purchase{}
                 , _redeem{}
                 , _history{}
@@ -113,10 +113,10 @@ namespace sw
             int32                _methodIndex;
         };
         /** @brief 원장 보존 검사 한 번입니다. 테이블 전체를 읽는다. */
-        class EconomyLedgerAuditWork final : public IServiceStoreWork
+        class EconomyLedgerAuditJob final : public IServiceStoreJob
         {
         public:
-            explicit EconomyLedgerAuditWork( EconomyService* pService )
+            explicit EconomyLedgerAuditJob( EconomyService* pService )
                 : _report{}
                 , _pService{ pService }
                 , _result{ ServiceStoreResult::Unavailable }
@@ -133,10 +133,10 @@ namespace sw
         };
 
         /** @brief 환불 알림 하나의 회수입니다. 응답이 없다. */
-        class EconomyRefundWork final : public IServiceStoreWork
+        class EconomyRefundJob final : public IServiceStoreJob
         {
         public:
-            EconomyRefundWork( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotification&& notice, UnixMilliseconds nowMs )
+            EconomyRefundJob( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotification&& notice, UnixMilliseconds nowMs )
                 : _notice{ std::move( notice ) }
                 , _pService{ pService }
                 , _pCurrencies{ pCurrencies }
@@ -158,10 +158,10 @@ namespace sw
         };
 
         /** @brief 저장소에 남은 환불 조회 기준 시각을 스토어마다 읽습니다. */
-        class EconomyRefundCursorReadWork final : public IServiceStoreWork
+        class EconomyRefundCursorReadJob final : public IServiceStoreJob
         {
         public:
-            EconomyRefundCursorReadWork( EconomyService* pService, vector<EconomyRefundCursor>&& listCursor )
+            EconomyRefundCursorReadJob( EconomyService* pService, vector<EconomyRefundCursor>&& listCursor )
                 : _listCursor{ std::move( listCursor ) }
                 , _pService{ pService }
                 , _result{ ServiceStoreResult::Unavailable }
@@ -187,10 +187,10 @@ namespace sw
         };
 
         /** @brief 환불 조회 기준 시각 하나를 씁니다. */
-        class EconomyRefundCursorWriteWork final : public IServiceStoreWork
+        class EconomyRefundCursorWriteJob final : public IServiceStoreJob
         {
         public:
-            EconomyRefundCursorWriteWork( EconomyService* pService, EconomyRefundCursor cursor )
+            EconomyRefundCursorWriteJob( EconomyService* pService, EconomyRefundCursor cursor )
                 : _cursor{ std::move( cursor ) }
                 , _pService{ pService }
                 , _result{ ServiceStoreResult::Unavailable }
@@ -207,10 +207,10 @@ namespace sw
         };
 
         /** @brief 남은 지급 알림을 읽습니다. */
-        class EconomyDeliveryListWork final : public IServiceStoreWork
+        class EconomyDeliveryListJob final : public IServiceStoreJob
         {
         public:
-            EconomyDeliveryListWork( EconomyService* pService, int32 maxCount )
+            EconomyDeliveryListJob( EconomyService* pService, int32 maxCount )
                 : _listTask{}
                 , _pService{ pService }
                 , _maxCount{ maxCount }
@@ -229,10 +229,10 @@ namespace sw
         };
 
         /** @brief 끝난 지급 알림의 레코드를 지웁니다. */
-        class EconomyDeliveryEraseWork final : public IServiceStoreWork
+        class EconomyDeliveryEraseJob final : public IServiceStoreJob
         {
         public:
-            EconomyDeliveryEraseWork( EconomyService* pService, string recordKey )
+            EconomyDeliveryEraseJob( EconomyService* pService, string recordKey )
                 : _recordKey{ std::move( recordKey ) }
                 , _pService{ pService }
                 , _result{ ServiceStoreResult::Unavailable }
@@ -338,7 +338,7 @@ namespace sw
     void EconomyService::shutdown()
     {
         // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
-        ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
+        ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
         { return _calls.isEmpty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
         { pollReceipts(); } );
         _calls.abandonAll();
@@ -445,23 +445,23 @@ namespace sw
     {
         if ( _settings._pReceiptRegistry == nullptr || _settings._pReceiptRegistry->usesDeliveryConfirmation() == false )
             return;
-        vector<ReceiptDeliveryOutcome> listOutcome;
+        vector<ReceiptDeliveryResult> listOutcome;
         _settings._pReceiptRegistry->pollDeliveryOutcomes( listOutcome );
-        for ( ReceiptDeliveryOutcome& outcome : listOutcome )
+        for ( ReceiptDeliveryResult& outcome : listOutcome )
         {
             _uniqueSetDeliveryInFlight.erase( outcome._recordKey );
             if ( outcome._status == ReceiptDeliveryStatus::Retry )
                 continue; // 레코드가 남아 다음 훑기가 다시 보낸다
             _uniqueSetDeliveryAlarmed.erase( outcome._recordKey );
             ++_pendingUpkeepCount;
-            _pStore->submit( make_unique<EconomyDeliveryEraseWork>( this, std::move( outcome._recordKey ) ) );
+            _pStore->submit( make_unique<EconomyDeliveryEraseJob>( this, std::move( outcome._recordKey ) ) );
         }
         if ( _bDeliveryScanPending == SW_TRUE || nowMs.count() < _nextDeliveryScanMs )
             return;
         _nextDeliveryScanMs   = nowMs.count() + _settings._deliveryScanIntervalMs;
         _bDeliveryScanPending = SW_TRUE;
         ++_pendingUpkeepCount;
-        _pStore->submit( make_unique<EconomyDeliveryListWork>( this, _settings._deliveryScanMaxCount ) );
+        _pStore->submit( make_unique<EconomyDeliveryListJob>( this, _settings._deliveryScanMaxCount ) );
     }
 
     void EconomyService::completeDeliveryList( const vector<ReceiptDeliveryTask>& listTask, ServiceStoreResult result, ServiceStoreCompletion completion )
@@ -502,7 +502,7 @@ namespace sw
                 if ( pValidator->takeRefundCursor( lastReadMs ) == false )
                     continue;
                 ++_pendingUpkeepCount;
-                _pStore->submit( make_unique<EconomyRefundCursorWriteWork>( this, EconomyRefundCursor{ pValidator->getStoreName(), lastReadMs } ) );
+                _pStore->submit( make_unique<EconomyRefundCursorWriteJob>( this, EconomyRefundCursor{ pValidator->getStoreName(), lastReadMs } ) );
             }
             return;
         }
@@ -521,7 +521,7 @@ namespace sw
         }
         _bRefundCursorReadPending = SW_TRUE;
         ++_pendingUpkeepCount;
-        _pStore->submit( make_unique<EconomyRefundCursorReadWork>( this, std::move( listCursor ) ) );
+        _pStore->submit( make_unique<EconomyRefundCursorReadJob>( this, std::move( listCursor ) ) );
     }
 
     void EconomyService::completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion )
@@ -587,21 +587,21 @@ namespace sw
                 pCall->_extra._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
-        const UnixMilliseconds         nowMs = call._nowMs;
-        unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, callID, methodIndex );
-        work->_accountID                     = call._accountID;
-        work->_history                       = call._history;
-        work->_purchase._offerID             = call._purchase._offerID;
-        work->_purchase._count               = call._purchase._count;
-        work->_purchase._accountID           = call._accountID;
-        work->_purchase._nowMs               = nowMs.count();
-        work->_purchase._journalKey          = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountID ), call._idempotencyKey._high,
-                                                                                      call._idempotencyKey._low );
-        work->_withdraw._storeName           = call._withdraw._storeName;
-        work->_withdraw._transactionID       = call._withdraw._transactionID;
-        work->_withdraw._accountID           = call._accountID;
-        work->_withdraw._nowMs               = nowMs.count();
-        work->_withdraw._windowMs            = _settings._withdrawalWindowMs;
+        const UnixMilliseconds        nowMs = call._nowMs;
+        unique_ptr<EconomyRequestJob> work  = make_unique<EconomyRequestJob>( this, _settings, callID, methodIndex );
+        work->_accountID                    = call._accountID;
+        work->_history                      = call._history;
+        work->_purchase._offerID            = call._purchase._offerID;
+        work->_purchase._count              = call._purchase._count;
+        work->_purchase._accountID          = call._accountID;
+        work->_purchase._nowMs              = nowMs.count();
+        work->_purchase._journalKey         = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountID ), call._idempotencyKey._high,
+                                                                                     call._idempotencyKey._low );
+        work->_withdraw._storeName          = call._withdraw._storeName;
+        work->_withdraw._transactionID      = call._withdraw._transactionID;
+        work->_withdraw._accountID          = call._accountID;
+        work->_withdraw._nowMs              = nowMs.count();
+        work->_withdraw._windowMs           = _settings._withdrawalWindowMs;
         _pStore->submit( std::move( work ) );
     }
 
@@ -618,15 +618,15 @@ namespace sw
             { return call._extra._receiptTicket == ticket; } );
             if ( pCall == nullptr )
                 continue;
-            pCall->_extra._receiptTicket             = 0;
-            const AccountID                accountID = pCall->_extra._accountID;
-            unique_ptr<EconomyRequestWork> work      = make_unique<EconomyRequestWork>( this, _settings, pCall->_callID, EconomyServiceInternal::kRedeemIndex );
-            work->_accountID                         = accountID;
-            work->_redeem._receipt                   = std::move( result );
-            work->_redeem._pExternalLinks            = _settings._pExternalLinks;
-            work->_redeem._accountID                 = accountID;
-            work->_redeem._nowMs                     = _nowMs.count();
-            work->_redeem._bAcceptSandbox            = _settings._bAcceptSandboxReceipts;
+            pCall->_extra._receiptTicket            = 0;
+            const AccountID               accountID = pCall->_extra._accountID;
+            unique_ptr<EconomyRequestJob> work      = make_unique<EconomyRequestJob>( this, _settings, pCall->_callID, EconomyServiceInternal::kRedeemIndex );
+            work->_accountID                        = accountID;
+            work->_redeem._receipt                  = std::move( result );
+            work->_redeem._pExternalLinks           = _settings._pExternalLinks;
+            work->_redeem._accountID                = accountID;
+            work->_redeem._nowMs                    = _nowMs.count();
+            work->_redeem._bAcceptSandbox           = _settings._bAcceptSandboxReceipts;
             _pStore->submit( std::move( work ) );
         }
     }
@@ -643,7 +643,7 @@ namespace sw
         if ( _pStore == nullptr || _bAuditPending == SW_TRUE )
             return;
         _bAuditPending = SW_TRUE;
-        _pStore->submit( make_unique<EconomyLedgerAuditWork>( this ) );
+        _pStore->submit( make_unique<EconomyLedgerAuditJob>( this ) );
     }
 
     void EconomyService::completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion )
@@ -732,7 +732,7 @@ namespace sw
         for ( ReceiptRefundNotification& notice : listNotice )
         {
             ++_pendingRefundCount;
-            _pStore->submit( make_unique<EconomyRefundWork>( this, _settings._pCurrencyCatalog, std::move( notice ), _nowMs ) );
+            _pStore->submit( make_unique<EconomyRefundJob>( this, _settings._pCurrencyCatalog, std::move( notice ), _nowMs ) );
         }
     }
 
@@ -749,7 +749,7 @@ namespace sw
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceStoreRefundCould", "EconomyService: a store refund could not be revoked (%#) - the next overlapping poll reports it again", static_cast<int32>( result ) );
             // 제공자의 겹침 거름이 이 거래를 기억하면 겹친 조회가 다시 알리지 않아 회수할 기회가 없어진다.
             if ( _settings._pReceiptRegistry != nullptr )
-                _settings._pReceiptRegistry->forgetRefund( notice );
+                _settings._pReceiptRegistry->removeRefund( notice );
         }
         if ( _pMetricRegistry == nullptr )
             return;

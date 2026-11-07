@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 아레나 바닥 — Poly Haven "Concrete Floor Worn 001"(CC0, 3 m 타일) 스캔 텍스처를 월드 좌표로 타일링한다. -->
-<MaterialDesc formatVersion="0" name="ShooterFloor" _base="engine/materials/pbrworldtile.material">
+<MaterialDef formatVersion="0" name="ShooterFloor" _base="engine/materials/pbrworldtile.material">
 	<_properties>
 		<item name="_worldTileSize" defaultValue="3.0" />
 		<item name="_albedoMap" assetPath="common/textures/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_diff_2k.dds" />
 		<item name="_normalMap" assetPath="common/textures/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_nor_gl_2k.dds" />
 		<item name="_ormMap" assetPath="common/textures/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_arm_2k.dds" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

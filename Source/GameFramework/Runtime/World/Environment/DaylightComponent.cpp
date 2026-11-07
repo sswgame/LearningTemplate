@@ -13,7 +13,7 @@
 namespace sw
 {
     DaylightComponent::DaylightComponent()
-        : _director{}
+        : _gameMode{}
         , _rainDimming{ 0.55f }
         , _nightIntensity{ 0.2f }
         , _sunriseHour{ 6.0f }
@@ -44,10 +44,10 @@ namespace sw
         DirectionalLightComponent* pSun     = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;
         if ( pManager == nullptr || pSun == nullptr )
             return;
-        const GameModeComponent* pDirector    = GameModeComponent::resolve<GameModeComponent>( *pManager, _director );
+        const GameModeComponent* pGameMode    = GameModeComponent::resolve<GameModeComponent>( *pManager, _gameMode );
         float32                  hour         = 0.0f;
         bool                     bPrecipitate = false;
-        if ( pDirector == nullptr || pDirector->readDaylight( hour, bPrecipitate ) == false )
+        if ( pGameMode == nullptr || pGameMode->readDaylight( hour, bPrecipitate ) == false )
             return;
         const float32 dayLength  = MathUtil::max( _sunsetHour - _sunriseHour, MathUtil::kEpsilon );
         const float32 dayRatio   = MathUtil::clamp( ( hour - _sunriseHour ) / dayLength, 0.0f, 1.0f );

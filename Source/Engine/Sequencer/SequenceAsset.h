@@ -115,8 +115,8 @@ namespace sw
     {
         None = 0,           /**< 어긋나지 않았습니다. */
         UnknownKind,        /**< 종류 표에 없는 종류입니다. */
-        SpawnFields,        /**< 스폰인데 `_prefab` 이나 `_targetObject` 가 비었습니다. */
-        PresetFields,       /**< 프리셋이 필수인 종류인데 `_preset` 이나 `_targetObject` 가 비었습니다. */
+        SpawnParams,        /**< 스폰인데 `_prefab` 이나 `_targetObject` 가 비었습니다. */
+        PresetParams,       /**< 프리셋이 필수인 종류인데 `_preset` 이나 `_targetObject` 가 비었습니다. */
         ScenarioMissing,    /**< 시나리오 항목인데 `_scenario` 가 비었습니다. */
         ScenarioNotAllowed, /**< 시나리오 항목이 아닌데 `_scenario` 가 있습니다. */
     };

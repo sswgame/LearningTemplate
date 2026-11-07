@@ -223,9 +223,9 @@ namespace sw
 
     void PairedAnimationDef::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
-        PairedAnimationRootFields rootFields;
-        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓이고 `finish` 가 읽기를 실패로 돌린다
-        _content._duration = rootFields._duration;
+        PairedAnimationRootParams rootParams;
+        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓이고 `finish` 가 읽기를 실패로 돌린다
+        _content._duration = rootParams._duration;
         PairedAnimationDefInternal::requireFinite( reader, root, "duration", _content._duration );
         if ( _content._duration <= 0.0f )
             reader.addError( "Character.PairedDurationInvalid", root, "attribute 'duration' must be positive" );
@@ -245,18 +245,18 @@ namespace sw
 
     void PairedAnimationDef::readRole( const XMLNode& node, CharacterDataReader& reader )
     {
-        PairedAnimationRoleFields fields;
-        (void)reader.readFields( node, fields );
+        PairedAnimationRoleParams params;
+        (void)reader.readFields( node, params );
         PairedAnimationRoleDef role;
-        role._name              = fields._name;
-        role._clip              = fields._clip;
-        role._exitState         = fields._exitState;
-        role._skeletonPath      = fields._skeleton;
-        role._bRequired         = fields._bRequired;
-        role._bAnchor           = fields._bAnchor;
-        role._startSeconds      = fields._start;
-        role._enterBlendSeconds = fields._enterBlend;
-        role._exitBlendSeconds  = fields._exitBlend;
+        role._name              = params._name;
+        role._clip              = params._clip;
+        role._exitState         = params._exitState;
+        role._skeletonPath      = params._skeleton;
+        role._bRequired         = params._bRequired;
+        role._bAnchor           = params._bAnchor;
+        role._startSeconds      = params._start;
+        role._enterBlendSeconds = params._enterBlend;
+        role._exitBlendSeconds  = params._exitBlend;
         PairedAnimationDefInternal::requireNonNegative( reader, node, "start", role._startSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "enterBlend", role._enterBlendSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "exitBlend", role._exitBlendSeconds );
@@ -277,9 +277,9 @@ namespace sw
                 if ( node.hasAttribute( pName ) == false )
                     reader.addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
             }
-            role._offset           = fields._offset;
-            role._yawRadians       = fields._yaw * MathUtil::kDegreeToRadian; // 데이터의 요는 도 단위다
-            role._maxAlignDistance = fields._maxAlignDistance;
+            role._offset           = params._offset;
+            role._yawRadians       = params._yaw * MathUtil::kDegreeToRadian; // 데이터의 요는 도 단위다
+            role._maxAlignDistance = params._maxAlignDistance;
             for ( uint32 axis = 0; axis < 3; ++axis )
             {
                 PairedAnimationDefInternal::requireFinite( reader, node, "offset", role._offset.data()[axis] );
@@ -299,7 +299,7 @@ namespace sw
         {
             if ( node.hasAttribute( "warpEnd" ) == false )
                 reader.addError( "Character.AttributeMissing", node, "needs attribute 'warpEnd'" );
-            role._warpEndSeconds = fields._warpEnd;
+            role._warpEndSeconds = params._warpEnd;
             PairedAnimationDefInternal::requireFinite( reader, node, "warpEnd", role._warpEndSeconds );
             // 크로스페이드가 끝나야 루트 모션 프레임의 클립이 이 역할의 클립이 된다 — 그 전에 창이 끝나면 한 번도 휘지 않는다.
             if ( role._warpEndSeconds <= role._enterBlendSeconds )
@@ -319,30 +319,30 @@ namespace sw
 
     void PairedAnimationDef::readNotify( const XMLNode& node, CharacterDataReader& reader )
     {
-        PairedAnimationNotifyFields fields;
-        (void)reader.readFields( node, fields );
+        PairedAnimationNotifyParams params;
+        (void)reader.readFields( node, params );
         PairedAnimationNotifyDef notify;
-        notify._name = fields._name;
-        notify._role = fields._role;
-        notify._time = fields._time;
+        notify._name = params._name;
+        notify._role = params._role;
+        notify._time = params._time;
         PairedAnimationDefInternal::requireNonNegative( reader, node, "time", notify._time );
         _content._listNotify.push_back( notify );
     }
 
     void PairedAnimationDef::readSelect( const XMLNode& node, CharacterDataReader& reader )
     {
-        PairedAnimationSelectFields fields;
-        (void)reader.readFields( node, fields );
+        PairedAnimationSelectParams params;
+        (void)reader.readFields( node, params );
         if ( _content._bHasSelect )
         {
             reader.addError( "Character.PairedSelectRepeated", node, "repeats <Select> (a paired animation has at most one)" );
             return;
         }
         _content._bHasSelect                = true;
-        _content._select._role              = fields._role;
-        const float32 minDegrees            = fields._minAngle;
-        const float32 maxDegrees            = fields._maxAngle;
-        _content._select._maxDistance       = fields._maxDistance;
+        _content._select._role              = params._role;
+        const float32 minDegrees            = params._minAngle;
+        const float32 maxDegrees            = params._maxAngle;
+        _content._select._maxDistance       = params._maxDistance;
         _content._select._minBearingRadians = minDegrees * MathUtil::kDegreeToRadian;
         _content._select._maxBearingRadians = maxDegrees * MathUtil::kDegreeToRadian;
         PairedAnimationDefInternal::requireHalfTurn( reader, node, "minAngle", minDegrees );

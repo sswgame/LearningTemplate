@@ -63,7 +63,7 @@ namespace sw
         SW_LOG_ERROR_ID( "ServerBus.EncodeFailed", "%# (version %#) is not written: %#", typeFqn.c_str(), version, bInRange ? "a field has no binary handler" : "a value is out of its declared range" );
     }
 
-    void ServerBusReadLog::noteRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion )
+    void ServerBusReadLog::recordRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion )
     {
         // 거절을 세는 것과 "한 번만" 알리는 것은 `LogOnce` 의 한 호출이다 — 부른 횟수가 곧 거절 수(`getRejectedCount`)다.
         const uint64 key = ( static_cast<uint64>( typeFqn.getHash() ) << 32 ) ^ ( static_cast<uint64>( result ) << 24 ) ^ readVersion;
@@ -73,7 +73,7 @@ namespace sw
                          describeReadResult( result ) );
     }
 
-    void ServerBusReadLog::noteTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount )
+    void ServerBusReadLog::recordTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount )
     {
         SW_LOG_ERROR_ID( "ServerBus.MessageTooLarge", "Bus message %# on '%#' is %# bytes, over the %# byte limit - not published", typeFqn.c_str(), topic, byteCount, IServerBusTransport::kMaxMessageSize );
     }

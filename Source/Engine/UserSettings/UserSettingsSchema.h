@@ -289,7 +289,7 @@ namespace sw
 {
     /** @brief 스키마 파일 루트(`<UserSettingsSchema version>`)의 칸입니다. 적지 않으면 판 0 이다. */
     REFLECT()
-    struct SW_API UserSettingsSchemaRootFields
+    struct SW_API UserSettingsSchemaRootParams
     {
         REFLECT_BODY();
 

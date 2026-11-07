@@ -199,7 +199,7 @@ namespace sw
             _gameSession.update( static_cast<float64>( _pRunner->getNowUs() ) * 1.0e-6 ); // 서비스 연결과 따로 사는 게임 UDP 세션도 같은 스레드에서 펌프한다
         if ( _bConnectionOpen == SW_TRUE )
             _client.update( nowMs );
-        drainNotifications();
+        pollNotifications();
         pollAccountReplies();
         switch ( _awaitKind )
         {
@@ -531,18 +531,18 @@ namespace sw
         return expanded;
     }
 
-    void LoadBot::drainNotifications()
+    void LoadBot::pollNotifications()
     {
         _listChatMessage.clear();
-        _chatClient.drainMessages( _chatLease, _listChatMessage );
+        _chatClient.pollMessages( _chatLease, _listChatMessage );
         _listPartySnapshot.clear();
-        _matchmakingClient.drainPartyUpdates( _matchmakingLease, _listPartySnapshot );
+        _matchmakingClient.pollPartyUpdates( _matchmakingLease, _listPartySnapshot );
         _listPartyInvite.clear();
-        _matchmakingClient.drainInvites( _matchmakingLease, _listPartyInvite );
+        _matchmakingClient.pollInvites( _matchmakingLease, _listPartyInvite );
         _listLobbySnapshot.clear();
-        _matchmakingClient.drainLobbyUpdates( _matchmakingLease, _listLobbySnapshot );
+        _matchmakingClient.pollLobbyUpdates( _matchmakingLease, _listLobbySnapshot );
         _listSocialNotification.clear();
-        _socialClient.drainNotifications( _socialLease, _listSocialNotification );
+        _socialClient.pollNotifications( _socialLease, _listSocialNotification );
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
@@ -585,11 +585,11 @@ namespace sw
     void LoadBot::pollMatchResult( MonotonicMilliseconds nowMs )
     {
         _listMatchAssignment.clear();
-        _matchmakingClient.drainMatchResults( _matchmakingLease, _listMatchAssignment );
+        _matchmakingClient.pollMatchResults( _matchmakingLease, _listMatchAssignment );
         if ( _listMatchAssignment.empty() == false )
         {
             const MatchAssignment& assignment = _listMatchAssignment.front();
-            if ( assignment._outcome == MatchQueueOutcome::Found )
+            if ( assignment._outcome == MatchQueueResult::Found )
             {
                 _pRunner->getMutableMetrics().recordMatch( assignment._matchID );
                 finishStep( string_view{} );

@@ -95,7 +95,7 @@ namespace sw
         /** @brief id 의 이름을 @p pOutName 에 씁니다. 없는 id 면 false 입니다. */
         [[nodiscard]] bool resolve( uint32 id, utf8* pOutName, uint32 capacity );
         /** @brief CPU 가 마지막으로 기록한 패스를 적습니다(병렬 기록이면 마지막으로 쓴 스레드의 것). */
-        void noteRecorded( uint32 id ) { _lastRecordedID.store( id ); }
+        void recordRecorded( uint32 id ) { _lastRecordedID.store( id ); }
         /** @brief CPU 가 마지막으로 기록한 패스의 id 입니다(0 = 없음). */
         [[nodiscard]] uint32 getLastRecordedID() const { return _lastRecordedID.load(); }
         /** @brief 소실 보고를 처음 맡으면 true 입니다 — 소실 뒤에는 같은 호출이 프레임마다 온다. */

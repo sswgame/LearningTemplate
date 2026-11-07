@@ -34,8 +34,8 @@ namespace sw
         bool isAnimationActive() const override;
         /** @brief 원본을 옮겨 쓸 때(프로필이 준비되고 원본이 있다)만 포즈를 쓴다. 원본이 없거나 프로필이 없으면 이 유닛은 읽기만 하는 작업만 남는다. */
         AnimationPoseAccess getPoseAccess() const override;
-        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         PoseRetargetComponent& _owner;
@@ -51,7 +51,7 @@ namespace sw
      *          이 유닛의 후처리 리그(`PoseModifierComponent` — 발 디딤 등)는 그 뒤에 돕니다. 같은 클립을 여러 캐릭터가 쓸 때 미리 베이크해 두려면
      *          `PoseRetargeter::bakeClip` 입니다.
      */
-    REFLECT( Category = "Animation 3D", DisplayName = "Pose Retarget Component", Tooltip = "Copies another unit's pose onto this skeleton through a retarget profile" )
+    REFLECT( Category = "Animation 3D", DisplayName = "Pose Retarget Component", Tooltip = "Copies another skeletalMesh's pose onto this skeleton through a retarget profile" )
     class SW_API PoseRetargetComponent : public Component
     {
         friend class PoseRetargetBinding;
@@ -85,7 +85,7 @@ namespace sw
         /** @brief 이번 기본 포즈 단계가 원본을 옮겨 쓸지 반환합니다(프로필이 준비되고 원본을 찾을 수 있다). 포즈 접근 선언과 `populateBasePose` 가 같은 판정을 쓴다. */
         bool isRetargeting() const;
         /** @brief 기본 포즈 단계입니다(워커). */
-        void populateBasePose( SkeletalMeshComponent& unit );
+        void populateBasePose( SkeletalMeshComponent& skeletalMesh );
 
         PROPERTY( Category = "Retarget", DisplayName = "Profile", Tooltip = "Retarget profile (*.retarget.xml)" )
         AssetRef<RetargetProfile> _profilePath;
@@ -96,7 +96,7 @@ namespace sw
         PoseRetargeter                          _retargeter;
         Pose                                    _targetReference;
         TComponentHandle<SkeletalMeshComponent> _source;
-        SkeletalMeshComponent*                  _pUnit;
+        SkeletalMeshComponent*                  _pSkeletalMesh;
         const Skeleton*                         _pBoundSourceSkeleton; ///< 리타기터를 묶은 원본 스켈레톤(정체성만 본다)
         const Skeleton*                         _pBoundTargetSkeleton;
         PROPERTY( Category = "Retarget", DisplayName = "Source From Parent", Tooltip = "Use the parent object's skeletal mesh as the source" )

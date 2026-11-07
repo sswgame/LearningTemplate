@@ -119,10 +119,10 @@ namespace sw
         return name;
     }
 
-    bool GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outFields, string& outError )
+    bool GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams, string& outError )
     {
         outEntry  = nullptr;
-        outFields = InstancedStruct{};
+        outParams = InstancedStruct{};
         string_view name;
         string_view arguments;
         if ( ActionRegistryInternal::splitCall( text, name, arguments ) == false )
@@ -136,20 +136,20 @@ namespace sw
             outError = "unknown action '" + string( name ) + "' (registered: " + ActionRegistry::joinNames() + ")";
             return false;
         }
-        InstancedStruct     fields( *pEntry->_pParamsOps );
+        InstancedStruct     params( *pEntry->_pParamsOps );
         vector<string_view> listToken;
         InstancedStructText::splitArguments( arguments, listToken );
-        if ( InstancedStructText::read( fields.getInstance(), *fields.getType(), listToken, outError ) == false )
+        if ( InstancedStructText::read( params.getInstance(), *params.getType(), listToken, outError ) == false )
             return false;
         outEntry  = pEntry;
-        outFields = std::move( fields );
+        outParams = std::move( params );
         return true;
     }
 
-    string GameActionCall::formatText( const ActionEntry& entry, const InstancedStruct& fields )
+    string GameActionCall::formatText( const ActionEntry& entry, const InstancedStruct& params )
     {
         const InstancedStruct defaults( *entry._pParamsOps );
-        const string          arguments = InstancedStructText::write( fields.getInstance(), defaults.getInstance(), *fields.getType() );
+        const string          arguments = InstancedStructText::write( params.getInstance(), defaults.getInstance(), *params.getType() );
         string                text( entry._pName );
         if ( arguments.empty() == false )
             text += "(" + arguments + ")";
@@ -160,11 +160,11 @@ namespace sw
     {
         outCall                   = GameActionCall{};
         const ActionEntry* pEntry = nullptr;
-        InstancedStruct    fields;
-        if ( tryReadFields( text, pEntry, fields, outError ) == false )
+        InstancedStruct    params;
+        if ( tryReadFields( text, pEntry, params, outError ) == false )
             return false;
         outCall._pEntry  = pEntry;
-        outCall._pParams = fields.share();
+        outCall._pParams = params.share();
         return true;
     }
 
@@ -177,11 +177,11 @@ namespace sw
         return false;
     }
 
-    GameActionCall GameActionCall::make( const ActionEntry& entry, const InstancedStruct& fields )
+    GameActionCall GameActionCall::make( const ActionEntry& entry, const InstancedStruct& params )
     {
         GameActionCall call;
         call._pEntry  = &entry;
-        call._pParams = InstancedStruct( fields ).share(); // 편집 값과 나눠 들지 않게 복사한다
+        call._pParams = InstancedStruct( params ).share(); // 편집 값과 나눠 들지 않게 복사한다
         return call;
     }
 

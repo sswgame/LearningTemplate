@@ -272,7 +272,7 @@ namespace sw
     {
         CreatureSpeciesDef species;
         bool               bValid = XMLFields::readFields( node, species, sourceName, { "weathers", "phases" } );
-        bValid                    = species._visitCondition.readFromNode( node, ScheduleConditionSchema{}, sourceName, species._id.view() ) && bValid; // 적은 `weathers` · `phases` 만 절이 된다
+        bValid                    = species._visitCondition.loadFromXML( node, ScheduleConditionSchema{}, sourceName, species._id.view() ) && bValid; // 적은 `weathers` · `phases` 만 절이 된다
         if ( species._listHabitat.empty() )
         {
             SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesLikesNoHabitat", "%#: species '%#' likes no habitat - it would never come", sourceName, species._id.c_str() );

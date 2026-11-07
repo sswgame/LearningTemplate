@@ -23,12 +23,12 @@ namespace
     };
 
     /** @brief 난수와 AEAD 를 켠 가짜 제공자에 키를 박은 봉인 도구입니다. */
-    struct VaultRig
+    struct VaultFixture
     {
         test::FakeNetSecurityProvider _security{};
         LoginSecretVault              _vault{};
 
-        explicit VaultRig( uint8 keySeed = 7 )
+        explicit VaultFixture( uint8 keySeed = 7 )
         {
             _security._bRandomOk = SW_TRUE;
             _security._bAeadOk   = SW_TRUE;
@@ -42,7 +42,7 @@ namespace
 /** @brief [LoginSecretVaultTest] 봉인한 비밀은 같은 문맥으로 풀리고, 형식은 [버전 1][nonce 12][암호문 + 태그 16] 이며 봉인마다 nonce 가 다르다 */
 SW_TEST_CASE( LoginSecretVaultTest, SealThenOpenRoundTrips )
 {
-    VaultRig      rig;
+    VaultFixture  rig;
     vector<uint8> listSealed;
     SW_REQUIRE_TRUE( rig._vault.seal( "refresh-token-abc", "apple", listSealed ) );
     SW_EXPECT_EQUAL( listSealed.size(), size_t( 1 + NetSecurityConstant::kAeadNonceSize + 17 + NetSecurityConstant::kAeadTagSize ) );
@@ -60,13 +60,13 @@ SW_TEST_CASE( LoginSecretVaultTest, SealThenOpenRoundTrips )
 /** @brief [LoginSecretVaultTest] 다른 제공자 이름(문맥)이나 다른 키로는 풀리지 않는다 — 다른 제공자의 레코드를 바꿔 끼울 수 없다 */
 SW_TEST_CASE( LoginSecretVaultTest, OtherContextOrKeyDoesNotOpen )
 {
-    VaultRig      rig;
+    VaultFixture  rig;
     vector<uint8> listSealed;
     SW_REQUIRE_TRUE( rig._vault.seal( "secret", "apple", listSealed ) );
 
     string plain;
     SW_EXPECT_FALSE( rig._vault.open( listSealed, "google", plain ) );
-    VaultRig otherKey( 99 );
+    VaultFixture otherKey( 99 );
     SW_EXPECT_FALSE( otherKey._vault.open( listSealed, "apple", plain ) );
     SW_EXPECT_TRUE( plain.empty() );
 }
@@ -74,7 +74,7 @@ SW_TEST_CASE( LoginSecretVaultTest, OtherContextOrKeyDoesNotOpen )
 /** @brief [LoginSecretVaultTest] 바꾼 바이트, 태그보다 짧은 바이트, 다른 형식 버전은 거절한다 */
 SW_TEST_CASE( LoginSecretVaultTest, TamperedShortOrOtherVersionIsRejected )
 {
-    VaultRig      rig;
+    VaultFixture  rig;
     vector<uint8> listSealed;
     SW_REQUIRE_TRUE( rig._vault.seal( "secret", "apple", listSealed ) );
     string plain;
@@ -107,7 +107,7 @@ SW_TEST_CASE( LoginSecretVaultTest, NotReadyOrMissingCryptoRefuses )
     SW_EXPECT_FALSE( idle.seal( "secret", "apple", listSealed ) );
     SW_EXPECT_TRUE( listSealed.empty() );
 
-    VaultRig rig;
+    VaultFixture rig;
     SW_REQUIRE_TRUE( rig._vault.seal( "secret", "apple", listSealed ) );
     rig._security._bRandomOk = SW_FALSE;
     vector<uint8> listNoRandom;

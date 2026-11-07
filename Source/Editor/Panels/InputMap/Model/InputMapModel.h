@@ -199,7 +199,7 @@ namespace sw::editor
         /** @brief 묶음의 파일마다 고친 몫을 원래 자리에 씁니다. */
         [[nodiscard]] bool saveBundle() const;
         /** @brief 저장하지 않은 표시를 @p bChanged 면 켜고 그대로 돌려줍니다. */
-        bool noteEdit( bool bChanged );
+        bool recordEdit( bool bChanged );
         /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`savesTriggerFields`). */
         bool canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const;
         /** @brief 지금 키 잡기가 패드 버튼을 받을 수 있으면 true 입니다. */
@@ -211,7 +211,7 @@ namespace sw::editor
         /** @brief 잡은 키로 바인딩 @p bindIndex 를 바꿉니다. */
         bool rebindCapturedKey( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask );
         /** @brief 잡기로 바뀐 바인딩의 겹침을 알리고 저장하지 않은 표시를 켭니다. */
-        bool noteCapturedBinding( const hashed_string& action, uint32 bindIndex );
+        bool recordCapturedBinding( const hashed_string& action, uint32 bindIndex );
 
     private:
         InputMap                 _inputMap;

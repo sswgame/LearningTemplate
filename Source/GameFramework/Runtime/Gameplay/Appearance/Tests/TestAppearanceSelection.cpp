@@ -43,7 +43,7 @@ namespace
                 <Item id="gold_helm" category="Armor" slot="Head" maxStack="1" weight="1" visual="gold_visual"/>
             </ItemCatalog>)",
                                                        "test" ) );
-            load( R"(<SlotTable><Slot name="Head"/><Slot name="Torso"/></SlotTable>)" );
+            load( R"(<SlotCatalog><Slot name="Head"/><Slot name="Torso"/></SlotCatalog>)" );
             load( R"(<ItemVisualCatalog>
                 <ItemVisual id="body_visual"><Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material"/></ItemVisual>
                 <ItemVisual id="helm_visual" customization="Metal"><Part name="Shell" kind="SocketPrefab" prefab="helm.prefab" socket="Head"/><State name="Up"/><State name="Down"/></ItemVisual>
@@ -71,7 +71,7 @@ namespace
 
         [[nodiscard]] bool expandBase( CharacterAppearanceSpec& outSpec ) const
         {
-            return _database.getPresets().expand( hashed_string( "Base" ), 1, _database.getSlotTable(), _database.getSets(), _database.getSchemas(), outSpec );
+            return _database.getPresets().expand( hashed_string( "Base" ), 1, _database.getSlotCatalog(), _database.getSets(), _database.getSchemas(), outSpec );
         }
 
         /** @brief 지금 모습을 담은 전체 선택입니다. */
@@ -126,7 +126,7 @@ SW_TEST_CASE_F( AppearanceSelectionTest, PartialTouchesOnlyItsCategory )
     SW_EXPECT_TRUE( partial._bodyType.empty() );
 
     CharacterAppearanceSpec target;
-    SW_REQUIRE_TRUE( _database.getPresets().expand( hashed_string( "Other" ), 1, _database.getSlotTable(), _database.getSets(), _database.getSchemas(), target ) );
+    SW_REQUIRE_TRUE( _database.getPresets().expand( hashed_string( "Other" ), 1, _database.getSlotCatalog(), _database.getSets(), _database.getSchemas(), target ) );
     CharacterAppearanceSpec   applied;
     AppearanceSelectionReport report;
     AppearanceSelection::applySelection( _database, partial, target, nullptr, applied, report );

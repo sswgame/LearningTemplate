@@ -30,7 +30,7 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_animationRewind, 0, "Record animation rewind history (poses, graph state, notifies, curves, root motion)" );
     /** @brief `-gv_animationRewindSeconds=<초>` — 되감기 기록이 남기는 시간입니다. */
-    SW_TEST_GLOBAL_VARIABLE( float32, gv_animationRewindSeconds, 10.0f, "Seconds of animation rewind history kept per unit" );
+    SW_TEST_GLOBAL_VARIABLE( float32, gv_animationRewindSeconds, 10.0f, "Seconds of animation rewind history kept per skeletalMesh" );
 
     namespace
     {
@@ -250,20 +250,20 @@ namespace sw
         return track._listFrame.back();
     }
 
-    void AnimationRewindRecorder::recordUnit( const SkeletalMeshComponent& unit, uint64 frameIndex )
+    void AnimationRewindRecorder::recordUnit( const SkeletalMeshComponent& skeletalMesh, uint64 frameIndex )
     {
         if ( _bEnabled == SW_FALSE || _bScrubbing == SW_TRUE )
             return;
-        AnimationRewindTrack& track = acquireTrack( unit, AnimationRewindKind::Skeletal );
-        if ( track._listParentIndex.size() != unit.getSkeleton().getBoneCount() )
-            track._listParentIndex = unit.getSkeleton().getParentIndices();
+        AnimationRewindTrack& track = acquireTrack( skeletalMesh, AnimationRewindKind::Skeletal );
+        if ( track._listParentIndex.size() != skeletalMesh.getSkeleton().getBoneCount() )
+            track._listParentIndex = skeletalMesh.getSkeleton().getParentIndices();
         AnimationRewindFrame& frame = appendFrame( track );
         frame._time                 = _clock;
         frame._frameIndex           = frameIndex;
-        frame._worldMatrix          = unit.getWorldMatrix();
-        encodePose( unit.getLocalPose(), frame );
+        frame._worldMatrix          = skeletalMesh.getWorldMatrix();
+        encodePose( skeletalMesh.getLocalPose(), frame );
         frame._state.reset();
-        unit.collectDebugState( frame._state );
+        skeletalMesh.collectDebugState( frame._state );
     }
 
     void AnimationRewindRecorder::recordState( const Component& target, AnimationRewindKind kind, const AnimationDebugState& state, uint64 frameIndex )

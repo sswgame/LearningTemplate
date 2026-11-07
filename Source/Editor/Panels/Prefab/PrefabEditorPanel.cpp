@@ -174,7 +174,7 @@ namespace sw::editor
         ImGui::Indent( PrefabEditorPanelInternal::kChildIndent * static_cast<float32>( depth ) );
         if ( ImGui::Selectable( object.getName().c_str(), getPreviewSelection().hasObject( &object ) ) )
             getPreviewSelection().selectObject( &object );
-        EditorSelfTestMarks::note( ( "prefabwindow.child." + string{ object.getName().c_str() } ).c_str() );
+        EditorSelfTestMarks::record( ( "prefabwindow.child." + string{ object.getName().c_str() } ).c_str() );
         ImGui::Unindent( PrefabEditorPanelInternal::kChildIndent * static_cast<float32>( depth ) );
         ImGui::PopID();
         vector<GameObject*> listChild;

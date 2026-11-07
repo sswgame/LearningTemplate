@@ -271,7 +271,7 @@ namespace sw::editor
         if ( pCatalog == nullptr )
             return;
         hashed_string accepted = slot;
-        for ( const AppearanceSlotDef& def : database.getSlotTable().getSlots() )
+        for ( const AppearanceSlotDef& def : database.getSlotCatalog().getSlots() )
         {
             if ( def._name == slot && def._accept.empty() == false )
                 accepted = def._accept;

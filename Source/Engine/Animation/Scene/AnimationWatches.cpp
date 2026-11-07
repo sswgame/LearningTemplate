@@ -24,17 +24,17 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readCrowdSharedUnits( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readCrowdSharedMeshes( const GameObjectManager* pManager, float64& outValue )
             {
                 return readCrowdModeCount( pManager, AnimationCrowdMode::Shared, outValue );
             }
 
-            [[nodiscard]] static bool readCrowdSoloUnits( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readCrowdSoloMeshes( const GameObjectManager* pManager, float64& outValue )
             {
                 return readCrowdModeCount( pManager, AnimationCrowdMode::Solo, outValue );
             }
 
-            [[nodiscard]] static bool readCrowdVertexAnimationUnits( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readCrowdVertexAnimationMeshes( const GameObjectManager* pManager, float64& outValue )
             {
                 return readCrowdModeCount( pManager, AnimationCrowdMode::VertexAnimation, outValue );
             }
@@ -68,14 +68,14 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( animationCrowdSharedUnits, "Animation.CrowdSharedUnits", "Units that shared a crowd bucket's pose last frame", &AnimationWatchsInternal::readCrowdSharedUnits );
-    SW_AUTOMATION_WATCH( animationCrowdSoloUnits, "Animation.CrowdSoloUnits", "Crowd-sharing units that evaluated alone last frame (a state that cannot be shared)",
-                         &AnimationWatchsInternal::readCrowdSoloUnits );
-    SW_AUTOMATION_WATCH( animationCrowdVertexAnimationUnits, "Animation.CrowdVertexAnimationUnits", "Units drawn with vertex animation last frame (very far crowd units)",
-                         &AnimationWatchsInternal::readCrowdVertexAnimationUnits );
-    SW_AUTOMATION_WATCH( animationActiveUnits, "Animation.ActiveUnits", "Skeletal units that worked last frame (not resting)", &AnimationWatchsInternal::readActiveUnits );
-    SW_AUTOMATION_WATCH( animationPoseEvaluatedUnits, "Animation.PoseEvaluatedUnits", "Skeletal units that built their own pose last frame (crowd-shared units do not)",
+    SW_AUTOMATION_WATCH( animationCrowdSharedMeshes, "Animation.CrowdSharedMeshes", "Units that shared a crowd bucket's pose last frame", &AnimationWatchsInternal::readCrowdSharedMeshes );
+    SW_AUTOMATION_WATCH( animationCrowdSoloMeshes, "Animation.CrowdSoloMeshes", "Crowd-sharing skeletalMeshes that evaluated alone last frame (a state that cannot be shared)",
+                         &AnimationWatchsInternal::readCrowdSoloMeshes );
+    SW_AUTOMATION_WATCH( animationCrowdVertexAnimationMeshes, "Animation.CrowdVertexAnimationMeshes", "Units drawn with vertex animation last frame (very far crowd skeletalMeshes)",
+                         &AnimationWatchsInternal::readCrowdVertexAnimationMeshes );
+    SW_AUTOMATION_WATCH( animationActiveUnits, "Animation.ActiveSkeletalMeshes", "Skeletal skeletalMeshes that worked last frame (not resting)", &AnimationWatchsInternal::readActiveUnits );
+    SW_AUTOMATION_WATCH( animationPoseEvaluatedUnits, "Animation.PoseEvaluatedSkeletalMeshes", "Skeletal skeletalMeshes that built their own pose last frame (crowd-shared skeletalMeshes do not)",
                          &AnimationWatchsInternal::readPoseEvaluatedUnits );
-    SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the units that built their own pose evaluated last frame (bone LOD skips the rest)",
+    SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
                          &AnimationWatchsInternal::readEvaluatedBones );
 } // namespace sw

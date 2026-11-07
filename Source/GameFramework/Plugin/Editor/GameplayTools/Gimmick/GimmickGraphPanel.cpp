@@ -245,7 +245,7 @@ namespace sw::editor
     {
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddNode" ) ) )
             EditorInputGUI::openPopup( "##gimmickAddNode" );
-        EditorSelfTestMarks::note( "gimmick.addnode" );
+        EditorSelfTestMarks::record( "gimmick.addnode" );
         if ( ImGui::BeginPopup( "##gimmickAddNode" ) )
         {
             const GimmickNodeCategory arrCategory[] = { GimmickNodeCategory::Sensor, GimmickNodeCategory::Operator, GimmickNodeCategory::Actuator };
@@ -262,7 +262,7 @@ namespace sw::editor
                         editAddNode( circuit, kind._name, &position );
                     }
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( GimmickGraphPanelInternal::makeMark( "gimmick.kind.", kind._name.c_str() ).c_str() );
+                        EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.kind.", kind._name.c_str() ).c_str() );
                 }
             }
             ImGui::EndPopup();
@@ -271,7 +271,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "AutoLayout" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AutoLayout" ) ) )
             _model.autoLayout();
-        EditorSelfTestMarks::note( "gimmick.layout" );
+        EditorSelfTestMarks::record( "gimmick.layout" );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NodesWiresProblems", TextArgumentList().addText( "name", circuit.getOwner()->getName().c_str() ).addInteger( "nodesCount", static_cast<int64>( _model.getNodes().size() ) ).addInteger( "wiresCount", static_cast<int64>( _model.getWires().size() + _model.getOrphanWires().size() ) ).addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         if ( _statusText.empty() == false )
@@ -353,7 +353,7 @@ namespace sw::editor
         commitLayoutWhenReleased( circuit );
         _nodeGraph.applyContentFitIfNeeded();
 
-        EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( _model.getNodes().size() ) );
+        EditorNodeGraph::recordDrawnNodeCount( static_cast<uint32>( _model.getNodes().size() ) );
         _nodeGraph.endCanvas();
         ed::SetCurrentEditor( nullptr );
         EditorChrome::endSection();
@@ -558,7 +558,7 @@ namespace sw::editor
             editRename( circuit, node._graphID, newID );
             return;
         }
-        EditorSelfTestMarks::note( "gimmick.node.id" );
+        EditorSelfTestMarks::record( "gimmick.node.id" );
 
         if ( pKind != nullptr )
         {
@@ -575,7 +575,7 @@ namespace sw::editor
                     return;
                 }
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( GimmickGraphPanelInternal::makeMark( "gimmick.param.", spec._name.c_str() ).c_str() );
+                    EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.param.", spec._name.c_str() ).c_str() );
             }
         }
 
@@ -605,7 +605,7 @@ namespace sw::editor
             }
             _statusText = "Select an object in the Hierarchy first";
         }
-        EditorSelfTestMarks::note( "gimmick.target.use" );
+        EditorSelfTestMarks::record( "gimmick.target.use" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ClearTarget" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ClearTarget" ) ) && node._target.isValid() )
         {
@@ -617,7 +617,7 @@ namespace sw::editor
             editRemove( circuit, vector<int32>{ node._graphID }, vector<int32>{} );
             return;
         }
-        EditorSelfTestMarks::note( "gimmick.node.delete" );
+        EditorSelfTestMarks::record( "gimmick.node.delete" );
     }
 
     void GimmickGraphPanel::drawWireSection( GimmickCircuitComponent& circuit )
@@ -638,12 +638,12 @@ namespace sw::editor
                     if ( ImGui::Selectable( label.c_str(), label == _formFrom._label ) )
                         _formFrom = PortChoice{ label, port.c_str(), node._graphID };
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( GimmickGraphPanelInternal::makeMark( "gimmick.wire.from.", label ).c_str() );
+                        EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.wire.from.", label ).c_str() );
                 }
             }
             ImGui::EndCombo();
         }
-        EditorSelfTestMarks::note( "gimmick.wire.from" );
+        EditorSelfTestMarks::record( "gimmick.wire.from" );
         if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "To" ), "To##gimmickWireTo" ), _formTo._label.empty() ? "(input)" : _formTo._label.c_str() ) )
         {
             for ( const GimmickGraphNode& node : _model.getNodes() )
@@ -657,12 +657,12 @@ namespace sw::editor
                     if ( ImGui::Selectable( label.c_str(), label == _formTo._label ) )
                         _formTo = PortChoice{ label, port.c_str(), node._graphID };
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( GimmickGraphPanelInternal::makeMark( "gimmick.wire.to.", label ).c_str() );
+                        EditorSelfTestMarks::record( GimmickGraphPanelInternal::makeMark( "gimmick.wire.to.", label ).c_str() );
                 }
             }
             ImGui::EndCombo();
         }
-        EditorSelfTestMarks::note( "gimmick.wire.to" );
+        EditorSelfTestMarks::record( "gimmick.wire.to" );
         ImGui::BeginDisabled( _formFrom._label.empty() || _formTo._label.empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Connect" ) ) )
         {
@@ -670,7 +670,7 @@ namespace sw::editor
             ImGui::EndDisabled();
             return;
         }
-        EditorSelfTestMarks::note( "gimmick.wire.connect" );
+        EditorSelfTestMarks::record( "gimmick.wire.connect" );
         ImGui::EndDisabled();
 
         int32 removeWireID = 0;
@@ -715,7 +715,7 @@ namespace sw::editor
         // 가리키는 노드가 없는 배선은 저장 내용에 남아 있다 - 지우면 저장 내용이 바뀌므로 편집(Undo 가능)으로 다룬다
         if ( _model.getOrphanWires().empty() == false && ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "RemoveBrokenWires" ) ) )
             editRemoveOrphanWires( circuit );
-        EditorSelfTestMarks::note( "gimmick.wire.removeBroken" );
+        EditorSelfTestMarks::record( "gimmick.wire.removeBroken" );
     }
 
     ObjectSnapshot GimmickGraphPanel::beginEdit( GimmickCircuitComponent& circuit ) const

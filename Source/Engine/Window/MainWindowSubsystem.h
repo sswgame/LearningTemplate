@@ -48,7 +48,7 @@ namespace sw
          * @brief 주 창을 넘겨받습니다. 이미 창이 있거나 @p window 가 비면 false 이고 아무것도 바꾸지 않습니다(두 번째 주 창을 조용히 바꿔 끼우지 않는다).
          * @details 성공하면 소유권은 이 서브시스템에 있다. 실패하면 @p window 는 부르는 쪽에 그대로 남아 부르는 쪽이 파괴한다.
          */
-        [[nodiscard]] bool adopt( unique_ptr<IWindow>& window );
+        [[nodiscard]] bool attach( unique_ptr<IWindow>& window );
 
         /** @brief 주 창입니다. 아직 없으면 nullptr 입니다. 소유하지 않은 관찰 포인터로만 쓴다(이 서브시스템이 내려가면 무효). */
         IWindow* getWindow() const { return _window.get(); }

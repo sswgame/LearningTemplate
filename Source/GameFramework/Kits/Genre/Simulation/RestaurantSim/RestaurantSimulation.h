@@ -236,7 +236,7 @@ namespace sw
         void closeDay( RestaurantDaySummary& outSummary );
         /** @brief 밤을 넘깁니다. 재료가 하루 늙어 상한 것은 버리고(다음 결산에 반영됩니다), 시세와 평판이 바뀝니다. */
         void advanceDay();
-        void drainEvents( vector<RestaurantEvent>& outListEvent );
+        void pollEvents( vector<RestaurantEvent>& outListEvent );
 
         /**
          * @brief 직원(레벨 포함), 손님, 주문, 메뉴, 스테이션, 만족도, 재료 배치, 조리(`Crafter`), 시세(`ShopState`), 오늘 결산, 걸음, 난수, 날씨 id, 분,

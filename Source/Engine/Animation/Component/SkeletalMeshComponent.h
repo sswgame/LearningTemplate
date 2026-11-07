@@ -63,7 +63,7 @@ namespace sw
      *            평가하지 않습니다. `_updateRateDivisor`(PROPERTY)는 하한이고 LOD 가 더 늘릴 수 있습니다. 같은 주기의 유닛은 위상(핸들 해시)이 달라 같은
      *            프레임에 몰리지 않습니다. 쉬는 유닛(재생 없음, 포즈 깨끗함)은 비용이 없습니다.
      */
-    REFLECT( Category = "Rendering 3D", DisplayName = "Skeletal Mesh Component", Tooltip = "Skinned mesh driven by a skeleton pose (animation unit)", Meta = "Icon=Skeleton" )
+    REFLECT( Category = "Rendering 3D", DisplayName = "Skeletal Mesh Component", Tooltip = "Skinned mesh driven by a skeleton pose (animation skeletalMesh)", Meta = "Icon=Skeleton" )
     class SW_API SkeletalMeshComponent : public MeshComponent
     {
     public:
@@ -361,7 +361,7 @@ namespace sw
         uint8 _bInterpolateFrame     : 1; ///< 이번 프레임은 평가 없이 보간만 한다
         uint8 _bInterpolationReady   : 1; ///< 보간할 두 포즈가 있다
         PROPERTY( Category = "Animation", DisplayName = "Share Crowd Pose",
-                  Tooltip = "Share one evaluated pose and skinned vertex range with units in the same state (crowds); far units switch to vertex animation" )
+                  Tooltip = "Share one evaluated pose and skinned vertex range with skeletalMeshes in the same state (crowds); far skeletalMeshes switch to vertex animation" )
         uint8                  _bShareCrowdPose  : 1;
         uint8                  _bHasDependents   : 1; ///< 다른 유닛이 이 유닛의 포즈를 읽는다(VAT 로 넘기지 않는다)
         uint8                  _bRuntimeSkeleton : 1; ///< 스켈레톤을 코드가 정했다(`setSkeleton`) — 빈 경로로 다시 풀 때 지키지 않는다

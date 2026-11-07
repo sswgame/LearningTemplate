@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Rig/RigNodeFields.h"
+#include "Engine/Animation/Rig/RigNodeParams.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Foundation/EngineDefines.h"
@@ -37,7 +37,7 @@ namespace sw
 
     /**
      * @brief 리그 데이터의 대상 하나입니다. 노드는 대상을 이름으로 가리킵니다.
-     * @details `_unit` 이 있으면 다른 유닛(장비 부품, 다른 캐릭터)의 본이나 소켓이며, 그 유닛이 먼저 평가되도록 의존을 건다(고리면 로드 오류).
+     * @details `_skeletalMesh` 이 있으면 다른 유닛(장비 부품, 다른 캐릭터)의 본이나 소켓이며, 그 유닛이 먼저 평가되도록 의존을 건다(고리면 로드 오류).
      *          `_space` 가 있으면 대상을 프레임 시작에 그 **자기 본** 기준으로 기록해 두었다가 이번 포즈의 그 본에 다시 적용한다.
      *          무기처럼 손에 붙어 따라오는 것이 한 프레임 늦지 않게 따라가고, 무기 유닛에 의존을 걸지 않는다(손, 무기, 손 순환을 피한다).
      */
@@ -47,13 +47,13 @@ namespace sw
         hashed_string _bone{};
         hashed_string _socket{};
         hashed_string _object{};
-        hashed_string _unit{};
+        hashed_string _skeletalMesh{};
         hashed_string _space{};
         BoneTransform _offset{};
         RigTargetKind _kind{ RigTargetKind::Bone };
 
         /** @brief 다른 유닛이나 오브젝트를 따라가므로 호스트가 값을 넣어야 하는 대상인지 반환합니다. */
-        bool isExternal() const { return _kind == RigTargetKind::Object || _unit.empty() == false; }
+        bool isExternal() const { return _kind == RigTargetKind::Object || _skeletalMesh.empty() == false; }
     };
 } // namespace sw
 
@@ -198,15 +198,15 @@ namespace sw
         /** @brief 객체 하나(칸 이름의 자식 요소)를 꺼냅니다. 없으면 무효 노드입니다. */
         XMLNode readObject( string_view key, bool bRequired );
         /**
-         * @brief 이 요소의 속성을 리플렉션 칸 구조체(@p pInstance, @p typeInfo) 하나로 읽습니다(`XMLFields::readFields` — RigNodeFields.h). 칸의 키는 읽은 것으로 기록합니다.
+         * @brief 이 요소의 속성을 리플렉션 칸 구조체(@p pInstance, @p typeInfo) 하나로 읽습니다(`XMLFields::readFields` — RigNodeParams.h). 칸의 키는 읽은 것으로 기록합니다.
          * @details 모르는 키는 `finish` 가 손으로 읽은 키와 함께 한 번에 낸다. 칸 오류(필수 · 값 · 범위)는 이 리더의 오류(`Rig.Rig`)로 남고 리더는 실패 상태가 된다.
          */
         [[nodiscard]] bool readFields( void* pInstance, const TypeInfo& typeInfo );
-        /** @brief `readFields` 의 타입 지정 버전입니다(`TFields::StaticType()`). */
-        template <typename TFields>
-        [[nodiscard]] bool readFields( TFields& outFields )
+        /** @brief `readFields` 의 타입 지정 버전입니다(`TParams::StaticType()`). */
+        template <typename TParams>
+        [[nodiscard]] bool readFields( TParams& outParams )
         {
-            return readFields( &outFields, *TFields::StaticType() );
+            return readFields( &outParams, *TParams::StaticType() );
         }
 
         /** @brief 오류를 남기고 실패로 둡니다. */
@@ -306,6 +306,6 @@ namespace sw
         [[nodiscard]] bool parseCommon( RigXMLReader& reader );
 
     protected:
-        RigNodeCommonFields _common; ///< 공통 키 · 기본값 · 범위(RigNodeFields.h)
+        RigNodeCommonParams _common; ///< 공통 키 · 기본값 · 범위(RigNodeParams.h)
     };
 } // namespace sw

@@ -37,7 +37,7 @@ namespace sw
         , _sumBlocks{ 0 }
         , _loadFuture{}
         , _listPoint{}
-        , _verdict{}
+        , _result{}
     {
     }
 
@@ -74,7 +74,7 @@ namespace sw
         _sumBlocks     = 0;
         _loadFuture    = {};
         _listPoint.clear();
-        _verdict = LeakCurveVerdict{};
+        _result = LeakCurveResult{};
         SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeControl", "Scene leak probe: '%#', 1 control round + %# warmup + %# measured rounds", _scenePath, LeakCurveCriteria::kDefaultWarmupRounds, measuredRounds );
         _phase        = Phase::Settling; // `update` 의 첫 호출이 대조 회차를 연다
         _settleFrames = SceneLoadLeakProbeInternal::kSettleFrames;
@@ -193,15 +193,15 @@ namespace sw
             }
             pProfiler->beginLeakWindow( LeakWindowDetail::TagTotals ); // 종료 보고가 창을 기대한다
         }
-        _verdict = MemoryProfiler::judgeLeakCurve( _listPoint, LeakCurveCriteria{} );
-        if ( _verdict._bValid == false )
+        _result = MemoryProfiler::judgeLeakCurve( _listPoint, LeakCurveCriteria{} );
+        if ( _result._bValid == false )
             SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeToo", "Scene leak probe: too few rounds finished for a verdict (%# points)", _listPoint.size() );
-        else if ( _verdict._bFlat )
-            SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeFLAT", "Scene leak probe: FLAT - slope %# B/round, %# blocks/round over %# rounds", static_cast<int64>( _verdict._slopeBytesPerRound ),
-                            static_cast<int64>( _verdict._slopeBlocksPerRound ), _verdict._sampleCount );
+        else if ( _result._bFlat )
+            SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeFLAT", "Scene leak probe: FLAT - slope %# B/round, %# blocks/round over %# rounds", static_cast<int64>( _result._slopeBytesPerRound ),
+                            static_cast<int64>( _result._slopeBlocksPerRound ), _result._sampleCount );
         else
-            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeLEAK", "Scene leak probe: LEAK - slope %# B/round, %# blocks/round over %# rounds ('%#' keeps memory after every load)", static_cast<int64>( _verdict._slopeBytesPerRound ),
-                             static_cast<int64>( _verdict._slopeBlocksPerRound ), _verdict._sampleCount, _scenePath );
+            SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeLEAK", "Scene leak probe: LEAK - slope %# B/round, %# blocks/round over %# rounds ('%#' keeps memory after every load)", static_cast<int64>( _result._slopeBytesPerRound ),
+                             static_cast<int64>( _result._slopeBlocksPerRound ), _result._sampleCount, _scenePath );
         _phase = Phase::Idle;
     }
 } // namespace sw

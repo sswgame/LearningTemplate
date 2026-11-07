@@ -193,9 +193,9 @@ namespace sw
         }
     }
 
-    void WorldClock::drainEvents( vector<WorldClockEvent>& outListEvent )
+    void WorldClock::pollEvents( vector<WorldClockEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void WorldClock::writeState( Archive& outArchive ) const

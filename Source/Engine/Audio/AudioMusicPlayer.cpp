@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    void AudioMusicPlayer::start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDesc> pMusic, AudioPlayingID playingID, float32 fadeSeconds )
+    void AudioMusicPlayer::start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDef> pMusic, AudioPlayingID playingID, float32 fadeSeconds )
     {
         if ( _playback._pDesc != nullptr )
             stop( voices, fadeSeconds );
@@ -77,9 +77,9 @@ namespace sw
             return;
         }
 
-        const hashed_string             currentName = _playback._segment >= 0 ? _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )]._name : hashed_string{};
-        const AudioMusicTransitionDesc* pRule       = _playback._pDesc->findTransition( currentName, segment );
-        const float32                   fadeIn      = pRule != nullptr ? pRule->_fadeInSeconds : 0.0f;
+        const hashed_string            currentName = _playback._segment >= 0 ? _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )]._name : hashed_string{};
+        const AudioMusicTransitionDef* pRule       = _playback._pDesc->findTransition( currentName, segment );
+        const float32                  fadeIn      = pRule != nullptr ? pRule->_fadeInSeconds : 0.0f;
 
         // 이미 전환을 기다리는 중이면 목적지만 바꾼다. 경계와 이전 구간의 페이드는 그대로다.
         if ( _playback._pendingSegment >= 0 )
@@ -120,8 +120,8 @@ namespace sw
 
     void AudioMusicPlayer::scheduleSegment( IAudioMusicVoices& voices, int32 segmentIndex, uint64 startFrame, float32 fadeInSeconds )
     {
-        const AudioMusicSegmentDesc& segment = _playback._pDesc->_listSegment[static_cast<size_t>( segmentIndex )];
-        const hashed_string          bus     = getBus();
+        const AudioMusicSegmentDef& segment = _playback._pDesc->_listSegment[static_cast<size_t>( segmentIndex )];
+        const hashed_string         bus     = getBus();
         for ( size_t layerIndex = 0; layerIndex < segment._listLayer.size(); ++layerIndex )
         {
             AudioMusicVoiceRequest request;
@@ -149,8 +149,8 @@ namespace sw
 
     float32 AudioMusicPlayer::computeLayerGain( const IAudioMusicVoices& voices, int32 segmentIndex, int32 layerIndex ) const
     {
-        const AudioMusicLayerDesc& layer    = _playback._pDesc->_listSegment[static_cast<size_t>( segmentIndex )]._listLayer[static_cast<size_t>( layerIndex )];
-        float32                    volumeDb = layer._volumeDb;
+        const AudioMusicLayerDef& layer    = _playback._pDesc->_listSegment[static_cast<size_t>( segmentIndex )]._listLayer[static_cast<size_t>( layerIndex )];
+        float32                   volumeDb = layer._volumeDb;
         if ( layer._parameter.empty() == false )
             volumeDb += AudioCurvePoint::evaluate( layer._listPoint, voices.findMusicParameter( layer._parameter ) ).value_or( 0.0f );
         return AudioMath::dbToLinear( volumeDb );
@@ -174,7 +174,7 @@ namespace sw
         // 루프하지 않는 구간이다. 다음 구간이 있으면 끝에 연결하고, 없으면 끝나면 멈춘다.
         if ( _playback._segment >= 0 && _playback._pendingSegment < 0 )
         {
-            const AudioMusicSegmentDesc& segment = _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )];
+            const AudioMusicSegmentDef& segment = _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )];
             if ( segment._bLoop == false )
             {
                 if ( segment._next.empty() == false )

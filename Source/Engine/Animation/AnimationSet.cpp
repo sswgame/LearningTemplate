@@ -140,10 +140,10 @@ namespace sw
         vector<string> listSeen;
         for ( XMLNode item = root.findChild( AnimationSetInternal::kClipName ); item; item = item.findNextSibling( AnimationSetInternal::kClipName ) )
         {
-            AnimationSetClipFields fields;
-            if ( XMLFields::readFields( item, fields, sourceLabel ) == false )
+            AnimationSetClipParams params;
+            if ( XMLFields::readFields( item, params, sourceLabel ) == false )
                 return false;
-            const string name = StringUtil::toLower( fields._name.c_str() );
+            const string name = StringUtil::toLower( params._name.c_str() );
             if ( StringUtil::contains( name, "/" ) )
             {
                 SW_LOG_ERROR_ID( "AnimationSet.NameHasPath", "Animation set '%#': clip name '%#' holds a path - a name with '/' means a clip file to the animator", sourceLabel, name.c_str() );
@@ -155,24 +155,24 @@ namespace sw
                 return false;
             }
             listSeen.push_back( name );
-            if ( fields._path.empty() == fields._set.empty() )
+            if ( params._path.empty() == params._set.empty() )
             {
                 SW_LOG_ERROR_ID( "AnimationSet.ClipNeedsOneSource", "Animation set '%#': clip '%#' must have exactly one of path and set (a line of the other kind over a base line needs _op=\"Replace\")", sourceLabel, name.c_str() );
                 return false;
             }
-            if ( fields._path.empty() == false )
+            if ( params._path.empty() == false )
             {
-                insertEntry( name, fields._path );
+                insertEntry( name, params._path );
                 continue;
             }
             AnimationSet other;
-            if ( other.loadChained( fields._set, depth + 1 ) == false )
+            if ( other.loadChained( params._set, depth + 1 ) == false )
                 return false;
-            const string        sourceName = fields._source.empty() ? name : StringUtil::toLower( fields._source.c_str() );
+            const string        sourceName = params._source.empty() ? name : StringUtil::toLower( params._source.c_str() );
             const string* const pClipPath  = other.findClipPath( hashed_string( string_view{ sourceName } ) );
             if ( pClipPath == nullptr )
             {
-                SW_LOG_ERROR_ID( "AnimationSet.ClipNotInSet", "Animation set '%#': clip '%#' is not in set '%#'", sourceLabel, sourceName.c_str(), fields._set.c_str() );
+                SW_LOG_ERROR_ID( "AnimationSet.ClipNotInSet", "Animation set '%#': clip '%#' is not in set '%#'", sourceLabel, sourceName.c_str(), params._set.c_str() );
                 return false;
             }
             insertEntry( name, *pClipPath );

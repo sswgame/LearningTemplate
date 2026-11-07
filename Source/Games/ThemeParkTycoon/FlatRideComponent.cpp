@@ -11,7 +11,7 @@
 namespace sw
 {
     FlatRideComponent::FlatRideComponent()
-        : _director{}
+        : _gameMode{}
         , _rideIndex{ -1 }
         , _spin{ 0.0f }
         , _angle{ 0.0f }
@@ -26,9 +26,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void FlatRideComponent::assignRide( GameObjectHandle director, int32 rideIndex, float32 spin )
+    void FlatRideComponent::assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin )
     {
-        _director  = director;
+        _gameMode  = gameMode;
         _rideIndex = rideIndex;
         _spin      = spin;
     }
@@ -43,10 +43,10 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkGameModeComponent* pDirector = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const ParkGameModeComponent* pGameMode = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
-        const vector<ParkRide>& listRide = pDirector->getSimulation().getRides();
+        const vector<ParkRide>& listRide = pGameMode->getSimulation().getRides();
         const bool              bInRange = 0 <= _rideIndex && _rideIndex < static_cast<int32>( listRide.size() );
         const ParkRide*         pRide    = bInRange ? listRide.data() + _rideIndex : nullptr;
         if ( pRide == nullptr || pRide->_listRider.empty() )

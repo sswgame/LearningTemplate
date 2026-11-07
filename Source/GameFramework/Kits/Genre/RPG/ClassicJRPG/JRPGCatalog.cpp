@@ -81,7 +81,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
 
@@ -127,10 +127,10 @@ namespace sw
         return loadedCount;
     }
 
-    bool JRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool JRPGCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "ExperienceCurve" ) )
-            return _curve.loadFromNode( node, sourceName );
+            return _curve.loadFromXML( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Class" ) )
             return loadClass( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Spell" ) )

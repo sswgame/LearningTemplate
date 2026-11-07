@@ -52,7 +52,7 @@ namespace sw
     /** @brief 미리보기 씬이 아닌 씬(또는 없는 키)을 가리키는 키입니다. */
     inline constexpr uint32 kInvalidSceneKey = 0;
 
-    /** @brief 매니저가 받아들인 씬의 자리입니다(`SceneManager::adoptScene`). */
+    /** @brief 매니저가 받아들인 씬의 자리입니다(`SceneManager::applyScene`). */
     enum class SceneRole : uint8
     {
         Loaded,  ///< 로드된 씬 목록에 더한다. 활성 씬이 없을 때만 활성이 된다
@@ -160,7 +160,7 @@ namespace sw
          * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다. 씬마다 오브젝트 매니저와 씬 범위
          *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
          *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
-         *          디바이스가 걸려 있으면(`setRHIDevice`) 다른 씬과 같이 `adoptScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
+         *          디바이스가 걸려 있으면(`setRHIDevice`) 다른 씬과 같이 `applyScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
          *          그림은 호스트가 이 씬의 키로 뷰를 요청할 때만 나옵니다(`PreviewSceneView` · `RenderPacketBuilder::populateScenePreviews`).
          * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdownSubsystem` 이 내립니다.
          */
@@ -226,7 +226,7 @@ namespace sw
         void cancelPendingAsyncLoads();
         /**
          * @brief 앱이 끝나는 중이니 도는 비동기 로드는 일찍 끝내라는 협조 신호를 올립니다(기다리지 않는다). 로드 잡은 시작 앞과 파싱 뒤(인스턴스화 앞)에서 읽고 돌아간다.
-         * @details `cancelPendingAsyncLoads` 와 달리 약속을 채우거나 기다리지 않는다 — 종료의 태스크 비우기(`GameModuleManager::drainRenderWorkers`)가 그 앞에서 부른다.
+         * @details `cancelPendingAsyncLoads` 와 달리 약속을 채우거나 기다리지 않는다 — 종료의 태스크 비우기(`GameModuleManager::flushRenderWorkers`)가 그 앞에서 부른다.
          *          이미 인스턴스화 중인 로드는 끊지 못하고 끝까지 돈다(`Scene::instantiate` 에 중단 점이 없다). 올린 뒤에는 이 매니저가 새 로드를 받지 않는다 — 종료 경로 전용이다.
          */
         void requestAsyncLoadStop();
@@ -301,7 +301,7 @@ namespace sw
          * @brief 씬을 받아들이는 유일한 길입니다 — 디바이스가 걸려 있으면 `Scene::initialize` 를 부르고 @p role 의 목록에 넣습니다.
          * @details 만들기(`createScene` · `createEmptyActiveScene` · `createPreviewScene`)와 비동기 로드 결과가 모두 여기로 옵니다. 길마다 초기화 여부가 갈리지 않게 하려고 한 곳에 둡니다.
          */
-        Scene* adoptScene( unique_ptr<Scene> scene, SceneRole role );
+        Scene* applyScene( unique_ptr<Scene> scene, SceneRole role );
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
         /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다. */

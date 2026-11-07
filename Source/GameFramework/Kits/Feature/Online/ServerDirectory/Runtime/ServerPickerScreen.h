@@ -35,7 +35,7 @@ namespace sw
         /** @brief 서버를 골랐을 때 불립니다. 화면은 곧 닫힌다. */
         using ServerPickedDelegate = Delegate<void( const ServerListEntry& server )>;
 
-        ServerPickerScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
+        ServerPickerScreen( const UIScreenDef& desc, unique_ptr<Widget> root );
         ~ServerPickerScreen() override;
 
         /**

@@ -67,7 +67,7 @@ namespace
     };
 
     /** @brief 루프백 망 위의 엔드포인트 + 클라이언트 하나(한 스레드, 결정적). */
-    struct OpsLoopbackRig
+    struct OpsLoopbackFixture
     {
         LoopbackStreamNetwork        _network{ 3u };
         unique_ptr<IStreamTransport> _serverTransport{ _network.createTransport() };
@@ -77,7 +77,7 @@ namespace
         OpsHTTPEndpoint              _endpoint{};
         OpsHTTPProbe                 _probe{};
 
-        ~OpsLoopbackRig()
+        ~OpsLoopbackFixture()
         {
             _endpoint.shutdown();
             _clientTransport->shutdown();
@@ -159,7 +159,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ContentLengthMatchesTheBody )
 
 SW_TEST_CASE( OpsHTTPEndpointTest, ServesMetricsOverLoopbackAndCloses )
 {
-    OpsLoopbackRig rig;
+    OpsLoopbackFixture rig;
     SW_REQUIRE_TRUE( rig.start() );
     rig._metrics.registerCounter( "loop_total", "Loop" )->add( 5 );
     rig.send( "GET /metr" ); // 머리가 조각나 와도 빈 줄까지 모은다
@@ -175,7 +175,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesMetricsOverLoopbackAndCloses )
 
 SW_TEST_CASE( OpsHTTPEndpointTest, OversizedHeadIsRefusedWith431 )
 {
-    OpsLoopbackRig rig;
+    OpsLoopbackFixture rig;
     SW_REQUIRE_TRUE( rig.start() );
     const string junk( 9000, 'a' ); // 빈 줄 없이 8 KB 를 넘는다
     rig.send( junk );

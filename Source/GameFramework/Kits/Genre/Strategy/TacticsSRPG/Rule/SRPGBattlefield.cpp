@@ -540,9 +540,9 @@ namespace sw
             pushEvent( SRPGEvent{ unitIndex, -1, pUnit->_unitLevel.getLevel(), SRPGEvent::Kind::UnitLevelUp, pUnit->_team } );
     }
 
-    void SRPGBattlefield::drainEvents( const DrainLease& lease, vector<SRPGEvent>& outListEvent )
+    void SRPGBattlefield::pollEvents( const ConsumerLease& lease, vector<SRPGEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( lease, outListEvent );
+        _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
     void SRPGBattlefield::writeState( Archive& outArchive ) const

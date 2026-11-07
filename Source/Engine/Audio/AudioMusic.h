@@ -34,7 +34,7 @@ namespace sw
 {
     /** @brief 구간의 레이어 하나입니다(세로 레이어링). */
     REFLECT()
-    struct SW_API AudioMusicLayerDesc
+    struct SW_API AudioMusicLayerDef
     {
         REFLECT_BODY();
 
@@ -53,7 +53,7 @@ namespace sw
 {
     /** @brief 음악 구간 하나입니다. */
     REFLECT()
-    struct SW_API AudioMusicSegmentDesc
+    struct SW_API AudioMusicSegmentDef
     {
         REFLECT_BODY();
 
@@ -62,7 +62,7 @@ namespace sw
         PROPERTY( Tooltip = "Segment the music moves to at the end when it does not loop" )
         hashed_string _next{};
         PROPERTY( Tooltip = "Layers played together" )
-        vector<AudioMusicLayerDesc> _listLayer{};
+        vector<AudioMusicLayerDef> _listLayer{};
         PROPERTY( Min = 0.0, Tooltip = "Tempo; 0 uses the music's", Meta = "Units=BPM" )
         float32 _tempo{ 0.0f };
         PROPERTY( Tooltip = "Beats per bar; 0 uses the music's" )
@@ -78,7 +78,7 @@ namespace sw
 {
     /** @brief 구간 사이 전환 규칙 하나입니다. `_from` 이 비었거나 `*` 면 어느 구간에서든입니다. */
     REFLECT()
-    struct SW_API AudioMusicTransitionDesc
+    struct SW_API AudioMusicTransitionDef
     {
         REFLECT_BODY();
 
@@ -102,23 +102,23 @@ namespace sw
     /**
      * @brief 적응형 음악 하나입니다.
      * @code
-     *     <AudioMusicDesc _bus="music" _tempo="120" _beatsPerBar="4" _startSegment="Explore" _layerFadeSeconds="1.5">
+     *     <AudioMusicDef _bus="music" _tempo="120" _beatsPerBar="4" _startSegment="Explore" _layerFadeSeconds="1.5">
      *         <_listSegment>
-     *             <AudioMusicSegmentDesc _name="Explore" _bars="8">
+     *             <AudioMusicSegmentDef _name="Explore" _bars="8">
      *                 <_listLayer>
-     *                     <AudioMusicLayerDesc _path="game/x/music/explore_pad.ogg" />
-     *                     <AudioMusicLayerDesc _path="game/x/music/explore_drums.ogg" _parameter="Danger">
+     *                     <AudioMusicLayerDef _path="game/x/music/explore_pad.ogg" />
+     *                     <AudioMusicLayerDef _path="game/x/music/explore_drums.ogg" _parameter="Danger">
      *                         <_listPoint><AudioCurvePoint _x="0" _y="-96" /><AudioCurvePoint _x="1" _y="0" /></_listPoint>
-     *                     </AudioMusicLayerDesc>
+     *                     </AudioMusicLayerDef>
      *                 </_listLayer>
-     *             </AudioMusicSegmentDesc>
+     *             </AudioMusicSegmentDef>
      *         </_listSegment>
-     *         <_listTransition><AudioMusicTransitionDesc _from="*" _to="Combat" _sync="NextBar" _stinger="game/x/music/hit.ogg" /></_listTransition>
-     *     </AudioMusicDesc>
+     *         <_listTransition><AudioMusicTransitionDef _from="*" _to="Combat" _sync="NextBar" _stinger="game/x/music/hit.ogg" /></_listTransition>
+     *     </AudioMusicDef>
      * @endcode
      */
     REFLECT()
-    struct SW_API AudioMusicDesc
+    struct SW_API AudioMusicDef
     {
         REFLECT_BODY();
 
@@ -127,9 +127,9 @@ namespace sw
         PROPERTY( Tooltip = "Segment that starts first" )
         hashed_string _startSegment{};
         PROPERTY( Tooltip = "Segments" )
-        vector<AudioMusicSegmentDesc> _listSegment{};
+        vector<AudioMusicSegmentDef> _listSegment{};
         PROPERTY( Tooltip = "Transition rules (first match wins; a rule from the current segment beats a * rule)" )
-        vector<AudioMusicTransitionDesc> _listTransition{};
+        vector<AudioMusicTransitionDef> _listTransition{};
         PROPERTY( Min = 1.0, Tooltip = "Tempo", Meta = "Units=BPM" )
         float32 _tempo{ 120.0f };
         PROPERTY( Min = 0.0, Tooltip = "Time a parameter-driven layer takes to move between its old and new volume", Units = s )
@@ -149,7 +149,7 @@ namespace sw
         /** @brief 구간 번호입니다. 없으면 -1 입니다. */
         int32 findSegmentIndex( const hashed_string& name ) const;
         /** @brief @p from → @p to 전환 규칙입니다(구간을 적은 규칙이 `*` 규칙보다 먼저). 없으면 nullptr 입니다. */
-        const AudioMusicTransitionDesc* findTransition( const hashed_string& from, const hashed_string& to ) const;
+        const AudioMusicTransitionDef* findTransition( const hashed_string& from, const hashed_string& to ) const;
         /** @brief 구간의 박 길이(프레임)입니다. */
         float64 computeFramesPerBeat( uint32 segmentIndex ) const;
         /** @brief 구간의 마디당 박 수입니다. */

@@ -58,7 +58,7 @@ namespace sw
         return -1;
     }
 
-    void AIDirectorIntensityModel::noteCombat()
+    void AIDirectorIntensityModel::recordCombat()
     {
         _calmSeconds = 0.0f;
     }
@@ -75,7 +75,7 @@ namespace sw
         const float32 added                                  = AIDirectorIntensityInternal::clampContribution( signal, MathUtil::max( 0.0f, amount ) * signal._scale );
         _stress                                              = MathUtil::clamp( _stress + added, 0.0f, _pDef->_max );
         if ( signal._bCombat )
-            noteCombat();
+            recordCombat();
         return true;
     }
 

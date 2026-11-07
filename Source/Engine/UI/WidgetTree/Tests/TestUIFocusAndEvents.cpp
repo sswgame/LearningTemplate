@@ -627,7 +627,7 @@ SW_TEST_CASE( UIPointerStateTest, ClearHoverAndForgetTree )
     scene._pLeaf->setCaptureOnDown();
     (void)pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
     (void)scene._log.take();
-    pointer.forgetTree( scene._tree );
+    pointer.removeTree( scene._tree );
     SW_EXPECT_TRUE( pointer.getCaptureTree() == nullptr );
     SW_EXPECT_TRUE( pointer.getHoverTree() == nullptr );
     SW_EXPECT_TRUE( scene._log.take().empty() ); // 알리지 않고 버린다

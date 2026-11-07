@@ -41,7 +41,7 @@ namespace sw::editor
              pHUD != nullptr )
             pHUD->setShown( bShown == false );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( pMark );
+        EditorSelfTestMarks::record( pMark );
         drawSectionPopupOnRightClick( "##debugHUDSections" );
     }
 
@@ -61,7 +61,7 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "EditorDebugHUD.DebugHUDSectionNot", "Debug HUD section '%#' is not registered any more", pSection->_pName );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDSection" ) );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( string{ "debugHUD.section." } + pSection->_pName ).c_str() );
+                EditorSelfTestMarks::record( ( string{ "debugHUD.section." } + pSection->_pName ).c_str() );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", pSection->_pName );
             ImGui::PopID();
@@ -107,7 +107,7 @@ namespace sw::editor
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "ShowDebugHUDCtrlF3" ), &bShown ) )
             pHUD->setShown( bShown );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DebugHUDShow" ) );
-        EditorSelfTestMarks::note( "preferences.debugHUD.shown" );
+        EditorSelfTestMarks::record( "preferences.debugHUD.shown" );
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Sections" ) );
         drawSectionChecklist();
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Layout" ) );

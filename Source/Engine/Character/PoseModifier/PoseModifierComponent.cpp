@@ -94,22 +94,22 @@ namespace sw
         return bWritesPose ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
     }
 
-    void PoseModifierBinding::prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void PoseModifierBinding::prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
-        _owner.prepareFrame( unit, context );
+        _owner.prepareFrame( skeletalMesh, context );
     }
 
-    void PoseModifierBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void PoseModifierBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         (void)context;
         if ( phase == AnimationPhase::PostProcess )
-            _owner.evaluateFrame( unit );
+            _owner.evaluateFrame( skeletalMesh );
     }
 
-    void PoseModifierBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    void PoseModifierBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
     {
-        if ( _owner._pUnit == &unit )
-            _owner._pUnit = nullptr;
+        if ( _owner._pSkeletalMesh == &skeletalMesh )
+            _owner._pSkeletalMesh = nullptr;
     }
 
     PoseModifierCurveSource::PoseModifierCurveSource( const PoseModifierComponent& owner )
@@ -137,9 +137,9 @@ namespace sw
             const SocketDef* pDef     = ( socketID != kInvalidSocketID ) ? pTable->findSocketDef( socketID ) : nullptr;
             if ( pDef != nullptr )
             {
-                const uint32 unitIndex = pTable->getSocketUnit( socketID );
-                const bool   bOwnUnit  = unitIndex < _owner._listTableUnit.size() && _owner._pUnit != nullptr &&
-                                      _owner._listTableUnit[unitIndex] == _owner._pUnit->getHandle();
+                const uint32 skeletalMeshIndex = pTable->getSocketUnit( socketID );
+                const bool   bOwnUnit          = skeletalMeshIndex < _owner._listTableUnit.size() && _owner._pSkeletalMesh != nullptr &&
+                                      _owner._listTableUnit[skeletalMeshIndex] == _owner._pSkeletalMesh->getHandle();
                 if ( bOwnUnit == false )
                     return RigSocketLookup::OtherUnit;
                 // 표면 기준 소켓은 체형 보정을 더한 로컬이다(테이블이 계산해 둔다).
@@ -178,7 +178,7 @@ namespace sw
         , _pSocketTable{ nullptr }
         , _pGroundQueryOverride{ nullptr }
         , _pFrameAnimator{ nullptr }
-        , _pUnit{ nullptr }
+        , _pSkeletalMesh{ nullptr }
         , _pBoundSkeleton{ nullptr }
         , _boundContentID{ 0 }
         , _bRigEnabled{ SW_TRUE }
@@ -189,7 +189,7 @@ namespace sw
 
     PoseModifierComponent::~PoseModifierComponent()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
     }
 
@@ -206,9 +206,9 @@ namespace sw
     void PoseModifierComponent::onEndPlay()
     {
         releaseDependencies();
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = nullptr;
+        _pSkeletalMesh = nullptr;
         _instance.shutdown();
         Component::onEndPlay();
     }
@@ -264,15 +264,15 @@ namespace sw
         loadSharedColliders();
     }
 
-    void PoseModifierComponent::bindUnit( const hashed_string& unitName, SkeletalMeshComponent* pUnit, shared_ptr<const SocketSet> sockets )
+    void PoseModifierComponent::bindUnit( const hashed_string& skeletalMeshName, SkeletalMeshComponent* pSkeletalMesh, shared_ptr<const SocketSet> sockets )
     {
-        UnitBinding binding{};
-        binding._name    = unitName;
-        binding._sockets = std::move( sockets );
-        binding._unit    = TComponentHandle<SkeletalMeshComponent>{ pUnit };
-        for ( UnitBinding& existing : _listUnitBinding )
+        SkeletalMeshBinding binding{};
+        binding._name         = skeletalMeshName;
+        binding._sockets      = std::move( sockets );
+        binding._skeletalMesh = TComponentHandle<SkeletalMeshComponent>{ pSkeletalMesh };
+        for ( SkeletalMeshBinding& existing : _listUnitBinding )
         {
-            if ( existing._name == unitName )
+            if ( existing._name == skeletalMeshName )
             {
                 existing = binding;
                 bindExternalTargets();
@@ -283,15 +283,15 @@ namespace sw
         bindExternalTargets();
     }
 
-    void PoseModifierComponent::bindRigidUnit( const hashed_string& unitName, GameObject* pObject, shared_ptr<const SocketSet> sockets )
+    void PoseModifierComponent::bindRigidUnit( const hashed_string& skeletalMeshName, GameObject* pObject, shared_ptr<const SocketSet> sockets )
     {
-        UnitBinding binding{};
-        binding._name        = unitName;
+        SkeletalMeshBinding binding{};
+        binding._name        = skeletalMeshName;
         binding._sockets     = std::move( sockets );
         binding._rigidObject = ( pObject != nullptr ) ? pObject->getHandle() : GameObjectHandle{};
-        for ( UnitBinding& existing : _listUnitBinding )
+        for ( SkeletalMeshBinding& existing : _listUnitBinding )
         {
-            if ( existing._name == unitName )
+            if ( existing._name == skeletalMeshName )
             {
                 existing = binding;
                 bindExternalTargets();
@@ -302,14 +302,14 @@ namespace sw
         bindExternalTargets();
     }
 
-    void PoseModifierComponent::bindRigidComponentUnit( const hashed_string& unitName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets )
+    void PoseModifierComponent::bindRigidComponentUnit( const hashed_string& skeletalMeshName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets )
     {
-        UnitBinding binding{};
-        binding._name          = unitName;
-        binding._sockets       = std::move( sockets );
-        binding._rigidFrame    = TComponentHandle<SceneComponent>{ pFrame };
-        UnitBinding* pExisting = VectorUtil::findIf( _listUnitBinding, [&unitName]( const UnitBinding& existing )
-        { return existing._name == unitName; } );
+        SkeletalMeshBinding binding{};
+        binding._name                  = skeletalMeshName;
+        binding._sockets               = std::move( sockets );
+        binding._rigidFrame            = TComponentHandle<SceneComponent>{ pFrame };
+        SkeletalMeshBinding* pExisting = VectorUtil::findIf( _listUnitBinding, [&skeletalMeshName]( const SkeletalMeshBinding& existing )
+        { return existing._name == skeletalMeshName; } );
         if ( pExisting != nullptr )
             *pExisting = binding;
         else
@@ -337,9 +337,9 @@ namespace sw
     {
         _pSocketTable = pTable;
         _listTableUnit.clear();
-        for ( SkeletalMeshComponent* pUnit : listUnitByIndex )
+        for ( SkeletalMeshComponent* pSkeletalMesh : listUnitByIndex )
         {
-            _listTableUnit.push_back( TComponentHandle<SkeletalMeshComponent>{ pUnit } );
+            _listTableUnit.push_back( TComponentHandle<SkeletalMeshComponent>{ pSkeletalMesh } );
         }
         bindRig();
     }
@@ -349,8 +349,8 @@ namespace sw
         _bRigEnabled = bEnabled ? SW_TRUE : SW_FALSE;
         if ( bEnabled )
             _instance.reset();
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty(); // 끈 프레임에 리그 없는 포즈를 한 번 다시 만든다.
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty(); // 끈 프레임에 리그 없는 포즈를 한 번 다시 만든다.
     }
 
     bool PoseModifierComponent::isTargetBound( const hashed_string& targetName ) const
@@ -367,11 +367,11 @@ namespace sw
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        if ( _pUnit != nullptr && pManager != nullptr )
+        if ( _pSkeletalMesh != nullptr && pManager != nullptr )
         {
             for ( const TComponentHandle<SkeletalMeshComponent> handle : _listDependency )
             {
-                _pUnit->removeAnimationDependency( pManager->resolveComponent( handle ) );
+                _pSkeletalMesh->removeAnimationDependency( pManager->resolveComponent( handle ) );
             }
         }
         _listDependency.clear();
@@ -386,23 +386,23 @@ namespace sw
         _instance.shutdown();
         _listExternal.clear();
         _boneRequirement.reset();
-        _boundContentID               = 0;
-        GameObject*            pOwner = getOwner();
-        SkeletalMeshComponent* pUnit  = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        if ( pUnit != _pUnit )
+        _boundContentID                      = 0;
+        GameObject*            pOwner        = getOwner();
+        SkeletalMeshComponent* pSkeletalMesh = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pSkeletalMesh != _pSkeletalMesh )
         {
-            if ( _pUnit != nullptr )
+            if ( _pSkeletalMesh != nullptr )
                 _bindingRegistration.reset();
-            _pUnit = pUnit;
-            if ( _pUnit != nullptr )
-                _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
+            _pSkeletalMesh = pSkeletalMesh;
+            if ( _pSkeletalMesh != nullptr )
+                _bindingRegistration = _pSkeletalMesh->registerAnimationPhaseTask( &_binding );
         }
-        _pBoundSkeleton = ( _pUnit != nullptr ) ? &_pUnit->getSkeleton() : nullptr;
-        if ( _pUnit == nullptr || _asset == nullptr )
+        _pBoundSkeleton = ( _pSkeletalMesh != nullptr ) ? &_pSkeletalMesh->getSkeleton() : nullptr;
+        if ( _pSkeletalMesh == nullptr || _asset == nullptr )
             return;
         // 데이터 스켈레톤을 아직 받지 않은 유닛(전용 서버는 외형을 입히지 않고, 외형은 시작 뒤에 입혀질 수 있다)에는 묶지 않는다 — 리그는 그 뼈를
         // 이름으로 찾으므로 암묵 스켈레톤에는 늘 실패한다. 스켈레톤이 바뀌면 프레임 준비(prepareFrame)가 다시 묶는다.
-        if ( _pUnit->hasDataSkeleton() == false )
+        if ( _pSkeletalMesh->hasDataSkeleton() == false )
             return;
         // 소켓을 이름으로 찾는 대상이 있는데 소켓 출처(외형이 풀어 준 소켓 표 · 자기 소켓 세트)가 아직 없으면 묶지 않는다 — 스켈레톤과 같은 까닭이다.
         // 외형이 시작 뒤에 입혀지면 그 사이에 묶어 "unknown socket" 을 냈다(출처가 오면 `setSocketTable` · `setOwnSockets` 가 다시 묶는다). 출처가 있는데 이름이 없으면 그때가 진짜 오류다.
@@ -410,7 +410,7 @@ namespace sw
             return;
 
         const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath.path();
-        if ( _instance.initialize( _asset, _pUnit->getSkeleton(), &_socketResolver, label ) == false )
+        if ( _instance.initialize( _asset, _pSkeletalMesh->getSkeleton(), &_socketResolver, label ) == false )
         {
             SW_LOG_ERROR_ID( "PoseModifier.RigCouldNotBound", "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );
             return;
@@ -432,10 +432,10 @@ namespace sw
         vector<hashed_string> listBoneName;
         for ( const uint32 bone : listBone )
         {
-            listBoneName.push_back( _pUnit->getSkeleton().getBone( bone )._name );
+            listBoneName.push_back( _pSkeletalMesh->getSkeleton().getBone( bone )._name );
         }
-        _boneRequirement = _pUnit->requireBones( std::move( listBoneName ) );
-        _pUnit->markPoseDirty();
+        _boneRequirement = _pSkeletalMesh->requireBones( std::move( listBoneName ) );
+        _pSkeletalMesh->markPoseDirty();
     }
 
     bool PoseModifierComponent::needsSockets() const
@@ -450,38 +450,38 @@ namespace sw
         return false;
     }
 
-    const PoseModifierComponent::UnitBinding* PoseModifierComponent::findUnitBinding( const hashed_string& unitName ) const
+    const PoseModifierComponent::SkeletalMeshBinding* PoseModifierComponent::findUnitBinding( const hashed_string& skeletalMeshName ) const
     {
-        for ( const UnitBinding& binding : _listUnitBinding )
+        for ( const SkeletalMeshBinding& binding : _listUnitBinding )
         {
-            if ( binding._name == unitName )
+            if ( binding._name == skeletalMeshName )
                 return &binding;
         }
         return nullptr;
     }
 
-    SkeletalMeshComponent* PoseModifierComponent::findUnitByName( const hashed_string& unitName, shared_ptr<const SocketSet>* pOutSockets ) const
+    SkeletalMeshComponent* PoseModifierComponent::findUnitByName( const hashed_string& skeletalMeshName, shared_ptr<const SocketSet>* pOutSockets ) const
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return nullptr;
-        const UnitBinding* pBinding = findUnitBinding( unitName );
+        const SkeletalMeshBinding* pBinding = findUnitBinding( skeletalMeshName );
         if ( pBinding != nullptr )
         {
             if ( pOutSockets != nullptr )
                 *pOutSockets = pBinding->_sockets;
-            return pManager->resolveComponent( pBinding->_unit ); // 강체 연결이면 비어 있다
+            return pManager->resolveComponent( pBinding->_skeletalMesh ); // 강체 연결이면 비어 있다
         }
         // 이름으로 찾는다. 자식(장비 부품)부터 찾고, 없으면 매니저 전체에서 찾는다.
         vector<GameObject*> listChild;
         pOwner->getChildren( listChild );
         for ( GameObject* pChild : listChild )
         {
-            if ( pChild->getName() == unitName )
+            if ( pChild->getName() == skeletalMeshName )
                 return pChild->getComponent<SkeletalMeshComponent>();
         }
-        GameObject* pFound = pManager->findGameObjectByName( unitName );
+        GameObject* pFound = pManager->findGameObjectByName( skeletalMeshName );
         return ( pFound != nullptr ) ? pFound->getComponent<SkeletalMeshComponent>() : nullptr;
     }
 
@@ -511,7 +511,7 @@ namespace sw
         {
             const SkeletalMeshComponent* pCurrent = listPending.back();
             listPending.pop_back();
-            if ( pCurrent == _pUnit )
+            if ( pCurrent == _pSkeletalMesh )
                 return true;
             if ( VectorUtil::contains( listVisited, pCurrent ) )
                 continue;
@@ -533,7 +533,7 @@ namespace sw
         hashed_string               boneName = def._bone;
         BoneTransform               socketLocal{};
         bool                        bSocketRoot  = false;
-        const UnitBinding*          pBinding     = ( def._unit.empty() == false ) ? findUnitBinding( def._unit ) : nullptr;
+        const SkeletalMeshBinding*  pBinding     = ( def._skeletalMesh.empty() == false ) ? findUnitBinding( def._skeletalMesh ) : nullptr;
         GameObjectManager*          pManager     = getOwner()->getManager();
         GameObject*                 pRigidObject = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveGameObject( pBinding->_rigidObject ) : nullptr;
         SceneComponent*             pRigidFrame  = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveComponent( pBinding->_rigidFrame ) : nullptr;
@@ -543,8 +543,8 @@ namespace sw
             const SocketDef* pDef = ( def._kind == RigTargetKind::Socket && pBinding->_sockets != nullptr ) ? pBinding->_sockets->findSocket( def._socket ) : nullptr;
             if ( pDef == nullptr )
             {
-                SW_LOG_ERROR_ID( "PoseModifier.RigTargetRigidUnit", "Rig '%#': target '%#' on rigid unit '%#' must name one of its sockets (it has no bones) - '%#' not found", label, def._name.c_str(),
-                                 def._unit.c_str(), def._socket.c_str() );
+                SW_LOG_ERROR_ID( "PoseModifier.RigTargetRigidUnit", "Rig '%#': target '%#' on rigid skeletalMesh '%#' must name one of its sockets (it has no bones) - '%#' not found", label, def._name.c_str(),
+                                 def._skeletalMesh.c_str(), def._socket.c_str() );
                 return false;
             }
             outResolved._pRigidObject = pRigidObject;
@@ -552,16 +552,16 @@ namespace sw
             outResolved._socketLocal  = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
             return true;
         }
-        if ( def._unit.empty() == false )
+        if ( def._skeletalMesh.empty() == false )
         {
-            pTargetUnit = findUnitByName( def._unit, &sockets );
+            pTargetUnit = findUnitByName( def._skeletalMesh, &sockets );
             if ( pTargetUnit != nullptr && def._kind == RigTargetKind::Socket )
             {
                 const SocketDef* pDef = ( sockets != nullptr ) ? sockets->findSocket( def._socket ) : nullptr;
                 if ( pDef == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesSocket", "Rig '%#': target '%#' names socket '%#' but unit '%#' has no such socket (bindUnit with its sockets)", label, def._name.c_str(),
-                                     def._socket.c_str(), def._unit.c_str() );
+                    SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesSocket", "Rig '%#': target '%#' names socket '%#' but skeletalMesh '%#' has no such socket (bindUnit with its sockets)", label, def._name.c_str(),
+                                     def._socket.c_str(), def._skeletalMesh.c_str() );
                     return false;
                 }
                 boneName    = pDef->_parent;
@@ -571,11 +571,11 @@ namespace sw
         }
         else if ( _pSocketTable != nullptr )
         {
-            const SocketID   socketID  = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
-            const SocketDef* pDef      = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
-            const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
-            if ( unitIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
-                pTargetUnit = getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] );
+            const SocketID   socketID          = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
+            const SocketDef* pDef              = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
+            const uint32     skeletalMeshIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
+            if ( skeletalMeshIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
+                pTargetUnit = getOwner()->getManager()->resolveComponent( _listTableUnit[skeletalMeshIndex] );
             if ( pDef != nullptr )
             {
                 float4x4 local = pDef->makeLocalTransform();
@@ -597,7 +597,7 @@ namespace sw
         if ( hasBegunPlay() == false )
             return;
         releaseDependencies();
-        if ( _instance.isInitialized() == false || _pUnit == nullptr )
+        if ( _instance.isInitialized() == false || _pSkeletalMesh == nullptr )
             return;
         const string_view label = _rigPath.empty() ? string_view{ "(runtime rig)" } : string_view{ _rigPath };
         _listExternal.assign( _instance.getTargetCount(), ExternalTarget{} );
@@ -612,7 +612,7 @@ namespace sw
             external._socketLocal        = def._offset;
             if ( def._space.empty() == false )
             {
-                external._spaceBone = _pUnit->getSkeleton().findBoneIndex( def._space );
+                external._spaceBone = _pSkeletalMesh->getSkeleton().findBoneIndex( def._space );
                 if ( external._spaceBone < 0 )
                 {
                     SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnknownSpace", "Rig '%#': target '%#' has unknown space bone '%#'", label, def._name.c_str(), def._space.c_str() );
@@ -647,18 +647,18 @@ namespace sw
             const hashed_string&   boneName    = resolved._boneName;
             const BoneTransform&   socketLocal = resolved._socketLocal;
             const bool             bSocketRoot = resolved._bSocketRoot;
-            if ( pTargetUnit == nullptr || pTargetUnit == _pUnit )
+            if ( pTargetUnit == nullptr || pTargetUnit == _pSkeletalMesh )
                 continue; // 아직 없다. bindUnit 이 다시 바인딩한다.
-            external._unitBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );
-            if ( bSocketRoot == false && external._unitBone < 0 )
+            external._skeletalMeshBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );
+            if ( bSocketRoot == false && external._skeletalMeshBone < 0 )
             {
-                SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesBone", "Rig '%#': target '%#' names bone '%#' that unit '%#' does not have", label, def._name.c_str(), boneName.c_str(),
+                SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesBone", "Rig '%#': target '%#' names bone '%#' that skeletalMesh '%#' does not have", label, def._name.c_str(), boneName.c_str(),
                                  pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
             // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
-            external._socketLocal = BoneTransform::makeFromMatrix( def._offset.toMatrix() * socketLocal.toMatrix() );
-            external._unit        = TComponentHandle<SkeletalMeshComponent>{ pTargetUnit };
+            external._socketLocal  = BoneTransform::makeFromMatrix( def._offset.toMatrix() * socketLocal.toMatrix() );
+            external._skeletalMesh = TComponentHandle<SkeletalMeshComponent>{ pTargetUnit };
             if ( external._spaceBone >= 0 )
             {
                 external._bBound = SW_TRUE; // 프레임 시작에 기록해 자기 본에 적용한다. 의존은 등록하지 않는다.
@@ -666,11 +666,11 @@ namespace sw
             }
             if ( wouldCreateCycle( pTargetUnit ) )
             {
-                SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnitWould", "Rig '%#': target '%#' on unit '%#' would create an animation dependency cycle - the target is disabled", label, def._name.c_str(),
+                SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnitWould", "Rig '%#': target '%#' on skeletalMesh '%#' would create an animation dependency cycle - the target is disabled", label, def._name.c_str(),
                                  pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
-            _pUnit->addAnimationDependency( pTargetUnit );
+            _pSkeletalMesh->addAnimationDependency( pTargetUnit );
             _listDependency.push_back( TComponentHandle<SkeletalMeshComponent>{ pTargetUnit } );
             external._bLive  = SW_TRUE;
             external._bBound = SW_TRUE;
@@ -681,7 +681,7 @@ namespace sw
     {
         vector<RigSpringCollider> listCollider;
         // 물리 에셋은 래그돌과 같은 공유 캐시의 한 벌이다(사본을 읽지 않는다).
-        const bool                           bWanted = _physicsAssetPath.empty() == false && _pUnit != nullptr;
+        const bool                           bWanted = _physicsAssetPath.empty() == false && _pSkeletalMesh != nullptr;
         const shared_ptr<const PhysicsAsset> pAsset  = bWanted ? SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath ) : nullptr;
         if ( bWanted && pAsset == nullptr )
             SW_LOG_ERROR_ID( "PoseModifier.PhysicsAssetCouldNot", "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
@@ -689,7 +689,7 @@ namespace sw
         {
             for ( const PhysicsAssetBodyDef& body : pAsset->_listBody )
             {
-                const int32 bone = _pUnit->getSkeleton().findBoneIndex( body._bone );
+                const int32 bone = _pSkeletalMesh->getSkeleton().findBoneIndex( body._bone );
                 if ( bone < 0 )
                     continue;
                 for ( const PhysicsShapeDesc3D& shape : body._listShape )
@@ -720,23 +720,23 @@ namespace sw
         _instance.setSharedColliders( listCollider );
     }
 
-    void PoseModifierComponent::prepareFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void PoseModifierComponent::prepareFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         if ( _bRigEnabled == SW_FALSE )
             return;
         // 리그가 핫 리로드됐거나(내용 번호가 바뀜) 유닛이 다른 스켈레톤을 받았으면(외형을 입음) 다시 묶는다.
-        const bool bRigChanged      = _asset != nullptr && _asset->getContentID() != _boundContentID && unit.hasDataSkeleton();
-        const bool bSkeletonChanged = &unit.getSkeleton() != _pBoundSkeleton;
+        const bool bRigChanged      = _asset != nullptr && _asset->getContentID() != _boundContentID && skeletalMesh.hasDataSkeleton();
+        const bool bSkeletonChanged = &skeletalMesh.getSkeleton() != _pBoundSkeleton;
         if ( bRigChanged || bSkeletonChanged )
             bindRig();
         if ( _instance.isInitialized() == false )
             return;
 
         _pFrameAnimator                        = ( getOwner() != nullptr ) ? getOwner()->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        _worldFromModel                        = unit.getWorldMatrix();
+        _worldFromModel                        = skeletalMesh.getWorldMatrix();
         const float4x4          modelFromWorld = _worldFromModel.invert();
         GameObjectManager*      pManager       = ( getOwner() != nullptr ) ? getOwner()->getManager() : nullptr;
-        const vector<float4x4>& listOwnModel   = unit.getModelSpaceTransforms(); // 지난 프레임의 최종 포즈
+        const vector<float4x4>& listOwnModel   = skeletalMesh.getModelSpaceTransforms(); // 지난 프레임의 최종 포즈
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( _listExternal.size() ); ++targetIndex )
         {
             ExternalTarget& external = _listExternal[targetIndex];
@@ -756,21 +756,21 @@ namespace sw
             }
             else
             {
-                const SkeletalMeshComponent* pTargetUnit = pManager->resolveComponent( external._unit );
+                const SkeletalMeshComponent* pTargetUnit = pManager->resolveComponent( external._skeletalMesh );
                 external._pFrameUnit                     = pTargetUnit;
                 if ( pTargetUnit == nullptr )
                 {
                     _instance.setExternalTarget( targetIndex, RigTargetValue{} );
                     continue;
                 }
-                external._unitToModel = pTargetUnit->getWorldMatrix() * modelFromWorld;
+                external._skeletalMeshToModel = pTargetUnit->getWorldMatrix() * modelFromWorld;
                 if ( external._bLive == SW_TRUE )
                     continue; // 평가 중에 그 유닛의 이번 프레임 포즈를 읽는다
                 const vector<float4x4>& listModel = pTargetUnit->getModelSpaceTransforms();
-                const float4x4          boneModel = ( 0 <= external._unitBone && static_cast<size_t>( external._unitBone ) < listModel.size() )
-                                                      ? listModel[static_cast<size_t>( external._unitBone )]
+                const float4x4          boneModel = ( 0 <= external._skeletalMeshBone && static_cast<size_t>( external._skeletalMeshBone ) < listModel.size() )
+                                                      ? listModel[static_cast<size_t>( external._skeletalMeshBone )]
                                                       : float4x4::Identity;
-                targetInModel                     = external._socketLocal.toMatrix() * boneModel * external._unitToModel;
+                targetInModel                     = external._socketLocal.toMatrix() * boneModel * external._skeletalMeshToModel;
             }
 
             RigTargetValue value{};
@@ -796,11 +796,11 @@ namespace sw
         prepare._worldGravity   = PhysicsSystem::getConfiguredGravity();
         prepare._pGroundQuery   = ( _pGroundQueryOverride != nullptr ) ? _pGroundQueryOverride : _groundQuery.get();
         // 등급은 지난 LOD 판정의 결과다. 뷰를 받지 않은 시스템(테스트, 서버)에서는 기본값(등급 0)이라 모든 노드가 켜진다.
-        prepare._lodState = unit.getAnimationLODState();
+        prepare._lodState = skeletalMesh.getAnimationLODState();
         _instance.prepare( prepare );
     }
 
-    void PoseModifierComponent::evaluateFrame( SkeletalMeshComponent& unit )
+    void PoseModifierComponent::evaluateFrame( SkeletalMeshComponent& skeletalMesh )
     {
         // 꺼졌어도 유닛은 다른 일(애니메이터)로 돌 수 있다. 그때 리그는 아무것도 하지 않는다.
         if ( _bRigEnabled == SW_FALSE || _instance.isInitialized() == false )
@@ -813,20 +813,20 @@ namespace sw
             if ( external._bLive == SW_FALSE || pTargetUnit == nullptr )
                 continue;
             const vector<float4x4>& listModel = pTargetUnit->getModelSpaceTransforms();
-            const float4x4          boneModel = ( 0 <= external._unitBone && static_cast<size_t>( external._unitBone ) < listModel.size() ) ? listModel[static_cast<size_t>( external._unitBone )]
-                                                                                                                                            : float4x4::Identity;
+            const float4x4          boneModel = ( 0 <= external._skeletalMeshBone && static_cast<size_t>( external._skeletalMeshBone ) < listModel.size() ) ? listModel[static_cast<size_t>( external._skeletalMeshBone )]
+                                                                                                                                                            : float4x4::Identity;
             RigTargetValue          value{};
             value._bValid = SW_TRUE;
-            PoseModifierComponentInternal::decomposeRigid( external._socketLocal.toMatrix() * boneModel * external._unitToModel, value._position, value._rotation );
+            PoseModifierComponentInternal::decomposeRigid( external._socketLocal.toMatrix() * boneModel * external._skeletalMeshToModel, value._position, value._rotation );
             _instance.setExternalTarget( targetIndex, value );
         }
-        _instance.evaluate( unit.getLocalPose(), unit.getSkeleton().getParentIndices(), _worldFromModel );
+        _instance.evaluate( skeletalMesh.getLocalPose(), skeletalMesh.getSkeleton().getParentIndices(), _worldFromModel );
         // 포즈 구동의 보정 모프는 이름이 그리는 메시의 모프 타깃과 같으면 그 가중치에 더한다(GPU 모프 풀이 스키닝 앞에서 적용한다). 기본 포즈 단계가 비운 뒤다.
         for ( const RigMorphWeight& morph : _instance.getMorphWeights() )
         {
-            const int32 targetIndex = unit.findMorphTargetIndex( morph._name );
+            const int32 targetIndex = skeletalMesh.findMorphTargetIndex( morph._name );
             if ( targetIndex >= 0 )
-                unit.addMorphWeight( static_cast<uint32>( targetIndex ), morph._weight );
+                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), morph._weight );
         }
     }
 } // namespace sw

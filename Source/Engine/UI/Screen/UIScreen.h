@@ -17,7 +17,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
-#include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Screen/UILayer.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -36,9 +36,9 @@ namespace sw
 
 namespace sw
 {
-    /** @struct UIScreenDesc @brief 화면 하나의 성질입니다(문서의 루트 요소 속성으로도 적습니다). */
+    /** @struct UIScreenDef @brief 화면 하나의 성질입니다(문서의 루트 요소 속성으로도 적습니다). */
     REFLECT()
-    struct SW_API UIScreenDesc
+    struct SW_API UIScreenDef
     {
         REFLECT_BODY();
 
@@ -81,7 +81,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        UIScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
+        UIScreen( const UIScreenDef& desc, unique_ptr<Widget> root );
         virtual ~UIScreen();
 
         /** @brief 동적 리플렉션 타입입니다. 엔진 밖 모듈의 화면 클래스는 자기 `StaticType()` 을 반환하도록 재정의합니다. */
@@ -89,11 +89,11 @@ namespace sw
         UIScreen( const UIScreen& )            = delete;
         UIScreen& operator=( const UIScreen& ) = delete;
 
-        WidgetTree&         getTree() { return _tree; }
-        const WidgetTree&   getTree() const { return _tree; }
-        const UIScreenDesc& getDesc() const { return _desc; }
-        UIScreenHandle      getHandle() const { return _handle; }
-        UISystem*           getUISystem() const { return _pUISystem; }
+        WidgetTree&        getTree() { return _tree; }
+        const WidgetTree&  getTree() const { return _tree; }
+        const UIScreenDef& getDesc() const { return _desc; }
+        UIScreenHandle     getHandle() const { return _handle; }
+        UISystem*          getUISystem() const { return _pUISystem; }
         /** @brief 포커스와 UI 액션을 받는 화면이면 true 입니다. 성질이 그렇고 HUD 나 오버레이 레이어가 아니어야 합니다. */
         bool takesFocus() const;
         /** @brief 포인터 이벤트를 받는 화면이면 true 입니다. 오버레이 레이어(알림)와 레이어 가시성 요청으로 숨긴 화면은 받지 않습니다. */
@@ -109,13 +109,13 @@ namespace sw
         /** @brief 이 화면을 생성한 문서 경로입니다(코드로 만든 화면이면 빈 문자열). */
         const string& getDocumentPath() const { return _documentPath; }
         /** @brief 문서에서 분리한 바인딩 식입니다(위젯 번호가 채워진 것이며, 바인딩 단계가 연결합니다). */
-        const vector<UIBindingDesc>& getBindings() const { return _listBinding; }
+        const vector<UIBindingDef>& getBindings() const { return _listBinding; }
         /** @brief 문서(와 그 조각)가 지정한 스타일 시트 경로입니다(테마 시트 뒤에 붙습니다). */
         const vector<string>& getStyleSheets() const { return _listStyleSheet; }
         /** @brief 이 화면의 스타일 세트(테마, 문서 시트 순서)입니다. 올리기 전이면 nullptr 입니다. */
         UIStyleSet* getStyleSet() const { return _styleSet.get(); }
         /** @brief 바인딩 식 하나를 추가합니다(코드로 만든 화면용이며, 문서 화면은 `UISystem::openScreen` 이 넣습니다). 다음 바인딩 단계가 다시 연결합니다. */
-        void addBinding( const UIBindingDesc& binding );
+        void addBinding( const UIBindingDef& binding );
         /** @brief 트리에 없는 위젯(코드가 지운 행)에 붙은 바인딩 식을 제거합니다. 제거했으면 다음 바인딩 단계가 다시 연결합니다. */
         void removeOrphanBindings();
         /**
@@ -184,9 +184,9 @@ namespace sw
         void releaseSubscription( uint64 id );
 
         WidgetTree                                                          _tree;
-        UIScreenDesc                                                        _desc;
+        UIScreenDef                                                         _desc;
         string                                                              _documentPath;    ///< 생성한 문서입니다(코드로 만들었으면 빈 문자열).
-        vector<UIBindingDesc>                                               _listBinding;     ///< 문서에서 분리한 바인딩 식입니다.
+        vector<UIBindingDef>                                                _listBinding;     ///< 문서에서 분리한 바인딩 식입니다.
         vector<string>                                                      _listStyleSheet;  ///< 문서와 조각이 지정한 스타일 시트입니다.
         unique_ptr<UIStyleSet>                                              _styleSet;        ///< 테마, 문서 시트 순서의 스타일 세트입니다(UISystem 이 설정합니다).
         unique_ptr<UIBindingSet>                                            _bindingSet;      ///< 바인딩 식을 해석한 것입니다(뷰모델, 설정과 위젯 필드를 연결합니다).

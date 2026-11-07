@@ -306,7 +306,7 @@ namespace sw
         if ( _pDevice == nullptr )
         {
             view._occlusionTiles = RHIStructuredBuffer{};
-            view._transientPool.forget();
+            view._transientPool.clear();
             view._taaHistory           = 0;
             view._taaHistorySRV        = kInvalidDescriptorIndex;
             view._depthHistory         = 0;

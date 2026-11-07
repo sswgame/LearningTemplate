@@ -8,12 +8,12 @@
  * @code
  *     <MaterialGraphDef formatVersion="0">
  *         <_listNode>
- *             <MaterialGraphNodeDesc _name="Tint" _kind="ColorParameter" _position="0,0">
+ *             <MaterialGraphNodeDef _name="Tint" _kind="ColorParameter" _position="0,0">
  *                 <_listValue><MaterialGraphValue _name="Parameter" _value="_tint" /></_listValue>
- *             </MaterialGraphNodeDesc>
- *             <MaterialGraphNodeDesc _name="Out" _kind="Output" _position="300,0">
+ *             </MaterialGraphNodeDef>
+ *             <MaterialGraphNodeDef _name="Out" _kind="Output" _position="300,0">
  *                 <_listLink><MaterialGraphLink _pin="BaseColor" _fromNode="Tint" _fromPin="RGB" /></_listLink>
- *             </MaterialGraphNodeDesc>
+ *             </MaterialGraphNodeDef>
  *         </_listNode>
  *     </MaterialGraphDef>
  * @endcode
@@ -67,7 +67,7 @@ namespace sw
 {
     /** @brief 그래프의 노드 하나입니다. */
     REFLECT()
-    struct SW_API MaterialGraphNodeDesc
+    struct SW_API MaterialGraphNodeDef
     {
         REFLECT_BODY();
 
@@ -113,7 +113,7 @@ namespace sw
         PROPERTY( Name = "formatVersion", Tooltip = "Schema version of the file" )
         uint32 _formatVersion{ 0 };
         PROPERTY( Tooltip = "Nodes of the graph" )
-        vector<MaterialGraphNodeDesc> _listNode{};
+        vector<MaterialGraphNodeDef> _listNode{};
         PROPERTY( Tooltip = "Comment boxes of the graph editor; the compiler does not read them" )
         vector<GraphCommentBox> _listComment{};
 

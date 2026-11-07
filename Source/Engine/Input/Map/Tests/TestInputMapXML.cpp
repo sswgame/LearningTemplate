@@ -1,4 +1,4 @@
-// InputMapXML — 바인딩 원소 스키마(InputMapFields.h)로 사용자 바인딩을 쓰고 읽기: 종류마다 왕복, 모르는 이름 · 칸의 거절(nogpu).
+// InputMapXML — 바인딩 원소 스키마(InputMapParams.h)로 사용자 바인딩을 쓰고 읽기: 종류마다 왕복, 모르는 이름 · 칸의 거절(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"

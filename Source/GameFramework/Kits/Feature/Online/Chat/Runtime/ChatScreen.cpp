@@ -27,7 +27,7 @@ namespace sw
         };
     } // namespace
 
-    ChatScreen::ChatScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    ChatScreen::ChatScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _channelID{}
         , _pModel{ nullptr }

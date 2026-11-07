@@ -31,9 +31,9 @@ namespace sw
             static constexpr const utf8* kAttackButton = "Attack"; ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
 
             /** @brief 최대 체력만 정한 체력 설정을 만듭니다. 실드 · 회복 · 기절은 기본값(꺼짐)입니다. */
-            static VitalitySettings makeVitalitySettings( float32 maxHealth )
+            static CombatHealthSettings makeCombatHealthSettings( float32 maxHealth )
             {
-                VitalitySettings settings;
+                CombatHealthSettings settings;
                 settings._maxHealth = maxHealth;
                 return settings;
             }
@@ -44,7 +44,7 @@ namespace sw
 namespace sw
 {
     ShooterEnemyComponent::ShooterEnemyComponent()
-        : _director{}
+        : _gameMode{}
         , _radius{ 0.45f }
         , _height{ 2.0f }
         , _reach{ 1.7f }
@@ -61,7 +61,7 @@ namespace sw
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
-        , _vitality{}
+        , _combatHealth{}
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
         , _attackCooldown{}
@@ -77,11 +77,11 @@ namespace sw
         setCanEverTick( true );
     }
 
-    bool ShooterEnemyComponent::launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed )
+    bool ShooterEnemyComponent::launch( GameObjectHandle gameMode, const float3& position, float32 yaw, float32 health, float32 speed )
     {
-        if ( _vitality.initialize( ShooterEnemyComponentInternal::makeVitalitySettings( health ) ) == false )
+        if ( _combatHealth.initialize( ShooterEnemyComponentInternal::makeCombatHealthSettings( health ) ) == false )
             return false;
-        _director = director;
+        _gameMode = gameMode;
         _position = position;
         _yaw      = yaw;
         _speed    = speed;
@@ -124,11 +124,11 @@ namespace sw
     {
         if ( isAlive() == false )
             return false;
-        (void)_vitality.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
-        _vitality.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
+        (void)_combatHealth.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
+        _combatHealth.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
         // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`). 쓰러짐은 읽기(`isDead`)가 정한다.
         notifyHealthChanged( false );
-        if ( _vitality.isAlive() == false )
+        if ( _combatHealth.isAlive() == false )
         {
             enterPhase( ShooterEnemyPhase::Dying );
             requestDropSocketParts();
@@ -162,8 +162,8 @@ namespace sw
     HealthReading ShooterEnemyComponent::getHealthReading() const
     {
         HealthReading reading;
-        reading._health    = _vitality.getHealth();
-        reading._maxHealth = _vitality.getSettings()._maxHealth;
+        reading._health    = _combatHealth.getHealth();
+        reading._maxHealth = _combatHealth.getSettings()._maxHealth;
         reading._bDead     = isDead() ? SW_TRUE : SW_FALSE;
         return reading;
     }
@@ -195,8 +195,8 @@ namespace sw
             return;
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ShooterGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _director ) : nullptr;
-        if ( pDirector == nullptr )
+        const ShooterGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        if ( pGameMode == nullptr )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         _phaseTime += step;
@@ -205,7 +205,7 @@ namespace sw
         const PawnComponent* pPawn       = pOwner->getComponent<PawnComponent>();
         const bool           bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
         const float32        controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
-        const float3         target      = pDirector->getPlayerFeet();
+        const float3         target      = pGameMode->getPlayerFeet();
         const float3         toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
         const float32        distance    = toTarget.getLength();
         // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::updateRepeat`). 쿨다운은 어느 단계에서도 흐른다.
@@ -232,7 +232,7 @@ namespace sw
                 {
                     _bAttackLanded = SW_TRUE;
                     if ( distance < _reach * 1.25f )
-                        requestPlayerDamage( pDirector->getPlayer() );
+                        requestPlayerDamage( pGameMode->getPlayer() );
                 }
                 if ( _phaseTime >= _attackLength )
                 {
@@ -265,7 +265,7 @@ namespace sw
         if ( pMovement != nullptr )
         {
             pMovement->setSuspended( _phase != ShooterEnemyPhase::Chasing );
-            (void)pMovement->stepMovement( pDirector->getBoxes(), step );
+            (void)pMovement->stepMovement( pGameMode->getBoxes(), step );
             _position              = pMovement->getFeetPosition();
             const float3& velocity = pMovement->getMoveVelocity();
             const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );

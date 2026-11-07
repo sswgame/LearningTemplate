@@ -28,9 +28,9 @@ namespace sw
         _pending.push( std::move( callback ) );
     }
 
-    void DeferredDelegateQueue::drain()
+    void DeferredDelegateQueue::flush()
     {
-        _drainThread.assumeHeld(); // drain 은 한 스레드(게임 스레드)만 부른다
+        _flushThread.assumeHeld(); // drain 은 한 스레드(게임 스레드)만 부른다
         if ( _pending.takeAll( _listProcessing ) == false )
             return;
         for ( Callback& callback : _listProcessing )
@@ -112,12 +112,12 @@ namespace sw
             func();
     }
 
-    void StructuralChangeBuffer::drain( GameObjectManager& manager )
+    void StructuralChangeBuffer::flush( GameObjectManager& manager )
     {
         // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **부른 순서대로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
-            _structuralQueue.drain();
+            _structuralQueue.flush();
         }
 
         // 틱 중의 세터가 쓴 것(대기 칸 · 쓰기 큐)을 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
@@ -129,26 +129,26 @@ namespace sw
         // 병렬 onTick 이 미룬 스폰 · 데미지 · 태그, 그리고 그것이 만든 오브젝트의 병합.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.postTick" );
-            _postTickQueue.drain();
+            _postTickQueue.flush();
             manager.mergePendingAdds();
             // 틱이 만든 것(스폰)은 같은 프레임 안에 시작한다.
             manager.dispatchPendingBeginPlay();
         }
     }
 
-    void StructuralChangeBuffer::drainUntilEmpty( GameObjectManager& manager )
+    void StructuralChangeBuffer::flushUntilEmpty( GameObjectManager& manager )
     {
         // 서로 다시 미루는 고리를 끊는 상한이다. 정상이면 한두 번에 빈다.
-        constexpr uint32 kMaxDrainPass = 64;
-        for ( uint32 pass = 0; pass < kMaxDrainPass; ++pass )
+        constexpr uint32 kMaxFlushPass = 64;
+        for ( uint32 pass = 0; pass < kMaxFlushPass; ++pass )
         {
-            drain( manager );
+            flush( manager );
             if ( _structuralQueue.isEmpty() && _postTickQueue.isEmpty() )
                 return;
         }
         // 상한에 닿으면 남은 것을 호출하지 않고 버린다. SW_ASSERT 로 멈추면 언로드가 반쯤 끝난 채 남고, 남겨 두면 모듈이 내려간 뒤
         // 다음 프레임 drain 이 없는 코드를 부른다. 게임 쪽 일 몇 개를 잃는 편이 안전하다.
-        SW_LOG_ERROR_ID( "StructuralChangeBuffer.DeferredWorkKeptRe", "Deferred work kept re-queueing after %# drain passes before module unload; discarding the rest", kMaxDrainPass );
+        SW_LOG_ERROR_ID( "StructuralChangeBuffer.DeferredWorkKeptRe", "Deferred work kept re-queueing after %# drain passes before module unload; discarding the rest", kMaxFlushPass );
         clear();
     }
 

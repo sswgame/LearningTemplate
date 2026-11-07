@@ -36,7 +36,7 @@ namespace sw::editor
 
     void EditorGraphDocumentPanelBase::finishGraphCanvas( uint32 drawnNodeCount )
     {
-        EditorNodeGraph::noteDrawnNodeCount( drawnNodeCount );
+        EditorNodeGraph::recordDrawnNodeCount( drawnNodeCount );
         _nodeGraph.endCanvas();
         _bindModuleCopy( nullptr );
     }

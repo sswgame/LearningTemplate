@@ -133,7 +133,7 @@ namespace sw
          * @details 시한은 보고 전체의 길이가 아니라 **진척이 멈춘 시간**을 잰다. 바쁜 기계에서 덤프 · 심볼 변환이 길어진 보고는 끝까지 쓰고,
          *          락에서 영영 선 보고(막힌 stdio · 힙 락)만 끊는다. 전체 길이를 재면 부하가 걸린 크래시에서 덤프 · 스택 파일이 잘린다.
          */
-        void noteProgress() { _reportProgress.fetch_add( 1 ); }
+        void recordProgress() { _reportProgress.fetch_add( 1 ); }
 
         /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다. 엔진은 로그 폴더를 준다 — 사용자가 폴더 하나만 보내면 되도록. */
         void setReportFolder( string_view folderPath ) { _reportFolder = folderPath; }
@@ -143,7 +143,7 @@ namespace sw
          * @brief 크래시 보고가 **진척 없이** 버틸 수 있는 시간(초)입니다. 그동안 한 걸음도 나아가지 않으면 보고를 버리고 곧장 끝냅니다. 0 이면 기본값(20 초).
          * @details 보고는 죽어 가는 프로세스 안에서 돈다. 크래시가 남긴 락(힙 손상으로 abort 한 malloc 의 락 · 막힌 stdio · 로더)을
          *          보고가 기다리면 영영 끝나지 않고, 크래시 난 게임이 창을 띄운 채 서 있다. 시한은 전체 길이가 아니라 진척이 멈춘 시간이라
-         *          바쁜 기계에서 길어진 덤프 · 심볼 변환은 끝까지 쓰고 멈춘 보고만 끊는다(`noteProgress`).
+         *          바쁜 기계에서 길어진 덤프 · 심볼 변환은 끝까지 쓰고 멈춘 보고만 끊는다(`recordProgress`).
          *          Windows 는 폴트 스레드가 시한마다 진척을 보고, POSIX 는 `alarm` 시그널이 진척을 보고 다시 건다.
          */
         void setReportDeadline( uint32 seconds );

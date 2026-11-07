@@ -20,7 +20,7 @@ namespace
         /** @brief 모든 코드 포인트를 가진 가족 하나("All")의 카탈로그로 시작합니다. */
         [[nodiscard]] static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
         {
-            sw::FontCatalogDesc catalog{};
+            sw::FontCatalogDef catalog{};
             catalog._defaultFamily = "All";
             sw::test::FakeFontServiceFixture::addFamily( catalog, "All", kAllPath );
             return fixture.initialize( catalog );
@@ -35,7 +35,7 @@ namespace
             sw::test::FakeFontFaceConfig hangul{};
             hangul.addRange( 0x20u, 0x20u ).addRange( 0xAC00u, 0xD7A3u );
             fixture._pRasterizer->setFaceConfig( kHangulPath, hangul );
-            sw::FontCatalogDesc catalog{};
+            sw::FontCatalogDef catalog{};
             catalog._defaultFamily = "Hangul";
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Hangul", kHangulPath );

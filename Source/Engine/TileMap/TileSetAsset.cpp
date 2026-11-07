@@ -147,16 +147,16 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: the root element must be <TileSet>", sourceName );
             return false;
         }
-        // 칸 · 범위는 스키마(`TileSetRootFields`)가 정본이다. 깨진 값 · 범위 밖 값은 읽기 실패다.
-        TileSetRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, sourceName ) == false )
+        // 칸 · 범위는 스키마(`TileSetRootParams`)가 정본이다. 깨진 값 · 범위 밖 값은 읽기 실패다.
+        TileSetRootParams rootParams;
+        if ( XMLFields::readFields( root, rootParams, sourceName ) == false )
             return false;
         TileSetAsset loaded;
-        loaded._atlasPath       = rootFields._atlas;
-        loaded._normalAtlasPath = rootFields._normalAtlas;
-        loaded._columnCount     = rootFields._columns;
-        loaded._rowCount        = rootFields._rows;
-        loaded._tileSize        = rootFields._tileSize;
+        loaded._atlasPath       = rootParams._atlas;
+        loaded._normalAtlasPath = rootParams._normalAtlas;
+        loaded._columnCount     = rootParams._columns;
+        loaded._rowCount        = rootParams._rows;
+        loaded._tileSize        = rootParams._tileSize;
 
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
@@ -178,12 +178,12 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
             return false;
         }
-        TileBrushFields fields;
-        if ( XMLFields::readFields( node, fields, sourceName, { "cell", "frames", "fps" } ) == false || fields._name.empty() )
+        TileBrushParams params;
+        if ( XMLFields::readFields( node, params, sourceName, { "cell", "frames", "fps" } ) == false || params._name.empty() )
             return false;
         TileBrush&        brush = outBrush;
-        const string_view name  = fields._name.view();
-        brush._name             = fields._name;
+        const string_view name  = params._name.view();
+        brush._name             = params._name;
         if ( findBrush( brush._name ) >= 0 )
         {
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: brush '%#' is listed twice", sourceName, name );
@@ -191,9 +191,9 @@ namespace sw
         }
         if ( parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
             return false;
-        brush._bSolid                         = fields._bSolid ? SW_TRUE : SW_FALSE;
-        brush._navCost                        = static_cast<uint8>( fields._navCost );
-        const string_view outside             = fields._outside;
+        brush._bSolid                         = params._bSolid ? SW_TRUE : SW_FALSE;
+        brush._navCost                        = static_cast<uint8>( params._navCost );
+        const string_view outside             = params._outside;
         const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same" ) == false && StringUtil::equals( outside, "empty" ) == false;
         if ( bInvalidOutsideMode )
         {
@@ -209,7 +209,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
                 return false;
             }
-            TileRuleFields ruleFields;
+            TileRuleParams ruleFields;
             if ( XMLFields::readFields( ruleNode, ruleFields, sourceName, { "cell", "frames", "fps" } ) == false )
                 return false;
             TileRule rule{};

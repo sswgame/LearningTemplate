@@ -210,9 +210,9 @@ namespace sw
         return _pCatalog != nullptr ? _pCatalog->findPursuit( getWantedLevel( regionID ) ) : nullptr;
     }
 
-    void WesternLawState::drainEvents( vector<WesternLawEvent>& outListEvent )
+    void WesternLawState::pollEvents( vector<WesternLawEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void WesternLawState::writeState( Archive& outArchive ) const

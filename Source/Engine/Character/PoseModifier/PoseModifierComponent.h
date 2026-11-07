@@ -50,9 +50,9 @@ namespace sw
         bool isAnimationActive() const override;
         /** @brief 켜져 있고 평가할 노드(켜짐 · 가중치 > 0 · LOD 로 꺼지지 않음)가 있을 때만 포즈를 쓴다 — `RigInstance::canWritePose`, 평가가 같은 판정으로 건너뛴다. */
         AnimationPoseAccess getPoseAccess() const override;
-        void                prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         PoseModifierComponent& _owner;
@@ -126,21 +126,21 @@ namespace sw
         void setPhysicsAssetPath( string_view path );
 
         /**
-         * @brief 리그의 `unit` 이름에 유닛을 연결합니다(장비 부품, 다른 캐릭터). @p sockets 는 그 유닛의 소켓 에셋입니다(소켓 대상이 씁니다).
+         * @brief 리그의 `skeletalMesh` 이름에 유닛을 연결합니다(장비 부품, 다른 캐릭터). @p sockets 는 그 유닛의 소켓 에셋입니다(소켓 대상이 씁니다).
          * @details 연결하지 않은 이름은 자식에서 먼저, 그다음 매니저 전체에서 같은 이름의 오브젝트를 찾는다. 외형 통합은 이 함수로 슬롯 유닛을 연결한다.
          */
-        void bindUnit( const hashed_string& unitName, SkeletalMeshComponent* pUnit, shared_ptr<const SocketSet> sockets = nullptr );
+        void bindUnit( const hashed_string& skeletalMeshName, SkeletalMeshComponent* pSkeletalMesh, shared_ptr<const SocketSet> sockets = nullptr );
         /**
-         * @brief 리그의 `unit` 이름에 본 없는 강체 오브젝트(정적 메시 무기 같은 장비 부품)를 연결합니다. 그 유닛의 소켓 대상은 "오브젝트 월드 × 소켓 로컬" 로 풀립니다.
+         * @brief 리그의 `skeletalMesh` 이름에 본 없는 강체 오브젝트(정적 메시 무기 같은 장비 부품)를 연결합니다. 그 유닛의 소켓 대상은 "오브젝트 월드 × 소켓 로컬" 로 풀립니다.
          * @details 소켓 로컬은 오브젝트 원점 기준이다(강체 부품의 루트 — 외형 소켓 테이블의 강체 유닛과 같은 규약). 본 대상은 오류다. 의존은 걸지 않는다 — 부품 위치는
          *          지난 프레임 값이므로 손에 붙은 부품은 `space` 로 손 본 기준으로 받아야 늦지 않는다. @p pObject 가 nullptr 이면 연결을 풀고 그 대상은 값이 없다(노드가 쉰다).
          */
-        void bindRigidUnit( const hashed_string& unitName, GameObject* pObject, shared_ptr<const SocketSet> sockets );
+        void bindRigidUnit( const hashed_string& skeletalMeshName, GameObject* pObject, shared_ptr<const SocketSet> sockets );
         /**
          * @brief `bindRigidUnit` 과 같되 소켓 로컬의 기준이 오브젝트 루트가 아니라 컴포넌트 @p pFrame 입니다(카메라 자식인 1인칭 총처럼 오브젝트를 따로 두지 않는 부품).
          * @details 위치는 지난 프레임 값일 수 있다 — 같은 틱 그룹의 카메라가 먼저 돌면 이번 프레임 값이다. @p pFrame 이 nullptr 이면 연결을 풀고 노드가 쉰다.
          */
-        void bindRigidComponentUnit( const hashed_string& unitName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets );
+        void bindRigidComponentUnit( const hashed_string& skeletalMeshName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets );
         /** @brief 리그의 `object` 이름에 오브젝트를 겁니다. 걸지 않은 이름은 같은 이름의 오브젝트를 찾습니다. */
         void bindObject( const hashed_string& objectName, GameObject* pObject );
         /**
@@ -179,24 +179,24 @@ namespace sw
         /** @brief 바깥 대상 하나의 런타임 상태입니다. */
         struct ExternalTarget
         {
-            float4x4                                _unitToModel{};         ///< 대상 유닛 모델에서 내 유닛 모델로 가는 변환이다(프레임 시작에 기록한다).
-            BoneTransform                           _socketLocal{};         ///< 대상 본 기준 오프셋이다(소켓 로컬 × 데이터 오프셋).
-            const SkeletalMeshComponent*            _pFrameUnit{ nullptr }; ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
-            TComponentHandle<SkeletalMeshComponent> _unit{};                ///< 다른 유닛(본이나 소켓 대상)이다.
-            GameObjectHandle                        _object{};              ///< 오브젝트를 대상으로 삼는다.
-            TComponentHandle<SceneComponent>        _frame{};               ///< 컴포넌트를 대상으로 삼는다(`bindRigidComponentUnit`).
-            int32                                   _unitBone{ -1 };        ///< 대상 유닛의 본이다.
-            int32                                   _spaceBone{ -1 };       ///< `space` 에 지정한 내 유닛의 본이다.
+            float4x4                                _skeletalMeshToModel{};  ///< 대상 유닛 모델에서 내 유닛 모델로 가는 변환이다(프레임 시작에 기록한다).
+            BoneTransform                           _socketLocal{};          ///< 대상 본 기준 오프셋이다(소켓 로컬 × 데이터 오프셋).
+            const SkeletalMeshComponent*            _pFrameUnit{ nullptr };  ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
+            TComponentHandle<SkeletalMeshComponent> _skeletalMesh{};         ///< 다른 유닛(본이나 소켓 대상)이다.
+            GameObjectHandle                        _object{};               ///< 오브젝트를 대상으로 삼는다.
+            TComponentHandle<SceneComponent>        _frame{};                ///< 컴포넌트를 대상으로 삼는다(`bindRigidComponentUnit`).
+            int32                                   _skeletalMeshBone{ -1 }; ///< 대상 유닛의 본이다.
+            int32                                   _spaceBone{ -1 };        ///< `space` 에 지정한 내 유닛의 본이다.
             uint8                                   _bBound{ SW_FALSE };
             uint8                                   _bLive{ SW_FALSE }; ///< 평가 중(워커)에 대상 유닛의 이번 프레임 포즈를 읽는다(의존을 건 대상)
         };
 
-        struct UnitBinding
+        struct SkeletalMeshBinding
         {
             hashed_string                           _name{};
             shared_ptr<const SocketSet>             _sockets{};
-            TComponentHandle<SkeletalMeshComponent> _unit{};
-            GameObjectHandle                        _rigidObject{}; ///< 강체 유닛(`bindRigidUnit`)이면 그 오브젝트다. 이때 `_unit` 은 비어 있다
+            TComponentHandle<SkeletalMeshComponent> _skeletalMesh{};
+            GameObjectHandle                        _rigidObject{}; ///< 강체 유닛(`bindRigidUnit`)이면 그 오브젝트다. 이때 `_skeletalMesh` 은 비어 있다
             TComponentHandle<SceneComponent>        _rigidFrame{};  ///< 컴포넌트가 기준인 강체 유닛(`bindRigidComponentUnit`)이면 그 컴포넌트다
         };
 
@@ -225,11 +225,11 @@ namespace sw
         /** @brief 묶을 때 건 의존을 뗍니다. */
         void releaseDependencies();
         /** @brief 이름의 유닛(명시 → 자식 → 매니저)입니다. */
-        SkeletalMeshComponent* findUnitByName( const hashed_string& unitName, shared_ptr<const SocketSet>* pOutSockets ) const;
+        SkeletalMeshComponent* findUnitByName( const hashed_string& skeletalMeshName, shared_ptr<const SocketSet>* pOutSockets ) const;
         /** @brief 이름의 명시 연결입니다. 없으면 nullptr 입니다. */
         /** @brief 리그에 자기 유닛의 소켓을 이름으로 찾는 대상이 있으면 true 입니다(소켓 출처가 올 때까지 묶기를 미룬다 — `bindRig`). */
-        bool               needsSockets() const;
-        const UnitBinding* findUnitBinding( const hashed_string& unitName ) const;
+        bool                       needsSockets() const;
+        const SkeletalMeshBinding* findUnitBinding( const hashed_string& skeletalMeshName ) const;
         /** @brief 이름의 오브젝트(명시 → 매니저)입니다. */
         GameObject* findObjectByName( const hashed_string& objectName ) const;
         /** @brief @p pUpstream 을 의존으로 걸면 고리가 생기는지입니다. */
@@ -237,13 +237,13 @@ namespace sw
         /** @brief 물리 에셋의 구와 캡슐을 스프링 공유 충돌체로 옮깁니다. */
         void loadSharedColliders();
         /** @brief 게임 스레드 준비입니다. */
-        void prepareFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context );
+        void prepareFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context );
         /** @brief 워커 평가입니다(PostProcess). */
-        void evaluateFrame( SkeletalMeshComponent& unit );
+        void evaluateFrame( SkeletalMeshComponent& skeletalMesh );
 
         PROPERTY( Category = "Rig", DisplayName = "Rig", Tooltip = "Post-process rig asset (*.rig.xml): ordered IK / constraint / spring nodes" )
         AssetRef<RigAsset> _rigPath;
-        PROPERTY( Category = "Rig", DisplayName = "Sockets", Tooltip = "This unit's socket asset (*.sockets.xml) for socket targets" )
+        PROPERTY( Category = "Rig", DisplayName = "Sockets", Tooltip = "This skeletalMesh's socket asset (*.sockets.xml) for socket targets" )
         AssetRef<SocketSet> _socketSetPath;
         PROPERTY( Category = "Rig", DisplayName = "Physics Asset", Tooltip = "Sphere / capsule bodies used as spring bone colliders" )
         AssetRef<PhysicsAsset> _physicsAssetPath;
@@ -257,7 +257,7 @@ namespace sw
         shared_ptr<const RigAsset>                      _asset;
         shared_ptr<const SocketSet>                     _ownSockets;
         vector<ExternalTarget>                          _listExternal;
-        vector<UnitBinding>                             _listUnitBinding;
+        vector<SkeletalMeshBinding>                     _listUnitBinding;
         vector<ObjectBinding>                           _listObjectBinding;
         vector<TComponentHandle<SkeletalMeshComponent>> _listDependency; ///< 이 컴포넌트가 등록한 의존이다(해제할 때 쓴다).
         vector<TComponentHandle<SkeletalMeshComponent>> _listTableUnit;  ///< 소켓 테이블의 유닛 번호에서 유닛으로 가는 목록이다.
@@ -266,7 +266,7 @@ namespace sw
         const ResolvedSocketTable*                      _pSocketTable;
         const IRigGroundQuery*                          _pGroundQueryOverride;
         const SkeletalAnimatorComponent*                _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
-        SkeletalMeshComponent*                          _pUnit;
+        SkeletalMeshComponent*                          _pSkeletalMesh;
         const Skeleton*                                 _pBoundSkeleton; ///< 마지막으로 묶으려 한 유닛 스켈레톤(바뀌면 프레임 준비가 다시 묶는다)
         uint64                                          _boundContentID;
         PROPERTY( Category = "Rig", DisplayName = "Enabled", Tooltip = "Evaluate the rig; disabled rigs cost nothing" )

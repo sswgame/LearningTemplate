@@ -1,11 +1,11 @@
 /**
  * @file AutomationExitCode.h
- * @brief 시나리오 결과(`AutomationOutcome`)를 App 프로세스 종료 코드로 번역합니다. 종료 코드 표의 유일한 정의 자리입니다.
+ * @brief 시나리오 결과(`AutomationResult`)를 App 프로세스 종료 코드로 번역합니다. 종료 코드 표의 유일한 정의 자리입니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Automation/Runner/AutomationOutcome.h"
+#include "Engine/Automation/Runner/AutomationResult.h"
 #include "Engine/EngineFrameHooks.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
@@ -19,29 +19,29 @@ namespace sw
      * @brief 결과의 프로세스 종료 코드입니다. 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있다 —
      *        백엔드마다 실행(`AutomationPerBackend`)과 CTest(`SW_EXIT_CODE_Skipped`)도 같은 표를 읽는다.
      */
-    constexpr int32 getAutomationExitCode( AutomationOutcome outcome )
+    constexpr int32 getAutomationExitCode( AutomationResult result )
     {
         ProcessExitCode exitCode = ProcessExitCode::Failed; // 열거형에 없는 값은 실패로 센다
-        switch ( outcome )
+        switch ( result )
         {
-            case AutomationOutcome::Running:
+            case AutomationResult::Running:
                 return kAutomationExitCodeRunning;
-            case AutomationOutcome::Passed:
+            case AutomationResult::Passed:
                 exitCode = ProcessExitCode::Passed;
                 break;
-            case AutomationOutcome::Failed:
+            case AutomationResult::Failed:
                 exitCode = ProcessExitCode::Failed;
                 break;
-            case AutomationOutcome::LoadError:
+            case AutomationResult::LoadError:
                 exitCode = ProcessExitCode::LoadError;
                 break;
-            case AutomationOutcome::TimedOut:
+            case AutomationResult::TimedOut:
                 exitCode = ProcessExitCode::TimedOut;
                 break;
-            case AutomationOutcome::Skipped:
+            case AutomationResult::Skipped:
                 exitCode = ProcessExitCode::Skipped;
                 break;
-            case AutomationOutcome::UnhandledLog:
+            case AutomationResult::UnhandledLog:
                 exitCode = ProcessExitCode::UnhandledLog;
                 break;
         }

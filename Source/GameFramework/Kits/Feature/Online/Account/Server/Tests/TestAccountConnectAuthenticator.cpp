@@ -65,10 +65,10 @@ namespace
     };
 
     /** @brief 계정 하나만 받아들이는 정책입니다(매칭 배정 모양). */
-    class AdmitOneAccount final : public IConnectAdmission
+    class AllowOneAccount final : public IConnectAdmission
     {
     public:
-        explicit AdmitOneAccount( AccountID accountID )
+        explicit AllowOneAccount( AccountID accountID )
             : _accountID{ accountID }
         {
         }
@@ -91,13 +91,13 @@ namespace
     };
 
     /** @brief 로그인 서버(발급)와 게임 서버(확인)가 같은 마스터 키를 나눈 모양입니다. */
-    struct TicketRig
+    struct TicketFixture
     {
         FakeTicketCrypto     _crypto{};
         LoginTicketAuthority _authority{};
         NetGameTicket        _ticket{};
 
-        explicit TicketRig( uint8 keySeed = 3 )
+        explicit TicketFixture( uint8 keySeed = 3 )
         {
             uint8 arrKey[LoginTicketAuthority::kMasterKeySize];
             AccountConnectAuthenticatorTestUtil::fillKey( arrKey, keySeed );
@@ -111,10 +111,10 @@ namespace
 /** @brief [AccountConnectAuthenticatorTest] 그 서버에 발급한 티켓은 시한 안에 맞고, 티켓 비밀(키 유도 솔트)과 계정을 돌려준다 */
 SW_TEST_CASE( AccountConnectAuthenticatorTest, IssuedTicketFindsSecretAndAccount )
 {
-    TicketRig rig;
+    TicketFixture rig;
     SW_REQUIRE_TRUE( rig.issue( "game-1" ) );
-    const AdmitEveryAccount     admitAll{};
-    AccountConnectAuthenticator authenticator( &rig._authority, hashed_string( "game-1" ), admitAll );
+    const AllowEveryAccount     acceptAll{};
+    AccountConnectAuthenticator authenticator( &rig._authority, hashed_string( "game-1" ), acceptAll );
     authenticator.setNowMs( UnixMilliseconds{ kNowMs } );
 
     NetSessionSecret secret;
@@ -130,22 +130,22 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, IssuedTicketFindsSecretAndAccount
 /** @brief [AccountConnectAuthenticatorTest] 시한이 지났거나, 다른 서버의 티켓이거나, 다른 마스터 키로 발급했으면 거절한다 */
 SW_TEST_CASE( AccountConnectAuthenticatorTest, ExpiredOtherServerOrOtherKeyIsRejected )
 {
-    TicketRig rig;
+    TicketFixture rig;
     SW_REQUIRE_TRUE( rig.issue( "game-1" ) );
-    const AdmitEveryAccount admitAll{};
+    const AllowEveryAccount acceptAll{};
     NetSessionSecret        secret;
     uint64                  principalID = 0;
 
-    AccountConnectAuthenticator expired( &rig._authority, hashed_string( "game-1" ), admitAll );
+    AccountConnectAuthenticator expired( &rig._authority, hashed_string( "game-1" ), acceptAll );
     expired.setNowMs( UnixMilliseconds{ kExpiresMs } ); // 시한과 같은 시각부터 지난 것이다
     SW_EXPECT_FALSE( expired.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
 
-    AccountConnectAuthenticator otherServer( &rig._authority, hashed_string( "game-2" ), admitAll );
+    AccountConnectAuthenticator otherServer( &rig._authority, hashed_string( "game-2" ), acceptAll );
     otherServer.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_FALSE( otherServer.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
 
-    TicketRig                   otherKey( 77 );
-    AccountConnectAuthenticator otherKeyServer( &otherKey._authority, hashed_string( "game-1" ), admitAll );
+    TicketFixture               otherKey( 77 );
+    AccountConnectAuthenticator otherKeyServer( &otherKey._authority, hashed_string( "game-1" ), acceptAll );
     otherKeyServer.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_FALSE( otherKeyServer.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
     SW_EXPECT_EQUAL( uint64( 0 ), principalID );
@@ -154,10 +154,10 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, ExpiredOtherServerOrOtherKeyIsRej
 /** @brief [AccountConnectAuthenticatorTest] 본문을 바꾼 티켓(계정 바꿔치기), 길이가 다른 토큰, 확인기 없는 서버는 거절한다 */
 SW_TEST_CASE( AccountConnectAuthenticatorTest, TamperedOrMisSizedTokenIsRejected )
 {
-    TicketRig rig;
+    TicketFixture rig;
     SW_REQUIRE_TRUE( rig.issue( "game-1" ) );
-    const AdmitEveryAccount     admitAll{};
-    AccountConnectAuthenticator authenticator( &rig._authority, hashed_string( "game-1" ), admitAll );
+    const AllowEveryAccount     acceptAll{};
+    AccountConnectAuthenticator authenticator( &rig._authority, hashed_string( "game-1" ), acceptAll );
     authenticator.setNowMs( UnixMilliseconds{ kNowMs } );
     NetSessionSecret secret;
     uint64           principalID = 0;
@@ -168,7 +168,7 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, TamperedOrMisSizedTokenIsRejected
     SW_EXPECT_FALSE( authenticator.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize - 1, secret, principalID ) );
     SW_EXPECT_FALSE( authenticator.findSessionSecret( nullptr, NetGameTicket::kTokenSize, secret, principalID ) );
 
-    AccountConnectAuthenticator noAuthority( nullptr, hashed_string( "game-1" ), admitAll );
+    AccountConnectAuthenticator noAuthority( nullptr, hashed_string( "game-1" ), acceptAll );
     noAuthority.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_FALSE( noAuthority.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
     SW_EXPECT_EQUAL( uint64( 0 ), principalID );
@@ -177,18 +177,18 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, TamperedOrMisSizedTokenIsRejected
 /** @brief [AccountConnectAuthenticatorTest] 티켓이 맞아도 받아들이기 정책 밖 계정(매칭 배정 밖)은 거절하고, 배정된 계정은 받는다 */
 SW_TEST_CASE( AccountConnectAuthenticatorTest, AdmissionPolicyGatesValidTickets )
 {
-    TicketRig rig;
+    TicketFixture rig;
     SW_REQUIRE_TRUE( rig.issue( "game-1" ) );
     NetSessionSecret secret;
     uint64           principalID = 0;
 
-    const AdmitOneAccount       admitOther( kAccount + 1 );
+    const AllowOneAccount       admitOther( kAccount + 1 );
     AccountConnectAuthenticator closed( &rig._authority, hashed_string( "game-1" ), admitOther );
     closed.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_FALSE( closed.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
     SW_EXPECT_EQUAL( uint64( 0 ), principalID );
 
-    const AdmitOneAccount       admitThis( kAccount );
+    const AllowOneAccount       admitThis( kAccount );
     AccountConnectAuthenticator open( &rig._authority, hashed_string( "game-1" ), admitThis );
     open.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_TRUE( open.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );

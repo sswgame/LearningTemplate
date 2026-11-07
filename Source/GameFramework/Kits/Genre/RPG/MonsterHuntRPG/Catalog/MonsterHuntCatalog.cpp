@@ -53,7 +53,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
         for ( const MonsterHuntMonsterDef& monster : _monsterCatalog.getAll() )
@@ -68,7 +68,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool MonsterHuntCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool MonsterHuntCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Alchemy" ) )
         {

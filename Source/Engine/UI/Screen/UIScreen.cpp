@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    UIScreen::UIScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    UIScreen::UIScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : _tree{}
         , _desc{ desc }
         , _documentPath{}
@@ -58,7 +58,7 @@ namespace sw
             _bClosing = SW_TRUE;
     }
 
-    void UIScreen::addBinding( const UIBindingDesc& binding )
+    void UIScreen::addBinding( const UIBindingDef& binding )
     {
         _listBinding.push_back( binding );
         _bindingSet->markRebind();
@@ -66,7 +66,7 @@ namespace sw
 
     void UIScreen::removeOrphanBindings()
     {
-        const size_t removeCount = VectorUtil::removeIf( _listBinding, [this]( const UIBindingDesc& binding )
+        const size_t removeCount = VectorUtil::removeIf( _listBinding, [this]( const UIBindingDef& binding )
         { return _tree.findWidgetByID( binding._widget ) == nullptr; } );
         if ( removeCount == 0 )
             return;

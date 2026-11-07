@@ -28,7 +28,7 @@ namespace sw
 {
     /** @brief 인자 없는 조건 · 동작의 칸입니다. */
     REFLECT()
-    struct SW_API VocabularyNoFields
+    struct SW_API VocabularyNoParams
     {
         REFLECT_BODY();
     };
@@ -202,7 +202,7 @@ namespace sw
 /**
  * @brief 조건을 그 함수의 .cpp 에서 등록합니다(`namespace sw` 안, 파일 범위). 이름이 곧 데이터가 적는 이름입니다.
  * @param name      식별자 이름(`weather`)
- * @param TArgs     칸 구조체(`ConditionNameListArgs`). 없으면 `VocabularyNoFields`
+ * @param TArgs     칸 구조체(`ConditionNameListArgs`). 없으면 `VocabularyNoParams`
  * @param pFunction `float64( const GameplayContext&, const TArgs& )` 함수의 주소(참거짓 반환도 된다)
  */
 #define SW_CONDITION( name, TArgs, pFunction )                                                                                                                 \

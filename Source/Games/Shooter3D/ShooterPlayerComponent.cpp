@@ -245,7 +245,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `cheat.shooter.heal` — 살아 있는 슈터 플레이어의 체력을 가득 채웁니다(쓰러진 플레이어는 `Vitality` 가 회복을 받지 않는다). */
+            /** @brief `cheat.shooter.heal` — 살아 있는 슈터 플레이어의 체력을 가득 채웁니다(쓰러진 플레이어는 `CombatHealth` 가 회복을 받지 않는다). */
             static bool runHeal( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
@@ -267,7 +267,7 @@ namespace sw
 
             /**
              * @brief `cheat.shooter.god` — 슈터 플레이어의 피해 면역을 뒤집습니다. 첫 플레이어의 지금 값을 기준으로 모두 같은 값이 됩니다.
-             * @details `cheat.god`(어빌리티 시스템 태그)은 `Vitality` 를 쓰는 슈터 플레이어에 닿지 않아 따로 둔다.
+             * @details `cheat.god`(어빌리티 시스템 태그)은 `CombatHealth` 를 쓰는 슈터 플레이어에 닿지 않아 따로 둔다.
              */
             static bool runGod( const vector<string>& listArgument, string& outReply )
             {
@@ -324,7 +324,7 @@ namespace sw
         , _tracerLifetime{ 0.07f }
         , _muzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f }
         , _arrWeapon{}
-        , _vitality{}
+        , _combatHealth{}
         , _weaponSockets{}
         , _listPendingShot{}
         , _listPendingEffect{}
@@ -363,13 +363,13 @@ namespace sw
             setCanEverTick( false ); // 무기 데이터가 틀리면 플레이어가 서지 않는다 — 이유는 equipWeapons 가 남겼다
             return;
         }
-        VitalitySettings settings;
+        CombatHealthSettings settings;
         settings._maxHealth        = _maxHealth;
         settings._healthRegenDelay = _regenDelay;
         settings._healthRegenRate  = _regenPerSecond;
-        if ( _vitality.initialize( settings ) == false )
+        if ( _combatHealth.initialize( settings ) == false )
         {
-            setCanEverTick( false ); // 체력 설정이 범위 밖이면 플레이어가 서지 않는다 — 이유는 Vitality 가 남겼다
+            setCanEverTick( false ); // 체력 설정이 범위 밖이면 플레이어가 서지 않는다 — 이유는 CombatHealth 가 남겼다
             return;
         }
         _weaponIndex                            = 0;
@@ -451,10 +451,10 @@ namespace sw
         {
             weapon.update( step );
         }
-        _vitality.update( step );
+        _combatHealth.update( step );
         _timeSinceShot += step;
         _hitMarkerTimer -= step;
-        if ( _vitality.isAlive() == false )
+        if ( _combatHealth.isAlive() == false )
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터 다시 시작한다.
             _downTimer += step;
@@ -491,13 +491,13 @@ namespace sw
 
     void ShooterPlayerComponent::takeDamage( float32 amount )
     {
-        if ( _bRoundJustRestarted == SW_TRUE || _vitality.isAlive() == false )
+        if ( _bRoundJustRestarted == SW_TRUE || _combatHealth.isAlive() == false )
             return;
-        const VitalityDamageResult result    = _vitality.applyDamage( amount );
-        GameObject*                pOwner    = getOwner();
-        GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*          pObject   = pManager != nullptr ? pManager->resolveGameObject( _director ) : nullptr;
-        ShooterGameModeComponent*  pDirector = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
+        const CombatHealthDamageResult result    = _combatHealth.applyDamage( amount );
+        GameObject*                    pOwner    = getOwner();
+        GameObjectManager*             pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*              pObject   = pManager != nullptr ? pManager->resolveGameObject( _director ) : nullptr;
+        ShooterGameModeComponent*      pDirector = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( result._bIgnored == SW_TRUE )
             return;
         ++_hitReactionCount;
@@ -531,7 +531,7 @@ namespace sw
 
     void ShooterPlayerComponent::restoreHealth( float32 amount )
     {
-        (void)_vitality.heal( MathUtil::max( 0.0f, amount ) );
+        (void)_combatHealth.heal( MathUtil::max( 0.0f, amount ) );
     }
 
     float32 ShooterPlayerComponent::computeAmmoShortage() const
@@ -883,10 +883,10 @@ namespace sw
         ShooterHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<ShooterHUDViewModel>();
         if ( pViewModel == nullptr )
             return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
-        const bool bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
+        const bool bCrosshair = _bFirstPerson == SW_TRUE && _combatHealth.isAlive();
         pViewModel->setCrosshairShown( bCrosshair );
         pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
-        pViewModel->setHealth( _vitality.getHealth(), _vitality.getHealthRatio() );
+        pViewModel->setHealth( _combatHealth.getHealth(), _combatHealth.getHealthRatio() );
         const WeaponState& weapon = getCurrentWeapon();
         pViewModel->setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
         // 무기의 이름은 무기의 장비 아이템(무기 표의 item)의 이름 하나가 원본이고, 아이템 표의 원문이 현지화 키다. 두 줄(WeaponName · ItemName)이 같은 값을 읽는다.
@@ -901,7 +901,7 @@ namespace sw
 
     void ShooterPlayerComponent::resetRound()
     {
-        _vitality.respawn();
+        _combatHealth.respawn();
         _downTimer                              = 0.0f;
         _bRoundJustRestarted                    = SW_TRUE;
         ShooterBodyMovementComponent* pMovement = findMovement();
@@ -983,7 +983,7 @@ namespace sw
             applyViewMode();
         updateHUD();
         // 쓰러짐 클립이 끝났다. 디렉터가 적을 정리하고 감독을 처음부터 다시 돌리며, 플레이어는 처음 위치에서 다시 시작한다.
-        if ( _vitality.isAlive() == false && _downTimer >= _downTime )
+        if ( _combatHealth.isAlive() == false && _downTimer >= _downTime )
         {
             if ( pDirector != nullptr )
                 pDirector->restartRound();

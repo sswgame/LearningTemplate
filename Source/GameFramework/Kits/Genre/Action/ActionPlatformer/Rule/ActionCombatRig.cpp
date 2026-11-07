@@ -253,9 +253,9 @@ namespace sw
         return static_cast<int32>( outListHit.size() );
     }
 
-    void ActionCombatRig::drainEvents( vector<ActionCombatEvent>& outListEvent )
+    void ActionCombatRig::pollEvents( vector<ActionCombatEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     bool ActionCombatRig::startMove( int32 comboIndex )

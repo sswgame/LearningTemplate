@@ -14,7 +14,7 @@
 
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationRuntime.h"
-#include "Engine/Automation/Runner/AutomationOutcome.h"
+#include "Engine/Automation/Runner/AutomationResult.h"
 #include "Engine/Automation/Scenario/ScenarioRecorder.h"
 #include "Engine/EngineFrameHooks.h"
 
@@ -133,9 +133,9 @@ namespace sw
         /** @brief 주 창을 세션 시작 때의 클라이언트 크기로 되돌립니다(`ResizeWindow` 와 같은 길). 창이 없거나 크기가 같으면 아무것도 하지 않는다. */
         void restoreStartWindowSize();
         /** @brief 찍어 둔 값 하나를 @p value 로 바꿉니다 — 첫 단계가 명령줄로 받은 `<Launch>` 값은 다음 단계로 넘기지 않고 기본값에서 시작한다. */
-        void forgetStartValue( string_view name, string_view value );
-        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationOutcome`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
-        [[nodiscard]] int32 onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount );
+        void removeStartValue( string_view name, string_view value );
+        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationResult`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
+        [[nodiscard]] int32 onStageEnded( AutomationResult result, uint32 completedScreenshotCount );
         /** @brief 녹화를 시작할 프레임인지 보고(활성 씬이 플레이 중이고 시작 차단이 없다) 시작합니다. */
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */

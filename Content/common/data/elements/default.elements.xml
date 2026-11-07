@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 원소 상호작용 기본표 — 불은 탈 것으로 번지고(바람 쪽으로), 다 타면 맨땅, 열은 얼음을 녹이고, 물 · 냉기는 불을 끄고, 전기는 이어진 도체로 퍼진다.
-     키트는 이 표를 그대로 쓰거나 복사해 고친다(ElementRuleTable · ElementGrid). 이름은 이 파일 안에서 선언한 것만 쓴다. -->
+     키트는 이 표를 그대로 쓰거나 복사해 고친다(ElementRuleCatalog · ElementGrid). 이름은 이 파일 안에서 선언한 것만 쓴다. -->
 <ElementRules stepTime="0.25">
   <Flag id="Flammable"/>
   <Flag id="Conductive"/>

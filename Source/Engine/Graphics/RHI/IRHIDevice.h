@@ -109,7 +109,7 @@ namespace sw
     {
     public:
         /** @brief 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다리는 함수의 타입입니다. 호출하는 쪽은 렌더 스레드가 아닙니다. */
-        using RenderThreadDrainFunction = void ( * )( void* pContext );
+        using RenderThreadFlushFunction = void ( * )( void* pContext );
         // ------------------------------------------------------------------------------
         // 1) 수명: initialize/shutdown, resize
         // ------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ namespace sw
         /**
          * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다. 돌아오면 앞서 제출한 모든 작업이 GPU 에서 끝나 있고 해제 큐가 비어 있습니다(클래스 머리말의 완료 계약).
          * @details **렌더 스레드가 실행 중일 때 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다린다**
-         *          (`setRenderThreadDrain`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료인 `SceneManager::updateTransitions`, 텍스처와 머티리얼
+         *          (`setRenderThreadFlush`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료인 `SceneManager::updateTransitions`, 텍스처와 머티리얼
          *          핫 리로드)도 이 순서를 따른다. 실제 대기는 백엔드의 `waitIdleInternal` 이 한다.
          * @warning 렌더 스레드가 프레임을 기록하거나 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면, DX12 는 아직 실행 전인 커맨드
          *          얼로케이터를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어긴다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
@@ -206,11 +206,11 @@ namespace sw
 
         /**
          * @brief 렌더 스레드가 이 디바이스로 기록을 시작할 때 설정하고(`RenderThread::start`), 멈춘 뒤 해제합니다(nullptr).
-         * @param pfnDrain         다른 스레드의 `waitIdle` 이 먼저 부를 함수입니다. nullptr 이면 해제합니다.
+         * @param pfnFlush         다른 스레드의 `waitIdle` 이 먼저 부를 함수입니다. nullptr 이면 해제합니다.
          * @param pContext         그 함수에 넘길 값(렌더 스레드 객체)입니다.
          * @param renderThreadID   렌더 스레드입니다. 이 스레드에서 부른 `waitIdle` 은 자기 자신을 기다리지 않습니다.
          */
-        void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID );
+        void setRenderThreadFlush( RenderThreadFlushFunction pfnFlush, void* pContext, std::thread::id renderThreadID );
         /**
          * @brief 이 스레드가 렌더 스레드 역할을 가졌다고 적습니다. 렌더 쪽 객체(`GPUScene`, `MaterialRenderProxy`)의 진입이 부른다.
          * @details Debug 는 스레드를 확인한다 — 렌더 스레드가 떠 있으면 그 스레드여야 한다(다른 스레드의 렌더 일은 `RenderThread::executeAndWait` 로 넘긴다).
@@ -571,7 +571,7 @@ namespace sw
         /** @brief 백엔드의 프레임 끝입니다(`endFrame` 이 렌더 스레드 역할을 확인한 뒤 부른다). */
         virtual void endFrameInternal( bool vsync, bool bPresent ) = 0;
 
-        /** @brief 렌더 스레드 역할의 소유자가 바뀌었습니다(`setRenderThreadDrain`). 자기 역할을 따로 든 백엔드 부품(스왑체인)이 같은 소유자로 맞춥니다. 빈 id 면 풀렸다. */
+        /** @brief 렌더 스레드 역할의 소유자가 바뀌었습니다(`setRenderThreadFlush`). 자기 역할을 따로 든 백엔드 부품(스왑체인)이 같은 소유자로 맞춥니다. 빈 id 면 풀렸다. */
         virtual void onRenderThreadRoleChanged( std::thread::id owner ) { (void)owner; }
 
         /** @brief `createSwapChain` 의 백엔드 훅입니다. 렌더 스레드와 GPU 는 이미 비었습니다. 백엔드가 소유하고 `destroySwapChainInternal` 까지 살립니다. */
@@ -596,10 +596,10 @@ namespace sw
         IRHITimestampProvider* _pTimestampProvider;
         /// @brief 컨텍스트 스레드 바인딩 능력입니다(findContextThreadBinding 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHIContextThreadBinding* _pContextThreadBinding;
-        /// @brief 렌더 스레드 비우기 함수 등록입니다(`setRenderThreadDrain`). 렌더 스레드를 세우고 풀 때 쓰고 `releaseHandle` · `waitIdle` 이 아무 스레드에서나 읽으므로 atomic 입니다.
+        /// @brief 렌더 스레드 비우기 함수 등록입니다(`setRenderThreadFlush`). 렌더 스레드를 세우고 풀 때 쓰고 `releaseHandle` · `waitIdle` 이 아무 스레드에서나 읽으므로 atomic 입니다.
         /// @details 세울 때는 컨텍스트와 id 를 먼저 쓰고 함수를 release 로 마지막에, 풀 때는 함수를 먼저 지웁니다. 읽는 쪽은 함수를 acquire 로 먼저 읽습니다.
-        atomic<RenderThreadDrainFunction> _pfnRenderThreadDrain;
-        atomic<void*>                     _pRenderThreadDrainContext;
+        atomic<RenderThreadFlushFunction> _pfnRenderThreadFlush;
+        atomic<void*>                     _pRenderThreadFlushContext;
         atomic<std::thread::id>           _renderThreadID;
         uint32                            _backBufferWidth;
         uint32                            _backBufferHeight;

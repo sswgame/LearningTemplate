@@ -57,7 +57,7 @@ namespace sw
      * @details 초기값은 런타임 구조체의 초기값을 그대로 가져온다(기본값의 정본은 하나). 태그 자식 · 매개변수 · 실행 클래스의 인자는 원소마다 따로 읽는다.
      */
     REFLECT()
-    struct SW_GF_API AbilityEffectFields
+    struct SW_GF_API AbilityEffectParams
     {
         REFLECT_BODY();
 
@@ -85,7 +85,7 @@ namespace sw
 
     /** @brief 이펙트의 모디파이어(`<Modifier …/>`) 칸입니다. `backing` 은 AttributeBased, `name` 은 SetByCaller 에서 필수다(읽기가 본다). */
     REFLECT()
-    struct SW_GF_API AbilityModifierFields
+    struct SW_GF_API AbilityModifierParams
     {
         REFLECT_BODY();
 
@@ -115,7 +115,7 @@ namespace sw
 
     /** @brief 클래스 이름 하나를 받는 원소(`<Execution class>` · `<AttributeSet class>`)의 칸입니다. 실행 클래스의 인자는 그 클래스가 읽는다. */
     REFLECT()
-    struct SW_GF_API AbilityClassFields
+    struct SW_GF_API AbilityClassParams
     {
         REFLECT_BODY();
 
@@ -125,7 +125,7 @@ namespace sw
 
     /** @brief id 하나를 받는 원소(`<GrantAbility id>` · `<AbilitySet id>`)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API AbilityIDFields
+    struct SW_GF_API AbilityIDParams
     {
         REFLECT_BODY();
 
@@ -135,7 +135,7 @@ namespace sw
 
     /** @brief 피해 실행(`<Execution class="Damage" setByCaller attackPowerCoefficient base/>`)의 인자입니다. 셋 다 필수다. */
     REFLECT()
-    struct SW_GF_API DamageExecutionFields
+    struct SW_GF_API DamageExecutionParams
     {
         REFLECT_BODY();
 
@@ -151,7 +151,7 @@ namespace sw
 
     /** @brief 게임플레이 큐 표현(`<AbilityPresentation …/>`)의 칸입니다. 프리팹이나 소리 중 하나는 적는다(읽기가 본다). */
     REFLECT()
-    struct SW_GF_API AbilityPresentationFields
+    struct SW_GF_API AbilityPresentationParams
     {
         REFLECT_BODY();
 
@@ -171,7 +171,7 @@ namespace sw
 
     /** @brief 어빌리티(`<Ability id class cost cooldown retrigger activateOnGranted>`)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API AbilityFields
+    struct SW_GF_API AbilityParams
     {
         REFLECT_BODY();
 
@@ -191,7 +191,7 @@ namespace sw
 
     /** @brief 어빌리티 매개변수(`<Param name text|value/>`)의 칸입니다. `text` 가 없으면 `value` 를 반드시 적는다(읽기가 본다). */
     REFLECT()
-    struct SW_GF_API AbilityParamFields
+    struct SW_GF_API AbilityParamEntryParams
     {
         REFLECT_BODY();
 
@@ -205,7 +205,7 @@ namespace sw
 
     /** @brief 태그 자식(`<AbilityTag tag/>` 등)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API AbilityTagFields
+    struct SW_GF_API AbilityTagParams
     {
         REFLECT_BODY();
 

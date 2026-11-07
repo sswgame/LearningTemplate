@@ -26,7 +26,7 @@ namespace
         void onEvent( const GuildEvent& event ) { _listEvent.push_back( event ); }
     };
 
-    struct GuildRig
+    struct GuildFixture
     {
         MemoryServiceDatabase _database;
         MemoryServiceStore    _store;
@@ -35,7 +35,7 @@ namespace
         Subscription          _eventSubscription;
         uint64                _nextTag{ 1 };
 
-        GuildRig()
+        GuildFixture()
             : _database{}
             , _store{ &_database }
             , _service{}
@@ -66,7 +66,7 @@ namespace
             {
             }
             vector<GuildCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             if ( listCompletion.empty() )
                 return GuildCompletion{};
@@ -125,7 +125,7 @@ namespace
         void clearSignals()
         {
             vector<SocialNotification> listNotification;
-            _service.drainNotifications( listNotification );
+            _service.pollNotifications( listNotification );
             _sink._listEvent.clear();
         }
 
@@ -135,7 +135,7 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + to_string( amount );
             request._reason     = "test.grant";
-            LedgerTransferOutcome outcome;
+            LedgerTransferResult outcome;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
         }
 
@@ -151,7 +151,7 @@ namespace
 /** @brief [GuildServiceTest] 만들기: id 는 차례대로, 만든 사람이 길드장이고 Joined 이벤트가 난다. 이름은 대소문자를 무시하고 유일하며 한 계정은 한 길드에만 든다 */
 SW_TEST_CASE( GuildServiceTest, CreateRegistersUniqueNames )
 {
-    GuildRig              rig;
+    GuildFixture          rig;
     const GuildCompletion created = rig.run( GuildOperation::Create, kMaster, kInvalidAccountID, "Dragons" );
     SW_EXPECT_TRUE( created._result == SocialResult::Ok );
     SW_EXPECT_EQUAL( uint64( 1 ), created._info._guildID );
@@ -189,7 +189,7 @@ SW_TEST_CASE( GuildServiceTest, NameRules )
 /** @brief [GuildServiceTest] 초대 · 수락: 임원 이상만 초대하고, 자신 · 다른 길드 사람은 초대할 수 없다. 초대 없는 수락 · 만료된 수락은 지고, 수락하면 알림 · 이벤트가 난다 */
 SW_TEST_CASE( GuildServiceTest, InviteAndAccept )
 {
-    GuildRig     rig;
+    GuildFixture rig;
     const uint64 guildID = rig.makeGuild();
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kMember, kOutside )._result == SocialResult::NotAllowed );
@@ -202,7 +202,7 @@ SW_TEST_CASE( GuildServiceTest, InviteAndAccept )
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside )._result == SocialResult::Ok );
     vector<SocialNotification> listNotification;
-    rig._service.drainNotifications( listNotification );
+    rig._service.pollNotifications( listNotification );
     SW_REQUIRE_EQUAL( size_t( 1 ), listNotification.size() );
     SW_EXPECT_TRUE( listNotification[0]._kind == SocialNotificationKind::GuildInvited );
     SW_EXPECT_EQUAL( kOutside, listNotification[0]._recipientID );
@@ -216,7 +216,7 @@ SW_TEST_CASE( GuildServiceTest, InviteAndAccept )
     SW_EXPECT_EQUAL( kOutside, rig._sink._listEvent[0]._accountID );
 
     listNotification.clear();
-    rig._service.drainNotifications( listNotification );
+    rig._service.pollNotifications( listNotification );
     SW_EXPECT_EQUAL( size_t( 3 ), listNotification.size() ); // 들어온 사람을 뺀 멤버 셋이 GuildChanged 를 받는다
     SW_EXPECT_EQUAL( 4, rig.run( GuildOperation::Get, kMaster )._info._memberCount );
 
@@ -226,7 +226,7 @@ SW_TEST_CASE( GuildServiceTest, InviteAndAccept )
 /** @brief [GuildServiceTest] 정원: 100 명이면 초대받은 사람도 들어오지 못한다(GuildFull). 한 명이 나가면 들어온다 */
 SW_TEST_CASE( GuildServiceTest, GuildCapacityIsEnforced )
 {
-    GuildRig     rig;
+    GuildFixture rig;
     const uint64 guildID = rig.run( GuildOperation::Create, kMaster, kInvalidAccountID, "Full" )._info._guildID;
     const auto   nLast   = static_cast<AccountID>( GuildLimit::kMaxMember ) + 10;
     for ( AccountID accountID = 11; accountID <= nLast; ++accountID )
@@ -249,7 +249,7 @@ SW_TEST_CASE( GuildServiceTest, GuildCapacityIsEnforced )
 /** @brief [GuildServiceTest] 떠나기: 멤버는 그냥 떠나고, 길드장은 혼자일 때만 떠나며 그러면 길드가 사라지고 이름이 풀린다. 해산 뒤 남은 초대는 NotFound 다 */
 SW_TEST_CASE( GuildServiceTest, LeaveAndDissolve )
 {
-    GuildRig     rig;
+    GuildFixture rig;
     const uint64 guildID = rig.makeGuild();
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside )._result == SocialResult::Ok );
@@ -273,7 +273,7 @@ SW_TEST_CASE( GuildServiceTest, LeaveAndDissolve )
 /** @brief [GuildServiceTest] 내보내기: 더 높은 역할만 할 수 있고, 내보내진 사람은 알림을 받고 길드가 없어져 다른 길드를 만들 수 있다 */
 SW_TEST_CASE( GuildServiceTest, KickFollowsRoleOrder )
 {
-    GuildRig rig;
+    GuildFixture rig;
     (void)rig.makeGuild();
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Kick, kMember, kOfficer )._result == SocialResult::NotAllowed );
@@ -284,7 +284,7 @@ SW_TEST_CASE( GuildServiceTest, KickFollowsRoleOrder )
     rig.clearSignals();
     SW_EXPECT_TRUE( rig.run( GuildOperation::Kick, kOfficer, kMember )._result == SocialResult::Ok );
     vector<SocialNotification> listNotification;
-    rig._service.drainNotifications( listNotification );
+    rig._service.pollNotifications( listNotification );
     bool bKickedNotified = false;
     for ( const SocialNotification& notification : listNotification )
     {
@@ -302,7 +302,7 @@ SW_TEST_CASE( GuildServiceTest, KickFollowsRoleOrder )
 /** @brief [GuildServiceTest] 역할: 길드장만 바꾼다. 길드장을 넘기면 나는 임원이 되고 길드의 길드장이 바뀐다. 범위 밖 역할은 Invalid 이고 레코드를 망가뜨리지 않는다 */
 SW_TEST_CASE( GuildServiceTest, RoleChangesAndMasterTransfer )
 {
-    GuildRig rig;
+    GuildFixture rig;
     (void)rig.makeGuild();
 
     SW_EXPECT_TRUE( rig.setRole( kOfficer, kMember, GuildRole::Officer ) == SocialResult::NotAllowed );
@@ -327,7 +327,7 @@ SW_TEST_CASE( GuildServiceTest, RoleChangesAndMasterTransfer )
 /** @brief [GuildServiceTest] 공지: 임원 이상이 바꾸고 멤버가 읽는다. 상한을 넘으면 저장하지 않는다(깨진 UTF-8 은 요청 코덱이 막는다) */
 SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
 {
-    GuildRig rig;
+    GuildFixture rig;
     (void)rig.makeGuild();
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
@@ -339,7 +339,7 @@ SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
 /** @brief [GuildServiceTest] 창고: 맡기기는 누구나, 꺼내기는 임원 이상. 잔액이 모자라면 InsufficientFunds, 분개 키가 없으면 Invalid, 같은 키로 다시 와도 한 번만 움직인다 */
 SW_TEST_CASE( GuildServiceTest, StorageMovesFundsOnce )
 {
-    GuildRig rig;
+    GuildFixture rig;
     (void)rig.makeGuild();
     rig.grant( kMember, 100 );
 
@@ -377,7 +377,7 @@ SW_TEST_CASE( GuildServiceTest, StorageMovesFundsOnce )
 /** @brief [GuildServiceTest] 창고에 남은 것이 있으면 해산할 수 없고, 다 꺼내면 해산된다 — 재화가 사라지지 않는다 */
 SW_TEST_CASE( GuildServiceTest, StorageBlocksDissolution )
 {
-    GuildRig rig;
+    GuildFixture rig;
     (void)rig.run( GuildOperation::Create, kMaster, kInvalidAccountID, "Solo" );
     rig.grant( kMaster, 10 );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMaster, 10, "test/dep.1" )._result == SocialResult::Ok );
@@ -390,7 +390,7 @@ SW_TEST_CASE( GuildServiceTest, StorageBlocksDissolution )
 /** @brief [GuildServiceTest] 신청: 닫힌 길드는 GuildClosed, 길드가 있으면 AlreadyInGuild. 임원 이상이 목록을 보고 받아들이거나 지운다. 받으면 멤버가 되고 신청은 사라진다 */
 SW_TEST_CASE( GuildServiceTest, ApplicationsFlow )
 {
-    GuildRig            rig;
+    GuildFixture        rig;
     const uint64        guildID = rig.makeGuild();
     constexpr AccountID kOther  = 5;
 
@@ -425,7 +425,7 @@ SW_TEST_CASE( GuildServiceTest, ApplicationsFlow )
 /** @brief [GuildServiceTest] 신청 만료와 상한: 죽은 신청은 받아들이지 못하고 목록에서 빠지며, 살아 있는 신청이 50 개면 PendingLimit, 죽으면 새 신청이 자리를 얻는다. 그사이 다른 길드에 든 사람은 받을 수 없다 */
 SW_TEST_CASE( GuildServiceTest, ApplicationsExpireAndAreCapped )
 {
-    GuildRig     rig;
+    GuildFixture rig;
     const uint64 guildID = rig.makeGuild();
     SW_EXPECT_TRUE( rig.setOpen( kMaster, true ) == SocialResult::Ok );
 
@@ -466,7 +466,7 @@ SW_TEST_CASE( GuildServiceTest, ApplicationsExpireAndAreCapped )
 /** @brief [GuildServiceTest] 경험치와 레벨: 서버 시스템이 늘리고 레벨은 표로 응답 때 정한다 — 표를 바꾸면 저장값 그대로 레벨이 따라간다. 상한에서 멈추고, 틀린 표는 받지 않는다 */
 SW_TEST_CASE( GuildServiceTest, ExperienceDrivesLevels )
 {
-    GuildRig     rig;
+    GuildFixture rig;
     const uint64 guildID = rig.makeGuild();
     string       error;
     SW_EXPECT_FALSE( rig._service.setLevelTable( vector<int64>{ 10, 10 }, error ) );
@@ -482,10 +482,10 @@ SW_TEST_CASE( GuildServiceTest, ExperienceDrivesLevels )
     rig._service.addExperience( guildID, 15, UnixMilliseconds{ kNowMs } );
     SW_EXPECT_EQUAL( 1, rig._store.pollCompletions() );
     vector<SocialNotification> listNotification;
-    rig._service.drainNotifications( listNotification );
+    rig._service.pollNotifications( listNotification );
     SW_EXPECT_EQUAL( size_t( 3 ), listNotification.size() ); // 멤버 모두
     vector<GuildCompletion> listCompletion;
-    rig._service.drainCompletions( listCompletion );
+    rig._service.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() );
 
     const GuildCompletion got = rig.run( GuildOperation::Get, kMember );
@@ -508,7 +508,7 @@ SW_TEST_CASE( GuildServiceTest, ExperienceDrivesLevels )
 /** @brief [GuildServiceTest] 로그인한 계정의 길드를 찾으면 MemberAttached 이벤트가 나고 완료는 없다. 길드가 없으면 이벤트도 없다 */
 SW_TEST_CASE( GuildServiceTest, AttachRaisesEventOnly )
 {
-    GuildRig     rig;
+    GuildFixture rig;
     const uint64 guildID = rig.makeGuild();
     rig._service.attachAccount( kMember, UnixMilliseconds{ kNowMs } );
     rig._service.attachAccount( kOutside, UnixMilliseconds{ kNowMs } );
@@ -520,14 +520,14 @@ SW_TEST_CASE( GuildServiceTest, AttachRaisesEventOnly )
     SW_EXPECT_EQUAL( kMember, rig._sink._listEvent[0]._accountID );
     SW_EXPECT_EQUAL( guildID, rig._sink._listEvent[0]._guildID );
     vector<GuildCompletion> listCompletion;
-    rig._service.drainCompletions( listCompletion );
+    rig._service.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() );
 }
 
 /** @brief [GuildServiceTest] 저장소 실패: Unavailable 이고 데이터 · 알림 · 이벤트가 그대로다. 다시 하면 된다. 읽기 실패도 NotInGuild 로 속이지 않는다 */
 SW_TEST_CASE( GuildServiceTest, StoreFailuresChangeNothing )
 {
-    GuildRig rig;
+    GuildFixture rig;
     (void)rig.makeGuild();
     const uint64 hashBefore = rig._database.computeContentHash();
 
@@ -536,7 +536,7 @@ SW_TEST_CASE( GuildServiceTest, StoreFailuresChangeNothing )
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
     SW_EXPECT_TRUE( rig._sink._listEvent.empty() );
     vector<SocialNotification> listNotification;
-    rig._service.drainNotifications( listNotification );
+    rig._service.pollNotifications( listNotification );
     SW_EXPECT_TRUE( listNotification.empty() );
 
     rig._database.armFault( ServiceStoreFault::RejectRead );

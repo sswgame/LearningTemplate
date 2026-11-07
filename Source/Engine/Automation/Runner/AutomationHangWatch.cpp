@@ -13,7 +13,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
-#include "Engine/Automation/Runner/AutomationOutcome.h"
+#include "Engine/Automation/Runner/AutomationResult.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -162,7 +162,7 @@ namespace sw
         writer.beginObject();
         Internal::writeStringField( writer, "name", Internal::toView( payload._scenario ) );
         Internal::writeStringField( writer, "result", Internal::toView( payload._result ) );
-        Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitCode( AutomationOutcome::TimedOut ) ) );
+        Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitCode( AutomationResult::TimedOut ) ) );
         Internal::writeNumberField( writer, "frames", payload._frame );
         Internal::writeStringField( writer, "reason", reason.view() );
         Internal::writeStringField( writer, "backend", Internal::toView( payload._backend ) );

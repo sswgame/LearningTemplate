@@ -20,7 +20,7 @@ namespace
     constexpr int64     kNowMs  = 1700000000000ll;
 
     /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 같은 데이터로 둘째를 만들면 "다시 뜬 서버" 입니다. */
-    struct TradeRig
+    struct TradeFixture
     {
         MemoryServiceStore _store;
         DefaultTradePolicy _policy;
@@ -29,7 +29,7 @@ namespace
         int64              _nowMs{ kNowMs };
         uint64             _nextTag{ 1 };
 
-        explicit TradeRig( MemoryServiceDatabase& database )
+        explicit TradeFixture( MemoryServiceDatabase& database )
             : _store{ &database }
             , _policy{}
             , _service{}
@@ -49,7 +49,7 @@ namespace
         {
             pump();
             vector<TradeCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             if ( listCompletion.empty() )
                 return TradeCompletion{};
@@ -113,7 +113,7 @@ namespace
         {
             pump();
             vector<TradeSnapshot> listUpdate;
-            _service.drainUpdates( listUpdate );
+            _service.pollUpdates( listUpdate );
             return listUpdate;
         }
     };
@@ -122,7 +122,7 @@ namespace
     struct TradeWorld
     {
         MemoryServiceDatabase _database;
-        TradeRig              _rig;
+        TradeFixture          _rig;
 
         TradeWorld()
             : _database{}
@@ -138,7 +138,7 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.grant";
-            LedgerTransferOutcome outcome;
+            LedgerTransferResult outcome;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
         }
 
@@ -148,7 +148,7 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
             request._journalKey = "test/spend/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.spend";
-            LedgerTransferOutcome outcome;
+            LedgerTransferResult outcome;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
         }
 
@@ -164,8 +164,8 @@ namespace
 /** @brief [TradeServiceTest] 초대: 자신 · 0 은 Invalid, 이미 거래 중이면 AlreadyTrading · PeerBusy 이고, 거절하면 다시 초대할 수 있다 */
 SW_TEST_CASE( TradeServiceTest, InviteRules )
 {
-    TradeWorld world;
-    TradeRig&  rig = world._rig;
+    TradeWorld    world;
+    TradeFixture& rig = world._rig;
     SW_EXPECT_TRUE( rig.invite( kAlice, kAlice )._result == TradeResult::Invalid );
     SW_EXPECT_TRUE( rig.invite( kAlice, kInvalidAccountID )._result == TradeResult::Invalid );
 
@@ -189,7 +189,7 @@ SW_TEST_CASE( TradeServiceTest, InviteRules )
 SW_TEST_CASE( TradeServiceTest, SettlementSwapsBothSidesOnce )
 {
     TradeWorld          world;
-    TradeRig&           rig    = world._rig;
+    TradeFixture&       rig    = world._rig;
     const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
 
     const TradeCompletion firstConfirm = rig.confirm( kAlice, locked );
@@ -215,7 +215,7 @@ SW_TEST_CASE( TradeServiceTest, SettlementSwapsBothSidesOnce )
 SW_TEST_CASE( TradeServiceTest, LostSettlementReplyMovesOnce )
 {
     TradeWorld          world;
-    TradeRig&           rig    = world._rig;
+    TradeFixture&       rig    = world._rig;
     const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
     const TradeSnapshot first  = rig.confirm( kAlice, locked )._snapshot;
 
@@ -230,9 +230,9 @@ SW_TEST_CASE( TradeServiceTest, LostSettlementReplyMovesOnce )
 /** @brief [TradeServiceTest] 잔액: 잠글 때 모자라면 거절하고, 잠근 뒤 써 버렸으면 정산이 Failed 로 닫히며 아무도 재화를 잃지 않는다 */
 SW_TEST_CASE( TradeServiceTest, FundsAreCheckedAtLockAndSettlement )
 {
-    TradeWorld   world;
-    TradeRig&    rig     = world._rig;
-    const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
+    TradeWorld    world;
+    TradeFixture& rig     = world._rig;
+    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
     SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );
     SW_EXPECT_TRUE( rig.offer( kAlice, tradeID, "cur.gold", 101 )._result == TradeResult::Ok ); // 제시는 잔액을 보지 않는다
     SW_EXPECT_TRUE( rig.lock( kAlice, tradeID )._result == TradeResult::InsufficientFunds );
@@ -258,7 +258,7 @@ SW_TEST_CASE( TradeServiceTest, FundsAreCheckedAtLockAndSettlement )
 SW_TEST_CASE( TradeServiceTest, ConfirmOfStaleOfferIsRefused )
 {
     TradeWorld          world;
-    TradeRig&           rig    = world._rig;
+    TradeFixture&       rig    = world._rig;
     const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
     SW_EXPECT_TRUE( rig.offer( kBob, locked._tradeID, "cur.gem", 1 )._result == TradeResult::Ok );
     SW_EXPECT_TRUE( rig.lock( kAlice, locked._tradeID )._result == TradeResult::Ok );
@@ -271,9 +271,9 @@ SW_TEST_CASE( TradeServiceTest, ConfirmOfStaleOfferIsRefused )
 /** @brief [TradeServiceTest] 시한이 지난 거래: 명령을 내면 닫히며 WrongState 이고, 새 초대는 남은 링크를 정리하고 진행한다 */
 SW_TEST_CASE( TradeServiceTest, ExpiredTradesCloseLazily )
 {
-    TradeWorld   world;
-    TradeRig&    rig     = world._rig;
-    const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
+    TradeWorld    world;
+    TradeFixture& rig     = world._rig;
+    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
 
     rig._nowMs += rig._settings._inviteTimeoutMs;
     const TradeCompletion late = rig.respond( kBob, tradeID );
@@ -292,9 +292,9 @@ SW_TEST_CASE( TradeServiceTest, ExpiredTradesCloseLazily )
 /** @brief [TradeServiceTest] 서비스 시한: update 가 시한이 된 거래를 닫고 알린다. 활동이 있으면 시한이 밀린다 */
 SW_TEST_CASE( TradeServiceTest, UpdateExpiresIdleTrades )
 {
-    TradeWorld   world;
-    TradeRig&    rig     = world._rig;
-    const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
+    TradeWorld    world;
+    TradeFixture& rig     = world._rig;
+    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
     (void)rig.takeUpdates();
 
     rig._service.update( UnixMilliseconds{ kNowMs + rig._settings._inviteTimeoutMs - 1 } );
@@ -316,8 +316,8 @@ SW_TEST_CASE( TradeServiceTest, UpdateExpiresIdleTrades )
 /** @brief [TradeServiceTest] 시한 처리가 저장소 실패로 지면 잊지 않고 다시 시도해 닫는다 */
 SW_TEST_CASE( TradeServiceTest, ExpiryRetriesAfterStoreFailure )
 {
-    TradeWorld world;
-    TradeRig&  rig = world._rig;
+    TradeWorld    world;
+    TradeFixture& rig = world._rig;
     (void)rig.invite( kAlice, kBob );
     (void)rig.takeUpdates();
     const int64 deadlineMs = kNowMs + rig._settings._inviteTimeoutMs;
@@ -335,8 +335,8 @@ SW_TEST_CASE( TradeServiceTest, ExpiryRetriesAfterStoreFailure )
 /** @brief [TradeServiceTest] 계정이 떠나면 그 거래가 닫히고 알림이 간다. 거래가 없으면 아무 일도 없다 */
 SW_TEST_CASE( TradeServiceTest, CloseForAccountWhenLeaving )
 {
-    TradeWorld world;
-    TradeRig&  rig = world._rig;
+    TradeWorld    world;
+    TradeFixture& rig = world._rig;
     (void)rig.invite( kAlice, kBob );
     (void)rig.takeUpdates();
 
@@ -356,7 +356,7 @@ SW_TEST_CASE( TradeServiceTest, RestartRecoversOwnedTrades )
     TradeWorld          world;
     const TradeSnapshot locked = world._rig.makeLockedTrade( 40, 20 );
 
-    TradeRig restarted( world._database );
+    TradeFixture restarted( world._database );
     restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
     const vector<TradeSnapshot> listClosed = restarted.takeUpdates();
     SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
@@ -375,9 +375,9 @@ SW_TEST_CASE( TradeServiceTest, RestartRecoversOwnedTrades )
 /** @brief [TradeServiceTest] 저장소 실패: 명령은 Unavailable 이고 거래 내용이 그대로다 */
 SW_TEST_CASE( TradeServiceTest, StoreFailureLeavesTradeIntact )
 {
-    TradeWorld   world;
-    TradeRig&    rig     = world._rig;
-    const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
+    TradeWorld    world;
+    TradeFixture& rig     = world._rig;
+    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
     world._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Unavailable );
     SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );

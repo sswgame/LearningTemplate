@@ -76,7 +76,7 @@ namespace sw
         uint32 post( string_view speaker, string_view text, float32 durationSeconds = 0.0f );
         /**
          * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간입니다.
-         * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDesc::_subtitleSpeakerKey`)다.
+         * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDef::_subtitleSpeakerKey`)다.
          */
         void postAudioCues( const vector<AudioSubtitleCue>& listCue );
         /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 장면 전환 때 부릅니다). */

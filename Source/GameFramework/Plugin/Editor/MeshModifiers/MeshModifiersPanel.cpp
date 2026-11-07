@@ -75,20 +75,20 @@ namespace sw::editor
             }
 
             /** @brief 자동화가 켜졌을 때만 `<접두>.<꼬리>` 키를 만들어 직전 위젯을 기록합니다(키 글 만드는 비용을 평소에는 내지 않는다). */
-            static void noteMark( const utf8* pPrefix, string_view tail )
+            static void recordMark( const utf8* pPrefix, string_view tail )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
                 string key( pPrefix );
                 key += ".";
                 key += tail;
-                EditorSelfTestMarks::note( key.c_str() );
+                EditorSelfTestMarks::record( key.c_str() );
             }
 
-            static void noteMark( const utf8* pPrefix, size_t index )
+            static void recordMark( const utf8* pPrefix, size_t index )
             {
                 if ( EditorSelfTestMarks::isEnabled() )
-                    noteMark( pPrefix, string_view( to_string( static_cast<uint32>( index ) ) ) );
+                    recordMark( pPrefix, string_view( to_string( static_cast<uint32>( index ) ) ) );
             }
 
             /** @brief 직전 항목에 마우스가 있으면 툴팁을 보입니다. */
@@ -172,7 +172,7 @@ namespace sw::editor
                 drawItemTooltip( def._pTooltip != nullptr ? def._pTooltip : def._pHint );
 
                 const bool bUseSelection = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "UseSelectionForParam" ) );
-                noteMark( pMarkKey, "useSelection" );
+                recordMark( pMarkKey, "useSelection" );
                 if ( bUseSelection )
                 {
                     // 모델링 도구는 레벨의 오브젝트를 고친다(언리얼 Modeling Mode 는 레벨 선택) — 메인 씬의 선택이다.
@@ -314,7 +314,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         if ( bUnsaved && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
             ImGui::SetTooltip( "%s", SW_LOCKEY( "EdPluginTip", "SaveStackBeforePickingMesh" ) );
-        EditorSelfTestMarks::note( "meshmodifiers.useSelection" );
+        EditorSelfTestMarks::record( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {
             GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
@@ -358,7 +358,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Selectable( pModifier->getName().c_str(), selected == index, ImGuiSelectableFlags_None, ImVec2{ ImGui::GetContentRegionAvail().x - buttonWidth, 0.0f } ) )
                 selected = index;
-            MeshModifiersPanelInternal::noteMark( pMarkPrefix, static_cast<size_t>( index ) );
+            MeshModifiersPanelInternal::recordMark( pMarkPrefix, static_cast<size_t>( index ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "^" ) );
             if ( ImGui::SmallButton( "^" ) )
                 upIndex = index;
@@ -373,7 +373,7 @@ namespace sw::editor
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( ">" ) );
                 if ( ImGui::SmallButton( ">" ) )
                     *pOutEnterIndex = index;
-                MeshModifiersPanelInternal::noteMark( "meshmodifiers.enter", static_cast<size_t>( index ) );
+                MeshModifiersPanelInternal::recordMark( "meshmodifiers.enter", static_cast<size_t>( index ) );
                 MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "EnterNestedStack" ) );
             }
             ImGui::PopID();
@@ -418,7 +418,7 @@ namespace sw::editor
         if ( _model.canLeaveNested() )
         {
             const bool bUp = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "NestedUp" ) );
-            EditorSelfTestMarks::note( "meshmodifiers.nested.up" );
+            EditorSelfTestMarks::record( "meshmodifiers.nested.up" );
             if ( bUp )
                 _model.requestLeaveNested();
             ImGui::SameLine();
@@ -457,11 +457,11 @@ namespace sw::editor
         // 보이는 하위 스택을 워프 정의 파일로 쓴다 — World Warp 모디파이어가 그 파일을 가리키면 여러 메시가 한 워프를 함께 받는다.
         string& warpExportPath = _model.editWarpExportPath();
         (void)MeshModifiersPanelInternal::drawTextInput( SW_LOCKEY( "EdMeshModifiers", "WarpExportPath" ), warpExportPath, warpExportPath );
-        EditorSelfTestMarks::note( "meshmodifiers.nested.warppath" );
+        EditorSelfTestMarks::record( "meshmodifiers.nested.warppath" );
         ImGui::BeginDisabled( _model.canExportWarp( shown ) == false );
         const bool bExport = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ExportWarp" ) );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "meshmodifiers.nested.exportwarp" );
+        EditorSelfTestMarks::record( "meshmodifiers.nested.exportwarp" );
         if ( bExport )
             _model.exportWarp( shown );
     }
@@ -470,7 +470,7 @@ namespace sw::editor
     {
         int32      addedIndex = -1;
         const bool bOpenMenu  = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
-        MeshModifiersPanelInternal::noteMark( pMarkPrefix, "add" );
+        MeshModifiersPanelInternal::recordMark( pMarkPrefix, "add" );
         if ( bOpenMenu )
             EditorInputGUI::openPopup( "##AddModifier" );
         if ( ImGui::BeginPopup( "##AddModifier" ) == false )
@@ -488,13 +488,13 @@ namespace sw::editor
                 ++end;
             }
             const bool bCategoryOpen = ImGui::BeginMenu( listRegistration[index]->_pCategory );
-            MeshModifiersPanelInternal::noteMark( pMarkPrefix, string( "category." ) + string( category ) ); // BeginMenu 는 마지막 항목을 메뉴 머리로 되돌려 둔다
+            MeshModifiersPanelInternal::recordMark( pMarkPrefix, string( "category." ) + string( category ) ); // BeginMenu 는 마지막 항목을 메뉴 머리로 되돌려 둔다
             if ( bCategoryOpen )
             {
                 for ( size_t item = index; item < end; ++item )
                 {
                     const bool bClicked = ImGui::MenuItem( listRegistration[item]->_pDisplayName );
-                    MeshModifiersPanelInternal::noteMark( pMarkPrefix, string( "item." ) + listRegistration[item]->_pID );
+                    MeshModifiersPanelInternal::recordMark( pMarkPrefix, string( "item." ) + listRegistration[item]->_pID );
                     drawRegistrationTooltip( *listRegistration[item] );
                     if ( bClicked == false )
                         continue;
@@ -527,7 +527,7 @@ namespace sw::editor
         string name = pModifier->getName();
         if ( MeshModifiersPanelInternal::drawTextInput( SW_LOCKEY( "EdMeshModifiers", "Name" ), name, name ) )
         {
-            noteEdit( session );
+            recordEdit( session );
             pModifier->setName( name );
         }
         finishItem();
@@ -555,14 +555,14 @@ namespace sw::editor
         float3             center = gizmo._center;
         if ( ImGui::DragFloat3( SW_LOCKEY( "EdMeshModifiers", "Center" ), &center._x, 0.01f ) )
         {
-            noteEdit( session );
+            recordEdit( session );
             gizmo._center = center;
         }
         finishItem();
         float3 rotation = gizmo._rotationDegree;
         if ( ImGui::DragFloat3( SW_LOCKEY( "EdMeshModifiers", "Rotation" ), &rotation._x, 0.5f ) )
         {
-            noteEdit( session );
+            recordEdit( session );
             gizmo._rotationDegree = rotation;
         }
         finishItem();
@@ -583,7 +583,7 @@ namespace sw::editor
             string reference = modifier.getSpaceReference();
             if ( MeshModifiersPanelInternal::drawTextInput( SW_LOCKEY( "EdMeshModifiers", "SpaceReference" ), reference, reference ) )
             {
-                noteEdit( session );
+                recordEdit( session );
                 modifier.setSpaceReference( reference );
             }
             finishItem();
@@ -634,7 +634,7 @@ namespace sw::editor
                 if ( ImGui::DragFloat( def._pName, &value, MathUtil::max( ( def._max - def._min ) * 0.001f, 0.0001f ), def._min, def._max,
                                        format.c_str() ) )
                 {
-                    noteEdit( session );
+                    recordEdit( session );
                     modifier.setScalar( paramIndex, value );
                     modifier.onParamsChanged();
                 }
@@ -648,7 +648,7 @@ namespace sw::editor
                 const string format = MeshModifiersPanelInternal::makeFormat( "%d", def._pUnit );
                 if ( ImGui::DragInt( def._pName, &value, 0.1f, static_cast<int32>( def._min ), static_cast<int32>( def._max ), format.c_str() ) )
                 {
-                    noteEdit( session );
+                    recordEdit( session );
                     modifier.setScalar( paramIndex, static_cast<float32>( value ) );
                     modifier.onParamsChanged();
                 }
@@ -690,7 +690,7 @@ namespace sw::editor
                 const string format = MeshModifiersPanelInternal::makeFormat( "%.3f", def._pUnit );
                 if ( ImGui::DragFloat3( def._pName, &value._x, 0.01f, def._min, def._max, format.c_str() ) )
                 {
-                    noteEdit( session );
+                    recordEdit( session );
                     modifier.setVector3( paramIndex, value );
                     modifier.onParamsChanged();
                 }
@@ -739,7 +739,7 @@ namespace sw::editor
                 break;
             }
         }
-        MeshModifiersPanelInternal::noteMark( "meshmodifiers.param", string_view( def._pName ) ); // 스칼라 · 벡터 칸은 입력칸 자신이다
+        MeshModifiersPanelInternal::recordMark( "meshmodifiers.param", string_view( def._pName ) ); // 스칼라 · 벡터 칸은 입력칸 자신이다
         ImGui::PopID();
     }
 
@@ -757,9 +757,9 @@ namespace sw::editor
         // 매개변수의 곡선은 편집기와 같은 FloatCurve(보간 · 접선 포함)라 그대로 넘기고 그대로 받는다
         const bool bOpen = EditorCurveEditor::drawPreview( "##CurvePreview", curve, ImGui::GetFrameHeight() * 2.0f );
         if ( itemIndex < 0 )
-            EditorSelfTestMarks::note( "meshmodifiers.curve" );
+            EditorSelfTestMarks::record( "meshmodifiers.curve" );
         else
-            MeshModifiersPanelInternal::noteMark( "meshmodifiers.curve", static_cast<size_t>( itemIndex ) );
+            MeshModifiersPanelInternal::recordMark( "meshmodifiers.curve", static_cast<size_t>( itemIndex ) );
         if ( bOpen )
         {
             _curveState          = EditorCurveEditorState{};
@@ -827,7 +827,7 @@ namespace sw::editor
         if ( value._listCurve.size() < limit )
         {
             bAddItem = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) );
-            EditorSelfTestMarks::note( "meshmodifiers.curveList.add" );
+            EditorSelfTestMarks::record( "meshmodifiers.curveList.add" );
         }
         if ( bAddItem )
         {
@@ -863,7 +863,7 @@ namespace sw::editor
             {
                 if ( ImGui::DragFloat( "##Value", pValue, 0.01f, def._min, def._max, "%.3f" ) )
                 {
-                    noteEdit( session );
+                    recordEdit( session );
                     bChanged = true;
                 }
                 finishItem();
@@ -874,7 +874,7 @@ namespace sw::editor
                 int32 value = static_cast<int32>( MathUtil::round( *pValue ) );
                 if ( ImGui::DragInt( "##Value", &value, 0.1f, static_cast<int32>( def._min ), static_cast<int32>( def._max ) ) )
                 {
-                    noteEdit( session );
+                    recordEdit( session );
                     *pValue  = static_cast<float32>( value );
                     bChanged = true;
                 }
@@ -897,7 +897,7 @@ namespace sw::editor
             {
                 if ( ImGui::DragFloat3( "##Value", pValue, 0.01f, def._min, def._max, "%.3f" ) )
                 {
-                    noteEdit( session );
+                    recordEdit( session );
                     bChanged = true;
                 }
                 finishItem();
@@ -1033,7 +1033,7 @@ namespace sw::editor
         if ( value._listText.size() < limit )
         {
             bAddItem = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) );
-            EditorSelfTestMarks::note( "meshmodifiers.referenceList.add" );
+            EditorSelfTestMarks::record( "meshmodifiers.referenceList.add" );
         }
         if ( bAddItem )
         {
@@ -1095,7 +1095,7 @@ namespace sw::editor
         float3 position = lattice.getControlPoint( selected );
         if ( ImGui::DragFloat3( SW_LOCKEY( "EdMeshModifiers", "PointPosition" ), &position._x, 0.005f ) )
         {
-            noteEdit( session );
+            recordEdit( session );
             session.setSelectedControlPoint( selected );
             const float3        delta = position - lattice.getControlPoint( selected );
             const vector<int32> listIndex{ selected };
@@ -1117,7 +1117,7 @@ namespace sw::editor
         bool bShadedPreview = session.isShadedPreviewEnabled();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "ShadedPreview" ), &bShadedPreview ) )
             session.setShadedPreviewEnabled( bShadedPreview );
-        EditorSelfTestMarks::note( "meshmodifiers.shadedPreview" );
+        EditorSelfTestMarks::record( "meshmodifiers.shadedPreview" );
         MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "ShadedPreviewTooltip" ) );
         const bool bGPUPreviewBlocked = session.isShadedPreviewEnabled() && session.isGPUPreviewActive() == false && stack.getModifierCount() > 0;
         if ( bGPUPreviewBlocked )
@@ -1137,7 +1137,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdMeshModifiers", "PlayPreviewTime" ) ) );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "PlayPreviewTime" ), &bPlaying ) )
             session.setPreviewPlaying( bPlaying );
-        EditorSelfTestMarks::note( "meshmodifiers.playPreviewTime" );
+        EditorSelfTestMarks::record( "meshmodifiers.playPreviewTime" );
 
         ImGui::BeginDisabled( session.canUndo() == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdMeshModifiers", "Undo" ) ) ) )
@@ -1166,9 +1166,9 @@ namespace sw::editor
         }
     }
 
-    void MeshModifiersPanel::noteEdit( MeshModifierSession& session )
+    void MeshModifiersPanel::recordEdit( MeshModifierSession& session )
     {
-        _model.noteEdit( session, ImGui::IsItemActive() );
+        _model.recordEdit( session, ImGui::IsItemActive() );
     }
 
     void MeshModifiersPanel::finishItem()

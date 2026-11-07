@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioMixer.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioSnapshotMixer.h"
 #include "Engine/Audio/AudioTypes.h"
 
@@ -15,26 +15,26 @@ namespace
     {
         static constexpr float32 kFadeSeconds = audio::kBlockSeconds * 2.0f; // 블록 둘에 끝나는 페이드
 
-        static AudioSnapshotDesc makeSnapshot( const utf8* pName, float32 musicDb )
+        static AudioSnapshotDef makeSnapshot( const utf8* pName, float32 musicDb )
         {
-            AudioSnapshotDesc snapshot{};
+            AudioSnapshotDef snapshot{};
             snapshot._name           = hashed_string( pName );
             snapshot._fadeInSeconds  = kFadeSeconds;
             snapshot._fadeOutSeconds = kFadeSeconds;
-            AudioSnapshotBusDesc busVolume{};
+            AudioSnapshotBusDef busVolume{};
             busVolume._bus      = hashed_string( "music" );
             busVolume._volumeDb = musicDb;
             snapshot._listBusVolume.push_back( busVolume );
             return snapshot;
         }
 
-        static AudioMixerDesc makeDesc()
+        static AudioMixerDef makeDesc()
         {
-            AudioMixerDesc desc{};
-            AudioBusDesc   master{};
+            AudioMixerDef desc{};
+            AudioBusDef   master{};
             master._name = hashed_string( AudioBusNames::kMaster );
             desc._listBus.push_back( master );
-            AudioBusDesc music{};
+            AudioBusDef music{};
             music._name   = hashed_string( "music" );
             music._parent = master._name;
             desc._listBus.push_back( music );
@@ -80,7 +80,7 @@ SW_TEST_CASE( AudioSnapshotMixerTest, FadesInAndOut )
 /** @brief [AudioSnapshotMixerTest] 페이드 시간이 0 이면 바로 닿는다 — 0 으로 나누지 않는다 */
 SW_TEST_CASE( AudioSnapshotMixerTest, ZeroFadeIsInstant )
 {
-    AudioMixerDesc desc                  = Util::makeDesc();
+    AudioMixerDef desc                   = Util::makeDesc();
     desc._listSnapshot[0]._fadeInSeconds = 0.0f;
     AudioMixer mixer;
     SW_REQUIRE_TRUE( mixer.initialize( desc, AudioChannelLayout::Stereo ) );
@@ -148,7 +148,7 @@ SW_TEST_CASE( AudioSnapshotMixerTest, UnknownSnapshotIsAnError )
 /** @brief [AudioSnapshotMixerTest] 사용자 볼륨은 0 ~ 1 로 자른다. 음소거는 데이터 값과 OR 다 — 사용자가 꺼도 데이터의 음소거는 남는다 */
 SW_TEST_CASE( AudioSnapshotMixerTest, UserStateCombinesWithData )
 {
-    AudioMixerDesc desc      = Util::makeDesc();
+    AudioMixerDef desc       = Util::makeDesc();
     desc._listBus[1]._bMuted = true;
     AudioMixer mixer;
     SW_REQUIRE_TRUE( mixer.initialize( desc, AudioChannelLayout::Stereo ) );
@@ -176,16 +176,16 @@ SW_TEST_CASE( AudioSnapshotMixerTest, AdoptMixerKeepsUserStateAndDropsLostSnapsh
     snapshots.setSnapshotIntensity( oldMixer, hashed_string( "Duck" ), 1.0f );
     snapshots.setSnapshotIntensity( oldMixer, hashed_string( "Hush" ), 1.0f );
 
-    AudioMixerDesc nextDesc = Util::makeDesc();
+    AudioMixerDef nextDesc = Util::makeDesc();
     nextDesc._listSnapshot.erase( nextDesc._listSnapshot.begin() ); // Duck 이 사라진다
-    AudioBusDesc late{};
+    AudioBusDef late{};
     late._name   = hashed_string( "late" );
     late._parent = hashed_string( AudioBusNames::kMaster );
     nextDesc._listBus.push_back( late );
     AudioMixer nextMixer;
     SW_REQUIRE_TRUE( nextMixer.initialize( nextDesc, AudioChannelLayout::Stereo ) );
 
-    snapshots.adoptMixer( nextMixer );
+    snapshots.applyMixer( nextMixer );
     SW_EXPECT_NEAR( 0.25f, nextMixer.getBusUserVolume( static_cast<uint32>( nextMixer.findBusIndex( music ) ) ), 0.0001f );
     SW_EXPECT_NEAR( 0.75f, nextMixer.getBusUserVolume( static_cast<uint32>( nextMixer.findBusIndex( hashed_string( "late" ) ) ) ), 0.0001f );
     SW_EXPECT_NEAR( 0.0f, snapshots.getSnapshotIntensity( hashed_string( "Duck" ) ), 0.0001f );

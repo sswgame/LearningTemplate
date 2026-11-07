@@ -541,9 +541,9 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void MMOClientView::drainEvents( vector<MMOClientEvent>& outListEvent )
+    void MMOClientView::pollEvents( vector<MMOClientEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     const MMOEntity* MMOClientView::findEntity( uint32 entityID ) const

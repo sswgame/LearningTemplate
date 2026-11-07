@@ -539,7 +539,7 @@ namespace sw::editor
              * @brief 자동화가 켜졌으면 이동 화살표마다 화면 사각형 이름(`meshmodifiers.handle.move.<축>`)를 남깁니다 — 시나리오가 손잡이를 끌어 양보를 검증한다.
              * @details 화살표 끝 쪽(길이의 90 %)을 고른다. 가운데 쪽은 다른 축 회전 고리(반경 80 %)와 겹친다.
              */
-            static void noteHandleMarks( const EditorViewportVisualizerArgs& args, const vector<Handle>& listHandle )
+            static void recordHandleMarks( const EditorViewportVisualizerArgs& args, const vector<Handle>& listHandle )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
@@ -751,7 +751,7 @@ namespace sw::editor
                     const bool    bActive = state._bDragging && state._handle._kind == handle._kind && state._handle._axis == handle._axis;
                     drawHandle( args, handle, bActive || static_cast<int32>( index ) == hoveredHandle );
                 }
-                noteHandleMarks( args, listHandle );
+                recordHandleMarks( args, listHandle );
                 ImVec2 centerScreen;
                 if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, frame._centerWorld, args._canvasPos, args._canvasSize, centerScreen ) )
                     args._pDrawList->AddCircle( centerScreen, 6.0f, themeColor( SW_THEME_COLOR( "Viewport", "ModifierAxis" ) ), 0, 2.0f );

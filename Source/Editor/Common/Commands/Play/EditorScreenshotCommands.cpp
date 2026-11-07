@@ -65,7 +65,7 @@ namespace sw::editor
             captureGameView();
     }
 
-    void EditorScreenshotCommands::noteFocusedView( EditorViewKind kind )
+    void EditorScreenshotCommands::recordFocusedView( EditorViewKind kind )
     {
         EditorScreenshotCommandsInternal::getState()._focusedView = kind;
     }

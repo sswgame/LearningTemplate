@@ -11,10 +11,10 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kSlotsXML = R"(<SlotTable>
+    constexpr const utf8* kSlotsXML = R"(<SlotCatalog>
         <Slot name="Head"/><Slot name="Torso"/><Slot name="MainHand"/><Slot name="OffHand"/>
         <Occupancy id="TwoHanded" slots="MainHand,OffHand"/>
-    </SlotTable>)";
+    </SlotCatalog>)";
 
     constexpr const utf8* kVisualsXML = R"(<ItemVisualCatalog>
         <ItemVisual id="body">
@@ -176,7 +176,7 @@ SW_TEST_CASE_F( AppearanceResolverTest, SetCompletionReplacesItsSlots )
 // 조건은 태그(칸 · 아무 곳) · 캐릭터 태그 · 점유 · 몸 종류 · 체형이고 not 으로 뒤집는다. 조건이 모두 맞아야 동작한다.
 SW_TEST_CASE_F( AppearanceResolverTest, RuleConditionsAllHaveToMatch )
 {
-    load( R"(<AppearanceRuleTable>
+    load( R"(<AppearanceRuleCatalog>
         <Rule id="TargetTag"><When target="Head" tag="Helmet.Full"/><Hide region="R1"/></Rule>
         <Rule id="WrongTarget"><When target="Torso" tag="Helmet.Full"/><Hide region="R2"/></Rule>
         <Rule id="AnyTag"><When tag="Helmet.Full"/><Hide region="R3"/></Rule>
@@ -186,7 +186,7 @@ SW_TEST_CASE_F( AppearanceResolverTest, RuleConditionsAllHaveToMatch )
         <Rule id="BodyShape"><When bodyShape="Heavy"/><Hide region="R7"/></Rule>
         <Rule id="CharacterTag"><When characterTag="Faction.Army"/><Hide region="R8"/></Rule>
         <Rule id="Both"><When occupied="Head"/><When occupied="Torso"/><Hide region="R9"/></Rule>
-    </AppearanceRuleTable>)" );
+    </AppearanceRuleCatalog>)" );
     equip( "Head", "helmet" );
     _spec._bodyType = hashed_string( "Dwarf" );
     _spec._tags.addTag( TagID::request( "Faction.Army" ) );
@@ -209,12 +209,12 @@ SW_TEST_CASE_F( AppearanceResolverTest, RuleConditionsAllHaveToMatch )
 // 숨김은 대상 · 부품 · 아이템 태그로 걸고 몸은 숨지 않는다. 규칙은 서로의 결과를 조건으로 보지 않는다.
 SW_TEST_CASE_F( AppearanceResolverTest, HideRulesDoNotChainAndSpareTheBody )
 {
-    load( R"(<AppearanceRuleTable>
+    load( R"(<AppearanceRuleCatalog>
         <Rule id="HideHelmet"><When occupied="Torso"/><Hide target="Head"/></Rule>
         <Rule id="SeesHelmet"><When occupied="Head"/><Hide region="SawHelmet"/></Rule>
         <Rule id="HideTie"><When occupied="Torso"/><Hide target="Hood" part="Tie"/></Rule>
         <Rule id="HideRifles"><When occupied="Torso"/><Hide itemTag="Weapon.Rifle"/></Rule>
-    </AppearanceRuleTable>)" );
+    </AppearanceRuleCatalog>)" );
     equip( "Head", "helmet" );
     equip( "Torso", "armor" );
     equip( "MainHand", "rifle" );
@@ -232,12 +232,12 @@ SW_TEST_CASE_F( AppearanceResolverTest, HideRulesDoNotChainAndSpareTheBody )
 // 같은 대상은 우선순위가 높은 규칙이 이기고 진 규칙도 설명에 남는다. 부품을 지목한 규칙이 전체 규칙보다 앞선다.
 SW_TEST_CASE_F( AppearanceResolverTest, HigherPriorityRuleWinsAndLoserIsExplained )
 {
-    load( R"(<AppearanceRuleTable>
+    load( R"(<AppearanceRuleCatalog>
         <Rule id="Low" priority="1"><When occupied="Torso"/><SwapMaterial target="Torso" material="low.material"/></Rule>
         <Rule id="High" priority="5"><When occupied="Torso"/><SwapMaterial target="Torso" material="high.material"/></Rule>
         <Rule id="Part" priority="1"><When occupied="Torso"/><SwapMesh target="Torso" part="Plate" mesh="part.mesh"/></Rule>
         <Rule id="All" priority="2"><When occupied="Torso"/><SwapMesh target="Torso" mesh="all.mesh"/></Rule>
-    </AppearanceRuleTable>)" );
+    </AppearanceRuleCatalog>)" );
     equip( "Torso", "armor" );
     resolve();
 
@@ -253,7 +253,7 @@ SW_TEST_CASE_F( AppearanceResolverTest, HigherPriorityRuleWinsAndLoserIsExplaine
 // 메시 변형은 규칙 > 피해 단계 > 꾸미기 순이고, 부품에 없는 변형은 그 부품에 영향이 없다.
 SW_TEST_CASE_F( AppearanceResolverTest, VariantOrderIsRuleThenDamageThenCustomization )
 {
-    load( R"(<AppearanceRuleTable><Rule id="Clean"><When characterTag="Tidy"/><Variant target="Torso" name="Clean"/></Rule></AppearanceRuleTable>)" );
+    load( R"(<AppearanceRuleCatalog><Rule id="Clean"><When characterTag="Tidy"/><Variant target="Torso" name="Clean"/></Rule></AppearanceRuleCatalog>)" );
     AppearanceSlotRequest& armor = equip( "Torso", "armor" );
     armor._damage                = 0.5f;
     resolve();
@@ -422,10 +422,10 @@ SW_TEST_CASE_F( AppearanceResolverTest, ItemCustomizationChangesThatItemOnly )
 // 규칙의 소켓 덮어쓰기는 요청의 같은 이름을 바꾸고, 새 이름은 뒤에 붙는다. 규칙 모프는 값을 덮어쓴다.
 SW_TEST_CASE_F( AppearanceResolverTest, RuleOverridesSocketsAndMorphs )
 {
-    load( R"(<AppearanceRuleTable>
+    load( R"(<AppearanceRuleCatalog>
         <Rule id="Socket"><When occupied="Torso"/><OverrideSocket name="Grip" parent="Hand" offset="0 1 0"/><OverrideSocket name="Extra" parent="Neck"/></Rule>
         <Rule id="Morph"><When occupied="Torso"/><Morph name="Flat" weight="0.75"/></Rule>
-    </AppearanceRuleTable>)" );
+    </AppearanceRuleCatalog>)" );
     AppearanceSocketOverride existing;
     existing._name = hashed_string( "Grip" );
     existing._placement._listSocket.push_back( hashed_string( "Old" ) );

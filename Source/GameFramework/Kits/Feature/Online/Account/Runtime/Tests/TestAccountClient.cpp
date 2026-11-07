@@ -135,7 +135,7 @@ namespace
                     continue;
                 }
                 const auto bodyIt = _mapMethodToBody.find( held._method );
-                (void)host.respondOk( held._token, AccountClientTestUtil::toWriter( bodyIt != _mapMethodToBody.end() ? bodyIt->second : vector<uint8>{} ), NetResponseRetention::Remember );
+                (void)host.respondOk( held._token, AccountClientTestUtil::toWriter( bodyIt != _mapMethodToBody.end() ? bodyIt->second : vector<uint8>{} ), NetResponseRetention::Keep );
             }
             _listHeld.clear();
         }
@@ -152,14 +152,14 @@ namespace
     };
 
     /** @brief 가짜 서버 + 연결 하나의 계정 클라이언트입니다. 선언 순서가 수명이다. @p pToken 이 있으면 Hello 뒤의 자동 재접속을 들고 멈춘 채로 선다. */
-    struct AccountClientRig
+    struct AccountClientFixture
     {
-        FakeAccountService  _service{};
-        AccountClient       _account{};
-        test::OnlineTestRig _rig{ false };
-        int32               _clientIndex{ -1 };
+        FakeAccountService      _service{};
+        AccountClient           _account{};
+        test::OnlineTestFixture _rig{ false };
+        int32                   _clientIndex{ -1 };
 
-        explicit AccountClientRig( const LoginSessionToken* pToken = nullptr )
+        explicit AccountClientFixture( const LoginSessionToken* pToken = nullptr )
         {
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();
@@ -207,7 +207,7 @@ namespace
 /** @brief [AccountClientTest] 로그인 성공은 토큰 · 신원을 보관하고 로그인 상태가 된다. 요청 id 가 답과 같다 */
 SW_TEST_CASE( AccountClientTest, LoginStoresTokenAndIdentity )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
     rig._service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     const uint64             requestID = rig._account.login( "alice", "password123" );
@@ -224,7 +224,7 @@ SW_TEST_CASE( AccountClientTest, LoginStoresTokenAndIdentity )
 /** @brief [AccountClientTest] 업무 결과가 실패면 토큰 · 로그인 상태를 바꾸지 않는다 */
 SW_TEST_CASE( AccountClientTest, FailedLoginChangesNothing )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig._service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeGrantBody( LoginResult::WrongCredentials ) );
     (void)rig._account.login( "alice", "wrong" );
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::WrongCredentials );
@@ -235,8 +235,8 @@ SW_TEST_CASE( AccountClientTest, FailedLoginChangesNothing )
 /** @brief [AccountClientTest] 성공 응답의 몸이 잘렸거나 깨졌으면 InvalidRequest 이고, 몸에 든 토큰을 믿지 않는다 */
 SW_TEST_CASE( AccountClientTest, TruncatedOrJunkOkBodyIsRefused )
 {
-    AccountClientRig    rig;
-    const vector<uint8> whole = AccountClientTestUtil::makeGrantBody( LoginResult::Ok );
+    AccountClientFixture rig;
+    const vector<uint8>  whole = AccountClientTestUtil::makeGrantBody( LoginResult::Ok );
     SW_REQUIRE_TRUE( whole.size() > 8 );
     vector<vector<uint8>> listBody;
     listBody.emplace_back();
@@ -259,7 +259,7 @@ SW_TEST_CASE( AccountClientTest, TruncatedOrJunkOkBodyIsRefused )
 /** @brief [AccountClientTest] 그 요청의 타입이 아닌 몸(메서드와 타입의 짝이 어긋남)은 스키마 해시 머리로 걸러 InvalidRequest 다. 티켓 · 연동 목록도 같다 */
 SW_TEST_CASE( AccountClientTest, BodyOfAnotherTypeIsRefused )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig._service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeTicketBody() );
     (void)rig._account.login( "alice", "password123" );
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
@@ -279,7 +279,7 @@ SW_TEST_CASE( AccountClientTest, BodyOfAnotherTypeIsRefused )
 /** @brief [AccountClientTest] 티켓 · 연동 목록 응답은 자기 칸에 담는다 */
 SW_TEST_CASE( AccountClientTest, TicketAndLinkRepliesFillTheirFields )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig._service.setBody( AccountMethod::kIssueGameTicket, AccountClientTestUtil::makeTicketBody() );
     (void)rig._account.issueGameTicket( "game" );
     SW_EXPECT_EQUAL( kNowMs + 1000, rig.take()._ticket._expiresAtMs );
@@ -292,7 +292,7 @@ SW_TEST_CASE( AccountClientTest, TicketAndLinkRepliesFillTheirFields )
 /** @brief [AccountClientTest] 공통 오류의 대응: 표에 없는 코드는 StoreUnavailable(다시 시도)이고, `_errorCode` 는 받은 그대로다 */
 SW_TEST_CASE( AccountClientTest, ErrorCodesMapToResults )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     struct Row
     {
         uint16      _errorCode;
@@ -324,7 +324,7 @@ SW_TEST_CASE( AccountClientTest, ErrorCodesMapToResults )
 /** @brief [AccountClientTest] 시도 제한의 상세 몸: 기다릴 시간을 읽는다. 없거나 잘렸거나 int64 를 넘는 값이면 0 이다(음수로 감기지 않는다) */
 SW_TEST_CASE( AccountClientTest, RateLimitDetailIsBounded )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig._service._errorCode = OnlineError::kRateLimited;
 
     rig._service._detailBytes = AccountClientTestUtil::makeVarUintBody( 1500 );
@@ -349,7 +349,7 @@ SW_TEST_CASE( AccountClientTest, RateLimitDetailIsBounded )
 /** @brief [AccountClientTest] 업데이트 필요의 상세 몸: 상점 주소를 읽고, 없거나 깨졌으면 결과는 그대로 주소만 빈다 */
 SW_TEST_CASE( AccountClientTest, UpdateDetailIsOptional )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig._service._errorCode = OnlineError::kUpdateRequired;
 
     rig._service._detailBytes = AccountClientTestUtil::makeStoreURLBody( "https://store.example/x" );
@@ -369,8 +369,8 @@ SW_TEST_CASE( AccountClientTest, UpdateDetailIsOptional )
 /** @brief [AccountClientTest] 토큰 없는 재접속은 보내지 않고 바로 InvalidToken 이다 */
 SW_TEST_CASE( AccountClientTest, ResumeWithoutTokenIsNotSent )
 {
-    AccountClientRig rig;
-    const uint64     requestID = rig._account.resume();
+    AccountClientFixture rig;
+    const uint64         requestID = rig._account.resume();
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), requestID );
     const AccountClientReply reply = rig.take();
     SW_EXPECT_EQUAL( requestID, reply._requestID );
@@ -381,7 +381,7 @@ SW_TEST_CASE( AccountClientTest, ResumeWithoutTokenIsNotSent )
 /** @brief [AccountClientTest] 재접속 결과: 토큰이 죽었다는 답(InvalidToken · Expired · Revoked)만 토큰을 버린다. 저장소 오류 · 깨진 몸은 토큰을 지켜 다시 시도하게 한다 */
 SW_TEST_CASE( AccountClientTest, ResumeDropsTokenOnlyWhenDead )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig.logIn();
     rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::StoreUnavailable ) );
     (void)rig._account.resume();
@@ -406,7 +406,7 @@ SW_TEST_CASE( AccountClientTest, ResumeDropsTokenOnlyWhenDead )
 /** @brief [AccountClientTest] 재접속 성공은 서버가 준 새 비밀로 토큰을 갈아 끼운다 */
 SW_TEST_CASE( AccountClientTest, ResumeReplacesTheSecret )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig.logIn();
     rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
     (void)rig._account.resume();
@@ -418,7 +418,7 @@ SW_TEST_CASE( AccountClientTest, ResumeReplacesTheSecret )
 SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
-    AccountClientRig        rig( &token );
+    AccountClientFixture    rig( &token );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._service._listMethod.size() );
     SW_EXPECT_EQUAL( AccountMethod::kResume, rig._service._listMethod[0] );
     SW_EXPECT_TRUE( rig.getClient().isRequestGateClosed() );
@@ -449,7 +449,7 @@ SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
 SW_TEST_CASE( AccountClientTest, DeferredRequestsEndWithTheResumeResult )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
-    AccountClientRig        rig( &token );
+    AccountClientFixture    rig( &token );
     const uint64            listRequestID = rig._account.listLinks();
     const uint64            ticketID      = rig._account.issueGameTicket( "game" );
 
@@ -473,7 +473,7 @@ SW_TEST_CASE( AccountClientTest, DeferredRequestsEndWithTheResumeResult )
 SW_TEST_CASE( AccountClientTest, DeadTokenEndsDeferredRequests )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
-    AccountClientRig        rig( &token );
+    AccountClientFixture    rig( &token );
     (void)rig._account.logout();
 
     rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::Expired ) );
@@ -492,7 +492,7 @@ SW_TEST_CASE( AccountClientTest, DeadTokenEndsDeferredRequests )
 SW_TEST_CASE( AccountClientTest, DisconnectDuringResumeFinishesEverything )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
-    AccountClientRig        rig( &token );
+    AccountClientFixture    rig( &token );
     (void)rig._account.listLinks();
     rig._rig._clients.drop( rig._clientIndex );
 
@@ -508,7 +508,7 @@ SW_TEST_CASE( AccountClientTest, DisconnectDuringResumeFinishesEverything )
 /** @brief [AccountClientTest] 로그아웃 · 탈퇴 성공만 토큰을 버린다. 실패한 로그아웃은 세션을 그대로 둔다 */
 SW_TEST_CASE( AccountClientTest, LogoutAndDeletionDropTheToken )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig.logIn();
     rig._service.setBody( AccountMethod::kLogout, AccountClientTestUtil::makeGrantBody( LoginResult::InvalidToken ) );
     (void)rig._account.logout();
@@ -533,7 +533,7 @@ SW_TEST_CASE( AccountClientTest, LogoutAndDeletionDropTheToken )
 /** @brief [AccountClientTest] 연동 성공은 신원만 갈아 끼우고 토큰은 그대로다(연동 응답은 토큰을 싣지 않는다) */
 SW_TEST_CASE( AccountClientTest, LinkUpdatesIdentityOnly )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig.logIn();
     rig._service.setBody( AccountMethod::kLinkCredential, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9, "renamed" ) );
     (void)rig._account.linkCredential( "renamed", "password123" );
@@ -545,7 +545,7 @@ SW_TEST_CASE( AccountClientTest, LinkUpdatesIdentityOnly )
 /** @brief [AccountClientTest] 밀려남 알림: 토큰을 버리고 이유 · 사유 코드를 이벤트로 낸다. 깨진 몸 · 모르는 종류는 무시하고 세션을 지킨다 */
 SW_TEST_CASE( AccountClientTest, RevokedPush )
 {
-    AccountClientRig rig;
+    AccountClientFixture rig;
     rig.logIn();
     rig._rig._clients.login( rig._clientIndex, kAccountID );
     rig.pump();
@@ -582,7 +582,7 @@ SW_TEST_CASE( AccountClientTest, OutOfRangeRequestIsNotSent )
     SW_EXPECT_LOG( "OnlineProtocol.MessageOutOfRange" );
     const string tooLong( static_cast<size_t>( LoginConstant::kMaxLoginNameWireSize ) + 1, 'a' );
     {
-        AccountClientRig         rig;
+        AccountClientFixture     rig;
         const uint64             requestID = rig._account.login( tooLong, "password123" );
         const AccountClientReply reply     = rig.take();
         SW_EXPECT_EQUAL( requestID, reply._requestID );
@@ -595,7 +595,7 @@ SW_TEST_CASE( AccountClientTest, OutOfRangeRequestIsNotSent )
         SW_EXPECT_TRUE( rig._service._listMethod.empty() );
     }
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
-    AccountClientRig        resuming( &token );
+    AccountClientFixture    resuming( &token );
     (void)resuming._account.issueGameTicket( string( static_cast<size_t>( LoginConstant::kMaxServerIDSize ) + 1, 's' ) );
     SW_EXPECT_TRUE( resuming.take()._result == LoginResult::InvalidRequest ); // 재접속을 기다리지 않는다
 }

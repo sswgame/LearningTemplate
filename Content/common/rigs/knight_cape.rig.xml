@@ -1,13 +1,13 @@
 <RigAsset>
 	<targets>
-		<item name="Shoulders" bone="chest" unit="Body" translation="0.0,0.2433,0.0" />
+		<item name="Shoulders" bone="chest" skeletalMesh="Body" translation="0.0,0.2433,0.0" />
 		<!-- 충돌체가 붙는 몸의 뼈(망토 스켈레톤에는 없다) — 달리거나 돌 때 망토가 몸통 · 엉덩이 · 허벅지를 뚫지 않게 한다. -->
-		<item name="BodyChest" bone="chest" unit="Body" />
-		<item name="BodyHips" bone="hips" unit="Body" />
-		<item name="BodyThighL" bone="upperleg.l" unit="Body" />
-		<item name="BodyThighR" bone="upperleg.r" unit="Body" />
-		<item name="BodyShinL" bone="lowerleg.l" unit="Body" />
-		<item name="BodyShinR" bone="lowerleg.r" unit="Body" />
+		<item name="BodyChest" bone="chest" skeletalMesh="Body" />
+		<item name="BodyHips" bone="hips" skeletalMesh="Body" />
+		<item name="BodyThighL" bone="upperleg.l" skeletalMesh="Body" />
+		<item name="BodyThighR" bone="upperleg.r" skeletalMesh="Body" />
+		<item name="BodyShinL" bone="lowerleg.l" skeletalMesh="Body" />
+		<item name="BodyShinR" bone="lowerleg.r" skeletalMesh="Body" />
 	</targets>
 	<nodes>
 		<item type="CopyTransform" name="Pin" bone="cape0" target="Shoulders" />

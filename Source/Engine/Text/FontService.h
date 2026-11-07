@@ -92,7 +92,7 @@ namespace sw
         /** @brief 카탈로그 파일을 읽고 기본 패밀리를 엽니다. 기본 패밀리를 열지 못하면 false 입니다(글자를 그릴 수 없으므로 기동 오류입니다). */
         [[nodiscard]] bool initialize( const AssetID& assetID );
         /** @brief 이미 읽은 카탈로그로 시작합니다(테스트와 도구). 검사와 기본 패밀리 열기는 `initialize` 와 같습니다. */
-        [[nodiscard]] bool initializeFromCatalog( FontCatalogDesc catalog );
+        [[nodiscard]] bool initializeFromCatalog( FontCatalogDef catalog );
         /** @brief 연 면, 연쇄, 경고 기록을 모두 해제합니다. 다시 `initialize` 할 수 있습니다. */
         void shutdown();
         /** @brief 파일 이름으로 시스템 글꼴을 찾습니다(`SystemFontLocator::findSystemFontFile`). 없으면 빈 글입니다. 에디터 ImGui 글꼴이 같은 색인을 쓴다. */
@@ -128,7 +128,7 @@ namespace sw
         /** @brief 글리프 캐시(SDF 아틀라스)입니다. 시작 전에는 부르지 않습니다. */
         GlyphCache& getGlyphCache() { return *_glyphCache; }
         /** @brief 읽은 카탈로그입니다. */
-        const FontCatalogDesc& getCatalog() const { return _catalog; }
+        const FontCatalogDef& getCatalog() const { return _catalog; }
         /** @brief 한 번만 남긴 경고(못 찾은 패밀리, 글리프 없는 코드 포인트)의 수입니다. 경고가 반복되지 않는지 테스트가 확인합니다. */
         uint32 getWarnedOnceCount() const { return static_cast<uint32>( _warnedOnce.getCount() ); }
 
@@ -150,7 +150,7 @@ namespace sw
     private:
         unique_ptr<IFontRasterizer> _rasterizer;
         unique_ptr<GlyphCache>      _glyphCache; ///< 시작할 때 만들고 종료할 때 해제합니다(래스터라이저를 빌립니다).
-        FontCatalogDesc             _catalog;
+        FontCatalogDef              _catalog;
         // 아래 세 맵의 키는 해시가 아니라 원문 문자열이다(`FontServiceInternal::kKeySeparator` 로 이은 값) — 해시 단독 키는 부딪히면 다른 면을 조용히 돌려준다.
         unordered_map<string, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (패밀리, 굵기, 기울기)에서 연 면을 찾는 맵입니다.
         unordered_map<string, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.

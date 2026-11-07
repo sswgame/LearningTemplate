@@ -164,7 +164,7 @@ namespace sw
             {
                 // 텍스처가 붙지 않은 필드는 머티리얼 데이터에 kInvalidDescriptorIndex 로 실려 셰이더로 간다(-gv_validateBindlessIndex=2 로 자리를 남긴다).
                 if ( BindlessIndexValidator::isTracingAbsent() )
-                    (void)BindlessIndexValidator::noteAbsent( hashed_string( _desc._name.c_str() ), hashed_string( prop._name.c_str() ), 0 ); // 자리마다 한 번만 남긴다
+                    (void)BindlessIndexValidator::recordAbsent( hashed_string( _desc._name.c_str() ), hashed_string( prop._name.c_str() ), 0 ); // 자리마다 한 번만 남긴다
                 continue;
             }
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSRV.size() );
@@ -338,7 +338,7 @@ namespace sw
         return initialize( pDevice, AssetID{ _assetPath } );
     }
 
-    void Material::forgetRHI( IRHIDevice* pDevice )
+    void Material::clearRHI( IRHIDevice* pDevice )
     {
         if ( _pRHIDevice != pDevice )
             return;
@@ -973,7 +973,7 @@ namespace sw
         if ( _bDefinesDirty != SW_FALSE )
         {
             _listCachedDefine.clear();
-            const MaterialPermutationDesc& permutationDesc = _desc._permutations;
+            const MaterialPermutationDef& permutationDesc = _desc._permutations;
 
             for ( const string& defineStr : permutationDesc._listAlwaysDefine )
             {
@@ -1120,21 +1120,21 @@ namespace sw
         this->syncDescFromRuntime();
 
         XMLDocument doc;
-        XMLNode     root = doc.appendRoot( "MaterialDesc" );
+        XMLNode     root = doc.appendRoot( "MaterialDef" );
 
         AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
         // 루트 칸은 기본값도 모두 쓴다 — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
-        MaterialRootFields rootFields;
-        rootFields._name              = _desc._name;
-        rootFields._shaderPath        = _desc._shaderPath;
-        rootFields._alphaMode         = _desc._alphaMode;
-        rootFields._renderQueue       = _desc._renderQueue;
-        rootFields._bTwoSidedLighting = _desc._bTwoSidedLighting != SW_FALSE;
-        rootFields._blendPreset       = _desc._blendPreset;
+        MaterialRootParams rootParams;
+        rootParams._name              = _desc._name;
+        rootParams._shaderPath        = _desc._shaderPath;
+        rootParams._alphaMode         = _desc._alphaMode;
+        rootParams._renderQueue       = _desc._renderQueue;
+        rootParams._bTwoSidedLighting = _desc._bTwoSidedLighting != SW_FALSE;
+        rootParams._blendPreset       = _desc._blendPreset;
         // 문턱값의 정본은 프로퍼티다(에디터가 고친다). Mask 가 아니면 칸은 쓰지 않는 값이라 기본값으로 둔다(읽을 때 다른 값은 오류다).
-        if ( _desc._alphaMode == MaterialAlphaMode::Mask && getScalarParameter( hashed_string( kAlphaCutoffProperty ), rootFields._alphaCutoff ) == false )
-            rootFields._alphaCutoff = _desc._alphaCutoff;
-        XMLFields::writeEveryField( root, rootFields );
+        if ( _desc._alphaMode == MaterialAlphaMode::Mask && getScalarParameter( hashed_string( kAlphaCutoffProperty ), rootParams._alphaCutoff ) == false )
+            rootParams._alphaCutoff = _desc._alphaCutoff;
+        XMLFields::writeEveryField( root, rootParams );
         MaterialXML::appendRenderFields( root, _desc );
 
         XMLNode props = root.appendChild( "_properties" );
@@ -1211,7 +1211,7 @@ namespace sw
         if ( doc.parse( bComposed ? string_view( flatText ) : xmlText ) == false )
             return false;
 
-        XMLNode root = doc.getRoot( "MaterialDesc" );
+        XMLNode root = doc.getRoot( "MaterialDef" );
         if ( root.isValid() == false )
             return false;
 
@@ -1219,14 +1219,14 @@ namespace sw
             return false;
 
         // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderFields` 가 읽는다.
-        MaterialRootFields rootFields;
+        MaterialRootParams rootParams;
         const string_view  sourceName{ root.getAttributeText( "name" ) };
-        if ( XMLFields::readFields( root, rootFields, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
+        if ( XMLFields::readFields( root, rootParams, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
             return false;
-        _desc             = MaterialDesc{};
-        _desc._name       = rootFields._name;
+        _desc             = MaterialDef{};
+        _desc._name       = rootParams._name;
         _desc._parentPath = parentPath;
-        setShaderPath( rootFields._shaderPath );
+        setShaderPath( rootParams._shaderPath );
 
         XMLNode props = root.findChild( "_properties" );
         if ( props.isValid() )
@@ -1243,7 +1243,7 @@ namespace sw
 
         if ( MaterialXML::parsePermutationNode( root, _desc._permutations ) == false )
             return false;
-        if ( MaterialXML::parseRenderFields( root, rootFields, sourceName, _desc ) == false )
+        if ( MaterialXML::parseRenderFields( root, rootParams, sourceName, _desc ) == false )
             return false;
 
         // 적은 문턱값은 셰이더가 읽는 프로퍼티로 간다. 프로퍼티가 없는 셰이더(문턱이 코드에 있다)에는 기본값 밖의 값을 받아 줄 곳이 없다.
@@ -1257,7 +1257,7 @@ namespace sw
                 prop._value = to_string( _desc._alphaCutoff );
                 bApplied    = true;
             }
-            if ( bApplied == false && _desc._alphaCutoff != MaterialRootFields{}._alphaCutoff )
+            if ( bApplied == false && _desc._alphaCutoff != MaterialRootParams{}._alphaCutoff )
             {
                 SW_LOG_ERROR_ID( "Material.AlphaCutoffNoProperty", "%#: alphaCutoff has nowhere to go - the material has no %# property", sourceName, kAlphaCutoffProperty );
                 return false;

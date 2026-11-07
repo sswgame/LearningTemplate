@@ -17,7 +17,7 @@
 
 #include "DevTools/DevToolsAPI.h"
 
-#include "Engine/Serialization/Serializer/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
     struct FileChangeEvent;
 
     /** @brief 설정 파일 하나를 맡는 처리기입니다. 맡은 파일이 아니면 `NotTracked` 를 돌려준다. */
-    using ConfigFileReloadDelegate = Delegate<ReloadOutcome( string_view fullPath )>;
+    using ConfigFileReloadDelegate = Delegate<ReloadResult( string_view fullPath )>;
 
     /** @class ConfigReloadSubsystem @brief `Config/` 감시와 설정 파일 리로드입니다. */
     class SW_DEVTOOLS_API ConfigReloadSubsystem final : public ISubsystem
@@ -56,7 +56,7 @@ namespace sw
          * @brief 바뀐 파일 하나를 처리합니다 — 호스트 설정이면 `ConfigManager` 가, 아니면 처리기가 다시 읽습니다. 설정 화면의 저장도 이것을 부른다.
          * @return 다시 읽었으면 `Reloaded`, 맡은 곳이 없으면 `NotTracked`, 깨진 파일이면(오류를 남기고 이전 값을 지켰다) `Failed`
          */
-        [[nodiscard]] ReloadOutcome reloadChangedFile( string_view fullPath );
+        [[nodiscard]] ReloadResult reloadChangedFile( string_view fullPath );
 
     private:
         void onConfigFileChanged( const FileChangeEvent& changeEvent );
@@ -66,6 +66,6 @@ namespace sw
         unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
         Subscription                    _configWatch; ///< 설정 폴더 감시 구독
         /** @brief 처리기 목록입니다 — 공용 멀티캐스트라 처리기가 순회 중 자기 구독을 놓아도 순회가 끝난 뒤 빠진다. 먼저 맡은 처리기에서 멈춘다(`broadcastUntil`). */
-        MulticastDelegate<ReloadOutcome( string_view )> _fileHandlers;
+        MulticastDelegate<ReloadResult( string_view )> _fileHandlers;
     };
 } // namespace sw

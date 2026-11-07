@@ -12,7 +12,7 @@
 namespace sw
 {
     FarmCropComponent::FarmCropComponent()
-        : _director{}
+        : _gameMode{}
         , _tileIndex{ -1 }
         , _modelScale{ 1.6f }
         , _modelFloor{ 0.05f }
@@ -29,9 +29,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void FarmCropComponent::assignTile( GameObjectHandle director, int32 tileIndex )
+    void FarmCropComponent::assignTile( GameObjectHandle gameMode, int32 tileIndex )
     {
-        _director  = director;
+        _gameMode  = gameMode;
         _tileIndex = tileIndex;
         _cropState = -1;
     }
@@ -45,10 +45,10 @@ namespace sw
         const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
-        const FarmGameModeComponent* pDirector = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const FarmGameModeComponent* pGameMode = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
-        const FarmField&    field    = pDirector->getField();
+        const FarmField&    field    = pGameMode->getField();
         const GridTopology& topology = field.getTopology();
         if ( _tileIndex >= topology.getCellCount() )
             return;
@@ -76,9 +76,9 @@ namespace sw
             return;
         }
         // 모델은 단계마다 바꾸고(디렉터의 작물 모델 표), 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
-        const string*                       pReadyModel = bReady ? pDirector->findReadyModel( pTile->_cropID ) : nullptr;
-        const string&                       model       = pReadyModel != nullptr ? *pReadyModel : pDirector->findGrowingModel( pTile->_cropID, stage );
-        const shared_ptr<MaterialInstance>& look        = pDirector->findCropLook( pTile->_cropID, bWithered, bReady && pReadyModel == nullptr );
+        const string*                       pReadyModel = bReady ? pGameMode->findReadyModel( pTile->_cropID ) : nullptr;
+        const string&                       model       = pReadyModel != nullptr ? *pReadyModel : pGameMode->findGrowingModel( pTile->_cropID, stage );
+        const shared_ptr<MaterialInstance>& look        = pGameMode->findCropLook( pTile->_cropID, bWithered, bReady && pReadyModel == nullptr );
         if ( look == nullptr )
             return;
         const float32 size = _modelScale * ( bReady ? 1.0f : 0.7f + 0.3f * ratio );

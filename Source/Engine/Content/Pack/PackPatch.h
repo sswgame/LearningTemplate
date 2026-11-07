@@ -90,7 +90,7 @@ namespace sw
 {
     /** @brief 패치 목록 루트(`<PackPatch from to pack [packSHA256 signature]>`)의 칸입니다. 해시와 서명은 함께 있거나 함께 없다(`PackPatchManifest::parse` 가 본다). */
     REFLECT()
-    struct SW_API PackPatchManifestFields
+    struct SW_API PackPatchManifestParams
     {
         REFLECT_BODY();
 
@@ -111,7 +111,7 @@ namespace sw
      * @details `patching` 의 철자(`chain` · `none`)는 설치된 게임과 지난 릴리스의 패치 빌더가 읽는 바깥 계약이라 열거자 이름으로 바꾸지 않는다 — 글로 받아 `PackPatchUtil` 이 푼다.
      */
     REFLECT()
-    struct SW_API PackBuildRecordFields
+    struct SW_API PackBuildRecordParams
     {
         REFLECT_BODY();
 

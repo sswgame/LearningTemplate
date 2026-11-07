@@ -93,7 +93,7 @@ namespace sw
         float32 computeDamagePerSecond( const float2& position ) const;
         /** @brief 지금 원 안이고 맵 안이며 지형이 허락하는 무작위 위치를 고릅니다(보급 상자). 못 찾으면 원 중심을 주고 false 를 반환합니다. */
         [[nodiscard]] bool pickPointInside( GameRandom& random, float2& outPosition ) const;
-        void               drainEvents( vector<BattleRoyaleZoneEvent>& outListEvent );
+        void               pollEvents( vector<BattleRoyaleZoneEvent>& outListEvent );
 
         /** @brief 네트워크용으로 원 상태를 씁니다(설정과 시드는 양쪽이 같다고 가정합니다). 단계 번호나 단계가 코덱 범위를 넘으면 false 입니다. */
         [[nodiscard]] bool writeState( BitWriter& writer ) const;

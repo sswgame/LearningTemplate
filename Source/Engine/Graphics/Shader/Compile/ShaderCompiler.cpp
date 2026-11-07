@@ -283,7 +283,7 @@ namespace sw
 
 #if defined( SW_HAS_DXC_API )
             /** @brief DXC 컴파일 한 번의 결과입니다. */
-            enum class DxcOutcome : uint8
+            enum class DxcResult : uint8
             {
                 Compiled, ///< 바이트코드를 얻었다
                 Rejected, ///< 셰이더 오류로 실패했다(오류 글을 담았다) — 다른 컴파일러로 넘기지 않는다
@@ -464,14 +464,14 @@ namespace sw
              * @brief DXC 로 DXIL · SPIR-V 를 컴파일합니다. 성공하면 바이트코드(OpenGL 이면 내장 변수를 바꾼 것)를 담습니다.
              * @details 생성 · 소스 읽기 · 인자 · 컴파일 · 결과 읽기의 순서가 곧 의미이고 인자 글의 수명이 이 함수 안이라 더 나누지 않는다.
              */
-            static DxcOutcome compileDXC( const ShaderCompileDesc& desc, const ShaderIncludeResolver& resolver, const ShaderCompileInput& input, const string& profile,
-                                          ShaderCompileResult& outResult )
+            static DxcResult compileDXC( const ShaderCompileDesc& desc, const ShaderIncludeResolver& resolver, const ShaderCompileInput& input, const string& profile,
+                                         ShaderCompileResult& outResult )
             {
                 DxcCreateInstanceProc fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( fnDXCCreateInstance == nullptr )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceUnavailableLibdxcompilerNot", "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
-                    return DxcOutcome::NoOutput;
+                    return DxcResult::NoOutput;
                 }
 
     #if defined( SW_SANITIZER_THREAD )
@@ -493,7 +493,7 @@ namespace sw
                 else
                     SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceCLSIDDxcUtilsFailed", "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
                 if ( utils == nullptr || compiler == nullptr )
-                    return DxcOutcome::NoOutput;
+                    return DxcResult::NoOutput;
 
                 // 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
                 RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( utils, resolver ).release();
@@ -504,7 +504,7 @@ namespace sw
                 const wstring wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
                 vector<uint8> sourceBytes;
                 if ( FileUtil::readFile( input._source.str(), sourceBytes ) == false )
-                    return DxcOutcome::NoOutput;
+                    return DxcResult::NoOutput;
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );
                 wstring wProfile    = StringUtil::utf8ToUTF16( profile.c_str() );
@@ -566,7 +566,7 @@ namespace sw
                 if ( FAILED( hrCompile ) )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCCompilerCompileFailed", "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
-                    return DxcOutcome::NoOutput;
+                    return DxcResult::NoOutput;
                 }
 
                 HRESULT status = S_OK;
@@ -579,13 +579,13 @@ namespace sw
                 if ( FAILED( status ) )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCFailed", "%#", outResult._errorMessage.c_str() );
-                    return DxcOutcome::Rejected;
+                    return DxcResult::Rejected;
                 }
 
                 DxcComPtr<IDxcBlob> shaderBlob;
                 compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( dxcAddressOf( shaderBlob ) ), nullptr );
                 if ( shaderBlob == nullptr || shaderBlob->GetBufferSize() == 0 )
-                    return DxcOutcome::NoOutput;
+                    return DxcResult::NoOutput;
 
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
@@ -601,7 +601,7 @@ namespace sw
                                             : "D3D12 (DXIL Row-Major)";
                 SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", pFormatName );
     #endif
-                return DxcOutcome::Compiled;
+                return DxcResult::Compiled;
             }
 
 #endif // SW_HAS_DXC_API
@@ -715,13 +715,13 @@ namespace sw
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
-        const Internal::DxcOutcome outcome = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
-        if ( outcome == Internal::DxcOutcome::Compiled )
+        const Internal::DxcResult outcome = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
+        if ( outcome == Internal::DxcResult::Compiled )
         {
             Internal::saveToCacheIfEnabled( cachePath, result );
             return result;
         }
-        if ( outcome == Internal::DxcOutcome::Rejected )
+        if ( outcome == Internal::DxcResult::Rejected )
             return result;
         // DXC 가 출력을 못 냈으면 실패다 - 예전에는 DX12 타깃을 FXC 로 다시 컴파일했지만 FXC 는 SM6 을 못 해 늘 실패했고, DXC 의 진짜 까닭을 FXC 의 글로 덮었다.
 #endif // SW_HAS_DXC_API

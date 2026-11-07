@@ -345,7 +345,7 @@ namespace sw::editor
             return;
         }
         const bool bRead = completion._result == LocalStoreResult::Ok &&
-                           _presetStore.loadFromText( string_view( reinterpret_cast<const utf8*>( completion._bytes.data() ), completion._bytes.size() ) );
+                           _presetStore.loadFromXMLText( string_view( reinterpret_cast<const utf8*>( completion._bytes.data() ), completion._bytes.size() ) );
         if ( bRead == false )
         {
             _status = "Preset slot could not be read (needs appearance data; see log)";

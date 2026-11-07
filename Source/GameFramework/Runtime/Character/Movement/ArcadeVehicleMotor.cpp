@@ -170,9 +170,9 @@ namespace sw
         return stepCount;
     }
 
-    void ArcadeVehicleMotor::drainEvents( vector<ArcadeVehicleEvent>& outListEvent )
+    void ArcadeVehicleMotor::pollEvents( vector<ArcadeVehicleEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     float32 ArcadeVehicleMotor::computeSteerRate( float32 speed ) const

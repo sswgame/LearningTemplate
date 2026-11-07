@@ -1332,10 +1332,10 @@ namespace sw
         _listRingFrameNumber.clear();
 
         // 스왑체인의 이미지별 펜스 표는 위 펜스의 사본이므로 비우기만 한다.
-        _swapChain.forgetImageFences();
+        _swapChain.removeImageFences();
         for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _listWindowSwapChain )
         {
-            pWindow->forgetImageFences();
+            pWindow->removeImageFences();
         }
     }
 
@@ -1498,7 +1498,7 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIDevice::noteSurfaceLost( const utf8* pWhere )
+    void VulkanRHIDevice::recordSurfaceLost( const utf8* pWhere )
     {
         ++_surfaceLostCount;
         SW_LOG_WARNING_ID( "Vulkan.VulkanSurfaceLostTime", "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
@@ -1664,7 +1664,7 @@ namespace sw
         return filled;
     }
 
-    void VulkanRHIDevice::noteSubmittedEventMarker( const utf8* pMarker )
+    void VulkanRHIDevice::recordSubmittedEventMarker( const utf8* pMarker )
     {
         if ( pMarker == nullptr || pMarker[0] == '\0' )
             return;
@@ -1935,7 +1935,7 @@ namespace sw
             if ( status == VulkanSwapChainStatus::SurfaceLost )
             {
                 // 사양: 서피스를 잃으면 스왑체인만이 아니라 서피스부터 다시 만든다. 잃은 서피스로 다시 acquire 하면 계속 진다.
-                noteSurfaceLost( "acquire" );
+                recordSurfaceLost( "acquire" );
                 if ( recreateSurfaceAndSwapChain() == false || _swapChain.isValid() == false )
                 {
                     _bSurfaceLost = SW_TRUE;
@@ -2069,7 +2069,7 @@ namespace sw
         // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
         if ( _frameStreamContext != nullptr )
-            noteSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
+            recordSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
         UniqueLock<mutex> queueLock{ _queueMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
         const bool     bDeviceLost  = isDeviceLost();
@@ -2093,7 +2093,7 @@ namespace sw
             else if ( presentStatus == VulkanSwapChainStatus::SurfaceLost )
             {
                 // 다음 beginFrame 에서 서피스부터 다시 만든다(큐 락 안이라 여기서 만들지 않는다).
-                noteSurfaceLost( "present" );
+                recordSurfaceLost( "present" );
                 _bSurfaceLost = SW_TRUE;
             }
             // 다른 창도 같은 제출 뒤에 표시한다(Godot 의 execute_and_present 자리). 낡았으면 다음에 그 창을 쓸 때(`useSwapChain`) 다시 만든다.
@@ -2258,7 +2258,7 @@ namespace sw
         submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers    = &listBuffer;
-        noteSubmittedEventMarker( pList->getLastEventMarker() );
+        recordSubmittedEventMarker( pList->getLastEventMarker() );
         ScopedLock<mutex> queueLock{ _queueMutex };
         VkResult          queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
         if ( queueResult == VK_SUCCESS )
@@ -2290,7 +2290,7 @@ namespace sw
         requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "executeCommandList: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         _listPendingSubmit.push_back( listBuffer );
-        noteSubmittedEventMarker( pList->getLastEventMarker() );
+        recordSubmittedEventMarker( pList->getLastEventMarker() );
 
         // 즉시 모드: 여기서 바로 내보낸다. acquire 세마포어 대기는 '이 프레임의 첫 제출'에만 걸고,
         // renderFinished 신호와 인플라이트 펜스는 endFrame 의 마지막 제출이 담당한다.

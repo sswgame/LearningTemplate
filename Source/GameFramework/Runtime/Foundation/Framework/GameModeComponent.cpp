@@ -169,8 +169,8 @@ namespace sw
             return;
         _bFlushScheduled = SW_TRUE;
         // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        pManager->executeOrDeferPostTickOnComponent( *this, []( GameModeComponent& director )
-        { director.flushPending(); } );
+        pManager->executeOrDeferPostTickOnComponent( *this, []( GameModeComponent& gameMode )
+        { gameMode.flushPending(); } );
     }
 
     void GameModeComponent::flushPending()

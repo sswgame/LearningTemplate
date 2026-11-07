@@ -252,7 +252,7 @@ namespace sw::editor
         if ( poll == EditorTaskPoll::Running )
             return;
         if ( poll == EditorTaskPoll::Ready )
-            adoptResult( result );
+            applyResult( result );
         if ( _nextProbeIndex >= _listObjectID.size() )
         {
             finish( false );
@@ -262,7 +262,7 @@ namespace sw::editor
         captureNextProbe( *editor::getActiveScene() ); // 멈출 이유가 없으면 활성 씬이 있다
     }
 
-    void EditorReflectionProbeBakeSession::adoptResult( EditorReflectionProbeFilterResult& result )
+    void EditorReflectionProbeBakeSession::applyResult( EditorReflectionProbeFilterResult& result )
     {
         if ( result._bSucceeded == false )
         {
@@ -276,7 +276,7 @@ namespace sw::editor
             return;
         }
         const uint32 resolution = result._data._resolution;
-        if ( pProbe->adoptProbeData( std::move( result._data ), result._assetPath ) == false )
+        if ( pProbe->applyProbeData( std::move( result._data ), result._assetPath ) == false )
         {
             reportFailure( "the baked reflection does not fit the probe" );
             return;

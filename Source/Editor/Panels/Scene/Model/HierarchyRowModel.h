@@ -72,7 +72,7 @@ namespace sw::editor
         /** @brief 프레임 시작에 행 순서를 다시 모읍니다(지난 프레임의 것은 이전 행으로 넘긴다). 주 선택이 외부(뷰포트, 다른 패널)에서 바뀌었으면 그 행을 펼쳐 보이게 합니다. */
         void beginFrame();
         /** @brief 이번 프레임에 그린 오브젝트 행을 위에서 아래 순서로 더합니다. */
-        void noteDrawnRow( uint64 objectID ) { _listDrawnRow.push_back( objectID ); }
+        void recordDrawnRow( uint64 objectID ) { _listDrawnRow.push_back( objectID ); }
         /** @brief 마지막으로 그린 프레임에서 @p objectID 의 행 번호(0 부터)입니다. 그리지 않았으면 -1 입니다. */
         int32 findDrawnRowIndex( uint64 objectID ) const;
         /** @brief 펼쳐서 보여 줄 오브젝트(뷰포트에서 고른 것)입니다. 없으면 0 입니다. */

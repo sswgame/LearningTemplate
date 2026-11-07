@@ -193,10 +193,10 @@ namespace sw
     bool RigAsset::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
         RigXMLReader       reader( root, sourceLabel );
-        RigAssetRootFields rootFields;
-        if ( reader.readFields( rootFields ) == false )
+        RigAssetRootParams rootParams;
+        if ( reader.readFields( rootParams ) == false )
             return false;
-        _bPlanar                 = rootFields._bPlanar ? SW_TRUE : SW_FALSE;
+        _bPlanar                 = rootParams._bPlanar ? SW_TRUE : SW_FALSE;
         const RigXMLList targets = reader.readArray( "targets", false );
         const RigXMLList nodes   = reader.readArray( "nodes", true );
         if ( reader.finish() == false )
@@ -222,20 +222,20 @@ namespace sw
     bool RigAsset::parseTarget( const XMLNode& value, string_view sourceLabel )
     {
         RigXMLReader    reader( value, sourceLabel );
-        RigTargetFields fields;
-        bool            bOk = reader.readFields( fields );
+        RigTargetParams params;
+        bool            bOk = reader.readFields( params );
         bOk                 = reader.finish() && bOk;
         if ( bOk == false )
             return false;
         RigTargetDef target{};
-        target._name                = fields._name;
-        target._bone                = fields._bone;
-        target._socket              = fields._socket;
-        target._object              = fields._object;
-        target._unit                = fields._unit;
-        target._space               = fields._space;
-        target._offset._translation = fields._translation;
-        target._offset._rotation    = quaternion::makeFromYawPitchRoll( fields._rotation * MathUtil::kDegreeToRadian );
+        target._name                = params._name;
+        target._bone                = params._bone;
+        target._socket              = params._socket;
+        target._object              = params._object;
+        target._skeletalMesh        = params._skeletalMesh;
+        target._space               = params._space;
+        target._offset._translation = params._translation;
+        target._offset._rotation    = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
 
         const uint32 sourceCount = ( target._bone.empty() ? 0u : 1u ) + ( target._socket.empty() ? 0u : 1u ) + ( target._object.empty() ? 0u : 1u );
         if ( sourceCount != 1 )
@@ -243,9 +243,9 @@ namespace sw
             SW_LOG_ERROR_ID( "RigAsset.RigTargetMustName", "Rig '%#': target '%#' must name exactly one of 'bone', 'socket', 'object'", sourceLabel, target._name.c_str() );
             return false;
         }
-        if ( target._object.empty() == false && target._unit.empty() == false )
+        if ( target._object.empty() == false && target._skeletalMesh.empty() == false )
         {
-            SW_LOG_ERROR_ID( "RigAsset.RigTargetObjectCannot", "Rig '%#': target '%#' is an object and cannot name a 'unit'", sourceLabel, target._name.c_str() );
+            SW_LOG_ERROR_ID( "RigAsset.RigTargetObjectCannot", "Rig '%#': target '%#' is an object and cannot name a 'skeletalMesh'", sourceLabel, target._name.c_str() );
             return false;
         }
         target._kind = target._bone.empty() == false ? RigTargetKind::Bone : ( target._socket.empty() == false ? RigTargetKind::Socket : RigTargetKind::Object );

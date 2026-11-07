@@ -254,10 +254,10 @@ namespace sw::editor
             return false;
         }
         // 고치는 규칙은 커밋 전 검사 · move-asset · 참조 검사와 같은 칸 목록이다 — 글을 찾아 바꾸지 않고 경로 칸의 값만 바꾼다. 목록이 없으면 옮기지 않는다(고치지 못한 참조를 남기지 않게).
-        AssetReferenceFields fields;
-        if ( fields.load( ProcessRoots::get()._project.str() ) == false )
+        AssetReferenceFields params;
+        if ( params.load( ProcessRoots::get()._project.str() ) == false )
             return false;
-        const vector<AssetReferenceRewriteRule> listRule = fields.makeRewriteRules( oldID, newID, false );
+        const vector<AssetReferenceRewriteRule> listRule = params.makeRewriteRules( oldID, newID, false );
 
         vector<EditorAssetReference> listReference;
         inoutIndex.findReferrers( oldID, listReference );
@@ -281,7 +281,7 @@ namespace sw::editor
             if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), referrerText ) == false )
                 continue;
             const string& referrerAbs = referrerFile->str();
-            if ( fields.rewrite( referrerText, AssetReferenceFields::syntaxOf( referrerID ), listRule ) == 0 )
+            if ( params.rewrite( referrerText, AssetReferenceFields::syntaxOf( referrerID ), listRule ) == 0 )
             {
                 // 역색인은 글에서 경로 모양을 찾고, 고치기는 경로 칸만 본다 — 칸 밖(주석)이거나 목록에 없는 칸이다. 칸이면 목록에 더한다.
                 SW_LOG_WARNING_ID( "EditorAssetFileCommands.ReferenceOutsideField", "'%#' names '%#' outside a path field of %# - it was not changed", referrerID, oldID,

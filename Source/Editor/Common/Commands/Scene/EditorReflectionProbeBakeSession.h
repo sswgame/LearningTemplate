@@ -63,7 +63,7 @@ namespace sw::editor
         /** @brief 다음 프로브 하나를 GPU 로 찍고 접기 · 쓰기 잡을 냅니다. 실패하면 이유를 남깁니다(베이크는 다음 프로브로 계속한다). */
         void captureNextProbe( Scene& scene );
         /** @brief 끝난 접기 · 쓰기 잡의 결과를 프로브에 넘깁니다. 실패했거나 프로브가 사라졌으면 이유를 남깁니다. */
-        void adoptResult( EditorReflectionProbeFilterResult& result );
+        void applyResult( EditorReflectionProbeFilterResult& result );
         void reportFailure( const string& error );
         /** @brief 편집 잠금을 풀고 결과를 알립니다. */
         void finish( bool bCanceled );

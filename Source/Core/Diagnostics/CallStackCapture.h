@@ -136,7 +136,7 @@ namespace sw
         static string symbolize( const CallStack& stack );
         /**
          * @brief 깊은 콜 스택(크래시 리포트용)을 심볼 문자열로 바꿉니다.
-         * @param pFrameProgress 프레임 하나를 풀 때마다 1 을 더할 칸(크래시 보고의 진척 — `CrashHandler::noteProgress`). 없으면 nullptr
+         * @param pFrameProgress 프레임 하나를 풀 때마다 1 을 더할 칸(크래시 보고의 진척 — `CrashHandler::recordProgress`). 없으면 nullptr
          */
         static string symbolize( const DeepCallStack& stack, atomic<uint32>* pFrameProgress = nullptr );
 

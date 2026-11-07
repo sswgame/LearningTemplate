@@ -1,5 +1,5 @@
 /**
- * @file GameplayAutomationFields.h
+ * @file GameplayAutomationParams.h
  * @brief 게임플레이 시나리오 단계(`AdvanceGameTime` · `Mount` · `Dismount`)의 인자 스키마입니다(`AutomationStep::readFields`).
  */
 #pragma once
@@ -17,7 +17,7 @@ namespace sw
 
     /** @brief `AdvanceGameTime` 의 인자입니다. 셋 중 정확히 하나를 적습니다. */
     REFLECT()
-    struct SW_GF_API AdvanceGameTimeFields
+    struct SW_GF_API AdvanceGameTimeParams
     {
         REFLECT_BODY();
 
@@ -31,7 +31,7 @@ namespace sw
 
     /** @brief `Mount` 의 인자입니다. */
     REFLECT()
-    struct SW_GF_API MountStepFields
+    struct SW_GF_API MountStepParams
     {
         REFLECT_BODY();
 
@@ -43,7 +43,7 @@ namespace sw
 
     /** @brief `Dismount` 의 인자입니다. */
     REFLECT()
-    struct SW_GF_API DismountStepFields
+    struct SW_GF_API DismountStepParams
     {
         REFLECT_BODY();
 

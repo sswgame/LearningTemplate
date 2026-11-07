@@ -33,7 +33,7 @@
 
 namespace sw::editor
 {
-    bool ModelImportMaterial::readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDesc>& outListToon,
+    bool ModelImportMaterial::readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDef>& outListToon,
                                                  vector<string>& outListIgnored )
     {
         outListToon.clear();
@@ -244,7 +244,7 @@ namespace sw::editor
         vector<uint8> listUsed( data.textures_count, SW_FALSE );
         for ( const ModelImportSection& section : inoutResult._listSection )
         {
-            const ToonMaterialDesc& toon = inoutResult._listToonMaterial[section._materialIndex];
+            const ToonMaterialDef& toon = inoutResult._listToonMaterial[section._materialIndex];
             for ( const int32 textureIndex : { toon._baseColorTexture, toon._shadeTexture, toon._emissiveTexture, toon._matcapTexture } )
             {
                 if ( 0 <= textureIndex && static_cast<cgltf_size>( textureIndex ) < data.textures_count )
@@ -474,7 +474,7 @@ namespace sw::editor
         }
         XMLDocument   document;
         const bool    bParsed    = document.parse( templateText );
-        const XMLNode root       = bParsed ? document.getRoot( "MaterialDesc" ) : XMLNode{};
+        const XMLNode root       = bParsed ? document.getRoot( "MaterialDef" ) : XMLNode{};
         const XMLNode properties = root.isValid() ? root.findChild( "_properties" ) : XMLNode{};
         if ( properties.isValid() == false )
         {
@@ -557,7 +557,7 @@ namespace sw::editor
         XMLDocument document;
         if ( document.parse( deltaText ) == false )
             return false;
-        const XMLNode root = document.getRoot( "MaterialDesc" );
+        const XMLNode root = document.getRoot( "MaterialDef" );
         if ( root.isValid() == false )
             return false;
         // 이름은 슬롯의 것이라 키에서 뺀다 — 값이 같으면 이름이 달라도 한 파일이다.
@@ -572,7 +572,7 @@ namespace sw::editor
     string ModelImportMaterial::makeSlotMaterialText( string_view fileStem, string_view sharedAssetID )
     {
         XMLDocument                  document;
-        const XMLNode                root           = document.appendRoot( "MaterialDesc" );
+        const XMLNode                root           = document.appendRoot( "MaterialDef" );
         constexpr AssetFormatVersion kFormatVersion = Material::kAssetType._formatVersion; // 상수로 읽는다 - 칸을 직접 쓰면 Engine 이 내보내지 않는 접미사 표까지 링크한다
         AssetXMLFormat::writeXMLVersion( root, kFormatVersion );
         root.appendAttribute( "name", fileStem );
@@ -606,7 +606,7 @@ namespace sw::editor
         XMLDocument  document;
         if ( FileUtil::readTextFile( slotPath, text ) == false || document.parse( text ) == false )
             return {};
-        return string( document.getRoot( "MaterialDesc" ).getAttributeText( "_base" ) );
+        return string( document.getRoot( "MaterialDef" ).getAttributeText( "_base" ) );
     }
 
     string ModelImportMaterial::makeRawTextureFolder( string_view sourcePath )

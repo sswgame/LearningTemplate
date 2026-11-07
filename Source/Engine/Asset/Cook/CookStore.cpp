@@ -75,40 +75,40 @@ namespace sw
         return hash;
     }
 
-    CookOutcome CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
+    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
     {
         if ( step == CookStep::Skipped )
-            return CookOutcome::Skipped;
+            return CookResult::Skipped;
         if ( step == CookStep::Failed )
-            return CookOutcome::Failed;
+            return CookResult::Failed;
         // 입력이 없는 기록은 무엇이 바뀌어도 새것이다 — 쿠커가 `AssetIO` 를 거치지 않고 읽었다는 뜻이므로 실패로 멈춘다.
         if ( job.getInputs().empty() )
         {
             SW_LOG_ERROR_ID( "Cook.NoInputRecorded", "Cook: '%#' recorded no input - its cooker read its sources around AssetIO, so a change would not cook it again", outputID );
-            return CookOutcome::Failed;
+            return CookResult::Failed;
         }
         vector<uint8> bytes;
         if ( FileUtil::readFile( outputPath, bytes ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookReportedWrittenBut", "Cook: '%#' was reported written but cannot be read back", outputPath );
-            return CookOutcome::Failed;
+            return CookResult::Failed;
         }
         // 출력 파일은 쿠커가 쓰므로 다시 읽는 것은 DDC 저장에 어차피 필요하다. 해시는 그 바이트를 한 번만 훑는다(`hashOutput` 이 시간도 잰다).
         const CookRecord record = CookRecord::make( job, hashOutput( bytes ) );
         if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
-            return CookOutcome::Failed;
+            return CookResult::Failed;
         }
-        return CookOutcome::Cooked;
+        return CookResult::Cooked;
     }
 
-    CookOutcome CookStore::record( string_view outputID, CookOutcome outcome ) const
+    CookResult CookStore::record( string_view outputID, CookResult result ) const
     {
-        _tally.add( outcome );
-        if ( outcome != CookOutcome::Skipped )
+        _tally.add( result );
+        if ( result != CookResult::Skipped )
             _setRequestedID.insert( string( outputID ) );
-        return outcome;
+        return result;
     }
 
     uint32 CookStore::removeUnrequestedOutputs( string_view cookedDir, uint32& outFailedCount ) const

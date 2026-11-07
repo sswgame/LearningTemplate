@@ -8,10 +8,10 @@
 namespace sw
 {
     /** @brief 규칙 사본을 저장소 스레드에서 쓸고, 커서가 움직인 사본을 서비스 스레드로 돌려줍니다. */
-    class ServiceRetentionJob::SweepWork final : public IServiceStoreWork
+    class ServiceRetentionJob::SweepJob final : public IServiceStoreJob
     {
     public:
-        SweepWork( ServiceRetentionJob* pJob, vector<ServiceRetentionRule> listRule, int64 nowMs )
+        SweepJob( ServiceRetentionJob* pJob, vector<ServiceRetentionRule> listRule, int64 nowMs )
             : _listRule{ std::move( listRule ) }
             , _pJob{ pJob }
             , _nowMs{ nowMs }
@@ -96,7 +96,7 @@ namespace sw
     void ServiceRetentionJob::shutdown()
     {
         if ( _pStore != nullptr )
-            ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
+            ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
             { return _bPending == SW_FALSE; } );
         _pStore     = nullptr;
         _pScheduler = nullptr;
@@ -110,7 +110,7 @@ namespace sw
         _run      = run;
         _bRunHeld = SW_TRUE;
         _bPending = SW_TRUE;
-        _pStore->submit( make_unique<SweepWork>( this, _listRule, run._occurrenceMs.count() ) );
+        _pStore->submit( make_unique<SweepJob>( this, _listRule, run._occurrenceMs.count() ) );
     }
 
     void ServiceRetentionJob::onSweepCompleted( vector<ServiceRetentionRule> listRule, ServiceStoreResult result, int64 deletedCount )

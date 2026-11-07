@@ -113,7 +113,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "MeshModifiers.CouldNotWriteWorld", "Could not write the world warp '%#'", _warpExportPath.c_str() );
     }
 
-    void MeshModifiersPanelModel::noteEdit( MeshModifierSession& session, bool bItemActive )
+    void MeshModifiersPanelModel::recordEdit( MeshModifierSession& session, bool bItemActive )
     {
         if ( _bEditing == false )
             session.recordUndo();

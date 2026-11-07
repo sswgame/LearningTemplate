@@ -98,7 +98,7 @@ namespace sw::editor
         // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 담당이다.
         editorContext.getSubsystem<EditorRenderViews>().setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
         if ( editorContext.getSubsystem<EditorRenderViews>().isGameViewFocused() )
-            EditorScreenshotCommands::noteFocusedView( EditorViewKind::Game );
+            EditorScreenshotCommands::recordFocusedView( EditorViewKind::Game );
         editorContext.getSubsystem<EditorRenderViews>().setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
 
         drawToolbar();
@@ -134,7 +134,7 @@ namespace sw::editor
         }
         else
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
-        EditorSelfTestMarks::note( "gameView.canvas" );
+        EditorSelfTestMarks::record( "gameView.canvas" );
 
         // 게임 카메라가 없으면(꺼짐 · 지움) 그릴 눈이 없다 — 지난 이미지 위에 안내를 띄운다(유니티 "No cameras rendering").
         _model.refreshNoCameraHint();
@@ -176,7 +176,7 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            EditorSelfTestMarks::note( "gameView.aspect" );
+            EditorSelfTestMarks::record( "gameView.aspect" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewAspect" ) );
 
             // 유니티 게임 뷰의 Maximize On Play 에 해당 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
@@ -184,7 +184,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Max" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Max" ), &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveOpened() == false )
                 SW_LOG_WARNING_ID( "GameViewPanel.EditorPreferencesCouldNot", "Editor preferences could not be saved" );
-            EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );
+            EditorSelfTestMarks::record( "gameView.maximizeOnPlay" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "MaximizeOnPlay" ) );
 
             ImGui::SameLine();
@@ -197,12 +197,12 @@ namespace sw::editor
             if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", SW_EDITOR_ICON( "Bug" ), bDebugDrawShown,
                                                 "Debug draw in the game view - lines, spheres and text from DebugDrawQueue (authority ghosts too). Sent to net play children" ) )
                 GameViewModel::setDebugDrawShown( bDebugDrawShown == false );
-            EditorSelfTestMarks::note( "gameView.debugDraw" );
+            EditorSelfTestMarks::record( "gameView.debugDraw" );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##GameViewScreenshot" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##GameViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureGameView();
-            EditorSelfTestMarks::note( "gameView.screenshot" );
+            EditorSelfTestMarks::record( "gameView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewScreenshot" ) );
         }
         EditorChrome::endToolbar();

@@ -33,7 +33,7 @@ namespace sw
         , _engineSampler{ 0 }
         , _defaultTexture{ 0 }
         , _contextOwnerThread{}
-        , _contextOwnedSinceNanos{ 0 }
+        , _contextOwnedStartNanos{ 0 }
         , _gpuBuffers{}
         , _listRegisteredBindless{}
         , _listBindlessFree{}
@@ -853,7 +853,7 @@ namespace sw
         if ( _platformContext->makeCurrent() == false )
             return false;
         _contextOwnerThread.store( std::this_thread::get_id(), std::memory_order_relaxed );
-        _contextOwnedSinceNanos.store( static_cast<uint64>( MonotonicClock::nowNanoseconds() ), std::memory_order_relaxed );
+        _contextOwnedStartNanos.store( static_cast<uint64>( MonotonicClock::nowNanoseconds() ), std::memory_order_relaxed );
         return true;
     }
 
@@ -886,7 +886,7 @@ namespace sw
         // 누가 쥐었는지 적는다 — 렌더 스레드인지(드레인 등록 때 받은 id) 다른 스레드인지, 얼마나 오래인지.
         const std::thread::id owner      = _contextOwnerThread.load( std::memory_order_relaxed );
         const uint64          nowNanos   = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
-        const uint64          sinceNanos = _contextOwnedSinceNanos.load( std::memory_order_relaxed );
+        const uint64          sinceNanos = _contextOwnedStartNanos.load( std::memory_order_relaxed );
         const uint64          heldMs     = nowNanos > sinceNanos ? ( nowNanos - sinceNanos ) / 1000000ull : 0ull;
         const bool            bRtOwner   = owner == _renderThreadID.load( std::memory_order_relaxed ) && owner != std::thread::id{};
         SW_LOG_ERROR_ID( "OpenGL.GLContextNotAcquired", "GL context not acquired in %# ms - held by thread %# (%#) for %# ms; GL calls on this thread are dropped", timeoutMs,

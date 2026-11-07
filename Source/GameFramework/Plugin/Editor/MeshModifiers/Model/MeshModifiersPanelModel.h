@@ -78,7 +78,7 @@ namespace sw::editor
         void exportWarp( const MeshModifierStack& shown ) const;
 
         /** @brief 입력칸이 값을 바꿨다 — 끌기의 첫 변경이면 되돌리기 기록을 남기고, 미리보기를 다시 걸게 합니다. @p bItemActive 는 그 칸이 아직 끌리는지입니다. */
-        void noteEdit( MeshModifierSession& session, bool bItemActive );
+        void recordEdit( MeshModifierSession& session, bool bItemActive );
         /** @brief 입력칸을 놓았다 — 다음 편집이 새 기록을 남기게 합니다. */
         void finishEdit() { _bEditing = SW_FALSE; }
 

@@ -112,7 +112,7 @@ namespace sw::editor
         _snapshotPath.clear();
     }
 
-    void RenderTargetPanel::adoptSnapshotTextureIfReady()
+    void RenderTargetPanel::applySnapshotTextureIfReady()
     {
         if ( _pSnapshotTextureID != nullptr || _snapshotHandle.isReady() == false )
             return;
@@ -242,7 +242,7 @@ namespace sw::editor
             return;
         }
         _snapshotHandle = textures.request( _snapshotPath, AssetLoadStart::Async );
-        adoptSnapshotTextureIfReady();
+        applySnapshotTextureIfReady();
     }
 
     void RenderTargetPanel::drawToolbar()
@@ -262,13 +262,13 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
             _bRefreshRequested = SW_TRUE;
-        EditorSelfTestMarks::note( "renderTargets.refresh" );
+        EditorSelfTestMarks::record( "renderTargets.refresh" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "RefreshTip" ) );
         bool bAuto = _bAutoRefresh != SW_FALSE;
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Auto" ) ) );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Auto" ), &bAuto ) )
             _bAutoRefresh = bAuto ? SW_TRUE : SW_FALSE;
-        EditorSelfTestMarks::note( "renderTargets.auto" );
+        EditorSelfTestMarks::record( "renderTargets.auto" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "AutoRefreshTip" ) );
     }
 
@@ -290,7 +290,7 @@ namespace sw::editor
             if ( ImGui::Selectable( info._name.c_str(), bSelected ) )
                 _selectedName = info._name;
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( "renderTargets.row." + info._name ).c_str() );
+                EditorSelfTestMarks::record( ( "renderTargets.row." + info._name ).c_str() );
 
             if ( info._bDepth != SW_FALSE )
             {
@@ -324,7 +324,7 @@ namespace sw::editor
                 _viewSettings._bLinearizeDepth = bLinearize ? SW_TRUE : SW_FALSE;
                 bChanged                       = true;
             }
-            EditorSelfTestMarks::note( "renderTargets.linearize" );
+            EditorSelfTestMarks::record( "renderTargets.linearize" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "LinearizeTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "AutoRange" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "AutoRange" ), &bAutoRange ) )
@@ -332,7 +332,7 @@ namespace sw::editor
                 _viewSettings._bAutoDepthRange = bAutoRange ? SW_TRUE : SW_FALSE;
                 bChanged                       = true;
             }
-            EditorSelfTestMarks::note( "renderTargets.autoRange" );
+            EditorSelfTestMarks::record( "renderTargets.autoRange" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "AutoRangeTip" ) );
             if ( bLinearize )
             {
@@ -369,7 +369,7 @@ namespace sw::editor
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ChannelTip" ) );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( string{ "renderTargets.channel." } + RenderTargetViewSettings::getChannelLabel( channel ) ).c_str() );
+                EditorSelfTestMarks::record( ( string{ "renderTargets.channel." } + RenderTargetViewSettings::getChannelLabel( channel ) ).c_str() );
         }
     }
 
@@ -449,7 +449,7 @@ namespace sw::editor
 
         // 색 그대로(RGBA)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나는 CPU 스냅샷으로 만든 이미지다.
         const bool bLive = ( bDepth == false ) && ( _viewSettings._channel == RenderTargetChannel::RGBA );
-        adoptSnapshotTextureIfReady();
+        applySnapshotTextureIfReady();
         void* pTextureID = bLive ? _pPreviewTextureID : _pSnapshotTextureID;
         if ( pTextureID == nullptr )
         {
@@ -489,7 +489,7 @@ namespace sw::editor
 
         const ImVec2 imageMin = ImGui::GetCursorScreenPos();
         ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2{ drawWidth, drawHeight } );
-        EditorSelfTestMarks::note( "renderTargets.preview" );
+        EditorSelfTestMarks::record( "renderTargets.preview" );
         probeHoveredPixel( *pSelected, float2{ imageMin.x, imageMin.y }, float2{ drawWidth, drawHeight } );
         ImGui::EndChild();
     }

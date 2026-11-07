@@ -93,7 +93,7 @@ namespace
     };
 
     /** @brief 서버 · 클라이언트 전송 한 쌍과 "조건이 설 때까지 돌리기" 입니다. */
-    struct StreamRig
+    struct StreamFixture
     {
         StreamRecorder                    _serverRecorder{}; ///< 전송보다 먼저 선언 — 전송이 먼저 죽으며 닫힘을 알린다
         StreamRecorder                    _clientRecorder{};
@@ -101,7 +101,7 @@ namespace
         unique_ptr<IStreamTransport>      _server{};
         unique_ptr<IStreamTransport>      _client{};
 
-        static bool makeLoopback( StreamRig& outRig, const StreamTransportConfig& baseSettings, const LoopbackStreamConditions& conditions )
+        static bool makeLoopback( StreamFixture& outRig, const StreamTransportConfig& baseSettings, const LoopbackStreamConditions& conditions )
         {
             outRig._network = make_unique<LoopbackStreamNetwork>( 7u );
             outRig._network->setConditions( conditions );
@@ -147,7 +147,7 @@ namespace
 
     // ---- 계약 본문 ----
 
-    void runOpenSendGracefulClose( StreamRig& rig )
+    void runOpenSendGracefulClose( StreamFixture& rig )
     {
         SW_REQUIRE_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
         const StreamConnectionHandle clientHandle = rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
@@ -180,7 +180,7 @@ namespace
         rig.shutdown();
     }
 
-    void runAbortResetsPeer( StreamRig& rig )
+    void runAbortResetsPeer( StreamFixture& rig )
     {
         SW_REQUIRE_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
         const StreamConnectionHandle clientHandle = rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
@@ -194,7 +194,7 @@ namespace
         rig.shutdown();
     }
 
-    void runConnectToClosedPortFails( StreamRig& rig )
+    void runConnectToClosedPortFails( StreamFixture& rig )
     {
         // 리슨을 내린 서버의 포트 — 루프백 레지스트리에 없다.
         SW_REQUIRE_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
@@ -210,7 +210,7 @@ namespace
     }
 
     /** @brief 받는 쪽이 읽기를 멈추면 보낸 쪽 줄이 높은 물금 → 상한(QueueFull)까지 차고, 다시 읽으면 낮은 물금 아래에서 `onStreamWritable` 이 온다. */
-    void runBackpressure( StreamRig& rig )
+    void runBackpressure( StreamFixture& rig )
     {
         SW_REQUIRE_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
         const StreamConnectionHandle clientHandle = rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
@@ -251,22 +251,22 @@ namespace
 
 SW_TEST_CASE( StreamTransportTest, LoopbackOpensSendsInOrderAndClosesGracefully )
 {
-    StreamRig rig;
-    SW_REQUIRE_TRUE( StreamRig::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{ 777, 0 } ) ); // 1..777 조각으로 쪼개 받는다
+    StreamFixture rig;
+    SW_REQUIRE_TRUE( StreamFixture::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{ 777, 0 } ) ); // 1..777 조각으로 쪼개 받는다
     runOpenSendGracefulClose( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, LoopbackAbortResetsPeer )
 {
-    StreamRig rig;
-    SW_REQUIRE_TRUE( StreamRig::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{} ) );
+    StreamFixture rig;
+    SW_REQUIRE_TRUE( StreamFixture::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{} ) );
     runAbortResetsPeer( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, LoopbackConnectToClosedPortFails )
 {
-    StreamRig rig;
-    SW_REQUIRE_TRUE( StreamRig::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{} ) );
+    StreamFixture rig;
+    SW_REQUIRE_TRUE( StreamFixture::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{} ) );
     runConnectToClosedPortFails( rig );
 }
 
@@ -300,8 +300,8 @@ SW_TEST_CASE( StreamTransportTest, LoopbackBackpressureFillsThenDrains )
     settings._sendHighWatermarkBytes = 64 * 1024;
     settings._sendLowWatermarkBytes  = 16 * 1024;
     settings._maxQueuedSendBytes     = 256 * 1024;
-    StreamRig rig;
-    SW_REQUIRE_TRUE( StreamRig::makeLoopback( rig, settings, LoopbackStreamConditions{ 0, 8 * 1024 } ) );
+    StreamFixture rig;
+    SW_REQUIRE_TRUE( StreamFixture::makeLoopback( rig, settings, LoopbackStreamConditions{ 0, 8 * 1024 } ) );
     runBackpressure( rig );
 }
 

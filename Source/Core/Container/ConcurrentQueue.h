@@ -11,7 +11,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 
-// `drain( vector<T>& )` 가 쓴다. 본문에 나오는 `sw::array` 는 주석 속 언급뿐이라 array.h 는 넣지 않는다.
+// `popAll( vector<T>& )` 가 쓴다. 본문에 나오는 `sw::array` 는 주석 속 언급뿐이라 array.h 는 넣지 않는다.
 // 주의: 토큰만 세고 include 를 지우면 이 헤더가 혼자서는 컴파일되지 않을 수 있다(단독 컴파일로 확인할 것).
 
 namespace sw
@@ -106,7 +106,7 @@ namespace sw
         }
 
         /** @brief 대기 중인 항목을 모두 꺼내 outList 뒤에 붙이고, 꺼낸 개수를 반환합니다. */
-        uint32 drain( vector<T>& outList )
+        uint32 popAll( vector<T>& outList )
         {
             uint32 drainCount = 0;
             T      item{};
@@ -119,7 +119,7 @@ namespace sw
         }
 
         /** @brief 대기 중인 항목을 최대 maxCount 개까지 꺼내 버퍼에 담고, 꺼낸 개수를 반환합니다. */
-        uint32 drain( T* pOutBuffer, uint32 maxCount )
+        uint32 popAll( T* pOutBuffer, uint32 maxCount )
         {
             if ( pOutBuffer == nullptr || maxCount == 0 )
                 return 0;

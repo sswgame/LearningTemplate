@@ -102,7 +102,7 @@ namespace sw
                 }
                 _holdProgress.update( deltaTime );
                 _listHoldEvent.clear();
-                _holdProgress.drainEvents( _listHoldEvent );
+                _holdProgress.pollEvents( _listHoldEvent );
                 if ( _holdProgress.isCompleted() )
                     completeStep();
                 break;
@@ -152,8 +152,8 @@ namespace sw
         return &_pDef->_listStep[static_cast<size_t>( _stepIndex )];
     }
 
-    void InteractionSession::drainEvents( vector<InteractionSessionEvent>& outListEvent )
+    void InteractionSession::pollEvents( vector<InteractionSessionEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 } // namespace sw

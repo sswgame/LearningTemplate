@@ -44,12 +44,12 @@ namespace sw
         _catalog.clear();
         _curve._listKey.clear();
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 표 전체를 읽지 않는 오류다(자르지 않는다).
-        SpawnTableRootFields rootFields{ _budgetPerMinute, _maxBudget, _startBudget, _bRefundOnDespawn == SW_TRUE };
-        bool                 bValid = XMLFields::readFields( root, rootFields, sourceName );
-        _budgetPerMinute            = rootFields._budgetPerMinute;
-        _maxBudget                  = rootFields._maxBudget;
-        _startBudget                = rootFields._startBudget;
-        _bRefundOnDespawn           = rootFields._bRefund ? SW_TRUE : SW_FALSE;
+        SpawnTableRootParams rootParams{ _budgetPerMinute, _maxBudget, _startBudget, _bRefundOnDespawn == SW_TRUE };
+        bool                 bValid = XMLFields::readFields( root, rootParams, sourceName );
+        _budgetPerMinute            = rootParams._budgetPerMinute;
+        _maxBudget                  = rootParams._maxBudget;
+        _startBudget                = rootParams._startBudget;
+        _bRefundOnDespawn           = rootParams._bRefund ? SW_TRUE : SW_FALSE;
         for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
         {
             SpawnEntryDef entry;
@@ -62,7 +62,7 @@ namespace sw
         bValid = GameDataXML::readFloatCurve( root, "Curve", 0.0f, _curve, sourceName ) && bValid;
         if ( bValid == false )
         {
-            SW_LOG_ERROR_ID( "SpawnDirector.SpawnTableInvalidFields", "%#: spawn table has invalid fields - not loaded", sourceName );
+            SW_LOG_ERROR_ID( "SpawnDirector.SpawnTableInvalidParams", "%#: spawn table has invalid fields - not loaded", sourceName );
             _catalog.clear();
             return 0;
         }
@@ -208,9 +208,9 @@ namespace sw
         return false;
     }
 
-    void SpawnDirector::drainEvents( vector<SpawnEvent>& outListEvent )
+    void SpawnDirector::pollEvents( vector<SpawnEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     int32 SpawnDirector::getAliveCount( const hashed_string& entryID ) const

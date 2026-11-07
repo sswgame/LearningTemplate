@@ -175,7 +175,7 @@ namespace sw
          */
         void releaseAll( IRHIDevice* pDevice );
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
-        void forgetAll();
+        void clearAll();
 
     private:
         /** @brief (패스 << 32 | 대상 포맷) 키입니다. */

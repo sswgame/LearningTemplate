@@ -192,9 +192,9 @@ namespace sw
         return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( core / kCoreMax ) );
     }
 
-    void WesternHorse::drainEvents( vector<WesternHorseEvent>& outListEvent )
+    void WesternHorse::pollEvents( vector<WesternHorseEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void WesternHorse::writeState( Archive& outArchive ) const

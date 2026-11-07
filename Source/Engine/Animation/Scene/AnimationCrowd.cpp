@@ -106,7 +106,7 @@ namespace sw
         , _scratchTrackPose{}
         , _listModelSpace{}
         , _listSkinPalette{}
-        , _idleSince{ 0.0 }
+        , _idleStartTime{ 0.0 }
         , _variationSpan{ 0.0 }
         , _blendStartClock{ 0.0 }
         , _nextStartTime{ 0.0f }
@@ -301,7 +301,7 @@ namespace sw
         // 묶음은 원본 메시를 그린다 — 결과는 묶음의 스킨 칸 하나라 사본이 필요 없다(AnimationSkinSlot).
         unique_ptr<AnimationCrowdBucket> bucket = sw::make_unique<AnimationCrowdBucket>( key, skeleton, clip, nextClip, sourceMesh );
         bucket->_variationSpan                  = static_cast<float64>( clip->getDuration() ) / static_cast<float64>( MathUtil::max( _settings._variationsPerClip, 1u ) );
-        bucket->_idleSince                      = _clock;
+        bucket->_idleStartTime                  = _clock;
         AnimationCrowdBucket* pBucket           = bucket.get();
         _listBucket.push_back( std::move( bucket ) );
         _mapBucket.emplace( key, pBucket );
@@ -355,11 +355,11 @@ namespace sw
             AnimationCrowdBucket& bucket = *_listBucket[bucketIndex];
             if ( bucket._memberCount > 0 || bucket._referenceCount > 0 )
             {
-                bucket._idleSince = _clock;
+                bucket._idleStartTime = _clock;
                 ++bucketIndex;
                 continue;
             }
-            if ( _clock - bucket._idleSince < static_cast<float64>( _settings._bucketKeepSeconds ) )
+            if ( _clock - bucket._idleStartTime < static_cast<float64>( _settings._bucketKeepSeconds ) )
             {
                 ++bucketIndex;
                 continue;

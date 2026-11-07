@@ -39,7 +39,7 @@ namespace
         bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
         int32              broadcast( NetChannelType, const uint8*, int32, int32 ) override { return 0; }
         void               disconnect( int32 connectionID ) override { _listDisconnected.push_back( connectionID ); }
-        void               drainInbound( NetInbound& ) override {}
+        void               pollInbound( NetInbound& ) override {}
         bool               isServer() const override { return true; }
         NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
         bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
@@ -121,17 +121,17 @@ namespace
 
         [[nodiscard]] TurnRelayClient& relay( int32 index ) { return _listClient[static_cast<size_t>( index )]->_relay; }
 
-        [[nodiscard]] static vector<TurnRelayEvent> drain( TurnRelayClient& client )
+        [[nodiscard]] static vector<TurnRelayEvent> pollAll( TurnRelayClient& client )
         {
             vector<TurnRelayEvent> listEvent;
-            client.drainEvents( listEvent );
+            client.pollEvents( listEvent );
             return listEvent;
         }
 
         [[nodiscard]] vector<TurnRelayEvent> drainServer()
         {
             vector<TurnRelayEvent> listEvent;
-            _server.drainEvents( listEvent );
+            _server.pollEvents( listEvent );
             return listEvent;
         }
 
@@ -181,7 +181,7 @@ SW_TEST_CASE_F( TurnRelayTest, RoomStartsWhenFull )
     SW_EXPECT_NOT_EQUAL( relay( 0 ).getToken(), relay( 1 ).getToken() );
     SW_EXPECT_NOT_EQUAL( relay( 0 ).getToken(), 0u );
 
-    const vector<TurnRelayEvent> listEvent = drain( relay( 0 ) );
+    const vector<TurnRelayEvent> listEvent = pollAll( relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 2 } );
     SW_EXPECT_TRUE( listEvent[0]._kind == TurnRelayEvent::Kind::Joined );
     SW_EXPECT_TRUE( listEvent[1]._kind == TurnRelayEvent::Kind::Started );
@@ -201,7 +201,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatChoiceAndFullRoom )
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), 1 );
     SW_EXPECT_EQUAL( relay( 1 ).getSeat(), 0 );
     SW_EXPECT_EQUAL( relay( 2 ).getSeat(), -1 );
-    const vector<TurnRelayEvent> listEvent = drain( relay( 2 ) );
+    const vector<TurnRelayEvent> listEvent = pollAll( relay( 2 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._kind == TurnRelayEvent::Kind::Denied );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::RoomFull );
@@ -217,10 +217,10 @@ SW_TEST_CASE_F( TurnRelayTest, ConnectionHoldsOneSeat )
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), 0 );
     SW_EXPECT_EQUAL( relay( 0 ).getToken(), token );
 
-    (void)drain( relay( 0 ) );
+    (void)pollAll( relay( 0 ) );
     relay( 0 ).join( 99 );
     pump();
-    const vector<TurnRelayEvent> listEvent = drain( relay( 0 ) );
+    const vector<TurnRelayEvent> listEvent = pollAll( relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::AlreadySeated );
     SW_EXPECT_TRUE( _server.findRoom( 99 ) == nullptr );
@@ -242,12 +242,12 @@ SW_TEST_CASE_F( TurnRelayTest, JoiningAnotherRoomForgetsTheOldRoomsState )
 SW_TEST_CASE_F( TurnRelayTest, ActionsReachEveryoneInOrder )
 {
     startRoom();
-    (void)drain( relay( 0 ) );
-    (void)drain( relay( 1 ) );
+    (void)pollAll( relay( 0 ) );
+    (void)pollAll( relay( 1 ) );
 
     const int32 rejected = relay( 1 ).submitAction( makeAction( 9 ) );
     pump();
-    vector<TurnRelayEvent> listEvent = drain( relay( 1 ) );
+    vector<TurnRelayEvent> listEvent = pollAll( relay( 1 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._kind == TurnRelayEvent::Kind::ActionRejected );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::NotYourTurn );
@@ -275,17 +275,17 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsBeforeStartOrOutsideAreRejected )
 {
     addClient()._relay.join( 7 );
     pump();
-    (void)drain( relay( 0 ) );
+    (void)pollAll( relay( 0 ) );
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
     pump();
-    vector<TurnRelayEvent> listEvent = drain( relay( 0 ) );
+    vector<TurnRelayEvent> listEvent = pollAll( relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::NotStarted );
 
     Client& stranger = addClient();
     (void)stranger._relay.submitAction( makeAction( 1 ) ); // 방 0 은 없다
     pump();
-    listEvent = drain( stranger._relay );
+    listEvent = pollAll( stranger._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::UnknownRoom );
 }
@@ -299,11 +299,11 @@ SW_TEST_CASE( TurnRelayPolicyTest, PolicyDecidesAndCanChangeDirection )
     config._seatCount = 2;
     SW_REQUIRE_TRUE( rig._server.initialize( &rig._serverPeers, config, &policy, TurnRelayTest::kTokenSeed ) );
     rig.startRoom();
-    (void)TurnRelayTest::drain( rig.relay( 0 ) );
+    (void)TurnRelayTest::pollAll( rig.relay( 0 ) );
 
     (void)rig.relay( 0 ).submitAction( TurnRelayTest::makeAction( 3 ) );
     rig.pump();
-    const vector<TurnRelayEvent> listEvent = TurnRelayTest::drain( rig.relay( 0 ) );
+    const vector<TurnRelayEvent> listEvent = TurnRelayTest::pollAll( rig.relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::InvalidAction );
 
@@ -365,7 +365,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     newcomer._relay.join( 7, 1 );
     pump();
     SW_EXPECT_EQUAL( newcomer._relay.getSeat(), -1 );
-    vector<TurnRelayEvent> listEvent = drain( newcomer._relay );
+    vector<TurnRelayEvent> listEvent = pollAll( newcomer._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::RoomFull );
 
@@ -373,7 +373,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     Client& thief = addClient();
     thief._relay.join( 7 ); // 받는 쪽이 방 7 의 메시지를 보도록 - 이 입장은 RoomFull 로 끝난다
     pump();
-    (void)drain( thief._relay );
+    (void)pollAll( thief._relay );
     BitWriter writer;
     writer.writeBits( NetTurnRelayMessage::kJoin, 8 );
     writer.writeVarUint( 7 );
@@ -382,7 +382,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     writer.writeVarUint( 0 );
     SW_EXPECT_TRUE( _server.handleMessage( 3, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     pump();
-    listEvent = drain( thief._relay );
+    listEvent = pollAll( thief._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::SeatInUse );
     SW_EXPECT_EQUAL( _server.findRoom( 7 )->_listSeat[0]._connectionID, 0 );
@@ -496,18 +496,18 @@ SW_TEST_CASE( TurnRelayPolicyTest, RoomAndHistoryLimitsRefuseMore )
     rig.addClient()._relay.join( 3 );
     rig.pump();
     SW_EXPECT_TRUE( rig._server.findRoom( 3 ) == nullptr );
-    const vector<TurnRelayEvent> listDenied = TurnRelayTest::drain( rig.relay( 2 ) );
+    const vector<TurnRelayEvent> listDenied = TurnRelayTest::pollAll( rig.relay( 2 ) );
     SW_REQUIRE_EQUAL( listDenied.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listDenied[0]._reason == TurnRejectReason::ServerFull );
 
-    (void)TurnRelayTest::drain( rig.relay( 0 ) );
+    (void)TurnRelayTest::pollAll( rig.relay( 0 ) );
     for ( uint8 value = 0; value < 3; ++value )
     {
         (void)rig.relay( 0 ).submitAction( TurnRelayTest::makeAction( value ) );
     }
     rig.pump();
     SW_EXPECT_EQUAL( rig._server.findRoom( 1 )->_listAction.size(), size_t{ 2 } );
-    vector<TurnRelayEvent> listEvent    = TurnRelayTest::drain( rig.relay( 0 ) );
+    vector<TurnRelayEvent> listEvent    = TurnRelayTest::pollAll( rig.relay( 0 ) );
     bool                   bHistoryFull = false;
     for ( const TurnRelayEvent& event : listEvent )
     {

@@ -112,7 +112,7 @@ namespace sw
          * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLOD P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 큰 값을 쓴다.
          *          `updateStreaming` 이 위쪽 밉을 기다리는 줄을 이 값의 내림차순(알리지 않은 것은 0, 같으면 먼저 읽힌 순)으로 정렬해 쓰고 알림을 비운다 — 한 프레임 안의 값이다.
          */
-        void noteScreenSize( string_view relativePath, float32 screenSize );
+        void recordScreenSize( string_view relativePath, float32 screenSize );
         /** @brief 위쪽 밉을 기다리는 텍스처가 있으면 true 입니다(게임 스레드가 화면 크기를 알릴 필요가 있는지 싸게 묻는다). */
         bool hasPendingStreamingUpgrades() const;
         /**

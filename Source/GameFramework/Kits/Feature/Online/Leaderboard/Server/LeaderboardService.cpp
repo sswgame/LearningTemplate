@@ -224,7 +224,7 @@ namespace sw
         };
 
         /** @brief 점수(또는 통계) 하나를 버전 조건으로 쓰는 작업입니다. 갱신 방식에 따라 새 값을 정합니다. */
-        class LeaderboardWriteWork final : public IServiceStoreWork
+        class LeaderboardWriteJob final : public IServiceStoreJob
         {
         public:
             hashed_string        _table{};
@@ -284,10 +284,10 @@ namespace sw
         };
 
         /** @brief 캐시를 잃은 기간의 점수를 영속 저장소에서 모두 읽는 작업입니다. */
-        class LeaderboardRebuildWork final : public IServiceStoreWork
+        class LeaderboardRebuildJob final : public IServiceStoreJob
         {
         public:
-            LeaderboardRebuildWork( LeaderboardService* pService, string rankKey, string scorePrefix )
+            LeaderboardRebuildJob( LeaderboardService* pService, string rankKey, string scorePrefix )
                 : _listScore{}
                 , _rankKey{ std::move( rankKey ) }
                 , _scorePrefix{ std::move( scorePrefix ) }
@@ -312,11 +312,11 @@ namespace sw
         };
 
         /** @brief 계정의 통계를 모두 읽는 작업입니다. */
-        class LeaderboardStatReadWork final : public IServiceStoreWork
+        class LeaderboardStatReadJob final : public IServiceStoreJob
         {
         public:
             /** @brief @p bCache 이면 응답 대신 접속한 계정의 통계 메모리를 채운다. */
-            LeaderboardStatReadWork( LeaderboardService* pService, AccountID accountID, uint64 requestTag, bool bCache )
+            LeaderboardStatReadJob( LeaderboardService* pService, AccountID accountID, uint64 requestTag, bool bCache )
                 : _listStat{}
                 , _pService{ pService }
                 , _accountID{ accountID }
@@ -365,10 +365,10 @@ namespace sw
         };
 
         /** @brief 업적 하나를 "없어야 함" 조건으로 쓰고 보상 우편을 같은 트랜잭션에 넣는 작업입니다. 이미 있으면 아무것도 하지 않습니다. */
-        class AchievementUnlockWork final : public IServiceStoreWork
+        class AchievementUnlockJob final : public IServiceStoreJob
         {
         public:
-            AchievementUnlockWork( LeaderboardService* pService, const AchievementDef& definition, AccountID accountID, UnixMilliseconds nowMs )
+            AchievementUnlockJob( LeaderboardService* pService, const AchievementDef& definition, AccountID accountID, UnixMilliseconds nowMs )
                 : _definition{ definition }
                 , _pService{ pService }
                 , _accountID{ accountID }
@@ -411,10 +411,10 @@ namespace sw
         };
 
         /** @brief 계정이 달성한 업적을 모두 읽는 작업입니다. */
-        class AchievementReadWork final : public IServiceStoreWork
+        class AchievementReadJob final : public IServiceStoreJob
         {
         public:
-            AchievementReadWork( LeaderboardService* pService, AccountID accountID, uint64 requestTag )
+            AchievementReadJob( LeaderboardService* pService, AccountID accountID, uint64 requestTag )
                 : _listAchievement{}
                 , _pService{ pService }
                 , _accountID{ accountID }
@@ -451,10 +451,10 @@ namespace sw
         };
 
         /** @brief 업적 진행률을 읽는 작업입니다. 통계와 달성 기록을 읽어 등록한 업적(복사본)마다 한 줄을 만듭니다. */
-        class AchievementProgressWork final : public IServiceStoreWork
+        class AchievementProgressJob final : public IServiceStoreJob
         {
         public:
-            AchievementProgressWork( LeaderboardService* pService, vector<AchievementDef>&& listDefinition, AccountID accountID, uint64 requestTag )
+            AchievementProgressJob( LeaderboardService* pService, vector<AchievementDef>&& listDefinition, AccountID accountID, uint64 requestTag )
                 : _listDefinition{ std::move( listDefinition ) }
                 , _listProgress{}
                 , _pService{ pService }
@@ -526,10 +526,10 @@ namespace sw
         };
 
         /** @brief 계정 목록의 점수를 읽어 목록 안 순위를 매기는 작업입니다. */
-        class ScoresOfReadWork final : public IServiceStoreWork
+        class ScoresOfReadJob final : public IServiceStoreJob
         {
         public:
-            ScoresOfReadWork( LeaderboardService* pService, string&& prefix, vector<AccountID>&& listAccountID, LeaderboardOrder order, uint64 periodID, uint64 requestTag )
+            ScoresOfReadJob( LeaderboardService* pService, string&& prefix, vector<AccountID>&& listAccountID, LeaderboardOrder order, uint64 periodID, uint64 requestTag )
                 : _listAccountID{ std::move( listAccountID ) }
                 , _listEntry{}
                 , _prefix{ std::move( prefix ) }
@@ -580,10 +580,10 @@ namespace sw
         };
 
         /** @brief 시즌 결과 하나를 읽는 작업입니다. 값은 점수와 순위입니다. */
-        class SeasonResultReadWork final : public IServiceStoreWork
+        class SeasonResultReadJob final : public IServiceStoreJob
         {
         public:
-            SeasonResultReadWork( LeaderboardService* pService, string key, uint32 seasonID, AccountID accountID, uint64 requestTag )
+            SeasonResultReadJob( LeaderboardService* pService, string key, uint32 seasonID, AccountID accountID, uint64 requestTag )
                 : _entry{}
                 , _key{ std::move( key ) }
                 , _pService{ pService }
@@ -627,10 +627,10 @@ namespace sw
         /**
          * @brief 정산의 첫 단계입니다. 시즌 점수를 모두 읽어 순위대로 정렬합니다. 쓰기는 하지 않고, 정렬한 목록을 서비스에 넘겨 페이지 일로 나눠 쓰게 합니다.
          */
-        class SeasonRankReadWork final : public IServiceStoreWork
+        class SeasonRankReadJob final : public IServiceStoreJob
         {
         public:
-            SeasonRankReadWork( LeaderboardService* pService, uint64 settlementID, string scorePrefix, LeaderboardOrder order )
+            SeasonRankReadJob( LeaderboardService* pService, uint64 settlementID, string scorePrefix, LeaderboardOrder order )
                 : _listRanked{}
                 , _scorePrefix{ std::move( scorePrefix ) }
                 , _pService{ pService }
@@ -663,11 +663,11 @@ namespace sw
          * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 12명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다.
          * @details 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다. 실패하면 다음 실행(임대가 지나 다른 서버가 맡거나 다시 부름)이 남은 사람부터 잇는다.
          */
-        class SeasonSettlementPageWork final : public IServiceStoreWork
+        class SeasonSettlementPageJob final : public IServiceStoreJob
         {
         public:
-            SeasonSettlementPageWork( LeaderboardService* pService, uint64 settlementID, const LeaderboardDef& board, const LeaderboardSeason& season,
-                                      vector<LeaderboardScoreRow> listPage, int32 firstRank, UnixMilliseconds nowMs )
+            SeasonSettlementPageJob( LeaderboardService* pService, uint64 settlementID, const LeaderboardDef& board, const LeaderboardSeason& season,
+                                     vector<LeaderboardScoreRow> listPage, int32 firstRank, UnixMilliseconds nowMs )
                 : _listPage{ std::move( listPage ) }
                 , _board{ board }
                 , _season{ season }
@@ -906,20 +906,20 @@ namespace sw
             pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardResult::NotRanked );
             return;
         }
-        unique_ptr<LeaderboardWriteWork> work = sw::make_unique<LeaderboardWriteWork>();
-        work->_table                          = LeaderboardServiceInternal::getScoreTable();
-        work->_key                            = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
-        work->_boardID                        = pBoard->_boardID;
-        work->_displayName                    = string( displayName );
-        work->_pService                       = this;
-        work->_accountID                      = accountID;
-        work->_periodID                       = periodID;
-        work->_requestTag                     = requestTag;
-        work->_value                          = score;
-        work->_nowMs                          = nowMs;
-        work->_update                         = pBoard->_update;
-        work->_order                          = pBoard->_order;
-        work->_operation                      = LeaderboardOperation::Submit;
+        unique_ptr<LeaderboardWriteJob> work = sw::make_unique<LeaderboardWriteJob>();
+        work->_table                         = LeaderboardServiceInternal::getScoreTable();
+        work->_key                           = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
+        work->_boardID                       = pBoard->_boardID;
+        work->_displayName                   = string( displayName );
+        work->_pService                      = this;
+        work->_accountID                     = accountID;
+        work->_periodID                      = periodID;
+        work->_requestTag                    = requestTag;
+        work->_value                         = score;
+        work->_nowMs                         = nowMs;
+        work->_update                        = pBoard->_update;
+        work->_order                         = pBoard->_order;
+        work->_operation                     = LeaderboardOperation::Submit;
         ++_pendingCount;
         _dependencies._pStore->submit( std::move( work ) );
     }
@@ -934,19 +934,19 @@ namespace sw
             pushCompletion( requestTag, LeaderboardOperation::StatChange, LeaderboardResult::Invalid );
             return;
         }
-        unique_ptr<LeaderboardWriteWork> work = sw::make_unique<LeaderboardWriteWork>();
-        work->_table                          = LeaderboardServiceInternal::getStatTable();
-        work->_key                            = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
-        work->_boardID                        = string( statName );
-        work->_displayName                    = string( displayName );
-        work->_pService                       = this;
-        work->_accountID                      = accountID;
-        work->_requestTag                     = requestTag;
-        work->_value                          = value;
-        work->_nowMs                          = nowMs;
-        work->_update                         = update;
-        work->_order                          = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
-        work->_operation                      = LeaderboardOperation::StatChange;
+        unique_ptr<LeaderboardWriteJob> work = sw::make_unique<LeaderboardWriteJob>();
+        work->_table                         = LeaderboardServiceInternal::getStatTable();
+        work->_key                           = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
+        work->_boardID                       = string( statName );
+        work->_displayName                   = string( displayName );
+        work->_pService                      = this;
+        work->_accountID                     = accountID;
+        work->_requestTag                    = requestTag;
+        work->_value                         = value;
+        work->_nowMs                         = nowMs;
+        work->_update                        = update;
+        work->_order                         = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
+        work->_operation                     = LeaderboardOperation::StatChange;
         ++_pendingCount;
         _dependencies._pStore->submit( std::move( work ) );
     }
@@ -982,7 +982,7 @@ namespace sw
                 if ( achievement._statName == boardID && finalScore >= achievement._threshold )
                 {
                     ++_pendingCount;
-                    _dependencies._pStore->submit( sw::make_unique<AchievementUnlockWork>( this, achievement, accountID, nowMs ) );
+                    _dependencies._pStore->submit( sw::make_unique<AchievementUnlockJob>( this, achievement, accountID, nowMs ) );
                 }
             }
             return;
@@ -1119,7 +1119,7 @@ namespace sw
             {
                 ++_pendingCount;
                 _dependencies._pStore->submit(
-                    sw::make_unique<LeaderboardRebuildWork>( this, rankKey, LeaderboardServiceInternal::makeScorePrefix( read._boardID, read._periodID ) ) );
+                    sw::make_unique<LeaderboardRebuildJob>( this, rankKey, LeaderboardServiceInternal::makeScorePrefix( read._boardID, read._periodID ) ) );
             }
             return;
         }
@@ -1311,7 +1311,7 @@ namespace sw
     void LeaderboardService::readStats( AccountID accountID, uint64 requestTag )
     {
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, requestTag, false ) );
+        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadJob>( this, accountID, requestTag, false ) );
     }
 
     void LeaderboardService::retainStats( AccountID accountID )
@@ -1322,7 +1322,7 @@ namespace sw
             return;
         stats._bLoading = SW_TRUE;
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, 0, true ) );
+        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadJob>( this, accountID, 0, true ) );
     }
 
     void LeaderboardService::releaseStats( AccountID accountID )
@@ -1378,7 +1378,7 @@ namespace sw
     void LeaderboardService::readAchievements( AccountID accountID, uint64 requestTag )
     {
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<AchievementReadWork>( this, accountID, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<AchievementReadJob>( this, accountID, requestTag ) );
     }
 
     void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement )
@@ -1403,7 +1403,7 @@ namespace sw
         }
         VectorUtil::sort( listDefinition, LeaderboardServiceInternal::isAchievementIDLess );
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<AchievementProgressWork>( this, std::move( listDefinition ), accountID, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<AchievementProgressJob>( this, std::move( listDefinition ), accountID, requestTag ) );
     }
 
     void LeaderboardService::applyAchievementProgress( uint64 requestTag, LeaderboardResult result, vector<AchievementProgress>&& listProgress )
@@ -1435,7 +1435,7 @@ namespace sw
         const uint64 periodID = computePeriodID( *pBoard, nowMs );
         ++_pendingCount;
         _dependencies._pStore->submit(
-            sw::make_unique<ScoresOfReadWork>( this, LeaderboardServiceInternal::makeScorePrefix( boardID, periodID ), std::move( listUnique ), pBoard->_order, periodID, requestTag ) );
+            sw::make_unique<ScoresOfReadJob>( this, LeaderboardServiceInternal::makeScorePrefix( boardID, periodID ), std::move( listUnique ), pBoard->_order, periodID, requestTag ) );
     }
 
     void LeaderboardService::applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardResult result, vector<LeaderboardEntry>&& listEntry )
@@ -1466,8 +1466,8 @@ namespace sw
             return;
         }
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SeasonResultReadWork>( this, LeaderboardServiceInternal::makeSeasonResultKey( pBoard->_boardID, seasonID, accountID ),
-                                                                              seasonID, accountID, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<SeasonResultReadJob>( this, LeaderboardServiceInternal::makeSeasonResultKey( pBoard->_boardID, seasonID, accountID ),
+                                                                             seasonID, accountID, requestTag ) );
     }
 
     void LeaderboardService::applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardResult result, const LeaderboardEntry& entry )
@@ -1544,7 +1544,7 @@ namespace sw
         progress._nowMs                  = nowMs;
         ++_pendingCount; // 정산 하나에 하나 — 페이지가 몇이든 끝날 때(`applySettlement`) 한 번 줄인다
         _dependencies._pStore->submit(
-            sw::make_unique<SeasonRankReadWork>( this, settlementID, LeaderboardServiceInternal::makeScorePrefix( board._boardID, season._seasonID ), board._order ) );
+            sw::make_unique<SeasonRankReadJob>( this, settlementID, LeaderboardServiceInternal::makeScorePrefix( board._boardID, season._seasonID ), board._order ) );
     }
 
     void LeaderboardService::applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked )
@@ -1585,8 +1585,8 @@ namespace sw
         const size_t                last  = MathUtil::min( progress._listRanked.size(), first + static_cast<size_t>( LeaderboardServiceInternal::kPlayersPerPage ) );
         vector<LeaderboardScoreRow> listPage( progress._listRanked.begin() + static_cast<ptrdiff_t>( first ), progress._listRanked.begin() + static_cast<ptrdiff_t>( last ) );
         progress._nextIndex = last;
-        _dependencies._pStore->submit( sw::make_unique<SeasonSettlementPageWork>( this, settlementID, progress._board, progress._season, std::move( listPage ),
-                                                                                  static_cast<int32>( first ) + 1, progress._nowMs ) );
+        _dependencies._pStore->submit( sw::make_unique<SeasonSettlementPageJob>( this, settlementID, progress._board, progress._season, std::move( listPage ),
+                                                                                 static_cast<int32>( first ) + 1, progress._nowMs ) );
     }
 
     void LeaderboardService::finishSettlement( uint64 settlementID, bool bSucceeded )

@@ -73,6 +73,6 @@ namespace sw
          * @brief 노드 @p node 의 핀을 모읍니다. 등록표의 선언이고, 하위 그래프 노드는 그 그래프의 `GraphInput` · `GraphOutput` 입니다(그 파일을 읽는다).
          * @return 종류를 모르거나 하위 그래프를 읽지 못하면 false 입니다(읽기가 오류를 남긴다).
          */
-        [[nodiscard]] static bool collectNodePins( const MaterialGraphNodeDesc& node, vector<MaterialGraphPinInfo>& outListInput, vector<MaterialGraphPinInfo>& outListOutput );
+        [[nodiscard]] static bool collectNodePins( const MaterialGraphNodeDef& node, vector<MaterialGraphPinInfo>& outListInput, vector<MaterialGraphPinInfo>& outListOutput );
     };
 } // namespace sw

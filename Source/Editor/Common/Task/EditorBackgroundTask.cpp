@@ -24,20 +24,20 @@ namespace sw::editor
         TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
         // 스테이지는 에디터 컨텍스트가 만든 상태 저장소에 산다(게임 스레드에서만 낸다). 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 넣지 않는다.
         if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-            pTaskManager->addToStage( pStore->get<EditorBackgroundWork>()._stage, handle, "EditorBackgroundJobs" );
+            pTaskManager->addToStage( pStore->get<EditorBackgroundJob>()._stage, handle, "EditorBackgroundJobs" );
         handle.submit();
     }
 
     void requestEditorBackgroundStop()
     {
         if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-            pStore->get<EditorBackgroundWork>()._stop.requestStop();
+            pStore->get<EditorBackgroundJob>()._stop.requestStop();
     }
 
     StopToken acquireEditorBackgroundStopSignal()
     {
         EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>();
-        return pStore != nullptr ? pStore->get<EditorBackgroundWork>()._stop.getToken() : StopToken{};
+        return pStore != nullptr ? pStore->get<EditorBackgroundJob>()._stop.getToken() : StopToken{};
     }
 } // namespace sw::editor
 
@@ -52,7 +52,7 @@ namespace sw::editor
     {
         EditorStateStore* pStore       = editor::findSubsystem<EditorStateStore>(); // 선택: 편집기를 켜지 않은 실행에는 없다
         TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
-        return pStore != nullptr && pTaskManager != nullptr && pTaskManager->isStageComplete( pStore->get<EditorBackgroundWork>()._stage ) == false;
+        return pStore != nullptr && pTaskManager != nullptr && pTaskManager->isStageComplete( pStore->get<EditorBackgroundJob>()._stage ) == false;
     }
 } // namespace sw::editor
 

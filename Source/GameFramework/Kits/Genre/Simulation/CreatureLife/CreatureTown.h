@@ -212,7 +212,7 @@ namespace sw
 
         /** @brief 하루를 넘깁니다. 능력 횟수를 되돌리고 호감도가 감쇠합니다(대화와 선물은 시계의 날로 하루 한 번입니다). 디렉터가 시계의 날 넘김에 맞춰 호출합니다. */
         void advanceDay();
-        void drainEvents( vector<CreatureTownEvent>& outListEvent );
+        void pollEvents( vector<CreatureTownEvent>& outListEvent );
         /** @brief 셀, 서식지(번호 포함), 생물, 집, 받은 부탁을 씁니다(핫 리로드와 세이브용). 평판, 부탁 일지, 시계는 빌린 것이라 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 마을 크기가 다르거나, 없는 종 · 서식지 · 집, 겹친 항목, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그, 일지, 시계는 `initialize` 에서 받은 것을 씁니다). */

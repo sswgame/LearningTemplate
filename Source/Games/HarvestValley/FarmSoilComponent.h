@@ -29,11 +29,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터와 칸 번호(행 우선)를 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignTile( GameObjectHandle director, int32 tileIndex );
+        void assignTile( GameObjectHandle gameMode, int32 tileIndex );
 
     private:
         PROPERTY( Category = "Tile", DisplayName = "Director", Tooltip = "Object with the FarmGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the director's field" )
         int32 _tileIndex;
 

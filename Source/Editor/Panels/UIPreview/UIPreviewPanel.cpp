@@ -70,13 +70,13 @@ namespace sw::editor
             }
 
             /** @brief 시나리오가 누를 레이블 `<접두어>.<접미어>` 를 남깁니다. 테스트를 켰을 때만 문자열을 만듭니다. */
-            static void noteMark( const utf8* pPrefix, const utf8* pSuffix )
+            static void recordMark( const utf8* pPrefix, const utf8* pSuffix )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
                 fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "%#.%#", pPrefix, pSuffix );
-                EditorSelfTestMarks::note( mark.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
             }
 
             /** @brief 열린 패널의 감시 값 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
@@ -387,7 +387,7 @@ namespace sw::editor
         const string  preview  = language.empty() ? string( SW_LOCKEY( "EditorUIPreview", "GameLanguage" ) ) : language;
         EditorChrome::setNextItemWidthColumns( UIPreviewPanelInternal::kLanguageComboColumns );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
-        UIPreviewPanelInternal::noteMark( "uipreview", "language" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "language" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PreviewLanguage" ) );
         if ( bOpen == false )
             return;
@@ -400,7 +400,7 @@ namespace sw::editor
                 label = SW_LOCKEYFORMAT( "EditorUIPreview", "PseudoLanguage", TextArgumentList().addText( "code", code ) );
             if ( ImGui::Selectable( label.c_str(), code == language ) )
                 _model.selectLanguage( index );
-            UIPreviewPanelInternal::noteMark( "uipreview.language", code.empty() ? "game" : code.c_str() );
+            UIPreviewPanelInternal::recordMark( "uipreview.language", code.empty() ? "game" : code.c_str() );
         }
         ImGui::EndCombo();
     }
@@ -410,12 +410,12 @@ namespace sw::editor
         const string previous = _model.getDocumentPath().get();
         if ( _model.getDocumentPath().drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
             _model.onDocumentPathCommitted( previous, isDocumentDirty() );
-        UIPreviewPanelInternal::noteMark( "uipreview", "path" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "DocumentPathTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
             revertDocument();
-        UIPreviewPanelInternal::noteMark( "uipreview", "reload" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ReloadTip" ) );
         ImGui::SameLine();
         const bool bCanSave = canSaveDocument() && isDocumentDirty();
@@ -423,7 +423,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패는 saveDocument 가 로그로 알린다
         ImGui::EndDisabled();
-        UIPreviewPanelInternal::noteMark( "uipreview", "save" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PreviewWriteBack" ) );
         // 도구 줄이 패널보다 길면 오른쪽 콤보(언어)가 패널 밖에 놓여 누를 수 없다 — 들어가지 않으면 줄을 바꾼다.
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 25.0f ) );
@@ -450,7 +450,7 @@ namespace sw::editor
         {
             if ( ImGui::Selectable( SW_LOCKEY( "EditorUIPreview", "GameTheme" ), chosenTheme.empty() ) )
                 _model.setTheme( hashed_string{} );
-            for ( const UIThemeDesc& theme : themes.getCatalog()._listTheme )
+            for ( const UIThemeDef& theme : themes.getCatalog()._listTheme )
             {
                 if ( ImGui::Selectable( theme._name.c_str(), theme._name == chosenTheme ) )
                     _model.setTheme( theme._name );
@@ -483,7 +483,7 @@ namespace sw::editor
         bool bInteract = _model.isInteracting();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Interact" ), &bInteract ) )
             _model.setInteracting( bInteract );
-        UIPreviewPanelInternal::noteMark( "uipreview", "interact" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "interact" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PreviewSimulatePointer" ) );
         ImGui::SameLine();
         // 탐색 방향(키보드, 패드의 방향 입력) 흉내 — 포커스를 옮기고 포커스 테두리(`:focus-visible`)를 보인다.
@@ -505,13 +505,13 @@ namespace sw::editor
             formatstring( id.data(), id.capacity(), "##uipreviewnav%#", button._pMark );
             if ( ImGui::ArrowButton( id.c_str(), button._dir ) )
                 (void)_model.navigateFocus( screen, static_cast<uint32>( button._direction ) );
-            UIPreviewPanelInternal::noteMark( "uipreview.nav", button._pMark );
+            UIPreviewPanelInternal::recordMark( "uipreview.nav", button._pMark );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "MoveThePreviewFocusInThisDirection" ) );
             ImGui::SameLine();
         }
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Accept" ) ) )
             _model.acceptFocus( screen );
-        UIPreviewPanelInternal::noteMark( "uipreview.nav", "accept" );
+        UIPreviewPanelInternal::recordMark( "uipreview.nav", "accept" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PressTheFocusedWidgetUIAcceptIts" ) );
     }
 
@@ -529,7 +529,7 @@ namespace sw::editor
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 16.0f );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewanimation", chosen.c_str() );
-        UIPreviewPanelInternal::noteMark( "uipreview", "animation" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "DocumentAnimationToPreviewThePreviewNever" ) );
         if ( bOpen )
         {
@@ -537,14 +537,14 @@ namespace sw::editor
             {
                 if ( ImGui::Selectable( animation._name.c_str(), animation._name == chosen ) )
                     _model.chooseAnimation( player, animation._name );
-                UIPreviewPanelInternal::noteMark( "uipreview.animation", animation._name.c_str() );
+                UIPreviewPanelInternal::recordMark( "uipreview.animation", animation._name.c_str() );
             }
             ImGui::EndCombo();
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
             _model.playAnimation( player );
-        UIPreviewPanelInternal::noteMark( "uipreview.animation", "play" );
+        UIPreviewPanelInternal::recordMark( "uipreview.animation", "play" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheChosenAnimationFromTheStart" ) );
         const utf8* pPauseLabel = _model.isAnimationPaused() ? SW_LOCKEY( "EdText", "Resume" ) : SW_LOCKEY( "EdButton", "Pause" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPauseLabel ) );
@@ -552,11 +552,11 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeStableLabel( pPauseLabel, "uipreviewpause" ) ) ) // 글이 Pause · Resume 으로 바뀌어도 같은 단추다
             _model.togglePauseAnimation( player );
         ImGui::EndDisabled();
-        UIPreviewPanelInternal::noteMark( "uipreview.animation", "pause" );
+        UIPreviewPanelInternal::recordMark( "uipreview.animation", "pause" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
             _model.stopAnimation( player );
-        UIPreviewPanelInternal::noteMark( "uipreview.animation", "stop" );
+        UIPreviewPanelInternal::recordMark( "uipreview.animation", "stop" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Loop" ) ) );
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Loop" ), &_model.editAnimationLoop() );
         ImGui::SameLine();
@@ -569,7 +569,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 29.0f );
         if ( ImGui::SliderFloat( "##uipreviewanimationtime", &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
             _model.scrubAnimation( player, scrubSeconds );
-        UIPreviewPanelInternal::noteMark( "uipreview", "animationtime" );
+        UIPreviewPanelInternal::recordMark( "uipreview", "animationtime" );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", UIPreviewLogic::makeTimeLabel( bActive ? time : scrubSeconds, duration ).c_str() );
     }
@@ -591,7 +591,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Add" ) ) )
             (void)_model.addWidget( screen, _model.getPaletteType(), pSelected );
         ImGui::EndDisabled();
-        Internal::noteMark( "uipreview.palette", "add" );
+        Internal::recordMark( "uipreview.palette", "add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "AddTheChosenWidgetTypeIntoThe" ) );
         ImGui::SameLine();
         const bool bCanDelete = _model.canDeleteSelected( screen.getTree() );
@@ -599,7 +599,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Delete" ) ) )
             (void)_model.deleteSelected( screen ); // 루트나 없는 선택은 못 지우고, 그때는 단추가 꺼져 있다
         ImGui::EndDisabled();
-        Internal::noteMark( "uipreview", "delete" );
+        Internal::recordMark( "uipreview", "delete" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "RemoveTheSelectedWidgetAndItsChildren" ) );
         // 형제 사이 옮기기(UMG 계층 창의 위 · 아래 옮기기) — 끌기 손잡이가 없는 부모(겹침 · 캔버스)에서도 순서를 바꾼다.
         struct MoveButton
@@ -622,13 +622,13 @@ namespace sw::editor
                 _model.moveSelected( screen.getTree(), button._delta );
             ImGui::PopID();
             ImGui::EndDisabled();
-            Internal::noteMark( "uipreview", button._pMark );
+            Internal::recordMark( "uipreview", button._pMark );
             EditorWidgets::drawTooltip( button._pTip );
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -1.0f );
         (void)EditorWidgets::drawTextField( "##uipreviewpalettefilter", _paletteFilter );
-        Internal::noteMark( "uipreview.palette", "filter" );
+        Internal::recordMark( "uipreview.palette", "filter" );
 
         const EditorListFilter paletteFilter{ string_view{ _paletteFilter } };
         ImGui::BeginChild( "##uipreviewpalettelist", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None );
@@ -646,7 +646,7 @@ namespace sw::editor
                 if ( EditorInputGUI::wasItemDoubleClicked() )
                     (void)_model.addWidget( screen, _model.getPaletteType(), screen.getTree().findWidgetByID( _model.getSelected() ) );
             }
-            Internal::noteMark( "uipreview.palette", pName );
+            Internal::recordMark( "uipreview.palette", pName );
             // 끌어서 트리 줄이나 이미지에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`). 페이로드는 {WidgetType, 타입 이름 id} 다.
             const EditorDragPayload payload{ EditorPayloadKind::WidgetType, EditorInputGUI::registerPayloadName( EditorPayloadKind::WidgetType, pName ) };
             (void)EditorInputGUI::beginDragSource( payload, pName ); // 끌기를 시작했는지는 쓰지 않는다
@@ -688,7 +688,7 @@ namespace sw::editor
             ImGui::SetCursorScreenPos( corner );
             ImGui::PushID( row._pMark );
             ImGui::InvisibleButton( "##handle", ImVec2{ half * 2.0f, half * 2.0f } );
-            Internal::noteMark( "uipreview.handle", row._pMark );
+            Internal::recordMark( "uipreview.handle", row._pMark );
             ImGui::GetWindowDrawList()->AddRectFilled( corner, ImVec2{ corner.x + half * 2.0f, corner.y + half * 2.0f }, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Highlight" ) ) );
             if ( ImGui::IsItemActivated() )
             {
@@ -728,7 +728,7 @@ namespace sw::editor
         ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );
         ImGui::PushID( "layouthandle" );
         ImGui::InvisibleButton( "##reorder", ImVec2{ half * 2.0f, half * 2.0f } );
-        Internal::noteMark( "uipreview.handle", "reorder" );
+        Internal::recordMark( "uipreview.handle", "reorder" );
         ImGui::GetWindowDrawList()->AddCircleFilled( center, half, color );
         if ( ImGui::IsItemActivated() )
             _bLayoutDragging = SW_TRUE;
@@ -780,7 +780,7 @@ namespace sw::editor
             const bool bChanged     = draw( _slot, pLabel );
             if ( bChanged )
                 _widget.setLayoutSlot( _slot );
-            UIPreviewPanelInternal::noteMark( "uipreview.slot", pMark );
+            UIPreviewPanelInternal::recordMark( "uipreview.slot", pMark );
             _panel.finishSlotField( _widget, _slotProp, beforeText, bChanged, bImmediate );
         }
 
@@ -907,8 +907,8 @@ namespace sw::editor
 
     void UIPreviewPanel::drawSlotSection( Widget& widget )
     {
-        const UIPreviewSlotFields fields = UIPreviewLogic::findSlotFields( widget );
-        if ( fields._bSizeOverride == false )
+        const UIPreviewSlotParams params = UIPreviewLogic::findSlotFields( widget );
+        if ( params._bSizeOverride == false )
             return; // 루트 — 부모가 없어 슬롯을 읽는 쪽이 없다
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
         if ( pSlotProp == nullptr )
@@ -919,13 +919,13 @@ namespace sw::editor
             return;
 
         SlotFieldPass pass{ *this, widget, *pSlotProp, EditorListFilter{ _grid.getFilterText() }, widget.getLayoutSlot() };
-        if ( fields._bPaddingAlignment )
+        if ( params._bPaddingAlignment )
             pass.drawPaddingAlignment();
-        if ( fields._bBoxSize )
+        if ( params._bBoxSize )
             pass.drawBoxSize();
-        if ( fields._bGrid )
+        if ( params._bGrid )
             pass.drawGrid();
-        if ( fields._bCanvas )
+        if ( params._bCanvas )
             pass.drawCanvas();
         pass.drawSizeOverrides();
         ImGui::Separator();
@@ -951,10 +951,10 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax32> ordinalText;
                 formatstring( ordinalText.data(), ordinalText.capacity(), "%#", ordinal );
-                Internal::noteMark( "uipreview.row", ordinalText.c_str() );
+                Internal::recordMark( "uipreview.row", ordinalText.c_str() );
                 const Widget* pWidget = screen.getTree().findWidgetByID( row._widget );
                 if ( pWidget != nullptr && pWidget->getName().empty() == false )
-                    Internal::noteMark( "uipreview.widget", pWidget->getName().c_str() );
+                    Internal::recordMark( "uipreview.widget", pWidget->getName().c_str() );
             }
             acceptPaletteDrop( screen, screen.getTree().findWidgetByID( row._widget ) ); // 팔레트 항목을 이 줄에 놓는다
             ImGui::Unindent( Internal::kIndentPerLevel * static_cast<float32>( row._depth ) + 0.001f );
@@ -1036,7 +1036,7 @@ namespace sw::editor
         const float2 origin{ cursor.x, cursor.y };
         ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureID ), ImVec2{ drawSize._x, drawSize._y } );
         const bool bImageHovered = ImGui::IsItemHovered();
-        EditorSelfTestMarks::note( "uipreview.image" );
+        EditorSelfTestMarks::record( "uipreview.image" );
         string droppedType;
         if ( bInteract == false && Internal::acceptPaletteType( droppedType ) )
         {

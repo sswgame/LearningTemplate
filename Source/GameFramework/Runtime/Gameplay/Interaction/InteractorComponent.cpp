@@ -368,7 +368,7 @@ namespace sw
     void InteractorComponent::handleSessionEvents( GameObjectManager& manager, GameObject& owner )
     {
         _listSessionEvent.clear();
-        _session.drainEvents( _listSessionEvent );
+        _session.pollEvents( _listSessionEvent );
         const InteractableComponent* pEventTarget = manager.resolveComponent( _focusComponent );
         const InteractionDef*        pEventDef    = pEventTarget != nullptr ? pEventTarget->getDefinition() : nullptr;
         for ( const InteractionSessionEvent event : _listSessionEvent )

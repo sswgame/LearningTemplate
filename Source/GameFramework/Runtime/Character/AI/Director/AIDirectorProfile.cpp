@@ -212,7 +212,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            bValid = encounter._condition.readFromNode( child, vocabulary, sourceName, encounter._id.c_str() ) && bValid;
+            bValid = encounter._condition.loadFromXML( child, vocabulary, sourceName, encounter._id.c_str() ) && bValid;
             for ( const AIDirectorEncounterDef& other : pool._listEncounter )
             {
                 if ( other._id == encounter._id )

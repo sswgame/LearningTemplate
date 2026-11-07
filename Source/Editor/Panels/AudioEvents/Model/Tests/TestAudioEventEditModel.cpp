@@ -11,7 +11,7 @@ namespace
 {
     void addEvent( AudioEventEditModel& model, const utf8* pName )
     {
-        AudioEventDesc event;
+        AudioEventDef event;
         event._name = hashed_string( pName );
         model.editLibrary()._listEvent.push_back( event );
     }

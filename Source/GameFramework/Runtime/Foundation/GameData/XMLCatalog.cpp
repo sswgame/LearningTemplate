@@ -15,7 +15,7 @@ namespace sw
         return XMLReadUtil::loadRootOrWarn( doc, assetID, pRootName, root, sourceName ) && pReadRoot( pCatalog, root, sourceName );
     }
 
-    bool XMLCatalogLoader::loadText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )
+    bool XMLCatalogLoader::loadFromXMLText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )
     {
         XMLDocument doc;
         XMLNode     root;

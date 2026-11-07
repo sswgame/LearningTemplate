@@ -29,11 +29,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터와 일꾼 자리를 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignWalker( GameObjectHandle director, int32 walkerIndex );
+        void assignWalker( GameObjectHandle gameMode, int32 walkerIndex );
 
     private:
         PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Walker", DisplayName = "Walker Index", Tooltip = "Slot in the simulation walker list" )
         int32 _walkerIndex;
         PROPERTY( Category = "Walker", DisplayName = "Height", Tooltip = "Capsule centre above the ground", Units = m )

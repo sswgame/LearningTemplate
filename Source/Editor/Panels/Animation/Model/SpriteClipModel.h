@@ -143,7 +143,7 @@ namespace sw::editor
         static SpriteClipAsset makeNewClip( string_view atlasPath );
         SpriteClipAsset        captureClipData() const;
         /** @brief 클립을 편집 상태로 받습니다. 아틀라스 칸도 그 클립의 것입니다(비었으면 비운다 — 앞 문서의 아틀라스가 이 문서에 저장되지 않는다). 고름은 범위 안으로 묶습니다. */
-        void adoptClip( SpriteClipAsset&& clip );
+        void applyClip( SpriteClipAsset&& clip );
         /** @brief 미리보기가 도는 구간입니다. 고른 구간, 없으면 프레임 전체입니다. */
         void findPreviewRange( int32& outFirstFrame, int32& outFrameCount, bool& outLoop ) const;
         /** @brief 프레임 @p frameIndex 의 미리보기 시간(초)입니다. */

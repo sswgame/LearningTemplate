@@ -203,7 +203,7 @@ namespace sw
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 끊긴 연결의 자리를 비웁니다. 자리와 토큰은 남으므로 같은 토큰으로 돌아올 수 있습니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
-        void drainEvents( vector<TurnRelayEvent>& outListEvent );
+        void pollEvents( vector<TurnRelayEvent>& outListEvent );
 
         const TurnRoom* findRoom( uint32 roomID ) const;
 
@@ -274,7 +274,7 @@ namespace sw
                                         ( 1u << ( NetTurnRelayMessage::kDenied - kBase ) ) );
         }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
-        void            drainEvents( vector<TurnRelayEvent>& outListEvent );
+        void            pollEvents( vector<TurnRelayEvent>& outListEvent );
 
         int32                     getSeat() const { return _seat; }
         uint32                    getToken() const { return _token; }

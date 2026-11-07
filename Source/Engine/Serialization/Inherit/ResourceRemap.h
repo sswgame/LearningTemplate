@@ -37,7 +37,7 @@ namespace sw
 
         /**
          * @brief 리소스 @p assetID 를 지금 태그로 바꿔야 하면 @p outAssetID 에 바꾼 id 를 쓰고 true 입니다. 바꾸지 않으면 false 입니다(표가 비면 잠금 없이 끝난다).
-         * @details 로드 축 태그를 묻는 줄이 있는 id 는 그 태그를 다시 읽기 기록에 남긴다(`ResourceComposition::noteRemap`).
+         * @details 로드 축 태그를 묻는 줄이 있는 id 는 그 태그를 다시 읽기 기록에 남긴다(`ResourceComposition::recordRemap`).
          */
         [[nodiscard]] static bool resolve( string_view assetID, string& outAssetID );
     };

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="Sprite2DPixel" _base="engine/materials/sprite2d.material">
+<MaterialDef formatVersion="0" name="Sprite2DPixel" _base="engine/materials/sprite2d.material">
 	<_properties>
 		<item name="_pointFilter" defaultValue="1" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

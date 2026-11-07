@@ -205,7 +205,7 @@ namespace sw
         _materialPSOBuilder.shutdown( pDevice );
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
         {
-            forgetAll();
+            clearAll();
             return;
         }
 
@@ -252,7 +252,7 @@ namespace sw
         }
     }
 
-    void RenderPSOCache::forgetAll()
+    void RenderPSOCache::clearAll()
     {
         _materialPSOBuilder.shutdown( nullptr );
         _mapEnginePSO.clear();

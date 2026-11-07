@@ -136,11 +136,11 @@ namespace sw
                 posting._assetID       = attachment._assetID;
                 posting._amount        = attachment._amount;
             }
-            LedgerTransferOutcome outcome;
-            const LedgerResult    staged = Ledger::stageTransfer( connection, request, pending, outcome );
+            LedgerTransferResult result;
+            const LedgerResult   staged = Ledger::stageTransfer( connection, request, pending, result );
             if ( staged != LedgerResult::Ok )
                 return staged;
-            if ( outcome._bReplayed == SW_TRUE )
+            if ( result._bReplayed == SW_TRUE )
             {
                 SW_LOG_ERROR_ID( "ServiceMail.MailSendJournalBut", "Mail '%#' has a send journal but no sent record", mailKey.c_str() );
                 return LedgerResult::Unavailable;

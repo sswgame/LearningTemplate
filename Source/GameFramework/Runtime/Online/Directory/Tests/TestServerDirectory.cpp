@@ -45,14 +45,14 @@ namespace
     }
 
     /** @brief 메모리 캐시 + 라우터입니다. 등록(쓰기)과 읽는 쪽(읽기)이 같은 라우터를 쓴다. */
-    struct DirectoryRig
+    struct DirectoryFixture
     {
 
         sw::ManualClock             _clock;
         sw::MemoryEphemeralDatabase _database;
         sw::MemoryEphemeralStore    _store;
         sw::EphemeralStoreRouter    _router;
-        DirectoryRig()
+        DirectoryFixture()
             : _clock{ sw::MonotonicMilliseconds{ 0 } }
             , _database{ _clock }
             , _store{ &_database }
@@ -248,7 +248,7 @@ SW_TEST_CASE( ServerDirectoryTest, PickPrefersSameRegionThenFillThenServerID )
 SW_TEST_CASE( ServerDirectoryTest, RegistrationRejectsInvalidDescriptor )
 {
     SW_EXPECT_LOG( "ServerRegistration.InvalidDescriptor" );
-    DirectoryRig               rig;
+    DirectoryFixture           rig;
     const sw::ServerDescriptor valid = makeStatus( 5, "kr", 0, 10 )._descriptor;
 
     sw::ServerRegistration registration;
@@ -285,7 +285,7 @@ SW_TEST_CASE( ServerDirectoryTest, RegistrationRejectsInvalidDescriptor )
  */
 SW_TEST_CASE( ServerDirectoryTest, RegistrationWritesOnChangeAndHeartbeatOnly )
 {
-    DirectoryRig           rig;
+    DirectoryFixture       rig;
     sw::ServerRegistration registration;
     SW_REQUIRE_TRUE( registration.initialize( &rig._router, makeStatus( 5, "kr", 0, 10 )._descriptor ) );
     SW_EXPECT_TRUE( registration.getStatus()._state == sw::ServerState::Starting );
@@ -332,7 +332,7 @@ SW_TEST_CASE( ServerDirectoryTest, RegistrationWritesOnChangeAndHeartbeatOnly )
  */
 SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPicks )
 {
-    DirectoryRig               rig;
+    DirectoryFixture           rig;
     const sw::UnixMilliseconds now{ kNowMs };
     sw::ServerRegistration     first;
     sw::ServerRegistration     second;
@@ -382,7 +382,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
  */
 SW_TEST_CASE( ServerDirectoryTest, ReaderDropsExpiredServerAndCleansIndex )
 {
-    DirectoryRig               rig;
+    DirectoryFixture           rig;
     const sw::UnixMilliseconds now{ kNowMs };
     sw::ServerRegistration     alive;
     sw::ServerRegistration     dead;
@@ -417,7 +417,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderDropsExpiredServerAndCleansIndex )
  */
 SW_TEST_CASE( ServerDirectoryTest, ReaderShutdownCancelsPendingReads )
 {
-    DirectoryRig               rig;
+    DirectoryFixture           rig;
     const sw::UnixMilliseconds now{ kNowMs };
     sw::ServerRegistration     registration;
     SW_REQUIRE_TRUE( registration.initialize( &rig._router, makeStatus( 1, "kr", 0, 10 )._descriptor ) );

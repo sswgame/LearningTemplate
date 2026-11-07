@@ -113,8 +113,8 @@ namespace sw
             manager.getAllGameObjects( listObject );
             for ( GameObject* pObject : listObject )
             {
-                if ( ShooterGameModeComponent* pDirector = pObject->getComponent<ShooterGameModeComponent>() )
-                    pDirector->setActive( false );
+                if ( ShooterGameModeComponent* pGameMode = pObject->getComponent<ShooterGameModeComponent>() )
+                    pGameMode->setActive( false );
             }
         }
         const GameObjectHandle pawnObject = findPawnObject( manager );

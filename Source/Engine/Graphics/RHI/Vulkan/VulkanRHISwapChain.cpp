@@ -578,7 +578,7 @@ namespace sw
         return static_cast<int32>( result );
     }
 
-    void VulkanRHISwapChain::forgetImageFences()
+    void VulkanRHISwapChain::removeImageFences()
     {
         std::fill( _listImageFence.begin(), _listImageFence.end(), VK_NULL_HANDLE );
     }

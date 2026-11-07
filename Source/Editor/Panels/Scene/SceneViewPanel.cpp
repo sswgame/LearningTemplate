@@ -48,13 +48,13 @@ namespace sw::editor
         _viewportClient.update( dt, bFocused, bHovered );
 
         if ( bFocused )
-            EditorScreenshotCommands::noteFocusedView( EditorViewKind::Scene );
+            EditorScreenshotCommands::recordFocusedView( EditorViewKind::Scene );
 
         if ( EditorChrome::beginToolbar( "##SceneViewToolbar" ) )
         {
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##SceneViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureSceneView();
-            EditorSelfTestMarks::note( "sceneView.screenshot" );
+            EditorSelfTestMarks::record( "sceneView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SceneViewScreenshot" ) );
             EditorWidgets::drawToolbarSeparator();
 

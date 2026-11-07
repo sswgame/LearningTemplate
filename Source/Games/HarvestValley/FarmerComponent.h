@@ -40,7 +40,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Farmer", DisplayName = "Director", Tooltip = "Object with the FarmGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )
         float32 _heightOffset;
         PROPERTY( Category = "Farmer", DisplayName = "Kind", Tooltip = "Follow the farmer or the faced tile" )

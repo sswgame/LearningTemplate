@@ -95,7 +95,7 @@ namespace sw
         }
     }
 
-    void OnlinePresence::noteOnline( const AccountIdentity& identity )
+    void OnlinePresence::recordOnline( const AccountIdentity& identity )
     {
         const auto identityIt          = _mapAccountToIdentity.find( identity._accountID );
         const bool bDisplayNameChanged = identityIt != _mapAccountToIdentity.end() && identityIt->second._displayName != identity._displayName && _pHost != nullptr;
@@ -110,7 +110,7 @@ namespace sw
             writeAccountEntries( identity, false );
     }
 
-    void OnlinePresence::noteOffline( AccountID accountID )
+    void OnlinePresence::recordOffline( AccountID accountID )
     {
         const auto identityIt = _mapAccountToIdentity.find( accountID );
         if ( identityIt == _mapAccountToIdentity.end() )

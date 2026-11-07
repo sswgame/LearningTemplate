@@ -44,22 +44,22 @@ namespace sw::editor
     namespace
     {
         /**
-         * @struct ToolDocumentDesc
+         * @struct ToolDocumentDef
          * @brief 도구 문서 종류 하나입니다. 로그와 상태 문구에 쓰는 이름, 경로가 비었을 때 여는 에디터 기본 파일을 가지고 있습니다.
          * @details 읽기, 쓰기, 실패 알림은 `loadToolDocument` 와 `saveToolDocument` 하나씩만 있다. 종류마다 다른 것은 이 기술자와
          *          파일 IO 오버로드(`readDocument` / `writeDocument`)뿐이다.
          */
-        struct ToolDocumentDesc
+        struct ToolDocumentDef
         {
             const utf8* _pLabel;           ///< "animation graph" 처럼 로그와 상태 문구에 들어가는 이름
             const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Saved/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
         };
 
-        constexpr ToolDocumentDesc kAnimationGraphDocument{ "animation graph", EditorPaths::kAnimationGraphDocumentFileName };
-        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", EditorPaths::kDialogueGraphDocumentFileName };
-        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", EditorPaths::kSpriteClipDocumentFileName };
-        constexpr ToolDocumentDesc kTileMapDocument{ "tile map", nullptr };
-        constexpr ToolDocumentDesc kSequenceDocument{ "sequence", nullptr };
+        constexpr ToolDocumentDef kAnimationGraphDocument{ "animation graph", EditorPaths::kAnimationGraphDocumentFileName };
+        constexpr ToolDocumentDef kDialogueGraphDocument{ "dialogue graph", EditorPaths::kDialogueGraphDocumentFileName };
+        constexpr ToolDocumentDef kSpriteClipDocument{ "sprite clip", EditorPaths::kSpriteClipDocumentFileName };
+        constexpr ToolDocumentDef kTileMapDocument{ "tile map", nullptr };
+        constexpr ToolDocumentDef kSequenceDocument{ "sequence", nullptr };
 
         struct EditorToolAssetInternal
         {
@@ -93,7 +93,7 @@ namespace sw::editor
              * @details 빈 경로를 파일 계층까지 넘기면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 그래서 부르는 쪽(`loadToolDocument`,
              *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
-            static string resolveDocumentPath( const ToolDocumentDesc& desc, string_view path, const DocumentUse use )
+            static string resolveDocumentPath( const ToolDocumentDef& desc, string_view path, const DocumentUse use )
             {
                 if ( path.empty() == false )
                     return resolveToolDocumentPath( path, use );
@@ -131,7 +131,7 @@ namespace sw::editor
              *          있으면 패널 상태 문구(`No file yet: …`, `Failed to read …`, `Loaded …`)를 쓴다.
              */
             template <typename TAsset>
-            static ToolAssetLoadResult loadToolDocument( const ToolDocumentDesc& desc, TAsset& outData, string_view path, string* pOutStatus )
+            static ToolAssetLoadResult loadToolDocument( const ToolDocumentDef& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
                 const string resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
                 if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
@@ -154,7 +154,7 @@ namespace sw::editor
 
             /** @brief 도구 문서를 씁니다. 경로 없음과 쓰기 실패를 모두 오류 한 줄로 알리므로, 호출부가 반환값을 버려도 조용히 넘어가지 않습니다. */
             template <typename TAsset>
-            [[nodiscard]] static bool saveToolDocument( const ToolDocumentDesc& desc, const TAsset& data, string_view path )
+            [[nodiscard]] static bool saveToolDocument( const ToolDocumentDef& desc, const TAsset& data, string_view path )
             {
                 const string resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
                 if ( resolved.empty() )

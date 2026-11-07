@@ -41,7 +41,7 @@ namespace sw
 
         /**
          * @brief 기본 머티리얼을 얻고 기본 카메라 · 메시 기본값을 겁니다.
-         * @details 매니저가 받는 씬은 받아들이는 길(`SceneManager::adoptScene`)이 부릅니다 — 매니저 밖에서 부르는 것은 단위 테스트뿐입니다.
+         * @details 매니저가 받는 씬은 받아들이는 길(`SceneManager::applyScene`)이 부릅니다 — 매니저 밖에서 부르는 것은 단위 테스트뿐입니다.
          */
         [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice );
 
@@ -115,7 +115,7 @@ namespace sw
         void setSourcePath( string_view path ) { _sourcePath = path; }
         /**
          * @brief 다음 `instantiate` 의 등록 · 로드 뒤 처리를 `finishHeldRegistration` 까지 쥡니다. 워커에서 짓는 비동기 로드가 짓기 전에 부릅니다.
-         * @details 훅(`onRegister` · `onPostLoad`)은 게임 스레드에서만 돈다 — 씬을 받는 쪽(`SceneManager::adoptScene`)이 끝낸다.
+         * @details 훅(`onRegister` · `onPostLoad`)은 게임 스레드에서만 돈다 — 씬을 받는 쪽(`SceneManager::applyScene`)이 끝낸다.
          */
         void holdRegistration();
         /** @brief 쥔 등록이 있으면 부릅니다(게임 스레드). 없으면 아무것도 하지 않습니다. */

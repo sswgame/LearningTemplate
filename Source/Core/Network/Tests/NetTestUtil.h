@@ -57,7 +57,7 @@ namespace sw::test
         }
 
         /** @brief 서버(엔드포인트 0)가 받은 메시지를 모두 꺼내 뒤에 붙입니다. */
-        static void drainServerMessages( LoopbackCluster& cluster, vector<vector<uint8>>& outListMessage )
+        static void pollServerMessages( LoopbackCluster& cluster, vector<vector<uint8>>& outListMessage )
         {
             int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;

@@ -154,7 +154,7 @@ namespace sw
         /** @brief 신고를 기다리는 목격자 수를 반환합니다. */
         int32 countPendingReports() const { return static_cast<int32>( _listPending.size() ); }
         bool  isDisguised() const { return _bDisguised != SW_FALSE; }
-        void  drainEvents( vector<WesternLawEvent>& outListEvent );
+        void  pollEvents( vector<WesternLawEvent>& outListEvent );
         /** @brief 지역 기록(현상금, 수배, 안 보인 시간, 법이 보는지), 신고 대기(남은 시간까지), 다음 사건 번호, 변장을 씁니다. 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 지역이나 범죄, 같은 지역의 두 기록, 다음 사건 번호 밖의 신고 대기이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */

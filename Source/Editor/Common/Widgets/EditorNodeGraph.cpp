@@ -265,7 +265,7 @@ namespace sw::editor
         collectMinimap();
         measureCommentRequest();
         ed::End();
-        EditorSelfTestMarks::note( ( _markScope + ".canvas" ).c_str() ); // 마지막 항목은 캔버스 자식 창이다
+        EditorSelfTestMarks::record( ( _markScope + ".canvas" ).c_str() ); // 마지막 항목은 캔버스 자식 창이다
         // 막대 · 미니맵은 캔버스 다음에 연 자식 창이라 캔버스 위에 놓이고 마우스도 먼저 받는다(노드 편집기는 그 아래를 누른 것으로 보지 않는다).
         drawViewBar();
         if ( _bMinimapVisible )
@@ -518,14 +518,14 @@ namespace sw::editor
         {
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphFit" ), "Fit" ) ) )
                 _bPendingNavigate = SW_TRUE;
-            EditorSelfTestMarks::note( ( _markScope + ".view.fit" ).c_str() );
+            EditorSelfTestMarks::record( ( _markScope + ".view.fit" ).c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphFitTip" ) );
             if ( _bAutoLayout == false )
             {
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphAlign" ), "Align" ) ) )
                     EditorInputGUI::openPopup( "##graphAlignMenu" );
-                EditorSelfTestMarks::note( ( _markScope + ".view.align" ).c_str() );
+                EditorSelfTestMarks::record( ( _markScope + ".view.align" ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphAlignTip" ) );
                 drawAlignMenu();
             }
@@ -534,7 +534,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphComment" ), "Comment" ) ) )
                     _bCommentRequested = SW_TRUE;
-                EditorSelfTestMarks::note( ( _markScope + ".view.comment" ).c_str() );
+                EditorSelfTestMarks::record( ( _markScope + ".view.comment" ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphCommentTip" ) );
             }
             ImGui::SameLine();
@@ -542,7 +542,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphMinimap" ), "Minimap" ) ) )
                 _bMinimapVisible = _bMinimapVisible == false;
             ImGui::PopStyleColor();
-            EditorSelfTestMarks::note( ( _markScope + ".view.minimap" ).c_str() );
+            EditorSelfTestMarks::record( ( _markScope + ".view.minimap" ).c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphMinimapTip" ) );
             const ImVec2 barSize = ImGui::GetWindowSize();
             _viewBarSize         = float2{ barSize.x, barSize.y };
@@ -576,7 +576,7 @@ namespace sw::editor
         {
             if ( ImGui::MenuItem( EditorThemeUtil::makeStableLabel( item._pLabel, item._pMark ), nullptr, false, selectedCount >= item._minCount ) )
                 _pendingAlign = item._align;
-            EditorSelfTestMarks::note( ( _markScope + item._pMark ).c_str() );
+            EditorSelfTestMarks::record( ( _markScope + item._pMark ).c_str() );
             if ( selectedCount < item._minCount )
                 EditorWidgets::drawTooltip( item._minCount > 2 ? SW_LOCKEY( "EdCommon", "GraphNeedThreeNodes" ) : SW_LOCKEY( "EdCommon", "GraphNeedTwoNodes" ) );
         }
@@ -627,7 +627,7 @@ namespace sw::editor
             }
             ImGui::SetCursorScreenPos( mapMin );
             ImGui::InvisibleButton( "##graphMinimapArea", ImVec2{ width, height } );
-            EditorSelfTestMarks::note( ( _markScope + ".minimap" ).c_str() );
+            EditorSelfTestMarks::record( ( _markScope + ".minimap" ).c_str() );
             // 누르거나 끄는 곳에 가장 가까운 노드로 보기를 옮긴다(Godot GraphEdit · 언리얼 머티리얼 그래프 미니맵의 끌어 옮기기).
             if ( ImGui::IsItemActive() && transform._scale > 0.0f )
             {
@@ -829,7 +829,7 @@ namespace sw::editor
         }
     }
 
-    void EditorNodeGraph::noteDrawnNodeCount( uint32 nodeCount )
+    void EditorNodeGraph::recordDrawnNodeCount( uint32 nodeCount )
     {
         getEditorState<EditorNodeGraphDrawnState>()._nodeCount = nodeCount;
     }

@@ -110,7 +110,7 @@ namespace sw::editor
         const bool bDecoded  = AudioGraphEditUtil::tryDecodePinID( _editGraph, fromPin, fromIndex, bInput ) && AudioGraphEditUtil::tryDecodePinID( _editGraph, toPin, toIndex, bInput );
         if ( bDecoded == false || AudioGraphEditUtil::connect( _editGraph, fromIndex, toIndex ) == false )
             return false;
-        noteEdit( "Connect Audio Graph Nodes" );
+        recordEdit( "Connect Audio Graph Nodes" );
         return true;
     }
 
@@ -121,7 +121,7 @@ namespace sw::editor
             return false;
         _pendingPlacedNode = static_cast<int32>( newIndex );
         _selectedNode      = static_cast<int32>( newIndex );
-        noteEdit( "Add Audio Graph Node" );
+        recordEdit( "Add Audio Graph Node" );
         return true;
     }
 
@@ -132,7 +132,7 @@ namespace sw::editor
             return 0;
         _selectedNode      = _editGraph.findNodeIndex( listNew.back() );
         _pendingPlacedNode = _editGraph.findNodeIndex( listNew.front() ); // 사본은 뒤에 붙는다 — 다음 캔버스 프레임이 첫 사본부터 데이터 자리에 놓는다
-        noteEdit( "Duplicate Audio Graph Nodes" );
+        recordEdit( "Duplicate Audio Graph Nodes" );
         return static_cast<uint32>( listNew.size() );
     }
 
@@ -156,7 +156,7 @@ namespace sw::editor
             uint32 readerIndex = 0;
             uint32 inputSlot   = 0;
             if ( AudioGraphEditUtil::tryDecodeLinkID( _editGraph, linkID, readerIndex, inputSlot ) && AudioGraphEditUtil::disconnect( _editGraph, readerIndex, inputSlot ) )
-                noteEdit( "Delete Audio Graph Link" );
+                recordEdit( "Delete Audio Graph Link" );
         }
         VectorUtil::sort( inoutListNodeID, std::greater<int32>{} );
         for ( const int32 nodeID : inoutListNodeID )
@@ -165,13 +165,13 @@ namespace sw::editor
             if ( AudioGraphEditUtil::tryDecodeNodeID( _editGraph, nodeID, nodeIndex ) && AudioGraphEditUtil::removeNode( _editGraph, nodeIndex ) )
             {
                 // 노드를 지우면 뒤 번호가 당겨진다 — 번호로 든 고름 · 놓을 노드가 다른 노드를 가리키지 않게 푼다.
-                noteEdit( "Delete Audio Graph Node" );
+                recordEdit( "Delete Audio Graph Node" );
                 clearNodeRefs();
             }
         }
     }
 
-    void AudioGraphModel::noteNodePosition( uint32 nodeIndex, const float2& position )
+    void AudioGraphModel::recordNodePosition( uint32 nodeIndex, const float2& position )
     {
         if ( nodeIndex >= _editGraph._listNode.size() || isPlacingNode( nodeIndex ) )
             return;
@@ -180,7 +180,7 @@ namespace sw::editor
         if ( bMoved == false )
             return;
         stored = position;
-        noteEdit( "Move Audio Graph Nodes", "audiograph.move" );
+        recordEdit( "Move Audio Graph Nodes", "audiograph.move" );
     }
 
     void AudioGraphModel::selectNodeByID( int32 nodeID )
@@ -190,7 +190,7 @@ namespace sw::editor
             _selectedNode = static_cast<int32>( nodeIndex );
     }
 
-    AudioGraphNodeDesc* AudioGraphModel::editSelectedNode()
+    AudioGraphNodeDef* AudioGraphModel::editSelectedNode()
     {
         const bool bSelected = 0 <= _selectedNode && _selectedNode < static_cast<int32>( _editGraph._listNode.size() );
         return bSelected ? &_editGraph._listNode[static_cast<size_t>( _selectedNode )] : nullptr;
@@ -198,16 +198,16 @@ namespace sw::editor
 
     void AudioGraphModel::setSelectedAsOutput()
     {
-        const AudioGraphNodeDesc* pNode = editSelectedNode();
+        const AudioGraphNodeDef* pNode = editSelectedNode();
         if ( pNode == nullptr )
             return;
         _editGraph._output = pNode->_name;
-        noteEdit( "Set Audio Graph Output" );
+        recordEdit( "Set Audio Graph Output" );
     }
 
     void AudioGraphModel::followSelectedRename( const hashed_string& previousName )
     {
-        const AudioGraphNodeDesc* pNode = editSelectedNode();
+        const AudioGraphNodeDef* pNode = editSelectedNode();
         if ( pNode == nullptr || pNode->_name.isEqual( previousName, NameCase::CaseSensitive ) )
             return;
         AudioGraphEditUtil::replaceNodeReferences( _editGraph, previousName, pNode->_name );

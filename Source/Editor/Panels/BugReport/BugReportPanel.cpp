@@ -44,11 +44,11 @@ namespace sw::editor
         _model.refreshIfDirty();
 
         (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _model.editNote(), 3, SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
-        EditorSelfTestMarks::note( "bugReport.note" );
+        EditorSelfTestMarks::record( "bugReport.note" );
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Bug" ), SW_LOCKEY( "EdButton", "CollectNow" ), "Collect Now" ) ) )
             (void)_model.captureNow(); // 결과는 알림으로 알린다
-        EditorSelfTestMarks::note( "bugReport.capture" );
+        EditorSelfTestMarks::record( "bugReport.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "Capture" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) )

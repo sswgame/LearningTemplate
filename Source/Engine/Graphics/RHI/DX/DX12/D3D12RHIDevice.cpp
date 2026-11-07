@@ -2125,7 +2125,7 @@ namespace sw
                                                  lastSerial );
     }
 
-    void D3D12RHIDevice::noteTextureTransfer( RHITextureHandle texture, uint64 serial )
+    void D3D12RHIDevice::recordTextureTransfer( RHITextureHandle texture, uint64 serial )
     {
         ScopedLock<mutex> lock{ _textureTransferMutex };
         _mapTextureTransferMarks[texture].recordWrite( serial );

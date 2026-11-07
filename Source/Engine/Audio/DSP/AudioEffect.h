@@ -1,8 +1,8 @@
 /**
  * @file AudioEffect.h
  * @brief 버스 이펙트의 공통 틀입니다. 이름을 붙인 파라미터와 처리 함수, 그리고 데이터의 이름으로 이펙트를 만드는 레지스트리를 담습니다.
- * @details 이펙트 종류는 코드의 테이블(`AudioEffectRegistry`)에 항목 하나씩 있고, 데이터(`*.audiomixer.xml` 의 `AudioEffectDesc`)는 종류 이름과 파라미터 이름으로만
- *          고른다. 모르는 종류나 모르는 파라미터는 읽기 오류다. 파라미터는 스냅샷이 이름으로 바꾼다(`AudioSnapshotDesc`).
+ * @details 이펙트 종류는 코드의 테이블(`AudioEffectRegistry`)에 항목 하나씩 있고, 데이터(`*.audiomixer.xml` 의 `AudioEffectDef`)는 종류 이름과 파라미터 이름으로만
+ *          고른다. 모르는 종류나 모르는 파라미터는 읽기 오류다. 파라미터는 스냅샷이 이름으로 바꾼다(`AudioSnapshotDef`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -29,7 +29,7 @@ namespace sw
 
 namespace sw
 {
-    struct AudioEffectDesc;
+    struct AudioEffectDef;
 
     class IAudioEffect;
 
@@ -40,7 +40,7 @@ namespace sw
         const AudioEffectParameterInfo* _pParameter{ nullptr };
         uint32                          _parameterCount{ 0 };
         /** @brief 만드는 함수입니다. 데이터(@p desc, 임펄스 응답 같은 자원 경로)를 읽지 못하면 오류를 남기고 nullptr 를 돌려줍니다. */
-        unique_ptr<IAudioEffect> ( *_pCreate )( const AudioEffectTypeInfo& typeInfo, const AudioEffectDesc& desc, AudioChannelLayout layout ){ nullptr };
+        unique_ptr<IAudioEffect> ( *_pCreate )( const AudioEffectTypeInfo& typeInfo, const AudioEffectDef& desc, AudioChannelLayout layout ){ nullptr };
         uint8 _supportedLayoutMask{ 0 }; ///< 처리할 수 있는 레이아웃의 비트(`1 << AudioChannelLayout`)다. 믹서가 맞지 않는 그래프를 초기화 오류로 멈춘다.
 
         /** @brief 이 종류가 @p layout 을 처리할 수 있는지입니다. */
@@ -110,7 +110,7 @@ namespace sw
          * @brief 데이터 @p desc 의 종류로 @p layout 용 이펙트를 만들고 데이터의 파라미터를 겁니다(적지 않은 파라미터는 기본값).
          * @return 모르는 종류 · 모르는 파라미터 · 지원하지 않는 레이아웃 · 읽지 못한 자원(컨볼루션 리버브의 임펄스 응답)이면 오류를 남기고 nullptr 입니다.
          */
-        static unique_ptr<IAudioEffect> createEffect( const AudioEffectDesc& desc, AudioChannelLayout layout );
+        static unique_ptr<IAudioEffect> createEffect( const AudioEffectDef& desc, AudioChannelLayout layout );
         /** @brief 번호의 종류입니다. */
         static const AudioEffectTypeInfo& getType( uint32 typeIndex );
     };

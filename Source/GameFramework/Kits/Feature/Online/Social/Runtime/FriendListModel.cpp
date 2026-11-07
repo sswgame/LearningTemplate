@@ -29,7 +29,7 @@ namespace sw
 
     FriendListModel::FriendListModel()
         : _listEntry{}
-        , _listDrained{}
+        , _listPolled{}
         , _pClient{ nullptr }
         , _revision{ 0 }
         , _pendingRequestCount{ 0 }
@@ -157,9 +157,9 @@ namespace sw
 
     bool FriendListModel::initialize( SocialClient* pClient )
     {
-        _drainLease.release();
+        _consumerLease.release();
         _pClient = nullptr;
-        if ( pClient != nullptr && pClient->claimNotifications( _drainLease ) == false )
+        if ( pClient != nullptr && pClient->claimNotifications( _consumerLease ) == false )
             return false;
         _pClient = pClient;
         return true;
@@ -169,9 +169,9 @@ namespace sw
     {
         if ( _pClient == nullptr )
             return;
-        _listDrained.clear();
-        _pClient->drainNotifications( _drainLease, _listDrained );
-        for ( const SocialNotification& notification : _listDrained )
+        _listPolled.clear();
+        _pClient->pollNotifications( _consumerLease, _listPolled );
+        for ( const SocialNotification& notification : _listPolled )
         {
             applyNotification( notification );
         }

@@ -101,7 +101,7 @@ namespace sw
         , _buildNotice{}
         , _onBeforeCommitBatch{}
         , _reloadHolds{}
-        , _drainWorkers{}
+        , _flushWorkers{}
         , _listCallbackRegistration{}
         , _callbackIDAllocator{}
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
@@ -495,10 +495,10 @@ namespace sw
         return _reloadHolds.add( delegate );
     }
 
-    Subscription LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
+    Subscription LiveReloadManager::setFlushWorkers( FlushWorkersDelegate delegate )
     {
-        _drainWorkers = std::move( delegate );
-        return issueSlotSubscription( string_view{}, CallbackSlot::DrainWorkers );
+        _flushWorkers = std::move( delegate );
+        return issueSlotSubscription( string_view{}, CallbackSlot::FlushWorkers );
     }
 
     Subscription LiveReloadManager::issueSlotSubscription( string_view moduleName, CallbackSlot slot )
@@ -536,9 +536,9 @@ namespace sw
 
     void LiveReloadManager::clearSlot( const CallbackRegistration& registration )
     {
-        if ( registration._slot == CallbackSlot::DrainWorkers )
+        if ( registration._slot == CallbackSlot::FlushWorkers )
         {
-            _drainWorkers = {};
+            _flushWorkers = {};
             return;
         }
         // 기록이 이미 지워졌으면(그래프 비우기) 비울 칸도 없다.
@@ -568,7 +568,7 @@ namespace sw
                 record._onValidateLibrary = {};
                 break;
             }
-            case CallbackSlot::DrainWorkers:
+            case CallbackSlot::FlushWorkers:
             {
                 break;
             }
@@ -754,12 +754,12 @@ namespace sw
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
                 {
-                    const utf8* pOutcome = ( context._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
+                    const utf8* pResult = ( context._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
                     if ( bCompleted == false )
                         SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX", "Module %# faulted (code 0x%#) while the host checked it — %#", context._moduleName,
-                                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pOutcome );
+                                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pResult );
                     else
-                        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleRejectedHostBefore", "Module %# was rejected by the host before it took over — %#", context._moduleName, pOutcome );
+                        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleRejectedHostBefore", "Module %# was rejected by the host before it took over — %#", context._moduleName, pResult );
                     abortShadowCopy( context, outShadow );
                     outShadow = {};
                     return false;
@@ -781,7 +781,7 @@ namespace sw
         BLOCK( "Swap Module Handles" )
         {
             // onBeforeReload 가 모듈 자원을 건드리기 전에 워커가 옛 라이브러리에서 빠져나와 있어야 한다.
-            if ( pPreviousHandle != nullptr && drainTasksBeforeUnload() == false )
+            if ( pPreviousHandle != nullptr && flushTasksBeforeUnload() == false )
                 return false;
 
             if ( context._onBeforeReload.isBound() && pPreviousHandle != nullptr )
@@ -790,7 +790,7 @@ namespace sw
             if ( pPreviousHandle != nullptr )
             {
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
-                drainTasksBeforeUnload();
+                flushTasksBeforeUnload();
                 engine::unregisterModuleTypes( context._moduleName );
             }
 
@@ -881,7 +881,7 @@ namespace sw
         if ( context._pLibraryModule != nullptr )
         {
             SW_LOG_INFO_ID( "LiveReloadManager.UnloadingModuleHandle", "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._pLibraryModule );
-            drainTasksBeforeUnload();
+            flushTasksBeforeUnload();
 
             engine::unregisterModuleTypes( context._moduleName );
             ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
@@ -902,7 +902,7 @@ namespace sw
             _listSharedModule.clear();
             return;
         }
-        drainTasksBeforeUnload();
+        flushTasksBeforeUnload();
         for ( auto it = _listSharedModule.rbegin(); it != _listSharedModule.rend(); ++it )
         {
             SW_LOG_INFO_ID( "LiveReloadManager.UnloadingSharedModuleHandle", "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
@@ -913,9 +913,9 @@ namespace sw
         _listSharedModule.clear();
     }
 
-    bool LiveReloadManager::drainTasksBeforeUnload()
+    bool LiveReloadManager::flushTasksBeforeUnload()
     {
-        const bool bDrained = drainWorkersBeforeUnload();
+        const bool bDrained = flushWorkersBeforeUnload();
         // 큐에 든 이벤트는 그것을 넣은 모듈의 vtable(소멸자 · 타입)을 가진다 — 워커를 비운 지금 배달하고 비워, 내려간 코드를 가리키는 이벤트가 남지 않게 한다.
         // 그 모듈의 구독자는 인스턴스와 함께 이미 풀렸으므로 남은 구독자(엔진 · 다른 모듈)만 받는다.
         if ( engine::areEngineServicesBound() )
@@ -926,9 +926,9 @@ namespace sw
         return bDrained;
     }
 
-    bool LiveReloadManager::drainWorkersBeforeUnload()
+    bool LiveReloadManager::flushWorkersBeforeUnload()
     {
-        // App 경로에서는 _drainWorkers(= GameModuleManager::drainRenderWorkers)가 실제로 비우고, 아래 폴백은 헤드리스 · 테스트에서만
+        // App 경로에서는 _flushWorkers(= GameModuleManager::flushRenderWorkers)가 실제로 비우고, 아래 폴백은 헤드리스 · 테스트에서만
         // 돈다. 제한 시간 상수는 양쪽이 함께 쓴다.
 
         // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 라이브러리에 들어가지 못하게 한다.
@@ -937,18 +937,18 @@ namespace sw
             engine::getSubsystem<SceneManager>().cancelPendingAsyncLoads();
 
         // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
-        if ( _drainWorkers.isBound() )
+        if ( _flushWorkers.isBound() )
         {
-            _drainWorkers();
+            _flushWorkers();
             if ( _bReloadGraphBroken == SW_TRUE )
                 return false;
             return true;
         }
 
-        // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`GameModuleManager::drainRenderWorkers` 의 같은 주석).
+        // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`GameModuleManager::flushRenderWorkers` 의 같은 주석).
         if ( engine::areEngineServicesBound() )
         {
-            engine::getSubsystem<TaskManager>().waitAll( "LiveReloadManager::drainBeforeUnload" );
+            engine::getSubsystem<TaskManager>().waitAll( "LiveReloadManager::pollBeforeUnload" );
         }
         return _bReloadGraphBroken == SW_FALSE;
     }

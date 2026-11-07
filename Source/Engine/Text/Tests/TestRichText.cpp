@@ -79,7 +79,7 @@ SW_TEST_CASE( RichTextTest, NamedColorSizeAndItalic )
 SW_TEST_CASE( RichTextTest, LayoutSplitsRunsAtSpanBoundaries )
 {
     sw::test::FakeFontServiceFixture fixture;
-    sw::FontCatalogDesc              catalog{};
+    sw::FontCatalogDef               catalog{};
     catalog._defaultFamily = "Latin";
     sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_REQUIRE_TRUE( fixture.initialize( catalog ) );

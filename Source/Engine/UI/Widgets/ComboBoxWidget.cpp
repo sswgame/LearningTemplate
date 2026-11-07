@@ -38,7 +38,7 @@ namespace sw
         class ComboBoxPopupScreen final : public UIScreen
         {
         public:
-            ComboBoxPopupScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, UIScreenHandle ownerScreen, WidgetID combo )
+            ComboBoxPopupScreen( const UIScreenDef& desc, unique_ptr<Widget> root, UIScreenHandle ownerScreen, WidgetID combo )
                 : UIScreen{ desc, std::move( root ) }
                 , _ownerScreen{ ownerScreen }
                 , _combo{ combo }
@@ -203,7 +203,7 @@ namespace sw
         (void)list->addChild( std::move( column ) );
         (void)root->addChild( std::move( list ) );
 
-        UIScreenDesc desc{};
+        UIScreenDef desc{};
         desc._layer                            = UILayer::Modal; // 메뉴 위에 놓되 입력은 막지 않는다(밖 클릭은 루트가 받아 닫는다)
         desc._bModal                           = false;
         desc._defaultFocus                     = Internal::makeOptionName( _selectedIndex != constant::invalid_index::kUint32 ? _selectedIndex : 0 );

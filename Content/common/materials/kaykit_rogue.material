@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- KayKit 도적 아틀라스 머티리얼 — _albedoMap 이 원본 GLB 에 든 텍스처(textures_raw/kaykit_rogue.png)다. _color 는 외형 꾸미기의 염색(MaterialColor → color)이 곱한다. 캐릭터 몸과 그 장비 프리팹이 나눠 쓴다. -->
-<MaterialDesc formatVersion="0" name="KayKitRogue" _base="engine/materials/benchtextured.material">
+<MaterialDef formatVersion="0" name="KayKitRogue" _base="engine/materials/benchtextured.material">
 	<_properties>
 		<item name="_albedoMap" assetPath="common/textures/kaykit_rogue.dds" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

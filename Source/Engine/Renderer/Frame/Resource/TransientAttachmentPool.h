@@ -132,7 +132,7 @@ namespace sw
         /** @brief 이 풀이 지금까지 만든 첨부 수입니다(놓았다 다시 만든 것도 센다 — 진단과 테스트용). */
         uint32 getAllocationCount() const { return _allocationCount; }
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
-        void forget();
+        void clear();
 
         /**
          * @brief 이 첨부를 이번 프레임에 처음 건드리는 것이면 표시하고 true 를 반환합니다.

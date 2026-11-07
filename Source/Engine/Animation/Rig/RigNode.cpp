@@ -339,6 +339,6 @@ namespace sw
 
     bool RigNode::parseCommon( RigXMLReader& reader )
     {
-        return reader.readFields( _common ); // 키 · 기본값 · 범위(가중치 0..1, 화면 크기 >= 0)는 RigNodeCommonFields 의 PROPERTY
+        return reader.readFields( _common ); // 키 · 기본값 · 범위(가중치 0..1, 화면 크기 >= 0)는 RigNodeCommonParams 의 PROPERTY
     }
 } // namespace sw

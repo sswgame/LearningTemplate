@@ -16,7 +16,7 @@
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
-#include "Engine/Automation/Runner/AutomationRunnerFields.h"
+#include "Engine/Automation/Runner/AutomationRunnerParams.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -212,10 +212,10 @@ namespace sw
 
     void AutomationJudge::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectVisitedFields fields = step.readValidatedFields<AutomationExpectVisitedFields>();
-        const string_view                   watch  = fields._watch;
-        const string_view                   target = fields._target;
-        const string_view                   key    = fields._key;
+        const AutomationExpectVisitedParams params = step.readValidatedFields<AutomationExpectVisitedParams>();
+        const string_view                   watch  = params._watch;
+        const string_view                   target = params._target;
+        const string_view                   key    = params._key;
         const WatchHistory*                 pWatch = nullptr;
         for ( const WatchHistory& history : _listWatch )
         {
@@ -223,16 +223,16 @@ namespace sw
             if ( bSame )
                 pWatch = &history;
         }
-        const uint32   since = fields._since; // 적지 않으면 처음부터 본다
+        const uint32   since = params._since; // 적지 않으면 처음부터 본다
         vector<string> listWant;
         if ( step.findAttribute( "is" ) != nullptr )
         {
-            listWant.push_back( fields._is );
+            listWant.push_back( params._is );
         }
         else
         {
             // `sequence` 는 쉼표로 가른 값 목록이다(앞뒤 공백을 떼고 빈 항목은 버린다).
-            for ( const string_view value : StringUtil::split( fields._sequence, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+            for ( const string_view value : StringUtil::split( params._sequence, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
             {
                 listWant.emplace_back( value );
             }
@@ -288,7 +288,7 @@ namespace sw
             context.recordFailure( step, "Remember " + message );
             return;
         }
-        const string name = step.readValidatedFields<AutomationRememberFields>()._as;
+        const string name = step.readValidatedFields<AutomationRememberParams>()._as;
         string       text = AutomationStepArgsUtil::makeValueText( value );
         SW_LOG_INFO_ID( "Automation.FrameRemember", "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
         for ( RememberedValue& remembered : _listRemembered )
@@ -304,17 +304,17 @@ namespace sw
 
     void AutomationJudge::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectLogFields fields     = step.readValidatedFields<AutomationExpectLogFields>();
-        const string                    target     = fields._contains.empty() ? fields._id : string( fields._id + "' containing '" + fields._contains );
-        const uint32                    matchCount = _logCapture.countLinesWithID( fields._id, fields._contains, fields._since );
-        if ( fields._count != kAutomationNoCount )
+        const AutomationExpectLogParams params     = step.readValidatedFields<AutomationExpectLogParams>();
+        const string                    target     = params._contains.empty() ? params._id : string( params._id + "' containing '" + params._contains );
+        const uint32                    matchCount = _logCapture.countLinesWithID( params._id, params._contains, params._since );
+        if ( params._count != kAutomationNoCount )
         {
-            if ( matchCount != fields._count )
-                context.recordFailure( step, formatToString( "ExpectLog id '%#' count == %#, got %#", target, fields._count, matchCount ) );
+            if ( matchCount != params._count )
+                context.recordFailure( step, formatToString( "ExpectLog id '%#' count == %#, got %#", target, params._count, matchCount ) );
             return;
         }
-        if ( matchCount < fields._atLeast )
-            context.recordFailure( step, formatToString( "ExpectLog id '%#' count >= %#, got %#", target, fields._atLeast, matchCount ) );
+        if ( matchCount < params._atLeast )
+            context.recordFailure( step, formatToString( "ExpectLog id '%#' count >= %#, got %#", target, params._atLeast, matchCount ) );
     }
 
     void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
@@ -347,7 +347,7 @@ namespace sw
 
     void AutomationJudge::judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectImagesDifferFields fields = step.readValidatedFields<AutomationExpectImagesDifferFields>();
+        const AutomationExpectImagesDifferParams params = step.readValidatedFields<AutomationExpectImagesDifferParams>();
         AutomationImageRegion                    region{};
         string                                   error;
         AutomationImage                          first;
@@ -355,23 +355,23 @@ namespace sw
         AutomationImage                          reducedFirst;
         AutomationImage                          reducedSecond;
         AutomationImageDifference                difference;
-        const bool                               bRegionRead = fields._region.empty() || AutomationImageMetric::tryParseRegion( fields._region, region );
-        const bool                               bCompared   = bRegionRead && AutomationImageMetric::loadPpm( context.resolveOutputPath( fields._first ), first, error ) &&
-                               AutomationImageMetric::loadPpm( context.resolveOutputPath( fields._second ), second, error ) && AutomationImageMetric::reduce( first, region, reducedFirst, error ) &&
+        const bool                               bRegionRead = params._region.empty() || AutomationImageMetric::tryParseRegion( params._region, region );
+        const bool                               bCompared   = bRegionRead && AutomationImageMetric::loadPpm( context.resolveOutputPath( params._first ), first, error ) &&
+                               AutomationImageMetric::loadPpm( context.resolveOutputPath( params._second ), second, error ) && AutomationImageMetric::reduce( first, region, reducedFirst, error ) &&
                                AutomationImageMetric::reduce( second, region, reducedSecond, error ) && AutomationImageMetric::compare( reducedFirst, reducedSecond, difference, error );
         if ( bCompared == false )
         {
             context.recordFailure( step, "could not compare the images: " + error );
             return;
         }
-        string line = fields._first + " vs " + fields._second + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at least " +
-                      AutomationStepArgsUtil::formatNumber( static_cast<float64>( fields._minDiffering ) * 100.0 ) + "%)";
+        string line = params._first + " vs " + params._second + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at least " +
+                      AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._minDiffering ) * 100.0 ) + "%)";
         SW_LOG_INFO_ID( "Automation.ImagesDiffer", "[Scenario] image %#", line.c_str() );
         _listMetricLine.push_back( line );
-        if ( difference._differingFraction < static_cast<float64>( fields._minDiffering ) )
+        if ( difference._differingFraction < static_cast<float64>( params._minDiffering ) )
             context.recordFailure( step, "the field did not change the picture - " + line );
-        if ( difference._differingFraction > static_cast<float64>( fields._maxDiffering ) )
-            context.recordFailure( step, "the field changed the picture more than allowed (at most " + AutomationStepArgsUtil::formatNumber( static_cast<float64>( fields._maxDiffering ) * 100.0 ) + "%) - " + line );
+        if ( difference._differingFraction > static_cast<float64>( params._maxDiffering ) )
+            context.recordFailure( step, "the field changed the picture more than allowed (at most " + AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._maxDiffering ) * 100.0 ) + "%) - " + line );
     }
 
     void AutomationJudge::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )
@@ -413,7 +413,7 @@ namespace sw
         string                                  error;
         AutomationStepArgsUtil::ExpectImageArgs args;
         (void)AutomationStepArgsUtil::parseExpectImage( step, args, error ); // 미룰 때 읽혔다
-        const string    file = step.readValidatedFields<AutomationExpectImageFields>()._file;
+        const string    file = step.readValidatedFields<AutomationExpectImageParams>()._file;
         AutomationImage image;
         AutomationImage reduced;
         if ( AutomationImageMetric::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImageMetric::reduce( image, args._region, reduced, error ) == false )
@@ -473,7 +473,7 @@ namespace sw
                                          "% of pixels differ (tolerance " + AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%)" );
     }
 
-    void AutomationJudge::applyLogGate( AutomationOutcome& inOutResult, string& outReason )
+    void AutomationJudge::applyLogGate( AutomationResult& inOutResult, string& outReason )
     {
         AutomationLogJudgement judgement = _logCapture.judgeLines( _logPolicy );
         if ( engine::areEngineServicesBound() )
@@ -483,8 +483,8 @@ namespace sw
                 const string line         = "Missing localized text for key '" + key + "'";
                 const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
                 // 시나리오 앞에 남은 같은 사건(`LocalizationManager` 의 `Localization.MissingKey` 줄)이다 — 같은 id 로 판정한다
-                const AutomationLogVerdict verdict = _logPolicy.classify( LogLevel::Warning, "Localization.MissingKey", line );
-                if ( bAlreadySeen || verdict == AutomationLogVerdict::Declared || verdict == AutomationLogVerdict::Allowed )
+                const AutomationLogResult result = _logPolicy.classify( LogLevel::Warning, "Localization.MissingKey", line );
+                if ( bAlreadySeen || result == AutomationLogResult::Declared || result == AutomationLogResult::Allowed )
                     continue;
                 ++judgement._notAllowedCount;
                 judgement._listUnhandled.push_back( "[Warning] [LocalizationManager] (id=Localization.MissingKey) " + line + " (before the scenario started)" );
@@ -495,13 +495,13 @@ namespace sw
             return;
         _listUnhandledLog = std::move( judgement._listUnhandled );
         // 이미 진 실행은 결과를 바꾸지 않는다(원인은 단언 · 시한이다). 줄은 보고의 `unhandledLogs` 에만 남겨, 진 보고도 경고 · 오류 줄을 숨기지 않게 한다.
-        if ( inOutResult != AutomationOutcome::Passed )
+        if ( inOutResult != AutomationResult::Passed )
             return;
         for ( const string& line : _listUnhandledLog )
         {
             _listFailure.push_back( "unhandled log: " + line );
         }
-        inOutResult = AutomationOutcome::UnhandledLog;
+        inOutResult = AutomationResult::UnhandledLog;
         outReason   = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
                     " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
                     " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
@@ -526,9 +526,9 @@ namespace sw
         {
             if ( step._kind != "ExpectLog" )
                 continue;
-            AutomationExpectLogFields fields;
+            AutomationExpectLogParams params;
             string                    readError;
-            const bool                bAbsent = step.readFields( fields, readError ) && fields._count == 0;
+            const bool                bAbsent = step.readFields( params, readError ) && params._count == 0;
             if ( bAbsent )
                 continue;                                                // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
             _logPolicy.declareExpectedID( *step.findAttribute( "id" ) ); // 검사 함수가 id 를 요구했다

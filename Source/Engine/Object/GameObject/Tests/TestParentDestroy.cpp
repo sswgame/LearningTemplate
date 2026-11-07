@@ -11,14 +11,14 @@ using namespace sw;
 namespace
 {
     /** @brief 옮겨 둔 부모와 그 아래 자식입니다. */
-    struct ParentDestroyRig
+    struct ParentDestroyFixture
     {
         GameObjectManager _manager;
         GameObject*       _pParent{ nullptr };
         GameObject*       _pChild{ nullptr };
         SceneComponent*   _pChildScene{ nullptr };
 
-        ParentDestroyRig()
+        ParentDestroyFixture()
         {
             _pParent = _manager.createGameObject( hashed_string( "Parent" ) );
             _pParent->addComponent<SceneComponent>()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } );
@@ -39,7 +39,7 @@ namespace
 
 SW_TEST_CASE( ParentDestroyTest, ChildrenGoWithTheirParentByDefault )
 {
-    ParentDestroyRig       rig;
+    ParentDestroyFixture   rig;
     const GameObjectHandle child = rig._pChild->getHandle();
     rig._manager.destroyGameObject( rig._pParent );
     rig.flush();
@@ -49,7 +49,7 @@ SW_TEST_CASE( ParentDestroyTest, ChildrenGoWithTheirParentByDefault )
 // 표시한 자식은 루트가 되어 있던 자리에 남는다.
 SW_TEST_CASE( ParentDestroyTest, KeptChildStaysWhereItWas )
 {
-    ParentDestroyRig rig;
+    ParentDestroyFixture rig;
     rig._pChild->setKeptWhenParentDestroyed( true );
     const GameObjectHandle child = rig._pChild->getHandle();
     rig._manager.destroyGameObject( rig._pParent );
@@ -65,7 +65,7 @@ SW_TEST_CASE( ParentDestroyTest, KeptChildStaysWhereItWas )
 // 자식만 지워도 부모는 그대로다.
 SW_TEST_CASE( ParentDestroyTest, DestroyingAChildLeavesTheParent )
 {
-    ParentDestroyRig       rig;
+    ParentDestroyFixture   rig;
     const GameObjectHandle parent = rig._pParent->getHandle();
     rig._manager.destroyGameObject( rig._pChild );
     rig.flush();

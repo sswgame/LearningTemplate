@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    struct AudioSnapshotDesc;
+    struct AudioSnapshotDef;
 
     class AudioMixer;
 } // namespace sw
@@ -44,7 +44,7 @@ namespace sw
         void setBusSolo( AudioMixer& mixer, const hashed_string& bus, bool bSolo );
 
         /** @brief 새 그래프로 바뀐 뒤 부릅니다. 버스 사용자 상태를 다시 적용하고, 스냅샷 설명자를 이름으로 다시 찾습니다(없어진 이름은 지운다). */
-        void adoptMixer( AudioMixer& mixer );
+        void applyMixer( AudioMixer& mixer );
         /** @brief 블록 하나만큼 스냅샷 세기를 옮기고, 버스 오프셋 · 센드 · 이펙트 파라미터에 적용합니다. */
         void update( AudioMixer& mixer );
 
@@ -52,11 +52,11 @@ namespace sw
         /** @brief 스냅샷 하나의 실행 상태입니다. 켠 순서대로 목록에 둡니다. */
         struct SnapshotState
         {
-            hashed_string            _name{};
-            const AudioSnapshotDesc* _pDesc{ nullptr };
-            float32                  _intensity{ 0.0f };
-            float32                  _target{ 0.0f };
-            bool                     _bDriven{ false }; ///< 게임이 세기를 직접 정한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            hashed_string           _name{};
+            const AudioSnapshotDef* _pDesc{ nullptr };
+            float32                 _intensity{ 0.0f };
+            float32                 _target{ 0.0f };
+            bool                    _bDriven{ false }; ///< 게임이 세기를 직접 정한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 버스 이름에 남는 사용자 상태입니다. 그래프를 바꾸면 다시 적용합니다. */

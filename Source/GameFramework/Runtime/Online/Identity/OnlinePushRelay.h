@@ -147,7 +147,7 @@ namespace sw
             const utf8*         pName    = findEnumName( pushEnum, static_cast<int64>( pushName ) );
             if ( pName == nullptr )
             {
-                noteMissingPushName( pushEnum, static_cast<int64>( pushName ) );
+                recordMissingPushName( pushEnum, static_cast<int64>( pushName ) );
                 return false;
             }
             outRelay._accountID = accountID;
@@ -162,6 +162,6 @@ namespace sw
 
         static void registerEntry( OnlinePushRelayEntry* pEntry );
         static void unregisterEntry( OnlinePushRelayEntry* pEntry );
-        static void noteMissingPushName( const hashed_string& pushEnum, int64 value );
+        static void recordMissingPushName( const hashed_string& pushEnum, int64 value );
     };
 } // namespace sw

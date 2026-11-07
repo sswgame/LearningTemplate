@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    KeyRebindScreen::KeyRebindScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    KeyRebindScreen::KeyRebindScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _capturedSlotText{}
         , _settingID{}

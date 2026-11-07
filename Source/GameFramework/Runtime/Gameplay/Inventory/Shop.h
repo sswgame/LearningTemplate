@@ -75,7 +75,7 @@ namespace sw
         void setBalance( const hashed_string& currency, int64 amount );
         void clear();
         /** @brief 쌓인 변화를 넘겨 주고 비웁니다. */
-        void drainEvents( vector<WalletEvent>& outListEvent );
+        void pollEvents( vector<WalletEvent>& outListEvent );
         /** @brief 통화마다 이름과 잔액을 처음 만난 순서로 씁니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 통화 이름이 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다. 음수 잔액(빚)도 그대로 복원합니다. */
@@ -266,7 +266,7 @@ namespace sw
         ShopResult sell( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
         /** @brief 하루를 넘깁니다. 시세를 회복하고, 재입고할 때가 되면 재입고합니다. */
         void advanceDay();
-        void drainEvents( vector<ShopEvent>& outListEvent );
+        void pollEvents( vector<ShopEvent>& outListEvent );
 
         /** @brief 사는 단가입니다. 가게가 팔지 않는 아이템이면 -1 입니다. */
         int32 computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const;

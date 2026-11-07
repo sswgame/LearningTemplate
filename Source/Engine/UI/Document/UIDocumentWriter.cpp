@@ -114,7 +114,7 @@ namespace sw
             }
 
             /** @brief 위젯 @p widget 과 그 자식을 @p parent 아래 원소로 씁니다. */
-            static void writeWidget( const Widget& widget, const XMLNode& parent, const vector<UIBindingDesc>& listBinding )
+            static void writeWidget( const Widget& widget, const XMLNode& parent, const vector<UIBindingDef>& listBinding )
             {
                 const TypeInfo* pType = widget.getTypeInfo();
                 if ( pType == nullptr )
@@ -130,7 +130,7 @@ namespace sw
                     // 다른 필드가 없어도 위젯 요소는 남긴다(타입이 곧 내용이다). 적었는지는 반환하지 않는다
                     (void)writeDifference( currentDocument.getRoot(), bDefaults ? defaultDocument.getRoot() : XMLNode{}, element, *pType );
                 }
-                for ( const UIBindingDesc& binding : listBinding )
+                for ( const UIBindingDef& binding : listBinding )
                 {
                     if ( binding._widget == widget.getID() )
                         writeAtPath( element, binding._propertyPath, binding._expression );
@@ -150,7 +150,7 @@ namespace sw
 
 namespace sw
 {
-    string UIDocumentWriter::write( const UIScreenDesc& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UIBindingDesc>& listBinding,
+    string UIDocumentWriter::write( const UIScreenDef& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UIBindingDef>& listBinding,
                                     const vector<UIAnimation>& listAnimation )
     {
         using Internal = UIDocumentWriterInternal;
@@ -159,10 +159,10 @@ namespace sw
         documentRoot.appendAttribute( kSchemaVersionKey, UIDocumentAsset::kVersion );
 
         // 화면 서술은 기본값과 다른 필드가 있을 때만 쓴다.
-        XMLDocument        currentDesc;
-        XMLDocument        defaultDesc;
-        const UIScreenDesc defaults{};
-        const TypeInfo&    descType = *UIScreenDesc::StaticType();
+        XMLDocument       currentDesc;
+        XMLDocument       defaultDesc;
+        const UIScreenDef defaults{};
+        const TypeInfo&   descType = *UIScreenDef::StaticType();
         if ( currentDesc.parse( XMLSerializer::serialize( &desc, descType ) ) && defaultDesc.parse( XMLSerializer::serialize( &defaults, descType ) ) )
         {
             XMLDocument   scratch;

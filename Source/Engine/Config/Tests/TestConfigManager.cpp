@@ -139,20 +139,20 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
     } ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 1024, 768 ) ) );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadOutcome::Reloaded );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadResult::Reloaded );
     SW_EXPECT_TRUE_MSG( manager.getConfig<EngineConfig>() == pBefore, "the reload replaced the config object (a kept pointer dangles)" );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
     SW_EXPECT_TRUE( notifiedType == EngineConfig::StaticType()->_fullyQualifiedName );
 
     // 모르는 경로는 아무것도 하지 않는다.
-    SW_EXPECT_TRUE( manager.reloadConfigFile( test::makeScratchPath( "Other.json" ) ) == ReloadOutcome::NotTracked );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( test::makeScratchPath( "Other.json" ) ) == ReloadResult::NotTracked );
     // 깨진 JSON 은 이전 값을 지킨다.
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "{ \"_window\": { \"_width\": " ) );
     SW_EXPECT_LOG( "JSON.ParseError" );
     SW_EXPECT_LOG( "Config.NotJSONObject" );
     SW_EXPECT_LOG( "Config.ReloadInvalid" );
-    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadOutcome::Failed );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) == ReloadResult::Failed );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
 }

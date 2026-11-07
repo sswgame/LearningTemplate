@@ -408,7 +408,7 @@ namespace sw
         LittleEndianUtil::appendUint16( _responseBytes, errorCode );
         if ( pDetail != nullptr )
             _responseBytes.insert( _responseBytes.end(), pDetail->getBytes().begin(), pDetail->getBytes().begin() + pDetail->getByteCount() );
-        const NetResponseRetention retention = OnlineError::isRetryable( errorCode ) ? NetResponseRetention::Forget : NetResponseRetention::Remember; // 다시 하라는 오류를 기억하면 같은 키의 재시도가 같은 오류만 받는다
+        const NetResponseRetention retention = OnlineError::isRetryable( errorCode ) ? NetResponseRetention::Discard : NetResponseRetention::Keep; // 다시 하라는 오류를 기억하면 같은 키의 재시도가 같은 오류만 받는다
         return _requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ), retention );
     }
 
@@ -639,7 +639,7 @@ namespace sw
         {
             BitWriter body;
             body.writeVarInt( _nowMs.count() );
-            (void)respondOk( context._token, body, NetResponseRetention::Remember ); // 핑은 멱등 키 없이 온다
+            (void)respondOk( context._token, body, NetResponseRetention::Keep ); // 핑은 멱등 키 없이 온다
             return;
         }
         IOnlineServerService* pService = findService( method );
@@ -693,7 +693,7 @@ namespace sw
         BitWriter answer;
         answer.writeVarUint( _settings._pRemoteConfig != nullptr ? _settings._pRemoteConfig->getSnapshotHash() : 0 );
         answer.writeVarInt( _nowMs.count() );
-        (void)respondOk( context._token, answer, NetResponseRetention::Remember ); // Hello 는 멱등 키 없이 온다
+        (void)respondOk( context._token, answer, NetResponseRetention::Keep ); // Hello 는 멱등 키 없이 온다
     }
 
     void OnlineServiceHost::respondVersionMismatch( const NetRequestToken& token )

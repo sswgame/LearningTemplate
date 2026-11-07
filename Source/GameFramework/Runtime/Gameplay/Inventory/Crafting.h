@@ -51,7 +51,7 @@ namespace sw
 
     /** @brief 레시피의 물건 줄(`<In|Tool|Out item count/>`)입니다. */
     REFLECT()
-    struct SW_GF_API RecipeItemFields
+    struct SW_GF_API RecipeItemParams
     {
         REFLECT_BODY();
 

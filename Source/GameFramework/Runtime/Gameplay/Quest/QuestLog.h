@@ -128,7 +128,7 @@ namespace sw
         bool isObjectiveOpen( const hashed_string& questID, const hashed_string& kind, const hashed_string& target ) const;
         /** @brief 진행 중인 퀘스트의 id 목록입니다. 받은 순서입니다. */
         void collectActive( vector<hashed_string>& outListQuest ) const;
-        void drainEvents( vector<QuestEvent>& outListEvent );
+        void pollEvents( vector<QuestEvent>& outListEvent );
         /** @brief 퀘스트마다 진행 상황(단계, 목표 개수, 단계 시간, 완료 횟수, 상태, 선택 대기)을 씁니다. */
         void writeState( Archive& outArchive ) const;
         /**

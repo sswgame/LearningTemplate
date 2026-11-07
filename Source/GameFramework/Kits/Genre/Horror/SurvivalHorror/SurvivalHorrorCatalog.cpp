@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
 
 #include "Core/Container/StringUtil.h"
 
@@ -13,7 +13,7 @@ namespace sw
 {
     namespace
     {
-        struct HorrorCatalogInternal
+        struct SurvivalHorrorCatalogInternal
         {
 
             /** @brief `code="3 1 4"` 를 숫자 목록으로 읽습니다. 비었거나 깨진 숫자가 있으면 오류입니다. */
@@ -28,20 +28,20 @@ namespace sw
                         outListDigit.push_back( digit );
                     else
                     {
-                        SW_LOG_ERROR_ID( "HorrorCatalog.DialLockBadDigit", "%#: dial lock '%#' has a bad digit '%#'", sourceName, id.c_str(), token );
+                        SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.DialLockBadDigit", "%#: dial lock '%#' has a bad digit '%#'", sourceName, id.c_str(), token );
                         bValid = false;
                     }
                 } );
                 if ( outListDigit.empty() )
                 {
-                    SW_LOG_ERROR_ID( "HorrorCatalog.DialLockNeedsCode", "%#: dial lock '%#' needs code=\"...\"", sourceName, id.c_str() );
+                    SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.DialLockNeedsCode", "%#: dial lock '%#' needs code=\"...\"", sourceName, id.c_str() );
                     bValid = false;
                 }
                 return bValid;
             }
 
             /** @brief "a-b,c-d" 를 연결 목록으로 읽습니다. 모양이 틀린 연결은 오류입니다. */
-            [[nodiscard]] static bool readLinks( string_view text, vector<HorrorClueLink>& outListLink, string_view sourceName, const hashed_string& id )
+            [[nodiscard]] static bool readLinks( string_view text, vector<SurvivalHorrorClueLink>& outListLink, string_view sourceName, const hashed_string& id )
             {
                 outListLink.clear();
                 bool bValid = true;
@@ -52,11 +52,11 @@ namespace sw
                     // 단서를 자기 자신과 잇는 연결은 보드(`linkClues`)가 받지 않으므로 그런 추리는 풀 수 없다.
                     if ( bMalformedLink || token.substr( 0, dash ) == token.substr( dash + 1 ) )
                     {
-                        SW_LOG_ERROR_ID( "HorrorCatalog.DeductionBadLinkExpected", "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, id.c_str(), token );
+                        SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.DeductionBadLinkExpected", "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, id.c_str(), token );
                         bValid = false;
                         return;
                     }
-                    HorrorClueLink link;
+                    SurvivalHorrorClueLink link;
                     link._first  = hashed_string( token.substr( 0, dash ) );
                     link._second = hashed_string( token.substr( dash + 1 ) );
                     outListLink.push_back( link );
@@ -66,7 +66,7 @@ namespace sw
         };
     } // namespace
 
-    HorrorCatalog::HorrorCatalog()
+    SurvivalHorrorCatalog::SurvivalHorrorCatalog()
         : _itemCatalog{}
         , _monsterCatalog{}
         , _keyLockCatalog{}
@@ -79,7 +79,7 @@ namespace sw
     {
     }
 
-    const RecipeDef* HorrorCatalog::findCombine( const hashed_string& firstItem, const hashed_string& secondItem ) const
+    const RecipeDef* SurvivalHorrorCatalog::findCombine( const hashed_string& firstItem, const hashed_string& secondItem ) const
     {
         const hashed_string station = getCombineStation();
         for ( const RecipeDef& recipe : _recipeCatalog.getAll() )
@@ -98,26 +98,26 @@ namespace sw
         return nullptr;
     }
 
-    uint32 HorrorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 SurvivalHorrorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
         // 열쇠 자물쇠가 가리키는 열쇠는 모두 읽은 뒤에 확인한다(자물쇠가 아이템보다 앞에 적혀도 된다).
-        for ( const HorrorKeyLockDef& lock : _keyLockCatalog.getAll() )
+        for ( const SurvivalHorrorKeyLockDef& lock : _keyLockCatalog.getAll() )
         {
             if ( _itemCatalog.find( lock._keyItem ) == nullptr )
-                SW_LOG_ERROR_ID( "HorrorCatalog.KeyLockNamesUnknown", "%#: key lock '%#' names an unknown key item '%#'", sourceName, lock._id.c_str(), lock._keyItem.c_str() );
+                SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.KeyLockNamesUnknown", "%#: key lock '%#' names an unknown key item '%#'", sourceName, lock._id.c_str(), lock._keyItem.c_str() );
         }
         return loadedCount;
     }
 
-    bool HorrorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool SurvivalHorrorCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Rules" ) )
             return GameDataXML::readSetting( node, sourceName, _rules );
@@ -137,13 +137,13 @@ namespace sw
             return loadDocument( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Deduction" ) )
             return loadDeduction( node, sourceName );
-        SW_LOG_ERROR_ID( "HorrorCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
+        SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
     }
 
-    bool HorrorCatalog::loadCombine( const XMLNode& node, string_view sourceName )
+    bool SurvivalHorrorCatalog::loadCombine( const XMLNode& node, string_view sourceName )
     {
-        HorrorCombineDef combine;
+        SurvivalHorrorCombineDef combine;
         if ( XMLFields::readFields( node, combine, sourceName ) == false )
             return false;
         RecipeDef recipe;
@@ -155,50 +155,50 @@ namespace sw
         return GameDataXML::addUnique( recipe, sourceName, _recipeCatalog );
     }
 
-    bool HorrorCatalog::loadDialLock( const XMLNode& node, string_view sourceName )
+    bool SurvivalHorrorCatalog::loadDialLock( const XMLNode& node, string_view sourceName )
     {
-        HorrorDialLockDef lock;
-        bool              bValid = XMLFields::readFields( node, lock, sourceName, { "code" } );
-        bValid                   = HorrorCatalogInternal::readDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, lock._id ) && bValid;
+        SurvivalHorrorDialLockDef lock;
+        bool                      bValid = XMLFields::readFields( node, lock, sourceName, { "code" } );
+        bValid                           = SurvivalHorrorCatalogInternal::readDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, lock._id ) && bValid;
         return bValid && GameDataXML::addUnique( lock, sourceName, _dialLockCatalog );
     }
 
-    bool HorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
+    bool SurvivalHorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
     {
-        HorrorSequenceDef sequence;
+        SurvivalHorrorSequenceDef sequence;
         if ( XMLFields::readFields( node, sequence, sourceName ) == false )
             return false;
         if ( sequence._listStep.empty() )
         {
-            SW_LOG_ERROR_ID( "HorrorCatalog.SequenceNeedsStepsB", "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
+            SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.SequenceNeedsStepsB", "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
             return false;
         }
         return GameDataXML::addUnique( sequence, sourceName, _sequenceCatalog );
     }
 
-    bool HorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
+    bool SurvivalHorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
     {
-        HorrorDocumentDef document;
+        SurvivalHorrorDocumentDef document;
         if ( XMLFields::readFields( node, document, sourceName ) == false )
             return false;
         return GameDataXML::addUnique( document, sourceName, _documentCatalog );
     }
 
-    bool HorrorCatalog::loadDeduction( const XMLNode& node, string_view sourceName )
+    bool SurvivalHorrorCatalog::loadDeduction( const XMLNode& node, string_view sourceName )
     {
-        HorrorDeductionDef deduction;
-        bool               bValid = XMLFields::readFields( node, deduction, sourceName, { "links" } );
-        bValid                    = HorrorCatalogInternal::readLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, deduction._id ) && bValid;
+        SurvivalHorrorDeductionDef deduction;
+        bool                       bValid = XMLFields::readFields( node, deduction, sourceName, { "links" } );
+        bValid                            = SurvivalHorrorCatalogInternal::readLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, deduction._id ) && bValid;
         return bValid && GameDataXML::addUnique( deduction, sourceName, _deductionCatalog );
     }
 
-    GridInventory::ShapeDelegate HorrorCatalog::makeShapeLookup() const
+    GridInventory::ShapeDelegate SurvivalHorrorCatalog::makeShapeLookup() const
     {
-        const HorrorCatalog* pCatalog = this;
+        const SurvivalHorrorCatalog* pCatalog = this;
         return GridInventory::ShapeDelegate::create(
             [pCatalog]( const hashed_string& itemID, GridItemShape& outShape )
         {
-            const HorrorItemDef* pItem = pCatalog->findItem( itemID );
+            const SurvivalHorrorItemDef* pItem = pCatalog->findItem( itemID );
             if ( pItem == nullptr )
                 return false;
             outShape._width    = pItem->_width;
@@ -211,6 +211,6 @@ namespace sw
 
 namespace sw
 {
-    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<HorrorCatalog>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( HorrorCatalog, HorrorCatalog, SW_KIT_API, HorrorCatalog::kAssetType.withLoader( AssetTypeLoader::of<HorrorCatalog>( MemoryTag::Game ) ) );
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<SurvivalHorrorCatalog>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( SurvivalHorrorCatalog, SurvivalHorrorCatalog, SW_KIT_API, SurvivalHorrorCatalog::kAssetType.withLoader( AssetTypeLoader::of<SurvivalHorrorCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

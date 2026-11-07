@@ -72,10 +72,10 @@ namespace sw
         return _roundTicksRemaining > 0 ? RoundSeriesTick::None : RoundSeriesTick::TimeUp;
     }
 
-    RoundSeriesOutcome RoundSeries::reportRound( const vector<int32>& listRoundScore )
+    RoundSeriesResult RoundSeries::reportRound( const vector<int32>& listRoundScore )
     {
         if ( _phase != RoundSeriesPhase::RoundActive || listRoundScore.size() != _listTotal.size() )
-            return RoundSeriesOutcome::Rejected;
+            return RoundSeriesResult::Rejected;
         const int32 participantCount = getParticipantCount();
         for ( int32 participant = 0; participant < participantCount; ++participant )
         {
@@ -84,11 +84,11 @@ namespace sw
         return finishRound();
     }
 
-    RoundSeriesOutcome RoundSeries::reportRoundWinner( int32 winner )
+    RoundSeriesResult RoundSeries::reportRoundWinner( int32 winner )
     {
         const bool bKnownWinner = winner == kNoWinner || isValidParticipant( winner );
         if ( _phase != RoundSeriesPhase::RoundActive || bKnownWinner == false )
-            return RoundSeriesOutcome::Rejected;
+            return RoundSeriesResult::Rejected;
         // 무승부 라운드는 모두 1 위이고, 아니면 이긴 쪽이 1 위, 나머지가 2 위이다.
         const int32 participantCount = getParticipantCount();
         for ( int32 participant = 0; participant < participantCount; ++participant )
@@ -99,7 +99,7 @@ namespace sw
         return finishRound();
     }
 
-    RoundSeriesOutcome RoundSeries::finishRound()
+    RoundSeriesResult RoundSeries::finishRound()
     {
         // 목표에 닿은 참가자 중 총점이 가장 높은 한 명을 고른다. 같으면 동점 규칙을 따른다.
         int32       best             = kNoWinner;
@@ -127,16 +127,16 @@ namespace sw
         {
             _winner = bTied ? kNoWinner : best;
             _phase  = RoundSeriesPhase::Finished;
-            return RoundSeriesOutcome::Finished;
+            return RoundSeriesResult::Finished;
         }
         if ( _settings._intermissionTicks > 0 )
         {
             _phase                      = RoundSeriesPhase::Intermission;
             _intermissionTicksRemaining = _settings._intermissionTicks;
-            return RoundSeriesOutcome::Intermission;
+            return RoundSeriesResult::Intermission;
         }
         openRound( _roundIndex + 1 );
-        return RoundSeriesOutcome::NextRound;
+        return RoundSeriesResult::NextRound;
     }
 
     void RoundSeries::validateState( ValidationContext& context ) const

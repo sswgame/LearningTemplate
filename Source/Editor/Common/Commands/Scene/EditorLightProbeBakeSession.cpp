@@ -236,7 +236,7 @@ namespace sw::editor
             return;
         }
         const uint32 probeCount = static_cast<uint32>( grid._listProbe.size() );
-        if ( pVolume->adoptProbeData( std::move( grid ), assetPath ) == false )
+        if ( pVolume->applyProbeData( std::move( grid ), assetPath ) == false )
         {
             reportFailure( "the baked grid does not fit the volume" );
             return;

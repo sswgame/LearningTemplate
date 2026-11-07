@@ -124,7 +124,7 @@ SW_TEST_CASE( SceneAssemblyTest, PartOverridesApplyAndSaveAsDifference )
     SW_REQUIRE_TRUE( scene.serializeToDocument( written ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, written._listSceneObjectNode.size() ); // 멤버는 엔티티로 적지 않는다
     const string savedPath = domain.makeDiskPath( "saved.scene.xml" );
-    SW_REQUIRE_TRUE( written.saveXML( Util::makeAbsolute( savedPath ) ) );
+    SW_REQUIRE_TRUE( written.saveToFile( Util::makeAbsolute( savedPath ) ) );
     string savedText;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( savedPath, savedText ) );
     SW_EXPECT_TRUE( savedText.find( "<Part path=\"1\"" ) != string::npos );

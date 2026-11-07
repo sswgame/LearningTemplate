@@ -79,7 +79,7 @@ namespace
         int32                           _escapeAttempts{ 0 };
         uint8                           _actionKind{ 0 };
         uint8                           _needsSwitch{ 0 };
-        uint8                           _outcome{ 0 };
+        uint8                           _result{ 0 };
         uint8                           _wild{ 1 };
 
         void write( sw::Archive& written ) const
@@ -120,7 +120,7 @@ namespace
             sw::StateArchiveUtil::writeName( written, _weatherID );
             written << _weatherTurns;
             written << _escapeAttempts;
-            written << _outcome;
+            written << _result;
             written << _wild;
         }
     };
@@ -175,14 +175,14 @@ namespace
 
         int32 countEvents( sw::MonsterBattleEvent::Kind kind )
         {
-            _battle.drainEvents( _listEvent );
+            _battle.pollEvents( _listEvent );
             return sw::VectorUtil::countBy<&sw::MonsterBattleEvent::_kind>( _listEvent, kind );
         }
 
         /** @brief 지금까지의 이벤트에서 @p kind 가 처음 나온 값입니다. 없으면 -1 입니다. */
         int32 findFirstValue( sw::MonsterBattleEvent::Kind kind )
         {
-            _battle.drainEvents( _listEvent );
+            _battle.pollEvents( _listEvent );
             const sw::MonsterBattleEvent* pEvent = sw::VectorUtil::findBy<&sw::MonsterBattleEvent::_kind>( _listEvent, kind );
             return pEvent != nullptr ? pEvent->_value : -1;
         }
@@ -190,7 +190,7 @@ namespace
         /** @brief 이번에 처음 기술을 쓴 편입니다. 이벤트 목록을 비웁니다. */
         int32 takeFirstActor()
         {
-            _battle.drainEvents( _listEvent );
+            _battle.pollEvents( _listEvent );
             const sw::MonsterBattleEvent* pEvent = sw::VectorUtil::findBy<&sw::MonsterBattleEvent::_kind>( _listEvent, sw::MonsterBattleEvent::Kind::MoveUsed );
             const int32                   side   = pEvent != nullptr ? pEvent->_side : -1;
             _listEvent.clear();
@@ -853,12 +853,12 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleBeforeStartDoesNothing )
     sw::vector<sw::MonsterInstance> listOne;
     listOne.push_back( make( "normie", 50, "strike" ) );
     _battle.start( listNone, listOne, false );
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Lost, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Lost, _battle.getResult() );
     _battle.start( listOne, listNone, false );
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Won, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Won, _battle.getResult() );
     listOne[0]._hp = 0;
     _battle.start( listOne, listOne, false );
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Lost, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Lost, _battle.getResult() );
     SW_EXPECT_FALSE( _battle.setAction( sw::MonsterBattle::kPlayerSide, sw::MonsterAction::makeMove( 0 ) ) );
 }
 
@@ -875,7 +875,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StartSkipsFaintedMonsters )
     listFoe.push_back( make( "swift", 50, "strike" ) );
     _battle.start( listPlayer, listFoe, false );
     SW_EXPECT_EQUAL( 1, _battle.getActiveIndex( sw::MonsterBattle::kPlayerSide ) );
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Ongoing, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Ongoing, _battle.getResult() );
 }
 
 /**
@@ -944,7 +944,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, SleepAndStatusFaint )
     dying._hp                 = 1;
     open( dying, make( "swift", 50 ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Lost, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Lost, _battle.getResult() );
     SW_EXPECT_EQUAL( 0, _battle.getActive( player )._hp );
 }
 
@@ -994,7 +994,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StatStages )
         _battle.resolveRound();
     }
     SW_EXPECT_EQUAL( sw::MonsterBattle::kMaxStage, _battle.getStage( player, sw::MonsterStat::Attack ) );
-    _battle.drainEvents( _listEvent );
+    _battle.pollEvents( _listEvent );
     SW_REQUIRE_TRUE( _listEvent.empty() == false );
     int32 lastChange = -1;
     for ( const sw::MonsterBattleEvent& event : _listEvent )
@@ -1094,16 +1094,16 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, WinAndLose )
     const int64 expBefore = _battle.getActive( player )._exp;
     SW_EXPECT_TRUE( _battle.setAction( player, sw::MonsterAction::makeMove( 0 ) ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Won, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Won, _battle.getResult() );
     SW_EXPECT_EQUAL( expBefore + 500, _battle.getActive( player )._exp );
-    SW_EXPECT_EQUAL( static_cast<int32>( sw::MonsterBattleOutcome::Won ), findFirstValue( sw::MonsterBattleEvent::Kind::BattleEnded ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::MonsterBattleResult::Won ), findFirstValue( sw::MonsterBattleEvent::Kind::BattleEnded ) );
     SW_EXPECT_FALSE( _battle.setAction( player, sw::MonsterAction::makeMove( 0 ) ) );
 
     open( weak, make( "swift", 50, "strike" ) );
     const int64 weakExp = _battle.getActive( player )._exp;
     SW_EXPECT_TRUE( _battle.setAction( foe, sw::MonsterAction::makeMove( 0 ) ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Lost, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Lost, _battle.getResult() );
     SW_EXPECT_EQUAL( weakExp, _battle.getActive( player )._exp );
 }
 
@@ -1116,22 +1116,22 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BallAndRun )
     open( make( "normie", 50 ), make( "flamo", 50 ), true );
     SW_EXPECT_TRUE( _battle.setAction( player, sw::MonsterAction::makeBall( 3.0f ) ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Captured, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Captured, _battle.getResult() );
     SW_EXPECT_TRUE( _battle.getCaptured()._speciesID == sw::hashed_string( "flamo" ) );
     SW_EXPECT_EQUAL( 3, countEvents( sw::MonsterBattleEvent::Kind::CaptureShake ) );
 
     open( make( "swift", 50 ), make( "normie", 50 ), true );
     SW_EXPECT_TRUE( _battle.setAction( player, sw::MonsterAction::makeRun() ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Escaped, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Escaped, _battle.getResult() );
 
     open( make( "normie", 50 ), make( "swift", 50 ), true ); // F = 55 × 128 / 205 + 30 × (시도 - 1): 아홉째에 255 를 넘는다
-    for ( int32 attempt = 0; attempt < 9 && _battle.getOutcome() == sw::MonsterBattleOutcome::Ongoing; ++attempt )
+    for ( int32 attempt = 0; attempt < 9 && _battle.getResult() == sw::MonsterBattleResult::Ongoing; ++attempt )
     {
         SW_EXPECT_TRUE( _battle.setAction( player, sw::MonsterAction::makeRun() ) );
         _battle.resolveRound();
     }
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Escaped, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Escaped, _battle.getResult() );
 }
 
 /**
@@ -1213,7 +1213,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRoundTrip )
     _battle.writeState( writtenCaptured );
     sw::Archive readingCaptured( writtenCaptured.getData(), writtenCaptured.getSize() );
     SW_REQUIRE_TRUE( restored.readState( readingCaptured ) );
-    SW_EXPECT_EQUAL( sw::MonsterBattleOutcome::Captured, restored.getOutcome() );
+    SW_EXPECT_EQUAL( sw::MonsterBattleResult::Captured, restored.getResult() );
     SW_EXPECT_TRUE( restored.getCaptured()._speciesID == sw::hashed_string( "flamo" ) );
 
     // 시작 전 전투도 왕복한다. 카탈로그 없이는 읽지 않는다.
@@ -1293,7 +1293,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRefusals )
     SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
     { forged._wild = 2; } ) );
     SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._outcome = 9; } ) );
+    { forged._result = 9; } ) );
     SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
     { forged._escapeAttempts = -1; } ) );
     SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
@@ -1326,7 +1326,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRefusals )
         forged._weatherTurns = -2;
     } ) );
     SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._outcome = static_cast<uint8>( sw::MonsterBattleOutcome::Captured ); } ) ); // 잡은 개체가 없다
+    { forged._result = static_cast<uint8>( sw::MonsterBattleResult::Captured ); } ) ); // 잡은 개체가 없다
     SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
     { forged._captured._speciesID = "nope"; } ) );
 

@@ -100,14 +100,14 @@ namespace
                 case Internal::kEcho:
                 {
                     answer.writeVarUint( body.readVarUint() );
-                    (void)host.respondOk( context._token, answer, NetResponseRetention::Remember );
+                    (void)host.respondOk( context._token, answer, NetResponseRetention::Keep );
                     break;
                 }
                 case Internal::kLogin:
                 {
                     const AccountID accountID = body.readVarUint();
                     if ( host.bindAccount( context._connection, accountID ) )
-                        (void)host.respondOk( context._token, answer, NetResponseRetention::Remember );
+                        (void)host.respondOk( context._token, answer, NetResponseRetention::Keep );
                     else
                         (void)host.respondError( context._token, OnlineError::kConflict );
                     break;
@@ -125,7 +125,7 @@ namespace
                 default:
                 {
                     answer.writeVarUint( context._accountID );
-                    (void)host.respondOk( context._token, answer, NetResponseRetention::Remember );
+                    (void)host.respondOk( context._token, answer, NetResponseRetention::Keep );
                     break;
                 }
             }
@@ -138,7 +138,7 @@ namespace
                 return;
             for ( const NetRequestToken& token : _listLateToken )
             {
-                _listLateAnswer.push_back( host.respondOk( token, BitWriter{}, NetResponseRetention::Remember ) ? SW_TRUE : SW_FALSE );
+                _listLateAnswer.push_back( host.respondOk( token, BitWriter{}, NetResponseRetention::Keep ) ? SW_TRUE : SW_FALSE );
             }
             _listLateToken.clear();
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
@@ -246,7 +246,7 @@ namespace
     };
 
     /** @brief 호스트 하나 + 가짜 서비스 둘. */
-    struct HostRig
+    struct HostFixture
     {
         LoopbackStreamNetwork        _network;
         unique_ptr<IStreamTransport> _hostTransport;
@@ -257,7 +257,7 @@ namespace
         vector<ClientSide*>          _listClient;
         UnixMilliseconds             _nowMs;
 
-        explicit HostRig( OnlineServiceHostConfig settings = makeSettings(), bool bAdminListener = false )
+        explicit HostFixture( OnlineServiceHostConfig settings = makeSettings(), bool bAdminListener = false )
             : _network{ 13u }
             , _hostTransport{ _network.createTransport() }
             , _adminTransport{ bAdminListener ? _network.createTransport() : nullptr }
@@ -365,7 +365,7 @@ namespace
         }
 
         /** @brief 답이 올 때까지 이 쪽과 @p rig 를 번갈아 돌립니다(최대 6 번). */
-        void waitAnswer( HostRig& rig )
+        void waitAnswer( HostFixture& rig )
         {
             for ( int32 index = 0; index < 6 && _bAnswered == false; ++index )
             {
@@ -514,7 +514,7 @@ SW_TEST_CASE( OnlineServiceHostTest, RegisterRefusesOverlappingMisalignedAndHost
  */
 SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst )
 {
-    HostRig       rig;
+    HostFixture   rig;
     RawClientSide raw( rig._network, rig.getPort() );
     for ( int32 index = 0; index < 4; ++index )
     {
@@ -553,7 +553,7 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashI
  */
 SW_TEST_CASE( OnlineServiceHostTest, HelloRefusalsReadOnlyTheFixedHashFieldFirst )
 {
-    HostRig       rig;
+    HostFixture   rig;
     const uint64  schemaHash = OnlineProtocolRegistry::computeSchemaHash();
     RawClientSide shortHello( rig._network, rig.getPort() );
     RawClientSide wrongHashBrokenRest( rig._network, rig.getPort() );
@@ -607,8 +607,8 @@ SW_TEST_CASE( OnlineServiceHostTest, HelloRefusalsReadOnlyTheFixedHashFieldFirst
  */
 SW_TEST_CASE( OnlineServiceHostTest, SameSchemaHashConnects )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     client._client.unregisterClientService( &client._serviceB ); // 서버가 맡은 키트 둘 가운데 하나만 쓴다
     rig.step( 10 );
@@ -622,7 +622,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SameSchemaHashConnects )
  */
 SW_TEST_CASE( OnlineServiceHostTest, SchemaHashMismatchStopsTheClientWithoutReconnecting )
 {
-    HostRig                   rig;
+    HostFixture               rig;
     const OnlineProtocolEntry clientOnlyProtocol{ "OnlineServiceHostTest.ClientOnly", test::TestEmptyMethodTable<Internal::kRangeB + OnlineMethodRange::kSize>{},
                                                   OnlineMessageTypes<>{} };
     ClientSide                client( rig._network, rig.getPort() ); // 이 클라이언트의 해시에는 위 항목이 섞인다
@@ -647,8 +647,8 @@ SW_TEST_CASE( OnlineServiceHostTest, SchemaHashMismatchStopsTheClientWithoutReco
 
 SW_TEST_CASE( OnlineServiceHostTest, AnonymousMethodsPassAndOthersNeedALogin )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     SW_REQUIRE_TRUE( client._client.isReady() );
@@ -674,7 +674,7 @@ SW_TEST_CASE( OnlineServiceHostTest, AnonymousMethodsPassAndOthersNeedALogin )
  */
 SW_TEST_CASE( OnlineServiceHostTest, AdminListenerSplitsServicesByExposure )
 {
-    HostRig rig( HostRig::makeSettings(), true );
+    HostFixture rig( HostFixture::makeSettings(), true );
     rig._serviceB._exposure = OnlineServiceExposure::Admin;
     SW_REQUIRE_TRUE( rig._host.getAdminListenPort() != 0 );
     SW_EXPECT_TRUE( rig._host.getAdminListenPort() != rig.getPort() );
@@ -720,7 +720,7 @@ SW_TEST_CASE( OnlineServiceHostTest, AdminServiceWithoutAnAdminListenerFailsToSt
         OnlineServiceHost host;
         SW_REQUIRE_TRUE( host.registerServerService( &adminService ) );
         string error;
-        SW_EXPECT_FALSE( host.initialize( startTransport.get(), HostRig::makeSettings(), error ) );
+        SW_EXPECT_FALSE( host.initialize( startTransport.get(), HostFixture::makeSettings(), error ) );
         SW_EXPECT_FALSE( error.empty() );
     }
     {
@@ -728,12 +728,12 @@ SW_TEST_CASE( OnlineServiceHostTest, AdminServiceWithoutAnAdminListenerFailsToSt
         OnlineServiceHost host;
         SW_REQUIRE_TRUE( host.registerServerService( &playerService ) );
         string error;
-        SW_REQUIRE_TRUE_MSG( host.initialize( lateTransport.get(), HostRig::makeSettings(), error ), error.c_str() );
+        SW_REQUIRE_TRUE_MSG( host.initialize( lateTransport.get(), HostFixture::makeSettings(), error ), error.c_str() );
         SW_EXPECT_LOG( "OnlineHost.ExposureRefused" ); // GM 리슨이 없는 호스트는 GM 전용 서비스를 받지 않는다
         SW_EXPECT_FALSE( host.registerServerService( &adminService ) );
     }
 
-    HostRig rig;
+    HostFixture rig;
     rig._serviceB._exposure = OnlineServiceExposure::Admin;
     ClientSide client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
@@ -746,10 +746,10 @@ SW_TEST_CASE( OnlineServiceHostTest, AdminServiceWithoutAnAdminListenerFailsToSt
 /** @brief [OnlineServiceHostTest] Hello 를 기한 안에 끝내지 않은 연결은 서버가 닫고, 한 주소의 동시 연결은 상한을 넘지 못한다 */
 SW_TEST_CASE( OnlineServiceHostTest, SilentAndExcessConnectionsAreClosed )
 {
-    OnlineServiceHostConfig settings  = HostRig::makeSettings();
+    OnlineServiceHostConfig settings  = HostFixture::makeSettings();
     settings._helloTimeoutMs          = 200;
     settings._maxConnectionsPerRemote = 2;
-    HostRig rig( settings );
+    HostFixture rig( settings );
     {
         RawClientSide silent( rig._network, rig.getPort() ); // 연결만 열고 Hello 를 보내지 않는다
         for ( int32 index = 0; index < 4; ++index )
@@ -781,11 +781,11 @@ SW_TEST_CASE( OnlineServiceHostTest, SilentAndExcessConnectionsAreClosed )
 
 SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )
 {
-    OnlineServiceHostConfig settings   = HostRig::makeSettings();
+    OnlineServiceHostConfig settings   = HostFixture::makeSettings();
     settings._requestBurstPerRemote    = 3;
     settings._requestRefillMsPerRemote = 10000;
-    HostRig    rig( settings );
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig( settings );
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     SW_REQUIRE_TRUE( client._client.isReady() );
@@ -810,8 +810,8 @@ SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )
 
 SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseAreDropped )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 5 );
@@ -831,15 +831,15 @@ SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseA
     client._client.shutdown();
     rig.step( 4 );
     SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
-    SW_EXPECT_TRUE( rig._host.respondOk( held, BitWriter{}, NetResponseRetention::Remember ) );  // 처리는 끝났다(멱등 기억은 남는다) — 닫힌 연결이라 엔드포인트가 보내지 않는다
-    SW_EXPECT_FALSE( rig._host.respondOk( held, BitWriter{}, NetResponseRetention::Remember ) ); // 한 번만
-    SW_EXPECT_TRUE( orphan._bAnswered && orphan._status == NetRequestStatus::Cancelled );        // 클라이언트는 내릴 때 끝냈다
+    SW_EXPECT_TRUE( rig._host.respondOk( held, BitWriter{}, NetResponseRetention::Keep ) );  // 처리는 끝났다(멱등 기억은 남는다) — 닫힌 연결이라 엔드포인트가 보내지 않는다
+    SW_EXPECT_FALSE( rig._host.respondOk( held, BitWriter{}, NetResponseRetention::Keep ) ); // 한 번만
+    SW_EXPECT_TRUE( orphan._bAnswered && orphan._status == NetRequestStatus::Cancelled );    // 클라이언트는 내릴 때 끝냈다
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, UnbindAccountClosesTheConnectionAndTellsEveryService )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 9 );
@@ -861,10 +861,10 @@ SW_TEST_CASE( OnlineServiceHostTest, UnbindAccountClosesTheConnectionAndTellsEve
 
 SW_TEST_CASE( OnlineServiceHostTest, PushReachesOnlyTheBoundAccountAndPushToAllEveryBoundAccount )
 {
-    HostRig    rig;
-    ClientSide first( rig._network, rig.getPort() );
-    ClientSide second( rig._network, rig.getPort() );
-    ClientSide anonymous( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  first( rig._network, rig.getPort() );
+    ClientSide  second( rig._network, rig.getPort() );
+    ClientSide  anonymous( rig._network, rig.getPort() );
     rig._listClient = { &first, &second, &anonymous };
     rig.step( 10 );
     (void)rig.call( first, Internal::kRangeA + Internal::kLogin, 1 );
@@ -889,8 +889,8 @@ SW_TEST_CASE( OnlineServiceHostTest, PushReachesOnlyTheBoundAccountAndPushToAllE
 
 SW_TEST_CASE( OnlineServiceHostTest, RetryWithTheSameIdempotencyKeyRunsTheHandlerOnce )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 11 );
@@ -905,8 +905,8 @@ SW_TEST_CASE( OnlineServiceHostTest, RetryWithTheSameIdempotencyKeyRunsTheHandle
 /** @brief [OnlineServiceHostTest] 다시 시도할 공통 오류(`OnlineError::isRetryable` — 일시 장애)는 기억하지 않아 같은 키의 재시도가 서비스에 다시 닿고, 끝난 오류는 기억한다 */
 SW_TEST_CASE( OnlineServiceHostTest, RetryableErrorIsNotRememberedForTheSameKey )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 11 );
@@ -929,9 +929,9 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
     MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    writer( &database );
     MemoryEphemeralStore    hostCache( &database );
-    OnlineServiceHostConfig settings = HostRig::makeSettings();
+    OnlineServiceHostConfig settings = HostFixture::makeSettings();
     settings._pEphemeralStore        = &hostCache;
-    HostRig rig( settings );
+    HostFixture rig( settings );
     (void)writer.submit( EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) );    // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     (void)writer.submit( EphemeralRequest::makeSet( "b", vector<uint8>{ 2, 2 }, 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     rig._serviceA._cacheKeyToRead   = "a";
@@ -952,9 +952,9 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     LocalServerBusHub       hub;
     LocalServerBus          busOfHost( &hub, 1 );
     LocalServerBus          busOfOther( &hub, 2 );
-    OnlineServiceHostConfig settings = HostRig::makeSettings();
+    OnlineServiceHostConfig settings = HostFixture::makeSettings();
     settings._pServerBusTransport    = &busOfHost;
-    HostRig            rig( settings );
+    HostFixture        rig( settings );
     Subscription       subscriptionA = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     const Subscription subscriptionB = rig._host.subscribeServerBus( "sd.changed", &rig._serviceB );
     SW_EXPECT_LOG( "OnlineHost.BusSubscribeTwice" );
@@ -978,7 +978,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
 /** @brief [OnlineServiceHostTest] 버스 없는 호스트에 구독을 거는 것은 조립 오류다 — 조용히 넘기면 그 주제의 다른 서버 알림이 영영 오지 않는다 */
 SW_TEST_CASE( OnlineServiceHostTest, SubscribingWithoutABusTransportIsAnAssemblyError )
 {
-    HostRig rig( HostRig::makeSettings() );
+    HostFixture rig( HostFixture::makeSettings() );
     SW_EXPECT_LOG( "OnlineHost.BusSubscribeWithoutTransport" );
     SW_EXPECT_FALSE( rig._host.subscribeServerBus( "sd.changed", &rig._serviceA ).isActive() ); // 빈 구독 — 부르는 쪽이 `getServerBus` 로 먼저 가른다
 }
@@ -993,10 +993,10 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     MemoryEphemeralStore    hostCache( &database );
     LocalServerBusHub       hub;
     LocalServerBus          busOfHost( &hub, 1 );
-    OnlineServiceHostConfig settings = HostRig::makeSettings();
+    OnlineServiceHostConfig settings = HostFixture::makeSettings();
     settings._pEphemeralStore        = &hostCache;
     settings._pServerBusTransport    = &busOfHost;
-    HostRig            rig( settings );
+    HostFixture        rig( settings );
     const Subscription subscription    = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     const Subscription cacheReplyOwner = rig._host.getEphemeralRouter()->openReplyOwner();
     (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
@@ -1013,7 +1013,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
 
 SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOwnPushes )
 {
-    HostRig            rig;
+    HostFixture        rig;
     SharedEndpointBots bots( rig._network, rig.getPort() );
     for ( int32 index = 0; index < 10; ++index )
     {
@@ -1047,8 +1047,8 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
 
 SW_TEST_CASE( OnlineServiceHostTest, TraceIDReachesTheServiceLogContextWithTheAccount )
 {
-    HostRig    rig;
-    ClientSide client( rig._network, rig.getPort() );
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 21 );

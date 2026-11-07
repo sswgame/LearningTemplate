@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
@@ -37,12 +37,12 @@ namespace
     struct AudioDataVariantTestUtil
     {
         static constexpr string_view kLibrary = R"(<AudioEventLibrary>
-            <_listParameter><AudioParameterDesc _name="Speed" _maxValue="10" /></_listParameter>
+            <_listParameter><AudioParameterDef _name="Speed" _maxValue="10" /></_listParameter>
             <_listEvent>
-                <AudioEventDesc _name="Step" _bus="sfx" _pitchMax="2" _priority="40">
+                <AudioEventDef _name="Step" _bus="sfx" _pitchMax="2" _priority="40">
                     <_listClip><AudioClipEntry _path="a.ogg" /></_listClip>
-                </AudioEventDesc>
-                <AudioEventDesc _name="Fire" _bus="sfx"><_listClip><AudioClipEntry _path="b.ogg" /></_listClip></AudioEventDesc>
+                </AudioEventDef>
+                <AudioEventDef _name="Fire" _bus="sfx"><_listClip><AudioClipEntry _path="b.ogg" /></_listClip></AudioEventDef>
             </_listEvent>
         </AudioEventLibrary>)";
     };
@@ -54,9 +54,9 @@ SW_TEST_CASE( AudioDataVariantTest, LibraryVariantMergesEventsByName )
 {
     AudioParentSource source{ Util::kLibrary };
     const string_view child = R"(<AudioEventLibrary _base="parent.audioevents.xml"><_listEvent>
-        <AudioEventDesc _name="Step" _pitchMax="5" />
-        <AudioEventDesc _name="Fire" _op="Remove" />
-        <AudioEventDesc _name="New" _bus="ui"><_listClip><AudioClipEntry _path="c.ogg" /></_listClip></AudioEventDesc>
+        <AudioEventDef _name="Step" _pitchMax="5" />
+        <AudioEventDef _name="Fire" _op="Remove" />
+        <AudioEventDef _name="New" _bus="ui"><_listClip><AudioClipEntry _path="c.ogg" /></_listClip></AudioEventDef>
     </_listEvent></AudioEventLibrary>)";
     string            flat;
     SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child", DataInheritanceSchema::makeFromType( *AudioEventLibrary::StaticType() ), source, flat ) );
@@ -64,7 +64,7 @@ SW_TEST_CASE( AudioDataVariantTest, LibraryVariantMergesEventsByName )
     AudioEventLibrary library;
     SW_REQUIRE_TRUE( library.loadFromXMLText( flat ) );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( library._listEvent.size() ) );
-    const AudioEventDesc* pStep = library.findEvent( hashed_string( "Step" ) );
+    const AudioEventDef* pStep = library.findEvent( hashed_string( "Step" ) );
     SW_REQUIRE_NOT_NULL( pStep );
     SW_EXPECT_NEAR( 5.0f, pStep->_pitchMax, 0.0f );
     SW_EXPECT_EQUAL( 40, pStep->_priority );
@@ -78,11 +78,11 @@ SW_TEST_CASE( AudioDataVariantTest, PresetInheritsAnotherEvent )
 {
     AudioEventLibrary library;
     SW_REQUIRE_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent>
-        <AudioEventDesc _name="Heavy" _parentEvent="Step" _pitchMax="1" />
-        <AudioEventDesc _name="Heaviest" _parentEvent="Heavy" _priority="90" />
-        <AudioEventDesc _name="Step" _bus="sfx" _pitchMax="2" _priority="40"><_listClip><AudioClipEntry _path="a.ogg" /></_listClip></AudioEventDesc>
+        <AudioEventDef _name="Heavy" _parentEvent="Step" _pitchMax="1" />
+        <AudioEventDef _name="Heaviest" _parentEvent="Heavy" _priority="90" />
+        <AudioEventDef _name="Step" _bus="sfx" _pitchMax="2" _priority="40"><_listClip><AudioClipEntry _path="a.ogg" /></_listClip></AudioEventDef>
     </_listEvent></AudioEventLibrary>)" ) );
-    const AudioEventDesc* pHeaviest = library.findEvent( hashed_string( "Heaviest" ) );
+    const AudioEventDef* pHeaviest = library.findEvent( hashed_string( "Heaviest" ) );
     SW_REQUIRE_NOT_NULL( pHeaviest );
     SW_EXPECT_EQUAL( 90, pHeaviest->_priority );
     SW_EXPECT_NEAR( 1.0f, pHeaviest->_pitchMax, 0.0f );
@@ -96,31 +96,31 @@ SW_TEST_CASE( AudioDataVariantTest, PresetErrors )
     SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
     AudioEventLibrary library;
-    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="A" _parentEvent="Missing" /></_listEvent></AudioEventLibrary>)" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDef _name="A" _parentEvent="Missing" /></_listEvent></AudioEventLibrary>)" ) );
     SW_EXPECT_FALSE( library.loadFromXMLText(
-        R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="A" _parentEvent="B" /><AudioEventDesc _name="B" _parentEvent="A" /></_listEvent></AudioEventLibrary>)" ) );
+        R"(<AudioEventLibrary><_listEvent><AudioEventDef _name="A" _parentEvent="B" /><AudioEventDef _name="B" _parentEvent="A" /></_listEvent></AudioEventLibrary>)" ) );
 }
 
 /** @brief [AudioDataVariantTest] 믹서 변형은 버스 · 센드를 이름으로 합치고 검사는 합친 결과에 걸린다 */
 SW_TEST_CASE( AudioDataVariantTest, MixerVariantMergesBusesByName )
 {
-    AudioParentSource source{ R"(<AudioMixerDesc _maxVoiceCount="32"><_listBus>
-        <AudioBusDesc _name="master" />
-        <AudioBusDesc _name="reverb" _parent="master" />
-        <AudioBusDesc _name="sfx" _parent="master" _volumeDb="-3"><_listSend><AudioSendDesc _bus="reverb" _levelDb="-14" /></_listSend></AudioBusDesc>
-    </_listBus></AudioMixerDesc>)" };
-    const string_view child = R"(<AudioMixerDesc _base="parent.audiomixer.xml" _maxVoiceCount="16"><_listBus>
-        <AudioBusDesc _name="sfx" _volumeDb="-6"><_listSend><AudioSendDesc _bus="reverb" _levelDb="-6" /></_listSend></AudioBusDesc>
-        <AudioBusDesc _name="ui" _parent="master" />
-    </_listBus></AudioMixerDesc>)";
+    AudioParentSource source{ R"(<AudioMixerDef _maxVoiceCount="32"><_listBus>
+        <AudioBusDef _name="master" />
+        <AudioBusDef _name="reverb" _parent="master" />
+        <AudioBusDef _name="sfx" _parent="master" _volumeDb="-3"><_listSend><AudioSendDef _bus="reverb" _levelDb="-14" /></_listSend></AudioBusDef>
+    </_listBus></AudioMixerDef>)" };
+    const string_view child = R"(<AudioMixerDef _base="parent.audiomixer.xml" _maxVoiceCount="16"><_listBus>
+        <AudioBusDef _name="sfx" _volumeDb="-6"><_listSend><AudioSendDef _bus="reverb" _levelDb="-6" /></_listSend></AudioBusDef>
+        <AudioBusDef _name="ui" _parent="master" />
+    </_listBus></AudioMixerDef>)";
     string            flat;
-    SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child", DataInheritanceSchema::makeFromType( *AudioMixerDesc::StaticType() ), source, flat ) );
+    SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child", DataInheritanceSchema::makeFromType( *AudioMixerDef::StaticType() ), source, flat ) );
 
-    AudioMixerDesc mixer;
+    AudioMixerDef mixer;
     SW_REQUIRE_TRUE( mixer.loadFromXMLText( flat ) );
     SW_EXPECT_EQUAL( 16u, mixer._maxVoiceCount );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( mixer._listBus.size() ) );
-    const AudioBusDesc& sfx = mixer._listBus[static_cast<size_t>( mixer.findBusIndex( hashed_string( "sfx" ) ) )];
+    const AudioBusDef& sfx = mixer._listBus[static_cast<size_t>( mixer.findBusIndex( hashed_string( "sfx" ) ) )];
     SW_EXPECT_NEAR( -6.0f, sfx._volumeDb, 0.0f );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( sfx._listSend.size() ) );
     SW_EXPECT_NEAR( -6.0f, sfx._listSend[0]._levelDb, 0.0f );
@@ -145,7 +145,7 @@ SW_TEST_CASE( AudioDataVariantTest, DeltaRoundTrips )
     SW_REQUIRE_TRUE( DataInheritance::flatten( delta, "child", schema, source, flat ) );
     AudioEventLibrary reloaded;
     SW_REQUIRE_TRUE( reloaded.loadFromXMLText( flat ) );
-    const AudioEventDesc* pStep = reloaded.findEvent( hashed_string( "Step" ) );
+    const AudioEventDef* pStep = reloaded.findEvent( hashed_string( "Step" ) );
     SW_REQUIRE_NOT_NULL( pStep );
     SW_EXPECT_NEAR( 7.0f, pStep->_pitchMax, 0.0f );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( reloaded._listEvent.size() ) );
@@ -156,10 +156,10 @@ SW_TEST_CASE( AudioDataVariantTest, PresetSavesOnlyItsDifference )
 {
     AudioEventLibrary library;
     SW_REQUIRE_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent>
-        <AudioEventDesc _name="Heavy" _parentEvent="Step" _pitchMax="1" />
-        <AudioEventDesc _name="Step" _bus="sfx" _pitchMax="2" _priority="40"><_listClip><AudioClipEntry _path="a.ogg" /></_listClip></AudioEventDesc>
+        <AudioEventDef _name="Heavy" _parentEvent="Step" _pitchMax="1" />
+        <AudioEventDef _name="Step" _bus="sfx" _pitchMax="2" _priority="40"><_listClip><AudioClipEntry _path="a.ogg" /></_listClip></AudioEventDef>
     </_listEvent></AudioEventLibrary>)" ) );
-    AudioEventDesc* pHeavy = library.findEvent( hashed_string( "Heavy" ) );
+    AudioEventDef* pHeavy = library.findEvent( hashed_string( "Heavy" ) );
     SW_REQUIRE_NOT_NULL( pHeavy );
     SW_EXPECT_TRUE( pHeavy->_parentEvent == hashed_string( "Step" ) ); // 읽기가 부모 표시를 남긴다
     pHeavy->_pitchMax = 3.0f;
@@ -172,7 +172,7 @@ SW_TEST_CASE( AudioDataVariantTest, PresetSavesOnlyItsDifference )
 
     AudioEventLibrary reloaded;
     SW_REQUIRE_TRUE( reloaded.loadFromXMLText( saved ) );
-    const AudioEventDesc* pReloaded = reloaded.findEvent( hashed_string( "Heavy" ) );
+    const AudioEventDef* pReloaded = reloaded.findEvent( hashed_string( "Heavy" ) );
     SW_REQUIRE_NOT_NULL( pReloaded );
     SW_EXPECT_NEAR( 3.0f, pReloaded->_pitchMax, 0.0f );
     SW_EXPECT_EQUAL( 40, pReloaded->_priority );
@@ -197,21 +197,21 @@ SW_TEST_CASE( AudioDataVariantTest, PresetWithMissingParentIsNotSaved )
 SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
 {
     const test::ScopedScratchDomain domain;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.music.xml" ), R"(<AudioMusicDesc _bus="music" _startSegment="Explore">
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.music.xml" ), R"(<AudioMusicDef _bus="music" _startSegment="Explore">
         <_listSegment>
-            <AudioMusicSegmentDesc _name="Explore" _bars="8"><_listLayer><AudioMusicLayerDesc _path="explore.ogg" /></_listLayer></AudioMusicSegmentDesc>
-            <AudioMusicSegmentDesc _name="Combat" _bars="4"><_listLayer><AudioMusicLayerDesc _path="combat.ogg" /></_listLayer></AudioMusicSegmentDesc>
+            <AudioMusicSegmentDef _name="Explore" _bars="8"><_listLayer><AudioMusicLayerDef _path="explore.ogg" /></_listLayer></AudioMusicSegmentDef>
+            <AudioMusicSegmentDef _name="Combat" _bars="4"><_listLayer><AudioMusicLayerDef _path="combat.ogg" /></_listLayer></AudioMusicSegmentDef>
         </_listSegment>
-    </AudioMusicDesc>)" ) );
-    const string   baseID = test::ScopedScratchDomain::makeID( "base.music.xml" ).str();
-    AudioMusicDesc music;
-    SW_REQUIRE_TRUE( music.loadFromXMLText( "<AudioMusicDesc _base=\"" + baseID + "\" _tempo=\"90\"><_listSegment><AudioMusicSegmentDesc _name=\"Combat\" _bars=\"2\" />"
-                                                                                  "<AudioMusicSegmentDesc _name=\"Boss\"><_listLayer><AudioMusicLayerDesc _path=\"boss.ogg\" /></_listLayer></AudioMusicSegmentDesc></_listSegment></AudioMusicDesc>",
+    </AudioMusicDef>)" ) );
+    const string  baseID = test::ScopedScratchDomain::makeID( "base.music.xml" ).str();
+    AudioMusicDef music;
+    SW_REQUIRE_TRUE( music.loadFromXMLText( "<AudioMusicDef _base=\"" + baseID + "\" _tempo=\"90\"><_listSegment><AudioMusicSegmentDef _name=\"Combat\" _bars=\"2\" />"
+                                                                                 "<AudioMusicSegmentDef _name=\"Boss\"><_listLayer><AudioMusicLayerDef _path=\"boss.ogg\" /></_listLayer></AudioMusicSegmentDef></_listSegment></AudioMusicDef>",
                                             "child.music.xml" ) );
     SW_EXPECT_NEAR( 90.0f, music._tempo, 0.0f );
     SW_EXPECT_TRUE( music._bus == hashed_string( "music" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( music._listSegment.size() ) );
-    const AudioMusicSegmentDesc& combat = music._listSegment[static_cast<size_t>( music.findSegmentIndex( hashed_string( "Combat" ) ) )];
+    const AudioMusicSegmentDef& combat = music._listSegment[static_cast<size_t>( music.findSegmentIndex( hashed_string( "Combat" ) ) )];
     SW_EXPECT_EQUAL( 2u, combat._bars );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( combat._listLayer.size() ) ); // 물려받음
     SW_EXPECT_TRUE( music.findSegmentIndex( hashed_string( "Boss" ) ) >= 0 );
@@ -222,7 +222,7 @@ SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
 {
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.audiograph.xml" ),
-                                              R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDesc _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
+                                              R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDef _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
     const string  baseID = test::ScopedScratchDomain::makeID( "base.audiograph.xml" ).str();
     AudioGraphDef graph;
     SW_REQUIRE_TRUE( graph.loadFromXMLText( "<AudioGraphDef _base=\"" + baseID + "\" _durationSeconds=\"2\" />", "child.audiograph.xml" ) );

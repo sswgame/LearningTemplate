@@ -43,10 +43,10 @@ namespace sw
         bool isAnimationActive() const override;
         /** @brief 이번 프레임에 모프 가중치나 눈 본을 쓸 일이 있을 때(`FacialAnimationComponent::isDrivingFace`)만 포즈를 쓴다. 표정 · 말하기 · 깜빡임 · 시선이 모두 쉬는 얼굴은 읽기만 한다. */
         AnimationPoseAccess getPoseAccess() const override;
-        void                prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
+        void                finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         FacialAnimationComponent& _owner;
@@ -136,11 +136,11 @@ namespace sw
         /** @brief 리그를 경로에서 다시 읽습니다. */
         void loadRig();
         /** @brief 유닛의 메시 · 스켈레톤에 맞춰 타깃 번호 · 눈 본 번호를 다시 짓습니다(바뀌었을 때만). */
-        void refreshBindings( const SkeletalMeshComponent& unit );
+        void refreshBindings( const SkeletalMeshComponent& skeletalMesh );
         /** @brief 시간 단계 — 깜빡임 · 사카드 · 말하기 시각을 흘립니다. */
         void advanceTime( float32 deltaSeconds );
         /** @brief 같은 오브젝트의 애니메이터(표정 커브의 출처)입니다. 찾을 수 없으면 nullptr 입니다. */
-        const SkeletalAnimatorComponent* findAnimator( const SkeletalMeshComponent* pUnit ) const;
+        const SkeletalAnimatorComponent* findAnimator( const SkeletalMeshComponent* pSkeletalMesh ) const;
         /** @brief 표정 하나의 이번 프레임 가중치입니다(명시 + 실시간 입력 + 애니메이터 커브). */
         float32 computeExpressionWeight( size_t poseIndex, const SkeletalAnimatorComponent* pAnimator ) const;
         /**
@@ -150,11 +150,11 @@ namespace sw
          */
         bool isDrivingFace() const;
         /** @brief 후처리 단계 — 모프 가중치 · 눈 본을 겁니다. */
-        void applyFace( SkeletalMeshComponent& unit );
+        void applyFace( SkeletalMeshComponent& skeletalMesh );
         /** @brief 포즈 하나(표정 · 비즘)를 가중치만큼 유닛에 더합니다. */
-        void addPose( SkeletalMeshComponent& unit, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const;
+        void addPose( SkeletalMeshComponent& skeletalMesh, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const;
         /** @brief 눈 본을 목표 쪽으로 돌립니다. */
-        void applyGaze( SkeletalMeshComponent& unit );
+        void applyGaze( SkeletalMeshComponent& skeletalMesh );
 
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         AssetRef<FacialRig> _facialRigPath;
@@ -179,7 +179,7 @@ namespace sw
         vector<int32>                                 _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호
         vector<float32>                               _listScratchVisemeWeight;
         TComponentHandle<SkeletalAnimatorComponent>   _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
-        SkeletalMeshComponent*                        _pUnit;
+        SkeletalMeshComponent*                        _pSkeletalMesh;
         const Mesh*                                   _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
         const Skeleton*                               _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
         float3                                        _lookAtWorld;

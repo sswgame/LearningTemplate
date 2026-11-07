@@ -32,7 +32,7 @@ namespace sw
 {
     /** @brief 회로 루트(`<GimmickCircuit stepTime>`)의 칸입니다. 회로가 지금 값(기본 스텝)으로 채운 뒤 읽는다. */
     REFLECT()
-    struct SW_GF_API GimmickCircuitRootFields
+    struct SW_GF_API GimmickCircuitRootParams
     {
         REFLECT_BODY();
 
@@ -42,7 +42,7 @@ namespace sw
 
     /** @brief 전선(`<Wire from="node.port" to="node.port" invert/>`)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API GimmickWireFields
+    struct SW_GF_API GimmickWireParams
     {
         REFLECT_BODY();
 

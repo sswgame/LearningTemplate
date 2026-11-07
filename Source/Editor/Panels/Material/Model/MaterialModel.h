@@ -70,7 +70,7 @@ namespace sw::editor
         /** @brief 그리기를 시작한다 — 이번 프레임에 CPU 구를 그리기 전까지 감시 값이 없다(창이 접히면 그대로 없다). */
         void beginFrame() { _bPreviewDrawn = SW_FALSE; }
         /** @brief CPU 구 미리보기를 그렸다 — 그 평균 (R - B) 를 감시 값으로 남깁니다. */
-        void notePreviewDrawn( float32 redMinusBlue );
+        void recordPreviewDrawn( float32 redMinusBlue );
         /** @brief 지난 그리기의 미리보기 평균 (R - B)(0..255)입니다. 지난 프레임에 그리지 않았으면 false 입니다. */
         [[nodiscard]] bool findPreviewRedMinusBlue( float32& outValue ) const;
 

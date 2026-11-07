@@ -1,5 +1,5 @@
 /**
- * @file InputMapFields.h
+ * @file InputMapParams.h
  * @brief 입력 맵 파일(`*.input.xml`)의 원소마다 적을 수 있는 칸의 스키마입니다(`<InputMap>` · `<layer>` · `<action>` · 바인딩 원소 일곱 — `bind` · `axis1d` · `chord` 는 `layer` · `time` · `negate` · `taps` 를 함께 받는다).
  * @details 속성 이름 · 필수 · 범위 · 기본값은 여기 `PROPERTY` 가 정본이고 `XMLFields::readFields` · `writeFields` 가 읽고 쓴다(언리얼 Input Mapping Context 의 UPROPERTY 자리).
  *          열거 값은 열거자 이름 그대로다(`trigger="Pressed"`, `source="Key"`). 키 · 마우스 버튼 이름은 `Key` · `MouseButton` 열거, 패드 버튼은 `GamepadButtonUtil` 이름이다.
@@ -27,7 +27,7 @@ namespace sw
 
     /** @brief `<InputMap>` 루트입니다. 더하는 파일(`appendFromAsset` · 묶음의 뒤 파일)은 `virtualCursor` 말고는 이 칸을 적지 않는다(`InputMap::loadBundle`). */
     REFLECT()
-    struct SW_API InputMapRootFields
+    struct SW_API InputMapRootParams
     {
         REFLECT_BODY();
 
@@ -47,7 +47,7 @@ namespace sw
 
     /** @brief `<layers><layer>` 와 액션을 묶는 `<layer>` 입니다. */
     REFLECT()
-    struct SW_API InputMapLayerFields
+    struct SW_API InputMapLayerParams
     {
         REFLECT_BODY();
 
@@ -63,9 +63,9 @@ namespace sw
         bool _bAlwaysOn{ false };
     };
 
-    /** @brief 묶음의 차이 파일이 앞 파일의 액션을 지우는 `<remove>` 입니다. 바꾸기는 `<override>` 이고 칸은 `<action>` 과 같다(`InputMapActionFields`). */
+    /** @brief 묶음의 차이 파일이 앞 파일의 액션을 지우는 `<remove>` 입니다. 바꾸기는 `<override>` 이고 칸은 `<action>` 과 같다(`InputMapActionParams`). */
     REFLECT()
-    struct SW_API InputMapRemoveFields
+    struct SW_API InputMapRemoveParams
     {
         REFLECT_BODY();
 
@@ -75,7 +75,7 @@ namespace sw
 
     /** @brief `<action>` · `<override>` 입니다. 바인딩이 자기 `layer` · `trigger` 를 적지 않으면 이 값을 쓴다. `<override>` 가 `layer` 를 적지 않으면 덮는 액션의 레이어다. */
     REFLECT()
-    struct SW_API InputMapActionFields
+    struct SW_API InputMapActionParams
     {
         REFLECT_BODY();
 
@@ -91,7 +91,7 @@ namespace sw
 
     /** @brief `<bind>` 입니다. `modifier` 를 적으면 단축키(수정 키 + 키)다. */
     REFLECT()
-    struct SW_API InputMapBindFields
+    struct SW_API InputMapBindParams
     {
         REFLECT_BODY();
 
@@ -123,7 +123,7 @@ namespace sw
 
     /** @brief `<axis1d>` 입니다. 음 · 양 두 슬롯으로 1D 축을 합성한다(키 둘 또는 패드 버튼 둘). */
     REFLECT()
-    struct SW_API InputMapAxis1DFields
+    struct SW_API InputMapAxis1DParams
     {
         REFLECT_BODY();
 
@@ -151,7 +151,7 @@ namespace sw
 
     /** @brief `<chord>` 입니다. 수정 키 하나를 누른 채 다른 키를 누른다. */
     REFLECT()
-    struct SW_API InputMapChordFields
+    struct SW_API InputMapChordParams
     {
         REFLECT_BODY();
 
@@ -175,7 +175,7 @@ namespace sw
 
     /** @brief `<vector2d>` 입니다. 네 방향 키로 2D 값을 합성한다. */
     REFLECT()
-    struct SW_API InputMapVector2DFields
+    struct SW_API InputMapVector2DParams
     {
         REFLECT_BODY();
 
@@ -195,7 +195,7 @@ namespace sw
 
     /** @brief `<stick>` 입니다. 패드 스틱의 2D 값(또는 `axis` 로 한 성분). */
     REFLECT()
-    struct SW_API InputMapStickFields
+    struct SW_API InputMapStickParams
     {
         REFLECT_BODY();
 
@@ -223,7 +223,7 @@ namespace sw
 
     /** @brief `<mouseDelta>` · `<mouseWheel>` 입니다. `scale` 은 감도 배율(1 = 픽셀 · 한 칸 그대로)이다. */
     REFLECT()
-    struct SW_API InputMapMouseAxisFields
+    struct SW_API InputMapMouseAxisParams
     {
         REFLECT_BODY();
 
@@ -235,7 +235,7 @@ namespace sw
 
     /** @brief `<virtualJoystick>` 입니다. 마우스 버튼을 누른 채 끌면 가상 스틱이 된다(온스크린 스틱 프로토타이핑). */
     REFLECT()
-    struct SW_API InputMapVirtualJoystickFields
+    struct SW_API InputMapVirtualJoystickParams
     {
         REFLECT_BODY();
 
@@ -253,7 +253,7 @@ namespace sw
 
     /** @brief `<anyKey>` 입니다("아무 키나 누르세요"). */
     REFLECT()
-    struct SW_API InputMapAnyKeyFields
+    struct SW_API InputMapAnyKeyParams
     {
         REFLECT_BODY();
 

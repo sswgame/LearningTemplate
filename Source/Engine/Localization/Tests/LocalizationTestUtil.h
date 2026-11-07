@@ -40,8 +40,8 @@ namespace sw::test
             if ( extraFields.empty() == false )
                 json += ", " + string( extraFields );
             json += " }";
-            JSONDocument fields;
-            if ( fields.parse( json, "test project fields" ) == false )
+            JSONDocument params;
+            if ( params.parse( json, "test project fields" ) == false )
             {
                 reportFailure( __FILE__, __LINE__, "test project fields are not JSON: " + json );
                 return projectPath;
@@ -50,9 +50,9 @@ namespace sw::test
             const XMLNode root = document.appendRoot( "LocalizationProject" );
             root.appendAttribute( "name", "test" );
             root.appendAttribute( "sourceCulture", sourceCulture );
-            for ( const string& fieldName : fields.getRoot().getMemberNames() )
+            for ( const string& fieldName : params.getRoot().getMemberNames() )
             {
-                const JSONValue list     = fields.getRoot().get( fieldName );
+                const JSONValue list     = params.getRoot().get( fieldName );
                 const XMLNode   listNode = root.appendChild( fieldName.c_str() );
                 for ( size_t index = 0; list.isArray() && index < list.size(); ++index )
                 {

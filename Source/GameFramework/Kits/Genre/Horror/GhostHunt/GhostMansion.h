@@ -130,9 +130,9 @@ namespace sw
         /** @brief 들킨 부에게 피해를 줍니다(청소기). 이번에 잡혔으면 true 를 반환합니다. */
         bool damageBoo( const hashed_string& booID, float32 amount );
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void drainEvents( vector<GhostMansionEvent>& outListEvent );
+        void pollEvents( vector<GhostMansionEvent>& outListEvent );
         /** @brief 지금 방 싸움의 이벤트(나타남, 공격, 잡힘 등)를 꺼내 갑니다. 저택이 `update` 에서 싸움 이벤트를 받아 잡은 수를 세므로, 게임은 여기서 받아야 합니다. */
-        void drainGhostEvents( vector<GhostEvent>& outListEvent );
+        void pollGhostEvents( vector<GhostEvent>& outListEvent );
 
         /**
          * @brief 싸움(`GhostEncounter`), 난수, 부(방, 가구, 체력, 시간, 상태), 뒤진 가구, 지금 방, 시드를 씁니다.

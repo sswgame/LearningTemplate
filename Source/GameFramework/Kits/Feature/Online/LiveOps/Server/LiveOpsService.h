@@ -28,7 +28,7 @@
 namespace sw
 {
     class IServiceStore;
-    class LiveOpsWriteWork;
+    class LiveOpsWriteJob;
     class RemoteConfig;
     class ServerBus;
 
@@ -122,15 +122,15 @@ namespace sw
         /** @brief 매개변수 값을 반환합니다. 원격 설정까지 해석한 값이며 이벤트나 키가 없으면 false 를 반환합니다. */
         [[nodiscard]] bool findParameter( string_view eventID, string_view key, string& outValue ) const;
 
-        // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `drainControlCompletions` 로 받는다.
-        // 같은 프로세스의 코드와 테스트는 직접 부르고 `drainCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
+        // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
+        // 같은 프로세스의 코드와 테스트는 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
         void putEvent( const LiveEventDef& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
         void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         // ILiveEventControl
         void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void collectEventJSON( vector<string>& outListJSON ) const override;
-        void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
-        void drainCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
+        void takeControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
+        void takeCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         const vector<LiveEventDef>& getEvents() const { return _listEvent; }
         int32                       getPendingCount() const { return _pendingCount; }
@@ -154,7 +154,7 @@ namespace sw
         string              resolveValue( const string& value ) const;
         bool                isKillSwitchOff() const;
         const LiveEventDef* findEvent( string_view eventID ) const;
-        void                submitWrite( unique_ptr<LiveOpsWriteWork> work );
+        void                submitWrite( unique_ptr<LiveOpsWriteJob> work );
 
     private:
         vector<LiveEventDef>           _listEvent;

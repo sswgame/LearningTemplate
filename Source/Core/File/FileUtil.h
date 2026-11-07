@@ -212,18 +212,18 @@ namespace sw
          * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
          * @details "없는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
          *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(git, 바깥 편집기, 쿠커 자식)가 만든 파일은 보이지 않는다 — 에디터는 파일 감시 사건이 비우고(`FileWatchDispatcher`),
-         *          자식 프로세스를 기다린 뒤 그 산출물을 경로로 묻는 코드는 기다린 뒤에 `noteFileCreated` 를 부른다(`Process` 는 `File` 보다 아래 층이라 알리지 못한다).
+         *          자식 프로세스를 기다린 뒤 그 산출물을 경로로 묻는 코드는 기다린 뒤에 `recordFileCreated` 를 부른다(`Process` 는 `File` 보다 아래 층이라 알리지 못한다).
          */
         static uint64 getCreationEpoch();
         /** @brief 파일 · 폴더를 만들었음을 알립니다(`getCreationEpoch` 을 올립니다). 이 클래스 밖에서 파일을 만드는 코드(플랫폼 계층 · 자식 프로세스를 기다리는 쪽)만 부릅니다. */
-        static void noteFileCreated();
+        static void recordFileCreated();
         /**
          * @brief 이 프로세스가 파일 · 폴더를 지운 횟수입니다(`removeFile` · `tryRemoveFile` · `removeDirectory` 가 지웠을 때 오릅니다).
          * @details "있는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 지운 파일의 옛 경로를 돌려주지 않게. `getCreationEpoch` 의 짝입니다.
          */
         static uint64 getRemovalEpoch();
         /** @brief 파일 · 폴더를 지웠음을 알립니다(`getRemovalEpoch` 을 올립니다). 이 클래스 밖에서 지우는 코드만 부릅니다. */
-        static void noteFileRemoved();
+        static void recordFileRemoved();
         /**
          * @brief 쓰기 입구 게이트입니다 — 경로를 받아 쓰기를 허락하면 true, 아니면 false 와 이유를 돌려줍니다. 여러 스레드에서 불립니다.
          * @details 시나리오가 `scratch/` 밖의 추적 파일을 바꾸는 것을 형식으로 막는다. 파일을 바꾸는 입구(`writeFile` · `writeTextFile` · `copyFile` 의 대상 · `removeFile` ·

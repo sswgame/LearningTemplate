@@ -1,4 +1,4 @@
-// AnimationGraphAsset — 원소 스키마(AnimationGraphFields.h)로 읽고 쓰기: 왕복, 기본값 생략, 열거자 이름, 칸 오류(nogpu).
+// AnimationGraphAsset — 원소 스키마(AnimationGraphParams.h)로 읽고 쓰기: 왕복, 기본값 생략, 열거자 이름, 칸 오류(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"

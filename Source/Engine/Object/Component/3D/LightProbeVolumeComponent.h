@@ -96,7 +96,7 @@ namespace sw
          * @brief 베이크 결과를 받아 들고 경로를 적습니다(베이크 도구가 파일을 쓴 뒤 부른다). 데이터의 모양이 지금 볼륨과 다르면 받지 않고 false 입니다.
          * @param path 그 데이터를 쓴 `.probes` 리소스 경로
          */
-        [[nodiscard]] bool adoptProbeData( LightProbeGrid&& grid, string_view path );
+        [[nodiscard]] bool applyProbeData( LightProbeGrid&& grid, string_view path );
 
         /** @brief 씬에 붙을 때 볼륨 레지스트리에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;

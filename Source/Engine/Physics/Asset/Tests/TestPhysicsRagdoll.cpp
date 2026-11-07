@@ -127,7 +127,7 @@ namespace
      * @brief 뼈 넷의 스켈레톤과 바디 둘의 래그돌입니다. 뼈는 root(0, 바디 0) ← spine(1, 바디 없음) ← hand(2, 바디 1) ← finger(3, 바디 없음)이고 y 로 늘어섭니다.
      * @details 손은 배율 2 입니다. 월드 행렬은 x 로 10 옮깁니다.
      */
-    struct PhysicsRagdollTestRig
+    struct PhysicsRagdollTestFixture
     {
         vector<hashed_string>       _listName{};
         vector<int32>               _listParent{};
@@ -136,7 +136,7 @@ namespace
         PhysicsRagdollTestBodyScene _scene{};
         PhysicsRagdoll              _ragdoll{};
 
-        explicit PhysicsRagdollTestRig( PhysicsBodyType type )
+        explicit PhysicsRagdollTestFixture( PhysicsBodyType type )
         {
             _listName       = { hashed_string( "root" ), hashed_string( "spine" ), hashed_string( "hand" ), hashed_string( "finger" ) };
             _listParent     = { -1, 0, 1, 2 };
@@ -180,7 +180,7 @@ namespace
  */
 SW_TEST_CASE( PhysicsRagdollTest, FindBodyIndexAndIsEmpty )
 {
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Dynamic );
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
     SW_EXPECT_FALSE( rig._ragdoll.isEmpty() );
     SW_EXPECT_EQUAL( 0, rig._ragdoll.findBodyIndex( rig._ragdoll._listBody[0] ) );
     SW_EXPECT_EQUAL( 1, rig._ragdoll.findBodyIndex( rig._ragdoll._listBody[1] ) );
@@ -194,9 +194,9 @@ SW_TEST_CASE( PhysicsRagdollTest, FindBodyIndexAndIsEmpty )
  */
 SW_TEST_CASE( PhysicsRagdollTest, DestroySkipsInvalidHandlesAndEmpties )
 {
-    PhysicsRagdollTestRig   rig( PhysicsBodyType::Dynamic );
-    const PhysicsBodyHandle first = rig._ragdoll._listBody[0];
-    rig._ragdoll._listBody[1]     = PhysicsBodyHandle{};
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
+    const PhysicsBodyHandle   first = rig._ragdoll._listBody[0];
+    rig._ragdoll._listBody[1]       = PhysicsBodyHandle{};
     PhysicsRagdollBuilder::destroy( rig._scene, rig._ragdoll );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( rig._scene._listDestroyed.size() ) );
     SW_EXPECT_TRUE( rig._scene._listDestroyed[0] == first );
@@ -209,7 +209,7 @@ SW_TEST_CASE( PhysicsRagdollTest, DestroySkipsInvalidHandlesAndEmpties )
  */
 SW_TEST_CASE( PhysicsRagdollTest, SetBodyTypeAppliesToEveryBody )
 {
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Kinematic );
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
     PhysicsRagdollBuilder::setBodyType( rig._scene, rig._ragdoll, PhysicsBodyType::Dynamic );
     for ( const PhysicsRagdollTestBodyScene::BodyState& state : rig._scene._listState )
     {
@@ -223,7 +223,7 @@ SW_TEST_CASE( PhysicsRagdollTest, SetBodyTypeAppliesToEveryBody )
 SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseMovesKinematicBodies )
 {
     using Util = PhysicsRagdollTestUtil;
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Kinematic );
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
     PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
 
     const PhysicsRagdollTestBodyScene::BodyState& root = rig._scene._listState[0];
@@ -241,13 +241,13 @@ SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseMovesKinematicBodies )
 SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseTeleportsOtherwise )
 {
     {
-        PhysicsRagdollTestRig rig( PhysicsBodyType::Kinematic );
+        PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
         PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.0f );
         SW_EXPECT_EQUAL( 0u, rig._scene._listState[0]._moveCount );
         SW_EXPECT_EQUAL( 1u, rig._scene._listState[0]._teleportCount );
     }
     {
-        PhysicsRagdollTestRig rig( PhysicsBodyType::Dynamic );
+        PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
         PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
         SW_EXPECT_EQUAL( 0u, rig._scene._listState[1]._moveCount );
         SW_EXPECT_EQUAL( 1u, rig._scene._listState[1]._teleportCount );
@@ -259,7 +259,7 @@ SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseTeleportsOtherwise )
  */
 SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseSkipsDisabledAndOutOfRange )
 {
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Kinematic );
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
     rig._scene._listState[0]._bEnabled = SW_FALSE;
     rig._ragdoll._listBoneIndex[1]     = 99;
     PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
@@ -276,11 +276,11 @@ SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseSkipsDisabledAndOutOfRange )
 SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsFollowsBodiesAndParents )
 {
     using Util = PhysicsRagdollTestUtil;
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Dynamic );
-    const quaternion      handRotation = quaternion::makeFromAxisAngle( float3::UnitZ, 1.5707964f );
-    rig._scene._listState[0]._position = float3{ 10.0f, 0.0f, 1.0f }; // 모델 (0, 0, 1)
-    rig._scene._listState[1]._position = float3{ 12.0f, 5.0f, 0.0f }; // 모델 (2, 5, 0)
-    rig._scene._listState[1]._rotation = handRotation;
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
+    const quaternion          handRotation = quaternion::makeFromAxisAngle( float3::UnitZ, 1.5707964f );
+    rig._scene._listState[0]._position     = float3{ 10.0f, 0.0f, 1.0f }; // 모델 (0, 0, 1)
+    rig._scene._listState[1]._position     = float3{ 12.0f, 5.0f, 0.0f }; // 모델 (2, 5, 0)
+    rig._scene._listState[1]._rotation     = handRotation;
 
     vector<float4x4> listOut( rig._listModel.size(), float4x4::Identity );
     PhysicsRagdollBuilder::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
@@ -306,7 +306,7 @@ SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsFollowsBodiesAndParents )
 SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsTreatsUnreadableBodyAsBoneless )
 {
     using Util = PhysicsRagdollTestUtil;
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Dynamic );
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
     rig._scene._listState[0]._bReadable = SW_FALSE;
     rig._scene._listState[1]._bReadable = SW_FALSE;
     vector<float4x4> listOut( rig._listModel.size(), float4x4::Identity );
@@ -324,7 +324,7 @@ SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsRejectsBoneCountMismatch )
 {
     SW_EXPECT_LOG( "PhysicsRagdoll.ReadBoneTransformsOutputSkeletonRagdoll" );
     using Util = PhysicsRagdollTestUtil;
-    PhysicsRagdollTestRig rig( PhysicsBodyType::Dynamic );
+    PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
     rig._scene._listState[0]._position = float3{ 50.0f, 0.0f, 0.0f };
 
     vector<float4x4> listShort( 2, float4x4::Identity );

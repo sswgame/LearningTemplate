@@ -247,7 +247,7 @@ namespace sw::editor
         /** @brief 읽기 스레드 본문입니다. 파이프가 닫힐 때까지 줄을 쌓고 종료 코드를 수집합니다. */
         static void readChildOutput( ChildProcess* pChild );
         /** @brief 프로세스 하나의 쌓인 줄을 꺼내 에디터 로그 · 패널 줄로 옮깁니다(`update`). */
-        void drainChildLines( ChildProcess& child, int32 processIndex );
+        void pollChildLines( ChildProcess& child, int32 processIndex );
         /**
          * @brief 멈춤 단계를 하나 진행합니다. 모두 끝났으면(또는 시한을 넘겨 강제 종료했으면) 합치기를 백그라운드 잡에 넘기고(@p bInline 이면 이 스레드에서 한다),
          *        잡의 결과가 왔으면 마무리합니다.
@@ -267,7 +267,7 @@ namespace sw::editor
         vector<unique_ptr<ChildProcess>> _listStoppingProcess; ///< `requestStop` 이 옮긴 프로세스(멈춤이 끝날 때까지 산다 - 잡이 읽기 스레드를 원시 포인터로 합류한다)
         unique_ptr<EditorNetPlayStopJob> _pStopJob;            ///< 읽기 스레드 합류 · 트레이스 합치기 잡
         vector<EditorNetPlayLogLine>     _listLogLine;
-        vector<EditorNetPlayLogLine>     _listDrainScratch;
+        vector<EditorNetPlayLogLine>     _listPollScratch;
         string                           _traceDirectory;
         string                           _mergedTracePath;
         string                           _debugChannelToken; ///< 전용 서버의 디버그 채널 토큰(세션마다 새로). 채널이 없으면 비어 있다

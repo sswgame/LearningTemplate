@@ -41,7 +41,7 @@ namespace sw
     void FrameExtensionHost::logFailureOnce( string_view key, const char* pReason, string_view detail )
     {
         RenderExtensionRegistry* const pRegistry = engine::findSubsystem<RenderExtensionRegistry>();
-        if ( pRegistry == nullptr || pRegistry->noteFailureOnce( key ) )
+        if ( pRegistry == nullptr || pRegistry->recordFailureOnce( key ) )
             SW_LOG_ERROR_ID( "RenderExtension.Failed", "Extension render: %# '%#'", pReason, detail );
     }
 

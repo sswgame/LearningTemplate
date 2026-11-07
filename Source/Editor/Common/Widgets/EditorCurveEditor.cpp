@@ -32,7 +32,7 @@ namespace sw::editor
             static ImVec2 toImVec2( const float2& value ) { return ImVec2{ value._x, value._y }; }
 
             /** @brief 이름을 사각형 하나에 남깁니다(상호작용 없는 항목 — 캔버스의 누름을 뺏지 않는다). */
-            static void noteRectMark( const utf8* pKey, const float2& center, float32 radius )
+            static void recordRectMark( const utf8* pKey, const float2& center, float32 radius )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
@@ -41,7 +41,7 @@ namespace sw::editor
                     ImVec2{center._x + radius, center._y + radius}
                 };
                 ImGui::ItemAdd( rect, 0, nullptr, ImGuiItemFlags_NoNav );
-                EditorSelfTestMarks::note( pKey );
+                EditorSelfTestMarks::record( pKey );
             }
 
             /** @brief 보이는 시간 범위를 픽셀 두 칸마다 표본으로 꺾은선을 그립니다. */
@@ -190,7 +190,7 @@ namespace sw::editor
                         state._selectedKey = curve.addKey( state._menuTime, state._menuValue );
                         bEdited            = true;
                     }
-                    EditorSelfTestMarks::note( ( string( pMarkScope ) + ".menu.addKey" ).c_str() );
+                    EditorSelfTestMarks::record( ( string( pMarkScope ) + ".menu.addKey" ).c_str() );
                     if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "FitView" ), "F" ) )
                         state._bFitPending = true;
                 }
@@ -317,7 +317,7 @@ namespace sw::editor
         const ImVec2 available = ImGui::GetContentRegionAvail();
         const ImVec2 size{ MathUtil::max( available.x, 64.0f ), MathUtil::max( available.y, 64.0f ) };
         ImGui::InvisibleButton( "##curveCanvas", size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle );
-        EditorSelfTestMarks::note( ( string( pMarkScope ) + ".canvas" ).c_str() );
+        EditorSelfTestMarks::record( ( string( pMarkScope ) + ".canvas" ).c_str() );
         const bool   bHovered = ImGui::IsItemHovered();
         const bool   bActive  = ImGui::IsItemActive();
         const ImVec2 minPoint = ImGui::GetItemRectMin();
@@ -362,7 +362,7 @@ namespace sw::editor
             }
             drawList.AddCircleFilled( EditorCurveEditorInternal::toImVec2( center ), keyRadius, bSelected ? selectColor : keyColor );
             formatstring( keyMark.data(), keyMark.capacity(), "%#.key.%#", pMarkScope, static_cast<uint32>( index ) );
-            EditorCurveEditorInternal::noteRectMark( keyMark.c_str(), center, keyRadius );
+            EditorCurveEditorInternal::recordRectMark( keyMark.c_str(), center, keyRadius );
         }
         drawList.PopClipRect();
         return bFinished;

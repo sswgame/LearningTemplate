@@ -1,6 +1,6 @@
 <RigAsset>
 	<targets>
-		<item name="Grip" unit="MainHand" socket="SupportHand" space="handslot.r" />
+		<item name="Grip" skeletalMesh="MainHand" socket="SupportHand" space="handslot.r" />
 	</targets>
 	<nodes>
 		<item type="StrideWarping" name="Stride" pelvis="hips" min_scale="0.6" max_scale="1.6" max_pelvis_drop="0.2">

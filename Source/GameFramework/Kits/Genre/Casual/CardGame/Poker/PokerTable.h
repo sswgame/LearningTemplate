@@ -165,7 +165,7 @@ namespace sw
         const CardPile& getBoard() const { return _board; }
         /** @brief 지난 쇼다운(또는 혼자 남은 판)의 팟을 반환합니다. */
         const vector<PokerPot>& getLastPots() const { return _listLastPot; }
-        void                    drainEvents( vector<PokerEvent>& outListEvent );
+        void                    pollEvents( vector<PokerEvent>& outListEvent );
 
     private:
         [[nodiscard]] bool openHand();

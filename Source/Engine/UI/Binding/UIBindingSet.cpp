@@ -146,7 +146,7 @@ namespace sw
         _bBound = SW_FALSE;
     }
 
-    void UIBindingSet::update( const vector<UIBindingDesc>& listBinding, const UIBindingContext& context )
+    void UIBindingSet::update( const vector<UIBindingDef>& listBinding, const UIBindingContext& context )
     {
         _polledCount = 0;
         if ( _bBound == false )
@@ -199,13 +199,13 @@ namespace sw
         _bSettingsChanged = SW_FALSE;
     }
 
-    void UIBindingSet::bind( const vector<UIBindingDesc>& listBinding, const UIBindingContext& context )
+    void UIBindingSet::bind( const vector<UIBindingDef>& listBinding, const UIBindingContext& context )
     {
         _listBinding.clear();
         _listError.clear();
         _seenSerial       = _pViewModel != nullptr ? _pViewModel->getChangeSerial() : 0;
         _bSettingsChanged = SW_FALSE;
-        for ( const UIBindingDesc& desc : listBinding )
+        for ( const UIBindingDef& desc : listBinding )
         {
             string error;
             if ( bindOne( desc, context, error ) )
@@ -225,7 +225,7 @@ namespace sw
         _bBound = SW_TRUE;
     }
 
-    bool UIBindingSet::bindOne( const UIBindingDesc& desc, const UIBindingContext& context, string& outError )
+    bool UIBindingSet::bindOne( const UIBindingDef& desc, const UIBindingContext& context, string& outError )
     {
         ActiveBinding binding{};
         binding._widget     = desc._widget;

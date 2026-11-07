@@ -84,7 +84,7 @@ namespace sw
      * @brief 게임 파라미터 하나입니다(Wwise RTPC, FMOD parameter). 게임이 `setParameter` 로 값을 넣고, 엔진이 `_seekSpeed` 로 따라갑니다.
      */
     REFLECT()
-    struct SW_API AudioParameterDesc
+    struct SW_API AudioParameterDef
     {
         REFLECT_BODY();
 
@@ -123,17 +123,17 @@ namespace sw
     /**
      * @brief 사운드 이벤트 하나입니다.
      * @code
-     *     <AudioEventDesc _name="Footstep" _bus="sfx" _attenuation="Small" _container="Random" _maxInstances="4" _steal="Oldest"
+     *     <AudioEventDef _name="Footstep" _bus="sfx" _attenuation="Small" _container="Random" _maxInstances="4" _steal="Oldest"
      *                     _priority="40" _cooldownSeconds="0.05" _volumeDbMin="-3" _pitchMin="-1" _pitchMax="1">
      *         <_listClip><AudioClipEntry _path="game/x/sounds/step_0.ogg" /><AudioClipEntry _path="game/x/sounds/step_1.ogg" /></_listClip>
-     *     </AudioEventDesc>
-     *     <AudioEventDesc _name="FootstepHeavy" _parentEvent="Footstep" _volumeDbMin="0" _pitchMin="-4" _pitchMax="-2" />
+     *     </AudioEventDef>
+     *     <AudioEventDef _name="FootstepHeavy" _parentEvent="Footstep" _volumeDbMin="0" _pitchMin="-4" _pitchMax="-2" />
      * @endcode
      * @details `_parentEvent` 는 같은 라이브러리(파일 상속을 합친 결과)의 다른 이벤트를 부모로 삼아 다른 칸만 적는 프리셋이다(언리얼 MetaSound Preset 자리). 클립 목록은 적으면 통째로 바뀐다.
      *          읽기는 부모를 펼친 한 벌을 채우고 `_parentEvent` 를 그대로 둔다. 쓰기(`AudioEventLibrary::saveToXMLText`)는 부모와 다른 칸만 다시 적는다 — 합치기와 차이는 `DataInheritance` 하나이고, 순환 · 없는 부모는 같은 오류다.
      */
     REFLECT()
-    struct SW_API AudioEventDesc
+    struct SW_API AudioEventDef
     {
         REFLECT_BODY();
 
@@ -205,11 +205,11 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "AudioEventLibrary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Game parameters (RTPC)" )
-        vector<AudioParameterDesc> _listParameter{};
+        vector<AudioParameterDef> _listParameter{};
         PROPERTY( Tooltip = "Attenuation presets local to this library" )
-        vector<AudioAttenuationDesc> _listAttenuation{};
+        vector<AudioAttenuationDef> _listAttenuation{};
         PROPERTY( Tooltip = "Events" )
-        vector<AudioEventDesc> _listEvent{};
+        vector<AudioEventDef> _listEvent{};
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
@@ -232,10 +232,10 @@ namespace sw
         [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
 
         /** @brief 이벤트입니다. 없으면 nullptr 입니다. */
-        const AudioEventDesc* findEvent( const hashed_string& name ) const;
+        const AudioEventDef* findEvent( const hashed_string& name ) const;
         /** @brief 고칠 이벤트입니다(에디터가 사본 라이브러리를 고칠 때). 없으면 nullptr 입니다. */
-        AudioEventDesc* findEvent( const hashed_string& name );
+        AudioEventDef* findEvent( const hashed_string& name );
         /** @brief 파라미터입니다. 없으면 nullptr 입니다. */
-        const AudioParameterDesc* findParameter( const hashed_string& name ) const;
+        const AudioParameterDef* findParameter( const hashed_string& name ) const;
     };
 } // namespace sw

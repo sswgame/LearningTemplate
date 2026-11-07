@@ -35,7 +35,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Sun", DisplayName = "Director", Tooltip = "Object with the game director that answers the time of day" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Sun", DisplayName = "Rain Dimming", Tooltip = "Intensity factor while it rains or snows", Min = 0.0, Max = 1.0 )
         float32 _rainDimming;
         PROPERTY( Category = "Sun", DisplayName = "Night Intensity", Tooltip = "Intensity after sunset and before the night ends", Min = 0.0 )

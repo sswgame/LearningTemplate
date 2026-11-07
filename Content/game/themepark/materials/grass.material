@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 공원 잔디 — 기본 머티리얼에 잔디 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="ThemeParkGrass" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="ThemeParkGrass" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.38 0.62 0.32 1.0" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

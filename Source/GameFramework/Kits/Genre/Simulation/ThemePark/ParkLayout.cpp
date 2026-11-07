@@ -45,7 +45,7 @@ namespace sw
 
     bool ParkLayout::loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName )
     {
-        return GameDataXML::loadText( *this, &ParkLayout::loadRoot, layouts, xmlText, sourceName, "ParkLayout" );
+        return GameDataXML::loadFromXMLText( *this, &ParkLayout::loadRoot, layouts, xmlText, sourceName, "ParkLayout" );
     }
 
     bool ParkLayout::loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName )

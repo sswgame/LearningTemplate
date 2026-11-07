@@ -81,11 +81,11 @@ namespace sw
             _pWallet->setBalance( data._pCatalog->getCurrency(), data._pCatalog->getQuotaSettings()._startCredits );
         if ( data._pCatalog->getMoons().empty() == false )
             _pMoon = &data._pCatalog->getMoons().front();
-        VitalitySettings crewVitality;
-        crewVitality._maxHealth = data._pCatalog->getCrewHealth();
+        CombatHealthSettings crewCombatHealth;
+        crewCombatHealth._maxHealth = data._pCatalog->getCrewHealth();
         for ( ScavengerCrewMember& member : _listCrew )
         {
-            if ( member._vitality.initialize( crewVitality ) == false )
+            if ( member._combatHealth.initialize( crewCombatHealth ) == false )
                 return false;
         }
         resetCrew();
@@ -167,7 +167,7 @@ namespace sw
         for ( ScavengerCrewMember& member : _listCrew )
         {
             if ( member.isDead() == false )
-                member._vitality.update( deltaTime );
+                member._combatHealth.update( deltaTime );
         }
         if ( _pMoon->_bCompany == false )
         {
@@ -265,7 +265,7 @@ namespace sw
         ScavengerCrewMember& member = _listCrew[static_cast<size_t>( player )];
         if ( member.isDead() )
             return 0.0f;
-        const VitalityDamageResult result = member._vitality.applyDamage( amount );
+        const CombatHealthDamageResult result = member._combatHealth.applyDamage( amount );
         if ( result._bDied == SW_TRUE )
             handleDeath( player, false );
         return result._healthDamage;
@@ -276,7 +276,7 @@ namespace sw
         const bool bCannotKill = _phase != ScavengerPhase::Landed || isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead();
         if ( bCannotKill )
             return;
-        _listCrew[static_cast<size_t>( player )]._vitality.kill();
+        _listCrew[static_cast<size_t>( player )]._combatHealth.kill();
         handleDeath( player, false );
     }
 
@@ -284,7 +284,7 @@ namespace sw
     {
         (void)( bIndoor ? _indoorDirector : _outdoorDirector ).notifyDespawned( spawnID );
         _listSpawnScratch.clear();
-        ( bIndoor ? _indoorDirector : _outdoorDirector ).drainEvents( _listSpawnScratch );
+        ( bIndoor ? _indoorDirector : _outdoorDirector ).pollEvents( _listSpawnScratch );
     }
 
     int32 ScavengerExpedition::sellAllShipScrap( ScavengerActionResult& outResult )
@@ -329,9 +329,9 @@ namespace sw
         return _shop.buy( _data._pCatalog->getTerminalShopID(), itemID, count, *_pWallet, *_pShipStorage );
     }
 
-    void ScavengerExpedition::drainEvents( vector<ScavengerEvent>& outListEvent )
+    void ScavengerExpedition::pollEvents( vector<ScavengerEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     int64 ScavengerExpedition::getCredits() const
@@ -448,7 +448,7 @@ namespace sw
                 }
                 continue;
             }
-            member._vitality.kill();
+            member._combatHealth.kill();
             handleDeath( static_cast<int32>( index ), true );
         }
         pushEvent( ScavengerEvent::Kind::ShipDeparted, -1, bAuto ? 1 : 0 );
@@ -530,7 +530,7 @@ namespace sw
             return;
         for ( ScavengerCrewMember& member : _listCrew )
         {
-            member._vitality.reset(); // 설정(최대 체력)은 initialize 가 이미 범위를 보고 받았다
+            member._combatHealth.reset(); // 설정(최대 체력)은 initialize 가 이미 범위를 보고 받았다
             member._carry.initialize( _data._pCatalog->getCarrySettings() );
             member._areaID         = hashed_string( kShipAreaID );
             member._bBodyRecovered = SW_FALSE;
@@ -540,7 +540,7 @@ namespace sw
     void ScavengerExpedition::collectThreatEvents( SpawnDirector& director, bool bIndoor )
     {
         _listSpawnScratch.clear();
-        director.drainEvents( _listSpawnScratch );
+        director.pollEvents( _listSpawnScratch );
         for ( const SpawnEvent& spawn : _listSpawnScratch )
         {
             if ( spawn._kind != SpawnEvent::Kind::Spawned )
@@ -574,7 +574,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listCrew.size() );
         for ( const ScavengerCrewMember& member : _listCrew )
         {
-            member._vitality.writeState( outArchive );
+            member._combatHealth.writeState( outArchive );
             member._carry.writeState( outArchive );
             StateArchiveUtil::writeName( outArchive, member._areaID );
             outArchive << member._bBodyRecovered;
@@ -609,7 +609,7 @@ namespace sw
         ScavengerExpedition restored = *this;
         for ( ScavengerCrewMember& member : restored._listCrew )
         {
-            const bool bMemberRead = member._vitality.readState( archive ) && member._carry.readState( archive ) && StateArchiveUtil::readName( archive, member._areaID );
+            const bool bMemberRead = member._combatHealth.readState( archive ) && member._carry.readState( archive ) && StateArchiveUtil::readName( archive, member._areaID );
             if ( bMemberRead == false )
                 return false;
             archive >> member._bBodyRecovered;

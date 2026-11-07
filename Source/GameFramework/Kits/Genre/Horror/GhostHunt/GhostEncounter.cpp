@@ -273,9 +273,9 @@ namespace sw
         }
     }
 
-    void GhostEncounter::drainEvents( vector<GhostEvent>& outListEvent )
+    void GhostEncounter::pollEvents( vector<GhostEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     const GhostInstance* GhostEncounter::findGhost( uint32 ghostID ) const

@@ -2,10 +2,10 @@
     "listDocument": [
         { "root": "AudioEventLibrary", "listField": [{ "name": "_listParameter", "key": "_name" }, { "name": "_listAttenuation", "key": "_name" }, { "name": "_listEvent", "key": "_name" }]},
         { "root": "AudioGraphDef", "listField": [{ "name": "_listNode", "key": "_name", "listField": [{ "name": "_listParameter", "key": "_name" }]}]},
-        { "root": "AudioMixerDesc", "listField": [{ "name": "_listBus", "key": "_name", "listField": [{ "name": "_listSend", "key": "_bus" }, { "name": "_listDuck", "key": "_sourceBus" }]}, { "name": "_listAttenuation", "key": "_name" }, { "name": "_occlusion" }, { "name": "_listSnapshot", "key": "_name", "listField": [{ "name": "_listBusVolume", "key": "_bus" }]}]},
-        { "root": "AudioMusicDesc", "listField": [{ "name": "_listSegment", "key": "_name" }]},
+        { "root": "AudioMixerDef", "listField": [{ "name": "_listBus", "key": "_name", "listField": [{ "name": "_listSend", "key": "_bus" }, { "name": "_listDuck", "key": "_sourceBus" }]}, { "name": "_listAttenuation", "key": "_name" }, { "name": "_occlusion" }, { "name": "_listSnapshot", "key": "_name", "listField": [{ "name": "_listBusVolume", "key": "_bus" }]}]},
+        { "root": "AudioMusicDef", "listField": [{ "name": "_listSegment", "key": "_name" }]},
         { "root": "MaterialGraphDef", "listField": [{ "name": "_listNode", "key": "_name", "listField": [{ "name": "_listLink", "key": "_pin" }, { "name": "_listValue", "key": "_name" }]}]},
-        { "root": "MaterialParameterCollectionDesc", "listField": [{ "name": "_listParameter", "key": "_name" }]},
+        { "root": "MaterialParameterCollectionDef", "listField": [{ "name": "_listParameter", "key": "_name" }]},
         { "root": "PhysicsAsset", "listField": [{ "name": "_listBody", "key": "_bone", "listField": [{ "name": "_joint" }, { "name": "_hitZone" }]}]},
         { "root": "RenderPipelineDesc", "listField": [{ "name": "_listAttachment", "key": "_name" }, { "name": "_listPass", "key": "_name" }]},
         { "root": "SpriteLibrary", "listField": [{ "name": "_listCategory", "key": "_name", "listField": [{ "name": "_listLabel", "key": "_name" }]}]},

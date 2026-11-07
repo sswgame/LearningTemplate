@@ -26,7 +26,7 @@ namespace
         void onReply( const MailboxReply& reply ) { _listReply.push_back( reply ); }
     };
 
-    struct MailboxRig
+    struct MailboxFixture
     {
         MemoryServiceDatabase _database;
         MemoryServiceStore    _store;
@@ -34,7 +34,7 @@ namespace
         MailboxReplySink      _sink;
         uint64                _nextKey{ 1 };
 
-        explicit MailboxRig( MailboxServiceConfig settings = MailboxServiceConfig{} )
+        explicit MailboxFixture( MailboxServiceConfig settings = MailboxServiceConfig{} )
             : _database{}
             , _store{ &_database }
             , _service{}
@@ -44,7 +44,7 @@ namespace
             SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
         }
 
-        ~MailboxRig() { _service.shutdown(); }
+        ~MailboxFixture() { _service.shutdown(); }
 
         void tick( int64 nowMs = kNowMs )
         {
@@ -116,7 +116,7 @@ namespace
 /** @brief [MailboxServiceTest] 입구: 로그인 전은 NotSignedIn, 멱등 키 없는 수령은 InvalidRequest 이고 저장소에 닿지 않는다 */
 SW_TEST_CASE( MailboxServiceTest, EntryRules )
 {
-    MailboxRig rig;
+    MailboxFixture rig;
     SW_EXPECT_TRUE( rig.call( MailboxMethod::kList, kInvalidAccountID )._result == MailboxResult::NotSignedIn );
     const string mailKey = rig.sendMail( 5 );
     SW_EXPECT_TRUE( rig.call( MailboxMethod::kClaim, kPlayer, mailKey, false )._result == MailboxResult::InvalidRequest );
@@ -128,8 +128,8 @@ SW_TEST_CASE( MailboxServiceTest, EntryRules )
 /** @brief [MailboxServiceTest] 흐름: 목록에 나오고, 수령하면 잔액이 오르며 답에 잔액이 실린다. 받은 우편은 지울 수 있다 */
 SW_TEST_CASE( MailboxServiceTest, ListClaimDelete )
 {
-    MailboxRig   rig;
-    const string mailKey = rig.sendMail( 5 );
+    MailboxFixture rig;
+    const string   mailKey = rig.sendMail( 5 );
 
     const MailboxReply listed = rig.call( MailboxMethod::kList, kPlayer );
     SW_EXPECT_TRUE( listed._result == MailboxResult::Ok );
@@ -148,7 +148,7 @@ SW_TEST_CASE( MailboxServiceTest, ListClaimDelete )
 /** @brief [MailboxServiceTest] 모두 받기: 받은 수를 돌려주고 잔액이 합만큼 오른다 */
 SW_TEST_CASE( MailboxServiceTest, ClaimAllCounts )
 {
-    MailboxRig rig;
+    MailboxFixture rig;
     (void)rig.sendMail( 5, 0, "mail.a" );
     (void)rig.sendMail( 7, 0, "mail.b" );
     const MailboxReply claimed = rig.call( MailboxMethod::kClaimAll, kPlayer );
@@ -163,7 +163,7 @@ SW_TEST_CASE( MailboxServiceTest, CampaignsAppearInFirstPage )
     SW_EXPECT_LOG( "MailboxService.MailCampaignsCouldNot" );
     MailboxServiceConfig settings;
     settings._campaignRefreshMs = 1000;
-    MailboxRig rig( settings );
+    MailboxFixture rig( settings );
 
     ServiceMailCampaign campaign;
     campaign._campaignID = 1;
@@ -193,7 +193,7 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
 {
     MailboxServiceConfig settings;
     settings._sweepIntervalMs = 0; // 틱이 스스로 돌지 않는다
-    MailboxRig rig( settings );
+    MailboxFixture rig( settings );
     (void)rig.sendMail( 5, kNowMs + 10 );
     rig._service.requestSweep();
     rig.tick( kNowMs + 11 );
@@ -212,8 +212,8 @@ SW_TEST_CASE( MailboxServiceTest, NeedsStore )
 /** @brief [MailboxServiceTest] 다시 시도할 결과(버전 충돌 · 일시 장애 — `MailboxReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 수령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( MailboxServiceTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionRig<MailboxProtocol, MailboxReply> rig;
-    MailboxReply                                           finished;
+    test::ReplyRetentionFixture<MailboxProtocol, MailboxReply> rig;
+    MailboxReply                                               finished;
     finished._result = MailboxResult::Ok;
     MailboxReply busy;
     busy._result = MailboxResult::Busy;

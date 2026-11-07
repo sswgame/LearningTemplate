@@ -52,11 +52,11 @@ namespace sw
         }
         /** @brief `loadFromFile` 의 XML 문자열 버전입니다. 테스트와 에디터 미리보기(`loadFromXMLText`)가 씁니다. */
         template <typename TLoader, typename TResult>
-        [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view xmlText, string_view sourceName,
-                                            const utf8* pRootName )
+        [[nodiscard]] static bool loadFromXMLText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view xmlText, string_view sourceName,
+                                                   const utf8* pRootName )
         {
             RootCall<TLoader, TResult> call{ loader, pLoadRoot };
-            return XMLCatalogLoader::loadText( &call, &RootCall<TLoader, TResult>::invoke, xmlText, sourceName, pRootName );
+            return XMLCatalogLoader::loadFromXMLText( &call, &RootCall<TLoader, TResult>::invoke, xmlText, sourceName, pRootName );
         }
 
         /** @brief `loadFromFile` 에 다른 카탈로그(기술, 코스터 설계)를 함께 넘기는 버전입니다. 루트 읽기가 `( root, context, sourceName )` 를 받습니다. */
@@ -67,13 +67,13 @@ namespace sw
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
             return XMLCatalogLoader::loadFromFile( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, assetID, pRootName );
         }
-        /** @brief `loadText` 에 다른 카탈로그를 함께 넘기는 버전입니다. */
+        /** @brief `loadFromXMLText` 에 다른 카탈로그를 함께 넘기는 버전입니다. */
         template <typename TLoader, typename TResult, typename TContext>
-        [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
-                                            string_view xmlText, string_view sourceName, const utf8* pRootName )
+        [[nodiscard]] static bool loadFromXMLText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
+                                                   string_view xmlText, string_view sourceName, const utf8* pRootName )
         {
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
-            return XMLCatalogLoader::loadText( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
+            return XMLCatalogLoader::loadFromXMLText( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
         }
 
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류나 겹친 id 면 더하지 않고 false 입니다(오타 하나가 앞 정의를 말없이 덮어쓰지 않게 한다). */

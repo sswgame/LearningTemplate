@@ -49,10 +49,10 @@ namespace sw
         {
             slot.release( pDevice );
         }
-        forget();
+        clear();
     }
 
-    void PassConstantRing::forget()
+    void PassConstantRing::clear()
     {
         _listSlot.clear();
         _cursor.store( 0, std::memory_order_relaxed );

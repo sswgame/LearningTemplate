@@ -36,7 +36,7 @@ namespace sw
     };
 
     /** @brief 알림 하나입니다. 텍스트는 현지화 키이거나 텍스트 그대로이며(텍스트 위젯이 해석합니다), 리치 텍스트라서 `[action=Interact]` 가 지금 장치의 글리프가 됩니다. */
-    struct UINotificationDesc
+    struct UINotificationDef
     {
         string             _text{};
         float32            _durationSeconds{ 4.0f }; ///< 보이는 시간입니다(대기열에서 기다린 시간은 세지 않습니다).
@@ -80,7 +80,7 @@ namespace sw
         SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
-        void post( const UINotificationDesc& desc );
+        void post( const UINotificationDef& desc );
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */
@@ -102,12 +102,12 @@ namespace sw
         /** @struct Entry @brief 알림 하나의 상태입니다. 서술, 센 횟수, 보인 시간, 위젯을 가집니다. */
         struct Entry
         {
-            UINotificationDesc _desc{};
-            uint64             _order{ 0 };
-            float32            _ageSeconds{ 0.0f };
-            uint32             _count{ 1 };
-            WidgetID           _widget{ kInvalidWidgetID };
-            bool               _bAnnounced{ false }; ///< 스크린 리더에 읽어 달라고 알렸는지 나타냅니다(보이는 글이 정해진 뒤 한 번). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            UINotificationDef _desc{};
+            uint64            _order{ 0 };
+            float32           _ageSeconds{ 0.0f };
+            uint32            _count{ 1 };
+            WidgetID          _widget{ kInvalidWidgetID };
+            bool              _bAnnounced{ false }; ///< 스크린 리더에 읽어 달라고 알렸는지 나타냅니다(보이는 글이 정해진 뒤 한 번). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @struct FadingEntry @brief 시간이 다 돼 사라지는 중인 항목의 위젯입니다. */

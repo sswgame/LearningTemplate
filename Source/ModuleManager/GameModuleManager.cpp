@@ -103,11 +103,11 @@ namespace sw
     {
         _moduleCompiler.reset(); // 소멸이 도는 빌드를 취소하고 빌드 스레드를 기다린다
 
-        // 호스트 모듈과 게임을 한 번의 비우기로 언로드한다. 따로 언로드하면 drainRenderWorkers 가 두 번 돌아 종료 경로에서
+        // 호스트 모듈과 게임을 한 번의 비우기로 언로드한다. 따로 언로드하면 flushRenderWorkers 가 두 번 돌아 종료 경로에서
         // 태스크 대기 제한 시간을 두 번까지 기다릴 수 있다.
-        suspendModules( ModuleScope::Both, true, DrainReason::Shutdown );
+        suspendModules( ModuleScope::Both, true, FlushReason::Shutdown );
         // 정적 링크(배포)는 모듈을 내리는 쪽(핫 리로드 매니저)이 없다 — 등록한 쪽(`bindGameAPI`)이 뗀다. 떼지 않으면 게임 모듈이 건 캐시 · 서브시스템
-        // (`ElementRuleTable` · `InteractionCatalog` 캐시)이 에셋 매니저 종료까지 남아 "still registered" 경고가 났다.
+        // (`ElementRuleCatalog` · `InteractionCatalog` 캐시)이 에셋 매니저 종료까지 남아 "still registered" 경고가 났다.
         if ( _pLiveReloadManager == nullptr && engine::areEngineServicesBound() )
             engine::unregisterModuleTypes( sw::config::kTargetGameModule );
 
@@ -173,7 +173,7 @@ namespace sw
 
     void GameModuleManager::onBeforeGameReload()
     {
-        suspendModules( ModuleScope::Game, true, DrainReason::Reload );
+        suspendModules( ModuleScope::Game, true, FlushReason::Reload );
     }
 
     void GameModuleManager::onAfterGameReload( void* pLibraryModule )
@@ -226,7 +226,7 @@ namespace sw
             if ( bGameScope )
             {
                 // 게임 상태는 새 라이브러리가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.
-                if ( suspendModulesInternal( ModuleScope::Game, true, true, DrainReason::Reload ) == false )
+                if ( suspendModulesInternal( ModuleScope::Game, true, true, FlushReason::Reload ) == false )
                 {
                     SW_LOG_ERROR_ID( "GameModuleManager.GameCouldNotSerialize", "The game could not serialize its state for the reload — keeping the old game modules running" );
                     return false;
@@ -254,19 +254,19 @@ namespace sw
 #endif
     }
 
-    void GameModuleManager::drainRenderWorkers( DrainReason reason )
+    void GameModuleManager::flushRenderWorkers( FlushReason reason )
     {
         // 종료의 비우기는 호스트 모듈(에디터)을 내리기 앞이라 에디터의 배경 일이 아직 돈다 — 기다리기 전에 그만 하라고 알린다(`Task fencing timeout` 의 원인이었다).
-        onBeforeDrainWorkers( reason );
-        if ( reason == DrainReason::Shutdown && _pSceneManager != nullptr )
+        onBeforeFlushWorkers( reason );
+        if ( reason == FlushReason::Shutdown && _pSceneManager != nullptr )
             _pSceneManager->requestAsyncLoadStop(); // 도는 비동기 씬 로드가 인스턴스화까지 가지 않게 한다
-        // 비우는 까닭(`DrainReason`)이 곧 장치 대기의 이유다.
+        // 비우는 까닭(`FlushReason`)이 곧 장치 대기의 이유다.
         RHIWaitIdleReason waitReason = RHIWaitIdleReason::HotReload;
-        if ( reason == DrainReason::BackendSwap )
+        if ( reason == FlushReason::BackendSwap )
             waitReason = RHIWaitIdleReason::BackendSwap;
-        else if ( reason == DrainReason::Shutdown )
+        else if ( reason == FlushReason::Shutdown )
             waitReason = RHIWaitIdleReason::Shutdown;
-        else if ( reason == DrainReason::Restart )
+        else if ( reason == FlushReason::Restart )
             waitReason = RHIWaitIdleReason::Tool;
 #if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
@@ -280,7 +280,7 @@ namespace sw
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
             _pRHI->getDevice().waitIdle( waitReason );
 
-        onRenderWorkersDrained();
+        onRenderWorkersFlushed();
 
         // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 기한은 없다(오래 걸리면 남은 태스크가 주기적으로 오류로 남는다).
         // **엔진 전체 대기가 맞다(모듈이 낸 태스크만 기다리지 않는다).** 입구를 한 곳으로 모아 태스크 단계(`TaskStageHandle`)에 넣는 구조는 만들 수 없다:
@@ -290,7 +290,7 @@ namespace sw
         // 주기 진단이 도는 태스크 이름과 함께 드러낸다.
         if ( engine::areEngineServicesBound() )
         {
-            engine::getSubsystem<TaskManager>().waitAll( "GameModuleManager::drainRenderWorkers" );
+            engine::getSubsystem<TaskManager>().waitAll( "GameModuleManager::flushRenderWorkers" );
         }
     }
 
@@ -328,15 +328,15 @@ namespace sw
         return _gameAPI.create != nullptr && _gameAPI.destroy != nullptr;
     }
 
-    void GameModuleManager::suspendModules( ModuleScope scope, bool bReleaseAPITable, DrainReason reason )
+    void GameModuleManager::suspendModules( ModuleScope scope, bool bReleaseAPITable, FlushReason reason )
     {
         // 종료, RHI 교체, 에디터 리로드에는 게임 상태를 넘겨받을 새 게임 라이브러리가 없다. 저장에 실패해도 언로드를 막지 않는다.
         (void)suspendModulesInternal( scope, bReleaseAPITable, false, reason );
     }
 
-    bool GameModuleManager::suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, DrainReason reason )
+    bool GameModuleManager::suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, FlushReason reason )
     {
-        drainRenderWorkers( reason );
+        flushRenderWorkers( reason );
 
         const bool bSuspendHostModule = scope != ModuleScope::Game;
         const bool bSuspendGame       = scope != ModuleScope::Editor;
@@ -367,7 +367,7 @@ namespace sw
             SW_LOG_ERROR_ID( "GameModuleManager.RestartGameNoGameInstance", "restartGame: there is no game instance to restart" );
             return false;
         }
-        drainRenderWorkers( DrainReason::Restart );
+        flushRenderWorkers( FlushReason::Restart );
         destroyGameInstance( false );
         SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
         sceneManager.closeActiveScene();
@@ -584,8 +584,8 @@ namespace sw
             return true;
 
         // 매니저가 비우기를 부르는 것은 모듈을 내리기 직전(리로드)뿐이다 — 종료는 `shutdown` 이 이 콜백을 놓은 뒤 매니저를 내린다.
-        holdReloadSubscription( _pLiveReloadManager->setDrainWorkers( SW_DELEGATE_LAMBDA( LiveReloadManager::DrainWorkersDelegate, [this]()
-        { drainRenderWorkers( DrainReason::Reload ); } ) ) );
+        holdReloadSubscription( _pLiveReloadManager->setFlushWorkers( SW_DELEGATE_LAMBDA( LiveReloadManager::FlushWorkersDelegate, [this]()
+        { flushRenderWorkers( FlushReason::Reload ); } ) ) );
 
         BLOCK( "SWGame 인스턴스 생성" )
         {

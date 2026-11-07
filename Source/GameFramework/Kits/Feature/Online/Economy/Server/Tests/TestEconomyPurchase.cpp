@@ -47,8 +47,8 @@ namespace
         request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( kBuyer ), string( assetID ), amount } );
         request._journalKey = "test/grant/" + string( assetID ) + "/" + to_string( amount );
         request._reason     = "test.grant";
-        LedgerTransferOutcome outcome;
-        SW_EXPECT_TRUE( Ledger::executeTransfer( database, request, outcome ) == LedgerResult::Ok );
+        LedgerTransferResult result;
+        SW_EXPECT_TRUE( Ledger::executeTransfer( database, request, result ) == LedgerResult::Ok );
     }
 
     int64 balanceOf( MemoryServiceDatabase& database, string_view assetID )

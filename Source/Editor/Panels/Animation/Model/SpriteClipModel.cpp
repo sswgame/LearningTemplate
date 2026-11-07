@@ -69,7 +69,7 @@ namespace sw::editor
         , _previewSeconds{ 0.0f }
         , _bPreviewPlaying{ SW_FALSE }
     {
-        adoptClip( makeNewClip( Internal::findDefaultAtlas() ) );
+        applyClip( makeNewClip( Internal::findDefaultAtlas() ) );
     }
 
     string SpriteClipModel::computeClipPath( string_view path )
@@ -94,22 +94,22 @@ namespace sw::editor
         if ( result == ToolAssetLoadResult::Malformed )
             return result; // 저장은 기반이 막는다
 
-        // 새 문서는 맨 앞 항목을 고른다(범위는 `adoptClip` 이 묶는다).
+        // 새 문서는 맨 앞 항목을 고른다(범위는 `applyClip` 이 묶는다).
         _selectedFrame     = 0;
         _selectedKey       = 0;
         _selectedAnimation = 0;
         _bPreviewPlaying   = SW_FALSE;
         if ( result == ToolAssetLoadResult::Missing )
         {
-            adoptClip( makeNewClip( Internal::findDefaultAtlas() ) );
+            applyClip( makeNewClip( Internal::findDefaultAtlas() ) );
         }
         else if ( Internal::isImagePath( path ) )
         {
-            adoptClip( makeNewClip( data._atlasPath ) );
+            applyClip( makeNewClip( data._atlasPath ) );
         }
         else
         {
-            adoptClip( std::move( data ) );
+            applyClip( std::move( data ) );
         }
         return result;
     }
@@ -137,7 +137,7 @@ namespace sw::editor
         SpriteClipAsset restored;
         if ( text.empty() == false && restored.loadFromXMLText( text ) == false )
             SW_LOG_WARNING_ID( "SpriteClip.SpriteClipUndoSnapshot", "Sprite clip undo snapshot could not be read - showing an empty clip" );
-        adoptClip( std::move( restored ) );
+        applyClip( std::move( restored ) );
     }
 
     SpriteClipFrame* SpriteClipModel::editSelectedFrame()
@@ -424,7 +424,7 @@ namespace sw::editor
         return data;
     }
 
-    void SpriteClipModel::adoptClip( SpriteClipAsset&& clip )
+    void SpriteClipModel::applyClip( SpriteClipAsset&& clip )
     {
         _clip                = std::move( clip );
         _atlasPath           = _clip._atlasPath.c_str();

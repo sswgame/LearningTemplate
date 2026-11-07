@@ -16,7 +16,7 @@ namespace
         sw::XMLDocument document;
         if ( document.parse( pText ) == false )
             return false;
-        return outCatalog.loadFromNode( document.getRoot( "ItemVisualCatalog" ), outReport, "test" );
+        return outCatalog.loadFromXML( document.getRoot( "ItemVisualCatalog" ), outReport, "test" );
     }
 } // namespace
 

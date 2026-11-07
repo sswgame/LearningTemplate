@@ -109,15 +109,15 @@ namespace
      * @brief 가짜 디렉터리를 올린 루프백 서버 + 연결 하나에 디렉터리 클라이언트 · 목록 모델입니다. 연결과 Hello 까지 끝난 채로 선다.
      * @details 선언 순서가 수명이다 — 가짜 서비스는 호스트보다, 디렉터리 클라이언트는 모델보다 오래 산다.
      */
-    struct ServerListRig
+    struct ServerListFixture
     {
         FakeServerDirectoryService _service{};
         ServerDirectoryClient      _directoryClient{};
-        test::OnlineTestRig        _rig{ false };
+        test::OnlineTestFixture    _rig{ false };
         ServerListModel            _model{};
         uint8                      _bReady : 1;
 
-        ServerListRig()
+        ServerListFixture()
             : _bReady{ SW_FALSE }
         {
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
@@ -189,7 +189,7 @@ SW_TEST_CASE( ServerListModelTest, OversizedKindIsRejected )
 /** @brief [ServerListModelTest] 서버가 목록으로 답하면 Loaded 이고 받은 목록을 그대로 든다(로딩 표시 한 번 + 응답 한 번) */
 SW_TEST_CASE( ServerListModelTest, AnsweredListIsLoaded )
 {
-    ServerListRig rig;
+    ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
 
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
@@ -211,7 +211,7 @@ SW_TEST_CASE( ServerListModelTest, AnsweredListIsLoaded )
 /** @brief [ServerListModelTest] 묻는 중에 다시 물으면 보내지 않고 false 다 — 서버는 요청 하나만 받고, 답이 온 뒤에는 다시 물을 수 있다 */
 SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
 {
-    ServerListRig rig;
+    ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
     rig._service._bHoldAnswers = SW_TRUE;
 
@@ -239,7 +239,7 @@ SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
 /** @brief [ServerListModelTest] 받은 목록이 있어도 서버가 오류(모르는 종류)로 답하면 Failed 이고 낡은 목록을 비운다 */
 SW_TEST_CASE( ServerListModelTest, ServerErrorClearsTheLoadedList )
 {
-    ServerListRig rig;
+    ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
     rig.pump();

@@ -137,7 +137,7 @@ namespace sw::editor
          */
         vector<ModelImportSection> _listSection;
         /** @brief VRM 이면 glTF 머티리얼마다의 툰 머티리얼입니다(glTF 순서). VRM 이 아니면 비어 있습니다. */
-        vector<ToonMaterialDesc> _listToonMaterial;
+        vector<ToonMaterialDef> _listToonMaterial;
         /** @brief 구간으로 나누는 일반 glTF 이면 glTF 머티리얼마다의 PBR 머티리얼입니다(glTF 순서). 아니면 비어 있습니다. */
         vector<ModelImportPbrMaterial> _listPbrMaterial;
         /** @brief glTF 텍스처 번호에서 원본 이미지로의 대응입니다. 툰 구간 머티리얼이 쓰는 텍스처만 채워지고 나머지는 비어 있습니다. */

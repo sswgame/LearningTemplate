@@ -113,13 +113,13 @@ namespace sw
         } );
     }
 
-    void RHIRenderResource::forgetAllFor( IRHIDevice* pDevice )
+    void RHIRenderResource::clearAllFor( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )
             return;
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            pResource->forgetRHI( pDevice );
+            pResource->clearRHI( pDevice );
         } );
     }
 

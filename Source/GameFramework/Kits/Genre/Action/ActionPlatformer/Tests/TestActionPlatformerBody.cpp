@@ -108,7 +108,7 @@ SW_TEST_CASE( ActionTerrainGridTest, LoadsDirtAndGrapplePointsFromText )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid grid;
-    SW_REQUIRE_TRUE( grid.loadFromText( "D O\r\n\n  #\n", 2.0f, sw::float2{ 10.0f, 20.0f }, map ) );
+    SW_REQUIRE_TRUE( grid.loadFromXMLText( "D O\r\n\n  #\n", 2.0f, sw::float2{ 10.0f, 20.0f }, map ) );
     SW_EXPECT_EQUAL( 3, grid.getWidth() );
     SW_EXPECT_EQUAL( 2, grid.getHeight() );
 
@@ -129,7 +129,7 @@ SW_TEST_CASE( ActionTerrainGridTest, LoadsDirtAndGrapplePointsFromText )
     SW_EXPECT_NEAR( 15.0f, grid.getGrapplePoints()[0]._x, kBodyTolerance );
     SW_EXPECT_NEAR( 23.0f, grid.getGrapplePoints()[0]._y, kBodyTolerance );
 
-    SW_REQUIRE_TRUE( grid.loadFromText( "   \n", 1.0f, sw::float2{}, map ) ); // 다시 읽으면 앞 내용이 남지 않는다
+    SW_REQUIRE_TRUE( grid.loadFromXMLText( "   \n", 1.0f, sw::float2{}, map ) ); // 다시 읽으면 앞 내용이 남지 않는다
     SW_EXPECT_TRUE( grid.getGrapplePoints().empty() );
     SW_EXPECT_FALSE( grid.isDirt( 0, 0 ) );
 }
@@ -142,9 +142,9 @@ SW_TEST_CASE( ActionTerrainGridTest, RejectsNonPositiveTileSize )
     SW_EXPECT_LOG( "PlatformerMotor2D.PlatformTileMapRefusedXTiles" );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid grid;
-    SW_REQUIRE_TRUE( grid.loadFromText( "D\n", 1.0f, sw::float2{}, map ) );
-    SW_EXPECT_FALSE( grid.loadFromText( "  \n", 0.0f, sw::float2{}, map ) );
-    SW_EXPECT_FALSE( grid.loadFromText( "  \n", -1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( grid.loadFromXMLText( "D\n", 1.0f, sw::float2{}, map ) );
+    SW_EXPECT_FALSE( grid.loadFromXMLText( "  \n", 0.0f, sw::float2{}, map ) );
+    SW_EXPECT_FALSE( grid.loadFromXMLText( "  \n", -1.0f, sw::float2{}, map ) );
     SW_EXPECT_TRUE( grid.isDirt( 0, 0 ) );
 }
 
@@ -172,7 +172,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GlideLimitsFallSpeedAndRestoresSettings 
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kOpenRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
     const sw::PlatformerSettings motorSettings{};
     const sw::ActionBodyDef      bodySettings{};
 
@@ -212,7 +212,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GlideEndsOnGround )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kOpenRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
     const sw::PlatformerSettings motorSettings{};
     sw::ActionPlatformerBody     body;
     body.initialize( motorSettings, sw::ActionBodyDef{} );
@@ -248,7 +248,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleKeepsRopeLengthAndHandsVelocityBa
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kOpenRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
     body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
 
@@ -294,7 +294,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleFromGlideRestoresSettings )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kOpenRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
     const sw::PlatformerSettings motorSettings{};
     sw::ActionPlatformerBody     body;
     body.initialize( motorSettings, sw::ActionBodyDef{} );
@@ -317,7 +317,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillEntersOnlyTowardDirtAndExitsOutside
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kDirtRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
     body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
@@ -349,7 +349,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillExitWithJumpLaunchesUpward )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kDirtRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
     body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
     body.setPosition( sw::float2{ 6.5f, 2.5f } );
@@ -370,7 +370,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillAbortsWhenItNeverReachesDirt )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kDirtRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
     body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
     body.setPosition( sw::float2{ 4.5f, 2.5f } );
@@ -389,7 +389,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillBlockedByRockBeforeDirtStillAborts 
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kRockBeforeDirtRoom, 0.5f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kRockBeforeDirtRoom, 0.5f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
     body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
     body.setPosition( sw::float2{ 1.95f, 1.25f } );
@@ -411,7 +411,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillInsideDirtWaitsAtRock )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kDirtThenRockRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtThenRockRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
     body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
     body.setPosition( sw::float2{ 4.5f, 2.5f } );
@@ -438,7 +438,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
 {
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
-    SW_REQUIRE_TRUE( terrain.loadFromText( kDirtRoom, 1.0f, sw::float2{}, map ) );
+    SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     const sw::ActionBodyDef bodySettings{};
 
     sw::ActionPlatformerBody drilling;

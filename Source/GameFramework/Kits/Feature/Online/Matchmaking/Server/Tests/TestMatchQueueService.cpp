@@ -122,7 +122,7 @@ namespace
                 if ( _transport != nullptr )
                 {
                     vector<MatchQueueTopicChange> listChange;
-                    _queue.drainTopicChanges( listChange );
+                    _queue.pollTopicChanges( listChange );
                     for ( const MatchQueueTopicChange& change : listChange )
                     {
                         if ( change._bSubscribe == SW_TRUE )
@@ -151,7 +151,7 @@ namespace
         MatchQueueCompletion takeCompletion()
         {
             vector<MatchQueueCompletion> listCompletion;
-            _queue.drainCompletions( listCompletion );
+            _queue.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             return listCompletion.empty() ? MatchQueueCompletion{} : listCompletion[0];
         }
@@ -159,7 +159,7 @@ namespace
         vector<MatchQueueNotification> takeNotifications()
         {
             vector<MatchQueueNotification> listNotification;
-            _queue.drainNotifications( listNotification );
+            _queue.pollNotifications( listNotification );
             return listNotification;
         }
 
@@ -299,7 +299,7 @@ SW_TEST_CASE( MatchQueueServiceTest, JoinAndLeave )
     SW_EXPECT_EQUAL( joined._ticketID, left._ticketID );
     const vector<MatchQueueNotification> listCancelled = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listCancelled.size() );
-    SW_EXPECT_TRUE( listCancelled[0]._assignment._outcome == MatchQueueOutcome::Cancelled );
+    SW_EXPECT_TRUE( listCancelled[0]._assignment._outcome == MatchQueueResult::Cancelled );
     SW_EXPECT_EQUAL( 0, queue.getQueuedTicketCount( "duel" ) );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
 
@@ -321,7 +321,7 @@ SW_TEST_CASE( MatchQueueServiceTest, FormedMatchIsPlacedOnAServer )
     SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
     const MatchAssignment& first  = listFound[0]._assignment;
     const MatchAssignment& second = listFound[1]._assignment;
-    SW_EXPECT_TRUE( first._outcome == MatchQueueOutcome::Found );
+    SW_EXPECT_TRUE( first._outcome == MatchQueueResult::Found );
     SW_EXPECT_TRUE( first._matchID != 0 );
     SW_EXPECT_EQUAL( first._matchID, second._matchID );
     SW_EXPECT_EQUAL( kGameID, first._serverID );
@@ -353,7 +353,7 @@ SW_TEST_CASE( MatchQueueServiceTest, UnplacedMatchWaitsThenGivesUp )
     world._server.tick( kNowMs + MatchQueueLimit::kNoServerGiveUpMs );
     const vector<MatchQueueNotification> listGaveUp = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listGaveUp.size() );
-    SW_EXPECT_TRUE( listGaveUp[0]._assignment._outcome == MatchQueueOutcome::NoServer );
+    SW_EXPECT_TRUE( listGaveUp[0]._assignment._outcome == MatchQueueResult::NoServer );
     SW_EXPECT_EQUAL( 0, world._server._queue.getLocalTicketCount() );
 }
 
@@ -366,7 +366,7 @@ SW_TEST_CASE( MatchQueueServiceTest, TicketTimesOutAtModeDeadline )
     world._server.tick( kNowMs + kMaxWait + 1 );
     const vector<MatchQueueNotification> listTimedOut = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listTimedOut.size() );
-    SW_EXPECT_TRUE( listTimedOut[0]._assignment._outcome == MatchQueueOutcome::Timeout );
+    SW_EXPECT_TRUE( listTimedOut[0]._assignment._outcome == MatchQueueResult::Timeout );
     SW_EXPECT_EQUAL( string( "duel" ), listTimedOut[0]._assignment._modeID );
     SW_EXPECT_EQUAL( 0, world._server._queue.getLocalTicketCount() );
 }
@@ -428,7 +428,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityRunsMatchesAcrossServers )
     SW_EXPECT_EQUAL( kAlice, listA[0]._recipientID );
     SW_EXPECT_EQUAL( kBob, listB[0]._recipientID );
     SW_EXPECT_EQUAL( listA[0]._assignment._matchID, listB[0]._assignment._matchID );
-    SW_EXPECT_TRUE( listB[0]._assignment._outcome == MatchQueueOutcome::Found );
+    SW_EXPECT_TRUE( listB[0]._assignment._outcome == MatchQueueResult::Found );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
 
     vector<ServerBusMessage> listGame;
@@ -475,7 +475,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
     world._serverB.tick( deadlineMs + 1 );
     const vector<MatchQueueNotification> listTimedOut = world._serverB.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listTimedOut.size() );
-    SW_EXPECT_TRUE( listTimedOut[0]._assignment._outcome == MatchQueueOutcome::Timeout );
+    SW_EXPECT_TRUE( listTimedOut[0]._assignment._outcome == MatchQueueResult::Timeout );
 }
 
 /** @brief [MatchQueueServiceTest] 백필: 경기 중 빈 슬롯을 새 경기보다 먼저 채우고, 들어갈 사람은 그 경기 id · 게임 서버 주소를 받는다. 모르는 모드 · 모양이 틀린 요청은 거절한다 */
@@ -509,7 +509,7 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
     world._server.tick( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
-    SW_EXPECT_TRUE( listFound[0]._assignment._outcome == MatchQueueOutcome::Found );
+    SW_EXPECT_TRUE( listFound[0]._assignment._outcome == MatchQueueResult::Found );
     SW_EXPECT_EQUAL( uint64( 77 ), listFound[0]._assignment._matchID );
     SW_EXPECT_EQUAL( string( "10.0.0.5" ), listFound[0]._assignment._address );
     SW_EXPECT_EQUAL( 1, listFound[0]._assignment._team );
@@ -531,7 +531,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs } ); // 서버가 없다
     vector<MatchQueueNotification> listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
-    SW_EXPECT_TRUE( listResult[0]._assignment._outcome == MatchQueueOutcome::NoServer );
+    SW_EXPECT_TRUE( listResult[0]._assignment._outcome == MatchQueueResult::NoServer );
 
     world._game.start( world._server._router, kNowMs, "eu" ); // 로비는 다른 지역도 받는다
     world._server.pump( kNowMs );
@@ -540,7 +540,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
     listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
-    SW_EXPECT_TRUE( listResult[0]._assignment._outcome == MatchQueueOutcome::Found );
+    SW_EXPECT_TRUE( listResult[0]._assignment._outcome == MatchQueueResult::Found );
     SW_EXPECT_EQUAL( kGameID, listResult[0]._assignment._serverID );
     SW_EXPECT_EQUAL( 0, listResult[0]._assignment._team );
     SW_EXPECT_EQUAL( 1, listResult[1]._assignment._team );
@@ -550,7 +550,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
     listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
-    SW_EXPECT_TRUE( listResult[0]._assignment._outcome == MatchQueueOutcome::NoServer );
+    SW_EXPECT_TRUE( listResult[0]._assignment._outcome == MatchQueueResult::NoServer );
 }
 
 namespace
@@ -581,7 +581,7 @@ namespace
             _party.createParty( leaderID, 1 );
             pump();
             vector<PartyLobbyCompletion> listCompletion;
-            _party.drainCompletions( listCompletion );
+            _party.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             const uint64 partyID = listCompletion.empty() ? 0 : listCompletion[0]._party._partyID;
             _party.inviteToParty( leaderID, memberID, 2 );
@@ -589,7 +589,7 @@ namespace
             _party.acceptPartyInvite( memberID, partyID, 3 );
             pump();
             listCompletion.clear();
-            _party.drainCompletions( listCompletion );
+            _party.takeCompletions( listCompletion );
             for ( const PartyLobbyCompletion& completion : listCompletion )
             {
                 SW_EXPECT_TRUE( completion._result == MatchmakingResult::Ok );
@@ -622,7 +622,7 @@ SW_TEST_CASE( MatchQueueServiceTest, PartyLeaderQueuesWholeParty )
     SW_EXPECT_TRUE( party._world._server.takeCompletion()._result == MatchmakingResult::Ok );
     const vector<MatchQueueNotification> listCancelled = party._world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listCancelled.size() );
-    SW_EXPECT_TRUE( listCancelled[0]._assignment._outcome == MatchQueueOutcome::Cancelled );
+    SW_EXPECT_TRUE( listCancelled[0]._assignment._outcome == MatchQueueResult::Cancelled );
     SW_EXPECT_EQUAL( 0, party._world._server._queue.getLocalTicketCount() );
     party.pump();
     SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok ); // 파티 기록의 티켓도 지워졌다
@@ -652,7 +652,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeavingDuringPartyLookupLeavesNoTicket )
     queue.joinQueue( kBob, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
     queue.leaveQueue( kBob, 8 );
     vector<MatchQueueCompletion> listCompletion;
-    queue.drainCompletions( listCompletion );
+    queue.takeCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
     SW_EXPECT_TRUE( listCompletion[0]._result == MatchmakingResult::NotQueued );
     SW_EXPECT_EQUAL( uint64( 7 ), listCompletion[0]._requestTag );
@@ -680,13 +680,13 @@ SW_TEST_CASE( MatchQueueServiceTest, MissingRatingIsLoadedBeforeQueueing )
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
     SW_EXPECT_EQUAL( 1, stats._mapRetained[kAlice] );
     vector<MatchQueueCompletion> listCompletion;
-    queue.drainCompletions( listCompletion );
+    queue.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() ); // 기다린다
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 8 );
     SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::AlreadyQueued );
 
     world._server.tick( kNowMs + 1 );
-    queue.drainCompletions( listCompletion );
+    queue.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() ); // 아직 읽지 못했다
 
     stats._mapStat[kAlice] = 1600;

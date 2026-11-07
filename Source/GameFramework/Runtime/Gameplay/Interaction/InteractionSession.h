@@ -69,7 +69,7 @@ namespace sw
         const InteractionStepDef* getStep() const;
         const InteractionDef*     getDefinition() const { return _pDef.get(); }
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 추가하고 비웁니다. */
-        void drainEvents( vector<InteractionSessionEvent>& outListEvent );
+        void pollEvents( vector<InteractionSessionEvent>& outListEvent );
 
     private:
         void beginStep();

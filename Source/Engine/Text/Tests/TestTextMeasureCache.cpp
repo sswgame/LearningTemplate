@@ -202,7 +202,7 @@ SW_TEST_CASE( TextMeasureCacheTest, MeasureDoesNotRecomputeEarlierTextWhenTheCac
 
     sw::test::FakeFontServiceFixture fonts;
     sw::TextLayoutEngine             layout{ *fonts._fontService };
-    sw::FontCatalogDesc              catalog{};
+    sw::FontCatalogDef               catalog{};
     catalog._defaultFamily = "Latin";
     sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_REQUIRE_TRUE( fonts.initialize( catalog ) );

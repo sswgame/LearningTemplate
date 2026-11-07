@@ -11,7 +11,7 @@
 namespace sw
 {
     NileCursorComponent::NileCursorComponent()
-        : _director{}
+        : _gameMode{}
         , _height{ 0.1f }
         , _thickness{ 0.12f }
     {
@@ -33,10 +33,10 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileGameModeComponent* pDirector = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _director );
+        const NileGameModeComponent* pGameMode = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _gameMode );
         int2                         tile{};
         int32                        size   = 1;
-        const bool                   bShown = pDirector != nullptr && pDirector->findCursor( tile, size );
+        const bool                   bShown = pGameMode != nullptr && pGameMode->findCursor( tile, size );
         if ( pMesh->isVisible() != bShown )
             pMesh->setVisible( bShown );
         if ( bShown == false )

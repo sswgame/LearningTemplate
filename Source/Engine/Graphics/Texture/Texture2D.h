@@ -114,7 +114,7 @@ namespace sw
         /**
          * @brief 제출한 업로드(`beginUploadFromImage` · `beginUploadFromCPUBytes`)가 끝났는지 보고, 끝났으면 bindless 에 등록합니다.
          * @param bBlocking 참이면 끝날 때까지 기다립니다(10 초 상한 — 넘으면 오류와 `Failed`). 거짓이면 `Pending` 을 그대로 돌려줍니다.
-         * @details 제출한 업로드가 없거나(장치 교체로 `forgetRHI` · `releaseRHI` 가 지움) 다른 디바이스면 `Failed` 입니다. 실패하면 만든 GPU 텍스처를 지운다.
+         * @details 제출한 업로드가 없거나(장치 교체로 `clearRHI` · `releaseRHI` 가 지움) 다른 디바이스면 `Failed` 입니다. 실패하면 만든 GPU 텍스처를 지운다.
          */
         [[nodiscard]] Texture2DUploadStatus finishUpload( IRHIDevice* pDevice, bool bBlocking );
         /** @brief 제출했고 아직 `finishUpload` 가 끝내지 않은 업로드가 있으면 true 입니다. */
@@ -171,7 +171,7 @@ namespace sw
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 텍스처를 돌려줍니다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
-        void forgetRHI( IRHIDevice* pDevice ) override;
+        void clearRHI( IRHIDevice* pDevice ) override;
         /**
          * @brief (RHIRenderResource) 새 디바이스에 같은 경로의 DDS 를 다시 업로드합니다(렌더 타깃이면 같은 크기로 다시 만듭니다).
          * @details CPU 텍스처는 여기서 업로드하지 않습니다. 빌린 머티리얼이 디바이스 교체 때 놓았다가 다시 빌리면 `TextureCache::acquire` 가 업로드합니다.

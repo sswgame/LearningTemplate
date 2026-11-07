@@ -267,7 +267,7 @@ namespace sw::editor
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2{ canvasSize._x, canvasSize._y } );
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
-        EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다. 뷰포트 피킹과 카메라 비행에 쓴다
+        EditorSelfTestMarks::record( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다. 뷰포트 피킹과 카메라 비행에 쓴다
         // 캔버스(이미지)의 호버와 클릭은 지금 읽는다. 뒤에서 시각화가 레이블 위치에 항목을 추가하면(빌보드) "마지막 항목" 이 바뀐다.
         const bool bCanvasHovered = ImGui::IsItemHovered();
         const bool bCanvasClicked = EditorInputGUI::wasItemClicked();

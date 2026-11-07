@@ -26,7 +26,7 @@ namespace sw
 {
     /** @brief 프리팹 루트(`<Prefab formatVersion name>`)의 칸입니다. `formatVersion` 은 에셋 형식이 읽는다. */
     REFLECT()
-    struct SW_API PrefabRootFields
+    struct SW_API PrefabRootParams
     {
         REFLECT_BODY();
 
@@ -36,7 +36,7 @@ namespace sw
 
     /** @brief 중첩 프리팹(`<PrefabInstance name prefab attach>`)의 칸입니다. 덮어쓰기와 그 노드에 붙는 노드는 자식 원소다. */
     REFLECT()
-    struct SW_API PrefabInstanceFields
+    struct SW_API PrefabInstanceParams
     {
         REFLECT_BODY();
 

@@ -108,7 +108,7 @@ namespace
         /** @brief 쌓인 알림을 `_listEvent` 뒤로 모으고 @p kind 의 수를 셉니다. */
         int32 countEvents( sw::ScavengerEvent::Kind kind )
         {
-            _expedition.drainEvents( _listEvent );
+            _expedition.pollEvents( _listEvent );
             return sw::VectorUtil::countBy<&sw::ScavengerEvent::_kind>( _listEvent, kind );
         }
 
@@ -184,7 +184,7 @@ namespace
             written << static_cast<uint32>( 2 );
             for ( int32 player = 0; player < 2; ++player )
             {
-                _expedition.findCrewMember( player )->_vitality.writeState( written );
+                _expedition.findCrewMember( player )->_combatHealth.writeState( written );
                 ( player == 0 ? carry : _expedition.findCrewMember( player )->_carry ).writeState( written );
                 sw::StateArchiveUtil::writeName( written, "ship" );
                 written << static_cast<uint8>( SW_FALSE );

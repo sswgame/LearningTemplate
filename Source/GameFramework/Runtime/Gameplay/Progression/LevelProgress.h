@@ -18,7 +18,7 @@ namespace sw
 
     /** @brief 경험치 곡선 공식(`<ExperienceCurve maxLevel base exponent linear>`)의 칸입니다. 곡선이 지금 값으로 채운 뒤 읽는다 — 적지 않은 칸은 생성자의 초기값이다. */
     REFLECT()
-    struct SW_GF_API ExperienceCurveFields
+    struct SW_GF_API ExperienceCurveParams
     {
         REFLECT_BODY();
 
@@ -34,7 +34,7 @@ namespace sw
 
     /** @brief 경험치 표의 한 줄(`<Level xp>`)입니다. */
     REFLECT()
-    struct SW_GF_API ExperienceLevelFields
+    struct SW_GF_API ExperienceLevelParams
     {
         REFLECT_BODY();
 
@@ -58,7 +58,7 @@ namespace sw
         void               setTable( const vector<int64>& listXPToNext );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 표(`<Level xp>`) 또는 공식 속성을 읽습니다. 깨진 값 · 범위 밖 값이면 오류를 남기고 곡선을 바꾸지 않은 채 false 입니다. */
-        [[nodiscard]] bool loadFromNode( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& node, string_view sourceName );
 
         /** @brief @p level 에서 다음 레벨까지 필요한 경험치입니다. 최고 레벨이면 0 입니다. */
         int64 getXPToNext( int32 level ) const;

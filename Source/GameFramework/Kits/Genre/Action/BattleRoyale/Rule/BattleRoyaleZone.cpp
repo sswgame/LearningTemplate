@@ -149,9 +149,9 @@ namespace sw
         return false;
     }
 
-    void BattleRoyaleZone::drainEvents( vector<BattleRoyaleZoneEvent>& outListEvent )
+    void BattleRoyaleZone::pollEvents( vector<BattleRoyaleZoneEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     bool BattleRoyaleZone::writeState( BitWriter& writer ) const

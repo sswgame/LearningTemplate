@@ -226,7 +226,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Save" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Save" ) ) )
                 (void)saveDocument(); // 실패는 상태 줄과 로그가 알린다
-            EditorSelfTestMarks::note( "behaviorTree.save" );
+            EditorSelfTestMarks::record( "behaviorTree.save" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Reload" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Reload" ) ) )
                 reloadDocument();
@@ -244,7 +244,7 @@ namespace sw::editor
                     }
                     ImGui::EndCombo();
                 }
-                EditorSelfTestMarks::note( "behaviorTree.add" );
+                EditorSelfTestMarks::record( "behaviorTree.add" );
                 ImGui::SameLine();
                 const bool bHasSelection = _model.find( _selectedID ) != nullptr;
                 const bool bMoveUp       = ImGui::Button( SW_LOCKEY( "EdPlugin", "Up" ) );
@@ -353,7 +353,7 @@ namespace sw::editor
         _selectedID               = selectedCount > 0 ? static_cast<int32>( arrSelected[0].Get() ) : -1;
 
         _nodeGraph.applyContentFitIfNeeded();
-        EditorNodeGraph::noteDrawnNodeCount( _model.getNodeCount() );
+        EditorNodeGraph::recordDrawnNodeCount( _model.getNodeCount() );
         _nodeGraph.endCanvas();
         ed::SetCurrentEditor( nullptr );
         EditorChrome::endSection();
@@ -375,17 +375,17 @@ namespace sw::editor
         if ( display != BehaviorTreeNames::toString( node._type ) )
             ImGui::TextUnformatted( display.c_str() );
         // 캔버스의 한 줄 요약. 칸은 종류의 스키마 값에 있다.
-        if ( const BehaviorConditionDecoratorFields* pDecorator = node._fields.find<BehaviorConditionDecoratorFields>(); pDecorator != nullptr )
+        if ( const BehaviorConditionDecoratorParams* pDecorator = node._fields.find<BehaviorConditionDecoratorParams>(); pDecorator != nullptr )
             ImGui::TextDisabled( "%s", pDecorator->_test.c_str() );
-        else if ( const BehaviorConditionFields* pCondition = node._fields.find<BehaviorConditionFields>(); pCondition != nullptr )
+        else if ( const BehaviorConditionParams* pCondition = node._fields.find<BehaviorConditionParams>(); pCondition != nullptr )
             ImGui::TextDisabled( "%s", pCondition->_test.c_str() );
-        else if ( const BehaviorTimedFields* pTimed = node._fields.find<BehaviorTimedFields>(); pTimed != nullptr )
+        else if ( const BehaviorTimedParams* pTimed = node._fields.find<BehaviorTimedParams>(); pTimed != nullptr )
             ImGui::TextDisabled( "%.2f s", pTimed->_seconds );
-        else if ( const BehaviorRepeatFields* pRepeat = node._fields.find<BehaviorRepeatFields>(); pRepeat != nullptr )
+        else if ( const BehaviorRepeatParams* pRepeat = node._fields.find<BehaviorRepeatParams>(); pRepeat != nullptr )
             ImGui::TextDisabled( "x%d", pRepeat->_count );
-        else if ( const BehaviorMoveToFields* pMove = node._fields.find<BehaviorMoveToFields>(); pMove != nullptr )
+        else if ( const BehaviorMoveToParams* pMove = node._fields.find<BehaviorMoveToParams>(); pMove != nullptr )
             ImGui::TextDisabled( "-> %s", pMove->_key.c_str() );
-        else if ( const BehaviorSubTreeFields* pSubTree = node._fields.find<BehaviorSubTreeFields>(); pSubTree != nullptr )
+        else if ( const BehaviorSubTreeParams* pSubTree = node._fields.find<BehaviorSubTreeParams>(); pSubTree != nullptr )
             ImGui::TextDisabled( "%s", pSubTree->_tree.empty() ? pSubTree->_slot.c_str() : pSubTree->_tree.c_str() );
         if ( bActive )
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Success" ) ), "running" );
@@ -466,7 +466,7 @@ namespace sw::editor
         }
     }
 
-    void BehaviorTreePanel::adoptPastedSubtree( int32 newID, const string& error, const utf8* pLabel )
+    void BehaviorTreePanel::attachPastedSubtree( int32 newID, const string& error, const utf8* pLabel )
     {
         if ( newID < 0 )
         {
@@ -509,7 +509,7 @@ namespace sw::editor
         string error;
         if ( duplicateID >= 0 )
         {
-            adoptPastedSubtree( _model.duplicateSubtree( duplicateID, error ), error, "Duplicate Behavior Subtree" );
+            attachPastedSubtree( _model.duplicateSubtree( duplicateID, error ), error, "Duplicate Behavior Subtree" );
             return;
         }
         if ( command == EditorGraphEditCommand::Paste )
@@ -523,7 +523,7 @@ namespace sw::editor
                 _statusText = "Select the parent node first";
                 return;
             }
-            adoptPastedSubtree( _model.pasteSubtree( parentID, text, -1, error ), error, "Paste Behavior Subtree" );
+            attachPastedSubtree( _model.pasteSubtree( parentID, text, -1, error ), error, "Paste Behavior Subtree" );
             return;
         }
         if ( ( command != EditorGraphEditCommand::Copy && command != EditorGraphEditCommand::Cut ) || _model.find( targetID ) == nullptr )
@@ -626,9 +626,9 @@ namespace sw::editor
             // 컴포넌트에 안 붙은 실행기(지휘관 AI 등) — 노드 번호는 깊이 우선 번호라 창에 연 파일과 같은 트리 파일을 쥔 실행기만 맞다.
             listDebugRunner.clear();
             pObject->forEachComponentOfType<GameModeComponent>(
-                [&listDebugRunner]( GameModeComponent* pDirector )
+                [&listDebugRunner]( GameModeComponent* pGameMode )
             {
-                const IBehaviorTreeDebugSource* pSource = pDirector->findBehaviorTreeDebugSource();
+                const IBehaviorTreeDebugSource* pSource = pGameMode->findBehaviorTreeDebugSource();
                 if ( pSource != nullptr )
                     pSource->collectBehaviorTreeRunners( listDebugRunner );
             } );
@@ -673,7 +673,7 @@ namespace sw::editor
 
         // 칸은 스키마와 등록에서 온다 — 칸이나 동작을 더해도 이 패널을 고치지 않는다.
         _bGridEdited                      = SW_FALSE;
-        const BehaviorActionFields* pTask = node._fields.find<BehaviorActionFields>();
+        const BehaviorActionParams* pTask = node._fields.find<BehaviorActionParams>();
         if ( pTask != nullptr )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );

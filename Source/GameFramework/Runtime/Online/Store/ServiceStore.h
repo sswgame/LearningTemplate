@@ -10,7 +10,7 @@
  *          - `Unavailable` 은 "적용됐는지 모른다"를 포함한다. 돈이나 아이템이 움직이는 커밋은 같은 트랜잭션에 멱등 기록(`ServiceIdempotency`)을 넣어 결과를 가려야 한다.
  *          - 키는 ASCII(`[0-9a-z_./-]`, 256 B 이하)이고 순서는 바이트 사전순이다. 숫자는 `ServiceKeyUtil::appendHex64`(고정 16자)로 써야 순서가 맞는다.
  *            테이블 이름은 `hashed_string` 이라 대소문자를 가리지 않으므로 소문자로만 쓴다.
- *          - 비동기: 서비스는 저장 왕복 하나를 `IServiceStoreWork` 로 묶어 `submit` 한다.
+ *          - 비동기: 서비스는 저장 왕복 하나를 `IServiceStoreJob` 로 묶어 `submit` 한다.
  *            `run` 은 저장소 스레드에서 돌고(동기 연결 API), `complete` 는 맡긴 스레드가 `pollCompletions` 를 부를 때 돈다.
  *            게임 스레드와 네트워크 스레드는 DB 를 기다리지 않는다.
  */
@@ -117,7 +117,7 @@ namespace sw
 {
     /**
      * @class IServiceStoreConnection
-     * @brief 저장소 스레드에서 `IServiceStoreWork::run` 이 받는 동기 연결입니다.
+     * @brief 저장소 스레드에서 `IServiceStoreJob::run` 이 받는 동기 연결입니다.
      * @details 그 호출 동안만 유효하므로 보관하면 안 된다.
      */
     class SW_GF_API IServiceStoreConnection
@@ -153,7 +153,7 @@ namespace sw
      * @brief 서비스의 저장소 완료 함수(`complete` 가 부르는 `apply*` · `complete*`)가 일의 결과와 함께 받는 끝 상태입니다.
      * @details 저장소 실패를 로그로 내는 완료 함수는 이것을 받아 `isCancelled` 가 false 일 때만 경고 · 오류를 낸다. 종료 때문에 취소된 일은 고장이 아니기 때문이다.
      *          `bool` 둘(`bReadOk`, `bCancelled`)이 나란히 오면 뒤바뀌어도 컴파일되므로 이름 있는 형식으로 받는다.
-     *          이 형식을 받는 함수(와 `IServiceStoreWork` 의 `complete`)는 로그를 내면서 `isCancelled` 를 한 번도 묻지 않으면 안 된다.
+     *          이 형식을 받는 함수(와 `IServiceStoreJob` 의 `complete`)는 로그를 내면서 `isCancelled` 를 한 번도 묻지 않으면 안 된다.
      */
     struct ServiceStoreCompletion
     {
@@ -166,7 +166,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IServiceStoreWork
+     * @class IServiceStoreJob
      * @brief 저장 왕복 하나입니다.
      * @details 입력은 맡기기 전에 이 객체에 복사해 둔다.
      *          `run` 은 저장소 스레드에서 정확히 한 번 불린다. 저장소를 종료하는 중이면 모든 호출이 Unavailable 인 연결로 불린다.
@@ -175,14 +175,14 @@ namespace sw
      *          저장소는 `submit` 을 부른 스레드의 로그 컨텍스트(요청 추적 id 와 주체)를 저장해 두었다가 `run` 과 `complete` 동안 다시 설정한다.
      *          그래서 저장소 스레드의 로그 줄에도 같은 요청 꼬리표가 붙는다.
      */
-    class SW_GF_API IServiceStoreWork
+    class SW_GF_API IServiceStoreJob
     {
     public:
-        IServiceStoreWork()          = default;
-        virtual ~IServiceStoreWork() = default;
+        IServiceStoreJob()          = default;
+        virtual ~IServiceStoreJob() = default;
 
-        IServiceStoreWork( const IServiceStoreWork& )            = delete;
-        IServiceStoreWork& operator=( const IServiceStoreWork& ) = delete;
+        IServiceStoreJob( const IServiceStoreJob& )            = delete;
+        IServiceStoreJob& operator=( const IServiceStoreJob& ) = delete;
 
         virtual void run( IServiceStoreConnection& connection ) = 0;
         virtual void complete()                                 = 0;
@@ -226,7 +226,7 @@ namespace sw
         IServiceStore( const IServiceStore& )            = delete;
         IServiceStore& operator=( const IServiceStore& ) = delete;
 
-        virtual void submit( unique_ptr<IServiceStoreWork> work ) = 0;
+        virtual void submit( unique_ptr<IServiceStoreJob> work ) = 0;
         /** @brief 끝난 일의 `complete` 를 이 스레드에서 부르고, 부른 수를 반환합니다. */
         virtual int32 pollCompletions() = 0;
         /** @brief 받았지만 아직 회수하지 않은 작업의 수를 반환합니다. */

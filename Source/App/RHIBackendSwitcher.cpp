@@ -305,7 +305,7 @@ namespace sw
         // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
         // 엔진 몫(`Backend swap took`)과 모듈 몫(게임 · 에디터를 다시 세우고 씬 상태를 되돌린다)을 함께 남긴다 - 교체 시간의 대부분이 모듈 몫이던 때 엔진 줄만 보였다.
         const Stopwatch swapWatch;
-        _pGameModuleManager->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
+        _pGameModuleManager->suspendModules( ModuleScope::Both, false, FlushReason::BackendSwap );
         const uint64 suspendMicroseconds = swapWatch.getElapsedMicroseconds();
 
         const bool   bSwapOk            = _pEngine->applyPendingBackendChange();

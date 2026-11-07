@@ -108,7 +108,7 @@ namespace sw::editor
         bool               bForce  = false;
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdPluginButton", "Reload" ), "Reload" ) ) )
             bForce = true;
-        EditorSelfTestMarks::note( "themepark.layout.reload" );
+        EditorSelfTestMarks::record( "themepark.layout.reload" );
         // [/doc:panel-draw]
         const bool bReread = preview.refresh( bForce );
         if ( preview.isLoaded() == false )
@@ -125,7 +125,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Map" ), SW_LOCKEY( "EdPluginParkLayout", "FocusGate" ), "FocusGate" ) ) )
             (void)EditorSceneViewUtil::focusOn( model.getGatePosition(), ParkLayoutPanelInternal::kGateFocusRadius ); // 씬 뷰가 닫혀 있으면 할 일이 없다
-        EditorSelfTestMarks::note( "themepark.layout.gate" );
+        EditorSelfTestMarks::record( "themepark.layout.gate" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginParkLayout", "FocusGateTip" ) );
 
         // 정렬은 표를 연 뒤에야 알 수 있어 건수는 거르기로 먼저 센다(정렬은 건수를 바꾸지 않는다).
@@ -170,7 +170,7 @@ namespace sw::editor
                 ImGui::PopID();
                 fixed_string<constant::buffer::kMax64> mark;
                 formatstring( mark.data(), mark.capacity(), "themepark.layout.ride.%#", rideIndex );
-                EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 줄을 두 번 눌러 카메라를 옮긴다 — 번호는 파일 순서라 정렬해도 그대로다
+                EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 줄을 두 번 눌러 카메라를 옮긴다 — 번호는 파일 순서라 정렬해도 그대로다
                 ImGui::TableSetColumnIndex( 1 );
                 ParkLayoutPanelInternal::drawNumberCell( ride._buildCost );
                 ImGui::TableSetColumnIndex( 2 );

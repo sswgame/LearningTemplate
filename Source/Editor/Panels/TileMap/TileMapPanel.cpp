@@ -158,12 +158,12 @@ namespace sw::editor
                 EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( button._pLabel ) );
             if ( ImGui::RadioButton( button._pLabel, _document.getTool() == button._tool ) )
                 _document.setTool( button._tool );
-            EditorSelfTestMarks::note( button._pMark );
+            EditorSelfTestMarks::record( button._pMark );
             EditorWidgets::drawTooltip( button._pTooltip );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Erase" ) ) );
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Erase" ), &_document.editErase() );
-        EditorSelfTestMarks::note( "tileMap.erase" );
+        EditorSelfTestMarks::record( "tileMap.erase" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetView" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "ResetView" ) ) )
@@ -192,7 +192,7 @@ namespace sw::editor
         canvasSize.x            = MathUtil::max( canvasSize.x, 64.0f );
         canvasSize.y            = MathUtil::max( canvasSize.y, 64.0f );
         ImGui::InvisibleButton( "##tilegrid", canvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle | ImGuiButtonFlags_MouseButtonRight );
-        EditorSelfTestMarks::note( "tileMap.canvas" );
+        EditorSelfTestMarks::record( "tileMap.canvas" );
         const bool bHovered = ImGui::IsItemHovered();
         const bool bActive  = ImGui::IsItemActive();
 
@@ -362,10 +362,10 @@ namespace sw::editor
         {
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Value" ) );
             ImGui::InputInt( "##Value", &_document.editPaintDataValue() );
-            EditorSelfTestMarks::note( "tileMap.dataLayer.value" );
+            EditorSelfTestMarks::record( "tileMap.dataLayer.value" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
             const bool bRemoveDataLayer = ImGui::Button( SW_LOCKEY( "EdVerb", "Remove" ) );
-            EditorSelfTestMarks::note( "tileMap.dataLayer.remove" );
+            EditorSelfTestMarks::record( "tileMap.dataLayer.remove" );
             if ( bRemoveDataLayer && _document.removeSelectedDataLayer() )
                 notifyDocumentEdited( "Remove Tile Map Data Layer" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "RemoveDataLayerTip" ) );
@@ -374,13 +374,13 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DataLayers" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
         ImGui::InputText( "##dataLayerName", _newDataLayerName.data(), _newDataLayerName.capacity() );
-        EditorSelfTestMarks::note( "tileMap.dataLayer.name" );
+        EditorSelfTestMarks::record( "tileMap.dataLayer.name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerNameTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Default" ) );
         ImGui::InputInt( "##dataLayerDefault", &_newDataLayerDefault );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerDefaultTip" ) );
         const bool bAddDataLayer = ImGui::Button( SW_LOCKEY( "EdText", "AddDataLayer" ) );
-        EditorSelfTestMarks::note( "tileMap.dataLayer.add" );
+        EditorSelfTestMarks::record( "tileMap.dataLayer.add" );
         if ( bAddDataLayer && _document.addDataLayer( _newDataLayerName.c_str(), _newDataLayerDefault ) )
         {
             _newDataLayerName.clear();
@@ -435,7 +435,7 @@ namespace sw::editor
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
         const bool bLoad = ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) );
-        EditorSelfTestMarks::note( "tileMap.load" );
+        EditorSelfTestMarks::record( "tileMap.load" );
         if ( bLoad )
         {
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
@@ -451,7 +451,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         const bool bSave = ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) );
-        EditorSelfTestMarks::note( "tileMap.save" );
+        EditorSelfTestMarks::record( "tileMap.save" );
         // 저장 경로 하나를 지난다 — 단추만 따로 쓰면 못 읽은 문서(Malformed)를 덮어쓰고 핫 리로드를 건너뛰었다.
         if ( bSave )
             (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 이유는 상태 줄에 있다
@@ -545,7 +545,7 @@ namespace sw::editor
 
     bool TileMapPanel::saveDocument()
     {
-        if ( _document.saveXML() == false )
+        if ( _document.saveToFile() == false )
             return false;
         syncDocumentUndoBaseline();
         // 다른 경로로 저장했으면 그 파일이 열린 문서다 — 핫 리로드 · 최근 목록 · 되돌리기의 문서 경로가 옛 파일을 가리키지 않게 한다.

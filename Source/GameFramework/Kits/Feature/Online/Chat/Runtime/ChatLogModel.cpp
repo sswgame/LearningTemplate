@@ -6,7 +6,7 @@ namespace sw
 {
     ChatLogModel::ChatLogModel()
         : _listLine{}
-        , _listDrained{}
+        , _listPolled{}
         , _pClient{ nullptr }
         , _revision{ 0 }
         , _retryAfterMs{ 0 }
@@ -16,9 +16,9 @@ namespace sw
 
     bool ChatLogModel::initialize( ChatClient* pClient )
     {
-        _drainLease.release();
+        _consumerLease.release();
         _pClient = nullptr;
-        if ( pClient != nullptr && pClient->claimMessages( _drainLease ) == false )
+        if ( pClient != nullptr && pClient->claimMessages( _consumerLease ) == false )
             return false;
         _pClient = pClient;
         return true;
@@ -28,9 +28,9 @@ namespace sw
     {
         if ( _pClient == nullptr )
             return;
-        _listDrained.clear();
-        _pClient->drainMessages( _drainLease, _listDrained );
-        for ( const ChatMessage& message : _listDrained )
+        _listPolled.clear();
+        _pClient->pollMessages( _consumerLease, _listPolled );
+        for ( const ChatMessage& message : _listPolled )
         {
             appendMessage( message );
         }

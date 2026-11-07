@@ -21,7 +21,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationFields.h"
+#include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationParams.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -35,10 +35,10 @@ namespace sw
             /** @brief `AdvanceGameTime` 은 `minutes` · `hours` · `toHour`(다음 그 시각, 0..24) 중 정확히 하나를 받습니다. */
             static bool validateAdvanceGameTime( const AutomationStep& step, string& outError )
             {
-                AdvanceGameTimeFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AdvanceGameTimeParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                const uint32 count = ( fields._minutes >= 0.0f ? 1u : 0u ) + ( fields._hours >= 0.0f ? 1u : 0u ) + ( fields._toHour >= 0.0f ? 1u : 0u );
+                const uint32 count = ( params._minutes >= 0.0f ? 1u : 0u ) + ( params._hours >= 0.0f ? 1u : 0u ) + ( params._toHour >= 0.0f ? 1u : 0u );
                 if ( count == 1 )
                     return true;
                 outError = step.describe() + ": needs exactly one of minutes · hours · toHour";
@@ -53,16 +53,16 @@ namespace sw
             {
                 GameObjectManager*             pManager = runner.findActiveObjectManager();
                 uint32                         count    = 0;
-                const AdvanceGameTimeFields    fields   = step.readValidatedFields<AdvanceGameTimeFields>();
+                const AdvanceGameTimeParams    params   = step.readValidatedFields<AdvanceGameTimeParams>();
                 vector<SessionStateComponent*> listState;
                 SessionStateComponent::collectOpen( pManager, listState );
                 for ( SessionStateComponent* pState : listState )
                 {
                     WorldClock& clock = pState->getClock();
-                    if ( fields._toHour >= 0.0f )
-                        clock.advanceToHour( fields._toHour );
+                    if ( params._toHour >= 0.0f )
+                        clock.advanceToHour( params._toHour );
                     else
-                        clock.advanceMinutes( fields._hours >= 0.0f ? fields._hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : fields._minutes );
+                        clock.advanceMinutes( params._hours >= 0.0f ? params._hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : params._minutes );
                     ++count;
                 }
                 if ( count == 0 )
@@ -83,14 +83,14 @@ namespace sw
 
             static bool validateMountStep( const AutomationStep& step, string& outError )
             {
-                MountStepFields fields;
-                return step.readFields( fields, outError );
+                MountStepParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateDismountStep( const AutomationStep& step, string& outError )
             {
-                DismountStepFields fields;
-                return step.readFields( fields, outError );
+                DismountStepParams params;
+                return step.readFields( params, outError );
             }
 
             static const utf8* toText( MountResult result )
@@ -126,9 +126,9 @@ namespace sw
             /** @brief 탑승자 폰을 탈것 오브젝트의 빈 좌석(운전석 먼저)에 태운다. 탈 수 없으면 그 까닭(`TooFar` 등)을 실패로 적는다. */
             static bool runMountStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const MountStepFields fields      = step.readValidatedFields<MountStepFields>();
-                const string&         riderName   = fields._rider;
-                const string&         vehicleName = fields._vehicle;
+                const MountStepParams params      = step.readValidatedFields<MountStepParams>();
+                const string&         riderName   = params._rider;
+                const string&         vehicleName = params._vehicle;
                 PawnComponent*        pRider      = findPawn( runner, step, riderName );
                 GameObject*           pVehicle    = pRider != nullptr ? findObject( runner, step, vehicleName ) : nullptr;
                 if ( pVehicle == nullptr )
@@ -153,7 +153,7 @@ namespace sw
 
             static bool runDismountStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string   riderName = step.readValidatedFields<DismountStepFields>()._rider;
+                const string   riderName = step.readValidatedFields<DismountStepParams>()._rider;
                 PawnComponent* pRider    = findPawn( runner, step, riderName );
                 if ( pRider != nullptr && VehicleSeatComponent::dismount( *pRider, false ) == false )
                     runner.recordFailure( step, "'" + riderName + "' is not seated" );

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorSession.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -19,7 +19,7 @@ namespace sw
 {
     namespace
     {
-        struct HorrorSessionInternal
+        struct SurvivalHorrorSessionInternal
         {
             static ResourceGaugeSettings makeSanitySettings( const SurvivalHorrorRules& rules )
             {
@@ -111,7 +111,7 @@ namespace sw
 
 namespace sw
 {
-    HorrorSession::HorrorSession()
+    SurvivalHorrorSession::SurvivalHorrorSession()
         : _sanity{}
         , _battery{}
         , _uniqueSeenMonster{}
@@ -136,25 +136,25 @@ namespace sw
     {
     }
 
-    bool HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs,
-                                    GridInventory& inventory, Inventory& itemBox )
+    bool SurvivalHorrorSession::initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs,
+                                            GridInventory& inventory, Inventory& itemBox )
     {
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "HorrorSession.HorrorSessionRefusedNoCatalog", "HorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
+            SW_LOG_ERROR_ID( "SurvivalHorrorSession.SurvivalHorrorSessionRefusedNoCatalog", "SurvivalHorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
             return false;
         }
         // 없는 방에서 시작하면 어느 길도 지날 수 없어 판이 멈춘다.
         if ( pAreaGraph != nullptr && startArea.empty() == false && pAreaGraph->findArea( startArea ) == nullptr )
         {
-            SW_LOG_ERROR_ID( "HorrorSession.UnknownStartArea", "HorrorSession: refused - start area '%#' is not on the graph", startArea.c_str() );
+            SW_LOG_ERROR_ID( "SurvivalHorrorSession.UnknownStartArea", "SurvivalHorrorSession: refused - start area '%#' is not on the graph", startArea.c_str() );
             return false;
         }
         const SurvivalHorrorRules& rules = pCatalog->getRules();
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
         ResourceGauge sanity;
         ResourceGauge battery;
-        if ( sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) ) == false || battery.initialize( HorrorSessionInternal::makeBatterySettings( rules ) ) == false )
+        if ( sanity.initialize( SurvivalHorrorSessionInternal::makeSanitySettings( rules ) ) == false || battery.initialize( SurvivalHorrorSessionInternal::makeBatterySettings( rules ) ) == false )
             return false;
         if ( inventory.initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight ) == false )
             return false;
@@ -184,7 +184,7 @@ namespace sw
         return true;
     }
 
-    void HorrorSession::update( float32 deltaTime, bool bInDarkness )
+    void SurvivalHorrorSession::update( float32 deltaTime, bool bInDarkness )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -203,7 +203,7 @@ namespace sw
         refreshHallucination();
     }
 
-    bool HorrorSession::storeInBox( int32 instanceID, int32 count )
+    bool SurvivalHorrorSession::storeInBox( int32 instanceID, int32 count )
     {
         const GridItem* pItem               = _pInventory->findInstance( instanceID );
         const bool      bInvalidMoveRequest = pItem == nullptr || count <= 0 || pItem->_count < count;
@@ -217,7 +217,7 @@ namespace sw
         return taken == count && added == taken;
     }
 
-    int32 HorrorSession::takeFromBox( const hashed_string& itemID, int32 count )
+    int32 SurvivalHorrorSession::takeFromBox( const hashed_string& itemID, int32 count )
     {
         const int32 wanted = MathUtil::min( count, _pItemBox->getItemCount( itemID ) );
         if ( wanted <= 0 )
@@ -228,7 +228,7 @@ namespace sw
         return added;
     }
 
-    bool HorrorSession::combineItems( int32 firstInstanceID, int32 secondInstanceID )
+    bool SurvivalHorrorSession::combineItems( int32 firstInstanceID, int32 secondInstanceID )
     {
         if ( _pCatalog == nullptr )
             return false;
@@ -277,18 +277,18 @@ namespace sw
         return true;
     }
 
-    bool HorrorSession::tryConsumeAmmo( const hashed_string& ammoItemID, int32 count )
+    bool SurvivalHorrorSession::tryConsumeAmmo( const hashed_string& ammoItemID, int32 count )
     {
         return _pInventory->removeItem( ammoItemID, count );
     }
 
-    bool HorrorSession::tryUseItem( int32 instanceID )
+    bool SurvivalHorrorSession::tryUseItem( int32 instanceID )
     {
         const GridItem* pItem = _pInventory->findInstance( instanceID );
         // 죽은 뒤에 약을 먹어 되살아나지 않는다.
         if ( pItem == nullptr || _pCatalog == nullptr || isDead() )
             return false;
-        const HorrorItemDef* pDef = _pCatalog->findItem( pItem->_itemID );
+        const SurvivalHorrorItemDef* pDef = _pCatalog->findItem( pItem->_itemID );
         if ( pDef == nullptr || ( pDef->_healAmount <= 0.0f && pDef->_sanityAmount <= 0.0f && pDef->_batteryAmount <= 0.0f ) )
             return false;
         const float32 maxHealth = _pCatalog->getRules()._maxHealth;
@@ -302,39 +302,39 @@ namespace sw
         return true;
     }
 
-    void HorrorSession::applyDamage( float32 amount )
+    void SurvivalHorrorSession::applyDamage( float32 amount )
     {
         _health = MathUtil::max( 0.0f, _health - MathUtil::max( 0.0f, amount ) );
     }
 
-    HorrorSaveResult HorrorSession::trySave()
+    SurvivalHorrorSaveResult SurvivalHorrorSession::trySave()
     {
         const SurvivalHorrorRules rules = _pCatalog != nullptr ? _pCatalog->getRules() : SurvivalHorrorRules{};
-        if ( rules._saveMode == HorrorSaveMode::Limited && _saveCount >= rules._maxSaves )
-            return HorrorSaveResult::NoSavesLeft;
-        if ( rules._saveMode == HorrorSaveMode::InkRibbon )
+        if ( rules._saveMode == SurvivalHorrorSaveMode::Limited && _saveCount >= rules._maxSaves )
+            return SurvivalHorrorSaveResult::NoSavesLeft;
+        if ( rules._saveMode == SurvivalHorrorSaveMode::InkRibbon )
         {
             // 가방에서 처음 찾은 SaveItem 하나를 쓴다(놓은 순서이므로 결정적이다).
             int32 ribbonInstance = -1;
             for ( const GridItem& item : _pInventory->getItems() )
             {
-                const HorrorItemDef* pDef = _pCatalog->findItem( item._itemID );
-                if ( pDef != nullptr && pDef->_kind == HorrorItemKind::SaveItem )
+                const SurvivalHorrorItemDef* pDef = _pCatalog->findItem( item._itemID );
+                if ( pDef != nullptr && pDef->_kind == SurvivalHorrorItemKind::SaveItem )
                 {
                     ribbonInstance = item._instanceID;
                     break;
                 }
             }
             if ( ribbonInstance < 0 )
-                return HorrorSaveResult::NoSaveItem;
+                return SurvivalHorrorSaveResult::NoSaveItem;
             (void)_pInventory->takeFromInstance( ribbonInstance, 1 );
         }
         ++_saveCount;
         pushEvent( SurvivalHorrorEvent::Kind::Saved, hashed_string(), static_cast<float32>( _saveCount ) );
-        return HorrorSaveResult::Ok;
+        return SurvivalHorrorSaveResult::Ok;
     }
 
-    bool HorrorSession::trySetFlashlight( bool bOn )
+    bool SurvivalHorrorSession::trySetFlashlight( bool bOn )
     {
         if ( bOn && _battery.getValue() <= 0.0f )
             return false;
@@ -342,9 +342,9 @@ namespace sw
         return true;
     }
 
-    float32 HorrorSession::witnessMonster( const hashed_string& monsterID )
+    float32 SurvivalHorrorSession::witnessMonster( const hashed_string& monsterID )
     {
-        const HorrorMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
+        const SurvivalHorrorMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
         if ( pMonster == nullptr )
             return 0.0f;
         const bool    bFirstSight = _uniqueSeenMonster.insert( monsterID ).second;
@@ -354,7 +354,7 @@ namespace sw
         return before - _sanity.getValue();
     }
 
-    void HorrorSession::loseSanity( float32 amount, const hashed_string& cause )
+    void SurvivalHorrorSession::loseSanity( float32 amount, const hashed_string& cause )
     {
         const float32 lost = _sanity.reduce( amount );
         if ( lost <= 0.0f )
@@ -363,57 +363,57 @@ namespace sw
         refreshHallucination();
     }
 
-    float32 HorrorSession::computeAimSwayScale() const
+    float32 SurvivalHorrorSession::computeAimSwayScale() const
     {
         const float32 maxSway = _pCatalog != nullptr ? _pCatalog->getRules()._maxAimSway : 0.0f;
         return 1.0f + ( 1.0f - MathUtil::saturate( _sanity.getRatio() ) ) * maxSway;
     }
 
-    HorrorPuzzleResult HorrorSession::useKey( const hashed_string& lockID )
+    SurvivalHorrorPuzzleResult SurvivalHorrorSession::useKey( const hashed_string& lockID )
     {
-        const HorrorKeyLockDef* pLock = _pCatalog != nullptr ? _pCatalog->findKeyLock( lockID ) : nullptr;
+        const SurvivalHorrorKeyLockDef* pLock = _pCatalog != nullptr ? _pCatalog->findKeyLock( lockID ) : nullptr;
         if ( pLock == nullptr )
-            return HorrorPuzzleResult::Unknown;
+            return SurvivalHorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( lockID ) > 0 )
-            return HorrorPuzzleResult::AlreadySolved;
+            return SurvivalHorrorPuzzleResult::AlreadySolved;
         if ( _pInventory->hasItem( pLock->_keyItem ) == false )
-            return HorrorPuzzleResult::MissingItem;
+            return SurvivalHorrorPuzzleResult::MissingItem;
         if ( pLock->_bConsumeKey )
             (void)_pInventory->removeItem( pLock->_keyItem, 1 ); // 열쇠는 위의 hasItem 이 확인했다
         (void)markSolved( lockID, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::DoorUnlocked, lockID );
-        return HorrorPuzzleResult::Solved;
+        return SurvivalHorrorPuzzleResult::Solved;
     }
 
-    HorrorPuzzleResult HorrorSession::enterDialCode( const hashed_string& lockID, const vector<int32>& listDigit )
+    SurvivalHorrorPuzzleResult SurvivalHorrorSession::enterDialCode( const hashed_string& lockID, const vector<int32>& listDigit )
     {
-        const HorrorDialLockDef* pLock = _pCatalog != nullptr ? _pCatalog->findDialLock( lockID ) : nullptr;
+        const SurvivalHorrorDialLockDef* pLock = _pCatalog != nullptr ? _pCatalog->findDialLock( lockID ) : nullptr;
         if ( pLock == nullptr )
-            return HorrorPuzzleResult::Unknown;
+            return SurvivalHorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( lockID ) > 0 )
-            return HorrorPuzzleResult::AlreadySolved;
+            return SurvivalHorrorPuzzleResult::AlreadySolved;
         // 틀렸을 때만 칸을 만든다 — 시도하지 않은 자물쇠와 맞힌 자물쇠의 바이트가 같아야 한다.
         const auto  attemptIter = _mapDialAttempt.find( lockID );
         const int32 wrongCount  = attemptIter != _mapDialAttempt.end() ? attemptIter->second : 0;
         if ( pLock->_maxAttempts > 0 && wrongCount >= pLock->_maxAttempts )
-            return HorrorPuzzleResult::LockedOut;
+            return SurvivalHorrorPuzzleResult::LockedOut;
         if ( listDigit != pLock->_listDigit )
         {
             _mapDialAttempt[lockID] = wrongCount + 1;
-            return pLock->_maxAttempts > 0 && wrongCount + 1 >= pLock->_maxAttempts ? HorrorPuzzleResult::LockedOut : HorrorPuzzleResult::Wrong;
+            return pLock->_maxAttempts > 0 && wrongCount + 1 >= pLock->_maxAttempts ? SurvivalHorrorPuzzleResult::LockedOut : SurvivalHorrorPuzzleResult::Wrong;
         }
         (void)markSolved( lockID, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::PuzzleSolved, lockID );
-        return HorrorPuzzleResult::Solved;
+        return SurvivalHorrorPuzzleResult::Solved;
     }
 
-    HorrorPuzzleResult HorrorSession::pressSequenceStep( const hashed_string& puzzleID, const hashed_string& step )
+    SurvivalHorrorPuzzleResult SurvivalHorrorSession::pressSequenceStep( const hashed_string& puzzleID, const hashed_string& step )
     {
-        const HorrorSequenceDef* pSequence = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleID ) : nullptr;
+        const SurvivalHorrorSequenceDef* pSequence = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleID ) : nullptr;
         if ( pSequence == nullptr || pSequence->_listStep.empty() )
-            return HorrorPuzzleResult::Unknown;
+            return SurvivalHorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( puzzleID ) > 0 )
-            return HorrorPuzzleResult::AlreadySolved;
+            return SurvivalHorrorPuzzleResult::AlreadySolved;
         // 진행 칸은 푸는 중에만 있다. 푼 퍼즐에 걸음 수만큼 남겨 두면 그 값이 `readState` 의 범위를 넘어 세이브를 다시 읽지 못했다.
         const auto  progressIter = _mapSequenceProgress.find( puzzleID );
         const int32 progress     = progressIter != _mapSequenceProgress.end() ? progressIter->second : 0;
@@ -421,20 +421,20 @@ namespace sw
         {
             _mapSequenceProgress.erase( puzzleID );
             loseSanity( pSequence->_mistakeSanity, puzzleID );
-            return HorrorPuzzleResult::Wrong;
+            return SurvivalHorrorPuzzleResult::Wrong;
         }
         if ( progress + 1 < static_cast<int32>( pSequence->_listStep.size() ) )
         {
             _mapSequenceProgress[puzzleID] = progress + 1;
-            return HorrorPuzzleResult::Progress;
+            return SurvivalHorrorPuzzleResult::Progress;
         }
         _mapSequenceProgress.erase( puzzleID );
         (void)markSolved( puzzleID, pSequence->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::PuzzleSolved, puzzleID );
-        return HorrorPuzzleResult::Solved;
+        return SurvivalHorrorPuzzleResult::Solved;
     }
 
-    bool HorrorSession::tryMoveTo( const hashed_string& areaID )
+    bool SurvivalHorrorSession::tryMoveTo( const hashed_string& areaID )
     {
         static const GameFlags kNoFlags; // 빌리지 않은 세션이므로 조건 있는 길은 닫힌 채이다
         if ( _pAreaGraph == nullptr || _pAreaGraph->canTraverse( _currentArea, areaID, _pFlags != nullptr ? *_pFlags : kNoFlags ) == false )
@@ -445,9 +445,9 @@ namespace sw
         return true;
     }
 
-    bool HorrorSession::readDocument( const hashed_string& documentID )
+    bool SurvivalHorrorSession::readDocument( const hashed_string& documentID )
     {
-        const HorrorDocumentDef* pDocument = _pCatalog != nullptr ? _pCatalog->findDocument( documentID ) : nullptr;
+        const SurvivalHorrorDocumentDef* pDocument = _pCatalog != nullptr ? _pCatalog->findDocument( documentID ) : nullptr;
         if ( pDocument == nullptr || _uniqueReadDocument.insert( documentID ).second == false )
             return false;
         pushEvent( SurvivalHorrorEvent::Kind::DocumentRead, documentID );
@@ -458,30 +458,30 @@ namespace sw
         return true;
     }
 
-    void HorrorSession::addClue( const hashed_string& clueID )
+    void SurvivalHorrorSession::addClue( const hashed_string& clueID )
     {
         if ( clueID.empty() == false && _uniqueClue.insert( clueID ).second )
             pushEvent( SurvivalHorrorEvent::Kind::ClueGained, clueID );
     }
 
-    bool HorrorSession::hasClue( const hashed_string& clueID ) const
+    bool SurvivalHorrorSession::hasClue( const hashed_string& clueID ) const
     {
         return _uniqueClue.count( clueID ) > 0;
     }
 
-    bool HorrorSession::linkClues( const hashed_string& firstClue, const hashed_string& secondClue )
+    bool SurvivalHorrorSession::linkClues( const hashed_string& firstClue, const hashed_string& secondClue )
     {
         const bool bCannotLinkClues = firstClue == secondClue || hasClue( firstClue ) == false || hasClue( secondClue ) == false || isLinked( firstClue, secondClue );
         if ( bCannotLinkClues )
             return false;
-        HorrorClueLink link;
+        SurvivalHorrorClueLink link;
         link._first  = firstClue;
         link._second = secondClue;
         _listClueLink.push_back( link );
         return true;
     }
 
-    bool HorrorSession::unlinkClues( const hashed_string& firstClue, const hashed_string& secondClue )
+    bool SurvivalHorrorSession::unlinkClues( const hashed_string& firstClue, const hashed_string& secondClue )
     {
         for ( size_t linkIndex = 0; linkIndex < _listClueLink.size(); ++linkIndex )
         {
@@ -494,26 +494,26 @@ namespace sw
         return false;
     }
 
-    bool HorrorSession::isLinked( const hashed_string& firstClue, const hashed_string& secondClue ) const
+    bool SurvivalHorrorSession::isLinked( const hashed_string& firstClue, const hashed_string& secondClue ) const
     {
-        return VectorUtil::containsIf( _listClueLink, [&]( const HorrorClueLink& link )
+        return VectorUtil::containsIf( _listClueLink, [&]( const SurvivalHorrorClueLink& link )
         { return link.isSame( firstClue, secondClue ); } );
     }
 
-    HorrorPuzzleResult HorrorSession::submitDeduction( const hashed_string& deductionID, const hashed_string& answer )
+    SurvivalHorrorPuzzleResult SurvivalHorrorSession::submitDeduction( const hashed_string& deductionID, const hashed_string& answer )
     {
-        const HorrorDeductionDef* pDeduction = _pCatalog != nullptr ? _pCatalog->findDeduction( deductionID ) : nullptr;
+        const SurvivalHorrorDeductionDef* pDeduction = _pCatalog != nullptr ? _pCatalog->findDeduction( deductionID ) : nullptr;
         if ( pDeduction == nullptr )
-            return HorrorPuzzleResult::Unknown;
+            return SurvivalHorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( deductionID ) > 0 )
-            return HorrorPuzzleResult::AlreadySolved;
-        for ( const HorrorClueLink& required : pDeduction->_listRequiredLink )
+            return SurvivalHorrorPuzzleResult::AlreadySolved;
+        for ( const SurvivalHorrorClueLink& required : pDeduction->_listRequiredLink )
         {
             if ( hasClue( required._first ) == false || hasClue( required._second ) == false )
-                return HorrorPuzzleResult::MissingItem;
+                return SurvivalHorrorPuzzleResult::MissingItem;
         }
         bool bCorrect = answer == pDeduction->_answer;
-        for ( const HorrorClueLink& required : pDeduction->_listRequiredLink )
+        for ( const SurvivalHorrorClueLink& required : pDeduction->_listRequiredLink )
         {
             if ( bCorrect && isLinked( required._first, required._second ) == false )
                 bCorrect = false;
@@ -525,30 +525,30 @@ namespace sw
             if ( _pCatalog->getRules()._bClearLinksOnWrong )
                 _listClueLink.clear();
             pushEvent( SurvivalHorrorEvent::Kind::DeductionFailed, deductionID );
-            return HorrorPuzzleResult::Wrong;
+            return SurvivalHorrorPuzzleResult::Wrong;
         }
         (void)markSolved( deductionID, pDeduction->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::DeductionSolved, deductionID );
-        return HorrorPuzzleResult::Solved;
+        return SurvivalHorrorPuzzleResult::Solved;
     }
 
-    void HorrorSession::drainEvents( vector<SurvivalHorrorEvent>& outListEvent )
+    void SurvivalHorrorSession::pollEvents( vector<SurvivalHorrorEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void HorrorSession::writeState( Archive& outArchive ) const
+    void SurvivalHorrorSession::writeState( Archive& outArchive ) const
     {
         _sanity.writeState( outArchive );
         _battery.writeState( outArchive );
-        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueSeenMonster );
-        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueReadDocument );
-        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueClue );
-        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueSolvedPuzzle );
-        HorrorSessionInternal::writeSortedMap( outArchive, _mapDialAttempt );
-        HorrorSessionInternal::writeSortedMap( outArchive, _mapSequenceProgress );
+        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueSeenMonster );
+        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueReadDocument );
+        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueClue );
+        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueSolvedPuzzle );
+        SurvivalHorrorSessionInternal::writeSortedMap( outArchive, _mapDialAttempt );
+        SurvivalHorrorSessionInternal::writeSortedMap( outArchive, _mapSequenceProgress );
         outArchive << static_cast<uint32>( _listClueLink.size() );
-        for ( const HorrorClueLink& link : _listClueLink )
+        for ( const SurvivalHorrorClueLink& link : _listClueLink )
         {
             StateArchiveUtil::writeName( outArchive, link._first );
             StateArchiveUtil::writeName( outArchive, link._second );
@@ -561,23 +561,23 @@ namespace sw
         outArchive << _bHallucinating;
     }
 
-    bool HorrorSession::readState( Archive& archive )
+    bool SurvivalHorrorSession::readState( Archive& archive )
     {
         if ( _pCatalog == nullptr )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 빌린 포인터, 게이지 설정은 사본도 그대로 가지고 있다.
-        HorrorSession restored = *this;
-        const bool    bPartRead =
-            restored._sanity.readState( archive ) && restored._battery.readState( archive ) && HorrorSessionInternal::readSet( archive, restored._uniqueSeenMonster ) &&
-            HorrorSessionInternal::readSet( archive, restored._uniqueReadDocument ) && HorrorSessionInternal::readSet( archive, restored._uniqueClue ) &&
-            HorrorSessionInternal::readSet( archive, restored._uniqueSolvedPuzzle ) && HorrorSessionInternal::readMap( archive, restored._mapDialAttempt ) &&
-            HorrorSessionInternal::readMap( archive, restored._mapSequenceProgress );
+        SurvivalHorrorSession restored = *this;
+        const bool            bPartRead =
+            restored._sanity.readState( archive ) && restored._battery.readState( archive ) && SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueSeenMonster ) &&
+            SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueReadDocument ) && SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueClue ) &&
+            SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueSolvedPuzzle ) && SurvivalHorrorSessionInternal::readMap( archive, restored._mapDialAttempt ) &&
+            SurvivalHorrorSessionInternal::readMap( archive, restored._mapSequenceProgress );
         uint32 linkCount = 0;
         // 연결마다 이름 둘(8)
         if ( bPartRead == false || archive.readCount( 8, linkCount ) == false )
             return false;
-        restored._listClueLink.assign( linkCount, HorrorClueLink{} );
-        for ( HorrorClueLink& link : restored._listClueLink )
+        restored._listClueLink.assign( linkCount, SurvivalHorrorClueLink{} );
+        for ( SurvivalHorrorClueLink& link : restored._listClueLink )
         {
             if ( StateArchiveUtil::readName( archive, link._first ) == false || StateArchiveUtil::readName( archive, link._second ) == false )
                 return false;
@@ -597,10 +597,10 @@ namespace sw
         return true;
     }
 
-    bool HorrorSession::isStateConsistent() const
+    bool SurvivalHorrorSession::isStateConsistent() const
     {
         const SurvivalHorrorRules& rules          = _pCatalog->getRules();
-        const bool                 bLimitedOver   = rules._saveMode == HorrorSaveMode::Limited && _saveCount > rules._maxSaves;
+        const bool                 bLimitedOver   = rules._saveMode == SurvivalHorrorSaveMode::Limited && _saveCount > rules._maxSaves;
         const bool                 bCountsInvalid = _health < 0.0f || _health > rules._maxHealth || _saveCount < 0 || _wrongDeductionCount < 0 || bLimitedOver;
         if ( bCountsInvalid )
             return false;
@@ -622,24 +622,24 @@ namespace sw
         }
         for ( const auto& [lockID, wrongCount] : _mapDialAttempt )
         {
-            const HorrorDialLockDef* pLock           = _pCatalog->findDialLock( lockID );
-            const bool               bInvalidAttempt = pLock == nullptr || wrongCount < 0 || ( pLock->_maxAttempts > 0 && wrongCount > pLock->_maxAttempts );
+            const SurvivalHorrorDialLockDef* pLock           = _pCatalog->findDialLock( lockID );
+            const bool                       bInvalidAttempt = pLock == nullptr || wrongCount < 0 || ( pLock->_maxAttempts > 0 && wrongCount > pLock->_maxAttempts );
             if ( bInvalidAttempt )
                 return false;
         }
         // 순서 퍼즐 진행은 다음 걸음의 index 이므로 그 퍼즐의 걸음 수 안이어야 한다.
         for ( const auto& [puzzleID, progress] : _mapSequenceProgress )
         {
-            const HorrorSequenceDef* pSequence                = _pCatalog->findSequence( puzzleID );
-            const bool               bInvalidSequenceProgress = pSequence == nullptr || progress < 0 || progress >= static_cast<int32>( pSequence->_listStep.size() );
+            const SurvivalHorrorSequenceDef* pSequence                = _pCatalog->findSequence( puzzleID );
+            const bool                       bInvalidSequenceProgress = pSequence == nullptr || progress < 0 || progress >= static_cast<int32>( pSequence->_listStep.size() );
             if ( bInvalidSequenceProgress )
                 return false;
         }
         // 보드의 규칙(`linkClues`)과 같다. 가진 단서끼리이고, 자기 자신과 겹침은 없다.
         for ( size_t linkIndex = 0; linkIndex < _listClueLink.size(); ++linkIndex )
         {
-            const HorrorClueLink& link     = _listClueLink[linkIndex];
-            bool                  bInvalid = link._first == link._second || hasClue( link._first ) == false || hasClue( link._second ) == false;
+            const SurvivalHorrorClueLink& link     = _listClueLink[linkIndex];
+            bool                          bInvalid = link._first == link._second || hasClue( link._first ) == false || hasClue( link._second ) == false;
             for ( size_t earlier = 0; earlier < linkIndex; ++earlier )
             {
                 bInvalid = bInvalid || _listClueLink[earlier].isSame( link._first, link._second );
@@ -650,7 +650,7 @@ namespace sw
         return _currentArea.empty() || _pAreaGraph == nullptr || _pAreaGraph->findArea( _currentArea ) != nullptr;
     }
 
-    void HorrorSession::pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value )
+    void SurvivalHorrorSession::pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value )
     {
         SurvivalHorrorEvent event;
         event._kind  = kind;
@@ -659,7 +659,7 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void HorrorSession::refreshHallucination()
+    void SurvivalHorrorSession::refreshHallucination()
     {
         const float32 threshold = _pCatalog != nullptr ? _pCatalog->getRules()._hallucinationThreshold : 0.0f;
         const bool    bNow      = _sanity.getRatio() < threshold;
@@ -669,7 +669,7 @@ namespace sw
         pushEvent( bNow ? SurvivalHorrorEvent::Kind::HallucinationStarted : SurvivalHorrorEvent::Kind::HallucinationEnded, hashed_string() );
     }
 
-    bool HorrorSession::markSolved( const hashed_string& puzzleID, const hashed_string& flag )
+    bool SurvivalHorrorSession::markSolved( const hashed_string& puzzleID, const hashed_string& flag )
     {
         if ( flag.empty() == false && _pFlags != nullptr )
             _pFlags->setFlag( flag, 1 );

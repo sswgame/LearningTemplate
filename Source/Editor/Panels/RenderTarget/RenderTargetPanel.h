@@ -93,7 +93,7 @@ namespace sw::editor
         /** @brief 스냅샷으로 미리보기 RGBA8 텍스처를 다시 만듭니다. */
         void rebuildSnapshotTexture();
         /** @brief 엔진이 스냅샷 텍스처를 올렸으면 ImGui 에 등록합니다(그릴 때마다 부른다). */
-        void adoptSnapshotTextureIfReady();
+        void applySnapshotTextureIfReady();
         /** @brief 스냅샷 미리보기 텍스처와 그 ImGui 등록을 해제합니다. */
         void releaseSnapshotTexture();
         /** @brief 그려진 미리보기 위에서 마우스가 가리키는 픽셀 값을 읽어 툴팁으로 보여 줍니다. */

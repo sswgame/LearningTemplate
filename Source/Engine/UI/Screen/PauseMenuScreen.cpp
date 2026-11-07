@@ -23,7 +23,7 @@ namespace sw
 
 namespace sw
 {
-    PauseMenuScreen::PauseMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    PauseMenuScreen::PauseMenuScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
     {
     }

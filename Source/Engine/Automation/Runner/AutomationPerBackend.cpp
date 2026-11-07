@@ -76,7 +76,7 @@ namespace sw
                 string         _reportPath{};
                 ProcessCommand _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
                 Process        _process{};
-                thread         _drainThread{};
+                thread         _flushThread{};
                 Deadline       _killDeadline = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
                 int32          _exitCode{ -1 };
                 bool           _bLaunched{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -99,7 +99,7 @@ namespace sw
                 return pLabel != nullptr ? pLabel : "crashed"; // 표(ProcessExitCodes.json)에 없는 코드는 프로세스가 죽은 것이다
             }
 
-            static bool isSkip( int32 exitCode ) { return exitCode == getAutomationExitCode( AutomationOutcome::Skipped ) || exitCode == kRHIUnusableHereExitCode; }
+            static bool isSkip( int32 exitCode ) { return exitCode == getAutomationExitCode( AutomationResult::Skipped ) || exitCode == kRHIUnusableHereExitCode; }
 
             /** @brief 기록 줄(`frame 300 Nile.Month = 3`)의 이름 · 값 경계(마지막 ` = `)입니다. 없으면 npos — 줄 전체가 이름이다. */
             static size_t      findRecordValueSeparator( string_view line ) { return line.rfind( " = " ); }
@@ -381,7 +381,7 @@ namespace sw
             const string& scenarioList         = listScenarioList[listChild.size()];
             if ( scenarioList.empty() )
             {
-                pChild->_exitCode = getAutomationExitCode( AutomationOutcome::Skipped ); // 나눈 목록이 백엔드 수보다 짧다 — 맡은 시나리오가 없다
+                pChild->_exitCode = getAutomationExitCode( AutomationResult::Skipped ); // 나눈 목록이 백엔드 수보다 짧다 — 맡은 시나리오가 없다
                 listChild.push_back( std::move( pChild ) );
                 continue;
             }
@@ -427,7 +427,7 @@ namespace sw
             }
             SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", child._backend.c_str(), child._logPath.c_str() );
             Process* pProcess  = &child._process;
-            child._drainThread = thread( [pProcess]()
+            child._flushThread = thread( [pProcess]()
             {
                 string line;
                 while ( pProcess->readOutputLine( line ) )
@@ -437,13 +437,13 @@ namespace sw
         };
         const auto finishChild = [&]( Internal::Child& child )
         {
-            const bool bKilled = child._process.isRunning() && child._process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
+            const bool bKilled = child._process.isRunning() && child._process.terminate( getAutomationExitCode( AutomationResult::TimedOut ) );
             if ( bKilled )
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# did not finish within %# s - killed", child._backend.c_str(), killSeconds );
             child._exitCode = child._process.waitForExit();
             if ( bKilled )
-                child._exitCode = getAutomationExitCode( AutomationOutcome::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
-            child._drainThread.join();
+                child._exitCode = getAutomationExitCode( AutomationResult::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
+            child._flushThread.join();
             child._bLaunched = false;
         };
         // 슬롯 안에서 띄우고, 끝나거나 시한이 지난 자식을 거두며 다음을 띄운다(쿠킹 표 순서).
@@ -478,7 +478,7 @@ namespace sw
             const bool bSkipped = Internal::isSkip( pChild->_exitCode );
             bAnyPassed          = bAnyPassed || pChild->_exitCode == 0;
             if ( pChild->_exitCode != 0 && bSkipped == false && firstFailure == 0 )
-                firstFailure = pChild->_exitCode == -1 ? getAutomationExitCode( AutomationOutcome::Failed ) : pChild->_exitCode;
+                firstFailure = pChild->_exitCode == -1 ? getAutomationExitCode( AutomationResult::Failed ) : pChild->_exitCode;
             const LogLevel level = pChild->_exitCode == 0 || bSkipped ? LogLevel::Info : LogLevel::Error;
             if ( level == LogLevel::Error )
                 SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendExit", "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
@@ -493,10 +493,10 @@ namespace sw
         for ( const string& mismatch : listRecordMismatch )
             SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendRecordMismatch", "[Scenario] per-backend: record mismatch - %#", mismatch.c_str() );
         if ( listRecordMismatch.empty() == false && firstFailure == 0 )
-            firstFailure = getAutomationExitCode( AutomationOutcome::Failed );
+            firstFailure = getAutomationExitCode( AutomationResult::Failed );
 
         const int32 exitCode = firstFailure != 0 ? firstFailure : bAnyPassed ? 0
-                                                                             : getAutomationExitCode( AutomationOutcome::Skipped );
+                                                                             : getAutomationExitCode( AutomationResult::Skipped );
         if ( options._reportPath.empty() == false )
             Internal::writeReport( options, listChild, listRecordMismatch, exitCode );
         return exitCode;

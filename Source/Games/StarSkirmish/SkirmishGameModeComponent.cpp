@@ -810,8 +810,8 @@ namespace sw
     void SkirmishGameModeComponent::handleEvents()
     {
         using Internal = SkirmishGameModeComponentInternal;
-        _listEvent.clear(); // drainEvents 는 뒤에 붙인다.
-        _match.drainEvents( _listEvent );
+        _listEvent.clear(); // pollEvents 는 뒤에 붙인다.
+        _match.pollEvents( _listEvent );
         // 유닛이 부서지면 누구 것이든 그 위치에서 쇳소리를 낸다. 한 프레임에 여럿이어도 한 번만 낸다(구경하는 AI 대 AI 판에서도 들린다). 동시 재생 상한은 이벤트 데이터가 정한다.
         for ( const RTSEvent& event : _listEvent )
         {

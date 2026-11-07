@@ -23,9 +23,9 @@ namespace sw
     {
     }
 
-    const HorrorScoreRule* AsymmetricHorrorRulesCatalog::findScoreRule( const hashed_string& action ) const
+    const AsymmetricHorrorScoreRule* AsymmetricHorrorRulesCatalog::findScoreRule( const hashed_string& action ) const
     {
-        return VectorUtil::findBy<&HorrorScoreRule::_action>( _listScoreRule, action );
+        return VectorUtil::findBy<&AsymmetricHorrorScoreRule::_action>( _listScoreRule, action );
     }
 
     uint32 AsymmetricHorrorRulesCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -37,7 +37,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) == false )
+            if ( loadFromXML( node, name, sourceName ) == false )
                 SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove", "%#: <%#> was not loaded (see above)", sourceName, name );
         }
         if ( _catalogKiller.isEmpty() )
@@ -45,7 +45,7 @@ namespace sw
         return static_cast<uint32>( _catalogKiller.getAll().size() );
     }
 
-    bool AsymmetricHorrorRulesCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool AsymmetricHorrorRulesCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Generator" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._generator );
@@ -67,7 +67,7 @@ namespace sw
             return GameDataXML::readInto( node, sourceName, _catalogKiller );
         if ( XMLReadUtil::isElement( name, "Category" ) )
         {
-            HorrorScoreCategoryDef category;
+            AsymmetricHorrorScoreCategoryDef category;
             if ( XMLFields::readFields( node, category, sourceName ) == false )
                 return false;
             if ( _categoryCap.findValue( category._id ).has_value() )
@@ -80,7 +80,7 @@ namespace sw
         }
         if ( XMLReadUtil::isElement( name, "Score" ) )
         {
-            HorrorScoreRule rule;
+            AsymmetricHorrorScoreRule rule;
             if ( XMLFields::readFields( node, rule, sourceName ) == false )
                 return false;
             // 찾기는 앞의 규칙을 돌려주므로, 겹친 뒤 규칙은 말없이 쓰이지 않는다.
@@ -98,8 +98,8 @@ namespace sw
 
     bool AsymmetricHorrorRulesCatalog::loadSkillCheck( const XMLNode& node, string_view sourceName )
     {
-        HorrorSkillCheckDef skillCheck;
-        bool                bValid = XMLFields::readFields( node, skillCheck, sourceName );
+        AsymmetricHorrorSkillCheckDef skillCheck;
+        bool                          bValid = XMLFields::readFields( node, skillCheck, sourceName );
         // 창의 판정 폭(early · late · score)은 기반 TimingJudge 가 읽고, 등급마다 더하는 진행량(bonus)은 여기서 읽는다.
         for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
         {
@@ -119,7 +119,7 @@ namespace sw
         // `bonus` 는 위에서 읽었다. 판정기가 모르는 이름으로 거절하면 `<SkillCheck>` 가 통째로 빠진다.
         const auto isBonus = []( const utf8* pName )
         { return StringUtil::equals( string_view( pName ), string_view( "bonus" ) ); };
-        if ( _judge.loadFromNode( node, sourceName, isBonus ) == false )
+        if ( _judge.loadFromXML( node, sourceName, isBonus ) == false )
             return false;
         _rules._skillCheck = skillCheck;
         return true;

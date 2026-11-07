@@ -387,7 +387,7 @@ namespace sw::editor
             const GizmoButton& button = kArrGizmoButton[index];
             if ( drawIconToggle( button._pID, EditorIconGlyphTable::findGlyphByName( button._pIconName ), operation == index, arrTooltip[index] ) )
                 editorContext.getSubsystem<EditorWorkspace>().setGizmoOperation( index );
-            EditorSelfTestMarks::note( ( string( pMarkScope ) + button._pMarkSuffix ).c_str() );
+            EditorSelfTestMarks::record( ( string( pMarkScope ) + button._pMarkSuffix ).c_str() );
             if ( bVertical == false )
                 ImGui::SameLine();
         }
@@ -397,7 +397,7 @@ namespace sw::editor
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
             editorContext.getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
-        EditorSelfTestMarks::note( ( string( pMarkScope ) + ".space" ).c_str() );
+        EditorSelfTestMarks::record( ( string( pMarkScope ) + ".space" ).c_str() );
     }
 
     void EditorWidgets::drawToolbarSeparator()
@@ -572,7 +572,7 @@ namespace sw::editor
         const utf8* pHintText = ( pHint != nullptr ) ? pHint : SW_LOCKEY( "EdCommon", "SearchHint" );
         bool        bChanged  = ImGui::InputTextWithHint( "##search", pHintText, pBuffer, bufferBytes );
         if ( pMark != nullptr )
-            EditorSelfTestMarks::note( pMark );
+            EditorSelfTestMarks::record( pMark );
         if ( bShowClear )
         {
             ImGui::SameLine();
@@ -735,7 +735,7 @@ namespace sw::editor
         result._bChanged              = ImGui::IsItemEdited();
         result._bDeactivatedAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
         if ( pMark != nullptr )
-            EditorSelfTestMarks::note( pMark );
+            EditorSelfTestMarks::record( pMark );
         return result;
     }
 
@@ -752,7 +752,7 @@ namespace sw::editor
             result._bDeactivatedAfterEdit = true;
         }
         if ( pMark != nullptr )
-            EditorSelfTestMarks::note( pMark );
+            EditorSelfTestMarks::record( pMark );
         return result;
     }
 
@@ -913,15 +913,15 @@ namespace sw::editor
         EditorUnsavedChoice choice = EditorUnsavedChoice::None;
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             choice = EditorUnsavedChoice::Save;
-        EditorSelfTestMarks::note( "unsaved.save" );
+        EditorSelfTestMarks::record( "unsaved.save" );
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdText", "DonTSave" ) ) )
             choice = EditorUnsavedChoice::Discard;
-        EditorSelfTestMarks::note( "unsaved.discard" );
+        EditorSelfTestMarks::record( "unsaved.discard" );
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
             choice = EditorUnsavedChoice::Cancel;
-        EditorSelfTestMarks::note( "unsaved.cancel" );
+        EditorSelfTestMarks::record( "unsaved.cancel" );
         if ( choice != EditorUnsavedChoice::None )
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();

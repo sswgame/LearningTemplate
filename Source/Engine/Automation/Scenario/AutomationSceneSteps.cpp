@@ -12,7 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
@@ -41,14 +41,14 @@ namespace sw
 
             static bool validateLoadScene( const AutomationStep& step, string& outError )
             {
-                AutomationLoadSceneFields fields;
-                return step.readFields( fields, outError );
+                AutomationLoadSceneParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateSequenceStep( const AutomationStep& step, string& outError )
             {
-                AutomationSequenceStepFields fields;
-                return step.readFields( fields, outError );
+                AutomationSequenceStepParams params;
+                return step.readFields( params, outError );
             }
 
             static bool runNothing( AutomationStepContext& context, const AutomationStep& step )
@@ -60,12 +60,12 @@ namespace sw
 
             static AutomationStepHold holdLoadScene( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                const AutomationLoadSceneFields fields = step.readValidatedFields<AutomationLoadSceneFields>();
+                const AutomationLoadSceneParams params = step.readValidatedFields<AutomationLoadSceneParams>();
                 // 상태는 맡긴 이 단계만 만든다 — 같은 타입으로 되돌려 읽는다.
                 PendingLoad* pPending = static_cast<PendingLoad*>( context.findHeldStepState( step ) );
                 if ( pPending == nullptr )
                 {
-                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( fields._path, SceneLoadKind::Travel );
+                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( params._path, SceneLoadKind::Travel );
                     if ( future.isValid() == false )
                     {
                         context.recordFailure( step, "the scene load could not be requested" );
@@ -76,8 +76,8 @@ namespace sw
                 const bool bLoaded = pPending->_future.isReady() && pPending->_future.get() != nullptr &&
                                      engine::getSubsystem<SceneManager>().getActiveScene() == pPending->_future.get();
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
-                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, fields._timeoutFrames,
-                                                                        "the scene '" + fields._path + ( pPending->_future.isReady() ? "' to become active" : "' to load" ) );
+                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, params._timeoutFrames,
+                                                                        "the scene '" + params._path + ( pPending->_future.isReady() ? "' to become active" : "' to load" ) );
                 if ( hold == AutomationStepHold::Run && bLoaded == false )
                     context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
                 return hold;
@@ -86,7 +86,7 @@ namespace sw
             static SequencePlayerComponent* findSequence( AutomationStepContext& context, const AutomationStep& step )
             {
                 GameObjectManager* pManager = context.findActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ step.readValidatedFields<AutomationSequenceStepFields>()._object } ) : nullptr;
+                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ step.readValidatedFields<AutomationSequenceStepParams>()._object } ) : nullptr;
                 return pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
             }
 
@@ -104,11 +104,11 @@ namespace sw
 
             static AutomationStepHold holdWaitSequence( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                const AutomationSequenceStepFields fields    = step.readValidatedFields<AutomationSequenceStepFields>();
+                const AutomationSequenceStepParams params    = step.readValidatedFields<AutomationSequenceStepParams>();
                 SequencePlayerComponent*           pSequence = findSequence( context, step );
                 const bool                         bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
-                const AutomationStepHold           hold      = context.holdUntilReady( step, input, bDone, fields._timeoutFrames,
-                                                                                       "the sequence on '" + fields._object + "' to finish playing" );
+                const AutomationStepHold           hold      = context.holdUntilReady( step, input, bDone, params._timeoutFrames,
+                                                                                       "the sequence on '" + params._object + "' to finish playing" );
                 if ( hold == AutomationStepHold::Run && ( pSequence == nullptr || bDone == false ) )
                     context.recordFailure( step, pSequence == nullptr ? "no object with that name and a SequencePlayerComponent in the active scene"
                                                                       : "the sequence was still playing when the wait timed out" );

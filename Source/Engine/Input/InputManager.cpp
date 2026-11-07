@@ -80,7 +80,7 @@ namespace sw
         , _pMouse{ nullptr }
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
-        , _listDrainedEvent{}
+        , _listPolledEvent{}
         , _listFramePress{}
         , _frameLookDelta{}
         , _lastPlatformPointer{ 0, 0 }
@@ -127,7 +127,7 @@ namespace sw
         _listDevice.clear();
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
-        _listDrainedEvent.clear();
+        _listPolledEvent.clear();
 
         // 1) 표준 키보드 장치를 등록한다
         auto pKeyboard = make_unique<KeyboardDevice>();
@@ -174,7 +174,7 @@ namespace sw
         _pInputMap = nullptr;
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
-        _listDrainedEvent.clear();
+        _listPolledEvent.clear();
 
         _bInitialized = SW_FALSE;
         SW_LOG_INFO_ID( "InputManager.InputManagerShutDown", "InputManager shut down." );
@@ -219,7 +219,7 @@ namespace sw
         const float64 inverseWindow      = 1.0 / static_cast<float64>( windowMicroseconds );
         for ( size_t eventIndex = 0; eventIndex < osEventCount; ++eventIndex )
         {
-            RawInputEvent& event = _listDrainedEvent[eventIndex];
+            RawInputEvent& event = _listPolledEvent[eventIndex];
             const float64  place = static_cast<float64>( event._timeMicroseconds - windowStart ) * inverseWindow;
             event._frameFraction = static_cast<float32>( MathUtil::clamp( place, 0.0, 1.0 ) );
         }
@@ -374,26 +374,26 @@ namespace sw
         releaseCapturedKeys();
 
         // 2) 락프리 큐에 비동기로 들어온 이번 프레임 원시 이벤트를 한꺼번에 꺼낸다
-        _listDrainedEvent.clear();
-        _queueRawEvent.drain( _listDrainedEvent );
+        _listPolledEvent.clear();
+        _queueRawEvent.popAll( _listPolledEvent );
         // 배타 가상 입력: OS 가 낸 장치 이벤트와 창 포커스 이벤트를 버린다(글자 입력도 버리며, 가상 원천이 `makeTextInput` 으로 따로 낸다).
         // 에디터 UI 가 ImGui 키를 넘긴 이벤트(`_bEditorUI`)는 OS 입력이 아니라 에디터의 것이라 남긴다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다.
         if ( bOSSuppressed )
         {
-            (void)VectorUtil::removeIf( _listDrainedEvent, []( const RawInputEvent& event )
+            (void)VectorUtil::removeIf( _listPolledEvent, []( const RawInputEvent& event )
             { return event._bEditorUI == SW_FALSE; } ); // 지운 수는 쓰지 않는다
         }
         // OS 이벤트에 프레임 안 자리를 채운다(서브틱 입력). 가상 이벤트는 녹화된 자리를 그대로 쓴다 — 재생이 녹화와 같은 순간을 본다.
         _frameEndMicroseconds = _pfnNowMicroseconds();
-        assignFrameFractions( _listDrainedEvent.size(), deltaSeconds );
+        assignFrameFractions( _listPolledEvent.size(), deltaSeconds );
         // 2-1) 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다.
         if ( _pVirtualInput != nullptr )
         {
-            const size_t firstVirtual = _listDrainedEvent.size();
-            _pVirtualInput->emitFrame( _virtualFrameIndex, _listDrainedEvent );
-            for ( size_t eventIndex = firstVirtual; eventIndex < _listDrainedEvent.size(); ++eventIndex )
+            const size_t firstVirtual = _listPolledEvent.size();
+            _pVirtualInput->emitFrame( _virtualFrameIndex, _listPolledEvent );
+            for ( size_t eventIndex = firstVirtual; eventIndex < _listPolledEvent.size(); ++eventIndex )
             {
-                _listDrainedEvent[eventIndex]._bSynthetic = SW_TRUE;
+                _listPolledEvent[eventIndex]._bSynthetic = SW_TRUE;
             }
             ++_virtualFrameIndex;
         }
@@ -407,11 +407,11 @@ namespace sw
         if ( bVirtualCursorActive )
         {
             // 커서는 게임 화면 안에 머문다(창 전체가 아니다 — 에디터 게임 뷰는 창의 일부다).
-            const size_t firstCursorEvent = _listDrainedEvent.size();
-            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, deltaSeconds, _listDrainedEvent );
-            for ( size_t eventIndex = firstCursorEvent; eventIndex < _listDrainedEvent.size(); ++eventIndex )
+            const size_t firstCursorEvent = _listPolledEvent.size();
+            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, deltaSeconds, _listPolledEvent );
+            for ( size_t eventIndex = firstCursorEvent; eventIndex < _listPolledEvent.size(); ++eventIndex )
             {
-                _listDrainedEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
+                _listPolledEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
             }
         }
 
@@ -420,7 +420,7 @@ namespace sw
         //    적용하면서 누름마다 그 순간과 그 앞까지의 시선 누적을 적는다(`tryGetPressInstant`).
         _listFramePress.clear();
         _frameLookDelta = float2{};
-        for ( const RawInputEvent& rawEvent : _listDrainedEvent )
+        for ( const RawInputEvent& rawEvent : _listPolledEvent )
         {
             recordFramePress( rawEvent );
             dispatchRawEvent( rawEvent );
@@ -1101,7 +1101,7 @@ namespace sw
         _bOSDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
     }
 
-    void InputManager::noteNativeEvent( const NativeWindowEvent& event )
+    void InputManager::recordNativeEvent( const NativeWindowEvent& event )
     {
         if ( ( event.isKeyboardInput() || event.isMouseInput() ) && event.isInputRelease() == false )
             ++_humanInputSerial;

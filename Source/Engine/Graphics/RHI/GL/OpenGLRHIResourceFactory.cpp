@@ -358,7 +358,7 @@ namespace sw
             return;
 
         ScopedOpenGLContext contextScope( _pDevice );
-        _pDevice->_recordingState._geometry.forget( buffer );
+        _pDevice->_recordingState._geometry.remove( buffer );
 
         uint32 glName{ 0 };
         if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )

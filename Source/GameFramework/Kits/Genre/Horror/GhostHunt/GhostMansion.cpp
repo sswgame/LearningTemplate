@@ -126,7 +126,7 @@ namespace sw
     {
         // 게임에 넘길 목록에 바로 꺼내고, 이번에 들어온 구간만 훑는다(지역 목록과 복사가 없다).
         const size_t firstNew = _listGhostEvent.size();
-        _encounter.drainEvents( _listGhostEvent );
+        _encounter.pollEvents( _listGhostEvent );
         bool bCaughtAny = false;
         for ( size_t index = firstNew; index < _listGhostEvent.size(); ++index )
         {
@@ -206,12 +206,12 @@ namespace sw
         return true;
     }
 
-    void GhostMansion::drainEvents( vector<GhostMansionEvent>& outListEvent )
+    void GhostMansion::pollEvents( vector<GhostMansionEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void GhostMansion::drainGhostEvents( vector<GhostEvent>& outListEvent )
+    void GhostMansion::pollGhostEvents( vector<GhostEvent>& outListEvent )
     {
         outListEvent.insert( outListEvent.end(), _listGhostEvent.begin(), _listGhostEvent.end() );
         _listGhostEvent.clear();

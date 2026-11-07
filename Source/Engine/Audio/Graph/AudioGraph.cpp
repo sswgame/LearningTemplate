@@ -197,7 +197,7 @@ namespace sw
         for ( uint32 orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
             const uint32                  dataIndex = listOrder[orderIndex];
-            const AudioGraphNodeDesc&     desc      = def._listNode[dataIndex];
+            const AudioGraphNodeDef&      desc      = def._listNode[dataIndex];
             const AudioGraphNodeKindInfo& typeInfo  = AudioGraphRegistry::getNodeType( desc._type );
             Node&                         node      = pGraph->_listNode[orderIndex];
             node._type                              = desc._type;
@@ -209,7 +209,7 @@ namespace sw
             {
                 node._listInput.push_back( listDataToOrder[static_cast<size_t>( def.findNodeIndex( input ) )] );
             }
-            for ( const AudioGraphParameterDesc& parameterDesc : desc._listParameter )
+            for ( const AudioGraphParameterDef& parameterDesc : desc._listParameter )
             {
                 const uint32                   parameterIndex = static_cast<uint32>( AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ) );
                 const AudioGraphParameterInfo& info           = typeInfo._pParameter[parameterIndex];

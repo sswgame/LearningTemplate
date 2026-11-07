@@ -19,13 +19,13 @@ namespace
     }
 
     /** @brief 데이터 하나 + 앞 하나입니다. 시각은 1000 ms 에서 시작합니다. */
-    struct CacheRig
+    struct CacheFixture
     {
 
         sw::ManualClock             _clock;
         sw::MemoryEphemeralDatabase _database;
         sw::MemoryEphemeralStore    _store;
-        CacheRig()
+        CacheFixture()
             : _clock{ sw::MonotonicMilliseconds{ 1000 } }
             , _database{ _clock }
             , _store{ &_database }
@@ -60,7 +60,7 @@ SW_TEST_CASE( EphemeralStoreTest, MalformedRequestsAreInvalidAndNotExecuted )
     SW_EXPECT_FALSE( sw::EphemeralRequest::isValidKey( "Upper" ) );
     SW_EXPECT_FALSE( sw::EphemeralRequest::isValidKey( "has space" ) );
 
-    CacheRig rig;
+    CacheFixture rig;
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "Bad Key", makeBytes( "v" ), 0 ) ) == sw::EphemeralResult::Invalid );
     sw::vector<uint8> listHuge( static_cast<size_t>( sw::IEphemeralStore::kMaxValueSize ) + 1, 'x' );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "big", listHuge, 0 ) ) == sw::EphemeralResult::Invalid );
@@ -84,7 +84,7 @@ SW_TEST_CASE( EphemeralStoreTest, MalformedRequestsAreInvalidAndNotExecuted )
  */
 SW_TEST_CASE( EphemeralStoreTest, RepliesKeepSubmitOrderAndIDsStartAtOne )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_EXPECT_EQUAL( uint64( 1 ), rig._store.submit( sw::EphemeralRequest::makeSet( "a", makeBytes( "1" ), 0 ) ) );
     SW_EXPECT_EQUAL( uint64( 2 ), rig._store.submit( sw::EphemeralRequest::makeGet( "a" ) ) );
     SW_EXPECT_EQUAL( uint64( 3 ), rig._store.submit( sw::EphemeralRequest::makeGet( "missing" ) ) );
@@ -105,7 +105,7 @@ SW_TEST_CASE( EphemeralStoreTest, RepliesKeepSubmitOrderAndIDsStartAtOne )
  */
 SW_TEST_CASE( EphemeralStoreTest, ConditionalSetAndErase )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "x" ), 0, sw::EphemeralCondition::IfPresent ) ) == sw::EphemeralResult::Conflict );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "k" ) ) == sw::EphemeralResult::NotFound );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "first" ), 0, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
@@ -123,7 +123,7 @@ SW_TEST_CASE( EphemeralStoreTest, ConditionalSetAndErase )
  */
 SW_TEST_CASE( EphemeralStoreTest, ValuesExpireAtDeadlineAndCanBeReacquired )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeBytes( "owner1" ), 100, sw::EphemeralCondition::IfAbsent ) ) == sw::EphemeralResult::Ok );
     rig._clock.advanceMilliseconds( 99 );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeGet( "lease" ) ) == sw::EphemeralResult::Ok );
@@ -143,7 +143,7 @@ SW_TEST_CASE( EphemeralStoreTest, ValuesExpireAtDeadlineAndCanBeReacquired )
  */
 SW_TEST_CASE( EphemeralStoreTest, ExpireResetsOrErasesValuesAndScoreSets )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeExpire( "none", 100 ) ) == sw::EphemeralResult::NotFound );
 
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 50 ) ) == sw::EphemeralResult::Ok );
@@ -170,7 +170,7 @@ SW_TEST_CASE( EphemeralStoreTest, ExpireResetsOrErasesValuesAndScoreSets )
  */
 SW_TEST_CASE( EphemeralStoreTest, CompareAndSetAndEraseGuardOwnership )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeCompareAndSet( "lease", makeBytes( "me" ), makeBytes( "me" ), 100 ) ) == sw::EphemeralResult::Conflict );
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "lease", makeBytes( "me" ), 100 ) ) == sw::EphemeralResult::Ok );
 
@@ -193,7 +193,7 @@ SW_TEST_CASE( EphemeralStoreTest, CompareAndSetAndEraseGuardOwnership )
  */
 SW_TEST_CASE( EphemeralStoreTest, IncrementStartsWindowAndRejectsNonIntegerOrOverflow )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_EXPECT_EQUAL( int64( 3 ), rig.run( sw::EphemeralRequest::makeIncrement( "rate", 3, 100 ) )._integer );
     rig._clock.advanceMilliseconds( 60 );
     SW_EXPECT_EQUAL( int64( -2 ), rig.run( sw::EphemeralRequest::makeIncrement( "rate", -5, 100 ) )._integer ); // 창을 다시 열지 않는다
@@ -223,7 +223,7 @@ SW_TEST_CASE( EphemeralStoreTest, IncrementStartsWindowAndRejectsNonIntegerOrOve
  */
 SW_TEST_CASE( EphemeralStoreTest, ScoreSetOrdersDescendingWithMemberTieBreak )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "alice", 10 ) ) == sw::EphemeralResult::Ok );
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "bob", 30 ) ) == sw::EphemeralResult::Ok );
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "carol", 10 ) ) == sw::EphemeralResult::Ok );
@@ -265,7 +265,7 @@ SW_TEST_CASE( EphemeralStoreTest, ScoreSetOrdersDescendingWithMemberTieBreak )
  */
 SW_TEST_CASE( EphemeralStoreTest, ScoreAddRefusesOutOfRangeAndEmptySetVanishes )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board", "a", sw::IEphemeralStore::kMaxAbsScore ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreAdd( "board", "a", 1 ) ) == sw::EphemeralResult::Invalid );
     SW_EXPECT_EQUAL( sw::IEphemeralStore::kMaxAbsScore, rig.run( sw::EphemeralRequest::makeScoreRank( "board", "a" ) )._score );
@@ -283,7 +283,7 @@ SW_TEST_CASE( EphemeralStoreTest, ScoreAddRefusesOutOfRangeAndEmptySetVanishes )
  */
 SW_TEST_CASE( EphemeralStoreTest, ValueAndScoreSetKindsDoNotMix )
 {
-    CacheRig rig;
+    CacheFixture rig;
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "k", makeBytes( "v" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "k", "m", 1 ) ) == sw::EphemeralResult::Invalid );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreRange( "k", 0, 5 ) ) == sw::EphemeralResult::Invalid );
@@ -375,7 +375,7 @@ SW_TEST_CASE( EphemeralStoreTest, ShutdownAnswersUnavailableAndDropsSubscription
  */
 SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
 {
-    CacheRig                 rig;
+    CacheFixture             rig;
     sw::EphemeralStoreRouter router;
     router.initialize( &rig._store );
 
@@ -419,7 +419,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySub
 {
     SW_EXPECT_LOG( "EphemeralStoreRouter.SubmitRefused" );
     SW_EXPECT_LOG( "EphemeralStoreRouter.SubscribeRefused" );
-    CacheRig                 rig;
+    CacheFixture             rig;
     sw::EphemeralStoreRouter router;
     const sw::Subscription   early = router.subscribe( "chan", []( const sw::EphemeralMessage& ) {} );
     SW_EXPECT_FALSE( early.isActive() );
@@ -442,7 +442,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterRefusesDeadOwnerEmptyDelegateAndEarlySub
  */
 SW_TEST_CASE( EphemeralStoreTest, RouterSharesChannelUntilLastSubscriberLeaves )
 {
-    CacheRig                 rig;
+    CacheFixture             rig;
     sw::MemoryEphemeralStore publisher( &rig._database );
     sw::EphemeralStoreRouter router;
     router.initialize( &rig._store );
@@ -484,7 +484,7 @@ SW_TEST_CASE( EphemeralStoreTest, RouterSharesChannelUntilLastSubscriberLeaves )
  */
 SW_TEST_CASE( EphemeralStoreTest, RouterShutdownAnswersPendingExactlyOnce )
 {
-    CacheRig                 rig;
+    CacheFixture             rig;
     sw::EphemeralStoreRouter router;
     router.initialize( &rig._store );
     const sw::Subscription owner   = router.openReplyOwner();

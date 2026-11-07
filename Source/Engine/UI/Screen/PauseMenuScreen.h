@@ -21,7 +21,7 @@ namespace sw
     class SW_API PauseMenuScreen : public UIScreen
     {
     public:
-        PauseMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
+        PauseMenuScreen( const UIScreenDef& desc, unique_ptr<Widget> root );
         ~PauseMenuScreen() override;
 
         bool onCommand( const hashed_string& command, Widget& source ) override;

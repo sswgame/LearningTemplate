@@ -21,10 +21,10 @@ namespace sw
     namespace
     {
         /** @brief GM 명령 하나의 저장소 왕복입니다. */
-        class AdminCommandWork final : public IServiceStoreWork
+        class AdminCommandJob final : public IServiceStoreJob
         {
         public:
-            AdminCommandWork( AdminService* pService, const AdminCommand& command, uint64 callID )
+            AdminCommandJob( AdminService* pService, const AdminCommand& command, uint64 callID )
                 : _command{ command }
                 , _reply{}
                 , _pService{ pService }
@@ -43,10 +43,10 @@ namespace sw
         };
 
         /** @brief 첫 관리자 넣기입니다. */
-        class AdminSeedWork final : public IServiceStoreWork
+        class AdminSeedJob final : public IServiceStoreJob
         {
         public:
-            AdminSeedWork( AdminService* pService, AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
+            AdminSeedJob( AdminService* pService, AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
                 : _pService{ pService }
                 , _accountID{ accountID }
                 , _nowMs{ nowMs }
@@ -99,7 +99,7 @@ namespace sw
     void AdminService::shutdown()
     {
         // 넘긴 점검과 공지 명령은 서버 디렉터리 키트의 저장 완료 뒤에 끝나므로 회수할 때마다 그 완료도 회수한다
-        ServiceStoreUtil::drainUntilIdle(
+        ServiceStoreUtil::flushUntilIdle(
             _pStore, [this]()
         { return _calls.isEmpty() && _pendingSeedCount <= 0; }, [this]()
         { pollForwardedCompletions(); } );
@@ -147,7 +147,7 @@ namespace sw
             (void)_calls.finish( callID, refused );
             return;
         }
-        _pStore->submit( make_unique<AdminCommandWork>( this, command, callID ) );
+        _pStore->submit( make_unique<AdminCommandJob>( this, command, callID ) );
     }
 
     void AdminService::seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
@@ -156,7 +156,7 @@ namespace sw
         if ( bInvalidSeed )
             return;
         ++_pendingSeedCount;
-        _pStore->submit( make_unique<AdminSeedWork>( this, accountID, role, nowMs ) );
+        _pStore->submit( make_unique<AdminSeedJob>( this, accountID, role, nowMs ) );
     }
 
     void AdminService::update( UnixMilliseconds nowMs )
@@ -309,7 +309,7 @@ namespace sw
         if ( _settings._pLiveEventControl != nullptr )
         {
             vector<LiveEventControlCompletion> listLiveCompletion;
-            _settings._pLiveEventControl->drainControlCompletions( listLiveCompletion );
+            _settings._pLiveEventControl->takeControlCompletions( listLiveCompletion );
             for ( const LiveEventControlCompletion& completion : listLiveCompletion )
             {
                 AdminResult result = AdminResult::Unavailable;
@@ -325,7 +325,7 @@ namespace sw
         if ( _settings._pDirectoryControl == nullptr )
             return;
         vector<ServerDirectoryControlCompletion> listCompletion;
-        _settings._pDirectoryControl->drainControlCompletions( listCompletion );
+        _settings._pDirectoryControl->takeControlCompletions( listCompletion );
         for ( const ServerDirectoryControlCompletion& completion : listCompletion )
         {
             AdminResult result = AdminResult::Unavailable;

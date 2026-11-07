@@ -16,7 +16,7 @@ namespace
 {
     struct AppearanceSectionsTestUtil
     {
-        static constexpr const utf8* kSlotsXML = R"(<SlotTable><Slot name="Head"/><Slot name="Torso"/><Slot name="Shoulder"/></SlotTable>)";
+        static constexpr const utf8* kSlotsXML = R"(<SlotCatalog><Slot name="Head"/><Slot name="Torso"/><Slot name="Shoulder"/></SlotCatalog>)";
 
         // 구간이 둘인 옷: 메시 변형(피해 단계가 고른다)과 머티리얼 변형(꾸미기가 고른다)이 구간 하나씩 바꾸고, 변형 · 피해 단계가 구간 하나에 값을 건다.
         static constexpr const utf8* kVisualsXML = R"(<ItemVisualCatalog>
@@ -72,7 +72,7 @@ namespace
             XMLDocument document;
             if ( document.parse( pText ) == false )
                 return false;
-            return outCatalog.loadFromNode( document.getRoot( "ItemVisualCatalog" ), outReport, "test" );
+            return outCatalog.loadFromXML( document.getRoot( "ItemVisualCatalog" ), outReport, "test" );
         }
     };
 } // namespace
@@ -120,11 +120,11 @@ SW_TEST_CASE( AppearanceSectionsTest, RulesSwapSectionsNarrowestLast )
     AppearanceDatabase database;
     Util::loadAll( database );
     // 좁은 규칙을 먼저 적어도 넓은 규칙이 덮지 않는다. 대상이 달라 같은 우선순위끼리 충돌이 아니다.
-    Util::load( database, R"(<AppearanceRuleTable>
+    Util::load( database, R"(<AppearanceRuleCatalog>
         <Rule id="Trim" priority="1"><When occupied="Torso"/><SwapMaterial target="Torso" part="Suit" section="trim" material="trim_rule.material"/></Rule>
         <Rule id="All" priority="1"><When occupied="Torso"/><SwapMaterial target="Torso" material="all.material"/></Rule>
         <Rule id="Glow" priority="1"><When occupied="Torso"/><MaterialValue target="Torso" part="Suit" section="cloth" name="_glow" value="1 0.5 0 1"/></Rule>
-    </AppearanceRuleTable>)" );
+    </AppearanceRuleCatalog>)" );
     CharacterAppearanceSpec spec;
     spec._bodyVisual = hashed_string( "body" );
     (void)Util::equip( spec, "Torso", "suit" );

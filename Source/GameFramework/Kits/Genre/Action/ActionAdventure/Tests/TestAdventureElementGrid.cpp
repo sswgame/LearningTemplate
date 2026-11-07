@@ -77,7 +77,7 @@ SW_TEST_CASE( AdventureElementGridTest, FireSpreadsToFourNeighborsWithoutWind )
     SW_EXPECT_FALSE( grid.isBurning( sw::int2{ 3, 3 } ) );
 
     sw::vector<sw::AdventureElementEvent> listEvent;
-    grid.drainEvents( listEvent );
+    grid.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 5, sw::VectorUtil::countBy<&sw::AdventureElementEvent::_type>( listEvent, sw::AdventureElementEventKind::Ignited ) );
 }
 
@@ -165,7 +165,7 @@ SW_TEST_CASE( AdventureElementGridTest, BurnTimesAndUpdrafts )
     SW_EXPECT_TRUE( grass.getMaterial( sw::int2{ 0, 0 } ) == sw::AdventureMaterial::Empty );
     SW_EXPECT_FALSE( grass.applyFire( sw::int2{ 0, 0 } ) );
     sw::vector<sw::AdventureElementEvent> listEvent;
-    grass.drainEvents( listEvent );
+    grass.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureElementEvent::_type>( listEvent, sw::AdventureElementEventKind::BurnedOut ) );
 
     sw::AdventureElementGrid wood;
@@ -227,7 +227,7 @@ SW_TEST_CASE( AdventureElementGridTest, FireOnNonFlammablesAndMelting )
     SW_EXPECT_TRUE( neighbor.getMaterial( sw::int2{ 1, 0 } ) == sw::AdventureMaterial::Water );
     SW_EXPECT_TRUE( neighbor.getMaterial( sw::int2{ 1, 1 } ) == sw::AdventureMaterial::Ice );
     sw::vector<sw::AdventureElementEvent> listEvent;
-    neighbor.drainEvents( listEvent );
+    neighbor.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureElementEvent::_type>( listEvent, sw::AdventureElementEventKind::Melted ) );
 }
 
@@ -260,7 +260,7 @@ SW_TEST_CASE( AdventureElementGridTest, IceExtinguishesAndFreezes )
     SW_EXPECT_FALSE( grid.applyIce( sw::int2{ 2, 0 } ) );
 
     sw::vector<sw::AdventureElementEvent> listEvent;
-    grid.drainEvents( listEvent );
+    grid.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureElementEvent::_type>( listEvent, sw::AdventureElementEventKind::Extinguished ) );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureElementEvent::_type>( listEvent, sw::AdventureElementEventKind::Frozen ) );
 }
@@ -283,7 +283,7 @@ SW_TEST_CASE( AdventureElementGridTest, ElectricityFloodsConductorsAndIceBlocks 
     SW_EXPECT_FALSE( grid.isCharged( sw::int2{ 3, 0 } ) );
     SW_EXPECT_FALSE( grid.isCharged( sw::int2{ 4, 0 } ) );
     sw::vector<sw::AdventureElementEvent> listEvent;
-    grid.drainEvents( listEvent );
+    grid.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 3, sw::VectorUtil::countBy<&sw::AdventureElementEvent::_type>( listEvent, sw::AdventureElementEventKind::Electrified ) );
 
     grid.step();
@@ -371,7 +371,7 @@ SW_TEST_CASE( AdventureElementGridTest, StateRoundTripIsDeterministic )
     SW_EXPECT_EQUAL( original.getStepCount(), restored.getStepCount() );
     SW_EXPECT_EQUAL( 1, restored.getWind()._x );
     sw::vector<sw::AdventureElementEvent> listEvent;
-    restored.drainEvents( listEvent );
+    restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 
     for ( int32 step = 0; step < 5; ++step )

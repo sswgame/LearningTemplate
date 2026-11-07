@@ -195,7 +195,7 @@ namespace sw
             MatchAssignment assignment;
             assignment._ticketID = ticketID;
             assignment._modeID   = _mapLocalTicket[ticketID]._modeID;
-            assignment._outcome  = MatchQueueOutcome::Timeout;
+            assignment._outcome  = MatchQueueResult::Timeout;
             notifyLocalTicket( ticketID, assignment );
         }
     }
@@ -456,7 +456,7 @@ namespace sw
             MatchAssignment assignment;
             assignment._ticketID = ticket._ticketID;
             assignment._modeID   = state._maker.getDefinition()._modeID;
-            assignment._outcome  = MatchQueueOutcome::Timeout;
+            assignment._outcome  = MatchQueueResult::Timeout;
             deliverToTicket( ticket._originServerID, assignment );
         }
         for ( MatchFormed& match : listFormed )
@@ -468,7 +468,7 @@ namespace sw
             const UnplacedMatch& unplaced = state._listUnplaced[index];
             const bool           bGiveUp  = nowMs.count() - unplaced._formedMs >= MatchQueueLimit::kNoServerGiveUpMs;
             // 배정할 서버가 없으면 다음 틱에 다시 시도한다. 서버 목록이 바뀌기를 기다리는 것이며, 오래 기다렸으면 NoServer 로 끝낸다
-            if ( placeMatch( state, unplaced._match, bGiveUp ? MatchQueueOutcome::NoServer : MatchQueueOutcome::Count, nowMs ) == false && bGiveUp == false )
+            if ( placeMatch( state, unplaced._match, bGiveUp ? MatchQueueResult::NoServer : MatchQueueResult::Count, nowMs ) == false && bGiveUp == false )
             {
                 ++index;
                 continue;
@@ -494,7 +494,7 @@ namespace sw
         assignment._ticketID = backfilled._ticket._ticketID;
         assignment._matchID  = request._matchID;
         assignment._modeID   = request._modeID;
-        assignment._outcome  = MatchQueueOutcome::Found;
+        assignment._outcome  = MatchQueueResult::Found;
         assignment._serverID = request._serverID;
         assignment._address  = request._address;
         // 포트 샤딩 — 티켓(파티)은 한 샤드에 함께 간다. 대표 계정이 샤드를 정한다(새 경기 배정과 같은 규칙).
@@ -545,7 +545,7 @@ namespace sw
         }
     }
 
-    bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, UnixMilliseconds nowMs )
+    bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueResult failOutcome, UnixMilliseconds nowMs )
     {
         const MatchModeDef&  mode = _mapMode[match._modeID];
         ServerSelectionQuery query;
@@ -559,7 +559,7 @@ namespace sw
         }
         ServerStatus picked;
         const bool   bPlaced = state._reader->pickServer( query, nowMs, picked );
-        if ( bPlaced == false && failOutcome == MatchQueueOutcome::Count )
+        if ( bPlaced == false && failOutcome == MatchQueueResult::Count )
             return false;
 
         if ( bPlaced && _dependencies._pBus != nullptr )                                                                                         // 게임 서버에 접속할 사람을 먼저 알린다
@@ -570,7 +570,7 @@ namespace sw
             assignment._ticketID = ticket._ticketID;
             assignment._matchID  = match._matchID;
             assignment._modeID   = match._modeID;
-            assignment._outcome  = bPlaced ? MatchQueueOutcome::Found : failOutcome;
+            assignment._outcome  = bPlaced ? MatchQueueResult::Found : failOutcome;
             if ( bPlaced )
             {
                 assignment._serverID = picked._descriptor._serverID;
@@ -620,7 +620,7 @@ namespace sw
             MatchAssignment assignment;
             assignment._matchID = match._matchID;
             assignment._modeID  = lobby._modeID;
-            assignment._outcome = bPlaced ? MatchQueueOutcome::Found : MatchQueueOutcome::NoServer;
+            assignment._outcome = bPlaced ? MatchQueueResult::Found : MatchQueueResult::NoServer;
             if ( bPlaced )
             {
                 assignment._serverID = picked._descriptor._serverID;
@@ -755,7 +755,7 @@ namespace sw
     {
         MatchAssignment cancelled;
         cancelled._ticketID = ticketID;
-        cancelled._outcome  = MatchQueueOutcome::Cancelled;
+        cancelled._outcome  = MatchQueueResult::Cancelled;
         const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt != _mapLocalTicket.end() )
         {

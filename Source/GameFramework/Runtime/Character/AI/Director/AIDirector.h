@@ -100,7 +100,7 @@ namespace sw
     /**
      * @class AIDirector
      * @brief 프로필 하나로 도는 페이싱 감독입니다. 프로필은 빌려 씁니다.
-     * @details 게임은 신호를 긴장도 모델에 넣고, `update` 를 부른 뒤 `drainEvents` 로 낼 것을 받아 만든다.
+     * @details 게임은 신호를 긴장도 모델에 넣고, `update` 를 부른 뒤 `pollEvents` 로 낼 것을 받아 만든다.
      *          **한 프레임의 순서**는 다음과 같다.
      *          긴장도 모델, 시간, 단계 넘기기, 스폰, 풀(Interval, Budget) 순이다.
      *          단계 넘기기는 나가는 전환을 적은 순서로 보며 한 프레임에 최대 `kMaxTransitionsPerUpdate` 번 넘긴다.
@@ -133,7 +133,7 @@ namespace sw
         /** @brief 단계를 바로 바꿉니다. 스크립트 이벤트와 테스트가 씁니다. 모르는 단계면 false 입니다. */
         bool forcePhase( const hashed_string& phaseID );
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void drainEvents( vector<AIDirectorEvent>& outListEvent );
+        void pollEvents( vector<AIDirectorEvent>& outListEvent );
 
         AIDirectorIntensityModel&        getBuiltinIntensityModel() { return _builtinModel; }
         const IAIDirectorIntensityModel& getIntensityModel() const;
@@ -205,7 +205,7 @@ namespace sw
         void                       updateBudgetPool( int32 poolIndex, float32 deltaTime );
         int32                      pickEncounter( int32 poolIndex );
         void                       emitPick( int32 poolIndex, int32 encounterIndex );
-        void                       drainSpawnEvents();
+        void                       pollSpawnEvents();
         void                       pushEvent( const AIDirectorEvent& event );
         uint32                     computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 

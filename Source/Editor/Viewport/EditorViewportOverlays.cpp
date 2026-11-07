@@ -149,7 +149,7 @@ namespace sw::editor
         ensureLoaded();
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Layout" ), SW_LOCKEY( "EdButton", "Overlays" ), "Overlays" ) ) )
             EditorInputGUI::openPopup( "##ViewportOverlaysMenu" );
-        EditorSelfTestMarks::note( "sceneView.overlays" );
+        EditorSelfTestMarks::record( "sceneView.overlays" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlaysMenu" ) );
         if ( ImGui::BeginPopup( "##ViewportOverlaysMenu" ) )
         {
@@ -266,7 +266,7 @@ namespace sw::editor
             state._bCollapsed = state._bCollapsed == false;
             save();
         }
-        EditorSelfTestMarks::note( ( "overlay.collapse." + state._id ).c_str() );
+        EditorSelfTestMarks::record( ( "overlay.collapse." + state._id ).c_str() );
         EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCKEY( "EdCommon", "OverlayExpand" ) : SW_LOCKEY( "EdCommon", "OverlayCollapse" ) );
         if ( state._bCollapsed )
         {
@@ -314,7 +314,7 @@ namespace sw::editor
                 }
             }
         }
-        EditorSelfTestMarks::note( ( "overlay.grip." + state._id ).c_str() );
+        EditorSelfTestMarks::record( ( "overlay.grip." + state._id ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlayGrip" ) );
         if ( ImGui::IsItemActivated() )
         {

@@ -47,7 +47,7 @@ namespace
     };
 
     /** @brief 서버 하나입니다. 영속 · 캐시 데이터와 버스 허브는 빌립니다. */
-    struct SocialRig
+    struct SocialFixture
     {
         MemoryServiceStore         _store;
         MemoryEphemeralStore       _cache;
@@ -58,7 +58,7 @@ namespace
         SocialService              _service;
         uint64                     _nextTag{ 1 };
 
-        SocialRig( MemoryServiceDatabase& database, MemoryEphemeralDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
+        SocialFixture( MemoryServiceDatabase& database, MemoryEphemeralDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
             : _store{ &database }
             , _cache{ &cacheData }
             , _router{}
@@ -83,7 +83,7 @@ namespace
             _service.initialize( dependencies );
         }
 
-        ~SocialRig()
+        ~SocialFixture()
         {
             pump();
             _service.shutdown();
@@ -114,7 +114,7 @@ namespace
         {
             pump();
             vector<SocialCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             return listCompletion;
         }
 
@@ -141,7 +141,7 @@ namespace
         {
             pump();
             vector<SocialNotification> listNotification;
-            _service.drainNotifications( listNotification );
+            _service.pollNotifications( listNotification );
             return listNotification;
         }
 
@@ -172,7 +172,7 @@ namespace
         MemoryServiceDatabase   _database;
         MemoryEphemeralDatabase _cacheData;
         LocalServerBusHub       _hub;
-        SocialRig               _rig;
+        SocialFixture           _rig;
 
         explicit SocialWorld( bool bBus = false )
             : _clock{ MonotonicMilliseconds{ 1000 } }
@@ -188,8 +188,8 @@ namespace
 /** @brief [SocialServiceTest] 신청 · 수락: 양쪽 줄이 맞고 받는 쪽이 알림을 받으며, 수락하면 둘 다 FriendAdded 를 받는다. 자신 · 0 은 Invalid 다 */
 SW_TEST_CASE( SocialServiceTest, RequestAndAcceptNotifyBothSides )
 {
-    SocialWorld world;
-    SocialRig&  rig = world._rig;
+    SocialWorld    world;
+    SocialFixture& rig = world._rig;
     SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kAlice ) == SocialResult::Invalid );
     SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kInvalidAccountID ) == SocialResult::Invalid );
 
@@ -226,8 +226,8 @@ SW_TEST_CASE( SocialServiceTest, RequestAndAcceptNotifyBothSides )
 /** @brief [SocialServiceTest] 이름으로 신청: 찾으면 그 계정에 신청하고 완료에 계정을 싣는다. 없으면 NotFound, 자신은 Invalid, 빈 이름은 Invalid, 저장소 실패는 Unavailable 이다 */
 SW_TEST_CASE( SocialServiceTest, RequestByName )
 {
-    SocialWorld world;
-    SocialRig&  rig = world._rig;
+    SocialWorld    world;
+    SocialFixture& rig = world._rig;
     rig._service.requestFriendByName( kAlice, "bob", UnixMilliseconds{ kNowMs }, 1 );
     const SocialCompletion found = rig.take();
     SW_EXPECT_TRUE( found._result == SocialResult::Ok );
@@ -247,8 +247,8 @@ SW_TEST_CASE( SocialServiceTest, RequestByName )
 /** @brief [SocialServiceTest] 차단 조회: 관계를 바꾸면 이 서버 메모리가 따라가고, 막은 쪽에서만 true 다 */
 SW_TEST_CASE( SocialServiceTest, BlockedLookupFollowsChanges )
 {
-    SocialWorld world;
-    SocialRig&  rig = world._rig;
+    SocialWorld    world;
+    SocialFixture& rig = world._rig;
     (void)rig.links( kAlice );
     SW_EXPECT_FALSE( rig._service.isBlockedLocal( kAlice, kBob ) );
     SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Block, kAlice, kBob ) == SocialResult::Ok );
@@ -261,9 +261,9 @@ SW_TEST_CASE( SocialServiceTest, BlockedLookupFollowsChanges )
 /** @brief [SocialServiceTest] 다른 서버가 관계를 바꾸면 버스 알림으로 다시 읽는다. 읽는 도중 알림이 와도 끝난 뒤 한 번 더 읽어 새 값이 된다 — 막음이 빠지면 차단이 샌다 */
 SW_TEST_CASE( SocialServiceTest, BusChangeReloadsEvenDuringALoad )
 {
-    SocialWorld world( true );
-    SocialRig   rigB( world._database, world._cacheData, &world._hub, kServerB );
-    SocialRig&  rigA = world._rig;
+    SocialWorld    world( true );
+    SocialFixture  rigB( world._database, world._cacheData, &world._hub, kServerB );
+    SocialFixture& rigA = world._rig;
     (void)rigA.links( kAlice );
     SW_EXPECT_FALSE( rigA._service.isBlockedLocal( kAlice, kBob ) );
 
@@ -283,8 +283,8 @@ SW_TEST_CASE( SocialServiceTest, BusChangeReloadsEvenDuringALoad )
 /** @brief [SocialServiceTest] 저장소 실패: 쓰기는 Unavailable 이고 알림이 없다. 읽기 실패는 메모리를 비우지 않는다 */
 SW_TEST_CASE( SocialServiceTest, StoreFailures )
 {
-    SocialWorld world;
-    SocialRig&  rig = world._rig;
+    SocialWorld    world;
+    SocialFixture& rig = world._rig;
     SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Block, kAlice, kBob ) == SocialResult::Ok );
     (void)rig.takeNotifications();
 
@@ -301,9 +301,9 @@ SW_TEST_CASE( SocialServiceTest, StoreFailures )
 /** @brief [SocialServiceTest] 접속 상태: 친구에게 알리고, 친구가 아니면 안 알린다. 조회는 이 서버 계정은 메모리, 다른 서버 계정은 캐시에서 읽는다. 틀린 값은 Invalid 다 */
 SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
 {
-    SocialWorld world( true );
-    SocialRig   rigB( world._database, world._cacheData, &world._hub, kServerB );
-    SocialRig&  rigA = world._rig;
+    SocialWorld    world( true );
+    SocialFixture  rigB( world._database, world._cacheData, &world._hub, kServerB );
+    SocialFixture& rigA = world._rig;
     rigA.befriend( kAlice, kBob );
     (void)rigA.links( kAlice );
     rigB.pump();
@@ -337,8 +337,8 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
 /** @brief [SocialServiceTest] 떠나면 친구에게 Offline 을 알리고 캐시 값을 지워 조회가 Offline 이다. 접속 상태를 쓰지 않은 계정은 조용히 떠난다 */
 SW_TEST_CASE( SocialServiceTest, LeavingGoesOffline )
 {
-    SocialWorld world;
-    SocialRig&  rig = world._rig;
+    SocialWorld    world;
+    SocialFixture& rig = world._rig;
     rig.befriend( kAlice, kBob );
     (void)rig.links( kAlice );
     (void)rig.links( kBob );
@@ -362,9 +362,9 @@ SW_TEST_CASE( SocialServiceTest, LeavingGoesOffline )
 /** @brief [SocialServiceTest] 접속 상태 값은 시한이 있어 주기마다 연장한다 — 연장이 멈춘(죽은) 서버의 계정은 시한 뒤 Offline 으로 보인다 */
 SW_TEST_CASE( SocialServiceTest, PresenceExpiresWithoutRefresh )
 {
-    SocialWorld world;
-    SocialRig   other( world._database, world._cacheData, nullptr, kServerB );
-    SocialRig&  rig = world._rig;
+    SocialWorld    world;
+    SocialFixture  other( world._database, world._cacheData, nullptr, kServerB );
+    SocialFixture& rig = world._rig;
     rig.befriend( kAlice, kBob );
     (void)other.links( kBob );
     constexpr int64 kTTLMs = 90000; // `SocialService.h` 의 시한
@@ -384,8 +384,8 @@ SW_TEST_CASE( SocialServiceTest, PresenceExpiresWithoutRefresh )
 /** @brief [SocialServiceTest] 다시 시도할 결과(일시 장애 · 경합 — `SocialReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 관계 바꾸기 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( SocialServiceTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionRig<SocialProtocol, SocialReply> rig;
-    SocialReply                                          finished;
+    test::ReplyRetentionFixture<SocialProtocol, SocialReply> rig;
+    SocialReply                                              finished;
     finished._result = SocialResult::Ok;
     SocialReply unavailable;
     unavailable._result = SocialResult::Unavailable;

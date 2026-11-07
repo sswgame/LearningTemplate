@@ -140,7 +140,7 @@ namespace
         int32 countEvents( FightingEvent::Kind kind )
         {
             vector<FightingEvent> listNew;
-            _match.drainEvents( listNew );
+            _match.pollEvents( listNew );
             for ( const FightingEvent& event : listNew )
             {
                 _listEvent.push_back( event );

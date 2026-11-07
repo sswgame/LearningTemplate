@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorEncounter.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    HorrorEncounter::HorrorEncounter()
+    SurvivalHorrorEncounter::SurvivalHorrorEncounter()
         : _listInvestigator{}
         , _monster{}
         , _turnOrder{}
@@ -19,26 +19,26 @@ namespace sw
         , _monsterToughness{ 0 }
         , _successFace{ 5 }
         , _turnCount{ 0 }
-        , _state{ HorrorEncounterState::Ongoing }
+        , _state{ SurvivalHorrorEncounterState::Ongoing }
     {
     }
 
-    bool HorrorEncounter::initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace )
+    bool SurvivalHorrorEncounter::initialize( const SurvivalHorrorMonsterDef& monster, const vector<SurvivalHorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace )
     {
         // 주사위는 여섯 면이다. 범위 밖 성공 눈은 맞추지 않고 거절한다.
         if ( successFace < 1 || successFace > 6 )
         {
-            SW_LOG_ERROR_ID( "HorrorEncounter.HorrorEncounterRefusedSuccessFace", "HorrorEncounter: refused success face %# - it must be within [1, 6]", successFace );
+            SW_LOG_ERROR_ID( "SurvivalHorrorEncounter.SurvivalHorrorEncounterRefusedSuccessFace", "SurvivalHorrorEncounter: refused success face %# - it must be within [1, 6]", successFace );
             return false;
         }
         if ( seed == 0 )
         {
-            SW_LOG_ERROR_ID( "HorrorEncounter.RefusedSeedZero", "HorrorEncounter: refused seed 0 - give a non-zero seed" );
+            SW_LOG_ERROR_ID( "SurvivalHorrorEncounter.RefusedSeedZero", "SurvivalHorrorEncounter: refused seed 0 - give a non-zero seed" );
             return false;
         }
         if ( hasValidActorIDs( listInvestigator ) == false )
         {
-            SW_LOG_ERROR_ID( "HorrorEncounter.RefusedActorID", "HorrorEncounter: refused investigators - an actor id is negative, repeated or the monster's" );
+            SW_LOG_ERROR_ID( "SurvivalHorrorEncounter.RefusedActorID", "SurvivalHorrorEncounter: refused investigators - an actor id is negative, repeated or the monster's" );
             return false;
         }
         _monster          = monster;
@@ -46,10 +46,10 @@ namespace sw
         _monsterToughness = monster._toughness;
         _successFace      = successFace;
         _turnCount        = 0;
-        _state            = HorrorEncounterState::Ongoing;
+        _state            = SurvivalHorrorEncounterState::Ongoing;
         _random.setSeed( seed );
         _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, 0x5bd1e995u ) );
-        for ( HorrorInvestigator& investigator : _listInvestigator )
+        for ( SurvivalHorrorInvestigator& investigator : _listInvestigator )
         {
             investigator._bDefeated = SW_FALSE;
             _turnOrder.addActor( investigator._actorID, investigator._speed );
@@ -60,17 +60,17 @@ namespace sw
         return true;
     }
 
-    HorrorTurnResult HorrorEncounter::playNextTurn()
+    SurvivalHorrorTurnResult SurvivalHorrorEncounter::playNextTurn()
     {
-        HorrorTurnResult result;
-        if ( _state != HorrorEncounterState::Ongoing )
+        SurvivalHorrorTurnResult result;
+        if ( _state != SurvivalHorrorEncounterState::Ongoing )
             return result;
         result._actorID = _turnOrder.next();
         ++_turnCount;
         if ( result._actorID == kMonsterActorID )
         {
-            HorrorInvestigator* pTarget = nullptr;
-            for ( HorrorInvestigator& investigator : _listInvestigator )
+            SurvivalHorrorInvestigator* pTarget = nullptr;
+            for ( SurvivalHorrorInvestigator& investigator : _listInvestigator )
             {
                 if ( investigator._bDefeated == SW_TRUE )
                     continue;
@@ -89,7 +89,7 @@ namespace sw
             return result;
         }
 
-        HorrorInvestigator* pInvestigator = findInvestigator( result._actorID );
+        SurvivalHorrorInvestigator* pInvestigator = findInvestigator( result._actorID );
         if ( pInvestigator == nullptr || pInvestigator->_bDefeated == SW_TRUE )
             return result;
         result._horrorSuccesses = rollSuccesses( pInvestigator->_will );
@@ -108,7 +108,7 @@ namespace sw
         return result;
     }
 
-    int32 HorrorEncounter::rollSuccesses( int32 diceCount )
+    int32 SurvivalHorrorEncounter::rollSuccesses( int32 diceCount )
     {
         int32 successCount = 0;
         for ( int32 diceIndex = 0; diceIndex < diceCount; ++diceIndex )
@@ -119,12 +119,12 @@ namespace sw
         return successCount;
     }
 
-    HorrorInvestigator* HorrorEncounter::findInvestigator( int32 actorID )
+    SurvivalHorrorInvestigator* SurvivalHorrorEncounter::findInvestigator( int32 actorID )
     {
-        return VectorUtil::findBy<&HorrorInvestigator::_actorID>( _listInvestigator, actorID );
+        return VectorUtil::findBy<&SurvivalHorrorInvestigator::_actorID>( _listInvestigator, actorID );
     }
 
-    void HorrorEncounter::defeatIfBroken( HorrorInvestigator& investigator )
+    void SurvivalHorrorEncounter::defeatIfBroken( SurvivalHorrorInvestigator& investigator )
     {
         if ( investigator._bDefeated == SW_TRUE || ( investigator._health > 0 && investigator._sanity > 0 ) )
             return;
@@ -132,35 +132,35 @@ namespace sw
         _turnOrder.removeActor( investigator._actorID );
     }
 
-    void HorrorEncounter::refreshState()
+    void SurvivalHorrorEncounter::refreshState()
     {
         if ( _monsterToughness <= 0 )
         {
-            _state = HorrorEncounterState::Victory;
+            _state = SurvivalHorrorEncounterState::Victory;
             return;
         }
-        for ( const HorrorInvestigator& investigator : _listInvestigator )
+        for ( const SurvivalHorrorInvestigator& investigator : _listInvestigator )
         {
             if ( investigator._bDefeated == SW_FALSE )
                 return;
         }
-        _state = HorrorEncounterState::Defeat;
+        _state = SurvivalHorrorEncounterState::Defeat;
     }
 
-    bool HorrorEncounter::hasValidActorIDs( const vector<HorrorInvestigator>& listInvestigator )
+    bool SurvivalHorrorEncounter::hasValidActorIDs( const vector<SurvivalHorrorInvestigator>& listInvestigator )
     {
-        for ( const HorrorInvestigator& investigator : listInvestigator )
+        for ( const SurvivalHorrorInvestigator& investigator : listInvestigator )
         {
             if ( investigator._actorID < 0 || investigator._actorID == kMonsterActorID )
                 return false;
         }
-        return VectorUtil::findDuplicateBy<&HorrorInvestigator::_actorID>( listInvestigator ) == nullptr;
+        return VectorUtil::findDuplicateBy<&SurvivalHorrorInvestigator::_actorID>( listInvestigator ) == nullptr;
     }
 
-    bool HorrorEncounter::isStateConsistent() const
+    bool SurvivalHorrorEncounter::isStateConsistent() const
     {
         int32 standingCount = 0;
-        for ( const HorrorInvestigator& investigator : _listInvestigator )
+        for ( const SurvivalHorrorInvestigator& investigator : _listInvestigator )
         {
             const bool bBroken        = investigator._health <= 0 || investigator._sanity <= 0;
             const bool bStanding      = investigator._bDefeated == SW_FALSE;
@@ -173,15 +173,15 @@ namespace sw
             return false;
         if ( _monsterToughness < 0 || _monsterToughness > _monster._toughness || _turnCount < 0 )
             return false;
-        const HorrorEncounterState expected = _monsterToughness == 0 ? HorrorEncounterState::Victory : ( standingCount == 0 ? HorrorEncounterState::Defeat : HorrorEncounterState::Ongoing );
+        const SurvivalHorrorEncounterState expected = _monsterToughness == 0 ? SurvivalHorrorEncounterState::Victory : ( standingCount == 0 ? SurvivalHorrorEncounterState::Defeat : SurvivalHorrorEncounterState::Ongoing );
         return _state == expected;
     }
 
-    void HorrorEncounter::writeState( Archive& outArchive ) const
+    void SurvivalHorrorEncounter::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeName( outArchive, _monster._id );
         outArchive << static_cast<uint32>( _listInvestigator.size() );
-        for ( const HorrorInvestigator& investigator : _listInvestigator )
+        for ( const SurvivalHorrorInvestigator& investigator : _listInvestigator )
         {
             outArchive << investigator._speed;
             outArchive << investigator._actorID;
@@ -198,7 +198,7 @@ namespace sw
         outArchive << static_cast<uint8>( _state );
     }
 
-    bool HorrorEncounter::readState( Archive& archive )
+    bool SurvivalHorrorEncounter::readState( Archive& archive )
     {
         hashed_string monsterID;
         uint32        count = 0;
@@ -207,9 +207,9 @@ namespace sw
         if ( bHeadRead == false || monsterID != _monster._id )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 괴물 정의와 성공 눈은 사본도 그대로 가지고 있다.
-        HorrorEncounter restored = *this;
-        restored._listInvestigator.assign( count, HorrorInvestigator{} );
-        for ( HorrorInvestigator& investigator : restored._listInvestigator )
+        SurvivalHorrorEncounter restored = *this;
+        restored._listInvestigator.assign( count, SurvivalHorrorInvestigator{} );
+        for ( SurvivalHorrorInvestigator& investigator : restored._listInvestigator )
         {
             archive >> investigator._speed;
             archive >> investigator._actorID;
@@ -226,10 +226,10 @@ namespace sw
         archive >> restored._monsterToughness;
         archive >> restored._turnCount;
         archive >> state;
-        const bool bValid = bPartRead && archive.isOk() && state <= static_cast<uint8>( HorrorEncounterState::Defeat );
+        const bool bValid = bPartRead && archive.isOk() && state <= static_cast<uint8>( SurvivalHorrorEncounterState::Defeat );
         if ( bValid == false )
             return false;
-        restored._state = static_cast<HorrorEncounterState>( state );
+        restored._state = static_cast<SurvivalHorrorEncounterState>( state );
         if ( hasValidActorIDs( restored._listInvestigator ) == false || restored.isStateConsistent() == false )
             return false;
         *this = std::move( restored );

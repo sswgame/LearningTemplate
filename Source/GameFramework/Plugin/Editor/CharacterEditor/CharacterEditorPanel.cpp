@@ -94,7 +94,7 @@ namespace sw::editor
                             bChanged = true;
                         }
                         if ( bFirstName && pFirstNameMark != nullptr )
-                            EditorSelfTestMarks::note( pFirstNameMark ); // 자동화가 첫 이름을 누를 자리
+                            EditorSelfTestMarks::record( pFirstNameMark ); // 자동화가 첫 이름을 누를 자리
                         bFirstName = false;
                     }
                     ImGui::EndCombo();
@@ -279,21 +279,21 @@ namespace sw::editor
         if ( ImGui::BeginTabBar( "##CharacterEditorTabs" ) )
         {
             const bool bSocketTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Sockets" ) );
-            EditorSelfTestMarks::note( "charactereditor.tab.sockets" );
+            EditorSelfTestMarks::record( "charactereditor.tab.sockets" );
             if ( bSocketTab )
             {
                 drawSocketTab();
                 ImGui::EndTabItem();
             }
             const bool bSkeletonTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Skeleton" ) );
-            EditorSelfTestMarks::note( "charactereditor.tab.skeleton" );
+            EditorSelfTestMarks::record( "charactereditor.tab.skeleton" );
             if ( bSkeletonTab )
             {
                 drawSkeletonTab();
                 ImGui::EndTabItem();
             }
             const bool bAppearanceTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Appearance" ) );
-            EditorSelfTestMarks::note( "charactereditor.tab.appearance" );
+            EditorSelfTestMarks::record( "charactereditor.tab.appearance" );
             if ( bAppearanceTab )
             {
                 drawAppearanceTab();
@@ -301,7 +301,7 @@ namespace sw::editor
             }
             // 미리보기는 탭 하나다 — 다른 탭의 줄을 밀지 않고, 가려진 탭은 그리지 않는다(뷰포트를 부른 프레임만 렌더한다).
             const bool bPreviewTab = ImGui::BeginTabItem( SW_LOCKEY( "EdPlugin", "Preview" ) );
-            EditorSelfTestMarks::note( "charactereditor.tab.preview" );
+            EditorSelfTestMarks::record( "charactereditor.tab.preview" );
             if ( bPreviewTab )
             {
                 drawPreviewTab();
@@ -386,7 +386,7 @@ namespace sw::editor
         if ( _document.getPaths()._rigPath.empty() == false )
         {
             ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "PreviewConstraintRig" ), &_bRigPreview );
-            EditorSelfTestMarks::note( "charactereditor.rigPreview" );
+            EditorSelfTestMarks::record( "charactereditor.rigPreview" );
             if ( pMutableBody != nullptr )
                 syncRigPreview( *pMutableBody );
         }
@@ -401,7 +401,7 @@ namespace sw::editor
         syncBoneGizmo();
         drawPreviewViewport( float2{ available._x, viewportHeight > minHeight ? viewportHeight : minHeight }, _gizmo.hasMouse() );
         _gizmo.draw( *this );
-        EditorSelfTestMarks::note( "charactereditor.previewScene" );
+        EditorSelfTestMarks::record( "charactereditor.previewScene" );
         if ( pAppearance != nullptr )
             drawSocketAxes( *pAppearance );
         if ( pBody != nullptr )
@@ -696,12 +696,12 @@ namespace sw::editor
                 if ( ImGui::Selectable( name.c_str(), name == selectedClip ) )
                     _document.selectClip( name );
                 if ( bFirst )
-                    EditorSelfTestMarks::note( "charactereditor.clip.first" ); // 자동화가 첫 클립을 누를 자리
+                    EditorSelfTestMarks::record( "charactereditor.clip.first" ); // 자동화가 첫 클립을 누를 자리
                 bFirst = false;
             }
             ImGui::EndCombo();
         }
-        EditorSelfTestMarks::note( "charactereditor.clip" );
+        EditorSelfTestMarks::record( "charactereditor.clip" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop##PreviewClip" ) );
         ImGui::Checkbox( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Loop" ), "Loop##PreviewClip" ), &_bClipLoop );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play##PreviewClip" ) );
@@ -714,7 +714,7 @@ namespace sw::editor
             else
                 _document.setStatus( "The clip could not be played (see log)" );
         }
-        EditorSelfTestMarks::note( "charactereditor.playClip" );
+        EditorSelfTestMarks::record( "charactereditor.playClip" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop##PreviewClip" ) );
         if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Stop" ), "Stop##PreviewClip" ) ) )
@@ -742,7 +742,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Load" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Load" ) ) )
             reloadDocument(); // 경로 칸의 소켓 파일을 다시 읽는다 — 읽음 · 못 읽음 표시와 미저장 기준은 문서 계약이 맞춘다
-        EditorSelfTestMarks::note( "charactereditor.loadSockets" );
+        EditorSelfTestMarks::record( "charactereditor.loadSockets" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Save" ) ) );
         ImGui::BeginDisabled( canSaveDocument() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Save" ) ) )
@@ -832,7 +832,7 @@ namespace sw::editor
                 }
                 if ( bFirst )
                 {
-                    EditorSelfTestMarks::note( "charactereditor.socket.first" );
+                    EditorSelfTestMarks::record( "charactereditor.socket.first" );
                     bFirst = false;
                 }
             }
@@ -913,7 +913,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LoadSkeleton" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadSkeleton" ) ) )
             _document.loadSkeleton();
-        EditorSelfTestMarks::note( "charactereditor.loadSkeleton" );
+        EditorSelfTestMarks::record( "charactereditor.loadSkeleton" );
 
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         (void)EditorWidgets::drawAssetPathField( "##RefPosePath", paths._refPosePath, "reference pose", nullptr, nullptr );
@@ -976,7 +976,7 @@ namespace sw::editor
         if ( EditorInputGUI::wasItemClicked() )
             _document.selectBone( bone );
         if ( boneIndex == 0 )
-            EditorSelfTestMarks::note( "charactereditor.bone.root" );
+            EditorSelfTestMarks::record( "charactereditor.bone.root" );
         if ( bOpen )
         {
             for ( const uint32 childIndex : listChild )
@@ -1007,7 +1007,7 @@ namespace sw::editor
             _document.reportEdit( pose.setTranslation( bone, translation, true, error ) || error.empty() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
-        EditorSelfTestMarks::note( "charactereditor.bone.translation" );
+        EditorSelfTestMarks::record( "charactereditor.bone.translation" );
 
         float3 degrees = current._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneRotation" ) );
@@ -1076,9 +1076,9 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LoadData" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadData" ) ) )
             _document.loadAppearanceData();
-        EditorSelfTestMarks::note( "charactereditor.loadData" );
+        EditorSelfTestMarks::record( "charactereditor.loadData" );
         if ( _document.isDatabaseLoaded() )
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "SlotsSetsPresets", TextArgumentList().addInteger( "slotsCount", static_cast<int64>( database.getSlotTable().getSlots().size() ) ).addInteger( "setsCount", static_cast<int64>( database.getSets().getSets().size() ) ).addInteger( "presetsCount", static_cast<int64>( database.getPresets().getPresets().size() ) ) ).c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "SlotsSetsPresets", TextArgumentList().addInteger( "slotsCount", static_cast<int64>( database.getSlotCatalog().getSlots().size() ) ).addInteger( "setsCount", static_cast<int64>( database.getSets().getSets().size() ) ).addInteger( "presetsCount", static_cast<int64>( database.getPresets().getPresets().size() ) ) ).c_str() );
         else
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "LoadTheItemsFileAndTheAppearanceFolder" ) );
     }
@@ -1097,7 +1097,7 @@ namespace sw::editor
             }
             hashed_string pickedPreset;
             const bool    bPresetPicked = CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "BasePreset" ), "Base preset" ), selection._basePresetID, listPreset, pickedPreset, "charactereditor.basePreset.first" );
-            EditorSelfTestMarks::note( "charactereditor.basePreset" );
+            EditorSelfTestMarks::record( "charactereditor.basePreset" );
             if ( bPresetPicked )
                 (void)appearance.setBasePreset( pickedPreset ); // 같은 값이면 false 이고 그대로 둔다
         }
@@ -1153,14 +1153,14 @@ namespace sw::editor
         }
         hashed_string pickedSet;
         const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "EquipmentSet" ), "Equip set" ), hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
-        EditorSelfTestMarks::note( "charactereditor.equipSet" );
+        EditorSelfTestMarks::record( "charactereditor.equipSet" );
         if ( bSetPicked && pickedSet.empty() == false )
             (void)appearance.equipSet( database, pickedSet ); // 이미 입고 있으면 false 이고 그대로 둔다
 
         // 데이터가 있으면 슬롯 표의 칸마다 그 칸에 낄 수 있는 아이템만 고르게 한다.
         vector<hashed_string> listItem;
         bool                  bFirstSlot = true;
-        for ( const AppearanceSlotDef& def : database.getSlotTable().getSlots() )
+        for ( const AppearanceSlotDef& def : database.getSlotCatalog().getSlots() )
         {
             AppearanceEditModel::collectSlotItems( database, def._name, listItem );
             hashed_string picked;
@@ -1169,7 +1169,7 @@ namespace sw::editor
                 (void)appearance.setSlotItem( def._name, picked );
             if ( bFirstSlot )
             {
-                EditorSelfTestMarks::note( "charactereditor.slot.first" );
+                EditorSelfTestMarks::record( "charactereditor.slot.first" );
                 bFirstSlot = false;
             }
             ImGui::PopID();
@@ -1233,7 +1233,7 @@ namespace sw::editor
                     if ( ImGui::IsItemDeactivatedAfterEdit() )
                         appearance.endContinuousEdit();
                     if ( bFirstSlider )
-                        EditorSelfTestMarks::note( "charactereditor.slider.first" ); // 첫 슬라이더 — 자동화가 누를 자리(마지막 것은 스키마가 길면 접힌 아래다)
+                        EditorSelfTestMarks::record( "charactereditor.slider.first" ); // 첫 슬라이더 — 자동화가 누를 자리(마지막 것은 스키마가 길면 접힌 아래다)
                     bFirstSlider = false;
                     break;
                 }
@@ -1397,7 +1397,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "SaveAsPreset" ) ) )
             _document.savePreset();
-        EditorSelfTestMarks::note( "charactereditor.savePreset" );
+        EditorSelfTestMarks::record( "charactereditor.savePreset" );
         ImGui::EndDisabled();
         if ( _document.getAppearanceModel().isDirty() )
         {
@@ -1408,7 +1408,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "SaveThumbnail" ) ) )
             saveThumbnail();
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
+        EditorSelfTestMarks::record( "charactereditor.saveThumbnail" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "StoresThePreviewTabSPictureIn" ) );
 
         if ( ImGui::BeginChild( "##PresetList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
@@ -1430,15 +1430,15 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
         ImGui::InputText( "##ExportFolder", paths._exportFolder.data(), paths._exportFolder.max_size() );
-        EditorSelfTestMarks::note( "charactereditor.exportFolder" );
+        EditorSelfTestMarks::record( "charactereditor.exportFolder" );
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##ExportID", paths._exportID.data(), paths._exportID.max_size() );
-        EditorSelfTestMarks::note( "charactereditor.exportID" );
+        EditorSelfTestMarks::record( "charactereditor.exportID" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ExportDataPreset" ) ) );
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ExportDataPreset" ) ) && _document.exportDataPreset() )
             ++_published._exportCount;
-        EditorSelfTestMarks::note( "charactereditor.exportPreset" );
+        EditorSelfTestMarks::record( "charactereditor.exportPreset" );
         ImGui::EndDisabled();
     }
 

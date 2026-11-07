@@ -31,32 +31,32 @@ namespace sw
 
 namespace sw
 {
-    SRPGOutcome SRPGMission::evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule )
+    SRPGResult SRPGMission::evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule )
     {
         if ( field.getTurn() <= 0 )
-            return SRPGOutcome::Ongoing;
+            return SRPGResult::Ongoing;
         if ( field.countAlive( SRPGTeam::Player ) == 0 )
-            return SRPGOutcome::Defeat;
+            return SRPGResult::Defeat;
         bool bPlayerHasCommander = false;
         if ( rule._bLoseOnCommander == SW_TRUE && isCommanderLost( field, SRPGTeam::Player, bPlayerHasCommander ) )
-            return SRPGOutcome::Defeat;
+            return SRPGResult::Defeat;
         const bool bOverTurnLimit = rule._turnLimit > 0 && field.getTurn() > rule._turnLimit;
         if ( bOverTurnLimit && rule._objective != SRPGObjective::SurviveTurns )
-            return SRPGOutcome::Defeat;
+            return SRPGResult::Defeat;
 
         switch ( rule._objective )
         {
             case SRPGObjective::DefeatAll:
             {
-                return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
+                return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGResult::Victory : SRPGResult::Ongoing;
             }
             case SRPGObjective::DefeatCommander:
             {
                 bool       bEnemyHasCommander = false;
                 const bool bLost              = isCommanderLost( field, SRPGTeam::Enemy, bEnemyHasCommander );
                 if ( bEnemyHasCommander == false )
-                    return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing; // 지휘관이 없으면 전멸로 판정한다
-                return bLost ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
+                    return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGResult::Victory : SRPGResult::Ongoing; // 지휘관이 없으면 전멸로 판정한다
+                return bLost ? SRPGResult::Victory : SRPGResult::Ongoing;
             }
             case SRPGObjective::ReachCell:
             {
@@ -67,17 +67,17 @@ namespace sw
                     for ( const int2& goal : rule._listGoalCell )
                     {
                         if ( unit._cell == goal )
-                            return SRPGOutcome::Victory;
+                            return SRPGResult::Victory;
                     }
                 }
-                return SRPGOutcome::Ongoing;
+                return SRPGResult::Ongoing;
             }
             case SRPGObjective::SurviveTurns:
             {
-                return bOverTurnLimit ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
+                return bOverTurnLimit ? SRPGResult::Victory : SRPGResult::Ongoing;
             }
         }
-        return SRPGOutcome::Ongoing;
+        return SRPGResult::Ongoing;
     }
 
     SRPGCampaign::SRPGCampaign()
@@ -144,9 +144,9 @@ namespace sw
         return placedCount;
     }
 
-    void SRPGCampaign::completeMission( const SRPGBattlefield& field, SRPGOutcome outcome )
+    void SRPGCampaign::completeMission( const SRPGBattlefield& field, SRPGResult result )
     {
-        if ( _bInMission == SW_FALSE || outcome == SRPGOutcome::Ongoing )
+        if ( _bInMission == SW_FALSE || result == SRPGResult::Ongoing )
             return;
         for ( const SRPGUnit& unit : field.getUnits() )
         {
@@ -165,7 +165,7 @@ namespace sw
             bAnyLeft = bAnyLeft || entry._bLost == SW_FALSE;
         }
         _bInMission = SW_FALSE;
-        if ( outcome == SRPGOutcome::Defeat || bAnyLeft == false )
+        if ( result == SRPGResult::Defeat || bAnyLeft == false )
             _bFailed = SW_TRUE;
     }
 

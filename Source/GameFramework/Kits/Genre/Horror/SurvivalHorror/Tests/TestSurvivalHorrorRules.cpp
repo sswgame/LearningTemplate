@@ -5,9 +5,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorEncounter.h"
-#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorSession.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Tests/StateBytesTestUtil.h"
@@ -25,7 +25,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kSurvivalHorrorXML = R"(<HorrorCatalog>
+    constexpr const utf8* kSurvivalHorrorXML = R"(<SurvivalHorrorCatalog>
   <Rules maxHealth="100" maxSanity="100" darknessDrain="10" sanityRegen="5" sanityRegenDelay="2" repeatSightingScale="0.5" hallucinationThreshold="0.3" maxAimSway="2" maxBattery="10" batteryDrain="2" gridWidth="4" gridHeight="2"/>
   <Item id="herb" kind="Heal" heal="25" maxStack="2"/>
   <Item id="calm" kind="Heal" sanity="30"/>
@@ -47,7 +47,7 @@ namespace
   <Document id="diary" title="Diary" clues="knife,gloves"/>
   <Document id="note"/>
   <Deduction id="culprit" answer="butler" links="knife-gloves" flag="solved" wrongSanity="15"/>
-</HorrorCatalog>)";
+</SurvivalHorrorCatalog>)";
 
     constexpr const utf8* kSurvivalHorrorGraphXML = R"(<AreaGraph><Area id="hall"/><Area id="cellar"/><Area id="attic"/>
   <Link from="hall" to="cellar" requires="redOpen"/></AreaGraph>)";
@@ -63,7 +63,7 @@ namespace
         vector<hashed_string>                   _listSolved{};
         vector<std::pair<hashed_string, int32>> _listDial{};
         vector<std::pair<hashed_string, int32>> _listSequence{};
-        vector<HorrorClueLink>                  _listLink{};
+        vector<SurvivalHorrorClueLink>          _listLink{};
         hashed_string                           _area{ "hall" };
         float32                                 _health{ 100.0f };
         int32                                   _saveCount{ 0 };
@@ -89,7 +89,7 @@ namespace
             }
         }
 
-        [[nodiscard]] bool read( HorrorSession& inoutSession ) const
+        [[nodiscard]] bool read( SurvivalHorrorSession& inoutSession ) const
         {
             Archive written;
             inoutSession.getSanity().writeState( written );
@@ -101,7 +101,7 @@ namespace
             writeCounts( written, _listDial );
             writeCounts( written, _listSequence );
             written << static_cast<uint32>( _listLink.size() );
-            for ( const HorrorClueLink& link : _listLink )
+            for ( const SurvivalHorrorClueLink& link : _listLink )
             {
                 StateArchiveUtil::writeName( written, link._first );
                 StateArchiveUtil::writeName( written, link._second );
@@ -120,12 +120,12 @@ namespace
     /** @brief 한 판입니다. 지도, 플래그, 격자 가방, 상자는 빌려 줍니다. */
     struct SurvivalHorrorRulesTest
     {
-        HorrorCatalog               _catalog{};
+        SurvivalHorrorCatalog       _catalog{};
         AreaGraph                   _graph{};
         GameFlags                   _flags{};
         GridInventory               _grid{};
         Inventory                   _box{};
-        HorrorSession               _session{};
+        SurvivalHorrorSession       _session{};
         vector<SurvivalHorrorEvent> _listEvent{};
 
         SurvivalHorrorRulesTest()
@@ -138,7 +138,7 @@ namespace
 
         bool open( const hashed_string& startArea = "hall" ) { return open( _session, startArea ); }
 
-        bool open( HorrorSession& outSession, const hashed_string& startArea = "hall" )
+        bool open( SurvivalHorrorSession& outSession, const hashed_string& startArea = "hall" )
         {
             SessionStateRefs refs;
             refs._pFlags = &_flags;
@@ -158,7 +158,7 @@ namespace
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p kind 의 수를 셉니다. */
         int32 countEvents( SurvivalHorrorEvent::Kind kind )
         {
-            _session.drainEvents( _listEvent );
+            _session.pollEvents( _listEvent );
             return VectorUtil::countBy<&SurvivalHorrorEvent::_kind>( _listEvent, kind );
         }
 
@@ -178,7 +178,7 @@ namespace
     /** @brief 초자연 전투의 재료입니다. */
     struct SurvivalHorrorTest
     {
-        HorrorMonsterDef _monster{};
+        SurvivalHorrorMonsterDef _monster{};
 
         SurvivalHorrorTest()
         {
@@ -190,9 +190,9 @@ namespace
         }
 
         /** @brief 빠른 조사자 하나입니다. 먼저 움직입니다. */
-        static HorrorInvestigator makeInvestigator( int32 actorID, int32 health = 5, int32 strength = 2 )
+        static SurvivalHorrorInvestigator makeInvestigator( int32 actorID, int32 health = 5, int32 strength = 2 )
         {
-            HorrorInvestigator investigator;
+            SurvivalHorrorInvestigator investigator;
             investigator._speed    = 2.0f;
             investigator._actorID  = actorID;
             investigator._health   = health;
@@ -201,7 +201,7 @@ namespace
         }
 
         /** @brief 전투의 상태 바이트를 손으로 씁니다. 차례는 @p order 를 그대로 싣습니다. */
-        static bool readForged( HorrorEncounter& inoutEncounter, const hashed_string& monsterID, const HorrorInvestigator& investigator, const TurnOrder& order, int32 toughness, HorrorEncounterState state )
+        static bool readForged( SurvivalHorrorEncounter& inoutEncounter, const hashed_string& monsterID, const SurvivalHorrorInvestigator& investigator, const TurnOrder& order, int32 toughness, SurvivalHorrorEncounterState state )
         {
             Archive written;
             StateArchiveUtil::writeName( written, monsterID );
@@ -229,7 +229,7 @@ namespace
             TurnOrder order;
             order.initialize( TurnOrderMode::Rounds, 7u );
             order.addActor( actorID, 2.0f );
-            order.addActor( HorrorEncounter::kMonsterActorID, 1.0f );
+            order.addActor( SurvivalHorrorEncounter::kMonsterActorID, 1.0f );
             return order;
         }
     };
@@ -242,12 +242,12 @@ namespace
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsEveryElement )
 {
-    HorrorCatalog catalog;
+    SurvivalHorrorCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kSurvivalHorrorXML, "SurvivalHorrorTest" ) );
 
     SW_EXPECT_EQUAL( 4, catalog.getRules()._gridWidth );
     SW_REQUIRE_TRUE( catalog.findItem( "herb" ) != nullptr );
-    SW_EXPECT_TRUE( catalog.findItem( "herb" )->_kind == HorrorItemKind::Heal );
+    SW_EXPECT_TRUE( catalog.findItem( "herb" )->_kind == SurvivalHorrorItemKind::Heal );
     SW_EXPECT_NEAR( 25.0f, catalog.findItem( "herb" )->_healAmount, kHorrorTolerance );
     SW_REQUIRE_TRUE( catalog.findKeyLock( "spareDoor" ) != nullptr );
     SW_EXPECT_FALSE( catalog.findKeyLock( "spareDoor" )->_bConsumeKey );
@@ -279,8 +279,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsEveryElement )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateDialLock )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><DialLock id="a" code="1" flag="first"/><DialLock id="a" code="2" flag="second"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><DialLock id="a" code="1" flag="first"/><DialLock id="a" code="2" flag="second"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_REQUIRE_TRUE( catalog.findDialLock( "a" ) != nullptr );
     SW_EXPECT_TRUE( catalog.findDialLock( "a" )->_flag == hashed_string( "first" ) );
 }
@@ -291,8 +291,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateDialLock )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateSequence )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><Sequence id="a" steps="x" flag="first"/><Sequence id="a" steps="y" flag="second"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Sequence id="a" steps="x" flag="first"/><Sequence id="a" steps="y" flag="second"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_EXPECT_TRUE( catalog.findSequence( "a" )->_flag == hashed_string( "first" ) );
 }
 
@@ -302,8 +302,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateSequence )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateDocument )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><Document id="a" clues="x"/><Document id="a" clues="y,z"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Document id="a" clues="x"/><Document id="a" clues="y,z"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, catalog.findDocument( "a" )->_listClue.size() );
 }
 
@@ -313,8 +313,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateDocument )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateDeduction )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><Deduction id="a" answer="first"/><Deduction id="a" answer="second"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Deduction id="a" answer="first"/><Deduction id="a" answer="second"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_EXPECT_TRUE( catalog.findDeduction( "a" )->_answer == hashed_string( "first" ) );
 }
 
@@ -324,8 +324,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateDeduction )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateCombine )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><Combine id="a" a="x" b="y" out="first"/><Combine id="a" a="p" b="q" out="second"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Combine id="a" a="x" b="y" out="first"/><Combine id="a" a="p" b="q" out="second"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_EXPECT_TRUE( catalog.findCombine( "x", "y" ) != nullptr );
     SW_EXPECT_TRUE( catalog.findCombine( "p", "q" ) == nullptr );
 }
@@ -336,8 +336,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateCombine )
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateItem )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><Item id="a" w="2"/><Item id="a" w="3"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Item id="a" w="2"/><Item id="a" w="3"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_EXPECT_EQUAL( 2, catalog.findItem( "a" )->_width );
 }
 
@@ -346,9 +346,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDuplicateItem )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesBadDialDigit )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.DialLockBadDigit" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<HorrorCatalog><DialLock id="a" code="1 x" flag="f"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.DialLockBadDigit" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><DialLock id="a" code="1 x" flag="f"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
     SW_EXPECT_TRUE( catalog.findDialLock( "a" ) == nullptr );
 }
 
@@ -357,9 +357,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesBadDialDigit )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDialWithoutCode )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.DialLockNeedsCode" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<HorrorCatalog><DialLock id="a" flag="f"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.DialLockNeedsCode" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><DialLock id="a" flag="f"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 /**
@@ -367,9 +367,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesDialWithoutCode )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesSequenceWithoutSteps )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.SequenceNeedsStepsB" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<HorrorCatalog><Sequence id="a" flag="f"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.SequenceNeedsStepsB" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Sequence id="a" flag="f"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 /**
@@ -377,9 +377,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesSequenceWithoutSteps )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesMalformedLink )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.DeductionBadLinkExpected" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<HorrorCatalog><Deduction id="a" answer="x" links="knife"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.DeductionBadLinkExpected" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Deduction id="a" answer="x" links="knife"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 /**
@@ -387,9 +387,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesMalformedLink )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesSelfLink )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.DeductionBadLinkExpected" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<HorrorCatalog><Deduction id="a" answer="x" links="knife-knife"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.DeductionBadLinkExpected" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Deduction id="a" answer="x" links="knife-knife"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 /**
@@ -397,9 +397,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesSelfLink )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogReportsLockWithUnknownKey )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.KeyLockNamesUnknown" );
-    HorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<HorrorCatalog><KeyLock id="a" key="later" flag="f"/><KeyLock id="b" key="nothing" flag="g"/><Item id="later"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.KeyLockNamesUnknown" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><KeyLock id="a" key="later" flag="f"/><KeyLock id="b" key="nothing" flag="g"/><Item id="later"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 /**
@@ -407,9 +407,9 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogReportsLockWithUnknownKey )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesUnknownElement )
 {
-    SW_EXPECT_LOG( "HorrorCatalog.UnknownElementSkipped" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( "<HorrorCatalog><Zombie/></HorrorCatalog>", "SurvivalHorrorTest" ) );
+    SW_EXPECT_LOG( "SurvivalHorrorCatalog.UnknownElementSkipped" );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( "<SurvivalHorrorCatalog><Zombie/></SurvivalHorrorCatalog>", "SurvivalHorrorTest" ) );
 }
 
 /**
@@ -419,8 +419,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesOutOfRangeItem )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    HorrorCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<HorrorCatalog><Item id="a" w="9"/></HorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SurvivalHorrorCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><Item id="a" w="9"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 // ── 세션 시작 ─────────────────────────────────────────────────────────
@@ -430,8 +430,8 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesOutOfRangeItem )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesNoCatalog )
 {
-    SW_EXPECT_LOG( "HorrorSession.HorrorSessionRefusedNoCatalog" );
-    HorrorSession session;
+    SW_EXPECT_LOG( "SurvivalHorrorSession.SurvivalHorrorSessionRefusedNoCatalog" );
+    SurvivalHorrorSession session;
     SW_EXPECT_FALSE( session.initialize( nullptr, &_graph, "hall", SessionStateRefs{}, _grid, _box ) );
 }
 
@@ -440,8 +440,8 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesNoCatalog )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesUnknownStartArea )
 {
-    SW_EXPECT_LOG( "HorrorSession.UnknownStartArea" );
-    HorrorSession session;
+    SW_EXPECT_LOG( "SurvivalHorrorSession.UnknownStartArea" );
+    SurvivalHorrorSession session;
     SW_EXPECT_FALSE( open( session, "nowhere" ) );
     SW_EXPECT_TRUE( _session.getCurrentArea() == hashed_string( "hall" ) );
 }
@@ -464,9 +464,9 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesBadGauge )
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesBadGridKeepsSession )
 {
     SW_EXPECT_LOG( "GridInventory.GridInventoryRefusedXCells" );
-    HorrorSession       session;
-    SurvivalHorrorRules rules = _catalog.getRules();
-    rules._gridWidth          = 0;
+    SurvivalHorrorSession session;
+    SurvivalHorrorRules   rules = _catalog.getRules();
+    rules._gridWidth            = 0;
     _catalog.setRules( rules );
     SW_EXPECT_FALSE( open( session ) );
     Archive written;
@@ -697,8 +697,8 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, CombineRollsBackWhenOutputDoesNotFit )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SaveUnlimited )
 {
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::Ok );
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::Ok );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::Ok );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::Ok );
     SW_EXPECT_EQUAL( 2, _session.getSaveCount() );
     SW_EXPECT_EQUAL( 2, countEvents( SurvivalHorrorEvent::Kind::Saved ) );
 }
@@ -710,11 +710,11 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SaveLimited )
 {
     SW_REQUIRE_TRUE( reopen( []( SurvivalHorrorRules& rules )
     {
-        rules._saveMode = HorrorSaveMode::Limited;
+        rules._saveMode = SurvivalHorrorSaveMode::Limited;
         rules._maxSaves = 1;
     } ) );
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::Ok );
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::NoSavesLeft );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::Ok );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::NoSavesLeft );
     SW_EXPECT_EQUAL( 1, _session.getSaveCount() );
 }
 
@@ -724,14 +724,14 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SaveLimited )
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SaveInkRibbon )
 {
     SW_REQUIRE_TRUE( reopen( []( SurvivalHorrorRules& rules )
-    { rules._saveMode = HorrorSaveMode::InkRibbon; } ) );
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::NoSaveItem );
+    { rules._saveMode = SurvivalHorrorSaveMode::InkRibbon; } ) );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::NoSaveItem );
     (void)give( "keyRed" );
     (void)give( "ribbon" );
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::Ok );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::Ok );
     SW_EXPECT_EQUAL( 0, _grid.getItemCount( "ribbon" ) );
     SW_EXPECT_EQUAL( 1, _grid.getItemCount( "keyRed" ) );
-    SW_EXPECT_TRUE( _session.trySave() == HorrorSaveResult::NoSaveItem );
+    SW_EXPECT_TRUE( _session.trySave() == SurvivalHorrorSaveResult::NoSaveItem );
 }
 
 // ── 퍼즐, 지도 ───────────────────────────────────────────────────────
@@ -741,17 +741,17 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SaveInkRibbon )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, KeyLocksOpenPaths )
 {
-    SW_EXPECT_TRUE( _session.useKey( "nothing" ) == HorrorPuzzleResult::Unknown );
-    SW_EXPECT_TRUE( _session.useKey( "redDoor" ) == HorrorPuzzleResult::MissingItem );
+    SW_EXPECT_TRUE( _session.useKey( "nothing" ) == SurvivalHorrorPuzzleResult::Unknown );
+    SW_EXPECT_TRUE( _session.useKey( "redDoor" ) == SurvivalHorrorPuzzleResult::MissingItem );
     SW_EXPECT_FALSE( _session.tryMoveTo( "cellar" ) );
     SW_EXPECT_TRUE( _session.getCurrentArea() == hashed_string( "hall" ) );
 
     (void)give( "keyRed" );
-    SW_EXPECT_TRUE( _session.useKey( "redDoor" ) == HorrorPuzzleResult::Solved );
+    SW_EXPECT_TRUE( _session.useKey( "redDoor" ) == SurvivalHorrorPuzzleResult::Solved );
     SW_EXPECT_EQUAL( 0, _grid.getItemCount( "keyRed" ) );
     SW_EXPECT_TRUE( _flags.hasFlag( "redOpen" ) );
     SW_EXPECT_EQUAL( 1, countEvents( SurvivalHorrorEvent::Kind::DoorUnlocked ) );
-    SW_EXPECT_TRUE( _session.useKey( "redDoor" ) == HorrorPuzzleResult::AlreadySolved );
+    SW_EXPECT_TRUE( _session.useKey( "redDoor" ) == SurvivalHorrorPuzzleResult::AlreadySolved );
 
     SW_EXPECT_TRUE( _session.tryMoveTo( "cellar" ) );
     SW_EXPECT_TRUE( _session.getCurrentArea() == hashed_string( "cellar" ) );
@@ -761,7 +761,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, KeyLocksOpenPaths )
     SW_EXPECT_FALSE( _session.tryMoveTo( "nowhere" ) );
 
     (void)give( "keySpare" );
-    SW_EXPECT_TRUE( _session.useKey( "spareDoor" ) == HorrorPuzzleResult::Solved );
+    SW_EXPECT_TRUE( _session.useKey( "spareDoor" ) == SurvivalHorrorPuzzleResult::Solved );
     SW_EXPECT_EQUAL( 1, _grid.getItemCount( "keySpare" ) );
 }
 
@@ -771,7 +771,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, KeyLocksOpenPaths )
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, NoFlagsKeepsConditionalPathsClosed )
 {
     _flags.setFlag( "redOpen", 1 );
-    HorrorSession session;
+    SurvivalHorrorSession session;
     SW_REQUIRE_TRUE( session.initialize( &_catalog, &_graph, "hall", SessionStateRefs{}, _grid, _box ) );
     SW_EXPECT_FALSE( session.tryMoveTo( "cellar" ) );
 }
@@ -783,21 +783,21 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, DialLockAttempts )
 {
     const vector<int32> listRight{ 3, 1, 4 };
     const vector<int32> listWrong{ 3, 1, 5 };
-    SW_EXPECT_TRUE( _session.enterDialCode( "nothing", listRight ) == HorrorPuzzleResult::Unknown );
-    SW_EXPECT_TRUE( _session.enterDialCode( "safe", listWrong ) == HorrorPuzzleResult::Wrong );
-    SW_EXPECT_TRUE( _session.enterDialCode( "safe", vector<int32>{} ) == HorrorPuzzleResult::LockedOut );
-    SW_EXPECT_TRUE( _session.enterDialCode( "safe", listRight ) == HorrorPuzzleResult::LockedOut );
+    SW_EXPECT_TRUE( _session.enterDialCode( "nothing", listRight ) == SurvivalHorrorPuzzleResult::Unknown );
+    SW_EXPECT_TRUE( _session.enterDialCode( "safe", listWrong ) == SurvivalHorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( _session.enterDialCode( "safe", vector<int32>{} ) == SurvivalHorrorPuzzleResult::LockedOut );
+    SW_EXPECT_TRUE( _session.enterDialCode( "safe", listRight ) == SurvivalHorrorPuzzleResult::LockedOut );
     SW_EXPECT_FALSE( _flags.hasFlag( "safeOpen" ) );
 
     const vector<int32> listFreeRight{ 1 };
     for ( int32 attempt = 0; attempt < 5; ++attempt )
     {
-        SW_EXPECT_TRUE( _session.enterDialCode( "free", listWrong ) == HorrorPuzzleResult::Wrong );
+        SW_EXPECT_TRUE( _session.enterDialCode( "free", listWrong ) == SurvivalHorrorPuzzleResult::Wrong );
     }
-    SW_EXPECT_TRUE( _session.enterDialCode( "free", listFreeRight ) == HorrorPuzzleResult::Solved );
+    SW_EXPECT_TRUE( _session.enterDialCode( "free", listFreeRight ) == SurvivalHorrorPuzzleResult::Solved );
     SW_EXPECT_TRUE( _flags.hasFlag( "freeOpen" ) );
     SW_EXPECT_EQUAL( 1, countEvents( SurvivalHorrorEvent::Kind::PuzzleSolved ) );
-    SW_EXPECT_TRUE( _session.enterDialCode( "free", listWrong ) == HorrorPuzzleResult::AlreadySolved );
+    SW_EXPECT_TRUE( _session.enterDialCode( "free", listWrong ) == SurvivalHorrorPuzzleResult::AlreadySolved );
 }
 
 /**
@@ -805,15 +805,15 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, DialLockAttempts )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SequencePuzzleSteps )
 {
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "nothing", "low" ) == HorrorPuzzleResult::Unknown );
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Progress );
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "nothing", "low" ) == SurvivalHorrorPuzzleResult::Unknown );
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Progress );
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Wrong );
     SW_EXPECT_NEAR( 95.0f, _session.getSanity().getValue(), kHorrorTolerance );
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "high" ) == HorrorPuzzleResult::Wrong ); // 처음부터이다
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Progress );
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "high" ) == HorrorPuzzleResult::Solved );
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "high" ) == SurvivalHorrorPuzzleResult::Wrong ); // 처음부터이다
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Progress );
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "high" ) == SurvivalHorrorPuzzleResult::Solved );
     SW_EXPECT_TRUE( _flags.hasFlag( "bellsDone" ) );
-    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::AlreadySolved );
+    SW_EXPECT_TRUE( _session.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::AlreadySolved );
 }
 
 /**
@@ -856,25 +856,25 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, ClueBoardLinks )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, DeductionNeedsCluesLinksAndAnswer )
 {
-    SW_EXPECT_TRUE( _session.submitDeduction( "nothing", "butler" ) == HorrorPuzzleResult::Unknown );
-    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "butler" ) == HorrorPuzzleResult::MissingItem );
+    SW_EXPECT_TRUE( _session.submitDeduction( "nothing", "butler" ) == SurvivalHorrorPuzzleResult::Unknown );
+    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "butler" ) == SurvivalHorrorPuzzleResult::MissingItem );
     SW_EXPECT_NEAR( 100.0f, _session.getSanity().getValue(), kHorrorTolerance );
 
     SW_REQUIRE_TRUE( _session.readDocument( "diary" ) );
-    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "butler" ) == HorrorPuzzleResult::Wrong ); // 찍어서 맞히기를 막는다
+    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "butler" ) == SurvivalHorrorPuzzleResult::Wrong ); // 찍어서 맞히기를 막는다
     SW_EXPECT_NEAR( 85.0f, _session.getSanity().getValue(), kHorrorTolerance );
     SW_EXPECT_EQUAL( 1, _session.getWrongDeductionCount() );
     SW_EXPECT_EQUAL( 1, countEvents( SurvivalHorrorEvent::Kind::DeductionFailed ) );
 
     SW_REQUIRE_TRUE( _session.linkClues( "knife", "gloves" ) );
-    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "maid" ) == HorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "maid" ) == SurvivalHorrorPuzzleResult::Wrong );
     SW_EXPECT_TRUE( _session.getClueLinks().empty() ); // 틀리면 지운다
 
     SW_REQUIRE_TRUE( _session.linkClues( "knife", "gloves" ) );
-    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "butler" ) == HorrorPuzzleResult::Solved );
+    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "butler" ) == SurvivalHorrorPuzzleResult::Solved );
     SW_EXPECT_TRUE( _flags.hasFlag( "solved" ) );
     SW_EXPECT_EQUAL( 1, countEvents( SurvivalHorrorEvent::Kind::DeductionSolved ) );
-    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "maid" ) == HorrorPuzzleResult::AlreadySolved );
+    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "maid" ) == SurvivalHorrorPuzzleResult::AlreadySolved );
 }
 
 /**
@@ -886,7 +886,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, WrongDeductionCanKeepLinks )
     { rules._bClearLinksOnWrong = false; } ) );
     SW_REQUIRE_TRUE( _session.readDocument( "diary" ) );
     SW_REQUIRE_TRUE( _session.linkClues( "knife", "gloves" ) );
-    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "maid" ) == HorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( _session.submitDeduction( "culprit", "maid" ) == SurvivalHorrorPuzzleResult::Wrong );
     SW_EXPECT_EQUAL( size_t{ 1 }, _session.getClueLinks().size() );
 }
 
@@ -900,31 +900,31 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionStateRoundTrip )
     (void)_session.witnessMonster( "zombie" );
     SW_REQUIRE_TRUE( _session.readDocument( "diary" ) );
     SW_REQUIRE_TRUE( _session.linkClues( "knife", "gloves" ) );
-    SW_REQUIRE_TRUE( _session.enterDialCode( "safe", vector<int32>{ 9 } ) == HorrorPuzzleResult::Wrong );
-    SW_REQUIRE_TRUE( _session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Progress );
+    SW_REQUIRE_TRUE( _session.enterDialCode( "safe", vector<int32>{ 9 } ) == SurvivalHorrorPuzzleResult::Wrong );
+    SW_REQUIRE_TRUE( _session.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Progress );
     (void)give( "keyRed" );
-    SW_REQUIRE_TRUE( _session.useKey( "redDoor" ) == HorrorPuzzleResult::Solved );
+    SW_REQUIRE_TRUE( _session.useKey( "redDoor" ) == SurvivalHorrorPuzzleResult::Solved );
     SW_REQUIRE_TRUE( _session.tryMoveTo( "cellar" ) );
     SW_REQUIRE_TRUE( _session.trySetFlashlight( true ) );
     _session.applyDamage( 10.0f );
     (void)_session.trySave();
     _session.update( 1.0f, false );
 
-    HorrorSession restored;
+    SurvivalHorrorSession restored;
     SW_REQUIRE_TRUE( open( restored ) );
     SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( _session, restored ) );
     SW_EXPECT_NEAR( 90.0f, restored.getHealth(), kHorrorTolerance );
     SW_EXPECT_TRUE( restored.getCurrentArea() == hashed_string( "cellar" ) );
     SW_EXPECT_TRUE( restored.isFlashlightOn() );
     SW_EXPECT_TRUE( restored.isLinked( "knife", "gloves" ) );
-    SW_EXPECT_TRUE( restored.useKey( "redDoor" ) == HorrorPuzzleResult::AlreadySolved );
-    SW_EXPECT_TRUE( restored.pressSequenceStep( "bells", "high" ) == HorrorPuzzleResult::Solved ); // 진행을 이어 간다
-    SW_EXPECT_TRUE( restored.enterDialCode( "safe", vector<int32>{ 9 } ) == HorrorPuzzleResult::LockedOut );
+    SW_EXPECT_TRUE( restored.useKey( "redDoor" ) == SurvivalHorrorPuzzleResult::AlreadySolved );
+    SW_EXPECT_TRUE( restored.pressSequenceStep( "bells", "high" ) == SurvivalHorrorPuzzleResult::Solved ); // 진행을 이어 간다
+    SW_EXPECT_TRUE( restored.enterDialCode( "safe", vector<int32>{ 9 } ) == SurvivalHorrorPuzzleResult::LockedOut );
     vector<SurvivalHorrorEvent> listEvent;
-    HorrorSession               fresh;
+    SurvivalHorrorSession       fresh;
     SW_REQUIRE_TRUE( open( fresh ) );
     SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( _session, fresh ) );
-    fresh.drainEvents( listEvent );
+    fresh.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 }
 
@@ -933,12 +933,12 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionStateRoundTrip )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SolvedSequenceSaveCanBeRead )
 {
-    SW_REQUIRE_TRUE( _session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Progress );
-    SW_REQUIRE_TRUE( _session.pressSequenceStep( "bells", "high" ) == HorrorPuzzleResult::Solved );
-    HorrorSession restored;
+    SW_REQUIRE_TRUE( _session.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Progress );
+    SW_REQUIRE_TRUE( _session.pressSequenceStep( "bells", "high" ) == SurvivalHorrorPuzzleResult::Solved );
+    SurvivalHorrorSession restored;
     SW_REQUIRE_TRUE( open( restored ) );
     SW_EXPECT_TRUE( StateBytesTestUtil::roundTrips( _session, restored ) );
-    SW_EXPECT_TRUE( restored.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::AlreadySolved );
+    SW_EXPECT_TRUE( restored.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::AlreadySolved );
 }
 
 /**
@@ -946,10 +946,10 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SolvedSequenceSaveCanBeRead )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, ResetSequenceWritesSameBytesAsUntouched )
 {
-    HorrorSession other;
+    SurvivalHorrorSession other;
     SW_REQUIRE_TRUE( open( other ) );
-    SW_EXPECT_TRUE( other.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Progress );
-    SW_EXPECT_TRUE( other.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( other.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Progress );
+    SW_EXPECT_TRUE( other.pressSequenceStep( "bells", "low" ) == SurvivalHorrorPuzzleResult::Wrong );
     _session.loseSanity( 5.0f, "bells" ); // 틀린 벌칙만큼 맞춘다
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( other, _session ) );
 }
@@ -970,7 +970,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesForgedBytes )
     good._listSequence = {
         { "bells", 1 }
     };
-    good._listLink.push_back( HorrorClueLink{ "knife", "gloves" } );
+    good._listLink.push_back( SurvivalHorrorClueLink{ "knife", "gloves" } );
     good._health = 50.0f;
     SW_REQUIRE_TRUE( good.read( _session ) ); // 형식은 맞다
     SW_EXPECT_NEAR( 50.0f, _session.getHealth(), kHorrorTolerance );
@@ -1037,13 +1037,13 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesForgedBytes )
     SW_EXPECT_FALSE( forged.read( _session ) );
 
     forged = good;
-    forged._listLink.push_back( HorrorClueLink{ "gloves", "knife" } ); // 겹친다
+    forged._listLink.push_back( SurvivalHorrorClueLink{ "gloves", "knife" } ); // 겹친다
     SW_EXPECT_FALSE( forged.read( _session ) );
     forged = good;
-    forged._listLink.push_back( HorrorClueLink{ "knife", "knife" } );
+    forged._listLink.push_back( SurvivalHorrorClueLink{ "knife", "knife" } );
     SW_EXPECT_FALSE( forged.read( _session ) );
     forged = good;
-    forged._listLink.push_back( HorrorClueLink{ "knife", "pantry" } ); // 가지지 않았다
+    forged._listLink.push_back( SurvivalHorrorClueLink{ "knife", "pantry" } ); // 가지지 않았다
     SW_EXPECT_FALSE( forged.read( _session ) );
 
     forged       = good;
@@ -1061,7 +1061,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesSavesOverLimit )
 {
     SW_REQUIRE_TRUE( reopen( []( SurvivalHorrorRules& rules )
     {
-        rules._saveMode = HorrorSaveMode::Limited;
+        rules._saveMode = SurvivalHorrorSaveMode::Limited;
         rules._maxSaves = 2;
     } ) );
     SurvivalForgedSession forged;
@@ -1078,8 +1078,8 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesUninitialized )
 {
     Archive written;
     _session.writeState( written );
-    Archive       reading( written.getData(), written.getSize() );
-    HorrorSession session;
+    Archive               reading( written.getData(), written.getSize() );
+    SurvivalHorrorSession session;
     SW_EXPECT_FALSE( session.readState( reading ) );
 }
 
@@ -1090,8 +1090,8 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesUninitialized )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesBadSuccessFace )
 {
-    SW_EXPECT_LOG( "HorrorEncounter.HorrorEncounterRefusedSuccessFace" );
-    HorrorEncounter encounter;
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.SurvivalHorrorEncounterRefusedSuccessFace" );
+    SurvivalHorrorEncounter encounter;
     SW_EXPECT_FALSE( encounter.initialize( _monster, {}, 1u, 7 ) );
 }
 
@@ -1100,8 +1100,8 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesBadSuccessFace )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesSeedZero )
 {
-    SW_EXPECT_LOG( "HorrorEncounter.RefusedSeedZero" );
-    HorrorEncounter encounter;
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedSeedZero" );
+    SurvivalHorrorEncounter encounter;
     SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 0u ) );
 }
 
@@ -1110,7 +1110,7 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesSeedZero )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterSurvivesSeedEqualToMixConstant )
 {
-    HorrorEncounter encounter;
+    SurvivalHorrorEncounter encounter;
     SW_EXPECT_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 0x5bd1e995u ) );
 }
 
@@ -1119,8 +1119,8 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterSurvivesSeedEqualToMixConstant )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesRepeatedActorID )
 {
-    SW_EXPECT_LOG( "HorrorEncounter.RefusedActorID" );
-    HorrorEncounter encounter;
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedActorID" );
+    SurvivalHorrorEncounter encounter;
     SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( 1 ), makeInvestigator( 1 ) }, 1u ) );
 }
 
@@ -1129,9 +1129,9 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesRepeatedActorID )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesMonsterActorID )
 {
-    SW_EXPECT_LOG( "HorrorEncounter.RefusedActorID" );
-    HorrorEncounter encounter;
-    SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( HorrorEncounter::kMonsterActorID ) }, 1u ) );
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedActorID" );
+    SurvivalHorrorEncounter encounter;
+    SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( SurvivalHorrorEncounter::kMonsterActorID ) }, 1u ) );
 }
 
 /**
@@ -1139,8 +1139,8 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesMonsterActorID )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesNegativeActorID )
 {
-    SW_EXPECT_LOG( "HorrorEncounter.RefusedActorID" );
-    HorrorEncounter encounter;
+    SW_EXPECT_LOG( "SurvivalHorrorEncounter.RefusedActorID" );
+    SurvivalHorrorEncounter encounter;
     SW_EXPECT_FALSE( encounter.initialize( _monster, { makeInvestigator( -1 ) }, 1u ) );
 }
 
@@ -1149,24 +1149,24 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterRefusesNegativeActorID )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterVictory )
 {
-    HorrorEncounter encounter;
+    SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u, 1 ) );
-    SW_EXPECT_TRUE( encounter.getState() == HorrorEncounterState::Ongoing );
+    SW_EXPECT_TRUE( encounter.getState() == SurvivalHorrorEncounterState::Ongoing );
 
-    const HorrorTurnResult first = encounter.playNextTurn();
+    const SurvivalHorrorTurnResult first = encounter.playNextTurn();
     SW_EXPECT_EQUAL( 1, first._actorID );
     SW_EXPECT_EQUAL( 2, first._horrorSuccesses );
     SW_EXPECT_EQUAL( 2, first._combatSuccesses );
     SW_EXPECT_EQUAL( 1, encounter.getMonsterToughness() );
 
-    const HorrorTurnResult second = encounter.playNextTurn();
-    SW_EXPECT_EQUAL( HorrorEncounter::kMonsterActorID, second._actorID );
+    const SurvivalHorrorTurnResult second = encounter.playNextTurn();
+    SW_EXPECT_EQUAL( SurvivalHorrorEncounter::kMonsterActorID, second._actorID );
     SW_EXPECT_EQUAL( 1, second._targetID );
     SW_EXPECT_EQUAL( 1, second._healthLoss );
     SW_EXPECT_EQUAL( 4, encounter.getInvestigators().front()._health );
 
     (void)encounter.playNextTurn();
-    SW_EXPECT_TRUE( encounter.getState() == HorrorEncounterState::Victory );
+    SW_EXPECT_TRUE( encounter.getState() == SurvivalHorrorEncounterState::Victory );
     SW_EXPECT_EQUAL( 0, encounter.getMonsterToughness() );
     SW_EXPECT_EQUAL( 3, encounter.getTurnCount() );
 
@@ -1179,27 +1179,27 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterVictory )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterMonsterTargetsWeakestUntilDefeat )
 {
-    _monster._damage           = 2;
-    HorrorInvestigator slowerA = makeInvestigator( 5, 2, 0 );
-    HorrorInvestigator slowerB = makeInvestigator( 3, 2, 0 );
-    slowerA._speed             = 0.5f; // 괴물이 먼저 움직인다
-    slowerB._speed             = 0.5f;
-    HorrorEncounter encounter;
+    _monster._damage                   = 2;
+    SurvivalHorrorInvestigator slowerA = makeInvestigator( 5, 2, 0 );
+    SurvivalHorrorInvestigator slowerB = makeInvestigator( 3, 2, 0 );
+    slowerA._speed                     = 0.5f; // 괴물이 먼저 움직인다
+    slowerB._speed                     = 0.5f;
+    SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { slowerA, slowerB }, 7u, 6 ) );
 
-    const HorrorTurnResult first = encounter.playNextTurn();
-    SW_EXPECT_EQUAL( HorrorEncounter::kMonsterActorID, first._actorID );
+    const SurvivalHorrorTurnResult first = encounter.playNextTurn();
+    SW_EXPECT_EQUAL( SurvivalHorrorEncounter::kMonsterActorID, first._actorID );
     SW_EXPECT_EQUAL( 3, first._targetID ); // 체력이 같으면 번호가 작은 쪽이다
     SW_EXPECT_EQUAL( 2, first._healthLoss );
 
     int32 turnGuard = 0;
-    while ( encounter.getState() == HorrorEncounterState::Ongoing && turnGuard < 32 )
+    while ( encounter.getState() == SurvivalHorrorEncounterState::Ongoing && turnGuard < 32 )
     {
         (void)encounter.playNextTurn();
         ++turnGuard;
     }
-    SW_EXPECT_TRUE( encounter.getState() == HorrorEncounterState::Defeat );
-    for ( const HorrorInvestigator& investigator : encounter.getInvestigators() )
+    SW_EXPECT_TRUE( encounter.getState() == SurvivalHorrorEncounterState::Defeat );
+    for ( const SurvivalHorrorInvestigator& investigator : encounter.getInvestigators() )
     {
         SW_EXPECT_EQUAL( SW_TRUE, investigator._bDefeated );
         SW_EXPECT_EQUAL( 0, investigator._health );
@@ -1211,19 +1211,19 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterMonsterTargetsWeakestUntilDefeat )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterHorrorBreaksInvestigator )
 {
-    _monster._horror                = 1;
-    HorrorInvestigator investigator = makeInvestigator( 1 );
-    investigator._will              = 0; // 주사위가 없어 공포 판정은 늘 진다
-    investigator._sanity            = 1;
-    HorrorEncounter encounter;
+    _monster._horror                        = 1;
+    SurvivalHorrorInvestigator investigator = makeInvestigator( 1 );
+    investigator._will                      = 0; // 주사위가 없어 공포 판정은 늘 진다
+    investigator._sanity                    = 1;
+    SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { investigator }, 7u, 1 ) );
 
-    const HorrorTurnResult result = encounter.playNextTurn();
+    const SurvivalHorrorTurnResult result = encounter.playNextTurn();
     SW_EXPECT_EQUAL( 0, result._horrorSuccesses );
     SW_EXPECT_EQUAL( 1, result._sanityLoss );
     SW_EXPECT_EQUAL( 0, result._combatSuccesses );
     SW_EXPECT_EQUAL( 3, encounter.getMonsterToughness() );
-    SW_EXPECT_TRUE( encounter.getState() == HorrorEncounterState::Defeat );
+    SW_EXPECT_TRUE( encounter.getState() == SurvivalHorrorEncounterState::Defeat );
 }
 
 /**
@@ -1231,14 +1231,14 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterHorrorBreaksInvestigator )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStartsWithBrokenInvestigators )
 {
-    HorrorEncounter encounter;
+    SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1, 0 ) }, 7u ) );
-    SW_EXPECT_TRUE( encounter.getState() == HorrorEncounterState::Defeat );
+    SW_EXPECT_TRUE( encounter.getState() == SurvivalHorrorEncounterState::Defeat );
     SW_EXPECT_EQUAL( SW_TRUE, encounter.getInvestigators().front()._bDefeated );
     SW_EXPECT_EQUAL( -1, encounter.playNextTurn()._actorID );
 
     SW_REQUIRE_TRUE( encounter.initialize( _monster, {}, 7u ) );
-    SW_EXPECT_TRUE( encounter.getState() == HorrorEncounterState::Defeat );
+    SW_EXPECT_TRUE( encounter.getState() == SurvivalHorrorEncounterState::Defeat );
 }
 
 /**
@@ -1247,10 +1247,10 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStartsWithBrokenInvestigators )
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
 {
     _monster._toughness = 50;
-    const vector<HorrorInvestigator> listInvestigator{ makeInvestigator( 1 ), makeInvestigator( 2 ) };
-    HorrorEncounter                  encounter;
+    const vector<SurvivalHorrorInvestigator> listInvestigator{ makeInvestigator( 1 ), makeInvestigator( 2 ) };
+    SurvivalHorrorEncounter                  encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, listInvestigator, 11u ) );
-    HorrorEncounter twin;
+    SurvivalHorrorEncounter twin;
     SW_REQUIRE_TRUE( twin.initialize( _monster, listInvestigator, 11u ) );
     for ( int32 turn = 0; turn < 3; ++turn )
     {
@@ -1259,22 +1259,22 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
     }
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( encounter, twin ) );
 
-    HorrorEncounter restored;
+    SurvivalHorrorEncounter restored;
     SW_REQUIRE_TRUE( restored.initialize( _monster, {}, 99u ) );
     SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( encounter, restored ) );
     for ( int32 turn = 0; turn < 5; ++turn )
     {
-        const HorrorTurnResult expected = encounter.playNextTurn();
-        const HorrorTurnResult actual   = restored.playNextTurn();
+        const SurvivalHorrorTurnResult expected = encounter.playNextTurn();
+        const SurvivalHorrorTurnResult actual   = restored.playNextTurn();
         SW_EXPECT_EQUAL( expected._actorID, actual._actorID );
         SW_EXPECT_EQUAL( expected._combatSuccesses, actual._combatSuccesses );
     }
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( encounter, restored ) );
 
     // 끝난 싸움도 왕복한다.
-    HorrorEncounter finished;
+    SurvivalHorrorEncounter finished;
     SW_REQUIRE_TRUE( finished.initialize( _monster, { makeInvestigator( 1, 0 ) }, 11u ) );
-    HorrorEncounter restoredFinished;
+    SurvivalHorrorEncounter restoredFinished;
     SW_REQUIRE_TRUE( restoredFinished.initialize( _monster, {}, 99u ) );
     SW_EXPECT_TRUE( StateBytesTestUtil::roundTrips( finished, restoredFinished ) );
 }
@@ -1284,59 +1284,59 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesForgedBytes )
 {
-    HorrorEncounter encounter;
+    SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u ) );
-    const HorrorInvestigator good  = makeInvestigator( 1 );
-    const TurnOrder          order = makeOrder( 1 );
-    SW_REQUIRE_TRUE( readForged( encounter, "ghoul", good, order, 3, HorrorEncounterState::Ongoing ) ); // 형식은 맞다
+    const SurvivalHorrorInvestigator good  = makeInvestigator( 1 );
+    const TurnOrder                  order = makeOrder( 1 );
+    SW_REQUIRE_TRUE( readForged( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Ongoing ) ); // 형식은 맞다
 
-    SW_EXPECT_FALSE( readForged( encounter, "other", good, order, 3, HorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 4, HorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, -1, HorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 3, HorrorEncounterState::Victory ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 0, HorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 3, HorrorEncounterState::Defeat ) );
-    SW_EXPECT_TRUE( readForged( encounter, "ghoul", good, order, 0, HorrorEncounterState::Victory ) );
+    SW_EXPECT_FALSE( readForged( encounter, "other", good, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 4, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, -1, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Victory ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 0, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Defeat ) );
+    SW_EXPECT_TRUE( readForged( encounter, "ghoul", good, order, 0, SurvivalHorrorEncounterState::Victory ) );
 
-    HorrorInvestigator forged = good;
-    forged._health            = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SurvivalHorrorInvestigator forged = good;
+    forged._health                    = -1;
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged         = good;
     forged._sanity = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged       = good;
     forged._will = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged           = good;
     forged._strength = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged        = good;
     forged._speed = 0.0f;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged            = good;
     forged._bDefeated = 2;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged            = good;
     forged._bDefeated = SW_TRUE; // 체력이 남았는데 빠졌다
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Defeat ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Defeat ) );
     forged         = good;
     forged._health = 0; // 체력이 없는데 남았다
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged          = good;
-    forged._actorID = HorrorEncounter::kMonsterActorID;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, makeOrder( forged._actorID ), 3, HorrorEncounterState::Ongoing ) );
+    forged._actorID = SurvivalHorrorEncounter::kMonsterActorID;
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, makeOrder( forged._actorID ), 3, SurvivalHorrorEncounterState::Ongoing ) );
     forged          = good;
     forged._actorID = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, makeOrder( -1 ), 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, makeOrder( -1 ), 3, SurvivalHorrorEncounterState::Ongoing ) );
 
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, makeOrder( 2 ), 3, HorrorEncounterState::Ongoing ) ); // 차례의 사람이 다르다
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, makeOrder( 2 ), 3, SurvivalHorrorEncounterState::Ongoing ) ); // 차례의 사람이 다르다
     TurnOrder noMonster;
     noMonster.initialize( TurnOrderMode::Rounds, 7u );
     noMonster.addActor( 1, 2.0f );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, noMonster, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, noMonster, 3, SurvivalHorrorEncounterState::Ongoing ) );
     TurnOrder extra = order;
     extra.addActor( 2, 1.0f );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, extra, 3, HorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, extra, 3, SurvivalHorrorEncounterState::Ongoing ) );
 }
 
 /**

@@ -39,11 +39,11 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @struct ToonMaterialDesc
+     * @struct ToonMaterialDef
      * @brief 툰 머티리얼 하나의 값입니다. 이름과 의미는 `toon.hlsl` 의 머티리얼 구조체(MToon 1.0 이름)와 같습니다. 색은 선형입니다.
      * @details 텍스처는 glTF `textures[]` 번호이며 -1 이면 없다. 파일 경로는 머티리얼을 만들 때(`makeMaterialXML`) 정한다.
      */
-    struct ToonMaterialDesc
+    struct ToonMaterialDef
     {
         string          _name;
         float4          _baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -99,7 +99,7 @@ namespace sw::editor
          *          (shadingShift, shadingToony) 로 옮겨 같은 경계가 되게 한다. 외곽선 두께는 월드에서는 cm 를 m 로, 화면에서는 NDC 의 1 % 단위를 화면 높이 비율(× 0.005)로 바꾼다.
          * @return 모르는 키, 셰이더, 값이 있으면 false 이고 @p outError 에 이유를 씁니다.
          */
-        [[nodiscard]] static bool readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc,
+        [[nodiscard]] static bool readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDef& outDesc,
                                                     vector<string>* pOutListIgnored, string& outError );
 
         /**
@@ -107,14 +107,14 @@ namespace sw::editor
          * @details 1.0 의 값은 선형이고 이름이 엔진과 같으므로 그대로 옮긴다. `KHR_materials_emissive_strength` 를 받는다.
          * @return 모르는 MToon 키나 값이 있으면 false 이고 @p outError 에 이유를 씁니다.
          */
-        [[nodiscard]] static bool readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError );
+        [[nodiscard]] static bool readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDef& outDesc, vector<string>* pOutListIgnored, string& outError );
 
         /**
          * @brief 엔진 툰 머티리얼을 템플릿으로 @p desc 의 값을 넣은 `.material` 문자열을 만듭니다. 템플릿을 읽지 못하거나 템플릿에 쓸 프로퍼티가 없으면 빈 문자열입니다.
          * @param listTexturePath glTF 텍스처 번호에서 리소스 경로(DDS)로의 대응입니다. 비어 있는 항목은 그 텍스처가 없는 것으로 씁니다.
          * @param toonTemplate 툰 머티리얼 템플릿의 경로입니다 — 원본은 엔진 기본 에셋 표(`EngineDefaultAssets::_toonMaterialTemplate`). 워커에서도 부르므로 서비스를 찾지 않고 호출한 쪽이 넘긴다.
          */
-        static string makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate );
+        static string makeMaterialXML( const ToonMaterialDef& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate );
         /** @brief 머티리얼 XML `_properties` 에서 그 이름의 항목을 찾습니다. 없으면 무효 노드입니다(툰 · PBR 머티리얼 임포트가 함께 쓴다). */
         static XMLNode findMaterialProperty( const XMLNode& properties, string_view name );
 

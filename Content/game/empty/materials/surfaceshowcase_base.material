@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 표면 셰이더 쇼케이스(surfaceshowcase.scene.xml)의 구 — surfacelit.material 에 Base 값만 켠 것. 마스크 텍스처는 비워 흰색으로 읽히므로 켠 채널이 구 전체를 덮는다. -->
-<MaterialDesc formatVersion="0" name="SurfaceShowcaseBase" _base="engine/materials/surfacelit.material">
+<MaterialDef formatVersion="0" name="SurfaceShowcaseBase" _base="engine/materials/surfacelit.material">
 	<_properties>
 		<item name="_color" defaultValue="0.6 0.6 0.6 1.0" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

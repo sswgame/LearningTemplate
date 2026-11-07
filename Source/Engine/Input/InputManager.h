@@ -323,13 +323,13 @@ namespace sw
          * @details 가상 입력은 창 메시지를 거치지 않으므로 이 수에 들지 않는다 — 데모 · 어트랙트 재생이 "사람이 손대면 멈춤" 을 가상 입력과 섞지 않고 본다(`ScenarioPlayback`).
          *          배타 모드가 사람 입력을 버려도 센다(버리기 전에 부른다). 게임패드는 창 메시지가 아니라 장치 폴링이라 세지 않는다.
          */
-        void noteNativeEvent( const NativeWindowEvent& event );
+        void recordNativeEvent( const NativeWindowEvent& event );
         /** @brief 지금까지 센 사람 입력 수입니다(늘기만 한다 — 시작 때 값과 비교한다). */
         uint64 getHumanInputSerial() const { return _humanInputSerial; }
         /** @brief 붙인 뒤 지난 `beginFrame` 횟수이며, 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
         uint32 getVirtualFrameIndex() const { return _virtualFrameIndex; }
         /** @brief 이번 `beginFrame` 이 장치에 적용한 원시 이벤트입니다(배타 가상 입력이면 가상 이벤트만). 입력 녹화가 읽으며, 다음 `beginFrame` 까지 유효합니다. */
-        const vector<RawInputEvent>& getLastFrameEvents() const { return _listDrainedEvent; }
+        const vector<RawInputEvent>& getLastFrameEvents() const { return _listPolledEvent; }
         /** @brief 지금까지 `beginFrame` 을 부른 횟수입니다(프레임마다 한 번 읽는 쪽이 같은 프레임을 두 번 읽지 않게). */
         uint32 getBeginFrameCount() const { return _beginFrameCount; }
 
@@ -451,7 +451,7 @@ namespace sw
         MouseDevice*                              _pMouse;                  /**< 편의 API 용 캐시 포인터입니다. */
         GamepadDevice*                            _pGamepad;                /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
-        vector<RawInputEvent>                     _listDrainedEvent;        /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
+        vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
         float2                                    _frameLookDelta;          /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
         int2                                      _lastPlatformPointer;     /**< 버튼 이벤트에 좌표가 없는 창(Wayland `wl_pointer.button`)이 쓰는 포인터의 마지막 자리입니다. */
@@ -484,7 +484,7 @@ namespace sw
         uint8                                     _bOSDeviceInputBlocked           : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
         uint8                                     _bNativeWindowFocused            : 1; /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
         uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
-        uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
+        uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
 
     private:
     };

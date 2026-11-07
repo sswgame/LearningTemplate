@@ -53,7 +53,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 감사 줄을 쓰고 읽습니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기는 저장소 스레드(`IServiceStoreWork::run` 안)에서 합니다. */
+    /** @brief 감사 줄을 쓰고 읽습니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기는 저장소 스레드(`IServiceStoreJob::run` 안)에서 합니다. */
     struct SW_GF_API ServiceAuditLog
     {
         static const hashed_string& getTable(); ///< "service_audit"

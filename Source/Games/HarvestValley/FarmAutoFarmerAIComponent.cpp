@@ -112,11 +112,11 @@ namespace sw
             }
 
             /** @brief 출하 할 일입니다(출하함 옆자리). */
-            static Task makeShipTask( const FarmGameModeComponent& director )
+            static Task makeShipTask( const FarmGameModeComponent& gameMode )
             {
                 Task task;
                 task._kind          = TaskKind::Ship;
-                task._standPosition = director.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f };
+                task._standPosition = gameMode.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f };
                 return task;
             }
 
@@ -180,36 +180,36 @@ namespace sw
              * @brief 지금 할 일을 고릅니다 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기. 할 일이 없으면 종류가 `None` 입니다.
              * @param seasonalSeed 이번 계절 씨앗의 번호입니다(없으면 음수).
              */
-            static Task chooseTask( const FarmGameModeComponent& director, const SessionStateComponent& state, const vector<hashed_string>& listSeed, int32 seasonalSeed, bool bHasSeed,
+            static Task chooseTask( const FarmGameModeComponent& gameMode, const SessionStateComponent& state, const vector<hashed_string>& listSeed, int32 seasonalSeed, bool bHasSeed,
                                     int32 cultivateLimit )
             {
                 const Inventory&   bag          = state.getInventory();
-                const CropCatalog& catalog      = director.getCropCatalog();
-                const bool         bTired       = director.getStamina() < 8 || director.getHourOfDay() >= 22.0f || director.getDayStarted() < state.getClock().getDay();
+                const CropCatalog& catalog      = gameMode.getCropCatalog();
+                const bool         bTired       = gameMode.getStamina() < 8 || gameMode.getHourOfDay() >= 22.0f || gameMode.getDayStarted() < state.getClock().getDay();
                 const int32        produceCount = countProduce( catalog, bag );
                 Task               task;
                 if ( produceCount > 0 && ( bTired || produceCount >= 6 ) )
                 {
-                    task = makeShipTask( director );
+                    task = makeShipTask( gameMode );
                 }
                 else if ( bTired == false )
                 {
-                    const int32 bestPriority = chooseTileTask( director.getField(), cultivateLimit, seasonalSeed, bHasSeed, task );
+                    const int32 bestPriority = chooseTileTask( gameMode.getField(), cultivateLimit, seasonalSeed, bHasSeed, task );
                     // 심을 칸이 있는데 씨앗이 없으면 산다.
                     const bool bNeedsSeedPurchase = bestPriority < 3 && bHasSeed == false && seasonalSeed >= 0;
                     if ( bNeedsSeedPurchase )
                     {
                         const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seasonalSeed )] );
-                        if ( pCrop != nullptr && state.getWallet().canAfford( director.getCurrency(), pCrop->_seedPrice ) )
+                        if ( pCrop != nullptr && state.getWallet().canAfford( gameMode.getCurrency(), pCrop->_seedPrice ) )
                         {
                             task._kind          = TaskKind::Shop;
-                            task._standPosition = director.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f };
+                            task._standPosition = gameMode.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f };
                         }
                     }
                 }
                 // 밭에 할 일이 없으면 남은 수확물을 넣고, 그것도 없으면 잔다.
                 if ( task._kind == TaskKind::None && produceCount > 0 )
-                    task = makeShipTask( director );
+                    task = makeShipTask( gameMode );
                 return task;
             }
         };
@@ -224,16 +224,16 @@ namespace sw
         , _buyBatch{ 6 }
         , _standTolerance{ 0.2f }
         , _approachBack{ 0.4f }
-        , _director{}
+        , _gameMode{}
         , _actionTimer{ 0.0f }
         , _buyRemaining{ 0 }
         , _seedCountAtBuy{ 0 }
     {
     }
 
-    bool FarmAutoFarmerAIComponent::walkTo( const FarmGameModeComponent& director, const float3& standPosition )
+    bool FarmAutoFarmerAIComponent::walkTo( const FarmGameModeComponent& gameMode, const float3& standPosition )
     {
-        if ( float3::getHorizontalDistance( director.getPlayerPosition(), standPosition ) <= _standTolerance )
+        if ( float3::getHorizontalDistance( gameMode.getPlayerPosition(), standPosition ) <= _standTolerance )
         {
             stopMoving();
             return true;
@@ -242,10 +242,10 @@ namespace sw
         return false;
     }
 
-    bool FarmAutoFarmerAIComponent::walkUpTo( const FarmGameModeComponent& director, const float3& standPosition )
+    bool FarmAutoFarmerAIComponent::walkUpTo( const FarmGameModeComponent& gameMode, const float3& standPosition )
     {
-        const float3& position  = director.getPlayerPosition();
-        const bool    bFacingUp = director.getFacing()._z > 0.5f;
+        const float3& position  = gameMode.getPlayerPosition();
+        const bool    bFacingUp = gameMode.getFacing()._z > 0.5f;
         const bool    bOnSpot   = float3::getHorizontalDistance( position, standPosition ) <= _standTolerance;
         if ( bFacingUp && bOnSpot )
         {
@@ -266,24 +266,24 @@ namespace sw
         using Internal                          = FarmAutoFarmerAIComponentInternal;
         const GameObject*            pPawnOwner = pawn.getOwner();
         const GameObjectManager*     pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
-        const FarmGameModeComponent* pDirector  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director ) : nullptr;
-        const SessionStateComponent* pState     = pDirector != nullptr ? SessionStateComponent::findOnOwner( *pDirector ) : nullptr;
-        if ( pState == nullptr || pDirector->isStarted() == false )
+        const FarmGameModeComponent* pGameMode  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const SessionStateComponent* pState     = pGameMode != nullptr ? SessionStateComponent::findOnOwner( *pGameMode ) : nullptr;
+        if ( pState == nullptr || pGameMode->isStarted() == false )
         {
             stopMoving();
             return;
         }
         _actionTimer -= context._deltaTime;
-        const FarmGameModeComponent& director = *pDirector;
+        const FarmGameModeComponent& gameMode = *pGameMode;
         const Inventory&             bag      = pState->getInventory();
-        const CropCatalog&           catalog  = director.getCropCatalog();
+        const CropCatalog&           catalog  = gameMode.getCropCatalog();
         const hashed_string          season   = pState->getClock().getSeasonName();
-        const vector<hashed_string>& listSeed = director.getSeeds();
+        const vector<hashed_string>& listSeed = gameMode.getSeeds();
 
         // 가게 앞에서 사는 중이면 다 살 때까지 선다(한 번에 하나씩 산다 — 틱마다 한 번 누른다). 지난 누름이 못 샀으면(돈 · 가방) 그만 산다.
-        const int32 selectedSeedCount = listSeed.empty() ? 0 : bag.getItemCount( listSeed[static_cast<size_t>( director.getSelectedSeedIndex() )] );
+        const int32 selectedSeedCount = listSeed.empty() ? 0 : bag.getItemCount( listSeed[static_cast<size_t>( gameMode.getSelectedSeedIndex() )] );
         const bool  bLastBuyFailed    = _buyRemaining < _buyBatch && selectedSeedCount <= _seedCountAtBuy;
-        const bool  bShouldBuySeeds   = _buyRemaining > 0 && bLastBuyFailed == false && director.isNearShop();
+        const bool  bShouldBuySeeds   = _buyRemaining > 0 && bLastBuyFailed == false && gameMode.isNearShop();
         if ( bShouldBuySeeds )
         {
             setStateName( "Buy" );
@@ -297,14 +297,14 @@ namespace sw
 
         // 이번 계절 씨앗(가진 것 먼저) — 디렉터의 고른 씨앗이 다르면 다음 씨앗을 누른다(틱마다 한 칸).
         const int32 seasonalSeed  = Internal::findSeasonalSeed( catalog, bag, listSeed, season );
-        const bool  bSeedSelected = seasonalSeed < 0 || director.getSelectedSeedIndex() == seasonalSeed;
+        const bool  bSeedSelected = seasonalSeed < 0 || gameMode.getSelectedSeedIndex() == seasonalSeed;
         if ( bSeedSelected == false )
             pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::SeedNext ) ) );
         const bool bHasSeed = seasonalSeed >= 0 && bag.getItemCount( listSeed[static_cast<size_t>( seasonalSeed )] ) > 0;
         // 할 일 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기.
-        const Internal::Task task = Internal::chooseTask( director, *pState, listSeed, seasonalSeed, bHasSeed, _cultivateLimit );
+        const Internal::Task task = Internal::chooseTask( gameMode, *pState, listSeed, seasonalSeed, bHasSeed, _cultivateLimit );
         setStateName( hashed_string( Internal::getStateName( task ) ) );
-        getBlackboard().setInt( "Stamina", director.getStamina() );
+        getBlackboard().setInt( "Stamina", gameMode.getStamina() );
         if ( task._kind == Internal::TaskKind::None )
         {
             getBlackboard().clearValue( "StandPosition" );
@@ -314,7 +314,7 @@ namespace sw
         }
 
         getBlackboard().setVector( "StandPosition", task._standPosition );
-        const bool bStanding = task._kind == Internal::TaskKind::Tile ? walkUpTo( director, task._standPosition ) : walkTo( director, task._standPosition );
+        const bool bStanding = task._kind == Internal::TaskKind::Tile ? walkUpTo( gameMode, task._standPosition ) : walkTo( gameMode, task._standPosition );
         if ( bStanding == false || _actionTimer > 0.0f )
             return;
         switch ( task._kind )
@@ -338,7 +338,7 @@ namespace sw
                     break;
                 _actionTimer = _actionInterval;
                 // 도구 버튼과 쓰기를 같은 틱에 — 디렉터는 도구를 먼저 바꾸고 쓴다.
-                if ( director.getTool() != task._tool )
+                if ( gameMode.getTool() != task._tool )
                     pressButton( hashed_string( FarmGameModeComponent::getButtonName( Internal::findToolButton( task._tool ) ) ) );
                 pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::Use ) ) );
                 break;

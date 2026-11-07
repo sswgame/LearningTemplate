@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="plain_red" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="plain_red" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.9 0.1 0.1 1"/>
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

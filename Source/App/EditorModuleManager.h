@@ -141,9 +141,9 @@ namespace sw
          * @details 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUI 나
          *          shutdown 이 낸 스냅샷을 기다리며(`DrawSnapshotHandoff`) 영원히 돌아오지 않는다. 에디터 모듈 핫 리로드가 실제로 여기서 멈췄다.
          */
-        void onRenderWorkersDrained() override;
+        void onRenderWorkersFlushed() override;
         /** @brief 종료의 비우기 앞에서 에디터의 백그라운드 잡에 중단 신호를 올립니다. */
-        void onBeforeDrainWorkers( DrainReason reason ) override;
+        void onBeforeFlushWorkers( FlushReason reason ) override;
 
     private:
         /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)가 같이 씁니다. */

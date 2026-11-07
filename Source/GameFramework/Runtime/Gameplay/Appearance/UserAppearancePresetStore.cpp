@@ -139,7 +139,7 @@ namespace sw
         return JSONSerializer::serializePretty( &file, *UserAppearancePresetFile::StaticType() );
     }
 
-    bool UserAppearancePresetStore::loadFromText( string_view text )
+    bool UserAppearancePresetStore::loadFromXMLText( string_view text )
     {
         using Internal = UserAppearancePresetStoreInternal;
         UserAppearancePresetFile file;
@@ -178,6 +178,6 @@ namespace sw
 
     bool UserAppearancePresetStore::readBytes( const uint8* pData, size_t size )
     {
-        return loadFromText( string_view( reinterpret_cast<const utf8*>( pData ), size ) );
+        return loadFromXMLText( string_view( reinterpret_cast<const utf8*>( pData ), size ) );
     }
 } // namespace sw

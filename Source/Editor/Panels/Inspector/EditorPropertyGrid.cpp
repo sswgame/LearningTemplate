@@ -199,7 +199,7 @@ namespace sw::editor
                         // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
                         fixed_string<constant::buffer::kMax128> itemMark;
                         formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", prop._name.c_str(), nameHashed.c_str() );
-                        EditorSelfTestMarks::note( itemMark.c_str() );
+                        EditorSelfTestMarks::record( itemMark.c_str() );
                     }
                     if ( bSelected )
                         ImGui::SetItemDefaultFocus();
@@ -247,14 +247,14 @@ namespace sw::editor
         if ( EditorCompactControls::beginViewOptions( "##InspectorViewOptions", _bShowModifiedOnly, SW_LOCKEY( "EditorInspector", "ViewOptions" ), "inspector.viewOptions" ) )
         {
             ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ShowOnlyModifiedProperties" ), nullptr, &_bShowModifiedOnly );
-            EditorSelfTestMarks::note( "inspector.viewOptions.modifiedOnly" );
+            EditorSelfTestMarks::record( "inspector.viewOptions.modifiedOnly" );
             ImGui::Separator();
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ExpandAll" ) ) )
                 _openAllRequest = 1;
-            EditorSelfTestMarks::note( "inspector.viewOptions.expandAll" );
+            EditorSelfTestMarks::record( "inspector.viewOptions.expandAll" );
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CollapseAll" ) ) )
                 _openAllRequest = -1;
-            EditorSelfTestMarks::note( "inspector.viewOptions.collapseAll" );
+            EditorSelfTestMarks::record( "inspector.viewOptions.collapseAll" );
             EditorCompactControls::endViewOptions();
         }
     }
@@ -491,7 +491,7 @@ namespace sw::editor
         // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
         fixed_string<constant::buffer::kMax128> labelMark;
         formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
-        EditorSelfTestMarks::note( labelMark.c_str() );
+        EditorSelfTestMarks::record( labelMark.c_str() );
 
         drawPropertyRowMenu( instance, prop, favoriteKey, bFavoriteTarget, bFavorite, defaultInstance );
 
@@ -502,7 +502,7 @@ namespace sw::editor
                 resetPropertyToDefault( instance, prop, defaultInstance );
             fixed_string<constant::buffer::kMax128> resetMark;
             formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
-            EditorSelfTestMarks::note( resetMark.c_str() );
+            EditorSelfTestMarks::record( resetMark.c_str() );
         }
 
         if ( prop._metadata->_bTransient == SW_TRUE )
@@ -521,7 +521,7 @@ namespace sw::editor
         // 시나리오가 누를 수 있게 값 입력란에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`). 테스트를 켰을 때만 기록한다.
         fixed_string<constant::buffer::kMax128> mark;
         formatstring( mark.data(), mark.capacity(), "inspector.property.%#.%#", typeInfo._name.c_str(), prop._name.c_str() );
-        EditorSelfTestMarks::note( mark.c_str() );
+        EditorSelfTestMarks::record( mark.c_str() );
         ImGui::PopID();
     }
 
@@ -551,7 +551,7 @@ namespace sw::editor
         const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop._handleTargetTypeName.empty();
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "PasteValue" ), nullptr, false, bPasteAllowed ) )
             applyPropertyTextAsEdit( instance, prop, ImGui::GetClipboardText(), "Paste Value" );
-        EditorSelfTestMarks::note( "inspector.menu.pasteValue" );
+        EditorSelfTestMarks::record( "inspector.menu.pasteValue" );
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyPropertyName" ) ) )
             ImGui::SetClipboardText( prop._name.c_str() );
         ImGui::EndPopup();
@@ -1021,7 +1021,7 @@ namespace sw::editor
             if ( EditorSelfTestMarks::isEnabled() )
             {
                 const string invokeMark = string( "inspector.method.invoke." ) + method._name.c_str();
-                EditorSelfTestMarks::note( invokeMark.c_str() );
+                EditorSelfTestMarks::record( invokeMark.c_str() );
             }
             if ( bInvoke )
                 invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValue::makeMethodArgs( listSlot ) );
@@ -1049,7 +1049,7 @@ namespace sw::editor
                 // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어
                 // 좁은 창에서 위젯 사각형의 가운데가 레이블 글 위에 놓이므로 입력 칸만 표식으로 남긴다.
                 const string argMark = formatToString( "%#%#.%#", string( "inspector.method.arg." ), method._name.c_str(), paramIndex );
-                EditorSelfTestMarks::noteInputFrame( argMark.c_str() );
+                EditorSelfTestMarks::recordInputFrame( argMark.c_str() );
             }
             ImGui::PopID();
         }

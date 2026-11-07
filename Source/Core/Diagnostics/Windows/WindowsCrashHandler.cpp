@@ -117,7 +117,7 @@ namespace sw
             {
                 CrashHandler* const pHandler = s_pDumpingHandler.load();
                 if ( pHandler != nullptr )
-                    pHandler->noteProgress();
+                    pHandler->recordProgress();
                 const bool bSnapshotCallbackForProcess = pInput != nullptr && pOutput != nullptr && pInput->CallbackType == IsProcessSnapshotCallback;
                 if ( bSnapshotCallbackForProcess )
                     pOutput->Status = S_FALSE;
@@ -210,7 +210,7 @@ namespace sw
                 // **이 두 줄을 아래로 옮기지 말 것.**
                 CrashHandler& handler          = *crash._pHandler;
                 const bool    bMiniDumpWritten = writeMiniDump( handler, crash._pExceptionInfo, crash._faultThreadID );
-                handler.noteProgress();
+                handler.recordProgress();
                 handler.writeContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
 
                 // 본문은 세 플랫폼이 함께 쓴다(CrashHandler.cpp).

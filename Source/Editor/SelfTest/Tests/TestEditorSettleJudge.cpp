@@ -11,7 +11,7 @@ using namespace sw::editor;
 SW_TEST_CASE( EditorSettleJudgeTest, ReadyWhenScreenAndWorkSettled )
 {
     EditorSettleJudge judge;
-    SW_EXPECT_TRUE( judge.advance( true, true ) == EditorSettleVerdict::Ready );
+    SW_EXPECT_TRUE( judge.advance( true, true ) == EditorSettleResult::Ready );
 }
 
 /** @brief 일이 남은 동안은 몇 프레임이든 기다린다 — 시한이 없다(Debug 의 느린 PNG 쓰기). */
@@ -19,8 +19,8 @@ SW_TEST_CASE( EditorSettleJudgeTest, PendingWorkWaitsWithoutLimit )
 {
     EditorSettleJudge judge;
     for ( uint32 frame = 0; frame < EditorSettleJudge::kMaxIdleMovingFrames * 10; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, false ) == EditorSettleVerdict::Waiting );
-    SW_EXPECT_TRUE( judge.advance( true, true ) == EditorSettleVerdict::Ready );
+        SW_REQUIRE_TRUE( judge.advance( false, false ) == EditorSettleResult::Waiting );
+    SW_EXPECT_TRUE( judge.advance( true, true ) == EditorSettleResult::Ready );
 }
 
 /** @brief 할 일이 없는데 화면이 이어서 움직이면 한도를 넘는 프레임에서 진동으로 놓는다. */
@@ -28,8 +28,8 @@ SW_TEST_CASE( EditorSettleJudgeTest, IdleMovementBeyondLimitOscillates )
 {
     EditorSettleJudge judge;
     for ( uint32 frame = 0; frame < EditorSettleJudge::kMaxIdleMovingFrames; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorSettleVerdict::Waiting );
-    SW_EXPECT_TRUE( judge.advance( false, true ) == EditorSettleVerdict::Oscillating );
+        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorSettleResult::Waiting );
+    SW_EXPECT_TRUE( judge.advance( false, true ) == EditorSettleResult::Oscillating );
 }
 
 /** @brief 일이 끼어든 프레임은 셈을 0 으로 되돌린다 — 그 움직임은 그 일 때문일 수 있다. */
@@ -37,9 +37,9 @@ SW_TEST_CASE( EditorSettleJudgeTest, PendingWorkResetsIdleMovement )
 {
     EditorSettleJudge judge;
     for ( uint32 frame = 0; frame < EditorSettleJudge::kMaxIdleMovingFrames; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorSettleVerdict::Waiting );
-    SW_REQUIRE_TRUE( judge.advance( false, false ) == EditorSettleVerdict::Waiting );
+        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorSettleResult::Waiting );
+    SW_REQUIRE_TRUE( judge.advance( false, false ) == EditorSettleResult::Waiting );
     for ( uint32 frame = 0; frame < EditorSettleJudge::kMaxIdleMovingFrames; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorSettleVerdict::Waiting );
-    SW_EXPECT_TRUE( judge.advance( false, true ) == EditorSettleVerdict::Oscillating );
+        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorSettleResult::Waiting );
+    SW_EXPECT_TRUE( judge.advance( false, true ) == EditorSettleResult::Oscillating );
 }

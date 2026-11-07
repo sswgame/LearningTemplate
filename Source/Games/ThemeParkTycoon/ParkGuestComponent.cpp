@@ -12,7 +12,7 @@
 namespace sw
 {
     ParkGuestComponent::ParkGuestComponent()
-        : _director{}
+        : _gameMode{}
         , _guestIndex{ -1 }
         , _heightOffset{ 0.45f }
         , _colorBucket{ -1 }
@@ -27,9 +27,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void ParkGuestComponent::assignGuest( GameObjectHandle director, int32 guestIndex )
+    void ParkGuestComponent::assignGuest( GameObjectHandle gameMode, int32 guestIndex )
     {
-        _director    = director;
+        _gameMode    = gameMode;
         _guestIndex  = guestIndex;
         _colorBucket = -1;
     }
@@ -42,12 +42,12 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkGameModeComponent* pDirector = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const ParkGameModeComponent* pGameMode = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
 
         // 같은 그룹의 다른 손님과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).
-        const vector<ParkGuest>& listGuest = pDirector->getSimulation().getGuests();
+        const vector<ParkGuest>& listGuest = pGameMode->getSimulation().getGuests();
         const bool               bInRange  = 0 <= _guestIndex && _guestIndex < static_cast<int32>( listGuest.size() );
         const ParkGuest*         pGuest    = bInRange ? listGuest.data() + _guestIndex : nullptr;
         const bool               bShown    = pGuest != nullptr && pGuest->_state != ParkGuestState::Riding && pGuest->_state != ParkGuestState::Left;
@@ -59,7 +59,7 @@ namespace sw
         const int32 bucket = ParkGameModeComponent::computeHappinessBucket( pGuest->_happiness );
         if ( bucket == _colorBucket )
             return;
-        const shared_ptr<MaterialInstance>& look = pDirector->getGuestLook( bucket );
+        const shared_ptr<MaterialInstance>& look = pGameMode->getGuestLook( bucket );
         if ( look == nullptr )
             return;
         pMesh->setMaterialInstance( look );

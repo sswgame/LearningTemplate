@@ -1,5 +1,5 @@
 /**
- * @file RigNodeFields.h
+ * @file RigNodeParams.h
  * @brief 리그 파일(`*.rig.xml`)의 원소마다 받는 칸입니다 — 에셋 루트 · 대상 · 노드 공통 키 · 노드 종류마다의 키와 그 목록 원소(`<item>`).
  * @details `RigXMLReader::readFields` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
  *          이름 목록(`<bones><item>…`)과 객체 목록(`<feet>` 등)은 자식 요소라 노드가 손으로 푼다. 파일 키는 밑줄 이름이라 칸마다 `Name` 을 적는다.
@@ -19,7 +19,7 @@ namespace sw
 {
     /** @brief 에셋 루트(`<Rig planar>`)의 칸입니다. */
     REFLECT()
-    struct SW_API RigAssetRootFields
+    struct SW_API RigAssetRootParams
     {
         REFLECT_BODY();
 
@@ -29,7 +29,7 @@ namespace sw
 
     /** @brief 대상(`<targets><item …/>`) 하나의 칸입니다. `bone` · `socket` · `object` 중 하나만 적는다(`RigAsset::parseTarget` 이 본다). */
     REFLECT()
-    struct SW_API RigTargetFields
+    struct SW_API RigTargetParams
     {
         REFLECT_BODY();
 
@@ -41,8 +41,8 @@ namespace sw
         hashed_string _socket{};
         PROPERTY( Name = "object" )
         hashed_string _object{};
-        PROPERTY( Name = "unit" )
-        hashed_string _unit{};
+        PROPERTY( Name = "skeletalMesh" )
+        hashed_string _skeletalMesh{};
         PROPERTY( Name = "space" )
         hashed_string _space{};
         PROPERTY( Name = "translation", Units = m )
@@ -53,7 +53,7 @@ namespace sw
 
     /** @brief 모든 노드가 받는 공통 키입니다(`RigNode::parseCommon`). `type` 은 에셋이 노드를 만들 때 따로 읽는다. */
     REFLECT()
-    struct SW_API RigNodeCommonFields
+    struct SW_API RigNodeCommonParams
     {
         REFLECT_BODY();
 
@@ -79,7 +79,7 @@ namespace sw
 
     /** @brief 위치 · 회전 제약(`Position` · `Rotation`)의 칸입니다. */
     REFLECT()
-    struct SW_API RigConstraintFields
+    struct SW_API RigConstraintParams
     {
         REFLECT_BODY();
 
@@ -93,7 +93,7 @@ namespace sw
 
     /** @brief 변환 복사(`CopyTransform`)의 칸입니다. 위치 · 회전을 고를 수 있다. */
     REFLECT()
-    struct SW_API RigCopyTransformFields : public RigConstraintFields
+    struct SW_API RigCopyTransformParams : public RigConstraintParams
     {
         REFLECT_BODY();
 
@@ -105,7 +105,7 @@ namespace sw
 
     /** @brief 부모 바꾸기(`ParentSwitch`)의 칸입니다. 부모 목록(`parents`)은 이름 목록이라 노드가 푼다. */
     REFLECT()
-    struct SW_API RigParentSwitchFields
+    struct SW_API RigParentSwitchParams
     {
         REFLECT_BODY();
 
@@ -119,7 +119,7 @@ namespace sw
 
     /** @brief 거리 제한(`Distance`)의 칸입니다. `min <= max` 는 노드가 본다. */
     REFLECT()
-    struct SW_API RigDistanceFields
+    struct SW_API RigDistanceParams
     {
         REFLECT_BODY();
 
@@ -135,7 +135,7 @@ namespace sw
 
     /** @brief 회전 범위 제한(`LimitRotation`)의 칸입니다. 각은 [피치, 요, 롤] 도 단위다. */
     REFLECT()
-    struct SW_API RigLimitRotationFields
+    struct SW_API RigLimitRotationParams
     {
         REFLECT_BODY();
 
@@ -149,7 +149,7 @@ namespace sw
 
     /** @brief 트위스트 분배(`TwistDistribution`)의 칸입니다. */
     REFLECT()
-    struct SW_API RigTwistDistributionFields
+    struct SW_API RigTwistDistributionParams
     {
         REFLECT_BODY();
 
@@ -161,7 +161,7 @@ namespace sw
 
     /** @brief 본과 몫 한 쌍(`<item bone weight>`)입니다 — 트위스트 분배 · 조준 사슬이 함께 쓴다. */
     REFLECT()
-    struct SW_API RigBoneWeightFields
+    struct SW_API RigBoneWeightParams
     {
         REFLECT_BODY();
 
@@ -173,7 +173,7 @@ namespace sw
 
     /** @brief 본 스케일(`ScaleBone`)의 칸입니다. 성분이 음수가 아닌지는 노드가 본다. */
     REFLECT()
-    struct SW_API RigScaleBoneFields
+    struct SW_API RigScaleBoneParams
     {
         REFLECT_BODY();
 
@@ -190,7 +190,7 @@ namespace sw
 
     /** @brief 2 본 IK(`TwoBoneIK`)의 칸입니다. */
     REFLECT()
-    struct SW_API RigTwoBoneIKFields
+    struct SW_API RigTwoBoneIKParams
     {
         REFLECT_BODY();
 
@@ -212,7 +212,7 @@ namespace sw
 
     /** @brief 사슬 IK(`FABRIKChain`)의 칸입니다. 본 목록(`bones`)과 관절 제한(`limits`)은 노드가 푼다. */
     REFLECT()
-    struct SW_API RigChainIKFields
+    struct SW_API RigChainIKParams
     {
         REFLECT_BODY();
 
@@ -228,7 +228,7 @@ namespace sw
 
     /** @brief CCD 사슬 IK(`CCDChain`)의 칸입니다 — 한 관절이 한 번에 도는 상한을 더 받는다. */
     REFLECT()
-    struct SW_API RigCCDChainFields : public RigChainIKFields
+    struct SW_API RigCCDChainParams : public RigChainIKParams
     {
         REFLECT_BODY();
 
@@ -238,7 +238,7 @@ namespace sw
 
     /** @brief 관절 제한(`<limits><item …/>`) 하나의 칸입니다. 각은 도 단위다. */
     REFLECT()
-    struct SW_API RigJointLimitFields
+    struct SW_API RigJointLimitParams
     {
         REFLECT_BODY();
 
@@ -258,9 +258,9 @@ namespace sw
         float32 _maxDegrees{ 180.0f };
     };
 
-    /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigBoneWeightFields` 목록이다. */
+    /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigBoneWeightParams` 목록이다. */
     REFLECT()
-    struct SW_API RigAimFields
+    struct SW_API RigAimParams
     {
         REFLECT_BODY();
 
@@ -276,7 +276,7 @@ namespace sw
 
     /** @brief 다리 하나(`<feet><item root mid end/>`)의 칸입니다 — 발 디딤 · 보폭 워핑이 함께 쓴다. */
     REFLECT()
-    struct SW_API RigLegFields
+    struct SW_API RigLegParams
     {
         REFLECT_BODY();
 
@@ -290,7 +290,7 @@ namespace sw
 
     /** @brief 발 디딤(`FootPlacement`)의 칸입니다. */
     REFLECT()
-    struct SW_API RigFootPlacementFields
+    struct SW_API RigFootPlacementParams
     {
         REFLECT_BODY();
 
@@ -314,7 +314,7 @@ namespace sw
 
     /** @brief 보폭 워핑(`StrideWarping`)의 칸입니다. 모두 필수다. `0 < min_scale <= max_scale` 은 노드가 본다. */
     REFLECT()
-    struct SW_API RigStrideWarpingFields
+    struct SW_API RigStrideWarpingParams
     {
         REFLECT_BODY();
 
@@ -328,9 +328,9 @@ namespace sw
         float32 _maxPelvisDrop{ 0.0f };
     };
 
-    /** @brief 전신 IK(`FullBodyIK`)의 칸입니다. 사슬 목록(`chains`)은 `RigFullBodyChainFields` 목록이다. */
+    /** @brief 전신 IK(`FullBodyIK`)의 칸입니다. 사슬 목록(`chains`)은 `RigFullBodyChainParams` 목록이다. */
     REFLECT()
-    struct SW_API RigFullBodyIKFields
+    struct SW_API RigFullBodyIKParams
     {
         REFLECT_BODY();
 
@@ -348,7 +348,7 @@ namespace sw
 
     /** @brief 전신 IK 사슬(`<chains><item …>`) 하나의 칸입니다. 본 목록(`bones`)은 노드가 푼다. */
     REFLECT()
-    struct SW_API RigFullBodyChainFields
+    struct SW_API RigFullBodyChainParams
     {
         REFLECT_BODY();
 
@@ -370,7 +370,7 @@ namespace sw
      * @details `gravity` 는 적었는지가 뜻(월드 중력 덮어쓰기)이라 노드가 손으로 읽는다.
      */
     REFLECT()
-    struct SW_API RigSpringChainFields
+    struct SW_API RigSpringChainParams
     {
         REFLECT_BODY();
 
@@ -396,7 +396,7 @@ namespace sw
 
     /** @brief 스프링 충돌체(`<colliders><item …/>`) 하나의 칸입니다. `bone` · `target` 중 하나만 적는다(노드가 본다). */
     REFLECT()
-    struct SW_API RigSpringColliderFields
+    struct SW_API RigSpringColliderParams
     {
         REFLECT_BODY();
 
@@ -416,7 +416,7 @@ namespace sw
 
     /** @brief 입자 하나의 물성(`<joints><item …/>`)입니다. 적지 않은 칸은 사슬 값이다 — 노드가 사슬 값으로 채운 뒤 읽는다. */
     REFLECT()
-    struct SW_API RigSpringJointFields
+    struct SW_API RigSpringJointParams
     {
         REFLECT_BODY();
 
@@ -434,7 +434,7 @@ namespace sw
 
     /** @brief 포즈 구동(`PoseDriver`)의 칸입니다. 포즈 목록(`poses`)은 노드가 푼다. */
     REFLECT()
-    struct SW_API RigPoseDriverFields
+    struct SW_API RigPoseDriverParams
     {
         REFLECT_BODY();
 
@@ -446,7 +446,7 @@ namespace sw
 
     /** @brief 구동 포즈(`<poses><item …>`) 하나의 칸입니다. 모프(`morphs`) · 보정 본(`bones`) 목록은 노드가 푼다. */
     REFLECT()
-    struct SW_API RigDriverPoseFields
+    struct SW_API RigDriverPoseParams
     {
         REFLECT_BODY();
 
@@ -458,7 +458,7 @@ namespace sw
 
     /** @brief 포즈의 모프 가중치(`<morphs><item morph weight/>`) 하나입니다. */
     REFLECT()
-    struct SW_API RigDriverMorphFields
+    struct SW_API RigDriverMorphParams
     {
         REFLECT_BODY();
 
@@ -470,7 +470,7 @@ namespace sw
 
     /** @brief 포즈의 보정 본(`<bones><item bone rotation translation/>`) 하나입니다. */
     REFLECT()
-    struct SW_API RigCorrectiveBoneFields
+    struct SW_API RigCorrectiveBoneParams
     {
         REFLECT_BODY();
 

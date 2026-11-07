@@ -12,7 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -82,14 +82,14 @@ namespace sw
 
             static bool validateLayoutDump( const AutomationStep& step, string& outError )
             {
-                AutomationFileStepFields fields;
-                return step.readFields( fields, outError );
+                AutomationFileStepParams params;
+                return step.readFields( params, outError );
             }
 
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
             static bool runLayoutDump( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string file = step.readValidatedFields<AutomationFileStepFields>()._file;
+                const string file = step.readValidatedFields<AutomationFileStepParams>()._file;
                 const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                     runner.recordFailure( step, "could not write " + path );
@@ -124,8 +124,8 @@ namespace sw
             return false;
         }
         // 칸(모르는 이름 · 개수 · 범위)은 리플렉션 구조체가 정한다 — 화면은 경로 칸이라 참조 검사 · 옮기기가 따라간다.
-        AutomationExpectUIFields fields;
-        return step.readFields( fields, outError );
+        AutomationExpectUIParams params;
+        return step.readFields( params, outError );
     }
 
     bool UIScenarioSteps::isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure )

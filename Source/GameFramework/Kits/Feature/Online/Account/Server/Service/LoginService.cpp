@@ -40,7 +40,7 @@ namespace sw
             }
 
             /** @brief 로그인 요청 하나를 저장소 스레드에서 실행하고 결과를 서비스에 돌려줍니다. 입력은 모두 복사해 보관합니다. */
-            class LoginWork final : public IServiceStoreWork
+            class LoginJob final : public IServiceStoreJob
             {
             public:
                 LoginCredential   _credential;
@@ -56,7 +56,7 @@ namespace sw
                 uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
                 uint8             _bUpdateRecommended;
 
-                LoginWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs )
+                LoginJob( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs )
                     : _credential{}
                     , _token{}
                     , _serverID{}
@@ -178,7 +178,7 @@ namespace sw
                 void complete() override { _pService->applyCompletion( std::move( _completion ), _outcome ); }
 
             private:
-                LoginStoreOutcome  _outcome;
+                LoginStoreResult   _outcome;
                 LoginCompletion    _completion;
                 LoginServiceConfig _settings; ///< 복사한 값이다. 서비스 설정이 바뀌어도 이 작업은 맡길 때의 값으로 실행한다
                 LoginService*      _pService;
@@ -187,10 +187,10 @@ namespace sw
             };
 
             /** @brief 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 작업입니다. 읽은 항목은 서비스가 비밀을 풀어 제공자에 철회를 맡깁니다. */
-            class LoginRevocationScanWork final : public IServiceStoreWork
+            class LoginRevocationScanJob final : public IServiceStoreJob
             {
             public:
-                LoginRevocationScanWork( LoginService* pService, int32 maxCount, UnixMilliseconds nowMs )
+                LoginRevocationScanJob( LoginService* pService, int32 maxCount, UnixMilliseconds nowMs )
                     : _listEntry{}
                     , _pService{ pService }
                     , _maxCount{ maxCount }
@@ -215,17 +215,17 @@ namespace sw
             };
 
             /** @brief 철회가 끝난 대기열 항목 하나를 지우는 작업입니다. 지우지 못하면 다음 읽기가 같은 철회를 다시 한다(제공자는 이미 무효인 토큰을 받아들인다). */
-            class LoginRevocationEraseWork final : public IServiceStoreWork
+            class LoginRevocationEraseJob final : public IServiceStoreJob
             {
             public:
-                LoginRevocationEraseWork( LoginService* pService, string key )
+                LoginRevocationEraseJob( LoginService* pService, string key )
                     : _key{ std::move( key ) }
                     , _pService{ pService }
                 {
                 }
 
                 void run( IServiceStoreConnection& connection ) override { (void)LoginStoreLogic::eraseRevocation( connection, _key ); }
-                void complete() override { _pService->noteStoreWorkDone(); }
+                void complete() override { _pService->recordStoreWorkDone(); }
 
             private:
                 string        _key;
@@ -233,14 +233,14 @@ namespace sw
             };
 
             /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리 작업입니다. 완료가 없고 부작용만 있습니다. */
-            class LoginMaintenanceWork final : public IServiceStoreWork
+            class LoginMaintenanceJob final : public IServiceStoreJob
             {
             public:
                 vector<LoginSessionRef> _listOnline;
                 uint64                  _disconnectedSessionID;
                 int32                   _purgeCount;
 
-                LoginMaintenanceWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, UnixMilliseconds nowMs )
+                LoginMaintenanceJob( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, UnixMilliseconds nowMs )
                     : _listOnline{}
                     , _disconnectedSessionID{ 0 }
                     , _purgeCount{ 0 }
@@ -271,7 +271,7 @@ namespace sw
                 }
 
             private:
-                LoginStoreOutcome  _outcome;
+                LoginStoreResult   _outcome;
                 LoginServiceConfig _settings;
                 LoginService*      _pService;
                 ILoginCrypto*      _pCrypto;
@@ -392,7 +392,7 @@ namespace sw
                     if ( revocation._bUnavailable == SW_FALSE && _pStore != nullptr )
                     {
                         ++_pendingCount;
-                        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationEraseWork>( this, pending._queueKey ) );
+                        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationEraseJob>( this, pending._queueKey ) );
                     }
                     _listPendingRevocation.erase( _listPendingRevocation.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
                     break; // 제공자에 닿지 못했으면 대기열에 남아 다음 읽기가 다시 한다
@@ -406,7 +406,7 @@ namespace sw
         _nextRevocationScanMs    = nowMs + _settings._revocationScanMs;
         _bRevocationScanInFlight = SW_TRUE;
         ++_pendingCount;
-        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationScanWork>( this, _settings._revocationBatchSize, nowMs ) );
+        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationScanJob>( this, _settings._revocationBatchSize, nowMs ) );
     }
 
     void LoginService::applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs )
@@ -450,8 +450,8 @@ namespace sw
 
     void LoginService::seedAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Register, requestTag, nowMs );
-        work->_credential                                = credential;
+        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Register, requestTag, nowMs );
+        work->_credential                               = credential;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -470,10 +470,10 @@ namespace sw
             pushImmediate( LoginOperation::Login, requestTag, LoginResult::RateLimited, buildGrant );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Login, requestTag, nowMs );
-        work->_credential                                = credential;
-        work->_bUpdateRecommended                        = buildGrant._bUpdateRecommended;
-        work->_storeURL                                  = buildGrant._storeURL;
+        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Login, requestTag, nowMs );
+        work->_credential                               = credential;
+        work->_bUpdateRecommended                       = buildGrant._bUpdateRecommended;
+        work->_storeURL                                 = buildGrant._storeURL;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -493,8 +493,8 @@ namespace sw
             pushImmediate( LoginOperation::GuestLogin, requestTag, LoginResult::RateLimited, buildGrant );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::GuestLogin, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::GuestLogin, requestTag, nowMs );
         Memory::copy( work->_arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         work->_bUpdateRecommended = buildGrant._bUpdateRecommended;
         work->_storeURL           = buildGrant._storeURL;
@@ -534,18 +534,18 @@ namespace sw
             pushImmediate( LoginOperation::Resume, requestTag, LoginResult::RateLimited, buildGrant );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Resume, requestTag, nowMs );
-        work->_token                                     = token;
-        work->_bUpdateRecommended                        = buildGrant._bUpdateRecommended;
-        work->_storeURL                                  = buildGrant._storeURL;
+        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Resume, requestTag, nowMs );
+        work->_token                                    = token;
+        work->_bUpdateRecommended                       = buildGrant._bUpdateRecommended;
+        work->_storeURL                                 = buildGrant._storeURL;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
     void LoginService::validateSession( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Validate, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Validate, requestTag, nowMs );
         work->_token = token;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
@@ -553,16 +553,16 @@ namespace sw
 
     void LoginService::logout( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Logout, requestTag, nowMs );
-        work->_token                                     = token;
+        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Logout, requestTag, nowMs );
+        work->_token                                    = token;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
     void LoginService::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::IssueGameTicket, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::IssueGameTicket, requestTag, nowMs );
         work->_token    = token;
         work->_serverID = serverID;
         ++_pendingCount;
@@ -571,17 +571,17 @@ namespace sw
 
     void LoginService::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Revoke, requestTag, nowMs );
-        work->_accountID                                 = accountID;
-        work->_revokeReason                              = reason;
+        unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Revoke, requestTag, nowMs );
+        work->_accountID                                = accountID;
+        work->_revokeReason                             = reason;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
     void LoginService::linkCredential( const LoginSessionToken& token, const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::LinkCredential, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::LinkCredential, requestTag, nowMs );
         work->_token      = token;
         work->_credential = credential;
         ++_pendingCount;
@@ -595,8 +595,8 @@ namespace sw
 
     void LoginService::unlinkPlatform( const LoginSessionToken& token, string_view provider, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::UnlinkPlatform, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::UnlinkPlatform, requestTag, nowMs );
         work->_token    = token;
         work->_provider = string( provider );
         ++_pendingCount;
@@ -605,8 +605,8 @@ namespace sw
 
     void LoginService::listLinks( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::ListLinks, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::ListLinks, requestTag, nowMs );
         work->_token = token;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
@@ -614,8 +614,8 @@ namespace sw
 
     void LoginService::requestDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::RequestDeletion, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::RequestDeletion, requestTag, nowMs );
         work->_token = token;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
@@ -623,8 +623,8 @@ namespace sw
 
     void LoginService::cancelDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::CancelDeletion, requestTag, nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::CancelDeletion, requestTag, nowMs );
         work->_token = token;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
@@ -634,16 +634,16 @@ namespace sw
     {
         if ( maxCount <= 0 )
             return;
-        unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
-        work->_purgeCount                                           = maxCount;
+        unique_ptr<LoginServiceInternal::LoginMaintenanceJob> work = make_unique<LoginServiceInternal::LoginMaintenanceJob>( this, _pCrypto, _settings, nowMs );
+        work->_purgeCount                                          = maxCount;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
     void LoginService::markDisconnected( uint64 sessionID, UnixMilliseconds nowMs )
     {
-        unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
-        work->_disconnectedSessionID                                = sessionID;
+        unique_ptr<LoginServiceInternal::LoginMaintenanceJob> work = make_unique<LoginServiceInternal::LoginMaintenanceJob>( this, _pCrypto, _settings, nowMs );
+        work->_disconnectedSessionID                               = sessionID;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -659,8 +659,8 @@ namespace sw
             listOnline.push_back( LoginSessionRef{ accountID, sessionID, LoginRevokeReason::None } );
         }
         VectorUtil::sort( listOnline, LoginServiceInternal::SessionRefLess{} );
-        unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work       = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
-        const int32                                            checkCount = MathUtil::min( maxCount, static_cast<int32>( listOnline.size() ) );
+        unique_ptr<LoginServiceInternal::LoginMaintenanceJob> work       = make_unique<LoginServiceInternal::LoginMaintenanceJob>( this, _pCrypto, _settings, nowMs );
+        const int32                                           checkCount = MathUtil::min( maxCount, static_cast<int32>( listOnline.size() ) );
         for ( int32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )
         {
             work->_listOnline.push_back( listOnline[( _refreshCursor + static_cast<size_t>( checkIndex ) ) % listOnline.size()] );
@@ -670,7 +670,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::noteRevokedElsewhere( AccountID accountID, uint64 sessionID, LoginRevokeReason reason )
+    void LoginService::recordRevokedElsewhere( AccountID accountID, uint64 sessionID, LoginRevokeReason reason )
     {
         const auto onlineIt = _mapAccountToSession.find( accountID );
         if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != sessionID )
@@ -701,7 +701,7 @@ namespace sw
         return onlineIt == _mapAccountToSession.end() ? 0 : onlineIt->second;
     }
 
-    void LoginService::applyCompletion( LoginCompletion&& completion, const LoginStoreOutcome& outcome )
+    void LoginService::applyCompletion( LoginCompletion&& completion, const LoginStoreResult& outcome )
     {
         --_pendingCount;
         for ( const LoginSessionRef& revoked : outcome._listRevoked )
@@ -839,8 +839,8 @@ namespace sw
             pushImmediate( pending._operation, pending._requestTag, result, LoginGrant{} );
             return;
         }
-        unique_ptr<LoginServiceInternal::LoginWork> work =
-            make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, pending._operation, pending._requestTag, pending._nowMs );
+        unique_ptr<LoginServiceInternal::LoginJob> work =
+            make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, pending._operation, pending._requestTag, pending._nowMs );
         work->_token              = pending._token;
         work->_provider           = pending._provider;
         work->_subject            = verification._subject;

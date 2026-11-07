@@ -191,7 +191,7 @@ namespace sw
         _listRefund.push_back( ReceiptRefundNotification{ getStoreName(), text, refundedMs } );
     }
 
-    void StoreReceiptValidator::forgetRefund( string_view transactionID )
+    void StoreReceiptValidator::removeRefund( string_view transactionID )
     {
         _uniqueSetNotifiedRefund.erase( string( transactionID ) );
     }
@@ -404,12 +404,12 @@ namespace sw
 
     void StoreReceiptValidator::completeDelivery( const ReceiptCall& call, ReceiptDeliveryStatus status )
     {
-        _listDeliveryDone.push_back( ReceiptDeliveryOutcome{ getStoreName(), call._recordKey, status } );
+        _listDeliveryDone.push_back( ReceiptDeliveryResult{ getStoreName(), call._recordKey, status } );
     }
 
-    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome )
+    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome )
     {
-        for ( ReceiptDeliveryOutcome& outcome : _listDeliveryDone )
+        for ( ReceiptDeliveryResult& outcome : _listDeliveryDone )
         {
             outListOutcome.push_back( std::move( outcome ) );
         }

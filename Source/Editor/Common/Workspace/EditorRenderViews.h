@@ -99,7 +99,7 @@ namespace sw::editor
          * @brief 게임 입력을 받는 다른 면(한 프로세스 재생의 월드 뷰포트 등)이 이번 프레임에 포커스를 가졌음을 알립니다. 패널이 그리는 동안 부릅니다.
          * @details 게임 뷰 패널처럼 그 창이 포커스면 키보드를 도구(에디터)가 아니라 게임 쪽에 둔다(`EditorInputActions::syncKeyboardOwner`).
          */
-        void noteGameInputSurfaceFocused() { _bGameInputSurfaceFocused = SW_TRUE; }
+        void recordGameInputSurfaceFocused() { _bGameInputSurfaceFocused = SW_TRUE; }
         /**
          * @brief 프레임 앞 정리 — 지난 프레임에 패널이 알린 포커스를 "지난 프레임 값" 으로 옮기고 이번 프레임 값을 비웁니다.
          * @details 키보드 주인 판정(`EditorInputActions::processFrame`)은 패널을 그리기 **전에** 돈다. 비운 값을 읽으면 게임 뷰 포커스가 늘 거짓이라
@@ -169,7 +169,7 @@ namespace sw::editor
          */
         void ensureTargetSize( EditorViewTarget& view, uint32 width, uint32 height );
         /** @brief 엔진이 렌더 텍스처를 GPU 에 올렸으면 핸들을 받아 ImGui 에 등록합니다(받기 전에는 0 — 그리지 않는다). UI 프레임마다 부른다(`clearViewDrawnMarks`). */
-        void adoptIfReady( EditorViewTarget& view );
+        void applyIfReady( EditorViewTarget& view );
         /** @brief 미리보기 타깃을 찾습니다(고칠 수 있게). 없으면 nullptr 입니다. */
         EditorPreviewViewTarget* findPreviewTargetMutable( uint32 id );
 

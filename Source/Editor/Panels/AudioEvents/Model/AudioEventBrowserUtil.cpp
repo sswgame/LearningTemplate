@@ -109,7 +109,7 @@ namespace sw::editor
         VectorUtil::sort( outListName, HashedStringLexicalLess{} );
     }
 
-    void AudioEventBrowserUtil::makeEventFieldRows( const AudioEventDesc& eventDesc, const AudioAttenuationDesc& attenuation, vector<AudioEventFieldRow>& outListRow )
+    void AudioEventBrowserUtil::makeEventFieldRows( const AudioEventDef& eventDesc, const AudioAttenuationDef& attenuation, vector<AudioEventFieldRow>& outListRow )
     {
         using Internal = AudioEventBrowserUtilInternal;
         outListRow.clear();
@@ -193,7 +193,7 @@ namespace sw::editor
 
     hashed_string AudioEventBrowserUtil::duplicateEvent( AudioEventLibrary& inoutLibrary, const hashed_string& source )
     {
-        const AudioEventDesc* pSource = inoutLibrary.findEvent( source );
+        const AudioEventDef* pSource = inoutLibrary.findEvent( source );
         if ( pSource == nullptr )
             return hashed_string{};
         // 겹치지 않는 이름을 찾는다 — 이름이 겹치면 라이브러리 검사가 저장을 막는다.
@@ -203,17 +203,17 @@ namespace sw::editor
         {
             newName = hashed_string( baseName + to_string( suffix ) );
         }
-        AudioEventDesc copy = *pSource; // 넣기 전에 복사한다 — 넣으면 목록이 다시 잡혀 pSource 가 무효가 될 수 있다
-        copy._name          = newName;
+        AudioEventDef copy = *pSource; // 넣기 전에 복사한다 — 넣으면 목록이 다시 잡혀 pSource 가 무효가 될 수 있다
+        copy._name         = newName;
         inoutLibrary._listEvent.push_back( std::move( copy ) );
         return newName;
     }
 
     bool AudioEventBrowserUtil::removeEvent( AudioEventLibrary& inoutLibrary, const hashed_string& name )
     {
-        vector<AudioEventDesc>& listEvent = inoutLibrary._listEvent;
-        const auto              eventIt   = std::find_if( listEvent.begin(), listEvent.end(), [&name]( const AudioEventDesc& event )
-                       { return event._name == name; } );
+        vector<AudioEventDef>& listEvent = inoutLibrary._listEvent;
+        const auto             eventIt   = std::find_if( listEvent.begin(), listEvent.end(), [&name]( const AudioEventDef& event )
+                      { return event._name == name; } );
         if ( eventIt == listEvent.end() )
             return false;
         listEvent.erase( eventIt );

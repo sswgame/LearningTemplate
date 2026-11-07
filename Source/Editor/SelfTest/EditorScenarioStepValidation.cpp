@@ -82,60 +82,60 @@ namespace sw::editor
     bool EditorScenarioStepValidation::validateClick( const AutomationStep& step, string& outError )
     {
         using Internal = EditorScenarioStepValidationInternal;
-        EditorClickFields fields;
-        return step.readFields( fields, outError ) && Internal::checkAnchor( step, fields._anchor, outError ) && Internal::checkModifiers( step, fields._mods, outError );
+        EditorClickParams params;
+        return step.readFields( params, outError ) && Internal::checkAnchor( step, params._anchor, outError ) && Internal::checkModifiers( step, params._mods, outError );
     }
 
     bool EditorScenarioStepValidation::validateText( const AutomationStep& step, string& outError )
     {
-        EditorTextFields fields;
-        return step.readFields( fields, outError );
+        EditorTextParams params;
+        return step.readFields( params, outError );
     }
 
     bool EditorScenarioStepValidation::validateSelfTest( const AutomationStep& step, string& outError )
     {
-        EditorSelfTestFields fields;
-        return step.readFields( fields, outError );
+        EditorSelfTestParams params;
+        return step.readFields( params, outError );
     }
 
     bool EditorScenarioStepValidation::validateDrag( const AutomationStep& step, string& outError )
     {
         using Internal = EditorScenarioStepValidationInternal;
-        EditorDragFields fields;
-        if ( step.readFields( fields, outError ) == false )
+        EditorDragParams params;
+        if ( step.readFields( params, outError ) == false )
             return false;
-        if ( fields._toMark.empty() == false && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
+        if ( params._toMark.empty() == false && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
         {
             outError = step.describe() + ": give either toMark or dx/dy, not both";
             return false;
         }
-        return Internal::checkAnchor( step, fields._anchor, outError ) && Internal::checkModifiers( step, fields._mods, outError );
+        return Internal::checkAnchor( step, params._anchor, outError ) && Internal::checkModifiers( step, params._mods, outError );
     }
 
     bool EditorScenarioStepValidation::validateHover( const AutomationStep& step, string& outError )
     {
         using Internal = EditorScenarioStepValidationInternal;
-        EditorHoverFields fields;
-        if ( step.readFields( fields, outError, { "release" } ) == false )
+        EditorHoverParams params;
+        if ( step.readFields( params, outError, { "release" } ) == false )
             return false;
         const bool bRelease = step.findAttribute( "release" ) != nullptr;
-        if ( bRelease == ( fields._mark.empty() == false ) )
+        if ( bRelease == ( params._mark.empty() == false ) )
         {
             outError = step.describe() + ": give either mark (and anchor) or release=\"true\"";
             return false;
         }
-        return Internal::checkAnchor( step, fields._anchor, outError );
+        return Internal::checkAnchor( step, params._anchor, outError );
     }
 
     bool EditorScenarioStepValidation::validateKey( const AutomationStep& step, string& outError )
     {
-        EditorKeyFields fields;
-        if ( step.readFields( fields, outError ) == false )
+        EditorKeyParams params;
+        if ( step.readFields( params, outError ) == false )
             return false;
         vector<string_view> listToken;
-        if ( splitKeyChord( fields._key, listToken ) == false )
+        if ( splitKeyChord( params._key, listToken ) == false )
         {
-            outError = step.describe() + ": key must be names joined with '+' (e.g. Enter · Escape · F5 · Ctrl+Z), got '" + fields._key + "'";
+            outError = step.describe() + ": key must be names joined with '+' (e.g. Enter · Escape · F5 · Ctrl+Z), got '" + params._key + "'";
             return false;
         }
         return true;
@@ -143,22 +143,22 @@ namespace sw::editor
 
     bool EditorScenarioStepValidation::validateExpectObject( const AutomationStep& step, string& outError )
     {
-        EditorExpectObjectFields fields;
-        return step.readFields( fields, outError );
+        EditorExpectObjectParams params;
+        return step.readFields( params, outError );
     }
 
     bool EditorScenarioStepValidation::validateDockLayout( const AutomationStep& step, string& outError )
     {
-        EditorDockLayoutFields fields;
-        return step.readFields( fields, outError );
+        EditorDockLayoutParams params;
+        return step.readFields( params, outError );
     }
 
     bool EditorScenarioStepValidation::validateCapture( const AutomationStep& step, string& outError )
     {
-        EditorCaptureFields fields;
-        if ( step.readFields( fields, outError ) == false )
+        EditorCaptureParams params;
+        if ( step.readFields( params, outError ) == false )
             return false;
-        if ( StringUtil::endsWith( fields._file, ".png", true ) )
+        if ( StringUtil::endsWith( params._file, ".png", true ) )
             return true;
         outError = step.describe() + ": needs file=\"….png\"";
         return false;
@@ -166,8 +166,8 @@ namespace sw::editor
 
     bool EditorScenarioStepValidation::validateWaitSettled( const AutomationStep& step, string& outError )
     {
-        EditorNoFields fields;
-        return step.readFields( fields, outError );
+        EditorNoParams params;
+        return step.readFields( params, outError );
     }
 
     // 에디터 모듈이 올라오지 않은 프로세스도 이 단계들의 속성을 검사할 수 있게, 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.

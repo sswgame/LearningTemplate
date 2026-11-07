@@ -44,7 +44,7 @@ namespace sw
         const MeshLODSystem& lodSystem = _manager.getSubsystem<MeshLODSystem>();
         if ( lodSystem.areViewsSet() == false )
             return; // 렌더가 뷰를 넣기 전에는 화면 크기를 모른다
-        SW_PROFILE_SCOPE( "GT.TextureStreaming.noteScreenSize" );
+        SW_PROFILE_SCOPE( "GT.TextureStreaming.recordScreenSize" );
         vector<string> listPath;
         _manager.forEachComponentOfType<MeshComponent>( [&]( MeshComponent* pMesh )
         {
@@ -58,7 +58,7 @@ namespace sw
             pMaterial->collectTexturePaths( listPath );
             for ( const string& path : listPath )
             {
-                textures.noteScreenSize( path, screenSize );
+                textures.recordScreenSize( path, screenSize );
             }
         } );
     }

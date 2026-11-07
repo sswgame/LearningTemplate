@@ -130,7 +130,7 @@ namespace sw
         _ground._probeTop               = _motor.getPosition()._y + Internal::kProbeAbove;
         (void)_motor.advance( input, deltaTime );
         _listFrameEvent.clear();
-        _motor.drainEvents( _listFrameEvent );
+        _motor.pollEvents( _listFrameEvent );
 
         pRoot->setWorldPosition( _motor.getPosition() );
         float3 rotation = pRoot->getLocalRotation();

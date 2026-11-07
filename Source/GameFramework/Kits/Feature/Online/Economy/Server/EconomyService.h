@@ -51,7 +51,7 @@ namespace sw
     class IAccountExternalLinks;
     class IAccountPresence;
     class IServiceStore;
-    class IServiceStoreWork;
+    class IServiceStoreJob;
     class MetricRegistry;
     class OfferCatalog;
     class ReceiptValidatorRegistry;

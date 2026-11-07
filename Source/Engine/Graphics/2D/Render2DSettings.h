@@ -33,7 +33,7 @@ namespace sw
 
     /** @brief `<TransparencySort mode axis>` 입니다. `axis` 는 `CustomAxis` 의 축이고 길이가 0 이 아니어야 한다(읽은 뒤 정규화한다). */
     REFLECT()
-    struct SW_API Render2DTransparencySortFields
+    struct SW_API Render2DTransparencySortParams
     {
         REFLECT_BODY();
 
@@ -45,7 +45,7 @@ namespace sw
 
     /** @brief `<SortingLayers><Layer name>` 입니다. */
     REFLECT()
-    struct SW_API Render2DSortingLayerFields
+    struct SW_API Render2DSortingLayerParams
     {
         REFLECT_BODY();
 

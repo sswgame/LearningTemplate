@@ -58,14 +58,14 @@ namespace
     };
 
     /** @brief 가짜 서버 + 로그인 도우미를 붙인 연결 하나입니다. 선언 순서가 수명이다. */
-    struct GMLoginRig
+    struct GMLoginFixture
     {
-        FakeGMAccountService _service{};
-        AccountGMLogin       _login{};
-        test::OnlineTestRig  _rig{ false };
-        int32                _clientIndex{ -1 };
+        FakeGMAccountService    _service{};
+        AccountGMLogin          _login{};
+        test::OnlineTestFixture _rig{ false };
+        int32                   _clientIndex{ -1 };
 
-        GMLoginRig()
+        GMLoginFixture()
         {
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();
@@ -92,7 +92,7 @@ namespace
 /** @brief [AccountGMLoginTest] Ready 에서 로그인을 한 번 보내 LoggedIn 이 되고, 토큰을 받은 뒤의 Ready(다시 연결)는 로그인을 다시 보내지 않는다 */
 SW_TEST_CASE( AccountGMLoginTest, LogsInOnceOnReady )
 {
-    GMLoginRig rig;
+    GMLoginFixture rig;
     SW_EXPECT_TRUE( rig._login.attach( rig.getClient(), AccountClientInfo{} ) ); // 두 번 붙여도 한 번이다
     SW_REQUIRE_TRUE( rig._login.setCredentials( "gm_kim", "secret-password" ) );
     SW_EXPECT_TRUE( rig._login.getState() == AccountGMLoginState::Idle );
@@ -114,7 +114,7 @@ SW_TEST_CASE( AccountGMLoginTest, LogsInOnceOnReady )
 /** @brief [AccountGMLoginTest] 거절되면 Failed 와 이유이고, 계정을 다시 정할 때까지 Ready 가 와도 보내지 않는다 */
 SW_TEST_CASE( AccountGMLoginTest, RefusedLoginWaitsForNewCredentials )
 {
-    GMLoginRig rig;
+    GMLoginFixture rig;
     rig._service._result = LoginResult::WrongCredentials;
     SW_REQUIRE_TRUE( rig._login.setCredentials( "gm_kim", "wrong-password" ) );
     rig.readyAndSettle();
@@ -135,7 +135,7 @@ SW_TEST_CASE( AccountGMLoginTest, RefusedLoginWaitsForNewCredentials )
 /** @brief [AccountGMLoginTest] 빈 이름 · 빈 비밀번호는 받지 않고, 계정을 정하지 않았거나 붙이지 않았으면 Ready 가 와도 보내지 않는다 */
 SW_TEST_CASE( AccountGMLoginTest, MissingCredentialsOrAttachSendNothing )
 {
-    GMLoginRig rig;
+    GMLoginFixture rig;
     SW_EXPECT_LOG( "AccountGMLogin.GMLoginNeedsBoth" );
     SW_EXPECT_FALSE( rig._login.setCredentials( "", "secret-password" ) );
     SW_EXPECT_FALSE( rig._login.setCredentials( "gm_kim", "" ) );

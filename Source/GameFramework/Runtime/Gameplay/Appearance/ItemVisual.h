@@ -231,7 +231,7 @@ namespace sw
         TagContainer                     _tags{};            ///< 외형 규칙이 참조하는 태그(`Helmet.FullFace`, `Sleeve.Long`). 형상 변경이면 보이는 외형의 태그를 쓴다
         hashed_string                    _id{};
         PROPERTY()
-        hashed_string _occupancy{}; ///< `SlotTable` 의 슬롯 점유 그룹. 비어 있으면 자기 슬롯만 차지한다
+        hashed_string _occupancy{}; ///< `SlotCatalog` 의 슬롯 점유 그룹. 비어 있으면 자기 슬롯만 차지한다
         PROPERTY()
         hashed_string _customization{}; ///< 꾸미기 스키마 id. 비어 있으면 꾸미기 없음
         PROPERTY()
@@ -257,7 +257,7 @@ namespace sw
     class SW_GF_API ItemVisualCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listVisual.clear(); }
 
         const ItemVisualDef*         findVisual( const hashed_string& id ) const;

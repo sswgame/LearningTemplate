@@ -42,7 +42,7 @@ namespace sw
         /** @brief 칸 @p cellCount 개의 벤치 화면을 만듭니다. */
         static unique_ptr<UIStressTestScreen> create( uint32 cellCount );
 
-        UIStressTestScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText );
+        UIStressTestScreen( const UIScreenDef& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText );
 
         void   onTick( float32 deltaSeconds ) override;
         uint32 getCellCount() const { return static_cast<uint32>( _listCellText.size() ); }

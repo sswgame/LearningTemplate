@@ -72,8 +72,8 @@ namespace sw
         /** @brief 패킷에 실을 공용 값입니다(`publishCanvasAnchors` 가 배율을 채운다). */
         const CanvasMarkerView& getGPUMarkerView() const { return _markerView; }
         /** @brief 마커 화면을 잊고 앵커 번호를 모두 버립니다(마지막 마커를 뗐을 때). 낸 앵커 표는 다음 `publishCanvasAnchors` 가 맞춘다. */
-        void forgetScreen();
-        /** @brief `forgetScreen` 에 더해 낸 앵커 표도 비웁니다(종료). */
+        void removeScreen();
+        /** @brief `removeScreen` 에 더해 낸 앵커 표도 비웁니다(종료). */
         void clear();
 
     private:

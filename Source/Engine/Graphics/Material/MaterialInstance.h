@@ -63,9 +63,9 @@ namespace sw
         /** @brief (RHIRenderResource) 그 디바이스로 요청한 덮어쓴 텍스처를 놓습니다. 상수 버퍼는 프록시가 같은 통보를 받는다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
-        void forgetRHI( IRHIDevice* pDevice ) override;
+        void clearRHI( IRHIDevice* pDevice ) override;
 
-        /** @brief 오버라이드만 있는 MaterialInstanceDesc XML 을 로드합니다. 부모는 따로 설정합니다. */
+        /** @brief 오버라이드만 있는 MaterialInstanceDef XML 을 로드합니다. 부모는 따로 설정합니다. */
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief 인스턴스 XML 을 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -109,7 +109,7 @@ namespace sw
         /** @brief 부모 머티리얼을 반환합니다. */
         Material* getParent() const { return _pParentMaterial; }
         /** @brief 인스턴스 디스크립터를 반환합니다. */
-        const MaterialInstanceDesc& getDesc() const { return _desc; }
+        const MaterialInstanceDef& getDesc() const { return _desc; }
         /** @brief 이름으로 찾은 파라미터 텍스트를 읽습니다. */
         bool getParameter( hashed_string name, string& outValue ) const;
         /** @brief 텍스처 파라미터의 에셋 경로입니다. 덮어썼으면 그 경로, 아니면 부모 프로퍼티의 경로, 둘 다 없으면 빈 문자열입니다. */
@@ -155,7 +155,7 @@ namespace sw
          * @return 다시 패킹해야 하면 true 입니다(빌린 것이 바뀌었거나 텍스처가 다시 올라왔습니다).
          */
         bool syncTextureOverrides( IRHIDevice* pRHI );
-        /** @brief 요청한 텍스처를 모두 놓습니다(핸들이 쥔 참조를 캐시에 돌려준다). 디바이스가 이미 없으면 캐시가 참조 수만 줄인다(`Material::forgetRHI` 와 같다). */
+        /** @brief 요청한 텍스처를 모두 놓습니다(핸들이 쥔 참조를 캐시에 돌려준다). 디바이스가 이미 없으면 캐시가 참조 수만 줄인다(`Material::clearRHI` 와 같다). */
         void releaseTextureOverrides();
         /**
          * @brief 덮어쓴 텍스처의 슬롯 번호입니다. 부모가 그 프로퍼티에 텍스처를 빌렸으면 그 슬롯을, 아니면 부모 슬롯 뒤에 덮어쓰기 순서대로 이어 붙입니다.
@@ -168,8 +168,8 @@ namespace sw
         void refreshCachedDefines() const;
 
     private:
-        Material*            _pParentMaterial;
-        MaterialInstanceDesc _desc;
+        Material*           _pParentMaterial;
+        MaterialInstanceDef _desc;
 
         vector<pair<hashed_string, string>>            _listValueOverride;
         vector<pair<hashed_string, float32>>           _listScalarOverride;
@@ -185,7 +185,7 @@ namespace sw
         shared_ptr<const MaterialRenderData> _renderData;
         /** @brief 사본을 만들 때의 부모 `getBufferGeneration()` 입니다. 다르면 부모 값이나 레이아웃이 바뀐 것이라 다시 만듭니다. */
         uint32 _parentBufferGeneration;
-        /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 반환할 때 씁니다(디바이스가 죽으면 forgetRHI 가 비웁니다). */
+        /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 반환할 때 씁니다(디바이스가 죽으면 clearRHI 가 비웁니다). */
         IRHIDevice* _pTextureDevice;
         /** @brief 덮어쓴 텍스처를 패킹할 때의 `TextureCache::getReloadGeneration()` 입니다. 다르면 다시 올라온 텍스처의 새 SRV 를 다시 패킹합니다. */
         uint32 _textureReloadGeneration;

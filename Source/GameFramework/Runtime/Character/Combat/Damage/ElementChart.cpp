@@ -97,7 +97,7 @@ namespace sw
         clear();
         for ( XMLNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
         {
-            ElementDeclFields element;
+            ElementDeclParams element;
             if ( XMLFields::readFields( node, element, sourceName ) )
                 addElement( element._id );
         }
@@ -109,7 +109,7 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Rule" ); node; node = node.findNextSibling( "Rule" ) )
         {
-            ElementRuleFields rule; // 칸 · 배율 >= 0 은 PROPERTY 가 본다
+            ElementRuleParams rule; // 칸 · 배율 >= 0 은 PROPERTY 가 본다
             if ( XMLFields::readFields( node, rule, sourceName ) == false )
                 continue;
             if ( hasElement( rule._attack ) == false || hasElement( rule._defend ) == false )

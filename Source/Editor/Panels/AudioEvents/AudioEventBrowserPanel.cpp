@@ -153,7 +153,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패는 saveToAsset 가 오류로 남기고 사본은 그대로다
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "audioevents.save" );
+        EditorSelfTestMarks::record( "audioevents.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "SaveEditsTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) )
@@ -161,7 +161,7 @@ namespace sw::editor
             _edit.end();
             return;
         }
-        EditorSelfTestMarks::note( "audioevents.stopEditing" );
+        EditorSelfTestMarks::record( "audioevents.stopEditing" );
         if ( _edit.isDirty() )
         {
             ImGui::SameLine();
@@ -171,26 +171,26 @@ namespace sw::editor
         // 고칠 이벤트 — 사본의 이벤트에서 고른다(복제한 새 이벤트는 저장 전에는 엔진 목록에 없다).
         if ( ImGui::BeginCombo( SW_LOCKEY( "EditorAudioEvents", "EditedEvent" ), _edit.getEventName().c_str() ) )
         {
-            for ( const AudioEventDesc& candidate : _edit.getLibrary()._listEvent )
+            for ( const AudioEventDef& candidate : _edit.getLibrary()._listEvent )
             {
                 if ( ImGui::Selectable( candidate._name.c_str(), candidate._name == _edit.getEventName() ) )
                     _edit.selectEvent( candidate._name );
             }
             ImGui::EndCombo();
         }
-        EditorSelfTestMarks::note( "audioevents.editedEvent" );
-        AudioEventDesc* pEvent = _edit.findEvent();
+        EditorSelfTestMarks::record( "audioevents.editedEvent" );
+        AudioEventDef* pEvent = _edit.findEvent();
         ImGui::BeginDisabled( pEvent == nullptr );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DuplicateEvent" ) ) )
         {
             _edit.duplicateEvent();
             pEvent = _edit.findEvent(); // 목록이 다시 잡혔을 수 있다
         }
-        EditorSelfTestMarks::note( "audioevents.duplicate" );
+        EditorSelfTestMarks::record( "audioevents.duplicate" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) && _edit.removeEvent() )
             pEvent = _edit.findEvent();
-        EditorSelfTestMarks::note( "audioevents.delete" );
+        EditorSelfTestMarks::record( "audioevents.delete" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "DeleteEventTip" ) );
 
@@ -199,7 +199,7 @@ namespace sw::editor
         {
             EditorPropertyGridTarget target{};
             target._pInstance = pEvent;
-            target._pType     = AudioEventDesc::StaticType();
+            target._pType     = AudioEventDef::StaticType();
             target._onEdited  = onEdited;
             _grid.drawProperties( target, nullptr, {} );
         }
@@ -215,7 +215,7 @@ namespace sw::editor
             _libraryGrid.drawProperties( target, nullptr, { hashed_string( "_listEvent" ) } );
             ImGui::PopID();
         }
-        EditorSelfTestMarks::note( "audioevents.librarySettings" );
+        EditorSelfTestMarks::record( "audioevents.librarySettings" );
     }
 
     void AudioEventBrowserPanel::drawEventList()
@@ -244,9 +244,9 @@ namespace sw::editor
                 _selectedEvent = name;
             fixed_string<constant::buffer::kMax128> mark;
             formatstring( mark.data(), mark.capacity(), "audioevents.event.%#", name.c_str() );
-            EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 이벤트를 고른다
+            EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 이벤트를 고른다
         }
-        EditorSelfTestMarks::note( "audioevents.list" );
+        EditorSelfTestMarks::record( "audioevents.list" );
     }
 
     void AudioEventBrowserPanel::drawEventDetail( IAudioService& audio )
@@ -257,8 +257,8 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "SelectEvent" ) );
             return;
         }
-        AudioEventDesc       eventDesc;
-        AudioAttenuationDesc attenuation;
+        AudioEventDef       eventDesc;
+        AudioAttenuationDef attenuation;
         if ( engine.findEventDesc( _selectedEvent, eventDesc, _selectedLibrary, &attenuation ) == false )
         {
             // 라이브러리가 언로드됐거나 다시 읽혀 이벤트가 사라졌다.
@@ -272,7 +272,7 @@ namespace sw::editor
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
             (void)engine.postEvent( _selectedEvent, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
-        EditorSelfTestMarks::note( "audioevents.postEvent" );
+        EditorSelfTestMarks::record( "audioevents.postEvent" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
         {
@@ -280,7 +280,7 @@ namespace sw::editor
             if ( EditorAssetCommands::openPath( _selectedLibrary.view() ) == false )
                 ImGui::SetClipboardText( _selectedLibrary.c_str() );
         }
-        EditorSelfTestMarks::note( "audioevents.openDataFile" );
+        EditorSelfTestMarks::record( "audioevents.openDataFile" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "OpenDataFileTip" ) );
 
         // 고치기 — 같은 파일의 사본이 있으면 그 사본을 고친다(고칠 이벤트는 사본에서 고른다).
@@ -294,11 +294,11 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) )
             (void)_edit.begin( _selectedLibrary, _selectedEvent );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "audioevents.edit" );
+        EditorSelfTestMarks::record( "audioevents.edit" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "EditEventTip" ) );
 
         AudioEventBrowserUtil::makeEventFieldRows( eventDesc, attenuation, _listFieldRow );
-        if ( ImGui::BeginTable( "##AudioEventFields", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) )
+        if ( ImGui::BeginTable( "##AudioEventParams", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) )
         {
             ImGui::TableSetupColumn( SW_LOCKEY( "EditorAudioEvents", "ColumnField" ), ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( SW_LOCKEY( "EditorAudioEvents", "ColumnValue" ), ImGuiTableColumnFlags_WidthStretch );

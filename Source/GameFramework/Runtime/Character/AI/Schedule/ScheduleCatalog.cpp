@@ -165,7 +165,7 @@ namespace sw
                 if ( elementPass < 0 && pass == 0 )
                     SW_LOG_WARNING_ID( "Schedule.UnknownElement", "%#: unknown element <%#>", sourceName, pName );
                 if ( elementPass == pass )
-                    loadedCount += loadElement( node, sourceName );
+                    loadedCount += loadFromXML( node, sourceName );
             }
         }
         resolveReferences( sourceName );
@@ -174,7 +174,7 @@ namespace sw
         return loadedCount;
     }
 
-    uint32 ScheduleCatalog::loadElement( const XMLNode& node, string_view sourceName )
+    uint32 ScheduleCatalog::loadFromXML( const XMLNode& node, string_view sourceName )
     {
         const utf8* pName = node.getName();
         if ( StringUtil::equals( pName, "Calendar" ) )
@@ -244,7 +244,7 @@ namespace sw
         bool bValid              = XMLFields::readFields( node, appointment, sourceName, { "start", "end" }, &ScheduleCondition::isConditionAttribute );
         appointment._startMinute = Internal::readClock( node, "start", sourceName, pID, bValid ).value_or( -1 );
         appointment._endMinute   = Internal::readClock( node, "end", sourceName, pID, bValid ).value_or( -1 );
-        bValid                   = appointment._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
+        bValid                   = appointment._condition.loadFromXML( node, _vocabulary, sourceName, pID ) && bValid;
         if ( findPlace( appointment._place ) == nullptr )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.AppointmentUnknownPlaceSkipped", "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
@@ -310,7 +310,7 @@ namespace sw
     {
         ScheduleEventDef event;
         bool             bValid = XMLFields::readFields( node, event, sourceName, {}, &ScheduleCondition::isConditionAttribute );
-        bValid                  = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
+        bValid                  = event._condition.loadFromXML( node, _vocabulary, sourceName, pID ) && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.EventInvalidFieldsSkipped", "%#: event '%#' has invalid fields - skipped", sourceName, pID );
@@ -342,7 +342,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ScheduleCatalog.RoutineWithoutIdSkipped", "%#: '%#' has a <Routine> without an id - skipped", sourceName, ownerName );
             bValid = false;
         }
-        bValid = outRoutine._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bValid;
+        bValid = outRoutine._condition.loadFromXML( node, _vocabulary, sourceName, ownerName ) && bValid;
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Block" ) == false )
@@ -382,7 +382,7 @@ namespace sw
         outTailEndMinute = -1;
         // 시각은 시계 표기이고 자정 넘김은 칸이 아니라 시각을 고치는 표시다.
         bool bFieldsValid = XMLFields::readFields( node, outBlock, sourceName, { "start", "end", "overnight", "onStart", "onEnd" }, &ScheduleCondition::isConditionAttribute );
-        bFieldsValid      = outBlock._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bFieldsValid;
+        bFieldsValid      = outBlock._condition.loadFromXML( node, _vocabulary, sourceName, ownerName ) && bFieldsValid;
         if ( const utf8* const pOnStart = node.findAttribute( "onStart" ); pOnStart != nullptr )
             bFieldsValid = GameActionCall::compileText( pOnStart, sourceName, outBlock._onStart ) && bFieldsValid;
         if ( const utf8* const pOnEnd = node.findAttribute( "onEnd" ); pOnEnd != nullptr )

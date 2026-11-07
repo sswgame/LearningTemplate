@@ -6,7 +6,7 @@
 
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
@@ -80,7 +80,7 @@ namespace
         /** @brief 이름의 이펙트를 만들고 파라미터를 이름으로 겁니다. */
         static sw::unique_ptr<sw::IAudioEffect> createEffect( const utf8* pType, std::initializer_list<std::pair<const utf8*, float32>> listParameter )
         {
-            sw::AudioEffectDesc desc;
+            sw::AudioEffectDef desc;
             desc._type                               = sw::hashed_string( pType );
             sw::unique_ptr<sw::IAudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( desc, sw::AudioChannelLayout::Stereo );
             if ( pEffect == nullptr )

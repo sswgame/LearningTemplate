@@ -50,7 +50,7 @@ namespace sw
         /** @brief 저장소가 열려 있으면 true 입니다. */
         bool isOpen() const { return _store != nullptr; }
         /** @brief 맡긴 일과 완료 콜백이 잇는 일이 바닥날 때까지 완료를 넘기고(끝낼 때 쓴 세이브를 잃지 않는다 - 남은 읽기는 IOError) 저장소를 닫습니다(`ILocalStore::shutdown`). */
-        void drain();
+        void flush();
         /** @brief 남은 구독을 끊고 저장소 · 봉인 문맥 · 키를 놓습니다. */
         void close();
 

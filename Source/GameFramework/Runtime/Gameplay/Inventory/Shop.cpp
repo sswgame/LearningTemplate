@@ -96,9 +96,9 @@ namespace sw
         ++_revision;
     }
 
-    void Wallet::drainEvents( vector<WalletEvent>& outListEvent )
+    void Wallet::pollEvents( vector<WalletEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void Wallet::writeState( Archive& outArchive ) const
@@ -396,9 +396,9 @@ namespace sw
         }
     }
 
-    void ShopState::drainEvents( vector<ShopEvent>& outListEvent )
+    void ShopState::pollEvents( vector<ShopEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     int32 ShopState::computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const

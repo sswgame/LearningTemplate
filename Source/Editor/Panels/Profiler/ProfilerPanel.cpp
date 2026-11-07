@@ -307,14 +307,14 @@ namespace sw::editor
             constexpr ImGuiTabItemFlags timelineFlags = ImGuiTabItemFlags_None;
 #endif
             const bool bTimelineTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Timeline" ), nullptr, timelineFlags );
-            EditorSelfTestMarks::note( "profiler.timeline.tab" );
+            EditorSelfTestMarks::record( "profiler.timeline.tab" );
             if ( bTimelineTab )
             {
                 drawTimelineTab();
                 ImGui::EndTabItem();
             }
             const bool bCallTreeTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "CallTree" ) );
-            EditorSelfTestMarks::note( "profiler.callTree.tab" );
+            EditorSelfTestMarks::record( "profiler.callTree.tab" );
             if ( bCallTreeTab )
             {
                 drawCallTreeTab();
@@ -365,7 +365,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Clear" ) ) )
             _capture.clear();
-        EditorSelfTestMarks::note( "profiler.capture.clear" );
+        EditorSelfTestMarks::record( "profiler.capture.clear" );
 
         // 정지, 스파이크, 캡처 파일을 다룬다. 유니티 Profiler 의 Record 끄기, 언리얼의 stat hitches, Save/Load 에 해당한다.
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( _capture.isPaused() ? "Resume" : "Pause" ) );
@@ -377,27 +377,27 @@ namespace sw::editor
         }
         else if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Pause" ) ) )
             _capture.pause();
-        EditorSelfTestMarks::note( "profiler.capture.pause" );
+        EditorSelfTestMarks::record( "profiler.capture.pause" );
         EditorChrome::sameLineIfFits( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Pause on spike" ).x );
         bool bPauseOnSpike = _capture.isPauseOnSpike();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "PauseOnSpike" ), &bPauseOnSpike ) )
             _capture.setPauseOnSpike( bPauseOnSpike );
-        EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
+        EditorSelfTestMarks::record( "profiler.capture.pauseOnSpike" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
         EditorChrome::sameLineIfFits( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
         ImGui::DragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
-        EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
+        EditorSelfTestMarks::record( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)_capture.saveCapture(); // 결과는 모델이 로그에 남긴다
-        EditorSelfTestMarks::note( "profiler.capture.save" );
+        EditorSelfTestMarks::record( "profiler.capture.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveCapture" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) )
             (void)_capture.loadCapture(); // 결과는 모델이 로그에 남긴다
-        EditorSelfTestMarks::note( "profiler.capture.load" );
+        EditorSelfTestMarks::record( "profiler.capture.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadCapture" ) );
     }
 
@@ -443,7 +443,7 @@ namespace sw::editor
     {
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
             _timeline.toggleRecording( profiler, _capture, ProfilerRecordingView::Timeline );
-        EditorSelfTestMarks::note( "profiler.timeline.record" );
+        EditorSelfTestMarks::record( "profiler.timeline.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "TimelineRecord" ) );
 
         ImGui::SameLine();
@@ -469,7 +469,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveTrace" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "SaveTrace" ) ) )
             _timeline.saveTrace( profiler );
-        EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
+        EditorSelfTestMarks::record( "profiler.timeline.saveTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveTrace" ) );
         ImGui::NewLine();
         drawTraceControls();
@@ -514,14 +514,14 @@ namespace sw::editor
     {
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "LoadTrace" ) ) && _timeline.loadLatestTrace() == false )
             SW_LOG_WARNING_ID( "ProfilerPanel.TraceStatus", "%#", _timeline.getTraceStatus() );
-        EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
+        EditorSelfTestMarks::record( "profiler.timeline.loadTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
         if ( _timeline.hasLoadedTrace() )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Unload" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Unload" ) ) )
                 _timeline.unloadTrace();
-            EditorSelfTestMarks::note( "profiler.timeline.unloadTrace" );
+            EditorSelfTestMarks::record( "profiler.timeline.unloadTrace" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
         }
         ImGui::SameLine();
@@ -731,7 +731,7 @@ namespace sw::editor
                 _capture.selectFrameOffset( static_cast<uint32>( lastIndex - MathUtil::clamp( clicked, 0, lastIndex ) ) );
             }
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( string{ "profiler.graph." } + pSeriesName ).c_str() );
+                EditorSelfTestMarks::record( ( string{ "profiler.graph." } + pSeriesName ).c_str() );
             const uint32 frameOffset = _capture.getSelectedFrameOffset();
             if ( frameOffset > 0 )
             {
@@ -1010,7 +1010,7 @@ namespace sw::editor
         const bool        bRecording = timeline.isRecording();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
             _timeline.toggleRecording( profiler, _capture, ProfilerRecordingView::CallTree );
-        EditorSelfTestMarks::note( "profiler.callTree.record" );
+        EditorSelfTestMarks::record( "profiler.callTree.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "CallTreeRecord" ) );
         ImGui::SameLine();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Frames" ) );

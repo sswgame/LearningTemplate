@@ -272,30 +272,30 @@ namespace sw
         return FrameDataInternal::computeAdvantage( _move, _frame, bOnBlock );
     }
 
-    GuardOutcome MoveTimeline::computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable )
+    GuardResult MoveTimeline::computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable )
     {
         switch ( stance )
         {
             case GuardStance::None:
             {
-                return GuardOutcome::Hit;
+                return GuardResult::Hit;
             }
             case GuardStance::Standing:
             {
                 if ( height == AttackHeight::High || height == AttackHeight::Mid )
-                    return bUnblockable ? GuardOutcome::Hit : GuardOutcome::Blocked;
-                return GuardOutcome::Hit; // 하단 · 잡기
+                    return bUnblockable ? GuardResult::Hit : GuardResult::Blocked;
+                return GuardResult::Hit; // 하단 · 잡기
             }
             case GuardStance::Crouching:
             {
                 if ( height == AttackHeight::High || height == AttackHeight::Throw )
-                    return GuardOutcome::Evaded;
+                    return GuardResult::Evaded;
                 if ( height == AttackHeight::Low )
-                    return bUnblockable ? GuardOutcome::Hit : GuardOutcome::Blocked;
-                return GuardOutcome::Hit; // 중단
+                    return bUnblockable ? GuardResult::Hit : GuardResult::Blocked;
+                return GuardResult::Hit; // 중단
             }
         }
-        return GuardOutcome::Hit;
+        return GuardResult::Hit;
     }
 
     void MoveTimeline::writeState( Archive& outArchive ) const

@@ -106,7 +106,7 @@ namespace sw
         }
 
         /** @brief 어댑터가 잎 셰이프 하나를 새로 만들 때마다 부릅니다. */
-        void noteLeafShapeCreated() { --_pendingLeafShapeCount; }
+        void recordLeafShapeCreated() { --_pendingLeafShapeCount; }
 
         /** @brief 잎 셰이프가 없으면 만듭니다. */
         virtual void ensureLeafShape( uint32 leaf ) = 0;
@@ -393,7 +393,7 @@ namespace sw
                     shape._type          = PhysicsShapeType3D::ConvexHull;
                     shape._listPoint     = _listLeafPoint[leaf];
                     _listLeafShape[leaf] = _scene.createShape( vector_reference<const PhysicsShapeDesc3D>{ &shape, 1 }, _material );
-                    noteLeafShapeCreated();
+                    recordLeafShapeCreated();
                 }
                 return _listLeafShape[leaf];
             }
@@ -562,7 +562,7 @@ namespace sw
                     shape._type          = PhysicsShapeType2D::Polygon;
                     shape._listPoint     = _listLeafPolygon[leaf];
                     _listLeafShape[leaf] = _scene.createShape( vector_reference<const PhysicsShapeDesc2D>{ &shape, 1 }, _material );
-                    noteLeafShapeCreated();
+                    recordLeafShapeCreated();
                 }
                 return _listLeafShape[leaf];
             }

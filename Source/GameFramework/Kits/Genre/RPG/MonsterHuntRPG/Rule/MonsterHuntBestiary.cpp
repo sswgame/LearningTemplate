@@ -93,9 +93,9 @@ namespace sw
         return _pChart->computeMultiplier( attackElement, pMonster->_listElement );
     }
 
-    void MonsterHuntBestiary::drainEvents( vector<MonsterHuntBestiaryEvent>& outListEvent )
+    void MonsterHuntBestiary::pollEvents( vector<MonsterHuntBestiaryEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     MonsterHuntBestiary::Entry* MonsterHuntBestiary::findEntryMutable( const hashed_string& monsterID )

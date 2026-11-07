@@ -71,9 +71,9 @@ namespace sw::editor
         /** @brief 속성 그리드가 바로 고치는 사본입니다. 고치면 `markEdited` 를 부릅니다. */
         AudioGraphDef& editGraph() { return _editGraph; }
         /** @brief 속성 그리드가 사본을 고쳤습니다. */
-        void markEdited() { noteEdit( "Edit Audio Graph", "audiograph.values" ); }
+        void markEdited() { recordEdit( "Edit Audio Graph", "audiograph.values" ); }
         /** @brief 캔버스가 주석 상자(`editGraph()._listComment`)를 고쳤습니다. 끌기 · 늘이기는 @p pCoalesceKey 로 한 단계에 합친다. */
-        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { noteEdit( pLabel, pCoalesceKey ); }
+        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { recordEdit( pLabel, pCoalesceKey ); }
         /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. 패널이 그리기마다 한 번 부른다. */
         [[nodiscard]] bool takeEdit( AudioGraphEdit& outEdit );
 
@@ -103,7 +103,7 @@ namespace sw::editor
         /** @brief 캔버스에서 지운 링크 · 노드를 지웁니다. 번호가 밀리지 않게 큰 id 부터, 링크 먼저 지운다. 지운 노드가 있으면 고름 · 놓을 노드를 푼다. */
         void applyDeletions( vector<int32>& inoutListLinkID, vector<int32>& inoutListNodeID );
         /** @brief 캔버스의 노드 위치 @p position 을 데이터에 싣습니다(놓는 중인 노드는 건너뛴다). */
-        void noteNodePosition( uint32 nodeIndex, const float2& position );
+        void recordNodePosition( uint32 nodeIndex, const float2& position );
         /** @brief 캔버스에서 고른 노드 id 를 고른 노드로 둡니다. */
         void selectNodeByID( int32 nodeID );
 
@@ -111,7 +111,7 @@ namespace sw::editor
         // 3) 인스펙터
         // ------------------------------------------------------------------------------
         /** @brief 고른 노드입니다. 없으면 nullptr 입니다(그리드가 바로 고친다). */
-        [[nodiscard]] AudioGraphNodeDesc* editSelectedNode();
+        [[nodiscard]] AudioGraphNodeDef* editSelectedNode();
         /** @brief 고른 노드를 그래프 출력으로 둡니다. */
         void setSelectedAsOutput();
         /** @brief 고른 노드 이름이 @p previousName 에서 바뀌었으면 다른 노드의 입력 · 그래프 출력도 따라가게 합니다(이름이 연결의 기준이다). */
@@ -122,7 +122,7 @@ namespace sw::editor
 
     private:
         /** @brief 고친 일을 쌓습니다. 한 그리기 안의 여러 편집은 마지막 이름 하나로 넘긴다(되돌리기 한 단계). */
-        void noteEdit( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { _pendingEdit = AudioGraphEdit{ pLabel, pCoalesceKey }; }
+        void recordEdit( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { _pendingEdit = AudioGraphEdit{ pLabel, pCoalesceKey }; }
         /** @brief 노드 번호로 든 고름 · 놓을 노드를 풉니다(그래프를 통째로 바꾸거나 노드를 지웠을 때). */
         void clearNodeRefs();
 

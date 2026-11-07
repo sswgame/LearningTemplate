@@ -170,7 +170,7 @@ namespace sw
                     break;
             }
 
-            if ( FD_ISSET( _inotifyFd, &readSet ) && drainEvents( buffer, sizeof( buffer ) ) == false )
+            if ( FD_ISSET( _inotifyFd, &readSet ) && readInotifyEvents( buffer, sizeof( buffer ) ) == false )
             {
                 _bIsWatching = false;
                 return;
@@ -178,7 +178,7 @@ namespace sw
         }
     }
 
-    bool LinuxFileWatcher::drainEvents( uint8* pBuffer, uint32 bufferSize )
+    bool LinuxFileWatcher::readInotifyEvents( uint8* pBuffer, uint32 bufferSize )
     {
         while ( true )
         {

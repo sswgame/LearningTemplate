@@ -34,7 +34,7 @@ namespace sw
     {
         if ( _reader == nullptr )
             return false;
-        _reader->drainLines( _listLine );
+        _reader->pollLines( _listLine );
         bool bQuitRequested = false;
         for ( const string& line : _listLine )
         {

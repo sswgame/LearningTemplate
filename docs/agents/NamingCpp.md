@@ -54,10 +54,10 @@ A class that owns RHI resources derives from `RHIRenderResource` and names its d
 | `initRHI( pDevice )` | Create this object's GPU resources on `pDevice`. Idempotent: return `true` when already resident |
 | `updateRHI( pDevice )` | Push changed CPU data to resources that already exist |
 | `releaseRHI( pDevice )` | `pDevice` is **still alive**: hand the resources back and clear the handles |
-| `forgetRHI( pDevice )` | `pDevice` is **already gone**: clear the handles only; calling destroy here is use-after-free |
+| `clearRHI( pDevice )` | `pDevice` is **already gone**: clear the handles only; calling destroy here is use-after-free |
 | `isRHIValid()` | Are this object's GPU resources live right now? |
 
-Never call `releaseRHI` / `forgetRHI` / `initRHI` in a loop from outside: `IRHIDevice` broadcasts them to the whole registry (`releaseAllFor` / `forgetAllFor` / `initAllFor`). Per-frame buffer managers that are not assets (`GPUScene`) keep their own vocabulary.
+Never call `releaseRHI` / `clearRHI` / `initRHI` in a loop from outside: `IRHIDevice` broadcasts them to the whole registry (`releaseAllFor` / `clearAllFor` / `initAllFor`). Per-frame buffer managers that are not assets (`GPUScene`) keep their own vocabulary.
 
 ### Class suffixes
 

@@ -1,4 +1,4 @@
-// RigAssetTest — 리그 파일(`*.rig.xml`) 읽기: 노드 종류마다의 칸(RigNodeFields.h)과 목록 원소, 모르는 키 · 범위 밖 값 · 모드에 없는 키를 막는지.
+// RigAssetTest — 리그 파일(`*.rig.xml`) 읽기: 노드 종류마다의 칸(RigNodeParams.h)과 목록 원소, 모르는 키 · 범위 밖 값 · 모드에 없는 키를 막는지.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -20,7 +20,7 @@ SW_TEST_CASE( RigAssetTest, ReadsNodeFieldsAndItems )
     RigAsset asset;
     SW_REQUIRE_TRUE( asset.loadFromXMLText( R"(<RigAsset planar="true">
         <targets>
-            <item name="Grip" socket="Grip" unit="Weapon" space="hand.r" rotation="0,90,0" />
+            <item name="Grip" socket="Grip" skeletalMesh="Weapon" space="hand.r" rotation="0,90,0" />
         </targets>
         <nodes>
             <item type="TwoBoneIK" name="Arm" weight="0.5" enabled="false" root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" match_rotation="true" />

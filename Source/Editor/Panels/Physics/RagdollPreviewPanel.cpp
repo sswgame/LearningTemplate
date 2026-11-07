@@ -161,15 +161,15 @@ namespace sw::editor
             reloadDocument();
             _model.requestRespawn(); // 다시 읽은 에셋으로 몸을 다시 놓는다
         }
-        EditorSelfTestMarks::note( "ragdoll.reload" );
+        EditorSelfTestMarks::record( "ragdoll.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadThePhysicsAssetFileAgainAfter" ) );
 
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "BodyPrefabSkeletalMeshOnItsRoot" ) );
         (void)EditorWidgets::drawTextField( "##ragdollPreview.body", _model.editBodyPrefabPath(), -1.0f );
-        EditorSelfTestMarks::note( "ragdoll.bodyField" );
+        EditorSelfTestMarks::record( "ragdoll.bodyField" );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Spawn" ) ) )
             _model.spawnFromField();
-        EditorSelfTestMarks::note( "ragdoll.spawn" );
+        EditorSelfTestMarks::record( "ragdoll.spawn" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyInThePreviewSceneAlt" ) );
 
         if ( isDocumentLoadFailed() == false ) // 에셋을 읽지 못했으면 몸을 놓지 않는다
@@ -180,27 +180,27 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Ragdoll" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Ragdoll" ) ) )
                 pRagdoll->startRagdoll( float3{}, -1 );
-            EditorSelfTestMarks::note( "ragdoll.drop" );
+            EditorSelfTestMarks::record( "ragdoll.drop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TurnEveryBodyDynamicTheBodyFalls" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Impulse" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Impulse" ) ) )
                 _model.applyImpulse( *pRagdoll );
-            EditorSelfTestMarks::note( "ragdoll.impulse" );
+            EditorSelfTestMarks::record( "ragdoll.impulse" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "GoRagdollAndPushThePickedBody" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Partial" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Partial" ) ) )
                 pRagdoll->startPartialRagdoll( 1.0f );
-            EditorSelfTestMarks::note( "ragdoll.partial" );
+            EditorSelfTestMarks::record( "ragdoll.partial" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "OnlyTheBodiesUnderTheRagdollS" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Release" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Release" ) ) )
                 pRagdoll->stopPartialRagdoll();
-            EditorSelfTestMarks::note( "ragdoll.release" );
+            EditorSelfTestMarks::record( "ragdoll.release" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "EndThePartialRagdollAndBlendBack" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reset" ) ) )
                 _model.requestRespawn(); // 다음 그리기가 몸을 처음 자세로 다시 놓는다
-            EditorSelfTestMarks::note( "ragdoll.reset" );
+            EditorSelfTestMarks::record( "ragdoll.reset" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyAgainInItsStart" ) );
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "ImpulseNS" ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
@@ -222,7 +222,7 @@ namespace sw::editor
         const float2 viewSize = computeViewportFillSize( RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         drawOverlay( pRagdoll );
-        EditorSelfTestMarks::note( "ragdoll.previewScene" );
+        EditorSelfTestMarks::record( "ragdoll.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
@@ -274,7 +274,7 @@ namespace sw::editor
             }
             ImGui::EndTable();
         }
-        EditorSelfTestMarks::note( "ragdoll.bodyTable" );
+        EditorSelfTestMarks::record( "ragdoll.bodyTable" );
     }
 
     void RagdollPreviewPanel::drawOverlay( const RagdollComponent* pRagdoll )

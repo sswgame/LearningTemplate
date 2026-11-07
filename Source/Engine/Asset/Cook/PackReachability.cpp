@@ -117,9 +117,9 @@ namespace sw
                 vector<unique_ptr<CatalogFile>> _listCatalog;      ///< 연 카탈로그 파일
                 uint8                           _bFailed : 1;
 
-                Walker( const AssetReferenceFields& fields, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, unordered_set<string>& setIncluded,
+                Walker( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, unordered_set<string>& setIncluded,
                         unordered_set<string>& setReferencedExcluded )
-                    : _fields{ fields }
+                    : _fields{ params }
                     , _rules{ rules }
                     , _files{ files }
                     , _source{ source }
@@ -553,12 +553,12 @@ namespace sw
 
 namespace sw
 {
-    bool PackReachability::collect( const AssetReferenceFields& fields, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, PackReachResult& outResult )
+    bool PackReachability::collect( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, PackReachResult& outResult )
     {
         outResult._setIncluded.clear();
         outResult._setReferencedExcluded.clear();
         outResult._rootCount = 0;
-        PackReachabilityInternal::Walker walker( fields, rules, files, source, outResult._setIncluded, outResult._setReferencedExcluded );
+        PackReachabilityInternal::Walker walker( params, rules, files, source, outResult._setIncluded, outResult._setReferencedExcluded );
         outResult._rootCount += walker.addCodeRoots();
         outResult._rootCount += walker.addAlwaysCookRoots();
         outResult._rootCount += walker.addRequiredDataRoots();

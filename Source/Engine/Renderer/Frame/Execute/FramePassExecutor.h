@@ -69,7 +69,7 @@ namespace sw
         /** @brief 상주 자원과 가림 되읽기 · 우편함을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseResources();
         /** @brief 디바이스가 바뀌거나 내려갈 때 프레임 리스트와 그래프 실행 상태(이름별 리소스 상태)를 버립니다 — 새 디바이스의 텍스처는 다시 Undefined 다. */
-        void forgetDevice();
+        void clearDevice();
 
         // ------------------------------------------------------------------------------
         // 2) 셋업이 부르는 준비(기록 전)
@@ -433,7 +433,7 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         /// @brief 모듈 확장 패스(`FrameExtensionHost::getPasses`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
         unordered_map<hashed_string, uint32> _mapExtensionPassIndex;
-        /// @brief 그래프 실행 상태(이름별 리소스 상태 추적)입니다. 디바이스가 바뀌면 버린다(`forgetDevice`).
+        /// @brief 그래프 실행 상태(이름별 리소스 상태 추적)입니다. 디바이스가 바뀌면 버린다(`clearDevice`).
         RenderGraphExecutionContext _graphContext;
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
         GPUNanCheck                 _nanCheck;

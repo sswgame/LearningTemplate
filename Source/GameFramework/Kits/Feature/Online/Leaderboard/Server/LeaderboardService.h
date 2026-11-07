@@ -157,14 +157,14 @@ namespace sw
         void readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag );
         /** @brief 시즌 하나를 정산합니다. 예약 작업이 부르며 테스트와 운영은 직접 부릅니다. 끝나면 @p onDone 을 부르며 인자는 모두 정산했는지 여부입니다. */
         void settleSeason( string_view boardID, uint32 seasonID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );
-        void drainAchievementUnlocks( vector<AchievementUnlock>& outListUnlock ) { _unlockBuffer.drainTo( outListUnlock ); }
+        void pollAchievementUnlocks( vector<AchievementUnlock>& outListUnlock ) { _unlockBuffer.moveAllTo( outListUnlock ); }
         /** @brief 시즌 정산 작업 id 를 만듭니다. `lb.settle.<보드>.<시즌 16진 8자리>` 형식입니다. */
         static string makeSettlementJobID( string_view boardID, uint32 seasonID );
 
         // 예약 작업
         void onScheduledRun( const ScheduledRun& run );
 
-        void  drainCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
+        void  takeCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
         int32 getPendingCount() const { return _pendingCount; }
 
         /**

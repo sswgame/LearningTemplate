@@ -24,7 +24,7 @@ namespace sw
         }
 
         AbilityComponent*             pAbilitySystem = getAbilitySystem();
-        const ArenaGameModeComponent* pDirector      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        const ArenaGameModeComponent* pGameMode      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         // 사거리 · 피해는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
         const std::optional<float32> range  = getParameter( "range" );
         const std::optional<float32> damage = getParameter( "damage" );
@@ -34,9 +34,9 @@ namespace sw
             cancelAbility();
             return;
         }
-        if ( pDirector != nullptr )
+        if ( pGameMode != nullptr )
         {
-            AbilityComponent* pTarget = pDirector->findNearestHostile( *pAbilitySystem, *range );
+            AbilityComponent* pTarget = pGameMode->findNearestHostile( *pAbilitySystem, *range );
             AbilityEffectSpec spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( pTarget != nullptr && spec.isValid() )
             {
@@ -57,7 +57,7 @@ namespace sw
         }
 
         AbilityComponent*             pAbilitySystem = getAbilitySystem();
-        const ArenaGameModeComponent* pDirector      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        const ArenaGameModeComponent* pGameMode      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
         const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
         // 어느 탄인지는 어빌리티 데이터(`<Param name="projectile">`)가 반드시 적고, 피해 · 속도 · 사거리 · 반지름은 그 탄 정의(게임 서비스 `ProjectileCatalog`)다.
@@ -72,14 +72,14 @@ namespace sw
             cancelAbility();
             return;
         }
-        if ( pDirector != nullptr && pUnit != nullptr )
+        if ( pGameMode != nullptr && pUnit != nullptr )
         {
             AbilityEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( spec.isValid() )
                 spec.setSetByCallerMagnitude( "Damage", pProjectile->_damage );
             const hashed_string     extraEffect = getNameParameter( "extraEffect" );
             const AbilityEffectSpec extraSpec   = extraEffect.empty() ? AbilityEffectSpec{} : makeOutgoingSpec( extraEffect );
-            pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), projectileID, spec, extraSpec );
+            pGameMode->launchProjectile( *pAbilitySystem, pUnit->getFacing(), projectileID, spec, extraSpec );
         }
         endAbility();
     }

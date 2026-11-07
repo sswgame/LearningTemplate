@@ -85,7 +85,7 @@ namespace sw
         }
     }
 
-    void UIScreenMarkers::forgetScreen()
+    void UIScreenMarkers::removeScreen()
     {
         _screen = kInvalidUIScreenHandle;
         _listAnchor.clear();
@@ -96,7 +96,7 @@ namespace sw
 
     void UIScreenMarkers::clear()
     {
-        forgetScreen();
+        removeScreen();
         _listCanvasAnchor.clear();
     }
 } // namespace sw

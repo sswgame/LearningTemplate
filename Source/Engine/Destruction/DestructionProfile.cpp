@@ -93,12 +93,12 @@ namespace sw
     void DestructionProfile::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         using Internal = DestructionProfileInternal;
-        DestructionRootFields rootFields;
-        rootFields._density         = _density;
-        rootFields._physicsMaterial = _physicsMaterial;
-        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓인다 — 칸 · 범위는 PROPERTY 가 정본이다
-        _density           = rootFields._density;
-        _physicsMaterial   = rootFields._physicsMaterial;
+        DestructionRootParams rootParams;
+        rootParams._density         = _density;
+        rootParams._physicsMaterial = _physicsMaterial;
+        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓인다 — 칸 · 범위는 PROPERTY 가 정본이다
+        _density           = rootParams._density;
+        _physicsMaterial   = rootParams._physicsMaterial;
         uint8 bStrainSeen  = SW_FALSE;
         uint8 bLinkSeen    = SW_FALSE;
         uint8 bImpactSeen  = SW_FALSE;
@@ -131,55 +131,55 @@ namespace sw
             {
                 if ( Internal::claimElement( child, reader, bLinkSeen ) == false )
                     continue;
-                DestructionLinkFields fields;
-                fields._strength        = _linkStrength;
-                fields._supportStrength = _supportStrength;
-                (void)reader.readFields( child, fields );
-                _linkStrength    = fields._strength;
-                _supportStrength = fields._supportStrength;
+                DestructionLinkParams params;
+                params._strength        = _linkStrength;
+                params._supportStrength = _supportStrength;
+                (void)reader.readFields( child, params );
+                _linkStrength    = params._strength;
+                _supportStrength = params._supportStrength;
             }
             else if ( StringUtil::equals( child.getName(), "Impact" ) )
             {
                 if ( Internal::claimElement( child, reader, bImpactSeen ) == false )
                     continue;
-                DestructionImpactFields fields;
-                fields._impulseToStrain = _impulseToStrain;
-                fields._minImpulse      = _minImpulse;
-                fields._radius          = _impactRadius;
-                (void)reader.readFields( child, fields );
-                _impulseToStrain = fields._impulseToStrain;
-                _minImpulse      = fields._minImpulse;
-                _impactRadius    = fields._radius;
+                DestructionImpactParams params;
+                params._impulseToStrain = _impulseToStrain;
+                params._minImpulse      = _minImpulse;
+                params._radius          = _impactRadius;
+                (void)reader.readFields( child, params );
+                _impulseToStrain = params._impulseToStrain;
+                _minImpulse      = params._minImpulse;
+                _impactRadius    = params._radius;
             }
             else if ( StringUtil::equals( child.getName(), "Debris" ) )
             {
                 if ( Internal::claimElement( child, reader, bDebrisSeen ) == false )
                     continue;
-                DestructionDebrisFields fields;
-                fields._lifetime            = _debrisLifetime;
-                fields._maxBodies           = _maxDebrisBody;
-                fields._smallVolume         = _smallDebrisVolume;
-                fields._fadeTime            = _fadeTime;
-                fields._sleepRemoveTime     = _sleepRemoveTime;
-                fields._keepCollisionVolume = _keepCollisionVolume;
-                fields._hullShrink          = _hullShrink;
-                (void)reader.readFields( child, fields );
-                _debrisLifetime      = fields._lifetime;
-                _maxDebrisBody       = fields._maxBodies;
-                _smallDebrisVolume   = fields._smallVolume;
-                _fadeTime            = fields._fadeTime;
-                _sleepRemoveTime     = fields._sleepRemoveTime;
-                _keepCollisionVolume = fields._keepCollisionVolume;
-                _hullShrink          = fields._hullShrink;
+                DestructionDebrisParams params;
+                params._lifetime            = _debrisLifetime;
+                params._maxBodies           = _maxDebrisBody;
+                params._smallVolume         = _smallDebrisVolume;
+                params._fadeTime            = _fadeTime;
+                params._sleepRemoveTime     = _sleepRemoveTime;
+                params._keepCollisionVolume = _keepCollisionVolume;
+                params._hullShrink          = _hullShrink;
+                (void)reader.readFields( child, params );
+                _debrisLifetime      = params._lifetime;
+                _maxDebrisBody       = params._maxBodies;
+                _smallDebrisVolume   = params._smallVolume;
+                _fadeTime            = params._fadeTime;
+                _sleepRemoveTime     = params._sleepRemoveTime;
+                _keepCollisionVolume = params._keepCollisionVolume;
+                _hullShrink          = params._hullShrink;
             }
             else if ( StringUtil::equals( child.getName(), "Network" ) )
             {
                 if ( Internal::claimElement( child, reader, bNetworkSeen ) == false )
                     continue;
-                DestructionNetworkFields fields;
-                fields._poseRate = _networkPoseRate;
-                (void)reader.readFields( child, fields );
-                _networkPoseRate = fields._poseRate;
+                DestructionNetworkParams params;
+                params._poseRate = _networkPoseRate;
+                (void)reader.readFields( child, params );
+                _networkPoseRate = params._poseRate;
             }
             else
             {

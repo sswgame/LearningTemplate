@@ -16,7 +16,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 
 namespace sw
 {
@@ -97,7 +97,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Element", DisplayName = "Rule Table", Tooltip = "Element rule table (required)" )
-        AssetRef<ElementRuleTable> _tablePath;
+        AssetRef<ElementRuleCatalog> _tablePath;
         PROPERTY( Category = "Element", DisplayName = "Material", Tooltip = "Material name in the table" )
         hashed_string _material;
         PROPERTY( Category = "Element", DisplayName = "Signal Status", Tooltip = "Status that sets the gimmick sensor signal (Burning for torches)" )
@@ -105,8 +105,8 @@ namespace sw
         PROPERTY( Category = "Element", DisplayName = "Start Status", Tooltip = "Stimulus applied at play start (Fire for a lit torch)" )
         hashed_string _startStimulus;
 
-        ElementGrid                        _grid;
-        shared_ptr<const ElementRuleTable> _pTable;               ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
-        uint32                             _seenTableReloadCount; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleTable>::getReloadCount` 값. 달라지면 다시 만든다
+        ElementGrid                          _grid;
+        shared_ptr<const ElementRuleCatalog> _pTable;               ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
+        uint32                               _seenTableReloadCount; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleCatalog>::getReloadCount` 값. 달라지면 다시 만든다
     };
 } // namespace sw

@@ -99,11 +99,11 @@ namespace sw
         static const hashed_string& getTable(); ///< "service_schedule"
 
     private:
-        class ClaimWork;
+        class ClaimJob;
         class FinishWork;
 
         /** @brief 차지 일의 결과입니다. */
-        enum class ClaimOutcome : uint8
+        enum class ClaimResult : uint8
         {
             Claimed = 0, ///< 이 서버가 돈다
             Finished,    ///< 이미 누군가 끝냈다
@@ -121,7 +121,7 @@ namespace sw
             uint8                _bClaimPending{ SW_FALSE };
         };
 
-        void onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimOutcome outcome, uint64 runToken, int64 retryAtMs );
+        void onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult result, uint64 runToken, int64 retryAtMs );
         void onWorkCompleted() { --_pendingWorkCount; }
 
     private:

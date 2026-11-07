@@ -119,7 +119,7 @@ namespace sw
         {
             _pDispatcher->update( nowMs );
             _listDeviceCompletionScratch.clear();
-            _pDispatcher->drainCompletions( _listDeviceCompletionScratch );
+            _pDispatcher->takeCompletions( _listDeviceCompletionScratch );
             for ( const PushDeviceCompletion& completion : _listDeviceCompletionScratch )
             {
                 NetRequestToken token;

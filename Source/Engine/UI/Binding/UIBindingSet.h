@@ -13,7 +13,7 @@
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Binding/UIBindingExpression.h"
 #include "Engine/UI/Binding/UIBindingValue.h"
-#include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
@@ -41,7 +41,7 @@ namespace sw
     /**
      * @class UIBindingSet
      * @brief 화면(`UIScreen`) 하나의 바인딩입니다(UE5 MVVM 의 바인딩 목록, 유니티 런타임 바인딩에 해당).
-     * @details 문서의 식(`UIBindingDesc`)을 해석해 연결하고(`bind`), 바인딩 단계(`update`)마다 바뀐 소스에 묶인 위젯 필드만 리플렉션으로 쓴다.
+     * @details 문서의 식(`UIBindingDef`)을 해석해 연결하고(`bind`), 바인딩 단계(`update`)마다 바뀐 소스에 묶인 위젯 필드만 리플렉션으로 쓴다.
      *
      *          **소스**: `{bind:필드}` 는 뷰모델이 그 필드를 알렸을 때만(필드 통지) 쓰고, `{poll:필드}` 는 매 프레임 값을 비교한다(개발 편의용이며 비용 카운터는 `UI.PollBindings`).
      *          위젯 필드에 쓰면 그 위젯의 `onBoundPropertyChanged` 가 필드에 맞는 무효화를 한다(텍스트와 크기 필드는 레이아웃, 색 필드는 그리기만).
@@ -73,7 +73,7 @@ namespace sw
          * @brief 바인딩 단계입니다. 연결되지 않았으면 연결하고 모든 필드를 쓰며, 연결되어 있으면 바뀐 소스의 필드만 씁니다.
          * @param listBinding 화면의 바인딩 식입니다(`UIScreen::getBindings`).
          */
-        void update( const vector<UIBindingDesc>& listBinding, const UIBindingContext& context );
+        void update( const vector<UIBindingDef>& listBinding, const UIBindingContext& context );
         /** @brief 사용자 입력이 위젯 @p widget 의 필드 @p propertyName 을 바꿨을 때 부릅니다. 양방향 바인딩이면 소스에 되씁니다. */
         void onWidgetValueEdited( Widget& widget, const hashed_string& propertyName );
         /** @brief 뷰모델 @p viewModel 이 지워질 때 부릅니다. 바인딩을 해제하고, 다음 `setViewModel` 까지 쉽니다. */
@@ -111,9 +111,9 @@ namespace sw
         };
 
         /** @brief 식을 모두 해석해 연결합니다. 오류는 `_listError` 와 로그에 남깁니다. */
-        void bind( const vector<UIBindingDesc>& listBinding, const UIBindingContext& context );
+        void bind( const vector<UIBindingDef>& listBinding, const UIBindingContext& context );
         /** @brief 식 하나를 해석해 연결합니다. 연결할 수 없으면 false 이고 @p outError 에 이유가 있습니다. 뷰모델이 없어 쉬는 식은 true 이며 연결하지 않습니다. */
-        [[nodiscard]] bool bindOne( const UIBindingDesc& desc, const UIBindingContext& context, string& outError );
+        [[nodiscard]] bool bindOne( const UIBindingDef& desc, const UIBindingContext& context, string& outError );
         /** @brief 설정 바인딩의 소스 종류를 정하고 범위와 선택지 필드를 찾습니다. 설정이 없으면 false 입니다. */
         [[nodiscard]] bool bindSetting( ActiveBinding& binding, const Widget& widget, const UIBindingContext& context, UIBindingValueKind& outSourceKind,
                                         string& outError ) const;

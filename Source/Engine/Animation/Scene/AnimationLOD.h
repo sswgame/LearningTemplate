@@ -125,7 +125,7 @@ namespace sw
 
         PROPERTY( Tooltip = "Update-rate levels from the largest on-screen size to 0 (at least one; the last must start at 0)" )
         vector<AnimationLODRateLevel> _listRateLevel;
-        PROPERTY( Min = 0, Tooltip = "Update divisor for units that are not visible (0: no pose at all)" )
+        PROPERTY( Min = 0, Tooltip = "Update divisor for skeletalMeshes that are not visible (0: no pose at all)" )
         uint32 _offscreenUpdateRateDivisor{ 0 };
         PROPERTY( Min = 1, Tooltip = "Upper bound the budget allocator may raise a divisor to" )
         uint32 _maxUpdateRateDivisor{ 16 };
@@ -133,7 +133,7 @@ namespace sw
         float32 _budgetMilliseconds{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Modelled cost of one pose evaluation in microseconds - the budget divides by this, never by measured time (required when the budget is on)" )
         float32 _unitCostMicroseconds{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Crowd units smaller than this on screen are drawn with vertex animation (0: never)" )
+        PROPERTY( Min = 0.0, Tooltip = "Crowd skeletalMeshes smaller than this on screen are drawn with vertex animation (0: never)" )
         float32 _vertexAnimationScreenSize{ 0.0f };
         PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds a graph layer, blend branch or rig node takes to fade out or back in when the LOD grade crosses its max_lod (0: switch at once)" )
         float32 _nodeFadeSeconds{ 0.0f };

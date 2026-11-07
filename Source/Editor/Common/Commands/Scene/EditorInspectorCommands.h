@@ -22,7 +22,7 @@ namespace sw::editor
     class EditorInspectorCommands
     {
     public:
-        /** @brief `adoptChildPrefabInstances` 의 결과입니다. `_rejectReason` 이 비어 있지 않으면 거절해서 아무것도 옮기지 않았습니다. */
+        /** @brief `attachChildPrefabInstances` 의 결과입니다. `_rejectReason` 이 비어 있지 않으면 거절해서 아무것도 옮기지 않았습니다. */
         struct AdoptResult
         {
             uint32 _adoptedCount{ 0 };
@@ -62,6 +62,6 @@ namespace sw::editor
          *          옮길 오브젝트를 올라와 있는 씬의 `SceneObjectReference` 가 가리키면 아무것도 옮기지 않고 거절한다(`AdoptResult::_rejectReason` 에 어느 참조인지 적고 로그를 남긴다) —
          *          옮기면 그 파일 id 가 다음 로드에 사라져 참조가 끊긴다. 참조를 먼저 지우거나 다른 오브젝트로 바꾼 뒤 다시 만든다.
          */
-        [[nodiscard]] static AdoptResult adoptChildPrefabInstances( GameObject* pRoot );
+        [[nodiscard]] static AdoptResult attachChildPrefabInstances( GameObject* pRoot );
     };
 } // namespace sw::editor

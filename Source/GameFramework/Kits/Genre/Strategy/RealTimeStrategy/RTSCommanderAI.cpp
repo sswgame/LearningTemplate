@@ -150,7 +150,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 작업
     // ------------------------------------------------------------------------------
-    ActionResult RTSCommanderAI::taskDefend( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskDefend( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&             self   = *static_cast<RTSCommanderAI*>( context._pOwner );
         Blackboard&                 board  = *context._world.find<BlackboardWriteSlot>(); // 러너가 틱마다 채운다
@@ -165,7 +165,7 @@ namespace sw
         return ActionResult::Succeeded;
     }
 
-    ActionResult RTSCommanderAI::taskGatherIdle( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskGatherIdle( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self   = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world  = *self._pWorld;
@@ -189,7 +189,7 @@ namespace sw
         return ActionResult::Succeeded;
     }
 
-    ActionResult RTSCommanderAI::taskTrainWorkers( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskTrainWorkers( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self               = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world              = *self._pWorld;
@@ -200,7 +200,7 @@ namespace sw
         return world.train( pDepot->_id, self._settings._workerID ) == RTSCommandResult::Ok ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    ActionResult RTSCommanderAI::taskBuildSupply( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskBuildSupply( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&  self    = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&        world   = *self._pWorld;
@@ -213,7 +213,7 @@ namespace sw
         return self.orderConstruction( self._settings._supplyID ) ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    ActionResult RTSCommanderAI::taskBuildProduction( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskBuildProduction( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI& self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world = *self._pWorld;
@@ -225,7 +225,7 @@ namespace sw
         return self.orderConstruction( self._settings._productionID ) ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    ActionResult RTSCommanderAI::taskTrainArmy( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskTrainArmy( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&   self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&         world = *self._pWorld;
@@ -244,7 +244,7 @@ namespace sw
         return bTrained ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    ActionResult RTSCommanderAI::taskAttack( ActionContext& context, const VocabularyNoFields& /*params*/ )
+    ActionResult RTSCommanderAI::taskAttack( ActionContext& context, const VocabularyNoParams& /*params*/ )
     {
         RTSCommanderAI&   self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&         world = *self._pWorld;
@@ -286,11 +286,11 @@ namespace sw
     }
 
     // 지휘관 트리 데이터(`commander.bt.xml`)가 `task` 속성으로 가리키는 이름이다.
-    SW_GAME_ACTION( RTSDefend, "rts.defend", VocabularyNoFields, &RTSCommanderAI::taskDefend );
-    SW_GAME_ACTION( RTSGatherIdle, "rts.gatherIdle", VocabularyNoFields, &RTSCommanderAI::taskGatherIdle );
-    SW_GAME_ACTION( RTSTrainWorkers, "rts.trainWorkers", VocabularyNoFields, &RTSCommanderAI::taskTrainWorkers );
-    SW_GAME_ACTION( RTSBuildSupply, "rts.buildSupply", VocabularyNoFields, &RTSCommanderAI::taskBuildSupply );
-    SW_GAME_ACTION( RTSBuildProduction, "rts.buildProduction", VocabularyNoFields, &RTSCommanderAI::taskBuildProduction );
-    SW_GAME_ACTION( RTSTrainArmy, "rts.trainArmy", VocabularyNoFields, &RTSCommanderAI::taskTrainArmy );
-    SW_GAME_ACTION( RTSAttack, "rts.attack", VocabularyNoFields, &RTSCommanderAI::taskAttack );
+    SW_GAME_ACTION( RTSDefend, "rts.defend", VocabularyNoParams, &RTSCommanderAI::taskDefend );
+    SW_GAME_ACTION( RTSGatherIdle, "rts.gatherIdle", VocabularyNoParams, &RTSCommanderAI::taskGatherIdle );
+    SW_GAME_ACTION( RTSTrainWorkers, "rts.trainWorkers", VocabularyNoParams, &RTSCommanderAI::taskTrainWorkers );
+    SW_GAME_ACTION( RTSBuildSupply, "rts.buildSupply", VocabularyNoParams, &RTSCommanderAI::taskBuildSupply );
+    SW_GAME_ACTION( RTSBuildProduction, "rts.buildProduction", VocabularyNoParams, &RTSCommanderAI::taskBuildProduction );
+    SW_GAME_ACTION( RTSTrainArmy, "rts.trainArmy", VocabularyNoParams, &RTSCommanderAI::taskTrainArmy );
+    SW_GAME_ACTION( RTSAttack, "rts.attack", VocabularyNoParams, &RTSCommanderAI::taskAttack );
 } // namespace sw

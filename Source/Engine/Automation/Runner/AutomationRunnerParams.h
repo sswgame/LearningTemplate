@@ -1,5 +1,5 @@
 /**
- * @file AutomationRunnerFields.h
+ * @file AutomationRunnerParams.h
  * @brief 실행기가 맡는 시나리오 단계(입력 · 변수 · 감시 값 · 로그 · 이미지 · 종료)의 인자 스키마입니다(`AutomationStep::readFields`).
  * @details 수 비교(`equals` · `near` · `atLeast` · `atMost`)는 어느 속성을 적었는지가 곧 규칙이라 스키마 칸이 아니라 손으로 읽습니다(`AutomationStepArgsUtil::parseNumberComparison`).
  *          감시 값 참조(`watch` · `target` · `key`)의 뜻 검사도 등록표를 봐야 해서 단계의 검사 함수가 합니다.
@@ -19,7 +19,7 @@ namespace sw
 
     /** @brief `Press` · `Release` · `Tap` 의 인자입니다. `hold` 는 `Tap` 에만 씁니다. */
     REFLECT()
-    struct SW_API AutomationSlotStepFields
+    struct SW_API AutomationSlotStepParams
     {
         REFLECT_BODY();
 
@@ -31,7 +31,7 @@ namespace sw
 
     /** @brief `MouseDelta` · `Wheel` 의 인자입니다. 없는 축은 0 입니다. */
     REFLECT()
-    struct SW_API AutomationAxisPairFields
+    struct SW_API AutomationAxisPairParams
     {
         REFLECT_BODY();
 
@@ -43,7 +43,7 @@ namespace sw
 
     /** @brief `MousePosition` 의 인자입니다(클라이언트 영역의 비율). */
     REFLECT()
-    struct SW_API AutomationMousePositionFields
+    struct SW_API AutomationMousePositionParams
     {
         REFLECT_BODY();
 
@@ -55,7 +55,7 @@ namespace sw
 
     /** @brief `GamepadAxis` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationGamepadAxisFields
+    struct SW_API AutomationGamepadAxisParams
     {
         REFLECT_BODY();
 
@@ -69,7 +69,7 @@ namespace sw
 
     /** @brief `Text` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationTextStepFields
+    struct SW_API AutomationTextStepParams
     {
         REFLECT_BODY();
 
@@ -79,7 +79,7 @@ namespace sw
 
     /** @brief `Variable` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationVariableFields
+    struct SW_API AutomationVariableParams
     {
         REFLECT_BODY();
 
@@ -91,7 +91,7 @@ namespace sw
 
     /** @brief `ExpectVariable` 의 인자입니다. 적지 않으면 정확히 같아야 합니다. */
     REFLECT()
-    struct SW_API AutomationExpectVariableFields
+    struct SW_API AutomationExpectVariableParams
     {
         REFLECT_BODY();
 
@@ -105,7 +105,7 @@ namespace sw
 
     /** @brief `Expect` 의 글 칸입니다. 수 비교 속성은 손으로 읽습니다(파일 머리말). */
     REFLECT()
-    struct SW_API AutomationExpectFields
+    struct SW_API AutomationExpectParams
     {
         REFLECT_BODY();
 
@@ -127,7 +127,7 @@ namespace sw
 
     /** @brief `WaitUntil` 의 시한 칸(`Expect` 칸에 더해진다)입니다. 셋 중 하나만 적습니다. */
     REFLECT()
-    struct SW_API AutomationWaitUntilFields : public AutomationExpectFields
+    struct SW_API AutomationWaitUntilParams : public AutomationExpectParams
     {
         REFLECT_BODY();
 
@@ -141,7 +141,7 @@ namespace sw
 
     /** @brief `ExpectVisited` 의 인자입니다. `is` · `sequence` 중 하나를 적습니다. */
     REFLECT()
-    struct SW_API AutomationExpectVisitedFields
+    struct SW_API AutomationExpectVisitedParams
     {
         REFLECT_BODY();
 
@@ -161,7 +161,7 @@ namespace sw
 
     /** @brief `Record` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationRecordFields
+    struct SW_API AutomationRecordParams
     {
         REFLECT_BODY();
 
@@ -175,7 +175,7 @@ namespace sw
 
     /** @brief `Remember` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationRememberFields : public AutomationRecordFields
+    struct SW_API AutomationRememberParams : public AutomationRecordParams
     {
         REFLECT_BODY();
 
@@ -185,7 +185,7 @@ namespace sw
 
     /** @brief `ExpectLog` 의 인자입니다. `count` · `atLeast` 중 하나를 적습니다. */
     REFLECT()
-    struct SW_API AutomationExpectLogFields
+    struct SW_API AutomationExpectLogParams
     {
         REFLECT_BODY();
 
@@ -203,7 +203,7 @@ namespace sw
 
     /** @brief `Screenshot` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationScreenshotFields
+    struct SW_API AutomationScreenshotParams
     {
         REFLECT_BODY();
 
@@ -215,7 +215,7 @@ namespace sw
 
     /** @brief `ExpectImage` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationExpectImageFields
+    struct SW_API AutomationExpectImageParams
     {
         REFLECT_BODY();
 
@@ -231,7 +231,7 @@ namespace sw
 
     /** @brief `ExpectImagesDiffer` 의 인자입니다 — 값을 바꾼 두 장이 정말 다른지 보는 음성 대조입니다(골든 없이 같은 실행의 두 스크린샷을 견준다). */
     REFLECT()
-    struct SW_API AutomationExpectImagesDifferFields
+    struct SW_API AutomationExpectImagesDifferParams
     {
         REFLECT_BODY();
 
@@ -249,7 +249,7 @@ namespace sw
 
     /** @brief `CloseWindow` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationCloseWindowFields
+    struct SW_API AutomationCloseWindowParams
     {
         REFLECT_BODY();
 
@@ -259,7 +259,7 @@ namespace sw
 
     /** @brief `ExpectExitWithin` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationExpectExitWithinFields
+    struct SW_API AutomationExpectExitWithinParams
     {
         REFLECT_BODY();
 
@@ -269,7 +269,7 @@ namespace sw
 
     /** @brief `Fail` · `Skip` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationEndStepFields
+    struct SW_API AutomationEndStepParams
     {
         REFLECT_BODY();
 

@@ -18,7 +18,7 @@
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteLibrary.h"
 #include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
@@ -98,7 +98,7 @@ namespace sw::editor
             EditorAssetMatchRule::engineType( UIStyleSheetAsset::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::EndsWith, BuiltinAssetTypesInternal::kArrModuleDataSuffix, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrModuleDataSuffix ),
                                             EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
-            EditorAssetMatchRule::engineType( AudioMixerDesc::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
+            EditorAssetMatchRule::engineType( AudioMixerDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataXMLExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataXMLExt ),
                                             EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),

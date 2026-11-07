@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="twosided_red" _base="game/empty/materials/renderstate/plain_red.material" cullMode="None" twoSidedLighting="true">
-</MaterialDesc>
+<MaterialDef formatVersion="0" name="twosided_red" _base="game/empty/materials/renderstate/plain_red.material" cullMode="None" twoSidedLighting="true">
+</MaterialDef>

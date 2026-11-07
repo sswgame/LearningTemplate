@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 평원 모래 — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="WildWestSand" _base="engine/materials/defaultmaterial.material">
+<MaterialDef formatVersion="0" name="WildWestSand" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.86 0.72 0.48 1.0" />
 		<item name="_roughness" defaultValue="0.7" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

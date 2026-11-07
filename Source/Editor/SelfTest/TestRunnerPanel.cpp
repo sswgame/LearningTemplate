@@ -135,7 +135,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _selfTests.getSelectedPattern().empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelected" ) ) )
             (void)EditorSelfTestRunner::requestRun( _selfTests.getSelectedPattern(), false ); // 버튼은 실행 중에 회색이다 — 거절될 일이 없다
-        EditorSelfTestMarks::note( "testRunner.runSelected" );
+        EditorSelfTestMarks::record( "testRunner.runSelected" );
         ImGui::EndDisabled();
         ImGui::SameLine();
         ImGui::BeginDisabled( _selfTests.getVisiblePattern().empty() );
@@ -165,7 +165,7 @@ namespace sw::editor
                         _selfTests.setSelected( id, bSelected );
                     EditorWidgets::drawTooltip( id.c_str() );
                     const string markKey = "testRunner.select." + id;
-                    EditorSelfTestMarks::note( markKey.c_str() );
+                    EditorSelfTestMarks::record( markKey.c_str() );
                     for ( const EditorSelfTestResult& result : listResult )
                     {
                         if ( result._id != id )

@@ -35,7 +35,7 @@ namespace sw::editor
         /** @brief 프로필의 두 스켈레톤을 디스크에서 읽고 세 자세를 다시 만듭니다. 못 읽은 쪽은 준비되지 않은 것으로 둡니다. */
         void reloadSkeletons( const RetargetProfile& profile );
         /** @brief 읽어 둔 스켈레톤을 들이고 세 자세를 다시 만듭니다. 없는 쪽은 nullptr 입니다. 다음 그리기에서 카메라를 맞춥니다. */
-        void adoptSkeletons( const RetargetProfile& profile, const Skeleton* pSource, const Skeleton* pTarget );
+        void applySkeletons( const RetargetProfile& profile, const Skeleton* pSource, const Skeleton* pTarget );
         /** @brief 읽어 둔 스켈레톤으로 세 자세의 본 위치를 다시 만듭니다. 리타깃 포즈를 끄는 동안에도 부릅니다. 없는 본을 적었으면 리타깃 포즈를 얹지 않습니다(이유는 점검 칸이 말한다). */
         void rebuildPoses( const RetargetProfile& profile );
 

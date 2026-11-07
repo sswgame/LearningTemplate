@@ -24,7 +24,7 @@ namespace sw
     };
 
     /** @brief 필터링 판정 결과입니다. */
-    enum class ChatFilterVerdict : uint8
+    enum class ChatFilterResult : uint8
     {
         Clean = 0,
         Masked,
@@ -53,7 +53,7 @@ namespace sw
         [[nodiscard]] bool loadFromFile( string_view path, ChatFilterMode mode, const ChatTextNormalizer& normalizer );
 
         /** @brief @p text 를 거릅니다. Masked 이면 @p outText 가 가린 글이고, Clean 이면 원문 그대로이며, Rejected 나 InvalidText 이면 건드리지 않습니다. */
-        ChatFilterVerdict apply( string_view text, string& outText ) const;
+        ChatFilterResult apply( string_view text, string& outText ) const;
 
         int32          getWordCount() const { return _wordCount; }
         ChatFilterMode getMode() const { return _mode; }

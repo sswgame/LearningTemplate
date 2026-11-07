@@ -57,7 +57,7 @@ namespace sw
     {
     }
 
-    bool ElementGrid::initialize( int32 width, int32 height, const ElementRuleTable* pTable )
+    bool ElementGrid::initialize( int32 width, int32 height, const ElementRuleCatalog* pTable )
     {
         const bool bValid = 1 <= width && 1 <= height && pTable != nullptr && 0.0f < pTable->getStepTime();
         if ( bValid == false )
@@ -83,7 +83,7 @@ namespace sw
             return;
         Cell& target     = getCell( cell );
         target           = Cell{};
-        target._material = static_cast<uint8>( MathUtil::clamp( material, 0, ElementRuleTable::kMaxMaterialCount - 1 ) );
+        target._material = static_cast<uint8>( MathUtil::clamp( material, 0, ElementRuleCatalog::kMaxMaterialCount - 1 ) );
     }
 
     int32 ElementGrid::getMaterial( const int2& cell ) const
@@ -98,7 +98,7 @@ namespace sw
 
     bool ElementGrid::hasStatus( const int2& cell, int32 status ) const
     {
-        const bool bInvalidStatus = isInside( cell ) == false || status < 0 || status >= ElementRuleTable::kMaxStatusCount;
+        const bool bInvalidStatus = isInside( cell ) == false || status < 0 || status >= ElementRuleCatalog::kMaxStatusCount;
         if ( bInvalidStatus )
             return false;
         return ( _listCell[static_cast<size_t>( toIndex( cell ) )]._statusBits & ( 1u << static_cast<uint32>( status ) ) ) != 0;
@@ -140,7 +140,7 @@ namespace sw
 
     void ElementGrid::removeStatus( Cell& cell, int32 status ) const
     {
-        if ( status < 0 || status >= ElementRuleTable::kMaxStatusCount )
+        if ( status < 0 || status >= ElementRuleCatalog::kMaxStatusCount )
             return;
         cell._statusBits &= static_cast<uint8>( ~( 1u << static_cast<uint32>( status ) ) );
         cell._arrStatusValue[status] = 0;
@@ -372,9 +372,9 @@ namespace sw
         return stepCount;
     }
 
-    void ElementGrid::drainEvents( vector<ElementEvent>& outListEvent )
+    void ElementGrid::pollEvents( vector<ElementEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     uint32 ElementGrid::computeStateHash() const

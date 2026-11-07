@@ -4,7 +4,7 @@
 -->
 <AudioEventLibrary>
 	<_listEvent>
-		<AudioEventDesc _name="Land"
+		<AudioEventDef _name="Land"
 		                _bus="sfx"
 		                _priority="40"
 		                _cooldownSeconds="0.15"
@@ -17,8 +17,8 @@
 			<_listClip>
 				<AudioClipEntry _path="game/voxelcraft/sounds/footstep_grass_000.ogg" />
 			</_listClip>
-		</AudioEventDesc>
-		<AudioEventDesc _name="BlockBreak"
+		</AudioEventDef>
+		<AudioEventDef _name="BlockBreak"
 		                _bus="sfx"
 		                _priority="55"
 		                _cooldownSeconds="0.05"
@@ -31,8 +31,8 @@
 			<_listClip>
 				<AudioClipEntry _path="game/voxelcraft/sounds/impact_soft_medium_000.ogg" />
 			</_listClip>
-		</AudioEventDesc>
-		<AudioEventDesc _name="BlockPlace"
+		</AudioEventDef>
+		<AudioEventDef _name="BlockPlace"
 		                _bus="sfx"
 		                _priority="55"
 		                _cooldownSeconds="0.05"
@@ -45,6 +45,6 @@
 			<_listClip>
 				<AudioClipEntry _path="game/voxelcraft/sounds/impact_plank_medium_001.ogg" />
 			</_listClip>
-		</AudioEventDesc>
+		</AudioEventDef>
 	</_listEvent>
 </AudioEventLibrary>

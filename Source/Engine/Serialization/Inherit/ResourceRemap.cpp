@@ -161,7 +161,7 @@ namespace sw
             }
         }
         if ( listLoadTag.empty() == false )
-            ResourceComposition::noteRemap( assetID, listLoadTag );
+            ResourceComposition::recordRemap( assetID, listLoadTag );
         return bRemapped;
     }
 } // namespace sw

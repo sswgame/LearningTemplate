@@ -32,7 +32,7 @@ namespace sw
 {
     /** @brief 프리셋 머리(`<Preset id>`)의 칸입니다. 섹션(`<View>` · `<Lens>` …)은 자식 원소다. */
     REFLECT()
-    struct SW_GF_API CameraPresetHeadFields
+    struct SW_GF_API CameraPresetHeadParams
     {
         REFLECT_BODY();
 
@@ -42,7 +42,7 @@ namespace sw
 
     /** @brief 돌리 경로의 점(`<Point position/>`)입니다. */
     REFLECT()
-    struct SW_GF_API CameraDollyPointFields
+    struct SW_GF_API CameraDollyPointParams
     {
         REFLECT_BODY();
 

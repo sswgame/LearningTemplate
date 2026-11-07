@@ -94,7 +94,7 @@ namespace sw::editor
                     requestToggle( manifest._name, bOn );
                 fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "modules.toggle.%#", manifest._name.c_str() );
-                EditorSelfTestMarks::note( mark.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
                 ImGui::EndDisabled();
                 if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
                     ImGui::SetTooltip( "%s", bLocked ? SW_LOCKEY( "EditorSettings", "ModuleLocked" ) : SW_LOCKEY( "EditorSettings", "ModuleToggle" ) );
@@ -103,7 +103,7 @@ namespace sw::editor
                     _model.selectModule( manifest._name );
                 fixed_string<constant::buffer::kMax128> rowMark;
                 formatstring( rowMark.data(), rowMark.capacity(), "modules.row.%#", manifest._name.c_str() );
-                EditorSelfTestMarks::note( rowMark.c_str() ); // 시나리오가 행을 골라 상세 절(modules.detail)을 연다
+                EditorSelfTestMarks::record( rowMark.c_str() ); // 시나리오가 행을 골라 상세 절(modules.detail)을 연다
                 EditorWidgets::drawTooltip( manifest._description.c_str() );
                 ImGui::TableSetColumnIndex( 2 );
                 ImGui::TextDisabled( "%s", manifest._version.toString().c_str() );
@@ -162,14 +162,14 @@ namespace sw::editor
             _model.applyPending();
             ImGui::CloseCurrentPopup();
         }
-        EditorSelfTestMarks::note( "modules.apply" );
+        EditorSelfTestMarks::record( "modules.apply" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
         {
             _model.cancelPending();
             ImGui::CloseCurrentPopup();
         }
-        EditorSelfTestMarks::note( "modules.cancel" );
+        EditorSelfTestMarks::record( "modules.cancel" );
         ImGui::EndPopup();
     }
 
@@ -214,7 +214,7 @@ namespace sw::editor
         if ( _model.makeSelectedDetail( detail ) == false )
             return; // 고른 것이 없거나 새로 고침으로 사라졌다
         ImGui::SeparatorText( detail._name.c_str() );
-        EditorSelfTestMarks::note( "modules.detail" );
+        EditorSelfTestMarks::record( "modules.detail" );
         if ( detail._description.empty() == false )
             ImGui::TextWrapped( "%s", detail._description.c_str() );
         ImGui::Text( "%s: %s", SW_LOCKEY( "EditorSettings", "ModuleVersion" ), detail._version.c_str() );
@@ -229,7 +229,7 @@ namespace sw::editor
         ImGui::BeginDisabled( detail._bHasOverride == false || bLocked );
         if ( ImGui::SmallButton( SW_LOCKEY( "EditorSettings", "ModuleResetOverride" ) ) )
             requestToggle( detail._name, detail._bEnabledByDefault ); // 기본과 같아지면 setOverride 가 줄을 지운다
-        EditorSelfTestMarks::note( "modules.reset" );
+        EditorSelfTestMarks::record( "modules.reset" );
         ImGui::EndDisabled();
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
             ImGui::SetTooltip( "%s", SW_LOCKEY( "EditorSettings", "ModuleResetOverrideTip" ) );

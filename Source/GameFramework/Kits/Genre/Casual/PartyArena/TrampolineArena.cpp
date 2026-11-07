@@ -271,7 +271,7 @@ namespace sw
 
         _match.update( deltaTime );
         _listMatchEvent.clear();
-        _match.drainEvents( _listMatchEvent );
+        _match.pollEvents( _listMatchEvent );
         for ( const MatchEvent& event : _listMatchEvent )
         {
             if ( event._kind == MatchEvent::Kind::Respawned && isValidPlayer( event._participant ) )
@@ -328,9 +328,9 @@ namespace sw
         return isValidPlayer( player ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr;
     }
 
-    void TrampolineArena::drainEvents( vector<TrampolineEvent>& outListEvent )
+    void TrampolineArena::pollEvents( vector<TrampolineEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void TrampolineArena::writeState( Archive& outArchive ) const

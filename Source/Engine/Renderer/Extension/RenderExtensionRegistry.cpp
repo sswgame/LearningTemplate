@@ -157,7 +157,7 @@ namespace sw
         }
     }
 
-    bool RenderExtensionRegistry::noteFailureOnce( string_view key )
+    bool RenderExtensionRegistry::recordFailureOnce( string_view key )
     {
         return _failureLogged.tryClaim( HashUtil::computeStringHash64( key, false ) );
     }

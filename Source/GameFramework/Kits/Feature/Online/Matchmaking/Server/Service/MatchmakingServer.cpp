@@ -274,20 +274,20 @@ namespace sw
         expireGrace( nowMs );
 
         _listLobbyStartScratch.clear();
-        _pPartyLobby->drainLobbyStarts( _listLobbyStartScratch );
+        _pPartyLobby->pollLobbyStarts( _listLobbyStartScratch );
         for ( const LobbyStartRequest& start : _listLobbyStartScratch )
         {
             _pQueue->placeLobby( start._lobby, nowMs );
         }
         _listBrokenTicketScratch.clear();
-        _pPartyLobby->drainBrokenTickets( _listBrokenTicketScratch );
+        _pPartyLobby->pollBrokenTickets( _listBrokenTicketScratch );
         for ( const uint64 ticketID : _listBrokenTicketScratch )
         {
             _pQueue->cancelTicket( ticketID );
         }
 
         _listPartyCompletionScratch.clear();
-        _pPartyLobby->drainCompletions( _listPartyCompletionScratch );
+        _pPartyLobby->takeCompletions( _listPartyCompletionScratch );
         for ( PartyLobbyCompletion& completion : _listPartyCompletionScratch )
         {
             MatchmakingReply reply;
@@ -298,7 +298,7 @@ namespace sw
             respond( host, completion._requestTag, reply );
         }
         _listQueueCompletionScratch.clear();
-        _pQueue->drainCompletions( _listQueueCompletionScratch );
+        _pQueue->takeCompletions( _listQueueCompletionScratch );
         for ( const MatchQueueCompletion& completion : _listQueueCompletionScratch )
         {
             MatchmakingReply reply;
@@ -308,7 +308,7 @@ namespace sw
         }
 
         _listPartyNotificationScratch.clear();
-        _pPartyLobby->drainNotifications( _listPartyNotificationScratch );
+        _pPartyLobby->pollNotifications( _listPartyNotificationScratch );
         for ( const PartyLobbyNotification& notification : _listPartyNotificationScratch )
         {
             if ( notification._pushKind == MatchmakingMethod::kPushPartyInvite )
@@ -322,14 +322,14 @@ namespace sw
             }
         }
         _listQueueNotificationScratch.clear();
-        _pQueue->drainNotifications( _listQueueNotificationScratch );
+        _pQueue->pollNotifications( _listQueueNotificationScratch );
         for ( const MatchQueueNotification& notification : _listQueueNotificationScratch )
         {
             push( host, notification._recipientID, MatchmakingMethod::kPushMatch, notification._assignment );
         }
 
         _listTopicChangeScratch.clear();
-        _pQueue->drainTopicChanges( _listTopicChangeScratch );
+        _pQueue->pollTopicChanges( _listTopicChangeScratch );
         for ( const MatchQueueTopicChange& change : _listTopicChangeScratch )
         {
             const bool bSubscribed   = _mapTopicSubscription.contains( change._topic );

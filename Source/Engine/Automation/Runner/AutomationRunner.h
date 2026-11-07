@@ -13,8 +13,8 @@
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
 #include "Engine/Automation/Runner/AutomationJudge.h"
-#include "Engine/Automation/Runner/AutomationOutcome.h"
 #include "Engine/Automation/Runner/AutomationReportWriter.h"
+#include "Engine/Automation/Runner/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationFrameStats.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -138,12 +138,12 @@ namespace sw
         /** @brief 프레임 시작(입력 `beginFrame` 전)에 부릅니다. 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌립니다. */
         void onFrameBegin( InputManager& input );
         /** @brief 프레임 끝(씬 틱과 렌더 제출 뒤)에 부릅니다. 이 프레임의 나머지 단계, 시간 초과, 끝을 확인합니다. 끝났으면 결과를, 아니면 Running 을 반환합니다. */
-        AutomationOutcome onFrameEnd( InputManager& input );
+        AutomationResult onFrameEnd( InputManager& input );
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. `ExpectExitWithin` 을 기다리던 중이면 그 시한 안인지로, 아니면 "끝나기 전에 닫혔다" 로 끝냅니다.
          * @return 최종 결과(이미 끝났으면 그 결과)
          */
-        AutomationOutcome onWindowClosed( InputManager* pInput );
+        AutomationResult onWindowClosed( InputManager* pInput );
         /** @brief 도는 시나리오를 바로 멈춥니다(재생을 끊을 때 — 데모 중 사람 입력 · `scenario.stop`). 결과는 건너뜀이고 가상 입력을 뗀다. 끝났으면 아무것도 하지 않는다. */
         void stop( InputManager* pInput, string_view reason );
 
@@ -200,9 +200,9 @@ namespace sw
         InputManager* getInputManager() const override { return _pInputManager; }
 
         /** @brief 시나리오를 바로 끝냅니다(`Pass`, `Fail`, `Skipped` 등). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
-        void finish( AutomationOutcome result, string_view reason );
+        void finish( AutomationResult result, string_view reason );
 
-        bool isActive() const { return _result == AutomationOutcome::Running; }
+        bool isActive() const { return _result == AutomationResult::Running; }
         /** @brief 시작 조건을 지나 단계를 돌기 시작했으면 true 입니다. */
         bool hasStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 마지막으로 시작한 실행 단계의 이름입니다(아직 없으면 빈 글). 창 제목과 단계 로그가 씁니다. */
@@ -215,7 +215,7 @@ namespace sw
          *          그 프레임의 `onFrameEnd` 가 끝맺고 결과를 돌려준다. 루프는 이것으로 `onFrameEnd` 를 부를지 정한다.
          */
         bool                      hasEnded() const { return _bEnded == SW_TRUE; }
-        AutomationOutcome         getResult() const { return _result; }
+        AutomationResult          getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
         const vector<string>&     getFailures() const { return _judge.getFailures(); }
         /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(리소스 id)입니다. */
@@ -315,7 +315,7 @@ namespace sw
         float32                  _wallLimitSeconds;       ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
         string                   _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
         TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
-        AutomationOutcome        _result;
+        AutomationResult         _result;
         AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
     };
 } // namespace sw

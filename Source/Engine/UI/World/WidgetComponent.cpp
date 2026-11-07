@@ -146,7 +146,7 @@ namespace sw
         attachMarker();
     }
 
-    void WidgetComponent::forgetUIService()
+    void WidgetComponent::removeUIService()
     {
         _pUIService    = nullptr;
         _markerWidget  = kInvalidWidgetID;

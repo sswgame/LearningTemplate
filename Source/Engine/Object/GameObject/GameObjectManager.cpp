@@ -519,7 +519,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepApplyPrePhysics( float32 /*deltaTime*/ )
     {
-        _structuralChangeBuffer.drain( *this );
+        _structuralChangeBuffer.flush( *this );
     }
 
     void GameObjectManager::runFrameStepNavigation( float32 /*deltaTime*/ )
@@ -571,7 +571,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepApplyPostPhysics( float32 /*deltaTime*/ )
     {
-        _structuralChangeBuffer.drain( *this );
+        _structuralChangeBuffer.flush( *this );
     }
 
     void GameObjectManager::runFrameStepFlushEnd( float32 /*deltaTime*/ )

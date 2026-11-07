@@ -1,4 +1,4 @@
-// ProgressionCatalogsTest — 통계 · 경험치 곡선 · 날씨 표의 칸 읽기(스키마: StatDef · ExperienceCurveFields · ExperienceLevelFields · WeatherDef).
+// ProgressionCatalogsTest — 통계 · 경험치 곡선 · 날씨 표의 칸 읽기(스키마: StatDef · ExperienceCurveParams · ExperienceLevelParams · WeatherDef).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

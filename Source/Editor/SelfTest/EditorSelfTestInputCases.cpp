@@ -243,7 +243,7 @@ namespace sw::editor
                 if ( bVisible )
                 {
                     (void)ImGui::Button( "Hover me##SelfTestTooltip" );
-                    EditorSelfTestMarks::note( "selftest.tooltipButton" );
+                    EditorSelfTestMarks::record( "selftest.tooltipButton" );
                     EditorWidgets::drawTooltip( "self-test tooltip" );
                 }
                 const bool bShown = bVisible && isAnyTooltipShown();

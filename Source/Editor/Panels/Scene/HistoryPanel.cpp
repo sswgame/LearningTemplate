@@ -50,17 +50,17 @@ namespace sw::editor
                     if ( EditorCompactControls::drawIconButton( "##historyUndo", SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EditorScene", "HistoryUndo" ),
                                                                 bCanUndo ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToUndo" ) ) )
                         cmdStack.undo();
-                    EditorSelfTestMarks::note( "history.undo" );
+                    EditorSelfTestMarks::record( "history.undo" );
                     ImGui::SameLine();
                     if ( EditorCompactControls::drawIconButton( "##historyRedo", SW_EDITOR_ICON( "Redo" ), SW_LOCKEY( "EditorScene", "HistoryRedo" ),
                                                                 bCanRedo ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToRedo" ) ) )
                         cmdStack.redo();
-                    EditorSelfTestMarks::note( "history.redo" );
+                    EditorSelfTestMarks::record( "history.redo" );
                     ImGui::SameLine();
                     if ( EditorCompactControls::drawIconButton( "##historyClear", SW_EDITOR_ICON( "Trash" ), SW_LOCKEY( "EditorScene", "HistoryClear" ),
                                                                 cmdCount > 0 ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToUndo" ) ) )
                         cmdStack.clear();
-                    EditorSelfTestMarks::note( "history.clear" );
+                    EditorSelfTestMarks::record( "history.clear" );
 
                     ImGui::SameLine();
                     EditorWidgets::drawCountLabel( static_cast<uint32>( currIndex ), static_cast<uint32>( cmdCount ) );
@@ -96,7 +96,7 @@ namespace sw::editor
                     const bool bZeroSelected = ( currIndex == 0 );
                     if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EditorScene", "HistoryInitialState" ), "entry0" ), bZeroSelected, ImGuiSelectableFlags_SpanAllColumns ) )
                         cmdStack.jumpTo( 0 );
-                    EditorSelfTestMarks::note( "history.step.0" );
+                    EditorSelfTestMarks::record( "history.step.0" );
 
                     // 각 명령 엔트리 (1..cmdCount)
                     for ( size_t cmdIndex = 0; cmdIndex < cmdCount; ++cmdIndex )
@@ -131,7 +131,7 @@ namespace sw::editor
                             cmdStack.jumpTo( stepNum );
                         fixed_string<constant::buffer::kMax32> mark;
                         formatstring( mark.data(), mark.capacity(), "history.step.%#", stepNum );
-                        EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 그 시점으로 되돌린다
+                        EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 그 시점으로 되돌린다
                         ImGui::SameLine( 0.0f, 0.0f );
                         ImGui::TextUnformatted( pCmdLabel );
                         ImGui::PopID();

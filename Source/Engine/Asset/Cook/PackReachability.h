@@ -73,7 +73,7 @@ namespace sw
          * @brief 뿌리에서 닿는 파일을 모읍니다.
          * @return 빠진 참조 · 읽지 못한 글 · 모르는 필수 데이터 종류가 하나라도 있으면(모두 오류로 남긴다) false 입니다. 그때도 끝까지 훑어 문제를 한 번에 알린다.
          */
-        [[nodiscard]] static bool collect( const AssetReferenceFields& fields, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
+        [[nodiscard]] static bool collect( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source,
                                            PackReachResult& outResult );
     };
 

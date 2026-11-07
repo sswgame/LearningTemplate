@@ -28,7 +28,7 @@ namespace
             tall.addRange( 0xAC00u, 0xD7A3u );
             tall._ascender = 1.0f;
             _fonts._pRasterizer->setFaceConfig( kTallPath, tall );
-            sw::FontCatalogDesc catalog{};
+            sw::FontCatalogDef catalog{};
             catalog._defaultFamily = "Latin";
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Tall", kTallPath );

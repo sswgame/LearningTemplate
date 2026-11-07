@@ -40,9 +40,9 @@ namespace
         SW_EXPECT_EQUAL( 0, report._unreadableRecordCount );
     }
 
-    sw::LedgerResult move( sw::MemoryServiceDatabase& database, const sw::LedgerTransferRequest& request, sw::LedgerTransferOutcome& outOutcome )
+    sw::LedgerResult move( sw::MemoryServiceDatabase& database, const sw::LedgerTransferRequest& request, sw::LedgerTransferResult& outResult )
     {
-        return sw::Ledger::executeTransfer( database, request, outOutcome );
+        return sw::Ledger::executeTransfer( database, request, outResult );
     }
 
     /** @brief 금 상한 50 인 정책입니다. */
@@ -59,17 +59,17 @@ namespace
 SW_TEST_CASE( LedgerTest, MovesAndRefusesOverdraft )
 {
     sw::MemoryServiceDatabase database;
-    sw::LedgerTransferOutcome outcome;
-    SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 100, "test/grant.1" ), outcome ) == sw::LedgerResult::Ok );
-    SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeAccount( kBob ), 30, "test/pay.1" ), outcome ) ==
+    sw::LedgerTransferResult  result;
+    SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 100, "test/grant.1" ), result ) == sw::LedgerResult::Ok );
+    SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeAccount( kBob ), 30, "test/pay.1" ), result ) ==
                      sw::LedgerResult::Ok );
     SW_EXPECT_EQUAL( int64( 70 ), readGold( database, kAlice ) );
     SW_EXPECT_EQUAL( int64( 30 ), readGold( database, kBob ) );
 
     const uint64 commitsBefore = database.getCommitCount();
-    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kBob ), sw::LedgerHolder::makeAccount( kAlice ), 31, "test/pay.2" ), outcome ) ==
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kBob ), sw::LedgerHolder::makeAccount( kAlice ), 31, "test/pay.2" ), result ) ==
                     sw::LedgerResult::InsufficientFunds );
-    SW_EXPECT_EQUAL( 0, outcome._failedPostingIndex );
+    SW_EXPECT_EQUAL( 0, result._failedPostingIndex );
     SW_EXPECT_EQUAL( commitsBefore, database.getCommitCount() );
     SW_EXPECT_EQUAL( int64( 30 ), readGold( database, kBob ) );
     expectAuditBalanced( database );
@@ -81,16 +81,16 @@ SW_TEST_CASE( LedgerTest, MovesAndRefusesOverdraft )
 SW_TEST_CASE( LedgerTest, JournalKeyIsIdempotent )
 {
     sw::MemoryServiceDatabase       database;
-    sw::LedgerTransferOutcome       outcome;
+    sw::LedgerTransferResult        result;
     const sw::LedgerTransferRequest grant = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 40, "test/grant.once" );
-    SW_REQUIRE_TRUE( move( database, grant, outcome ) == sw::LedgerResult::Ok );
-    SW_EXPECT_FALSE( outcome._bReplayed );
-    SW_REQUIRE_TRUE( move( database, grant, outcome ) == sw::LedgerResult::Ok );
-    SW_EXPECT_TRUE( outcome._bReplayed );
+    SW_REQUIRE_TRUE( move( database, grant, result ) == sw::LedgerResult::Ok );
+    SW_EXPECT_FALSE( result._bReplayed );
+    SW_REQUIRE_TRUE( move( database, grant, result ) == sw::LedgerResult::Ok );
+    SW_EXPECT_TRUE( result._bReplayed );
     SW_EXPECT_EQUAL( int64( 40 ), readGold( database, kAlice ) );
 
     const sw::LedgerTransferRequest different = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 41, "test/grant.once" );
-    SW_EXPECT_TRUE( move( database, different, outcome ) == sw::LedgerResult::JournalKeyReused );
+    SW_EXPECT_TRUE( move( database, different, result ) == sw::LedgerResult::JournalKeyReused );
     SW_EXPECT_EQUAL( int64( 40 ), readGold( database, kAlice ) );
     expectAuditBalanced( database );
 }
@@ -101,20 +101,20 @@ SW_TEST_CASE( LedgerTest, JournalKeyIsIdempotent )
 SW_TEST_CASE( LedgerTest, ExactlyOnceUnderStoreFaults )
 {
     sw::MemoryServiceDatabase database;
-    sw::LedgerTransferOutcome outcome;
+    sw::LedgerTransferResult  result;
 
     const sw::LedgerTransferRequest rejected = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 10, "test/grant.rejected" );
     database.armFault( sw::ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( move( database, rejected, outcome ) == sw::LedgerResult::Unavailable );
+    SW_EXPECT_TRUE( move( database, rejected, result ) == sw::LedgerResult::Unavailable );
     SW_EXPECT_EQUAL( int64( 0 ), readGold( database, kAlice ) );
-    SW_REQUIRE_TRUE( move( database, rejected, outcome ) == sw::LedgerResult::Ok ); // 같은 키로 다시
+    SW_REQUIRE_TRUE( move( database, rejected, result ) == sw::LedgerResult::Ok ); // 같은 키로 다시
     SW_EXPECT_EQUAL( int64( 10 ), readGold( database, kAlice ) );
 
     const sw::LedgerTransferRequest lost = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 5, "test/grant.lostreply" );
     database.armFault( sw::ServiceStoreFault::LoseCommitReply );
-    SW_EXPECT_TRUE( move( database, lost, outcome ) == sw::LedgerResult::Ok ); // 적용됐다 — 분개가 있다
-    SW_EXPECT_TRUE( outcome._bReplayed );
-    SW_REQUIRE_TRUE( move( database, lost, outcome ) == sw::LedgerResult::Ok );
+    SW_EXPECT_TRUE( move( database, lost, result ) == sw::LedgerResult::Ok ); // 적용됐다 — 분개가 있다
+    SW_EXPECT_TRUE( result._bReplayed );
+    SW_REQUIRE_TRUE( move( database, lost, result ) == sw::LedgerResult::Ok );
     SW_EXPECT_EQUAL( int64( 15 ), readGold( database, kAlice ) );
     expectAuditBalanced( database );
 }
@@ -125,18 +125,18 @@ SW_TEST_CASE( LedgerTest, ExactlyOnceUnderStoreFaults )
 SW_TEST_CASE( LedgerTest, CapAndInvalidRequests )
 {
     sw::MemoryServiceDatabase database;
-    sw::LedgerTransferOutcome outcome;
+    sw::LedgerTransferResult  result;
     const GoldCapPolicy       policy;
     sw::LedgerTransferRequest overCap = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 51, "test/grant.cap" );
     overCap._pPolicy                  = &policy;
-    SW_EXPECT_TRUE( move( database, overCap, outcome ) == sw::LedgerResult::CapExceeded );
+    SW_EXPECT_TRUE( move( database, overCap, result ) == sw::LedgerResult::CapExceeded );
     SW_EXPECT_EQUAL( int64( 0 ), readGold( database, kAlice ) );
 
-    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeAccount( kAlice ), 1, "test/self" ), outcome ) ==
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeAccount( kAlice ), 1, "test/self" ), result ) ==
                     sw::LedgerResult::Invalid );
-    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 0, "test/zero" ), outcome ) ==
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 0, "test/zero" ), result ) ==
                     sw::LedgerResult::Invalid );
-    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), -5, "test/negative" ), outcome ) ==
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), -5, "test/negative" ), result ) ==
                     sw::LedgerResult::Invalid );
     expectAuditBalanced( database );
 }

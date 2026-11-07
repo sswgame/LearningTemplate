@@ -1,5 +1,5 @@
 <UIDocument _schemaVersion="1">
-	<UIScreenDesc _layer="Loading" _bTakesFocus="false" _bShowCursor="false" />
+	<UIScreenDef _layer="Loading" _bTakesFocus="false" _bShowCursor="false" />
 	<BorderPanel _name="Backdrop">
 		<_background _color="0.03,0.035,0.05,1" />
 		<SafeZonePanel>

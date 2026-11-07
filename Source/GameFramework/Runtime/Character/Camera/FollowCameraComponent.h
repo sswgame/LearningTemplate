@@ -37,7 +37,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Camera", DisplayName = "Director", Tooltip = "Object with the game director that answers the camera focus" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Camera", DisplayName = "Offset", Tooltip = "Camera position relative to the focus", Units = m )
         float3 _offset;
         PROPERTY( Category = "Camera", DisplayName = "Min Far Plane", Tooltip = "Far plane is at least this far", Min = 1.0, Units = m )

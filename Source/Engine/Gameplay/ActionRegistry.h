@@ -101,15 +101,15 @@ namespace sw
         [[nodiscard]] static bool compileText( string_view text, string_view sourceName, GameActionCall& outCall );
         /** @brief 로그를 남기지 않는 `compileText` 입니다. 틀리면 까닭을 @p outError 에 적습니다. */
         [[nodiscard]] static bool tryCompileText( string_view text, GameActionCall& outCall, string& outError );
-        /** @brief 이미 읽은 칸으로 호출을 만듭니다. 칸을 XML 속성으로 읽는 행동 트리가 씁니다. @p fields 는 @p entry 의 칸 구조체여야 합니다. */
-        [[nodiscard]] static GameActionCall make( const ActionEntry& entry, const InstancedStruct& fields );
+        /** @brief 이미 읽은 칸으로 호출을 만듭니다. 칸을 XML 속성으로 읽는 행동 트리가 씁니다. @p params 는 @p entry 의 칸 구조체여야 합니다. */
+        [[nodiscard]] static GameActionCall make( const ActionEntry& entry, const InstancedStruct& params );
 
         /** @brief 글 @p text 의 이름 부분입니다(`flag.set(a)` → `flag.set`). */
         [[nodiscard]] static string_view getCallName( string_view text );
-        /** @brief 글을 칸 값으로 풉니다. 편집기가 칸을 보이려고 부릅니다. 틀리면 false 이고 @p outFields 는 비어 있습니다. */
-        [[nodiscard]] static bool tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outFields, string& outError );
+        /** @brief 글을 칸 값으로 풉니다. 편집기가 칸을 보이려고 부릅니다. 틀리면 false 이고 @p outParams 는 비어 있습니다. */
+        [[nodiscard]] static bool tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams, string& outError );
         /** @brief 칸 값을 글로 되돌립니다(`tryReadFields` 의 짝). 기본값과 같은 칸은 쓰지 않습니다. */
-        [[nodiscard]] static string formatText( const ActionEntry& entry, const InstancedStruct& fields );
+        [[nodiscard]] static string formatText( const ActionEntry& entry, const InstancedStruct& params );
 
         /** @brief 부릅니다. 빈 호출은 `Failed` 입니다. */
         ActionResult invoke( ActionContext& context ) const;
@@ -128,7 +128,7 @@ namespace sw
  * @brief 동작을 그 함수의 .cpp 에서 등록합니다(`namespace sw` 안, 파일 범위).
  * @param varName   파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName     데이터가 적는 이름(리터럴, `<영역>.<동작>`)
- * @param TParams   칸 구조체. 없으면 `VocabularyNoFields`
+ * @param TParams   칸 구조체. 없으면 `VocabularyNoParams`
  * @param pFunction `ActionResult( ActionContext&, const TParams& )` 함수의 주소
  */
 #define SW_GAME_ACTION( varName, pName, TParams, pFunction )                                                                                                     \

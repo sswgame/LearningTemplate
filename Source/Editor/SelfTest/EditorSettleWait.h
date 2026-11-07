@@ -32,7 +32,7 @@ namespace sw::editor
         EditorSettleWait();
 
         /** @brief 이번 프레임의 재료를 모아 판정합니다. 처음 부르면(또는 상태 저장소가 새로 섰으면) 기다림을 시작합니다. @p pActiveManager 는 에셋 일을 셀 활성 씬입니다(없으면 nullptr). */
-        [[nodiscard]] EditorSettleVerdict advance( GameObjectManager* pActiveManager );
+        [[nodiscard]] EditorSettleResult advance( GameObjectManager* pActiveManager );
         /** @brief 마지막 `advance` 가 무엇에 막혔는지 한 줄입니다 — 바깥 그물에 걸리거나 진동으로 질 때 붙인다. */
         const string& describeWait() const { return _waitingFor; }
         /** @brief 진동으로 질 때 알릴 한 줄입니다(할 일 없이 움직인 프레임 수와 마지막으로 움직인 창). */

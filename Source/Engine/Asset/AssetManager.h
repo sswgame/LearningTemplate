@@ -172,7 +172,7 @@ namespace sw
         /**
          * @brief @p work 를 워커에서 낮은 우선순위로 돌리는 에셋 일로 냅니다(로드 단계에 넣고 제출한다). 에셋 로드와 실행 중에 짓는 파생 에셋(외형이 합친 메시)이 쓴다.
          * @details 게임 모듈은 태스크 매니저를 보지 않는다(`HostOnly`) — 모듈의 백그라운드 일은 이 창구로 내서 결정적 실행의 프레임 경계 대기가 함께 센다(언리얼 DDC 빌드 태스크 자리).
-         *          모듈을 내리기 전에는 엔진이 모든 태스크를 기다린다(`LiveReloadManager::drainBeforeUnload`).
+         *          모듈을 내리기 전에는 엔진이 모든 태스크를 기다린다(`LiveReloadManager::pollBeforeUnload`).
          */
         void launchLoadWork( string_view name, const TaskDelegate& work );
         /** @brief 로드 단계의 태스크만 끝날 때까지 기다립니다(@p pOwner 는 오래 걸릴 때의 로그 이름). 로드 태스크를 낸 캐시가 지워지기 전에 부른다. */

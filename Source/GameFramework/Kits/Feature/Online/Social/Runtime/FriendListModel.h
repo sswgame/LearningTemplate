@@ -78,8 +78,8 @@ namespace sw
 
     private:
         vector<FriendEntry>        _listEntry;
-        vector<SocialNotification> _listDrained;
-        DrainLease                 _drainLease;
+        vector<SocialNotification> _listPolled;
+        ConsumerLease              _consumerLease;
         SocialClient*              _pClient;
         uint64                     _revision;
         uint32                     _pendingRequestCount;

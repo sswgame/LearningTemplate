@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/DeckBattle/DeckBattle.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -16,18 +16,18 @@ namespace sw
 {
     namespace
     {
-        struct DeckBattleInternal
+        struct CardBattleInternal
         {
-            [[nodiscard]] static bool parseEffectKind( string_view text, DeckBattleEffectKind& outKind )
+            [[nodiscard]] static bool parseEffectKind( string_view text, CardBattleEffectKind& outKind )
             {
                 if ( StringUtil::equals( text, "Damage" ) )
-                    outKind = DeckBattleEffectKind::Damage;
+                    outKind = CardBattleEffectKind::Damage;
                 else if ( StringUtil::equals( text, "Block" ) )
-                    outKind = DeckBattleEffectKind::Block;
+                    outKind = CardBattleEffectKind::Block;
                 else if ( StringUtil::equals( text, "Draw" ) )
-                    outKind = DeckBattleEffectKind::Draw;
+                    outKind = CardBattleEffectKind::Draw;
                 else if ( StringUtil::equals( text, "Energy" ) )
-                    outKind = DeckBattleEffectKind::Energy;
+                    outKind = CardBattleEffectKind::Energy;
                 else
                     return false;
                 return true;
@@ -52,11 +52,11 @@ namespace sw
 
 namespace sw
 {
-    DeckBattleCatalog::DeckBattleCatalog()
+    CardBattleCatalog::CardBattleCatalog()
     {
     }
 
-    uint32 DeckBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 CardBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 카드는 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
@@ -64,22 +64,22 @@ namespace sw
         {
             if ( StringUtil::equals( node.getName(), "Card" ) == false )
             {
-                SW_LOG_ERROR_ID( "DeckBattle.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "CardBattle.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
                 continue;
             }
-            DeckBattleCardDef def;
+            CardBattleCardDef def;
             bool              bValid = XMLFields::readFields( node, def, sourceName, { "effects" } );
             XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, XMLReadUtil::MissingValue::Reject,
                                              [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
             {
-                DeckBattleEffect effect;
-                const bool       bKind = DeckBattleInternal::parseEffectKind( kindName, effect._kind );
+                CardBattleEffect effect;
+                const bool       bKind = CardBattleInternal::parseEffectKind( kindName, effect._kind );
                 effect._amount         = amount;
                 if ( bKind && bAmount )
                     def._listEffect.push_back( effect );
                 else
                 {
-                    SW_LOG_ERROR_ID( "DeckBattle.CardUnreadableEffect", "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
+                    SW_LOG_ERROR_ID( "CardBattle.CardUnreadableEffect", "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
                     bValid = false;
                 }
             } );
@@ -89,7 +89,7 @@ namespace sw
         return loadedCount;
     }
 
-    DeckBattle::DeckBattle()
+    CardBattle::CardBattle()
         : _listDefIndex{}
         , _drawPile{}
         , _hand{}
@@ -103,12 +103,12 @@ namespace sw
         , _playerBlock{ 0 }
         , _energy{ 0 }
         , _turn{ 0 }
-        , _phase{ DeckBattlePhase::Lost }
+        , _phase{ CardBattlePhase::Lost }
     {
     }
 
-    bool DeckBattle::initialize( const DeckBattleCatalog* pCatalog, const DeckBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
-                                 const DeckBattleEnemy& enemy, uint32 seed )
+    bool CardBattle::initialize( const CardBattleCatalog* pCatalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
+                                 const CardBattleEnemy& enemy, uint32 seed )
     {
         _pCatalog = pCatalog;
         _settings = settings;
@@ -135,19 +135,19 @@ namespace sw
         if ( _drawPile.isEmpty() )
             return false;
         _drawPile.shuffle( _random );
-        _phase = DeckBattlePhase::PlayerTurn;
+        _phase = CardBattlePhase::PlayerTurn;
         startTurn();
         return true;
     }
 
-    const DeckBattleCardDef* DeckBattle::getCardDef( const Card& card ) const
+    const CardBattleCardDef* CardBattle::getCardDef( const Card& card ) const
     {
         if ( _pCatalog == nullptr || card._id >= _listDefIndex.size() )
             return nullptr;
         return &_pCatalog->getAt( static_cast<size_t>( _listDefIndex[card._id] ) );
     }
 
-    void DeckBattle::startTurn()
+    void CardBattle::startTurn()
     {
         ++_turn;
         _playerBlock = 0;
@@ -155,7 +155,7 @@ namespace sw
         drawCards( _settings._drawPerTurn );
     }
 
-    void DeckBattle::drawCards( int32 count )
+    void CardBattle::drawCards( int32 count )
     {
         for ( int32 drawn = 0; drawn < count; ++drawn )
         {
@@ -175,28 +175,28 @@ namespace sw
         }
     }
 
-    void DeckBattle::applyEffect( const DeckBattleEffect& effect )
+    void CardBattle::applyEffect( const CardBattleEffect& effect )
     {
         switch ( effect._kind )
         {
-            case DeckBattleEffectKind::Damage:
+            case CardBattleEffectKind::Damage:
             {
                 const int32 absorbed = MathUtil::min( _enemy._block, effect._amount );
                 _enemy._block -= absorbed;
                 _enemy._hp = MathUtil::max( 0, _enemy._hp - ( effect._amount - absorbed ) );
                 break;
             }
-            case DeckBattleEffectKind::Block:
+            case CardBattleEffectKind::Block:
             {
                 _playerBlock += effect._amount;
                 break;
             }
-            case DeckBattleEffectKind::Draw:
+            case CardBattleEffectKind::Draw:
             {
                 drawCards( effect._amount );
                 break;
             }
-            case DeckBattleEffectKind::Energy:
+            case CardBattleEffectKind::Energy:
             {
                 _energy += effect._amount;
                 break;
@@ -204,18 +204,18 @@ namespace sw
         }
     }
 
-    bool DeckBattle::playCard( int32 handIndex )
+    bool CardBattle::playCard( int32 handIndex )
     {
-        const bool bCannotPlayCard = _phase != DeckBattlePhase::PlayerTurn || handIndex < 0 || _hand.getCount() <= handIndex;
+        const bool bCannotPlayCard = _phase != CardBattlePhase::PlayerTurn || handIndex < 0 || _hand.getCount() <= handIndex;
         if ( bCannotPlayCard )
             return false;
-        const DeckBattleCardDef* pDef = getCardDef( _hand.getAt( handIndex ) );
+        const CardBattleCardDef* pDef = getCardDef( _hand.getAt( handIndex ) );
         if ( pDef == nullptr || _energy < pDef->_cost )
             return false;
         _energy -= pDef->_cost;
         // 효과(뽑기)가 손을 바꾸기 전에 낸 패를 손에서 뺀다.
         const Card card = _hand.removeAt( handIndex );
-        for ( const DeckBattleEffect& effect : pDef->_listEffect )
+        for ( const CardBattleEffect& effect : pDef->_listEffect )
         {
             applyEffect( effect );
         }
@@ -224,41 +224,41 @@ namespace sw
         else
             _discardPile.push( card );
         if ( _enemy._hp <= 0 )
-            _phase = DeckBattlePhase::Won;
+            _phase = CardBattlePhase::Won;
         return true;
     }
 
-    void DeckBattle::endTurn()
+    void CardBattle::endTurn()
     {
-        if ( _phase != DeckBattlePhase::PlayerTurn )
+        if ( _phase != CardBattlePhase::PlayerTurn )
             return;
         (void)_hand.drawInto( _discardPile, _hand.getCount() );
         // 적 차례에서는 방어가 적 차례 시작에 사라진다.
         _enemy._block = 0;
         if ( _enemy._listIntent.empty() == false )
         {
-            const DeckBattleEffect& intent = _enemy._listIntent[static_cast<size_t>( _enemy._intentIndex ) % _enemy._listIntent.size()];
+            const CardBattleEffect& intent = _enemy._listIntent[static_cast<size_t>( _enemy._intentIndex ) % _enemy._listIntent.size()];
             ++_enemy._intentIndex;
-            if ( intent._kind == DeckBattleEffectKind::Damage )
+            if ( intent._kind == CardBattleEffectKind::Damage )
             {
                 const int32 absorbed = MathUtil::min( _playerBlock, intent._amount );
                 _playerBlock -= absorbed;
                 _playerHP = MathUtil::max( 0, _playerHP - ( intent._amount - absorbed ) );
             }
-            else if ( intent._kind == DeckBattleEffectKind::Block )
+            else if ( intent._kind == CardBattleEffectKind::Block )
             {
                 _enemy._block += intent._amount;
             }
         }
         if ( _playerHP <= 0 )
         {
-            _phase = DeckBattlePhase::Lost;
+            _phase = CardBattlePhase::Lost;
             return;
         }
         startTurn();
     }
 
-    void DeckBattle::writeState( Archive& outArchive ) const
+    void CardBattle::writeState( Archive& outArchive ) const
     {
         outArchive << static_cast<uint32>( _listDefIndex.size() );
         for ( const int32 defIndex : _listDefIndex )
@@ -270,7 +270,7 @@ namespace sw
         _discardPile.writeState( outArchive );
         _exhaustPile.writeState( outArchive );
         outArchive << static_cast<uint32>( _enemy._listIntent.size() );
-        for ( const DeckBattleEffect& intent : _enemy._listIntent )
+        for ( const CardBattleEffect& intent : _enemy._listIntent )
         {
             outArchive << static_cast<uint8>( intent._kind );
             outArchive << intent._amount;
@@ -286,12 +286,12 @@ namespace sw
         outArchive << static_cast<uint8>( _phase );
     }
 
-    bool DeckBattle::readState( Archive& archive )
+    bool CardBattle::readState( Archive& archive )
     {
         if ( _pCatalog == nullptr )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 설정은 사본도 그대로 가지고 있다.
-        DeckBattle battle   = *this;
+        CardBattle battle   = *this;
         uint32     defCount = 0;
         // 카드마다 정의 id 이름(4) 이상
         if ( archive.readCount( 4, defCount ) == false )
@@ -315,16 +315,16 @@ namespace sw
         // 의도마다 종류(1) + 양(4)
         if ( archive.readCount( 5, intentCount ) == false )
             return false;
-        battle._enemy._listIntent.assign( intentCount, DeckBattleEffect{} );
-        for ( DeckBattleEffect& intent : battle._enemy._listIntent )
+        battle._enemy._listIntent.assign( intentCount, CardBattleEffect{} );
+        for ( CardBattleEffect& intent : battle._enemy._listIntent )
         {
             uint8 kind = 0;
             archive >> kind;
             archive >> intent._amount;
             // 음수 공격은 `endTurn` 의 빼기가 더하기로 뒤집혀 체력과 방어를 채운다
-            if ( kind > static_cast<uint8>( DeckBattleEffectKind::Energy ) || intent._amount < 0 )
+            if ( kind > static_cast<uint8>( CardBattleEffectKind::Energy ) || intent._amount < 0 )
                 return false;
-            intent._kind = static_cast<DeckBattleEffectKind>( kind );
+            intent._kind = static_cast<CardBattleEffectKind>( kind );
         }
         archive >> battle._enemy._hp;
         archive >> battle._enemy._block;
@@ -339,14 +339,14 @@ namespace sw
         archive >> phase;
         const bool bEnemyValid         = 0 <= battle._enemy._hp && 0 <= battle._enemy._block && 0 <= battle._enemy._intentIndex;
         const bool bPlayerValid        = 0 <= battle._playerHP && battle._playerHP <= _settings._playerHP && 0 <= battle._playerBlock && 0 <= battle._energy && 0 <= battle._turn;
-        const bool bInvalidBattleState = archive.isError() || phase > static_cast<uint8>( DeckBattlePhase::Lost ) || bEnemyValid == false || bPlayerValid == false;
+        const bool bInvalidBattleState = archive.isError() || phase > static_cast<uint8>( CardBattlePhase::Lost ) || bEnemyValid == false || bPlayerValid == false;
         if ( bInvalidBattleState )
             return false;
-        battle._phase = static_cast<DeckBattlePhase>( phase );
+        battle._phase = static_cast<CardBattlePhase>( phase );
         // 끝난 판은 끝난 이유가 값에 남는다(이긴 적 없는데 이겼다고 적은 바이트를 받지 않는다).
-        const bool bPhaseValid = ( battle._phase != DeckBattlePhase::Won || battle._enemy._hp == 0 ) && ( battle._phase != DeckBattlePhase::Lost || battle._playerHP == 0 );
+        const bool bPhaseValid = ( battle._phase != CardBattlePhase::Won || battle._enemy._hp == 0 ) && ( battle._phase != CardBattlePhase::Lost || battle._playerHP == 0 );
         const bool bPilesValid = battle._hand.getCount() <= _settings._handLimit &&
-                                 DeckBattleInternal::arePilesExactlyDeck( { &battle._drawPile, &battle._hand, &battle._discardPile, &battle._exhaustPile }, battle._listDefIndex.size() );
+                                 CardBattleInternal::arePilesExactlyDeck( { &battle._drawPile, &battle._hand, &battle._discardPile, &battle._exhaustPile }, battle._listDefIndex.size() );
         if ( bPhaseValid == false || bPilesValid == false )
             return false;
         *this = std::move( battle );
@@ -356,6 +356,6 @@ namespace sw
 
 namespace sw
 {
-    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<DeckBattleCatalog>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( DeckBattleCatalog, DeckBattleCatalog, SW_KIT_API, DeckBattleCatalog::kAssetType.withLoader( AssetTypeLoader::of<DeckBattleCatalog>( MemoryTag::Game ) ) );
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<CardBattleCatalog>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( CardBattleCatalog, CardBattleCatalog, SW_KIT_API, CardBattleCatalog::kAssetType.withLoader( AssetTypeLoader::of<CardBattleCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

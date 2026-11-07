@@ -13,7 +13,7 @@ namespace sw
         struct TradeServiceInternal
         {
             /** @brief 거래 요청 하나를 저장소 스레드에서 실행합니다. 입력은 복사해 보관합니다. */
-            class TradeWork final : public IServiceStoreWork
+            class TradeJob final : public IServiceStoreJob
             {
             public:
                 TradeCommand _command;
@@ -22,8 +22,8 @@ namespace sw
                 AccountID    _toID;
                 uint64       _seed;
 
-                TradeWork( TradeService* pService, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, TradeOperation operation,
-                           uint64 requestTag, UnixMilliseconds nowMs )
+                TradeJob( TradeService* pService, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, TradeOperation operation,
+                          uint64 requestTag, UnixMilliseconds nowMs )
                     : _command{}
                     , _tradeID{ 0 }
                     , _fromID{ kInvalidAccountID }
@@ -139,16 +139,16 @@ namespace sw
 
     void TradeService::recoverOwnedTrades( UnixMilliseconds nowMs )
     {
-        unique_ptr<TradeServiceInternal::TradeWork> work =
-            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Recover, uint64{ 0 }, nowMs );
+        unique_ptr<TradeServiceInternal::TradeJob> work =
+            make_unique<TradeServiceInternal::TradeJob>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Recover, uint64{ 0 }, nowMs );
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
     void TradeService::invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<TradeServiceInternal::TradeWork> work =
-            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Invite, requestTag, nowMs );
+        unique_ptr<TradeServiceInternal::TradeJob> work =
+            make_unique<TradeServiceInternal::TradeJob>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Invite, requestTag, nowMs );
         work->_fromID = fromID;
         work->_toID   = toID;
         work->_seed   = ++_nextSeed ^ static_cast<uint64>( nowMs.count() );
@@ -202,8 +202,8 @@ namespace sw
 
     void TradeService::closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs )
     {
-        unique_ptr<TradeServiceInternal::TradeWork> work =
-            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Leave, uint64{ 0 }, nowMs );
+        unique_ptr<TradeServiceInternal::TradeJob> work =
+            make_unique<TradeServiceInternal::TradeJob>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Leave, uint64{ 0 }, nowMs );
         work->_fromID          = accountID;
         work->_command._reason = reason;
         ++_pendingCount;
@@ -219,8 +219,8 @@ namespace sw
                 ++tradeIt;
                 continue;
             }
-            unique_ptr<TradeServiceInternal::TradeWork> work =
-                make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Expire, uint64{ 0 }, nowMs );
+            unique_ptr<TradeServiceInternal::TradeJob> work =
+                make_unique<TradeServiceInternal::TradeJob>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Expire, uint64{ 0 }, nowMs );
             work->_tradeID = tradeIt->first;
             ++_pendingCount;
             tradeIt = _mapTradeToDeadline.erase( tradeIt ); // 결과가 닫힘이면 그대로 두고, 아직이면 다시 넣는다
@@ -249,8 +249,8 @@ namespace sw
 
     void TradeService::submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        unique_ptr<TradeServiceInternal::TradeWork> work =
-            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, operation, requestTag, nowMs );
+        unique_ptr<TradeServiceInternal::TradeJob> work =
+            make_unique<TradeServiceInternal::TradeJob>( this, _pPolicy, _pLedgerPolicy, _serverID, operation, requestTag, nowMs );
         work->_tradeID = tradeID;
         work->_command = command;
         ++_pendingCount;

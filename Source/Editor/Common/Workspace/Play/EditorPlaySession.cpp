@@ -358,7 +358,7 @@ namespace sw::editor
         return pData != nullptr && pData->_sceneEditHoldCount > 0;
     }
 
-    void EditorPlaySession::noteSceneEditWhileHeld()
+    void EditorPlaySession::recordSceneEditWhileHeld()
     {
         PlaySessionData* pData = findData();
         if ( pData != nullptr )

@@ -67,7 +67,7 @@ namespace sw::editor
              * @brief 창의 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 위치와 같은 식으로 구한다).
              * @details 떠 있는 창은 제목 표시줄 오른쪽 끝, 도킹된 창은 보이는 탭의 오른쪽 끝이다. 안 보이는 탭과 접힌 창은 남기지 않는다.
              */
-            static void noteCloseButton( const utf8* pTitle, const bool* pOpen )
+            static void recordCloseButton( const utf8* pTitle, const bool* pOpen )
             {
                 const ImGuiWindow* pWindow   = ImGui::GetCurrentWindow();
                 const bool         bDocked   = pWindow->DockIsActive;
@@ -143,7 +143,7 @@ namespace sw::editor
         const bool bVisible = ImGui::Begin( EditorPanelText::makeWindowName( pTitle ).c_str(), pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
         if ( bNoPadding )
             ImGui::PopStyleVar();
-        EditorChromeInternal::noteCloseButton( pTitle, pOpen );
+        EditorChromeInternal::recordCloseButton( pTitle, pOpen );
         return bVisible;
     }
 

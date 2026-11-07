@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Runner/AutomationRunnerFields.h"
+#include "Engine/Automation/Runner/AutomationRunnerParams.h"
 
 namespace sw
 {
@@ -102,21 +102,21 @@ namespace sw
 
     bool AutomationStepArgsUtil::parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError )
     {
-        AutomationExpectImageFields fields;
-        if ( step.readFields( fields, outError ) == false )
+        AutomationExpectImageParams params;
+        if ( step.readFields( params, outError ) == false )
             return false;
         // 골든 이름은 파일 이름의 한 조각이다 — 경로 · 점을 받지 않는다(`<시나리오>.<이름>.<백엔드>.ppm` 이 하나로 읽혀야 한다).
-        const bool bPlainName = fields._golden.empty() == false && fields._golden.find_first_of( "/\\.:" ) == string::npos;
+        const bool bPlainName = params._golden.empty() == false && params._golden.find_first_of( "/\\.:" ) == string::npos;
         if ( bPlainName == false )
         {
-            outError = step.describe() + ": golden must be a plain name (no path, no dot), got '" + fields._golden + "'";
+            outError = step.describe() + ": golden must be a plain name (no path, no dot), got '" + params._golden + "'";
             return false;
         }
-        outArgs._golden    = fields._golden;
-        outArgs._tolerance = fields._tolerance;
-        if ( fields._region.empty() == false && AutomationImageMetric::tryParseRegion( fields._region, outArgs._region ) == false )
+        outArgs._golden    = params._golden;
+        outArgs._tolerance = params._tolerance;
+        if ( params._region.empty() == false && AutomationImageMetric::tryParseRegion( params._region, outArgs._region ) == false )
         {
-            outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + fields._region + "'";
+            outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + params._region + "'";
             return false;
         }
         return true;

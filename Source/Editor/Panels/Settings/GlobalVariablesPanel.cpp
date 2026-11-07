@@ -449,7 +449,7 @@ namespace sw::editor
             markSessionDirty();
         fixed_string<constant::buffer::kMax128> mark;
         formatstring( mark.data(), mark.capacity(), "globalVariables.value.%#", info._name.c_str() );
-        EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 그 변수의 값을 바꾼다
+        EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 그 변수의 값을 바꾼다
 
         // Reset 컬럼 — 기본값과 다른 줄에만 단추를 둔다(언리얼 디테일의 "기본값으로" 화살표). 모든 줄의 단추는 바뀐 줄을 찾기 어렵게 했다(uiaudit 10).
         ImGui::TableNextColumn();
@@ -461,7 +461,7 @@ namespace sw::editor
                 markSessionDirty();
             }
             formatstring( mark.data(), mark.capacity(), "globalVariables.reset.%#", info._name.c_str() );
-            EditorSelfTestMarks::note( mark.c_str() );
+            EditorSelfTestMarks::record( mark.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetVariable" ) );
         }
     }

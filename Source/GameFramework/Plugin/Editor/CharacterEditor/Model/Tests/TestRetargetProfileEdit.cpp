@@ -232,7 +232,7 @@ SW_TEST_CASE( RetargetPreviewModelTest, OnlyASkeletonPathChangeIsStaleAndFramesT
     float32 radius = 0.0f;
     SW_EXPECT_FALSE( preview.findFrameSphere( center, radius ) );
 
-    preview.adoptSkeletons( profile, &skeleton, &skeleton );
+    preview.applySkeletons( profile, &skeleton, &skeleton );
     SW_EXPECT_FALSE( preview.isStale( profile ) );
     SW_EXPECT_TRUE( preview.consumeFramePending() );
     SW_EXPECT_FALSE( preview.consumeFramePending() );
@@ -255,7 +255,7 @@ SW_TEST_CASE( RetargetPreviewModelTest, RetargetPoseMovesOnlyThePosedTarget )
         RetargetPoseBone{ hashed_string( "root" ), float3{ 90.0f, 0.0f, 0.0f } }
     } );
     RetargetPreviewModel preview;
-    preview.adoptSkeletons( profile, &skeleton, &skeleton );
+    preview.applySkeletons( profile, &skeleton, &skeleton );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( preview.getTargetPosePositions().size() ) );
     const float3 end       = preview.getTargetPosePositions().back();
     const float3 reference = preview.getTargetReferencePositions().back();
@@ -280,7 +280,7 @@ SW_TEST_CASE( RetargetPreviewModelTest, FrameSphereHoldsEveryBoneAndAMissingSide
 {
     const Skeleton       skeleton = Util::makeSkeleton();
     RetargetPreviewModel preview;
-    preview.adoptSkeletons( Util::makeProfile(), nullptr, &skeleton );
+    preview.applySkeletons( Util::makeProfile(), nullptr, &skeleton );
     SW_EXPECT_FALSE( preview.isSourceReady() );
     SW_EXPECT_TRUE( preview.isTargetReady() );
     SW_EXPECT_TRUE( preview.getSourcePositions().empty() );

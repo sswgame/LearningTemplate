@@ -104,7 +104,7 @@ namespace sw
         void advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition );
         /** @brief @p team 편의 투사체 중 @p center 를 중심으로 반경 @p radius 안에 있는 것을 꺼내고(맞은 것), 꺼낸 수를 반환합니다. */
         int32 takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit );
-        void  drainEvents( vector<ActionCombatEvent>& outListEvent );
+        void  pollEvents( vector<ActionCombatEvent>& outListEvent );
 
         bool                           isFrozen() const { return _hitstopFrames > 0; }
         int32                          getHitstopFrames() const { return _hitstopFrames; }

@@ -40,12 +40,12 @@ namespace
             return args._listName.empty() == false;
         }
 
-        static float64 readFixed( const GameplayContext& /*context*/, const VocabularyNoFields& /*args*/ )
+        static float64 readFixed( const GameplayContext& /*context*/, const VocabularyNoParams& /*args*/ )
         {
             return 7.0;
         }
 
-        static ActionResult runCount( ActionContext& context, const VocabularyNoFields& /*params*/ )
+        static ActionResult runCount( ActionContext& context, const VocabularyNoParams& /*params*/ )
         {
             TestValues* pValues = context._world.find<TestValuesSlot>();
             if ( pValues == nullptr )
@@ -64,8 +64,8 @@ namespace
 
     SW_CONDITION( testName, ConditionNameArg, &XTestUtil::readName );
     SW_CONDITION( testAny, ConditionNameListArgs, &XTestUtil::readAny );
-    SW_CONDITION( testFixed, VocabularyNoFields, &XTestUtil::readFixed );
-    SW_GAME_ACTION( TestCount, "test.count", VocabularyNoFields, &XTestUtil::runCount );
+    SW_CONDITION( testFixed, VocabularyNoParams, &XTestUtil::readFixed );
+    SW_GAME_ACTION( TestCount, "test.count", VocabularyNoParams, &XTestUtil::runCount );
 } // namespace
 
 /** @brief [ConditionExprTest] 우선순위 · 괄호 · 부정 · 비교 · 음수 · 소수. 빈 식은 참이다 */

@@ -155,10 +155,10 @@ namespace sw
                     pDevice->getResourceFactory()->destroyTexture( attachment._texture );
             }
         }
-        forget();
+        clear();
     }
 
-    void TransientAttachmentPool::forget()
+    void TransientAttachmentPool::clear()
     {
         _mapAttachment.clear();
         _mapForward.clear();

@@ -84,7 +84,7 @@ namespace sw
         (void)UIEventRouter::makePathTo( tree, tree._focusedWidget, outPath );
     }
 
-    void UIFocusManager::forgetTree( const WidgetTree& tree )
+    void UIFocusManager::removeTree( const WidgetTree& tree )
     {
         if ( _pFocusedTree != &tree )
             return;

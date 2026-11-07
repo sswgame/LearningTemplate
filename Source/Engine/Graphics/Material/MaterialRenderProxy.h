@@ -70,11 +70,11 @@ namespace sw
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수 버퍼를 돌려줍니다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 핸들만 버립니다. */
-        void forgetRHI( IRHIDevice* pDevice ) override;
+        void clearRHI( IRHIDevice* pDevice ) override;
 
     private:
         /** @brief 핸들을 비우고 다음 `sync` 가 다시 올리게 합니다. */
-        void forgetHandles();
+        void clearHandles();
 
     private:
         RHIDeviceBuffer                      _constant;

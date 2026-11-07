@@ -119,7 +119,7 @@ namespace sw
             /** @brief 메시 캐시의 키 해시입니다(값의 비트를 섞습니다). */
             struct DescHash
             {
-                size_t operator()( const SlicedSpriteDesc& desc ) const noexcept
+                size_t operator()( const SlicedSpriteDef& desc ) const noexcept
                 {
                     uint32 arrWord[7]{};
                     Memory::copy( &arrWord[0], &desc._size, sizeof( float32 ) * 2 );
@@ -135,7 +135,7 @@ namespace sw
             };
 
             /** @brief 9-슬라이스와 타일 메시 표입니다 — 에셋 매니저가 내장 캐시로 만들어 소유한다. 사라진 항목은 새 항목을 넣을 때 정리한다(크기를 끌어 바꾸는 편집은 크기마다 항목을 남긴다). */
-            class SlicedMeshCache final : public WeakInternCache<SlicedSpriteDesc, Mesh, DescHash>
+            class SlicedMeshCache final : public WeakInternCache<SlicedSpriteDef, Mesh, DescHash>
             {
             public:
                 static constexpr const utf8* kAssetKindName = "SlicedSpriteMesh";
@@ -146,7 +146,7 @@ namespace sw
             };
 
             /** @brief 값에 맞는 정점을 만들어 메시 하나로 만듭니다. 정점이 없으면(크기 0) nullptr 입니다. */
-            static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDesc& desc )
+            static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDef& desc )
             {
                 vector<RHIVertex> listVertex;
                 SpriteMeshBuilder::makeSlicedVertices( desc, listVertex );
@@ -165,13 +165,13 @@ namespace sw
 
 namespace sw
 {
-    bool SlicedSpriteDesc::operator==( const SlicedSpriteDesc& other ) const
+    bool SlicedSpriteDef::operator==( const SlicedSpriteDef& other ) const
     {
         return Memory::compare( &_size, &other._size, sizeof( _size ) ) == 0 && Memory::compare( &_border, &other._border, sizeof( _border ) ) == 0 &&
                _bTiled == other._bTiled;
     }
 
-    void SpriteMeshBuilder::makeSlicedVertices( const SlicedSpriteDesc& desc, vector<RHIVertex>& outListVertex )
+    void SpriteMeshBuilder::makeSlicedVertices( const SlicedSpriteDef& desc, vector<RHIVertex>& outListVertex )
     {
         using Internal = SpriteMeshBuilderInternal;
         outListVertex.clear();
@@ -218,7 +218,7 @@ namespace sw
         }
     }
 
-    shared_ptr<Mesh> SpriteMeshBuilder::acquireSlicedMesh( const SlicedSpriteDesc& desc )
+    shared_ptr<Mesh> SpriteMeshBuilder::acquireSlicedMesh( const SlicedSpriteDef& desc )
     {
         SW_MEMORY_SCOPE( Mesh );
         return SpriteMeshBuilderInternal::getSlicedMeshCache().acquire( desc, &SpriteMeshBuilderInternal::createSlicedMesh );

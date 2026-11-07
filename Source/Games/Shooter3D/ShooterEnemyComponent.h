@@ -12,8 +12,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
-#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
 
 namespace sw
 {
@@ -66,11 +66,11 @@ namespace sw
          * @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드).
          * @return 체력이 범위 밖(1 보다 작음)이라 거절되면 false 이다. 거절하면 아무것도 바꾸지 않으므로 부르는 쪽이 오브젝트를 정리한다(체력을 올려 대신 서지 않는다).
          */
-        [[nodiscard]] bool launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
+        [[nodiscard]] bool launch( GameObjectHandle gameMode, const float3& position, float32 yaw, float32 health, float32 speed );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
-        bool isAlive() const { return _bLaunched == SW_TRUE && _vitality.isAlive(); }
-        bool isDead() const { return _bLaunched == SW_TRUE && _vitality.isAlive() == false; }
+        bool isAlive() const { return _bLaunched == SW_TRUE && _combatHealth.isAlive(); }
+        bool isDead() const { return _bLaunched == SW_TRUE && _combatHealth.isAlive() == false; }
         /** @brief 체력 원천의 읽기입니다 — 쓰러짐은 `isDead()`. */
         HealthReading getHealthReading() const override;
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
@@ -84,7 +84,7 @@ namespace sw
         float32 getReach() const { return _reach; }
         /** @brief 손 닿는 거리의 이 비율 안이면 멈춰 섭니다(내비 에이전트 정지 거리와 AI 조종자가 같이 읽습니다). */
         float32          getStopFraction() const { return _stopFraction; }
-        GameObjectHandle getDirector() const { return _director; }
+        GameObjectHandle getGameMode() const { return _gameMode; }
 
     private:
         /** @brief 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). 이번 피해로 쓰러졌으면 true 입니다(이미 쓰러졌으면 false). */
@@ -102,7 +102,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Enemy", DisplayName = "Director", Tooltip = "Object with the ShooterGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Units = m )
         float32 _radius;
         PROPERTY( Category = "Enemy", DisplayName = "Height", Tooltip = "Top of the hit capsule above the feet", Min = 0.0, Units = m )
@@ -134,7 +134,7 @@ namespace sw
 
         float3            _position; ///< 발
         float32           _yaw;
-        Vitality          _vitality; ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
+        CombatHealth      _combatHealth; ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
         float32           _speed;
         float32           _phaseTime;
         Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)

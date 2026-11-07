@@ -19,7 +19,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
@@ -138,18 +138,18 @@ namespace sw
 
         // --- 문서 ---------------------------------------------------------------
         /**
-         * @brief UI 문서 @p documentPath 로 화면을 생성해 올립니다. 문서의 `UIScreenDesc` 로 만들며, 바인딩 식은 화면이 보관합니다(`UIScreen::getBindings`).
+         * @brief UI 문서 @p documentPath 로 화면을 생성해 올립니다. 문서의 `UIScreenDef` 로 만들며, 바인딩 식은 화면이 보관합니다(`UIScreen::getBindings`).
          * @return 읽지 못하거나 생성할 수 없으면(모르는 타입, 속성, 값) 무효 핸들이며, 오류(파일, 줄)를 로그에 남깁니다.
          */
         [[nodiscard]] UIScreenHandle openScreen( string_view documentPath ) { return openScreen<UIScreen>( documentPath ); }
-        /** @brief 문서를 C++ 화면 클래스 @p ScreenType 으로 엽니다. `onCommand` 와 `onBack` 을 재정의한 클래스여야 하며, 생성자는 `( const UIScreenDesc&, unique_ptr<Widget> )` 형태입니다. */
+        /** @brief 문서를 C++ 화면 클래스 @p ScreenType 으로 엽니다. `onCommand` 와 `onBack` 을 재정의한 클래스여야 하며, 생성자는 `( const UIScreenDef&, unique_ptr<Widget> )` 형태입니다. */
         template <typename ScreenType>
         [[nodiscard]] UIScreenHandle openScreen( string_view documentPath )
         {
-            UIScreenDesc          desc{};
-            vector<UIBindingDesc> listBinding{};
-            vector<string>        listStyleSheet{};
-            unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
+            UIScreenDef          desc{};
+            vector<UIBindingDef> listBinding{};
+            vector<string>       listStyleSheet{};
+            unique_ptr<Widget>   root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
             if ( root == nullptr )
                 return kInvalidUIScreenHandle;
             return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
@@ -318,9 +318,9 @@ namespace sw
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
         /** @brief 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`)입니다 — `closeScreensOfModule` 을 부릅니다. */
         void               onModuleUnloadingNotice( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
-        unique_ptr<Widget> instantiateDocument( string_view documentPath, UIScreenDesc& outDesc, vector<UIBindingDesc>& outListBinding, vector<string>& outListStyleSheet );
+        unique_ptr<Widget> instantiateDocument( string_view documentPath, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding, vector<string>& outListStyleSheet );
         /** @brief 문서로 생성한 화면에 문서 경로, 바인딩, 스타일 시트를 기록하고 올립니다. */
-        UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDesc> listBinding, vector<string> listStyleSheet );
+        UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDef> listBinding, vector<string> listStyleSheet );
         /** @brief 화면의 스타일 시트를 테마 @p themeName(빈 이름이면 지금 테마) 시트, 화면 시트 순서로 다시 적용하고 트리 전체를 다시 맞추게 합니다. */
         void rebuildStyleSet( UIScreen& screen, const hashed_string& themeName = hashed_string{} );
         /** @brief 테마가 바뀐 알림(`UIThemeController::onThemeChanged`)입니다 — 모든 화면의 스타일 시트를 다시 적용합니다. */

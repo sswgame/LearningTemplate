@@ -197,7 +197,7 @@ namespace sw
         const bool bNotRegisteredObstacle = pObstacle == nullptr || pObstacle->_navIndex >= _listObstacle.size() || _listObstacle[pObstacle->_navIndex] != pObstacle;
         if ( bNotRegisteredObstacle )
             return;
-        _tileRebaker.forgetObstacle( *pObstacle, _listRuntime ); // 다시 베이크 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다
+        _tileRebaker.untrackObstacle( *pObstacle, _listRuntime ); // 다시 베이크 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다
         NavMeshObstacleComponent* pMoved    = _listObstacle.back();
         _listObstacle[pObstacle->_navIndex] = pMoved;
         pMoved->_navIndex                   = pObstacle->_navIndex;

@@ -22,12 +22,12 @@ namespace sw
     void ArenaEnemyAIComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
-        const ArenaGameModeComponent* pDirector = ArenaGameModeComponent::findForPawn( pawn );
+        const ArenaGameModeComponent* pGameMode = ArenaGameModeComponent::findForPawn( pawn );
         const GameObject*             pOwner    = pawn.getOwner();
         float3                        selfPosition{};
         float3                        targetPosition{};
-        const bool                    bHasTarget = pDirector != nullptr && pOwner != nullptr && pDirector->findUnitPosition( pOwner->getHandle(), selfPosition ) &&
-                                pDirector->findNearestHostilePosition( pOwner->getHandle(), targetPosition );
+        const bool                    bHasTarget = pGameMode != nullptr && pOwner != nullptr && pGameMode->findUnitPosition( pOwner->getHandle(), selfPosition ) &&
+                                pGameMode->findNearestHostilePosition( pOwner->getHandle(), targetPosition );
         if ( bHasTarget == false )
         {
             setStateName( "Idle" );

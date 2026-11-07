@@ -31,7 +31,7 @@ namespace
         const sw::string      text = sw::string( "<Routine id=\"test\" " ) + pAttributes + "/>";
         sw::ScheduleCondition condition;
         if ( document.parse( text ) )
-            (void)condition.readFromNode( document.getRoot(), sw::ScheduleConditionSchema{}, "test", "test" ); // 틀린 읽기는 오류 로그가 시험을 깬다
+            (void)condition.loadFromXML( document.getRoot(), sw::ScheduleConditionSchema{}, "test", "test" ); // 틀린 읽기는 오류 로그가 시험을 깬다
         return condition;
     }
 
@@ -171,7 +171,7 @@ SW_TEST_CASE( ScheduleConditionTest, ReadsAttributesAndRejectsBrokenData )
     sw::XMLDocument document;
     SW_EXPECT_TRUE( document.parse( R"(<Routine id="rainy" days="Sat,Sun" weathers="rain" daysOfSeason="1,2,5-9" weeks="1,3" from="Spring 20" to="Summer 5" phases="Dawn,Day" minAffinity="2"/>)" ) );
     sw::ScheduleCondition condition;
-    SW_EXPECT_TRUE( condition.readFromNode( document.getRoot(), vocabulary, "test", "rainy" ) );
+    SW_EXPECT_TRUE( condition.loadFromXML( document.getRoot(), vocabulary, "test", "rainy" ) );
     SW_EXPECT_EQUAL( size_t( 7 ), condition._listClause.size() ); // 요일 · 날씨 · 계절의 날 · 주 · 날짜 · 때 · 호감도
 
     // 범위는 풀어서 읽는다(1, 2, 5 ~ 9) — 맨 끝 날 9 는 참이고 3 은 거짓이다.
@@ -186,14 +186,14 @@ SW_TEST_CASE( ScheduleConditionTest, ReadsAttributesAndRejectsBrokenData )
     sw::XMLDocument inverted;
     SW_EXPECT_TRUE( inverted.parse( R"(<Routine id="never" minAffinity="5" maxAffinity="2"/>)" ) );
     sw::ScheduleCondition invertedCondition;
-    SW_EXPECT_FALSE( invertedCondition.readFromNode( inverted.getRoot(), vocabulary, "test", "never" ) );
+    SW_EXPECT_FALSE( invertedCondition.loadFromXML( inverted.getRoot(), vocabulary, "test", "never" ) );
 
     SW_EXPECT_LOG( "Schedule.FlagsInvalid" );
     SW_EXPECT_LOG( "ConditionExpr.Invalid" ); // 식을 읽는 쪽이 어디가 틀렸는지 먼저 알린다
     sw::XMLDocument brokenFlags;
     SW_EXPECT_TRUE( brokenFlags.parse( R"(<Routine id="broken" flags="bridgeFixed &amp;&amp;"/>)" ) );
     sw::ScheduleCondition brokenCondition;
-    SW_EXPECT_FALSE( brokenCondition.readFromNode( brokenFlags.getRoot(), vocabulary, "test", "broken" ) );
+    SW_EXPECT_FALSE( brokenCondition.loadFromXML( brokenFlags.getRoot(), vocabulary, "test", "broken" ) );
 }
 
 /**

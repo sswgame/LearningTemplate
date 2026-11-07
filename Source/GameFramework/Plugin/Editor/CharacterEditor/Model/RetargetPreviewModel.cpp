@@ -64,10 +64,10 @@ namespace sw::editor
         // 스켈레톤은 런타임과 같은 공유 캐시의 한 벌을 읽는다(빈 경로는 읽지 않는다 — nullptr).
         const shared_ptr<const Skeleton> pSource = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() );
         const shared_ptr<const Skeleton> pTarget = SharedAssetCache<Skeleton>::acquire( profile.getTargetSkeletonPath() );
-        adoptSkeletons( profile, pSource.get(), pTarget.get() );
+        applySkeletons( profile, pSource.get(), pTarget.get() );
     }
 
-    void RetargetPreviewModel::adoptSkeletons( const RetargetProfile& profile, const Skeleton* pSource, const Skeleton* pTarget )
+    void RetargetPreviewModel::applySkeletons( const RetargetProfile& profile, const Skeleton* pSource, const Skeleton* pTarget )
     {
         _sourcePath    = profile.getSourceSkeletonPath();
         _targetPath    = profile.getTargetSkeletonPath();

@@ -27,17 +27,17 @@ namespace sw
             return HashUtil::mix32( seed ^ HashUtil::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
         }
 
-        /** @brief 기체 정의에서 기반 `Vitality` 설정을 만듭니다(범위는 `Vitality::initialize` 가 본다). */
-        VitalitySettings makeMechVitality( const MechDef& mech )
+        /** @brief 기체 정의에서 기반 `CombatHealth` 설정을 만듭니다(범위는 `CombatHealth::initialize` 가 본다). */
+        CombatHealthSettings makeMechCombatHealth( const MechDef& mech )
         {
-            VitalitySettings vitality;
-            vitality._maxHealth          = mech._maxHealth;
-            vitality._poiseMax           = mech._downMax;
-            vitality._poiseRegenDelay    = mech._downRecoveryDelay;
-            vitality._poiseRegenRate     = mech._downRecovery;
-            vitality._poiseBreakDuration = mech._downTime;
-            vitality._bDownedEnabled     = SW_FALSE;
-            return vitality;
+            CombatHealthSettings combatHealth;
+            combatHealth._maxHealth          = mech._maxHealth;
+            combatHealth._poiseMax           = mech._downMax;
+            combatHealth._poiseRegenDelay    = mech._downRecoveryDelay;
+            combatHealth._poiseRegenRate     = mech._downRecovery;
+            combatHealth._poiseBreakDuration = mech._downTime;
+            combatHealth._bDownedEnabled     = SW_FALSE;
+            return combatHealth;
         }
 
         /** @brief 기체 정의에서 부스트(과열형 `ResourceGauge`) 설정을 만듭니다(범위는 `ResourceGauge::initialize` 가 본다). */
@@ -231,7 +231,7 @@ namespace sw
                 }
                 writeInput( outArchive, pilot._input );
                 writeInput( outArchive, pilot._previousInput );
-                pilot._vitality.writeState( outArchive );
+                pilot._combatHealth.writeState( outArchive );
                 pilot._boost.writeState( outArchive );
                 pilot._lockOn.writeState( outArchive );
                 pilot._melee.writeState( outArchive );
@@ -261,11 +261,11 @@ namespace sw
             }
 
             /** @brief 읽은 조종사 상태와 체력 상태가 맞는지 봅니다. 나와 있으면 살아 있고, 격추됐으면 죽어 있습니다(판이 끝나 내려간 조종사와 출격 전은 어느 쪽이든 됩니다). */
-            [[nodiscard]] static bool isVitalityFittingState( const MechPilot& pilot )
+            [[nodiscard]] static bool isCombatHealthFittingState( const MechPilot& pilot )
             {
                 if ( pilot._state == MechPilotState::Active || pilot._state == MechPilotState::Down )
-                    return pilot._vitality.isAlive();
-                return pilot._state != MechPilotState::Destroyed || pilot._vitality.isDead();
+                    return pilot._combatHealth.isAlive();
+                return pilot._state != MechPilotState::Destroyed || pilot._combatHealth.isDead();
             }
 
             static bool isPressed( uint8 current, uint8 previous ) { return current == SW_TRUE && previous == SW_FALSE; }
@@ -361,7 +361,7 @@ namespace sw
         , _projectiles{}
         , _listTeamName{}
         , _eventBuffer{}
-        , _listVitalityScratch{}
+        , _listCombatHealthScratch{}
         , _listMatchScratch{}
         , _listCandidateScratch{}
         , _listProjectileEventScratch{}
@@ -423,9 +423,9 @@ namespace sw
             if ( pMech == nullptr || pMech->_listMode.empty() || isMechDataComplete( *pMech ) == false )
                 return -1;
             // 기체를 바꿀 때마다 체력과 부스트를 다시 짜므로(equipMech) 덱의 모든 기체가 지금 범위 안이어야 한다(거절 사유는 각 initialize 가 남긴다).
-            Vitality      probeVitality;
+            CombatHealth  probeCombatHealth;
             ResourceGauge probeBoost;
-            if ( probeVitality.initialize( makeMechVitality( *pMech ) ) == false || probeBoost.initialize( makeMechBoost( *pMech ) ) == false )
+            if ( probeCombatHealth.initialize( makeMechCombatHealth( *pMech ) ) == false || probeBoost.initialize( makeMechBoost( *pMech ) ) == false )
                 return -1;
             deckCost += pMech->_cost;
             pilot._listDeckMech.push_back( pMech );
@@ -564,9 +564,9 @@ namespace sw
         return scale;
     }
 
-    void MechArenaWorld::drainEvents( vector<MechArenaEvent>& outListEvent )
+    void MechArenaWorld::pollEvents( vector<MechArenaEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -589,7 +589,7 @@ namespace sw
     {
         _match.update( deltaTime );
         _listMatchScratch.clear();
-        _match.drainEvents( _listMatchScratch );
+        _match.pollEvents( _listMatchScratch );
         for ( const MatchEvent& event : _listMatchScratch )
         {
             if ( event._kind == MatchEvent::Kind::Respawned )
@@ -683,7 +683,7 @@ namespace sw
             return true;
         if ( isMechDataComplete( *pMech ) == false )
             return false;
-        if ( pilot._vitality.initialize( makeMechVitality( *pMech ) ) == false )
+        if ( pilot._combatHealth.initialize( makeMechCombatHealth( *pMech ) ) == false )
             return false;
 
         if ( pilot._boost.initialize( makeMechBoost( *pMech ) ) == false )
@@ -749,7 +749,7 @@ namespace sw
         pilot._state = MechPilotState::Active;
         if ( bRespawn == false )
             return;
-        pilot._vitality.setInvulnerable( _settings._respawnInvulnerable );
+        pilot._combatHealth.setInvulnerable( _settings._respawnInvulnerable );
         pushEvent( MechArenaEvent::Kind::Respawned, pilotIndex, -1, static_cast<float32>( pilot._deckIndex ), pilot.getMech()->_id );
         triggerSkills( pilotIndex, MechSkillTrigger::OnRespawn );
     }
@@ -961,9 +961,9 @@ namespace sw
         if ( bKnockdown )
             finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다
 
-        const VitalityDamageResult result = target._vitality.applyDamage( finalDamage, finalDown, attacker );
-        _listVitalityScratch.clear();
-        target._vitality.drainEvents( _listVitalityScratch );
+        const CombatHealthDamageResult result = target._combatHealth.applyDamage( finalDamage, finalDown, attacker );
+        _listCombatHealthScratch.clear();
+        target._combatHealth.pollEvents( _listCombatHealthScratch );
         if ( result._bIgnored == SW_TRUE )
             return;
         const int32 victimParticipant   = target._listParticipant.empty() ? -1 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
@@ -1058,7 +1058,7 @@ namespace sw
                 continue;
             if ( trigger == MechSkillTrigger::HealthBelow )
             {
-                const bool bBelow = pilot._vitality.isAlive() && pilot._vitality.getHealthRatio() < pSkill->_threshold;
+                const bool bBelow = pilot._combatHealth.isAlive() && pilot._combatHealth.getHealthRatio() < pSkill->_threshold;
                 if ( bBelow == false || pilot._listSkillSpent[static_cast<size_t>( index )] == SW_TRUE )
                     continue;
             }
@@ -1087,9 +1087,9 @@ namespace sw
             const MechDef*    pMech = pilot.getMech();
             MechPilotSnapshot entry;
             entry._position      = pilot._position;
-            entry._health        = pilot._vitality.getHealth();
+            entry._health        = pilot._combatHealth.getHealth();
             entry._boostHeat     = pilot._boost.getRatio();
-            entry._downRatio     = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._vitality.getPoise() / pMech->_downMax ) : 0.0f;
+            entry._downRatio     = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._combatHealth.getPoise() / pMech->_downMax ) : 0.0f;
             entry._team          = pilot._team;
             entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ) : -1;
             entry._mode          = pilot._mode;
@@ -1097,7 +1097,7 @@ namespace sw
             entry._comboStage    = pilot._comboStage;
             entry._state         = pilot._state;
             entry._bOverheated   = pilot._boost.isOverheated() ? SW_TRUE : SW_FALSE;
-            entry._bInvulnerable = pilot._vitality.isInvulnerable() ? SW_TRUE : SW_FALSE;
+            entry._bInvulnerable = pilot._combatHealth.isInvulnerable() ? SW_TRUE : SW_FALSE;
             const int32 shot     = findSlot( pilot, MechWeaponKind::Shot );
             if ( shot >= 0 )
             {
@@ -1282,7 +1282,7 @@ namespace sw
         if ( bTimerRead == false || MechArenaWorldInternal::readSkillTimers( archive, outPilot ) == false )
             return false;
         const bool bBodyRead = MechArenaWorldInternal::readInput( archive, outPilot._input ) && MechArenaWorldInternal::readInput( archive, outPilot._previousInput ) &&
-                               outPilot._vitality.readState( archive ) && outPilot._boost.readState( archive ) && outPilot._lockOn.readState( archive ) &&
+                               outPilot._combatHealth.readState( archive ) && outPilot._boost.readState( archive ) && outPilot._lockOn.readState( archive ) &&
                                outPilot._melee.readState( archive, *_pMoveCatalog );
         if ( bBodyRead == false )
             return false;
@@ -1297,7 +1297,7 @@ namespace sw
                  StateArchiveUtil::readCountdown( archive, outPilot._listSpecialCooldown[index] ) == false )
                 return false;
         }
-        return MechArenaWorldInternal::isMeleeStateValid( outPilot ) && MechArenaWorldInternal::isVitalityFittingState( outPilot );
+        return MechArenaWorldInternal::isMeleeStateValid( outPilot ) && MechArenaWorldInternal::isCombatHealthFittingState( outPilot );
     }
 
     void MechArenaWorld::stepPilot( int32 pilotIndex, float32 deltaTime )
@@ -1312,14 +1312,14 @@ namespace sw
         const MechInput& previous = pilot._previousInput;
         const MechDef*   pMech    = pilot.getMech();
 
-        pilot._vitality.update( deltaTime );
-        _listVitalityScratch.clear();
-        pilot._vitality.drainEvents( _listVitalityScratch );
-        if ( pilot._state == MechPilotState::Down && pilot._vitality.isPoiseBroken() == false )
+        pilot._combatHealth.update( deltaTime );
+        _listCombatHealthScratch.clear();
+        pilot._combatHealth.pollEvents( _listCombatHealthScratch );
+        if ( pilot._state == MechPilotState::Down && pilot._combatHealth.isPoiseBroken() == false )
         {
             // 기상: 다운치는 가득 찬 채로 일어나고 잠시 무적이다.
             pilot._state = MechPilotState::Active;
-            pilot._vitality.setInvulnerable( pMech->_wakeInvulnerable );
+            pilot._combatHealth.setInvulnerable( pMech->_wakeInvulnerable );
             pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
         }
         pilot._staggerRemaining.update( deltaTime );

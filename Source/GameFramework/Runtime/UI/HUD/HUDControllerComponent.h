@@ -27,7 +27,7 @@ namespace sw
 
     /**
      * @class HUDControllerComponent
-     * @brief HUD 문서를 플레이 시작에 열고 끝에 닫습니다. 문서(`_documentPath`)는 `*.ui.xml` 이며 문서의 `UIScreenDesc` 가 HUD 층을 가리킵니다.
+     * @brief HUD 문서를 플레이 시작에 열고 끝에 닫습니다. 문서(`_documentPath`)는 `*.ui.xml` 이며 문서의 `UIScreenDef` 가 HUD 층을 가리킵니다.
      * @details 언리얼의 `AHUD` 와 Lyra 의 HUD 레이아웃에 해당한다.
      *          값은 게임 컴포넌트가 뷰모델(`getOrCreateViewModel<T>`, 이 컴포넌트가 소유)에 넣고, 문서의 `{bind:필드}` 가 위젯 속성에 연결한다. 위젯을 이름으로 찾지 않는다.
      *          뷰모델 타입은 게임이 정한다. HUD 항목(슈터의 탄약과 조준선, 승마의 탑승 상태와 스태미나)은 게임마다 다르므로 기반에 항목을 두지 않는다.

@@ -84,7 +84,7 @@ namespace sw
      *          `fallback` 은 이름 목록 글이라 손으로 푼다.
      */
     REFLECT()
-    struct SW_API SocketFields
+    struct SW_API SocketParams
     {
         REFLECT_BODY();
 
@@ -108,7 +108,7 @@ namespace sw
 
     /** @brief `<VirtualBone>` 의 칸입니다. */
     REFLECT()
-    struct SW_API VirtualBoneFields
+    struct SW_API VirtualBoneParams
     {
         REFLECT_BODY();
 
@@ -124,7 +124,7 @@ namespace sw
 
     /** @brief `<SocketKinds><Kind>` 의 칸입니다. */
     REFLECT()
-    struct SW_API SocketKindFields
+    struct SW_API SocketKindParams
     {
         REFLECT_BODY();
 

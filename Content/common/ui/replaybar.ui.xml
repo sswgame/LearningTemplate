@@ -3,7 +3,7 @@
 		리플레이 막대 — IntentReplayBar 가 연다(IntentNetworkWiring 3절). 이름 Scrub(슬라이더, 값 = 재생 틱) · TimeText(현재 / 가장 먼 시각) · PlayPauseLabel 은 코드가 맞추고,
 		버튼 명령 Replay.StepBack(1 초 되감기) · Replay.TogglePause · Replay.Close 를 코드가 받는다. 게임은 이 문서를 복사해 모습만 바꾼다.
 	-->
-	<UIScreenDesc _layer="GameMenu" _bPausesGame="false" _defaultFocus="PlayPause" />
+	<UIScreenDef _layer="GameMenu" _bPausesGame="false" _defaultFocus="PlayPause" />
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Bar" _contentPadding="16,8,16,8">

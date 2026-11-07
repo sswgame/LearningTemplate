@@ -2,60 +2,60 @@
 <!-- 머티리얼 그래프 견본 — 색 × 텍스처 기본색에 테두리 자체 발광(하위 그래프 rim_term). 생성물: rim_glow.gen.material · shaders/matgraph/matgraph_rim_glow_<해시>.hlsl. 값 변형은 rim_glow_red.material 처럼 `_base` 로 적는다. -->
 <MaterialGraphDef formatVersion="0">
 	<_listNode>
-		<MaterialGraphNodeDesc _name="Tint" _kind="ColorParameter" _position="0,0">
+		<MaterialGraphNodeDef _name="Tint" _kind="ColorParameter" _position="0,0">
 			<_listValue>
 				<MaterialGraphValue _name="Parameter" _value="_tint" />
 				<MaterialGraphValue _name="Default" _value="0.2 0.4 0.9 1" />
 			</_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Albedo" _kind="TextureSample" _position="0,160">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Albedo" _kind="TextureSample" _position="0,160">
 			<_listValue>
 				<MaterialGraphValue _name="Parameter" _value="_albedo" />
 			</_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Base" _kind="Multiply" _position="280,60">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Base" _kind="Multiply" _position="280,60">
 			<_listLink>
 				<MaterialGraphLink _pin="A" _fromNode="Tint" _fromPin="RGB" />
 				<MaterialGraphLink _pin="B" _fromNode="Albedo" _fromPin="RGB" />
 			</_listLink>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Rough" _kind="ScalarParameter" _position="280,220">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Rough" _kind="ScalarParameter" _position="280,220">
 			<_listValue>
 				<MaterialGraphValue _name="Parameter" _value="_roughness" />
 				<MaterialGraphValue _name="Default" _value="0.4" />
 			</_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="RimColor" _kind="ColorParameter" _position="0,340">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="RimColor" _kind="ColorParameter" _position="0,340">
 			<_listValue>
 				<MaterialGraphValue _name="Parameter" _value="_rimColor" />
 				<MaterialGraphValue _name="Default" _value="0.1 0.8 1 1" />
 			</_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="RimPower" _kind="ScalarParameter" _position="0,500">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="RimPower" _kind="ScalarParameter" _position="0,500">
 			<_listValue>
 				<MaterialGraphValue _name="Parameter" _value="_rimPower" />
 				<MaterialGraphValue _name="Default" _value="3" />
 				<MaterialGraphValue _name="Min" _value="0.5" />
 				<MaterialGraphValue _name="Max" _value="8" />
 			</_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Rim" _kind="Subgraph" _assetPath="game/empty/materials/matgraph/rim_term.matgraph.xml" _position="280,500">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Rim" _kind="Subgraph" _assetPath="game/empty/materials/matgraph/rim_term.matgraph.xml" _position="280,500">
 			<_listLink>
 				<MaterialGraphLink _pin="Power" _fromNode="RimPower" _fromPin="Out" />
 			</_listLink>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Glow" _kind="Multiply" _position="560,400">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Glow" _kind="Multiply" _position="560,400">
 			<_listLink>
 				<MaterialGraphLink _pin="A" _fromNode="RimColor" _fromPin="RGB" />
 				<MaterialGraphLink _pin="B" _fromNode="Rim" _fromPin="Rim" />
 			</_listLink>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Out" _kind="Output" _position="840,160">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Out" _kind="Output" _position="840,160">
 			<_listLink>
 				<MaterialGraphLink _pin="BaseColor" _fromNode="Base" _fromPin="Out" />
 				<MaterialGraphLink _pin="Roughness" _fromNode="Rough" _fromPin="Out" />
 				<MaterialGraphLink _pin="Emissive" _fromNode="Glow" _fromPin="Out" />
 			</_listLink>
-		</MaterialGraphNodeDesc>
+		</MaterialGraphNodeDef>
 	</_listNode>
 </MaterialGraphDef>

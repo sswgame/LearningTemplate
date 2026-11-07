@@ -7,7 +7,7 @@
  *          - 실행기 스레드 하나에서 돈다.
  */
 #pragma once
-#include "Core/Container/DrainGate.h"
+#include "Core/Container/ConsumerGate.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -92,7 +92,7 @@ namespace sw
         void               finishStep( string_view errorKey );
         void               finishWithResult( uint16 errorCode, uint8 result );
         string             expandText( const string& text );
-        void               drainNotifications();
+        void               pollNotifications();
         void               pollAccountReplies();
         void               pollMatchResult( MonotonicMilliseconds nowMs );
         void               pollGameSession();
@@ -118,9 +118,9 @@ namespace sw
         MatchmakingClient          _matchmakingClient;
         LiveOpsClient              _liveOpsClient;
         LoadBotGameSession         _gameSession;
-        DrainLease                 _chatLease;
-        DrainLease                 _socialLease;
-        DrainLease                 _matchmakingLease;
+        ConsumerLease              _chatLease;
+        ConsumerLease              _socialLease;
+        ConsumerLease              _matchmakingLease;
         GameRandom                 _random;
         vector<Frame>              _listFrame;
         vector<AccountClientReply> _listAccountReply;

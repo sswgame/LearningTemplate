@@ -52,7 +52,7 @@ namespace sw
 namespace sw
 {
     NileBuildingComponent::NileBuildingComponent()
-        : _director{}
+        : _gameMode{}
         , _buildingIndex{ -1 }
         , _modelScale{ 0.5f }
         , _decorationScale{ 3.0f }
@@ -68,9 +68,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void NileBuildingComponent::assignBuilding( GameObjectHandle director, int32 buildingIndex )
+    void NileBuildingComponent::assignBuilding( GameObjectHandle gameMode, int32 buildingIndex )
     {
-        _director      = director;
+        _gameMode      = gameMode;
         _buildingIndex = buildingIndex;
         _shownKey      = -1;
     }
@@ -143,11 +143,11 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileGameModeComponent* pDirector = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const NileGameModeComponent* pGameMode = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
         // 같은 그룹의 다른 건물과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).
-        const vector<CityBuilding>& listBuilding         = pDirector->getCity().getBuildings();
+        const vector<CityBuilding>& listBuilding         = pGameMode->getCity().getBuildings();
         const bool                  bInRange             = 0 <= _buildingIndex && _buildingIndex < static_cast<int32>( listBuilding.size() );
         const CityBuilding*         pBuilding            = bInRange ? listBuilding.data() + _buildingIndex : nullptr;
         const bool                  bBuildingUnavailable = pBuilding == nullptr || pBuilding->_bAlive == SW_FALSE || pBuilding->_pDef == nullptr;

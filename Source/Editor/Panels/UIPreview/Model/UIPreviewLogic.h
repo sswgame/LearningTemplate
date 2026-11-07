@@ -77,7 +77,7 @@ namespace sw::editor
      * @brief 고른 위젯의 부모 패널이 읽는 슬롯 필드 그룹입니다(디자이너의 Slot 필드가 이것만 보여 준다 — UMG 디자이너가 부모 패널의 슬롯 타입만 보여 주는 것과 같다).
      * @details 슬롯은 모든 패널의 필드를 한 구조체(`WidgetLayoutSlot`)에 모았으므로, 패널 종류마다 슬롯 타입을 두지 않고 "어느 그룹을 보이는지" 만 고른다.
      */
-    struct UIPreviewSlotFields
+    struct UIPreviewSlotParams
     {
         bool _bPaddingAlignment{ false }; ///< 여백 · 가로/세로 정렬(캔버스 밖의 모든 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool _bBoxSize{ false };          ///< 크기 규칙 · 채우기 비율(상자 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -142,9 +142,9 @@ namespace sw::editor
         /** @brief 누름 · 안에 있음을 잊습니다(트리를 새로 지었거나 입력 흉내를 껐다). */
         void reset();
         /** @brief 포인터가 안에 있음만 잊습니다 — 다음 프레임이 Move 를 다시 보내 호버를 새 구조로 다시 잡습니다(위젯이 붙거나 떨어졌다). */
-        void forgetInside() { _bInside = SW_FALSE; }
+        void removeInside() { _bInside = SW_FALSE; }
         /** @brief 포인터를 @p position 으로 옮겼다고 적습니다(확인 입력 흉내가 포커스 위젯 가운데로 옮겼다). */
-        void notePosition( const float2& position ) { _lastPosition = position; }
+        void recordPosition( const float2& position ) { _lastPosition = position; }
 
     private:
         float2 _lastPosition; ///< 마지막으로 보낸 위치(UI 단위)
@@ -241,7 +241,7 @@ namespace sw::editor
         /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
         static bool canEditSlotByHandle( const Widget& widget );
         /** @brief 위젯 @p widget 의 부모 패널 종류로 Slot 필드에 보일 필드 그룹을 고릅니다. 부모가 없으면(루트) 모두 false 입니다. */
-        static UIPreviewSlotFields findSlotFields( const Widget& widget );
+        static UIPreviewSlotParams findSlotFields( const Widget& widget );
         /**
          * @brief 손잡이 @p handle 을 UI 단위 @p deltaUI 만큼 끈 결과를 슬롯에 적용합니다. 가운데는 두 오프셋을 함께, 변은 그 변의 오프셋만 옮깁니다(자동 크기이면 오른쪽 · 아래 오프셋은 쓰이지 않아 옮기지 않는다).
          * @return 슬롯이 바뀌었으면 true 입니다.

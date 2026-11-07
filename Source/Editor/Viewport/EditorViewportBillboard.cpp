@@ -150,7 +150,7 @@ namespace sw::editor
                                         0, nullptr, ImGuiItemFlags_NoNav );
                         fixed_string<constant::buffer::kMax128> mark;
                         formatstring( mark.data(), mark.capacity(), "viewport.billboard.%#", item._pObject->getName().c_str() );
-                        EditorSelfTestMarks::note( mark.c_str() );
+                        EditorSelfTestMarks::record( mark.c_str() );
                     }
                 }
             }

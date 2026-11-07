@@ -15,10 +15,10 @@ namespace sw
 
 namespace sw
 {
-    bool FontCatalogDesc::loadFromAsset( const AssetID& assetID )
+    bool FontCatalogDef::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();
-        *this                       = FontCatalogDesc{};
+        *this                       = FontCatalogDef{};
         if ( XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "FontCatalog.FontCatalogCouldNot", "[Text] Font catalog could not be read or holds unknown keys: %#", assetPath );
@@ -27,9 +27,9 @@ namespace sw
         return validate();
     }
 
-    bool FontCatalogDesc::loadFromXMLText( string_view xmlText )
+    bool FontCatalogDef::loadFromXMLText( string_view xmlText )
     {
-        *this = FontCatalogDesc{};
+        *this = FontCatalogDef{};
         if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR_ID( "FontCatalog.FontCatalogTextCould", "[Text] Font catalog text could not be read or holds unknown keys" );
@@ -38,15 +38,15 @@ namespace sw
         return validate();
     }
 
-    bool FontCatalogDesc::validate() const
+    bool FontCatalogDef::validate() const
     {
         bool           bValid = true;
         vector<string> listName;
-        for ( const FontFamilyDesc& family : _listFamily )
+        for ( const FontFamilyDef& family : _listFamily )
         {
             listName.push_back( family._name );
         }
-        for ( const SystemFontFamilyDesc& family : _listSystemFamily )
+        for ( const SystemFontFamilyDef& family : _listSystemFamily )
         {
             listName.push_back( family._name );
         }
@@ -67,14 +67,14 @@ namespace sw
                 }
             }
         }
-        for ( const FontFamilyDesc& family : _listFamily )
+        for ( const FontFamilyDef& family : _listFamily )
         {
             if ( family._listFace.empty() )
             {
                 SW_LOG_ERROR_ID( "FontCatalog.FontFamilyNoFaces", "[Text] Font family '%#' has no faces", family._name.c_str() );
                 bValid = false;
             }
-            for ( const FontFaceDesc& face : family._listFace )
+            for ( const FontFaceDef& face : family._listFace )
             {
                 if ( face._path.empty() )
                 {
@@ -91,18 +91,18 @@ namespace sw
         return bValid;
     }
 
-    const FontFamilyDesc* FontCatalogDesc::findFamily( string_view name ) const
+    const FontFamilyDef* FontCatalogDef::findFamily( string_view name ) const
     {
-        return VectorUtil::findIf( _listFamily, [&]( const FontFamilyDesc& family )
+        return VectorUtil::findIf( _listFamily, [&]( const FontFamilyDef& family )
         { return StringUtil::equals( family._name, name, true ); } );
     }
 
-    const SystemFontFamilyDesc* FontCatalogDesc::findSystemFamily( string_view name ) const
+    const SystemFontFamilyDef* FontCatalogDef::findSystemFamily( string_view name ) const
     {
-        return VectorUtil::findIf( _listSystemFamily, [&]( const SystemFontFamilyDesc& family )
+        return VectorUtil::findIf( _listSystemFamily, [&]( const SystemFontFamilyDef& family )
         { return StringUtil::equals( family._name, name, true ); } );
     }
 
     /** @brief 글꼴 카탈로그 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_ASSET_TYPE( FontCatalog, AssetTypeDef::makeDataFile( "fontcatalog", AssetPathRule{ {}, {}, "fontcatalog.xml" }, AssetTypeLoader::of<FontCatalogDesc>() ) );
+    SW_ASSET_TYPE( FontCatalog, AssetTypeDef::makeDataFile( "fontcatalog", AssetPathRule{ {}, {}, "fontcatalog.xml" }, AssetTypeLoader::of<FontCatalogDef>() ) );
 } // namespace sw

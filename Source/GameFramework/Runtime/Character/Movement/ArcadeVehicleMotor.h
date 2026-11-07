@@ -155,7 +155,7 @@ namespace sw
         void update( const ArcadeVehicleInput& input, float32 deltaTime );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 첫 걸음에만 주며, 진행한 걸음 수를 반환합니다. */
         int32 advance( const ArcadeVehicleInput& input, float32 frameTime );
-        void  drainEvents( vector<ArcadeVehicleEvent>& outListEvent );
+        void  pollEvents( vector<ArcadeVehicleEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다. 알림을 쓰지 않는 쪽이 받을 목록을 만들어 복사하지 않도록 둔 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 

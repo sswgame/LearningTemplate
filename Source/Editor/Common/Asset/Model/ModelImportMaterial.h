@@ -33,7 +33,7 @@ namespace sw::editor
          * @param outListToon glTF 머티리얼 순서의 툰 머티리얼입니다. VRM 이 아니면 비어 있습니다.
          * @return 모르는 키나 값이 있으면 오류를 남기고 false 를 반환합니다.
          */
-        [[nodiscard]] static bool readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDesc>& outListToon,
+        [[nodiscard]] static bool readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDef>& outListToon,
                                                      vector<string>& outListIgnored );
 
         /**
@@ -110,7 +110,7 @@ namespace sw::editor
          * @return 글을 읽지 못하면 false 입니다.
          */
         [[nodiscard]] static bool makeSharedMaterialText( string_view fullText, string_view templateText, string_view templatePath, SharedMaterialText& outShared );
-        /** @brief 공유 머티리얼을 가리키는 슬롯 파일 한 줄(`<MaterialDesc formatVersion name parent/>`)입니다. */
+        /** @brief 공유 머티리얼을 가리키는 슬롯 파일 한 줄(`<MaterialDef formatVersion name parent/>`)입니다. */
         [[nodiscard]] static string makeSlotMaterialText( string_view fileStem, string_view sharedAssetID );
         /** @brief 공유 머티리얼(`<x>/models/_shared/materials/<키>.material`)과 슬롯 파일을 씁니다. 원본이 `models_raw/` 아래가 아니거나 쓰지 못하면 false 입니다. */
         [[nodiscard]] static bool writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, string_view sourcePath, string_view sideFolder );

@@ -1076,14 +1076,14 @@ namespace sw
             if ( _mapInstanceMember.find( objectID ) == _mapInstanceMember.end() )
                 nextFileID = MathUtil::max( nextFileID, fileID + 1 );
         }
-        const auto noteHeldNode = [&nextFileID]( const SceneDocument::SceneObjectNode& node )
+        const auto recordHeldNode = [&nextFileID]( const SceneDocument::SceneObjectNode& node )
         {
             if ( node._instanceAnchorFileID == 0 )
                 nextFileID = MathUtil::max( nextFileID, node._fileID + 1 );
         };
         for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
         {
-            noteHeldNode( unresolved );
+            recordHeldNode( unresolved );
         }
         if ( _objectManager != nullptr )
         {
@@ -1091,7 +1091,7 @@ namespace sw
             {
                 for ( const SceneDocument::SceneObjectNode& node : group._listNode )
                 {
-                    noteHeldNode( node );
+                    recordHeldNode( node );
                 }
             }
         }

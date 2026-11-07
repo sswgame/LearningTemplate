@@ -13,7 +13,7 @@
 namespace sw
 {
     ArenaProjectileComponent::ArenaProjectileComponent()
-        : _director{}
+        : _gameMode{}
         , _visualLift{ 0.9f }
         , _projectileID{ 0 }
         , _bFinished{ SW_FALSE }
@@ -22,9 +22,9 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void ArenaProjectileComponent::bind( GameObjectHandle director, uint32 projectileID, const float3& position )
+    void ArenaProjectileComponent::bind( GameObjectHandle gameMode, uint32 projectileID, const float3& position )
     {
-        _director     = director;
+        _gameMode     = gameMode;
         _projectileID = projectileID;
         _bFinished    = SW_FALSE;
         placeMesh( position );
@@ -37,8 +37,8 @@ namespace sw
             return;
         GameObject*                   pOwner      = getOwner();
         GameObjectManager*            pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ArenaGameModeComponent* pDirector   = pManager != nullptr ? GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _director ) : nullptr;
-        const ProjectileState*        pProjectile = pDirector != nullptr ? pDirector->findProjectile( _projectileID ) : nullptr;
+        const ArenaGameModeComponent* pGameMode   = pManager != nullptr ? GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const ProjectileState*        pProjectile = pGameMode != nullptr ? pGameMode->findProjectile( _projectileID ) : nullptr;
         if ( pProjectile == nullptr )
         {
             finish(); // 맞았거나 사거리 · 판 밖에서 끝났다(디렉터가 이번 프레임 `PrePhysics` 에서 뺐다)

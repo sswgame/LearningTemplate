@@ -35,11 +35,11 @@ namespace sw
     class SkeletalAnimatorComponent;
 
     /**
-     * @struct AnimationLayerDesc
+     * @struct AnimationLayerDef
      * @brief 코드가 더하는 레이어 하나의 서술입니다(`addLayer`). 마스크는 본 하나와 그 자손입니다(비었으면 모든 본).
      * @details 합치는 방법(`AnimationLayerBlend`)은 그래프 에셋 헤더에 있다. 데이터로 정하는 레이어(본 마스크 프리셋, 본별 가중치)는 그래프의 "layers" 다.
      */
-    struct AnimationLayerDesc
+    struct AnimationLayerDef
     {
         hashed_string       _clipName;
         hashed_string       _maskRootBone;
@@ -121,10 +121,10 @@ namespace sw
         bool                            isAnimationActive() const override;
         AnimationPoseAccess             getPoseAccess() const override { return AnimationPoseAccess::Writes; }
         bool                            pollAnimationAssetsReady() override;
-        void                            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
-        void                            finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                            onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                            finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
+        void                            onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
         bool                            describeSharedPose( AnimationSharedPoseRequest& outRequest ) const override;
         shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const override;
         void                            collectDebugState( AnimationDebugState& inoutState ) const override;
@@ -252,7 +252,7 @@ namespace sw
         const hashed_string& getCurrentStateName() const { return _graphPlayer.getCurrentStateName(); }
 
         /** @brief 레이어를 더하고 그 인덱스를 반환합니다. 클립을 못 찾으면 -1 입니다. */
-        int32 addLayer( const AnimationLayerDesc& desc );
+        int32 addLayer( const AnimationLayerDef& desc );
         /** @brief 레이어 가중치를 바꿉니다. */
         void setLayerWeight( uint32 layerIndex, float32 weight );
         /** @brief 레이어 클립을 처음부터 다시 재생합니다(맞음 움찔처럼 한 번 도는 가산 레이어). */
@@ -380,7 +380,7 @@ namespace sw
         /** @brief 레이어 하나의 실행 상태입니다. */
         struct LayerState
         {
-            AnimationLayerDesc              _desc;
+            AnimationLayerDef               _desc;
             shared_ptr<const AnimationClip> _clip;
             LinkedLayerGraph*               _pLinkedGraph{ nullptr }; ///< 슬롯 레이어를 채운 그래프다(`_listLinkedGraph` 안). 클립 레이어와 비어 있는 슬롯은 nullptr 이다
             AnimationPlayer                 _player;
@@ -483,7 +483,7 @@ namespace sw
          */
         void updateLODFades( float32 deltaSeconds );
         /** @brief 기본 포즈 단계입니다. */
-        void populateBasePose( SkeletalMeshComponent& unit );
+        void populateBasePose( SkeletalMeshComponent& skeletalMesh );
         /** @brief 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다. */
         string makeClipPath( const hashed_string& clipName ) const;
         /** @brief `_animationSetPath` 의 셋을 읽어 둡니다(게임 스레드, 시작 · 그래프 읽기 · 경로 변경). 비었으면 놓습니다. */
@@ -491,7 +491,7 @@ namespace sw
         /** @brief 이번 프레임의 알림을 받는 쪽에 넘깁니다(게임 스레드). */
         void dispatchNotifies();
         /** @brief 루트 모션을 오브젝트에 옮깁니다(게임 스레드). */
-        void applyRootMotion( SkeletalMeshComponent& unit );
+        void applyRootMotion( SkeletalMeshComponent& skeletalMesh );
 
         PROPERTY( Category = "Animation", DisplayName = "Animation Graph", Tooltip = "State machine graph; nodes name clips" )
         AssetRef<AnimationGraphAsset> _animationGraphPath;
@@ -556,7 +556,7 @@ namespace sw
         PoseInertializer                                              _inertializer;         ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
         shared_ptr<const AnimationClip>                               _sequencerClip;
         BoneTransform                                                 _rootMotionDelta;
-        SkeletalMeshComponent*                                        _pUnit;
+        SkeletalMeshComponent*                                        _pSkeletalMesh;
         IAnimationNotifyListener*                                     _pNotifyListener;
         float32                                                       _lastDeltaSeconds; ///< 마지막 시간 단계의 델타 시간(배율 적용)
         float32                                                       _sequencerTime;

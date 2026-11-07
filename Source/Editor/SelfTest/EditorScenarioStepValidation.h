@@ -44,7 +44,7 @@ namespace sw::editor
 
     /** @brief `EditorClick` 의 인자입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorClickFields
+    struct SW_EDITOR_API EditorClickParams
     {
         REFLECT_BODY();
 
@@ -62,7 +62,7 @@ namespace sw::editor
 
     /** @brief `EditorDrag` 의 인자입니다. 끝은 `toMark` 또는 이동량(`dx` · `dy`) 하나로 적습니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorDragFields
+    struct SW_EDITOR_API EditorDragParams
     {
         REFLECT_BODY();
 
@@ -84,7 +84,7 @@ namespace sw::editor
 
     /** @brief `EditorHover` 의 인자입니다. `mark` 또는 `release` 하나를 적습니다(`release` 는 적었는지가 뜻입니다). */
     REFLECT()
-    struct SW_EDITOR_API EditorHoverFields
+    struct SW_EDITOR_API EditorHoverParams
     {
         REFLECT_BODY();
 
@@ -96,7 +96,7 @@ namespace sw::editor
 
     /** @brief `EditorText` 의 인자입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorTextFields
+    struct SW_EDITOR_API EditorTextParams
     {
         REFLECT_BODY();
 
@@ -106,7 +106,7 @@ namespace sw::editor
 
     /** @brief `EditorSelfTest` 의 인자입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorSelfTestFields
+    struct SW_EDITOR_API EditorSelfTestParams
     {
         REFLECT_BODY();
 
@@ -116,7 +116,7 @@ namespace sw::editor
 
     /** @brief `EditorKey` 의 인자입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorKeyFields
+    struct SW_EDITOR_API EditorKeyParams
     {
         REFLECT_BODY();
 
@@ -128,7 +128,7 @@ namespace sw::editor
 
     /** @brief `EditorExpectObject` 의 인자입니다. 적지 않으면 한 개, 선택 검사 없음입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorExpectObjectFields
+    struct SW_EDITOR_API EditorExpectObjectParams
     {
         REFLECT_BODY();
 
@@ -144,7 +144,7 @@ namespace sw::editor
 
     /** @brief `EditorExpectDockLayout` 의 인자입니다. 0 이면 기본 최소 변입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorDockLayoutFields
+    struct SW_EDITOR_API EditorDockLayoutParams
     {
         REFLECT_BODY();
 
@@ -157,7 +157,7 @@ namespace sw::editor
 
     /** @brief `CaptureEditorUI` 의 인자입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorCaptureFields
+    struct SW_EDITOR_API EditorCaptureParams
     {
         REFLECT_BODY();
 
@@ -171,7 +171,7 @@ namespace sw::editor
 
     /** @brief 인자가 없는 에디터 단계의 스키마입니다. */
     REFLECT()
-    struct SW_EDITOR_API EditorNoFields
+    struct SW_EDITOR_API EditorNoParams
     {
         REFLECT_BODY();
     };

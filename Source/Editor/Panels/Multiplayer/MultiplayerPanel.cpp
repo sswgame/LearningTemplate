@@ -246,7 +246,7 @@ namespace sw::editor
             {
                 const bool bTabOpen = ImGui::BeginTabItem( entry._pRegistration->_pLabel );
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "multiplayer.tab." ) + entry._pRegistration->_pID ).c_str() ); // 자동화가 탭 제목을 눌러 탭을 고른다
+                    EditorSelfTestMarks::record( ( string( "multiplayer.tab." ) + entry._pRegistration->_pID ).c_str() ); // 자동화가 탭 제목을 눌러 탭을 고른다
                 if ( bTabOpen )
                 {
                     entry._pTab->drawTab( context );

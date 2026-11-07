@@ -36,7 +36,7 @@ namespace
             if ( pDevice == _pDevice )
                 _pDevice->_listShutdownStep.push_back( "releaseRHI" );
         }
-        void forgetRHI( IRHIDevice* ) override {}
+        void clearRHI( IRHIDevice* ) override {}
 
     private:
         test::FakeRHIDevice* _pDevice;
@@ -228,7 +228,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 
     // 렌더 스레드가 떠 있으면 든 프레임이 없어도 미룬다(짓는 중인 패킷이 있다). 다음 프레임이 끝나면 내린다.
-    device.setRenderThreadDrain( []( void* ) {}, nullptr, std::thread::id{} );
+    device.setRenderThreadFlush( []( void* ) {}, nullptr, std::thread::id{} );
     device.releaseHandle( RHIHandleKind::Texture, 13 );
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameQueued();
@@ -237,7 +237,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForThePacketBeingBuilt )
 
     // 렌더 스레드를 풀면 남은 것을 모두 내린다.
     device.releaseHandle( RHIHandleKind::Texture, 14 );
-    device.setRenderThreadDrain( nullptr, nullptr, std::thread::id{} );
+    device.setRenderThreadFlush( nullptr, nullptr, std::thread::id{} );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
 }
 

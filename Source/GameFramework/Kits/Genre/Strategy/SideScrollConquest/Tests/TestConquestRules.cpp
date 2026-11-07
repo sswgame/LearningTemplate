@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/DrainGate.h"
+#include "Core/Container/ConsumerGate.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -197,7 +197,7 @@ namespace
         sw::ConquestCatalog           _catalog{};
         sw::ConquestCatalog           _otherCatalog{};
         sw::ConquestWorld             _world{};
-        sw::DrainLease                _lease{};
+        sw::ConsumerLease             _lease{};
         sw::vector<sw::ConquestEvent> _listEvent{};
 
         ConquestRulesTest()
@@ -224,14 +224,14 @@ namespace
 
         int32 countEvents( sw::ConquestEvent::Kind kind )
         {
-            _world.drainEvents( _lease, _listEvent );
+            _world.pollEvents( _lease, _listEvent );
             return sw::VectorUtil::countBy<&sw::ConquestEvent::_kind>( _listEvent, kind );
         }
 
         /** @brief 지금까지의 이벤트에서 @p kind 가 처음 나온 값입니다. 없으면 -1 입니다. */
         int32 findFirstValue( sw::ConquestEvent::Kind kind )
         {
-            _world.drainEvents( _lease, _listEvent );
+            _world.pollEvents( _lease, _listEvent );
             const sw::ConquestEvent* pEvent = sw::VectorUtil::findBy<&sw::ConquestEvent::_kind>( _listEvent, kind );
             return pEvent != nullptr ? pEvent->_value : -1;
         }
@@ -723,10 +723,10 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRoundTrip )
     SW_EXPECT_TRUE( ConquestTestUtil::isSameState( _world, restored ) );
     SW_EXPECT_EQUAL( _world.getUnits().size(), restored.getUnits().size() );
 
-    sw::DrainLease lease;
+    sw::ConsumerLease lease;
     SW_REQUIRE_TRUE( restored.claimEvents( lease ) );
     sw::vector<sw::ConquestEvent> listRestoredEvent;
-    restored.drainEvents( lease, listRestoredEvent );
+    restored.pollEvents( lease, listRestoredEvent );
     SW_EXPECT_TRUE( listRestoredEvent.empty() );
 
     for ( int32 step = 0; step < 20; ++step )

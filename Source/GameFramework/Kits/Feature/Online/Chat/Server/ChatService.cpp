@@ -52,10 +52,10 @@ namespace sw
         };
 
         /** @brief 제재 상태를 읽는 작업입니다. */
-        class ChatSanctionWork final : public IServiceStoreWork
+        class ChatSanctionJob final : public IServiceStoreJob
         {
         public:
-            ChatSanctionWork( ChatService* pService, AccountID accountID, UnixMilliseconds nowMs )
+            ChatSanctionJob( ChatService* pService, AccountID accountID, UnixMilliseconds nowMs )
                 : _pService{ pService }
                 , _accountID{ accountID }
                 , _nowMs{ nowMs }
@@ -86,10 +86,10 @@ namespace sw
         };
 
         /** @brief 쌓인 기록을 한 트랜잭션으로 쓰고, 정리할 채널이 있으면 보존 기간이 지난 기록을 지웁니다. */
-        class ChatHistoryWriteWork final : public IServiceStoreWork
+        class ChatHistoryWriteJob final : public IServiceStoreJob
         {
         public:
-            ChatHistoryWriteWork( ChatService* pService, vector<ChatMessage>&& listMessage, vector<string>&& listTrimChannel, int64 trimBeforeMs )
+            ChatHistoryWriteJob( ChatService* pService, vector<ChatMessage>&& listMessage, vector<string>&& listTrimChannel, int64 trimBeforeMs )
                 : _listMessage{ std::move( listMessage ) }
                 , _listTrimChannel{ std::move( listTrimChannel ) }
                 , _pService{ pService }
@@ -153,10 +153,10 @@ namespace sw
         };
 
         /** @brief 기록을 최근 것부터 읽는 작업입니다. 커서는 앞 응답의 마지막 키이며 그보다 이전 기록부터 읽습니다. */
-        class ChatHistoryReadWork final : public IServiceStoreWork
+        class ChatHistoryReadJob final : public IServiceStoreJob
         {
         public:
-            ChatHistoryReadWork( ChatService* pService, string&& channelID, string&& cursor, int32 maxCount, uint64 requestTag )
+            ChatHistoryReadJob( ChatService* pService, string&& channelID, string&& cursor, int32 maxCount, uint64 requestTag )
                 : _listMessage{}
                 , _channelID{ std::move( channelID ) }
                 , _cursor{ std::move( cursor ) }
@@ -206,10 +206,10 @@ namespace sw
          * @details 기록 키는 고정 폭 16진이라 순번을 하나 올린 키가 신고한 메시지 바로 다음 키입니다. 그 키를 커서로 내림차순으로 읽으면 첫 레코드가 신고한 메시지입니다.
          *          첫 레코드가 그 메시지가 아니면 기록에 아직 없거나 지워진 것이므로 NotFound 입니다. 문맥 줄은 오래된 것부터 담아 마지막 줄이 신고 대상입니다.
          */
-        class ChatReportWork final : public IServiceStoreWork
+        class ChatReportJob final : public IServiceStoreJob
         {
         public:
-            ChatReportWork( ChatService* pService, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs, uint64 requestTag )
+            ChatReportJob( ChatService* pService, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs, uint64 requestTag )
                 : _request{ request }
                 , _pService{ pService }
                 , _reporterID{ reporterID }
@@ -343,7 +343,7 @@ namespace sw
 
     void ChatService::shutdown()
     {
-        ServiceStoreUtil::drainUntilIdle( _dependencies._pStore, [this]()
+        ServiceStoreUtil::flushUntilIdle( _dependencies._pStore, [this]()
         { return _pendingStoreCount <= 0; } );
         if ( _pendingStoreCount > 0 )
             SW_LOG_ERROR_ID( "ChatService.ChatServiceShutDownStore", "ChatService shut down with %# store works still pending", _pendingStoreCount );
@@ -387,7 +387,7 @@ namespace sw
             return;
         member._bSanctionReading = SW_TRUE;
         ++_pendingStoreCount;
-        _dependencies._pStore->submit( make_unique<ChatSanctionWork>( this, accountID, nowMs ) );
+        _dependencies._pStore->submit( make_unique<ChatSanctionJob>( this, accountID, nowMs ) );
     }
 
     void ChatService::applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs )
@@ -513,7 +513,7 @@ namespace sw
             completeSimple( ChatServiceInternal::toMethod( send._recipientID != kInvalidAccountID ), send._requestTag, ChatResult::Unavailable );
         }
         _mapAccountToMember.erase( memberIt );
-        _spamGuard.forget( accountID );
+        _spamGuard.remove( accountID );
     }
 
     void ChatService::joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag )
@@ -595,16 +595,16 @@ namespace sw
             outRetryAfterMs = member._muteUntilMs - nowMs.count();
             return ChatResult::Muted;
         }
-        const ChatSpamVerdict spam = _spamGuard.check( accountID, text, nowMs.count(), outRetryAfterMs );
-        if ( spam == ChatSpamVerdict::RateLimited )
+        const ChatSpamResult spam = _spamGuard.check( accountID, text, nowMs.count(), outRetryAfterMs );
+        if ( spam == ChatSpamResult::RateLimited )
             return ChatResult::RateLimited;
-        if ( spam == ChatSpamVerdict::Repeated )
+        if ( spam == ChatSpamResult::Repeated )
             return ChatResult::Repeated;
         switch ( _wordFilter.apply( text, outText ) )
         {
-            case ChatFilterVerdict::Rejected:
+            case ChatFilterResult::Rejected:
                 return ChatResult::Rejected;
-            case ChatFilterVerdict::InvalidText:
+            case ChatFilterResult::InvalidText:
                 return ChatResult::Invalid;
             default:
                 return ChatResult::Ok;
@@ -767,7 +767,7 @@ namespace sw
         }
         _bHistoryWriting = SW_TRUE;
         ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteWork>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs.count() - _settings._historyRetentionMs ) );
+        _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteJob>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs.count() - _settings._historyRetentionMs ) );
     }
 
     void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion )
@@ -811,7 +811,7 @@ namespace sw
             return;
         }
         ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatHistoryReadWork>( this, string( channelID ), string( cursor ), maxCount, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<ChatHistoryReadJob>( this, string( channelID ), string( cursor ), maxCount, requestTag ) );
     }
 
     void ChatService::applyHistoryRead( uint64 requestTag, ChatResult result, vector<ChatMessage>&& listMessage, string&& nextCursor )
@@ -861,7 +861,7 @@ namespace sw
         ++_reportSequence;
         const uint64 uniqueID = ( _dependencies._serverID << 32 ) | _reportSequence;
         ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatReportWork>( this, request, accountID, uniqueID, nowMs, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<ChatReportJob>( this, request, accountID, uniqueID, nowMs, requestTag ) );
     }
 
     void ChatService::applyReport( uint64 requestTag, ChatResult result )

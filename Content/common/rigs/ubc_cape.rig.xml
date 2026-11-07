@@ -2,14 +2,14 @@
      고정점은 UBC Back 소켓 자리(spine_03 위 · 뒤), 몸 충돌체는 UBC 뼈에 붙고 망토 축소에 맞춰 줄였다. -->
 <RigAsset>
 	<targets>
-		<item name="Shoulders" bone="spine_03" unit="Body" translation="0.0,0.1,-0.15" />
+		<item name="Shoulders" bone="spine_03" skeletalMesh="Body" translation="0.0,0.1,-0.15" />
 		<!-- 충돌체가 붙는 몸의 뼈(망토 스켈레톤에는 없다) — 달리거나 돌 때 망토가 몸통 · 엉덩이 · 허벅지를 뚫지 않게 한다. -->
-		<item name="BodyChest" bone="spine_03" unit="Body" />
-		<item name="BodyHips" bone="pelvis" unit="Body" />
-		<item name="BodyThighL" bone="thigh_l" unit="Body" />
-		<item name="BodyThighR" bone="thigh_r" unit="Body" />
-		<item name="BodyShinL" bone="calf_l" unit="Body" />
-		<item name="BodyShinR" bone="calf_r" unit="Body" />
+		<item name="BodyChest" bone="spine_03" skeletalMesh="Body" />
+		<item name="BodyHips" bone="pelvis" skeletalMesh="Body" />
+		<item name="BodyThighL" bone="thigh_l" skeletalMesh="Body" />
+		<item name="BodyThighR" bone="thigh_r" skeletalMesh="Body" />
+		<item name="BodyShinL" bone="calf_l" skeletalMesh="Body" />
+		<item name="BodyShinR" bone="calf_r" skeletalMesh="Body" />
 	</targets>
 	<nodes>
 		<item type="CopyTransform" name="Pin" bone="cape0" target="Shoulders" />

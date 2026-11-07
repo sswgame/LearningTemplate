@@ -269,9 +269,9 @@ namespace sw
         }
     }
 
-    void JRPGParty::drainEvents( vector<JRPGPartyEvent>& outListEvent )
+    void JRPGParty::pollEvents( vector<JRPGPartyEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void JRPGParty::writeState( Archive& outArchive ) const
@@ -426,7 +426,7 @@ namespace sw
         const JRPGMember& member = _listMember[static_cast<size_t>( memberIndex )];
         StatBlock         stats;
         member._equipment.computeStats( stats );
-        return member.getStat( JRPGStat::Vitality ) / 2 + static_cast<int32>( stats.getValue( JRPGPartyInternal::getDefenseName() ) );
+        return member.getStat( JRPGStat::CombatHealth ) / 2 + static_cast<int32>( stats.getValue( JRPGPartyInternal::getDefenseName() ) );
     }
 
     int32 JRPGParty::countAlive() const

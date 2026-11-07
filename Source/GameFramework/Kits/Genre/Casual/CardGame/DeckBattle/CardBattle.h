@@ -1,5 +1,5 @@
 /**
- * @file DeckBattle.h
+ * @file CardBattle.h
  * @brief 덱 빌딩 전투의 코어를 구현합니다. 문스톤 아일랜드나 슬레이 더 스파이어 류를 작게 줄인 것으로, 뽑을 더미, 손, 버린 더미, 소멸 더미를 두고 턴마다 에너지와 뽑기를 처리합니다.
  *        카드 효과(피해, 방어, 뽑기, 에너지)는 데이터로 적고, 적 하나가 의도를 차례대로 실행합니다.
  */
@@ -26,7 +26,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 효과의 종류입니다. */
-    enum class DeckBattleEffectKind : uint8
+    enum class CardBattleEffectKind : uint8
     {
         Damage = 0, ///< 상대의 방어를 먼저 깎고, 남은 만큼 체력을 깎는다
         Block,      ///< 내 방어를 올린다(내 다음 턴이 시작되면 사라진다)
@@ -35,10 +35,10 @@ namespace sw
     };
 
     /** @brief 효과 하나입니다. */
-    struct DeckBattleEffect
+    struct CardBattleEffect
     {
         int32                _amount{ 0 };
-        DeckBattleEffectKind _kind{ DeckBattleEffectKind::Damage };
+        CardBattleEffectKind _kind{ CardBattleEffectKind::Damage };
     };
 } // namespace sw
 
@@ -46,7 +46,7 @@ namespace sw
 {
     /** @brief 카드 정의입니다. */
     REFLECT()
-    struct DeckBattleCardDef
+    struct CardBattleCardDef
     {
         REFLECT_BODY();
 
@@ -54,7 +54,7 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Required )
         string                   _name{};
-        vector<DeckBattleEffect> _listEffect{};
+        vector<CardBattleEffect> _listEffect{};
         PROPERTY( Min = 0 )
         int32 _cost{ 1 };
         PROPERTY()
@@ -65,37 +65,37 @@ namespace sw
 namespace sw
 {
     /**
-     * @class DeckBattleCatalog
-     * @brief `<DeckBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></DeckBattleCatalog>` 를 읽습니다.
+     * @class CardBattleCatalog
+     * @brief `<CardBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></CardBattleCatalog>` 를 읽습니다.
      *        `effects` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy)입니다.
      */
-    class SW_KIT_API DeckBattleCatalog : public GameCatalog<DeckBattleCardDef, XMLCatalog<DeckBattleCatalog>>
+    class SW_KIT_API CardBattleCatalog : public GameCatalog<CardBattleCardDef, XMLCatalog<CardBattleCatalog>>
     {
-        friend class XMLCatalog<DeckBattleCatalog>;
+        friend class XMLCatalog<CardBattleCatalog>;
 
     public:
-        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<DeckBattleCatalog>` 가 접미사로 가른다. */
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<CardBattleCatalog>` 가 접미사로 가른다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".deckbattle.xml", AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `DeckBattle.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "DeckBattleCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `CardBattle.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "CardBattleCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        DeckBattleCatalog();
+        CardBattleCatalog();
 
     private:
-        static constexpr const utf8* kXMLRootName = "DeckBattleCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
+        static constexpr const utf8* kXMLRootName = "CardBattleCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
     };
 
-    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<DeckBattleCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<DeckBattleCatalog>;
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CardBattleCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<CardBattleCatalog>;
 } // namespace sw
 
 namespace sw
 {
     /** @brief 전투 설정입니다. */
-    struct DeckBattleSettings
+    struct CardBattleSettings
     {
         int32 _playerHP{ 50 };
         int32 _energyPerTurn{ 3 };
@@ -107,9 +107,9 @@ namespace sw
 namespace sw
 {
     /** @brief 적 하나입니다. 의도는 턴마다 차례대로 돌아갑니다. */
-    struct DeckBattleEnemy
+    struct CardBattleEnemy
     {
-        vector<DeckBattleEffect> _listIntent{}; ///< Damage 는 공격, Block 은 방어이다(그 밖의 종류는 무시한다)
+        vector<CardBattleEffect> _listIntent{}; ///< Damage 는 공격, Block 은 방어이다(그 밖의 종류는 무시한다)
         int32                    _hp{ 0 };
         int32                    _block{ 0 };
         int32                    _intentIndex{ 0 };
@@ -119,7 +119,7 @@ namespace sw
 namespace sw
 {
     /** @brief 전투 단계입니다. */
-    enum class DeckBattlePhase : uint8
+    enum class CardBattlePhase : uint8
     {
         PlayerTurn = 0,
         Won,
@@ -127,23 +127,23 @@ namespace sw
     };
 
     /**
-     * @class DeckBattle
+     * @class CardBattle
      * @brief 한 전투를 진행합니다. 카드 한 장은 `Card` 이고 번호는 이 전투 안에서의 카드 index 입니다. 정의는 `getCardDef` 로 찾습니다. 시드를 쓰므로 결과가 결정적입니다.
      */
-    class SW_KIT_API DeckBattle
+    class SW_KIT_API CardBattle
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CDBT" );
         static constexpr uint32 kStateVersion = 1;
 
-        DeckBattle();
+        CardBattle();
 
         /**
          * @brief 덱(@p listDeckCardID 의 정의 id 목록)을 섞어 첫 턴을 엽니다. 카탈로그에 없는 id 는 건너뜁니다.
          * @return 덱이 비면 false 를 반환한다.
          */
-        [[nodiscard]] bool initialize( const DeckBattleCatalog* pCatalog, const DeckBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
-                                       const DeckBattleEnemy& enemy, uint32 seed );
+        [[nodiscard]] bool initialize( const CardBattleCatalog* pCatalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
+                                       const CardBattleEnemy& enemy, uint32 seed );
         /** @brief 손의 @p handIndex 번째 패를 씁니다. 에너지가 모자라거나 내 턴이 아니면 false 를 반환합니다. */
         [[nodiscard]] bool playCard( int32 handIndex );
         /** @brief 턴을 마칩니다. 손을 버리고, 적이 의도를 실행하고, 살아 있으면 다음 턴을 시작합니다(방어 초기화, 에너지, 뽑기). */
@@ -154,22 +154,22 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 카탈로그에 없는 정의 id, 음수이거나 최대를 넘는 값, 덱과 맞지 않는 더미(빠지거나 겹친 카드)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        const DeckBattleCardDef* getCardDef( const Card& card ) const;
+        const CardBattleCardDef* getCardDef( const Card& card ) const;
         const CardPile&          getDrawPile() const { return _drawPile; }
         const CardPile&          getHand() const { return _hand; }
         const CardPile&          getDiscardPile() const { return _discardPile; }
         const CardPile&          getExhaustPile() const { return _exhaustPile; }
-        const DeckBattleEnemy&   getEnemy() const { return _enemy; }
+        const CardBattleEnemy&   getEnemy() const { return _enemy; }
         int32                    getPlayerHP() const { return _playerHP; }
         int32                    getPlayerBlock() const { return _playerBlock; }
         int32                    getEnergy() const { return _energy; }
         int32                    getTurn() const { return _turn; }
-        DeckBattlePhase          getPhase() const { return _phase; }
+        CardBattlePhase          getPhase() const { return _phase; }
 
     private:
         void startTurn();
         void drawCards( int32 count );
-        void applyEffect( const DeckBattleEffect& effect );
+        void applyEffect( const CardBattleEffect& effect );
 
     private:
         vector<int32>            _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
@@ -177,14 +177,14 @@ namespace sw
         CardPile                 _hand;
         CardPile                 _discardPile;
         CardPile                 _exhaustPile;
-        DeckBattleEnemy          _enemy;
-        DeckBattleSettings       _settings;
+        CardBattleEnemy          _enemy;
+        CardBattleSettings       _settings;
         GameRandom               _random;
-        const DeckBattleCatalog* _pCatalog;
+        const CardBattleCatalog* _pCatalog;
         int32                    _playerHP;
         int32                    _playerBlock;
         int32                    _energy;
         int32                    _turn;
-        DeckBattlePhase          _phase;
+        CardBattlePhase          _phase;
     };
 } // namespace sw

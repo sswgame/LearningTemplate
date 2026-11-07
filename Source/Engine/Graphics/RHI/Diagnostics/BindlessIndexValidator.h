@@ -60,7 +60,7 @@ namespace sw
          * @details 셰이더는 그 번호를 분기로 걸러야 하는데, 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올리면 배열 밖을 읽어 디바이스를 잃는다.
          *          손실이 났을 때 어느 패스와 필드가 후보인지 고르는 데 쓴다.
          */
-        static bool noteAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element );
+        static bool recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element );
 
         /** @brief 지금까지 오류 로그를 남긴(죽은 번호) 자리 수입니다(테스트와 진단용). */
         static uint32 getReportCount();

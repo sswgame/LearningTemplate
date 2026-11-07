@@ -127,7 +127,7 @@ namespace sw
         void update( float32 deltaTime );
         /** @brief @p position 에서 @p radius 안의 가장 가까운 아이템을 @p player 가 줍습니다. 없으면 false 를 반환합니다. */
         [[nodiscard]] bool tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem );
-        void               drainEvents( vector<PartyItemEvent>& outListEvent );
+        void               pollEvents( vector<PartyItemEvent>& outListEvent );
         /** @brief 쌓인 이벤트를 꺼내지 않고 버립니다. 이벤트를 쓰지 않는 쪽에서 받을 목록을 만들어 복사하지 않게 하려는 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 

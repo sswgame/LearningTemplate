@@ -34,7 +34,7 @@ namespace sw
                 int32        _firstCreditIndex{ -1 }; ///< 이 보유자가 받은 첫 다리(상한 보고)
             };
 
-            static LedgerResult finish( LedgerTransferOutcome& outOutcome, LedgerResult result )
+            static LedgerResult finish( LedgerTransferResult& outOutcome, LedgerResult result )
             {
                 outOutcome._result = result;
                 return result;
@@ -61,7 +61,7 @@ namespace sw
                 return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
             }
 
-            static vector<uint8> encodeJournal( const LedgerTransferRequest& request, uint64 contentHash, const vector<LedgerTransferOutcome::HolderBalance>& listHolderBalance )
+            static vector<uint8> encodeJournal( const LedgerTransferRequest& request, uint64 contentHash, const vector<LedgerTransferResult::HolderBalance>& listHolderBalance )
             {
                 BitWriter writer;
                 writer.writeVarUint( kJournalFormat );
@@ -78,7 +78,7 @@ namespace sw
                     LedgerPosting::write( writer, posting );
                 }
                 writer.writeVarUint( listHolderBalance.size() );
-                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : listHolderBalance )
                 {
                     LedgerHolder::write( writer, holderBalance._holder );
                     ServiceKeyUtil::writeString( writer, holderBalance._balance._assetID );
@@ -87,7 +87,7 @@ namespace sw
                 return writer.releaseBytes();
             }
 
-            [[nodiscard]] static bool decodeJournal( const vector<uint8>& bytes, LedgerJournalEntry& outEntry, vector<LedgerTransferOutcome::HolderBalance>* pOutListHolderBalance )
+            [[nodiscard]] static bool decodeJournal( const vector<uint8>& bytes, LedgerJournalEntry& outEntry, vector<LedgerTransferResult::HolderBalance>* pOutListHolderBalance )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readVarUint() != kJournalFormat )
@@ -121,7 +121,7 @@ namespace sw
                     pOutListHolderBalance->clear();
                 for ( uint64 balanceIndex = 0; balanceIndex < balanceCount; ++balanceIndex )
                 {
-                    LedgerTransferOutcome::HolderBalance holderBalance;
+                    LedgerTransferResult::HolderBalance holderBalance;
                     if ( LedgerHolder::read( reader, holderBalance._holder ) == false )
                         return false;
                     if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, holderBalance._balance._assetID ) == false )
@@ -239,7 +239,7 @@ namespace sw
             }
 
             /** @brief 저장된 분개로 결과를 채웁니다(같은 내용이면 Ok + 다시 돌려줌, 다르면 JournalKeyReused). */
-            static LedgerResult replayJournal( const vector<uint8>& bytes, const LedgerTransferRequest& request, LedgerTransferOutcome& outOutcome )
+            static LedgerResult replayJournal( const vector<uint8>& bytes, const LedgerTransferRequest& request, LedgerTransferResult& outOutcome )
             {
                 LedgerJournalEntry entry;
                 if ( decodeJournal( bytes, entry, &outOutcome._listHolderBalance ) == false )
@@ -257,9 +257,9 @@ namespace sw
                 return finish( outOutcome, LedgerResult::Ok );
             }
 
-            static void applyCommitVersion( LedgerTransferOutcome& inoutOutcome, uint64 commitVersion )
+            static void applyCommitVersion( LedgerTransferResult& inoutOutcome, uint64 commitVersion )
             {
-                for ( LedgerTransferOutcome::HolderBalance& holderBalance : inoutOutcome._listHolderBalance )
+                for ( LedgerTransferResult::HolderBalance& holderBalance : inoutOutcome._listHolderBalance )
                 {
                     holderBalance._balance._version = holderBalance._balance._amount == 0 ? 0 : commitVersion;
                 }
@@ -335,9 +335,9 @@ namespace sw
     }
 
     LedgerResult Ledger::stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, ServiceTransaction& inoutTransaction,
-                                        LedgerTransferOutcome& outOutcome )
+                                        LedgerTransferResult& outOutcome )
     {
-        outOutcome                   = LedgerTransferOutcome{};
+        outOutcome                   = LedgerTransferResult{};
         outOutcome._journalKey       = request._journalKey;
         outOutcome._timeMs           = request._timeMs;
         const LedgerResult validated = LedgerInternal::validate( request, outOutcome._failedPostingIndex );
@@ -387,11 +387,11 @@ namespace sw
                 else
                     pending.put( getBalanceTable(), balanceKey, LedgerInternal::encodeBalance( nextAmount ), balanceRecord._version );
             }
-            LedgerTransferOutcome::HolderBalance& holderBalance = outOutcome._listHolderBalance.emplace_back();
-            holderBalance._holder                               = delta._holder;
-            holderBalance._balance._assetID                     = delta._assetID;
-            holderBalance._balance._amount                      = nextAmount;
-            holderBalance._balance._version                     = balanceRecord._version;
+            LedgerTransferResult::HolderBalance& holderBalance = outOutcome._listHolderBalance.emplace_back();
+            holderBalance._holder                              = delta._holder;
+            holderBalance._balance._assetID                    = delta._assetID;
+            holderBalance._balance._amount                     = nextAmount;
+            holderBalance._balance._version                    = balanceRecord._version;
         }
 
         const uint64 contentHash = LedgerInternal::computeContentHash( request );
@@ -418,7 +418,7 @@ namespace sw
         return LedgerInternal::finish( outOutcome, LedgerResult::Ok );
     }
 
-    LedgerResult Ledger::resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferOutcome& outOutcome )
+    LedgerResult Ledger::resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outOutcome )
     {
         ServiceRecord            journalRecord;
         const ServiceStoreResult journalRead = connection.readRecord( getJournalTable(), request._journalKey, journalRecord );
@@ -432,7 +432,7 @@ namespace sw
         return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable );
     }
 
-    LedgerResult Ledger::executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferOutcome& outOutcome )
+    LedgerResult Ledger::executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outOutcome )
     {
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {

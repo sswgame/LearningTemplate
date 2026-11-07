@@ -73,9 +73,9 @@ namespace sw
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이(constant::time::kDefaultFixedStepSeconds)다. 0 이하 · 깨진 값은 오류다.
-        GimmickCircuitRootFields rootFields{ _stepTime };
-        bool                     bValid = XMLFields::readFields( root, rootFields, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
-        _stepTime                       = bValid ? rootFields._stepTime : _stepTime;
+        GimmickCircuitRootParams rootParams{ _stepTime };
+        bool                     bValid = XMLFields::readFields( root, rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        _stepTime                       = bValid ? rootParams._stepTime : _stepTime;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Node" ) )
@@ -99,7 +99,7 @@ namespace sw
             }
             if ( StringUtil::equals( child.getName(), "Wire" ) )
             {
-                GimmickWireFields wire;
+                GimmickWireParams wire;
                 if ( XMLFields::readFields( child, wire, _sourceName ) == false )
                 {
                     bValid = false;

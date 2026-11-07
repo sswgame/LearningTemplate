@@ -1,10 +1,10 @@
 /**
- * @file HorrorMatch.h
+ * @file AsymmetricHorrorMatch.h
  * @brief 1 대 4 비대칭 공포 한 판(서버 권위)을 진행합니다. 생존자(건강, 부상, 빈사, 들림, 갈고리 1, 2, 3단계, 구출, 치료, 몸부림), 발전기(다인 수리, 스킬 체크,
  *        폭발 소음, 걷어차기 퇴행), 탈출구(전원, 열기), 해치, 엔드게임 붕괴, 판자, 창틀, 사물함, 살인마(속도, 공격 쿨다운, 헛방, 위협 반경, 능력),
  *        블러드포인트, 결과(탈출과 희생)를 다룹니다.
  * @details 고정 걸음(`FixedStepTimer`)으로만 흐르고 스킬 체크는 시드로 정해지므로, 같은 호출이면 같은 결과가 나온다. 기반은 이렇게 쓴다.
- *          - 체력 상태: `Vitality`(체력 2 는 건강, 1 은 부상, 기절은 빈사이며, 출혈 체력은 남은 출혈 초이고 기절 중 부활은 빈사 회복이다)
+ *          - 체력 상태: `CombatHealth`(체력 2 는 건강, 1 은 부상, 기절은 빈사이며, 출혈 체력은 남은 출혈 초이고 기절 중 부활은 빈사 회복이다)
  *          - 수리, 치료, 탈출구: `InteractionProgress`(인원 배율, 스킬 체크 `TimingJudge`, 실패 소음, 퇴행)
  *          - 판과 결과: `MatchState`(생존자 팀과 살인마 팀이며, 탈출과 희생은 탈락이고, 점수를 쓴다)
  *          - 살인마 봇의 감각: `collectKillerStimuli` 가 `AIPerception::sense` 에 넣을 자극(위치와 소음 반경)을 채운다.
@@ -24,7 +24,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionProgress.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
@@ -32,8 +32,8 @@
 namespace sw
 {
     struct AIStimulus;
-    struct HorrorKillerDef;
-    struct HorrorSnapshot;
+    struct AsymmetricHorrorKillerDef;
+    struct AsymmetricHorrorSnapshot;
 
     class Archive;
     class AsymmetricHorrorRulesCatalog;
@@ -82,9 +82,9 @@ namespace sw
     };
 
     /** @brief 생존자 하나입니다. */
-    struct HorrorSurvivor
+    struct AsymmetricHorrorSurvivor
     {
-        Vitality            _vitality{};
+        CombatHealth        _combatHealth{};
         InteractionProgress _healing{}; ///< 이 생존자를 치료하는 진행이다(치료하는 쪽들이 붙는다)
         StatBlock           _score{};   ///< 블러드포인트 범주별 점수이다
         float3              _position{};
@@ -114,21 +114,21 @@ namespace sw
 namespace sw
 {
     /** @brief 살인마입니다. */
-    struct HorrorKiller
+    struct AsymmetricHorrorKiller
     {
-        StatBlock              _score{};
-        float3                 _position{};
-        float3                 _forward{ 0.0f, 0.0f, 1.0f };
-        float3                 _busyExit{}; ///< 넘기가 끝나면 설 위치
-        const HorrorKillerDef* _pDef{ nullptr };
-        Countdown              _attackCooldown{};
-        Countdown              _stunRemaining{};
-        Countdown              _busyRemaining{}; ///< 판자 부수기, 넘기, 사물함 뒤지기 중이다
-        Countdown              _abilityCooldown{};
-        int32                  _carrying{ -1 };
-        int32                  _breakingPallet{ -1 };
-        int32                  _participant{ -1 };
-        uint8                  _bVaulting{ SW_FALSE };
+        StatBlock                        _score{};
+        float3                           _position{};
+        float3                           _forward{ 0.0f, 0.0f, 1.0f };
+        float3                           _busyExit{}; ///< 넘기가 끝나면 설 위치
+        const AsymmetricHorrorKillerDef* _pDef{ nullptr };
+        Countdown                        _attackCooldown{};
+        Countdown                        _stunRemaining{};
+        Countdown                        _busyRemaining{}; ///< 판자 부수기, 넘기, 사물함 뒤지기 중이다
+        Countdown                        _abilityCooldown{};
+        int32                            _carrying{ -1 };
+        int32                            _breakingPallet{ -1 };
+        int32                            _participant{ -1 };
+        uint8                            _bVaulting{ SW_FALSE };
 
         bool canAct() const { return _stunRemaining.isActive() == false && _busyRemaining.isActive() == false; }
     };
@@ -137,7 +137,7 @@ namespace sw
 namespace sw
 {
     /** @brief 발전기 하나입니다. */
-    struct HorrorGenerator
+    struct AsymmetricHorrorGenerator
     {
         InteractionProgress _progress{};
         float3              _position{};
@@ -149,7 +149,7 @@ namespace sw
 namespace sw
 {
     /** @brief 탈출구 하나입니다. */
-    struct HorrorGate
+    struct AsymmetricHorrorGate
     {
         InteractionProgress _progress{};
         float3              _position{};
@@ -159,7 +159,7 @@ namespace sw
 namespace sw
 {
     /** @brief 창틀 하나입니다. */
-    struct HorrorWindow
+    struct AsymmetricHorrorWindow
     {
         float3  _position{};
         float32 _blockedRemaining{ 0.0f };
@@ -215,10 +215,10 @@ namespace sw
 {
     /**
      * @brief 판 하나의 설정입니다.
-     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `HorrorMatch::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `AsymmetricHorrorMatch::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
      */
     REFLECT()
-    struct SW_KIT_API HorrorMatchSettings
+    struct SW_KIT_API AsymmetricHorrorMatchSettings
     {
         REFLECT_BODY();
         PROPERTY()
@@ -233,21 +233,21 @@ namespace sw
 namespace sw
 {
     /**
-     * @class HorrorMatch
+     * @class AsymmetricHorrorMatch
      * @brief 서버가 돌리는 한 판입니다. 규칙 카탈로그는 빌려 쓰므로 판보다 오래 살아야 합니다.
      * @details 무대(발전기, 갈고리, 판자, 창틀, 사물함, 탈출구, 해치 위치)는 `start` 전에 추가해야 한다.
      *          모든 행동 함수는 거리와 상태를 확인해 할 수 없으면 false 를 반환하고, 시간이 드는 일은 `update` 가 진행한다.
      */
-    class SW_KIT_API HorrorMatch
+    class SW_KIT_API AsymmetricHorrorMatch
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "HMAT" );
         static constexpr uint32 kStateVersion = 1;
 
-        HorrorMatch();
+        AsymmetricHorrorMatch();
 
         /** @brief 규칙과 살인마를 정합니다. 살인마 id 를 모르면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( const HorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog );
+        [[nodiscard]] bool initialize( const AsymmetricHorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog );
         int32              addSurvivor( const float3& position );
         void               setKillerPosition( const float3& position );
         int32              addGenerator( const float3& position );
@@ -302,11 +302,11 @@ namespace sw
         /** @brief 살인마 봇의 `AIPerception::sense` 에 넣을 자극을 모읍니다. 숨지 않은 생존자의 위치에 이번 걸음의 소음 반경을 실습니다. */
         void                       collectKillerStimuli( vector<AIStimulus>& outListStimulusEntry ) const;
         const InteractionProgress* findActivityProgress( int32 survivor ) const;
-        void                       makeSnapshot( HorrorSnapshot& outSnapshot ) const;
-        /** @brief 스냅샷(`HorrorSnapshot`)을 넷 채널의 종류 @p kind 로 등록합니다. 채널을 봉인하기 전에 부르고, 그 채널이 내준 호스트 설정으로 연결한다(핸드셰이크가 스키마를 확인한다). */
+        void                       makeSnapshot( AsymmetricHorrorSnapshot& outSnapshot ) const;
+        /** @brief 스냅샷(`AsymmetricHorrorSnapshot`)을 넷 채널의 종류 @p kind 로 등록합니다. 채널을 봉인하기 전에 부르고, 그 채널이 내준 호스트 설정으로 연결한다(핸드셰이크가 스키마를 확인한다). */
         [[nodiscard]] static bool registerSnapshotMessage( NetMessageChannel& inoutChannel, uint8 kind );
         /**
-         * @brief 서버 권위 상태(`HorrorSnapshot`)를 봉인한 채널의 메시지(종류 바이트 + 스키마 해시 없는 본문)로 씁니다. 받는 쪽은 `NetMessageChannel::readMessage` 로 읽는다.
+         * @brief 서버 권위 상태(`AsymmetricHorrorSnapshot`)를 봉인한 채널의 메시지(종류 바이트 + 스키마 해시 없는 본문)로 씁니다. 받는 쪽은 `NetMessageChannel::readMessage` 로 읽는다.
          * @return 범위 밖 값(255 개를 넘는 목록, 갈고리 단계 15 초과 등)이 있거나, 채널이 봉인 전이거나, 그 종류에 스냅샷을 등록하지 않았으면 false 입니다(잘라 쓰지 않는다).
          */
         [[nodiscard]] bool writeSnapshotMessage( const NetMessageChannel& channel, uint8 kind, NetMessageWriter& outWriter ) const;
@@ -321,24 +321,24 @@ namespace sw
          *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 바이트가 깨졌거나, 값이 범위 밖이거나 서로 맞지 않으면(`isStateConsistent`) false 를 반환하고 상태는 그대로입니다.
          */
         [[nodiscard]] bool readState( Archive& archive );
-        void               drainEvents( vector<AsymmetricHorrorEvent>& outListEvent );
+        void               pollEvents( vector<AsymmetricHorrorEvent>& outListEvent );
 
-        const HorrorSurvivor*  findSurvivor( int32 survivor ) const { return isValidSurvivor( survivor ) ? &_listSurvivor[static_cast<size_t>( survivor )] : nullptr; }
-        int32                  getSurvivorCount() const { return static_cast<int32>( _listSurvivor.size() ); }
-        const HorrorKiller&    getKiller() const { return _killer; }
-        const HorrorGenerator* findGenerator( int32 generator ) const;
-        const HorrorGate*      findGate( int32 gate ) const;
-        const HorrorWindow*    findWindow( int32 window ) const;
-        PalletState            getPalletState( int32 pallet ) const;
-        int32                  getCompletedGeneratorCount() const { return _completedGeneratorCount; }
-        bool                   areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
-        bool                   isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
-        bool                   isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
-        float32                getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
-        const MatchState&      getMatch() const { return _match; }
-        bool                   isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
-        int32                  countStandingSurvivors() const;
-        uint32                 getTick() const { return _tick; }
+        const AsymmetricHorrorSurvivor*  findSurvivor( int32 survivor ) const { return isValidSurvivor( survivor ) ? &_listSurvivor[static_cast<size_t>( survivor )] : nullptr; }
+        int32                            getSurvivorCount() const { return static_cast<int32>( _listSurvivor.size() ); }
+        const AsymmetricHorrorKiller&    getKiller() const { return _killer; }
+        const AsymmetricHorrorGenerator* findGenerator( int32 generator ) const;
+        const AsymmetricHorrorGate*      findGate( int32 gate ) const;
+        const AsymmetricHorrorWindow*    findWindow( int32 window ) const;
+        PalletState                      getPalletState( int32 pallet ) const;
+        int32                            getCompletedGeneratorCount() const { return _completedGeneratorCount; }
+        bool                             areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
+        bool                             isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
+        bool                             isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
+        float32                          getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
+        const MatchState&                getMatch() const { return _match; }
+        bool                             isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
+        int32                            countStandingSurvivors() const;
+        uint32                           getTick() const { return _tick; }
 
     private:
         bool isValidSurvivor( int32 survivor ) const { return survivor >= 0 && survivor < static_cast<int32>( _listSurvivor.size() ); }
@@ -362,21 +362,21 @@ namespace sw
         void                 releaseHealers( int32 patient, bool bResetProgress );
         void                 finishHeal( int32 patient );
         /** @brief 빈사나 들림 상태에서 부상으로 되돌립니다(치료 완료, 구출, 몸부림 탈출). */
-        void restoreInjured( HorrorSurvivor& survivor );
+        void restoreInjured( AsymmetricHorrorSurvivor& survivor );
         void sacrifice( int32 survivor, bool bBledOut );
         void leaveActivity( int32 survivor );
         void dropCarried( bool bStunKiller, float32 stunTime );
         void stunKiller( float32 seconds );
         void startCollapse();
         void resolveEnd();
-        void syncHealthState( HorrorSurvivor& survivor );
+        void syncHealthState( AsymmetricHorrorSurvivor& survivor );
         void awardScore( StatBlock& outScore, const utf8* pAction, float32 amount );
         /** @brief 발전기의 수리 규칙을 카탈로그에서 다시 잡습니다(진행량은 남긴다). 규칙이 범위 밖이라 거절되면 false 이고 발전기는 그대로입니다. */
         [[nodiscard]] bool configureGenerator( int32 generator, bool bRegressing );
         /** @brief `start` 가 판에 주는 설정입니다. 복원할 때 같은 설정으로 판을 다시 엽니다. */
         MatchSettings makeMatchSettings() const;
         /** @brief 생존자 하나의 상태를 읽어 덮어씁니다(규칙과 치료 설정은 `addSurvivor` 가 만든 것을 씁니다). 데이터가 깨졌으면 false 를 반환합니다. */
-        [[nodiscard]] bool readSurvivor( Archive& archive, HorrorSurvivor& outSurvivor ) const;
+        [[nodiscard]] bool readSurvivor( Archive& archive, AsymmetricHorrorSurvivor& outSurvivor ) const;
         /** @brief 무대(갈고리, 판자, 사물함, 창문, 발전기, 탈출문)를 위치로 다시 만들고 그 위에 상태를 덮습니다. 판자 수를 @p outPalletCount 에 적습니다. */
         [[nodiscard]] bool readStage( Archive& archive, uint32& outPalletCount );
         /** @brief 살인마 상태를 읽어 덮습니다. 든 생존자 · 부수는 판자 번호가 @p survivorCount · @p palletCount 밖이면 false 입니다. */
@@ -390,12 +390,12 @@ namespace sw
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
 
     private:
-        HorrorMatchSettings                 _settings;
-        HorrorKiller                        _killer;
-        vector<HorrorSurvivor>              _listSurvivor;
-        vector<HorrorGenerator>             _listGenerator;
-        vector<HorrorGate>                  _listGate;
-        vector<HorrorWindow>                _listWindow;
+        AsymmetricHorrorMatchSettings       _settings;
+        AsymmetricHorrorKiller              _killer;
+        vector<AsymmetricHorrorSurvivor>    _listSurvivor;
+        vector<AsymmetricHorrorGenerator>   _listGenerator;
+        vector<AsymmetricHorrorGate>        _listGate;
+        vector<AsymmetricHorrorWindow>      _listWindow;
         vector<float3>                      _listHook;
         vector<float3>                      _listPallet;
         vector<PalletState>                 _listPalletState;
@@ -403,7 +403,7 @@ namespace sw
         vector<int32>                       _listLockerOccupant;
         EventBuffer<AsymmetricHorrorEvent>  _eventBuffer;
         vector<InteractionEvent>            _listInteractionScratch;
-        vector<VitalityEvent>               _listVitalityScratch;
+        vector<CombatHealthEvent>           _listCombatHealthScratch;
         MatchState                          _match;
         FixedStepTimer                      _timer;
         float3                              _hatchPosition;

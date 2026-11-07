@@ -74,18 +74,18 @@ namespace sw
         return _fileHandlers.add( handler );
     }
 
-    ReloadOutcome ConfigReloadSubsystem::reloadChangedFile( string_view fullPath )
+    ReloadResult ConfigReloadSubsystem::reloadChangedFile( string_view fullPath )
     {
-        const ReloadOutcome hostOutcome = _configManager.reloadConfigFile( fullPath );
-        if ( hostOutcome != ReloadOutcome::NotTracked )
+        const ReloadResult hostOutcome = _configManager.reloadConfigFile( fullPath );
+        if ( hostOutcome != ReloadResult::NotTracked )
             return hostOutcome;
-        ReloadOutcome outcome = ReloadOutcome::NotTracked;
-        (void)_fileHandlers.broadcastUntil( [&outcome]( ReloadOutcome handlerOutcome )
+        ReloadResult result = ReloadResult::NotTracked;
+        (void)_fileHandlers.broadcastUntil( [&result]( ReloadResult handlerOutcome )
         {
-            outcome = handlerOutcome;
-            return handlerOutcome != ReloadOutcome::NotTracked; // 처음 맡은 처리기에서 멈춘다
+            result = handlerOutcome;
+            return handlerOutcome != ReloadResult::NotTracked; // 처음 맡은 처리기에서 멈춘다
         }, fullPath );
-        return outcome;
+        return result;
     }
 
     void ConfigReloadSubsystem::onConfigFileChanged( const FileChangeEvent& changeEvent )
@@ -94,7 +94,7 @@ namespace sw
             return;
         const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
-        if ( reloadChangedFile( fullPath ) == ReloadOutcome::Failed )
+        if ( reloadChangedFile( fullPath ) == ReloadResult::Failed )
             SW_LOG_WARNING_ID( "ConfigReload.ConfigReloadKeptPrevious", "Config reload kept the previous values - fix and save %# again", fullPath.c_str() );
     }
 } // namespace sw

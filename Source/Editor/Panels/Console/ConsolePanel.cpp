@@ -109,7 +109,7 @@ namespace sw::editor
                 if ( bClicked )
                     inoutEnabled = ( inoutEnabled == false );
                 if ( pMark != nullptr )
-                    EditorSelfTestMarks::note( pMark );
+                    EditorSelfTestMarks::record( pMark );
                 EditorWidgets::drawTooltip( pTooltip );
             }
 
@@ -365,13 +365,13 @@ namespace sw::editor
             clearEntries();
             bNewLogs = false;
         }
-        EditorSelfTestMarks::note( "console.clear" );
+        EditorSelfTestMarks::record( "console.clear" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Collapse" ) );
         if ( EditorWidgets::drawToggleButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Collapse" ), "Collapse" ), _bCollapse == SW_TRUE ) )
             _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
-        EditorSelfTestMarks::note( "console.collapse" );
+        EditorSelfTestMarks::record( "console.collapse" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
     }
 
@@ -416,7 +416,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( SW_EDITOR_ICON( "Settings" ), ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
             EditorInputGUI::openPopup( "##ConsoleOptions" );
-        EditorSelfTestMarks::note( "console.options" );
+        EditorSelfTestMarks::record( "console.options" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Options" ) );
         drawOptionsPopup();
     }

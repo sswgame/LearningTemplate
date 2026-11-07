@@ -254,9 +254,9 @@ namespace sw
             if ( _arrAIActive[player] != SW_FALSE )
                 _arrAI[player].update( deltaTime );
         }
-        // `RTSWorld::drainEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
+        // `RTSWorld::pollEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
         _listFrameEvent.clear();
-        _world.drainEvents( _eventLease, _listFrameEvent );
+        _world.pollEvents( _eventLease, _listFrameEvent );
         for ( const RTSEvent& event : _listFrameEvent )
         {
             for ( int32 player = 0; player < kPlayerCount; ++player )
@@ -300,7 +300,7 @@ namespace sw
         }
     }
 
-    void SkirmishMatch::drainEvents( vector<RTSEvent>& outListEvent )
+    void SkirmishMatch::pollEvents( vector<RTSEvent>& outListEvent )
     {
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();

@@ -282,7 +282,7 @@ namespace sw
 
         /**
          * @brief @p result 가 같은 멱등 키로 다시 시도할 결과(저장소 · 제공자 일시 장애, 시간이 지나면 풀리는 잠금 · 제한)인지입니다.
-         * @details 서버는 이 결과를 멱등 응답으로 기억하지 않는다(`NetResponseRetention::Forget`) — 기억하면 같은 키의 재시도가 서비스에 닿지 못하고 같은 답을 받는다. 응답 형식 셋이 함께 쓴다.
+         * @details 서버는 이 결과를 멱등 응답으로 기억하지 않는다(`NetResponseRetention::Discard`) — 기억하면 같은 키의 재시도가 서비스에 닿지 못하고 같은 답을 받는다. 응답 형식 셋이 함께 쓴다.
          */
         [[nodiscard]] static constexpr bool isRetryable( LoginResult result )
         {

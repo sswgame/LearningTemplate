@@ -182,10 +182,10 @@ namespace
 
         MonsterHuntContractTest() { SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) ); }
 
-        static sw::vector<sw::MonsterHuntInvestigationEvent> drain( sw::MonsterHuntInvestigation& investigation )
+        static sw::vector<sw::MonsterHuntInvestigationEvent> pollAll( sw::MonsterHuntInvestigation& investigation )
         {
             sw::vector<sw::MonsterHuntInvestigationEvent> listEvent;
-            investigation.drainEvents( listEvent );
+            investigation.pollEvents( listEvent );
             return listEvent;
         }
 
@@ -446,7 +446,7 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, KnowledgeRisesByKillsBookAndNeverFalls )
     SW_EXPECT_EQUAL( 1, bestiary.getKnowledge( "ghoul" ) );
 
     sw::vector<sw::MonsterHuntBestiaryEvent> listEvent;
-    bestiary.drainEvents( listEvent );
+    bestiary.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 2 ), listEvent.size() );
     SW_EXPECT_EQUAL( sw::MonsterHuntBestiaryEvent::Kind::KnowledgeRaised, listEvent[0]._kind );
     SW_EXPECT_EQUAL( 1, listEvent[0]._value );
@@ -495,10 +495,10 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, JumpRevealsEveryWeaknessInBetween )
     SW_EXPECT_EQUAL( sw::hashed_string( "necro_oil" ), listWeakness[0]->_id );
 
     sw::vector<sw::MonsterHuntBestiaryEvent> listEvent;
-    bestiary.drainEvents( listEvent );
+    bestiary.pollEvents( listEvent );
     listEvent.clear();
     SW_EXPECT_TRUE( bestiary.readBook( "ghoul" ) );
-    bestiary.drainEvents( listEvent );
+    bestiary.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 3 ), listEvent.size() ); // 단계 하나 + 새 약점 둘(앞서 본 것은 다시 알리지 않는다)
     SW_EXPECT_EQUAL( sw::hashed_string( "igni" ), listEvent[1]._weaknessID );
     SW_EXPECT_EQUAL( sw::hashed_string( "grapeshot" ), listEvent[2]._weaknessID );
@@ -728,11 +728,11 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationWalksOrderDistanceAndSteps
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::AlreadyFound, investigation.investigate( "blood", atOrigin ) );
     SW_EXPECT_TRUE( investigation.isClueFound( "blood" ) );
     SW_EXPECT_FALSE( investigation.isClueFound( "feather" ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), drain( investigation ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), pollAll( investigation ).size() );
 
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Found, investigation.investigate( "feather", atFeather ) );
     {
-        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = drain( investigation );
+        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( investigation );
         SW_REQUIRE_EQUAL( size_t( 2 ), listEvent.size() );
         SW_EXPECT_EQUAL( sw::MonsterHuntInvestigationEvent::Kind::ClueFound, listEvent[0]._kind );
         SW_EXPECT_EQUAL( sw::MonsterHuntInvestigationEvent::Kind::StepCompleted, listEvent[1]._kind );
@@ -744,7 +744,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationWalksOrderDistanceAndSteps
 
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Found, investigation.investigate( "eggs", atEggs ) );
     {
-        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = drain( investigation );
+        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( investigation );
         SW_REQUIRE_EQUAL( size_t( 3 ), listEvent.size() );
         SW_EXPECT_EQUAL( sw::MonsterHuntInvestigationEvent::Kind::Solved, listEvent[2]._kind );
     }
@@ -762,7 +762,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
     SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "interview", nullptr ) );
     SW_EXPECT_EQUAL( sw::hashed_string( "search" ), investigation.getStepID() );
     {
-        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = drain( investigation );
+        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( investigation );
         SW_REQUIRE_EQUAL( size_t( 1 ), listEvent.size() );
         SW_EXPECT_EQUAL( sw::hashed_string( "talk" ), listEvent[0]._stepID );
     }
@@ -770,7 +770,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Found, investigation.investigate( "note", sw::float3{ 0.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( investigation.isSolved() ); // 뒤의 빈 단계도 넘긴다
     {
-        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = drain( investigation );
+        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( investigation );
         SW_REQUIRE_EQUAL( size_t( 4 ), listEvent.size() ); // 단서, search, report, 끝
         SW_EXPECT_EQUAL( sw::hashed_string( "report" ), listEvent[2]._stepID );
         SW_EXPECT_EQUAL( sw::MonsterHuntInvestigationEvent::Kind::Solved, listEvent[3]._kind );
@@ -780,14 +780,14 @@ SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
     SW_REQUIRE_TRUE( noSteps.initialize( &_catalog, "no_steps", nullptr ) );
     SW_EXPECT_TRUE( noSteps.isSolved() );
     {
-        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = drain( noSteps );
+        const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( noSteps );
         SW_REQUIRE_EQUAL( size_t( 1 ), listEvent.size() );
         SW_EXPECT_EQUAL( sw::MonsterHuntInvestigationEvent::Kind::Solved, listEvent[0]._kind );
     }
 
     sw::MonsterHuntInvestigation unknown;
     SW_EXPECT_FALSE( unknown.initialize( &_catalog, "nothing", nullptr ) );
-    SW_EXPECT_TRUE( drain( unknown ).empty() );
+    SW_EXPECT_TRUE( pollAll( unknown ).empty() );
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Solved, unknown.investigate( "blood", sw::float3{} ) );
 }
 

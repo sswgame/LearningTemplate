@@ -28,7 +28,7 @@ namespace sw
                 bool bValid = true;
                 for ( XMLNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
-                    RecipeItemFields line; // item 필수 · count >= 1(적지 않으면 한 개)은 PROPERTY 가 본다
+                    RecipeItemParams line; // item 필수 · count >= 1(적지 않으면 한 개)은 PROPERTY 가 본다
                     if ( XMLFields::readFields( child, line, sourceName ) )
                         outItems.addItem( line._item, line._count );
                     else

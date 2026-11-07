@@ -233,7 +233,7 @@ namespace sw
         bool                      isRoundOver() const { return _match.getPhase() == MatchPhase::Ended; }
         float32                   getTime() const { return _time; }
         const TrampolineSettings& getSettings() const { return _settings; }
-        void                      drainEvents( vector<TrampolineEvent>& outListEvent );
+        void                      pollEvents( vector<TrampolineEvent>& outListEvent );
 
     private:
         bool   isValidPlayer( int32 player ) const { return 0 <= player && player < static_cast<int32>( _listPlayer.size() ); }

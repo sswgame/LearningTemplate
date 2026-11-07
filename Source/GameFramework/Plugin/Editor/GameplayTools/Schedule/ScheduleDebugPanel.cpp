@@ -106,7 +106,7 @@ namespace sw::editor
             ImGui::PushID( npcIndex );
             if ( ImGui::Selectable( npcID.c_str(), bSelected ) )
                 _model.selectNPC( npcID );
-            EditorSelfTestMarks::note( ( string( "schedule.npc." ) + npcID.c_str() ).c_str() ); // 자동화가 NPC 를 고를 자리
+            EditorSelfTestMarks::record( ( string( "schedule.npc." ) + npcID.c_str() ).c_str() ); // 자동화가 NPC 를 고를 자리
             ImGui::PopID();
         }
     }

@@ -237,14 +237,14 @@ namespace sw
             attachHost( host );
         _pLoginService->update( nowMs );
         _listCompletionScratch.clear();
-        _pLoginService->drainCompletions( _listCompletionScratch );
+        _pLoginService->takeCompletions( _listCompletionScratch );
         for ( const LoginCompletion& completion : _listCompletionScratch )
         {
             handleCompletion( host, completion );
         }
         // 이벤트는 완료 뒤에 처리한다. 로그인 응답과 탈퇴 응답을 먼저 보내고, 밀려난 세션은 그 뒤에 끊는다.
         _listEventScratch.clear();
-        _pLoginService->drainEvents( _listEventScratch );
+        _pLoginService->pollEvents( _listEventScratch );
         for ( const LoginEvent& event : _listEventScratch )
         {
             handleEvent( host, event );
@@ -266,7 +266,7 @@ namespace sw
     void AccountServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
-        _presence.noteOffline( accountID );
+        _presence.recordOffline( accountID );
         const auto sessionIt = _mapAccountToSession.find( accountID );
         if ( sessionIt == _mapAccountToSession.end() )
             return; // 이 객체가 끊은 연결(밀려남, 로그아웃)이다. 세션 테이블에서 먼저 뺐다
@@ -289,7 +289,7 @@ namespace sw
             return; // 읽기가 (타입, 결과, 버전)마다 한 번 오류 로그와 카운터를 남겼다 — 그 세션은 영속 레코드 다시 읽기로 끊긴다
         if ( notice._reasonCode.empty() == false && findSessionID( notice._accountID ) == notice._sessionID )
             _mapAccountToReasonCode[notice._accountID] = notice._reasonCode;
-        _pLoginService->noteRevokedElsewhere( notice._accountID, notice._sessionID, notice._reason );
+        _pLoginService->recordRevokedElsewhere( notice._accountID, notice._sessionID, notice._reason );
     }
 
     void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs )
@@ -347,7 +347,7 @@ namespace sw
         }
         const bool bOk = completion._result == LoginResult::Ok;
         // 응답 형식 셋의 보존 판정은 결과 하나가 정한다(`AccountProtocol::isRetryable`) — 다시 시도할 결과를 기억하면 같은 키의 재시도가 같은 답만 받는다.
-        const NetResponseRetention retention = AccountProtocol::isRetryable( completion._result ) ? NetResponseRetention::Forget : NetResponseRetention::Remember;
+        const NetResponseRetention retention = AccountProtocol::isRetryable( completion._result ) ? NetResponseRetention::Discard : NetResponseRetention::Keep;
         if ( bWritten == false )
         {
             // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 respondMessage 를 쓰지 않고 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
@@ -375,12 +375,12 @@ namespace sw
                 }
             }
             _mapAccountToSession[accountID] = BoundSession{ completion._grant._token, call._connection };
-            _presence.noteOnline( completion._grant._identity );
+            _presence.recordOnline( completion._grant._identity );
         }
         const bool bLinkOperation   = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
         const bool bPresenceRefresh = bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end();
         if ( bPresenceRefresh )
-            _presence.noteOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
+            _presence.recordOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
         (void)host.respondOk( call._token, body, retention );
         if ( bOk && completion._operation == LoginOperation::Logout )
         {
@@ -466,7 +466,7 @@ namespace sw
     void AccountServer::publishRemoteRevocations( OnlineServiceHost& host )
     {
         _listEventScratch.clear();
-        _pLoginService->drainRemoteRevocations( _listEventScratch );
+        _pLoginService->pollRemoteRevocations( _listEventScratch );
         ServerBus* pBus = host.getServerBus();
         for ( const LoginEvent& event : _listEventScratch )
         {

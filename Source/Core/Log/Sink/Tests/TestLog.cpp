@@ -433,13 +433,13 @@ SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
     ThreadSafeLogCapture capture;
     SW_REQUIRE_TRUE( capture.isAttached() );
 
-    constexpr uint32 kDrainCount = 500;
-    for ( uint32 logIndex = 0; logIndex < kDrainCount; ++logIndex )
+    constexpr uint32 kPollCount = 500;
+    for ( uint32 logIndex = 0; logIndex < kPollCount; ++logIndex )
     {
         SW_LOG_INFO_ID( "TestLog.DrainCheck", "[TestLog] Drain check %#", logIndex );
     }
 
-    SW_EXPECT_EQUAL( kDrainCount, capture.getCount() );
+    SW_EXPECT_EQUAL( kPollCount, capture.getCount() );
 }
 
 /**

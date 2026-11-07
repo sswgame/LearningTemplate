@@ -68,18 +68,18 @@ namespace sw
 
             static void readOption( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaID )
             {
-                CustomizationOptionFields fields;
-                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName ); // 오류는 보고서에 쌓인다
+                CustomizationOptionParams params;
+                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName ); // 오류는 보고서에 쌓인다
                 CustomizationOptionDef option;
-                option._name               = fields._name;
-                option._visual             = fields._visual;
-                option._variant            = fields._variant;
-                option._materialVariant    = fields._materialVariant;
-                const hashed_string prefab = fields._prefab;
-                const hashed_string sprite = fields._sprite;
+                option._name               = params._name;
+                option._visual             = params._visual;
+                option._variant            = params._variant;
+                option._materialVariant    = params._materialVariant;
+                const hashed_string prefab = params._prefab;
+                const hashed_string sprite = params._sprite;
                 option._asset              = prefab.empty() ? sprite : prefab;
-                option._offset             = fields._offset;
-                option._rotation           = fields._rotation;
+                option._offset             = params._offset;
+                option._rotation           = params._rotation;
                 const bool bChoiceOnly     = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
                 if ( option._name.empty() || inoutParam.findOption( option._name ) != nullptr )
                     report.addErrorWithID( "Appearance.OptionNameInvalid", "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
@@ -95,10 +95,10 @@ namespace sw
 
             static void readCondition( const XMLNode& node, const CustomizationSchemaDef& schema, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName )
             {
-                CustomizationConditionFields fields;
+                CustomizationConditionParams params;
                 CustomizationConditionDef    condition;
-                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName, { "options" } ); // 구간은 대상을 안 뒤에 다시 읽는다
-                condition._parameter = fields._parameter;
+                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName, { "options" } ); // 구간은 대상을 안 뒤에 다시 읽는다
+                condition._parameter = params._parameter;
                 AppearanceXMLUtil::readNameList( node, "options", condition._listOption );
                 // 조건은 앞에 선언한 매개변수만 가리킬 수 있다. 아직 목록에 들어가지 않은 자기 자신도 가리킬 수 없으므로 순환이 생길 수 없다.
                 const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
@@ -111,8 +111,8 @@ namespace sw
                 if ( pTarget->_kind == CustomizationKind::Slider )
                 {
                     // 적지 않은 구간 끝은 대상 슬라이더의 범위다.
-                    condition._min = node.findAttribute( "min" ) != nullptr ? fields._min : pTarget->_min;
-                    condition._max = node.findAttribute( "max" ) != nullptr ? fields._max : pTarget->_max;
+                    condition._min = node.findAttribute( "min" ) != nullptr ? params._min : pTarget->_min;
+                    condition._max = node.findAttribute( "max" ) != nullptr ? params._max : pTarget->_max;
                 }
                 else if ( pTarget->_kind == CustomizationKind::Color || condition._listOption.empty() )
                 {
@@ -132,16 +132,16 @@ namespace sw
             static void readParameter( const XMLNode& node, CustomizationKind kind, CustomizationSchemaDef& inoutSchema, AppearanceLoadReport& report, string_view sourceName )
             {
                 reportUnknownParamAttributes( node, kind, report, sourceName ); // 종류마다 받는 칸
-                CustomizationParamFields fields;
-                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName, { "default" } ); // 기본값은 종류마다 꼴이 달라 아래에서 읽는다
+                CustomizationParamEntryParams params;
+                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName, { "default" } ); // 기본값은 종류마다 꼴이 달라 아래에서 읽는다
                 CustomizationParamDef param;
                 param._kind     = kind;
-                param._name     = fields._name;
-                param._category = fields._category;
-                param._symmetry = fields._symmetry;
-                param._socket   = fields._socket; // 부착 매개변수만 필수 — 아래에서 확인한다
-                param._min      = fields._min;
-                param._max      = fields._max;
+                param._name     = params._name;
+                param._category = params._category;
+                param._symmetry = params._symmetry;
+                param._socket   = params._socket; // 부착 매개변수만 필수 — 아래에서 확인한다
+                param._min      = params._min;
+                param._max      = params._max;
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
                 {
                     report.addErrorWithID( "Appearance.ParameterNameInvalid", "%#: schema '%#' has a parameter without a name or a duplicate '%#'", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
@@ -225,7 +225,7 @@ namespace sw
         return VectorUtil::findBy<&CustomizationParamDef::_name>( _listParameter, name );
     }
 
-    bool CustomizationSchemaCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool CustomizationSchemaCatalog::loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();

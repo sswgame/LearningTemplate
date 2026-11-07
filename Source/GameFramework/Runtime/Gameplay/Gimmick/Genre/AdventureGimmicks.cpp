@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
@@ -110,14 +110,14 @@ namespace sw
 
     void ElementStatusComponent::rebuild()
     {
-        _seenTableReloadCount = SharedAssetCache<ElementRuleTable>::getReloadCount();
+        _seenTableReloadCount = SharedAssetCache<ElementRuleCatalog>::getReloadCount();
         if ( _tablePath.empty() )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementStatusNoRule", "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
             return;
         }
         // 새 테이블을 받기 전에 격자를 옛 테이블과 함께 쥔 채 둔다 — 받지 못하면 옛 상태 그대로다.
-        shared_ptr<const ElementRuleTable> pTable = SharedAssetCache<ElementRuleTable>::acquire( _tablePath );
+        shared_ptr<const ElementRuleCatalog> pTable = SharedAssetCache<ElementRuleCatalog>::acquire( _tablePath );
         if ( pTable == nullptr )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementRuleTableCould", "Element rule table %# could not be read", _tablePath.c_str() );
@@ -154,7 +154,7 @@ namespace sw
     void ElementStatusComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        if ( _seenTableReloadCount != SharedAssetCache<ElementRuleTable>::getReloadCount() )
+        if ( _seenTableReloadCount != SharedAssetCache<ElementRuleCatalog>::getReloadCount() )
             rebuild(); // 규칙 테이블 파일이 바뀌었으므로 새 테이블로 다시 만든다. 상태는 처음부터 시작한다
         if ( _grid.update( deltaTime ) > 0 )
             publishSignal();
@@ -162,7 +162,7 @@ namespace sw
 
     bool ElementStatusComponent::applyStimulus( const hashed_string& stimulus )
     {
-        const ElementRuleTable* pTable = _grid.getTable();
+        const ElementRuleCatalog* pTable = _grid.getTable();
         if ( pTable == nullptr )
             return false;
         const bool bChanged = _grid.applyStimulus( int2{ 0, 0 }, pTable->findStimulus( stimulus ) ) > 0;
@@ -172,7 +172,7 @@ namespace sw
 
     bool ElementStatusComponent::hasStatus( const hashed_string& status ) const
     {
-        const ElementRuleTable* pTable = _grid.getTable();
+        const ElementRuleCatalog* pTable = _grid.getTable();
         return pTable != nullptr && _grid.hasStatus( int2{ 0, 0 }, pTable->findStatus( status ) );
     }
 

@@ -188,17 +188,17 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
                 _model.reloadLocalization();
-            EditorSelfTestMarks::note( "dataTable.reload" );
+            EditorSelfTestMarks::record( "dataTable.reload" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ReloadTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 21.0f ) ); // 좁은 창에서 새 키 칸이 오른쪽 끝에서 잘렸다(uiaudit 23)
             EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
-            EditorSelfTestMarks::note( "dataTable.newKey" );
+            EditorSelfTestMarks::record( "dataTable.newKey" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "AddKey" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) && _model.addKey( _newKeyBuffer.c_str() ) )
                 _newKeyBuffer.clear();
-            EditorSelfTestMarks::note( "dataTable.addKey" );
+            EditorSelfTestMarks::record( "dataTable.addKey" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "AddKeyTip" ) );
         }
         EditorChrome::endToolbar();
@@ -361,7 +361,7 @@ namespace sw::editor
             bDeleteRequested = true;
         fixed_string<constant::buffer::kMax128> mark;
         formatstring( mark.data(), mark.capacity(), "dataTable.delete.%#", record._key.c_str() );
-        EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 더한 키를 지운다
+        EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 더한 키를 지운다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "DeleteKeyTip" ) );
 
         ImGui::PopID();

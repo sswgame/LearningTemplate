@@ -30,10 +30,10 @@ namespace
 
     /** @brief 저장소 일 하나를 함수 하나로 감쌉니다. */
     template <typename FunctionType>
-    class ServiceStoreTestWork final : public IServiceStoreWork
+    class ServiceStoreTestJob final : public IServiceStoreJob
     {
     public:
-        ServiceStoreTestWork( FunctionType function, int32& outCompleteCount, int32& outCancelledCount )
+        ServiceStoreTestJob( FunctionType function, int32& outCompleteCount, int32& outCancelledCount )
             : _function{ std::move( function ) }
             , _outCompleteCount{ outCompleteCount }
             , _outCancelledCount{ outCancelledCount }
@@ -64,7 +64,7 @@ namespace
         {
             int32 completeCount  = 0;
             int32 cancelledCount = 0;
-            store.submit( sw::make_unique<ServiceStoreTestWork<FunctionType>>( std::move( function ), completeCount, cancelledCount ) );
+            store.submit( sw::make_unique<ServiceStoreTestJob<FunctionType>>( std::move( function ), completeCount, cancelledCount ) );
             const Deadline deadline = Deadline::afterMilliseconds( 10000 );
             while ( completeCount == 0 && deadline.isExpired() == false )
             {
@@ -147,24 +147,24 @@ namespace
      */
     struct ServiceStoreParity
     {
-        static void note( vector<string>& inoutListLine, string_view step, ServiceStoreResult result, int32 detail = 0 )
+        static void record( vector<string>& inoutListLine, string_view step, ServiceStoreResult result, int32 detail = 0 )
         {
             inoutListLine.push_back( formatToString( "%#: %# %#", step, static_cast<int32>( result ), detail ) );
         }
 
         /** @brief 커밋하고 결과와 어긋난 쓰기 번호를 적습니다. 커밋 정보는 @p outInfo 에 남습니다. */
-        static void noteCommit( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const ServiceTransaction& transaction, ServiceCommitInfo& outInfo )
+        static void recordCommit( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const ServiceTransaction& transaction, ServiceCommitInfo& outInfo )
         {
             outInfo                         = ServiceCommitInfo{};
             const ServiceStoreResult result = connection.commit( transaction, &outInfo );
-            note( inoutListLine, step, result, outInfo._conflictIndex );
+            record( inoutListLine, step, result, outInfo._conflictIndex );
         }
 
         /** @brief 읽고 결과와 바이트 수를 적습니다. 레코드는 @p outRecord 에 남습니다. */
-        static void noteRead( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const hashed_string& table, string_view key, ServiceRecord& outRecord )
+        static void recordRead( vector<string>& inoutListLine, IServiceStoreConnection& connection, string_view step, const hashed_string& table, string_view key, ServiceRecord& outRecord )
         {
             const ServiceStoreResult result = connection.readRecord( table, key, outRecord );
-            note( inoutListLine, step, result, static_cast<int32>( outRecord._bytes.size() ) );
+            record( inoutListLine, step, result, static_cast<int32>( outRecord._bytes.size() ) );
         }
 
         static vector<string> runScenario( IServiceStoreConnection& connection )
@@ -173,74 +173,74 @@ namespace
             ServiceRecord     record;
             ServiceCommitInfo info;
 
-            noteRead( listLine, connection, "read missing", kTable, "a", record );
+            recordRead( listLine, connection, "read missing", kTable, "a", record );
             listLine.push_back( record._version == ServiceRecord::kAbsentVersion ? "absent version" : "some version" );
 
             ServiceTransaction create;
             create.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "1" ), ServiceRecord::kAbsentVersion );
-            noteCommit( listLine, connection, "create", create, info );
+            recordCommit( listLine, connection, "create", create, info );
             const uint64 firstVersion = info._commitVersion;
             listLine.push_back( firstVersion > 0 ? "version given" : "no version" );
-            noteCommit( listLine, connection, "create again", create, info );
+            recordCommit( listLine, connection, "create again", create, info );
 
-            noteRead( listLine, connection, "read", kTable, "a", record );
+            recordRead( listLine, connection, "read", kTable, "a", record );
             listLine.push_back( record._version == firstVersion ? "read the commit version" : "read another version" );
             listLine.push_back( string( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() ) );
 
             ServiceTransaction update;
             update.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "2" ), firstVersion );
-            noteCommit( listLine, connection, "update", update, info );
+            recordCommit( listLine, connection, "update", update, info );
             const uint64 secondVersion = info._commitVersion;
             listLine.push_back( secondVersion > firstVersion ? "version rose" : "version did not rise" );
-            noteCommit( listLine, connection, "stale update", update, info );
+            recordCommit( listLine, connection, "stale update", update, info );
 
             ServiceTransaction mixed;
             mixed.put( kTable, "fresh", SQLServiceStoreTestUtil::makeBytes( "x" ) );
             mixed.put( kTable, "a", SQLServiceStoreTestUtil::makeBytes( "3" ), firstVersion );
-            noteCommit( listLine, connection, "mixed", mixed, info );
-            noteRead( listLine, connection, "mixed left nothing", kTable, "fresh", record );
+            recordCommit( listLine, connection, "mixed", mixed, info );
+            recordRead( listLine, connection, "mixed left nothing", kTable, "fresh", record );
 
             ServiceTransaction require;
             require.requireVersion( kTable, "a", secondVersion );
             require.put( kTable, "b", SQLServiceStoreTestUtil::makeBytes( "b" ) );
-            noteCommit( listLine, connection, "require", require, info );
+            recordCommit( listLine, connection, "require", require, info );
             ServiceTransaction staleRequire;
             staleRequire.requireVersion( kTable, "a", firstVersion );
-            noteCommit( listLine, connection, "stale require", staleRequire, info );
+            recordCommit( listLine, connection, "stale require", staleRequire, info );
             ServiceTransaction requireAbsent;
             requireAbsent.requireVersion( kTable, "nothing", ServiceRecord::kAbsentVersion );
-            noteCommit( listLine, connection, "require absent", requireAbsent, info );
+            recordCommit( listLine, connection, "require absent", requireAbsent, info );
 
             ServiceTransaction staleErase;
             staleErase.erase( kTable, "b", firstVersion );
-            noteCommit( listLine, connection, "stale erase", staleErase, info );
+            recordCommit( listLine, connection, "stale erase", staleErase, info );
             ServiceTransaction eraseAbsentButThere;
             eraseAbsentButThere.erase( kTable, "b", ServiceRecord::kAbsentVersion );
-            noteCommit( listLine, connection, "erase expecting absent", eraseAbsentButThere, info );
+            recordCommit( listLine, connection, "erase expecting absent", eraseAbsentButThere, info );
             ServiceTransaction eraseMissing;
             eraseMissing.erase( kTable, "nothing" );
-            noteCommit( listLine, connection, "erase missing", eraseMissing, info );
+            recordCommit( listLine, connection, "erase missing", eraseMissing, info );
             ServiceTransaction erase;
             erase.erase( kTable, "b" );
-            noteCommit( listLine, connection, "erase", erase, info );
-            noteRead( listLine, connection, "erased", kTable, "b", record );
+            recordCommit( listLine, connection, "erase", erase, info );
+            recordRead( listLine, connection, "erased", kTable, "b", record );
 
             // 지웠다 다시 만들어도 옛 버전을 받지 않는다(ABA 없음).
             ServiceTransaction recreate;
             recreate.put( kTable, "b", SQLServiceStoreTestUtil::makeBytes( "again" ), ServiceRecord::kAbsentVersion );
-            noteCommit( listLine, connection, "recreate", recreate, info );
+            recordCommit( listLine, connection, "recreate", recreate, info );
             listLine.push_back( info._commitVersion > secondVersion ? "new version" : "old version" );
 
             ServiceTransaction empty;
             empty.put( kTable, "emptybytes", vector<uint8>{} );
-            noteCommit( listLine, connection, "empty bytes", empty, info );
-            noteRead( listLine, connection, "read empty bytes", kTable, "emptybytes", record );
+            recordCommit( listLine, connection, "empty bytes", empty, info );
+            recordRead( listLine, connection, "read empty bytes", kTable, "emptybytes", record );
 
             for ( const utf8* pKey : { "k/1", "k/2", "k/3", "l/1", "k0" } )
             {
                 ServiceTransaction seed;
                 seed.put( kTable, pKey, SQLServiceStoreTestUtil::makeBytes( pKey ) );
-                noteCommit( listLine, connection, pKey, seed, info );
+                recordCommit( listLine, connection, pKey, seed, info );
             }
             noteList( listLine, connection, "first page", "k/", "", 2, false );
             noteList( listLine, connection, "second page", "k/", "k/2", 2, false );
@@ -251,18 +251,18 @@ namespace
             noteList( listLine, connection, "other table", "", "", 5, false, hashed_string{ "paritytwo" } );
 
             // 키 규칙은 DB 에 닿기 전에 거른다.
-            noteRead( listLine, connection, "bad key read", kTable, "Bad Key'; DROP TABLE sw_record; --", record );
-            noteRead( listLine, connection, "empty table read", hashed_string{}, "a", record );
+            recordRead( listLine, connection, "bad key read", kTable, "Bad Key'; DROP TABLE sw_record; --", record );
+            recordRead( listLine, connection, "empty table read", hashed_string{}, "a", record );
             ServiceTransaction badKey;
             badKey.put( kTable, "Bad Key'; DROP TABLE sw_record; --", SQLServiceStoreTestUtil::makeBytes( "x" ) );
-            noteCommit( listLine, connection, "bad key commit", badKey, info );
+            recordCommit( listLine, connection, "bad key commit", badKey, info );
             ServiceTransaction twice;
             twice.put( kTable, "dup", SQLServiceStoreTestUtil::makeBytes( "1" ) );
             twice.put( kTable, "dup", SQLServiceStoreTestUtil::makeBytes( "2" ) );
-            noteCommit( listLine, connection, "same key twice", twice, info );
-            noteCommit( listLine, connection, "empty transaction", ServiceTransaction{}, info );
+            recordCommit( listLine, connection, "same key twice", twice, info );
+            recordCommit( listLine, connection, "empty transaction", ServiceTransaction{}, info );
             vector<ServiceRecord> listRecord;
-            note( listLine, "list zero", connection.listRecords( kTable, "", "", 0, false, listRecord ) );
+            record( listLine, "list zero", connection.listRecords( kTable, "", "", 0, false, listRecord ) );
             return listLine;
         }
 
@@ -322,7 +322,7 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
             transaction.put( kTable, "only", SQLServiceStoreTestUtil::makeBytes( "x" ), ServiceRecord::kAbsentVersion );
             result = connection.commit( transaction );
         };
-        fixture._store.submit( sw::make_unique<ServiceStoreTestWork<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
+        fixture._store.submit( sw::make_unique<ServiceStoreTestJob<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
     }
     const Deadline deadline = Deadline::afterMilliseconds( 45000 );
     while ( completeCount < kWorkCount && deadline.isExpired() == false )
@@ -542,7 +542,7 @@ SW_TEST_CASE( SQLServiceStoreTest, ReadFailuresAreUnavailable )
     }
 }
 
-/** @brief 종료 뒤 맡긴 일은 닫힌 연결로 돌고 완료를 받으며 취소로 표시된다(`IServiceStoreWork` 의 약속). */
+/** @brief 종료 뒤 맡긴 일은 닫힌 연결로 돌고 완료를 받으며 취소로 표시된다(`IServiceStoreJob` 의 약속). */
 SW_TEST_CASE( SQLServiceStoreTest, WorkAfterShutdownIsCancelled )
 {
     FakeStoreFixture fixture;
@@ -555,7 +555,7 @@ SW_TEST_CASE( SQLServiceStoreTest, WorkAfterShutdownIsCancelled )
         ServiceRecord record;
         result = connection.readRecord( kTable, "a", record );
     };
-    fixture._store.submit( sw::make_unique<ServiceStoreTestWork<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
+    fixture._store.submit( sw::make_unique<ServiceStoreTestJob<decltype( function )>>( std::move( function ), completeCount, cancelledCount ) );
     SW_EXPECT_EQUAL( 1, fixture._store.pollCompletions() );
     SW_EXPECT_EQUAL( 1, completeCount );
     SW_EXPECT_EQUAL( 1, cancelledCount );

@@ -61,33 +61,33 @@ namespace sw
         _mutex.unlock();
     }
 
-    void JSONLinesLogOutput::appendLine( string& outLine, const JSONLogFields& fields )
+    void JSONLinesLogOutput::appendLine( string& outLine, const JSONLogFields& params )
     {
-        const size_t levelIndex = static_cast<size_t>( fields._level );
+        const size_t levelIndex = static_cast<size_t>( params._level );
         outLine.append( "{\"time\":\"" );
-        JSONStringUtil::appendEscaped( outLine, fields._time );
-        outLine.append( "\",\"ts\":" ).append( to_string( fields._unixMilliseconds ) );
+        JSONStringUtil::appendEscaped( outLine, params._time );
+        outLine.append( "\",\"ts\":" ).append( to_string( params._unixMilliseconds ) );
         outLine.append( ",\"level\":\"" ).append( levelIndex < SW_COUNT_OF( JSONLinesInternal::kArrLevelName ) ? JSONLinesInternal::kArrLevelName[levelIndex] : "info" ).append( "\"" );
-        JSONLinesInternal::appendTextField( outLine, "tag", fields._tag );
-        if ( fields._bHasClock )
-            outLine.append( fields._clock == LogClock::Frame ? ",\"frame\":" : ",\"tick\":" ).append( to_string( fields._clockNumber ) );
-        if ( fields._context._traceID.isValid() )
+        JSONLinesInternal::appendTextField( outLine, "tag", params._tag );
+        if ( params._bHasClock )
+            outLine.append( params._clock == LogClock::Frame ? ",\"frame\":" : ",\"tick\":" ).append( to_string( params._clockNumber ) );
+        if ( params._context._traceID.isValid() )
         {
             outLine.append( ",\"trace\":\"" );
-            HexUtil::appendUint64( outLine, fields._context._traceID._high );
-            HexUtil::appendUint64( outLine, fields._context._traceID._low );
+            HexUtil::appendUint64( outLine, params._context._traceID._high );
+            HexUtil::appendUint64( outLine, params._context._traceID._low );
             outLine.append( "\"" );
         }
-        if ( fields._context._principalID != 0 )
+        if ( params._context._principalID != 0 )
         {
             outLine.append( ",\"acct\":\"" );
-            HexUtil::appendUint64( outLine, fields._context._principalID );
+            HexUtil::appendUint64( outLine, params._context._principalID );
             outLine.append( "\"" );
         }
-        if ( fields._id.empty() == false )
-            JSONLinesInternal::appendTextField( outLine, "id", fields._id );
-        JSONLinesInternal::appendTextField( outLine, "msg", fields._message );
-        JSONLinesInternal::appendTextField( outLine, "file", fields._file );
-        outLine.append( ",\"line\":" ).append( to_string( fields._line ) ).append( "}\n" );
+        if ( params._id.empty() == false )
+            JSONLinesInternal::appendTextField( outLine, "id", params._id );
+        JSONLinesInternal::appendTextField( outLine, "msg", params._message );
+        JSONLinesInternal::appendTextField( outLine, "file", params._file );
+        outLine.append( ",\"line\":" ).append( to_string( params._line ) ).append( "}\n" );
     }
 } // namespace sw

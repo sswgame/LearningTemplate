@@ -145,11 +145,11 @@ namespace sw
 
     MaterialInstance::~MaterialInstance()
     {
-        // 텍스처를 요청한 디바이스가 죽었으면 forgetRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다. 상수 버퍼는 프록시가 놓는다.
+        // 텍스처를 요청한 디바이스가 죽었으면 clearRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다. 상수 버퍼는 프록시가 놓는다.
         releaseTextureOverrides();
     }
 
-    void MaterialInstance::forgetRHI( IRHIDevice* pDevice )
+    void MaterialInstance::clearRHI( IRHIDevice* pDevice )
     {
         // 텍스처는 디바이스와 함께 갔다(TextureCache 의 Texture2D 도 같은 통보를 받는다). 참조만 놓는다.
         if ( _pTextureDevice == pDevice )
@@ -176,32 +176,32 @@ namespace sw
         syncDescOverrides();
 
         XMLDocument doc;
-        XMLNode     root = doc.appendRoot( "MaterialInstanceDesc" );
+        XMLNode     root = doc.appendRoot( "MaterialInstanceDef" );
         AssetXMLFormat::writeXMLVersion( root, kAssetType._formatVersion );
-        XMLFields::writeFields( root, MaterialInstanceRootFields{ _desc._name, _desc._parentPath } );
+        XMLFields::writeFields( root, MaterialInstanceRootParams{ _desc._name, _desc._parentPath } );
         if ( _desc._quality.empty() == false )
             root.appendAttribute( "quality", string_view( _desc._quality ) ); // 적지 않음이 "덮어쓰지 않음"이다
 
         XMLNode overrides = root.appendChild( "_overrides" );
-        for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
+        for ( const MaterialInstanceDef::Override& overrideItem : _desc._listOverride )
         {
-            XMLFields::writeFields( overrides.appendChild( "item" ), MaterialOverrideFields{ overrideItem._name, overrideItem._value, overrideItem._assetPath } );
+            XMLFields::writeFields( overrides.appendChild( "item" ), MaterialOverrideParams{ overrideItem._name, overrideItem._value, overrideItem._assetPath } );
         }
 
         if ( _desc._listKeyword.empty() == false )
         {
             XMLNode list = root.appendChild( "_keywords" );
-            for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
+            for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
             {
-                XMLFields::writeFields( list.appendChild( "item" ), MaterialKeywordOverrideFields{ keywordItem._name, keywordItem._bEnabled } );
+                XMLFields::writeFields( list.appendChild( "item" ), MaterialKeywordOverrideParams{ keywordItem._name, keywordItem._bEnabled } );
             }
         }
         if ( _desc._listMultiCompile.empty() == false )
         {
             XMLNode list = root.appendChild( "_multiCompiles" );
-            for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
+            for ( const MaterialInstanceDef::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
             {
-                XMLFields::writeFields( list.appendChild( "item" ), MaterialMultiCompileFields{ multiCompileItem._name, multiCompileItem._selected } );
+                XMLFields::writeFields( list.appendChild( "item" ), MaterialMultiCompileParams{ multiCompileItem._name, multiCompileItem._selected } );
             }
         }
 
@@ -288,7 +288,7 @@ namespace sw
             return false;
         TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         bool          bChanged{ false };
-        // 디바이스가 바뀌었으면 옛 디바이스로 요청한 것을 놓고 새로 요청한다(옛 것이 이미 죽었으면 forgetRHI 가 먼저 와서 비웠다).
+        // 디바이스가 바뀌었으면 옛 디바이스로 요청한 것을 놓고 새로 요청한다(옛 것이 이미 죽었으면 clearRHI 가 먼저 와서 비웠다).
         if ( _pTextureDevice != nullptr && _pTextureDevice != pRHI )
         {
             releaseTextureOverrides();
@@ -631,7 +631,7 @@ namespace sw
         self->_desc._listOverride.clear();
         for ( const auto& [name, valueText] : _listValueOverride )
         {
-            MaterialInstanceDesc::Override overrideItem{};
+            MaterialInstanceDef::Override overrideItem{};
             overrideItem._name  = name.c_str() ? name.c_str() : "";
             overrideItem._value = valueText;
             self->_desc._listOverride.push_back( std::move( overrideItem ) );
@@ -641,7 +641,7 @@ namespace sw
         {
             if ( texture._assetPath.empty() )
                 continue;
-            MaterialInstanceDesc::Override overrideItem{};
+            MaterialInstanceDef::Override overrideItem{};
             overrideItem._name      = texture._name.c_str() ? texture._name.c_str() : "";
             overrideItem._assetPath = texture._assetPath;
             self->_desc._listOverride.push_back( std::move( overrideItem ) );
@@ -649,7 +649,7 @@ namespace sw
         self->_desc._listKeyword.clear();
         for ( const auto& [name, enabled] : _listKeywordOverride )
         {
-            MaterialInstanceDesc::KeywordOverride keywordItem{};
+            MaterialInstanceDef::KeywordOverride keywordItem{};
             keywordItem._name     = name.c_str() ? name.c_str() : "";
             keywordItem._bEnabled = enabled;
             self->_desc._listKeyword.push_back( std::move( keywordItem ) );
@@ -657,7 +657,7 @@ namespace sw
         self->_desc._listMultiCompile.clear();
         for ( const auto& [name, selected] : _listMultiCompileOverride )
         {
-            MaterialInstanceDesc::MultiCompileOverride multiCompileItem{};
+            MaterialInstanceDef::MultiCompileOverride multiCompileItem{};
             multiCompileItem._name     = name.c_str() ? name.c_str() : "";
             multiCompileItem._selected = selected;
             self->_desc._listMultiCompile.push_back( std::move( multiCompileItem ) );
@@ -676,7 +676,7 @@ namespace sw
         if ( doc.parse( xmlText ) == false )
             return false;
 
-        XMLNode root = doc.getRoot( "MaterialInstanceDesc" );
+        XMLNode root = doc.getRoot( "MaterialInstanceDef" );
         if ( root.isValid() == false )
             return false;
 
@@ -685,14 +685,14 @@ namespace sw
 
         // 칸은 스키마(MaterialXML.h)가 정한다. 품질은 적지 않음이 "덮어쓰지 않음"이라 따로 읽는다.
         const string_view                   sourceName{ root.getAttributeText( "name" ) };
-        MaterialInstanceRootFields          rootFields;
+        MaterialInstanceRootParams          rootParams;
         std::optional<MaterialQualityLevel> quality;
-        if ( XMLFields::readFields( root, rootFields, sourceName, { "formatVersion", "quality" } ) == false ||
+        if ( XMLFields::readFields( root, rootParams, sourceName, { "formatVersion", "quality" } ) == false ||
              XMLFields::readOptionalEnum( root, "quality", quality, sourceName ) == false )
             return false;
-        _desc             = MaterialInstanceDesc{};
-        _desc._name       = rootFields._name;
-        _desc._parentPath = rootFields._parentPath;
+        _desc             = MaterialInstanceDef{};
+        _desc._name       = rootParams._name;
+        _desc._parentPath = rootParams._parentPath;
         _desc._quality    = quality.has_value() ? string( getEnumName( *quality ) ) : string{};
 
         XMLNode overrides = root.findChild( "_overrides" );
@@ -700,10 +700,10 @@ namespace sw
         {
             for ( XMLNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialOverrideFields fields;
-                if ( XMLFields::readFields( item, fields, sourceName ) == false )
+                MaterialOverrideParams params;
+                if ( XMLFields::readFields( item, params, sourceName ) == false )
                     return false;
-                _desc._listOverride.push_back( MaterialInstanceDesc::Override{ std::move( fields._name ), std::move( fields._value ), std::move( fields._assetPath ) } );
+                _desc._listOverride.push_back( MaterialInstanceDef::Override{ std::move( params._name ), std::move( params._value ), std::move( params._assetPath ) } );
             }
         }
         XMLNode keywords = root.findChild( "_keywords" );
@@ -711,10 +711,10 @@ namespace sw
         {
             for ( XMLNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialKeywordOverrideFields fields;
-                if ( XMLFields::readFields( item, fields, sourceName ) == false )
+                MaterialKeywordOverrideParams params;
+                if ( XMLFields::readFields( item, params, sourceName ) == false )
                     return false;
-                _desc._listKeyword.push_back( MaterialInstanceDesc::KeywordOverride{ std::move( fields._name ), fields._bEnabled } );
+                _desc._listKeyword.push_back( MaterialInstanceDef::KeywordOverride{ std::move( params._name ), params._bEnabled } );
             }
         }
         XMLNode multiCompileNode = root.findChild( "_multiCompiles" );
@@ -722,10 +722,10 @@ namespace sw
         {
             for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialMultiCompileFields fields;
-                if ( XMLFields::readFields( item, fields, sourceName ) == false )
+                MaterialMultiCompileParams params;
+                if ( XMLFields::readFields( item, params, sourceName ) == false )
                     return false;
-                _desc._listMultiCompile.push_back( MaterialInstanceDesc::MultiCompileOverride{ std::move( fields._name ), std::move( fields._selected ) } );
+                _desc._listMultiCompile.push_back( MaterialInstanceDef::MultiCompileOverride{ std::move( params._name ), std::move( params._selected ) } );
             }
         }
 
@@ -738,18 +738,18 @@ namespace sw
         }
 
         // `assetPath` 가 있는 항목은 텍스처 덮어쓰기다. 빠뜨리면 .materialinstance 의 텍스처가 조용히 부모 것으로 남는다.
-        for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
+        for ( const MaterialInstanceDef::Override& overrideItem : _desc._listOverride )
         {
             if ( overrideItem._assetPath.empty() == false )
                 setTextureParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._assetPath );
             else
                 MaterialInstanceInternal::insertOrAssign( _listValueOverride, hashed_string( overrideItem._name.c_str() ), overrideItem._value );
         }
-        for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
+        for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
         {
             MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, hashed_string( keywordItem._name.c_str() ), keywordItem._bEnabled );
         }
-        for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
+        for ( const MaterialInstanceDef::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
         {
             MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, hashed_string( multiCompileItem._name.c_str() ), multiCompileItem._selected );
         }

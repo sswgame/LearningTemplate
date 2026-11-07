@@ -355,7 +355,7 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueBothEnqueueOverloadsStopWhenFull
     SW_EXPECT_TRUE( queue.enqueue( sw::string( "fifth" ) ) );
 
     sw::vector<sw::string> listItem;
-    SW_EXPECT_EQUAL( 4u, queue.drain( listItem ) );
+    SW_EXPECT_EQUAL( 4u, queue.popAll( listItem ) );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listItem.size() ) );
     SW_EXPECT_EQUAL( sw::string( "second" ), listItem[0] );
     SW_EXPECT_EQUAL( sw::string( "first" ), listItem[1] );

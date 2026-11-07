@@ -28,7 +28,7 @@ namespace sw
     {
         struct UIDocumentLoaderInternal
         {
-            static constexpr utf8   kScreenDescElement[]     = "UIScreenDesc";
+            static constexpr utf8   kScreenDescElement[]     = "UIScreenDef";
             static constexpr utf8   kStyleSheetListElement[] = "_listStyleSheet";
             static constexpr utf8   kAnimationListElement[]  = "_listAnimation";
             static constexpr utf8   kItemElement[]           = "item";
@@ -47,10 +47,10 @@ namespace sw
             /** @brief 생성 한 번의 컨텍스트입니다. 조각 캐시, 지금 지나는 조각 연쇄(자기를 다시 부르는지 판정), 바인딩, 오류를 가집니다. */
             struct InstantiateContext
             {
-                UIDocumentCache*       _pCache;
-                vector<string>         _listFragmentStack;
-                vector<UIBindingDesc>* _pOutListBinding;
-                string*                _pError;
+                UIDocumentCache*      _pCache;
+                vector<string>        _listFragmentStack;
+                vector<UIBindingDef>* _pOutListBinding;
+                string*               _pError;
             };
 
             /** @brief `<경로>:<줄>: <이유>` 형식의 문구입니다. 줄을 모르면(0) 경로만 적습니다. */
@@ -113,7 +113,7 @@ namespace sw
                     if ( isBindingValue( attribute.getValue() ) )
                     {
                         inoutNode._listBinding.push_back(
-                            UIBindingDesc{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetID, findLine( context, source ) } );
+                            UIBindingDef{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetID, findLine( context, source ) } );
                         continue;
                     }
                     destination.appendAttribute( attribute.getName(), attribute.getValue() );
@@ -152,7 +152,7 @@ namespace sw
                         return fail( context, element, string( "'" ) + pTag + "' has unknown attribute '" + pName + "'" );
                     if ( isBindingValue( attribute.getValue() ) )
                     {
-                        node._listBinding.push_back( UIBindingDesc{ string( pName ), string( attribute.getValue() ), kInvalidWidgetID, node._sourceLine } );
+                        node._listBinding.push_back( UIBindingDef{ string( pName ), string( attribute.getValue() ), kInvalidWidgetID, node._sourceLine } );
                         continue;
                     }
                     propertyRoot.appendAttribute( pName, attribute.getValue() );
@@ -204,8 +204,8 @@ namespace sw
             [[nodiscard]] static bool parseScreenDesc( const ParseContext& context, const XMLNode& element )
             {
                 vector<SchemaOrphanValue> listOrphan;
-                const SoftReadResult      result = XMLSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UIScreenDesc::StaticType(), element.toString(), &listOrphan );
-                return acceptSoftRead( context, element, "UIScreenDesc", result, listOrphan );
+                const SoftReadResult      result = XMLSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UIScreenDef::StaticType(), element.toString(), &listOrphan );
+                return acceptSoftRead( context, element, "UIScreenDef", result, listOrphan );
             }
 
             /** @brief 스타일 시트 목록(`<item>경로</item>`)을 읽습니다. */
@@ -327,10 +327,10 @@ namespace sw
 
                 if ( namePrefix.empty() == false && widget->getName().empty() == false )
                     widget->setName( hashed_string( namePrefix + "." + widget->getName().c_str() ) );
-                for ( const UIBindingDesc& binding : node._listBinding )
+                for ( const UIBindingDef& binding : node._listBinding )
                 {
-                    UIBindingDesc instanceBinding = binding;
-                    instanceBinding._widget       = widget->getID();
+                    UIBindingDef instanceBinding = binding;
+                    instanceBinding._widget      = widget->getID();
                     context._pOutListBinding->push_back( std::move( instanceBinding ) );
                 }
 
@@ -439,7 +439,7 @@ namespace sw
             if ( StringUtil::equals( pName, Internal::kScreenDescElement ) )
             {
                 if ( bScreenDesc )
-                    return Internal::fail( context, child, "UIDocument has more than one UIScreenDesc" );
+                    return Internal::fail( context, child, "UIDocument has more than one UIScreenDef" );
                 bScreenDesc = true;
                 if ( Internal::parseScreenDesc( context, child ) == false )
                     return false;
@@ -491,7 +491,7 @@ namespace sw
         return unique_ptr<Widget>( static_cast<Widget*>( block.release() ) );
     }
 
-    unique_ptr<Widget> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDesc>& outListBinding,
+    unique_ptr<Widget> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding,
                                                       string& outError )
     {
         if ( document._listNode.empty() )

@@ -524,7 +524,7 @@ namespace sw
     }
 
     template <typename TSerializer>
-    bool ObjectStateSerializer::loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context )
+    bool ObjectStateSerializer::loadFromXMLText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context )
     {
         if ( pGameObject == nullptr || text.empty() )
             return false;
@@ -605,12 +605,12 @@ namespace sw
 
     bool ObjectStateSerializer::loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
     {
-        return loadFromText<XMLSerializer>( pGameObject, xmlString, context );
+        return loadFromXMLText<XMLSerializer>( pGameObject, xmlString, context );
     }
 
     bool ObjectStateSerializer::loadFromJSONString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context )
     {
-        return loadFromText<JSONSerializer>( pGameObject, jsonString, context );
+        return loadFromXMLText<JSONSerializer>( pGameObject, jsonString, context );
     }
 
     ObjectIdentity ObjectStateSerializer::captureIdentity( const GameObject* pGameObject )

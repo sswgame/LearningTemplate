@@ -362,9 +362,9 @@ namespace sw
         return false;
     }
 
-    void UnoGame::drainEvents( vector<UnoEvent>& outListEvent )
+    void UnoGame::pollEvents( vector<UnoEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void UnoGame::writeState( Archive& outArchive ) const

@@ -209,7 +209,7 @@ namespace sw::editor
             }
             if ( page._bTypeFound == false )
                 ImGui::EndDisabled();
-            EditorSelfTestMarks::note( ( "projectsettings.page." + page._entry._page ).c_str() );
+            EditorSelfTestMarks::record( ( "projectsettings.page." + page._entry._page ).c_str() );
             EditorWidgets::drawTooltip( page._entry._relativePath.c_str() );
             ImGui::PopID();
         }
@@ -250,7 +250,7 @@ namespace sw::editor
                 _statusText = "Save failed - see the log";
             }
         }
-        EditorSelfTestMarks::note( "projectsettings.save" );
+        EditorSelfTestMarks::record( "projectsettings.save" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) );
         ImGui::BeginDisabled( page._bDirty == false && document.isLoadFailed() == false );
@@ -260,7 +260,7 @@ namespace sw::editor
             refreshDirtyState();
             _statusText = "Reverted to the file";
         }
-        EditorSelfTestMarks::note( "projectsettings.revert" );
+        EditorSelfTestMarks::record( "projectsettings.revert" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
@@ -269,7 +269,7 @@ namespace sw::editor
             refreshDirtyState();
             _statusText = "Reset to the default values - Save writes the file";
         }
-        EditorSelfTestMarks::note( "projectsettings.reset" );
+        EditorSelfTestMarks::record( "projectsettings.reset" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SetsEveryValueToItsDefaultThe" ) );
         if ( _statusText.empty() == false )
         {

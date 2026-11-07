@@ -30,12 +30,12 @@ namespace sw
         /** @brief 이 버퍼를 만들어 준 디바이스입니다. 통보 덕에 여기 남아 있다면 아직 살아 있습니다. */
         IRHIDevice* getLiveDevice() const { return isResident() ? _pDevice : nullptr; }
         /** @brief 방금 만든 핸들을 만들어 준 디바이스와 함께 보관합니다. */
-        void adopt( IRHIDevice* pDevice, RHIBufferHandle buffer )
+        void attach( IRHIDevice* pDevice, RHIBufferHandle buffer )
         {
             _pDevice = pDevice;
             _buffer  = buffer;
         }
         /** @brief 핸들을 잊습니다. 죽은 디바이스의 것을 destroy 하면 해제 후 사용이므로, 잊는 것이 옳을 때 씁니다. */
-        void forget() { *this = RHIDeviceBuffer{}; }
+        void clear() { *this = RHIDeviceBuffer{}; }
     };
 } // namespace sw

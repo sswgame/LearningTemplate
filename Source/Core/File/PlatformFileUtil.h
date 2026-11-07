@@ -124,7 +124,7 @@ namespace sw
          *        `-gv_ioLogReads=1` 이면 경로 · 바이트 · 스레드를 로그로 남깁니다(언리얼 `-FileOpenLog` 와 같은 진단).
          * @param byteCount 읽은 바이트. 핸들만 연 경우(뒤에 위치 지정 읽기가 온다)는 0 입니다.
          */
-        static void noteFileOpenedForRead( string_view filePath, size_t byteCount );
+        static void recordFileOpenedForRead( string_view filePath, size_t byteCount );
 
         /**
          * @brief OS 경계에 들어온 경로가 엄격한 절대 경로인지 봅니다(R2 - 디스크 I/O 는 절대 경로만). 아니면 오류(`File.RelativePath`)를 남기고 false - 부르는 OS 호출은 실패한다.
@@ -147,7 +147,7 @@ namespace sw
         static constexpr size_t kLongPathThreshold = 248;
 #endif
 
-        /** @brief 프로세스 시작부터 `noteFileOpenedForRead` 가 센 열기 횟수입니다(기동 보고 `startup … ms, … file opens`). */
+        /** @brief 프로세스 시작부터 `recordFileOpenedForRead` 가 센 열기 횟수입니다(기동 보고 `startup … ms, … file opens`). */
         [[nodiscard]] static uint64 getFileOpenCount();
     };
 } // namespace sw

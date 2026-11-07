@@ -187,7 +187,7 @@ namespace sw
                 return pSchedule != nullptr && VectorUtil::contains( args._listValue, ( pSchedule->_dayOfSeason - 1 ) / kDaysPerWeek + 1 );
             }
 
-            static float64 readAffinity( const GameplayContext& context, const VocabularyNoFields& /*args*/ )
+            static float64 readAffinity( const GameplayContext& context, const VocabularyNoParams& /*args*/ )
             {
                 const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
                 return pSchedule != nullptr ? static_cast<float64>( pSchedule->_affinity ) : 0.0;
@@ -294,7 +294,7 @@ namespace sw
         return mask;
     }
 
-    bool ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName, string_view ownerName )
+    bool ScheduleCondition::loadFromXML( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName, string_view ownerName )
     {
         using Internal = ScheduleConditionInternal;
         _listClause.clear();
@@ -442,5 +442,5 @@ namespace sw
     SW_CONDITION( dayOfSeason, ScheduleNumberListArgs, &ScheduleConditionInternal::readDayOfSeason );
     SW_CONDITION( week, ScheduleNumberListArgs, &ScheduleConditionInternal::readWeek );
     SW_CONDITION( date, ScheduleDateArgs, &ScheduleConditionInternal::readDate );
-    SW_CONDITION( affinity, VocabularyNoFields, &ScheduleConditionInternal::readAffinity );
+    SW_CONDITION( affinity, VocabularyNoParams, &ScheduleConditionInternal::readAffinity );
 } // namespace sw

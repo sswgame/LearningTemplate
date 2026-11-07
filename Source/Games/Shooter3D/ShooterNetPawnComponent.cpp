@@ -303,8 +303,8 @@ namespace sw
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ShooterPlayerComponent*   pPlayer   = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
-        const ShooterGameModeComponent* pDirector = pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
-        return pDirector != nullptr ? &pDirector->getBoxes() : nullptr;
+        const ShooterGameModeComponent* pGameMode = pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
+        return pGameMode != nullptr ? &pGameMode->getBoxes() : nullptr;
     }
 
     void ShooterNetPawnComponent::writeState( const ShooterMoveState& state, vector<uint8>& outBytes )

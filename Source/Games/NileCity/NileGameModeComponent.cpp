@@ -210,7 +210,7 @@ namespace sw
             _clock.update( deltaTime * _timeScale ); // 배속은 디렉터가 곱한다(시계 배율은 1)
             settleMonths();
         }
-        drainEvents();
+        pollEvents();
         if ( areViewsSpawned() )
             collectViewChanges();
     }
@@ -304,7 +304,7 @@ namespace sw
     void NileGameModeComponent::settleMonths()
     {
         _listClockEvent.clear();
-        _clock.drainEvents( _listClockEvent );
+        _clock.pollEvents( _listClockEvent );
         for ( size_t index = 0; index < _listClockEvent.size(); ++index )
         {
             if ( _listClockEvent[index]._kind != WorldClockEvent::Kind::DayChanged )
@@ -830,10 +830,10 @@ namespace sw
         }
     }
 
-    void NileGameModeComponent::drainEvents()
+    void NileGameModeComponent::pollEvents()
     {
-        _listEvent.clear(); // drainEvents 는 뒤에 붙인다
-        _city.drainEvents( _cityEventLease, _listEvent );
+        _listEvent.clear(); // pollEvents 는 뒤에 붙인다
+        _city.pollEvents( _cityEventLease, _listEvent );
         bool bHouseEvolved = false;
         for ( const CityEvent& event : _listEvent )
         {

@@ -86,7 +86,7 @@ namespace sw::editor
         PlaySessionState _queuedState{ PlaySessionState::Stopped };
         /** @brief 씬 편집을 막고 있는 작업 수입니다(`EditorPlaySession::holdSceneEdits` — 베이크하는 동안 물리 셰이프가 바뀌지 않게). */
         uint32 _sceneEditHoldCount;
-        /** @brief 막는 동안 씬이 바뀐 횟수입니다(`EditorPlaySession::noteSceneEditWhileHeld`). */
+        /** @brief 막는 동안 씬이 바뀐 횟수입니다(`EditorPlaySession::recordSceneEditWhileHeld`). */
         uint32 _heldSceneEditCount;
         /**
          * @brief 마지막으로 거절 로그를 남긴 편집 이름입니다(`EditorPlaySession::refuseSceneEdit`). 편집이 다시 허용되면 비웁니다.
@@ -177,7 +177,7 @@ namespace sw::editor
         /** @brief 씬 편집을 막고 있는 작업이 있으면 true 입니다. */
         static bool areSceneEditsHeld();
         /** @brief 막는 동안 씬이 바뀌었음을 셉니다(`EditorWorkspace::markSceneDirty` 가 부른다 — 편집 허용 답을 묻지 않은 경로다). */
-        static void noteSceneEditWhileHeld();
+        static void recordSceneEditWhileHeld();
         /** @brief 막는 동안 바뀐 횟수입니다(세션 동안 늘기만 한다). 막는 작업은 시작할 때 값과 비교해 바뀌면 멈춘다. */
         static uint32 getHeldSceneEditCount();
         /** @brief 이번 프레임에 Step 이 예약되어 있으면 true 입니다. */

@@ -102,14 +102,14 @@ namespace
     };
 
     /** @brief 요청 서버 · 클라이언트를 엔드포인트 한 쌍에 묶습니다. 리스너가 엔드포인트 쌍보다 먼저 선언되어 오래 산다. */
-    struct RequestRig
+    struct RequestFixture
     {
         EchoService              _echo{};
         ServerSide               _serverSide{};
         ClientSide               _clientSide{};
         test::StreamEndpointPair _pair;
 
-        explicit RequestRig( const NetRequestServerConfig& serverSettings = NetRequestServerConfig{}, uint64 principalID = 0 )
+        explicit RequestFixture( const NetRequestServerConfig& serverSettings = NetRequestServerConfig{}, uint64 principalID = 0 )
             : _pair{ _serverSide, _clientSide, StreamEndpointConfig{}, LoopbackStreamConditions{} }
         {
             _serverSide._principalID = principalID;
@@ -130,7 +130,7 @@ namespace
 
 SW_TEST_CASE( NetRequestTest, ResponseMatchesRequestAndUnknownMethodIsRefused )
 {
-    RequestRig rig;
+    RequestFixture rig;
     SW_REQUIRE_EQUAL( 1, rig._clientSide._openedCount );
     ResponseLog echoLog;
     ResponseLog unknownLog;
@@ -147,7 +147,7 @@ SW_TEST_CASE( NetRequestTest, ResponseMatchesRequestAndUnknownMethodIsRefused )
 
 SW_TEST_CASE( NetRequestTest, DeadlineEndsRequestAndLateResponseIsIgnored )
 {
-    RequestRig        rig;
+    RequestFixture    rig;
     ResponseLog       log;
     NetRequestOptions options;
     options._timeoutSeconds = 0.02;
@@ -166,9 +166,9 @@ SW_TEST_CASE( NetRequestTest, DeadlineEndsRequestAndLateResponseIsIgnored )
 
 SW_TEST_CASE( NetRequestTest, CancelCompletesLocallyAndMarksServerRequest )
 {
-    RequestRig   rig;
-    ResponseLog  log;
-    const uint64 requestID = rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, NetRequestOptions{}, log );
+    RequestFixture rig;
+    ResponseLog    log;
+    const uint64   requestID = rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, NetRequestOptions{}, log );
     rig._pair.step( 2 );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( rig._echo._listDeferred.size() ) );
     SW_EXPECT_TRUE( rig._clientSide._client.cancel( requestID ) );
@@ -188,7 +188,7 @@ SW_TEST_CASE( NetRequestTest, IdempotentRetryAfterReconnectIsProcessedOnce )
     ResponseLog                  lostLog;
     ResponseLog                  retryLog;
     ResponseLog                  freshLog;
-    RequestRig                   rig( NetRequestServerConfig{}, 42 );
+    RequestFixture               rig( NetRequestServerConfig{}, 42 );
     const StreamConnectionHandle first = rig._pair._clientHandle;
     NetRequestOptions            options;
     options._idempotencyKey = NetIdempotencyKey{ 0x1234u, 0x5678u };
@@ -221,7 +221,7 @@ SW_TEST_CASE( NetRequestTest, IdempotentRetryAfterReconnectIsProcessedOnce )
 
 SW_TEST_CASE( NetRequestTest, InFlightDuplicateKeyWaitsForFirstResponse )
 {
-    RequestRig        rig;
+    RequestFixture    rig;
     NetRequestOptions options;
     options._idempotencyKey = NetIdempotencyKey{ 7u, 8u };
     ResponseLog firstLog;
@@ -243,8 +243,8 @@ SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
 {
     NetRequestServerConfig settings;
     settings._maxInFlightPerConnection = 2;
-    RequestRig  rig( settings );
-    ResponseLog log;
+    RequestFixture rig( settings );
+    ResponseLog    log;
     for ( int32 index = 0; index < 3; ++index )
     {
         SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, NetRequestOptions{}, log ) != 0 );
@@ -264,9 +264,9 @@ SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
 
 SW_TEST_CASE( NetRequestTest, TraceIDTravelsInTheHeadAndWrapsTheHandler )
 {
-    RequestRig  rig( NetRequestServerConfig{}, 7 );
-    ResponseLog log;
-    LogContext  caller;
+    RequestFixture rig( NetRequestServerConfig{}, 7 );
+    ResponseLog    log;
+    LogContext     caller;
     caller._traceID = LogTraceID{ 0xAB, 0xCD };
     {
         ScopedLogContext scope( caller ); // 보내는 스레드의 문맥 — 옵션이 비면 이것이 실린다
@@ -294,11 +294,11 @@ SW_TEST_CASE( NetRequestTest, TraceIDTravelsInTheHeadAndWrapsTheHandler )
 }
 
 /**
- * @brief [NetRequestTest] 다시 시도할 결과(`NetResponseRetention::Forget`)는 기억하지 않는다 — 같은 키의 재시도가 처리기에 다시 닿고, 끝난 결과는 기억한다
+ * @brief [NetRequestTest] 다시 시도할 결과(`NetResponseRetention::Discard`)는 기억하지 않는다 — 같은 키의 재시도가 처리기에 다시 닿고, 끝난 결과는 기억한다
  */
 SW_TEST_CASE( NetRequestTest, ForgottenResponseLetsTheSameKeyRetry )
 {
-    RequestRig        rig;
+    RequestFixture    rig;
     NetRequestOptions options;
     options._idempotencyKey = NetIdempotencyKey{ 11u, 12u };
     ResponseLog pendingLog;
@@ -308,7 +308,7 @@ SW_TEST_CASE( NetRequestTest, ForgottenResponseLetsTheSameKeyRetry )
     rig._pair.step( 2 );
     SW_REQUIRE_EQUAL( 1, rig._echo._callCount );
     const uint8 arrPending[1] = { 1 };
-    SW_EXPECT_TRUE( rig._serverSide._server.respond( rig._echo._listDeferred[0], NetRequestStatus::Ok, arrPending, 1, NetResponseRetention::Forget ) );
+    SW_EXPECT_TRUE( rig._serverSide._server.respond( rig._echo._listDeferred[0], NetRequestStatus::Ok, arrPending, 1, NetResponseRetention::Discard ) );
     rig._pair.step( 4 );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( pendingLog._listStatus.size() ) );
 

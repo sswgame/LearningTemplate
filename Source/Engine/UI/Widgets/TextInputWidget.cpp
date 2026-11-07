@@ -294,7 +294,7 @@ namespace sw
         UISystem* const   pUI     = pScreen != nullptr ? pScreen->getUISystem() : nullptr;
         if ( pUI == nullptr )
             return;
-        UINotificationDesc notice{};
+        UINotificationDef notice{};
         notice._text = SW_LOCTEXT( "Notification", "ClipboardWriteFailed", "Could not copy to the clipboard." );
         notice._kind = UINotificationKind::Warning;
         engine::getSubsystem<UINotificationService>().post( notice );

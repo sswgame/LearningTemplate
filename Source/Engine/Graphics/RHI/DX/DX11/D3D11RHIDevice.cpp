@@ -1227,20 +1227,20 @@ namespace sw
         return list;
     }
 
-    void D3D11RHIDevice::forgetBufferInRecordingStates( RHIBufferHandle buffer )
+    void D3D11RHIDevice::removeBufferInRecordingStates( RHIBufferHandle buffer )
     {
-        _recordingState._geometry.forget( buffer );
+        _recordingState._geometry.remove( buffer );
 
         ScopedLock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList == nullptr )
                 continue;
-            pList->getRecordingState()._geometry.forget( buffer );
+            pList->getRecordingState()._geometry.remove( buffer );
         }
     }
 
-    void D3D11RHIDevice::forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso )
+    void D3D11RHIDevice::removePipelineStateInRecordingStates( RHIPipelineStateHandle pso )
     {
         if ( _recordingState._activeGraphicsPSO == pso )
             _recordingState._activeGraphicsPSO = 0;

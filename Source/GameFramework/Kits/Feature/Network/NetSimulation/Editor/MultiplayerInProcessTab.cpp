@@ -53,7 +53,7 @@ namespace sw::editor
                 return;
             }
             const bool bStopClicked = ImGui::Button( SW_LOCKEY( "EdPlugin", "Stop" ) );
-            EditorSelfTestMarks::note( "multiplayer.inprocess.stop" );
+            EditorSelfTestMarks::record( "multiplayer.inprocess.stop" );
             if ( bStopClicked )
             {
                 session.stop();
@@ -64,7 +64,7 @@ namespace sw::editor
             (void)session.update( static_cast<float64>( ImGui::GetIO().DeltaTime ) );
             // 재생 중인 이 창이 포커스면 키보드는 초점 월드(게임)가 받는다 — 게임 뷰 패널과 같다. 알리지 않으면 에디터가 키를 가져가 월드가 움직이지 않는다.
             if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
-                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().noteGameInputSurfaceFocused();
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().recordGameInputSurfaceFocused();
             drawWorlds( session );
         }
 
@@ -89,7 +89,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Clients" ) );
             ImGui::SliderInt( "##Clients", &_clientCount, 1, EditorNetSimSession::kMaxClients );
             const bool bStartClicked = ImGui::Button( SW_LOCKEY( "EdPlugin", "StartInProcess" ) );
-            EditorSelfTestMarks::note( "multiplayer.inprocess.start" );
+            EditorSelfTestMarks::record( "multiplayer.inprocess.start" );
             if ( bStartClicked )
             {
                 EditorNetSimSettings settings;
@@ -126,7 +126,7 @@ namespace sw::editor
                     // 카메라 끌기는 초점 월드에서만 받는다 — 다른 칸을 클릭하면 먼저 초점이 옮겨 간다.
                     pViewport->draw( viewSize, bFocused );
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( ( formatToString( "multiplayer.inprocess.world%#", worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
+                        EditorSelfTestMarks::record( ( formatToString( "multiplayer.inprocess.world%#", worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
                     if ( EditorInputGUI::wasItemClicked() && bFocused == false )
                         (void)session.setInputFocus( worldIndex );
                 }

@@ -144,20 +144,20 @@ namespace sw::editor
                     return holdUntilMarkSettled( runner, step, input );
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
-                const EditorClickFields fields   = step.readValidatedFields<EditorClickFields>();
+                const EditorClickParams params   = step.readValidatedFields<EditorClickParams>();
                 bool                    bDrawn   = true;
                 bool                    bSettled = true;
-                checkMark( &fields._mark, bDrawn, bSettled );
+                checkMark( &params._mark, bDrawn, bSettled );
                 const bool bInputDrained = EditorSelfTestInput::hasPendingEvents() == false;
-                const bool bAimed        = EditorSelfTestInput::isMouseAtMark( fields._mark, fields._anchor );
+                const bool bAimed        = EditorSelfTestInput::isMouseAtMark( params._mark, params._anchor );
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 프레임마다 붙잡는다. 누르는 `runClick` 이 놓는다.
                 if ( bDrawn )
-                    (void)EditorSelfTestInput::holdMouseAtMark( fields._mark, fields._anchor );
+                    (void)EditorSelfTestInput::holdMouseAtMark( params._mark, params._anchor );
                 const bool               bReady = bSettled && bInputDrained && bAimed;
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
-                                                                         "the pointer to reach editor widget '" + fields._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
+                                                                         "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
-                    runner.recordFailure( step, formatToString( "editor widget '%#' did not settle under the pointer within %# frame(s)", fields._mark, kSettleWaitFrames ) );
+                    runner.recordFailure( step, formatToString( "editor widget '%#' did not settle under the pointer within %# frame(s)", params._mark, kSettleWaitFrames ) );
                 return hold;
             }
 
@@ -179,14 +179,14 @@ namespace sw::editor
                 SettleWaitState* pState = static_cast<SettleWaitState*>( runner.findHeldStepState( step ) );
                 if ( pState == nullptr )
                     pState = static_cast<SettleWaitState*>( &runner.setHeldStepState( step, make_unique<SettleWaitState>() ) );
-                const EditorSettleVerdict verdict = pState->_wait.advance( runner.findActiveObjectManager() );
-                if ( verdict == EditorSettleVerdict::Oscillating )
+                const EditorSettleResult verdict = pState->_wait.advance( runner.findActiveObjectManager() );
+                if ( verdict == EditorSettleResult::Oscillating )
                     runner.recordFailure( step, pState->_wait.describeOscillation() );
                 // 진행 중인 일에는 시한이 없다(`EditorSettleJudge`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
                 // Run 이면 실행기가 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
                 const string waitingFor = pState->_wait.describeWait();
-                return runner.holdUntilReady( step, input, verdict == EditorSettleVerdict::Ready,
-                                              verdict == EditorSettleVerdict::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
+                return runner.holdUntilReady( step, input, verdict == EditorSettleResult::Ready,
+                                              verdict == EditorSettleResult::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
             }
 
             /**
@@ -223,14 +223,14 @@ namespace sw::editor
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const EditorClickFields fields = step.readValidatedFields<EditorClickFields>();
-                const string&           mark   = fields._mark;
+                const EditorClickParams params = step.readValidatedFields<EditorClickParams>();
+                const string&           mark   = params._mark;
                 uint8                   modifierMask{ 0 };
-                (void)Validation::parseModifiers( fields._mods, modifierMask ); // 시작 때 검사했다
-                const int32         button       = fields._button;
-                const float2        anchor       = fields._anchor;
+                (void)Validation::parseModifiers( params._mods, modifierMask ); // 시작 때 검사했다
+                const int32         button       = params._button;
+                const float2        anchor       = params._anchor;
                 const vector<int32> listModifier = makeImGuiModifiers( modifierMask );
-                const PressState    state        = fields._state;
+                const PressState    state        = params._state;
                 if ( reportClippedMark( runner, step, mark ) )
                     return true;
                 if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
@@ -284,8 +284,8 @@ namespace sw::editor
              */
             static bool runDrag( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const EditorDragFields fields = step.readValidatedFields<EditorDragFields>();
-                const string&          mark   = fields._mark;
+                const EditorDragParams params = step.readValidatedFields<EditorDragParams>();
+                const string&          mark   = params._mark;
                 EditorSelfTestMark     found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false )
                 {
@@ -295,20 +295,20 @@ namespace sw::editor
                 if ( reportClippedMark( runner, step, mark ) )
                     return true;
                 uint8 modifierMask{ 0 };
-                (void)Validation::parseModifiers( fields._mods, modifierMask ); // 시작 때 검사했다
-                float64             deltaX       = static_cast<float64>( fields._dx );
-                float64             deltaY       = static_cast<float64>( fields._dy );
-                const int32         button       = fields._button;
+                (void)Validation::parseModifiers( params._mods, modifierMask ); // 시작 때 검사했다
+                float64             deltaX       = static_cast<float64>( params._dx );
+                float64             deltaY       = static_cast<float64>( params._dy );
+                const int32         button       = params._button;
                 const vector<int32> listModifier = makeImGuiModifiers( modifierMask );
                 // `anchor` 는 누르기 시작할 자리를 레이블 안 비율로 잡는다 — 넓은 캔버스(씬 뷰)의 빈 구석에서 끄는 상자 선택처럼 가운데가 아닌 곳에서 시작할 때.
-                const float2 start{ found._min._x + ( found._max._x - found._min._x ) * fields._anchor._x, found._min._y + ( found._max._y - found._min._y ) * fields._anchor._y };
+                const float2 start{ found._min._x + ( found._max._x - found._min._x ) * params._anchor._x, found._min._y + ( found._max._y - found._min._y ) * params._anchor._y };
                 // `toMark` 는 끝을 다른 위젯의 가운데로 잡는다 — 끌어 놓기(Hierarchy 행을 다른 행에, 에셋을 슬롯에)의 받는 쪽을 픽셀 거리로 세지 않는다.
-                if ( fields._toMark.empty() == false )
+                if ( params._toMark.empty() == false )
                 {
                     EditorSelfTestMark target{};
-                    if ( EditorSelfTestMarks::find( fields._toMark, target ) == false )
+                    if ( EditorSelfTestMarks::find( params._toMark, target ) == false )
                     {
-                        runner.recordFailure( step, "no editor widget is marked '" + fields._toMark + "' (was it drawn in the last frame?)" );
+                        runner.recordFailure( step, "no editor widget is marked '" + params._toMark + "' (was it drawn in the last frame?)" );
                         return true;
                     }
                     deltaX = static_cast<float64>( ( target._min._x + target._max._x ) * 0.5f - start._x );
@@ -349,9 +349,9 @@ namespace sw::editor
                     EditorSelfTestInput::releaseMouseHold();
                     return true;
                 }
-                const EditorHoverFields fields = step.readValidatedFields<EditorHoverFields>( { "release" } );
-                const string&           mark   = fields._mark;
-                const float2            anchor = fields._anchor;
+                const EditorHoverParams params = step.readValidatedFields<EditorHoverParams>( { "release" } );
+                const string&           mark   = params._mark;
+                const float2            anchor = params._anchor;
                 if ( EditorSelfTestInput::holdMouseAtMark( mark, anchor ) == false )
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                 return true;
@@ -359,7 +359,7 @@ namespace sw::editor
 
             static bool runText( AutomationStepContext& /*runner*/, const AutomationStep& step )
             {
-                EditorSelfTestInput::typeText( step.readValidatedFields<EditorTextFields>()._value );
+                EditorSelfTestInput::typeText( step.readValidatedFields<EditorTextParams>()._value );
                 return true;
             }
 
@@ -389,13 +389,13 @@ namespace sw::editor
 
             [[nodiscard]] static bool parseKey( const AutomationStep& step, KeyArgs& outArgs, string& outError )
             {
-                EditorKeyFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                EditorKeyParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                outArgs._state = fields._state;
-                if ( parseKeyChord( fields._key, outArgs._listKey ) == false )
+                outArgs._state = params._state;
+                if ( parseKeyChord( params._key, outArgs._listKey ) == false )
                 {
-                    outError = step.describe() + ": unknown key '" + fields._key + "' (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)";
+                    outError = step.describe() + ": unknown key '" + params._key + "' (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)";
                     return false;
                 }
                 return true;
@@ -444,7 +444,7 @@ namespace sw::editor
             {
                 if ( prepareMarks( runner, step, outError ) == false )
                     return false;
-                const string component = step.readValidatedFields<EditorExpectObjectFields>()._component;
+                const string component = step.readValidatedFields<EditorExpectObjectParams>()._component;
                 if ( component.empty() )
                     return true;
                 if ( editor::getSubsystem<TypeRegistry>().findType( hashed_string( component ) ) == nullptr )
@@ -457,10 +457,10 @@ namespace sw::editor
 
             static bool runExpectObject( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const EditorExpectObjectFields fields        = step.readValidatedFields<EditorExpectObjectFields>();
-                const uint32                   expectedCount = fields._count;
-                const uint32                   bSelected     = fields._selected;
-                const hashed_string            name( fields._name );
+                const EditorExpectObjectParams params        = step.readValidatedFields<EditorExpectObjectParams>();
+                const uint32                   expectedCount = params._count;
+                const uint32                   bSelected     = params._selected;
+                const hashed_string            name( params._name );
                 GameObjectManager*             pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                 {
@@ -469,8 +469,8 @@ namespace sw::editor
                 }
 
                 vector<GameObject*> listObject;
-                if ( fields._component.empty() == false )
-                    EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( fields._component ) ), listObject );
+                if ( params._component.empty() == false )
+                    EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( params._component ) ), listObject );
                 else
                     pManager->getAllGameObjects( listObject );
 
@@ -528,7 +528,7 @@ namespace sw::editor
 
             static bool runDockLayout( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const uint32  minNodeSide = step.readValidatedFields<EditorDockLayoutFields>()._minNodeSize; // 0 이면 아래의 기본 최소 변
+                const uint32  minNodeSide = step.readValidatedFields<EditorDockLayoutParams>()._minNodeSize; // 0 이면 아래의 기본 최소 변
                 const float32 minSide     = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
 
                 const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
@@ -591,7 +591,7 @@ namespace sw::editor
             {
                 if ( s_pRequestedSelfTestStep != &step )
                 {
-                    if ( EditorSelfTestRunner::requestRun( step.readValidatedFields<EditorSelfTestFields>()._pattern, false ) == false )
+                    if ( EditorSelfTestRunner::requestRun( step.readValidatedFields<EditorSelfTestParams>()._pattern, false ) == false )
                         return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
                     s_pRequestedSelfTestStep = &step;
                 }
@@ -606,7 +606,7 @@ namespace sw::editor
                 const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
                 if ( bRequested == false || listResult.empty() )
                 {
-                    runner.recordFailure( step, "no editor self test ran for pattern '" + step.readValidatedFields<EditorSelfTestFields>()._pattern + "' (no editor, a run already active, or no match)" );
+                    runner.recordFailure( step, "no editor self test ran for pattern '" + step.readValidatedFields<EditorSelfTestParams>()._pattern + "' (no editor, a run already active, or no match)" );
                     return true;
                 }
                 for ( const EditorSelfTestResult& result : listResult )

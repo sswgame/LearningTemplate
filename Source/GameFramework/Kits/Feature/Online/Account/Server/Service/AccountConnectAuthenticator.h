@@ -30,7 +30,7 @@ namespace sw
     public:
         /**
          * @brief @p pAuthority 는 초기화를 마친 것을 빌려 씁니다. @p serverID 는 티켓이 가리켜야 하는 이 게임 서버의 id 입니다.
-         * @param admission 티켓이 맞은 계정을 받아들일지 정합니다(빌려 쓴다). 매칭 서버는 `MatchServerAgent`, 그 밖은 `AdmitEveryAccount` 입니다.
+         * @param admission 티켓이 맞은 계정을 받아들일지 정합니다(빌려 쓴다). 매칭 서버는 `MatchServerAgent`, 그 밖은 `AllowEveryAccount` 입니다.
          */
         AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverID, const IConnectAdmission& admission );
 

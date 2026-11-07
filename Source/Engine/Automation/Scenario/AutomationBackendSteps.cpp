@@ -3,7 +3,7 @@
 #include "Engine/Automation/Scenario/AutomationBackendSteps.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -36,12 +36,12 @@ namespace sw
 
     bool AutomationBackendSteps::validateSwapBackend( const AutomationStep& step, string& outError )
     {
-        AutomationSwapBackendFields fields;
-        if ( step.readFields( fields, outError ) == false )
+        AutomationSwapBackendParams params;
+        if ( step.readFields( params, outError ) == false )
             return false;
         RHIBackend backend{};
-        const bool bRelative = fields._backend == kOtherBackend || fields._backend == kStartBackend;
-        if ( bRelative == false && tryParseBackend( fields._backend, backend ) == false )
+        const bool bRelative = params._backend == kOtherBackend || params._backend == kStartBackend;
+        if ( bRelative == false && tryParseBackend( params._backend, backend ) == false )
         {
             outError = step.describe() + ": needs backend=\"dx11|dx12|vk|gl|other|start\"";
             return false;

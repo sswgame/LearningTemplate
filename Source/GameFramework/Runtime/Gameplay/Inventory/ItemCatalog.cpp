@@ -33,22 +33,22 @@ namespace sw
                     SW_LOG_WARNING_ID( "ItemCatalog.ItemRequiresNeedsExactly", "%#: item '%#' <Requires> needs exactly one of set / equippedTag / characterTag / bodyShape", sourceName, pItemID );
                     return false;
                 }
-                EquipmentRequiresFields fields;
-                if ( XMLFields::readFields( node, fields, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
+                EquipmentRequiresParams params;
+                if ( XMLFields::readFields( node, params, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
                     return false;
                 // 속성은 공통 어휘의 줄임말이다. 칸은 읽기 때의 정적 검사(조건 순환 · 없는 세트)가 읽는다.
                 string text;
                 if ( pSet != nullptr )
                 {
-                    outCondition._setID = fields._set;
-                    outCondition._kind  = fields._pieces > 0 ? EquipmentConditionKind::SetPieces : EquipmentConditionKind::SetComplete;
+                    outCondition._setID = params._set;
+                    outCondition._kind  = params._pieces > 0 ? EquipmentConditionKind::SetPieces : EquipmentConditionKind::SetComplete;
                     if ( outCondition._setID.empty() )
                         return false;
-                    text = fields._pieces > 0 ? formatToString( "setPieces(%#, %#)", outCondition._setID.c_str(), fields._pieces ) : formatToString( "setComplete(%#)", outCondition._setID.c_str() );
+                    text = params._pieces > 0 ? formatToString( "setPieces(%#, %#)", outCondition._setID.c_str(), params._pieces ) : formatToString( "setComplete(%#)", outCondition._setID.c_str() );
                 }
                 else if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
                 {
-                    const string_view tagText = pEquippedTag != nullptr ? string_view( fields._equippedTag ) : string_view( fields._characterTag );
+                    const string_view tagText = pEquippedTag != nullptr ? string_view( params._equippedTag ) : string_view( params._characterTag );
                     outCondition._kind        = pEquippedTag != nullptr ? EquipmentConditionKind::EquippedTag : EquipmentConditionKind::CharacterTag;
                     outCondition._tag         = TagID::request( tagText );
                     if ( outCondition._tag.isValid() == false )

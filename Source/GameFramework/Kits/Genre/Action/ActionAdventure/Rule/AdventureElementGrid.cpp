@@ -239,10 +239,10 @@ namespace sw
         return _grid.update( deltaTime );
     }
 
-    void AdventureElementGrid::drainEvents( vector<AdventureElementEvent>& outListEvent )
+    void AdventureElementGrid::pollEvents( vector<AdventureElementEvent>& outListEvent )
     {
         _listGridEvent.clear();
-        _grid.drainEvents( _listGridEvent );
+        _grid.pollEvents( _listGridEvent );
         for ( const ElementEvent& gridEvent : _listGridEvent )
         {
             AdventureElementEvent event;

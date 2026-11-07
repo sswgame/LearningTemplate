@@ -36,9 +36,9 @@ namespace sw
     struct SW_GF_API ServerBusReadLog
     {
         /** @brief 거절을 셉니다. 로그는 (타입, 결과, 받은 버전)마다 한 번입니다. 배포 중 채팅 중계에서 메시지마다 로그를 쓰지 않으려는 것입니다. */
-        static void noteRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion );
+        static void recordRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion );
         /** @brief 크기 상한을 넘어 발행하지 않은 메시지를 알립니다(매번). */
-        static void noteTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount );
+        static void recordTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount );
         /** @brief 이 프로세스가 지금까지 거절한 버스 메시지 수입니다(진단, 테스트). */
         static uint64 getRejectedCount();
     };
@@ -83,7 +83,7 @@ namespace sw
                 return false;
             if ( static_cast<int32>( bytes.size() ) > IServerBusTransport::kMaxMessageSize )
             {
-                ServerBusReadLog::noteTooLarge( T::StaticType()->_fullyQualifiedName, _pName, static_cast<int32>( bytes.size() ) );
+                ServerBusReadLog::recordTooLarge( T::StaticType()->_fullyQualifiedName, _pName, static_cast<int32>( bytes.size() ) );
                 return false;
             }
             bus.publishBytes( _pName, bytes );
@@ -110,7 +110,7 @@ namespace sw
             if ( result == MixedBuildReadResult::Read )
                 return ServerBusReadResult::Read;
             const ServerBusReadResult busResult = toBusResult( result );
-            ServerBusReadLog::noteRejected( T::StaticType()->_fullyQualifiedName, message._topic, busResult, readVersion );
+            ServerBusReadLog::recordRejected( T::StaticType()->_fullyQualifiedName, message._topic, busResult, readVersion );
             return busResult;
         }
 
@@ -181,7 +181,7 @@ namespace sw
                 return false;
             if ( static_cast<int32>( bytes.size() ) > IServerBusTransport::kMaxMessageSize )
             {
-                ServerBusReadLog::noteTooLarge( T::StaticType()->_fullyQualifiedName, topic, static_cast<int32>( bytes.size() ) );
+                ServerBusReadLog::recordTooLarge( T::StaticType()->_fullyQualifiedName, topic, static_cast<int32>( bytes.size() ) );
                 return false;
             }
             bus.publishBytes( topic, bytes );

@@ -38,7 +38,7 @@ namespace sw::editor
         if ( EditorWidgets::drawIconToggle( pID, SW_EDITOR_ICON( "Filter" ), bFiltered, pTooltip ) )
             EditorInputGUI::openPopup( pID );
         if ( pMark != nullptr )
-            EditorSelfTestMarks::note( pMark );
+            EditorSelfTestMarks::record( pMark );
         return ImGui::BeginPopup( pID );
     }
 

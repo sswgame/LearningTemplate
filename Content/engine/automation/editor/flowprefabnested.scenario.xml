@@ -2,7 +2,7 @@
 <!--
   에디터 흐름 시나리오 — 중첩 프리팹. 안쪽 프리팹에 적용한 값이 바깥 프리팹이 스폰한 부품에도 퍼진다(유니티 중첩 프리팹 · 언리얼 차일드 액터).
   ① Lamp(점광)를 만들어 임시 프리팹 lamp 로 만든다. ② Post 를 만들고 Lamp 를 그 아래로 끌어 놓은 뒤 Post 를 프리팹 post 로 만든다 —
-     자식 프리팹 인스턴스 Lamp 는 post 의 중첩 프리팹 부품이 된다(prefab.create → adoptChildPrefabInstances).
+     자식 프리팹 인스턴스 Lamp 는 post 의 중첩 프리팹 부품이 된다(prefab.create → attachChildPrefabInstances).
   ③ lamp 를 하나 더 스폰해 LampTop 으로 이름을 바꾸고 반경을 7 로 고쳐 Apply Overrides 한다.
   ④ Post 아래의 부품 Lamp 도 반경 7 이 된다(PrefabInstanceRegistry 의 부품도 같은 프리팹의 인스턴스다). 되돌리기 한 번이면 원래 값으로 돌아온다.
   ⑤ 씬을 저장하고 새 씬 → 다시 열기 — 부품은 씬에 엔티티로 저장되지 않고 Post 가 새 lamp 로 다시 스폰한다(Lamp 는 하나, 반경 7).

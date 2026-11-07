@@ -97,7 +97,7 @@ namespace sw
         /** @brief UI 맵 레이어를 맞춥니다. `UI` 는 활성 화면이 있을 때 켜고, `UIGlobal`(일시정지)은 활성 화면이 없고 일시정지 메뉴가 있을 때 켭니다. */
         void syncInputLayers( const UIScreen* pActive, bool bHasPauseMenu );
         /** @brief 지울 화면의 트리를 포인터와 포커스가 놓게 합니다. */
-        void forgetScreen( UIScreen& screen );
+        void removeScreen( UIScreen& screen );
 
         /** @brief @p inputMap 의 액션 @p action 을 지금 누르는 물리 입력이 모두 UI 에 소비된 것이면 true 입니다. */
         bool isActionConsumed( const InputMap& inputMap, const hashed_string& action ) const;

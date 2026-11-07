@@ -96,12 +96,12 @@ namespace sw
             pShard->disconnect( localConnectionID );
     }
 
-    void NetEndpointShardSet::drainInbound( NetInbound& outInbound )
+    void NetEndpointShardSet::pollInbound( NetInbound& outInbound )
     {
         outInbound.clear();
         for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
         {
-            _listShard[static_cast<size_t>( shardIndex )]->drainInbound( _shardInbound );
+            _listShard[static_cast<size_t>( shardIndex )]->pollInbound( _shardInbound );
             for ( NetEndpointEvent event : _shardInbound._listEvent )
             {
                 event._connectionID = makeConnectionID( shardIndex, event._connectionID );

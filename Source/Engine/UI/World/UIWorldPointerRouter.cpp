@@ -67,7 +67,7 @@ namespace sw
         _pHovered = _pCaptured;
     }
 
-    void UIWorldPointerRouter::forgetComponent( const WidgetComponent& component )
+    void UIWorldPointerRouter::untrackComponent( const WidgetComponent& component )
     {
         if ( _pHovered == &component )
             _pHovered = nullptr;

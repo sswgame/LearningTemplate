@@ -1,5 +1,5 @@
 /**
- * @file ElementRuleTable.h
+ * @file ElementRuleCatalog.h
  * @brief 원소 상호작용 규칙 테이블입니다. 재질(성질 플래그와 수치), 상태(타는 중, 대전), 자극(불, 얼음, 물, 전기를 가했을 때), 스텝 규칙(번짐, 녹임, 다 탐, 사라짐)을 정의합니다.
  * @details 야생의 숨결의 화학 엔진처럼 "불은 풀로 번지고, 물은 불을 끄고, 바람이 불을 민다" 를 코드가 아니라 데이터로 적는다. 코드에는 규칙의 **종류**
  *          (자극 동작, 스텝 규칙, 번짐 형태)만 있고, 무엇이 무엇에 닿아 무엇이 되는지는 테이블이 정한다. 알 수 없는 재질, 상태, 플래그, 자극 이름은 읽을 때 오류이다.
@@ -85,7 +85,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 상태 하나입니다. 셀마다 최대 `ElementRuleTable::kMaxStatusCount` 개를 가질 수 있습니다. */
+    /** @brief 상태 하나입니다. 셀마다 최대 `ElementRuleCatalog::kMaxStatusCount` 개를 가질 수 있습니다. */
     REFLECT()
     struct SW_GF_API ElementStatusDef
     {
@@ -101,7 +101,7 @@ namespace sw
 
     /** @brief 이름 하나만 받는 선언(`<Flag id/>` · `<Stimulus id>`)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API ElementNameFields
+    struct SW_GF_API ElementNameParams
     {
         REFLECT_BODY();
 
@@ -111,7 +111,7 @@ namespace sw
 
     /** @brief 규칙표 루트(`<ElementRules stepTime>`)의 칸입니다. 표가 지금 값(기본 스텝)으로 채운 뒤 읽는다. */
     REFLECT()
-    struct SW_GF_API ElementRuleRootFields
+    struct SW_GF_API ElementRuleRootParams
     {
         REFLECT_BODY();
 
@@ -121,7 +121,7 @@ namespace sw
 
     /** @brief 자극 규칙(`<On …/>`)의 칸입니다. 이름은 이 표에서 앞에 선언한 것만 가리키며, 읽기가 번호로 바꾼다. */
     REFLECT()
-    struct SW_GF_API ElementStimulusRuleFields
+    struct SW_GF_API ElementStimulusRuleParams
     {
         REFLECT_BODY();
 
@@ -149,7 +149,7 @@ namespace sw
 
     /** @brief 스텝 규칙(`<Expire>` · `<Convert>` · `<Spread>`)의 칸입니다. 이름은 읽기가 번호로 바꾼다. */
     REFLECT()
-    struct SW_GF_API ElementStepRuleFields
+    struct SW_GF_API ElementStepRuleParams
     {
         REFLECT_BODY();
 
@@ -226,13 +226,13 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ElementRuleTable
+     * @class ElementRuleCatalog
      * @brief 재질, 플래그, 상태, 자극, 스텝 규칙의 테이블입니다. XML 로 읽거나 코드로 만들 수 있고 결과는 같습니다. 테이블은 바꾸지 않으므로 여러 격자가 참조해서 씁니다.
      */
-    class SW_GF_API ElementRuleTable
+    class SW_GF_API ElementRuleCatalog
     {
     public:
-        /** @brief 이 데이터 종류입니다(등록은 `ElementRuleTable.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<ElementRuleTable>` 는 경로 규칙으로 가른다. */
+        /** @brief 이 데이터 종류입니다(등록은 `ElementRuleCatalog.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<ElementRuleCatalog>` 는 경로 규칙으로 가른다. */
         static constexpr AssetTypeDef kAssetType        = AssetTypeDef::makeDataFile( "elementrules", AssetPathRule{ {}, {}, ".elements.xml" }, {} );
         static constexpr int32        kMaxFlagCount     = 32;
         static constexpr int32        kMaxStatusCount   = 4;
@@ -272,7 +272,7 @@ namespace sw
         [[nodiscard]] bool readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
         [[nodiscard]] bool readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const;
         /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 -1 로 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
+        [[nodiscard]] bool readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleCatalog::*pFind )( const hashed_string& ) const, int32& outIndex,
                                       string_view sourceName ) const;
 
     private:
@@ -285,8 +285,8 @@ namespace sw
     };
 
     /**
-     * @brief 공유 캐시("elementrules")는 GameFramework 가 인스턴스화합니다(`ElementRuleTable.cpp`). 쓰는 쪽은 `SharedAssetCache<ElementRuleTable>::acquire` 로 받습니다(같은 경로는 같은 객체).
+     * @brief 공유 캐시("elementrules")는 GameFramework 가 인스턴스화합니다(`ElementRuleCatalog.cpp`). 쓰는 쪽은 `SharedAssetCache<ElementRuleCatalog>::acquire` 로 받습니다(같은 경로는 같은 객체).
      * @details 파일을 고치면 에디터 핫 리로드가 캐시에서 떼어 내고 `getReloadCount` 를 늘린다 — 쥔 쪽은 옛 테이블을 쥐고 있다가 다시 받는다.
      */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ElementRuleTable>;
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ElementRuleCatalog>;
 } // namespace sw

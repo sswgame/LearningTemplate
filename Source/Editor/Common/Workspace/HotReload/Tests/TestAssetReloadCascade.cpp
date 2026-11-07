@@ -51,7 +51,7 @@ namespace
 
     sw::string makeMaterialText( const char* pName, const sw::string& parentID, const char* pRoughness )
     {
-        sw::string text = "<MaterialDesc formatVersion=\"0\" name=\"" + sw::string( pName ) + "\"";
+        sw::string text = "<MaterialDef formatVersion=\"0\" name=\"" + sw::string( pName ) + "\"";
         if ( parentID.empty() == false )
             text += " _base=\"" + parentID + "\"";
         else
@@ -59,7 +59,7 @@ namespace
         text += "><_properties>";
         if ( pRoughness != nullptr )
             text += "<item name=\"_roughness\" type=\"Range\" defaultValue=\"" + sw::string( pRoughness ) + "\" min=\"0.0\" max=\"1.0\" />";
-        text += "</_properties></MaterialDesc>";
+        text += "</_properties></MaterialDef>";
         return text;
     }
 

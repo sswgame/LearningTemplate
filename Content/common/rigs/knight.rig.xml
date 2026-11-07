@@ -1,7 +1,7 @@
 <RigAsset>
 	<targets>
 		<item name="LookTarget" object="RigLookTarget" />
-		<item name="Grip" socket="Grip" unit="Weapon" space="handslot.r" />
+		<item name="Grip" socket="Grip" skeletalMesh="Weapon" space="handslot.r" />
 	</targets>
 	<nodes>
 		<item type="FootPlacement"

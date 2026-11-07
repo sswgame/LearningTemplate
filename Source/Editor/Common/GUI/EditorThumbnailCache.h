@@ -84,7 +84,7 @@ namespace sw::editor
          */
         void finishLoads();
         /** @brief 끝난 로드 @p pOperation(참조를 쥔다)의 텍스처를 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. 디바이스를 쓰지 않는다. */
-        bool adoptReady( const string& assetID, const shared_ptr<TextureLoadOperation>& pOperation );
+        bool applyReady( const string& assetID, const shared_ptr<TextureLoadOperation>& pOperation );
         /** @brief 이번 프레임에 쓰지 않은 것 가운데 오래된 것부터 용량까지 놓습니다. */
         void evictOverCapacity();
 

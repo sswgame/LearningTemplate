@@ -228,9 +228,9 @@ namespace sw
         finishIfDone();
     }
 
-    void RhythmPlaySession::drainEvents( vector<RhythmEvent>& outListEvent )
+    void RhythmPlaySession::pollEvents( vector<RhythmEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void RhythmPlaySession::writeState( Archive& outArchive ) const

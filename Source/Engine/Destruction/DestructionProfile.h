@@ -34,7 +34,7 @@ namespace sw
      * @details 범위(양수 · 음수 아님)는 여기 PROPERTY 가 정본이다.
      */
     REFLECT()
-    struct SW_API DestructionRootFields
+    struct SW_API DestructionRootParams
     {
         REFLECT_BODY();
 
@@ -45,7 +45,7 @@ namespace sw
     };
 
     REFLECT()
-    struct SW_API DestructionLinkFields
+    struct SW_API DestructionLinkParams
     {
         REFLECT_BODY();
 
@@ -56,7 +56,7 @@ namespace sw
     };
 
     REFLECT()
-    struct SW_API DestructionImpactFields
+    struct SW_API DestructionImpactParams
     {
         REFLECT_BODY();
 
@@ -69,7 +69,7 @@ namespace sw
     };
 
     REFLECT()
-    struct SW_API DestructionDebrisFields
+    struct SW_API DestructionDebrisParams
     {
         REFLECT_BODY();
 
@@ -90,7 +90,7 @@ namespace sw
     };
 
     REFLECT()
-    struct SW_API DestructionNetworkFields
+    struct SW_API DestructionNetworkParams
     {
         REFLECT_BODY();
 

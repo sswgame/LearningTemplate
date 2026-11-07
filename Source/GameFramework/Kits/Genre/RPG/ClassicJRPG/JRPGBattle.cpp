@@ -48,7 +48,7 @@ namespace sw
         , _comboPoints{ 0 }
         , _round{ 0 }
         , _fleeAttempts{ 0 }
-        , _outcome{ JRPGBattleOutcome::Ongoing }
+        , _result{ JRPGBattleResult::Ongoing }
     {
     }
 
@@ -72,7 +72,7 @@ namespace sw
         _fleeAttempts                 = 0;
         _rewardExp                    = 0;
         _rewardGold                   = 0;
-        _outcome                      = JRPGBattleOutcome::Ongoing;
+        _result                       = JRPGBattleResult::Ongoing;
         const bool bCannotStartBattle = _pCatalog == nullptr || pParty == nullptr || pParty->countAlive() == 0;
         if ( bCannotStartBattle )
             return false;
@@ -139,7 +139,7 @@ namespace sw
 
     bool JRPGBattle::isInProgress() const
     {
-        return _outcome == JRPGBattleOutcome::Ongoing && _pParty != nullptr && _pCatalog != nullptr && _listEnemy.empty() == false &&
+        return _result == JRPGBattleResult::Ongoing && _pParty != nullptr && _pCatalog != nullptr && _listEnemy.empty() == false &&
                static_cast<int32>( _listCommand.size() ) == _pParty->getMemberCount();
     }
 
@@ -172,7 +172,7 @@ namespace sw
         syncActors();
         _turnOrder.restartRound();
         const int32 roundBefore = _turnOrder.getRound();
-        while ( _outcome == JRPGBattleOutcome::Ongoing )
+        while ( _result == JRPGBattleResult::Ongoing )
         {
             const int32 actor = _turnOrder.next();
             if ( actor < 0 || _turnOrder.getRound() != roundBefore + 1 )
@@ -199,7 +199,7 @@ namespace sw
         if ( _random.nextFloat() < chance )
         {
             pushEvent( JRPGBattleEvent::Kind::Fled, false, -1, -1, _fleeAttempts );
-            _outcome = JRPGBattleOutcome::Fled;
+            _result = JRPGBattleResult::Fled;
             return true;
         }
         pushEvent( JRPGBattleEvent::Kind::FleeFailed, false, -1, -1, _fleeAttempts );
@@ -325,7 +325,7 @@ namespace sw
         const JRPGMember&     member  = _pParty->getMember( memberIndex );
         const JRPGClassDef*   pClass  = _pCatalog->findClass( member._classID );
         const JRPGEnemyDef*   pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( target )]._enemyID );
-        const int32           defense = pEnemy != nullptr ? pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Vitality )] / 2 : 0;
+        const int32           defense = pEnemy != nullptr ? pEnemy->_arrStat[static_cast<size_t>( JRPGStat::CombatHealth )] / 2 : 0;
         vector<hashed_string> listType;
         if ( pClass != nullptr && pClass->_attackType.empty() == false )
             listType.push_back( pClass->_attackType );
@@ -629,11 +629,11 @@ namespace sw
 
     void JRPGBattle::finishIfDecided()
     {
-        if ( _outcome != JRPGBattleOutcome::Ongoing )
+        if ( _result != JRPGBattleResult::Ongoing )
             return;
         if ( _pParty->countAlive() == 0 )
         {
-            _outcome = JRPGBattleOutcome::Defeat;
+            _result = JRPGBattleResult::Defeat;
             pushEvent( JRPGBattleEvent::Kind::Defeat, false, -1, -1 );
             return;
         }
@@ -647,7 +647,7 @@ namespace sw
             _rewardExp += pEnemy->_exp;
             _rewardGold += pEnemy->_gold;
         }
-        _outcome          = JRPGBattleOutcome::Victory;
+        _result           = JRPGBattleResult::Victory;
         const int64 share = _pParty->distributeRewards( _rewardExp, _rewardGold );
         pushEvent( JRPGBattleEvent::Kind::Victory, false, -1, -1, static_cast<int32>( share ) );
     }
@@ -664,9 +664,9 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void JRPGBattle::drainEvents( vector<JRPGBattleEvent>& outListEvent )
+    void JRPGBattle::pollEvents( vector<JRPGBattleEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void JRPGBattle::writeState( Archive& outArchive ) const
@@ -701,7 +701,7 @@ namespace sw
         outArchive << _comboPoints;
         outArchive << _round;
         outArchive << _fleeAttempts;
-        outArchive << static_cast<uint8>( _outcome );
+        outArchive << static_cast<uint8>( _result );
     }
 
     bool JRPGBattle::isEnemyStateValid( const JRPGEnemyState& enemy ) const
@@ -782,7 +782,7 @@ namespace sw
             restored._listDefending[memberIndex] = bDefend;
         }
 
-        uint8 outcome = 0;
+        uint8 result = 0;
         if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
             return false;
         archive >> restored._rewardExp;
@@ -790,12 +790,12 @@ namespace sw
         archive >> restored._comboPoints;
         archive >> restored._round;
         archive >> restored._fleeAttempts;
-        archive >> outcome;
-        const bool bValid = archive.isOk() && outcome <= static_cast<uint8>( JRPGBattleOutcome::Fled ) && 0 <= restored._comboPoints && restored._comboPoints <= _settings._comboMax &&
+        archive >> result;
+        const bool bValid = archive.isOk() && result <= static_cast<uint8>( JRPGBattleResult::Fled ) && 0 <= restored._comboPoints && restored._comboPoints <= _settings._comboMax &&
                             0 <= restored._round && 0 <= restored._fleeAttempts && 0 <= restored._rewardExp && 0 <= restored._rewardGold;
         if ( bValid == false )
             return false;
-        restored._outcome = static_cast<JRPGBattleOutcome>( outcome );
+        restored._result = static_cast<JRPGBattleResult>( result );
         restored._eventBuffer.clear();
         *this = std::move( restored );
         return true;

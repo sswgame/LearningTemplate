@@ -1,5 +1,5 @@
 /**
- * @file HorrorCatalog.h
+ * @file SurvivalHorrorCatalog.h
  * @brief 생존 공포의 데이터를 담습니다. 아이템(격자 크기, 겹침, 회복, 정신력, 배터리), 조합, 괴물, 열쇠 자물쇠, 다이얼 자물쇠, 순서 퍼즐, 문서, 추리, 규칙 수치를 정의합니다.
  * @details 조합은 기반 `RecipeCatalog` 의 레시피(작업대 `Combine`, 재료 둘에서 결과 하나)로 담아 둔다. 약초 섞기도 제작과 같은 정의이다.
  */
@@ -26,7 +26,7 @@ namespace sw
 
     /** @brief 아이템의 쓰임입니다. */
     ENUM()
-    enum class HorrorItemKind : uint8
+    enum class SurvivalHorrorItemKind : uint8
     {
         None = 0,
         Weapon,
@@ -40,7 +40,7 @@ namespace sw
 
     /** @brief 세이브 제한 방식입니다. */
     ENUM()
-    enum class HorrorSaveMode : uint8
+    enum class SurvivalHorrorSaveMode : uint8
     {
         Unlimited = 0,
         Limited,  ///< 정해진 횟수만 세이브할 수 있다
@@ -49,7 +49,7 @@ namespace sw
 
     /** @brief 아이템 하나입니다. 격자에서 `_width` x `_height` 셀을 차지하며, 돌리면 바뀝니다. */
     REFLECT()
-    struct HorrorItemDef
+    struct SurvivalHorrorItemDef
     {
         REFLECT_BODY();
 
@@ -70,7 +70,7 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _maxStack{ 1 }; ///< 한 슬롯에 겹치는 수이다(탄약)
         PROPERTY()
-        HorrorItemKind _kind{ HorrorItemKind::None };
+        SurvivalHorrorItemKind _kind{ SurvivalHorrorItemKind::None };
     };
 } // namespace sw
 
@@ -78,7 +78,7 @@ namespace sw
 {
     /** @brief 괴물 하나입니다. 목격 공포와 턴제 초자연 전투의 수치를 가집니다. */
     REFLECT()
-    struct HorrorMonsterDef
+    struct SurvivalHorrorMonsterDef
     {
         REFLECT_BODY();
 
@@ -101,7 +101,7 @@ namespace sw
 {
     /** @brief 열쇠로 여는 자물쇠(문)입니다. 열면 `_flag` 가 서고, `AreaGraph` 연결의 조건이 그 플래그를 읽습니다. */
     REFLECT()
-    struct HorrorKeyLockDef
+    struct SurvivalHorrorKeyLockDef
     {
         REFLECT_BODY();
 
@@ -120,7 +120,7 @@ namespace sw
 {
     /** @brief 숫자 다이얼 자물쇠입니다. */
     REFLECT()
-    struct HorrorDialLockDef
+    struct SurvivalHorrorDialLockDef
     {
         REFLECT_BODY();
 
@@ -138,7 +138,7 @@ namespace sw
 {
     /** @brief 순서 퍼즐(종, 피아노, 석상 돌리기)입니다. 틀리면 처음부터 다시 합니다. */
     REFLECT()
-    struct HorrorSequenceDef
+    struct SurvivalHorrorSequenceDef
     {
         REFLECT_BODY();
 
@@ -157,7 +157,7 @@ namespace sw
 {
     /** @brief 문서(일지, 쪽지)입니다. 읽으면 단서가 생깁니다. */
     REFLECT()
-    struct HorrorDocumentDef
+    struct SurvivalHorrorDocumentDef
     {
         REFLECT_BODY();
 
@@ -173,7 +173,7 @@ namespace sw
 namespace sw
 {
     /** @brief 단서 보드의 연결 하나입니다. 순서는 상관없습니다(`isSame`). */
-    struct HorrorClueLink
+    struct SurvivalHorrorClueLink
     {
         hashed_string _first{};
         hashed_string _second{};
@@ -189,7 +189,7 @@ namespace sw
 {
     /** @brief 추리 하나입니다. 정답과, 그 답에 이르는 데 꼭 필요한 단서 연결을 가집니다. */
     REFLECT()
-    struct HorrorDeductionDef
+    struct SurvivalHorrorDeductionDef
     {
         REFLECT_BODY();
 
@@ -198,8 +198,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _answer{};
         PROPERTY()
-        hashed_string          _flag{};
-        vector<HorrorClueLink> _listRequiredLink{};
+        hashed_string                  _flag{};
+        vector<SurvivalHorrorClueLink> _listRequiredLink{};
         PROPERTY( Min = 0.0 )
         float32 _wrongSanity{ 10.0f }; ///< 틀린 추리의 벌칙(정신력)
     };
@@ -240,7 +240,7 @@ namespace sw
         PROPERTY( Min = 0 )
         int32 _maxSaves{ 0 }; ///< `Limited` 일 때의 횟수
         PROPERTY()
-        HorrorSaveMode _saveMode{ HorrorSaveMode::Unlimited };
+        SurvivalHorrorSaveMode _saveMode{ SurvivalHorrorSaveMode::Unlimited };
         PROPERTY()
         bool _bClearLinksOnWrong{ true }; ///< 틀린 추리 뒤 단서 연결을 모두 지운다
     };
@@ -250,7 +250,7 @@ namespace sw
 {
     /** @brief `<Combine id="mixGR" a="herbGreen" b="herbRed" out="herbMix" count="1"/>` 의 스키마입니다(읽은 뒤 기반 `RecipeDef` 로 옮긴다). */
     REFLECT()
-    struct HorrorCombineDef
+    struct SurvivalHorrorCombineDef
     {
         REFLECT_BODY();
 
@@ -270,50 +270,50 @@ namespace sw
 namespace sw
 {
     /**
-     * @class HorrorCatalog
-     * @brief `<HorrorCatalog><Rules saveMode="InkRibbon" gridWidth="6" .../><Item id="herbGreen" kind="Heal" w="1" h="1" heal="25"/>
+     * @class SurvivalHorrorCatalog
+     * @brief `<SurvivalHorrorCatalog><Rules saveMode="InkRibbon" gridWidth="6" .../><Item id="herbGreen" kind="Heal" w="1" h="1" heal="25"/>
      *        <Combine id="mixGG" a="herbGreen" b="herbGreen" out="herbMix"/><Monster id="zombie" sanityLoss="10" toughness="3"/>
      *        <KeyLock id="redDoor" key="keyRed" flag="redDoorOpen"/><DialLock id="safe" code="3 1 4" flag="safeOpen" attempts="3"/>
      *        <Sequence id="bells" steps="low,high,mid" flag="bellsDone" mistakeSanity="5"/><Document id="diary" title="Diary" clues="knife,gloves"/>
-     *        <Deduction id="culprit" answer="butler" links="knife-gloves,gloves-pantry" flag="caseSolved" wrongSanity="15"/></HorrorCatalog>` 를 읽습니다.
+     *        <Deduction id="culprit" answer="butler" links="knife-gloves,gloves-pantry" flag="caseSolved" wrongSanity="15"/></SurvivalHorrorCatalog>` 를 읽습니다.
      */
-    class SW_KIT_API HorrorCatalog : public XMLCatalog<HorrorCatalog>
+    class SW_KIT_API SurvivalHorrorCatalog : public XMLCatalog<SurvivalHorrorCatalog>
     {
-        friend class XMLCatalog<HorrorCatalog>;
+        friend class XMLCatalog<SurvivalHorrorCatalog>;
 
     public:
-        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<HorrorCatalog>` 가 접미사로 가른다. */
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<SurvivalHorrorCatalog>` 가 접미사로 가른다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".horror.xml", AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `HorrorCatalog.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "HorrorCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `SurvivalHorrorCatalog.cpp` 의 줄이 로더를 더한다). */
+        static constexpr AssetTypeDef kAssetType{ "SurvivalHorrorCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        HorrorCatalog();
+        SurvivalHorrorCatalog();
 
         /** @brief 조합 작업대 이름(`Combine`)을 반환합니다. */
         static hashed_string getCombineStation() { return hashed_string( "Combine" ); }
         /** @brief 두 아이템(순서 무관)을 섞는 레시피를 반환합니다. 없으면 nullptr 입니다. */
         const RecipeDef* findCombine( const hashed_string& firstItem, const hashed_string& secondItem ) const;
 
-        const HorrorItemDef* findItem( const hashed_string& id ) const { return _itemCatalog.find( id ); }
+        const SurvivalHorrorItemDef* findItem( const hashed_string& id ) const { return _itemCatalog.find( id ); }
         /** @brief 기반 `GridInventory` 에 넘길 모양 조회 델리게이트를 만듭니다. 이 카탈로그를 빌리므로 가방보다 오래 살아야 합니다. */
-        GridInventory::ShapeDelegate makeShapeLookup() const;
-        const HorrorMonsterDef*      findMonster( const hashed_string& id ) const { return _monsterCatalog.find( id ); }
-        const HorrorKeyLockDef*      findKeyLock( const hashed_string& id ) const { return _keyLockCatalog.find( id ); }
-        const HorrorDialLockDef*     findDialLock( const hashed_string& id ) const { return _dialLockCatalog.find( id ); }
-        const HorrorSequenceDef*     findSequence( const hashed_string& id ) const { return _sequenceCatalog.find( id ); }
-        const HorrorDocumentDef*     findDocument( const hashed_string& id ) const { return _documentCatalog.find( id ); }
-        const HorrorDeductionDef*    findDeduction( const hashed_string& id ) const { return _deductionCatalog.find( id ); }
-        const RecipeCatalog&         getRecipeCatalog() const { return _recipeCatalog; }
-        const SurvivalHorrorRules&   getRules() const { return _rules; }
-        void                         setRules( const SurvivalHorrorRules& rules ) { _rules = rules; }
+        GridInventory::ShapeDelegate      makeShapeLookup() const;
+        const SurvivalHorrorMonsterDef*   findMonster( const hashed_string& id ) const { return _monsterCatalog.find( id ); }
+        const SurvivalHorrorKeyLockDef*   findKeyLock( const hashed_string& id ) const { return _keyLockCatalog.find( id ); }
+        const SurvivalHorrorDialLockDef*  findDialLock( const hashed_string& id ) const { return _dialLockCatalog.find( id ); }
+        const SurvivalHorrorSequenceDef*  findSequence( const hashed_string& id ) const { return _sequenceCatalog.find( id ); }
+        const SurvivalHorrorDocumentDef*  findDocument( const hashed_string& id ) const { return _documentCatalog.find( id ); }
+        const SurvivalHorrorDeductionDef* findDeduction( const hashed_string& id ) const { return _deductionCatalog.find( id ); }
+        const RecipeCatalog&              getRecipeCatalog() const { return _recipeCatalog; }
+        const SurvivalHorrorRules&        getRules() const { return _rules; }
+        void                              setRules( const SurvivalHorrorRules& rules ) { _rules = rules; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "HorrorCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
+        static constexpr const utf8* kXMLRootName = "SurvivalHorrorCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
-        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& node, string_view name, string_view sourceName );
         [[nodiscard]] bool loadCombine( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadDialLock( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadSequence( const XMLNode& node, string_view sourceName );
@@ -321,17 +321,17 @@ namespace sw
         [[nodiscard]] bool loadDeduction( const XMLNode& node, string_view sourceName );
 
     private:
-        GameCatalog<HorrorItemDef>      _itemCatalog;
-        GameCatalog<HorrorMonsterDef>   _monsterCatalog;
-        GameCatalog<HorrorKeyLockDef>   _keyLockCatalog;
-        GameCatalog<HorrorDialLockDef>  _dialLockCatalog;
-        GameCatalog<HorrorSequenceDef>  _sequenceCatalog;
-        GameCatalog<HorrorDocumentDef>  _documentCatalog;
-        GameCatalog<HorrorDeductionDef> _deductionCatalog;
-        RecipeCatalog                   _recipeCatalog;
-        SurvivalHorrorRules             _rules;
+        GameCatalog<SurvivalHorrorItemDef>      _itemCatalog;
+        GameCatalog<SurvivalHorrorMonsterDef>   _monsterCatalog;
+        GameCatalog<SurvivalHorrorKeyLockDef>   _keyLockCatalog;
+        GameCatalog<SurvivalHorrorDialLockDef>  _dialLockCatalog;
+        GameCatalog<SurvivalHorrorSequenceDef>  _sequenceCatalog;
+        GameCatalog<SurvivalHorrorDocumentDef>  _documentCatalog;
+        GameCatalog<SurvivalHorrorDeductionDef> _deductionCatalog;
+        RecipeCatalog                           _recipeCatalog;
+        SurvivalHorrorRules                     _rules;
     };
 
-    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<HorrorCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<HorrorCatalog>;
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<SurvivalHorrorCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<SurvivalHorrorCatalog>;
 } // namespace sw

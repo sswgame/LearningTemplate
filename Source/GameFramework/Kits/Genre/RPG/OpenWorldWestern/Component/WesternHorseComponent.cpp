@@ -56,7 +56,7 @@ namespace sw
 namespace sw
 {
     WesternHorseComponent::WesternHorseComponent()
-        : _director{}
+        : _gameMode{}
         , _breed{}
         , _seed{ 1 }
         , _gameHoursPerSecond{ 0.0f }
@@ -104,7 +104,7 @@ namespace sw
         }
         _horse.update( deltaTime, deltaTime * _gameHoursPerSecond );
         vector<WesternHorseEvent> listEvent;
-        _horse.drainEvents( listEvent );
+        _horse.pollEvents( listEvent );
         const GameObject* pOwner = getOwner();
         for ( const WesternHorseEvent& horseEvent : listEvent )
         {
@@ -116,13 +116,13 @@ namespace sw
     {
         GameObject*                     pOwner    = getOwner();
         const GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const WesternGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<WesternGameModeComponent>( *pManager, _director ) : nullptr;
-        const WesternCatalog*           pCatalog  = pDirector != nullptr ? pDirector->findWesternCatalog() : nullptr;
+        const WesternGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<WesternGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const WesternCatalog*           pCatalog  = pGameMode != nullptr ? pGameMode->findWesternCatalog() : nullptr;
         WesternHorseMountComponent*     pMount    = pOwner != nullptr ? pOwner->getComponent<WesternHorseMountComponent>() : nullptr;
         const utf8*                     pName     = pOwner != nullptr ? pOwner->getName().c_str() : "?";
         if ( pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternCatalog", "[Western] horse '%#' has no western catalog - %#", pName, pDirector == nullptr ? "Director does not point at a western director" : "the director did not start" );
+            SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternCatalog", "[Western] horse '%#' has no western catalog - %#", pName, pGameMode == nullptr ? "Director does not point at a western director" : "the director did not start" );
             return false;
         }
         if ( pMount == nullptr )

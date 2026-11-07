@@ -414,7 +414,7 @@ namespace sw
         }
     }
 
-    unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, UIScreenDesc& outDesc, vector<UIBindingDesc>& outListBinding,
+    unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
                                                       vector<string>& outListStyleSheet )
     {
         string                                  error;
@@ -454,7 +454,7 @@ namespace sw
         return root;
     }
 
-    UIScreenHandle UISystem::pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDesc> listBinding, vector<string> listStyleSheet )
+    UIScreenHandle UISystem::pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDef> listBinding, vector<string> listStyleSheet )
     {
         screen->_documentPath   = FileUtil::normalizePath( documentPath );
         screen->_listBinding    = std::move( listBinding );
@@ -505,10 +505,10 @@ namespace sw
 
     unique_ptr<UIScreen> UISystem::createDocumentScreen( string_view documentPath )
     {
-        UIScreenDesc          desc{};
-        vector<UIBindingDesc> listBinding{};
-        vector<string>        listStyleSheet{};
-        unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
+        UIScreenDef          desc{};
+        vector<UIBindingDef> listBinding{};
+        vector<string>       listStyleSheet{};
+        unique_ptr<Widget>   root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return nullptr;
         unique_ptr<UIScreen> screen = sw::make_unique<UIScreen>( desc, std::move( root ) );
@@ -543,10 +543,10 @@ namespace sw
 
     bool UISystem::rebuildScreenFromDocument( UIScreen& screen )
     {
-        UIScreenDesc          desc{};
-        vector<UIBindingDesc> listBinding{};
-        vector<string>        listStyleSheet{};
-        unique_ptr<Widget>    root = instantiateDocument( screen._documentPath, desc, listBinding, listStyleSheet );
+        UIScreenDef          desc{};
+        vector<UIBindingDef> listBinding{};
+        vector<string>       listStyleSheet{};
+        unique_ptr<Widget>   root = instantiateDocument( screen._documentPath, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return false; // 기존 트리를 유지한다. 오류는 instantiateDocument 가 남겼다
 
@@ -838,7 +838,7 @@ namespace sw
     {
         unique_ptr<UIScreen> screen = std::move( _listScreen[index] );
         _listScreen.erase( _listScreen.begin() + index );
-        _input.forgetScreen( *screen ); // 포인터와 포커스가 트리를 놓는다(트리가 지워질 때 포커스 매니저에게 알릴 일이 없다)
+        _input.removeScreen( *screen ); // 포인터와 포커스가 트리를 놓는다(트리가 지워질 때 포커스 매니저에게 알릴 일이 없다)
         screen->_pUISystem = nullptr;
     }
 

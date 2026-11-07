@@ -253,7 +253,7 @@ namespace sw
         /** @brief 시간을 흘립니다. 시간제 스위치가 꺼지고, 시간 안에 다 켜지 못한 횃불이 꺼집니다. */
         void update( float32 deltaTime, GameFlags& flags );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void drainEvents( vector<AdventureDungeonEvent>& outListEvent );
+        void pollEvents( vector<AdventureDungeonEvent>& outListEvent );
 
         const AdventureDungeonProgress* findProgress( const hashed_string& dungeonID ) const;
         bool                            isDeviceActive( const hashed_string& dungeonID, const hashed_string& deviceID ) const;

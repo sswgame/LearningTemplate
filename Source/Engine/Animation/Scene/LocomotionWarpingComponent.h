@@ -48,9 +48,9 @@ namespace sw
         bool isAnimationActive() const override { return false; }
         /** @brief 후처리 단계에서 몸 방향 본을 돌릴 때(`isOrientingPose`)만 포즈를 쓴다. 서 있거나 방향 보정이 없으면 읽기만 하므로 군중 묶음을 나눌 수 있다. */
         AnimationPoseAccess getPoseAccess() const override;
-        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
+        void                finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         LocomotionWarpingComponent& _owner;
@@ -97,9 +97,9 @@ namespace sw
 
     private:
         /** @brief 게임 스레드 — 속도를 재고 재생 배율 · 방향 각을 정합니다. */
-        void updateFromMovement( SkeletalMeshComponent& unit );
+        void updateFromMovement( SkeletalMeshComponent& skeletalMesh );
         /** @brief 후처리 — 방향 각만큼 뼈를 돌립니다(워커). */
-        void applyOrientation( SkeletalMeshComponent& unit ) const;
+        void applyOrientation( SkeletalMeshComponent& skeletalMesh ) const;
         void bindToUnit();
         void unbindFromUnit();
 
@@ -120,7 +120,7 @@ namespace sw
 
         LocomotionWarpingBinding _binding;
         Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        SkeletalMeshComponent*   _pUnit;               ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
+        SkeletalMeshComponent*   _pSkeletalMesh;       ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
         float3                   _previousPosition;
         float3                   _measuredVelocity;
         float32                  _orientationAngle;

@@ -38,7 +38,7 @@ namespace sw::editor
         const hashed_string&     getEventName() const { return _eventName; }
         void                     selectEvent( const hashed_string& eventName ) { _eventName = eventName; }
         /** @brief 고치는 이벤트입니다. 지웠거나 없으면 nullptr 입니다. */
-        AudioEventDesc* findEvent() { return _library.findEvent( _eventName ); }
+        AudioEventDef* findEvent() { return _library.findEvent( _eventName ); }
 
         /** @brief 고치는 이벤트를 복제하고 사본을 고릅니다. */
         void duplicateEvent();

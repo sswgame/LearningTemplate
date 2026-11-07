@@ -29,6 +29,6 @@ namespace sw
 
     private:
         PROPERTY( Category = "Drag", DisplayName = "Director", Tooltip = "Object with the SkirmishGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
     };
 } // namespace sw

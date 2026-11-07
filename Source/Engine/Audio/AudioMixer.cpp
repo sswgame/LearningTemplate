@@ -36,7 +36,7 @@ namespace sw
 
     AudioMixer::~AudioMixer() = default;
 
-    bool AudioMixer::initialize( const AudioMixerDesc& desc, AudioChannelLayout layout )
+    bool AudioMixer::initialize( const AudioMixerDef& desc, AudioChannelLayout layout )
     {
         _listBusState.clear();
         _listOrder.clear();
@@ -48,14 +48,14 @@ namespace sw
         _listBusState.resize( desc._listBus.size() );
         for ( size_t busIndex = 0; busIndex < desc._listBus.size(); ++busIndex )
         {
-            const AudioBusDesc& busDesc = desc._listBus[busIndex];
-            Bus&                bus     = _listBusState[busIndex];
-            bus._name                   = busDesc._name;
-            bus._parentIndex            = desc.findBusIndex( busDesc._parent );
-            bus._volumeDb               = busDesc._volumeDb;
-            bus._bMuted                 = busDesc._bMuted ? SW_TRUE : SW_FALSE;
-            bus._bSolo                  = busDesc._bSolo ? SW_TRUE : SW_FALSE;
-            bus._layout                 = resolveAudioMixerBusLayout( busDesc._channels, layout );
+            const AudioBusDef& busDesc = desc._listBus[busIndex];
+            Bus&               bus     = _listBusState[busIndex];
+            bus._name                  = busDesc._name;
+            bus._parentIndex           = desc.findBusIndex( busDesc._parent );
+            bus._volumeDb              = busDesc._volumeDb;
+            bus._bMuted                = busDesc._bMuted ? SW_TRUE : SW_FALSE;
+            bus._bSolo                 = busDesc._bSolo ? SW_TRUE : SW_FALSE;
+            bus._layout                = resolveAudioMixerBusLayout( busDesc._channels, layout );
             bus._input.allocate( bus._layout );
             // 넓은 버스가 두 채널 버스(부모 · 센드)로 갈 때 쓰는 BS.775 행렬이다. 레이아웃의 마스크는 늘 아는 스피커라 실패하지 않는다.
             const uint32 busChannelCount = AudioChannelLayoutUtil::getChannelCount( bus._layout );
@@ -66,7 +66,7 @@ namespace sw
                 _listBusState.clear();
                 return false;
             }
-            for ( const AudioSendDesc& sendDesc : busDesc._listSend )
+            for ( const AudioSendDef& sendDesc : busDesc._listSend )
             {
                 Send send;
                 send._targetIndex = static_cast<uint32>( desc.findBusIndex( sendDesc._bus ) );
@@ -75,7 +75,7 @@ namespace sw
                 send._bPreFader   = sendDesc._bPreFader;
                 bus._listSend.push_back( send );
             }
-            for ( const AudioDuckDesc& duckDesc : busDesc._listDuck )
+            for ( const AudioDuckDef& duckDesc : busDesc._listDuck )
             {
                 Duck duck;
                 duck._sourceIndex    = static_cast<uint32>( desc.findBusIndex( duckDesc._sourceBus ) );
@@ -85,7 +85,7 @@ namespace sw
                 duck._releaseSeconds = duckDesc._releaseSeconds;
                 bus._listDuck.push_back( duck );
             }
-            for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
+            for ( const AudioEffectDef& effectDesc : busDesc._listEffect )
             {
                 // 지원하지 않는 레이아웃 · 읽지 못한 자원(임펄스 응답)은 조용히 건너뛰지 않고 그래프 전체를 오류로 멈춘다(오류는 createEffect 가 남긴다).
                 unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc, bus._layout );

@@ -2,7 +2,7 @@
  * @file BehaviorTreeEditModel.h
  * @brief 행동 트리 편집 창의 화면 없는 편집 모델입니다. 데이터 파일(`*.bt.xml`)을 고칠 수 있는 트리로 읽고, 노드 더하기 · 지우기 · 순서 바꾸기 · 속성 고치기를 받고, 파일 글로 되씁니다.
  * @details ImGui 를 모른다. 로더(`BehaviorTreeAsset`)는 틀린 파일을 읽지 않지만 편집기는 틀린 중간 상태(자식 없는 컴포짓, 아직 안 고른 작업 이름)를
- *          들고 있어야 하므로 트리 짓기는 따로 두고, 구조 문제는 `collectIssues` 가 알린다. 노드 원소의 칸 읽기 · 쓰기는 로더와 같은 `BehaviorTreeXML` 이다(스키마는 `BehaviorTreeNodeFields.h`).
+ *          들고 있어야 하므로 트리 짓기는 따로 두고, 구조 문제는 `collectIssues` 가 알린다. 노드 원소의 칸 읽기 · 쓰기는 로더와 같은 `BehaviorTreeXML` 이다(스키마는 `BehaviorTreeNodeParams.h`).
  *          **저장하면 주석이 사라진다**(트리를 글로 새로 쓴다) - 설명은 노드 `name` 에 적는다. 노드 번호(`_id`)는 편집 중에만 안정이고, 파일에는 쓰지 않는다.
  *          깊이 우선(앞 자식부터) 순서가 런타임 `BehaviorTree` 의 노드 번호와 같다(`collectPreorder`) - 플레이 중 활성 노드 표시가 이 대응을 쓴다.
  */
@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
-#include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeParams.h"
 
 namespace sw
 {

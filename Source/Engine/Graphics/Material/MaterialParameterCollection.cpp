@@ -63,7 +63,7 @@ namespace sw
 
 namespace sw
 {
-    bool MaterialParameterCollectionDesc::validate( string_view sourceLabel ) const
+    bool MaterialParameterCollectionDef::validate( string_view sourceLabel ) const
     {
         bool bValid = true;
         for ( size_t index = 0; index < _listParameter.size(); ++index )
@@ -93,7 +93,7 @@ namespace sw
             if ( pExisting != nullptr )
                 return pExisting;
         }
-        MaterialParameterCollectionDesc desc;
+        MaterialParameterCollectionDef desc;
         if ( ReflectedXMLFile::loadDesc( assetID, desc ) == false || desc.validate( assetID.view() ) == false )
             return nullptr;
         shared_ptr<MaterialParameterCollection> pCollection = sw::make_shared<MaterialParameterCollection>( std::move( desc ) );
@@ -101,12 +101,12 @@ namespace sw
         return pCollection;
     }
 
-    MaterialParameterCollection::MaterialParameterCollection( MaterialParameterCollectionDesc desc )
+    MaterialParameterCollection::MaterialParameterCollection( MaterialParameterCollectionDef desc )
         : _listEntry{}
         , _generation{ 1 }
     {
         _listEntry.reserve( desc._listParameter.size() );
-        for ( const MaterialCollectionParameterDesc& parameter : desc._listParameter )
+        for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
         {
             _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value } );
         }
@@ -151,5 +151,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( MaterialParameterCollection, MaterialParameterCollectionDesc::kAssetType );
+    SW_ASSET_TYPE( MaterialParameterCollection, MaterialParameterCollectionDef::kAssetType );
 } // namespace sw

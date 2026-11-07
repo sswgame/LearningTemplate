@@ -195,7 +195,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         _clock.update( deltaTime );
-        _clock.drainEvents( _listClockEvent );
+        _clock.pollEvents( _listClockEvent );
         // 공유 평판은 공유 날짜가 넘어갈 때 한 번만 식힌다. 참조해서 쓰는 키트는 식히지 않는다. 키트 수만큼 반복해서 식지 않게 하기 위해서다.
         for ( const WorldClockEvent& clockEvent : _listClockEvent )
         {

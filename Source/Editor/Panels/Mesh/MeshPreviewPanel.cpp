@@ -117,7 +117,7 @@ namespace sw::editor
             reloadDocument();
             _model.requestResync(); // 다시 임포트한 메시를 미리보기에 다시 건다
         }
-        EditorSelfTestMarks::note( "mesh.reload" );
+        EditorSelfTestMarks::record( "mesh.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheMeshFileAgainAfterImporting" ) );
 
         syncPreviewSubject();
@@ -128,7 +128,7 @@ namespace sw::editor
 
         const float2 viewSize = computeViewportFillSize( MeshPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
-        EditorSelfTestMarks::note( "mesh.previewScene" );
+        EditorSelfTestMarks::record( "mesh.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 

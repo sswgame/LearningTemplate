@@ -51,7 +51,7 @@ namespace sw
         return _gpuContext != IProfilerGPUTimeline::kInvalidGPUContext;
     }
 
-    void GPUTimelineExporter::forgetContext()
+    void GPUTimelineExporter::removeContext()
     {
         _gpuContext      = IProfilerGPUTimeline::kInvalidGPUContext;
         _pDeviceIdentity = nullptr;

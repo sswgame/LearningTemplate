@@ -185,7 +185,7 @@ namespace sw::editor
         return _inputMap.getSourceAssetPath( _inputMap.getActionSourceIndex( action ) );
     }
 
-    bool InputMapModel::noteEdit( bool bChanged )
+    bool InputMapModel::recordEdit( bool bChanged )
     {
         _bDirty = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
         return bChanged;
@@ -199,7 +199,7 @@ namespace sw::editor
 
     bool InputMapModel::resetActionToDefault( const hashed_string& action )
     {
-        return noteEdit( _inputMap.resetActionToDefault( action ) );
+        return recordEdit( _inputMap.resetActionToDefault( action ) );
     }
 
     bool InputMapModel::setLayerEnabled( const hashed_string& layer, bool bEnabled )
@@ -207,7 +207,7 @@ namespace sw::editor
         if ( _inputMap.hasLayer( layer ) == false || _inputMap.isLayerEnabled( layer ) == bEnabled )
             return false;
         _inputMap.setLayerEnabled( layer, bEnabled );
-        return noteEdit( true );
+        return recordEdit( true );
     }
 
     bool InputMapModel::savesTriggerFields( BindingKind kind )
@@ -223,32 +223,32 @@ namespace sw::editor
 
     bool InputMapModel::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
     {
-        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTrigger( action, bindIndex, trigger ) );
+        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingTrigger( action, bindIndex, trigger ) );
     }
 
     bool InputMapModel::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
     {
-        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTriggerTime( action, bindIndex, seconds ) );
+        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingTriggerTime( action, bindIndex, seconds ) );
     }
 
     bool InputMapModel::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
     {
-        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingNegate( action, bindIndex, bNegate ) );
+        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingNegate( action, bindIndex, bNegate ) );
     }
 
     bool InputMapModel::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
     {
-        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTapCount( action, bindIndex, tapCount ) );
+        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingTapCount( action, bindIndex, tapCount ) );
     }
 
     bool InputMapModel::setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer )
     {
-        return noteEdit( _inputMap.setBindingLayer( action, bindIndex, layer ) );
+        return recordEdit( _inputMap.setBindingLayer( action, bindIndex, layer ) );
     }
 
     bool InputMapModel::removeBinding( const hashed_string& action, uint32 bindIndex )
     {
-        return noteEdit( _inputMap.removeBinding( action, bindIndex ) );
+        return recordEdit( _inputMap.removeBinding( action, bindIndex ) );
     }
 
     bool InputMapModel::canCreateAction( string_view name ) const
@@ -263,7 +263,7 @@ namespace sw::editor
             return false;
         _inputMap.createAction( sw::hashed_string( string( name ).c_str() ), valueType );
         _selectedAction = name; // 만들자마자 바인딩을 더할 수 있게 고른다
-        return noteEdit( true );
+        return recordEdit( true );
     }
 
     bool InputMapModel::deleteAction( const hashed_string& action )
@@ -272,7 +272,7 @@ namespace sw::editor
             return false;
         if ( _selectedAction == action.view() )
             _selectedAction.clear();
-        return noteEdit( true );
+        return recordEdit( true );
     }
 
     bool InputMapModel::canCreateLayer( string_view name ) const
@@ -285,7 +285,7 @@ namespace sw::editor
         if ( canCreateLayer( name ) == false )
             return false;
         _inputMap.registerLayer( hashed_string( string( name ).c_str() ), priority );
-        return noteEdit( true );
+        return recordEdit( true );
     }
 
     void InputMapModel::collectVisibleActions( const EditorListFilter& filter, vector<hashed_string>& outListVisibleAction ) const
@@ -402,13 +402,13 @@ namespace sw::editor
         return bindingCount > 0 ? _inputMap.findBindingLayer( action, bindingCount - 1 ) : _inputMap.getDefaultLayerName();
     }
 
-    bool InputMapModel::noteCapturedBinding( const hashed_string& action, uint32 bindIndex )
+    bool InputMapModel::recordCapturedBinding( const hashed_string& action, uint32 bindIndex )
     {
         // 겹침 규칙은 충돌 칸과 한 벌이다. 그대로 두는 것은 덮어쓰기를 원할 수 있어서이고, 충돌 칸이 다시 잡기 · 지우기를 준다.
         refreshConflicts();
         if ( InputMapConflicts::involves( _listConflict, action, bindIndex ) )
             SW_LOG_WARNING_ID( "InputMapModel.BindingConflictsSameLayer", "Binding %# of '%#' now fires together with another action on the same layer - see Conflicts", bindIndex, action.c_str() );
-        return noteEdit( true );
+        return recordEdit( true );
     }
 
     bool InputMapModel::finishKeyCapture( Key newKey, uint8 modifierMask )
@@ -421,7 +421,7 @@ namespace sw::editor
         cancelKeyCapture();
         // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)이면 바뀌지 않는다. 경고는 InputMap 이 남긴다. 이때는 문서를 dirty 로 표시하지 않는다.
         const bool bChanged = bNewBinding ? bindCapturedKey( action, newKey, modifierMask, bindIndex ) : rebindCapturedKey( action, bindIndex, newKey, modifierMask );
-        return bChanged && noteCapturedBinding( action, bindIndex );
+        return bChanged && recordCapturedBinding( action, bindIndex );
     }
 
     bool InputMapModel::canCaptureSlot() const
@@ -456,7 +456,7 @@ namespace sw::editor
         }
         else if ( _inputMap.rebindSlot( action, slot, bindIndex ) == false )
             return false;
-        return noteCapturedBinding( action, bindIndex );
+        return recordCapturedBinding( action, bindIndex );
     }
 
     void InputMapModel::pollGamepadCapture( InputManager& input )

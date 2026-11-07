@@ -33,7 +33,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Cancel" ), "Cancel##lightProbeBake" ) ) )
                 pSession->cancel( "canceled" );
-            EditorSelfTestMarks::note( "statusBar.lightProbeBakeCancel" ); // 시나리오 lightprobebakecancel 이 누른다
+            EditorSelfTestMarks::record( "statusBar.lightProbeBakeCancel" ); // 시나리오 lightprobebakecancel 이 누른다
         }
     } // namespace
 

@@ -909,9 +909,9 @@ namespace sw
         pGhost->begin( kart._motor.getPosition(), kart._motor.getYaw(), _settings._step );
     }
 
-    void KartRace::drainEvents( vector<KartRaceEvent>& outListEvent )
+    void KartRace::pollEvents( vector<KartRaceEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void KartRace::writeState( Archive& outArchive ) const

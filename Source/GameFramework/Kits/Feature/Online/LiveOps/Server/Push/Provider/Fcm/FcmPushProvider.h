@@ -78,7 +78,7 @@ namespace sw
         void queueSend( uint64 deliveryID, string&& bodyJSON, UnixMilliseconds nowMs );
         void submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds nowMs );
         /** @brief 토큰을 기다리던 배달을 새 토큰으로 보내거나(Granted) 결과로 끝냅니다. */
-        void flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds nowMs );
+        void flushWaiting( ServiceAccountTokenSource::Outcome result, UnixMilliseconds nowMs );
         void finishSend( uint64 deliveryID, const HTTPClientResponse& response );
         void complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 

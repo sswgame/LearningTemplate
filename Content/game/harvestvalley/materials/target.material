@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 바라보는 칸 표시 — 반투명 유리 머티리얼에 노란 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="HarvestValleyTarget" _base="engine/materials/glassmaterial.material">
+<MaterialDef formatVersion="0" name="HarvestValleyTarget" _base="engine/materials/glassmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="1.0 0.95 0.3 0.45" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

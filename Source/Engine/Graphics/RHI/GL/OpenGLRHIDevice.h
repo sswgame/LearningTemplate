@@ -490,7 +490,7 @@ namespace sw
         uint32 _defaultTexture;
         /// @brief 지금 컨텍스트를 가진 스레드(없으면 기본값)와 가진 시각입니다. 잡기에 실패했을 때 누가 가지고 있었는지 로그에 적습니다(진단 전용).
         atomic<std::thread::id> _contextOwnerThread;
-        atomic<uint64>          _contextOwnedSinceNanos;
+        atomic<uint64>          _contextOwnedStartNanos;
 
         RHIHandleTable<uint32> _gpuBuffers;
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).

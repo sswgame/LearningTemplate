@@ -235,7 +235,7 @@ namespace sw
                 if ( pVariable == nullptr )
                     continue; // 모르는 변수는 `prepare` 가 읽기 오류로 낸다
                 if ( bLaterStage == false )
-                    forgetStartValue( variable._name, pVariable->getDefaultValueAsString() );
+                    removeStartValue( variable._name, pVariable->getDefaultValueAsString() );
                 if ( pVariable->getValueAsString() != variable._value )
                     (void)pVariable->setValueFromString( variable._value );
                 if ( variable._name == kStartSceneVariable )
@@ -254,7 +254,7 @@ namespace sw
                 IGameRestarter* const pRestarter = engine::findSubsystem<IGameRestarter>();
                 if ( pRestarter == nullptr || pRestarter->restartGame() == false )
                 {
-                    _pRunner->finish( AutomationOutcome::Failed,
+                    _pRunner->finish( AutomationResult::Failed,
                                       pRestarter == nullptr ? "this host cannot restart the game for a later chain stage" : "the game could not be restarted for this stage" );
                     return;
                 }
@@ -267,7 +267,7 @@ namespace sw
         }
     }
 
-    void AutomationSession::forgetStartValue( string_view name, string_view value )
+    void AutomationSession::removeStartValue( string_view name, string_view value )
     {
         for ( auto& [startName, startValue] : _listStartVariable )
         {
@@ -337,9 +337,9 @@ namespace sw
         // 그 값이 사진에 섞인다 — 백엔드마다 렌더 스레드가 뒤처지는 정도가 달라 Vulkan · GL 만 FSR 이 섞였다(useroptions scale). 단계 앞에서 패킷을 비운다(언리얼 FlushRenderingCommands).
         // 시계를 붙잡지 않는다 — 붙잡으면 게임이 그동안 더 돌아 뒤 사진의 게임 시간이 렌더 지연에 따라 흔들린다.
         if ( _pRenderThread != nullptr && _pRunner->hasPendingScreenshot() )
-            _pRenderThread->drainPackets();
-        const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );
-        if ( result == AutomationOutcome::Running )
+            _pRenderThread->pollPackets();
+        const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
+        if ( result == AutomationResult::Running )
             return kEngineFrameRunning;
         const int32 exitCode = onStageEnded( result, completedScreenshotCount );
         if ( exitCode != kEngineFrameRunning )
@@ -377,7 +377,7 @@ namespace sw
                               bRunning ? &status : nullptr );
     }
 
-    int32 AutomationSession::onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount )
+    int32 AutomationSession::onStageEnded( AutomationResult result, uint32 completedScreenshotCount )
     {
         const size_t stageIndex = _pChain->getStageIndex();
         const string stageName  = _pRunner->getScenario().getName().empty() ? _pChain->getCurrentPath() : _pRunner->getScenario().getName();
@@ -386,7 +386,7 @@ namespace sw
         {
             const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
             // 건너뜀은 실패가 아니다 - 까닭과 등급(빌드 구성이면 Info, 환경 탓이면 Warning)은 실행기의 SKIP 줄이 이미 남겼다.
-            if ( result == AutomationOutcome::Passed || result == AutomationOutcome::Skipped )
+            if ( result == AutomationResult::Passed || result == AutomationResult::Skipped )
                 SW_LOG_INFO_ID( "AutomationSession.ChainStageEnded", "[Scenario] %#", line.c_str() );
             else
                 SW_LOG_ERROR_ID( "AutomationSession.ChainStageFailed", "[Scenario] %#", line.c_str() );
@@ -410,13 +410,13 @@ namespace sw
         // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).
         if ( _pRunner == nullptr || _pRunner->hasEnded() )
             return kEngineFrameRunning;
-        AutomationOutcome result = _pRunner->onWindowClosed( context._pInput );
+        AutomationResult result = _pRunner->onWindowClosed( context._pInput );
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
         if ( _pChain != nullptr && _pChain->onStageEnded( result ) )
         {
             SW_LOG_ERROR_ID( "AutomationSession.WindowClosedStageStill", "[Scenario] the window closed with %# stage(s) still to run (put <CloseWindow> in the last scenario of a chain)",
                              static_cast<uint32>( _pChain->getStageCount() - _pChain->getStageIndex() ) );
-            result = AutomationOutcome::Failed;
+            result = AutomationResult::Failed;
         }
         return getAutomationExitCode( result );
     }
@@ -500,7 +500,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
             inoutState._bFailed         = SW_TRUE;
-            inoutState._failureExitCode = getAutomationExitCode( AutomationOutcome::LoadError );
+            inoutState._failureExitCode = getAutomationExitCode( AutomationResult::LoadError );
             return;
         }
         const int32 exitCode        = AutomationPerBackend::run( options );

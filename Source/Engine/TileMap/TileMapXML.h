@@ -20,7 +20,7 @@ namespace sw
      * @details 칸 순서가 파일의 속성 순서다(저장 바이트를 기존 형식 그대로 지킨다 — `TileMapXMLTest.SavedBytesMatchTheExistingFormat`).
      */
     REFLECT()
-    struct SW_API TileWarpFields
+    struct SW_API TileWarpParams
     {
         REFLECT_BODY();
 
@@ -40,7 +40,7 @@ namespace sw
 
     /** @brief 스폰(`<spawn x y/>`)의 칸입니다. 맵 안의 자리인지는 크기를 아는 읽기가 본다. */
     REFLECT()
-    struct SW_API TileSpawnFields
+    struct SW_API TileSpawnParams
     {
         REFLECT_BODY();
 
@@ -52,7 +52,7 @@ namespace sw
 
     /** @brief 타일 레이어(`<tileLayer tileSet>`)의 칸입니다. 팔레트 · 셀은 자식 원소다. */
     REFLECT()
-    struct SW_API TileLayerFields
+    struct SW_API TileLayerParams
     {
         REFLECT_BODY();
 
@@ -62,7 +62,7 @@ namespace sw
 
     /** @brief 팔레트 줄(`<palette><b name/>`)의 칸입니다. */
     REFLECT()
-    struct SW_API TilePaletteEntryFields
+    struct SW_API TilePaletteEntryParams
     {
         REFLECT_BODY();
 
@@ -72,7 +72,7 @@ namespace sw
 
     /** @brief 데이터 레이어(`<dataLayers><layer name default>값…</layer>`)의 칸입니다. 값 목록은 원소 글이라 손으로 푼다. */
     REFLECT()
-    struct SW_API TileDataLayerFields
+    struct SW_API TileDataLayerParams
     {
         REFLECT_BODY();
 

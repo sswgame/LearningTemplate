@@ -366,7 +366,7 @@ namespace sw
         static string saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options );
         /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXMLString` 과 `loadFromJSONString` 의 본체입니다. */
         template <typename TSerializer>
-        [[nodiscard]] static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
+        [[nodiscard]] static bool loadFromXMLText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
         /**
          * @brief 오브젝트의 상태를 제자리에서 다시 읽습니다. 로더 세 개(XML, JSON, 바이너리)는 포맷 읽기만 `deserializeState( version, context )` 로 넘깁니다.
          * @details 자식 연결을 기록하고 컴포넌트를 비운 뒤, 컴포넌트 ID 를 복원하는 범위 안에서 읽는다. 읽으면 배치에 기록하고(배치가 없으면 한 개짜리

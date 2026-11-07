@@ -218,11 +218,11 @@ namespace sw::test
         }
 
         /** @brief 카탈로그의 모든 저장소 면 경로를 메모리 글꼴로 등록하고 시작합니다. */
-        [[nodiscard]] bool initialize( const FontCatalogDesc& catalog )
+        [[nodiscard]] bool initialize( const FontCatalogDef& catalog )
         {
-            for ( const FontFamilyDesc& family : catalog._listFamily )
+            for ( const FontFamilyDef& family : catalog._listFamily )
             {
-                for ( const FontFaceDesc& face : family._listFace )
+                for ( const FontFaceDef& face : family._listFace )
                 {
                     _fontService->registerMemoryFontFile( face._path, vector<uint8>( 1, static_cast<uint8>( 1 ) ) );
                 }
@@ -238,11 +238,11 @@ namespace sw::test
         void beginFrame() { _fontService->getGlyphCache().beginFrame(); }
 
         /** @brief 저장소 가족 하나(면 하나)를 카탈로그에 더합니다. */
-        static void addFamily( FontCatalogDesc& inoutCatalog, const string& name, const string& path, FontWeight weight = FontWeight::Regular )
+        static void addFamily( FontCatalogDef& inoutCatalog, const string& name, const string& path, FontWeight weight = FontWeight::Regular )
         {
-            FontFamilyDesc family{};
+            FontFamilyDef family{};
             family._name = name;
-            FontFaceDesc face{};
+            FontFaceDef face{};
             face._path   = path;
             face._weight = weight;
             family._listFace.push_back( face );

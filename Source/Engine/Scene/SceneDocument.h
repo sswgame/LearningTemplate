@@ -24,7 +24,7 @@ namespace sw
 {
     /** @brief 씬 루트(`<Scene formatVersion name>`)의 칸입니다. 이름을 적지 않으면 파일 이름이다. `formatVersion` 은 에셋 형식이 읽는다. */
     REFLECT()
-    struct SW_API SceneRootFields
+    struct SW_API SceneRootParams
     {
         REFLECT_BODY();
 
@@ -37,7 +37,7 @@ namespace sw
      * @details 파일 id 는 0 이 아니어야 한다(`Scene::serializeToDocument` 가 늘 적는다) — 부착 · 핸들이 이 값으로 부모를 가리키고 쿠커가 엔티티를 찾는다.
      */
     REFLECT()
-    struct SW_API SceneEntityFields
+    struct SW_API SceneEntityParams
     {
         REFLECT_BODY();
 
@@ -156,7 +156,7 @@ namespace sw
          */
         [[nodiscard]] SW_API bool loadXMLFromDiskFile( string_view diskPath );
         /** @brief XML 을 디스크 경로에 저장합니다. 셀로 나눈 문서(쿠킹본, `_listStreamingCell`)는 쓰지 않고 false 입니다 — 셀의 엔티티를 잃는다. */
-        [[nodiscard]] SW_API bool saveXML( const AbsolutePath& absPath ) const;
+        [[nodiscard]] SW_API bool saveToFile( const AbsolutePath& absPath ) const;
         /**
          * @brief 씬 상속 문서를 부모 @p parent 와의 차이로 저장합니다(`_baseScenePath` 가 차 있어야 합니다).
          * @param parent 같은 직렬화기로 쓴 부모입니다(부모를 지어 `Scene::serializeToDocument` 로 쓴 것). 손으로 쓴 글과 비교하면 값이 같아도 모두 다르게 나온다(`DataInheritance::makeDelta`).

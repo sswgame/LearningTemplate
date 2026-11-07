@@ -45,7 +45,7 @@ namespace
     };
 
     /** @brief 가짜 FCM(토큰 주소와 보내기 주소)과 제공자의 묶음입니다. 선언 순서가 수명이다 — 망이 전송들보다 오래 산다. */
-    struct FcmRig
+    struct FcmFixture
     {
         LoopbackStreamNetwork         _network{ 7u };
         ManualClock                   _clock{ MonotonicMilliseconds{ 0 } };
@@ -62,11 +62,11 @@ namespace
         int32                         _tokenStatus{ HTTPConstant::kStatusOk };
         int32                         _tokenRequestCount{ 0 };
 
-        FcmRig()
+        FcmFixture()
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FcmRig::onRequest>( this ) ) );
+            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FcmFixture::onRequest>( this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             const string    baseURL = "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) );
             FcmPushSettings settings;
@@ -134,7 +134,7 @@ namespace
 /** @brief [FcmPushProviderTest] 토큰을 받아 HTTP v1 주소로 Bearer 와 함께 보내고 토큰은 다시 받지 않는다. 몸에 기기 토큰 · 현지화 키 · 앱이 열 화면이 실린다 */
 SW_TEST_CASE( FcmPushProviderTest, SendsTheV1RequestWithAnAccessToken )
 {
-    FcmRig rig;
+    FcmFixture rig;
     SW_EXPECT_TRUE( rig.send()._status == PushDeliveryStatus::Delivered );
     SW_EXPECT_TRUE( rig.send()._status == PushDeliveryStatus::Delivered );
     SW_EXPECT_EQUAL( 1, rig._tokenRequestCount );
@@ -175,7 +175,7 @@ SW_TEST_CASE( FcmPushProviderTest, RetryAfter )
     SW_EXPECT_EQUAL( int64( 60000 ), FcmPushProvider::computeRetryAfterMs( 429, "not a number" ) );
     SW_EXPECT_EQUAL( int64( 0 ), FcmPushProvider::computeRetryAfterMs( 503, "" ) );
 
-    FcmRig rig;
+    FcmFixture rig;
     rig._sendStatus                 = 429;
     rig._retryAfter                 = "9";
     const PushDeliveryResult result = rig.send();
@@ -187,7 +187,7 @@ SW_TEST_CASE( FcmPushProviderTest, RetryAfter )
 SW_TEST_CASE( FcmPushProviderTest, ResponsesBecomeResults )
 {
     SW_EXPECT_LOG( "FcmPushProvider.FCMRejectedAccessToken" );
-    FcmRig rig;
+    FcmFixture rig;
     rig._sendStatus = 400;
     rig._sendBody   = R"({"error":{"details":[{"errorCode":"UNREGISTERED"}]}})";
     SW_EXPECT_TRUE( rig.send()._status == PushDeliveryStatus::InvalidToken );
@@ -208,7 +208,7 @@ SW_TEST_CASE( FcmPushProviderTest, TokenFailuresEndTheWaitingDeliveries )
 {
     SW_EXPECT_LOG( "ServiceAccountTokenSource.AccessTokenRequestService" );
     SW_EXPECT_LOG( "ServiceAccountTokenSource.CouldNotSignToken" );
-    FcmRig rig;
+    FcmFixture rig;
     rig._tokenStatus = 500;
     SW_EXPECT_TRUE( rig.send()._status == PushDeliveryStatus::Transient );
     rig._tokenStatus = 400;
@@ -226,7 +226,7 @@ SW_TEST_CASE( FcmPushProviderTest, Topics )
     SW_EXPECT_FALSE( FcmPushProvider::isValidTopic( "" ) );
     SW_EXPECT_FALSE( FcmPushProvider::isValidTopic( "a b" ) );
 
-    FcmRig rig;
+    FcmFixture rig;
     SW_EXPECT_TRUE( rig._pProvider->supportsTopics() );
     rig._pProvider->sendToTopic( kDeliveryID, "news", PushTestUtil::makeAlert(), UnixMilliseconds{ kNowMs } );
     SW_EXPECT_TRUE( rig.take()._status == PushDeliveryStatus::Delivered );

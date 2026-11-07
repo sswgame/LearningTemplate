@@ -77,10 +77,10 @@ namespace sw
 namespace sw
 {
     /** @brief 회차 하나를 차지해 본다(저장소 스레드), 결과는 스케줄러에(서비스 스레드). */
-    class ServiceScheduler::ClaimWork final : public IServiceStoreWork
+    class ServiceScheduler::ClaimJob final : public IServiceStoreJob
     {
     public:
-        ClaimWork( ServiceScheduler* pScheduler, size_t jobIndex, string jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs, int64 leaseMs )
+        ClaimJob( ServiceScheduler* pScheduler, size_t jobIndex, string jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs, int64 leaseMs )
             : _jobID{ std::move( jobID ) }
             , _pScheduler{ pScheduler }
             , _jobIndex{ jobIndex }
@@ -90,7 +90,7 @@ namespace sw
             , _leaseMs{ leaseMs }
             , _runToken{ 0 }
             , _retryAtMs{ 0 }
-            , _outcome{ ClaimOutcome::Retry }
+            , _outcome{ ClaimResult::Retry }
         {
         }
 
@@ -110,13 +110,13 @@ namespace sw
                     return; // 깨진 레코드 — 다시 보지 않으면 영영 안 돈다. 운영이 고칠 때까지 다시 해 본다
                 if ( existing._state != ServiceSchedulerInternal::kStateRunning )
                 {
-                    _outcome = ClaimOutcome::Finished;
+                    _outcome = ClaimResult::Finished;
                     return;
                 }
                 const int64 leaseEndMs = existing._startMs + _leaseMs;
                 if ( _nowMs < leaseEndMs )
                 {
-                    _outcome   = ClaimOutcome::Busy;
+                    _outcome   = ClaimResult::Busy;
                     _retryAtMs = leaseEndMs;
                     return;
                 }
@@ -131,13 +131,13 @@ namespace sw
             const ServiceStoreResult commitResult = connection.commit( transaction, &info );
             if ( commitResult == ServiceStoreResult::Ok )
             {
-                _outcome  = ClaimOutcome::Claimed;
+                _outcome  = ClaimResult::Claimed;
                 _runToken = info._commitVersion;
                 return;
             }
             if ( commitResult == ServiceStoreResult::Conflict )
             {
-                _outcome   = ClaimOutcome::Busy; // 같은 순간 다른 서버가 차지했다
+                _outcome   = ClaimResult::Busy; // 같은 순간 다른 서버가 차지했다
                 _retryAtMs = _nowMs + _leaseMs;
             }
         }
@@ -158,14 +158,14 @@ namespace sw
         int64             _leaseMs;
         uint64            _runToken;
         int64             _retryAtMs;
-        ClaimOutcome      _outcome;
+        ClaimResult       _outcome;
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 차지한 회차의 끝을 적는다(버전 조건 — 이어받긴 레코드는 건드리지 않는다). */
-    class ServiceScheduler::FinishWork final : public IServiceStoreWork
+    class ServiceScheduler::FinishWork final : public IServiceStoreJob
     {
     public:
         FinishWork( ServiceScheduler* pScheduler, const ScheduledRun& run, uint64 serverID, bool bSucceeded, int64 nowMs )
@@ -267,7 +267,7 @@ namespace sw
                 continue;
             job._bClaimPending = SW_TRUE;
             ++_pendingWorkCount;
-            _pStore->submit( sw::make_unique<ClaimWork>( this, jobIndex, job._definition._jobID, occurrenceMs, _serverID, nowMs.count(), job._definition._leaseMs ) );
+            _pStore->submit( sw::make_unique<ClaimJob>( this, jobIndex, job._definition._jobID, occurrenceMs, _serverID, nowMs.count(), job._definition._leaseMs ) );
         }
     }
 
@@ -350,7 +350,7 @@ namespace sw
         return s_table;
     }
 
-    void ServiceScheduler::onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimOutcome outcome, uint64 runToken, int64 retryAtMs )
+    void ServiceScheduler::onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult outcome, uint64 runToken, int64 retryAtMs )
     {
         if ( jobIndex >= _listJob.size() )
             return; // 종료한 뒤에 회수한 일
@@ -358,7 +358,7 @@ namespace sw
         job._bClaimPending = SW_FALSE;
         switch ( outcome )
         {
-            case ClaimOutcome::Claimed:
+            case ClaimResult::Claimed:
             {
                 job._handledOccurrenceMs = occurrenceMs;
                 ScheduledRun run;
@@ -368,13 +368,13 @@ namespace sw
                 job._function( run );
                 break;
             }
-            case ClaimOutcome::Finished:
+            case ClaimResult::Finished:
             {
                 job._handledOccurrenceMs = occurrenceMs;
                 break;
             }
-            case ClaimOutcome::Busy:
-            case ClaimOutcome::Retry:
+            case ClaimResult::Busy:
+            case ClaimResult::Retry:
             {
                 job._retryOccurrenceMs = occurrenceMs;
                 job._retryAtMs         = retryAtMs;

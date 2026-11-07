@@ -36,7 +36,7 @@ sw_addModuleLibrary(GameFramework
 # (`sw_markDeterministicSources`). 격투(`GF_Fighting`)가 부르는 Runtime(FrameData · InputCommandBuffer · RoundSeries)는 실수 계산이 없어 넣지 않는다.
 sw_markDeterministicSources(GameFramework
 	Runtime/Character/Combat/Health/ResourceGauge.cpp
-	Runtime/Character/Combat/Health/Vitality.cpp
+	Runtime/Character/Combat/Health/CombatHealth.cpp
 	Runtime/Character/Combat/LockOnSelector.cpp
 	Runtime/Character/Combat/Projectile/ProjectileDef.cpp
 	Runtime/Character/Combat/Projectile/ProjectileSimulation.cpp

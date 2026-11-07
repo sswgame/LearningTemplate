@@ -42,7 +42,7 @@ namespace sw
     };
 
     /** @brief 모듈을 내리기 전에 워커를 비우는 까닭입니다. 비우기가 시한을 넘겼을 때 리로드 그래프를 막을지가 이것으로 갈립니다. */
-    enum class DrainReason : uint8
+    enum class FlushReason : uint8
     {
         Reload,      ///< 모듈 리로드 앞 — 시한을 넘기면 그래프를 막는다(옛 라이브러리를 내리면 도는 태스크가 해제된 코드를 탄다)
         BackendSwap, ///< RHI 백엔드 교체 앞 — 같은 라이브러리로 다시 세우지만 리로드와 같이 막는다
@@ -204,17 +204,17 @@ namespace sw
          * @param scope 종료할 대상
          * @param bReleaseAPITable true 면 API 테이블과 타입 등록까지 해제합니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
          *        만들** 때는 false 이고, 테이블을 그대로 재사용합니다.
-         * @param reason 워커를 비우는 까닭(`drainRenderWorkers`)
+         * @param reason 워커를 비우는 까닭(`flushRenderWorkers`)
          * @details 종료, 핫 리로드, RHI 핫스왑이 모두 이 순서를 지켜야 합니다. 사유마다 따로 조립하면 한 곳만 고치고 나머지를
          *          빠뜨리게 됩니다.
          */
-        void suspendModules( ModuleScope scope, bool bReleaseAPITable, DrainReason reason );
+        void suspendModules( ModuleScope scope, bool bReleaseAPITable, FlushReason reason );
         /**
          * @brief 렌더 워커, GPU, 태스크가 하던 일이 모두 끝날 때까지 기다립니다. 모듈을 언로드하기 전에 반드시 거치는 함수입니다.
          * @details 디바이스가 없는 RHI 도 여기에 들어옵니다(백엔드 교체 실패). 그래서 `hasDevice()` 를 먼저 확인합니다.
          *          태스크 대기가 시한을 넘기면 @p reason 이 종료가 아닐 때만 리로드 그래프를 막습니다.
          */
-        void drainRenderWorkers( DrainReason reason );
+        void flushRenderWorkers( FlushReason reason );
         /** @brief 리로드 그래프를 깨진 상태로 표시해 이후 리로드를 막습니다. 배포 구성에서는 아무 일도 하지 않습니다. */
         void markReloadGraphBroken( const utf8* pReason );
 
@@ -258,10 +258,10 @@ namespace sw
         virtual void onBeforeSuspendModules() {}
         /** @brief `ModuleScope::Editor` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
         virtual void suspendHostModule( bool bReleaseAPITable ) { (void)bReleaseAPITable; }
-        /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`DrainReason::Shutdown` 일 때만 뜻이 있다). */
-        virtual void onBeforeDrainWorkers( DrainReason reason ) { (void)reason; }
+        /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */
+        virtual void onBeforeFlushWorkers( FlushReason reason ) { (void)reason; }
         /** @brief 렌더 워커와 GPU 를 비운 직후, 태스크를 기다리기 전에 불립니다(에디터의 렌더 대기 표시를 버립니다). */
-        virtual void onRenderWorkersDrained() {}
+        virtual void onRenderWorkersFlushed() {}
 
     private:
         /** @brief 게임 모듈 라이브러리의 ABI · API 표 심볼 이름입니다(리로드 전 검사 `isGameLibraryUsable` 와 개발 구성의 바인딩이 같이 쓴다). */
@@ -295,7 +295,7 @@ namespace sw
          * @param bKeepGameOnCaptureFailure true 면 게임 상태를 저장하지 못했을 때 아무것도 언로드하지 않고 false 를 반환합니다(리로드 직전).
          *        종료나 RHI 교체처럼 상태를 넘겨받을 새 라이브러리가 없으면 false 로 둡니다.
          */
-        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, DrainReason reason );
+        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, FlushReason reason );
         /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 **버리지 않고** 다음 리로드까지 보관합니다. */
         void restoreGameState();
 

@@ -135,7 +135,7 @@ namespace sw
         /** @brief 시간을 진행합니다. 숨음, 나타남, 공격, 기절 시간과 흡입 중 도망 방향 바꾸기를 처리합니다. */
         void update( float32 deltaTime );
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void drainEvents( vector<GhostEvent>& outListEvent );
+        void pollEvents( vector<GhostEvent>& outListEvent );
 
         /** @brief 난수, 유령(정의 id, 위치, 도망 방향, 체력, 상태 시간, 번호, 상태), 스트로브 충전, 서지, 흡입 대상, 다음 번호, 강화 단계를 씁니다. 카탈로그는 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;

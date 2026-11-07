@@ -20,11 +20,11 @@ namespace sw
     /**
      * @brief 저장소 폰트 면 하나입니다. 굵기, 기울기, 파일을 가집니다.
      * @code
-     *     <FontFaceDesc _weight="Regular" _slant="Upright" _path="engine/fonts/kenney_future.ttf" />
+     *     <FontFaceDef _weight="Regular" _slant="Upright" _path="engine/fonts/kenney_future.ttf" />
      * @endcode
      */
     REFLECT()
-    struct SW_API FontFaceDesc
+    struct SW_API FontFaceDef
     {
         REFLECT_BODY();
         PROPERTY( Tooltip = "Weight this face draws" )
@@ -42,13 +42,13 @@ namespace sw
 {
     /** @brief 저장소 폰트 패밀리 하나입니다. 이름과 면들을 가집니다(언리얼 `FCompositeFont` 의 서체 하나, 유니티 Font Asset 하나에 해당). */
     REFLECT()
-    struct SW_API FontFamilyDesc
+    struct SW_API FontFamilyDef
     {
         REFLECT_BODY();
         PROPERTY( Tooltip = "Family name text styles and the culture table pick it by" )
         string _name{};
         PROPERTY( Tooltip = "Faces of this family (weights and slants)" )
-        vector<FontFaceDesc> _listFace;
+        vector<FontFaceDef> _listFace;
     };
 } // namespace sw
 
@@ -59,7 +59,7 @@ namespace sw
      * @details 파일은 `SystemFontLocator` 가 OS 폰트 폴더에서 찾는다(리눅스는 하위 폴더까지). 기운 면은 적지 않는다. 기울임은 배치가 기울여 그린다.
      */
     REFLECT()
-    struct SW_API SystemFontFamilyDesc
+    struct SW_API SystemFontFamilyDef
     {
         REFLECT_BODY();
         PROPERTY( Tooltip = "Family name the culture table lists" )
@@ -83,15 +83,15 @@ namespace sw
 {
     /** @brief 폰트 카탈로그 한 벌입니다. */
     REFLECT()
-    struct SW_API FontCatalogDesc
+    struct SW_API FontCatalogDef
     {
         REFLECT_BODY();
         PROPERTY( Tooltip = "Family used when a style names none and at the end of every fallback chain" )
         string _defaultFamily{};
         PROPERTY( Tooltip = "Font families shipped in the resource packs" )
-        vector<FontFamilyDesc> _listFamily;
+        vector<FontFamilyDef> _listFamily;
         PROPERTY( Tooltip = "Families looked up in the operating system font folders" )
-        vector<SystemFontFamilyDesc> _listSystemFamily;
+        vector<SystemFontFamilyDef> _listSystemFamily;
         PROPERTY( Tooltip = "Distance field the glyph atlas holds: Sdf (single channel, cheap) or MSDF (multi channel RGBA, sharp corners on large text; costs more per new glyph and 4x atlas memory)" )
         GlyphFieldKind _glyphField{ GlyphFieldKind::Sdf };
 
@@ -103,8 +103,8 @@ namespace sw
         [[nodiscard]] bool validate() const;
 
         /** @brief 이름의 저장소 가족입니다(대소문자 무시). 없으면 nullptr. */
-        const FontFamilyDesc* findFamily( string_view name ) const;
+        const FontFamilyDef* findFamily( string_view name ) const;
         /** @brief 이름의 시스템 가족입니다(대소문자 무시). 없으면 nullptr. */
-        const SystemFontFamilyDesc* findSystemFamily( string_view name ) const;
+        const SystemFontFamilyDef* findSystemFamily( string_view name ) const;
     };
 } // namespace sw

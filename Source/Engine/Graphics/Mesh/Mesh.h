@@ -205,7 +205,7 @@ namespace sw
         explicit Mesh( CreateKey ) noexcept {}
         /**
          * @brief 정점 버퍼를 해제합니다. 디바이스가 살아 있으면 반환하고, 이미 없으면 핸들만 버립니다.
-         * @note 디바이스가 먼저 죽었다면 통보(`releaseRHI`, `forgetRHI`)가 먼저 와서 핸들을 비워 두므로,
+         * @note 디바이스가 먼저 죽었다면 통보(`releaseRHI`, `clearRHI`)가 먼저 와서 핸들을 비워 두므로,
          *       소멸 순서와 상관없이 죽은 디바이스로 destroy 하지 않습니다.
          */
         ~Mesh() override;
@@ -213,7 +213,7 @@ namespace sw
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 반환합니다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
-        void forgetRHI( IRHIDevice* pDevice ) override;
+        void clearRHI( IRHIDevice* pDevice ) override;
 
         /** @brief 복사를 금지합니다. */
         Mesh( const Mesh& ) = delete;

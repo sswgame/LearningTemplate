@@ -145,8 +145,8 @@ namespace sw::editor
 
     void MaterialGraphPanel::drawCanvasNode( uint32 nodeIndex )
     {
-        const MaterialGraphNodeDesc& node   = _model.getGraph()._listNode[nodeIndex];
-        const int32                  nodeID = MaterialGraphModel::makeNodeID( nodeIndex );
+        const MaterialGraphNodeDef& node   = _model.getGraph()._listNode[nodeIndex];
+        const int32                 nodeID = MaterialGraphModel::makeNodeID( nodeIndex );
         _nodeGraph.beginNode( nodeID );
         ImGui::TextUnformatted( node._name.c_str() );
         EditorThemeUtil::textMuted( node._kind.c_str() );
@@ -297,7 +297,7 @@ namespace sw::editor
             for ( uint32 nodeIndex = 0; nodeIndex < movedNodeCount; ++nodeIndex )
             {
                 const ImVec2 position = ed::GetNodePosition( toNodeID( MaterialGraphModel::makeNodeID( nodeIndex ) ) );
-                _model.noteNodePosition( nodeIndex, float2{ position.x, position.y } );
+                _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
                 _model.markCommentsEdited( "Move Material Graph Comment", "materialgraph.comment.move" );
@@ -308,7 +308,7 @@ namespace sw::editor
             _model.selectNodeByID( static_cast<int32>( arrSelected[0].Get() ) );
 
         _nodeGraph.applyContentFitIfNeeded();
-        EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( graph._listNode.size() ) );
+        EditorNodeGraph::recordDrawnNodeCount( static_cast<uint32>( graph._listNode.size() ) );
         _nodeGraph.endCanvas();
         ed::SetCurrentEditor( nullptr );
         ImGui::EndChild();
@@ -419,7 +419,7 @@ namespace sw::editor
             return;
         }
         const uint32                 nodeIndex = static_cast<uint32>( selected );
-        const MaterialGraphNodeDesc& node      = _model.getGraph()._listNode[nodeIndex];
+        const MaterialGraphNodeDef&  node      = _model.getGraph()._listNode[nodeIndex];
         const MaterialGraphNodeKind* pKind     = MaterialGraphNodeRegistry::find( node._kind );
         ImGui::SeparatorText( node._name.c_str() );
         if ( pKind == nullptr )

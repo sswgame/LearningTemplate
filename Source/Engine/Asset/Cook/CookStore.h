@@ -30,7 +30,7 @@ namespace sw
     };
 
     /** @brief `cookFile` 의 결과입니다. */
-    enum class CookOutcome : uint8
+    enum class CookResult : uint8
     {
         Reused,  ///< 기록이 새것이라 DDC 의 출력을 다시 썼다
         Cooked,  ///< 구웠고 기록과 DDC 를 새로 썼다
@@ -46,11 +46,11 @@ namespace sw
         uint32 _failedCount{ 0 };
 
         /** @brief 결과 하나를 셉니다. */
-        void add( CookOutcome outcome )
+        void add( CookResult result )
         {
-            _reusedCount += outcome == CookOutcome::Reused ? 1u : 0u;
-            _cookedCount += outcome == CookOutcome::Cooked ? 1u : 0u;
-            _failedCount += outcome == CookOutcome::Failed ? 1u : 0u;
+            _reusedCount += result == CookResult::Reused ? 1u : 0u;
+            _cookedCount += result == CookResult::Cooked ? 1u : 0u;
+            _failedCount += result == CookResult::Failed ? 1u : 0u;
         }
         /** @brief 쓴 출력(다시 쓰기 · 베이크) 수입니다. */
         uint32 getWrittenCount() const { return _reusedCount + _cookedCount; }
@@ -79,10 +79,10 @@ namespace sw
          * @param cook 출력 파일을 @p outputPath 에 쓰고 `CookStep` 을 돌려주는 함수입니다. 빈 에셋 캐시와 작업 범위 안에서 부릅니다.
          */
         template <typename CookFunction>
-        [[nodiscard]] CookOutcome cookFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
+        [[nodiscard]] CookResult cookFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
         {
             if ( reuseFreshOutput( desc, outputID, outputPath ) )
-                return record( outputID, CookOutcome::Reused );
+                return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
             CookJob        job( desc );
             const CookStep step = cook();
@@ -116,11 +116,11 @@ namespace sw
         /** @brief 기록이 새것이고 DDC 에 그 출력이 있으면 출력 파일에 쓰고 true 입니다. */
         [[nodiscard]] bool reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const;
         /** @brief 작업이 쓴 출력으로 기록과 DDC 를 씁니다. */
-        [[nodiscard]] CookOutcome finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const;
+        [[nodiscard]] CookResult finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const;
         /** @brief 에셋 캐시를 모두 비웁니다(작업의 시작 조건 — 파일 머리말). */
         static void clearAssetCachesForJob();
         /** @brief 결과 하나를 세고, 요청받은 출력 id 로 적어 둡니다(`Skipped` 는 요청이 아니다). `cookFile` 의 모든 반환이 이것을 지난다 — 한 갈래가 빠지면 멀쩡한 출력이 지워진다. */
-        CookOutcome record( string_view outputID, CookOutcome outcome ) const;
+        CookResult record( string_view outputID, CookResult result ) const;
 
     private:
         string                        _recordRootPath;

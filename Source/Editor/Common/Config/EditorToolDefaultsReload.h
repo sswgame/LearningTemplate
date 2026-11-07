@@ -8,7 +8,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "Engine/Serialization/Serializer/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw::editor
 {
@@ -23,7 +23,7 @@ namespace sw::editor
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p fullPath 가 도구 기본값 파일이면 다시 읽습니다. 아니면 `NotTracked`, 깨졌으면(이전 값을 지켰다) `Failed` 입니다. */
-        [[nodiscard]] static ReloadOutcome reloadIfToolDefaults( string_view fullPath );
+        [[nodiscard]] static ReloadResult reloadIfToolDefaults( string_view fullPath );
 
     private:
         Subscription _handler; ///< 엔진 설정 리로드에 건 처리기

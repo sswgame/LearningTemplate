@@ -67,15 +67,15 @@ namespace
 
         LoginResult registerAccount( string_view name, string_view password )
         {
-            LoginStoreOutcome outcome;
-            LoginStoreLogic   logic( database, crypto, settings, ticketAuthority, outcome );
+            LoginStoreResult result;
+            LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
             return logic.registerAccount( LoginCredential{ string( name ), string( password ) }, nullptr );
         }
 
         LoginResult login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
         {
-            LoginStoreOutcome outcome;
-            LoginStoreLogic   logic( database, crypto, settings, ticketAuthority, outcome );
+            LoginStoreResult result;
+            LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
             return logic.login( LoginCredential{ string( name ), string( password ) }, nowMs, outGrant );
         }
     };
@@ -128,15 +128,15 @@ SW_TEST_CASE( LoginStoreLogicTest, TokenResumesUntilLogout )
     LoginGrant grant;
     SW_REQUIRE_TRUE( fixture.login( "Erin_06", "correct horse", grant ) == LoginResult::Ok );
     {
-        LoginStoreOutcome outcome;
-        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
-        AccountIdentity   identity;
+        LoginStoreResult result;
+        LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+        AccountIdentity  identity;
         SW_EXPECT_TRUE( logic.validateSession( grant._token, kNowMs + 1000, identity ) == LoginResult::Ok );
         SW_EXPECT_TRUE( logic.logout( grant._token, kNowMs + 2000 ) == LoginResult::Ok );
     }
-    LoginStoreOutcome outcome;
-    LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
-    AccountIdentity   identity;
+    LoginStoreResult result;
+    LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+    AccountIdentity  identity;
     SW_EXPECT_TRUE( logic.validateSession( grant._token, kNowMs + 3000, identity ) != LoginResult::Ok );
 }
 
@@ -148,8 +148,8 @@ SW_TEST_CASE( LoginStoreLogicTest, GuestLinksCredentialOnce )
     const uint8 arrDeviceSecret[LoginConstant::kDeviceSecretSize]{ 7, 7, 7 };
     LoginGrant  guestGrant;
     {
-        LoginStoreOutcome outcome;
-        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+        LoginStoreResult result;
+        LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
         SW_REQUIRE_TRUE( logic.guestLogin( arrDeviceSecret, kNowMs, guestGrant ) == LoginResult::Ok );
         AccountLinkSummary summary;
         SW_REQUIRE_TRUE( logic.listLinks( guestGrant._token, kNowMs + 1, summary ) == LoginResult::Ok );
@@ -169,10 +169,10 @@ SW_TEST_CASE( LoginStoreLogicTest, GuestLinksCredentialOnce )
 /** @brief [LoginStoreLogicTest] 외부 계정만 있는 계정은 그것을 떼지 못하고(LastLoginMethod), 이름을 붙인 뒤에는 뗀다. 붙지 않은 제공자는 NotLinked 다 */
 SW_TEST_CASE( LoginStoreLogicTest, LastLoginMethodStays )
 {
-    Fixture           fixture;
-    LoginStoreOutcome outcome;
-    LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
-    LoginGrant        grant;
+    Fixture          fixture;
+    LoginStoreResult result;
+    LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+    LoginGrant       grant;
     SW_REQUIRE_TRUE( logic.platformLogin( "steam", "76561190000000001", "Heidi", nullptr, kNowMs, grant ) == LoginResult::Ok );
     SW_EXPECT_TRUE( grant._bCreated == SW_TRUE );
     SW_EXPECT_TRUE( logic.unlinkPlatform( grant._token, "steam", kNowMs + 1 ) == LoginResult::LastLoginMethod );
@@ -189,10 +189,10 @@ SW_TEST_CASE( LoginStoreLogicTest, LastLoginMethodStays )
 /** @brief [LoginStoreLogicTest] 연동 조회: 그 계정 · 그 제공자 · 그 주체일 때만 true 다. 연동이 없거나 틀린 제공자 이름도 저장소 오류가 아니라 false 이고, 떼면 false 가 된다(영수증 구매자 대조가 쓴다) */
 SW_TEST_CASE( LoginStoreLogicTest, ReadIsLinkedMatchesOnlyTheLinkedSubject )
 {
-    Fixture           fixture;
-    LoginStoreOutcome outcome;
-    LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
-    LoginGrant        grant;
+    Fixture          fixture;
+    LoginStoreResult result;
+    LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+    LoginGrant       grant;
     SW_REQUIRE_TRUE( logic.platformLogin( "steam", "76561190000000001", "Heidi", nullptr, kNowMs, grant ) == LoginResult::Ok );
     const uint64 accountID = grant._identity._accountID;
 
@@ -226,9 +226,9 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
     {
         LoginGrant grant;
         SW_REQUIRE_TRUE( fixture.login( name, "correct horse", grant ) == LoginResult::Ok );
-        LoginStoreOutcome outcome;
-        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
-        int64             outDueMs = 0;
+        LoginStoreResult result;
+        LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+        int64            outDueMs = 0;
         SW_REQUIRE_TRUE( logic.requestDeletion( grant._token, kNowMs, outDueMs ) == LoginResult::Ok );
         SW_EXPECT_EQUAL( dueMs, outDueMs );
         AccountIdentity identity;
@@ -239,8 +239,8 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
     SW_REQUIRE_TRUE( fixture.login( "Ivan_11", "correct horse", ivanGrant, kNowMs + 1000 ) == LoginResult::Ok ); // 유예 안이면 들어온다
     SW_EXPECT_EQUAL( dueMs, ivanGrant._deletionDueMs );
     {
-        LoginStoreOutcome outcome;
-        LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+        LoginStoreResult result;
+        LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
         SW_REQUIRE_TRUE( logic.cancelDeletion( ivanGrant._token, kNowMs + 2000 ) == LoginResult::Ok );
         SW_EXPECT_EQUAL( 1, logic.purgeDueDeletions( dueMs + 1, 8 ) ); // Judy 만
     }

@@ -188,7 +188,7 @@ namespace sw::editor
          * @details 읽지 못한 파일이면 이전 문서의 그래프를 보관하지 않고 기본 그래프를 보여 주며 저장을 막는다. 읽지 못한 파일을 덮어쓰지 않기 위해서다.
          *          레이아웃 동기화 플래그를 끄고 캔버스가 내용에 맞추게 한다. 미리보기 상태는 패널의 미리보기 모델이 정리한다.
          */
-        void adoptLoadedGraph( AssetType&& data, ToolAssetLoadResult result )
+        void applyLoadedGraph( AssetType&& data, ToolAssetLoadResult result )
         {
             _graph = result == ToolAssetLoadResult::Loaded ? std::move( data ) : AssetType{};
             if ( _graph._listNode.empty() )

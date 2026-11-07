@@ -243,7 +243,7 @@ namespace sw
     {
         if ( bRespawnViews == false )
             return;
-        const GameObjectHandle director = getOwner()->getHandle();
+        const GameObjectHandle gameMode = getOwner()->getHandle();
         for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
             // 이름은 `Villager.<NPC id>` — 시나리오가 `Object.*` 감시 값의 target 으로 쓴다.
@@ -253,7 +253,7 @@ namespace sw
                 continue;
             FarmVillagerComponent* pView = pVillager->getComponent<FarmVillagerComponent>();
             if ( pView != nullptr )
-                pView->assignVillager( director, npcIndex );
+                pView->assignVillager( gameMode, npcIndex );
             // 외형은 NPC 마다 다르게 — 프리셋을 번호로 돌려 고르고 번호를 씨앗으로 준다(같은 저장이면 같은 사람이 같은 차림이다).
             CharacterAppearanceComponent* pAppearance = pVillager->getComponent<CharacterAppearanceComponent>();
             if ( pAppearance != nullptr && _listVillagerPreset.empty() == false )

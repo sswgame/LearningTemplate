@@ -105,15 +105,15 @@ namespace sw
             endPlayback( ScenarioPlayEnd::StoppedByHuman, context._pInput );
             return kEngineFrameRunning;
         }
-        const AutomationOutcome result = _pRunner->hasEnded() ? _pRunner->getResult() : _pRunner->onFrameEnd( *context._pInput );
-        if ( result == AutomationOutcome::Running )
+        const AutomationResult result = _pRunner->hasEnded() ? _pRunner->getResult() : _pRunner->onFrameEnd( *context._pInput );
+        if ( result == AutomationResult::Running )
             return kEngineFrameRunning;
-        if ( result == AutomationOutcome::Passed && _options._bLoop )
+        if ( result == AutomationResult::Passed && _options._bLoop )
         {
             startRunner(); // 어트랙트 루프 — 처음부터 다시
             return kEngineFrameRunning;
         }
-        endPlayback( result == AutomationOutcome::Passed ? ScenarioPlayEnd::Completed : ScenarioPlayEnd::Failed, context._pInput );
+        endPlayback( result == AutomationResult::Passed ? ScenarioPlayEnd::Completed : ScenarioPlayEnd::Failed, context._pInput );
         return kEngineFrameRunning;
     }
 

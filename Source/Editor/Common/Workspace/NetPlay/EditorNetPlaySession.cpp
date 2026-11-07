@@ -239,7 +239,7 @@ namespace sw::editor
         , _listStoppingProcess{}
         , _pStopJob{ make_unique<EditorNetPlayStopJob>() }
         , _listLogLine{}
-        , _listDrainScratch{}
+        , _listPollScratch{}
         , _traceDirectory{}
         , _mergedTracePath{}
         , _debugChannelToken{}
@@ -510,7 +510,7 @@ namespace sw::editor
         for ( size_t processIndex = 0; processIndex < _listProcess.size(); ++processIndex )
         {
             ChildProcess& child = *_listProcess[processIndex];
-            drainChildLines( child, static_cast<int32>( processIndex ) );
+            pollChildLines( child, static_cast<int32>( processIndex ) );
             if ( child._exited.load() != 0 && child._bExitReported == false )
             {
                 child._bExitReported = true;
@@ -520,14 +520,14 @@ namespace sw::editor
         // 거두는 중인 프로세스의 줄도 옮긴다(끝날 때까지 나오는 줄 - 서버의 끊김 줄 등). 번호는 멈추기 전과 같다(목록을 통째로 옮겼다).
         for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
         {
-            drainChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
+            pollChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
         }
         advanceStop( false );
         if ( _listLogLine.size() > kMaxLogLine )
             _listLogLine.erase( _listLogLine.begin(), _listLogLine.begin() + static_cast<ptrdiff_t>( _listLogLine.size() - kMaxLogLine ) );
     }
 
-    void EditorNetPlaySession::drainChildLines( ChildProcess& child, int32 processIndex )
+    void EditorNetPlaySession::pollChildLines( ChildProcess& child, int32 processIndex )
     {
         vector<string> listLine;
         {
@@ -726,7 +726,7 @@ namespace sw::editor
         {
             for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
             {
-                drainChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
+                pollChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
             }
             advanceStop( true );
             if ( _stopPhase == StopPhase::WaitingForExit )
@@ -745,7 +745,7 @@ namespace sw::editor
         // 읽기 스레드는 합류했다 - 남은 줄은 모두 쌓여 있다.
         for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
         {
-            drainChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
+            pollChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
         }
         for ( [[maybe_unused]] const unique_ptr<ChildProcess>& pChild : _listStoppingProcess ) // Shipping 은 로그를 지워 안 쓴다
         {

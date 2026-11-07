@@ -176,7 +176,7 @@ namespace sw
 
     int32 NetMessageRouter::pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetEndpointEvent>* pOutListEvent )
     {
-        peers.drainInbound( _inbound );
+        peers.pollInbound( _inbound );
         for ( const NetEndpointEvent& event : _inbound._listEvent )
         {
             dispatchEvent( event );

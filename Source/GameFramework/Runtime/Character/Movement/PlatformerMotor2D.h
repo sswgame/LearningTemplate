@@ -38,7 +38,7 @@ namespace sw
         void               setTile( int32 x, int32 y, PlatformTile tile );
         void               fillTiles( int32 minX, int32 minY, int32 maxX, int32 maxY, PlatformTile tile );
         /** @brief 글자로 칠합니다. 줄마다 한 행(첫 줄이 맨 위)이고, '#' 는 벽, '-' 는 한쪽 발판, 'H' 는 사다리, '^' 는 위험, 나머지는 빈 타일입니다. */
-        [[nodiscard]] bool loadFromText( string_view text, float32 tileSize, const float2& origin );
+        [[nodiscard]] bool loadFromXMLText( string_view text, float32 tileSize, const float2& origin );
 
         /** @brief 맵 밖은 벽으로 봐서 떨어져 나가지 않게 합니다. 아래쪽 밖만 빈 타일(구덩이)입니다. */
         PlatformTile getTile( int32 x, int32 y ) const;

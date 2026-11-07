@@ -47,7 +47,7 @@ namespace sw
         void push( Callback callback );
 
         /** @brief 지금까지 넣은 일을 넣은 순서대로 실행하고 비웁니다. 실행 중에 넣은 일은 다음 비우기로 갑니다. 한 스레드만 부릅니다. */
-        void drain();
+        void flush();
 
         /** @brief 넣은 일이 없는지 봅니다(잠금 아래). 비우는 중인 목록은 보지 않습니다. */
         bool isEmpty();
@@ -57,8 +57,8 @@ namespace sw
 
     private:
         LockedSwapQueue<Callback>        _pending;                      ///< 넣은 일(잠금 아래)
-        ThreadRole                       _drainThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
-        vector<Callback> _listProcessing SW_GUARDED_BY( _drainThread ); ///< 비우는 중인 일(비우는 스레드만)
+        ThreadRole                       _flushThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<Callback> _listProcessing SW_GUARDED_BY( _flushThread ); ///< 비우는 중인 일(비우는 스레드만)
     };
 } // namespace sw
 
@@ -123,14 +123,14 @@ namespace sw
          * @brief 틱이 남긴 것을 정해진 순서로 적용합니다(게임 스레드, 틱 밖) — 구조 변경 → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → 병합 → 시작.
          * @details 순서는 이 함수 하나가 갖습니다(파일 머리말의 주의). 물리 앞 · 프레임 끝에 한 번씩 불립니다.
          */
-        void drain( GameObjectManager& manager );
+        void flush( GameObjectManager& manager );
 
         /**
          * @brief 두 큐가 빌 때까지 `drain` 을 되풀이합니다(모듈 언로드 직전, 틱 밖).
          * @details `drain` 은 큐를 한 번 맞바꿔 돌므로 그 안의 콜백 · BeginPlay 가 다시 미룬 일은 남습니다. 모듈이 내려간 뒤 남은 람다가
          *          돌면 없는 코드로 뛰므로 여기서 끝까지 비웁니다. 상한에 닿으면(서로 다시 미루는 고리) 오류를 남기고 호출 없이 버립니다.
          */
-        void drainUntilEmpty( GameObjectManager& manager );
+        void flushUntilEmpty( GameObjectManager& manager );
 
         /** @brief 쌓인 일을 실행하지 않고 버립니다(매니저 clear). */
         void clear();

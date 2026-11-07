@@ -114,7 +114,7 @@ namespace sw
 namespace sw
 {
     /** @brief 전투의 끝입니다. */
-    enum class JRPGBattleOutcome : uint8
+    enum class JRPGBattleResult : uint8
     {
         Ongoing = 0,
         Victory,
@@ -193,7 +193,7 @@ namespace sw
          * @return 도망쳤으면 true 입니다.
          */
         [[nodiscard]] bool tryFlee();
-        void               drainEvents( vector<JRPGBattleEvent>& outListEvent );
+        void               pollEvents( vector<JRPGBattleEvent>& outListEvent );
         /** @brief 적, 이번 라운드 명령, 방어, 턴 순서, 난수, 보상, 콤보, 라운드, 도망 횟수, 결과를 씁니다. 파티, 카탈로그, 판정, 타이밍 입력, 설정은 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief 전투가 빌려 쓸 파티를 연결합니다. 새 전투에 `readState` 하기 전에 호출해야 합니다(파티는 `JRPGParty::readState` 로 따로 읽습니다). `start` 도 파티를 연결합니다. */
@@ -209,7 +209,7 @@ namespace sw
         /** @brief 지금 도망칠 확률을 반환합니다(0.05..0.95이며, 보스가 있으면 0입니다). */
         float32 computeFleeChance() const;
 
-        JRPGBattleOutcome             getOutcome() const { return _outcome; }
+        JRPGBattleResult              getResult() const { return _result; }
         const vector<JRPGEnemyState>& getEnemies() const { return _listEnemy; }
         int32                         getComboPoints() const { return _comboPoints; }
         int32                         getRound() const { return _round; }
@@ -256,6 +256,6 @@ namespace sw
         int32                        _comboPoints;
         int32                        _round;
         int32                        _fleeAttempts;
-        JRPGBattleOutcome            _outcome;
+        JRPGBattleResult             _result;
     };
 } // namespace sw

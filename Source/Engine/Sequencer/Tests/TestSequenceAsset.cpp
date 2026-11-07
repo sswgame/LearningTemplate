@@ -113,14 +113,14 @@ SW_TEST_CASE( SequencerTest, FieldIssueFollowsTheItemKind )
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::ScenarioMissing );
 
     item._kind = SequenceItemKind::Spawn;
-    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::SpawnFields );
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::SpawnParams );
     item._prefab = "a.prefab.xml";
-    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::SpawnFields ); // 이름도 필수다
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::SpawnParams ); // 이름도 필수다
     item._targetObject = "Spawned";
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
 
     item._kind = SequenceItemKind::Appearance;
-    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::PresetFields );
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::PresetParams );
     item._preset = "wet";
     SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
 

@@ -151,9 +151,9 @@ namespace sw
         return isSolved() ? hashed_string{} : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id;
     }
 
-    void MonsterHuntInvestigation::drainEvents( vector<MonsterHuntInvestigationEvent>& outListEvent )
+    void MonsterHuntInvestigation::pollEvents( vector<MonsterHuntInvestigationEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     int32 MonsterHuntInvestigation::computeOpenOrder() const

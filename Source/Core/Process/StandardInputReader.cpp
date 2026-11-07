@@ -40,7 +40,7 @@ namespace sw
         string{}.swap( _partialLine );
     }
 
-    void StandardInputReader::drainLines( vector<string>& outListLine )
+    void StandardInputReader::pollLines( vector<string>& outListLine )
     {
         ScopedLock<mutex> lock{ _mutex };
         for ( string& line : _listLine )

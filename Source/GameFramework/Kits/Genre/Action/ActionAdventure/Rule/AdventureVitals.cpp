@@ -35,7 +35,7 @@ namespace sw
         }
 
         // 따로 만들어 모두 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
-        VitalitySettings healthSettings;
+        CombatHealthSettings healthSettings;
         healthSettings._maxHealth = static_cast<float32>( settings._startHeartCount * kQuartersPerHeart );
         ResourceGaugeSettings magicSettings;
         magicSettings._max       = settings._magicMax;
@@ -45,7 +45,7 @@ namespace sw
         staminaSettings._regenRate        = settings._staminaRegenRate;
         staminaSettings._regenDelay       = settings._staminaRegenDelay;
         staminaSettings._exhaustThreshold = settings._staminaRecoverLevel;
-        Vitality      health;
+        CombatHealth  health;
         ResourceGauge magic;
         ResourceGauge stamina;
         const bool    bHealthAccepted  = health.initialize( healthSettings );
@@ -67,7 +67,7 @@ namespace sw
 
     bool AdventureVitals::resetHealth()
     {
-        VitalitySettings health;
+        CombatHealthSettings health;
         health._maxHealth = static_cast<float32>( _heartCount * kQuartersPerHeart );
         return _health.initialize( health );
     }
@@ -76,7 +76,7 @@ namespace sw
     {
         if ( quarters <= 0 )
             return false;
-        const VitalityDamageResult result = _health.applyDamage( static_cast<float32>( quarters ) );
+        const CombatHealthDamageResult result = _health.applyDamage( static_cast<float32>( quarters ) );
         return result._bDied == SW_TRUE;
     }
 
@@ -116,7 +116,7 @@ namespace sw
         return true;
     }
 
-    AdventureStaminaOutcome AdventureVitals::updateStamina( AdventureStaminaAction action, float32 deltaTime )
+    AdventureStaminaResult AdventureVitals::updateStamina( AdventureStaminaAction action, float32 deltaTime )
     {
         float32 rate = 0.0f;
         switch ( action )
@@ -124,7 +124,7 @@ namespace sw
             case AdventureStaminaAction::Idle:
             {
                 _stamina.update( deltaTime );
-                return AdventureStaminaOutcome::Continue;
+                return AdventureStaminaResult::Continue;
             }
             case AdventureStaminaAction::Climb:
             {
@@ -148,23 +148,23 @@ namespace sw
             }
         }
         if ( _stamina.drain( rate, deltaTime ) )
-            return AdventureStaminaOutcome::Continue;
+            return AdventureStaminaResult::Continue;
         switch ( action )
         {
             case AdventureStaminaAction::Climb:
             case AdventureStaminaAction::Glide:
             {
-                return AdventureStaminaOutcome::Fall;
+                return AdventureStaminaResult::Fall;
             }
             case AdventureStaminaAction::Swim:
             {
                 (void)applyDamage( _settings._drownDamage ); // 죽었는지는 체력이 판단한다. 여기서는 빠졌다는 결과만 알린다
                 _stamina.refill();                           // 물가로 돌아가면 다시 헤엄칠 수 있다
-                return AdventureStaminaOutcome::Drown;
+                return AdventureStaminaResult::Drown;
             }
             default:
             {
-                return AdventureStaminaOutcome::Stop;
+                return AdventureStaminaResult::Stop;
             }
         }
     }

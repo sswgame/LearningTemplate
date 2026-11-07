@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -23,7 +23,7 @@ namespace sw
         /** @brief 노드 하나의 이름 · 입력 규칙 · 값 · 클립을 검사합니다. */
         bool validateAudioGraphNode( const AudioGraphDef& def, size_t nodeIndex, string_view sourceName )
         {
-            const AudioGraphNodeDesc&     node     = def._listNode[nodeIndex];
+            const AudioGraphNodeDef&      node     = def._listNode[nodeIndex];
             const AudioGraphNodeKindInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
             const utf8*                   pName    = node._name.c_str();
             bool                          bValid   = true;
@@ -66,7 +66,7 @@ namespace sw
             }
             for ( size_t parameterIndex = 0; parameterIndex < node._listParameter.size(); ++parameterIndex )
             {
-                const AudioGraphParameterDesc& parameter = node._listParameter[parameterIndex];
+                const AudioGraphParameterDef& parameter = node._listParameter[parameterIndex];
                 if ( AudioGraphRegistry::findParameterIndex( typeInfo, parameter._name ) < 0 )
                 {
                     SW_LOG_ERROR_ID( "AudioGraphDef.NodeNoValueNamed", "%#: node '%#' (%#) has no value named '%#'", sourceName, pName, typeInfo._pName, parameter._name.c_str() );
@@ -82,7 +82,7 @@ namespace sw
                 }
                 // 게임 파라미터가 움직이는 값은 곡선이 필수다(곡선 없는 연결을 "값 그대로" 로 읽지 않는다).
                 const bool bDriven      = parameter._parameter.empty() == false;
-                const bool bCurveUsable = parameter._listPoint.empty() == false && AudioMixerDesc::isCurveSorted( parameter._listPoint );
+                const bool bCurveUsable = parameter._listPoint.empty() == false && AudioMixerDef::isCurveSorted( parameter._listPoint );
                 if ( bDriven && bCurveUsable == false )
                 {
                     SW_LOG_ERROR_ID( "AudioGraphDef.NodeValueFollowsBut", "%#: node '%#' value '%#' follows '%#' but its curve is empty or out of order", sourceName, pName, parameter._name.c_str(),
@@ -194,7 +194,7 @@ namespace sw
     bool AudioGraphDef::makeProcessingOrder( vector<uint32>& outListNodeIndex ) const
     {
         outListNodeIndex.clear();
-        for ( const AudioGraphNodeDesc& node : _listNode )
+        for ( const AudioGraphNodeDef& node : _listNode )
         {
             for ( const hashed_string& input : node._listInput )
             {

@@ -306,9 +306,9 @@ namespace sw::editor
                 if ( EditorWidgets::drawRowIconToggle( "##visible", bVisible, true, SW_EDITOR_ICON( "Eye" ), SW_EDITOR_ICON( "EyeSlash" ), SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
                                                        SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
                     EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
-                EditorSelfTestMarks::note( "hierarchy.activeToggle" );
+                EditorSelfTestMarks::record( "hierarchy.activeToggle" );
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
+                    EditorSelfTestMarks::record( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
                 // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
                 const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
@@ -316,7 +316,7 @@ namespace sw::editor
                                                        SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
                     pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
+                    EditorSelfTestMarks::record( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
             }
 
@@ -503,16 +503,16 @@ namespace sw::editor
                 if ( bPrefabInstance )
                     ImGui::PopStyleColor();
                 drawRowBadge( arrLabel, arrBadge );
-                rowModel.noteDrawnRow( objectID );
+                rowModel.recordDrawnRow( objectID );
                 if ( pRevealTarget == pObj )
                 {
                     ImGui::SetScrollHereY( 0.5f );
                     rowModel.clearReveal();
                 }
                 if ( bSelected )
-                    EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
+                    EditorSelfTestMarks::record( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
+                    EditorSelfTestMarks::record( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
 
                 handleRowClick( pObj, pManager );
                 drawInlineRename( pObj, objectID, renamingObjectID, renameBuffer, bFocusRenameInput );
@@ -618,7 +618,7 @@ namespace sw::editor
                 ImGui::BeginDisabled();
             if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdButton", "PlusCreate" ), "+ Create" ) ) )
                 EditorSceneCommands::create( pManager, nullptr );
-            EditorSelfTestMarks::note( "hierarchy.create" );
+            EditorSelfTestMarks::record( "hierarchy.create" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "CreateGameObject" ) );
             if ( bEditsAllowed == false )
                 ImGui::EndDisabled();
@@ -631,7 +631,7 @@ namespace sw::editor
             {
                 if ( ImGui::MenuItem( SW_LOCKEY( "EditorScene", "HierarchyAllTypes" ), nullptr, activeType.empty() ) )
                     _filterBuffer.clear();
-                EditorSelfTestMarks::note( "hierarchy.typeFilter.all" );
+                EditorSelfTestMarks::record( "hierarchy.typeFilter.all" );
                 ImGui::Separator();
                 vector<string> listTypeName;
                 if ( pManager != nullptr )
@@ -641,7 +641,7 @@ namespace sw::editor
                     if ( ImGui::MenuItem( typeName.c_str(), nullptr, StringUtil::equals( activeType, typeName ) ) )
                         _filterBuffer = string_view{ "t:" + typeName };
                     const string mark = "hierarchy.typeFilter." + typeName;
-                    EditorSelfTestMarks::note( mark.c_str() );
+                    EditorSelfTestMarks::record( mark.c_str() );
                 }
                 EditorCompactControls::endViewOptions();
             }

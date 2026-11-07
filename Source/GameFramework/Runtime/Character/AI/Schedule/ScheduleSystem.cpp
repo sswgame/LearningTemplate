@@ -624,9 +624,9 @@ namespace sw
         return ScheduleSystemInternal::toDay( _minute );
     }
 
-    void ScheduleSystem::drainEvents( vector<ScheduleEvent>& outListEvent )
+    void ScheduleSystem::pollEvents( vector<ScheduleEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     /** @brief `-gv_scheduleTrace=<npc id | *>` — 값이 바뀌면 그 NPC 의 "왜 여기 있나" 와 오늘 시간표를 로그에 한 번 남깁니다. */

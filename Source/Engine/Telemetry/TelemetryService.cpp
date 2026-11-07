@@ -482,11 +482,11 @@ namespace sw
         root.set( "seq" ).setUint( _sequence + static_cast<uint64>( _listPendingLine.size() ) );
         root.set( "t" ).setFloat( MathUtil::round( _sessionSeconds * constant::time::kMillisecondsPerSecond ) / constant::time::kMillisecondsPerSecond );
         root.set( "sample" ).setFloat( static_cast<float64>( def._sampleRate ) );
-        const JSONValue fields = root.set( "fields" );
-        fields.setObject();
+        const JSONValue params = root.set( "fields" );
+        params.setObject();
         for ( const TelemetryValue& value : event.getValues() )
         {
-            TelemetryServiceInternal::setValueJSON( fields.set( value._name.c_str() ), value );
+            TelemetryServiceInternal::setValueJSON( params.set( value._name.c_str() ), value );
         }
         return doc.dump( -1 );
     }

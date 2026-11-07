@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Graph/AnimationGraphFields.h"
+#include "Engine/Animation/Graph/AnimationGraphParams.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -28,21 +28,21 @@ namespace sw
             static constexpr const utf8* kArrLinkChild[]       = { "condition" };
             static constexpr const utf8* kArrBoneMaskChild[]   = { "roots", "bones" };
 
-            /** @brief 원소 하나를 스키마 @p TFields 로 읽고, 자식 원소가 @p arrChild 안의 이름뿐인지 봅니다. 칸 하나라도 틀리면 false 입니다(오류는 로그에). */
-            template <typename TFields, size_t ChildCount>
-            [[nodiscard]] static bool readElement( const XMLNode& element, TFields& outFields, string_view sourceLabel, const utf8* const ( &arrChild )[ChildCount],
+            /** @brief 원소 하나를 스키마 @p TParams 로 읽고, 자식 원소가 @p arrChild 안의 이름뿐인지 봅니다. 칸 하나라도 틀리면 false 입니다(오류는 로그에). */
+            template <typename TParams, size_t ChildCount>
+            [[nodiscard]] static bool readElement( const XMLNode& element, TParams& outParams, string_view sourceLabel, const utf8* const ( &arrChild )[ChildCount],
                                                    std::initializer_list<string_view> listHandRead = {} )
             {
-                const bool bFields   = XMLFields::readFields( element, outFields, sourceLabel, listHandRead );
+                const bool bFields   = XMLFields::readFields( element, outParams, sourceLabel, listHandRead );
                 const bool bChildren = XMLNameCheck::reportUnknownChildren( element, arrChild, sourceLabel );
                 return bFields && bChildren;
             }
 
-            /** @brief 자식이 없는 원소 하나를 스키마 @p TFields 로 읽습니다. */
-            template <typename TFields>
-            [[nodiscard]] static bool readLeafElement( const XMLNode& element, TFields& outFields, string_view sourceLabel )
+            /** @brief 자식이 없는 원소 하나를 스키마 @p TParams 로 읽습니다. */
+            template <typename TParams>
+            [[nodiscard]] static bool readLeafElement( const XMLNode& element, TParams& outParams, string_view sourceLabel )
             {
-                const bool bFields   = XMLFields::readFields( element, outFields, sourceLabel );
+                const bool bFields   = XMLFields::readFields( element, outParams, sourceLabel );
                 const bool bChildren = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, sourceLabel );
                 return bFields && bChildren;
             }
@@ -200,13 +200,13 @@ namespace sw
     bool AnimationGraphAsset::parseBlendSpace( const XMLNode& blendSpaceXML, AnimationGraphNode& inoutNode )
     {
         using Internal = AnimationGraphAssetInternal;
-        AnimationGraphBlendSpaceFields fields;
-        if ( Internal::readElement( blendSpaceXML, fields, inoutNode._name, Internal::kArrBlendSpaceChild ) == false )
+        AnimationGraphBlendSpaceParams params;
+        if ( Internal::readElement( blendSpaceXML, params, inoutNode._name, Internal::kArrBlendSpaceChild ) == false )
             return false;
         AnimationGraphBlendSpaceDef& def = inoutNode._blendSpace;
-        def._parameterX                  = fields._x;
-        def._parameterY                  = fields._y;
-        def._notifyMode                  = fields._notify;
+        def._parameterX                  = params._x;
+        def._parameterY                  = params._y;
+        def._notifyMode                  = params._notify;
         def._space.clear();
         def._space.setAxisCount( def._parameterY.empty() ? 1u : 2u );
         if ( def._parameterX.empty() )
@@ -218,7 +218,7 @@ namespace sw
         bool bValid = true;
         for ( XMLNode sampleXML = blendSpaceXML.findChild( "samples" ).findChild(); sampleXML.isValid(); sampleXML = sampleXML.findNextSibling() )
         {
-            AnimationGraphSampleFields sample;
+            AnimationGraphSampleParams sample;
             if ( Internal::isTag( sampleXML, "sample", "samples", inoutNode._name ) == false || Internal::readLeafElement( sampleXML, sample, inoutNode._name ) == false )
             {
                 bValid = false;
@@ -243,13 +243,13 @@ namespace sw
     bool AnimationGraphAsset::parsePoseNode( const XMLNode& poseNodeXML, AnimationGraphNode& inoutNode )
     {
         using Internal = AnimationGraphAssetInternal;
-        AnimationGraphPoseNodeFields fields;
-        if ( Internal::readElement( poseNodeXML, fields, inoutNode._name, Internal::kArrPoseNodeChild ) == false )
+        AnimationGraphPoseNodeParams params;
+        if ( Internal::readElement( poseNodeXML, params, inoutNode._name, Internal::kArrPoseNodeChild ) == false )
             return false;
         AnimationGraphPoseNodeDef& def = inoutNode._poseNode;
         def                            = AnimationGraphPoseNodeDef{};
-        def._type                      = fields._type;
-        def._weightParameter           = fields._weight;
+        def._type                      = params._type;
+        def._weightParameter           = params._weight;
         if ( def._type == AnimationPoseNodeKind::None )
         {
             SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeUnknown", "Animation graph node '%#' has a pose_node of type None", inoutNode._name.c_str() );
@@ -323,20 +323,20 @@ namespace sw
         for ( XMLNode nodeXML = root.findChild( "nodes" ).findChild(); nodeXML.isValid(); nodeXML = nodeXML.findNextSibling() )
         {
             // `loop` 는 적지 않음 · 참 · 거짓 셋이라 스키마 칸이 아니다 — 적었을 때만 클립 설정을 덮는다.
-            AnimationGraphNodeFields fields;
+            AnimationGraphNodeParams params;
             std::optional<bool>      loop;
             if ( Internal::isTag( nodeXML, "node", "nodes", sourceLabel ) == false ||
-                 ( Internal::readElement( nodeXML, fields, sourceLabel, Internal::kArrNodeChild, { "loop" } ) && ( nodeXML.getAttributeText( "loop" ).empty() || nodeXML.readOptionalAttribute( "loop", loop ) ) ) == false )
+                 ( Internal::readElement( nodeXML, params, sourceLabel, Internal::kArrNodeChild, { "loop" } ) && ( nodeXML.getAttributeText( "loop" ).empty() || nodeXML.readOptionalAttribute( "loop", loop ) ) ) == false )
             {
                 bValid = false;
                 continue;
             }
             AnimationGraphNode node{};
-            node._id          = fields._id;
-            node._name        = fields._name;
-            node._position    = float2{ fields._x, fields._y };
-            node._syncGroup   = fields._syncGroup;
-            node._maxLODGrade = fields._maxLod;
+            node._id          = params._id;
+            node._name        = params._name;
+            node._position    = float2{ params._x, params._y };
+            node._syncGroup   = params._syncGroup;
+            node._maxLODGrade = params._maxLod;
             if ( loop.has_value() )
                 node._loopOverride = *loop ? 1 : 0;
             const XMLNode blendSpaceXML = Internal::findFilledChild( nodeXML, "blend_space" );
@@ -367,19 +367,19 @@ namespace sw
         bool bValid    = true;
         for ( XMLNode linkXML = root.findChild( "links" ).findChild(); linkXML.isValid(); linkXML = linkXML.findNextSibling() )
         {
-            AnimationGraphLinkFields fields;
-            if ( Internal::isTag( linkXML, "link", "links", sourceLabel ) == false || Internal::readElement( linkXML, fields, sourceLabel, Internal::kArrLinkChild ) == false )
+            AnimationGraphLinkParams params;
+            if ( Internal::isTag( linkXML, "link", "links", sourceLabel ) == false || Internal::readElement( linkXML, params, sourceLabel, Internal::kArrLinkChild ) == false )
             {
                 bValid = false;
                 continue;
             }
             AnimationGraphLink link{};
-            link._id              = fields._id;
-            link._fromNode        = fields._from;
-            link._toNode          = fields._to;
-            link._blendSeconds    = fields._blend;
-            link._blendMode       = fields._blendMode;
-            link._halfLifeSeconds = fields._halfLife;
+            link._id              = params._id;
+            link._fromNode        = params._from;
+            link._toNode          = params._to;
+            link._blendSeconds    = params._blend;
+            link._blendMode       = params._blendMode;
+            link._halfLifeSeconds = params._halfLife;
             if ( link._blendMode == AnimationBlendMode::Inertialization && link._halfLifeSeconds <= 0.0f )
             {
                 SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkUses", "Animation graph link %# uses Inertialization without a positive 'half_life'", link._id );
@@ -388,7 +388,7 @@ namespace sw
             const XMLNode conditionXML = Internal::findFilledChild( linkXML, "condition" );
             if ( conditionXML.isValid() )
             {
-                AnimationGraphConditionFields condition;
+                AnimationGraphConditionParams condition;
                 if ( Internal::readLeafElement( conditionXML, condition, sourceLabel ) == false )
                     bValid = false;
                 if ( condition._op == AnimationConditionOp::None )
@@ -421,23 +421,23 @@ namespace sw
         bool bValid    = true;
         for ( XMLNode commentXML = root.findChild( "comments" ).findChild(); commentXML.isValid(); commentXML = commentXML.findNextSibling() )
         {
-            AnimationGraphCommentFields fields;
-            if ( Internal::isTag( commentXML, "comment", "comments", sourceLabel ) == false || Internal::readLeafElement( commentXML, fields, sourceLabel ) == false )
+            AnimationGraphCommentParams params;
+            if ( Internal::isTag( commentXML, "comment", "comments", sourceLabel ) == false || Internal::readLeafElement( commentXML, params, sourceLabel ) == false )
             {
                 bValid = false;
                 continue;
             }
-            if ( VectorUtil::containsBy<&GraphCommentBox::_id>( _listComment, fields._id ) )
+            if ( VectorUtil::containsBy<&GraphCommentBox::_id>( _listComment, params._id ) )
             {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.CommentNeedsID", "Animation graph '%#': comment id %# repeats", sourceLabel, fields._id );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.CommentNeedsID", "Animation graph '%#': comment id %# repeats", sourceLabel, params._id );
                 bValid = false;
                 continue;
             }
             GraphCommentBox comment{};
-            comment._id       = fields._id;
-            comment._text     = fields._text;
-            comment._position = float2{ fields._x, fields._y };
-            comment._size     = float2{ fields._w, fields._h };
+            comment._id       = params._id;
+            comment._text     = params._text;
+            comment._position = float2{ params._x, params._y };
+            comment._size     = float2{ params._w, params._h };
             _listComment.push_back( std::move( comment ) );
         }
         return bValid;
@@ -455,32 +455,32 @@ namespace sw
         bool bValid    = true;
         for ( XMLNode maskXML = root.findChild( "bone_masks" ).findChild(); maskXML.isValid(); maskXML = maskXML.findNextSibling() )
         {
-            AnimationGraphBoneMaskFields fields;
+            AnimationGraphBoneMaskParams params;
             if ( Internal::isTag( maskXML, "bone_mask", "bone_masks", "Animation graph" ) == false ||
-                 Internal::readElement( maskXML, fields, "Animation graph bone mask", Internal::kArrBoneMaskChild ) == false )
+                 Internal::readElement( maskXML, params, "Animation graph bone mask", Internal::kArrBoneMaskChild ) == false )
             {
                 bValid = false;
                 continue;
             }
-            if ( fields._name.empty() || findBoneMask( fields._name ) != nullptr )
+            if ( params._name.empty() || findBoneMask( params._name ) != nullptr )
             {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsBone", "Animation graph bone mask '%#' has an empty or repeated 'name'", fields._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsBone", "Animation graph bone mask '%#' has an empty or repeated 'name'", params._name.c_str() );
                 bValid = false;
                 continue;
             }
             // 프리셋 파일("file")이나 바로 적은 본문(<roots>, <bones>) 중 하나다. 둘 다 적으면 어느 쪽이 기준인지 모르므로 오류다.
-            const bool bFromFile = fields._file.empty() == false;
+            const bool bFromFile = params._file.empty() == false;
             const bool bInline   = maskXML.findChild( "roots" ).isValid() || maskXML.findChild( "bones" ).isValid();
             if ( bFromFile && bInline )
             {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphBoneMask2", "Animation graph bone mask '%#' has both 'file' and inline bones", fields._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphBoneMask2", "Animation graph bone mask '%#' has both 'file' and inline bones", params._name.c_str() );
                 bValid = false;
                 continue;
             }
             AnimationBoneMaskDef mask{};
-            mask._name           = fields._name;
+            mask._name           = params._name;
             const string context = string( "Animation graph bone mask '" ) + mask._name.c_str() + "'";
-            const bool   bLoaded = bFromFile ? mask.loadFromFile( AssetID{ fields._file } ) : mask.parseObject( maskXML, context );
+            const bool   bLoaded = bFromFile ? mask.loadFromFile( AssetID{ params._file } ) : mask.parseObject( maskXML, context );
             if ( bLoaded == false )
             {
                 bValid = false;
@@ -497,35 +497,35 @@ namespace sw
         bool bValid    = true;
         for ( XMLNode layerXML = root.findChild( "layers" ).findChild(); layerXML.isValid(); layerXML = layerXML.findNextSibling() )
         {
-            AnimationGraphLayerFields fields;
-            if ( Internal::isTag( layerXML, "layer", "layers", "Animation graph" ) == false || Internal::readLeafElement( layerXML, fields, "Animation graph layer" ) == false )
+            AnimationGraphLayerParams params;
+            if ( Internal::isTag( layerXML, "layer", "layers", "Animation graph" ) == false || Internal::readLeafElement( layerXML, params, "Animation graph layer" ) == false )
             {
                 bValid = false;
                 continue;
             }
-            if ( fields._name.empty() || fields._clip.empty() == fields._slot.empty() || findLayer( fields._name ) != nullptr )
+            if ( params._name.empty() || params._clip.empty() == params._slot.empty() || findLayer( params._name ) != nullptr )
             {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsLayer", "Animation graph layer '%#' needs exactly one of 'clip' and 'slot' (one of the other kind over a base layer needs _op=\"Replace\") and a 'name' no other layer has", fields._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsLayer", "Animation graph layer '%#' needs exactly one of 'clip' and 'slot' (one of the other kind over a base layer needs _op=\"Replace\") and a 'name' no other layer has", params._name.c_str() );
                 bValid = false;
                 continue;
             }
-            if ( fields._mask.empty() == false && findBoneMask( fields._mask ) == nullptr )
+            if ( params._mask.empty() == false && findBoneMask( params._mask ) == nullptr )
             {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerNames", "Animation graph layer '%#' names unknown bone mask '%#'", fields._name.c_str(), fields._mask.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLayerNames", "Animation graph layer '%#' names unknown bone mask '%#'", params._name.c_str(), params._mask.c_str() );
                 bValid = false;
                 continue;
             }
             AnimationGraphLayerDef layer{};
-            layer._name            = fields._name;
-            layer._clipName        = fields._clip;
-            layer._slotName        = fields._slot;
-            layer._maskName        = fields._mask;
-            layer._weightParameter = fields._weightParam;
-            layer._weight          = fields._weight;
-            layer._halfLifeSeconds = fields._halfLife;
-            layer._maxLODGrade     = fields._maxLod;
-            layer._blend           = fields._blend;
-            layer._bLoop           = fields._bLoop ? SW_TRUE : SW_FALSE;
+            layer._name            = params._name;
+            layer._clipName        = params._clip;
+            layer._slotName        = params._slot;
+            layer._maskName        = params._mask;
+            layer._weightParameter = params._weightParam;
+            layer._weight          = params._weight;
+            layer._halfLifeSeconds = params._halfLife;
+            layer._maxLODGrade     = params._maxLod;
+            layer._blend           = params._blend;
+            layer._bLoop           = params._bLoop ? SW_TRUE : SW_FALSE;
             _listLayer.push_back( layer );
         }
         return bValid;
@@ -538,11 +538,11 @@ namespace sw
             const XMLNode masksXML = root.appendChild( "bone_masks" );
             for ( const AnimationBoneMaskDef& mask : _listBoneMask )
             {
-                AnimationGraphBoneMaskFields fields;
-                fields._name          = mask._name;
-                fields._file          = mask._filePath;
+                AnimationGraphBoneMaskParams params;
+                params._name          = mask._name;
+                params._file          = mask._filePath;
                 const XMLNode maskXML = masksXML.appendChild( "bone_mask" );
-                XMLFields::writeFields( maskXML, fields );
+                XMLFields::writeFields( maskXML, params );
                 if ( mask._filePath.empty() )
                     mask.writeObject( maskXML );
             }
@@ -552,18 +552,18 @@ namespace sw
         const XMLNode layersXML = root.appendChild( "layers" );
         for ( const AnimationGraphLayerDef& layer : _listLayer )
         {
-            AnimationGraphLayerFields fields;
-            fields._name        = layer._name;
-            fields._clip        = layer._clipName;
-            fields._slot        = layer._slotName;
-            fields._mask        = layer._maskName;
-            fields._weightParam = layer._weightParameter;
-            fields._weight      = layer._weight;
-            fields._halfLife    = layer._halfLifeSeconds;
-            fields._maxLod      = layer._maxLODGrade;
-            fields._blend       = layer._blend;
-            fields._bLoop       = layer._bLoop == SW_TRUE;
-            XMLFields::writeFields( layersXML.appendChild( "layer" ), fields );
+            AnimationGraphLayerParams params;
+            params._name        = layer._name;
+            params._clip        = layer._clipName;
+            params._slot        = layer._slotName;
+            params._mask        = layer._maskName;
+            params._weightParam = layer._weightParameter;
+            params._weight      = layer._weight;
+            params._halfLife    = layer._halfLifeSeconds;
+            params._maxLod      = layer._maxLODGrade;
+            params._blend       = layer._blend;
+            params._bLoop       = layer._bLoop == SW_TRUE;
+            XMLFields::writeFields( layersXML.appendChild( "layer" ), params );
         }
     }
 
@@ -579,21 +579,21 @@ namespace sw
 
     void AnimationGraphAsset::writeNode( const XMLNode& nodesXML, const AnimationGraphNode& node )
     {
-        AnimationGraphNodeFields fields;
-        fields._id            = node._id;
-        fields._name          = node._name;
-        fields._x             = node._position._x;
-        fields._y             = node._position._y;
-        fields._syncGroup     = node._syncGroup;
-        fields._maxLod        = node._maxLODGrade;
+        AnimationGraphNodeParams params;
+        params._id            = node._id;
+        params._name          = node._name;
+        params._x             = node._position._x;
+        params._y             = node._position._y;
+        params._syncGroup     = node._syncGroup;
+        params._maxLod        = node._maxLODGrade;
         const XMLNode nodeXML = nodesXML.appendChild( "node" );
-        XMLFields::writeFields( nodeXML, fields );
+        XMLFields::writeFields( nodeXML, params );
         if ( node._loopOverride >= 0 )
             nodeXML.appendAttribute( "loop", node._loopOverride != 0 );
         if ( node.hasBlendSpace() )
         {
             const AnimationGraphBlendSpaceDef& def = node._blendSpace;
-            AnimationGraphBlendSpaceFields     blendSpace;
+            AnimationGraphBlendSpaceParams     blendSpace;
             blendSpace._x               = def._parameterX;
             blendSpace._y               = def._parameterY;
             blendSpace._notify          = def._notifyMode;
@@ -602,7 +602,7 @@ namespace sw
             const XMLNode samplesXML = blendSpaceXML.appendChild( "samples" );
             for ( const BlendSpaceSample& sample : def._space.getSamples() )
             {
-                AnimationGraphSampleFields sampleFields;
+                AnimationGraphSampleParams sampleFields;
                 sampleFields._clip = sample._clipName;
                 sampleFields._x    = sample._position._x;
                 sampleFields._y    = sample._position._y;
@@ -612,7 +612,7 @@ namespace sw
         if ( node.hasPoseNode() )
         {
             const AnimationGraphPoseNodeDef& def = node._poseNode;
-            AnimationGraphPoseNodeFields     poseNode;
+            AnimationGraphPoseNodeParams     poseNode;
             poseNode._type            = def._type;
             poseNode._weight          = def._weightParameter;
             const XMLNode poseNodeXML = nodeXML.appendChild( "pose_node" );
@@ -627,18 +627,18 @@ namespace sw
 
     void AnimationGraphAsset::writeLink( const XMLNode& linksXML, const AnimationGraphLink& link )
     {
-        AnimationGraphLinkFields fields;
-        fields._id            = link._id;
-        fields._from          = link._fromNode;
-        fields._to            = link._toNode;
-        fields._blend         = link._blendSeconds;
-        fields._blendMode     = link._blendMode;
-        fields._halfLife      = link._halfLifeSeconds;
+        AnimationGraphLinkParams params;
+        params._id            = link._id;
+        params._from          = link._fromNode;
+        params._to            = link._toNode;
+        params._blend         = link._blendSeconds;
+        params._blendMode     = link._blendMode;
+        params._halfLife      = link._halfLifeSeconds;
         const XMLNode linkXML = linksXML.appendChild( "link" );
-        XMLFields::writeFields( linkXML, fields );
+        XMLFields::writeFields( linkXML, params );
         if ( link._op == AnimationConditionOp::None )
             return;
-        AnimationGraphConditionFields condition;
+        AnimationGraphConditionParams condition;
         condition._param = link._parameter;
         condition._op    = link._op;
         condition._value = link._threshold;
@@ -667,14 +667,14 @@ namespace sw
             const XMLNode commentsXML = root.appendChild( "comments" );
             for ( const GraphCommentBox& comment : _listComment )
             {
-                AnimationGraphCommentFields fields;
-                fields._id   = comment._id;
-                fields._text = comment._text;
-                fields._x    = comment._position._x;
-                fields._y    = comment._position._y;
-                fields._w    = comment._size._x;
-                fields._h    = comment._size._y;
-                XMLFields::writeFields( commentsXML.appendChild( "comment" ), fields );
+                AnimationGraphCommentParams params;
+                params._id   = comment._id;
+                params._text = comment._text;
+                params._x    = comment._position._x;
+                params._y    = comment._position._y;
+                params._w    = comment._size._x;
+                params._h    = comment._size._y;
+                XMLFields::writeFields( commentsXML.appendChild( "comment" ), params );
             }
         }
 

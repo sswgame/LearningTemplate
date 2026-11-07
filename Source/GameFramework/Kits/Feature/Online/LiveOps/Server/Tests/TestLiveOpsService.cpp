@@ -18,7 +18,7 @@ namespace
     constexpr AccountID kGM      = 7;
     constexpr AccountID kPlayer  = 11;
 
-    struct LiveOpsRig
+    struct LiveOpsFixture
     {
         MemoryServiceDatabase _database;
         MemoryServiceStore    _store;
@@ -26,7 +26,7 @@ namespace
         LiveOpsService        _service;
         int64                 _auditTime{ 0 };
 
-        explicit LiveOpsRig( bool bConfig = true )
+        explicit LiveOpsFixture( bool bConfig = true )
             : _database{}
             , _store{ &_database }
             , _config{}
@@ -62,7 +62,7 @@ namespace
         LiveOpsResult takeResult()
         {
             vector<LiveOpsCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             return listCompletion.empty() ? LiveOpsResult::Unavailable : listCompletion[0]._result;
         }
@@ -122,7 +122,7 @@ namespace
 /** @brief [LiveOpsServiceTest] 쓰기: 다시 읽어 창 안에서만 보이고 감사 줄이 남는다. 지우면 사라지고, 없는 것을 지우면 NotFound, 틀린 정의는 저장소에 닿지 않는다 */
 SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
 {
-    LiveOpsRig rig;
+    LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( ServiceAuditLog::getTable() ) );
     rig.tick( kStartMs );
@@ -156,7 +156,7 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
 /** @brief [LiveOpsServiceTest] 저장소 실패: 쓰기는 Unavailable 이고, 읽기 실패는 이전 목록을 둔 채 다음 주기에 다시 읽는다 */
 SW_TEST_CASE( LiveOpsServiceTest, StoreFailuresKeepPreviousState )
 {
-    LiveOpsRig rig;
+    LiveOpsFixture rig;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Unavailable );
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
@@ -172,7 +172,7 @@ SW_TEST_CASE( LiveOpsServiceTest, StoreFailuresKeepPreviousState )
 /** @brief [LiveOpsServiceTest] 바뀜 알림: 정의가 바뀌거나 창이 열리고 닫힐 때만 한 번 켜진다 — 다시 읽기만으로는 켜지지 않는다 */
 SW_TEST_CASE( LiveOpsServiceTest, StateChangeFiresOnOpenAndClose )
 {
-    LiveOpsRig rig;
+    LiveOpsFixture rig;
     rig.tick( kStartMs - 2 );
     SW_EXPECT_FALSE( rig._service.takeStateChange() ); // 빈 상태는 알리지 않는다
 
@@ -193,8 +193,8 @@ SW_TEST_CASE( LiveOpsServiceTest, StateChangeFiresOnOpenAndClose )
 /** @brief [LiveOpsServiceTest] 시작 푸시: 창이 열리면 한 번 나가고 지역을 싣는다. 푸시를 달지 않은 이벤트는 없고, 열린 지 오래된 창을 처음 보면(서버 재시작) 내지 않는다 */
 SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
 {
-    LiveOpsRig   rig;
-    LiveEventDef withPush = LiveOpsTestUtil::makeEvent( "with.push" );
+    LiveOpsFixture rig;
+    LiveEventDef   withPush = LiveOpsTestUtil::makeEvent( "with.push" );
     withPush._listParameter.push_back( LiveOpsTestUtil::makeParameter( LiveOpsPush::kTitleParameter, "push.title.key" ) );
     withPush._listRegion.push_back( "kr" );
     SW_EXPECT_TRUE( rig.put( withPush ) == LiveOpsResult::Ok );
@@ -210,7 +210,7 @@ SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
     SW_EXPECT_EQUAL( kEndMs, listStart[0]._windowEndMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), listStart[0]._listRegion.size() );
 
-    LiveOpsRig late;
+    LiveOpsFixture late;
     SW_EXPECT_TRUE( late.put( withPush ) == LiveOpsResult::Ok );
     late.tick( kStartMs + LiveOpsPush::kStartGraceMs + 1 );
     listStart.clear();
@@ -221,8 +221,8 @@ SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
 /** @brief [LiveOpsServiceTest] 대상: 지역이 다르면 보이지 않고, 클라이언트에게 숨긴 이벤트는 서버 쪽 조회에서만 보인다 */
 SW_TEST_CASE( LiveOpsServiceTest, AudienceFilters )
 {
-    LiveOpsRig   rig;
-    LiveEventDef regional = LiveOpsTestUtil::makeEvent( "regional" );
+    LiveOpsFixture rig;
+    LiveEventDef   regional = LiveOpsTestUtil::makeEvent( "regional" );
     regional._listRegion.push_back( "kr" );
     LiveEventDef hidden    = LiveOpsTestUtil::makeEvent( "hidden" );
     hidden._bClientVisible = SW_FALSE;
@@ -239,7 +239,7 @@ SW_TEST_CASE( LiveOpsServiceTest, AudienceFilters )
 SW_TEST_CASE( LiveOpsServiceTest, ParametersResolveRemoteConfig )
 {
     SW_EXPECT_LOG( "LiveOpsService.LiveOpsRemoteConfigKey" );
-    LiveOpsRig rig;
+    LiveOpsFixture rig;
     rig.setConfigText( "sale.percent", "30" );
     LiveEventDef definition = LiveOpsTestUtil::makeEvent();
     definition._listParameter.push_back( LiveOpsTestUtil::makeParameter( "percent", "@sale.percent" ) );
@@ -262,7 +262,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParametersResolveRemoteConfig )
 /** @brief [LiveOpsServiceTest] 긴급 스위치: 끄면 아무 이벤트도 보이지 않고 클라이언트가 다시 받게 알린다. 켜면 돌아온다 */
 SW_TEST_CASE( LiveOpsServiceTest, KillSwitchHidesEverything )
 {
-    LiveOpsRig rig;
+    LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
     rig.tick( kStartMs );
     (void)rig._service.takeStateChange();
@@ -283,7 +283,7 @@ SW_TEST_CASE( LiveOpsServiceTest, KillSwitchHidesEverything )
 SW_TEST_CASE( LiveOpsServiceTest, JsonRoundTrip )
 {
     SW_EXPECT_LOG( "JSON.ParseError" );
-    LiveOpsRig rig;
+    LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
     rig.tick( kStartMs );
     vector<string> listJSON;

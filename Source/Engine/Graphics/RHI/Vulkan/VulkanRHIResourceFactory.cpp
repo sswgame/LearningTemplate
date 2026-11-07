@@ -419,7 +419,7 @@ namespace sw
         {
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbSlotSize.erase( buffer );
-            _pDevice->_constantBufferMirror.forget( buffer );
+            _pDevice->_constantBufferMirror.remove( buffer );
         }
 
         VulkanRHIDevice::VulkanBufferRecord owned;

@@ -34,7 +34,7 @@ namespace sw
     } // namespace
 
     FarmerComponent::FarmerComponent()
-        : _director{}
+        : _gameMode{}
         , _heightOffset{ 0.5f }
         , _kind{ FarmerViewKind::Farmer }
         , _lastToolUseCount{ 0 }
@@ -57,23 +57,23 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmGameModeComponent* pDirector = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const FarmGameModeComponent* pGameMode = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
         const float3 lift{ 0.0f, _heightOffset, 0.0f };
         if ( _kind == FarmerViewKind::Farmer )
         {
-            pMesh->setLocalPosition( pDirector->getPlayerPosition() + lift );
+            pMesh->setLocalPosition( pGameMode->getPlayerPosition() + lift );
             // 도구를 쓸 때마다 몸이 그 동작을 한 번 한다(그래프가 끝나면 이동으로 돌아간다). 애니메이터가 없는 몸(정적 메시)은 동작이 없다.
             SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
-            if ( pAnimator != nullptr && pDirector->getToolUseCount() != _lastToolUseCount )
-                pAnimator->getParameters().setTrigger( hashed_string( getToolTrigger( pDirector->getLastUsedTool() ) ) );
-            _lastToolUseCount = pDirector->getToolUseCount();
+            if ( pAnimator != nullptr && pGameMode->getToolUseCount() != _lastToolUseCount )
+                pAnimator->getParameters().setTrigger( hashed_string( getToolTrigger( pGameMode->getLastUsedTool() ) ) );
+            _lastToolUseCount = pGameMode->getToolUseCount();
             return;
         }
         int32      x       = 0;
         int32      y       = 0;
-        const bool bOnTile = pDirector->findTargetTile( x, y );
+        const bool bOnTile = pGameMode->findTargetTile( x, y );
         if ( pMesh->isVisible() != bOnTile )
             pMesh->setVisible( bOnTile );
         if ( bOnTile )

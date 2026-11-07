@@ -1,6 +1,6 @@
 /**
- * @file AutomationOutcome.h
- * @brief 시나리오 한 편이 끝난 까닭(`AutomationOutcome`)을 정의합니다. 숫자 값은 없습니다 — 프로세스 종료 코드로의 번역은 `AutomationExitCode.h` 가 맡습니다.
+ * @file AutomationResult.h
+ * @brief 시나리오 한 편이 끝난 까닭(`AutomationResult`)을 정의합니다. 숫자 값은 없습니다 — 프로세스 종료 코드로의 번역은 `AutomationExitCode.h` 가 맡습니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -15,7 +15,7 @@ namespace sw
      *          정수 값을 일부러 두지 않았다 — 종료 코드는 App 이 밖으로 내는 약속이라 이 열거형이 곧 코드가 되면 실행기의 결과 형식이 종료 코드 표에 묶인다.
      */
     ENUM()
-    enum class AutomationOutcome : uint8
+    enum class AutomationResult : uint8
     {
         Running,
         Passed,

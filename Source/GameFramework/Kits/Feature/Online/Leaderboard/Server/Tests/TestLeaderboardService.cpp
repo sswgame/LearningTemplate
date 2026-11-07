@@ -41,7 +41,7 @@ namespace
     };
 
     /** @brief 서버 하나입니다. 캐시는 자기 것이고 영속 데이터는 빌립니다 — 같은 데이터로 둘째를 만들면 "캐시를 잃고 다시 뜬 서버" 입니다. */
-    struct LeaderboardRig
+    struct LeaderboardFixture
     {
         MemoryEphemeralDatabase _cacheData;
         MemoryEphemeralStore    _cache;
@@ -50,7 +50,7 @@ namespace
         LeaderboardService      _service;
         uint64                  _nextTag{ 1 };
 
-        LeaderboardRig( ManualClock& clock, MemoryServiceDatabase& database )
+        LeaderboardFixture( ManualClock& clock, MemoryServiceDatabase& database )
             : _cacheData{ clock }
             , _cache{ &_cacheData }
             , _router{}
@@ -64,7 +64,7 @@ namespace
             _service.initialize( dependencies );
         }
 
-        ~LeaderboardRig()
+        ~LeaderboardFixture()
         {
             pump();
             _service.shutdown();
@@ -83,7 +83,7 @@ namespace
         {
             pump();
             vector<LeaderboardCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             if ( listCompletion.empty() )
                 return LeaderboardCompletion{};
@@ -203,7 +203,7 @@ namespace
     {
         ManualClock           _clock;
         MemoryServiceDatabase _database;
-        LeaderboardRig        _rig;
+        LeaderboardFixture    _rig;
 
         LeaderboardWorld()
             : _clock{ MonotonicMilliseconds{ 1000 } }
@@ -264,8 +264,8 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
 /** @brief [LeaderboardServiceTest] 갱신 방식: Best 는 정렬 방향으로 더 좋을 때만, Latest 는 덮어쓰기, Sum 은 더하되 상한에서 멈춘다 */
 SW_TEST_CASE( LeaderboardServiceTest, UpdateModesApply )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     rig.addBoard( "fastest", LeaderboardOrder::Ascending );
     rig.addBoard( "latest", LeaderboardOrder::Descending, LeaderboardUpdate::Latest );
@@ -292,8 +292,8 @@ SW_TEST_CASE( LeaderboardServiceTest, UpdateModesApply )
 /** @brief [LeaderboardServiceTest] 틀린 제출은 저장소에 닿지 않고 까닭을 돌려준다. 태그가 0 이면 완료가 없다 */
 SW_TEST_CASE( LeaderboardServiceTest, InvalidSubmitsAreRefused )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     rig.addSeasonBoard( "season", 1 );
     const uint64 commitsBefore = world._database.getCommitCount();
@@ -310,15 +310,15 @@ SW_TEST_CASE( LeaderboardServiceTest, InvalidSubmitsAreRefused )
     rig._service.submitScore( "nope", 1, "", 1, UnixMilliseconds{ kNowMs }, 0 );
     rig.pump();
     vector<LeaderboardCompletion> listCompletion;
-    rig._service.drainCompletions( listCompletion );
+    rig._service.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() );
 }
 
 /** @brief [LeaderboardServiceTest] 상위 조회: 순위 · 점수 · 이름 · 쪽 나누기. 오름차순 보드는 작은 값이 1 등이고 점수를 원래 부호로 돌려준다 */
 SW_TEST_CASE( LeaderboardServiceTest, TopReadsRanksScoresAndNames )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     rig.addBoard( "fastest", LeaderboardOrder::Ascending );
     (void)rig.submit( "best", 1, 10, kNowMs, "one" );
@@ -357,8 +357,8 @@ SW_TEST_CASE( LeaderboardServiceTest, TopReadsRanksScoresAndNames )
 /** @brief [LeaderboardServiceTest] 주변 조회: 나를 포함해 위아래 반경이고 맨 위에서는 위가 잘린다. 점수가 없으면 NotRanked */
 SW_TEST_CASE( LeaderboardServiceTest, AroundReadsNeighbours )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     for ( uint64 accountID = 1; accountID <= 5; ++accountID )
     {
@@ -385,8 +385,8 @@ SW_TEST_CASE( LeaderboardServiceTest, TiesRankTheSameEverywhere )
 {
     for ( const LeaderboardOrder order : { LeaderboardOrder::Descending, LeaderboardOrder::Ascending } )
     {
-        LeaderboardWorld world;
-        LeaderboardRig&  rig = world._rig;
+        LeaderboardWorld    world;
+        LeaderboardFixture& rig = world._rig;
         rig.addSeasonBoard( "season", 1, order );
         for ( const uint64 accountID : { uint64( 7 ), uint64( 3 ), uint64( 5 ) } )
         {
@@ -426,7 +426,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildsRanksAfterCacheLoss )
     (void)world._rig.submit( "fastest", 1, 30 );
     (void)world._rig.submit( "fastest", 2, 10 );
 
-    LeaderboardRig restarted{ world._clock, world._database };
+    LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "fastest", LeaderboardOrder::Ascending );
     restarted._service.submitScore( "fastest", 3, "late", 20, UnixMilliseconds{ kNowMs }, 0 ); // 완료는 다시 채우는 동안 온다
     restarted._service.readTop( "fastest", 0, 10, UnixMilliseconds{ kNowMs }, 1 );
@@ -436,7 +436,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildsRanksAfterCacheLoss )
     restarted.pump();
 
     vector<LeaderboardCompletion> listCompletion;
-    restarted._service.drainCompletions( listCompletion );
+    restarted._service.takeCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
     const LeaderboardCompletion& full = listCompletion[0]._requestTag == 1 ? listCompletion[0] : listCompletion[1];
     SW_REQUIRE_EQUAL( size_t( 3 ), full._listEntry.size() );
@@ -454,7 +454,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildFailureReportsThenRecovers )
     world._rig.addBoard( "best" );
     (void)world._rig.submit( "best", 1, 30 );
 
-    LeaderboardRig restarted{ world._clock, world._database };
+    LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "best" );
     world._database.armFault( ServiceStoreFault::RejectRead );
     SW_EXPECT_TRUE( restarted.top( "best" )._result == LeaderboardResult::Unavailable );
@@ -466,8 +466,8 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildFailureReportsThenRecovers )
 /** @brief [LeaderboardServiceTest] 쓰기가 실패하면 Unavailable 이고 순위에 나타나지 않는다 */
 SW_TEST_CASE( LeaderboardServiceTest, FailedWriteDoesNotReachRanks )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     world._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.submit( "best", 1, 30 )._result == LeaderboardResult::Unavailable );
@@ -477,8 +477,8 @@ SW_TEST_CASE( LeaderboardServiceTest, FailedWriteDoesNotReachRanks )
 /** @brief [LeaderboardServiceTest] 기간: 초기화 분이 지나면 빈 보드로 시작하고, 기간 id 는 기간 시작 시각이며, 순위 캐시는 기간 끝 + 하루까지만 남긴다 */
 SW_TEST_CASE( LeaderboardServiceTest, DailyBoardsResetAtTheirMinute )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
     const LeaderboardDef* pBoard = rig._service.findBoard( "daily" );
     SW_REQUIRE_TRUE( pBoard != nullptr );
@@ -510,9 +510,9 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardsResetAtTheirMinute )
 /** @brief [LeaderboardServiceTest] 통계: 방식대로 바뀌고 연결된 보드에 누적값이 들어가며, 안 바뀌면 보드도 그대로다. 틀린 이름은 Invalid */
 SW_TEST_CASE( LeaderboardServiceTest, StatsFeedLinkedBoards )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
-    LeaderboardDef   linked;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    LeaderboardDef      linked;
     linked._boardID    = "kills_board";
     linked._sourceStat = "kills";
     linked._update     = LeaderboardUpdate::Latest;
@@ -542,8 +542,8 @@ SW_TEST_CASE( LeaderboardServiceTest, StatsFeedLinkedBoards )
 SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
 {
     SW_EXPECT_LOG( "LeaderboardService.LeaderboardStatsAccountCould" );
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     (void)rig.stat( 1, "rating", 1500, LeaderboardUpdate::Latest );
 
     int64 value = 0;
@@ -579,18 +579,18 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
 /** @brief [LeaderboardServiceTest] 업적: 임계값을 넘으면 알림과 보상 우편이 한 번만 나가고, 다시 넘어도 그대로다 */
 SW_TEST_CASE( LeaderboardServiceTest, AchievementUnlocksOnce )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addAchievement( "ten_kills", "kills", 10 );
 
     (void)rig.stat( 1, "kills", 9, LeaderboardUpdate::Latest );
     vector<AchievementUnlock> listUnlock;
-    rig._service.drainAchievementUnlocks( listUnlock );
+    rig._service.pollAchievementUnlocks( listUnlock );
     SW_EXPECT_TRUE( listUnlock.empty() );
     SW_EXPECT_EQUAL( 0, world.countMail() );
 
     (void)rig.stat( 1, "kills", 10, LeaderboardUpdate::Latest );
-    rig._service.drainAchievementUnlocks( listUnlock );
+    rig._service.pollAchievementUnlocks( listUnlock );
     SW_REQUIRE_EQUAL( size_t( 1 ), listUnlock.size() );
     SW_EXPECT_EQUAL( uint64( 1 ), listUnlock[0]._accountID );
     SW_EXPECT_EQUAL( string( "ten_kills" ), listUnlock[0]._state._achievementID );
@@ -598,7 +598,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AchievementUnlocksOnce )
 
     listUnlock.clear();
     (void)rig.stat( 1, "kills", 20, LeaderboardUpdate::Latest );
-    rig._service.drainAchievementUnlocks( listUnlock );
+    rig._service.pollAchievementUnlocks( listUnlock );
     SW_EXPECT_TRUE( listUnlock.empty() );
     SW_EXPECT_EQUAL( 1, world.countMail() );
 
@@ -611,8 +611,8 @@ SW_TEST_CASE( LeaderboardServiceTest, AchievementUnlocksOnce )
 /** @brief [LeaderboardServiceTest] 업적 저장이 실패하면 달성도 우편도 없고, 다음 통계 변화에서 다시 시도한다 */
 SW_TEST_CASE( LeaderboardServiceTest, AchievementRetriesAfterFailedCommit )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addAchievement( "ten_kills", "kills", 10 );
     world._database.armFault( ServiceStoreFault::RejectCommit, 1 ); // 통계 쓰기는 지나가고 업적 쓰기가 진다
     (void)rig.stat( 1, "kills", 10, LeaderboardUpdate::Latest );
@@ -620,7 +620,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AchievementRetriesAfterFailedCommit )
 
     (void)rig.stat( 1, "kills", 11, LeaderboardUpdate::Latest );
     vector<AchievementUnlock> listUnlock;
-    rig._service.drainAchievementUnlocks( listUnlock );
+    rig._service.pollAchievementUnlocks( listUnlock );
     SW_EXPECT_EQUAL( size_t( 1 ), listUnlock.size() );
     SW_EXPECT_EQUAL( 1, world.countMail() );
 }
@@ -628,8 +628,8 @@ SW_TEST_CASE( LeaderboardServiceTest, AchievementRetriesAfterFailedCommit )
 /** @brief [LeaderboardServiceTest] 업적 진행률: id 순서이고, 숨긴 업적은 달성 전에 id · 진행 · 임계값을 가리며, 달성 뒤에는 보인다 */
 SW_TEST_CASE( LeaderboardServiceTest, ProgressMasksHiddenAchievements )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addAchievement( "b_open", "kills", 10 );
     rig.addAchievement( "a_hidden", "kills", 20, true, 0 );
     (void)rig.stat( 1, "kills", 5, LeaderboardUpdate::Latest );
@@ -658,8 +658,8 @@ SW_TEST_CASE( LeaderboardServiceTest, ProgressMasksHiddenAchievements )
 /** @brief [LeaderboardServiceTest] 친구 순위: 점수 없는 계정은 빠지고 같은 계정은 한 번이며, 영속 값이라 캐시를 잃어도 같다. 비었거나 상한을 넘으면 Invalid */
 SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "best" );
     (void)rig.submit( "best", 1, 10, kNowMs, "one" );
     (void)rig.submit( "best", 2, 30, kNowMs, "two" );
@@ -672,7 +672,7 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
     SW_EXPECT_EQUAL( string( "three" ), friends._listEntry[0]._displayName );
     SW_EXPECT_EQUAL( 2, friends._listEntry[1]._rank );
 
-    LeaderboardRig restarted{ world._clock, world._database };
+    LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "best" );
     SW_EXPECT_EQUAL( size_t( 2 ), restarted.scoresOf( "best", vector<AccountID>{ 1, 3 } )._listEntry.size() );
 
@@ -685,8 +685,8 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
 /** @brief [LeaderboardServiceTest] 정산: 순위와 점수를 남기고 구간대로 보상하며, 구간 밖은 결과만 남는다. 시즌 결과 조회의 오류 길도 본다 */
 SW_TEST_CASE( LeaderboardServiceTest, SettlementRecordsRanksAndRewards )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addBoard( "plain" );
     rig.addSeasonBoard( "season", 2 );
     (void)rig.submit( "season", 1, 10, kInSeasonMs );
@@ -720,8 +720,8 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementRecordsRanksAndRewards )
 /** @brief [LeaderboardServiceTest] 정산이 도중에 실패하면 실패로 끝나고, 다시 돌면 남은 사람만 처리한다 — 앞에서 보상받은 사람에게 두 번 주지 않는다. 다 끝난 뒤 또 돌아도 그대로다 */
 SW_TEST_CASE( LeaderboardServiceTest, SettlementResumesWithoutDoublePaying )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addSeasonBoard( "season", 30 ); // 커밋 하나에 12 명이라 30 명이면 커밋 셋이다
     for ( uint64 accountID = 1; accountID <= 30; ++accountID )
     {
@@ -745,8 +745,8 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementResumesWithoutDoublePaying )
 /** @brief [LeaderboardServiceTest] 쪽(600 명)을 넘는 정산도 순위가 이어진다 — 둘째 쪽 첫 사람은 601 등이다. 참가자가 없는 시즌은 할 일 없이 성공한다 */
 SW_TEST_CASE( LeaderboardServiceTest, SettlementPagesKeepRanksContinuous )
 {
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
     rig.addSeasonBoard( "empty", 1 );
     SW_EXPECT_EQUAL( 1, rig.settle( "empty", 1 )._succeededCount );
     SW_EXPECT_EQUAL( 0, world.countMail() );
@@ -769,9 +769,9 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
 {
     SW_EXPECT_EQUAL( string( "lb.settle.season.00000001" ), LeaderboardService::makeSettlementJobID( "season", 1 ) );
 
-    LeaderboardWorld world;
-    LeaderboardRig&  rig = world._rig;
-    ServiceScheduler scheduler;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    ServiceScheduler    scheduler;
     scheduler.initialize( &rig._store, 1 );
     rig._service.setScheduler( &scheduler );
     rig.addSeasonBoard( "season", 1 );
@@ -805,8 +805,8 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
 /** @brief [LeaderboardServiceTest] 다시 시도할 결과(일시 장애 · 경합 — `LeaderboardReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 점수 제출 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( LeaderboardServiceTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionRig<LeaderboardProtocol, LeaderboardReply> rig;
-    LeaderboardReply                                               finished;
+    test::ReplyRetentionFixture<LeaderboardProtocol, LeaderboardReply> rig;
+    LeaderboardReply                                                   finished;
     finished._result = LeaderboardResult::Ok;
     LeaderboardReply unavailable;
     unavailable._result = LeaderboardResult::Unavailable;

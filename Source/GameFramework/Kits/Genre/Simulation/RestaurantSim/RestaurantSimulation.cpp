@@ -395,9 +395,9 @@ namespace sw
         rollMarketPrices();
     }
 
-    void RestaurantSimulation::drainEvents( vector<RestaurantEvent>& outListEvent )
+    void RestaurantSimulation::pollEvents( vector<RestaurantEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void RestaurantSimulation::writeState( Archive& outArchive ) const

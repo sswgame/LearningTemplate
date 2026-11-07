@@ -84,17 +84,17 @@ namespace
      * @brief 로그인 서비스 + 바인딩 + 루프백 서버 + 클라이언트들입니다.
      * @details 서버를 먼저 내린다(저장소 → 호스트 → 남은 완료) — 완료와 `onAccountLeft` 가 서비스를 부르므로 서비스의 `shutdown` 은 그 뒤다(`LoginService.h` 의 종료 순서).
      */
-    struct AccountServerRig
+    struct AccountServerFixture
     {
-        FakeBindingCrypto                 _crypto{};
-        LoginService                      _loginService{};
-        AccountServer                     _accountServer{};
-        vector<unique_ptr<AccountClient>> _listAccount{};
-        unique_ptr<test::OnlineTestRig>   _pRig{};
+        FakeBindingCrypto                   _crypto{};
+        LoginService                        _loginService{};
+        AccountServer                       _accountServer{};
+        vector<unique_ptr<AccountClient>>   _listAccount{};
+        unique_ptr<test::OnlineTestFixture> _pRig{};
 
-        explicit AccountServerRig( const LoginServiceConfig& settings = LoginServiceConfig{} )
+        explicit AccountServerFixture( const LoginServiceConfig& settings = LoginServiceConfig{} )
         {
-            _pRig = make_unique<test::OnlineTestRig>( false );
+            _pRig = make_unique<test::OnlineTestFixture>( false );
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
             _loginService.initialize( &_pRig->_server._store, &_crypto, settings, arrMasterKey );
             _accountServer.initialize( &_loginService, AccountServerConfig{} );
@@ -102,7 +102,7 @@ namespace
             _pRig->_server.start();
         }
 
-        ~AccountServerRig()
+        ~AccountServerFixture()
         {
             _pRig.reset();
             _accountServer.shutdown();
@@ -221,9 +221,9 @@ namespace
 /** @brief [AccountServerTest] 가입 → 로그인 → 로그아웃: 로그인만 연결을 묶고, 로그아웃은 세션을 지우고 묶음을 푼다 */
 SW_TEST_CASE( AccountServerTest, RegisterLoginLogout )
 {
-    AccountServerRig rig;
-    const int32      client    = rig.addClient();
-    const AccountID  accountID = rig.registerAccount( client, "alice_01" );
+    AccountServerFixture rig;
+    const int32          client    = rig.addClient();
+    const AccountID      accountID = rig.registerAccount( client, "alice_01" );
     SW_EXPECT_NOT_EQUAL( kInvalidAccountID, accountID );
     SW_EXPECT_FALSE( rig.getAccount( client ).isLoggedIn() ); // 가입은 연결을 묶지 않는다
     StreamConnectionHandle connection;
@@ -247,9 +247,9 @@ SW_TEST_CASE( AccountServerTest, RegisterLoginLogout )
 /** @brief [AccountServerTest] 업무 실패(틀린 비밀번호 · 없는 계정)는 연결을 묶지 않고, 같은 연결이 다시 로그인할 수 있다 */
 SW_TEST_CASE( AccountServerTest, FailedLoginKeepsTheConnectionFree )
 {
-    AccountServerRig rig;
-    const int32      client    = rig.addClient();
-    const AccountID  accountID = rig.registerAccount( client, "alice_01" );
+    AccountServerFixture rig;
+    const int32          client    = rig.addClient();
+    const AccountID      accountID = rig.registerAccount( client, "alice_01" );
 
     (void)rig.getAccount( client ).login( "alice_01", "wrong-password" );
     SW_EXPECT_TRUE( rig.take( client )._result == LoginResult::WrongCredentials );
@@ -264,8 +264,8 @@ SW_TEST_CASE( AccountServerTest, FailedLoginKeepsTheConnectionFree )
 /** @brief [AccountServerTest] 패킷: 깨진 · 잘린 · 빈 몸은 kInvalidRequest 이고 서비스에 닿지 않는다. 그 뒤 같은 연결의 정상 로그인이 막히지 않는다 */
 SW_TEST_CASE( AccountServerTest, MalformedBodiesAreRefused )
 {
-    AccountServerRig rig;
-    const int32      client = rig.addClient();
+    AccountServerFixture rig;
+    const int32          client = rig.addClient();
     (void)rig.registerAccount( client, "alice_01" );
     const int32 pendingBefore = rig._loginService.getPendingCount();
 
@@ -284,9 +284,9 @@ SW_TEST_CASE( AccountServerTest, MalformedBodiesAreRefused )
 /** @brief [AccountServerTest] 세션이 있는 연결의 깨진 몸도 kInvalidRequest 이고 세션은 그대로다. 빈 서버 id 는 발급할 곳이 없어 같다. 모르는 메서드는 kNotFound 다 */
 SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
 {
-    AccountServerRig rig;
-    const int32      client    = rig.addClient();
-    const AccountID  accountID = rig.signIn( client, "alice_01" );
+    AccountServerFixture rig;
+    const int32          client    = rig.addClient();
+    const AccountID      accountID = rig.signIn( client, "alice_01" );
 
     for ( const uint16 method : { AccountMethod::kLinkCredential, AccountMethod::kLinkPlatform, AccountMethod::kUnlinkPlatform, AccountMethod::kIssueGameTicket } )
     {
@@ -301,8 +301,8 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
 /** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막아 클라이언트에 InvalidToken 이다 */
 SW_TEST_CASE( AccountServerTest, SessionMethodsNeedALogin )
 {
-    AccountServerRig rig;
-    const int32      client = rig.addClient();
+    AccountServerFixture rig;
+    const int32          client = rig.addClient();
     (void)rig.getAccount( client ).logout();
     const AccountClientReply reply = rig.take( client );
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, reply._errorCode );
@@ -313,8 +313,8 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsNeedALogin )
 /** @brief [AccountServerTest] 호스트에 묶였어도 이 바인딩의 세션이 없는 연결(테스트 로그인)은 세션 메서드가 kUnauthenticated, 로그인 메서드가 kInvalidRequest 다 */
 SW_TEST_CASE( AccountServerTest, BoundConnectionWithoutSessionIsRefused )
 {
-    AccountServerRig rig;
-    const int32      client = rig.addClient();
+    AccountServerFixture rig;
+    const int32          client = rig.addClient();
     rig._pRig->_clients.login( client, 77 );
     rig.pump();
 
@@ -327,12 +327,12 @@ SW_TEST_CASE( AccountServerTest, BoundConnectionWithoutSessionIsRefused )
 /** @brief [AccountServerTest] 로그인한 연결이 다시 로그인하면 kInvalidRequest 이고 주체는 그대로다(한 연결에 계정 하나) */
 SW_TEST_CASE( AccountServerTest, LoggedInConnectionCannotLogInAgain )
 {
-    AccountServerRig rig;
-    const int32      first     = rig.addClient();
-    const AccountID  firstID   = rig.signIn( first, "alice_01" );
-    const int32      second    = rig.addClient();
-    const AccountID  secondID  = rig.registerAccount( second, "bob_0001" );
-    const uint64     sessionID = rig._accountServer.findSessionID( firstID );
+    AccountServerFixture rig;
+    const int32          first     = rig.addClient();
+    const AccountID      firstID   = rig.signIn( first, "alice_01" );
+    const int32          second    = rig.addClient();
+    const AccountID      secondID  = rig.registerAccount( second, "bob_0001" );
+    const uint64         sessionID = rig._accountServer.findSessionID( firstID );
 
     (void)rig.getAccount( first ).login( "bob_0001", kPassword );
     const AccountClientReply reply = rig.take( first );
@@ -345,11 +345,11 @@ SW_TEST_CASE( AccountServerTest, LoggedInConnectionCannotLogInAgain )
 /** @brief [AccountServerTest] 겹쳐 보낸 로그인: 앞 로그인이 끝나기 전의 둘째는 거절한다 — 받아 주면 둘째가 묶이지 못한 채 Ok 를 받아 응답의 세션과 연결의 주체가 갈린다 */
 SW_TEST_CASE( AccountServerTest, PipelinedLoginsOnOneConnection )
 {
-    AccountServerRig rig;
-    const int32      helper   = rig.addClient();
-    const AccountID  secondID = rig.registerAccount( helper, "bob_0001" );
-    const int32      client   = rig.addClient();
-    const AccountID  firstID  = rig.registerAccount( client, "alice_01" );
+    AccountServerFixture rig;
+    const int32          helper   = rig.addClient();
+    const AccountID      secondID = rig.registerAccount( helper, "bob_0001" );
+    const int32          client   = rig.addClient();
+    const AccountID      firstID  = rig.registerAccount( client, "alice_01" );
 
     const uint64                     firstRequest  = rig.getAccount( client ).login( "alice_01", kPassword );
     const uint64                     secondRequest = rig.getAccount( client ).login( "bob_0001", kPassword );
@@ -371,10 +371,10 @@ SW_TEST_CASE( AccountServerTest, PipelinedLoginsOnOneConnection )
 /** @brief [AccountServerTest] 중복 로그인: 새 연결이 이기고, 앞 연결은 DuplicateLogin 알림을 한 번 받은 뒤 끊기며 토큰을 잃는다 */
 SW_TEST_CASE( AccountServerTest, DuplicateLoginKicksTheOldConnection )
 {
-    AccountServerRig rig;
-    const int32      first      = rig.addClient();
-    const AccountID  accountID  = rig.signIn( first, "alice_01" );
-    const uint64     oldSession = rig._accountServer.findSessionID( accountID );
+    AccountServerFixture rig;
+    const int32          first      = rig.addClient();
+    const AccountID      accountID  = rig.signIn( first, "alice_01" );
+    const uint64         oldSession = rig._accountServer.findSessionID( accountID );
 
     const int32 second = rig.addClient();
     (void)rig.getAccount( second ).login( "alice_01", kPassword );
@@ -396,7 +396,7 @@ SW_TEST_CASE( AccountServerTest, DuplicateLoginKicksTheOldConnection )
 /** @brief [AccountServerTest] 끊김: 묶음과 세션 표에서 빠지지만 저장소의 세션은 유예로 남아, 새 연결이 토큰으로 같은 세션에 돌아오고 비밀은 새로 받는다 */
 SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
 {
-    AccountServerRig        rig;
+    AccountServerFixture    rig;
     const int32             first     = rig.addClient();
     const AccountID         accountID = rig.signIn( first, "alice_01" );
     const LoginSessionToken token     = rig.getAccount( first ).getToken();
@@ -422,10 +422,10 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
 /** @brief [AccountServerTest] 위조 토큰: 비밀이 다르거나 없는 세션이면 InvalidToken 이고 연결을 묶지 않으며, 진짜 세션을 건드리지 않는다 */
 SW_TEST_CASE( AccountServerTest, ForgedResumeTokenIsRefused )
 {
-    AccountServerRig rig;
-    const int32      owner     = rig.addClient();
-    const AccountID  accountID = rig.signIn( owner, "alice_01" );
-    const uint64     sessionID = rig._accountServer.findSessionID( accountID );
+    AccountServerFixture rig;
+    const int32          owner     = rig.addClient();
+    const AccountID      accountID = rig.signIn( owner, "alice_01" );
+    const uint64         sessionID = rig._accountServer.findSessionID( accountID );
 
     LoginSessionToken wrongSecret   = rig.getAccount( owner ).getToken();
     wrongSecret._arrSecret[0]       = static_cast<uint8>( wrongSecret._arrSecret[0] + 1 );
@@ -447,7 +447,7 @@ SW_TEST_CASE( AccountServerTest, ForgedResumeTokenIsRefused )
 /** @brief [AccountServerTest] 운영 끊기: 사유 코드가 알림에 실리고, 세션이 지워져 그 토큰으로 돌아올 수 없다 */
 SW_TEST_CASE( AccountServerTest, AdministrativeRevokeCarriesTheReasonCode )
 {
-    AccountServerRig        rig;
+    AccountServerFixture    rig;
     const int32             client    = rig.addClient();
     const AccountID         accountID = rig.signIn( client, "alice_01" );
     const LoginSessionToken token     = rig.getAccount( client ).getToken();
@@ -467,13 +467,13 @@ SW_TEST_CASE( AccountServerTest, AdministrativeRevokeCarriesTheReasonCode )
 /** @brief [AccountServerTest] 다른 서버의 끊기 알림(버스): 그 세션이 이 서버에 있을 때만 끊고 사유 코드를 싣는다. 옛 세션 알림 · 자기가 낸 알림은 무시한다 */
 SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
 {
-    AccountServerRig rig;
-    const int32      client    = rig.addClient();
-    const AccountID  accountID = rig.signIn( client, "alice_01" );
-    const uint64     sessionID = rig._accountServer.findSessionID( accountID );
+    AccountServerFixture rig;
+    const int32          client    = rig.addClient();
+    const AccountID      accountID = rig.signIn( client, "alice_01" );
+    const uint64         sessionID = rig._accountServer.findSessionID( accountID );
 
-    test::OnlineTestRig&   world = *rig._pRig;
-    test::OnlineTestServer other( world._network, &world._database, &world._cacheDatabase, &world._hub, 2 );
+    test::OnlineTestFixture& world = *rig._pRig;
+    test::OnlineTestServer   other( world._network, &world._database, &world._cacheDatabase, &world._hub, 2 );
     other.start();
     const auto pumpBoth = [&]()
     { test::updateAll( { &world._server, &other }, world._clients, kNowMs, 12 ); };
@@ -508,8 +508,8 @@ SW_TEST_CASE( AccountServerTest, RateLimitReachesTheClient )
 {
     LoginServiceConfig settings;
     settings._attemptBurst = 1;
-    AccountServerRig rig( settings );
-    const int32      client = rig.addClient();
+    AccountServerFixture rig( settings );
+    const int32          client = rig.addClient();
     (void)rig.registerAccount( client, "alice_01" );
 
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
@@ -523,9 +523,9 @@ SW_TEST_CASE( AccountServerTest, RateLimitReachesTheClient )
 /** @brief [AccountServerTest] 저장소 오류는 kUnavailable 이고 연결을 묶지 않는다. 고쳐지면 같은 연결로 다시 로그인한다 */
 SW_TEST_CASE( AccountServerTest, StoreFailureIsUnavailable )
 {
-    AccountServerRig rig;
-    const int32      client    = rig.addClient();
-    const AccountID  accountID = rig.registerAccount( client, "alice_01" );
+    AccountServerFixture rig;
+    const int32          client    = rig.addClient();
+    const AccountID      accountID = rig.registerAccount( client, "alice_01" );
 
     rig._pRig->_database.armFault( ServiceStoreFault::RejectRead );
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
@@ -541,9 +541,9 @@ SW_TEST_CASE( AccountServerTest, StoreFailureIsUnavailable )
 /** @brief [AccountServerTest] 빌드 버전: 최소 판보다 낮으면 kUpdateRequired 와 상점 주소가 상세 몸으로 간다 */
 SW_TEST_CASE( AccountServerTest, UpdateRequiredCarriesTheStoreURL )
 {
-    AccountServerRig rig;
-    RemoteConfig     config;
-    const auto       setText = [&]( string_view key, string_view text, int64 version )
+    AccountServerFixture rig;
+    RemoteConfig         config;
+    const auto           setText = [&]( string_view key, string_view text, int64 version )
     {
         RemoteConfigValue value;
         value._type = RemoteConfigValueType::Text;
@@ -575,9 +575,9 @@ SW_TEST_CASE( AccountServerTest, UpdateRequiredCarriesTheStoreURL )
 /** @brief [AccountServerTest] 게스트 → 이름 연동: 응답의 신원이 클라이언트에 반영되고 토큰은 그대로이며 연동 목록에 나온다 */
 SW_TEST_CASE( AccountServerTest, GuestLinksACredential )
 {
-    AccountServerRig rig;
-    const int32      client = rig.addClient();
-    const uint8      arrDeviceSecret[LoginConstant::kDeviceSecretSize]{ 7, 7, 7 };
+    AccountServerFixture rig;
+    const int32          client = rig.addClient();
+    const uint8          arrDeviceSecret[LoginConstant::kDeviceSecretSize]{ 7, 7, 7 };
     (void)rig.getAccount( client ).guestLogin( arrDeviceSecret );
     const AccountClientReply guest = rig.take( client );
     SW_REQUIRE_TRUE( guest._result == LoginResult::Ok );
@@ -596,8 +596,8 @@ SW_TEST_CASE( AccountServerTest, GuestLinksACredential )
 /** @brief [AccountServerTest] 게임 접속 티켓은 세션이 있는 연결만 받고, 시한이 지금 뒤다 */
 SW_TEST_CASE( AccountServerTest, GameTicketNeedsASession )
 {
-    AccountServerRig rig;
-    const int32      client = rig.addClient();
+    AccountServerFixture rig;
+    const int32          client = rig.addClient();
     (void)rig.getAccount( client ).issueGameTicket( "game-1" );
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.take( client )._errorCode );
 
@@ -619,10 +619,10 @@ SW_TEST_CASE( AccountServerTest, RetryableResultReachesTheServiceAgain )
     SW_EXPECT_FALSE( AccountProtocol::isRetryable( LoginResult::WrongCredentials ) );
     SW_EXPECT_TRUE( ( AccountGrantReply{ LoginGrant{}, LoginResult::ProviderUnavailable } ).isRetryable() );
 
-    AccountServerRig  rig;
-    const int32       client    = rig.addClient();
-    const AccountID   accountID = rig.registerAccount( client, "alice_01" );
-    NetRequestOptions options;
+    AccountServerFixture rig;
+    const int32          client    = rig.addClient();
+    const AccountID      accountID = rig.registerAccount( client, "alice_01" );
+    NetRequestOptions    options;
     options._idempotencyKey = NetIdempotencyKey::makeRandom();
     rig._pRig->_database.armFault( ServiceStoreFault::RejectRead );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.sendRaw( client, AccountMethod::kLogin, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode );

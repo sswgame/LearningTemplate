@@ -151,7 +151,7 @@ namespace sw::editor
             {
                 // 하위 메뉴는 열린 동안 그 명령의 함수가 안을 그린다(대상에 따라 항목이 바뀌는 메뉴 — Add Component · Select All With).
                 const bool bSubmenuOpen = ImGui::BeginMenu( menuLabel.c_str(), bEnabled );
-                EditorSelfTestMarks::note( markKey.c_str() );
+                EditorSelfTestMarks::record( markKey.c_str() );
                 if ( bSubmenuOpen )
                 {
                     desc._submenu( state._target );
@@ -163,7 +163,7 @@ namespace sw::editor
             const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
             if ( ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, bEnabled ) )
                 chosenCommandID = desc._id;
-            EditorSelfTestMarks::note( markKey.c_str() );
+            EditorSelfTestMarks::record( markKey.c_str() );
         }
         ImGui::EndPopup();
         // 고른 명령은 다음 프레임 첫머리에 실행한다 — 패널이 그리는 중인 목록(컴포넌트 카드 · 행)이 명령 뒤에 남지 않는다.

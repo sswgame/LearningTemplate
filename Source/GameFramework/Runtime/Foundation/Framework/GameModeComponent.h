@@ -67,7 +67,7 @@ namespace sw
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 부릅니다. */
         void onSubTick( uint32 subTickID, float32 deltaTime ) override;
         /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다. 플레이를 시작하기 전에 불러야 하며, 씬 데이터는 PROPERTY `_tickAfter` 로 적습니다. */
-        void setTickAfter( GameObjectHandle director ) { _tickAfter = director; }
+        void setTickAfter( GameObjectHandle gameMode ) { _tickAfter = gameMode; }
         /** @brief 이 디렉터의 규칙이 도는 틱입니다. `_tickAfter` 를 걸었으면 규칙 서브틱이고, 아니면 주 틱입니다. 다른 디렉터가 선행 조건으로 겁니다. */
         SubTickHandle getRuleTickHandle() const;
         /**
@@ -118,10 +118,10 @@ namespace sw
          *          매니저 타입을 템플릿으로 받아서, 이 헤더는 오브젝트 매니저를 include 하지 않는다. 부르는 쪽은 이미 include 했다.
          */
         template <typename TDirector, typename TManager>
-        static const TDirector* resolve( const TManager& manager, GameObjectHandle director )
+        static const TDirector* resolve( const TManager& manager, GameObjectHandle gameMode )
         {
             // 오브젝트 타입도 매니저에서 얻어 의존 이름으로 둔다. 이 헤더에서 GameObject 는 앞 선언뿐이다.
-            const auto* pObject = manager.resolveGameObject( director );
+            const auto* pObject = manager.resolveGameObject( gameMode );
             return pObject != nullptr ? pObject->template getComponent<TDirector>() : nullptr;
         }
 

@@ -25,7 +25,7 @@ namespace sw
         (void)setField( _secondsLeft, secondsLeft, "_secondsLeft" );
     }
 
-    SettingsConfirmScreen::SettingsConfirmScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    SettingsConfirmScreen::SettingsConfirmScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _viewModel{}
         , _pSettings{ nullptr }

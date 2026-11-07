@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/SlotTable.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SlotCatalog.h"
 
 namespace sw
 {
@@ -29,8 +29,8 @@ namespace sw
     /**
      * @class AppearanceDatabase
      * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고, 루트 원소 이름으로 종류를 구분합니다.
-     * @details 파일은 다음과 같다. `slots.xml`(`SlotTable`, 반드시 필요), `sets.xml`(`EquipmentSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
-     *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleTable`), `presets.xml`(`CharacterAppearanceCatalog`).
+     * @details 파일은 다음과 같다. `slots.xml`(`SlotCatalog`, 반드시 필요), `sets.xml`(`EquipmentSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
+     *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleCatalog`), `presets.xml`(`CharacterAppearanceCatalog`).
      *          프리셋은 에셋 파일 하나에 하나씩도 둘 수 있다. `presets/` 아래의 `*.appearance.xml`(루트 `<CharacterAppearance>`)을 `presets.xml` 뒤에 읽는다.
      *          캐릭터 편집 창이 내보내는 곳이고(언리얼과 유니티의 프리셋 에셋에 해당), 씬의 `CharacterAppearanceComponent` 는 그 id 를 가리킨다.
      *          모두 읽은 뒤 `finishLoad` 가 알 수 없는 이름(슬롯, 세트, 아이템, 외형, 스키마, 매개변수, 항목, 변형, 부품, 부모)과 장착 조건 순환, 프리셋 부모 순환을 오류로 모은다.
@@ -75,11 +75,11 @@ namespace sw
         /** @brief 다시 읽은 뒤(`reloadFromFolder` 성공) 부를 델리게이트를 겁니다. 외형 컴포넌트가 다시 조립합니다. 돌려준 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerReloaded( const Delegate<void()>& delegate );
 
-        const SlotTable&                  getSlotTable() const { return _slotTable; }
+        const SlotCatalog&                getSlotCatalog() const { return _slotCatalog; }
         const EquipmentSetCatalog&        getSets() const { return _sets; }
         const ItemVisualCatalog&          getVisuals() const { return _visuals; }
         const CustomizationSchemaCatalog& getSchemas() const { return _schemas; }
-        const AppearanceRuleTable&        getRules() const { return _rules; }
+        const AppearanceRuleCatalog&      getRules() const { return _rules; }
         const CharacterAppearanceCatalog& getPresets() const { return _presets; }
         const ItemCatalog*                getItemCatalog() const { return _pItemCatalog; }
         const AppearanceLoadReport&       getReport() const { return _report; }
@@ -116,11 +116,11 @@ namespace sw
         bool               isSectionDeclared( const hashed_string& section ) const;
 
     private:
-        SlotTable                  _slotTable;
+        SlotCatalog                _slotCatalog;
         EquipmentSetCatalog        _sets;
         ItemVisualCatalog          _visuals;
         CustomizationSchemaCatalog _schemas;
-        AppearanceRuleTable        _rules;
+        AppearanceRuleCatalog      _rules;
         CharacterAppearanceCatalog _presets;
         AppearanceLoadReport       _report;
         const ItemCatalog*         _pItemCatalog;

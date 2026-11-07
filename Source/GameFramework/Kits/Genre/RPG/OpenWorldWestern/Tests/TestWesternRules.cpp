@@ -116,7 +116,7 @@ namespace
         int32 drainCount( sw::WesternLawEvent::Kind kind )
         {
             sw::vector<sw::WesternLawEvent> listEvent;
-            _law.drainEvents( listEvent );
+            _law.pollEvents( listEvent );
             int32 count = 0;
             for ( const sw::WesternLawEvent& event : listEvent )
             {
@@ -171,7 +171,7 @@ namespace
         int32 drainCount( sw::WesternHorse& horse, sw::WesternHorseEvent::Kind kind )
         {
             sw::vector<sw::WesternHorseEvent> listEvent;
-            horse.drainEvents( listEvent );
+            horse.pollEvents( listEvent );
             int32 count = 0;
             for ( const sw::WesternHorseEvent& event : listEvent )
             {
@@ -422,17 +422,17 @@ SW_TEST_CASE_F( WesternLawTest, WantedCoolsWhileUnseen )
     (void)fresh.commitCrime( "murder", _region, sw::float3{}, { makeWitness( 1, true ) }, _sight, false );
     SW_REQUIRE_TRUE( fresh.findPursuit( _region ) != nullptr );
     SW_EXPECT_EQUAL( sw::hashed_string( "Manhunt" ), fresh.findPursuit( _region )->_name );
-    sw::vector<sw::WesternLawEvent> listDrained;
-    fresh.drainEvents( listDrained );
-    listDrained.clear();
+    sw::vector<sw::WesternLawEvent> listPolled;
+    fresh.pollEvents( listPolled );
+    listPolled.clear();
 
     fresh.update( 120.0f );
     SW_EXPECT_EQUAL( 1, fresh.getWantedLevel( _region ) );
     SW_EXPECT_EQUAL( sw::hashed_string( "Search" ), fresh.findPursuit( _region )->_name );
-    fresh.drainEvents( listDrained );
+    fresh.pollEvents( listPolled );
     int32 lowered = 0;
     int32 changed = 0;
-    for ( const sw::WesternLawEvent& event : listDrained )
+    for ( const sw::WesternLawEvent& event : listPolled )
     {
         lowered += event._kind == sw::WesternLawEvent::Kind::WantedLowered ? 1 : 0;
         changed += event._kind == sw::WesternLawEvent::Kind::PursuitChanged ? 1 : 0;

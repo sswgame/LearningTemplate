@@ -74,7 +74,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터 · 유닛 · 모델 폭을 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignUnit( GameObjectHandle director, SlotHandle unitID, float32 modelWidth );
+        void assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth );
 
         /**
          * @brief 이 뷰의 메시 자리와 디렉터가 지금 가진 유닛 자리의 수평 거리입니다(감시 값 `Skirmish.ViewLagMax` 가 쓴다). 비교할 수 없으면(유닛이 없거나 아직 자리를 맞추기 전) -1 입니다.
@@ -86,7 +86,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Unit", DisplayName = "Director", Tooltip = "Object with the SkirmishGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Unit", DisplayName = "Air Height", Tooltip = "Flying units hover this high", Units = m )
         float32 _airHeight;
         PROPERTY( Category = "Unit", DisplayName = "Footprint Fill", Tooltip = "A building model is scaled to this fraction of the tiles it covers", Min = 0.0, Units = ratio )

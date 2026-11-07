@@ -60,7 +60,7 @@ namespace sw
 
     /** @brief 스킬 트리 머리(`<Tree id>`)의 칸입니다. */
     REFLECT()
-    struct SW_KIT_API SkillTreeHeadFields
+    struct SW_KIT_API SkillTreeHeadParams
     {
         REFLECT_BODY();
 

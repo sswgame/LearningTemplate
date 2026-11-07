@@ -30,14 +30,14 @@ namespace sw::editor
         struct AssetReferenceCheckEntryInternal
         {
             /** @brief 리플렉션 `AssetPath` 프로퍼티 가운데 칸 목록에 없는 것을 오류로 남깁니다. 반환은 그 수입니다. */
-            static uint32 checkReflectedFields( const AssetReferenceFields& fields )
+            static uint32 checkReflectedFields( const AssetReferenceFields& params )
             {
                 uint32 problemCount{ 0 };
-                editor::getSubsystem<TypeRegistry>().forEachType( [&fields, &problemCount]( const TypeInfo& type )
+                editor::getSubsystem<TypeRegistry>().forEachType( [&params, &problemCount]( const TypeInfo& type )
                 {
                     for ( const PropertyInfo& property : type._listProperty )
                     {
-                        if ( property._metadata->_bAssetPath == SW_FALSE || fields.isField( property._name.c_str() ) )
+                        if ( property._metadata->_bAssetPath == SW_FALSE || params.isField( property._name.c_str() ) )
                             continue;
                         SW_LOG_ERROR_ID( "AssetReferenceCheck.FieldNotListed", "%#.%# is an AssetPath property but '%#' is not in %# - its paths would not be checked or fixed on move. The build rewrites that file: commit it",
                                          type._fullyQualifiedName.c_str(), property._name.c_str(), property._name.c_str(), AssetReferenceFields::kGeneratedFile );
@@ -48,14 +48,14 @@ namespace sw::editor
             }
 
             /** @brief 파일 하나의 참조 가운데 없는 것을 `파일:줄` 과 함께 오류로 남깁니다. 반환은 그 수입니다. */
-            static uint32 checkFile( const AssetReferenceFields& fields, const AssetIDSet& assets, string_view label, string_view text, AssetReferenceSyntax syntax )
+            static uint32 checkFile( const AssetReferenceFields& params, const AssetIDSet& assets, string_view label, string_view text, AssetReferenceSyntax syntax )
             {
                 vector<AssetReference> listReference;
-                fields.extract( text, syntax, listReference );
+                params.extract( text, syntax, listReference );
                 uint32 problemCount{ 0 };
                 for ( const AssetReference& reference : listReference )
                 {
-                    if ( fields.isChecked( reference._path ) == false || fields.resolves( reference._path, assets ) )
+                    if ( params.isChecked( reference._path ) == false || params.resolves( reference._path, assets ) )
                         continue;
                     SW_LOG_ERROR_ID( "AssetReferenceCheck.Missing", "%#:%#: %# = '%#' does not exist", label, reference._line, reference._field, reference._path );
                     ++problemCount;
@@ -67,10 +67,10 @@ namespace sw::editor
             static int32 checkAssetReferences()
             {
                 const string&        projectRoot = ProcessRoots::get()._project.str();
-                AssetReferenceFields fields;
-                if ( fields.load( projectRoot ) == false )
+                AssetReferenceFields params;
+                if ( params.load( projectRoot ) == false )
                     return -1;
-                uint32 problemCount = checkReflectedFields( fields );
+                uint32 problemCount = checkReflectedFields( params );
 
                 // 트리의 파일이 있는 것이다(임포트 산출물 포함 — ctest 는 임포트 단계 뒤에 돈다). 참조자는 그 가운데 글 에셋이다.
                 const string&  contentRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
@@ -89,7 +89,7 @@ namespace sw::editor
                         continue;
                     assetID = FileUtil::normalizeSeparators( assetID );
                     assets.addFile( assetID );
-                    if ( fields.isReferrer( assetID ) )
+                    if ( params.isReferrer( assetID ) )
                         listReferrer.emplace_back( filePath, assetID );
                 }
 
@@ -99,15 +99,15 @@ namespace sw::editor
                     string text;
                     if ( FileUtil::readTextFile( filePath, text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
-                    problemCount += checkFile( fields, assets, "Content/" + assetID, text, AssetReferenceFields::syntaxOf( assetID ) );
+                    problemCount += checkFile( params, assets, "Content/" + assetID, text, AssetReferenceFields::syntaxOf( assetID ) );
                     ++scannedCount;
                 }
-                for ( const string& cmakeFile : fields.getCMakeFiles() )
+                for ( const string& cmakeFile : params.getCMakeFiles() )
                 {
                     string text;
                     if ( FileUtil::readTextFile( FileUtil::joinPath( projectRoot, cmakeFile ), text ) == false )
                         return -1; // 칸 목록이 적은 파일이 없으면 목록이 틀린 것이다
-                    problemCount += checkFile( fields, assets, cmakeFile, text, AssetReferenceSyntax::CMake );
+                    problemCount += checkFile( params, assets, cmakeFile, text, AssetReferenceSyntax::CMake );
                     ++scannedCount;
                 }
                 SW_LOG_INFO_ID( "AssetReferenceCheck.Summary", "Asset reference check: %# files, %# problems (fields: %#)", scannedCount, problemCount, AssetReferenceFields::kConfigFile );

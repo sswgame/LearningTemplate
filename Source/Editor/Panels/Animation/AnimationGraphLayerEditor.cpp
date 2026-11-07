@@ -26,13 +26,13 @@ namespace sw::editor
         struct AnimationGraphLayerEditorInternal
         {
             /** @brief 값 입력란 앞 이름의 폭입니다(DPI 배율 전). */
-            static void noteIndexedMark( const utf8* pPrefix, size_t index )
+            static void recordIndexedMark( const utf8* pPrefix, size_t index )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
                 fixed_string<constant::buffer::kMax64> key;
                 formatstring( key.data(), key.capacity(), "%#.%#", pPrefix, static_cast<uint64>( index ) );
-                EditorSelfTestMarks::note( key.c_str() );
+                EditorSelfTestMarks::record( key.c_str() );
             }
 
             static void drawRowLabel( const utf8* pLabel )
@@ -125,7 +125,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( index ) );
             if ( ImGui::Selectable( label.c_str(), _selectedLayer == static_cast<int32>( index ) ) )
                 _selectedLayer = static_cast<int32>( index );
-            AnimationGraphLayerEditorInternal::noteIndexedMark( "animationGraph.layer", index );
+            AnimationGraphLayerEditorInternal::recordIndexedMark( "animationGraph.layer", index );
             ImGui::PopID();
         }
 
@@ -134,7 +134,7 @@ namespace sw::editor
             _selectedLayer = AnimationGraphLayerEdit::addLayer( inoutGraph );
             pEdit          = "Add Animation Layer";
         }
-        EditorSelfTestMarks::note( "animationGraph.layer.add" );
+        EditorSelfTestMarks::record( "animationGraph.layer.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddLayerTip" ) );
         const int32 layerCount = static_cast<int32>( listLayer.size() );
         const bool  bSelected  = 0 <= _selectedLayer && _selectedLayer < layerCount;
@@ -146,7 +146,7 @@ namespace sw::editor
             _selectedLayer = -1;
             pEdit          = "Remove Animation Layer";
         }
-        EditorSelfTestMarks::note( "animationGraph.layer.remove" );
+        EditorSelfTestMarks::record( "animationGraph.layer.remove" );
         // 레이어는 적은 순서대로 얹으므로 순서가 결과를 바꾼다(뒤의 레이어가 위다).
         ImGui::BeginDisabled( bSelected == false || _selectedLayer == 0 );
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
@@ -308,7 +308,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( index ) );
             if ( ImGui::Selectable( label.c_str(), _selectedMask == static_cast<int32>( index ) ) )
                 _selectedMask = static_cast<int32>( index );
-            AnimationGraphLayerEditorInternal::noteIndexedMark( "animationGraph.mask", index );
+            AnimationGraphLayerEditorInternal::recordIndexedMark( "animationGraph.mask", index );
             ImGui::PopID();
         }
 
@@ -317,7 +317,7 @@ namespace sw::editor
             _selectedMask = AnimationGraphLayerEdit::addMask( inoutGraph );
             pEdit         = "Add Bone Mask";
         }
-        EditorSelfTestMarks::note( "animationGraph.mask.add" );
+        EditorSelfTestMarks::record( "animationGraph.mask.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddBoneMaskTip" ) );
         const bool                    bSelected = 0 <= _selectedMask && _selectedMask < static_cast<int32>( listMask.size() );
         const AnimationGraphLayerDef* pUser =
@@ -331,7 +331,7 @@ namespace sw::editor
             pEdit         = "Remove Bone Mask";
         }
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "animationGraph.mask.remove" );
+        EditorSelfTestMarks::record( "animationGraph.mask.remove" );
         if ( pUser != nullptr )
             ImGui::SetItemTooltip( "%s", SW_LOCKEYFORMAT( "EdFormat", "UsedByLayer", TextArgumentList().addText( "layer", pUser->_name.c_str() ) ).c_str() );
         return pEdit;
@@ -441,7 +441,7 @@ namespace sw::editor
             inoutMask._listEntry.push_back( entry );
             pInoutEdit = "Edit Bone Mask";
         }
-        EditorSelfTestMarks::note( "animationGraph.mask.addBone" );
+        EditorSelfTestMarks::record( "animationGraph.mask.addBone" );
         ImGui::EndDisabled();
     }
 } // namespace sw::editor

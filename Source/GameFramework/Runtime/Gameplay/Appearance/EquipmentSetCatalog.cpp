@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    bool EquipmentSetCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool EquipmentSetCatalog::loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
@@ -92,7 +92,7 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Complete" ) )
                 {
-                    EquipmentSetCompleteFields complete;
+                    EquipmentSetCompleteParams complete;
                     (void)AppearanceXMLUtil::readFields( child, complete, report, sourceName, { "slots" } );
                     def._completeVisual = complete._visual;
                     AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );

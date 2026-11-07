@@ -84,7 +84,7 @@ namespace sw
          */
         void setRasterBudgetNanoseconds( int64 budgetNanoseconds ) { _rasterBudgetNanoseconds = budgetNanoseconds; }
         /** @brief 면 하나의 글리프를 모두 테이블에서 지웁니다(면을 닫을 때). 아틀라스 영역은 페이지를 비울 때 돌아옵니다. */
-        void forgetFace( FontFaceID face );
+        void removeFace( FontFaceID face );
 
         /** @brief 아틀라스입니다(렌더러에 업로드를 넘길 때 `takeUploads`). */
         GlyphAtlas&       getAtlas() { return _atlas; }
@@ -102,7 +102,7 @@ namespace sw
         /** @brief 표에 없는 글리프를 래스터화해 아틀라스에 올리고 표에 넣습니다. 실패(래스터화 실패, 자리 없음)면 nullptr 입니다. */
         const CachedGlyph* rasterizeAndAdd( FontFaceID face, uint32 glyphIndex, uint64 frameIndex );
         /** @brief 비운 페이지에 있던 글리프를 표에서 지웁니다. */
-        void forgetPage( uint32 page );
+        void removePage( uint32 page );
 
     private:
         IFontRasterizer&                   _rasterizer;

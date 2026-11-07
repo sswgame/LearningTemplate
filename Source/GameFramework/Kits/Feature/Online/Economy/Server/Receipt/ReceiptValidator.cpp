@@ -114,11 +114,11 @@ namespace sw
         }
     }
 
-    void ReceiptValidatorRegistry::forgetRefund( const ReceiptRefundNotification& notice )
+    void ReceiptValidatorRegistry::removeRefund( const ReceiptRefundNotification& notice )
     {
         IReceiptValidator* pValidator = findValidator( notice._storeName );
         if ( pValidator != nullptr )
-            pValidator->forgetRefund( notice._transactionID );
+            pValidator->removeRefund( notice._transactionID );
     }
 
     bool ReceiptValidatorRegistry::usesDeliveryConfirmation() const
@@ -140,7 +140,7 @@ namespace sw
         return true;
     }
 
-    void ReceiptValidatorRegistry::pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome )
+    void ReceiptValidatorRegistry::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome )
     {
         for ( IReceiptValidator* pValidator : _listValidator )
         {

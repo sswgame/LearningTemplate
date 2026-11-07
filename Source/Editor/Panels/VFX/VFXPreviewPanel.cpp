@@ -110,18 +110,18 @@ namespace sw::editor
             reloadDocument();
             _model.requestResync(); // 다시 읽은 효과를 미리보기에 다시 건다
         }
-        EditorSelfTestMarks::note( "vfx.reload" );
+        EditorSelfTestMarks::record( "vfx.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheEffectFileAgainAfterSaving" ) );
         VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) && pSubject != nullptr )
             pSubject->play();
-        EditorSelfTestMarks::note( "vfx.restart" );
+        EditorSelfTestMarks::record( "vfx.restart" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheEffectAgainFromTheStart" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) && pSubject != nullptr )
             pSubject->stop();
-        EditorSelfTestMarks::note( "vfx.stop" );
+        EditorSelfTestMarks::record( "vfx.stop" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "StopAndClearTheParticles" ) );
         ImGui::SameLine();
         // GPU 방출기의 살아 있는 입자는 GPU 버퍼에만 있다 — 이번 재생에서 만든 수(일정)와 CPU 방출기의 살아 있는 수를 따로 보인다.
@@ -137,7 +137,7 @@ namespace sw::editor
             _model.syncEffect( getPreviewScene(), getLoadedAssetPath() );
         const float2 viewSize = computeViewportFillSize( VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
-        EditorSelfTestMarks::note( "vfx.previewScene" );
+        EditorSelfTestMarks::record( "vfx.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 

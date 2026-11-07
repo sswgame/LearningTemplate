@@ -536,20 +536,20 @@ namespace sw
                 escapedMessage = StringUtil::escapeInvalidUTF8( message );
                 message        = escapedMessage;
             }
-            JSONLogFields fields;
-            fields._time             = stamp._text.c_str();
-            fields._unixMilliseconds = WallClock::nowUnixMilliseconds().count();
-            fields._level            = level;
-            fields._tag              = pEffectiveTag;
-            fields._message          = message;
-            fields._id               = pID != nullptr ? string_view{ pID } : string_view{};
-            fields._file             = pEffectiveFile;
-            fields._line             = line;
-            fields._context          = context;
+            JSONLogFields params;
+            params._time             = stamp._text.c_str();
+            params._unixMilliseconds = WallClock::nowUnixMilliseconds().count();
+            params._level            = level;
+            params._tag              = pEffectiveTag;
+            params._message          = message;
+            params._id               = pID != nullptr ? string_view{ pID } : string_view{};
+            params._file             = pEffectiveFile;
+            params._line             = line;
+            params._context          = context;
             LogClock clock{ LogClock::Tick };
-            fields._bHasClock = Logger::getClockNumber( clock, fields._clockNumber );
-            fields._clock     = clock;
-            JSONLinesLogOutput::appendLine( record._json, fields );
+            params._bHasClock = Logger::getClockNumber( clock, params._clockNumber );
+            params._clock     = clock;
+            JSONLinesLogOutput::appendLine( record._json, params );
         }
         submitRecord( std::move( record ) );
     }

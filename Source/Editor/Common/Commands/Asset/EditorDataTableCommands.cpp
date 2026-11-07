@@ -258,7 +258,7 @@ namespace sw::editor
         inoutSheet._listRemovedKey.clear();
 
         // 올린 프로젝트가 아니면 NotTracked — 다시 읽을 것이 없다. 저장은 끝났으니 다시 읽기 실패(관리자가 오류를 남겼다)는 실행 중 글이 예전 것이라는 알림이다.
-        const bool bReloadFailed = editor::getSubsystem<LocalizationManager>().reloadChangedFile( inoutSheet._projectPath ) == ReloadOutcome::Failed;
+        const bool bReloadFailed = editor::getSubsystem<LocalizationManager>().reloadChangedFile( inoutSheet._projectPath ) == ReloadResult::Failed;
         SW_LOG_INFO_ID( "EditorDataTableCommands.SavedLocalizationProject", "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
         if ( bReloadFailed )
             SW_LOG_WARNING_ID( "EditorDataTableCommands.RunningGameKeepsPrevious", "The running game keeps the previous text of '%#' until it reloads", inoutSheet._projectPath.c_str() );

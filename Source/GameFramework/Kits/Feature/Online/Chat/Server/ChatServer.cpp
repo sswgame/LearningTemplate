@@ -112,7 +112,7 @@ namespace sw
     void ChatServer::flushServiceOutput( OnlineServiceHost& host )
     {
         _listTopicScratch.clear();
-        _pService->drainBusTopicChanges( _listTopicScratch );
+        _pService->pollBusTopicChanges( _listTopicScratch );
         for ( const ChatBusTopicChange& change : _listTopicScratch )
         {
             const bool bShouldListen = change._bSubscribe == SW_TRUE && host.getServerBus() != nullptr; // 서버가 한 대면 들을 버스가 없다
@@ -123,7 +123,7 @@ namespace sw
         }
 
         _listCompletionScratch.clear();
-        _pService->drainCompletions( _listCompletionScratch );
+        _pService->takeCompletions( _listCompletionScratch );
         for ( const ChatCompletion& completion : _listCompletionScratch )
         {
             NetRequestToken token;
@@ -133,7 +133,7 @@ namespace sw
         }
 
         _listDeliveryScratch.clear();
-        _pService->drainDeliveries( _listDeliveryScratch );
+        _pService->pollDeliveries( _listDeliveryScratch );
         for ( const ChatDelivery& delivery : _listDeliveryScratch )
         {
             BitWriter body;

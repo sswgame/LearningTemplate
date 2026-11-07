@@ -278,8 +278,8 @@ namespace sw
         /** @brief 시간을 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다. */
         void update( float32 deltaTime );
         /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
-        [[nodiscard]] bool claimEvents( DrainLease& outLease ) { return _eventBuffer.claim( outLease ); }
-        void               drainEvents( const DrainLease& lease, vector<RTSEvent>& outListEvent );
+        [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
+        void               pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent );
 
         // 조회
         const RTSUnit*   findUnit( RTSUnitID unitID ) const;
@@ -408,7 +408,7 @@ namespace sw
         RTSUnitBuckets        _buckets; ///< 이웃 탐색 버킷(버킷 하나는 `_settings._bucketSize` 셀)
         vector<float3>        _listNeighborScratch;
         vector<RTSUnitID>     _listQueryScratch;
-        FlowFieldCache        _flowFields; ///< 무리 이동이 목적지마다 나눠 쓰는 흐름장(땅 격자)
+        FlowFieldCache        _flowParams; ///< 무리 이동이 목적지마다 나눠 쓰는 흐름장(땅 격자)
         const RTSCatalog*     _pCatalog;
         RTSSettings           _settings;
         FixedStepTimer        _stepTimer;

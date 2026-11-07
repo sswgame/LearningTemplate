@@ -201,9 +201,9 @@ namespace sw
         return true;
     }
 
-    void PartyItemSpawner::drainEvents( vector<PartyItemEvent>& outListEvent )
+    void PartyItemSpawner::pollEvents( vector<PartyItemEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     uint32 PartyItemSpawner::loadRoot( const XMLNode& root, string_view sourceName )

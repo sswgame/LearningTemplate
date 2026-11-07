@@ -83,7 +83,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
         {
             if ( isTracingAbsent() )
-                (void)noteAbsent( site._passName, fieldName, element ); // 위치마다 한 번만 남긴다
+                (void)recordAbsent( site._passName, fieldName, element ); // 위치마다 한 번만 남긴다
             return true;
         }
         if ( site._pDevice->isBindlessIndexLive( space, index ) )
@@ -108,7 +108,7 @@ namespace sw
         return true;
     }
 
-    bool BindlessIndexValidator::noteAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
+    bool BindlessIndexValidator::recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
     {
         const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {

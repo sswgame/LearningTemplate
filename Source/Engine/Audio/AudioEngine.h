@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    struct AudioMixerDesc;
+    struct AudioMixerDef;
 
     class AudioMixer;
 
@@ -82,7 +82,7 @@ namespace sw
          * @param layout 출력 채널 구성입니다. 레이아웃은 장치를 닫은 뒤에만(`setChannelLayout`) 바꿉니다.
          * @details 그래프의 이펙트가 레이아웃을 지원하지 않으면(이펙트 종류 표의 지원 레이아웃) false 입니다.
          */
-        [[nodiscard]] bool initialize( const AudioMixerDesc& mixerDesc, AudioChannelLayout layout );
+        [[nodiscard]] bool initialize( const AudioMixerDef& mixerDesc, AudioChannelLayout layout );
         /** @brief 출력 채널 구성입니다. `render` 의 교차 출력이 이 채널 수를 가집니다. */
         AudioChannelLayout getChannelLayout() const { return _layout; }
         /**
@@ -101,7 +101,7 @@ namespace sw
          * @brief 믹서 그래프를 교체합니다. 그래프는 여기서 만들고 다음 블록부터 적용됩니다. 재생 중인 보이스는 같은 이름의 버스로 옮겨 갑니다.
          * @return 그래프가 검사를 통과하지 못하면 false 를 반환하고, 현재 그래프를 그대로 씁니다.
          */
-        [[nodiscard]] bool loadMixer( const AudioMixerDesc& mixerDesc );
+        [[nodiscard]] bool loadMixer( const AudioMixerDef& mixerDesc );
         /**
          * @brief 이벤트 라이브러리를 이름(보통 리소스 경로)으로 로드합니다. 같은 이름이 있으면 교체합니다(핫 리로드). 클립 디코드를 요청해 둡니다.
          * @return 이벤트의 버스나 감쇠가 현재 그래프와 라이브러리에 없거나, 다른 라이브러리와 이벤트나 파라미터 이름이 겹치면 오류를 남기고 false 를 반환합니다.
@@ -148,7 +148,7 @@ namespace sw
          * @brief 적응형 음악을 시작합니다. 시작 구간부터 재생하고, 재생 중인 음악은 @p fadeSeconds 동안 줄입니다. 레이어 클립의 디코드를 요청해 둡니다.
          * @return 음악의 재생 id 입니다. 구간이 바뀌어도 같습니다. 설명자가 nullptr 이면 0 을 반환합니다.
          */
-        AudioPlayingID startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds );
+        AudioPlayingID startMusic( shared_ptr<const AudioMusicDef> pMusic, float32 fadeSeconds );
         /** @brief 구간을 바꿉니다. 전환 규칙의 맞춤 지점(박, 마디, 구간 끝)에서 샘플 단위로 바꾸고 스팅어를 냅니다. 같은 구간이면 아무것도 하지 않습니다. */
         void setMusicSegment( const hashed_string& segment );
         /** @brief 음악을 @p fadeSeconds 동안 줄여 멈춥니다. */
@@ -185,7 +185,7 @@ namespace sw
         /** @brief 에미터의 위치와 속도를 정합니다. 처음이면 에미터를 만듭니다. */
         void setEmitter( AudioEmitterID emitterID, const float3& position, const float3& velocity );
         /**
-         * @brief 에미터까지 소리가 오는 길(가림 0..1, 회절 0..1, 문을 돌아 오는 겉보기 위치)을 정합니다. 가림 · 회절은 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다.
+         * @brief 에미터까지 소리가 오는 길(가림 0..1, 회절 0..1, 문을 돌아 오는 겉보기 위치)을 정합니다. 가림 · 회절은 엔진이 `AudioOcclusionDef::_smoothingSeconds` 로 따라갑니다.
          * @details 가림만 있으면 `AudioPropagation::makeOcclusion( value )` 를 넘깁니다.
          */
         void setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation );
@@ -209,8 +209,8 @@ namespace sw
          * @details 에디터의 오디오 이벤트 창이 읽습니다. @p pOutAttenuation 이 있으면 이벤트의 감쇠 프리셋(라이브러리 것을 먼저, 없으면 믹서 그래프 것)을 담고, 감쇠가 없으면 기본값으로 둡니다.
          * @return 이벤트가 없으면 false 입니다.
          */
-        [[nodiscard]] bool findEventDesc( const hashed_string& eventName, AudioEventDesc& outDesc, hashed_string& outLibraryName,
-                                          AudioAttenuationDesc* pOutAttenuation = nullptr ) const;
+        [[nodiscard]] bool findEventDesc( const hashed_string& eventName, AudioEventDef& outDesc, hashed_string& outLibraryName,
+                                          AudioAttenuationDef* pOutAttenuation = nullptr ) const;
         /** @brief 살아 있는 이벤트 인스턴스마다 마지막 블록의 상태(이벤트 · 버스 · 남은 시간 · 가상 보이스 수)를 @p outListStatus 에 담습니다(비우고 채웁니다). */
         void getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const;
         /**
@@ -271,7 +271,7 @@ namespace sw
         {
             shared_ptr<AudioMixer>              _pMixer{};      ///< SwapMixer
             shared_ptr<const AudioEventLibrary> _pLibrary{};    ///< SetLibrary 가 쓴다. nullptr 이면 언로드한다.
-            shared_ptr<const AudioMusicDesc>    _pMusic{};      ///< StartMusic
+            shared_ptr<const AudioMusicDef>     _pMusic{};      ///< StartMusic
             hashed_string                       _name{};        ///< 버스, 이벤트, 파라미터, 스냅샷, 라이브러리의 이름이다.
             hashed_string                       _path{};        ///< 클립 경로다.
             AudioClipPlayParams                 _clipParams{};  ///< PlayClip
@@ -317,7 +317,7 @@ namespace sw
         struct EventState
         {
             shared_ptr<const AudioEventLibrary> _pLibrary{};
-            const AudioEventDesc*               _pDesc{ nullptr };
+            const AudioEventDef*                _pDesc{ nullptr };
             uint64                              _lastPostFrame{ 0 };
             uint32                              _sequenceCursor{ 0 };
             int32                               _lastRandomIndex{ -1 };
@@ -328,7 +328,7 @@ namespace sw
         struct EventInstance
         {
             shared_ptr<const AudioEventLibrary> _pLibrary{}; ///< 설명자가 있는 라이브러리다. 언로드해도 인스턴스가 참조한다.
-            const AudioEventDesc*               _pDesc{ nullptr };
+            const AudioEventDef*                _pDesc{ nullptr };
             AudioPlayingID                      _playingID{ 0 };
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _startFrame{ 0 };
@@ -348,7 +348,7 @@ namespace sw
         /** @brief 에미터의 이름 붙은 파라미터를 넣거나 고칩니다. */
         void applySetEmitterParameter( const Command& command );
         /** @brief 만든 그래프로 바꿉니다(사용자 버스 상태 다시 적용, 보이스 버스 다시 찾기, 감쇠 · 스냅샷 다시 묶기). 그래프 레이아웃은 `_layout` 과 같아야 합니다. */
-        void adoptMixer( shared_ptr<AudioMixer> pMixer );
+        void applyMixer( shared_ptr<AudioMixer> pMixer );
         /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
         void renderBlock();
         /** @brief 재생 id 나 에미터의 보이스를 멈춥니다. @p fadeSeconds 가 음수면 이벤트의 값을 씁니다. */
@@ -380,11 +380,11 @@ namespace sw
         /** @brief 이벤트를 재생합니다. 쿨다운, 상한, 컨테이너를 적용합니다. */
         void applyPostEvent( const Command& command );
         /** @brief 쿨다운과 동시 재생 상한을 봅니다. 상한이면 뺏을 인스턴스를 멈춥니다. 버려야 하면(버린 수를 올리고) false 입니다. */
-        [[nodiscard]] bool tryAdmitEvent( const EventState& state, const AudioEventDesc& event );
+        [[nodiscard]] bool tryAcceptEvent( const EventState& state, const AudioEventDef& event );
         /** @brief 이벤트의 살아 있는 인스턴스 수와, 뺏을 인스턴스(정책에 가장 맞는 것)의 번호를 구합니다. 없으면 -1 입니다. */
-        int32 findStealVictim( const AudioEventDesc& event, uint32& outLiveCount ) const;
+        int32 findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const;
         /** @brief 컨테이너 종류에 따라 이번에 낼 첫 클립과 개수를 고릅니다(무작위는 앞서 낸 것을 피하고, 순차는 커서를 옮긴다). */
-        void pickEventClips( EventState& inoutState, const AudioEventDesc& event, uint32& outFirstClip, uint32& outPickCount );
+        void pickEventClips( EventState& inoutState, const AudioEventDef& event, uint32& outFirstClip, uint32& outPickCount );
         /** @brief 라이브러리를 교체하거나 언로드하고, 이벤트와 감쇠 테이블을 다시 만듭니다. */
         void applySetLibrary( const Command& command );
         /** @brief 감쇠 테이블(그래프와 라이브러리의 프리셋)을 다시 만들고, 보이스의 번호를 이름으로 다시 찾습니다. */
@@ -419,20 +419,20 @@ namespace sw
 
         AudioClipCache _clipStore; /**< 경로에서 클립으로 가는 캐시입니다. */
         // 게임 스레드
-        LockedSwapQueue<Command>                         _commandQueue;                  /**< 게임 스레드가 쌓은 명령입니다. 오디오 스레드가 블록 머리에 통째로 가져간다. */
-        ThreadRole                                       _audioThread;                   ///< 오디오 스레드 역할 — 꺼내 온 명령 목록은 믹스를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
-        vector<Command> _listApplyingCommand             SW_GUARDED_BY( _audioThread );  /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */
-        LibraryMap _mapGameLibrary                       SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 라이브러리입니다. */
-        shared_ptr<const AudioMixerDesc> _pGameMixerDesc SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
-        mutable mutex                                    _libraryMutex;                  /**< `_mapGameLibrary` 와 `_pGameMixerDesc` 를 지킵니다. 이벤트는 병렬 틱에서도 재생합니다. */
-        atomic<uint32>                                   _libraryGeneration;             /**< `_mapGameLibrary` 를 바꿀 때마다 오릅니다(`getEventLibraryGeneration`). */
-        atomic<uint64>                                   _nextPlayingID;                 /**< 다음 재생 id 입니다. */
+        LockedSwapQueue<Command>                        _commandQueue;                  /**< 게임 스레드가 쌓은 명령입니다. 오디오 스레드가 블록 머리에 통째로 가져간다. */
+        ThreadRole                                      _audioThread;                   ///< 오디오 스레드 역할 — 꺼내 온 명령 목록은 믹스를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<Command> _listApplyingCommand            SW_GUARDED_BY( _audioThread );  /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */
+        LibraryMap _mapGameLibrary                      SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 라이브러리입니다. */
+        shared_ptr<const AudioMixerDef> _pGameMixerDesc SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
+        mutable mutex                                   _libraryMutex;                  /**< `_mapGameLibrary` 와 `_pGameMixerDesc` 를 지킵니다. 이벤트는 병렬 틱에서도 재생합니다. */
+        atomic<uint32>                                  _libraryGeneration;             /**< `_mapGameLibrary` 를 바꿀 때마다 오릅니다(`getEventLibraryGeneration`). */
+        atomic<uint64>                                  _nextPlayingID;                 /**< 다음 재생 id 입니다. */
         // 오디오 스레드
         shared_ptr<AudioMixer>                       _pMixer;                         /**< 지금 그래프입니다. */
         AudioVoicePool                               _voicePool;                      /**< 보이스 슬롯과 가상화 정책입니다. */
         vector<EventInstance>                        _listInstance;                   /**< 이벤트 인스턴스 슬롯입니다. */
         AudioBlockBuffer                             _blockOutput;                    /**< 마지막 블록의 출력입니다(평면). */
-        vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
+        vector<AudioAttenuationDef>                  _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
         AudioSnapshotMixer                           _snapshotMixer;                  /**< 켜 둔 스냅샷과 버스 사용자 상태입니다(그래프를 바꿔도 이름으로 남는다). */
         AudioMusicPlayer                             _musicPlayer;                    /**< 적응형 음악의 재생 위치 · 전환 예약 · 레이어 게인입니다. */
         LibraryMap                                   _mapLibrary;                     /**< 로드한 라이브러리입니다. */

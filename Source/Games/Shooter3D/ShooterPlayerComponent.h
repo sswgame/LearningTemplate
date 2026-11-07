@@ -1,6 +1,6 @@
 /**
  * @file ShooterPlayerComponent.h
- * @brief 슈터 플레이어(폰)를 구현합니다. 무기 세 종류(연사, 탄창, 재장전, 퍼짐, 반동), 히트스캔, 체력(`Vitality`), HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름), 몸(KayKit 캐릭터), 탄도선을 맡으며 입력은 의도만 읽습니다.
+ * @brief 슈터 플레이어(폰)를 구현합니다. 무기 세 종류(연사, 탄창, 재장전, 퍼짐, 반동), 히트스캔, 체력(`CombatHealth`), HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름), 몸(KayKit 캐릭터), 탄도선을 맡으며 입력은 의도만 읽습니다.
  */
 #pragma once
 #include "Core/Container/GameObjectHandle.h"
@@ -17,7 +17,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
@@ -79,9 +79,9 @@ namespace sw
         void addWaveAmmo();
         /** @brief 수리 보상입니다. 체력을 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restoreHealth( float32 amount );
-        /** @brief 치트 `cheat.shooter.god` 입니다. 켜면 피해를 받지 않습니다(`Vitality::setDamageImmune`, 판을 다시 시작해도 남는다). */
-        void setDamageImmune( bool bImmune ) { _vitality.setDamageImmune( bImmune ); }
-        bool isDamageImmune() const { return _vitality.isDamageImmune(); }
+        /** @brief 치트 `cheat.shooter.god` 입니다. 켜면 피해를 받지 않습니다(`CombatHealth::setDamageImmune`, 판을 다시 시작해도 남는다). */
+        void setDamageImmune( bool bImmune ) { _combatHealth.setDamageImmune( bImmune ); }
+        bool isDamageImmune() const { return _combatHealth.isDamageImmune(); }
         /** @brief 스폰한 몸을 지웁니다(상태를 저장하기 전). 다음 틱이 끝난 뒤 다시 스폰합니다. */
         void despawnViews();
         /**
@@ -96,14 +96,14 @@ namespace sw
         float3 getFeetPosition() const;
         /** @brief 그릴 발 자리입니다 — 시뮬레이션 자리에 예측 보정을 녹이는 오프셋을 더한 것(몸 · 카메라). 판정(사격 · 감독)은 `getFeetPosition` 입니다. */
         float3             getDisplayFeetPosition() const;
-        float32            getHealth() const { return _vitality.getHealth(); }
+        float32            getHealth() const { return _combatHealth.getHealth(); }
         float32            getMaxHealth() const { return _maxHealth; }
-        bool               isAlive() const { return _vitality.isAlive(); }
+        bool               isAlive() const { return _combatHealth.isAlive(); }
         const WeaponState& getCurrentWeapon() const { return _arrWeapon[_weaponIndex]; }
         /** @brief 무기 슬롯 @p weaponIndex(0 소총, 1 산탄총, 2 권총)의 무기입니다. */
         const WeaponState& getWeapon( int32 weaponIndex ) const { return _arrWeapon[weaponIndex]; }
         int32              getWeaponIndex() const { return _weaponIndex; }
-        GameObjectHandle   getDirector() const { return _director; }
+        GameObjectHandle   getGameMode() const { return _gameMode; }
         /** @brief 무기의 외형 아이템(외형의 MainHand 슬롯)입니다. 무기 표의 `item` 이며, 범위 밖 슬롯이면 빈 이름입니다. */
         hashed_string getWeaponItem( int32 weaponIndex ) const;
         /** @brief 지금 보는 요(라디안, +Z 에서 +X 쪽)입니다. */
@@ -173,9 +173,9 @@ namespace sw
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;
         /** @brief 방아쇠를 당깁니다. 눈에서 @p aimDirection 으로 쏘고, 반동은 @p camera 에 준다. */
-        void fireWeapon( const ShooterGameModeComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
+        void fireWeapon( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
         /** @brief 광선 하나가 막는 상자 · 바닥에 닿는 거리입니다(닿지 않으면 사거리). 틱 안에서 부르며 물리를 묻지 않습니다. */
-        float32 traceCover( const ShooterGameModeComponent& director, const Ray& ray ) const;
+        float32 traceCover( const ShooterGameModeComponent& gameMode, const Ray& ray ) const;
         /**
          * @brief 쌓인 광선을 적의 히트박스(래그돌 바디, 레이어 `_hitboxLayer`)에 물리 질의로 쏘고, 맞은 적에 맞음을 보내며 탄도선 · 탄착 · 소리를 쌓습니다(게임 스레드).
          * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterRayHit::makeHitInfo`).
@@ -201,7 +201,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Player", DisplayName = "Spawn Position", Tooltip = "Feet position at the start and after being overrun", Units = m )
         float3 _spawnPosition;
         PROPERTY( Category = "Player", DisplayName = "Body Prefab", Tooltip = "Visible body (skeletal mesh, animator, appearance, ShooterAvatarComponent)" )
@@ -230,7 +230,7 @@ namespace sw
         float4 _muzzleFlashColor;
 
         WeaponState              _arrWeapon[kWeaponCount];
-        Vitality                 _vitality;
+        CombatHealth             _combatHealth;
         AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
         vector<PendingShot>      _listPendingShot;
         vector<EffectRequest>    _listPendingEffect;

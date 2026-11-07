@@ -1,8 +1,8 @@
 <RigAsset>
 	<targets>
-		<item name="Grip" unit="MainHand" socket="SupportHand" space="hand_r" />
-		<item name="ViewGrip" unit="ViewWeapon" socket="Grip" />
-		<item name="ViewSupport" unit="ViewWeapon" socket="SupportHand" />
+		<item name="Grip" skeletalMesh="MainHand" socket="SupportHand" space="hand_r" />
+		<item name="ViewGrip" skeletalMesh="ViewWeapon" socket="Grip" />
+		<item name="ViewSupport" skeletalMesh="ViewWeapon" socket="SupportHand" />
 	</targets>
 	<nodes>
 		<item type="StrideWarping" name="Stride" pelvis="pelvis" min_scale="0.6" max_scale="1.6" max_pelvis_drop="0.2">

@@ -44,14 +44,14 @@ namespace sw
             };
 
             /** @brief 동작 원소 @p node 의 칸을 읽습니다. 그 동작이 받지 않는 칸은 오류입니다. 모르는 동작이면 false 입니다. */
-            [[nodiscard]] static bool readActionFields( const XMLNode& node, AppearanceRuleActionFields& outFields, AppearanceLoadReport& report, string_view sourceName )
+            [[nodiscard]] static bool readActionFields( const XMLNode& node, AppearanceRuleActionParams& outParams, AppearanceLoadReport& report, string_view sourceName )
             {
                 for ( const ActionFieldSet& set : kArrActionField )
                 {
                     if ( StringUtil::equals( node.getName(), set._pElement ) == false )
                         continue;
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, set._ppField, set._fieldCount, report, sourceName );
-                    (void)AppearanceXMLUtil::readFields( node, outFields, report, sourceName, { "parent", "offset", "rotation", "value" } );
+                    (void)AppearanceXMLUtil::readFields( node, outParams, report, sourceName, { "parent", "offset", "rotation", "value" } );
                     return true;
                 }
                 return false;
@@ -59,10 +59,10 @@ namespace sw
 
             [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
-                AppearanceRuleWhenFields fields;
-                (void)AppearanceXMLUtil::readFields( node, fields, report, sourceName, { "bodyShape", "bodyType" } ); // 오류는 보고서에 쌓인다
-                outCondition._bNegate      = fields._bNot ? SW_TRUE : SW_FALSE;
-                outCondition._target       = fields._target; // 태그 조건에서만 쓰는 선택 이름
+                AppearanceRuleWhenParams params;
+                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName, { "bodyShape", "bodyType" } ); // 오류는 보고서에 쌓인다
+                outCondition._bNegate      = params._bNot ? SW_TRUE : SW_FALSE;
+                outCondition._target       = params._target; // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
                 const utf8* pOccupied      = node.findAttribute( "occupied" );
@@ -78,17 +78,17 @@ namespace sw
                 if ( pTag != nullptr )
                 {
                     outCondition._kind = outCondition._target.empty() ? AppearanceRuleConditionKind::AnyTag : AppearanceRuleConditionKind::TargetTag;
-                    outCondition._tag  = TagID::request( fields._tag );
+                    outCondition._tag  = TagID::request( params._tag );
                 }
                 else if ( pCharacterTag != nullptr )
                 {
                     outCondition._kind = AppearanceRuleConditionKind::CharacterTag;
-                    outCondition._tag  = TagID::request( fields._characterTag );
+                    outCondition._tag  = TagID::request( params._characterTag );
                 }
                 else if ( pOccupied != nullptr )
                 {
                     outCondition._kind   = AppearanceRuleConditionKind::Occupied;
-                    outCondition._target = fields._occupied;
+                    outCondition._target = params._occupied;
                     if ( outCondition._target.empty() )
                         report.addErrorWithID( "Appearance.NameEmpty", "%#: rule '%#' <When occupied> needs a slot name", sourceName, ruleID.c_str() );
                 }
@@ -102,13 +102,13 @@ namespace sw
                 switch ( outCondition._kind )
                 {
                     case AppearanceRuleConditionKind::TargetTag:
-                        text += formatToString( "targetTag(%#, %#)", outCondition._target.c_str(), fields._tag.c_str() );
+                        text += formatToString( "targetTag(%#, %#)", outCondition._target.c_str(), params._tag.c_str() );
                         break;
                     case AppearanceRuleConditionKind::AnyTag:
-                        text += formatToString( "anyTag(%#)", fields._tag.c_str() );
+                        text += formatToString( "anyTag(%#)", params._tag.c_str() );
                         break;
                     case AppearanceRuleConditionKind::CharacterTag:
-                        text += formatToString( "tag(%#)", fields._characterTag.c_str() );
+                        text += formatToString( "tag(%#)", params._characterTag.c_str() );
                         break;
                     case AppearanceRuleConditionKind::Occupied:
                         text += formatToString( "occupied(%#)", outCondition._target.c_str() );
@@ -139,15 +139,15 @@ namespace sw
             [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 const utf8*                pName = node.getName();
-                AppearanceRuleActionFields fields;
-                if ( readActionFields( node, fields, report, sourceName ) == false )
+                AppearanceRuleActionParams params;
+                if ( readActionFields( node, params, report, sourceName ) == false )
                 {
                     report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
                     return false;
                 }
-                outAction._target  = fields._target; // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
-                outAction._part    = fields._part;
-                outAction._section = fields._section; // SwapMaterial · MaterialValue 만 받는다(kArrActionField)
+                outAction._target  = params._target; // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
+                outAction._part    = params._part;
+                outAction._section = params._section; // SwapMaterial · MaterialValue 만 받는다(kArrActionField)
                 if ( StringUtil::equals( pName, "Hide" ) )
                 {
                     const bool  bItemTag  = node.findAttribute( "itemTag" ) != nullptr;
@@ -167,12 +167,12 @@ namespace sw
                     if ( bItemTag )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideItemTag;
-                        outAction._tag  = TagID::request( fields._itemTag );
+                        outAction._tag  = TagID::request( params._itemTag );
                     }
                     else if ( bRegion )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideRegion;
-                        outAction._name = fields._region;
+                        outAction._name = params._region;
                         return outAction._name.empty() == false;
                     }
                     return true;
@@ -180,39 +180,39 @@ namespace sw
                 if ( StringUtil::equals( pName, "Variant" ) )
                 {
                     outAction._kind = AppearanceRuleActionKind::ChooseVariant;
-                    outAction._name = fields._name;
+                    outAction._name = params._name;
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMesh" ) )
                 {
                     outAction._kind  = AppearanceRuleActionKind::SwapMesh;
-                    outAction._value = fields._mesh;
+                    outAction._value = params._mesh;
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMaterial" ) )
                 {
                     outAction._kind  = AppearanceRuleActionKind::SwapMaterial;
-                    outAction._value = fields._material;
+                    outAction._value = params._material;
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "Morph" ) )
                 {
                     outAction._kind   = AppearanceRuleActionKind::ApplyMorph;
-                    outAction._name   = fields._name;
-                    outAction._weight = fields._weight;
+                    outAction._name   = params._name;
+                    outAction._weight = params._weight;
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "MaterialValue" ) )
                 {
                     // 주인이 비면 몸이다(`Morph` 와 같다). 값은 스칼라 · 벡터 네 모양이다 — 빠지면 읽기가 보고서에 남긴다.
                     outAction._kind = AppearanceRuleActionKind::MaterialValue;
-                    outAction._name = fields._name;
+                    outAction._name = params._name;
                     AppearanceXMLUtil::readRequiredShaderValue( node, "value", outAction._materialValue, report, sourceName );
                     return outAction._name.empty() == false;
                 }
                 // OverrideSocket(남은 하나 — readActionFields 가 모르는 원소를 걸렀다)
                 outAction._kind = AppearanceRuleActionKind::OverrideSocket;
-                outAction._name = fields._name;
+                outAction._name = params._name;
                 AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
                 return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
             }
@@ -257,7 +257,7 @@ namespace sw
         return _name == other._name && _value == other._value && _weight == other._weight && _placement == other._placement && _materialValue == other._materialValue;
     }
 
-    bool AppearanceRuleTable::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool AppearanceRuleCatalog::loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
@@ -302,12 +302,12 @@ namespace sw
         return report.getErrors().size() == errorCountBefore;
     }
 
-    const AppearanceRuleDef* AppearanceRuleTable::findRule( const hashed_string& id ) const
+    const AppearanceRuleDef* AppearanceRuleCatalog::findRule( const hashed_string& id ) const
     {
         return VectorUtil::findBy<&AppearanceRuleDef::_id>( _listRule, id );
     }
 
-    bool AppearanceRuleTable::areExclusive( const AppearanceRuleDef& lhs, const AppearanceRuleDef& rhs )
+    bool AppearanceRuleCatalog::areExclusive( const AppearanceRuleDef& lhs, const AppearanceRuleDef& rhs )
     {
         for ( const AppearanceRuleCondition& left : lhs._listCondition )
         {
@@ -320,7 +320,7 @@ namespace sw
         return false;
     }
 
-    void AppearanceRuleTable::reportConflicts( AppearanceLoadReport& report, string_view sourceName ) const
+    void AppearanceRuleCatalog::reportConflicts( AppearanceLoadReport& report, string_view sourceName ) const
     {
         for ( size_t lhsIndex = 0; lhsIndex < _listRule.size(); ++lhsIndex )
         {

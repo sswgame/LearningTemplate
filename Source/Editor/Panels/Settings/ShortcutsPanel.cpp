@@ -83,7 +83,7 @@ namespace sw::editor
         // 단추를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetAll" ) ) )
             _capture.resetAllShortcuts( bindings );
-        EditorSelfTestMarks::note( "shortcuts.resetAll" );
+        EditorSelfTestMarks::record( "shortcuts.resetAll" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllShortcuts" ) );
         ImGui::SameLine();
         EditorWidgets::drawSearchField( "##ShortcutFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchShortcutsHint" ), 0.0f, false );
@@ -110,12 +110,12 @@ namespace sw::editor
         EditorThemeUtil::textError( SW_LOCKEY( "EditorSettings", "ShortcutInUse" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Replace" ) ) )
             _capture.confirmReplace( bindings );
-        EditorSelfTestMarks::note( "shortcuts.replace" );
+        EditorSelfTestMarks::record( "shortcuts.replace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ReplaceShortcut" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
             _capture.cancel( bindings );
-        EditorSelfTestMarks::note( "shortcuts.cancel" );
+        EditorSelfTestMarks::record( "shortcuts.cancel" );
     }
 
     void ShortcutsPanel::drawShortcutTable( const EditorInputActions& inputActions, IShortcutBindings& bindings )
@@ -163,7 +163,7 @@ namespace sw::editor
         ImGui::TableSetColumnIndex( 3 );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Set" ) ) )
             _capture.beginCapture( bindings, desc._inputAction );
-        EditorSelfTestMarks::note( ShortcutsPanelInternal::makeMark( "set", desc._id ).c_str() );
+        EditorSelfTestMarks::record( ShortcutsPanelInternal::makeMark( "set", desc._id ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SetShortcut" ) );
         if ( inputActions.isShortcutModified( desc._inputAction ) )
         {

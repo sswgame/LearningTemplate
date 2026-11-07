@@ -13,7 +13,7 @@
 
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Content/AssetIO.h"
@@ -124,7 +124,7 @@ namespace sw
             return true;
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
-        AudioMixerDesc mixerDesc;
+        AudioMixerDef mixerDesc;
         if ( mixerDesc.loadFromAsset( AssetID{ kDefaultMixerPath } ) == false )
         {
             SW_LOG_ERROR_ID( "AudioService.AudioMixerGraphCould", "Audio mixer graph '%#' could not be loaded", kDefaultMixerPath );
@@ -399,7 +399,7 @@ namespace sw
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
-        shared_ptr<AudioMusicDesc> pMusic = make_shared<AudioMusicDesc>();
+        shared_ptr<AudioMusicDef> pMusic = make_shared<AudioMusicDef>();
         if ( pMusic->loadFromAsset( assetID ) == false )
             return false;
         if ( _musicPlayingID != 0 )
@@ -433,7 +433,7 @@ namespace sw
     bool IAudioService::loadMixer( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();
-        AudioMixerDesc    mixerDesc;
+        AudioMixerDef     mixerDesc;
         if ( mixerDesc.loadFromAsset( assetID ) == false )
             return false;
         if ( _pEngine->loadMixer( mixerDesc ) == false )

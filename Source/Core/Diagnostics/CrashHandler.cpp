@@ -292,7 +292,7 @@ namespace sw
         }
 
         (void)FileUtil::writeCrashFile( arrPath, arrReport, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
-        noteProgress();
+        recordProgress();
         // 빵부스러기도 할당 없는 단계에서 쓴다 — 컨텍스트 파일과 같은 단계(심볼 변환 · 스택 보고보다 먼저).
         writeBreadcrumbFile();
     }
@@ -323,7 +323,7 @@ namespace sw
         // 실제 폴트 지점이 [0] 에 온다.
         DeepCallStack stack{};
         CallStackCapture::captureFromContext( stack, pPlatformContext, pPlatformThread );
-        noteProgress();
+        recordProgress();
 
         StringBuilder<constant::buffer::kMax8192> builder;
         builder.append( "\n==================== CRASH ====================\n" );
@@ -361,7 +361,7 @@ namespace sw
         // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashTestKind::StderrHeld). 순서가 반대면 거기서
         // 막혔을 때 스택 파일이 없다.
         writeStackFile( builder.c_str() );
-        noteProgress();
+        recordProgress();
         // 로거가 비동기일 수 있으므로 stderr 로도 직접 내보내 크래시 직전의 기록을 확실히 남긴다.
         std::fputs( builder.c_str(), stderr );
         std::fflush( stderr );

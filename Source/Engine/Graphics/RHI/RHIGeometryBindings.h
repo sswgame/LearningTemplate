@@ -51,7 +51,7 @@ namespace sw
         /** @brief 정점 슬롯을 모두 비웁니다(`IRHICommandList::setPipelineState` 계약 — 정점 버퍼는 PSO 뒤에 건다). 인덱스 버퍼는 남긴다. */
         void clearVertexBuffers();
         /** @brief 그 버퍼를 건 칸(정점 · 인덱스)을 모두 비웁니다(버퍼를 지울 때 — 다음 드로우가 지운 핸들을 걸지 않게). */
-        void forget( RHIBufferHandle buffer );
+        void remove( RHIBufferHandle buffer );
 
         /**
          * @brief PSO 가 읽는 정점 슬롯(@p layout)에만 겁니다. 슬롯 하나를 실제로 거는 일은 백엔드의 @p bindSlot( slot, binding ) 이 하고, 걸 버퍼가 없으면 false 를 돌려준다.

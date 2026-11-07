@@ -35,9 +35,9 @@ namespace sw
         GameObject*                   pOwner   = pawn.getOwner();
         GameObjectManager*            pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const VoxelPlayerComponent*   pPlayer  = pOwner != nullptr ? pOwner->getComponent<VoxelPlayerComponent>() : nullptr;
-        const VoxelGameModeComponent* pDirector =
-            pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
-        const bool bNotPlaying = pDirector == nullptr || pDirector->isStarted() == false || context._deltaTime <= 0.0f;
+        const VoxelGameModeComponent* pGameMode =
+            pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
+        const bool bNotPlaying = pGameMode == nullptr || pGameMode->isStarted() == false || context._deltaTime <= 0.0f;
         if ( bNotPlaying )
             return;
         const float32 deltaTime     = MathUtil::min( context._deltaTime, 0.1f );
@@ -56,7 +56,7 @@ namespace sw
         moveTo( feet + flat * _walkLookAhead );
 
         // 앞이 막혔거나 물 속이면 뛴다(물에서는 위로 헤엄).
-        const VoxelWorld& world = pDirector->getWorld();
+        const VoxelWorld& world = pGameMode->getWorld();
         const float3      ahead = feet + flat * _blockLookAhead;
         const bool        bBlocked =
             world.isSolid( static_cast<int32>( MathUtil::floor( ahead._x ) ), static_cast<int32>( MathUtil::floor( feet._y + 0.5f ) ), static_cast<int32>( MathUtil::floor( ahead._z ) ) );

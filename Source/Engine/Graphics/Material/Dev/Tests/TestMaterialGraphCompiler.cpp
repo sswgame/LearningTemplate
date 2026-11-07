@@ -23,7 +23,7 @@ namespace
         /** @brief 노드 하나의 XML 입니다. @p links 는 `핀=노드.출력` 을 쉼표로 나눈 글입니다. */
         static string makeNode( string_view name, string_view kind, string_view links = {}, string_view values = {} )
         {
-            string text{ "<MaterialGraphNodeDesc _name=\"" };
+            string text{ "<MaterialGraphNodeDef _name=\"" };
             text.append( name ).append( "\" _kind=\"" ).append( kind ).append( "\"><_listLink>" );
             for ( const string_view link : StringUtil::split( links, "," ) )
             {
@@ -41,7 +41,7 @@ namespace
                     continue;
                 text.append( "<MaterialGraphValue _name=\"" ).append( value.substr( 0, equals ) ).append( "\" _value=\"" ).append( value.substr( equals + 1 ) ).append( "\" />" );
             }
-            text.append( "</_listValue></MaterialGraphNodeDesc>" );
+            text.append( "</_listValue></MaterialGraphNodeDef>" );
             return text;
         }
 
@@ -97,7 +97,7 @@ namespace
             MaterialGraphDef graph;
             if ( graph.loadFromXMLText( wrapGraph( nodes ), kSource ) == false )
                 return false;
-            for ( MaterialGraphNodeDesc& node : graph._listNode )
+            for ( MaterialGraphNodeDef& node : graph._listNode )
             {
                 if ( node._kind == "Layer" )
                     node._assetPath = string{ layerID };
@@ -323,7 +323,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, BaseGraphIsInherited )
 
     string child{ "<MaterialGraphDef _base=\"" };
     child.append( test::ScopedScratchDomain::makeID( "parent.matgraph.xml" ).str() );
-    child.append( "\"><_listNode><MaterialGraphNodeDesc _name=\"Tint\"><_listValue><MaterialGraphValue _name=\"Default\" _value=\"0 1 0 1\" /></_listValue></MaterialGraphNodeDesc></_listNode></MaterialGraphDef>" );
+    child.append( "\"><_listNode><MaterialGraphNodeDef _name=\"Tint\"><_listValue><MaterialGraphValue _name=\"Default\" _value=\"0 1 0 1\" /></_listValue></MaterialGraphNodeDef></_listNode></MaterialGraphDef>" );
     MaterialGraphDef graph;
     SW_REQUIRE_TRUE( graph.loadFromXMLText( child, "child" ) );
     MaterialGraphCompileResult result;

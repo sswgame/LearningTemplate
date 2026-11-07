@@ -72,8 +72,8 @@ namespace sw
                 job.recordInput( input );
             }
 
-            /** @brief 작업이 없을 때의 읽기 판정입니다(`CookJob::admitRead` 참고). */
-            [[nodiscard]] static bool admitReadOutsideJob( string_view source )
+            /** @brief 작업이 없을 때의 읽기 판정입니다(`CookJob::allowRead` 참고). */
+            [[nodiscard]] static bool allowReadOutsideJob( string_view source )
             {
                 if ( CookSession::isActive() == false )
                     return true;
@@ -137,11 +137,11 @@ namespace sw
         return 0;
     }
 
-    bool CookJob::admitRead( const AssetID& id, const uint8* pData, size_t size )
+    bool CookJob::allowRead( const AssetID& id, const uint8* pData, size_t size )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )
-            return CookJobInternal::admitReadOutsideJob( id.view() );
+            return CookJobInternal::allowReadOutsideJob( id.view() );
         string inputID;
         if ( CookJobInternal::makeInputID( id, inputID ) == false )
             return false;
@@ -149,11 +149,11 @@ namespace sw
         return true;
     }
 
-    bool CookJob::admitDiskRead( string_view diskPath, const uint8* pData, size_t size )
+    bool CookJob::allowDiskRead( string_view diskPath, const uint8* pData, size_t size )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )
-            return CookJobInternal::admitReadOutsideJob( diskPath );
+            return CookJobInternal::allowReadOutsideJob( diskPath );
         return pJob->recordDiskInput( diskPath, ContentHash::computeBytes( pData, size ) );
     }
 
@@ -162,7 +162,7 @@ namespace sw
         return CookJobInternal::_t_pCurrent != nullptr || CookSession::isActive();
     }
 
-    bool CookJob::admitAsyncRead( const AssetID& id )
+    bool CookJob::allowAsyncRead( const AssetID& id )
     {
         if ( requiresCallingThreadRead() == false )
             return true;
@@ -170,7 +170,7 @@ namespace sw
         return false;
     }
 
-    void CookJob::admitMissingRead( const AssetID& id )
+    void CookJob::allowMissingRead( const AssetID& id )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         string   inputID;
@@ -178,7 +178,7 @@ namespace sw
             CookJobInternal::recordContentInput( *pJob, CookInputKind::Resource, std::move( inputID ), 0 );
     }
 
-    void CookJob::admitMissingDiskRead( string_view diskPath )
+    void CookJob::allowMissingDiskRead( string_view diskPath )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob != nullptr )

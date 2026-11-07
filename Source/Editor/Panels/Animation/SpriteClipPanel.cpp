@@ -105,13 +105,13 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
             reloadDocument();
-        EditorSelfTestMarks::note( "spriteClip.load" );
+        EditorSelfTestMarks::record( "spriteClip.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "LoadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         // 저장 단추도 저장 경로 하나(`saveDocumentAndClearDirty`)를 지난다 — 예전 단추는 못 읽은 문서(Malformed)도 덮어쓰고, 경로가 비거나 쓰기에 실패해도 "저장했다" 를 띄웠다.
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 이유는 상태 줄에 있다
-        EditorSelfTestMarks::note( "spriteClip.save" );
+        EditorSelfTestMarks::record( "spriteClip.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "SeparateFromAnimationGraph", TextArgumentList().addText( "dirSavedEditor", config::kDirSavedEditor ).addText( "spriteClipDocumentFileName", EditorPaths::kSpriteClipDocumentFileName ) ).c_str() );
     }
@@ -138,15 +138,15 @@ namespace sw::editor
             _model.addFrame();
             notifyDocumentEdited( "Add Sprite Frame" );
         }
-        EditorSelfTestMarks::note( "spriteClip.addFrame" );
+        EditorSelfTestMarks::record( "spriteClip.addFrame" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RemoveFrame" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveFrame" ) ) && _model.removeSelectedFrame() )
             notifyDocumentEdited( "Remove Sprite Frame" );
-        EditorSelfTestMarks::note( "spriteClip.removeFrame" );
+        EditorSelfTestMarks::record( "spriteClip.removeFrame" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrame" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrame" ) ) && _model.duplicateSelectedFrame() )
             notifyDocumentEdited( "Duplicate Sprite Frame" );
-        EditorSelfTestMarks::note( "spriteClip.duplicateFrame" );
+        EditorSelfTestMarks::record( "spriteClip.duplicateFrame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrameTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorSpriteClip", "MoveFrameEarlier" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "MoveFrameEarlier" ) ) && _model.moveSelectedFrame( -1 ) )
@@ -166,7 +166,7 @@ namespace sw::editor
             if ( ImGui::Selectable( label.c_str(), _model.getSelectedFrame() == frameIndex ) )
                 _model.selectFrame( frameIndex );
             formatstring( label.data(), label.capacity(), "spriteClip.frame.%#", frameIndex );
-            EditorSelfTestMarks::note( label.c_str() ); // 시나리오가 프레임을 고른다
+            EditorSelfTestMarks::record( label.c_str() ); // 시나리오가 프레임을 고른다
             ImGui::PopID();
         }
 
@@ -207,7 +207,7 @@ namespace sw::editor
         ImGui::Separator();
         if ( ImGui::Button( _model.isPreviewPlaying() ? SW_LOCKEY( "EdText", "StopPreview" ) : SW_LOCKEY( "EdText", "PlayPreview" ) ) )
             _model.togglePreview();
-        EditorSelfTestMarks::note( "spriteClip.preview" );
+        EditorSelfTestMarks::record( "spriteClip.preview" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "PreviewTip" ) );
         if ( _model.isPreviewPlaying() )
         {
@@ -290,7 +290,7 @@ namespace sw::editor
             _model.addFramesFromGrid();
             notifyDocumentEdited( "Add Sprite Frames" );
         }
-        EditorSelfTestMarks::note( "spriteClip.addAllCells" );
+        EditorSelfTestMarks::record( "spriteClip.addAllCells" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AddAllCellsTip" ) );
 
         void* pTexture = _model.hasAtlasPath() ? _atlasThumbnail.findTexture( _model.getAtlasPath() ) : nullptr;
@@ -351,7 +351,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AnimationsNameFirstFrameFrameCountLoopNone" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "AddAnimation" ) ) && _model.addAnimation() )
             notifyDocumentEdited( "Add Sprite Animation" );
-        EditorSelfTestMarks::note( "spriteClip.addAnimation" );
+        EditorSelfTestMarks::record( "spriteClip.addAnimation" );
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveAnimation" ) ) && _model.removeSelectedAnimation() )
             notifyDocumentEdited( "Remove Sprite Animation" );

@@ -74,11 +74,11 @@ namespace sw::editor
                 vector<NamedMark>    _listMark;
                 KeyboardTarget       _keyboardTarget{};
                 uint32               _keyboardTargetFrame{ 0 };       ///< `_keyboardTarget` 을 뜬 ImGui 프레임
-                uint32               _keyboardTargetStableSince{ 0 }; ///< 지금 표본과 같은 값이 이어진 첫 프레임
+                uint32               _keyboardTargetStableStart{ 0 }; ///< 지금 표본과 같은 값이 이어진 첫 프레임
                 uint64               _layoutSignature{ 0 };           ///< 바로 앞 프레임이 끝난 뒤의 창 배치 서명(`sampleLayoutSignature`)
                 uint32               _layoutFrame{ 0 };               ///< `_layoutSignature` 를 뜬 ImGui 프레임(그 서명은 이 바로 앞 프레임의 것이다)
                 uint32               _layoutTag{ 0 };                 ///< `_layoutSignature` 가 그린 프레임이 열릴 때 찍힌 기다림 번호
-                uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutSettledSince`)
+                uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutSettledAfter`)
                 uint32               _settleWaitSerial{ 0 };          ///< 마지막 `beginSettleWait` 의 번호
                 uint32               _openFrameTag{ 0 };              ///< 지금 열린 프레임에 찍은 기다림 번호
                 vector<WindowPlace>  _listWindowPlace;                ///< 바로 앞 표본의 창마다 자리 해시(`_layoutSignature` 의 재료) — 바뀐 창을 이름으로 알린다
@@ -139,14 +139,14 @@ namespace sw::editor
              */
             static void record( State& state, const utf8* pKey, EditorSelfTestMark mark )
             {
-                mark._stableSinceFrame = mark._frame;
+                mark._stableStartFrame = mark._frame;
                 for ( NamedMark& named : state._listMark )
                 {
                     if ( named._key != pKey )
                         continue;
                     const bool bContinued = named._mark._frame + 1 >= mark._frame && isSamePlace( named._mark, mark );
                     if ( bContinued )
-                        mark._stableSinceFrame = named._mark._stableSinceFrame;
+                        mark._stableStartFrame = named._mark._stableStartFrame;
                     named._mark = mark;
                     return;
                 }
@@ -218,14 +218,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorSelfTestMarks::note( const utf8* pKey )
+    void EditorSelfTestMarks::record( const utf8* pKey )
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findRecordingState( pKey );
         if ( pState != nullptr )
             EditorSelfTestInputInternal::record( *pState, pKey, EditorSelfTestInputInternal::makeLastItemMark() );
     }
 
-    void EditorSelfTestMarks::noteInputFrame( const utf8* pKey )
+    void EditorSelfTestMarks::recordInputFrame( const utf8* pKey )
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findRecordingState( pKey );
         if ( pState == nullptr )
@@ -435,7 +435,7 @@ namespace sw::editor
             return false;
         // 표본이 지난 프레임 것이어야 한다 — 오래된 표본(기록을 다시 켰다)은 지금 초점을 말하지 않는다.
         const bool bFresh = pState->_keyboardTargetFrame + 1 >= static_cast<uint32>( ImGui::GetFrameCount() );
-        return bFresh && pState->_keyboardTargetFrame > pState->_keyboardTargetStableSince;
+        return bFresh && pState->_keyboardTargetFrame > pState->_keyboardTargetStableStart;
     }
 
     uint32 EditorSelfTestInput::beginSettleWait()
@@ -452,7 +452,7 @@ namespace sw::editor
         return pState != nullptr ? pState->_settleWaitSerial : 0;
     }
 
-    bool EditorSelfTestInput::isLayoutSettledSince( uint32 waitSerial )
+    bool EditorSelfTestInput::isLayoutSettledAfter( uint32 waitSerial )
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         // 같은 두 표본 중 앞 것의 번호가 기다림 번호 이상이면 뒤 것도 그렇다(번호는 줄지 않는다).
@@ -486,7 +486,7 @@ namespace sw::editor
             const uint32                                      frame      = static_cast<uint32>( ImGui::GetFrameCount() );
             const bool                                        bContinued = state._keyboardTargetFrame + 1 >= frame && state._keyboardTarget == target;
             if ( bContinued == false )
-                state._keyboardTargetStableSince = frame;
+                state._keyboardTargetStableStart = frame;
             state._keyboardTarget      = target;
             state._keyboardTargetFrame = frame;
 

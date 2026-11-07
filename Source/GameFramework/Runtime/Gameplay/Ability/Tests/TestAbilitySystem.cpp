@@ -69,7 +69,7 @@ namespace
     };
 
     /** @brief 어트리뷰트 세트를 붙인 오브젝트 하나입니다. */
-    struct AbilityRig
+    struct AbilityFixture
     {
         GameObjectManager _manager;
         AbilityComponent* _pAbilities{ nullptr };
@@ -80,7 +80,7 @@ namespace
         static inline const hashed_string kMana{ "Mana" };
         static inline const hashed_string kPower{ "Power" };
 
-        AbilityRig()
+        AbilityFixture()
         {
             _pAbilities                   = _manager.createGameObject( hashed_string( "Hero" ) )->addComponent<AbilityComponent>();
             unique_ptr<AttributeSet> pSet = make_unique<AttributeSet>();
@@ -136,7 +136,7 @@ namespace
             return tags;
         }
     };
-    using Rig  = AbilityRig;
+    using Rig  = AbilityFixture;
     using Util = AbilityTestUtil;
 } // namespace
 

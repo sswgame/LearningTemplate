@@ -128,7 +128,7 @@ namespace sw::editor
         reasons |= bRunning ? static_cast<uint32>( EditorRedrawReason::Simulation ) : 0u;
         reasons |= bToast ? static_cast<uint32>( EditorRedrawReason::Notification ) : 0u;
         reasons |= bAnimate ? static_cast<uint32>( EditorRedrawReason::Animation ) : 0u;
-        reasons |= bWorking ? static_cast<uint32>( EditorRedrawReason::BackgroundWork ) : 0u;
+        reasons |= bWorking ? static_cast<uint32>( EditorRedrawReason::BackgroundJob ) : 0u;
         reasons |= bLoading ? static_cast<uint32>( EditorRedrawReason::AssetsLoading ) : 0u;
         return reasons;
     }
@@ -744,7 +744,7 @@ namespace sw::editor
         // 네이티브 대화상자는 사용자가 닫을 때까지 떠 있다. Undo 스택과 같은 종류의 함정이다.
         FileDialog::cancelResults();
 
-        // 기다리지 않는다. 여기로 오는 경로(GameModuleManager::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤이므로
+        // 기다리지 않는다. 여기로 오는 경로(GameModuleManager::suspendModules)는 이미 flushRenderWorkers 로 렌더 워커를 비운 뒤이므로
         // 기다릴 대상이 없다.
         abandonPendingDraw();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )

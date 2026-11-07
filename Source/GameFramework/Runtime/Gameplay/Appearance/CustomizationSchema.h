@@ -62,7 +62,7 @@ namespace sw
 
     /** @brief 매개변수 원소(`<Slider>` · `<Color>` · `<Choice>` · `<Attachment>`)가 함께 받는 칸입니다. 종류마다 받는 칸이 다르다(읽기가 막는다). `default` 는 종류마다 꼴이 달라 손으로 푼다. */
     REFLECT()
-    struct SW_GF_API CustomizationParamFields
+    struct SW_GF_API CustomizationParamEntryParams
     {
         REFLECT_BODY();
 
@@ -82,7 +82,7 @@ namespace sw
 
     /** @brief 선택지(`<Option …/>`)의 칸입니다(파일 스키마 — 회전은 파일 글 그대로 도 단위). */
     REFLECT()
-    struct SW_GF_API CustomizationOptionFields
+    struct SW_GF_API CustomizationOptionParams
     {
         REFLECT_BODY();
 
@@ -106,7 +106,7 @@ namespace sw
 
     /** @brief 조건(`<Condition parameter options min max/>`)의 칸입니다. 선택지 목록은 손으로 푼다. 구간은 적지 않으면 대상 슬라이더의 범위다. */
     REFLECT()
-    struct SW_GF_API CustomizationConditionFields
+    struct SW_GF_API CustomizationConditionParams
     {
         REFLECT_BODY();
 
@@ -223,7 +223,7 @@ namespace sw
     class SW_GF_API CustomizationSchemaCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listSchema.clear(); }
 
         const CustomizationSchemaDef*         findSchema( const hashed_string& id ) const;

@@ -103,9 +103,9 @@ namespace sw
         if ( ServiceRecordUtil::encode( kRecordVersion, state, bytes ) == false )
             return LedgerResult::Invalid;
         const LedgerTransferRequest request = LedgerItemInstanceInternal::makeTransfer( LedgerHolder::makeMint(), ownerHolder, state._assetID, journalKey, reason, nowMs );
-        LedgerTransferOutcome       outcome;
-        const LedgerResult          staged = Ledger::stageTransfer( connection, request, inoutTransaction, outcome );
-        if ( staged != LedgerResult::Ok || outcome._bReplayed == SW_TRUE )
+        LedgerTransferResult        result;
+        const LedgerResult          staged = Ledger::stageTransfer( connection, request, inoutTransaction, result );
+        if ( staged != LedgerResult::Ok || result._bReplayed == SW_TRUE )
             return staged; // 다시 온 만들기는 상태를 두 번 쓰지 않는다
         inoutTransaction.put( getStateTable(), state._assetID, std::move( bytes ), ServiceRecord::kAbsentVersion );
         return LedgerResult::Ok;
@@ -122,9 +122,9 @@ namespace sw
         if ( read != ServiceStoreResult::Ok )
             return read == ServiceStoreResult::Unavailable ? LedgerResult::Unavailable : LedgerResult::Invalid;
         const LedgerTransferRequest request = LedgerItemInstanceInternal::makeTransfer( ownerHolder, LedgerHolder::makeSink(), assetID, journalKey, reason, nowMs );
-        LedgerTransferOutcome       outcome;
-        const LedgerResult          staged = Ledger::stageTransfer( connection, request, inoutTransaction, outcome );
-        if ( staged != LedgerResult::Ok || outcome._bReplayed == SW_TRUE )
+        LedgerTransferResult        result;
+        const LedgerResult          staged = Ledger::stageTransfer( connection, request, inoutTransaction, result );
+        if ( staged != LedgerResult::Ok || result._bReplayed == SW_TRUE )
             return staged;
         inoutTransaction.erase( getStateTable(), assetID, version );
         return LedgerResult::Ok;

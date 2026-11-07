@@ -49,10 +49,10 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "ExperienceCurve", root ) == false )
             return false;
-        return loadFromNode( root, sourceName );
+        return loadFromXML( root, sourceName );
     }
 
-    bool ExperienceCurve::loadFromNode( const XMLNode& node, string_view sourceName )
+    bool ExperienceCurve::loadFromXML( const XMLNode& node, string_view sourceName )
     {
         // 표(`<Level xp>`)가 있으면 표, 없으면 공식이다. 표의 xp 는 필수이고 1 이상, 공식의 빠진 칸은 생성자의 초기값이다.
         // 깨진 값 · 범위 밖 값은 오류이고 곡선을 바꾸지 않는다(자르지 않는다).
@@ -60,7 +60,7 @@ namespace sw
         vector<int64> listXPToNext;
         for ( XMLNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
         {
-            ExperienceLevelFields level; // xp 필수 · >= 1 은 PROPERTY 가 본다
+            ExperienceLevelParams level; // xp 필수 · >= 1 은 PROPERTY 가 본다
             if ( XMLFields::readFields( child, level, sourceName ) )
                 listXPToNext.push_back( level._xp );
             else
@@ -73,8 +73,8 @@ namespace sw
             setTable( listXPToNext );
             return true;
         }
-        ExperienceCurveFields fields{ _base, _exponent, _linear, _maxLevel };
-        return XMLFields::readFields( node, fields, sourceName ) && setFormula( fields._base, fields._exponent, fields._linear, fields._maxLevel );
+        ExperienceCurveParams params{ _base, _exponent, _linear, _maxLevel };
+        return XMLFields::readFields( node, params, sourceName ) && setFormula( params._base, params._exponent, params._linear, params._maxLevel );
     }
 
     int64 ExperienceCurve::getXPToNext( int32 level ) const

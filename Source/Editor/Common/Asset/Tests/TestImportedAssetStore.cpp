@@ -24,7 +24,7 @@ namespace
     struct ImportedAssetStoreTestUtil
     {
         static constexpr const utf8* kTemplate = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="Template" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Template" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" defaultValue="1" min="0.0" max="1.0" group="Surface"/>
@@ -35,7 +35,7 @@ namespace
 			<item>MATERIAL_DOMAIN_SURFACE</item>
 		</_alwaysDefines>
 	</_permutations>
-</MaterialDesc>
+</MaterialDef>
 )";
 
         /** @brief 임포터처럼 견본을 읽어 이름 · 거칠기 · 기본색 텍스처를 채운 글입니다. */
@@ -43,7 +43,7 @@ namespace
         {
             XMLDocument document;
             SW_EXPECT_TRUE( document.parse( kTemplate ) );
-            const XMLNode root = document.getRoot( "MaterialDesc" );
+            const XMLNode root = document.getRoot( "MaterialDef" );
             root.setAttribute( "name", pName );
             for ( XMLNode item = root.findChild( "_properties" ).findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {

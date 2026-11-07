@@ -234,7 +234,7 @@ namespace sw::editor
                 }
 
                 /** @brief `_pListRunChain` 의 사슬을 다 떨어질 때까지 가져와 임포트합니다. 구간 인자는 쓰지 않습니다(어느 스레드가 몇 번 불리든 사슬은 한 번씩만 돕니다). */
-                void drain( [[maybe_unused]] uint32 start, [[maybe_unused]] uint32 end )
+                void flushPending( [[maybe_unused]] uint32 start, [[maybe_unused]] uint32 end )
                 {
                     const uint32 slotCount = static_cast<uint32>( _pListRunChain->size() );
                     for ( ;; )
@@ -258,12 +258,12 @@ namespace sw::editor
                     TaskManager* const pTaskManager = bParallel && chainCount > 1 ? _pTaskManager : nullptr;
                     if ( pTaskManager == nullptr )
                     {
-                        drain( 0, chainCount );
+                        flushPending( 0, chainCount );
                         return;
                     }
                     // 참여자(워커 + 이 스레드)마다 청크 하나라 `drain` 이 청크 수만큼 불리고, 먼저 끝난 스레드가 남은 사슬을 이어서 가져간다.
                     const uint32 participantCount = MathUtil::min( chainCount, pTaskManager->getWorkerCount() + 1 );
-                    pTaskManager->runParallel( participantCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ImportJob::drain, this ) );
+                    pTaskManager->runParallel( participantCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ImportJob::flushPending, this ) );
                 }
             };
 

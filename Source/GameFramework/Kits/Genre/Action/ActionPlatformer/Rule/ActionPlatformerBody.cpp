@@ -56,9 +56,9 @@ namespace sw
     {
     }
 
-    bool ActionTerrainGrid::loadFromText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap )
+    bool ActionTerrainGrid::loadFromXMLText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap )
     {
-        if ( outMap.loadFromText( text, tileSize, origin ) == false )
+        if ( outMap.loadFromXMLText( text, tileSize, origin ) == false )
             return false;
         _origin   = origin;
         _tileSize = outMap.getTileSize();
@@ -66,7 +66,7 @@ namespace sw
         _listDirt.assign( static_cast<size_t>( _topology.getCellCount() ), SW_FALSE );
         _listGrapplePoint.clear();
 
-        // `PlatformTileMap::loadFromText` 와 같은 방식으로 줄을 나눈다(빈 줄과 끝의 CR 을 무시한다).
+        // `PlatformTileMap::loadFromXMLText` 와 같은 방식으로 줄을 나눈다(빈 줄과 끝의 CR 을 무시한다).
         const vector<string_view> listLine = StringUtil::split( text, "\r\n", { ._bDropEmpty = true } );
         for ( size_t row = 0; row < listLine.size(); ++row )
         {

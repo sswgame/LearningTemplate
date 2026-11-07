@@ -835,12 +835,12 @@ namespace sw
         }
     }
 
-    LeakCurveVerdict MemoryProfiler::judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria )
+    LeakCurveResult MemoryProfiler::judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria )
     {
-        LeakCurveVerdict verdict;
-        const size_t     warmup = criteria._warmupRounds;
+        LeakCurveResult result;
+        const size_t    warmup = criteria._warmupRounds;
         if ( listPoint.size() < warmup + 2 )
-            return verdict; // 기울기에 점이 둘은 있어야 한다 — 모자라면 평평하다고 말하지 않는다
+            return result; // 기울기에 점이 둘은 있어야 한다 — 모자라면 평평하다고 말하지 않는다
 
         // x 는 워밍업 뒤 첫 점을 0 으로 둔 회차 번호입니다. 최소제곱 기울기 = (n·Σxy − Σx·Σy) / (n·Σxx − (Σx)²)
         const size_t  count = listPoint.size() - warmup;
@@ -863,14 +863,14 @@ namespace sw
             sumBlocks += blocks;
             sumBlocksX += blocks * x;
         }
-        const float64 denominator    = n * sumXX - sumX * sumX; // 점이 둘 이상이고 x 가 서로 달라 0 보다 크다
-        verdict._bValid              = true;
-        verdict._sampleCount         = static_cast<uint32>( count );
-        verdict._slopeBytesPerRound  = ( n * sumBytesX - sumX * sumBytes ) / denominator;
-        verdict._slopeBlocksPerRound = ( n * sumBlocksX - sumX * sumBlocks ) / denominator;
-        verdict._bFlat               = verdict._slopeBytesPerRound <= criteria._maxSlopeBytesPerRound &&
-                         verdict._slopeBlocksPerRound <= criteria._maxSlopeBlocksPerRound;
-        return verdict;
+        const float64 denominator   = n * sumXX - sumX * sumX; // 점이 둘 이상이고 x 가 서로 달라 0 보다 크다
+        result._bValid              = true;
+        result._sampleCount         = static_cast<uint32>( count );
+        result._slopeBytesPerRound  = ( n * sumBytesX - sumX * sumBytes ) / denominator;
+        result._slopeBlocksPerRound = ( n * sumBlocksX - sumX * sumBlocks ) / denominator;
+        result._bFlat               = result._slopeBytesPerRound <= criteria._maxSlopeBytesPerRound &&
+                        result._slopeBlocksPerRound <= criteria._maxSlopeBlocksPerRound;
+        return result;
     }
 
     uint32 MemoryProfiler::printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag, uint32 maxPrintedEntry )

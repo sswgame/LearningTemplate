@@ -259,20 +259,20 @@ namespace sw
         const std::optional<float32> curveScale = phase._spawnCurve.evaluate( _phaseTime );
         _spawnDirector.setBudgetScale( curveScale.has_value() ? phase._spawnScale * *curveScale : phase._spawnScale );
         (void)_spawnDirector.update( deltaTime );
-        drainSpawnEvents();
+        pollSpawnEvents();
     }
 
     bool AIDirector::notifyDespawned( uint32 spawnID )
     {
         const bool bKnown = _spawnDirector.notifyDespawned( spawnID );
-        drainSpawnEvents();
+        pollSpawnEvents();
         return bKnown;
     }
 
-    void AIDirector::drainSpawnEvents()
+    void AIDirector::pollSpawnEvents()
     {
         _listScratchSpawnEvent.clear();
-        _spawnDirector.drainEvents( _listScratchSpawnEvent );
+        _spawnDirector.pollEvents( _listScratchSpawnEvent );
         for ( const SpawnEvent& spawn : _listScratchSpawnEvent )
         {
             AIDirectorEvent event;
@@ -455,9 +455,9 @@ namespace sw
         }
     }
 
-    void AIDirector::drainEvents( vector<AIDirectorEvent>& outListEvent )
+    void AIDirector::pollEvents( vector<AIDirectorEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void AIDirector::explain( string& outText ) const

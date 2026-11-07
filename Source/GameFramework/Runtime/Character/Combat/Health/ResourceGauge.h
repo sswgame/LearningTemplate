@@ -132,7 +132,7 @@ namespace sw
         float32               _value;
         float32               _maxBonus;
         float32               _regenScale;
-        float32               _sinceUse; ///< 마지막으로 쓴 뒤 지난 시간
+        float32               _timeSinceUse; ///< 마지막으로 쓴 뒤 지난 시간
         Countdown             _overheatPenalty;
         uint8                 _bLocked; ///< 탈진 · 과열 잠금
     };

@@ -62,7 +62,7 @@ namespace sw
         return &_probeData;
     }
 
-    bool ReflectionProbeComponent::adoptProbeData( ReflectionProbeAsset&& data, string_view path )
+    bool ReflectionProbeComponent::applyProbeData( ReflectionProbeAsset&& data, string_view path )
     {
         string     error;
         const bool bValid   = data.isValid( &error );

@@ -754,7 +754,7 @@ namespace sw
         const hashed_string     presetID = bPreview ? _previewSelection._basePresetID : hashed_string( _presetID );
         const uint32            seed     = bPreview ? _previewSelection._seed : static_cast<uint32>( _seed );
         CharacterAppearanceSpec base;
-        if ( database.getPresets().expand( presetID, seed, database.getSlotTable(), database.getSets(), database.getSchemas(), base ) == false )
+        if ( database.getPresets().expand( presetID, seed, database.getSlotCatalog(), database.getSets(), database.getSchemas(), base ) == false )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePresetCouldNot", "Appearance preset '%#' could not be expanded", presetID.c_str() );
             return false;

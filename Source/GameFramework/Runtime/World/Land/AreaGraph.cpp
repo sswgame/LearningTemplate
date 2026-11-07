@@ -29,12 +29,12 @@ namespace sw
     uint32 AreaGraph::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
-        const uint32 loadedCount = loadFromNode( root, sourceName );
+        const uint32 loadedCount = loadFromXML( root, sourceName );
         resetState();
         return loadedCount;
     }
 
-    uint32 AreaGraph::loadFromNode( const XMLNode& node, string_view sourceName )
+    uint32 AreaGraph::loadFromXML( const XMLNode& node, string_view sourceName )
     {
         uint32 loadedCount = 0;
         for ( XMLNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
@@ -54,7 +54,7 @@ namespace sw
         }
         for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
-            AreaLinkFields link;
+            AreaLinkParams link;
             if ( XMLFields::readFields( linkNode, link, sourceName ) == false )
                 continue; // 끝점이 없거나 깨진 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
             const hashed_string& from     = link._from;

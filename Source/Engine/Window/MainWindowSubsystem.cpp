@@ -41,7 +41,7 @@ namespace sw
         _window->setTitle( pTitle ); // 창 제목을 거는 유일한 곳(IWindow 의 friend)
     }
 
-    bool MainWindowSubsystem::adopt( unique_ptr<IWindow>& window )
+    bool MainWindowSubsystem::attach( unique_ptr<IWindow>& window )
     {
         if ( window == nullptr || _window != nullptr )
             return false;

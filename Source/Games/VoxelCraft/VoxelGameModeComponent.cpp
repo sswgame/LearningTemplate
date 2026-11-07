@@ -262,7 +262,7 @@ namespace sw
     void VoxelGameModeComponent::spawnChunks( GameObjectManager& manager )
     {
         // 청크마다 오브젝트 하나를 스폰합니다. 처음에는 전부 메싱하고, 이후에는 바뀐 청크만 한 프레임에 몇 개씩 메싱합니다.
-        const GameObjectHandle director = getOwner()->getHandle();
+        const GameObjectHandle gameMode = getOwner()->getHandle();
         _listChunk.assign( static_cast<size_t>( kChunkCountX * kChunkCountZ ), GameObjectHandle{} );
         for ( int32 chunkZ = 0; chunkZ < kChunkCountZ; ++chunkZ )
         {
@@ -278,7 +278,7 @@ namespace sw
                     continue;
                 }
                 pMesh->setLocalPosition( float3{ static_cast<float32>( chunkX * kVoxelChunkSize ), 0.0f, static_cast<float32>( chunkZ * kVoxelChunkSize ) } );
-                pChunk->assignChunk( director, chunkX, chunkZ );
+                pChunk->assignChunk( gameMode, chunkX, chunkZ );
                 pChunk->requestRebuild();
                 _listChunk[static_cast<size_t>( chunkZ * kChunkCountX + chunkX )] = pObject->getHandle();
             }

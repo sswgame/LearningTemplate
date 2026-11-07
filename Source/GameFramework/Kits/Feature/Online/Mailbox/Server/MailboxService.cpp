@@ -24,10 +24,10 @@ namespace sw
         };
 
         /** @brief 새 우편 알림을 가져가며 지우는 작업입니다(`ServiceMail::claimNotices`). */
-        class MailboxNoticeWork final : public IServiceStoreWork
+        class MailboxNoticeJob final : public IServiceStoreJob
         {
         public:
-            MailboxNoticeWork( MailboxService* pService, int32 batchCount )
+            MailboxNoticeJob( MailboxService* pService, int32 batchCount )
                 : _listNotice{}
                 , _pService{ pService }
                 , _batchCount{ batchCount }
@@ -46,10 +46,10 @@ namespace sw
         };
 
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
-        class MailboxRequestWork final : public IServiceStoreWork
+        class MailboxRequestJob final : public IServiceStoreJob
         {
         public:
-            MailboxRequestWork( MailboxService* pService, const MailboxCall& call, const vector<ServiceMailCampaign>& listCampaign, const ILedgerPolicy* pPolicy, uint64 callID )
+            MailboxRequestJob( MailboxService* pService, const MailboxCall& call, const vector<ServiceMailCampaign>& listCampaign, const ILedgerPolicy* pPolicy, uint64 callID )
                 : _call{ call }
                 , _listCampaign{ listCampaign }
                 , _reply{}
@@ -114,10 +114,10 @@ namespace sw
         };
 
         /** @brief 만료 정리 한 번입니다. */
-        class MailboxSweepWork final : public IServiceStoreWork
+        class MailboxSweepJob final : public IServiceStoreJob
         {
         public:
-            MailboxSweepWork( MailboxService* pService, UnixMilliseconds nowMs, int32 batchCount )
+            MailboxSweepJob( MailboxService* pService, UnixMilliseconds nowMs, int32 batchCount )
                 : _stats{}
                 , _pService{ pService }
                 , _nowMs{ nowMs }
@@ -136,10 +136,10 @@ namespace sw
         };
 
         /** @brief 캠페인 목록 다시 읽기입니다. */
-        class MailboxCampaignWork final : public IServiceStoreWork
+        class MailboxCampaignJob final : public IServiceStoreJob
         {
         public:
-            explicit MailboxCampaignWork( MailboxService* pService )
+            explicit MailboxCampaignJob( MailboxService* pService )
                 : _listCampaign{}
                 , _pService{ pService }
                 , _result{ ServiceStoreResult::Unavailable }
@@ -223,7 +223,7 @@ namespace sw
 
     void MailboxService::shutdown()
     {
-        ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
+        ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
         { return isIdle(); } );
         _calls.abandonAll();
         _findOwner.reset(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
@@ -246,7 +246,7 @@ namespace sw
         {
             _bCampaignRefreshPending = SW_TRUE;
             _nextCampaignRefreshMs   = nowMs + _settings._campaignRefreshMs;
-            _pStore->submit( make_unique<MailboxCampaignWork>( this ) );
+            _pStore->submit( make_unique<MailboxCampaignJob>( this ) );
         }
         const bool bTickSweep = _settings._pScheduler == nullptr && _settings._sweepIntervalMs > 0 && nowMs >= _nextSweepMs; // 예약 테이블이 있으면 회차가 부른다
         const bool bSweepDue  = bTickSweep || _bSweepRequested == SW_TRUE;
@@ -255,14 +255,14 @@ namespace sw
             _bSweepPending   = SW_TRUE;
             _bSweepRequested = SW_FALSE;
             _nextSweepMs     = nowMs + _settings._sweepIntervalMs;
-            _pStore->submit( make_unique<MailboxSweepWork>( this, nowMs, _settings._sweepBatchCount ) );
+            _pStore->submit( make_unique<MailboxSweepJob>( this, nowMs, _settings._sweepBatchCount ) );
         }
         const bool bNoticeDue = _settings._noticeIntervalMs > 0 && nowMs >= _nextNoticeMs && _pHost != nullptr;
         if ( _bNoticePending == SW_FALSE && bNoticeDue )
         {
             _bNoticePending = SW_TRUE;
             _nextNoticeMs   = nowMs + _settings._noticeIntervalMs;
-            _pStore->submit( make_unique<MailboxNoticeWork>( this, _settings._noticeBatchCount ) );
+            _pStore->submit( make_unique<MailboxNoticeJob>( this, _settings._noticeBatchCount ) );
         }
         _calls.publishPendingCount();
     }
@@ -365,7 +365,7 @@ namespace sw
             return;
         }
         const bool bFirstPage = call._method == MailboxMethod::kList && call._request._cursor.empty();
-        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, call, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, callID ) );
+        _pStore->submit( sw::make_unique<MailboxRequestJob>( this, call, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, callID ) );
     }
 
     void MailboxService::completeCall( uint64 callID, const MailboxReply& reply )

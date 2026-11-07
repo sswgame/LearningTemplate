@@ -66,7 +66,7 @@ SW_TEST_CASE( BehaviorTreeVariantTest, LeavesUseSharedVocabulary )
 {
     XTestSource       source;
     BehaviorTreeAsset asset;
-    SW_REQUIRE_TRUE( asset.loadFromText( XTestUtil::kBaseTree, "base.bt.xml", source ) );
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( XTestUtil::kBaseTree, "base.bt.xml", source ) );
     GameFlags flags;
     XTestUtil::tickOnce( asset.getTree(), flags );
     SW_EXPECT_EQUAL( 1, flags.getFlag( "rested" ) );
@@ -91,7 +91,7 @@ SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchById )
   </Selector>
 </BehaviorTree>)XML";
     BehaviorTreeAsset     asset;
-    SW_REQUIRE_TRUE( asset.loadFromText( kChild, "child.bt.xml", source ) );
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( kChild, "child.bt.xml", source ) );
     GameFlags flags;
     XTestUtil::tickOnce( asset.getTree(), flags );
     SW_EXPECT_EQUAL( 1, flags.getFlag( "shouted" ) ); // 앞에 끼운 가지가 먼저 성공했다
@@ -99,7 +99,7 @@ SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchById )
 
     SW_EXPECT_LOG( "BehaviorTreeAsset.NamesUnknownTaskRegistered" );
     BehaviorTreeAsset broken;
-    SW_EXPECT_FALSE( broken.loadFromText( R"(<BehaviorTree><Action task="no.such.action"/></BehaviorTree>)", "broken.bt.xml", source ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<BehaviorTree><Action task="no.such.action"/></BehaviorTree>)", "broken.bt.xml", source ) );
 }
 
 /** @brief [BehaviorTreeVariantTest] `<SubTree tree>` 는 읽을 때 펼치고 자기 자신을 넣으면 오류다. `<SubTree slot>` 은 러너가 채운 트리를 돌린다 */
@@ -110,7 +110,7 @@ SW_TEST_CASE( BehaviorTreeVariantTest, SubTreeExpandsAndSlotsFill )
     source._listFile.push_back( { "loop.bt.xml", R"(<BehaviorTree><Sequence><SubTree tree="loop.bt.xml"/></Sequence></BehaviorTree>)" } );
 
     BehaviorTreeAsset expanded;
-    SW_REQUIRE_TRUE( expanded.loadFromText( R"(<BehaviorTree><Sequence><SubTree tree="rest.bt.xml"/></Sequence></BehaviorTree>)", "host.bt.xml", source ) );
+    SW_REQUIRE_TRUE( expanded.loadFromXMLText( R"(<BehaviorTree><Sequence><SubTree tree="rest.bt.xml"/></Sequence></BehaviorTree>)", "host.bt.xml", source ) );
     SW_EXPECT_EQUAL( 2, expanded.getTree().getNodeCount() ); // 펼친 노드가 그 자리에 있다 — 실행에는 하위 트리 노드가 없다
     GameFlags flags;
     XTestUtil::tickOnce( expanded.getTree(), flags );
@@ -118,12 +118,12 @@ SW_TEST_CASE( BehaviorTreeVariantTest, SubTreeExpandsAndSlotsFill )
 
     SW_EXPECT_LOG( "BehaviorTreeAsset.SubTreeCycle" );
     BehaviorTreeAsset cycle;
-    SW_EXPECT_FALSE( cycle.loadFromText( R"(<BehaviorTree><SubTree tree="loop.bt.xml"/></BehaviorTree>)", "cycle.bt.xml", source ) );
+    SW_EXPECT_FALSE( cycle.loadFromXMLText( R"(<BehaviorTree><SubTree tree="loop.bt.xml"/></BehaviorTree>)", "cycle.bt.xml", source ) );
 
     BehaviorTreeAsset host;
-    SW_REQUIRE_TRUE( host.loadFromText( R"(<BehaviorTree><Sequence><SubTree slot="combat"/></Sequence></BehaviorTree>)", "slot.bt.xml", source ) );
+    SW_REQUIRE_TRUE( host.loadFromXMLText( R"(<BehaviorTree><Sequence><SubTree slot="combat"/></Sequence></BehaviorTree>)", "slot.bt.xml", source ) );
     BehaviorTreeAsset fill;
-    SW_REQUIRE_TRUE( fill.loadFromText( R"(<BehaviorTree><Action task="flag.set" flag="fought"/></BehaviorTree>)", "fill.bt.xml", source ) );
+    SW_REQUIRE_TRUE( fill.loadFromXMLText( R"(<BehaviorTree><Action task="flag.set" flag="fought"/></BehaviorTree>)", "fill.bt.xml", source ) );
     GameFlags       slotFlags;
     GameplayContext world;
     world.set<GameFlagsSlot>( &slotFlags );

@@ -106,16 +106,16 @@ namespace sw
 
     bool Render2DSettings::readTransparencySort( const XMLNode& node, string_view sourceName )
     {
-        Render2DTransparencySortFields fields;
-        if ( XMLFields::readFields( node, fields, sourceName ) == false || XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) == false )
+        Render2DTransparencySortParams params;
+        if ( XMLFields::readFields( node, params, sourceName ) == false || XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) == false )
             return false;
-        if ( fields._axis.getLengthSquared() <= MathUtil::kEpsilon )
+        if ( params._axis.getLengthSquared() <= MathUtil::kEpsilon )
         {
             SW_LOG_ERROR_ID( "Render2DSettings.TransparencySortAxisMust", "%#: transparency sort axis must have a non-zero length", sourceName );
             return false;
         }
-        _sortMode = fields._mode;
-        _sortAxis = fields._axis;
+        _sortMode = params._mode;
+        _sortAxis = params._axis;
         _sortAxis.normalize();
         return true;
     }
@@ -129,10 +129,10 @@ namespace sw
                 SW_LOG_ERROR_ID( "Render2DSettings.UnknownElementSortingLayersOnly", "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
                 return false;
             }
-            Render2DSortingLayerFields fields;
-            if ( XMLFields::readFields( layerNode, fields, sourceName ) == false || fields._name.empty() )
+            Render2DSortingLayerParams params;
+            if ( XMLFields::readFields( layerNode, params, sourceName ) == false || params._name.empty() )
                 return false;
-            const hashed_string& layerName = fields._name;
+            const hashed_string& layerName = params._name;
             if ( findSortingLayer( layerName ) >= 0 )
             {
                 SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListedTwice", "%#: sorting layer '%#' is listed twice", sourceName, layerName.c_str() );

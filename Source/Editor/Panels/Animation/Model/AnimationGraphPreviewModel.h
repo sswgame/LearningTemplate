@@ -52,7 +52,7 @@ namespace sw::editor
         /** @brief 한 단계 넘기고(못 넘기면 재생을 끈다) 지금 상태를 보입니다. */
         void step( string_view graphPath );
         /** @brief 상태가 바뀌었으면 사본에서 그 전이 링크를 찾아 흐름 표시로 남깁니다. */
-        void noteTransition();
+        void recordTransition();
 
     private:
         AnimationGraphAsset  _previewGraph;     ///< 미리보기 플레이어가 빌려 쓰는 그래프 복사본이다

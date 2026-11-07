@@ -187,9 +187,9 @@ namespace sw
 #endif
     }
 
-    void GPUPassTimeline::forgetDevice()
+    void GPUPassTimeline::clearDevice()
     {
-        _exporter.forgetContext();
+        _exporter.removeContext();
         _pFailedDevice = nullptr;
     }
 } // namespace sw

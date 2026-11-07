@@ -63,7 +63,7 @@ namespace sw
 
     /** @brief 세트 완성 표현(`<Complete visual slots/>`)의 칸입니다. 슬롯 목록은 손으로 푼다. */
     REFLECT()
-    struct SW_GF_API EquipmentSetCompleteFields
+    struct SW_GF_API EquipmentSetCompleteParams
     {
         REFLECT_BODY();
 
@@ -83,7 +83,7 @@ namespace sw
     class SW_GF_API EquipmentSetCatalog : public IEquipmentSetLookup
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listSet.clear(); }
 
         const EquipmentSetDef*         findSet( const hashed_string& id ) const;

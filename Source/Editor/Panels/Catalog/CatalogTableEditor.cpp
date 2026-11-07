@@ -167,7 +167,7 @@ namespace sw::editor
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, -1, string(), group._name };
         }
         if ( bFirstGroup )
-            EditorSelfTestMarks::note( "catalog.addrow.first" );
+            EditorSelfTestMarks::record( "catalog.addrow.first" );
         ImGui::PopID();
     }
 
@@ -180,12 +180,12 @@ namespace sw::editor
         if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, elementIndex, string(), string() };
         if ( rowPosition == 0 && bFirstGroup )
-            EditorSelfTestMarks::note( "catalog.row.duplicate.first" );
+            EditorSelfTestMarks::record( "catalog.row.duplicate.first" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, elementIndex, string(), string() };
         if ( rowPosition == 0 && bFirstGroup )
-            EditorSelfTestMarks::note( "catalog.row.remove.first" );
+            EditorSelfTestMarks::record( "catalog.row.remove.first" );
         if ( document.canCreateVariant( elementIndex ) )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) );
@@ -199,11 +199,11 @@ namespace sw::editor
                 _bOpenChildPopup = SW_TRUE;
             }
             if ( rowPosition == 0 && bFirstGroup )
-                EditorSelfTestMarks::note( "catalog.children.open" );
+                EditorSelfTestMarks::record( "catalog.children.open" );
             // 시나리오가 "물려받는 첫 행" 을 고를 수 있게 한다.
             if ( inoutbFirstVariantButton && document.getParsed().getElement( elementIndex ).findAttribute( DataInheritance::kBaseAttribute ) >= 0 )
             {
-                EditorSelfTestMarks::note( "catalog.children.open.variant" );
+                EditorSelfTestMarks::record( "catalog.children.open.variant" );
                 inoutbFirstVariantButton = false;
             }
         }
@@ -234,7 +234,7 @@ namespace sw::editor
                     _bOpenCurvePopup = SW_TRUE;
                 }
                 if ( inoutbFirstCurveButton )
-                    EditorSelfTestMarks::note( "catalog.curves.open" );
+                    EditorSelfTestMarks::record( "catalog.curves.open" );
                 inoutbFirstCurveButton = false;
             }
         }
@@ -261,7 +261,7 @@ namespace sw::editor
         if ( drawValueField( shown, pValue == nullptr, pInherited != nullptr, width, false, committed ) )
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, committed };
         if ( bFirstCell )
-            EditorSelfTestMarks::note( "catalog.cell.first" );
+            EditorSelfTestMarks::record( "catalog.cell.first" );
 
         if ( pValue != nullptr && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
         {
@@ -287,7 +287,7 @@ namespace sw::editor
         if ( bAbsent && bEditing == false )
             ImGui::PopStyleColor();
         if ( bMarkFirst )
-            EditorSelfTestMarks::note( "catalog.children.cell" );
+            EditorSelfTestMarks::record( "catalog.children.cell" );
         if ( bChanged )
         {
             _editID   = cellID;
@@ -340,7 +340,7 @@ namespace sw::editor
             ImGui::EndChild();
         }
         const bool bCloseClicked = ImGui::Button( SW_LOCKEY( "EdText", "Close" ) );
-        EditorSelfTestMarks::note( "catalog.children.close" );
+        EditorSelfTestMarks::record( "catalog.children.close" );
         if ( bCloseClicked || bOpen == false )
         {
             _childOwner = -1;
@@ -359,7 +359,7 @@ namespace sw::editor
         if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "AddChild" ) ) )
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddChildNode, _childOwner, section._name, section._keyAttribute, section._ownerPath };
         if ( inoutbFirstAdd )
-            EditorSelfTestMarks::note( "catalog.children.add" );
+            EditorSelfTestMarks::record( "catalog.children.add" );
         inoutbFirstAdd = false;
         if ( section._kind != CatalogChildSectionKind::Whole || section._bHasParent == false )
             return;
@@ -381,7 +381,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "ClearInherited" ) ) )
                 groupEdit( CatalogTableEdit::Kind::ClearChildGroup );
-            EditorSelfTestMarks::note( "catalog.children.clear" );
+            EditorSelfTestMarks::record( "catalog.children.clear" );
         }
     }
 
@@ -440,7 +440,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "RestoreChild" ) ) )
                     nodeEdit( CatalogTableEdit::Kind::RestoreChildNode );
-                EditorSelfTestMarks::note( "catalog.children.restore" );
+                EditorSelfTestMarks::record( "catalog.children.restore" );
             }
             else if ( bLocked == false )
             {
@@ -462,7 +462,7 @@ namespace sw::editor
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
                     nodeEdit( CatalogTableEdit::Kind::RemoveChildNode );
                 if ( inoutbFirstRemove )
-                    EditorSelfTestMarks::note( "catalog.children.remove" );
+                    EditorSelfTestMarks::record( "catalog.children.remove" );
                 inoutbFirstRemove = false;
             }
         }
@@ -571,7 +571,7 @@ namespace sw::editor
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddKey" ) ) )
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddCurveKey, curve._elementIndex, string(), string() };
-        EditorSelfTestMarks::note( "catalog.curves.addkey" );
+        EditorSelfTestMarks::record( "catalog.curves.addkey" );
         ImGui::Separator();
         ImGui::PopID();
     }

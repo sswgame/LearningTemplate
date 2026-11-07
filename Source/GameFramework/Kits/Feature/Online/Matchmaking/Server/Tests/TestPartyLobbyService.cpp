@@ -34,7 +34,7 @@ namespace
         }
     };
 
-    struct PartyRig
+    struct PartyFixture
     {
         ManualClock             _clock;
         MemoryEphemeralDatabase _cacheData;
@@ -42,7 +42,7 @@ namespace
         EphemeralStoreRouter    _router;
         PartyLobbyService       _service;
 
-        explicit PartyRig( int32 maxPartySize = 3 )
+        explicit PartyFixture( int32 maxPartySize = 3 )
             : _clock{ MonotonicMilliseconds{ 1000 } }
             , _cacheData{ _clock }
             , _cache{ &_cacheData }
@@ -53,7 +53,7 @@ namespace
             SW_EXPECT_TRUE( _service.initialize( &_router, 1, maxPartySize ) );
         }
 
-        ~PartyRig()
+        ~PartyFixture()
         {
             _service.shutdown();
             _router.shutdown();
@@ -71,7 +71,7 @@ namespace
         {
             pump();
             vector<PartyLobbyCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             PartyLobbyCompletion found;
             int32                count = 0;
             for ( PartyLobbyCompletion& completion : listCompletion )
@@ -89,7 +89,7 @@ namespace
         {
             pump();
             vector<PartyLobbyNotification> listNotification;
-            _service.drainNotifications( listNotification );
+            _service.pollNotifications( listNotification );
             return listNotification;
         }
 
@@ -169,7 +169,7 @@ namespace
 SW_TEST_CASE( PartyLobbyServiceTest, RefusesBadMaxPartySize )
 {
     SW_EXPECT_LOG( "PartyLobbyService.PartyLobbyServiceRefusedStartMax" );
-    PartyRig          rig;
+    PartyFixture      rig;
     PartyLobbyService service;
     SW_EXPECT_FALSE( service.initialize( &rig._router, 2, PartyLobbyLimit::kMinPartySize - 1 ) );
     SW_EXPECT_FALSE( service.initialize( &rig._router, 2, PartyLobbyLimit::kMaxPartySize + 1 ) );
@@ -183,7 +183,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, RefusesBadMaxPartySize )
 /** @brief [PartyLobbyServiceTest] 파티: 만들면 파티장이고 찾을 수 있다. 이미 파티가 있으면 AlreadyInParty, 파티가 없으면 NotInParty 다 */
 SW_TEST_CASE( PartyLobbyServiceTest, CreateAndFindParty )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
     SW_EXPECT_EQUAL( uint64( 1 ), partyID >> 32 );
     const vector<PartyLobbyNotification> listNotification = rig.takeNotifications();
@@ -206,7 +206,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, CreateAndFindParty )
 /** @brief [PartyLobbyServiceTest] 초대 · 수락: 파티장만 초대한다. 자신 · 0 · 멤버는 초대할 수 없고, 초대 없이 수락할 수 없으며, 정원이 차면 PartyFull 이고 인덱스가 남지 않는다 */
 SW_TEST_CASE( PartyLobbyServiceTest, InviteAndAcceptRules )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
 
     SW_EXPECT_TRUE( rig.invite( kAlice, kAlice ) == MatchmakingResult::Invalid );
@@ -242,7 +242,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, InviteAndAcceptRules )
 /** @brief [PartyLobbyServiceTest] 줄을 서 있는 파티에는 들어올 수 없다. 멤버가 떠나면 티켓이 깨졌다고 알린다 */
 SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
     rig.addMember( partyID, kAlice, kBob );
     SW_EXPECT_TRUE( rig.invite( kAlice, kCarol ) == MatchmakingResult::Ok );
@@ -258,7 +258,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
     rig._service.leaveParty( kBob, 2 );
     SW_EXPECT_TRUE( rig.take( 2 )._result == MatchmakingResult::Ok );
     vector<uint64> listBroken;
-    rig._service.drainBrokenTickets( listBroken );
+    rig._service.pollBrokenTickets( listBroken );
     SW_REQUIRE_EQUAL( size_t( 1 ), listBroken.size() );
     SW_EXPECT_EQUAL( kTicket, listBroken[0] );
     SW_EXPECT_EQUAL( uint64( 0 ), rig.find( kAlice )._party._queuedTicketID );
@@ -267,7 +267,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
 /** @brief [PartyLobbyServiceTest] 떠나기: 파티장이 떠나면 다음 사람이 파티장이고, 떠난 사람은 멤버가 빈 알림을 받으며 다시 파티를 만들 수 있다. 마지막 사람이 떠나면 파티가 사라진다 */
 SW_TEST_CASE( PartyLobbyServiceTest, LeaderLeavingPromotesNextMember )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
     rig.addMember( partyID, kAlice, kBob );
     (void)rig.takeNotifications();
@@ -295,7 +295,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, LeaderLeavingPromotesNextMember )
 /** @brief [PartyLobbyServiceTest] 내보내기: 파티장만, 자신은 안 되고, 멤버가 아니면 NotInParty 다. 내보내진 사람의 인덱스가 지워진다 */
 SW_TEST_CASE( PartyLobbyServiceTest, KickRules )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
     rig.addMember( partyID, kAlice, kBob );
 
@@ -314,7 +314,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, KickRules )
 /** @brief [PartyLobbyServiceTest] 파티 기록이 시한으로 사라지면 인덱스도 끝나 파티가 없는 것으로 본다 */
 SW_TEST_CASE( PartyLobbyServiceTest, PartyExpires )
 {
-    PartyRig rig;
+    PartyFixture rig;
     (void)rig.makeParty( kAlice );
     rig._clock.advanceMilliseconds( PartyLobbyLimit::kPartyTTLMs + 1 );
     SW_EXPECT_TRUE( rig.find( kAlice )._result == MatchmakingResult::NotInParty );
@@ -324,7 +324,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, PartyExpires )
 /** @brief [PartyLobbyServiceTest] 로비 만들기 규칙: 이름 · 정원 하한 · 모드 id · 설정 키 글자를 본다. 만든 사람이 방장이고 목록에 나온다 */
 SW_TEST_CASE( PartyLobbyServiceTest, CreateLobbyValidatesAndLists )
 {
-    PartyRig      rig;
+    PartyFixture  rig;
     LobbySnapshot request;
     request._name           = "Room";
     request._modeID         = "duel";
@@ -368,7 +368,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, CreateLobbyValidatesAndLists )
 /** @brief [PartyLobbyServiceTest] 참가: 인원이 적은 팀으로 들어가고, 두 번 들어와도 한 번이며, 정원이 차면 LobbyFull, 없는 로비는 NotInLobby 다 */
 SW_TEST_CASE( PartyLobbyServiceTest, JoinBalancesTeamsAndHonoursCapacity )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 lobbyID = rig.makeLobby( kAlice, "duel", 3 );
 
     const PartyLobbyCompletion second = rig.join( kBob, lobbyID );
@@ -389,7 +389,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, JoinBalancesTeamsAndHonoursCapacity )
 /** @brief [PartyLobbyServiceTest] 시작: 방장만, 다른 사람이 모두 준비해야 하고, 혼자는 시작할 수 없다. 시작하면 배정 요청이 나오고 새 참가는 막힌다. 다시 열면 또 시작할 수 있다 */
 SW_TEST_CASE( PartyLobbyServiceTest, StartRequiresReadyAndReopens )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 lobbyID = rig.makeLobby( kAlice );
 
     SW_EXPECT_TRUE( rig.start( kAlice, lobbyID ) == MatchmakingResult::LobbyNotReady ); // 혼자다
@@ -403,10 +403,10 @@ SW_TEST_CASE( PartyLobbyServiceTest, StartRequiresReadyAndReopens )
     SW_EXPECT_TRUE( rig.ready( kBob, lobbyID ) == MatchmakingResult::Ok );
 
     vector<LobbyStartRequest> listStart;
-    rig._service.drainLobbyStarts( listStart );
+    rig._service.pollLobbyStarts( listStart );
     SW_EXPECT_TRUE( listStart.empty() );
     SW_EXPECT_TRUE( rig.start( kAlice, lobbyID ) == MatchmakingResult::Ok );
-    rig._service.drainLobbyStarts( listStart );
+    rig._service.pollLobbyStarts( listStart );
     SW_REQUIRE_EQUAL( size_t( 1 ), listStart.size() );
     SW_EXPECT_EQUAL( lobbyID, listStart[0]._lobby._lobbyID );
     SW_EXPECT_TRUE( listStart[0]._lobby._state == LobbyState::Starting );
@@ -424,7 +424,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, StartRequiresReadyAndReopens )
 /** @brief [PartyLobbyServiceTest] 떠나기: 방장이 떠나면 다음 사람이 방장이다. 마지막 사람이 떠나면 목록에서도 사라진다 */
 SW_TEST_CASE( PartyLobbyServiceTest, LobbyOwnerLeavingPromotesAndLastLeavingRemoves )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 lobbyID = rig.makeLobby( kAlice );
     (void)rig.join( kBob, lobbyID );
 
@@ -444,7 +444,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, LobbyOwnerLeavingPromotesAndLastLeavingRemo
 /** @brief [PartyLobbyServiceTest] 다른 로비에 들어가거나 새 로비를 만들면 앞 로비에서 빠진다 — 유령 멤버가 남아 앞 로비를 시작하지 못하는 일이 없다 */
 SW_TEST_CASE( PartyLobbyServiceTest, MovingToAnotherLobbyLeavesThePrevious )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 first  = rig.makeLobby( kAlice );
     const uint64 second = rig.makeLobby( kCarol );
     (void)rig.join( kBob, first );
@@ -476,7 +476,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, MovingToAnotherLobbyLeavesThePrevious )
 /** @brief [PartyLobbyServiceTest] 계정이 떠나면 파티와 로비에서 함께 빠진다 */
 SW_TEST_CASE( PartyLobbyServiceTest, RemoveAccountLeavesPartyAndLobby )
 {
-    PartyRig     rig;
+    PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
     rig.addMember( partyID, kAlice, kBob );
     const uint64 lobbyID = rig.makeLobby( kAlice );

@@ -99,7 +99,7 @@ namespace sw
         [[nodiscard]] bool writePlainLocked( IStreamTransport& transport, const uint8* pData, size_t size );
         bool               flushCiphertext( IStreamTransport& transport );
         /** @brief 파서에서 값을 꺼내 태그와 짝짓습니다. 프레임이 깨졌거나 태그 없는 답이면 false 를 반환합니다. */
-        bool drainParsedValues();
+        bool pollParsedValues();
         void failAwaitingTags();
 
     private:

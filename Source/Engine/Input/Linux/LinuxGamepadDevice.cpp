@@ -279,10 +279,10 @@ namespace sw
                 return;
         }
 
-        drainJoystickEvents();
+        pollJoystickEvents();
     }
 
-    void LinuxGamepadDevice::drainJoystickEvents()
+    void LinuxGamepadDevice::pollJoystickEvents()
     {
         using Internal = LinuxGamepadDeviceInternal;
 

@@ -430,9 +430,9 @@ namespace sw
         }
     }
 
-    void TurnRelayServer::drainEvents( vector<TurnRelayEvent>& outListEvent )
+    void TurnRelayServer::pollEvents( vector<TurnRelayEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     // ------------------------------------------------------------------------------
@@ -552,8 +552,8 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void TurnRelayClient::drainEvents( vector<TurnRelayEvent>& outListEvent )
+    void TurnRelayClient::pollEvents( vector<TurnRelayEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 } // namespace sw

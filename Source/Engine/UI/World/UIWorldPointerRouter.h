@@ -37,7 +37,7 @@ namespace sw
         /** @brief 호버를 모두 풉니다(포인터가 화면 위젯 위로 올라갔거나 잠겼다). 잡은 위젯은 유지한다. */
         void releaseHover();
         /** @brief @p component 를 더 쓰지 않습니다(컴포넌트가 끝나거나 UI 시스템이 내려간다). 호버와 잡기를 알림 없이 버린다. */
-        void forgetComponent( const WidgetComponent& component );
+        void untrackComponent( const WidgetComponent& component );
         /** @brief 지금 호버 중인 위젯입니다(없으면 nullptr). */
         const WidgetComponent* getHoveredComponent() const { return _pHovered; }
 

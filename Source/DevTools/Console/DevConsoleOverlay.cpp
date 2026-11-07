@@ -29,7 +29,7 @@ namespace sw
         class DevConsoleScreen final : public UIScreen
         {
         public:
-            DevConsoleScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, WidgetID column )
+            DevConsoleScreen( const UIScreenDef& desc, unique_ptr<Widget> root, WidgetID column )
                 : UIScreen{ desc, std::move( root ) }
                 , _column{ column }
             {
@@ -58,7 +58,7 @@ namespace sw
                 (void)panel->addChild( std::move( column ) );
                 (void)root->addChild( std::move( panel ) );
 
-                UIScreenDesc desc{};
+                UIScreenDef desc{};
                 desc._layer       = UILayer::Overlay;
                 desc._bTakesFocus = false;
                 desc._bShowCursor = false;

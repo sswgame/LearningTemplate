@@ -47,31 +47,31 @@ namespace sw
 
     void ReferencePoseOverride::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
-        ReferencePoseRootFields rootFields;
-        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓인다
-        _mirrorAxis = rootFields._mirrorAxis;
+        ReferencePoseRootParams rootParams;
+        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓인다
+        _mirrorAxis = rootParams._mirrorAxis;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Bone" ) )
             {
-                BoneOverrideFields fields;
-                (void)reader.readFields( child, fields );
+                BoneOverrideParams params;
+                (void)reader.readFields( child, params );
                 BoneOverride boneOverride;
-                boneOverride._bone = fields._name;
+                boneOverride._bone = params._name;
                 // 덮어쓰기 층이라 적은 칸만 표시한다.
                 if ( child.hasAttribute( "translation" ) )
                 {
-                    boneOverride._translation = fields._translation;
+                    boneOverride._translation = params._translation;
                     boneOverride._fieldMask |= BoneOverride::kTranslationBit;
                 }
                 if ( child.hasAttribute( "rotation" ) )
                 {
-                    boneOverride._rotation = quaternion::makeFromYawPitchRoll( fields._rotation * MathUtil::kDegreeToRadian );
+                    boneOverride._rotation = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
                     boneOverride._fieldMask |= BoneOverride::kRotationBit;
                 }
                 if ( child.hasAttribute( "scale" ) )
                 {
-                    boneOverride._scale = fields._scale;
+                    boneOverride._scale = params._scale;
                     boneOverride._fieldMask |= BoneOverride::kScaleBit;
                 }
                 if ( boneOverride._bone.empty() )
@@ -85,9 +85,9 @@ namespace sw
             }
             else if ( StringUtil::equals( child.getName(), "Mirror" ) )
             {
-                BoneMirrorFields fields;
-                if ( reader.readFields( child, fields ) && fields._left.empty() == false && fields._right.empty() == false )
-                    addMirrorPair( fields._left, fields._right );
+                BoneMirrorParams params;
+                if ( reader.readFields( child, params ) && params._left.empty() == false && params._right.empty() == false )
+                    addMirrorPair( params._left, params._right );
             }
             else
             {

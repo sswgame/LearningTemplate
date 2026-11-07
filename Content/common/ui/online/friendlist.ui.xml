@@ -1,6 +1,6 @@
 <UIDocument _schemaVersion="1">
 	<!-- 친구 목록 견본 문서(온라인 키트 U1). C++ 화면은 `FriendListScreen` 이다. 줄 글은 코드가 `Friends` 패널에 `Friend.<번호>` 이름으로 채운다. 문서 경로는 호출하는 게임이 `FriendListScreen::open` 에 준다. -->
-	<UIScreenDesc _bPausesGame="false" _defaultFocus="Refresh" />
+	<UIScreenDef _bPausesGame="false" _defaultFocus="Refresh" />
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Window" _styleClass="window">

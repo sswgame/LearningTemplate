@@ -172,7 +172,7 @@ namespace sw
 namespace sw
 {
     /// @brief 스위치, 멀티 컴파일, 품질을 합친 퍼뮤테이션입니다.
-    struct MaterialPermutationDesc
+    struct MaterialPermutationDef
     {
         MaterialQualityLevel         _quality   = MaterialQualityLevel::High;
         uint32                       _shaderLOD = 300;
@@ -186,7 +186,7 @@ namespace sw
 namespace sw
 {
     /// @brief 머티리얼 에셋의 디스크립터입니다(셰이더 경로, 프로퍼티, 퍼뮤테이션).
-    struct MaterialDesc
+    struct MaterialDef
     {
         /** @brief .material 리소스에서 채웁니다(팩별 C++ 기본값 없음). */
         string                      _name;
@@ -199,7 +199,7 @@ namespace sw
         vector<RHIBlendTargetState> _listBlendTarget;                        ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
         RHIRenderStateOverride      _renderStateOverride;                    ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
         vector<MaterialProperty>    _listProperty;
-        MaterialPermutationDesc     _permutations;
+        MaterialPermutationDef      _permutations;
         /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */
         string _parentPath;
     };
@@ -208,7 +208,7 @@ namespace sw
 namespace sw
 {
     /** @brief 직렬화되는 인스턴스 오버라이드입니다(게임 MIC / MaterialPropertyBlock). */
-    struct MaterialInstanceDesc
+    struct MaterialInstanceDef
     {
         string _name;
         string _parentPath; ///< 선택적 힌트입니다. 런타임에는 여전히 Material* 부모가 필요합니다

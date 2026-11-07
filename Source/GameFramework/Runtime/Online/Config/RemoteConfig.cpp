@@ -137,10 +137,10 @@ namespace sw
 namespace sw
 {
     /** @brief 테이블 전체를 읽는다(저장소 스레드), 결과를 바꿔 넣는다(서비스 스레드). */
-    class RemoteConfig::ReloadWork final : public IServiceStoreWork
+    class RemoteConfig::ReloadJob final : public IServiceStoreJob
     {
     public:
-        explicit ReloadWork( RemoteConfig* pConfig )
+        explicit ReloadJob( RemoteConfig* pConfig )
             : _mapEntry{}
             , _pConfig{ pConfig }
             , _result{ ServiceStoreResult::Ok }
@@ -182,7 +182,7 @@ namespace sw
 namespace sw
 {
     /** @brief 값 하나를 버전 조건 + 감사 줄로 쓴다. */
-    class RemoteConfig::SetWork final : public IServiceStoreWork
+    class RemoteConfig::SetWork final : public IServiceStoreJob
     {
     public:
         SetWork( RemoteConfig* pConfig, string key, const RemoteConfigValue& value, const ServiceAuditEntry& audit, uint64 expectedVersion )
@@ -237,7 +237,7 @@ namespace sw
     void RemoteConfig::requestReload( IServiceStore& store )
     {
         ++_pendingWorkCount;
-        store.submit( sw::make_unique<ReloadWork>( this ) );
+        store.submit( sw::make_unique<ReloadJob>( this ) );
     }
 
     void RemoteConfig::submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )

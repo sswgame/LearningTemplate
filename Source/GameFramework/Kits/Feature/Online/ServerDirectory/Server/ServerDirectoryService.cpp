@@ -76,10 +76,10 @@ namespace sw
 namespace sw
 {
     /** @brief 점검과 공지 두 테이블을 읽는 작업입니다. */
-    class ServerDirectoryReloadWork final : public IServiceStoreWork
+    class ServerDirectoryReloadJob final : public IServiceStoreJob
     {
     public:
-        ServerDirectoryReloadWork( ServerDirectoryService* pService, UnixMilliseconds nowMs )
+        ServerDirectoryReloadJob( ServerDirectoryService* pService, UnixMilliseconds nowMs )
             : _listMaintenance{}
             , _listNotice{}
             , _pService{ pService }
@@ -139,7 +139,7 @@ namespace sw
 namespace sw
 {
     /** @brief 점검이나 공지 변경 하나를 처리합니다. 레코드 쓰기(또는 지우기)와 감사 기록을 한 트랜잭션으로 씁니다. 버전 조건을 쓰므로 그사이 바뀌었으면 Unavailable 이며 다시 하면 됩니다. */
-    class ServerDirectoryWriteWork final : public IServiceStoreWork
+    class ServerDirectoryWriteJob final : public IServiceStoreJob
     {
     public:
         ServiceAuditEntry       _auditEntry;
@@ -151,7 +151,7 @@ namespace sw
         uint64                  _requestTag;
         ServerDirectoryResult   _result;
 
-        ServerDirectoryWriteWork()
+        ServerDirectoryWriteJob()
             : _auditEntry{}
             , _bytes{}
             , _key{}
@@ -252,7 +252,7 @@ namespace sw
     {
         _reloadSchedule.markStarted( nowMs );
         ++_pendingCount;
-        _dependencies._pStore->submit( make_unique<ServerDirectoryReloadWork>( this, nowMs ) );
+        _dependencies._pStore->submit( make_unique<ServerDirectoryReloadJob>( this, nowMs ) );
     }
 
     void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
@@ -433,7 +433,7 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
         }
-        unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
+        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
         if ( ServerDirectoryProtocol::encodeMaintenance( window, work->_bytes ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
@@ -458,15 +458,15 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
         }
-        unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
-        work->_table                              = Internal::getMaintenanceTable();
-        work->_key                                = string( scope );
-        work->_auditEntry._actor                  = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action                 = "sd.maintenance.clear";
-        work->_auditEntry._subject                = "sd/" + string( scope );
-        work->_auditEntry._memo                   = string( memo );
-        work->_auditEntry._timeMs                 = nowMs.count();
-        work->_requestTag                         = requestTag;
+        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
+        work->_table                             = Internal::getMaintenanceTable();
+        work->_key                               = string( scope );
+        work->_auditEntry._actor                 = ServiceAuditLog::makeOperatorActor( actorID );
+        work->_auditEntry._action                = "sd.maintenance.clear";
+        work->_auditEntry._subject               = "sd/" + string( scope );
+        work->_auditEntry._memo                  = string( memo );
+        work->_auditEntry._timeMs                = nowMs.count();
+        work->_requestTag                        = requestTag;
         submitWrite( std::move( work ) );
     }
 
@@ -478,7 +478,7 @@ namespace sw
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
         }
-        unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
+        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
         if ( ServerDirectoryProtocol::encodeNotice( notice, work->_bytes ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
@@ -497,15 +497,15 @@ namespace sw
 
     void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        using Internal                            = ServerDirectoryServiceInternal;
-        unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
-        work->_table                              = Internal::getNoticeTable();
-        work->_key                                = ServiceKeyUtil::makeHex64( noticeID );
-        work->_auditEntry._actor                  = ServiceAuditLog::makeOperatorActor( actorID );
-        work->_auditEntry._action                 = "sd.notice.remove";
-        work->_auditEntry._subject                = "sd/notice/" + work->_key;
-        work->_auditEntry._timeMs                 = nowMs.count();
-        work->_requestTag                         = requestTag;
+        using Internal                           = ServerDirectoryServiceInternal;
+        unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
+        work->_table                             = Internal::getNoticeTable();
+        work->_key                               = ServiceKeyUtil::makeHex64( noticeID );
+        work->_auditEntry._actor                 = ServiceAuditLog::makeOperatorActor( actorID );
+        work->_auditEntry._action                = "sd.notice.remove";
+        work->_auditEntry._subject               = "sd/notice/" + work->_key;
+        work->_auditEntry._timeMs                = nowMs.count();
+        work->_requestTag                        = requestTag;
         submitWrite( std::move( work ) );
     }
 
@@ -532,10 +532,10 @@ namespace sw
         postNotice( notice, actorID, nowMs, requestTag );
     }
 
-    void ServerDirectoryService::drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion )
+    void ServerDirectoryService::takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion )
     {
         vector<ServerDirectoryCompletion> listCompletion;
-        _completionBuffer.drainTo( listCompletion );
+        _completionBuffer.moveAllTo( listCompletion );
         for ( const ServerDirectoryCompletion& completion : listCompletion )
         {
             ServerDirectoryControlResult result = ServerDirectoryControlResult::Unavailable;
@@ -549,7 +549,7 @@ namespace sw
         }
     }
 
-    void ServerDirectoryService::submitWrite( unique_ptr<ServerDirectoryWriteWork> work )
+    void ServerDirectoryService::submitWrite( unique_ptr<ServerDirectoryWriteJob> work )
     {
         work->_pService = this;
         ++_pendingCount;

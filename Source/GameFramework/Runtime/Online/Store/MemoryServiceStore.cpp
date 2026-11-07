@@ -293,7 +293,7 @@ namespace sw
         _listCompleted.clear();
     }
 
-    void MemoryServiceStore::submit( unique_ptr<IServiceStoreWork> work )
+    void MemoryServiceStore::submit( unique_ptr<IServiceStoreJob> work )
     {
         bool bShutdown = false;
         {
@@ -321,12 +321,12 @@ namespace sw
     int32 MemoryServiceStore::pollCompletions()
     {
         // complete 안에서 새 일을 맡길 수 있다 — 꺼낸 목록을 따로 돌고, 새로 쌓인 것은 다음 poll 이 회수한다(SQL 구현과 같은 순서 약속).
-        vector<unique_ptr<IServiceStoreWork>> listReady;
+        vector<unique_ptr<IServiceStoreJob>> listReady;
         {
             ScopedLock<mutex> lock{ _mutex };
             listReady.swap( _listCompleted );
         }
-        for ( unique_ptr<IServiceStoreWork>& work : listReady )
+        for ( unique_ptr<IServiceStoreJob>& work : listReady )
         {
             ScopedLogContext scope( work->getLogContext() ); // 문맥 없는 스레드에서 거둬도 맡긴 요청의 꼬리표로
             work->complete();

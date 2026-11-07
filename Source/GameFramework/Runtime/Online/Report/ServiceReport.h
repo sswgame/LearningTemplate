@@ -109,7 +109,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 신고 쓰기와 읽기입니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기와 처리는 저장소 스레드(`IServiceStoreWork::run`)에서 부릅니다. */
+    /** @brief 신고 쓰기와 읽기입니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기와 처리는 저장소 스레드(`IServiceStoreJob::run`)에서 부릅니다. */
     struct SW_GF_API ServiceReportStore
     {
         static const hashed_string& getTable(); ///< "service_report"

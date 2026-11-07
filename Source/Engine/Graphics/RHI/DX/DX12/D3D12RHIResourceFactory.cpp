@@ -522,7 +522,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
         ring._allocator.markSubmitted( span, serial );
-        _pDevice->noteTextureTransfer( texture, serial );
+        _pDevice->recordTextureTransfer( texture, serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -607,7 +607,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
         ring._allocator.markSubmitted( span, serial );
-        _pDevice->noteTextureTransfer( texture, serial );
+        _pDevice->recordTextureTransfer( texture, serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -780,7 +780,7 @@ namespace sw
         if ( serial == 0 )
             return RHITransferSubmit::rejected();
         // 원본 텍스처도 복사가 끝나기 전에는 해제되지 않게 전송 시리얼에 매단다(destroyTexture 가 해제를 미룬다).
-        _pDevice->noteTextureTransfer( texture, serial );
+        _pDevice->recordTextureTransfer( texture, serial );
 
         D3D12RHIDevice::TextureReadbackRecord record;
         record._readback  = std::move( readback );
@@ -877,7 +877,7 @@ namespace sw
         }
         _pDevice->_mapCbAlignedSize.erase( buffer );
         _pDevice->_mapStructuredStride.erase( buffer );
-        _pDevice->_constantBufferMirror.forget( buffer );
+        _pDevice->_constantBufferMirror.remove( buffer );
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;

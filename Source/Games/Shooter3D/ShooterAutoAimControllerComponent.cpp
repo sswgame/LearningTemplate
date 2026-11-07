@@ -70,9 +70,9 @@ namespace sw
         const GameObject*               pPawnOwner = pawn.getOwner();
         const GameObjectManager*        pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const ShooterPlayerComponent*   pPlayer    = pPawnOwner != nullptr ? pPawnOwner->getComponent<ShooterPlayerComponent>() : nullptr;
-        const ShooterGameModeComponent* pDirector =
-            pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
-        if ( pDirector == nullptr || pPlayer->isAlive() == false )
+        const ShooterGameModeComponent* pGameMode =
+            pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
+        if ( pGameMode == nullptr || pPlayer->isAlive() == false )
         {
             stopMoving();
             clearFocus();
@@ -90,13 +90,13 @@ namespace sw
         float32                         bestDistance = MathUtil::kMaxFloat;
         float3                          aimPoint{ 0.0f, 0.0f, 0.0f };
         bool                            bVisible = false;
-        const vector<ShooterEnemyView>& listView = pDirector->getEnemyViews();
+        const vector<ShooterEnemyView>& listView = pGameMode->getEnemyViews();
         const ShooterEnemyView*         pView    = listView.data();
         for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
         {
             const float3  chest          = pView[viewIndex]._position + float3{ 0.0f, pView[viewIndex]._height * _chestHeight, 0.0f };
             const float32 distance       = float3::getDistance( eye, chest );
-            const bool    bChestVisible  = Internal::isVisible( eye, chest, pDirector->getBoxes() );
+            const bool    bChestVisible  = Internal::isVisible( eye, chest, pGameMode->getBoxes() );
             const bool    bBetterVisible = bChestVisible && ( bVisible == false || distance < bestDistance );
             const bool    bBetterHidden  = bVisible == false && bChestVisible == false && distance < bestDistance;
             if ( bBetterVisible || bBetterHidden )

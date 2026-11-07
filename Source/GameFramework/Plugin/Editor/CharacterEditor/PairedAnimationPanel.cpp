@@ -129,7 +129,7 @@ namespace sw::editor
         const float2 viewSize = computeViewportFillSize( PairedAnimationPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, _gizmo.hasMouse() );
         _gizmo.draw( *this );
-        EditorSelfTestMarks::note( "pairedanim.previewScene" );
+        EditorSelfTestMarks::record( "pairedanim.previewScene" );
         EditorWidgets::drawPanelStatus( _editError.empty() ? _status.c_str() : _editError.c_str() );
     }
 
@@ -205,17 +205,17 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Undo" ) ) )
             reportEdit( _model.undo() );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "pairedanim.undo" );
+        EditorSelfTestMarks::record( "pairedanim.undo" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Redo" ) ) );
         ImGui::BeginDisabled( _model.canRedo() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Redo" ) ) )
             reportEdit( _model.redo() );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "pairedanim.redo" );
+        EditorSelfTestMarks::record( "pairedanim.redo" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Check" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Check" ) ) )
             _status = _model.isValid() ? "The paired animation follows every rule" : "The paired animation breaks a rule - see the log";
-        EditorSelfTestMarks::note( "pairedanim.check" );
+        EditorSelfTestMarks::record( "pairedanim.check" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "ReadTheEditedContentWithTheRuntime" ) );
     }
 
@@ -228,7 +228,7 @@ namespace sw::editor
             reportEdit( _model.setDuration( duration, true, _editError ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             _model.endContinuousEdit();
-        EditorSelfTestMarks::note( "pairedanim.duration" );
+        EditorSelfTestMarks::record( "pairedanim.duration" );
 
         // 공유 시간축의 문지르기는 뷰포트 위 공통 재생 막대가 맡는다(readPreviewTimeline · seekPreviewTimeline).
         // 앞으로 지났으면 울린 알림을 보인다(뒤로 가면 지운다 — 세션은 되감지 않는다).
@@ -309,7 +309,7 @@ namespace sw::editor
                     reportEdit( _model.setRoleOffset( roleIndex, offset, yawDegrees, true, _editError ) );
                 if ( bOffsetDone || bYawDone )
                     _model.endContinuousEdit();
-                EditorSelfTestMarks::note( ( string( "pairedanim.role." ) + role._name.c_str() + ".offset" ).c_str() );
+                EditorSelfTestMarks::record( ( string( "pairedanim.role." ) + role._name.c_str() + ".offset" ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "AnchorRelativeRootPositionAndYawAt" ) );
             }
             if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
@@ -342,7 +342,7 @@ namespace sw::editor
                 reportEdit( _model.setNotifyTime( notifyIndex, time, true, _editError ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
-            EditorSelfTestMarks::note( ( string( "pairedanim.notify." ) + notify._name.c_str() + ".time" ).c_str() );
+            EditorSelfTestMarks::record( ( string( "pairedanim.notify." ) + notify._name.c_str() + ".time" ).c_str() );
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 19.0f );
             if ( ImGui::BeginCombo( "##Role", notify._role.c_str() ) )
@@ -373,7 +373,7 @@ namespace sw::editor
             reportEdit( _model.addNotify( hashed_string( _newNotifyName.c_str() ), content._listRole[0]._name, _model.getScrubTime(), _editError ) );
         }
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "pairedanim.addNotify" );
+        EditorSelfTestMarks::record( "pairedanim.addNotify" );
     }
 
     void PairedAnimationPanel::syncPreviewRoles()

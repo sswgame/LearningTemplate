@@ -36,9 +36,9 @@ namespace sw
         return true;
     }
 
-    const UIThemeDesc* UIThemeCatalog::findTheme( const hashed_string& name ) const
+    const UIThemeDef* UIThemeCatalog::findTheme( const hashed_string& name ) const
     {
-        return VectorUtil::findBy<&UIThemeDesc::_name>( _listTheme, name );
+        return VectorUtil::findBy<&UIThemeDef::_name>( _listTheme, name );
     }
 
     /** @brief UI 테마 카탈로그 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
@@ -154,7 +154,7 @@ namespace sw
         (void)setTheme( hashed_string( setting ) );
     }
 
-    const UIThemeDesc* UIThemeController::findTheme( const hashed_string& themeName ) const
+    const UIThemeDef* UIThemeController::findTheme( const hashed_string& themeName ) const
     {
         const hashed_string& theme = themeName.empty() ? _themeName : themeName;
         return theme.empty() ? nullptr : _catalog.findTheme( theme );
@@ -164,7 +164,7 @@ namespace sw
     {
         UIStyleSheetCache&                          styleSheetCache = *_pStyleSheets;
         vector<shared_ptr<const UIStyleSheetAsset>> listSheet;
-        const UIThemeDesc*                          pTheme = findTheme( themeName );
+        const UIThemeDef*                           pTheme = findTheme( themeName );
         if ( pTheme != nullptr )
             appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, listSheet );
         appendStyleSheets( styleSheetCache, screen._listStyleSheet, listSheet );

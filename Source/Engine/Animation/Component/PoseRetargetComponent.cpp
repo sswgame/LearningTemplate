@@ -27,17 +27,17 @@ namespace sw
         return _owner.isRetargeting() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
     }
 
-    void PoseRetargetBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void PoseRetargetBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         (void)context;
         if ( phase == AnimationPhase::BasePose )
-            _owner.populateBasePose( unit );
+            _owner.populateBasePose( skeletalMesh );
     }
 
-    void PoseRetargetBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    void PoseRetargetBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
     {
-        if ( _owner._pUnit == &unit )
-            _owner._pUnit = nullptr;
+        if ( _owner._pSkeletalMesh == &skeletalMesh )
+            _owner._pSkeletalMesh = nullptr;
     }
 
     PoseRetargetComponent::PoseRetargetComponent()
@@ -47,7 +47,7 @@ namespace sw
         , _retargeter{}
         , _targetReference{}
         , _source{}
-        , _pUnit{ nullptr }
+        , _pSkeletalMesh{ nullptr }
         , _pBoundSourceSkeleton{ nullptr }
         , _pBoundTargetSkeleton{ nullptr }
         , _bSourceFromParent{ SW_FALSE }
@@ -59,7 +59,7 @@ namespace sw
 
     PoseRetargetComponent::~PoseRetargetComponent()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
     }
 
@@ -77,9 +77,9 @@ namespace sw
     void PoseRetargetComponent::onEndPlay()
     {
         setSource( nullptr );
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = nullptr;
+        _pSkeletalMesh = nullptr;
         Component::onEndPlay();
     }
 
@@ -127,26 +127,26 @@ namespace sw
     {
         bindToUnit();
         SkeletalMeshComponent* pOld = findSource();
-        if ( pOld != nullptr && _pUnit != nullptr )
-            _pUnit->removeAnimationDependency( pOld );
+        if ( pOld != nullptr && _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->removeAnimationDependency( pOld );
         _source                     = TComponentHandle<SkeletalMeshComponent>{ pSource };
         _pBoundSourceSkeleton       = nullptr;
-        const bool bNeedsDependency = pSource != nullptr && _pUnit != nullptr && pSource != _pUnit;
+        const bool bNeedsDependency = pSource != nullptr && _pSkeletalMesh != nullptr && pSource != _pSkeletalMesh;
         if ( bNeedsDependency )
-            _pUnit->addAnimationDependency( pSource ); // 원본의 모든 단계(최종 포즈)가 먼저 끝나야 한다
+            _pSkeletalMesh->addAnimationDependency( pSource ); // 원본의 모든 단계(최종 포즈)가 먼저 끝나야 한다
     }
 
     void PoseRetargetComponent::bindToUnit()
     {
-        GameObject*            pOwner = getOwner();
-        SkeletalMeshComponent* pUnit  = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        if ( pUnit == _pUnit )
+        GameObject*            pOwner        = getOwner();
+        SkeletalMeshComponent* pSkeletalMesh = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pSkeletalMesh == _pSkeletalMesh )
             return;
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = pUnit;
-        if ( _pUnit != nullptr )
-            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
+        _pSkeletalMesh = pSkeletalMesh;
+        if ( _pSkeletalMesh != nullptr )
+            _bindingRegistration = _pSkeletalMesh->registerAnimationPhaseTask( &_binding );
     }
 
     bool PoseRetargetComponent::isRetargeting() const
@@ -154,13 +154,13 @@ namespace sw
         return _bProfileReady == SW_TRUE && findSource() != nullptr;
     }
 
-    void PoseRetargetComponent::populateBasePose( SkeletalMeshComponent& unit )
+    void PoseRetargetComponent::populateBasePose( SkeletalMeshComponent& skeletalMesh )
     {
         const SkeletalMeshComponent* pSource = isRetargeting() ? findSource() : nullptr;
         if ( pSource == nullptr )
             return;
         const Skeleton& sourceSkeleton = pSource->getSkeleton();
-        const Skeleton& targetSkeleton = unit.getSkeleton();
+        const Skeleton& targetSkeleton = skeletalMesh.getSkeleton();
         if ( _pBoundSourceSkeleton != &sourceSkeleton || _pBoundTargetSkeleton != &targetSkeleton )
         {
             // 스켈레톤이 바뀌었을 때만 다시 묶는다(이름 찾기 · 레퍼런스 모델 공간).
@@ -176,6 +176,6 @@ namespace sw
         }
         // 원본은 의존이라 이 유닛보다 먼저 모든 단계를 마쳤다(`AnimationDependencyEdge`) — 원본의 후처리(IK · 스프링)와 부착까지 적용된 최종 로컬 포즈를 옮긴다.
         // 이 유닛 자신의 후처리(리그)는 그 위에서 다시 돈다.
-        _retargeter.retarget( pSource->getLocalPose(), unit.getLocalPose() );
+        _retargeter.retarget( pSource->getLocalPose(), skeletalMesh.getLocalPose() );
     }
 } // namespace sw

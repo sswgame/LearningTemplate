@@ -1,5 +1,5 @@
 /**
- * @file AutomationStepFields.h
+ * @file AutomationStepParams.h
  * @brief 엔진 시나리오 단계의 인자 스키마입니다 — 받는 속성 · 필수 · 범위 · 기본값이 `PROPERTY` 한 곳에 있습니다(`AutomationStep::readFields`).
  * @details 언리얼 자동화 스펙의 `USTRUCT` 인자와 같은 자리입니다. 칸 사이 의미 검사(`.png` 끝 · 등록된 명령 이름)만 단계의 검사 함수가 손으로 합니다.
  */
@@ -35,7 +35,7 @@ namespace sw
 
     /** @brief `PostWindowMessage` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationWindowMessageFields
+    struct SW_API AutomationWindowMessageParams
     {
         REFLECT_BODY();
 
@@ -45,7 +45,7 @@ namespace sw
 
     /** @brief `ExpectCursorClip` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationCursorClipFields
+    struct SW_API AutomationCursorClipParams
     {
         REFLECT_BODY();
 
@@ -55,7 +55,7 @@ namespace sw
 
     /** @brief 파일 하나를 쓰는 단계(`CaptureWindow` · `EndFrameStats` · `DumpUILayout`)의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationFileStepFields
+    struct SW_API AutomationFileStepParams
     {
         REFLECT_BODY();
 
@@ -65,7 +65,7 @@ namespace sw
 
     /** @brief `<Scratch from as>` 의 인자입니다 — 원본 폴더(추적 중인 픽스처)와 사본 폴더(`scratch/…`). */
     REFLECT()
-    struct SW_API AutomationScratchFields
+    struct SW_API AutomationScratchParams
     {
         REFLECT_BODY();
 
@@ -77,7 +77,7 @@ namespace sw
 
     /** @brief `ExpectUI` 의 인자입니다. 적은 칸만 본다(셋 중 하나 이상) — 판정은 적었는지를 단계 속성으로 가른다(`screen="None"` 은 화면 없음). */
     REFLECT()
-    struct SW_API AutomationExpectUIFields
+    struct SW_API AutomationExpectUIParams
     {
         REFLECT_BODY();
 
@@ -91,7 +91,7 @@ namespace sw
 
     /** @brief `LoadScene` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationLoadSceneFields
+    struct SW_API AutomationLoadSceneParams
     {
         REFLECT_BODY();
 
@@ -103,7 +103,7 @@ namespace sw
 
     /** @brief `PlaySequence` · `WaitSequence` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationSequenceStepFields
+    struct SW_API AutomationSequenceStepParams
     {
         REFLECT_BODY();
 
@@ -115,7 +115,7 @@ namespace sw
 
     /** @brief `DevCommand` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationDevCommandFields
+    struct SW_API AutomationDevCommandParams
     {
         REFLECT_BODY();
 
@@ -125,7 +125,7 @@ namespace sw
 
     /** @brief `ResizeWindow` 의 인자입니다(픽셀). */
     REFLECT()
-    struct SW_API AutomationResizeWindowFields
+    struct SW_API AutomationResizeWindowParams
     {
         REFLECT_BODY();
 
@@ -137,7 +137,7 @@ namespace sw
 
     /** @brief `SwapBackend` 의 인자입니다(`AutomationBackendSteps::tryParseBackend` 의 이름 · `other` · `start`). */
     REFLECT()
-    struct SW_API AutomationSwapBackendFields
+    struct SW_API AutomationSwapBackendParams
     {
         REFLECT_BODY();
 
@@ -157,7 +157,7 @@ namespace sw
 
     /** @brief `ActionPress` · `ActionRelease` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationActionButtonFields
+    struct SW_API AutomationActionButtonParams
     {
         REFLECT_BODY();
 
@@ -174,7 +174,7 @@ namespace sw
 
     /** @brief `Action` 의 인자입니다. 누르는 길이와 간격은 프레임 또는 초 둘 중 하나로 적습니다. */
     REFLECT()
-    struct SW_API AutomationActionFields
+    struct SW_API AutomationActionParams
     {
         REFLECT_BODY();
 
@@ -196,7 +196,7 @@ namespace sw
 
     /** @brief `ActionAxis` 의 인자입니다. 길이는 프레임 또는 초 둘 중 하나로 적습니다. */
     REFLECT()
-    struct SW_API AutomationActionAxisFields
+    struct SW_API AutomationActionAxisParams
     {
         REFLECT_BODY();
 
@@ -216,7 +216,7 @@ namespace sw
 
     /** @brief 인자가 없는 단계의 스키마입니다 — 적힌 속성은 모두 오타입니다. */
     REFLECT()
-    struct SW_API AutomationNoFields
+    struct SW_API AutomationNoParams
     {
         REFLECT_BODY();
     };

@@ -77,7 +77,7 @@ namespace sw::editor
          */
         void handleEditCommands();
         /** @brief 붙이거나 복제한 하위 트리 @p newID 를 고르고 구조 편집으로 남깁니다. 실패(-1)면 @p error 를 상태 줄에 둡니다. */
-        void               adoptPastedSubtree( int32 newID, const string& error, const utf8* pLabel );
+        void               attachPastedSubtree( int32 newID, const string& error, const utf8* pLabel );
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
 
         // 편집

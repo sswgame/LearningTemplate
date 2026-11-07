@@ -26,7 +26,7 @@ namespace sw
     class ItemStackList;
     class LootCatalog;
     class MetroidvaniaCatalog;
-    class Vitality;
+    class CombatHealth;
     class Wallet;
 
     /** @brief 죽음과 휴식 알림의 종류입니다. */
@@ -78,7 +78,7 @@ namespace sw
 {
     /**
      * @class MetroidvaniaDeathRestState
-     * @brief 통화, 시체, 물약, 처치 기록, 되살아날 위치를 관리합니다. 체력은 기반 `Vitality` 를 빌려 받습니다.
+     * @brief 통화, 시체, 물약, 처치 기록, 되살아날 위치를 관리합니다. 체력은 기반 `CombatHealth` 를 빌려 받습니다.
      */
     class SW_KIT_API MetroidvaniaDeathRestState
     {
@@ -95,21 +95,21 @@ namespace sw
         void initialize( const MetroidvaniaCatalog* pCatalog, const SessionStateRefs& refs );
 
         /**
-         * @brief 쉬는 지점에서 쉽니다. 체력을 가득 채우고(`Vitality::respawn`), 물약을 충전하고, 보스가 아닌 적을 부활시키고, 되살아날 위치를 갱신합니다.
+         * @brief 쉬는 지점에서 쉽니다. 체력을 가득 채우고(`CombatHealth::respawn`), 물약을 충전하고, 보스가 아닌 적을 부활시키고, 되살아날 위치를 갱신합니다.
          * @return 쉬는 지점이 아니면 아무 일도 하지 않고 false 를 반환합니다.
          */
-        [[nodiscard]] bool rest( const hashed_string& siteID, Vitality& vitality );
+        [[nodiscard]] bool rest( const hashed_string& siteID, CombatHealth& combatHealth );
         /**
          * @brief 죽습니다. 가진 통화를 그 자리에 시체로 떨어뜨리고(이미 시체가 있으면 그 통화는 영영 사라집니다), 마지막으로 쉰 위치에서 되살아납니다
          *        (체력과 물약은 가득 차고, 보스가 아닌 적은 부활합니다).
          * @return 되살아날 지점 id 입니다(쉰 적이 없으면 빈 이름).
          */
-        hashed_string die( const hashed_string& areaID, const float2& position, Vitality& vitality );
+        hashed_string die( const hashed_string& areaID, const float2& position, CombatHealth& combatHealth );
         /** @brief 시체를 되찾습니다. 같은 방이고 `_corpseRecoverRadius` 안이어야 합니다. 되찾았으면 true 를 반환합니다. */
         [[nodiscard]] bool tryRecoverCorpse( const hashed_string& areaID, const float2& position );
 
         /** @brief 물약을 마십니다. 충전이 남았고 살아 있으면 회복하고 true 를 반환합니다. */
-        bool drinkFlask( Vitality& vitality );
+        bool drinkFlask( CombatHealth& combatHealth );
         /** @brief 물약 충전 수를 하나 늘립니다(상한까지). 늘었으면 true 를 반환하며, 늘어난 충전은 바로 찹니다. */
         bool upgradeFlaskCharges();
         /** @brief 물약 회복량을 한 단계 올립니다. */
@@ -125,7 +125,7 @@ namespace sw
         /** @brief 그 위치의 적이 지금 살아 있는지(처치 기록이 없는지) 반환합니다. */
         bool isSpawnAlive( const hashed_string& spawnID ) const;
         /** @brief 쌓인 알림을 꺼내 갑니다. */
-        void drainEvents( vector<MetroidvaniaDeathRestEvent>& outListEvent );
+        void pollEvents( vector<MetroidvaniaDeathRestEvent>& outListEvent );
 
         int32                                 getFlaskCharges() const { return _flaskCharges; }
         int32                                 getFlaskMaxCharges() const { return _flaskMaxCharges; }
@@ -143,7 +143,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        void          refreshWorld( Vitality& vitality );
+        void          refreshWorld( CombatHealth& combatHealth );
         void          pushEvent( MetroidvaniaDeathRestEventKind type, const hashed_string& id, int32 amount );
         hashed_string getCurrencyName() const;
 

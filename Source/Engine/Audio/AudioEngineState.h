@@ -48,7 +48,7 @@ namespace sw
      */
     struct AudioSubtitleCue
     {
-        hashed_string  _speakerKey{};   ///< 이벤트의 화자 키다(`AudioEventDesc::_subtitleSpeakerKey`). 비면 이름 줄을 접는다.
+        hashed_string  _speakerKey{};   ///< 이벤트의 화자 키다(`AudioEventDef::_subtitleSpeakerKey`). 비면 이름 줄을 접는다.
         hashed_string  _textKey{};      ///< 시작한 클립의 자막 키다(`AudioClipEntry::_subtitleKey`).
         AudioPlayingID _playingID{ 0 }; ///< 재생 id 다.
     };
@@ -104,12 +104,12 @@ namespace sw
     /** @brief 오디오 스레드가 가진 적응형 음악의 재생 위치입니다. 구간 전환 예약을 함께 담습니다. */
     struct AudioMusicPlayback
     {
-        shared_ptr<const AudioMusicDesc> _pDesc{};              ///< 지금 음악이다.
-        AudioPlayingID                   _playingID{ 0 };       ///< 음악의 재생 id 다.
-        uint64                           _segmentStart{ 0 };    ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
-        uint64                           _pendingFrame{ 0 };    ///< 예약된 전환의 렌더 프레임이다.
-        int32                            _segment{ -1 };        ///< 지금 구간이다(-1 = 없음).
-        int32                            _pendingSegment{ -1 }; ///< 예약된 다음 구간이다(-1 = 없음).
+        shared_ptr<const AudioMusicDef> _pDesc{};              ///< 지금 음악이다.
+        AudioPlayingID                  _playingID{ 0 };       ///< 음악의 재생 id 다.
+        uint64                          _segmentStart{ 0 };    ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
+        uint64                          _pendingFrame{ 0 };    ///< 예약된 전환의 렌더 프레임이다.
+        int32                           _segment{ -1 };        ///< 지금 구간이다(-1 = 없음).
+        int32                           _pendingSegment{ -1 }; ///< 예약된 다음 구간이다(-1 = 없음).
 
         /** @brief @p renderedFrameCount 시각의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
         AudioMusicStatus makeStatus( uint64 renderedFrameCount ) const;

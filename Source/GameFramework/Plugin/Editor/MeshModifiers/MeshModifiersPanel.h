@@ -103,7 +103,7 @@ namespace sw::editor
         void drawLatticePoints( MeshModifierSession& session, LatticeModifier& lattice );
         void drawFooter( MeshModifierSession& session );
         /** @brief 입력칸이 값을 바꾼 직후 부릅니다. 끌기 한 번에 되돌리기 기록을 한 번만 남기고 미리보기를 다시 걸게 합니다. */
-        void noteEdit( MeshModifierSession& session );
+        void recordEdit( MeshModifierSession& session );
         /** @brief 입력칸을 그린 뒤 부릅니다. 끌기가 끝났으면 다음 편집이 새 기록을 남기게 합니다. */
         void finishItem();
 

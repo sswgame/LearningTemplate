@@ -3,7 +3,7 @@
  * @brief 공간화입니다. 리스너와 에미터 상태, 거리 감쇠 곡선(데이터), 방향(패너 입력), 도플러, 가림(occlusion)에 따른 볼륨과 로우패스를 다룹니다.
  * @details 3D 는 리스너 수평면의 (오른쪽, 앞) 방향을 내고 `AudioPanner` 가 레이아웃(스테레오 · 5.1 · 7.1)에 맞춰 게인으로 바꾼다. 고도는 쓰지 않으며 HRTF 는 지원하지 않는다.
  *          2D(Screen2D)는 화면 평면의 가로 거리를 팬 값으로 쓰고 앞 두 채널에만 낸다(`AudioPanMode::FrontStereo`).
- *          감쇠 프리셋(`AudioAttenuationDesc`)은 Wwise 의 Attenuation ShareSet, 언리얼의 Sound Attenuation 에 해당하며, 소리(이벤트나 클립)가 이름으로 고른다.
+ *          감쇠 프리셋(`AudioAttenuationDef`)은 Wwise 의 Attenuation ShareSet, 언리얼의 Sound Attenuation 에 해당하며, 소리(이벤트나 클립)가 이름으로 고른다.
  *          가림 값(0 = 열림, 1 = 막힘)은 게임 스레드가 레이캐스트로 측정해서 넣는다(`IAudioOcclusionQuery`). 엔진이 이 값을 부드럽게 따라가며 볼륨과 컷오프로 바꾼다.
  *          방 · 포털 그래프는 소리가 문을 돌아 오는 길(겉보기 위치, 회절)도 낸다(`AudioPropagation`). 엔진은 겉보기 위치로 방향 · 거리를, 회절로 볼륨 · 컷오프를 더 정한다.
  */
@@ -78,13 +78,13 @@ namespace sw
     /**
      * @brief 거리 감쇠 프리셋 하나입니다.
      * @code
-     *     <AudioAttenuationDesc _name="Footstep" _curve="Inverse" _minDistance="1" _maxDistance="25" _dopplerFactor="0">
+     *     <AudioAttenuationDef _name="Footstep" _curve="Inverse" _minDistance="1" _maxDistance="25" _dopplerFactor="0">
      *         <_listLowPassPoint><AudioCurvePoint _x="5" _y="20000" /><AudioCurvePoint _x="25" _y="3000" /></_listLowPassPoint>
-     *     </AudioAttenuationDesc>
+     *     </AudioAttenuationDef>
      * @endcode
      */
     REFLECT()
-    struct SW_API AudioAttenuationDesc
+    struct SW_API AudioAttenuationDef
     {
         REFLECT_BODY();
 
@@ -116,7 +116,7 @@ namespace sw
 {
     /** @brief 가림 값(0..1)을 소리로 바꾸는 설정입니다(믹서 데이터의 전역 값). */
     REFLECT()
-    struct SW_API AudioOcclusionDesc
+    struct SW_API AudioOcclusionDef
     {
         REFLECT_BODY();
 
@@ -215,8 +215,8 @@ namespace sw
         static constexpr float32 kMaxDopplerRatio = 2.0f;
 
         /** @brief 리스너 하나에서 에미터 하나의 결과입니다. */
-        static AudioSpatialResult compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
-                                           const AudioOcclusionDesc& occlusion );
+        static AudioSpatialResult compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDef& attenuation,
+                                           const AudioOcclusionDef& occlusion );
         /**
          * @brief 리스너마다의 결과 @p count 개(1 개 이상)를 보이스 하나의 결과로 합칩니다.
          * @details `Loudest` 는 게인이 가장 큰 결과 그대로입니다. `PowerSum` 은 게인 = √(Σ 게인²)(상한은 1 과 가장 큰 단독 게인 중 큰 쪽),

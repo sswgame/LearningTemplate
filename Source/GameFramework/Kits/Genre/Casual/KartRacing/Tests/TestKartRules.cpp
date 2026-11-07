@@ -130,7 +130,7 @@ namespace
 
         int32 countEvents( sw::KartRaceEvent::Kind kind )
         {
-            _race.drainEvents( _listEvent );
+            _race.pollEvents( _listEvent );
             int32 count = 0;
             for ( const sw::KartRaceEvent& event : _listEvent )
             {

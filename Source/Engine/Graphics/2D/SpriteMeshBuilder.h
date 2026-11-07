@@ -17,18 +17,18 @@ namespace sw
     class Mesh;
 
     /**
-     * @struct SlicedSpriteDesc
+     * @struct SlicedSpriteDef
      * @brief 9-슬라이스와 타일 메시 하나를 정하는 값입니다. 같은 값이면 같은 메시를 공유합니다(`SpriteMeshBuilder::acquireSlicedMesh`).
      * @details 테두리는 **프레임에 대한 비율**(0..1)이며 (왼쪽, 아래, 오른쪽, 위) 순서입니다. 스프라이트의 자연 크기는 단위 사각형(1 × 1)이므로
      *          테두리의 월드 크기도 그 비율과 같습니다. 크기를 바꿔도 모서리는 자연 크기에서 보이던 크기로 남고, 가운데만 늘어나거나(Sliced) 반복됩니다(Tiled).
      */
-    struct SlicedSpriteDesc
+    struct SlicedSpriteDef
     {
         float2 _size{ 1.0f, 1.0f };               ///< 월드(로컬) 크기입니다. 폭과 높이 순서입니다
         float4 _border{ 0.0f, 0.0f, 0.0f, 0.0f }; ///< (왼쪽, 아래, 오른쪽, 위) 프레임 비율
         uint8  _bTiled{ SW_FALSE };               ///< 가운데와 변을 늘리지 않고 자연 크기로 반복합니다
 
-        bool operator==( const SlicedSpriteDesc& other ) const;
+        bool operator==( const SlicedSpriteDef& other ) const;
     };
 } // namespace sw
 
@@ -47,13 +47,13 @@ namespace sw
         static constexpr uint32 kMaxTileCountPerAxis = 64;
 
         /** @brief 앞면과 뒷면 삼각형 목록(인덱스 없음)을 만듭니다. 앞면이 먼저이고 사각형마다 정점이 여섯 개입니다. */
-        static void makeSlicedVertices( const SlicedSpriteDesc& desc, vector<RHIVertex>& outListVertex );
+        static void makeSlicedVertices( const SlicedSpriteDef& desc, vector<RHIVertex>& outListVertex );
 
         /**
          * @brief 같은 값의 메시를 공유합니다. 없으면 만듭니다. 여러 스레드에서 불러도 됩니다(내부에서 잠급니다).
          * @details 캐시는 약한 참조입니다(`MeshUtil::acquirePrimitive` 와 같은 구조). 마지막 스프라이트가 놓으면 메시도 사라집니다.
          *          같은 크기와 테두리의 패널은 메시가 하나이므로 한 배치로 묶입니다.
          */
-        static shared_ptr<Mesh> acquireSlicedMesh( const SlicedSpriteDesc& desc );
+        static shared_ptr<Mesh> acquireSlicedMesh( const SlicedSpriteDef& desc );
     };
 } // namespace sw

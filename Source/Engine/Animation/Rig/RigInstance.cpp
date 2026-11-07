@@ -74,7 +74,7 @@ namespace sw
                 continue;
             if ( target._space.empty() == false )
             {
-                SW_LOG_ERROR_ID( "RigInstance.RigTargetUsesSpace", "Rig '%#': target '%#' uses 'space' but is on this unit - 'space' is only for other units and objects", label, target._name.c_str() );
+                SW_LOG_ERROR_ID( "RigInstance.RigTargetUsesSpace", "Rig '%#': target '%#' uses 'space' but is on this skeletalMesh - 'space' is only for other skeletalMeshes and objects", label, target._name.c_str() );
                 bOk = false;
                 continue;
             }

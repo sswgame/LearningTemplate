@@ -29,16 +29,16 @@ namespace sw::editor
         constexpr const utf8* kNewGraphText = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialGraphDef formatVersion="0">
 	<_listNode>
-		<MaterialGraphNodeDesc _name="BaseColor" _kind="ColorParameter" _position="0,0">
+		<MaterialGraphNodeDef _name="BaseColor" _kind="ColorParameter" _position="0,0">
 			<_listValue>
 				<MaterialGraphValue _name="Parameter" _value="_baseColor" />
 			</_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Out" _kind="Output" _position="280,0">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Out" _kind="Output" _position="280,0">
 			<_listLink>
 				<MaterialGraphLink _pin="BaseColor" _fromNode="BaseColor" _fromPin="RGB" />
 			</_listLink>
-		</MaterialGraphNodeDesc>
+		</MaterialGraphNodeDef>
 	</_listNode>
 </MaterialGraphDef>
 )";

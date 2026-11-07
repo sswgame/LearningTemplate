@@ -11,7 +11,7 @@
 namespace sw
 {
     FarmVillagerComponent::FarmVillagerComponent()
-        : _director{}
+        : _gameMode{}
         , _npcIndex{ -1 }
         , _heightOffset{ 0.5f }
         , _agent{}
@@ -29,9 +29,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void FarmVillagerComponent::assignVillager( GameObjectHandle director, int32 npcIndex )
+    void FarmVillagerComponent::assignVillager( GameObjectHandle gameMode, int32 npcIndex )
     {
-        _director = director;
+        _gameMode = gameMode;
         _npcIndex = npcIndex;
         _bPlaced  = false;
     }
@@ -44,12 +44,12 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmVillageGameModeComponent* pDirector         = GameModeComponent::resolve<FarmVillageGameModeComponent>( *pManager, _director );
-        const bool                          bFollowsAVillager = pDirector != nullptr && 0 <= _npcIndex && _npcIndex < pDirector->getVillagerCount();
+        const FarmVillageGameModeComponent* pGameMode         = GameModeComponent::resolve<FarmVillageGameModeComponent>( *pManager, _gameMode );
+        const bool                          bFollowsAVillager = pGameMode != nullptr && 0 <= _npcIndex && _npcIndex < pGameMode->getVillagerCount();
         if ( bFollowsAVillager == false )
             return;
-        const float3 goal     = pDirector->getVillagerPosition( _npcIndex );
-        const bool   bTooFar  = float3::getHorizontalDistance( _agent.getPosition(), goal ) > pDirector->getBodySnapDistance();
+        const float3 goal     = pGameMode->getVillagerPosition( _npcIndex );
+        const bool   bTooFar  = float3::getHorizontalDistance( _agent.getPosition(), goal ) > pGameMode->getBodySnapDistance();
         const bool   bJumpsTo = _bPlaced == false || bTooFar;
         if ( bJumpsTo )
         {
@@ -58,11 +58,11 @@ namespace sw
         }
         else
         {
-            _agent.setSettings( pDirector->makeBodySettings( _npcIndex ) );
+            _agent.setSettings( pGameMode->makeBodySettings( _npcIndex ) );
             _listGoal[0] = goal;
             _agent.followPath( _listGoal );
-            pDirector->collectNeighborPositions( _npcIndex, _listNeighbor );
-            _agent.update( pDirector->getNavGrid(), _listNeighbor, deltaTime );
+            pGameMode->collectNeighborPositions( _npcIndex, _listNeighbor );
+            _agent.update( pGameMode->getNavGrid(), _listNeighbor, deltaTime );
         }
         pMesh->setLocalPosition( _agent.getPosition() + float3{ 0.0f, _heightOffset, 0.0f } );
     }

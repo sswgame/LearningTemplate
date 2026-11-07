@@ -117,7 +117,7 @@ namespace sw
         if ( _role == role )
             return;
         _role = role;
-        noteSelectionInputChanged();
+        recordSelectionInputChanged();
     }
 
     void CameraComponent::setFieldOfViewY( float32 fovRadians )
@@ -125,7 +125,7 @@ namespace sw
         if ( _fovY == fovRadians )
             return;
         _fovY = fovRadians;
-        noteSelectionInputChanged();
+        recordSelectionInputChanged();
     }
 
     void CameraComponent::setPriority( int32 priority )
@@ -133,14 +133,14 @@ namespace sw
         if ( _priority == priority )
             return;
         _priority = priority;
-        noteSelectionInputChanged();
+        recordSelectionInputChanged();
     }
 
-    void CameraComponent::noteSelectionInputChanged() const
+    void CameraComponent::recordSelectionInputChanged() const
     {
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-            pOwner->getManager()->getCameraRegistry().noteChanged();
+            pOwner->getManager()->getCameraRegistry().recordChanged();
     }
 
     void CameraComponent::setRenderOutput( const CameraRenderOutput& output )
@@ -148,7 +148,7 @@ namespace sw
         const bool bTargetChanged = _renderOutput._target != output._target;
         _renderOutput             = output;
         if ( bTargetChanged )
-            noteSelectionInputChanged();
+            recordSelectionInputChanged();
         declareRenderTexture();
     }
 

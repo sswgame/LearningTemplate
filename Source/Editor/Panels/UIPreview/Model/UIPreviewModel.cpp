@@ -203,8 +203,8 @@ namespace sw::editor
             UIScreen* pScreen = pOffscreen->findScreen( _screen );
             if ( pScreen != nullptr )
             {
-                _pointer.forgetTree( pScreen->getTree() ); // 트리를 지우기 전에 호버와 포커스를 놓는다
-                _focus.forgetTree( pScreen->getTree() );
+                _pointer.removeTree( pScreen->getTree() ); // 트리를 지우기 전에 호버와 포커스를 놓는다
+                _focus.removeTree( pScreen->getTree() );
             }
             pOffscreen->remove( _screen );
         }
@@ -288,8 +288,8 @@ namespace sw::editor
             return;
         const bool bRebuilt = _seenRootID != kInvalidWidgetID;
         _seenRootID         = rootID;
-        _pointer.forgetTree( tree );
-        _focus.forgetTree( tree );
+        _pointer.removeTree( tree );
+        _focus.removeTree( tree );
         _pointerTracker.reset();
         ++_generation;
         _listBaseline.clear();
@@ -519,7 +519,7 @@ namespace sw::editor
         // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 보관하고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
         WidgetTree& tree = screen.getTree();
         _pointer.clearHover();
-        _pointerTracker.forgetInside();
+        _pointerTracker.removeInside();
         _baselineWidget  = kInvalidWidgetID;
         _selectedOrdinal = selectedOrdinal;
         _selected        = selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, selectedOrdinal ) : kInvalidWidgetID;
@@ -805,7 +805,7 @@ namespace sw::editor
         (void)_pointer.process( tree, event );
         event._kind = UIPointerEventKind::Up;
         (void)_pointer.process( tree, event );
-        _pointerTracker.notePosition( event._position );
+        _pointerTracker.recordPosition( event._position );
         markPreviewMutated();
     }
 

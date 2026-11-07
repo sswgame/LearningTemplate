@@ -43,12 +43,12 @@ namespace sw
         return _owner.finishClipLoadsIfComplete();
     }
 
-    void SkeletalAnimatorBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    void SkeletalAnimatorBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
             _owner.advanceTime( context );
         else if ( phase == AnimationPhase::BasePose )
-            _owner.populateBasePose( unit );
+            _owner.populateBasePose( skeletalMesh );
     }
 
     AnimationPlayer* SkeletalAnimatorBinding::findSyncPlayer( hashed_string& outGroupName, float32& outWeight )
@@ -60,17 +60,17 @@ namespace sw
         return &_owner._graphPlayer.getPlayer();
     }
 
-    void SkeletalAnimatorBinding::finishAnimationFrame( SkeletalMeshComponent& unit )
+    void SkeletalAnimatorBinding::finishAnimationFrame( SkeletalMeshComponent& skeletalMesh )
     {
         // 알림이 먼저다 — 받는 쪽(모션 워핑 창)이 이번 프레임의 루트 모션을 바꿀 수 있다.
         _owner.dispatchNotifies();
-        _owner.applyRootMotion( unit );
+        _owner.applyRootMotion( skeletalMesh );
     }
 
-    void SkeletalAnimatorBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    void SkeletalAnimatorBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
     {
-        if ( _owner._pUnit == &unit )
-            _owner._pUnit = nullptr;
+        if ( _owner._pSkeletalMesh == &skeletalMesh )
+            _owner._pSkeletalMesh = nullptr;
     }
 
     bool SkeletalAnimatorBinding::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
@@ -247,7 +247,7 @@ namespace sw
         , _inertializer{}
         , _sequencerClip{}
         , _rootMotionDelta{}
-        , _pUnit{ nullptr }
+        , _pSkeletalMesh{ nullptr }
         , _pNotifyListener{ nullptr }
         , _lastDeltaSeconds{ 0.0f }
         , _sequencerTime{ 0.0f }
@@ -275,7 +275,7 @@ namespace sw
 
     SkeletalAnimatorComponent::~SkeletalAnimatorComponent()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
     }
 
@@ -286,7 +286,7 @@ namespace sw
         bindToUnit();
         // 스폰이 디스크를 기다리지 않게 클립은 워커가 읽는다. 다 읽힐 때까지 유닛은 그리지 않고(캐릭터는 애니메이션이 준비된 뒤 나타난다),
         // 씬 프레임의 도착 단계가 유닛을 통해 마무리를 묻는다(`pollAnimationAssetsReady`). 묻는 쪽(유닛)이 없으면 그 자리에서 읽는다.
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             loadGraphForBeginPlay();
         else
             loadGraph();
@@ -300,7 +300,7 @@ namespace sw
         if ( _bClipsPending == SW_TRUE )
         {
             _bStartPending = _bPlayOnBegin;
-            _pUnit->holdUntilAnimationAssetsReady();
+            _pSkeletalMesh->holdUntilAnimationAssetsReady();
             return;
         }
         if ( _bPlayOnBegin == SW_TRUE )
@@ -464,9 +464,9 @@ namespace sw
 
     void SkeletalAnimatorComponent::onEndPlay()
     {
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = nullptr;
+        _pSkeletalMesh = nullptr;
         Component::onEndPlay();
     }
 
@@ -502,15 +502,15 @@ namespace sw
 
     void SkeletalAnimatorComponent::bindToUnit()
     {
-        GameObject*            pOwner = getOwner();
-        SkeletalMeshComponent* pUnit  = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        if ( pUnit == _pUnit )
+        GameObject*            pOwner        = getOwner();
+        SkeletalMeshComponent* pSkeletalMesh = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pSkeletalMesh == _pSkeletalMesh )
             return;
-        if ( _pUnit != nullptr )
+        if ( _pSkeletalMesh != nullptr )
             _bindingRegistration.reset();
-        _pUnit = pUnit;
-        if ( _pUnit != nullptr )
-            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
+        _pSkeletalMesh = pSkeletalMesh;
+        if ( _pSkeletalMesh != nullptr )
+            _bindingRegistration = _pSkeletalMesh->registerAnimationPhaseTask( &_binding );
         else
             SW_LOG_WARNING_ID( "SkeletalAnimator.SkeletalAnimatorNoSkeletalMeshComponent", "'%#': skeletal animator has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
@@ -712,8 +712,8 @@ namespace sw
         const bool bPlayable = rebuildLinkedGraphs() && rebuildGraphLayers();
         if ( bPlayable == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayersNotUsed", "The linked layers of '%#' are not used (errors above)", _animationGraphPath.c_str() );
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
     }
 
     void SkeletalAnimatorComponent::setAnimationSetPath( string_view path )
@@ -824,8 +824,8 @@ namespace sw
         _stateTime        = 0.0f;
         if ( bFound == false && stateName.empty() == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationClipNotFound", "Animation clip '%#' was not found in '%#'", stateName.c_str(), _animationSetPath.c_str() );
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
         return bFound;
     }
 
@@ -847,8 +847,8 @@ namespace sw
         }
         _graphPlayer.getPlayer().setCurrentTime( seconds );
         _stateTime = seconds;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
         return true;
     }
 
@@ -857,11 +857,11 @@ namespace sw
         _graphPlayer.stop();
         _currentState.clear();
         _stateTime = 0.0f;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
     }
 
-    int32 SkeletalAnimatorComponent::addLayer( const AnimationLayerDesc& desc )
+    int32 SkeletalAnimatorComponent::addLayer( const AnimationLayerDef& desc )
     {
         if ( preloadClip( desc._clipName ) == false )
         {
@@ -890,8 +890,8 @@ namespace sw
         layer._player.play( layer._clip.get(), layer._desc._bLoop == SW_TRUE );
         // 반감기가 있으면 다음 평가가 끊긴 레이어 포즈에서 새 포즈로 이어 간다(얹은 적이 없으면 이어 갈 포즈가 없다).
         layer._bRestartPending = ( layer._desc._halfLifeSeconds > 0.0f && layer._history.findLast() != nullptr ) ? SW_TRUE : SW_FALSE;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
     }
 
     void SkeletalAnimatorComponent::clearLayers()
@@ -923,8 +923,8 @@ namespace sw
         _sequencerClip   = std::move( clip );
         _sequencerTime   = time;
         _sequencerWeight = ( _sequencerClip != nullptr ) ? MathUtil::clamp( weight, 0.0f, 1.0f ) : 0.0f;
-        if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
     }
 
     void SkeletalAnimatorComponent::setSyncGroup( const hashed_string& groupName, float32 weight )
@@ -1026,12 +1026,12 @@ namespace sw
         return _rootMotionModifierSubscriptions.issue( pModifier );
     }
 
-    void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& unit )
+    void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& skeletalMesh )
     {
         // 루트 모션은 오브젝트 트랜스폼에 쓴다 — 게임 스레드에서, 모든 단계가 끝난 뒤다(아래 트랜스폼 플러시가 반영한다).
-        if ( _bExtractRootMotion == SW_FALSE || unit.getOwner() == nullptr )
+        if ( _bExtractRootMotion == SW_FALSE || skeletalMesh.getOwner() == nullptr )
             return;
-        SceneComponent* pRoot = unit.getOwner()->getPrimarySceneComponent();
+        SceneComponent* pRoot = skeletalMesh.getOwner()->getPrimarySceneComponent();
         if ( pRoot == nullptr )
             return;
         // 움직임은 캐릭터 공간(루트 본의 부모 = 모델 공간)의 값이다 — 오브젝트의 월드 회전 · 배율로 돌려 월드 이동으로 바꾼다.
@@ -1054,7 +1054,7 @@ namespace sw
         if ( bMoves )
         {
             CharacterControllerComponent* pController =
-                _bRootMotionThroughController == SW_TRUE ? unit.getOwner()->getComponent<CharacterControllerComponent>() : nullptr;
+                _bRootMotionThroughController == SW_TRUE ? skeletalMesh.getOwner()->getComponent<CharacterControllerComponent>() : nullptr;
             if ( pController != nullptr && pController->hasBegunPlay() )
                 pController->addRootMotionDisplacement( frame._worldTranslation );
             else
@@ -1174,7 +1174,7 @@ namespace sw
 
     void SkeletalAnimatorComponent::updateLODFades( float32 deltaSeconds )
     {
-        const AnimationLODState lodState = _pUnit != nullptr ? _pUnit->getAnimationLODState() : AnimationLODState{};
+        const AnimationLODState lodState = _pSkeletalMesh != nullptr ? _pSkeletalMesh->getAnimationLODState() : AnimationLODState{};
         for ( LayerState& layer : _listGraphLayer )
         {
             layer._lodFade.update( lodState.isNodeOn( layer._pGraphLayer->_maxLODGrade ), deltaSeconds, lodState._nodeFadeSeconds );
@@ -1431,14 +1431,14 @@ namespace sw
         }
     }
 
-    void SkeletalAnimatorComponent::populateBasePose( SkeletalMeshComponent& unit )
+    void SkeletalAnimatorComponent::populateBasePose( SkeletalMeshComponent& skeletalMesh )
     {
-        const Skeleton&           skeleton = unit.getSkeleton();
-        Pose&                     pose     = unit.getLocalPose();
+        const Skeleton&           skeleton = skeletalMesh.getSkeleton();
+        Pose&                     pose     = skeletalMesh.getLocalPose();
         const AnimationPlayer&    player   = _graphPlayer.getPlayer();
         const IAnimationPlayable* pCurrent = player.getCurrentPlayable();
         const IAnimationPlayable* pNext    = player.getNextPlayable();
-        const uint8*              pMask    = unit.findBoneLODMask();
+        const uint8*              pMask    = skeletalMesh.findBoneLODMask();
 
         // pose 는 유닛이 레퍼런스(또는 리더 포즈)로 채워 둔 상태다. 지금 칸을 그 위에 샘플하고, 페이드 중이면 다음 칸과 섞는다.
         if ( pCurrent != nullptr )
@@ -1483,15 +1483,15 @@ namespace sw
         }
 
         // 모프 타깃 커브 — 이름이 그리는 메시의 모프 타깃과 같은 커브는 그 가중치가 된다(임포트가 glTF weights 채널을 타깃 이름의 커브로 싣는다).
-        if ( unit.getMorphTargetCount() == 0 )
+        if ( skeletalMesh.getMorphTargetCount() == 0 )
             return;
         const vector<hashed_string>& listCurveName  = _curves.getNames();
         const vector<float32>&       listCurveValue = _curves.getValues();
         for ( size_t curveIndex = 0; curveIndex < listCurveName.size(); ++curveIndex )
         {
-            const int32 targetIndex = unit.findMorphTargetIndex( listCurveName[curveIndex] );
+            const int32 targetIndex = skeletalMesh.findMorphTargetIndex( listCurveName[curveIndex] );
             if ( targetIndex >= 0 )
-                unit.addMorphWeight( static_cast<uint32>( targetIndex ), listCurveValue[curveIndex] );
+                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), listCurveValue[curveIndex] );
         }
     }
 } // namespace sw

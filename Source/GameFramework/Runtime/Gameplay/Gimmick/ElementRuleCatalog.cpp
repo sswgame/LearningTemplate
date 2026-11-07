@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -16,7 +16,7 @@ namespace sw
 {
     namespace
     {
-        struct ElementRuleTableInternal
+        struct ElementRuleCatalogInternal
         {
             static constexpr const utf8* kRootName = "ElementRules";
 
@@ -26,8 +26,8 @@ namespace sw
     } // namespace
 
     /** 격자가 옛 테이블을 가리키므로 제자리에서 바꾸지 않고 떼어 낸다. 스키마 테스트와 카탈로그 편집기도 이 정의로 파일을 읽는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( ElementRules, ElementRuleTable, SW_GF_API,
-                                  ElementRuleTable::kAssetType.withLoader( AssetTypeLoader::of<ElementRuleTable>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
+    SW_MODULE_SHARED_ASSET_CACHE( ElementRules, ElementRuleCatalog, SW_GF_API,
+                                  ElementRuleCatalog::kAssetType.withLoader( AssetTypeLoader::of<ElementRuleCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw
 
 namespace sw
@@ -42,7 +42,7 @@ namespace sw
         return std::nullopt;
     }
 
-    void ElementRuleTable::clear()
+    void ElementRuleCatalog::clear()
     {
         _listFlag.clear();
         _listMaterial.clear();
@@ -52,7 +52,7 @@ namespace sw
         _stepTime = kDefaultStepTime;
     }
 
-    int32 ElementRuleTable::addFlag( const hashed_string& id )
+    int32 ElementRuleCatalog::addFlag( const hashed_string& id )
     {
         const int32 existing = findFlag( id );
         if ( existing >= 0 )
@@ -63,7 +63,7 @@ namespace sw
         return static_cast<int32>( _listFlag.size() ) - 1;
     }
 
-    int32 ElementRuleTable::addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag )
+    int32 ElementRuleCatalog::addMaterial( const hashed_string& id, const vector<hashed_string>& listFlag )
     {
         if ( findMaterial( id ) >= 0 || static_cast<int32>( _listMaterial.size() ) >= kMaxMaterialCount )
             return -1;
@@ -80,7 +80,7 @@ namespace sw
         return static_cast<int32>( _listMaterial.size() ) - 1;
     }
 
-    void ElementRuleTable::setMaterialParam( int32 material, const hashed_string& name, int32 value )
+    void ElementRuleCatalog::setMaterialParam( int32 material, const hashed_string& name, int32 value )
     {
         if ( material < 0 || material >= static_cast<int32>( _listMaterial.size() ) )
             return;
@@ -97,7 +97,7 @@ namespace sw
         def._listParamValue.push_back( value );
     }
 
-    int32 ElementRuleTable::addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps )
+    int32 ElementRuleCatalog::addStatus( const hashed_string& id, ElementStatusKind kind, int32 steps )
     {
         if ( findStatus( id ) >= 0 || static_cast<int32>( _listStatus.size() ) >= kMaxStatusCount )
             return -1;
@@ -109,7 +109,7 @@ namespace sw
         return static_cast<int32>( _listStatus.size() ) - 1;
     }
 
-    int32 ElementRuleTable::addStimulus( const hashed_string& id )
+    int32 ElementRuleCatalog::addStimulus( const hashed_string& id )
     {
         const int32 existing = findStimulus( id );
         if ( existing >= 0 )
@@ -120,18 +120,18 @@ namespace sw
         return static_cast<int32>( _listStimulus.size() ) - 1;
     }
 
-    void ElementRuleTable::addStimulusRule( int32 stimulus, const ElementStimulusRule& rule )
+    void ElementRuleCatalog::addStimulusRule( int32 stimulus, const ElementStimulusRule& rule )
     {
         if ( 0 <= stimulus && stimulus < static_cast<int32>( _listStimulus.size() ) )
             _listStimulus[static_cast<size_t>( stimulus )]._listRule.push_back( rule );
     }
 
-    void ElementRuleTable::addStepRule( const ElementStepRule& rule )
+    void ElementRuleCatalog::addStepRule( const ElementStepRule& rule )
     {
         _listStepRule.push_back( rule );
     }
 
-    int32 ElementRuleTable::findFlag( const hashed_string& id ) const
+    int32 ElementRuleCatalog::findFlag( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listFlag.size(); ++index )
         {
@@ -141,7 +141,7 @@ namespace sw
         return -1;
     }
 
-    int32 ElementRuleTable::findMaterial( const hashed_string& id ) const
+    int32 ElementRuleCatalog::findMaterial( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listMaterial.size(); ++index )
         {
@@ -151,7 +151,7 @@ namespace sw
         return -1;
     }
 
-    int32 ElementRuleTable::findStatus( const hashed_string& id ) const
+    int32 ElementRuleCatalog::findStatus( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listStatus.size(); ++index )
         {
@@ -161,7 +161,7 @@ namespace sw
         return -1;
     }
 
-    int32 ElementRuleTable::findStimulus( const hashed_string& id ) const
+    int32 ElementRuleCatalog::findStimulus( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listStimulus.size(); ++index )
         {
@@ -171,7 +171,7 @@ namespace sw
         return -1;
     }
 
-    bool ElementRuleTable::hasFlag( int32 material, int32 flag ) const
+    bool ElementRuleCatalog::hasFlag( int32 material, int32 flag ) const
     {
         const bool bInvalidFlagRequest = material < 0 || material >= static_cast<int32>( _listMaterial.size() ) || flag < 0;
         if ( bInvalidFlagRequest )
@@ -179,27 +179,27 @@ namespace sw
         return ( _listMaterial[static_cast<size_t>( material )]._flags & ( 1u << static_cast<uint32>( flag ) ) ) != 0;
     }
 
-    bool ElementRuleTable::loadFromAsset( const AssetID& assetID )
+    bool ElementRuleCatalog::loadFromAsset( const AssetID& assetID )
     {
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        if ( XMLReadUtil::loadRootOrWarn( doc, assetID, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, assetID, ElementRuleCatalogInternal::kRootName, root, sourceName ) == false )
             return false;
         return loadRoot( root, sourceName );
     }
 
-    bool ElementRuleTable::loadFromXMLText( string_view xmlText, string_view sourceName )
+    bool ElementRuleCatalog::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, ElementRuleTableInternal::kRootName, root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, ElementRuleCatalogInternal::kRootName, root ) == false )
             return false;
         return loadRoot( root, sourceName );
     }
 
-    bool ElementRuleTable::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const,
-                                      int32& outIndex, string_view sourceName ) const
+    bool ElementRuleCatalog::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleCatalog::*pFind )( const hashed_string& ) const,
+                                        int32& outIndex, string_view sourceName ) const
     {
         outIndex = -1;
         if ( name.empty() ) // 적지 않으면 "없음"(-1)
@@ -207,33 +207,33 @@ namespace sw
         outIndex = ( this->*pFind )( name );
         if ( outIndex >= 0 )
             return true;
-        SW_LOG_WARNING_ID( "ElementRuleTable.NamesNothingDeclaredTable", "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, name.c_str() );
+        SW_LOG_WARNING_ID( "ElementRuleCatalog.NamesNothingDeclaredTable", "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, name.c_str() );
         return false;
     }
 
-    bool ElementRuleTable::readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const
+    bool ElementRuleCatalog::readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const
     {
-        ElementStimulusRuleFields fields;
-        bool                      bValid = XMLFields::readFields( node, fields, sourceName );
-        bValid                           = readIndex( fields._material, node, "material", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
-        bValid                           = readIndex( fields._flag, node, "flag", &ElementRuleTable::findFlag, outRule._flag, sourceName ) && bValid;
-        bValid                           = readIndex( fields._status, node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName ) && bValid;
-        bValid                           = readIndex( fields._without, node, "without", &ElementRuleTable::findStatus, outRule._without, sourceName ) && bValid;
-        bValid                           = readIndex( fields._setMaterial, node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
-        bValid                           = readIndex( fields._addStatus, node, "addStatus", &ElementRuleTable::findStatus, outRule._addStatus, sourceName ) && bValid;
-        bValid                           = readIndex( fields._removeStatus, node, "removeStatus", &ElementRuleTable::findStatus, outRule._removeStatus, sourceName ) && bValid;
-        bValid                           = readIndex( fields._floodStatus, node, "floodStatus", &ElementRuleTable::findStatus, outRule._floodStatus, sourceName ) && bValid;
-        bValid                           = readIndex( fields._through, node, "through", &ElementRuleTable::findFlag, outRule._floodThrough, sourceName ) && bValid;
-        outRule._event                   = fields._event;
+        ElementStimulusRuleParams params;
+        bool                      bValid = XMLFields::readFields( node, params, sourceName );
+        bValid                           = readIndex( params._material, node, "material", &ElementRuleCatalog::findMaterial, outRule._material, sourceName ) && bValid;
+        bValid                           = readIndex( params._flag, node, "flag", &ElementRuleCatalog::findFlag, outRule._flag, sourceName ) && bValid;
+        bValid                           = readIndex( params._status, node, "status", &ElementRuleCatalog::findStatus, outRule._status, sourceName ) && bValid;
+        bValid                           = readIndex( params._without, node, "without", &ElementRuleCatalog::findStatus, outRule._without, sourceName ) && bValid;
+        bValid                           = readIndex( params._setMaterial, node, "setMaterial", &ElementRuleCatalog::findMaterial, outRule._setMaterial, sourceName ) && bValid;
+        bValid                           = readIndex( params._addStatus, node, "addStatus", &ElementRuleCatalog::findStatus, outRule._addStatus, sourceName ) && bValid;
+        bValid                           = readIndex( params._removeStatus, node, "removeStatus", &ElementRuleCatalog::findStatus, outRule._removeStatus, sourceName ) && bValid;
+        bValid                           = readIndex( params._floodStatus, node, "floodStatus", &ElementRuleCatalog::findStatus, outRule._floodStatus, sourceName ) && bValid;
+        bValid                           = readIndex( params._through, node, "through", &ElementRuleCatalog::findFlag, outRule._floodThrough, sourceName ) && bValid;
+        outRule._event                   = params._event;
         if ( outRule._floodStatus >= 0 && outRule._floodThrough < 0 )
         {
-            SW_LOG_WARNING_ID( "ElementRuleTable.FloodStatusNeedsThroughFlag", "%#: <On floodStatus> needs through=\"<flag>\"", sourceName );
+            SW_LOG_WARNING_ID( "ElementRuleCatalog.FloodStatusNeedsThroughFlag", "%#: <On floodStatus> needs through=\"<flag>\"", sourceName );
             bValid = false;
         }
         return bValid;
     }
 
-    bool ElementRuleTable::readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const
+    bool ElementRuleCatalog::readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const
     {
         if ( XMLReadUtil::isElement( node.getName(), "Expire" ) )
             outRule._kind = ElementStepRuleKind::Expire;
@@ -243,45 +243,45 @@ namespace sw
             outRule._kind = ElementStepRuleKind::Spread;
         else
         {
-            SW_LOG_WARNING_ID( "ElementRuleTable.UnknownStepRuleExpire", "%#: unknown step rule <%#> (Expire, Convert, Spread)", sourceName, node.getName() );
+            SW_LOG_WARNING_ID( "ElementRuleCatalog.UnknownStepRuleExpire", "%#: unknown step rule <%#> (Expire, Convert, Spread)", sourceName, node.getName() );
             return false;
         }
-        ElementStepRuleFields fields; // 상태 필수 · 형태는 ENUM() 이름 · after >= 0
-        bool                  bValid = XMLFields::readFields( node, fields, sourceName );
-        bValid                       = readIndex( fields._status, node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName ) && bValid;
-        bValid                       = readIndex( fields._neighbor, node, "neighbor", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
-        bValid                       = readIndex( fields._setMaterial, node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
-        bValid                       = readIndex( fields._to, node, "to", &ElementRuleTable::findFlag, outRule._toFlag, sourceName ) && bValid;
-        outRule._after               = fields._after;
-        outRule._bCrosswind          = fields._bCrosswind;
-        outRule._stepsParam          = fields._stepsParam;
-        outRule._event               = fields._event;
-        outRule._pattern             = fields._pattern;
+        ElementStepRuleParams params; // 상태 필수 · 형태는 ENUM() 이름 · after >= 0
+        bool                  bValid = XMLFields::readFields( node, params, sourceName );
+        bValid                       = readIndex( params._status, node, "status", &ElementRuleCatalog::findStatus, outRule._status, sourceName ) && bValid;
+        bValid                       = readIndex( params._neighbor, node, "neighbor", &ElementRuleCatalog::findMaterial, outRule._material, sourceName ) && bValid;
+        bValid                       = readIndex( params._setMaterial, node, "setMaterial", &ElementRuleCatalog::findMaterial, outRule._setMaterial, sourceName ) && bValid;
+        bValid                       = readIndex( params._to, node, "to", &ElementRuleCatalog::findFlag, outRule._toFlag, sourceName ) && bValid;
+        outRule._after               = params._after;
+        outRule._bCrosswind          = params._bCrosswind;
+        outRule._stepsParam          = params._stepsParam;
+        outRule._event               = params._event;
+        outRule._pattern             = params._pattern;
         if ( bValid && outRule._status < 0 )
         {
-            SW_LOG_WARNING_ID( "ElementRuleTable.NeedsStatus", "%#: <%#> needs a status", sourceName, node.getName() );
+            SW_LOG_WARNING_ID( "ElementRuleCatalog.NeedsStatus", "%#: <%#> needs a status", sourceName, node.getName() );
             bValid = false;
         }
         return bValid;
     }
 
-    bool ElementRuleTable::loadRoot( const XMLNode& root, string_view sourceName )
+    bool ElementRuleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
-        ElementRuleRootFields rootFields{ _stepTime };
-        bool                  bValid = XMLFields::readFields( root, rootFields, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
-        _stepTime                    = bValid ? rootFields._stepTime : _stepTime;
+        ElementRuleRootParams rootParams{ _stepTime };
+        bool                  bValid = XMLFields::readFields( root, rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        _stepTime                    = bValid ? rootParams._stepTime : _stepTime;
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( XMLReadUtil::isElement( child.getName(), "Flag" ) )
             {
-                ElementNameFields flag;
+                ElementNameParams flag;
                 bValid = XMLFields::readFields( child, flag, sourceName ) && bValid;
                 if ( addFlag( flag._id ) < 0 )
                 {
-                    SW_LOG_WARNING_ID( "ElementRuleTable.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
+                    SW_LOG_WARNING_ID( "ElementRuleCatalog.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
                     bValid = false;
                 }
             }
@@ -291,7 +291,7 @@ namespace sw
                 bValid = XMLFields::readFields( child, status, sourceName ) && bValid;
                 if ( addStatus( status._id, status._kind, status._steps ) < 0 )
                 {
-                    SW_LOG_WARNING_ID( "ElementRuleTable.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
+                    SW_LOG_WARNING_ID( "ElementRuleCatalog.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
                     bValid = false;
                 }
             }
@@ -304,7 +304,7 @@ namespace sw
             const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
             if ( material < 0 )
             {
-                SW_LOG_WARNING_ID( "ElementRuleTable.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
+                SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
                 bValid = false;
                 continue;
             }
@@ -316,7 +316,7 @@ namespace sw
                 int32 value{ 0 };
                 if ( StringUtil::parseInt( attribute.getValue(), value ) == false )
                 {
-                    SW_LOG_WARNING_ID( "ElementRuleTable.MaterialIdNotInteger", "%#: <Material id=\"%#\"> %#=\"%#\" is not an integer", sourceName, child.getAttributeText( "id" ), attribute.getName(), attribute.getValue() );
+                    SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdNotInteger", "%#: <Material id=\"%#\"> %#=\"%#\" is not an integer", sourceName, child.getAttributeText( "id" ), attribute.getName(), attribute.getValue() );
                     bValid = false;
                     continue;
                 }
@@ -325,7 +325,7 @@ namespace sw
         }
         for ( XMLNode child = root.findChild( "Stimulus" ); child; child = child.findNextSibling( "Stimulus" ) )
         {
-            ElementNameFields stimulusFields;
+            ElementNameParams stimulusFields;
             bValid               = XMLFields::readFields( child, stimulusFields, sourceName ) && bValid;
             const int32 stimulus = addStimulus( stimulusFields._id );
             for ( XMLNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
@@ -353,7 +353,7 @@ namespace sw
                                 XMLReadUtil::isElement( child.getName(), "Step" );
             if ( bKnown == false )
             {
-                SW_LOG_WARNING_ID( "ElementRuleTable.UnknownElementElementRules", "%#: unknown element <%#> in <ElementRules>", sourceName, child.getName() );
+                SW_LOG_WARNING_ID( "ElementRuleCatalog.UnknownElementElementRules", "%#: unknown element <%#> in <ElementRules>", sourceName, child.getName() );
                 bValid = false;
             }
         }

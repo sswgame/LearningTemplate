@@ -108,7 +108,7 @@ namespace sw
         /** @brief 월드 · AI 를 돌리고 알림을 AI 에 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
-        void drainEvents( vector<RTSEvent>& outListEvent );
+        void pollEvents( vector<RTSEvent>& outListEvent );
 
         RTSWorld&             getWorld() { return _world; }
         const RTSWorld&       getWorld() const { return _world; }
@@ -143,7 +143,7 @@ namespace sw
 
     private:
         RTSWorld              _world;
-        DrainLease            _eventLease; ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
+        ConsumerLease         _eventLease; ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
         RTSCommanderAI        _arrAI[kPlayerCount];
         Wallet                _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
         vector<RTSEvent>      _listEvent;               ///< 화면이 꺼내 갈 사본

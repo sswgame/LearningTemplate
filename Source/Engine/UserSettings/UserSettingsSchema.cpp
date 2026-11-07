@@ -574,9 +574,9 @@ namespace sw
 
         // 다 읽은 뒤에만 합친다. 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓하기 때문이다.
         UserSettingsSchema           overlay;
-        UserSettingsSchemaRootFields rootFields;
-        bool                         bOk = XMLFields::readFields( root, rootFields, sourceName );
-        overlay._version                 = rootFields._version;
+        UserSettingsSchemaRootParams rootParams;
+        bool                         bOk = XMLFields::readFields( root, rootParams, sourceName );
+        overlay._version                 = rootParams._version;
 
         const uint32 orderBase = static_cast<uint32>( _listSetting.size() );
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )

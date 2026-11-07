@@ -140,7 +140,7 @@ namespace sw
          * @details 값이 가장 낮은 단계의 `min` 보다 작아도 0 이다. 단계에는 하한이 없어서 가장 낮은 단계로 떨어지며, "단계 밖" 은 없다.
          */
         int32 getTierIndex( const hashed_string& factionID ) const;
-        void  drainEvents( vector<ReputationEvent>& outListEvent );
+        void  pollEvents( vector<ReputationEvent>& outListEvent );
         /** @brief 세력마다 id 와 값을 처음 만난 순서로 씁니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 세력 id 가 비어 있으면 false 를 반환하고 상태는 바뀌지 않습니다. */

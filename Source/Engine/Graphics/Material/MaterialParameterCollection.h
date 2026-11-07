@@ -26,7 +26,7 @@ namespace sw
 {
     /** @brief 묶음의 값 하나입니다. */
     REFLECT()
-    struct SW_API MaterialCollectionParameterDesc
+    struct SW_API MaterialCollectionParameterDef
     {
         REFLECT_BODY();
 
@@ -42,13 +42,13 @@ namespace sw
     /**
      * @brief `*.matparams.xml` 하나입니다. 변형은 루트의 `_base` 로 적고 값을 이름으로 합칩니다(계절 · 지역별 묶음).
      * @code
-     *     <MaterialParameterCollectionDesc>
-     *       <_listParameter><MaterialCollectionParameterDesc _name="WorldTint" _value="1, 0.9, 0.8, 1" /></_listParameter>
-     *     </MaterialParameterCollectionDesc>
+     *     <MaterialParameterCollectionDef>
+     *       <_listParameter><MaterialCollectionParameterDef _name="WorldTint" _value="1, 0.9, 0.8, 1" /></_listParameter>
+     *     </MaterialParameterCollectionDef>
      * @endcode
      */
     REFLECT()
-    struct SW_API MaterialParameterCollectionDesc
+    struct SW_API MaterialParameterCollectionDef
     {
         REFLECT_BODY();
 
@@ -62,7 +62,7 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "MaterialParameterCollection", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Values shared by every material that binds this collection" )
-        vector<MaterialCollectionParameterDesc> _listParameter{};
+        vector<MaterialCollectionParameterDef> _listParameter{};
 
         /** @brief 이름이 비거나 겹치면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
@@ -82,7 +82,7 @@ namespace sw
         [[nodiscard]] static shared_ptr<MaterialParameterCollection> acquire( const AssetID& assetID );
 
         /** @brief @p desc 의 값으로 만듭니다(`acquire` · 테스트). */
-        explicit MaterialParameterCollection( MaterialParameterCollectionDesc desc );
+        explicit MaterialParameterCollection( MaterialParameterCollectionDef desc );
 
         /** @brief 지금 값입니다. 없는 이름이면 nullptr 입니다. */
         [[nodiscard]] const float4* findValue( const hashed_string& name ) const;

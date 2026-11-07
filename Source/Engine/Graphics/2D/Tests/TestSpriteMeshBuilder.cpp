@@ -45,7 +45,7 @@ namespace
  */
 SW_TEST_CASE( SpriteMeshBuilderTest, SlicedCornersKeepTheirSizeAndTheCenterStretches )
 {
-    sw::SlicedSpriteDesc desc{};
+    sw::SlicedSpriteDef desc{};
     desc._size   = sw::float2{ 4.0f, 2.0f };
     desc._border = sw::float4{ 0.25f, 0.25f, 0.25f, 0.25f };
     sw::vector<sw::RHIVertex> listVertex;
@@ -85,7 +85,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, SlicedCornersKeepTheirSizeAndTheCenterStret
  */
 SW_TEST_CASE( SpriteMeshBuilderTest, TiledRepeatsTheMiddleAndCropsTheLastTile )
 {
-    sw::SlicedSpriteDesc tiled{};
+    sw::SlicedSpriteDef tiled{};
     tiled._size   = sw::float2{ 2.5f, 1.0f };
     tiled._bTiled = SW_TRUE;
     sw::vector<sw::RHIVertex> listVertex;
@@ -99,13 +99,13 @@ SW_TEST_CASE( SpriteMeshBuilderTest, TiledRepeatsTheMiddleAndCropsTheLastTile )
     SW_EXPECT_TRUE( isNear( 0.0f, last._uLeft ) && isNear( 0.5f, last._uRight ) );
 
     // Sliced 로 같은 크기면 칸 하나가 늘어난다.
-    sw::SlicedSpriteDesc stretched = tiled;
-    stretched._bTiled              = SW_FALSE;
+    sw::SlicedSpriteDef stretched = tiled;
+    stretched._bTiled             = SW_FALSE;
     sw::SpriteMeshBuilder::makeSlicedVertices( stretched, listVertex );
     SW_REQUIRE_EQUAL( 1u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
 
     // 테두리 합보다 작은 크기.
-    sw::SlicedSpriteDesc tiny{};
+    sw::SlicedSpriteDef tiny{};
     tiny._size   = sw::float2{ 0.2f, 1.0f };
     tiny._border = sw::float4{ 0.25f, 0.0f, 0.25f, 0.0f };
     sw::SpriteMeshBuilder::makeSlicedVertices( tiny, listVertex );
@@ -120,7 +120,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, TiledRepeatsTheMiddleAndCropsTheLastTile )
  */
 SW_TEST_CASE( SpriteMeshBuilderTest, SameDescSharesOneMesh )
 {
-    sw::SlicedSpriteDesc desc{};
+    sw::SlicedSpriteDef desc{};
     desc._size                            = sw::float2{ 3.0f, 1.5f };
     desc._border                          = sw::float4{ 0.2f, 0.2f, 0.2f, 0.2f };
     const sw::shared_ptr<sw::Mesh> first  = sw::SpriteMeshBuilder::acquireSlicedMesh( desc );

@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioMixer.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
 
@@ -16,10 +16,10 @@ namespace sw
         struct AudioSnapshotMixerInternal
         {
             /** @brief 데이터에 적힌(없으면 종류 기본) 이펙트 파라미터 값입니다. */
-            static float32 findBaseEffectValue( const AudioEffectDesc& effect, const AudioEffectTypeInfo& typeInfo, uint32 parameterIndex )
+            static float32 findBaseEffectValue( const AudioEffectDef& effect, const AudioEffectTypeInfo& typeInfo, uint32 parameterIndex )
             {
                 const hashed_string parameterName( typeInfo._pParameter[parameterIndex]._pName );
-                for ( const AudioEffectParameterDesc& parameter : effect._listParameter )
+                for ( const AudioEffectParameterDef& parameter : effect._listParameter )
                 {
                     if ( parameter._name == parameterName )
                         return parameter._value;
@@ -28,9 +28,9 @@ namespace sw
             }
 
             /** @brief 데이터에 적힌 센드 레벨입니다. 없으면 바닥 값입니다. */
-            static float32 findBaseSendLevel( const AudioMixerDesc& desc, uint32 busIndex, const hashed_string& target )
+            static float32 findBaseSendLevel( const AudioMixerDef& desc, uint32 busIndex, const hashed_string& target )
             {
-                for ( const AudioSendDesc& send : desc._listBus[busIndex]._listSend )
+                for ( const AudioSendDef& send : desc._listBus[busIndex]._listSend )
                 {
                     if ( send._bus == target )
                         return send._levelDb;
@@ -109,7 +109,7 @@ namespace sw
         applyBusUserState( mixer, state );
     }
 
-    void AudioSnapshotMixer::adoptMixer( AudioMixer& mixer )
+    void AudioSnapshotMixer::applyMixer( AudioMixer& mixer )
     {
         for ( const BusUserState& state : _listBusUserState )
         {
@@ -151,7 +151,7 @@ namespace sw
             ++snapshotIndex;
         }
 
-        const AudioMixerDesc& desc = mixer.getDesc();
+        const AudioMixerDef& desc = mixer.getDesc();
 
         // 버스 오프셋: 세기 × dB 를 더한다.
         for ( uint32 busIndex = 0; busIndex < mixer.getBusCount(); ++busIndex )
@@ -160,7 +160,7 @@ namespace sw
         }
         for ( const SnapshotState& snapshot : _listSnapshot )
         {
-            for ( const AudioSnapshotBusDesc& busVolume : snapshot._pDesc->_listBusVolume )
+            for ( const AudioSnapshotBusDef& busVolume : snapshot._pDesc->_listBusVolume )
             {
                 const int32 busIndex = mixer.findBusIndex( busVolume._bus );
                 if ( busIndex >= 0 )
@@ -172,9 +172,9 @@ namespace sw
         }
 
         // 센드와 이펙트 파라미터: 어느 스냅샷이든 가리키는 슬롯은 데이터 값에서 시작해 켠 순서대로 세기만큼 보간한다(모두 빠지면 데이터 값으로 돌아온다).
-        for ( const AudioSnapshotDesc& anySnapshot : desc._listSnapshot )
+        for ( const AudioSnapshotDef& anySnapshot : desc._listSnapshot )
         {
-            for ( const AudioSnapshotSendDesc& sendItem : anySnapshot._listSend )
+            for ( const AudioSnapshotSendDef& sendItem : anySnapshot._listSend )
             {
                 const int32 busIndex    = mixer.findBusIndex( sendItem._bus );
                 const int32 targetIndex = mixer.findBusIndex( sendItem._target );
@@ -183,7 +183,7 @@ namespace sw
                 float32 levelDb = AudioSnapshotMixerInternal::findBaseSendLevel( desc, static_cast<uint32>( busIndex ), sendItem._target );
                 for ( const SnapshotState& snapshot : _listSnapshot )
                 {
-                    for ( const AudioSnapshotSendDesc& activeSend : snapshot._pDesc->_listSend )
+                    for ( const AudioSnapshotSendDef& activeSend : snapshot._pDesc->_listSend )
                     {
                         if ( activeSend._bus == sendItem._bus && activeSend._target == sendItem._target )
                             levelDb += ( activeSend._levelDb - levelDb ) * snapshot._intensity;
@@ -191,13 +191,13 @@ namespace sw
                 }
                 (void)mixer.setSendLevelDb( static_cast<uint32>( busIndex ), static_cast<uint32>( targetIndex ), levelDb );
             }
-            for ( const AudioSnapshotEffectDesc& effectItem : anySnapshot._listEffectParameter )
+            for ( const AudioSnapshotEffectDef& effectItem : anySnapshot._listEffectParameter )
             {
                 const int32 busIndex = mixer.findBusIndex( effectItem._bus );
                 if ( busIndex < 0 )
                     continue;
-                IAudioEffect*          pEffect     = mixer.findEffect( static_cast<uint32>( busIndex ), effectItem._effect );
-                const AudioEffectDesc* pEffectDesc = desc.findEffect( static_cast<uint32>( busIndex ), effectItem._effect );
+                IAudioEffect*         pEffect     = mixer.findEffect( static_cast<uint32>( busIndex ), effectItem._effect );
+                const AudioEffectDef* pEffectDesc = desc.findEffect( static_cast<uint32>( busIndex ), effectItem._effect );
                 if ( pEffect == nullptr || pEffectDesc == nullptr )
                     continue;
                 const int32 parameterIndex = pEffect->findParameterIndex( effectItem._parameter );
@@ -208,7 +208,7 @@ namespace sw
                 float32                         value    = AudioSnapshotMixerInternal::findBaseEffectValue( *pEffectDesc, typeInfo, static_cast<uint32>( parameterIndex ) );
                 for ( const SnapshotState& snapshot : _listSnapshot )
                 {
-                    for ( const AudioSnapshotEffectDesc& activeEffect : snapshot._pDesc->_listEffectParameter )
+                    for ( const AudioSnapshotEffectDef& activeEffect : snapshot._pDesc->_listEffectParameter )
                     {
                         const bool bSame = activeEffect._bus == effectItem._bus && activeEffect._effect == effectItem._effect &&
                                            activeEffect._parameter == effectItem._parameter;
@@ -230,7 +230,7 @@ namespace sw
             if ( snapshot._name == name )
                 return &snapshot;
         }
-        const AudioSnapshotDesc* pDesc = mixer.getDesc().findSnapshot( name );
+        const AudioSnapshotDef* pDesc = mixer.getDesc().findSnapshot( name );
         if ( pDesc == nullptr )
         {
             SW_LOG_ERROR_ID( "AudioSnapshotMixer.UnknownAudioSnapshot", "Unknown audio snapshot '%#'", name.c_str() );

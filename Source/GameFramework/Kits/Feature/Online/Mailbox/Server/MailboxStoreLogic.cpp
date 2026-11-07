@@ -81,10 +81,10 @@ namespace sw
                 return MailboxResult::Unavailable;
             }
 
-            static void collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountID, vector<LedgerBalance>& inoutListBalance )
+            static void collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& inoutListBalance )
             {
                 const LedgerHolder account = LedgerHolder::makeAccount( accountID );
-                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
                 {
                     if ( holderBalance._holder != account )
                         continue;
@@ -129,9 +129,9 @@ namespace sw
                 }
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
-                    ServiceTransaction    transaction;
-                    LedgerTransferOutcome outcome;
-                    const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+                    ServiceTransaction   transaction;
+                    LedgerTransferResult outcome;
+                    const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
                     if ( staged != LedgerResult::Ok )
                         return toMailboxResult( staged );
                     if ( outcome._bReplayed == SW_TRUE )
@@ -154,9 +154,9 @@ namespace sw
             }
 
             /** @brief 이동으로 바뀐 계정 보유자의 잔액을 모읍니다. */
-            static void collectAccountChanges( const LedgerTransferOutcome& outcome, vector<MailboxBalanceChange>& outListChange )
+            static void collectAccountChanges( const LedgerTransferResult& outcome, vector<MailboxBalanceChange>& outListChange )
             {
-                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
                 {
                     if ( holderBalance._holder._kind == LedgerHolderKind::Account )
                         outListChange.push_back( MailboxBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
@@ -197,7 +197,7 @@ namespace sw
                 {
                     request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetID, attachment._amount } );
                 }
-                LedgerTransferOutcome outcome;
+                LedgerTransferResult outcome;
                 if ( Ledger::stageTransfer( connection, request, inoutTransaction, outcome ) != LedgerResult::Ok || outcome._bReplayed == SW_TRUE )
                     return false;
                 if ( outbReturned )
@@ -300,7 +300,7 @@ namespace sw
 
             ServiceTransaction    transaction;
             LedgerTransferRequest request;
-            LedgerTransferOutcome outcome;
+            LedgerTransferResult  outcome;
             const bool            bHasAttachment = mail._message._listAttachment.empty() == false;
             if ( bHasAttachment )
             {

@@ -113,7 +113,7 @@ namespace sw
 
     SW_UI_SCREEN_SWITCH( OptionsMenu, "OptionsMenu", 2, &OptionsMenuScreenInternal::syncSwitch );
 
-    OptionsMenuScreen::OptionsMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    OptionsMenuScreen::OptionsMenuScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _listCategory{}
         , _listTabButton{}
@@ -276,7 +276,7 @@ namespace sw
             _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, pUI->getEngineDocuments()._settingsConfirm );
         if ( result._bNeedsRestart && pUI != nullptr )
         {
-            UINotificationDesc notice{};
+            UINotificationDef notice{};
             notice._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
             notice._durationSeconds = 6.0f;
             notice._kind            = UINotificationKind::Warning;
@@ -359,7 +359,7 @@ namespace sw
         UIDocumentCache&                        documents    = engine::getSubsystem<UIDocumentCache>();
         string                                  error;
         const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, error );
-        vector<UIBindingDesc>                   listBinding;
+        vector<UIBindingDef>                    listBinding;
         unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
         if ( row == nullptr )
         {
@@ -371,7 +371,7 @@ namespace sw
         (void)rows.addChild( std::move( row ) );
         WidgetTree& tree = getTree();
         // 템플릿에 적힌 바인딩(게임이 덮어쓴 행 템플릿)도 그대로 연결한다.
-        for ( const UIBindingDesc& binding : listBinding )
+        for ( const UIBindingDef& binding : listBinding )
         {
             addBinding( binding );
         }
@@ -393,10 +393,10 @@ namespace sw
         const string expression = "{setting:" + prefix + "}";
         const utf8*  pProperty  = Internal::getRowWidget( setting._type )._pValueProperty;
         if ( pProperty != nullptr )
-            addBinding( UIBindingDesc{ pProperty, expression, pValue->getID(), 0 } );
+            addBinding( UIBindingDef{ pProperty, expression, pValue->getID(), 0 } );
         Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) );
         if ( pValueText != nullptr )
-            addBinding( UIBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getID(), 0 } );
+            addBinding( UIBindingDef{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getID(), 0 } );
         Widget* pGlyph = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kGlyphName ) );
         if ( pGlyph != nullptr )
             entry._glyph = pGlyph->getID();

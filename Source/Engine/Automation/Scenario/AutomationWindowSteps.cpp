@@ -20,7 +20,7 @@
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Window/IWindow.h"
@@ -38,22 +38,22 @@ namespace sw
         {
             static bool validateMessage( const AutomationStep& step, string& outError )
             {
-                AutomationWindowMessageFields fields;
-                return step.readFields( fields, outError );
+                AutomationWindowMessageParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateClip( const AutomationStep& step, string& outError )
             {
-                AutomationCursorClipFields fields;
-                return step.readFields( fields, outError );
+                AutomationCursorClipParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateCapture( const AutomationStep& step, string& outError )
             {
-                AutomationFileStepFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AutomationFileStepParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                if ( StringUtil::endsWith( fields._file, ".png", true ) )
+                if ( StringUtil::endsWith( params._file, ".png", true ) )
                     return true;
                 outError = step.describe() + ": file must end with .png";
                 return false;
@@ -110,7 +110,7 @@ namespace sw
                     runner.recordFailure( step, "there is no window to send a message to" );
                     return true;
                 }
-                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageFields>()._message;
+                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageParams>()._message;
                 RECT                          client{};
                 GetClientRect( hwnd, &client );
                 const LPARAM center = MAKELPARAM( ( client.right - client.left ) / 2, ( client.bottom - client.top ) / 2 );
@@ -160,7 +160,7 @@ namespace sw
                                    GetSystemMetrics( SM_XVIRTUALSCREEN ) + GetSystemMetrics( SM_CXVIRTUALSCREEN ),
                                    GetSystemMetrics( SM_YVIRTUALSCREEN ) + GetSystemMetrics( SM_CYVIRTUALSCREEN ) };
                 const bool bWholeScreen = clip.left <= screen.left && clip.top <= screen.top && clip.right >= screen.right && clip.bottom >= screen.bottom;
-                const bool bWantLocked  = step.readValidatedFields<AutomationCursorClipFields>()._state == AutomationCursorClipState::Locked;
+                const bool bWantLocked  = step.readValidatedFields<AutomationCursorClipParams>()._state == AutomationCursorClipState::Locked;
                 if ( bWantLocked ? bInsideClient : bWholeScreen )
                     return true;
                 // 커서는 전경 창만 가둔다(`InputManager::applyMouseLockMode`). 도는 사이 다른 창이 전경을 가져갔으면 잠금은 볼 수 없는 것이지 틀린 것이 아니다 —
@@ -304,7 +304,7 @@ namespace sw
                             memset( &bytes[( static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ) ) * 4u], 0, 4u );
                     }
                 }
-                const string path = runner.resolveOutputPath( step.readValidatedFields<AutomationFileStepFields>()._file );
+                const string path = runner.resolveOutputPath( step.readValidatedFields<AutomationFileStepParams>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
                      ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
@@ -323,7 +323,7 @@ namespace sw
             }
             static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageFields>()._message;
+                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageParams>()._message;
                 if ( message == AutomationWindowMessage::KillFocus || message == AutomationWindowMessage::SetFocus )
                     return runFocusMessage( runner, step, message == AutomationWindowMessage::SetFocus );
                 return runUnsupported( runner, step );

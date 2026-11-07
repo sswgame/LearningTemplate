@@ -101,7 +101,7 @@ namespace sw
 {
     /** @brief 파일 루트(`<PairedAnimation duration>`)의 칸입니다. */
     REFLECT()
-    struct SW_API PairedAnimationRootFields
+    struct SW_API PairedAnimationRootParams
     {
         REFLECT_BODY();
 
@@ -115,7 +115,7 @@ namespace sw
      *          그 밖에는 셋을 적으면 오류다. 그 "적었는지"는 `PairedAnimationDef::readRole` 이 본다.
      */
     REFLECT()
-    struct SW_API PairedAnimationRoleFields
+    struct SW_API PairedAnimationRoleParams
     {
         REFLECT_BODY();
 
@@ -151,7 +151,7 @@ namespace sw
 
     /** @brief `<Notify>` 의 칸입니다. */
     REFLECT()
-    struct SW_API PairedAnimationNotifyFields
+    struct SW_API PairedAnimationNotifyParams
     {
         REFLECT_BODY();
 
@@ -165,7 +165,7 @@ namespace sw
 
     /** @brief `<Select>` 의 칸입니다. 각은 도 단위다. */
     REFLECT()
-    struct SW_API PairedAnimationSelectFields
+    struct SW_API PairedAnimationSelectParams
     {
         REFLECT_BODY();
 

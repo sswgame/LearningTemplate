@@ -19,15 +19,15 @@ namespace sw
         }
     }
 
-    bool CharacterPoseUtil::copyUnitPose( const SkeletalMeshComponent& unit, CharacterBoneArray& inoutBones )
+    bool CharacterPoseUtil::copyUnitPose( const SkeletalMeshComponent& skeletalMesh, CharacterBoneArray& inoutBones )
     {
-        const Skeleton& skeleton  = unit.getSkeleton();
+        const Skeleton& skeleton  = skeletalMesh.getSkeleton();
         const uint32    boneCount = skeleton.getBoneCount();
         // 이름 하나만 대조해도 다른 스켈레톤을 가려낸다. 본 수가 같은 다른 리그를 받으면 다시 만든다.
         const bool bSameShape = inoutBones.getBoneCount() == boneCount && ( boneCount == 0 || inoutBones._listName[0] == skeleton.getBone( 0 )._name );
         if ( bSameShape == false )
             makeBindBones( skeleton, inoutBones );
-        const vector<float4x4>& listModel = unit.getModelSpaceTransforms();
+        const vector<float4x4>& listModel = skeletalMesh.getModelSpaceTransforms();
         if ( listModel.size() != static_cast<size_t>( boneCount ) )
             return false;
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )

@@ -12,8 +12,8 @@
 
 namespace sw
 {
-    struct AudioAttenuationDesc;
-    struct AudioEventDesc;
+    struct AudioAttenuationDef;
+    struct AudioEventDef;
     struct AudioEventLibrary;
 } // namespace sw
 
@@ -59,7 +59,7 @@ namespace sw::editor
         /** @brief @p listName 에서 @p filter 를 (대소문자 무시) 품은 이름만 사전순으로 @p outListName 에 담습니다. 필터가 비면 전부입니다. */
         static void filterEventNames( const vector<hashed_string>& listName, string_view filter, vector<hashed_string>& outListName );
         /** @brief 이벤트 설명자와 감쇠 프리셋에서 속성 테이블 행을 만듭니다(비우고 채웁니다). 감쇠 이름이 비면 반경 줄은 "2D" 입니다. */
-        static void makeEventFieldRows( const AudioEventDesc& eventDesc, const AudioAttenuationDesc& attenuation, vector<AudioEventFieldRow>& outListRow );
+        static void makeEventFieldRows( const AudioEventDef& eventDesc, const AudioAttenuationDef& attenuation, vector<AudioEventFieldRow>& outListRow );
         /**
          * @brief 재생 중 인스턴스 테이블 행을 만듭니다(비우고 채웁니다). @p eventFilter 가 비지 않으면 그 이벤트만 담습니다.
          * @details 남은 시간이 짧은 것이 위에 오고, 끝을 모르는 것(반복 · 클립 대기)은 맨 아래에 재생 id 순으로 둡니다.

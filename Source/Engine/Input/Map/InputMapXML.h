@@ -1,7 +1,7 @@
 /**
  * @file InputMapXML.h
  * @brief 입력 맵 정의(`<InputMap>`)와 사용자 바인딩(`<UserBindings>`)이 함께 쓰는 `<action>` 원소 하나의 읽기 · 쓰기입니다.
- * @details 두 파일은 수명이 다르지만(디자인 데이터 · 플레이어 파일) 바인딩 원소는 같다 — 원소마다의 칸은 `InputMapFields.h` 스키마이고 여기 하나가 읽고 쓴다.
+ * @details 두 파일은 수명이 다르지만(디자인 데이터 · 플레이어 파일) 바인딩 원소는 같다 — 원소마다의 칸은 `InputMapParams.h` 스키마이고 여기 하나가 읽고 쓴다.
  *          예전에는 두 형식이 같은 바인딩을 다른 속성 이름(`negative` · `negKey`, `code` · `key` · `button`, `responseExponent` · `exponent`)으로 따로 읽었다.
  *          언리얼 Enhanced Input 이 매핑 컨텍스트와 플레이어 키 프로필에 같은 `FEnhancedActionKeyMapping` 을 쓰는 것과 같다.
  */

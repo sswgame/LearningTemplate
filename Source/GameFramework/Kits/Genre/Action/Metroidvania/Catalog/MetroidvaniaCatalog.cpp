@@ -49,24 +49,24 @@ namespace sw
         bValid                            = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
         rules._currency                   = rootDef._currency;
 
-        VitalitySettings& vitality   = rules._health;
-        vitality._maxHealth          = health._maxHealth;
-        vitality._poiseMax           = health._poiseMax;
-        vitality._poiseRegenDelay    = health._poiseRegenDelay;
-        vitality._poiseRegenRate     = health._poiseRegenRate;
-        vitality._poiseBreakDuration = health._poiseBreakDuration;
-        vitality._healthRegenRate    = health._healthRegenRate;
-        vitality._bDownedEnabled     = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
-        ResourceGaugeSettings& gauge = rules._stamina;
-        gauge._max                   = stamina._max;
-        gauge._regenRate             = stamina._regenRate;
-        gauge._regenDelay            = stamina._regenDelay;
-        gauge._exhaustThreshold      = stamina._exhaustThreshold;
-        gauge._bOverheatMode         = SW_FALSE;
+        CombatHealthSettings& combatHealth = rules._health;
+        combatHealth._maxHealth            = health._maxHealth;
+        combatHealth._poiseMax             = health._poiseMax;
+        combatHealth._poiseRegenDelay      = health._poiseRegenDelay;
+        combatHealth._poiseRegenRate       = health._poiseRegenRate;
+        combatHealth._poiseBreakDuration   = health._poiseBreakDuration;
+        combatHealth._healthRegenRate      = health._healthRegenRate;
+        combatHealth._bDownedEnabled       = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
+        ResourceGaugeSettings& gauge       = rules._stamina;
+        gauge._max                         = stamina._max;
+        gauge._regenRate                   = stamina._regenRate;
+        gauge._regenDelay                  = stamina._regenDelay;
+        gauge._exhaustThreshold            = stamina._exhaustThreshold;
+        gauge._bOverheatMode               = SW_FALSE;
 
         // 패리 창은 판정의 유일한 근거다 — 코드가 대신 정한 창을 쓰지 않는다.
         const XMLNode parry = root.findChild( "Parry" );
-        if ( parry && rules._parryJudge.loadFromNode( parry, sourceName ) == false )
+        if ( parry && rules._parryJudge.loadFromXML( parry, sourceName ) == false )
             bValid = false;
         if ( rules._parryJudge.getWindows().empty() )
         {

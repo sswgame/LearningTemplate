@@ -86,13 +86,13 @@ namespace sw
         vector<AssetID> listListed;
         for ( XMLNode line = root.findChild( kSettingsElement ); line.isValid(); line = line.findNextSibling( kSettingsElement ) )
         {
-            InputMapBundleLine fields;
-            if ( XMLFields::readFields( line, fields, absPath ) == false )
+            InputMapBundleLine params;
+            if ( XMLFields::readFields( line, params, absPath ) == false )
             {
                 SW_LOG_ERROR_ID( "InputMapBundle.LineInvalid", "Input map bundle %#: an <%#> line needs path=\"<input map>\" and nothing else", absPath, kSettingsElement );
                 return false;
             }
-            listListed.push_back( AssetID{ string_view{ fields._path } } );
+            listListed.push_back( AssetID{ string_view{ params._path } } );
         }
 
         vector<AssetID> listKit;

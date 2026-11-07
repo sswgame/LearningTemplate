@@ -65,7 +65,7 @@ namespace
         return request;
     }
 
-    struct DirectoryServiceRig
+    struct DirectoryServiceFixture
     {
         ManualClock             _clock;
         MemoryEphemeralDatabase _cacheData;
@@ -76,7 +76,7 @@ namespace
         ServerRegistration      _registration;
         ServerDirectoryService  _service;
 
-        DirectoryServiceRig()
+        DirectoryServiceFixture()
             : _clock{ MonotonicMilliseconds{ 0 } }
             , _cacheData{ _clock }
             , _cache{ &_cacheData }
@@ -96,7 +96,7 @@ namespace
             _service.initialize( dependencies, settings );
         }
 
-        ~DirectoryServiceRig()
+        ~DirectoryServiceFixture()
         {
             _service.shutdown();
             _registration.shutdown();
@@ -145,7 +145,7 @@ namespace
         {
             pump();
             vector<ServerDirectoryCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             return listCompletion.empty() ? ServerDirectoryResult::Count : listCompletion.back()._result;
         }
@@ -177,8 +177,8 @@ namespace
 /** @brief [ServerDirectoryServiceTest] 배정: 등록된 서버를 고른다. 모르는 종류 · 틀린 지역 이름은 Invalid, 시작 중인 서버뿐이면 NoServer 이다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, AssignPicksRegisteredServer )
 {
-    DirectoryServiceRig    rig;
-    const UnixMilliseconds nowMs{ kNowMs };
+    DirectoryServiceFixture rig;
+    const UnixMilliseconds  nowMs{ kNowMs };
     SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment(), nowMs )._result == ServerDirectoryResult::NoServer );
     SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment( "unknown" ), nowMs )._result == ServerDirectoryResult::Invalid );
     SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment( "game", "KR!" ), nowMs )._result == ServerDirectoryResult::Invalid );
@@ -194,7 +194,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignPicksRegisteredServer )
 /** @brief [ServerDirectoryServiceTest] 목록: 찬 비율을 계산하고 오래된 서버는 뺀다. 모르는 종류는 Invalid 이다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, ListServersSkipsStale )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     rig.startServer( ServerState::Open, 25 );
 
     vector<ServerListEntry> listEntry;
@@ -212,7 +212,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ListServersSkipsStale )
 /** @brief [ServerDirectoryServiceTest] 점검: 쓰기 뒤 다시 읽어 막는다. 끝 시각과 안내 키를 주고, 범위 밖 종류와 기간 밖은 막지 않으며, 지우면 풀린다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBlocksAssignment )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     rig.startServer();
     const UnixMilliseconds nowMs{ kNowMs };
 
@@ -240,7 +240,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBlocksAssignment )
 /** @brief [ServerDirectoryServiceTest] 허용 계정: 점검 중에도 배정받고, 점검 상태의 서버도 후보다. 다른 계정은 막히며 상태에 허용 목록이 보이지 않는 것은 형식이 보장한다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, AllowedAccountPassesMaintenance )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     rig.startServer( ServerState::Maintenance );
     const UnixMilliseconds nowMs{ kNowMs };
     SW_EXPECT_TRUE( rig._service.assignServer( kTester, makeAssignment(), nowMs )._result == ServerDirectoryResult::NoServer ); // 점검이 걸리지 않았으면 점검 서버는 후보가 아니다
@@ -257,8 +257,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AllowedAccountPassesMaintenance )
 /** @brief [ServerDirectoryServiceTest] 변경 규칙: 틀린 범위 · 뒤집힌 기간 · 빈 공지 · id 0 · 너무 큰 값은 Invalid 이고 저장소가 그대로다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
 {
-    DirectoryServiceRig rig;
-    const uint64        hashBefore = rig._database.computeContentHash();
+    DirectoryServiceFixture rig;
+    const uint64            hashBefore = rig._database.computeContentHash();
 
     SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "Bad.Scope" ) ) == ServerDirectoryResult::Invalid );
     SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "game", 10, 10 ) ) == ServerDirectoryResult::Invalid );
@@ -280,7 +280,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
 /** @brief [ServerDirectoryServiceTest] 없는 것을 지우면 NotFound 이고, 있는 공지를 지우면 Ok 이며 쓴 변경마다 감사 기록이 남는다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, RemoveAndAudit )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     rig._service.removeNotice( 9, 7, UnixMilliseconds{ kNowMs }, 1 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::NotFound );
     rig._service.clearMaintenance( "game", 7, "memo", UnixMilliseconds{ kNowMs }, 2 );
@@ -299,8 +299,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, RemoveAndAudit )
 /** @brief [ServerDirectoryServiceTest] 저장소 실패: 쓰기 실패는 Unavailable 이고 다시 읽지 않는다. 읽기 실패는 있던 값을 둔다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailuresKeepPreviousState )
 {
-    DirectoryServiceRig    rig;
-    const UnixMilliseconds nowMs{ kNowMs };
+    DirectoryServiceFixture rig;
+    const UnixMilliseconds  nowMs{ kNowMs };
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
     SW_REQUIRE_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
@@ -321,8 +321,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailuresKeepPreviousState )
 SW_TEST_CASE( ServerDirectoryServiceTest, BadRecordKeepsPreviousState )
 {
     SW_EXPECT_LOG( "ServerDirectoryService.ServerDirectoryMaintenanceRecord" );
-    DirectoryServiceRig    rig;
-    const UnixMilliseconds nowMs{ kNowMs };
+    DirectoryServiceFixture rig;
+    const UnixMilliseconds  nowMs{ kNowMs };
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
 
@@ -336,8 +336,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, BadRecordKeepsPreviousState )
 /** @brief [ServerDirectoryServiceTest] 다시 읽기: 다른 서버의 변경은 알림이나 주기로 들어온다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, ReloadOnNotifyAndPeriod )
 {
-    DirectoryServiceRig    rig;
-    const UnixMilliseconds nowMs{ kNowMs };
+    DirectoryServiceFixture rig;
+    const UnixMilliseconds  nowMs{ kNowMs };
     rig.tick( kNowMs );
 
     rig.writeMaintenanceDirectly( makeWindow( "game" ) );
@@ -357,7 +357,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ReloadOnNotifyAndPeriod )
 /** @brief [ServerDirectoryServiceTest] 상태: 기간 안의 것만 우선순위 순서로 보인다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, StatusShowsActiveByPriority )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs - 1, 0, 1 ) ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 2, kNowMs - 1, 0, 9 ) ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 3, kNowMs + 500, 0, 99 ) ) == ServerDirectoryResult::Ok ); // 아직 시작 전이다
@@ -375,7 +375,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusShowsActiveByPriority )
 /** @brief [ServerDirectoryServiceTest] 바뀜 표시: 처음 읽은 빈 상태는 알리지 않고, 변경과 기간 경계에서 한 번씩 켜지며 읽으면 꺼진다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeMarksOnVisibleChange )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     rig.tick( kNowMs );
     SW_EXPECT_FALSE( rig._service.takeStatusChange() );
 
@@ -396,7 +396,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeMarksOnVisibleChange )
 /** @brief [ServerDirectoryServiceTest] 바뀜 표시: 클라이언트가 받는 칸이면 시각이나 문구 방식만 바뀌어도 알린다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeCoversEveryVisibleField )
 {
-    DirectoryServiceRig rig;
+    DirectoryServiceFixture rig;
     SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs - 1, kNowMs + 1000 ) ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
@@ -424,7 +424,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeCoversEveryVisibleField )
 /** @brief [ServerDirectoryServiceTest] GM 창구: 변경 값이 그대로 저장되고 결과가 창구의 형식으로 바뀐다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
 {
-    DirectoryServiceRig      rig;
+    DirectoryServiceFixture  rig;
     IServerDirectoryControl& control = rig._service;
     const UnixMilliseconds   nowMs{ kNowMs };
 
@@ -449,7 +449,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     rig.pump();
 
     vector<ServerDirectoryControlCompletion> listCompletion;
-    control.drainControlCompletions( listCompletion );
+    control.takeControlCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 5 ), listCompletion.size() );
     const auto resultOf = [&listCompletion]( uint64 requestTag )
     {

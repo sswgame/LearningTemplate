@@ -79,13 +79,13 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
         // 트리 데이터(`*.bt.xml`)가 이름으로 가리키는 작업입니다(`RTSCommanderAI.cpp` 끝의 `SW_GAME_ACTION` 줄이 `rts.*` 이름을 붙인다).
-        static ActionResult taskDefend( ActionContext& context, const VocabularyNoFields& params );
-        static ActionResult taskGatherIdle( ActionContext& context, const VocabularyNoFields& params );
-        static ActionResult taskTrainWorkers( ActionContext& context, const VocabularyNoFields& params );
-        static ActionResult taskBuildSupply( ActionContext& context, const VocabularyNoFields& params );
-        static ActionResult taskBuildProduction( ActionContext& context, const VocabularyNoFields& params );
-        static ActionResult taskTrainArmy( ActionContext& context, const VocabularyNoFields& params );
-        static ActionResult taskAttack( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskDefend( ActionContext& context, const VocabularyNoParams& params );
+        static ActionResult taskGatherIdle( ActionContext& context, const VocabularyNoParams& params );
+        static ActionResult taskTrainWorkers( ActionContext& context, const VocabularyNoParams& params );
+        static ActionResult taskBuildSupply( ActionContext& context, const VocabularyNoParams& params );
+        static ActionResult taskBuildProduction( ActionContext& context, const VocabularyNoParams& params );
+        static ActionResult taskTrainArmy( ActionContext& context, const VocabularyNoParams& params );
+        static ActionResult taskAttack( ActionContext& context, const VocabularyNoParams& params );
 
     private:
         /** @brief 놀거나 채취 중인 일꾼 하나로 @p buildingID 를 본진 둘레에 짓습니다. */

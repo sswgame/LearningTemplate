@@ -9,7 +9,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Audio/AudioMixer.h"
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
 
@@ -71,14 +71,14 @@ namespace sw
         shutdown();
     }
 
-    bool AudioEngine::initialize( const AudioMixerDesc& mixerDesc, AudioChannelLayout layout )
+    bool AudioEngine::initialize( const AudioMixerDef& mixerDesc, AudioChannelLayout layout )
     {
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( mixerDesc, layout ) == false )
             return false;
-        _layout                                         = layout;
-        _pMixer                                         = std::move( pMixer );
-        shared_ptr<const AudioMixerDesc> pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
+        _layout                                        = layout;
+        _pMixer                                        = std::move( pMixer );
+        shared_ptr<const AudioMixerDef> pGameMixerDesc = make_shared<AudioMixerDef>( mixerDesc );
         {
             ScopedLock<mutex> lock{ _libraryMutex };
             _pGameMixerDesc = std::move( pGameMixerDesc );
@@ -117,14 +117,14 @@ namespace sw
         _published.clear();
     }
 
-    bool AudioEngine::loadMixer( const AudioMixerDesc& mixerDesc )
+    bool AudioEngine::loadMixer( const AudioMixerDef& mixerDesc )
     {
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( mixerDesc, _layout ) == false )
             return false;
         {
             ScopedLock<mutex> lock{ _libraryMutex };
-            _pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
+            _pGameMixerDesc = make_shared<AudioMixerDef>( mixerDesc );
         }
         Command command;
         command._type   = CommandType::SwapMixer;
@@ -149,17 +149,17 @@ namespace sw
             return false;
         }
         _layout = layout;
-        adoptMixer( std::move( pMixer ) );
+        applyMixer( std::move( pMixer ) );
         _blockOutput.allocate( layout );
         _blockCursor = audio::kBlockFrameCount;
         return true;
     }
 
-    void AudioEngine::adoptMixer( shared_ptr<AudioMixer> pMixer )
+    void AudioEngine::applyMixer( shared_ptr<AudioMixer> pMixer )
     {
         SW_ASSERT( pMixer->getChannelLayout() == _layout );
         _pMixer = std::move( pMixer );
-        _snapshotMixer.adoptMixer( *_pMixer ); // 버스 사용자 상태 다시 적용, 스냅샷 설명자 다시 찾기
+        _snapshotMixer.applyMixer( *_pMixer ); // 버스 사용자 상태 다시 적용, 스냅샷 설명자 다시 찾기
         // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
         for ( AudioVoiceSlot& slot : _voicePool )
         {
@@ -195,7 +195,7 @@ namespace sw
             return false;
 
         // 뱅크를 로드하듯 클립 디코드를 미리 요청해 둔다. 첫 재생이 디코드를 기다리지 않게 하려는 것이다.
-        for ( const AudioEventDesc& event : pLibrary->_listEvent )
+        for ( const AudioEventDef& event : pLibrary->_listEvent )
         {
             for ( const AudioClipEntry& clip : event._listClip )
             {
@@ -216,7 +216,7 @@ namespace sw
         using Internal               = AudioEngineInternal;
         const string_view sourceName = libraryName.view();
         bool              bValid     = true;
-        for ( const AudioEventDesc& event : library._listEvent )
+        for ( const AudioEventDef& event : library._listEvent )
         {
             if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ) < 0 )
             {
@@ -226,13 +226,13 @@ namespace sw
             if ( event._attenuation.empty() == false )
             {
                 bool bFound = ( _pGameMixerDesc != nullptr && _pGameMixerDesc->findAttenuation( event._attenuation ) != nullptr );
-                for ( const AudioAttenuationDesc& attenuation : library._listAttenuation )
+                for ( const AudioAttenuationDef& attenuation : library._listAttenuation )
                 {
                     bFound = bFound || attenuation._name == event._attenuation;
                 }
                 for ( const auto& entry : _mapGameLibrary )
                 {
-                    for ( const AudioAttenuationDesc& attenuation : entry.second->_listAttenuation )
+                    for ( const AudioAttenuationDef& attenuation : entry.second->_listAttenuation )
                     {
                         bFound = bFound || attenuation._name == event._attenuation;
                     }
@@ -248,7 +248,7 @@ namespace sw
         {
             if ( entry.first == libraryName )
                 continue;
-            for ( const AudioEventDesc& event : library._listEvent )
+            for ( const AudioEventDef& event : library._listEvent )
             {
                 if ( entry.second->findEvent( event._name ) != nullptr )
                 {
@@ -256,7 +256,7 @@ namespace sw
                     bValid = false;
                 }
             }
-            for ( const AudioParameterDesc& parameter : library._listParameter )
+            for ( const AudioParameterDef& parameter : library._listParameter )
             {
                 if ( entry.second->findParameter( parameter._name ) != nullptr )
                 {
@@ -298,30 +298,30 @@ namespace sw
         ScopedLock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
-            for ( const AudioEventDesc& eventDesc : entry.second->_listEvent )
+            for ( const AudioEventDef& eventDesc : entry.second->_listEvent )
             {
                 outListName.push_back( eventDesc._name );
             }
         }
     }
 
-    bool AudioEngine::findEventDesc( const hashed_string& eventName, AudioEventDesc& outDesc, hashed_string& outLibraryName,
-                                     AudioAttenuationDesc* pOutAttenuation ) const
+    bool AudioEngine::findEventDesc( const hashed_string& eventName, AudioEventDef& outDesc, hashed_string& outLibraryName,
+                                     AudioAttenuationDef* pOutAttenuation ) const
     {
         ScopedLock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
-            const AudioEventDesc* pEvent = entry.second->findEvent( eventName );
+            const AudioEventDef* pEvent = entry.second->findEvent( eventName );
             if ( pEvent == nullptr )
                 continue;
             outDesc        = *pEvent;
             outLibraryName = entry.first;
             if ( pOutAttenuation != nullptr )
             {
-                *pOutAttenuation = AudioAttenuationDesc{};
+                *pOutAttenuation = AudioAttenuationDef{};
                 if ( pEvent->_attenuation.empty() )
                     return true;
-                for ( const AudioAttenuationDesc& attenuation : entry.second->_listAttenuation )
+                for ( const AudioAttenuationDef& attenuation : entry.second->_listAttenuation )
                 {
                     if ( attenuation._name == pEvent->_attenuation )
                     {
@@ -329,7 +329,7 @@ namespace sw
                         return true;
                     }
                 }
-                const AudioAttenuationDesc* pMixerAttenuation = _pGameMixerDesc != nullptr ? _pGameMixerDesc->findAttenuation( pEvent->_attenuation ) : nullptr;
+                const AudioAttenuationDef* pMixerAttenuation = _pGameMixerDesc != nullptr ? _pGameMixerDesc->findAttenuation( pEvent->_attenuation ) : nullptr;
                 if ( pMixerAttenuation != nullptr )
                     *pOutAttenuation = *pMixerAttenuation;
             }
@@ -385,7 +385,7 @@ namespace sw
     AudioPlayingID AudioEngine::postEvent( const hashed_string& eventName, AudioEmitterID emitterID )
     {
         // 라이브러리를 참조한 채 잠금을 푼다. 다른 스레드가 그 사이에 언로드해도 설명자는 살아 있다.
-        const AudioEventDesc*               pEvent = nullptr;
+        const AudioEventDef*                pEvent = nullptr;
         shared_ptr<const AudioEventLibrary> pLibrary;
         {
             ScopedLock<mutex> lock{ _libraryMutex };
@@ -456,18 +456,18 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
-    AudioPlayingID AudioEngine::startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds )
+    AudioPlayingID AudioEngine::startMusic( shared_ptr<const AudioMusicDef> pMusic, float32 fadeSeconds )
     {
         if ( pMusic == nullptr )
             return 0;
-        for ( const AudioMusicSegmentDesc& segment : pMusic->_listSegment )
+        for ( const AudioMusicSegmentDef& segment : pMusic->_listSegment )
         {
-            for ( const AudioMusicLayerDesc& layer : segment._listLayer )
+            for ( const AudioMusicLayerDef& layer : segment._listLayer )
             {
                 _clipStore.requestClip( layer._path );
             }
         }
-        for ( const AudioMusicTransitionDesc& transition : pMusic->_listTransition )
+        for ( const AudioMusicTransitionDef& transition : pMusic->_listTransition )
         {
             _clipStore.requestClip( transition._stinger );
         }
@@ -792,7 +792,7 @@ namespace sw
             }
             case CommandType::SwapMixer:
             {
-                adoptMixer( std::move( command._pMixer ) );
+                applyMixer( std::move( command._pMixer ) );
                 break;
             }
             case CommandType::SetLibrary:
@@ -1058,7 +1058,7 @@ namespace sw
             const auto it = _mapEmitter.find( slot._emitterID );
             if ( it != _mapEmitter.end() )
             {
-                const AudioAttenuationDesc& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
+                const AudioAttenuationDef& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
                 // 리스너가 여럿이면 그래프의 `_listenerMix` 대로 합친다(기본은 가장 크게 들리는 리스너, 언리얼과 Wwise 의 "가장 가까운 리스너").
                 AudioSpatialResult arrResult[kMaxListenerCount];
                 uint32             listenerCount = 0;
@@ -1087,7 +1087,7 @@ namespace sw
         // 이벤트의 파라미터 곡선(RTPC)은 볼륨 dB 와 피치 반음은 더하고, 로우패스는 낮은 쪽을 쓴다.
         if ( slot._instanceIndex >= 0 )
         {
-            const AudioEventDesc* pEvent = _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc;
+            const AudioEventDef* pEvent = _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc;
             if ( pEvent != nullptr )
             {
                 for ( const AudioParameterMapping& mapping : pEvent->_listParameterMap )
@@ -1327,7 +1327,7 @@ namespace sw
 
         if ( command._pLibrary != nullptr )
         {
-            for ( const AudioParameterDesc& desc : command._pLibrary->_listParameter )
+            for ( const AudioParameterDef& desc : command._pLibrary->_listParameter )
             {
                 const bool      bNew      = _mapParameter.find( desc._name ) == _mapParameter.end();
                 ParameterState& parameter = _mapParameter[desc._name];
@@ -1356,7 +1356,7 @@ namespace sw
         }
         for ( const auto& libraryEntry : _mapLibrary )
         {
-            for ( const AudioEventDesc& event : libraryEntry.second->_listEvent )
+            for ( const AudioEventDef& event : libraryEntry.second->_listEvent )
             {
                 EventState& state = _mapEventState[event._name];
                 state._pDesc      = &event;
@@ -1370,7 +1370,7 @@ namespace sw
         _listAttenuation = _pMixer->getDesc()._listAttenuation;
         for ( const auto& libraryEntry : _mapLibrary )
         {
-            for ( const AudioAttenuationDesc& attenuation : libraryEntry.second->_listAttenuation )
+            for ( const AudioAttenuationDef& attenuation : libraryEntry.second->_listAttenuation )
             {
                 _listAttenuation.push_back( attenuation );
             }
@@ -1408,7 +1408,7 @@ namespace sw
         return -1;
     }
 
-    int32 AudioEngine::findStealVictim( const AudioEventDesc& event, uint32& outLiveCount ) const
+    int32 AudioEngine::findStealVictim( const AudioEventDef& event, uint32& outLiveCount ) const
     {
         outLiveCount      = 0;
         int32 victimIndex = -1;
@@ -1454,7 +1454,7 @@ namespace sw
         return victimIndex;
     }
 
-    bool AudioEngine::tryAdmitEvent( const EventState& state, const AudioEventDesc& event )
+    bool AudioEngine::tryAcceptEvent( const EventState& state, const AudioEventDef& event )
     {
         // 쿨다운은 오디오 시각(렌더한 프레임)으로 측정한다.
         const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
@@ -1485,7 +1485,7 @@ namespace sw
         return true;
     }
 
-    void AudioEngine::pickEventClips( EventState& inoutState, const AudioEventDesc& event, uint32& outFirstClip, uint32& outPickCount )
+    void AudioEngine::pickEventClips( EventState& inoutState, const AudioEventDef& event, uint32& outFirstClip, uint32& outPickCount )
     {
         const uint32 clipCount = static_cast<uint32>( event._listClip.size() );
         outFirstClip           = 0;
@@ -1536,9 +1536,9 @@ namespace sw
         const auto stateIt = _mapEventState.find( command._name );
         if ( stateIt == _mapEventState.end() || stateIt->second._pDesc == nullptr )
             return;
-        EventState&           state = stateIt->second;
-        const AudioEventDesc& event = *state._pDesc;
-        if ( tryAdmitEvent( state, event ) == false )
+        EventState&          state = stateIt->second;
+        const AudioEventDef& event = *state._pDesc;
+        if ( tryAcceptEvent( state, event ) == false )
             return;
 
         const int32 instanceIndex = allocateInstance();

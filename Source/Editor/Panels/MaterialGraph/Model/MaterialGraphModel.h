@@ -62,7 +62,7 @@ namespace sw::editor
         [[nodiscard]] const MaterialGraphDef& getGraph() const { return _graph; }
         MaterialGraphDef&                     editGraph() { return _graph; }
         /** @brief 캔버스가 주석 상자를 고쳤습니다. */
-        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { noteEdit( pLabel, pCoalesceKey, false ); }
+        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { recordEdit( pLabel, pCoalesceKey, false ); }
         /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. */
         [[nodiscard]] bool takeEdit( MaterialGraphEdit& outEdit );
 
@@ -88,7 +88,7 @@ namespace sw::editor
         void               removeNodes( const vector<int32>& listNodeID );
         void               beginCanvasFrame();
         [[nodiscard]] bool isPlacingNode( uint32 nodeIndex ) const { return _placingNode >= 0 && static_cast<int32>( nodeIndex ) == _placingNode; }
-        void               noteNodePosition( uint32 nodeIndex, const float2& position );
+        void               recordNodePosition( uint32 nodeIndex, const float2& position );
         void               selectNodeByID( int32 nodeID );
 
         // ------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ namespace sw::editor
             vector<MaterialGraphPinInfo> _listOutput;
         };
 
-        void noteEdit( const utf8* pLabel, const utf8* pCoalesceKey, bool bChangesShader );
+        void recordEdit( const utf8* pLabel, const utf8* pCoalesceKey, bool bChangesShader );
         void rebuildPins();
         /** @brief 노드 @p fromIndex 의 입력을 거슬러 @p targetIndex 에 닿으면 true 입니다(고리 검사). */
         [[nodiscard]] bool readsNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const;

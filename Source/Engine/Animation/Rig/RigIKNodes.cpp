@@ -48,22 +48,22 @@ namespace sw
                 for ( size_t index = 0; limits.isValid() && index < limits.size(); ++index )
                 {
                     RigXMLReader        limitReader( limits.at( index ), reader.getContext() );
-                    RigJointLimitFields fields;
-                    bool                bOk = limitReader.readFields( fields );
+                    RigJointLimitParams params;
+                    bool                bOk = limitReader.readFields( params );
                     bOk                     = limitReader.finish() && bOk;
-                    if ( bOk == false || fields._type == RigJointLimitType::None )
+                    if ( bOk == false || params._type == RigJointLimitType::None )
                     {
                         reader.fail( "malformed limit (type is Cone or Hinge)" );
                         return false;
                     }
                     LimitSpec spec{};
-                    spec._bone              = fields._bone;
-                    spec._limit._type       = fields._type;
-                    spec._limit._swingLimit = fields._swingDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._twistLimit = fields._twistDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._minAngle   = fields._minDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._maxAngle   = fields._maxDegrees * MathUtil::kDegreeToRadian;
-                    spec._limit._hingeAxis  = fields._axis.normalize();
+                    spec._bone              = params._bone;
+                    spec._limit._type       = params._type;
+                    spec._limit._swingLimit = params._swingDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._twistLimit = params._twistDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._minAngle   = params._minDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._maxAngle   = params._maxDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._hingeAxis  = params._axis.normalize();
                     if ( spec._limit._hingeAxis.getLengthSquared() < 0.5f )
                         spec._limit._hingeAxis = float3::UnitX;
                     outListSpec.push_back( spec );
@@ -80,7 +80,7 @@ namespace sw
                 for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
                 {
                     RigXMLReader footReader( feet.at( index ), reader.getContext() );
-                    RigLegFields leg;
+                    RigLegParams leg;
                     bOk = footReader.readFields( leg );
                     bOk = footReader.finish() && bOk;
                     TFoot foot{};
@@ -191,7 +191,7 @@ namespace sw
             }
 
         private:
-            RigTwoBoneIKFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigTwoBoneIKParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             uint32             _root{ 0 };
             uint32             _mid{ 0 };
             uint32             _end{ 0 };
@@ -215,7 +215,7 @@ namespace sw
             {
 
                 // 한 관절의 회전 상한은 CCD 만 받는다 — FABRIK 은 사슬 공통 칸만 읽는다(그 키를 적으면 모르는 키다).
-                bool bOk                  = ( _bFABRIK == SW_TRUE ) ? reader.readFields( static_cast<RigChainIKFields&>( _fields ) ) : reader.readFields( _fields );
+                bool bOk                  = ( _bFABRIK == SW_TRUE ) ? reader.readFields( static_cast<RigChainIKParams&>( _fields ) ) : reader.readFields( _fields );
                 _settings._iterationCount = _fields._iterations;
                 _settings._tolerance      = _fields._tolerance;
                 _settings._maxStepAngle   = _fields._maxStepDegrees * MathUtil::kDegreeToRadian;
@@ -253,7 +253,7 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() ); }
 
         private:
-            RigCCDChainFields                     _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigCCDChainParams                     _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             vector<hashed_string>                 _listBoneName{};
             vector<RigIKNodesInternal::LimitSpec> _listLimitSpec{};
             vector<uint32>                        _listBone{};
@@ -283,12 +283,12 @@ namespace sw
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
                 {
                     RigXMLReader        entryReader( chain.at( index ), reader.getContext() );
-                    RigBoneWeightFields entryFields;
-                    bOk = entryReader.readFields( entryFields );
+                    RigBoneWeightParams entryParams;
+                    bOk = entryReader.readFields( entryParams );
                     bOk = entryReader.finish() && bOk;
                     ChainEntry entry{};
-                    entry._name   = entryFields._bone;
-                    entry._weight = entryFields._weight;
+                    entry._name   = entryParams._bone;
+                    entry._weight = entryParams._weight;
                     _listChain.push_back( entry );
                 }
                 if ( bOk && _aimAxis.getLengthSquared() < 0.5f )
@@ -354,7 +354,7 @@ namespace sw
             }
 
         private:
-            RigAimFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigAimParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct ChainEntry
             {
                 hashed_string _name{};
@@ -488,7 +488,7 @@ namespace sw
             }
 
         private:
-            RigFootPlacementFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigFootPlacementParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct Foot
             {
                 hashed_string _rootName{};
@@ -633,7 +633,7 @@ namespace sw
             }
 
         private:
-            RigStrideWarpingFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigStrideWarpingParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct Foot
             {
                 hashed_string _rootName{};
@@ -678,14 +678,14 @@ namespace sw
                 for ( size_t index = 0; bOk && chains.isValid() && index < chains.size(); ++index )
                 {
                     RigXMLReader           chainReader( chains.at( index ), reader.getContext() );
-                    RigFullBodyChainFields chainFields;
+                    RigFullBodyChainParams chainParams;
                     Chain                  chain{};
-                    bOk                   = chainReader.readFields( chainFields );
+                    bOk                   = chainReader.readFields( chainParams );
                     bOk                   = chainReader.readNameList( "bones", chain._listBoneName, true ) && bOk;
                     bOk                   = chainReader.finish() && bOk;
-                    chain._targetName     = chainFields._target;
-                    chain._pelvisWeight   = chainFields._weight;
-                    chain._bMatchRotation = chainFields._bMatchRotation ? SW_TRUE : SW_FALSE;
+                    chain._targetName     = chainParams._target;
+                    chain._pelvisWeight   = chainParams._weight;
+                    chain._bMatchRotation = chainParams._bMatchRotation ? SW_TRUE : SW_FALSE;
                     if ( bOk && chain._listBoneName.size() < 2 )
                     {
                         reader.fail( "each chain needs at least two 'bones'" );
@@ -786,7 +786,7 @@ namespace sw
             }
 
         private:
-            RigFullBodyIKFields _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeFields.h)
+            RigFullBodyIKParams _fields{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             struct Chain
             {
                 vector<hashed_string> _listBoneName{};

@@ -1,5 +1,5 @@
 /**
- * @file ControlAutomationFields.h
+ * @file ControlAutomationParams.h
  * @brief 조종 시나리오 단계(`Intent` · `Possess`)의 인자 스키마입니다(`AutomationStep::readFields`).
  */
 #pragma once
@@ -15,7 +15,7 @@ namespace sw
 {
     /** @brief `Intent` 의 인자입니다. `yaw` · `pitch` 는 적지 않으면 폰의 지금 값을 그대로 둡니다(적었는지가 뜻이라 손으로 읽습니다). */
     REFLECT()
-    struct SW_GF_API ControlIntentStepFields
+    struct SW_GF_API ControlIntentStepParams
     {
         REFLECT_BODY();
 
@@ -33,7 +33,7 @@ namespace sw
 
     /** @brief `Possess` 의 인자입니다. `pawn` 을 적지 않으면 놓습니다. */
     REFLECT()
-    struct SW_GF_API ControlPossessStepFields
+    struct SW_GF_API ControlPossessStepParams
     {
         REFLECT_BODY();
 

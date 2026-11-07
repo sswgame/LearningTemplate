@@ -32,7 +32,7 @@ namespace
     };
 
     /** @brief `CombatAttributeSet` 을 붙인 오브젝트 하나와 피격 · 쓰러짐 이벤트 기록입니다. */
-    struct CombatRig
+    struct CombatFixture
     {
         GameObjectManager _manager;
         AbilityComponent* _pAbilities{ nullptr };
@@ -43,7 +43,7 @@ namespace
         GameObjectHandle  _lastHitInstigator{};
         GameObjectHandle  _lastHitTarget{};
 
-        CombatRig()
+        CombatFixture()
         {
             _pAbilities = _manager.createGameObject( hashed_string( "Fighter" ) )->addComponent<AbilityComponent>();
             (void)_pAbilities->addAttributeSet<CombatAttributeSet>();
@@ -85,7 +85,7 @@ namespace
  */
 SW_TEST_CASE( CombatAttributeSetTest, DefaultsMatchTheDocumentedValues )
 {
-    const CombatRig rig;
+    const CombatFixture rig;
     SW_EXPECT_EQUAL( 100.0f, rig.current( CombatAttributes::health() ) );
     SW_EXPECT_EQUAL( 100.0f, rig.current( CombatAttributes::maxHealth() ) );
     SW_EXPECT_EQUAL( 100.0f, rig.current( CombatAttributes::mana() ) );
@@ -123,7 +123,7 @@ SW_TEST_CASE( CombatAttributeSetTest, UnattachedSetClampsOnlyTheFloor )
  */
 SW_TEST_CASE( CombatAttributeSetTest, ValuesStayWithinTheirRange )
 {
-    CombatRig rig;
+    CombatFixture rig;
     SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::health(), 500.0f ) );
     SW_EXPECT_EQUAL( 100.0f, rig.base( CombatAttributes::health() ) );
     SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::mana(), -5.0f ) );
@@ -141,7 +141,7 @@ SW_TEST_CASE( CombatAttributeSetTest, ValuesStayWithinTheirRange )
  */
 SW_TEST_CASE( CombatAttributeSetTest, LoweringMaximumPullsCurrentDownRaisingDoesNotFill )
 {
-    CombatRig rig;
+    CombatFixture rig;
     SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::maxHealth(), 60.0f ) );
     SW_EXPECT_EQUAL( 60.0f, rig.base( CombatAttributes::health() ) );
     SW_EXPECT_EQUAL( 60.0f, rig.current( CombatAttributes::health() ) );
@@ -157,7 +157,7 @@ SW_TEST_CASE( CombatAttributeSetTest, LoweringMaximumPullsCurrentDownRaisingDoes
  */
 SW_TEST_CASE( CombatAttributeSetTest, MaximumBuffRemovalPullsHealthBack )
 {
-    CombatRig                rig;
+    CombatFixture            rig;
     const ActiveEffectHandle handle = rig.apply( EffectDurationPolicy::Infinite, CombatAttributes::maxHealth(), 50.0f );
     SW_EXPECT_EQUAL( 150.0f, rig.current( CombatAttributes::maxHealth() ) );
     SW_EXPECT_EQUAL( 100.0f, rig.current( CombatAttributes::health() ) ); // 버프만으로는 차오르지 않는다
@@ -175,7 +175,7 @@ SW_TEST_CASE( CombatAttributeSetTest, MaximumBuffRemovalPullsHealthBack )
  */
 SW_TEST_CASE( CombatAttributeSetTest, LoweringMaximumClampsCurrentRaisedByAnEffect )
 {
-    CombatRig rig;
+    CombatFixture rig;
     SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::health(), 80.0f ) );
     (void)rig.apply( EffectDurationPolicy::Infinite, CombatAttributes::health(), 30.0f );
     SW_REQUIRE_TRUE( rig.current( CombatAttributes::health() ) == 100.0f ); // 80 + 30 이 최대치에 잘렸다
@@ -190,7 +190,7 @@ SW_TEST_CASE( CombatAttributeSetTest, LoweringMaximumClampsCurrentRaisedByAnEffe
  */
 SW_TEST_CASE( CombatAttributeSetTest, IncomingDamageMovesToHealthAndClears )
 {
-    CombatRig rig;
+    CombatFixture rig;
     rig.applyInstant( CombatAttributes::incomingDamage(), 30.0f );
     SW_EXPECT_EQUAL( 70.0f, rig.current( CombatAttributes::health() ) );
     SW_EXPECT_EQUAL( 0.0f, rig.base( CombatAttributes::incomingDamage() ) );
@@ -210,7 +210,7 @@ SW_TEST_CASE( CombatAttributeSetTest, IncomingDamageMovesToHealthAndClears )
  */
 SW_TEST_CASE( CombatAttributeSetTest, NonPositiveDamageIsIgnored )
 {
-    CombatRig rig;
+    CombatFixture rig;
     SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::health(), 50.0f ) );
     rig.applyInstant( CombatAttributes::incomingDamage(), -10.0f );
     SW_EXPECT_EQUAL( 50.0f, rig.current( CombatAttributes::health() ) );
@@ -223,7 +223,7 @@ SW_TEST_CASE( CombatAttributeSetTest, NonPositiveDamageIsIgnored )
  */
 SW_TEST_CASE( CombatAttributeSetTest, LethalDamageReportsActualLossThenDies )
 {
-    CombatRig                      rig;
+    CombatFixture                  rig;
     unique_ptr<CombatProbeAbility> pAbility = make_unique<CombatProbeAbility>();
     CombatProbeAbility&            ability  = *pAbility;
     const AbilitySpecHandle        handle   = rig._pAbilities->giveAbility( std::move( pAbility ) );
@@ -246,7 +246,7 @@ SW_TEST_CASE( CombatAttributeSetTest, LethalDamageReportsActualLossThenDies )
  */
 SW_TEST_CASE( CombatAttributeSetTest, DeadOwnerIgnoresDamageAndHealing )
 {
-    CombatRig rig;
+    CombatFixture rig;
     rig.applyInstant( CombatAttributes::incomingDamage(), 100.0f );
     SW_REQUIRE_TRUE( rig.isDead() );
     const size_t eventCount = rig._listEventTag.size();
@@ -266,7 +266,7 @@ SW_TEST_CASE( CombatAttributeSetTest, DeadOwnerIgnoresDamageAndHealing )
  */
 SW_TEST_CASE( CombatAttributeSetTest, IncomingHealingMovesToHealthUpToMaximum )
 {
-    CombatRig rig;
+    CombatFixture rig;
     SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::health(), 50.0f ) );
     rig.applyInstant( CombatAttributes::incomingHealing(), 20.0f );
     SW_EXPECT_EQUAL( 70.0f, rig.current( CombatAttributes::health() ) );
@@ -285,7 +285,7 @@ SW_TEST_CASE( CombatAttributeSetTest, IncomingHealingMovesToHealthUpToMaximum )
  */
 SW_TEST_CASE( CombatAttributeSetTest, InvulnerableOwnerTakesNoHitAndDoesNotDie )
 {
-    CombatRig rig;
+    CombatFixture rig;
     rig._pAbilities->getOwnedTagCounts().updateCount( AbilityComponent::getInvulnerableTag(), 1 );
     rig.applyInstant( CombatAttributes::incomingDamage(), 500.0f );
     SW_EXPECT_EQUAL( 100.0f, rig.current( CombatAttributes::health() ) );

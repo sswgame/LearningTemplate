@@ -1,6 +1,6 @@
 <UIDocument _schemaVersion="1">
 	<!-- 디버그 HUD 설정 창(Dev 전용 — `hud window`). 모달이라 열린 동안만 UI 가 입력을 가진다. 섹션 체크 상자는 DebugHUD 가 등록부에서 `Sections` 아래에 짓는다. -->
-	<UIScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Shown" />
+	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Shown" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/options.uistyle.xml</item>
 	</_listStyleSheet>

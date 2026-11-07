@@ -1,6 +1,6 @@
 /**
  * @file ChatLogModel.h
- * @brief 채팅 화면이 읽는 받은 메시지 기록과 마지막 보내기 결과입니다. `ChatClient::drainMessages` 로 꺼낸 메시지를 시간 순으로 쌓고(`kMaxLines` 줄까지, 넘치면 가장 오래된 줄부터 버린다),
+ * @brief 채팅 화면이 읽는 받은 메시지 기록과 마지막 보내기 결과입니다. `ChatClient::pollMessages` 로 꺼낸 메시지를 시간 순으로 쌓고(`kMaxLines` 줄까지, 넘치면 가장 오래된 줄부터 버린다),
  *        `ChatClient::send` 의 결과를 보관합니다(온라인 키트 U1).
  * @details 화면(`ChatScreen`)은 요청을 직접 보내지 않고 이 객체로 보낸다 — 응답 델리게이트가 화면 수명에 묶이지 않게 한다. `update` 가 클라이언트의 메시지 버퍼를 꺼내므로 한 클라이언트에 모델 하나만 붙을 수 있다(`initialize` 가 false).
  *          채널에 들어가는 일(`ChatClient::join`)은 부르는 게임의 몫이다 — 길드와 파티 채널은 서버가 멤버로 넣고, 서버가 보낸 채널의 메시지는 이 기록에 채널 id 와 함께 들어온다.
@@ -55,8 +55,8 @@ namespace sw
 
     private:
         deque<ChatMessage>  _listLine;
-        DrainLease          _drainLease;
-        vector<ChatMessage> _listDrained;
+        ConsumerLease       _consumerLease;
+        vector<ChatMessage> _listPolled;
         ChatClient*         _pClient;
         uint64              _revision;
         int64               _retryAfterMs;

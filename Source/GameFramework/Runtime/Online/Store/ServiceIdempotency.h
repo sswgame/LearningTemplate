@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    /** @brief 멱등 기록 도우미입니다. 저장소 스레드(`IServiceStoreWork::run` 안)에서 씁니다. */
+    /** @brief 멱등 기록 도우미입니다. 저장소 스레드(`IServiceStoreJob::run` 안)에서 씁니다. */
     struct SW_GF_API ServiceIdempotency
     {
         static const hashed_string& getTable();

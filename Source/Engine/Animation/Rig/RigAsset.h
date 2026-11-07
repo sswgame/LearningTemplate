@@ -63,9 +63,9 @@ namespace sw
      *          @code
      *          <RigAsset planar="false">
      *            <targets>
-     *              <item name="Grip" socket="Grip" unit="Weapon" space="handslot.r" />
+     *              <item name="Grip" socket="Grip" skeletalMesh="Weapon" space="handslot.r" />
      *              <item name="Look" object="LookTarget" />
-     *              <item name="Chest" bone="chest" unit="Body" translation="0,0,0" rotation="0,0,0" />
+     *              <item name="Chest" bone="chest" skeletalMesh="Body" translation="0,0,0" rotation="0,0,0" />
      *            </targets>
      *            <nodes>
      *              <item type="TwoBoneIK" name="LeftHand" weight="1" weight_curve="HandIK" weight_slot="Grip"

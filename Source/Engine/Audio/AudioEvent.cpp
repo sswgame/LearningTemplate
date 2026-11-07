@@ -6,7 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -95,7 +95,7 @@ namespace sw
                 const XMLNode               root      = doc.getRoot();
                 const XMLNode               eventList = root.findChild( kEventListElement );
                 EventSource                 source{ eventList };
-                const DataInheritanceSchema schema = DataInheritanceSchema::makeFromType( *AudioEventDesc::StaticType() );
+                const DataInheritanceSchema schema = DataInheritanceSchema::makeFromType( *AudioEventDef::StaticType() );
 
                 XMLDocument   outDoc;
                 const XMLNode outRoot = outDoc.appendRoot( root.getName() );
@@ -145,7 +145,7 @@ namespace sw
                     return false;
                 const XMLNode               root      = doc.getRoot();
                 const XMLNode               eventList = root.findChild( kEventListElement );
-                const DataInheritanceSchema schema    = DataInheritanceSchema::makeFromType( *AudioEventDesc::StaticType() );
+                const DataInheritanceSchema schema    = DataInheritanceSchema::makeFromType( *AudioEventDef::StaticType() );
                 XMLDocument                 outDoc;
                 const XMLNode               outRoot = outDoc.appendRoot( root.getName() );
                 for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -236,10 +236,10 @@ namespace sw
 
     bool AudioEventLibrary::validate( string_view sourceName ) const
     {
-        bool bValid = AudioMixerDesc::validateAttenuations( _listAttenuation, sourceName );
+        bool bValid = AudioMixerDef::validateAttenuations( _listAttenuation, sourceName );
         for ( size_t parameterIndex = 0; parameterIndex < _listParameter.size(); ++parameterIndex )
         {
-            const AudioParameterDesc& parameter = _listParameter[parameterIndex];
+            const AudioParameterDef& parameter = _listParameter[parameterIndex];
             if ( parameter._name.empty() )
             {
                 SW_LOG_ERROR_ID( "AudioEventLibrary.ParameterNoName", "%#: parameter %# has no name", sourceName, parameterIndex );
@@ -263,7 +263,7 @@ namespace sw
 
         for ( size_t eventIndex = 0; eventIndex < _listEvent.size(); ++eventIndex )
         {
-            const AudioEventDesc& event = _listEvent[eventIndex];
+            const AudioEventDef& event = _listEvent[eventIndex];
             if ( event._name.empty() )
             {
                 SW_LOG_ERROR_ID( "AudioEventLibrary.EventNoName", "%#: event %# has no name", sourceName, eventIndex );
@@ -282,8 +282,8 @@ namespace sw
             if ( event._parentEvent.empty() == false )
             {
                 // 프리셋 사슬은 라이브러리 안에서 끝나야 한다 — 저장이 부모 이벤트와의 차이로 쓰고 읽기가 같은 사슬로 펼친다.
-                const AudioEventDesc* pParent    = findEvent( event._parentEvent );
-                size_t                chainCount = 0;
+                const AudioEventDef* pParent    = findEvent( event._parentEvent );
+                size_t               chainCount = 0;
                 while ( pParent != nullptr && pParent != &event && pParent->_parentEvent.empty() == false && chainCount <= _listEvent.size() )
                 {
                     pParent = findEvent( pParent->_parentEvent );
@@ -327,7 +327,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "AudioEventLibrary.EventMapsUnknownParameter", "%#: event '%#' maps unknown parameter '%#'", sourceName, pName, mapping._parameter.c_str() );
                     bValid = false;
                 }
-                if ( mapping._listPoint.empty() || AudioMixerDesc::isCurveSorted( mapping._listPoint ) == false )
+                if ( mapping._listPoint.empty() || AudioMixerDef::isCurveSorted( mapping._listPoint ) == false )
                 {
                     SW_LOG_ERROR_ID( "AudioEventLibrary.EventParameterCurveEmpty", "%#: event '%#' parameter curve '%#' is empty or out of order", sourceName, pName, mapping._parameter.c_str() );
                     bValid = false;
@@ -337,20 +337,20 @@ namespace sw
         return bValid;
     }
 
-    const AudioEventDesc* AudioEventLibrary::findEvent( const hashed_string& name ) const
+    const AudioEventDef* AudioEventLibrary::findEvent( const hashed_string& name ) const
     {
-        return VectorUtil::findBy<&AudioEventDesc::_name>( _listEvent, name );
+        return VectorUtil::findBy<&AudioEventDef::_name>( _listEvent, name );
     }
 
-    AudioEventDesc* AudioEventLibrary::findEvent( const hashed_string& name )
+    AudioEventDef* AudioEventLibrary::findEvent( const hashed_string& name )
     {
-        return VectorUtil::findBy<&AudioEventDesc::_name>( _listEvent, name );
+        return VectorUtil::findBy<&AudioEventDef::_name>( _listEvent, name );
     }
 
     string AudioEventLibrary::saveToXMLText() const
     {
         const string fullText = XMLSerializer::serialize( this, *StaticType() );
-        const bool   bPreset  = VectorUtil::containsIf( _listEvent, []( const AudioEventDesc& event )
+        const bool   bPreset  = VectorUtil::containsIf( _listEvent, []( const AudioEventDef& event )
            { return event._parentEvent.empty() == false; } );
         if ( bPreset == false )
             return fullText;
@@ -395,9 +395,9 @@ namespace sw
         return true;
     }
 
-    const AudioParameterDesc* AudioEventLibrary::findParameter( const hashed_string& name ) const
+    const AudioParameterDef* AudioEventLibrary::findParameter( const hashed_string& name ) const
     {
-        return VectorUtil::findBy<&AudioParameterDesc::_name>( _listParameter, name );
+        return VectorUtil::findBy<&AudioParameterDef::_name>( _listParameter, name );
     }
 } // namespace sw
 

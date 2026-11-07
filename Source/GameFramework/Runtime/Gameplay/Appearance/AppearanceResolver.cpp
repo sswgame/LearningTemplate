@@ -690,7 +690,7 @@ namespace sw
                     const bool   bSkipOccupier = occupier._pRequest == nullptr || occupier._bHidden == SW_TRUE || occupier._pVisual->_occupancy.empty();
                     if ( bSkipOccupier )
                         continue;
-                    const SlotOccupancyDef* pOccupancy = database.getSlotTable().findOccupancy( occupier._pVisual->_occupancy );
+                    const SlotOccupancyDef* pOccupancy = database.getSlotCatalog().findOccupancy( occupier._pVisual->_occupancy );
                     if ( pOccupancy == nullptr )
                         continue;
                     for ( const hashed_string& slot : pOccupancy->_listSlot )

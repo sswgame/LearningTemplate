@@ -12,7 +12,7 @@
  *
  * @note 두 가지 통보를 구분합니다. 이것이 이 파일에서 가장 중요한 구분입니다.
  *       - `releaseRHI( pDevice )`: 디바이스가 **아직 살아 있습니다.** 자기 GPU 리소스를 제대로 돌려주고 핸들을 비웁니다.
- *       - `forgetRHI( pDevice )`: 디바이스가 **이미 없습니다.** 돌려줄 곳이 없으니 핸들만 비웁니다(destroy 하면 해제 후 사용입니다).
+ *       - `clearRHI( pDevice )`: 디바이스가 **이미 없습니다.** 돌려줄 곳이 없으니 핸들만 비웁니다(destroy 하면 해제 후 사용입니다).
  *       정상 경로는 언제나 전자입니다. 후자는 `shutdown()` 없이 사라진 디바이스에 대한 안전망입니다.
  *       다시 만드는 쪽은 `initRHI( pDevice )` 이고, 새 디바이스가 만들어진 직후 `initAllFor` 가 같은 목록에 통보를 보냅니다.
  */
@@ -52,7 +52,7 @@ namespace sw
          *          디바이스 주소를 받는 이유는 `releaseRHI` 와 같습니다. 테스트처럼 디바이스가 여럿 살아 있는
          *          자리에서, 남이 죽었다고 내 핸들까지 비우면 멀쩡한 리소스를 잃습니다.
          */
-        virtual void forgetRHI( IRHIDevice* pDevice ) = 0;
+        virtual void clearRHI( IRHIDevice* pDevice ) = 0;
 
         /**
          * @brief 새 디바이스에 자기 GPU 리소스를 다시 만듭니다.
@@ -73,8 +73,8 @@ namespace sw
         /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `releaseRHI` 를 보냅니다. 디바이스가 살아 있을 때 부릅니다. */
         static void releaseAllFor( IRHIDevice* pDevice );
 
-        /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `forgetRHI` 를 보냅니다. 디바이스가 이미 사라진 뒤의 안전망입니다. */
-        static void forgetAllFor( IRHIDevice* pDevice );
+        /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `clearRHI` 를 보냅니다. 디바이스가 이미 사라진 뒤의 안전망입니다. */
+        static void clearAllFor( IRHIDevice* pDevice );
 
         /** @brief 등록된 객체 전부에게 `initRHI` 를 보냅니다. 디바이스가 새로 생긴 직후에 부릅니다. */
         static void initAllFor( IRHIDevice* pDevice );

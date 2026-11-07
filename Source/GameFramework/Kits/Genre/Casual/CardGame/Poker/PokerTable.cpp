@@ -507,9 +507,9 @@ namespace sw
         _currentSeat = -1;
     }
 
-    void PokerTable::drainEvents( vector<PokerEvent>& outListEvent )
+    void PokerTable::pollEvents( vector<PokerEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void PokerTable::writeState( Archive& outArchive ) const

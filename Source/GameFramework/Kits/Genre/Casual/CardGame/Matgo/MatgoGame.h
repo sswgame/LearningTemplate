@@ -240,7 +240,7 @@ namespace sw
         /** @brief 끝난 판에서 사람마다 받은 점수(+)와 낸 점수(-)를 반환합니다. */
         const vector<int32>& getSettlement() const { return _listSettlement; }
         const MatgoSettings& getSettings() const { return _settings; }
-        void                 drainEvents( vector<MatgoEvent>& outListEvent );
+        void                 pollEvents( vector<MatgoEvent>& outListEvent );
 
     private:
         void resolveCard( int32 player, const Card& card, uint16 targetID );

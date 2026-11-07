@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Serializer/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {
@@ -133,7 +133,7 @@ namespace sw::editor
          * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면(워커 임포터의 원본 포함) `NotTracked`,
          *         경로표가 가리키는 캐시가 등록되지 않았으면(오류를 남겼다) `Failed` 입니다.
          */
-        [[nodiscard]] static ReloadOutcome reloadChangedAsset( const AssetID& assetID );
+        [[nodiscard]] static ReloadResult reloadChangedAsset( const AssetID& assetID );
 
         /**
          * @brief 임포트 잡이 도는 중이거나 기다리는 원본이 있으면 true 입니다. 이 동안 임포트 결과를 읽는 쪽(캐시 리로드 · 검증)은 미뤄진다.
@@ -207,7 +207,7 @@ namespace sw::editor
         /** @brief @p route 의 캐시(빈 이름이면 리로드 함수를 가진 아무 캐시)가 그 에셋을 지금 들고 있으면 true 입니다. */
         [[nodiscard]] static bool isHeldInCaches( const AssetReloadRoute& route, const AssetID& assetID );
         /** @brief @p route 가 가리키는 엔진 캐시를 다시 읽고 활성 씬의 사용자에게 알립니다. 임포터는 부르지 않는다. 에디터 스레드에서만 부릅니다. */
-        [[nodiscard]] static ReloadOutcome reloadCaches( const AssetReloadRoute& route, const AssetID& assetID );
+        [[nodiscard]] static ReloadResult reloadCaches( const AssetReloadRoute& route, const AssetID& assetID );
 
         /** @brief 끝난 잡의 결과를 가져오고 다음 잡을 시작하며, 더 할 일이 없으면 미룬 파일을 처리합니다. */
         void pumpImportJob();

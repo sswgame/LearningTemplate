@@ -156,7 +156,7 @@ namespace sw::editor
                     text    = droppedPath;
                     bEdited = true;
                 }
-                EditorSelfTestMarks::note( pMark );
+                EditorSelfTestMarks::record( pMark );
                 if ( pTooltip != nullptr )
                     EditorWidgets::drawTooltip( pTooltip );
                 return bEdited;
@@ -241,7 +241,7 @@ namespace sw::editor
                 _previewPlayer->seekToFrame( _currentFrame );
             previewCurrentFrame();
         }
-        EditorSelfTestMarks::note( "sequencer.scrub" );
+        EditorSelfTestMarks::record( "sequencer.scrub" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ScrubTip" ) );
 
         // 키 트랙이 위, 구간 항목이 아래다 — 자주 고치는 쪽(키 · 커브)이 패널이 낮아도 보인다.
@@ -329,13 +329,13 @@ namespace sw::editor
         if ( ImGui::Button( pCreate ) && _document.commitItemDraft() >= 0 )
             notifyDocumentEdited( "Add Sequence Item" );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "sequencer.item.create" );
+        EditorSelfTestMarks::record( "sequencer.item.create" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CreateItemTip" ) );
         const utf8* const pCancel = SW_LOCKEY( "EdVerb", "Cancel" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pCancel ) );
         if ( ImGui::Button( pCancel ) )
             _document.cancelItemDraft();
-        EditorSelfTestMarks::note( "sequencer.item.cancel" );
+        EditorSelfTestMarks::record( "sequencer.item.cancel" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CancelItemTip" ) );
         if ( _document.isDraftingItem() )
         {
@@ -349,12 +349,12 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "KeyTracks" ) );
         if ( ImGui::Button( "+ Transform Track" ) )
             addKeyTrack( SequenceTrackKind::Transform );
-        EditorSelfTestMarks::note( "sequencer.addTransformTrack" );
+        EditorSelfTestMarks::record( "sequencer.addTransformTrack" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddTransformTrackTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Property Track" ) );
         if ( ImGui::Button( "+ Property Track" ) )
             addKeyTrack( SequenceTrackKind::Property );
-        EditorSelfTestMarks::note( "sequencer.addPropertyTrack" );
+        EditorSelfTestMarks::record( "sequencer.addPropertyTrack" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddPropertyTrackTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Rig Slot Track" ) );
         if ( ImGui::Button( "+ Rig Slot Track" ) )
@@ -386,7 +386,7 @@ namespace sw::editor
                 _document._selectedTrack = trackIndex;
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.track.%#", trackIndex );
-            EditorSelfTestMarks::note( mark.c_str() );
+            EditorSelfTestMarks::record( mark.c_str() );
             ImGui::SameLine();
             drawKeyStrip( track, trackIndex );
             ImGui::PopID();
@@ -469,7 +469,7 @@ namespace sw::editor
             notifyDocumentEdited( "Add Sequence Key" );
         }
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "sequencer.addKey" );
+        EditorSelfTestMarks::record( "sequencer.addKey" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddKeyTip" ) );
         const utf8* const pDeleteKey = SW_LOCKEY( "EditorSequencer", "DeleteKeyButton" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDeleteKey ) );
@@ -544,7 +544,7 @@ namespace sw::editor
                 notifyDocumentEdited( "Edit Sequence Key", "sequence-key" );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
-            EditorSelfTestMarks::note( mark.c_str() );
+            EditorSelfTestMarks::record( mark.c_str() );
             ImGui::SameLine();
             if ( ImGui::SmallButton( pCurve ) )
             {
@@ -556,7 +556,7 @@ namespace sw::editor
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "OpenCurveTip" ) );
             formatstring( mark.data(), mark.capacity(), "sequencer.curve.%#", channelIndex );
-            EditorSelfTestMarks::note( mark.c_str() );
+            EditorSelfTestMarks::record( mark.c_str() );
             ImGui::PopID();
         }
     }

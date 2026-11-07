@@ -716,10 +716,10 @@ namespace sw
                     // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만 보낸다(연결 유지, RTT, 상대의 확인용). 대역폭 토큰을 다 썼으면
                     // 메시지는 기다리고 확인할 것만 "보낼 것"으로 센다.
                     refillSendCredit( nowSeconds, slot );
-                    const bool    bCanCarry = slot._sendCredit > 0.0;
-                    const bool    bHasData  = bCanCarry ? slot._connection.hasDataToSend( nowSeconds ) : slot._connection.isAckPending();
-                    const float64 sinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : nowSeconds - slot._lastSendTime;
-                    const bool    bDue      = sinceSend >= _settings._sendInterval && ( sinceSend >= _settings._keepAliveInterval || bHasData );
+                    const bool    bCanCarry     = slot._sendCredit > 0.0;
+                    const bool    bHasData      = bCanCarry ? slot._connection.hasDataToSend( nowSeconds ) : slot._connection.isAckPending();
+                    const float64 timeSinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : nowSeconds - slot._lastSendTime;
+                    const bool    bDue          = timeSinceSend >= _settings._sendInterval && ( timeSinceSend >= _settings._keepAliveInterval || bHasData );
                     if ( bDue == false )
                         break;
                     sendPayload( nowSeconds, slot );
@@ -1190,14 +1190,14 @@ namespace sw
         deliverFinished( listFinished );
     }
 
-    void NetEndpoint::drainEvents( vector<NetEndpointEvent>& outListEvent )
+    void NetEndpoint::pollEvents( vector<NetEndpointEvent>& outListEvent )
     {
         ScopedLock<mutex> lock{ _mutex };
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 
-    void NetEndpoint::drainInbound( NetInbound& outInbound )
+    void NetEndpoint::pollInbound( NetInbound& outInbound )
     {
         outInbound.clear();
         ScopedLock<mutex> lock{ _mutex };
@@ -1209,7 +1209,7 @@ namespace sw
             if ( slot._state != NetConnectionState::Connected )
                 continue;
             const size_t firstNotice = outInbound._listDeliveryNotice.size();
-            slot._connection.drainDeliveryNotices( outInbound._listDeliveryNotice );
+            slot._connection.pollDeliveryNotices( outInbound._listDeliveryNotice );
             for ( size_t noticeIndex = firstNotice; noticeIndex < outInbound._listDeliveryNotice.size(); ++noticeIndex )
             {
                 outInbound._listDeliveryNotice[noticeIndex]._connectionID = index;

@@ -23,7 +23,7 @@ namespace sw::editor
         /** @brief 마지막으로 포커스를 받은 뷰를 찍습니다(커맨드 `viewport.screenshot`, F9). */
         static void captureFocusedView();
         /** @brief 뷰 패널이 포커스를 받았으면 그 종류를 적습니다(패널 그리기에서 부른다 — 단축키는 패널보다 먼저 처리된다). */
-        static void noteFocusedView( EditorViewKind kind );
+        static void recordFocusedView( EditorViewKind kind );
         /** @brief 요청이 끝났으면 토스트를 띄웁니다. 셸이 프레임마다 부릅니다. */
         static void update();
     };

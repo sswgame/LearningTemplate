@@ -44,10 +44,10 @@ namespace sw
 namespace sw
 {
     /** @brief 계정의 기기 목록을 읽는 작업입니다. 알림 하나에 해당합니다. */
-    class PushDeviceReadWork final : public IServiceStoreWork
+    class PushDeviceReadJob final : public IServiceStoreJob
     {
     public:
-        PushDeviceReadWork( PushNotificationDispatcher* pDispatcher, AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs )
+        PushDeviceReadJob( PushNotificationDispatcher* pDispatcher, AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs )
             : _listDevice{}
             , _message{ message }
             , _pDispatcher{ pDispatcher }
@@ -87,10 +87,10 @@ namespace sw
 namespace sw
 {
     /** @brief 토픽 알림의 표를 "없어야 한다" 조건으로 쓰는 작업입니다. 쓰면 이 서버가 보낼 차례이고, 이미 있으면(Conflict) 다른 서버가 보냈다. */
-    class PushTopicClaimWork final : public IServiceStoreWork
+    class PushTopicClaimJob final : public IServiceStoreJob
     {
     public:
-        PushTopicClaimWork( PushNotificationDispatcher* pDispatcher, string claimKey, string topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
+        PushTopicClaimJob( PushNotificationDispatcher* pDispatcher, string claimKey, string topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
             : _claimKey{ std::move( claimKey ) }
             , _topic{ std::move( topic ) }
             , _message{ message }
@@ -122,7 +122,7 @@ namespace sw
 namespace sw
 {
     /** @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)과 해지를 한 트랜잭션으로 쓰는 작업입니다. */
-    class PushDeviceWriteWork final : public IServiceStoreWork
+    class PushDeviceWriteJob final : public IServiceStoreJob
     {
     public:
         vector<uint8>               _bytes; ///< 등록할 기기 레코드이다. 해지일 때는 비어 있다
@@ -133,7 +133,7 @@ namespace sw
         LiveOpsResult               _result;
         uint8                       _bErase;
 
-        PushDeviceWriteWork()
+        PushDeviceWriteJob()
             : _bytes{}
             , _key{}
             , _pDispatcher{ nullptr }
@@ -259,7 +259,7 @@ namespace sw
             return false;
         }
         ++_pendingWorkCount;
-        _pStore->submit( make_unique<PushDeviceReadWork>( this, accountID, message, nowMs ) );
+        _pStore->submit( make_unique<PushDeviceReadJob>( this, accountID, message, nowMs ) );
         return true;
     }
 
@@ -291,7 +291,7 @@ namespace sw
             return;
         }
         ++_pendingWorkCount;
-        _pStore->submit( make_unique<PushTopicClaimWork>( this, string( claimKey ), string( topic ), message, nowMs ) );
+        _pStore->submit( make_unique<PushTopicClaimJob>( this, string( claimKey ), string( topic ), message, nowMs ) );
     }
 
     void PushNotificationDispatcher::applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs )
@@ -404,7 +404,7 @@ namespace sw
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsResult::Unavailable : LiveOpsResult::Invalid } );
             return;
         }
-        unique_ptr<PushDeviceWriteWork> work = make_unique<PushDeviceWriteWork>();
+        unique_ptr<PushDeviceWriteJob> work = make_unique<PushDeviceWriteJob>();
         if ( LiveOpsProtocol::encodeDevice( registration, work->_bytes ) == false )
         {
             if ( requestTag != 0 )
@@ -428,12 +428,12 @@ namespace sw
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsResult::Invalid } );
             return;
         }
-        unique_ptr<PushDeviceWriteWork> work = make_unique<PushDeviceWriteWork>();
-        work->_key                           = makeDeviceKey( accountID, providerID, token );
-        work->_pDispatcher                   = this;
-        work->_accountID                     = accountID;
-        work->_requestTag                    = requestTag;
-        work->_bErase                        = SW_TRUE;
+        unique_ptr<PushDeviceWriteJob> work = make_unique<PushDeviceWriteJob>();
+        work->_key                          = makeDeviceKey( accountID, providerID, token );
+        work->_pDispatcher                  = this;
+        work->_accountID                    = accountID;
+        work->_requestTag                   = requestTag;
+        work->_bErase                       = SW_TRUE;
         ++_pendingWorkCount;
         _pStore->submit( std::move( work ) );
     }

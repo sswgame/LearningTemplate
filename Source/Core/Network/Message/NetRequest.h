@@ -37,8 +37,8 @@ namespace sw
      */
     enum class NetResponseRetention : uint8
     {
-        Remember, ///< 끝난 결과다. 같은 키의 재시도는 이 응답을 받는다
-        Forget,   ///< 다시 시도할 결과다. 같은 키의 재시도는 처리기가 다시 처리한다(처리 중에 기다리던 같은 키 요청은 이 응답을 함께 받는다)
+        Keep,    ///< 끝난 결과다. 같은 키의 재시도는 이 응답을 받는다
+        Discard, ///< 다시 시도할 결과다. 같은 키의 재시도는 처리기가 다시 처리한다(처리 중에 기다리던 같은 키 요청은 이 응답을 함께 받는다)
     };
 
     /** @brief 응답 상태입니다. 값은 와이어 형식입니다. */
@@ -221,9 +221,9 @@ namespace sw
 
         /**
          * @brief 응답합니다(어느 스레드에서나 가능). 이미 응답했으면 false 를 반환합니다.
-         * @details 멱등 키가 있으면 @p retention 이 `Remember` 일 때 응답을 기억하므로, 연결이 닫혔어도 재시도가 받습니다. `Forget` 이면 키를 비워 재시도를 다시 처리합니다.
+         * @details 멱등 키가 있으면 @p retention 이 `Keep` 일 때 응답을 기억하므로, 연결이 닫혔어도 재시도가 받습니다. `Discard` 이면 키를 비워 재시도를 다시 처리합니다.
          */
-        bool respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize, NetResponseRetention retention = NetResponseRetention::Remember );
+        bool respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize, NetResponseRetention retention = NetResponseRetention::Keep );
         /** @brief 클라이언트가 취소했는지 반환합니다. 오래 걸리는 처리기가 중간에 확인합니다. */
         bool isCancelled( const NetRequestToken& token ) const;
 
@@ -305,7 +305,7 @@ namespace sw
         /** @brief 요청 프레임의 머리를 읽습니다. 깨졌으면 false 이고, 그때 `_requestID` 는 읽은 만큼(못 읽었으면 0)입니다. */
         [[nodiscard]] static bool readRequestHeader( const uint8* pBody, int32 bodySize, RequestHeader& outHeader );
         /** @brief 메서드 · 처리 중 수 · 멱등 키로 요청을 받을지 정하고, 받으면 처리 중 목록에 올립니다(`_mutex` 를 잡는다). */
-        RequestAdmission admitRequest( StreamConnectionHandle handle, const RequestHeader& header );
+        RequestAdmission acceptRequest( StreamConnectionHandle handle, const RequestHeader& header );
         void             sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
         void             purgeIdempotencyLocked( int64 now ) SW_REQUIRES_LOCK( _mutex );
 

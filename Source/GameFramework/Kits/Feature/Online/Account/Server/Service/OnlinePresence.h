@@ -70,9 +70,9 @@ namespace sw
         bool isEnabled() const { return _pHost != nullptr; }
 
         /** @brief 계정이 이 프로세스에 접속했거나 표시 이름이 바뀌었을 때 부릅니다. */
-        void noteOnline( const AccountIdentity& identity );
+        void recordOnline( const AccountIdentity& identity );
         /** @brief 계정이 이 프로세스에서 떠났을 때 부릅니다. */
-        void noteOffline( AccountID accountID );
+        void recordOffline( AccountID accountID );
         /** @brief 캐시에 다시 기록하는 주기를 처리합니다. */
         void update( UnixMilliseconds nowMs );
         /** @brief 이 서버의 알림 주제(`push.<서버>`) 메시지를 이 빌드의 알림으로 바꿔 접속해 있는 계정에게 넘깁니다. 이 주제가 아니면 false 를 반환합니다. */

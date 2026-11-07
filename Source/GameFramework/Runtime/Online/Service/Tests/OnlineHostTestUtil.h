@@ -73,7 +73,7 @@ namespace sw::test
                 (void)host.respondError( context._token, OnlineError::kConflict );
                 return;
             }
-            (void)host.respondOk( context._token, BitWriter{}, NetResponseRetention::Remember );
+            (void)host.respondOk( context._token, BitWriter{}, NetResponseRetention::Keep );
         }
     };
 
@@ -273,7 +273,7 @@ namespace sw::test
      * @brief 서버 하나 + 클라이언트 묶음(같은 망 · 메모리 저장소 · 캐시 · 버스)입니다. 키트 서비스를 올리려면 `_server._host.registerServerService` 뒤 `_server.start()` 를 부른다.
      * @details @p bStart 가 false 면 받기를 시작하지 않는다 — 키트 서비스를 먼저 올리는 테스트가 쓴다(호스트는 `initialize` 전에만 서비스를 받는다).
      */
-    struct OnlineTestRig
+    struct OnlineTestFixture
     {
         LoopbackStreamNetwork   _network{ 5u };
         MemoryServiceDatabase   _database{};
@@ -283,7 +283,7 @@ namespace sw::test
         OnlineTestServer        _server{ _network, &_database, &_cacheDatabase, &_hub, 1 };
         OnlineTestClients       _clients{ _network };
 
-        explicit OnlineTestRig( bool bStart = true )
+        explicit OnlineTestFixture( bool bStart = true )
         {
             if ( bStart )
                 _server.start();
@@ -348,16 +348,16 @@ namespace sw::test
      *          선언 순서가 수명이다(가짜 서비스가 망보다 오래 산다).
      */
     template <typename TProtocol, typename TReply>
-    struct ReplyRetentionRig
+    struct ReplyRetentionFixture
     {
         static constexpr int64 kNowMs = 1700000000000ll;
 
         TestReplyServerService<TProtocol, TReply> _service{};
         TestProtocolClientService<TProtocol>      _clientService{};
-        OnlineTestRig                             _rig{ false };
+        OnlineTestFixture                         _rig{ false };
         int32                                     _clientIndex{ -1 };
 
-        ReplyRetentionRig()
+        ReplyRetentionFixture()
         {
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();

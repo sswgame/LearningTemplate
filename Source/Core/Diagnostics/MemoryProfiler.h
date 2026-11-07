@@ -175,7 +175,7 @@ namespace sw
 namespace sw
 {
     /** @brief `MemoryProfiler::judgeLeakCurve` 의 판정입니다. */
-    struct LeakCurveVerdict
+    struct LeakCurveResult
     {
         bool    _bValid{ false };          ///< 워밍업을 뺀 점이 둘 이상이어야 기울기를 낼 수 있다. false 이면 아래 값은 0 이고 평평하다고 말하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool    _bFlat{ false };           ///< 두 기울기가 모두 허용치 이하이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -388,7 +388,7 @@ namespace sw
          * @brief 반복 로드의 회차별 점이 평평한지 가릅니다 — 점마다 닫힌 창의 합(`_totalBytes` · `_totalBlockCount`)이고, 처음 `_warmupRounds` 개는 버립니다.
          * @details 남은 점에 최소제곱 직선을 맞춰 기울기가 기준 이하이면 평평합니다. 순수 계산이라 창이나 프로파일러 상태와 무관합니다.
          */
-        [[nodiscard]] static LeakCurveVerdict judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria );
+        [[nodiscard]] static LeakCurveResult judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria );
 
         /** @brief 콜 스택별 집계를 @p order 기준 내림차순으로 정렬해 반환합니다(세부 추적이 켜져 있을 때만 채워집니다). */
         vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;

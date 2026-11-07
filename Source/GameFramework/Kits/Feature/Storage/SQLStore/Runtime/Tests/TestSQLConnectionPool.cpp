@@ -19,7 +19,7 @@ using namespace sw;
 namespace
 {
     /** @brief 일 하나가 지난 길입니다. 테스트가 들고 일이 채웁니다(완료 큐의 잠금을 지나 보인다). */
-    struct PoolJobOutcome
+    struct PoolJobResult
     {
         SQLResult _result{ SQLResult::Error };
         int32     _runCount{ 0 };
@@ -30,7 +30,7 @@ namespace
     class PoolTestJob final : public ISQLJob
     {
     public:
-        explicit PoolTestJob( PoolJobOutcome& outcome )
+        explicit PoolTestJob( PoolJobResult& outcome )
             : _outcome{ outcome }
         {
         }
@@ -44,7 +44,7 @@ namespace
         void cancel() override { ++_outcome._cancelCount; }
 
     private:
-        PoolJobOutcome& _outcome;
+        PoolJobResult& _outcome;
     };
 
     /** @brief 문이 열릴 때까지 워커를 잡아 두는 일입니다. */
@@ -78,7 +78,7 @@ namespace
     class PoolChainJob final : public ISQLJob
     {
     public:
-        PoolChainJob( SQLConnectionPool& pool, PoolJobOutcome& nextOutcome )
+        PoolChainJob( SQLConnectionPool& pool, PoolJobResult& nextOutcome )
             : _pool{ pool }
             , _nextOutcome{ nextOutcome }
         {
@@ -89,7 +89,7 @@ namespace
 
     private:
         SQLConnectionPool& _pool;
-        PoolJobOutcome&    _nextOutcome;
+        PoolJobResult&     _nextOutcome;
     };
 
     struct SQLConnectionPoolTestUtil
@@ -103,7 +103,7 @@ namespace
         }
 
         /** @brief 맡은 일이 모두 끝날 때까지 완료를 거둡니다(10 초 상한). 다 끝나면 true 입니다. */
-        [[nodiscard]] static bool drain( SQLConnectionPool& pool )
+        [[nodiscard]] static bool pollAll( SQLConnectionPool& pool )
         {
             const Deadline deadline = Deadline::afterMilliseconds( 10000 );
             while ( deadline.isExpired() == false )
@@ -117,11 +117,11 @@ namespace
         }
 
         /** @brief 일 하나를 맡기고 끝날 때까지 기다린 결과입니다. */
-        static PoolJobOutcome runOne( SQLConnectionPool& pool )
+        static PoolJobResult runOne( SQLConnectionPool& pool )
         {
-            PoolJobOutcome outcome;
+            PoolJobResult outcome;
             pool.submit( sw::make_unique<PoolTestJob>( outcome ) );
-            const bool bDrained = drain( pool );
+            const bool bDrained = pollAll( pool );
             SW_EXPECT_TRUE( bDrained );
             return outcome;
         }
@@ -150,8 +150,8 @@ SW_TEST_CASE( SQLConnectionPoolTest, InitializeRefusesWhatCannotRun )
 /** @brief 시작하지 않은 풀에 맡긴 일도 정확히 한 번 돌고 완료된다 — 닫힌 연결로, 취소가 아니라 쓸 수 없는 풀로. */
 SW_TEST_CASE( SQLConnectionPoolTest, JobOnAnUnstartedPoolFinishesAsConnectionLost )
 {
-    SQLConnectionPool    pool;
-    const PoolJobOutcome outcome = SQLConnectionPoolTestUtil::runOne( pool );
+    SQLConnectionPool   pool;
+    const PoolJobResult outcome = SQLConnectionPoolTestUtil::runOne( pool );
     SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
     SW_EXPECT_EQUAL( 1, outcome._runCount );
     SW_EXPECT_EQUAL( 1, outcome._completeCount );
@@ -165,13 +165,13 @@ SW_TEST_CASE( SQLConnectionPoolTest, RunsOnWorkerAndCompletesOnPoll )
     string              error;
     SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 2 ), error ) );
 
-    deque<PoolJobOutcome> listOutcome( 16 );
-    for ( PoolJobOutcome& outcome : listOutcome )
+    deque<PoolJobResult> listOutcome( 16 );
+    for ( PoolJobResult& outcome : listOutcome )
     {
         pool.submit( sw::make_unique<PoolTestJob>( outcome ) );
     }
-    SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::drain( pool ) );
-    for ( const PoolJobOutcome& outcome : listOutcome )
+    SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::pollAll( pool ) );
+    for ( const PoolJobResult& outcome : listOutcome )
     {
         SW_EXPECT_TRUE( outcome._result == SQLResult::Ok );
         SW_EXPECT_EQUAL( 1, outcome._runCount );
@@ -188,9 +188,9 @@ SW_TEST_CASE( SQLConnectionPoolTest, CompleteMaySubmitANewJob )
     SQLConnectionPool   pool;
     string              error;
     SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
-    PoolJobOutcome next;
+    PoolJobResult next;
     pool.submit( sw::make_unique<PoolChainJob>( pool, next ) );
-    SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::drain( pool ) );
+    SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::pollAll( pool ) );
     SW_EXPECT_EQUAL( 1, next._completeCount ); // 잠금 밖에서 complete 를 불러야 교착 없이 온다
     SW_EXPECT_TRUE( next._result == SQLResult::Ok );
 }
@@ -230,15 +230,15 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
 
     driver.setAllowedOpenCount( 0 );
     driver.loseAllConnections();
-    const int32           attemptsBefore = driver.getOpenCount();
-    constexpr int32       kJobCount      = 32;
-    deque<PoolJobOutcome> listOutcome( kJobCount );
-    for ( PoolJobOutcome& outcome : listOutcome )
+    const int32          attemptsBefore = driver.getOpenCount();
+    constexpr int32      kJobCount      = 32;
+    deque<PoolJobResult> listOutcome( kJobCount );
+    for ( PoolJobResult& outcome : listOutcome )
     {
         pool.submit( sw::make_unique<PoolTestJob>( outcome ) );
     }
-    SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::drain( pool ) );
-    for ( const PoolJobOutcome& outcome : listOutcome )
+    SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::pollAll( pool ) );
+    for ( const PoolJobResult& outcome : listOutcome )
     {
         SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
     }
@@ -267,7 +267,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, WorkerThatCouldNotConnectStillAnswers )
     SQLConnectionPool pool;
     string            error;
     SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ), error ) );
-    const PoolJobOutcome outcome = SQLConnectionPoolTestUtil::runOne( pool ); // 첫 일 앞에서 한 번 더 시도한다 — 둘째 경고
+    const PoolJobResult outcome = SQLConnectionPoolTestUtil::runOne( pool ); // 첫 일 앞에서 한 번 더 시도한다 — 둘째 경고
     SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
     SW_EXPECT_EQUAL( 0, outcome._cancelCount ); // 고장이지 종료가 아니다
 }
@@ -290,18 +290,18 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
     }
     SW_REQUIRE_TRUE( bEntered.load() );
 
-    PoolJobOutcome queued;
+    PoolJobResult queued;
     pool.submit( sw::make_unique<PoolTestJob>( queued ) );
     sw::thread stopper{ [&pool]()
     { pool.shutdown(); } };
 
     // 종료가 깃발을 세웠는지는 새 일이 그 자리에서 취소되는 것으로 본다. 그 전의 일은 줄에 서고 워커는 문에 잡혀 있어 칸을 만지지 않는다.
-    deque<PoolJobOutcome> listProbe;
-    const Deadline        stopDeadline = Deadline::afterMilliseconds( 10000 );
-    bool                  bStopping    = false;
+    deque<PoolJobResult> listProbe;
+    const Deadline       stopDeadline = Deadline::afterMilliseconds( 10000 );
+    bool                 bStopping    = false;
     while ( bStopping == false && stopDeadline.isExpired() == false )
     {
-        PoolJobOutcome& probe = listProbe.emplace_back();
+        PoolJobResult& probe = listProbe.emplace_back();
         pool.submit( sw::make_unique<PoolTestJob>( probe ) );
         bStopping = probe._cancelCount == 1;
         if ( bStopping == false )
@@ -316,7 +316,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
     SW_EXPECT_EQUAL( 1, queued._cancelCount );
     SW_EXPECT_EQUAL( 1, queued._completeCount );
     SW_EXPECT_TRUE( queued._result == SQLResult::ConnectionLost );
-    for ( const PoolJobOutcome& probe : listProbe )
+    for ( const PoolJobResult& probe : listProbe )
     {
         SW_EXPECT_EQUAL( 1, probe._cancelCount );
         SW_EXPECT_EQUAL( 1, probe._completeCount );

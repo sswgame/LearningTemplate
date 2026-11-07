@@ -61,7 +61,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
         {
-            SkillTreeHeadFields head;
+            SkillTreeHeadParams head;
             if ( XMLFields::readFields( treeNode, head, sourceName ) == false )
                 continue;
             SkillTreeDef tree;

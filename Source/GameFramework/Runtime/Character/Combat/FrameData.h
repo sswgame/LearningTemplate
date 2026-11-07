@@ -49,7 +49,7 @@ namespace sw
     };
 
     /** @brief 공격 높이 대 가드 자세의 결과입니다. */
-    enum class GuardOutcome : uint8
+    enum class GuardResult : uint8
     {
         Hit = 0, ///< 맞았다
         Blocked, ///< 막았다(가드 피해 · 가드 경직)
@@ -275,9 +275,9 @@ namespace sw
          *          - 앉아 가드: 상단과 잡기는 머리 위로 헛친다(피함). 하단은 막고, 중단은 맞는다.
          *          - 가드 불가(@p bUnblockable)는 막힐 상황에서 맞지만, 높이로 피하는 것은 그대로이다.
          */
-        static GuardOutcome computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable = false );
+        static GuardResult computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable = false );
         /** @brief `computeGuardOutcome( height, stance )` 가 `Blocked` 이면 true 입니다. */
-        static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardOutcome( height, stance ) == GuardOutcome::Blocked; }
+        static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardOutcome( height, stance ) == GuardResult::Blocked; }
 
         /** @brief 재생 중이면 기술 id, 프레임, 히트스톱, 접촉, 막힘을 씁니다. 기술 정의는 카탈로그의 것이므로 id 만 싣습니다. */
         void writeState( Archive& outArchive ) const;

@@ -33,16 +33,16 @@ namespace sw
         virtual ~FarmAutoFarmerAIComponent() override = default;
 
         /** @brief 따를 디렉터입니다(디렉터가 세운 뒤 · 빙의시키기 전에 부른다). */
-        void assignDirector( GameObjectHandle director ) { _director = director; }
+        void assignGameMode( GameObjectHandle gameMode ) { _gameMode = gameMode; }
 
     protected:
         void think( const ControlFrameContext& context, const PawnComponent& pawn ) override;
 
     private:
         /** @brief 칸 아래 자리로 갔다가 위로 걸어 들어갑니다. 섰고 위를 보면 true 입니다. */
-        bool walkUpTo( const FarmGameModeComponent& director, const float3& standPosition );
+        bool walkUpTo( const FarmGameModeComponent& gameMode, const float3& standPosition );
         /** @brief @p standPosition 으로 갑니다. 섰으면 true 입니다. */
-        bool walkTo( const FarmGameModeComponent& director, const float3& standPosition );
+        bool walkTo( const FarmGameModeComponent& gameMode, const float3& standPosition );
 
     private:
         PROPERTY( Category = "Auto Play", DisplayName = "Action Interval", Tooltip = "Seconds between actions on a tile or at the bin", Min = 0.0, Units = s )
@@ -56,7 +56,7 @@ namespace sw
         PROPERTY( Category = "Auto Play", DisplayName = "Approach Back", Tooltip = "How far below the tile's stand spot the farmer steps back, to walk up into it facing up", Min = 0.0, Units = m )
         float32 _approachBack;
 
-        GameObjectHandle _director;       ///< 따르는 디렉터의 오브젝트
+        GameObjectHandle _gameMode;       ///< 따르는 디렉터의 오브젝트
         float32          _actionTimer;    ///< 0 이하가 되면 다음 행동
         int32            _buyRemaining;   ///< 가게에서 이어서 살 남은 개수(0 이면 사지 않는 중)
         int32            _seedCountAtBuy; ///< 지난 사기 누름 때 가방의 고른 씨앗 수(못 샀는지 본다)

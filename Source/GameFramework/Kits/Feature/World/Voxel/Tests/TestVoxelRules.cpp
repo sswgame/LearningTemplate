@@ -16,7 +16,7 @@ using namespace sw;
 namespace
 {
     /** @brief 돌 · 물 · 유리 카탈로그와 2 x 2 청크 월드입니다. y = 10 의 돌 바닥을 깔 수 있습니다. */
-    struct VoxelRig
+    struct VoxelFixture
     {
         VoxelBlockCatalog _catalog;
         VoxelWorld        _world;
@@ -24,7 +24,7 @@ namespace
         VoxelBlockIndex   _water{ kVoxelAirBlock };
         VoxelBlockIndex   _glass{ kVoxelAirBlock };
 
-        VoxelRig()
+        VoxelFixture()
         {
             _stone = addBlock( "stone", true, true );
             _water = addBlock( "water", false, false );
@@ -91,7 +91,7 @@ namespace
 // 번호 0 은 공기다. 번호는 저장되므로 겹친 id 가 앞 블록의 번호를 바꾸면 안 된다.
 SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     SW_EXPECT_EQUAL( 1, static_cast<int32>( rig._stone ) );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( rig._water ) );
     SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "glass" ) ) == rig._glass );
@@ -108,7 +108,7 @@ SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
 
 SW_TEST_CASE( VoxelWorldTest, OutsideReadsAirAndRefusesWrites )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     SW_EXPECT_EQUAL( 32, rig._world.getSizeX() );
     SW_EXPECT_TRUE( rig._world.getBlock( -1, 0, 0 ) == kVoxelAirBlock );
     SW_EXPECT_FALSE( rig._world.setBlock( 32, 0, 0, rig._stone ) );
@@ -126,8 +126,8 @@ SW_TEST_CASE( VoxelWorldTest, OutsideReadsAirAndRefusesWrites )
 
 SW_TEST_CASE( VoxelWorldTest, BoundaryBlockAlsoDirtiesItsNeighbor )
 {
-    VoxelRig rig;
-    VoxelRig::clearDirty( rig._world );
+    VoxelFixture rig;
+    VoxelFixture::clearDirty( rig._world );
     const uint32 revision = rig._world.findChunk( 0, 0 )->_revision;
 
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) );
@@ -135,7 +135,7 @@ SW_TEST_CASE( VoxelWorldTest, BoundaryBlockAlsoDirtiesItsNeighbor )
     SW_EXPECT_FALSE( rig._world.isChunkDirty( 1, 0 ) );
     SW_EXPECT_EQUAL( revision + 1, rig._world.findChunk( 0, 0 )->_revision );
 
-    VoxelRig::clearDirty( rig._world );
+    VoxelFixture::clearDirty( rig._world );
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) ); // 같은 값은 표시하지 않는다
     SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 0 ) );
 
@@ -143,7 +143,7 @@ SW_TEST_CASE( VoxelWorldTest, BoundaryBlockAlsoDirtiesItsNeighbor )
     SW_EXPECT_TRUE( rig._world.isChunkDirty( 1, 0 ) );
     SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 1 ) );
 
-    VoxelRig::clearDirty( rig._world );
+    VoxelFixture::clearDirty( rig._world );
     SW_REQUIRE_TRUE( rig._world.setBlock( kVoxelChunkSize, 0, kVoxelChunkSize, rig._stone ) ); // 청크 (1, 1) 의 모서리
     SW_EXPECT_TRUE( rig._world.isChunkDirty( 0, 1 ) );
     SW_EXPECT_TRUE( rig._world.isChunkDirty( 1, 0 ) );
@@ -159,13 +159,13 @@ SW_TEST_CASE( VoxelWorldTest, RefusesEmptyWorld )
 
 SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     rig.layFloor( 2 );
     SW_REQUIRE_TRUE( rig._world.setBlock( 20, 9, 20, rig._glass ) );
-    const vector<uint8> listSaved = VoxelRig::save( rig._world );
+    const vector<uint8> listSaved = VoxelFixture::save( rig._world );
 
-    VoxelRig restored;
-    VoxelRig::clearDirty( restored._world );
+    VoxelFixture restored;
+    VoxelFixture::clearDirty( restored._world );
     const uint32 revision = restored._world.findChunk( 1, 1 )->_revision;
     Archive      reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored._world.readState( reading ) );
@@ -173,17 +173,17 @@ SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
     SW_EXPECT_EQUAL( uint32( 32 * 32 ), restored._world.countBlocks( restored._stone ) );
     SW_EXPECT_TRUE( restored._world.isChunkDirty( 1, 1 ) );
     SW_EXPECT_EQUAL( revision + 1, restored._world.findChunk( 1, 1 )->_revision ); // 이미 만든 메시가 낡은 것이 된다
-    SW_EXPECT_TRUE( VoxelRig::save( restored._world ) == listSaved );
+    SW_EXPECT_TRUE( VoxelFixture::save( restored._world ) == listSaved );
 }
 
 SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
 {
-    VoxelRig            rig;
-    const vector<uint8> listSaved = VoxelRig::save( rig._world );
+    VoxelFixture        rig;
+    const vector<uint8> listSaved = VoxelFixture::save( rig._world );
 
     // 청크 수가 다르다
-    VoxelRig   target;
-    VoxelWorld other;
+    VoxelFixture target;
+    VoxelWorld   other;
     SW_REQUIRE_TRUE( other.initialize( 1, 1, &target._catalog ) );
     Archive wrongSize( listSaved.data(), listSaved.size() );
     SW_EXPECT_FALSE( other.readState( wrongSize ) );
@@ -214,7 +214,7 @@ SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
 
 SW_TEST_CASE( VoxelRaycastTest, HitsTheFirstSolidWithFaceAndPlaceCell )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 2, 2, rig._stone ) );
     VoxelRayHit hit;
     SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, float3{ 0.5f, 2.5f, 2.5f }, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
@@ -227,7 +227,7 @@ SW_TEST_CASE( VoxelRaycastTest, HitsTheFirstSolidWithFaceAndPlaceCell )
 
 SW_TEST_CASE( VoxelRaycastTest, RangeAndBadInputsMiss )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 2, 2, rig._stone ) );
     VoxelRayHit  hit;
     const float3 origin{ 0.5f, 2.5f, 2.5f };
@@ -240,7 +240,7 @@ SW_TEST_CASE( VoxelRaycastTest, RangeAndBadInputsMiss )
 
 SW_TEST_CASE( VoxelRaycastTest, WaterStopsOnlyWhenAsked )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     SW_REQUIRE_TRUE( rig._world.setBlock( 2, 2, 2, rig._water ) );
     SW_REQUIRE_TRUE( rig._world.setBlock( 4, 2, 2, rig._stone ) );
     const float3 origin{ 0.5f, 2.5f, 2.5f };
@@ -253,7 +253,7 @@ SW_TEST_CASE( VoxelRaycastTest, WaterStopsOnlyWhenAsked )
 
 SW_TEST_CASE( VoxelRaycastTest, StartingInsideABlockHasNoFace )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     SW_REQUIRE_TRUE( rig._world.setBlock( 1, 1, 1, rig._stone ) );
     VoxelRayHit hit;
     SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, float3{ 1.5f, 1.5f, 1.5f }, float3{ 0.0f, 1.0f, 0.0f }, 5.0f, hit ) );
@@ -265,7 +265,7 @@ SW_TEST_CASE( VoxelRaycastTest, StartingInsideABlockHasNoFace )
 
 SW_TEST_CASE( VoxelBodyTest, FallsOntoTheFloorAndStands )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     rig.layFloor( 2 );
     VoxelBody body;
     body.setPosition( float3{ 5.5f, 8.0f, 5.5f } );
@@ -279,7 +279,7 @@ SW_TEST_CASE( VoxelBodyTest, FallsOntoTheFloorAndStands )
 // 빠르게 떨어져도 한 걸음이 짧아 얇은 바닥을 뚫지 않는다.
 SW_TEST_CASE( VoxelBodyTest, LongFrameDoesNotTunnelThroughTheFloor )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     rig.layFloor( 2 );
     VoxelBody body;
     body.setPosition( float3{ 5.5f, 60.0f, 5.5f } );
@@ -293,7 +293,7 @@ SW_TEST_CASE( VoxelBodyTest, LongFrameDoesNotTunnelThroughTheFloor )
 
 SW_TEST_CASE( VoxelBodyTest, JumpNeedsTheGroundAndClearsOneBlock )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     rig.layFloor( 2 );
     VoxelBody body;
     body.setPosition( float3{ 5.5f, 3.5f, 5.5f } ); // 공중이다
@@ -314,7 +314,7 @@ SW_TEST_CASE( VoxelBodyTest, JumpNeedsTheGroundAndClearsOneBlock )
 
 SW_TEST_CASE( VoxelBodyTest, WallStopsOneAxisAndSlidesOnTheOther )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     rig.layFloor( 2 );
     for ( int32 z = 0; z < 32; ++z )
     {
@@ -332,7 +332,7 @@ SW_TEST_CASE( VoxelBodyTest, WallStopsOneAxisAndSlidesOnTheOther )
 
 SW_TEST_CASE( VoxelBodyTest, WaterSlowsAndJumpSwimsUp )
 {
-    VoxelRig rig;
+    VoxelFixture rig;
     rig.layFloor( 2 );
     for ( int32 y = 3; y < 20; ++y )
     {
@@ -448,7 +448,7 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
 
 SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
 {
-    VoxelRig              rig;
+    VoxelFixture          rig;
     const VoxelBlockIndex grass   = rig.addBlock( "grass", true, true );
     const VoxelBlockIndex dirt    = rig.addBlock( "dirt", true, true );
     const VoxelBlockIndex bedrock = rig.addBlock( "bedrock", true, true );
@@ -467,11 +467,11 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
     SW_EXPECT_TRUE( report._minHeight <= surface && surface <= report._maxHeight );
     SW_EXPECT_EQUAL( surface, rig._world.findTopSolidY( 3, 3 ) ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
 
-    VoxelRig again;
+    VoxelFixture again;
     (void)again.addBlock( "grass", true, true );
     (void)again.addBlock( "dirt", true, true );
     (void)again.addBlock( "bedrock", true, true );
     (void)again.addBlock( "sand", true, true );
     (void)VoxelTerrainGenerator::fillWorld( again._world, settings );
-    SW_EXPECT_TRUE( VoxelRig::save( again._world ) == VoxelRig::save( rig._world ) );
+    SW_EXPECT_TRUE( VoxelFixture::save( again._world ) == VoxelFixture::save( rig._world ) );
 }

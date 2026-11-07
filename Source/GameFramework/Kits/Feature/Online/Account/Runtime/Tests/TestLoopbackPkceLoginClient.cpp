@@ -58,7 +58,7 @@ namespace
     };
 
     /** @brief 가짜 토큰 서버 · 리다이렉트를 보낼 테스트 클라이언트 · 로그인 클라이언트입니다. 선언 순서가 수명이다 — 망이 전송들보다 오래 산다. */
-    struct PkceRig
+    struct PkceFixture
     {
         LoopbackStreamNetwork         _network{ 13u };
         ManualClock                   _clock{ MonotonicMilliseconds{ 0 } };
@@ -72,13 +72,13 @@ namespace
         string                        _tokenBody{ R"({"id_token":"ID-TOKEN","access_token":"ACCESS","token_type":"Bearer"})" };
         int32                         _tokenStatus{ HTTPConstant::kStatusOk };
 
-        explicit PkceRig( bool bUseIDToken = true )
+        explicit PkceFixture( bool bUseIDToken = true )
         {
             _security._bRandomOk = SW_TRUE;
             _security._bHashOk   = SW_TRUE;
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _tokenServer.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&PkceRig::onTokenRequest>( this ) ) );
+            SW_EXPECT_TRUE( _tokenServer.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&PkceFixture::onTokenRequest>( this ) ) );
             SW_EXPECT_TRUE( _redirectSender.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             PkceLoginProviderConfig settings;
             settings._provider         = "google";
@@ -132,7 +132,7 @@ namespace
 /** @brief [LoopbackPkceLoginClientTest] 인증 주소는 기존 쿼리 뒤에 response_type · client_id · 루프백 redirect_uri · scope · state · nonce · S256 challenge 를 덧붙인다 */
 SW_TEST_CASE( LoopbackPkceLoginClientTest, OpensTheAuthorizationURL )
 {
-    PkceRig rig;
+    PkceFixture rig;
     (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._browser._listURL.size() );
     const string& url = rig._browser._listURL[0];
@@ -161,7 +161,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, OpensTheAuthorizationURL )
 /** @brief [LoopbackPkceLoginClientTest] 맞는 state 의 리다이렉트 코드를 폼(grant_type · code · redirect_uri · client_id · code_verifier)으로 바꾸고, 티켓은 `id_token|nonce` 이며 challenge 는 그 verifier 의 요약이다 */
 SW_TEST_CASE( LoopbackPkceLoginClientTest, ExchangesTheCodeWithTheVerifier )
 {
-    PkceRig      rig;
+    PkceFixture  rig;
     const uint64 requestID = rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._browser._listURL.size() );
     const vector<HTTPHeader> listQuery = PkceTestUtil::readQuery( rig._browser._listURL[0] );
@@ -202,7 +202,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, ExchangesTheCodeWithTheVerifier )
 /** @brief [LoopbackPkceLoginClientTest] 프로필 API 방식이면 티켓은 access_token 그대로이다 */
 SW_TEST_CASE( LoopbackPkceLoginClientTest, AccessTokenModeUsesTheAccessToken )
 {
-    PkceRig rig( false );
+    PkceFixture rig( false );
     (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
     rig.redirect( "code=C&state=" + rig.getAuthorizationState() );
     const vector<PlatformLoginClientResult> listResult = rig.takeResults();
@@ -214,7 +214,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, AccessTokenModeUsesTheAccessToken )
 /** @brief [LoopbackPkceLoginClientTest] 모르는 state 는 400 이고 어떤 로그인도 바꾸지 않으며, 다른 경로는 404 다. 사용자가 거절하면(access_denied) 취소다 */
 SW_TEST_CASE( LoopbackPkceLoginClientTest, ForgedStateIsIgnoredAndDenialCancels )
 {
-    PkceRig rig;
+    PkceFixture rig;
     (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
     rig.redirect( "code=STOLEN&state=forged" );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listRedirectResponse.size() );
@@ -243,7 +243,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, FailuresEndTheLoginOnce )
 {
     SW_EXPECT_LOG( "LoopbackPkceLoginClient.ExternalSignDidNot" );
     {
-        PkceRig rig;
+        PkceFixture rig;
         rig._tokenStatus = 400;
         rig._tokenBody   = R"({"error":"invalid_grant"})";
         (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
@@ -254,7 +254,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, FailuresEndTheLoginOnce )
         SW_EXPECT_TRUE( listResult[0]._ticket.empty() );
     }
     {
-        PkceRig rig;
+        PkceFixture rig;
         (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
         rig.pump( kNowMs + 4999 );
         SW_EXPECT_TRUE( rig.takeResults().empty() );
@@ -264,7 +264,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, FailuresEndTheLoginOnce )
         SW_EXPECT_TRUE( listResult[0]._bCancelled == SW_TRUE );
     }
     {
-        PkceRig rig;
+        PkceFixture rig;
         (void)rig._login.beginLogin( "nobody", MonotonicMilliseconds{ kNowMs } );
         SW_EXPECT_TRUE( rig._browser._listURL.empty() );
         rig._browser._bOpenOk = SW_FALSE;

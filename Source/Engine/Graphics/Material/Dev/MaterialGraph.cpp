@@ -14,7 +14,7 @@ namespace sw
 {
     SW_ASSET_TYPE( MaterialGraph, MaterialGraphDef::kAssetType );
 
-    const MaterialGraphValue* MaterialGraphNodeDesc::findValue( string_view name ) const
+    const MaterialGraphValue* MaterialGraphNodeDef::findValue( string_view name ) const
     {
         for ( const MaterialGraphValue& value : _listValue )
         {
@@ -24,7 +24,7 @@ namespace sw
         return nullptr;
     }
 
-    const MaterialGraphLink* MaterialGraphNodeDesc::findLink( string_view pin ) const
+    const MaterialGraphLink* MaterialGraphNodeDef::findLink( string_view pin ) const
     {
         for ( const MaterialGraphLink& link : _listLink )
         {

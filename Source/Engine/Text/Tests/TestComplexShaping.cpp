@@ -129,7 +129,7 @@ SW_TEST_CASE( ComplexShapingTest, LayoutPlacesShapedFormsInVisualOrder )
     using Util = ComplexShapingTestUtil;
     sw::FontService fontService( sw::IFontRasterizer::createDefault() );
     fontService.registerMemoryFontFile( Util::kFontVirtualPath, Util::makeFontBytes() );
-    sw::FontCatalogDesc catalog{};
+    sw::FontCatalogDef catalog{};
     catalog._defaultFamily = "Shaping";
     sw::test::FakeFontServiceFixture::addFamily( catalog, "Shaping", Util::kFontVirtualPath );
     SW_REQUIRE_TRUE( fontService.initializeFromCatalog( catalog ) );

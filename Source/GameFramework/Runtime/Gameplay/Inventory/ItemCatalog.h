@@ -25,7 +25,7 @@ namespace sw
     /** @brief 아이템 한 종류입니다. 분류, 장비 슬롯, 태그는 문자열 id 이므로 장르마다 자유롭게 정합니다. */
     /** @brief 장착 조건(`<Requires …/>`)의 칸입니다. `set` · `equippedTag` · `characterTag` · `bodyShape` 중 정확히 하나를 적는다(읽기가 본다). 몸 모양은 이름 목록이라 손으로 푼다. */
     REFLECT()
-    struct SW_GF_API EquipmentRequiresFields
+    struct SW_GF_API EquipmentRequiresParams
     {
         REFLECT_BODY();
 

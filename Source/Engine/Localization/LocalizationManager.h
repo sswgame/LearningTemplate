@@ -25,7 +25,7 @@
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TimeZoneInfo.h"
-#include "Engine/Serialization/Serializer/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {
@@ -122,7 +122,7 @@ namespace sw
          * @brief 바뀐 파일이 로드한 프로젝트의 것이면 그 프로젝트를 다시 읽습니다(핫 리로드).
          * @return 다시 읽었으면 `Reloaded`, 로드한 프로젝트의 파일이 아니면 `NotTracked`, 다시 읽지 못했으면(오류를 남기고 이전 글을 지켰다) `Failed`
          */
-        [[nodiscard]] ReloadOutcome reloadChangedFile( string_view changedPath );
+        [[nodiscard]] ReloadResult reloadChangedFile( string_view changedPath );
         /** @brief 그 경로가 로드한 프로젝트의 파일(프로젝트, 원문 테이블, 번역 테이블)인지 확인합니다. */
         bool isProjectFile( string_view path ) const;
 

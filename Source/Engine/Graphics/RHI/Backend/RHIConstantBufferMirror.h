@@ -70,7 +70,7 @@ namespace sw
         }
 
         /** @brief 버퍼를 잊습니다(`destroyBuffer`). */
-        void forget( RHIBufferHandle buffer );
+        void remove( RHIBufferHandle buffer );
         /** @brief 모두 잊습니다(장치 종료). */
         void clear();
         /** @brief 아직 채울 슬롯이 남은 버퍼 수를 반환합니다. */

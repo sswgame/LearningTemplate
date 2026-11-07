@@ -42,7 +42,7 @@ namespace sw
          */
         [[nodiscard]] bool openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
         /** @brief 디바이스가 사라졌을 때 잊습니다(출력 쪽 컨텍스트는 Tracy 가 닫지 않습니다. 다음 디바이스는 새 번호를 씁니다). */
-        void forgetContext();
+        void removeContext();
 
         /** @brief 프레임 하나를 세고, 시계를 다시 맞출 차례면 true 입니다. */
         bool advanceAndCheckResync();

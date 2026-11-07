@@ -180,7 +180,7 @@ namespace sw::editor
         bool bRecord = AnimationRewindRecorder::isRecordingRequested();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Record" ), &bRecord ) )
             AnimationRewindRecorder::setRecordingRequested( bRecord );
-        EditorSelfTestMarks::note( "animationRewind.record" );
+        EditorSelfTestMarks::record( "animationRewind.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "RecordTip" ) );
         ImGui::SameLine();
         float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
@@ -218,7 +218,7 @@ namespace sw::editor
                 EditorPlaySession::pause();
             rewind.setScrubTime( rewind.getLatestTime() - static_cast<float64>( _scrubSecondsAgo ) );
         }
-        EditorSelfTestMarks::note( "animationRewind.timeline" );
+        EditorSelfTestMarks::record( "animationRewind.timeline" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "TimelineTip" ) );
         ImGui::SameLine();
         if ( rewind.isScrubbing() )
@@ -230,7 +230,7 @@ namespace sw::editor
                 if ( EditorPlaySession::isPaused() )
                     EditorPlaySession::setState( PlaySessionState::Playing );
             }
-            EditorSelfTestMarks::note( "animationRewind.resume" );
+            EditorSelfTestMarks::record( "animationRewind.resume" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "ResumeTip" ) );
         }
         else

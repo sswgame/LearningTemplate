@@ -13,7 +13,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/SlotTable.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SlotCatalog.h"
 
 namespace sw
 {
@@ -425,7 +425,7 @@ namespace sw
         return VectorUtil::findBy<&AppearanceSlotRequest::_slot>( _listSlot, slot );
     }
 
-    bool CharacterAppearanceCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool CharacterAppearanceCatalog::loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
@@ -634,7 +634,7 @@ namespace sw
         return GameHash::toUnitFloat( HashUtil::mix32( seed ^ HashUtil::mix32( key ^ 0x68e31da4u ) ) );
     }
 
-    bool CharacterAppearanceCatalog::expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
+    bool CharacterAppearanceCatalog::expand( const hashed_string& id, uint32 seed, const SlotCatalog& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
                                              CharacterAppearanceSpec& outSpec ) const
     {
         CharacterAppearanceDef merged;

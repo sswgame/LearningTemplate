@@ -63,7 +63,7 @@ namespace sw
 {
     /** @brief 피팅 부품 파일 루트(`<FitPart layer profile>`)의 칸입니다. */
     REFLECT()
-    struct SW_API FitPartRootFields
+    struct SW_API FitPartRootParams
     {
         REFLECT_BODY();
 
@@ -75,7 +75,7 @@ namespace sw
 
     /** @brief `<Hide region>` 의 칸입니다. */
     REFLECT()
-    struct SW_API FitHideFields
+    struct SW_API FitHideParams
     {
         REFLECT_BODY();
 

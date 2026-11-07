@@ -25,14 +25,14 @@ namespace sw
      */
     enum class EditorRedrawReason : uint32
     {
-        None           = 0,
-        Input          = 1u << 0, ///< ImGui 가 이번 프레임에 입력 이벤트를 받았거나 마우스 단추가 눌려 있다
-        ActiveItem     = 1u << 1, ///< 끌기 · 글 입력 · 창 옮기기 · 끌어 놓기처럼 잡고 있는 항목이 있다
-        Simulation     = 1u << 2, ///< 에디터 플레이 · 시뮬레이션이 돈다
-        Notification   = 1u << 3, ///< 알림 토스트 · 진행 막대가 떠 있다(시간이 지나면 사라진다)
-        Animation      = 1u << 4, ///< 패널이 연속 프레임을 청했다(틱하는 미리보기 씬 · 읽는 중인 썸네일, `EditorRenderViews::requestAnimationFrame`)
-        BackgroundWork = 1u << 5, ///< 프레임마다 나아가는 일이 있다(원본 임포트 · 라이트 · 반사 프로브 굽기) — 워커가 끝내도 창 메시지는 오지 않는다
-        AssetsLoading  = 1u << 6, ///< 씬이 아직 다 도착하지 않았다(메시 · 텍스처 로드 · 업로드, 머티리얼 PSO 빌드, 씬 전환 — 감시 값 `Assets.Pending` 과 같은 판정). 잠들면 덜 그린 화면이 남는다
+        None          = 0,
+        Input         = 1u << 0, ///< ImGui 가 이번 프레임에 입력 이벤트를 받았거나 마우스 단추가 눌려 있다
+        ActiveItem    = 1u << 1, ///< 끌기 · 글 입력 · 창 옮기기 · 끌어 놓기처럼 잡고 있는 항목이 있다
+        Simulation    = 1u << 2, ///< 에디터 플레이 · 시뮬레이션이 돈다
+        Notification  = 1u << 3, ///< 알림 토스트 · 진행 막대가 떠 있다(시간이 지나면 사라진다)
+        Animation     = 1u << 4, ///< 패널이 연속 프레임을 청했다(틱하는 미리보기 씬 · 읽는 중인 썸네일, `EditorRenderViews::requestAnimationFrame`)
+        BackgroundJob = 1u << 5, ///< 프레임마다 나아가는 일이 있다(원본 임포트 · 라이트 · 반사 프로브 굽기) — 워커가 끝내도 창 메시지는 오지 않는다
+        AssetsLoading = 1u << 6, ///< 씬이 아직 다 도착하지 않았다(메시 · 텍스처 로드 · 업로드, 머티리얼 PSO 빌드, 씬 전환 — 감시 값 `Assets.Pending` 과 같은 판정). 잠들면 덜 그린 화면이 남는다
     };
 
     // ------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ namespace sw
         uint32 ( *getPreviewSceneViews )( EditorHandle editor, PreviewSceneView* pOutView, uint32 capacity ){ nullptr };
         /** @brief 이번 프레임의 다시 그릴 까닭(`EditorRedrawReason` 비트 묶음)입니다. `updateUI` 뒤에 부릅니다. 0 이면 에디터가 조용합니다. */
         uint32 ( *getRedrawReasons )( EditorHandle editor ){ nullptr };
-        /** @brief 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(`drainRenderWorkers`) 앞에서 한 번 부릅니다. */
+        /** @brief 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(`flushRenderWorkers`) 앞에서 한 번 부릅니다. */
         void ( *requestBackgroundStop )( EditorHandle editor ){ nullptr };
         /** @brief 지금 이 모듈을 내리면 안 되면 true 입니다(다른 스레드가 이 모듈 코드에 있다 — 열린 파일 대화상자). 인스턴스가 없어도 부를 수 있다. 호스트가 리로드 잡음으로 건다. */
         bool ( *isReloadHeld )(){ nullptr };

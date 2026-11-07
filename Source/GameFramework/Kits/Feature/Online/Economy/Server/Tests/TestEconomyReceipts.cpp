@@ -56,13 +56,13 @@ namespace
     };
 
     /** @brief 저장 규칙을 바로 부르는 묶음입니다. */
-    struct ReceiptRig
+    struct ReceiptFixture
     {
         MemoryServiceDatabase _database;
         CurrencyCatalog       _currencies;
         OfferCatalog          _offers;
 
-        ReceiptRig()
+        ReceiptFixture()
             : _database{}
             , _currencies{}
             , _offers{}
@@ -144,7 +144,7 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
             request._journalKey = "test/spend/" + to_string( accountID ) + "/" + to_string( amount );
             request._reason     = "test.spend";
-            LedgerTransferOutcome outcome;
+            LedgerTransferResult outcome;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
         }
     };
@@ -184,7 +184,7 @@ namespace
     {
     public:
         vector<ReceiptDeliveryTask>     _listAsked{};
-        vector<ReceiptDeliveryOutcome>  _listOutcome{};
+        vector<ReceiptDeliveryResult>   _listOutcome{};
         vector<ReceiptValidationResult> _listResult{};
         ReceiptBuyerRule                _buyerRule{};
         string                          _storeBuyerID{};
@@ -219,14 +219,14 @@ namespace
             (void)now;
             _listAsked.push_back( task );
         }
-        void pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome ) override
+        void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome ) override
         {
             outListOutcome.insert( outListOutcome.end(), _listOutcome.begin(), _listOutcome.end() );
             _listOutcome.clear();
         }
 
         /** @brief 맡은 알림 @p index 의 결과를 다음 회수에 냅니다. */
-        void answer( size_t index, ReceiptDeliveryStatus status ) { _listOutcome.push_back( ReceiptDeliveryOutcome{ "fake", _listAsked[index]._recordKey, status } ); }
+        void answer( size_t index, ReceiptDeliveryStatus status ) { _listOutcome.push_back( ReceiptDeliveryResult{ "fake", _listAsked[index]._recordKey, status } ); }
     };
 
     /** @brief 서비스 답을 받습니다. */
@@ -238,16 +238,16 @@ namespace
     };
 
     /** @brief 서비스 + 가짜 스토어입니다. */
-    struct EconomyServiceRig
+    struct EconomyServiceFixture
     {
-        ReceiptRig               _data;
+        ReceiptFixture           _data;
         MemoryServiceStore       _store;
         FakeReceiptValidator     _validator;
         ReceiptValidatorRegistry _registry;
         EconomyService           _service;
         EconomyReplySink         _sink;
 
-        explicit EconomyServiceRig( bool bAcceptSandbox = false )
+        explicit EconomyServiceFixture( bool bAcceptSandbox = false )
             : _data{}
             , _store{ &_data._database }
             , _validator{}
@@ -264,7 +264,7 @@ namespace
             SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
         }
 
-        ~EconomyServiceRig()
+        ~EconomyServiceFixture()
         {
             _service.shutdown();
             _registry.shutdown();
@@ -304,7 +304,7 @@ namespace
     };
 
     /** @brief 지급 뒤 알림을 쓰는 서비스 하나입니다. 저장소를 넘겨받아 재시작을 흉내 냅니다. */
-    struct DeliveryServiceRig
+    struct DeliveryServiceFixture
     {
         DeliveryRecordingValidator _validator;
         ReceiptValidatorRegistry   _registry;
@@ -313,7 +313,7 @@ namespace
         MemoryServiceStore&        _store;
         int64                      _nowMs;
 
-        DeliveryServiceRig( ReceiptRig& data, MemoryServiceStore& store, int64 nowMs = kNowMs )
+        DeliveryServiceFixture( ReceiptFixture& data, MemoryServiceStore& store, int64 nowMs = kNowMs )
             : _validator{}
             , _registry{}
             , _service{}
@@ -331,7 +331,7 @@ namespace
             SW_EXPECT_TRUE( _service.initialize( &store, settings ) );
         }
 
-        ~DeliveryServiceRig()
+        ~DeliveryServiceFixture()
         {
             _service.shutdown();
             _registry.shutdown();
@@ -366,7 +366,7 @@ namespace
 
     struct DeliveryTestUtil
     {
-        static size_t countRecords( ReceiptRig& data )
+        static size_t countRecords( ReceiptFixture& data )
         {
             vector<ReceiptDeliveryTask> listTask;
             SW_EXPECT_TRUE( EconomyStoreLogic::listDeliveries( data._database, 100, listTask ) == ServiceStoreResult::Ok );
@@ -378,7 +378,7 @@ namespace
 /** @brief [EconomyReceiptsTest] 지급: 카탈로그의 지급대로 받고, 같은 거래를 다시 내면 재생으로 한 번만 받으며, 다른 계정은 AlreadyRedeemed 다 */
 SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
 {
-    ReceiptRig         rig;
+    ReceiptFixture     rig;
     const EconomyReply first = rig.redeem( kBuyer );
     SW_EXPECT_TRUE( first._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( first._bReplayed == SW_FALSE );
@@ -399,7 +399,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
 /** @brief [EconomyReceiptsTest] 외부 로그인 묶기: 답의 스토어 신원이 그 계정에 연동된 주체여야 받는다 — 남의 주문 번호를 먼저 낸 계정이 받던 결함이다. 진 뒤에도 진짜 구매자는 받는다 */
 SW_TEST_CASE( EconomyReceiptsTest, LinkedLoginBuyerMustMatchTheAccount )
 {
-    ReceiptRig        rig;
+    ReceiptFixture    rig;
     FakeExternalLinks links;
     SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::LinkedLogin, "S1", &links ) == EconomyResult::NotPurchaser );
     SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kOther ) );
@@ -419,8 +419,8 @@ SW_TEST_CASE( EconomyReceiptsTest, LinkedLoginBuyerMustMatchTheAccount )
 SW_TEST_CASE( EconomyReceiptsTest, AccountTokenBuyerMustMatchTheAccount )
 {
     SW_EXPECT_LOG( "EconomyStoreLogic.BuyerTokenMissing" );
-    ReceiptRig   rig;
-    const string token = ReceiptBuyerToken::make( kBuyer );
+    ReceiptFixture rig;
+    const string   token = ReceiptBuyerToken::make( kBuyer );
     SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::AccountToken, token, nullptr ) == EconomyResult::NotPurchaser );
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::AccountToken, "", nullptr ) == EconomyResult::BuyerTokenMissing );
     string upper = token;
@@ -451,7 +451,7 @@ SW_TEST_CASE( EconomyReceiptsTest, BuyerTokenIsAUUIDPerAccount )
 SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
 {
     SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsExternalLinks" );
-    ReceiptRig           data;
+    ReceiptFixture       data;
     MemoryServiceStore   store{ &data._database };
     SteamReceiptSettings steam;
     steam._buyerRule._binding       = ReceiptBuyerBinding::LinkedLogin;
@@ -478,7 +478,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
 /** @brief [EconomyReceiptsTest] 지급 거절: 검증 결과 · 샌드박스 · 모르는 상품 · 계정 0 은 아무것도 주지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, RedeemRefusalsGrantNothing )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Invalid )._result == EconomyResult::ReceiptInvalid );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Refunded )._result == EconomyResult::ReceiptRefunded );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Retry )._result == EconomyResult::ReceiptPending );
@@ -495,7 +495,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemRefusalsGrantNothing )
 /** @brief [EconomyReceiptsTest] 지급 응답을 잃어도 같은 거래를 다시 내면 한 번만 받는다 */
 SW_TEST_CASE( EconomyReceiptsTest, RedeemSurvivesLostCommitReply )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     rig._database.armFault( ServiceStoreFault::LoseCommitReply );
     (void)rig.redeem( kBuyer );
     const EconomyReply retried = rig.redeem( kBuyer );
@@ -506,7 +506,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemSurvivesLostCommitReply )
 /** @brief [EconomyReceiptsTest] 환불: 지급한 만큼 회수하고 이미 쓴 부분은 빚이 된다. 두 번 와도 한 번만 회수하고, 환불된 거래는 다시 받을 수 없다 */
 SW_TEST_CASE( EconomyReceiptsTest, RefundRevokesOnceIntoDebt )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig.spend( kBuyer, 70 );
 
@@ -525,7 +525,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundRevokesOnceIntoDebt )
 /** @brief [EconomyReceiptsTest] 지급보다 먼저 온 환불은 표시만 남기고, 뒤에 온 지급을 막는다 */
 SW_TEST_CASE( EconomyReceiptsTest, RefundBeforeRedeemBlocksIt )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.refund() == EconomyResult::Ok );
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
     SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
@@ -534,7 +534,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundBeforeRedeemBlocksIt )
 /** @brief [EconomyReceiptsTest] 환불 저장소 실패는 Unavailable 이고 스토어가 다시 보내면 한 번만 회수한다 */
 SW_TEST_CASE( EconomyReceiptsTest, RefundRetriesAfterStoreFailure )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.refund() == EconomyResult::Unavailable );
@@ -549,7 +549,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundRetriesAfterStoreFailure )
 /** @brief [EconomyReceiptsTest] 청약철회: 쓰지 않은 만큼만 돌려받고 내역을 알린다. 다시 하면 AlreadyRefunded, 그 뒤 온 스토어 환불은 또 회수하지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, WithdrawTakesBackOnlyUnused )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig.spend( kBuyer, 70 );
 
@@ -568,7 +568,7 @@ SW_TEST_CASE( EconomyReceiptsTest, WithdrawTakesBackOnlyUnused )
 /** @brief [EconomyReceiptsTest] 청약철회 거절: 다른 계정 · 없는 거래는 NotPurchaser, 기한이 지나면 WithdrawalExpired, 다 썼으면 NothingToWithdraw 다 */
 SW_TEST_CASE( EconomyReceiptsTest, WithdrawRefusals )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( rig.withdraw( kOther )._result == EconomyResult::NotPurchaser );
     SW_EXPECT_TRUE( rig.withdraw( kBuyer, kNowMs, "tx-none" )._result == EconomyResult::NotPurchaser );
@@ -584,7 +584,7 @@ SW_TEST_CASE( EconomyReceiptsTest, WithdrawRefusals )
 /** @brief [EconomyReceiptsTest] 지갑과 내역: 지급 · 사용이 부호와 함께 최근 내역에 나온다 */
 SW_TEST_CASE( EconomyReceiptsTest, WalletAndHistoryReflectMoves )
 {
-    ReceiptRig rig;
+    ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig.spend( kBuyer, 30 );
 
@@ -612,8 +612,8 @@ SW_TEST_CASE( EconomyReceiptsTest, WalletAndHistoryReflectMoves )
 /** @brief [EconomyReceiptsTest] 서비스: 영수증은 스토어 검증 뒤에 지급한다. 등록 안 된 스토어 · 깨진 영수증 · 샌드박스는 거절, 멱등 키 없는 구매 · 로그인 전 요청도 거절한다 */
 SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
 {
-    EconomyServiceRig  rig;
-    const EconomyReply redeemed = rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" );
+    EconomyServiceFixture rig;
+    const EconomyReply    redeemed = rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" );
     SW_EXPECT_TRUE( redeemed._result == EconomyResult::Ok );
     SW_EXPECT_EQUAL( int64( 100 ), rig._data.balanceOf( kBuyer ) );
 
@@ -635,7 +635,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
 /** @brief [EconomyReceiptsTest] 서비스: 스토어가 보낸 환불 알림을 회수한다 */
 SW_TEST_CASE( EconomyReceiptsTest, ServiceRevokesPushedRefunds )
 {
-    EconomyServiceRig rig;
+    EconomyServiceFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
     rig._validator.pushRefund( "tx1", kNowMs );
     rig._validator.pushRefund( "tx1", kNowMs ); // 스토어는 다시 보낼 수 있다
@@ -646,7 +646,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRevokesPushedRefunds )
 /** @brief [EconomyReceiptsTest] 원장 보존 검사: 지급 · 사용 · 환불 뒤에도 잔액 합이 발행 - 소각과 맞는다(환불의 빚도 포함) */
 SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
 {
-    EconomyServiceRig rig;
+    EconomyServiceFixture rig;
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
     rig._data.spend( kBuyer, 70 );
     rig._validator.pushRefund( "tx1", kNowMs );
@@ -659,9 +659,9 @@ SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
 /** @brief [EconomyReceiptsTest] 지급 알림: 지급이 커밋된 뒤에만 스토어에 맡기고 레코드가 함께 남으며, 받았다는 답에 지운다. 지급 분개와 레코드는 한 트랜잭션이다 */
 SW_TEST_CASE( EconomyReceiptsTest, DeliveryIsConfirmedAfterTheGrant )
 {
-    ReceiptRig         data;
-    MemoryServiceStore store{ &data._database };
-    DeliveryServiceRig rig( data, store );
+    ReceiptFixture         data;
+    MemoryServiceStore     store{ &data._database };
+    DeliveryServiceFixture rig( data, store );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     SW_EXPECT_EQUAL( int64( 100 ), data.balanceOf( kBuyer ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
@@ -677,9 +677,9 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryIsConfirmedAfterTheGrant )
 /** @brief [EconomyReceiptsTest] 지급이 지면 알리지 않는다 — 스토어가 환불하게 둔다. 저장소 실패 · 다른 구매자 · 이미 다른 계정이 받은 거래 모두 레코드도 알림도 없다. 저장소가 돌아와 다시 내면 그때 알린다 */
 SW_TEST_CASE( EconomyReceiptsTest, FailedGrantIsNotConfirmed )
 {
-    ReceiptRig         data;
-    MemoryServiceStore store{ &data._database };
-    DeliveryServiceRig rig( data, store );
+    ReceiptFixture         data;
+    MemoryServiceStore     store{ &data._database };
+    DeliveryServiceFixture rig( data, store );
     rig.pump(); // 기동 직후의 훑기를 먼저 끝낸다
 
     data._database.armFault( ServiceStoreFault::RejectCommit );
@@ -703,9 +703,9 @@ SW_TEST_CASE( EconomyReceiptsTest, FailedGrantIsNotConfirmed )
 /** @brief [EconomyReceiptsTest] 지급 알림의 재시도: 닿지 못하면 레코드가 남아 훑기 간격마다 다시 보내고, 날아가는 동안은 겹쳐 보내지 않으며, 거절은 지운다 */
 SW_TEST_CASE( EconomyReceiptsTest, DeliveryRetriesUntilAnswered )
 {
-    ReceiptRig         data;
-    MemoryServiceStore store{ &data._database };
-    DeliveryServiceRig rig( data, store );
+    ReceiptFixture         data;
+    MemoryServiceStore     store{ &data._database };
+    DeliveryServiceFixture rig( data, store );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
 
@@ -729,13 +729,13 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryRetriesUntilAnswered )
 /** @brief [EconomyReceiptsTest] 재시작: 지급 뒤 알림을 끝내지 못하고 내려가도 다음 기동이 레코드를 읽어 다시 보낸다 — 메모리에만 있으면 3 일 뒤 스토어가 환불해 지급이 회수된다 */
 SW_TEST_CASE( EconomyReceiptsTest, DeliverySurvivesARestart )
 {
-    ReceiptRig         data;
+    ReceiptFixture     data;
     MemoryServiceStore store{ &data._database };
     {
-        DeliveryServiceRig before( data, store );
+        DeliveryServiceFixture before( data, store );
         SW_EXPECT_TRUE( before.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     }
-    DeliveryServiceRig after( data, store );
+    DeliveryServiceFixture after( data, store );
     after.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), after._validator._listAsked.size() );
     SW_EXPECT_EQUAL( string( "key.tx1" ), after._validator._listAsked[0]._deliveryKey );
@@ -745,9 +745,9 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliverySurvivesARestart )
 /** @brief [EconomyReceiptsTest] 같은 거래를 다시 내면 재생이지만 스토어가 아직 확인 전이라 했으니 다시 알린다 */
 SW_TEST_CASE( EconomyReceiptsTest, ReplayedGrantIsConfirmedAgain )
 {
-    ReceiptRig         data;
-    MemoryServiceStore store{ &data._database };
-    DeliveryServiceRig rig( data, store );
+    ReceiptFixture         data;
+    MemoryServiceStore     store{ &data._database };
+    DeliveryServiceFixture rig( data, store );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
     rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
@@ -764,9 +764,9 @@ SW_TEST_CASE( EconomyReceiptsTest, ReplayedGrantIsConfirmedAgain )
 SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
 {
     SW_EXPECT_LOG( "EconomyService.DeliveryNearDeadline" );
-    ReceiptRig         data;
-    MemoryServiceStore store{ &data._database };
-    DeliveryServiceRig rig( data, store );
+    ReceiptFixture         data;
+    MemoryServiceStore     store{ &data._database };
+    DeliveryServiceFixture rig( data, store );
     rig._validator._deadlineMs = kNowMs + 1000;
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
@@ -783,7 +783,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
 SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
 {
     SW_EXPECT_LOG( "EconomyStoreLogic.DeliveryRecordUnreadable" );
-    ReceiptRig              rig;
+    ReceiptFixture          rig;
     ReceiptValidationResult receipt;
     receipt._storeName     = "fake";
     receipt._transactionID = "tx1";
@@ -805,7 +805,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
 /** @brief [EconomyReceiptsTest] 환불 조회 기준: 기동 때 저장소에서 읽어 넘기고, 옮겨진 기준을 쓰며, 다시 켠 서비스가 그 값을 받는다 — 전에는 메모리에만 있어 재시작이 구간을 비웠다 */
 SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
 {
-    ReceiptRig         data;
+    ReceiptFixture     data;
     MemoryServiceStore store{ &data._database };
     const auto         makeSettings = [&data]( ReceiptValidatorRegistry& registry )
     {
@@ -853,7 +853,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
 SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
 {
     SW_EXPECT_LOG( "EconomyService.RefundCursorReadFailed" );
-    ReceiptRig               data;
+    ReceiptFixture           data;
     MemoryServiceStore       store{ &data._database };
     CursorRecordingValidator validator;
     ReceiptValidatorRegistry registry;
@@ -889,8 +889,8 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
 SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
 {
     SW_EXPECT_LOG( "EconomyStoreLogic.RefundCursorUnreadable" );
-    ReceiptRig rig;
-    int64      lastReadMs = 7;
+    ReceiptFixture rig;
+    int64          lastReadMs = 7;
     SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "google", lastReadMs ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64( 0 ), lastReadMs );
     SW_EXPECT_TRUE( EconomyStoreLogic::writeRefundCursor( rig._database, "google", kNowMs ) == ServiceStoreResult::Ok );

@@ -23,7 +23,7 @@
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Serializer/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
 {
@@ -144,7 +144,7 @@ namespace sw
          *          깨졌으면 경고를 남기고 이전 값을 그대로 둔다. 경로는 `FileUtil::pathsEqualNormalized` 로 비교한다.
          * @return 다시 읽었으면 `Reloaded`, 파일에서 읽은 설정이 아닌 경로면 `NotTracked`, 깨진 파일이면(오류를 남겼다) `Failed`
          */
-        [[nodiscard]] ReloadOutcome reloadConfigFile( string_view changedPath );
+        [[nodiscard]] ReloadResult reloadConfigFile( string_view changedPath );
         /** @brief 설정을 다시 읽을 때마다 호출되는 델리게이트입니다. */
         ConfigReloadedDelegate& onConfigReloaded() { return _onConfigReloaded; }
         /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */

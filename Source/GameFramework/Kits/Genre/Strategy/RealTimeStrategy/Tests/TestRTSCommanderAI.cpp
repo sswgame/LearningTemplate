@@ -27,7 +27,7 @@ namespace
 </RTSCatalog>)";
 
     /** @brief 플레이어 넷을 꾸린 빈 판과, 작업 하나로 된 트리를 도는 AI 입니다. 플레이어 0 이 AI 이고 1 은 같은 팀, 2 · 3 은 적입니다. */
-    struct CommanderRig
+    struct CommanderFixture
     {
         static inline const hashed_string kMinerals{ "minerals" };
         static inline const hashed_string kDepot{ "command_center" };
@@ -117,7 +117,7 @@ namespace
             return event;
         }
     };
-    using Rig = CommanderRig;
+    using Rig = CommanderFixture;
 
     struct RTSCommanderAITestUtil
     {

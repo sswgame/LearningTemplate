@@ -12,7 +12,7 @@
 namespace sw
 {
     NileWalkerComponent::NileWalkerComponent()
-        : _director{}
+        : _gameMode{}
         , _walkerIndex{ -1 }
         , _height{ 0.35f }
         , _pShownLook{ nullptr }
@@ -27,9 +27,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void NileWalkerComponent::assignWalker( GameObjectHandle director, int32 walkerIndex )
+    void NileWalkerComponent::assignWalker( GameObjectHandle gameMode, int32 walkerIndex )
     {
-        _director    = director;
+        _gameMode    = gameMode;
         _walkerIndex = walkerIndex;
         _pShownLook  = nullptr;
     }
@@ -42,11 +42,11 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileGameModeComponent* pDirector = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const NileGameModeComponent* pGameMode = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
         // 같은 그룹의 다른 일꾼과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).
-        const vector<CityWalker>& listWalker = pDirector->getCity().getWalkers();
+        const vector<CityWalker>& listWalker = pGameMode->getCity().getWalkers();
         const bool                bShown     = 0 <= _walkerIndex && _walkerIndex < static_cast<int32>( listWalker.size() );
         if ( pMesh->isVisible() != bShown )
             pMesh->setVisible( bShown );
@@ -55,7 +55,7 @@ namespace sw
         const CityWalker& walker   = listWalker.data()[_walkerIndex];
         const float2      position = CitySimulation::computeWalkerPosition( walker );
         pMesh->setLocalPosition( float3{ position._x, _height, position._y } );
-        const shared_ptr<MaterialInstance>& look = pDirector->findWalkerLook( walker );
+        const shared_ptr<MaterialInstance>& look = pGameMode->findWalkerLook( walker );
         if ( look == nullptr || look.get() == _pShownLook )
             return;
         pMesh->setMaterialInstance( look );

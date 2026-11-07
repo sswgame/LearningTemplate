@@ -87,7 +87,7 @@ namespace sw
         /** @brief 등록된 프록시 포인터를 번호 순서로 복사합니다(`RenderScope` 가 살아 있는 동안 유효하다). */
         void copyProxies( vector<IExtensionSceneProxy*>& outList ) const;
         /** @brief 그릴 수 없는 모듈 패스 · 요소의 오류를 키마다 한 번만 남기게 합니다. 처음이면 true 입니다. 키는 호출한 쪽이 정한 글입니다. */
-        bool noteFailureOnce( string_view key );
+        bool recordFailureOnce( string_view key );
 
     private:
         struct ProxyEntry
@@ -107,7 +107,7 @@ namespace sw
         vector<ProxyEntry> _listProxy            SW_GUARDED_BY( _mutex );
         vector<PendingUpdate> _listPendingUpdate SW_GUARDED_BY( _mutex );
         ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;
-        OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`noteFailureOnce`)
+        OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`recordFailureOnce`)
     };
 
     SW_SERVICE_SLOT( RenderExtensionRegistry, Optional );

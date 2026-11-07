@@ -26,15 +26,15 @@ namespace sw
         constexpr uint32 kTownStateVersion = 1;
 
         /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 마을 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
-        const TownGameModeComponent* findTownProbeDirector( const GameObjectManager* pManager )
+        const TownGameModeComponent* findTownProbeGameMode( const GameObjectManager* pManager )
         {
             const TownGameModeComponent* pFound = nullptr;
             if ( pManager != nullptr )
             {
-                pManager->forEachComponentOfType<TownGameModeComponent>( [&pFound]( const TownGameModeComponent* pDirector )
+                pManager->forEachComponentOfType<TownGameModeComponent>( [&pFound]( const TownGameModeComponent* pGameMode )
                 {
                     if ( pFound == nullptr )
-                        pFound = pDirector;
+                        pFound = pGameMode;
                 } );
             }
             return pFound;
@@ -42,55 +42,55 @@ namespace sw
 
         [[nodiscard]] bool readHeroTileX( const GameObjectManager* pManager, float64& outValue )
         {
-            const TownGameModeComponent* pDirector = findTownProbeDirector( pManager );
-            if ( pDirector == nullptr )
+            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
+            if ( pGameMode == nullptr )
                 return false;
-            outValue = pDirector->getHeroTileX();
+            outValue = pGameMode->getHeroTileX();
             return true;
         }
 
         [[nodiscard]] bool readHeroTileY( const GameObjectManager* pManager, float64& outValue )
         {
-            const TownGameModeComponent* pDirector = findTownProbeDirector( pManager );
-            if ( pDirector == nullptr )
+            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
+            if ( pGameMode == nullptr )
                 return false;
-            outValue = pDirector->getHeroTileY();
+            outValue = pGameMode->getHeroTileY();
             return true;
         }
 
         [[nodiscard]] bool readHeroFacing( const GameObjectManager* pManager, float64& outValue )
         {
-            const TownGameModeComponent* pDirector = findTownProbeDirector( pManager );
-            if ( pDirector == nullptr )
+            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
+            if ( pGameMode == nullptr )
                 return false;
-            outValue = static_cast<float64>( pDirector->getHeroFacing() );
+            outValue = static_cast<float64>( pGameMode->getHeroFacing() );
             return true;
         }
 
         [[nodiscard]] bool readTalking( const GameObjectManager* pManager, float64& outValue )
         {
-            const TownGameModeComponent* pDirector = findTownProbeDirector( pManager );
-            if ( pDirector == nullptr )
+            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
+            if ( pGameMode == nullptr )
                 return false;
-            outValue = pDirector->isTalking() ? 1.0 : 0.0;
+            outValue = pGameMode->isTalking() ? 1.0 : 0.0;
             return true;
         }
 
         [[nodiscard]] bool readShownLineCount( const GameObjectManager* pManager, float64& outValue )
         {
-            const TownGameModeComponent* pDirector = findTownProbeDirector( pManager );
-            if ( pDirector == nullptr )
+            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
+            if ( pGameMode == nullptr )
                 return false;
-            outValue = pDirector->getShownLineCount();
+            outValue = pGameMode->getShownLineCount();
             return true;
         }
 
         [[nodiscard]] bool readFinishedTalkCount( const GameObjectManager* pManager, float64& outValue )
         {
-            const TownGameModeComponent* pDirector = findTownProbeDirector( pManager );
-            if ( pDirector == nullptr )
+            const TownGameModeComponent* pGameMode = findTownProbeGameMode( pManager );
+            if ( pGameMode == nullptr )
                 return false;
-            outValue = pDirector->getFinishedTalkCount();
+            outValue = pGameMode->getFinishedTalkCount();
             return true;
         }
     } // namespace

@@ -197,7 +197,7 @@ namespace sw
         Pose                            _scratchTrackPose;
         vector<float4x4>                _listModelSpace;
         vector<float4x4>                _listSkinPalette;
-        float64                         _idleSince;
+        float64                         _idleStartTime;
         float64                         _variationSpan;   ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
         float64                         _blendStartClock; ///< 섞기 묶음이 생긴 군중 시계
         float32                         _nextStartTime;   ///< 섞기 묶음이 생길 때 들어가는 클립의 시각

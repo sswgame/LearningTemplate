@@ -157,7 +157,7 @@ namespace sw
 namespace sw
 {
     VoxelPlayerComponent::VoxelPlayerComponent()
-        : _director{}
+        : _gameMode{}
         , _reachDistance{ 6.0f }
         , _placeInterval{ 0.25f }
         , _startYaw{ 0.6f }
@@ -213,7 +213,7 @@ namespace sw
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const VoxelGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _director ) : nullptr;
+        const VoxelGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
         // 자동 플레이에서는 플레이어 조종자가 폰을 조종하지 않으므로 마우스도 잠그지 않습니다. 시점은 AI 가 정하며 `setAngles` 가 조종 회전을 요청합니다.
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
@@ -224,13 +224,13 @@ namespace sw
                 return;
             }
             // 자동 플레이면 플레이어 조종자가 먼저 폰을 가져가지 못하게 합니다. 가져가면 마우스 잠금이 한 프레임 걸렸다 풀립니다. 디렉터가 AI 를 빙의시킵니다.
-            if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
+            if ( pGameMode != nullptr && pGameMode->isAutoPlayOn() )
                 pPawn->setAutoPossess( PawnAutoPossess::None );
         }
         if ( pCamera != nullptr )
             pCamera->setAngles( _startYaw, _startPitch );
-        if ( pDirector != nullptr && pDirector->isStarted() )
-            initializeBody( *pDirector );
+        if ( pGameMode != nullptr && pGameMode->isStarted() )
+            initializeBody( *pGameMode );
         if ( _pendingStateBytes.empty() == false )
             applyPendingState();
     }
@@ -291,13 +291,13 @@ namespace sw
         GameObjectManager*            pManager        = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const VoxelGameModeComponent* pDirector       = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _director ) : nullptr;
+        const VoxelGameModeComponent* pGameMode       = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
         const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<VoxelBlockCatalog>();
-        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f;
+        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || deltaTime <= 0.0f;
         if ( bNotReadyToTick )
             return;
         if ( _bBodyPlaced == SW_FALSE )
-            initializeBody( *pDirector );
+            initializeBody( *pGameMode );
         const float32 step = MathUtil::min( deltaTime, 0.1f );
 
         float3 wish{ 0.0f, 0.0f, 0.0f };
@@ -308,19 +308,19 @@ namespace sw
         readIntent( *pPawn, *pCatalog, wish, bJump, bSprint, bBreak, bPlace );
 
         const bool bWasOnGround = _body.isOnGround();
-        _body.step( pDirector->getWorld(), wish, bJump, bSprint, step );
+        _body.step( pGameMode->getWorld(), wish, bJump, bSprint, step );
         if ( bWasOnGround == false && _body.isOnGround() )
             _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventLand );
         // 월드 밖으로 떨어지면 처음 위치로 되돌립니다.
         if ( _body.getPosition()._y < -10.0f )
-            _body.setPosition( pDirector->findSpawnPosition() );
+            _body.setPosition( pGameMode->findSpawnPosition() );
         pCamera->setEyePosition( _body.getEyePosition() );
 
-        updateTarget( *pDirector, *pCamera );
+        updateTarget( *pGameMode, *pCamera );
         updateBreaking( step, *pCatalog, bBreak );
         // 버튼을 누르고 있으면 간격마다 하나씩 놓습니다. 지나간 시간을 이어서 세므로 놓기 빈도가 프레임 시간에 좌우되지 않습니다(`Countdown::updateRepeat`).
         if ( _placeCooldown.updateRepeat( step, _placeInterval, bPlace ) )
-            placeBlock( *pDirector, *pCatalog );
+            placeBlock( *pGameMode, *pCatalog );
         if ( _listPendingEdit.empty() == false || _soundQueue.isEmpty() == false )
             scheduleFlush();
     }
@@ -336,9 +336,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 몸과 손(DuringPhysics): 자기 오브젝트를 바꾸고, 월드는 읽기만 합니다.
     // ------------------------------------------------------------------------------
-    void VoxelPlayerComponent::initializeBody( const VoxelGameModeComponent& director )
+    void VoxelPlayerComponent::initializeBody( const VoxelGameModeComponent& gameMode )
     {
-        _body.setPosition( director.findSpawnPosition() );
+        _body.setPosition( gameMode.findSpawnPosition() );
         _startPosition                      = _body.getPosition();
         _bBodyPlaced                        = SW_TRUE;
         GameObject*                 pOwner  = getOwner();
@@ -414,10 +414,10 @@ namespace sw
         }
     }
 
-    void VoxelPlayerComponent::updateTarget( const VoxelGameModeComponent& director, const FirstPersonCameraComponent& camera )
+    void VoxelPlayerComponent::updateTarget( const VoxelGameModeComponent& gameMode, const FirstPersonCameraComponent& camera )
     {
         VoxelRayHit hit;
-        const bool  bHit             = VoxelRaycast::raycast( director.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
+        const bool  bHit             = VoxelRaycast::raycast( gameMode.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
         const bool  bBreakTargetLost = bHit == false || hit._block != _target._block || _bHasTarget == SW_FALSE;
         if ( bBreakTargetLost )
             _breakProgress = 0.0f; // 다른 블록을 보면 처음부터 다시 부숩니다.
@@ -451,11 +451,11 @@ namespace sw
         _bHasTarget = SW_FALSE;
     }
 
-    void VoxelPlayerComponent::placeBlock( const VoxelGameModeComponent& director, const VoxelBlockCatalog& catalog )
+    void VoxelPlayerComponent::placeBlock( const VoxelGameModeComponent& gameMode, const VoxelBlockCatalog& catalog )
     {
         if ( _bHasTarget == SW_FALSE )
             return;
-        const VoxelWorld& world = director.getWorld();
+        const VoxelWorld& world = gameMode.getWorld();
         const VoxelCoord  cell  = _target._previous;
         if ( _body.overlapsBlock( cell ) || world.isInside( cell._x, cell._y, cell._z ) == false )
             return; // 몸과 겹치는 곳이나 월드 밖에는 놓지 않습니다.
@@ -489,12 +489,12 @@ namespace sw
         _bFlushScheduled                  = SW_FALSE;
         GameObject*             pOwner    = getOwner();
         GameObjectManager*      pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( _director ) : nullptr;
-        VoxelGameModeComponent* pDirector = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
+        const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( _gameMode ) : nullptr;
+        VoxelGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
         for ( const BlockEdit& edit : _listPendingEdit )
         {
-            if ( pDirector != nullptr )
-                (void)pDirector->applyBlockEdit( edit._coord, edit._block ); // 월드 밖의 좌표는 앞에서 이미 걸러졌습니다.
+            if ( pGameMode != nullptr )
+                (void)pGameMode->applyBlockEdit( edit._coord, edit._block ); // 월드 밖의 좌표는 앞에서 이미 걸러졌습니다.
         }
         _listPendingEdit.clear();
         _soundQueue.playAll();

@@ -1,6 +1,6 @@
 /**
  * @file EconomyStoreLogic.h
- * @brief 경제 서비스의 저장 부분입니다. 저장소 스레드(`IServiceStoreWork::run`)에서 부르는 동기 함수이며 서비스 멤버는 모릅니다. 입력은 값으로 받습니다.
+ * @brief 경제 서비스의 저장 부분입니다. 저장소 스레드(`IServiceStoreJob::run`)에서 부르는 동기 함수이며 서비스 멤버는 모릅니다. 입력은 값으로 받습니다.
  * @details - 구매는 원장 이동 한 건과 계정당 구매 수 레코드(`econ_purchase`, 한도가 있을 때)를 한 트랜잭션으로 처리한다. 원장 이동은 계정에서 소각으로 가격을 내고, 발행에서 계정으로 지급하는 것이다.
  *            분개 키는 클라이언트의 멱등 키이므로, 응답을 잃고 재시도하면 **잔액과 한도 판정보다 먼저** 지난 결과를 받는다.
  *          - 가상 화폐의 가격은 재원 자산의 현재 잔액을 적힌 순서대로 나눠서 분개 항목을 만든다. 무상 재화를 먼저 쓰는 것이 관례이다.
@@ -121,6 +121,6 @@ namespace sw
         static EconomyResult readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyReply& outReply );
         static EconomyResult readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyReply& outReply );
         /** @brief 이동 결과에서 @p accountID 의 잔액만 골라냅니다. */
-        static void collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance );
+        static void collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance );
     };
 } // namespace sw

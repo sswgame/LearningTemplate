@@ -29,7 +29,7 @@ namespace
     constexpr const utf8* kClientID = "game-client";
 
     /** @brief 가짜 제공자 서버 하나(경로마다 상태 · 몸)와 HTTP 클라이언트 둘(JWKS 용, 애플 교환 · 철회 용)입니다. 선언 순서가 수명이다 — 망이 전송들보다 오래 산다. */
-    struct ProviderHTTPRig
+    struct ProviderHTTPFixture
     {
         LoopbackStreamNetwork         _network{ 11u };
         ManualClock                   _clock{ MonotonicMilliseconds{ 0 } };
@@ -48,11 +48,11 @@ namespace
         int32                         _tokenStatus{ HTTPConstant::kStatusOk };
         int32                         _revokeStatus{ HTTPConstant::kStatusOk };
 
-        ProviderHTTPRig()
+        ProviderHTTPFixture()
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&ProviderHTTPRig::onRequest>( this ) ) );
+            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&ProviderHTTPFixture::onRequest>( this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SW_EXPECT_TRUE( _appleClient.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             _baseURL  = "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) );
@@ -185,7 +185,7 @@ namespace
             return compact;
         }
 
-        static PlatformLoginProviderConfig makeOidcSettings( const ProviderHTTPRig& rig )
+        static PlatformLoginProviderConfig makeOidcSettings( const ProviderHTTPFixture& rig )
         {
             PlatformLoginProviderConfig settings;
             settings._name            = "oidc_test";
@@ -224,8 +224,8 @@ namespace
 /** @brief [OidcLoginProviderTest] 처음 확인에서 JWKS 를 한 번 받아 서명 키를 찾고, 주체 · 표시 이름을 돌려준다. 다음 토큰은 캐시로 확인한다 */
 SW_TEST_CASE( OidcLoginProviderTest, VerifiesWithFetchedKeysAndCachesThem )
 {
-    ProviderHTTPRig   rig;
-    OidcLoginProvider provider( TestUtil::makeOidcSettings( rig ), &rig._security, &rig._client );
+    ProviderHTTPFixture rig;
+    OidcLoginProvider   provider( TestUtil::makeOidcSettings( rig ), &rig._security, &rig._client );
 
     TokenClaims claims;
     claims._name                                 = "Kim";
@@ -247,7 +247,7 @@ SW_TEST_CASE( OidcLoginProviderTest, VerifiesWithFetchedKeysAndCachesThem )
 /** @brief [OidcLoginProviderTest] 다른 발급자 · 다른 대상 · 지난 토큰 · 깨진 토큰은 거절이고, nonce 를 요구하면 티켓의 nonce 와 토큰의 nonce 가 같아야 한다 */
 SW_TEST_CASE( OidcLoginProviderTest, RejectsClaimsThatDoNotMatch )
 {
-    ProviderHTTPRig             rig;
+    ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings = TestUtil::makeOidcSettings( rig );
     settings._bRequireNonce              = SW_TRUE;
     OidcLoginProvider provider( settings, &rig._security, &rig._client );
@@ -277,7 +277,7 @@ SW_TEST_CASE( OidcLoginProviderTest, RejectsClaimsThatDoNotMatch )
 SW_TEST_CASE( OidcLoginProviderTest, UnknownKeyIsRejectedAndUnreachableJwksIsUnavailable )
 {
     {
-        ProviderHTTPRig                 rig;
+        ProviderHTTPFixture             rig;
         OidcLoginProvider               provider( TestUtil::makeOidcSettings( rig ), &rig._security, &rig._client );
         const PlatformLoginVerification unknownKey = rig.verify( provider, TestUtil::makeIDToken( rig._security, TokenClaims{}, "kid-rotated" ) );
         SW_EXPECT_TRUE( unknownKey._bRejected == SW_TRUE );
@@ -285,7 +285,7 @@ SW_TEST_CASE( OidcLoginProviderTest, UnknownKeyIsRejectedAndUnreachableJwksIsUna
         SW_EXPECT_EQUAL( 1, rig.countRequests( "/jwks" ) ); // 받는 중에 온 모르는 kid 는 그 받기를 기다린다 — 따로 받지 않는다
     }
     {
-        ProviderHTTPRig rig;
+        ProviderHTTPFixture rig;
         rig._jwksStatus = HTTPConstant::kStatusServerError;
         OidcLoginProvider provider( TestUtil::makeOidcSettings( rig ), &rig._security, &rig._client );
         SW_EXPECT_LOG( "OidcLoginProvider.JWKSFetchFailed" );
@@ -299,7 +299,7 @@ SW_TEST_CASE( OidcLoginProviderTest, UnknownKeyIsRejectedAndUnreachableJwksIsUna
 /** @brief [ProfileAPILoginProviderTest] 액세스 토큰을 Bearer 로 프로필 주소에 보내고, 점 경로의 주체 · 표시 이름을 읽는다 */
 SW_TEST_CASE( ProfileAPILoginProviderTest, ReadsSubjectFromTheProfile )
 {
-    ProviderHTTPRig             rig;
+    ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
     settings._name            = "profile_test";
     settings._kind            = PlatformLoginProviderKind::AccessTokenProfile;
@@ -323,7 +323,7 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, ReadsSubjectFromTheProfile )
 /** @brief [ProfileAPILoginProviderTest] 401 · 403 · 주체 없는 200 은 거절이고, 5xx · 깨진 JSON 은 쓸 수 없음이다 */
 SW_TEST_CASE( ProfileAPILoginProviderTest, MapsStatusAndBodyToRejectedOrUnavailable )
 {
-    ProviderHTTPRig             rig;
+    ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
     settings._name        = "profile_test";
     settings._kind        = PlatformLoginProviderKind::AccessTokenProfile;
@@ -350,7 +350,7 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, MapsStatusAndBodyToRejectedOrUnavaila
 /** @brief [TicketQueryLoginProviderTest] 키 · 티켓 · 받을 서비스 이름(identity)을 쿼리 인자로 덧붙여(주소에 `?` 가 있으면 `&`) 보내고, 결과 글이 성공 값이면 주체를 읽는다 — 스팀 AuthenticateUserTicket 모양 */
 SW_TEST_CASE( TicketQueryLoginProviderTest, SendsKeyAndTicketAndReadsTheResult )
 {
-    ProviderHTTPRig             rig;
+    ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
     settings._name          = "steam";
     settings._kind          = PlatformLoginProviderKind::TicketQuery;
@@ -399,7 +399,7 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, UnsafeTicketAndMissingKeyAreRefused 
     SW_EXPECT_FALSE( TicketQueryLoginProvider::isQuerySafe( "a&key=x" ) );
     SW_EXPECT_FALSE( TicketQueryLoginProvider::isQuerySafe( "a b" ) );
 
-    ProviderHTTPRig             rig;
+    ProviderHTTPFixture         rig;
     PlatformLoginProviderConfig settings;
     settings._name          = "steam";
     settings._kind          = PlatformLoginProviderKind::TicketQuery;
@@ -423,12 +423,12 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, UnsafeTicketAndMissingKeyAreRefused 
 namespace
 {
     /** @brief 애플 제공자(교환 · 철회 주소는 가짜 서버)와 그 서버입니다. */
-    struct AppleRig
+    struct AppleFixture
     {
-        ProviderHTTPRig                _http{};
+        ProviderHTTPFixture            _http{};
         unique_ptr<AppleLoginProvider> _pProvider{};
 
-        AppleRig()
+        AppleFixture()
         {
             PlatformLoginProviderConfig settings = TestUtil::makeOidcSettings( _http );
             settings._name                       = "apple";
@@ -496,7 +496,7 @@ SW_TEST_CASE( AppleLoginProviderTest, SplitsTheTicket )
 /** @brief [AppleLoginProviderTest] client secret 은 ES256 JWT(kid = 서명 키 id, iss = 팀 id, sub = 첫 client id, aud = appleid, 수명 24 시간)이고 만료 1 시간 전까지 다시 쓴다 */
 SW_TEST_CASE( AppleLoginProviderTest, ClientSecretCarriesTheDocumentedClaims )
 {
-    AppleRig     rig;
+    AppleFixture rig;
     const string secret = rig._pProvider->makeClientSecret( UnixMilliseconds{ kNowMs } );
     SW_REQUIRE_FALSE( secret.empty() );
     JWTUnverified token;
@@ -529,7 +529,7 @@ SW_TEST_CASE( AppleLoginProviderTest, ClientSecretCarriesTheDocumentedClaims )
 /** @brief [AppleLoginProviderTest] ID 토큰을 확인한 뒤 인가 코드를 `POST /auth/token`(grant_type=authorization_code)으로 바꿔 refresh token 을 연동 비밀로 싣는다 */
 SW_TEST_CASE( AppleLoginProviderTest, ExchangesTheCodeForALinkSecret )
 {
-    AppleRig rig;
+    AppleFixture rig;
     rig._http._tokenBody                         = R"({"access_token":"A","token_type":"Bearer","expires_in":3600,"refresh_token":"R-1","id_token":"I"})";
     const PlatformLoginVerification verification = rig._http.verify( *rig._pProvider, rig.makeIDToken() + "||code-9" );
     SW_EXPECT_TRUE( verification.isVerified() );
@@ -549,7 +549,7 @@ SW_TEST_CASE( AppleLoginProviderTest, ExchangesTheCodeForALinkSecret )
 /** @brief [AppleLoginProviderTest] 교환이 실패해도 로그인은 성공이고 연동 비밀만 없다. 인가 코드가 없으면 교환하지 않고, ID 토큰이 틀리면 교환하지 않고 거절이다 */
 SW_TEST_CASE( AppleLoginProviderTest, ExchangeFailureStillLogsIn )
 {
-    AppleRig rig;
+    AppleFixture rig;
     rig._http._tokenStatus = 400;
     rig._http._tokenBody   = R"({"error":"invalid_grant"})";
     SW_EXPECT_LOG( "AppleLoginProvider.LoginProviderCouldNot" );
@@ -567,7 +567,7 @@ SW_TEST_CASE( AppleLoginProviderTest, ExchangeFailureStillLogsIn )
 /** @brief [AppleLoginProviderTest] 철회는 `POST /auth/revoke`(token · token_type_hint=refresh_token)이고, 200 과 400 invalid_grant 는 끝, 400 invalid_client · 5xx 는 다시 시도다 */
 SW_TEST_CASE( AppleLoginProviderTest, RevokesTheRefreshToken )
 {
-    AppleRig rig;
+    AppleFixture rig;
     SW_EXPECT_TRUE( rig._pProvider->supportsRevocation() );
     SW_EXPECT_TRUE( rig.revoke( "R-1" )._bUnavailable == SW_FALSE );
     const HTTPServerRequest* pRevoke = rig._http.findLastRequest( "/auth/revoke" );

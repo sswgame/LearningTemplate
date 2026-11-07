@@ -46,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 보존 기간 쓸기입니다. 저장소 스레드(`IServiceStoreWork::run` 안)에서 씁니다. */
+    /** @brief 보존 기간 쓸기입니다. 저장소 스레드(`IServiceStoreJob::run` 안)에서 씁니다. */
     struct SW_GF_API ServiceRetention
     {
         static constexpr int32 kPageSize = 64; ///< 한 트랜잭션의 쓰기 상한에 맞춘 한 쪽의 크기

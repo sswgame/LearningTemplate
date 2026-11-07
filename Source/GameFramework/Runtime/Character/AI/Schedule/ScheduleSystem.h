@@ -118,7 +118,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 일정 이벤트입니다(`drainEvents`). */
+    /** @brief 일정 이벤트입니다(`pollEvents`). */
     struct ScheduleEvent
     {
         enum class Kind : uint8
@@ -303,7 +303,7 @@ namespace sw
         int32                          getMinute() const { return _minute; }
         const ScheduleCatalog*         getCatalog() const { return _pCatalog; }
         int32                          getDay() const;
-        void                           drainEvents( vector<ScheduleEvent>& outListEvent );
+        void                           pollEvents( vector<ScheduleEvent>& outListEvent );
 
         void fillSaveState( ScheduleSaveState& outState ) const;
         /** @brief 저장 상태로 되돌립니다. `initialize` 한 뒤 같은 카탈로그로 부릅니다. 모르는 NPC id 는 건너뜁니다. */

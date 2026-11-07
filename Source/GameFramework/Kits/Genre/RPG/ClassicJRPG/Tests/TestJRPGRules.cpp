@@ -102,7 +102,7 @@ namespace
         int64             _rewardGold{ 0 };
         uint8             _commandKind{ 0 };
         uint8             _defending{ 0 };
-        uint8             _outcome{ 0 };
+        uint8             _result{ 0 };
 
         void write( sw::Archive& written ) const
         {
@@ -135,7 +135,7 @@ namespace
             written << _comboPoints;
             written << _round;
             written << _fleeAttempts;
-            written << _outcome;
+            written << _result;
         }
     };
 
@@ -189,13 +189,13 @@ namespace
 
         int32 countBattleEvents( sw::JRPGBattleEvent::Kind kind )
         {
-            _battle.drainEvents( _listBattleEvent );
+            _battle.pollEvents( _listBattleEvent );
             return sw::VectorUtil::countBy<&sw::JRPGBattleEvent::_kind>( _listBattleEvent, kind );
         }
 
         int32 countPartyEvents( sw::JRPGPartyEvent::Kind kind )
         {
-            _party.drainEvents( _listPartyEvent );
+            _party.pollEvents( _listPartyEvent );
             return sw::VectorUtil::countBy<&sw::JRPGPartyEvent::_kind>( _listPartyEvent, kind );
         }
 
@@ -210,7 +210,7 @@ namespace
         /** @brief 멤버들이 적에게 준 피해 값을 차례로 돌려줍니다. */
         sw::vector<int32> collectMemberDamage()
         {
-            _battle.drainEvents( _listBattleEvent );
+            _battle.pollEvents( _listBattleEvent );
             sw::vector<int32> listDamage;
             for ( const sw::JRPGBattleEvent& event : _listBattleEvent )
             {
@@ -427,7 +427,7 @@ SW_TEST_CASE_F( JRPGRulesTest, FailedStartDoesNotProgress )
     SW_EXPECT_FALSE( startBattle( "nope" ) );
     SW_EXPECT_FALSE( _battle.setCommand( 0, sw::JRPGCommand::makeDefend() ) );
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::JRPGBattleOutcome::Ongoing, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::JRPGBattleResult::Ongoing, _battle.getResult() );
     SW_EXPECT_EQUAL( 0, _battle.getRound() );
     SW_EXPECT_FALSE( _battle.tryFlee() );
 
@@ -471,7 +471,7 @@ SW_TEST_CASE_F( JRPGRulesTest, ComboUsesPointsAndParticipants )
     _party.getMember( 1 )._hp = 60;
 
     _listBattleEvent.clear();
-    _battle.drainEvents( _listBattleEvent );
+    _battle.pollEvents( _listBattleEvent );
     _listBattleEvent.clear();
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeAttack( 0 ) ) );
     SW_EXPECT_TRUE( _battle.setCommand( 1, sw::JRPGCommand::makeCombo( "eclipse", 0 ) ) );
@@ -540,7 +540,7 @@ SW_TEST_CASE_F( JRPGRulesTest, Flee )
     SW_EXPECT_FALSE( _battle.tryFlee() );
     SW_EXPECT_EQUAL( 1, _battle.getRound() );
     SW_EXPECT_EQUAL( 1000, _battle.getEnemies()[0]._hp ); // 공격 명령은 버렸다
-    SW_EXPECT_EQUAL( sw::JRPGBattleOutcome::Ongoing, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::JRPGBattleResult::Ongoing, _battle.getResult() );
 
     _settings._fleeBase = 100.0f;
     SW_REQUIRE_TRUE( startBattle( "slime" ) );
@@ -550,7 +550,7 @@ SW_TEST_CASE_F( JRPGRulesTest, Flee )
     {
         ++tries;
     }
-    SW_EXPECT_EQUAL( sw::JRPGBattleOutcome::Fled, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::JRPGBattleResult::Fled, _battle.getResult() );
     SW_EXPECT_FALSE( _battle.tryFlee() ); // 끝난 전투
 }
 
@@ -565,7 +565,7 @@ SW_TEST_CASE_F( JRPGRulesTest, VictoryDistributesRewards )
     SW_EXPECT_TRUE( _battle.setCommand( 0, sw::JRPGCommand::makeAttack( 0 ) ) );
     _battle.resolveRound();
 
-    SW_EXPECT_EQUAL( sw::JRPGBattleOutcome::Victory, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::JRPGBattleResult::Victory, _battle.getResult() );
     SW_EXPECT_EQUAL( 31, _battle.getRewardExp() );
     SW_EXPECT_EQUAL( 7, _battle.getRewardGold() );
     SW_EXPECT_EQUAL( 7, _wallet.getBalance( sw::Wallet::getDefaultCurrency() ) );
@@ -587,7 +587,7 @@ SW_TEST_CASE_F( JRPGRulesTest, DefeatWhenEveryMemberFalls )
     SW_REQUIRE_TRUE( startBattle( "giant" ) );
     _party.getMember( 0 )._hp = 1;
     _battle.resolveRound();
-    SW_EXPECT_EQUAL( sw::JRPGBattleOutcome::Defeat, _battle.getOutcome() );
+    SW_EXPECT_EQUAL( sw::JRPGBattleResult::Defeat, _battle.getResult() );
     SW_EXPECT_EQUAL( 1, countBattleEvents( sw::JRPGBattleEvent::Kind::Defeat ) );
     SW_EXPECT_EQUAL( 1, countBattleEvents( sw::JRPGBattleEvent::Kind::Defeated ) );
 }
@@ -854,7 +854,7 @@ SW_TEST_CASE_F( JRPGRulesTest, PartyStateRoundTrip )
     SW_EXPECT_EQUAL( 33, restored.getMember( 0 )._hp );
     SW_EXPECT_EQUAL( 50, restored.getMember( 0 )._level.getXP() );
 
-    restored.drainEvents( _listPartyEvent );
+    restored.pollEvents( _listPartyEvent );
     SW_EXPECT_TRUE( _listPartyEvent.empty() );
 }
 
@@ -1064,7 +1064,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
     SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
     { forged._rewardGold = -1; } ) );
     SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
-    { forged._outcome = 9; } ) );
+    { forged._result = 9; } ) );
 
     // 맞는 시전 상태는 읽히고, 다음 라운드에 터진다.
     JRPGForgedBattle casting;

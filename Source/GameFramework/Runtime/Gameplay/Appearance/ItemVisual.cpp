@@ -459,7 +459,7 @@ namespace sw
         return stageIndex;
     }
 
-    bool ItemVisualCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool ItemVisualCatalog::loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();

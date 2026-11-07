@@ -161,7 +161,7 @@ SW_TEST_CASE_F( PreferencesModelTest, EditCallsTheHookAndWaitsBeforeSaving )
     SW_EXPECT_FALSE( _model.hasPendingSave() );
 
     _model.selectSection( _section );
-    _model.noteEdited();
+    _model.recordEdited();
     SW_EXPECT_EQUAL( 1, s_changedCount );
     SW_EXPECT_TRUE( _model.hasPendingSave() );
 
@@ -172,7 +172,7 @@ SW_TEST_CASE_F( PreferencesModelTest, EditCallsTheHookAndWaitsBeforeSaving )
 SW_TEST_CASE_F( PreferencesModelTest, EditWithoutHookStillWaitsToSave )
 {
     _model.selectSection( _page );
-    _model.noteEdited();
+    _model.recordEdited();
     SW_EXPECT_EQUAL( 0, s_changedCount );
     SW_EXPECT_TRUE( _model.hasPendingSave() );
 }

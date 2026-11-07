@@ -26,12 +26,12 @@ namespace sw::editor
         for ( EditorViewTarget& view : _arrViewTarget )
         {
             view._bDrawn = SW_FALSE;
-            adoptIfReady( view );
+            applyIfReady( view );
         }
         for ( EditorPreviewViewTarget& preview : _listPreviewTarget )
         {
             preview._target._bDrawn = SW_FALSE;
-            adoptIfReady( preview._target );
+            applyIfReady( preview._target );
         }
         _bAnimationRequested = SW_FALSE;
     }
@@ -185,10 +185,10 @@ namespace sw::editor
             if ( view._pendingTexture.isValid() == false )
                 SW_LOG_ERROR_ID( "EditorRenderViews.RequestFailed", "View target %#x%# could not be requested ('%#')", width, height, view._pendingPath.c_str() );
         }
-        adoptIfReady( view );
+        applyIfReady( view );
     }
 
-    void EditorRenderViews::adoptIfReady( EditorViewTarget& view )
+    void EditorRenderViews::applyIfReady( EditorViewTarget& view )
     {
         if ( view._pendingTexture.isReady() == false )
             return; // 바꿀 것이 없거나, 엔진이 아직 올리지 않았다(다음 프레임에 다시 본다)

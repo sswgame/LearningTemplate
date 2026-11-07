@@ -42,7 +42,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs, string& outError );
 
-        void  submit( unique_ptr<IServiceStoreWork> work ) override;
+        void  submit( unique_ptr<IServiceStoreJob> work ) override;
         int32 pollCompletions() override { return _pool.pollCompletions(); }
         int32 getPendingCount() const override { return _pool.getPendingCount(); }
         void  shutdown() override { _pool.shutdown(); }

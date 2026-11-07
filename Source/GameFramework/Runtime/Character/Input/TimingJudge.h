@@ -64,7 +64,7 @@ namespace sw
          * @brief `<Window>` 자식들을 읽습니다. 깨진 값 · 음수 폭이 있으면 오류를 남기고 창 표를 바꾸지 않은 채 false 입니다.
          * @param pfnHandRead 창에 함께 적는 키트 속성(스킬 체크의 `bonus`)을 답합니다. 부르는 쪽이 따로 읽습니다.
          */
-        [[nodiscard]] bool loadFromNode( const XMLNode& node, string_view sourceName, bool ( *pfnHandRead )( const utf8* pName ) = nullptr );
+        [[nodiscard]] bool loadFromXML( const XMLNode& node, string_view sourceName, bool ( *pfnHandRead )( const utf8* pName ) = nullptr );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 모든 창을 곱해 넓히거나 좁힙니다(난이도 · 접근성). */
         void setScale( float32 scale ) { _scale = scale > 0.0f ? scale : 1.0f; }

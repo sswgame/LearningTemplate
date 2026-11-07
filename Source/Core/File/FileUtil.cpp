@@ -108,7 +108,7 @@ namespace sw
                 {
                     if ( PlatformFileUtil::replaceFile( tempPath.c_str(), filePath.c_str() ) )
                     {
-                        FileUtil::noteFileCreated();
+                        FileUtil::recordFileCreated();
                         return true;
                     }
                     ThreadUtil::sleepForMilliseconds( 20 );
@@ -175,7 +175,7 @@ namespace sw
                 const OptionalFileRead result = readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText, bMissingIsError );
                 if ( result != OptionalFileRead::Read )
                     return result;
-                PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
+                PlatformFileUtil::recordFileOpenedForRead( fileName, outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
 
                 // BOM 판정의 기준은 skipUTF8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와 질의 경로가 서로 다른 답을 준다.
                 const string_view withoutBom = FileUtil::skipUTF8Bom( outText );
@@ -664,7 +664,7 @@ namespace sw
         return FileUtilInternal::s_writeCounters._creationEpoch.load( std::memory_order_acquire );
     }
 
-    void FileUtil::noteFileCreated()
+    void FileUtil::recordFileCreated()
     {
         FileUtilInternal::s_writeCounters._creationEpoch.fetch_add( 1, std::memory_order_release );
     }
@@ -674,7 +674,7 @@ namespace sw
         return FileUtilInternal::s_writeCounters._removalEpoch.load( std::memory_order_acquire );
     }
 
-    void FileUtil::noteFileRemoved()
+    void FileUtil::recordFileRemoved()
     {
         FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
     }
@@ -708,7 +708,7 @@ namespace sw
     {
         if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes, true ) != OptionalFileRead::Read )
             return false;
-        PlatformFileUtil::noteFileOpenedForRead( fileName, outBytes.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
+        PlatformFileUtil::recordFileOpenedForRead( fileName, outBytes.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
         return true;
     }
 
@@ -742,7 +742,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FileUtil.FailedReadEnd", "Failed to read %# to the end (%#)", fileName, bReadError ? "read error" : "larger than the limit" );
             return false;
         }
-        PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() );
+        PlatformFileUtil::recordFileOpenedForRead( fileName, outText.size() );
         return true;
     }
 
@@ -783,7 +783,7 @@ namespace sw
         const bool   bClosed = std::fclose( pFile ) == 0;
         if ( written != text.size() || bClosed == false )
             return false;
-        noteFileCreated();
+        recordFileCreated();
         return true;
     }
 
@@ -795,7 +795,7 @@ namespace sw
                 return false;
         }
         const bool bMoved = PlatformFileUtil::moveToRecycleBin( listPath );
-        noteFileRemoved(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
+        recordFileRemoved(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
         return bMoved;
     }
 
@@ -977,7 +977,7 @@ namespace sw
 
         const string directory = FileUtilInternal::trimTrailingSeparators( directoryPath );
         if ( FileUtilInternal::createDirectoryTree( directory ) )
-            noteFileCreated(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
+            recordFileCreated(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
         // 성공은 "폴더가 있는가" 로만 가른다. 병렬 쿠킹 · 임포트가 같은 폴더를 동시에 만들 때 다른 스레드가 먼저 만든 경쟁은 실패가 아니다.
         // 같은 이름의 파일이 막고 있으면 여전히 실패다.
         if ( isDirectory( directory ) == false )
@@ -1009,7 +1009,7 @@ namespace sw
                 // createDirectory 는 이 호출이 만들었을 때만 true 다 - 이미 있으면(다른 프로세스가 먼저 잡았으면) 다음 번호로.
                 if ( PlatformFileSystem::createDirectory( path ) )
                 {
-                    noteFileCreated();
+                    recordFileCreated();
                     return path;
                 }
                 if ( exists( path ) == false )
@@ -1024,7 +1024,7 @@ namespace sw
             if ( pFile != nullptr )
             {
                 std::fclose( pFile );
-                noteFileCreated();
+                recordFileCreated();
                 return path;
             }
             if ( exists( path ) == false )
@@ -1151,7 +1151,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FileUtil.CopyFileFailed", "copyFile '%#' -> '%#' failed: %#", source, destination, PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
-        noteFileCreated(); // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
+        recordFileCreated(); // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
         return true;
     }
 
@@ -1162,7 +1162,7 @@ namespace sw
         if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
-            noteFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
+            recordFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
         if ( exists( path ) == false )
             return true;
         SW_LOG_WARNING_ID( "FileUtil.CouldNotRemove", "Could not remove '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
@@ -1176,7 +1176,7 @@ namespace sw
         if ( exists( path ) && isWriteAllowed( path ) == false )
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
-            noteFileRemoved();
+            recordFileRemoved();
         return exists( path ) == false;
     }
 
@@ -1186,7 +1186,7 @@ namespace sw
             return false;
         if ( PlatformFileUtil::replaceFile( string( from ).c_str(), string( to ).c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
             return false;
-        noteFileRemoved(); // 옛 경로는 낡았다
+        recordFileRemoved(); // 옛 경로는 낡았다
         return true;
     }
 
@@ -1204,7 +1204,7 @@ namespace sw
             const bool   bRealDirectory = status._kind == PlatformFileSystem::FileKind::Directory && status._bLink == false;
             const size_t removedCount   = bRealDirectory ? FileUtilInternal::removeTree( directory ) : ( PlatformFileSystem::removeEntry( directory ) ? 1 : 0 );
             if ( removedCount > 0 )
-                noteFileRemoved(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다
+                recordFileRemoved(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다
         }
         if ( isDirectory( path ) == false )
             return true;

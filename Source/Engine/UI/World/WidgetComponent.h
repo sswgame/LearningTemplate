@@ -178,7 +178,7 @@ namespace sw
          */
         void bindUIService( UIWidgetComponentService* pService );
         /** @brief 서비스가 먼저 종료된 경우 등록과 마커를 알림 없이 잊습니다(`UIWidgetComponentService::shutdownSubsystem` 이 부릅니다). */
-        void forgetUIService();
+        void removeUIService();
 
         // --- World(렌더 텍스처 사각형) -----------------------------------------------
         /** @brief World 의 렌더 텍스처 크기입니다(픽셀 = UI 단위, 배율 1). `_drawSize` 를 쓰며, 없으면 기본 256 × 128 입니다. */

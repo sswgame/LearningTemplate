@@ -134,7 +134,7 @@ namespace sw
         void release( int32 lane, float32 time );
 
         /** @brief 쌓인 이벤트를 넘기고 비웁니다. */
-        void drainEvents( vector<RhythmEvent>& outListEvent );
+        void pollEvents( vector<RhythmEvent>& outListEvent );
 
         /**
          * @brief 레인마다 판정 위치와 누르고 있는 롱노트, 등급별 판정 수, 입력 기록, 점수, 정확도 합, 라이프, 지금 시각, 콤보, 놓침, 판정 수, 상태를 씁니다.

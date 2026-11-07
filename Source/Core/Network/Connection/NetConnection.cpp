@@ -213,7 +213,7 @@ namespace sw
         return true;
     }
 
-    void NetConnection::drainDeliveryNotices( vector<NetDeliveryNotice>& inoutListNotice )
+    void NetConnection::pollDeliveryNotices( vector<NetDeliveryNotice>& inoutListNotice )
     {
         inoutListNotice.insert( inoutListNotice.end(), _listDeliveryNotice.begin(), _listDeliveryNotice.end() );
         _listDeliveryNotice.clear();

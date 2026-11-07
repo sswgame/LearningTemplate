@@ -102,7 +102,7 @@ namespace sw::editor
         return true;
     }
 
-    void MaterialGraphModel::noteEdit( const utf8* pLabel, const utf8* pCoalesceKey, bool bChangesShader )
+    void MaterialGraphModel::recordEdit( const utf8* pLabel, const utf8* pCoalesceKey, bool bChangesShader )
     {
         _pendingEdit = MaterialGraphEdit{ pLabel, pCoalesceKey };
         if ( bChangesShader == false )
@@ -181,7 +181,7 @@ namespace sw::editor
         }
         if ( bReplaced == false )
             listLink.push_back( std::move( newLink ) );
-        noteEdit( "Connect Material Graph Pins", nullptr, true );
+        recordEdit( "Connect Material Graph Pins", nullptr, true );
         return true;
     }
 
@@ -195,7 +195,7 @@ namespace sw::editor
         const string& pinName = _listNodePin[nodeIndex]._listInput[slot]._name;
         VectorUtil::removeIf( _graph._listNode[nodeIndex]._listLink, [&pinName]( const MaterialGraphLink& link )
         { return link._pin == pinName; } );
-        noteEdit( "Disconnect Material Graph Pin", nullptr, true );
+        recordEdit( "Disconnect Material Graph Pin", nullptr, true );
         return true;
     }
 
@@ -203,7 +203,7 @@ namespace sw::editor
     {
         if ( MaterialGraphNodeRegistry::find( kindName ) == nullptr )
             return false;
-        MaterialGraphNodeDesc node;
+        MaterialGraphNodeDef node;
         node._kind     = string{ kindName };
         node._position = canvasPosition;
         for ( uint32 number = 1; node._name.empty(); ++number )
@@ -218,7 +218,7 @@ namespace sw::editor
         _selectedNode         = nodeIndex;
         _pendingPlacedNode    = nodeIndex;
         rebuildPins();
-        noteEdit( "Add Material Graph Node", nullptr, true );
+        recordEdit( "Add Material Graph Node", nullptr, true );
         return true;
     }
 
@@ -233,9 +233,9 @@ namespace sw::editor
             if ( bInRange )
                 listRemoved.push_back( _graph._listNode[static_cast<size_t>( nodeID - 1 )]._name );
         }
-        VectorUtil::removeIf( _graph._listNode, [&listRemoved]( const MaterialGraphNodeDesc& node )
+        VectorUtil::removeIf( _graph._listNode, [&listRemoved]( const MaterialGraphNodeDef& node )
         { return VectorUtil::contains( listRemoved, node._name ); } );
-        for ( MaterialGraphNodeDesc& node : _graph._listNode )
+        for ( MaterialGraphNodeDef& node : _graph._listNode )
         {
             VectorUtil::removeIf( node._listLink, [&listRemoved]( const MaterialGraphLink& link )
             { return VectorUtil::contains( listRemoved, link._fromNode ); } );
@@ -244,7 +244,7 @@ namespace sw::editor
         _pendingPlacedNode = -1;
         _placingNode       = -1;
         rebuildPins();
-        noteEdit( "Delete Material Graph Node", nullptr, true );
+        recordEdit( "Delete Material Graph Node", nullptr, true );
     }
 
     void MaterialGraphModel::beginCanvasFrame()
@@ -253,7 +253,7 @@ namespace sw::editor
         _pendingPlacedNode = -1;
     }
 
-    void MaterialGraphModel::noteNodePosition( uint32 nodeIndex, const float2& position )
+    void MaterialGraphModel::recordNodePosition( uint32 nodeIndex, const float2& position )
     {
         if ( isPlacingNode( nodeIndex ) )
             return;
@@ -262,7 +262,7 @@ namespace sw::editor
         if ( bMoved == false )
             return;
         stored = position;
-        noteEdit( "Move Material Graph Node", "materialgraph.move", false );
+        recordEdit( "Move Material Graph Node", "materialgraph.move", false );
     }
 
     void MaterialGraphModel::selectNodeByID( int32 nodeID )
@@ -279,8 +279,8 @@ namespace sw::editor
 
     void MaterialGraphModel::setValue( uint32 nodeIndex, string_view name, string_view text )
     {
-        MaterialGraphNodeDesc& node = _graph._listNode[nodeIndex];
-        bool                   bSet = false;
+        MaterialGraphNodeDef& node = _graph._listNode[nodeIndex];
+        bool                  bSet = false;
         for ( MaterialGraphValue& value : node._listValue )
         {
             if ( value._name != name )
@@ -296,14 +296,14 @@ namespace sw::editor
             node._listValue.push_back( std::move( value ) );
         }
         rebuildPins(); // 하위 그래프 입력 노드의 `Type` · `Name` 이 핀을 바꾼다
-        noteEdit( "Edit Material Graph Value", "materialgraph.value", true );
+        recordEdit( "Edit Material Graph Value", "materialgraph.value", true );
     }
 
     void MaterialGraphModel::setAssetPath( uint32 nodeIndex, string_view path )
     {
         _graph._listNode[nodeIndex]._assetPath = string{ path };
         rebuildPins();
-        noteEdit( "Edit Material Graph Asset", nullptr, true );
+        recordEdit( "Edit Material Graph Asset", nullptr, true );
     }
 
     void MaterialGraphModel::refreshCompile( string_view documentPath )

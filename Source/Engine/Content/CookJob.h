@@ -132,12 +132,12 @@ namespace sw
          * @brief 리소스 읽기 하나를 받아들입니다(`AssetIO` 가 읽은 바이트와 함께 부른다).
          * @return 이 스레드에 작업이 있으면 입력으로 기록하고 true, 작업이 없고 세션도 없으면 true, 세션 안인데 작업 밖이면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool admitRead( const AssetID& id, const uint8* pData, size_t size );
+        [[nodiscard]] static bool allowRead( const AssetID& id, const uint8* pData, size_t size );
         /**
-         * @brief 디스크 경로(절대 또는 작업 폴더 기준) 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `admitRead` 와 같고,
+         * @brief 디스크 경로(절대 또는 작업 폴더 기준) 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `allowRead` 와 같고,
          *        절대 경로를 만들지 못하면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool admitDiskRead( string_view diskPath, const uint8* pData, size_t size );
+        [[nodiscard]] static bool allowDiskRead( string_view diskPath, const uint8* pData, size_t size );
         /**
          * @brief 리소스를 요청한 스레드에서 읽어야 하면 true 입니다. 이 스레드에 작업이 있거나 쿠킹 세션이 열려 있을 때입니다.
          * @details 작업 범위는 스레드 지역 값이라 워커에서 읽으면 그 읽기가 입력에서 빠진다. 에셋 로드(`AssetLoadOperation::startLoad`)는 이때 `Async` 요청도
@@ -148,14 +148,14 @@ namespace sw
          * @brief 요청한 스레드에서 읽어야 하면(`requiresCallingThreadRead`) 비동기 읽기를 거절합니다(완료가 다른 스레드에서 와서 기록이 빠진다). 쿠커는 동기로 읽는다.
          * @return 거절했으면 false 입니다(오류를 남긴다).
          */
-        [[nodiscard]] static bool admitAsyncRead( const AssetID& id );
+        [[nodiscard]] static bool allowAsyncRead( const AssetID& id );
         /**
          * @brief 찾지 못한 리소스 읽기를 받아들입니다. 이 스레드에 작업이 있으면 해시 0 으로 기록합니다.
          * @details 없는 파일을 찾은 결과로 출력이 정해질 수 있다 — 그 파일이 생기면 다시 베이크해야 한다.
          */
-        static void admitMissingRead( const AssetID& id );
-        /** @brief 찾지 못한 디스크 경로 읽기를 받아들입니다(`admitMissingRead` 와 같고, 경로는 `admitDiskRead` 처럼 절대 경로로 기록한다). */
-        static void admitMissingDiskRead( string_view diskPath );
+        static void allowMissingRead( const AssetID& id );
+        /** @brief 찾지 못한 디스크 경로 읽기를 받아들입니다(`allowMissingRead` 와 같고, 경로는 `allowDiskRead` 처럼 절대 경로로 기록한다). */
+        static void allowMissingDiskRead( string_view diskPath );
 
         /**
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
@@ -167,7 +167,7 @@ namespace sw
         /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없거나 순회가 도중에 멈췄으면 0 입니다. */
         static uint64 computeListingHash( string_view folderPath, string_view extension );
 
-        /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `admitDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
+        /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `allowDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool recordDiskInput( string_view diskPath, uint64 contentHash );
         /** @brief 입력 하나를 기록합니다. 같은 입력이 있으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
         void recordInput( const CookInput& input );

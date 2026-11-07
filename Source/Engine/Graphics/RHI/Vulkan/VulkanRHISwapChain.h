@@ -122,7 +122,7 @@ namespace sw
          */
         int32 waitForImageReuse( VkDevice device, VkFence frameFence );
         /** @brief 이미지별 펜스 표를 비웁니다. 디바이스가 프레임 펜스를 다시 만들 때 부릅니다(표는 그 펜스의 사본이다). */
-        void forgetImageFences();
+        void removeImageFences();
 
         /** @brief 현재 이미지를 화면에 표시합니다. 이 이미지의 renderFinished 세마포어를 기다립니다. 결과와 상관없이 이미지를 내려놓습니다. */
         VulkanSwapChainStatus present( VkQueue queue );

@@ -511,7 +511,7 @@ namespace sw::editor
                     editorConfig = getActiveTheme();
                 }
                 if ( index == 2 )
-                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 테스트(input.themeSwatch)가 누른다
+                    EditorSelfTestMarks::record( "theme.swatch.violet" ); // 에디터 자체 테스트(input.themeSwatch)가 누른다
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentSwatch" ) );
                 ImGui::PopID();
             }

@@ -77,7 +77,7 @@ namespace sw
         const uint32 id = registerPass( passName );
         if ( id == 0 )
             return;
-        engine::findSubsystem<GPUBreadcrumbLog>()->noteRecorded( id ); // id 가 0 이 아니면 표가 있다(`registerPass`)
+        engine::findSubsystem<GPUBreadcrumbLog>()->recordRecorded( id ); // id 가 0 이 아니면 표가 있다(`registerPass`)
         commands.writeBreadcrumb( id );
     }
 

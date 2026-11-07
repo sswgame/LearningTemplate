@@ -229,7 +229,7 @@ namespace sw
         const bool bNothingInFlight = pDevice == nullptr || _pDevice != pDevice || _uploadTicket.isValid() == false || getHandle() == 0;
         if ( bNothingInFlight )
         {
-            // 장치 교체가 `forgetRHI` · `releaseRHI` 로 지웠거나 다른 디바이스의 텍스처다 — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다.
+            // 장치 교체가 `clearRHI` · `releaseRHI` 로 지웠거나 다른 디바이스의 텍스처다 — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다.
             SW_LOG_ERROR_ID( "Texture.NoUploadInFlight", "Texture2D: '%#' has no upload in flight on this device", _path.c_str() );
             _uploadTicket               = RHITransferTicket{};
             const bool bOwnsLiveTexture = pDevice != nullptr && _pDevice == pDevice && getHandle() != 0;
@@ -292,7 +292,7 @@ namespace sw
         const bool bNothingInFlight = pDevice == nullptr || _pDevice != pDevice || _upgrade._ticket.isValid() == false;
         if ( bNothingInFlight )
         {
-            // 장치 교체가 지웠다(`releaseRHI` · `forgetRHI`) — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다. 새 텍스처는 그 디바이스와 함께 갔거나 해제 큐가 지웠다.
+            // 장치 교체가 지웠다(`releaseRHI` · `clearRHI`) — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다. 새 텍스처는 그 디바이스와 함께 갔거나 해제 큐가 지웠다.
             _upgrade = PendingUpgrade{};
             return Texture2DUploadStatus::Failed;
         }
@@ -544,7 +544,7 @@ namespace sw
         _streamedMipCount  = 0;
     }
 
-    void Texture2D::forgetRHI( IRHIDevice* pDevice )
+    void Texture2D::clearRHI( IRHIDevice* pDevice )
     {
         if ( _pDevice != pDevice )
             return;

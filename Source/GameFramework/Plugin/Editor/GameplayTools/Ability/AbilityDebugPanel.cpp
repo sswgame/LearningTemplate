@@ -87,7 +87,7 @@ namespace sw::editor
         const GameObject* pCurrentOwner = pCurrent != nullptr ? pCurrent->getOwner() : nullptr;
         const utf8*       pPreview      = pCurrentOwner != nullptr ? pCurrentOwner->getName().c_str() : SW_LOCKEY( "EdAbilityDebug", "PickTarget" );
         const bool        bOpen         = ImGui::BeginCombo( "##AbilityTarget", pPreview );
-        EditorSelfTestMarks::note( "abilityDebug.target" );
+        EditorSelfTestMarks::record( "abilityDebug.target" );
         if ( bOpen == false )
             return;
 
@@ -110,7 +110,7 @@ namespace sw::editor
                 _pickedHandle = handle;
             ImGui::PopID();
             const string mark = string( "abilityDebug.candidate." ) + pObject->getName().c_str();
-            EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 대상을 고른다(펼칠 때만 그려진다)
+            EditorSelfTestMarks::record( mark.c_str() ); // 시나리오가 대상을 고른다(펼칠 때만 그려진다)
         }
         ImGui::EndCombo();
     }

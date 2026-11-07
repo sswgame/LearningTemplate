@@ -457,9 +457,9 @@ namespace sw
         return payout;
     }
 
-    void MatgoGame::drainEvents( vector<MatgoEvent>& outListEvent )
+    void MatgoGame::pollEvents( vector<MatgoEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void MatgoGame::writeState( Archive& outArchive ) const

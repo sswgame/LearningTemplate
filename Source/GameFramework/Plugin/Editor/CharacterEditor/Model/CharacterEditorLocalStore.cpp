@@ -43,7 +43,7 @@ namespace sw::editor
 
     void CharacterEditorLocalStore::shutdownSubsystem()
     {
-        _channel.drain();
+        _channel.flush();
         _channel.close();
     }
 

@@ -1,5 +1,5 @@
 /**
- * @file BehaviorTreeNodeFields.h
+ * @file BehaviorTreeNodeParams.h
  * @brief 행동 트리 데이터 파일(`*.bt.xml`)의 노드 칸입니다 — 노드 종류마다 파일에 적을 수 있는 칸의 스키마(`Behavior*Fields`)와, 읽은 노드 하나(`BehaviorTreeNodeData`).
  * @details 언리얼 BT 의 노드 클래스가 저마다 UPROPERTY 를 가지는 것과 같은 모양이다. 종류마다 받는 속성 · 필수 · 범위 · 기본값은 스키마 구조체의 `PROPERTY` 가 정본이고,
  *          읽기 · 쓰기는 카탈로그와 같은 `XMLFields::readFields` · `writeFields` 다. 모든 종류의 칸을 모은 고정 구조체를 두지 않는다 — 노드는 자기 종류의 스키마 값 하나와, 작업이면 그 동작의 칸을 든다.
@@ -24,7 +24,7 @@ namespace sw
 
     /** @brief `Selector` 의 칸입니다. */
     REFLECT()
-    struct SW_GF_API BehaviorSelectorFields
+    struct SW_GF_API BehaviorSelectorParams
     {
         REFLECT_BODY();
 
@@ -34,7 +34,7 @@ namespace sw
 
     /** @brief `Repeat` 의 칸입니다. */
     REFLECT()
-    struct SW_GF_API BehaviorRepeatFields
+    struct SW_GF_API BehaviorRepeatParams
     {
         REFLECT_BODY();
 
@@ -44,7 +44,7 @@ namespace sw
 
     /** @brief `seconds` 하나로 정하는 종류(`Cooldown` · `TimeLimit` · `Wait`)입니다. */
     REFLECT()
-    struct SW_GF_API BehaviorTimedFields
+    struct SW_GF_API BehaviorTimedParams
     {
         REFLECT_BODY();
 
@@ -54,7 +54,7 @@ namespace sw
 
     /** @brief `BlackboardCondition`(조건 데코레이터)의 칸입니다. 식은 공통 어휘입니다(`hasBlackboard(Threat)`, `blackboard(Hp) < 5 && flag(alarm)`). */
     REFLECT()
-    struct SW_GF_API BehaviorConditionDecoratorFields
+    struct SW_GF_API BehaviorConditionDecoratorParams
     {
         REFLECT_BODY();
 
@@ -66,7 +66,7 @@ namespace sw
 
     /** @brief `Condition`(조건 잎)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API BehaviorConditionFields
+    struct SW_GF_API BehaviorConditionParams
     {
         REFLECT_BODY();
 
@@ -76,7 +76,7 @@ namespace sw
 
     /** @brief `Action` 의 칸입니다. 나머지 속성은 그 동작의 칸입니다(`ActionRegistry`). */
     REFLECT()
-    struct SW_GF_API BehaviorActionFields
+    struct SW_GF_API BehaviorActionParams
     {
         REFLECT_BODY();
 
@@ -86,7 +86,7 @@ namespace sw
 
     /** @brief `MoveTo` 의 칸입니다. */
     REFLECT()
-    struct SW_GF_API BehaviorMoveToFields
+    struct SW_GF_API BehaviorMoveToParams
     {
         REFLECT_BODY();
 
@@ -98,12 +98,12 @@ namespace sw
 
     /** @brief `SubTree` 의 칸입니다. 둘 중 정확히 하나를 적습니다. */
     REFLECT()
-    struct SW_GF_API BehaviorSubTreeFields
+    struct SW_GF_API BehaviorSubTreeParams
     {
         REFLECT_BODY();
 
         /** @brief .cpp 에 두어 이 헤더가 `BehaviorTreeAsset` 을 앞선 선언으로만 안다(그 헤더가 이 칸들을 쓴다). */
-        BehaviorSubTreeFields();
+        BehaviorSubTreeParams();
 
         PROPERTY( Tooltip = "Tree file expanded here when the tree is read" )
         AssetRef<BehaviorTreeAsset> _tree{};

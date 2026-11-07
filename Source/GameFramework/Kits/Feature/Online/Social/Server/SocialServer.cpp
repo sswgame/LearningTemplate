@@ -209,7 +209,7 @@ namespace sw
         _listJoinedAccount.clear();
 
         _listSocialScratch.clear();
-        _pSocialService->drainCompletions( _listSocialScratch );
+        _pSocialService->takeCompletions( _listSocialScratch );
         for ( SocialCompletion& completion : _listSocialScratch )
         {
             SocialReply reply;
@@ -221,7 +221,7 @@ namespace sw
         }
 
         _listGuildScratch.clear();
-        _pGuildService->drainCompletions( _listGuildScratch );
+        _pGuildService->takeCompletions( _listGuildScratch );
         for ( GuildCompletion& completion : _listGuildScratch )
         {
             SocialReply reply;
@@ -276,8 +276,8 @@ namespace sw
     void SocialServer::sendNotifications( OnlineServiceHost& host )
     {
         _listNotificationScratch.clear();
-        _pSocialService->drainNotifications( _listNotificationScratch );
-        _pGuildService->drainNotifications( _listNotificationScratch );
+        _pSocialService->pollNotifications( _listNotificationScratch );
+        _pGuildService->pollNotifications( _listNotificationScratch );
         for ( const SocialNotification& notification : _listNotificationScratch )
         {
             BitWriter body;

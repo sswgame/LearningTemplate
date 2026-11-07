@@ -84,7 +84,7 @@ namespace sw
 {
     /** @brief `<TileSet>` 루트의 칸입니다. 그림 셀 수(`columns` × `rows`)와 타일 한 칸의 월드 크기(`tileSize`)는 모두 양수다(적지 않으면 1). */
     REFLECT()
-    struct SW_API TileSetRootFields
+    struct SW_API TileSetRootParams
     {
         REFLECT_BODY();
 
@@ -104,7 +104,7 @@ namespace sw
 
     /** @brief `<Tile>` · `<RuleTile>` 의 칸입니다. 그림(`cell` · `frames` · `fps`)은 서로 배타라 손으로 읽는다(`TileSetAsset::parseVisual`). */
     REFLECT()
-    struct SW_API TileBrushFields
+    struct SW_API TileBrushParams
     {
         REFLECT_BODY();
 
@@ -122,7 +122,7 @@ namespace sw
 
     /** @brief `<RuleTile><Rule pattern>` 의 칸입니다. 그림은 브러시와 같이 손으로 읽는다. */
     REFLECT()
-    struct SW_API TileRuleFields
+    struct SW_API TileRuleParams
     {
         REFLECT_BODY();
 

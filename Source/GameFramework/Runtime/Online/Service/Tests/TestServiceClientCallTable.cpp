@@ -170,7 +170,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
  */
 SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsSkipped )
 {
-    test::OnlineTestRig                          rig;
+    test::OnlineTestFixture                      rig;
     int32                                        readyCount = 0;
     unique_ptr<DestroyOtherOnReadyClientService> killer     = make_unique<DestroyOtherOnReadyClientService>( kKillerProtocol );
     unique_ptr<DestroyOtherOnReadyClientService> victim     = make_unique<DestroyOtherOnReadyClientService>( kVictimProtocol );
@@ -200,8 +200,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReaches
 
 SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopback )
 {
-    test::OnlineTestRig rig;
-    const int32         clientIndex = rig._clients.connect( rig._server._port, {} );
+    test::OnlineTestFixture rig;
+    const int32             clientIndex = rig._clients.connect( rig._server._port, {} );
     test::updateAll( { &rig._server }, rig._clients, 0 );
     SW_REQUIRE_TRUE( rig._clients.getClient( clientIndex ).isReady() );
 
@@ -249,8 +249,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ForeignResponseDuringSendDoesNotTakeTh
 /** @brief [ServiceClientCallTableTest] 키트 클라이언트가 응답 전에 사라진 모양 — 보낸 요청의 델리게이트 주인을 지운 뒤 응답이 오면 버려지고, 서버는 처리했다 */
 SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWithoutCallingTheOwner )
 {
-    test::OnlineTestRig rig;
-    const int32         clientIndex = rig._clients.connect( rig._server._port, {} );
+    test::OnlineTestFixture rig;
+    const int32             clientIndex = rig._clients.connect( rig._server._port, {} );
     test::updateAll( { &rig._server }, rig._clients, 0 );
     SW_REQUIRE_TRUE( rig._clients.getClient( clientIndex ).isReady() );
 

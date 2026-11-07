@@ -97,10 +97,10 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "BodyPrefabSkeletalAnimatorOnItsRoot" ) );
         (void)EditorWidgets::drawTextField( "##clipPreview.body", _model.editBodyPrefabPath(), -1.0f );
-        EditorSelfTestMarks::note( "clip.bodyField" );
+        EditorSelfTestMarks::record( "clip.bodyField" );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Spawn" ) ) )
             _model.spawnFromField();
-        EditorSelfTestMarks::note( "clip.spawn" );
+        EditorSelfTestMarks::record( "clip.spawn" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyInThePreviewScene" ) );
 
         SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
@@ -110,7 +110,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Restart" ) ) )
                 _model.requestReplay(); // 다음 그리기가 처음부터 다시 재생한다
-            EditorSelfTestMarks::note( "clip.restart" );
+            EditorSelfTestMarks::record( "clip.restart" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Loop" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Loop" ), &_model.editLoop() ) )
                 _model.requestReplay();
@@ -122,7 +122,7 @@ namespace sw::editor
 
         const float2 viewSize = computeViewportFillSize( AnimationClipPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
-        EditorSelfTestMarks::note( "clip.previewScene" );
+        EditorSelfTestMarks::record( "clip.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 

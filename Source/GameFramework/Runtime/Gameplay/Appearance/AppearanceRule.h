@@ -122,7 +122,7 @@ namespace sw
      * @details 몸 모양 · 몸 종류는 이름 목록이라 손으로 푼다. `target` 은 `tag` 와만 쓴다.
      */
     REFLECT()
-    struct SW_GF_API AppearanceRuleWhenFields
+    struct SW_GF_API AppearanceRuleWhenParams
     {
         REFLECT_BODY();
 
@@ -144,7 +144,7 @@ namespace sw
      *          머티리얼 값(`value`, 스칼라 · 벡터 네 모양)은 손으로 푼다.
      */
     REFLECT()
-    struct SW_GF_API AppearanceRuleActionFields
+    struct SW_GF_API AppearanceRuleActionParams
     {
         REFLECT_BODY();
 
@@ -172,15 +172,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AppearanceRuleTable
-     * @brief `<AppearanceRuleTable><Rule id="FullHelmetHidesHair" priority="10"><When target="Head" tag="Helmet.FullFace"/><Hide target="Hair"/></Rule></AppearanceRuleTable>` 형식으로 읽습니다.
+     * @class AppearanceRuleCatalog
+     * @brief `<AppearanceRuleCatalog><Rule id="FullHelmetHidesHair" priority="10"><When target="Head" tag="Helmet.FullFace"/><Hide target="Hair"/></Rule></AppearanceRuleCatalog>` 형식으로 읽습니다.
      * @details 같은 대상을 다르게 바꾸는 두 규칙은 우선순위가 높은 쪽이 이긴다. **우선순위가 같으면 로드 오류**이다.
      *          다만 둘이 함께 맞을 수 없음이 글에서 바로 드러나는 경우는 허용한다. 한쪽이 `<When … not="true"/>` 로 같은 질문을 뒤집는 경우가 그렇다.
      */
-    class SW_GF_API AppearanceRuleTable
+    class SW_GF_API AppearanceRuleCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listRule.clear(); }
 
         const vector<AppearanceRuleDef>& getRules() const { return _listRule; }

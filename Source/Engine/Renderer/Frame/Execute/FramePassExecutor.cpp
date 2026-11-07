@@ -208,7 +208,7 @@ namespace sw
         _nanCheck.shutdown();
     }
 
-    void FramePassExecutor::forgetDevice()
+    void FramePassExecutor::clearDevice()
     {
         // 리소스 상태 추적은 이름에서 상태를 찾는 구조라 디바이스가 바뀌어도 살아남는다. 새 디바이스의 텍스처는 다시 Undefined 다.
         // 지우지 않으면 첫 프레임이 "이미 렌더 타깃 상태" 로 믿고 배리어를 건너뛴다.

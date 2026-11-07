@@ -84,7 +84,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            const bool        bLoaded = loadElement( node, name, sourceName );
+            const bool        bLoaded = loadFromXML( node, name, sourceName );
             const bool        bDef    = name == "Unit" || name == "Building" || name == "Site";
             if ( bLoaded && bDef )
                 ++loadedCount;
@@ -112,7 +112,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool ConquestCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool ConquestCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( name == "Rules" )
         {

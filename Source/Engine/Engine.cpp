@@ -489,7 +489,7 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.Asset.finishPending" );
             if constexpr ( build::kWithClientCode )
-                drainRenderThreadPackets();
+                flushRenderThreadPackets();
             engine::getSubsystem<AssetManager>().finishPendingAssetWork();
         }
         // 품질 · 언어 · 데이터 레이어 태그나 덮어쓰기 층이 바뀌었으면 그 값에 기댄 리소스를 쥔 캐시가 다시 읽는다(틱 밖 — 쥔 쪽은 다음 틱에 새 값을 본다).
@@ -719,10 +719,10 @@ namespace sw
             requestQuit( captureExitCode );
     }
 
-    void Engine::drainRenderThreadPackets()
+    void Engine::flushRenderThreadPackets()
     {
         if ( _pRenderThread != nullptr )
-            _pRenderThread->drainPackets();
+            _pRenderThread->pollPackets();
     }
 
     void Engine::submitRenderPacket( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )

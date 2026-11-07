@@ -127,7 +127,7 @@ namespace sw
         void leaveQueue( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 떠났을 때 부릅니다. 그 계정이 포함된 티켓을 뺍니다. */
         void removeAccount( AccountID accountID );
-        /** @brief 파티 멤버가 바뀌어 티켓이 깨졌을 때 부릅니다(`PartyLobbyService::drainBrokenTickets`). 이 서버의 티켓이면 빼고, 다른 서버의 티켓이면 권한 서버와 티켓을 낸 서버에 버스로 알립니다. */
+        /** @brief 파티 멤버가 바뀌어 티켓이 깨졌을 때 부릅니다(`PartyLobbyService::pollBrokenTickets`). 이 서버의 티켓이면 빼고, 다른 서버의 티켓이면 권한 서버와 티켓을 낸 서버에 버스로 알립니다. */
         void cancelTicket( uint64 ticketID );
         /** @brief 시작한 로비를 전용 서버에 배정합니다. */
         void placeLobby( const LobbySnapshot& lobby, UnixMilliseconds nowMs );
@@ -136,9 +136,9 @@ namespace sw
         void handleBusMessage( const ServerBusMessage& message, UnixMilliseconds nowMs );
         /** @brief 경기 중 빈 슬롯을 맡깁니다. 이 서버가 그 모드의 권한이면 매처에 바로 넣고, 아니면 버스로 권한 서버에 보냅니다. 같은 프로세스의 게임 서버와 테스트가 부릅니다. */
         void submitBackfill( const MatchBackfillRequest& request );
-        void drainCompletions( vector<MatchQueueCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
-        void drainNotifications( vector<MatchQueueNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
-        void drainTopicChanges( vector<MatchQueueTopicChange>& outListChange ) { _topicBuffer.drainTo( outListChange ); }
+        void takeCompletions( vector<MatchQueueCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void pollNotifications( vector<MatchQueueNotification>& outListNotification ) { _notificationBuffer.moveAllTo( outListNotification ); }
+        void pollTopicChanges( vector<MatchQueueTopicChange>& outListChange ) { _topicBuffer.moveAllTo( outListChange ); }
 
         bool  isAuthority( string_view modeID ) const;
         int32 getQueuedTicketCount( string_view modeID ) const; ///< 권한 서버의 매처 안에 있는 티켓 수이다
@@ -213,7 +213,7 @@ namespace sw
         void               updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs );
         void               onLeaseReply( const EphemeralReply& reply );
         void               placeMatches( ModeState& state, UnixMilliseconds nowMs );
-        [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, UnixMilliseconds nowMs );
+        [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueResult failOutcome, UnixMilliseconds nowMs );
         void               deliverToTicket( uint64 originServerID, const MatchAssignment& assignment );
         void               notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment );
         void               removeFromQueue( const string& modeID, uint64 ticketID );

@@ -34,7 +34,7 @@ namespace
         return definition;
     }
 
-    struct SchedulerRig
+    struct SchedulerFixture
     {
         MemoryServiceDatabase _database;
         MemoryServiceStore    _store;
@@ -43,7 +43,7 @@ namespace
         RunSink               _firstSink;
         RunSink               _secondSink;
 
-        explicit SchedulerRig( const ScheduleDef& definition = makeDaily() )
+        explicit SchedulerFixture( const ScheduleDef& definition = makeDaily() )
             : _database{}
             , _store{ &_database }
             , _first{}
@@ -80,7 +80,7 @@ namespace
         return true;
     }
 
-    struct RetentionRig
+    struct RetentionFixture
     {
         MemoryServiceDatabase _database;
         hashed_string         _table{ "retention_test" };
@@ -193,7 +193,7 @@ SW_TEST_CASE( ServiceSchedulerTest, DefinitionRules )
 /** @brief [ServiceSchedulerTest] 회차마다 서버 하나만 돈다. 끝낸 회차는 다른 서버가 임대 뒤에도 다시 돌지 않고, 다음 회차에 다시 돈다 */
 SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
 {
-    SchedulerRig rig;
+    SchedulerFixture rig;
     rig.tickBoth( kNowMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
@@ -217,7 +217,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
 SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOver )
 {
     SW_EXPECT_LOG( "ServiceScheduler.CouldNotRecordEnd" );
-    SchedulerRig rig;
+    SchedulerFixture rig;
     rig.tickBoth( kNowMs );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 
@@ -241,7 +241,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOver )
 /** @brief [ServiceSchedulerTest] 꺼져 있어 지나친 회차는 가장 최근 하나만 돈다 */
 SW_TEST_CASE( ServiceSchedulerTest, MissedOccurrencesRunOnce )
 {
-    SchedulerRig rig;
+    SchedulerFixture rig;
     rig._first.update( UnixMilliseconds{ kNowMs + 5 * kDayMs } );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
@@ -254,7 +254,7 @@ SW_TEST_CASE( ServiceSchedulerTest, MissedOccurrencesRunOnce )
 /** @brief [ServiceSchedulerTest] 저장소가 실패하면 처리기를 부르지 않고, 재시도 시각 전에는 다시 묻지 않으며, 그 뒤에 돈다 */
 SW_TEST_CASE( ServiceSchedulerTest, StoreFailureRetriesLater )
 {
-    SchedulerRig rig;
+    SchedulerFixture rig;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     rig._first.update( UnixMilliseconds{ kNowMs } );
     rig.pump();
@@ -271,7 +271,7 @@ SW_TEST_CASE( ServiceSchedulerTest, StoreFailureRetriesLater )
 /** @brief [ServiceSchedulerTest] 실패로 끝낸 회차도 끝난 것이다 - 처리기가 멱등이어도 다른 서버가 다시 돌지 않고 다음 회차를 기다린다 */
 SW_TEST_CASE( ServiceSchedulerTest, FailedRunIsFinished )
 {
-    SchedulerRig rig;
+    SchedulerFixture rig;
     rig._first.update( UnixMilliseconds{ kNowMs } );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
@@ -285,7 +285,7 @@ SW_TEST_CASE( ServiceSchedulerTest, FailedRunIsFinished )
 /** @brief [ServiceRetentionTest] 보존 기간이 지난 것만 지운다. 경계는 지난 것이고, 시각을 읽지 못하는 레코드는 남긴다 */
 SW_TEST_CASE( ServiceRetentionTest, DeletesOnlyExpired )
 {
-    RetentionRig rig;
+    RetentionFixture rig;
     rig.put( "a.old", kNowMs - 2000 );
     rig.put( "b.edge", kNowMs - 1000 );
     rig.put( "c.new", kNowMs - 999 );
@@ -306,7 +306,7 @@ SW_TEST_CASE( ServiceRetentionTest, DeletesOnlyExpired )
 /** @brief [ServiceRetentionTest] 상한에 닿으면 커서를 남겨 다음 회차가 이어서 지운다 */
 SW_TEST_CASE( ServiceRetentionTest, LimitsResumeFromCursor )
 {
-    RetentionRig rig;
+    RetentionFixture rig;
     for ( const utf8* pKey : { "a", "b", "c", "d" } )
     {
         rig.put( pKey, kNowMs - 2000 );
@@ -328,7 +328,7 @@ SW_TEST_CASE( ServiceRetentionTest, LimitsResumeFromCursor )
 /** @brief [ServiceRetentionTest] 쓰기가 실패하면 그 결과를 돌려주고 커서가 지나가지 않아 다음 회차가 같은 레코드를 지운다 */
 SW_TEST_CASE( ServiceRetentionTest, FailedCommitDoesNotSkipRecords )
 {
-    RetentionRig rig;
+    RetentionFixture rig;
     rig.put( "a", kNowMs - 2000 );
     ServiceRetentionRule   rule = rig.makeRule();
     ServiceRetentionReport report;
@@ -344,7 +344,7 @@ SW_TEST_CASE( ServiceRetentionTest, FailedCommitDoesNotSkipRecords )
 /** @brief [ServiceRetentionTest] 시각 읽기나 기간이 없는 규칙은 거절한다 */
 SW_TEST_CASE( ServiceRetentionTest, InvalidRuleIsRefused )
 {
-    RetentionRig           rig;
+    RetentionFixture       rig;
     ServiceRetentionRule   rule = rig.makeRule( 0 );
     ServiceRetentionReport report;
     SW_EXPECT_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
@@ -357,7 +357,7 @@ SW_TEST_CASE( ServiceRetentionTest, InvalidRuleIsRefused )
 SW_TEST_CASE( ServiceRetentionTest, JobSweepsOnSchedule )
 {
     SW_EXPECT_LOG( "ServiceRetentionJob.ServiceRetentionJobRuleTableNeeds" );
-    RetentionRig       rig;
+    RetentionFixture   rig;
     MemoryServiceStore store( &rig._database );
     rig.put( "a", kDayStart - 2000 );
     rig.put( "b", kDayStart ); // 회차 시각 기준으로는 아직 남는다

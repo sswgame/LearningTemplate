@@ -31,8 +31,8 @@ namespace sw
 
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 디렉터 @p director 의 탄 @p projectileID 를 보여 줍니다. @p position 은 쏜 자리(발 높이)이고 모습은 `_visualLift` 만큼 위에 그린다. */
-        void bind( GameObjectHandle director, uint32 projectileID, const float3& position );
+        /** @brief 디렉터 @p gameMode 의 탄 @p projectileID 를 보여 줍니다. @p position 은 쏜 자리(발 높이)이고 모습은 `_visualLift` 만큼 위에 그린다. */
+        void bind( GameObjectHandle gameMode, uint32 projectileID, const float3& position );
 
     private:
         void placeMesh( const float3& position ) const;
@@ -40,7 +40,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Projectile", DisplayName = "Director", Tooltip = "Object with the ArenaGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Projectile", DisplayName = "Visual Lift", Tooltip = "Drawn this high above the hit point (chest height)", Units = m )
         float32 _visualLift;
 

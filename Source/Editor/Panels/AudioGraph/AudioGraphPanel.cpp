@@ -151,7 +151,7 @@ namespace sw::editor
     void AudioGraphPanel::drawCanvasNode( uint32 nodeIndex )
     {
         const AudioGraphDef&          graph    = _model.getGraph();
-        const AudioGraphNodeDesc&     node     = graph._listNode[nodeIndex];
+        const AudioGraphNodeDef&      node     = graph._listNode[nodeIndex];
         const AudioGraphNodeKindInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
         const int32                   nodeID   = AudioGraphEditUtil::makeNodeID( nodeIndex );
         _nodeGraph.beginNode( nodeID );
@@ -332,7 +332,7 @@ namespace sw::editor
             for ( uint32 nodeIndex = 0; nodeIndex < movedNodeCount; ++nodeIndex )
             {
                 const ImVec2 position = ed::GetNodePosition( toNodeID( AudioGraphEditUtil::makeNodeID( nodeIndex ) ) );
-                _model.noteNodePosition( nodeIndex, float2{ position.x, position.y } );
+                _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
                 _model.markCommentsEdited( "Move Audio Graph Comment", "audiograph.comment.move" );
@@ -343,7 +343,7 @@ namespace sw::editor
             _model.selectNodeByID( static_cast<int32>( arrSelected[0].Get() ) );
 
         _nodeGraph.applyContentFitIfNeeded();
-        EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( graph._listNode.size() ) );
+        EditorNodeGraph::recordDrawnNodeCount( static_cast<uint32>( graph._listNode.size() ) );
         _nodeGraph.endCanvas();
         ed::SetCurrentEditor( nullptr );
         ImGui::EndChild();
@@ -363,7 +363,7 @@ namespace sw::editor
         _graphGrid.drawProperties( graphTarget, nullptr, { hashed_string( "_listNode" ) } );
         ImGui::PopID();
 
-        if ( AudioGraphNodeDesc* pNode = _model.editSelectedNode(); pNode != nullptr )
+        if ( AudioGraphNodeDef* pNode = _model.editSelectedNode(); pNode != nullptr )
         {
             ImGui::SeparatorText( pNode->_name.c_str() );
             if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "SetOutput" ) ) )
@@ -372,7 +372,7 @@ namespace sw::editor
             const hashed_string      previousName = pNode->_name;
             EditorPropertyGridTarget nodeTarget{};
             nodeTarget._pInstance = pNode;
-            nodeTarget._pType     = AudioGraphNodeDesc::StaticType();
+            nodeTarget._pType     = AudioGraphNodeDef::StaticType();
             nodeTarget._onEdited  = onEdited;
             ImGui::PushID( "##AudioGraphNode" );
             _nodeGrid.drawProperties( nodeTarget, nullptr, { hashed_string( "_editorPosition" ) } );

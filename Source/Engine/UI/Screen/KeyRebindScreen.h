@@ -36,7 +36,7 @@ namespace sw
         /** @brief 키를 기다리다 이 시간이 지나면 취소하고 닫습니다(패드 사용자도 빠져나올 길이 있어야 하고, 패드 B 는 바인딩할 수 있는 입력이라 취소 단추로 쓸 수 없습니다). */
         static constexpr float32 kListenTimeoutSeconds = 10.0f;
 
-        KeyRebindScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
+        KeyRebindScreen( const UIScreenDef& desc, unique_ptr<Widget> root );
         ~KeyRebindScreen() override;
 
         /** @brief 문서 @p documentPath 로 창을 열어 설정 @p settingID 의 키를 받습니다. 열지 못하면 무효 핸들을 반환합니다. */

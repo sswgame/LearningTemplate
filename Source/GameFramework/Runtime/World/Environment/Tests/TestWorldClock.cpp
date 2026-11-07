@@ -83,10 +83,10 @@ SW_TEST_CASE( WorldClockTest, CrossingADayRaisesItsEvents )
     WorldClock clock;
     SW_REQUIRE_TRUE( clock.initialize( WorldClockTestUtil::makeSettings() ) );
     vector<WorldClockEvent> listEvent;
-    clock.drainEvents( listEvent );
+    clock.pollEvents( listEvent );
     listEvent.clear();
     clock.update( 25.0f ); // 하루 하고 한 시간
-    clock.drainEvents( listEvent );
+    clock.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::DayChanged ) );
     SW_EXPECT_TRUE( WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::HourChanged ) >= 1u );
     SW_EXPECT_NEAR( 1.0f, clock.getHour(), 0.01f );

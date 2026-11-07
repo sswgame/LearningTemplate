@@ -30,7 +30,7 @@ namespace sw
     };
 
     /** @brief 작전의 결과입니다. */
-    enum class SRPGOutcome : uint8
+    enum class SRPGResult : uint8
     {
         Ongoing = 0,
         Victory,
@@ -55,7 +55,7 @@ namespace sw
      */
     struct SW_KIT_API SRPGMission
     {
-        static SRPGOutcome evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule );
+        static SRPGResult evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule );
     };
 } // namespace sw
 
@@ -98,7 +98,7 @@ namespace sw
         /** @brief 남은 명단을 @p listCell 순서대로 아군으로 배치하고, 배치한 수를 반환합니다. */
         int32 deployRoster( SRPGBattlefield& field, const vector<int2>& listCell ) const;
         /** @brief 작전 결과를 받습니다. 레벨과 개발 결과를 명단으로 되돌리고, 격파된 유닛은 잃으며, 패배하면 판이 끝납니다. */
-        void completeMission( const SRPGBattlefield& field, SRPGOutcome outcome );
+        void completeMission( const SRPGBattlefield& field, SRPGResult result );
 
         hashed_string                  getMissionKind() const;
         uint32                         getMissionSeed() const;

@@ -19,9 +19,9 @@ namespace
         static constexpr const utf8* kHangulPath = "test/fonts/hangul.ttf";
 
         /** @brief 라틴 가족(기본) · 한글 가족 둘의 카탈로그입니다. 한글 가족은 공백도 가진다. */
-        static sw::FontCatalogDesc makeLatinHangulCatalog()
+        static sw::FontCatalogDef makeLatinHangulCatalog()
         {
-            sw::FontCatalogDesc catalog{};
+            sw::FontCatalogDef catalog{};
             catalog._defaultFamily = "Latin";
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Hangul", kHangulPath );
@@ -113,8 +113,8 @@ SW_TEST_CASE( FontServiceTest, MissingSystemFallbackIsNotAWarning )
 {
     sw::test::FakeFontServiceFixture fixture;
     FontServiceTestUtil::configureLatinHangul( *fixture._pRasterizer );
-    sw::FontCatalogDesc      catalog = FontServiceTestUtil::makeLatinHangulCatalog();
-    sw::SystemFontFamilyDesc systemFamily{};
+    sw::FontCatalogDef      catalog = FontServiceTestUtil::makeLatinHangulCatalog();
+    sw::SystemFontFamilyDef systemFamily{};
     systemFamily._name           = "Sw Not Installed Sans";
     systemFamily._windowsRegular = "SwNotInstalledSans-Regular.ttf";
     systemFamily._linuxRegular   = "SwNotInstalledSans-Regular.ttf";
@@ -132,8 +132,8 @@ SW_TEST_CASE( FontServiceTest, MissingSystemFallbackIsNotAWarning )
 SW_TEST_CASE( FontServiceTest, WeightPicksNearestFaceAndMarksFauxBold )
 {
     sw::test::FakeFontServiceFixture fixture;
-    sw::FontCatalogDesc              catalog = FontServiceTestUtil::makeLatinHangulCatalog();
-    sw::FontFaceDesc                 boldFace{};
+    sw::FontCatalogDef               catalog = FontServiceTestUtil::makeLatinHangulCatalog();
+    sw::FontFaceDef                  boldFace{};
     boldFace._path   = "test/fonts/latin_bold.ttf";
     boldFace._weight = sw::FontWeight::Bold;
     catalog._listFamily[0]._listFace.push_back( boldFace );
@@ -175,7 +175,7 @@ SW_TEST_CASE( FontServiceTest, LanguageChangeRebuildsChain )
 
     // 문화권 표의 대체 가족 이름(ko: Noto Sans KR · ar: Noto Sans Arabic)을 저장소 가족으로 둔다 — 시스템 글꼴 없이 사슬만 본다.
     sw::test::FakeFontServiceFixture fixture( &localization );
-    sw::FontCatalogDesc              catalog = FontServiceTestUtil::makeLatinHangulCatalog();
+    sw::FontCatalogDef               catalog = FontServiceTestUtil::makeLatinHangulCatalog();
     sw::test::FakeFontServiceFixture::addFamily( catalog, "Noto Sans KR", "test/fonts/notosanskr.ttf" );
     sw::test::FakeFontServiceFixture::addFamily( catalog, "Noto Sans Arabic", "test/fonts/notosansarabic.ttf" );
     SW_EXPECT_LOG( "Text.FontFamilyMissing" ); // 테스트 카탈로그에 없는 문화권 대체 가족(Malgun Gothic · Noto Sans …)이 한 번씩 경고한다

@@ -10,7 +10,7 @@
 
 #include "Engine/Automation/Runner/AutomationLogCapture.h"
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
-#include "Engine/Automation/Runner/AutomationOutcome.h"
+#include "Engine/Automation/Runner/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationDeferredValue.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -84,7 +84,7 @@ namespace sw
          *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
          *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `getAllowedLogIDs` 에 남아 보고에 적힌다.
          */
-        void applyLogGate( AutomationOutcome& inOutResult, string& outReason );
+        void applyLogGate( AutomationResult& inOutResult, string& outReason );
 
         const vector<string>& getFailures() const { return _listFailure; }
         /** @brief `-scenario-update-golden` 으로 이 실행이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */

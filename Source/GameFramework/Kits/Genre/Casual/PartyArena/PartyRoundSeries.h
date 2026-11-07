@@ -108,7 +108,7 @@ namespace sw
         const vector<PartyRoundDef>& getRounds() const { return _listRound; }
         const vector<int32>&         getPlacementPoints() const { return _seriesSettings._listPlacementPoint; }
         int32                        getWinScore() const { return _seriesSettings._winScore; }
-        void                         drainEvents( vector<PartySeriesEvent>& outListEvent );
+        void                         pollEvents( vector<PartySeriesEvent>& outListEvent );
 
     private:
         static constexpr const utf8* kXMLRootName = "PartySeries"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)

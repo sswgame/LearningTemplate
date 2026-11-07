@@ -85,7 +85,7 @@ namespace
     };
 
     /** @brief 가짜 구글입니다. */
-    struct GoogleRig
+    struct GoogleFixture
     {
         LoopbackHTTP                       _http{};
         test::FakeNetSecurityProvider      _security{};
@@ -102,9 +102,9 @@ namespace
         int64                              _nowMs{ kNowMs };
 
         /** @param bRestoreCursor false 면 서비스가 기준 시각을 아직 넘기지 않은 제공자로 선다. */
-        explicit GoogleRig( bool bRestoreCursor = true )
+        explicit GoogleFixture( bool bRestoreCursor = true )
         {
-            StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&GoogleRig::onRequest>( this ) );
+            StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&GoogleFixture::onRequest>( this ) );
             GoogleReceiptSettings settings;
             settings._credentials._clientEmail   = "a@b";
             settings._credentials._privateKeyPem = "key";
@@ -176,7 +176,7 @@ namespace
             task._deliveryKey = string( deliveryKey );
             _pValidator->confirmDelivery( task, UnixMilliseconds{ _nowMs } );
             pump();
-            vector<ReceiptDeliveryOutcome> listOutcome;
+            vector<ReceiptDeliveryResult> listOutcome;
             _pValidator->pollDeliveryOutcomes( listOutcome );
             SW_EXPECT_EQUAL( size_t( 1 ), listOutcome.size() );
             if ( listOutcome.empty() )
@@ -195,7 +195,7 @@ namespace
     };
 
     /** @brief 가짜 애플입니다. */
-    struct AppleRig
+    struct AppleFixture
     {
         LoopbackHTTP                      _http{};
         test::FakeNetSecurityProvider     _security{};
@@ -209,9 +209,9 @@ namespace
         int32                             _historyStatus{ HTTPConstant::kStatusOk };
         int64                             _nowMs{ kNowMs };
 
-        explicit AppleRig( bool bSandboxServer = false )
+        explicit AppleFixture( bool bSandboxServer = false )
         {
-            StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&AppleRig::onRequest>( this ) );
+            StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&AppleFixture::onRequest>( this ) );
             AppleReceiptSettings settings;
             settings._issuerID              = "issuer";
             settings._keyID                 = "key";
@@ -460,7 +460,7 @@ SW_TEST_CASE( StoreReceiptValidatorTest, PollWindowRestoresAndKnowsWhatIsLost )
 /** @brief [GoogleReceiptValidatorTest] 재시작: 저장소의 기준을 받기 전에는 조회하지 않고, 받으면 그 기준에서 읽는다. 끝까지 읽어야 옮겨진 기준을 한 번 내준다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, RefundQueryWaitsForTheStoredCursor )
 {
-    GoogleRig rig( false );
+    GoogleFixture rig( false );
     rig.pump();
     SW_EXPECT_TRUE( rig._listVoidedStart.empty() );
 
@@ -482,7 +482,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, GapBeyondTheStoreLimitWarns )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundGapBeyondStoreLimit" );
     constexpr int64 kDayMs = 24ll * 60 * 60 * 1000;
-    GoogleRig       rig( false );
+    GoogleFixture   rig( false );
     rig._pValidator->restoreRefundCursor( kNowMs - 40 * kDayMs );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listVoidedStart.size() );
@@ -533,7 +533,7 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ProviderEntryRequiresABuyerBinding )
 /** @brief [GoogleReceiptValidatorTest] 정상 구매: 거래 id 는 주문 번호, 상품은 물은 것, 구매자는 답의 난독화 계정 id 다. 구매 확인은 검증에서 보내지 않고 알림 키와 기한(구매 + 3 일)만 싣는다 — 전에는 지급 전에 보내 지급이 지면 환불도 재시도도 없었다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndWaitsForTheGrant )
 {
-    GoogleRig rig;
+    GoogleFixture rig;
     rig._productBody                     = R"({"orderId":"GPA.1","purchaseState":0,"acknowledgementState":0,"purchaseTimeMillis":"1700000000000","obfuscatedExternalAccountId":"tok"})";
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
@@ -556,7 +556,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndWaitsForTheGrant )
 /** @brief [GoogleReceiptValidatorTest] 이미 확인된 구매는 알릴 것이 없다. 취소 · 보류 답도 알림 키를 싣지 않는다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, OnlyUnacknowledgedPurchasesNeedConfirmation )
 {
-    GoogleRig rig;
+    GoogleFixture rig;
     rig._productBody = R"({"orderId":"GPA.1","purchaseState":0,"acknowledgementState":1})";
     SW_EXPECT_TRUE( rig.validate()._deliveryKey.empty() );
     rig._productBody = R"({"orderId":"GPA.1","purchaseState":1,"acknowledgementState":0})";
@@ -575,7 +575,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, ConfirmDeliveryStatusDecidesRetry )
     SW_EXPECT_LOG( "GoogleReceiptValidator.GoogleRejectedAccessToken" );
     SW_EXPECT_LOG( "StoreReceiptValidator.DeliveryRefused" );
     SW_EXPECT_LOG( "StoreReceiptValidator.DeliveryKeyUnreadable" );
-    GoogleRig rig;
+    GoogleFixture rig;
     for ( int32 status : { 500, 503, 429 } )
     {
         rig._acknowledgeStatus = status;
@@ -600,7 +600,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, ConfirmDeliveryStatusDecidesRetry )
 /** @brief [GoogleReceiptValidatorTest] 2xx 인데 JSON 이 아니면 Retry 다 — 전에는 Invalid 로 답해 결제한 사람의 영수증을 버렸다. 구매 확인도 보내지 않는다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, BodyThatIsNotJSONIsRetry )
 {
-    GoogleRig rig;
+    GoogleFixture rig;
     for ( const utf8* pBody : { "", "<html>bad gateway</html>", R"({"orderId":"GPA)" } )
     {
         rig._productBody                     = pBody;
@@ -614,7 +614,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, BodyThatIsNotJSONIsRetry )
 /** @brief [GoogleReceiptValidatorTest] 상태 표와 대조: 취소 Refunded, 보류 Retry, 다른 상품 · 다른 토큰의 답 · 주문 번호 없음 Invalid. 라이선스 테스트는 샌드박스다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, StateAndEchoDecideTheResult )
 {
-    GoogleRig rig;
+    GoogleFixture rig;
     rig._productBody = R"({"orderId":"GPA.1","purchaseState":1})";
     SW_EXPECT_TRUE( rig.validate()._status == ReceiptStatus::Refunded );
     rig._productBody = R"({"purchaseState":2})";
@@ -642,7 +642,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, StateAndEchoDecideTheResult )
 SW_TEST_CASE( GoogleReceiptValidatorTest, StatusSplitsRetryFromInvalidAndDropsTheToken )
 {
     SW_EXPECT_LOG( "GoogleReceiptValidator.GoogleRejectedAccessToken" );
-    GoogleRig rig;
+    GoogleFixture rig;
     rig._productBody = R"({"orderId":"GPA.1","purchaseState":0})";
     for ( int32 status : { 500, 429 } )
     {
@@ -665,7 +665,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, StatusSplitsRetryFromInvalidAndDropsTh
 /** @brief [GoogleReceiptValidatorTest] 영수증 모양이 틀리면 구글에 묻지 않고 Invalid 다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, MalformedReceiptNeverReachesGoogle )
 {
-    GoogleRig rig;
+    GoogleFixture rig;
     rig.pump();
     for ( const utf8* pPayload : { "", "gem100", "gem100|", "|TOKEN", "gem/100|TOKEN", "gem100|TO KEN" } )
     {
@@ -679,7 +679,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, MalformedReceiptNeverReachesGoogle )
 /** @brief [GoogleReceiptValidatorTest] 무효 구매 목록: 쪽 토큰을 따라 끝까지 읽어 한 번씩 알리고, 끝난 뒤에야 구간이 옮겨진다. 주문 번호 없는 줄은 버린다 */
 SW_TEST_CASE( GoogleReceiptValidatorTest, VoidedFollowsPagesThenMovesTheWindow )
 {
-    GoogleRig rig;
+    GoogleFixture rig;
     rig._listVoidedBody.push_back( R"({"tokenPagination":{"nextPageToken":"P2"},"voidedPurchases":[{"orderId":"A","voidedTimeMillis":"1700000000000"},{"voidedTimeMillis":"1"}]})" );
     rig._listVoidedBody.push_back( R"({"voidedPurchases":[{"orderId":"B"},{"orderId":"A"}]})" );
     rig.pump();
@@ -704,7 +704,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, VoidedFollowsPagesThenMovesTheWindow )
 SW_TEST_CASE( GoogleReceiptValidatorTest, FailedVoidedKeepsTheWindow )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
-    GoogleRig rig;
+    GoogleFixture rig;
     rig.pump();
     rig._voidedStatus = 500;
     rig._nowMs += kPollMs;
@@ -725,7 +725,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, FailedVoidedKeepsTheWindow )
 /** @brief [AppleReceiptValidatorTest] 정상 거래: 서명한 답의 값이 결과가 되고 구매자는 `appAccountToken` 이다. 운영 환경은 샌드박스가 아니다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, SignedTransactionIsValid )
 {
-    AppleRig rig;
+    AppleFixture rig;
     rig.setTransaction( AppleBodyTestUtil::kGoodTransaction );
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
@@ -743,7 +743,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, SignedTransactionIsValid )
 SW_TEST_CASE( AppleReceiptValidatorTest, UnreadableAnswersAreRetry )
 {
     SW_EXPECT_LOG( "AppleReceiptValidator.SignedTransactionAppleDoes" );
-    AppleRig rig;
+    AppleFixture rig;
     for ( const utf8* pBody : { "", "<html></html>", R"({"signedTransactionInfo")", "{}", R"({"signedTransactionInfo":7})", R"({"signedTransactionInfo":"a.b"})" } )
     {
         rig._transactionBody                 = pBody;
@@ -759,7 +759,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, UnreadableAnswersAreRetry )
 /** @brief [AppleReceiptValidatorTest] 서명한 답의 대조: 다른 거래 · 다른 번들 · 상품 없음 · 환경 없음은 Invalid, 취소된 거래는 Refunded 다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, SignedFieldsAreCompared )
 {
-    AppleRig rig;
+    AppleFixture rig;
     for ( const utf8* pPayload : {
               R"({"transactionId":"9999","bundleId":"com.x.game","environment":"Production","productId":"gem100"})",
               R"({"bundleId":"com.x.game","environment":"Production","productId":"gem100"})",
@@ -781,7 +781,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, SignedFieldsAreCompared )
 /** @brief [AppleReceiptValidatorTest] 환경: 정확히 Production 인 것만 운영 결제다 — Sandbox 와 모르는 값(Xcode)은 샌드박스로 표시되어 서비스가 운영 서버에서 거절한다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, OnlyProductionIsNotSandbox )
 {
-    AppleRig rig;
+    AppleFixture rig;
     for ( const utf8* pEnvironment : { "Sandbox", "Xcode", "production" } )
     {
         rig.setTransaction( string( R"({"transactionId":"1234","bundleId":"com.x.game","productId":"gem100","environment":")" ) + pEnvironment + R"("})" );
@@ -795,7 +795,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, OnlyProductionIsNotSandbox )
 SW_TEST_CASE( AppleReceiptValidatorTest, StatusSplitsRetryFromInvalid )
 {
     SW_EXPECT_LOG( "AppleReceiptValidator.AppleRejectedAppStore" );
-    AppleRig rig;
+    AppleFixture rig;
     rig.setTransaction( AppleBodyTestUtil::kGoodTransaction );
     for ( int32 status : { 401, 403, 500, 429 } )
     {
@@ -812,7 +812,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, StatusSplitsRetryFromInvalid )
 /** @brief [AppleReceiptValidatorTest] 환불 기록: 우리 번들 · 환경의 환불만 알린다. 다른 번들의 알림 · 다른 번들의 거래 · 샌드박스 알림 · 숫자가 아닌 거래는 버린다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFilters )
 {
-    AppleRig rig;
+    AppleFixture rig;
     using Body = AppleBodyTestUtil;
     rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) + "," + Body::makeRefundItem( "2", "Sandbox" ) + "," + Body::makeRefundItem( "3", "Production", "com.other" ) + "," +
                                                        Body::makeRefundItem( "4", "Production", kBundle, "com.other" ) + "," + Body::makeRefundItem( "x5" ) + "," + Body::makeRefundItem( "1" ) ) );
@@ -828,7 +828,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFilters )
 SW_TEST_CASE( AppleReceiptValidatorTest, UnverifiedNotificationKeepsTheWindow )
 {
     SW_EXPECT_LOG( "AppleReceiptValidator.AppleNotificationDoesNot" );
-    AppleRig rig;
+    AppleFixture rig;
     using Body              = AppleBodyTestUtil;
     rig._security._bChainOk = SW_FALSE;
     rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) ) );
@@ -853,7 +853,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, UnverifiedNotificationKeepsTheWindow )
 /** @brief [AppleReceiptValidatorTest] 환불 기록의 쪽은 끝까지 따라간다 — 전에는 열 쪽에서 멈추고도 구간을 옮겨 뒤쪽 환불을 놓쳤다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFollowsEveryPage )
 {
-    AppleRig rig;
+    AppleFixture rig;
     using Body                 = AppleBodyTestUtil;
     constexpr int32 kPageCount = 12;
     for ( int32 page = 0; page < kPageCount; ++page )
@@ -878,7 +878,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFollowsEveryPage )
 /** @brief [AppleReceiptValidatorTest] 쪽이 더 있다는데 토큰이 없으면 구간을 옮기지 않는다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, MoreWithoutTokenKeepsTheWindow )
 {
-    AppleRig rig;
+    AppleFixture rig;
     rig._listHistoryBody.push_back( R"({"hasMore":true,"notificationHistory":[]})" );
     rig.pump();
     rig._nowMs += kPollMs;
@@ -901,7 +901,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, HistoryLimitFollowsTheEnvironment )
     settings._bSandboxServer = SW_TRUE;
     SW_EXPECT_EQUAL( 29 * kDayMs, settings.getHistoryMaxAgeMs() );
 
-    AppleRig rig( true );
+    AppleFixture rig( true );
     rig._historyStatus = 500;
     rig.pump();
     rig._nowMs += 40 * kDayMs; // 샌드박스 한계를 넘은 중단
@@ -913,7 +913,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, HistoryLimitFollowsTheEnvironment )
 /** @brief [AppleReceiptValidatorTest] 종료: 날아가던 검증은 한 번만 Retry 로 끝나고 새 조회를 보내지 않는다 */
 SW_TEST_CASE( AppleReceiptValidatorTest, ShutdownFinishesInFlightAsRetry )
 {
-    AppleRig rig;
+    AppleFixture rig;
     rig.setTransaction( AppleBodyTestUtil::kGoodTransaction );
     rig.pump();
     rig._pValidator->submitValidation( StoreTestUtil::makeRequest( "apple", "1234" ), UnixMilliseconds{ rig._nowMs } );

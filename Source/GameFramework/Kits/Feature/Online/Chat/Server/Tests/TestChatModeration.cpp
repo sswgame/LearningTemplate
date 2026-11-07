@@ -42,14 +42,14 @@ SW_TEST_CASE( ChatModerationTest, SpamGuardLimitsBurstsAndRefillsPerInterval )
 {
     ChatSpamGuard guard   = makeGuard( 3 );
     int64         retryMs = 0;
-    SW_EXPECT_TRUE( guard.check( 7, "one", 0, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "two", 0, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "three", 0, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "four", 0, retryMs ) == ChatSpamVerdict::RateLimited );
+    SW_EXPECT_TRUE( guard.check( 7, "one", 0, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "two", 0, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "three", 0, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "four", 0, retryMs ) == ChatSpamResult::RateLimited );
     SW_EXPECT_TRUE( retryMs > 0 && retryMs <= 1000 );
-    SW_EXPECT_TRUE( guard.check( 8, "other account", 0, retryMs ) == ChatSpamVerdict::Allowed ); // 버킷은 계정마다다
-    SW_EXPECT_TRUE( guard.check( 7, "four", 1000, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "five", 1000, retryMs ) == ChatSpamVerdict::RateLimited );
+    SW_EXPECT_TRUE( guard.check( 8, "other account", 0, retryMs ) == ChatSpamResult::Allowed ); // 버킷은 계정마다다
+    SW_EXPECT_TRUE( guard.check( 7, "four", 1000, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "five", 1000, retryMs ) == ChatSpamResult::RateLimited );
 }
 
 /** @brief [ChatModerationTest] 같은 글(정규화가 같으면 같다)은 창 안에서 상한까지만 받고, 창이 지나거나 계정을 잊으면 다시 받는다 */
@@ -57,14 +57,14 @@ SW_TEST_CASE( ChatModerationTest, SpamGuardStopsRepeatsInsideTheWindow )
 {
     ChatSpamGuard guard   = makeGuard( 100 );
     int64         retryMs = 0;
-    SW_EXPECT_TRUE( guard.check( 7, "hello", 0, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "Hello", 100, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "H.E.L.L.O", 200, retryMs ) == ChatSpamVerdict::Repeated );
-    SW_EXPECT_TRUE( guard.check( 7, "hello there", 300, retryMs ) == ChatSpamVerdict::Allowed ); // 다른 글
-    SW_EXPECT_TRUE( guard.check( 7, "hello", 10200, retryMs ) == ChatSpamVerdict::Allowed );     // 창이 지났다
-    guard.forget( 7 );
-    SW_EXPECT_TRUE( guard.check( 7, "hello", 10300, retryMs ) == ChatSpamVerdict::Allowed );
-    SW_EXPECT_TRUE( guard.check( 7, "hello", 10400, retryMs ) == ChatSpamVerdict::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "hello", 0, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "Hello", 100, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "H.E.L.L.O", 200, retryMs ) == ChatSpamResult::Repeated );
+    SW_EXPECT_TRUE( guard.check( 7, "hello there", 300, retryMs ) == ChatSpamResult::Allowed ); // 다른 글
+    SW_EXPECT_TRUE( guard.check( 7, "hello", 10200, retryMs ) == ChatSpamResult::Allowed );     // 창이 지났다
+    guard.remove( 7 );
+    SW_EXPECT_TRUE( guard.check( 7, "hello", 10300, retryMs ) == ChatSpamResult::Allowed );
+    SW_EXPECT_TRUE( guard.check( 7, "hello", 10400, retryMs ) == ChatSpamResult::Allowed );
 }
 
 /** @brief [ChatModerationTest] 반복 해시는 대소문자 · 전각 · 건너뛸 글자(구두점 · 0 폭 글자)를 정규화한다 */
@@ -85,25 +85,25 @@ SW_TEST_CASE( ChatModerationTest, WordFilterMasksOrRejectsNormalizedMatches )
     ChatWordFilter mask;
     SW_EXPECT_EQUAL( 2, mask.initialize( { "bad", "", "\xEC\x9A\x95" }, ChatFilterMode::Mask, getNormalizer() ) ); // 빈 낱말은 버린다, 욕
     string out;
-    SW_EXPECT_TRUE( mask.apply( "this is BAD!", out ) == ChatFilterVerdict::Masked );
+    SW_EXPECT_TRUE( mask.apply( "this is BAD!", out ) == ChatFilterResult::Masked );
     SW_EXPECT_EQUAL( string( "this is ***!" ), out );
-    SW_EXPECT_TRUE( mask.apply( "\xEF\xBD\x82\xEF\xBD\x81\xEF\xBD\x84", out ) == ChatFilterVerdict::Masked ); // 전각 ｂａｄ
-    SW_EXPECT_TRUE( mask.apply( "b.a.d", out ) == ChatFilterVerdict::Masked );
+    SW_EXPECT_TRUE( mask.apply( "\xEF\xBD\x82\xEF\xBD\x81\xEF\xBD\x84", out ) == ChatFilterResult::Masked ); // 전각 ｂａｄ
+    SW_EXPECT_TRUE( mask.apply( "b.a.d", out ) == ChatFilterResult::Masked );
     SW_EXPECT_EQUAL( string( "*****" ), out );
     SW_EXPECT_TRUE( mask.apply( "b\xE2\x80\x8B"
                                 "a\xE2\x80\x8D"
                                 "d",
-                                out ) == ChatFilterVerdict::Masked ); // ZWSP · ZWJ 를 끼웠다
-    SW_EXPECT_TRUE( mask.apply( "a \xEC\x9A\x95 b", out ) == ChatFilterVerdict::Masked );
+                                out ) == ChatFilterResult::Masked ); // ZWSP · ZWJ 를 끼웠다
+    SW_EXPECT_TRUE( mask.apply( "a \xEC\x9A\x95 b", out ) == ChatFilterResult::Masked );
     SW_EXPECT_EQUAL( string( "a * b" ), out );
-    SW_EXPECT_TRUE( mask.apply( "good game", out ) == ChatFilterVerdict::Clean );
+    SW_EXPECT_TRUE( mask.apply( "good game", out ) == ChatFilterResult::Clean );
     SW_EXPECT_EQUAL( string( "good game" ), out );
-    SW_EXPECT_TRUE( mask.apply( "bro\xFFken", out ) == ChatFilterVerdict::InvalidText );
+    SW_EXPECT_TRUE( mask.apply( "bro\xFFken", out ) == ChatFilterResult::InvalidText );
 
     ChatWordFilter reject;
     SW_EXPECT_EQUAL( 1, reject.initialize( { "bad" }, ChatFilterMode::Reject, getNormalizer() ) );
-    SW_EXPECT_TRUE( reject.apply( "so Bad", out ) == ChatFilterVerdict::Rejected );
-    SW_EXPECT_TRUE( reject.apply( "fine", out ) == ChatFilterVerdict::Clean );
+    SW_EXPECT_TRUE( reject.apply( "so Bad", out ) == ChatFilterResult::Rejected );
+    SW_EXPECT_TRUE( reject.apply( "fine", out ) == ChatFilterResult::Clean );
 }
 
 /** @brief [ChatModerationTest] 건너뛸 글자 파일은 `U+XXXX` 줄만 받는다 — 틀린 줄 · 없는 파일은 읽지 않는다(목록은 빈다) */

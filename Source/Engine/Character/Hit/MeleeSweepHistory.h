@@ -44,7 +44,7 @@ namespace sw
 namespace sw
 {
     /** @brief 주장을 서버 기록과 맞춘 결과입니다. */
-    enum class MeleeClaimVerdict : uint8
+    enum class MeleeClaimResult : uint8
     {
         Confirmed = 0, ///< 서버 칼날 기록이 표적을 덮는다
         NoSweep,       ///< 그 프레임 안팎에 이 때린 쪽의 스윕 기록이 없다(휘두르지 않았거나 너무 오래됐다)
@@ -95,14 +95,14 @@ namespace sw
          * @param targetRadius 표적의 반지름(구로 본다)
          * @param pOutParams 인정할 때 그 기록의 값(피해 · 충격량 · 두께)을 받습니다. 필요 없으면 nullptr
          */
-        MeleeClaimVerdict verify( uint64 attackerID, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius, MeleeHitParams* pOutParams ) const;
+        MeleeClaimResult verify( uint64 attackerID, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius, MeleeHitParams* pOutParams ) const;
 
         /**
          * @brief 주장을 확인하고 인정되면 기록된 피해로 @p target 에 맞음을 전달합니다. @p inoutListHitTarget 에 이미 있는 오브젝트는 전달하지 않고(창 하나에 한 번) 인정만 돌려줍니다.
          * @return 인정 결과입니다. `Confirmed` 일 때만 전달이 일어날 수 있습니다.
          */
-        MeleeClaimVerdict claimHit( GameObject& attacker, GameObject& target, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius,
-                                    vector<GameObjectHandle>& inoutListHitTarget ) const;
+        MeleeClaimResult claimHit( GameObject& attacker, GameObject& target, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius,
+                                   vector<GameObjectHandle>& inoutListHitTarget ) const;
 
     private:
         /** @brief 스윕 하나의 기록입니다. 두 줄이 같은 길이일 때만 지난 칼날 토막을 쓴다(창의 첫 프레임은 지난 칼날이 없다). */

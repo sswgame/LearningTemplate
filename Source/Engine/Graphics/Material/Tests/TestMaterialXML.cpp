@@ -26,7 +26,7 @@ namespace
         sw::XMLDocument doc;
         if ( doc.parse( text ) == false )
             return false;
-        for ( sw::XMLNode item = doc.getRoot( "MaterialDesc" ).findChild( "_properties" ).findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+        for ( sw::XMLNode item = doc.getRoot( "MaterialDef" ).findChild( "_properties" ).findChild( "item" ); item; item = item.findNextSibling( "item" ) )
         {
             sw::MaterialProperty prop{};
             if ( sw::MaterialXML::parsePropertyNode( item, prop ) == false )
@@ -92,18 +92,18 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
 {
     const sw::string shaderPath = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._shaderForwardLit.get();
     const sw::string current    = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="CurrentMat" shaderPath=")" +
+<MaterialDef formatVersion="0" name="CurrentMat" shaderPath=")" +
                                shaderPath +
                                R"(" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 0 0 1"/>
 	</_properties>
-</MaterialDesc>
+</MaterialDef>
 )";
 
     sw::XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( current ) );
-    const sw::XMLNode root = doc.getRoot( "MaterialDesc" );
+    const sw::XMLNode root = doc.getRoot( "MaterialDef" );
     SW_REQUIRE_TRUE( root.isValid() );
     SW_EXPECT_TRUE( sw::AssetXMLFormat::isCurrentXMLVersion( sw::Material::kAssetType, root ) );
     SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, sw::AssetXMLFormat::readXMLVersion( root ) );
@@ -120,7 +120,7 @@ namespace
 {
     // 부모 상속 테스트의 부모 — 프로퍼티 둘(색 · 거칠기)과 퍼뮤테이션 하나.
     constexpr const utf8* kParentMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="ParentMat" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="ParentMat" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bSrgb="1" />
 		<item name="_roughness" type="Range" defaultValue="0.5" min="0.0" max="1.0" group="Surface" />
@@ -130,7 +130,7 @@ namespace
 			<item>MATERIAL_DOMAIN_SURFACE</item>
 		</_alwaysDefines>
 	</_permutations>
-</MaterialDesc>
+</MaterialDef>
 )";
 } // namespace
 
@@ -142,13 +142,13 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
     const sw::test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), kParentMaterial ) );
     const sw::string child = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="ChildMat" _base=")" +
+<MaterialDef formatVersion="0" name="ChildMat" _base=")" +
                              sw::test::ScopedScratchDomain::makeID( "parent.material" ).str() +
                              R"(">
 	<_properties>
 		<item name="_color" defaultValue="0.2 0.4 0.6 1" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>
 )";
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), child ) );
 
@@ -186,14 +186,14 @@ SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
     const sw::test::ScopedScratchDomain domain;
     const sw::string                    idA = sw::test::ScopedScratchDomain::makeID( "a.material" ).str();
     const sw::string                    idB = sw::test::ScopedScratchDomain::makeID( "b.material" ).str();
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), "<MaterialDesc formatVersion=\"0\" name=\"A\" _base=\"" + idB + "\"/>" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDesc formatVersion=\"0\" name=\"B\" _base=\"" + idA + "\"/>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), "<MaterialDef formatVersion=\"0\" name=\"A\" _base=\"" + idB + "\"/>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDef formatVersion=\"0\" name=\"B\" _base=\"" + idA + "\"/>" ) );
     sw::shared_ptr<sw::Material> cyclic = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_FALSE( cyclic->loadFromFile( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ),
-                                                  "<MaterialDesc formatVersion=\"0\" name=\"Orphan\" _base=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
+                                                  "<MaterialDef formatVersion=\"0\" name=\"Orphan\" _base=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
     sw::shared_ptr<sw::Material> orphan = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
     SW_EXPECT_FALSE( orphan->loadFromFile( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );

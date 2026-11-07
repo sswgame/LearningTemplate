@@ -149,29 +149,29 @@ SW_TEST_CASE( AdventureVitalsTest, StaminaOutcomeDependsOnTheAction )
 {
     struct Case
     {
-        sw::AdventureStaminaAction  _action;
-        sw::AdventureStaminaOutcome _outcome;
+        sw::AdventureStaminaAction _action;
+        sw::AdventureStaminaResult _result;
     };
     const Case arrCase[] = {
-        { sw::AdventureStaminaAction::Climb,  sw::AdventureStaminaOutcome::Fall},
-        { sw::AdventureStaminaAction::Glide,  sw::AdventureStaminaOutcome::Fall},
-        {sw::AdventureStaminaAction::Sprint,  sw::AdventureStaminaOutcome::Stop},
-        {  sw::AdventureStaminaAction::Swim, sw::AdventureStaminaOutcome::Drown},
+        { sw::AdventureStaminaAction::Climb,  sw::AdventureStaminaResult::Fall},
+        { sw::AdventureStaminaAction::Glide,  sw::AdventureStaminaResult::Fall},
+        {sw::AdventureStaminaAction::Sprint,  sw::AdventureStaminaResult::Stop},
+        {  sw::AdventureStaminaAction::Swim, sw::AdventureStaminaResult::Drown},
     };
     for ( const Case& testCase : arrCase )
     {
         sw::AdventureVitals vitals;
-        SW_EXPECT_TRUE( vitals.updateStamina( testCase._action, 1.0f ) == sw::AdventureStaminaOutcome::Continue );
+        SW_EXPECT_TRUE( vitals.updateStamina( testCase._action, 1.0f ) == sw::AdventureStaminaResult::Continue );
         SW_EXPECT_TRUE( vitals.getStamina().getValue() < 100.0f );
-        SW_EXPECT_TRUE( vitals.updateStamina( testCase._action, 1000.0f ) == testCase._outcome );
+        SW_EXPECT_TRUE( vitals.updateStamina( testCase._action, 1000.0f ) == testCase._result );
     }
 
     sw::AdventureVitals vitals;
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Climb, 1.0f ) == sw::AdventureStaminaOutcome::Continue );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Climb, 1.0f ) == sw::AdventureStaminaResult::Continue );
     SW_EXPECT_NEAR( 90.0f, vitals.getStamina().getValue(), kVitalsTolerance );
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Sprint, 1.0f ) == sw::AdventureStaminaOutcome::Continue );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Sprint, 1.0f ) == sw::AdventureStaminaResult::Continue );
     SW_EXPECT_NEAR( 75.0f, vitals.getStamina().getValue(), kVitalsTolerance );
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Idle, 100.0f ) == sw::AdventureStaminaOutcome::Continue );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Idle, 100.0f ) == sw::AdventureStaminaResult::Continue );
     SW_EXPECT_NEAR( 100.0f, vitals.getStamina().getValue(), kVitalsTolerance );
 }
 
@@ -181,7 +181,7 @@ SW_TEST_CASE( AdventureVitalsTest, StaminaOutcomeDependsOnTheAction )
 SW_TEST_CASE( AdventureVitalsTest, ExhaustionLocksUntilRecovered )
 {
     sw::AdventureVitals vitals;
-    SW_REQUIRE_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Sprint, 1000.0f ) == sw::AdventureStaminaOutcome::Stop );
+    SW_REQUIRE_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Sprint, 1000.0f ) == sw::AdventureStaminaResult::Stop );
     SW_EXPECT_TRUE( vitals.getStamina().isExhausted() );
     SW_EXPECT_FALSE( vitals.trySpendStamina( 1.0f ) );
 
@@ -189,7 +189,7 @@ SW_TEST_CASE( AdventureVitalsTest, ExhaustionLocksUntilRecovered )
     (void)vitals.updateStamina( sw::AdventureStaminaAction::Idle, 2.0f );
     SW_EXPECT_NEAR( 60.0f, vitals.getStamina().getValue(), kVitalsTolerance );
     SW_EXPECT_TRUE( vitals.getStamina().isExhausted() );
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Climb, 0.1f ) == sw::AdventureStaminaOutcome::Fall );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Climb, 0.1f ) == sw::AdventureStaminaResult::Fall );
     SW_EXPECT_NEAR( 60.0f, vitals.getStamina().getValue(), kVitalsTolerance ); // 잠겨 있으면 깎이지도 않는다
 
     (void)vitals.updateStamina( sw::AdventureStaminaAction::Idle, 1.0f );
@@ -204,16 +204,16 @@ SW_TEST_CASE( AdventureVitalsTest, ExhaustionLocksUntilRecovered )
 SW_TEST_CASE( AdventureVitalsTest, DrowningDamagesAndRefills )
 {
     sw::AdventureVitals vitals;
-    SW_REQUIRE_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Sprint, 1000.0f ) == sw::AdventureStaminaOutcome::Stop );
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 0.1f ) == sw::AdventureStaminaOutcome::Drown );
+    SW_REQUIRE_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Sprint, 1000.0f ) == sw::AdventureStaminaResult::Stop );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 0.1f ) == sw::AdventureStaminaResult::Drown );
     SW_EXPECT_EQUAL( 8, vitals.computeHealthQuarters() );
     SW_EXPECT_FALSE( vitals.getStamina().isExhausted() );
     SW_EXPECT_NEAR( 100.0f, vitals.getStamina().getValue(), kVitalsTolerance );
 
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 1000.0f ) == sw::AdventureStaminaOutcome::Drown );
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 1000.0f ) == sw::AdventureStaminaOutcome::Drown );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 1000.0f ) == sw::AdventureStaminaResult::Drown );
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 1000.0f ) == sw::AdventureStaminaResult::Drown );
     SW_EXPECT_TRUE( vitals.isDead() );
-    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 1000.0f ) == sw::AdventureStaminaOutcome::Drown ); // 결과만 알리고 더 깎을 것이 없다
+    SW_EXPECT_TRUE( vitals.updateStamina( sw::AdventureStaminaAction::Swim, 1000.0f ) == sw::AdventureStaminaResult::Drown ); // 결과만 알리고 더 깎을 것이 없다
     SW_EXPECT_EQUAL( 0, vitals.computeHealthQuarters() );
 }
 
@@ -245,16 +245,16 @@ SW_TEST_CASE( AdventureVitalsTest, HealthEventsCanBeDrained )
     (void)vitals.heal( 1 );
     SW_EXPECT_TRUE( vitals.applyDamage( 100 ) );
 
-    sw::vector<sw::VitalityEvent> listEvent;
-    vitals.drainHealthEvents( listEvent );
+    sw::vector<sw::CombatHealthEvent> listEvent;
+    vitals.pollHealthEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 4 ), listEvent.size() );
-    SW_EXPECT_TRUE( listEvent[0]._type == sw::VitalityEventType::Damaged );
-    SW_EXPECT_TRUE( listEvent[1]._type == sw::VitalityEventType::Healed );
-    SW_EXPECT_TRUE( listEvent[2]._type == sw::VitalityEventType::Damaged );
-    SW_EXPECT_TRUE( listEvent[3]._type == sw::VitalityEventType::Died );
+    SW_EXPECT_TRUE( listEvent[0]._type == sw::CombatHealthEventType::Damaged );
+    SW_EXPECT_TRUE( listEvent[1]._type == sw::CombatHealthEventType::Healed );
+    SW_EXPECT_TRUE( listEvent[2]._type == sw::CombatHealthEventType::Damaged );
+    SW_EXPECT_TRUE( listEvent[3]._type == sw::CombatHealthEventType::Died );
 
     listEvent.clear();
-    vitals.drainHealthEvents( listEvent );
+    vitals.pollHealthEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 }
 
@@ -270,7 +270,7 @@ SW_TEST_CASE( AdventureVitalsTest, StateRoundTripKeepsEverything )
     SW_EXPECT_TRUE( original.upgradeMagic() );
     SW_EXPECT_TRUE( original.trySpendMagic( 10.0f ) );
     SW_EXPECT_TRUE( original.addStaminaVessel() );
-    SW_REQUIRE_TRUE( original.updateStamina( sw::AdventureStaminaAction::Sprint, 1000.0f ) == sw::AdventureStaminaOutcome::Stop );
+    SW_REQUIRE_TRUE( original.updateStamina( sw::AdventureStaminaAction::Sprint, 1000.0f ) == sw::AdventureStaminaResult::Stop );
 
     sw::Archive written;
     original.writeState( written );

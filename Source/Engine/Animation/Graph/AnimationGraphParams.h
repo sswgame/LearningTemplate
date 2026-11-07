@@ -1,5 +1,5 @@
 /**
- * @file AnimationGraphFields.h
+ * @file AnimationGraphParams.h
  * @brief 애니메이션 그래프 파일(`*.animgraph.xml`)의 원소마다 적을 수 있는 칸의 스키마입니다(`node` · `blend_space` · `sample` · `pose_node` · `link` · `condition` · `layer` · `comment` · `bone_mask` · 본 마스크의 `entry`).
  * @details 속성 이름 · 필수 · 범위 · 기본값은 여기 `PROPERTY` 가 정본이고, 읽기 · 쓰기는 카탈로그 · 행동 트리와 같은 `XMLFields::readFields` · `writeFields` 다
  *          (속성 이름은 칸 이름에서 앞의 `_` 와 불리언 `b` 를 뗀 것, 다르면 `Name =`). 열거 값은 열거자 이름 그대로다(`op="GreaterEqual"`).
@@ -17,7 +17,7 @@ namespace sw
 {
     /** @brief `<node>` 입니다. `loop` 는 적지 않음 · 참 · 거짓 셋이라 칸이 아니라 손으로 읽는다(`AnimationGraphNode::_loopOverride`). */
     REFLECT()
-    struct SW_API AnimationGraphNodeFields
+    struct SW_API AnimationGraphNodeParams
     {
         REFLECT_BODY();
 
@@ -38,7 +38,7 @@ namespace sw
 
     /** @brief `<blend_space>` 입니다. `y` 를 적지 않으면 1D 다. */
     REFLECT()
-    struct SW_API AnimationGraphBlendSpaceFields
+    struct SW_API AnimationGraphBlendSpaceParams
     {
         REFLECT_BODY();
 
@@ -52,7 +52,7 @@ namespace sw
 
     /** @brief `<blend_space><samples><sample>` 입니다. 적지 않은 축은 0 이다. */
     REFLECT()
-    struct SW_API AnimationGraphSampleFields
+    struct SW_API AnimationGraphSampleParams
     {
         REFLECT_BODY();
 
@@ -66,7 +66,7 @@ namespace sw
 
     /** @brief `<pose_node>` 입니다. 입력은 자식 `<inputs><item>` 이다. */
     REFLECT()
-    struct SW_API AnimationGraphPoseNodeFields
+    struct SW_API AnimationGraphPoseNodeParams
     {
         REFLECT_BODY();
 
@@ -78,7 +78,7 @@ namespace sw
 
     /** @brief `<link>` 입니다. 조건은 자식 `<condition>` 이다(없으면 "끝나면 다음"). */
     REFLECT()
-    struct SW_API AnimationGraphLinkFields
+    struct SW_API AnimationGraphLinkParams
     {
         REFLECT_BODY();
 
@@ -99,7 +99,7 @@ namespace sw
 
     /** @brief `<link><condition>` 입니다. */
     REFLECT()
-    struct SW_API AnimationGraphConditionFields
+    struct SW_API AnimationGraphConditionParams
     {
         REFLECT_BODY();
 
@@ -113,7 +113,7 @@ namespace sw
 
     /** @brief `<layers><layer>` 입니다. */
     REFLECT()
-    struct SW_API AnimationGraphLayerFields
+    struct SW_API AnimationGraphLayerParams
     {
         REFLECT_BODY();
 
@@ -146,7 +146,7 @@ namespace sw
 
     /** @brief `<comments><comment>` 입니다(`GraphCommentBox` 의 파일 모양 — 자리와 크기를 칸 넷으로 적는다). */
     REFLECT()
-    struct SW_API AnimationGraphCommentFields
+    struct SW_API AnimationGraphCommentParams
     {
         REFLECT_BODY();
 
@@ -166,7 +166,7 @@ namespace sw
 
     /** @brief `<bone_masks><bone_mask>` 입니다. 본문은 프리셋 파일(`file`)이나 바로 적은 자식(`<roots>` · `<bones>` — `AnimationBoneMaskDef::parseObject`) 중 하나다. */
     REFLECT()
-    struct SW_API AnimationGraphBoneMaskFields
+    struct SW_API AnimationGraphBoneMaskParams
     {
         REFLECT_BODY();
 
@@ -178,7 +178,7 @@ namespace sw
 
     /** @brief 본 마스크의 `<roots>` · `<bones>` 아래 `<entry>` 입니다(그래프 안에 적은 마스크와 프리셋 파일 `*.bonemask.xml` 이 같다). */
     REFLECT()
-    struct SW_API AnimationBoneMaskEntryFields
+    struct SW_API AnimationBoneMaskEntryParams
     {
         REFLECT_BODY();
 

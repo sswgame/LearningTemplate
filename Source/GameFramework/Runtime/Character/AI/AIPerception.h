@@ -77,7 +77,7 @@ namespace sw
         const AIPerceivedTarget*         findTarget( uint64 id ) const;
         /** @brief 지금 보이는 대상 중 @p origin 에 가장 가까운 것입니다. 없으면 nullptr 입니다. */
         const AIPerceivedTarget* findNearestSeen( const float3& origin ) const;
-        void                     forgetAll() { _listTarget.clear(); }
+        void                     clearAll() { _listTarget.clear(); }
 
     private:
         AIPerceptionSettings      _settings;

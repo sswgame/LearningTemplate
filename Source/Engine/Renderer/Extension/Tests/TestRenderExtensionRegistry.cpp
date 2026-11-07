@@ -257,12 +257,12 @@ SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterFlushesTheRenderScope )
 SW_TEST_CASE( RenderExtensionRegistryTest, NoteFailureOncePerKey )
 {
     RenderExtensionRegistry registry;
-    SW_EXPECT_TRUE( registry.noteFailureOnce( "PassA" ) );
-    SW_EXPECT_FALSE( registry.noteFailureOnce( "PassA" ) );
-    SW_EXPECT_TRUE( registry.noteFailureOnce( "PassB" ) );
+    SW_EXPECT_TRUE( registry.recordFailureOnce( "PassA" ) );
+    SW_EXPECT_FALSE( registry.recordFailureOnce( "PassA" ) );
+    SW_EXPECT_TRUE( registry.recordFailureOnce( "PassB" ) );
 
     RenderExtensionRegistry other; // 레지스트리마다 따로다
-    SW_EXPECT_TRUE( other.noteFailureOnce( "PassA" ) );
+    SW_EXPECT_TRUE( other.recordFailureOnce( "PassA" ) );
 }
 
 /** @brief [RenderExtensionRegistryTest] 확장 등록은 수명이다 — 만들 때 올리고 소멸할 때 푼다 */

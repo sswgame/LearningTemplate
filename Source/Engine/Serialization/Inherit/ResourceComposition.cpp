@@ -39,7 +39,7 @@ namespace sw
                 mutex                                 _mutex{};
                 vector<string>                        _listLayerRoot{};
                 unordered_map<string, Record>         _mapRecord{};
-                unordered_map<string, vector<string>> _mapRemapTag{}; ///< 경로 교체가 물은 로드 축 태그(`noteRemap`)
+                unordered_map<string, vector<string>> _mapRemapTag{}; ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
                 unordered_set<string>                 _uniqueComposedID{};
                 vector<string>                        _listPendingReload{};
             };
@@ -133,14 +133,14 @@ namespace sw
         record._bLayered                            = bLayered ? SW_TRUE : SW_FALSE;
     }
 
-    void ResourceComposition::noteComposed( string_view assetID )
+    void ResourceComposition::recordComposed( string_view assetID )
     {
         ResourceCompositionInternal::State& state = ResourceCompositionInternal::getState();
         ScopedLock<mutex>                   lock{ state._mutex };
         state._uniqueComposedID.insert( string{ assetID } );
     }
 
-    void ResourceComposition::noteRemap( string_view assetID, const vector<string>& listLoadTag )
+    void ResourceComposition::recordRemap( string_view assetID, const vector<string>& listLoadTag )
     {
         ResourceCompositionInternal::State& state = ResourceCompositionInternal::getState();
         ScopedLock<mutex>                   lock{ state._mutex };

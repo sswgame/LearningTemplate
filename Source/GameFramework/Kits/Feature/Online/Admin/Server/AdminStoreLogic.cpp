@@ -113,12 +113,12 @@ namespace sw
                     transfer._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, request._assetID, magnitude } );
                 else
                     transfer._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), request._assetID, magnitude } );
-                LedgerTransferOutcome outcome;
-                const LedgerResult    staged = Ledger::stageTransfer( connection, transfer, inoutTransaction, outcome );
+                LedgerTransferResult outcome;
+                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, inoutTransaction, outcome );
                 if ( staged != LedgerResult::Ok )
                     return toAdminResult( staged );
                 int64 after = before._amount;
-                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
                 {
                     outReply._listBalance.push_back( holderBalance._balance );
                     after = holderBalance._balance._amount;

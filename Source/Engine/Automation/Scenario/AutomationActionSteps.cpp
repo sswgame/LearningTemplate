@@ -12,7 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -73,21 +73,21 @@ namespace sw
 
             static bool validateAction( const AutomationStep& step, string& outError )
             {
-                AutomationActionFields fields;
-                return step.readFields( fields, outError ) && checkDurationChoice( step, fields._hold, fields._seconds, "hold", "seconds", outError ) &&
-                       checkDurationChoice( step, fields._interval, fields._intervalSeconds, "interval", "intervalSeconds", outError );
+                AutomationActionParams params;
+                return step.readFields( params, outError ) && checkDurationChoice( step, params._hold, params._seconds, "hold", "seconds", outError ) &&
+                       checkDurationChoice( step, params._interval, params._intervalSeconds, "interval", "intervalSeconds", outError );
             }
 
             static bool validatePressOrRelease( const AutomationStep& step, string& outError )
             {
-                AutomationActionButtonFields fields;
-                return step.readFields( fields, outError );
+                AutomationActionButtonParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateAxis( const AutomationStep& step, string& outError )
             {
-                AutomationActionAxisFields fields;
-                return step.readFields( fields, outError ) && checkDurationChoice( step, fields._frames, fields._seconds, "frames", "seconds", outError );
+                AutomationActionAxisParams params;
+                return step.readFields( params, outError ) && checkDurationChoice( step, params._frames, params._seconds, "frames", "seconds", outError );
             }
 
             /** @brief 바인딩이 쓰는 장치 종류입니다. */
@@ -151,19 +151,19 @@ namespace sw
 
             [[nodiscard]] static bool prepareAction( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                const AutomationActionFields fields   = step.readValidatedFields<AutomationActionFields>();
-                const ActionBinding*         pBinding = findBinding( runner, step, fields._name, fields._device, &isButtonBinding, "single button", outError );
+                const AutomationActionParams params   = step.readValidatedFields<AutomationActionParams>();
+                const ActionBinding*         pBinding = findBinding( runner, step, params._name, params._device, &isButtonBinding, "single button", outError );
                 if ( pBinding == nullptr )
                     return false;
-                const uint32 holdFrames     = resolveDuration( runner, fields._hold, fields._seconds, kDefaultHoldFrames );
-                const uint32 intervalFrames = resolveDuration( runner, fields._interval, fields._intervalSeconds, holdFrames + 1 ); // 적지 않으면 떼고 한 프레임 뒤 다시 누른다
-                if ( fields._count > 1 && intervalFrames <= holdFrames )
+                const uint32 holdFrames     = resolveDuration( runner, params._hold, params._seconds, kDefaultHoldFrames );
+                const uint32 intervalFrames = resolveDuration( runner, params._interval, params._intervalSeconds, holdFrames + 1 ); // 적지 않으면 떼고 한 프레임 뒤 다시 누른다
+                if ( params._count > 1 && intervalFrames <= holdFrames )
                 {
                     outError = step.describe() + ": interval (" + to_string( intervalFrames ) + " frames) must be longer than hold (" + to_string( holdFrames ) + " frames) to press again";
                     return false;
                 }
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
-                for ( uint32 pressIndex = 0; pressIndex < fields._count; ++pressIndex )
+                for ( uint32 pressIndex = 0; pressIndex < params._count; ++pressIndex )
                 {
                     if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * intervalFrames, pBinding->_arrSlot[0], holdFrames ) == false )
                     {
@@ -176,8 +176,8 @@ namespace sw
 
             [[nodiscard]] static bool preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                const AutomationActionButtonFields fields   = step.readValidatedFields<AutomationActionButtonFields>();
-                const ActionBinding*               pBinding = findBinding( runner, step, fields._name, fields._device, &isButtonBinding, "single button", outError );
+                const AutomationActionButtonParams params   = step.readValidatedFields<AutomationActionButtonParams>();
+                const ActionBinding*               pBinding = findBinding( runner, step, params._name, params._device, &isButtonBinding, "single button", outError );
                 if ( pBinding == nullptr )
                     return false;
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
@@ -206,13 +206,13 @@ namespace sw
              */
             [[nodiscard]] static bool prepareAxis( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                const AutomationActionAxisFields fields   = step.readValidatedFields<AutomationActionAxisFields>();
-                const ActionBinding*             pBinding = findBinding( runner, step, fields._name, fields._device, &isAxisBinding, "axis", outError );
+                const AutomationActionAxisParams params   = step.readValidatedFields<AutomationActionAxisParams>();
+                const ActionBinding*             pBinding = findBinding( runner, step, params._name, params._device, &isAxisBinding, "axis", outError );
                 if ( pBinding == nullptr )
                     return false;
-                const float32       valueX = fields._x;
-                const float32       valueY = fields._y;
-                const uint32        frames = resolveDuration( runner, fields._frames, fields._seconds, kDefaultHoldFrames );
+                const float32       valueX = params._x;
+                const float32       valueY = params._y;
+                const uint32        frames = resolveDuration( runner, params._frames, params._seconds, kDefaultHoldFrames );
                 VirtualInputScript& script = runner.getInputScript();
                 const uint32        first  = step._frameIndex;
                 bool                bOk    = true;

@@ -117,7 +117,7 @@ namespace sw
 namespace sw
 {
     /** @brief 작업 하나가 정한 결과입니다. 서비스가 완료, 알림, 이벤트로 나눕니다. */
-    struct GuildOutcome
+    struct GuildResult
     {
         GuildInfo                _info{};
         vector<GuildStorageItem> _listStorage{};
@@ -166,15 +166,15 @@ namespace sw
         void                 setLedgerPolicy( const ILedgerPolicy* pPolicy ) { _pLedgerPolicy = pPolicy; }
         const ILedgerPolicy* getLedgerPolicy() const { return _pLedgerPolicy; }
 
-        void  drainCompletions( vector<GuildCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
-        void  drainNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
+        void  takeCompletions( vector<GuildCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void  pollNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.moveAllTo( outListNotification ); }
         int32 getPendingCount() const { return _pendingCount; }
 
         /** @brief 이름 규칙을 검사합니다. 1~24바이트이고, 올바른 UTF-8 이며, 제어 문자가 없고, 앞뒤 공백이 없어야 합니다. */
         static bool isValidName( string_view name );
 
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome );
+        void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome );
 
     private:
         void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs );

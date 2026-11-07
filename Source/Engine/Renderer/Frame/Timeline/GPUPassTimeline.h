@@ -54,7 +54,7 @@ namespace sw
          */
         void reportFrame( const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass );
         /** @brief 디바이스를 잊습니다. 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 엽니다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않습니다. */
-        void forgetDevice();
+        void clearDevice();
 
     private:
         /**

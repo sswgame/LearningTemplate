@@ -214,18 +214,18 @@ namespace sw
                                      sceneObjectNode.getAttributeText( "name" ), kRemovedPrefabGUID, absPath );
                     return false;
                 }
-                // 칸 · 0 이 아닌 id 는 SceneEntityFields 의 PROPERTY 가 본다.
-                SceneEntityFields fields;
-                if ( XMLFields::readFields( sceneObjectNode, fields, absPath ) == false )
+                // 칸 · 0 이 아닌 id 는 SceneEntityParams 의 PROPERTY 가 본다.
+                SceneEntityParams params;
+                if ( XMLFields::readFields( sceneObjectNode, params, absPath ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneDocument.EntityNoValidId", "Entity '%#' is not readable in %# - the scene is not loaded", fields._name, absPath );
+                    SW_LOG_ERROR_ID( "SceneDocument.EntityNoValidId", "Entity '%#' is not readable in %# - the scene is not loaded", params._name, absPath );
                     return false;
                 }
-                outNode._fileID        = fields._id;
-                outNode._name          = std::move( fields._name );
-                outNode._prefab        = std::move( fields._prefab );
-                outNode._sceneInstance = std::move( fields._scene );
-                parseDataLayers( fields._layers, outNode._listDataLayer );
+                outNode._fileID        = params._id;
+                outNode._name          = std::move( params._name );
+                outNode._prefab        = std::move( params._prefab );
+                outNode._sceneInstance = std::move( params._scene );
+                parseDataLayers( params._layers, outNode._listDataLayer );
 
                 const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
                 if ( overrideNode.isValid() )
@@ -334,14 +334,14 @@ namespace sw
             return false;
         }
 
-        // 씬 · 엔티티의 값은 속성에만 있다(`saveXML` 이 쓰는 모양).
-        SceneRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, absPath, { "formatVersion" } ) == false )
+        // 씬 · 엔티티의 값은 속성에만 있다(`saveToFile` 이 쓰는 모양).
+        SceneRootParams rootParams;
+        if ( XMLFields::readFields( root, rootParams, absPath, { "formatVersion" } ) == false )
         {
             *this = {};
             return false;
         }
-        _name = rootFields._name.empty() ? FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) ) : rootFields._name;
+        _name = rootParams._name.empty() ? FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) ) : rootParams._name;
 
         if ( SceneDocumentInternal::readSceneSettings( root, _name, absPath, _sceneSettings ) == false )
         {
@@ -523,7 +523,7 @@ namespace sw
         _baseScenePath.clear();
     }
 
-    bool SceneDocument::saveXML( const AbsolutePath& absPath ) const
+    bool SceneDocument::saveToFile( const AbsolutePath& absPath ) const
     {
         XMLDocument xmlDoc;
         if ( buildXML( xmlDoc ) == false )
@@ -574,7 +574,7 @@ namespace sw
 
         XMLNode root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( kAssetType._formatVersion ) );
-        XMLFields::writeFields( root, SceneRootFields{ _name } );
+        XMLFields::writeFields( root, SceneRootParams{ _name } );
         {
             XMLDocument sceneSettingsDoc;
             if ( sceneSettingsDoc.parse( XMLSerializer::serialize( &_sceneSettings, *SceneSettings::StaticType() ) ) == false ||
@@ -602,7 +602,7 @@ namespace sw
                 return false;
             }
             XMLNode sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            XMLFields::writeFields( sceneObjectNode, SceneEntityFields{ entity._fileID, entity._name, entity._prefab, entity._sceneInstance, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
+            XMLFields::writeFields( sceneObjectNode, SceneEntityParams{ entity._fileID, entity._name, entity._prefab, entity._sceneInstance, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
             if ( entity._prefabOverrideXML.empty() == false )
             {
                 XMLDocument overrideDoc;

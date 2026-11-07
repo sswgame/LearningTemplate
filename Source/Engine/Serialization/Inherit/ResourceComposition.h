@@ -52,9 +52,9 @@ namespace sw
          */
         static void record( string_view assetID, const vector<string>& listLoadTag, bool bLayered, string_view composedText );
         /** @brief 리소스 id 로 합성한 리소스라고 적습니다(층 목록이 바뀔 때 새 층 파일을 찾을 대상). */
-        static void noteComposed( string_view assetID );
+        static void recordComposed( string_view assetID );
         /** @brief 경로 교체(`ResourceRemap`)가 @p assetID 를 고를 때 로드 축 태그 @p listLoadTag 를 물었다고 적습니다. 그 태그가 바뀌면 다시 읽는다(합성 기록과 따로 든다 — 같은 id 의 합성이 지우지 않게). */
-        static void noteRemap( string_view assetID, const vector<string>& listLoadTag );
+        static void recordRemap( string_view assetID, const vector<string>& listLoadTag );
         /** @brief 태그가 바뀌었습니다. 그 태그에 기댄 리소스를 다시 읽을 목록에 올립니다(`ResourceTags`). */
         static void notifyTagsChanged( const vector<string>& listChangedTag );
         /** @brief 층 목록이 바뀌었습니다. 층을 얹었던 리소스와 새 층에 파일이 있는 리소스를 다시 읽을 목록에 올립니다(`ResourceLayers`). */

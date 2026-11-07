@@ -26,12 +26,12 @@ rim_glow.matgraph.xml                         저작 파일(팩에 들지 않는
 ```xml
 <MaterialGraphDef formatVersion="0">
 	<_listNode>
-		<MaterialGraphNodeDesc _name="Tint" _kind="ColorParameter" _position="0,0">
+		<MaterialGraphNodeDef _name="Tint" _kind="ColorParameter" _position="0,0">
 			<_listValue><MaterialGraphValue _name="Parameter" _value="_tint" /></_listValue>
-		</MaterialGraphNodeDesc>
-		<MaterialGraphNodeDesc _name="Out" _kind="Output" _position="280,0">
+		</MaterialGraphNodeDef>
+		<MaterialGraphNodeDef _name="Out" _kind="Output" _position="280,0">
 			<_listLink><MaterialGraphLink _pin="BaseColor" _fromNode="Tint" _fromPin="RGB" /></_listLink>
-		</MaterialGraphNodeDesc>
+		</MaterialGraphNodeDef>
 	</_listNode>
 </MaterialGraphDef>
 ```

@@ -275,7 +275,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsSurviveStalledGameThread )
     SW_EXPECT_EQUAL( 1, cluster.getServer().getConnectedCount() );
     SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
     vector<NetEndpointEvent> listEvent;
-    cluster.getClient( 0 ).drainEvents( listEvent );
+    cluster.getClient( 0 ).pollEvents( listEvent );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( listEvent.size() ) ); // Connected 하나뿐 — 끊김이 없었다
     SW_EXPECT_TRUE( listEvent[0]._kind == NetEndpointEvent::Kind::Connected );
     NetConnectionStats stats;

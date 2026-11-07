@@ -44,7 +44,7 @@ namespace sw::editor
         void collectHiddenProperties( vector<hashed_string>& outListHidden ) const;
 
         /** @brief 그리드가 고른 섹션을 고쳤다 — 섹션의 변경 훅을 부르고 저장을 기다리게 합니다. */
-        void noteEdited();
+        void recordEdited();
         /** @brief 고른 섹션을 기본값으로 되돌리고(변경 훅은 되돌리기가 부른다) 저장을 기다리게 합니다. */
         void resetSelectedSection();
         /** @brief 기다리는 저장이 있고 첫 편집 뒤 `kSaveDelayNanoseconds` 가 지났거나 @p bForce 면 파일에 씁니다. */

@@ -58,7 +58,7 @@ namespace sw
         }
     }
 
-    bool PlatformTileMap::loadFromText( string_view text, float32 tileSize, const float2& origin )
+    bool PlatformTileMap::loadFromXMLText( string_view text, float32 tileSize, const float2& origin )
     {
         vector<string_view> listLine;
         StringUtil::forEachLine( text, [&]( string_view line )

@@ -101,7 +101,7 @@ namespace sw
                     outDolly._listPoint.clear();
                 for ( ; pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
                 {
-                    CameraDollyPointFields point;
+                    CameraDollyPointParams point;
                     if ( XMLFields::readFields( pointNode, point, sourceName ) )
                         outDolly._listPoint.push_back( point._position );
                     else
@@ -118,7 +118,7 @@ namespace sw
             /** @brief 프리셋 하나를 읽습니다. 섹션마다 스키마(Def 의 초기값 · `Min`/`Max`)로 읽고, 오류가 하나라도 있으면 false 입니다(오류는 `readFields` 가 이름과 함께 알린다). */
             [[nodiscard]] static bool readPreset( const XMLNode& node, CameraPresetDef& inoutDef, string_view sourceName )
             {
-                bool bValid = true; // 머리 칸(id · 모르는 속성)은 부르는 쪽이 CameraPresetHeadFields 로 읽었다
+                bool bValid = true; // 머리 칸(id · 모르는 속성)은 부르는 쪽이 CameraPresetHeadParams 로 읽었다
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
@@ -262,7 +262,7 @@ namespace sw
         // 기본 블렌드를 먼저 — `<BlendIn>` 이 없는 프리셋이 이 값으로 시작한다.
         const XMLNode defaultNode = root.findChild( "DefaultBlend" );
         if ( defaultNode.isValid() && CameraPresetInternal::readBlend( defaultNode, _defaultBlend, sourceName ) == false )
-            SW_LOG_ERROR_ID( "CameraPreset.DefaultBlendInvalidFields", "%#: <DefaultBlend> has invalid fields", sourceName );
+            SW_LOG_ERROR_ID( "CameraPreset.DefaultBlendInvalidParams", "%#: <DefaultBlend> has invalid fields", sourceName );
 
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
@@ -270,7 +270,7 @@ namespace sw
             const utf8* pName = node.getName();
             if ( StringUtil::equals( pName, "Preset" ) )
             {
-                CameraPresetHeadFields head;
+                CameraPresetHeadParams head;
                 if ( XMLFields::readFields( node, head, sourceName ) == false )
                     continue;
                 const utf8* const pID = head._id.c_str();

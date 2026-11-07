@@ -803,7 +803,7 @@ namespace sw::editor
             return false;
         // 구간을 나누는 머티리얼 표(툰 또는 PBR)의 이름 — 비어 있으면 구간 없는 메시다.
         vector<string> listSectionMaterialName;
-        for ( const ToonMaterialDesc& toon : outResult._listToonMaterial )
+        for ( const ToonMaterialDef& toon : outResult._listToonMaterial )
         {
             listSectionMaterialName.push_back( toon._name );
         }

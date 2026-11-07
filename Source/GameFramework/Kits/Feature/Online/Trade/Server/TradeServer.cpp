@@ -160,7 +160,7 @@ namespace sw
         }
         _pTradeService->update( nowMs );
         _listCompletionScratch.clear();
-        _pTradeService->drainCompletions( _listCompletionScratch );
+        _pTradeService->takeCompletions( _listCompletionScratch );
         _mapTradeToLedger.clear();
         for ( const TradeCompletion& completion : _listCompletionScratch )
         {
@@ -183,7 +183,7 @@ namespace sw
             respond( host, call._token, reply );
         }
         _listUpdateScratch.clear();
-        _pTradeService->drainUpdates( _listUpdateScratch );
+        _pTradeService->pollUpdates( _listUpdateScratch );
         for ( const TradeSnapshot& snapshot : _listUpdateScratch )
         {
             pushSnapshot( host, snapshot );
@@ -246,9 +246,9 @@ namespace sw
         (void)host.respondReply<TradeProtocol::MessageTypes>( token, reply );
     }
 
-    void TradeServer::collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )
+    void TradeServer::collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )
     {
-        for ( const LedgerTransferOutcome::HolderBalance& holderBalance : ledger._listHolderBalance )
+        for ( const LedgerTransferResult::HolderBalance& holderBalance : ledger._listHolderBalance )
         {
             if ( holderBalance._holder._kind == LedgerHolderKind::Account && holderBalance._holder._accountID == accountID )
                 outListBalance.push_back( TradeBalance{ holderBalance._balance._assetID, holderBalance._balance._amount } );

@@ -9,7 +9,7 @@
 namespace sw::editor
 {
     /** @brief 정지 대기 한 프레임의 판정입니다. */
-    enum class EditorSettleVerdict : uint8
+    enum class EditorSettleResult : uint8
     {
         Ready,       ///< 화면도 일도 멈췄다 — 놓는다
         Waiting,     ///< 아직 — 붙잡는다
@@ -31,12 +31,12 @@ namespace sw::editor
         uint32 _idleMovingFrames{ 0 };
 
         /** @brief 이번 프레임의 재료로 판정합니다. @p bScreenSettled 화면이 자리 잡았다, @p bWorkDone 씬 · 에셋 · 뒤에 끝날 일이 모두 끝났다. */
-        [[nodiscard]] EditorSettleVerdict advance( bool bScreenSettled, bool bWorkDone )
+        [[nodiscard]] EditorSettleResult advance( bool bScreenSettled, bool bWorkDone )
         {
             if ( bScreenSettled && bWorkDone )
-                return EditorSettleVerdict::Ready;
+                return EditorSettleResult::Ready;
             _idleMovingFrames = bWorkDone ? _idleMovingFrames + 1 : 0;
-            return _idleMovingFrames > kMaxIdleMovingFrames ? EditorSettleVerdict::Oscillating : EditorSettleVerdict::Waiting;
+            return _idleMovingFrames > kMaxIdleMovingFrames ? EditorSettleResult::Oscillating : EditorSettleResult::Waiting;
         }
     };
 } // namespace sw::editor

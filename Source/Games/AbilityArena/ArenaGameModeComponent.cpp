@@ -44,39 +44,39 @@ namespace sw
             static constexpr const utf8* kEventPlayerFell = "PlayerFell";
             static constexpr const utf8* kEventEnemyFell  = "EnemyFell";
 
-            [[nodiscard]] static bool readPlayerX( const ArenaGameModeComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerX( const ArenaGameModeComponent& gameMode, float64& outValue )
             {
                 float3 position{};
-                if ( director.findUnitPosition( director.getPlayerObject(), position ) == false )
+                if ( gameMode.findUnitPosition( gameMode.getPlayerObject(), position ) == false )
                     return false;
                 outValue = static_cast<float64>( position._x );
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerZ( const ArenaGameModeComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerZ( const ArenaGameModeComponent& gameMode, float64& outValue )
             {
                 float3 position{};
-                if ( director.findUnitPosition( director.getPlayerObject(), position ) == false )
+                if ( gameMode.findUnitPosition( gameMode.getPlayerObject(), position ) == false )
                     return false;
                 outValue = static_cast<float64>( position._z );
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerShotCount( const ArenaGameModeComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerShotCount( const ArenaGameModeComponent& gameMode, float64& outValue )
             {
-                outValue = director.getPlayerShotCount();
+                outValue = gameMode.getPlayerShotCount();
                 return true;
             }
 
-            [[nodiscard]] static bool readKillCount( const ArenaGameModeComponent& director, float64& outValue )
+            [[nodiscard]] static bool readKillCount( const ArenaGameModeComponent& gameMode, float64& outValue )
             {
-                outValue = director.getKillCount();
+                outValue = gameMode.getKillCount();
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerControllerKind( const ArenaGameModeComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerControllerKind( const ArenaGameModeComponent& gameMode, float64& outValue )
             {
-                outValue = director.isPlayerDrivenByAI() ? 1.0 : 0.0;
+                outValue = gameMode.isPlayerDrivenByAI() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -446,9 +446,9 @@ namespace sw
         const TComponentHandle<ArenaGameModeComponent> self{ this };
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
         {
-            ArenaGameModeComponent* pDirector = pManager->resolveComponent( self );
-            if ( pDirector != nullptr )
-                pDirector->spawnProjectile( request );
+            ArenaGameModeComponent* pGameMode = pManager->resolveComponent( self );
+            if ( pGameMode != nullptr )
+                pGameMode->spawnProjectile( request );
         } ) );
     }
 
@@ -459,7 +459,7 @@ namespace sw
         const ArenaUnitComponent* pUnit    = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
         if ( pManager == nullptr || pUnit == nullptr )
             return nullptr;
-        return resolve<ArenaGameModeComponent>( *pManager, pUnit->getDirector() );
+        return resolve<ArenaGameModeComponent>( *pManager, pUnit->getGameMode() );
     }
 
     const ArenaGameModeComponent* ArenaGameModeComponent::findForPawn( const PawnComponent& pawn )
@@ -469,7 +469,7 @@ namespace sw
         const ArenaUnitComponent* pUnit    = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
         if ( pManager == nullptr || pUnit == nullptr )
             return nullptr;
-        return resolve<ArenaGameModeComponent>( *pManager, pUnit->getDirector() );
+        return resolve<ArenaGameModeComponent>( *pManager, pUnit->getGameMode() );
     }
 
     // ------------------------------------------------------------------------------
@@ -561,7 +561,7 @@ namespace sw
         applyTint( *pMesh, static_cast<int32>( request._kind ) );
         pMesh->setLocalPosition( request._position );
         const float3 facing = ArenaUnitComponent::flattenDirection( float3{ 0.0f, 0.0f, 0.0f } - request._position, float3{ 0.0f, 0.0f, 1.0f } );
-        pUnitComponent->assignDirector( getOwner()->getHandle(), facing );
+        pUnitComponent->assignGameMode( getOwner()->getHandle(), facing );
 
         ArenaUnit unit;
         unit._object = pObject->getHandle();

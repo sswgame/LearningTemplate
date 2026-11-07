@@ -28,11 +28,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터 · 놀이기구 번호 · 도는 빠르기(rad/s)를 정합니다. */
-        void assignRide( GameObjectHandle director, int32 rideIndex, float32 spin );
+        void assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin );
 
     private:
         PROPERTY( Category = "Ride", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Ride", DisplayName = "Ride Index", Tooltip = "Ride slot in the simulation" )
         int32 _rideIndex;
         PROPERTY( Category = "Ride", DisplayName = "Spin", Tooltip = "Turn rate while riders are on", Units = "rad/s" )

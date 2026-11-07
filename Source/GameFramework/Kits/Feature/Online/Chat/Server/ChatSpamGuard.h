@@ -26,7 +26,7 @@ namespace sw
     };
 
     /** @brief 도배 판정 결과입니다. */
-    enum class ChatSpamVerdict : uint8
+    enum class ChatSpamResult : uint8
     {
         Allowed = 0,
         RateLimited,
@@ -49,9 +49,9 @@ namespace sw
         void initialize( const ChatSpamConfig& settings, const ChatTextNormalizer& normalizer );
 
         /** @brief 말하기 하나를 판정합니다. 허락하면 버킷에서 토큰을 꺼내고 반복 기록에 넣습니다. 거절하면 @p outRetryAfterMs 가 기다릴 시간입니다. */
-        ChatSpamVerdict check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs );
+        ChatSpamResult check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs );
         /** @brief 계정이 떠났을 때 반복 기록을 지웁니다. 버킷은 상한에서 저절로 정리됩니다. */
-        void forget( AccountID accountID ) { _mapAccountToHistory.erase( accountID ); }
+        void remove( AccountID accountID ) { _mapAccountToHistory.erase( accountID ); }
 
     private:
         static constexpr uint32 kHistorySize = 4;

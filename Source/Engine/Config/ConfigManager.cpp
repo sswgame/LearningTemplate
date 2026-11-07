@@ -174,15 +174,15 @@ namespace sw
         return nullptr;
     }
 
-    ReloadOutcome ConfigManager::reloadConfigFile( string_view changedPath )
+    ReloadResult ConfigManager::reloadConfigFile( string_view changedPath )
     {
         for ( const auto& [key, source] : _mapSource )
         {
             (void)key;
             if ( source._pReload != nullptr && FileUtil::pathsEqualNormalized( source._resolvedPath, changedPath ) )
-                return source._pReload( *this, source._resolvedPath ) ? ReloadOutcome::Reloaded : ReloadOutcome::Failed;
+                return source._pReload( *this, source._resolvedPath ) ? ReloadResult::Reloaded : ReloadResult::Failed;
         }
-        return ReloadOutcome::NotTracked;
+        return ReloadResult::NotTracked;
     }
 } // namespace sw
 

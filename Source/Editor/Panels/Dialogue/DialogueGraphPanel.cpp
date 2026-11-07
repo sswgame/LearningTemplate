@@ -147,7 +147,7 @@ namespace sw::editor
             // 노드 종류마다 단추 하나씩이던 줄을 메뉴 하나로(언리얼 · 유니티 그래프는 오른쪽 클릭 검색과 추가 메뉴 하나다 — 캔버스 검색도 같은 목록).
             if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphAddNode" ), "AddNode" ) ) )
                 EditorInputGUI::openPopup( "##dialogueAddNode" );
-            EditorSelfTestMarks::note( "dialogueGraph.addMenu" );
+            EditorSelfTestMarks::record( "dialogueGraph.addMenu" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AddNodeTip" ) );
             if ( ImGui::BeginPopup( "##dialogueAddNode" ) )
             {
@@ -162,7 +162,7 @@ namespace sw::editor
                     }
                     fixed_string<constant::buffer::kMax64> markKey;
                     formatstring( markKey.data(), markKey.capacity(), "dialogueGraph.add.%#", info._pName );
-                    EditorSelfTestMarks::note( markKey.c_str() );
+                    EditorSelfTestMarks::record( markKey.c_str() );
                 }
                 ImGui::EndPopup();
             }
@@ -170,7 +170,7 @@ namespace sw::editor
             EditorWidgets::drawToolbarSeparator();
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
-            EditorSelfTestMarks::note( "dialogueGraph.save" );
+            EditorSelfTestMarks::record( "dialogueGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
@@ -339,7 +339,7 @@ namespace sw::editor
     {
         DialogueGraphAsset        data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
-        adoptLoadedGraph( std::move( data ), result );
+        applyLoadedGraph( std::move( data ), result );
         _preview.resetForDocument();
         return result;
     }

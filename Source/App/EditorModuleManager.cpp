@@ -227,7 +227,7 @@ namespace sw
 
     void EditorModuleManager::onBeforeEditorReload()
     {
-        suspendModules( ModuleScope::Editor, true, DrainReason::Reload );
+        suspendModules( ModuleScope::Editor, true, FlushReason::Reload );
     }
 
     void EditorModuleManager::onAfterEditorReload( void* pLibraryModule )
@@ -280,14 +280,14 @@ namespace sw
         destroyEditorInstance( bReleaseAPITable );
     }
 
-    void EditorModuleManager::onBeforeDrainWorkers( DrainReason reason )
+    void EditorModuleManager::onBeforeFlushWorkers( FlushReason reason )
     {
-        const bool bStopJobs = reason == DrainReason::Shutdown && hasEditor() && _editorAPI.requestBackgroundStop != nullptr;
+        const bool bStopJobs = reason == FlushReason::Shutdown && hasEditor() && _editorAPI.requestBackgroundStop != nullptr;
         if ( bStopJobs )
             _editorAPI.requestBackgroundStop( _editor );
     }
 
-    void EditorModuleManager::onRenderWorkersDrained()
+    void EditorModuleManager::onRenderWorkersFlushed()
     {
         // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 **아직 렌더 스레드에 제출되기 전인** 프레임의 것이다
         // (게임 스레드가 리로드하느라 제출하지 못했다). 풀어 버리면 UI 스레드가 풀려 다음 `updateUI` 에서 보조 뷰포트를 그리는 동안 렌더 스레드가 그 프레임의 메인 스냅샷을 그려

@@ -49,7 +49,7 @@ namespace sw
     WidgetTree::~WidgetTree()
     {
         if ( _pFocusManager != nullptr )
-            _pFocusManager->forgetTree( *this );
+            _pFocusManager->removeTree( *this );
         setRoot( nullptr );
     }
 

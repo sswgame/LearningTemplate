@@ -28,7 +28,7 @@ namespace sw
         return listPoint.back()._y;
     }
 
-    float32 AudioAttenuationDesc::computeGain( float32 distance ) const
+    float32 AudioAttenuationDef::computeGain( float32 distance ) const
     {
         const float32 minDistance = MathUtil::max( 0.01f, _minDistance );
         const float32 maxDistance = MathUtil::max( minDistance, _maxDistance );
@@ -60,7 +60,7 @@ namespace sw
         return 1.0f;
     }
 
-    float32 AudioAttenuationDesc::computeLowPassHz( float32 distance ) const
+    float32 AudioAttenuationDef::computeLowPassHz( float32 distance ) const
     {
         return AudioCurvePoint::evaluate( _listLowPassPoint, distance ).value_or( audio::kFilterOpenHz );
     }
@@ -222,8 +222,8 @@ namespace sw
         return combined;
     }
 
-    AudioSpatialResult AudioSpatializer::compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
-                                                  const AudioOcclusionDesc& occlusion )
+    AudioSpatialResult AudioSpatializer::compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDef& attenuation,
+                                                  const AudioOcclusionDef& occlusion )
     {
         // 소리가 문을 돌아 오면(회절) 방향과 거리는 겉보기 위치(리스너 쪽 문 방향, 길 전체 길이)로 정한다. 도플러는 에미터 자신의 움직임이다.
         const bool         bRedirected = attenuation._bOcclusion && emitter._bRedirected;

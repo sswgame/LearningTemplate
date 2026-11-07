@@ -18,7 +18,7 @@ using namespace sw;
 namespace
 {
     /** @brief 조종자가 쥔 탑승자와 폰이 있는 탈것입니다. 물리 씬은 없습니다(빈 자리로 봅니다). */
-    struct VehicleRig
+    struct VehicleFixture
     {
         GameObjectManager               _manager;
         GameObject*                     _pRider{ nullptr };
@@ -30,7 +30,7 @@ namespace
         VehicleSeatComponent*           _pSeat{ nullptr };
         IntentTrackControllerComponent* _pController{ nullptr };
 
-        VehicleRig()
+        VehicleFixture()
         {
             _pRider       = _manager.createGameObject( hashed_string( "Rider" ) );
             _pRiderRoot   = _pRider->addComponent<SceneComponent>();
@@ -50,7 +50,7 @@ namespace
 
 SW_TEST_CASE( VehicleSeatTest, DriverTakesTheVehicleAndGivesItBack )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     SW_EXPECT_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     SW_EXPECT_FALSE( rig._pSeat->isFree() );
     SW_EXPECT_TRUE( rig._pSeat->getOccupant() == rig._pRider->getHandle() );
@@ -69,7 +69,7 @@ SW_TEST_CASE( VehicleSeatTest, DriverTakesTheVehicleAndGivesItBack )
 
 SW_TEST_CASE( VehicleSeatTest, RiderSitsOnTheSeatOffsetAndFollowsTheVehicle )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     rig._pSeat->setSeatOffset( float3{ 0.0f, 2.0f, 0.0f } );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     SW_EXPECT_NEAR( 2.0f, rig._pRiderRoot->getWorldPosition()._y, 1e-4f );
@@ -79,7 +79,7 @@ SW_TEST_CASE( VehicleSeatTest, RiderSitsOnTheSeatOffsetAndFollowsTheVehicle )
 
 SW_TEST_CASE( VehicleSeatTest, RiderLandsOnTheExitSpotAndUpright )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     rig._pSeat->setExitOffset( float3{ -2.0f, 0.0f, 0.0f } );
     rig._pVehicleRoot->setLocalPosition( float3{ 1.0f, 0.0f, 0.0f } ); // 타는 거리 안이다
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
@@ -94,7 +94,7 @@ SW_TEST_CASE( VehicleSeatTest, RiderLandsOnTheExitSpotAndUpright )
 // 강제 하차(쓰러짐)는 지금 자리에서 떨어뜨린다.
 SW_TEST_CASE( VehicleSeatTest, ForcedDismountStaysWhereTheRiderIs )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     rig._pVehicleRoot->setLocalPosition( float3{ 1.0f, 0.0f, 0.0f } );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     rig._pVehicleRoot->setLocalPosition( float3{ 20.0f, 0.0f, 0.0f } );
@@ -105,7 +105,7 @@ SW_TEST_CASE( VehicleSeatTest, ForcedDismountStaysWhereTheRiderIs )
 
 SW_TEST_CASE( VehicleSeatTest, RefusalsNameTheReasonAndChangeNothing )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     rig._pVehicleRoot->setLocalPosition( float3{ 100.0f, 0.0f, 0.0f } );
     SW_EXPECT_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::TooFar );
     SW_EXPECT_TRUE( rig._pSeat->isFree() );
@@ -142,7 +142,7 @@ SW_TEST_CASE( VehicleSeatTest, DriverSeatNeedsAVehiclePawn )
 // 승객은 빙의를 옮기지 않는다.
 SW_TEST_CASE( VehicleSeatTest, PassengerKeepsItsOwnController )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     rig._pSeat->setDriverSeat( false );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
@@ -154,7 +154,7 @@ SW_TEST_CASE( VehicleSeatTest, PassengerKeepsItsOwnController )
 // 주인을 따라오던 말 AI 처럼 탈것을 쥐고 있던 조종자는 내리면 다시 쥔다.
 SW_TEST_CASE( VehicleSeatTest, PreviousVehicleControllerGetsItBack )
 {
-    VehicleRig                      rig;
+    VehicleFixture                  rig;
     IntentTrackControllerComponent* pHorseAI = rig._manager.createGameObject( hashed_string( "HorseAI" ) )->addComponent<IntentTrackControllerComponent>();
     pHorseAI->possess( *rig._pVehiclePawn );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
@@ -167,7 +167,7 @@ SW_TEST_CASE( VehicleSeatTest, PreviousVehicleControllerGetsItBack )
 
 SW_TEST_CASE( VehicleSeatTest, NearestFreeSeatPrefersTheDriverThenTheClosest )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     rig._pSeat->setDriverSeat( false );
     rig._pVehicleRoot->setLocalPosition( float3{ 1.0f, 0.0f, 0.0f } );
     SW_EXPECT_TRUE( VehicleSeatComponent::findNearestFreeSeat( *rig._pRiderPawn ) == rig._pSeat );
@@ -188,7 +188,7 @@ SW_TEST_CASE( VehicleSeatTest, NearestFreeSeatPrefersTheDriverThenTheClosest )
 // 탈것이 사라지면 앉은 쪽은 지금 자리에서 내려 다시 자기 폰을 쥔다.
 SW_TEST_CASE( VehicleSeatTest, RiderSurvivesTheVehicle )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     rig._pVehicleRoot->setLocalPosition( float3{ 2.0f, 0.0f, 0.0f } );
     const GameObjectHandle rider = rig._pRider->getHandle();
@@ -205,7 +205,7 @@ SW_TEST_CASE( VehicleSeatTest, RiderSurvivesTheVehicle )
 // 내린 탑승자는 다시 평범한 자식이다. 표시가 남으면 다음에 붙은 부모가 사라져도 살아남는다.
 SW_TEST_CASE( VehicleSeatTest, DismountClearsTheKeptMark )
 {
-    VehicleRig rig;
+    VehicleFixture rig;
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     SW_EXPECT_TRUE( rig._pRider->isKeptWhenParentDestroyed() );
     SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
@@ -215,7 +215,7 @@ SW_TEST_CASE( VehicleSeatTest, DismountClearsTheKeptMark )
 // 탑승자가 사라지면 좌석은 빈다. 끊긴 핸들을 든 채 "사람이 있다" 고 하면 그 탈것은 다시 탈 수 없다.
 SW_TEST_CASE( VehicleSeatTest, SeatFreesWhenTheRiderIsGone )
 {
-    VehicleRig                      rig;
+    VehicleFixture                  rig;
     IntentTrackControllerComponent* pHorseAI = rig._manager.createGameObject( hashed_string( "HorseAI" ) )->addComponent<IntentTrackControllerComponent>();
     pHorseAI->possess( *rig._pVehiclePawn );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );

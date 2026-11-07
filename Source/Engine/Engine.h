@@ -185,7 +185,7 @@ namespace sw
          */
         void onMainWindowResize( uint32 width, uint32 height );
         /** @brief 렌더 스레드가 받은 패킷을 모두 끝낼 때까지 기다립니다(렌더 스레드가 없으면 할 일이 없다). */
-        void drainRenderThreadPackets();
+        void flushRenderThreadPackets();
         /** @brief 기동 단계를 구성한 직후 렌더러 몫의 서브시스템(RHI 단계 · 프레임 렌더러 · 패킷 빌더)을 잡아 둡니다. 전용 서버는 할 일이 없습니다. */
         void bindRendererParts( const engine::StartupParts& parts );
         /** @brief 기동 단계가 돈 뒤 RHI · 렌더 스레드 · 주 창 크기 구독을 잡습니다(서지 않은 것은 nullptr). 전용 서버는 할 일이 없습니다. */

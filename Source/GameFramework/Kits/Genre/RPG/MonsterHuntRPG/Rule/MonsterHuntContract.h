@@ -79,7 +79,7 @@ namespace sw
         bool          isSolved() const;
         int32         getStepIndex() const { return _stepIndex; }
         hashed_string getStepID() const;
-        void          drainEvents( vector<MonsterHuntInvestigationEvent>& outListEvent );
+        void          pollEvents( vector<MonsterHuntInvestigationEvent>& outListEvent );
         /** @brief 계약 id, 단계, 지금 단계에서 찾은 단서를 씁니다. 빌려 온 퀘스트 일지와 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 계약이 카탈로그에 없거나 단계가 계약 밖이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */

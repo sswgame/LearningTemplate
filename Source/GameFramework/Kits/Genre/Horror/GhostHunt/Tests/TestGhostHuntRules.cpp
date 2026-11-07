@@ -130,7 +130,7 @@ namespace
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
         int32 countEvents( GhostEventKind type )
         {
-            _encounter.drainEvents( _listEvent );
+            _encounter.pollEvents( _listEvent );
             return VectorUtil::countBy<&GhostEvent::_type>( _listEvent, type );
         }
 
@@ -186,7 +186,7 @@ namespace
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
         int32 countEvents( GhostMansionEventKind type )
         {
-            _mansion.drainEvents( _listEvent );
+            _mansion.pollEvents( _listEvent );
             return VectorUtil::countBy<&GhostMansionEvent::_type>( _listEvent, type );
         }
 
@@ -654,7 +654,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
     SW_EXPECT_EQUAL( 1, restored.getVacuumStage() );
     SW_EXPECT_NEAR( 0.25f, restored.getStrobeCharge(), kGhostTolerance );
     vector<GhostEvent> listEvent;
-    restored.drainEvents( listEvent );
+    restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 
     // 복원한 쪽도 같은 싸움을 잇는다.
@@ -810,7 +810,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, ClearingRoomLightsItAndGivesKey )
     SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::CoinsCollected ) );
     vector<GhostEvent> listGhostEvent;
-    _mansion.drainGhostEvents( listGhostEvent );
+    _mansion.pollGhostEvents( listGhostEvent );
     SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventKind::Caught ) );
 
     SW_EXPECT_EQUAL( 0, _mansion.enterRoom( "foyer" ) );
@@ -831,7 +831,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, LeavingRightAfterCatchKeepsTheCatch )
     SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
     SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );
     vector<GhostEvent> listGhostEvent;
-    _mansion.drainGhostEvents( listGhostEvent );
+    _mansion.pollGhostEvents( listGhostEvent );
     SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventKind::Caught ) );
 }
 
@@ -993,7 +993,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionStateRoundTrip )
     SW_EXPECT_TRUE( restored.findBoo( "booA" )->_state == HidingGhostState::Revealed );
     SW_EXPECT_EQUAL( size_t{ 1 }, restored.getEncounter().getGhosts().size() );
     vector<GhostMansionEvent> listEvent;
-    restored.drainEvents( listEvent );
+    restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 
     _mansion.update( 9.0f );

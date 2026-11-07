@@ -45,7 +45,7 @@ namespace sw
         /** @brief 포커스 위젯에서 루트까지의 경로(루트에서 포커스 위젯)입니다. 액션 이벤트가 이 경로를 탑니다. 포커스가 @p tree 에 없으면 빈 경로입니다. */
         void makeFocusPath( const WidgetTree& tree, UIWidgetPath& outPath ) const;
         /** @brief @p tree 를 더 쓰지 않습니다. 그 트리에 있던 포커스를 알림 없이 버립니다(트리가 지워질 때 트리가 부릅니다). */
-        void forgetTree( const WidgetTree& tree );
+        void removeTree( const WidgetTree& tree );
 
     private:
         WidgetTree* _pFocusedTree;

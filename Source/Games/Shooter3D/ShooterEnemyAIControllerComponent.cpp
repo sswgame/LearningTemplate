@@ -57,23 +57,23 @@ namespace sw
         const GameObject*               pPawnOwner = pawn.getOwner();
         const GameObjectManager*        pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const ShooterEnemyComponent*    pEnemy     = pPawnOwner != nullptr ? pPawnOwner->getComponent<ShooterEnemyComponent>() : nullptr;
-        const ShooterGameModeComponent* pDirector =
-            pManager != nullptr && pEnemy != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pEnemy->getDirector() ) : nullptr;
+        const ShooterGameModeComponent* pGameMode =
+            pManager != nullptr && pEnemy != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pEnemy->getGameMode() ) : nullptr;
         const hashed_string attack( Internal::kAttack );
-        if ( pDirector == nullptr || pEnemy->isAlive() == false )
+        if ( pGameMode == nullptr || pEnemy->isAlive() == false )
         {
             holdButton( attack, false );
             stopMoving();
             clearFocus();
             return;
         }
-        const float3& target   = pDirector->getPlayerFeet();
+        const float3& target   = pGameMode->getPlayerFeet();
         const float3& position = pEnemy->getPosition();
         const float32 deltaX   = target._x - position._x;
         const float32 deltaZ   = target._z - position._z;
         const float32 distance = MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
         const float3  focus    = target + float3{ 0.0f, _focusHeight, 0.0f };
-        holdButton( attack, distance < pEnemy->getReach() && pDirector->isPlayerAlive() );
+        holdButton( attack, distance < pEnemy->getReach() && pGameMode->isPlayerAlive() );
 
         const ShooterEnemyPhase phase = pEnemy->getPhase();
         setStateName( hashed_string( Internal::getStateName( phase ) ) );

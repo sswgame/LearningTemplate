@@ -149,14 +149,14 @@ namespace sw::editor
         if ( ImGui::BeginTabBar( "##AnimationGraphInspectorTabs" ) == false )
             return;
         const bool bGraphTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Graph" ) );
-        EditorSelfTestMarks::note( "animationGraph.tab.graph" );
+        EditorSelfTestMarks::record( "animationGraph.tab.graph" );
         if ( bGraphTab )
         {
             drawGraphInspector();
             ImGui::EndTabItem();
         }
         const bool bLayersTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Layers" ) );
-        EditorSelfTestMarks::note( "animationGraph.tab.layers" );
+        EditorSelfTestMarks::record( "animationGraph.tab.layers" );
         if ( bLayersTab )
         {
             const utf8* pEdit = _layerEditor.draw( _graph );
@@ -174,7 +174,7 @@ namespace sw::editor
             // 상태 종류마다 단추 하나씩이던 줄을 메뉴 하나로(언리얼 AnimBP 상태 기계 · 유니티 Animator 의 "상태 만들기" 메뉴).
             if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphAddNode" ), "AddNode" ) ) )
                 EditorInputGUI::openPopup( "##animationAddNode" );
-            EditorSelfTestMarks::note( "animationGraph.addMenu" );
+            EditorSelfTestMarks::record( "animationGraph.addMenu" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphAddNodeTip" ) );
             if ( ImGui::BeginPopup( "##animationAddNode" ) )
             {
@@ -196,7 +196,7 @@ namespace sw::editor
                         addNamedNode( item._pName );
                         notifyDocumentEdited( "Add Animation Graph Node" );
                     }
-                    EditorSelfTestMarks::note( item._pMark );
+                    EditorSelfTestMarks::record( item._pMark );
                     EditorWidgets::drawTooltip( item._pTip );
                 }
                 ImGui::EndPopup();
@@ -205,17 +205,17 @@ namespace sw::editor
             // 고른 노드 둘(고른 순서)을 잇는다 — 캔버스에서 노드를 누르고 Ctrl 로 둘째를 고른다.
             if ( ImGui::Button( SW_LOCKEY( "EdText", "LinkSelected" ) ) )
                 linkSelectedNodes();
-            EditorSelfTestMarks::note( "animationGraph.linkSelected" );
+            EditorSelfTestMarks::record( "animationGraph.linkSelected" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LinkSelectedTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
                 reloadDocument();
-            EditorSelfTestMarks::note( "animationGraph.load" );
+            EditorSelfTestMarks::record( "animationGraph.load" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LoadTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
-            EditorSelfTestMarks::note( "animationGraph.save" );
+            EditorSelfTestMarks::record( "animationGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
@@ -416,7 +416,7 @@ namespace sw::editor
     {
         AnimationGraphAsset       data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
-        adoptLoadedGraph( std::move( data ), result );
+        applyLoadedGraph( std::move( data ), result );
         _preview.resetForDocument();
         _layerEditor.clearSelection();
         return result;
@@ -581,7 +581,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         EditorWidgets::drawTextField( "##stateName", _nameEditBuffer );
-        EditorSelfTestMarks::note( "animationGraph.state.name" );
+        EditorSelfTestMarks::record( "animationGraph.state.name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateClipTip" ) );
         const bool bStateNameCommitted = ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name;
         if ( bStateNameCommitted )
@@ -623,7 +623,7 @@ namespace sw::editor
                 _selectedNodeID = 0;
             }
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( formatToString( "animationGraph.link.%#", static_cast<uint64>( index ) ) ).c_str() );
+                EditorSelfTestMarks::record( ( formatToString( "animationGraph.link.%#", static_cast<uint64>( index ) ) ).c_str() );
             ImGui::PopID();
         }
     }
@@ -646,7 +646,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         EditorWidgets::drawTextField( "##conditionParam", _parameterEditBuffer );
-        EditorSelfTestMarks::note( "animationGraph.condition.param" );
+        EditorSelfTestMarks::record( "animationGraph.condition.param" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionParamTip" ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
@@ -659,7 +659,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         const bool bOpOpen = ImGui::BeginCombo( "##conditionOp", pLink->_op == AnimationConditionOp::None ? "(on finish)" : getEnumName( pLink->_op ) );
-        EditorSelfTestMarks::note( "animationGraph.condition.op" );
+        EditorSelfTestMarks::record( "animationGraph.condition.op" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionOpTip" ) );
         if ( bOpOpen )
         {
@@ -672,7 +672,7 @@ namespace sw::editor
                     bEdited    = true;
                 }
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( formatToString( "animationGraph.condition.op.%#", static_cast<uint64>( op ) ) ).c_str() );
+                    EditorSelfTestMarks::record( ( formatToString( "animationGraph.condition.op.%#", static_cast<uint64>( op ) ) ).c_str() );
             }
             ImGui::EndCombo();
         }
@@ -680,14 +680,14 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::DragFloat( "##conditionValue", &pLink->_threshold, 0.05f );
-        EditorSelfTestMarks::note( "animationGraph.condition.value" );
+        EditorSelfTestMarks::record( "animationGraph.condition.value" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionValueTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Blend" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::DragFloat( "##transitionBlend", &pLink->_blendSeconds, 0.01f, -1.0f, 10.0f, pLink->_blendSeconds < 0.0f ? "(player default)" : "%.2f s" );
-        EditorSelfTestMarks::note( "animationGraph.condition.blend" );
+        EditorSelfTestMarks::record( "animationGraph.condition.blend" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "TransitionBlendTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         if ( bEdited )

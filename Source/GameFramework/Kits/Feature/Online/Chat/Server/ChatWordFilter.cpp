@@ -140,11 +140,11 @@ namespace sw
         return true;
     }
 
-    ChatFilterVerdict ChatWordFilter::apply( string_view text, string& outText ) const
+    ChatFilterResult ChatWordFilter::apply( string_view text, string& outText ) const
     {
         vector<uint32> listCodepoint;
         if ( ChatWordFilterInternal::decode( text, listCodepoint ) == false )
-            return ChatFilterVerdict::InvalidText;
+            return ChatFilterResult::InvalidText;
 
         // 건너뛸 글자를 건너뛴 정규화 글의 각 글자가 원문의 몇 번째 글자인지 기록한다. 걸린 구간을 원문 위치로 되돌리는 데 쓴다.
         vector<int32> listOriginalIndex;
@@ -179,15 +179,15 @@ namespace sw
         if ( bAnyMatch == false )
         {
             outText.assign( text.data(), text.size() );
-            return ChatFilterVerdict::Clean;
+            return ChatFilterResult::Clean;
         }
         if ( _mode == ChatFilterMode::Reject )
-            return ChatFilterVerdict::Rejected;
+            return ChatFilterResult::Rejected;
         outText.clear();
         for ( size_t index = 0; index < listCodepoint.size(); ++index )
         {
             StringUtil::appendUTF8( outText, listMasked[index] != 0 ? ChatWordFilterInternal::kMaskCodepoint : listCodepoint[index] );
         }
-        return ChatFilterVerdict::Masked;
+        return ChatFilterResult::Masked;
     }
 } // namespace sw

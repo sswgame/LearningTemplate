@@ -31,12 +31,12 @@ namespace
     };
 
     /** @brief 잎 하나를 가진 화면입니다. 시스템에 붙이지 않아 전역 명령표는 묻지 않습니다. */
-    struct UIScreenRig
+    struct UIScreenFixture
     {
         UIScreen _screen;
         Widget*  _pLeaf;
 
-        explicit UIScreenRig( const UIScreenDesc& desc = UIScreenDesc{} )
+        explicit UIScreenFixture( const UIScreenDef& desc = UIScreenDef{} )
             : _screen{ desc, make_unique<CanvasPanel>() }
             , _pLeaf{ nullptr }
         {
@@ -159,18 +159,18 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
 /** @brief [UIScreenServicesTest] HUD 와 오버레이는 설정과 상관없이 포커스를 받지 않고, 시스템에 붙지 않은 화면을 닫으면 닫는 중이 된다 */
 SW_TEST_CASE( UIScreenServicesTest, ScreenFocusRuleAndClose )
 {
-    UIScreenDesc desc;
+    UIScreenDef desc;
     desc._layer       = UILayer::HUD;
     desc._bTakesFocus = true;
-    SW_EXPECT_FALSE( UIScreenRig( desc )._screen.takesFocus() );
+    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.takesFocus() );
     desc._layer = UILayer::Overlay;
-    SW_EXPECT_FALSE( UIScreenRig( desc )._screen.takesFocus() );
+    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.takesFocus() );
     desc._layer = UILayer::Menu;
-    SW_EXPECT_TRUE( UIScreenRig( desc )._screen.takesFocus() );
+    SW_EXPECT_TRUE( UIScreenFixture( desc )._screen.takesFocus() );
     desc._bTakesFocus = false;
-    SW_EXPECT_FALSE( UIScreenRig( desc )._screen.takesFocus() );
+    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.takesFocus() );
 
-    UIScreenRig rig;
+    UIScreenFixture rig;
     SW_EXPECT_FALSE( rig._screen.isClosing() );
     SW_EXPECT_TRUE( rig._screen.onBack() );
     SW_EXPECT_TRUE( rig._screen.isClosing() );
@@ -180,7 +180,7 @@ SW_TEST_CASE( UIScreenServicesTest, ScreenFocusRuleAndClose )
 SW_TEST_CASE( UIScreenServicesTest, CommandSubscriptions )
 {
     SW_EXPECT_LOG( "UIScreen.CommandWidgetNotHandled" );
-    UIScreenRig         rig;
+    UIScreenFixture     rig;
     UICommandProbe      first;
     UICommandProbe      second;
     const hashed_string command( "Do" );
@@ -204,7 +204,7 @@ SW_TEST_CASE( UIScreenServicesTest, CommandSubscriptions )
 /** @brief [UIScreenServicesTest] 명령 함수가 자기 등록을 풀어도(표에서 지워져도) 돌고 있는 함수는 끝까지 돈다 */
 SW_TEST_CASE( UIScreenServicesTest, CommandMayReleaseItself )
 {
-    UIScreenRig         rig;
+    UIScreenFixture     rig;
     UICommandProbe      probe;
     const hashed_string command( "Once" );
     probe._subscription = rig._screen.registerCommand( command, UICommandDelegate::create<&UICommandProbe::onCommandReleasingItself>( &probe ) );

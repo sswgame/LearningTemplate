@@ -35,7 +35,7 @@ namespace sw
      */
     /** @brief `<chains><item name ik_goal>` 의 칸입니다. 본 목록(`source` · `target`)은 이름 목록이라 손으로 푼다. */
     REFLECT()
-    struct SW_API RetargetChainFields
+    struct SW_API RetargetChainParams
     {
         REFLECT_BODY();
 
@@ -84,7 +84,7 @@ namespace sw
 
     /** @brief `<target_pose><item bone rotation>` 의 칸입니다(파일 스키마 — 회전은 파일 글 그대로 도 단위다). */
     REFLECT()
-    struct SW_API RetargetPoseBoneFields
+    struct SW_API RetargetPoseBoneParams
     {
         REFLECT_BODY();
 
@@ -96,7 +96,7 @@ namespace sw
 
     /** @brief 파일 루트(`<RetargetProfile …>`)의 칸입니다. 루트 · 골반 짝과 목록은 자식 요소라 손으로 푼다. */
     REFLECT()
-    struct SW_API RetargetProfileRootFields
+    struct SW_API RetargetProfileRootParams
     {
         REFLECT_BODY();
 

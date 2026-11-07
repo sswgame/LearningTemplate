@@ -37,7 +37,7 @@ namespace sw
 
     /** @brief 파일 루트의 칸입니다. */
     REFLECT()
-    struct ReferencePoseRootFields
+    struct ReferencePoseRootParams
     {
         REFLECT_BODY();
 
@@ -47,7 +47,7 @@ namespace sw
 
     /** @brief `<Bone>` 의 칸입니다. 덮어쓰기 층이라 적은 칸만 표시한다(`BoneOverride::_fieldMask`). 회전은 도 단위 오일러이고 읽은 뒤 쿼터니언으로 옮긴다. */
     REFLECT()
-    struct BoneOverrideFields
+    struct BoneOverrideParams
     {
         REFLECT_BODY();
 
@@ -63,7 +63,7 @@ namespace sw
 
     /** @brief `<Mirror left right>` 의 칸입니다. */
     REFLECT()
-    struct BoneMirrorFields
+    struct BoneMirrorParams
     {
         REFLECT_BODY();
 

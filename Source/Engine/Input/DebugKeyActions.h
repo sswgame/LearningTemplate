@@ -21,7 +21,7 @@ namespace sw
 {
     /** @brief 디버그 키 재배치 파일(`debugkeys.xml`)의 `<bind>` 하나입니다. 기본 키에서 바뀐 바인딩만 적는다. `modifier` 는 손으로 읽는다(적지 않음이 뜻이다). */
     REFLECT()
-    struct SW_API DebugKeyRebindFields
+    struct SW_API DebugKeyRebindParams
     {
         REFLECT_BODY();
 

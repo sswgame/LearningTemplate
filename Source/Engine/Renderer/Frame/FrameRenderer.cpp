@@ -229,11 +229,11 @@ namespace sw
         releasePassResources();
         _state._graph.clear();
         // 패스 실행의 그래프 실행 상태(이름별 리소스 상태)와 프레임 리스트도 이 디바이스의 것이다.
-        _passExecutor.forgetDevice();
+        _passExecutor.clearDevice();
         _state._frameContext._pCmd = nullptr;
         _pDevice                   = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않도록 버린다.
-        _state._gpuPassTimeline.forgetDevice();
+        _state._gpuPassTimeline.clearDevice();
         _state._pTaskManager = nullptr;
         _status              = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
@@ -342,7 +342,7 @@ namespace sw
         // _state._gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼, 핸들, 머티리얼 데이터 버퍼를 보존한다).
         // 패킷에서는 CPU 스냅샷(인스턴스와 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
         // GPU 버퍼와 디스크립터를 releaseGPU() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
-        _state._gpuScene.adoptCPUSnapshot( packet._gpuScene );
+        _state._gpuScene.applyCPUSnapshot( packet._gpuScene );
         // 캔버스(화면 2D)도 패킷으로만 온다(렌더 스레드는 위젯을 볼 수 없다). 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         setCanvasFrame( packet._canvas );
 

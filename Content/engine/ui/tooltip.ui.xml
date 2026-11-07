@@ -1,6 +1,6 @@
 <UIDocument _schemaVersion="1">
 	<!-- 툴팁 화면 — UITooltipService 가 연다. Body 를 포인터 옆으로 옮기고(렌더 변환) Text 에 위젯 설명 글을 넣는다. 클릭과 호버를 받지 않는다(호버를 빼앗으면 툴팁이 깜빡인다). -->
-	<UIScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<UIScreenDef _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
 	<CanvasPanel _visibility="HitTestInvisible">
 		<BorderPanel _name="Body" _styleClass="tooltip" _contentPadding="10,6,10,6">
 			<_slot _anchorMin="0,0"

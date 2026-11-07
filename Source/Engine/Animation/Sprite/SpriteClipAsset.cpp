@@ -44,7 +44,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite", "Could not read sprite clip '%#'", path );
             return false;
         }
-        return loadText( text, path );
+        return loadFromXMLText( text, path );
     }
 
     bool SpriteClipAsset::loadFromDiskFile( string_view diskPath )
@@ -59,10 +59,10 @@ namespace sw
             SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath );
             return false;
         }
-        return loadText( text, diskPath );
+        return loadFromXMLText( text, diskPath );
     }
 
-    bool SpriteClipAsset::loadText( const string& text, string_view sourceLabel )
+    bool SpriteClipAsset::loadFromXMLText( const string& text, string_view sourceLabel )
     {
         const string label{ sourceLabel };
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값은 오류다(`readConfigXMLDocument` 가 로그로 알린다).

@@ -253,7 +253,7 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
     SW_EXPECT_TRUE( Memory::compare( arrSlot[2 % kSlotCount], arrExpected, kSlotBytes ) == 0 );
 
     // 부순 버퍼는 채우지 않는다.
-    shadow.forget( 7 );
+    shadow.remove( 7 );
     SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
     const uint32 writeCountBeforeForget = writeCount;
     for ( uint32 slot = 0; slot < kSlotCount; ++slot )

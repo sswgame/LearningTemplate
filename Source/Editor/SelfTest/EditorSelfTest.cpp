@@ -270,10 +270,10 @@ namespace sw::editor
         // 정지를 기다리는 동안은 테스트를 부르지 않는다. 진행 중인 일에는 시한이 없고(`EditorSettleJudge`), 할 일 없이 화면이 계속 움직이면 그 테스트의 실패다. 정지 판정의 화면 표본은 레이블 기록이 켜져 있어야 쌓인다(위에서 켰다).
         if ( state._settleWait.has_value() )
         {
-            const EditorSettleVerdict verdict = state._settleWait->advance( editor::getActiveObjectManager() );
-            if ( verdict == EditorSettleVerdict::Waiting )
+            const EditorSettleResult verdict = state._settleWait->advance( editor::getActiveObjectManager() );
+            if ( verdict == EditorSettleResult::Waiting )
                 return;
-            if ( verdict == EditorSettleVerdict::Oscillating )
+            if ( verdict == EditorSettleResult::Oscillating )
                 (void)state._context.expect( false, state._settleWait->describeOscillation().c_str() );
             state._settleWait.reset();
         }

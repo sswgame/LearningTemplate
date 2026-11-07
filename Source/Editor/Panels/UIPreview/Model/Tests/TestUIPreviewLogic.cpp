@@ -180,12 +180,12 @@ SW_TEST_CASE( UIPreviewLogicTest, SlotFieldsFollowTheParentPanel )
 
     SW_EXPECT_FALSE( UIPreviewLogic::findSlotFields( root )._bSizeOverride ); // 루트에는 슬롯이 없다
 
-    const UIPreviewSlotFields canvasFields = UIPreviewLogic::findSlotFields( box );
+    const UIPreviewSlotParams canvasFields = UIPreviewLogic::findSlotFields( box );
     SW_EXPECT_TRUE( canvasFields._bCanvas );
     SW_EXPECT_FALSE( canvasFields._bPaddingAlignment );
     SW_EXPECT_TRUE( UIPreviewLogic::canEditSlotByHandle( box ) );
 
-    const UIPreviewSlotFields boxFields = UIPreviewLogic::findSlotFields( inBox );
+    const UIPreviewSlotParams boxFields = UIPreviewLogic::findSlotFields( inBox );
     SW_EXPECT_TRUE( boxFields._bBoxSize );
     SW_EXPECT_TRUE( boxFields._bPaddingAlignment );
     SW_EXPECT_FALSE( UIPreviewLogic::canEditSlotByHandle( inBox ) );

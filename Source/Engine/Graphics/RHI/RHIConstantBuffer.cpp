@@ -34,7 +34,7 @@ namespace sw
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
         {
-            forget();
+            clear();
             return;
         }
 
@@ -43,6 +43,6 @@ namespace sw
             pDevice->getResourceFactory()->unregisterBindlessResource( _index );
         if ( _buffer != 0 )
             pDevice->getResourceFactory()->destroyBuffer( _buffer );
-        forget();
+        clear();
     }
 } // namespace sw

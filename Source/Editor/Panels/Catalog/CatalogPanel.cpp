@@ -203,17 +203,17 @@ namespace sw::editor
     {
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RefreshFiles" ) ) )
             _bIndexLoaded = SW_FALSE;
-        EditorSelfTestMarks::note( "catalog.refresh" );
+        EditorSelfTestMarks::record( "catalog.refresh" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         CatalogDocument& document = _session.editDocument();
         ImGui::BeginDisabled( _session.hasFile() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 상태 줄에 이유가 있다
-        EditorSelfTestMarks::note( "catalog.save" );
+        EditorSelfTestMarks::record( "catalog.save" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
             revertDocument();
-        EditorSelfTestMarks::note( "catalog.revert" );
+        EditorSelfTestMarks::record( "catalog.revert" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Undo" ) ) );
         ImGui::BeginDisabled( document.canUndo() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Undo" ) ) )
@@ -223,7 +223,7 @@ namespace sw::editor
             _tableEditor.reset();
             syncDirty();
         }
-        EditorSelfTestMarks::note( "catalog.undo" );
+        EditorSelfTestMarks::record( "catalog.undo" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Redo" ) ) );
         ImGui::BeginDisabled( document.canRedo() == false );
@@ -240,7 +240,7 @@ namespace sw::editor
             validateCurrentFile();
             syncDirty(); // 검증 결과 감시 값(`Editor.CatalogValidation`)도 여기서 갱신된다 — 저장 · 복원 길과 같다
         }
-        EditorSelfTestMarks::note( "catalog.validate" );
+        EditorSelfTestMarks::record( "catalog.validate" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "RawText" ) ) );
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "RawText" ), &_bRawMode );
         ImGui::EndDisabled();
@@ -249,7 +249,7 @@ namespace sw::editor
     void CatalogPanel::drawFileList()
     {
         EditorWidgets::drawSearchField( "##catalogFilter", _filter, SW_LOCKEY( "EditorCatalog", "FilterHint" ), -1.0f, false );
-        EditorSelfTestMarks::note( "catalog.filter" );
+        EditorSelfTestMarks::record( "catalog.filter" );
         if ( _bIndexLoaded == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCatalog", "Scanning" ) );
@@ -289,7 +289,7 @@ namespace sw::editor
                 }
                 if ( bFirstFile )
                 {
-                    EditorSelfTestMarks::note( "catalog.file.first" ); // 표식은 마지막 항목을 가리킨다 — 회색 폴더 글보다 먼저
+                    EditorSelfTestMarks::record( "catalog.file.first" ); // 표식은 마지막 항목을 가리킨다 — 회색 폴더 글보다 먼저
                     bFirstFile = false;
                 }
                 EditorWidgets::drawTooltip( file._assetID.c_str() );
@@ -363,7 +363,7 @@ namespace sw::editor
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) );
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) )
                     restorePreviousFile();
-                EditorSelfTestMarks::note( "catalog.restore" );
+                EditorSelfTestMarks::record( "catalog.restore" );
             }
             for ( const string& warning : _session.getWarnings() )
             {

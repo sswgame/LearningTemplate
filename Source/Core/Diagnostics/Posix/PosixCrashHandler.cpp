@@ -46,7 +46,7 @@ namespace sw
 
             /**
              * @brief 시한(`alarm`)이 닿았다 — 그동안 보고가 나아갔으면 시한을 다시 걸고, 한 걸음도 나아가지 않았으면 보고를 버리고 곧장 끝냅니다.
-             * @details 시한은 진척이 멈춘 시간이다(`CrashHandler::noteProgress`). 시그널 안이라 async-signal-safe 한 것(`alarm` · `write` · `_exit` ·
+             * @details 시한은 진척이 멈춘 시간이다(`CrashHandler::recordProgress`). 시그널 안이라 async-signal-safe 한 것(`alarm` · `write` · `_exit` ·
              *          잠금 없는 원자 읽기)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld).
              */
             static void onReportDeadline( int32 )

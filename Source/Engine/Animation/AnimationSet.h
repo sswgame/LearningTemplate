@@ -27,7 +27,7 @@ namespace sw
      *          바탕의 `path` 줄을 `set` 으로 바꾸는 차이는 `_op="Replace"` 를 적는다(칸을 합치면 둘 다 남아 오류다).
      */
     REFLECT()
-    struct SW_API AnimationSetClipFields
+    struct SW_API AnimationSetClipParams
     {
         REFLECT_BODY();
 

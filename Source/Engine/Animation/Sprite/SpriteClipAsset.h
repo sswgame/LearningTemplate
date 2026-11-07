@@ -36,7 +36,7 @@ namespace sw
         float4 _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f };
         /**
          * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위)입니다. 이 프레임에 대한 비율(0..1)이며, 모두 0 이면 테두리가 없습니다. 런타임이 읽는 값입니다.
-         * @details 스프라이트의 자연 크기가 1 × 1 이라 비율이 곧 모서리의 월드 크기다(`SlicedSpriteDesc`). 파일에 적는 값은 `_borderPixels` 이고,
+         * @details 스프라이트의 자연 크기가 1 × 1 이라 비율이 곧 모서리의 월드 크기다(`SlicedSpriteDef`). 파일에 적는 값은 `_borderPixels` 이고,
          *          이 값은 그것을 프레임의 픽셀 크기로 나눈 것이다(`SpriteClipAsset::rebuildFrameBorders`). 파일에는 적지 않는다.
          */
         float4 _border{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -208,6 +208,6 @@ namespace sw
         /** @brief 읽은 값의 의미를 고칩니다(음수 크기 · 테두리는 오류, 프레임 밖 구간은 자르고 알림). 어긋나 읽을 수 없으면 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
         /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromFile` · `loadFromDiskFile`)의 공통 단계입니다. */
-        [[nodiscard]] bool loadText( const string& text, string_view sourceLabel );
+        [[nodiscard]] bool loadFromXMLText( const string& text, string_view sourceLabel );
     };
 } // namespace sw

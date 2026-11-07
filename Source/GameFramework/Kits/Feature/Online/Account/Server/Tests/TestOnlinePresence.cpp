@@ -25,7 +25,7 @@ namespace
     };
 
     /** @brief 캐시 · 버스를 나눈 서버 둘과 서버마다의 접속 상태입니다. 접속 상태는 호스트가 살아 있을 때 내린다. */
-    struct PresenceRig
+    struct PresenceFixture
     {
         LoopbackStreamNetwork   _network{ 9u };
         MemoryServiceDatabase   _database{};
@@ -39,7 +39,7 @@ namespace
         FoundSink               _sink{};
         Subscription            _ownerB{};
 
-        PresenceRig()
+        PresenceFixture()
         {
             _serverA.start();
             _serverB.start();
@@ -48,7 +48,7 @@ namespace
             _ownerB = _presenceB.openFindOwner();
         }
 
-        ~PresenceRig()
+        ~PresenceFixture()
         {
             _ownerB.reset();
             _presenceA.shutdown();
@@ -111,9 +111,9 @@ namespace
 /** @brief [OnlinePresenceTest] 서버 A 에 접속한 계정을 서버 B 가 계정 id 와 표시 이름(대소문자 무시)으로 찾고, 접속한 서버를 받는다 */
 SW_TEST_CASE( OnlinePresenceTest, OtherServerFindsTheAccountByIdAndName )
 {
-    PresenceRig rig;
+    PresenceFixture rig;
     SW_REQUIRE_TRUE( rig._presenceA.isEnabled() && rig._presenceB.isEnabled() );
-    rig._presenceA.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
+    rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
     rig.pump();
 
     const AccountPresenceResult byAccount = rig.findAccountFromB( kAlice );
@@ -134,19 +134,19 @@ SW_TEST_CASE( OnlinePresenceTest, OtherServerFindsTheAccountByIdAndName )
 /** @brief [OnlinePresenceTest] 떠나면 기록을 지우지만, 그사이 다른 서버에 새로 접속했으면 그쪽 기록을 남긴다(내 것일 때만 지운다) */
 SW_TEST_CASE( OnlinePresenceTest, LeavingErasesOnlyItsOwnRecord )
 {
-    PresenceRig rig;
-    rig._presenceA.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
+    PresenceFixture rig;
+    rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
     rig.pump();
-    rig._presenceA.noteOffline( kAlice );
+    rig._presenceA.recordOffline( kAlice );
     rig.pump();
     SW_EXPECT_FALSE( rig.findAccountFromB( kAlice ).isOnline() );
     SW_EXPECT_FALSE( rig.findNameFromB( "Alice" ).isOnline() );
 
-    rig._presenceA.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
+    rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
     rig.pump();
-    rig._presenceB.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) ); // 새 로그인이 이긴다
+    rig._presenceB.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) ); // 새 로그인이 이긴다
     rig.pump();
-    rig._presenceA.noteOffline( kAlice ); // A 의 늦은 정리가 B 의 기록을 지우면 안 된다
+    rig._presenceA.recordOffline( kAlice ); // A 의 늦은 정리가 B 의 기록을 지우면 안 된다
     rig.pump();
     const AccountPresenceResult moved = rig.findAccountFromB( kAlice );
     SW_EXPECT_TRUE( moved.isOnline() );
@@ -156,10 +156,10 @@ SW_TEST_CASE( OnlinePresenceTest, LeavingErasesOnlyItsOwnRecord )
 /** @brief [OnlinePresenceTest] 표시 이름이 바뀌면 이전 이름으로는 찾지 못하고 새 이름으로 찾는다 */
 SW_TEST_CASE( OnlinePresenceTest, RenameMovesTheNameRecord )
 {
-    PresenceRig rig;
-    rig._presenceA.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
+    PresenceFixture rig;
+    rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
     rig.pump();
-    rig._presenceA.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alicia" ) );
+    rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alicia" ) );
     rig.pump();
     SW_EXPECT_FALSE( rig.findNameFromB( "Alice" ).isOnline() );
     const AccountPresenceResult renamed = rig.findNameFromB( "alicia" );
@@ -190,8 +190,8 @@ SW_TEST_CASE( OnlinePresenceTest, DetachedFindEndsNotFoundOnTheNextTick )
 /** @brief [OnlinePresenceTest] 주인 몫을 놓은 찾기는 답이 와도 부르지 않고, 살아 있지 않은 몫으로는 맡기지 않는다(오류) */
 SW_TEST_CASE( OnlinePresenceTest, ReleasedOwnerIsNotCalled )
 {
-    PresenceRig rig;
-    rig._presenceA.noteOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
+    PresenceFixture rig;
+    rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
     rig.pump();
     Subscription owner = rig._presenceB.openFindOwner();
     (void)rig._presenceB.submitFindByAccount( kAlice, rig.makeDelegate(), owner );

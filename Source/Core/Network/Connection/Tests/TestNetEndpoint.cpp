@@ -53,7 +53,7 @@ namespace
             for ( float64 elapsed = step; elapsed <= maxSeconds; elapsed += step )
             {
                 cluster.step( step );
-                NetTestUtil::drainServerMessages( cluster, listReceived );
+                NetTestUtil::pollServerMessages( cluster, listReceived );
                 if ( static_cast<int32>( listReceived.size() ) >= count )
                     return elapsed;
             }
@@ -76,7 +76,7 @@ SW_TEST_CASE( NetEndpointTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );
     SW_EXPECT_EQUAL( 0, pair.getClient( 0 ).getClientIndex() );
     vector<NetEndpointEvent> listEvent;
-    pair.getServer().drainEvents( listEvent );
+    pair.getServer().pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._kind == NetEndpointEvent::Kind::Connected );
 
     // 나쁜 망 — 두 엔드포인트의 보내는 쪽 흉내에 지연 80 ms ± 30, 손실 20 %, 중복 10 %, 깨짐 5 %. 신뢰 메시지 200 개가 순서대로 한 번씩.
@@ -192,7 +192,7 @@ SW_TEST_CASE( NetEndpointTest, EveryChannelPairsItsSendAndReceiveFlows )
     for ( int32 frame = 0; frame < 60 && ( listServerReceived.size() < serverExpected || clientReceived < clientExpected ); ++frame )
     {
         pair.run( 1.0 / 60.0 );
-        NetTestUtil::drainServerMessages( pair, listServerReceived );
+        NetTestUtil::pollServerMessages( pair, listServerReceived );
         int32          connectionID = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         vector<uint8>  buffer;
@@ -269,12 +269,12 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
     SW_EXPECT_LOG( "Net.ServerRefused" );     // 클라이언트가 거절을 받으며 남긴다
     runAll( 0.5, true, true );
     vector<NetEndpointEvent> listEvent;
-    second.drainEvents( listEvent );
+    second.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.size() == 1 );
     SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::ServerFull );
     // 다른 게임의 요청은 이유를 붙여 거절한다(타임아웃을 기다리지 않는다). 그 게임의 다른 패킷은 체크섬부터 틀린다.
     listEvent.clear();
-    foreign.drainEvents( listEvent );
+    foreign.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._reason == NetDisconnectReason::Rejected );
     SW_EXPECT_TRUE( foreign.getConnectionState( 0 ) == NetConnectionState::Disconnected );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
@@ -283,7 +283,7 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
     first.disconnect( 0 );
     runAll( 0.2, true, true );
     listEvent.clear();
-    server.drainEvents( listEvent );
+    server.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected && listEvent.back()._reason == NetDisconnectReason::Remote );
     SW_EXPECT_EQUAL( 0, server.getConnectedCount() );
@@ -292,10 +292,10 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
     SW_REQUIRE_TRUE( first.connect( NetAddress::makeLoopback( 4000 ) ) );
     runAll( 0.3, true, true );
     SW_REQUIRE_TRUE( first.getConnectionState( 0 ) == NetConnectionState::Connected );
-    first.drainEvents( listEvent );
+    first.pollEvents( listEvent );
     listEvent.clear();
     runAll( 1.5, false, true );
-    first.drainEvents( listEvent );
+    first.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
 }
@@ -363,12 +363,12 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
 
     // 대기 시한(10 초)을 넘긴 멈춤은 끊긴다 — 9 초에는 살아 있고 12 초에는 끊겼다.
     vector<NetEndpointEvent> listEvent;
-    client.drainEvents( listEvent );
+    client.pollEvents( listEvent );
     listEvent.clear();
     runFor( 9.0, false, true );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
     runFor( 3.0, false, true );
-    client.drainEvents( listEvent );
+    client.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
 }
@@ -411,7 +411,7 @@ SW_TEST_CASE( NetEndpointTest, WireVersionMismatchIsRefusedWithReason )
     }
     SW_EXPECT_TRUE( current.getConnectionState( 0 ) == NetConnectionState::Connected );
     vector<NetEndpointEvent> listEvent;
-    outdated.drainEvents( listEvent );
+    outdated.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._kind == NetEndpointEvent::Kind::Disconnected );
     SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::VersionMismatch );
@@ -643,10 +643,10 @@ SW_TEST_CASE( NetEndpointTest, ReliableMessagesUpTo64KbArriveWholeOverABadLine )
     for ( int32 step = 0; step < 60 * 20 && listReceived.size() < listSent.size(); ++step )
     {
         cluster.step();
-        NetTestUtil::drainServerMessages( cluster, listReceived );
+        NetTestUtil::pollServerMessages( cluster, listReceived );
     }
     cluster.run( 1.0 ); // 늦게 온 중복 조각 · 재전송이 메시지를 하나 더 만들지 않는다
-    NetTestUtil::drainServerMessages( cluster, listReceived );
+    NetTestUtil::pollServerMessages( cluster, listReceived );
 
     SW_REQUIRE_EQUAL( listSent.size(), listReceived.size() );
     for ( size_t index = 0; index < listSent.size(); ++index )
@@ -671,7 +671,7 @@ SW_TEST_CASE( NetEndpointTest, DisconnectMidMessageLeavesNoFragmentsBehind )
     SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, large ) );
     cluster.run( 0.2 ); // 조각 몇 개만 — 64 개가 다 가기 전
     vector<vector<uint8>> listReceived;
-    NetTestUtil::drainServerMessages( cluster, listReceived );
+    NetTestUtil::pollServerMessages( cluster, listReceived );
     SW_REQUIRE_TRUE( listReceived.empty() );
     const NetConnection* pServerSide = cluster.getServer().findConnection( 0 );
     SW_REQUIRE_TRUE( pServerSide != nullptr );
@@ -687,7 +687,7 @@ SW_TEST_CASE( NetEndpointTest, DisconnectMidMessageLeavesNoFragmentsBehind )
     const vector<uint8> smallMessage = NetTestUtil::makePatternMessage( 9u, 16 );
     SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, smallMessage ) );
     cluster.run( 0.5 );
-    NetTestUtil::drainServerMessages( cluster, listReceived );
+    NetTestUtil::pollServerMessages( cluster, listReceived );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listReceived.size() );
     SW_EXPECT_TRUE_MSG( listReceived[0] == smallMessage, "no fragment of the old connection is glued to the new connection's first message" );
 }

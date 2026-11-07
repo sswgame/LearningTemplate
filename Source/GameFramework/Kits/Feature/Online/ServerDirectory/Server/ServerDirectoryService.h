@@ -6,8 +6,8 @@
  *          - 보이는 내용(기간 안의 점검과 공지)의 해시가 바뀌면 `takeStatusChange` 가 true 이다. 다시 읽기나 기간 경계에서 바뀌며, 시작과 끝은 다시 읽지 않아도 보이는 내용이 바뀐다. 바인딩이 이 서버의 모든 클라이언트에 알린다.
  *          - 배정은 서버 종류마다 기반 계층의 `ServerRegistryReader` 하나(설정 `_listServerKind`)의 스냅샷으로 고른다. 기반 계층의 `ServerSelection` 규칙을 따른다.
  *            점검이 걸린 종류는 허용 계정만 배정받으며, 그들은 Maintenance 상태의 서버도 후보가 된다.
- *          - 변경 API 는 클라이언트 네트워크 메서드로 열지 않는다. GM 도구(GF_Admin)는 서버 조립 문맥의 `IServerDirectoryControl` 로 부르고 완료를 `drainControlCompletions` 로 받는다.
- *            같은 프로세스의 다른 코드와 테스트는 `setMaintenance` 등을 직접 부르고 `drainCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다.
+ *          - 변경 API 는 클라이언트 네트워크 메서드로 열지 않는다. GM 도구(GF_Admin)는 서버 조립 문맥의 `IServerDirectoryControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
+ *            같은 프로세스의 다른 코드와 테스트는 `setMaintenance` 등을 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다.
  *
  *          PlayFab Title News(공지)와 타이틀 점검, 국내 MMO 의 "서버 선택과 점검 화이트리스트" 와 같은 구조이다.
  */
@@ -33,7 +33,7 @@ namespace sw
     class EphemeralStoreRouter;
     class IServiceStore;
     class ServerBus;
-    class ServerDirectoryWriteWork;
+    class ServerDirectoryWriteJob;
 
     /** @brief 서버 디렉터리 설정입니다. */
     struct ServerDirectoryServiceConfig
@@ -119,18 +119,18 @@ namespace sw
         /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막으면 true 입니다. 계정 서버와 게임 서버가 조립 단계에서 물을 수 있습니다. 막으면 그 점검 창을 @p pOutWindow 에 채웁니다. */
         bool isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
 
-        // 변경 함수들이며 비동기이다. 완료는 drainCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
+        // 변경 함수들이며 비동기이다. 완료는 takeCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
         void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
         void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
         void removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
 
-        void drainCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
+        void takeCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         // IServerDirectoryControl — GM 키트가 서버 조립 문맥으로 부른다
         void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
+        void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
 
         uint64 getStatusRevision() const { return _statusRevision; }
         int32  getPendingCount() const { return _pendingCount; }
@@ -144,7 +144,7 @@ namespace sw
         void                  markStatusIfChanged( UnixMilliseconds nowMs );
         uint64                computeVisibleHash( UnixMilliseconds nowMs ) const;
         ServerRegistryReader* findReader( string_view kind ) const;
-        void                  submitWrite( unique_ptr<ServerDirectoryWriteWork> work );
+        void                  submitWrite( unique_ptr<ServerDirectoryWriteJob> work );
 
     private:
         vector<unique_ptr<ServerRegistryReader>> _listReader;

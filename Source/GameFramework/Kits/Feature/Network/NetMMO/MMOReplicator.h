@@ -305,7 +305,7 @@ namespace sw
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 서버에 (다시) 연결되면 호출합니다. 보이던 엔티티를 비우며, 새 연결은 새로 보임부터 다시 받습니다. */
         void onConnectionOpened( int32 connectionID ) override;
-        void drainEvents( vector<MMOClientEvent>& outListEvent );
+        void pollEvents( vector<MMOClientEvent>& outListEvent );
 
         const MMOEntity* findEntity( uint32 entityID ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }

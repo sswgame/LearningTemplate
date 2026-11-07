@@ -4,37 +4,37 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
 
 // 결함: 상태 바이트의 값이 최대를 넘어도 받아 체력 · 자원이 그릇보다 많은 채로 복원됐다 - 키트마다 손으로 막던 것을 읽기 입구에서 막는다.
 SW_TEST_CASE( HealthStateLimitsTest, VitalityRefusesHealthAboveItsMaximum )
 {
-    sw::VitalitySettings settings;
+    sw::CombatHealthSettings settings;
     settings._maxHealth = 100.0f;
     settings._maxShield = 10.0f;
-    sw::Vitality written;
+    sw::CombatHealth written;
     SW_REQUIRE_TRUE( written.initialize( settings ) );
     sw::Archive archive;
     written.writeState( archive );
 
-    sw::Vitality same;
+    sw::CombatHealth same;
     SW_REQUIRE_TRUE( same.initialize( settings ) );
     sw::Archive reading( archive.getData(), archive.getSize() );
     SW_EXPECT_TRUE( same.readState( reading ) );
     SW_EXPECT_EQUAL( same.getHealth(), 100.0f );
 
-    sw::VitalitySettings smaller = settings;
-    smaller._maxHealth           = 50.0f;
-    sw::Vitality lowered;
+    sw::CombatHealthSettings smaller = settings;
+    smaller._maxHealth               = 50.0f;
+    sw::CombatHealth lowered;
     SW_REQUIRE_TRUE( lowered.initialize( smaller ) );
     sw::Archive readingLowered( archive.getData(), archive.getSize() );
     SW_EXPECT_FALSE( lowered.readState( readingLowered ) );
     SW_EXPECT_EQUAL( lowered.getHealth(), 50.0f ); // 거절하면 그대로다
 
-    sw::VitalitySettings noShield = settings;
-    noShield._maxShield           = 5.0f;
-    sw::Vitality shieldLowered;
+    sw::CombatHealthSettings noShield = settings;
+    noShield._maxShield               = 5.0f;
+    sw::CombatHealth shieldLowered;
     SW_REQUIRE_TRUE( shieldLowered.initialize( noShield ) );
     sw::Archive readingShield( archive.getData(), archive.getSize() );
     SW_EXPECT_FALSE( shieldLowered.readState( readingShield ) );

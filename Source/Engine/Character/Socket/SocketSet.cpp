@@ -94,7 +94,7 @@ namespace sw
                 reader.reportUnknownElement( child );
                 continue;
             }
-            SocketKindFields kindFields;
+            SocketKindParams kindFields;
             (void)reader.readFields( child, kindFields ); // 오류는 읽개의 목록에 쌓인다
             const hashed_string name = kindFields._name;
             if ( name.empty() )
@@ -215,11 +215,11 @@ namespace sw
     void SocketSet::readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader )
     {
         // 칸은 스키마로 읽고, 적은 칸만 덮어쓰기 표시를 단다(층이 쌓일 때 적지 않은 칸은 아래 층의 값을 둔다).
-        SocketFields fields;
-        (void)reader.readFields( node, fields, { "fallback" } );
+        SocketParams params;
+        (void)reader.readFields( node, params, { "fallback" } );
         SocketDef socket;
         socket._fieldMask = 0;
-        socket._name      = fields._name;
+        socket._name      = params._name;
         if ( socket._name.empty() )
             return;
         if ( findSocket( socket._name ) != nullptr )
@@ -235,37 +235,37 @@ namespace sw
             return bWritten;
         };
         if ( markWritten( "parent", SocketFieldBit::kParent ) )
-            socket._parent = fields._parent;
+            socket._parent = params._parent;
         if ( markWritten( "kind", SocketFieldBit::kKind ) )
         {
-            socket._kind = fields._kind;
+            socket._kind = params._kind;
             if ( socket._kind.empty() == false && kinds.hasKind( socket._kind ) == false )
                 reader.addError( "Character.SocketKindUnknown", node, string( "has unknown kind '" ) + socket._kind.c_str() + "'" );
         }
         if ( markWritten( "translation", SocketFieldBit::kTranslation ) )
-            socket._translation = fields._translation;
+            socket._translation = params._translation;
         if ( markWritten( "rotation", SocketFieldBit::kRotation ) )
-            socket._rotation = quaternion::makeFromYawPitchRoll( fields._rotation * MathUtil::kDegreeToRadian );
+            socket._rotation = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
         if ( markWritten( "scale", SocketFieldBit::kScale ) )
-            socket._scale = fields._scale;
+            socket._scale = params._scale;
         if ( markWritten( "preview", SocketFieldBit::kPreview ) )
-            socket._previewMesh = string( StringUtil::trim( fields._preview ) );
+            socket._previewMesh = string( StringUtil::trim( params._preview ) );
         if ( markWritten( "fallback", SocketFieldBit::kFallback ) )
             reader.readNameList( node, "fallback", socket._listFallback );
         if ( markWritten( "anchor", SocketFieldBit::kAnchor ) )
-            socket._anchor = fields._anchor;
+            socket._anchor = params._anchor;
         _listSocket.push_back( std::move( socket ) );
     }
 
     void SocketSet::readVirtualBone( const XMLNode& node, CharacterDataReader& reader )
     {
-        VirtualBoneFields fields;
-        (void)reader.readFields( node, fields );
+        VirtualBoneParams params;
+        (void)reader.readFields( node, params );
         VirtualBoneDef virtualBone;
-        virtualBone._name                 = fields._name;
-        virtualBone._from                 = fields._from;
-        virtualBone._to                   = fields._to;
-        virtualBone._weight               = fields._weight;
+        virtualBone._name                 = params._name;
+        virtualBone._from                 = params._from;
+        virtualBone._to                   = params._to;
+        virtualBone._weight               = params._weight;
         const bool bIncompleteVirtualBone = virtualBone._name.empty() || virtualBone._from.empty() || virtualBone._to.empty();
         if ( bIncompleteVirtualBone )
             return;

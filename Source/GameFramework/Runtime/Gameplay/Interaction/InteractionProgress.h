@@ -111,7 +111,7 @@ namespace sw
         uint32                   getSkillCheckActor() const { return _skillCheckActor; }
         const InteractionConfig& getConfig() const { return _config; }
         /** @brief 쌓인 이벤트를 @p outListEvent 뒤에 추가하고 비웁니다. */
-        void drainEvents( vector<InteractionEvent>& outListEvent );
+        void pollEvents( vector<InteractionEvent>& outListEvent );
 
         /** @brief 참가자, 난수, 시드, 진행량, 시계, 스킬 체크(대상, 남은 시간, 목표 시각, 대기), 끝남, 퇴행을 씁니다. 규칙과 판정기는 `initialize` 가 받은 것이므로 저장하지 않고, 알림은 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;

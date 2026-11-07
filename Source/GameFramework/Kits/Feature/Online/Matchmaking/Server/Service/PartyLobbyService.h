@@ -153,11 +153,11 @@ namespace sw
         /** @brief 계정이 이 서버에서 떠났을 때 부릅니다. 파티와, 이 서버가 들여보낸 로비에서 뺍니다. */
         void removeAccount( AccountID accountID );
 
-        void drainCompletions( vector<PartyLobbyCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
-        void drainNotifications( vector<PartyLobbyNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
-        void drainLobbyStarts( vector<LobbyStartRequest>& outListStart ) { _lobbyStartBuffer.drainTo( outListStart ); }
+        void takeCompletions( vector<PartyLobbyCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void pollNotifications( vector<PartyLobbyNotification>& outListNotification ) { _notificationBuffer.moveAllTo( outListNotification ); }
+        void pollLobbyStarts( vector<LobbyStartRequest>& outListStart ) { _lobbyStartBuffer.moveAllTo( outListStart ); }
         /** @brief 멤버가 바뀌어 대기열에서 빠져야 할 파티 티켓입니다. */
-        void drainBrokenTickets( vector<uint64>& outListTicketID ) { _brokenTicketBuffer.drainTo( outListTicketID ); }
+        void pollBrokenTickets( vector<uint64>& outListTicketID ) { _brokenTicketBuffer.moveAllTo( outListTicketID ); }
 
         int32 getPendingCount() const { return _updater.getPendingCount() + static_cast<int32>( _mapRequestToStep.size() ); }
 

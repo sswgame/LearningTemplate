@@ -46,7 +46,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
         if ( _zone._listPhase.empty() )
@@ -54,7 +54,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool BattleRoyaleCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool BattleRoyaleCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Armor" ) )
             return loadArmor( node, sourceName );

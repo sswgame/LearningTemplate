@@ -40,7 +40,7 @@ namespace sw
     bool GameSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = GameSettings{};
-        return GameDataXML::loadText( *this, &GameSettings::loadRoot, xmlText, sourceName, "GameSettings" );
+        return GameDataXML::loadFromXMLText( *this, &GameSettings::loadRoot, xmlText, sourceName, "GameSettings" );
     }
 
     namespace
@@ -79,7 +79,7 @@ namespace sw
             // 팩 밖에서 읽는 필수 데이터 — 종류 하나에 팩 하나다. 자리는 읽는 쪽(`GameInstance::makeRequiredDataPath`)이 등록 줄의 규칙으로 만든다.
             if ( StringUtil::equals( pName, "RequiredData" ) )
             {
-                RequiredDataFields line;
+                RequiredDataParams line;
                 const bool         bRead = XMLFields::readFields( child, line, sourceName ); // 두 칸 모두 필수
                 if ( bRead == false || line._kind.empty() || line._pack.empty() )
                 {

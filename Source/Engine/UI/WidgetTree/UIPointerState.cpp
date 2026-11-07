@@ -75,7 +75,7 @@ namespace sw
             pWidget->onPointerCaptureLost();
     }
 
-    void UIPointerState::forgetTree( const WidgetTree& tree )
+    void UIPointerState::removeTree( const WidgetTree& tree )
     {
         if ( _pHoverTree == &tree )
         {

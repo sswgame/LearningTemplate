@@ -162,7 +162,7 @@ namespace sw::editor
                 ImGui::EndTabItem();
             }
             const bool bDebugTab = ImGui::BeginTabItem( SW_LOCKEY( "EdSection", "Debug" ) );
-            EditorSelfTestMarks::note( "inputMap.tab.debug" );
+            EditorSelfTestMarks::record( "inputMap.tab.debug" );
             if ( bDebugTab )
             {
                 drawDebugTab();
@@ -194,7 +194,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Reload" ) ) )
             reloadFromFile();
-        EditorSelfTestMarks::note( "inputMap.reload" );
+        EditorSelfTestMarks::record( "inputMap.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReloadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
@@ -277,7 +277,7 @@ namespace sw::editor
             if ( bConflict )
                 EditorThemeUtil::popTextColor();
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( string{ "inputMap.action." } + actionName.c_str() ).c_str() );
+                EditorSelfTestMarks::record( ( string{ "inputMap.action." } + actionName.c_str() ).c_str() );
             if ( bConflict )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ActionConflictTip" ) );
             // 키 글리프는 오른쪽 끝에 맞춘다 — 고정 폭으로 비워 두면 "[ LeftControl+... ]" 같은 긴 글리프가 잘린다.
@@ -335,7 +335,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "NoBindings" ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EditorInputMap", "AddBinding" ) ) )
             _document.beginNewBindingCapture();
-        EditorSelfTestMarks::note( "inputMap.addBinding" );
+        EditorSelfTestMarks::record( "inputMap.addBinding" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "AddBindingTip" ) );
 
         drawActionConflicts( action );
@@ -407,7 +407,7 @@ namespace sw::editor
         const utf8*         pCurrent = getEnumName( trigger );
         const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
         if ( EditorSelfTestMarks::isEnabled() )
-            EditorSelfTestMarks::note( ( formatToString( "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) ) ).c_str() );
+            EditorSelfTestMarks::record( ( formatToString( "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) ) ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TriggerTip" ) );
         if ( bOpen == false )
             return;
@@ -417,7 +417,7 @@ namespace sw::editor
             if ( ImGui::Selectable( getEnumName( value ), value == trigger ) )
                 (void)_document.setBindingTrigger( action, bindIndex, value );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );
+                EditorSelfTestMarks::record( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );
         }
         ImGui::EndCombo();
     }

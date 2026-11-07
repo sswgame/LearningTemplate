@@ -736,7 +736,7 @@ namespace sw
         destroyBodies( span<const PhysicsBodyHandle>{ &body, 1 } );
     }
 
-    void Box2DPhysicsScene::forgetPairJointsOf( PhysicsBodyHandle body )
+    void Box2DPhysicsScene::removePairJointsOf( PhysicsBodyHandle body )
     {
         for ( map<pair<uint64, uint64>, b2JointId>::iterator iter = _mapPairToJoint.begin(); iter != _mapPairToJoint.end(); )
         {
@@ -766,7 +766,7 @@ namespace sw
             {
                 _joints.erase( joint.getSlot() );
             }
-            forgetPairJointsOf( body );
+            removePairJointsOf( body );
             for ( const b2ShapeId& shapeID : record._listShapeID )
             {
                 _mapShapeToBody.erase( Box2DUtil::makeShapeKey( shapeID ) );

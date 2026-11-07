@@ -87,7 +87,7 @@ namespace sw
         explicit MemoryServiceStore( MemoryServiceDatabase* pDatabase );
         ~MemoryServiceStore() override;
 
-        void  submit( unique_ptr<IServiceStoreWork> work ) override;
+        void  submit( unique_ptr<IServiceStoreJob> work ) override;
         int32 pollCompletions() override;
         int32 getPendingCount() const override;
         void  shutdown() override;
@@ -95,9 +95,9 @@ namespace sw
         MemoryServiceDatabase& getDatabase() { return *_pDatabase; }
 
     private:
-        mutable mutex                                        _mutex; ///< 완료 큐를 보호한다. `submit` 은 아무 스레드에서나 부른다
-        vector<unique_ptr<IServiceStoreWork>> _listCompleted SW_GUARDED_BY( _mutex );
-        MemoryServiceDatabase*                               _pDatabase;
-        uint8 _bShutdown                                     SW_GUARDED_BY( _mutex );
+        mutable mutex                                       _mutex; ///< 완료 큐를 보호한다. `submit` 은 아무 스레드에서나 부른다
+        vector<unique_ptr<IServiceStoreJob>> _listCompleted SW_GUARDED_BY( _mutex );
+        MemoryServiceDatabase*                              _pDatabase;
+        uint8 _bShutdown                                    SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

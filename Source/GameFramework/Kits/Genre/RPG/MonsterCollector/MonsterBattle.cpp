@@ -63,7 +63,7 @@ namespace sw
         , _pChart{ nullptr }
         , _weatherTurns{ 0 }
         , _escapeAttempts{ 0 }
-        , _outcome{ MonsterBattleOutcome::Ongoing }
+        , _outcome{ MonsterBattleResult::Ongoing }
         , _bWild{ SW_FALSE }
     {
     }
@@ -83,7 +83,7 @@ namespace sw
         _arrSide[kPlayerSide]._listMonster = listPlayer;
         _arrSide[kFoeSide]._listMonster    = listFoe;
         _bWild                             = bWild;
-        _outcome                           = MonsterBattleOutcome::Ongoing;
+        _outcome                           = MonsterBattleResult::Ongoing;
         _escapeAttempts                    = 0;
         _captured                          = MonsterInstance{};
         _weatherID                         = hashed_string{};
@@ -98,7 +98,7 @@ namespace sw
             const int32 first = findFirstUsable( side );
             if ( first < 0 )
             {
-                setOutcome( side == kPlayerSide ? MonsterBattleOutcome::Lost : MonsterBattleOutcome::Won );
+                setOutcome( side == kPlayerSide ? MonsterBattleResult::Lost : MonsterBattleResult::Won );
                 return;
             }
             _arrSide[side]._activeIndex = first;
@@ -137,7 +137,7 @@ namespace sw
 
     bool MonsterBattle::isInProgress() const
     {
-        return _outcome == MonsterBattleOutcome::Ongoing && _pCatalog != nullptr && _arrSide[kPlayerSide]._listMonster.empty() == false && _arrSide[kFoeSide]._listMonster.empty() == false;
+        return _outcome == MonsterBattleResult::Ongoing && _pCatalog != nullptr && _arrSide[kPlayerSide]._listMonster.empty() == false && _arrSide[kFoeSide]._listMonster.empty() == false;
     }
 
     bool MonsterBattle::setAction( int32 side, const MonsterAction& action )
@@ -196,7 +196,7 @@ namespace sw
             return entry._activeIndex == 0 && entry._bNeedsSwitch == false && entry._action._kind == MonsterActionKind::None;
         if ( entry._activeIndex < 0 || entry._activeIndex >= static_cast<int32>( entry._listMonster.size() ) || canUseAction( side, entry._action ) == false )
             return false;
-        if ( _outcome != MonsterBattleOutcome::Ongoing )
+        if ( _outcome != MonsterBattleResult::Ongoing )
             return true;
         // 진행 중에는 나선 개체가 살아 있거나, 쓰러졌으면 대신 나설 개체가 있어 교체를 기다린다.
         if ( entry._bNeedsSwitch == false )
@@ -225,7 +225,7 @@ namespace sw
         }
         _turnOrder.restartRound();
 
-        for ( int32 turn = 0; turn < kSideCount && _outcome == MonsterBattleOutcome::Ongoing; ++turn )
+        for ( int32 turn = 0; turn < kSideCount && _outcome == MonsterBattleResult::Ongoing; ++turn )
         {
             const int32 side = _turnOrder.next();
             if ( side < 0 || side >= kSideCount )
@@ -233,7 +233,7 @@ namespace sw
             executeAction( side );
         }
 
-        if ( _outcome == MonsterBattleOutcome::Ongoing )
+        if ( _outcome == MonsterBattleResult::Ongoing )
             applyEndOfRound();
         for ( Side& entry : _arrSide )
         {
@@ -405,7 +405,7 @@ namespace sw
         }
         _captured = target;
         pushEvent( MonsterBattleEvent::Kind::Captured, kFoeSide, 0, target._speciesID );
-        setOutcome( MonsterBattleOutcome::Captured );
+        setOutcome( MonsterBattleResult::Captured );
     }
 
     void MonsterBattle::executeRun()
@@ -426,7 +426,7 @@ namespace sw
             return;
         }
         pushEvent( MonsterBattleEvent::Kind::Escaped, kPlayerSide, _escapeAttempts );
-        setOutcome( MonsterBattleOutcome::Escaped );
+        setOutcome( MonsterBattleResult::Escaped );
     }
 
     void MonsterBattle::switchTo( int32 side, int32 partyIndex )
@@ -511,7 +511,7 @@ namespace sw
         }
         if ( bHasOther == false )
         {
-            setOutcome( side == kPlayerSide ? MonsterBattleOutcome::Lost : MonsterBattleOutcome::Won );
+            setOutcome( side == kPlayerSide ? MonsterBattleResult::Lost : MonsterBattleResult::Won );
             return;
         }
         _arrSide[side]._bNeedsSwitch = true;
@@ -547,7 +547,7 @@ namespace sw
     void MonsterBattle::applyEndOfRound()
     {
         const MonsterWeatherDef* pWeather = _weatherID.empty() ? nullptr : _pCatalog->findWeather( _weatherID );
-        for ( int32 side = 0; side < kSideCount && _outcome == MonsterBattleOutcome::Ongoing; ++side )
+        for ( int32 side = 0; side < kSideCount && _outcome == MonsterBattleResult::Ongoing; ++side )
         {
             if ( _arrSide[side]._bNeedsSwitch || getActive( side ).isFainted() )
                 continue;
@@ -740,7 +740,7 @@ namespace sw
         return -1;
     }
 
-    void MonsterBattle::setOutcome( MonsterBattleOutcome outcome )
+    void MonsterBattle::setOutcome( MonsterBattleResult outcome )
     {
         _outcome = outcome;
         pushEvent( MonsterBattleEvent::Kind::BattleEnded, kPlayerSide, static_cast<int32>( outcome ) );
@@ -757,9 +757,9 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void MonsterBattle::drainEvents( vector<MonsterBattleEvent>& outListEvent )
+    void MonsterBattle::pollEvents( vector<MonsterBattleEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void MonsterBattle::writeState( Archive& outArchive ) const
@@ -840,11 +840,11 @@ namespace sw
         archive >> bWild;
         // 날씨가 없으면 턴도 0 이고, 있으면 남은 턴이거나 끝없음(-1)이다.
         const bool bWeatherValid  = restored._weatherID.empty() ? restored._weatherTurns == 0 : ( _pCatalog->findWeather( restored._weatherID ) != nullptr && ( restored._weatherTurns == -1 || restored._weatherTurns > 0 ) );
-        const bool bCapturedValid = restored._captured._speciesID.empty() ? outcome != static_cast<uint8>( MonsterBattleOutcome::Captured ) : restored._captured.isKnownTo( *_pCatalog );
-        const bool bValid         = archive.isOk() && bWeatherValid && bCapturedValid && outcome <= static_cast<uint8>( MonsterBattleOutcome::Escaped ) && bWild <= SW_TRUE && restored._escapeAttempts >= 0;
+        const bool bCapturedValid = restored._captured._speciesID.empty() ? outcome != static_cast<uint8>( MonsterBattleResult::Captured ) : restored._captured.isKnownTo( *_pCatalog );
+        const bool bValid         = archive.isOk() && bWeatherValid && bCapturedValid && outcome <= static_cast<uint8>( MonsterBattleResult::Escaped ) && bWild <= SW_TRUE && restored._escapeAttempts >= 0;
         if ( bValid == false )
             return false;
-        restored._outcome = static_cast<MonsterBattleOutcome>( outcome );
+        restored._outcome = static_cast<MonsterBattleResult>( outcome );
         restored._bWild   = bWild == SW_TRUE;
         for ( int32 side = 0; side < kSideCount; ++side )
         {

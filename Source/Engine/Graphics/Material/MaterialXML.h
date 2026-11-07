@@ -19,7 +19,7 @@ namespace sw
      *          예전에는 칸마다 속성과 같은 이름의 자식 원소를 모두 받고 `type` 에 옛 이름 `cpuType` 을 받았다 — 콘텐츠가 쓰지 않는 두 번째 문법이라 지웠다.
      */
     REFLECT()
-    struct SW_API MaterialPropertyFields
+    struct SW_API MaterialPropertyParams
     {
         REFLECT_BODY();
 
@@ -63,7 +63,7 @@ namespace sw
 
     /** @brief 열거 프로퍼티의 항목 하나(`<_enumEntries><item name value/>`)입니다. */
     REFLECT()
-    struct SW_API MaterialEnumEntryFields
+    struct SW_API MaterialEnumEntryParams
     {
         REFLECT_BODY();
 
@@ -74,12 +74,12 @@ namespace sw
     };
 
     /**
-     * @brief 머티리얼 루트(`<MaterialDesc …>`)의 칸입니다. `formatVersion` 은 에셋 형식이, `_base` 는 부모 펼치기(`DataInheritance`)가 읽는다.
+     * @brief 머티리얼 루트(`<MaterialDef …>`)의 칸입니다. `formatVersion` 은 에셋 형식이, `_base` 는 부모 펼치기(`DataInheritance`)가 읽는다.
      * @details 쓸 때는 기본값도 모두 쓴다(`XMLFields::writeEveryField`) — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
      *          렌더 상태 칸(`RHIFixedRenderState`)은 같은 원소에 적지만 이 구조체에 들지 않는다 — "적지 않음" 이 "패스의 값" 이라 적은 칸만 쓴다(`MaterialXML::parseRenderFields`).
      */
     REFLECT()
-    struct SW_API MaterialRootFields
+    struct SW_API MaterialRootParams
     {
         REFLECT_BODY();
 
@@ -90,7 +90,7 @@ namespace sw
         PROPERTY()
         MaterialAlphaMode _alphaMode{ MaterialAlphaMode::Opaque };
         PROPERTY( Min = 0, Max = 1 )
-        float32 _alphaCutoff{ MaterialDesc{}._alphaCutoff };
+        float32 _alphaCutoff{ MaterialDef{}._alphaCutoff };
         PROPERTY()
         int32 _renderQueue{ 0 };
         PROPERTY()
@@ -101,21 +101,21 @@ namespace sw
 
     /** @brief 순열(`<_permutations quality shaderLOD usage>`)의 칸입니다. 목록(`_alwaysDefines` · `_staticSwitches` · `_multiCompiles`)은 자식 원소라 손으로 푼다. */
     REFLECT()
-    struct SW_API MaterialPermutationFields
+    struct SW_API MaterialPermutationParams
     {
         REFLECT_BODY();
 
         PROPERTY()
-        MaterialQualityLevel _quality{ MaterialPermutationDesc{}._quality };
+        MaterialQualityLevel _quality{ MaterialPermutationDef{}._quality };
         PROPERTY()
-        uint32 _shaderLOD{ MaterialPermutationDesc{}._shaderLOD };
+        uint32 _shaderLOD{ MaterialPermutationDef{}._shaderLOD };
         PROPERTY()
-        MaterialUsageFlags _usage{ MaterialPermutationDesc{}._usage };
+        MaterialUsageFlags _usage{ MaterialPermutationDef{}._usage };
     };
 
     /** @brief 정적 스위치(`<_staticSwitches><item …/>`) 하나의 칸입니다. 이름을 적지 않으면 키워드가 이름이다. */
     REFLECT()
-    struct SW_API MaterialStaticSwitchFields
+    struct SW_API MaterialStaticSwitchParams
     {
         REFLECT_BODY();
 
@@ -133,7 +133,7 @@ namespace sw
 
     /** @brief 멀티 컴파일(`<_multiCompiles><item name selected>`) 하나의 칸입니다 — 머티리얼과 인스턴스가 함께 쓴다. 선택지(`_options`)는 자식 목록이다. */
     REFLECT()
-    struct SW_API MaterialMultiCompileFields
+    struct SW_API MaterialMultiCompileParams
     {
         REFLECT_BODY();
 
@@ -143,9 +143,9 @@ namespace sw
         string _selected{};
     };
 
-    /** @brief 머티리얼 인스턴스 루트(`<MaterialInstanceDesc name parentPath quality>`)의 칸입니다. `quality` 는 적지 않음이 "덮어쓰지 않음"이라 손으로 읽는다. */
+    /** @brief 머티리얼 인스턴스 루트(`<MaterialInstanceDef name parentPath quality>`)의 칸입니다. `quality` 는 적지 않음이 "덮어쓰지 않음"이라 손으로 읽는다. */
     REFLECT()
-    struct SW_API MaterialInstanceRootFields
+    struct SW_API MaterialInstanceRootParams
     {
         REFLECT_BODY();
 
@@ -157,7 +157,7 @@ namespace sw
 
     /** @brief 인스턴스의 값 덮어쓰기(`<_overrides><item name value assetPath/>`) 하나입니다. `assetPath` 가 있으면 텍스처 덮어쓰기다. */
     REFLECT()
-    struct SW_API MaterialOverrideFields
+    struct SW_API MaterialOverrideParams
     {
         REFLECT_BODY();
 
@@ -171,7 +171,7 @@ namespace sw
 
     /** @brief 인스턴스의 정적 스위치 덮어쓰기(`<_keywords><item name bEnabled/>`) 하나입니다. */
     REFLECT()
-    struct SW_API MaterialKeywordOverrideFields
+    struct SW_API MaterialKeywordOverrideParams
     {
         REFLECT_BODY();
 
@@ -197,19 +197,19 @@ namespace sw
         /** @brief 루트 속성 @p pName 이 렌더 상태 칸(`RHIFixedRenderState`)이면 true 입니다. 칸 표는 리플렉션 하나다. */
         [[nodiscard]] static bool isRenderStateAttribute( const utf8* pName );
         /**
-         * @brief 루트의 렌더 칸(@p rootFields 와 렌더 상태 · `_listBlendTarget`)을 읽어 @p inoutDesc 에 담습니다. 받아 줄 수 없는 조합은 오류를 남기고 false 입니다.
+         * @brief 루트의 렌더 칸(@p rootParams 와 렌더 상태 · `_listBlendTarget`)을 읽어 @p inoutDesc 에 담습니다. 받아 줄 수 없는 조합은 오류를 남기고 false 입니다.
          * @details 조합 규칙: 깊이 테스트는 덮을 수 없다(첨부와 함께 움직인다 — `depthCompare="Always"` 를 쓴다). 켜진 블렌드는 `alphaMode="Blend"` 만 받는다. 프리셋과 타깃 목록은 함께 적지 않는다.
          *          `twoSidedLighting` 은 `cullMode="None"` 과 함께다. `alphaCutoff` 는 `Mask` 일 때만 기본값이 아닐 수 있다. `MATERIAL_ALPHA_CUTOFF` · `MATERIAL_TWO_SIDED` 를 define 으로 직접 적지 않는다.
          *          @p inoutDesc 의 퍼뮤테이션을 읽은 뒤에 부른다.
          */
-        [[nodiscard]] static bool parseRenderFields( XMLNode root, const MaterialRootFields& rootFields, string_view sourceName, MaterialDesc& inoutDesc );
+        [[nodiscard]] static bool parseRenderFields( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc );
         /** @brief 렌더 상태 칸 중 적은 것과 `_listBlendTarget` 을 씁니다(`parseRenderFields` 의 짝). */
-        static void appendRenderFields( XMLNode root, const MaterialDesc& desc );
+        static void appendRenderFields( XMLNode root, const MaterialDef& desc );
 
-        /** @brief 순열 설정을 읽습니다(칸은 `MaterialPermutationFields` · `MaterialStaticSwitchFields` · `MaterialMultiCompileFields`). 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc );
+        /** @brief 순열 설정을 읽습니다(칸은 `MaterialPermutationParams` · `MaterialStaticSwitchParams` · `MaterialMultiCompileParams`). 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parsePermutationNode( XMLNode root, MaterialPermutationDef& outDesc );
 
-        static void appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationDesc );
+        static void appendPermutationNode( XMLNode root, const MaterialPermutationDef& permutationDesc );
 
         /**
          * @brief 머티리얼의 합치기 규칙입니다(`DataInheritance`). 머티리얼은 손으로 읽는 XML 이라 값으로 적는다 — 언리얼 Material Instance 의 "부모 + 바꾼 값만" 과 같은 일이다.

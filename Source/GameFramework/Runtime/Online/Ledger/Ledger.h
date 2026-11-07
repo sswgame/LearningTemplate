@@ -1,7 +1,7 @@
 /**
  * @file Ledger.h
  * @brief 원장을 정의합니다. 테이블 세 개(`ledger_balance`, `ledger_journal`, `ledger_history`) 위의 복식 이동입니다.
- * @details 모두 저장소 스레드(`IServiceStoreWork::run`)에서 도는 동기 함수이다.
+ * @details 모두 저장소 스레드(`IServiceStoreJob::run`)에서 도는 동기 함수이다.
  *          PlayFab Economy v2 의 거래 기록이나 Nakama 의 wallet_ledger(단식)와 달리 복식이며 분개 키로 멱등하다. 회계의 차변과 대변이 같다.
  *
  *          - 잔액: 계정과 맡김마다 (보유자, 자산) 레코드 하나를 둔다(키 `<보유자 키>/<자산>`). 0 이 되면 지운다. 발행과 소각에는 잔액이 없다.
@@ -45,14 +45,14 @@ namespace sw
          *          커밋이 `Conflict` 나 `Unavailable` 이면 `resolveConflict` 로 가린다.
          */
         [[nodiscard]] static LedgerResult stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, ServiceTransaction& inoutTransaction,
-                                                         LedgerTransferOutcome& outOutcome );
+                                                         LedgerTransferResult& outResult );
         /** @brief 붙인 트랜잭션의 커밋이 실패했을 때 결과를 가립니다. 분개가 이제 있으면 `Ok` 와 `_bReplayed` 이며(다른 서버가 먼저 했거나 응답만 잃은 경우), 없으면 `Conflict` 이고, 읽지 못하면 `Unavailable` 입니다. */
-        [[nodiscard]] static LedgerResult resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferOutcome& outOutcome );
+        [[nodiscard]] static LedgerResult resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult );
         /**
          * @brief 이동 하나를 혼자 커밋합니다. 붙이고, 커밋하고, 버전 충돌이면 다시 읽어 다시 합니다(`kMaxRetryCount`).
          * @details 커밋이 `Unavailable` 이고 분개가 없으면 `Unavailable` 이다. 적용 여부를 모르는 상태이며, 같은 키로 나중에 다시 하면 가려진다.
          */
-        [[nodiscard]] static LedgerResult executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferOutcome& outOutcome );
+        [[nodiscard]] static LedgerResult executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult );
 
         /** @brief 계정이나 맡김의 모든 잔액을 자산 id 순으로 @p outListBalance 뒤에 붙입니다. 시스템 보유자와 무효 보유자는 `Invalid` 입니다. */
         [[nodiscard]] static ServiceStoreResult listBalances( IServiceStoreConnection& connection, const LedgerHolder& holder, vector<LedgerBalance>& outListBalance );

@@ -34,7 +34,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터와 건물 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignBuilding( GameObjectHandle director, int32 buildingIndex );
+        void assignBuilding( GameObjectHandle gameMode, int32 buildingIndex );
 
         /** @brief 이 건물 종류가 키트 모델로 그려지면 true(밭 · 조각상은 색 상자) 입니다. */
         static bool hasModel( const CityBuildingDef& def );
@@ -46,7 +46,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Building", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Building", DisplayName = "Building Index", Tooltip = "Slot in the simulation building list" )
         int32 _buildingIndex;
         PROPERTY( Category = "Building", DisplayName = "Model Scale", Min = 0.0 )

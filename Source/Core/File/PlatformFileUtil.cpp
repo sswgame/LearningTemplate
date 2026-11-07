@@ -36,7 +36,7 @@ namespace sw
     {
         struct PlatformFileUtilInternal
         {
-            /** @brief 읽으려고 연 파일 수입니다(`noteFileOpenedForRead`). */
+            /** @brief 읽으려고 연 파일 수입니다(`recordFileOpenedForRead`). */
             inline static atomic<uint64> s_fileOpenCount{ 0 };
             /** @brief 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다. */
             inline static atomic<int64> s_emulatedDiskBusyUntilNano{ 0 };
@@ -185,7 +185,7 @@ namespace sw
         MonotonicClock::sleepUntilNanoseconds( doneNano );
     }
 
-    void PlatformFileUtil::noteFileOpenedForRead( [[maybe_unused]] string_view filePath, [[maybe_unused]] size_t byteCount )
+    void PlatformFileUtil::recordFileOpenedForRead( [[maybe_unused]] string_view filePath, [[maybe_unused]] size_t byteCount )
     {
         PlatformFileUtilInternal::s_fileOpenCount.fetch_add( 1, std::memory_order_relaxed );
         if ( gv_ioLogReads == false )

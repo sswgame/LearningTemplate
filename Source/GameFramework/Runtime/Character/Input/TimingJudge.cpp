@@ -22,7 +22,7 @@ namespace sw
         } );
     }
 
-    bool TimingJudge::loadFromNode( const XMLNode& node, string_view sourceName, bool ( *pfnHandRead )( const utf8* pName ) )
+    bool TimingJudge::loadFromXML( const XMLNode& node, string_view sourceName, bool ( *pfnHandRead )( const utf8* pName ) )
     {
         // 적지 않은 칸은 TimingWindow 의 초기값이다. `width` 는 앞뒤 폭을 함께 정하고, `early` · `late` 가 각자 덮는다.
         // 깨진 값 · 음수 폭은 오류이고 창 표를 바꾸지 않는다(자르지 않는다).
@@ -47,7 +47,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "TimingWindows", root ) == false )
             return false;
-        return loadFromNode( root, sourceName ) && _listWindow.empty() == false;
+        return loadFromXML( root, sourceName ) && _listWindow.empty() == false;
     }
 
     TimingResult TimingJudge::judge( float32 targetTime, float32 pressTime ) const

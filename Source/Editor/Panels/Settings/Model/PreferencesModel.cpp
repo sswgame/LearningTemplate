@@ -86,7 +86,7 @@ namespace sw::editor
         }
     }
 
-    void PreferencesModel::noteEdited()
+    void PreferencesModel::recordEdited()
     {
         if ( _pSelected != nullptr && _pSelected->_pfnOnChanged != nullptr )
             _pSelected->_pfnOnChanged();

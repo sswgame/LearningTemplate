@@ -27,7 +27,7 @@ namespace
     constexpr const utf8* kFailureReport = R"({"response":{"result":"Failure","error":{"errorcode":1,"errordesc":"busy"}}})";
 
     /** @brief 가짜 스팀 + 실제 HTTP 클라이언트 + 검증기입니다. 선언 순서가 수명이다 — 망이 전송들보다, 클라이언트가 검증기보다 오래 산다. */
-    struct SteamRig
+    struct SteamFixture
     {
         LoopbackStreamNetwork             _network{ 7u };
         ManualClock                       _clock{ MonotonicMilliseconds{ 0 } };
@@ -44,11 +44,11 @@ namespace
         int64                             _nowMs{ kNowMs };
 
         /** @brief @p pBaseURL 이 있으면 그 주소로 묻습니다(없으면 가짜 스팀). */
-        explicit SteamRig( bool bSandbox = false, const utf8* pBaseURL = nullptr, ReceiptBuyerBinding binding = ReceiptBuyerBinding::None )
+        explicit SteamFixture( bool bSandbox = false, const utf8* pBaseURL = nullptr, ReceiptBuyerBinding binding = ReceiptBuyerBinding::None )
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&SteamRig::onRequest>( this ) ) );
+            SW_EXPECT_TRUE( _server.initialize( _network.createTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&SteamFixture::onRequest>( this ) ) );
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SteamReceiptSettings settings;
             settings._appID                = "480";
@@ -264,7 +264,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, URLsPickTheInterface )
 /** @brief [SteamReceiptValidatorTest] 쿼리에 싣지 못하는 영수증은 스팀에 묻지 않고 Invalid 로 끝난다(다른 인자를 끼워 넣는 길) */
 SW_TEST_CASE( SteamReceiptValidatorTest, MalformedReceiptNeverReachesSteam )
 {
-    SteamRig rig;
+    SteamFixture rig;
     for ( const utf8* pPayload : { "", "abc", "1&orderid=2", "12345678901234567890123", "1 " } )
     {
         const ReceiptValidationResult result = rig.validate( pPayload );
@@ -279,7 +279,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, MalformedReceiptNeverReachesSteam )
 /** @brief [SteamReceiptValidatorTest] 정상 주문: 거래 id 는 주문 번호, 상품은 첫 항목, 구매 시각은 응답의 것이고 표가 요청과 같다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, SucceededOrderIsValid )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._queryBody                       = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
@@ -299,7 +299,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, SucceededOrderIsValid )
 /** @brief [SteamReceiptValidatorTest] 샌드박스 설정의 결과는 샌드박스 결제로 표시된다(서비스가 운영 서버에서 거절하는 근거) */
 SW_TEST_CASE( SteamReceiptValidatorTest, SandboxConfigMarksTheResult )
 {
-    SteamRig rig( true );
+    SteamFixture rig( true );
     rig._queryBody                       = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Valid );
@@ -311,7 +311,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, SandboxConfigMarksTheResult )
 /** @brief [SteamReceiptValidatorTest] 응답의 상태가 결과가 된다: 환불은 Refunded, 마무리 전은 Retry, 실패 · 모르는 값 · 상태 없음은 Invalid 다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, OrderStatusDecidesTheResult )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._queryBody = SteamBodyTestUtil::makeOrder( kOrder, "Refunded" );
     SW_EXPECT_TRUE( rig.validate()._status == ReceiptStatus::Refunded );
     rig._queryBody = SteamBodyTestUtil::makeOrder( kOrder, "Init" );
@@ -327,7 +327,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, OrderStatusDecidesTheResult )
 /** @brief [SteamReceiptValidatorTest] 위조 · 깨진 답은 지급하지 않는다: 다른 주문의 답, 주문 번호 없음, 항목 없음 · 비었음 · 모양이 틀림, 결과가 OK 아님, 뿌리 모양이 틀림 */
 SW_TEST_CASE( SteamReceiptValidatorTest, ForgedAnswersGrantNothing )
 {
-    SteamRig rig;
+    SteamFixture rig;
     for ( const utf8* pBody : {
               R"({"response":{"result":"OK","params":{"orderid":"9999","status":"Succeeded","items":[{"itemid":"100"}]}}})",
               R"({"response":{"result":"OK","params":{"status":"Succeeded","items":[{"itemid":"100"}]}}})",
@@ -357,7 +357,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ForgedAnswersGrantNothing )
 /** @brief [SteamReceiptValidatorTest] 2xx 인데 JSON 이 아니면(잘린 몸 · 프록시 화면) Retry 다 — Invalid 로 답하면 결제한 사람의 영수증이 버려진다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, TruncatedBodyIsRetry )
 {
-    SteamRig     rig;
+    SteamFixture rig;
     const string whole = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
     for ( size_t cut : { size_t( 1 ), whole.size() / 2, whole.size() - 1 } )
     {
@@ -375,7 +375,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, TruncatedBodyIsRetry )
 /** @brief [SteamReceiptValidatorTest] 구매 시각이 틀린 주문은 시각만 비고 판정은 그대로다. 숫자로 온 주문 번호 · 상품 번호도 글로 읽는다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, LooseFieldsStayReadable )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","time":"2023-11-14T-1:13:20","items":[{"itemid":"100"}]}}})";
     ReceiptValidationResult first = rig.validate();
     SW_EXPECT_TRUE( first._status == ReceiptStatus::Valid );
@@ -390,7 +390,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, LooseFieldsStayReadable )
 /** @brief [SteamReceiptValidatorTest] 상태 코드: 5xx · 429 는 Retry, 4xx 는 주문이 없다는 답이라 Invalid 다(몸이 성공처럼 보여도) */
 SW_TEST_CASE( SteamReceiptValidatorTest, HTTPStatusSplitsRetryFromInvalid )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._queryBody = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
     for ( int32 status : { 500, 503, 429 } )
     {
@@ -410,7 +410,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, HTTPStatusSplitsRetryFromInvalid )
 SW_TEST_CASE( SteamReceiptValidatorTest, RejectedKeyIsRetryAndLogged )
 {
     SW_EXPECT_LOG( "SteamReceiptValidator.SteamRejectedPublisherKey" );
-    SteamRig rig;
+    SteamFixture rig;
     for ( int32 status : { HTTPConstant::kStatusUnauthorized, HTTPConstant::kStatusForbidden } )
     {
         rig._queryStatus = status;
@@ -422,7 +422,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RejectedKeyIsRetryAndLogged )
 SW_TEST_CASE( SteamReceiptValidatorTest, TransportFailureIsRetry )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
-    SteamRig                      rig( false, "not a url" );
+    SteamFixture                  rig( false, "not a url" );
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Retry );
     SW_EXPECT_EQUAL( string( "malformed URL" ), result._failureText );
@@ -432,7 +432,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, TransportFailureIsRetry )
 /** @brief [SteamReceiptValidatorTest] 환불 보고: 환불 상태만 알리고, 시각은 응답의 것(틀리면 지금)이다. 주문 번호가 아닌 줄 · 모양이 틀린 줄은 버린다. 겹쳐 읽어도 한 번만 알린다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportFiltersAndDeduplicates )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._reportBody = R"({"response":{"result":"OK","params":{"orders":[
         {"orderid":"1","status":"Refunded","time":"2023-11-14T22:13:20Z"},
         {"orderid":"2","status":"Succeeded","time":"2023-11-14T22:13:20Z"},
@@ -463,7 +463,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportFiltersAndDeduplicates )
 /** @brief [SteamReceiptValidatorTest] 환불 보고의 뿌리 모양이 틀려도 멈추지 않고 알림이 없다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportShapeIsChecked )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._reportBody = R"({"response":{"result":"OK","params":{"orders":{"orderid":"1","status":"Refunded"}}}})";
     rig.pump();
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
@@ -479,7 +479,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
     SW_EXPECT_LOG( "SteamReceiptValidator.SteamRefundReportNotOk" );
-    SteamRig rig;
+    SteamFixture rig;
     rig.pump(); // 첫 조회는 지금에서 겹침만큼 앞이다
     const int64 firstMs = kNowMs;
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listReportTime.size() );
@@ -516,7 +516,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
 /** @brief [SteamReceiptValidatorTest] 조회 주기: 주기 전에는 묻지 않고, 앞 요청이 끝나기 전에는 주기가 지나도 겹쳐 보내지 않는다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, ReportPollIntervalAndNoOverlap )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig.pump();
     rig._nowMs += kPollMs - 1;
     rig.pump();
@@ -534,7 +534,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ReportPollIntervalAndNoOverlap )
 SW_TEST_CASE( SteamReceiptValidatorTest, FullReportWithoutTimesKeepsTheWindow )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryTruncated" );
-    SteamRig rig;
+    SteamFixture rig;
     rig._reportBody = SteamBodyTestUtil::makeFullReport( "" );
     rig.pump();
     SW_EXPECT_EQUAL( static_cast<size_t>( SteamReceiptValidator::kReportMaxResults ), rig.takeRefunds().size() );
@@ -548,7 +548,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FullReportWithoutTimesKeepsTheWindow )
 /** @brief [SteamReceiptValidatorTest] 보고서가 상한까지 차면 읽은 가장 늦은 시각에서 바로 잇고, 잇는 조회가 끝나야 구간이 옮겨진다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, FullReportContinuesFromTheLastTime )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._reportBody = SteamBodyTestUtil::makeFullReport( R"(,"time":"2023-11-14T22:13:20Z")" );
     rig._pValidator->update( UnixMilliseconds{ rig._nowMs } );
     rig._server.update();
@@ -573,7 +573,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FullReportContinuesFromTheLastTime )
 /** @brief [SteamReceiptValidatorTest] 회수하지 못한 환불을 잊으면 겹친 조회가 다시 알린다 — 겹침 거름이 회수할 기회를 없애지 않게 한다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, ForgottenRefundIsReportedAgain )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._reportBody = R"({"response":{"result":"OK","params":{"orders":[{"orderid":"1","status":"Refunded"}]}}})";
     rig.pump();
     SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
@@ -581,7 +581,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ForgottenRefundIsReportedAgain )
     rig.pump();
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
 
-    rig._pValidator->forgetRefund( "1" );
+    rig._pValidator->removeRefund( "1" );
     rig._nowMs += kPollMs;
     rig.pump();
     SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
@@ -590,7 +590,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ForgottenRefundIsReportedAgain )
 /** @brief [SteamReceiptValidatorTest] 답의 `steamid` 가 결과의 구매자가 되고 설정의 규칙이 결과에 실린다(대조는 지급 논리가 한다). 답에 없으면 비어 있다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, SteamIDBecomesTheBuyer )
 {
-    SteamRig rig( false, nullptr, ReceiptBuyerBinding::LinkedLogin );
+    SteamFixture rig( false, nullptr, ReceiptBuyerBinding::LinkedLogin );
     SW_EXPECT_TRUE( rig._pValidator->getBuyerRule()._binding == ReceiptBuyerBinding::LinkedLogin );
     rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","steamid":"76561190000000001","status":"Succeeded","items":[{"itemid":"100"}]}}})";
     ReceiptValidationResult first = rig.validate();
@@ -607,7 +607,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, SteamIDBecomesTheBuyer )
 /** @brief [SteamReceiptValidatorTest] 종료: 날아가던 검증은 한 번만 Retry 로 끝나고, 늦게 온 답은 결과를 더 내지 않으며, 새 보고서를 보내지 않는다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, ShutdownFinishesInFlightAsRetry )
 {
-    SteamRig rig;
+    SteamFixture rig;
     rig._queryBody = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
     rig.pump();
     rig.submit( kOrder );

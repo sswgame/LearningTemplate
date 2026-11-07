@@ -65,7 +65,7 @@ namespace sw::editor
                 _model.setLayerShown( *pScene, row._name, bShown );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataLayers", "ShownTip" ) );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( string( "dataLayers.shown." ) + row._name ).c_str() );
+                EditorSelfTestMarks::record( ( string( "dataLayers.shown." ) + row._name ).c_str() );
             ImGui::TableSetColumnIndex( 2 );
             bool bInitiallyActive = row._bInitiallyActive != SW_FALSE;
             if ( ImGui::Checkbox( "##initial", &bInitiallyActive ) )

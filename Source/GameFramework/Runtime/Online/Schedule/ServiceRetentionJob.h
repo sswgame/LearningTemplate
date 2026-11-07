@@ -54,7 +54,7 @@ namespace sw
         bool  isRunning() const { return _bPending == SW_TRUE; }
 
     private:
-        class SweepWork;
+        class SweepJob;
 
         void onSweepCompleted( vector<ServiceRetentionRule> listRule, ServiceStoreResult result, int64 deletedCount );
 

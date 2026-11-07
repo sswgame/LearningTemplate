@@ -13,7 +13,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
-#include "Engine/Input/Map/InputMapFields.h"
+#include "Engine/Input/Map/InputMapParams.h"
 #include "Engine/Input/Map/InputMapXML.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -36,7 +36,7 @@
  *  - InputActionBuffer: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정(맵이 들고 프레임마다 진행).
  *  - InputGlyphResolver: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회(상태 없음).
  *  - InputAccessibilitySettings: 감도 · 축 반전 · 데드존 · 토글 액션(맵이 들고, 맵을 다시 읽어도 남는다).
- *  - InputRemapSerializer: 플레이어 리매핑 파일(`<UserBindings>`)의 쓰기 · 읽기. 두 형식이 함께 쓰는 `<action>` 원소 읽기 · 쓰기는 InputMapXML(스키마 InputMapFields.h).
+ *  - InputRemapSerializer: 플레이어 리매핑 파일(`<UserBindings>`)의 쓰기 · 읽기. 두 형식이 함께 쓰는 `<action>` 원소 읽기 · 쓰기는 InputMapXML(스키마 InputMapParams.h).
  */
 
 // InputAccessibilitySettings
@@ -1956,55 +1956,55 @@ namespace sw
     bool InputMap::readMapSettings( const XMLNode& root, string_view absPath, bool bAppend )
     {
         static constexpr const utf8* kArrRootChild[] = { "layers", "layer", "action", "override", "remove" };
-        InputMapRootFields           fields;
-        const bool                   bFields   = XMLFields::readFields( root, fields, absPath );
+        InputMapRootParams           params;
+        const bool                   bFields   = XMLFields::readFields( root, params, absPath );
         const bool                   bChildren = XMLNameCheck::reportUnknownChildren( root, kArrRootChild, absPath );
         if ( bFields == false || bChildren == false )
             return false;
         if ( bAppend )
         {
-            if ( fields._virtualCursor == InputMapVirtualCursor::Off )
+            if ( params._virtualCursor == InputMapVirtualCursor::Off )
                 return true;
             if ( _virtualCursorStick != InputMapVirtualCursor::Off )
             {
                 SW_LOG_ERROR_ID( "InputMap.VirtualCursorSetTwice", "InputMap %# sets virtualCursor but an earlier map of the bundle already did", absPath );
                 return false;
             }
-            _virtualCursorStick = fields._virtualCursor;
+            _virtualCursorStick = params._virtualCursor;
             return true;
         }
         clear();
-        const bool bTimingRefused = setDoubleClickTime( fields._doubleClickTime ) == false || setDoubleClickMaxDistance( fields._doubleClickMaxDistance ) == false ||
-                                    setHoldThreshold( fields._holdThreshold ) == false || setDragThreshold( fields._dragThreshold ) == false;
+        const bool bTimingRefused = setDoubleClickTime( params._doubleClickTime ) == false || setDoubleClickMaxDistance( params._doubleClickMaxDistance ) == false ||
+                                    setHoldThreshold( params._holdThreshold ) == false || setDragThreshold( params._dragThreshold ) == false;
         if ( bTimingRefused )
             return false;
-        _virtualCursorStick = fields._virtualCursor;
-        _defaultLayerName   = fields._defaultLayer;
+        _virtualCursorStick = params._virtualCursor;
+        _defaultLayerName   = params._defaultLayer;
         return true;
     }
 
     bool InputMap::readLayer( const XMLNode& layerNode, string_view absPath, bool bAppend, std::initializer_list<string_view> listChild, hashed_string& outName )
     {
-        InputMapLayerFields fields;
-        const bool          bFields   = XMLFields::readFields( layerNode, fields, absPath );
+        InputMapLayerParams params;
+        const bool          bFields   = XMLFields::readFields( layerNode, params, absPath );
         bool                bChildren = true;
         for ( XMLNode child = layerNode.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             if ( VectorUtil::contains( listChild, string_view{ child.getName() } ) )
                 continue;
-            SW_LOG_ERROR_ID( "InputMap.LayerUnknownElement", "InputMap %#: <layer name=\"%#\"> has unknown element <%#>", absPath, fields._name.c_str(), child.getName() );
+            SW_LOG_ERROR_ID( "InputMap.LayerUnknownElement", "InputMap %#: <layer name=\"%#\"> has unknown element <%#>", absPath, params._name.c_str(), child.getName() );
             bChildren = false;
         }
         if ( bFields == false || bChildren == false )
             return false;
-        outName = fields._name;
-        if ( bAppend && hasLayer( fields._name ) && listChild.size() == 0 )
+        outName = params._name;
+        if ( bAppend && hasLayer( params._name ) && listChild.size() == 0 )
         {
-            SW_LOG_ERROR_ID( "InputMap.InputMapRedefinesLayerMap", "InputMap %# redefines layer '%#' that the map already has - put actions in it with <layer name=...> instead", absPath, fields._name.c_str() );
+            SW_LOG_ERROR_ID( "InputMap.InputMapRedefinesLayerMap", "InputMap %# redefines layer '%#' that the map already has - put actions in it with <layer name=...> instead", absPath, params._name.c_str() );
             return false;
         }
-        if ( hasLayer( fields._name ) == false || listChild.size() == 0 )
-            registerLayer( fields._name, fields._priority, fields._bEnabled, fields._bBlockLower, fields._bAlwaysOn );
+        if ( hasLayer( params._name ) == false || listChild.size() == 0 )
+            registerLayer( params._name, params._priority, params._bEnabled, params._bBlockLower, params._bAlwaysOn );
         return true;
     }
 
@@ -2134,23 +2134,23 @@ namespace sw
 
     void InputMap::readRemove( const XMLNode& node, string_view absPath, bool& inoutbValid )
     {
-        InputMapRemoveFields fields;
-        const bool           bFields   = XMLFields::readFields( node, fields, absPath );
+        InputMapRemoveParams params;
+        const bool           bFields   = XMLFields::readFields( node, params, absPath );
         const bool           bChildren = XMLNameCheck::reportUnknownChildren( node, nullptr, 0, absPath );
         if ( bFields == false || bChildren == false )
         {
             inoutbValid = false;
             return;
         }
-        ActionEntry* const pEntry = findDiffTarget( node, fields._name, absPath );
+        ActionEntry* const pEntry = findDiffTarget( node, params._name, absPath );
         if ( pEntry == nullptr )
         {
             inoutbValid = false;
             return;
         }
-        shadowActionDefinition( *pEntry, fields._name );
-        (void)removeAction( fields._name ); // 바로 위에서 찾았다
-        _listSource[_currentSourceIndex]._listRemove.push_back( fields._name );
+        shadowActionDefinition( *pEntry, params._name );
+        (void)removeAction( params._name ); // 바로 위에서 찾았다
+        _listSource[_currentSourceIndex]._listRemove.push_back( params._name );
     }
 
     uint32 InputMap::countAllSameLayerInputConflicts( string_view sourceName ) const
@@ -2259,14 +2259,14 @@ namespace sw
 
         XMLDocument        doc;
         const XMLNode      root = doc.appendRoot( "InputMap" );
-        InputMapRootFields rootFields;
-        rootFields._defaultLayer           = _defaultLayerName;
-        rootFields._doubleClickTime        = _triggerRules._doubleClickTime;
-        rootFields._doubleClickMaxDistance = _triggerRules._doubleClickMaxDistance;
-        rootFields._holdThreshold          = _triggerRules._holdThreshold;
-        rootFields._dragThreshold          = _triggerRules._dragThreshold;
-        rootFields._virtualCursor          = _virtualCursorStick;
-        XMLFields::writeFields( root, rootFields );
+        InputMapRootParams rootParams;
+        rootParams._defaultLayer           = _defaultLayerName;
+        rootParams._doubleClickTime        = _triggerRules._doubleClickTime;
+        rootParams._doubleClickMaxDistance = _triggerRules._doubleClickMaxDistance;
+        rootParams._holdThreshold          = _triggerRules._holdThreshold;
+        rootParams._dragThreshold          = _triggerRules._dragThreshold;
+        rootParams._virtualCursor          = _virtualCursorStick;
+        XMLFields::writeFields( root, rootParams );
 
         const XMLNode layersNode = root.appendChild( "layers" );
         for ( const hashed_string& layerName : _listLayerName )
@@ -2295,13 +2295,13 @@ namespace sw
         const LayerDef* pLayer = findLayer( layerName );
         if ( pLayer == nullptr )
             return;
-        InputMapLayerFields layerFields;
-        layerFields._name        = layerName;
-        layerFields._priority    = pLayer->_priority;
-        layerFields._bEnabled    = pLayer->_bEnabled != SW_FALSE;
-        layerFields._bBlockLower = pLayer->_bBlockLower != SW_FALSE;
-        layerFields._bAlwaysOn   = pLayer->_bAlwaysOn != SW_FALSE;
-        XMLFields::writeFields( layersNode.appendChild( "layer" ), layerFields );
+        InputMapLayerParams layerParams;
+        layerParams._name        = layerName;
+        layerParams._priority    = pLayer->_priority;
+        layerParams._bEnabled    = pLayer->_bEnabled != SW_FALSE;
+        layerParams._bBlockLower = pLayer->_bBlockLower != SW_FALSE;
+        layerParams._bAlwaysOn   = pLayer->_bAlwaysOn != SW_FALSE;
+        XMLFields::writeFields( layersNode.appendChild( "layer" ), layerParams );
     }
 
     bool InputMap::fillSourceDocument( uint32 sourceIndex, XMLDocument& outDoc ) const
@@ -2310,14 +2310,14 @@ namespace sw
         const XMLNode       root   = outDoc.appendRoot( "InputMap" );
         if ( source._bBase == SW_TRUE )
         {
-            InputMapRootFields rootFields;
-            rootFields._defaultLayer           = _defaultLayerName;
-            rootFields._doubleClickTime        = _triggerRules._doubleClickTime;
-            rootFields._doubleClickMaxDistance = _triggerRules._doubleClickMaxDistance;
-            rootFields._holdThreshold          = _triggerRules._holdThreshold;
-            rootFields._dragThreshold          = _triggerRules._dragThreshold;
-            rootFields._virtualCursor          = source._bVirtualCursor == SW_TRUE ? _virtualCursorStick : InputMapVirtualCursor::Off;
-            XMLFields::writeFields( root, rootFields );
+            InputMapRootParams rootParams;
+            rootParams._defaultLayer           = _defaultLayerName;
+            rootParams._doubleClickTime        = _triggerRules._doubleClickTime;
+            rootParams._doubleClickMaxDistance = _triggerRules._doubleClickMaxDistance;
+            rootParams._holdThreshold          = _triggerRules._holdThreshold;
+            rootParams._dragThreshold          = _triggerRules._dragThreshold;
+            rootParams._virtualCursor          = source._bVirtualCursor == SW_TRUE ? _virtualCursorStick : InputMapVirtualCursor::Off;
+            XMLFields::writeFields( root, rootParams );
         }
         else if ( source._bVirtualCursor == SW_TRUE )
         {
@@ -2360,7 +2360,7 @@ namespace sw
         }
         for ( const hashed_string& actionName : source._listRemove )
         {
-            InputMapRemoveFields removeFields;
+            InputMapRemoveParams removeFields;
             removeFields._name = actionName;
             XMLFields::writeFields( root.appendChild( "remove" ), removeFields );
         }

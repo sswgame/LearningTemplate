@@ -27,7 +27,7 @@ namespace
  */
 SW_TEST_CASE( AudioSpatialTest, AttenuationCurvesAtDistances )
 {
-    sw::AudioAttenuationDesc inverse;
+    sw::AudioAttenuationDef inverse;
     inverse._curve       = sw::AudioAttenuationCurve::Inverse;
     inverse._minDistance = 1.0f;
     inverse._maxDistance = 30.0f;
@@ -36,14 +36,14 @@ SW_TEST_CASE( AudioSpatialTest, AttenuationCurvesAtDistances )
     SW_EXPECT_NEAR( 0.25f, inverse.computeGain( 4.0f ), 1e-6f );
     SW_EXPECT_NEAR( 1.0f / 30.0f, inverse.computeGain( 50.0f ), 1e-6f );
 
-    sw::AudioAttenuationDesc inverseSquare = inverse;
-    inverseSquare._curve                   = sw::AudioAttenuationCurve::InverseSquare;
+    sw::AudioAttenuationDef inverseSquare = inverse;
+    inverseSquare._curve                  = sw::AudioAttenuationCurve::InverseSquare;
     SW_EXPECT_NEAR( 0.25f, inverseSquare.computeGain( 2.0f ), 1e-6f );
     // 최소 거리가 곡선을 민다: min 2 면 4 m 에서 절반.
     inverse._minDistance = 2.0f;
     SW_EXPECT_NEAR( 0.5f, inverse.computeGain( 4.0f ), 1e-6f );
 
-    sw::AudioAttenuationDesc linear;
+    sw::AudioAttenuationDef linear;
     linear._curve       = sw::AudioAttenuationCurve::Linear;
     linear._minDistance = 1.0f;
     linear._maxDistance = 11.0f;
@@ -52,7 +52,7 @@ SW_TEST_CASE( AudioSpatialTest, AttenuationCurvesAtDistances )
     SW_EXPECT_NEAR( 0.0f, linear.computeGain( 11.0f ), 1e-6f );
     SW_EXPECT_NEAR( 0.0f, linear.computeGain( 20.0f ), 1e-6f );
 
-    sw::AudioAttenuationDesc custom;
+    sw::AudioAttenuationDef custom;
     custom._curve           = sw::AudioAttenuationCurve::Custom;
     custom._listCustomPoint = {
         { 0.0f,   0.0f},

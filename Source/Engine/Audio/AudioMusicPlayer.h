@@ -1,6 +1,6 @@
 /**
  * @file AudioMusicPlayer.h
- * @brief 적응형 음악(`AudioMusicDesc`: 구간 · 레이어 · 전환)을 재생하는 플레이어와, 플레이어가 보이스 풀에 하는 일의 창(`IAudioMusicVoices`)을 선언합니다.
+ * @brief 적응형 음악(`AudioMusicDef`: 구간 · 레이어 · 전환)을 재생하는 플레이어와, 플레이어가 보이스 풀에 하는 일의 창(`IAudioMusicVoices`)을 선언합니다.
  * @details 플레이어는 재생 위치와 전환 예약만 들고, 소리는 엔진의 보이스로 낸다. 보이스 슬롯의 생김새는 모르고 창의 다섯 일(시작 · 페이드 · 놓기 · 레이어 게인 · 시각)만 쓴다.
  *          `AudioEngine` 이 하나를 들고 오디오 스레드에서만 부른다. Wwise Interactive Music · FMOD 의 전환 타임라인, Godot `AudioStreamInteractive` 처럼
  *          음악의 박 · 마디 맞춤을 일반 이벤트 재생과 따로 두는 나눔이다.
@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    struct AudioMusicDesc;
+    struct AudioMusicDef;
 
     class AudioMusicPlayer;
 } // namespace sw
@@ -82,7 +82,7 @@ namespace sw
         static constexpr int32 kAnySegment = -3;
 
         /** @brief 음악을 시작합니다. 재생 중인 음악은 @p fadeSeconds 동안 줄이고, 지금 블록에서 시작 구간을 재생합니다. */
-        void start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDesc> pMusic, AudioPlayingID playingID, float32 fadeSeconds );
+        void start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDef> pMusic, AudioPlayingID playingID, float32 fadeSeconds );
         /** @brief 구간 전환을 전환 규칙의 맞춤 지점(박, 마디, 구간 끝)에 예약하고 스팅어를 냅니다. 같은 구간이면 아무것도 하지 않습니다. */
         void setSegment( IAudioMusicVoices& voices, const hashed_string& segment ) { scheduleTransition( voices, segment, false ); }
         /** @brief 음악 보이스를 @p fadeSeconds 로 멈춥니다. */

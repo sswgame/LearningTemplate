@@ -37,7 +37,7 @@ namespace sw
             _fileWatcher.reset();
             return false;
         }
-        _lastDrainTimestamp = FileUtil::getCurrentFileTimestamp();
+        _lastPollTimestamp = FileUtil::getCurrentFileTimestamp();
         return true;
     }
 
@@ -56,8 +56,8 @@ namespace sw
         vector<FileChangeEvent> listEvent;
 
         // 잃은 알림은 "직전 비우기 이후" 에 일어났다. 그 시각을 이번 비우기의 시각으로 바꾸기 전에 붙잡아 둔다.
-        const uint64 sinceTimestamp = _lastDrainTimestamp;
-        _lastDrainTimestamp         = FileUtil::getCurrentFileTimestamp();
+        const uint64 sinceTimestamp = _lastPollTimestamp;
+        _lastPollTimestamp          = FileUtil::getCurrentFileTimestamp();
 
         if ( _fileWatcher == nullptr )
             return;

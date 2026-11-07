@@ -536,7 +536,7 @@ namespace sw
         /** @brief `loadDefinition` 의 레이어 단계입니다. `<layers>` 블록의 레이어를 등록하고 기본 레이어를 보장합니다. 깨진 값은 @p inoutbValid 를 내립니다. */
         void readLayerDefinitions( const XMLNode& root, string_view absPath, bool bAppend, bool& inoutbValid );
         /**
-         * @brief `<layer>` 원소 하나를 스키마(`InputMapLayerFields`)로 읽어 등록합니다. @p listChild 는 그 원소가 품을 수 있는 자식 이름입니다(`<layers>` 안은 없음, 맨 위는 `action`).
+         * @brief `<layer>` 원소 하나를 스키마(`InputMapLayerParams`)로 읽어 등록합니다. @p listChild 는 그 원소가 품을 수 있는 자식 이름입니다(`<layers>` 안은 없음, 맨 위는 `action`).
          * @details 맨 위 `<layer>` 는 이미 있는 레이어면 설정을 바꾸지 않고 액션만 담는다. 더하는 파일이 `<layers>` 로 있는 레이어를 다시 정의하면 오류다.
          */
         [[nodiscard]] bool readLayer( const XMLNode& layerNode, string_view absPath, bool bAppend, std::initializer_list<string_view> listChild, hashed_string& outName );

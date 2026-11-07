@@ -1,12 +1,12 @@
 /**
- * @file HorrorSnapshot.h
+ * @file AsymmetricHorrorSnapshot.h
  * @brief 비대칭 공포의 서버 권위 상태입니다. 발전기와 탈출구 진행, 판자, 창틀, 엔드게임(전원, 해치, 붕괴), 생존자(상태, 갈고리 단계, 시간, 치료, 출혈, 위치),
  *        살인마(위치, 들고 있는 생존자, 기절, 쿨다운)를 담습니다.
  * @details 바이트는 고정 배치형(B, `FixedLayout`)입니다. 코드 생성기가 아래 `PROPERTY` 의 범위 키로 코덱을 만들고, 손 코덱과 손 버전 상수는 없습니다.
  *          범위 밖 정수와 255 개를 넘는 목록은 잘라 쓰지 않고 쓰기가 실패합니다.
  *          `Step` 이 붙은 실수(위치 0.01 m 로 +-1000 m 안, 진행량 0.001, 시간 0.01 초)는 손실 인코딩이므로 범위 밖 값을 경계로 잘라 씁니다.
  *          **필드 순서가 와이어 형식입니다.**
- *          장르 키트는 넷 키트를 include 하지 않습니다. 게임이 `HorrorMatch::writeState` 의 바이트를 채널에 싣고, 받는 쪽은 `FixedLayout::read` 로 읽습니다.
+ *          장르 키트는 넷 키트를 include 하지 않습니다. 게임이 `AsymmetricHorrorMatch::writeState` 의 바이트를 채널에 싣고, 받는 쪽은 `FixedLayout::read` 로 읽습니다.
  *          바이트 머리에 스키마 해시가 있으므로 배치가 다른 빌드의 바이트는 `SchemaMismatch` 로 거절됩니다.
  */
 #pragma once
@@ -18,13 +18,13 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorMatch.h"
+#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorMatch.h"
 
 namespace sw
 {
     /** @brief 생존자 하나의 화면에 보이는 상태입니다. */
     REFLECT()
-    struct HorrorSurvivorSnapshot
+    struct AsymmetricHorrorSurvivorSnapshot
     {
         REFLECT_BODY();
         PROPERTY( Step = 0.01, Min = -1000, Max = 1000 )
@@ -50,7 +50,7 @@ namespace sw
 {
     /** @brief 발전기 하나의 보이는 상태입니다. 진행과 표시를 한 원소에 두어 두 목록의 길이가 어긋나는 모양을 없앱니다. */
     REFLECT()
-    struct HorrorGeneratorSnapshot
+    struct AsymmetricHorrorGeneratorSnapshot
     {
         REFLECT_BODY();
         PROPERTY( Step = 0.001, Min = 0, Max = 1 )
@@ -64,14 +64,14 @@ namespace sw
 {
     /** @brief 한 걸음의 판 전체 상태입니다. 같은 스냅샷은 항상 같은 바이트가 나옵니다(결정적). */
     REFLECT()
-    struct HorrorSnapshot
+    struct AsymmetricHorrorSnapshot
     {
         REFLECT_BODY();
         static constexpr uint32 kMaxListSize = 255; ///< 생존자, 발전기, 탈출구, 판자, 창틀 목록의 길이 상한
         PROPERTY( MaxCount = kMaxListSize )
-        vector<HorrorSurvivorSnapshot> _listSurvivor{};
+        vector<AsymmetricHorrorSurvivorSnapshot> _listSurvivor{};
         PROPERTY( MaxCount = kMaxListSize )
-        vector<HorrorGeneratorSnapshot> _listGenerator{};
+        vector<AsymmetricHorrorGeneratorSnapshot> _listGenerator{};
         PROPERTY( MaxCount = kMaxListSize, Step = 0.001, Min = 0, Max = 1 )
         vector<float32> _listGateProgress{};
         PROPERTY( MaxCount = kMaxListSize )

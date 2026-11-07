@@ -284,7 +284,7 @@ namespace sw::editor
         return applyToPrefab( pOuter, AssetID{ outerPath } );
     }
 
-    EditorInspectorCommands::AdoptResult EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
+    EditorInspectorCommands::AdoptResult EditorInspectorCommands::attachChildPrefabInstances( GameObject* pRoot )
     {
         // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
         GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;

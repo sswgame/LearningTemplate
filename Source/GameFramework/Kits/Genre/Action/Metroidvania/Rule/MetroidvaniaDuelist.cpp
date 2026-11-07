@@ -26,7 +26,7 @@ namespace sw
 {
     MetroidvaniaDuelist::MetroidvaniaDuelist()
         : _pCatalog{ nullptr }
-        , _vitality{}
+        , _combatHealth{}
         , _stamina{}
         , _time{ 0.0f }
         , _parryPressTime{ MetroidvaniaDuelistInternal::kNeverPressed }
@@ -44,12 +44,12 @@ namespace sw
             return false;
         }
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
-        Vitality      vitality;
+        CombatHealth  combatHealth;
         ResourceGauge stamina;
-        if ( vitality.initialize( pCatalog->getRules()._health ) == false || stamina.initialize( pCatalog->getRules()._stamina ) == false )
+        if ( combatHealth.initialize( pCatalog->getRules()._health ) == false || stamina.initialize( pCatalog->getRules()._stamina ) == false )
             return false;
         _pCatalog         = pCatalog;
-        _vitality         = vitality;
+        _combatHealth     = combatHealth;
         _stamina          = stamina;
         _time             = 0.0f;
         _parryPressTime   = MetroidvaniaDuelistInternal::kNeverPressed;
@@ -65,18 +65,18 @@ namespace sw
             return;
         _time += deltaTime;
         _riposteWindow.update( deltaTime );
-        _vitality.update( deltaTime );
+        _combatHealth.update( deltaTime );
         _stamina.update( deltaTime );
     }
 
     bool MetroidvaniaDuelist::tryAttack()
     {
-        return _pCatalog != nullptr && _vitality.isAlive() && _stamina.trySpend( _pCatalog->getRules()._attackStaminaCost );
+        return _pCatalog != nullptr && _combatHealth.isAlive() && _stamina.trySpend( _pCatalog->getRules()._attackStaminaCost );
     }
 
     bool MetroidvaniaDuelist::tryDodge()
     {
-        return _pCatalog != nullptr && _vitality.isAlive() && _stamina.trySpend( _pCatalog->getRules()._dodgeStaminaCost );
+        return _pCatalog != nullptr && _combatHealth.isAlive() && _stamina.trySpend( _pCatalog->getRules()._dodgeStaminaCost );
     }
 
     void MetroidvaniaDuelist::pressParry()
@@ -88,7 +88,7 @@ namespace sw
     {
         MetroidvaniaDefenseOutcome outcome;
         // 죽었거나 무적(시간 · 면역)이면 맞은 것이 아니다 — 가드 스태미나를 쓰거나 패리 창을 열거나 맞음 연출을 낼 결과를 주지 않는다.
-        const bool bNothingHappens = _pCatalog == nullptr || _vitality.isAlive() == false || _vitality.ignoresDamage();
+        const bool bNothingHappens = _pCatalog == nullptr || _combatHealth.isAlive() == false || _combatHealth.ignoresDamage();
         if ( bNothingHappens )
         {
             outcome._result = MetroidvaniaDefenseResult::Ignored;
@@ -128,9 +128,9 @@ namespace sw
                 (void)_stamina.reduce( _stamina.getValue() );
             }
         }
-        const VitalityDamageResult damageResult = _vitality.applyDamage( healthDamage, poise, attackerID );
-        outcome._healthDamage                   = damageResult._healthDamage;
-        outcome._bStaggered                     = damageResult._bPoiseBroken;
+        const CombatHealthDamageResult damageResult = _combatHealth.applyDamage( healthDamage, poise, attackerID );
+        outcome._healthDamage                       = damageResult._healthDamage;
+        outcome._bStaggered                         = damageResult._bPoiseBroken;
         return outcome;
     }
 
@@ -144,14 +144,14 @@ namespace sw
             _riposteWindow.clear();
             return baseDamage * multiplier;
         }
-        if ( target.getVitality().isPoiseBroken() )
+        if ( target.getCombatHealth().isPoiseBroken() )
             return baseDamage * multiplier;
         return baseDamage;
     }
 
     void MetroidvaniaDuelist::writeState( Archive& outArchive ) const
     {
-        _vitality.writeState( outArchive );
+        _combatHealth.writeState( outArchive );
         _stamina.writeState( outArchive );
         outArchive << _time;
         outArchive << _parryPressTime;
@@ -164,7 +164,7 @@ namespace sw
     {
         // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그, 체력, 지구력 설정은 사본이 그대로 가지고 있다.
         MetroidvaniaDuelist restored  = *this;
-        const bool          bBodyRead = restored._vitality.readState( archive ) && restored._stamina.readState( archive );
+        const bool          bBodyRead = restored._combatHealth.readState( archive ) && restored._stamina.readState( archive );
         archive >> restored._time;
         archive >> restored._parryPressTime;
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._riposteWindow );

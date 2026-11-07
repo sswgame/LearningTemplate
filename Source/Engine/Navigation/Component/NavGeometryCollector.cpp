@@ -36,7 +36,7 @@ namespace sw
         struct NavGeometryCollectorInternal
         {
             /** @brief 오브젝트 하나를 베이크에 넣을지 · 영역입니다. */
-            struct ObjectVerdict
+            struct ObjectResult
             {
                 uint8 _area{ 0 };
                 bool  _bIncluded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -47,25 +47,25 @@ namespace sw
              * @details 움직이는 것(에이전트 · 캐릭터 컨트롤러 · 스킨드 메시 · Static 이 아닌 강체)이 든 계층은 통째로 뺀다 — 베이크하는 순간 그 자리에 있던
              *          캐릭터 · 손에 든 무기가 바닥에 구멍을 내지 않게.
              */
-            static ObjectVerdict evaluateObject( const GameObject& object, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings )
+            static ObjectResult evaluateObject( const GameObject& object, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings )
             {
-                ObjectVerdict verdict{};
-                bool          bAreaSet = false;
+                ObjectResult result{};
+                bool         bAreaSet = false;
                 for ( const GameObject* pCurrent = &object; pCurrent != nullptr; pCurrent = pCurrent->getParent() )
                 {
                     const NavMeshModifierComponent* pModifier = pCurrent->getComponent<NavMeshModifierComponent>();
                     if ( pModifier != nullptr && pModifier->isActive() )
                     {
                         if ( pModifier->isIgnoredFromBuild() )
-                            return verdict;
+                            return result;
                         if ( bAreaSet == false && pModifier->getAreaName().empty() == false )
                         {
                             bAreaSet = true;
-                            if ( settings.findAreaIndex( pModifier->getAreaName(), verdict._area ) == false )
+                            if ( settings.findAreaIndex( pModifier->getAreaName(), result._area ) == false )
                             {
                                 SW_LOG_ERROR_ID( "SceneNavigation.NavMeshModifierNamesUnknown", "NavMesh modifier on '%#' names unknown area '%#' - baked as plain ground", pCurrent->getName().c_str(),
                                                  pModifier->getAreaName().c_str() );
-                                verdict._area = 0;
+                                result._area = 0;
                             }
                         }
                     }
@@ -74,20 +74,20 @@ namespace sw
                         for ( const TagID& tag : pSurface->getExcludeTags() )
                         {
                             if ( tag.isValid() && pCurrent->hasTag( tag ) )
-                                return verdict;
+                                return result;
                         }
                     }
                     const bool bMover = pCurrent->getComponent<NavMeshAgentComponent>() != nullptr ||
                                         pCurrent->getComponent<CharacterControllerComponent>() != nullptr ||
                                         pCurrent->getComponent<SkeletalMeshComponent>() != nullptr;
                     if ( bMover )
-                        return verdict;
+                        return result;
                     const RigidBodyComponent* pBody = pCurrent->getComponent<RigidBodyComponent>();
                     if ( pBody != nullptr && pBody->getBodyType() != PhysicsBodyType::Static )
-                        return verdict;
+                        return result;
                 }
-                verdict._bIncluded = true;
-                return verdict;
+                result._bIncluded = true;
+                return result;
             }
 
             /** @brief 오브젝트의 켜진 링크를 @p outGeometry 에 더합니다. @p pSurfaceBox 가 있으면 그 상자에 닿는 링크만 더합니다. */
@@ -212,20 +212,20 @@ namespace sw
             const bool bIrrelevantObject = bOutsideSurface && bHasLink == false && bHasContribution == false;
             if ( bIrrelevantObject )
                 return;
-            const Internal::ObjectVerdict verdict = Internal::evaluateObject( *pObject, pSurface, settings );
-            if ( verdict._bIncluded == false )
+            const Internal::ObjectResult result = Internal::evaluateObject( *pObject, pSurface, settings );
+            if ( result._bIncluded == false )
                 return;
             if ( bHasLink )
-                Internal::collectLinks( *pObject, pLinkType, settings, verdict._area, bSurfaceBox ? &surfaceBox : nullptr, outGeometry );
+                Internal::collectLinks( *pObject, pLinkType, settings, result._area, bSurfaceBox ? &surfaceBox : nullptr, outGeometry );
             if ( bHasContribution )
-                Internal::collectContributions( *pObject, verdict._area, outGeometry );
+                Internal::collectContributions( *pObject, result._area, outGeometry );
             if ( bOutsideSurface )
                 return;
             for ( const INavGeometrySource* pSource : listSource )
             {
                 if ( pSource->getNavGeometryOwner() == pObject && pSource->overridesOwnerGeometry() )
                 {
-                    pSource->collectNavGeometry( outGeometry, verdict._area );
+                    pSource->collectNavGeometry( outGeometry, result._area );
                     return;
                 }
             }
@@ -261,7 +261,7 @@ namespace sw
                         listPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                     }
                     outGeometry.addTriangles( listPosition.data(), static_cast<uint32>( listPosition.size() ), mesh->getIndices().data(), mesh->getIndexCount(),
-                                              pMeshComponent->getWorldMatrix(), verdict._area );
+                                              pMeshComponent->getWorldMatrix(), result._area );
                 } );
             }
             if ( bColliders )
@@ -277,7 +277,7 @@ namespace sw
                     const float4x4 world = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
                     for ( const PhysicsShapeDesc3D& shape : pBody->getShapes() )
                     {
-                        outGeometry.addPhysicsShape( PhysicsComponent::makeScaledShape( shape, scale ), world, verdict._area );
+                        outGeometry.addPhysicsShape( PhysicsComponent::makeScaledShape( shape, scale ), world, result._area );
                     }
                 } );
             }

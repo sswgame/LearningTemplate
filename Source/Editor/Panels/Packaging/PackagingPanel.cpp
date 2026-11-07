@@ -114,11 +114,11 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OutputFolder" ) );
 
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "SkipBuild" ), &_model.editSkipBuild() ); // 바뀐 값은 다음 Package 가 쓴다
-        EditorSelfTestMarks::note( "packaging.skipBuild" );
+        EditorSelfTestMarks::record( "packaging.skipBuild" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipBuild" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "SkipCook" ) ) );
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "SkipCook" ), &_model.editSkipCook() );
-        EditorSelfTestMarks::note( "packaging.skipCook" );
+        EditorSelfTestMarks::record( "packaging.skipCook" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipCook" ) );
         ImGui::EndDisabled();
     }
@@ -128,7 +128,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bBusy );
         const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "BuildAll" ), SW_LOCKEY( "EdButton", "Package" ), "Package" ) );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "packaging.package" );
+        EditorSelfTestMarks::record( "packaging.package" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Package" ) );
         if ( bPackage )
             (void)_model.startPackaging(); // 이미 돌면 단추가 꺼져 있다

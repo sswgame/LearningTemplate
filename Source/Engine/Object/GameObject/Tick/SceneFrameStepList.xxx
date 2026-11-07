@@ -7,7 +7,7 @@
  * - 단계 본문은 매니저의 `runFrameStep<Name>( float32 deltaTime )` 하나입니다. 본문이 없으면 컴파일 오류입니다. 프로파일 스코프(`GT.Scene.tick.*`)는 본문이 듭니다.
  * - **모든 단계 끝에** 매니저가 그 단계에 등록한 씬 서비스(`SW_SCENE_SERVICE( Type, 단계 )`)의 `update` 를 부릅니다. 본문은 서비스를 부르지 않습니다 —
  *   어느 단계에 등록해도 돈다(`SceneFrameStepTest.EveryStepUpdatesItsRegisteredServicesOnce`).
- * - 언리얼 `UWorld::Tick` 의 `RunTickGroup( TG_PrePhysics … TG_PostUpdateWork )` 사이에 물리 · 내비게이션 · 애니메이션을 끼우는 것과 같은 자리이고,
+ * - 언리얼 `UWorld::Tick` 의 `RunTickGroup( TG_PrePhysics … TG_PostUpdateJob )` 사이에 물리 · 내비게이션 · 애니메이션을 끼우는 것과 같은 자리이고,
  *   유니티 `PlayerLoop` 처럼 단계 목록으로 적습니다. 끼워 넣는 것은 줄 하나와 본문 하나입니다(`SceneFrameStepTest` 가 줄 순서를 본다).
  * - 컴포넌트 틱 그룹은 물리 앞 둘(PrePhysics · DuringPhysics)과 물리 뒤 둘(PostPhysics · PostUpdate)로 나뉩니다. 그래서 PostPhysics 이후의 틱은
  *   **이번 프레임의** 바디 자세 · 겹침을 보고, 앞의 두 그룹은 지난 프레임의 것을 봅니다. 앞 그룹에서 쓴 애니메이터 파라미터 · 트랜스폼은 같은 프레임의

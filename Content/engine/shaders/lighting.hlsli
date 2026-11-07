@@ -37,7 +37,7 @@ struct Shadow
 /** @brief 라이트 프로브 SH9(g_SwLightProbes). */
 struct LightProbe
 {
-    static float4 loadElement( uint elementIndex );
+    static float4 loadFromXML( uint elementIndex );
     static float4 load( uint probeIndex, uint element );
     static float3 evaluateSphericalHarmonics( uint probeIndex, float3 normal );
 };
@@ -268,7 +268,7 @@ bool LightData::computeIncidence( float3 worldPosition, out float3 outToLight, o
 }
 
 /** @brief 라이트 프로브 버퍼(g_SwLightProbes, t13)의 원소 하나입니다 — 이 함수만 그 버퍼를 읽는다(SH9 · 반사 프로브 텍셀이 같은 버퍼다). */
-static float4 LightProbe::loadElement( uint elementIndex )
+static float4 LightProbe::loadFromXML( uint elementIndex )
 {
     return g_SwLightProbes[elementIndex];
 }
@@ -278,7 +278,7 @@ static float4 LightProbe::loadElement( uint elementIndex )
  */
 static float4 LightProbe::load( uint probeIndex, uint element )
 {
-    return LightProbe::loadElement( probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element );
+    return LightProbe::loadFromXML( probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element );
 }
 
 /**
@@ -357,10 +357,10 @@ static float3 ReflectionProbe::sampleLevel( uint firstTexel, uint resolution, ui
     const uint2  high      = min( low + 1u, uint2( resolution - 1u, resolution - 1u ) );
     const float2 blend     = texel - float2( low );
     const uint   levelBase = firstTexel + level * resolution * resolution;
-    const float3 topLeft   = LightProbe::loadElement( levelBase + low.y * resolution + low.x ).rgb;
-    const float3 topRight  = LightProbe::loadElement( levelBase + low.y * resolution + high.x ).rgb;
-    const float3 lowLeft   = LightProbe::loadElement( levelBase + high.y * resolution + low.x ).rgb;
-    const float3 lowRight  = LightProbe::loadElement( levelBase + high.y * resolution + high.x ).rgb;
+    const float3 topLeft   = LightProbe::loadFromXML( levelBase + low.y * resolution + low.x ).rgb;
+    const float3 topRight  = LightProbe::loadFromXML( levelBase + low.y * resolution + high.x ).rgb;
+    const float3 lowLeft   = LightProbe::loadFromXML( levelBase + high.y * resolution + low.x ).rgb;
+    const float3 lowRight  = LightProbe::loadFromXML( levelBase + high.y * resolution + high.x ).rgb;
     return lerp( lerp( topLeft, topRight, blend.x ), lerp( lowLeft, lowRight, blend.x ), blend.y );
 }
 

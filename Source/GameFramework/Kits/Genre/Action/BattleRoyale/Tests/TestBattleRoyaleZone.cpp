@@ -128,7 +128,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, StagesFlowAndInterpolate )
     SW_EXPECT_EQUAL( 1, zone.getPhaseIndex() );
 
     sw::vector<sw::BattleRoyaleZoneEvent> listEvent;
-    zone.drainEvents( listEvent );
+    zone.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 4 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._kind == sw::BattleRoyaleZoneEvent::Kind::NextZoneRevealed );
     SW_EXPECT_NEAR( 200.0f, listEvent[0]._radius, kZoneTolerance );
@@ -262,7 +262,7 @@ SW_TEST_CASE( BattleRoyaleZoneTest, ArchiveRoundTripResumes )
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     sw::vector<sw::BattleRoyaleZoneEvent> listEvent;
-    restored.drainEvents( listEvent );
+    restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
     SW_EXPECT_TRUE( restored.getStage() == sw::BattleRoyaleZoneStage::Shrinking );
     SW_EXPECT_NEAR( original.getRadius(), restored.getRadius(), kZoneTolerance );

@@ -898,16 +898,16 @@ namespace sw
         const MoveFrameData& frameData = move._frame;
         const bool           bInCombo =
             other._state == FighterState::Juggle || other._state == FighterState::WallSplat || other._state == FighterState::Down;
-        const bool         bCanGuard = other._state == FighterState::Neutral || other._state == FighterState::Blockstun;
-        const GuardStance  stance    = bCanGuard ? other._guard : GuardStance::None;
-        const GuardOutcome outcome =
-            bInCombo ? GuardOutcome::Hit : MoveTimeline::computeGuardOutcome( frameData._height, stance, frameData._bUnblockable == SW_TRUE );
-        if ( outcome == GuardOutcome::Evaded )
+        const bool        bCanGuard = other._state == FighterState::Neutral || other._state == FighterState::Blockstun;
+        const GuardStance stance    = bCanGuard ? other._guard : GuardStance::None;
+        const GuardResult outcome =
+            bInCombo ? GuardResult::Hit : MoveTimeline::computeGuardOutcome( frameData._height, stance, frameData._bUnblockable == SW_TRUE );
+        if ( outcome == GuardResult::Evaded )
             return; // 높이가 맞지 않아 헛쳤다(앉은 상대에게 상단 기술이나 잡기). 지속 프레임 동안 다시 판정한다
 
         const float32 pushX = fighter._dirX * move._pushback;
         const float32 pushZ = fighter._dirZ * move._pushback;
-        if ( outcome == GuardOutcome::Blocked )
+        if ( outcome == GuardResult::Blocked )
         {
             const int32 chip = computeDamage( attacker, frameData._chipDamage, false );
             applyDamage( defender, chip );
@@ -1081,9 +1081,9 @@ namespace sw
         pushEvent( reason, winner, 0 );
         _lastRoundWinner = winner;
         // 무승부 라운드는 둘 다 1위라서 둘 다 1승이다. 라운드 중에만 호출되므로 거절되지 않는다.
-        const RoundSeriesOutcome outcome = _series.reportRoundWinner( winner == kDraw ? RoundSeries::kNoWinner : winner );
+        const RoundSeriesResult outcome = _series.reportRoundWinner( winner == kDraw ? RoundSeries::kNoWinner : winner );
         pushEvent( FightingEvent::Kind::RoundEnd, winner, winner );
-        if ( outcome != RoundSeriesOutcome::Finished )
+        if ( outcome != RoundSeriesResult::Finished )
             return;
         const int32 matchWinner = getMatchWinner();
         pushEvent( FightingEvent::Kind::MatchEnd, matchWinner, matchWinner );
@@ -1111,9 +1111,9 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void FightingMatch::drainEvents( vector<FightingEvent>& outListEvent )
+    void FightingMatch::pollEvents( vector<FightingEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     // ------------------------------------------------------------------------------

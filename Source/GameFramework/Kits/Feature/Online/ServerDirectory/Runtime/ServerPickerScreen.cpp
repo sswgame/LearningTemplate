@@ -60,7 +60,7 @@ namespace sw
         };
     } // namespace
 
-    ServerPickerScreen::ServerPickerScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    ServerPickerScreen::ServerPickerScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _onPicked{}
         , _kind{}

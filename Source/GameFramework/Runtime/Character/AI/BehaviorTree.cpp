@@ -6,7 +6,7 @@
 
 #include "Engine/Navigation/INavMover.h"
 
-#include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeParams.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 

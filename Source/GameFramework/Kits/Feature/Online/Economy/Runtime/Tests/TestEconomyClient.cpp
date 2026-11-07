@@ -53,14 +53,14 @@ namespace
     };
 
     /** @brief 가짜 서버 + 연결 하나의 경제 클라이언트입니다. 선언 순서가 수명이다. */
-    struct EconomyClientRig
+    struct EconomyClientFixture
     {
-        FakeEconomyService  _service{};
-        EconomyClient       _economy{};
-        test::OnlineTestRig _rig{ false };
-        int32               _clientIndex{ -1 };
+        FakeEconomyService      _service{};
+        EconomyClient           _economy{};
+        test::OnlineTestFixture _rig{ false };
+        int32                   _clientIndex{ -1 };
 
-        EconomyClientRig()
+        EconomyClientFixture()
         {
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();
@@ -113,15 +113,15 @@ namespace
     };
 
     /** @brief 흐름 + 가짜 서버 + 가짜 다리입니다. */
-    struct PurchaseFlowRig
+    struct PurchaseFlowFixture
     {
-        EconomyClientRig            _client{};
+        EconomyClientFixture        _client{};
         FakeBillingBridge           _bridge{};
         vector<StorePurchaseReport> _listReport{};
         StorePurchaseFlow           _flow;
 
-        PurchaseFlowRig()
-            : _flow{ _bridge, _client._economy, StorePurchaseFlow::ReportDelegate::create<&PurchaseFlowRig::onReport>( this ) }
+        PurchaseFlowFixture()
+            : _flow{ _bridge, _client._economy, StorePurchaseFlow::ReportDelegate::create<&PurchaseFlowFixture::onReport>( this ) }
         {
         }
 
@@ -146,7 +146,7 @@ namespace
 /** @brief [EconomyClientTest] 지갑 응답은 캐시를 통째로 바꾸고, 구매 응답은 바뀐 것만 덮는다. 고칠 때마다 판이 오른다 */
 SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
 {
-    EconomyClientRig     rig;
+    EconomyClientFixture rig;
     EconomyReplyRecorder recorder;
     rig._service._reply._listBalance = {
         LedgerBalance{"cur.gold", 10},
@@ -181,7 +181,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
 /** @brief [EconomyClientTest] 실패한 답은 캐시를 바꾸지 않고 결과를 그대로 넘긴다 */
 SW_TEST_CASE( EconomyClientTest, FailedReplyChangesNothing )
 {
-    EconomyClientRig     rig;
+    EconomyClientFixture rig;
     EconomyReplyRecorder recorder;
     rig._service._reply._result      = EconomyResult::InsufficientFunds;
     rig._service._reply._listBalance = {
@@ -199,7 +199,7 @@ SW_TEST_CASE( EconomyClientTest, FailedReplyChangesNothing )
 /** @brief [EconomyClientTest] 구매 · 지급의 멱등 키: 비어 있으면 새로 만들고 답이 돌려주며, 그 키를 넘기면 서버가 같은 키로 알아 기억한 답을 준다(서비스는 다시 불리지 않는다). 키는 호출마다 다르다 */
 SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
 {
-    EconomyClientRig     rig;
+    EconomyClientFixture rig;
     EconomyReplyRecorder recorder;
     EconomyRedeemRequest redeem;
     redeem._storeName = "google";
@@ -339,7 +339,7 @@ SW_TEST_CASE( EconomyMirrorTest, InventoryFollowsTheLedger )
 SW_TEST_CASE( StorePurchaseFlowTest, BeginCarriesTheBuyerToken )
 {
     SW_EXPECT_LOG( "StorePurchaseFlow.CannotBegin" );
-    PurchaseFlowRig rig;
+    PurchaseFlowFixture rig;
     SW_EXPECT_TRUE( rig._flow.begin( kAccount, "gem100" ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._bridge._listRequest.size() );
     SW_EXPECT_EQUAL( string( "gem100" ), rig._bridge._listRequest[0]._productID );
@@ -357,7 +357,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, BeginCarriesTheBuyerToken )
 /** @brief [StorePurchaseFlowTest] 결제된 영수증을 스토어 이름과 함께 서버에 내고, 지급되면 거래를 마친 뒤 알린다 */
 SW_TEST_CASE( StorePurchaseFlowTest, PurchasedIsRedeemedThenFinished )
 {
-    PurchaseFlowRig rig;
+    PurchaseFlowFixture rig;
     rig._bridge.pushPurchased( "gem100|TOKEN" );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._client._service._listRedeem.size() );
@@ -373,7 +373,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, PurchasedIsRedeemedThenFinished )
 /** @brief [StorePurchaseFlowTest] 스토어에 닿지 못한 서버 답은 거래를 마치지 않고 다시 낼 수 있다. 다시 내면 같은 멱등 키이고, 지급되면 마친다 */
 SW_TEST_CASE( StorePurchaseFlowTest, PendingRedeemRetriesWithTheSameKey )
 {
-    PurchaseFlowRig rig;
+    PurchaseFlowFixture rig;
     rig._client._service._reply._result = EconomyResult::ReceiptPending;
     rig._bridge.pushPurchased( "gem100|TOKEN" );
     rig.pump();
@@ -398,7 +398,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, PendingRedeemRetriesWithTheSameKey )
 SW_TEST_CASE( StorePurchaseFlowTest, RefusedPurchaseStaysOpen )
 {
     SW_EXPECT_LOG( "StorePurchaseFlow.BuyerTokenMissing" );
-    PurchaseFlowRig rig;
+    PurchaseFlowFixture rig;
     for ( EconomyResult result : { EconomyResult::NotPurchaser, EconomyResult::BuyerTokenMissing, EconomyResult::AlreadyRedeemed, EconomyResult::ReceiptInvalid } )
     {
         rig._client._service._reply._result = result;
@@ -417,7 +417,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, RefusedPurchaseStaysOpen )
 /** @brief [StorePurchaseFlowTest] 취소 · 실패 · 보류는 서버에 내지 않고 그대로 알린다 */
 SW_TEST_CASE( StorePurchaseFlowTest, UnpaidResultsNeverReachTheServer )
 {
-    PurchaseFlowRig rig;
+    PurchaseFlowFixture rig;
     for ( StoreBillingStatus status : { StoreBillingStatus::Cancelled, StoreBillingStatus::Failed, StoreBillingStatus::Pending } )
     {
         StoreBillingResult& result = rig._bridge._listResult.emplace_back();

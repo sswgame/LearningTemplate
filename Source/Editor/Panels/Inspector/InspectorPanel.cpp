@@ -149,7 +149,7 @@ namespace sw::editor
         if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, SW_EDITOR_ICON( "Lock" ), SW_EDITOR_ICON( "Unlock" ), SW_LOCKEY( "EditorInspector", "LockedToObject" ),
                                                   SW_LOCKEY( "EditorInspector", "FollowingSelection" ) ) )
             _lockedObjectID = bLocked ? 0 : editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
-        EditorSelfTestMarks::note( "inspector.lock" );
+        EditorSelfTestMarks::record( "inspector.lock" );
         ImGui::Separator();
 
         // 미리보기 창의 선택을 겨누면 그 창 씬의 오브젝트를 보인다. 잠금은 메인 선택의 오브젝트에만 쓴다.
@@ -314,7 +314,7 @@ namespace sw::editor
             return;
 
         ImGui::SeparatorText( SW_LOCKEY( "EditorInspector", "FavoritesSection" ) );
-        EditorSelfTestMarks::note( "inspector.favorites" );
+        EditorSelfTestMarks::record( "inspector.favorites" );
         for ( const EditorPropertyGridTarget& target : listTarget )
         {
             // 같은 타입의 컴포넌트가 둘이면 id 가 겹치므로 인스턴스 주소로 나눈다.
@@ -536,7 +536,7 @@ namespace sw::editor
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "InspectorAddComponent" );
         }
-        EditorSelfTestMarks::note( "inspector.addComponent" );
+        EditorSelfTestMarks::record( "inspector.addComponent" );
         if ( ImGui::BeginPopup( "InspectorAddComponent" ) )
         {
             bool bFailed{ false };
@@ -621,7 +621,7 @@ namespace sw::editor
         if ( ( bEnter || bLeftAfterEdit ) && bNameChanged )
             InspectorObjectEdit::applyObjectEdit( pObj, "Rename GameObject", [pObj, this]()
             { pObj->setName( hashed_string( _nameEditBuffer.c_str() ) ); } );
-        EditorSelfTestMarks::note( "inspector.name" );
+        EditorSelfTestMarks::record( "inspector.name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ObjectName" ) );
 
         bool bActive = pObj->isActive();

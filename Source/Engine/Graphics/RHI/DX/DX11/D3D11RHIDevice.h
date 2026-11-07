@@ -486,8 +486,8 @@ namespace sw
          *          목록은 `_liveCmdListMutex` 가 지키지만 **리스트의 상태**는 그 리스트를 기록하는 스레드의 것이다. 그래서 병렬 기록 중에는 부르지 않는다
          *          (`destroyBuffer` · `destroyPipelineState` 가 `requireRegistryMutableNow` 로 모든 구성에서 감시한다. 해제는 `IRHIDevice::releaseHandle` 이 기록 밖으로 미룬다).
          */
-        void forgetBufferInRecordingStates( RHIBufferHandle buffer );
-        void forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso );
+        void removeBufferInRecordingStates( RHIBufferHandle buffer );
+        void removePipelineStateInRecordingStates( RHIPipelineStateHandle pso );
         /** @brief 불투명 버퍼 핸들로 ID3D11Buffer 를 찾습니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
         /**

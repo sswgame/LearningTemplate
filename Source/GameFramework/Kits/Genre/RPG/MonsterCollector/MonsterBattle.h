@@ -49,7 +49,7 @@ namespace sw
 namespace sw
 {
     /** @brief 전투의 끝입니다. */
-    enum class MonsterBattleOutcome : uint8
+    enum class MonsterBattleResult : uint8
     {
         Ongoing = 0,
         Won,
@@ -123,7 +123,7 @@ namespace sw
             BrokeFree,
             Escaped,
             EscapeFailed,
-            BattleEnded ///< `_value` 는 MonsterBattleOutcome
+            BattleEnded ///< `_value` 는 MonsterBattleResult
         };
         hashed_string _id{}; ///< 기술, 종, 날씨의 id
         float32       _multiplier{ 1.0f };
@@ -170,7 +170,7 @@ namespace sw
         void resolveRound();
         /** @brief 쓰러진 자리를 @p partyIndex 의 개체로 채웁니다(`NeedsSwitch` 다음에 호출합니다). */
         [[nodiscard]] bool switchFainted( int32 side, int32 partyIndex );
-        void               drainEvents( vector<MonsterBattleEvent>& outListEvent );
+        void               pollEvents( vector<MonsterBattleEvent>& outListEvent );
         /** @brief 양쪽(개체, 능력 변화, 정한 행동, 나선 개체, 교체 대기), 턴 순서, 난수, 잡은 개체, 날씨, 도망 횟수, 결과, 야생 여부를 씁니다. 카탈로그와 상성표는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 종, 기술, 성격, 날씨이거나 값이 범위 밖이거나(쓸 수 없는 행동, 교체할 개체가 없는 교체 대기 등) 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
@@ -199,7 +199,7 @@ namespace sw
         /** @brief 지금 나선 개체의 실효 스피드입니다(능력 변화와 마비 반영). */
         float32 computeEffectiveSpeed( int32 side ) const;
 
-        MonsterBattleOutcome           getOutcome() const { return _outcome; }
+        MonsterBattleResult            getResult() const { return _result; }
         bool                           isWild() const { return _bWild; }
         int32                          getRound() const { return _turnOrder.getRound(); }
         int32                          getActiveIndex( int32 side ) const { return _arrSide[side]._activeIndex; }
@@ -247,7 +247,7 @@ namespace sw
         int32              computeStatWithStage( int32 side, const MonsterInstance& monster, MonsterStat stat, bool bCritical, bool bAttacker ) const;
         float32            computeWeatherMultiplier( const hashed_string& moveType ) const;
         int32              findFirstUsable( int32 side ) const;
-        void               setOutcome( MonsterBattleOutcome outcome );
+        void               setResult( MonsterBattleResult result );
 
     private:
         Side                            _arrSide[kSideCount];
@@ -260,7 +260,7 @@ namespace sw
         const ElementChart*             _pChart;
         int32                           _weatherTurns;
         int32                           _escapeAttempts;
-        MonsterBattleOutcome            _outcome;
+        MonsterBattleResult             _result;
         bool                            _bWild; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw

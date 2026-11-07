@@ -82,7 +82,7 @@ namespace sw::editor
         /** @brief 타일맵 XML 을 읽어 내용을 채우고 경로 칸을 그 경로로 둡니다. 파일이 없으면 새 맵입니다. 실패 이유는 상태 줄에 남깁니다. */
         ToolAssetLoadResult loadXML( string_view assetRelativePath );
         /** @brief 경로 칸의 Resource 상대 경로로 TileMap XML 을 쓰고 결과를 상태 줄에 남깁니다. 성공하면 true 입니다(dirty 해제 · 되돌리기 기준은 패널이 한다). */
-        [[nodiscard]] bool saveXML();
+        [[nodiscard]] bool saveToFile();
         /** @brief 되돌리기 기록용 맵 글(이름 칸 포함)입니다. */
         string captureText() const;
         /** @brief 되돌리기 기록 글로 맵을 되돌립니다. 읽지 못하면 빈 맵을 보입니다. */

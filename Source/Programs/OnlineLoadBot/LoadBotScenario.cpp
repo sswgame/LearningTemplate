@@ -227,13 +227,13 @@ namespace sw
             outError = "cannot read scenario '" + string( path ) + "'";
             return false;
         }
-        if ( loadText( text, outScenario, outError ) )
+        if ( loadFromXMLText( text, outScenario, outError ) )
             return true;
         outError = string( path ) + ": " + outError;
         return false;
     }
 
-    bool LoadBotScenario::loadText( string_view jsonText, LoadBotScenario& outScenario, string& outError )
+    bool LoadBotScenario::loadFromXMLText( string_view jsonText, LoadBotScenario& outScenario, string& outError )
     {
         JSONDocument document;
         if ( document.parse( jsonText, "<scenario>" ) == false )

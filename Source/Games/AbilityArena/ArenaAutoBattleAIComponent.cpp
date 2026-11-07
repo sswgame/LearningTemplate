@@ -28,9 +28,9 @@ namespace sw
         (void)context;
         const GameObject*             pOwner         = pawn.getOwner();
         const AbilityComponent*       pAbilitySystem = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
-        const ArenaGameModeComponent* pDirector      = ArenaGameModeComponent::findForPawn( pawn );
+        const ArenaGameModeComponent* pGameMode      = ArenaGameModeComponent::findForPawn( pawn );
         float3                        selfPosition{};
-        const bool                    bMissingBattleContext = pAbilitySystem == nullptr || pDirector == nullptr || pDirector->findUnitPosition( pOwner->getHandle(), selfPosition ) == false;
+        const bool                    bMissingBattleContext = pAbilitySystem == nullptr || pGameMode == nullptr || pGameMode->findUnitPosition( pOwner->getHandle(), selfPosition ) == false;
         if ( bMissingBattleContext )
         {
             stopMoving();
@@ -44,7 +44,7 @@ namespace sw
             pressButton( hashed_string( "Arena.Heal" ) );
 
         float3 targetPosition{};
-        if ( pDirector->findNearestHostilePosition( pOwner->getHandle(), targetPosition ) == false )
+        if ( pGameMode->findNearestHostilePosition( pOwner->getHandle(), targetPosition ) == false )
         {
             stopMoving();
             return;
@@ -55,7 +55,7 @@ namespace sw
 
         // 둘러싸이면 반대쪽으로 대시 — 같은 틱에 물러나는 쪽으로 걸어 유닛이 그쪽을 바라본 뒤 대시가 그 쪽으로 미끄러진다.
         uint32 nearbyEnemyCount = 0;
-        for ( const ArenaUnitView& view : pDirector->getUnitViews() )
+        for ( const ArenaUnitView& view : pGameMode->getUnitViews() )
         {
             const bool bNearby = view._kind != ArenaUnitKind::Player && view._bAlive == SW_TRUE && float3::getDistance( view._position, selfPosition ) < _crowdRadius;
             if ( bNearby )

@@ -114,7 +114,7 @@ namespace sw
              * @brief 지급 분개를 커밋합니다. 스토어에 알려야 하는 영수증이면 알림 레코드를 같은 트랜잭션에 넣습니다.
              * @details 재생(이미 지급한 거래)도 쓴다 — 스토어가 아직 확인 전이라고 답했으니 지난번 알림이 끝나지 않았다. 그 쓰기가 실패하면 Unavailable 로 답해 클라이언트가 같은 영수증을 다시 내게 한다.
              */
-            [[nodiscard]] static LedgerResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt, LedgerTransferOutcome& outOutcome )
+            [[nodiscard]] static LedgerResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt, LedgerTransferResult& outOutcome )
             {
                 ReceiptDeliveryTask task;
                 if ( EconomyStoreLogic::makeDeliveryTask( receipt, task ) == false )
@@ -213,7 +213,7 @@ namespace sw
                 }
                 LedgerTransferRequest stored = request;
                 stored._listPosting          = entry._listPosting;
-                LedgerTransferOutcome replay;
+                LedgerTransferResult replay;
                 if ( Ledger::resolveConflict( connection, stored, replay ) != LedgerResult::Ok )
                 {
                     outReply._result = EconomyResult::InvalidRequest;
@@ -324,10 +324,10 @@ namespace sw
         return EconomyResult::Unavailable;
     }
 
-    void EconomyStoreLogic::collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance )
+    void EconomyStoreLogic::collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance )
     {
         const LedgerHolder account = LedgerHolder::makeAccount( accountID );
-        for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+        for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
         {
             if ( holderBalance._holder == account )
                 outListBalance.push_back( holderBalance._balance );
@@ -359,9 +359,9 @@ namespace sw
             if ( const std::optional<EconomyResult> early = EconomyStoreLogicInternal::buildPurchaseRequest( connection, currencies, *pOffer, input, outReply, request ) )
                 return EconomyStoreLogicInternal::finish( outReply, *early );
 
-            ServiceTransaction    transaction;
-            LedgerTransferOutcome outcome;
-            const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            ServiceTransaction   transaction;
+            LedgerTransferResult outcome;
+            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
             if ( staged != LedgerResult::Ok )
             {
                 if ( staged == LedgerResult::InsufficientFunds && EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
@@ -450,8 +450,8 @@ namespace sw
         {
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
         }
-        LedgerTransferOutcome outcome;
-        const LedgerResult    result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, outcome );
+        LedgerTransferResult outcome;
+        const LedgerResult   result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, outcome );
         if ( result == LedgerResult::JournalKeyReused )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라서 분개 내용이 다르다
         if ( result != LedgerResult::Ok )
@@ -585,14 +585,14 @@ namespace sw
             {
                 request._listPosting.push_back( LedgerPosting{ posting._to, LedgerHolder::makeSink(), posting._assetID, posting._amount } );
             }
-            LedgerTransferOutcome outcome;
-            const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            LedgerTransferResult outcome;
+            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
             if ( staged != LedgerResult::Ok )
                 return toEconomyResult( staged );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
                 {
                     if ( holderBalance._holder._kind == LedgerHolderKind::Account )
                         outListChange.push_back( EconomyBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
@@ -657,8 +657,8 @@ namespace sw
                 return Internal::finish( outReply, EconomyResult::NothingToWithdraw );
             ServiceTransaction transaction;
             transaction.put( getRefundTable(), redeemKey, vector<uint8>{ Internal::kMarkWithdrawn }, ServiceRecord::kAbsentVersion );
-            LedgerTransferOutcome outcome;
-            const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            LedgerTransferResult outcome;
+            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
             if ( staged != LedgerResult::Ok )
                 return Internal::finish( outReply, toEconomyResult( staged ) );
             const ServiceStoreResult committed = connection.commit( transaction );

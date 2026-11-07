@@ -33,7 +33,7 @@ namespace sw
         const TypeInfo*         getTypeInfo() const override { return StaticType(); }
         static constexpr size_t kVisibleLines = 15; ///< 화면에 보이는 줄 수의 상한이다
 
-        ChatScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
+        ChatScreen( const UIScreenDef& desc, unique_ptr<Widget> root );
         ~ChatScreen() override;
 
         /** @brief 문서 @p documentPath 로 @p channelID 의 채팅 화면을 열고 모델을 연결합니다. 문서를 열지 못하면 무효 핸들입니다. */

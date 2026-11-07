@@ -81,7 +81,7 @@ namespace sw
             }
 
             /** @brief 인자 오류입니다. 구문은 맞으므로 계속 훑습니다. */
-            void noteArgumentError( string_view reason )
+            void recordArgumentError( string_view reason )
             {
                 if ( _error.empty() )
                     _error = string( reason );
@@ -295,7 +295,7 @@ namespace sw
                 const bool          bRebuild  = _mode == TextWalkMode::Rebuild && bEmit;
                 const TextArgument* pArgument = ( bFormat && _pArguments != nullptr ) ? _pArguments->findArgument( name ) : nullptr;
                 if ( bFormat && pArgument == nullptr )
-                    noteArgumentError( "missing argument '" + string( name ) + "'" );
+                    recordArgumentError( "missing argument '" + string( name ) + "'" );
 
                 skipSpace();
                 if ( bRebuild )
@@ -400,7 +400,7 @@ namespace sw
                     else if ( argument._kind == TextArgumentKind::Decimal )
                         outValue = argument._decimal;
                     else
-                        noteArgumentError( "plural argument '" + argument._name + "' must be a number" );
+                        recordArgumentError( "plural argument '" + argument._name + "' must be a number" );
                     for ( size_t index = 0; index < listSelector.size(); ++index )
                     {
                         float64    exactValue{ 0.0 };
@@ -413,7 +413,7 @@ namespace sw
                 else if ( argument._kind == TextArgumentKind::Text || argument._kind == TextArgumentKind::Integer )
                     wanted = argument._text;
                 else
-                    noteArgumentError( "select argument '" + argument._name + "' must be text" );
+                    recordArgumentError( "select argument '" + argument._name + "' must be text" );
 
                 size_t otherIndex = listSelector.size();
                 for ( size_t index = 0; index < listSelector.size(); ++index )
@@ -453,7 +453,7 @@ namespace sw
                 const TextArgument* pArgument = _pArguments != nullptr ? _pArguments->findArgument( name ) : nullptr;
                 if ( pArgument == nullptr )
                 {
-                    noteArgumentError( "missing argument '" + string( name ) + "'" );
+                    recordArgumentError( "missing argument '" + string( name ) + "'" );
                     outText.append( "{" ).append( name ).append( "}" );
                     return;
                 }
@@ -487,7 +487,7 @@ namespace sw
                 const TextArgument* pArgument = _pArguments != nullptr ? _pArguments->findArgument( name ) : nullptr;
                 if ( pArgument == nullptr )
                 {
-                    noteArgumentError( "missing argument '" + string( name ) + "'" );
+                    recordArgumentError( "missing argument '" + string( name ) + "'" );
                     outText.append( "{" ).append( name ).append( "}" );
                     return;
                 }
@@ -496,7 +496,7 @@ namespace sw
                     const bool bNumber = pArgument->_kind == TextArgumentKind::Integer || pArgument->_kind == TextArgumentKind::Decimal;
                     if ( bNumber == false )
                     {
-                        noteArgumentError( "number argument '" + string( name ) + "' is not a number" );
+                        recordArgumentError( "number argument '" + string( name ) + "' is not a number" );
                         outText.append( pArgument->_text );
                         return;
                     }
@@ -512,18 +512,18 @@ namespace sw
                     else if ( style.empty() )
                         outText.append( pArgument->_kind == TextArgumentKind::Integer ? _pCulture->formatInteger( pArgument->_integer ) : _pCulture->formatDecimal( value, pArgument->_minFraction, pArgument->_maxFraction ) );
                     else
-                        noteArgumentError( "unknown number style '" + string( style ) + "'" );
+                        recordArgumentError( "unknown number style '" + string( style ) + "'" );
                     return;
                 }
                 if ( pArgument->_kind != TextArgumentKind::DateTime )
                 {
-                    noteArgumentError( "date/time argument '" + string( name ) + "' is not a date" );
+                    recordArgumentError( "date/time argument '" + string( name ) + "' is not a date" );
                     return;
                 }
                 const string_view pattern = type == "date" ? _pCulture->findDatePattern( style ) : _pCulture->findTimePattern( style );
                 if ( pattern.empty() )
                 {
-                    noteArgumentError( "unknown date/time style '" + string( style ) + "'" );
+                    recordArgumentError( "unknown date/time style '" + string( style ) + "'" );
                     return;
                 }
                 outText.append( _pCulture->formatDateTime( pArgument->_dateTime, pattern ) );

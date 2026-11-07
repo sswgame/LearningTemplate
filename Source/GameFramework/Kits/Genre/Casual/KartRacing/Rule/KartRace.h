@@ -157,7 +157,7 @@ namespace sw
      *     race.addRacer( kartSettings, false ); // 사람
      *     race.addRacer( kartSettings, true );  // AI
      *     race.start();
-     *     // 매 프레임: race.setInput( 0, input ); race.update( deltaTime ); race.drainEvents( listEvent );
+     *     // 매 프레임: race.setInput( 0, input ); race.update( deltaTime ); race.pollEvents( listEvent );
      * @endcode
      */
     class SW_KIT_API KartRace
@@ -225,7 +225,7 @@ namespace sw
         const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
         bool                           isItemBoxActive( int32 boxIndex ) const;
         const KartTrack*               getTrack() const { return _pTrack; }
-        void                           drainEvents( vector<KartRaceEvent>& outListEvent );
+        void                           pollEvents( vector<KartRaceEvent>& outListEvent );
 
     private:
         bool isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }

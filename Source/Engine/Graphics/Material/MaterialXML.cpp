@@ -25,17 +25,17 @@ namespace sw
         {
             static constexpr const utf8* kBlendTargetListName = "_listBlendTarget";
 
-            /** @brief 열거 항목(`MaterialEnumEntryFields`)을 읽습니다. 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
+            /** @brief 열거 항목(`MaterialEnumEntryParams`)을 읽습니다. 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool parseEnumEntries( XMLNode parent, string_view sourceName, vector<MaterialEnumEntry>& outListEntry )
             {
                 outListEntry.clear();
                 const XMLNode list = parent.findChild( "_enumEntries" );
                 for ( XMLNode item = list.isValid() ? list.findChild( "item" ) : XMLNode{}; item; item = item.findNextSibling( "item" ) )
                 {
-                    MaterialEnumEntryFields fields;
-                    if ( XMLFields::readFields( item, fields, sourceName ) == false )
+                    MaterialEnumEntryParams params;
+                    if ( XMLFields::readFields( item, params, sourceName ) == false )
                         return false;
-                    outListEntry.push_back( MaterialEnumEntry{ std::move( fields._name ), fields._value } );
+                    outListEntry.push_back( MaterialEnumEntry{ std::move( params._name ), params._value } );
                 }
                 return true;
             }
@@ -73,36 +73,36 @@ namespace sw
     {
         outProp                = MaterialProperty{};
         MaterialProperty& prop = outProp;
-        // 칸은 스키마(`MaterialPropertyFields`)가 정한다 — 철자가 다른 속성(bSRGB · bHDR 처럼)이 조용히 기본값이 되지 않게 모르는 이름은 로드 오류다.
-        MaterialPropertyFields fields;
-        if ( XMLFields::readFields( item, fields, string_view{ item.getAttributeText( "name" ) } ) == false )
+        // 칸은 스키마(`MaterialPropertyParams`)가 정한다 — 철자가 다른 속성(bSRGB · bHDR 처럼)이 조용히 기본값이 되지 않게 모르는 이름은 로드 오류다.
+        MaterialPropertyParams params;
+        if ( XMLFields::readFields( item, params, string_view{ item.getAttributeText( "name" ) } ) == false )
             return false;
-        prop._name = fields._name;
+        prop._name = params._name;
         uint32 size{ 0 };
-        if ( fields._type.empty() == false )
-            prop._type = MaterialPacking::stringToType( fields._type, size );
+        if ( params._type.empty() == false )
+            prop._type = MaterialPacking::stringToType( params._type, size );
         // 기본값과 현재 값은 한쪽만 적으면 다른 쪽이 따라간다.
-        prop._defaultValue        = fields._defaultValue.empty() ? fields._value : fields._defaultValue;
-        prop._value               = fields._value.empty() ? prop._defaultValue : fields._value;
-        prop._assetPath           = fields._assetPath;
-        prop._enumType            = fields._enumType;
-        prop._displayName         = fields._displayName;
-        prop._group               = fields._group;
-        prop._tooltip             = fields._tooltip;
-        prop._shaderKeyword       = fields._shaderKeyword;
-        prop._collectionPath      = fields._collection;
-        prop._collectionParameter = fields._collectionParameter;
+        prop._defaultValue        = params._defaultValue.empty() ? params._value : params._defaultValue;
+        prop._value               = params._value.empty() ? prop._defaultValue : params._value;
+        prop._assetPath           = params._assetPath;
+        prop._enumType            = params._enumType;
+        prop._displayName         = params._displayName;
+        prop._group               = params._group;
+        prop._tooltip             = params._tooltip;
+        prop._shaderKeyword       = params._shaderKeyword;
+        prop._collectionPath      = params._collection;
+        prop._collectionParameter = params._collectionParameter;
         if ( prop._collectionPath.empty() != prop._collectionParameter.empty() )
         {
             SW_LOG_ERROR_ID( "Material.CollectionBindingHalf", "Material property '%#' needs both collection and collectionParameter", prop._name );
             return false;
         }
-        prop._min       = fields._min;
-        prop._max       = fields._max;
-        prop._bHDR      = fields._bHdr ? SW_TRUE : SW_FALSE;
-        prop._bSRGB     = fields._bSrgb ? SW_TRUE : SW_FALSE;
-        prop._bHidden   = fields._bHidden ? SW_TRUE : SW_FALSE;
-        prop._bAdvanced = fields._bAdvanced ? SW_TRUE : SW_FALSE;
+        prop._min       = params._min;
+        prop._max       = params._max;
+        prop._bHDR      = params._bHdr ? SW_TRUE : SW_FALSE;
+        prop._bSRGB     = params._bSrgb ? SW_TRUE : SW_FALSE;
+        prop._bHidden   = params._bHidden ? SW_TRUE : SW_FALSE;
+        prop._bAdvanced = params._bAdvanced ? SW_TRUE : SW_FALSE;
         if ( MaterialXMLInternal::parseEnumEntries( item, string_view{ item.getAttributeText( "name" ) }, prop._listEnumEntry ) == false )
             return false;
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
@@ -132,9 +132,9 @@ namespace sw
         parent.appendAttribute( pName, value );
     }
 
-    bool MaterialXML::parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc )
+    bool MaterialXML::parsePermutationNode( XMLNode root, MaterialPermutationDef& outDesc )
     {
-        outDesc = MaterialPermutationDesc{};
+        outDesc = MaterialPermutationDef{};
         if ( root.isValid() == false )
             return true;
         XMLNode permutationsNode = root.findChild( "_permutations" );
@@ -142,12 +142,12 @@ namespace sw
             return true;
 
         const string_view         sourceName{ root.getAttributeText( "name" ) };
-        MaterialPermutationFields fields;
-        if ( XMLFields::readFields( permutationsNode, fields, sourceName ) == false ) // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다
+        MaterialPermutationParams params;
+        if ( XMLFields::readFields( permutationsNode, params, sourceName ) == false ) // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다
             return false;
-        outDesc._quality   = fields._quality;
-        outDesc._shaderLOD = fields._shaderLOD;
-        outDesc._usage     = fields._usage;
+        outDesc._quality   = params._quality;
+        outDesc._shaderLOD = params._shaderLOD;
+        outDesc._usage     = params._usage;
 
         XMLNode always = permutationsNode.findChild( "_alwaysDefines" );
         MaterialXMLInternal::parseStringListItems( always, outDesc._listAlwaysDefine );
@@ -157,7 +157,7 @@ namespace sw
         {
             for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialStaticSwitchFields switchFields;
+                MaterialStaticSwitchParams switchFields;
                 if ( XMLFields::readFields( item, switchFields, sourceName ) == false )
                     return false;
                 MaterialStaticSwitch entry{};
@@ -176,7 +176,7 @@ namespace sw
         {
             for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialMultiCompileFields multiCompileFields;
+                MaterialMultiCompileParams multiCompileFields;
                 if ( XMLFields::readFields( item, multiCompileFields, sourceName ) == false )
                     return false;
                 MaterialMultiCompile multiCompile{};
@@ -191,11 +191,11 @@ namespace sw
         return true;
     }
 
-    void MaterialXML::appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationsNode )
+    void MaterialXML::appendPermutationNode( XMLNode root, const MaterialPermutationDef& permutationsNode )
     {
         XMLNode node = root.appendChild( "_permutations" );
         // 순열은 부모 것을 통째로 바꾸므로 기본값을 생략해도 되지만, 차이(`DataInheritance::makeDelta`)는 글을 맞대므로 늘 같은 꼴로 모두 쓴다.
-        XMLFields::writeEveryField( node, MaterialPermutationFields{ permutationsNode._quality, permutationsNode._shaderLOD, permutationsNode._usage } );
+        XMLFields::writeEveryField( node, MaterialPermutationParams{ permutationsNode._quality, permutationsNode._shaderLOD, permutationsNode._usage } );
         MaterialXMLInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
 
         if ( permutationsNode._listStaticSwitch.empty() == false )
@@ -203,7 +203,7 @@ namespace sw
             XMLNode list = node.appendChild( "_staticSwitches" );
             for ( const MaterialStaticSwitch& entry : permutationsNode._listStaticSwitch )
             {
-                MaterialStaticSwitchFields switchFields;
+                MaterialStaticSwitchParams switchFields;
                 switchFields._name           = entry._name;
                 switchFields._keyword        = entry._keyword;
                 switchFields._keywordOff     = entry._keywordOff;
@@ -219,7 +219,7 @@ namespace sw
             for ( const MaterialMultiCompile& mc : permutationsNode._listMultiCompile )
             {
                 XMLNode item = list.appendChild( "item" );
-                XMLFields::writeFields( item, MaterialMultiCompileFields{ mc._name, mc._selected } );
+                XMLFields::writeFields( item, MaterialMultiCompileParams{ mc._name, mc._selected } );
                 MaterialXMLInternal::appendMaterialStringList( item, "_options", mc._listOption );
             }
         }
@@ -230,7 +230,7 @@ namespace sw
 {
     DataInheritanceSchema MaterialXML::makeInheritanceSchema()
     {
-        DataInheritanceSchema schema{ "MaterialDesc" };
+        DataInheritanceSchema schema{ "MaterialDef" };
         schema._listKeptAttribute.emplace_back( "formatVersion" ); // 판 · 이름은 자기 에셋의 것이다
         schema._listKeptAttribute.emplace_back( "name" );
         schema._bEmptyClears = SW_FALSE;
@@ -241,7 +241,7 @@ namespace sw
         return schema;
     }
 
-    SW_DATA_INHERITANCE_SCHEMA( MaterialDesc, &MaterialXML::makeInheritanceSchema );
+    SW_DATA_INHERITANCE_SCHEMA( MaterialDef, &MaterialXML::makeInheritanceSchema );
 
     bool MaterialXML::isRenderStateAttribute( const utf8* pName )
     {
@@ -253,7 +253,7 @@ namespace sw
         return false;
     }
 
-    bool MaterialXML::parseRenderFields( XMLNode root, const MaterialRootFields& rootFields, string_view sourceName, MaterialDesc& inoutDesc )
+    bool MaterialXML::parseRenderFields( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc )
     {
         // 렌더 상태 칸을 0 으로 채운 값과 1 로 채운 값 위에 두 번 읽으면 두 값이 같은 비트가 적은 칸이다(`RHIRenderStateOverride::makeFromReads`). 다른 스키마의 속성은 모르는 칸이 아니다.
         const auto isOtherAttribute = []( const utf8* pName )
@@ -265,11 +265,11 @@ namespace sw
             return false;
         RHIRenderStateOverride stateOverride = RHIRenderStateOverride::makeFromReads( overZeros, overOnes );
 
-        inoutDesc._alphaMode         = rootFields._alphaMode;
-        inoutDesc._alphaCutoff       = rootFields._alphaCutoff;
-        inoutDesc._renderQueue       = rootFields._renderQueue;
-        inoutDesc._bTwoSidedLighting = rootFields._bTwoSidedLighting ? SW_TRUE : SW_FALSE;
-        inoutDesc._blendPreset       = rootFields._blendPreset;
+        inoutDesc._alphaMode         = rootParams._alphaMode;
+        inoutDesc._alphaCutoff       = rootParams._alphaCutoff;
+        inoutDesc._renderQueue       = rootParams._renderQueue;
+        inoutDesc._bTwoSidedLighting = rootParams._bTwoSidedLighting ? SW_TRUE : SW_FALSE;
+        inoutDesc._blendPreset       = rootParams._blendPreset;
         inoutDesc._listBlendTarget.clear();
 
         bool       bValid = true;
@@ -282,12 +282,12 @@ namespace sw
             fail();
         }
         const bool bNoCull = static_cast<uint8>( stateOverride._mask._cullMode ) != 0 && stateOverride._values._cullMode == RHICullMode::None;
-        if ( rootFields._bTwoSidedLighting && bNoCull == false )
+        if ( rootParams._bTwoSidedLighting && bNoCull == false )
         {
             SW_LOG_ERROR_ID( "Material.TwoSidedLightingNeedsNoCull", "%#: twoSidedLighting lights the back faces - it needs cullMode=\"None\" too", sourceName );
             fail();
         }
-        if ( rootFields._alphaMode != MaterialAlphaMode::Mask && rootFields._alphaCutoff != MaterialRootFields{}._alphaCutoff )
+        if ( rootParams._alphaMode != MaterialAlphaMode::Mask && rootParams._alphaCutoff != MaterialRootParams{}._alphaCutoff )
         {
             SW_LOG_ERROR_ID( "Material.AlphaCutoffWithoutMask", "%#: alphaCutoff needs alphaMode=\"Mask\"", sourceName );
             fail();
@@ -295,14 +295,14 @@ namespace sw
 
         // 블렌드 칸: 프리셋(모든 타깃) 또는 타깃 목록이다.
         const XMLNode blendTargets = root.findChild( MaterialXMLInternal::kBlendTargetListName );
-        if ( rootFields._blendPreset.empty() == false && blendTargets.isValid() )
+        if ( rootParams._blendPreset.empty() == false && blendTargets.isValid() )
         {
             SW_LOG_ERROR_ID( "Material.BlendPresetAndTargets", "%#: blendPreset and _listBlendTarget go separately - write one of them", sourceName );
             fail();
         }
-        if ( rootFields._blendPreset.empty() == false )
+        if ( rootParams._blendPreset.empty() == false )
         {
-            const RenderBlendPreset* const pPreset = RenderBlendPresetTable::find( rootFields._blendPreset );
+            const RenderBlendPreset* const pPreset = RenderBlendPresetTable::find( rootParams._blendPreset );
             if ( pPreset != nullptr )
             {
                 stateOverride._arrBlendTarget[0] = *pPreset;
@@ -310,7 +310,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_ERROR_ID( "Material.BlendPresetUnknown", "%#: blendPreset '%#' is not in %#", sourceName, rootFields._blendPreset, RenderBlendPresetTable::kAssetPath );
+                SW_LOG_ERROR_ID( "Material.BlendPresetUnknown", "%#: blendPreset '%#' is not in %#", sourceName, rootParams._blendPreset, RenderBlendPresetTable::kAssetPath );
                 fail();
             }
         }
@@ -341,7 +341,7 @@ namespace sw
         for ( uint32 targetIndex = 0; targetIndex < stateOverride._blendTargetCount; ++targetIndex )
         {
             // 쓰기 마스크만 바꾸는 것은 불투명도 받는다. 켜진 블렌드만 반투명 배치 목록의 일이다.
-            if ( stateOverride._arrBlendTarget[targetIndex]._bEnableBlend != SW_FALSE && rootFields._alphaMode != MaterialAlphaMode::Blend )
+            if ( stateOverride._arrBlendTarget[targetIndex]._bEnableBlend != SW_FALSE && rootParams._alphaMode != MaterialAlphaMode::Blend )
             {
                 SW_LOG_ERROR_ID( "Material.BlendWithoutAlphaModeBlend", "%#: a blending target needs alphaMode=\"Blend\" - it is what sends the material to the transparent batches", sourceName );
                 fail();
@@ -370,7 +370,7 @@ namespace sw
         return bValid;
     }
 
-    void MaterialXML::appendRenderFields( XMLNode root, const MaterialDesc& desc )
+    void MaterialXML::appendRenderFields( XMLNode root, const MaterialDef& desc )
     {
         // 적은 칸의 비트를 뒤집은 값을 "기본값" 으로 넘기면 적은 칸만 다르다 — 적지 않은 칸은 쓰이지 않는다.
         const RHIFixedRenderState& values   = desc._renderStateOverride._values;

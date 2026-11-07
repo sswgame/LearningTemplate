@@ -133,7 +133,7 @@ namespace sw
             (void)flushCiphertext( transport );
             _parser.append( _plainBytes.data(), _plainBytes.size() );
         }
-        if ( drainParsedValues() == false )
+        if ( pollParsedValues() == false )
             abort( transport, _parser.hasFailed() ? _parser.getFailureText() : "unexpected reply" );
         else if ( _bAuthRejected == SW_TRUE )
             abort( transport, "AUTH was rejected" );
@@ -192,7 +192,7 @@ namespace sw
         return result == StreamSendResult::Queued || result == StreamSendResult::QueuedAboveHighWatermark;
     }
 
-    bool RespConnection::drainParsedValues()
+    bool RespConnection::pollParsedValues()
     {
         RespValue value;
         for ( ;; )

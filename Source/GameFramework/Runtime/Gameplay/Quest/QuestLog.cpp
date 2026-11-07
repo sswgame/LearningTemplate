@@ -330,9 +330,9 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void QuestLog::drainEvents( vector<QuestEvent>& outListEvent )
+    void QuestLog::pollEvents( vector<QuestEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void QuestLog::writeState( Archive& outArchive ) const

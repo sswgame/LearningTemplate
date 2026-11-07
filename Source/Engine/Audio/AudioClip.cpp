@@ -332,7 +332,7 @@ namespace sw
         vector<shared_ptr<const AudioClipData>> listNodeClip( def._listNode.size() );
         for ( size_t nodeIndex = 0; nodeIndex < def._listNode.size(); ++nodeIndex )
         {
-            const AudioGraphNodeDesc& node = def._listNode[nodeIndex];
+            const AudioGraphNodeDef& node = def._listNode[nodeIndex];
             if ( node._clip.isSet() == false )
                 continue;
             const string_view clipPath = node._clip.get();

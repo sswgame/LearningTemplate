@@ -17,9 +17,9 @@
 
 namespace sw
 {
-    /** @struct UIThemeDesc @brief 테마 하나입니다. 모든 화면의 문서 시트 앞에 적용할 시트들을 가집니다. */
+    /** @struct UIThemeDef @brief 테마 하나입니다. 모든 화면의 문서 시트 앞에 적용할 시트들을 가집니다. */
     REFLECT()
-    struct SW_API UIThemeDesc
+    struct SW_API UIThemeDef
     {
         REFLECT_BODY();
 
@@ -44,12 +44,12 @@ namespace sw
         PROPERTY( DisplayName = "Default Theme" )
         hashed_string _defaultTheme{};
         PROPERTY( DisplayName = "Themes" )
-        vector<UIThemeDesc> _listTheme{};
+        vector<UIThemeDef> _listTheme{};
 
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 이름의 테마입니다. 없으면 nullptr 입니다. */
-        const UIThemeDesc* findTheme( const hashed_string& name ) const;
+        const UIThemeDef* findTheme( const hashed_string& name ) const;
     };
 } // namespace sw
 
@@ -103,7 +103,7 @@ namespace sw
         /** @brief 지금 테마가 바뀔 때마다 부르는 칸입니다(`add` 가 돌려준 구독을 든다). */
         UIThemeChangedEvent& onThemeChanged() { return _onThemeChanged; }
         /** @brief 테마 @p themeName(빈 이름이면 지금 테마)의 서술입니다. 둘 다 비었거나 목록에 없으면 nullptr 입니다. */
-        const UIThemeDesc* findTheme( const hashed_string& themeName ) const;
+        const UIThemeDef* findTheme( const hashed_string& themeName ) const;
         /** @brief 화면의 스타일 시트를 테마 @p themeName(빈 이름이면 지금 테마) 시트, 화면 시트 순서로 다시 적용하고 트리 전체를 다시 맞추게 합니다. */
         void rebuildStyleSet( UIScreen& screen, const hashed_string& themeName = hashed_string{} ) const;
 

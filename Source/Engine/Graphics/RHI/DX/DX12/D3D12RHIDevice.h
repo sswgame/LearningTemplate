@@ -665,7 +665,7 @@ namespace sw
         /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
         bool isDeviceLost();
         /** @brief 이 텍스처에 마지막으로 제출한 전송(업로드 또는 읽기 원본)의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
-        void noteTextureTransfer( RHITextureHandle texture, uint64 serial );
+        void recordTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
         [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
         /** @brief 텍스처의 첫 업로드가 끝나 bindless 에 등록해도 되는지 봅니다(아니면 오류를 남긴다 — `RHITransferSerials::isTextureReadyToRegister`). */

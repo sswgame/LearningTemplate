@@ -264,13 +264,13 @@ namespace sw
                                          element.getAttributeText( kName ), sourceName, kRemovedNestedGUID );
                         return false;
                     }
-                    PrefabInstanceFields fields;
-                    if ( XMLFields::readFields( element, fields, sourceName ) == false )
+                    PrefabInstanceParams params;
+                    if ( XMLFields::readFields( element, params, sourceName ) == false )
                         return false;
                     PrefabInstanceNode node{};
-                    node._name              = std::move( fields._name );
-                    node._prefabPath        = std::move( fields._prefab );
-                    node._attachKey         = std::move( fields._attach );
+                    node._name              = std::move( params._name );
+                    node._prefabPath        = std::move( params._prefab );
+                    node._attachKey         = std::move( params._attach );
                     node._parentIndex       = parentIndex;
                     const XMLNode overrides = element.findChild( PrefabOverrides::kRootName );
                     if ( overrides.isValid() )
@@ -291,7 +291,7 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    XMLFields::writeFields( element, PrefabInstanceFields{ node._name, node._prefabPath, node._attachKey } );
+                    XMLFields::writeFields( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey } );
                     if ( node._overrideXML.empty() == false )
                     {
                         XMLDocument overrideDoc;
@@ -724,11 +724,11 @@ namespace sw
             return false;
         }
 
-        PrefabRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
+        PrefabRootParams rootParams;
+        if ( XMLFields::readFields( root, rootParams, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
             return false;
-        if ( rootFields._name.empty() == false )
-            _name = rootFields._name;
+        if ( rootParams._name.empty() == false )
+            _name = rootParams._name;
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
@@ -1019,7 +1019,7 @@ namespace sw
         root.appendAttribute( "formatVersion", static_cast<uint32>( PrefabAsset::kAssetType._formatVersion ) );
         if ( _basePath.empty() == false )
             root.appendAttribute( DataInheritance::kBaseAttribute, string_view( _basePath ) );
-        XMLFields::writeFields( root, PrefabRootFields{ _name } );
+        XMLFields::writeFields( root, PrefabRootParams{ _name } );
 
         // 변형은 부모와 다른 점만 쓴다. 다른 점을 만들지 못하면 쓰지 않는다 — 모든 칸을 적어 부모를 끊지 않는다.
         if ( _basePath.empty() == false )
@@ -1070,7 +1070,7 @@ namespace sw
             return false;
         }
 
-        // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveXML 과 같은 형태).
+        // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
         const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveToFile( absPath.str() );
         if ( writeOk == false )
         {
@@ -1905,7 +1905,7 @@ namespace sw
                 continue;
             }
 
-            const CookOutcome outcome = store.cookFile( desc, outputID, outputPath, [&]()
+            const CookResult result = store.cookFile( desc, outputID, outputPath, [&]()
             {
                 // 중첩 인스턴스의 원본을 읽는 캐시는 작업마다 새로 둔다 — 앞 작업이 읽어 둔 원본을 쓰면 그 읽기가 이 작업의 입력에서 빠진다.
                 PrefabCache nestedPrefabs;
@@ -1921,13 +1921,13 @@ namespace sw
                 }
                 return CookStep::Written;
             } );
-            if ( outcome == CookOutcome::Failed )
+            if ( result == CookResult::Failed )
             {
                 ++outFailedCount;
                 continue;
             }
             uniqueSetWrittenKey.insert( outputKey );
-            tally.add( outcome );
+            tally.add( result );
         }
         SW_LOG_INFO_ID( "PrefabAsset.PrefabCookReusedDDC", "Prefab cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();

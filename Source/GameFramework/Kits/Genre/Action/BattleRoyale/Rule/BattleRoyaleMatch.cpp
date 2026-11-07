@@ -81,16 +81,16 @@ namespace sw
         BattleRoyalePlayer&          player         = outPlayer;
         player._team                                = team;
 
-        VitalitySettings vitality;
-        vitality._maxHealth               = playerSettings._maxHealth;
-        vitality._downedHealth            = playerSettings._downedHealth;
-        vitality._bleedoutRate            = playerSettings._bleedoutRate;
-        vitality._reviveTime              = playerSettings._reviveTime;
-        vitality._reviveHealthRatio       = playerSettings._reviveHealthRatio;
-        vitality._invulnerableAfterRevive = 0.0f;
-        vitality._bDownedEnabled          = SW_TRUE;
-        vitality._bDamageInterruptsRevive = SW_FALSE; // 부활이 끊기는 조건은 이 키트가 정한다(자기장 피해는 부활을 끊지 않는다)
-        if ( player._vitality.initialize( vitality ) == false )
+        CombatHealthSettings combatHealth;
+        combatHealth._maxHealth               = playerSettings._maxHealth;
+        combatHealth._downedHealth            = playerSettings._downedHealth;
+        combatHealth._bleedoutRate            = playerSettings._bleedoutRate;
+        combatHealth._reviveTime              = playerSettings._reviveTime;
+        combatHealth._reviveHealthRatio       = playerSettings._reviveHealthRatio;
+        combatHealth._invulnerableAfterRevive = 0.0f;
+        combatHealth._bDownedEnabled          = SW_TRUE;
+        combatHealth._bDamageInterruptsRevive = SW_FALSE; // 부활이 끊기는 조건은 이 키트가 정한다(자기장 피해는 부활을 끊지 않는다)
+        if ( player._combatHealth.initialize( combatHealth ) == false )
             return false;
 
         InteractionConfig revive;
@@ -152,11 +152,11 @@ namespace sw
         {
             interruptRevive( victim, true ); // 기절한 사람이 적에게 맞으면 부활이 처음부터 다시 시작된다
         }
-        const VitalityDamageResult result = target._vitality.applyDamage( bodyDamage, 0.0f, instigator );
-        const float32              dealt  = result._shieldAbsorbed + result._healthDamage;
+        const CombatHealthDamageResult result = target._combatHealth.applyDamage( bodyDamage, 0.0f, instigator );
+        const float32                  dealt  = result._shieldAbsorbed + result._healthDamage;
         if ( isValidPlayer( attacker ) && dealt > 0.0f )
             _matchState.reportDamage( attacker, victim, dealt );
-        processVitality( victim );
+        processCombatHealth( victim );
         return dealt;
     }
 
@@ -173,8 +173,8 @@ namespace sw
         helper._revivingTarget = target;
         if ( downed._revive.getParticipantCount() == 1 )
         {
-            // 살리는 동안 출혈을 멈춘다. 진행은 InteractionProgress 가 가지고 있고, Vitality 의 부활 시계는 배율 0으로 멈춰 둔다.
-            (void)downed._vitality.startRevive( reviver, 0.0f );
+            // 살리는 동안 출혈을 멈춘다. 진행은 InteractionProgress 가 가지고 있고, CombatHealth 의 부활 시계는 배율 0으로 멈춰 둔다.
+            (void)downed._combatHealth.startRevive( reviver, 0.0f );
             pushEvent( BattleRoyaleEvent::Kind::ReviveStarted, target, reviver, downed._team, 0 );
         }
         return true;
@@ -192,12 +192,12 @@ namespace sw
         BattleRoyalePlayer& downed = _listPlayer[static_cast<size_t>( target )];
         (void)downed._revive.leave( static_cast<uint32>( reviver ) );
         if ( downed._revive.getParticipantCount() == 0 )
-            downed._vitality.stopRevive();
+            downed._combatHealth.stopRevive();
     }
 
-    void BattleRoyaleMatch::drainEvents( vector<BattleRoyaleEvent>& outListEvent )
+    void BattleRoyaleMatch::pollEvents( vector<BattleRoyaleEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     const BattleRoyalePlayer* BattleRoyaleMatch::findPlayer( int32 player ) const
@@ -241,7 +241,7 @@ namespace sw
             const BattleRoyalePlayer& rightPlayer = _listPlayer[static_cast<size_t>( right )];
             if ( leftPlayer.isDowned() != rightPlayer.isDowned() )
                 return leftPlayer.isDowned();
-            return leftPlayer.isDowned() ? leftPlayer._vitality.getDownedHealth() < rightPlayer._vitality.getDownedHealth() : leftPlayer._vitality.getHealth() < rightPlayer._vitality.getHealth();
+            return leftPlayer.isDowned() ? leftPlayer._combatHealth.getDownedHealth() < rightPlayer._combatHealth.getDownedHealth() : leftPlayer._combatHealth.getHealth() < rightPlayer._combatHealth.getHealth();
         } );
         for ( size_t order = 0; order < listZoneOrder.size() && _matchState.getPhase() == MatchPhase::InProgress; ++order )
         {
@@ -251,8 +251,8 @@ namespace sw
             const float32 zoneDamage = _zone.computeDamagePerSecond( player._position ) * deltaTime;
             if ( zoneDamage > 0.0f )
             {
-                (void)player._vitality.applyDamage( zoneDamage, 0.0f, -1 ); // 결과는 processVitality 가 사건으로 읽는다
-                processVitality( listZoneOrder[order] );
+                (void)player._combatHealth.applyDamage( zoneDamage, 0.0f, -1 ); // 결과는 processCombatHealth 가 사건으로 읽는다
+                processCombatHealth( listZoneOrder[order] );
             }
         }
         for ( size_t index = 0; index < _listPlayer.size() && _matchState.getPhase() == MatchPhase::InProgress; ++index )
@@ -260,8 +260,8 @@ namespace sw
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player.isDead() )
                 continue;
-            player._vitality.update( deltaTime );
-            processVitality( static_cast<int32>( index ) );
+            player._combatHealth.update( deltaTime );
+            processCombatHealth( static_cast<int32>( index ) );
             if ( player.isDowned() && player._revive.getParticipantCount() > 0 )
             {
                 player._revive.update( deltaTime );
@@ -281,17 +281,17 @@ namespace sw
         collectMatchEvents();
     }
 
-    void BattleRoyaleMatch::processVitality( int32 player )
+    void BattleRoyaleMatch::processCombatHealth( int32 player )
     {
         BattleRoyalePlayer& target = _listPlayer[static_cast<size_t>( player )];
         // 지역 목록에 복사해 둔다. 처리 중에 다른 사람의 알림을 다시 꺼내기 때문이다(팀 전멸).
-        vector<VitalityEvent> listEvent;
-        target._vitality.drainEvents( listEvent );
-        for ( const VitalityEvent& event : listEvent )
+        vector<CombatHealthEvent> listEvent;
+        target._combatHealth.pollEvents( listEvent );
+        for ( const CombatHealthEvent& event : listEvent )
         {
-            if ( event._type == VitalityEventType::Downed )
+            if ( event._type == CombatHealthEventType::Downed )
                 handleDowned( player, event._instigatorID );
-            else if ( event._type == VitalityEventType::Died )
+            else if ( event._type == CombatHealthEventType::Died )
                 handleDeath( player, event._instigatorID );
         }
     }
@@ -340,7 +340,7 @@ namespace sw
                 other._revivingTarget = -1;
         }
         downed._revive.reset();
-        downed._vitality.stopRevive();
+        downed._combatHealth.stopRevive();
         if ( bNotify )
             pushEvent( BattleRoyaleEvent::Kind::ReviveInterrupted, target, -1, downed._team, 0 );
     }
@@ -357,10 +357,10 @@ namespace sw
                 _listPlayer[index]._revivingTarget = -1;
             }
         }
-        // 진행이 다 찼다. 멈춰 둔 Vitality 의 부활 시계를 한 번에 끝까지 돌린다.
-        (void)downed._vitality.startRevive( reviver, 1.0f );
-        downed._vitality.update( downed._vitality.getSettings()._reviveTime );
-        downed._vitality.discardEvents();
+        // 진행이 다 찼다. 멈춰 둔 CombatHealth 의 부활 시계를 한 번에 끝까지 돌린다.
+        (void)downed._combatHealth.startRevive( reviver, 1.0f );
+        downed._combatHealth.update( downed._combatHealth.getSettings()._reviveTime );
+        downed._combatHealth.discardEvents();
         downed._revive.reset();
         downed._downedBy = -1;
         pushEvent( BattleRoyaleEvent::Kind::PlayerRevived, target, reviver, downed._team, 0 );
@@ -379,8 +379,8 @@ namespace sw
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player._team != team || player.isDowned() == false )
                 continue;
-            player._vitality.kill( player._downedBy );
-            processVitality( static_cast<int32>( index ) );
+            player._combatHealth.kill( player._downedBy );
+            processCombatHealth( static_cast<int32>( index ) );
         }
     }
 
@@ -402,7 +402,7 @@ namespace sw
     void BattleRoyaleMatch::collectMatchEvents()
     {
         _listMatchScratch.clear();
-        _matchState.drainEvents( _listMatchScratch );
+        _matchState.pollEvents( _listMatchScratch );
         for ( const MatchEvent& event : _listMatchScratch )
         {
             if ( event._kind == MatchEvent::Kind::TeamEliminated )
@@ -438,7 +438,7 @@ namespace sw
         {
             const BattleRoyalePlayer& player = _listPlayer[index];
             outArchive << player._team;
-            player._vitality.writeState( outArchive );
+            player._combatHealth.writeState( outArchive );
             player._revive.writeState( outArchive ); // 부활 진행(붙은 팀원과 붙은 순서, 진행량, 시계)
             player._inventory.writeState( outArchive );
             player._loadout.writeState( outArchive );
@@ -497,7 +497,7 @@ namespace sw
                 return false;
             if ( initializePlayer( player, team, static_cast<int32>( index ) ) == false )
                 return false;
-            if ( player._vitality.readState( archive ) == false || player._revive.readState( archive ) == false )
+            if ( player._combatHealth.readState( archive ) == false || player._revive.readState( archive ) == false )
                 return false;
             // 붙은 팀원은 모두 이 판의 사람 번호여야 한다.
             int32 knownReviverCount = 0;

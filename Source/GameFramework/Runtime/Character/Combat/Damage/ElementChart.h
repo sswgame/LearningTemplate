@@ -40,7 +40,7 @@ namespace sw
 
     /** @brief 속성 선언(`<Element id/>`)입니다. */
     REFLECT()
-    struct SW_GF_API ElementDeclFields
+    struct SW_GF_API ElementDeclParams
     {
         REFLECT_BODY();
 
@@ -50,7 +50,7 @@ namespace sw
 
     /** @brief 상성 규칙(`<Rule attack defend multiplier/>`)입니다. 규칙 줄은 배율을 적으려고 있는 것이다 — 빠진 배율을 1 로 두지 않는다. */
     REFLECT()
-    struct SW_GF_API ElementRuleFields
+    struct SW_GF_API ElementRuleParams
     {
         REFLECT_BODY();
 

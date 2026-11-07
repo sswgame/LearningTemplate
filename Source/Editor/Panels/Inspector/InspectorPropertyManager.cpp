@@ -160,7 +160,7 @@ namespace sw::editor
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
-                EditorSelfTestMarks::note( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );
+                EditorSelfTestMarks::record( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );
                 if ( ImGui::BeginPopup( "AssetPicker" ) )
                 {
                     AssetPickerState& picker = getAssetPickerState();
@@ -642,7 +642,7 @@ namespace sw::editor
                 bool            bPicked = false;
                 if ( ImGui::Selectable( "(none)", current.isValid() == false ) )
                     bPicked = true;
-                EditorSelfTestMarks::note( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
+                EditorSelfTestMarks::record( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                 if ( inoutListChoice.empty() )
                     ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoneInScene", TextArgumentList().addText( "type", targetType._name.c_str() ) ).c_str() );
                 for ( const InspectorComponentChoice& choice : inoutListChoice )
@@ -653,7 +653,7 @@ namespace sw::editor
                         bPicked = true;
                     }
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( ( "inspector.handle.choice." + choice._label ).c_str() );
+                        EditorSelfTestMarks::record( ( "inspector.handle.choice." + choice._label ).c_str() );
                 }
                 ImGui::EndCombo();
                 if ( bPicked == false || picked == current )

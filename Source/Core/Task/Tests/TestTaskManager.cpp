@@ -360,7 +360,7 @@ SW_TEST_CASE( TaskManagerTest, WaitStageReturnsOnlyAfterEveryStageTaskIsDone )
     sw::TaskStageHandle stage = manager.createStage();
     for ( int32 index = 0; index < kTaskCount; ++index )
     {
-        sw::TaskHandle handle = manager.emplaceTask( "StageWork", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&doneCount]()
+        sw::TaskHandle handle = manager.emplaceTask( "StageJob", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&doneCount]()
         {
             sw::ThreadUtil::sleepForMilliseconds( 1 );
             doneCount.fetch_add( 1, std::memory_order_release );

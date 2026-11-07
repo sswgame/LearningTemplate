@@ -31,11 +31,11 @@ namespace
         /** @brief 머티리얼 XML 을 임시 리소스로 읽습니다. @p attributes 는 루트 속성, @p children 은 루트 자식입니다. */
         [[nodiscard]] static bool load( Material& material, string_view attributes, string_view children = "" )
         {
-            string xml = "<MaterialDesc formatVersion=\"0\" name=\"StateMat\" shaderPath=\"engine/shaders/forward_lit.hlsl\" ";
+            string xml = "<MaterialDef formatVersion=\"0\" name=\"StateMat\" shaderPath=\"engine/shaders/forward_lit.hlsl\" ";
             xml.append( attributes );
             xml += ">";
             xml.append( children );
-            xml += "</MaterialDesc>";
+            xml += "</MaterialDef>";
             const test::ScopedScratchDomain domain;
             SW_EXPECT_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "state.material" ), xml ) );
             return material.loadFromFile( test::ScopedScratchDomain::makeID( "state.material" ) );

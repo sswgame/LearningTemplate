@@ -63,7 +63,7 @@ namespace
     };
 
     /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 데이터를 같이 쓰면 "서버 둘" 입니다. */
-    struct LoginRig
+    struct LoginFixture
     {
         MemoryServiceStore        _store;
         FakeServiceCrypto         _crypto;
@@ -71,7 +71,7 @@ namespace
         LoginService              _service;
         uint64                    _nextTag{ 1 };
 
-        explicit LoginRig( MemoryServiceDatabase& database, const LoginServiceConfig& settings = LoginServiceConfig{} )
+        explicit LoginFixture( MemoryServiceDatabase& database, const LoginServiceConfig& settings = LoginServiceConfig{} )
             : _store{ &database }
             , _crypto{}
             , _provider{ "fake" }
@@ -82,7 +82,7 @@ namespace
             SW_EXPECT_TRUE( _service.registerPlatformProvider( &_provider ) );
         }
 
-        ~LoginRig()
+        ~LoginFixture()
         {
             pump();
             _store.shutdown();
@@ -105,7 +105,7 @@ namespace
         {
             pump();
             vector<LoginCompletion> listCompletion;
-            _service.drainCompletions( listCompletion );
+            _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             if ( listCompletion.empty() )
                 return LoginCompletion{};
@@ -138,7 +138,7 @@ namespace
         {
             pump();
             vector<LoginEvent> listEvent;
-            _service.drainEvents( listEvent );
+            _service.pollEvents( listEvent );
             return listEvent;
         }
 
@@ -160,7 +160,7 @@ SW_TEST_CASE( LoginServiceTest, AttemptsAreLimitedPerClientIncludingRegister )
     MemoryServiceDatabase database;
     LoginServiceConfig    settings;
     settings._attemptBurst = 2;
-    LoginRig rig( database, settings );
+    LoginFixture rig( database, settings );
 
     SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
     SW_EXPECT_TRUE( rig.login( "alice" )._result == LoginResult::Ok );
@@ -183,7 +183,7 @@ SW_TEST_CASE( LoginServiceTest, SeedAccountsAreNotLimited )
     MemoryServiceDatabase database;
     LoginServiceConfig    settings;
     settings._attemptBurst = 1;
-    LoginRig rig( database, settings );
+    LoginFixture rig( database, settings );
     for ( int32 index = 0; index < 5; ++index )
     {
         const uint64 tag = static_cast<uint64>( index ) + 1;
@@ -196,7 +196,7 @@ SW_TEST_CASE( LoginServiceTest, SeedAccountsAreNotLimited )
 SW_TEST_CASE( LoginServiceTest, ClientBuildIsChecked )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
 
     RemoteConfig config;
@@ -242,7 +242,7 @@ SW_TEST_CASE( LoginServiceTest, ClientBuildIsChecked )
 SW_TEST_CASE( LoginServiceTest, DirectoryKnowsOnlineAccountsOnly )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     SW_EXPECT_TRUE( rig.registerAccount( "Alice" ) == LoginResult::Ok );
     AccountIdentity identity;
     SW_EXPECT_FALSE( rig._service.findIdentityByDisplayName( "alice", identity ) ); // 가입만으로는 접속이 아니다
@@ -272,7 +272,7 @@ SW_TEST_CASE( LoginServiceTest, DirectoryKnowsOnlineAccountsOnly )
 SW_TEST_CASE( LoginServiceTest, SecondLoginRevokesFirst )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     const LoginGrant      first        = rig.signIn( "alice" );
     const uint64          firstSession = rig._service.findOnlineSessionID( first._identity._accountID );
 
@@ -301,7 +301,7 @@ SW_TEST_CASE( LoginServiceTest, SecondLoginRevokesFirst )
 SW_TEST_CASE( LoginServiceTest, DisconnectThenResume )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     const LoginGrant      grant     = rig.signIn( "alice" );
     const AccountID       accountID = grant._identity._accountID;
     const uint64          sessionID = rig._service.findOnlineSessionID( accountID );
@@ -328,21 +328,21 @@ SW_TEST_CASE( LoginServiceTest, DisconnectThenResume )
 SW_TEST_CASE( LoginServiceTest, RevocationOnAnotherServerIsNoticed )
 {
     MemoryServiceDatabase database;
-    LoginRig              rigA( database );
-    LoginRig              rigB( database );
+    LoginFixture          rigA( database );
+    LoginFixture          rigB( database );
     const LoginGrant      grantA    = rigA.signIn( "alice" );
     const AccountID       accountID = grantA._identity._accountID;
     const uint64          sessionA  = rigA._service.findOnlineSessionID( accountID );
 
     SW_EXPECT_TRUE( rigB.login( "alice" )._result == LoginResult::Ok );
     vector<LoginEvent> listRemote;
-    rigB._service.drainRemoteRevocations( listRemote );
+    rigB._service.pollRemoteRevocations( listRemote );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRemote.size() ); // B 는 자기 것이 아닌 세션을 밀었으니 버스로 알린다
     SW_EXPECT_EQUAL( sessionA, listRemote[0]._sessionID );
 
-    rigA._service.noteRevokedElsewhere( accountID, sessionA + 1, LoginRevokeReason::DuplicateLogin ); // 다른 세션의 알림
+    rigA._service.recordRevokedElsewhere( accountID, sessionA + 1, LoginRevokeReason::DuplicateLogin ); // 다른 세션의 알림
     SW_EXPECT_TRUE( rigA._service.isAccountOnline( accountID ) );
-    rigA._service.noteRevokedElsewhere( accountID, sessionA, LoginRevokeReason::DuplicateLogin );
+    rigA._service.recordRevokedElsewhere( accountID, sessionA, LoginRevokeReason::DuplicateLogin );
     SW_EXPECT_FALSE( rigA._service.isAccountOnline( accountID ) );
     AccountIdentity identity;
     SW_EXPECT_FALSE( rigA._service.findIdentity( accountID, identity ) );
@@ -355,8 +355,8 @@ SW_TEST_CASE( LoginServiceTest, RevocationOnAnotherServerIsNoticed )
 SW_TEST_CASE( LoginServiceTest, RefreshFindsMissedRevocation )
 {
     MemoryServiceDatabase database;
-    LoginRig              rigA( database );
-    LoginRig              rigB( database );
+    LoginFixture          rigA( database );
+    LoginFixture          rigB( database );
     const AccountID       accountID = rigA.signIn( "alice" )._identity._accountID;
     SW_EXPECT_TRUE( rigB.login( "alice" )._result == LoginResult::Ok );
     SW_EXPECT_TRUE( rigA._service.isAccountOnline( accountID ) );
@@ -371,7 +371,7 @@ SW_TEST_CASE( LoginServiceTest, RefreshFindsMissedRevocation )
 SW_TEST_CASE( LoginServiceTest, RevokeByOperator )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     const LoginGrant      grant     = rig.signIn( "alice" );
     const AccountID       accountID = grant._identity._accountID;
     rig._service.revokeAccountSessions( accountID, LoginRevokeReason::Administrative, UnixMilliseconds{ kNowMs }, 50 );
@@ -388,7 +388,7 @@ SW_TEST_CASE( LoginServiceTest, RevokeByOperator )
 SW_TEST_CASE( LoginServiceTest, PlatformLoginGoesThroughProvider )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     const LoginCompletion first = rig.platformLogin( "subject:sub1:Hero" );
     SW_EXPECT_TRUE( first._result == LoginResult::Ok );
     SW_EXPECT_TRUE( first._grant._identity._accountID != kInvalidAccountID );
@@ -407,7 +407,7 @@ SW_TEST_CASE( LoginServiceTest, PlatformLoginGoesThroughProvider )
 SW_TEST_CASE( LoginServiceTest, LinkingUpdatesTheDirectory )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     const uint8           arrDeviceSecret[LoginConstant::kDeviceSecretSize]{ 9, 8, 7 };
     rig._service.guestLogin( arrDeviceSecret, AccountClientInfo{}, kClientKey, UnixMilliseconds{ kNowMs }, 50 );
     const LoginCompletion guest = rig.take( 50 );
@@ -428,7 +428,7 @@ SW_TEST_CASE( LoginServiceTest, LinkingUpdatesTheDirectory )
 SW_TEST_CASE( LoginServiceTest, GameTicketNeedsLiveSession )
 {
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     const LoginGrant      grant = rig.signIn( "alice" );
     rig._service.issueGameTicket( grant._token, hashed_string( "game1" ), UnixMilliseconds{ kNowMs }, 50 );
     SW_EXPECT_TRUE( rig.take( 50 )._result == LoginResult::Ok );
@@ -444,7 +444,7 @@ SW_TEST_CASE( LoginServiceTest, StoreFailureAndProviderRegistration )
     SW_EXPECT_LOG( "Registration.DuplicateName" );
     SW_EXPECT_LOG( "LoginService.PlatformLoginProviderNo" );
     MemoryServiceDatabase database;
-    LoginRig              rig( database );
+    LoginFixture          rig( database );
     SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
     database.armFault( ServiceStoreFault::RejectRead );
     SW_EXPECT_TRUE( rig.login( "alice" )._result == LoginResult::StoreUnavailable );

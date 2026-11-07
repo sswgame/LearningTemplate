@@ -17,7 +17,7 @@ using namespace sw;
 namespace
 {
     constexpr const utf8* kDocumentXML = R"(<UIDocument _schemaVersion="1">
-  <UIScreenDesc _bPausesGame="true"/>
+  <UIScreenDef _bPausesGame="true"/>
   <_listStyleSheet><item>engine/ui/a.uss.xml</item></_listStyleSheet>
   <_listAnimation>
     <UIAnimation _name="fade"/>
@@ -70,7 +70,7 @@ SW_TEST_CASE( UIDocumentTest, RefusesBadDocuments )
     expectRefused( "<UIDocument _schemaVersion=\"1\" odd=\"1\"><BoxPanel/></UIDocument>", "unknown attribute" );
     expectRefused( makeDocument( "" ).c_str(), "no root widget" );
     expectRefused( makeDocument( "<BoxPanel/><BoxPanel/>" ).c_str(), "more than one root widget" );
-    expectRefused( makeDocument( "<UIScreenDesc/><UIScreenDesc/><BoxPanel/>" ).c_str(), "more than one UIScreenDesc" );
+    expectRefused( makeDocument( "<UIScreenDef/><UIScreenDef/><BoxPanel/>" ).c_str(), "more than one UIScreenDef" );
     expectRefused( makeDocument( "<NotAWidget/>" ).c_str(), "unknown element" );
     expectRefused( makeDocument( "<BoxPanel odd=\"1\"/>" ).c_str(), "unknown attribute 'odd'" );
     expectRefused( makeDocument( "<BoxPanel><odd/></BoxPanel>" ).c_str(), "unknown element <odd>" );
@@ -100,8 +100,8 @@ SW_TEST_CASE( UIDocumentTest, InstantiatesWidgets )
     SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", asset, error ) );
     UIDocumentCache cache;
 
-    vector<UIBindingDesc> listBinding;
-    unique_ptr<Widget>    root = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
+    vector<UIBindingDef> listBinding;
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
     SW_REQUIRE_TRUE( root != nullptr );
     SW_EXPECT_TRUE( root->getName() == hashed_string( "Root" ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), root->getChildren().size() );
@@ -123,9 +123,9 @@ SW_TEST_CASE( UIDocumentTest, BadValueFailsInstantiate )
     UIDocumentAsset asset;
     string          error;
     SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel _name=\"Root\"><TextWidget _text=\"{bind:_a}\"/><BoxPanel _spacing=\"abc\"/></BoxPanel>" ), "engine/ui/bad.ui.xml", asset, error ) );
-    UIDocumentCache       cache;
-    vector<UIBindingDesc> listBinding;
-    listBinding.push_back( UIBindingDesc{} );
+    UIDocumentCache      cache;
+    vector<UIBindingDef> listBinding;
+    listBinding.push_back( UIBindingDef{} );
     SW_EXPECT_TRUE( UIDocumentLoader::instantiate( asset, cache, listBinding, error ) == nullptr );
     SW_EXPECT_TRUE( error.find( "engine/ui/bad.ui.xml" ) != string::npos );
     SW_EXPECT_EQUAL( size_t( 1 ), listBinding.size() );
@@ -143,8 +143,8 @@ SW_TEST_CASE( UIDocumentTest, FragmentsWrapNamesAndRefuseCycles )
     SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel><UserWidget _name=\"Row\" _document=\"engine/ui/row.ui.xml\"/></BoxPanel>" ), "engine/ui/main.ui.xml", asset, error ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), asset._listFragment.size() );
 
-    vector<UIBindingDesc> listBinding;
-    unique_ptr<Widget>    root = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
+    vector<UIBindingDef> listBinding;
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
     SW_REQUIRE_TRUE( root != nullptr );
     const Widget* pRow = root->getChildren()[0].get();
     SW_EXPECT_TRUE( pRow->getName() == hashed_string( "Row" ) );
@@ -170,9 +170,9 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
     UIDocumentAsset asset;
     string          error;
     SW_REQUIRE_TRUE( UIDocumentLoader::parse( kDocumentXML, "engine/ui/test.ui.xml", asset, error ) );
-    UIDocumentCache       cache;
-    vector<UIBindingDesc> listBinding;
-    unique_ptr<Widget>    root = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
+    UIDocumentCache      cache;
+    vector<UIBindingDef> listBinding;
+    unique_ptr<Widget>   root = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
     SW_REQUIRE_TRUE( root != nullptr );
 
     const string text = UIDocumentWriter::write( asset._screenDesc, asset._listStyleSheet, *root, listBinding, asset._listAnimation );
@@ -189,8 +189,8 @@ SW_TEST_CASE( UIDocumentTest, WriteThenReadIsTheSame )
     SW_REQUIRE_EQUAL( size_t( 1 ), reread._listNode[2]._listBinding.size() );
     SW_EXPECT_EQUAL( string( "{bind:_health}" ), reread._listNode[2]._listBinding[0]._expression );
 
-    vector<UIBindingDesc> listSecond;
-    unique_ptr<Widget>    secondRoot = UIDocumentLoader::instantiate( reread, cache, listSecond, error );
+    vector<UIBindingDef> listSecond;
+    unique_ptr<Widget>   secondRoot = UIDocumentLoader::instantiate( reread, cache, listSecond, error );
     SW_REQUIRE_TRUE( secondRoot != nullptr );
     SW_EXPECT_EQUAL( string( text ), UIDocumentWriter::write( reread._screenDesc, reread._listStyleSheet, *secondRoot, listSecond, reread._listAnimation ) );
 }

@@ -16,7 +16,7 @@
 namespace sw
 {
     FollowCameraComponent::FollowCameraComponent()
-        : _director{}
+        : _gameMode{}
         , _offset{ 0.0f, 15.0f, -11.0f }
         , _minFarPlane{ 120.0f }
     {
@@ -36,10 +36,10 @@ namespace sw
         Component::onTick( deltaTime );
         GameObject*              pOwner    = getOwner();
         GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<GameModeComponent>( *pManager, _director ) : nullptr;
+        const GameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<GameModeComponent>( *pManager, _gameMode ) : nullptr;
         GameObjectHandle         focusObject{};
         float3                   focusPosition{ 0.0f, 0.0f, 0.0f };
-        if ( pDirector == nullptr || pDirector->readCameraFocus( focusObject, focusPosition ) == false )
+        if ( pGameMode == nullptr || pGameMode->readCameraFocus( focusObject, focusPosition ) == false )
         {
             applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
             return;

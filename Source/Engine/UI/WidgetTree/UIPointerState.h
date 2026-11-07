@@ -32,7 +32,7 @@ namespace sw
      * @details `process` 의 순서는 다음과 같다. (1) 잡은 위젯이 있으면 경로를 그 위젯까지의 조상 경로로 정하고(히트 테스트 안 함), 없으면 히트 테스트를 한다.
      *          (2) 기존 호버 경로와 비교해 빠진 쪽에 Leave(잎부터), 새로 들어온 쪽에 Enter(루트부터)를 알린다(경로를 타지 않는 알림 `Widget::onHoverChanged`).
      *          (3) 이벤트를 경로로 보내고 잡기와 놓기를 적용한다.
-     *          상태는 번호와 트리 포인터를 가지므로, 트리를 지우기 전에 `forgetTree` 를 부른다(화면을 닫는 `UISystem` 이 한다).
+     *          상태는 번호와 트리 포인터를 가지므로, 트리를 지우기 전에 `removeTree` 를 부른다(화면을 닫는 `UISystem` 이 한다).
      */
     class SW_API UIPointerState
     {
@@ -46,7 +46,7 @@ namespace sw
         /** @brief 잡은 위젯이 있으면 잡기를 끝내고 그 위젯에 알립니다(`Widget::onPointerCaptureLost`). 뗌을 전할 수 없게 됐을 때 부릅니다(게임이 마우스를 잠갔을 때). */
         void cancelCapture();
         /** @brief @p tree 를 더 쓰지 않습니다. 그 트리의 호버와 잡기를 알림 없이 버립니다(트리를 지우기 직전에 부릅니다). */
-        void forgetTree( const WidgetTree& tree );
+        void removeTree( const WidgetTree& tree );
 
         WidgetID            getCapturedWidget() const { return _captured; }
         const WidgetTree*   getCaptureTree() const { return _pCaptureTree; }

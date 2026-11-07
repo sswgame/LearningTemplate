@@ -180,7 +180,7 @@ namespace sw
 
     bool FighterCatalog::loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName )
     {
-        return GameDataXML::loadText( *this, &FighterCatalog::loadRoot, moveCatalog, xmlText, sourceName, "FighterCatalog" );
+        return GameDataXML::loadFromXMLText( *this, &FighterCatalog::loadRoot, moveCatalog, xmlText, sourceName, "FighterCatalog" );
     }
 
     void FighterCatalog::addFighter( const FighterDef& fighter )

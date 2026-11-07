@@ -28,8 +28,8 @@ namespace sw
         , _skippedStageCount{ 0 }
         , _failedStageCount{ 0 }
         , _skippedResultCount{ 0 }
-        , _firstNonPassResult{ AutomationOutcome::Passed }
-        , _finalResult{ AutomationOutcome::Running }
+        , _firstNonPassResult{ AutomationResult::Passed }
+        , _finalResult{ AutomationResult::Running }
         , _bKeepGoing{ SW_FALSE }
         , _bBegun{ SW_FALSE }
         , _bFinished{ SW_FALSE }
@@ -61,7 +61,7 @@ namespace sw
         _bKeepGoing  = bKeepGoing;
         _bBegun      = SW_TRUE;
         _bFinished   = _listPath.empty();
-        _finalResult = _listPath.empty() ? AutomationOutcome::Passed : AutomationOutcome::Running;
+        _finalResult = _listPath.empty() ? AutomationResult::Passed : AutomationResult::Running;
     }
 
     const string& AutomationScenarioChain::getCurrentPath() const
@@ -69,19 +69,19 @@ namespace sw
         return _stageIndex < _listPath.size() && _bFinished == false ? _listPath[_stageIndex] : AutomationScenarioChainInternal::s_emptyPath;
     }
 
-    bool AutomationScenarioChain::onStageEnded( AutomationOutcome result )
+    bool AutomationScenarioChain::onStageEnded( AutomationResult result )
     {
         if ( isActive() == false )
             return false;
         const bool bHasNext = _stageIndex + 1 < _listPath.size();
-        if ( _bKeepGoing && result == AutomationOutcome::Skipped )
+        if ( _bKeepGoing && result == AutomationResult::Skipped )
         {
             ++_skippedResultCount; // 이 단계만 못 돈 것이다 — 실패가 아니고 뒤 단계는 돈다
         }
-        else if ( result != AutomationOutcome::Passed )
+        else if ( result != AutomationResult::Passed )
         {
             ++_failedStageCount;
-            if ( _firstNonPassResult == AutomationOutcome::Passed )
+            if ( _firstNonPassResult == AutomationResult::Passed )
                 _firstNonPassResult = result;
             if ( _bKeepGoing == false || bHasNext == false )
             {
@@ -98,17 +98,17 @@ namespace sw
         }
         _bFinished = SW_TRUE;
         // 실패가 없고 모든 단계가 건너뜀이면 체인도 건너뜀이다(돌린 것이 하나도 없다).
-        _finalResult = _firstNonPassResult != AutomationOutcome::Passed ? _firstNonPassResult
-                     : _skippedResultCount == _listPath.size()          ? AutomationOutcome::Skipped
-                                                                        : AutomationOutcome::Passed;
+        _finalResult = _firstNonPassResult != AutomationResult::Passed ? _firstNonPassResult
+                     : _skippedResultCount == _listPath.size()         ? AutomationResult::Skipped
+                                                                       : AutomationResult::Passed;
         return false;
     }
 
-    string AutomationScenarioChain::describeStageEnd( size_t stageIndex, AutomationOutcome result, string_view scenarioName ) const
+    string AutomationScenarioChain::describeStageEnd( size_t stageIndex, AutomationResult result, string_view scenarioName ) const
     {
         string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
                       string( scenarioName ) + ")";
-        if ( result != AutomationOutcome::Passed && _skippedStageCount > 0 )
+        if ( result != AutomationResult::Passed && _skippedStageCount > 0 )
             text += formatToString( " - %# later stage(s) skipped", _skippedStageCount );
         return text;
     }

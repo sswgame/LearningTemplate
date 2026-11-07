@@ -14,10 +14,10 @@
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
-#include "Engine/Automation/Runner/AutomationRunnerFields.h"
+#include "Engine/Automation/Runner/AutomationRunnerParams.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
@@ -63,13 +63,13 @@ namespace sw
 
             [[nodiscard]] static bool parseSlotStep( const AutomationStep& step, SlotStepArgs& outArgs, string& outError )
             {
-                AutomationSlotStepFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AutomationSlotStepParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                outArgs._holdFrameCount = fields._hold;
-                if ( InputSlot::tryParse( fields._slot, outArgs._slot ) == false )
+                outArgs._holdFrameCount = params._hold;
+                if ( InputSlot::tryParse( params._slot, outArgs._slot ) == false )
                 {
-                    outError = step.describe() + ": unknown slot '" + fields._slot + "' (Key.E · Mouse.Left · Gamepad.A · Gamepad1.A)";
+                    outError = step.describe() + ": unknown slot '" + params._slot + "' (Key.E · Mouse.Left · Gamepad.A · Gamepad1.A)";
                     return false;
                 }
                 return true;
@@ -92,26 +92,26 @@ namespace sw
             /** @brief `MouseDelta` · `Wheel`(`y` 는 세로 휠, `x` 는 가로 휠 눈금)입니다. 없는 축은 0 입니다. */
             static bool validateAxisPair( const AutomationStep& step, string& outError )
             {
-                AutomationAxisPairFields fields;
-                return step.readFields( fields, outError );
+                AutomationAxisPairParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateMousePosition( const AutomationStep& step, string& outError )
             {
-                AutomationMousePositionFields fields;
-                return step.readFields( fields, outError );
+                AutomationMousePositionParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateGamepadAxis( const AutomationStep& step, string& outError )
             {
-                AutomationGamepadAxisFields fields;
-                return step.readFields( fields, outError );
+                AutomationGamepadAxisParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateText( const AutomationStep& step, string& outError )
             {
-                AutomationTextStepFields fields;
-                return step.readFields( fields, outError );
+                AutomationTextStepParams params;
+                return step.readFields( params, outError );
             }
 
             /** @brief `name` · `value` 가 있고 `name` 이 등록된 전역 변수인지 봅니다. 아니면 nullptr 과 이유입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
@@ -125,8 +125,8 @@ namespace sw
 
             static bool validateVariable( const AutomationStep& step, string& outError )
             {
-                AutomationVariableFields fields;
-                return step.readFields( fields, outError ) && findRegisteredVariable( step, fields._name, outError ) != nullptr;
+                AutomationVariableParams params;
+                return step.readFields( params, outError ) && findRegisteredVariable( step, params._name, outError ) != nullptr;
             }
 
             /**
@@ -135,16 +135,16 @@ namespace sw
              */
             [[nodiscard]] static bool evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info, bool& outMatched, string& outError )
             {
-                AutomationExpectVariableFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AutomationExpectVariableParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
                 if ( step.findAttribute( "tolerance" ) != nullptr && info._type != GlobalVariableType::Float )
                 {
                     outError = step.describe() + ": tolerance is a non-negative number for float variables only";
                     return false;
                 }
-                const string& value = fields._value;
-                if ( AutomationStepArgsUtil::compareVariable( info, string_view{ value }, fields._tolerance, outMatched ) == false )
+                const string& value = params._value;
+                if ( AutomationStepArgsUtil::compareVariable( info, string_view{ value }, params._tolerance, outMatched ) == false )
                 {
                     outError = step.describe() + ": value '" + value + "' is not a " + info.getTypeName() + " (enum variables take the number)";
                     return false;
@@ -155,10 +155,10 @@ namespace sw
             /** @brief `ExpectVariable` 입니다. 변수가 등록돼 있고, `value` 가 그 타입으로 읽히며, `tolerance`(0 이상)는 실수 변수에만 붙습니다. */
             static bool validateExpectVariable( const AutomationStep& step, string& outError )
             {
-                AutomationExpectVariableFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AutomationExpectVariableParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                const GlobalVariableInfo* pInfo    = findRegisteredVariable( step, fields._name, outError );
+                const GlobalVariableInfo* pInfo    = findRegisteredVariable( step, params._name, outError );
                 bool                      bMatched = false;
                 return pInfo != nullptr && evaluateExpectVariable( step, *pInfo, bMatched, outError );
             }
@@ -205,15 +205,15 @@ namespace sw
 
             static bool validateExpect( const AutomationStep& step, string& outError )
             {
-                AutomationExpectFields fields;
-                return step.readFields( fields, outError, { "equals", "near", "atLeast", "atMost" } ) && validateWatchComparison( step, outError );
+                AutomationExpectParams params;
+                return step.readFields( params, outError, { "equals", "near", "atLeast", "atMost" } ) && validateWatchComparison( step, outError );
             }
 
             /** @brief `WaitUntil` 입니다. 그 프레임에 혼자 있는지는 준비 함수(`AutomationRunnerEngineSteps::prepareWaitUntil`)가 시나리오 전체를 보고 확인합니다. */
             static bool validateWaitUntil( const AutomationStep& step, string& outError )
             {
-                AutomationWaitUntilFields fields;
-                if ( step.readFields( fields, outError, { "equals", "near", "atLeast", "atMost" } ) == false )
+                AutomationWaitUntilParams params;
+                if ( step.readFields( params, outError, { "equals", "near", "atLeast", "atMost" } ) == false )
                     return false;
                 const uint32 timeoutCount = ( step.findAttribute( "timeoutFrames" ) != nullptr ? 1u : 0u ) + ( step.findAttribute( "timeoutSeconds" ) != nullptr ? 1u : 0u ) +
                                             ( step.findAttribute( "timeoutWallSeconds" ) != nullptr ? 1u : 0u );
@@ -238,8 +238,8 @@ namespace sw
             /** @brief `ExpectVisited` 입니다. `is`(그 값을 한 번이라도 거쳤다) 또는 `sequence`(쉼표로 적은 값을 이 순서로 거쳤다) 하나와 `since`(프레임) 입니다. */
             static bool validateExpectVisited( const AutomationStep& step, string& outError )
             {
-                AutomationExpectVisitedFields fields;
-                if ( step.readFields( fields, outError ) == false || validateWatchReference( step, outError ) == false )
+                AutomationExpectVisitedParams params;
+                if ( step.readFields( params, outError ) == false || validateWatchReference( step, outError ) == false )
                     return false;
                 if ( countComparisons( step, { "is", "sequence" } ) == false )
                 {
@@ -252,25 +252,25 @@ namespace sw
             /** @brief `Record` 입니다. 감시 값 값을 보고의 `records` 에 남깁니다. */
             static bool validateRecord( const AutomationStep& step, string& outError )
             {
-                AutomationRecordFields fields;
-                return step.readFields( fields, outError ) && validateWatchReference( step, outError );
+                AutomationRecordParams params;
+                return step.readFields( params, outError ) && validateWatchReference( step, outError );
             }
 
             /** @brief `Remember` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
             static bool validateRemember( const AutomationStep& step, string& outError )
             {
-                AutomationRememberFields fields;
-                return step.readFields( fields, outError ) && validateWatchReference( step, outError );
+                AutomationRememberParams params;
+                return step.readFields( params, outError ) && validateWatchReference( step, outError );
             }
 
             static bool validateExpectLog( const AutomationStep& step, string& outError )
             {
                 // 사건은 로그 id 로만 센다 — 문장으로 세면 문구를 고칠 때 단언이 조용히 낡는다. contains 는 그 id 줄의 값(경로 · 수)을 좁히는 데만 쓴다.
                 // 세려는 줄에 id 가 없으면 소스에서 `SW_LOG_*_ID` 로 쓴다.
-                AutomationExpectLogFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AutomationExpectLogParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                if ( ( fields._count == kAutomationNoCount ) == ( fields._atLeast == kAutomationNoCount ) )
+                if ( ( params._count == kAutomationNoCount ) == ( params._atLeast == kAutomationNoCount ) )
                 {
                     outError = step.describe() + ": needs exactly one of count · atLeast";
                     return false;
@@ -280,8 +280,8 @@ namespace sw
 
             static bool validateScreenshot( const AutomationStep& step, string& outError )
             {
-                AutomationScreenshotFields fields;
-                return step.readFields( fields, outError );
+                AutomationScreenshotParams params;
+                return step.readFields( params, outError );
             }
 
             /**
@@ -291,23 +291,23 @@ namespace sw
              */
             [[nodiscard]] static bool capturesWithoutSettling( const AutomationStep& step )
             {
-                return step.readValidatedFields<AutomationScreenshotFields>()._bWaitForSettle == false;
+                return step.readValidatedFields<AutomationScreenshotParams>()._bWaitForSettle == false;
             }
 
             static bool validateExpectImagesDiffer( const AutomationStep& step, string& outError )
             {
-                AutomationExpectImagesDifferFields fields;
-                if ( step.readFields( fields, outError ) == false )
+                AutomationExpectImagesDifferParams params;
+                if ( step.readFields( params, outError ) == false )
                     return false;
-                if ( fields._minDiffering > fields._maxDiffering )
+                if ( params._minDiffering > params._maxDiffering )
                 {
                     outError = step.describe() + ": minDiffering must not exceed maxDiffering";
                     return false;
                 }
                 AutomationImageRegion region{};
-                if ( fields._region.empty() == false && AutomationImageMetric::tryParseRegion( fields._region, region ) == false )
+                if ( params._region.empty() == false && AutomationImageMetric::tryParseRegion( params._region, region ) == false )
                 {
-                    outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + fields._region + "'";
+                    outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + params._region + "'";
                     return false;
                 }
                 return true;
@@ -321,26 +321,26 @@ namespace sw
 
             static bool validateCloseWindow( const AutomationStep& step, string& outError )
             {
-                AutomationCloseWindowFields fields;
-                return step.readFields( fields, outError );
+                AutomationCloseWindowParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateExpectExitWithin( const AutomationStep& step, string& outError )
             {
-                AutomationExpectExitWithinFields fields;
-                return step.readFields( fields, outError );
+                AutomationExpectExitWithinParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validatePass( const AutomationStep& step, string& outError )
             {
-                AutomationNoFields fields;
-                return step.readFields( fields, outError );
+                AutomationNoParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateFailOrSkip( const AutomationStep& step, string& outError )
             {
-                AutomationEndStepFields fields;
-                return step.readFields( fields, outError );
+                AutomationEndStepParams params;
+                return step.readFields( params, outError );
             }
 
             /** @brief 값 비교 단계(`Expect`)의 비교 하나를 읽습니다. 정확히 하나여야 합니다. */
@@ -391,7 +391,7 @@ namespace sw
         [[nodiscard]] static bool prepareWheel( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&        runner = asRunner( context );
-            AutomationAxisPairFields args;
+            AutomationAxisPairParams args;
             if ( step.readFields( args, outError ) == false )
                 return false;
             if ( args._y != 0.0f )
@@ -404,7 +404,7 @@ namespace sw
         [[nodiscard]] static bool prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&        runner = asRunner( context );
-            AutomationAxisPairFields args;
+            AutomationAxisPairParams args;
             if ( step.readFields( args, outError ) == false )
                 return false;
             runner._inputScript.addMouseDelta( step._frameIndex, args._x, args._y );
@@ -423,7 +423,7 @@ namespace sw
                 outError = step.describe() + ": no window to place the pointer in";
                 return false;
             }
-            AutomationMousePositionFields args;
+            AutomationMousePositionParams args;
             if ( step.readFields( args, outError ) == false )
                 return false;
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
@@ -435,7 +435,7 @@ namespace sw
         [[nodiscard]] static bool prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&           runner = asRunner( context );
-            AutomationGamepadAxisFields args;
+            AutomationGamepadAxisParams args;
             if ( step.readFields( args, outError ) == false )
                 return false;
             // 가상 입력 세션의 패드는 끊긴 채 시작하고 끊긴 패드의 스틱은 입력 맵 · 가상 커서가 읽지 않는다 — 축을 내는 단계는 그 패드를 먼저 연결한다.
@@ -472,18 +472,18 @@ namespace sw
         static bool runVariable( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&              runner = asRunner( context );
-            const AutomationVariableFields fields = step.readValidatedFields<AutomationVariableFields>();
-            if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( fields._name, fields._value ) == false )
-                runner.recordFailure( step, "could not set " + fields._name + " to '" + fields._value + "'" );
+            const AutomationVariableParams params = step.readValidatedFields<AutomationVariableParams>();
+            if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( params._name, params._value ) == false )
+                runner.recordFailure( step, "could not set " + params._name + " to '" + params._value + "'" );
             return true;
         }
 
         static bool runExpectVariable( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&                    runner = asRunner( context );
-            const AutomationExpectVariableFields fields = step.readValidatedFields<AutomationExpectVariableFields>();
-            const string&                        name   = fields._name;
-            const string&                        value  = fields._value;
+            const AutomationExpectVariableParams params = step.readValidatedFields<AutomationExpectVariableParams>();
+            const string&                        name   = params._name;
+            const string&                        value  = params._value;
             const GlobalVariableInfo*            pInfo  = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
             if ( pInfo == nullptr )
             {
@@ -538,7 +538,7 @@ namespace sw
         static bool runScreenshot( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner    = asRunner( context );
-            const string      path      = runner.resolveOutputPath( step.readValidatedFields<AutomationScreenshotFields>()._file );
+            const string      path      = runner.resolveOutputPath( step.readValidatedFields<AutomationScreenshotParams>()._file );
             const string      directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
@@ -564,7 +564,7 @@ namespace sw
         [[nodiscard]] static bool startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
         {
             string        error;
-            const float32 seconds            = bClose ? step.readValidatedFields<AutomationCloseWindowFields>()._withinSeconds : step.readValidatedFields<AutomationExpectExitWithinFields>()._seconds;
+            const float32 seconds            = bClose ? step.readValidatedFields<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedFields<AutomationExpectExitWithinParams>()._seconds;
             runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose == false )
                 return true;
@@ -586,7 +586,7 @@ namespace sw
             AutomationRunner& runner = asRunner( context );
             runner._judge.judgeDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
             (void)step;
-            runner.finish( AutomationOutcome::Passed, "<Pass/>" );
+            runner.finish( AutomationResult::Passed, "<Pass/>" );
             return true;
         }
 
@@ -612,7 +612,7 @@ namespace sw
             const string*     pReason = step.findAttribute( "reason" );
             const string_view reason  = pReason != nullptr ? string_view{ *pReason } : string_view{ "<Fail/>" };
             runner.recordFailure( step, reason );
-            runner.finish( AutomationOutcome::Failed, reason );
+            runner.finish( AutomationResult::Failed, reason );
             return true;
         }
 
@@ -620,7 +620,7 @@ namespace sw
         {
             AutomationRunner& runner  = asRunner( context );
             const string*     pReason = step.findAttribute( "reason" );
-            runner.finish( AutomationOutcome::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" } );
+            runner.finish( AutomationResult::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" } );
             return true;
         }
 

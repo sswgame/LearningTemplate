@@ -29,11 +29,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터와 손님 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignGuest( GameObjectHandle director, int32 guestIndex );
+        void assignGuest( GameObjectHandle gameMode, int32 guestIndex );
 
     private:
         PROPERTY( Category = "Guest", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Guest", DisplayName = "Guest Index", Tooltip = "Slot in the simulation's guest list" )
         int32 _guestIndex;
         PROPERTY( Category = "Guest", DisplayName = "Height Offset", Tooltip = "Lift above the walking point", Units = m )

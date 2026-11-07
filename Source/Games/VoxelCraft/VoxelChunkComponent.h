@@ -37,7 +37,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 디렉터와 청크 번호를 정합니다. 디렉터가 청크를 스폰한 뒤에 부릅니다. */
-        void assignChunk( GameObjectHandle director, int32 chunkX, int32 chunkZ );
+        void assignChunk( GameObjectHandle gameMode, int32 chunkX, int32 chunkZ );
         /** @brief 다음 틱에 메시를 다시 만들도록 요청합니다. 디렉터가 `PrePhysics` 에서 부릅니다. */
         void requestRebuild() { _bRebuildRequested = SW_TRUE; }
 
@@ -48,7 +48,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Chunk", DisplayName = "Director", Tooltip = "Object with the VoxelGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Chunk", DisplayName = "Chunk X", Min = 0 )
         int32 _chunkX;
         PROPERTY( Category = "Chunk", DisplayName = "Chunk Z", Min = 0 )

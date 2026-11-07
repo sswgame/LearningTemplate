@@ -2,7 +2,7 @@
  * @file NetEndpointThread.h
  * @brief `NetEndpoint` 를 게임 프레임과 따로 도는 전용 네트워크 스레드입니다 — 소켓을 기다렸다가(`poll`) 받기 · 확인 · 재전송 · 유지 · 타임아웃을 돌립니다.
  * @details 게임 스레드가 멈춰도(로딩 · 긴 프레임 · 중단점) 연결이 끊기지 않고, 받은 패킷의 확인이 프레임 간격만큼 늦지 않습니다(RTT 가 프레임
- *          길이를 포함하지 않는다). 게임은 아무 스레드에서나 `NetEndpoint::sendMessage` · `receiveMessage` · `drainEvents` 를 부릅니다 — `NetEndpoint`
+ *          길이를 포함하지 않는다). 게임은 아무 스레드에서나 `NetEndpoint::sendMessage` · `receiveMessage` · `pollEvents` 를 부릅니다 — `NetEndpoint`
  *          가 잠금으로 지킨다. 스레드가 도는 동안에는 `NetEndpoint::update` 를 직접 부르지 않습니다.
  *
  *          작업 스레드 풀(`TaskManager`)에 맡기지 않는 까닭: 소켓을 기다리며 잠드는 일이라 풀의 워커 하나를 붙잡게 된다. 로그 · 파일 감시와 같은

@@ -33,7 +33,7 @@ namespace sw
 
     /** @brief 스키마 파일 루트(`<TelemetrySchema version>`)의 칸입니다. 적지 않으면 판 1 이다. */
     REFLECT()
-    struct SW_API TelemetrySchemaRootFields
+    struct SW_API TelemetrySchemaRootParams
     {
         REFLECT_BODY();
 

@@ -1,5 +1,5 @@
 <UIDocument _schemaVersion="1">
-	<UIScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Apply" />
+	<UIScreenDef _layer="Modal" _bModal="true" _defaultFocus="Apply" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/options.uistyle.xml</item>
 	</_listStyleSheet>

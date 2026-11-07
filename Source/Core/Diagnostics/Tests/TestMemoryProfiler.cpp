@@ -597,7 +597,7 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     {
         listFlat.push_back( LeakCurvePoint{ 1000, 4 } );
     }
-    const LeakCurveVerdict flat = MemoryProfiler::judgeLeakCurve( listFlat, criteria );
+    const LeakCurveResult flat = MemoryProfiler::judgeLeakCurve( listFlat, criteria );
     SW_REQUIRE_TRUE( flat._bValid );
     SW_EXPECT_EQUAL( 8u, flat._sampleCount );
     SW_EXPECT_NEAR( 0.0, flat._slopeBytesPerRound, 1.0e-6 );
@@ -611,7 +611,7 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     {
         listGrowing.push_back( LeakCurvePoint{ 1000 + uint64{ 4096 } * round, 4 + uint64{ 1 } * round } );
     }
-    const LeakCurveVerdict growing = MemoryProfiler::judgeLeakCurve( listGrowing, criteria );
+    const LeakCurveResult growing = MemoryProfiler::judgeLeakCurve( listGrowing, criteria );
     SW_REQUIRE_TRUE( growing._bValid );
     SW_EXPECT_NEAR( 4096.0, growing._slopeBytesPerRound, 1.0e-6 );
     SW_EXPECT_NEAR( 1.0, growing._slopeBlocksPerRound, 1.0e-6 );
@@ -636,11 +636,11 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     SW_EXPECT_TRUE( MemoryProfiler::judgeLeakCurve( listShrinking, criteria )._bFlat );
 
     // 점이 모자라면 판정할 수 없다 — 평평하다고 말하지 않는다.
-    const LeakCurveVerdict tooShort = MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{
-                                                                          {1, 1},
-                                                                          {2, 1}
+    const LeakCurveResult tooShort = MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{
+                                                                         {1, 1},
+                                                                         {2, 1}
     },
-                                                                      criteria );
+                                                                     criteria );
     SW_EXPECT_FALSE( tooShort._bValid );
     SW_EXPECT_FALSE( tooShort._bFlat );
     SW_EXPECT_FALSE( MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{}, criteria )._bFlat );

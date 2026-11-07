@@ -49,7 +49,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
         // 등급표는 점수를 등급으로 바꾸는 유일한 근거다 — 코드가 대신 정한 표를 쓰지 않는다.
@@ -61,7 +61,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool ActionPlatformerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool ActionPlatformerCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Stage" ) )
             return loadStage( node, sourceName );

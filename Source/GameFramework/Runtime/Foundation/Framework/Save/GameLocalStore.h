@@ -46,7 +46,7 @@ namespace sw
         /** @brief 저장소를 엽니다. 암호 제공자(`INetSecurityProvider`)가 게임 범위에 없거나 열지 못하면 오류를 남기고 실패한다(세이브 없이 서지 않는다). */
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 맡긴 일이 바닥날 때까지 완료를 넘기고(콜백이 잇는 쓰기까지) 저장소를 닫습니다(`LocalStoreChannel::drain`). */
-        void        stopSubsystem() override { _channel.drain(); }
+        void        stopSubsystem() override { _channel.flush(); }
         void        shutdownSubsystem() override { _channel.close(); }
         const utf8* getSubsystemName() const override { return kSubsystemName; }
 

@@ -306,7 +306,7 @@ namespace sw
             setMesh( MeshUtil::acquirePrimitive( meshID ) );
             return;
         }
-        SlicedSpriteDesc desc{};
+        SlicedSpriteDef desc{};
         desc._size            = _size;
         desc._border          = getEffectiveSliceBorder();
         desc._bTiled          = ( _drawMode == SpriteDrawMode::Tiled ) ? SW_TRUE : SW_FALSE;

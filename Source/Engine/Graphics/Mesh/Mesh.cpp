@@ -684,7 +684,7 @@ namespace sw
         // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다. GPUUploadQueue 는 그 백엔드에서 요청을 받지 않고 렌더 스레드가 만든다.
         if ( engine::areEngineServicesBound() && pDevice->getCapabilities()._bThreadSafeResourceCreation == SW_FALSE )
             SW_ASSERT( engine::getSubsystem<TaskManager>().isWorkerThread() == false );
-        // 이미 GPU 에 있으면 그대로 둔다. 이전 디바이스가 죽었다면 통보(`releaseRHI`, `forgetRHI`)가 먼저 와서
+        // 이미 GPU 에 있으면 그대로 둔다. 이전 디바이스가 죽었다면 통보(`releaseRHI`, `clearRHI`)가 먼저 와서
         // 여기를 비워 놓았으므로, 값이 남아 있다는 것은 곧 살아 있는 디바이스의 것이라는 뜻이다.
         if ( isRHIValid() )
             return true;
@@ -724,8 +724,8 @@ namespace sw
                 pResource->destroyBuffer( indexBuffer );
             return false;
         }
-        _vertex.adopt( pDevice, vertexBuffer );
-        _index.adopt( pDevice, indexBuffer );
+        _vertex.attach( pDevice, vertexBuffer );
+        _index.attach( pDevice, indexBuffer );
         return true;
     }
 
@@ -750,14 +750,14 @@ namespace sw
         releaseVertexBuffer(); // 인덱스 버퍼는 정점 버퍼와 같은 디바이스의 것이다(함께 만든다)
     }
 
-    void Mesh::forgetRHI( IRHIDevice* pDevice )
+    void Mesh::clearRHI( IRHIDevice* pDevice )
     {
         // 다른 디바이스가 죽었다는 통보다. 내 버퍼는 멀쩡하다.
         if ( _vertex._pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 버퍼는 그와 함께 갔다. destroy 하면 해제 후 사용이다.
-        _vertex.forget();
-        _index.forget();
+        _vertex.clear();
+        _index.clear();
     }
 
     void Mesh::releaseVertexBuffer()
@@ -770,7 +770,7 @@ namespace sw
             pLiveDevice->releaseHandle( RHIHandleKind::Buffer, _vertex._buffer );
         if ( IRHIDevice* pLiveDevice = _index.getLiveDevice() )
             pLiveDevice->releaseHandle( RHIHandleKind::Buffer, _index._buffer );
-        _vertex.forget();
-        _index.forget();
+        _vertex.clear();
+        _index.clear();
     }
 } // namespace sw

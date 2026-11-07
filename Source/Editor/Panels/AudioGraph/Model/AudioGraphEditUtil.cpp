@@ -42,7 +42,7 @@ namespace sw::editor
         const bool   bValidEnds = fromIndex < nodeCount && toIndex < nodeCount;
         if ( bValidEnds == false || fromIndex == toIndex )
             return false;
-        AudioGraphNodeDesc& reader = inoutDef._listNode[toIndex];
+        AudioGraphNodeDef& reader = inoutDef._listNode[toIndex];
         if ( AudioGraphRegistry::getNodeType( reader._type )._bSource )
             return false;
         const hashed_string& name = inoutDef._listNode[fromIndex]._name;
@@ -84,7 +84,7 @@ namespace sw::editor
             numbered.append( pTypeName ).append( number );
             name = string( numbered.view() );
         }
-        AudioGraphNodeDesc node;
+        AudioGraphNodeDef node;
         node._name           = hashed_string( string_view( name ) );
         node._type           = type;
         node._editorPosition = canvasPosition;
@@ -103,19 +103,19 @@ namespace sw::editor
             uint32      newIndex    = 0;
             if ( sourceIndex < 0 )
                 continue;
-            const AudioGraphNodeDesc source = inoutDef._listNode[static_cast<size_t>( sourceIndex )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
+            const AudioGraphNodeDef source = inoutDef._listNode[static_cast<size_t>( sourceIndex )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
             if ( addNode( inoutDef, source._type, source._editorPosition + offset, newIndex ) == false )
                 break; // 노드 수 상한
-            AudioGraphNodeDesc& copy = inoutDef._listNode[newIndex];
-            copy._listParameter      = source._listParameter;
-            copy._clip               = source._clip;
+            AudioGraphNodeDef& copy = inoutDef._listNode[newIndex];
+            copy._listParameter     = source._listParameter;
+            copy._clip              = source._clip;
             listSource.push_back( name );
             listNew.push_back( copy._name );
         }
         for ( size_t index = 0; index < listSource.size(); ++index )
         {
-            const AudioGraphNodeDesc source = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listSource[index] ) )];
-            AudioGraphNodeDesc&      copy   = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listNew[index] ) )];
+            const AudioGraphNodeDef source = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listSource[index] ) )];
+            AudioGraphNodeDef&      copy   = inoutDef._listNode[static_cast<size_t>( inoutDef.findNodeIndex( listNew[index] ) )];
             for ( const hashed_string& input : source._listInput )
             {
                 for ( size_t mapIndex = 0; mapIndex < listSource.size(); ++mapIndex )
@@ -134,7 +134,7 @@ namespace sw::editor
             return false;
         const hashed_string name = inoutDef._listNode[nodeIndex]._name;
         inoutDef._listNode.erase( inoutDef._listNode.begin() + static_cast<ptrdiff_t>( nodeIndex ) );
-        for ( AudioGraphNodeDesc& node : inoutDef._listNode )
+        for ( AudioGraphNodeDef& node : inoutDef._listNode )
         {
             for ( size_t inputIndex = node._listInput.size(); inputIndex > 0; --inputIndex )
             {
@@ -149,7 +149,7 @@ namespace sw::editor
 
     void AudioGraphEditUtil::replaceNodeReferences( AudioGraphDef& inoutDef, const hashed_string& oldName, const hashed_string& newName )
     {
-        for ( AudioGraphNodeDesc& node : inoutDef._listNode )
+        for ( AudioGraphNodeDef& node : inoutDef._listNode )
         {
             for ( hashed_string& input : node._listInput )
             {
@@ -163,7 +163,7 @@ namespace sw::editor
 
     bool AudioGraphEditUtil::layoutIfUnplaced( AudioGraphDef& inoutDef )
     {
-        for ( const AudioGraphNodeDesc& node : inoutDef._listNode )
+        for ( const AudioGraphNodeDef& node : inoutDef._listNode )
         {
             const bool bPlaced = node._editorPosition._x != 0.0f || node._editorPosition._y != 0.0f;
             if ( bPlaced )
@@ -177,8 +177,8 @@ namespace sw::editor
         vector<uint32> listRowCount( inoutDef._listNode.size() + 1, 0 );
         for ( const uint32 nodeIndex : listOrder )
         {
-            AudioGraphNodeDesc& node  = inoutDef._listNode[nodeIndex];
-            uint32              depth = 0;
+            AudioGraphNodeDef& node  = inoutDef._listNode[nodeIndex];
+            uint32             depth = 0;
             for ( const hashed_string& input : node._listInput )
             {
                 depth = MathUtil::max( depth, listDepth[static_cast<size_t>( inoutDef.findNodeIndex( input ) )] + 1u );

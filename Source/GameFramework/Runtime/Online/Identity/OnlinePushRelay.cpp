@@ -21,7 +21,7 @@ namespace sw
             }
 
             /** @brief 거절을 세고, (열거형, 열거자, 이유)마다 한 번 로그를 남깁니다. 세는 것과 "한 번만" 은 `LogOnce` 의 한 호출이다 — 부른 횟수가 곧 거절 수(`getRejectedCount`)다. */
-            static void noteRejected( const OnlinePushRelay& relay, const utf8* pReason )
+            static void recordRejected( const OnlinePushRelay& relay, const utf8* pReason )
             {
                 const uint64 key = ( HashUtil::computeStringHash64( relay._pushEnum.data(), relay._pushEnum.size() ) * 31u ) ^
                                    HashUtil::computeStringHash64( relay._pushName.data(), relay._pushName.size() ) ^ HashUtil::computeStringHash64( pReason, StringUtil::strlen( pReason ) );
@@ -81,17 +81,17 @@ namespace sw
         const OnlinePushRelayEntry* pEntry = findEntry( relay );
         if ( pEntry == nullptr )
         {
-            OnlinePushRelayInternal::noteRejected( relay, "this build has no relay entry for the push" );
+            OnlinePushRelayInternal::recordRejected( relay, "this build has no relay entry for the push" );
             return false;
         }
         if ( string_view( pEntry->_pGetBodyFqn().c_str() ) != string_view( relay._bodyType ) )
         {
-            OnlinePushRelayInternal::noteRejected( relay, "the push carries another body type in this build" );
+            OnlinePushRelayInternal::recordRejected( relay, "the push carries another body type in this build" );
             return false;
         }
         if ( pEntry->_pConvert( relay._bodyBytes, outBody ) == false )
         {
-            OnlinePushRelayInternal::noteRejected( relay, "the body could not be read (semantic version, unknown enumerator, range)" );
+            OnlinePushRelayInternal::recordRejected( relay, "the body could not be read (semantic version, unknown enumerator, range)" );
             return false;
         }
         outKind = pEntry->_kind;
@@ -117,7 +117,7 @@ namespace sw
         OnlinePushRelayInternal::getList().remove( pEntry );
     }
 
-    void OnlinePushRelayRegistry::noteMissingPushName( const hashed_string& pushEnum, int64 value )
+    void OnlinePushRelayRegistry::recordMissingPushName( const hashed_string& pushEnum, int64 value )
     {
         SW_LOG_ERROR_ID( "OnlinePushRelay.PushValueNoReflected", "Push %# value %# has no reflected enumerator name - add ENUM( Count = Count ) to it; the push is not relayed", pushEnum.c_str(), value );
     }

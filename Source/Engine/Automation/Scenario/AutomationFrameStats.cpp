@@ -10,7 +10,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
-#include "Engine/Automation/Scenario/AutomationStepFields.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -116,14 +116,14 @@ namespace sw
         {
             static bool validateBegin( const AutomationStep& step, string& outError )
             {
-                AutomationNoFields fields;
-                return step.readFields( fields, outError );
+                AutomationNoParams params;
+                return step.readFields( params, outError );
             }
 
             static bool validateEnd( const AutomationStep& step, string& outError )
             {
-                AutomationFileStepFields fields;
-                return step.readFields( fields, outError );
+                AutomationFileStepParams params;
+                return step.readFields( params, outError );
             }
 
             static bool runBegin( AutomationStepContext& context, const AutomationStep& step )
@@ -141,7 +141,7 @@ namespace sw
                     context.recordFailure( step, "no <BeginFrameStats/> before this step" );
                     return true;
                 }
-                const string path = context.resolveOutputPath( step.readValidatedFields<AutomationFileStepFields>()._file );
+                const string path = context.resolveOutputPath( step.readValidatedFields<AutomationFileStepParams>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path ) ) == false )
                 {
                     context.recordFailure( step, "could not write the frame stats to " + path );

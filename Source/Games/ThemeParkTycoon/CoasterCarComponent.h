@@ -28,11 +28,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터 · 코스터 번호 · 칸 번호(0 이 맨 앞)를 정합니다. */
-        void assignCar( GameObjectHandle director, int32 coasterIndex, int32 carIndex );
+        void assignCar( GameObjectHandle gameMode, int32 coasterIndex, int32 carIndex );
 
     private:
         PROPERTY( Category = "Car", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Car", DisplayName = "Coaster Index", Tooltip = "Which built coaster" )
         int32 _coasterIndex;
         PROPERTY( Category = "Car", DisplayName = "Car Index", Tooltip = "0 is the front car" )

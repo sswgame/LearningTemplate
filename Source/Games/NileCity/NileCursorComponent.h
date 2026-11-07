@@ -29,7 +29,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Cursor", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
-        GameObjectHandle _director;
+        GameObjectHandle _gameMode;
         PROPERTY( Category = "Cursor", DisplayName = "Height", Tooltip = "Box centre above the ground", Units = m )
         float32 _height;
         PROPERTY( Category = "Cursor", DisplayName = "Thickness", Tooltip = "Box height", Units = m )

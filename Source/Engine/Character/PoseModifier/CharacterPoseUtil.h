@@ -24,6 +24,6 @@ namespace sw
          * @brief 유닛의 현재 모델 공간 행렬을 본 배열의 모델 슬롯에 옮깁니다. 본 배열이 그 유닛의 스켈레톤 형태가 아니면 바인드 본으로 다시 만들고 옮깁니다.
          * @return 유닛이 아직 포즈를 만들지 않아 옮길 행렬이 없으면 false 입니다(본 배열은 바인드 포즈).
          */
-        [[nodiscard]] static bool copyUnitPose( const SkeletalMeshComponent& unit, CharacterBoneArray& inoutBones );
+        [[nodiscard]] static bool copyUnitPose( const SkeletalMeshComponent& skeletalMesh, CharacterBoneArray& inoutBones );
     };
 } // namespace sw

@@ -29,7 +29,7 @@ namespace sw
         class LoadingScreen final : public UIScreen
         {
         public:
-            LoadingScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+            LoadingScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
                 : UIScreen{ makePausingDesc( desc ), std::move( root ) }
             {
             }
@@ -37,9 +37,9 @@ namespace sw
             bool onBack() override { return true; }
 
         private:
-            static UIScreenDesc makePausingDesc( const UIScreenDesc& desc )
+            static UIScreenDef makePausingDesc( const UIScreenDef& desc )
             {
-                UIScreenDesc pausing = desc;
+                UIScreenDef pausing  = desc;
                 pausing._bPausesGame = true;
                 return pausing;
             }
@@ -253,7 +253,7 @@ namespace sw
             unique_ptr<BorderPanel> panel = sw::make_unique<BorderPanel>();
             panel->setBackground( UIBrush::makeSolid( float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) );
             panel->setVisibility( WidgetVisibility::HitTestInvisible );
-            UIScreenDesc desc{};
+            UIScreenDef desc{};
             desc._layer       = UILayer::Overlay;
             desc._bTakesFocus = false;
             desc._bShowCursor = false;

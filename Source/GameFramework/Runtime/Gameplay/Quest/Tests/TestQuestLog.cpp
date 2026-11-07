@@ -60,7 +60,7 @@ namespace
         int32 countEvents( QuestEvent::Kind kind )
         {
             vector<QuestEvent> listEvent;
-            _log.drainEvents( listEvent );
+            _log.pollEvents( listEvent );
             int32 count = 0;
             for ( const QuestEvent& event : listEvent )
             {
@@ -149,12 +149,12 @@ SW_TEST_CASE_F( QuestLogTest, BranchesWaitForChoice )
     SW_EXPECT_FALSE( _log.choose( "wolves", "nothing" ) );
 
     vector<QuestEvent> listEvent;
-    _log.drainEvents( listEvent );
+    _log.pollEvents( listEvent );
     SW_REQUIRE_TRUE( _log.choose( "wolves", "spare" ) );
     SW_EXPECT_TRUE( _log.getStatus( "wolves" ) == QuestStatus::Completed );
 
     listEvent.clear();
-    _log.drainEvents( listEvent );
+    _log.pollEvents( listEvent );
     bool bSawReward = false;
     for ( const QuestEvent& event : listEvent )
     {
@@ -213,7 +213,7 @@ SW_TEST_CASE_F( QuestLogTest, StateRoundTrips )
     SW_EXPECT_EQUAL( 1, restored.findProgress( "wolves" )->_listCount[0] );
     SW_EXPECT_NEAR( 2.0f, restored.findProgress( "timed" )->_stageTime, 1.0e-5f );
     vector<QuestEvent> listEvent;
-    restored.drainEvents( listEvent );
+    restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 }
 

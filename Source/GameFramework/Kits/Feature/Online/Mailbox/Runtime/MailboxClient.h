@@ -3,11 +3,11 @@
  * @brief 우편함 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 목록, 읽음, 수령, 모두 받기, 지우기를 보내고 첫 페이지 목록 캐시와 안 읽은 수를 보관합니다.
  * @details - 수령 응답의 잔액(`_listBalance`)은 게임이 경제 클라이언트로 넘긴다. 키트끼리는 서로 모르며 원장이 원본이다.
  *          - 커서 없는 목록 응답이 캐시를 교체한다. 수령, 읽음, 지우기가 성공하면 그 키의 우편을 바로 고친다. 모두 받기는 다음 목록으로 맞춘다.
- *          - 새 우편 알림(`kPushNewMail`)은 `drainNewMail` 로 넘긴다. 게임은 받으면 목록을 다시 읽는다.
+ *          - 새 우편 알림(`kPushNewMail`)은 `pollNewMail` 로 넘긴다. 게임은 받으면 목록을 다시 읽는다.
  *          - 수령을 재시도할 때는 같은 멱등 키(응답의 `_idempotencyKey`)를 쓴다. 요청 · 응답 규칙은 `OnlineKitClient` 에 있다.
  */
 #pragma once
-#include "Core/Container/DrainGate.h"
+#include "Core/Container/ConsumerGate.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -51,13 +51,13 @@ namespace sw
         int32                   countUnread() const;
         uint32                  getRevision() const { return _revision; }
         /** @brief 새 우편 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
-        [[nodiscard]] bool claimNewMail( DrainLease& outLease ) { return _newMailGate.claim( outLease ); }
+        [[nodiscard]] bool claimNewMail( ConsumerLease& outLease ) { return _newMailGate.claim( outLease ); }
         /** @brief 받은 새 우편 알림을 @p outListNewMail 끝에 넘깁니다. @p lease 는 `claimNewMail` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
-        void drainNewMail( const DrainLease& lease, vector<MailboxNewMail>& outListNewMail )
+        void pollNewMail( const ConsumerLease& lease, vector<MailboxNewMail>& outListNewMail )
         {
             SW_ASSERT( _newMailGate.isHeldBy( lease ) );
             if ( _newMailGate.isHeldBy( lease ) )
-                _newMailBuffer.drainTo( outListNewMail );
+                _newMailBuffer.moveAllTo( outListNewMail );
         }
 
         // IOnlineClientService
@@ -70,7 +70,7 @@ namespace sw
 
     private:
         vector<MailView>            _listMail;
-        DrainGate                   _newMailGate;
+        ConsumerGate                _newMailGate;
         EventBuffer<MailboxNewMail> _newMailBuffer;
         uint32                      _revision;
     };

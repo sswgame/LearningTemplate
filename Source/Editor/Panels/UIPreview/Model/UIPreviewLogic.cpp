@@ -420,22 +420,22 @@ namespace sw::editor
         return castTo<const CanvasPanel>( widget.getParent() ) != nullptr;
     }
 
-    UIPreviewSlotFields UIPreviewLogic::findSlotFields( const Widget& widget )
+    UIPreviewSlotParams UIPreviewLogic::findSlotFields( const Widget& widget )
     {
-        UIPreviewSlotFields fields{};
+        UIPreviewSlotParams params{};
         const auto*         pParent = widget.getParent();
         if ( pParent == nullptr )
-            return fields;
-        fields._bSizeOverride = true;
+            return params;
+        params._bSizeOverride = true;
         if ( castTo<const CanvasPanel>( pParent ) != nullptr )
         {
-            fields._bCanvas = true;
-            return fields;
+            params._bCanvas = true;
+            return params;
         }
-        fields._bPaddingAlignment = true;
-        fields._bBoxSize          = castTo<const BoxPanel>( pParent ) != nullptr;
-        fields._bGrid             = castTo<const GridPanel>( pParent ) != nullptr;
-        return fields;
+        params._bPaddingAlignment = true;
+        params._bBoxSize          = castTo<const BoxPanel>( pParent ) != nullptr;
+        params._bGrid             = castTo<const GridPanel>( pParent ) != nullptr;
+        return params;
     }
 
     bool UIPreviewLogic::applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI )

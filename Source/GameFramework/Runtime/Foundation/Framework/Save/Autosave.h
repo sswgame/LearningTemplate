@@ -131,7 +131,7 @@ namespace sw
          * @brief 정책, 로컬 저장소, 델리게이트를 두고 슬롯 기록 읽기를 맡겨 순번을 잇습니다. 타이머, 요청, 막기는 비웁니다.
          * @param store 빌려 쓴다(이 관리자보다 오래 산다 - 보통 게임 인스턴스의 `GameLocalStore`). 맡긴 요청의 구독은 이 관리자가 들어, 먼저 사라지면 콜백이 불리지 않는다.
          * @return 슬롯 수가 1..64 밖이거나 간격 · 최소 간격이 음수이거나 그룹 · 접두사가 슬롯 이름 규칙을 어기면 오류를 남기고 false 입니다(가까운 값으로 맞추지 않는다).
-         *         그러면 상태는 그대로입니다. XML 읽기(`loadFromNode`)는 같은 범위를 읽을 때 이미 거절한다.
+         *         그러면 상태는 그대로입니다. XML 읽기(`loadFromXML`)는 같은 범위를 읽을 때 이미 거절한다.
          */
         [[nodiscard]] bool initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveDelegate& onSave, const LoadDelegate& onLoad );
         /** @brief 플레이 시간을 넘기고(간격 저장), 쌓인 요청을 막기가 없을 때 하나로 저장합니다. 게임 업데이트에서 부릅니다. */

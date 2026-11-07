@@ -101,14 +101,14 @@ namespace sw
         }
         (void)scroll->addChild( std::move( grid ) );
         (void)root->addChild( std::move( scroll ) );
-        UIScreenDesc desc{};
+        UIScreenDef desc{};
         desc._layer       = UILayer::HUD;
         desc._bTakesFocus = false;
         desc._bShowCursor = false;
         return sw::make_unique<UIStressTestScreen>( desc, std::move( root ), std::move( listCellText ) );
     }
 
-    UIStressTestScreen::UIStressTestScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText )
+    UIStressTestScreen::UIStressTestScreen( const UIScreenDef& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText )
         : UIScreen{ desc, std::move( root ) }
         , _listCellText{ std::move( listCellText ) }
         , _churnCursor{ 0 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Kenney Mini Dungeon 모델의 팔레트 머티리얼 — _albedoMap 이 키트의 색 칸 텍스처다(모델 UV 가 칸을 고른다). 바닥 · 벽 · 소품이 이 하나를 나눠 써 한 배치로 묶인다. -->
-<MaterialDesc formatVersion="0" name="ArenaPalette" _base="engine/materials/benchtextured.material">
+<MaterialDef formatVersion="0" name="ArenaPalette" _base="engine/materials/benchtextured.material">
 	<_properties>
 		<item name="_albedoMap" assetPath="game/abilityarena/textures/dungeon_colormap.dds" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

@@ -107,7 +107,7 @@ namespace
             _listTag.push_back( requestTag );
         }
 
-        void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override
+        void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override
         {
             for ( const ServerDirectoryControlCompletion& completion : _listCompletion )
             {
@@ -143,7 +143,7 @@ namespace
 
         void collectEventJSON( vector<string>& outListJSON ) const override { outListJSON = _listEventJSON; }
 
-        void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override
+        void takeControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override
         {
             for ( const LiveEventControlCompletion& completion : _listCompletion )
             {
@@ -162,7 +162,7 @@ namespace
         void onReply( const AdminReply& reply ) { _listReply.push_back( reply ); }
     };
 
-    struct AdminRig
+    struct AdminFixture
     {
         MemoryServiceDatabase _database;
         MemoryServiceStore    _store;
@@ -176,7 +176,7 @@ namespace
         AdminService          _service;
         uint64                _nextKey{ 1 };
 
-        explicit AdminRig( bool bPorts = true )
+        explicit AdminFixture( bool bPorts = true )
             : _database{}
             , _store{ &_database }
             , _sessions{}
@@ -204,7 +204,7 @@ namespace
             SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
         }
 
-        ~AdminRig() { _service.shutdown(); }
+        ~AdminFixture() { _service.shutdown(); }
 
         void send( AccountID adminID, uint16 method, const AdminRequest& request, uint64 keyLow = 0 )
         {
@@ -257,7 +257,7 @@ namespace
 SW_TEST_CASE( AdminServiceTest, EntryRules )
 {
     SW_EXPECT_LOG( "AdminService.AdminServiceNeedsStore" );
-    AdminRig rig;
+    AdminFixture rig;
     SW_EXPECT_TRUE( rig.call( kInvalidAccountID, AdminMethod::kLookupAccount, makeRequest() )._result == AdminResult::NotSignedIn );
     SW_EXPECT_TRUE( rig.call( kSuper, 9999, makeRequest() )._result == AdminResult::Forbidden );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCallCount() );
@@ -274,7 +274,7 @@ SW_TEST_CASE( AdminServiceTest, EntryRules )
 /** @brief [AdminServiceTest] 조회: id 나 이름으로 찾고 접속 여부를 이 프로세스의 디렉터리로 채운다. 없는 계정과 색인 없는 이름 조회는 UnknownAccount 이다 */
 SW_TEST_CASE( AdminServiceTest, LookupFillsOnlineAndUsesNameIndex )
 {
-    AdminRig rig;
+    AdminFixture rig;
 
     AdminRequest byName = makeRequest();
     byName._displayName = "player";
@@ -291,7 +291,7 @@ SW_TEST_CASE( AdminServiceTest, LookupFillsOnlineAndUsesNameIndex )
     unknownName._displayName = "nobody";
     SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::kLookupAccount, unknownName )._result == AdminResult::UnknownAccount );
 
-    AdminRig noPorts( false );
+    AdminFixture noPorts( false );
     SW_EXPECT_TRUE( noPorts.call( kViewer, AdminMethod::kLookupAccount, byName )._result == AdminResult::UnknownAccount );
     AdminRequest playerID = makeRequest();
     playerID._accountID   = kPlayer;
@@ -303,7 +303,7 @@ SW_TEST_CASE( AdminServiceTest, LookupFillsOnlineAndUsesNameIndex )
 /** @brief [AdminServiceTest] 지급: 바뀐 잔액을 그 계정에 알린다. 같은 키의 재시도와 실패는 알리지 않는다 */
 SW_TEST_CASE( AdminServiceTest, AdjustNotifiesBalanceOnce )
 {
-    AdminRig     rig;
+    AdminFixture rig;
     AdminRequest request = makeRequest();
     request._accountID   = kPlayer;
     request._assetID     = "cur.gold";
@@ -325,7 +325,7 @@ SW_TEST_CASE( AdminServiceTest, AdjustNotifiesBalanceOnce )
 /** @brief [AdminServiceTest] 제재: 정지가 새로 걸리면 세션을 끊고, 재시도 · 채팅 금지 · 해제는 끊지 않는다 */
 SW_TEST_CASE( AdminServiceTest, SuspendRevokesSessionsOnce )
 {
-    AdminRig           rig;
+    AdminFixture       rig;
     const AdminRequest suspend = makeSanction( ServiceSanctionKind::Suspend, kNowMs + 1000 );
     SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, suspend, 60 )._result == AdminResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._sessions._listRevoked.size() );
@@ -342,7 +342,7 @@ SW_TEST_CASE( AdminServiceTest, SuspendRevokesSessionsOnce )
 /** @brief [AdminServiceTest] 영구 정지: 요청의 시각이 이미 지났어도 영구로 저장되므로 세션을 끊는다 */
 SW_TEST_CASE( AdminServiceTest, BanRevokesEvenWithPastTime )
 {
-    AdminRig rig;
+    AdminFixture rig;
     SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, makeSanction( ServiceSanctionKind::Ban, 1 ) )._result == AdminResult::Forbidden ); // 영구 정지는 Super 몫이다
     SW_EXPECT_TRUE( rig._sessions._listRevoked.empty() );
 
@@ -355,7 +355,7 @@ SW_TEST_CASE( AdminServiceTest, BanRevokesEvenWithPastTime )
 /** @brief [AdminServiceTest] 점검 · 공지 명령: 등급을 확인한 뒤 넘기고, 응답은 넘긴 키트의 완료가 온 뒤에 간다. 값과 결과가 그대로 전해진다 */
 SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
 {
-    AdminRig rig;
+    AdminFixture rig;
 
     AdminRequest maintenance = makeRequest();
     maintenance._scope       = "game";
@@ -406,7 +406,7 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
 /** @brief [AdminServiceTest] 라이브 이벤트 명령: 목록은 바로 답하되 너무 큰 정의는 뺀다. 바꾸기는 넘기고 완료에서 답한다 */
 SW_TEST_CASE( AdminServiceTest, LiveEventCommandsForward )
 {
-    AdminRig rig;
+    AdminFixture rig;
     rig._liveControl._listEventJSON.push_back( "{\"id\":\"a\"}" );
     rig._liveControl._listEventJSON.push_back( string( static_cast<size_t>( AdminProtocol::kMaxEventJSONSize ) + 1, 'x' ) );
     const AdminReply listed = rig.call( kViewer, AdminMethod::kListLiveEvents, makeRequest() );
@@ -434,7 +434,7 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsForward )
 /** @brief [AdminServiceTest] 넘길 키트가 없으면 등급이 맞아도 Unavailable 이고 기다리는 호출이 남지 않는다 */
 SW_TEST_CASE( AdminServiceTest, ForwardWithoutKitIsUnavailable )
 {
-    AdminRig rig( false );
+    AdminFixture rig( false );
 
     AdminRequest maintenance = makeRequest();
     maintenance._scope       = "game";
@@ -451,7 +451,7 @@ SW_TEST_CASE( AdminServiceTest, ForwardWithoutKitIsUnavailable )
 SW_TEST_CASE( AdminServiceTest, UnknownForwardedCompletionWarns )
 {
     SW_EXPECT_LOG( "ServiceServerCallTable.UnknownCall" );
-    AdminRig rig;
+    AdminFixture rig;
     rig._directoryControl._listCompletion.push_back( ServerDirectoryControlCompletion{ 12345, ServerDirectoryControlResult::Ok } );
     rig.tick();
     SW_EXPECT_TRUE( rig._sink._listReply.empty() );
@@ -461,7 +461,7 @@ SW_TEST_CASE( AdminServiceTest, UnknownForwardedCompletionWarns )
 SW_TEST_CASE( AdminServiceTest, SeedRoleOnlyWhenAbsent )
 {
     SW_EXPECT_LOG( "AdminService.AdminServiceCouldNotSeed" );
-    AdminRig rig;
+    AdminFixture rig;
 
     const UnixMilliseconds nowMs{ kNowMs };
     rig._service.seedRole( kPlayer, AdminRole::Viewer, nowMs );
@@ -488,7 +488,7 @@ SW_TEST_CASE( AdminServiceTest, SeedRoleOnlyWhenAbsent )
 /** @brief [AdminServiceTest] 종료: 넘긴 명령의 완료를 회수해 응답한 뒤 끝난다 */
 SW_TEST_CASE( AdminServiceTest, ShutdownDrainsForwardedCalls )
 {
-    AdminRig rig;
+    AdminFixture rig;
 
     AdminRequest maintenance = makeRequest();
     maintenance._scope       = "game";
@@ -503,8 +503,8 @@ SW_TEST_CASE( AdminServiceTest, ShutdownDrainsForwardedCalls )
 /** @brief [AdminServiceTest] 다시 시도할 결과(버전 충돌 · 일시 장애 — `AdminReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 지급 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( AdminServiceTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionRig<AdminProtocol, AdminReply> rig;
-    AdminReply                                         finished;
+    test::ReplyRetentionFixture<AdminProtocol, AdminReply> rig;
+    AdminReply                                             finished;
     finished._result = AdminResult::Ok;
     AdminReply busy;
     busy._result = AdminResult::Busy;

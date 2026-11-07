@@ -183,7 +183,7 @@ namespace sw
         void startPacing();
         void applyDirectorEvents();
         /** @brief 페이싱 프로필이 다시 읽혔으면(핫 리로드) 판을 이어 새 프로필로 옮깁니다(`AIDirector::rebindProfile`). 구조가 바뀌었으면 이 판은 옛 프로필로 돈다. */
-        void adoptReloadedProfile();
+        void applyReloadedProfile();
         void requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite );
         void spawnEffectPools( GameObjectManager& manager );
         void spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool );

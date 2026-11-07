@@ -53,7 +53,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorSelfTestMarks::note( pMark );
+        EditorSelfTestMarks::record( pMark );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetMode" ) );
         if ( settings._mode != EditorNetMode::Standalone )
         {

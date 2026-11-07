@@ -78,7 +78,7 @@ namespace
         void collect()
         {
             vector<TrampolineEvent> listNew;
-            _arena.drainEvents( listNew );
+            _arena.pollEvents( listNew );
             for ( const TrampolineEvent& event : listNew )
             {
                 _listEvent.push_back( event );
@@ -747,14 +747,14 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPlacesCapsAndExpires )
     }
     SW_EXPECT_EQUAL( size_t( 2 ), most );
     vector<PartyItemEvent> listEvent;
-    spawner.drainEvents( listEvent );
+    spawner.pollEvents( listEvent );
     SW_EXPECT_TRUE( PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::Expired ) > 0 );
     SW_EXPECT_TRUE( PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::Spawned ) > 2 );
 
     spawner.update( 0.5f );
     spawner.discardEvents();
     listEvent.clear();
-    spawner.drainEvents( listEvent );
+    spawner.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 }
 
@@ -814,7 +814,7 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPicksUpTheNearest )
     SW_EXPECT_EQUAL( 1, spawner.getInstances()[0]._serial );
 
     vector<PartyItemEvent> listEvent;
-    spawner.drainEvents( listEvent );
+    spawner.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( 1, PartyArenaTestUtil::countEvents( listEvent, PartyItemEvent::Kind::PickedUp ) );
     SW_EXPECT_EQUAL( 3, listEvent.back()._player );
 }
@@ -956,7 +956,7 @@ SW_TEST_CASE( PartyArenaTest, SeriesRanksRoundsAndFindsAWinner )
     SW_EXPECT_TRUE( series.getCurrentRound()->_id == hashed_string( "b" ) );
 
     vector<PartySeriesEvent> listEvent;
-    series.drainEvents( listEvent );
+    series.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 2, PartyArenaTestUtil::countEvents( listEvent, PartySeriesEvent::Kind::RoundStarted ) );
     SW_EXPECT_EQUAL( 3, PartyArenaTestUtil::countEvents( listEvent, PartySeriesEvent::Kind::RoundRanked ) );
     for ( const PartySeriesEvent& event : listEvent )
@@ -972,7 +972,7 @@ SW_TEST_CASE( PartyArenaTest, SeriesRanksRoundsAndFindsAWinner )
     SW_EXPECT_TRUE( series.isFinished() );
     SW_EXPECT_EQUAL( 0, series.getWinner() );
     listEvent.clear();
-    series.drainEvents( listEvent );
+    series.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, PartyArenaTestUtil::countEvents( listEvent, PartySeriesEvent::Kind::SeriesWon ) );
     SW_EXPECT_FALSE( series.reportRound( { 10, 5, 1 } ) );
 }

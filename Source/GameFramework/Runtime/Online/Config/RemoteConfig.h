@@ -139,7 +139,7 @@ namespace sw
         static int32 computeRolloutBucket( string_view flag, uint64 accountID );
 
     private:
-        class ReloadWork;
+        class ReloadJob;
         class SetWork;
 
         struct Entry

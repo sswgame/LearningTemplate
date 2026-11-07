@@ -29,7 +29,7 @@ namespace
         string makeOutputPath( string_view outputID ) const { return FileUtil::joinPath( _cookedDir, outputID ); }
 
         /** @brief 입력 파일을 읽어 `baked:` 를 붙여 씁니다. */
-        CookOutcome cook( const CookStore& store, const CookJobDesc& desc, string_view outputID )
+        CookResult cook( const CookStore& store, const CookJobDesc& desc, string_view outputID )
         {
             const string outputPath = makeOutputPath( outputID );
             return store.cookFile( desc, outputID, outputPath, [&]
@@ -62,14 +62,14 @@ SW_TEST_CASE( CookStoreTest, ReusesWhileInputsAreUnchanged )
     CookFixture fixture;
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
 
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:one" ), fixture.readOutput( "x.bin" ) );
     SW_EXPECT_TRUE( FileUtil::exists( fixture._store.makeRecordPath( "x.bin" ) ) );
 
     const CookStore nextRun = fixture.makeNextRun();
-    SW_EXPECT_EQUAL( CookOutcome::Reused, fixture.cook( nextRun, kDesc, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( nextRun, kDesc, "x.bin" ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( fixture.makeOutputPath( "x.bin" ) ) );
-    SW_EXPECT_EQUAL( CookOutcome::Reused, fixture.cook( nextRun, kDesc, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( nextRun, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:one" ), fixture.readOutput( "x.bin" ) );
     SW_EXPECT_EQUAL( 1, fixture._bakeCount );
     SW_EXPECT_EQUAL( 2u, nextRun.getTally()._reusedCount );
@@ -82,16 +82,16 @@ SW_TEST_CASE( CookStoreTest, CooksAgainWhenInputOrVersionChanges )
 {
     CookFixture fixture;
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "two" ) );
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:two" ), fixture.readOutput( "x.bin" ) );
 
     CookJobDesc nextVersion      = kDesc; // 쿠커 코드가 바뀌면 지문이 바뀌어 다시 굽는다
     nextVersion._codeFingerprint = 2;
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
-    SW_EXPECT_EQUAL( CookOutcome::Reused, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
     SW_EXPECT_EQUAL( 3, fixture._bakeCount );
 }
 
@@ -103,12 +103,12 @@ SW_TEST_CASE( CookStoreTest, RejectsJobsWithoutInputs )
     CookFixture  fixture;
     const string outputPath = fixture.makeOutputPath( "none.bin" );
     SW_EXPECT_LOG( "Cook.NoInputRecorded" );
-    const CookOutcome outcome = fixture._store.cookFile( kDesc, "none.bin", outputPath, [&]
+    const CookResult result = fixture._store.cookFile( kDesc, "none.bin", outputPath, [&]
     { return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, "x" ) ? CookStep::Written : CookStep::Failed; } );
-    SW_EXPECT_EQUAL( CookOutcome::Failed, outcome );
+    SW_EXPECT_EQUAL( CookResult::Failed, result );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._store.makeRecordPath( "none.bin" ) ) );
 
-    SW_EXPECT_EQUAL( CookOutcome::Skipped, fixture._store.cookFile( kDesc, "skip.bin", fixture.makeOutputPath( "skip.bin" ), []
+    SW_EXPECT_EQUAL( CookResult::Skipped, fixture._store.cookFile( kDesc, "skip.bin", fixture.makeOutputPath( "skip.bin" ), []
     { return CookStep::Skipped; } ) );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._store.makeRecordPath( "skip.bin" ) ) );
     SW_EXPECT_EQUAL( 1u, fixture._store.getTally()._failedCount );
@@ -121,16 +121,16 @@ SW_TEST_CASE( CookStoreTest, RemovesOnlyUnrequestedRecordedOutputs )
 {
     CookFixture fixture;
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "keep.bin" ) );
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "sub/gone.bin" ) );
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "skipped.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "keep.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "sub/gone.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "skipped.bin" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture.makeOutputPath( "authored.bin" ), "hand" ) );
 
     const CookStore nextRun = fixture.makeNextRun();
-    SW_EXPECT_EQUAL( CookOutcome::Reused, fixture.cook( nextRun, kDesc, "keep.bin" ) );
+    SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( nextRun, kDesc, "keep.bin" ) );
     CookJobDesc noLongerCooked   = kDesc; // 설정이 바뀌어 기록이 낡아야 쿠커가 건너뛸 기회를 얻는다 — 입력 · 설정이 그대로면 기록이 이긴다
     noLongerCooked._settingsHash = 1;
-    SW_EXPECT_EQUAL( CookOutcome::Skipped, nextRun.cookFile( noLongerCooked, "skipped.bin", fixture.makeOutputPath( "skipped.bin" ), []
+    SW_EXPECT_EQUAL( CookResult::Skipped, nextRun.cookFile( noLongerCooked, "skipped.bin", fixture.makeOutputPath( "skipped.bin" ), []
     { return CookStep::Skipped; } ) );
 
     uint32 failedCount = 0;

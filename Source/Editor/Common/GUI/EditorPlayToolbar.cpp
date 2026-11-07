@@ -114,7 +114,7 @@ namespace sw::editor
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
                         (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
                     ImGui::EndDisabled();
-                    EditorSelfTestMarks::note( "toolbar.netPlay" );
+                    EditorSelfTestMarks::record( "toolbar.netPlay" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStart" ) );
                     return true;
                 }
@@ -125,7 +125,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
                     session.requestStop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 Timeline 탭에 연다
-                EditorSelfTestMarks::note( "toolbar.netStop" );
+                EditorSelfTestMarks::record( "toolbar.netStop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStop" ) );
                 return true;
             }
@@ -157,7 +157,7 @@ namespace sw::editor
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
                         requestSession( PendingSession::Play, bSceneDirty );
-                    EditorSelfTestMarks::note( "toolbar.play" );
+                    EditorSelfTestMarks::record( "toolbar.play" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStart" ) );
                 }
 
@@ -171,7 +171,7 @@ namespace sw::editor
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Globe" ), SW_LOCKEY( "EdButton", "Simulate" ), "Simulate" ) ) )
                         requestSession( PendingSession::Simulate, bSceneDirty );
-                    EditorSelfTestMarks::note( "toolbar.simulate" );
+                    EditorSelfTestMarks::record( "toolbar.simulate" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SimulateStart" ) );
                 }
 
@@ -185,7 +185,7 @@ namespace sw::editor
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Pause" ), SW_LOCKEY( "EdButton", "Pause" ), "Pause" ) ) )
                         EditorPlaySession::pause();
-                    EditorSelfTestMarks::note( "toolbar.pause" );
+                    EditorSelfTestMarks::record( "toolbar.pause" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayPause" ) );
                 }
 
@@ -212,7 +212,7 @@ namespace sw::editor
                     if ( pObjectManager != nullptr )
                         editorContext.getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
                 }
-                EditorSelfTestMarks::note( "toolbar.stop" );
+                EditorSelfTestMarks::record( "toolbar.stop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStop" ) );
             }
 
@@ -234,7 +234,7 @@ namespace sw::editor
                 {
                     if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ResetToX100" ), nullptr, false, timeScale != 1.0f ) )
                         editor::getSubsystem<GameTimeScale>().set( 1.0f );
-                    EditorSelfTestMarks::note( "toolbar.timeScale.reset" );
+                    EditorSelfTestMarks::record( "toolbar.timeScale.reset" );
                     ImGui::EndPopup();
                 }
             }
@@ -265,7 +265,7 @@ namespace sw::editor
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Bug" ), SW_LOCKEY( "EdButton", "Renderdoc" ), "RenderDoc" ) ) )
                     RenderDocCapture::triggerCapture();
                 ImGui::EndDisabled();
-                EditorSelfTestMarks::note( "toolbar.renderDoc" );
+                EditorSelfTestMarks::record( "toolbar.renderDoc" );
                 if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
                 {
                     const utf8* pTooltip = SW_LOCKEY( "EdCommon", "RenderDocCapture" );
@@ -324,7 +324,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( ImGui::Button( ">>" ) )
                     EditorInputGUI::openPopup( kOverflowPopupID );
-                EditorSelfTestMarks::note( "toolbar.overflow" );
+                EditorSelfTestMarks::record( "toolbar.overflow" );
                 // 접힌 펼침 안의 단추도 내놓은 것이다 — 기본 배율(모니터 DPI)이 크면 세션 옵션이 펼침에 들어 자체 테스트가 "단추 없음" 으로 졌다.
                 if ( firstOverflow <= static_cast<size_t>( Section::SessionOptions ) )
                     getState()._bAutoplayOffered = GameAutoplay::findActive() != nullptr;
@@ -352,7 +352,7 @@ namespace sw::editor
                     startSession( getState()._pendingSession );
                     ImGui::CloseCurrentPopup();
                 }
-                EditorSelfTestMarks::note( "toolbar.playAnyway" );
+                EditorSelfTestMarks::record( "toolbar.playAnyway" );
                 ImGui::SameLine();
                 if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Cancel" ) ) )
                     ImGui::CloseCurrentPopup();

@@ -15,15 +15,15 @@
  * @code
  *     <AudioGraphDef _output="Amp" _durationSeconds="3">
  *         <_listNode>
- *             <AudioGraphNodeDesc _name="Grains" _type="Granular" _clip="game/x/sounds/rain_loop.ogg">
+ *             <AudioGraphNodeDef _name="Grains" _type="Granular" _clip="game/x/sounds/rain_loop.ogg">
  *                 <_listParameter>
- *                     <AudioGraphParameterDesc _name="grainsPerSecond" _value="30" _parameter="RainIntensity">
+ *                     <AudioGraphParameterDef _name="grainsPerSecond" _value="30" _parameter="RainIntensity">
  *                         <_listPoint><AudioCurvePoint _x="0" _y="5" /><AudioCurvePoint _x="1" _y="80" /></_listPoint>
- *                     </AudioGraphParameterDesc>
+ *                     </AudioGraphParameterDef>
  *                 </_listParameter>
- *             </AudioGraphNodeDesc>
- *             <AudioGraphNodeDesc _name="Tone" _type="LowPass"><_listInput><item>Grains</item></_listInput></AudioGraphNodeDesc>
- *             <AudioGraphNodeDesc _name="Amp" _type="Envelope"><_listInput><item>Tone</item></_listInput></AudioGraphNodeDesc>
+ *             </AudioGraphNodeDef>
+ *             <AudioGraphNodeDef _name="Tone" _type="LowPass"><_listInput><item>Grains</item></_listInput></AudioGraphNodeDef>
+ *             <AudioGraphNodeDef _name="Amp" _type="Envelope"><_listInput><item>Tone</item></_listInput></AudioGraphNodeDef>
  *         </_listNode>
  *     </AudioGraphDef>
  * @endcode
@@ -71,7 +71,7 @@ namespace sw
      * @brief 노드 값 하나입니다. `_parameter` 가 비면 `_value` 그대로이고, 있으면 그 게임 파라미터를 곡선(`_listPoint`)으로 바꾼 값입니다(종류 표의 범위로 묶는다).
      */
     REFLECT()
-    struct SW_API AudioGraphParameterDesc
+    struct SW_API AudioGraphParameterDef
     {
         REFLECT_BODY();
 
@@ -90,7 +90,7 @@ namespace sw
 {
     /** @brief 그래프의 노드 하나입니다. */
     REFLECT()
-    struct SW_API AudioGraphNodeDesc
+    struct SW_API AudioGraphNodeDef
     {
         REFLECT_BODY();
 
@@ -99,7 +99,7 @@ namespace sw
         PROPERTY( Tooltip = "Earlier nodes whose signals are summed into this node (not for oscillators, noise and granular)" )
         vector<hashed_string> _listInput{};
         PROPERTY( Tooltip = "Node values; values left out keep the type's default" )
-        vector<AudioGraphParameterDesc> _listParameter{};
+        vector<AudioGraphParameterDef> _listParameter{};
         PROPERTY( Tooltip = "Source clip of a Granular node (in memory: shorter than the streaming threshold, not a graph)" )
         DataPath _clip;
         PROPERTY( Tooltip = "Position of the node on the editor canvas; the sound does not read it" )
@@ -134,7 +134,7 @@ namespace sw
         static constexpr float32 kMaxDurationSeconds = 3600.0f;
 
         PROPERTY( Tooltip = "Nodes; inputs must name nodes of this graph and must not form a cycle" )
-        vector<AudioGraphNodeDesc> _listNode{};
+        vector<AudioGraphNodeDef> _listNode{};
         PROPERTY( Tooltip = "Node whose signal is the sound (mono)" )
         hashed_string _output{};
         PROPERTY( Min = 0.0, Tooltip = "Length of one sound; envelopes release at its end and looping events restart the graph", Units = s )

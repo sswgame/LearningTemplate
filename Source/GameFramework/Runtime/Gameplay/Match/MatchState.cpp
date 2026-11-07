@@ -322,9 +322,9 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void MatchState::drainEvents( vector<MatchEvent>& outListEvent )
+    void MatchState::pollEvents( vector<MatchEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void MatchState::writeState( Archive& outArchive ) const

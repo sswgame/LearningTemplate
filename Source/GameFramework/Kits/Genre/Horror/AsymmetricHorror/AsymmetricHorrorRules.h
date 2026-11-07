@@ -26,7 +26,7 @@ namespace sw
 
     /** @brief 발전기 수치입니다(`<Generator>`). 시간은 초, 진행량은 0..1 입니다. */
     REFLECT()
-    struct HorrorGeneratorDef
+    struct AsymmetricHorrorGeneratorDef
     {
         REFLECT_BODY();
 
@@ -51,7 +51,7 @@ namespace sw
 {
     /** @brief 치료 수치입니다(`<Heal>`). */
     REFLECT()
-    struct HorrorHealDef
+    struct AsymmetricHorrorHealDef
     {
         REFLECT_BODY();
 
@@ -70,7 +70,7 @@ namespace sw
 {
     /** @brief 스킬 체크 수치입니다(`<SkillCheck>`). 창(`<Window grade early late score bonus>`)은 기반 `TimingJudge` 가 판정합니다. */
     REFLECT()
-    struct HorrorSkillCheckDef
+    struct AsymmetricHorrorSkillCheckDef
     {
         REFLECT_BODY();
 
@@ -86,7 +86,7 @@ namespace sw
 {
     /** @brief 갈고리 수치입니다(`<Hook>`). */
     REFLECT()
-    struct HorrorHookDef
+    struct AsymmetricHorrorHookDef
     {
         REFLECT_BODY();
 
@@ -107,7 +107,7 @@ namespace sw
 {
     /** @brief 판자 수치입니다(`<Pallet>`). */
     REFLECT()
-    struct HorrorPalletDef
+    struct AsymmetricHorrorPalletDef
     {
         REFLECT_BODY();
 
@@ -124,7 +124,7 @@ namespace sw
 {
     /** @brief 창틀 수치입니다(`<Window>`). */
     REFLECT()
-    struct HorrorWindowDef
+    struct AsymmetricHorrorWindowDef
     {
         REFLECT_BODY();
 
@@ -149,7 +149,7 @@ namespace sw
 {
     /** @brief 사물함 수치입니다(`<Locker>`). */
     REFLECT()
-    struct HorrorLockerDef
+    struct AsymmetricHorrorLockerDef
     {
         REFLECT_BODY();
 
@@ -162,7 +162,7 @@ namespace sw
 {
     /** @brief 탈출 수치입니다(`<Endgame>`). */
     REFLECT()
-    struct HorrorEndgameDef
+    struct AsymmetricHorrorEndgameDef
     {
         REFLECT_BODY();
 
@@ -189,14 +189,14 @@ namespace sw
     {
         REFLECT_BODY();
 
-        HorrorGeneratorDef  _generator{};
-        HorrorHealDef       _heal{};
-        HorrorSkillCheckDef _skillCheck{};
-        HorrorHookDef       _hook{};
-        HorrorPalletDef     _pallet{};
-        HorrorWindowDef     _window{};
-        HorrorLockerDef     _locker{};
-        HorrorEndgameDef    _endgame{};
+        AsymmetricHorrorGeneratorDef  _generator{};
+        AsymmetricHorrorHealDef       _heal{};
+        AsymmetricHorrorSkillCheckDef _skillCheck{};
+        AsymmetricHorrorHookDef       _hook{};
+        AsymmetricHorrorPalletDef     _pallet{};
+        AsymmetricHorrorWindowDef     _window{};
+        AsymmetricHorrorLockerDef     _locker{};
+        AsymmetricHorrorEndgameDef    _endgame{};
         PROPERTY( Min = 0.1 )
         float32 _survivorSpeed{ 4.0f };
         PROPERTY( Min = 0.0 )
@@ -218,7 +218,7 @@ namespace sw
 {
     /** @brief 살인마 하나입니다. */
     REFLECT()
-    struct HorrorKillerDef
+    struct AsymmetricHorrorKillerDef
     {
         REFLECT_BODY();
 
@@ -251,7 +251,7 @@ namespace sw
 {
     /** @brief 행동 하나가 주는 블러드포인트입니다. 받는 점수는 `_points` x 양(수리 진행량, 스킬 체크 창 점수, 또는 1)입니다. */
     REFLECT()
-    struct HorrorScoreRule
+    struct AsymmetricHorrorScoreRule
     {
         REFLECT_BODY();
 
@@ -268,7 +268,7 @@ namespace sw
 {
     /** @brief `<Category id="Objectives" cap="8000"/>` — 블러드포인트 범주 하나의 상한입니다. */
     REFLECT()
-    struct HorrorScoreCategoryDef
+    struct AsymmetricHorrorScoreCategoryDef
     {
         REFLECT_BODY();
 
@@ -305,11 +305,11 @@ namespace sw
 
         AsymmetricHorrorRulesCatalog();
 
-        const AsymmetricHorrorRules&   getRules() const { return _rules; }
-        const TimingJudge&             getJudge() const { return _judge; }
-        const HorrorKillerDef*         findKiller( const hashed_string& id ) const { return _catalogKiller.find( id ); }
-        const vector<HorrorKillerDef>& getKillers() const { return _catalogKiller.getAll(); }
-        const HorrorScoreRule*         findScoreRule( const hashed_string& action ) const;
+        const AsymmetricHorrorRules&             getRules() const { return _rules; }
+        const TimingJudge&                       getJudge() const { return _judge; }
+        const AsymmetricHorrorKillerDef*         findKiller( const hashed_string& id ) const { return _catalogKiller.find( id ); }
+        const vector<AsymmetricHorrorKillerDef>& getKillers() const { return _catalogKiller.getAll(); }
+        const AsymmetricHorrorScoreRule*         findScoreRule( const hashed_string& action ) const;
         /** @brief 범주의 상한을 반환합니다(없으면 0 이며 상한이 없다는 뜻입니다). */
         float32 getCategoryCap( const hashed_string& category ) const { return _categoryCap.getValue( category ); }
 
@@ -317,15 +317,15 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "AsymmetricHorrorRules"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
-        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& node, string_view name, string_view sourceName );
         [[nodiscard]] bool loadSkillCheck( const XMLNode& node, string_view sourceName );
 
     private:
-        AsymmetricHorrorRules        _rules;
-        TimingJudge                  _judge;
-        GameCatalog<HorrorKillerDef> _catalogKiller;
-        vector<HorrorScoreRule>      _listScoreRule;
-        StatBlock                    _categoryCap;
+        AsymmetricHorrorRules                  _rules;
+        TimingJudge                            _judge;
+        GameCatalog<AsymmetricHorrorKillerDef> _catalogKiller;
+        vector<AsymmetricHorrorScoreRule>      _listScoreRule;
+        StatBlock                              _categoryCap;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<AsymmetricHorrorRulesCatalog>::acquire` 로 한 벌을 받습니다. */

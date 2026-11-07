@@ -148,7 +148,7 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
         (void)sender.readPacket( time + 0.02, ackReader ); // 확인만 받으면 된다 — 결과는 아래 통지로 본다
     }
     vector<NetDeliveryNotice> listNotice;
-    sender.drainDeliveryNotices( listNotice );
+    sender.pollDeliveryNotices( listNotice );
     int32 lostCount      = 0;
     int32 deliveredCount = 0;
     for ( const NetDeliveryNotice& notice : listNotice )
@@ -169,7 +169,7 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
     SW_EXPECT_EQUAL( 1, lostCount );
     SW_EXPECT_EQUAL( 7, deliveredCount );
     listNotice.clear();
-    sender.drainDeliveryNotices( listNotice );
+    sender.pollDeliveryNotices( listNotice );
     SW_EXPECT_TRUE( listNotice.empty() ); // 한 번만 낸다
 
     // 싣지 못한 채 나이 상한을 넘기면 잃은 것이다.
@@ -180,7 +180,7 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
     saturated.writePacket( 0.0, tinyPacket, 12 ); // 머리만 들어가는 크기라 메시지는 남는다
     BitWriter latePacket;
     saturated.writePacket( 1.0, latePacket, 300 );
-    saturated.drainDeliveryNotices( listNotice );
+    saturated.pollDeliveryNotices( listNotice );
     SW_REQUIRE_EQUAL( size_t( 1 ), listNotice.size() );
     SW_EXPECT_EQUAL( uint32( 9 ), listNotice[0]._tag );
     SW_EXPECT_TRUE( listNotice[0]._result == NetDeliveryResult::Lost );
@@ -545,7 +545,7 @@ SW_TEST_CASE( NetConnectionTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReli
         BitReader reader( listPacket.data(), static_cast<int32>( listPacket.size() ) );
         return receiver.readPacket( time, reader );
     };
-    const auto drain = [&receiver]( NetChannelType channel ) -> vector<int32>
+    const auto pollAll = [&receiver]( NetChannelType channel ) -> vector<int32>
     {
         vector<int32> listValue;
         vector<uint8> buffer;
@@ -564,16 +564,16 @@ SW_TEST_CASE( NetConnectionTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReli
     SW_REQUIRE_TRUE( deliver( packetC, 0.05 ) );
     SW_REQUIRE_TRUE( deliver( packetA, 0.06 ) );
     SW_REQUIRE_TRUE( deliver( packetB, 0.07 ) );
-    SW_EXPECT_TRUE( drain( NetChannelType::ReliableUnordered ) == ( vector<int32>{ 4, 2 } ) ); // 받는 대로 — 순서 1 을 기다리지 않는다
-    SW_EXPECT_TRUE( drain( NetChannelType::ReliableOrdered ).empty() );                        // 순서 3 은 잃은 1 을 기다린다
+    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableUnordered ) == ( vector<int32>{ 4, 2 } ) ); // 받는 대로 — 순서 1 을 기다리지 않는다
+    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableOrdered ).empty() );                        // 순서 3 은 잃은 1 을 기다린다
 
     // 확인이 보내는 쪽에 가지 않았다 — 재전송 간격(0.1 초)이 지나 넷이 모두 다시 간다. 순서는 1, 3 으로 이어지고 없음 2 · 4 는 다시 건네지지 않는다.
     BitWriter resend;
     sender.writePacket( 0.5, resend, 300 );
     BitReader resendReader( resend.getBytes().data(), resend.getByteCount() );
     SW_REQUIRE_TRUE( receiver.readPacket( 0.55, resendReader ) );
-    SW_EXPECT_TRUE( drain( NetChannelType::ReliableOrdered ) == ( vector<int32>{ 1, 3 } ) );
-    SW_EXPECT_TRUE( drain( NetChannelType::ReliableUnordered ).empty() );
+    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableOrdered ) == ( vector<int32>{ 1, 3 } ) );
+    SW_EXPECT_TRUE( pollAll( NetChannelType::ReliableUnordered ).empty() );
 
     // 순서 없음은 조각나지 않는다.
     SW_EXPECT_LOG( "Net.MessageTooLarge" ); // 조각 하나를 넘는 순서 없음 메시지는 오류와 함께 거절한다

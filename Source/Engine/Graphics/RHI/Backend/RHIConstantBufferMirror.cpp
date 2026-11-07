@@ -6,7 +6,7 @@
 
 namespace sw
 {
-    void RHIConstantBufferMirror::forget( RHIBufferHandle buffer )
+    void RHIConstantBufferMirror::remove( RHIBufferHandle buffer )
     {
         ScopedLock<mutex> lock{ _mutex };
         _mapPendingWrite.erase( buffer );

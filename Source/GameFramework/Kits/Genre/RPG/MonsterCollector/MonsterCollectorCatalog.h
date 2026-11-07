@@ -344,7 +344,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
-        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool loadFromXML( const XMLNode& node, string_view name, string_view sourceName );
         [[nodiscard]] bool loadMove( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadSpecies( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadEncounter( const XMLNode& node, string_view sourceName );

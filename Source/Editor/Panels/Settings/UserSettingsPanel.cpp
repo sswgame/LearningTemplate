@@ -43,11 +43,11 @@ namespace sw::editor
             }
 
             /** @brief @p pPrefix 뒤에 @p id 를 붙인 표식을 남깁니다(시나리오가 탭 · 설정 칸을 누른다). */
-            static void noteMark( const utf8* pPrefix, const utf8* pID )
+            static void recordMark( const utf8* pPrefix, const utf8* pID )
             {
                 fixed_string<constant::buffer::kMax128> mark;
                 formatstring( mark.data(), mark.capacity(), "%#%#", pPrefix, pID );
-                EditorSelfTestMarks::note( mark.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
             }
         };
     } // namespace
@@ -88,7 +88,7 @@ namespace sw::editor
             // 이름은 게임 옵션 메뉴와 같은 데이터(스키마의 `text` 현지화 키)다 — 예전에는 id(`display`)를 그대로 보였다. id 는 탭 ID 로 남는다.
             const string tabLabel = string( getCategoryLabel( category ) ) + "###" + category._id.c_str();
             const bool   bTabOpen = ImGui::BeginTabItem( tabLabel.c_str() );
-            UserSettingsPanelInternal::noteMark( "userSettings.tab.", category._id.c_str() );
+            UserSettingsPanelInternal::recordMark( "userSettings.tab.", category._id.c_str() );
             if ( bTabOpen == false )
                 continue;
             _selectedCategory = categoryIndex;
@@ -117,11 +117,11 @@ namespace sw::editor
                 ImGui::BeginDisabled();
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) )
                 _lastRejectedCount = settings.applyPending()._failedCount; // 저장 실패 · 거절된 설정 이름은 매니저가 경고로 남긴다
-            EditorSelfTestMarks::note( "userSettings.apply" );
+            EditorSelfTestMarks::record( "userSettings.apply" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
                 settings.revertPending();
-            EditorSelfTestMarks::note( "userSettings.revert" );
+            EditorSelfTestMarks::record( "userSettings.revert" );
             if ( bPending == false )
                 ImGui::EndDisabled();
 
@@ -129,7 +129,7 @@ namespace sw::editor
             const vector<UserSettingCategoryDef>& listCategory = settings.getCategories();
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetTab" ) ) && _selectedCategory < static_cast<uint32>( listCategory.size() ) )
                 settings.resetCategoryToDefaults( listCategory[_selectedCategory]._id );
-            EditorSelfTestMarks::note( "userSettings.resetTab" );
+            EditorSelfTestMarks::record( "userSettings.resetTab" );
 
             if ( settings.isRestartRequired() )
             {
@@ -264,7 +264,7 @@ namespace sw::editor
             }
         }
 
-        UserSettingsPanelInternal::noteMark( "userSettings.value.", def._id.c_str() ); // 값 칸(종류별 위젯)의 자리
+        UserSettingsPanelInternal::recordMark( "userSettings.value.", def._id.c_str() ); // 값 칸(종류별 위젯)의 자리
         if ( bEnabled == false )
             ImGui::EndDisabled();
         ImGui::PopID();

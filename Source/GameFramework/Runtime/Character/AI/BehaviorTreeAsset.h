@@ -48,7 +48,7 @@ namespace sw
     /**
      * @struct BehaviorTreeXML
      * @brief 노드 원소 하나의 칸 읽기 · 쓰기입니다. 런타임 로더와 에디터 모델이 함께 쓴다(같은 형식을 두 곳이 손으로 읽지 않는다).
-     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeFields.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `XMLFields::readFields` 가 이름과 함께 알린다.
+     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeParams.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `XMLFields::readFields` 가 이름과 함께 알린다.
      */
     struct SW_GF_API BehaviorTreeXML
     {
@@ -81,7 +81,7 @@ namespace sw
      *     </BehaviorTree>
      * @endcode
      * @details **노드 원소와 속성**(원소 이름은 `BehaviorNodeKind` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다).
-     *          종류마다 받는 속성 · 필수 · 범위는 스키마 구조체(`BehaviorTreeNodeFields.h`)가 정본이고 `BehaviorTreeXML` 이 읽는다 — 아래는 그 요약이다(`compare` · `abort` 값은 열거자 이름 그대로):
+     *          종류마다 받는 속성 · 필수 · 범위는 스키마 구조체(`BehaviorTreeNodeParams.h`)가 정본이고 `BehaviorTreeXML` 이 읽는다 — 아래는 그 요약이다(`compare` · `abort` 값은 열거자 이름 그대로):
      *          - `Selector` (`name`, `reactive`) · `Sequence` (`name`) · `Inverter` · `ForceSuccess` — 자식은 컴포짓이 하나 이상, 데코레이터가 정확히 하나다.
      *          - `Repeat` (`count` 필수, 0 이면 실패할 때까지) · `Cooldown` · `TimeLimit` (`seconds` 필수).
      *          - `BlackboardCondition` (`test` 필수 — 공통 조건식, `abort` 기본 `None` | `Self` | `LowerPriority` | `Both`) — 데코레이터다.
@@ -116,7 +116,7 @@ namespace sw
         /** @brief 글을 읽습니다. 부모와 하위 파일은 리소스에서 찾습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 글을 읽습니다. 부모와 하위 파일을 @p source 에서 찾습니다(테스트 · 도구). */
-        [[nodiscard]] bool loadFromText( string_view xmlText, string_view sourceName, IDataInheritanceSource& source );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, IDataInheritanceSource& source );
 
         /** @brief 읽은 트리입니다. 읽기에 실패했거나 읽기 전이면 빈 트리(`isValid` 가 false)입니다. 이 객체보다 오래 쓰려면 복사한다. */
         const BehaviorTree& getTree() const { return _tree; }

@@ -12,7 +12,7 @@
 namespace sw
 {
     FarmSoilComponent::FarmSoilComponent()
-        : _director{}
+        : _gameMode{}
         , _tileIndex{ -1 }
         , _soilState{ -1 }
     {
@@ -26,9 +26,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void FarmSoilComponent::assignTile( GameObjectHandle director, int32 tileIndex )
+    void FarmSoilComponent::assignTile( GameObjectHandle gameMode, int32 tileIndex )
     {
-        _director  = director;
+        _gameMode  = gameMode;
         _tileIndex = tileIndex;
         _soilState = -1;
     }
@@ -42,10 +42,10 @@ namespace sw
         const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
-        const FarmGameModeComponent* pDirector = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr )
+        const FarmGameModeComponent* pGameMode = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr )
             return;
-        const FarmField&    field    = pDirector->getField();
+        const FarmField&    field    = pGameMode->getField();
         const GridTopology& topology = field.getTopology();
         if ( _tileIndex >= topology.getCellCount() )
             return;
@@ -56,7 +56,7 @@ namespace sw
         const int32 soilState = pTile->_bTilled == SW_FALSE ? 0 : ( pTile->_bWatered != SW_FALSE ? 2 : 1 );
         if ( soilState == _soilState )
             return;
-        const shared_ptr<MaterialInstance>& look = pDirector->getSoilLook( soilState );
+        const shared_ptr<MaterialInstance>& look = pGameMode->getSoilLook( soilState );
         if ( look == nullptr )
             return;
         pMesh->setMaterialInstance( look );

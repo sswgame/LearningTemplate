@@ -110,7 +110,7 @@ SW_TEST_CASE( ActionCombatRigTest, ComboChainsThroughTheCancelWindow )
     SW_EXPECT_EQUAL( -1, rig.getComboIndex() );
 
     sw::vector<sw::ActionCombatEvent> listEvent;
-    rig.drainEvents( listEvent );
+    rig.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 3 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._type == sw::ActionCombatEventKind::MoveStarted );
     SW_EXPECT_EQUAL( kSlash1, listEvent[0]._id );
@@ -265,7 +265,7 @@ SW_TEST_CASE( ActionCombatRigTest, ParryReflectsOnlyEnemyShotsInRadius )
     SW_EXPECT_EQUAL( 5, rig.getHitstopFrames() );
 
     sw::vector<sw::ActionCombatEvent> listEvent;
-    rig.drainEvents( listEvent );
+    rig.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::ParryStarted ) );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::ProjectileReflected ) );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::HitstopStarted ) );
@@ -319,7 +319,7 @@ SW_TEST_CASE( ActionCombatRigTest, ProjectilesExpireAndHitWalls )
     SW_EXPECT_TRUE( rig.getProjectiles().empty() );
 
     sw::PlatformTileMap map;
-    SW_REQUIRE_TRUE( map.loadFromText( "    \n  # \n    \n", 1.0f, sw::float2{ 0.0f, 0.0f } ) );
+    SW_REQUIRE_TRUE( map.loadFromXMLText( "    \n  # \n    \n", 1.0f, sw::float2{ 0.0f, 0.0f } ) );
     const sw::float2    start{ 1.5f, 1.5f };
     const sw::float2    fast{ 60.0f, 0.0f }; // 한 프레임에 한 칸
     sw::ActionCombatRig walled;
@@ -402,7 +402,7 @@ SW_TEST_CASE( ActionCombatRigTest, GunSpawnsPelletsAndReportsWhyItCannot )
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{}, sw::float2{ 1.0f, 0.0f }, true ) == sw::WeaponFireResult::OutOfAmmo ); // 탄창 2 를 다 썼고 예비가 없다
 
     sw::vector<sw::ActionCombatEvent> listEvent;
-    rig.drainEvents( listEvent );
+    rig.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 2, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::GunFired ) );
 }
 

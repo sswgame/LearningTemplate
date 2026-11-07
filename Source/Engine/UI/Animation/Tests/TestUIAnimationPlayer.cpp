@@ -31,7 +31,7 @@ namespace
         vector<Subscription> _listSubscription;
 
         AnimationRig()
-            : _screen{ UIScreenDesc{}, make_unique<CanvasPanel>() }
+            : _screen{ UIScreenDef{}, make_unique<CanvasPanel>() }
             , _pLeaf{ nullptr }
             , _log{}
             , _listSubscription{}

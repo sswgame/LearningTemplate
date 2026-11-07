@@ -63,7 +63,7 @@ namespace sw
         UISystem* pUI = _pUISystem != nullptr ? _pUISystem : game::findSubsystem<UISystem>();
         if ( pUI == nullptr )
             return false; // 서버처럼 UI 가 없다
-        UINotificationDesc desc{};
+        UINotificationDef desc{};
         desc._text            = _text;
         desc._durationSeconds = _durationSeconds;
         desc._kind            = UINotificationKind::Hint;

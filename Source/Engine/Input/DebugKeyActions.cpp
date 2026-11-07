@@ -187,12 +187,12 @@ namespace sw
                 const string slotText = InputSlot::toText( current );
                 if ( slotText.empty() )
                     continue; // 키보드, 마우스, 패드가 아닌 슬롯은 문자열로 적을 수 없다
-                DebugKeyRebindFields fields;
-                fields._action         = action;
-                fields._index          = static_cast<int32>( bindIndex );
-                fields._slot           = slotText;
+                DebugKeyRebindParams params;
+                params._action         = action;
+                params._index          = static_cast<int32>( bindIndex );
+                params._slot           = slotText;
                 const XMLNode bindNode = root.appendChild( kBindElement );
-                XMLFields::writeFields( bindNode, fields );
+                XMLFields::writeFields( bindNode, params );
                 if ( bKeyboardChord )
                 {
                     const string modifierText = InputRemapSerializer::formatModifierNames( pCurrent->_modifierMask );
@@ -231,16 +231,16 @@ namespace sw
         for ( XMLNode bindNode = root.findChild( kBindElement ); bindNode.isValid(); bindNode = bindNode.findNextSibling( kBindElement ) )
         {
             // `modifier` 는 적지 않음(슬롯만 바꿈) · `None`(수정 키 없음) · 이름 셋이라 스키마 칸이 아니다.
-            DebugKeyRebindFields fields;
+            DebugKeyRebindParams params;
             InputSlot            slot{};
-            if ( XMLFields::readFields( bindNode, fields, filePath, { kModifierAttr } ) == false || InputSlot::tryParse( fields._slot, slot ) == false )
+            if ( XMLFields::readFields( bindNode, params, filePath, { kModifierAttr } ) == false || InputSlot::tryParse( params._slot, slot ) == false )
             {
-                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, fields._action.c_str(),
-                                   fields._slot.c_str() );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, params._action.c_str(),
+                                   params._slot.c_str() );
                 continue;
             }
-            const hashed_string& action        = fields._action;
-            const int32          bindIndex     = fields._index;
+            const hashed_string& action        = params._action;
+            const int32          bindIndex     = params._index;
             const utf8*          pModifierText = bindNode.findAttribute( kModifierAttr );
             bool                 bApplied      = false;
             if ( map.hasAction( action ) && pModifierText == nullptr )
@@ -256,7 +256,7 @@ namespace sw
                            map.rebindKeyShortcut( action, static_cast<uint32>( bindIndex ), static_cast<Key>( slot._controlIndex ), modifierMask );
             }
             if ( bApplied == false )
-                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, action.c_str(), fields._slot.c_str(), bindIndex );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, action.c_str(), params._slot.c_str(), bindIndex );
         }
         return true;
     }

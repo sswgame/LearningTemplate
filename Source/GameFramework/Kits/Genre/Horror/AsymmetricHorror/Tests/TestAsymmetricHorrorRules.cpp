@@ -5,9 +5,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorMatch.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
-#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorMatch.h"
-#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorSnapshot.h"
+#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorSnapshot.h"
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Tests/StateBytesTestUtil.h"
@@ -50,9 +50,9 @@ namespace
     /** @brief 판 설정과 시간 흘리기입니다. */
     struct AsymmetricHorrorTestUtil
     {
-        static HorrorMatchSettings makeSettings( const hashed_string& killerID = "trapper" )
+        static AsymmetricHorrorMatchSettings makeSettings( const hashed_string& killerID = "trapper" )
         {
-            HorrorMatchSettings settings;
+            AsymmetricHorrorMatchSettings settings;
             settings._killerID  = killerID;
             settings._fixedStep = kAsymmetricStep;
             settings._seed      = 7u;
@@ -61,7 +61,7 @@ namespace
 
         static float3 at( float32 x, float32 z ) { return float3{ x, 0.0f, z }; }
 
-        static void advance( HorrorMatch& inoutMatch, float32 seconds )
+        static void advance( AsymmetricHorrorMatch& inoutMatch, float32 seconds )
         {
             const int32 stepCount = static_cast<int32>( seconds / kAsymmetricStep + 0.5f );
             for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
@@ -79,7 +79,7 @@ namespace
         vector<uint8>           _listByte{};
         size_t                  _stageBase{ 0 }; ///< 판 다음의 완료 수 자리이다
 
-        explicit AsymmetricForgedBytes( const HorrorMatch& match )
+        explicit AsymmetricForgedBytes( const AsymmetricHorrorMatch& match )
         {
             Archive written;
             match.writeState( written );
@@ -109,7 +109,7 @@ namespace
         {
             vector<uint8> listByte = _listByte;
             std::memcpy( listByte.data() + offset, &value, sizeof( TValue ) );
-            HorrorMatch restored;
+            AsymmetricHorrorMatch restored;
             SW_EXPECT_TRUE( restored.initialize( AsymmetricHorrorTestUtil::makeSettings(), &catalog ) );
             Archive reading( listByte.data(), listByte.size() );
             return restored.readState( reading );
@@ -120,7 +120,7 @@ namespace
     struct AsymmetricHorrorRulesTest
     {
         AsymmetricHorrorRulesCatalog  _catalog{};
-        HorrorMatch                   _match{};
+        AsymmetricHorrorMatch         _match{};
         vector<AsymmetricHorrorEvent> _listEvent{};
 
         AsymmetricHorrorRulesTest()
@@ -134,11 +134,11 @@ namespace
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p kind 의 수를 셉니다. */
         int32 countEvents( AsymmetricHorrorEvent::Kind kind )
         {
-            _match.drainEvents( _listEvent );
+            _match.pollEvents( _listEvent );
             return VectorUtil::countBy<&AsymmetricHorrorEvent::_kind>( _listEvent, kind );
         }
 
-        const HorrorSurvivor& survivor( int32 index ) const { return *_match.findSurvivor( index ); }
+        const AsymmetricHorrorSurvivor& survivor( int32 index ) const { return *_match.findSurvivor( index ); }
 
         /** @brief 원점의 생존자를 쓰러뜨립니다. 살인마는 2 m 뒤에서 +Z 를 봅니다. */
         void downAtOrigin()
@@ -171,11 +171,11 @@ namespace
         /** @brief 왕복한 판이 같은 바이트이고, 같은 시간을 흘려도 같은 판인지 봅니다. */
         void expectRoundTrip()
         {
-            HorrorMatch restored;
+            AsymmetricHorrorMatch restored;
             SW_REQUIRE_TRUE( restored.initialize( AsymmetricHorrorTestUtil::makeSettings(), &_catalog ) );
             SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( _match, restored ) );
             vector<AsymmetricHorrorEvent> listEvent;
-            restored.drainEvents( listEvent );
+            restored.pollEvents( listEvent );
             SW_EXPECT_TRUE( listEvent.empty() );
             advance( 0.5f );
             AsymmetricHorrorTestUtil::advance( restored, 0.5f );
@@ -187,7 +187,7 @@ namespace
     struct AsymmetricHorrorTest
     {
         AsymmetricHorrorRulesCatalog  _catalog{};
-        HorrorMatch                   _match{};
+        AsymmetricHorrorMatch         _match{};
         vector<AsymmetricHorrorEvent> _listEvent{};
 
         AsymmetricHorrorTest()
@@ -198,7 +198,7 @@ namespace
 
         int32 countEvents( AsymmetricHorrorEvent::Kind kind )
         {
-            _match.drainEvents( _listEvent );
+            _match.pollEvents( _listEvent );
             return VectorUtil::countBy<&AsymmetricHorrorEvent::_kind>( _listEvent, kind );
         }
 
@@ -335,7 +335,7 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesOutOfRangeSetting )
     SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Hook stages="0"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
-    SW_EXPECT_EQUAL( HorrorHookDef{}._stages, catalog.getRules()._hook._stages );
+    SW_EXPECT_EQUAL( AsymmetricHorrorHookDef{}._stages, catalog.getRules()._hook._stages );
 }
 
 // ── 판 열기 ───────────────────────────────────────────────────────────
@@ -345,8 +345,8 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesOutOfRangeSetting )
  */
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, InitializeRefusesUnknownKiller )
 {
-    SW_EXPECT_LOG( "HorrorMatch.UnknownKiller" );
-    HorrorMatch match;
+    SW_EXPECT_LOG( "AsymmetricHorrorMatch.UnknownKiller" );
+    AsymmetricHorrorMatch match;
     SW_EXPECT_FALSE( match.initialize( AsymmetricHorrorTestUtil::makeSettings( "nobody" ), &_catalog ) );
 }
 
@@ -355,10 +355,10 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, InitializeRefusesUnknownKiller )
  */
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, InitializeRefusesBadStep )
 {
-    SW_EXPECT_LOG( "HorrorMatch.HorrorMatchRefusedSettings" );
-    HorrorMatchSettings settings = AsymmetricHorrorTestUtil::makeSettings();
-    settings._fixedStep          = 0.0f;
-    HorrorMatch match;
+    SW_EXPECT_LOG( "AsymmetricHorrorMatch.AsymmetricHorrorMatchRefusedSettings" );
+    AsymmetricHorrorMatchSettings settings = AsymmetricHorrorTestUtil::makeSettings();
+    settings._fixedStep                    = 0.0f;
+    AsymmetricHorrorMatch match;
     SW_EXPECT_FALSE( match.initialize( settings, &_catalog ) );
 }
 
@@ -367,7 +367,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, InitializeRefusesBadStep )
  */
 SW_TEST_CASE( AsymmetricHorrorRulesTest, InitializeRefusesNoCatalog )
 {
-    HorrorMatch match;
+    AsymmetricHorrorMatch match;
     SW_EXPECT_FALSE( match.initialize( AsymmetricHorrorTestUtil::makeSettings(), nullptr ) );
     SW_EXPECT_EQUAL( -1, match.addSurvivor( float3{} ) );
     SW_EXPECT_EQUAL( -1, match.addGenerator( float3{} ) );
@@ -662,19 +662,19 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, HealingDyingStopsBleeding )
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 0.0f, 1.5f ) ) == 1 );
     _match.start();
     downAtOrigin();
-    const float32 bleedBefore = survivor( 0 )._vitality.getDownedHealth();
+    const float32 bleedBefore = survivor( 0 )._combatHealth.getDownedHealth();
     SW_REQUIRE_TRUE( _match.startHeal( 1, 0 ) );
     advance( 0.5f );
-    SW_EXPECT_NEAR( bleedBefore, survivor( 0 )._vitality.getDownedHealth(), kAsymmetricTolerance );
+    SW_EXPECT_NEAR( bleedBefore, survivor( 0 )._combatHealth.getDownedHealth(), kAsymmetricTolerance );
 
     _match.stopActivity( 1 );
     advance( 0.5f );
-    SW_EXPECT_NEAR( bleedBefore - 0.5f, survivor( 0 )._vitality.getDownedHealth(), kAsymmetricTolerance );
+    SW_EXPECT_NEAR( bleedBefore - 0.5f, survivor( 0 )._combatHealth.getDownedHealth(), kAsymmetricTolerance );
 
     SW_REQUIRE_TRUE( _match.startHeal( 1, 0 ) );
     advance( 0.7f );
     SW_EXPECT_TRUE( survivor( 0 )._state == SurvivorState::Injured );
-    SW_EXPECT_TRUE( survivor( 0 )._vitality.isAlive() );
+    SW_EXPECT_TRUE( survivor( 0 )._combatHealth.isAlive() );
 }
 
 /**
@@ -839,7 +839,7 @@ SW_TEST_CASE_F( AsymmetricHorrorTest, SkillCheckBonusCompletesGenerator )
     SW_EXPECT_EQUAL( 1, _match.getCompletedGeneratorCount() ); // 두 번 세지 않는다
 
     // 응답 직후의 바이트도 완료 수와 맞아 다시 읽힌다.
-    HorrorMatch restored;
+    AsymmetricHorrorMatch restored;
     SW_REQUIRE_TRUE( restored.initialize( AsymmetricHorrorTestUtil::makeSettings(), &_catalog ) );
     SW_EXPECT_TRUE( StateBytesTestUtil::roundTrips( _match, restored ) );
 }
@@ -1039,7 +1039,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, LockersHideAndGrab )
 
     SW_EXPECT_TRUE( _match.searchLocker( 0 ) );
     SW_EXPECT_TRUE( survivor( 0 )._state == SurvivorState::Carried );
-    SW_EXPECT_TRUE( survivor( 0 )._vitality.isDowned() );
+    SW_EXPECT_TRUE( survivor( 0 )._combatHealth.isDowned() );
     SW_EXPECT_EQUAL( 0, _match.getKiller()._carrying );
     SW_EXPECT_EQUAL( 1, countEvents( AsymmetricHorrorEvent::Kind::LockerGrab ) );
     SW_EXPECT_TRUE( survivor( 0 )._activity == SurvivorActivity::None );
@@ -1194,7 +1194,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, SnapshotCopiesVisibleState )
     SW_REQUIRE_TRUE( _match.startRepair( 0, 0 ) );
     advance( 0.5f );
 
-    HorrorSnapshot snapshot;
+    AsymmetricHorrorSnapshot snapshot;
     _match.makeSnapshot( snapshot );
     SW_EXPECT_EQUAL( 5u, snapshot._tick );
     SW_EXPECT_TRUE( snapshot._phase == MatchPhase::InProgress );
@@ -1217,7 +1217,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, RoundTripBeforeStart )
     SW_REQUIRE_TRUE( _match.addGenerator( float3{} ) == 0 );
     SW_REQUIRE_TRUE( _match.addGate( float3{} ) == 0 );
     SW_REQUIRE_TRUE( _match.addHook( float3{} ) == 0 );
-    HorrorMatch restored;
+    AsymmetricHorrorMatch restored;
     SW_REQUIRE_TRUE( restored.initialize( AsymmetricHorrorTestUtil::makeSettings(), &_catalog ) );
     SW_EXPECT_TRUE( StateBytesTestUtil::roundTrips( _match, restored ) );
     SW_EXPECT_EQUAL( 1, restored.getSurvivorCount() );
@@ -1300,17 +1300,17 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesWrongHost )
     Archive written;
     _match.writeState( written );
 
-    HorrorMatch uninitialized;
-    Archive     reading( written.getData(), written.getSize() );
+    AsymmetricHorrorMatch uninitialized;
+    Archive               reading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( uninitialized.readState( reading ) );
 
-    HorrorMatch other;
+    AsymmetricHorrorMatch other;
     SW_REQUIRE_TRUE( other.initialize( AsymmetricHorrorTestUtil::makeSettings( "nurse" ), &_catalog ) );
     Archive readingOther( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( readingOther ) );
     SW_EXPECT_EQUAL( 0, other.getSurvivorCount() );
 
-    HorrorMatch truncated;
+    AsymmetricHorrorMatch truncated;
     SW_REQUIRE_TRUE( truncated.initialize( AsymmetricHorrorTestUtil::makeSettings(), &_catalog ) );
     Archive readingTruncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( readingTruncated ) );

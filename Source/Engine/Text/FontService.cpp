@@ -138,7 +138,7 @@ namespace sw
 
     bool FontService::initialize( const AssetID& assetID )
     {
-        FontCatalogDesc catalog;
+        FontCatalogDef catalog;
         if ( catalog.loadFromAsset( assetID ) == false )
             return false;
         if ( gv_fontMsdfGlyphs )
@@ -146,7 +146,7 @@ namespace sw
         return initializeFromCatalog( std::move( catalog ) );
     }
 
-    bool FontService::initializeFromCatalog( FontCatalogDesc catalog )
+    bool FontService::initializeFromCatalog( FontCatalogDef catalog )
     {
         shutdown();
         if ( catalog.validate() == false )
@@ -197,7 +197,7 @@ namespace sw
         _mapOpenedFile.clear();
         _mapChain.clear();
         _warnedOnce.clear();
-        _catalog      = FontCatalogDesc{};
+        _catalog      = FontCatalogDef{};
         _bInitialized = SW_FALSE;
     }
 
@@ -293,16 +293,16 @@ namespace sw
             return iter->second._face;
         }
 
-        OpenedFamilyFace            opened{};
-        const FontFamilyDesc*       pFamily       = _catalog.findFamily( family );
-        const SystemFontFamilyDesc* pSystemFamily = pFamily == nullptr ? _catalog.findSystemFamily( family ) : nullptr;
+        OpenedFamilyFace           opened{};
+        const FontFamilyDef*       pFamily       = _catalog.findFamily( family );
+        const SystemFontFamilyDef* pSystemFamily = pFamily == nullptr ? _catalog.findSystemFamily( family ) : nullptr;
         if ( pFamily != nullptr )
         {
             // 같은 기울기를 먼저 보고, 그 안에서 굵기가 가장 가까운 면(같으면 무거운 쪽)을 고른다. CSS 폰트 매칭의 단순 버전이다.
-            const FontFaceDesc* pBest           = nullptr;
-            bool                bBestSlantMatch = false;
-            uint32              bestDistance    = constant::invalid_index::kUint32;
-            for ( const FontFaceDesc& face : pFamily->_listFace )
+            const FontFaceDef* pBest           = nullptr;
+            bool               bBestSlantMatch = false;
+            uint32             bestDistance    = constant::invalid_index::kUint32;
+            for ( const FontFaceDef& face : pFamily->_listFace )
             {
                 const bool   bSlantMatch = face._slant == slant;
                 const uint32 distance    = FontServiceInternal::computeWeightDistance( weight, face._weight );

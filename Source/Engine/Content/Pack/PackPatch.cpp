@@ -154,46 +154,46 @@ namespace sw
             SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNo", "Pack patch manifest %# has no <%#> root", sourceName, PackPatchInternal::kRootName );
             return false;
         }
-        PackPatchManifestFields fields;
-        if ( XMLFields::readFields( root, fields, sourceName ) == false )
+        PackPatchManifestParams params;
+        if ( XMLFields::readFields( root, params, sourceName ) == false )
             return false; // 읽기가 원소 · 속성 이름으로 오류를 남겼다
-        if ( fields._from == fields._to )
+        if ( params._from == params._to )
         {
-            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestGoes", "Pack patch manifest %# goes from build '%#' to itself", sourceName, fields._from );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestGoes", "Pack patch manifest %# goes from build '%#' to itself", sourceName, params._from );
             return false;
         }
         // 패치 팩은 목록 파일과 같은 폴더의 파일이다 — 폴더를 벗어나는 이름을 받지 않는다.
-        const bool bUnsafePackName = fields._pack.empty() || fields._pack.find_first_of( "/\\" ) != string::npos || fields._pack == "..";
+        const bool bUnsafePackName = params._pack.empty() || params._pack.find_first_of( "/\\" ) != string::npos || params._pack == "..";
         if ( bUnsafePackName )
         {
-            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNames", "Pack patch manifest %# names pack '%#' - it must be a plain file name next to the manifest", sourceName, fields._pack );
+            SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestNames", "Pack patch manifest %# names pack '%#' - it must be a plain file name next to the manifest", sourceName, params._pack );
             return false;
         }
         // 팩 해시와 서명은 함께 있거나 함께 없다 — 한쪽만 있으면 서명이 무엇을 묶는지 알 수 없다.
-        if ( fields._packSHA256.empty() != fields._signature.empty() )
+        if ( params._packSHA256.empty() != params._signature.empty() )
         {
             SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestOnly", "Pack patch manifest %# has only one of packSHA256 and signature - a signed patch needs both", sourceName );
             return false;
         }
-        if ( fields._packSHA256.empty() == false )
+        if ( params._packSHA256.empty() == false )
         {
             vector<uint8> listDecoded;
-            if ( fields._packSHA256.size() != PackPatchInternal::kSHA256HexDigits || PackPatchInternal::fromHex( fields._packSHA256, listDecoded ) == false )
+            if ( params._packSHA256.size() != PackPatchInternal::kSHA256HexDigits || PackPatchInternal::fromHex( params._packSHA256, listDecoded ) == false )
             {
                 SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestPackSHA256", "Pack patch manifest %#: packSHA256 must be %# lowercase hex digits", sourceName, PackPatchInternal::kSHA256HexDigits );
                 return false;
             }
-            if ( fields._signature.size() != PackPatchInternal::kSignatureHexDigits || PackPatchInternal::fromHex( fields._signature, listDecoded ) == false )
+            if ( params._signature.size() != PackPatchInternal::kSignatureHexDigits || PackPatchInternal::fromHex( params._signature, listDecoded ) == false )
             {
                 SW_LOG_ERROR_ID( "PackPatch.PackPatchManifestSignature", "Pack patch manifest %#: signature must be %# lowercase hex digits", sourceName, PackPatchInternal::kSignatureHexDigits );
                 return false;
             }
-            outManifest._packSHA256Hex = fields._packSHA256;
-            outManifest._signatureHex  = fields._signature;
+            outManifest._packSHA256Hex = params._packSHA256;
+            outManifest._signatureHex  = params._signature;
         }
-        outManifest._fromBuild    = fields._from;
-        outManifest._toBuild      = fields._to;
-        outManifest._packFileName = fields._pack;
+        outManifest._fromBuild    = params._from;
+        outManifest._toBuild      = params._to;
+        outManifest._packFileName = params._pack;
         for ( XMLNode removed = root.findChild( PackPatchInternal::kRemovedName ); removed.isValid(); removed = removed.findNextSibling( PackPatchInternal::kRemovedName ) )
         {
             PackPathFields removedFields;
@@ -208,16 +208,16 @@ namespace sw
     {
         XMLDocument             document;
         const XMLNode           root = document.appendRoot( PackPatchInternal::kRootName );
-        PackPatchManifestFields fields;
-        fields._from = manifest._fromBuild;
-        fields._to   = manifest._toBuild;
-        fields._pack = manifest._packFileName;
+        PackPatchManifestParams params;
+        params._from = manifest._fromBuild;
+        params._to   = manifest._toBuild;
+        params._pack = manifest._packFileName;
         if ( manifest._signatureHex.empty() == false )
         {
-            fields._packSHA256 = manifest._packSHA256Hex;
-            fields._signature  = manifest._signatureHex;
+            params._packSHA256 = manifest._packSHA256Hex;
+            params._signature  = manifest._signatureHex;
         }
-        XMLFields::writeFields( root, fields );
+        XMLFields::writeFields( root, params );
         for ( const string& removedPath : manifest._listRemovedPath )
         {
             PackPathFields removed;
@@ -247,50 +247,50 @@ namespace sw
             SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordNo", "Pack build record %# has no <%#> root", sourceName, PackPatchInternal::kRecordRoot );
             return false;
         }
-        PackBuildRecordFields fields;
-        if ( XMLFields::readFields( root, fields, sourceName ) == false )
+        PackBuildRecordParams params;
+        if ( XMLFields::readFields( root, params, sourceName ) == false )
             return false; // 옛 기록(patching 이 없는 것)은 다시 굽는다 — 없는 값을 Chain 으로 보지 않는다
-        if ( fields._patching == PackPatchInternal::kPatchingChain )
+        if ( params._patching == PackPatchInternal::kPatchingChain )
             outRecord._patching = PackPatching::Chain;
-        else if ( fields._patching == PackPatchInternal::kPatchingNone )
+        else if ( params._patching == PackPatchInternal::kPatchingNone )
             outRecord._patching = PackPatching::None;
         else
         {
-            SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordPatching", "Pack build record %#: patching '%#' is neither '%#' nor '%#'", sourceName, fields._patching, PackPatchInternal::kPatchingChain, PackPatchInternal::kPatchingNone );
+            SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordPatching", "Pack build record %#: patching '%#' is neither '%#' nor '%#'", sourceName, params._patching, PackPatchInternal::kPatchingChain, PackPatchInternal::kPatchingNone );
             return false;
         }
         if ( outRecord._patching == PackPatching::None )
         {
-            if ( root.findChild( PackPatchInternal::kEntryName ).isValid() || fields._build.empty() == false )
+            if ( root.findChild( PackPatchInternal::kEntryName ).isValid() || params._build.empty() == false )
             {
                 SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordPatching2", "Pack build record %#: patching '%#' carries no build number or entries", sourceName, PackPatchInternal::kPatchingNone );
                 return false;
             }
             return true;
         }
-        if ( fields._build.empty() )
+        if ( params._build.empty() )
         {
             SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordNoBuild", "Pack build record %#: patching '%#' needs a build number", sourceName, PackPatchInternal::kPatchingChain );
             return false;
         }
-        outRecord._build = fields._build;
+        outRecord._build = params._build;
         unordered_map<string, uint64> mapPathToHash;
         for ( XMLNode entry = root.findChild( PackPatchInternal::kEntryName ); entry.isValid(); entry = entry.findNextSibling( PackPatchInternal::kEntryName ) )
         {
-            PackPathFields entryFields;
-            if ( XMLFields::readFields( entry, entryFields, sourceName ) == false )
+            PackPathFields entryParams;
+            if ( XMLFields::readFields( entry, entryParams, sourceName ) == false )
                 return false;
             PackContentEntry content;
-            content._path = entryFields._path;
-            if ( PackPatchInternal::parseHash( entryFields._hash, content._contentHash ) == false )
+            content._path = entryParams._path;
+            if ( PackPatchInternal::parseHash( entryParams._hash, content._contentHash ) == false )
             {
-                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordHash", "Pack build record %#: '%#' has hash '%#' - need %# hex digits", sourceName, entryFields._path, entryFields._hash,
+                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordHash", "Pack build record %#: '%#' has hash '%#' - need %# hex digits", sourceName, entryParams._path, entryParams._hash,
                                  PackPatchInternal::kHashDigits );
                 return false;
             }
             if ( mapPathToHash.emplace( content._path, content._contentHash ).second == false )
             {
-                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordLists", "Pack build record %# lists '%#' twice - cannot tell which content is right", sourceName, entryFields._path );
+                SW_LOG_ERROR_ID( "PackPatch.PackBuildRecordLists", "Pack build record %# lists '%#' twice - cannot tell which content is right", sourceName, entryParams._path );
                 return false;
             }
             outRecord._listEntry.push_back( std::move( content ) );
@@ -310,19 +310,19 @@ namespace sw
         { return pLeft->_path < pRight->_path; } );
         XMLDocument           document;
         const XMLNode         root = document.appendRoot( PackPatchInternal::kRecordRoot );
-        PackBuildRecordFields fields;
-        fields._patching = record._patching == PackPatching::None ? PackPatchInternal::kPatchingNone : PackPatchInternal::kPatchingChain;
+        PackBuildRecordParams params;
+        params._patching = record._patching == PackPatching::None ? PackPatchInternal::kPatchingNone : PackPatchInternal::kPatchingChain;
         if ( record._patching == PackPatching::Chain )
-            fields._build = record._build; // 패치를 쓰지 않는 빌드는 번호도 내용 목록도 갖지 않는다
-        XMLFields::writeFields( root, fields );
+            params._build = record._build; // 패치를 쓰지 않는 빌드는 번호도 내용 목록도 갖지 않는다
+        XMLFields::writeFields( root, params );
         if ( record._patching == PackPatching::None )
             return document.saveToString();
         for ( const PackContentEntry* pEntry : listSorted )
         {
-            PackPathFields entryFields;
-            entryFields._path = pEntry->_path;
-            entryFields._hash = PackPatchInternal::makeHashText( pEntry->_contentHash );
-            XMLFields::writeFields( root.appendChild( PackPatchInternal::kEntryName ), entryFields );
+            PackPathFields entryParams;
+            entryParams._path = pEntry->_path;
+            entryParams._hash = PackPatchInternal::makeHashText( pEntry->_contentHash );
+            XMLFields::writeFields( root.appendChild( PackPatchInternal::kEntryName ), entryParams );
         }
         return document.saveToString();
     }

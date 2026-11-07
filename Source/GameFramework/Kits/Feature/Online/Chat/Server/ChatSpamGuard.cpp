@@ -21,7 +21,7 @@ namespace sw
         _mapAccountToHistory.clear();
     }
 
-    ChatSpamVerdict ChatSpamGuard::check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs )
+    ChatSpamResult ChatSpamGuard::check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs )
     {
         const uint64 hash        = _normalizer.computeTextHash( text );
         History&     history     = _mapAccountToHistory[accountID];
@@ -34,15 +34,15 @@ namespace sw
         if ( repeatCount >= _settings._maxRepeatCount )
         {
             outRetryAfterMs = _settings._repeatWindowMs;
-            return ChatSpamVerdict::Repeated;
+            return ChatSpamResult::Repeated;
         }
         if ( _bucketMap.tryConsume( accountID, nowMs, outRetryAfterMs ) == false )
-            return ChatSpamVerdict::RateLimited;
+            return ChatSpamResult::RateLimited;
         SentText sent;
         sent._hash   = hash;
         sent._timeMs = nowMs;
         history.push( sent );
         outRetryAfterMs = 0;
-        return ChatSpamVerdict::Allowed;
+        return ChatSpamResult::Allowed;
     }
 } // namespace sw

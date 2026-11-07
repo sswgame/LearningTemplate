@@ -62,7 +62,7 @@ namespace sw::editor
             _openFilter.clear();
             EditorInputGUI::openPopup( "##DocumentOpen" );
         }
-        EditorSelfTestMarks::note( markOpen.c_str() );
+        EditorSelfTestMarks::record( markOpen.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DocumentOpen" ) );
         drawOpenDocumentPopup( pMarkPrefix );
 
@@ -105,7 +105,7 @@ namespace sw::editor
             ++shownCount;
             if ( ImGui::Selectable( path.c_str(), path == _loadedAssetPath ) )
                 openPath = path;
-            EditorSelfTestMarks::note( ( markPrefix + FileUtil::getFileNamePart( path ) ).c_str() );
+            EditorSelfTestMarks::record( ( markPrefix + FileUtil::getFileNamePart( path ) ).c_str() );
         }
         if ( shownCount == 0 )
         {

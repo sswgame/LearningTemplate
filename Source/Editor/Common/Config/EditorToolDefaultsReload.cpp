@@ -20,19 +20,19 @@ namespace sw::editor
         return SubsystemInitResult::Succeeded;
     }
 
-    ReloadOutcome EditorToolDefaultsReload::reloadIfToolDefaults( string_view fullPath )
+    ReloadResult EditorToolDefaultsReload::reloadIfToolDefaults( string_view fullPath )
     {
         const AbsolutePath toolDefaultsPath = EditorToolDefaults::getHostPath();
         if ( FileUtil::pathsEqualNormalized( toolDefaultsPath.str(), fullPath ) == false )
-            return ReloadOutcome::NotTracked;
+            return ReloadResult::NotTracked;
         // 편집기가 저장하며 잠시 지웠다 다시 쓰는 사건은 다시 읽을 것이 없다 — 이어지는 생성 사건이 읽는다. 정말 지웠으면 다음 기동이 오류로 멈춘다.
         if ( FileUtil::exists( toolDefaultsPath.str() ) == false )
-            return ReloadOutcome::NotTracked;
+            return ReloadResult::NotTracked;
         EditorToolDefaults reloaded{};
         if ( reloaded.loadFromHost() == false )
-            return ReloadOutcome::Failed;
+            return ReloadResult::Failed;
         getEditorToolDefaults() = std::move( reloaded );
         SW_LOG_INFO_ID( "EditorToolDefaultsReload.EditorToolDefaultsReloaded", "Editor tool defaults reloaded from %#", toolDefaultsPath.c_str() );
-        return ReloadOutcome::Reloaded;
+        return ReloadResult::Reloaded;
     }
 } // namespace sw::editor

@@ -207,7 +207,7 @@ namespace sw
             {
                 if ( requiredMask[boneIndex] == SW_TRUE && mask[boneIndex] == SW_FALSE )
                 {
-                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBoneRemoved", "Bone LOD '%#': a level removes '%#', a core bone or the parent of one (sockets, rig, physics, notifies, <coreBones>) - the unit keeps every bone",
+                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBoneRemoved", "Bone LOD '%#': a level removes '%#', a core bone or the parent of one (sockets, rig, physics, notifies, <coreBones>) - the skeletalMesh keeps every bone",
                                      sourceLabel, skeleton.getBone( boneIndex )._name.c_str() );
                     outListMask.clear();
                     return false;

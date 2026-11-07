@@ -65,7 +65,7 @@ namespace sw
 namespace sw
 {
     VoxelChunkComponent::VoxelChunkComponent()
-        : _director{}
+        : _gameMode{}
         , _chunkX{ 0 }
         , _chunkZ{ 0 }
         , _waterMeshName{ "Water" }
@@ -79,9 +79,9 @@ namespace sw
 
     VoxelChunkComponent::~VoxelChunkComponent() = default;
 
-    void VoxelChunkComponent::assignChunk( GameObjectHandle director, int32 chunkX, int32 chunkZ )
+    void VoxelChunkComponent::assignChunk( GameObjectHandle gameMode, int32 chunkX, int32 chunkZ )
     {
-        _director = director;
+        _gameMode = gameMode;
         _chunkX   = chunkX;
         _chunkZ   = chunkZ;
     }
@@ -93,12 +93,12 @@ namespace sw
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const VoxelGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _director ) : nullptr;
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
+        const VoxelGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
         // 메싱은 월드를 읽기만 하므로 같은 그룹의 다른 청크와 나란히 실행됩니다. 블록은 틱이 끝난 뒤에만 바뀝니다.
         _bRebuildRequested = SW_FALSE;
-        VoxelMesher::fillChunkMesh( pDirector->getWorld(), _chunkX, _chunkZ, _scratchMesh );
+        VoxelMesher::fillChunkMesh( pGameMode->getWorld(), _chunkX, _chunkZ, _scratchMesh );
         _bApplyScheduled = SW_TRUE;
         pManager->executeOrDeferPostTickOnComponent( *this, []( VoxelChunkComponent& chunk )
         { chunk.applyMeshes(); } );

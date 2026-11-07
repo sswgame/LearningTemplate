@@ -32,7 +32,7 @@ namespace sw
     } // namespace
 
     TownWalkerViewComponent::TownWalkerViewComponent()
-        : _director{}
+        : _gameMode{}
         , _spriteOffset{ 0.0f, 0.0f }
         , _depthPerUnitY{ 0.01f }
         , _playingAnimation{}
@@ -56,17 +56,17 @@ namespace sw
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
-        const TownGameModeComponent* pDirector = GameModeComponent::resolve<TownGameModeComponent>( *pManager, _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
+        const TownGameModeComponent* pGameMode = GameModeComponent::resolve<TownGameModeComponent>( *pManager, _gameMode );
+        if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
-        const float3& feet = pDirector->getHeroPosition();
+        const float3& feet = pGameMode->getHeroPosition();
         pScene->setLocalPosition( float3{ feet._x + _spriteOffset._x, feet._y + _spriteOffset._y, feet._y * _depthPerUnitY } );
 
         SpriteAnimatorComponent* pAnimator = pOwner->getComponent<SpriteAnimatorComponent>();
         if ( pAnimator == nullptr )
             return;
-        string animation = pDirector->isHeroWalking() ? "walk_" : "idle_";
-        animation += toFacingSuffix( pDirector->getHeroFacing() );
+        string animation = pGameMode->isHeroWalking() ? "walk_" : "idle_";
+        animation += toFacingSuffix( pGameMode->getHeroFacing() );
         if ( animation == _playingAnimation )
             return;
         pAnimator->play( animation );

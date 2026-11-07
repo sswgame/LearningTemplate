@@ -62,7 +62,7 @@ namespace sw::editor
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "PreviewSplit" ), "Preview Split" ) ) )
             (void)_model.refreshPreview(); // 나누지 못한 이유는 쿠커가 로그에 남긴다
-        EditorSelfTestMarks::note( "streamingCells.preview" );
+        EditorSelfTestMarks::record( "streamingCells.preview" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorStreamingCells", "PreviewTip" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "CellMRadiusM", TextArgumentList().addDecimal( "cellSize", static_cast<float64>( settings._cellGrid._cellSize ), 1 ).addDecimal( "loadingRadius", static_cast<float64>( settings._cellGrid._loadingRadius ), 1 ).addDecimal( "unloadMargin", static_cast<float64>( settings._unloadMargin ), 1 ).addInteger( "maxCellLoadsPerFrame", static_cast<int64>( settings._maxCellLoadsPerFrame ) ) ).c_str() );
@@ -149,7 +149,7 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax64> mark;
                 formatstring( mark.data(), mark.capacity(), "streamingCells.cell.%#", rowIndex );
-                EditorSelfTestMarks::note( mark.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
             }
             ImGui::TableSetColumnIndex( 1 );
             ImGui::Text( "%u", static_cast<uint32>( cell._listObjectID.size() ) );

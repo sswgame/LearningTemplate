@@ -120,7 +120,7 @@ SW_TEST_CASE( AdventureDungeonTest, SmallKeysOpenDoorsAndBelongToOneDungeon )
     SW_EXPECT_TRUE( state.openDoor( kNowhere, kDoor1, flags ) == sw::AdventureDoorResult::UnknownDoor );
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    state.drainEvents( listEvent );
+    state.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 2, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventKind::DoorOpened ) );
 }
 
@@ -173,7 +173,7 @@ SW_TEST_CASE( AdventureDungeonTest, TreasuresGoToTheDungeonOrTheReward )
     SW_EXPECT_FALSE( state.openTreasure( kNowhere, kKeysChest, flags, reward ) );
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    state.drainEvents( listEvent );
+    state.pollEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 2 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[1]._type == sw::AdventureDungeonEventKind::TreasureOpened );
     SW_EXPECT_EQUAL( sw::hashed_string( "Rupee" ), listEvent[1]._item );
@@ -250,7 +250,7 @@ SW_TEST_CASE( AdventureDungeonTest, SwitchesStayOn )
     SW_EXPECT_FALSE( state.isDeviceActive( kForest, sw::hashed_string( "ghost" ) ) );
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    state.drainEvents( listEvent );
+    state.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventKind::DeviceActivated ) );
 }
 
@@ -279,7 +279,7 @@ SW_TEST_CASE( AdventureDungeonTest, TimedSwitchExpiresAndRestarts )
     SW_EXPECT_FALSE( flags.hasFlag( kFlagClock ) );
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    state.drainEvents( listEvent );
+    state.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventKind::DeviceActivated ) );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventKind::DeviceDeactivated ) );
 }
@@ -336,7 +336,7 @@ SW_TEST_CASE( AdventureDungeonTest, TorchGroupsNeedAllTorchesInTime )
     state.update( 1.0f, flags ); // 3 초가 다 됐다
     SW_EXPECT_EQUAL( 0, state.getLitTorchCount( kForest, kTorches ) );
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    state.drainEvents( listEvent );
+    state.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventKind::TorchesFailed ) );
 
     SW_EXPECT_TRUE( state.lightTorch( kForest, kTorches, flags ) );
@@ -385,7 +385,7 @@ SW_TEST_CASE( AdventureDungeonTest, UninitializedStateIsSafe )
     SW_EXPECT_EQUAL( 0, state.findProgress( kForest )->_smallKeyCount );
     SW_EXPECT_FALSE( state.isDeviceActive( kForest, kEye ) );
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    state.drainEvents( listEvent );
+    state.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 }
 
@@ -417,7 +417,7 @@ SW_TEST_CASE( AdventureDungeonTest, StateRoundTripResumes )
     SW_EXPECT_EQUAL( 1, restored.getLitTorchCount( kForest, kTorches ) );
     SW_EXPECT_TRUE( restored.isDeviceActive( kForest, kClock ) );
     sw::vector<sw::AdventureDungeonEvent> listEvent;
-    restored.drainEvents( listEvent );
+    restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 
     sw::GameFlags restoredFlags = flags;

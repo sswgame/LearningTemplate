@@ -282,7 +282,7 @@ namespace sw
         _thread   = sw::thread( &RenderThread::threadMain, this );
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
         if ( pDevice != nullptr )
-            pDevice->setRenderThreadDrain( &RenderThread::drainPacketsThunk, this, _thread.get_id() );
+            pDevice->setRenderThreadFlush( &RenderThread::pollPacketsThunk, this, _thread.get_id() );
         SW_LOG_TRACE_ID( "RenderThread.DedicatedWorkerStarted", "Dedicated worker started" );
         return true;
     }
@@ -315,7 +315,7 @@ namespace sw
         }
         discardPendingRenderTargetRead(); // 스레드가 끝난 뒤, 디바이스를 놓기 전에
         if ( _pDevice != nullptr )
-            _pDevice->setRenderThreadDrain( nullptr, nullptr, std::thread::id{} );
+            _pDevice->setRenderThreadFlush( nullptr, nullptr, std::thread::id{} );
         _pDevice             = nullptr;
         _pFrameRenderer      = nullptr;
         _pOffscreenRenderers = nullptr;
@@ -387,12 +387,12 @@ namespace sw
         _cvConsume.notify_one();
     }
 
-    void RenderThread::drainPacketsThunk( void* pContext )
+    void RenderThread::pollPacketsThunk( void* pContext )
     {
-        static_cast<RenderThread*>( pContext )->drainPackets();
+        static_cast<RenderThread*>( pContext )->pollPackets();
     }
 
-    void RenderThread::drainPackets()
+    void RenderThread::pollPackets()
     {
         if ( _bRunning.load( std::memory_order_acquire ) == false || std::this_thread::get_id() == _thread.get_id() )
             return;
@@ -403,28 +403,28 @@ namespace sw
 
     void RenderThread::setPrepareHook( PresentHookDelegate hook )
     {
-        drainPackets(); // 받은 패킷이 이 훅을 다 부른 뒤에 바꾼다(헤더의 훅 세터 설명)
+        pollPackets(); // 받은 패킷이 이 훅을 다 부른 뒤에 바꾼다(헤더의 훅 세터 설명)
         const ScopedThreadRoleBorrow borrow{ _packetThread };
         _prepareHook = std::move( hook );
     }
 
     void RenderThread::setPresentHook( PresentHookDelegate hook )
     {
-        drainPackets();
+        pollPackets();
         const ScopedThreadRoleBorrow borrow{ _packetThread };
         _presentHook = std::move( hook );
     }
 
     void RenderThread::setPostPresentHook( PresentHookDelegate hook )
     {
-        drainPackets();
+        pollPackets();
         const ScopedThreadRoleBorrow borrow{ _packetThread };
         _postPresentHook = std::move( hook );
     }
 
     void RenderThread::setBeginFrameHook( BeginFrameHookDelegate hook )
     {
-        drainPackets();
+        pollPackets();
         const ScopedThreadRoleBorrow borrow{ _packetThread };
         _beginFrameHook = std::move( hook );
     }
@@ -777,9 +777,9 @@ namespace sw
     void RenderThread::drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream, bool bMainDrew )
     {
         // 씬마다 빠뜨린 배치 수를 이 프레임 것으로 다시 쓴다(캡처 준비 판정 `CaptureReadiness`). 주 화면이 그리지 않은 프레임은 기다릴 그림이 없다.
-        array<ScenePendingWork, 1 + kMaxPreviewSceneView> arrPending{};
-        uint32                                            pendingCount = 0;
-        arrPending[pendingCount++]                                     = ScenePendingWork{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
+        array<ScenePendingJob, 1 + kMaxPreviewSceneView> arrPending{};
+        uint32                                           pendingCount = 0;
+        arrPending[pendingCount++]                                    = ScenePendingJob{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
 
         // 미리보기 씬(에디터 툴 창)은 씬마다의 렌더러로 자기 타깃에 그린다(`OffscreenSceneRenderers` — 캡처와 같은 길). 사라진 씬의 렌더러는 그 씬과 함께 내린다.
         const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && _pOffscreenRenderers != nullptr && pFrameStream != nullptr;
@@ -791,7 +791,7 @@ namespace sw
                 RenderFramePacket&   preview   = *packet._listScenePreview[previewIndex];
                 FrameRenderer* const pRenderer = _pOffscreenRenderers->execute( *_pFrameRenderer, _pDevice, preview, preview._clearColor );
                 // 실패는 렌더러가 로그로 남기고 타깃은 클리어 색으로 남는다 — 기다려도 나아지지 않으니 남은 일로 세지 않는다
-                arrPending[pendingCount++] = ScenePendingWork{ preview._sceneKey, pRenderer != nullptr ? pRenderer->getLastPendingPSOBatchCount() : 0u };
+                arrPending[pendingCount++] = ScenePendingJob{ preview._sceneKey, pRenderer != nullptr ? pRenderer->getLastPendingPSOBatchCount() : 0u };
             }
             for ( const uint32 sceneKey : _listPendingRetiredSceneKey )
             {

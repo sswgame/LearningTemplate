@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 아레나 벽 — Poly Haven "Concrete Block Wall"(CC0, 2 m 타일 = 기준의 기본값) 스캔 텍스처를 월드 좌표로 타일링한다. -->
-<MaterialDesc formatVersion="0" name="ShooterWall" _base="engine/materials/pbrworldtile.material">
+<MaterialDef formatVersion="0" name="ShooterWall" _base="engine/materials/pbrworldtile.material">
 	<_properties>
 		<item name="_albedoMap" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_diff_2k.dds" />
 		<item name="_normalMap" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_nor_gl_2k.dds" />
 		<item name="_ormMap" assetPath="common/textures/polyhaven/concrete_block_wall/concrete_block_wall_arm_2k.dds" />
 	</_properties>
-</MaterialDesc>
+</MaterialDef>

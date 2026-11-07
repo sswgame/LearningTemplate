@@ -38,31 +38,31 @@ namespace sw
         { return string_view( expected ) == id; } );
     }
 
-    AutomationLogVerdict AutomationLogPolicy::classify( LogLevel level, string_view id, string_view message ) const
+    AutomationLogResult AutomationLogPolicy::classify( LogLevel level, string_view id, string_view message ) const
     {
         if ( isGatedLevel( level ) == false || isExemptMessage( message ) )
-            return AutomationLogVerdict::NotGated;
+            return AutomationLogResult::NotGated;
         // 선언은 id 로만 한다(문장은 다른 줄까지 가리거나 문구를 고치면 낡는다).
         if ( isDeclaredID( id ) )
-            return AutomationLogVerdict::Declared;
+            return AutomationLogResult::Declared;
         if ( id.empty() )
-            return AutomationLogVerdict::MissingID;
-        return VectorUtil::contains( _listAllowedID, string( id ) ) ? AutomationLogVerdict::Allowed : AutomationLogVerdict::NotAllowed;
+            return AutomationLogResult::MissingID;
+        return VectorUtil::contains( _listAllowedID, string( id ) ) ? AutomationLogResult::Allowed : AutomationLogResult::NotAllowed;
     }
 
     void AutomationLogPolicy::judge( LogLevel level, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const
     {
-        const AutomationLogVerdict verdict = classify( level, id, message );
-        if ( verdict == AutomationLogVerdict::Allowed )
+        const AutomationLogResult result = classify( level, id, message );
+        if ( result == AutomationLogResult::Allowed )
         {
             const string idText{ id };
             if ( VectorUtil::contains( inoutJudgement._listAllowedID, idText ) == false )
                 inoutJudgement._listAllowedID.push_back( idText );
             return;
         }
-        if ( verdict != AutomationLogVerdict::MissingID && verdict != AutomationLogVerdict::NotAllowed )
+        if ( result != AutomationLogResult::MissingID && result != AutomationLogResult::NotAllowed )
             return;
-        const bool bMissingID = verdict == AutomationLogVerdict::MissingID;
+        const bool bMissingID = result == AutomationLogResult::MissingID;
         if ( bMissingID )
             ++inoutJudgement._missingIDCount;
         else

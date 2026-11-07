@@ -145,7 +145,7 @@ namespace sw
                 const UIScreenHandle screen = uiSystem.pushScreen( UIDemoScreen::create() );
                 uiSystem.setInputMode( UIInputMode::Navigation );
                 // 알림과 액션 글리프도 함께 보인다(오버레이 레이어, 스크린샷 확인용).
-                UINotificationDesc hint{};
+                UINotificationDef hint{};
                 hint._text            = "[action=UI.Accept] Select";
                 hint._durationSeconds = 600.0f;
                 hint._kind            = UINotificationKind::Hint;
@@ -227,7 +227,7 @@ namespace sw
         (void)panel->addChild( std::move( column ) );
         (void)root->addChild( std::move( panel ) );
 
-        UIScreenDesc desc{};
+        UIScreenDef desc{};
         desc._layer        = UILayer::Menu;
         desc._defaultFocus = hashed_string( "Start" );
         return sw::make_unique<UIScreen>( desc, std::move( root ) );

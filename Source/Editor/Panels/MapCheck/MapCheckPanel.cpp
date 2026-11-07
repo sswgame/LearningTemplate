@@ -121,7 +121,7 @@ namespace sw::editor
                 ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( color ) );
                 const bool bOpen = ImGui::SmallButton( label.c_str() );
                 ImGui::PopStyleColor();
-                EditorSelfTestMarks::note( "statusBar.mapCheck" );
+                EditorSelfTestMarks::record( "statusBar.mapCheck" );
                 if ( bOpen )
                     context.getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
                 if ( ImGui::IsItemHovered() )
@@ -212,7 +212,7 @@ namespace sw::editor
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "CheckMap" ), "Check Map" ) ) )
             (void)validateActiveScene(); // 검사한 수는 로그에 남는다
-        EditorSelfTestMarks::note( "mapCheck.checkMap" );
+        EditorSelfTestMarks::record( "mapCheck.checkMap" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckMap" ) );
 
         bool                                   bShowErrors = _bShowErrors == SW_TRUE;
@@ -286,7 +286,7 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax64> mark;
                 formatstring( mark.data(), mark.capacity(), "mapCheck.row.%#", rowIndex );
-                EditorSelfTestMarks::note( mark.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
             }
             if ( pObject == nullptr )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "NotInActiveScene" ) );

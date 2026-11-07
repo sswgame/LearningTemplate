@@ -68,7 +68,7 @@ namespace sw
      */
     /** @brief 날씨 표 루트(`<Weathers transition>`)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API WeatherCatalogRootFields
+    struct SW_GF_API WeatherCatalogRootParams
     {
         REFLECT_BODY();
 

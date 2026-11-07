@@ -64,7 +64,7 @@ namespace sw
         void collectKnownWeaknesses( const hashed_string& monsterID, vector<const MonsterHuntWeakness*>& outListWeakness ) const;
         /** @brief 공격 속성 @p attackElement 가 그 괴물에게 주는 배율을 반환합니다(방어 속성 모두의 곱이며, 모르는 괴물이거나 상성 테이블이 없으면 1입니다). */
         float32 computeMultiplier( const hashed_string& monsterID, const hashed_string& attackElement ) const;
-        void    drainEvents( vector<MonsterHuntBestiaryEvent>& outListEvent );
+        void    pollEvents( vector<MonsterHuntBestiaryEvent>& outListEvent );
         /** @brief 괴물마다 지식 단계와 처치 수를 씁니다. 카탈로그와 상성 테이블은 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 괴물이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */

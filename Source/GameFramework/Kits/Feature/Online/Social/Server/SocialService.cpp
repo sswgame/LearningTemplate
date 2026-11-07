@@ -137,11 +137,11 @@ namespace sw
         };
 
         /** @brief 관계 바꾸기 하나를 처리합니다. 이름으로 신청했으면 이름 인덱스를 읽고, 두 줄과 두 개수를 읽어 규칙으로 정한 뒤 버전 조건으로 씁니다. 충돌이 나면 다시 읽고 다시 시도합니다. */
-        class SocialLinkWork final : public IServiceStoreWork
+        class SocialLinkJob final : public IServiceStoreJob
         {
         public:
-            SocialLinkWork( SocialService* pService, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID,
-                            string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
+            SocialLinkJob( SocialService* pService, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID,
+                           string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
                 : _decision{}
                 , _displayName{ displayName }
                 , _pService{ pService }
@@ -255,10 +255,10 @@ namespace sw
         };
 
         /** @brief 한 계정의 관계를 모두 읽는 작업입니다. */
-        class SocialLoadWork final : public IServiceStoreWork
+        class SocialLoadJob final : public IServiceStoreJob
         {
         public:
-            SocialLoadWork( SocialService* pService, AccountID accountID, uint64 requestTag )
+            SocialLoadJob( SocialService* pService, AccountID accountID, uint64 requestTag )
                 : _listLink{}
                 , _pService{ pService }
                 , _accountID{ accountID }
@@ -367,7 +367,7 @@ namespace sw
     {
         (void)ensureLocal( accountID ); // 항목을 있게만 한다 — 쓰는 쪽은 저마다 다시 찾는다
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SocialLinkWork>( this, _dependencies._pNameIndex, operation, accountID, otherID, displayName, nowMs, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<SocialLinkJob>( this, _dependencies._pNameIndex, operation, accountID, otherID, displayName, nowMs, requestTag ) );
     }
 
     void SocialService::applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision )
@@ -547,7 +547,7 @@ namespace sw
     {
         _mapAccountToLocal[accountID]._bLoading = SW_TRUE;
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SocialLoadWork>( this, accountID, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<SocialLoadJob>( this, accountID, requestTag ) );
     }
 
     void SocialService::reloadIfLocal( AccountID accountID )

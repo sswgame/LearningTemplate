@@ -206,7 +206,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
     const sw::AssetID changedID = ScopedScratchDomain::toID( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) );
     SW_EXPECT_TRUE( loc.isProjectFile( changedID.view() ) );
-    SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadOutcome::Reloaded );
+    SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadResult::Reloaded );
     SW_EXPECT_EQUAL( sw::string( "수수께끼 섬" ), Internal::text( loc.getString( sw::hashed_string( "ui.title" ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "신비의 섬" ), Internal::text( pHeld ) ); // 들고 있던 포인터는 그대로다
     SW_EXPECT_TRUE( loc.getTextRevision() > revisionBefore );
@@ -217,11 +217,11 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     SW_EXPECT_LOG( "Xml.ParseError" );
     SW_EXPECT_LOG( "Localization.TranslationNotLoaded" );
     SW_EXPECT_LOG( "Localization.ReloadFailed" );
-    SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadOutcome::Failed );
+    SW_EXPECT_TRUE( loc.reloadChangedFile( changedID.view() ) == sw::ReloadResult::Failed );
     SW_EXPECT_EQUAL( sw::string( "수수께끼 섬" ), Internal::text( loc.getString( sw::hashed_string( "ui.title" ) ) ) );
 
     // 프로젝트 밖의 파일은 다루지 않는다.
-    SW_EXPECT_TRUE( loc.reloadChangedFile( ScopedScratchDomain::makeID( "other.translation.xml" ).view() ) == sw::ReloadOutcome::NotTracked );
+    SW_EXPECT_TRUE( loc.reloadChangedFile( ScopedScratchDomain::makeID( "other.translation.xml" ).view() ) == sw::ReloadResult::NotTracked );
 }
 
 /**

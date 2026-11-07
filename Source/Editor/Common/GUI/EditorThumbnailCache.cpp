@@ -164,16 +164,16 @@ namespace sw::editor
                 continue;
             }
             const string assetID = _listLoading[loadingIndex]._assetID;
-            if ( state == AssetLoadState::Failed || adoptReady( assetID, _listLoading[loadingIndex]._pOperation ) == false )
+            if ( state == AssetLoadState::Failed || applyReady( assetID, _listLoading[loadingIndex]._pOperation ) == false )
                 recordFailure( assetID );
             else
                 _uniqueKnownID.erase( assetID ); // 항목이 생겼다 — 이후엔 항목 목록이 답한다. 쫓겨나면 다시 예약할 수 있게 비운다
-            // 로드 목록에서 지워도 항목이 로드 작업을 쥐었으므로(`adoptReady`) 참조는 남는다.
+            // 로드 목록에서 지워도 항목이 로드 작업을 쥐었으므로(`applyReady`) 참조는 남는다.
             _listLoading.erase( _listLoading.begin() + static_cast<std::ptrdiff_t>( loadingIndex ) );
         }
     }
 
-    bool EditorThumbnailCache::adoptReady( const string& assetID, const shared_ptr<TextureLoadOperation>& pOperation )
+    bool EditorThumbnailCache::applyReady( const string& assetID, const shared_ptr<TextureLoadOperation>& pOperation )
     {
         const TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
         ImGuiRenderer*      pBackend = EditorThumbnailCacheInternal::findRenderer();

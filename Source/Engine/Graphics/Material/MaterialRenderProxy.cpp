@@ -22,7 +22,7 @@ namespace sw
 
     MaterialRenderProxy::~MaterialRenderProxy()
     {
-        // 디바이스가 먼저 죽었으면 forgetRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
+        // 디바이스가 먼저 죽었으면 clearRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
         if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
             releaseRHI( pLiveDevice );
     }
@@ -51,7 +51,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "MaterialRenderProxy.CouldNotCreateMaterial", "Could not create a material constant buffer of %# bytes", byteSize );
                 return kInvalidDescriptorIndex;
             }
-            _constant.adopt( pDevice, buffer );
+            _constant.attach( pDevice, buffer );
             _constantByteSize = byteSize;
             _descriptorIndex  = pDevice->getResourceFactory()->registerBindlessBufferSRV( buffer );
         }
@@ -69,18 +69,18 @@ namespace sw
             pDevice->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
         if ( _constant._buffer != 0 )
             pDevice->releaseHandle( RHIHandleKind::Buffer, _constant._buffer );
-        forgetHandles();
+        clearHandles();
     }
 
-    void MaterialRenderProxy::forgetRHI( IRHIDevice* pDevice )
+    void MaterialRenderProxy::clearRHI( IRHIDevice* pDevice )
     {
         if ( _constant._pDevice == pDevice )
-            forgetHandles();
+            clearHandles();
     }
 
-    void MaterialRenderProxy::forgetHandles()
+    void MaterialRenderProxy::clearHandles()
     {
-        _constant.forget();
+        _constant.clear();
         _constantByteSize = 0;
         _descriptorIndex  = kInvalidDescriptorIndex;
         _uploaded.reset();

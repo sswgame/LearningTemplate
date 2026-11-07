@@ -133,7 +133,7 @@ namespace sw
         return _listGradeScale[index];
     }
 
-    bool WesternCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool WesternCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         using Internal = WesternCatalogInternal;
         bool bAdd      = false;
@@ -195,7 +195,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadElement( node, name, sourceName ) )
+            if ( loadFromXML( node, name, sourceName ) )
                 ++loadedCount;
         }
 

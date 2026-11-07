@@ -222,9 +222,9 @@ namespace sw
         addProgress( -_config._skillCheckPenalty );
     }
 
-    void InteractionProgress::drainEvents( vector<InteractionEvent>& outListEvent )
+    void InteractionProgress::pollEvents( vector<InteractionEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void InteractionProgress::writeState( Archive& outArchive ) const

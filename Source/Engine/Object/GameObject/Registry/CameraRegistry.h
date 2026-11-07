@@ -54,7 +54,7 @@ namespace sw
          */
         uint32 getRegistrySerial() const { return _registrySerial.load( std::memory_order_relaxed ); }
         /** @brief 선택 규칙과 맞춤의 입력(역할 · 우선순위 · 출력 대상 · 시야각)이 바뀌었음을 알려 번호를 올립니다. 카메라 컴포넌트의 세터가 값이 실제로 바뀔 때만 부릅니다. */
-        void noteChanged() { _registrySerial.fetch_add( 1, std::memory_order_relaxed ); }
+        void recordChanged() { _registrySerial.fetch_add( 1, std::memory_order_relaxed ); }
 
         /**
          * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 컴포넌트 id 가 큰(나중에 만든) 것이 이깁니다 — 되돌리기 ·

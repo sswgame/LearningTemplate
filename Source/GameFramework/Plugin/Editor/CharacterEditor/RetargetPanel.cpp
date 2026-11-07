@@ -64,7 +64,7 @@ namespace sw::editor
             {
                 const bool bOpen = ImGui::CollapsingHeader( EditorThemeUtil::makeStableLabel( pLabel, pStableID ), ImGuiTreeNodeFlags_DefaultOpen );
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( string( "retarget.section." ) + pStableID ).c_str() );
+                    EditorSelfTestMarks::record( ( string( "retarget.section." ) + pStableID ).c_str() );
                 return bOpen;
             }
 
@@ -294,7 +294,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "New" ) ) )
             requestOpenDocument( string_view( _newDocumentPath.c_str() ) ); // 없는 파일이면 `loadDocument` 가 빈 문서로 연다
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "retarget.new" );
+        EditorSelfTestMarks::record( "retarget.new" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "StartAnEmptyProfileAtThisResource" ) );
     }
 
@@ -335,7 +335,7 @@ namespace sw::editor
         ImGui::TextDisabled( "target reference" );
         const float2 available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
         drawPreviewViewport( float2{ available._x, RetargetPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale() }, false );
-        EditorSelfTestMarks::note( "retarget.preview" );
+        EditorSelfTestMarks::record( "retarget.preview" );
         drawSkeletonLines();
     }
 
@@ -504,7 +504,7 @@ namespace sw::editor
             bChanged = true;
         }
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "retarget.addChain" );
+        EditorSelfTestMarks::record( "retarget.addChain" );
         if ( bChanged )
         {
             _profile.setChains( std::move( listChain ) );
@@ -535,7 +535,7 @@ namespace sw::editor
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 bChanged = true;
-            EditorSelfTestMarks::note( "retarget.targetPose.rotation" );
+            EditorSelfTestMarks::record( "retarget.targetPose.rotation" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "Remove" ) ) )
                 removeIndex = poseIndex;
@@ -548,7 +548,7 @@ namespace sw::editor
         }
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputTextWithHint( "##NewPoseBone", "target bone", _newPoseBone.data(), _newPoseBone.max_size() );
-        EditorSelfTestMarks::note( "retarget.targetPose.newBone" );
+        EditorSelfTestMarks::record( "retarget.targetPose.newBone" );
         ImGui::SameLine();
         const hashed_string newBone( _newPoseBone.c_str() );
         const bool          bBoneUsable = _preview.hasTargetBone( newBone ) && RetargetProfileEdit::canAddPoseBone( listPose, newBone ); // 대상 스켈레톤에 있는 본만 받는다
@@ -559,7 +559,7 @@ namespace sw::editor
             bChanged = true;
         }
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "retarget.targetPose.add" );
+        EditorSelfTestMarks::record( "retarget.targetPose.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "TurnATargetBoneInItsParent" ) );
         // 끄는 값도 프로필에 넣는다 — 사본만 고치면 다음 프레임이 프로필에서 다시 복사해 끌기가 사라지고 미리보기도 앞 값을 그린다. 되돌리기 단계는 놓을 때 한 번(기준 글은 끌기 전 그대로다).
         if ( bChanged || bDragged )
@@ -606,7 +606,7 @@ namespace sw::editor
             bChanged = true;
         }
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "retarget.addPair" );
+        EditorSelfTestMarks::record( "retarget.addPair" );
         if ( bChanged )
         {
             _profile.setBonePairs( std::move( listPair ) );
@@ -634,7 +634,7 @@ namespace sw::editor
             const float32 ratio = chain.computeLengthRatio();
             ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "SourceMTargetM", TextArgumentList().addText( "name", chain._name.c_str() ).addDecimal( "sourceLength", static_cast<float64>( chain._sourceLength ), 3 ).addDecimal( "targetLength", static_cast<float64>( chain._targetLength ), 3 ).addDecimal( "ratio", static_cast<float64>( ratio ), 2 ) ).c_str() );
         }
-        EditorSelfTestMarks::note( "retarget.check" );
+        EditorSelfTestMarks::record( "retarget.check" );
         EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Warning" ) );
         for ( const string& warning : _inspection._listWarning )
         {

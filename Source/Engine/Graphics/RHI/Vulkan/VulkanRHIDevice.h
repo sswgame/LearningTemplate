@@ -547,9 +547,9 @@ namespace sw
          */
         [[nodiscard]] bool recreateSurfaceAndSwapChain();
         /** @brief 서피스를 잃은 것을 세고 경고로 남깁니다(잃은 횟수와 그때의 프레임). 다음에 관찰했을 때 환경 탓인지 가리는 데 씁니다. */
-        void noteSurfaceLost( const utf8* pWhere );
+        void recordSurfaceLost( const utf8* pWhere );
         /** @brief 제출 순서에 들어간 리스트 · 프레임 세그먼트의 마지막 이벤트 마커를 적어 둡니다(디바이스 손실 로그용). 비어 있으면 그대로 둡니다. */
-        void noteSubmittedEventMarker( const utf8* pMarker );
+        void recordSubmittedEventMarker( const utf8* pMarker );
         /** @brief VK_EXT_device_fault 로 디바이스 손실의 결함 정보를 읽어 로그로 남깁니다. 확장이 없으면 없다고 한 줄 남깁니다. */
         void reportDeviceFault();
 

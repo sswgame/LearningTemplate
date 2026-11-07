@@ -1,4 +1,4 @@
-// CraftingElementCatalogsTest — 제작 레시피(RecipeDef · RecipeItemFields)와 속성 상성표(ElementRuleFields · ElementStatusChance)의 칸 읽기.
+// CraftingElementCatalogsTest — 제작 레시피(RecipeDef · RecipeItemParams)와 속성 상성표(ElementRuleParams · ElementStatusChance)의 칸 읽기.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

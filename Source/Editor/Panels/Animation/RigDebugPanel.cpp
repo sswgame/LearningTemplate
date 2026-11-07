@@ -297,11 +297,11 @@ namespace sw::editor
             }
 
             /** @brief @p nodeIndex 번 노드 줄의 칸 @p pCell 에 표식을 남깁니다(시나리오가 켜짐 · 가중치를 고친다). */
-            static void noteNodeMark( uint32 nodeIndex, const utf8* pCell )
+            static void recordNodeMark( uint32 nodeIndex, const utf8* pCell )
             {
                 fixed_string<constant::buffer::kMax64> mark;
                 formatstring( mark.data(), mark.capacity(), "rigdebug.node.%#.%#", nodeIndex, pCell );
-                EditorSelfTestMarks::note( mark.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
             }
 
             /** @brief 노드가 쓰는 본 이름을 "첫 본 (+n)" 꼴로 줄입니다. */
@@ -400,7 +400,7 @@ namespace sw::editor
                 _weightBeforeEdit = node.getWeight();
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 RigDebugPanelInternal::recordWeight( objectID, nodeIndex, _weightBeforeEdit, node.getWeight() );
-            RigDebugPanelInternal::noteNodeMark( nodeIndex, "weight" );
+            RigDebugPanelInternal::recordNodeMark( nodeIndex, "weight" );
 
             ImGui::TableNextColumn();
             // 커브 · 슬롯 · LOD 를 모두 곱한 이번 프레임 값 — 시퀀서 리그 슬롯 트랙이 움직이는 것이 여기 보인다.
@@ -419,7 +419,7 @@ namespace sw::editor
                 node.setEnabled( bEnabled );
                 RigDebugPanelInternal::recordEnabled( objectID, nodeIndex, bEnabled );
             }
-            RigDebugPanelInternal::noteNodeMark( nodeIndex, "on" );
+            RigDebugPanelInternal::recordNodeMark( nodeIndex, "on" );
             ImGui::PopID();
         }
         ImGui::EndTable();
@@ -468,7 +468,7 @@ namespace sw::editor
             }
             ImGui::EndTable();
         }
-        EditorSelfTestMarks::note( "rigdebug.targets" );
+        EditorSelfTestMarks::record( "rigdebug.targets" );
         if ( targetEdit._status.empty() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Target", TextArgumentList().addText( "target", targetEdit._status ) ).c_str() );
     }
@@ -505,7 +505,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveToRig" ) ) )
             _status = RigDebugPanelInternal::saveNodeSettings( *pModifier );
         ImGui::EndDisabled();
-        EditorSelfTestMarks::note( "rigdebug.save" );
+        EditorSelfTestMarks::record( "rigdebug.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "WriteTheWeightsAndOnOffOf" ) );
 
         GameObject*                  pObject = pModifier->getOwner();

@@ -560,9 +560,9 @@ namespace sw
         _uiInputMap->setLayerEnabled( UIInputRouterInternal::kUIGlobalLayerName, pActive == nullptr && bHasPauseMenu );
     }
 
-    void UIInputRouter::forgetScreen( UIScreen& screen )
+    void UIInputRouter::removeScreen( UIScreen& screen )
     {
-        _pointer.forgetTree( screen.getTree() );
+        _pointer.removeTree( screen.getTree() );
         if ( _focus.getFocusedTree() == &screen.getTree() )
             _focus.clearFocus();
     }

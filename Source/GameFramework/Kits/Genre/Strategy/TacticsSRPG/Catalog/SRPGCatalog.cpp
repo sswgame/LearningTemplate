@@ -138,7 +138,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            const bool        bLoaded = loadElement( node, name, sourceName );
+            const bool        bLoaded = loadFromXML( node, name, sourceName );
             const bool        bCurve  = name == "PilotCurve" || name == "UnitCurve";
             if ( bLoaded && bCurve == false )
                 ++loadedCount;
@@ -161,12 +161,12 @@ namespace sw
         return loadedCount;
     }
 
-    bool SRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    bool SRPGCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( name == "PilotCurve" )
-            return _pilotCurve.loadFromNode( node, sourceName );
+            return _pilotCurve.loadFromXML( node, sourceName );
         if ( name == "UnitCurve" )
-            return _unitCurve.loadFromNode( node, sourceName );
+            return _unitCurve.loadFromXML( node, sourceName );
         if ( name == "Terrain" )
             return loadTerrain( node, sourceName );
         if ( name == "Weapon" )

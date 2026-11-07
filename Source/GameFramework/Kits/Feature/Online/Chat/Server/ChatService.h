@@ -1,7 +1,7 @@
 /**
  * @file ChatService.h
  * @brief 채팅 로직입니다. 채널 멤버(이 서버), 말하기, 귓속말, 기록 읽기를 처리합니다. 말하기는 제재, 도배, 필터를 거친 뒤 전달, 버스 발행, 기록으로 이어집니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
- * @details - 결과는 요청 태그와 함께 `drainCompletions` 로, 받을 사람에게 갈 메시지는 `drainDeliveries` 로, 버스 구독 변경은 `drainBusTopicChanges` 로 회수한다. 구독과 해지는 바인딩이 호스트에 한다.
+ * @details - 결과는 요청 태그와 함께 `takeCompletions` 로, 받을 사람에게 갈 메시지는 `pollDeliveries` 로, 버스 구독 변경은 `pollBusTopicChanges` 로 회수한다. 구독과 해지는 바인딩이 호스트에 한다.
  *            다른 서버가 낸 버스 메시지는 바인딩이 `handleBusMessage` 로 넘긴다.
  *          - 클라이언트가 들어가고 나올 수 있는 채널은 `world.` 와 `custom.` 뿐이다. `guild.` 와 `party.` 는 서버 시스템이 `addMember` 와 `removeMember` 로 넣는다.
  *            게임 조립 단계가 친구와 매칭 키트의 이벤트를 연결하며, 키트끼리는 include 하지 않는다.
@@ -154,7 +154,7 @@ namespace sw
         /** @brief 쌓인 기록을 저장소에 씁니다. */
         void update( UnixMilliseconds nowMs );
 
-        // 클라이언트 요청이다. 결과는 같은 요청 태그로 drainCompletions 에서 받는다
+        // 클라이언트 요청이다. 결과는 같은 요청 태그로 takeCompletions 에서 받는다
         void joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag );
         void leaveChannel( AccountID accountID, string_view channelID, uint64 requestTag );
         void sendMessage( AccountID accountID, string_view channelID, string_view text, UnixMilliseconds nowMs, uint64 requestTag );
@@ -174,9 +174,9 @@ namespace sw
         /** @brief 구독한 버스 메시지를 처리합니다. 바인딩이 넘기며, 자기 서버가 낸 채팅은 메시지의 서버 id 로 거릅니다. 제재 알림은 자기 서버가 낸 것도 처리합니다. */
         void handleBusMessage( const ServerBusMessage& message );
 
-        void drainCompletions( vector<ChatCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
-        void drainDeliveries( vector<ChatDelivery>& outListDelivery ) { _deliveryBuffer.drainTo( outListDelivery ); }
-        void drainBusTopicChanges( vector<ChatBusTopicChange>& outListChange ) { _busTopicBuffer.drainTo( outListChange ); }
+        void takeCompletions( vector<ChatCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void pollDeliveries( vector<ChatDelivery>& outListDelivery ) { _deliveryBuffer.moveAllTo( outListDelivery ); }
+        void pollBusTopicChanges( vector<ChatBusTopicChange>& outListChange ) { _busTopicBuffer.moveAllTo( outListChange ); }
 
         int32 getLocalMemberCount( string_view channelID ) const;
         /** @brief 맡겨 두고 끝나지 않은 작업(저장, 접속 상태 찾기)의 수입니다. */

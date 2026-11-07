@@ -34,10 +34,10 @@ namespace
 
     struct MaterialParameterCollectionTestUtil
     {
-        static MaterialParameterCollectionDesc makeDesc()
+        static MaterialParameterCollectionDef makeDesc()
         {
-            MaterialParameterCollectionDesc desc;
-            MaterialCollectionParameterDesc tint;
+            MaterialParameterCollectionDef desc;
+            MaterialCollectionParameterDef tint;
             tint._name  = "Tint";
             tint._value = float4{ 1.0f, 0.5f, 0.25f, 1.0f };
             desc._listParameter.push_back( tint );
@@ -72,7 +72,7 @@ SW_TEST_CASE( MaterialParameterCollectionTest, SetValueBumpsTheGeneration )
 SW_TEST_CASE( MaterialParameterCollectionTest, ValidateRejectsBadNames )
 {
     SW_EXPECT_LOG( "MaterialParameterCollection.BadName" );
-    MaterialParameterCollectionDesc desc = Util::makeDesc();
+    MaterialParameterCollectionDef desc = Util::makeDesc();
     SW_EXPECT_TRUE( desc.validate( "test" ) );
     desc._listParameter.push_back( desc._listParameter[0] );
     SW_EXPECT_FALSE( desc.validate( "test" ) );
@@ -89,17 +89,17 @@ SW_TEST_CASE( MaterialParameterCollectionTest, PropertyTextHasTheTypeChannels )
 /** @brief [MaterialParameterCollectionTest] 묶음 변형은 값을 이름으로 합친다 */
 SW_TEST_CASE( MaterialParameterCollectionTest, VariantMergesByName )
 {
-    CollectionParentSource source{ R"(<MaterialParameterCollectionDesc><_listParameter>
-        <MaterialCollectionParameterDesc _name="Tint" _value="1, 1, 1, 1" />
-        <MaterialCollectionParameterDesc _name="Wind" _value="2, 0, 0, 0" />
-    </_listParameter></MaterialParameterCollectionDesc>)" };
+    CollectionParentSource source{ R"(<MaterialParameterCollectionDef><_listParameter>
+        <MaterialCollectionParameterDef _name="Tint" _value="1, 1, 1, 1" />
+        <MaterialCollectionParameterDef _name="Wind" _value="2, 0, 0, 0" />
+    </_listParameter></MaterialParameterCollectionDef>)" };
     string                 flat;
-    SW_REQUIRE_TRUE( DataInheritance::flatten( R"(<MaterialParameterCollectionDesc _base="parent.matparams.xml"><_listParameter>
-        <MaterialCollectionParameterDesc _name="Tint" _value="1, 0, 0, 1" />
-    </_listParameter></MaterialParameterCollectionDesc>)",
-                                               "child", DataInheritanceSchema::makeFromType( *MaterialParameterCollectionDesc::StaticType() ), source, flat ) );
-    MaterialParameterCollectionDesc desc;
-    SW_REQUIRE_TRUE( XMLSerializer::deserialize( &desc, *MaterialParameterCollectionDesc::StaticType(), flat ) );
+    SW_REQUIRE_TRUE( DataInheritance::flatten( R"(<MaterialParameterCollectionDef _base="parent.matparams.xml"><_listParameter>
+        <MaterialCollectionParameterDef _name="Tint" _value="1, 0, 0, 1" />
+    </_listParameter></MaterialParameterCollectionDef>)",
+                                               "child", DataInheritanceSchema::makeFromType( *MaterialParameterCollectionDef::StaticType() ), source, flat ) );
+    MaterialParameterCollectionDef desc;
+    SW_REQUIRE_TRUE( XMLSerializer::deserialize( &desc, *MaterialParameterCollectionDef::StaticType(), flat ) );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( desc._listParameter.size() ) );
     SW_EXPECT_NEAR( 0.0f, desc._listParameter[0]._value._y, 0.0f );
     SW_EXPECT_NEAR( 2.0f, desc._listParameter[1]._value._x, 0.0f );

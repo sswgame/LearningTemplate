@@ -59,7 +59,7 @@ namespace
             {
                 _director.update( step );
             }
-            _director.drainEvents( _listEvent );
+            _director.pollEvents( _listEvent );
         }
 
         int32 count( AIDirectorEventKind kind, const utf8* pID ) const
@@ -318,7 +318,7 @@ SW_TEST_CASE( AIDirectorPoolTest, MaxCountStopsAPoolForTheRun )
     {
         director.update( 1.0f );
     }
-    director.drainEvents( listEvent );
+    director.pollEvents( listEvent );
     int32 picks = 0;
     for ( const AIDirectorEvent& event : listEvent )
     {
@@ -337,7 +337,7 @@ SW_TEST_CASE( AIDirectorPoolTest, LongFrameIsCappedPerUpdate )
     director.initialize( &profile, nullptr, 1 );
     director.update( 500.0f );
     vector<AIDirectorEvent> listEvent;
-    director.drainEvents( listEvent );
+    director.pollEvents( listEvent );
     int32 picks = 0;
     for ( const AIDirectorEvent& event : listEvent )
     {

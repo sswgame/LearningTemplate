@@ -4,8 +4,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/DeckBattle/DeckBattle.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
@@ -204,12 +204,12 @@ namespace
         }
     };
 
-    constexpr const utf8* kDeckBattleXML = R"(<DeckBattleCatalog>
+    constexpr const utf8* kCardBattleXML = R"(<CardBattleCatalog>
   <Card id="strike" name="Strike" cost="1" effects="Damage:6"/>
-</DeckBattleCatalog>)";
+</CardBattleCatalog>)";
 
-    /** @brief `DeckBattle::writeState` 의 카드 두 장짜리 판을 꾸밉니다. 번호 0, 1 은 처음에 뽑을 더미에 있습니다. */
-    struct DeckBattleForged
+    /** @brief `CardBattle::writeState` 의 카드 두 장짜리 판을 꾸밉니다. 번호 0, 1 은 처음에 뽑을 더미에 있습니다. */
+    struct CardBattleForged
     {
         sw::CardPile _drawPile{};
         sw::CardPile _hand{};
@@ -221,15 +221,15 @@ namespace
         int32        _playerBlock{ 0 };
         int32        _energy{ 3 };
         int32        _turn{ 1 };
-        uint8        _phase{ static_cast<uint8>( sw::DeckBattlePhase::PlayerTurn ) };
+        uint8        _phase{ static_cast<uint8>( sw::CardBattlePhase::PlayerTurn ) };
 
-        DeckBattleForged()
+        CardBattleForged()
         {
             _drawPile.push( sw::Card{ 0, 0, 0 } );
             _drawPile.push( sw::Card{ 1, 0, 0 } );
         }
 
-        bool readInto( sw::DeckBattle& inoutBattle ) const
+        bool readInto( sw::CardBattle& inoutBattle ) const
         {
             sw::Archive written;
             written << static_cast<uint32>( 2 );
@@ -240,7 +240,7 @@ namespace
             sw::CardPile{}.writeState( written );
             sw::CardPile{}.writeState( written );
             written << static_cast<uint32>( 1 );
-            written << static_cast<uint8>( sw::DeckBattleEffectKind::Damage );
+            written << static_cast<uint8>( sw::CardBattleEffectKind::Damage );
             written << _intentAmount;
             written << _enemyHP;
             written << _enemyBlock;
@@ -609,82 +609,82 @@ SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
  */
 SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
 {
-    sw::DeckBattleCatalog catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDeckBattleXML, "CardGameReadStateTest" ) );
-    sw::DeckBattleSettings settings;
+    sw::CardBattleCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCardBattleXML, "CardGameReadStateTest" ) );
+    sw::CardBattleSettings settings;
     settings._drawPerTurn = 1;
     settings._handLimit   = 1;
-    sw::DeckBattleEnemy enemy;
+    sw::CardBattleEnemy enemy;
     enemy._hp = 10;
-    enemy._listIntent.push_back( sw::DeckBattleEffect{ 3, sw::DeckBattleEffectKind::Damage } );
-    sw::DeckBattle battle;
+    enemy._listIntent.push_back( sw::CardBattleEffect{ 3, sw::CardBattleEffectKind::Damage } );
+    sw::CardBattle battle;
     SW_REQUIRE_TRUE( battle.initialize( &catalog, settings, { "strike", "strike", "strike" }, enemy, 51u ) );
     SW_REQUIRE_TRUE( battle.playCard( 0 ) );
 
     sw::Archive written;
     battle.writeState( written );
-    sw::DeckBattle restored;
+    sw::CardBattle restored;
     SW_REQUIRE_TRUE( restored.initialize( &catalog, settings, { "strike" }, enemy, 52u ) );
     SW_REQUIRE_TRUE( CardGameReadStateTestUtil::readInto( restored, written ) );
     SW_EXPECT_EQUAL( 4, restored.getEnemy()._hp );
 
-    const DeckBattleForged valid;
+    const CardBattleForged valid;
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 10, restored.getEnemy()._hp );
 
-    DeckBattleForged missing = valid;
+    CardBattleForged missing = valid;
     missing._drawPile        = sw::CardPile{};
     missing._drawPile.push( sw::Card{ 0, 0, 0 } );
     SW_EXPECT_FALSE( missing.readInto( restored ) );
 
-    DeckBattleForged clone = valid;
+    CardBattleForged clone = valid;
     clone._drawPile        = sw::CardPile{};
     clone._drawPile.push( sw::Card{ 0, 0, 0 } );
     clone._hand.push( sw::Card{ 0, 0, 0 } );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    DeckBattleForged outOfDeck = valid;
+    CardBattleForged outOfDeck = valid;
     outOfDeck._drawPile        = sw::CardPile{};
     outOfDeck._drawPile.push( sw::Card{ 0, 0, 0 } );
     outOfDeck._drawPile.push( sw::Card{ 2, 0, 0 } );
     SW_EXPECT_FALSE( outOfDeck.readInto( restored ) );
 
-    DeckBattleForged handOverLimit = valid;
+    CardBattleForged handOverLimit = valid;
     handOverLimit._drawPile        = sw::CardPile{};
     handOverLimit._hand.push( sw::Card{ 0, 0, 0 } );
     handOverLimit._hand.push( sw::Card{ 1, 0, 0 } );
     SW_EXPECT_FALSE( handOverLimit.readInto( restored ) );
 
-    DeckBattleForged intentNegative = valid;
+    CardBattleForged intentNegative = valid;
     intentNegative._intentAmount    = -3;
     SW_EXPECT_FALSE( intentNegative.readInto( restored ) );
 
-    DeckBattleForged enemyNegative = valid;
+    CardBattleForged enemyNegative = valid;
     enemyNegative._enemyHP         = -1;
     SW_EXPECT_FALSE( enemyNegative.readInto( restored ) );
 
-    DeckBattleForged blockNegative = valid;
+    CardBattleForged blockNegative = valid;
     blockNegative._enemyBlock      = -1;
     SW_EXPECT_FALSE( blockNegative.readInto( restored ) );
 
-    DeckBattleForged hpOverMax = valid;
+    CardBattleForged hpOverMax = valid;
     hpOverMax._playerHP        = settings._playerHP + 1;
     SW_EXPECT_FALSE( hpOverMax.readInto( restored ) );
 
-    DeckBattleForged hpNegative = valid;
+    CardBattleForged hpNegative = valid;
     hpNegative._playerHP        = -1;
     SW_EXPECT_FALSE( hpNegative.readInto( restored ) );
 
-    DeckBattleForged energyNegative = valid;
+    CardBattleForged energyNegative = valid;
     energyNegative._energy          = -1;
     SW_EXPECT_FALSE( energyNegative.readInto( restored ) );
 
-    DeckBattleForged fakeWin = valid;
-    fakeWin._phase           = static_cast<uint8>( sw::DeckBattlePhase::Won );
+    CardBattleForged fakeWin = valid;
+    fakeWin._phase           = static_cast<uint8>( sw::CardBattlePhase::Won );
     SW_EXPECT_FALSE( fakeWin.readInto( restored ) );
 
-    DeckBattleForged fakeLoss = valid;
-    fakeLoss._phase           = static_cast<uint8>( sw::DeckBattlePhase::Lost );
+    CardBattleForged fakeLoss = valid;
+    fakeLoss._phase           = static_cast<uint8>( sw::CardBattlePhase::Lost );
     SW_EXPECT_FALSE( fakeLoss.readInto( restored ) );
 
     SW_EXPECT_EQUAL( 10, restored.getEnemy()._hp );

@@ -42,8 +42,8 @@ namespace
         request._listPosting.push_back( sw::LedgerPosting{ sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( accountID ), "gold", amount } );
         request._journalKey = "test/grant";
         request._reason     = "test.grant";
-        sw::LedgerTransferOutcome outcome;
-        SW_EXPECT_TRUE( sw::Ledger::executeTransfer( database, request, outcome ) == sw::LedgerResult::Ok );
+        sw::LedgerTransferResult result;
+        SW_EXPECT_TRUE( sw::Ledger::executeTransfer( database, request, result ) == sw::LedgerResult::Ok );
     }
 } // namespace
 

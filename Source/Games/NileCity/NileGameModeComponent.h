@@ -116,7 +116,7 @@ namespace sw
         void updateInput( float32 deltaTime, const InputManager& input );
         void updateCursor( const InputManager& input );
         void placeSelected();
-        void drainEvents();
+        void pollEvents();
         /** @brief 시뮬레이션과 스폰한 모습을 비교해 바뀐 도로 타일, 건물 타일, 모자란 일꾼 수를 쌓습니다(PrePhysics). */
         void        collectViewChanges();
         void        logStatus() const;
@@ -237,7 +237,7 @@ namespace sw
 
         shared_ptr<const CityCatalog>        _pCatalog;
         CitySimulation                       _city;
-        DrainLease                           _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
+        ConsumerLease                        _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
         Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
         WorldClock                           _clock;          ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
         NileCityPlanner                      _planner;

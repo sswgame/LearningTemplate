@@ -201,9 +201,9 @@ namespace sw
         return tierIndex >= 0 ? pFaction->_listTier[static_cast<size_t>( tierIndex )]._name : hashed_string{};
     }
 
-    void ReputationState::drainEvents( vector<ReputationEvent>& outListEvent )
+    void ReputationState::pollEvents( vector<ReputationEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.moveAllTo( outListEvent );
     }
 
     void ReputationState::writeState( Archive& outArchive ) const

@@ -162,7 +162,7 @@ namespace sw
         const CardPile& getDrawPile() const { return _drawPile; }
         /** @brief 이긴 사람을 반환합니다. 아직 없으면 -1 입니다. */
         int32 getWinner() const { return _winner; }
-        void  drainEvents( vector<UnoEvent>& outListEvent );
+        void  pollEvents( vector<UnoEvent>& outListEvent );
 
     private:
         int32 findNextPlayer( int32 player, int32 steps ) const;

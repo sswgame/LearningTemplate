@@ -58,7 +58,7 @@ namespace sw::editor
     bool CharacterEditorPackData::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = CharacterEditorPackData{};
-        if ( GameDataXML::loadText( *this, &CharacterEditorPackData::loadRoot, xmlText, sourceName, CharacterEditorPackDataInternal::kRootName ) )
+        if ( GameDataXML::loadFromXMLText( *this, &CharacterEditorPackData::loadRoot, xmlText, sourceName, CharacterEditorPackDataInternal::kRootName ) )
             return true;
         *this = CharacterEditorPackData{};
         return false;

@@ -183,7 +183,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이동 결과입니다. 성공이면 관여한 계정과 맡김 보유자의 이동 뒤 잔액을 담습니다. */
-    struct LedgerTransferOutcome
+    struct LedgerTransferResult
     {
         struct HolderBalance
         {

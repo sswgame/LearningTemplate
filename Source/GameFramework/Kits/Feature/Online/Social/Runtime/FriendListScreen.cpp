@@ -64,7 +64,7 @@ namespace sw
         };
     } // namespace
 
-    FriendListScreen::FriendListScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+    FriendListScreen::FriendListScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _pModel{ nullptr }
         , _shownRevision{ 0 }

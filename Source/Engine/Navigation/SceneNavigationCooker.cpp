@@ -112,10 +112,10 @@ namespace sw
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
-            const string      outputID   = NavMeshAsset::makeCookedPath( relativePath );
-            const string      cookedPath = FileUtil::joinPath( cookedDir, outputID );
-            const CookOutcome outcome    = store.cookFile( desc, outputID, cookedPath, [&]()
-               {
+            const string     outputID   = NavMeshAsset::makeCookedPath( relativePath );
+            const string     cookedPath = FileUtil::joinPath( cookedDir, outputID );
+            const CookResult result     = store.cookFile( desc, outputID, cookedPath, [&]()
+                {
                 // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
                 string text;
                 if ( AssetIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
@@ -134,8 +134,8 @@ namespace sw
                 SW_LOG_INFO_ID( "SceneNavigationCooker.CookedNavmeshAgentTypes", "Cooked navmesh '%#' (%# agent types)", cookedPath.c_str(), asset.getEntries().size() );
                 return CookStep::Written;
             } );
-            outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
-            tally.add( outcome );
+            outFailedCount += result == CookResult::Failed ? 1u : 0u;
+            tally.add( result );
         }
         SW_LOG_INFO_ID( "SceneNavigationCooker.NavmeshCookReusedDDC", "Navmesh cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
         return tally.getWrittenCount();

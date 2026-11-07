@@ -517,7 +517,7 @@ namespace sw
             for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
             {
                 listShardEvent.clear();
-                _listShard[static_cast<size_t>( shardIndex )]->_host.drainEvents( listShardEvent );
+                _listShard[static_cast<size_t>( shardIndex )]->_host.pollEvents( listShardEvent );
                 for ( NetEndpointEvent event : listShardEvent )
                 {
                     event._connectionID = _peers.makeConnectionID( shardIndex, event._connectionID );

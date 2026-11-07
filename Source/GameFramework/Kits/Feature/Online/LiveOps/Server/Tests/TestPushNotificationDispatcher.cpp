@@ -16,7 +16,7 @@ namespace
     constexpr AccountID kAccount = 42;
 
     /** @brief 발송기 + 메모리 저장소 + 가짜 제공자입니다. */
-    struct DispatcherRig
+    struct DispatcherFixture
     {
         MemoryServiceDatabase      _database;
         MemoryServiceStore         _store;
@@ -24,7 +24,7 @@ namespace
         PushNotificationDispatcher _dispatcher;
         int64                      _nowMs;
 
-        explicit DispatcherRig( const PushDispatcherConfig& settings = PushDispatcherConfig{} )
+        explicit DispatcherFixture( const PushDispatcherConfig& settings = PushDispatcherConfig{} )
             : _database{}
             , _store{ &_database }
             , _provider{}
@@ -71,7 +71,7 @@ namespace
         LiveOpsResult takeCompletion()
         {
             vector<PushDeviceCompletion> listCompletion;
-            _dispatcher.drainCompletions( listCompletion );
+            _dispatcher.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             return listCompletion.empty() ? LiveOpsResult::Unavailable : listCompletion[0]._result;
         }
@@ -81,7 +81,7 @@ namespace
 /** @brief [PushDispatcherTest] 계정의 기기마다 한 번씩 보내고 끝난다. 이 서버에 없는 제공자의 기기는 건너뛴다 */
 SW_TEST_CASE( PushDispatcherTest, DeliversToEveryDevice )
 {
-    DispatcherRig rig;
+    DispatcherFixture rig;
     rig.addDevice( "a" );
     rig.addDevice( "b" );
     rig.addDevice( "c", kNowMs, kAccount, "other" );
@@ -95,7 +95,7 @@ SW_TEST_CASE( PushDispatcherTest, DeliversToEveryDevice )
 /** @brief [PushDispatcherTest] 잘못된 토큰이면 그 기기만 저장소에서 지워 다음 알림이 보내지 않는다 */
 SW_TEST_CASE( PushDispatcherTest, InvalidTokenRemovesTheDevice )
 {
-    DispatcherRig rig;
+    DispatcherFixture rig;
     rig.addDevice( "dead" );
     rig.addDevice( "alive" );
     rig._provider.scriptResult( "dead", PushDeliveryStatus::InvalidToken );
@@ -111,14 +111,14 @@ SW_TEST_CASE( PushDispatcherTest, InvalidTokenRemovesTheDevice )
 /** @brief [PushDispatcherTest] 일시 실패는 1, 2, 4, 8 초 백오프로 다시 보내고 다섯 번 지면 버린다. 기기는 지우지 않는다 */
 SW_TEST_CASE( PushDispatcherTest, TransientRetriesWithBackoffThenDrops )
 {
-    DispatcherRig rig;
+    DispatcherFixture rig;
     rig.addDevice( "a" );
     rig._provider.scriptResult( "a", PushDeliveryStatus::Transient, 100 );
     rig.notify();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._provider.getSent().size() );
 
-    size_t expectedSent = 1;
-    int64  sinceLastMs  = 0;
+    size_t expectedSent    = 1;
+    int64  timeSinceLastMs = 0;
     for ( int64 backoffMs : { 1000ll, 2000ll, 4000ll, 8000ll } )
     {
         rig._nowMs += backoffMs - 1;
@@ -128,9 +128,9 @@ SW_TEST_CASE( PushDispatcherTest, TransientRetriesWithBackoffThenDrops )
         rig.pump();
         ++expectedSent;
         SW_EXPECT_EQUAL( expectedSent, rig._provider.getSent().size() );
-        sinceLastMs += backoffMs;
+        timeSinceLastMs += backoffMs;
     }
-    SW_EXPECT_EQUAL( int64( 15000 ), sinceLastMs );
+    SW_EXPECT_EQUAL( int64( 15000 ), timeSinceLastMs );
     rig.pump();
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._droppedCount );
     SW_EXPECT_EQUAL( 0, rig._dispatcher.getInFlightCount() );
@@ -143,7 +143,7 @@ SW_TEST_CASE( PushDispatcherTest, TransientRetriesWithBackoffThenDrops )
 /** @brief [PushDispatcherTest] 제공자가 늦추라고 한 시간이 백오프보다 길면 그 시간을 따르고, 그 뒤 성공하면 끝난다 */
 SW_TEST_CASE( PushDispatcherTest, RateLimitedHonorsTheProviderDelay )
 {
-    DispatcherRig rig;
+    DispatcherFixture rig;
     rig.addDevice( "a" );
     rig._provider.scriptResult( "a", PushDeliveryStatus::RateLimited, 1, 60000 );
     rig.notify();
@@ -161,7 +161,7 @@ SW_TEST_CASE( PushDispatcherTest, RateLimitedHonorsTheProviderDelay )
 SW_TEST_CASE( PushDispatcherTest, RejectedIsDroppedOnce )
 {
     SW_EXPECT_LOG( "PushNotificationDispatcher.PushDispatcherProviderRejectedNotification" );
-    DispatcherRig rig;
+    DispatcherFixture rig;
     rig.addDevice( "a" );
     rig._provider.scriptResult( "a", PushDeliveryStatus::Rejected );
     rig.notify();
@@ -178,7 +178,7 @@ SW_TEST_CASE( PushDispatcherTest, AccountBurstIsLimited )
 {
     PushDispatcherConfig settings;
     settings._accountBurst = 2;
-    DispatcherRig rig( settings );
+    DispatcherFixture rig( settings );
     rig.addDevice( "a" );
     PushNotificationMessage message;
     SW_EXPECT_TRUE( rig._dispatcher.notifyAccount( kAccount, message, UnixMilliseconds{ rig._nowMs } ) );
@@ -193,7 +193,7 @@ SW_TEST_CASE( PushDispatcherTest, AccountBurstIsLimited )
 /** @brief [PushDispatcherTest] 기기 한도를 넘으면 가장 오래 등록된 기기를 밀어내고, 같은 토큰을 다시 등록하면 덮어쓴다 */
 SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldest )
 {
-    DispatcherRig rig;
+    DispatcherFixture rig;
     for ( int32 index = 0; index < PushLimit::kMaxDevicePerAccount; ++index )
     {
         rig.addDevice( "t" + to_string( index ), kNowMs + index );
@@ -212,7 +212,7 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldest )
 /** @brief [PushDispatcherTest] 등록 · 해지의 완료: 형식이 틀리면 Invalid, 없는 기기 해지는 NotFound, 맞으면 Ok 이고 해지한 기기에는 보내지 않는다. 태그 0 은 완료가 없다 */
 SW_TEST_CASE( PushDispatcherTest, RegistrationCompletions )
 {
-    DispatcherRig          rig;
+    DispatcherFixture      rig;
     PushDeviceRegistration registration;
     registration._providerID = "fake";
     registration._token      = "a";
@@ -245,7 +245,7 @@ SW_TEST_CASE( PushDispatcherTest, RegistrationCompletions )
 /** @brief [PushDispatcherTest] 저장소를 읽지 못한 알림은 버린다(배달은 최대 한 번) — 멈추거나 빈 목록으로 기기를 지우지 않는다 */
 SW_TEST_CASE( PushDispatcherTest, StoreFailureDropsTheNotification )
 {
-    DispatcherRig rig;
+    DispatcherFixture rig;
     rig.addDevice( "a" );
     rig._database.armFault( ServiceStoreFault::RejectRead );
     rig.notify();
@@ -258,7 +258,7 @@ SW_TEST_CASE( PushDispatcherTest, StoreFailureDropsTheNotification )
 /** @brief [PushDispatcherTest] 토픽: 같은 표로는 한 번만 보내고, 잘못된 표 키는 보내지 않고 센다. 토픽의 일시 실패도 다시 보내며 기기를 건드리지 않는다 */
 SW_TEST_CASE( PushDispatcherTest, TopicClaimSendsOnce )
 {
-    DispatcherRig                 rig;
+    DispatcherFixture             rig;
     const PushNotificationMessage message;
     rig._dispatcher.notifyTopicOnce( "event.1", "news", message, UnixMilliseconds{ rig._nowMs } );
     rig._dispatcher.notifyTopicOnce( "event.1", "news", message, UnixMilliseconds{ rig._nowMs } );
