@@ -2,6 +2,7 @@
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -53,12 +54,12 @@ namespace sw
         , _statusTimer{ 0.0f }
         , _huntTimer{ 0.0f }
         , _arrAIActive{ SW_FALSE, SW_FALSE }
-        , _bHumanPlayer{ SW_FALSE }
+        , _humanMask{ 0 }
         , _bReportedOver{ SW_FALSE }
     {
     }
 
-    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings )
+    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings )
     {
         if ( _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} ) == false )
             return false;
@@ -81,7 +82,7 @@ namespace sw
         _listFrameEvent.clear();
         _statusTimer   = 0.0f;
         _huntTimer     = 0.0f;
-        _bHumanPlayer  = bHumanPlayer ? SW_TRUE : SW_FALSE;
+        _humanMask     = static_cast<uint8>( humanMask & ( kHumanPlayer0 | kHumanPlayer1 ) );
         _bReportedOver = SW_FALSE;
         paintMap();
 
@@ -108,23 +109,24 @@ namespace sw
 
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            const bool bAI               = bHumanPlayer == false || player != 0;
+            const bool bAI               = isHumanPlayer( player ) == false;
             _arrAIActive[player]         = bAI ? SW_TRUE : SW_FALSE;
-            const SkirmishAIStyle& style = bHumanPlayer ? _settings._opponentAI : player == 0 ? _settings._rushAI
-                                                                                              : _settings._macroAI;
+            const SkirmishAIStyle& style = hasHumanPlayer() ? _settings._opponentAI : player == 0 ? _settings._rushAI
+                                                                                                  : _settings._macroAI;
             if ( bAI )
             {
                 SW_ASSERT( _settings._pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
                 _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), *_settings._pCommanderTree );
             }
         }
-        SW_LOG_INFO_ID( "SkirmishMatch.MatchStart", "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
+        SW_LOG_INFO_ID( "SkirmishMatch.MatchStart", "[Skirmish] match start - %#", _humanMask == ( kHumanPlayer0 | kHumanPlayer1 ) ? "blue (host) vs red (client)" : _humanMask != 0 ? "you (blue, south-west) vs computer (red)"
+                                                                                                                                                                                     : "computer (rush, blue) vs computer (macro, red)" );
         return true;
     }
 
     void SkirmishMatch::serializeState( StateIO& io )
     {
-        io.expect( _bHumanPlayer );
+        io.expect( _humanMask );
         io.value( _world );
         if ( io.isOk() == false )
             return;
@@ -259,7 +261,7 @@ namespace sw
             {
                 _bReportedOver                            = SW_TRUE;
                 [[maybe_unused]] const int32 winner       = _world.getWinningTeam();
-                [[maybe_unused]] const bool  bHumanResult = _bHumanPlayer != SW_FALSE;
+                [[maybe_unused]] const bool  bHumanResult = _humanMask == kHumanPlayer0; // 혼자 하는 판만 "승리 · 패배" 다(2 인 대전은 두 사람이다)
                 logStatus();
                 SW_LOG_INFO_ID( "SkirmishMatch.GameOverTPlayer", "[Skirmish] game over at t=%#s - player %# wins%#", static_cast<int32>( _world.getTime() ), winner,
                                 bHumanResult ? ( winner == 0 ? " (victory!)" : " (defeat)" ) : "" );
@@ -325,6 +327,14 @@ namespace sw
         } );
         if ( bestDistance < MathUtil::kMaxFloat )
             (void)_world.issueGroupMove( listArrived, target, true );
+    }
+
+    uint32 SkirmishMatch::computeChecksum() const
+    {
+        // 세이브 바이트를 해시한다 - 월드 · 지갑 · AI 진행 · 시계가 모두 들어 어긋난 칸을 빠뜨리지 않는다(칸을 골라 섞으면 새 칸을 잊는다).
+        Archive archive;
+        writeState( archive );
+        return HashUtil::appendBytes32( HashUtil::kFNVOffset32, archive.getData(), static_cast<size_t>( archive.getSize() ) );
     }
 
     SkirmishPlayerSummary SkirmishMatch::makeSummary( int32 player ) const

@@ -7,6 +7,8 @@
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
  *          스폰은 틱 안에서 할 수 없으므로 보이기 시작한 유닛과 사라진 유닛의 슬롯을 쌓아 두었다가 `executeOrDeferPostTick` 한 번으로 틱이 끝난 뒤에 스폰하고 지운다.
+ *          사람의 명령은 모두 값(`RTSCommand`)으로 만들어 `submitCommand` 한 곳으로 낸다. 혼자 하면 월드에 바로 적용하고, 넷 세션이 열려 있으면(2 인 대전)
+ *          락스텝 입력에 실어 두 프로세스가 같은 틱에 적용한다(`SkirmishLockstepLink`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -29,6 +31,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
+#include "Games/StarSkirmish/SkirmishLockstepLink.h"
 #include "Games/StarSkirmish/SkirmishMatch.h"
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
@@ -66,9 +69,17 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
-        const RTSWorld&      getWorld() const { return _match.getWorld(); }
-        const SkirmishMatch& getMatch() const { return _match; }
-        bool                 isSelected( RTSUnitID unitID ) const { return _selection.isSelected( unitID ); }
+        const RTSWorld&             getWorld() const { return _match.getWorld(); }
+        const SkirmishMatch&        getMatch() const { return _match; }
+        const SkirmishLockstepLink& getLockstep() const { return _lockstep; }
+        /** @brief 이 화면이 맡은 플레이어입니다. 혼자 하면 0 번, 2 인 대전이면 서버 0 번 · 클라이언트 1 번입니다. */
+        int32 getLocalPlayer() const { return _lockstep.isActive() ? _lockstep.getLocalPlayer() : 0; }
+        /**
+         * @brief 사람의 명령 하나를 냅니다. 2 인 대전이면 다음 락스텝 입력에 싣고(-1 — 아직 적용 전), 아니면 이 화면의 플레이어로 월드에 바로 적용해 받은 유닛 수를 반환합니다.
+         * @details 개발 명령(`skirmish.order`)과 입력이 같은 길로 들어온다.
+         */
+        int32 submitCommand( RTSCommand&& command );
+        bool  isSelected( RTSUnitID unitID ) const { return _selection.isSelected( unitID ); }
         /** @brief 유닛 주인(또는 자원 종류)과 선택 여부를 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
         /** @brief 끌어서 선택하는 중이면 true 를 반환하고, 땅 위 상자의 중심과 크기를 채웁니다. */
@@ -236,6 +247,7 @@ namespace sw
         shared_ptr<const BehaviorTreeAsset>        _pCommanderTree;
         CommanderDebugSource                       _commanderDebugSource;
         SkirmishMatch                              _match;
+        SkirmishLockstepLink                       _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
         RTSSelection                               _selection;
         vector<RTSEvent>                           _listEvent;
         vector<UnitSlot>                           _listUnitSlot;

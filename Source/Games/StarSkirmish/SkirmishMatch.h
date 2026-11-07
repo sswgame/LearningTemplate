@@ -3,7 +3,8 @@
  * @brief StarSkirmish 의 한 판 규칙 — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 시작 유닛, 컴퓨터 상대(`RTSCommanderAI`), 정리 사냥, 상태 · 승패 로그입니다.
  *
  * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `RTSWorld` · `RTSCommanderAI` 만 씁니다).
- *          사람이 0 번을 맡으면 AI 는 1 번만, 자동 플레이면 둘 다 AI 입니다. 두 AI 는 성향이 다릅니다(0 번 러시 · 1 번 운영) — 같은 AI 끼리면 대칭이라
+ *          사람이 맡은 플레이어(`kHumanPlayer0` · `kHumanPlayer1` 깃발)는 AI 가 돌지 않습니다 — 혼자 하면 0 번만, 2 인 락스텝이면 둘 다, 자동 플레이면 아무도 사람이 아닙니다.
+ *          둘 다 AI 면 성향이 다릅니다(0 번 러시 · 1 번 운영) — 같은 AI 끼리면 대칭이라
  *          가운데서 서로 지우기만 하고 끝나지 않는다.
  */
 #pragma once
@@ -92,8 +93,10 @@ namespace sw
     class SkirmishMatch
     {
     public:
-        static constexpr int32 kMapSize     = 64;
-        static constexpr int32 kPlayerCount = 2;
+        static constexpr int32 kMapSize      = 64;
+        static constexpr int32 kPlayerCount  = 2;
+        static constexpr uint8 kHumanPlayer0 = 1u << 0; ///< 사람 깃발 - 0 번을 사람이 맡는다(옛 "사람 여부" 값 1 과 같아 세이브 바이트가 그대로다)
+        static constexpr uint8 kHumanPlayer1 = 1u << 1;
 
         SkirmishMatch();
 
@@ -102,19 +105,22 @@ namespace sw
 
         /**
          * @brief 맵을 칠하고 두 기지(본진 · 일꾼 넷 · 광물 여덟 · 간헐천)를 놓습니다.
-         * @param bHumanPlayer 0 번을 사람이 맡는가(아니면 둘 다 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
+         * @param humanMask 사람이 맡는 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`, 0 이면 둘 다 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
          * @return 월드(`RTSWorld::initialize`)가 거절하면 false 입니다. 그러면 판을 시작하지 않는다.
          */
-        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings );
+        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings );
         /** @brief 월드 · AI 를 돌리고 알림을 AI 에 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
         void pollEvents( vector<RTSEvent>& outListEvent );
 
-        RTSWorld&             getWorld() { return _world; }
-        const RTSWorld&       getWorld() const { return _world; }
-        bool                  isCliff( int32 x, int32 y ) const;
-        bool                  hasHumanPlayer() const { return _bHumanPlayer != SW_FALSE; }
+        RTSWorld&       getWorld() { return _world; }
+        const RTSWorld& getWorld() const { return _world; }
+        bool            isCliff( int32 x, int32 y ) const;
+        bool            hasHumanPlayer() const { return _humanMask != 0; }
+        bool            isHumanPlayer( int32 player ) const { return 0 <= player && player < kPlayerCount && ( _humanMask & ( 1u << player ) ) != 0; }
+        /** @brief 판 상태(세이브와 같은 바이트)의 해시입니다. 락스텝 두 프로세스가 같은 틱에 같은 값을 내야 합니다. */
+        uint32                computeChecksum() const;
         bool                  isOver() const { return _world.getWinningTeam() >= 0; }
         SkirmishPlayerSummary makeSummary( int32 player ) const;
         /** @brief 플레이어 @p player 를 맡은 컴퓨터 상대입니다. 사람이 맡았거나 범위 밖이면 nullptr 입니다(자동화 감시 값 `Skirmish.AITask`). */
@@ -153,7 +159,7 @@ namespace sw
         float32               _statusTimer;
         float32               _huntTimer;
         uint8                 _arrAIActive[kPlayerCount];
-        uint8                 _bHumanPlayer;
+        uint8                 _humanMask; ///< 사람이 맡은 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`)
         uint8                 _bReportedOver;
     };
 } // namespace sw

@@ -2,10 +2,13 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "StarSkirmish — 실시간 전략 테스트 게임(스타크래프트 장르) — GF_RealTimeStrategy 키트를 쓴다",
+    "_description": "StarSkirmish — 실시간 전략 테스트 게임(스타크래프트 장르) — GF_RealTimeStrategy 키트를 쓴다 — 넷 세션이 열리면 GF_NetLockstep 으로 2 인 대전(명령만 나누는 락스텝)",
     "_listDependency": [
         {
             "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_NetLockstep"
         },
         {
             "_name": "GF_RealTimeStrategy"

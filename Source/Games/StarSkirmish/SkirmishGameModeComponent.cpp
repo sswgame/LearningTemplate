@@ -7,11 +7,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
 #include "Core/String/FourCcUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/IInputCaptureQuery.h"
@@ -23,6 +25,8 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -117,6 +121,78 @@ namespace sw
         }
     } // namespace
 
+    namespace
+    {
+        /** @brief 개발 명령입니다. 활성 씬의 디렉터를 찾습니다. */
+        struct SkirmishGameModeComponentDevInternal
+        {
+            [[nodiscard]] static SkirmishGameModeComponent* findDirector( string& outReply )
+            {
+                const SceneManager* const  pScenes   = game::findSubsystem<SceneManager>();
+                const Scene* const         pScene    = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
+                GameObjectManager* const   pManager  = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+                SkirmishGameModeComponent* pDirector = nullptr;
+                if ( pManager != nullptr )
+                {
+                    pManager->forEachComponentOfType<SkirmishGameModeComponent>( [&pDirector]( SkirmishGameModeComponent* pFound )
+                    {
+                        if ( pDirector == nullptr )
+                            pDirector = pFound;
+                    } );
+                }
+                if ( pDirector == nullptr )
+                    outReply = "skirmish: no skirmish director in the active scene";
+                return pDirector;
+            }
+
+            static bool runOrder( const vector<string>& listArgument, string& outReply )
+            {
+                float32 x = 0.0f;
+                float32 z = 0.0f;
+                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[0], x ) == false || StringUtil::parseFloat( listArgument[1], z ) == false )
+                    return false;
+                SkirmishGameModeComponent* const pDirector = findDirector( outReply );
+                if ( pDirector == nullptr )
+                    return true;
+                const int32 player = pDirector->getLocalPlayer();
+                RTSCommand  command;
+                command._kind        = RTSCommandKind::GroupMove;
+                command._target      = float3{ x, 0.0f, z };
+                command._bAttackMove = SW_TRUE;
+                pDirector->getWorld().forEachUnit( [player, &command]( const RTSUnit& unit )
+                {
+                    const bool bArmy = unit._owner == player && unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack();
+                    if ( bArmy && static_cast<int32>( command._listUnit.size() ) < RTSCommand::kMaxUnitCount )
+                        command._listUnit.push_back( unit._id );
+                } );
+                const uint32 unitCount = static_cast<uint32>( command._listUnit.size() );
+                const int32  applied   = pDirector->submitCommand( std::move( command ) );
+                outReply               = formatToString( "skirmish: player %# attack-moves %# units - %#", player, unitCount, applied < 0 ? "sent with the next lockstep input" : "applied" );
+                return true;
+            }
+
+            static bool runLockstepStatus( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const SkirmishGameModeComponent* const pDirector = findDirector( outReply );
+                if ( pDirector == nullptr )
+                    return true;
+                const SkirmishLockstepLink& lockstep = pDirector->getLockstep();
+                if ( lockstep.isActive() == false )
+                {
+                    outReply = "skirmish: not a network match";
+                    return true;
+                }
+                const LockstepSession& session = lockstep.getSession();
+                outReply                       = formatToString( "skirmish lockstep: player %# tick %# stalls %# desynced %# applied %# %#", lockstep.getLocalPlayer(), session.getCurrentTick(), session.getStallCount(),
+                                           session.isDesynced() ? 1 : 0, lockstep.getAppliedCommandCount( 0 ), lockstep.getAppliedCommandCount( 1 ) );
+                SW_LOG_INFO_ID( "SkirmishGameMode.LockstepStatus", "[Skirmish] %#", outReply.c_str() );
+                return true;
+            }
+        };
+    } // namespace
+
     /**
      * @brief `-gv_skirmishAutoPlay=1`: 디렉터를 컴퓨터 대 컴퓨터(러시 대 운영)로 엽니다(씬의 `_bAutoPlay` 가 꺼져 있어도 엽니다). 입력 없이 승패까지 가므로 확인과 화면 녹화에 씁니다.
      * @details 배포본으로도 돌릴 수 있게 남겨 둔다. `App -gv_skirmishAutoPlay=1` 로 실행하면 30초마다 `[Skirmish] t=.. p0 workers .. army ..` 가, 끝에는 승패가 로그에 남는다.
@@ -126,6 +202,11 @@ namespace sw
 
     SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", SkirmishGameModeComponent, &readSelectedCount );
     SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", SkirmishGameModeComponent, &readSelectedMovingCount );
+    SW_DEV_COMMAND( SkirmishOrder, "skirmish.order", "skirmish.order <x> <z>", "Attack-move every army unit of this screen's player to the map point (through the lockstep input in a network match)",
+                    &SkirmishGameModeComponentDevInternal::runOrder );
+    SW_DEV_COMMAND( SkirmishLockstepStatus, "skirmish.lockstep", "skirmish.lockstep", "Show the network match lockstep tick, stalls, desync and applied command counts",
+                    &SkirmishGameModeComponentDevInternal::runLockstepStatus );
+
     SW_AUTOMATION_QUERY_WATCH( skirmishAITask, "Skirmish.AITask", "Active behavior tree task of the AI commander playing player key (0 or 1)", &readAITask, false, true );
 } // namespace sw
 
@@ -182,6 +263,7 @@ namespace sw
         , _pCommanderTree{}
         , _commanderDebugSource{ *this }
         , _match{}
+        , _lockstep{}
         , _selection{}
         , _listEvent{}
         , _listUnitSlot{}
@@ -225,6 +307,7 @@ namespace sw
     void SkirmishGameModeComponent::onEndPlay()
     {
         _unitModels.clear();
+        _lockstep.close();
         GameModeComponent::onEndPlay();
     }
 
@@ -250,11 +333,16 @@ namespace sw
                 pRig->startWithPreset( _watchCameraPreset );
             }
         }
+        // 2 인 대전의 클라이언트(1 번, 북동)는 씬의 카메라 초점(0 번 본진)이 아니라 자기 본진에서 시작한다.
+        const RTSPlayer* pLocalPlayer = _match.getWorld().findPlayer( getLocalPlayer() );
+        if ( pRig != nullptr && _bHuman == SW_TRUE && getLocalPlayer() != 0 && pLocalPlayer != nullptr )
+            pRig->setFocusPoint( float3{ pLocalPlayer->_startPosition._x, 0.0f, pLocalPlayer->_startPosition._z } );
         if ( _bHuman == SW_TRUE )
         {
-            SW_LOG_INFO_ID( "SkirmishGameMode.YouBlueDragSelect", "[Skirmish] you are blue - drag to select, right click to move/attack/gather, A attack-move, S stop, H hold, Q/W/E train, "
+            SW_LOG_INFO_ID( "SkirmishGameMode.YouBlueDragSelect", "[Skirmish] you are %# - drag to select, right click to move/attack/gather, A attack-move, S stop, H hold, Q/W/E train, "
                                                                   "B depot · N barracks · G refinery · Y academy · F factory · T starport · U bunker at the cursor, Ctrl+1..9 groups, arrows pan, "
-                                                                  "wheel zoom, - = speed, P pause, F1 status" );
+                                                                  "wheel zoom, - = speed, P pause, F1 status",
+                            getLocalPlayer() == 0 ? "blue" : "red" );
         }
         else
             SW_LOG_INFO_ID( "SkirmishGameMode.WatchingComputerVsComputer", "[Skirmish] watching computer vs computer - arrows/WASD pan, wheel zoom, - = speed, P pause, F1 status" );
@@ -268,7 +356,9 @@ namespace sw
         const InputManager* pInput = game::findSubsystem<InputManager>();
         if ( pInput != nullptr )
             updateInput( *pInput );
-        if ( _bPaused == SW_FALSE )
+        if ( _lockstep.isActive() )
+            (void)_lockstep.advance( deltaTime, _match.getWorld().getSettings()._fixedStep, _match ); // 두 프로세스가 같은 걸음으로 돈다 - 속도 · 일시정지는 쓰지 않는다
+        else if ( _bPaused == SW_FALSE )
             _match.update( deltaTime * _timeScale );
         handleEvents();
         _selection.prune( _match.getWorld() );
@@ -359,7 +449,12 @@ namespace sw
             SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the game mode needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
             return false;
         }
-        _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
+        // 넷 세션이 열려 있으면 2 인 락스텝 대전이다(서버 0 번 · 클라이언트 1 번). 자동 플레이면 두 AI 가 양쪽 프로세스에서 같은 판 규칙으로 돈다.
+        if ( _lockstep.open() == false )
+            return false; // 까닭은 락스텝이 남겼다
+        _bHuman                         = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
+        const uint8           humanMask = _bHuman == SW_FALSE ? uint8{ 0 } : _lockstep.isActive() ? uint8( SkirmishMatch::kHumanPlayer0 | SkirmishMatch::kHumanPlayer1 )
+                                                                                                  : SkirmishMatch::kHumanPlayer0;
         SkirmishMatchSettings matchSettings;
         matchSettings._huntIntervalSeconds   = _huntIntervalSeconds;
         matchSettings._arrivedRadius         = _arrivedRadius;
@@ -374,10 +469,10 @@ namespace sw
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
         matchSettings._pCommanderTree        = &_pCommanderTree->getTree();
-        if ( _match.initialize( _pCatalog.get(), _bHuman == SW_TRUE, matchSettings ) == false )
+        if ( _match.initialize( _pCatalog.get(), humanMask, matchSettings ) == false )
             return false;
         _selection.clear();
-        _selection.setPlayer( 0 );
+        _selection.setPlayer( getLocalPlayer() );
         _selection.setMaxCount( _maxSelectionCount );
         _listEvent.clear();
         return true;
@@ -474,11 +569,12 @@ namespace sw
     {
         // 보일 유닛은 사람 쪽 화면이 안 보이는 적을 그리지 않게 정한다(자원은 항상 보인다). 슬롯의 유닛이 바뀌었거나 이번에 못 본 슬롯(죽음, 안개)만 쌓는다.
         ++_frameStamp;
-        const RTSWorld& world  = _match.getWorld();
-        const bool      bHuman = _bHuman == SW_TRUE;
-        world.forEachUnit( [this, &world, bHuman]( const RTSUnit& unit )
+        const RTSWorld& world       = _match.getWorld();
+        const bool      bHuman      = _bHuman == SW_TRUE;
+        const int32     localPlayer = getLocalPlayer();
+        world.forEachUnit( [this, &world, bHuman, localPlayer]( const RTSUnit& unit )
         {
-            const bool bHiddenFromHuman = bHuman && unit._owner != 0 && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false;
+            const bool bHiddenFromHuman = bHuman && unit._owner != localPlayer && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( localPlayer, unit._id ) == false;
             if ( bHiddenFromHuman )
                 return;
             if ( _pUnitModelCatalog->find( unit._pDef->_id ) == nullptr )
@@ -509,12 +605,15 @@ namespace sw
         // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
         const GameInputView inputMap( input.getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
         const bool          bFaster = inputMap.wasActionTriggered( _fasterAction );
-        if ( bFaster || inputMap.wasActionTriggered( _slowerAction ) )
+        const bool          bTiming = bFaster || inputMap.wasActionTriggered( _slowerAction ) || inputMap.wasActionTriggered( _pauseAction );
+        if ( bTiming && _lockstep.isActive() )
+            SW_LOG_INFO_ID( "SkirmishGameMode.TimingInNetMatch", "[Skirmish] speed and pause are off in a network match - both players run the same steps" );
+        else if ( bFaster || inputMap.wasActionTriggered( _slowerAction ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
             SW_LOG_INFO_ID( "SkirmishGameMode.SpeedX", "[Skirmish] speed x%#", _timeScale );
         }
-        if ( inputMap.wasActionTriggered( _pauseAction ) )
+        if ( _lockstep.isActive() == false && inputMap.wasActionTriggered( _pauseAction ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO_ID( "SkirmishGameMode.PauseToggled", "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
@@ -549,10 +648,10 @@ namespace sw
             const bool bHold = inputMap.wasActionTriggered( _holdAction );
             if ( bHold || inputMap.wasActionTriggered( _stopAction ) )
             {
-                for ( const RTSUnitID unitID : _selection.getSelected() )
-                {
-                    (void)( bHold ? world.issueHold( unitID ) : world.issueStop( unitID ) );
-                }
+                RTSCommand command;
+                command._kind     = bHold ? RTSCommandKind::Hold : RTSCommandKind::Stop;
+                command._listUnit = _selection.getSelected();
+                (void)submitCommand( std::move( command ) );
             }
             for ( size_t productIndex = 0; productIndex < _listTrainAction.size(); ++productIndex )
             {
@@ -600,8 +699,14 @@ namespace sw
             if ( _bAttackMovePending == SW_TRUE )
             {
                 // A 다음 선택(왼쪽 클릭)이면 선택한 병력을 그 위치로 공격 이동시킨다.
-                _bAttackMovePending                = SW_FALSE;
-                [[maybe_unused]] const int32 count = world.issueGroupMove( _selection.getSelected(), point, true, bShift );
+                _bAttackMovePending = SW_FALSE;
+                RTSCommand command;
+                command._kind                      = RTSCommandKind::GroupMove;
+                command._listUnit                  = _selection.getSelected();
+                command._target                    = point;
+                command._bAttackMove               = SW_TRUE;
+                command._bQueue                    = bShift ? SW_TRUE : SW_FALSE;
+                [[maybe_unused]] const int32 count = submitCommand( std::move( command ) );
                 SW_LOG_INFO_ID( "SkirmishGameMode.UnitsAttackMove", "[Skirmish] %# units attack-move to (%#, %#)", count, static_cast<int32>( point._x ), static_cast<int32>( point._z ) );
                 return;
             }
@@ -642,22 +747,36 @@ namespace sw
         if ( _selection.getSelected().empty() || _selection.isCommandable( world ) == false )
             return;
         // 유닛이나 자원을 눌렀으면 하나씩 상황에 맞는 명령(공격, 채취, 이어 짓기)을 낸다. 빈 땅이면 움직이는 것은 무리 이동, 건물은 집결지 지정이다.
-        const RTSUnitID   targetID = world.pickUnit( point );
-        vector<RTSUnitID> listMobile;
+        const RTSUnitID targetID = world.pickUnit( point );
+        RTSCommand      rally;
+        RTSCommand      smart;
+        RTSCommand      groupMove;
+        rally._kind     = RTSCommandKind::Rally;
+        smart._kind     = RTSCommandKind::Smart;
+        groupMove._kind = RTSCommandKind::GroupMove;
+        for ( RTSCommand* pCommand : { &rally, &smart, &groupMove } )
+        {
+            pCommand->_target   = point;
+            pCommand->_targetID = targetID;
+            pCommand->_bQueue   = bQueue ? SW_TRUE : SW_FALSE;
+        }
         for ( const RTSUnitID unitID : _selection.getSelected() )
         {
             const RTSUnit* pUnit = world.findUnit( unitID );
             if ( pUnit == nullptr )
                 continue;
             if ( pUnit->isBuilding() )
-                world.setRallyPoint( unitID, point );
+                rally._listUnit.push_back( unitID );
             else if ( targetID.isValid() && targetID != unitID )
-                (void)world.issueSmart( unitID, point, targetID, bQueue );
+                smart._listUnit.push_back( unitID );
             else
-                listMobile.push_back( unitID );
+                groupMove._listUnit.push_back( unitID );
         }
-        if ( listMobile.empty() == false )
-            (void)world.issueGroupMove( listMobile, point, false, bQueue );
+        for ( RTSCommand* pCommand : { &rally, &smart, &groupMove } )
+        {
+            if ( pCommand->_listUnit.empty() == false )
+                (void)submitCommand( std::move( *pCommand ) );
+        }
     }
 
     bool SkirmishGameModeComponent::hasValidNames() const
@@ -754,8 +873,14 @@ namespace sw
             SW_LOG_INFO_ID( "SkirmishGameMode.NoFreeGeyserNear", "[Skirmish] no free geyser near the cursor for %#", pDef->_name.c_str() );
             return;
         }
-        [[maybe_unused]] const RTSCommandResult result = world.issueBuild( workerID, pDef->_id, cell );
-        SW_LOG_INFO_ID( "SkirmishGameMode.Build", "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, getEnumName( result ) );
+        RTSCommand command;
+        command._kind                      = RTSCommandKind::Build;
+        command._listUnit                  = { workerID };
+        command._defID                     = pDef->_id;
+        command._cell                      = cell;
+        [[maybe_unused]] const int32 count = submitCommand( std::move( command ) );
+        SW_LOG_INFO_ID( "SkirmishGameMode.Build", "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, count > 0 ? "ok" : count < 0 ? "sent"
+                                                                                                                                                             : "refused" );
     }
 
     void SkirmishGameModeComponent::trainFromPrimary( int32 productIndex )
@@ -768,9 +893,21 @@ namespace sw
         _pCatalog->findProducts( pPrimary->_pDef->_id, listProduct );
         if ( productIndex >= static_cast<int32>( listProduct.size() ) )
             return;
-        const RTSUnitDef&                       product = *listProduct[static_cast<size_t>( productIndex )];
-        [[maybe_unused]] const RTSCommandResult result  = world.train( pPrimary->_id, product._id );
-        SW_LOG_INFO_ID( "SkirmishGameMode.Train", "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), getEnumName( result ) );
+        const RTSUnitDef& product = *listProduct[static_cast<size_t>( productIndex )];
+        RTSCommand        command;
+        command._kind                      = RTSCommandKind::Train;
+        command._listUnit                  = { pPrimary->_id };
+        command._defID                     = product._id;
+        [[maybe_unused]] const int32 count = submitCommand( std::move( command ) );
+        SW_LOG_INFO_ID( "SkirmishGameMode.Train", "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), count > 0 ? "ok" : count < 0 ? "sent"
+                                                                                                                                                                       : "refused" );
+    }
+
+    int32 SkirmishGameModeComponent::submitCommand( RTSCommand&& command )
+    {
+        if ( _lockstep.isActive() )
+            return _lockstep.queueCommand( std::move( command ) ) ? -1 : 0;
+        return _match.getWorld().applyCommand( getLocalPlayer(), command );
     }
 
     bool SkirmishGameModeComponent::findGroundPoint( const InputManager& input, float3& outPoint ) const

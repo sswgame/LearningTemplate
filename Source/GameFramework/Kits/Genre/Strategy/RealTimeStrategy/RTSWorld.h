@@ -31,6 +31,8 @@
 
 namespace sw
 {
+    struct RTSCommand;
+
     class Archive;
     class Wallet;
 
@@ -275,6 +277,11 @@ namespace sw
         /** @brief 대기열의 마지막 항목을 빼고 비용을 돌려받습니다. */
         bool cancelTrain( RTSUnitID buildingID );
         void setRallyPoint( RTSUnitID buildingID, const float3& position );
+        /**
+         * @brief 플레이어 @p player 가 낸 명령(`RTSCommand`) 하나를 적용합니다. 화면이 바로 내리는 명령과 락스텝이 나눈 명령이 같은 길로 들어옵니다.
+         * @details 명령의 유닛 가운데 @p player 의 살아 있는 유닛만 받는다(망을 건너온 입력이 남의 유닛을 움직이지 못한다). 받은 유닛 수를 반환합니다.
+         */
+        int32 applyCommand( int32 player, const RTSCommand& command );
 
         /** @brief 시간을 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다. */
         void update( float32 deltaTime );

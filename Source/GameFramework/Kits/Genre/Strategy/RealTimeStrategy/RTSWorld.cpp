@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommand.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -1918,5 +1919,63 @@ namespace sw
                     order._pFlowField = _flowParams.acquire( _grid, _grid.computeCell( order._target ) );
             }
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    int32 RTSWorld::applyCommand( int32 player, const RTSCommand& command )
+    {
+        vector<RTSUnitID> listOwned;
+        listOwned.reserve( command._listUnit.size() );
+        for ( const RTSUnitID unitID : command._listUnit )
+        {
+            const RTSUnit* pUnit = findUnit( unitID );
+            if ( pUnit != nullptr && pUnit->_owner == player )
+                listOwned.push_back( unitID );
+        }
+        if ( listOwned.empty() )
+            return 0;
+        const bool bQueue = command._bQueue != SW_FALSE;
+        int32      count  = 0;
+        switch ( command._kind )
+        {
+            case RTSCommandKind::Smart:
+                for ( const RTSUnitID unitID : listOwned )
+                {
+                    count += issueSmart( unitID, command._target, command._targetID, bQueue ) == RTSCommandResult::Ok ? 1 : 0;
+                }
+                break;
+            case RTSCommandKind::GroupMove:
+                count = issueGroupMove( listOwned, command._target, command._bAttackMove != SW_FALSE, bQueue );
+                break;
+            case RTSCommandKind::Hold:
+            case RTSCommandKind::Stop:
+                for ( const RTSUnitID unitID : listOwned )
+                {
+                    const RTSCommandResult result = command._kind == RTSCommandKind::Hold ? issueHold( unitID ) : issueStop( unitID );
+                    count += result == RTSCommandResult::Ok ? 1 : 0;
+                }
+                break;
+            case RTSCommandKind::Build:
+                count = issueBuild( listOwned.front(), command._defID, command._cell, bQueue ) == RTSCommandResult::Ok ? 1 : 0;
+                break;
+            case RTSCommandKind::Train:
+                count = train( listOwned.front(), command._defID ) == RTSCommandResult::Ok ? 1 : 0;
+                break;
+            case RTSCommandKind::Rally:
+                for ( const RTSUnitID unitID : listOwned )
+                {
+                    const RTSUnit* pUnit = findUnit( unitID );
+                    if ( pUnit->isBuilding() == false )
+                        continue;
+                    setRallyPoint( unitID, command._target );
+                    ++count;
+                }
+                break;
+            case RTSCommandKind::Count:
+                break;
+        }
+        return count;
     }
 } // namespace sw
