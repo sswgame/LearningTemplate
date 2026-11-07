@@ -52,7 +52,7 @@ SW_TEST_CASE( RigAssetTest, ReadsNodeFieldsAndItems )
 namespace
 {
     /** @brief 노드 한 줄을 리그로 읽습니다(대상 `Grip` 은 늘 있다). */
-    bool parseNode( const utf8* pNodeLine )
+    bool loadNodeFromXML( const utf8* pNodeLine )
     {
         RigAsset     asset;
         const string xml = string( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>)" ) + pNodeLine + "</nodes></RigAsset>";
@@ -64,28 +64,28 @@ namespace
 SW_TEST_CASE( RigAssetTest, RejectsUnknownKey )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
-    SW_EXPECT_FALSE( parseNode( R"(<item type="TwoBoneIK" name="Arm" root="a" mid="b" end="c" target="Grip" typo="1" />)" ) );
+    SW_EXPECT_FALSE( loadNodeFromXML( R"(<item type="TwoBoneIK" name="Arm" root="a" mid="b" end="c" target="Grip" typo="1" />)" ) );
 }
 
 /** @brief [RigAssetTest] 공통 키의 범위(가중치 0..1)는 PROPERTY 가 본다 */
 SW_TEST_CASE( RigAssetTest, RejectsWeightOutOfRange )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
-    SW_EXPECT_FALSE( parseNode( R"(<item type="TwoBoneIK" name="Arm" weight="1.5" root="a" mid="b" end="c" target="Grip" />)" ) );
+    SW_EXPECT_FALSE( loadNodeFromXML( R"(<item type="TwoBoneIK" name="Arm" weight="1.5" root="a" mid="b" end="c" target="Grip" />)" ) );
 }
 
 /** @brief [RigAssetTest] 필수 칸이 빠지면 실패다 */
 SW_TEST_CASE( RigAssetTest, RejectsMissingRequiredField )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
-    SW_EXPECT_FALSE( parseNode( R"(<item type="TwoBoneIK" name="Arm" root="a" mid="b" target="Grip" />)" ) );
+    SW_EXPECT_FALSE( loadNodeFromXML( R"(<item type="TwoBoneIK" name="Arm" root="a" mid="b" target="Grip" />)" ) );
 }
 
 /** @brief [RigAssetTest] 위치 제약은 변환 복사의 `position` 키를 받지 않는다(모드에 없는 키) */
 SW_TEST_CASE( RigAssetTest, RejectsKeyOutsideMode )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
-    SW_EXPECT_FALSE( parseNode( R"(<item type="Position" name="Follow" bone="weapon" target="Grip" position="false" />)" ) );
+    SW_EXPECT_FALSE( loadNodeFromXML( R"(<item type="Position" name="Follow" bone="weapon" target="Grip" position="false" />)" ) );
 }
 
 /** @brief [RigAssetTest] 열거 칸은 이름으로 읽는다 — 모르는 이름은 실패다 */
@@ -93,7 +93,7 @@ SW_TEST_CASE( RigAssetTest, RejectsUnknownEnumName )
 {
     SW_EXPECT_LOG( "Rig.Rig" );
     SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
-    SW_EXPECT_FALSE( parseNode( R"(<item type="SpringChain" name="Cape"><bones><item>a</item><item>b</item></bones>
+    SW_EXPECT_FALSE( loadNodeFromXML( R"(<item type="SpringChain" name="Cape"><bones><item>a</item><item>b</item></bones>
         <colliders><item bone="spine" shape="Box" radius="0.1" /></colliders></item>)" ) );
 }
 

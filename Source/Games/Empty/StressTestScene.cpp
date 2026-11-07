@@ -597,7 +597,7 @@ namespace sw
         if ( _glassMaterial == nullptr )
         {
             _glassMaterial = Material::create();
-            if ( _glassMaterial->loadFromFile( AssetID{ _settings._glassMaterial.c_str() } ) == false )
+            if ( _glassMaterial->loadFromAsset( AssetID{ _settings._glassMaterial.c_str() } ) == false )
             {
                 SW_LOG_WARNING_ID( "StressTestScene.FailedReadTransparentMaterial", "[Bench] Failed to read the transparent material - skipping the transparent cubes." );
                 _glassMaterial.reset();

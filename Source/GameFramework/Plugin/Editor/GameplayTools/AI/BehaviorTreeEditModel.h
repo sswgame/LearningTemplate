@@ -115,7 +115,7 @@ namespace sw::editor
         void               collectSubtree( int32 id, vector<int32>& outListID ) const;
         /** @brief @p source 의 노드 @p sourceID 와 그 아래를 새 번호로 이 모델에 더하고(부모 목록에는 넣지 않는다) 새 번호를 돌려줍니다. 자리 검사는 부르는 쪽이 했다. */
         int32 graftSubtree( const BehaviorTreeEditModel& source, int32 sourceID, int32 parentID );
-        int32 parseNode( const XMLNode& node, int32 parentID, uint32 depth, string& outError );
+        int32 loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth, string& outError );
         void  writeNode( int32 id, const XMLNode& parentXML ) const;
 
     private:

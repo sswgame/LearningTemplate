@@ -49,7 +49,7 @@ namespace sw::editor
     bool CharacterEditorPackData::loadFromAsset( const AssetID& assetID )
     {
         *this = CharacterEditorPackData{};
-        if ( GameDataXML::loadFromFile( *this, &CharacterEditorPackData::loadRoot, assetID, CharacterEditorPackDataInternal::kRootName ) )
+        if ( GameDataXML::loadFromAsset( *this, &CharacterEditorPackData::loadRoot, assetID, CharacterEditorPackDataInternal::kRootName ) )
             return true;
         *this = CharacterEditorPackData{};
         return false;

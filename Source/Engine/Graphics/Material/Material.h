@@ -127,8 +127,8 @@ namespace sw
         /** @brief 텍스처를 빌린 디바이스입니다(초기화 전이면 nullptr). 인스턴스가 덮어쓴 텍스처를 같은 디바이스로 요청한다. */
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
 
-        /** @brief 파일에서 머티리얼을 로드합니다. */
-        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
+        /** @brief 리소스 id 의 머티리얼을 로드합니다(팩 · 소스 트리). */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
          * @brief 디스크 파일에서 머티리얼을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(`XMLDocument::loadFromFile`).
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromFile` 에 넣으면 팩 전용 구성이 거절합니다.
@@ -305,7 +305,7 @@ namespace sw
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromFile` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
         [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context );
 
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */

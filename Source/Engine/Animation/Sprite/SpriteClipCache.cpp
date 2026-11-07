@@ -14,7 +14,7 @@ namespace sw
     {
         struct SpriteClipCacheInternal
         {
-            [[nodiscard]] static bool load( const AssetID& assetID, SpriteClipAsset& outClip ) { return outClip.loadFromFile( assetID ); }
+            [[nodiscard]] static bool load( const AssetID& assetID, SpriteClipAsset& outClip ) { return outClip.loadFromAsset( assetID ); }
         };
     } // namespace
 } // namespace sw

@@ -62,7 +62,7 @@ namespace sw
         AnimationPoseAccess getPoseAccess() const override { return isAnimationActive() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly; }
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                onAnimationMeshDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         RagdollComponent& _owner;

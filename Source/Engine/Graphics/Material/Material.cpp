@@ -118,7 +118,7 @@ namespace sw
 
         // 못 읽은 머티리얼은 빈 값으로 올리지 않고 실패한다. 대신 그릴 것(마젠타 `missingmaterial`)은 부르는 쪽 한 곳이 정한다(`MeshComponent::resolveMaterialAsset`).
         AssetLoadScope loadScope( "Material", assetRelativePath );
-        if ( loadFromFile( assetID ) == false )
+        if ( loadFromAsset( assetID ) == false )
         {
             SW_LOG_ERROR_ID( "Material.MaterialFileCouldNot", "Material file '%#' could not be loaded", assetRelativePath );
             return false;
@@ -1076,7 +1076,7 @@ namespace sw
         return false;
     }
 
-    bool Material::loadFromFile( const AssetID& assetID )
+    bool Material::loadFromAsset( const AssetID& assetID )
     {
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
@@ -1110,7 +1110,7 @@ namespace sw
         // 부모도 같은 직렬화로 펼친 글과 맞댄다 — 손으로 쓴 원문(`0.0` · 빠진 기본 속성)과 비교하면 같은 값도 다르게 보인다.
         const shared_ptr<Material> parent = Material::create();
         string                     deltaText;
-        if ( parent->loadFromFile( AssetID{ _desc._parentPath } ) &&
+        if ( parent->loadFromAsset( AssetID{ _desc._parentPath } ) &&
              DataInheritance::makeDelta( fullText, parent->saveFullToString(), MaterialXML::makeInheritanceSchema(), _desc._parentPath, deltaText ) )
             return deltaText;
         // 모든 칸을 적어 부모를 끊지 않는다 — 빈 글을 돌려 저장이 실패로 드러나게 한다.

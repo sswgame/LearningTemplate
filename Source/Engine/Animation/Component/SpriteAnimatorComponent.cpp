@@ -349,7 +349,7 @@ namespace sw
         _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() )
             return;
-        if ( _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
+        if ( _graph.loadFromAsset( AssetID{ _animationGraphPath } ) == false )
             return;
         _bGraphLoaded = SW_TRUE;
         _graphPlayer.setGraph( &_graph );

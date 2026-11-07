@@ -63,7 +63,7 @@ namespace sw
         AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::ReadsOnly; }
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                onAnimationMeshDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         CharacterAppearanceComponent& _owner;
@@ -88,7 +88,7 @@ namespace sw
         /** @brief 본 비율이 있을 때만 쓴다(`runAnimationPhase` 가 같은 판정으로 건너뛴다). 비율이 없는데 등록돼 있어도 군중 공유를 막지 않는다. */
         AnimationPoseAccess getPoseAccess() const override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        void                onAnimationMeshDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         CharacterAppearanceComponent& _owner;
@@ -398,7 +398,7 @@ namespace sw
 
         CharacterAppearanceSocketTask     _socketTask;
         CharacterAppearanceProportionTask _proportionTask;
-        // 작업보다 뒤에 선언한다 — 먼저 사라지며 풀리고, 풀릴 때 작업에 `onAnimationUnitDetached` 를 알린다.
+        // 작업보다 뒤에 선언한다 — 먼저 사라지며 풀리고, 풀릴 때 작업에 `onAnimationMeshDetached` 를 알린다.
         Subscription                                   _socketTaskRegistration;     ///< 소켓 작업의 유닛 등록 구독
         Subscription                                   _proportionTaskRegistration; ///< 비율 작업의 유닛 등록 구독
         Subscription                                   _socketBoneRequirement;      ///< 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 지키는 구독(장비가 바뀌면 다시 낸다)

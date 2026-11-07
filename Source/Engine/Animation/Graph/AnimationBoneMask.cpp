@@ -95,7 +95,7 @@ namespace sw
         return true;
     }
 
-    bool AnimationBoneMaskDef::loadFromFile( const AssetID& assetID )
+    bool AnimationBoneMaskDef::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         _listEntry.clear();

@@ -31,7 +31,7 @@ namespace sw
 
 namespace sw
 {
-    bool SpriteClipAsset::loadFromFile( const AssetID& assetID )
+    bool SpriteClipAsset::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         clear();

@@ -109,7 +109,7 @@ namespace sw
         _owner._animator                     = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
     }
 
-    void FacialAnimationBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
+    void FacialAnimationBinding::onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh )
     {
         if ( _owner._pSkeletalMesh == &skeletalMesh )
             _owner._pSkeletalMesh = nullptr;

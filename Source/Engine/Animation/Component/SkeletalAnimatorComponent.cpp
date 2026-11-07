@@ -67,7 +67,7 @@ namespace sw
         _owner.applyRootMotion( skeletalMesh );
     }
 
-    void SkeletalAnimatorBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
+    void SkeletalAnimatorBinding::onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh )
     {
         if ( _owner._pSkeletalMesh == &skeletalMesh )
             _owner._pSkeletalMesh = nullptr;
@@ -328,7 +328,7 @@ namespace sw
     {
         refreshAnimationSet();
         _graph = AnimationGraphAsset{};
-        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
+        if ( _animationGraphPath.empty() == false && _graph.loadFromAsset( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         loadLinkedGraphs();
         requestClipLoads();
@@ -408,7 +408,7 @@ namespace sw
             linked->_slot                       = hashed_string( binding._slot );
             linked->_graphPath                  = binding._graphPath.path();
             // 못 읽으면 빈 그래프로 남고 `rebuildLinkedGraphs` 가 그래프를 쓰지 않게 한다.
-            if ( linked->_graph.loadFromFile( binding._graphPath.id() ) == false )
+            if ( linked->_graph.loadFromAsset( binding._graphPath.id() ) == false )
                 SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayerGraphCouldNot", "Linked layer graph '%#' for slot '%#' could not be loaded", binding._graphPath.c_str(), binding._slot.c_str() );
             _listLinkedGraph.push_back( std::move( linked ) );
         }
@@ -523,7 +523,7 @@ namespace sw
         _bClipsPending = SW_FALSE;
         refreshAnimationSet();
         _graph = AnimationGraphAsset{};
-        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
+        if ( _animationGraphPath.empty() == false && _graph.loadFromAsset( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         loadLinkedGraphs();
         applyGraphPlayables();

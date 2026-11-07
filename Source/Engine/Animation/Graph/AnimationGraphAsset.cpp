@@ -115,7 +115,7 @@ namespace sw
         return false;
     }
 
-    bool AnimationGraphAsset::loadFromFile( const AssetID& assetID )
+    bool AnimationGraphAsset::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Animation );
@@ -150,7 +150,7 @@ namespace sw
         if ( _baseID.empty() )
             return ResourceComposer::saveText( absPath.str(), fullText );
         AnimationGraphAsset parent;
-        if ( parent.loadFromFile( AssetID{ _baseID } ) == false )
+        if ( parent.loadFromAsset( AssetID{ _baseID } ) == false )
         {
             DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
             return false;
@@ -271,7 +271,7 @@ namespace sw
             return false;
         }
         bool bValid = XMLReadUtil::hasOnlyKnownNames( root, {}, { "nodes", "links", "bone_masks", "layers", "comments" }, sourceLabel );
-        bValid      = parseNodes( root, sourceLabel ) && bValid;
+        bValid      = loadNodesFromXML( root, sourceLabel ) && bValid;
         bValid      = parseLinks( root, sourceLabel ) && bValid;
         bValid      = parseComments( root, sourceLabel ) && bValid;
         if ( parseLayers( root ) == false )
@@ -308,7 +308,7 @@ namespace sw
         return bValid;
     }
 
-    bool AnimationGraphAsset::parseNodes( const XMLNode& root, string_view sourceLabel )
+    bool AnimationGraphAsset::loadNodesFromXML( const XMLNode& root, string_view sourceLabel )
     {
         using Internal = AnimationGraphAssetInternal;
         bool bValid    = true;
@@ -472,7 +472,7 @@ namespace sw
             AnimationBoneMaskDef mask{};
             mask._name           = params._name;
             const string context = string( "Animation graph bone mask '" ) + mask._name.c_str() + "'";
-            const bool   bLoaded = bFromFile ? mask.loadFromFile( AssetID{ params._file } ) : mask.parseObject( maskXML, context );
+            const bool   bLoaded = bFromFile ? mask.loadFromAsset( AssetID{ params._file } ) : mask.parseObject( maskXML, context );
             if ( bLoaded == false )
             {
                 bValid = false;

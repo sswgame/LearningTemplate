@@ -105,7 +105,7 @@ namespace sw
 
     private:
         /**
-         * @brief `<GameSettings>` 루트의 표준 칸을 읽습니다(`GameDataXML::loadFromFile`).
+         * @brief `<GameSettings>` 루트의 표준 칸을 읽습니다(`GameDataXML::loadFromAsset`).
          * @details 자식 요소마다 같은 이름의 리플렉션 칸을 찾아 그 형식의 텍스트 읽기(`SerializerUtil::applyPropertyText`, 경로 칸은 `DataPath` 처리기)로 넣는다.
          *          칸 표, `<Defaults>`(`ComponentDefaults` 가 같은 파일을 읽는다), `<Engine>`(`PackEngineSettings` 가 읽는다) 밖의 원소는 로드 오류이고,
          *          `PROPERTY( Required )` 칸이 빠져도 로드 오류다. 철자가 틀린 칸이 조용히 사라지지 않게 하려는 것이다.

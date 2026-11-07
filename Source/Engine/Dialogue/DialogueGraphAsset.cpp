@@ -34,7 +34,7 @@ namespace sw
 
 namespace sw
 {
-    bool DialogueGraphAsset::loadFromFile( const AssetID& assetID )
+    bool DialogueGraphAsset::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Script );

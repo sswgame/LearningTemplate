@@ -159,7 +159,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, SlotRoundTripsAndInstanceValuesDoNotMix )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "slot_a.material" ), ModelImportMaterial::makeSlotMaterialText( "slot_a", sharedID ) ) );
 
     shared_ptr<Material> material = Material::create();
-    SW_REQUIRE_TRUE( material->loadFromFile( AssetID{ test::EditorScratchDomain::makeID( "slot_a.material" ) } ) );
+    SW_REQUIRE_TRUE( material->loadFromAsset( AssetID{ test::EditorScratchDomain::makeID( "slot_a.material" ) } ) );
     SW_EXPECT_EQUAL( string( "slot_a" ), material->getName() );
     SW_EXPECT_EQUAL( string( "engine/shaders/pbr_lit.hlsl" ), material->getShaderPath() );
     const MaterialProperty* pRoughness = material->findProperty( hashed_string( "_roughness" ) );

@@ -218,7 +218,7 @@ namespace sw
         }
         for ( size_t index = 0; index < nodes.size(); ++index )
         {
-            if ( parseNode( nodes.at( index ), sourceLabel ) == false )
+            if ( loadNodeFromXML( nodes.at( index ), sourceLabel ) == false )
                 return false;
         }
         return true;
@@ -263,7 +263,7 @@ namespace sw
         return true;
     }
 
-    bool RigAsset::parseNode( const XMLNode& value, string_view sourceLabel )
+    bool RigAsset::loadNodeFromXML( const XMLNode& value, string_view sourceLabel )
     {
         RigXMLReader  reader( value, sourceLabel );
         hashed_string typeName{};

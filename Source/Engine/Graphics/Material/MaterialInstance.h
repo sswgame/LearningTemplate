@@ -66,7 +66,7 @@ namespace sw
         void clearRHI( IRHIDevice* pDevice ) override;
 
         /** @brief 오버라이드만 있는 MaterialInstanceDef XML 을 로드합니다. 부모는 따로 설정합니다. */
-        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 인스턴스 XML 을 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /**

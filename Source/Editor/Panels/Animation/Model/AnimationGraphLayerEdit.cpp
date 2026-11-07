@@ -114,7 +114,7 @@ namespace sw::editor
         }
         AnimationBoneMaskDef loaded{};
         loaded._name = inoutMask._name;
-        if ( loaded.loadFromFile( AssetID{ presetPath } ) == false )
+        if ( loaded.loadFromAsset( AssetID{ presetPath } ) == false )
         {
             SW_LOG_WARNING_ID( "AnimationGraphLayers.BoneMaskPresetCould", "Bone mask preset '%#' could not be read - the mask is unchanged", presetPath );
             return BoneMaskPresetResult::Failed;

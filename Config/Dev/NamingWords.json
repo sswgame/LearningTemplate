@@ -25,7 +25,16 @@
         "isEditorImageUsable": "isEditorLibraryUsable",
         "_gameModuleManager": "_moduleManager",
         "_backendSwap": "_backendSwitcher",
-        "UIInputMapView": "GameInputView(Engine/Input/Map)"
+        "UIInputMapView": "GameInputView(Engine/Input/Map)",
+        "parseNode": "loadNodeFromXML(XML 원소 하나를 읽는다)",
+        "parseNodes": "loadNodesFromXML",
+        "AnimationUnitList": "AnimationMeshList(애니메이션 시스템의 스켈레탈 메시 목록)",
+        "onAnimationUnitDetached": "onAnimationMeshDetached",
+        "getPoseEvaluatedUnitCount": "getPoseEvaluatedMeshCount",
+        "getActiveUnitCount": "getActiveMeshCount",
+        "_unitCostMicroseconds": "_meshCostMicroseconds",
+        "XMLCatalogLoader::loadFromFile": "XMLCatalogLoader::loadFromAsset(에셋 id 입구)",
+        "GameDataXML::loadFromFile": "GameDataXML::loadFromAsset(에셋 id 입구)"
     },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",

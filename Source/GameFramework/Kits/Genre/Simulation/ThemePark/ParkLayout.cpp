@@ -38,7 +38,7 @@ namespace sw
         shared_ptr<const CoasterLayoutCatalog> pLayouts = SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterPath );
         if ( pLayouts == nullptr )
             return false;
-        if ( GameDataXML::loadFromFile( *this, &ParkLayout::loadRoot, *pLayouts, assetID, "ParkLayout" ) == false )
+        if ( GameDataXML::loadFromAsset( *this, &ParkLayout::loadRoot, *pLayouts, assetID, "ParkLayout" ) == false )
             return false;
         _pCoasterLayouts = std::move( pLayouts );
         return true;

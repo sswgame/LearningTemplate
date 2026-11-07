@@ -111,7 +111,7 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
     const sw::test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "current.material" ), current ) );
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( sw::test::ScopedScratchDomain::makeID( "current.material" ) ) );
+    SW_EXPECT_TRUE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "current.material" ) ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
     SW_EXPECT_EQUAL( shaderPath, material->getShaderPath() );
 }
@@ -153,7 +153,7 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), child ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_REQUIRE_TRUE( material->loadFromFile( sw::test::ScopedScratchDomain::makeID( "child.material" ) ) );
+    SW_REQUIRE_TRUE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "child.material" ) ) );
     SW_EXPECT_EQUAL( sw::string( "ChildMat" ), material->getName() );
     SW_EXPECT_EQUAL( sw::string( "engine/shaders/forward_lit.hlsl" ), material->getShaderPath() );
     const sw::MaterialProperty* pColor     = material->findProperty( sw::hashed_string( "_color" ) );
@@ -190,13 +190,13 @@ SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDef formatVersion=\"0\" name=\"B\" _base=\"" + idA + "\"/>" ) );
     sw::shared_ptr<sw::Material> cyclic = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
-    SW_EXPECT_FALSE( cyclic->loadFromFile( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
+    SW_EXPECT_FALSE( cyclic->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ),
                                                   "<MaterialDef formatVersion=\"0\" name=\"Orphan\" _base=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
     sw::shared_ptr<sw::Material> orphan = sw::Material::create();
     SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
-    SW_EXPECT_FALSE( orphan->loadFromFile( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );
+    SW_EXPECT_FALSE( orphan->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );
 }
 
 /**
@@ -212,5 +212,5 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatRejectsLegacyMaterialXML )
 </Material>
 )" ) );
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_FALSE( material->loadFromFile( sw::test::ScopedScratchDomain::makeID( "legacy.material" ) ) );
+    SW_EXPECT_FALSE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "legacy.material" ) ) );
 }

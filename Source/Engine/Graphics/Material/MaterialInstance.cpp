@@ -159,7 +159,7 @@ namespace sw
             releaseTextureOverrides();
     }
 
-    bool MaterialInstance::loadFromFile( const AssetID& assetID )
+    bool MaterialInstance::loadFromAsset( const AssetID& assetID )
     {
         XMLDocument doc;
         if ( doc.loadResource( assetID ) == false )

@@ -106,7 +106,7 @@ namespace sw
             _owner.evaluateFrame( skeletalMesh );
     }
 
-    void PoseModifierBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
+    void PoseModifierBinding::onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh )
     {
         if ( _owner._pSkeletalMesh == &skeletalMesh )
             _owner._pSkeletalMesh = nullptr;

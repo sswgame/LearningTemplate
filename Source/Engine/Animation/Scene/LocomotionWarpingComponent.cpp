@@ -49,7 +49,7 @@ namespace sw
         _owner.updateFromMovement( skeletalMesh );
     }
 
-    void LocomotionWarpingBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
+    void LocomotionWarpingBinding::onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh )
     {
         if ( _owner._pSkeletalMesh == &skeletalMesh )
             _owner._pSkeletalMesh = nullptr;

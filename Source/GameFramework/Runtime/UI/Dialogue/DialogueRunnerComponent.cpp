@@ -82,7 +82,7 @@ namespace sw
     {
         const string_view xmlPath = assetID.view();
         _graphPath                = string( xmlPath );
-        return _graph.loadFromFile( assetID ) && compileGraph();
+        return _graph.loadFromAsset( assetID ) && compileGraph();
     }
 
     bool DialogueRunnerComponent::loadGraphXML( string_view xmlContent )

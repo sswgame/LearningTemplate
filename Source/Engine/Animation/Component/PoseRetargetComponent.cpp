@@ -34,7 +34,7 @@ namespace sw
             _owner.populateBasePose( skeletalMesh );
     }
 
-    void PoseRetargetBinding::onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh )
+    void PoseRetargetBinding::onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh )
     {
         if ( _owner._pSkeletalMesh == &skeletalMesh )
             _owner._pSkeletalMesh = nullptr;

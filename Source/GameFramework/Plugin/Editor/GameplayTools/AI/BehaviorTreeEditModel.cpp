@@ -308,7 +308,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    int32 BehaviorTreeEditModel::parseNode( const XMLNode& node, int32 parentID, uint32 depth, string& outError )
+    int32 BehaviorTreeEditModel::loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth, string& outError )
     {
         using Internal = BehaviorTreeEditModelInternal;
         BehaviorNodeKind type{};
@@ -351,7 +351,7 @@ namespace sw::editor
         }
         for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
         {
-            if ( parseNode( child, id, depth + 1, outError ) < 0 )
+            if ( loadNodeFromXML( child, id, depth + 1, outError ) < 0 )
                 return -1;
         }
         return id;
@@ -395,7 +395,7 @@ namespace sw::editor
                 outError = "The tree has more than one root node - wrap them in a <Selector> or <Sequence>";
                 return false;
             }
-            if ( next.parseNode( first, -1, 0, outError ) < 0 )
+            if ( next.loadNodeFromXML( first, -1, 0, outError ) < 0 )
                 return false;
         }
         next._baseID = DataInheritance::findBasePath( xmlText );

@@ -121,7 +121,7 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
         [[nodiscard]] bool parseTarget( const XMLNode& value, string_view sourceLabel );
-        [[nodiscard]] bool parseNode( const XMLNode& value, string_view sourceLabel );
+        [[nodiscard]] bool loadNodeFromXML( const XMLNode& value, string_view sourceLabel );
 
     private:
         vector<RigTargetDef>        _listTarget;

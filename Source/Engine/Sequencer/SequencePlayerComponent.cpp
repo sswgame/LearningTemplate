@@ -61,7 +61,7 @@ namespace sw
     {
         if ( _sequencePath.empty() )
             return;
-        if ( _player.loadFromFile( AssetID{ _sequencePath } ) == false )
+        if ( _player.loadFromAsset( AssetID{ _sequencePath } ) == false )
             SW_LOG_WARNING_ID( "SequencePlayer.SequenceCouldNotLoaded", "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath.c_str(), getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 

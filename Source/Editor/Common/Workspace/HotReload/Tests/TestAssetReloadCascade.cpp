@@ -91,7 +91,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), makeMaterialText( "Child", parentID, nullptr ) ) );
 
     sw::shared_ptr<sw::Material> child = sw::Material::create();
-    SW_REQUIRE_TRUE( child->loadFromFile( sw::AssetID{ childID } ) );
+    SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ childID } ) );
     SW_EXPECT_EQUAL( sw::string( "0.5" ), readRoughness( *child ) );
 
     EditorReferenceIndex index;
@@ -105,7 +105,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, parentID, &inlinesMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::FileUtil::normalizePath( childID ), listOrder[0] );
-    SW_REQUIRE_TRUE( child->loadFromFile( sw::AssetID{ listOrder[0] } ) );
+    SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ listOrder[0] } ) );
     SW_EXPECT_EQUAL( sw::string( "0.9" ), readRoughness( *child ) );
 }
 

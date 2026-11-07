@@ -52,7 +52,7 @@ namespace sw
         AnimationPoseAccess getPoseAccess() const override;
         void                prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
+        void                onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         PoseModifierComponent& _owner;

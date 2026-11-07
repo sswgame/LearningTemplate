@@ -250,7 +250,7 @@ namespace sw
         return track._listFrame.back();
     }
 
-    void AnimationRewindRecorder::recordUnit( const SkeletalMeshComponent& skeletalMesh, uint64 frameIndex )
+    void AnimationRewindRecorder::recordMesh( const SkeletalMeshComponent& skeletalMesh, uint64 frameIndex )
     {
         if ( _bEnabled == SW_FALSE || _bScrubbing == SW_TRUE )
             return;

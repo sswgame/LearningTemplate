@@ -153,7 +153,7 @@ namespace sw
             return nullptr;
         }
         /** @brief 유닛이 사라지거나 작업이 해제됐을 때 부릅니다. 보관하던 유닛 포인터를 해제합니다. */
-        virtual void onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) { (void)skeletalMesh; }
+        virtual void onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) { (void)skeletalMesh; }
         /** @brief 진단 상태(그래프 상태, 알림, 커브, 루트 모션)를 채웁니다. 되감기 기록기와 패널이 읽습니다(게임 스레드, 평가 뒤). */
         virtual void collectDebugState( AnimationDebugState& inoutState ) const { (void)inoutState; }
     };
@@ -334,7 +334,7 @@ namespace sw
     };
 
     /** @brief 등록된 애니메이션 유닛(등록 순서). */
-    using AnimationUnitList = AnimationOrderedList<SkeletalMeshComponent>;
+    using AnimationMeshList = AnimationOrderedList<SkeletalMeshComponent>;
 } // namespace sw
 
 namespace sw
@@ -342,7 +342,7 @@ namespace sw
     /**
      * @struct AnimationDependencyEdge
      * @brief 의존 간선 하나입니다. **위 유닛의 모든 단계가 끝난 뒤에야 아래 유닛이 시작합니다**(리더 포즈 · 부착 대상 · 리그 대상 모두 위 유닛의 최종 포즈를 읽는다).
-     * @details 번호는 `AnimationUnitList` 의 위치입니다. 이 뜻을 지키는 순서는 `AnimationComponentSet` 의 성분 안 순서(유닛 먼저, 한 유닛의 네 포즈 단계를 이어서)입니다.
+     * @details 번호는 `AnimationMeshList` 의 위치입니다. 이 뜻을 지키는 순서는 `AnimationComponentSet` 의 성분 안 순서(유닛 먼저, 한 유닛의 네 포즈 단계를 이어서)입니다.
      *          "단계마다 위 유닛이 먼저" 인 순서는 이 뜻을 지키지 못한다 — 아래 유닛의 기본 포즈 단계가 위 유닛의 부착 · 후처리 단계보다 먼저 돌아 최종이 아닌 포즈를 읽는다.
      *          리타깃 원본도 이 뜻으로 읽는다: 원본의 후처리(IK · 스프링)까지 끝난 최종 포즈를 옮긴다(언리얼 `Retarget Pose From Mesh` 도 원본 메시 컴포넌트의 평가가 끝난 포즈를 읽는다).
      */
@@ -367,15 +367,15 @@ namespace sw
         /** @brief 성분 수입니다. */
         uint32 getComponentCount() const { return _listStart.empty() ? 0u : static_cast<uint32>( _listStart.size() - 1 ); }
         /** @brief 모든 성분의 유닛 수 합입니다. */
-        uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
+        uint32 getSkeletalMeshCount() const { return static_cast<uint32>( _listSkeletalMesh.size() ); }
         /** @brief 가장 큰 성분의 유닛 수입니다. 성분이 없으면 0 입니다. */
         uint32 getMaxComponentSize() const { return _maxComponentSize; }
-        /** @brief @p componentIndex 성분의 첫 칸 번호입니다(`getUnits()` 안의 위치). */
+        /** @brief @p componentIndex 성분의 첫 칸 번호입니다(`getSkeletalMeshes()` 안의 위치). */
         uint32 getComponentStart( uint32 componentIndex ) const { return _listStart[componentIndex]; }
         /** @brief @p componentIndex 성분의 끝 칸 번호입니다(마지막 칸 다음). */
         uint32 getComponentEnd( uint32 componentIndex ) const { return _listStart[componentIndex + 1]; }
         /** @brief 성분 순서로 이어 붙인 유닛 전부입니다. */
-        const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
+        const vector<SkeletalMeshComponent*>& getSkeletalMeshes() const { return _listSkeletalMesh; }
         /** @brief 의존 고리가 있었으면 true 입니다(`AnimationSystem` 이 지을 때 정한다). 고리의 유닛은 한 성분 구간의 뒤에 등록 순서로 놓여 있습니다. */
         bool hasCycle() const { return _bCycle == SW_TRUE; }
 
@@ -384,7 +384,7 @@ namespace sw
 
         void clear()
         {
-            _listUnit.clear();
+            _listSkeletalMesh.clear();
             _listStart.clear();
             _maxComponentSize = 0;
             _bCycle           = SW_FALSE;
@@ -396,7 +396,7 @@ namespace sw
         void removeSingletons( const unordered_set<const SkeletalMeshComponent*>& uniqueRemoval )
         {
             const uint32 componentCount = getComponentCount();
-            uint32       writeUnit      = 0;
+            uint32       writeMesh      = 0;
             uint32       writeComponent = 0;
             for ( uint32 componentIndex = 0; componentIndex < componentCount; ++componentIndex )
             {
@@ -404,19 +404,19 @@ namespace sw
                 const uint32 end   = _listStart[componentIndex + 1];
                 if ( end - start == 1 )
                 {
-                    const SkeletalMeshComponent* pKey = _listUnit[start];
+                    const SkeletalMeshComponent* pKey = _listSkeletalMesh[start];
                     if ( uniqueRemoval.contains( pKey ) )
                         continue;
                 }
-                _listStart[writeComponent++] = writeUnit; // 쓰는 자리는 읽은 자리를 앞서지 않으므로 아직 읽지 않은 칸을 덮지 않는다
+                _listStart[writeComponent++] = writeMesh; // 쓰는 자리는 읽은 자리를 앞서지 않으므로 아직 읽지 않은 칸을 덮지 않는다
                 for ( uint32 slot = start; slot < end; ++slot )
                 {
-                    _listUnit[writeUnit++] = _listUnit[slot];
+                    _listSkeletalMesh[writeMesh++] = _listSkeletalMesh[slot];
                 }
             }
-            _listStart[writeComponent] = writeUnit;
+            _listStart[writeComponent] = writeMesh;
             _listStart.resize( writeComponent + 1 );
-            _listUnit.resize( writeUnit );
+            _listSkeletalMesh.resize( writeMesh );
             updateMaxComponentSize();
         }
         /** @brief `_listStart` 을 보고 가장 큰 성분의 크기를 다시 셉니다. */
@@ -430,8 +430,8 @@ namespace sw
         }
 
     private:
-        vector<SkeletalMeshComponent*> _listUnit;              ///< 성분 순서로 이어 붙인 유닛이다
-        vector<uint32>                 _listStart;             ///< 성분마다 `_listUnit` 안의 시작 칸이다(끝 하나 더, 비어 있으면 성분이 없다)
+        vector<SkeletalMeshComponent*> _listSkeletalMesh;      ///< 성분 순서로 이어 붙인 유닛이다
+        vector<uint32>                 _listStart;             ///< 성분마다 `_listSkeletalMesh` 안의 시작 칸이다(끝 하나 더, 비어 있으면 성분이 없다)
         uint32                         _maxComponentSize{ 0 }; ///< 가장 큰 성분의 유닛 수다
         uint8                          _bCycle{ SW_FALSE };    ///< 의존 고리가 있었다
     };
@@ -471,13 +471,13 @@ namespace sw
         void onSceneCleared() override {}
 
         /** @brief 유닛을 등록합니다(컴포넌트 등록 때 부릅니다). */
-        void registerUnit( SkeletalMeshComponent* pSkeletalMesh );
+        void registerMesh( SkeletalMeshComponent* pSkeletalMesh );
         /**
          * @brief 유닛을 해제합니다. 여러 번 불러도 안전합니다.
          * @details 의존을 가지지도 받지도 않는 유닛(유닛 하나짜리 성분)은 성분을 다시 짓지 않습니다. 다음 평가가 시작될 때 해제한 유닛을 모아 성분 목록에서 한 번에 뺍니다.
          *          그 밖의 유닛은 성분을 비우고 다음 평가가 다시 짓습니다.
          */
-        void unregisterUnit( SkeletalMeshComponent* pSkeletalMesh );
+        void unregisterMesh( SkeletalMeshComponent* pSkeletalMesh );
         /** @brief 의존이나 리더가 바뀌었음을 알립니다. 다음 평가가 성분을 다시 만듭니다. */
         void markOrderDirty() { _bOrderDirty = SW_TRUE; }
 
@@ -506,13 +506,13 @@ namespace sw
         const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
         /**
          * @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다.
-         * @details 측정 보기 전용이다 — 예산 배분은 표의 단가(`AnimationLODSettings::_unitCostMicroseconds`)를 쓴다. 단가를 고칠 때 이 값과 견준다.
+         * @details 측정 보기 전용이다 — 예산 배분은 표의 단가(`AnimationLODSettings::_meshCostMicroseconds`)를 쓴다. 단가를 고칠 때 이 값과 견준다.
          */
         float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
         /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
         float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
         /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */
-        uint32 getPoseEvaluatedUnitCount() const { return _poseEvaluatedUnitCount; }
+        uint32 getPoseEvaluatedMeshCount() const { return _poseEvaluatedMeshCount; }
         /** @brief 지난 평가에서 포즈를 만든 유닛이 풀어 낸 본 수의 합입니다(본 LOD 가 뺀 본은 세지 않는다 — 감시 값 `Animation.EvaluatedBones`). */
         uint32 getPoseEvaluatedBoneCount() const { return _poseEvaluatedBoneCount; }
 
@@ -526,9 +526,9 @@ namespace sw
         uint32 getCrowdModeCount( AnimationCrowdMode mode ) const { return _arrCrowdModeCount[static_cast<uint32>( mode )]; }
 
         /** @brief 등록된 유닛 수입니다. */
-        uint32 getUnitCount() const { return _skeletalMeshList.getCount(); }
+        uint32 getSkeletalMeshCount() const { return _skeletalMeshList.getCount(); }
         /** @brief 등록된 유닛 전부입니다(등록 순서이고 평가 순서는 아닙니다). 성분은 다음 평가 때 고쳐지므로 "지금 있는 유닛"은 이 함수로 봅니다. */
-        const vector<SkeletalMeshComponent*>& getUnits() const { return _skeletalMeshList.getItems(); }
+        const vector<SkeletalMeshComponent*>& getSkeletalMeshes() const { return _skeletalMeshList.getItems(); }
         /**
          * @brief 의존으로 이어진 유닛 묶음(연결 성분)입니다 — 평가 순서 그대로입니다(성분은 가장 앞선 등록 순서 순, 성분 안은 위 유닛이 먼저). 테스트와 진단용입니다.
          *        해제된 외톨이 유닛을 먼저 빼므로 죽은 유닛 포인터는 보이지 않습니다. 의존 고리 여부는 `AnimationComponentSet::hasCycle` 입니다.
@@ -543,7 +543,7 @@ namespace sw
         /** @brief 평가한 프레임 수입니다. */
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수를 반환합니다. */
-        uint32 getActiveUnitCount() const { return _activeUnitCount; }
+        uint32 getActiveMeshCount() const { return _activeMeshCount; }
 #if SW_ANIMATION_REWIND_ENABLED
         // --- 되감기 (AnimationRewind.h, Shipping 에는 없다) ---
         /** @brief 되감기 기록기입니다. 켜져 있으면 평가 뒤 일한 유닛을 기록하고, 되감는 동안에는 평가 대신 기록된 포즈를 적용합니다. */
@@ -569,22 +569,22 @@ namespace sw
          */
         void rebuildComponents();
         /** @brief `rebuildComponents` 1 단계: 의존 간선을 모아 위 유닛별 구간(CSR)으로 정렬합니다. 유닛의 "아래 유닛이 있음" 표시도 이때 갱신합니다. */
-        void collectDependencyEdges( const vector<SkeletalMeshComponent*>& listUnit );
+        void collectDependencyEdges( const vector<SkeletalMeshComponent*>& listSkeletalMesh );
         /** @brief `rebuildComponents` 2 단계: Kahn 위상 정렬로 `_listScratchOrder` 를 채웁니다. 고리가 있으면 순서가 유닛 수보다 짧게 남습니다. */
-        void sortUnitsTopologically( uint32 skeletalMeshCount );
+        void sortMeshesTopologically( uint32 skeletalMeshCount );
         /** @brief `rebuildComponents` 3 단계: 고리의 유닛과 그 아래 유닛을 오류로 알리고 등록 순서로 순서 배열 뒤에 붙입니다. */
-        void appendCyclicUnits( const vector<SkeletalMeshComponent*>& listUnit );
+        void appendCyclicMeshes( const vector<SkeletalMeshComponent*>& listSkeletalMesh );
         /** @brief `rebuildComponents` 4 단계: 간선으로 이어진 유닛을 성분으로 묶어(union-find) `_listScratchComponentOf` 를 채우고 성분 수를 돌려줍니다. */
-        [[nodiscard]] uint32 groupUnitsIntoComponents( uint32 skeletalMeshCount );
+        [[nodiscard]] uint32 groupMeshesIntoComponents( uint32 skeletalMeshCount );
         /** @brief `rebuildComponents` 5 단계: 성분별 구간을 세고 위상 순서대로 유닛을 `_componentAll` 의 구간에 놓습니다. */
-        void placeUnitsInComponents( const vector<SkeletalMeshComponent*>& listUnit, uint32 componentCount );
-        /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 성분 목록(유닛 하나짜리 성분)에서 한 번에 뺍니다. 성분을 다시 지을 예정이면 모아 둔 것만 버립니다. */
+        void placeMeshesInComponents( const vector<SkeletalMeshComponent*>& listSkeletalMesh, uint32 componentCount );
+        /** @brief 해제된 외톨이 유닛(`unregisterMesh`)을 성분 목록(유닛 하나짜리 성분)에서 한 번에 뺍니다. 성분을 다시 지을 예정이면 모아 둔 것만 버립니다. */
         void flushSingletonRemoval();
         /**
          * @brief 이번 프레임에 일하는 유닛만 성분 순서로 `_componentActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 성분 안은 위 유닛이 먼저이므로,
          *        게임 스레드의 순회(`beginAnimationFrame` · 군중 · 동기 그룹 · `finishAnimationFrame` · 되감기 기록)도 이 순서를 따른다 — 아래 유닛이 위 유닛의 결과를 이어 받는다(군중 묶음 가입 등).
          */
-        void collectActiveUnits( float32 deltaSeconds );
+        void collectActiveMeshes( float32 deltaSeconds );
         /**
          * @brief 포즈 단계 넷(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 성분 위로 `runParallelByCost` 한 번에 돌리고(성분 안은 유닛 먼저), 포즈 단계의 벽시계 평균
          *        (`_averageEvaluationMicroseconds`)을 갱신합니다. 단계별 시간은 워커가 단계마다 누적해 한 청크에 한 번 프로파일 카운터로 냅니다.
@@ -619,10 +619,10 @@ namespace sw
         void releaseLODClient( IAnimationLODClient* pClient );
 
     private:
-        AnimationUnitList                           _skeletalMeshList;
-        unordered_set<const SkeletalMeshComponent*> _uniqueSingletonRemoval; ///< 성분 목록에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushSingletonRemoval` 이 비운다)
+        AnimationMeshList                           _skeletalMeshList;
+        unordered_set<const SkeletalMeshComponent*> _uniqueSingletonRemoval; ///< 성분 목록에서 뺄 외톨이 유닛이다(`unregisterMesh` 이 모으고 `flushSingletonRemoval` 이 비운다)
         AnimationComponentSet                       _componentAll;           ///< 모든 유닛의 성분이다(평가 순서 — 외톨이 해제는 지름길로 뺀다)
-        AnimationComponentSet                       _componentActive;        ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다). 단계를 처리하는 유닛 전부다
+        AnimationComponentSet                       _componentActive;        ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveMeshes` 가 채운다). 단계를 처리하는 유닛 전부다
         AnimationOrderedList<IAnimationLODClient>   _lodClientList;          ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
         vector<LODView>                             _listLODView;
         LODView                                     _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
@@ -651,8 +651,8 @@ namespace sw
         float32            _deltaSeconds;
         float32            _averageEvaluationMicroseconds;
         float32            _expectedEvaluationMicroseconds;
-        uint32             _activeUnitCount;
-        uint32             _poseEvaluatedUnitCount;
+        uint32             _activeMeshCount;
+        uint32             _poseEvaluatedMeshCount;
         uint32             _poseEvaluatedBoneCount; ///< 지난 평가에서 포즈를 만든 유닛이 풀어 낸 본 수의 합(본 LOD 마스크를 뺀 것)
         uint32             _arrCrowdModeCount[4];   ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
         uint8              _bOrderDirty;

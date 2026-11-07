@@ -59,9 +59,9 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsLast", "Animation LOD settings '%#': the last rate level must have _minScreenSize 0", sourceLabel );
             return false;
         }
-        if ( _budgetMilliseconds > 0.0f && _unitCostMicroseconds <= 0.0f )
+        if ( _budgetMilliseconds > 0.0f && _meshCostMicroseconds <= 0.0f )
         {
-            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsBudgetMilliseconds", "Animation LOD settings '%#': _budgetMilliseconds is set but _unitCostMicroseconds is not - the budget needs a modelled skeletalMesh cost", sourceLabel );
+            SW_LOG_ERROR_ID( "AnimationLOD.AnimationLODSettingsBudgetMilliseconds", "Animation LOD settings '%#': _budgetMilliseconds is set but _meshCostMicroseconds is not - the budget needs a modelled skeletalMesh cost", sourceLabel );
             return false;
         }
         return true;

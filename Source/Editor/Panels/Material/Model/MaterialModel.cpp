@@ -37,7 +37,7 @@ namespace sw::editor
 
     ToolAssetLoadResult MaterialModel::loadDocument( string_view path )
     {
-        if ( _material->loadFromFile( AssetID{ path } ) == false )
+        if ( _material->loadFromAsset( AssetID{ path } ) == false )
         {
             _status = SW_LOCKEY( "EditorMaterial", "LoadFailedStatus" );
             return ToolAssetLoadResult::Malformed;

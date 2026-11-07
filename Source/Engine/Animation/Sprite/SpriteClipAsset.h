@@ -145,8 +145,8 @@ namespace sw
         SpriteClipAsset();
 
         /** @brief 리소스 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
-        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
-        /** @brief **디스크 파일**의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromFile` 과 같습니다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief **디스크 파일**의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -207,7 +207,7 @@ namespace sw
     private:
         /** @brief 읽은 값의 의미를 고칩니다(음수 크기 · 테두리는 오류, 프레임 밖 구간은 자르고 알림). 어긋나 읽을 수 없으면 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
-        /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromFile` · `loadFromDiskFile`)의 공통 단계입니다. */
+        /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromAsset` · `loadFromDiskFile`)의 공통 단계입니다. */
         [[nodiscard]] bool loadFromXMLText( const string& text, string_view sourceLabel );
     };
 } // namespace sw

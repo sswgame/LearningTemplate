@@ -112,7 +112,7 @@ namespace sw
         void    endFrame( float32 deltaSeconds );
         float64 getClock() const { return _clock; }
         /** @brief 스켈레탈 유닛의 이번 프레임을 기록합니다(평가 뒤 · 게임 스레드). */
-        void recordUnit( const SkeletalMeshComponent& skeletalMesh, uint64 frameIndex );
+        void recordMesh( const SkeletalMeshComponent& skeletalMesh, uint64 frameIndex );
         /** @brief 포즈가 없는 대상(스프라이트 애니메이터)의 상태를 기록합니다. */
         void recordState( const Component& target, AnimationRewindKind kind, const AnimationDebugState& state, uint64 frameIndex );
 

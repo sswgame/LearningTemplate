@@ -100,7 +100,7 @@ namespace sw
     {
         // 게임 시계는 스킨이 없는 씬에도 흐른다 — 머티리얼 시간 · 구름 · 자동 노출이 이 값을 읽는다. VAT 는 군중 시계 그대로다(인스턴스 시간 오프셋이 이 시계 기준이다).
         inoutSnapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
-        if ( animation.getUnitCount() == 0 && inoutSnapshot._listSkinPalette.empty() )
+        if ( animation.getSkeletalMeshCount() == 0 && inoutSnapshot._listSkinPalette.empty() )
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.skinPalettes" );
 
@@ -111,14 +111,14 @@ namespace sw
         listWeight->reserve( _morphWeightCountHint );
         // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다. 유닛 하나가 빠지면(시체를 정리함) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
         // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬이며 바인드 포즈) 한 번 그려진다.
-        for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
+        for ( const SkeletalMeshComponent* pSkeletalMesh : animation.getSkeletalMeshes() )
         {
             // 자기 칸을 그리는 유닛만 자기 팔레트를 싣는다 — 군중 묶음과 나누는 유닛은 묶음의 칸을, VAT 유닛 · 스킨 없는 유닛은 칸 없이 그린다(`getSkinSlot` 과 같은 규칙).
-            const uint32 skinSlot = pUnit->getSkinSlot();
-            if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pUnit->getOwnSkinSlot() )
+            const uint32 skinSlot = pSkeletalMesh->getSkinSlot();
+            if ( skinSlot == AnimationSkinSlot::kNone || skinSlot != pSkeletalMesh->getOwnSkinSlot() )
                 continue;
-            appendPalette( inoutSnapshot, *listRow, *listWeight, pUnit->getMesh(), skinSlot, pUnit->getLODIndex(), pUnit->getSkinPalette(), &pUnit->getMorphWeights(),
-                           pUnit->getSkinningMethod() );
+            appendPalette( inoutSnapshot, *listRow, *listWeight, pSkeletalMesh->getMesh(), skinSlot, pSkeletalMesh->getLODIndex(), pSkeletalMesh->getSkinPalette(), &pSkeletalMesh->getMorphWeights(),
+                           pSkeletalMesh->getSkinningMethod() );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )

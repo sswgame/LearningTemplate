@@ -176,7 +176,7 @@ namespace sw
         // 등록된 일에 알린다 — 일이 이 유닛 포인터를 들고 있으면 놓게 한다.
         for ( IAnimationPhaseTask* pTask : _listTask )
         {
-            pTask->onAnimationUnitDetached( *this );
+            pTask->onAnimationMeshDetached( *this );
         }
         _listTask.clear();
     }
@@ -196,7 +196,7 @@ namespace sw
     {
         MeshComponent::onRegister( manager );
         _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
-        _pAnimationSystem->registerUnit( this );
+        _pAnimationSystem->registerMesh( this );
         _lodRegistration = _pAnimationSystem->registerLODClient( &_lodClient );
         _updatePhase     = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentID() );
     }
@@ -205,7 +205,7 @@ namespace sw
     {
         leaveCrowd( &manager.getSubsystem<AnimationSystem>().getCrowd() );
         _lodRegistration.reset();
-        manager.getSubsystem<AnimationSystem>().unregisterUnit( this );
+        manager.getSubsystem<AnimationSystem>().unregisterMesh( this );
         _pAnimationSystem = nullptr;
         MeshComponent::onUnregister( manager );
     }
@@ -581,7 +581,7 @@ namespace sw
     {
         if ( VectorUtil::removeFirst( _listTask, pTask ) == 0 )
             return;
-        pTask->onAnimationUnitDetached( *this );
+        pTask->onAnimationMeshDetached( *this );
         _bPoseDirty = SW_TRUE;
     }
 

@@ -35,7 +35,7 @@ namespace sw
         /** @brief 원본을 옮겨 쓸 때(프로필이 준비되고 원본이 있다)만 포즈를 쓴다. 원본이 없거나 프로필이 없으면 이 유닛은 읽기만 하는 작업만 남는다. */
         AnimationPoseAccess getPoseAccess() const override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
+        void                onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         PoseRetargetComponent& _owner;

@@ -59,7 +59,7 @@ namespace sw
 
 namespace sw
 {
-    bool SequenceAsset::loadFromFile( const AssetID& assetID )
+    bool SequenceAsset::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         *this                  = SequenceAsset{};

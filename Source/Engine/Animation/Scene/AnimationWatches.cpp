@@ -43,7 +43,7 @@ namespace sw
             {
                 if ( pManager == nullptr )
                     return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getActiveUnitCount() );
+                outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getActiveMeshCount() );
                 return true;
             }
 
@@ -51,7 +51,7 @@ namespace sw
             {
                 if ( pManager == nullptr )
                     return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getPoseEvaluatedUnitCount() );
+                outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getPoseEvaluatedMeshCount() );
                 return true;
             }
 

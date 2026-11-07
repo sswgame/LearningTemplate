@@ -19,14 +19,14 @@ namespace sw
      * @struct XMLCatalogLoader
      * @brief `XMLCatalog` 가 부르는 문서 열기와 루트 찾기의 몸통입니다. 템플릿 밖에 두어서 카탈로그 헤더가 XML 헤더를 끌어오지 않게 합니다.
      * @details 실패 경고는 `XMLReadUtil::loadRootOrWarn` · `parseRootOrWarn` 이 낸다. 루트 읽기가 0 개이거나 false 이면 실패이다.
-     *          `GameDataXML::loadFromFile` · `loadFromXMLText`(다른 카탈로그를 함께 받는 문맥 버전 포함)도 이 몸통을 쓴다 — 문서 열기 · 루트 찾기는 여기 하나다.
+     *          `GameDataXML::loadFromAsset` · `loadFromXMLText`(다른 카탈로그를 함께 받는 문맥 버전 포함)도 이 몸통을 쓴다 — 문서 열기 · 루트 찾기는 여기 하나다.
      */
     struct SW_GF_API XMLCatalogLoader
     {
         using ReadRootFunction = bool ( * )( void* pCatalog, const XMLNode& root, string_view sourceName );
 
         /** @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
-        [[nodiscard]] static bool loadFromFile( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
+        [[nodiscard]] static bool loadFromAsset( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
         /** @brief XML 문자열 버전입니다. 테스트와 에디터 미리보기가 씁니다. */
         [[nodiscard]] static bool loadFromXMLText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
 
@@ -45,7 +45,7 @@ namespace sw
      * @details 카탈로그는 루트 원소 이름 `kXMLRootName` 과 루트 읽기 `loadRoot( const XMLNode&, string_view sourceName )` 만 두면 된다. 루트 읽기는 원소를 손으로 고르지 않고 `XMLCatalogElement` 표로 돌린다(`XMLCatalogTable.h`).
      *          루트 읽기는 읽은 항목 수(`uint32`, 0 이면 실패)나 성공 여부(`bool`)를 반환한다.
      *          둘 다 비공개로 두고 베이스를 friend 로 연다.
-     *          다른 카탈로그를 함께 받는 루트 읽기(기술, 코스터 설계)는 `GameDataXML::loadFromFile` 의 문맥 버전을 그대로 쓴다.
+     *          다른 카탈로그를 함께 받는 루트 읽기(기술, 코스터 설계)는 `GameDataXML::loadFromAsset` 의 문맥 버전을 그대로 쓴다.
      *          **사본을 만들지 않는다.** 파일에서 읽는 길은 공유 캐시 하나다 — 그 카탈로그의 .cpp 가 캐시를 인스턴스화하고(`SW_MODULE_SHARED_ASSET_CACHE`, 헤더에 `extern template`) 쓰는 쪽은
      *          `SharedAssetCache<카탈로그>::acquire` · `request` 로 같은 경로의 한 벌을 쥔다. 그래서 `loadFromAsset` 은 비공개이고 종류의 로더(`AssetTypeLoader`)만 friend 다 —
      *          쓰는 쪽이 멤버 · 지역 변수로 사본을 읽으면 다시 읽기가 닿지 않고 같은 파일을 여러 번 읽는다(언리얼 `UDataTable` · 유니티 `ScriptableObject` 처럼 에셋 한 벌을 참조한다).
@@ -80,7 +80,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽습니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다. 종류의 로더(공유 캐시 · 스키마 검사)와 자기 읽기를 감싸는 파생만 부른다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID )
         {
-            return XMLCatalogLoader::loadFromFile( this, &XMLCatalog::readRoot, assetID, TCatalog::kXMLRootName );
+            return XMLCatalogLoader::loadFromAsset( this, &XMLCatalog::readRoot, assetID, TCatalog::kXMLRootName );
         }
 
     private:

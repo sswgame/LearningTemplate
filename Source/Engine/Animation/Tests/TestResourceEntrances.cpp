@@ -113,7 +113,7 @@ SW_TEST_CASE( ResourceEntranceTest, ReadingByIDRecordsTheComposition )
     Util::write( domain, "a.material", Util::makeMaterial( "A", Util::kWhen ) );
     const AssetID              materialID = ScopedScratchDomain::makeID( "a.material" );
     const shared_ptr<Material> material   = Material::create();
-    SW_REQUIRE_TRUE( material->loadFromFile( materialID ) );
+    SW_REQUIRE_TRUE( material->loadFromAsset( materialID ) );
     SW_EXPECT_TRUE( Util::isRecorded( materialID ) );
 
     Util::write( domain, "a.scene.xml", Util::makeScene( "A", Util::kWhen ) );
@@ -146,7 +146,7 @@ SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
     SW_REQUIRE_TRUE( ResourceLayers::setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const shared_ptr<Material> material = Material::create();
-    SW_REQUIRE_TRUE( material->loadFromFile( ScopedScratchDomain::makeID( "b.material" ) ) );
+    SW_REQUIRE_TRUE( material->loadFromAsset( ScopedScratchDomain::makeID( "b.material" ) ) );
     SW_EXPECT_EQUAL( string( "FromLayer" ), material->getName() );
 
     const shared_ptr<const RetargetProfile> profile = SharedAssetCache<RetargetProfile>::acquire( ScopedScratchDomain::makeID( "b.retarget.xml" ).view() );

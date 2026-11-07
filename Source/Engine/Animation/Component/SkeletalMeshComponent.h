@@ -154,7 +154,7 @@ namespace sw
         const vector<TComponentHandle<SkeletalMeshComponent>>& getAnimationDependencies() const { return _listDependency; }
 
         /**
-         * @brief 단계에 끼어드는 작업을 등록하고 그 구독을 돌려줍니다(소유하지 않습니다). 구독을 놓으면 빠지고 그 작업에 `onAnimationUnitDetached` 를 알립니다.
+         * @brief 단계에 끼어드는 작업을 등록하고 그 구독을 돌려줍니다(소유하지 않습니다). 구독을 놓으면 빠지고 그 작업에 `onAnimationMeshDetached` 를 알립니다.
          * @details nullptr 이면 빈 구독입니다. 구독 하나가 등록 하나입니다. 유닛이 먼저 사라지면 구독은 무효가 됩니다(알리지 않는다).
          */
         [[nodiscard]] Subscription registerAnimationPhaseTask( IAnimationPhaseTask* pTask );
@@ -314,7 +314,7 @@ namespace sw
         void refreshDrawnSkinSlot();
         /** @brief 군중 상태(묶음 · 혼자 · VAT)를 정합니다. `updateCrowdMembership` 이 부르고 칸 변화를 알린다. */
         void updateCrowdState( AnimationCrowd& crowd );
-        /** @brief 작업을 뗍니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다(작업 구독이 풀릴 때). */
+        /** @brief 작업을 뗍니다. 그 작업에 `onAnimationMeshDetached` 를 알립니다(작업 구독이 풀릴 때). */
         void detachAnimationPhaseTask( IAnimationPhaseTask* pTask );
 
         /** @brief 사용처 하나가 알린 핵심 본입니다(`requireBones`). */

@@ -21,7 +21,7 @@ namespace sw
         SW_LOG_WARNING_ID( "XMLCatalog.NoEntries", "%#: <%#> has no entries", sourceName, pRootName );
     }
 
-    bool XMLCatalogLoader::loadFromFile( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName )
+    bool XMLCatalogLoader::loadFromAsset( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName )
     {
         XMLDocument doc;
         XMLNode     root;

@@ -252,7 +252,7 @@ namespace sw
         AnimationGraphAsset() = default;
 
         /** @brief 리소스 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
-        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 쓰지 않고 오류입니다(부모를 끊지 않는다). */
@@ -284,7 +284,7 @@ namespace sw
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
         /** @brief "nodes" 의 노드를 읽어 목록에 더합니다. 깨진 노드는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
-        [[nodiscard]] bool parseNodes( const XMLNode& root, string_view sourceLabel );
+        [[nodiscard]] bool loadNodesFromXML( const XMLNode& root, string_view sourceLabel );
         /** @brief "comments" 의 주석 상자를 읽어 목록에 더합니다. id 가 1 미만이거나 겹치면 오류를 남기고 false 를 돌려줍니다. */
         [[nodiscard]] bool parseComments( const XMLNode& root, string_view sourceLabel );
         /** @brief "links" 의 링크를 읽어 목록에 더합니다. 깨진 링크는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */

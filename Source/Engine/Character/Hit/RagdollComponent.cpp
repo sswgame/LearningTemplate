@@ -76,7 +76,7 @@ namespace sw
         _owner.updateWeights( unit, _owner._lastDeltaSeconds );
     }
 
-    void RagdollAnimationBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    void RagdollAnimationBinding::onAnimationMeshDetached( SkeletalMeshComponent& unit )
     {
         if ( _owner._pUnit == &unit )
             _owner._pUnit = nullptr;

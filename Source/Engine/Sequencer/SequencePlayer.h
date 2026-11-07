@@ -23,7 +23,7 @@ namespace sw
         SequencePlayer();
 
         /** @brief JSON 시퀀스를 로드합니다. */
-        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 이미 파싱된 에셋을 설정합니다. */
         void setAsset( const SequenceAsset& asset );
 

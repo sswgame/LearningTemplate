@@ -124,7 +124,7 @@ namespace sw
         void                            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
         void                            finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
-        void                            onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
+        void                            onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) override;
         bool                            describeSharedPose( AnimationSharedPoseRequest& outRequest ) const override;
         shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const override;
         void                            collectDebugState( AnimationDebugState& inoutState ) const override;

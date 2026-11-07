@@ -46,7 +46,7 @@ namespace sw
         void                prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
-        void                onAnimationUnitDetached( SkeletalMeshComponent& skeletalMesh ) override;
+        void                onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) override;
 
     private:
         FacialAnimationComponent& _owner;
