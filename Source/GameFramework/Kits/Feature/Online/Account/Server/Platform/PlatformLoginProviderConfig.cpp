@@ -20,8 +20,8 @@ namespace sw
             static constexpr const utf8* kKnownKeys[] = { "name", "kind", "issuer", "jwksUrl",
                                                           "clientIds", "requireNonce", "profileUrl", "subjectPath",
                                                           "displayNamePath", "ticketParam", "keyParam", "keySecretEnvironment",
-                                                          "resultPath", "resultValue", "teamId", "signingKeyId",
-                                                          "tokenUrl", "revokeUrl" };
+                                                          "identityParam", "identity", "resultPath", "resultValue",
+                                                          "teamId", "signingKeyId", "tokenUrl", "revokeUrl" };
 
             static bool isKnownKey( string_view key ) { return VectorUtil::contains( kKnownKeys, key ); }
 
@@ -88,6 +88,8 @@ namespace sw
         outSettings._ticketParam          = Internal::readText( entry, "ticketParam", "" );
         outSettings._keyParam             = Internal::readText( entry, "keyParam", "" );
         outSettings._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment", "" );
+        outSettings._identityParam        = Internal::readText( entry, "identityParam", "" );
+        outSettings._identity             = Internal::readText( entry, "identity", "" );
         outSettings._resultPath           = Internal::readText( entry, "resultPath", "" );
         outSettings._resultValue          = Internal::readText( entry, "resultValue", "" );
         outSettings._teamID               = Internal::readText( entry, "teamId", "" );
@@ -131,7 +133,9 @@ namespace sw
             const bool bHasQuery  = settings._profileURL.empty() == false && settings._ticketParam.empty() == false;
             const bool bHasKey    = settings._keyParam.empty() == false && settings._keySecretEnvironment.empty() == false;
             const bool bHasResult = settings._resultPath.empty() == false && settings._resultValue.empty() == false;
-            return bHasQuery && bHasKey && bHasResult;
+            // 스팀 웹 API 티켓(`GetAuthTicketForWebApi`)은 받을 서비스 이름(identity)으로 묶인다 — 이름 없이 물으면 그 티켓은 확인되지 않는다(partner.steamgames.com ISteamUserAuth 문서).
+            const bool bHasIdentity = TicketQueryLoginProvider::isQuerySafe( settings._identityParam ) && TicketQueryLoginProvider::isQuerySafe( settings._identity );
+            return bHasQuery && bHasKey && bHasResult && bHasIdentity;
         }
         return settings._profileURL.empty() == false;
     }

@@ -50,9 +50,11 @@ namespace sw
         [[nodiscard]] virtual bool setRichPresence( string_view key, string_view value ) = 0;
         /**
          * @brief 서버 로그인에 내밀 스토어 인증 티켓(바이트)을 받습니다. 서버가 스토어에 물어 이 계정이 맞는지 확인한다.
+         * @param identity 티켓을 받을 서비스 이름입니다. 서버 로그인 제공자 설정의 `identity` 와 같은 글이어야 한다 — 스팀은 이 이름으로 만든 티켓만 그 이름으로 확인한다
+         *                 (`GetAuthTicketForWebApi( pchIdentity )` ↔ `AuthenticateUserTicket` 의 `identity`). 언리얼 Steam OSS 의 웹 API 티켓도 같은 짝이다(기억에 의존).
          * @return 플랫폼에 로그인돼 있지 않으면 false 입니다.
          */
-        [[nodiscard]] virtual bool requestAuthTicket( vector<uint8>& outTicket ) = 0;
+        [[nodiscard]] virtual bool requestAuthTicket( string_view identity, vector<uint8>& outTicket ) = 0;
         /** @brief 프레임마다 부릅니다(SDK 콜백 펌프). */
         virtual void update() = 0;
     };

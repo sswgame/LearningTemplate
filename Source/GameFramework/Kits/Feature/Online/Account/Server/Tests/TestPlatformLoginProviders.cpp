@@ -347,21 +347,23 @@ SW_TEST_CASE( ProfileAPILoginProviderTest, MapsStatusAndBodyToRejectedOrUnavaila
     SW_EXPECT_TRUE( failed._subject.empty() );
 }
 
-/** @brief [TicketQueryLoginProviderTest] 키와 티켓을 쿼리 인자로 덧붙여(주소에 `?` 가 있으면 `&`) 보내고, 결과 글이 성공 값이면 주체를 읽는다 — 스팀 AuthenticateUserTicket 모양 */
+/** @brief [TicketQueryLoginProviderTest] 키 · 티켓 · 받을 서비스 이름(identity)을 쿼리 인자로 덧붙여(주소에 `?` 가 있으면 `&`) 보내고, 결과 글이 성공 값이면 주체를 읽는다 — 스팀 AuthenticateUserTicket 모양 */
 SW_TEST_CASE( TicketQueryLoginProviderTest, SendsKeyAndTicketAndReadsTheResult )
 {
     ProviderHTTPRig             rig;
     PlatformLoginProviderConfig settings;
-    settings._name        = "steam";
-    settings._kind        = PlatformLoginProviderKind::TicketQuery;
-    settings._profileURL  = rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480";
-    settings._ticketParam = "ticket";
-    settings._keyParam    = "key";
-    settings._resultPath  = "response.params.result";
-    settings._resultValue = "OK";
-    settings._subjectPath = "response.params.steamid";
+    settings._name          = "steam";
+    settings._kind          = PlatformLoginProviderKind::TicketQuery;
+    settings._profileURL    = rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480";
+    settings._ticketParam   = "ticket";
+    settings._keyParam      = "key";
+    settings._identityParam = "identity";
+    settings._identity      = "swlogin";
+    settings._resultPath    = "response.params.result";
+    settings._resultValue   = "OK";
+    settings._subjectPath   = "response.params.steamid";
     TicketQueryLoginProvider provider( settings, "SECRETKEY", &rig._client );
-    SW_EXPECT_EQUAL( rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480&key=SECRETKEY&ticket=AB12", provider.makeRequestURL( "AB12" ) );
+    SW_EXPECT_EQUAL( rig._baseURL + "/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=480&key=SECRETKEY&ticket=AB12&identity=swlogin", provider.makeRequestURL( "AB12" ) );
 
     rig._profileBody                             = R"({"response":{"params":{"result":"OK","steamid":"76561197960287930"}}})";
     const PlatformLoginVerification verification = rig.verify( provider, "AB12" );
@@ -369,13 +371,15 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, SendsKeyAndTicketAndReadsTheResult )
     SW_EXPECT_EQUAL( string( "76561197960287930" ), verification._subject );
     const HTTPServerRequest* pRequest = rig.findLastRequest( "/ISteamUserAuth/AuthenticateUserTicket/v1/" );
     SW_REQUIRE_TRUE( pRequest != nullptr );
-    const HTTPHeader* pApp    = pRequest->findQuery( "appid" );
-    const HTTPHeader* pKey    = pRequest->findQuery( "key" );
-    const HTTPHeader* pTicket = pRequest->findQuery( "ticket" );
-    SW_REQUIRE_TRUE( pApp != nullptr && pKey != nullptr && pTicket != nullptr );
+    const HTTPHeader* pApp      = pRequest->findQuery( "appid" );
+    const HTTPHeader* pKey      = pRequest->findQuery( "key" );
+    const HTTPHeader* pTicket   = pRequest->findQuery( "ticket" );
+    const HTTPHeader* pIdentity = pRequest->findQuery( "identity" );
+    SW_REQUIRE_TRUE( pApp != nullptr && pKey != nullptr && pTicket != nullptr && pIdentity != nullptr );
     SW_EXPECT_EQUAL( string( "480" ), pApp->_value );
     SW_EXPECT_EQUAL( string( "SECRETKEY" ), pKey->_value );
     SW_EXPECT_EQUAL( string( "AB12" ), pTicket->_value );
+    SW_EXPECT_EQUAL( string( "swlogin" ), pIdentity->_value ); // 클라이언트가 GetAuthTicketForWebApi 에 넘긴 이름과 같아야 스팀이 받는다
 
     rig._profileBody = R"({"response":{"error":{"errorcode":101,"errordesc":"Invalid ticket"}}})";
     SW_EXPECT_TRUE( rig.verify( provider, "AB12" )._bRejected == SW_TRUE );
@@ -397,13 +401,15 @@ SW_TEST_CASE( TicketQueryLoginProviderTest, UnsafeTicketAndMissingKeyAreRefused 
 
     ProviderHTTPRig             rig;
     PlatformLoginProviderConfig settings;
-    settings._name        = "steam";
-    settings._kind        = PlatformLoginProviderKind::TicketQuery;
-    settings._profileURL  = rig._baseURL + "/verify";
-    settings._ticketParam = "ticket";
-    settings._keyParam    = "key";
-    settings._resultPath  = "result";
-    settings._resultValue = "OK";
+    settings._name          = "steam";
+    settings._kind          = PlatformLoginProviderKind::TicketQuery;
+    settings._profileURL    = rig._baseURL + "/verify";
+    settings._ticketParam   = "ticket";
+    settings._keyParam      = "key";
+    settings._identityParam = "identity";
+    settings._identity      = "swlogin";
+    settings._resultPath    = "result";
+    settings._resultValue   = "OK";
     TicketQueryLoginProvider provider( settings, "K", &rig._client );
     SW_EXPECT_TRUE( rig.verify( provider, "AB&key=evil" )._bRejected == SW_TRUE );
     SW_EXPECT_TRUE( rig._listRequest.empty() );

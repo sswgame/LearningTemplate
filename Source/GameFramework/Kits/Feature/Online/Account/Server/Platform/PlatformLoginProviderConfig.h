@@ -55,6 +55,8 @@ namespace sw
         string                    _ticketParam{};          ///< TicketQuery — 티켓을 싣는 쿼리 인자 이름
         string                    _keyParam{};             ///< TicketQuery — 서버 비밀 키를 싣는 쿼리 인자 이름
         string                    _keySecretEnvironment{}; ///< TicketQuery — 서버 비밀 키를 담은 환경 변수 이름(키는 설정 파일에 쓰지 않는다)
+        string                    _identityParam{};        ///< TicketQuery — 티켓을 받을 서비스의 이름을 싣는 쿼리 인자 이름(스팀 AuthenticateUserTicket 의 `identity`, 필수)
+        string                    _identity{};             ///< TicketQuery — 그 서비스 이름. 클라이언트가 티켓을 만들 때 같은 글을 넘긴다(스팀 `GetAuthTicketForWebApi( pchIdentity )` — 다르면 확인이 실패한다)
         string                    _resultPath{};           ///< TicketQuery — 확인 결과 글의 점 경로(예: "response.params.result")
         string                    _resultValue{};          ///< TicketQuery — 성공일 때 그 경로의 글(예: "OK")
         string                    _teamID{};               ///< AppleSignIn — 개발자 팀 id(client secret 의 `iss`)
@@ -79,7 +81,7 @@ namespace sw
         static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**
          * @brief 제공자 파일(`OnlineProviderFile::read`)의 항목 하나 `{"name","kind":"oidc|profile|ticketQuery|appleSignIn","issuer","jwksUrl","clientIds":[…],"requireNonce","profileUrl",
-         *        "subjectPath","displayNamePath","ticketParam","keyParam","keySecretEnvironment","resultPath","resultValue","teamId","signingKeyId","tokenUrl","revokeUrl"}` 를 읽습니다.
+         *        "subjectPath","displayNamePath","ticketParam","keyParam","keySecretEnvironment","identityParam","identity","resultPath","resultValue","teamId","signingKeyId","tokenUrl","revokeUrl"}` 를 읽습니다.
          * @details 모르는 키, 빠진 필수 키, 규칙에 맞지 않는 이름은 오류(@p outError)로 처리한다. 철자가 틀린 설정이 조용히 기본값이 되지 않게 하려는 것이다.
          */
         [[nodiscard]] static bool readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings, string& outError );

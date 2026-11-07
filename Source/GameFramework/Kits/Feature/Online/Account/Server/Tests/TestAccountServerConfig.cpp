@@ -88,7 +88,7 @@ SW_TEST_CASE( PlatformLoginProviderConfigTest, ReadsEachKind )
     }
     {
         PlatformLoginProviderConfig settings;
-        SW_REQUIRE_TRUE( AccountConfigTestUtil::readProvider( R"({"name":"steam","kind":"ticketQuery","profileUrl":"https://q","ticketParam":"ticket","keyParam":"key","keySecretEnvironment":"K","resultPath":"response.params.result","resultValue":"OK"})", settings ) );
+        SW_REQUIRE_TRUE( AccountConfigTestUtil::readProvider( R"({"name":"steam","kind":"ticketQuery","profileUrl":"https://q","ticketParam":"ticket","keyParam":"key","keySecretEnvironment":"K","identityParam":"identity","identity":"swlogin","resultPath":"response.params.result","resultValue":"OK"})", settings ) );
         SW_EXPECT_TRUE( settings._kind == PlatformLoginProviderKind::TicketQuery );
     }
     {
@@ -112,7 +112,9 @@ SW_TEST_CASE( PlatformLoginProviderConfigTest, RefusesBrokenEntries )
               R"({"name":"","kind":"profile","profileUrl":"https://p"})",
               R"({"name":"averyveryverylongname","kind":"profile","profileUrl":"https://p"})",
               R"({"name":"naver","kind":"profile"})",
-              R"({"name":"steam","kind":"ticketQuery","profileUrl":"https://q","ticketParam":"ticket","keyParam":"key","resultPath":"r","resultValue":"OK"})",
+              R"({"name":"steam","kind":"ticketQuery","profileUrl":"https://q","ticketParam":"ticket","keyParam":"key","identityParam":"identity","identity":"swlogin","resultPath":"r","resultValue":"OK"})",
+              R"({"name":"steam","kind":"ticketQuery","profileUrl":"https://q","ticketParam":"ticket","keyParam":"key","keySecretEnvironment":"K","resultPath":"r","resultValue":"OK"})",
+              R"({"name":"steam","kind":"ticketQuery","profileUrl":"https://q","ticketParam":"ticket","keyParam":"key","keySecretEnvironment":"K","identityParam":"identity","identity":"a&b","resultPath":"r","resultValue":"OK"})",
               R"({"name":"apple","kind":"appleSignIn","issuer":"https://i","jwksUrl":"https://j","clientIds":["a"],"teamId":"T","keySecretEnvironment":"K"})",
               R"({"name":"google","kind":"oidc","issuer":"https://i","jwksUrl":"https://j","clientIds":["a"],"requireNonce":"yes"})",
           } )

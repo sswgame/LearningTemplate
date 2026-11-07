@@ -59,7 +59,7 @@ namespace sw
     {
         string url = _settings._profileURL;
         url += url.find( '?' ) == string::npos ? "?" : "&";
-        url += _settings._keyParam + "=" + _key + "&" + _settings._ticketParam + "=" + string( ticket );
+        url += _settings._keyParam + "=" + _key + "&" + _settings._ticketParam + "=" + string( ticket ) + "&" + _settings._identityParam + "=" + _settings._identity;
         return url;
     }
 

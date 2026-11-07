@@ -39,7 +39,8 @@ namespace sw
         [[nodiscard]] virtual bool writeCloudFile( string_view fileName, const vector<uint8>& bytes ) = 0;
         [[nodiscard]] virtual bool readCloudFile( string_view fileName, vector<uint8>& outBytes )     = 0;
         [[nodiscard]] virtual bool setRichPresence( string_view key, string_view value )              = 0;
-        [[nodiscard]] virtual bool requestAuthTicket( vector<uint8>& outTicket )                      = 0;
+        /** @brief `ISteamUser::GetAuthTicketForWebApi( identity )` 로 웹 API 티켓을 받아 16 진 글(바이트)로 씁니다. 서버는 같은 @p identity 로 확인한다(`TicketQueryLoginProvider`). */
+        [[nodiscard]] virtual bool requestAuthTicket( string_view identity, vector<uint8>& outTicket ) = 0;
     };
 
     /**
@@ -63,7 +64,7 @@ namespace sw
         bool        writeCloudFile( string_view fileName, const vector<uint8>& bytes ) override { return _pBridge->writeCloudFile( fileName, bytes ); }
         bool        readCloudFile( string_view fileName, vector<uint8>& outBytes ) override { return _pBridge->readCloudFile( fileName, outBytes ); }
         bool        setRichPresence( string_view key, string_view value ) override { return _pBridge->setRichPresence( key, value ); }
-        bool        requestAuthTicket( vector<uint8>& outTicket ) override { return _pBridge->requestAuthTicket( outTicket ); }
+        bool        requestAuthTicket( string_view identity, vector<uint8>& outTicket ) override { return _pBridge->requestAuthTicket( identity, outTicket ); }
         void        update() override { _pBridge->runCallbacks(); }
 
     private:
