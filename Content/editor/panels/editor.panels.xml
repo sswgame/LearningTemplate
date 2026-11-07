@@ -11,6 +11,7 @@
 		<EditorPanelText _title="Bug Report" _label="Bug Report" />
 		<EditorPanelText _title="Camera Presets" _label="Camera Presets" />
 		<EditorPanelText _title="Catalog Editor" _label="Catalog Editor" />
+		<EditorPanelText _title="Changes" _label="Changes" />
 		<EditorPanelText _title="Character Editor" _label="Character Editor" />
 		<EditorPanelText _title="Clip Preview" _label="Clip Preview" />
 		<EditorPanelText _title="Command Palette" _label="Command Palette" />

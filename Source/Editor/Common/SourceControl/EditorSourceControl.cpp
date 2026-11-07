@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Task/EditorExternalToolJob.h"
 
@@ -18,7 +19,50 @@ namespace sw::editor
         , _listLock{}
         , _listPending{}
         , _running{}
+        , _listChange{}
+        , _detailPath{}
+        , _listDetailLine{}
+        , _lastError{}
+        , _changeRevision{ 0 }
+        , _detailOperation{ SourceControlOperation::None }
+        , _bStatusKnown{ SW_FALSE }
+        , _reserved{ 0 }
     {
+    }
+
+    bool EditorSourceControl::requestStatus()
+    {
+        if ( _pProvider->canTrackChanges() == false )
+            return false;
+        enqueue( SourceControlOperation::Status, {} );
+        return true;
+    }
+
+    bool EditorSourceControl::requestDiff( string_view repositoryPath )
+    {
+        if ( _pProvider->canTrackChanges() == false || repositoryPath.empty() )
+            return false;
+        enqueue( SourceControlOperation::Diff, repositoryPath );
+        return true;
+    }
+
+    bool EditorSourceControl::requestHistory( string_view repositoryPath )
+    {
+        if ( _pProvider->canTrackChanges() == false || repositoryPath.empty() )
+            return false;
+        enqueue( SourceControlOperation::History, repositoryPath );
+        return true;
+    }
+
+    bool EditorSourceControl::requestRevert( const SourceControlChange& change )
+    {
+        if ( _pProvider->canTrackChanges() == false || GitChangeCommands::canRevert( change ) == false )
+            return false;
+        enqueue( SourceControlOperation::Revert, change._path );
+        // 이름 바꾸기는 옛 경로도 HEAD 로 되돌려야 원래 파일이 돌아온다
+        if ( change._kind == SourceControlChangeKind::Renamed && change._originalPath.empty() == false )
+            enqueue( SourceControlOperation::Revert, change._originalPath );
+        return true;
     }
 
     EditorSourceControl::~EditorSourceControl() = default;
@@ -121,6 +165,31 @@ namespace sw::editor
                 command = _pProvider->makeUnlockCommand( next._repositoryPath );
                 break;
             }
+            case SourceControlOperation::ProbeGit:
+            {
+                command = GitSourceControlProvider::makeProbeCommand();
+                break;
+            }
+            case SourceControlOperation::Status:
+            {
+                command = GitChangeCommands::makeStatusCommand();
+                break;
+            }
+            case SourceControlOperation::Diff:
+            {
+                command = GitChangeCommands::makeDiffCommand( next._repositoryPath );
+                break;
+            }
+            case SourceControlOperation::History:
+            {
+                command = GitChangeCommands::makeHistoryCommand( next._repositoryPath );
+                break;
+            }
+            case SourceControlOperation::Revert:
+            {
+                command = GitChangeCommands::makeRevertCommand( next._repositoryPath );
+                break;
+            }
             case SourceControlOperation::None:
             {
                 break;
@@ -144,11 +213,70 @@ namespace sw::editor
                     setProvider( make_unique<GitLfsSourceControlProvider>() );
                     SW_LOG_INFO_ID( "SourceControl.SourceControl", "Source control: %# (%#)", _pProvider->getName().data(), lastLine.c_str() );
                     requestRefresh();
+                    (void)requestStatus();
                 }
                 else
                 {
                     SW_LOG_INFO_ID( "SourceControl.SourceControlGitLfs", "Source control: git lfs is not available - locking is off, read-only files are still shown" );
+                    enqueue( SourceControlOperation::ProbeGit, {} ); // 잠금은 없어도 변경 목록 · diff · 되돌리기는 git 하나로 된다
                 }
+                return;
+            }
+            case SourceControlOperation::ProbeGit:
+            {
+                if ( bLaunched && exitCode == 0 )
+                {
+                    setProvider( make_unique<GitSourceControlProvider>() );
+                    SW_LOG_INFO_ID( "SourceControl.GitOnly", "Source control: %# (%#) - changes, diff and revert without locking", _pProvider->getName().data(), lastLine.c_str() );
+                    (void)requestStatus();
+                }
+                else
+                {
+                    SW_LOG_INFO_ID( "SourceControl.NoGit", "Source control: git is not available - the Changes window stays empty" );
+                }
+                return;
+            }
+            case SourceControlOperation::Status:
+            {
+                vector<SourceControlChange> listChange;
+                if ( exitCode == 0 && GitChangeCommands::parseStatusOutput( listLine, listChange ) )
+                {
+                    _listChange   = std::move( listChange );
+                    _bStatusKnown = SW_TRUE;
+                    _lastError.clear();
+                }
+                else
+                {
+                    _lastError = formatToString( "Listing changes failed (exit %#): %#", exitCode, lastLine );
+                    SW_LOG_WARNING_ID( "SourceControl.StatusFailed", "Source control: %#", _lastError );
+                }
+                ++_changeRevision;
+                return;
+            }
+            case SourceControlOperation::Diff:
+            case SourceControlOperation::History:
+            {
+                _detailPath      = operation._repositoryPath;
+                _detailOperation = operation._operation;
+                _listDetailLine  = listLine;
+                if ( exitCode != 0 )
+                    _lastError = formatToString( "%# of %# failed (exit %#): %#", operation._operation == SourceControlOperation::Diff ? "Diff" : "History", operation._repositoryPath, exitCode, lastLine );
+                ++_changeRevision;
+                return;
+            }
+            case SourceControlOperation::Revert:
+            {
+                if ( exitCode == 0 )
+                {
+                    SW_LOG_INFO_ID( "SourceControl.Reverted", "Source control: reverted %# to HEAD", operation._repositoryPath );
+                    _lastError.clear();
+                }
+                else
+                {
+                    _lastError = formatToString( "Revert of %# failed (exit %#): %#", operation._repositoryPath, exitCode, lastLine );
+                    SW_LOG_WARNING_ID( "SourceControl.RevertFailed", "Source control: %#", _lastError );
+                }
+                (void)requestStatus();
                 return;
             }
             case SourceControlOperation::Refresh:

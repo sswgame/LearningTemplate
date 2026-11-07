@@ -19,10 +19,15 @@ namespace sw::editor
     enum class SourceControlOperation : uint8
     {
         None = 0,
-        Probe,   ///< 공급자를 쓸 수 있는지 확인한다(`git lfs version`)
-        Refresh, ///< 잠금 목록을 다시 읽는다
-        Lock,    ///< 파일 하나를 잠근다
-        Unlock,  ///< 파일 하나의 잠금을 해제한다
+        Probe,    ///< 공급자를 쓸 수 있는지 확인한다(`git lfs version`)
+        Refresh,  ///< 잠금 목록을 다시 읽는다
+        Lock,     ///< 파일 하나를 잠근다
+        Unlock,   ///< 파일 하나의 잠금을 해제한다
+        ProbeGit, ///< git LFS 가 없을 때 git 만 쓸 수 있는지 확인한다(`git --version`)
+        Status,   ///< 바뀐 파일 목록을 다시 읽는다
+        Diff,     ///< 파일 하나의 diff(HEAD 대비)를 읽는다
+        History,  ///< 파일 하나의 최근 커밋을 읽는다
+        Revert,   ///< 추적 파일 하나를 HEAD 로 되돌린다(색인 · 작업 트리)
     };
 } // namespace sw::editor
 
@@ -89,6 +94,35 @@ namespace sw::editor
         /** @brief 잠금 목록을 바꿉니다. 테스트와 갱신 결과가 씁니다. */
         void setLocks( vector<SourceControlLock>&& listLock ) { _listLock = std::move( listLock ); }
 
+        // ------------------------------------------------------------------------------
+        // 변경 목록 · diff · 이력 · 되돌리기(git 공급자만 — `ISourceControlProvider::canTrackChanges`)
+        // ------------------------------------------------------------------------------
+        /** @brief 바뀐 파일 목록을 다시 읽도록 요청합니다. 공급자가 변경을 다루지 않으면 false 입니다. */
+        bool requestStatus();
+        /** @brief 파일 하나(저장소 기준 경로)의 diff 를 읽도록 요청합니다. 결과는 `getDetailLines` 입니다. */
+        bool requestDiff( string_view repositoryPath );
+        /** @brief 파일 하나의 최근 커밋을 읽도록 요청합니다. 결과는 `getDetailLines` 입니다. */
+        bool requestHistory( string_view repositoryPath );
+        /**
+         * @brief 추적 파일 하나를 HEAD 로 되돌리도록 요청합니다(저장하지 않은 변경을 버린다 — 부르는 쪽이 먼저 확인을 받는다). 끝나면 변경 목록을 다시 읽는다.
+         * @return 공급자가 변경을 다루지 않거나 그 변경이 되돌릴 수 없는 종류(추적 밖 · 충돌)면 false 입니다.
+         */
+        bool requestRevert( const SourceControlChange& change );
+        /** @brief 지난 변경 목록입니다. */
+        const vector<SourceControlChange>& getChanges() const { return _listChange; }
+        /** @brief 변경 목록을 한 번이라도 읽었으면 true 입니다(빈 목록과 "아직 모름" 을 가른다). */
+        bool hasStatus() const { return _bStatusKnown == SW_TRUE; }
+        /** @brief 지난 diff · 이력 결과의 파일입니다. */
+        const string& getDetailPath() const { return _detailPath; }
+        /** @brief 지난 diff · 이력의 종류입니다(`Diff` · `History`, 없으면 `None`). */
+        SourceControlOperation getDetailOperation() const { return _detailOperation; }
+        /** @brief 지난 diff · 이력의 줄입니다. */
+        const vector<string>& getDetailLines() const { return _listDetailLine; }
+        /** @brief 마지막으로 실패한 변경 작업의 이유입니다(창이 보인다). 성공하면 비운다. */
+        const string& getLastError() const { return _lastError; }
+        /** @brief 변경 목록 · 상세가 바뀔 때마다 오르는 번호입니다. */
+        uint32 getChangeRevision() const { return _changeRevision; }
+
     private:
         /** @brief 순서를 기다리는 작업 하나입니다. */
         struct PendingOperation
@@ -107,5 +141,13 @@ namespace sw::editor
         vector<SourceControlLock>          _listLock;
         vector<PendingOperation>           _listPending;
         PendingOperation                   _running;
+        vector<SourceControlChange>        _listChange;
+        string                             _detailPath;
+        vector<string>                     _listDetailLine;
+        string                             _lastError;
+        uint32                             _changeRevision;
+        SourceControlOperation             _detailOperation;
+        uint8                              _bStatusKnown : 1;
+        [[maybe_unused]] uint8             _reserved     : 7;
     };
 } // namespace sw::editor

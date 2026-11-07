@@ -2,6 +2,8 @@
 
 #include "Editor/Common/SourceControl/SourceControlProvider.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -62,5 +64,93 @@ namespace sw::editor
     ProcessCommand GitLfsSourceControlProvider::makeUnlockCommand( string_view repositoryPath ) const
     {
         return ProcessCommand::fromSearchPath( "git", { "lfs", "unlock", string( repositoryPath ) } );
+    }
+
+    ProcessCommand GitSourceControlProvider::makeProbeCommand()
+    {
+        return ProcessCommand::fromSearchPath( "git", { "--version" } );
+    }
+
+    ProcessCommand GitChangeCommands::makeStatusCommand()
+    {
+        // 경로를 따옴표로 감싸지 않게 한다(한글 파일 이름) — 그래도 감싼 경로는 아래에서 벗긴다
+        return ProcessCommand::fromSearchPath( "git", { "-c", "core.quotepath=false", "status", "--porcelain=v1", "--untracked-files=all" } );
+    }
+
+    bool GitChangeCommands::parseStatusOutput( const vector<string>& listLine, vector<SourceControlChange>& outListChange )
+    {
+        outListChange.clear();
+        const auto unquote = []( string_view path )
+        {
+            if ( path.size() >= 2 && path.front() == '"' && path.back() == '"' )
+                path = path.substr( 1, path.size() - 2 );
+            return string( path );
+        };
+        for ( const string& line : listLine )
+        {
+            if ( line.empty() )
+                continue;
+            if ( line.size() < 4 || line[2] != ' ' )
+            {
+                outListChange.clear();
+                return false;
+            }
+            const utf8          indexState    = line[0];
+            const utf8          worktreeState = line[1];
+            const string_view   rest          = string_view( line ).substr( 3 );
+            SourceControlChange change{};
+            const size_t        arrow = rest.find( " -> " );
+            if ( arrow != string_view::npos )
+            {
+                change._originalPath = unquote( rest.substr( 0, arrow ) );
+                change._path         = unquote( rest.substr( arrow + 4 ) );
+            }
+            else
+            {
+                change._path = unquote( rest );
+            }
+            const bool bConflict = indexState == 'U' || worktreeState == 'U' || ( indexState == 'A' && worktreeState == 'A' ) || ( indexState == 'D' && worktreeState == 'D' );
+            if ( indexState == '?' && worktreeState == '?' )
+                change._kind = SourceControlChangeKind::Untracked;
+            else if ( bConflict )
+                change._kind = SourceControlChangeKind::Conflicted;
+            else if ( indexState == 'R' || indexState == 'C' )
+                change._kind = SourceControlChangeKind::Renamed;
+            else if ( indexState == 'A' )
+                change._kind = SourceControlChangeKind::Added;
+            else if ( indexState == 'D' || worktreeState == 'D' )
+                change._kind = SourceControlChangeKind::Deleted;
+            else if ( indexState == 'M' || worktreeState == 'M' || indexState == 'T' || worktreeState == 'T' )
+                change._kind = SourceControlChangeKind::Modified;
+            else
+            {
+                outListChange.clear();
+                return false; // 모르는 상태 글자 — 틀린 목록을 보이지 않는다
+            }
+            change._bStaged = indexState != ' ' && indexState != '?';
+            outListChange.push_back( std::move( change ) );
+        }
+        return true;
+    }
+
+    ProcessCommand GitChangeCommands::makeDiffCommand( string_view repositoryPath )
+    {
+        return ProcessCommand::fromSearchPath( "git", { "--no-pager", "diff", "--no-color", "HEAD", "--", string( repositoryPath ) } );
+    }
+
+    ProcessCommand GitChangeCommands::makeHistoryCommand( string_view repositoryPath )
+    {
+        return ProcessCommand::fromSearchPath( "git", { "--no-pager", "log", "--no-color", "--date=short", "--pretty=format:%h %ad %an  %s", "-n", formatToString( "%#", kHistoryCount ), "--", string( repositoryPath ) } );
+    }
+
+    ProcessCommand GitChangeCommands::makeRevertCommand( string_view repositoryPath )
+    {
+        return ProcessCommand::fromSearchPath( "git", { "restore", "--source=HEAD", "--staged", "--worktree", "--", string( repositoryPath ) } );
+    }
+
+    bool GitChangeCommands::canRevert( const SourceControlChange& change )
+    {
+        // 추적 밖 파일을 "되돌리면" 지워진다 — 되돌리기 어려운 삭제라 하지 않는다. 충돌은 손으로 푼다.
+        return change._kind != SourceControlChangeKind::Untracked && change._kind != SourceControlChangeKind::Conflicted;
     }
 } // namespace sw::editor

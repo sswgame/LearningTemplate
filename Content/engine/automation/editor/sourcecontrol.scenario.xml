@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 버전 관리 Changes 창(S3): git 이 있으면(LFS 없이도) 공급자가 변경을 다루고, 창이 바뀐 파일 목록을 읽는다.
+  저장소 상태는 기계마다 다르므로 목록 수는 0 이상만 본다. sourcecontrol.history CLAUDE.md 로 추적 파일의 최근 커밋을 읽는다(줄 수 1 이상).
+  되돌리기는 추적 파일을 HEAD 로 바꾸는 일이라 시나리오가 누르지 않는다 — 명령 · 출력 해석은 단위 테스트 GitChangeCommandsTest 가 본다.
+  볼 그림: sourcecontrol/changes.png(툴바 "Git LFS - idle" 또는 "Git - idle", 상태 · 경로 · Staged 표, 얼룩 줄 없음).
+  실행: App -EnableEditor -scenario=engine/automation/editor/sourcecontrol.scenario.xml -unattended
+-->
+<Scenario name="editor.sourcecontrol" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.SourceControlTracksChanges" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="panel.focus source_control_changes"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.SourceControlChangeCount" atLeast="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="sourcecontrol.history CLAUDE.md"/>
+	<WaitUntil watch="Editor.SourceControlDetailLines" atLeast="1" timeoutWallSeconds="60"/>
+	<CaptureEditorUI file="sourcecontrol/changes.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

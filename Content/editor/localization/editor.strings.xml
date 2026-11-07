@@ -438,6 +438,11 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdButton.Diff" source="Diff">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdButton.Discard" source="Discard">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
@@ -451,6 +456,11 @@
 		<entry key="EdButton.FixAll" source="Fix All">
 			<origins>
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.History" source="History">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.NewCollection" source="New Collection">
@@ -542,6 +552,11 @@
 		<entry key="EdButton.ResumeServer" source="Resume server">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.Revert" source="Revert">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.SaveSearch" source="Save Search">
@@ -2144,6 +2159,11 @@
 		<entry key="EdFormat.Ready" source="{sW_EDITORICON}  Ready">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdFormat.RevertFileToHead" source="Revert {file} to HEAD? Its staged and unsaved edits are lost.">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.RightTrigger" source="Right Trigger: {rightTrigger}">
@@ -8017,6 +8037,51 @@
 		<entry key="EditorSettings.VariableModule" source="Module: {module}">
 			<origins>
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.CannotRevertTooltip" source="Untracked files and conflicts are not reverted here - reverting would delete the file or hide the conflict">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.Listing" source="Listing changed files...">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.NoChanges" source="No changed files. Edits you save appear here.">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.NoDetail" source="No diff yet. Press Diff or History.">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.NoGit" source="git was not found on PATH, so changes cannot be listed. Install git and restart the editor.">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.PickAFile" source="Pick a file to see its diff or history.">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.RevertTooltip" source="Put this file back to HEAD (staged and unsaved edits are lost)">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.ScopeTooltip" source="Lists changed files, shows a file's diff against HEAD and its last 20 commits, and reverts tracked files. Commit, push and branches stay in your git tool">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSourceControl.UntrackedNoDiff" source="This file is not tracked yet, so there is nothing to compare with.">
+			<origins>
+				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.AddAllCells" source="Add All Cells">
