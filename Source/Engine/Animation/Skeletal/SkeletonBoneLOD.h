@@ -54,6 +54,8 @@ namespace sw
      */
     class SW_API SkeletonBoneLOD
     {
+        friend struct AssetTypeLoader;
+
     public:
         /** @brief 본 LOD 파일의 확장자입니다. */
         static constexpr string_view kExtension = ".bonelod.xml";
@@ -68,8 +70,6 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief XML 을 읽습니다. `_base` 의 부모는 @p source 에서 읽습니다(테스트 · 쿠커). */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel, IDataInheritanceSource& source );
-        /** @brief 리소스 경로의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
         /** @brief 내용 번호입니다. 읽을 때마다 새 번호가 되므로(핫 리로드는 제자리에서 다시 읽습니다) 마스크를 만든 쪽이 변경을 알아챕니다. */
         uint64 getRevision() const { return _revision; }
@@ -113,6 +113,8 @@ namespace sw
         static void makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath );
 
     private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<SkeletonBoneLOD>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 루트 객체를 읽습니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
         /** @brief 펼친 글을 읽습니다. */

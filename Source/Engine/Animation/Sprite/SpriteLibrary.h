@@ -56,6 +56,8 @@ namespace sw
     REFLECT()
     class SW_API SpriteLibrary
     {
+        friend struct AssetTypeLoader;
+
     public:
         REFLECT_BODY();
 
@@ -68,8 +70,6 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `SpriteLibrary.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "SpriteLibrary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        /** @brief 리소스 id 의 파일을 읽습니다. 읽지 못하면 오류를 남기고 false 이며 내용은 비어 있습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 본문을 읽습니다(`_base` 를 펼칩니다). 모르는 칸 · 겹친 이름 · 음수 테두리 · 아틀라스 크기 없는 테두리는 오류이고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 분류 · 라벨의 프레임입니다. 없으면 nullptr 입니다. */
@@ -85,6 +85,8 @@ namespace sw
         vector<SpriteLibraryCategory> _listCategory;
 
     private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<SpriteLibrary>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 읽은 값의 의미를 보고 비율 테두리를 채웁니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
     };

@@ -4,6 +4,9 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Animation/AnimationAssetCache.h"
 
 namespace sw::editor
 {
@@ -35,10 +38,11 @@ namespace sw::editor
 
     bool BonePoseEditModel::loadSkeleton( const AssetID& assetID )
     {
-        Skeleton loaded;
-        if ( loaded.loadFromAsset( assetID ) == false )
+        // 런타임과 같은 공유 캐시의 한 벌을 읽고 편집 문맥의 사본으로 받는다.
+        const shared_ptr<const Skeleton> pLoaded = SharedAssetCache<Skeleton>::acquire( assetID.view() );
+        if ( pLoaded == nullptr )
             return false;
-        _skeleton = std::move( loaded );
+        _skeleton = *pLoaded;
         return true;
     }
 

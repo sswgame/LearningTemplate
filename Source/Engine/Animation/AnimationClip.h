@@ -58,6 +58,8 @@ namespace sw
      */
     class SW_API AnimationClip final : public IAnimationPlayable
     {
+        friend struct AssetTypeLoader;
+
     public:
         /** @brief 클립 에셋 확장자입니다. */
         static constexpr string_view kExtension = ".animclip";
@@ -145,10 +147,16 @@ namespace sw
         [[nodiscard]] bool readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /**
+         * @brief 파일을 지금 읽어 이 객체를 채웁니다(공유 캐시를 거치지 않는 사본). 쿠킹 작업 전용이다.
+         * @details 쿠킹 작업(`CookJob`)은 범위 안의 리소스 읽기를 입력으로 기록하므로 캐시가 쥔 한 벌을 쓰면 입력이 빠진다 — 그래서 사본을 읽는 이름을 따로 둔다.
+         *          런타임 · 에디터의 쓰는 쪽은 `SharedAssetCache<AnimationClip>::acquire` 로 한 벌을 쥔다.
+         */
+        [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
 
     private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationClip>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 블롭을 정렬된 저장소에 옮깁니다. */
         void assignCodecBytes( const uint8* pData, size_t byteCount );
         /** @brief 루트 모션 트랙 하나를 @p time 에서 샘플합니다. */

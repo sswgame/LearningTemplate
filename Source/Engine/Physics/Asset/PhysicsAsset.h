@@ -120,6 +120,8 @@ namespace sw
     REFLECT()
     struct SW_API PhysicsAsset
     {
+        friend struct AssetTypeLoader;
+
         REFLECT_BODY();
 
         PROPERTY( Tooltip = "Collision layer of bodies that do not name one" )
@@ -131,8 +133,6 @@ namespace sw
         PROPERTY( Tooltip = "Bodies connected by a joint collide with each other" )
         bool _bCollideJointedBodies{ false };
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 모르는 키나 열거자, 겹친 뼈, 셰이프 없는 바디, 모르는 쌍 뼈는 오류이며 false 를 반환합니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 에셋 자체의 규칙을 검사합니다(뼈 이름이 겹치지 않고, 바디마다 셰이프가 있고, 쌍의 뼈가 에셋에 있다). */
@@ -141,5 +141,9 @@ namespace sw
         [[nodiscard]] bool validateAgainstSkeleton( span<const hashed_string> listBoneName, string_view sourceName ) const;
         /** @brief 뼈 이름의 바디 번호입니다. 없으면 -1 입니다. */
         int32 findBodyIndex( const hashed_string& bone ) const;
+
+    private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<PhysicsAsset>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
     };
 } // namespace sw

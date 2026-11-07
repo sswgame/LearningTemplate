@@ -2,8 +2,10 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
@@ -128,12 +130,11 @@ SW_TEST_CASE( AnimationSetTest, LoopsStopWithAnError )
     const test::ScopedScratchDomain domain;
     const string                    self = test::ScopedScratchDomain::makeID( "loop.animset.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), "<AnimationSet formatVersion=\"0\" _base=\"" + self + "\"/>" ) );
-    AnimationSet animationSet;
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
-    SW_EXPECT_FALSE( animationSet.loadFromAsset( test::ScopedScratchDomain::makeID( "loop.animset.xml" ) ) );
+    SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "loop.animset.xml" ).view() ) == nullptr );
 
     const string selfSet = test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "setloop.animset.xml" ), "<AnimationSet formatVersion=\"0\"><clip name=\"a\" set=\"" + selfSet + "\"/></AnimationSet>" ) );
     SW_EXPECT_LOG( "AnimationSet.ChainTooDeep" );
-    SW_EXPECT_FALSE( animationSet.loadFromAsset( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ) ) );
+    SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).view() ) == nullptr );
 }

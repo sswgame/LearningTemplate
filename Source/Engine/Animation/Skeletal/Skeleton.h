@@ -216,6 +216,8 @@ namespace sw
     REFLECT()
     class SW_API Skeleton
     {
+        friend struct AssetTypeLoader;
+
     public:
         REFLECT_BODY();
 
@@ -287,14 +289,20 @@ namespace sw
          * @return 사슬 오류(순환 · 깊이 · 없는 부모)이거나 층이 틀리면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool mergeVariantText( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText );
-        /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /**
+         * @brief 파일을 지금 읽어 이 객체를 채웁니다(공유 캐시를 거치지 않는 사본). 쿠킹 작업 전용이다.
+         * @details 쿠킹 작업(`CookJob`)은 범위 안의 리소스 읽기를 입력으로 기록하므로 캐시가 쥔 한 벌을 쓰면 입력이 빠진다 — 그래서 사본을 읽는 이름을 따로 둔다.
+         *          런타임 · 에디터의 쓰는 쪽은 `SharedAssetCache<Skeleton>::acquire` 로 한 벌을 쥔다.
+         */
+        [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
 
     private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<Skeleton>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 읽은 본과 부착을 검증하며 다시 쌓습니다(부모가 앞에 있는지, 부착 · 소켓 본이 있는지). `_listParentIndex` 도 여기서 채웁니다. */
         [[nodiscard]] bool rebuildFromLoaded( string_view sourceLabel );
         /** @brief 평평한 `<Skeleton>` 문서를 읽습니다. 사슬의 맨 위 층입니다. 실패하면 내용을 비웁니다. */

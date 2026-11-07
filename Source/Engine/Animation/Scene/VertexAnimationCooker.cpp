@@ -91,7 +91,8 @@ namespace sw
             SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListMesh", "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
             return false;
         }
-        if ( _animationSet.loadFromAsset( AssetID{ _animationSetPath } ) == false )
+        // 쿠킹 작업의 입력으로 기록되어야 하므로 공유 캐시가 아니라 이 자리에서 읽는다(`CookJob` — 캐시가 쥔 한 벌을 쓰면 입력이 빠진다).
+        if ( _animationSet.loadCopyFromAsset( AssetID{ _animationSetPath } ) == false )
             return false; // 셋이 까닭을 남겼다
         for ( const hashed_string& clipName : _listClip )
         {
@@ -120,7 +121,8 @@ namespace sw
             SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould", "Vertex animation cook: could not read mesh '%#'", list._meshPath.c_str() );
             return false;
         }
-        if ( skeleton.loadFromAsset( AssetID{ list._skeletonPath } ) == false )
+        // 스켈레톤 · 클립은 쿠킹 작업의 입력으로 기록되도록 이 자리에서 읽는다(공유 캐시를 거치지 않는다 — `CookJob`).
+        if ( skeleton.loadCopyFromAsset( AssetID{ list._skeletonPath } ) == false )
         {
             SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould2", "Vertex animation cook: could not read skeleton '%#'", list._skeletonPath.c_str() );
             return false;
@@ -133,7 +135,7 @@ namespace sw
         AnimationClip       clip;
         MeshVertexAnimation animation;
         const bool          bBaked =
-            clip.loadFromAsset( AssetID{ list.makeClipPath( clipName ) } ) && MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
+            clip.loadCopyFromAsset( AssetID{ list.makeClipPath( clipName ) } ) && MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
         if ( bBaked == false || animation.saveToFile( outputPath ) == false )
         {
             SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookFailed", "Vertex animation cook failed for '%#' clip '%#'", list._meshPath.c_str(), clipName.c_str() );

@@ -51,6 +51,8 @@ namespace sw
     /** @brief `.fracture` 하나의 내용입니다. 파일 머리말을 참고하세요. */
     struct SW_API FractureAsset
     {
+        friend struct AssetTypeLoader;
+
         /** @brief 현재 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델을 다시 임포트해야 합니다. */
         static constexpr uint32 kVersion = 1;
         /** @brief 확장자입니다. */
@@ -90,9 +92,11 @@ namespace sw
         [[nodiscard]] bool readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 메시 경로 옆의 파쇄 경로입니다(`a/b.mesh` → `a/b.fracture`). */
         static string makePathForMesh( string_view meshPath );
+
+    private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FractureAsset>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
     };
 } // namespace sw

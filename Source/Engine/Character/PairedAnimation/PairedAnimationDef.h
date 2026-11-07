@@ -202,6 +202,8 @@ namespace sw
      */
     class SW_API PairedAnimationDef
     {
+        friend struct AssetTypeLoader;
+
     public:
         static constexpr string_view kExtension = ".pairedanim.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
@@ -215,8 +217,6 @@ namespace sw
 
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 오류가 있으면 모두 로그로 내고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
          * @brief 내용을 파일 형식(`*.pairedanim.xml`)으로 씁니다. 적지 않아도 되는 값(앵커가 아닌 역할의 `anchor`, 0 인 `start` · `yaw`, 빈 `skeleton`)은 쓰지 않습니다.
          * @details 쓰기는 검사하지 않는다 — 결과를 `loadFromXMLText` 로 다시 읽어야 규칙(앵커 하나, 정렬 속성 등)을 본다. 정렬하지 않는 역할의 오프셋 · 워프 값은 쓰지 않는다.
@@ -255,10 +255,12 @@ namespace sw
         static void computeAlignTarget( const float3& anchorPosition, float32 anchorYaw, const PairedAnimationRoleDef& role, float3& outPosition, float32& outYaw );
 
     private:
-        void readRoot( const XMLNode& root, CharacterDataReader& reader );
-        void readRole( const XMLNode& node, CharacterDataReader& reader );
-        void readNotify( const XMLNode& node, CharacterDataReader& reader );
-        void readSelect( const XMLNode& node, CharacterDataReader& reader );
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<PairedAnimationDef>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        void               readRoot( const XMLNode& root, CharacterDataReader& reader );
+        void               readRole( const XMLNode& node, CharacterDataReader& reader );
+        void               readNotify( const XMLNode& node, CharacterDataReader& reader );
+        void               readSelect( const XMLNode& node, CharacterDataReader& reader );
         /** @brief 역할 사이 · 알림의 규칙을 검사합니다(앵커 하나, 겹친 이름, 알림 시각과 역할). */
         void validate( CharacterDataReader& reader );
         /** @brief 내용을 비웁니다. */

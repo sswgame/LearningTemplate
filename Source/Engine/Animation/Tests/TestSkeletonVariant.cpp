@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -322,9 +323,10 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     SW_REQUIRE_TRUE( writeScaled( "chain_leaf.skeleton.xml", idMid ) );
     SW_REQUIRE_TRUE( writeScaled( "chain_loop.skeleton.xml", idLoop ) );
 
-    const Skeleton base = Util::makeBase();
-    Skeleton       leaf;
-    SW_REQUIRE_TRUE( leaf.loadFromAsset( test::ScopedScratchDomain::makeID( "chain_leaf.skeleton.xml" ) ) );
+    const Skeleton                   base  = Util::makeBase();
+    const shared_ptr<const Skeleton> pLeaf = SharedAssetCache<Skeleton>::acquire( test::ScopedScratchDomain::makeID( "chain_leaf.skeleton.xml" ).view() );
+    SW_REQUIRE_TRUE( pLeaf != nullptr );
+    const Skeleton& leaf = *pLeaf;
     SW_EXPECT_EQUAL( base.getBoneCount(), leaf.getBoneCount() );
     SW_EXPECT_EQUAL( base.getHierarchyHash( base.getBoneCount() ), leaf.getHierarchyHash( base.getBoneCount() ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), leaf.getBasePaths().size() );
@@ -332,9 +334,8 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     SW_EXPECT_NEAR( expected._x, leaf.getBone( 1 )._referencePose._translation._x, 0.0001f );
     SW_EXPECT_NEAR( expected._y, leaf.getBone( 1 )._referencePose._translation._y, 0.0001f );
 
-    Skeleton looped;
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
-    SW_EXPECT_FALSE( looped.loadFromAsset( AssetID{ idLoop } ) );
+    SW_EXPECT_TRUE( SharedAssetCache<Skeleton>::acquire( idLoop ) == nullptr );
 }
 
 /**

@@ -3,10 +3,12 @@
 #include "Editor/Panels/Physics/Model/RagdollPreviewModel.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -53,12 +55,14 @@ namespace sw::editor
     {
         _listBodyRow.clear();
         _selectedBody = -1;
-        PhysicsAsset asset;
-        if ( asset.loadFromAsset( AssetID{ assetPath } ) == false )
+        // 미리 보기 표는 래그돌과 같은 공유 캐시의 한 벌을 읽는다(사본을 읽지 않는다).
+        const shared_ptr<const PhysicsAsset> pAsset = SharedAssetCache<PhysicsAsset>::acquire( assetPath );
+        if ( pAsset == nullptr )
         {
             _status = "The physics asset could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
+        const PhysicsAsset& asset = *pAsset;
         for ( const PhysicsAssetBodyDef& body : asset._listBody )
         {
             RagdollPreviewBodyRow& row = _listBodyRow.emplace_back();
