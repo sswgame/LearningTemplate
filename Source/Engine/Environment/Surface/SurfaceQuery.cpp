@@ -74,7 +74,7 @@ namespace sw
 
 namespace sw
 {
-    bool SurfaceQuery::sampleBelow( GameObjectManager& manager, const SurfaceKindTable& table, const float3& from, const float3& to, uint64 ignoreObjectID, bool bIs2D,
+    bool SurfaceQuery::sampleBelow( GameObjectManager& manager, const shared_ptr<const SurfaceKindTable>& pTable, const float3& from, const float3& to, uint64 ignoreObjectID, bool bIs2D,
                                     SurfaceSample& outSample )
     {
         const float3    direction = to - from;
@@ -82,12 +82,14 @@ namespace sw
         CharacterRayHit hit;
         const bool      bHit = bIs2D ? CharacterRayHit::raycast2D( manager, from, direction, distance, SurfaceQueryInternal::kAllLayers, ignoreObjectID, hit )
                                      : CharacterRayHit::raycast3D( manager, from, direction, distance, SurfaceQueryInternal::kAllLayers, ignoreObjectID, hit );
-        return bHit && resolveHit( manager, table, hit, outSample );
+        return bHit && resolveHit( manager, pTable, hit, outSample );
     }
 
-    bool SurfaceQuery::resolveHit( GameObjectManager& manager, const SurfaceKindTable& table, const CharacterRayHit& hit, SurfaceSample& outSample )
+    bool SurfaceQuery::resolveHit( GameObjectManager& manager, const shared_ptr<const SurfaceKindTable>& pTable, const CharacterRayHit& hit, SurfaceSample& outSample )
     {
-        SurfaceSample sample;
+        SW_ASSERT( pTable != nullptr );
+        const SurfaceKindTable& table = *pTable;
+        SurfaceSample           sample;
         sample._point           = hit._point;
         sample._normal          = hit._normal;
         sample._objectID        = hit._pObject != nullptr ? hit._pObject->getObjectID() : 0;
@@ -106,7 +108,7 @@ namespace sw
                 sample._source     = SurfaceSource::Water;
             }
         }
-        sample._pKind = table.findKind( sample._material );
+        sample._pKind = shared_ptr<const SurfaceKindDef>( pTable, table.findKind( sample._material ) ); // 같은 수명(aliasing) — 표가 결과와 함께 산다
         if ( sample._pKind == nullptr )
         {
             const string_view name( sample._material.c_str() );

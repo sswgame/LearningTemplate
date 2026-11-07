@@ -32,7 +32,7 @@ namespace sw
                 if ( pTable == nullptr )
                     return false;
                 const float3 feet = pScene->getWorldPosition();
-                return SurfaceQuery::sampleBelow( *pManager, *pTable, feet + float3{ 0.0f, kProbeLift, 0.0f }, feet - float3{ 0.0f, probeLength, 0.0f }, object.getObjectID(), false, outSample );
+                return SurfaceQuery::sampleBelow( *pManager, pTable, feet + float3{ 0.0f, kProbeLift, 0.0f }, feet - float3{ 0.0f, probeLength, 0.0f }, object.getObjectID(), false, outSample );
             }
 
             /** @brief 감시 값 `Surface.GroundKind` 입니다. 대상의 `GroundSurfaceComponent` 가 마지막으로 읽은 표면 종류입니다(디딘 것이 없으면 값이 없다). */

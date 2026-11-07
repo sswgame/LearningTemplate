@@ -143,7 +143,7 @@ namespace sw
                     const shared_ptr<const SurfaceKindTable> pTable   = pManager != nullptr ? SurfaceKindTable::findDefault() : nullptr;
                     CharacterRayHit                          hit;
                     SurfaceSample                            sample;
-                    const bool                               bSampled = pTable != nullptr && context._component.castFromTo( from, to, 0.0f, kAllLayers, hit ) && SurfaceQuery::resolveHit( *pManager, *pTable, hit, sample );
+                    const bool                               bSampled = pTable != nullptr && context._component.castFromTo( from, to, 0.0f, kAllLayers, hit ) && SurfaceQuery::resolveHit( *pManager, pTable, hit, sample );
                     if ( bSampled == false )
                     {
                         record( context, hashed_string{}, foot, 0, AnimationNotifyPhase::Instant );
