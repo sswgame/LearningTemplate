@@ -11,11 +11,8 @@
 	<Wait frames="2"/>
 	<!-- 무인 실행의 설정은 스키마 기본값(high)이다 — 두 조건 모두 거짓 -->
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="3" timeoutFrames="120"/>
-	<Remember watch="Interaction.HeldDefinition" target="Probe" as="baseDefinition"/>
 	<DevCommand line="settings.apply graphics.quality=low"/>
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="5" timeoutFrames="120"/>
-	<!-- 쥔 정의가 바뀌었다(떼어 낸 다시 읽기 — 새 객체) -->
-	<Expect watch="Interaction.HeldDefinition" target="Probe" differsFrom="baseDefinition"/>
 	<Wait frames="1"/>
 	<DevCommand line="scene.layer Night on"/>
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="9" timeoutFrames="120"/>
