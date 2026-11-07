@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 완결 루프 — 택틱스 SRPG 키트(GF_TacticsSRPG)의 전투 한 판: 아군 페이즈(고르기 → 이동 → 공격) → 적 페이즈(AI) → 둘째 턴 → 승리.
+  플레이어와 같은 입력(Move 축으로 커서 한 칸씩, 입력 맵 액션 KitDemo.Confirm)으로만 움직인다. 적 페이즈는 키트 AI(SRPGCommanderAI)가 한다.
+  씬: 6 x 3 평지, 기사(아군 0번, 이동 4) (0,1), 경비병 둘(이동 0) (3,1) · (5,1). 칼은 반드시 맞고 경비병을 한 번에 쓰러뜨린다(data/kitdemo/demo.srpg.xml).
+  감시 값: KitDemo.Tactics.PhaseTeam(0 아군, 1 적, 2 제3) · .Turn · .Result(0 진행, 1 승리, 2 패배) · .CursorX · .CursorY · .Selected · .EnemiesAlive · .PlayersAlive.
+  실행: ctest -R Scenario.game.empty.kitdemo_tactics
+-->
+<Scenario name="game.empty.kitdemo_tactics" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kitdemo_tactics.scene.xml"/>
+	<WaitUntil watch="KitDemo.Tactics.EnemiesAlive" equals="2" timeoutFrames="120"/>
+	<Expect watch="KitDemo.Tactics.Turn" equals="1"/>
+	<Expect watch="KitDemo.Tactics.PhaseTeam" equals="0"/>
+	<Expect watch="KitDemo.Tactics.CursorX" equals="0"/>
+	<Expect watch="KitDemo.Tactics.CursorY" equals="1"/>
+	<!-- 1 턴: 기사를 고른다 -->
+	<Action name="KitDemo.Confirm"/>
+	<WaitUntil watch="KitDemo.Tactics.Selected" equals="0" timeoutFrames="10"/>
+	<!-- 커서를 오른쪽으로 두 칸 → 이동 -->
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<Expect watch="KitDemo.Tactics.CursorX" equals="2"/>
+	<Action name="KitDemo.Confirm"/>
+	<Wait frames="2"/>
+	<!-- 한 칸 더 → 첫 경비병을 친다. 아군이 모두 행동해 적 페이즈(이동 0 이라 서 있다)를 지나 2 턴이 된다 -->
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<Expect watch="KitDemo.Tactics.CursorX" equals="3"/>
+	<Action name="KitDemo.Confirm"/>
+	<WaitUntil watch="KitDemo.Tactics.EnemiesAlive" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="KitDemo.Tactics.Turn" equals="2" timeoutFrames="60"/>
+	<WaitUntil watch="KitDemo.Tactics.PhaseTeam" equals="0" timeoutFrames="60"/>
+	<Expect watch="KitDemo.Tactics.PlayersAlive" equals="1"/>
+	<!-- 2 턴: 커서를 기사(2,1)로 돌려 고르고, 두 칸 가서 둘째 경비병을 친다 -->
+	<ActionAxis name="Move" x="-1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<Action name="KitDemo.Confirm"/>
+	<WaitUntil watch="KitDemo.Tactics.Selected" equals="0" timeoutFrames="10"/>
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<Expect watch="KitDemo.Tactics.CursorX" equals="4"/>
+	<Action name="KitDemo.Confirm"/>
+	<Wait frames="2"/>
+	<ActionAxis name="Move" x="1" seconds="0.05"/>
+	<Wait frames="4"/>
+	<Action name="KitDemo.Confirm"/>
+	<WaitUntil watch="KitDemo.Tactics.Result" equals="1" timeoutFrames="30"/>
+	<Expect watch="KitDemo.Tactics.EnemiesAlive" equals="0"/>
+	<Expect watch="KitDemo.Tactics.Turn" equals="2"/>
+	<ExpectLog id="KitDemo.TacticsDestroyed" count="2"/>
+	<ExpectLog id="KitDemo.TacticsVictory" count="1"/>
+	<Pass/>
+</Scenario>

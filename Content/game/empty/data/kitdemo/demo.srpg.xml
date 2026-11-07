@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 키트 시연 — 택틱스 SRPG 전투 하나(maps/kitdemo_tactics)의 지형 · 무기 · 기체 · 파일럿.
+  시연 시나리오(automation/kitdemo_tactics)가 기대는 값: 칼은 반드시 맞고(hit 999 · crit -999) 경비병(HP 1000 · 장갑 0)을 한 번에 쓰러뜨린다.
+  경비병은 이동 0 이라 제자리에 서고, 이웃한 아군만 칠 수 있다.
+-->
+<SRPGCatalog>
+	<PilotCurve base="100" exponent="0" maxLevel="30"/>
+	<UnitCurve base="10" exponent="0" maxLevel="10"/>
+	<Terrain id="plain" name="Plain"/>
+	<Weapon id="demo_blade" name="Blade" kind="Melee" maxRange="1" power="3000" hit="999" crit="-999"/>
+	<Unit id="demo_knight" name="Knight" hp="3000" en="50" move="4" armor="500" weapons="demo_blade"/>
+	<Unit id="demo_guard" name="Guard" hp="1000" en="0" move="0" armor="0" weapons="demo_blade"/>
+	<Pilot id="demo_pilot" name="Pilot" shooting="10" melee="10" reaction="10" awaken="0" defense="0" growShooting="0" growMelee="0" growReaction="0" growAwaken="0" growDefense="0"/>
+</SRPGCatalog>
