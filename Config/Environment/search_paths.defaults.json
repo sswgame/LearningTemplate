@@ -31,5 +31,22 @@
     "vcpkg_installed_rel": "build/vcpkg_installed",
     "clang_format_version": "20.1.8",
     "llvm_version": "20.1.8",
-    "ninja_version": "1.12.1"
+    "ninja_version": "1.12.1",
+    "emsdk_tools_subdir": "Tools/emsdk",
+    "emsdk_git_url": "https://github.com/emscripten-core/emsdk.git",
+    "emsdk_version": "6.0.13",
+    "jdk_tools_subdir": "Tools/JDK",
+    "jdk_version": "17.0.21+9",
+    "jdk_download_urls": {
+        "windows": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.21_9.zip",
+        "linux": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz"
+    },
+    "android_sdk_tools_subdir": "Tools/Android",
+    "android_cmdline_tools_urls": {
+        "windows": "https://dl.google.com/android/repository/commandlinetools-win-16111833_latest.zip",
+        "linux": "https://dl.google.com/android/repository/commandlinetools-linux-16111833_latest.zip"
+    },
+    "android_ndk_version": "29.0.14206865",
+    "android_platform": "36",
+    "android_build_tools": "36.1.0"
 }

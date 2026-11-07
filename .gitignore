@@ -81,6 +81,9 @@ Tools/_deps/
 /vcpkg/
 Tools/vcpkg/
 Tools/Tracy/
+Tools/emsdk/
+Tools/JDK/
+Tools/Android/
 .vcpkg/
 vcpkg_installed/
 
