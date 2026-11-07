@@ -48,12 +48,12 @@
 **한 길이다.** `parseData` · `parseDesc` · 머티리얼 · 스켈레톤의 펼치기를 `ResourceComposer::compose( text, id, context )` 하나로 모은다. 규칙 출처(리플렉션 · `SW_DATA_INHERITANCE_SCHEMA` · 카탈로그 표)는 지금처럼 루트 이름으로 찾는다.
 
 ```
-1. 부모: 파일 _base, 항목 _base            (구현됨)
-2. 조건: 플랫폼 · 품질 · 언어 · 지역 · 기능 태그  (신규)
-3. 층: DLC · 모드 · 라이브 운영 · 계절          (신규)
+1. 부모: 파일 _base, 항목 _base                                   (구현됨)
+2. 조건: 플랫폼 · 대상 · 품질 · 언어 · 지역 · 데이터 레이어 · 기능 · 플래그  (구현됨)
+3. 층: 게임 · DLC · 모드 · 라이브 운영 · 계절                         (구현됨)
 ```
 
-세 단계 모두 `DataInheritance` 의 합치기 규칙(열쇠 · `_op` · `_before` · `_after`)을 그대로 쓴다. 차이 하나를 얹는 일이므로 합치기 코드는 새로 없다.
+부모와 층은 `DataInheritance` 의 합치기 규칙(열쇠 · `_op` · `_before` · `_after`)을 그대로 쓴다. 조건은 합치기 규칙을 쓰지 않는다 — 아래 까닭. 읽는 쪽은 단계를 모르고 펼친 글만 받는다.
 
 **프리팹:** `PrefabOverrides` 는 열쇠 모양이 달라 유지한다(`DataInheritance.md`). 대신 문서 머리의 조건 · 층 단계는 같은 길을 지난다.
 
@@ -63,20 +63,24 @@
 
 #### 조건별 값
 
-언리얼 Device Profile · 플랫폼별 값, Godot 기능 태그, 유니티 플랫폼별 임포트 설정에 해당한다. 형식은 둘이다.
+언리얼 Device Profile · 플랫폼별 ini 층(쿠킹 · 실행 때 CVar 를 고른다), Godot 기능 태그(프로젝트 설정 칸을 `칸.태그` 로 덮는다), 유니티 플랫폼별 임포트 설정(쿠킹 축만)에 해당한다(기억에 의존). 여기는 Godot 처럼 태그 집합 하나에 묻되, 언리얼처럼 쿠킹 축과 실행 축을 나눠 쿠킹 축은 쿠킹본에서 지운다. 형식은 둘이다.
 
-글 형식은 그 자리에 차이를 적는다.
+글 형식은 고칠 원소 안에 조건을 적는다(`Engine/Serialization/Inherit/ResourceComposer.h`).
 
 ```xml
 <VFXEffectDef _name="Sparks" _maxParticles="4096">
-	<_when test="mobile || quality.low" _maxParticles="512" />
+	<_when _if="target.server || quality.low" _maxParticles="512" />
+	<_when _if="!platform.windows" _op="Remove" />   <!-- 이 원소를 뺀다(루트는 뺄 수 없다) -->
 </VFXEffectDef>
 ```
 
-- 항목 · 구조체 칸 어디에나 적을 수 있고, 위에서 아래로 얹는다.
-- 식은 [조건 어휘](#5-행동-어휘)와 같은 문법의 컴파일된 식이다. 값은 태그 집합 `ResourceContext` 에서 온다.
+- 조건은 **자기를 품은 원소 하나**의 속성을 바꾸거나(`칸="값"`) 그 원소를 뺀다(`_op="Remove"`). 항목 · 구조체 칸 · 목록 원소 어디에나 적고, 한 원소의 조건은 적힌 차례로 얹는다(나중이 이긴다). 자식 원소를 품은 조건은 오류다 — 조건부로 더하려면 원소를 적고 반대 조건으로 뺀다.
+- 처음 설계는 조건 단계도 `DataInheritance` 의 합치기 규칙을 쓰기로 했다. 그러면 조건을 풀 때마다 그 형식의 규칙이 필요한데 규칙 출처가 쿠커(문서 표 `Config/Dev`), 개발 실행(리플렉션), 배포 런타임(규칙 표가 없다 — 로드 축 조건은 배포에서 푼다)마다 달라 같은 답을 장담할 수 없다. 원소 하나만 고치게 하면 규칙이 필요 없고 세 곳이 같은 함수(`ResourceComposer::resolveConditions`)로 같은 답을 낸다. 잃는 것은 "조건이 참이면 목록에 원소를 더한다" 한 줄짜리 표현뿐이다.
+- 조건 속성 이름은 `_if` 다(`test` 는 행동 트리 조건 노드의 칸이다). 식은 [조건 어휘](#5-행동-어휘)와 같은 `ConditionExpr` 이고 그냥 이름은 태그 조건(`resourceTag`)이다. 태그 아닌 조건(`flag(x)` · `chance`) · 모르는 축 · 닫힌 값 목록 밖의 값은 읽기 오류다 — 리소스 문맥에는 게임 세계 칸이 없어 늘 거짓이 되기 때문이다. 게임 플래그는 게임 코드가 `flag` 축 태그로 켠다.
+- 태그는 프로세스 값 `ResourceTags` 다. 축 표는 코드 한 벌이다 — 축마다 값을 넣는 코드가 따로 있어 데이터로 늘어나는 정책이 아니다(값은 데이터다).
+- 부모(`_base`)를 지나도 조건은 사라지지 않는다. 부모와 자식이 같은 원소에 적은 조건은 쌓이고(부모 다음 자식), 열쇠 목록의 원소로 세지 않으며, 차이 저장은 자식이 더한 조건만 적는다(`DataInheritance.md`).
 
-바이너리(텍스처 · 오디오 · 메시)는 안을 고칠 수 없어 경로를 바꾼다. Godot 의 언어별 리소스 교체와 같다.
+바이너리(텍스처 · 오디오 · 메시)는 안을 고칠 수 없어 경로를 바꾼다(`ResourceRemap`). Godot 의 언어별 리소스 교체와 같고, 여기는 모든 태그 축을 받는다.
 
 ```xml
 <ResourceRemap>
@@ -84,24 +88,36 @@
 </ResourceRemap>
 ```
 
+- 표는 게임 팩 설정 `<Engine _resourceRemap>` 이다. 같은 id 의 줄은 위에서부터 보고 처음 참인 줄을 읽는다. 사슬(바꾼 id 를 또 바꾸는 줄)은 오류다 — 한 단계면 줄 하나가 곧 답이다.
+- 리소스 입구(`AssetIO` 의 읽기 · 비동기 읽기 · 있는지 묻기)가 찾기 전에 한 번 바꾼다. 쿠킹 작업 안에서는 바꾸지 않는다 — 쿠커가 기계의 언어로 다른 파일을 읽으면 쿠킹본이 기계마다 달라진다. 두 파일 모두 팩에 든다.
+
 **축마다 정해지는 때가 다르다.**
 
-| 축 | 정해지는 때 | 쿠킹본 |
-|---|---|---|
-| 플랫폼 · 빌드 대상 | 쿠킹 | 펼쳐서 없어진다. 런타임 비용이 없다 |
-| 품질 · 언어 · 지역 · 기능 태그 | 로드 | `_when` 이 남는다. 값이 바뀌면 그 축을 쓰는 리소스를 다시 읽는다(`reloadShared`) |
+| 축 | 정해지는 때 | 값을 넣는 곳 | 쿠킹본 |
+|---|---|---|---|
+| `platform`(windows · linux) · `target`(client · server) | 쿠킹 | 엔진 기동(쿠커도 같은 자리) | 펼쳐서 없어진다. 남은 식(아래)은 런타임이 같은 값으로 푼다 |
+| `quality` | 로드 | 사용자 설정 핸들러 `resource.tag`(`graphics.quality` 의 `param="quality"`) | `_when` 이 남는다. 값이 바뀌면 그 태그를 읽은 리소스를 다시 읽는다 |
+| `locale` | 로드 | 현지화의 지금 언어(`en-US` 는 `locale.en_US` — 식의 이름 글자에 `-` 가 없다) | 위와 같다 |
+| `region` · `feature` · `flag` | 로드 | 게임 코드(`ResourceTags::setAxisValue` · `setTagActive`) | 위와 같다 |
+| `layer` | 로드 | 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`) | 위와 같다 |
 
-**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다.
+- 쿠커는 쿠킹 축 조건만 풀고, 한 원소에서 로드 축 조건이 나온 뒤의 조건은 차례를 지키려 함께 남긴다(뒤의 쿠킹 축 조건을 먼저 얹으면 같은 칸의 값이 뒤집힌다). 쿠킹본을 런타임이 푼 결과가 소스를 바로 푼 결과와 같은지는 `ResourceConditionTest.CookedTextResolvesLikeTheSource` 가 본다.
+- 다시 읽기: 리소스 id 로 읽은 합성(`ResourceContext::withAsset` — `XMLDocument::loadResource` · `XMLSerializer::loadFromAsset` · `ReflectedXMLFile`)은 기댄 로드 축 태그를 기록에 남기고(`ResourceComposition`), 태그가 바뀌면 에셋 매니저가 프레임 단계에서 그 id 를 쥔 캐시를 다시 읽는다(`AssetManager::reloadComposedDependents` → `AssetCacheBase::reloadComposed`). 핫 리로드와 달리 배포 구성에도 있다 — 품질 · 언어를 바꾸는 것은 플레이어다. 공유 캐시는 종류의 다시 읽기 방식(제자리 · 떼어 내기)대로 바꾸고, GPU 캐시(텍스처 · 머티리얼 · 메시 · 프리팹)는 다음 읽기가 새 결과를 본다. 확인: 시나리오 `game.empty.resourcecondition`(품질 · 데이터 레이어를 바꾸면 표를 쥔 쪽의 값이 바뀐다).
 
-**네트워크:** 게임플레이 값이 클라이언트마다 달라지면 판정이 어긋난다. 합성 결과의 해시를 접속 때 대조해 서버와 다르면 거절한다. 품질 축이 시뮬레이션 값을 건드리는지는 이 대조가 드러낸다.
+**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다. 에디터처럼 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다.
+
+**네트워크:** 게임플레이 값이 클라이언트마다 달라지면 판정이 어긋난다. 클라이언트는 서버에 붙자마자 로드 축 · 층에 기댄 합성 한 줄씩(리소스 id + 결과 해시)을 보내고(`GameNetSessionMessage::kResourceDigest`), 서버는 같은 리소스를 다르게 합성했으면 그 연결을 끊는다(`Net.ResourceDigestMismatch`). 서버가 읽지 않는 리소스(전용 서버의 시각 효과)는 대조하지 않으므로 품질 축이 시각 값만 바꾸면 붙고, 시뮬레이션 값을 바꾸면 거절된다. 언리얼은 접속 때 패키지 · 네트워크 버전을 대조하고 Godot 은 대조하지 않는다(기억에 의존) — 여기는 합성 결과 자체를 본다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트는 거짓을 보낼 수 있다).
 
 #### 덮어쓰기 층
 
-언리얼 Composite Data Table 과 팩 우선순위에 해당한다. 층은 순서 있는 목록(`engine → common → game → dlc → mod`)이고, 층 안의 `<같은 리소스 id>` 파일은 원본을 암묵적 부모로 가진 차이다.
+언리얼 Composite Data Table 과 팩 우선순위에 해당한다. 층은 순서 있는 목록(`ResourceLayers`, 아래 층이 먼저)이고, 리소스 `X` 의 층 파일 `<뿌리>/X` 는 원본을 암묵적 부모로 가진 차이다(`_base` 를 적으면 오류). 팩 우선순위의 파일 통째 교체와 달리 다른 칸만 적는다.
 
-- 게임 쿠킹은 자기 층까지 펼친다. DLC · 모드 층은 팩을 올릴 때 합성한다. 그래서 합성 코드는 배포 구성에도 남는다.
+- 목록은 게임 팩 설정 `<Engine _listResourceLayer>` 의 뿌리(리소스 id 폴더 — `game/<팩>/layers/<이름>`)이고, DLC · 모드 팩을 올리는 쪽이 늘린다(`ResourceLayers::setLayers` — 바뀐 층에 파일이 있던 · 있는 리소스를 다시 읽는다).
+- 층의 조건(`_when`)은 층의 차이에 얹는다 — 거짓이면 그 차이를 얹지 않는다. 합치기 규칙은 읽는 쪽의 형식에서 온다(리플렉션 형식은 리플렉션 — 배포 런타임에도 있다, 손 형식은 그 규칙 함수, 합치기 함수 형식은 그 함수, 카탈로그는 표).
+- **처음 설계를 바꾼 것:** "게임 쿠킹은 자기 층까지 펼친다" 를 버리고 모든 층을 읽을 때 얹는다. 팩 쿠커는 도메인마다 팩을 굽고(`PackCooker::cookDomainPack`) 공용 도메인(`common` · `engine`) 팩은 게임마다 같아야 하므로, 게임 층을 공용 팩에 펼칠 자리가 없다. 층이 없는 게임은 글 검색 한 번으로 지나간다.
+- 층은 리소스 id 로 읽을 때만 얹는다. 글로 받는 입구(`loadFromXMLText` — 편집기 미리 보기 · 테스트)는 id 가 없어 얹지 않는다.
 - 항목 id 를 바꾸지 않으므로 세이브는 그대로다.
-- 신뢰 경계: 층 파일은 외부 입력이다. 합성 뒤에 그 형식의 검증을 다시 돌리고, 온라인 게임은 위 해시 대조로 거른다.
+- 신뢰 경계: 층 파일은 외부 입력이다. 합성 뒤에 그 형식의 검증이 그대로 돌고(읽는 쪽은 펼친 글만 받는다), 온라인 게임은 위 해시 대조로 거른다.
 
 ### 3. 공유 캐시
 
@@ -266,7 +282,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 2 | 공유 캐시 통합, `GameDataCache` 삭제, `acquire` 도입 | 같은 경로가 같은 객체라는 테스트, 다시 읽기가 쓰는 쪽에 닿는 시나리오 |
 | 3 | `AssetRef<T>` 와 생성 목록, `string` 칸 전환 | 잘못된 종류 연결이 로드 오류, 손 표가 줄어듦 |
 | 4 | 카탈로그 공유 전환(코드 끝남, 컴파일 전) | 공개 `loadFromAsset` 제거가 컴파일됨 |
-| 5 | 조건 · 층, 경로 교체, 합성 해시 대조 | 조건 · 층마다 값과 그림이 바뀌는 시나리오 |
+| 5 | 조건 · 층, 경로 교체, 합성 해시 대조(코드 끝남, 컴파일 전 — 위 2 절) | 단위 테스트 `ResourceTagsTest` · `ResourceConditionTest` · `ResourceLayerTest` · `ResourceRemapTest` · `ResourceCompositionTest`, 시나리오 `game/empty/automation/resourcecondition`(품질 · 데이터 레이어로 쥔 쪽의 값이 바뀐다) |
 | 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리(구현 — 시나리오 `game/empty/automation/vocabulary`. `<Archetype>` 은 위 까닭으로 남김) | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
 | 7 | 종류별 변형(위 표) | 표 한 줄마다 효과를 확인하는 시나리오 |
 
@@ -288,7 +304,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 |---|---|
 | 공유 전환에서 사본을 고쳐 쓰던 코드가 대량으로 드러난다 | `const` 컴파일 오류로 빠짐없이 찾는다. 분량이 크므로 단계 4 를 범위별로 나눈다 |
 | 조건 어휘 비용 | 읽을 때 컴파일하고, 매 틱 조건은 측정으로 확인한다 |
-| 로드 축 `_when` 이 많아지면 품질 변경 때 다시 읽기가 몰린다 | 축별로 쓰는 리소스를 기록해 그것만 다시 읽는다 |
+| 로드 축 `_when` 이 많아지면 품질 변경 때 다시 읽기가 몰린다 | 태그별로 기댄 리소스를 기록해 그것만 다시 읽는다(`ResourceComposition`, 구현됨) |
 | 코드 기본값 변경이 적지 않은 칸의 값을 바꾼다 | 이미 있는 규칙(`DataInheritance.md`)을 따른다 |
 | 합성 코드가 배포 구성에 남는다 | DLC · 모드 층이 없는 게임은 쿠킹본에 합성할 것이 없어 글 검색 한 번으로 지나간다 |
 
@@ -297,4 +313,8 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 구현 전에 코드를 읽어 정한다. 사용자 결정이 필요한 항목은 없다.
 
 - 메시 런타임 조립(언리얼 Mutable)은 `BodyShape` · 메시 병합 코드를 조사한 뒤 넣을지 정한다. 이 설계에 포함하지 않았다.
+- 형식마다의 입구(`Skeleton` · `Material` · `RigAsset` · `RetargetProfile` · `AnimationSet` · `AnimationGraphAsset` · `SpriteLibrary` · `AudioEventLibrary` · `AudioMixerDesc` · `MaterialGraphDef` · `PhysicsAsset` · `SceneDocument`)는 `loadFromAsset` 이 `loadFromXMLText( 글, 이름 )` 로 넘겨 리소스 id 를 잃는다. 조건은 풀리지만 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 범용 입구(`XMLDocument::loadResource` · `XMLSerializer::loadFromAsset` · `ReflectedXMLFile`)로 읽는 리소스만 받는다. 할 일: 글 입구가 `ResourceContext` 를 받게 바꾸고 `loadFromAsset` 이 `withAsset` 을 넘긴다(그 형식들을 다른 작업자가 고치는 중이라 이번에 하지 않았다).
+- 카탈로그(`forDocument`)의 덮어쓰기 층은 규칙을 `Config/Dev/DataCatalogInheritance.json` 에서 읽는다. 배포 구성에 그 표가 없으면 카탈로그 층은 오류로 멈춘다(`ResourceLayer.NoRule` 앞의 표 읽기 오류). 할 일: 규칙 표를 배포 구성이 읽는 자리로 옮긴다(조건은 규칙이 필요 없어 해당하지 않는다).
+- 편집기가 조건이 든 리소스를 열면 지금 태그로 푼 값을 들고, 저장하면 그 값이 파일에 박히고 `_when` 이 사라진다(차이 저장도 푼 글을 본다). 할 일: 편집기 사본은 조건을 풀지 않은 글(`resolveConditions` 를 건너뛴 합성)을 들고 조건 원소를 편집 대상으로 보인다.
+- 접속 대조는 클라이언트가 붙을 때까지 합성한 리소스만 본다. 붙은 뒤에 읽은 게임플레이 데이터는 대조하지 않는다.
 - `XMLCatalog` 계열 중 파일에서 읽는 쪽이 저장소에 없는 키트 카탈로그(약 20 종 — SRPG · 정복 · 메트로배니아 · 공포 · 몬스터 · 파티 · 카트 등)는 지우지 않았다. 규칙 클래스가 `const T*` 를 받는 라이브러리이고 아직 그것을 쓰는 게임이 없을 뿐이라, 캐시 등록(파일 규칙 없는 `makeCacheOnly`)만 붙였다. 그 키트를 쓰는 게임이 생기면 데이터 파일 규칙(`makeDataFile`)을 정한다.

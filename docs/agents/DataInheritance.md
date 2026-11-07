@@ -104,6 +104,27 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 - 부모를 `AssetIO` 로 읽으므로 그 읽기가 쿠킹 작업의 입력이 된다. 의존 목록을 따로 적지 않아도 부모가 바뀌면 자식의 쿠킹 키가 바뀐다(`CookJob`).
 - 에디터 · 개발 실행은 원본을 읽어 합친다.
 
+## 조건(`_when`) · 덮어쓰기 층 · 경로 교체
+
+부모 다음 단계다(`ResourceComposer`, 설계는 `docs/ResourceStructure.md` 2 절). 어느 형식에나 규칙 없이 적는다.
+
+```xml
+<Interaction id="Use" maxDistance="3">
+	<_when _if="quality.low" maxDistance="5" />          <!-- 이 원소의 속성을 바꾼다 -->
+	<_when _if="!platform.windows" _op="Remove" />       <!-- 이 원소를 뺀다 -->
+</Interaction>
+```
+
+| 규칙 | 까닭 |
+|---|---|
+| 조건은 자기를 품은 원소 하나만 고친다(속성 · 빼기). 자식 원소를 품으면 오류다 | 합치기 규칙(열쇠 · 스키마)이 필요 없어 쿠커 · 개발 실행 · 배포 런타임이 같은 답을 낸다. 조건부로 더하려면 원소를 적고 반대 조건으로 뺀다 |
+| 한 원소의 조건은 적힌 차례로 얹고 나중이 이긴다. 안쪽 원소의 조건과 바깥 원소의 조건은 서로 다른 원소를 고친다 | — |
+| `_if` 는 리소스 태그(`축.값`)만 묻는다. 게임 상태 조건(`flag` · `chance`) · 모르는 축 · 닫힌 값 밖은 읽기 오류다 | 리소스 문맥에 게임 세계 칸이 없다. 게임 플래그는 `flag` 축 태그로 넣는다 |
+| 부모와 자식이 같은 원소에 적은 조건은 쌓인다(부모 다음 자식). 열쇠 목록 아래의 조건은 목록 원소가 아니다. 차이 저장은 자식이 더한 조건만 적고, 부모의 조건을 지운 결과는 저장 오류다(`DataInheritance.WhenDropped`) | 자식이 값을 적어도 부모의 품질 조건이 사라지면 안 된다 |
+| 팩 쿠커는 쿠킹 축(`platform` · `target`) 조건을 풀고, 로드 축 조건과 그 뒤 조건은 남긴다 | 한 원소에서 차례가 뒤집히지 않게 한다. 남은 쿠킹 축 조건은 런타임이 같은 값으로 푼다 |
+
+덮어쓰기 층은 게임 팩 설정의 `<Engine _listResourceLayer>` 뿌리다. 리소스 `X` 를 리소스 id 로 읽을 때 `<뿌리>/X` 가 있으면 원본을 부모로 얹는다(층 파일에 `_base` 를 적으면 오류). 규칙은 읽는 쪽의 형식에서 온다 — 리플렉션 형식은 리플렉션(배포 런타임에도 있다), 손 형식은 그 규칙 함수, 카탈로그는 표. 경로 교체는 `<Engine _resourceRemap>` 표의 `<Remap id when to>` 다.
+
 ## 도구가 묻는 것
 
 - 이 칸이 어디서 왔나: `DataInheritance::flatten` 의 `DataInheritanceProvenance`(`findOrigin( "_listPass[Present]._cullMode" )`), 프리팹은 `PrefabCache::findFieldOrigin`.
