@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하우징 고스트 — 놓을 수 없는 자리(반투명 빨강) -->
+<MaterialDef formatVersion="0" name="housing_ghost_blocked" _base="engine/materials/glassmaterial.material">
+	<_properties>
+		<item name="_color" defaultValue="0.95 0.2 0.15 0.45"/>
+	</_properties>
+</MaterialDef>

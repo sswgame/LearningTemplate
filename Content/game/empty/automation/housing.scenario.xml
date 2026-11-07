@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  하우징 키트(GF_Housing) 첫 수직 슬라이스 — 부지 HousingPlot(8 x 6 칸, 2 층, 500 골드)에 개발 명령 housing.* 로 짓는다. 값으로 판정한다(골든 없음).
+  ① 고스트: 바닥 없는 탁자는 NoSupport(빨강), 바닥 위 80 도 탁자는 놓을 수 있다(초록) — 격자가 90 도 · 1 x 2 칸으로 맞춘다.
+  ② 스냅: 문은 벽 끝 소켓에 붙는다(날 자리 1.3 → 1.5). ③ 까닭: 겹침 · 부지 밖 · 자유 배치 불허 · 받침.
+  ④ 비용 · 회수: 바닥 5(회수 50 %) · 벽 10 · 문 20 · 탁자 30. ⑤ 되돌리기: 치우기 · 놓기의 역과 값. ⑥ 위층 바닥은 벽 위에 선다.
+  ⑦ 저장 · 재로드: 같은 배치 · id · 지갑으로 돌아오고, 부품 뷰가 배치 수와 같다(중복 · 누락 없음).
+  실행: App -scenario=game/empty/automation/housing.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.housing" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/housing.scene.xml"/>
+	<Wait frames="5"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="0"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="500"/>
+
+	<!-- ① 고스트 -->
+	<DevCommand line="housing.preview HousingPlot table 2.3 1.2 0 80"/>
+	<Wait frames="2"/>
+	<Expect watch="Housing.LastResult" target="HousingPlot" is="NoSupport"/>
+	<Expect watch="Housing.GhostPlaceable" target="HousingPlot" equals="0"/>
+	<Expect watch="Object.Exists" target="HousingPlot_Ghost" equals="1"/>
+
+	<!-- 바닥 4 x 3 칸(id 1..12, 60 골드) -->
+	<DevCommand line="housing.place HousingPlot floor 0.5 0.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 1.5 0.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 2.5 0.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 3.5 0.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 0.5 1.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 1.5 1.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 2.5 1.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 3.5 1.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 0.5 2.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 1.5 2.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 2.5 2.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot floor 3.5 2.5 0 0"/>
+	<Wait frames="2"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="12"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="440"/>
+	<Expect watch="Housing.GhostPlaceable" target="HousingPlot" equals="1"/>
+
+	<!-- ① 탁자 80 도 → 90 도, 1 x 2 칸(가운데 2.5, 1.0) -->
+	<DevCommand line="housing.place HousingPlot table 2.3 1.2 0 80"/>
+	<Wait frames="2"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="13" is="250 100 0 90"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="410"/>
+	<Expect watch="Housing.GhostPlaceable" target="HousingPlot" equals="0"/>
+	<Expect watch="Housing.LastResult" target="HousingPlot" is="Ok"/>
+
+	<!-- ② 벽과 문 — 문은 벽 끝 소켓에 붙는다 -->
+	<DevCommand line="housing.place HousingPlot wall 0.5 2.5 0 0"/>
+	<DevCommand line="housing.place HousingPlot door 1.3 2.6 0 0"/>
+	<Wait frames="2"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="15" is="150 250 0 0"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="380"/>
+
+	<!-- ③ 배치 불가 까닭 -->
+	<DevCommand line="housing.place HousingPlot wall 2.5 1.5 0 0"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.LastResult" target="HousingPlot" is="Overlap"/>
+	<DevCommand line="housing.place HousingPlot floor 8.5 0.5 0 0"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.LastResult" target="HousingPlot" is="OutOfPlot"/>
+	<DevCommand line="housing.place HousingPlot floor 5.2 4.2 0 0 free"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.LastResult" target="HousingPlot" is="FreePlacementNotAllowed"/>
+	<DevCommand line="housing.remove HousingPlot 3"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.LastResult" target="HousingPlot" is="SupportsOthers"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="15"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="380"/>
+
+	<!-- ④ 회수 · ⑤ 되돌리기 -->
+	<DevCommand line="housing.remove HousingPlot 1"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="382"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="14"/>
+	<DevCommand line="housing.undo HousingPlot"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="380"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="15"/>
+	<DevCommand line="housing.undo HousingPlot"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="400"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="14"/>
+	<DevCommand line="housing.redo HousingPlot"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="380"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="15" is="150 250 0 0"/>
+	<DevCommand line="housing.move HousingPlot 13 1.3 0.6 0 90"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="13" is="150 100 0 90"/>
+	<DevCommand line="housing.undo HousingPlot"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="13" is="250 100 0 90"/>
+
+	<!-- ⑥ 위층 바닥은 벽 위에 선다 -->
+	<DevCommand line="housing.place HousingPlot floor 0.5 2.5 1 0"/>
+	<Wait frames="1"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="16" is="50 250 1 0"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="375"/>
+	<WaitUntil watch="Housing.ViewCount" target="HousingPlot" equals="16" timeoutFrames="10"/>
+	<Expect watch="Object.Exists" target="HousingPlot_Part13" equals="1"/>
+
+	<!-- ⑦ 저장 · 바꾸기 · 재로드 -->
+	<DevCommand line="housing.save HousingPlot {out}/housing.plot"/>
+	<ExpectLog id="DevCommand.Reply" contains="housing: saved" atLeast="1"/>
+	<DevCommand line="housing.remove HousingPlot 13"/>
+	<Wait frames="2"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="405"/>
+	<WaitUntil watch="Housing.ViewCount" target="HousingPlot" equals="15" timeoutFrames="10"/>
+	<Expect watch="Object.Exists" target="HousingPlot_Part13" equals="0"/>
+	<DevCommand line="housing.load HousingPlot {out}/housing.plot"/>
+	<Wait frames="2"/>
+	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="16"/>
+	<Expect watch="Housing.Funds" target="HousingPlot" equals="375"/>
+	<Expect watch="Housing.Placement" target="HousingPlot" key="13" is="250 100 0 90"/>
+	<WaitUntil watch="Housing.ViewCount" target="HousingPlot" equals="16" timeoutFrames="10"/>
+	<Expect watch="Object.Exists" target="HousingPlot_Part13" equals="1"/>
+	<Pass/>
+</Scenario>

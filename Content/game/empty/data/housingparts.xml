@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하우징 부품 카탈로그(GF_Housing, HousingPartCatalog) — 시연 씬 maps/housing.scene.xml 의 부지가 쓴다. 칸 1 m, 층 3 m. 프리팹 원점은 점유 칸의 가운데 바닥(회전 0).
+     벽과 문은 끝 소켓(wallEnd)에 서로 붙는다. 탁자만 자유 배치를 허락한다. -->
+<HousingPartCatalog currency="Gold" cellSize="1" levelHeight="3" socketSnapRadius="0.6">
+	<Part id="floor" name="Floor" prefab="game/empty/prefabs/housing/floor.prefab.xml" layer="Floor" height="0.1" cost="5" refundRatio="0.5"/>
+	<Part id="wall" name="Wall" prefab="game/empty/prefabs/housing/wall.prefab.xml" layer="Structure" height="2.8" cost="10" refundRatio="0.5" snapTo="wallEnd">
+		<Socket kind="wallEnd" position="-0.5,0,0"/>
+		<Socket kind="wallEnd" position="0.5,0,0"/>
+	</Part>
+	<Part id="door" name="Door" prefab="game/empty/prefabs/housing/door.prefab.xml" layer="Structure" height="2.8" cost="20" refundRatio="0.5" snapTo="wallEnd">
+		<Socket kind="wallEnd" position="-0.5,0,0"/>
+		<Socket kind="wallEnd" position="0.5,0,0"/>
+	</Part>
+	<Part id="table" name="Table" prefab="game/empty/prefabs/housing/table.prefab.xml" sizeX="2" sizeZ="1" height="0.8" cost="30" freePlacement="true"/>
+	<Part id="bed" name="Bed" prefab="game/empty/prefabs/housing/bed.prefab.xml" sizeX="2" sizeZ="2" height="1" cost="60"/>
+</HousingPartCatalog>

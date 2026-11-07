@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하우징 침구 -->
+<MaterialDef formatVersion="0" name="housing_cloth" _base="engine/materials/defaultmaterial.material">
+	<_properties>
+		<item name="_color" defaultValue="0.75 0.78 0.9 1"/>
+	</_properties>
+</MaterialDef>

@@ -2,7 +2,7 @@
     "_name": "SWGame",
     "_version": "1.0.0",
     "_kind": "Game",
-    "_description": "Empty — 엔진 기능 쇼케이스 · 자동화 시험대인 최소 SWGame. 키트는 콘텐츠가 쓰는 것만(넷 파괴 · 넷 페어드 애니메이션의 두 프로세스 확인 씬, 근접 판정 · 유닛 스탯의 meleeduel 씬)",
+    "_description": "Empty — 엔진 기능 쇼케이스 · 자동화 시험대인 최소 SWGame. 키트는 콘텐츠가 쓰는 것만(넷 파괴 · 넷 페어드 애니메이션의 두 프로세스 확인 씬, 근접 판정 · 유닛 스탯의 meleeduel 씬, 하우징 시연 씬)",
     "_listDependency": [
         {
             "_name": "GameFramework"
@@ -15,6 +15,9 @@
         },
         {
             "_name": "GF_ActionCombat"
+        },
+        {
+            "_name": "GF_Housing"
         }
     ],
     "_listConfiguration": [

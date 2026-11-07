@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하우징 가구 나무 -->
+<MaterialDef formatVersion="0" name="housing_wood" _base="engine/materials/defaultmaterial.material">
+	<_properties>
+		<item name="_color" defaultValue="0.55 0.36 0.2 1"/>
+	</_properties>
+</MaterialDef>

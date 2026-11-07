@@ -1,0 +1,66 @@
+<Prefab formatVersion="0" name="HousingTable">
+	<GameObject _schemaVersion="0" _name="HousingTable" _bActive="true">
+		<_listComponent>
+			<SceneComponent _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachComponent="None" />
+			<MeshComponent _localPosition="0,0.75,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,0.1,1"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="game/empty/materials/housing/wood.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="-0.85,0.35,-0.35"
+			               _localRotation="0,0,0"
+			               _localScale="0.1,0.7,0.1"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="game/empty/materials/housing/wood.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="0.85,0.35,-0.35"
+			               _localRotation="0,0,0"
+			               _localScale="0.1,0.7,0.1"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="game/empty/materials/housing/wood.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="-0.85,0.35,0.35"
+			               _localRotation="0,0,0"
+			               _localScale="0.1,0.7,0.1"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="game/empty/materials/housing/wood.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<MeshComponent _localPosition="0.85,0.35,0.35"
+			               _localRotation="0,0,0"
+			               _localScale="0.1,0.7,0.1"
+			               _attachOwner="None"
+			               _attachComponent="SceneComponent#0"
+			               _meshID="Cube"
+			               _materialPath="game/empty/materials/housing/wood.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

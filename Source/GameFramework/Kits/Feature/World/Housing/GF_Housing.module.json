@@ -1,0 +1,20 @@
+{
+    "_name": "GF_Housing",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "하우징 · 주거 건축 키트 — 부지 · 부품 카탈로그(벽 · 바닥 · 문 · 가구) · 고스트 미리보기 · 격자 / 소켓 스냅 · 회전 · 배치 불가 까닭 · 비용과 회수 · 되돌리기 · 부지 저장",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}
