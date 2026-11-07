@@ -214,6 +214,11 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
+		<entry key="Changes" source="Changes" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Character Editor" source="Character Editor" context="Editor command name">
 			<origins>
 				<item>editor/commands/charactereditor.commands.xml</item>
@@ -9531,6 +9536,11 @@
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Recovered Work" source="Recovered Work" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Redo" source="Redo" context="Editor command name">
