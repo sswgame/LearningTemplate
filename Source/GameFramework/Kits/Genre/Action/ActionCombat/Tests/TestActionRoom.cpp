@@ -8,13 +8,14 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include <cstring>
 #include <limits>
 
-// ActionRoomTest — 룸 전투: 공격 방향 · 방어 · 쿨다운, 닿음과 탄 피해, 무적과 대시, 사격 간격과 탄 방향, 클리어 · 패배 이벤트, 상태 왕복.
+// ActionRoomTest — 룸 전투: 공격 방향 · 방어 · 쿨다운, 닿음과 탄 피해, 무적과 대시, 사격 간격과 탄 방향, 탄 카탈로그의 탄, 클리어 · 패배 이벤트, 상태 왕복.
 // 결함: 적을 세우지 못한 보스 룸이 "보스 처치" 를 알렸다 · 클리어 뒤 남은 탄이 플레이어를 때렸다 · 음수 시간이 적을 거꾸로 움직였다 · NaN · 최대 초과 체력의 상태를 받았다.
 // MonsterCatalogTest — 카탈로그: 사격 · 보상 읽기, 공격 간격 0 인 사격 종(결함), 이번 읽기에 하나도 없으면 실패(결함). 키트 GF_ActionCombat(nogpu).
 
@@ -24,10 +25,20 @@ namespace
     constexpr const utf8* kRoomMonsterXML = R"(<MonsterCatalog>
   <Monster id="grunt" name="Grunt"><Stats hp="50" maxHP="50" atk="7" def="4" speed="0" radius="0.5"/></Monster>
   <Monster id="walker" name="Walker"><Stats hp="50" maxHP="50" atk="7" speed="2" radius="0.5"/></Monster>
-  <Monster id="gunner" name="Gunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1" firstDelay="0.5"/><Shot speed="2" life="1" radius="0.25" damage="9"/></Monster>
-  <Monster id="sideGunner" name="SideGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot angle="1.5707963" speed="2" life="2" radius="0.25" damage="9"/></Monster>
-  <Monster id="slowGunner" name="SlowGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot speed="1" life="8" radius="0.1" damage="9"/></Monster>
+  <Monster id="gunner" name="Gunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1" firstDelay="0.5"/><Shot projectile="bolt"/></Monster>
+  <Monster id="sideGunner" name="SideGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot angle="1.5707963" projectile="bolt_long"/></Monster>
+  <Monster id="slowGunner" name="SlowGunner"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="4" firstDelay="0.25"/><Shot projectile="drift"/></Monster>
+  <Monster id="forever" name="Forever"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1"/><Shot projectile="endless"/></Monster>
+  <Monster id="ghostShot" name="GhostShot"><Stats hp="10" maxHP="10" speed="0" radius="0.5"/><AI coolTime="1"/><Shot projectile="ghost"/></Monster>
 </MonsterCatalog>)";
+
+    // 사격 줄이 가리키는 탄(쏘는 법은 몬스터, 날아가는 것은 탄). 룸에는 벽이 없어 수명으로 끝나고 사거리는 두지 않는다. `endless` 는 수명도 사거리도 없어 룸이 받지 않는다.
+    constexpr const utf8* kRoomProjectileXML = R"(<ProjectileCatalog>
+  <Projectile id="bolt" speed="2" lifetime="1" range="0" radius="0.25" damage="9"/>
+  <Projectile id="bolt_long" speed="2" lifetime="2" range="0" radius="0.25" damage="9"/>
+  <Projectile id="drift" speed="1" lifetime="8" range="0" radius="0.1" damage="9"/>
+  <Projectile id="endless" speed="1" lifetime="0" range="0" radius="0.1" damage="9"/>
+</ProjectileCatalog>)";
 
     constexpr float32 kRoomStep      = 0.25f;
     constexpr float32 kRoomTolerance = 1.0e-3f;
@@ -41,10 +52,15 @@ namespace
     /** @brief 카탈로그를 건 게임 범위입니다. 테스트 본문이 `ScopedGameScope` 로 겁니다. */
     struct RoomBench
     {
-        sw::MonsterCatalog _catalog;
-        sw::SubsystemScope _scope;
+        sw::MonsterCatalog    _catalog;
+        sw::ProjectileCatalog _projectiles;
+        sw::SubsystemScope    _scope;
 
-        [[nodiscard]] bool setUp() { return _catalog.loadFromXMLText( kRoomMonsterXML, "ActionRoomTest" ) && _scope.bind<sw::MonsterCatalog>( &_catalog ); }
+        [[nodiscard]] bool setUp()
+        {
+            return _catalog.loadFromXMLText( kRoomMonsterXML, "ActionRoomTest" ) && _projectiles.loadFromXMLText( kRoomProjectileXML, "ActionRoomTest" ) &&
+                   _scope.bind<sw::MonsterCatalog>( &_catalog ) && _scope.bind<sw::ProjectileCatalog>( &_projectiles );
+        }
     };
 
     struct ActionRoomTestUtil
@@ -390,6 +406,37 @@ SW_TEST_CASE( ActionRoomTest, ShotAngleRotatesTheAim )
 }
 
 /**
+ * @brief [ActionRoomTest] 사격 줄의 탄은 탄 카탈로그(게임 서비스)에서 찾는다. 없는 탄 · 수명도 사거리도 없는 탄(벽 없는 방에 영원히 남는다)을 쏘는 종과, 탄 카탈로그가 없을 때 쏘는 종은 세우지 않는다
+ */
+SW_TEST_CASE( ActionRoomTest, ShotsResolveFromTheProjectileCatalog )
+{
+    SW_EXPECT_LOG( "ActionRoom.ShotProjectileUnusable" );
+    SW_EXPECT_LOG( "ActionRoom.ShooterNoProjectileCatalog" );
+    {
+        RoomBench bench;
+        SW_REQUIRE_TRUE( bench.setUp() );
+        sw::game::ScopedGameScope scopedScope( bench._scope );
+        sw::ActionRoom            ghost;
+        ActionRoomTestUtil::beginHallWith( ghost, sw::hashed_string( "ghostShot" ), sw::float2{ 5.0f, 0.0f } );
+        SW_EXPECT_EQUAL( 0, ghost.getAliveEnemyCount() );
+        sw::ActionRoom forever;
+        ActionRoomTestUtil::beginHallWith( forever, sw::hashed_string( "forever" ), sw::float2{ 5.0f, 0.0f } );
+        SW_EXPECT_EQUAL( 0, forever.getAliveEnemyCount() );
+    }
+
+    sw::MonsterCatalog monsters;
+    SW_REQUIRE_TRUE( monsters.loadFromXMLText( kRoomMonsterXML, "ActionRoomTest" ) );
+    sw::SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind<sw::MonsterCatalog>( &monsters ) );
+    sw::game::ScopedGameScope scopedScope( scope );
+    sw::ActionRoom            room;
+    ActionRoomTestUtil::beginHallWith( room, kGunner, sw::float2{ 5.0f, 0.0f } );
+    SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
+    ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 5.0f, 0.0f } ); // 쏘지 않는 종은 탄 카탈로그가 없어도 선다
+    SW_EXPECT_EQUAL( 1, room.getAliveEnemyCount() );
+}
+
+/**
  * @brief [ActionRoomTest] 결함: 클리어한 뒤에도 날아오던 탄이 플레이어를 때려, 이긴 방에서 질 수 있었다. 클리어하면 탄이 사라진다
  */
 SW_TEST_CASE( ActionRoomTest, ClearRemovesRemainingProjectiles )
@@ -538,10 +585,10 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
     const size_t size = static_cast<size_t>( written.getSize() );
 
     // 머리: 종류(1) 클리어(1) 쿨다운 셋(12) = 14, 종 수(4), 이름 길이(4) + "gunner"(6) = 28, 적 수(4) = 32.
-    // 적: 위치(8) 체력(4) 사격(4) 종 인덱스(2) 생존(1). 탄은 공통 발사체의 바이트다(`ProjectileSimulation::writeState`): 다음 id(4) 수(4), 맨 끝 탄 105 —
-    // 빈 정의 이름(4) 위치(12) 속도(12) 피해 · 나이 · 거리 · 수명 · 사거리 · 중력 · 저항 · 유도 · 반지름 · 폭발 · 반발(44) id · 반응 번호(8) 정수 여섯(24) 깃발(1).
+    // 적: 위치(8) 체력(4) 사격(4) 종 인덱스(2) 생존(1). 탄은 공통 발사체의 바이트다(`ProjectileSimulation::writeState`): 다음 id(4) 수(4), 맨 끝 탄 109 —
+    // 정의 이름 길이(4) + "bolt"(4) 위치(12) 속도(12) 피해 · 나이 · 거리 · 수명 · 사거리 · 중력 · 저항 · 유도 · 반지름 · 폭발 · 반발(44) id · 반응 번호(8) 정수 여섯(24) 깃발(1).
     constexpr size_t kActorAt    = 32;
-    constexpr size_t kProjectile = 105;
+    constexpr size_t kProjectile = 109;
     SW_REQUIRE_EQUAL( kActorAt + 19 + 4 + 4 + kProjectile, size );
 
     sw::ActionRoom target;
@@ -611,8 +658,8 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
   <Monster id="boss" name="Boss" archetype="RangedShooter">
     <Stats hp="220" maxHP="300" atk="12" def="16" speed="0.9" radius="0.7"/>
     <AI coolTime="1.5" firstDelay="1.25"/>
-    <Shot angle="0" speed="4.5" life="2.5" radius="0.25" damage="10"/>
-    <Shot angle="1.5" speed="3.25" life="1.75" radius="0.25" damage="11"/>
+    <Shot angle="0" projectile="orb"/>
+    <Shot angle="1.5" projectile="orb_slow"/>
     <Prefab path="prefabs/boss"/>
     <Drop exp="10" souls="3"/>
   </Monster>
@@ -625,7 +672,8 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     SW_EXPECT_EQUAL( 300, pBoss->_stats._maxHP );
     SW_EXPECT_NEAR( 1.25f, pBoss->_ai._firstAttackDelay, kRoomTolerance );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBoss->_listShot.size() );
-    SW_EXPECT_EQUAL( 11, pBoss->_listShot[1]._damage );
+    SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle, kRoomTolerance );
+    SW_EXPECT_TRUE( pBoss->_listShot[1]._projectileID == sw::hashed_string( "orb_slow" ) );
     SW_EXPECT_EQUAL( sw::string( "prefabs/boss" ), pBoss->_prefabPath );
     SW_EXPECT_EQUAL( 3, pBoss->getDrop( sw::hashed_string( "souls" ) ) );
     SW_EXPECT_EQUAL( 0, pBoss->getDrop( sw::hashed_string( "gold" ) ) );
@@ -648,7 +696,7 @@ SW_TEST_CASE( MonsterCatalogTest, BrokenMonstersAreSkipped )
 
     sw::MonsterCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCatalog>
-  <Monster id="rapid" name="r"><AI coolTime="0"/><Shot/></Monster>
+  <Monster id="rapid" name="r"><AI coolTime="0"/><Shot projectile="bolt"/></Monster>
   <Monster id="odd" name="o"><Mystery/></Monster>
   <Monster id="debt" name="d"><Drop gold="-1"/></Monster>
   <Beast/>

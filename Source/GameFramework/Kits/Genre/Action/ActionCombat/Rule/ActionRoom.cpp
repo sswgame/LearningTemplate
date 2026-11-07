@@ -25,6 +25,38 @@ namespace sw
             bool findTargetPoint( const ProjectileState& /*projectile*/, float3& /*outPoint*/ ) const override { return false; }
             bool sweep( const ProjectileState& /*projectile*/, const float3& /*from*/, const float3& /*to*/, ProjectileHit& /*outHit*/ ) const override { return false; }
         };
+
+        struct ActionRoomInternal
+        {
+            /**
+             * @brief 종 @p def 의 사격 줄마다 탄 정의를 찾아 풉니다. 쏘지 않는 종은 빈 목록으로 true 입니다.
+             * @details 탄 카탈로그는 몬스터 카탈로그와 같은 길(게임 서비스)로 받는다. 방에는 벽이 없어 수명도 사거리도 없는 탄은 영원히 남으므로 받지 않는다.
+             */
+            [[nodiscard]] static bool resolveShots( const MonsterDef& def, vector<ResolvedShot>& outListShot )
+            {
+                outListShot.clear();
+                if ( def._listShot.empty() )
+                    return true;
+                const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+                if ( pProjectiles == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "ActionRoom.ShooterNoProjectileCatalog", "Monster '%#' shoots but no ProjectileCatalog is registered as a game service - the action room does not spawn it", def._id );
+                    return false;
+                }
+                for ( const MonsterShotDef& shot : def._listShot )
+                {
+                    const ProjectileDef* pProjectile = pProjectiles->find( shot._projectileID );
+                    if ( pProjectile == nullptr || ( pProjectile->_lifetime <= 0.0f && pProjectile->_range <= 0.0f ) )
+                    {
+                        SW_LOG_ERROR_ID( "ActionRoom.ShotProjectileUnusable", "Monster '%#' shoots projectile '%#' that is not in the projectile catalog or has neither lifetime nor range - the action room does not spawn it",
+                                         def._id, shot._projectileID.c_str() );
+                        return false;
+                    }
+                    outListShot.push_back( ResolvedShot::resolve( *pProjectile, {}, {} ) );
+                }
+                return true;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -40,6 +72,7 @@ namespace sw
         , _projectiles{}
         , _listProjectileEventScratch{}
         , _listMonsterDef{}
+        , _listMonsterShot{}
         , _attackCooldown{}
         , _dashCooldown{}
         , _invulnerable{}
@@ -61,6 +94,7 @@ namespace sw
         _listActor.clear();
         _projectiles.clear();
         _listMonsterDef.clear();
+        _listMonsterShot.clear();
         _attackCooldown.clear();
         _dashCooldown.clear();
         _invulnerable.clear();
@@ -256,7 +290,11 @@ namespace sw
             SW_LOG_ERROR_ID( "Action.RoomMonsterNotInCatalog", "Monster '%#' is not in the monster catalog - the action room does not spawn it", monsterID.c_str() );
             return -1;
         }
+        vector<ResolvedShot> listShot;
+        if ( ActionRoomInternal::resolveShots( *pFound, listShot ) == false )
+            return -1;
         _listMonsterDef.push_back( *pFound );
+        _listMonsterShot.push_back( std::move( listShot ) );
         return static_cast<int32>( _listMonsterDef.size() - 1 );
     }
 
@@ -307,25 +345,18 @@ namespace sw
             actor._attackTimer.restart( def._ai._attackCoolTime );
             ++outResult._enemyVolleyCount;
 
-            // 탄은 정의의 줄마다 한 발이다. 겨냥 방향을 `_angle`(라디안)만큼 돌린 쪽으로 난다(0은 겨냥 방향, π/2 는 (−y, x) 방향).
-            const float2 aim = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
-            for ( const MonsterShotDef& shot : def._listShot )
+            // 탄은 정의의 줄마다 한 발이다. 겨냥 방향을 `_angle`(라디안)만큼 돌린 쪽으로 난다(0은 겨냥 방향, π/2 는 (−y, x) 방향). 수치는 그 줄의 탄 정의다.
+            const float2                aim      = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
+            const vector<ResolvedShot>& listShot = _listMonsterShot[actor._defIndex];
+            for ( size_t shotIndex = 0; shotIndex < def._listShot.size(); ++shotIndex )
             {
-                const float32 radian = shot._angle;
+                const float32 radian = def._listShot[shotIndex]._angle;
                 const float32 cosine = MathUtil::cos( radian );
                 const float32 sine   = MathUtil::sin( radian );
-
-                // 수명 0 인 탄은 쏜 프레임에 사라지는 탄이다. 공통 시뮬레이션의 수명 0 은 "제한 없음" 이라 내지 않는다.
-                if ( shot._lifeTime <= 0.0f )
-                    continue;
-                ProjectileState projectile;
-                projectile._position         = float3{ actor._position._x, actor._position._y, 0.0f };
-                projectile._previousPosition = projectile._position;
-                projectile._velocity         = float3{ ( aim._x * cosine - aim._y * sine ) * shot._speed, ( aim._x * sine + aim._y * cosine ) * shot._speed, 0.0f };
-                projectile._lifetime         = shot._lifeTime;
-                projectile._radius           = shot._radius;
-                projectile._damage           = static_cast<float32>( shot._damage );
-                (void)_projectiles.spawn( projectile ); // 탄 id 는 쓰지 않는다
+                const float3  origin{ actor._position._x, actor._position._y, 0.0f };
+                const float3  direction{ aim._x * cosine - aim._y * sine, aim._x * sine + aim._y * cosine, 0.0f };
+                // 룸 평면(법선 Z)에는 중력이 없다 — −Y 중력을 넘기면 평면 안에서 탄을 끌어내린다.
+                (void)_projectiles.spawn( ProjectileState::launch( listShot[shotIndex], origin, direction, 0.0f ) ); // 탄 id 는 쓰지 않는다
             }
         }
     }
@@ -358,7 +389,7 @@ namespace sw
         {
             if ( queryOverlaps( hurt, kLayerPlayer, computeProjectileBounds( projectile ), kLayerProjectile, _layers ) == false )
                 continue;
-            outResult._damageToPlayer += static_cast<int32>( projectile._damage ); // 쏠 때 `MonsterShotDef::_damage`(정수)에서 왔다
+            outResult._damageToPlayer += static_cast<int32>( projectile._damage ); // 쏠 때 탄 정의의 피해다. 룸의 피해는 정수라 소수는 버린다
             projectile._bAlive = SW_FALSE;
             _projectiles.removeDead();
             _invulnerable.start( _settings._hitInvulnerableSeconds );
@@ -487,6 +518,7 @@ namespace sw
         if ( archive.readCount( 4, defCount ) == false )
             return false;
         restored._listMonsterDef.clear();
+        restored._listMonsterShot.clear();
         for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
         {
             hashed_string monsterID;

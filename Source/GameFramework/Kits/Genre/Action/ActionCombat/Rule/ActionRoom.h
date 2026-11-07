@@ -17,6 +17,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
 
 namespace sw
@@ -146,12 +147,13 @@ namespace sw
      *          싸움을 시작할 때 그 싸움에 나온 종의 정의를 복사해 둔다(싸움 도중 카탈로그가 다시 로드되어도 영향이 없다). 방 배치(어느 종을 어디에 둘지)는 게임이 넘기는 `ActionRoomLayout` 이다.
      *          적은 오브젝트가 아니라서 `UnitStatsComponent` 를 거치지 않고, 방어 공식만 같다(`DamageMath::applyArmor`).
      *          적의 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)을 룸 평면(x, y, z = 0)에 묶어 돌리고, 플레이어 맞음(무적 · 한 프레임 한 번)만 룸이 본다.
+     *          탄 수치는 사격 줄이 가리키는 탄 정의(게임 서비스 `ProjectileCatalog`)다. 몬스터 카탈로그와 같은 길(서비스)로 받고, 종을 처음 세울 때 그 종의 탄을 함께 풀어 둔다.
      */
     class SW_KIT_API ActionRoom
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "AROM" );
-        static constexpr uint32 kStateVersion = 2;
+        static constexpr uint32 kStateVersion = 3; ///< 3: 탄의 정의 이름이 탄 정의 id 다(2 는 비어 있었다)
 
         /** @brief 비활성(None)과 게이트 닫힘 상태로 시작합니다. */
         ActionRoom();
@@ -246,8 +248,8 @@ namespace sw
         /** @brief 싸움을 시작하고 @p listSpawn 의 적을 세웁니다. 배치가 비어 있으면 오류를 남깁니다(@p pKindName 은 로그용 이름). */
         void beginFight( ActionRoomKind kind, const vector<ActionRoomSpawnDef>& listSpawn, const utf8* pKindName );
         /**
-         * @brief 이번 싸움의 정의 목록에서 @p monsterID 의 인덱스를 찾습니다. 없으면 카탈로그 서비스에서 찾아 목록에 추가합니다.
-         * @return 정의 인덱스입니다. 카탈로그가 없거나 그 id 가 없으면 -1 이고 오류를 남깁니다.
+         * @brief 이번 싸움의 정의 목록에서 @p monsterID 의 인덱스를 찾습니다. 없으면 카탈로그 서비스에서 찾아 목록에 추가하고 사격 줄의 탄을 풉니다(`_listMonsterShot`).
+         * @return 정의 인덱스입니다. 카탈로그가 없거나 그 id 가 없거나, 쏘는 종인데 탄 카탈로그가 없거나 탄이 없거나 수명 · 사거리가 둘 다 없는 탄이면 -1 이고 오류를 남깁니다.
          */
         int32 getOrCreateMonsterDef( const hashed_string& monsterID );
         /** @brief 플레이어 공격을 시도합니다. */
@@ -274,19 +276,20 @@ namespace sw
         AABB playerAttackBox( float32 x, float32 y, FacingDir facing ) const;
 
     private:
-        ActionRoomSite          _site;
-        ActionRoomSettings      _settings;
-        ActionRoomLayout        _layout;
-        ActionRoomKind          _kind;
-        CollisionLayers         _layers;
-        vector<Actor>           _listActor;
-        ProjectileSimulation    _projectiles;
-        vector<ProjectileEvent> _listProjectileEventScratch;
-        vector<MonsterDef>      _listMonsterDef; ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
-        Countdown               _attackCooldown;
-        Countdown               _dashCooldown;
-        Countdown               _invulnerable; ///< 피격 후 무적 시간
-        uint8                   _bCleared : 1;
-        [[maybe_unused]] uint8  _reserved : 7;
+        ActionRoomSite               _site;
+        ActionRoomSettings           _settings;
+        ActionRoomLayout             _layout;
+        ActionRoomKind               _kind;
+        CollisionLayers              _layers;
+        vector<Actor>                _listActor;
+        ProjectileSimulation         _projectiles;
+        vector<ProjectileEvent>      _listProjectileEventScratch;
+        vector<MonsterDef>           _listMonsterDef;  ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
+        vector<vector<ResolvedShot>> _listMonsterShot; ///< `_listMonsterDef` 와 같은 순서로, 그 종의 사격 줄마다 푼 탄(싸움 도중 탄 카탈로그를 다시 읽어도 그대로다)
+        Countdown                    _attackCooldown;
+        Countdown                    _dashCooldown;
+        Countdown                    _invulnerable; ///< 피격 후 무적 시간
+        uint8                        _bCleared : 1;
+        [[maybe_unused]] uint8       _reserved : 7;
     };
 } // namespace sw
