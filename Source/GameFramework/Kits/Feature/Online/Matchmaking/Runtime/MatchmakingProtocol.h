@@ -2,7 +2,7 @@
  * @file MatchmakingProtocol.h
  * @brief 매칭 서비스의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kMatchmaking`), 본문, 캐시 기록, 버스 메시지의 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
  * @details 요청, 응답, 알림, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
- *          업무 결과는 응답 본문(`MatchmakingReply::_result`)에 담으며 거래와 경제 키트도 같다.
+ *          응답은 메서드마다 따로이다. 업무 결과(`_result`)는 도메인 값만이고, 규칙 밖 값 · 일시 장애 · 경합은 공통 범주(`OnlineError`)로 온다.
  *          공통 오류(`OnlineError`)만 오류 코드로 오며, 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 공통 범주 표(`kArrCommonResult`)로 이를 결과에 맞춘다.
  *          캐시 기록(파티, 로비)은 자기 기술형(A)이며 기록 버전이 다르면 읽지 않는다.
  */
@@ -122,19 +122,46 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 만 의미가 있습니다. */
+    /** @brief 파티 메서드(만들기 · 초대 · 수락 · 나가기 · 추방)의 응답입니다. */
     REFLECT()
-    struct MatchmakingReply
+    struct MatchmakingPartyReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbyList )
-        vector<LobbySnapshot> _listLobby{}; ///< LobbyList. 상한은 `PartyLobbyLimit::kMaxLobbyList` 와 같다
         PROPERTY()
         PartySnapshot _party{};
         PROPERTY()
+        MatchmakingResult _result{ MatchmakingResult::Ok };
+    };
+
+    /** @brief 로비 메서드(만들기 · 들어가기 · 나가기 · 준비 · 시작)의 응답입니다. */
+    REFLECT()
+    struct MatchmakingLobbyReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
         LobbySnapshot _lobby{};
         PROPERTY()
-        uint64 _ticketID{ 0 }; ///< QueueJoin 과 QueueLeave 의 티켓 id 이다
+        MatchmakingResult _result{ MatchmakingResult::Ok };
+    };
+
+    /** @brief 로비 목록(`LobbyList`)의 응답입니다. */
+    REFLECT()
+    struct MatchmakingLobbyListReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbyList )
+        vector<LobbySnapshot> _listLobby{}; ///< 상한은 `PartyLobbyLimit::kMaxLobbyList` 와 같다
+        PROPERTY()
+        MatchmakingResult _result{ MatchmakingResult::Ok }; ///< 모르는 모드면 `UnknownMode`
+    };
+
+    /** @brief 줄서기(`QueueJoin` · `QueueLeave`)의 응답입니다. */
+    REFLECT()
+    struct MatchmakingTicketReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _ticketID{ 0 };
         PROPERTY()
         MatchmakingResult _result{ MatchmakingResult::Ok };
     };
@@ -145,19 +172,19 @@ namespace sw
     /** @brief Matchmaking 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct MatchmakingMethod : OnlineMethodTable<MatchmakingMethodName, OnlineMethodRange::kMatchmaking, MatchmakingPushName>
     {
-        using PartyCreate  = Method<MethodName::PartyCreate, OnlineNoBody, MatchmakingReply>;         ///< 파티를 돌려준다
-        using PartyInvite  = Method<MethodName::PartyInvite, MatchmakingIDRequest, MatchmakingReply>; ///< 계정을 받아 파티를 돌려준다. 파티장만 부를 수 있다
-        using PartyAccept  = Method<MethodName::PartyAccept, MatchmakingIDRequest, MatchmakingReply>; ///< 파티 id 를 받아 파티를 돌려준다
-        using PartyLeave   = Method<MethodName::PartyLeave, OnlineNoBody, MatchmakingReply>;
-        using PartyKick    = Method<MethodName::PartyKick, MatchmakingIDRequest, MatchmakingReply>;   ///< 계정을 받는다. 파티장만 부를 수 있다
-        using LobbyCreate  = Method<MethodName::LobbyCreate, LobbySnapshot, MatchmakingReply>;        ///< 로비(이름, 모드, 정원, 설정)를 받아 로비를 돌려준다
-        using LobbyList    = Method<MethodName::LobbyList, MatchmakingModeRequest, MatchmakingReply>; ///< 모드를 받아 로비 목록을 돌려준다. 새 로비부터 나온다
-        using LobbyJoin    = Method<MethodName::LobbyJoin, MatchmakingIDRequest, MatchmakingReply>;   ///< 로비 id 를 받아 로비를 돌려준다
-        using LobbyLeave   = Method<MethodName::LobbyLeave, MatchmakingIDRequest, MatchmakingReply>;  ///< 로비 id
-        using LobbyReady   = Method<MethodName::LobbyReady, MatchmakingReadyRequest, MatchmakingReply>;
-        using LobbyStart   = Method<MethodName::LobbyStart, MatchmakingIDRequest, MatchmakingReply>;  ///< 로비 id 를 받으며 방장만 부를 수 있다. 전용 서버 배정은 결과 알림으로 전달한다
-        using QueueJoin    = Method<MethodName::QueueJoin, MatchmakingModeRequest, MatchmakingReply>; ///< 모드와 지역을 받아 티켓 id 를 돌려준다. 파티장이면 파티 전체의 티켓이다
-        using QueueLeave   = Method<MethodName::QueueLeave, OnlineNoBody, MatchmakingReply>;
+        using PartyCreate  = Method<MethodName::PartyCreate, OnlineNoBody, MatchmakingPartyReply>;         ///< 파티를 돌려준다
+        using PartyInvite  = Method<MethodName::PartyInvite, MatchmakingIDRequest, MatchmakingPartyReply>; ///< 계정을 받아 파티를 돌려준다. 파티장만 부를 수 있다
+        using PartyAccept  = Method<MethodName::PartyAccept, MatchmakingIDRequest, MatchmakingPartyReply>; ///< 파티 id 를 받아 파티를 돌려준다
+        using PartyLeave   = Method<MethodName::PartyLeave, OnlineNoBody, MatchmakingPartyReply>;
+        using PartyKick    = Method<MethodName::PartyKick, MatchmakingIDRequest, MatchmakingPartyReply>;       ///< 계정을 받는다. 파티장만 부를 수 있다
+        using LobbyCreate  = Method<MethodName::LobbyCreate, LobbySnapshot, MatchmakingLobbyReply>;            ///< 로비(이름, 모드, 정원, 설정)를 받아 로비를 돌려준다
+        using LobbyList    = Method<MethodName::LobbyList, MatchmakingModeRequest, MatchmakingLobbyListReply>; ///< 모드를 받아 로비 목록을 돌려준다. 새 로비부터 나온다
+        using LobbyJoin    = Method<MethodName::LobbyJoin, MatchmakingIDRequest, MatchmakingLobbyReply>;       ///< 로비 id 를 받아 로비를 돌려준다
+        using LobbyLeave   = Method<MethodName::LobbyLeave, MatchmakingIDRequest, MatchmakingLobbyReply>;      ///< 로비 id
+        using LobbyReady   = Method<MethodName::LobbyReady, MatchmakingReadyRequest, MatchmakingLobbyReply>;
+        using LobbyStart   = Method<MethodName::LobbyStart, MatchmakingIDRequest, MatchmakingLobbyReply>;   ///< 로비 id 를 받으며 방장만 부를 수 있다. 전용 서버 배정은 결과 알림으로 전달한다
+        using QueueJoin    = Method<MethodName::QueueJoin, MatchmakingModeRequest, MatchmakingTicketReply>; ///< 모드와 지역을 받아 티켓 id 를 돌려준다. 파티장이면 파티 전체의 티켓이다
+        using QueueLeave   = Method<MethodName::QueueLeave, OnlineNoBody, MatchmakingTicketReply>;
         using Party        = Push<PushName::Party, PartySnapshot>;         ///< 파티 알림이다. 멤버가 비어 있으면 해산, 나감, 내보내짐을 뜻한다
         using PartyInvited = Push<PushName::PartyInvite, sw::PartyInvite>; ///< 초대한 계정과 파티 id 를 보낸다
         using Lobby        = Push<PushName::Lobby, LobbySnapshot>;         ///< 로비 알림이다. 멤버가 비어 있으면 나감을 뜻한다
@@ -178,16 +205,6 @@ namespace sw
         using Table        = OnlineProtocolTable<MatchmakingMethod, OnlineMethodList<MatchmakingMethod::PartyCreate, MatchmakingMethod::PartyInvite, MatchmakingMethod::PartyAccept, MatchmakingMethod::PartyLeave, MatchmakingMethod::PartyKick, MatchmakingMethod::LobbyCreate, MatchmakingMethod::LobbyList, MatchmakingMethod::LobbyJoin, MatchmakingMethod::LobbyLeave, MatchmakingMethod::LobbyReady, MatchmakingMethod::LobbyStart, MatchmakingMethod::QueueJoin, MatchmakingMethod::QueueLeave>, OnlinePushList<MatchmakingMethod::Party, MatchmakingMethod::PartyInvited, MatchmakingMethod::Lobby, MatchmakingMethod::Match>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = MatchmakingResult;
-
-        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
-        static constexpr OnlineErrorResult<MatchmakingResult> kArrCommonResult[] = {
-            { OnlineError::kInvalidRequest, MatchmakingResult::Invalid },
-            { OnlineError::kUnavailable, MatchmakingResult::Unavailable },
-            { OnlineError::kBusy, MatchmakingResult::Conflict },
-            { OnlineError::kConflict, MatchmakingResult::Conflict, true },
-            { OnlineError::kVersionMismatch, MatchmakingResult::UpdateRequired },
-            { OnlineError::kUpdateRequired, MatchmakingResult::UpdateRequired },
-        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

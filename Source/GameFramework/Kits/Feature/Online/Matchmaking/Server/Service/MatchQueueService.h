@@ -75,9 +75,9 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct MatchQueueCompletion
     {
-        uint64            _requestTag{ 0 };
-        uint64            _ticketID{ 0 };
-        MatchmakingResult _result{ MatchmakingResult::Ok };
+        uint64             _requestTag{ 0 };
+        uint64             _ticketID{ 0 };
+        MatchmakingOutcome _result{ MatchmakingResult::Ok };
     };
 } // namespace sw
 
@@ -197,7 +197,7 @@ namespace sw
             uint64            _partyID{ 0 };
         };
 
-        void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
+        void onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party );
         /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
         void prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 다 읽었거나 시한이 지난 줄 서기의 티켓을 냅니다. 시한이 지났으면 `submitTicket` 이 RatingUnavailable 로 끝냅니다. */

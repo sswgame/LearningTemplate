@@ -157,7 +157,7 @@ SW_TEST_CASE( MatchMakerTest, BackfillFillsOneTeamsOpenSlot )
     SW_REQUIRE_TRUE( maker.addBackfill( request ) == MatchmakingResult::Ok );
     MatchBackfillRequest wrongMode = request;
     wrongMode._modeID              = "other";
-    SW_EXPECT_TRUE( maker.addBackfill( wrongMode ) == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( maker.addBackfill( wrongMode ).hasError( OnlineError::kInvalidRequest ) );
     SW_REQUIRE_TRUE( maker.addTicket( makeTicket( 1, 1520, "eu", 0, 2 ) ) == MatchmakingResult::Ok ); // 빈 슬롯 하나에 둘은 안 들어간다
     SW_REQUIRE_TRUE( maker.addTicket( makeTicket( 2, 1510, "eu", 0 ) ) == MatchmakingResult::Ok );
 

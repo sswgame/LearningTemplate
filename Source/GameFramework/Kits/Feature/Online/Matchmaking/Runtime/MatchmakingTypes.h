@@ -12,6 +12,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw
 {
@@ -34,15 +35,15 @@ namespace sw
         NotLobbyOwner,
         LobbyNotReady,
         InviteMissing,
-        // 전용 서버 배정
-        NoServer,
-        Invalid,
-        Unavailable,
-        Conflict,
-        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         RatingUnavailable, ///< 실력 모드인데 이 서버가 아직 멤버의 통계를 읽지 않았다. 잠시 뒤 다시 줄을 선다
         Count
     };
+
+    /**
+     * @brief 매칭 결과입니다. 업무 결과(`MatchmakingResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 규칙 밖 값은 `kInvalidRequest`, 저장소 · 캐시 장애는 `kUnavailable`, 다시 해도 경합이면 `kBusy` 이다. 전용 서버 배정 결과는 `MatchQueueResult` 가 따로 든다(옛 `NoServer` 는 쓰는 곳이 없어 지웠다).
+     */
+    using MatchmakingOutcome = OnlineOutcome<MatchmakingResult>;
 } // namespace sw
 
 namespace sw

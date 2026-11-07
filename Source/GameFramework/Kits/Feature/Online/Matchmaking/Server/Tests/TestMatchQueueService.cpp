@@ -280,8 +280,8 @@ SW_TEST_CASE( MatchQueueServiceTest, JoinAndLeave )
     MatchQueueService& queue = world._server._queue;
 
     SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "nope" )._result == MatchmakingResult::UnknownMode );
-    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel", "" )._result == MatchmakingResult::Invalid );
-    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel", "Not A Region" )._result == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel", "" )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel", "Not A Region" )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
 
     const MatchQueueCompletion joined = world._server.join( kAlice );

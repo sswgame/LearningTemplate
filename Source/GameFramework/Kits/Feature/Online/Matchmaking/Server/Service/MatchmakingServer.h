@@ -76,12 +76,18 @@ namespace sw
 
         int32 getGraceCount() const { return static_cast<int32>( _mapAccountToGraceEnd.size() ); }
 
+        // 완료에서 응답으로 — 응답 타입은 호출의 메서드가 고른다(`OnlineProtocolService::completeByMethod`)
+        void fillReply( MatchmakingPartyReply& reply, PartyLobbyCompletion& completion );
+        void fillReply( MatchmakingLobbyReply& reply, PartyLobbyCompletion& completion );
+        void fillReply( MatchmakingLobbyListReply& reply, PartyLobbyCompletion& completion );
+        void fillReply( MatchmakingTicketReply& reply, MatchQueueCompletion& completion );
+
     private:
         void attachHost( OnlineServiceHost& host );
         /** @brief 유예가 끝난 계정을 접속 상태로 묻거나(서버 여러 대) 바로 뺍니다. */
         void expireGrace( UnixMilliseconds nowMs );
         void onGracePresenceFound( const AccountPresenceResult& result );
-        void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
+        void onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party );
         /** @brief 이 서버 계정 @p recipientID 가 받은 파티 스냅숏으로 파티 채널 멤버를 맞춥니다. 멤버가 비었으면 빠진 것이다. */
         void syncPartyChannel( AccountID recipientID, const PartySnapshot& party );
         /** @brief 알림 @p kind 를 이 서버의 계정에게 B 로 보내고, 없으면 다른 서버로 중계합니다(`IAccountPresence::sendRemotePush`). 정의는 `.cpp` 에만 있습니다. */

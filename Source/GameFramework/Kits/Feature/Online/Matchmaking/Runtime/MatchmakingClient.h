@@ -26,9 +26,6 @@ namespace sw
     class SW_KIT_API MatchmakingClient final : public OnlineProtocolClient<MatchmakingClient, MatchmakingProtocol>
     {
     public:
-        using Reply         = OnlineResult<MatchmakingReply>;
-        using ReplyDelegate = Delegate<void( const Reply& )>;
-
         MatchmakingClient();
 
         /**

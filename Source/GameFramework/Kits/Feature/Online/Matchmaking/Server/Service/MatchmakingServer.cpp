@@ -193,21 +193,13 @@ namespace sw
         _pPartyLobby->takeCompletions( _listPartyCompletionScratch );
         for ( PartyLobbyCompletion& completion : _listPartyCompletionScratch )
         {
-            MatchmakingReply reply;
-            reply._result    = completion._result;
-            reply._party     = std::move( completion._party );
-            reply._lobby     = std::move( completion._lobby );
-            reply._listLobby = std::move( completion._listLobby );
-            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면 서버가 낸 요청이다
+            (void)completeByMethod( completion._requestTag, completion ); // 응답 타입은 호출의 메서드가 정한다(`fillReply`). 요청 태그가 0이면 서버가 낸 요청이다
         }
         _listQueueCompletionScratch.clear();
         _pQueue->takeCompletions( _listQueueCompletionScratch );
-        for ( const MatchQueueCompletion& completion : _listQueueCompletionScratch )
+        for ( MatchQueueCompletion& completion : _listQueueCompletionScratch )
         {
-            MatchmakingReply reply;
-            reply._result   = completion._result;
-            reply._ticketID = completion._ticketID;
-            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면 서버가 낸 요청이다
+            (void)completeByMethod( completion._requestTag, completion ); // 요청 태그가 0이면 서버가 낸 요청이다
         }
 
         _listPartyNotificationScratch.clear();
@@ -301,7 +293,31 @@ namespace sw
         _pPartyLobby->removeAccount( accountID );
     }
 
-    void MatchmakingServer::onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party )
+    void MatchmakingServer::fillReply( MatchmakingPartyReply& reply, PartyLobbyCompletion& completion )
+    {
+        reply._party  = std::move( completion._party );
+        reply._result = completion._result._result;
+    }
+
+    void MatchmakingServer::fillReply( MatchmakingLobbyReply& reply, PartyLobbyCompletion& completion )
+    {
+        reply._lobby  = std::move( completion._lobby );
+        reply._result = completion._result._result;
+    }
+
+    void MatchmakingServer::fillReply( MatchmakingLobbyListReply& reply, PartyLobbyCompletion& completion )
+    {
+        reply._listLobby = std::move( completion._listLobby );
+        reply._result    = completion._result._result;
+    }
+
+    void MatchmakingServer::fillReply( MatchmakingTicketReply& reply, MatchQueueCompletion& completion )
+    {
+        reply._ticketID = completion._ticketID;
+        reply._result   = completion._result._result;
+    }
+
+    void MatchmakingServer::onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party )
     {
         if ( result != MatchmakingResult::Ok || _pGroupChannels == nullptr )
             return; // 파티가 없다

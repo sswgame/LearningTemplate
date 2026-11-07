@@ -22,11 +22,11 @@ namespace
     /** @brief 파티 찾기의 답을 받습니다. */
     struct PartyFoundSink
     {
-        PartySnapshot     _party{};
-        int32             _count{ 0 };
-        MatchmakingResult _result{ MatchmakingResult::Ok };
+        PartySnapshot      _party{};
+        int32              _count{ 0 };
+        MatchmakingOutcome _result{ MatchmakingResult::Ok };
 
-        void onFound( uint64 /*tag*/, MatchmakingResult result, const PartySnapshot& party )
+        void onFound( uint64 /*tag*/, MatchmakingOutcome result, const PartySnapshot& party )
         {
             ++_count;
             _result = result;
@@ -101,13 +101,13 @@ namespace
             return created._party._partyID;
         }
 
-        MatchmakingResult invite( AccountID leaderID, AccountID targetID )
+        MatchmakingOutcome invite( AccountID leaderID, AccountID targetID )
         {
             _service.inviteToParty( leaderID, targetID, 2 );
             return take( 2 )._result;
         }
 
-        MatchmakingResult accept( AccountID accountID, uint64 partyID )
+        MatchmakingOutcome accept( AccountID accountID, uint64 partyID )
         {
             _service.acceptPartyInvite( accountID, partyID, 3 );
             return take( 3 )._result;
@@ -145,13 +145,13 @@ namespace
             return take( 5 );
         }
 
-        MatchmakingResult ready( AccountID accountID, uint64 lobbyID, bool bReady = true )
+        MatchmakingOutcome ready( AccountID accountID, uint64 lobbyID, bool bReady = true )
         {
             _service.setLobbyReady( accountID, lobbyID, bReady, 6 );
             return take( 6 )._result;
         }
 
-        MatchmakingResult start( AccountID accountID, uint64 lobbyID )
+        MatchmakingOutcome start( AccountID accountID, uint64 lobbyID )
         {
             _service.startLobby( accountID, lobbyID, 7 );
             return take( 7 )._result;
@@ -177,7 +177,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, RefusesBadMaxPartySize )
     PartyFoundSink sink; // 시작하지 못한 서비스는 찾기에 Unavailable 로 답한다
     service.findPartyOfAccount( kAlice, 9, PartyLobbyService::PartyFoundDelegate::create<&PartyFoundSink::onFound>( &sink ) );
     SW_EXPECT_EQUAL( 1, sink._count );
-    SW_EXPECT_TRUE( sink._result == MatchmakingResult::Unavailable );
+    SW_EXPECT_TRUE( sink._result.hasError( OnlineError::kUnavailable ) );
 }
 
 /** @brief [PartyLobbyServiceTest] 파티: 만들면 파티장이고 찾을 수 있다. 이미 파티가 있으면 AlreadyInParty, 파티가 없으면 NotInParty 다 */
@@ -209,8 +209,8 @@ SW_TEST_CASE( PartyLobbyServiceTest, InviteAndAcceptRules )
     PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
 
-    SW_EXPECT_TRUE( rig.invite( kAlice, kAlice ) == MatchmakingResult::Invalid );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kInvalidAccountID ) == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.invite( kAlice, kAlice ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.invite( kAlice, kInvalidAccountID ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.invite( kBob, kCarol ) == MatchmakingResult::NotInParty );
     SW_EXPECT_TRUE( rig.accept( kBob, partyID ) == MatchmakingResult::InviteMissing );
 
@@ -302,7 +302,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, KickRules )
     rig._service.kickFromParty( kBob, kAlice, 2 );
     SW_EXPECT_TRUE( rig.take( 2 )._result == MatchmakingResult::NotPartyLeader );
     rig._service.kickFromParty( kAlice, kAlice, 2 );
-    SW_EXPECT_TRUE( rig.take( 2 )._result == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.take( 2 )._result.hasError( OnlineError::kInvalidRequest ) );
     rig._service.kickFromParty( kAlice, kCarol, 2 );
     SW_EXPECT_TRUE( rig.take( 2 )._result == MatchmakingResult::NotInParty );
     rig._service.kickFromParty( kAlice, kBob, 2 );
@@ -333,19 +333,19 @@ SW_TEST_CASE( PartyLobbyServiceTest, CreateLobbyValidatesAndLists )
     LobbySnapshot bad = request;
     bad._name         = "";
     rig._service.createLobby( kAlice, bad, UnixMilliseconds{ kNowMs }, 4 );
-    SW_EXPECT_TRUE( rig.take( 4 )._result == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.take( 4 )._result.hasError( OnlineError::kInvalidRequest ) );
     bad                 = request;
     bad._maxMemberCount = PartyLobbyLimit::kMinLobbySize - 1;
     rig._service.createLobby( kAlice, bad, UnixMilliseconds{ kNowMs }, 4 );
-    SW_EXPECT_TRUE( rig.take( 4 )._result == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.take( 4 )._result.hasError( OnlineError::kInvalidRequest ) );
     bad         = request;
     bad._modeID = "Bad Mode";
     rig._service.createLobby( kAlice, bad, UnixMilliseconds{ kNowMs }, 4 );
-    SW_EXPECT_TRUE( rig.take( 4 )._result == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.take( 4 )._result.hasError( OnlineError::kInvalidRequest ) );
     bad = request;
     bad._listSetting.push_back( LobbySetting{ "Bad Key", "v" } );
     rig._service.createLobby( kAlice, bad, UnixMilliseconds{ kNowMs }, 4 );
-    SW_EXPECT_TRUE( rig.take( 4 )._result == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.take( 4 )._result.hasError( OnlineError::kInvalidRequest ) );
 
     request._listSetting.push_back( LobbySetting{ "map.name", "desert" } );
     rig._service.createLobby( kAlice, request, UnixMilliseconds{ kNowMs }, 4 );
@@ -411,8 +411,8 @@ SW_TEST_CASE( PartyLobbyServiceTest, StartRequiresReadyAndReopens )
     SW_EXPECT_EQUAL( lobbyID, listStart[0]._lobby._lobbyID );
     SW_EXPECT_TRUE( listStart[0]._lobby._state == LobbyState::Starting );
 
-    SW_EXPECT_TRUE( rig.join( kCarol, lobbyID )._result == MatchmakingResult::Invalid );
-    SW_EXPECT_TRUE( rig.start( kAlice, lobbyID ) == MatchmakingResult::Invalid );
+    SW_EXPECT_TRUE( rig.join( kCarol, lobbyID )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.start( kAlice, lobbyID ).hasError( OnlineError::kInvalidRequest ) );
 
     rig._service.reopenLobby( lobbyID );
     rig.pump();

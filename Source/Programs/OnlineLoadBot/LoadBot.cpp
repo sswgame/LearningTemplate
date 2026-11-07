@@ -474,13 +474,12 @@ namespace sw
                 MatchmakingModeRequest request;
                 request._modeID = step._text;
                 request._region = region;
-                (void)_matchmakingClient.call<MatchmakingMethod::QueueJoin>( request, MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
+                callKit<MatchmakingMethod::QueueJoin>( _matchmakingClient, request );
                 return true;
             }
             case LoadBotAction::PartyCreate:
             {
-                // 요청 id 는 쓰지 않는다 — 결과는 onMatchmakingReply 로 온다
-                (void)_matchmakingClient.call<MatchmakingMethod::PartyCreate>( MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
+                callKit<MatchmakingMethod::PartyCreate>( _matchmakingClient, OnlineNoBody{} ); // 결과는 onKitReply 로 온다
                 return true;
             }
             case LoadBotAction::LiveOpsState:
