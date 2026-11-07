@@ -2,13 +2,46 @@
 
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Scene/SceneManager.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct CharacterControllerComponentInternal
+        {
+            /** @brief `character.jump <object> [speed]` — 오브젝트의 캐릭터 컨트롤러가 위로 뜁니다(기본 5 m/s). 시나리오가 점프 · 탈출 입력을 흉내 낸다. */
+            static bool runJump( const vector<string>& listArgument, string& outReply )
+            {
+                float32    speed   = 5.0f;
+                const bool bParsed = ( listArgument.size() == 1 || listArgument.size() == 2 ) && ( listArgument.size() == 1 || StringUtil::parseFloat( listArgument[1], speed ) );
+                if ( bParsed == false || speed <= 0.0f )
+                    return false;
+                GameObject*                   pObject     = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                CharacterControllerComponent* pController = pObject != nullptr ? pObject->getComponent<CharacterControllerComponent>() : nullptr;
+                if ( pController == nullptr )
+                {
+                    outReply = "character.jump: no object named '" + listArgument[0] + "' with a CharacterControllerComponent in the active scene";
+                    return true;
+                }
+                pController->jump( speed );
+                outReply = "character.jump " + listArgument[0];
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( CharacterJump, "character.jump", "character.jump <object> [speed]", "Make an object's character controller jump (speed in m/s, default 5)", &CharacterControllerComponentInternal::runJump );
+} // namespace sw
 
 namespace sw
 {
@@ -30,6 +63,8 @@ namespace sw
         , _frameRootMotionVelocity{}
         , _pendingSurfaceVelocity{}
         , _frameSurfaceVelocity{}
+        , _pendingMoveScale{ 1.0f }
+        , _frameMoveScale{ 1.0f }
         , _pendingLaunch{}
         , _airVelocity{}
         , _previousPosition{}
@@ -69,6 +104,12 @@ namespace sw
     {
         ScopedLock<SpinLock> lock{ _commandLock };
         _pendingSurfaceVelocity += float3{ velocity._x, 0.0f, velocity._z };
+    }
+
+    void CharacterControllerComponent::applyMoveScale( float32 scale )
+    {
+        ScopedLock<SpinLock> lock{ _commandLock };
+        _pendingMoveScale = MathUtil::min( _pendingMoveScale, MathUtil::max( scale, 0.0f ) );
     }
 
     void CharacterControllerComponent::setRadius( float32 radius )
@@ -171,6 +212,8 @@ namespace sw
                 _pendingRootMotion         = float3{};
                 _frameSurfaceVelocity      = _pendingSurfaceVelocity;
                 _pendingSurfaceVelocity    = float3{};
+                _frameMoveScale            = _pendingMoveScale;
+                _pendingMoveScale          = 1.0f;
             }
             if ( _pendingLaunch.getLengthSquared() > 0.0f )
             {
@@ -179,7 +222,8 @@ namespace sw
                 _pendingLaunch = float3{};
             }
         }
-        moveVelocity = moveVelocity + _frameRootMotionVelocity + _frameSurfaceVelocity + _airVelocity;
+        // 이동 계수는 걷는 몫(요청 · 루트 모션)에만 든다 — 면이 나르는 속도와 공중 관성은 환경 저항과 상관없다.
+        moveVelocity = ( moveVelocity + _frameRootMotionVelocity ) * _frameMoveScale + _frameSurfaceVelocity + _airVelocity;
         // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다. 점프는 그 위에 덮는다.
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;

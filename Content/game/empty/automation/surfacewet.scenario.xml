@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  날씨 · 침수 → 젖음, 물 → 씻김(SurfaceExposureComponent) — 무대 maps/surfaceinteraction(Walker 는 SkeletonWarrior, 표면 채널 engine/character/default.surfacechannels.xml).
+  ① 맑음: 젖음 0. ② 비(cheat.weather rain): 열린 하늘에서 비 노출 1, 젖음이 오른다(0.2/s − 마름 0.05/s). ③ 지붕 아래(-5,0): 비 노출 0. ④ 맑음: 마른다(감쇠).
+  ⑤ 얕은 물(바닥 -0.3 m): 잠긴 비율 0.3/1.8 ≈ 0.17. ⑥ 깊은 물(바닥 -1.5 m): 0.83 — 젖음이 빨리 오르고 흙(washPerSecond 0.25)은 씻기며 상처(씻김 0)는 남는다. ⑦ 물 밖: 비율 0.
+  값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/surfacewet.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.surfacewet" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceinteraction.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="object.place Walker -3 0.05 0"/>
+	<Wait frames="30"/>
+	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atMost="0.01"/>
+	<Expect watch="Surface.RainExposure" target="Walker" atMost="0.01"/>
+	<Expect watch="Surface.GroundKind" target="Walker" is="Stone"/>
+	<DevCommand line="surface.probe Walker"/>
+
+	<DevCommand line="cheat.weather rain"/>
+	<Wait frames="180"/>
+	<Expect watch="Surface.RainExposure" target="Walker" atLeast="0.99"/>
+	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atLeast="0.3"/>
+
+	<DevCommand line="object.place Walker -5 0.05 0"/>
+	<Wait frames="30"/>
+	<Expect watch="Surface.RainExposure" target="Walker" atMost="0.01"/>
+
+	<DevCommand line="cheat.weather clear"/>
+	<DevCommand line="surface.set Walker Wet 0.5"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atMost="0.35" timeoutSeconds="6"/>
+
+	<DevCommand line="surface.set Walker Wet 0"/>
+	<DevCommand line="surface.set Walker Dirt 1"/>
+	<DevCommand line="surface.set Walker Wound 1"/>
+	<DevCommand line="object.place Walker 3 0.05 0"/>
+	<WaitUntil watch="Surface.Submersion" target="Walker" near="0.167" tolerance="0.03" timeoutSeconds="2"/>
+	<Expect watch="Surface.GroundKind" target="Walker" is="Water"/>
+	<Wait frames="120"/>
+	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atLeast="0.04"/>
+
+	<DevCommand line="object.place Walker 5 0.05 0"/>
+	<WaitUntil watch="Surface.Submersion" target="Walker" atLeast="0.8" timeoutSeconds="3"/>
+	<Wait frames="120"/>
+	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wet" atLeast="0.6"/>
+	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Dirt" atMost="0.7"/>
+	<Expect watch="Appearance.SurfaceChannel" target="Walker" key="Wound" atLeast="0.99"/>
+	<Expect watch="Surface.MoveScale" target="Walker" near="0.6" tolerance="0.01"/>
+
+	<DevCommand line="object.place Walker -3 0.05 0"/>
+	<WaitUntil watch="Surface.Submersion" target="Walker" atMost="0.01" timeoutSeconds="2"/>
+	<Pass/>
+</Scenario>

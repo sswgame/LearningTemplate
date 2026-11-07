@@ -32,7 +32,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Surface.KindTableEmpty", "%#: no surface kinds in <_listKind>", path );
             bOk = false;
         }
-        // 칸 · 범위(이동 계수 0..2, 수명 >= 0, 용량 1..4096)는 PROPERTY 가 정본이고 `loadDesc` 가 본다. 여기서는 칸 사이의 규칙만 본다.
+        // 칸 · 범위(이동 계수 0..1, 수명 >= 0, 용량 1..4096)는 PROPERTY 가 정본이고 `loadDesc` 가 본다. 여기서는 칸 사이의 규칙만 본다.
         for ( size_t kindIndex = 0; kindIndex < _listKind.size(); ++kindIndex )
         {
             const SurfaceKindDef& kind = _listKind[kindIndex];

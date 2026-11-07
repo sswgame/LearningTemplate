@@ -1,0 +1,151 @@
+<Scene formatVersion="2" name="SurfaceInteraction">
+	<!-- 표면 상호작용 무대(automation/surface*.scenario.xml) — 왼쪽부터 돌(지붕 반쪽) · 눈 · 물웅덩이(얕은 곳 0.3 m · 깊은 곳 1.5 m) · 모래 함몰 구역.
+	     걷는 해골(Walker)은 제자리 걷기(Walking_A, 발 알림 FootL · FootR)라 시나리오가 object.place 로 자리를 옮긴다.
+	     표면 질의(SurfaceQuery)가 패드의 물리 재질 · 물 깊이로 종류를 고르고, 눈은 발자국(SurfaceFootprintSystem)을, 날씨 · 물은 젖음 · 씻김(SurfaceExposureComponent)을,
+	     모래 구역은 함몰 · 감속 · 탈출(SinkingSandZoneComponent)을 낸다. 날씨는 Weather 오브젝트의 판 상태가 연다(WeatherDirectorComponent). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="2,6,-12" _localRotation="0.42,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="12" _shadowDistance="30" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Weather">
+			<GameObject _schemaVersion="0" _name="Weather" _bActive="true">
+				<_listComponent>
+					<SessionStateComponent />
+					<WeatherDirectorComponent _weatherDataPath="game/empty/data/surfacedemo.weather.xml" _startWeather="clear" _seed="7" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="StonePad">
+			<GameObject _schemaVersion="0" _name="StonePad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-4,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="SnowPad">
+			<GameObject _schemaVersion="0" _name="SnowPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Snow" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Snow">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_light.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="PoolShallow">
+			<GameObject _schemaVersion="0" _name="PoolShallow" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="3,-0.55,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="PoolDeep">
+			<GameObject _schemaVersion="0" _name="PoolDeep" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="5,-1.75,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Stone" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Stone">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="SandPad">
+			<GameObject _schemaVersion="0" _name="SandPad" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="8,-0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Sand" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="2,0.25,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Sand">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="4,0.5,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Roof">
+			<GameObject _schemaVersion="0" _name="Roof" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-5,3,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="Wood" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="1,0.1,3" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="Wood">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="2,0.2,6" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Pool">
+			<GameObject _schemaVersion="0" _name="Pool" _bActive="true">
+				<_listComponent>
+					<WaterBodyComponent _localPosition="4,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _shape="Lake" _materialPath="engine/materials/water.material" _size="4,6" _cellSize="0.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Quicksand">
+			<GameObject _schemaVersion="0" _name="Quicksand" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="8,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<SinkingSandZoneComponent _halfExtents="1.5,1,2.5" _sinkSpeed="0.2" _maxDepth="0.9" _moveScaleAtMaxDepth="0.1" _escapePerJump="0.3" _engulfSeconds="2" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Walker">
+			<GameObject _schemaVersion="0" _name="Walker" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="0.7853982" _gravityScale="1" _mass="70" _layer="Character" />
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="CharacterControllerComponent#0" _meshID="" _materialPath="" _boundsRadius="2" _blendMode="Opaque" />
+					<SkeletalAnimatorComponent _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Walking_A" _bPlayOnBegin="true" />
+					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<AnimationNotifyComponent _notifyTablePath="common/characters/skeleton_warrior/skeleton_warrior.notifies.xml" />
+					<GroundSurfaceComponent _probeLength="0.6" />
+					<SurfaceExposureComponent _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

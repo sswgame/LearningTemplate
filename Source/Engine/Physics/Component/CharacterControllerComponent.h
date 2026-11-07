@@ -54,6 +54,15 @@ namespace sw
          * @details 아무 스레드에서 불러도 됩니다. 트랜스폼을 직접 옮기면 순간이동이라 벽을 지나므로, 면이 나르는 것은 이것으로 넘깁니다.
          */
         void addSurfaceVelocity( const float3& velocity );
+        /**
+         * @brief 이번 물리 프레임의 걷는 속도(요청 속도 · 루트 모션)에 곱할 이동 계수를 얹습니다(눈 · 모래 · 물 · 함몰 구역). 프레임마다 다시 불러야 이어지고, 여럿이면 가장 작은 값입니다.
+         * @details 환경이 주는 이동 저항의 한 입력이다 — 표면(`GroundSurfaceComponent`)과 구역(`SinkingSandZoneComponent`)이 각자 부른다.
+         *          결정: 곱이 아니라 최솟값이다 — 물리 스텝이 없는 렌더 프레임이 끼면 같은 호출이 두 번 쌓이는데, 최솟값은 몇 번 불러도 같다(곱은 0.8 이 0.64 가 된다).
+         *          면 속도 · 발사 · 관성은 곱하지 않는다(걷는 힘이 아니다). 아무 스레드에서 불러도 됩니다. 음수는 0 으로 둡니다.
+         */
+        void applyMoveScale( float32 scale );
+        /** @brief 지난 물리 프레임에 걷는 속도에 곱한 계수입니다(진단 · 감시 값). */
+        float32 getMoveScale() const { return _frameMoveScale; }
         /** @brief 마지막 스텝에 바닥을 딛고 있었는지입니다. */
         bool isGrounded() const { return _state._bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
@@ -113,6 +122,8 @@ namespace sw
         float3 _frameRootMotionVelocity SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
         float3 _pendingSurfaceVelocity  SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 쌓인 면 속도(`_commandLock`)
         float3 _frameSurfaceVelocity    SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
+        float32 _pendingMoveScale       SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 받은 이동 계수의 최솟값(`_commandLock`)
+        float32 _frameMoveScale         SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
         float3 _pendingLaunch           SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
         float3 _airVelocity             SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
         float3                          _previousPosition;

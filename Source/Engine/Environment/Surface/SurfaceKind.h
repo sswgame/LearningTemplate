@@ -40,7 +40,7 @@ namespace sw
         hashed_string _name{};
         PROPERTY( Required, Tooltip = "Footstep class put into the footstep sound path ({surface})" )
         hashed_string _footstep{};
-        PROPERTY( Min = 0.0, Max = 2.0, Tooltip = "Multiplier on the requested walk speed while standing on this surface (not the physics friction)" )
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Multiplier on the requested walk speed while standing on this surface (not the physics friction; resistances take the smallest)" )
         float32 _moveScale{ 1.0f };
         PROPERTY( Tooltip = "Prefab placed where a foot lands (empty: this surface keeps no footprints)" )
         DataPath _footprintPrefab;
