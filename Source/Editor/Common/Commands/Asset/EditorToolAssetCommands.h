@@ -15,6 +15,7 @@
 namespace sw
 {
     struct TileMapXMLData;
+    struct TileSetContent;
 
     class AnimationGraphAsset;
     class DialogueGraphAsset;
@@ -62,6 +63,13 @@ namespace sw::editor
         static ToolAssetLoadResult loadTileMap( string_view assetRelativePath, TileMapXMLData& outData, string& outStatus );
         /** @brief Resource 상대 경로로 TileMap XML 을 씁니다. */
         [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXMLData& data );
+        /**
+         * @brief 타일셋(`.tileset.xml`)을 읽습니다. 결과는 `loadTileMap` 과 같은 세 가지입니다.
+         * @details 형식과 규칙은 런타임 읽기(`TileSetAsset::loadFromXMLText`) 하나다 — 에디터가 따로 파서를 두지 않는다. 저장도 그 읽기로 사본을 되읽은 뒤에만 원본을 덮는다.
+         */
+        static ToolAssetLoadResult loadTileSet( string_view path, TileSetContent& outData, string& outStatus );
+        /** @brief 타일셋을 씁니다(`TileSetContent::saveToXMLText`). 되읽지 못하는 내용이면 원본을 덮지 않고 false 입니다. */
+        [[nodiscard]] static bool saveTileSet( string_view path, const TileSetContent& data );
         /** @brief 도구 문서 경로(리소스 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
         [[nodiscard]] static bool hasToolDocument( string_view path );
         /**

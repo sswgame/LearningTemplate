@@ -8105,6 +8105,171 @@ msgctxt "EditorTileMap.WidthTip"
 msgid "Map width in cells. Takes effect when you press Apply Size."
 msgstr "맵 너비(칸)입니다. Apply Size 를 눌러야 적용됩니다."
 
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.AddRule"
+msgid "Add rule"
+msgstr "규칙 더하기"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.AddRuleTile"
+msgid "Add rule tile"
+msgstr "규칙 타일 더하기"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.AddTile"
+msgid "Add tile"
+msgstr "타일 더하기"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.AtlasCellTip"
+msgid "Click a cell to use it. Shift-click adds it as an animation frame."
+msgstr "셀을 누르면 그 셀을 씁니다. Shift 를 누르고 누르면 애니메이션 프레임으로 더합니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.AtlasCells"
+msgid "Atlas"
+msgstr "아틀라스"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.BrushNameTip"
+msgid "Maps paint brushes by this name. It must be unique."
+msgstr "맵은 이 이름으로 브러시를 칠합니다. 겹치면 안 됩니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Brushes"
+msgid "Brushes"
+msgstr "브러시"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.DefaultLook"
+msgid "Default look"
+msgstr "기본 모습"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Fps"
+msgid "Frames per second"
+msgstr "초당 프레임"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Frames"
+msgid "Frames"
+msgstr "프레임"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.FramesTip"
+msgid "Click an atlas cell to set the look. Shift-click adds a frame and makes it animated."
+msgstr "아틀라스 셀을 누르면 모습이 됩니다. Shift 를 누르고 누르면 프레임을 더해 애니메이션이 됩니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Grid"
+msgid "Columns, rows"
+msgstr "열, 행"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.GridTip"
+msgid "How many cells the atlas is cut into. Cell numbers stay, so cells that fall outside are shown as problems."
+msgstr "아틀라스를 몇 칸으로 나눌지입니다. 셀 번호는 그대로라 밖으로 나간 셀은 문제로 보입니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.KindRule"
+msgid "rule tile"
+msgstr "규칙 타일"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.KindTile"
+msgid "tile"
+msgstr "타일"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.LoadingAtlasHint"
+msgid "Loading the atlas texture."
+msgstr "아틀라스 텍스처를 읽는 중입니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Look"
+msgid "Look"
+msgstr "모습"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.NavCost"
+msgid "Move cost"
+msgstr "이동 비용"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.NavCostTip"
+msgid "Path finding cost from 1 to 255. 255 blocks the cell."
+msgstr "길 찾기 비용입니다(1 ~ 255). 255 는 막힘입니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.NoAtlasHint"
+msgid "Enter an atlas texture to pick cells from."
+msgstr "셀을 고를 아틀라스 텍스처를 적으세요."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.NoBrushesHint"
+msgid "No brushes yet. Add a tile, then pick its cell in the atlas."
+msgstr "브러시가 없습니다. 타일을 더한 뒤 아틀라스에서 셀을 고르세요."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.OutsideSame"
+msgid "Outside is same"
+msgstr "맵 밖은 같음"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.OutsideSameTip"
+msgid "Treat cells outside the map as this brush, so map edges draw no border."
+msgstr "맵 밖 칸을 이 브러시로 보아 맵 가장자리에 테두리를 그리지 않습니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Pattern"
+msgid "Neighbors"
+msgstr "이웃"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.PatternTip"
+msgid "Click a neighbor to cycle it: . any, o the same brush, x not the same brush. The middle shows the cell this rule picks."
+msgstr "이웃을 누르면 바뀝니다: . 상관없음, o 같은 브러시, x 같은 브러시 아님. 가운데는 이 규칙이 고르는 셀입니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.RemoveLastFrame"
+msgid "Remove last frame"
+msgstr "마지막 프레임 빼기"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.RuleLabel"
+msgid "Rule {index}"
+msgstr "규칙 {index}"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.RuleOrderTip"
+msgid "The first rule that matches its neighbors wins."
+msgstr "이웃이 맞는 첫 규칙이 이깁니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.SaveTip"
+msgid "Write the tile set. A tile set with problems is not saved, so the game never reads a broken file."
+msgstr "타일셋을 씁니다. 문제가 있으면 저장하지 않아 게임이 깨진 파일을 읽지 않습니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.Solid"
+msgid "Solid"
+msgstr "단단함"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.SolidTip"
+msgid "Characters cannot walk through this tile."
+msgstr "캐릭터가 이 타일을 지나가지 못합니다."
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.TileSize"
+msgid "Tile size"
+msgstr "타일 크기"
+
+#: Source/Editor/Panels/TileSet/TileSetPanel.cpp
+msgctxt "EditorTileSet.TileSizeTip"
+msgid "World size of one cell."
+msgstr "셀 한 칸의 월드 크기입니다."
+
 #: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
 msgctxt "EditorTip.CameraFOV"
 msgid "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."
@@ -9334,6 +9499,12 @@ msgstr "테마 · 모양..."
 msgctxt "Tile Map Tool"
 msgid "Tile Map Tool"
 msgstr "타일 맵 도구"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Tile Set Editor"
+msgid "Tile Set Editor"
+msgstr "타일셋 편집기"
 
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml

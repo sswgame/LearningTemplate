@@ -26,6 +26,7 @@
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/TileMap/TileMapXML.h"
+#include "Engine/TileMap/TileSetAsset.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 
@@ -69,6 +70,7 @@ namespace sw::editor
                                                 EditorAssetMatchPriority::Fallback ),
         };
         const EditorAssetMatchRule kArrTileMapRule[]       = { EditorAssetMatchRule::engineType( TileMapXMLData::kAssetType ) };
+        const EditorAssetMatchRule kArrTileSetRule[]       = { EditorAssetMatchRule::engineType( TileSetAsset::kAssetType, AssetReloadRoute::sharedCache( TileSetAsset::kAssetType ) ) };
         const EditorAssetMatchRule kArrSequenceRule[]      = { EditorAssetMatchRule::engineType( SequenceAsset::kAssetType ) };
         const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, AssetReloadRoute::sharedCache( Skeleton::kAssetType, AssetReferenceUse::InlinedAtLoad ) ) };
         const EditorAssetMatchRule kArrAnimationClipRule[] = { EditorAssetMatchRule::engineType( AnimationClip::kAssetType, AssetReloadRoute::sharedCache( AnimationClip::kAssetType ) ) };
@@ -115,6 +117,8 @@ namespace sw::editor
                           true, kArrSpriteClipRule, SW_COUNT_OF( kArrSpriteClipRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( TileMap, TileMapXMLData::kAssetType._name.data(), 1000, "TileMap", "Tile Map", "Tile Map Tool", SW_EDITOR_ICON_NAME( "TileMap" ), SW_THEME_COLOR_KEY( "Asset", "TileMap" ), true,
                           true, kArrTileMapRule, SW_COUNT_OF( kArrTileMapRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( TileSet, TileSetAsset::kAssetType._name.data(), 1050, "TileSet", "Tile Sets", "Tile Set Editor", SW_EDITOR_ICON_NAME( "TileMap" ), SW_THEME_COLOR_KEY( "Asset", "TileMap" ), true,
+                          true, kArrTileSetRule, SW_COUNT_OF( kArrTileSetRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( Sequence, SequenceAsset::kAssetType._name.data(), 1100, "Sequence", "Seq", "Sequencer", SW_EDITOR_ICON_NAME( "Sequence" ), SW_THEME_COLOR_KEY( "Asset", "Sequence" ), true, true,
                           kArrSequenceRule, SW_COUNT_OF( kArrSequenceRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( Skeleton, Skeleton::kAssetType._name.data(), 1300, "Skeleton", "Skeletons", nullptr, SW_EDITOR_ICON_NAME( "Skeleton" ), SW_THEME_COLOR_KEY( "Asset", "Skeleton" ), true, true,

@@ -58,6 +58,7 @@
 		<EditorPanelText _title="Streaming Cells" _label="Streaming Cells" />
 		<EditorPanelText _title="Test Runner" _label="Test Runner" />
 		<EditorPanelText _title="Tile Map Tool" _label="Tile Map Tool" />
+		<EditorPanelText _title="Tile Set Editor" _label="Tile Set Editor" />
 		<EditorPanelText _title="UI Preview" _label="UI Preview" />
 		<EditorPanelText _title="User Settings" _label="User Settings" />
 		<EditorPanelText _title="VFX Preview" _label="VFX Preview" />

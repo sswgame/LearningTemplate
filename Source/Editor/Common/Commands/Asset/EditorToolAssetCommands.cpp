@@ -38,6 +38,7 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/TileMap/TileMapXML.h"
+#include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw::editor
 {
@@ -59,6 +60,7 @@ namespace sw::editor
         constexpr ToolDocumentDef kDialogueGraphDocument{ "dialogue graph", EditorPaths::kDialogueGraphDocumentFileName };
         constexpr ToolDocumentDef kSpriteClipDocument{ "sprite clip", EditorPaths::kSpriteClipDocumentFileName };
         constexpr ToolDocumentDef kTileMapDocument{ "tile map", nullptr };
+        constexpr ToolDocumentDef kTileSetDocument{ "tile set", nullptr };
         constexpr ToolDocumentDef kSequenceDocument{ "sequence", nullptr };
 
         struct EditorToolAssetInternal
@@ -114,6 +116,22 @@ namespace sw::editor
             {
                 const std::optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
                 return documentFile.has_value() && data.saveToFile( *documentFile );
+            }
+
+            /** @brief 타일셋은 런타임 읽기 그대로 읽는다(규칙 위반은 그 읽기가 로그로 남긴다). */
+            [[nodiscard]] static bool readDocument( TileSetContent& outData, const string& resolved )
+            {
+                string       text;
+                TileSetAsset asset;
+                if ( FileUtil::readTextFile( resolved, text ) == false || asset.loadFromXMLText( text, resolved ) == false )
+                    return false;
+                outData = asset.getContent();
+                return true;
+            }
+
+            [[nodiscard]] static bool writeDocument( const TileSetContent& data, const string& resolved )
+            {
+                return FileUtil::writeTextFile( resolved, data.saveToXMLText() );
             }
 
             [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved )
@@ -223,6 +241,16 @@ namespace sw::editor
     bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXMLData& data )
     {
         return EditorToolAssetInternal::saveToolDocument( kTileMapDocument, data, assetRelativePath );
+    }
+
+    ToolAssetLoadResult EditorToolAssetCommands::loadTileSet( string_view path, TileSetContent& outData, string& outStatus )
+    {
+        return EditorToolAssetInternal::loadToolDocument( kTileSetDocument, outData, path, &outStatus );
+    }
+
+    bool EditorToolAssetCommands::saveTileSet( string_view path, const TileSetContent& data )
+    {
+        return EditorToolAssetInternal::saveToolDocument( kTileSetDocument, data, path );
     }
 
     bool EditorToolAssetCommands::hasToolDocument( string_view path )

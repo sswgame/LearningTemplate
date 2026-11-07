@@ -3086,6 +3086,57 @@
 		<entry key="EditorTileMap.WidthTip"
 		       text="맵 너비(칸)입니다. Apply Size 를 눌러야 적용됩니다."
 		       sourceHash="eadaf6648b34919b" />
+		<entry key="EditorTileSet.AddRule" text="규칙 더하기" sourceHash="ad489663eaa69cc2" />
+		<entry key="EditorTileSet.AddRuleTile" text="규칙 타일 더하기" sourceHash="9944d06aa5bdfc22" />
+		<entry key="EditorTileSet.AddTile" text="타일 더하기" sourceHash="4feea233d049c3e8" />
+		<entry key="EditorTileSet.AtlasCellTip"
+		       text="셀을 누르면 그 셀을 씁니다. Shift 를 누르고 누르면 애니메이션 프레임으로 더합니다."
+		       sourceHash="1d7f3554a680e32b" />
+		<entry key="EditorTileSet.AtlasCells" text="아틀라스" sourceHash="4e206b9101d459ac" />
+		<entry key="EditorTileSet.BrushNameTip"
+		       text="맵은 이 이름으로 브러시를 칠합니다. 겹치면 안 됩니다."
+		       sourceHash="57a675bce4dd8cb6" />
+		<entry key="EditorTileSet.Brushes" text="브러시" sourceHash="cc37c1d33b2fdbe3" />
+		<entry key="EditorTileSet.DefaultLook" text="기본 모습" sourceHash="4e51a3f28ef49f39" />
+		<entry key="EditorTileSet.Fps" text="초당 프레임" sourceHash="836f876b51a97c50" />
+		<entry key="EditorTileSet.Frames" text="프레임" sourceHash="11a25b24cd33bb4f" />
+		<entry key="EditorTileSet.FramesTip"
+		       text="아틀라스 셀을 누르면 모습이 됩니다. Shift 를 누르고 누르면 프레임을 더해 애니메이션이 됩니다."
+		       sourceHash="c32a3f9111eba5c9" />
+		<entry key="EditorTileSet.Grid" text="열, 행" sourceHash="fa226271be1c86e5" />
+		<entry key="EditorTileSet.GridTip"
+		       text="아틀라스를 몇 칸으로 나눌지입니다. 셀 번호는 그대로라 밖으로 나간 셀은 문제로 보입니다."
+		       sourceHash="7daf38977ee3df61" />
+		<entry key="EditorTileSet.KindRule" text="규칙 타일" sourceHash="771284da15382675" />
+		<entry key="EditorTileSet.KindTile" text="타일" sourceHash="1e5099ef2e9bcca9" />
+		<entry key="EditorTileSet.LoadingAtlasHint" text="아틀라스 텍스처를 읽는 중입니다." sourceHash="fefa24d8a7845482" />
+		<entry key="EditorTileSet.Look" text="모습" sourceHash="4efeeeb48a45a316" />
+		<entry key="EditorTileSet.NavCost" text="이동 비용" sourceHash="e6ae51ab780334c1" />
+		<entry key="EditorTileSet.NavCostTip"
+		       text="길 찾기 비용입니다(1 ~ 255). 255 는 막힘입니다."
+		       sourceHash="6366b0d7b65e777d" />
+		<entry key="EditorTileSet.NoAtlasHint" text="셀을 고를 아틀라스 텍스처를 적으세요." sourceHash="ffc4c986856efe65" />
+		<entry key="EditorTileSet.NoBrushesHint"
+		       text="브러시가 없습니다. 타일을 더한 뒤 아틀라스에서 셀을 고르세요."
+		       sourceHash="b34eae1ed921c757" />
+		<entry key="EditorTileSet.OutsideSame" text="맵 밖은 같음" sourceHash="ff9e776373cae40a" />
+		<entry key="EditorTileSet.OutsideSameTip"
+		       text="맵 밖 칸을 이 브러시로 보아 맵 가장자리에 테두리를 그리지 않습니다."
+		       sourceHash="6ee22a8ee1942e8f" />
+		<entry key="EditorTileSet.Pattern" text="이웃" sourceHash="2054c45ac9ebb948" />
+		<entry key="EditorTileSet.PatternTip"
+		       text="이웃을 누르면 바뀝니다: . 상관없음, o 같은 브러시, x 같은 브러시 아님. 가운데는 이 규칙이 고르는 셀입니다."
+		       sourceHash="b3a63462ace556d5" />
+		<entry key="EditorTileSet.RemoveLastFrame" text="마지막 프레임 빼기" sourceHash="f5df799d1030f0d6" />
+		<entry key="EditorTileSet.RuleLabel" text="규칙 {index}" sourceHash="6771d0f81ca91205" />
+		<entry key="EditorTileSet.RuleOrderTip" text="이웃이 맞는 첫 규칙이 이깁니다." sourceHash="5474eba063de0276" />
+		<entry key="EditorTileSet.SaveTip"
+		       text="타일셋을 씁니다. 문제가 있으면 저장하지 않아 게임이 깨진 파일을 읽지 않습니다."
+		       sourceHash="e43d0d29276cc4b2" />
+		<entry key="EditorTileSet.Solid" text="단단함" sourceHash="fe31d1c784d29ef4" />
+		<entry key="EditorTileSet.SolidTip" text="캐릭터가 이 타일을 지나가지 못합니다." sourceHash="2416573a9d510042" />
+		<entry key="EditorTileSet.TileSize" text="타일 크기" sourceHash="93df9e95fc4aa10a" />
+		<entry key="EditorTileSet.TileSizeTip" text="셀 한 칸의 월드 크기입니다." sourceHash="644af77bd299a76b" />
 		<entry key="EditorTip.CameraFOV"
 		       text="세로 시야각(도)입니다. 값이 클수록 장면이 넓게 보이고 가장자리가 늘어나 보입니다."
 		       sourceHash="12b9a65047c8f0b3" />
@@ -3471,6 +3522,7 @@
 		<entry key="Test Runner" text="테스트 실행기" sourceHash="b609ba8e16775cd5" />
 		<entry key="Theme &amp; Look and Feel..." text="테마 · 모양..." sourceHash="118e3cb7b4f93874" />
 		<entry key="Tile Map Tool" text="타일 맵 도구" sourceHash="5f89ed1b3d4f9fa3" />
+		<entry key="Tile Set Editor" text="타일셋 편집기" sourceHash="eafe8f61c53d2a3e" />
 		<entry key="UI Preview" text="UI 미리보기" sourceHash="8ae784a291556f7b" />
 		<entry key="Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
 		<entry key="Undo the last edit" text="마지막 편집을 되돌립니다" sourceHash="08f4815bc31fa1e0" />

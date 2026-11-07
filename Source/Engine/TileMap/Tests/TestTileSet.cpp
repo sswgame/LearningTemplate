@@ -193,3 +193,69 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_NEAR( 2.0f, pFresh->getTileSize(), 0.0001f );
 }
+
+/**
+ * @brief [TileSetTest] 내용을 글로 쓰고 다시 읽으면 같은 타일셋이다 — 에디터가 저장한 파일을 런타임이 같은 브러시 · 규칙 · 모습으로 읽는다
+ * @details 쓰기(`TileSetContent::saveToXMLText`)는 읽기의 짝이다. 기본값 칸(navCost 1 · solid 거짓 · outside empty)은 적지 않아도 같은 값으로 읽힌다.
+ */
+SW_TEST_CASE( TileSetTest, ContentRoundTripsThroughText )
+{
+    sw::TileSetAsset original;
+    SW_REQUIRE_TRUE( original.loadFromXMLText( kTileSetXML, "<test>" ) );
+    const sw::string text = original.getContent().saveToXMLText();
+    sw::TileSetAsset reread;
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( text, "<saved>" ) );
+
+    const sw::TileSetContent& before = original.getContent();
+    const sw::TileSetContent& after  = reread.getContent();
+    SW_EXPECT_TRUE( before._atlasPath == after._atlasPath );
+    SW_EXPECT_EQUAL( before._columnCount, after._columnCount );
+    SW_EXPECT_EQUAL( before._rowCount, after._rowCount );
+    SW_REQUIRE_EQUAL( static_cast<uint32>( before._listBrush.size() ), static_cast<uint32>( after._listBrush.size() ) );
+    for ( size_t brushIndex = 0; brushIndex < before._listBrush.size(); ++brushIndex )
+    {
+        const sw::TileBrush& a = before._listBrush[brushIndex];
+        const sw::TileBrush& b = after._listBrush[brushIndex];
+        SW_EXPECT_TRUE( a._name == b._name );
+        SW_EXPECT_TRUE( a._defaultVisual._listFrameCell == b._defaultVisual._listFrameCell );
+        SW_EXPECT_NEAR( a._defaultVisual._framesPerSecond, b._defaultVisual._framesPerSecond, 1e-6 );
+        SW_EXPECT_EQUAL( a._navCost, b._navCost );
+        SW_EXPECT_EQUAL( a._bSolid, b._bSolid );
+        SW_EXPECT_EQUAL( a._bOutsideIsSame, b._bOutsideIsSame );
+        SW_REQUIRE_EQUAL( static_cast<uint32>( a._listRule.size() ), static_cast<uint32>( b._listRule.size() ) );
+        for ( size_t ruleIndex = 0; ruleIndex < a._listRule.size(); ++ruleIndex )
+        {
+            for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
+            {
+                SW_EXPECT_TRUE( a._listRule[ruleIndex]._arrNeighbor[neighbor] == b._listRule[ruleIndex]._arrNeighbor[neighbor] );
+            }
+            SW_EXPECT_TRUE( a._listRule[ruleIndex]._visual._listFrameCell == b._listRule[ruleIndex]._visual._listFrameCell );
+        }
+    }
+}
+
+/**
+ * @brief [TileSetTest] 규칙 위반은 그 브러시 · 규칙 번호와 함께 모인다 — 에디터가 문제를 해당 브러시 옆에 보이고, 읽기는 같은 목록으로 거절한다
+ */
+SW_TEST_CASE( TileSetTest, IssuesPointAtTheBrushAndRule )
+{
+    sw::TileSetAsset tileSet;
+    SW_REQUIRE_TRUE( tileSet.loadFromXMLText( kTileSetXML, "<test>" ) );
+    sw::TileSetContent           content = tileSet.getContent();
+    sw::vector<sw::TileSetIssue> listIssue;
+    content.collectIssues( listIssue );
+    SW_EXPECT_TRUE( listIssue.empty() );
+
+    content._listBrush[0]._listRule[1]._visual._listFrameCell[0] = 99; // ground 의 둘째 규칙 — 4 × 4 아틀라스 밖
+    content._listBrush[2]._name                                  = content._listBrush[1]._name;
+    content.collectIssues( listIssue );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listIssue.size() ) );
+    SW_EXPECT_EQUAL( 0, listIssue[0]._brushIndex );
+    SW_EXPECT_EQUAL( 1, listIssue[0]._ruleIndex );
+    SW_EXPECT_EQUAL( 2, listIssue[1]._brushIndex );
+    SW_EXPECT_EQUAL( -1, listIssue[1]._ruleIndex );
+
+    SW_EXPECT_LOG( "TileSet.Invalid" );
+    sw::TileSetAsset rejected;
+    SW_EXPECT_FALSE( rejected.loadFromXMLText( content.saveToXMLText(), "<bad>" ) );
+}

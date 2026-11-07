@@ -3,6 +3,7 @@
 #include "Engine/TileMap/TileSetAsset.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
@@ -17,8 +18,9 @@ namespace sw
     {
         struct TileSetAssetInternal
         {
-
             static constexpr string_view kFrameListSeparators = " ,\t"; ///< `frames` 정수 목록의 구분 글자
+            /** @brief 패턴 글자 아홉 칸 중 이웃 여덟의 자리입니다(가운데 다섯째는 보지 않는다). */
+            static constexpr uint32 kArrCellOfNeighbor[8] = { 0, 1, 2, 3, 5, 6, 7, 8 };
 
             /** @brief 아홉 글자 패턴(공백은 건너뜀)을 이웃 여덟 셀의 조건으로 읽습니다. 가운데(다섯째) 글자는 보지 않습니다. */
             [[nodiscard]] static bool parsePattern( string_view text, TileNeighborRule ( &outArrNeighbor )[8] )
@@ -58,12 +60,75 @@ namespace sw
                 }
                 if ( count != 9 )
                     return false;
-                constexpr uint32 kArrCellOfNeighbor[8] = { 0, 1, 2, 3, 5, 6, 7, 8 };
                 for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
                 {
                     outArrNeighbor[neighbor] = arrCell[kArrCellOfNeighbor[neighbor]];
                 }
                 return true;
+            }
+
+            /** @brief 이웃 조건 하나의 패턴 글자입니다(`parsePattern` 의 짝). */
+            static utf8 makePatternCharacter( TileNeighborRule rule )
+            {
+                switch ( rule )
+                {
+                    case TileNeighborRule::Any:
+                        return '.';
+                    case TileNeighborRule::Same:
+                        return 'o';
+                    case TileNeighborRule::Other:
+                        return 'x';
+                }
+                return '.';
+            }
+
+            /** @brief 이웃 여덟 조건을 세 줄 아홉 글자 패턴(`".x. xoo .o."`)으로 씁니다. 가운데는 '.' 입니다. */
+            static string makePattern( const TileNeighborRule ( &arrNeighbor )[8] )
+            {
+                utf8 arrCell[9];
+                arrCell[4] = '.';
+                for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
+                {
+                    arrCell[kArrCellOfNeighbor[neighbor]] = makePatternCharacter( arrNeighbor[neighbor] );
+                }
+                const utf8 arrText[11] = { arrCell[0], arrCell[1], arrCell[2], ' ', arrCell[3], arrCell[4], arrCell[5], ' ', arrCell[6], arrCell[7], arrCell[8] };
+                return string( arrText, 11 );
+            }
+
+            /** @brief 모습 하나를 노드 속성으로 씁니다 — 셀 하나는 `cell`, 둘 이상은 `frames` + `fps` 입니다(`parseVisual` 의 짝). */
+            static void writeVisual( const XMLNode& node, const TileVisual& visual )
+            {
+                if ( visual._listFrameCell.size() == 1 )
+                {
+                    node.appendAttribute( "cell", visual._listFrameCell[0] );
+                    return;
+                }
+                string frames;
+                for ( const int32 cell : visual._listFrameCell )
+                {
+                    if ( frames.empty() == false )
+                        frames += " ";
+                    frames += formatToString( "%#", cell );
+                }
+                node.appendAttribute( "frames", string_view( frames ) );
+                node.appendAttribute( "fps", visual._framesPerSecond );
+            }
+
+            /** @brief 모습 하나의 규칙 위반을 덧붙입니다(셀 없음 · 아틀라스 밖 셀 · fps 없는 애니메이션). */
+            static void collectVisualIssues( const TileSetContent& content, const TileVisual& visual, int32 brushIndex, int32 ruleIndex, vector<TileSetIssue>& outListIssue )
+            {
+                const string_view brushName = content._listBrush[static_cast<size_t>( brushIndex )]._name.view();
+                const string      owner     = ruleIndex < 0 ? formatToString( "brush '%#'", brushName ) : formatToString( "rule %# of '%#'", ruleIndex, brushName );
+                if ( visual._listFrameCell.empty() )
+                    outListIssue.push_back( TileSetIssue{ formatToString( "%# has no cell", owner ), brushIndex, ruleIndex } );
+                const int32 cellCount = content.getCellCount();
+                for ( const int32 cell : visual._listFrameCell )
+                {
+                    if ( cell < 0 || cell >= cellCount )
+                        outListIssue.push_back( TileSetIssue{ formatToString( "%# cell %# is outside the %#x%# atlas", owner, cell, content._columnCount, content._rowCount ), brushIndex, ruleIndex } );
+                }
+                if ( visual._listFrameCell.size() > 1 && visual._framesPerSecond <= 0.0f )
+                    outListIssue.push_back( TileSetIssue{ formatToString( "%# has frames but no positive fps", owner ), brushIndex, ruleIndex } );
             }
         };
     } // namespace
@@ -78,7 +143,83 @@ namespace sw
         const uint64  index = static_cast<uint64>( frame ) % static_cast<uint64>( _listFrameCell.size() );
         return _listFrameCell[static_cast<size_t>( index )];
     }
+} // namespace sw
 
+namespace sw
+{
+    int32 TileSetContent::findBrush( const hashed_string& name ) const
+    {
+        for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
+        {
+            if ( _listBrush[brushIndex]._name == name )
+                return static_cast<int32>( brushIndex );
+        }
+        return -1;
+    }
+
+    void TileSetContent::collectIssues( vector<TileSetIssue>& outListIssue ) const
+    {
+        using Internal = TileSetAssetInternal;
+        if ( _columnCount < 1 || _rowCount < 1 )
+            outListIssue.push_back( TileSetIssue{ formatToString( "the atlas grid %#x%# needs at least one column and one row", _columnCount, _rowCount ), -1, -1 } );
+        if ( _tileSize <= 0.0f )
+            outListIssue.push_back( TileSetIssue{ formatToString( "tileSize %# must be positive", _tileSize ), -1, -1 } );
+        for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
+        {
+            const TileBrush& brush = _listBrush[brushIndex];
+            const int32      index = static_cast<int32>( brushIndex );
+            if ( brush._name.empty() )
+                outListIssue.push_back( TileSetIssue{ formatToString( "brush %# has no name", index ), index, -1 } );
+            else if ( findBrush( brush._name ) != index )
+                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' is listed twice", brush._name.view() ), index, -1 } );
+            if ( brush._navCost < 1 )
+                outListIssue.push_back( TileSetIssue{ formatToString( "brush '%#' navCost must be 1 to 255", brush._name.view() ), index, -1 } );
+            Internal::collectVisualIssues( *this, brush._defaultVisual, index, -1, outListIssue );
+            for ( size_t ruleIndex = 0; ruleIndex < brush._listRule.size(); ++ruleIndex )
+            {
+                Internal::collectVisualIssues( *this, brush._listRule[ruleIndex]._visual, index, static_cast<int32>( ruleIndex ), outListIssue );
+            }
+        }
+    }
+
+    string TileSetContent::saveToXMLText() const
+    {
+        using Internal = TileSetAssetInternal;
+        XMLDocument   doc;
+        const XMLNode root = doc.appendRoot( "TileSet" );
+        if ( _name.empty() == false )
+            root.appendAttribute( "name", string_view( _name ) );
+        root.appendAttribute( "atlas", string_view( _atlasPath ) );
+        if ( _normalAtlasPath.empty() == false )
+            root.appendAttribute( "normalAtlas", string_view( _normalAtlasPath ) );
+        root.appendAttribute( "columns", _columnCount );
+        root.appendAttribute( "rows", _rowCount );
+        root.appendAttribute( "tileSize", _tileSize );
+        for ( const TileBrush& brush : _listBrush )
+        {
+            // 규칙 타일인지는 규칙이 있는지다(`TileBrush::isRuleTile`) — 규칙이 하나도 없는 규칙 타일은 `collectIssues` 가 내지 못하므로 그냥 타일로 쓴다.
+            const XMLNode node = root.appendChild( brush.isRuleTile() ? "RuleTile" : "Tile" );
+            node.appendAttribute( "name", brush._name.view() );
+            Internal::writeVisual( node, brush._defaultVisual );
+            if ( brush._bSolid == SW_TRUE )
+                node.appendAttribute( "solid", "true" );
+            if ( brush._navCost != 1 )
+                node.appendAttribute( "navCost", static_cast<int32>( brush._navCost ) );
+            if ( brush._bOutsideIsSame == SW_TRUE )
+                node.appendAttribute( "outside", "same" );
+            for ( const TileRule& rule : brush._listRule )
+            {
+                const XMLNode ruleNode = node.appendChild( "Rule" );
+                ruleNode.appendAttribute( "pattern", string_view( Internal::makePattern( rule._arrNeighbor ) ) );
+                Internal::writeVisual( ruleNode, rule._visual );
+            }
+        }
+        return doc.saveToString();
+    }
+} // namespace sw
+
+namespace sw
+{
     bool TileSetAsset::loadFromAsset( const AssetID& assetID )
     {
         const string_view path = assetID.view();
@@ -95,10 +236,13 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.ParseFailed", "%#", doc.getLastError() );
             return false;
         }
-        return loadFromDocument( doc, path );
+        TileSetContent loaded;
+        if ( parseDocument( doc, path, loaded ) == false )
+            return false;
+        return adoptContent( std::move( loaded ), path );
     }
 
-    bool TileSetAsset::parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const
+    bool TileSetAsset::parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual )
     {
         outVisual = TileVisual{};
         if ( node.findAttribute( "frames" ) != nullptr )
@@ -108,39 +252,44 @@ namespace sw
                 SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
                 return false;
             }
-            if ( node.readOptionalAttributeInRange( "fps", 0.0f, MathUtil::kMaxFloat, outVisual._framesPerSecond ) == false )
-                return false;
-            if ( outVisual._listFrameCell.size() > 1 && outVisual._framesPerSecond <= 0.0f )
-            {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> has frames but no positive fps", sourceName, node.getName() );
-                return false;
-            }
+            return node.readOptionalAttributeInRange( "fps", 0.0f, MathUtil::kMaxFloat, outVisual._framesPerSecond );
         }
-        else if ( node.findAttribute( "cell" ) != nullptr )
+        if ( node.findAttribute( "cell" ) != nullptr )
         {
             const std::optional<int32> cell = node.readRequiredAttribute<int32>( "cell" );
             if ( cell.has_value() == false )
                 return false;
             outVisual._listFrameCell.push_back( *cell );
+            return true;
         }
-        else if ( bRequired )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> needs cell=\"n\" or frames=\"a b c\"", sourceName, node.getName() );
-            return false;
-        }
-        const int32 cellCount = _columnCount * _rowCount;
-        for ( const int32 cell : outVisual._listFrameCell )
-        {
-            if ( cell < 0 || cell >= cellCount )
-            {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> cell %# is outside the %#x%# atlas", sourceName, node.getName(), cell, _columnCount, _rowCount );
-                return false;
-            }
-        }
-        return true;
+        SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> needs cell=\"n\" or frames=\"a b c\"", sourceName, node.getName() );
+        return false;
     }
 
     bool TileSetAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
+    {
+        TileSetContent loaded;
+        if ( parseContent( xmlText, sourceName, loaded ) == false )
+            return false;
+        return adoptContent( std::move( loaded ), sourceName );
+    }
+
+    bool TileSetAsset::adoptContent( TileSetContent&& loaded, string_view sourceName )
+    {
+        // 형식 뒤의 규칙은 한 곳(`collectIssues`)이 판정한다 — 에디터가 브러시 옆에 보이는 문제와 같은 목록이다.
+        vector<TileSetIssue> listIssue;
+        loaded.collectIssues( listIssue );
+        for ( const TileSetIssue& issue : listIssue )
+        {
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: %#", sourceName, issue._message.c_str() );
+        }
+        if ( listIssue.empty() == false )
+            return false;
+        _content = std::move( loaded );
+        return true;
+    }
+
+    bool TileSetAsset::parseContent( string_view xmlText, string_view sourceName, TileSetContent& outContent )
     {
         // 데이터 문서 길로 읽는다 — 조건(`_when`)을 푼다. 예전의 `parse` 는 조건을 풀지 않았다.
         XMLDocument doc;
@@ -149,10 +298,10 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.ParseFailed", "%#", doc.getLastError() );
             return false;
         }
-        return loadFromDocument( doc, sourceName );
+        return parseDocument( doc, sourceName, outContent );
     }
 
-    bool TileSetAsset::loadFromDocument( const XMLDocument& doc, string_view sourceName )
+    bool TileSetAsset::parseDocument( const XMLDocument& doc, string_view sourceName, TileSetContent& outContent )
     {
         const XMLNode root = doc.getRoot( "TileSet" );
         if ( root.isValid() == false )
@@ -164,7 +313,8 @@ namespace sw
         TileSetRootParams rootParams;
         if ( XMLFields::readFields( root, rootParams, sourceName ) == false )
             return false;
-        TileSetAsset loaded;
+        TileSetContent loaded;
+        loaded._name            = rootParams._name;
         loaded._atlasPath       = rootParams._atlas;
         loaded._normalAtlasPath = rootParams._normalAtlas;
         loaded._columnCount     = rootParams._columns;
@@ -174,15 +324,15 @@ namespace sw
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
             TileBrush brush{};
-            if ( loaded.parseBrush( node, sourceName, brush ) == false )
+            if ( parseBrush( node, sourceName, brush ) == false )
                 return false;
             loaded._listBrush.push_back( brush );
         }
-        *this = loaded;
+        outContent = std::move( loaded );
         return true;
     }
 
-    bool TileSetAsset::parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush ) const
+    bool TileSetAsset::parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush )
     {
         using Internal       = TileSetAssetInternal;
         const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile" );
@@ -197,12 +347,7 @@ namespace sw
         TileBrush&        brush = outBrush;
         const string_view name  = params._name.view();
         brush._name             = params._name;
-        if ( findBrush( brush._name ) >= 0 )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: brush '%#' is listed twice", sourceName, name );
-            return false;
-        }
-        if ( parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
+        if ( parseVisual( node, sourceName, brush._defaultVisual ) == false )
             return false;
         brush._bSolid                         = params._bSolid ? SW_TRUE : SW_FALSE;
         brush._navCost                        = static_cast<uint8>( params._navCost );
@@ -231,10 +376,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleFields._pattern.c_str(), name );
                 return false;
             }
-            if ( parseVisual( ruleNode, sourceName, true, rule._visual ) == false )
+            if ( parseVisual( ruleNode, sourceName, rule._visual ) == false )
                 return false;
             brush._listRule.push_back( rule );
         }
+        // 규칙 없는 규칙 타일은 형식 오류다 — 내용(`TileSetContent`)에는 "규칙 타일" 표시가 따로 없어 규칙이 비면 그냥 타일이 된다.
         if ( bRuleTile && brush._listRule.empty() )
         {
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule tile '%#' has no <Rule>", sourceName, name );
@@ -243,37 +389,28 @@ namespace sw
         return true;
     }
 
-    float4 TileSetAsset::computeCellUvRect( int32 cell ) const
+    float4 TileSetAsset::computeCellUvRect( const TileSetContent& content, int32 cell )
     {
-        const int32   column = ( _columnCount > 0 ) ? cell % _columnCount : 0;
-        const int32   row    = ( _columnCount > 0 ) ? cell / _columnCount : 0;
-        const float32 width  = 1.0f / static_cast<float32>( MathUtil::max( _columnCount, 1 ) );
-        const float32 height = 1.0f / static_cast<float32>( MathUtil::max( _rowCount, 1 ) );
+        const int32   column = ( content._columnCount > 0 ) ? cell % content._columnCount : 0;
+        const int32   row    = ( content._columnCount > 0 ) ? cell / content._columnCount : 0;
+        const float32 width  = 1.0f / static_cast<float32>( MathUtil::max( content._columnCount, 1 ) );
+        const float32 height = 1.0f / static_cast<float32>( MathUtil::max( content._rowCount, 1 ) );
         return float4{ static_cast<float32>( column ) * width, static_cast<float32>( row ) * height, width, height };
-    }
-
-    int32 TileSetAsset::findBrush( const hashed_string& name ) const
-    {
-        for ( size_t brushIndex = 0; brushIndex < _listBrush.size(); ++brushIndex )
-        {
-            if ( _listBrush[brushIndex]._name == name )
-                return static_cast<int32>( brushIndex );
-        }
-        return -1;
     }
 
     const TileVisual* TileSetAsset::resolveVisual( const vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y ) const
     {
-        const bool bOutsideVisualGrid = x < 0 || y < 0 || x >= width || y >= height;
+        const vector<TileBrush>& listBrush          = _content._listBrush;
+        const bool               bOutsideVisualGrid = x < 0 || y < 0 || x >= width || y >= height;
         if ( bOutsideVisualGrid )
             return nullptr;
         const size_t cellCount = static_cast<size_t>( width ) * static_cast<size_t>( height );
         if ( listBrushIndex.size() < cellCount )
             return nullptr;
         const uint16 brushValue = listBrushIndex[static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x )];
-        if ( brushValue == 0 || brushValue > _listBrush.size() )
+        if ( brushValue == 0 || brushValue > listBrush.size() )
             return nullptr;
-        const TileBrush& brush = _listBrush[brushValue - 1u];
+        const TileBrush& brush = listBrush[brushValue - 1u];
         if ( brush.isRuleTile() == false )
             return &brush._defaultVisual;
 
@@ -311,6 +448,6 @@ namespace sw
 
 namespace sw
 {
-    /** 파일 규칙 없이 공유 캐시로만 찾는 종류다. 칸마다 지은 브러시 번호를 지키려 다시 읽기는 떼어 낸다(`Detach`). */
-    SW_SHARED_ASSET_CACHE( TileSetAsset, TileSetAsset, AssetTypeDef::makeCacheOnly( "TileSetAsset", AssetTypeLoader::of<TileSetAsset>( MemoryTag::Asset, SharedAssetReloadMode::Detach ) ) );
+    /** 공유 캐시로 찾는 종류다(접미사 `.tileset.xml` — 에디터의 타일셋 편집 창이 이 종류로 문서를 받는다). 칸마다 지은 브러시 번호를 지키려 다시 읽기는 떼어 낸다(`Detach`). */
+    SW_SHARED_ASSET_CACHE( TileSetAsset, TileSetAsset, TileSetAsset::kAssetType.withLoader( AssetTypeLoader::of<TileSetAsset>( MemoryTag::Asset, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw

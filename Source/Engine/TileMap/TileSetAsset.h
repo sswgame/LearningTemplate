@@ -12,6 +12,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -131,6 +132,44 @@ namespace sw
         string _pattern{};
     };
 
+    /** @brief 타일셋 내용의 규칙 위반 하나입니다(`TileSetContent::collectIssues`). 읽기는 이것을 오류로 남기고, 에디터는 그 브러시 · 규칙 옆에 보인다. */
+    struct TileSetIssue
+    {
+        string _message{};        ///< 영어 한 문장
+        int32  _brushIndex{ -1 }; ///< 문제가 난 브러시 번호(타일셋 전체의 문제면 -1)
+        int32  _ruleIndex{ -1 };  ///< 문제가 난 규칙 번호(브러시 자체 · 기본 모습이면 -1)
+    };
+
+    /**
+     * @struct TileSetContent
+     * @brief 타일셋 파일 한 벌의 내용입니다. 읽기(`TileSetAsset::loadFromXMLText`)가 채우고 쓰기(`saveToXMLText`)가 같은 형식으로 씁니다 — 에디터는 이 사본을 고쳐 쓰고, 런타임은 쓴 글을 다시 읽는다.
+     * @details 규칙(아틀라스 밖 셀 · 같은 이름 · 규칙 없는 규칙 타일 · fps 없는 애니메이션 · 칸 수)은 `collectIssues` 한 곳이다. 읽기도 이것으로 판정하므로 에디터가 보이는 문제와 로드 오류가 갈리지 않는다.
+     */
+    struct SW_API TileSetContent
+    {
+        string            _name{}; ///< 루트의 `name`(표시용, 비어도 된다)
+        string            _atlasPath{};
+        string            _normalAtlasPath{};
+        vector<TileBrush> _listBrush{};
+        float32           _tileSize{ 1.0f };
+        int32             _columnCount{ 1 };
+        int32             _rowCount{ 1 };
+
+        /** @brief 이름의 브러시 순번입니다. 없으면 -1 입니다. */
+        int32 findBrush( const hashed_string& name ) const;
+        /** @brief 아틀라스 셀 수(`columns` × `rows`)입니다. */
+        int32 getCellCount() const { return _columnCount * _rowCount; }
+        /**
+         * @brief 규칙 위반을 모두 @p outListIssue 에 덧붙입니다. 하나도 없으면 읽을 수 있는 내용입니다.
+         */
+        void collectIssues( vector<TileSetIssue>& outListIssue ) const;
+        /**
+         * @brief `.tileset.xml` 글로 씁니다. 읽기의 형식 그대로이고 기본값 칸(`solid` 거짓 · `navCost` 1 · `outside` empty · 빈 노멀 아틀라스)은 적지 않습니다.
+         * @details 모습은 셀이 하나면 `cell`, 둘 이상이면 `frames` + `fps` 다. 규칙의 `pattern` 은 세 줄 아홉 글자이고 가운데는 '.' 다.
+         */
+        string saveToXMLText() const;
+    };
+
     /**
      * @class TileSetAsset
      * @brief 아틀라스 하나와 그 셀로 만든 브러시 목록입니다. 유니티의 Tile Palette, Rule Tile, Animated Tile, Godot 의 TileSet(terrain, animation, physics,
@@ -160,24 +199,44 @@ namespace sw
             { 1,  1},
         };
 
-        /** @brief XML 본문을 읽습니다. */
+        /** @brief 타일셋 파일의 접미사입니다. */
+        static constexpr string_view kExtension = ".tileset.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `TileSetAsset.cpp` 의 공유 캐시 줄). 접미사가 있어 에디터 종류 · 콘텐츠 브라우저가 타일셋 편집 창으로 연다. */
+        static constexpr AssetTypeDef kAssetType{ "TileSetAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
+        /** @brief XML 본문을 읽습니다. 형식이 틀리거나 규칙 위반(`TileSetContent::collectIssues`)이 있으면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
+        /**
+         * @brief 형식만 읽어 @p outContent 를 채웁니다(모르는 요소 · 속성 · 패턴 글자 · 빠진 모습은 오류). 규칙 위반(`collectIssues`)은 보지 않습니다.
+         * @details `loadFromXMLText` 의 앞 절반이다. 에디터의 되돌리기 글은 편집 중의 상태라 위반(밖으로 나간 셀 등)이 든 채로 돌아와야 해 이것으로 읽는다.
+         */
+        [[nodiscard]] static bool parseContent( string_view xmlText, string_view sourceName, TileSetContent& outContent );
+        /** @brief 읽은 문서(조건을 푼 글)를 내용으로 옮깁니다(형식만). 글 입구와 리소스 입구가 함께 쓴다. */
+        [[nodiscard]] static bool parseDocument( const XMLDocument& doc, string_view sourceName, TileSetContent& outContent );
+        /** @brief 읽은 내용입니다. 에디터는 이것을 복사해 고친다. */
+        const TileSetContent& getContent() const { return _content; }
 
         /** @brief 아틀라스 텍스처 경로입니다. */
-        const string& getAtlasPath() const { return _atlasPath; }
+        const string& getAtlasPath() const { return _content._atlasPath; }
         /** @brief 아틀라스와 같은 셀 배치의 노멀 맵 경로입니다(빛을 받는 타일). 비어 있으면 없습니다. */
-        const string& getNormalAtlasPath() const { return _normalAtlasPath; }
-        int32         getColumnCount() const { return _columnCount; }
-        int32         getRowCount() const { return _rowCount; }
+        const string& getNormalAtlasPath() const { return _content._normalAtlasPath; }
+        int32         getColumnCount() const { return _content._columnCount; }
+        int32         getRowCount() const { return _content._rowCount; }
         /** @brief 타일 한 셀의 월드 크기입니다. */
-        float32 getTileSize() const { return _tileSize; }
+        float32 getTileSize() const { return _content._tileSize; }
         /** @brief 아틀라스 셀의 UV 사각형 (u, v, 폭, 높이) 입니다. */
-        float4 computeCellUvRect( int32 cell ) const;
+        float4 computeCellUvRect( int32 cell ) const { return computeCellUvRect( _content, cell ); }
+        /** @brief @p content 의 아틀라스 셀 UV 사각형입니다(에디터가 저장 전 사본으로 그린다 — 런타임과 같은 셀 해석). */
+        static float4 computeCellUvRect( const TileSetContent& content, int32 cell );
 
         /** @brief 브러시 목록입니다. */
-        const vector<TileBrush>& getBrushes() const { return _listBrush; }
+        const vector<TileBrush>& getBrushes() const { return _content._listBrush; }
         /** @brief 이름의 브러시 순번입니다. 없으면 -1 입니다. */
-        int32 findBrush( const hashed_string& name ) const;
+        int32 findBrush( const hashed_string& name ) const { return _content.findBrush( name ); }
 
         /**
          * @brief 셀 하나의 모습을 고릅니다. 그냥 타일은 그 모습이고, 규칙 타일은 이웃 조건이 맞는 첫 규칙입니다(없으면 기본 모습).
@@ -189,20 +248,15 @@ namespace sw
     private:
         /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<TileSetAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 읽은 문서(조건을 푼 글)를 타일셋으로 옮깁니다. 글 입구와 리소스 입구가 함께 쓴다. */
-        [[nodiscard]] bool loadFromDocument( const XMLDocument& doc, string_view sourceName );
-        /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 @p bRequired 일 때 오류입니다. */
-        [[nodiscard]] bool parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
-        /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(이름이 겹치는지 이 타일셋의 지금 브러시와 견준다). 잘못되었으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush ) const;
+        /** @brief 형식 뒤의 규칙(`collectIssues`)을 보고 통과하면 내용을 들인다. 실패하면 오류를 남기고 내용은 바뀌지 않는다. */
+        [[nodiscard]] bool adoptContent( TileSetContent&& loaded, string_view sourceName );
+        /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 오류입니다. 값의 규칙(셀 범위 · fps)은 `collectIssues` 가 본다. */
+        [[nodiscard]] static bool parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual );
+        /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(형식만 — 이름 겹침 · 셀 범위는 `collectIssues`). 잘못되었으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush );
 
     private:
-        string            _atlasPath;
-        string            _normalAtlasPath;
-        vector<TileBrush> _listBrush;
-        float32           _tileSize{ 1.0f };
-        int32             _columnCount{ 1 };
-        int32             _rowCount{ 1 };
+        TileSetContent _content;
     };
 
     /**
