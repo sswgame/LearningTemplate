@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
@@ -42,6 +43,7 @@ namespace sw
         , _maxGrowth{ 0.0f }
         , _compiled{}
         , _tracker{}
+        , _listCandidateScratch{}
         , _pendingSeconds{ 0.0f }
         , _age{ 0.0f }
         , _growth{ 0.0f }
@@ -50,6 +52,20 @@ namespace sw
         , _reserved{ 0 }
     {
         setCanEverTick( true );
+    }
+
+    void ZoneVolumeComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
+        (void)ZoneOccupantIndex::ensureFor( manager );
+    }
+
+    void ZoneVolumeComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ZoneVolumeComponent>( this );
+        ZoneOccupantIndex::releaseIfUnused( manager );
+        Component::onUnregister( manager );
     }
 
     void ZoneVolumeComponent::onBeginPlay()
@@ -86,6 +102,13 @@ namespace sw
             self._pendingSeconds  = 0.0f;
             self.updateZone( manager, seconds );
         } );
+    }
+
+    float32 ZoneVolumeComponent::getHorizontalReach() const
+    {
+        // 상자는 x · z 반 크기, 구 · 원기둥은 반지름 x 다(`sampleAt`). 퍼짐은 수평 둘에 더한다.
+        const float32 halfZ = _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x;
+        return MathUtil::max( _halfExtents._x, halfZ ) + _growth;
     }
 
     hashed_string ZoneVolumeComponent::getSourceName() const
@@ -224,24 +247,33 @@ namespace sw
         if ( _growthRate > 0.0f )
             _growth = MathUtil::min( _maxGrowth, _growth + _growthRate * deltaTime );
 
-        // 안에 든 물리 개체를 고른다 — 캐릭터는 발, 움직이는 강체는 중심. 한 오브젝트에 둘이 있으면 캐릭터 쪽 하나다.
+        // 안에 든 물리 개체를 고른다 — 캐릭터는 발, 움직이는 강체는 중심. 한 오브젝트에 둘이 있으면 캐릭터 쪽 하나다(거르기는 격자가 지을 때 한다).
         _tracker.beginFrame();
-        manager.forEachComponentOfType<CharacterControllerComponent>( [&]( CharacterControllerComponent* pController )
+        const SceneComponent* const pScene = pOwner->getPrimarySceneComponent();
+        ZoneOccupantIndex* const    pIndex = ZoneOccupantIndex::find( manager );
+        SW_ASSERT( pIndex != nullptr ); // 등록한 볼륨이 있는 동안 붙어 있다(`onRegister`)
+        if ( pScene != nullptr && pIndex != nullptr )
         {
-            ZoneSample  sample;
-            GameObject* pObject = pController->getOwner();
-            if ( pObject != nullptr && pObject != pOwner && sampleAt( pController->getWorldPosition(), ZoneVolumeComponentInternal::computeCharacterHeight( *pController ), sample ) )
-                _tracker.touch( *pObject, sample );
-        } );
-        manager.forEachComponentOfType<RigidBodyComponent>( [&]( RigidBodyComponent* pBody )
+            const float3  center = pScene->getWorldPosition();
+            const float32 reachX = _halfExtents._x + _growth;
+            const float32 reachZ = ( _shape == ZoneVolumeShape::Box ? _halfExtents._z : _halfExtents._x ) + _growth;
+            pIndex->queryCandidates( manager, center._x - reachX, center._z - reachZ, center._x + reachX, center._z + reachZ, _listCandidateScratch );
+        }
+        else
         {
-            ZoneSample  sample;
-            GameObject* pObject  = pBody->getOwner();
-            const bool  bDynamic = pBody->getBodyType() == PhysicsBodyType::Dynamic && pBody->isTrigger() == false;
-            if ( bDynamic && pObject != nullptr && pObject != pOwner && pObject->getComponent<CharacterControllerComponent>() == nullptr &&
-                 sampleAt( pBody->getWorldPosition(), ZoneVolumeComponentInternal::kRigidBodyHeight, sample ) )
-                _tracker.touch( *pObject, sample );
-        } );
+            _listCandidateScratch.clear();
+        }
+        for ( const ZoneOccupantCandidate& candidate : _listCandidateScratch )
+        {
+            if ( candidate._pObject == pOwner )
+                continue;
+            ZoneSample sample;
+            const bool bInside = candidate._pController != nullptr
+                                   ? sampleAt( candidate._pController->getWorldPosition(), ZoneVolumeComponentInternal::computeCharacterHeight( *candidate._pController ), sample )
+                                   : sampleAt( candidate._pBody->getWorldPosition(), ZoneVolumeComponentInternal::kRigidBodyHeight, sample );
+            if ( bInside )
+                _tracker.touch( *candidate._pObject, sample );
+        }
         const ActionSource source{ getSourceName(), pOwner->getHandle() };
         _tracker.dispatchOverlapEvents( manager, _compiled, source, deltaTime );
 

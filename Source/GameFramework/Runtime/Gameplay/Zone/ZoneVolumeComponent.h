@@ -22,6 +22,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneTracker.h"
 
@@ -51,10 +52,16 @@ namespace sw
         ZoneVolumeComponent();
         ~ZoneVolumeComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 지역 후보 격자(`ZoneOccupantIndex`)를 붙입니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내리고, 마지막 볼륨이면 격자를 뗍니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
+        /** @brief 모양의 수평 반 크기 중 큰 쪽(퍼짐 포함, m)입니다 — 지역 후보 격자의 셀을 정한다. */
+        float32 getHorizontalReach() const;
         /** @brief 이 볼륨이 건 효과의 출처(`volume:<오브젝트 이름>`)입니다. */
         hashed_string getSourceName() const;
         /** @brief 프로필 · 덮어쓰기를 합치고 컴파일했으면 true 입니다(실패는 시작할 때 오류로 남는다). */
@@ -76,7 +83,8 @@ namespace sw
         /** @brief 코드로 만든 볼륨 · 테스트가 칸을 정합니다. 씬에 놓은 볼륨은 PROPERTY 가 채운다. */
         void configure( string_view profilePath, ZoneVolumeShape shape, const float3& halfExtents );
         /**
-         * @brief 이번 프레임을 처리합니다 — 안에 든 대상을 고르고 위치 값을 내 `ZoneTracker` 에 넘깁니다(틱 뒤 게임 스레드, 테스트도 부른다).
+         * @brief 이번 프레임을 처리합니다 — 안에 든 대상을 고르고 위치 값을 내 `ZoneTracker` 에 넘깁니다(틱 뒤 게임 스레드).
+         * @details 후보는 씬을 돌지 않고 지역 후보 격자(`ZoneOccupantIndex`)에서 자기 수평 사각형에 든 것만 받는다 — 볼륨이 많아도 개체를 프레임에 한 번 모은다.
          */
         void updateZone( GameObjectManager& manager, float32 deltaTime );
         /** @brief 월드 점 @p position(발)이 안이면 위치 값을 채우고 true 입니다. @p bodyHeight 는 잠긴 비율의 분모입니다. */
@@ -108,13 +116,14 @@ namespace sw
         PROPERTY( Category = "Runtime", DisplayName = "Max Growth", Min = 0.0, Units = m, Tooltip = "Most the size grows" )
         float32 _maxGrowth;
 
-        ZoneCompiledProfile _compiled;
-        ZoneTracker         _tracker;
-        float32             _pendingSeconds; ///< 틱이 쌓고 틱 뒤 갱신이 쓰는 게임 초
-        float32             _age;
-        float32             _growth;
-        uint8               _bReady   : 1;
-        uint8               _bOpened  : 1; ///< 시작을 시도했다(실패도 — 다시 오류를 내지 않는다)
-        uint8               _reserved : 6;
+        ZoneCompiledProfile           _compiled;
+        ZoneTracker                   _tracker;
+        vector<ZoneOccupantCandidate> _listCandidateScratch; ///< 격자 질의 결과 재사용 버퍼
+        float32                       _pendingSeconds;       ///< 틱이 쌓고 틱 뒤 갱신이 쓰는 게임 초
+        float32                       _age;
+        float32                       _growth;
+        uint8                         _bReady   : 1;
+        uint8                         _bOpened  : 1; ///< 시작을 시도했다(실패도 — 다시 오류를 내지 않는다)
+        uint8                         _reserved : 6;
     };
 } // namespace sw

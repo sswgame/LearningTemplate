@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -10,8 +11,10 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneTracker.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
 
 using namespace sw;
 
@@ -321,4 +324,29 @@ SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
     vector<ZoneModuleDef> listBad{ removeAvoid, removeAvoid };
     SW_EXPECT_LOG( "Zone.OverrideModuleMissing" );
     SW_EXPECT_FALSE( broken.applyOverrides( listBad, "test" ) ); // 두 번째 빼기는 없는 이름이다
+}
+
+/** @brief [ZoneTest] 볼륨이 여럿이어도 지역 후보 격자는 프레임에 한 번 짓고(볼륨마다 씬을 돌지 않는다), 프레임 앞(`runBeforeTick`)에 낡는다 */
+SW_TEST_CASE( ZoneTest, OccupantIndexBuildsOncePerFrame )
+{
+    GameObjectManager manager;
+    GameObject*       pSwamp = manager.createGameObject( hashed_string( "Swamp" ) );
+    (void)pSwamp->addComponent<SceneComponent>();
+    pSwamp->addComponent<ZoneVolumeComponent>()->configure( "", ZoneVolumeShape::Box, float3{ 2.0f, 1.0f, 3.0f } );
+    GameObject* pGas = manager.createGameObject( hashed_string( "Gas" ) );
+    (void)pGas->addComponent<SceneComponent>();
+    ZoneVolumeComponent* pGasVolume = pGas->addComponent<ZoneVolumeComponent>();
+    pGasVolume->configure( "", ZoneVolumeShape::Sphere, float3{ 5.0f, 1.0f, 1.0f } );
+    SW_EXPECT_NEAR( 5.0f, pGasVolume->getHorizontalReach(), 1.0e-5f ); // 구는 반지름 x 다 — z 반 크기(1)를 쓰지 않는다
+
+    ZoneOccupantIndex* pIndex = ZoneOccupantIndex::find( manager );
+    SW_REQUIRE_TRUE( pIndex != nullptr ); // 첫 볼륨이 등록될 때 붙는다
+    vector<ZoneOccupantCandidate> listCandidate;
+    pIndex->queryCandidates( manager, -2.0f, -3.0f, 2.0f, 3.0f, listCandidate );
+    pIndex->queryCandidates( manager, -5.0f, -5.0f, 5.0f, 5.0f, listCandidate );
+    SW_EXPECT_TRUE( listCandidate.empty() ); // 물리 개체가 없는 씬
+    SW_EXPECT_EQUAL( 1u, pIndex->getBuildCount() );
+    pIndex->runBeforeTick( manager, 1.0f / 60.0f );
+    pIndex->queryCandidates( manager, -2.0f, -3.0f, 2.0f, 3.0f, listCandidate );
+    SW_EXPECT_EQUAL( 2u, pIndex->getBuildCount() );
 }
