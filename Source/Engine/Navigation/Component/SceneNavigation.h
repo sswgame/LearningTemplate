@@ -5,13 +5,20 @@
  *          DuringPhysics 틱 결과 적용 뒤, 애니메이션 · 물리 앞 — 에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리에 든다)에서 `update` 만 부릅니다.
  *          얻기는 `manager.getSubsystem<SceneNavigation>()` 입니다. 언리얼 `UNavigationSystemV1` + `ARecastNavMesh` + `UCrowdManager` 를 씬 단위로 묶은 자리입니다.
  *
- *          **갱신 한 번**(게임 스레드): ① 플레이 중이면 표면 · 에이전트가 쓰는 에이전트 종류의 내비메시를 마련한다(쿠킹본이 맞으면 읽고, 아니면 모든 타일을
+ *          **갱신 한 번**(게임 스레드, `Navigation` 단계): ⓪ 지난 프레임에 넘긴 비동기 경로 질의를 수확한다(결과가 칸에 든다 — 이것이 내비메시 쓰기 증표
+ *          `NavMeshWriteAccess` 를 낸다) ① 플레이 중이면 표면 · 에이전트가 쓰는 에이전트 종류의 내비메시를 마련한다(쿠킹본이 맞으면 읽고, 아니면 모든 타일을
  *          워커로 베이크한다) ② 장애물이 움직였으면 옛 · 새 자리를, 파괴 · 수정자가 알린 자리를(`invalidateArea`) 타일로 바꿔 재베이크 줄에 넣는다 ③ 끝난 재베이크
- *          결과를 끼우고, 줄의 타일을 워커에 넘긴다(동시에 `_maxConcurrentTileBakeCount` 개까지, 같은 타일은 하나씩) ④ 에이전트 요청(목적지 · 멈춤 ·
- *          순간이동)과 자리(컨트롤러가 옮긴 자리)를 군중에 넣고 ⑤ 군중을 진행하고 ⑥ 결과를 오브젝트 · 컨트롤러에 쓴다.
+ *          결과를 끼우고(증표가 있어야 한다), 줄의 타일을 워커에 넘긴다(동시에 `_maxConcurrentTileBakeCount` 개까지, 같은 타일은 하나씩) ④ 에이전트 요청(목적지 · 멈춤 ·
+ *          순간이동)과 자리(컨트롤러가 옮긴 자리)를 군중에 넣고, 이번 프레임까지 쌓인 경로 요청을 워커에 넘긴다 ⑤ 군중 진행을 종류마다 워커 일로 넘긴다.
+ *          ⑥ 결과를 오브젝트 · 컨트롤러에 쓰는 것은 `FlushPostAnimation` 단계 본문 앞의 `completeFrameJob` 이다(⑤ 를 기다린 뒤) — 그 사이 `Animation` 단계가
+ *          군중과 겹쳐 돈다. 군중 일이 읽고 쓰는 것은 군중 자신과 내비메시(읽기)뿐이다(등록 줄의 접근 `Navigation` 쓰기). 군중 결과는 일 하나가 종류 하나를
+ *          통째로 진행해 스레드 · 일의 수와 상관없이 같다(결정적).
  *
- *          **질의**(`findPath` · `findNearestPoint` · `raycast`)는 베이크한 내비메시에 대해 어느 틱에서든 부를 수 있습니다(스레드마다 질의 객체). 아직 베이크하지
- *          않은 종류면 실패합니다 — 베이크는 갱신이 합니다(`ensureNavMesh` 는 게임 스레드에서 지금 베이크한다).
+ *          **질의**: 대상 수에 비례해 도는 경로는 `requestPath` 로 줄에 세우고 다음 갱신 뒤에 `takePathResult` 로 받는다(⓪ 이 수확한다 — 요청한 틱이 PrePhysics 면 다음
+ *          프레임, PostPhysics 면 그다음 프레임의 PostPhysics 틱부터 보인다). 한 번 묻는 질의(`findPath` · `findNearestPoint` · `raycast` — 감시 값 · 도구 · 이벤트 하나)는
+ *          동기로 어느 틱에서든 부를 수 있다(스레드마다 질의 객체, 타일 교체는 ③ 에서만 — 틱과 겹치지 않는다). 아직 베이크하지 않은 종류면 실패한다 — 베이크는 갱신이
+ *          한다(`ensureNavMesh` 는 게임 스레드에서 지금 베이크한다). 에이전트(`NavMeshAgentComponent`)의 경로는 군중이 자기 경로 줄(Detour `dtPathQueue`)로 ⑤ 안에서
+ *          구한다 — 군중 진행이 워커로 가면서 그 경로 찾기도 게임 스레드를 떠났다.
  *
  *          이 클래스는 레지스트리 · 종류별 내비메시 마련(쿠킹본 · 전체 베이크) · 질의 · 갱신 순서만 갖고, 바뀌는 이유가 다른 일은 조각이 맡습니다.
  *          기하 모으기는 `NavGeometryCollector`, 장애물 · 알린 영역의 타일 재베이크는 `NavTileRebaker`(값 멤버), 에이전트와 군중 사이 옮기기는
@@ -30,13 +37,16 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Navigation/Component/NavDebugView.h"
 #include "Engine/Navigation/Component/NavGeometryCollector.h"
+#include "Engine/Navigation/Component/NavPathSolver.h"
 #include "Engine/Navigation/Component/NavTileRebaker.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Navigation/PathRequestQueue.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
@@ -53,6 +63,7 @@ namespace sw
     class NavMeshLinkComponent;
     class NavMeshObstacleComponent;
     class NavMeshSurfaceComponent;
+    class NavMeshWriteAccess;
 
     /**
      * @class INavGeometrySource
@@ -128,8 +139,10 @@ namespace sw
         /** @brief 설정 표입니다(없으면 읽는다). */
         const NavMeshSettings& getSettings();
 
-        /** @brief 갱신 한 번 — 파일 머리말의 순서입니다. 게임 스레드에서 매니저가 부릅니다. */
+        /** @brief 갱신 한 번 — 파일 머리말의 순서(⓪ ~ ⑤)입니다. 게임 스레드에서 매니저가 부릅니다. */
         void update( float32 deltaTime ) override;
+        /** @brief 워커에 넘긴 군중 진행을 기다리고 결과(⑥)를 오브젝트 · 컨트롤러에 씁니다(`FlushPostAnimation` 단계 본문 앞, 게임 스레드). 넘긴 것이 없으면 할 일이 없습니다. */
+        void completeFrameJob() override;
         /** @brief 씬 원본 경로를 받아 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름으로 둡니다(`setSourcePath`). */
         void onSceneLoading( string_view sourcePath ) override { setSourcePath( sourcePath ); }
         /** @brief `gv_navDebugDraw` 의 비트대로 디버그 뷰를 맞추고 선을 그립니다. */
@@ -181,7 +194,24 @@ namespace sw
         /** @brief 쿠킹본에서 읽었으면 true 입니다. */
         bool isLoadedFromCooked( const hashed_string& agentType ) const;
 
-        /** @brief 경로 — 에이전트 종류의 기본 거름(표의 영역 비용)입니다. 찾는 범위는 종류의 몸 크기입니다. */
+        /**
+         * @brief 비동기 경로 요청 — 에이전트 종류의 거름(넘길 때의 영역 비용)으로 @p start 에서 @p end 까지를 줄에 세웁니다. 아무 스레드(병렬 틱)에서 부릅니다.
+         * @details 다음 갱신이 워커에 넘기고 그다음 갱신(⓪)이 수확한다. 요청자는 핸들을 들고 `takePathResult` 로 받거나 `cancelPathRequest` 로 버린다 — 요청자가 사라지면
+         *          버린다(언리얼 `AbortAsyncFindPathRequest`). 씬을 비우면 모든 요청이 사라진다(옛 핸들은 `Unknown`). 아직 베이크하지 않은 종류면 결과는 `Failed` 경로다.
+         */
+        [[nodiscard]] PathRequestHandle requestPath( const hashed_string& agentType, const float3& start, const float3& end );
+        /** @brief 비동기 경로 요청 — 거름을 줍니다(이 요청의 사본으로 든다). */
+        [[nodiscard]] PathRequestHandle requestPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter );
+        /** @brief 요청을 버립니다(아무 스레드). 워커가 구하는 중이면 그 결과는 수확에서 버린다. */
+        void cancelPathRequest( const PathRequestHandle& handle );
+        /** @brief 결과가 있으면 @p outPath 로 옮기고 핸들을 끝냅니다(`Ready`). 아직이면 `Pending`, 끝난 · 버린 핸들이면 `Unknown` 입니다(아무 스레드). */
+        [[nodiscard]] PathRequestState takePathResult( const PathRequestHandle& handle, NavPath& outPath );
+        /** @brief 줄에 선 · 구하는 중인 경로 요청 수입니다(게임 스레드 — 진단 · 감시 값). */
+        uint32 getPendingPathRequestCount() const { return _pathQueue.getPendingCount(); }
+        /** @brief 수확한 경로 요청 수(누적, 진단)입니다. */
+        uint64 getCompletedPathRequestCount() const { return _pathQueue.getCompletedCount(); }
+
+        /** @brief 경로 — 에이전트 종류의 기본 거름(표의 영역 비용)입니다. 찾는 범위는 종류의 몸 크기입니다. 동기 질의 — 대상 수만큼 매 프레임 묻는 곳은 `requestPath` 를 쓴다. */
         NavPathStatus findPath( const hashed_string& agentType, const float3& start, const float3& end, NavPath& outPath ) const;
         /** @brief 경로 — 거름을 줍니다. */
         NavPathStatus      findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter, NavPath& outPath ) const;
@@ -234,6 +264,8 @@ namespace sw
         static AABB computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry );
 
     private:
+        friend class NavPathSolver; // 넘기기 직전 에이전트 종류를 내비메시로 푼다(`findRuntime`)
+
         /** @brief 영역 비용 덮어쓰기 하나입니다(`setAgentAreaCost`). */
         struct AreaCostOverride
         {
@@ -258,9 +290,16 @@ namespace sw
         bool installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash );
         /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). 갱신은 `Defer`, 그 자리에서 끝내는 `flushTileBakes` 는 `Wait` 다. */
         void processDirtyAreas( NavMeshArrival arrival );
-        void updateAgents( float32 deltaTime );
+        /** @brief 내비메시를 읽는 워커가 없게 합니다 — 군중 진행을 기다리고 경로 질의를 수확한다(결과가 칸에 든다). 그 증표로 타일을 바꾼다. 게임 스레드에서만 부릅니다. */
+        [[nodiscard]] NavMeshWriteAccess acquireNavMeshWriteAccess();
+        /** @brief ④ — 에이전트 요청 · 자리를 군중에 넣습니다(게임 스레드). */
+        void syncAgentsIntoCrowds();
+        /** @brief ⑤ — 에이전트가 있는 군중마다 진행을 워커 일로 넘깁니다(워커가 없으면 이 자리에서 진행한다). */
+        void launchCrowdUpdates( float32 deltaTime );
+        /** @brief 넘긴 군중 진행이 끝날 때까지 기다립니다(군중을 만지는 모든 게임 스레드 일의 앞 — 수확 · 놓기 · 거름 바꾸기). */
+        void waitCrowdUpdates();
         /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 시점 — 질의가 없는 동안). */
-        void applyLinkStates();
+        void applyLinkStates( const NavMeshWriteAccess& access );
         // 등록 구독이 풀렸을 때 부르는 해제 — 종류마다 구독 목록 하나라 id 에 종류를 싣지 않는다. 구독은 컴포넌트 · 소스가 살아 있는 동안 풀린다(`onUnregister`).
         /** @brief 기하 소스를 순서를 지키며 뺍니다. */
         void releaseGeometrySource( INavGeometrySource* pSource );
@@ -284,10 +323,16 @@ namespace sw
         vector<AreaCostOverride>             _listAreaCostOverride; ///< 에이전트 종류별 영역 비용 · 통행 덮어쓰기(씬을 비울 때까지)
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
+        NavPathSolver                        _pathSolver; ///< `_pathQueue` 의 풀이(이 내비게이션의 내비메시 표를 읽는다) — 줄보다 먼저 선언한다
+        PathRequestQueue<NavPathSolver>      _pathQueue;  ///< 비동기 경로 요청(⓪ 수확 · ④ 넘기기)
+        TaskStageHandle                      _crowdStage; ///< ⑤ 에서 넘긴 군중 진행 일 전부(`completeFrameJob` · `waitCrowdUpdates` 가 기다린다)
         GameObjectManager*                   _pManager;
         uint32                               _waitingMeshCount; ///< 이번 갱신에 마련을 미룬(`NavMeshArrival::Defer`) 모으기들이 센, 아직 읽는 중인 메시 수. 갱신 첫머리에 0 으로 돌린다
-        uint8                                _bSettingsLoaded : 1;
-        uint8                                _bIgnoreCooked   : 1; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
+        float32                              _crowdDeltaTime;   ///< ⑤ 에서 넘긴 진행의 시간 — ⑥ 의 몸 돌리기가 같은 값을 쓴다
+        uint8                                _bSettingsLoaded      : 1;
+        uint8                                _bIgnoreCooked        : 1; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
+        uint8                                _bCrowdUpdateLaunched : 1; ///< ⑤ 가 진행을 넘겼고 아직 ⑥ 이 쓰지 않았다 — 그동안 군중을 만지면 단언한다
+        uint8                                _bCrowdTasksInFlight  : 1; ///< ⑤ 가 워커 태스크를 냈다(워커가 없어 이 자리에서 진행했으면 기다릴 것이 없다)
         // 슬롯 색인(`_navIndex`)으로 O(1) 빼는 목록 넷의 등록 구독입니다. 풀리면 그 종류의 `unregister…` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다.
         ItemSubscriptionList<NavMeshAgentComponent>    _agentSubscriptions{ ItemSubscriptionList<NavMeshAgentComponent>::ReleaseFunction::create<&SceneNavigation::unregisterAgent>( this ) };
         ItemSubscriptionList<NavMeshSurfaceComponent>  _surfaceSubscriptions{ ItemSubscriptionList<NavMeshSurfaceComponent>::ReleaseFunction::create<&SceneNavigation::unregisterSurface>( this ) };

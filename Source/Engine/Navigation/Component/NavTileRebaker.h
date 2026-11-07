@@ -23,6 +23,7 @@ namespace sw
     class GameObjectManager;
     class INavGeometrySource;
     class NavMeshObstacleComponent;
+    class NavMeshWriteAccess;
 
     /** @class NavTileRebaker @brief 파일 머리말 참고. */
     class SW_API NavTileRebaker
@@ -56,7 +57,7 @@ namespace sw
         /** @brief 사라지는 장애물을 내비메시에서 뺍니다(다시 베이크 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다). */
         void untrackObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
         /** @brief 장애물 캐시 종류마다 쌓인 장애물 요청을 처리합니다(끝난 베이크 끼우기와 같은 자리 — 질의가 없는 동안). */
-        static void updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds );
+        static void updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds, const NavMeshWriteAccess& access );
         /** @brief 새 캐시 종류에 지금 뚫고 있는 장애물을 모두 넣습니다(런타임을 처음 만들 때). */
         static void addCarvedObstaclesToCache( NavMeshRuntime& runtime, const vector<NavMeshObstacleComponent*>& listObstacle );
         /**
@@ -67,7 +68,7 @@ namespace sw
         void processDirtyAreas( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle,
                                 GameObjectManager& manager, const NavMeshSettings& settings, const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival );
         /** @brief 끝난 일의 타일을 내비메시에 끼웁니다(질의가 없는 구간에서만 — 갱신 첫머리). */
-        void applyFinishedBakes( const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
+        void applyFinishedBakes( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const NavMeshWriteAccess& access );
 
         /** @brief 줄의 타일을 워커에 넘깁니다. 종류마다 동시에 @p maxConcurrent 개(최소 1)까지, 같은 타일은 하나씩입니다. */
         static void launchTileBakes( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, uint32 maxConcurrent );

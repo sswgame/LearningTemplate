@@ -71,7 +71,7 @@ namespace sw
 
     private:
         dtCrowd*              _pCrowd;
-        dtNavMeshQuery*       _pQuery;     ///< 군중 밖 질의(목적지 붙이기, 위치 맞추기)에 쓴다. 게임 스레드만 쓴다.
+        dtNavMeshQuery*       _pQuery;     ///< 군중 밖 질의(목적지 붙이기, 위치 맞추기)에 쓴다. 요청을 넣는 스레드(게임 스레드)만 쓴다 — `update`(워커)는 쓰지 않는다.
         const dtNavMesh*      _pNavMesh;   ///< 링크 찾기(읽기만)
         vector<uint8>         _listFailed; ///< 에이전트마다 기록한다. 마지막 요청의 목적지를 찾지 못했다.
         vector<float3>        _listTarget; ///< 에이전트마다 기록한다. 마지막으로 지정한 목적지다(붙이기 전의 값).

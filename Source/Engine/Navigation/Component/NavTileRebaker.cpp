@@ -98,7 +98,7 @@ namespace sw
         obstacle._bCarved = SW_FALSE;
     }
 
-    void NavTileRebaker::updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds )
+    void NavTileRebaker::updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds, const NavMeshWriteAccess& /*access*/ )
     {
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {
@@ -253,7 +253,7 @@ namespace sw
         }
     }
 
-    void NavTileRebaker::applyFinishedBakes( const vector<unique_ptr<NavMeshRuntime>>& listRuntime )
+    void NavTileRebaker::applyFinishedBakes( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const NavMeshWriteAccess& /*access*/ )
     {
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {

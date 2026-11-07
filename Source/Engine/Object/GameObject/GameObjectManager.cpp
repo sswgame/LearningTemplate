@@ -220,6 +220,34 @@ namespace sw
                     _listSceneService.push_back( entry );
             }
         }
+        validateSceneServiceJobs();
+    }
+
+    void GameObjectManager::validateSceneServiceJobs() const
+    {
+        for ( size_t serviceIndex = 0; serviceIndex < _listSceneService.size(); ++serviceIndex )
+        {
+            const SceneServiceRegistration& registration = *_listSceneService[serviceIndex]._pRegistration;
+            if ( registration.hasFrameJob() == false )
+                continue;
+            const utf8* pName = _listSceneService[serviceIndex]._pService->getSubsystemName();
+            if ( registration._completeStep <= registration._frameStep )
+            {
+                SW_LOG_ERROR_ID( "GameObjectManager.FrameJobCompleteStep", "Scene service '%#' completes its frame job at step %# which is not after its update step %# - the job would be waited a frame late",
+                                 pName, getSceneFrameStepName( registration._completeStep ), getSceneFrameStepName( registration._frameStep ) );
+                continue;
+            }
+            for ( size_t otherIndex = serviceIndex + 1; otherIndex < _listSceneService.size(); ++otherIndex )
+            {
+                const SceneServiceRegistration& other = *_listSceneService[otherIndex]._pRegistration;
+                // 두 일의 사이(넘긴 단계 끝 ~ 마치는 단계 앞)가 겹치면 같이 돈다 — 겹치는 접근이면 워커끼리 경합한다.
+                const bool bWindowsOverlap = other.hasFrameJob() && other._frameStep < registration._completeStep && registration._frameStep < other._completeStep;
+                if ( bWindowsOverlap == false || hasFrameAccessConflict( registration._jobAccess, other._jobAccess ) == false )
+                    continue;
+                SW_LOG_ERROR_ID( "GameObjectManager.FrameJobAccessConflict", "Scene services '%#' and '%#' run frame jobs at the same time with conflicting scene data access - move one completion step or split the data",
+                                 pName, _listSceneService[otherIndex]._pService->getSubsystemName() );
+            }
+        }
     }
 
     GameObjectManager::~GameObjectManager()
@@ -439,9 +467,11 @@ namespace sw
         ++_updateSerial;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`). 관찰자는 보통 비어 있어 단계마다 분기 하나다.
         // 단계마다 본문 뒤에 그 단계에 등록한 씬 서비스를 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
+        // 본문 앞에는 이 단계에서 마치기로 한 서비스의 프레임 일을 마친다(워커 일 결과를 쓴다) — 본문(트랜스폼 펼치기 등)이 그 결과를 본다.
 #define SW_SCENE_FRAME_STEP( Name )                       \
     if ( _frameStepObserver.isBound() )                   \
         _frameStepObserver.get()( SceneFrameStep::Name ); \
+    completeSceneServiceJobs( SceneFrameStep::Name );     \
     runFrameStep##Name( deltaTime );                      \
     updateSceneServices( SceneFrameStep::Name, deltaTime );
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
@@ -561,7 +591,17 @@ namespace sw
 
     void GameObjectManager::runFrameStepNavigation( float32 /*deltaTime*/ )
     {
-        // 군중 진행(`SceneNavigation`)은 이 단계에 등록된 씬 서비스다(`update` 가 단계 끝에 부른다). 끝난 타일 재베이크를 끼우는 것도 거기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
+        // 내비게이션(`SceneNavigation`)은 이 단계에 등록된 씬 서비스다(`update` 가 단계 끝에 부른다). 끝난 타일 재베이크 · 비동기 경로 결과를 끼우고, 군중 진행을 워커에 넘긴다.
+        // 군중 결과(자리 · 컨트롤러 속도)는 `FlushPostAnimation` 본문 앞(`completeFrameJob`)에서 쓴다 — 그 사이 애니메이션이 군중과 겹쳐 돈다.
+    }
+
+    void GameObjectManager::completeSceneServiceJobs( SceneFrameStep step )
+    {
+        for ( SceneServiceEntry& entry : _listSceneService )
+        {
+            if ( entry._pRegistration->_completeStep == step )
+                entry._pService->completeFrameJob();
+        }
     }
 
     void GameObjectManager::updateSceneServices( SceneFrameStep step, float32 deltaTime )

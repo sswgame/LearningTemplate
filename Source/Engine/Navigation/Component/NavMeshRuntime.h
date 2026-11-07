@@ -17,11 +17,13 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Navigation/Component/NavPathSolver.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Navigation/PathRequestQueue.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -29,6 +31,18 @@ namespace sw
 {
     class NavMeshSurfaceComponent;
 
+    /**
+     * @class NavMeshWriteAccess
+     * @brief "지금 내비메시를 읽는 워커가 없다" 는 증표입니다 — 비동기 경로 질의를 수확했고(경로 줄의 `Fence`) 군중 진행이 끝났다. `SceneNavigation` 만 만듭니다.
+     * @details 타일을 바꾸는 일(재베이크 결과 끼우기 · 장애물 캐시 짓기 · 링크 막기)이 이 증표를 인자로 받는다 — 진행 중 질의와 겹쳐 타일을 바꾸는 길은 컴파일되지 않는다.
+     */
+    class NavMeshWriteAccess
+    {
+        friend class SceneNavigation;
+
+    private:
+        explicit NavMeshWriteAccess( const PathRequestQueue<NavPathSolver>::Fence& /*fence*/ ) {}
+    };
 } // namespace sw
 
 namespace sw
@@ -85,6 +99,7 @@ namespace sw
         NavMeshBakeStats              _bakeStats{};
         AABB                          _bounds{};
         float3                        _searchExtent{ 1.0f, 2.0f, 1.0f };
+        float32                       _crowdDeltaTime{ 0.0f }; ///< 워커에 넘긴 군중 진행의 시간(`SceneNavigation::launchCrowdUpdates` 가 넘기기 전에 적는다)
         uint8                         _bFromCooked : 1;
 
         NavMeshRuntime()
@@ -109,6 +124,16 @@ namespace sw
                 engine::getSubsystem<TaskManager>().waitStage( _bakeStage, "NavMeshRuntime" );
                 return;
             }
+        }
+
+        /**
+         * @brief 군중을 `_crowdDeltaTime` 만큼 진행합니다 — 군중 진행 태스크의 본문(워커)입니다. 군중 자신과 내비메시(읽기)만 만진다.
+         * @details 진행하는 동안 게임 스레드는 이 군중을 만지지 않는다 — 군중을 만지는 길은 모두 `SceneNavigation::waitCrowdUpdates` 를 먼저 지난다.
+         */
+        void updateCrowd()
+        {
+            SW_MEMORY_SCOPE( Navigation );
+            _pCrowd->update( _crowdDeltaTime );
         }
 
         /** @brief 장애물을 장애물 캐시로 다루면 true 입니다(덧칠 부피 없이 베이크한다). */

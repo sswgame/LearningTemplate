@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -53,7 +54,9 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SceneNavigation, Navigation )
+    // 군중 진행(⑤)은 `Navigation` 단계 끝에 워커로 가고 `FlushPostAnimation` 본문 앞에서 마친다(⑥) — 그 사이 `Animation` 단계와 겹친다.
+    // 그 일이 만지는 씬 데이터는 내비게이션(군중 · 에이전트 이동 상태)뿐이다. 오브젝트 자리 · 컨트롤러 속도는 ⑥ 이 게임 스레드에서 쓴다.
+    SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneNavigation, Navigation, FlushPostAnimation, SceneFrameAccess{ SceneDataKindSet{ SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{}, true } )
 
     SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
 
@@ -81,10 +84,16 @@ namespace sw
         , _listAreaCostOverride{}
         , _tileRebaker{}
         , _debugView{}
+        , _pathSolver{ *this }
+        , _pathQueue{ _pathSolver }
+        , _crowdStage{}
         , _pManager{ &manager }
         , _waitingMeshCount{ 0 }
+        , _crowdDeltaTime{ 0.0f }
         , _bSettingsLoaded{ SW_FALSE }
         , _bIgnoreCooked{ SW_FALSE }
+        , _bCrowdUpdateLaunched{ SW_FALSE }
+        , _bCrowdTasksInFlight{ SW_FALSE }
     {
     }
 
@@ -95,6 +104,10 @@ namespace sw
 
     void SceneNavigation::onSceneCleared()
     {
+        // 워커가 군중 · 내비메시를 읽고 있다 — 놓기 전에 기다린다. 넘긴 군중 결과(⑥)와 경로 요청은 씬과 함께 버린다(옛 핸들은 `Unknown`).
+        waitCrowdUpdates();
+        _bCrowdUpdateLaunched = SW_FALSE;
+        (void)_pathQueue.clear(); // 내비메시를 놓는 것은 아래 줄이다 — 증표 없이 런타임을 통째로 지운다
         NavTileRebaker::waitForAllBakes( _listRuntime );
         _waitingMeshCount = 0; // 미룬 마련은 씬과 함께 사라진다 — 남기면 자동화 사진이 영영 기다린다
         for ( NavMeshAgentComponent* pAgent : _listAgent )
@@ -159,6 +172,7 @@ namespace sw
     {
         if ( pAgent == nullptr || pAgent->_crowdAgentID == NavigationConstant::kInvalidAgentID )
             return;
+        waitCrowdUpdates(); // 군중 진행(⑤)이 워커에서 도는 중이면 끝난 뒤에 뺀다
         if ( pAgent->_crowdIndex < _listRuntime.size() && _listRuntime[pAgent->_crowdIndex]->_pCrowd != nullptr )
             _listRuntime[pAgent->_crowdIndex]->_pCrowd->removeAgent( pAgent->_crowdAgentID );
         pAgent->_crowdAgentID   = NavigationConstant::kInvalidAgentID;
@@ -251,7 +265,7 @@ namespace sw
         return VectorUtil::findBy<&NavMeshLinkComponent::computeCurrentLinkID>( _listLink, linkID );
     }
 
-    void SceneNavigation::applyLinkStates()
+    void SceneNavigation::applyLinkStates( const NavMeshWriteAccess& /*access*/ )
     {
         for ( NavMeshLinkComponent* pLink : _listLink )
         {
@@ -308,7 +322,9 @@ namespace sw
         pExisting->_bAllowed = bAllowed ? SW_TRUE : SW_FALSE;
         if ( NavMeshRuntime* pRuntime = findRuntime( pType->_name ) )
         {
+            // 이미 넘긴 경로 요청은 넘길 때의 거름 사본으로 끝난다(`NavPathJob::_filter`). 군중은 진행 중이면 끝난 뒤에 바꾼다.
             applyAreaCostOverrides( pType->_name, pRuntime->_filter );
+            waitCrowdUpdates();
             if ( pRuntime->_pCrowd != nullptr )
                 pRuntime->_pCrowd->setQueryFilter( pRuntime->_filter );
         }
@@ -603,6 +619,40 @@ namespace sw
         return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, filter, outPath );
     }
 
+    PathRequestHandle SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end )
+    {
+        NavPathJob job;
+        job._agentType = agentType;
+        job._start     = start;
+        job._end       = end;
+        return _pathQueue.request( std::move( job ) );
+    }
+
+    PathRequestHandle SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter )
+    {
+        NavPathJob job;
+        job._agentType     = agentType;
+        job._start         = start;
+        job._end           = end;
+        job._filter        = filter;
+        job._bCustomFilter = true;
+        return _pathQueue.request( std::move( job ) );
+    }
+
+    void SceneNavigation::cancelPathRequest( const PathRequestHandle& handle )
+    {
+        _pathQueue.cancel( handle );
+    }
+
+    PathRequestState SceneNavigation::takePathResult( const PathRequestHandle& handle, NavPath& outPath )
+    {
+        NavPathJob             job;
+        const PathRequestState state = _pathQueue.takeResult( handle, job );
+        if ( state == PathRequestState::Ready )
+            outPath = std::move( job._path );
+        return state;
+    }
+
     bool SceneNavigation::findNearestPoint( const hashed_string& agentType, const float3& position, NavLocation& outLocation ) const
     {
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
@@ -634,10 +684,15 @@ namespace sw
         const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false ||
                                _listLink.empty() == false;
         _waitingMeshCount = 0; // 이번 갱신에 미룬 마련만 센다(사라진 표면 · 에이전트의 옛 기다림이 남지 않게)
-        if ( bAnything == false || _pManager == nullptr )
-            return;
         SW_MEMORY_SCOPE( Navigation );
         SW_PROFILE_SCOPE( "GT.Navigation.tick" );
+        // ⓪ 지난 프레임에 넘긴 경로 질의를 수확한다 — 내비메시가 없어도 돈다(요청자는 `Failed` 결과를 받아야 기다림이 끝난다).
+        const NavMeshWriteAccess access = acquireNavMeshWriteAccess();
+        if ( bAnything == false || _pManager == nullptr )
+        {
+            _pathQueue.launch( "NavPathQuery" );
+            return;
+        }
         // 플레이 중이면 표면이 맡은 종류를 마련한다(처음 쓸 때 — 쿠킹본이 맞으면 읽고 아니면 베이크한다).
         if ( _pManager->hasBegunPlay() )
         {
@@ -658,14 +713,22 @@ namespace sw
                 }
             }
         }
-        // 순서에 뜻이 있다 — 끝난 타일 끼우기는 질의가 없는 이 자리(컴포넌트 틱 뒤)에서만, 새 일은 끼운 뒤에 넘긴다.
+        // 순서에 뜻이 있다 — 끝난 타일 끼우기는 읽는 워커가 없는 이 자리(⓪ 의 증표)에서만, 새 일(베이크 · 경로 질의 · 군중)은 끼운 뒤에 넘긴다.
         _tileRebaker.updateObstacles( _listRuntime, _listObstacle, getSettings()._obstacleMoveThreshold );
         processDirtyAreas( NavMeshArrival::Defer );
-        _tileRebaker.applyFinishedBakes( _listRuntime );
-        NavTileRebaker::updateObstacleCaches( _listRuntime, deltaTime ); // 캐시 종류는 장애물 요청을 층에서 바로 짓는다(끼우기와 같은 자리)
-        applyLinkStates();
+        _tileRebaker.applyFinishedBakes( _listRuntime, access );
+        NavTileRebaker::updateObstacleCaches( _listRuntime, deltaTime, access ); // 캐시 종류는 장애물 요청을 층에서 바로 짓는다(끼우기와 같은 자리)
+        applyLinkStates( access );
         NavTileRebaker::launchTileBakes( _listRuntime, _settings._maxConcurrentTileBakeCount );
-        updateAgents( deltaTime );
+        syncAgentsIntoCrowds();
+        _pathQueue.launch( "NavPathQuery" );
+        launchCrowdUpdates( deltaTime );
+    }
+
+    NavMeshWriteAccess SceneNavigation::acquireNavMeshWriteAccess()
+    {
+        waitCrowdUpdates();
+        return NavMeshWriteAccess{ _pathQueue.complete() };
     }
 
     void SceneNavigation::processDirtyAreas( NavMeshArrival arrival )
@@ -675,6 +738,7 @@ namespace sw
 
     void SceneNavigation::flushTileBakes()
     {
+        const NavMeshWriteAccess access = acquireNavMeshWriteAccess();
         _tileRebaker.updateObstacles( _listRuntime, _listObstacle, getSettings()._obstacleMoveThreshold );
         // 그 자리에서 끝내는 길이다(테스트 · 쿠킹) — 메시를 기다린다. `Defer` 면 넘긴 영역이 남아 아래 반복이 끝나지 않는다.
         processDirtyAreas( NavMeshArrival::Wait );
@@ -682,7 +746,7 @@ namespace sw
         {
             NavTileRebaker::launchTileBakes( _listRuntime, _settings._maxConcurrentTileBakeCount );
             NavTileRebaker::waitForAllBakes( _listRuntime );
-            _tileRebaker.applyFinishedBakes( _listRuntime );
+            _tileRebaker.applyFinishedBakes( _listRuntime, access );
             processDirtyAreas( NavMeshArrival::Wait );
         }
         // 장애물 캐시는 갱신마다 타일 하나를 짓는다(Detour 가 비용을 프레임에 나눈다) — 다 지을 때까지 돈다. 상한은 그 종류의 타일 자리 수다.
@@ -699,7 +763,7 @@ namespace sw
         }
     }
 
-    void SceneNavigation::updateAgents( float32 deltaTime )
+    void SceneNavigation::syncAgentsIntoCrowds()
     {
         if ( _listAgent.empty() )
             return;
@@ -726,18 +790,56 @@ namespace sw
             }
             NavAgentCrowdSync::syncAgentIntoCrowd( agent, *pRuntime, _listRuntime );
         }
+    }
+
+    void SceneNavigation::launchCrowdUpdates( float32 deltaTime )
+    {
+        if ( _listAgent.empty() )
+            return;
+        SW_PROFILE_SCOPE( "GT.Navigation.launchCrowd" );
+        _crowdDeltaTime       = deltaTime;
+        _bCrowdUpdateLaunched = SW_TRUE;
+        const bool bWorkers   = engine::areEngineServicesBound();
+        // 종류 하나의 군중은 일 하나가 통째로 진행한다(Detour 군중은 안에서 나누지 않는다) — 종류끼리는 서로 모르므로 같이 돈다. 결과는 스레드 수와 상관없다.
+        for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
         {
-            SW_PROFILE_SCOPE( "GT.Navigation.crowd" );
-            for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
+            if ( pRuntime->_pCrowd == nullptr || pRuntime->_pCrowd->getActiveAgentCount() == 0 )
+                continue;
+            pRuntime->_crowdDeltaTime = deltaTime;
+            if ( bWorkers == false )
             {
-                if ( pRuntime->_pCrowd != nullptr && pRuntime->_pCrowd->getActiveAgentCount() > 0 )
-                    pRuntime->_pCrowd->update( deltaTime );
+                pRuntime->updateCrowd(); // 워커가 없으면(테스트 · 도구) 지금 진행한다 — 쓰기는 그래도 ⑥ 이다
+                continue;
             }
+            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+            TaskHandle   task        = taskManager.emplaceTask( "NavCrowdUpdate", SW_DELEGATE_METHOD( TaskDelegate, &NavMeshRuntime::updateCrowd, pRuntime.get() ) );
+            taskManager.addToStage( _crowdStage, task, "NavCrowdUpdate" );
+            task.submit();
+            _bCrowdTasksInFlight = SW_TRUE;
         }
+    }
+
+    void SceneNavigation::waitCrowdUpdates()
+    {
+        if ( _bCrowdTasksInFlight == SW_FALSE )
+            return;
+        SW_PROFILE_SCOPE( "GT.Navigation.waitCrowd" );
+        engine::getSubsystem<TaskManager>().waitStage( _crowdStage, "SceneNavigation" );
+        _bCrowdTasksInFlight = SW_FALSE;
+    }
+
+    void SceneNavigation::completeFrameJob()
+    {
+        if ( _bCrowdUpdateLaunched == SW_FALSE )
+            return;
+        SW_MEMORY_SCOPE( Navigation );
+        SW_PROFILE_SCOPE( "GT.Navigation.writeAgents" );
+        waitCrowdUpdates();
+        _bCrowdUpdateLaunched = SW_FALSE;
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
             if ( pAgent->_crowdAgentID != NavigationConstant::kInvalidAgentID && pAgent->_crowdIndex < _listRuntime.size() )
-                NavAgentCrowdSync::writeAgentResult( *pAgent, *_listRuntime[pAgent->_crowdIndex], deltaTime );
+                NavAgentCrowdSync::writeAgentResult( *pAgent, *_listRuntime[pAgent->_crowdIndex], _crowdDeltaTime );
         }
     }
 
@@ -804,6 +906,7 @@ namespace sw
                     outValue.setText( "the target's agent type has no navmesh baked yet" );
                     return false;
                 }
+                // 동기 질의를 남긴다 — 감시 값은 읽는 자리에서 값을 내야 하고 단계 하나에 질의 하나다(대상 수에 비례하지 않는다).
                 if ( navigation.findPath( agentType, pFrom->getWorldPosition(), pTo->getWorldPosition(), outPath ) != NavPathStatus::Complete )
                 {
                     outValue.setText( "no complete path" );

@@ -632,6 +632,13 @@ namespace sw
 
         /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. `update` 가 모든 단계 끝에 부른다 — 본문은 부르지 않는다. */
         void updateSceneServices( SceneFrameStep step, float32 deltaTime );
+        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 **앞**에 부른다. */
+        void completeSceneServiceJobs( SceneFrameStep step );
+        /**
+         * @brief 프레임 일의 등록 줄이 맞는지 봅니다(만들 때 한 번) — 마치는 단계가 넘기는 단계 뒤인가, 사이가 겹치는 두 서비스의 일이 겹치는 접근을 선언하지 않았는가.
+         * @details 어긋나면 오류로 남긴다. 서비스는 그대로 만든다 — 등록 줄은 정적 데이터라 고칠 곳은 그 줄이고, 이 검사는 그 줄을 쓴 사람이 첫 실행에서 보게 하는 자리다.
+         */
+        void validateSceneServiceJobs() const;
 
         /** @brief 이 매니저가 만든 씬 서비스 하나입니다(소유는 씬 범위 — 갱신 단계를 알려고 등록 줄과 짝지어 든다). */
         struct SceneServiceEntry

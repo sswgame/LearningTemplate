@@ -46,7 +46,7 @@ namespace sw
     /**
      * @class INavCrowd
      * @brief 내비메시 하나 위의 군중입니다(경로 따라가기, 이웃 회피, 떨어지기). 언리얼의 `UCrowdManager` 와 DetourCrowd 에 해당합니다.
-     * @details 한 스레드(게임 스레드)가 다룬다. `update` 가 모든 에이전트의 경로, 회피, 이동을 한 번에 진행한다. 에이전트의 위치를 다른 것이
+     * @details 한 번에 한 스레드만 다룬다 — 요청 · 결과 읽기는 게임 스레드, `update` 는 워커 일(`NavMeshRuntime::updateCrowd`)이고 그동안 게임 스레드는 만지지 않는다. `update` 가 모든 에이전트의 경로, 회피, 이동을 한 번에 진행한다. 에이전트의 위치를 다른 것이
      *          움직이면(캐릭터 컨트롤러) 갱신 전에 `syncAgentPosition` 으로 알려, 군중이 그 위치에서 이어 가게 한다.
      */
     class INavCrowd
