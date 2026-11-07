@@ -49,7 +49,7 @@ namespace sw
 
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toXMLText() const;
+        string             saveToXMLText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         /** @brief 쌍을 넣습니다(같은 원문이면 번역을 바꿉니다). 바뀌었으면 true 입니다. */

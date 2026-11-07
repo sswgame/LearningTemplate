@@ -307,7 +307,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, SubgraphIsInlined )
     MaterialGraphDef selfGraph;
     SW_REQUIRE_TRUE( selfGraph.loadFromXMLText( MaterialGraphTestUtil::wrapGraph( selfNodes ), "self" ) );
     selfGraph._listNode[0]._assetPath = subgraphID;
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sub.matgraph.xml" ), selfGraph.toXMLText() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sub.matgraph.xml" ), selfGraph.saveToXMLText() ) );
     MaterialGraphCompileResult cycleResult;
     SW_EXPECT_FALSE( MaterialGraphCompiler::compile( graph, MaterialGraphTestUtil::kSource, cycleResult ) );
     SW_EXPECT_TRUE( MaterialGraphTestUtil::hasIssue( cycleResult, "SubgraphCycle", "Sub/Self" ) );

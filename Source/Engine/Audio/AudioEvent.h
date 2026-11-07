@@ -216,7 +216,7 @@ namespace sw
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
         /** @brief 라이브러리를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). */
-        string toXMLText() const;
+        string saveToXMLText() const;
         /**
          * @brief 검사(`validate`)를 통과한 라이브러리를 리소스 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
          * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.

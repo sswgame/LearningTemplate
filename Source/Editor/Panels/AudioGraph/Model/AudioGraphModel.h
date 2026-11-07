@@ -57,7 +57,7 @@ namespace sw::editor
         /** @brief 사본을 되돌리기 글(`captureText`)로 바꿉니다. 고른 노드 · 놓을 노드를 풉니다. 읽지 못하면 오류를 남기고 빈 그래프로 둡니다(이 모델이 쓴 글이라 결함이다). */
         void restore( string_view xmlText );
         /** @brief 되돌리기 · dirty 판정에 쓰는 사본의 글입니다. */
-        string captureText() const { return _editGraph.toXMLText(); }
+        string captureText() const { return _editGraph.saveToXMLText(); }
         /** @brief 검사를 통과하면 @p diskPath 에 쓰고 true 입니다. 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다). */
         [[nodiscard]] bool save( const AbsolutePath& diskPath ) const;
         /** @brief 저장된 @p path 의 파일을 2D 로 한 번 냅니다(버스 `ui`). 앞의 미리 듣기는 멈춘다. */

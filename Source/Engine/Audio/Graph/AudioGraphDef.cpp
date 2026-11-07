@@ -160,7 +160,7 @@ namespace sw
         return bValid;
     }
 
-    string AudioGraphDef::toXMLText() const
+    string AudioGraphDef::saveToXMLText() const
     {
         return XMLSerializer::serialize( this, *StaticType() );
     }
@@ -172,7 +172,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNotSaved", "%#: audio graph not saved - it does not pass validation", absPath.str() );
             return false;
         }
-        if ( FileUtil::writeTextFile( absPath.str(), toXMLText() ) == false )
+        if ( FileUtil::writeTextFile( absPath.str(), saveToXMLText() ) == false )
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot2", "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

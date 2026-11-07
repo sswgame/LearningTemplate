@@ -122,7 +122,7 @@ namespace sw
         /** @brief XML 글을 읽습니다(`_base` 를 펼친다). 모르는 칸 · 다른 판은 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 모든 칸을 적은 글입니다(되돌리기 기록 · 복사 버퍼). `loadFromXMLText` 가 다시 읽습니다. */
-        [[nodiscard]] string toXMLText() const;
+        [[nodiscard]] string saveToXMLText() const;
         /** @brief 파일에 씁니다. @p baseID 가 있으면 그 부모와 다른 칸만 적습니다(`ReflectedXMLFile::saveDescAsChild`). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath, const AssetID& baseID ) const;
         /** @brief 이름의 노드 번호입니다. 없으면 -1 입니다. */

@@ -258,7 +258,7 @@ namespace sw
         return VectorUtil::findBy<&AudioEventDesc::_name>( _listEvent, name );
     }
 
-    string AudioEventLibrary::toXMLText() const
+    string AudioEventLibrary::saveToXMLText() const
     {
         return XMLSerializer::serialize( this, *StaticType() );
     }
@@ -272,7 +272,7 @@ namespace sw
         }
         // 변형은 변형으로 저장한다 — 부모와 다른 칸만 쓴다(`ReflectedXMLFile::saveDescAsChild` 와 같은 규칙).
         string existingText;
-        string saveText = toXMLText();
+        string saveText = saveToXMLText();
         if ( FileUtil::readOptionalTextFile( absPath.str(), existingText ) == OptionalFileRead::Read )
         {
             const string      baseID = DataInheritance::findBasePath( existingText );
@@ -280,7 +280,7 @@ namespace sw
             if ( baseID.empty() == false )
             {
                 string deltaText;
-                if ( parent.loadFromAsset( AssetID{ baseID } ) == false || DataInheritance::makeDelta( saveText, parent.toXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID, deltaText ) == false )
+                if ( parent.loadFromAsset( AssetID{ baseID } ) == false || DataInheritance::makeDelta( saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID, deltaText ) == false )
                 {
                     SW_LOG_ERROR_ID( "AudioEventLibrary.VariantNotSaved", "%#: audio event library not saved - its parent '%#' could not be read", absPath.str(), baseID );
                     return false;

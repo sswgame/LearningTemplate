@@ -35,7 +35,7 @@ SW_TEST_CASE( TranslationMemoryTest, ExactNormalizedAndFuzzyMatches )
     SW_EXPECT_EQUAL( sw::string( "Open the door" ), memory.findSourceOfText( "문을 연다" ) );
 
     sw::TranslationMemory reloaded;
-    SW_REQUIRE_TRUE( reloaded.loadFromXMLText( memory.toXMLText(), "tm" ) );
+    SW_REQUIRE_TRUE( reloaded.loadFromXMLText( memory.saveToXMLText(), "tm" ) );
     SW_EXPECT_EQUAL( size_t( 2 ), reloaded.getEntryCount() );
     SW_EXPECT_EQUAL( memory.getCulture(), reloaded.getCulture() );
 }

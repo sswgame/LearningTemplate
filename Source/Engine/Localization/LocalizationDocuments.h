@@ -58,7 +58,7 @@ namespace sw
 
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toXMLText() const;
+        string             saveToXMLText() const;
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
 
         const SourceTextEntry* findEntry( string_view key ) const;
@@ -121,7 +121,7 @@ namespace sw
 
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toXMLText() const;
+        string             saveToXMLText() const;
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
 
         const TranslationEntry* findEntry( string_view key ) const;

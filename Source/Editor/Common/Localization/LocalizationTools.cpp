@@ -244,13 +244,13 @@ namespace sw
                 TranslationMemory memory;
                 if ( loadMemory( memoryPath, culture, memory, inoutResult._report ) == false )
                     return;
-                const string memoryBefore = memory.toXMLText();
+                const string memoryBefore = memory.saveToXMLText();
 
                 reconcileTranslation( mapSource, translation, memory, cultureReport );
                 prefillFromMemory( mapSource, memory, translation, cultureReport );
                 countAndValidate( culture, mapSource, translation, cultureReport, inoutResult._report );
 
-                const bool bMemoryChanged = memory.toXMLText() != memoryBefore;
+                const bool bMemoryChanged = memory.saveToXMLText() != memoryBefore;
                 if ( cultureReport._bChanged == false && bMemoryChanged == false )
                     return;
                 cultureReport._bChanged = SW_TRUE;
@@ -550,7 +550,7 @@ namespace sw
 
         // 3) 합치기와 쓰기
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
-        const string newText = gatherTable.toXMLText();
+        const string newText = gatherTable.saveToXMLText();
         string       diskText;
         const bool   bSameOnDisk = FileUtil::readOptionalTextFile( outResult._gatherTablePath, diskText ) == OptionalFileRead::Read && diskText == newText;
         if ( bSameOnDisk == false )

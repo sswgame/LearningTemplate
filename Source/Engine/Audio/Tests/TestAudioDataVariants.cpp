@@ -131,11 +131,11 @@ SW_TEST_CASE( AudioDataVariantTest, DeltaRoundTrips )
 
     const DataInheritanceSchema schema = DataInheritanceSchema::makeFromType( *AudioEventLibrary::StaticType() );
     string                      delta;
-    SW_REQUIRE_TRUE( DataInheritance::makeDelta( edited.toXMLText(), parent.toXMLText(), schema, "parent.audioevents.xml", delta ) );
+    SW_REQUIRE_TRUE( DataInheritance::makeDelta( edited.saveToXMLText(), parent.saveToXMLText(), schema, "parent.audioevents.xml", delta ) );
     SW_EXPECT_TRUE( delta.find( "_base=\"parent.audioevents.xml\"" ) != string::npos );
     SW_EXPECT_TRUE( delta.find( "Fire" ) == string::npos );
 
-    AudioParentSource source{ parent.toXMLText() };
+    AudioParentSource source{ parent.saveToXMLText() };
     string            flat;
     SW_REQUIRE_TRUE( DataInheritance::flatten( delta, "child", schema, source, flat ) );
     AudioEventLibrary reloaded;

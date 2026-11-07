@@ -88,7 +88,7 @@ namespace sw
         return loadFromXMLText( text, absolutePath, pOutError );
     }
 
-    string TranslationMemory::toXMLText() const
+    string TranslationMemory::saveToXMLText() const
     {
         XMLDocument   document;
         const XMLNode root = document.appendRoot( "TranslationMemory" );
@@ -105,7 +105,7 @@ namespace sw
 
     bool TranslationMemory::saveToFile( string_view absolutePath ) const
     {
-        const string text = toXMLText();
+        const string text = saveToXMLText();
         string       existing;
         const bool   bFileContentUnchanged = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read && existing == text;
         if ( bFileContentUnchanged )

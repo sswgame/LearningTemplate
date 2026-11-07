@@ -65,7 +65,7 @@ namespace sw
         return true;
     }
 
-    string MaterialGraphDef::toXMLText() const
+    string MaterialGraphDef::saveToXMLText() const
     {
         return XMLSerializer::serialize( this, *StaticType() );
     }

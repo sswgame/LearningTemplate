@@ -248,7 +248,7 @@ namespace sw
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
     }
 
-    string SourceStringTable::toXMLText() const
+    string SourceStringTable::saveToXMLText() const
     {
         XMLDocument   document;
         const XMLNode root = document.appendRoot( "SourceStringTable" );
@@ -273,7 +273,7 @@ namespace sw
 
     bool SourceStringTable::saveToFile( const AbsolutePath& absPath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), toXMLText() );
+        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), saveToXMLText() );
     }
 
     const SourceTextEntry* SourceStringTable::findEntry( string_view key ) const
@@ -363,7 +363,7 @@ namespace sw
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
     }
 
-    string TranslationTable::toXMLText() const
+    string TranslationTable::saveToXMLText() const
     {
         XMLDocument   document;
         const XMLNode root = document.appendRoot( "TranslationTable" );
@@ -386,7 +386,7 @@ namespace sw
 
     bool TranslationTable::saveToFile( const AbsolutePath& absPath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), toXMLText() );
+        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), saveToXMLText() );
     }
 
     const TranslationEntry* TranslationTable::findEntry( string_view key ) const
