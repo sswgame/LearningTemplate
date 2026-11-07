@@ -205,7 +205,13 @@ namespace sw
 
             static void writeAudio( DebugHUDSectionWriter& writer )
             {
-                const AudioEngineStats stats = engine::getSubsystem<IAudioService>().getEngine().getStats();
+                const IAudioService* pAudio = engine::findSubsystem<IAudioService>();
+                if ( pAudio == nullptr || pAudio->isInitialized() == false )
+                {
+                    writer.addLine( "service", "none" );
+                    return;
+                }
+                const AudioEngineStats stats = pAudio->getEngine().getStats();
                 writer.addLineFormat( "voices", "%# (%# real, %# virtual)", stats._voiceCount, stats._realVoiceCount, stats._virtualVoiceCount );
                 writer.addLineFormat( "instances", "%#", stats._instanceCount );
                 writer.addLineFormat( "dropped", "%#", stats._droppedEventCount );

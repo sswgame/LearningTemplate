@@ -106,3 +106,39 @@ namespace sw
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UserSettingsHandlerRegistry::releaseSubscription>( this ) };
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct UserSettingsHandlerSetRegistrar
+     * @brief 엔진 기능 폴더가 자기 사용자 설정 핸들러 묶음을 스스로 올리는 정적 등록자입니다(`SW_USER_SETTINGS_HANDLER_SET` — 오디오의 `audio.*`).
+     * @details 엔진 핸들러(`UserSettingsEngineHandlers::initialize`)가 자기 것을 올린 뒤 이 목록의 묶음을 차례로 올리고 구독을 같이 든다 — 스키마를 읽기 전이라
+     *          엔진 스키마가 쓰는 이름이 검사를 통과한다. 그 폴더를 짓지 않는 구성(전용 서버의 오디오)은 등록자도 없어 사용자 설정이 그 기능을 모른다.
+     *          `AudioBackendRegistrar` 와 같은 모양이다 — 정적 초기화 때 머리에 이어 붙는다.
+     */
+    struct SW_API UserSettingsHandlerSetRegistrar
+    {
+        /** @brief 묶음의 핸들러 · 공급자를 @p registry 에 올리고 구독을 @p outListRegistration 에 더합니다. */
+        using RegisterFunction = void ( * )( UserSettingsHandlerRegistry& registry, vector<Subscription>& outListRegistration );
+
+        const utf8*                            _pName;
+        RegisterFunction                       _pRegister;
+        const UserSettingsHandlerSetRegistrar* _pNext;
+
+        UserSettingsHandlerSetRegistrar( const utf8* pName, RegisterFunction pRegister );
+        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
+        static const UserSettingsHandlerSetRegistrar* getHead();
+        /** @brief 목록의 묶음을 모두 @p registry 에 올립니다. */
+        static void registerAll( UserSettingsHandlerRegistry& registry, vector<Subscription>& outListRegistration );
+    };
+} // namespace sw
+
+/**
+ * @brief 사용자 설정 핸들러 묶음 @p Name 을 등록합니다. @p pRegister 는 `UserSettingsHandlerSetRegistrar::RegisterFunction` 입니다.
+ *        그 기능의 `.cpp` 의 `namespace sw` 안, 익명 네임스페이스 밖에서 한 번 씁니다.
+ */
+#define SW_USER_SETTINGS_HANDLER_SET( Name, pRegister )                                 \
+    const ::sw::UserSettingsHandlerSetRegistrar s_userSettingsHandlerSetRegistrar##Name \
+    {                                                                                   \
+        #Name, pRegister                                                                \
+    }

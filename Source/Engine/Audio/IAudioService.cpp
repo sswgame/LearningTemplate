@@ -19,7 +19,9 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw
 {
@@ -33,6 +35,8 @@ namespace sw
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
             /** @brief 오프라인 렌더 덤프가 쌓는 최대 길이(초)입니다. 7.1 이면 약 110 MB 이며, 넘는 부분은 쌓지 않습니다. */
             static constexpr uint32 kMaxDumpSeconds = 60;
+            /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
+            static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
 
             /** @brief 장치 백엔드 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
             static const AudioBackendRegistrar*& getRegistrarHead()
@@ -97,6 +101,7 @@ namespace sw
 
     IAudioService::IAudioService()
         : _pEngine{ make_unique<AudioEngine>() }
+        , _soundPlayer{ *this }
         , _listBusVolume{}
         , _listOfflineBlock{}
         , _listDumpSample{}
@@ -179,6 +184,20 @@ namespace sw
         _bInitialized = SW_TRUE;
         SW_LOG_INFO_ID( "AudioService.InitializedChannels", "Initialized (%#, %# channels).", _bOutputOpen ? "device output" : "offline - no device", AudioChannelLayoutUtil::getChannelCount( layout ) );
         return true;
+    }
+
+    bool IAudioService::tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode )
+    {
+        using Internal = IAudioServiceInternal;
+        for ( uint32 modeIndex = 0; modeIndex < SW_COUNT_OF( Internal::kArrSpeakerModeName ); ++modeIndex )
+        {
+            if ( StringUtil::equals( text, Internal::kArrSpeakerModeName[modeIndex] ) )
+            {
+                outMode = static_cast<AudioSpeakerMode>( modeIndex );
+                return true;
+            }
+        }
+        return false;
     }
 
     bool IAudioService::resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout )
@@ -518,13 +537,13 @@ namespace sw
 {
     span<const utf8* const> IAudioService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ModuleUnloadStageSubsystem::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;
     }
 
     span<const utf8* const> IAudioService::getSubsystemDependents() const
     {
-        static constexpr const utf8* kArrDependent[] = { SceneManager::kSubsystemName };
+        static constexpr const utf8* kArrDependent[] = { SceneManager::kSubsystemName, UserSettingsManager::kSubsystemName };
         return kArrDependent;
     }
 
@@ -583,14 +602,15 @@ namespace sw
 
 namespace sw
 {
-    // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.
+    // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)은 장치를 열지 않는다 — 소리 요청을 받아 버린다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_UNBUILT_ENGINE_FOLDERS`).
     SW_ENGINE_SERVICE_SUBSYSTEM( IAudioService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         SW_MEMORY_SCOPE( Audio );
-        engine::StartupSetup& setup = *build._pStartupSetup;
-        if ( setup._audio == nullptr )
-            setup._audio = setup._bDedicatedServer ? IAudioService::createNull() : IAudioService::create();
-        build._pStartupParts->_pAudio = &scope.addSubsystem( std::move( setup._audio ) );
+        IAudioService& audio                = scope.addSubsystem( build._pStartupSetup->_bDedicatedServer ? IAudioService::createNull() : IAudioService::create() );
+        build._pStartupParts->_pAudioDriver = &audio;
+        const bool bExposed                 = scope.expose<IEngineAudioDriver>( audio ) && scope.exposeMember<ISoundPlayer>( audio, audio.getSoundPlayer() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
     } );
 } // namespace sw
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Audio/LipSyncImport.h"
+#include "Engine/Animation/Facial/LipSyncImport.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
@@ -8,11 +8,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"
-#include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 
 namespace sw
@@ -30,6 +28,13 @@ namespace sw
 
     uint32 LipSyncImport::importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount )
     {
+        IVoiceDecoder* const pDecoder = IVoiceDecoder::find();
+        if ( pDecoder == nullptr )
+        {
+            SW_LOG_ERROR_ID( "LipSync.NoVoiceDecoder", "Lip sync import needs the audio decoder - this build has no audio (the client build imports)" );
+            ++outFailedCount;
+            return 0;
+        }
         vector<string> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, "", listFile ) == false )
         {
@@ -45,21 +50,16 @@ namespace sw
             const string relative   = normalized.substr( MathUtil::min( normalizedRoot.size() + 1, normalized.size() ) );
             if ( isVoiceAudio( relative ) == false )
                 continue;
-            vector<uint8> bytes;
-            AudioPcm      pcm;
-            AudioClipData clip;
-            const bool    bDecodeFailed = AssetIO::readBinaryAsset( AssetID{ relative }, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
-                                       AudioClipData::convertPcm( pcm, clip ) == false;
-            if ( bDecodeFailed )
+            vector<float32> listSample;
+            uint32          sampleRate = 0;
+            if ( pDecoder->decodeMono( AssetID{ relative }, listSample, sampleRate ) == false )
             {
                 SW_LOG_ERROR_ID( "LipSync.DecodeFailed", "Lip sync import could not decode '%#'", relative.c_str() );
                 ++outFailedCount;
                 continue;
             }
-            vector<float32> listSample;
-            clip.copyMonoSamples( listSample );
             VisemeTrack track;
-            LipSyncAnalyzer::analyze( listSample, clip._sampleRate, settings, track );
+            LipSyncAnalyzer::analyze( listSample, sampleRate, settings, track );
             const string                      trackPath = VisemeTrack::makePathForAudio( normalized );
             const std::optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
             if ( trackFile.has_value() == false || track.saveToFile( *trackFile ) == false )

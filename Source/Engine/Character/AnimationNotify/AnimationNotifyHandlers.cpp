@@ -5,11 +5,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/YawUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Scene/MotionWarpingComponent.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Audio/Component/SceneAudio.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Hit/CharacterHit.h"
@@ -22,7 +21,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 
 namespace sw
 {
@@ -46,13 +47,13 @@ namespace sw
             }
 
             /**
-             * @brief 알림을 받은 오브젝트가 사는 씬의 오디오 서비스입니다. 없으면 nullptr 입니다.
-             * @details 처리기는 기본 레지스트리(프로세스 수명)에 한 번 등록되므로 서비스를 들고 있지 않는다. 씬이 받은 것을 그때그때 씬에서 읽는다.
+             * @brief 알림을 받은 오브젝트가 사는 씬이 받은 소리 창구입니다. 없으면(전용 서버 — 오디오를 짓지 않는다) nullptr 입니다.
+             * @details 처리기는 기본 레지스트리(프로세스 수명)에 한 번 등록되므로 창구를 들고 있지 않는다. 씬이 받은 엔진 범위에서 그때그때 찾는다.
              */
-            static IAudioService* findAudioService( const AnimationNotifyContext& context )
+            static ISoundPlayer* findSoundPlayer( const AnimationNotifyContext& context )
             {
                 GameObjectManager* pManager = context._owner.getManager();
-                return pManager != nullptr ? pManager->getSubsystem<sw::SceneAudio>().findAudioService() : nullptr;
+                return pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
             }
 
             /** @class PlaySoundHandler @brief 소켓 위치에서 소리를 냅니다(현재 오디오는 위치를 받지 않으므로, 위치는 기록에만 남깁니다). */
@@ -66,9 +67,9 @@ namespace sw
                     static const hashed_string s_socket( "socket" );
                     const string               sound    = context._entry.getTextParam( s_sound );
                     const float3               position = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
-                    IAudioService*             pAudio   = findAudioService( context );
-                    if ( pAudio != nullptr )
-                        (void)pAudio->play( AssetID{ sound } );
+                    ISoundPlayer*              pSound   = findSoundPlayer( context );
+                    if ( pSound != nullptr )
+                        (void)pSound->play( AssetID{ sound }, hashed_string{} );
                     record( context, hashed_string( sound ), position, 0, AnimationNotifyPhase::Instant );
                 }
 
@@ -149,10 +150,10 @@ namespace sw
                         record( context, hashed_string{}, foot, 0, AnimationNotifyPhase::Instant );
                         return;
                     }
-                    const string   sound  = context._entry.getTextParam( s_sound );
-                    IAudioService* pAudio = findAudioService( context );
-                    if ( sound.empty() == false && pAudio != nullptr )
-                        (void)pAudio->play( AssetID{ StringUtil::replace( sound, "{surface}", sample._pKind->_footstep.c_str() ) } );
+                    const string  sound  = context._entry.getTextParam( s_sound );
+                    ISoundPlayer* pSound = findSoundPlayer( context );
+                    if ( sound.empty() == false && pSound != nullptr )
+                        (void)pSound->play( AssetID{ StringUtil::replace( sound, "{surface}", sample._pKind->_footstep.c_str() ) }, hashed_string{} );
                     // 발자국 방향은 몸의 앞(루트의 +Z)이다 — 발 뼈의 축은 리그마다 다르다.
                     float4x4 root;
                     (void)context._component.findSocketWorldTransform( hashed_string{}, root ); // 빈 이름은 루트 변환을 담고 false 다(선언 설명)

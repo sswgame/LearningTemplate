@@ -1,6 +1,6 @@
 /**
  * @file UserSettingsEngineHandlers.h
- * @brief 엔진이 등록하는 사용자 설정 핸들러(오디오 버스, 입력, 언어, 화면)와 화면 요청(`DisplaySettingsRequest`)을 정의합니다.
+ * @brief 엔진이 등록하는 사용자 설정 핸들러(입력, 언어, 화면)와 화면 요청(`DisplaySettingsRequest`)을 정의합니다. 오디오(`audio.*`)는 오디오 폴더가 묶음으로 올린다(`AudioUserSettingsHandlers`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -15,11 +15,8 @@
 
 namespace sw
 {
-    enum class AudioSpeakerMode : uint8;
-
     class CommandLineManager;
     class GlobalVariableManager;
-    class IAudioService;
     class InputMap;
     class LocalizationManager;
 
@@ -29,7 +26,6 @@ namespace sw
         GlobalVariableManager*    _pGlobalVariableManager{ nullptr };
         const CommandLineManager* _pCommandLineManager{ nullptr }; ///< 있으면 명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다)
         InputMap*                 _pInputMap{ nullptr };
-        IAudioService*            _pAudioService{ nullptr };
         LocalizationManager*      _pLocalizationManager{ nullptr };
     };
 } // namespace sw
@@ -60,13 +56,13 @@ namespace sw
      * @class UserSettingsEngineHandlers
      * @brief 엔진 핸들러 모음입니다. `UserSettingsManager` 가 하나 가지고 레지스트리에 등록합니다.
      * @details 이름(스키마의 `target="handler:…"`):
-     *          - `audio.busVolume`(param 은 버스), `audio.mute`, `audio.speakerMode`(`auto`/`stereo`/`surround51`/`surround71`/`headphones`)
      *          - `input.mouseSensitivity`, `input.gamepadSensitivity`, `input.invertX`, `input.invertY`, `input.stickDeadzone`,
      *            `input.toggleMode`(param 은 액션, 값은 `hold`/`toggle`), `input.keyBinding`(키 바인딩 설정의 기본 대상)
      *          - `localization.language`(빈 값은 게임 기본 언어 그대로)
      *          - `display.windowMode`(`windowed`/`borderless`), `display.resolution`(`<너비>x<높이>`), `display.vsync`
      *          - `resource.tag`(param 은 리소스 태그 축 — `graphics.quality` 가 `quality` 축을 켠다. 리소스의 `<_when _if="quality.low">` 가 읽는다)
      *          선택지 공급자: `localization.languages`(읽은 언어 목록), `display.resolutions`(기본 모니터가 내는 해상도 — 못 읽으면 스키마의 고정 선택지).
+     *          기능 폴더의 묶음(`UserSettingsHandlerSetRegistrar` — 오디오의 `audio.busVolume` · `audio.mute` · `audio.speakerMode`)을 이 뒤에 함께 올린다.
      */
     class SW_API UserSettingsEngineHandlers
     {
@@ -96,13 +92,8 @@ namespace sw
         [[nodiscard]] static bool tryParseResolution( string_view text, uint32& outWidth, uint32& outHeight );
         /** @brief `windowed` 와 `borderless` 를 읽습니다. */
         [[nodiscard]] static bool tryParseWindowMode( string_view text, WindowDisplayMode& outMode );
-        /** @brief `auto` · `stereo` · `surround51` · `surround71` · `headphones` 를 읽습니다. */
-        [[nodiscard]] static bool tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode );
 
     private:
-        [[nodiscard]] bool applyBusVolume( const UserSettingApplyParams& context );
-        [[nodiscard]] bool applyMute( const UserSettingApplyParams& context );
-        [[nodiscard]] bool applySpeakerMode( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyMouseSensitivity( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyGamepadSensitivity( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyInvertX( const UserSettingApplyParams& context );
@@ -122,7 +113,6 @@ namespace sw
         static string formatResolution( int32 width, int32 height );
 
         static bool isToggleModeName( string_view value );
-        static bool isSpeakerModeName( string_view value );
         static bool isWindowModeName( string_view value );
         static bool isResolutionText( string_view value );
 

@@ -20,8 +20,10 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
+#include "Engine/Audio/AudioSoundPlayer.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Presentation/IEngineAudioDriver.h"
 
 namespace sw
 {
@@ -53,8 +55,10 @@ namespace sw
     /**
      * @class IAudioService
      * @brief 오디오 재생과 관리를 위한 서비스입니다. 백엔드(XAudio2, Null)는 출력 장치를 열고 닫는 일만 재정의합니다.
+     * @details 오디오 밖(엔진 루프 · 애니메이션 · 시퀀서 · 게임 코드)은 이 클래스를 모르고 창구로 부른다 — 프레임은 `IEngineAudioDriver`, 소리는 `ISoundPlayer`(멤버 `AudioSoundPlayer`),
+     *          볼륨 · 음소거 · 스피커 모드는 사용자 설정 핸들러(`AudioUserSettingsHandlers`). 전용 서버는 오디오 폴더를 짓지 않아 칸이 모두 빈다.
      */
-    class SW_API IAudioService : public ISubsystem
+    class SW_API IAudioService : public ISubsystem, public IEngineAudioDriver
     {
     public:
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없거나 틀리면 `initialize` 가 실패합니다(코드 그래프로 대신하지 않습니다). */
@@ -91,7 +95,7 @@ namespace sw
         void                    shutdownSubsystem() override { shutdown(); }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
-        /** @brief 씬 매니저는 오디오 뒤에 선다 — 낮은 층인 씬이 기능 이름을 적지 않게 기능 쪽이 적는다. */
+        /** @brief 씬 매니저 · 사용자 설정은 오디오 뒤에 선다 — 오디오를 모르는 쪽이 기능 이름을 적지 않게 기능 쪽이 적는다(서버는 오디오를 짓지 않는다). */
         span<const utf8* const>    getSubsystemDependents() const override;
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Audio;
         /** @brief 초기화가 끝났는지 반환합니다. */
@@ -115,8 +119,8 @@ namespace sw
          */
         [[nodiscard]] static bool resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout );
 
-        /** @brief 프레임마다 부릅니다. 장치가 없으면 흐른 시간만큼 엔진을 렌더해 재생을 진행합니다. */
-        void update( float32 deltaSeconds );
+        /** @brief 프레임마다 부릅니다(`IEngineAudioDriver`). 장치가 없으면 흐른 시간만큼 엔진을 렌더해 재생을 진행합니다. */
+        void update( float32 deltaSeconds ) override;
 
         /**
          * @brief 클립 하나를 비동기로 재생합니다. 디코드는 워커에서 합니다.
@@ -168,6 +172,11 @@ namespace sw
         AudioEngine& getEngine() { return *_pEngine; }
         /** @brief 엔진입니다. */
         const AudioEngine& getEngine() const { return *_pEngine; }
+        /** @brief 소리 창구입니다(기동 단계가 `ISoundPlayer` 칸으로 건다). */
+        AudioSoundPlayer& getSoundPlayer() { return _soundPlayer; }
+
+        /** @brief `auto` · `stereo` · `surround51` · `surround71` · `headphones` 를 읽습니다(사용자 설정 `audio.speakerMode` 의 값). */
+        [[nodiscard]] static bool tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode );
 
         /** @brief 전체 마스터 볼륨을 설정합니다. 0~1 밖의 값은 잘립니다. */
         void setMasterVolume( float32 volume );
@@ -230,6 +239,7 @@ namespace sw
 
     private:
         unique_ptr<AudioEngine> _pEngine;          /**< 오디오 엔진입니다. */
+        AudioSoundPlayer        _soundPlayer;      /**< 소리 창구입니다(`ISoundPlayer`). */
         vector<AudioBusVolume>  _listBusVolume;    /**< 세 기본 버스 밖의 버스 볼륨입니다. */
         vector<float32>         _listOfflineBlock; /**< 장치가 없을 때 렌더하는 버퍼입니다. */
         vector<float32>         _listDumpSample;   /**< 덤프할 오프라인 렌더(채널 교차)입니다. `gv_audioDumpPath` 가 있을 때만 쌓습니다. */
@@ -248,7 +258,7 @@ namespace sw
         uint8                   _bInitialized : 1; /**< initialize 가 끝났는지입니다. */
     };
 
-    SW_SERVICE_SLOT( IAudioService, Required );
+    SW_SERVICE_SLOT( IAudioService, Optional );
 } // namespace sw
 
 namespace sw

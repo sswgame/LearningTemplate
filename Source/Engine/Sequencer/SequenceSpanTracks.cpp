@@ -4,19 +4,19 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/Component/AudioEmitterComponent.h"
-#include "Engine/Audio/Component/SceneAudio.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/ISubtitleSink.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 
 namespace sw
 {
@@ -67,35 +67,37 @@ namespace sw
                 context._pState->_clip.reset();
             }
 
-            static AudioEngine* findAudioEngine( const SequenceSpanContext& context )
+            /** @brief 시퀀스가 도는 씬이 받은 소리 창구입니다. 없으면(전용 서버 — 오디오를 짓지 않는다 · 하네스) nullptr 입니다. */
+            static ISoundPlayer* findSoundPlayer( const SequenceSpanContext& context )
             {
-                return context._pManager != nullptr ? context._pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
+                return context._pManager != nullptr ? locateSubsystem<ISoundPlayer>( context._pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
             }
 
             static void enterAudio( const SequenceSpanContext& context )
             {
+                ISoundPlayer* pSound = findSoundPlayer( context );
+                if ( pSound == nullptr )
+                    return; // 들을 곳이 없는 구성이다
                 const hashed_string eventName( context._pItem->_sound.c_str() );
-                // 바인딩이 있으면 그 자리에서 낸다(에미터가 없으면 데이터 결함이다). 없으면 화면 소리(에미터 0)다.
+                // 바인딩이 있으면 그 오브젝트의 에미터에서 낸다(에미터가 없으면 창구가 데이터 결함으로 남긴다). 없으면 화면 소리다.
                 if ( context._pItem->_binding != kSequenceNoBinding )
                 {
-                    AudioEmitterComponent* pEmitter = context._pTarget != nullptr ? context._pTarget->getComponent<AudioEmitterComponent>() : nullptr;
-                    if ( pEmitter == nullptr )
+                    if ( context._pTarget == nullptr )
                     {
-                        SW_LOG_ERROR_ID( "SequenceSpan.AudioNoEmitter", "Sequence audio '%#' - the bound object has no AudioEmitterComponent", context._pItem->_name );
+                        SW_LOG_ERROR_ID( "SequenceSpan.AudioNoTarget", "Sequence audio '%#' - the binding resolved to no object", context._pItem->_name );
                         return;
                     }
-                    context._pState->_playingID = pEmitter->post( eventName );
+                    context._pState->_playingID = pSound->postEventOn( *context._pTarget, eventName );
                     return;
                 }
-                AudioEngine* pEngine        = findAudioEngine( context );
-                context._pState->_playingID = pEngine != nullptr ? pEngine->postEvent( eventName ) : 0;
+                context._pState->_playingID = pSound->postEvent( eventName );
             }
 
             static void leaveAudio( const SequenceSpanContext& context )
             {
-                AudioEngine* pEngine = findAudioEngine( context );
-                if ( pEngine != nullptr && context._pState->_playingID != 0 )
-                    pEngine->stop( context._pState->_playingID, -1.0f ); // 음수는 이벤트의 페이드다
+                ISoundPlayer* pSound = findSoundPlayer( context );
+                if ( pSound != nullptr )
+                    pSound->stop( context._pState->_playingID, -1.0f ); // 음수는 이벤트의 페이드다
                 context._pState->_playingID = 0;
             }
 

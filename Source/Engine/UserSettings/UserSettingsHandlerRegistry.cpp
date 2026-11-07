@@ -8,6 +8,47 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct UserSettingsHandlerRegistryInternal
+        {
+            /** @brief 핸들러 묶음 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
+            static const UserSettingsHandlerSetRegistrar*& getRegistrarHead()
+            {
+                static const UserSettingsHandlerSetRegistrar* s_pHead = nullptr;
+                return s_pHead;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    UserSettingsHandlerSetRegistrar::UserSettingsHandlerSetRegistrar( const utf8* pName, RegisterFunction pRegister )
+        : _pName{ pName }
+        , _pRegister{ pRegister }
+        , _pNext{ nullptr }
+    {
+        _pNext                                                  = UserSettingsHandlerRegistryInternal::getRegistrarHead();
+        UserSettingsHandlerRegistryInternal::getRegistrarHead() = this;
+    }
+
+    const UserSettingsHandlerSetRegistrar* UserSettingsHandlerSetRegistrar::getHead()
+    {
+        return UserSettingsHandlerRegistryInternal::getRegistrarHead();
+    }
+
+    void UserSettingsHandlerSetRegistrar::registerAll( UserSettingsHandlerRegistry& registry, vector<Subscription>& outListRegistration )
+    {
+        for ( const UserSettingsHandlerSetRegistrar* pRegistrar = getHead(); pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
+        {
+            pRegistrar->_pRegister( registry, outListRegistration );
+        }
+    }
+} // namespace sw
+
+namespace sw
+{
     UserSettingsHandlerRegistry::UserSettingsHandlerRegistry()
         : _listHandler{}
         , _listProvider{}

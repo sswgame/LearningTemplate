@@ -16,12 +16,12 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Animation/Facial/LipSyncImport.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackCooker.h"
-#include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -237,7 +237,8 @@ namespace sw
             }
 
             /**
-             * @brief 전용 서버가 하는 헤드리스 작업은 씬 · 팩 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 판정 · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
+             * @brief 전용 서버가 하는 헤드리스 작업은 씬 · 팩 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 판정 · 원본 임포트(에디터 모듈) · 립싱크 임포트(음성 디코드 — 서버는 오디오를 짓지 않는다)는
+             *        App 의 일이다 — 조용히 넘기지 않고 실패한다.
              * @return 서버에 주어진 클라이언트 전용 작업이 있어 실패로 막았으면 true 입니다.
              */
             [[nodiscard]] static bool rejectClientOnlyTask( CommandLineManager& commandLine, bool bDedicatedServer, HeadlessTaskState& inoutState )
@@ -255,6 +256,7 @@ namespace sw
                     CommandLineArgument::CHECK_MODELS,
                     CommandLineArgument::IMPORT_HEIGHTFIELDS,
                     CommandLineArgument::CHECK_HEIGHTFIELDS,
+                    CommandLineArgument::IMPORT_LIPSYNC,
                 };
                 for ( const CommandLineArgument argument : kArrClientOnlyTask )
                 {

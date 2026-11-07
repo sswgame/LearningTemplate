@@ -20,7 +20,6 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
@@ -28,9 +27,6 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/Cache/CacheStatsUtil.h"
-#include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioService.h"
-#include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -79,6 +75,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Presentation/IEngineAudioDriver.h"
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
@@ -139,7 +136,7 @@ namespace sw
         , _pFontService{ nullptr }
         , _pUIDriver{ nullptr }
         , _pInputManager{ nullptr }
-        , _pAudioService{ nullptr }
+        , _pAudioDriver{ nullptr }
         , _pSceneManager{ nullptr }
     {
     }
@@ -246,7 +243,7 @@ namespace sw
             _pConfigManager             = startupParts._pConfigManager;
             _configReloadedSubscription = _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );
             _pInputManager              = startupParts._pInputManager;
-            _pAudioService              = startupParts._pAudio;
+            _pAudioDriver               = startupParts._pAudioDriver;
             _pSceneManager              = startupParts._pSceneManager;
             _pFontService               = startupParts._pFontService;
             _pUIDriver                  = startupParts._pUIDriver;
@@ -377,7 +374,7 @@ namespace sw
         _pFontService   = nullptr;
         _pUIDriver      = nullptr;
         _pInputManager  = nullptr;
-        _pAudioService  = nullptr;
+        _pAudioDriver   = nullptr;
         _pSceneManager  = nullptr;
         _pConfigManager = nullptr;
         // 서비스 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
@@ -505,8 +502,8 @@ namespace sw
                 _pSceneManager->updateTransitions();
             if ( _pEventDispatcher != nullptr )
                 _pEventDispatcher->processEvents();
-            if ( _pAudioService != nullptr )
-                _pAudioService->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
+            if ( _pAudioDriver != nullptr )
+                _pAudioDriver->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
         }
     }
 
@@ -556,10 +553,10 @@ namespace sw
         const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         const IWindow* const             pMainWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         EngineUIFrame                    frame{};
-        frame._width                = vpWidth;
-        frame._height               = vpHeight;
-        frame._pointerOrigin        = int2{ mainOutput._windowX, mainOutput._windowY };
-        frame._contentScale         = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
+        frame._width         = vpWidth;
+        frame._height        = vpHeight;
+        frame._pointerOrigin = int2{ mainOutput._windowX, mainOutput._windowY };
+        frame._contentScale  = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
         // 플랫폼 안전 여백(노치 · 시스템 바)은 창 전체에 그릴 때만 맞다 — 에디터 게임 뷰(창 안의 이미지)는 창의 여백과 무관하다.
         const bool bWholeWindow     = pMainWindow != nullptr && pMainWindow->getWidth() == vpWidth && pMainWindow->getHeight() == vpHeight;
         frame._safeInsets           = bWholeWindow ? pMainWindow->getSafeAreaInsets() : float4{};

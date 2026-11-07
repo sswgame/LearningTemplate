@@ -93,9 +93,10 @@ endif()
 
 set(SW_UNBUILT_ENGINE_FOLDERS "")
 if(SW_TARGET_TYPE STREQUAL "Server")
-	# 전용 서버는 그리지도 화면을 띄우지도 않는다 — 렌더러는 `IEngineRenderDriver`, 런타임 UI 는 `IEngineUIDriver` 와 게임 코드의 창구(Engine/Presentation ·
-	# GameFramework 의 Presentation)로만 이어진다. 클라이언트 전용 소스(`Client/`)도 짓지 않는다(`SW_CLIENT_ONLY_SOURCE_PATTERNS`).
-	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Renderer" "UI")
+	# 전용 서버는 그리지도 화면을 띄우지도 소리를 내지도 않는다 — 렌더러는 `IEngineRenderDriver`, 런타임 UI 는 `IEngineUIDriver`, 오디오는 `IEngineAudioDriver` ·
+	# `ISoundPlayer` · `IVoiceDecoder` 와 게임 코드의 창구(Engine/Presentation · GameFramework 의 Presentation)로만 이어진다. 클라이언트 전용 소스(`Client/`)도
+	# 짓지 않는다(`SW_CLIENT_ONLY_SOURCE_PATTERNS`). 언리얼 데디케이티드 서버는 오디오 모듈을 싣고 장치만 만들지 않는다 — 여기는 코드를 싣지 않는다(기억).
+	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Audio" "Renderer" "UI")
 endif()
 
 if(SW_SHIPPING_BUILD)

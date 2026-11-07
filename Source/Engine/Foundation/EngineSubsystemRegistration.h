@@ -43,7 +43,7 @@ namespace sw
     class FontService;
     class FrameRendererSubsystem;
     class GameNetSession;
-    class IAudioService;
+    class IEngineAudioDriver;
     class IEngineRenderDriver;
     class InputManager;
     class ReflectionSubsystem;
@@ -67,7 +67,7 @@ namespace sw
 
         /**
          * @brief 기동 단계 범위의 호스트별 값입니다.
-         * @details `_reflection` · `_defaultAssets` · `_audio` 는 본문만 다른 대역을 넘기는 자리다(하네스). 비어 있으면 엔진의 클래스를 만든다.
+         * @details `_reflection` · `_defaultAssets` 는 본문만 다른 대역을 넘기는 자리다(하네스). 비어 있으면 엔진의 클래스를 만든다.
          *          넘기는 쪽이 제 메모리 용도(`SW_MEMORY_SCOPE`) 아래에서 만든다. 형식은 앞으로 선언만 한다 — 값을 만들고 없애는 쪽(`EngineSubsystemSet.h` 를 include 하는
          *          호스트)과 그 자리를 비우는 공장(그 서브시스템의 .cpp)이 완전한 형식을 본다.
          */
@@ -78,7 +78,6 @@ namespace sw
             bool                                     _bRenderer{ false };           ///< 창 · RHI · 렌더러 · 렌더 스레드 · 씬 디바이스를 둔다(전용 서버 역할은 끈다 — `Engine::initialize`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             unique_ptr<ReflectionSubsystem>          _reflection{};
             unique_ptr<EngineDefaultAssetsSubsystem> _defaultAssets{};
-            unique_ptr<IAudioService>                _audio{};
         };
 
         /** @brief 기동 단계 범위에서 호스트가 직접 쓰는 서브시스템입니다(범위가 소유한다). 렌더 쪽은 `_bRenderer` 가 꺼졌거나 서버 타깃이면 nullptr 입니다. */
@@ -91,7 +90,7 @@ namespace sw
             FrameRendererSubsystem*   _pFrameRendererSubsystem{ nullptr };
             RenderThreadSubsystem*    _pRenderThread{ nullptr };
             InputManager*             _pInputManager{ nullptr };
-            IAudioService*            _pAudio{ nullptr };
+            IEngineAudioDriver*       _pAudioDriver{ nullptr }; ///< 엔진 루프의 오디오 창구(`IAudioService`). 서버는 오디오를 짓지 않아 비어 있다
             SceneManager*             _pSceneManager{ nullptr };
             UserSettingsManager*      _pUserSettings{ nullptr };
             FontService*              _pFontService{ nullptr };

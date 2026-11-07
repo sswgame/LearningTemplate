@@ -12,16 +12,15 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 
 namespace sw
 {
@@ -323,16 +322,13 @@ namespace sw
         }
         else
         {
-            vector<uint8> bytes;
-            AudioPcm      pcm;
-            AudioClipData clip;
-            const bool    bAudioDecoded = AssetIO::readBinaryAsset( assetID, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
-                                       AudioClipData::convertPcm( pcm, clip );
-            if ( bAudioDecoded )
+            // 음성 디코드는 오디오의 창구다 — 오디오를 짓지 않는 구성(전용 서버)은 트랙만 쓴다.
+            IVoiceDecoder*  pDecoder = IVoiceDecoder::find();
+            vector<float32> listSample;
+            uint32          sampleRate = 0;
+            if ( pDecoder != nullptr && pDecoder->decodeMono( assetID, listSample, sampleRate ) )
             {
-                vector<float32> listSample;
-                clip.copyMonoSamples( listSample );
-                speakSamples( std::move( listSample ), clip._sampleRate );
+                speakSamples( std::move( listSample ), sampleRate );
                 bStarted = true;
             }
         }
@@ -341,11 +337,11 @@ namespace sw
             SW_LOG_ERROR_ID( "FacialAnimation.NeitherVisemeTrackNor", "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
             return false;
         }
-        // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 오디오 서비스로 낸다(`SceneEngineServices::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).
+        // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 소리 창구로 낸다(`SceneEngineServices::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        IAudioService*           pAudio   = pManager != nullptr ? locateSubsystem<IAudioService>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
-        if ( pAudio != nullptr && pAudio->isInitialized() )
-            (void)pAudio->play( assetID );
+        ISoundPlayer*            pSound   = pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+        if ( pSound != nullptr )
+            (void)pSound->play( assetID, hashed_string{} );
         return true;
     }
 

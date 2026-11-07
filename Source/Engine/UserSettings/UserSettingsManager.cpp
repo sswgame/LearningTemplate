@@ -14,7 +14,6 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -1094,7 +1093,6 @@ namespace sw
         targets._pGlobalVariableManager = &engine::getSubsystem<GlobalVariableManager>();
         targets._pCommandLineManager    = &engine::getSubsystem<CommandLineManager>();
         targets._pInputMap              = &engine::getSubsystem<InputManager>().getInputMap();
-        targets._pAudioService          = &engine::getSubsystem<IAudioService>();
         targets._pLocalizationManager   = &engine::getSubsystem<LocalizationManager>();
         initialize( targets );
 
@@ -1137,8 +1135,8 @@ namespace sw
 
     span<const utf8* const> UserSettingsManager::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { IAudioService::kSubsystemName, InputManager::kSubsystemName, AssetManager::kSubsystemName,
-                                                          PackEngineSettingsSubsystem::kSubsystemName };
+        // 오디오는 이 뒤에 서지 않는다 — 오디오가 스스로 앞에 선다고 적는다(`IAudioService::getSubsystemDependents`, 서버는 오디오를 짓지 않는다).
+        static constexpr const utf8* kArrDependency[] = { InputManager::kSubsystemName, AssetManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName };
         return kArrDependency;
     }
 

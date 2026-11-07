@@ -123,7 +123,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "SaveTip" ) );
 
-        IAudioService& audio       = editor::getSubsystem<IAudioService>(); // 전용 서버도 널 서비스가 있어 늘 있다
+        IAudioService& audio       = editor::getSubsystem<IAudioService>(); // 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다)
         const bool     bAudioReady = audio.isInitialized();
         if ( bAudioReady )
             _model.refreshPreview( audio.getEngine() );

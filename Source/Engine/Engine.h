@@ -39,7 +39,7 @@ namespace sw
     class FontService;
     class FrameProfiler;
     class GlobalVariableManager;
-    class IAudioService;
+    class IEngineAudioDriver;
     class IEngineRenderDriver;
     class InputManager;
     class InputMap;
@@ -246,8 +246,8 @@ namespace sw
         IEngineUIDriver* _pUIDriver; ///< 런타임 UI 의 프레임 단계(없으면 nullptr — 전용 서버)
         /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 디버그 키 맵 · 관찰자 문맥이 쓴다. */
         InputManager* _pInputManager;
-        /** @brief 서브시스템 `Audio` 의 오디오 서비스입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 갱신하고 플레이어 설정이 볼륨을 넣는다. */
-        IAudioService* _pAudioService;
+        /** @brief 오디오의 프레임 창구입니다(`_startup` 소유 — 빌려 쓴다). 오디오를 짓지 않는 구성(전용 서버)은 nullptr 입니다. */
+        IEngineAudioDriver* _pAudioDriver;
         /** @brief 서브시스템 `Scene` 의 씬 매니저입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 전환 · 틱 · 디버그 그리기 · 패킷이 쓴다. */
         SceneManager* _pSceneManager;
     };

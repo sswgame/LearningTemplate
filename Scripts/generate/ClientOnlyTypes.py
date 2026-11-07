@@ -3,9 +3,9 @@
 """
 Scripts/generate/ClientOnlyTypes.py
 
-전용 서버가 짓지 않는 소스(`Source/Engine/UI/` · `…/Client/`)의 리플렉션 형식 이름을 표 `Config/Engine/ClientOnlyTypes.generated.json` 으로 모은다.
+전용 서버가 짓지 않는 소스(`SW_UNBUILT_ENGINE_FOLDERS` 의 엔진 폴더 — 오디오 · 렌더러 · UI, `…/Client/`)의 리플렉션 형식 이름을 표 `Config/Engine/ClientOnlyTypes.generated.json` 으로 모은다.
 
-- 왜 표인가: 서버는 그 소스를 짓지 않아 형식을 모른다. 씬 · 프리팹에 HUD · 마커 · 월드 위젯 컴포넌트가 있으면 서버는 모르는 형식을 만나는데,
+- 왜 표인가: 서버는 그 소스를 짓지 않아 형식을 모른다. 씬 · 프리팹에 HUD · 마커 · 월드 위젯 · 소리(에미터 · 리스너 · 잔향 존) 컴포넌트가 있으면 서버는 모르는 형식을 만나는데,
   이름 바꾸기 · 빠진 모듈(오류)과 클라이언트 전용(정상)을 가르려면 이 이름들을 서버도 알아야 한다. 서버의 직렬화기는 표의 형식이면 만들지 않고 조용히
   건너뛴다(`ClientOnlyTypeTable` — 언리얼은 클래스를 서버도 지어 두고 액터를 띄우지 않는다. 여기는 클래스를 짓지 않으니 이름만 싣는다 — 기억).
 - 표를 저장소에 두는 까닭: 배포 서버가 그대로 싣고, 커밋 훅이 빌드 없이 낡음을 잡는다(`--check`).
@@ -27,21 +27,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.ServerUIIncludes import readServerUnbuiltFolders  # noqa: E402 — 짓지 않는 엔진 폴더의 정본은 BuildLayout.cmake 한 곳이다
 
 kTablePath = "Config/Engine/ClientOnlyTypes.generated.json"
 kReflectedType = re.compile(r"^\s*REFLECT\s*\([^\n]*\)\s*\n\s*(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", re.M)
 
 
-def isClientOnlySource(relativePath: str) -> bool:
-    """전용 서버가 짓지 않는 소스인가(`SW_UNBUILT_ENGINE_FOLDERS` 의 UI · `SW_CLIENT_ONLY_SOURCE_PATTERNS` 의 `/Client/`)."""
-    return relativePath.startswith("Source/Engine/UI/") or "/Client/" in relativePath
+def isClientOnlySource(relativePath: str, listUnbuiltFolder: list[str]) -> bool:
+    """전용 서버가 짓지 않는 소스인가(`SW_UNBUILT_ENGINE_FOLDERS` 의 엔진 폴더 · `SW_CLIENT_ONLY_SOURCE_PATTERNS` 의 `/Client/`)."""
+    return any(relativePath.startswith(f"Source/Engine/{folder}/") for folder in listUnbuiltFolder) or "/Client/" in relativePath
 
 
 def collectTypeNames(projectRoot: Path) -> list[str]:
+    listUnbuiltFolder = readServerUnbuiltFolders(projectRoot)
     setName: set[str] = set()
     for path in (projectRoot / "Source").rglob("*.h"):
         relativePath = path.relative_to(projectRoot).as_posix()
-        if "/Tests/" in relativePath or not isClientOnlySource(relativePath):
+        if "/Tests/" in relativePath or not isClientOnlySource(relativePath, listUnbuiltFolder):
             continue
         setName.update(kReflectedType.findall(path.read_text(encoding="utf-8")))
     return sorted(setName)

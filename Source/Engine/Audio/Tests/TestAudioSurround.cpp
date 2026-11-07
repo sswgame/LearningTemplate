@@ -11,7 +11,6 @@
 #include "Engine/Audio/AudioDownmix.h"
 #include "Engine/Audio/AudioPanner.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 
 namespace
 {
@@ -215,8 +214,8 @@ SW_TEST_CASE( AudioSurroundTest, SpeakerModeResolvesAgainstTheDevice )
     SW_EXPECT_TRUE( sw::IAudioService::resolveLayout( sw::AudioSpeakerMode::Headphones, stereo, layout ) && layout == sw::AudioChannelLayout::Binaural );
 
     sw::AudioSpeakerMode mode{ sw::AudioSpeakerMode::Auto };
-    SW_EXPECT_TRUE( sw::UserSettingsEngineHandlers::tryParseSpeakerMode( "surround71", mode ) && mode == sw::AudioSpeakerMode::Surround71 );
-    SW_EXPECT_FALSE( sw::UserSettingsEngineHandlers::tryParseSpeakerMode( "quad", mode ) );
+    SW_EXPECT_TRUE( sw::IAudioService::tryParseSpeakerMode( "surround71", mode ) && mode == sw::AudioSpeakerMode::Surround71 );
+    SW_EXPECT_FALSE( sw::IAudioService::tryParseSpeakerMode( "quad", mode ) );
 }
 
 /**

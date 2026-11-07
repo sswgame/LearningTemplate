@@ -1,8 +1,8 @@
 /**
  * @file GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h
  * @brief 게임 코드가 소리를 내는 한 줄 함수를 정의합니다.
- * @details 오디오 서비스가 없는 구성(헤드리스, 테스트)과 소리 창구가 없는 구성(전용 서버 — `IGameSoundPlayer`)에서는 조용히 false 나 0 을 반환한다.
- *          공유 게임 코드는 오디오 헤더를 읽지 않는다 — 오디오 엔진에 닿는 일은 클라이언트 전용 소스의 `IGameSoundPlayer` 구현이 한다.
+ * @details 소리 창구(엔진 서비스 `ISoundPlayer`)가 없는 구성(전용 서버 — 오디오를 짓지 않는다, 헤드리스 하네스)에서는 조용히 false 나 0 을 반환한다.
+ *          공유 게임 코드는 오디오 헤더를 읽지 않는다 — 오디오 엔진에 닿는 일은 오디오 폴더의 창구 구현(`AudioSoundPlayer`)이 한다(엔진 · 게임이 같은 창구 한 벌).
  *          소리는 이벤트 이름으로 낸다(`postEvent`, `postEventAt`). 무슨 클립을 어떻게 낼지는 게임의 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
  *          오브젝트에 붙어 따라 움직이거나 반복하는 소리는 `AudioEmitterComponent` 를 쓴다.
  */
@@ -15,15 +15,15 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IGameSoundPlayer.h"
 
 namespace sw
 {
     /**
      * @struct GameSound
-     * @brief 소리 창구(`IGameSoundPlayer`)를 찾고 널을 거르는 일을 게임마다 다시 쓰지 않도록 모은 것입니다.
+     * @brief 소리 창구(`ISoundPlayer`)를 게임 범위에서 찾고 널을 거르는 일을 게임마다 다시 쓰지 않도록 모은 것입니다.
      */
     struct SW_GF_API GameSound
     {
@@ -40,12 +40,12 @@ namespace sw
         /** @brief 이벤트 라이브러리를 내립니다. 게임을 종료하거나 모듈을 내릴 때 부릅니다. */
         static void unloadEvents( string_view path );
         /** @brief 이벤트를 2D(공간화 없음)로 냅니다. UI 와 플레이어 자신의 소리에 씁니다. */
-        static GameSoundPlayingID postEvent( const hashed_string& eventName );
+        static SoundPlayingID postEvent( const hashed_string& eventName );
         /**
          * @brief 이벤트를 월드 위치 하나에서 냅니다. 따라 움직이지 않는 원샷이며 폭발, 착탄, 죽음에 씁니다.
          * @details 한 번 쓰는 에미터를 만들어 그 위치에 두고, 소리가 끝나면 엔진이 지운다.
          */
-        static GameSoundPlayingID postEventAt( const hashed_string& eventName, const float3& position );
+        static SoundPlayingID postEventAt( const hashed_string& eventName, const float3& position );
         /**
          * @brief @p object 에 붙은 소리 자리(에미터) 모두에 파라미터 값을 겁니다. 반복 소리(탈것의 바람 · 마찰음)를 게임 값으로 움직입니다(언리얼 `SetFloatParameter` · Wwise RTPC 의 게임 오브젝트 범위).
          * @details 게임 스레드에서 부른다. 창구가 없으면(전용 서버 · 헤드리스) 아무것도 하지 않는다.
