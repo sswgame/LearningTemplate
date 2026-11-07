@@ -4,49 +4,32 @@
     "_listKit": [
         {
             "_name": "account",
-            "_listOption": [
-                {
-                    "_key": "ticketKeySecretEnvironment",
-                    "_value": "SW_SHOOTER3D_TICKET_KEY"
-                }
-            ]
+            "_settings": {
+                "_ticketKeySecretEnvironment": "SW_SHOOTER3D_TICKET_KEY"
+            }
         },
         {
-            "_name": "chat"
+            "_name": "chat",
+            "_settings": {
+                "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
+                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
+            }
         },
         {
             "_name": "economy",
-            "_listOption": [
-                {
-                    "_key": "currencyCatalog",
-                    "_value": "game/shooter3d/data/shooter3d.currencies.xml"
-                },
-                {
-                    "_key": "offerCatalog",
-                    "_value": "game/shooter3d/data/shooter3d.offers.xml"
-                },
-                {
-                    "_key": "receiptProvidersFile",
-                    "_value": "Config/Server/Online/Shooter3D.receipts.json"
-                },
-                {
-                    "_key": "receiptTrustFile",
-                    "_value": "Config/Server/Online/ca-bundle.pem"
-                }
-            ]
+            "_settings": {
+                "_currencyCatalog": "game/shooter3d/data/shooter3d.currencies.xml",
+                "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml",
+                "_receiptProvidersFile": "Config/Server/Online/Providers/Shooter3D.receipts.json",
+                "_receiptTrustFile": "Config/Server/Online/ca-bundle.pem"
+            }
         },
         {
             "_name": "liveops",
-            "_listOption": [
-                {
-                    "_key": "pushProvidersFile",
-                    "_value": "Config/Server/Online/Shooter3D.push.json"
-                },
-                {
-                    "_key": "pushTrustFile",
-                    "_value": "Config/Server/Online/ca-bundle.pem"
-                }
-            ]
+            "_settings": {
+                "_pushProvidersFile": "Config/Server/Online/Providers/Shooter3D.push.json",
+                "_pushTrustFile": "Config/Server/Online/ca-bundle.pem"
+            }
         },
         {
             "_name": "mailbox"
