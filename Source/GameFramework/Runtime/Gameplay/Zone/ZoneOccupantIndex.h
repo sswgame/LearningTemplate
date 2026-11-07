@@ -76,7 +76,6 @@ namespace sw
         SpatialHashGrid2D             _grid;              ///< 후보 번호(`SlotHandle` 의 인덱스) → 지은 때의 수평 자리
         vector<SlotHandle>            _listHandleScratch; ///< 질의 결과 재사용 버퍼
         uint32                        _buildCount;
-        uint8                         _bBuilt   : 1; ///< 이번 프레임에 지었다
-        uint8                         _reserved : 7;
+        uint8                         _bBuilt : 1; ///< 이번 프레임에 지었다
     };
 } // namespace sw

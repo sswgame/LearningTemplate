@@ -20,7 +20,6 @@ namespace sw
         , _listHandleScratch{}
         , _buildCount{ 0 }
         , _bBuilt{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 

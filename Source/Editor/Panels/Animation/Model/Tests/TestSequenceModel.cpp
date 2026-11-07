@@ -37,7 +37,7 @@ namespace
         /** @brief 바인딩 Hero(1) 를 고른 문서입니다 — 새 항목 · 트랙의 대상이다. */
         static SequenceModel makeDocument()
         {
-            SequenceModel document = SequenceModelTestUtil::makeDocument();
+            SequenceModel document;
             (void)document.addBinding( "Hero" );
             return document;
         }
