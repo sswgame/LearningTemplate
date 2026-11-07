@@ -52,8 +52,7 @@ namespace sw
 namespace sw
 {
     NileBuildingComponent::NileBuildingComponent()
-        : _gameMode{}
-        , _buildingIndex{ -1 }
+        : _buildingIndex{ -1 }
         , _modelScale{ 0.5f }
         , _decorationScale{ 3.0f }
         , _shownKey{ -1 }
@@ -70,7 +69,7 @@ namespace sw
 
     void NileBuildingComponent::assignBuilding( GameObjectHandle gameMode, int32 buildingIndex )
     {
-        _gameMode      = gameMode;
+        bindGameMode( gameMode );
         _buildingIndex = buildingIndex;
         _shownKey      = -1;
     }
@@ -143,7 +142,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileGameModeComponent* pGameMode = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _gameMode );
+        const NileGameModeComponent* pGameMode = findDirector<NileGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         // 같은 그룹의 다른 건물과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).

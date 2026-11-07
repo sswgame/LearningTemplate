@@ -12,8 +12,7 @@
 namespace sw
 {
     ParkGuestComponent::ParkGuestComponent()
-        : _gameMode{}
-        , _guestIndex{ -1 }
+        : _guestIndex{ -1 }
         , _heightOffset{ 0.45f }
         , _colorBucket{ -1 }
     {
@@ -29,7 +28,7 @@ namespace sw
 
     void ParkGuestComponent::assignGuest( GameObjectHandle gameMode, int32 guestIndex )
     {
-        _gameMode    = gameMode;
+        bindGameMode( gameMode );
         _guestIndex  = guestIndex;
         _colorBucket = -1;
     }
@@ -42,7 +41,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkGameModeComponent* pGameMode = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _gameMode );
+        const ParkGameModeComponent* pGameMode = findDirector<ParkGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
 

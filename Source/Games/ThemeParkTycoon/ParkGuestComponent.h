@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /**
@@ -17,7 +19,7 @@ namespace sw
      * @details 손님 수가 줄면 남는 칸은 숨깁니다(오브젝트를 만들고 지우지 않는 풀). 탄 손님 · 떠난 손님도 숨깁니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Guest View", Tooltip = "Follows one guest of the park gameMode's simulation" )
-    class ParkGuestComponent : public Component
+    class ParkGuestComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -32,8 +34,6 @@ namespace sw
         void assignGuest( GameObjectHandle gameMode, int32 guestIndex );
 
     private:
-        PROPERTY( Category = "Guest", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Guest", DisplayName = "Guest Index", Tooltip = "Slot in the simulation's guest list" )
         int32 _guestIndex;
         PROPERTY( Category = "Guest", DisplayName = "Height Offset", Tooltip = "Lift above the walking point", Units = m )

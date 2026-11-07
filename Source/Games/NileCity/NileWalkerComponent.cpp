@@ -12,8 +12,7 @@
 namespace sw
 {
     NileWalkerComponent::NileWalkerComponent()
-        : _gameMode{}
-        , _walkerIndex{ -1 }
+        : _walkerIndex{ -1 }
         , _height{ 0.35f }
         , _pShownLook{ nullptr }
     {
@@ -29,7 +28,7 @@ namespace sw
 
     void NileWalkerComponent::assignWalker( GameObjectHandle gameMode, int32 walkerIndex )
     {
-        _gameMode    = gameMode;
+        bindGameMode( gameMode );
         _walkerIndex = walkerIndex;
         _pShownLook  = nullptr;
     }
@@ -42,7 +41,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileGameModeComponent* pGameMode = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _gameMode );
+        const NileGameModeComponent* pGameMode = findDirector<NileGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         // 같은 그룹의 다른 일꾼과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).

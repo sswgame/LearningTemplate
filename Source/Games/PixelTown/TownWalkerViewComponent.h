@@ -11,6 +11,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /**
@@ -22,7 +24,7 @@ namespace sw
      *          화면 위쪽(월드 Y 가 큰) 캐릭터가 뒤에 그려지도록 Z = 발 Y × `_depthPerUnitY` 로 둔다(유니티 Custom Axis (0, 1, 0) 와 같은 결과).
      */
     REFLECT( Category = "Overworld", DisplayName = "Town Walker View", Tooltip = "Follows the town gameMode hero and picks the walk or idle animation for its facing" )
-    class TownWalkerViewComponent : public Component
+    class TownWalkerViewComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -34,8 +36,6 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the TownGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Walker", DisplayName = "Sprite Offset", Tooltip = "Sprite center from the feet (a 16x32 hero stands half a tile above its tile center)", Units = m )
         float2 _spriteOffset;
         PROPERTY( Category = "Walker", DisplayName = "Depth Per Unit Y", Tooltip = "Z per world unit of feet Y; positive draws higher characters behind lower ones" )

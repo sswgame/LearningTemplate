@@ -11,6 +11,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     struct CityBuildingDef;
@@ -22,7 +24,7 @@ namespace sw
      *          집이 아니면 단계가 모습을 바꾸지 않습니다. 건물 종류가 바뀌면(허물고 다른 것을 지었다) 디렉터가 오브젝트를 바꿔 세웁니다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "Nile Building View", Tooltip = "Shows one building of the Nile gameMode city" )
-    class NileBuildingComponent : public Component
+    class NileBuildingComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -45,8 +47,6 @@ namespace sw
         static string makeModelPath( const utf8* pName );
 
     private:
-        PROPERTY( Category = "Building", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Building", DisplayName = "Building Index", Tooltip = "Slot in the simulation building list" )
         int32 _buildingIndex;
         PROPERTY( Category = "Building", DisplayName = "Model Scale", Min = 0.0 )

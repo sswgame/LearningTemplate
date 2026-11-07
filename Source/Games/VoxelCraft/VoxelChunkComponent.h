@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/View/VoxelMesher.h"
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
 
 namespace sw
 {
@@ -26,7 +27,7 @@ namespace sw
      *          새 메시를 만들어 교체하므로 렌더러가 그리는 중인 정점 버퍼를 덮어쓰지 않습니다. 이전 메시는 컴포넌트가 해제할 때 사라집니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Chunk", Tooltip = "Procedural opaque and water meshes of one voxel chunk" )
-    class VoxelChunkComponent : public Component
+    class VoxelChunkComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -47,8 +48,6 @@ namespace sw
         MeshComponent* findWaterMesh() const;
 
     private:
-        PROPERTY( Category = "Chunk", DisplayName = "Director", Tooltip = "Object with the VoxelGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Chunk", DisplayName = "Chunk X", Min = 0 )
         int32 _chunkX;
         PROPERTY( Category = "Chunk", DisplayName = "Chunk Z", Min = 0 )

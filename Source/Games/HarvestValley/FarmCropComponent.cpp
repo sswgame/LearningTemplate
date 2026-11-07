@@ -12,8 +12,7 @@
 namespace sw
 {
     FarmCropComponent::FarmCropComponent()
-        : _gameMode{}
-        , _tileIndex{ -1 }
+        : _tileIndex{ -1 }
         , _modelScale{ 1.6f }
         , _modelFloor{ 0.05f }
         , _soilTop{ 0.08f }
@@ -31,7 +30,7 @@ namespace sw
 
     void FarmCropComponent::assignTile( GameObjectHandle gameMode, int32 tileIndex )
     {
-        _gameMode  = gameMode;
+        bindGameMode( gameMode );
         _tileIndex = tileIndex;
         _cropState = -1;
     }
@@ -45,7 +44,7 @@ namespace sw
         const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
-        const FarmGameModeComponent* pGameMode = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode );
+        const FarmGameModeComponent* pGameMode = findDirector<FarmGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         const FarmField&    field    = pGameMode->getField();

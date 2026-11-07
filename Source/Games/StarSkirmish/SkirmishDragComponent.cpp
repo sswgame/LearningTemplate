@@ -11,7 +11,6 @@
 namespace sw
 {
     SkirmishDragComponent::SkirmishDragComponent()
-        : _gameMode{}
     {
         setCanEverTick( true );
     }
@@ -31,7 +30,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishGameModeComponent* pGameMode = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _gameMode );
+        const SkirmishGameModeComponent* pGameMode = findDirector<SkirmishGameModeComponent>();
         float3                           center{};
         float3                           scale{};
         const bool                       bShown = pGameMode != nullptr && pGameMode->findDragBox( center, scale );

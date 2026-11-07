@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /**
@@ -16,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Drag Box", Tooltip = "Shows the drag-select box of the skirmish gameMode" )
-    class SkirmishDragComponent : public Component
+    class SkirmishDragComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -28,7 +30,5 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Drag", DisplayName = "Director", Tooltip = "Object with the SkirmishGameModeComponent" )
-        GameObjectHandle _gameMode;
     };
 } // namespace sw

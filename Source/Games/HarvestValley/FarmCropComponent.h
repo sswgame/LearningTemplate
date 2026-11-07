@@ -12,6 +12,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /**
@@ -21,7 +23,7 @@ namespace sw
      *          다 자라면 제 모델(무 · 당근 · 호박 · 옥수수)이고, 제 모델이 없는 작물은 잎에 작물 색을 입힙니다. 모델은 디렉터가 미리 쥐고 있어 바꿀 때 읽지 않습니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Crop View", Tooltip = "Shows the crop of one field tile of the farm gameMode" )
-    class FarmCropComponent : public Component
+    class FarmCropComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -38,8 +40,6 @@ namespace sw
         // 작물 → 모델은 디렉터의 작물 모델 표(씬 데이터, `FarmGameModeComponent::findReadyModel` · `findGrowingModel`)가 정한다.
 
     private:
-        PROPERTY( Category = "Tile", DisplayName = "Director", Tooltip = "Object with the FarmGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the gameMode field" )
         int32 _tileIndex;
         /**

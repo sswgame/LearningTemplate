@@ -11,8 +11,7 @@
 namespace sw
 {
     FlatRideComponent::FlatRideComponent()
-        : _gameMode{}
-        , _rideIndex{ -1 }
+        : _rideIndex{ -1 }
         , _spin{ 0.0f }
         , _angle{ 0.0f }
     {
@@ -28,7 +27,7 @@ namespace sw
 
     void FlatRideComponent::assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin )
     {
-        _gameMode  = gameMode;
+        bindGameMode( gameMode );
         _rideIndex = rideIndex;
         _spin      = spin;
     }
@@ -43,7 +42,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkGameModeComponent* pGameMode = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _gameMode );
+        const ParkGameModeComponent* pGameMode = findDirector<ParkGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         const vector<ParkRide>& listRide = pGameMode->getSimulation().getRides();

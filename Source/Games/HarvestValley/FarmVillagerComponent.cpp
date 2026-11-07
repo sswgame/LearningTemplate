@@ -11,8 +11,7 @@
 namespace sw
 {
     FarmVillagerComponent::FarmVillagerComponent()
-        : _gameMode{}
-        , _npcIndex{ -1 }
+        : _npcIndex{ -1 }
         , _heightOffset{ 0.5f }
         , _agent{}
         , _listGoal{ float3{} }
@@ -31,7 +30,7 @@ namespace sw
 
     void FarmVillagerComponent::assignVillager( GameObjectHandle gameMode, int32 npcIndex )
     {
-        _gameMode = gameMode;
+        bindGameMode( gameMode );
         _npcIndex = npcIndex;
         _bPlaced  = false;
     }
@@ -44,7 +43,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmVillageGameModeComponent* pGameMode         = GameModeComponent::resolve<FarmVillageGameModeComponent>( *pManager, _gameMode );
+        const FarmVillageGameModeComponent* pGameMode         = findDirector<FarmVillageGameModeComponent>();
         const bool                          bFollowsAVillager = pGameMode != nullptr && 0 <= _npcIndex && _npcIndex < pGameMode->getVillagerCount();
         if ( bFollowsAVillager == false )
             return;

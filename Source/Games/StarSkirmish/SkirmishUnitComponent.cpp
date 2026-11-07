@@ -53,8 +53,7 @@ namespace sw
 namespace sw
 {
     SkirmishUnitComponent::SkirmishUnitComponent()
-        : _gameMode{}
-        , _airHeight{ 2.5f }
+        : _airHeight{ 2.5f }
         , _footprintFill{ 0.9f }
         , _unitFill{ 1.6f }
         , _lastPosition{ 0.0f, 0.0f, 0.0f }
@@ -77,7 +76,7 @@ namespace sw
 
     void SkirmishUnitComponent::assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth )
     {
-        _gameMode   = gameMode;
+        bindGameMode( gameMode );
         _unitID     = unitID;
         _modelWidth = modelWidth > 0.0f ? modelWidth : 1.0f;
         _pShownLook = nullptr;
@@ -150,7 +149,7 @@ namespace sw
         const bool               bNotMeasurable = pManager == nullptr || pMesh == nullptr || _bPlaced == SW_FALSE;
         if ( bNotMeasurable )
             return -1.0f;
-        const SkirmishGameModeComponent* pGameMode = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _gameMode );
+        const SkirmishGameModeComponent* pGameMode = findDirector<SkirmishGameModeComponent>();
         const RTSUnit*                   pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return -1.0f;
@@ -168,7 +167,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishGameModeComponent* pGameMode = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _gameMode );
+        const SkirmishGameModeComponent* pGameMode = findDirector<SkirmishGameModeComponent>();
         const RTSUnit*                   pUnit     = pGameMode != nullptr ? pGameMode->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return;

@@ -18,8 +18,7 @@
 namespace sw
 {
     ArenaUnitComponent::ArenaUnitComponent()
-        : _gameMode{}
-        , _kind{ ArenaUnitKind::Grunt }
+        : _kind{ ArenaUnitKind::Grunt }
         , _facingMode{ PawnFacingMode::ControlYaw }
         , _unitRadius{ 0.5f }
         , _facing{ 0.0f, 0.0f, 1.0f }
@@ -42,8 +41,8 @@ namespace sw
 
     void ArenaUnitComponent::assignGameMode( GameObjectHandle gameMode, const float3& facing )
     {
-        _gameMode = gameMode;
-        _facing   = facing;
+        bindGameMode( gameMode );
+        _facing = facing;
     }
 
     float3 ArenaUnitComponent::flattenDirection( const float3& direction, const float3& fallback )
@@ -66,7 +65,7 @@ namespace sw
         const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
-        const ArenaGameModeComponent* pGameMode = GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _gameMode );
+        const ArenaGameModeComponent* pGameMode = findDirector<ArenaGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )

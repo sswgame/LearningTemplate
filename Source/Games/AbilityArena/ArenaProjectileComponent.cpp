@@ -13,8 +13,7 @@
 namespace sw
 {
     ArenaProjectileComponent::ArenaProjectileComponent()
-        : _gameMode{}
-        , _visualLift{ 0.9f }
+        : _visualLift{ 0.9f }
         , _projectileID{ 0 }
         , _bFinished{ SW_FALSE }
         , _reserved{ 0 }
@@ -24,7 +23,7 @@ namespace sw
 
     void ArenaProjectileComponent::bind( GameObjectHandle gameMode, uint32 projectileID, const float3& position )
     {
-        _gameMode     = gameMode;
+        bindGameMode( gameMode );
         _projectileID = projectileID;
         _bFinished    = SW_FALSE;
         placeMesh( position );
@@ -35,9 +34,7 @@ namespace sw
         Component::onTick( deltaTime );
         if ( _projectileID == 0 || _bFinished == SW_TRUE )
             return;
-        GameObject*                   pOwner      = getOwner();
-        GameObjectManager*            pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ArenaGameModeComponent* pGameMode   = pManager != nullptr ? GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const ArenaGameModeComponent* pGameMode   = findDirector<ArenaGameModeComponent>();
         const ProjectileState*        pProjectile = pGameMode != nullptr ? pGameMode->findProjectile( _projectileID ) : nullptr;
         if ( pProjectile == nullptr )
         {

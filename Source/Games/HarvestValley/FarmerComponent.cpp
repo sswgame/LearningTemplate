@@ -34,8 +34,7 @@ namespace sw
     } // namespace
 
     FarmerComponent::FarmerComponent()
-        : _gameMode{}
-        , _heightOffset{ 0.5f }
+        : _heightOffset{ 0.5f }
         , _kind{ FarmerViewKind::Farmer }
         , _lastToolUseCount{ 0 }
     {
@@ -57,7 +56,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmGameModeComponent* pGameMode = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _gameMode );
+        const FarmGameModeComponent* pGameMode = findDirector<FarmGameModeComponent>();
         if ( pGameMode == nullptr )
             return;
         const float3 lift{ 0.0f, _heightOffset, 0.0f };

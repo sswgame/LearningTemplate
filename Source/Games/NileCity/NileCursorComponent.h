@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /**
@@ -16,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 커서가 땅 밖이면 숨깁니다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "Nile Cursor View", Tooltip = "Shows the build cursor of the Nile gameMode" )
-    class NileCursorComponent : public Component
+    class NileCursorComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -28,8 +30,6 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Cursor", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Cursor", DisplayName = "Height", Tooltip = "Box centre above the ground", Units = m )
         float32 _height;
         PROPERTY( Category = "Cursor", DisplayName = "Thickness", Tooltip = "Box height", Units = m )

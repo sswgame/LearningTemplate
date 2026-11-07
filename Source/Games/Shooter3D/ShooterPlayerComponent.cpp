@@ -313,8 +313,7 @@ namespace sw
 namespace sw
 {
     ShooterPlayerComponent::ShooterPlayerComponent()
-        : _gameMode{}
-        , _spawnPosition{ 0.0f, 0.0f, -16.0f }
+        : _spawnPosition{ 0.0f, 0.0f, -16.0f }
         , _bodyPrefab{}
         , _listWeaponID{}
         , _eyeHeight{ 1.6f }
@@ -439,9 +438,8 @@ namespace sw
         Component::onTick( deltaTime );
         _bRoundJustRestarted                                  = SW_FALSE;
         GameObject*                     pOwner                = getOwner();
-        GameObjectManager*              pManager              = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterGameModeComponent* pDirector             = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const ShooterGameModeComponent* pDirector             = findDirector<ShooterGameModeComponent>();
         const bool                      bMissingCameraContext = pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f;
         if ( bMissingCameraContext )
             return;
@@ -525,7 +523,7 @@ namespace sw
         const CombatHealthDamageResult result    = _combatHealth.applyDamage( amount );
         GameObject*                    pOwner    = getOwner();
         GameObjectManager*             pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*              pObject   = pManager != nullptr ? pManager->resolveGameObject( _gameMode ) : nullptr;
+        const GameObject*              pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
         ShooterGameModeComponent*      pDirector = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( result._bIgnored == SW_TRUE )
             return;
@@ -1058,7 +1056,7 @@ namespace sw
         // 쏜 광선을 적의 히트박스에 묻고 맞음을 보낸다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다. 탄도선 · 탄착 · 소리도 여기서 쌓인다.
         resolveShots( *pManager );
         resolveMelee( *pManager );
-        const GameObject*         pDirectorObject = pManager->resolveGameObject( _gameMode );
+        const GameObject*         pDirectorObject = pManager->resolveGameObject( getGameMode() );
         ShooterGameModeComponent* pDirector       = pDirectorObject != nullptr ? pDirectorObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( pDirector != nullptr )
         {

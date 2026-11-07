@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /** @brief 농부 뷰가 따라가는 것입니다. */
@@ -27,7 +29,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들(씬의 PROPERTY)로 들고 매 프레임 풉니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farmer View", Tooltip = "Follows the farm gameMode farmer or the tile the farmer faces" )
-    class FarmerComponent : public Component
+    class FarmerComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -39,8 +41,6 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Farmer", DisplayName = "Director", Tooltip = "Object with the FarmGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )
         float32 _heightOffset;
         PROPERTY( Category = "Farmer", DisplayName = "Kind", Tooltip = "Follow the farmer or the faced tile" )

@@ -65,8 +65,7 @@ namespace sw
 namespace sw
 {
     VoxelChunkComponent::VoxelChunkComponent()
-        : _gameMode{}
-        , _chunkX{ 0 }
+        : _chunkX{ 0 }
         , _chunkZ{ 0 }
         , _waterMeshName{ "Water" }
         , _scratchMesh{}
@@ -81,9 +80,9 @@ namespace sw
 
     void VoxelChunkComponent::assignChunk( GameObjectHandle gameMode, int32 chunkX, int32 chunkZ )
     {
-        _gameMode = gameMode;
-        _chunkX   = chunkX;
-        _chunkZ   = chunkZ;
+        bindGameMode( gameMode );
+        _chunkX = chunkX;
+        _chunkZ = chunkZ;
     }
 
     void VoxelChunkComponent::onTick( float32 deltaTime )
@@ -93,7 +92,7 @@ namespace sw
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const VoxelGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const VoxelGameModeComponent* pGameMode = findDirector<VoxelGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
         // 메싱은 월드를 읽기만 하므로 같은 그룹의 다른 청크와 나란히 실행됩니다. 블록은 틱이 끝난 뒤에만 바뀝니다.

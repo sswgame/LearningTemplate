@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovementComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
 
 namespace sw
 {
@@ -42,7 +43,7 @@ namespace sw
      *          자기 오브젝트에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다. 어빌리티가 디렉터를 찾는 길도 이 핸들입니다(`ArenaGameModeComponent::findForUnit`).
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Unit", Tooltip = "Pawn side of an arena unit: moves and presses ability inputs from the control intent" )
-    class ArenaUnitComponent : public Component
+    class ArenaUnitComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -69,9 +70,8 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따를 디렉터와 처음 바라볼 쪽을 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void             assignGameMode( GameObjectHandle gameMode, const float3& facing );
-        GameObjectHandle getGameMode() const { return _gameMode; }
-        ArenaUnitKind    getKind() const { return _kind; }
+        void          assignGameMode( GameObjectHandle gameMode, const float3& facing );
+        ArenaUnitKind getKind() const { return _kind; }
         /** @brief 바라보는 방향(XZ 평면의 단위 벡터)입니다. 어빌리티가 투사체 방향으로 쓴다(같은 오브젝트의 워커에서). */
         const float3& getFacing() const { return _facing; }
 
@@ -87,8 +87,6 @@ namespace sw
         void updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLinger );
 
     private:
-        PROPERTY( Category = "Arena", DisplayName = "Director", Tooltip = "Object with the ArenaGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Arena", DisplayName = "Kind", Tooltip = "Player units are not pushed apart; enemies are" )
         ArenaUnitKind _kind;
         PROPERTY( Category = "Arena", DisplayName = "Facing", Tooltip = "Face the move direction (player) or the control yaw the AI turns to its focus (enemies)" )

@@ -20,6 +20,7 @@
 #include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
 
@@ -60,7 +61,7 @@ namespace sw
      *          탄은 무기가 받는 것만 넣는다(`WeaponDef::_accepts`). 적을 맞히면 그 탄의 맞음 동작(`<OnHit>`)을 적의 태그 문맥으로 부른다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Player", Tooltip = "Movement, weapons, hitscan, health, the body and the tracers of the shooter player" )
-    class ShooterPlayerComponent : public Component
+    class ShooterPlayerComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -115,7 +116,6 @@ namespace sw
         /** @brief 무기 슬롯 @p weaponIndex(0 소총, 1 산탄총, 2 권총)의 무기입니다. */
         const WeaponState& getWeapon( int32 weaponIndex ) const { return _arrWeapon[weaponIndex]; }
         int32              getWeaponIndex() const { return _weaponIndex; }
-        GameObjectHandle   getGameMode() const { return _gameMode; }
         /** @brief 무기의 외형 아이템(외형의 MainHand 슬롯)입니다. 무기 표의 `item` 이며, 범위 밖 슬롯이면 빈 이름입니다. */
         hashed_string getWeaponItem( int32 weaponIndex ) const;
         /** @brief 지금 보는 요(라디안, +Z 에서 +X 쪽)입니다. */
@@ -214,8 +214,6 @@ namespace sw
         void syncViewWeapon();
 
     private:
-        PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Player", DisplayName = "Spawn Position", Tooltip = "Feet position at the start and after being overrun", Units = m )
         float3 _spawnPosition;
         PROPERTY( Category = "Player", DisplayName = "Body Prefab", Tooltip = "Visible body (skeletal mesh, animator, appearance, ShooterAvatarComponent)" )

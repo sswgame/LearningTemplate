@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
+
 namespace sw
 {
     /**
@@ -16,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터 시뮬레이션의 탑승자 수를 읽기만 하고 자기 오브젝트의 메시만 돌립니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Flat Ride View", Tooltip = "Spins a flat ride while the park gameMode's simulation has riders on it" )
-    class FlatRideComponent : public Component
+    class FlatRideComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -31,8 +33,6 @@ namespace sw
         void assignRide( GameObjectHandle gameMode, int32 rideIndex, float32 spin );
 
     private:
-        PROPERTY( Category = "Ride", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Ride", DisplayName = "Ride Index", Tooltip = "Ride slot in the simulation" )
         int32 _rideIndex;
         PROPERTY( Category = "Ride", DisplayName = "Spin", Tooltip = "Turn rate while riders are on", Units = "rad/s" )

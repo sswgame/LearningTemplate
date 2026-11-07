@@ -11,8 +11,7 @@
 namespace sw
 {
     NileCursorComponent::NileCursorComponent()
-        : _gameMode{}
-        , _height{ 0.1f }
+        : _height{ 0.1f }
         , _thickness{ 0.12f }
     {
         setCanEverTick( true );
@@ -33,7 +32,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileGameModeComponent* pGameMode = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _gameMode );
+        const NileGameModeComponent* pGameMode = findDirector<NileGameModeComponent>();
         int2                         tile{};
         int32                        size   = 1;
         const bool                   bShown = pGameMode != nullptr && pGameMode->findCursor( tile, size );

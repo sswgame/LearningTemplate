@@ -32,8 +32,7 @@ namespace sw
     } // namespace
 
     TownWalkerViewComponent::TownWalkerViewComponent()
-        : _gameMode{}
-        , _spriteOffset{ 0.0f, 0.0f }
+        : _spriteOffset{ 0.0f, 0.0f }
         , _depthPerUnitY{ 0.01f }
         , _playingAnimation{}
     {
@@ -56,7 +55,7 @@ namespace sw
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
-        const TownGameModeComponent* pGameMode = GameModeComponent::resolve<TownGameModeComponent>( *pManager, _gameMode );
+        const TownGameModeComponent* pGameMode = findDirector<TownGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )
             return;
         const float3& feet = pGameMode->getHeroPosition();

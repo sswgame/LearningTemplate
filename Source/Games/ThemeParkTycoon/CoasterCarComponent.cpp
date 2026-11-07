@@ -13,8 +13,7 @@
 namespace sw
 {
     CoasterCarComponent::CoasterCarComponent()
-        : _gameMode{}
-        , _coasterIndex{ -1 }
+        : _coasterIndex{ -1 }
         , _carIndex{ 0 }
         , _carSpacing{ 2.4f }
     {
@@ -30,7 +29,7 @@ namespace sw
 
     void CoasterCarComponent::assignCar( GameObjectHandle gameMode, int32 coasterIndex, int32 carIndex )
     {
-        _gameMode     = gameMode;
+        bindGameMode( gameMode );
         _coasterIndex = coasterIndex;
         _carIndex     = carIndex;
     }
@@ -44,7 +43,7 @@ namespace sw
         const bool         bMissingCarContext = pManager == nullptr || pMesh == nullptr || _carIndex < 0;
         if ( bMissingCarContext )
             return;
-        const ParkGameModeComponent* pGameMode = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _gameMode );
+        const ParkGameModeComponent* pGameMode = findDirector<ParkGameModeComponent>();
         const CoasterTrain*          pTrain    = pGameMode != nullptr ? pGameMode->findCoasterTrain( _coasterIndex ) : nullptr;
         if ( pTrain == nullptr )
             return;

@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
+#include "GameFramework/Runtime/Foundation/Framework/DirectorBoundComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
 namespace sw
@@ -40,7 +41,7 @@ namespace sw
      *          디렉터가 월드를 바꾸고 청크의 다시 메싱을 요청합니다. 블록 카탈로그는 게임 서비스(`VoxelBlockCatalog`)로 읽습니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Player", Tooltip = "First-person voxel body, block breaking and placing, and the hotbar" )
-    class VoxelPlayerComponent : public Component
+    class VoxelPlayerComponent : public DirectorBoundComponent
     {
     public:
         REFLECT_BODY();
@@ -68,8 +69,7 @@ namespace sw
         uint32  getBrokenCount() const { return _brokenCount; }
         uint32  getPlacedCount() const { return _placedCount; }
         /** @brief 몸을 처음 놓은 위치입니다. 테스트와 감시 값이 걸은 거리를 측정할 때 기준으로 씁니다. */
-        const float3&           getStartPosition() const { return _startPosition; }
-        const GameObjectHandle& getGameMode() const { return _gameMode; }
+        const float3& getStartPosition() const { return _startPosition; }
 
     private:
         /** @brief 바꿀 블록 하나입니다. 틱이 끝난 뒤 디렉터가 월드에 반영합니다. */
@@ -107,8 +107,6 @@ namespace sw
         void applyPendingState();
 
     private:
-        PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the VoxelGameModeComponent" )
-        GameObjectHandle _gameMode;
         PROPERTY( Category = "Player", DisplayName = "Reach", Tooltip = "Blocks within this distance can be broken or built on", Min = 0.0, Units = m )
         float32 _reachDistance;
         PROPERTY( Category = "Player", DisplayName = "Place Interval", Tooltip = "Seconds between placements while the button is held", Min = 0.0, Units = s )

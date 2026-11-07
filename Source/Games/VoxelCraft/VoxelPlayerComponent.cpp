@@ -157,8 +157,7 @@ namespace sw
 namespace sw
 {
     VoxelPlayerComponent::VoxelPlayerComponent()
-        : _gameMode{}
-        , _reachDistance{ 6.0f }
+        : _reachDistance{ 6.0f }
         , _placeInterval{ 0.25f }
         , _startYaw{ 0.6f }
         , _startPitch{ -0.2f }
@@ -211,9 +210,8 @@ namespace sw
             return;
         }
         GameObject*                   pOwner    = getOwner();
-        GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const VoxelGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const VoxelGameModeComponent* pGameMode = findDirector<VoxelGameModeComponent>();
         // 자동 플레이에서는 플레이어 조종자가 폰을 조종하지 않으므로 마우스도 잠그지 않습니다. 시점은 AI 가 정하며 `setAngles` 가 조종 회전을 요청합니다.
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
@@ -284,10 +282,9 @@ namespace sw
     {
         Component::onTick( deltaTime );
         GameObject*                   pOwner          = getOwner();
-        GameObjectManager*            pManager        = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const VoxelGameModeComponent* pGameMode       = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const VoxelGameModeComponent* pGameMode       = findDirector<VoxelGameModeComponent>();
         const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<const VoxelBlockCatalog>();
         const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || pCatalog == nullptr || pGameMode->isStarted() == false || deltaTime <= 0.0f;
         if ( bNotReadyToTick )
@@ -485,7 +482,7 @@ namespace sw
         _bFlushScheduled                  = SW_FALSE;
         GameObject*             pOwner    = getOwner();
         GameObjectManager*      pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( _gameMode ) : nullptr;
+        const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
         VoxelGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
         for ( const BlockEdit& edit : _listPendingEdit )
         {
