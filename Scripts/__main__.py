@@ -53,6 +53,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("lint", "lint.PreCommit", "Staged 파일 대상 사전 커밋 린트 검사"),
     Subcommand("include-order", "lint.IncludeOrder:mainCheck", "include 순서 검사(--files 로 좁힌다)"),
     Subcommand("byte-read", "lint.ByteReadShape", "파일에서 읽은 개수를 믿고 할당하는 모양 · LittleEndianUtil 직접 읽기 검사(--files · --all · --self-check)"),
+    Subcommand("state-shape", "lint.StateShape", "손으로 짝지은 writeState · readState( Archive& ) 검사(--files · --all · --self-check)"),
     Subcommand("cpp-shape", "lint.CppShape", "C++ 모양 규칙 검사 — 선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선(--files · --all · --summary)"),
     Subcommand("naming-words", "lint.NamingWords", "함수 앞 단어 · 형식 끝 단어를 허용 표와 대조한다"),
     Subcommand("platform-chains", "lint.PlatformChains", "플랫폼 #if 사슬이 빠진 플랫폼을 컴파일 오류로 내는지 본다(--self-check)"),

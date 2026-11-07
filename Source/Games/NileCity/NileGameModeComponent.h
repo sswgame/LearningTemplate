@@ -61,7 +61,7 @@ namespace sw
         void onEndPlay() override;
 
         /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 월 수, 속도, 선택한 도구)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것(게임 스레드, 틱 뒤) ----
         int32 getPopulation() const;
@@ -78,8 +78,6 @@ namespace sw
     protected:
         /** @brief 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다. */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

@@ -93,25 +93,11 @@ namespace sw
     {
     }
 
-    void NileCityPlanner::writeState( Archive& outArchive ) const
+    void NileCityPlanner::serializeState( StateIO& io )
     {
-        outArchive << _nextStep;
-        outArchive << _skippedCount;
-    }
-
-    bool NileCityPlanner::readState( Archive& archive )
-    {
-        int32 nextStep     = 0;
-        int32 skippedCount = 0;
-        archive >> nextStep;
-        archive >> skippedCount;
-        const bool bStepValid           = 0 <= nextStep && nextStep <= static_cast<int32>( _listStep.size() );
-        const bool bInvalidPlannerState = archive.isError() || bStepValid == false || skippedCount < 0;
-        if ( bInvalidPlannerState )
-            return false;
-        _nextStep     = nextStep;
-        _skippedCount = skippedCount;
-        return true;
+        io.value( _nextStep );
+        io.value( _skippedCount );
+        io.check( 0 <= _nextStep && _nextStep <= static_cast<int32>( _listStep.size() ) && 0 <= _skippedCount );
     }
 
     float32 NileCityPlanner::computeRiverCenter( const NileCityLayout& layout, int32 y )

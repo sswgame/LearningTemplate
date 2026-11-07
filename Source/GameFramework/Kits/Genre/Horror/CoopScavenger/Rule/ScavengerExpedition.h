@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerCarry.h"
@@ -177,10 +178,9 @@ namespace sw
         /**
          * @brief 사람(체력, 든 것, 위치, 시신), 우주선 고철, 할당량, 시설, 위협 감독 둘, 상점 시세, 난수, 위성 id, 시드, 내린 시간, 단계, 해 질 녘 알림을 씁니다.
          *        카탈로그, 빌린 지갑, 시계, 날씨, 플래그, 우주선 창고는 저장하지 않습니다(주인이 저장합니다). 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 데이터와 같은 사람 수로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 위성이면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 데이터와 같은 사람 수로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 위성이면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         ScavengerPhase                getPhase() const { return _phase; }
         const ScavengerMoonDef*       getMoon() const { return _pMoon; }

@@ -14,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -73,10 +74,11 @@ namespace sw
         void fillEntries( vector<GameFlagEntry>& outListEntry ) const;
         /** @brief 세이브에서 복원합니다. 지금 값은 모두 지웁니다. */
         void restoreEntries( const vector<GameFlagEntry>& listEntry );
-        /** @brief 플래그를 이름 순으로 씁니다. 같은 플래그면 넣은 순서와 상관없이 같은 바이트가 나옵니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 모두 바꿉니다. 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 플래그를 이름 순으로 씁니다. 같은 플래그면 넣은 순서와 상관없이 같은 바이트가 나옵니다.
+         *        `writeState` 의 바이트로 모두 바꿉니다. 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO_IN_PLACE();
 
         uint32 getRevision() const { return _revision; }
         size_t getCount() const { return _mapFlag.size(); }

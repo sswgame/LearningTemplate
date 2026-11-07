@@ -12,6 +12,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
@@ -97,7 +98,9 @@ namespace sw
         }
 
         /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부르며, 첫 값은 `StateIO::writeHeader` 가 쓰는 표와 버전입니다. */
-        virtual void writeState( Archive& outArchive ) const = 0;
+        void writeState( Archive& outArchive ) const { StateIO::writeObject( *this, outArchive ); }
+        /** @brief 디렉터의 상태를 놓는 본문 하나입니다(`StateIO`). 첫 값은 `io.header` 의 표준 머리입니다. 읽기는 사본 없이 돌므로(컴포넌트는 복사하지 않는다) 지역 변수에 읽어 끝까지 맞으면 대입합니다. */
+        virtual void serializeState( StateIO& io ) = 0;
         /**
          * @brief `writeState` 의 바이트로 판을 복원합니다. `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
          * @details 시작 전이면 보관했다가 `onBeginPlay` 가 판을 시작한 뒤 적용한다. 읽지 못하면 `onStateRestored( false )` 가 알리고 새 판으로 간다.
@@ -129,7 +132,7 @@ namespace sw
         /** @brief 데이터를 읽고 새 판을 엽니다. 열지 못하면 false 를 반환하며, 무엇이 왜 실패했는지는 경로를 아는 파생 클래스가 알립니다. 실패한 뒤 다시 부를 수 있습니다. */
         [[nodiscard]] virtual bool startGame() = 0;
         /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 입니다. */
-        [[nodiscard]] virtual bool readState( Archive& archive ) = 0;
+        [[nodiscard]] bool readState( Archive& archive ) { return StateIO::readInPlace( *this, archive ); }
         /** @brief 복원 바이트를 적용한 뒤에 불립니다. 결과를 알리고, 실패했으면 반쯤 바뀐 판을 새 판으로 되돌립니다. */
         virtual void onStateRestored( bool bRestored ) { (void)bRestored; }
         /** @brief 판이 열리고(복원과 첫 플러시 뒤) 한 번 불립니다. 조작 안내, 첫 상태 로그, 카메라 맞추기에 씁니다. */

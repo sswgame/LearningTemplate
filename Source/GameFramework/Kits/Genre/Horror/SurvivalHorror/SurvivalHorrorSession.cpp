@@ -42,35 +42,28 @@ namespace sw
                 return settings;
             }
 
-            /** @brief 이름 집합을 이름 순으로 씁니다. 같은 집합이면 같은 바이트가 나옵니다. */
-            static void writeSortedSet( Archive& outArchive, const unordered_set<hashed_string>& uniqueName )
+            static void serializeSet( StateIO& io, unordered_set<hashed_string>& uniqueName )
             {
                 vector<hashed_string> listName( uniqueName.begin(), uniqueName.end() );
                 VectorUtil::sort( listName, HashedStringLexicalLess{} );
-                outArchive << static_cast<uint32>( listName.size() );
-                for ( const hashed_string& name : listName )
+                uint32 nameCount = static_cast<uint32>( listName.size() );
+                io.count( 4, nameCount );
+                if ( io.isOk() == false )
+                    return;
+                if ( io.isReading() )
                 {
-                    StateIO::writeName( outArchive, name );
+                    uniqueName.clear();
+                }
+                for ( uint32 index = 0; index < nameCount; ++index )
+                {
+                    hashed_string name = io.isWriting() ? listName[index] : hashed_string{};
+                    io.value( name );
+                    if ( io.isReading() && ( io.isOk() == false || io.check( uniqueName.insert( name ).second ) == false ) )
+                        return;
                 }
             }
 
-            [[nodiscard]] static bool readSet( Archive& archive, unordered_set<hashed_string>& outUniqueName )
-            {
-                uint32 count = 0;
-                if ( archive.readCount( 4, count ) == false )
-                    return false;
-                outUniqueName.clear();
-                for ( uint32 index = 0; index < count; ++index )
-                {
-                    hashed_string name;
-                    if ( StateIO::readName( archive, name ) == false || outUniqueName.insert( name ).second == false )
-                        return false;
-                }
-                return true;
-            }
-
-            /** @brief 이름에서 수로 가는 맵을 이름 순으로 씁니다. 같은 맵이면 같은 바이트가 나옵니다. */
-            static void writeSortedMap( Archive& outArchive, const unordered_map<hashed_string, int32>& mapNameToCount )
+            static void serializeMap( StateIO& io, unordered_map<hashed_string, int32>& mapNameToCount )
             {
                 vector<hashed_string> listName;
                 listName.reserve( mapNameToCount.size() );
@@ -79,32 +72,24 @@ namespace sw
                     listName.push_back( name );
                 }
                 VectorUtil::sort( listName, HashedStringLexicalLess{} );
-                outArchive << static_cast<uint32>( listName.size() );
-                for ( const hashed_string& name : listName )
-                {
-                    StateIO::writeName( outArchive, name );
-                    outArchive << mapNameToCount.find( name )->second;
-                }
-            }
-
-            [[nodiscard]] static bool readMap( Archive& archive, unordered_map<hashed_string, int32>& outMapNameToCount )
-            {
-                uint32 count = 0;
+                uint32 nameCount = static_cast<uint32>( listName.size() );
                 // 이름(4) + 수(4)
-                if ( archive.readCount( 8, count ) == false )
-                    return false;
-                outMapNameToCount.clear();
-                for ( uint32 index = 0; index < count; ++index )
+                io.count( 8, nameCount );
+                if ( io.isOk() == false )
+                    return;
+                if ( io.isReading() )
                 {
-                    hashed_string name;
-                    int32         value = 0;
-                    if ( StateIO::readName( archive, name ) == false )
-                        return false;
-                    archive >> value;
-                    if ( archive.isError() || outMapNameToCount.emplace( name, value ).second == false )
-                        return false;
+                    mapNameToCount.clear();
                 }
-                return true;
+                for ( uint32 index = 0; index < nameCount; ++index )
+                {
+                    hashed_string name  = io.isWriting() ? listName[index] : hashed_string{};
+                    int32         value = io.isWriting() ? mapNameToCount.find( name )->second : 0;
+                    io.value( name );
+                    io.value( value );
+                    if ( io.isReading() && ( io.isOk() == false || io.check( mapNameToCount.emplace( name, value ).second ) == false ) )
+                        return;
+                }
             }
         };
     } // namespace
@@ -538,64 +523,35 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void SurvivalHorrorSession::writeState( Archive& outArchive ) const
+    void SurvivalHorrorSession::serializeState( StateIO& io )
     {
-        _sanity.writeState( outArchive );
-        _battery.writeState( outArchive );
-        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueSeenMonster );
-        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueReadDocument );
-        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueClue );
-        SurvivalHorrorSessionInternal::writeSortedSet( outArchive, _uniqueSolvedPuzzle );
-        SurvivalHorrorSessionInternal::writeSortedMap( outArchive, _mapDialAttempt );
-        SurvivalHorrorSessionInternal::writeSortedMap( outArchive, _mapSequenceProgress );
-        outArchive << static_cast<uint32>( _listClueLink.size() );
-        for ( const SurvivalHorrorClueLink& link : _listClueLink )
-        {
-            StateIO::writeName( outArchive, link._first );
-            StateIO::writeName( outArchive, link._second );
-        }
-        StateIO::writeName( outArchive, _currentArea );
-        outArchive << _health;
-        outArchive << _saveCount;
-        outArchive << _wrongDeductionCount;
-        outArchive << _bFlashlightOn;
-        outArchive << _bHallucinating;
-    }
-
-    bool SurvivalHorrorSession::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 빌린 포인터, 게이지 설정은 사본도 그대로 가지고 있다.
-        SurvivalHorrorSession restored = *this;
-        const bool            bPartRead =
-            restored._sanity.readState( archive ) && restored._battery.readState( archive ) && SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueSeenMonster ) &&
-            SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueReadDocument ) && SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueClue ) &&
-            SurvivalHorrorSessionInternal::readSet( archive, restored._uniqueSolvedPuzzle ) && SurvivalHorrorSessionInternal::readMap( archive, restored._mapDialAttempt ) &&
-            SurvivalHorrorSessionInternal::readMap( archive, restored._mapSequenceProgress );
-        uint32 linkCount = 0;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.value( _sanity );
+        io.value( _battery );
+        SurvivalHorrorSessionInternal::serializeSet( io, _uniqueSeenMonster );
+        SurvivalHorrorSessionInternal::serializeSet( io, _uniqueReadDocument );
+        SurvivalHorrorSessionInternal::serializeSet( io, _uniqueClue );
+        SurvivalHorrorSessionInternal::serializeSet( io, _uniqueSolvedPuzzle );
+        SurvivalHorrorSessionInternal::serializeMap( io, _mapDialAttempt );
+        SurvivalHorrorSessionInternal::serializeMap( io, _mapSequenceProgress );
         // 연결마다 이름 둘(8)
-        if ( bPartRead == false || archive.readCount( 8, linkCount ) == false )
-            return false;
-        restored._listClueLink.assign( linkCount, SurvivalHorrorClueLink{} );
-        for ( SurvivalHorrorClueLink& link : restored._listClueLink )
+        io.list( _listClueLink, 8, [&]( SurvivalHorrorClueLink& link )
         {
-            if ( StateIO::readName( archive, link._first ) == false || StateIO::readName( archive, link._second ) == false )
-                return false;
+            io.value( link._first );
+            io.value( link._second );
+        } );
+        io.value( _currentArea );
+        io.value( _health );
+        io.value( _saveCount );
+        io.value( _wrongDeductionCount );
+        io.flag( _bFlashlightOn );
+        io.flag( _bHallucinating );
+        if ( io.isReading() && io.isOk() )
+        {
+            io.check( isStateConsistent() );
+            _eventBuffer.clear();
         }
-        if ( StateIO::readName( archive, restored._currentArea ) == false )
-            return false;
-        archive >> restored._health;
-        archive >> restored._saveCount;
-        archive >> restored._wrongDeductionCount;
-        archive >> restored._bFlashlightOn;
-        archive >> restored._bHallucinating;
-        const bool bValid = archive.isOk() && restored._bFlashlightOn <= SW_TRUE && restored._bHallucinating <= SW_TRUE;
-        if ( bValid == false || restored.isStateConsistent() == false )
-            return false;
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
     }
 
     bool SurvivalHorrorSession::isStateConsistent() const

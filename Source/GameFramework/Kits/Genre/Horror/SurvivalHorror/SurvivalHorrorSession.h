@@ -15,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
@@ -167,10 +168,9 @@ namespace sw
         /**
          * @brief 정신력과 배터리 게이지, 본 괴물, 읽은 문서, 단서, 푼 퍼즐(이름 순), 다이얼 시도와 순서 진행(이름 순), 단서 연결, 현재 위치, 체력, 세이브 수,
          *        틀린 추리 수, 손전등, 환각을 씁니다. 같은 상태면 같은 바이트가 나옵니다. 카탈로그, 빌린 격자 가방, 아이템 상자, 플래그, 방 그래프는 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 전이거나, 데이터가 깨졌거나, 범위 밖 값이나 카탈로그에 없는 id 가 있으면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 전이거나, 데이터가 깨졌거나, 범위 밖 값이나 카탈로그에 없는 id 가 있으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         const ResourceGauge&                  getSanity() const { return _sanity; }
         const ResourceGauge&                  getBattery() const { return _battery; }

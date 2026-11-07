@@ -257,29 +257,21 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태
     // ------------------------------------------------------------------------------
-    void TownGameModeComponent::writeState( Archive& outArchive ) const
+    void TownGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kTownStateTag, kTownStateVersion );
-        Archive moverBody;
-        _mover.writeState( moverBody );
-        StateIO::writeSection( outArchive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody );
-    }
-
-    bool TownGameModeComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, kTownStateTag, kTownStateVersion ) == false )
-            return false;
-        Archive            moverBody;
-        OverworldTileMover mover      = _mover;
-        const bool         bMoverRead = StateIO::readExpectedSection( archive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody ) &&
-                                mover.readState( moverBody ) && moverBody.getRemainingBytes() == 0;
-        const bool bStateRead = bMoverRead && archive.isError() == false && archive.getRemainingBytes() == 0;
-        if ( bStateRead == false )
-            return false;
-        _mover = mover;
-        _mover.setTileMap( &_tileMap );
-        _mover.setInputEnabled( true ); // 대화는 저장하지 않는다 — 복원한 판은 대화 밖이다
-        return true;
+        io.header( kTownStateTag, kTownStateVersion );
+        if ( io.isOk() == false )
+            return;
+        OverworldTileMover mover = _mover;
+        io.section( OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, [&mover]( StateIO& bodyIO )
+        { bodyIO.value( mover ); } );
+        io.end();
+        if ( io.isReading() && io.isOk() )
+        {
+            _mover = mover;
+            _mover.setTileMap( &_tileMap );
+            _mover.setInputEnabled( true ); // 대화는 저장하지 않는다 — 복원한 판은 대화 밖이다
+        }
     }
 
     void TownGameModeComponent::onStateRestored( bool bRestored )

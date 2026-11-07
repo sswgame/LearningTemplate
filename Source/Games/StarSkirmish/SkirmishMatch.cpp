@@ -122,47 +122,31 @@ namespace sw
         return true;
     }
 
-    void SkirmishMatch::writeState( Archive& outArchive ) const
+    void SkirmishMatch::serializeState( StateIO& io )
     {
-        outArchive << _bHumanPlayer;
-        _world.writeState( outArchive );
-        for ( const Wallet& wallet : _arrWallet )
+        io.expect( _bHumanPlayer );
+        io.value( _world );
+        if ( io.isOk() == false )
+            return;
+        for ( Wallet& wallet : _arrWallet )
         {
-            wallet.writeState( outArchive );
+            io.value( wallet );
         }
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             if ( _arrAIActive[player] == SW_TRUE )
-                _arrAI[player].writeState( outArchive );
+            {
+                io.value( _arrAI[player] );
+            }
         }
-        outArchive << _statusTimer;
-        outArchive << _huntTimer;
-        outArchive << _bReportedOver;
-    }
-
-    bool SkirmishMatch::readState( Archive& archive )
-    {
-        uint8 bHumanPlayer = SW_FALSE;
-        archive >> bHumanPlayer;
-        const bool bInvalidMatchHeader = archive.isError() || bHumanPlayer != _bHumanPlayer || _world.readState( archive ) == false;
-        if ( bInvalidMatchHeader )
-            return false;
-        for ( Wallet& wallet : _arrWallet )
+        io.value( _statusTimer );
+        io.value( _huntTimer );
+        io.value( _bReportedOver );
+        if ( io.isReading() )
         {
-            if ( wallet.readState( archive ) == false )
-                return false;
+            _listEvent.clear();
+            _listFrameEvent.clear();
         }
-        for ( int32 player = 0; player < kPlayerCount; ++player )
-        {
-            if ( _arrAIActive[player] == SW_TRUE && _arrAI[player].readState( archive ) == false )
-                return false;
-        }
-        archive >> _statusTimer;
-        archive >> _huntTimer;
-        archive >> _bReportedOver;
-        _listEvent.clear();
-        _listFrameEvent.clear();
-        return archive.isOk();
     }
 
     void SkirmishMatch::paintMap()

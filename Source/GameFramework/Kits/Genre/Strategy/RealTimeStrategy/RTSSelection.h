@@ -9,6 +9,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
@@ -58,10 +60,11 @@ namespace sw
         bool  isCommandable( const RTSWorld& world ) const;
         int32 getPlayer() const { return _player; }
 
-        /** @brief 고른 유닛과 부대를 유닛 id(세대 포함)로 씁니다. 핫 리로드와 세이브에 쓰며, 같은 id 를 복원한 월드와 함께 읽어야 합니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. 죽은 유닛은 다음 `prune` 이 걸러 냅니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 고른 유닛과 부대를 유닛 id(세대 포함)로 씁니다. 핫 리로드와 세이브에 쓰며, 같은 id 를 복원한 월드와 함께 읽어야 합니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. 죽은 유닛은 다음 `prune` 이 걸러 냅니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         void addUnit( RTSUnitID unitID );

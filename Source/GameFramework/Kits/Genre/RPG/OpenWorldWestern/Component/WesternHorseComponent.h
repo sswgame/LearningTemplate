@@ -12,6 +12,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHorse.h"
@@ -45,7 +46,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 말 상태를 씁니다. 첫 값은 표와 버전이고, 말을 열었는지와 (열었으면) 말 상태가 뒤따릅니다. */
-        void writeState( Archive& outArchive ) const;
+        SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief `writeState` 의 바이트를 받아 둡니다. 말을 연 뒤에 적용하며, 읽지 못하면 알리고 새 말로 갑니다. */
         void restoreState( vector<uint8>&& bytes );
 

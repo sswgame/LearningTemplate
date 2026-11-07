@@ -153,59 +153,44 @@ namespace sw
         outMax                         = computeCell( float3{ center._x + halfX, center._y, center._z + halfZ } );
     }
 
-    void LandRegistry::writeState( Archive& outArchive ) const
+    void LandRegistry::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        outArchive << static_cast<uint32>( _listOwnerName.size() );
-        for ( const hashed_string& ownerName : _listOwnerName )
-        {
-            StateIO::writeName( outArchive, ownerName );
-        }
-        for ( const Cell& cell : _listCell )
-        {
-            outArchive << cell._owner;
-            outArchive << cell._bBlocking;
-        }
-    }
-
-    bool LandRegistry::readState( Archive& archive )
-    {
-        int32  width      = 0;
-        int32  height     = 0;
-        uint32 ownerCount = 0;
-        archive >> width;
-        archive >> height;
-        const bool bGridMismatch = archive.isError() || width != _topology._width || height != _topology._height;
-        if ( bGridMismatch )
-            return false;
-        if ( archive.readCount( sizeof( uint32 ), ownerCount ) == false )
-            return false;
+        io.expect( _topology._width );
+        io.expect( _topology._height );
+        uint32 ownerCount = static_cast<uint32>( _listOwnerName.size() );
+        io.count( sizeof( uint32 ), ownerCount );
+        if ( io.isOk() == false )
+            return;
         // 저장된 번호(1..) → 지금 번호. 이름이 지금 등록에 없으면 새로 등록한다(그 키트가 아직 묶이지 않았어도 칸은 그 이름의 것이다).
-        LandRegistry   land = *this;
         vector<uint16> listOwnerMap;
-        listOwnerMap.reserve( ownerCount );
         for ( uint32 index = 0; index < ownerCount; ++index )
         {
-            hashed_string ownerName;
-            if ( StateIO::readName( archive, ownerName ) == false || ownerName.empty() )
-                return false;
-            listOwnerMap.push_back( land.registerOwner( ownerName ) );
+            hashed_string ownerName = io.isWriting() ? _listOwnerName[index] : hashed_string{};
+            io.value( ownerName );
+            if ( io.isReading() )
+            {
+                if ( io.isOk() == false || io.check( ownerName.empty() == false ) == false )
+                    return;
+                listOwnerMap.push_back( registerOwner( ownerName ) );
+            }
         }
-        for ( Cell& cell : land._listCell )
+        for ( Cell& cell : _listCell )
         {
-            uint16 savedOwner = kNoOwner;
-            uint8  bBlocking  = SW_FALSE;
-            archive >> savedOwner;
-            archive >> bBlocking;
-            const bool bInvalidCellRecord = archive.isError() || savedOwner > ownerCount || bBlocking > SW_TRUE;
-            if ( bInvalidCellRecord )
-                return false;
+            uint16 savedOwner = cell._owner;
+            uint8  bBlocking  = cell._bBlocking;
+            io.value( savedOwner );
+            io.value( bBlocking );
+            if ( io.isWriting() )
+                continue;
+            if ( io.check( savedOwner <= ownerCount && bBlocking <= SW_TRUE ) == false )
+                return;
             cell._owner     = savedOwner == kNoOwner ? kNoOwner : listOwnerMap[static_cast<size_t>( savedOwner - 1 )];
             cell._bBlocking = savedOwner == kNoOwner ? SW_FALSE : bBlocking;
         }
-        land._revision = _revision + 1;
-        *this          = std::move( land );
-        return true;
+        if ( io.isReading() )
+        {
+            ++_revision;
+        }
     }
+
 } // namespace sw

@@ -140,12 +140,16 @@ namespace sw
         return true;
     }
 
-    void WesternHorseComponent::writeState( Archive& outArchive ) const
+    void WesternHorseComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        outArchive << _bOpened;
-        if ( _bOpened == SW_TRUE )
-            _horse.writeState( outArchive );
+        io.header( kStateTag, kStateVersion );
+        uint8 bOpened = _bOpened;
+        io.value( bOpened );
+        if ( bOpened == SW_TRUE )
+        {
+            io.valueAtomic( _horse );
+        }
+        io.end();
     }
 
     void WesternHorseComponent::restoreState( vector<uint8>&& bytes )
@@ -160,11 +164,7 @@ namespace sw
         if ( _pendingStateBytes.empty() )
             return;
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        uint8      bWasOpened = SW_FALSE;
-        const bool bHeader    = StateIO::readHeader( archive, kStateTag, kStateVersion );
-        if ( bHeader )
-            archive >> bWasOpened;
-        const bool bRead = bHeader && ( bWasOpened == SW_FALSE || _horse.readState( archive ) ) && archive.getRemainingBytes() == 0;
+        const bool bRead = readState( archive );
         _pendingStateBytes.clear();
         if ( bRead == false )
         {

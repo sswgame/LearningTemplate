@@ -297,45 +297,37 @@ namespace sw
         return GuardResult::Hit;
     }
 
-    void MoveTimeline::writeState( Archive& outArchive ) const
+    void MoveTimeline::serializeState( StateIO& io, const MoveCatalog* pCatalog )
     {
-        outArchive << _bPlaying;
-        if ( _bPlaying == SW_FALSE )
+        uint8 bPlaying = _bPlaying;
+        io.flag( bPlaying );
+        if ( io.isOk() == false )
             return;
-        StateIO::writeName( outArchive, _move._id );
-        outArchive << _frame;
-        outArchive << _hitstopRemaining;
-        outArchive << _bContact;
-        outArchive << _bBlocked;
-    }
-
-    bool MoveTimeline::readState( Archive& archive, const MoveCatalog& catalog )
-    {
-        uint8 bPlaying = SW_FALSE;
-        archive >> bPlaying;
-        if ( archive.isError() || bPlaying > SW_TRUE )
-            return false;
         if ( bPlaying == SW_FALSE )
         {
-            cancel();
-            return true;
+            if ( io.isReading() )
+            {
+                cancel();
+            }
+            return;
         }
-        hashed_string moveID;
-        int32         frame            = 0;
-        int32         hitstopRemaining = 0;
-        uint8         bContact         = SW_FALSE;
-        uint8         bBlocked         = SW_FALSE;
-        if ( StateIO::readName( archive, moveID ) == false )
-            return false;
-        archive >> frame;
-        archive >> hitstopRemaining;
-        archive >> bContact;
-        archive >> bBlocked;
-        const MoveFrameData* pMove = catalog.find( moveID );
-        if ( archive.isError() || pMove == nullptr )
-            return false;
-        return restoreState( *pMove, frame, hitstopRemaining, bContact == SW_TRUE, bBlocked == SW_TRUE );
+        hashed_string moveID           = _move._id;
+        int32         frame            = _frame;
+        int32         hitstopRemaining = _hitstopRemaining;
+        uint8         bContact         = _bContact;
+        uint8         bBlocked         = _bBlocked;
+        io.value( moveID );
+        io.value( frame );
+        io.value( hitstopRemaining );
+        io.value( bContact );
+        io.value( bBlocked );
+        if ( io.isReading() && io.isOk() )
+        {
+            const MoveFrameData* pMove = pCatalog->find( moveID );
+            io.check( pMove != nullptr && restoreState( *pMove, frame, hitstopRemaining, bContact == SW_TRUE, bBlocked == SW_TRUE ) );
+        }
     }
+
 } // namespace sw
 
 namespace sw

@@ -55,7 +55,7 @@ namespace sw
         virtual ~VoxelGameModeComponent() override;
 
         /** @brief 블록(부수거나 놓은 것 포함)을 기록합니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
         /**
          * @brief 블록 하나를 바꿉니다. 플레이어와 청크가 월드를 읽는 동안에는 쓰면 안 되므로, 틱이 끝난 뒤 게임 스레드에서만 부릅니다.
          * @return 좌표가 월드 밖이면 false 입니다.
@@ -70,7 +70,6 @@ namespace sw
     protected:
         /** @brief 시드로 지형을 생성합니다. 블록 카탈로그가 없거나 블록 이름 PROPERTY 가 카탈로그에 없으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool startGame() override;
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

@@ -22,6 +22,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
@@ -314,14 +315,11 @@ namespace sw
          * @brief 세이브와 핫 리로드용 전체 상태를 씁니다. 살인마 id, 판(`MatchState`), 걸음, 무대(위치, 판자, 사물함, 창틀, 발전기, 탈출구, 해치),
          *        생존자(체력, 치료 진행, 점수, 타이머, 갈고리, 하던 일), 살인마(점수, 위치, 쿨다운, 들고 있는 생존자), 엔드게임을 씁니다. 네트워크 스냅샷(`writeSnapshotMessage`)은
          *        화면용으로 양자화한 값이라 복원할 수 없으므로 따로 둡니다. 설정과 카탈로그는 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다.
-         */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState( Archive& )` 가 쓴 바이트를 읽어 상태를 복원합니다. 무대와 생존자는 바이트가 정하고, 규칙은 `initialize` 의 카탈로그를 씁니다.
+         *        `writeState( Archive& )` 가 쓴 바이트를 읽어 상태를 복원합니다. 무대와 생존자는 바이트가 정하고, 규칙은 `initialize` 의 카탈로그를 씁니다.
          *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 바이트가 깨졌거나, 값이 범위 밖이거나 서로 맞지 않으면(`isStateConsistent`) false 를 반환하고 상태는 그대로입니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
-        void               pollEvents( vector<AsymmetricHorrorEvent>& outListEvent );
+        SW_DECLARE_STATE_IO();
+        void pollEvents( vector<AsymmetricHorrorEvent>& outListEvent );
 
         const AsymmetricHorrorSurvivor*  findSurvivor( int32 survivor ) const { return isValidSurvivor( survivor ) ? &_listSurvivor[static_cast<size_t>( survivor )] : nullptr; }
         int32                            getSurvivorCount() const { return static_cast<int32>( _listSurvivor.size() ); }
@@ -375,12 +373,12 @@ namespace sw
         [[nodiscard]] bool configureGenerator( int32 generator, bool bRegressing );
         /** @brief `start` 가 판에 주는 설정입니다. 복원할 때 같은 설정으로 판을 다시 엽니다. */
         MatchSettings makeMatchSettings() const;
-        /** @brief 생존자 하나의 상태를 읽어 덮어씁니다(규칙과 치료 설정은 `addSurvivor` 가 만든 것을 씁니다). 데이터가 깨졌으면 false 를 반환합니다. */
-        [[nodiscard]] bool readSurvivor( Archive& archive, AsymmetricHorrorSurvivor& outSurvivor ) const;
-        /** @brief 무대(갈고리, 판자, 사물함, 창문, 발전기, 탈출문)를 위치로 다시 만들고 그 위에 상태를 덮습니다. 판자 수를 @p outPalletCount 에 적습니다. */
-        [[nodiscard]] bool readStage( Archive& archive, uint32& outPalletCount );
-        /** @brief 살인마 상태를 읽어 덮습니다. 든 생존자 · 부수는 판자 번호가 @p survivorCount · @p palletCount 밖이면 false 입니다. */
-        [[nodiscard]] bool readKiller( Archive& archive, uint32 survivorCount, uint32 palletCount );
+        /** @brief 생존자 하나의 상태를 놓습니다(규칙과 치료 설정은 `addSurvivor` 가 만든 것을 씁니다). */
+        void serializeSurvivor( StateIO& io, AsymmetricHorrorSurvivor& survivor ) const;
+        /** @brief 무대(갈고리, 판자, 사물함, 창문, 발전기, 탈출문)를 놓습니다. 읽을 때는 위치로 다시 만들고 그 위에 상태를 덮습니다. 판자 수를 @p inoutPalletCount 에 적습니다. */
+        void serializeStage( StateIO& io, uint32& inoutPalletCount );
+        /** @brief 살인마 상태를 놓습니다. 든 생존자 · 부수는 판자 번호가 @p survivorCount · @p palletCount 밖이면 거절합니다. */
+        void serializeKiller( StateIO& io, uint32 survivorCount, uint32 palletCount );
         /**
          * @brief 읽은 상태가 스스로 맞는지 봅니다. 판과 팀 번호, 완료 수와 전원, 해치, 창틀, 생존자의 상태와 체력과 갈고리 단계, 하던 일과 그 진행의 참가자,
          *        사물함 짝, 들린 생존자 짝, 부수는 판자를 봅니다. 어긋난 짝은 범위 안 번호여도 판을 멈추거나(들린 채 내려오지 못함) 없는 사람이 일을 잇게 합니다.

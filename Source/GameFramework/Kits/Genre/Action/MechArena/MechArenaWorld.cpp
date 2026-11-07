@@ -99,150 +99,66 @@ namespace sw
                 return name;
             }
 
-            static void writeInput( Archive& outArchive, const MechInput& input )
+            static void serializeInput( StateIO& io, MechInput& input )
             {
-                outArchive << input._moveX;
-                outArchive << input._moveZ;
-                outArchive << input._skillSlot;
-                outArchive << input._bDash;
-                outArchive << input._bJump;
-                outArchive << input._bHover;
-                outArchive << input._bFire;
-                outArchive << input._bMelee;
-                outArchive << input._bSpecial;
-                outArchive << input._bTransform;
-                outArchive << input._bLockOn;
+                io.value( input._moveX );
+                io.value( input._moveZ );
+                io.value( input._skillSlot );
+                io.flag( input._bDash );
+                io.flag( input._bJump );
+                io.flag( input._bHover );
+                io.flag( input._bFire );
+                io.flag( input._bMelee );
+                io.flag( input._bSpecial );
+                io.flag( input._bTransform );
+                io.flag( input._bLockOn );
             }
 
-            [[nodiscard]] static bool readInput( Archive& archive, MechInput& outInput )
+            /** @brief 덱과 스킬 목록입니다. 정의는 이름으로 카탈로그에서 다시 찾습니다. */
+            static void serializeLoadout( StateIO& io, const MechCatalog* pCatalog, MechPilot& pilot )
             {
-                archive >> outInput._moveX;
-                archive >> outInput._moveZ;
-                archive >> outInput._skillSlot;
-                archive >> outInput._bDash;
-                archive >> outInput._bJump;
-                archive >> outInput._bHover;
-                archive >> outInput._bFire;
-                archive >> outInput._bMelee;
-                archive >> outInput._bSpecial;
-                archive >> outInput._bTransform;
-                archive >> outInput._bLockOn;
-                const uint8 combined = static_cast<uint8>( outInput._bDash | outInput._bJump | outInput._bHover | outInput._bFire | outInput._bMelee |
-                                                           outInput._bSpecial | outInput._bTransform | outInput._bLockOn );
-                return archive.isOk() && combined <= SW_TRUE;
+                uint32 deckCount = static_cast<uint32>( pilot._listDeckMech.size() );
+                io.count( 4, deckCount );
+                if ( io.check( deckCount != 0 ) == false )
+                    return;
+                for ( uint32 index = 0; index < deckCount; ++index )
+                {
+                    hashed_string mechID = io.isWriting() ? pilot._listDeckMech[index]->_id : hashed_string{};
+                    io.value( mechID );
+                    if ( io.isWriting() )
+                        continue;
+                    const MechDef* pMech = pCatalog->findMech( mechID );
+                    if ( io.check( pMech != nullptr && pMech->_listMode.empty() == false ) == false )
+                        return;
+                    pilot._listDeckMech.push_back( pMech );
+                }
+                uint32 skillCount = static_cast<uint32>( pilot._listSkill.size() );
+                io.count( 4, skillCount );
+                if ( io.isOk() == false )
+                    return;
+                for ( uint32 index = 0; index < skillCount; ++index )
+                {
+                    hashed_string skillID = io.isWriting() ? pilot._listSkill[index]->_id : hashed_string{};
+                    io.value( skillID );
+                    if ( io.isWriting() )
+                        continue;
+                    const MechSkillDef* pSkill = pCatalog->findSkill( skillID );
+                    if ( io.check( pSkill != nullptr ) == false )
+                        return;
+                    pilot._listSkill.push_back( pSkill );
+                }
+                if ( io.isReading() )
+                {
+                    pilot._listSkillRemaining.resize( skillCount );
+                    pilot._listSkillCooldown.resize( skillCount );
+                    pilot._listSkillSpent.resize( skillCount, SW_FALSE );
+                }
             }
 
             /**
              * @brief 조종사의 덱(기체 id)과 스킬 id 를 카탈로그에서 찾아 채우고, 스킬 수만큼 타이머 슬롯을 잡습니다.
              * @return 덱이 비었거나 카탈로그에 없는 기체 · 스킬이면 false 입니다.
              */
-            [[nodiscard]] static bool readLoadout( Archive& archive, const MechCatalog& catalog, MechPilot& outPilot )
-            {
-                uint32 deckCount = 0;
-                if ( archive.readCount( 4, deckCount ) == false || deckCount == 0 )
-                    return false;
-                for ( uint32 index = 0; index < deckCount; ++index )
-                {
-                    hashed_string mechID;
-                    if ( StateIO::readName( archive, mechID ) == false )
-                        return false;
-                    const MechDef* pMech = catalog.findMech( mechID );
-                    if ( pMech == nullptr || pMech->_listMode.empty() )
-                        return false;
-                    outPilot._listDeckMech.push_back( pMech );
-                }
-                uint32 skillCount = 0;
-                if ( archive.readCount( 4, skillCount ) == false )
-                    return false;
-                for ( uint32 index = 0; index < skillCount; ++index )
-                {
-                    hashed_string skillID;
-                    if ( StateIO::readName( archive, skillID ) == false )
-                        return false;
-                    const MechSkillDef* pSkill = catalog.findSkill( skillID );
-                    if ( pSkill == nullptr )
-                        return false;
-                    outPilot._listSkill.push_back( pSkill );
-                }
-                outPilot._listSkillRemaining.resize( skillCount );
-                outPilot._listSkillCooldown.resize( skillCount );
-                outPilot._listSkillSpent.resize( skillCount, SW_FALSE );
-                return true;
-            }
-
-            /** @brief 스킬마다 남은 시간 · 쿨다운 · 쓴 표시를 읽습니다. 슬롯은 `readLoadout` 이 스킬 수만큼 잡아 두었습니다. */
-            [[nodiscard]] static bool readSkillTimers( Archive& archive, MechPilot& outPilot )
-            {
-                for ( size_t index = 0; index < outPilot._listSkill.size(); ++index )
-                {
-                    const bool bSkillRead = StateIO::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
-                                            StateIO::readCountdown( archive, outPilot._listSkillCooldown[index] );
-                    archive >> outPilot._listSkillSpent[index];
-                    const bool bPilotSkillInvalid = bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE;
-                    if ( bPilotSkillInvalid )
-                        return false;
-                }
-                return true;
-            }
-
-            static void writePilot( Archive& outArchive, const MechPilot& pilot )
-            {
-                outArchive << static_cast<uint32>( pilot._listDeckMech.size() );
-                for ( const MechDef* pMech : pilot._listDeckMech )
-                {
-                    StateIO::writeName( outArchive, pMech->_id );
-                }
-                outArchive << static_cast<uint32>( pilot._listSkill.size() );
-                for ( const MechSkillDef* pSkill : pilot._listSkill )
-                {
-                    StateIO::writeName( outArchive, pSkill->_id );
-                }
-                outArchive << pilot._spawnPosition;
-                outArchive << pilot._team;
-                outArchive << pilot._deckIndex;
-                outArchive << pilot._nextDeckIndex;
-                outArchive << pilot._mode;
-                outArchive << pilot._comboStage;
-                outArchive << pilot._meleeSlot;
-                outArchive << pilot._kills;
-                outArchive << pilot._deaths;
-                outArchive << static_cast<uint8>( pilot._state );
-                outArchive << pilot._bGrounded;
-                outArchive << pilot._bMeleeHit;
-                outArchive << pilot._bMeleeQueued;
-                outArchive << pilot._bWasOverheated;
-                outArchive << static_cast<uint32>( pilot._listParticipant.size() );
-                for ( const int32 participant : pilot._listParticipant )
-                {
-                    outArchive << participant;
-                }
-                outArchive << pilot._position;
-                outArchive << pilot._velocity;
-                outArchive << pilot._forward;
-                outArchive << pilot._dashDirection;
-                StateIO::writeCountdown( outArchive, pilot._dashRemaining );
-                StateIO::writeCountdown( outArchive, pilot._staggerRemaining );
-                StateIO::writeCountdown( outArchive, pilot._transformCooldown );
-                for ( size_t index = 0; index < pilot._listSkill.size(); ++index )
-                {
-                    StateIO::writeCountdown( outArchive, pilot._listSkillRemaining[index] );
-                    StateIO::writeCountdown( outArchive, pilot._listSkillCooldown[index] );
-                    outArchive << pilot._listSkillSpent[index];
-                }
-                writeInput( outArchive, pilot._input );
-                writeInput( outArchive, pilot._previousInput );
-                pilot._combatHealth.writeState( outArchive );
-                pilot._boost.writeState( outArchive );
-                pilot._lockOn.writeState( outArchive );
-                pilot._melee.writeState( outArchive );
-                outArchive << static_cast<uint32>( pilot._listWeaponState.size() );
-                for ( size_t index = 0; index < pilot._listWeaponState.size(); ++index )
-                {
-                    pilot._listWeaponState[index].writeState( outArchive );
-                    StateIO::writeCountdown( outArchive, pilot._listSpecialCooldown[index] );
-                }
-            }
-
             /**
              * @brief 읽은 근접 상태가 지금 기체와 맞는지 봅니다. 콤보 중이면 근접 타임라인이 돌고, 슬롯이 지금 형태의 근접 슬롯이고, 단이 그 슬롯의 기술 수 안이어야 합니다.
              * @details `stepMelee` 가 `_meleeSlot` 으로 지금 형태의 무기 목록을 그대로 찾는다. 이 값이 어긋나면 목록 밖을 읽는다.
@@ -1126,82 +1042,53 @@ namespace sw
         return channel.writeMessage( kind, snapshot, outWriter );
     }
 
-    void MechArenaWorld::writeState( Archive& outArchive ) const
+    void MechArenaWorld::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listTeamName.size() );
-        for ( const hashed_string& name : _listTeamName )
+        if ( io.check( _pMechCatalog != nullptr && _pMoveCatalog != nullptr ) == false )
+            return;
+        io.list( _listTeamName );
+        io.flag( _bStarted );
+        io.flag( _bEndReported );
+        io.value( _tick );
+        io.value( _timer );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, name );
+            _match.initialize( _bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
         }
-        outArchive << _bStarted;
-        outArchive << _bEndReported;
-        outArchive << _tick;
-        StateIO::writeStepTimer( outArchive, _timer );
-        _match.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listPilot.size() );
-        for ( const MechPilot& pilot : _listPilot )
-        {
-            MechArenaWorldInternal::writePilot( outArchive, pilot );
-        }
-        _projectiles.writeState( outArchive );
-    }
-
-    bool MechArenaWorld::readState( Archive& archive )
-    {
-        if ( _pMechCatalog == nullptr || _pMoveCatalog == nullptr )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정과 카탈로그는 사본이 그대로 가지고 있다.
-        MechArenaWorld restored  = *this;
-        uint32         teamCount = 0;
-        if ( archive.readCount( 4, teamCount ) == false )
-            return false;
-        restored._listTeamName.assign( teamCount, hashed_string{} );
-        for ( hashed_string& name : restored._listTeamName )
-        {
-            if ( StateIO::readName( archive, name ) == false )
-                return false;
-        }
-        archive >> restored._bStarted;
-        archive >> restored._bEndReported;
-        archive >> restored._tick;
-        const bool bHeadValid = archive.isOk() && restored._bStarted <= SW_TRUE && restored._bEndReported <= SW_TRUE;
-        if ( bHeadValid == false || StateIO::readStepTimer( archive, restored._timer ) == false )
-            return false;
-        restored._match.initialize( restored._bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
-        if ( restored._match.readState( archive ) == false )
-            return false;
-        if ( restored._bStarted == SW_TRUE && restored._match.getTeamCount() != static_cast<int32>( teamCount ) )
-            return false;
-
-        uint32 pilotCount = 0;
+        io.value( _match );
+        if ( io.check( _bStarted != SW_TRUE || _match.getTeamCount() == static_cast<int32>( _listTeamName.size() ) ) == false )
+            return;
+        uint32 pilotCount = static_cast<uint32>( _listPilot.size() );
         // 조종사마다 적어도 덱 개수(4) + 기체 이름(4) + 스킬 개수(4) + 위치, 정수, 상태 슬롯(60) 바이트
-        if ( archive.readCount( 72, pilotCount ) == false )
-            return false;
-        restored._listPilot.assign( pilotCount, MechPilot{} );
+        io.count( 72, pilotCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
+        {
+            _listPilot.assign( pilotCount, MechPilot{} );
+        }
         for ( uint32 index = 0; index < pilotCount; ++index )
         {
-            if ( restored.readPilot( archive, static_cast<int32>( index ), restored._listPilot[index] ) == false )
-                return false;
+            serializePilot( io, static_cast<int32>( index ), _listPilot[index] );
+            if ( io.isOk() == false )
+                return;
         }
-        for ( const MechPilot& pilot : restored._listPilot )
+        for ( const MechPilot& pilot : _listPilot )
         {
-            if ( pilot._lockOn.getTarget() > static_cast<uint64>( pilotCount ) ) // 대상 id 는 조종사 번호 + 1 이다(0 은 대상 없음)
-                return false;
+            io.check( pilot._lockOn.getTarget() <= static_cast<uint64>( pilotCount ) ); // 대상 id 는 조종사 번호 + 1 이다(0 은 대상 없음)
         }
-
-        if ( restored._projectiles.readState( archive ) == false )
-            return false;
-        for ( const ProjectileState& projectile : restored._projectiles.getProjectiles() )
+        io.value( _projectiles );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
         {
             // 탄속 0 인 탄은 날아가지 않는 광선이라 쏠 때 탄이 되지 않는다. 사거리 없는 탄은 판 밖에 닿기 전까지 남는다 — 둘 다 이 판이 쏘지 않는 탄이다.
-            const bool bValid = projectile.getSpeed() > 0.0f && projectile._range > 0.0f && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) &&
-                              -1 <= projectile._target && projectile._target < static_cast<int32>( pilotCount ) && restored.findProjectileSlot( projectile._payload ) != nullptr;
-            if ( bValid == false )
-                return false;
+            io.check( projectile.getSpeed() > 0.0f && projectile._range > 0.0f && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) &&
+                      -1 <= projectile._target && projectile._target < static_cast<int32>( pilotCount ) && findProjectileSlot( projectile._payload ) != nullptr );
         }
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        _eventBuffer.clear();
     }
 
     MatchSettings MechArenaWorld::makeMatchSettings() const
@@ -1213,85 +1100,93 @@ namespace sw
         return matchSettings;
     }
 
-    bool MechArenaWorld::readPilot( Archive& archive, int32 pilotIndex, MechPilot& outPilot )
+    void MechArenaWorld::serializePilot( StateIO& io, int32 pilotIndex, MechPilot& pilot )
     {
-        if ( MechArenaWorldInternal::readLoadout( archive, *_pMechCatalog, outPilot ) == false )
-            return false;
-        const uint32 deckCount = static_cast<uint32>( outPilot._listDeckMech.size() );
-
-        int32 mode           = 0;
-        uint8 state          = 0;
-        uint8 bWasOverheated = SW_FALSE;
-        archive >> outPilot._spawnPosition;
-        archive >> outPilot._team;
-        archive >> outPilot._deckIndex;
-        archive >> outPilot._nextDeckIndex;
-        archive >> mode;
-        archive >> outPilot._comboStage;
-        archive >> outPilot._meleeSlot;
-        archive >> outPilot._kills;
-        archive >> outPilot._deaths;
-        archive >> state;
-        archive >> outPilot._bGrounded;
-        archive >> outPilot._bMeleeHit;
-        archive >> outPilot._bMeleeQueued;
-        archive >> bWasOverheated;
-        const int32 deckSize   = static_cast<int32>( deckCount );
-        const uint8 flags      = static_cast<uint8>( outPilot._bGrounded | outPilot._bMeleeHit | outPilot._bMeleeQueued | bWasOverheated );
-        const bool  bHeadValid = archive.isOk() && 0 <= outPilot._team && outPilot._team < static_cast<int32>( _listTeamName.size() ) && 0 <= outPilot._deckIndex &&
-                                outPilot._deckIndex < deckSize && 0 <= outPilot._nextDeckIndex && outPilot._nextDeckIndex < deckSize && -1 <= outPilot._comboStage && 0 <= outPilot._kills &&
-                                0 <= outPilot._deaths && state <= static_cast<uint8>( MechPilotState::Retired ) && flags <= SW_TRUE;
-        if ( bHeadValid == false )
-            return false;
-        outPilot._state = static_cast<MechPilotState>( state );
-
-        // 무기, 체력, 부스트 설정은 지금 장착한 기체가 정한다.
-        const MechDef* pMech = outPilot.getMech();
-        if ( equipMech( outPilot, pilotIndex ) == false )
-            return false;
-        outPilot._bWasOverheated = bWasOverheated;
-        outPilot._mode           = mode;
-        if ( mode < 0 || mode >= static_cast<int32>( pMech->_listMode.size() ) )
-            return false;
-
-        uint32 participantCount = 0;
+        MechArenaWorldInternal::serializeLoadout( io, _pMechCatalog, pilot );
+        if ( io.isOk() == false )
+            return;
+        const uint32 deckCount      = static_cast<uint32>( pilot._listDeckMech.size() );
+        const int32  deckSize       = static_cast<int32>( deckCount );
+        int32        mode           = pilot._mode;
+        uint8        bWasOverheated = pilot._bWasOverheated;
+        io.value( pilot._spawnPosition );
+        io.value( pilot._team );
+        io.value( pilot._deckIndex );
+        io.value( pilot._nextDeckIndex );
+        io.value( mode );
+        io.value( pilot._comboStage );
+        io.value( pilot._meleeSlot );
+        io.value( pilot._kills );
+        io.value( pilot._deaths );
+        io.enumValue( pilot._state, MechPilotState::Retired );
+        io.flag( pilot._bGrounded );
+        io.flag( pilot._bMeleeHit );
+        io.flag( pilot._bMeleeQueued );
+        io.flag( bWasOverheated );
+        if ( io.check( 0 <= pilot._team && pilot._team < static_cast<int32>( _listTeamName.size() ) && 0 <= pilot._deckIndex && pilot._deckIndex < deckSize && 0 <= pilot._nextDeckIndex &&
+                       pilot._nextDeckIndex < deckSize && -1 <= pilot._comboStage && 0 <= pilot._kills && 0 <= pilot._deaths ) == false )
+            return;
+        if ( io.isReading() )
+        {
+            // 무기, 체력, 부스트 설정은 지금 장착한 기체가 정한다.
+            const MechDef* pMech = pilot.getMech();
+            if ( io.check( equipMech( pilot, pilotIndex ) ) == false )
+                return;
+            pilot._bWasOverheated = bWasOverheated;
+            pilot._mode           = mode;
+            if ( io.check( 0 <= mode && mode < static_cast<int32>( pMech->_listMode.size() ) ) == false )
+                return;
+        }
         // 참가자는 `start` 가 덱 슬롯마다 만든다. `stepMatch` 와 `resolveHit` 가 지금 슬롯의 참가자를 그대로 찾는다.
-        if ( archive.readCount( 4, participantCount ) == false || participantCount != ( _bStarted == SW_TRUE ? deckCount : 0u ) )
-            return false;
-        outPilot._listParticipant.assign( participantCount, -1 );
-        for ( int32& participant : outPilot._listParticipant )
+        uint32 participantCount = static_cast<uint32>( pilot._listParticipant.size() );
+        io.count( 4, participantCount );
+        if ( io.check( participantCount == ( _bStarted == SW_TRUE ? deckCount : 0u ) ) == false )
+            return;
+        if ( io.isReading() )
         {
-            archive >> participant;
-            const MatchParticipant* pParticipant = _match.findParticipant( participant );
-            if ( archive.isError() || pParticipant == nullptr || pParticipant->_team != outPilot._team )
-                return false;
+            pilot._listParticipant.assign( participantCount, -1 );
         }
-        archive >> outPilot._position;
-        archive >> outPilot._velocity;
-        archive >> outPilot._forward;
-        archive >> outPilot._dashDirection;
-        const bool bTimerRead = StateIO::readCountdown( archive, outPilot._dashRemaining ) &&
-                                StateIO::readCountdown( archive, outPilot._staggerRemaining ) &&
-                                StateIO::readCountdown( archive, outPilot._transformCooldown );
-        if ( bTimerRead == false || MechArenaWorldInternal::readSkillTimers( archive, outPilot ) == false )
-            return false;
-        const bool bBodyRead = MechArenaWorldInternal::readInput( archive, outPilot._input ) && MechArenaWorldInternal::readInput( archive, outPilot._previousInput ) &&
-                               outPilot._combatHealth.readState( archive ) && outPilot._boost.readState( archive ) && outPilot._lockOn.readState( archive ) &&
-                               outPilot._melee.readState( archive, *_pMoveCatalog );
-        if ( bBodyRead == false )
-            return false;
-
-        uint32 weaponCount = 0;
-        archive >> weaponCount;
-        if ( archive.isError() || weaponCount != static_cast<uint32>( outPilot._listWeaponState.size() ) )
-            return false;
-        for ( uint32 index = 0; index < weaponCount; ++index )
+        for ( int32& participant : pilot._listParticipant )
         {
-            if ( outPilot._listWeaponState[index].readState( archive ) == false ||
-                 StateIO::readCountdown( archive, outPilot._listSpecialCooldown[index] ) == false )
-                return false;
+            io.value( participant );
+            if ( io.isReading() )
+            {
+                const MatchParticipant* pParticipant = _match.findParticipant( participant );
+                if ( io.check( pParticipant != nullptr && pParticipant->_team == pilot._team ) == false )
+                    return;
+            }
         }
-        return MechArenaWorldInternal::isMeleeStateValid( outPilot ) && MechArenaWorldInternal::isCombatHealthFittingState( outPilot );
+        io.value( pilot._position );
+        io.value( pilot._velocity );
+        io.value( pilot._forward );
+        io.value( pilot._dashDirection );
+        io.value( pilot._dashRemaining );
+        io.value( pilot._staggerRemaining );
+        io.value( pilot._transformCooldown );
+        for ( size_t index = 0; index < pilot._listSkill.size(); ++index )
+        {
+            io.value( pilot._listSkillRemaining[index] );
+            io.value( pilot._listSkillCooldown[index] );
+            io.flag( pilot._listSkillSpent[index] );
+        }
+        MechArenaWorldInternal::serializeInput( io, pilot._input );
+        MechArenaWorldInternal::serializeInput( io, pilot._previousInput );
+        io.value( pilot._combatHealth );
+        io.value( pilot._boost );
+        io.value( pilot._lockOn );
+        pilot._melee.serializeState( io, _pMoveCatalog );
+        io.expect( static_cast<uint32>( pilot._listWeaponState.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( size_t index = 0; index < pilot._listWeaponState.size(); ++index )
+        {
+            io.value( pilot._listWeaponState[index] );
+            io.value( pilot._listSpecialCooldown[index] );
+        }
+        if ( io.isReading() && io.isOk() )
+        {
+            io.check( MechArenaWorldInternal::isMeleeStateValid( pilot ) && MechArenaWorldInternal::isCombatHealthFittingState( pilot ) );
+        }
     }
 
     void MechArenaWorld::stepPilot( int32 pilotIndex, float32 deltaTime )

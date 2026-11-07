@@ -565,110 +565,61 @@ namespace sw
         return _pClock != nullptr ? _pClock->getDay() : 0;
     }
 
-    void ScavengerExpedition::writeState( Archive& outArchive ) const
+    void ScavengerExpedition::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listCrew.size() );
-        for ( const ScavengerCrewMember& member : _listCrew )
+        if ( io.check( _data._pCatalog != nullptr ) == false )
+            return;
+        io.expect( static_cast<uint32>( _listCrew.size() ) );
+        if ( io.isOk() == false )
+            return;
+        const int32 crewCount = static_cast<int32>( _listCrew.size() );
+        for ( ScavengerCrewMember& member : _listCrew )
         {
-            member._combatHealth.writeState( outArchive );
-            member._carry.writeState( outArchive );
-            StateIO::writeName( outArchive, member._areaID );
-            outArchive << member._bBodyRecovered;
+            io.value( member._combatHealth );
+            io.value( member._carry );
+            io.value( member._areaID );
+            io.flag( member._bBodyRecovered );
         }
-        outArchive << static_cast<uint32>( _listShipScrap.size() );
-        for ( const ScavengerScrap& scrap : _listShipScrap )
-        {
-            ScavengerFacility::writeScrap( outArchive, scrap );
-        }
-        StateIO::writeName( outArchive, _pMoon != nullptr ? _pMoon->_id : hashed_string{} );
-        outArchive << static_cast<uint8>( _phase );
-        outArchive << _bDuskAnnounced;
-        outArchive << _seed;
-        outArchive << _hoursOnMoon;
-        StateIO::writeRandom( outArchive, _random );
-        _quota.writeState( outArchive );
-        _facility.writeState( outArchive );
-        _indoorDirector.writeState( outArchive );
-        _outdoorDirector.writeState( outArchive );
-        _shop.writeState( outArchive );
-    }
-
-    bool ScavengerExpedition::readState( Archive& archive )
-    {
-        if ( _data._pCatalog == nullptr )
-            return false;
-        uint32 crewCount = 0;
-        archive >> crewCount;
-        if ( archive.isError() || crewCount != _listCrew.size() )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 데이터, 빌린 포인터, 사람마다의 설정은 사본도 그대로 가지고 있다.
-        ScavengerExpedition restored = *this;
-        for ( ScavengerCrewMember& member : restored._listCrew )
-        {
-            const bool bMemberRead = member._combatHealth.readState( archive ) && member._carry.readState( archive ) && StateIO::readName( archive, member._areaID );
-            if ( bMemberRead == false )
-                return false;
-            archive >> member._bBodyRecovered;
-            if ( archive.isError() || member._bBodyRecovered > SW_TRUE )
-                return false;
-        }
-
-        uint32 scrapCount = 0;
-        if ( archive.readCount( ScavengerFacility::kMinScrapBytes, scrapCount ) == false )
-            return false;
-        restored._listShipScrap.assign( scrapCount, ScavengerScrap{} );
-        for ( ScavengerScrap& scrap : restored._listShipScrap )
-        {
-            if ( ScavengerFacility::readScrap( archive, scrap ) == false )
-                return false;
-        }
-
-        hashed_string moonID;
-        uint8         phase = 0;
-        if ( StateIO::readName( archive, moonID ) == false )
-            return false;
-        archive >> phase;
-        archive >> restored._bDuskAnnounced;
-        archive >> restored._seed;
-        archive >> restored._hoursOnMoon;
-        const bool bHeadValid = StateIO::readRandom( archive, restored._random ) && phase <= static_cast<uint8>( ScavengerPhase::GameOver ) &&
-                                restored._bDuskAnnounced <= SW_TRUE && 0.0f <= restored._hoursOnMoon; // NaN 이면 자정 비교가 늘 거짓이라 우주선이 뜨지 않는다
-        if ( bHeadValid == false )
-            return false;
-        restored._phase = static_cast<ScavengerPhase>( phase );
-        restored._pMoon = moonID.empty() ? nullptr : _data._pCatalog->findMoon( moonID );
-        if ( moonID.empty() == false && restored._pMoon == nullptr )
-            return false;
-        if ( restored._phase == ScavengerPhase::Landed && restored._pMoon == nullptr )
-            return false;
-
+        io.list( _listShipScrap, ScavengerFacility::kMinScrapBytes, [&]( ScavengerScrap& scrap )
+        { ScavengerFacility::serializeScrap( io, scrap ); } );
+        io.reference( _pMoon, [this]( const hashed_string& moonID )
+        { return _data._pCatalog->findMoon( moonID ); } );
+        io.enumValue( _phase, ScavengerPhase::GameOver );
+        io.flag( _bDuskAnnounced );
+        io.value( _seed );
+        io.value( _hoursOnMoon );
+        io.value( _random );
+        if ( io.check( 0.0f <= _hoursOnMoon && ( _phase != ScavengerPhase::Landed || _pMoon != nullptr ) ) == false ) // NaN 이면 자정 비교가 늘 거짓이라 우주선이 뜨지 않는다
+            return;
         // 위협 감독은 내려 있는 동안만 테이블을 가진다(궤도와 회사에서는 비어 있다). 같은 테이블로 열고 나머지를 읽는다.
-        const bool bThreatActive = restored._phase == ScavengerPhase::Landed && restored._pMoon->_bCompany == false && _data._pThreatTable != nullptr;
-        restored._indoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
-        restored._outdoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
-        const bool bPartRead = restored._quota.readState( archive ) && restored._facility.readState( archive ) &&
-                               restored._indoorDirector.readState( archive ) && restored._outdoorDirector.readState( archive ) && restored._shop.readState( archive );
-        if ( bPartRead == false )
-            return false;
+        if ( io.isReading() )
+        {
+            const bool bThreatActive = _phase == ScavengerPhase::Landed && _pMoon->_bCompany == false && _data._pThreatTable != nullptr;
+            _indoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
+            _outdoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
+        }
+        io.value( _quota );
+        io.value( _facility );
+        io.value( _indoorDirector );
+        io.value( _outdoorDirector );
+        io.value( _shop );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
         // 시신 번호는 나중에 `_listCrew` 를 그대로 가리킨다. 사람 수 밖이면 시신을 싣는 순간 범위 밖을 쓴다.
-        const auto isBodyInCrew = [crewCount]( const vector<ScavengerScrap>& listScrap )
+        const auto checkBodies = [&]( const vector<ScavengerScrap>& listScrap )
         {
             for ( const ScavengerScrap& scrap : listScrap )
             {
-                if ( scrap._bodyOf >= static_cast<int32>( crewCount ) )
-                    return false;
+                io.check( scrap._bodyOf < crewCount );
             }
-            return true;
         };
-        bool bBodiesValid = isBodyInCrew( restored._listShipScrap ) && isBodyInCrew( restored._facility.getGroundScrap() );
-        for ( const ScavengerCrewMember& member : restored._listCrew )
+        checkBodies( _listShipScrap );
+        checkBodies( _facility.getGroundScrap() );
+        for ( const ScavengerCrewMember& member : _listCrew )
         {
-            bBodiesValid = bBodiesValid && isBodyInCrew( member._carry.getScraps() );
+            checkBodies( member._carry.getScraps() );
         }
-        if ( bBodiesValid == false )
-            return false;
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        _eventBuffer.clear();
     }
+
 } // namespace sw

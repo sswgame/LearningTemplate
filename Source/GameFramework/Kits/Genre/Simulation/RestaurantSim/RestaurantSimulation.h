@@ -15,6 +15,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
@@ -241,10 +242,9 @@ namespace sw
         /**
          * @brief 직원(레벨 포함), 손님, 주문, 메뉴, 스테이션, 만족도, 재료 배치, 조리(`Crafter`), 시세(`ShopState`), 오늘 결산, 걸음, 난수, 날씨 id, 분,
          *        도착 누적, 미룬 폐기비, 다음 손님 번호, 영업 중 여부를 씁니다. 카탈로그, 설정, 빌린 지갑, 시계, 평판, 주방 창고는 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 설정으로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나, 메뉴 수가 다르거나, 음수 · 범위 밖 값, 없는 손님 · 요리 · 직원, 겹친 줄이나 자리가 있으면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 설정으로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나, 메뉴 수가 다르거나, 음수 · 범위 밖 값, 없는 손님 · 요리 · 직원, 겹친 줄이나 자리가 있으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         /** @brief 지금 주문할 수 있는 요리인지 반환합니다(메뉴, 레시피, 스테이션, 레벨, 재료를 확인합니다). */
         bool  canServe( const hashed_string& dishID ) const;

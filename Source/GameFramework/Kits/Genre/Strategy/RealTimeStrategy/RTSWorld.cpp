@@ -26,123 +26,101 @@ namespace sw
             static constexpr uint32  kMinOrderStateBytes  = 34;   ///< 명령 하나의 상태가 최소한 차지하는 바이트 수
             static constexpr uint32  kMinPlayerStateBytes = 30;   ///< 플레이어 하나의 상태가 최소한 차지하는 바이트 수
 
-            /** @brief `writeState` 가 쓴 명령 하나를 읽습니다. 흐름장을 쓰던 명령인지는 @p outListFlowFieldOrder 끝에 붙입니다. */
-            [[nodiscard]] static bool readOrder( Archive& archive, const RTSCatalog& catalog, RTSOrder& outOrder, vector<uint8>& outListFlowFieldOrder )
+            static void serializeUnitID( StateIO& io, RTSUnitID& unitID )
             {
-                uint64 targetUnit = 0;
-                uint8  type       = 0;
-                uint8  bFlowField = SW_FALSE;
-                if ( StateIO::readName( archive, outOrder._buildID ) == false )
-                    return false;
-                archive >> outOrder._target;
-                StateIO::readInt2( archive, outOrder._buildCell );
-                archive >> targetUnit;
-                archive >> outOrder._arriveRadius;
-                archive >> type;
-                archive >> bFlowField;
-                const bool bBuildKnown = outOrder._buildID.empty() || catalog.find( outOrder._buildID ) != nullptr;
-                if ( archive.isError() || type > static_cast<uint8>( RTSOrderType::Hold ) || bFlowField > SW_TRUE || outOrder._arriveRadius < 0.0f || bBuildKnown == false )
-                    return false;
-                outOrder._targetUnit = RTSUnitID::fromPacked( targetUnit );
-                outOrder._type       = static_cast<RTSOrderType>( type );
-                outListFlowFieldOrder.push_back( bFlowField );
-                return true;
-            }
-
-            /** @brief 플레이어 하나의 필드를 읽습니다. 지갑은 싣지 않으므로 부르는 쪽이 지금 플레이어의 것을 넘겨 둡니다. 오류는 아카이브에 남습니다. */
-            static void readPlayer( Archive& archive, RTSPlayer& outPlayer )
-            {
-                archive >> outPlayer._startPosition;
-                archive >> outPlayer._supplyUsed;
-                archive >> outPlayer._supplyCap;
-                archive >> outPlayer._team;
-                archive >> outPlayer._nextUnderAttackTime;
-                archive >> outPlayer._bDefeated;
-                archive >> outPlayer._bHadBuilding;
-            }
-
-            /** @brief 유닛의 필드(정의 · 명령 · 생산 줄을 뺀 나머지)를 읽습니다. 열거형이 범위 밖이거나 정의 없이 살아 있으면 false 입니다. */
-            [[nodiscard]] static bool readUnitFields( Archive& archive, RTSUnit& outUnit )
-            {
-                uint64 id             = 0;
-                uint64 attackTarget   = 0;
-                uint64 gatherTarget   = 0;
-                uint64 harvester      = 0;
-                uint64 builder        = 0;
-                uint64 linkedResource = 0;
-                uint8  cargoType      = 0;
-                uint8  gatherPhase    = 0;
-                archive >> outUnit._position;
-                archive >> outUnit._rallyPoint;
-                archive >> outUnit._moveGoal;
-                StateIO::readInt2( archive, outUnit._cell );
-                archive >> id;
-                archive >> attackTarget;
-                archive >> gatherTarget;
-                archive >> harvester;
-                archive >> builder;
-                archive >> linkedResource;
-                archive >> outUnit._hp;
-                archive >> outUnit._cooldown._remaining;
-                archive >> outUnit._buildProgress;
-                archive >> outUnit._productionTimer;
-                archive >> outUnit._gatherTimer;
-                archive >> outUnit._owner;
-                archive >> outUnit._resourceLeft;
-                archive >> outUnit._cargoAmount;
-                archive >> outUnit._supplyReserved;
-                archive >> cargoType;
-                archive >> gatherPhase;
-                archive >> outUnit._bAlive;
-                archive >> outUnit._bHasRally;
-                archive >> outUnit._bSupplyBlocked;
-                const bool bEnumValid       = cargoType <= static_cast<uint8>( RTSResourceType::None ) && gatherPhase <= static_cast<uint8>( RTSGatherPhase::Returning );
-                const bool bAliveValid      = outUnit._bAlive == SW_FALSE || outUnit._pDef != nullptr;
-                const bool bInvalidUnitData = archive.isError() || bEnumValid == false || bAliveValid == false;
-                if ( bInvalidUnitData )
-                    return false;
-                outUnit._id             = RTSUnitID::fromPacked( id );
-                outUnit._attackTarget   = RTSUnitID::fromPacked( attackTarget );
-                outUnit._gatherTarget   = RTSUnitID::fromPacked( gatherTarget );
-                outUnit._harvester      = RTSUnitID::fromPacked( harvester );
-                outUnit._builder        = RTSUnitID::fromPacked( builder );
-                outUnit._linkedResource = RTSUnitID::fromPacked( linkedResource );
-                outUnit._cargoType      = static_cast<RTSResourceType>( cargoType );
-                outUnit._gatherPhase    = static_cast<RTSGatherPhase>( gatherPhase );
-                // 경로와 흐름장은 싣지 않는다. 맨 앞 명령을 처음부터 다시 진행시키면 이 격자에서 경로를 다시 구한다.
-                outUnit._bOrderStarted = SW_FALSE;
-                outUnit._repathTimer.clear();
-                return true;
-            }
-
-            /** @brief 유닛 하나(정의 id, 명령, 생산 줄, 필드)를 읽습니다. 카탈로그에서 빠진 정의면 판을 맞출 수 없으므로 false 입니다. */
-            [[nodiscard]] static bool readUnit( Archive& archive, const RTSCatalog& catalog, const RTSSettings& settings, RTSUnit& outUnit, vector<uint8>& outListFlowFieldOrder )
-            {
-                hashed_string defID;
-                if ( StateIO::readName( archive, defID ) == false )
-                    return false;
-                outUnit._pDef = defID.empty() ? nullptr : catalog.find( defID );
-                if ( defID.empty() == false && outUnit._pDef == nullptr )
-                    return false;
-                uint32 orderCount = 0;
-                if ( archive.readCount( kMinOrderStateBytes, orderCount ) == false )
-                    return false;
-                for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
+                uint64 packed = unitID.packed();
+                io.value( packed );
+                if ( io.isReading() )
                 {
-                    if ( readOrder( archive, catalog, outUnit._listOrder.emplace_back(), outListFlowFieldOrder ) == false )
-                        return false;
+                    unitID = RTSUnitID::fromPacked( packed );
                 }
-                uint32 productionCount = 0;
-                if ( archive.readCount( sizeof( uint32 ), productionCount ) == false || productionCount > static_cast<uint32>( settings._productionQueueMax ) )
-                    return false;
+            }
+
+            static void serializeOrder( StateIO& io, const RTSCatalog* pCatalog, RTSOrder& order, vector<uint8>& outListFlowFieldOrder )
+            {
+                uint8 bFlowField = order._pFlowField != nullptr ? SW_TRUE : SW_FALSE;
+                io.value( order._buildID );
+                io.value( order._target );
+                io.value( order._buildCell );
+                serializeUnitID( io, order._targetUnit );
+                io.value( order._arriveRadius );
+                io.enumValue( order._type, RTSOrderType::Hold );
+                io.flag( bFlowField );
+                io.check( 0.0f <= order._arriveRadius );
+                if ( io.isReading() )
+                {
+                    io.check( order._buildID.empty() || pCatalog->find( order._buildID ) != nullptr );
+                    outListFlowFieldOrder.push_back( bFlowField );
+                }
+            }
+
+            static void serializeUnit( StateIO& io, const RTSCatalog* pCatalog, const RTSSettings& settings, RTSUnit& unit, vector<uint8>& outListFlowFieldOrder )
+            {
+                io.reference( unit._pDef, [pCatalog]( const hashed_string& defID )
+                { return pCatalog->find( defID ); } );
+                uint32 orderCount = static_cast<uint32>( unit._listOrder.size() );
+                io.count( kMinOrderStateBytes, orderCount );
+                for ( uint32 orderIndex = 0; orderIndex < orderCount && io.isOk(); ++orderIndex )
+                {
+                    serializeOrder( io, pCatalog, io.isWriting() ? unit._listOrder[orderIndex] : unit._listOrder.emplace_back(), outListFlowFieldOrder );
+                }
+                uint32 productionCount = static_cast<uint32>( unit._listProduction.size() );
+                io.count( sizeof( uint32 ), productionCount );
+                if ( io.check( productionCount <= static_cast<uint32>( settings._productionQueueMax ) ) == false )
+                    return;
                 for ( uint32 productionIndex = 0; productionIndex < productionCount; ++productionIndex )
                 {
-                    hashed_string productionID;
-                    if ( StateIO::readName( archive, productionID ) == false || catalog.find( productionID ) == nullptr )
-                        return false;
-                    outUnit._listProduction.push_back( productionID );
+                    hashed_string productionID = io.isWriting() ? unit._listProduction[productionIndex] : hashed_string{};
+                    io.value( productionID );
+                    if ( io.isReading() )
+                    {
+                        if ( io.isOk() == false || io.check( pCatalog->find( productionID ) != nullptr ) == false )
+                            return;
+                        unit._listProduction.push_back( productionID );
+                    }
                 }
-                return readUnitFields( archive, outUnit );
+                io.value( unit._position );
+                io.value( unit._rallyPoint );
+                io.value( unit._moveGoal );
+                io.value( unit._cell );
+                serializeUnitID( io, unit._id );
+                serializeUnitID( io, unit._attackTarget );
+                serializeUnitID( io, unit._gatherTarget );
+                serializeUnitID( io, unit._harvester );
+                serializeUnitID( io, unit._builder );
+                serializeUnitID( io, unit._linkedResource );
+                io.value( unit._hp );
+                io.value( unit._cooldown._remaining );
+                io.value( unit._buildProgress );
+                io.value( unit._productionTimer );
+                io.value( unit._gatherTimer );
+                io.value( unit._owner );
+                io.value( unit._resourceLeft );
+                io.value( unit._cargoAmount );
+                io.value( unit._supplyReserved );
+                io.enumValue( unit._cargoType, RTSResourceType::None );
+                io.enumValue( unit._gatherPhase, RTSGatherPhase::Returning );
+                io.value( unit._bAlive );
+                io.value( unit._bHasRally );
+                io.value( unit._bSupplyBlocked );
+                io.check( unit._bAlive == SW_FALSE || unit._pDef != nullptr );
+                if ( io.isReading() )
+                {
+                    // 경로와 흐름장은 싣지 않는다. 맨 앞 명령을 처음부터 다시 진행시키면 이 격자에서 경로를 다시 구한다.
+                    unit._bOrderStarted = SW_FALSE;
+                    unit._repathTimer.clear();
+                }
+            }
+
+            static void serializePlayer( StateIO& io, RTSPlayer& player )
+            {
+                io.value( player._startPosition );
+                io.value( player._supplyUsed );
+                io.value( player._supplyCap );
+                io.value( player._team );
+                io.value( player._nextUnderAttackTime );
+                io.value( player._bDefeated );
+                io.value( player._bHadBuilding );
             }
 
             /**
@@ -1801,165 +1779,107 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기와 읽기(핫 리로드, 세이브)
     // ------------------------------------------------------------------------------
-    void RTSWorld::writeState( Archive& outArchive ) const
-    {
-        outArchive << _grid.getWidth();
-        outArchive << _grid.getHeight();
-        outArchive << _listTerrainBlocked;
-        outArchive << static_cast<uint32>( _listUnit.size() );
-        for ( size_t index = 0; index < _listUnit.size(); ++index )
-        {
-            const RTSUnit& unit = _listUnit[index];
-            outArchive << _listGeneration[index];
-            StateIO::writeName( outArchive, unit._pDef != nullptr ? unit._pDef->_id : hashed_string{} );
-            outArchive << static_cast<uint32>( unit._listOrder.size() );
-            for ( const RTSOrder& order : unit._listOrder )
-            {
-                StateIO::writeName( outArchive, order._buildID );
-                outArchive << order._target;
-                StateIO::writeInt2( outArchive, order._buildCell );
-                outArchive << order._targetUnit.packed();
-                outArchive << order._arriveRadius;
-                outArchive << static_cast<uint8>( order._type );
-                outArchive << static_cast<uint8>( order._pFlowField != nullptr ? SW_TRUE : SW_FALSE );
-            }
-            outArchive << static_cast<uint32>( unit._listProduction.size() );
-            for ( const hashed_string& productionID : unit._listProduction )
-            {
-                StateIO::writeName( outArchive, productionID );
-            }
-            outArchive << unit._position;
-            outArchive << unit._rallyPoint;
-            outArchive << unit._moveGoal;
-            StateIO::writeInt2( outArchive, unit._cell );
-            outArchive << unit._id.packed();
-            outArchive << unit._attackTarget.packed();
-            outArchive << unit._gatherTarget.packed();
-            outArchive << unit._harvester.packed();
-            outArchive << unit._builder.packed();
-            outArchive << unit._linkedResource.packed();
-            outArchive << unit._hp;
-            outArchive << unit._cooldown._remaining;
-            outArchive << unit._buildProgress;
-            outArchive << unit._productionTimer;
-            outArchive << unit._gatherTimer;
-            outArchive << unit._owner;
-            outArchive << unit._resourceLeft;
-            outArchive << unit._cargoAmount;
-            outArchive << unit._supplyReserved;
-            outArchive << static_cast<uint8>( unit._cargoType );
-            outArchive << static_cast<uint8>( unit._gatherPhase );
-            outArchive << unit._bAlive;
-            outArchive << unit._bHasRally;
-            outArchive << unit._bSupplyBlocked;
-        }
-        outArchive << static_cast<uint32>( _listFreeSlot.size() );
-        for ( const uint32 slot : _listFreeSlot )
-        {
-            outArchive << slot;
-        }
-        outArchive << static_cast<uint32>( _listPlayer.size() );
-        for ( const RTSPlayer& player : _listPlayer )
-        {
-            outArchive << player._startPosition;
-            outArchive << player._supplyUsed;
-            outArchive << player._supplyCap;
-            outArchive << player._team;
-            outArchive << player._nextUnderAttackTime;
-            outArchive << player._bDefeated;
-            outArchive << player._bHadBuilding;
-        }
-        _vision.writeState( outArchive );
-        StateIO::writeStepTimer( outArchive, _stepTimer );
-        outArchive << _time;
-        outArchive << _winningTeam;
-    }
-
-    bool RTSWorld::readState( Archive& archive )
+    void RTSWorld::serializeState( StateIO& io )
     {
         using Internal = RTSWorldInternal;
-        int32 width    = 0;
-        int32 height   = 0;
-        archive >> width;
-        archive >> height;
-        const bool bInvalidWorldHeader = archive.isError() || width != _grid.getWidth() || height != _grid.getHeight() || _pCatalog == nullptr;
-        if ( bInvalidWorldHeader )
-            return false;
-        vector<uint8> listTerrainBlocked;
-        archive >> listTerrainBlocked;
-        if ( archive.isError() || listTerrainBlocked.size() != _listTerrainBlocked.size() )
-            return false;
+        // 이 형식은 복사하지 않는다 — 읽기는 새 목록에 받아 끝까지 맞으면 옮기고, 쓰기는 지금 목록을 그대로 놓는다.
+        io.expect( _grid.getWidth() );
+        io.expect( _grid.getHeight() );
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        vector<uint8>  restoredTerrain;
+        vector<uint8>& listTerrainBlocked = io.isWriting() ? _listTerrainBlocked : restoredTerrain;
+        io.value( listTerrainBlocked );
+        if ( io.check( listTerrainBlocked.size() == _listTerrainBlocked.size() ) == false )
+            return;
         for ( const uint8 bBlocked : listTerrainBlocked )
         {
-            if ( bBlocked > SW_TRUE )
-                return false;
+            io.check( bBlocked <= SW_TRUE );
         }
 
-        uint32 unitCount = 0;
-        if ( archive.readCount( Internal::kMinUnitStateBytes, unitCount ) == false )
-            return false;
-        deque<RTSUnit> listUnit;
-        vector<uint32> listGeneration( unitCount );
+        uint32 unitCount = static_cast<uint32>( _listUnit.size() );
+        io.count( Internal::kMinUnitStateBytes, unitCount );
+        if ( io.isOk() == false )
+            return;
+        deque<RTSUnit> restoredUnit;
+        vector<uint32> restoredGeneration;
         vector<uint8>  listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는지(유닛, 명령 순서)
+        if ( io.isReading() )
+        {
+            restoredGeneration.resize( unitCount );
+        }
+        deque<RTSUnit>& listUnit       = io.isWriting() ? _listUnit : restoredUnit;
+        vector<uint32>& listGeneration = io.isWriting() ? _listGeneration : restoredGeneration;
         for ( uint32 index = 0; index < unitCount; ++index )
         {
-            archive >> listGeneration[index];
-            if ( Internal::readUnit( archive, *_pCatalog, _settings, listUnit.emplace_back(), listFlowFieldOrder ) == false )
-                return false;
-            if ( Internal::isUnitValid( listUnit.back(), index, listGeneration[index], static_cast<int32>( _listPlayer.size() ), _grid ) == false )
-                return false;
+            io.value( listGeneration[index] );
+            RTSUnit& unit = io.isWriting() ? listUnit[index] : listUnit.emplace_back();
+            Internal::serializeUnit( io, _pCatalog, _settings, unit, listFlowFieldOrder );
+            if ( io.isOk() == false )
+                return;
+            if ( io.isReading() && io.check( Internal::isUnitValid( unit, index, listGeneration[index], static_cast<int32>( _listPlayer.size() ), _grid ) ) == false )
+                return;
         }
 
-        uint32 freeSlotCount = 0;
-        if ( archive.readCount( sizeof( uint32 ), freeSlotCount ) == false )
-            return false;
-        vector<uint32> listFreeSlot( freeSlotCount );
-        for ( uint32& slot : listFreeSlot )
+        vector<uint32>  restoredFreeSlot;
+        vector<uint32>& listFreeSlot = io.isWriting() ? _listFreeSlot : restoredFreeSlot;
+        io.list( listFreeSlot, sizeof( uint32 ), [&]( uint32& slot )
         {
-            archive >> slot;
-            if ( slot >= unitCount )
-                archive.setError();
-        }
-        uint32 playerCount = 0;
+            io.value( slot );
+            io.check( slot < unitCount );
+        } );
+        uint32 playerCount = static_cast<uint32>( _listPlayer.size() );
+        io.count( Internal::kMinPlayerStateBytes, playerCount );
         // 지갑은 플레이어를 추가한 쪽이 빌려 준 것이라 싣지 않는다. 같은 수의 플레이어를 먼저 추가한 월드에만 읽어야 한다.
-        const bool bInvalidPlayerData = archive.isError() || archive.readCount( Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size();
-        if ( bInvalidPlayerData || Internal::areFreeSlotsValid( listFreeSlot, listUnit ) == false )
-            return false;
-        vector<RTSPlayer> listPlayer( playerCount );
-        for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
+        if ( io.check( playerCount == _listPlayer.size() ) == false )
+            return;
+        if ( io.isReading() && io.check( Internal::areFreeSlotsValid( listFreeSlot, listUnit ) ) == false )
+            return;
+        vector<RTSPlayer> restoredPlayer;
+        if ( io.isReading() )
         {
-            listPlayer[playerIndex]._pWallet = _listPlayer[playerIndex]._pWallet;
+            restoredPlayer.resize( playerCount );
+            for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
+            {
+                restoredPlayer[playerIndex]._pWallet = _listPlayer[playerIndex]._pWallet;
+            }
         }
+        vector<RTSPlayer>& listPlayer = io.isWriting() ? _listPlayer : restoredPlayer;
         for ( RTSPlayer& player : listPlayer )
         {
-            Internal::readPlayer( archive, player );
+            Internal::serializePlayer( io, player );
         }
         // 시야는 사본에 읽는다 — 뒤가 깨졌으면 상태를 그대로 둬야 한다.
-        RTSVision vision = _vision;
-        if ( archive.isError() || vision.readState( archive ) == false )
-            return false;
+        RTSVision restoredVision;
+        if ( io.isReading() )
+        {
+            restoredVision = _vision;
+        }
+        RTSVision& vision = io.isWriting() ? _vision : restoredVision;
+        io.value( vision );
         FixedStepTimer stepTimer   = _stepTimer;
-        float32        time        = 0.0f;
-        int32          winningTeam = -1;
-        if ( StateIO::readStepTimer( archive, stepTimer ) == false )
-            return false;
-        archive >> time;
-        archive >> winningTeam;
+        float32        time        = _time;
+        int32          winningTeam = _winningTeam;
+        io.value( stepTimer );
+        io.value( time );
+        io.value( winningTeam );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
         const int32 teamCount = vision.getTeamCount();
-        if ( archive.isError() || time < 0.0f || winningTeam < -1 || teamCount <= winningTeam )
-            return false;
+        io.check( 0.0f <= time && -1 <= winningTeam && winningTeam < teamCount );
         for ( const RTSPlayer& player : listPlayer )
         {
-            if ( Internal::isPlayerValid( player, teamCount ) == false )
-                return false;
+            io.check( Internal::isPlayerValid( player, teamCount ) );
         }
+        if ( io.isOk() == false )
+            return;
 
-        _listTerrainBlocked = std::move( listTerrainBlocked );
-        _listUnit           = std::move( listUnit );
-        _listGeneration     = std::move( listGeneration );
-        _listFreeSlot       = std::move( listFreeSlot );
-        _listPlayer         = std::move( listPlayer );
-        _vision             = std::move( vision );
+        _listTerrainBlocked = std::move( restoredTerrain );
+        _listUnit           = std::move( restoredUnit );
+        _listGeneration     = std::move( restoredGeneration );
+        _listFreeSlot       = std::move( restoredFreeSlot );
+        _listPlayer         = std::move( restoredPlayer );
+        _vision             = std::move( restoredVision );
         _eventBuffer.clear();
         _flowParams.clear();
         _stepTimer   = stepTimer;
@@ -1967,14 +1887,15 @@ namespace sw
         _winningTeam = winningTeam;
 
         // 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다(`repaintGrid`). 같은 데이터에서 나오므로 저장하지 않는다.
+        const int32   width    = _grid.getWidth();
+        const int32   height   = _grid.getHeight();
         const float32 cellSize = _grid.getCellSize();
         const float3  origin   = _grid.getOrigin();
-        if ( _grid.initialize( width, height, cellSize, origin ) == false )
-            return false;
+        if ( io.check( _grid.initialize( width, height, cellSize, origin ) ) == false )
+            return;
         repaintGrid();
         restoreAgents( listFlowFieldOrder );
         rebuildBuckets();
-        return true;
     }
 
     void RTSWorld::restoreAgents( const vector<uint8>& listFlowFieldOrder )

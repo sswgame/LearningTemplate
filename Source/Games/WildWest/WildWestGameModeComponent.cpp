@@ -84,16 +84,14 @@ namespace sw
 
     WildWestGameModeComponent::~WildWestGameModeComponent() = default;
 
-    void WildWestGameModeComponent::writeState( Archive& outArchive ) const
+    void WildWestGameModeComponent::serializeState( StateIO& io )
     {
         // 플레이어의 삶만 싣는다 — 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        _outlaw.writeState( outArchive );
-    }
-
-    bool WildWestGameModeComponent::readState( Archive& archive )
-    {
-        return StateIO::readHeader( archive, kStateTag, kStateVersion ) && _outlaw.readState( archive ) && archive.getRemainingBytes() == 0;
+        io.header( kStateTag, kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        io.valueAtomic( _outlaw );
+        io.end();
     }
 
     bool WildWestGameModeComponent::startGame()

@@ -24,6 +24,8 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
@@ -205,12 +207,11 @@ namespace sw
 
         /**
          * @brief 차마다 차체, 드리프트 상태, 받아 둔 입력, 랩 기록, 아이템, 진행, 타이머, 순위를 쓰고, 이어서 투사체, 아이템 상자 타이머, 순위 순서, 난수, 고정 걸음, 시간, 단계를 씁니다.
-         * @details 설정, 트랙, 아이템 카탈로그, 고스트(빌린 기록기)와 차마다의 기본 차 설정, AI 설정, 사람과 AI 의 구분(`addRacer` 와 `setRacerAI` 가 정한 값)은 저장하지 않는다.
-         *          이벤트는 읽을 때 비운다.
+         *        설정, 트랙, 아이템 카탈로그, 고스트(빌린 기록기)와 차마다의 기본 차 설정, AI 설정, 사람과 AI 의 구분(`addRacer` 와 `setRacerAI` 가 정한 값)은 저장하지 않는다.
+         *        이벤트는 읽을 때 비운다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 차 수나 상자 수가 다르거나, 모르는 아이템 id 이거나, 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 차 수나 상자 수가 다르거나, 모르는 아이템 id 이거나, 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         /** @brief 단계입니다. `Waiting` 은 차를 더하는 때, `Warmup` 은 카운트다운(차가 서 있다), `InProgress` 는 경기 중이고 `Ended` 는 끝입니다(장르 공통 `MatchPhase`). */
         MatchPhase       getPhase() const { return _phase; }

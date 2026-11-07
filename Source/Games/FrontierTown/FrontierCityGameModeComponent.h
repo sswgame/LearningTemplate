@@ -40,13 +40,12 @@ namespace sw
         FrontierCityGameModeComponent();
         virtual ~FrontierCityGameModeComponent() override;
 
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         const CitySimulation& getCity() const { return _city; }
 
     protected:
         [[nodiscard]] bool startGame() override;
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;

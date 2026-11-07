@@ -132,7 +132,7 @@ namespace sw
         void onEndPlay() override;
 
         /** @brief 판의 진행(처치 수, 페이싱 감독 상태)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 적과 효과는 모습이라 정리합니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
         /** @brief 플레이어가 쓰러졌습니다. 적을 정리하고 감독을 처음부터 다시 돌립니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restartRound();
         /** @brief 플레이어가 맞았습니다. 감독의 긴장도 신호로 넣습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
@@ -162,8 +162,6 @@ namespace sw
     protected:
         /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 읽지 못하면 적이 오지 않을 뿐 판은 시작합니다). */
         [[nodiscard]] bool startGame() override;
-        /** @brief 판의 진행(처치 수, 페이싱 감독 상태)을 읽습니다. 적은 정리하고, 감독 예산으로 스폰했던 적만 같은 스폰 ID 로 다시 스폰합니다. */
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

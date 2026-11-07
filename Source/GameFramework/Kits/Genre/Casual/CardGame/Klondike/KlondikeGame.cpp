@@ -27,21 +27,29 @@ namespace sw
                 return true;
             }
 
-            static void writeBoard( Archive& outArchive, const KlondikeState& state )
+            static void serializeBoard( StateIO& io, const KlondikeSettings& settings, KlondikeState& state )
             {
                 for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
                 {
-                    state._arrTableau[column].writeState( outArchive );
-                    outArchive << state._arrFaceDownCount[column];
+                    io.value( state._arrTableau[column] );
+                    io.value( state._arrFaceDownCount[column] );
+                    // 카드가 있는 열의 맨 위는 늘 앞면이다(`revealColumnTop`). 뒤집힌 맨 위는 옮길 수 없는데 파운데이션으로는 올라가 숨은 패를 꺼낸다
+                    const int32 columnCount = state._arrTableau[column].getCount();
+                    if ( io.check( 0 <= state._arrFaceDownCount[column] && state._arrFaceDownCount[column] <= MathUtil::max( 0, columnCount - 1 ) ) == false )
+                        return;
                 }
-                for ( const CardPile& foundation : state._arrFoundation )
+                for ( CardPile& foundation : state._arrFoundation )
                 {
-                    foundation.writeState( outArchive );
+                    io.value( foundation );
                 }
-                state._stock.writeState( outArchive );
-                state._waste.writeState( outArchive );
-                outArchive << state._recycleCount;
-                outArchive << state._moveCount;
+                io.value( state._stock );
+                io.value( state._waste );
+                io.value( state._recycleCount );
+                io.value( state._moveCount );
+                if ( io.isReading() && io.isOk() )
+                {
+                    io.check( isBoardValid( state, settings ) );
+                }
             }
 
             /** @brief 읽은 판이 규칙으로 나올 수 있는 판인지 봅니다. 파운데이션은 무늬별로 에이스부터 하나씩 쌓이고, 카드는 트럼프 52장이며 겹치지 않습니다. */
@@ -66,30 +74,6 @@ namespace sw
                 }
                 const bool bRecycleValid = 0 <= state._recycleCount && ( settings._maxRecycle < 0 || state._recycleCount <= settings._maxRecycle );
                 return bRecycleValid && 0 <= state._moveCount && CardPile::arePilesValid( listPile, &CardPile::isStandardCard );
-            }
-
-            [[nodiscard]] static bool readBoard( Archive& archive, const KlondikeSettings& settings, KlondikeState& outState )
-            {
-                for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
-                {
-                    if ( outState._arrTableau[column].readState( archive ) == false )
-                        return false;
-                    archive >> outState._arrFaceDownCount[column];
-                    // 카드가 있는 열의 맨 위는 늘 앞면이다(`revealColumnTop`). 뒤집힌 맨 위는 옮길 수 없는데 파운데이션으로는 올라가 숨은 패를 꺼낸다
-                    const int32 columnCount    = outState._arrTableau[column].getCount();
-                    const bool  bFaceDownValid = 0 <= outState._arrFaceDownCount[column] && outState._arrFaceDownCount[column] <= MathUtil::max( 0, columnCount - 1 );
-                    if ( archive.isError() || bFaceDownValid == false )
-                        return false;
-                }
-                for ( CardPile& foundation : outState._arrFoundation )
-                {
-                    if ( foundation.readState( archive ) == false )
-                        return false;
-                }
-                const bool bPilesRead = outState._stock.readState( archive ) && outState._waste.readState( archive );
-                archive >> outState._recycleCount;
-                archive >> outState._moveCount;
-                return bPilesRead && archive.isOk() && isBoardValid( outState, settings );
             }
         };
     } // namespace
@@ -337,33 +321,12 @@ namespace sw
         return movedCount;
     }
 
-    void KlondikeGame::writeState( Archive& outArchive ) const
+    void KlondikeGame::serializeState( StateIO& io )
     {
-        KlondikeGameInternal::writeBoard( outArchive, _state );
-        outArchive << static_cast<uint32>( _listHistory.size() );
-        for ( const KlondikeState& history : _listHistory )
-        {
-            KlondikeGameInternal::writeBoard( outArchive, history );
-        }
+        KlondikeGameInternal::serializeBoard( io, _settings, _state );
+        // 판마다 열 7개(더미 4 + 뒤집힌 수 4) + 파운데이션 4개, 스톡, 웨이스트(더미 4) + 되돌린 수, 옮긴 수(8)
+        io.list( _listHistory, 88, [&]( KlondikeState& history )
+        { KlondikeGameInternal::serializeBoard( io, _settings, history ); } );
     }
 
-    bool KlondikeGame::readState( Archive& archive )
-    {
-        KlondikeState state;
-        if ( KlondikeGameInternal::readBoard( archive, _settings, state ) == false )
-            return false;
-        uint32 historyCount = 0;
-        // 판마다 열 7개(더미 4 + 뒤집힌 수 4) + 파운데이션 4개, 스톡, 웨이스트(더미 4) + 되돌린 수, 옮긴 수(8)
-        if ( archive.readCount( 88, historyCount ) == false )
-            return false;
-        vector<KlondikeState> listHistory( historyCount, KlondikeState{} );
-        for ( KlondikeState& history : listHistory )
-        {
-            if ( KlondikeGameInternal::readBoard( archive, _settings, history ) == false )
-                return false;
-        }
-        _state       = std::move( state );
-        _listHistory = std::move( listHistory );
-        return true;
-    }
 } // namespace sw

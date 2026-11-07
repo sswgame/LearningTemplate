@@ -15,6 +15,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
@@ -334,15 +335,12 @@ namespace sw
 
         /**
          * @brief 땅, 유닛(위치, 명령, 생산, 채취), 플레이어, 안개, 시간을 씁니다. 핫 리로드와 세이브에 쓰며 설정과 카탈로그는 쓰지 않습니다.
-         * @details 정의는 카탈로그 id 로, 유닛 참조는 세대를 포함한 id 로 적는다. 경로와 흐름장은 쓰지 않으므로, 읽은 쪽에서 맨 앞 명령의 경로를 다시 구한다.
+         *        정의는 카탈로그 id 로, 유닛 참조는 세대를 포함한 id 로 적는다. 경로와 흐름장은 쓰지 않으므로, 읽은 쪽에서 맨 앞 명령의 경로를 다시 구한다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 를 먼저 호출해야 하며 크기와 카탈로그가 같아야 합니다.
+         *        격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다. 이동 중이던 유닛은 맨 앞 명령을 처음부터 다시 진행하고, 흐름장을 쓰던 무리 이동은 흐름장을 다시 빌린다.
+         *        @return 크기가 다르거나, 카탈로그에 없는 유닛이 있거나, 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
          */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 를 먼저 호출해야 하며 크기와 카탈로그가 같아야 합니다.
-         * @details 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다. 이동 중이던 유닛은 맨 앞 명령을 처음부터 다시 진행하고, 흐름장을 쓰던 무리 이동은 흐름장을 다시 빌린다.
-         * @return 크기가 다르거나, 카탈로그에 없는 유닛이 있거나, 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
-         */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO_IN_PLACE();
 
     private:
         RTSUnit*  findUnitMutable( RTSUnitID unitID );

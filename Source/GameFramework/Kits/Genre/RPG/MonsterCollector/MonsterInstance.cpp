@@ -406,47 +406,22 @@ namespace sw
         { return monster.isFainted() == false; } );
     }
 
-    void MonsterStorage::writeState( Archive& outArchive ) const
+    void MonsterStorage::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listParty.size() );
-        for ( const MonsterInstance& monster : _listParty )
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        const auto serializeMonster = [&]( MonsterInstance& monster )
         {
-            monster.writeState( outArchive );
-        }
-        outArchive << static_cast<uint32>( _listBox.size() );
-        for ( const MonsterInstance& monster : _listBox )
-        {
-            monster.writeState( outArchive );
-        }
+            io.value( monster );
+            if ( io.isReading() && io.isOk() )
+            {
+                io.check( monster.isKnownTo( *_pCatalog ) );
+            }
+        };
+        io.list( _listParty, MonsterInstance::kStateMinBytes, serializeMonster );
+        io.check( _listParty.size() <= static_cast<size_t>( kPartySize ) );
+        io.list( _listBox, MonsterInstance::kStateMinBytes, serializeMonster );
+        io.check( _listBox.size() <= static_cast<size_t>( _boxCapacity ) );
     }
 
-    bool MonsterStorage::readMonsters( Archive& archive, uint32 count, vector<MonsterInstance>& outListMonster ) const
-    {
-        outListMonster.assign( count, MonsterInstance{} );
-        for ( MonsterInstance& monster : outListMonster )
-        {
-            if ( monster.readState( archive ) == false || monster.isKnownTo( *_pCatalog ) == false )
-                return false;
-        }
-        return true;
-    }
-
-    bool MonsterStorage::readState( Archive& archive )
-    {
-        uint32                  partyCount = 0;
-        vector<MonsterInstance> listParty;
-        if ( _pCatalog == nullptr || archive.readCount( MonsterInstance::kStateMinBytes, partyCount ) == false || partyCount > static_cast<uint32>( kPartySize ) )
-            return false;
-        if ( readMonsters( archive, partyCount, listParty ) == false )
-            return false;
-        uint32                  boxCount = 0;
-        vector<MonsterInstance> listBox;
-        if ( archive.readCount( MonsterInstance::kStateMinBytes, boxCount ) == false || boxCount > static_cast<uint32>( _boxCapacity ) )
-            return false;
-        if ( readMonsters( archive, boxCount, listBox ) == false )
-            return false;
-        _listParty = std::move( listParty );
-        _listBox   = std::move( listBox );
-        return true;
-    }
 } // namespace sw

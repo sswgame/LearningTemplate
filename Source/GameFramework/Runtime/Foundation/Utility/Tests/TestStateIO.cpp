@@ -7,6 +7,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include <cstring>
+
 // StateIOTest — 상태 구간: 기대한 표 · 버전의 구간만 읽히고(다른 버전은 거절), 표로 갈라 읽는 쪽은 아무 구간이나 받는다.
 // 누적기: 음수와 터무니없는 값을 거절한다(1e30 은 빼도 줄지 않아 소비 고리가 끝나지 않는다)(nogpu).
 
@@ -119,4 +121,135 @@ SW_TEST_CASE( StateIOTest, EmptyNameRoundTripsEmpty )
     SW_REQUIRE_TRUE( sw::StateIO::readName( reading, second ) );
     SW_EXPECT_TRUE( first.empty() );
     SW_EXPECT_TRUE( second == sw::hashed_string( "gunner" ) );
+}
+
+namespace
+{
+    /** @brief 입구를 시험하는 작은 상태입니다. 손으로 쓴 바이트와 견줘 칸 순서와 폭을 고정합니다. */
+    struct StateIOTestState
+    {
+        SW_DECLARE_STATE_IO();
+
+        sw::hashed_string  _name{};
+        sw::vector<uint32> _listID{};
+        int32              _level{ 1 };
+        uint8              _bActive{ SW_FALSE };
+        uint8              _kind{ 0 };
+    };
+
+    enum class StateIOTestKind : uint8
+    {
+        First,
+        Last,
+    };
+
+    void StateIOTestState::serializeState( sw::StateIO& io )
+    {
+        io.value( _name );
+        io.list( _listID );
+        io.value( _level );
+        io.flag( _bActive );
+        StateIOTestKind kind = static_cast<StateIOTestKind>( _kind );
+        io.enumValue( kind, StateIOTestKind::Last );
+        _kind = static_cast<uint8>( kind );
+        io.check( 1 <= _level );
+    }
+} // namespace
+
+/**
+ * @brief [StateIOTest] 한 함수가 쓴 바이트가 손으로 놓은 칸 순서 · 폭과 같고, 다시 읽어 같은 상태가 된다
+ */
+SW_TEST_CASE( StateIOTest, WritesFieldsInOrderAndRoundTrips )
+{
+    StateIOTestState state;
+    state._name    = sw::hashed_string( "hero" );
+    state._listID  = { 7u, 9u };
+    state._level   = 3;
+    state._bActive = SW_TRUE;
+    state._kind    = 1;
+    sw::Archive written;
+    state.writeState( written );
+
+    sw::Archive byHand;
+    sw::StateIO::writeName( byHand, state._name );
+    byHand << static_cast<uint32>( 2 );
+    byHand << static_cast<uint32>( 7 );
+    byHand << static_cast<uint32>( 9 );
+    byHand << int32{ 3 };
+    byHand << uint8{ SW_TRUE };
+    byHand << uint8{ 1 };
+    SW_REQUIRE_TRUE( written.getSize() == byHand.getSize() );
+    SW_EXPECT_TRUE( std::memcmp( written.getData(), byHand.getData(), written.getSize() ) == 0 );
+
+    sw::Archive      reading( written.getData(), written.getSize() );
+    StateIOTestState restored;
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_TRUE( restored._name == state._name );
+    SW_EXPECT_EQUAL( size_t{ 2 }, restored._listID.size() );
+    SW_EXPECT_EQUAL( 3, restored._level );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( restored._kind ) );
+}
+
+/**
+ * @brief [StateIOTest] 어느 칸에서 거절되든 읽기는 실패하고 상태는 그대로다(입구가 사본에 읽는다)
+ */
+SW_TEST_CASE( StateIOTest, RejectedReadLeavesStateUntouched )
+{
+    const auto readForged = []( int32 level, uint8 bActive, uint8 kind, StateIOTestState& inoutState )
+    {
+        sw::Archive forged;
+        sw::StateIO::writeName( forged, sw::hashed_string( "forged" ) );
+        forged << static_cast<uint32>( 0 );
+        forged << level;
+        forged << bActive;
+        forged << kind;
+        sw::Archive reading( forged.getData(), forged.getSize() );
+        return inoutState.readState( reading );
+    };
+    StateIOTestState state;
+    state._name  = sw::hashed_string( "kept" );
+    state._level = 5;
+    SW_EXPECT_FALSE( readForged( 0, SW_TRUE, 1, state ) ); // 범위 검사
+    SW_EXPECT_FALSE( readForged( 2, 2, 1, state ) );       // 깃발
+    SW_EXPECT_FALSE( readForged( 2, SW_TRUE, 2, state ) ); // 열거
+    SW_EXPECT_TRUE( state._name == sw::hashed_string( "kept" ) );
+    SW_EXPECT_EQUAL( 5, state._level );
+    SW_EXPECT_TRUE( readForged( 2, SW_TRUE, 1, state ) );
+    SW_EXPECT_EQUAL( 2, state._level );
+}
+
+/**
+ * @brief [StateIOTest] 구간은 표 · 판이 같을 때만 본문을 읽고, 본문이 남으면 거절한다
+ */
+SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
+{
+    constexpr uint32 kTag = 0x54534554u;
+    sw::Archive      outer;
+    {
+        sw::StateIO io( outer );
+        int32       value = 42;
+        io.section( kTag, 1, [&value]( sw::StateIO& bodyIO )
+        { bodyIO.value( value ); } );
+    }
+    {
+        sw::Archive reading( outer.getData(), outer.getSize() );
+        sw::StateIO io( reading );
+        int32       value = 0;
+        io.section( kTag, 1, [&value]( sw::StateIO& bodyIO )
+        { bodyIO.value( value ); } );
+        SW_EXPECT_TRUE( io.isOk() );
+        SW_EXPECT_EQUAL( 42, value );
+    }
+    {
+        sw::Archive reading( outer.getData(), outer.getSize() );
+        sw::StateIO io( reading );
+        io.section( kTag, 2, []( sw::StateIO& ) {} );
+        SW_EXPECT_FALSE( io.isOk() ); // 다른 판
+    }
+    {
+        sw::Archive reading( outer.getData(), outer.getSize() );
+        sw::StateIO io( reading );
+        io.section( kTag, 1, []( sw::StateIO& ) {} );
+        SW_EXPECT_FALSE( io.isOk() ); // 읽지 않은 본문이 남았다
+    }
 }

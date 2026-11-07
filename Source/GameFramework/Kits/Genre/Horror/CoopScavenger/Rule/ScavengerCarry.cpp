@@ -88,27 +88,11 @@ namespace sw
         return VectorUtil::containsBy<&ScavengerScrap::_bTwoHanded>( _listScrap, SW_TRUE );
     }
 
-    void ScavengerCarry::writeState( Archive& outArchive ) const
+    void ScavengerCarry::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listScrap.size() );
-        for ( const ScavengerScrap& scrap : _listScrap )
-        {
-            ScavengerFacility::writeScrap( outArchive, scrap );
-        }
+        io.list( _listScrap, ScavengerFacility::kMinScrapBytes, [&]( ScavengerScrap& scrap )
+        { ScavengerFacility::serializeScrap( io, scrap ); } );
+        io.check( static_cast<int32>( _listScrap.size() ) <= _settings._slotCount );
     }
 
-    bool ScavengerCarry::readState( Archive& archive )
-    {
-        uint32 count = 0;
-        if ( archive.readCount( ScavengerFacility::kMinScrapBytes, count ) == false || static_cast<int32>( count ) > _settings._slotCount )
-            return false;
-        vector<ScavengerScrap> listScrap( count );
-        for ( ScavengerScrap& scrap : listScrap )
-        {
-            if ( ScavengerFacility::readScrap( archive, scrap ) == false )
-                return false;
-        }
-        _listScrap = std::move( listScrap );
-        return true;
-    }
 } // namespace sw

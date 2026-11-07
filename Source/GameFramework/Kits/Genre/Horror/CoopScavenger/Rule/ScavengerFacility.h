@@ -9,6 +9,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -84,17 +86,14 @@ namespace sw
         /**
          * @brief 지도를 만든 위성 id 와 시드, 바닥 고철, 빌린 플래그에 둔 잠금 해제 목록, 다음 고유 번호, 방 수, 잠긴 문 수를 씁니다.
          *        그래프는 위성과 시드로 다시 만들 수 있으므로 저장하지 않고, 빌린 플래그 자체도 저장하지 않습니다(주인이 저장합니다).
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 그래프는 빌린 카탈로그의 위성으로 다시 만듭니다. 데이터가 깨졌거나, 만든 지도가 있는데 카탈로그가 없거나 없는 위성이면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
+        SW_DECLARE_STATE_IO();
         /** @brief 지도를 다시 만들 카탈로그를 빌립니다. 새 객체에 `readState` 하기 전에 호출해야 합니다(`createLayout` 도 이 값을 설정합니다). */
         void bindCatalog( const ScavengerCatalog* pCatalog ) { _pCatalog = pCatalog; }
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 그래프는 빌린 카탈로그의 위성으로 다시 만듭니다. 데이터가 깨졌거나, 만든 지도가 있는데 카탈로그가 없거나 없는 위성이면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
 
-        /** @brief 고철 하나를 씁니다(운반 슬롯, 우주선, 바닥이 함께 씁니다). */
-        static void writeScrap( Archive& outArchive, const ScavengerScrap& scrap );
-        /** @brief `writeScrap` 이 쓴 바이트를 읽습니다. 데이터가 깨졌거나 무게 · 가치가 범위 밖이면 false 를 반환합니다. 시신 번호가 사람 수 안인지는 사람을 아는 `ScavengerExpedition` 이 봅니다. */
-        [[nodiscard]] static bool readScrap( Archive& archive, ScavengerScrap& outScrap );
+        /** @brief 고철 하나를 놓습니다(운반 슬롯, 우주선, 바닥이 함께 씁니다). 무게 · 가치가 범위 밖이면 거절합니다. 시신 번호가 사람 수 안인지는 사람을 아는 `ScavengerExpedition` 이 봅니다. */
+        static void serializeScrap( StateIO& io, ScavengerScrap& scrap );
 
     private:
         AreaGraph               _graph;

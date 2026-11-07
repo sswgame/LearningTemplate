@@ -55,14 +55,28 @@ namespace sw
 
     FrontierCityGameModeComponent::~FrontierCityGameModeComponent() = default;
 
-    void FrontierCityGameModeComponent::writeState( Archive& outArchive ) const
+    void FrontierCityGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        const uint8 bLaidOut = _bLaidOut;
-        outArchive << bLaidOut;
-        Archive body;
-        _city.writeState( body );
-        StateIO::writeSection( outArchive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body );
+        SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        if ( io.check( pState != nullptr ) == false )
+            return;
+        io.header( kStateTag, kStateVersion );
+        uint8 bLaidOut = _bLaidOut;
+        io.value( bLaidOut );
+        if ( io.isOk() == false )
+            return;
+        CitySimulation restoredCity;
+        if ( io.isReading() && io.check( initializeCity( restoredCity, *pState ) ) == false )
+            return;
+        CitySimulation& city = io.isWriting() ? _city : restoredCity;
+        io.section( CitySimulation::kStateTag, CitySimulation::kStateVersion, [&city]( StateIO& bodyIO )
+        { bodyIO.value( city ); } );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _city        = std::move( restoredCity );
+        _bLaidOut    = bLaidOut == SW_FALSE ? SW_FALSE : SW_TRUE;
+        _bViewsDirty = SW_TRUE;
     }
 
     bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state )
@@ -100,30 +114,6 @@ namespace sw
             return false;
         }
         _bLaidOut    = SW_FALSE;
-        _bViewsDirty = SW_TRUE;
-        return true;
-    }
-
-    bool FrontierCityGameModeComponent::readState( Archive& archive )
-    {
-        SessionStateComponent* pState   = SessionStateComponent::findOnOwner( *this );
-        uint8                  bLaidOut = SW_FALSE;
-        Archive                body;
-        const bool             bHeadRead = pState != nullptr && StateIO::readHeader( archive, kStateTag, kStateVersion );
-        if ( bHeadRead == false )
-            return false;
-        archive >> bLaidOut;
-        const bool bInvalidCityHeader = archive.isError() || StateIO::readExpectedSection( archive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body ) == false;
-        if ( bInvalidCityHeader )
-            return false;
-        CitySimulation city;
-        if ( initializeCity( city, *pState ) == false )
-            return false;
-        const bool bInvalidCityBody = city.readState( body ) == false || body.getRemainingBytes() != 0 || archive.getRemainingBytes() != 0;
-        if ( bInvalidCityBody )
-            return false;
-        _city        = std::move( city );
-        _bLaidOut    = bLaidOut == SW_FALSE ? SW_FALSE : SW_TRUE;
         _bViewsDirty = SW_TRUE;
         return true;
     }

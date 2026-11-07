@@ -18,6 +18,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
@@ -187,10 +188,9 @@ namespace sw
         /**
          * @brief 거점(정의 id, 성문, 성벽, 점령), 건물(정의 id, 대기열, 진행, 슬롯, 일꾼), 병사, 자원, 지휘관, 고정 걸음, 지난 시간, 수입, 웨이브 타이머,
          *        다음 병사 번호, 승패를 씁니다. 정의는 id 로 저장하고 읽을 때 카탈로그에서 찾습니다. 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있거나 값이 범위 밖이면 false 를 반환하고 상태는 그대로입니다.
          */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있거나 값이 범위 밖이면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
         int32 getResource( const hashed_string& resource ) const;
         int32 computePopulation() const;

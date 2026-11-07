@@ -296,110 +296,51 @@ namespace sw
         return total;
     }
 
-    void ScavengerFacility::writeState( Archive& outArchive ) const
+    void ScavengerFacility::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _layoutMoonID );
-        outArchive << _layoutSeed;
-        outArchive << static_cast<uint32>( _listGroundScrap.size() );
+        io.value( _layoutMoonID );
+        io.value( _layoutSeed );
+        io.list( _listGroundScrap, kMinScrapBytes, [&]( ScavengerScrap& scrap )
+        { serializeScrap( io, scrap ); } );
+        io.list( _listUnlockedFlag );
+        io.value( _nextUid );
+        io.value( _roomCount );
+        io.value( _lockedDoorCount );
+        // 시드 0 은 난수의 고정점이라 만든 지도에는 없다.
+        if ( io.check( 1 <= _nextUid && 0 <= _roomCount && 0 <= _lockedDoorCount && ( _layoutMoonID.empty() || _layoutSeed != 0u ) ) == false || io.isWriting() )
+            return;
         for ( const ScavengerScrap& scrap : _listGroundScrap )
         {
-            writeScrap( outArchive, scrap );
-        }
-        outArchive << static_cast<uint32>( _listUnlockedFlag.size() );
-        for ( const hashed_string& flag : _listUnlockedFlag )
-        {
-            StateIO::writeName( outArchive, flag );
-        }
-        outArchive << _nextUid;
-        outArchive << _roomCount;
-        outArchive << _lockedDoorCount;
-    }
-
-    bool ScavengerFacility::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 빌린 플래그 포인터는 사본도 그대로 가지고 있다.
-        ScavengerFacility restored = *this;
-        if ( StateIO::readName( archive, restored._layoutMoonID ) == false )
-            return false;
-        archive >> restored._layoutSeed;
-
-        uint32 scrapCount = 0;
-        if ( archive.readCount( kMinScrapBytes, scrapCount ) == false )
-            return false;
-        restored._listGroundScrap.assign( scrapCount, ScavengerScrap{} );
-        for ( ScavengerScrap& scrap : restored._listGroundScrap )
-        {
-            if ( readScrap( archive, scrap ) == false )
-                return false;
-        }
-
-        uint32 flagCount = 0;
-        if ( archive.readCount( 4, flagCount ) == false )
-            return false;
-        restored._listUnlockedFlag.assign( flagCount, hashed_string{} );
-        for ( hashed_string& flag : restored._listUnlockedFlag )
-        {
-            if ( StateIO::readName( archive, flag ) == false )
-                return false;
-        }
-        archive >> restored._nextUid;
-        archive >> restored._roomCount;
-        archive >> restored._lockedDoorCount;
-        // 시드 0 은 난수의 고정점이라 만든 지도에는 없다.
-        const bool bValid = archive.isOk() && 1 <= restored._nextUid && 0 <= restored._roomCount && 0 <= restored._lockedDoorCount && ( restored._layoutMoonID.empty() || restored._layoutSeed != 0u );
-        if ( bValid == false )
-            return false;
-        for ( const ScavengerScrap& scrap : restored._listGroundScrap )
-        {
             // 번호는 `placeScrap` 이 나눠 준다. 다음 번호 이상이면 새로 놓는 고철과 겹쳐 찾기가 엉뚱한 것을 집는다.
-            if ( scrap._uid <= 0 || scrap._uid >= restored._nextUid )
-                return false;
+            io.check( 0 < scrap._uid && scrap._uid < _nextUid );
         }
-
         // 그래프는 같은 위성과 같은 시드로 다시 만든다(고철 배치는 버리고 읽은 바닥을 쓴다).
-        restored._graph.clear();
-        if ( restored._layoutMoonID.empty() == false )
+        _graph.clear();
+        if ( io.isOk() && _layoutMoonID.empty() == false )
         {
-            const ScavengerMoonDef* pMoon = _pCatalog != nullptr ? _pCatalog->findMoon( restored._layoutMoonID ) : nullptr;
-            if ( pMoon == nullptr )
-                return false;
+            const ScavengerMoonDef* pMoon = _pCatalog != nullptr ? _pCatalog->findMoon( _layoutMoonID ) : nullptr;
+            if ( io.check( pMoon != nullptr ) == false )
+                return;
             ScavengerFacility built;
-            if ( built.createLayout( *_pCatalog, *pMoon, restored._layoutSeed, 1.0f ) == false )
-                return false;
-            restored._graph = std::move( built._graph );
+            if ( io.check( built.createLayout( *_pCatalog, *pMoon, _layoutSeed, 1.0f ) ) )
+            {
+                _graph = std::move( built._graph );
+            }
         }
-        *this = std::move( restored );
-        return true;
     }
 
-    void ScavengerFacility::writeScrap( Archive& outArchive, const ScavengerScrap& scrap )
+    void ScavengerFacility::serializeScrap( StateIO& io, ScavengerScrap& scrap )
     {
-        StateIO::writeName( outArchive, scrap._scrapID );
-        StateIO::writeName( outArchive, scrap._areaID );
-        outArchive << scrap._weight;
-        outArchive << scrap._uid;
-        outArchive << scrap._value;
-        outArchive << scrap._bodyOf;
-        outArchive << scrap._day;
-        outArchive << scrap._bTwoHanded;
-    }
-
-    bool ScavengerFacility::readScrap( Archive& archive, ScavengerScrap& outScrap )
-    {
-        ScavengerScrap scrap;
-        if ( StateIO::readName( archive, scrap._scrapID ) == false || StateIO::readName( archive, scrap._areaID ) == false )
-            return false;
-        archive >> scrap._weight;
-        archive >> scrap._uid;
-        archive >> scrap._value;
-        archive >> scrap._bodyOf;
-        archive >> scrap._day;
-        archive >> scrap._bTwoHanded;
+        io.value( scrap._scrapID );
+        io.value( scrap._areaID );
+        io.value( scrap._weight );
+        io.value( scrap._uid );
+        io.value( scrap._value );
+        io.value( scrap._bodyOf );
+        io.value( scrap._day );
+        io.flag( scrap._bTwoHanded );
         // 무게가 NaN 이면 이동 속도가, 음수 가치면 매입액이 깨진다.
-        const bool bValid = archive.isOk() && 0.0f <= scrap._weight && 0 <= scrap._value && -1 <= scrap._bodyOf && scrap._bTwoHanded <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        outScrap = scrap;
-        return true;
+        io.check( 0.0f <= scrap._weight && 0 <= scrap._value && -1 <= scrap._bodyOf );
     }
+
 } // namespace sw

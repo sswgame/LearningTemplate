@@ -11,6 +11,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
@@ -66,10 +68,11 @@ namespace sw
         float32             getCellSize() const { return _cellSize; }
         const float3&       getOrigin() const { return _origin; }
 
-        /** @brief 크기, 주인 이름 목록, 셀마다 (주인 번호, 막힘)을 씁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 저장된 이름은 지금 번호로 다시 매기며(없는 이름은 새로 등록), 크기가 지금과 다르거나 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 크기, 주인 이름 목록, 셀마다 (주인 번호, 막힘)을 씁니다.
+         *        `writeState` 의 바이트로 상태를 바꿉니다. 저장된 이름은 지금 번호로 다시 매기며(없는 이름은 새로 등록), 크기가 지금과 다르거나 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 한 셀입니다. 주인 번호와 막힘을 담습니다. */

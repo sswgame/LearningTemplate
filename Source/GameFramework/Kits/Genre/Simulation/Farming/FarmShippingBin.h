@@ -9,6 +9,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
@@ -41,9 +43,7 @@ namespace sw
         int64 settleShipping( const CropCatalog& catalog, Wallet& inoutWallet );
 
         /** @brief 출하함에 든 것을 씁니다(핫 리로드와 세이브용). 통화는 설정이므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const { _bin.writeState( outArchive ); }
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         ItemStackList _bin;

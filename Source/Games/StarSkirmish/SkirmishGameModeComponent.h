@@ -63,7 +63,7 @@ namespace sw
         void onEndPlay() override;
 
         /** @brief 판(월드, AI 진행, 선택, 속도, 일시정지)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const RTSWorld&      getWorld() const { return _match.getWorld(); }
@@ -79,8 +79,6 @@ namespace sw
     protected:
         /** @brief 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다. */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽습니다. 끝까지 맞지 않으면 false 를 반환합니다(판이 반쯤 바뀌었을 수 있으므로 `onStateRestored` 가 새 판으로 되돌립니다). */
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

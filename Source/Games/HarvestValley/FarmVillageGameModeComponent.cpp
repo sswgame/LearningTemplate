@@ -182,40 +182,38 @@ namespace sw
         return true;
     }
 
-    void FarmVillageGameModeComponent::writeState( Archive& outArchive ) const
-    {
-        StateIO::writeHeader( outArchive, FarmVillageGameModeComponentInternal::kStateTag, FarmVillageGameModeComponentInternal::kStateVersion );
-        ScheduleSaveState state;
-        if ( _bHasPendingSave )
-            state = _pendingSave; // 아직 걸지 않은 저장은 그대로 다시 싣는다(일정이 서기 전의 핫 리로드)
-        else
-            _schedule.fillSaveState( state );
-        // 실을 수 없으면 직렬화기가 아카이브를 오류 상태로 두어 저장 전체가 실패한다(이유는 직렬화기가 알린다).
-        if ( BinarySerializer::serialize( &state, *ScheduleSaveState::StaticType(), outArchive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
-            SW_LOG_ERROR_ID( "FarmVillageGameMode.ScheduleSaveStateCould", "[Village] the schedule save state could not be written" );
-    }
-
-    bool FarmVillageGameModeComponent::readState( Archive& archive )
+    void FarmVillageGameModeComponent::serializeState( StateIO& io )
     {
         using Internal = FarmVillageGameModeComponentInternal;
         // 판이 정확히 같을 때만 읽는다(첫 출시 전이라 옛 판 리더가 없다).
-        if ( StateIO::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
-            return false;
-        // 임시에 끝까지 읽은 뒤에만 바꾼다(반쯤 읽은 상태를 남기지 않는다).
+        io.header( Internal::kStateTag, Internal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
         ScheduleSaveState state;
-        if ( BinarySerializer::deserialize( &state, *ScheduleSaveState::StaticType(), archive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
+        if ( io.isWriting() )
+        {
+            if ( _bHasPendingSave )
+                state = _pendingSave; // 아직 걸지 않은 저장은 그대로 다시 싣는다(일정이 서기 전의 핫 리로드)
+            else
+                _schedule.fillSaveState( state );
+            // 실을 수 없으면 직렬화기가 아카이브를 오류 상태로 두어 저장 전체가 실패한다(이유는 직렬화기가 알린다).
+            if ( BinarySerializer::serialize( &state, *ScheduleSaveState::StaticType(), io.getArchive(), SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
+                SW_LOG_ERROR_ID( "FarmVillageGameMode.ScheduleSaveStateCould", "[Village] the schedule save state could not be written" );
+            return;
+        }
+        // 임시에 끝까지 읽은 뒤에만 바꾼다(반쯤 읽은 상태를 남기지 않는다).
+        if ( io.check( BinarySerializer::deserialize( &state, *ScheduleSaveState::StaticType(), io.getArchive(), SerializeContext::getDefault( SerializePurpose::SaveGame ) ) ) == false )
         {
             SW_LOG_ERROR_ID( "FarmVillageGameMode.ScheduleSaveStateCould2", "[Village] the schedule save state could not be read" );
-            return false;
+            return;
         }
         if ( _schedule.getNPCCount() > 0 )
         {
             _schedule.restoreSaveState( state );
-            return true;
+            return;
         }
         _pendingSave     = std::move( state );
         _bHasPendingSave = true;
-        return true;
     }
 
     void FarmVillageGameModeComponent::updateGame( float32 deltaTime )

@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
@@ -125,13 +126,12 @@ namespace sw
         /** @brief `[Skirmish] t=.. p0 workers .. army .. | p1 ...` 한 줄을 남깁니다. */
         void logStatus() const;
 
-        /** @brief 월드 · AI 진행 · 시계를 씁니다(핫 리로드 · 세이브). */
-        void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 같은 사람 여부로 `initialize` 한 뒤에 부릅니다.
-         * @return 사람 여부가 다르거나 깨졌으면 false 입니다. 월드를 읽은 뒤 뒤가 깨지면 월드만 바뀐 채로 남으므로, 부르는 쪽은 실패하면 다시 `initialize` 합니다.
+         * @brief 월드 · AI 진행 · 시계를 씁니다(핫 리로드 · 세이브).
+         *        `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 같은 사람 여부로 `initialize` 한 뒤에 부릅니다.
+         *        @return 사람 여부가 다르거나 깨졌으면 false 입니다. 월드를 읽은 뒤 뒤가 깨지면 월드만 바뀐 채로 남으므로, 부르는 쪽은 실패하면 다시 `initialize` 합니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO_IN_PLACE();
 
     private:
         void      paintMap();

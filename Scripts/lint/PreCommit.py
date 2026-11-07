@@ -32,7 +32,7 @@ from lint.CppShape import checkCppShape  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
-from lint.PlatformChains import checkPlatformChains  # noqa: E402
+from lint.StateShape import checkStateShape  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -83,6 +83,15 @@ def main(argv: list[str] | None = None) -> int:
             hasErrors = True
             print(f"[CppShape] FAIL — C++ 모양 규칙 위반 {len(listShapeViolation)}건")
             for line in listShapeViolation:
+                print(f"  - {line}")
+
+    # --- 상태를 손으로 짝지어 쓰고 읽는 모양(`Archive` 를 받는 함수를 새로 짓는 것을 형식으로 막지 못하는 자리 — StateShape.py 머리말) ---------------
+    if stagedCppFiles:
+        listStateViolation = checkStateShape(projectRoot, [str(path) for path in stagedCppFiles])
+        if listStateViolation:
+            hasErrors = True
+            print(f"[StateShape] FAIL — 상태 직렬화 모양 위반 {len(listStateViolation)}건")
+            for line in listStateViolation:
                 print(f"  - {line}")
 
     # --- 파일에서 읽은 개수를 믿고 할당하는 모양(`vector::resize` 를 형식으로 막지 못하는 자리 — ByteReadShape.py 머리말) ---------------

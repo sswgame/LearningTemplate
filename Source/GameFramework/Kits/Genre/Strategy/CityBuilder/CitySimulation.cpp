@@ -45,37 +45,6 @@ namespace sw
                 return MathUtil::max( 2, ( population + 3 ) / 4 * goodsPerFourPeople * 2 );
             }
 
-            /** @brief `writeState` 가 쓴 건물 하나를 읽습니다. 카탈로그에서 빠진 건물이면 도시를 맞출 수 없으므로 false 입니다. */
-            [[nodiscard]] static bool readBuilding( Archive& archive, const CityCatalog& catalog, CityBuilding& outBuilding )
-            {
-                hashed_string defID;
-                if ( StateIO::readName( archive, defID ) == false )
-                    return false;
-                outBuilding._pDef = defID.empty() ? nullptr : catalog.findBuilding( defID );
-                if ( defID.empty() == false && outBuilding._pDef == nullptr )
-                    return false;
-                if ( outBuilding._stock.readState( archive ) == false )
-                    return false;
-                StateIO::readInt2( archive, outBuilding._origin );
-                StateIO::readInt2( archive, outBuilding._accessTile );
-                archive >> outBuilding._efficiency;
-                archive >> outBuilding._walkerTimer;
-                archive >> outBuilding._productionProgress;
-                for ( float32& serviceTime : outBuilding._arrServiceTime )
-                {
-                    archive >> serviceTime;
-                }
-                archive >> outBuilding._evolveTimer;
-                archive >> outBuilding._devolveTimer;
-                archive >> outBuilding._immigrationTimer;
-                archive >> outBuilding._assignedWorkers;
-                archive >> outBuilding._activeWalkerCount;
-                archive >> outBuilding._level;
-                archive >> outBuilding._population;
-                archive >> outBuilding._bAlive;
-                return archive.isError() == false;
-            }
-
             /**
              * @brief 읽은 건물 하나를 봅니다. 살아 있는 건물은 정의를 바로 찌르고(`storage._pDef->_kind`), 발밑을 격자 번호로 바로 바꾼다(`demolish`) — 정의가 없거나 격자 밖이면 범위 밖이다.
              */
@@ -132,51 +101,6 @@ namespace sw
                     occupiedCount += tile._buildingIndex >= 0 ? 1 : 0;
                 }
                 return occupiedCount == footprintSum;
-            }
-
-            /** @brief 타일 좌표 목록 하나(개수 + 좌표)를 읽습니다. */
-            [[nodiscard]] static bool readTileList( Archive& archive, vector<int2>& outListTile )
-            {
-                uint32 count = 0;
-                if ( archive.readCount( sizeof( int32 ) * 2, count ) == false )
-                    return false;
-                outListTile.resize( count );
-                for ( int2& tile : outListTile )
-                {
-                    StateIO::readInt2( archive, tile );
-                }
-                return true;
-            }
-
-            /** @brief `writeState` 가 쓴 일꾼 하나를 읽습니다. 집 번호가 @p buildingCount 밖이거나 열거형이 범위 밖이면 false 입니다. */
-            [[nodiscard]] static bool readWalker( Archive& archive, uint32 buildingCount, CityWalker& outWalker )
-            {
-                const bool bListRead = readTileList( archive, outWalker._listPath ) && readTileList( archive, outWalker._listVisited );
-                if ( bListRead == false || StateIO::readName( archive, outWalker._cargoGood ) == false )
-                    return false;
-                uint8 kind    = 0;
-                uint8 service = 0;
-                StateIO::readInt2( archive, outWalker._tile );
-                StateIO::readInt2( archive, outWalker._previousTile );
-                StateIO::readInt2( archive, outWalker._nextTile );
-                archive >> outWalker._progress;
-                archive >> outWalker._homeBuilding;
-                archive >> outWalker._targetBuilding;
-                archive >> outWalker._stepsLeft;
-                archive >> outWalker._cargoAmount;
-                archive >> kind;
-                archive >> service;
-                archive >> outWalker._bReturning;
-                archive >> outWalker._bAlive;
-                const bool bHomeValid         = -1 <= outWalker._homeBuilding && outWalker._homeBuilding < static_cast<int32>( buildingCount );
-                const bool bTargetValid       = -1 <= outWalker._targetBuilding && outWalker._targetBuilding < static_cast<int32>( buildingCount );
-                const bool bEnumValid         = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
-                const bool bInvalidWalkerData = archive.isError() || bHomeValid == false || bTargetValid == false || bEnumValid == false || outWalker._bReturning > SW_TRUE || outWalker._bAlive > SW_TRUE || outWalker._cargoAmount < 0;
-                if ( bInvalidWalkerData )
-                    return false;
-                outWalker._kind    = static_cast<CityWalkerKind>( kind );
-                outWalker._service = static_cast<CityService>( service );
-                return true;
             }
 
             /**
@@ -1150,168 +1074,92 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기와 읽기(핫 리로드, 세이브)
     // ------------------------------------------------------------------------------
-    void CitySimulation::writeState( Archive& outArchive ) const
+    void CitySimulation::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        for ( const CityTile& tile : _listTile )
+        io.expect( _topology._width );
+        io.expect( _topology._height );
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
+        for ( CityTile& tile : _listTile )
         {
-            outArchive << tile._buildingIndex;
-            outArchive << tile._roadComponent;
-            outArchive << tile._desirability;
-            outArchive << static_cast<uint8>( tile._terrain );
-            outArchive << tile._bRoad;
+            io.value( tile._buildingIndex );
+            io.value( tile._roadComponent );
+            io.value( tile._desirability );
+            io.enumValue( tile._terrain, CityTerrain::Rock );
+            io.value( tile._bRoad );
         }
-        outArchive << static_cast<uint32>( _listBuilding.size() );
-        for ( const CityBuilding& building : _listBuilding )
+        io.list( _listBuilding, CitySimulationInternal::kMinBuildingStateBytes, [&]( CityBuilding& building )
         {
-            StateIO::writeName( outArchive, building._pDef != nullptr ? building._pDef->_id : hashed_string{} );
-            building._stock.writeState( outArchive );
-            StateIO::writeInt2( outArchive, building._origin );
-            StateIO::writeInt2( outArchive, building._accessTile );
-            outArchive << building._efficiency;
-            outArchive << building._walkerTimer;
-            outArchive << building._productionProgress;
-            for ( const float32 serviceTime : building._arrServiceTime )
+            io.reference( building._pDef, [this]( const hashed_string& defID )
+            { return _pCatalog->findBuilding( defID ); } );
+            io.value( building._stock );
+            io.value( building._origin );
+            io.value( building._accessTile );
+            io.value( building._efficiency );
+            io.value( building._walkerTimer );
+            io.value( building._productionProgress );
+            for ( float32& serviceTime : building._arrServiceTime )
             {
-                outArchive << serviceTime;
+                io.value( serviceTime );
             }
-            outArchive << building._evolveTimer;
-            outArchive << building._devolveTimer;
-            outArchive << building._immigrationTimer;
-            outArchive << building._assignedWorkers;
-            outArchive << building._activeWalkerCount;
-            outArchive << building._level;
-            outArchive << building._population;
-            outArchive << building._bAlive;
-        }
-        outArchive << static_cast<uint32>( _listWalker.size() );
-        for ( const CityWalker& walker : _listWalker )
-        {
-            outArchive << static_cast<uint32>( walker._listPath.size() );
-            for ( const int2& tile : walker._listPath )
+            io.value( building._evolveTimer );
+            io.value( building._devolveTimer );
+            io.value( building._immigrationTimer );
+            io.value( building._assignedWorkers );
+            io.value( building._activeWalkerCount );
+            io.value( building._level );
+            io.value( building._population );
+            io.value( building._bAlive );
+            if ( io.isReading() && io.isOk() )
             {
-                StateIO::writeInt2( outArchive, tile );
+                io.check( CitySimulationInternal::isBuildingValid( building, *_pCatalog, _topology ) );
             }
-            outArchive << static_cast<uint32>( walker._listVisited.size() );
-            for ( const int2& tile : walker._listVisited )
+        } );
+        if ( io.isReading() && io.isOk() )
+        {
+            io.check( CitySimulationInternal::areTilesValid( _listTile, _listBuilding, _topology ) );
+        }
+        const int32 buildingCount = static_cast<int32>( _listBuilding.size() );
+        const auto  serializeTile = [&]( int2& tile )
+        { io.value( tile ); };
+        io.list( _listWalker, CitySimulationInternal::kMinWalkerStateBytes, [&]( CityWalker& walker )
+        {
+            io.list( walker._listPath, sizeof( int32 ) * 2, serializeTile );
+            io.list( walker._listVisited, sizeof( int32 ) * 2, serializeTile );
+            io.value( walker._cargoGood );
+            io.value( walker._tile );
+            io.value( walker._previousTile );
+            io.value( walker._nextTile );
+            io.value( walker._progress );
+            io.value( walker._homeBuilding );
+            io.value( walker._targetBuilding );
+            io.value( walker._stepsLeft );
+            io.value( walker._cargoAmount );
+            io.enumValue( walker._kind, CityWalkerKind::Cart );
+            io.enumValue( walker._service, CityService::Count );
+            io.flag( walker._bReturning );
+            io.flag( walker._bAlive );
+            if ( io.check( -1 <= walker._homeBuilding && walker._homeBuilding < buildingCount && -1 <= walker._targetBuilding && walker._targetBuilding < buildingCount && 0 <= walker._cargoAmount ) && io.isReading() )
             {
-                StateIO::writeInt2( outArchive, tile );
+                io.check( CitySimulationInternal::isWalkerValid( walker, _listBuilding, _topology ) );
             }
-            StateIO::writeName( outArchive, walker._cargoGood );
-            StateIO::writeInt2( outArchive, walker._tile );
-            StateIO::writeInt2( outArchive, walker._previousTile );
-            StateIO::writeInt2( outArchive, walker._nextTile );
-            outArchive << walker._progress;
-            outArchive << walker._homeBuilding;
-            outArchive << walker._targetBuilding;
-            outArchive << walker._stepsLeft;
-            outArchive << walker._cargoAmount;
-            outArchive << static_cast<uint8>( walker._kind );
-            outArchive << static_cast<uint8>( walker._service );
-            outArchive << walker._bReturning;
-            outArchive << walker._bAlive;
-        }
-        StateIO::writeStepTimer( outArchive, _stepTimer );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _time;
-        outArchive << _floodFertility;
-        outArchive << _wageDebt;
-        outArchive << _monthIncome;
-        outArchive << _workforce;
-        outArchive << _employed;
-        outArchive << _bRoadsDirty;
-        outArchive << _bDesirabilityDirty;
-    }
-
-    bool CitySimulation::readState( Archive& archive )
-    {
-        int32 width  = 0;
-        int32 height = 0;
-        archive >> width;
-        archive >> height;
-        const bool bInvalidCityHeader = archive.isError() || width != _topology._width || height != _topology._height || _pCatalog == nullptr;
-        if ( bInvalidCityHeader )
-            return false;
-
-        vector<CityTile> listTile( _listTile.size() );
-        for ( CityTile& tile : listTile )
-        {
-            uint8 terrain = 0;
-            archive >> tile._buildingIndex;
-            archive >> tile._roadComponent;
-            archive >> tile._desirability;
-            archive >> terrain;
-            archive >> tile._bRoad;
-            const bool bInvalidTileData = archive.isError() || terrain > static_cast<uint8>( CityTerrain::Rock );
-            if ( bInvalidTileData )
-                return false;
-            tile._terrain = static_cast<CityTerrain>( terrain );
-        }
-
-        uint32 buildingCount = 0;
-        if ( archive.readCount( CitySimulationInternal::kMinBuildingStateBytes, buildingCount ) == false )
-            return false;
-        vector<CityBuilding> listBuilding( buildingCount );
-        for ( CityBuilding& building : listBuilding )
-        {
-            if ( CitySimulationInternal::readBuilding( archive, *_pCatalog, building ) == false || CitySimulationInternal::isBuildingValid( building, *_pCatalog, _topology ) == false )
-                return false;
-        }
-        if ( CitySimulationInternal::areTilesValid( listTile, listBuilding, _topology ) == false )
-            return false;
-
-        uint32 walkerCount = 0;
-        if ( archive.readCount( CitySimulationInternal::kMinWalkerStateBytes, walkerCount ) == false )
-            return false;
-        vector<CityWalker> listWalker( walkerCount );
-        for ( CityWalker& walker : listWalker )
-        {
-            if ( CitySimulationInternal::readWalker( archive, buildingCount, walker ) == false || CitySimulationInternal::isWalkerValid( walker, listBuilding, _topology ) == false )
-                return false;
-        }
-
-        FixedStepTimer stepTimer = _stepTimer;
-        GameRandom     random;
-        if ( StateIO::readStepTimer( archive, stepTimer ) == false || StateIO::readRandom( archive, random ) == false )
-            return false;
-        float32 time               = 0.0f;
-        float32 floodFertility     = 0.0f;
-        float32 wageDebt           = 0.0f;
-        int32   monthIncome        = 0;
-        int32   workforce          = 0;
-        int32   employed           = 0;
-        uint8   bRoadsDirty        = SW_FALSE;
-        uint8   bDesirabilityDirty = SW_FALSE;
-        archive >> time;
-        archive >> floodFertility;
-        archive >> wageDebt;
-        archive >> monthIncome;
-        archive >> workforce;
-        archive >> employed;
-        archive >> bRoadsDirty;
-        archive >> bDesirabilityDirty;
+        } );
+        io.value( _stepTimer );
+        io.value( _random );
+        io.value( _time );
+        io.value( _floodFertility );
+        io.value( _wageDebt );
+        io.value( _monthIncome );
+        io.value( _workforce );
+        io.value( _employed );
+        io.flag( _bRoadsDirty );
+        io.flag( _bDesirabilityDirty );
         // 임금 빚은 정수 부분을 달마다 내어 1 아래이다. 일하는 사람은 일할 수 있는 사람에서 나눠 준다(`assignLabor`).
-        const bool bMoneyValid = 0.0f <= wageDebt && wageDebt < 1.0f;
-        const bool bLaborValid = 0 <= workforce && 0 <= employed && employed <= workforce;
-        const bool bFlagsValid = bRoadsDirty <= SW_TRUE && bDesirabilityDirty <= SW_TRUE;
-        if ( archive.isError() || time < 0.0f || floodFertility < 0.0f || 1.0f < floodFertility || bMoneyValid == false || bLaborValid == false || bFlagsValid == false )
-            return false;
-
-        _listTile           = std::move( listTile );
-        _listBuilding       = std::move( listBuilding );
-        _listWalker         = std::move( listWalker );
-        _stepTimer          = stepTimer;
-        _random             = random;
-        _time               = time;
-        _floodFertility     = floodFertility;
-        _wageDebt           = wageDebt;
-        _monthIncome        = monthIncome;
-        _workforce          = workforce;
-        _employed           = employed;
-        _bRoadsDirty        = bRoadsDirty;
-        _bDesirabilityDirty = bDesirabilityDirty;
-        _eventBuffer.clear();
-        return true;
+        io.check( 0.0f <= _wageDebt && _wageDebt < 1.0f && 0 <= _workforce && 0 <= _employed && _employed <= _workforce && 0.0f <= _time && 0.0f <= _floodFertility && _floodFertility <= 1.0f );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
+        }
     }
+
 } // namespace sw

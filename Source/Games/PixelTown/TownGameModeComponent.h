@@ -49,7 +49,7 @@ namespace sw
         virtual ~TownGameModeComponent() override;
 
         /** @brief 걸음 상태(키트 이동기의 바이트)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         /** @brief 주인공 발의 월드 자리입니다. 걷는 동안은 두 칸 사이를 걸음 시간에 맞춰 잇습니다. 뷰는 PostUpdate 에서 이것만 읽습니다. */
         const float3& getHeroPosition() const { return _heroPosition; }
@@ -69,8 +69,6 @@ namespace sw
     protected:
         /** @brief 땅 · 소품 레이어로 걷는 맵을 만들고 주민 칸을 막은 뒤 주인공을 스폰 칸에 세웁니다. 레이어나 주인공이 없으면 판을 열지 않습니다. */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

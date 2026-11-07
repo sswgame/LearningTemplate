@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
@@ -82,9 +84,20 @@ namespace sw
          * @brief 스택(층마다 프리셋 id, 블렌드, 진행, 감쇠한 포즈, 입력이 돌린 상태)을 씁니다. 첫 값은 형식 표와 버전입니다.
          * @details 프리셋 본문은 쓰지 않는다. 읽을 때 카탈로그에서 다시 찾고, 카탈로그에 없는 층(코드로 만든 프리셋)은 마지막 포즈로 고정해 둔다.
          */
-        void writeState( Archive& outArchive ) const;
+        void writeState( Archive& outArchive ) const
+        {
+            StateIO io( outArchive );
+            const_cast<CameraDirector*>( this )->serializeState( io, nullptr );
+        }
         /** @brief `writeState` 의 바이트로 스택을 복원합니다. 형식이 맞지 않거나 잘렸으면 false 이고 지금 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive, const CameraPresetCatalog& catalog );
+        [[nodiscard]] bool readState( Archive& archive, const CameraPresetCatalog& catalog )
+        {
+            StateIO io( archive );
+            serializeState( io, &catalog );
+            return io.isOk();
+        }
+        /** @brief 쓰기와 읽기를 함께 적은 본문입니다. 읽을 때는 @p pCatalog 가 필수이고 쓸 때는 쓰지 않습니다(프리셋 정의는 id 로 다시 찾는다). */
+        void serializeState( StateIO& io, const CameraPresetCatalog* pCatalog );
 
         const hashed_string&   getActivePresetID() const { return getActivePreset()._id; }
         const CameraPresetDef& getActivePreset() const;

@@ -1196,169 +1196,76 @@ namespace sw
         return channel.writeMessage( kind, snapshot, outWriter );
     }
 
-    void AsymmetricHorrorMatch::writeState( Archive& outArchive ) const
+    void AsymmetricHorrorMatch::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _settings._killerID );
-        outArchive << _bStarted;
-        outArchive << _bEndReported;
-        outArchive << _tick;
-        StateIO::writeStepTimer( outArchive, _timer );
-        _match.writeState( outArchive );
-        outArchive << _survivorTeam;
-        outArchive << _killerTeam;
-        outArchive << _completedGeneratorCount;
-        outArchive << _bGatesPowered;
-        outArchive << _bHatchPlaced;
-        outArchive << _bHatchOpen;
-        outArchive << _bHatchClosed;
-        outArchive << _bCollapseStarted;
-        StateIO::writeCountdown( outArchive, _collapseRemaining );
-        outArchive << _hatchPosition;
+        if ( io.check( _pCatalog != nullptr && _killer._pDef != nullptr ) == false )
+            return;
+        io.expect( _settings._killerID );
+        if ( io.isOk() == false )
+            return;
+        // 같은 설정과 카탈로그로 새 판을 열고, 무대와 생존자를 add... 로 다시 만든 뒤(규칙에서 오는 설정) 상태를 덮는다.
+        if ( io.isReading() )
+        {
+            AsymmetricHorrorMatch restored;
+            if ( io.check( restored.initialize( _settings, _pCatalog ) ) == false )
+                return;
+            *this = std::move( restored );
+        }
+        uint8 bStarted = _bStarted;
+        io.flag( bStarted );
+        io.flag( _bEndReported );
+        io.value( _tick );
+        io.value( _timer );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
+        {
+            _match.initialize( bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
+        }
+        io.value( _match );
+        io.value( _survivorTeam );
+        io.value( _killerTeam );
+        io.value( _completedGeneratorCount );
+        io.flag( _bGatesPowered );
+        io.flag( _bHatchPlaced );
+        io.flag( _bHatchOpen );
+        io.flag( _bHatchClosed );
+        io.flag( _bCollapseStarted );
+        io.value( _collapseRemaining );
+        io.value( _hatchPosition );
+        if ( io.check( 0 <= _completedGeneratorCount ) == false )
+            return;
 
         // 무대: 위치를 먼저 싣고(읽는 쪽이 add... 로 다시 만든다) 그 위에 상태를 덮는다.
-        outArchive << static_cast<uint32>( _listHook.size() );
-        for ( const float3& position : _listHook )
-        {
-            outArchive << position;
-        }
-        outArchive << static_cast<uint32>( _listPallet.size() );
-        for ( size_t index = 0; index < _listPallet.size(); ++index )
-        {
-            outArchive << _listPallet[index];
-            outArchive << static_cast<uint8>( _listPalletState[index] );
-        }
-        outArchive << static_cast<uint32>( _listLocker.size() );
-        for ( size_t index = 0; index < _listLocker.size(); ++index )
-        {
-            outArchive << _listLocker[index];
-            outArchive << _listLockerOccupant[index];
-        }
-        outArchive << static_cast<uint32>( _listWindow.size() );
-        for ( const AsymmetricHorrorWindow& window : _listWindow )
-        {
-            outArchive << window._position;
-            outArchive << window._blockedRemaining;
-            outArchive << window._chaseVaultCount;
-        }
-        outArchive << static_cast<uint32>( _listGenerator.size() );
-        for ( const AsymmetricHorrorGenerator& generator : _listGenerator )
-        {
-            outArchive << generator._position;
-            outArchive << generator._bKicked;
-            outArchive << generator._bBlocked;
-            generator._progress.writeState( outArchive );
-        }
-        outArchive << static_cast<uint32>( _listGate.size() );
-        for ( const AsymmetricHorrorGate& gate : _listGate )
-        {
-            outArchive << gate._position;
-            gate._progress.writeState( outArchive );
-        }
-
-        outArchive << static_cast<uint32>( _listSurvivor.size() );
-        for ( const AsymmetricHorrorSurvivor& survivor : _listSurvivor )
-        {
-            outArchive << survivor._position;
-            survivor._combatHealth.writeState( outArchive );
-            survivor._healing.writeState( outArchive );
-            survivor._score.writeState( outArchive );
-            outArchive << survivor._lastMoveSpeed;
-            StateIO::writeCountdown( outArchive, survivor._hasteRemaining );
-            outArchive << survivor._hookTimer;
-            outArchive << survivor._struggleIdle;
-            outArchive << survivor._wiggleProgress;
-            StateIO::writeCountdown( outArchive, survivor._vaultRemaining );
-            outArchive << survivor._noiseRadius;
-            StateIO::writeCountdown( outArchive, survivor._noiseRemaining );
-            outArchive << survivor._vaultExit;
-            outArchive << survivor._hookStage;
-            outArchive << survivor._activityTarget;
-            outArchive << survivor._participant;
-            outArchive << static_cast<uint8>( survivor._state );
-            outArchive << static_cast<uint8>( survivor._activity );
-            outArchive << survivor._bStruggling;
-            outArchive << survivor._bWiggling;
-            outArchive << survivor._bBledOut;
-        }
-
-        _killer._score.writeState( outArchive );
-        outArchive << _killer._position;
-        outArchive << _killer._forward;
-        outArchive << _killer._busyExit;
-        StateIO::writeCountdown( outArchive, _killer._attackCooldown );
-        StateIO::writeCountdown( outArchive, _killer._stunRemaining );
-        StateIO::writeCountdown( outArchive, _killer._busyRemaining );
-        StateIO::writeCountdown( outArchive, _killer._abilityCooldown );
-        outArchive << _killer._carrying;
-        outArchive << _killer._breakingPallet;
-        outArchive << _killer._participant;
-        outArchive << _killer._bVaulting;
-    }
-
-    bool AsymmetricHorrorMatch::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr || _killer._pDef == nullptr )
-            return false;
-        hashed_string killerID;
-        if ( StateIO::readName( archive, killerID ) == false || killerID != _settings._killerID )
-            return false;
-        // 같은 설정과 카탈로그로 새 판을 열고, 무대와 생존자를 add... 로 다시 만든 뒤(규칙에서 오는 설정) 상태를 덮는다. 끝까지 맞을 때만 바꾼다.
-        AsymmetricHorrorMatch restored;
-        if ( restored.initialize( _settings, _pCatalog ) == false )
-            return false;
-        uint8 bStarted = SW_FALSE;
-        archive >> bStarted;
-        archive >> restored._bEndReported;
-        archive >> restored._tick;
-        const bool bHeadValid = archive.isOk() && bStarted <= SW_TRUE && restored._bEndReported <= SW_TRUE;
-        if ( bHeadValid == false || StateIO::readStepTimer( archive, restored._timer ) == false )
-            return false;
-        restored._match.initialize( bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
-        if ( restored._match.readState( archive ) == false )
-            return false;
-        archive >> restored._survivorTeam;
-        archive >> restored._killerTeam;
-        archive >> restored._completedGeneratorCount;
-        archive >> restored._bGatesPowered;
-        archive >> restored._bHatchPlaced;
-        archive >> restored._bHatchOpen;
-        archive >> restored._bHatchClosed;
-        archive >> restored._bCollapseStarted;
-        const bool bCollapseRead = StateIO::readCountdown( archive, restored._collapseRemaining );
-        archive >> restored._hatchPosition;
-        const uint8 flags =
-            static_cast<uint8>( restored._bGatesPowered | restored._bHatchPlaced | restored._bHatchOpen | restored._bHatchClosed | restored._bCollapseStarted );
-        const bool bInvalidRestoredFlags = bCollapseRead == false || archive.isError() || flags > SW_TRUE || restored._completedGeneratorCount < 0;
-        if ( bInvalidRestoredFlags )
-            return false;
-
         uint32 palletCount = 0;
-        if ( restored.readStage( archive, palletCount ) == false )
-            return false;
+        serializeStage( io, palletCount );
+        if ( io.isOk() == false )
+            return;
 
-        uint32 survivorCount = 0;
+        uint32 survivorCount = static_cast<uint32>( _listSurvivor.size() );
         // 생존자마다 최소한 위치(12) + 실수, 타이머, 정수 필드(60) + 체력, 치료, 점수
-        if ( archive.readCount( 72, survivorCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < survivorCount; ++index )
+        io.count( 72, survivorCount );
+        for ( uint32 index = 0; index < survivorCount && io.isOk(); ++index )
         {
-            float3 position;
-            archive >> position;
-            if ( archive.isError() )
-                return false;
-            const int32 survivor = restored.addSurvivor( position );
-            if ( survivor < 0 || restored.readSurvivor( archive, restored._listSurvivor[static_cast<size_t>( survivor )] ) == false )
-                return false;
+            float3 position = io.isWriting() ? _listSurvivor[index]._position : float3{};
+            io.value( position );
+            if ( io.isOk() == false )
+                return;
+            int32 survivor = static_cast<int32>( index );
+            if ( io.isReading() )
+            {
+                survivor = addSurvivor( position );
+                if ( io.check( survivor >= 0 ) == false )
+                    return;
+            }
+            serializeSurvivor( io, _listSurvivor[static_cast<size_t>( survivor )] );
         }
-        if ( restored.readKiller( archive, survivorCount, palletCount ) == false )
-            return false;
-
-        restored._bStarted = bStarted;
-        if ( restored.isStateConsistent() == false )
-            return false;
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        serializeKiller( io, survivorCount, palletCount );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _bStarted = bStarted;
+        io.check( isStateConsistent() );
+        _eventBuffer.clear();
     }
 
     bool AsymmetricHorrorMatch::isStateConsistent() const
@@ -1525,144 +1432,139 @@ namespace sw
         return settings;
     }
 
-    bool AsymmetricHorrorMatch::readSurvivor( Archive& archive, AsymmetricHorrorSurvivor& outSurvivor ) const
+    void AsymmetricHorrorMatch::serializeSurvivor( StateIO& io, AsymmetricHorrorSurvivor& survivor ) const
     {
-        uint8      state                    = 0;
-        uint8      activity                 = 0;
-        const bool bSurvivorStateReadFailed = outSurvivor._combatHealth.readState( archive ) == false || outSurvivor._healing.readState( archive ) == false || outSurvivor._score.readState( archive ) == false;
-        if ( bSurvivorStateReadFailed )
-            return false;
-        archive >> outSurvivor._lastMoveSpeed;
-        const bool bHasteRead = StateIO::readCountdown( archive, outSurvivor._hasteRemaining );
-        archive >> outSurvivor._hookTimer;
-        archive >> outSurvivor._struggleIdle;
-        archive >> outSurvivor._wiggleProgress;
-        const bool bVaultRead = StateIO::readCountdown( archive, outSurvivor._vaultRemaining );
-        archive >> outSurvivor._noiseRadius;
-        const bool bNoiseRead = StateIO::readCountdown( archive, outSurvivor._noiseRemaining );
-        archive >> outSurvivor._vaultExit;
-        archive >> outSurvivor._hookStage;
-        archive >> outSurvivor._activityTarget;
-        archive >> outSurvivor._participant;
-        archive >> state;
-        archive >> activity;
-        archive >> outSurvivor._bStruggling;
-        archive >> outSurvivor._bWiggling;
-        archive >> outSurvivor._bBledOut;
-        const uint8 flags          = static_cast<uint8>( outSurvivor._bStruggling | outSurvivor._bWiggling | outSurvivor._bBledOut );
-        const bool  bFieldsInRange = 0.0f <= outSurvivor._lastMoveSpeed && 0.0f <= outSurvivor._hookTimer && 0.0f <= outSurvivor._struggleIdle && 0.0f <= outSurvivor._wiggleProgress && outSurvivor._wiggleProgress < 1.0f &&
-                                    0.0f <= outSurvivor._noiseRadius && 0 <= outSurvivor._hookStage;
-        const bool bValid = bHasteRead && bVaultRead && bNoiseRead && archive.isOk() && state <= static_cast<uint8>( SurvivorState::Escaped ) &&
-                            activity <= static_cast<uint8>( SurvivorActivity::InLocker ) && bFieldsInRange && flags <= SW_TRUE;
-        if ( bValid == false )
-            return false;
-        outSurvivor._state    = static_cast<SurvivorState>( state );
-        outSurvivor._activity = static_cast<SurvivorActivity>( activity );
-        return true;
+        io.value( survivor._combatHealth );
+        io.value( survivor._healing );
+        io.value( survivor._score );
+        io.value( survivor._lastMoveSpeed );
+        io.value( survivor._hasteRemaining );
+        io.value( survivor._hookTimer );
+        io.value( survivor._struggleIdle );
+        io.value( survivor._wiggleProgress );
+        io.value( survivor._vaultRemaining );
+        io.value( survivor._noiseRadius );
+        io.value( survivor._noiseRemaining );
+        io.value( survivor._vaultExit );
+        io.value( survivor._hookStage );
+        io.value( survivor._activityTarget );
+        io.value( survivor._participant );
+        io.enumValue( survivor._state, SurvivorState::Escaped );
+        io.enumValue( survivor._activity, SurvivorActivity::InLocker );
+        io.flag( survivor._bStruggling );
+        io.flag( survivor._bWiggling );
+        io.flag( survivor._bBledOut );
+        io.check( 0.0f <= survivor._lastMoveSpeed && 0.0f <= survivor._hookTimer && 0.0f <= survivor._struggleIdle && 0.0f <= survivor._wiggleProgress && survivor._wiggleProgress < 1.0f && 0.0f <= survivor._noiseRadius && 0 <= survivor._hookStage );
     }
 
-    bool AsymmetricHorrorMatch::readStage( Archive& archive, uint32& outPalletCount )
+    void AsymmetricHorrorMatch::serializeStage( StateIO& io, uint32& inoutPalletCount )
     {
-        uint32 hookCount = 0;
-        if ( archive.readCount( 12, hookCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < hookCount; ++index )
+        uint32 hookCount = static_cast<uint32>( _listHook.size() );
+        io.count( 12, hookCount );
+        for ( uint32 index = 0; index < hookCount && io.isOk(); ++index )
         {
-            float3 position;
-            archive >> position;
-            (void)addHook( position );
+            float3 position = io.isWriting() ? _listHook[index] : float3{};
+            io.value( position );
+            if ( io.isReading() )
+            {
+                (void)addHook( position );
+            }
         }
-        if ( archive.readCount( 13, outPalletCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < outPalletCount; ++index )
+        inoutPalletCount = static_cast<uint32>( _listPallet.size() );
+        io.count( 13, inoutPalletCount );
+        for ( uint32 index = 0; index < inoutPalletCount && io.isOk(); ++index )
         {
-            float3 position;
-            uint8  state = 0;
-            archive >> position;
-            archive >> state;
-            if ( archive.isError() || state > static_cast<uint8>( PalletState::Broken ) )
-                return false;
-            _listPalletState[static_cast<size_t>( addPallet( position ) )] = static_cast<PalletState>( state );
+            float3 position = io.isWriting() ? _listPallet[index] : float3{};
+            uint8  state    = io.isWriting() ? static_cast<uint8>( _listPalletState[index] ) : uint8( 0 );
+            io.value( position );
+            io.value( state );
+            if ( io.check( state <= static_cast<uint8>( PalletState::Broken ) ) == false )
+                return;
+            if ( io.isReading() )
+            {
+                _listPalletState[static_cast<size_t>( addPallet( position ) )] = static_cast<PalletState>( state );
+            }
         }
-        uint32 lockerCount = 0;
-        if ( archive.readCount( 16, lockerCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < lockerCount; ++index )
+        uint32 lockerCount = static_cast<uint32>( _listLocker.size() );
+        io.count( 16, lockerCount );
+        for ( uint32 index = 0; index < lockerCount && io.isOk(); ++index )
         {
-            float3 position;
-            int32  occupant = -1;
-            archive >> position;
-            archive >> occupant;
-            _listLockerOccupant[static_cast<size_t>( addLocker( position ) )] = occupant;
+            float3 position = io.isWriting() ? _listLocker[index] : float3{};
+            int32  occupant = io.isWriting() ? _listLockerOccupant[index] : -1;
+            io.value( position );
+            io.value( occupant );
+            if ( io.isReading() )
+            {
+                _listLockerOccupant[static_cast<size_t>( addLocker( position ) )] = occupant;
+            }
         }
-        uint32 windowCount = 0;
-        if ( archive.readCount( 20, windowCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < windowCount; ++index )
+        uint32 windowCount = static_cast<uint32>( _listWindow.size() );
+        io.count( 20, windowCount );
+        for ( uint32 index = 0; index < windowCount && io.isOk(); ++index )
         {
-            float3 position;
-            archive >> position;
-            AsymmetricHorrorWindow& window = _listWindow[static_cast<size_t>( addWindow( position ) )];
-            archive >> window._blockedRemaining;
-            archive >> window._chaseVaultCount;
+            float3 position = io.isWriting() ? _listWindow[index]._position : float3{};
+            io.value( position );
+            AsymmetricHorrorWindow& window = _listWindow[io.isWriting() ? static_cast<size_t>( index ) : static_cast<size_t>( addWindow( position ) )];
+            io.value( window._blockedRemaining );
+            io.value( window._chaseVaultCount );
         }
-        uint32 generatorCount = 0;
-        if ( archive.readCount( 14, generatorCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < generatorCount; ++index )
+        uint32 generatorCount = static_cast<uint32>( _listGenerator.size() );
+        io.count( 14, generatorCount );
+        for ( uint32 index = 0; index < generatorCount && io.isOk(); ++index )
         {
-            float3 position;
-            uint8  bKicked  = SW_FALSE;
-            uint8  bBlocked = SW_FALSE;
-            archive >> position;
-            archive >> bKicked;
-            archive >> bBlocked;
-            const bool bInvalidGeneratorFlags = archive.isError() || bKicked > SW_TRUE || bBlocked > SW_TRUE;
-            if ( bInvalidGeneratorFlags )
-                return false;
-            const int32 generator = addGenerator( position );
-            if ( generator < 0 || configureGenerator( generator, bKicked == SW_TRUE ) == false ) // 걷어차인 발전기는 퇴행 규칙을 쓴다
-                return false;
-            AsymmetricHorrorGenerator& target = _listGenerator[static_cast<size_t>( generator )];
-            target._bBlocked                  = bBlocked;
-            if ( target._progress.readState( archive ) == false )
-                return false;
+            float3 position = io.isWriting() ? _listGenerator[index]._position : float3{};
+            uint8  bKicked  = io.isWriting() ? _listGenerator[index]._bKicked : uint8( SW_FALSE );
+            uint8  bBlocked = io.isWriting() ? _listGenerator[index]._bBlocked : uint8( SW_FALSE );
+            io.value( position );
+            io.flag( bKicked );
+            io.flag( bBlocked );
+            if ( io.isOk() == false )
+                return;
+            int32 generator = static_cast<int32>( index );
+            if ( io.isReading() )
+            {
+                generator = addGenerator( position );
+                if ( io.check( generator >= 0 && configureGenerator( generator, bKicked == SW_TRUE ) ) == false ) // 걷어차인 발전기는 퇴행 규칙을 쓴다
+                    return;
+                _listGenerator[static_cast<size_t>( generator )]._bBlocked = bBlocked;
+            }
+            io.value( _listGenerator[static_cast<size_t>( generator )]._progress );
         }
-        uint32 gateCount = 0;
-        if ( archive.readCount( 12, gateCount ) == false )
-            return false;
-        for ( uint32 index = 0; index < gateCount; ++index )
+        uint32 gateCount = static_cast<uint32>( _listGate.size() );
+        io.count( 12, gateCount );
+        for ( uint32 index = 0; index < gateCount && io.isOk(); ++index )
         {
-            float3 position;
-            archive >> position;
-            if ( archive.isError() )
-                return false;
-            const int32 gate = addGate( position );
-            if ( gate < 0 || _listGate[static_cast<size_t>( gate )]._progress.readState( archive ) == false )
-                return false;
+            float3 position = io.isWriting() ? _listGate[index]._position : float3{};
+            io.value( position );
+            if ( io.isOk() == false )
+                return;
+            int32 gate = static_cast<int32>( index );
+            if ( io.isReading() )
+            {
+                gate = addGate( position );
+                if ( io.check( gate >= 0 ) == false )
+                    return;
+            }
+            io.value( _listGate[static_cast<size_t>( gate )]._progress );
         }
-        return true;
     }
 
-    bool AsymmetricHorrorMatch::readKiller( Archive& archive, uint32 survivorCount, uint32 palletCount )
+    void AsymmetricHorrorMatch::serializeKiller( StateIO& io, uint32 survivorCount, uint32 palletCount )
     {
         AsymmetricHorrorKiller& killer = _killer;
-        if ( killer._score.readState( archive ) == false )
-            return false;
-        archive >> killer._position;
-        archive >> killer._forward;
-        archive >> killer._busyExit;
-        const bool bKillerTimerRead = StateIO::readCountdown( archive, killer._attackCooldown ) &&
-                                      StateIO::readCountdown( archive, killer._stunRemaining ) &&
-                                      StateIO::readCountdown( archive, killer._busyRemaining ) &&
-                                      StateIO::readCountdown( archive, killer._abilityCooldown );
-        archive >> killer._carrying;
-        archive >> killer._breakingPallet;
-        archive >> killer._participant;
-        archive >> killer._bVaulting;
-        const bool bKillerValid = bKillerTimerRead && archive.isOk() && -1 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) &&
-                                -1 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) && killer._bVaulting <= SW_TRUE;
-        return bKillerValid;
+        io.value( killer._score );
+        io.value( killer._position );
+        io.value( killer._forward );
+        io.value( killer._busyExit );
+        io.value( killer._attackCooldown );
+        io.value( killer._stunRemaining );
+        io.value( killer._busyRemaining );
+        io.value( killer._abilityCooldown );
+        io.value( killer._carrying );
+        io.value( killer._breakingPallet );
+        io.value( killer._participant );
+        io.flag( killer._bVaulting );
+        io.check( -1 <= killer._carrying && killer._carrying < static_cast<int32>( survivorCount ) && -1 <= killer._breakingPallet && killer._breakingPallet < static_cast<int32>( palletCount ) );
     }
 
     void AsymmetricHorrorMatch::step( float32 deltaTime )

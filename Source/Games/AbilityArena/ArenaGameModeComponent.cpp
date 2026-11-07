@@ -271,26 +271,19 @@ namespace sw
         SW_LOG_INFO_ID( "ArenaGameMode.ArenaReadyWASDMove", "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
     }
 
-    void ArenaGameModeComponent::writeState( Archive& outArchive ) const
+    void ArenaGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
-        outArchive << _wave;
-        outArchive << _killCount;
-    }
-
-    bool ArenaGameModeComponent::readState( Archive& archive )
-    {
-        uint32 wave      = 0;
-        uint32 killCount = 0;
-        if ( StateIO::readHeader( archive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        archive >> wave;
-        archive >> killCount;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 )
-            return false;
-        _wave      = wave;
-        _killCount = killCount;
-        return true;
+        uint32 wave      = _wave;
+        uint32 killCount = _killCount;
+        io.header( ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
+        io.value( wave );
+        io.value( killCount );
+        io.end();
+        if ( io.isReading() && io.isOk() )
+        {
+            _wave      = wave;
+            _killCount = killCount;
+        }
     }
 
     void ArenaGameModeComponent::onStateRestored( bool bRestored )

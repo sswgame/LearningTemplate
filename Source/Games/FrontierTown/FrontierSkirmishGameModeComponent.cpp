@@ -46,15 +46,35 @@ namespace sw
 
     FrontierSkirmishGameModeComponent::~FrontierSkirmishGameModeComponent() = default;
 
-    void FrontierSkirmishGameModeComponent::writeState( Archive& outArchive ) const
+    void FrontierSkirmishGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        const uint8 bPatrolToB = _bPatrolToB;
-        outArchive << _tickCount;
-        outArchive << bPatrolToB;
-        outArchive << _worker.packed();
-        outArchive << _soldier.packed();
-        _world.writeState( outArchive );
+        SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        if ( io.check( pState != nullptr ) == false )
+            return;
+        io.header( kStateTag, kStateVersion );
+        int32  tickCount    = _tickCount;
+        uint8  bPatrolToB   = _bPatrolToB;
+        uint64 workerValue  = _worker.packed();
+        uint64 soldierValue = _soldier.packed();
+        io.value( tickCount );
+        io.value( bPatrolToB );
+        io.value( workerValue );
+        io.value( soldierValue );
+        if ( io.isOk() == false )
+            return;
+        RTSWorld restoredWorld;
+        if ( io.isReading() && io.check( initializeWorld( restoredWorld, *pState ) ) == false )
+            return;
+        io.value( io.isWriting() ? _world : restoredWorld );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _world       = std::move( restoredWorld );
+        _tickCount   = tickCount;
+        _bPatrolToB  = bPatrolToB == SW_FALSE ? SW_FALSE : SW_TRUE;
+        _worker      = RTSUnitID::fromPacked( workerValue );
+        _soldier     = RTSUnitID::fromPacked( soldierValue );
+        _bViewsDirty = SW_TRUE;
     }
 
     bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
@@ -104,34 +124,6 @@ namespace sw
         }
         _tickCount   = 0;
         _bPatrolToB  = SW_TRUE;
-        _bViewsDirty = SW_TRUE;
-        return true;
-    }
-
-    bool FrontierSkirmishGameModeComponent::readState( Archive& archive )
-    {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr || StateIO::readHeader( archive, kStateTag, kStateVersion ) == false )
-            return false;
-        int32  tickCount    = 0;
-        uint8  bPatrolToB   = SW_TRUE;
-        uint64 workerValue  = 0;
-        uint64 soldierValue = 0;
-        archive >> tickCount;
-        archive >> bPatrolToB;
-        archive >> workerValue;
-        archive >> soldierValue;
-        RTSWorld world;
-        if ( initializeWorld( world, *pState ) == false )
-            return false;
-        const bool bInvalidWorldState = archive.isError() || world.readState( archive ) == false || archive.getRemainingBytes() != 0;
-        if ( bInvalidWorldState )
-            return false;
-        _world       = std::move( world );
-        _tickCount   = tickCount;
-        _bPatrolToB  = bPatrolToB == SW_FALSE ? SW_FALSE : SW_TRUE;
-        _worker      = RTSUnitID::fromPacked( workerValue );
-        _soldier     = RTSUnitID::fromPacked( soldierValue );
         _bViewsDirty = SW_TRUE;
         return true;
     }

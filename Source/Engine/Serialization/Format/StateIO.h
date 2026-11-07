@@ -34,14 +34,6 @@ namespace sw
         struct HasSerializeState<T, std::void_t<decltype( std::declval<T&>().serializeState( std::declval<StateIO&>() ) )>> : std::true_type
         {
         };
-        template <typename T, typename = void>
-        struct HasHandState : std::false_type
-        {
-        };
-        template <typename T>
-        struct HasHandState<T, std::void_t<decltype( std::declval<const T&>().writeState( std::declval<Archive&>() ) )>> : std::true_type
-        {
-        };
     } // namespace StateIOInternal
 
     /**
@@ -87,18 +79,6 @@ namespace sw
             {
                 inoutValue.serializeState( *this );
             }
-            else if constexpr ( StateIOInternal::HasHandState<T>::value )
-            {
-                // shortcut: 아직 손으로 짝지은 형식이 남은 동안의 다리다, 전수 이전이 끝나면 이 갈래를 지운다.
-                if ( isReading() )
-                {
-                    check( inoutValue.readState( _archive ) );
-                }
-                else
-                {
-                    inoutValue.writeState( _archive );
-                }
-            }
             else if constexpr ( std::is_base_of_v<DeterministicRandom32, T> )
             {
                 valueRandom( inoutValue ); // 파생 형식(`GameRandom`)은 템플릿이 겹지기 전에 기반으로 넘긴다
@@ -123,6 +103,18 @@ namespace sw
         void value( FixedStepTimer& inoutTimer );
         /** @brief 아직 정수가 되지 않은 누적 양입니다. 0..1 밖을 거절합니다. */
         void value( RateAccumulator& inoutAccumulator );
+
+        /** @brief 형식 안의 형식이지만 읽기가 그 형식만 사본에 받아 끝까지 맞으면 옮깁니다. 바깥이 사본 없는 판(`SW_DECLARE_STATE_IO_IN_PLACE`)일 때 씁니다. */
+        template <typename T>
+        void valueAtomic( T& inoutValue )
+        {
+            if ( isReading() )
+            {
+                (void)readAtomic( inoutValue, _archive ); // 실패는 아카이브 오류에 남는다
+                return;
+            }
+            inoutValue.serializeState( *this );
+        }
 
         /** @brief 저장 폭이 @p TStored 인 칸입니다(`int32` 칸을 `uint8` 로 놓거나 범위를 보지 않는 열거). 읽은 값의 범위는 부르는 쪽이 봅니다. */
         template <typename TStored, typename T>
@@ -170,6 +162,8 @@ namespace sw
 
         /** @brief 읽는 중이고 @p bCondition 이 거짓이면 거절합니다. 지금까지 맞으면 true 입니다. 쓰는 중에는 늘 true 입니다. */
         bool check( bool bCondition );
+        /** @brief 읽을 때 남은 바이트가 없어야 합니다. 상태 하나가 아카이브 하나를 차지하는 최상위 형식이 끝에 부릅니다. */
+        void end() { check( _archive.getRemainingBytes() == 0 ); }
         /** @brief 지금 읽기 · 쓰기를 실패로 남깁니다. */
         void fail() { _archive.setError(); }
 
@@ -269,7 +263,7 @@ namespace sw
                 }
                 StateIO bodyIO( sectionBody );
                 body( bodyIO );
-                check( bodyIO.isOk() );
+                check( bodyIO.isOk() && sectionBody.getRemainingBytes() == 0 );
                 return;
             }
             Archive sectionBody;

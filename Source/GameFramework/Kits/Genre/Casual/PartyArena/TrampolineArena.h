@@ -22,6 +22,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
@@ -217,10 +218,11 @@ namespace sw
         static void            writeInput( BitWriter& writer, const TrampolineInput& input );
         static TrampolineInput readInput( BitReader& reader );
 
-        /** @brief 사람마다 몸, 받아 둔 입력, 타이머, 콤보, 아이템 효과와 아이템 상태, 경기(`MatchState`), 고정 걸음, 시각을 씁니다. 설정, 판정 창, 아이템 정의는 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 경기의 팀 · 참가자 수가 인원과 다르거나, 값이 범위 밖이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 사람마다 몸, 받아 둔 입력, 타이머, 콤보, 아이템 효과와 아이템 상태, 경기(`MatchState`), 고정 걸음, 시각을 씁니다. 설정, 판정 창, 아이템 정의는 저장하지 않고, 이벤트는 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 경기의 팀 · 참가자 수가 인원과 다르거나, 값이 범위 밖이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         /** @brief 콤보 @p combo 일 때 튀는 높이를 반환합니다. */
         float32 computeBounceHeight( int32 combo ) const;

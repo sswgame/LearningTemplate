@@ -206,24 +206,69 @@ namespace sw
             (void)_weather.update( deltaTime * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
     }
 
-    void SessionStateComponent::writeState( Archive& outArchive ) const
+    void SessionStateComponent::serializeState( StateIO& io )
     {
-        // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
-        if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
+        // 구간 표는 여기 한 곳이다. 쓰기는 이 순서로 싣고, 읽기는 표로 찾아 넘긴다.
+        const auto forEachSection = [this]( auto&& visit )
         {
-            outArchive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
+            visit( _wallet, "wallet" );
+            visit( _flags, "flags" );
+            visit( _clock, "clock" );
+            visit( _questLog, "quest log" );
+            visit( _reputation, "reputation" );
+            visit( _inventory, "inventory" );
+            visit( _weather, "weather" );
+            visit( _land, "land" );
+        };
+        Archive& archive = io.getArchive();
+        if ( io.isWriting() )
+        {
+            // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
+            if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
+            {
+                archive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
+                return;
+            }
+            StateIO::writeHeader( archive, kStateTag, kStateVersion );
+            archive << SessionStateComponentInternal::kSectionCount;
+            forEachSection( [&archive]( const auto& state, const utf8* )
+            { SessionStateComponentInternal::writeStateSection( archive, state ); } );
             return;
         }
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        outArchive << SessionStateComponentInternal::kSectionCount;
-        SessionStateComponentInternal::writeStateSection( outArchive, _wallet );
-        SessionStateComponentInternal::writeStateSection( outArchive, _flags );
-        SessionStateComponentInternal::writeStateSection( outArchive, _clock );
-        SessionStateComponentInternal::writeStateSection( outArchive, _questLog );
-        SessionStateComponentInternal::writeStateSection( outArchive, _reputation );
-        SessionStateComponentInternal::writeStateSection( outArchive, _inventory );
-        SessionStateComponentInternal::writeStateSection( outArchive, _weather );
-        SessionStateComponentInternal::writeStateSection( outArchive, _land );
+        io.header( kStateTag, kStateVersion );
+        uint32 sectionCount = 0;
+        // 구간마다 태그, 버전, 길이(12바이트) 이상
+        io.count( 12, sectionCount );
+        if ( io.isOk() == false )
+            return;
+        // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
+        vector<SessionStateComponentInternal::Section> listSection;
+        listSection.resize( sectionCount );
+        for ( SessionStateComponentInternal::Section& section : listSection )
+        {
+            if ( io.check( StateIO::readSection( archive, section._tag, section._version, section._body ) ) == false )
+                return;
+        }
+        if ( io.check( archive.getRemainingBytes() == 0 ) == false )
+            return;
+        // 구간 하나가 깨지면 applyStateSection 이 경고를 남기고 그 구간만 새 판으로 둔다. 반환값은 쓰지 않는다.
+        for ( const SessionStateComponentInternal::Section& section : listSection )
+        {
+            bool bKnown = false;
+            forEachSection( [&section, &bKnown]( auto& state, const utf8* pName )
+            {
+                if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
+                {
+                    (void)SessionStateComponentInternal::applyStateSection( section, state, pName );
+                    bKnown = true;
+                }
+            } );
+            if ( bKnown == false )
+            {
+                SW_LOG_WARNING_ID( "SessionState.SessionStateUnknownSectionSkipped", "SessionState: unknown section %# skipped", section._tag );
+            }
+        }
+        _listClockEvent.clear();
     }
 
     void SessionStateComponent::restoreState( vector<uint8>&& bytes )
@@ -283,83 +328,4 @@ namespace sw
         return bRestored;
     }
 
-    bool SessionStateComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, kStateTag, kStateVersion ) == false )
-            return false;
-        uint32 sectionCount = 0;
-        // 구간마다 태그, 버전, 길이(12바이트) 이상
-        if ( archive.readCount( 12, sectionCount ) == false )
-            return false;
-        // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
-        vector<SessionStateComponentInternal::Section> listSection;
-        listSection.resize( sectionCount );
-        for ( SessionStateComponentInternal::Section& section : listSection )
-        {
-            if ( StateIO::readSection( archive, section._tag, section._version, section._body ) == false )
-                return false;
-        }
-        if ( archive.getRemainingBytes() != 0 )
-            return false;
-
-        // 구간 하나가 깨지면 applyStateSection 이 경고를 남기고 그 구간만 새 판으로 둔다. 반환값은 쓰지 않는다.
-        for ( const SessionStateComponentInternal::Section& section : listSection )
-        {
-            switch ( section._tag )
-            {
-                case Wallet::kStateTag:
-                {
-                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)SessionStateComponentInternal::applyStateSection( section, _wallet, "wallet" );
-                    break;
-                }
-                case GameFlags::kStateTag:
-                {
-                    (void)SessionStateComponentInternal::applyStateSection( section, _flags, "flags" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    break;
-                }
-                case WorldClock::kStateTag:
-                {
-                    (void)SessionStateComponentInternal::applyStateSection( section, _clock, "clock" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    break;
-                }
-                case QuestLog::kStateTag:
-                {
-                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)SessionStateComponentInternal::applyStateSection( section, _questLog, "quest log" );
-                    break;
-                }
-                case ReputationState::kStateTag:
-                {
-                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)SessionStateComponentInternal::applyStateSection( section, _reputation, "reputation" );
-                    break;
-                }
-                case Inventory::kStateTag:
-                {
-                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)SessionStateComponentInternal::applyStateSection( section, _inventory, "inventory" );
-                    break;
-                }
-                case WeatherSystem::kStateTag:
-                {
-                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)SessionStateComponentInternal::applyStateSection( section, _weather, "weather" );
-                    break;
-                }
-                case LandRegistry::kStateTag:
-                {
-                    (void)SessionStateComponentInternal::applyStateSection( section, _land, "land" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    break;
-                }
-                default:
-                {
-                    SW_LOG_WARNING_ID( "SessionState.SessionStateUnknownSectionSkipped", "SessionState: unknown section %# skipped", section._tag );
-                    break;
-                }
-            }
-        }
-        _listClockEvent.clear();
-        return true;
-    }
 } // namespace sw

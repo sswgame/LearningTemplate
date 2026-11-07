@@ -22,24 +22,14 @@ namespace sw
 
 namespace sw
 {
-    void ElementGrid::Cell::write( Archive& outArchive ) const
+    void ElementGrid::Cell::serializeState( StateIO& io )
     {
-        static_assert( kStateBytes == sizeof( Cell ), "Cell has a field that kStateBytes does not count (or padding) - update kStateBytes, write and read together" );
-        outArchive << _material;
-        outArchive << _statusBits;
-        for ( const uint8 value : _arrStatusValue )
-        {
-            outArchive << value;
-        }
-    }
-
-    void ElementGrid::Cell::read( Archive& archive )
-    {
-        archive >> _material;
-        archive >> _statusBits;
+        static_assert( kStateBytes == sizeof( Cell ), "Cell has a field that kStateBytes does not count (or padding) - update kStateBytes and this function together" );
+        io.value( _material );
+        io.value( _statusBits );
         for ( uint8& value : _arrStatusValue )
         {
-            archive >> value;
+            io.value( value );
         }
     }
 
@@ -391,51 +381,27 @@ namespace sw
         return hash;
     }
 
-    void ElementGrid::writeState( Archive& outArchive ) const
+    void ElementGrid::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        for ( const Cell& cell : _listCell )
+        io.expect( _topology._width );
+        io.expect( _topology._height );
+        if ( io.isOk() == false )
+            return;
+        // 크기는 initialize 의 것이어야 한다. 셀마다 `Cell::serializeState` 의 바이트(`Cell::kStateBytes`)가 있어야 한다
+        if ( io.isReading() && io.check( io.getArchive().hasBytesAvailable( static_cast<uint64>( _listCell.size() ) * Cell::kStateBytes ) ) == false )
+            return;
+        for ( Cell& cell : _listCell )
         {
-            cell.write( outArchive );
+            cell.serializeState( io );
         }
-        StateIO::writeInt2( outArchive, _wind );
-        StateIO::writeStepTimer( outArchive, _timer );
-        outArchive << _stepCount;
+        io.value( _wind );
+        io.value( _timer );
+        io.value( _stepCount );
+        if ( io.isReading() )
+        {
+            _listPending.clear();
+            _eventBuffer.clear();
+        }
     }
 
-    bool ElementGrid::readState( Archive& archive )
-    {
-        int32 width  = 0;
-        int32 height = 0;
-        archive >> width;
-        archive >> height;
-        const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        // 크기는 initialize 의 것이어야 한다. 셀마다 `Cell::write` 가 쓴 바이트(`Cell::kStateBytes`)가 있어야 한다
-        const bool bInvalidGridArchive =
-            archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * Cell::kStateBytes ) == false;
-        if ( bInvalidGridArchive )
-            return false;
-        vector<Cell> listCell( static_cast<size_t>( cellCount ) );
-        for ( Cell& cell : listCell )
-        {
-            cell.read( archive );
-        }
-        int2           wind      = {};
-        FixedStepTimer timer     = _timer;
-        uint32         stepCount = 0;
-        StateIO::readInt2( archive, wind );
-        const bool bTimerRead = StateIO::readStepTimer( archive, timer );
-        archive >> stepCount;
-        if ( bTimerRead == false || archive.isError() )
-            return false;
-        _topology  = GridTopology( width, height );
-        _listCell  = std::move( listCell );
-        _wind      = wind;
-        _timer     = timer;
-        _stepCount = stepCount;
-        _listPending.clear();
-        _eventBuffer.clear();
-        return true;
-    }
 } // namespace sw

@@ -9,6 +9,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -93,10 +94,11 @@ namespace sw
         /** @brief 자동 완료입니다. 올릴 수 있는 패를 파운데이션으로 올리며, 되돌리기 한 번으로 묶습니다. 올린 장수를 반환합니다. */
         int32 autoComplete();
 
-        /** @brief 판(열, 뒤집힌 장수, 파운데이션, 스톡, 웨이스트, 되돌린 수, 옮긴 수)과 되돌리기 기록을 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 규칙으로 나올 수 없는 판(트럼프에 없거나 겹친 카드, 순서가 틀린 파운데이션, 뒤집힌 맨 위, 범위 밖 수)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 판(열, 뒤집힌 장수, 파운데이션, 스톡, 웨이스트, 되돌린 수, 옮긴 수)과 되돌리기 기록을 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 규칙으로 나올 수 없는 판(트럼프에 없거나 겹친 카드, 순서가 틀린 파운데이션, 뒤집힌 맨 위, 범위 밖 수)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         const KlondikeState&    getState() const { return _state; }
         const KlondikeSettings& getSettings() const { return _settings; }

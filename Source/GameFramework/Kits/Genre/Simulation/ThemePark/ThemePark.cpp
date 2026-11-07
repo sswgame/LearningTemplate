@@ -28,68 +28,6 @@ namespace sw
                 return from + ( to - from ) * MathUtil::clamp( alpha, 0.0f, 1.0f );
             }
 
-            /** @brief `writeState` 가 쓴 놀이기구 하나를 읽습니다. */
-            [[nodiscard]] static bool readRide( Archive& archive, ParkRide& outRide )
-            {
-                if ( StateIO::readName( archive, outRide._id ) == false )
-                    return false;
-                archive >> outRide._name;
-                archive >> outRide._excitement;
-                archive >> outRide._intensity;
-                archive >> outRide._nausea;
-                archive >> outRide._cycleTime;
-                archive >> outRide._entrance;
-                archive >> outRide._capacity;
-                archive >> outRide._price;
-                archive >> outRide._runningCostPerMinute;
-                archive >> outRide._bOpen;
-                if ( StateIO::readIDList( archive, outRide._listQueue ) == false || StateIO::readIDList( archive, outRide._listRider ) == false )
-                    return false;
-                archive >> outRide._cycleTimer._remaining;
-                archive >> outRide._totalRiders;
-                archive >> outRide._totalIncome;
-                // `buildRide` 가 정원과 한 바퀴 시간을 1 이상으로 맞춘다. 정원 0 은 줄이 영영 줄지 않고 예상 대기가 0 나누기가 된다. 음수 값은 돈을 거꾸로 옮긴다.
-                const bool bRatingValid = 0.0f <= outRide._excitement && 0.0f <= outRide._intensity && 0.0f <= outRide._nausea;
-                const bool bRunValid    = 1.0f <= outRide._cycleTime && 1 <= outRide._capacity && static_cast<int32>( outRide._listRider.size() ) <= outRide._capacity;
-                const bool bMoneyValid  = 0 <= outRide._price && 0 <= outRide._runningCostPerMinute && 0 <= outRide._totalIncome;
-                return archive.isOk() && outRide._id.empty() == false && outRide._bOpen <= SW_TRUE && bRatingValid && bRunValid && bMoneyValid;
-            }
-
-            /** @brief `writeState` 가 쓴 손님 하나를 읽습니다. 열거형이 범위 밖이거나 목표 놀이기구가 @p rideCount 밖이면 false 입니다. */
-            [[nodiscard]] static bool readGuest( Archive& archive, uint32 rideCount, ParkGuest& outGuest )
-            {
-                uint8 state   = 0;
-                uint8 thought = 0;
-                archive >> outGuest._position;
-                archive >> outGuest._walkFrom;
-                archive >> outGuest._walkTo;
-                archive >> outGuest._id;
-                archive >> outGuest._cash;
-                archive >> outGuest._targetRideIndex;
-                archive >> outGuest._rideCount;
-                archive >> outGuest._happiness;
-                archive >> outGuest._nausea;
-                archive >> outGuest._energy;
-                archive >> outGuest._minIntensity;
-                archive >> outGuest._maxIntensity;
-                archive >> outGuest._nauseaTolerance;
-                archive >> outGuest._walkTimer;
-                archive >> outGuest._walkDuration;
-                archive >> outGuest._queueTime;
-                archive >> state;
-                archive >> thought;
-                const bool bEnumValid        = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
-                const bool bRideValid        = -1 <= outGuest._targetRideIndex && outGuest._targetRideIndex < static_cast<int32>( rideCount );
-                const bool bFeelingValid     = 0.0f <= outGuest._happiness && outGuest._happiness <= 1.0f && 0.0f <= outGuest._nausea && outGuest._nausea <= 1.0f && 0.0f <= outGuest._energy && outGuest._energy <= 1.0f;
-                const bool bValuesValid      = 0 < outGuest._id && 0 <= outGuest._cash && outGuest._minIntensity <= outGuest._maxIntensity && 0.0f <= outGuest._walkDuration && 0.0f <= outGuest._queueTime;
-                const bool bInvalidGuestData = archive.isError() || bEnumValid == false || bRideValid == false || bFeelingValid == false || bValuesValid == false;
-                if ( bInvalidGuestData )
-                    return false;
-                outGuest._state   = static_cast<ParkGuestState>( state );
-                outGuest._thought = static_cast<ParkGuestThought>( thought );
-                return true;
-            }
-
             /**
              * @brief 줄 또는 탑승자 목록 하나가 손님과 맞는지 봅니다. 모든 id 는 그 놀이기구를 고른 손님이고, 그 상태이며, 다른 목록에 또 있지 않아야 합니다.
              * @details 손님은 id 오름차순이다(`findGuest` 가 이분 탐색을 쓴다). @p inoutListListed 는 손님마다 목록에 있는지를 쌓는다.
@@ -686,116 +624,71 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기와 읽기(핫 리로드, 세이브)
     // ------------------------------------------------------------------------------
-    void ThemeParkSimulation::writeState( Archive& outArchive ) const
+    void ThemeParkSimulation::serializeState( StateIO& io )
     {
-        outArchive << _settings._entryFee;
-        outArchive << static_cast<uint32>( _listRide.size() );
-        for ( const ParkRide& ride : _listRide )
+        io.value( _settings._entryFee );
+        io.check( 0 <= _settings._entryFee );
+        io.list( _listRide, ThemeParkInternal::kMinRideStateBytes, [&]( ParkRide& ride )
         {
-            StateIO::writeName( outArchive, ride._id );
-            outArchive << string_view( ride._name );
-            outArchive << ride._excitement;
-            outArchive << ride._intensity;
-            outArchive << ride._nausea;
-            outArchive << ride._cycleTime;
-            outArchive << ride._entrance;
-            outArchive << ride._capacity;
-            outArchive << ride._price;
-            outArchive << ride._runningCostPerMinute;
-            outArchive << ride._bOpen;
-            StateIO::writeIDList( outArchive, ride._listQueue );
-            StateIO::writeIDList( outArchive, ride._listRider );
-            outArchive << ride._cycleTimer._remaining;
-            outArchive << ride._totalRiders;
-            outArchive << ride._totalIncome;
-        }
-        outArchive << static_cast<uint32>( _listGuest.size() );
-        for ( const ParkGuest& guest : _listGuest )
+            io.value( ride._id );
+            io.value( ride._name );
+            io.value( ride._excitement );
+            io.value( ride._intensity );
+            io.value( ride._nausea );
+            io.value( ride._cycleTime );
+            io.value( ride._entrance );
+            io.value( ride._capacity );
+            io.value( ride._price );
+            io.value( ride._runningCostPerMinute );
+            io.flag( ride._bOpen );
+            io.list( ride._listQueue );
+            io.list( ride._listRider );
+            io.value( ride._cycleTimer._remaining );
+            io.value( ride._totalRiders );
+            io.value( ride._totalIncome );
+            // `buildRide` 가 정원과 한 바퀴 시간을 1 이상으로 맞춘다. 정원 0 은 줄이 영영 줄지 않고 예상 대기가 0 나누기가 된다. 음수 값은 돈을 거꾸로 옮긴다.
+            io.check( ride._id.empty() == false && 0.0f <= ride._excitement && 0.0f <= ride._intensity && 0.0f <= ride._nausea && 1.0f <= ride._cycleTime && 1 <= ride._capacity &&
+                      static_cast<int32>( ride._listRider.size() ) <= ride._capacity && 0 <= ride._price && 0 <= ride._runningCostPerMinute && 0 <= ride._totalIncome );
+        } );
+        const int32 rideCount = static_cast<int32>( _listRide.size() );
+        io.list( _listGuest, ThemeParkInternal::kMinGuestStateBytes, [&]( ParkGuest& guest )
         {
-            outArchive << guest._position;
-            outArchive << guest._walkFrom;
-            outArchive << guest._walkTo;
-            outArchive << guest._id;
-            outArchive << guest._cash;
-            outArchive << guest._targetRideIndex;
-            outArchive << guest._rideCount;
-            outArchive << guest._happiness;
-            outArchive << guest._nausea;
-            outArchive << guest._energy;
-            outArchive << guest._minIntensity;
-            outArchive << guest._maxIntensity;
-            outArchive << guest._nauseaTolerance;
-            outArchive << guest._walkTimer;
-            outArchive << guest._walkDuration;
-            outArchive << guest._queueTime;
-            outArchive << static_cast<uint8>( guest._state );
-            outArchive << static_cast<uint8>( guest._thought );
-        }
-        StateIO::writeStepTimer( outArchive, _stepTimer );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _arrival._fraction;
-        outArchive << _runningCost._fraction;
-        outArchive << _elapsedTime;
-        outArchive << _parkRating;
-        outArchive << _nextGuestID;
-        outArchive << _totalVisitorCount;
-    }
-
-    bool ThemeParkSimulation::readState( Archive& archive )
-    {
-        int32 entryFee = 0;
-        archive >> entryFee;
-        uint32 rideCount = 0;
-        if ( archive.isError() || entryFee < 0 || archive.readCount( ThemeParkInternal::kMinRideStateBytes, rideCount ) == false )
-            return false;
-        vector<ParkRide> listRide( rideCount );
-        for ( ParkRide& ride : listRide )
-        {
-            if ( ThemeParkInternal::readRide( archive, ride ) == false )
-                return false;
-        }
-        uint32 guestCount = 0;
-        if ( archive.readCount( ThemeParkInternal::kMinGuestStateBytes, guestCount ) == false )
-            return false;
-        vector<ParkGuest> listGuest( guestCount );
-        for ( ParkGuest& guest : listGuest )
-        {
-            if ( ThemeParkInternal::readGuest( archive, rideCount, guest ) == false )
-                return false;
-        }
-        FixedStepTimer stepTimer = _stepTimer;
-        GameRandom     random;
-        if ( StateIO::readStepTimer( archive, stepTimer ) == false || StateIO::readRandom( archive, random ) == false )
-            return false;
-        float32 arrivalAccumulator = 0.0f;
-        float32 costAccumulator    = 0.0f;
-        float32 elapsedTime        = 0.0f;
-        int32   parkRating         = 0;
-        uint32  nextGuestID        = 0;
-        uint32  totalVisitorCount  = 0;
-        archive >> arrivalAccumulator;
-        archive >> costAccumulator;
-        archive >> elapsedTime;
-        archive >> parkRating;
-        archive >> nextGuestID;
-        archive >> totalVisitorCount;
+            io.value( guest._position );
+            io.value( guest._walkFrom );
+            io.value( guest._walkTo );
+            io.value( guest._id );
+            io.value( guest._cash );
+            io.value( guest._targetRideIndex );
+            io.value( guest._rideCount );
+            io.value( guest._happiness );
+            io.value( guest._nausea );
+            io.value( guest._energy );
+            io.value( guest._minIntensity );
+            io.value( guest._maxIntensity );
+            io.value( guest._nauseaTolerance );
+            io.value( guest._walkTimer );
+            io.value( guest._walkDuration );
+            io.value( guest._queueTime );
+            io.enumValue( guest._state, ParkGuestState::Left );
+            io.enumValue( guest._thought, ParkGuestThought::NothingToRide );
+            io.check( -1 <= guest._targetRideIndex && guest._targetRideIndex < rideCount && 0.0f <= guest._happiness && guest._happiness <= 1.0f && 0.0f <= guest._nausea && guest._nausea <= 1.0f && 0.0f <= guest._energy && guest._energy <= 1.0f &&
+                      0 < guest._id && 0 <= guest._cash && guest._minIntensity <= guest._maxIntensity && 0.0f <= guest._walkDuration && 0.0f <= guest._queueTime );
+        } );
+        io.value( _stepTimer );
+        io.value( _random );
+        io.value( _arrival._fraction );
+        io.value( _runningCost._fraction );
+        io.value( _elapsedTime );
+        io.value( _parkRating );
+        io.value( _nextGuestID );
+        io.value( _totalVisitorCount );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        const uint32 guestCount = static_cast<uint32>( _listGuest.size() );
         // 운영비는 정수 부분을 걸음마다 빼 가 1 아래이다. 도착 누적은 공원이 차면 1 위로 쌓일 수 있다(`admitGuest` 가 정원에서 멈춘다).
-        const bool bAccumulatorValid = 0.0f <= arrivalAccumulator && 0.0f <= costAccumulator && costAccumulator < 1.0f;
-        const bool bParkValid        = 0.0f <= elapsedTime && 0 <= parkRating && parkRating <= 999 && 0 < nextGuestID && guestCount <= totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests;
-        if ( archive.isError() || bAccumulatorValid == false || bParkValid == false || ThemeParkInternal::areLinksValid( listRide, listGuest, nextGuestID ) == false )
-            return false;
-
-        _settings._entryFee    = entryFee;
-        _listRide              = std::move( listRide );
-        _listGuest             = std::move( listGuest );
-        _stepTimer             = stepTimer;
-        _random                = random;
-        _arrival._fraction     = arrivalAccumulator;
-        _runningCost._fraction = costAccumulator;
-        _elapsedTime           = elapsedTime;
-        _parkRating            = parkRating;
-        _nextGuestID           = nextGuestID;
-        _totalVisitorCount     = totalVisitorCount;
-        return true;
+        io.check( 0.0f <= _arrival._fraction && 0.0f <= _runningCost._fraction && _runningCost._fraction < 1.0f );
+        io.check( 0.0f <= _elapsedTime && 0 <= _parkRating && _parkRating <= 999 && 0 < _nextGuestID && guestCount <= _totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests );
+        io.check( ThemeParkInternal::areLinksValid( _listRide, _listGuest, _nextGuestID ) );
     }
+
 } // namespace sw

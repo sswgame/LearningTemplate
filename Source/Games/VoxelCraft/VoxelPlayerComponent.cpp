@@ -235,14 +235,31 @@ namespace sw
             applyPendingState();
     }
 
-    void VoxelPlayerComponent::writeState( Archive& outArchive ) const
+    void VoxelPlayerComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
-        outArchive << _body.getPosition();
-        _hotbar.writeState( outArchive );
-        outArchive << _brokenCount;
-        outArchive << _placedCount;
-        outArchive << static_cast<uint8>( _bBodyPlaced );
+        io.header( VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        float3      position    = _body.getPosition();
+        VoxelHotbar hotbar      = _hotbar;
+        uint32      brokenCount = _brokenCount;
+        uint32      placedCount = _placedCount;
+        uint8       bBodyPlaced = static_cast<uint8>( _bBodyPlaced );
+        io.value( position );
+        io.value( hotbar );
+        io.value( brokenCount );
+        io.value( placedCount );
+        io.value( bBodyPlaced );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _hotbar      = hotbar;
+        _brokenCount = brokenCount;
+        _placedCount = placedCount;
+        if ( bBodyPlaced != SW_FALSE )
+        {
+            // 몸을 놓기 전에 기록한 상태라면 처음 위치(다음 틱)에서 시작합니다.
+            _body.setPosition( position );
+            _bBodyPlaced = SW_TRUE;
+        }
     }
 
     void VoxelPlayerComponent::restoreState( vector<uint8>&& bytes )
@@ -254,33 +271,12 @@ namespace sw
 
     void VoxelPlayerComponent::applyPendingState()
     {
-        Archive     archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        float3      position{};
-        VoxelHotbar hotbar;
-        uint32      brokenCount = 0;
-        uint32      placedCount = 0;
-        uint8       bBodyPlaced = SW_FALSE;
-        bool        bRead       = StateIO::readHeader( archive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
-        archive >> position;
-        bRead = bRead && hotbar.readState( archive );
-        archive >> brokenCount;
-        archive >> placedCount;
-        archive >> bBodyPlaced;
+        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        const bool bRead = readState( archive );
         _pendingStateBytes.clear();
-        const bool bStateMismatch = bRead == false || archive.isError() || archive.getRemainingBytes() != 0;
-        if ( bStateMismatch )
+        if ( bRead == false )
         {
             SW_LOG_WARNING_ID( "VoxelPlayer.SavedPlayerStateDoes", "[Voxel] the saved player state does not match this build - starting at the spawn" );
-            return;
-        }
-        _hotbar      = hotbar;
-        _brokenCount = brokenCount;
-        _placedCount = placedCount;
-        if ( bBodyPlaced != SW_FALSE )
-        {
-            // 몸을 놓기 전에 기록한 상태라면 처음 위치(다음 틱)에서 시작합니다.
-            _body.setPosition( position );
-            _bBodyPlaced = SW_TRUE;
         }
     }
 

@@ -22,96 +22,50 @@ namespace sw
         {
             static constexpr float32 kAheadPriority = 100.0f; ///< 빨간 껍질은 바로 앞 순위의 차를 먼저 잡는다
 
-            static void writeRacer( Archive& outArchive, const KartRacer& kart )
+            static void serializeRacer( StateIO& io, int32 racerCount, const KartTrack* pTrack, KartRacer& kart )
             {
-                kart._motor.writeState( outArchive );
-                outArchive << kart._ai.getDriftSide();
-                outArchive << kart._input._vehicle._throttle;
-                outArchive << kart._input._vehicle._steer;
-                outArchive << kart._input._vehicle._bDriftHeld;
-                outArchive << kart._input._vehicle._bBoostPressed;
-                outArchive << kart._input._vehicle._bJumpPressed;
-                outArchive << kart._input._bUseItem;
-                outArchive << static_cast<uint32>( kart._listLapTime.size() );
-                for ( const float32 lapTime : kart._listLapTime )
+                int32 driftSide = kart._ai.getDriftSide();
+                io.value( kart._motor );
+                io.value( driftSide );
+                io.value( kart._input._vehicle._throttle );
+                io.value( kart._input._vehicle._steer );
+                io.flag( kart._input._vehicle._bDriftHeld );
+                io.flag( kart._input._vehicle._bBoostPressed );
+                io.flag( kart._input._vehicle._bJumpPressed );
+                io.flag( kart._input._bUseItem );
+                if ( io.check( -1 <= driftSide && driftSide <= 1 ) == false )
+                    return;
+                if ( io.isReading() )
                 {
-                    outArchive << lapTime;
+                    kart._ai.setDriftSide( driftSide );
                 }
-                StateIO::writeName( outArchive, kart._itemID );
-                outArchive << kart._previousPosition;
-                outArchive << kart._distance;
-                outArchive << kart._progress;
-                outArchive << kart._lapStartTime;
-                outArchive << kart._bestLapTime;
-                outArchive << kart._finishTime;
-                StateIO::writeCountdown( outArchive, kart._spinTime );
-                StateIO::writeCountdown( outArchive, kart._shieldTime );
-                outArchive << kart._wrongWayTime;
-                outArchive << kart._itemHeldTime;
-                outArchive << kart._speedScale;
-                outArchive << kart._lap;
-                outArchive << kart._nextCheckpoint;
-                outArchive << kart._place;
-                outArchive << kart._finishPlace;
-                outArchive << kart._lastBoostPad;
-                outArchive << kart._bFinished;
-                outArchive << kart._bWrongWay;
-            }
-
-            [[nodiscard]] static bool readRacer( Archive& archive, int32 racerCount, const KartTrack& track, KartRacer& outKart )
-            {
-                int32 driftSide = 0;
-                if ( outKart._motor.readState( archive ) == false )
-                    return false;
-                archive >> driftSide;
-                archive >> outKart._input._vehicle._throttle;
-                archive >> outKart._input._vehicle._steer;
-                archive >> outKart._input._vehicle._bDriftHeld;
-                archive >> outKart._input._vehicle._bBoostPressed;
-                archive >> outKart._input._vehicle._bJumpPressed;
-                archive >> outKart._input._bUseItem;
-                const ArcadeVehicleInput& vehicle           = outKart._input._vehicle;
-                const bool                bVehicleValid     = vehicle._bDriftHeld <= SW_TRUE && vehicle._bBoostPressed <= SW_TRUE && vehicle._bJumpPressed <= SW_TRUE;
-                const bool                bDriftValid       = -1 <= driftSide && driftSide <= 1;
-                const bool                bInvalidKartState = archive.isError() || bVehicleValid == false || outKart._input._bUseItem > SW_TRUE || bDriftValid == false;
-                if ( bInvalidKartState )
-                    return false;
-                uint32 lapCount = 0;
-                // 바퀴마다 기록(4)
-                if ( archive.readCount( 4, lapCount ) == false )
-                    return false;
-                outKart._ai.setDriftSide( driftSide );
-                outKart._listLapTime.assign( lapCount, 0.0f );
-                for ( float32& lapTime : outKart._listLapTime )
-                {
-                    archive >> lapTime;
-                }
-                if ( StateIO::readName( archive, outKart._itemID ) == false )
-                    return false;
-                archive >> outKart._previousPosition;
-                archive >> outKart._distance;
-                archive >> outKart._progress;
-                archive >> outKart._lapStartTime;
-                archive >> outKart._bestLapTime;
-                archive >> outKart._finishTime;
-                const bool bTimersRead = StateIO::readCountdown( archive, outKart._spinTime ) && StateIO::readCountdown( archive, outKart._shieldTime );
-                archive >> outKart._wrongWayTime;
-                archive >> outKart._itemHeldTime;
-                archive >> outKart._speedScale;
-                archive >> outKart._lap;
-                archive >> outKart._nextCheckpoint;
-                archive >> outKart._place;
-                archive >> outKart._finishPlace;
-                archive >> outKart._lastBoostPad;
-                archive >> outKart._bFinished;
-                archive >> outKart._bWrongWay;
-                const bool bPlaceValid = 0 <= outKart._place && outKart._place <= racerCount && 0 <= outKart._finishPlace && outKart._finishPlace <= racerCount;
-                const bool bFlagsValid = outKart._bFinished <= SW_TRUE && outKart._bWrongWay <= SW_TRUE;
+                io.list( kart._listLapTime );
+                io.value( kart._itemID );
+                io.value( kart._previousPosition );
+                io.value( kart._distance );
+                io.value( kart._progress );
+                io.value( kart._lapStartTime );
+                io.value( kart._bestLapTime );
+                io.value( kart._finishTime );
+                io.value( kart._spinTime );
+                io.value( kart._shieldTime );
+                io.value( kart._wrongWayTime );
+                io.value( kart._itemHeldTime );
+                io.value( kart._speedScale );
+                io.value( kart._lap );
+                io.value( kart._nextCheckpoint );
+                io.value( kart._place );
+                io.value( kart._finishPlace );
+                io.value( kart._lastBoostPad );
+                io.flag( kart._bFinished );
+                io.flag( kart._bWrongWay );
+                if ( io.isWriting() )
+                    return;
+                io.check( 0 <= kart._place && kart._place <= racerCount && 0 <= kart._finishPlace && kart._finishPlace <= racerCount );
                 // 체크포인트 수는 문 번호로 바로 쓰인다(`computeProgress`). 트랙 데이터가 바뀐 세이브면 문 밖을 읽는다.
-                const bool bCourseValid = 0 <= outKart._nextCheckpoint && outKart._nextCheckpoint <= track.getCheckpointCount() && 0 <= outKart._lap && outKart._lap <= track.getLapCount() + 1;
+                io.check( 0 <= kart._nextCheckpoint && kart._nextCheckpoint <= pTrack->getCheckpointCount() && 0 <= kart._lap && kart._lap <= pTrack->getLapCount() + 1 );
                 // 비교는 NaN 에서 거짓이다. 시간이 NaN 이면 랩 타임과 최고 기록이 줄줄이 깨진다.
-                const bool bTimesValid = 0.0f <= outKart._lapStartTime && 0.0f <= outKart._bestLapTime && 0.0f <= outKart._finishTime && 0.0f <= outKart._wrongWayTime && 0.0f <= outKart._itemHeldTime;
-                return bTimersRead && archive.isOk() && bPlaceValid && bFlagsValid && bCourseValid && bTimesValid && outKart._speedScale > 0.0f;
+                io.check( 0.0f <= kart._lapStartTime && 0.0f <= kart._bestLapTime && 0.0f <= kart._finishTime && 0.0f <= kart._wrongWayTime && 0.0f <= kart._itemHeldTime && kart._speedScale > 0.0f );
             }
         };
     } // namespace
@@ -912,103 +866,67 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void KartRace::writeState( Archive& outArchive ) const
+    void KartRace::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listRacer.size() );
-        for ( const KartRacer& kart : _listRacer )
+        io.expect( static_cast<uint32>( _listRacer.size() ) );
+        if ( io.isOk() == false )
+            return;
+        const int32 racerCount = static_cast<int32>( _listRacer.size() );
+        for ( KartRacer& kart : _listRacer )
         {
-            KartRaceInternal::writeRacer( outArchive, kart );
-        }
-        _projectiles.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listItemBoxTimer.size() );
-        for ( const Countdown& boxTimer : _listItemBoxTimer )
-        {
-            StateIO::writeCountdown( outArchive, boxTimer );
-        }
-        outArchive << static_cast<uint32>( _listPlaceOrder.size() );
-        for ( const int32 racer : _listPlaceOrder )
-        {
-            outArchive << racer;
-        }
-        StateIO::writeRandom( outArchive, _random );
-        StateIO::writeStepTimer( outArchive, _timer );
-        outArchive << _raceTime;
-        StateIO::writeCountdown( outArchive, _countdown );
-        outArchive << _bestLapTime;
-        outArchive << _firstFinishTime;
-        outArchive << _finishedCount;
-        outArchive << static_cast<uint8>( _phase );
-    }
-
-    bool KartRace::readState( Archive& archive )
-    {
-        uint32 racerCount = 0;
-        archive >> racerCount;
-        if ( archive.isError() || racerCount != _listRacer.size() )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정, 트랙, 카탈로그, 고스트, 차마다의 기본 차 설정과 AI 설정은 사본도 그대로 가지고 있다.
-        KartRace    race  = *this;
-        const int32 count = static_cast<int32>( racerCount );
-        for ( KartRacer& kart : race._listRacer )
-        {
-            if ( KartRaceInternal::readRacer( archive, count, *_pTrack, kart ) == false || race.isKnownItem( kart._itemID ) == false )
-                return false;
+            KartRaceInternal::serializeRacer( io, racerCount, _pTrack, kart );
+            if ( io.isWriting() )
+                continue;
+            if ( io.isOk() == false || io.check( isKnownItem( kart._itemID ) ) == false )
+                return;
             // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 계산한다(`updateRubberBand` 와 같은 식이다).
             ArcadeVehicleSettings settings = kart._baseSettings;
             settings._maxSpeed *= kart._speedScale;
             kart._motor.setSettings( settings );
         }
-
-        if ( race._projectiles.readState( archive ) == false )
-            return false;
-        for ( const ProjectileState& projectile : race._projectiles.getProjectiles() )
+        io.value( _projectiles );
+        if ( io.isReading() && io.isOk() )
         {
-            // 아이템 종류는 정의 id 가 정한다(빈 id 는 아이템이 아니다).
-            const bool bOwnerValid  = -1 <= projectile._owner && projectile._owner < count;
-            const bool bTargetValid = -1 <= projectile._target && projectile._target < count;
-            if ( projectile._defID.empty() || race.isKnownItem( projectile._defID ) == false || bOwnerValid == false || bTargetValid == false )
-                return false;
+            for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
+            {
+                // 아이템 종류는 정의 id 가 정한다(빈 id 는 아이템이 아니다).
+                io.check( projectile._defID.empty() == false && isKnownItem( projectile._defID ) && -1 <= projectile._owner && projectile._owner < racerCount && -1 <= projectile._target && projectile._target < racerCount );
+            }
         }
-
-        uint32 boxCount = 0;
-        archive >> boxCount;
-        if ( archive.isError() || boxCount != race._listItemBoxTimer.size() )
-            return false;
-        for ( Countdown& boxTimer : race._listItemBoxTimer )
+        io.expect( static_cast<uint32>( _listItemBoxTimer.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( Countdown& boxTimer : _listItemBoxTimer )
         {
-            if ( StateIO::readCountdown( archive, boxTimer ) == false )
-                return false;
+            io.value( boxTimer );
         }
-        uint32 placeCount = 0;
-        archive >> placeCount;
-        if ( archive.isError() || ( placeCount != 0 && placeCount != racerCount ) )
-            return false;
-        race._listPlaceOrder.assign( placeCount, -1 );
-        for ( int32& racer : race._listPlaceOrder )
+        uint32 placeCount = static_cast<uint32>( _listPlaceOrder.size() );
+        io.value( placeCount );
+        if ( io.check( placeCount == 0 || placeCount == static_cast<uint32>( racerCount ) ) == false )
+            return;
+        if ( io.isReading() )
         {
-            archive >> racer;
-            if ( racer < 0 || count <= racer )
-                return false;
+            _listPlaceOrder.assign( placeCount, -1 );
         }
-
-        uint8      phase       = 0;
-        const bool bRandomRead = StateIO::readRandom( archive, race._random ) && StateIO::readStepTimer( archive, race._timer );
-        archive >> race._raceTime;
-        const bool bCountdownRead = StateIO::readCountdown( archive, race._countdown );
-        archive >> race._bestLapTime;
-        archive >> race._firstFinishTime;
-        archive >> race._finishedCount;
-        archive >> phase;
-        const bool bFinishedValid    = 0 <= race._finishedCount && race._finishedCount <= count;
-        const bool bFirstFinishValid = race._firstFinishTime < 0.0f || 0.0f <= race._firstFinishTime; // 둘 다 거짓이면 NaN 이다 — 시한이 영영 끝나지 않는다
-        const bool bTimesValid       = 0.0f <= race._raceTime && 0.0f <= race._bestLapTime && bFirstFinishValid;
-        const bool bInvalidRaceState = bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || bTimesValid == false || phase > static_cast<uint8>( MatchPhase::Ended );
-        if ( bInvalidRaceState )
-            return false;
-        race._phase = static_cast<MatchPhase>( phase );
-        race._eventBuffer.clear();
-        *this = std::move( race );
-        return true;
+        for ( int32& racer : _listPlaceOrder )
+        {
+            io.value( racer );
+            io.check( 0 <= racer && racer < racerCount );
+        }
+        io.value( _random );
+        io.value( _timer );
+        io.value( _raceTime );
+        io.value( _countdown );
+        io.value( _bestLapTime );
+        io.value( _firstFinishTime );
+        io.value( _finishedCount );
+        io.enumValue( _phase, MatchPhase::Ended );
+        // 실수의 NaN 은 아카이브 읽기가 거절한다(시한이 영영 끝나지 않는 값).
+        io.check( 0 <= _finishedCount && _finishedCount <= racerCount && 0.0f <= _raceTime && 0.0f <= _bestLapTime );
+        if ( io.isReading() )
+        {
+            _eventBuffer.clear();
+        }
     }
 
     bool KartRace::isKnownItem( const hashed_string& itemID ) const

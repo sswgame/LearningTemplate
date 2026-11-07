@@ -284,55 +284,32 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    void ActionCombatRig::writeState( Archive& outArchive ) const
+    void ActionCombatRig::serializeState( StateIO& io )
     {
-        StateIO::writeName( outArchive, _pCombo != nullptr ? _pCombo->_id : hashed_string{} );
-        _timeline.writeState( outArchive );
-        outArchive << _comboIndex;
-        outArchive << _attackBufferFrames;
-        outArchive << _parryFrames;
-        outArchive << _hitstopFrames;
-        outArchive << _bGunEquipped;
-        _gun.writeState( outArchive );
-        _projectiles.writeState( outArchive );
-    }
-
-    bool ActionCombatRig::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr || _pMoves == nullptr )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그, 기술 테이블, 무기 정의는 사본이 그대로 가지고 있다.
-        ActionCombatRig restored = *this;
-        hashed_string   comboID;
-        uint8           bGunEquipped = SW_FALSE;
-        if ( StateIO::readName( archive, comboID ) == false )
-            return false;
-        restored._pCombo = comboID.empty() ? nullptr : _pCatalog->findCombo( comboID );
-        if ( comboID.empty() == false && restored._pCombo == nullptr )
-            return false;
-        if ( restored._timeline.readState( archive, *_pMoves ) == false )
-            return false;
-        archive >> restored._comboIndex;
-        archive >> restored._attackBufferFrames;
-        archive >> restored._parryFrames;
-        archive >> restored._hitstopFrames;
-        archive >> bGunEquipped;
-        const int32 comboMoveCount = restored._pCombo != nullptr ? static_cast<int32>( restored._pCombo->_listMove.size() ) : 0;
-        const bool  bHeadValid     = archive.isOk() && -1 <= restored._comboIndex && restored._comboIndex < comboMoveCount && 0 <= restored._attackBufferFrames &&
-                                0 <= restored._parryFrames && 0 <= restored._hitstopFrames && bGunEquipped == _bGunEquipped;
-        if ( bHeadValid == false || restored._gun.readState( archive ) == false )
-            return false;
+        if ( io.check( _pCatalog != nullptr && _pMoves != nullptr ) == false )
+            return;
+        io.reference( _pCombo, [this]( const hashed_string& comboID )
+        { return _pCatalog->findCombo( comboID ); } );
+        _timeline.serializeState( io, _pMoves );
+        io.value( _comboIndex );
+        io.value( _attackBufferFrames );
+        io.value( _parryFrames );
+        io.value( _hitstopFrames );
+        io.expect( _bGunEquipped );
+        const int32 comboMoveCount = _pCombo != nullptr ? static_cast<int32>( _pCombo->_listMove.size() ) : 0;
+        if ( io.check( -1 <= _comboIndex && _comboIndex < comboMoveCount && 0 <= _attackBufferFrames && 0 <= _parryFrames && 0 <= _hitstopFrames ) == false )
+            return;
+        io.value( _gun );
         // 탄 수치 · id(다음 id 아래여야 새 탄과 겹치지 않는다)는 시뮬레이션이 보고, 편은 여기서 본다.
-        if ( restored._projectiles.readState( archive ) == false )
-            return false;
-        for ( const ProjectileState& projectile : restored._projectiles.getProjectiles() )
+        io.value( _projectiles );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
         {
             const bool bTeamValid = projectile._team == static_cast<int32>( ActionTeam::Player ) || projectile._team == static_cast<int32>( ActionTeam::Enemy );
-            if ( bTeamValid == false || projectile._position._z != 0.0f || projectile._velocity._z != 0.0f )
-                return false;
+            io.check( bTeamValid && projectile._position._z == 0.0f && projectile._velocity._z == 0.0f );
         }
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        _eventBuffer.clear();
     }
+
 } // namespace sw

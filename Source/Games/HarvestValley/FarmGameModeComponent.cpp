@@ -241,70 +241,52 @@ namespace sw
         inoutBuilder.addUint32( _random.getState() );
     }
 
-    void FarmGameModeComponent::writeState( Archive& outArchive ) const
+    void FarmGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
-        Archive fieldBody;
-        _field.writeState( fieldBody );
-        StateIO::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody );
-        Archive shipmentBody;
-        _shipment.writeState( shipmentBody );
-        StateIO::writeSection( outArchive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
-        StateIO::writeRandom( outArchive, _random );
-        outArchive << _playerPosition;
-        outArchive << _facing;
-        outArchive << _stamina;
-        outArchive << _selectedSeedIndex;
-        outArchive << static_cast<uint8>( _tool );
-        outArchive << static_cast<uint8>( _bRaining );
-        outArchive << _dayStarted;
-    }
-
-    bool FarmGameModeComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        FarmField       field;
-        FarmShippingBin shipment;
-        GameRandom      random;
-        field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
-        Archive    fieldBody;
-        Archive    shipmentBody;
-        const bool bSectionsRead = StateIO::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody ) &&
-                                   StateIO::readExpectedSection( archive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
-        const bool bSimulationRead = bSectionsRead && field.readState( fieldBody ) && fieldBody.getRemainingBytes() == 0 && shipment.readState( shipmentBody ) &&
-                                     shipmentBody.getRemainingBytes() == 0 && StateIO::readRandom( archive, random );
-        if ( bSimulationRead == false )
-            return false;
-        float3 playerPosition{};
-        float3 facing{};
-        int32  stamina           = 0;
-        int32  selectedSeedIndex = 0;
-        uint8  tool              = 0;
-        uint8  bRaining          = SW_FALSE;
-        archive >> playerPosition;
-        archive >> facing;
-        archive >> stamina;
-        archive >> selectedSeedIndex;
-        archive >> tool;
-        archive >> bRaining;
-        int32 dayStarted = 0;
-        archive >> dayStarted;
-        const bool bToolValid        = tool <= static_cast<uint8>( FarmTool::Hand );
-        const bool bInvalidFarmState = archive.isError() || archive.getRemainingBytes() != 0 || bToolValid == false;
-        if ( bInvalidFarmState )
-            return false;
-        _field             = std::move( field );
-        _shipment          = std::move( shipment );
+        io.header( FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        FarmField       restoredField;
+        FarmShippingBin restoredShipment;
+        if ( io.isReading() )
+        {
+            restoredField.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
+        }
+        FarmField&       field    = io.isWriting() ? _field : restoredField;
+        FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
+        io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
+        { bodyIO.value( field ); } );
+        io.section( FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, [&shipment]( StateIO& bodyIO )
+        { bodyIO.value( shipment ); } );
+        GameRandom random            = _random;
+        float3     playerPosition    = _playerPosition;
+        float3     facing            = _facing;
+        int32      stamina           = _stamina;
+        int32      selectedSeedIndex = _selectedSeedIndex;
+        FarmTool   tool              = _tool;
+        uint8      bRaining          = static_cast<uint8>( _bRaining );
+        int32      dayStarted        = _dayStarted;
+        io.value( random );
+        io.value( playerPosition );
+        io.value( facing );
+        io.value( stamina );
+        io.value( selectedSeedIndex );
+        io.enumValue( tool, FarmTool::Hand );
+        io.value( bRaining );
+        io.value( dayStarted );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _field             = std::move( restoredField );
+        _shipment          = std::move( restoredShipment );
         _dayStarted        = dayStarted;
         _random            = random;
         _playerPosition    = playerPosition;
         _facing            = facing;
         _stamina           = MathUtil::clamp( stamina, 0, _maxStamina );
         _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
-        _tool              = static_cast<FarmTool>( tool );
+        _tool              = tool;
         _bRaining          = bRaining != SW_FALSE ? SW_TRUE : SW_FALSE;
-        return true;
     }
 
     void FarmGameModeComponent::onStateRestored( bool bRestored )

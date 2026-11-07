@@ -42,13 +42,12 @@ namespace sw
         MeadowFarmGameModeComponent();
         virtual ~MeadowFarmGameModeComponent() override;
 
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         const FarmField& getField() const { return _field; }
 
     protected:
         [[nodiscard]] bool startGame() override;
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;

@@ -55,72 +55,6 @@ namespace sw
             static hashed_string makeDeliverKind() { return hashed_string( "Deliver" ); }
 
             static hashed_string makeHabitatKind() { return hashed_string( "Habitat" ); }
-
-            /** @brief 이름 목록 하나(개수 + 이름)를 읽어 @p outListName 을 채웁니다. */
-            [[nodiscard]] static bool readNameList( Archive& archive, vector<hashed_string>& outListName )
-            {
-                uint32 count = 0;
-                if ( archive.readCount( 4, count ) == false )
-                    return false;
-                outListName.assign( count, hashed_string{} );
-                for ( hashed_string& name : outListName )
-                {
-                    if ( StateIO::readName( archive, name ) == false )
-                        return false;
-                }
-                return true;
-            }
-
-            /** @brief `writeState` 가 쓴 서식지 하나를 읽습니다. 셀 번호가 마을(@p tileCount 셀) 밖이면 false 입니다. */
-            [[nodiscard]] static bool readHabitat( Archive& archive, int32 tileCount, HabitatInstance& outHabitat )
-            {
-                uint32 habitatTileCount = 0;
-                if ( StateIO::readName( archive, outHabitat._habitatID ) == false )
-                    return false;
-                StateIO::readInt2( archive, outHabitat._origin );
-                archive >> outHabitat._id;
-                archive >> outHabitat._rotation;
-                if ( archive.readCount( 4, habitatTileCount ) == false )
-                    return false;
-                // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
-                if ( habitatTileCount == 0 || outHabitat._id <= 0 || outHabitat._rotation < 0 || kRotationCount <= outHabitat._rotation )
-                    return false;
-                outHabitat._listTile.resize( habitatTileCount, 0 );
-                for ( int32& tileIndex : outHabitat._listTile )
-                {
-                    archive >> tileIndex;
-                    const bool bInside = 0 <= tileIndex && tileIndex < tileCount;
-                    if ( bInside == false )
-                        return false;
-                }
-                return true;
-            }
-
-            /** @brief `writeState` 가 쓴 생물 하나를 읽습니다. 번호가 가리키는 서식지 · 집의 확인은 모두 읽은 뒤에 합니다. */
-            [[nodiscard]] static bool readCreature( Archive& archive, TownCreature& outCreature )
-            {
-                uint32     abilityCount = 0;
-                const bool bHeadRead    = StateIO::readName( archive, outCreature._speciesID ) && archive.readCount( 4, abilityCount );
-                if ( bHeadRead == false )
-                    return false;
-                outCreature._listAbilityUse.resize( abilityCount, 0 );
-                for ( int32& useCount : outCreature._listAbilityUse )
-                {
-                    archive >> useCount;
-                }
-                archive >> outCreature._habitat;
-                archive >> outCreature._house;
-                archive >> outCreature._lastTalkDay;
-                archive >> outCreature._lastGiftDay;
-                archive >> outCreature._arrivalDay;
-                // 음수 사용 횟수는 하루 횟수를 늘린다. 없는 날은 -1 이다.
-                for ( const int32 useCount : outCreature._listAbilityUse )
-                {
-                    if ( useCount < 0 )
-                        return false;
-                }
-                return -1 <= outCreature._habitat && -1 <= outCreature._lastTalkDay && -1 <= outCreature._lastGiftDay && 0 <= outCreature._arrivalDay;
-            }
         };
     } // namespace
 } // namespace sw
@@ -769,129 +703,67 @@ namespace sw
         return _topology.toCell( pHabitat->_listTile.front() );
     }
 
-    void CreatureTown::writeState( Archive& outArchive ) const
+    void CreatureTown::serializeState( StateIO& io )
     {
-        outArchive << _topology._width;
-        outArchive << _topology._height;
-        for ( const hashed_string& object : _listObject )
+        io.expect( _topology._width );
+        io.expect( _topology._height );
+        if ( io.isOk() == false )
+            return;
+        const int32 tileCount = _topology._width * _topology._height;
+        for ( hashed_string& object : _listObject )
         {
-            StateIO::writeName( outArchive, object );
+            io.value( object );
         }
-        outArchive << static_cast<uint32>( _listHabitat.size() );
-        for ( const HabitatInstance& habitat : _listHabitat )
+        // 서식지마다 이름(4) + 위치(8) + 번호(4) + 회전(4) + 셀 수(4) 이상
+        io.list( _listHabitat, 24, [&]( HabitatInstance& habitat )
         {
-            StateIO::writeName( outArchive, habitat._habitatID );
-            StateIO::writeInt2( outArchive, habitat._origin );
-            outArchive << habitat._id;
-            outArchive << habitat._rotation;
-            outArchive << static_cast<uint32>( habitat._listTile.size() );
-            for ( const int32 tileIndex : habitat._listTile )
+            io.value( habitat._habitatID );
+            io.value( habitat._origin );
+            io.value( habitat._id );
+            io.value( habitat._rotation );
+            io.list( habitat._listTile, 4, [&]( int32& tileIndex )
             {
-                outArchive << tileIndex;
-            }
-        }
-        outArchive << static_cast<uint32>( _listCreature.size() );
-        for ( const TownCreature& creature : _listCreature )
+                io.value( tileIndex );
+                io.check( 0 <= tileIndex && tileIndex < tileCount );
+            } );
+            // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
+            io.check( habitat._listTile.empty() == false && 0 < habitat._id && 0 <= habitat._rotation && habitat._rotation < CreatureTownInternal::kRotationCount );
+        } );
+        // 생물마다 이름(4) + 능력 수(4) + 서식지, 집, 대화 날, 선물 날, 온 날(20) 이상
+        io.list( _listCreature, 28, [&]( TownCreature& creature )
         {
-            StateIO::writeName( outArchive, creature._speciesID );
-            outArchive << static_cast<uint32>( creature._listAbilityUse.size() );
+            io.value( creature._speciesID );
+            io.list( creature._listAbilityUse );
+            io.value( creature._habitat );
+            io.value( creature._house );
+            io.value( creature._lastTalkDay );
+            io.value( creature._lastGiftDay );
+            io.value( creature._arrivalDay );
+            // 음수 사용 횟수는 하루 횟수를 늘린다. 없는 날은 -1 이다.
             for ( const int32 useCount : creature._listAbilityUse )
             {
-                outArchive << useCount;
+                io.check( 0 <= useCount );
             }
-            outArchive << creature._habitat;
-            outArchive << creature._house;
-            outArchive << creature._lastTalkDay;
-            outArchive << creature._lastGiftDay;
-            outArchive << creature._arrivalDay;
-        }
-        outArchive << static_cast<uint32>( _listHouse.size() );
-        for ( const CreatureHouse& house : _listHouse )
-        {
-            outArchive << static_cast<uint32>( house._listResident.size() );
-            for ( const hashed_string& resident : house._listResident )
-            {
-                StateIO::writeName( outArchive, resident );
-            }
-            StateIO::writeInt2( outArchive, house._tile );
-            outArchive << house._capacity;
-        }
-        outArchive << static_cast<uint32>( _listOpenRequest.size() );
-        for ( const hashed_string& questID : _listOpenRequest )
-        {
-            StateIO::writeName( outArchive, questID );
-        }
-        outArchive << _nextHabitatID;
-        outArchive << _lastAttractKey;
-    }
-
-    bool CreatureTown::readState( Archive& archive )
-    {
-        int32 width  = 0;
-        int32 height = 0;
-        archive >> width;
-        archive >> height;
-        const bool bTownSizeMismatch = archive.isError() || width != _topology._width || height != _topology._height;
-        if ( bTownSizeMismatch )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 설정, 빌린 일지와 시계 포인터는 사본도 그대로 가지고 있다.
-        CreatureTown town      = *this;
-        const int32  tileCount = width * height;
-        for ( hashed_string& object : town._listObject )
-        {
-            if ( StateIO::readName( archive, object ) == false )
-                return false;
-        }
-
-        uint32 habitatCount = 0;
-        // 서식지마다 이름(4) + 위치(8) + 번호(4) + 회전(4) + 셀 수(4) 이상
-        if ( archive.readCount( 24, habitatCount ) == false )
-            return false;
-        town._listHabitat.assign( habitatCount, HabitatInstance{} );
-        for ( HabitatInstance& habitat : town._listHabitat )
-        {
-            if ( CreatureTownInternal::readHabitat( archive, tileCount, habitat ) == false )
-                return false;
-        }
-
-        uint32 creatureCount = 0;
-        // 생물마다 이름(4) + 능력 수(4) + 서식지, 집, 대화 날, 선물 날, 온 날(20) 이상
-        if ( archive.readCount( 28, creatureCount ) == false )
-            return false;
-        town._listCreature.assign( creatureCount, TownCreature{} );
-        for ( TownCreature& creature : town._listCreature )
-        {
-            if ( CreatureTownInternal::readCreature( archive, creature ) == false )
-                return false;
-        }
-
-        uint32 houseCount = 0;
+            io.check( -1 <= creature._habitat && -1 <= creature._lastTalkDay && -1 <= creature._lastGiftDay && 0 <= creature._arrivalDay );
+        } );
         // 집마다 사는 수(4) + 셀(8) + 정원(4) 이상
-        if ( archive.readCount( 16, houseCount ) == false )
-            return false;
-        town._listHouse.assign( houseCount, CreatureHouse{} );
-        for ( CreatureHouse& house : town._listHouse )
+        io.list( _listHouse, 16, [&]( CreatureHouse& house )
         {
-            if ( CreatureTownInternal::readNameList( archive, house._listResident ) == false )
-                return false;
-            StateIO::readInt2( archive, house._tile );
-            archive >> house._capacity;
-            if ( house._capacity < 1 || _topology.isInside( house._tile._x, house._tile._y ) == false )
-                return false;
-        }
-
-        if ( CreatureTownInternal::readNameList( archive, town._listOpenRequest ) == false )
-            return false;
-        archive >> town._nextHabitatID;
-        archive >> town._lastAttractKey;
-        const bool bCountersValid = 0 < town._nextHabitatID && -1 <= town._lastAttractKey;
-        if ( archive.isError() || bCountersValid == false || town.areLinksValid() == false )
-            return false;
-        town._eventBuffer.clear();
-        town.updateAppealTier();
-        town._eventBuffer.clear(); // 복원한 단계는 알리지 않는다
-        *this = std::move( town );
-        return true;
+            io.list( house._listResident );
+            io.value( house._tile );
+            io.value( house._capacity );
+            io.check( 1 <= house._capacity && _topology.isInside( house._tile._x, house._tile._y ) );
+        } );
+        io.list( _listOpenRequest );
+        io.value( _nextHabitatID );
+        io.value( _lastAttractKey );
+        io.check( 0 < _nextHabitatID && -1 <= _lastAttractKey );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        io.check( areLinksValid() );
+        _eventBuffer.clear();
+        updateAppealTier();
+        _eventBuffer.clear(); // 복원한 단계는 알리지 않는다
     }
 
     bool CreatureTown::areLinksValid() const

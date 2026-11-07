@@ -15,6 +15,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/FrameData.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
@@ -117,13 +119,10 @@ namespace sw
         /**
          * @brief 콤보 id, 기술 타임라인(기술 id), 콤보 인덱스, 공격 기억, 패리 창, 히트스톱, 총(장비 여부와 `WeaponState`), 투사체(다음 탄 id 포함)를 씁니다.
          *        카탈로그와 기술 테이블은 `initialize` 에서 받은 것이고 무기 정의는 `equipGun` 에서 받은 것이라 싣지 않으며, 알림은 읽을 때 비웁니다.
-         */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 콤보와 기술은 `initialize` 의 카탈로그에서 id 로 찾습니다. `initialize` 하지 않았거나, 없는 콤보나 기술이거나,
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 콤보와 기술은 `initialize` 의 카탈로그에서 id 로 찾습니다. `initialize` 하지 않았거나, 없는 콤보나 기술이거나,
          *        총 장비 여부와 무기가 지금과 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         [[nodiscard]] bool startMove( int32 comboIndex );

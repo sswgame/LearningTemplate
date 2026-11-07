@@ -321,80 +321,67 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
-    void ParkGameModeComponent::writeState( Archive& outArchive ) const
+    void ParkGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
-        _simulation.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listPlacement.size() );
-        for ( const RidePlacement& placement : _listPlacement )
+        io.header( ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        ThemeParkSimulation restoredSimulation;
+        if ( io.isReading() )
         {
-            outArchive << placement._rideIndex;
+            restoredSimulation.initialize( _settings, makeRefs() );
         }
-        outArchive << static_cast<uint32>( _listCoaster.size() );
-        for ( const unique_ptr<CoasterRuntime>& pCoaster : _listCoaster )
-        {
-            outArchive << pCoaster->_placementIndex;
-            outArchive << pCoaster->_train.getDistance();
-            outArchive << pCoaster->_train.getSpeed();
-        }
-        outArchive << _statusTimer;
-        outArchive << _autoBuildTimer;
-        outArchive << _selectedPlacement;
-        _wallet.writeState( outArchive );
-    }
-
-    bool ParkGameModeComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        ThemeParkSimulation simulation;
-        simulation.initialize( _settings, makeRefs() );
-        uint32 placementCount = 0;
-        if ( simulation.readState( archive ) == false || archive.readCount( sizeof( int32 ), placementCount ) == false )
-            return false;
-        if ( placementCount != static_cast<uint32>( _listPlacement.size() ) )
-            return false; // 배치 데이터가 바뀌었다. 건설한 것을 맞출 수 없다.
+        ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
+        io.value( simulation );
+        uint32 placementCount = static_cast<uint32>( _listPlacement.size() );
+        io.count( sizeof( int32 ), placementCount );
+        // 배치 데이터가 바뀌었으면 건설한 것을 맞출 수 없다.
+        if ( io.check( placementCount == _listPlacement.size() ) == false )
+            return;
         const int32   rideCount = static_cast<int32>( simulation.getRides().size() );
         vector<int32> listRideIndex( placementCount );
-        for ( int32& rideIndex : listRideIndex )
+        for ( uint32 index = 0; index < placementCount; ++index )
         {
-            archive >> rideIndex;
-            if ( rideIndex < -1 || rideIndex >= rideCount )
-                archive.setError();
+            listRideIndex[index] = _listPlacement[index]._rideIndex;
+            io.value( listRideIndex[index] );
+            io.check( -1 <= listRideIndex[index] && listRideIndex[index] < rideCount );
         }
-        uint32 coasterCount = 0;
-        if ( archive.isError() || archive.readCount( sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount ) == false )
-            return false;
+        uint32 coasterCount = static_cast<uint32>( _listCoaster.size() );
+        io.count( sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount );
+        if ( io.isOk() == false )
+            return;
         vector<unique_ptr<CoasterRuntime>> listCoaster;
         for ( uint32 coasterIndex = 0; coasterIndex < coasterCount; ++coasterIndex )
         {
-            int32   placementIndex = -1;
-            float32 distance       = 0.0f;
-            float32 speed          = 0.0f;
-            archive >> placementIndex;
-            archive >> distance;
-            archive >> speed;
+            int32   placementIndex = io.isWriting() ? _listCoaster[coasterIndex]->_placementIndex : -1;
+            float32 distance       = io.isWriting() ? _listCoaster[coasterIndex]->_train.getDistance() : 0.0f;
+            float32 speed          = io.isWriting() ? _listCoaster[coasterIndex]->_train.getSpeed() : 0.0f;
+            io.value( placementIndex );
+            io.value( distance );
+            io.value( speed );
+            if ( io.isWriting() )
+                continue;
             CoasterRideStats           stats{};
-            unique_ptr<CoasterRuntime> pCoaster = archive.isOk() ? createCoaster( placementIndex, stats ) : nullptr;
-            if ( pCoaster == nullptr )
-                return false;
+            unique_ptr<CoasterRuntime> pCoaster = io.isOk() ? createCoaster( placementIndex, stats ) : nullptr;
+            if ( io.check( pCoaster != nullptr ) == false )
+                return;
             pCoaster->_train.setDistance( distance );
             pCoaster->_train.setSpeed( speed );
             listCoaster.push_back( std::move( pCoaster ) );
         }
-        float32 statusTimer       = 0.0f;
-        float32 autoBuildTimer    = 0.0f;
-        int32   selectedPlacement = 0;
-        archive >> statusTimer;
-        archive >> autoBuildTimer;
-        archive >> selectedPlacement;
-        Wallet     wallet;
-        const bool bInvalidParkState = archive.isError() || wallet.readState( archive ) == false || archive.getRemainingBytes() != 0;
-        if ( bInvalidParkState )
-            return false;
-
-        _simulation = std::move( simulation );
-        _wallet     = std::move( wallet );
+        float32 statusTimer       = _statusTimer;
+        float32 autoBuildTimer    = _autoBuildTimer;
+        int32   selectedPlacement = _selectedPlacement;
+        Wallet  restoredWallet;
+        io.value( statusTimer );
+        io.value( autoBuildTimer );
+        io.value( selectedPlacement );
+        io.value( io.isWriting() ? _wallet : restoredWallet );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _simulation = std::move( restoredSimulation );
+        _wallet     = std::move( restoredWallet );
         for ( uint32 placementIndex = 0; placementIndex < placementCount; ++placementIndex )
         {
             RidePlacement& placement = _listPlacement[placementIndex];
@@ -407,7 +394,6 @@ namespace sw
         _autoBuildTimer    = autoBuildTimer;
         _selectedPlacement = MathUtil::clamp( selectedPlacement, 0, static_cast<int32>( placementCount ) - 1 );
         _ridingCoaster     = -1;
-        return true;
     }
 
     void ParkGameModeComponent::onStateRestored( bool bRestored )

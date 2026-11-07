@@ -15,6 +15,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -120,10 +121,11 @@ namespace sw
         int32 getStepCount() const { return static_cast<int32>( _listStep.size() ); }
         int32 getNextStep() const { return _nextStep; }
 
-        /** @brief 진행(다음 단계 · 건너뛴 수)을 씁니다. 계획표 자체는 `reset` 이 다시 짓는다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 진행을 바꿉니다. 계획표 밖이면 false 이고 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 진행(다음 단계 · 건너뛴 수)을 씁니다. 계획표 자체는 `reset` 이 다시 짓는다.
+         *        `writeState` 의 바이트로 진행을 바꿉니다. 계획표 밖이면 false 이고 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 순서표 한 칸 — 도로 한 줄(ㄱ 자) 또는 건물 하나입니다. */

@@ -13,6 +13,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
@@ -246,14 +247,11 @@ namespace sw
 
         /**
          * @brief 타일, 건물, 일꾼, 돈, 달력, 난수를 씁니다. 핫 리로드와 세이브에 쓰며 설정과 카탈로그는 쓰지 않습니다. 읽는 쪽에서 같은 설정과 카탈로그로 `initialize` 해야 합니다.
-         * @details 건물과 물자는 카탈로그 id 로 적는다(포인터는 실행마다 다르기 때문이다).
+         *        건물과 물자는 카탈로그 id 로 적는다(포인터는 실행마다 다르기 때문이다).
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 를 먼저 호출해야 하며 크기와 카탈로그가 같아야 합니다.
+         *        @return 크기가 다르거나, 카탈로그에 없는 건물, 타일 · 건물 · 일꾼이 서로 맞지 않는 값, 범위 밖 값이 있거나 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
          */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 를 먼저 호출해야 하며 크기와 카탈로그가 같아야 합니다.
-         * @return 크기가 다르거나, 카탈로그에 없는 건물, 타일 · 건물 · 일꾼이 서로 맞지 않는 값, 범위 밖 값이 있거나 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
-         */
-        [[nodiscard]] bool readState( Archive& archive );
+        SW_DECLARE_STATE_IO();
 
     private:
         void stepFixed( float32 deltaTime );

@@ -163,17 +163,13 @@ namespace sw
         return float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f };
     }
 
-    void VoxelGameModeComponent::writeState( Archive& outArchive ) const
+    void VoxelGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
-        _world.writeState( outArchive );
-    }
-
-    bool VoxelGameModeComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        return _world.readState( archive ) && archive.getRemainingBytes() == 0;
+        io.header( VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        io.value( _world );
+        io.end();
     }
 
     void VoxelGameModeComponent::onStateRestored( bool bRestored )

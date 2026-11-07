@@ -41,89 +41,12 @@ namespace sw
                 return choice._weight;
             }
 
-            /** @brief 오늘의 집계를 읽습니다. 오류는 아카이브에 남습니다. */
-            static void readDaySummary( Archive& archive, RestaurantDaySummary& outToday )
-            {
-                archive >> outToday._revenue;
-                archive >> outToday._tips;
-                archive >> outToday._ingredientCost;
-                archive >> outToday._wages;
-                archive >> outToday._spoilageCost;
-                archive >> outToday._profit;
-                archive >> outToday._rating;
-                archive >> outToday._arrivals;
-                archive >> outToday._served;
-                archive >> outToday._walkouts;
-                archive >> outToday._noChoice;
-                archive >> outToday._unservedAtClose;
-            }
-
             /** @brief 읽은 결산의 돈과 사람 수가 음수가 아닌지 봅니다(이익만 음수가 될 수 있습니다). */
             static bool isDaySummaryValid( const RestaurantDaySummary& today )
             {
                 const bool bMoneyValid  = 0 <= today._revenue && 0 <= today._tips && 0 <= today._ingredientCost && 0 <= today._wages && 0 <= today._spoilageCost;
                 const bool bPeopleValid = 0 <= today._arrivals && 0 <= today._served && 0 <= today._walkouts && 0 <= today._noChoice && 0 <= today._unservedAtClose;
                 return bMoneyValid && bPeopleValid && 0.0f <= today._rating && today._rating <= 5.0f;
-            }
-
-            /** @brief `writeState` 가 쓴 직원 하나를 읽습니다. 역할이 범위 밖이거나 플래그가 깨졌으면 false 입니다. */
-            [[nodiscard]] static bool readStaff( Archive& archive, StaffMember& outStaff )
-            {
-                uint8 role = 0;
-                if ( StateIO::readName( archive, outStaff._name ) == false || outStaff._level.readState( archive ) == false )
-                    return false;
-                archive >> outStaff._busyMinutes;
-                archive >> outStaff._dailyWage;
-                archive >> outStaff._taskCustomer;
-                archive >> role;
-                archive >> outStaff._bHired;
-                const bool bValuesValid      = 0.0f <= outStaff._busyMinutes && 0 <= outStaff._dailyWage && -1 <= outStaff._taskCustomer;
-                const bool bInvalidStaffData = archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || outStaff._bHired > SW_TRUE || bValuesValid == false;
-                if ( bInvalidStaffData )
-                    return false;
-                outStaff._role = static_cast<StaffRole>( role );
-                return true;
-            }
-
-            /** @brief `writeState` 가 쓴 손님 하나를 읽습니다. 자리 번호가 @p seatCount 밖이거나 상태가 범위 밖이면 false 입니다. */
-            [[nodiscard]] static bool readCustomer( Archive& archive, int32 seatCount, RestaurantCustomer& outCustomer )
-            {
-                uint8 state = 0;
-                if ( StateIO::readName( archive, outCustomer._typeID ) == false || StateIO::readName( archive, outCustomer._dishID ) == false )
-                    return false;
-                archive >> outCustomer._waited;
-                archive >> outCustomer._patience;
-                archive >> outCustomer._eatRemaining;
-                archive >> outCustomer._price;
-                archive >> outCustomer._id;
-                archive >> outCustomer._seat;
-                archive >> outCustomer._quality;
-                archive >> state;
-                archive >> outCustomer._bServing;
-                archive >> outCustomer._bCheckingOut;
-                const bool bValuesValid = 0.0f <= outCustomer._waited && 0.0f <= outCustomer._patience && 0 <= outCustomer._price && 0 < outCustomer._id && 0 <= outCustomer._quality;
-                const bool bValid       = archive.isOk() && state <= static_cast<uint8>( CustomerState::Left ) && -1 <= outCustomer._seat && outCustomer._seat < seatCount &&
-                                    outCustomer._bServing <= SW_TRUE && outCustomer._bCheckingOut <= SW_TRUE && bValuesValid;
-                if ( bValid == false )
-                    return false;
-                outCustomer._state = static_cast<CustomerState>( state );
-                // 앉은 손님만 자리를 가진다(`leaveCustomer`, `settlePayment` 가 비운다).
-                return isSeated( outCustomer ) == ( outCustomer._seat >= 0 );
-            }
-
-            /** @brief `writeState` 가 쓴 주문 하나를 읽습니다. 요리사 번호가 @p staffCount 밖이면 false 입니다. */
-            [[nodiscard]] static bool readOrder( Archive& archive, int32 staffCount, KitchenOrder& outOrder )
-            {
-                if ( StateIO::readName( archive, outOrder._dishID ) == false || StateIO::readName( archive, outOrder._station ) == false )
-                    return false;
-                archive >> outOrder._remaining;
-                archive >> outOrder._customerID;
-                archive >> outOrder._cook;
-                archive >> outOrder._quality;
-                archive >> outOrder._bReady;
-                // 기다리는 주문과 조리 중인 주문의 남은 시간은 음수가 아니다. 다 된 주문만 걸음만큼 넘긴 값이 남는다. 다 되면 요리사를 풀어 준다.
-                const bool bProgressValid = outOrder._bReady == SW_FALSE ? 0.0f <= outOrder._remaining : outOrder._cook < 0;
-                return archive.isOk() && -1 <= outOrder._cook && outOrder._cook < staffCount && outOrder._bReady <= SW_TRUE && 0 <= outOrder._quality && bProgressValid;
             }
         };
     } // namespace
@@ -400,181 +323,120 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void RestaurantSimulation::writeState( Archive& outArchive ) const
+    void RestaurantSimulation::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listStaff.size() );
-        for ( const StaffMember& staff : _listStaff )
-        {
-            StateIO::writeName( outArchive, staff._name );
-            staff._level.writeState( outArchive );
-            outArchive << staff._busyMinutes;
-            outArchive << staff._dailyWage;
-            outArchive << staff._taskCustomer;
-            outArchive << static_cast<uint8>( staff._role );
-            outArchive << staff._bHired;
-        }
-        outArchive << static_cast<uint32>( _listCustomer.size() );
-        for ( const RestaurantCustomer& customer : _listCustomer )
-        {
-            StateIO::writeName( outArchive, customer._typeID );
-            StateIO::writeName( outArchive, customer._dishID );
-            outArchive << customer._waited;
-            outArchive << customer._patience;
-            outArchive << customer._eatRemaining;
-            outArchive << customer._price;
-            outArchive << customer._id;
-            outArchive << customer._seat;
-            outArchive << customer._quality;
-            outArchive << static_cast<uint8>( customer._state );
-            outArchive << customer._bServing;
-            outArchive << customer._bCheckingOut;
-        }
-        outArchive << static_cast<uint32>( _listOrder.size() );
-        for ( const KitchenOrder& order : _listOrder )
-        {
-            StateIO::writeName( outArchive, order._dishID );
-            StateIO::writeName( outArchive, order._station );
-            outArchive << order._remaining;
-            outArchive << order._customerID;
-            outArchive << order._cook;
-            outArchive << order._quality;
-            outArchive << order._bReady;
-        }
-        outArchive << static_cast<uint32>( _listMenu.size() );
-        for ( const MenuEntry& entry : _listMenu )
-        {
-            StateIO::writeName( outArchive, entry._dishID );
-            outArchive << entry._price;
-            outArchive << entry._bOnMenu;
-        }
-        outArchive << static_cast<uint32>( _listStation.size() );
-        for ( const StationSlot& slot : _listStation )
-        {
-            StateIO::writeName( outArchive, slot._station );
-            outArchive << slot._count;
-        }
-        outArchive << static_cast<uint32>( _listSatisfaction.size() );
-        for ( const float32 satisfaction : _listSatisfaction )
-        {
-            outArchive << satisfaction;
-        }
-        _stock.writeState( outArchive );
-        _crafter.writeState( outArchive );
-        _market.writeState( outArchive );
-        outArchive << _today._revenue;
-        outArchive << _today._tips;
-        outArchive << _today._ingredientCost;
-        outArchive << _today._wages;
-        outArchive << _today._spoilageCost;
-        outArchive << _today._profit;
-        outArchive << _today._rating;
-        outArchive << _today._arrivals;
-        outArchive << _today._served;
-        outArchive << _today._walkouts;
-        outArchive << _today._noChoice;
-        outArchive << _today._unservedAtClose;
-        StateIO::writeStepTimer( outArchive, _stepTimer );
-        StateIO::writeRandom( outArchive, _random );
-        StateIO::writeName( outArchive, _weatherID );
-        outArchive << _minutes;
-        StateIO::writeRateAccumulator( outArchive, _arrival );
-        outArchive << _pendingSpoilageCost;
-        outArchive << _nextCustomerID;
-        outArchive << _bOpen;
-    }
-
-    bool RestaurantSimulation::readState( Archive& archive )
-    {
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 설정, 빌린 포인터는 사본도 그대로 가지고 있다.
-        RestaurantSimulation restored = *this;
-        uint32               count    = 0;
         // 직원마다 이름(4) + 레벨(경험치와 누적 16 + 레벨 4) + 바쁨(4) + 일당(8) + 맡은 손님(4) + 역할과 고용(2)
-        if ( archive.readCount( 42, count ) == false )
-            return false;
-        restored._listStaff.assign( count, StaffMember{} );
-        for ( StaffMember& staff : restored._listStaff )
+        io.list( _listStaff, 42, [&]( StaffMember& staff )
         {
-            if ( RestaurantSimulationInternal::readStaff( archive, staff ) == false )
-                return false;
-        }
-
+            io.value( staff._name );
+            io.value( staff._level );
+            io.value( staff._busyMinutes );
+            io.value( staff._dailyWage );
+            io.value( staff._taskCustomer );
+            io.enumValue( staff._role, StaffRole::Cashier );
+            io.flag( staff._bHired );
+            io.check( 0.0f <= staff._busyMinutes && 0 <= staff._dailyWage && -1 <= staff._taskCustomer );
+        } );
         // 손님마다 이름 둘(8) + 기다림, 인내, 먹기(12) + 가격(8) + 번호, 자리, 품질(12) + 상태, 서빙, 계산(3)
-        if ( archive.readCount( 43, count ) == false )
-            return false;
-        restored._listCustomer.assign( count, RestaurantCustomer{} );
-        for ( RestaurantCustomer& customer : restored._listCustomer )
+        io.list( _listCustomer, 43, [&]( RestaurantCustomer& customer )
         {
-            if ( RestaurantSimulationInternal::readCustomer( archive, _settings._seatCount, customer ) == false )
-                return false;
-        }
-
+            io.value( customer._typeID );
+            io.value( customer._dishID );
+            io.value( customer._waited );
+            io.value( customer._patience );
+            io.value( customer._eatRemaining );
+            io.value( customer._price );
+            io.value( customer._id );
+            io.value( customer._seat );
+            io.value( customer._quality );
+            io.enumValue( customer._state, CustomerState::Left );
+            io.flag( customer._bServing );
+            io.flag( customer._bCheckingOut );
+            io.check( 0.0f <= customer._waited && 0.0f <= customer._patience && 0 <= customer._price && 0 < customer._id && 0 <= customer._quality && -1 <= customer._seat && customer._seat < _settings._seatCount );
+            // 앉은 손님만 자리를 가진다(`leaveCustomer`, `settlePayment` 가 비운다).
+            io.check( RestaurantSimulationInternal::isSeated( customer ) == ( customer._seat >= 0 ) );
+        } );
+        uint32 orderCount = static_cast<uint32>( _listOrder.size() );
         // 주문마다 이름 둘(8) + 남은 시간, 손님, 요리사, 품질(16) + 준비(1)
-        if ( archive.readCount( 25, count ) == false )
-            return false;
-        restored._listOrder.clear();
-        for ( uint32 index = 0; index < count; ++index )
+        io.count( 25, orderCount );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
         {
-            KitchenOrder order;
-            if ( RestaurantSimulationInternal::readOrder( archive, static_cast<int32>( restored._listStaff.size() ), order ) == false )
-                return false;
-            restored._listOrder.push_back( order );
+            _listOrder.clear();
         }
-
+        const int32 staffCount = static_cast<int32>( _listStaff.size() );
+        for ( uint32 index = 0; index < orderCount; ++index )
+        {
+            KitchenOrder order = io.isWriting() ? _listOrder[index] : KitchenOrder{};
+            io.value( order._dishID );
+            io.value( order._station );
+            io.value( order._remaining );
+            io.value( order._customerID );
+            io.value( order._cook );
+            io.value( order._quality );
+            io.flag( order._bReady );
+            // 기다리는 주문과 조리 중인 주문의 남은 시간은 음수가 아니다. 다 된 주문만 걸음만큼 넘긴 값이 남는다. 다 되면 요리사를 풀어 준다.
+            const bool bProgressValid = order._bReady == SW_FALSE ? 0.0f <= order._remaining : order._cook < 0;
+            if ( io.check( -1 <= order._cook && order._cook < staffCount && 0 <= order._quality && bProgressValid ) == false )
+                return;
+            if ( io.isReading() )
+            {
+                _listOrder.push_back( order );
+            }
+        }
         // 메뉴는 카탈로그의 요리마다 하나이다. 이름(4) + 가격(8) + 켜짐(1)
-        if ( archive.readCount( 13, count ) == false || count != _listMenu.size() )
-            return false;
-        for ( MenuEntry& entry : restored._listMenu )
+        io.expect( static_cast<uint32>( _listMenu.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( MenuEntry& entry : _listMenu )
         {
-            if ( StateIO::readName( archive, entry._dishID ) == false )
-                return false;
-            archive >> entry._price;
-            archive >> entry._bOnMenu;
+            io.value( entry._dishID );
+            io.value( entry._price );
+            io.flag( entry._bOnMenu );
             // `setMenuPrice` 처럼 가격은 1 이상이다. 음수 가격은 손님이 낼 때 지갑에서 돈을 뺀다.
-            if ( archive.isError() || entry._bOnMenu > SW_TRUE || entry._price < 1 )
-                return false;
+            io.check( 1 <= entry._price );
         }
-
         // 스테이션마다 이름(4) + 수(4)
-        if ( archive.readCount( 8, count ) == false )
-            return false;
-        restored._listStation.assign( count, StationSlot{} );
-        for ( StationSlot& slot : restored._listStation )
+        io.list( _listStation, 8, [&]( StationSlot& slot )
         {
-            if ( StateIO::readName( archive, slot._station ) == false )
-                return false;
-            archive >> slot._count;
-            if ( slot._station.empty() || slot._count < 0 )
-                return false;
-        }
-        if ( archive.isError() || archive.readCount( 4, count ) == false )
-            return false;
-        restored._listSatisfaction.assign( count, 0.0f );
-        for ( float32& satisfaction : restored._listSatisfaction )
+            io.value( slot._station );
+            io.value( slot._count );
+            io.check( slot._station.empty() == false && 0 <= slot._count );
+        } );
+        io.list( _listSatisfaction, 4, [&]( float32& satisfaction )
         {
-            archive >> satisfaction;
-            if ( satisfaction < 0.0f || 1.0f < satisfaction )
-                return false;
-        }
-
-        const bool bPartRead = archive.isOk() && restored._stock.readState( archive ) && restored._crafter.readState( archive ) && restored._market.readState( archive );
-        if ( bPartRead == false )
-            return false;
-        RestaurantSimulationInternal::readDaySummary( archive, restored._today );
-        const bool bTailRead = StateIO::readStepTimer( archive, restored._stepTimer ) && StateIO::readRandom( archive, restored._random ) &&
-                               StateIO::readName( archive, restored._weatherID );
-        archive >> restored._minutes;
-        const bool bArrivalRead = StateIO::readRateAccumulator( archive, restored._arrival );
-        archive >> restored._pendingSpoilageCost;
-        archive >> restored._nextCustomerID;
-        archive >> restored._bOpen;
-        const bool bValuesValid            = 0.0f <= restored._minutes && 0 <= restored._pendingSpoilageCost && 0 < restored._nextCustomerID && RestaurantSimulationInternal::isDaySummaryValid( restored._today );
-        const bool bInvalidRestaurantState = bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE || bValuesValid == false;
-        if ( bInvalidRestaurantState || restored.areLinksValid() == false )
-            return false;
-        restored._eventBuffer.clear();
-        restored._listSpoilageScratch.clear();
-        *this = std::move( restored );
-        return true;
+            io.value( satisfaction );
+            io.check( 0.0f <= satisfaction && satisfaction <= 1.0f );
+        } );
+        io.value( _stock );
+        io.value( _crafter );
+        io.value( _market );
+        io.value( _today._revenue );
+        io.value( _today._tips );
+        io.value( _today._ingredientCost );
+        io.value( _today._wages );
+        io.value( _today._spoilageCost );
+        io.value( _today._profit );
+        io.value( _today._rating );
+        io.value( _today._arrivals );
+        io.value( _today._served );
+        io.value( _today._walkouts );
+        io.value( _today._noChoice );
+        io.value( _today._unservedAtClose );
+        io.value( _stepTimer );
+        io.value( _random );
+        io.value( _weatherID );
+        io.value( _minutes );
+        io.value( _arrival );
+        io.value( _pendingSpoilageCost );
+        io.value( _nextCustomerID );
+        io.flag( _bOpen );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        io.check( 0.0f <= _minutes && 0 <= _pendingSpoilageCost && 0 < _nextCustomerID && RestaurantSimulationInternal::isDaySummaryValid( _today ) && areLinksValid() );
+        _eventBuffer.clear();
+        _listSpoilageScratch.clear();
     }
 
     bool RestaurantSimulation::areLinksValid() const

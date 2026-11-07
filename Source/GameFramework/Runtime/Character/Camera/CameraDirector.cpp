@@ -20,117 +20,59 @@ namespace sw
 
             static bool isCut( const BlendCurveDef& blend ) { return blend._curve == BlendCurve::Cut || blend._duration <= 0.0f; }
 
-            static void writePose( Archive& outArchive, const CameraPose& pose )
+            static void serializePose( StateIO& io, CameraPose& pose )
             {
-                outArchive << pose._position;
-                outArchive << float4{ pose._rotation._x, pose._rotation._y, pose._rotation._z, pose._rotation._w };
-                outArchive << pose._fieldOfViewY;
-                outArchive << pose._orthoHeight;
-                outArchive << pose._nearPlane;
-                outArchive << pose._farPlane;
-                outArchive << pose._depthOfField._focusDistance;
-                outArchive << pose._depthOfField._aperture;
-                outArchive << pose._depthOfField._sensorHeight;
-                outArchive << pose._lensShift;
-                outArchive << pose._postProcess._exposureCompensation;
-                outArchive << pose._postProcess._bloomScale;
-                outArchive << pose._postProcess._vignetteIntensity;
-                outArchive << pose._postProcess._saturation;
-                outArchive << pose._postProcess._contrast;
-                outArchive << pose._postProcess._letterboxAspectRatio;
-                outArchive << pose._postProcess._autoExposureMinEv;
-                outArchive << pose._postProcess._autoExposureMaxEv;
-                outArchive << pose._postProcess._autoExposureSpeedUp;
-                outArchive << pose._postProcess._autoExposureSpeedDown;
-                outArchive << pose._bOrthographic;
-            }
-
-            static void readPose( Archive& archive, CameraPose& outPose )
-            {
-                float4 rotation{};
-                archive >> outPose._position;
-                archive >> rotation;
-                outPose._rotation = quaternion( rotation );
-                archive >> outPose._fieldOfViewY;
-                archive >> outPose._orthoHeight;
-                archive >> outPose._nearPlane;
-                archive >> outPose._farPlane;
-                archive >> outPose._depthOfField._focusDistance;
-                archive >> outPose._depthOfField._aperture;
-                archive >> outPose._depthOfField._sensorHeight;
-                archive >> outPose._lensShift;
-                archive >> outPose._postProcess._exposureCompensation;
-                archive >> outPose._postProcess._bloomScale;
-                archive >> outPose._postProcess._vignetteIntensity;
-                archive >> outPose._postProcess._saturation;
-                archive >> outPose._postProcess._contrast;
-                archive >> outPose._postProcess._letterboxAspectRatio;
-                archive >> outPose._postProcess._autoExposureMinEv;
-                archive >> outPose._postProcess._autoExposureMaxEv;
-                archive >> outPose._postProcess._autoExposureSpeedUp;
-                archive >> outPose._postProcess._autoExposureSpeedDown;
-                archive >> outPose._bOrthographic;
-            }
-
-            static void writeBlend( Archive& outArchive, const BlendCurveDef& blend )
-            {
-                outArchive << static_cast<uint8>( blend._curve );
-                outArchive << blend._duration;
-                outArchive << blend._exponent;
-                outArchive << blend._springFrequency;
-                outArchive << blend._springDamping;
-                outArchive << static_cast<uint32>( blend._listCustomKey.size() );
-                for ( const BlendCurveKey& key : blend._listCustomKey )
+                float4 rotation{ pose._rotation._x, pose._rotation._y, pose._rotation._z, pose._rotation._w };
+                io.value( pose._position );
+                io.value( rotation );
+                if ( io.isReading() )
                 {
-                    outArchive << key._time;
-                    outArchive << key._value;
+                    pose._rotation = quaternion( rotation );
                 }
+                io.value( pose._fieldOfViewY );
+                io.value( pose._orthoHeight );
+                io.value( pose._nearPlane );
+                io.value( pose._farPlane );
+                io.value( pose._depthOfField._focusDistance );
+                io.value( pose._depthOfField._aperture );
+                io.value( pose._depthOfField._sensorHeight );
+                io.value( pose._lensShift );
+                io.value( pose._postProcess._exposureCompensation );
+                io.value( pose._postProcess._bloomScale );
+                io.value( pose._postProcess._vignetteIntensity );
+                io.value( pose._postProcess._saturation );
+                io.value( pose._postProcess._contrast );
+                io.value( pose._postProcess._letterboxAspectRatio );
+                io.value( pose._postProcess._autoExposureMinEv );
+                io.value( pose._postProcess._autoExposureMaxEv );
+                io.value( pose._postProcess._autoExposureSpeedUp );
+                io.value( pose._postProcess._autoExposureSpeedDown );
+                io.value( pose._bOrthographic );
             }
 
-            [[nodiscard]] static bool readBlend( Archive& archive, BlendCurveDef& outBlend )
+            static void serializeBlend( StateIO& io, BlendCurveDef& blend )
             {
-                uint8 curve = 0;
-                archive >> curve;
-                archive >> outBlend._duration;
-                archive >> outBlend._exponent;
-                archive >> outBlend._springFrequency;
-                archive >> outBlend._springDamping;
-                if ( archive.isError() || curve > static_cast<uint8>( BlendCurve::Custom ) )
-                    return false;
-                outBlend._curve = static_cast<BlendCurve>( curve );
-                uint32 keyCount = 0;
-                if ( archive.readCount( 8, keyCount ) == false )
-                    return false;
-                outBlend._listCustomKey.resize( keyCount );
-                for ( BlendCurveKey& key : outBlend._listCustomKey )
+                io.enumValue( blend._curve, BlendCurve::Custom );
+                io.value( blend._duration );
+                io.value( blend._exponent );
+                io.value( blend._springFrequency );
+                io.value( blend._springDamping );
+                io.list( blend._listCustomKey, 8, [&]( BlendCurveKey& key )
                 {
-                    archive >> key._time;
-                    archive >> key._value;
-                }
-                return archive.isOk();
+                    io.value( key._time );
+                    io.value( key._value );
+                } );
             }
 
-            /** @brief 입력이 돌린 상태만 씁니다. 암 길이 · 조준 · look-ahead 는 다음 프레임이 다시 구한다. */
-            static void writeModeState( Archive& outArchive, const CameraModeState& state )
+            static void serializeModeState( StateIO& io, CameraModeState& state )
             {
-                outArchive << state._panOffset;
-                outArchive << state._yawOffset;
-                outArchive << state._pitchOffset;
-                outArchive << state._rotateYaw;
-                outArchive << state._rotateYawShown;
-                outArchive << state._zoom;
-                outArchive << state._time;
-            }
-
-            static void readModeState( Archive& archive, CameraModeState& outState )
-            {
-                archive >> outState._panOffset;
-                archive >> outState._yawOffset;
-                archive >> outState._pitchOffset;
-                archive >> outState._rotateYaw;
-                archive >> outState._rotateYawShown;
-                archive >> outState._zoom;
-                archive >> outState._time;
+                io.value( state._panOffset );
+                io.value( state._yawOffset );
+                io.value( state._pitchOffset );
+                io.value( state._rotateYaw );
+                io.value( state._rotateYawShown );
+                io.value( state._zoom );
+                io.value( state._time );
             }
         };
     } // namespace
@@ -338,57 +280,43 @@ namespace sw
         return bCut;
     }
 
-    void CameraDirector::writeState( Archive& outArchive ) const
+    void CameraDirector::serializeState( StateIO& io, const CameraPresetCatalog* pCatalog )
     {
         using Internal = CameraDirectorInternal;
-        StateIO::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
-        outArchive << static_cast<uint8>( _bHasPose );
-        Internal::writePose( outArchive, _outputPose );
-        outArchive << static_cast<uint32>( _listLayer.size() );
-        for ( const Layer& layer : _listLayer )
+        io.header( Internal::kStateTag, Internal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        uint8      bHasPose   = _bHasPose;
+        CameraPose outputPose = _outputPose;
+        io.value( bHasPose );
+        Internal::serializePose( io, outputPose );
+        uint32 layerCount = static_cast<uint32>( _listLayer.size() );
+        io.count( Internal::kLayerMinBytes, layerCount );
+        if ( io.check( layerCount <= kMaxLayerCount ) == false )
+            return;
+        // 읽기는 임시에 다 받고 끝까지 맞을 때만 바꾼다 — 반쯤 읽은 스택을 남기지 않는다.
+        vector<Layer> restoredLayer;
+        if ( io.isReading() )
         {
-            StateIO::writeName( outArchive, layer._def._id );
-            outArchive << layer._bFrozen;
-            Internal::writeBlend( outArchive, layer._blend );
-            outArchive << layer._elapsed;
-            outArchive << layer._weight;
-            Internal::writePose( outArchive, layer._dampedPose );
-            Internal::writePose( outArchive, layer._pose );
-            Internal::writeModeState( outArchive, layer._state );
+            restoredLayer.resize( layerCount );
         }
-    }
-
-    bool CameraDirector::readState( Archive& archive, const CameraPresetCatalog& catalog )
-    {
-        using Internal = CameraDirectorInternal;
-        if ( StateIO::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
-            return false;
-        uint8      bHasPose = SW_FALSE;
-        CameraPose outputPose;
-        archive >> bHasPose;
-        Internal::readPose( archive, outputPose );
-        uint32 layerCount = 0;
-        if ( archive.readCount( Internal::kLayerMinBytes, layerCount ) == false || layerCount > kMaxLayerCount )
-            return false;
-        // 임시에 다 읽고 끝까지 맞을 때만 바꾼다 — 반쯤 읽은 스택을 남기지 않는다.
-        vector<Layer> listLayer( layerCount );
-        for ( Layer& layer : listLayer )
+        for ( Layer& layer : io.isWriting() ? _listLayer : restoredLayer )
         {
-            hashed_string id;
-            if ( StateIO::readName( archive, id ) == false )
-                return false;
-            archive >> layer._bFrozen;
-            if ( Internal::readBlend( archive, layer._blend ) == false )
-                return false;
-            archive >> layer._elapsed;
-            archive >> layer._weight;
-            Internal::readPose( archive, layer._dampedPose );
-            Internal::readPose( archive, layer._pose );
-            Internal::readModeState( archive, layer._state );
-            if ( archive.isError() )
-                return false;
+            hashed_string id = layer._def._id;
+            io.value( id );
+            io.value( layer._bFrozen );
+            Internal::serializeBlend( io, layer._blend );
+            io.value( layer._elapsed );
+            io.value( layer._weight );
+            Internal::serializePose( io, layer._dampedPose );
+            Internal::serializePose( io, layer._pose );
+            Internal::serializeModeState( io, layer._state );
+            if ( io.isOk() == false )
+                return;
+            if ( io.isWriting() )
+                continue;
             layer._bFresh               = SW_FALSE;
-            const CameraPresetDef* pDef = layer._bFrozen == SW_TRUE ? nullptr : catalog.find( id );
+            const CameraPresetDef* pDef = layer._bFrozen == SW_TRUE ? nullptr : pCatalog->find( id );
             if ( pDef != nullptr )
             {
                 layer._def = *pDef;
@@ -400,12 +328,14 @@ namespace sw
                 layer._bFrozen = SW_TRUE;
             }
         }
-        _listLayer  = std::move( listLayer );
+        if ( io.isWriting() )
+            return;
+        _listLayer  = std::move( restoredLayer );
         _outputPose = outputPose;
         _bHasPose   = bHasPose == SW_TRUE ? SW_TRUE : SW_FALSE;
         _bCutQueued = SW_FALSE;
         _impulseListener.clear();
         _fieldOfViewKickListener.clear();
-        return true;
     }
+
 } // namespace sw

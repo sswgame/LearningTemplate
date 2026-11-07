@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
@@ -55,10 +57,11 @@ namespace sw
         int32                         getCount() const { return static_cast<int32>( _listScrap.size() ); }
         const vector<ScavengerScrap>& getScraps() const { return _listScrap; }
 
-        /** @brief 든 것을 씁니다. 설정(슬롯 수와 무게)은 `initialize` 에서 받으므로 저장하지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 슬롯 수를 넘으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 든 것을 씁니다. 설정(슬롯 수와 무게)은 `initialize` 에서 받으므로 저장하지 않습니다.
+         *        `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 슬롯 수를 넘으면 false 를 반환하고 상태는 그대로입니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         vector<ScavengerScrap> _listScrap;

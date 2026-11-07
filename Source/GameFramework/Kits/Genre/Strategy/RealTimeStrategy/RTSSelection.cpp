@@ -24,8 +24,7 @@ namespace sw
                        unit._position._z - radius <= maxCorner._z;
             }
 
-            /** @brief 유닛 id 목록 하나를 묶은 id(`packed`) 목록으로 씁니다. `readList` 가 읽습니다. */
-            static void writeList( Archive& outArchive, const vector<RTSUnitID>& listUnit )
+            static void serializeList( StateIO& io, vector<RTSUnitID>& listUnit )
             {
                 vector<uint64> listPacked;
                 listPacked.reserve( listUnit.size() );
@@ -33,27 +32,20 @@ namespace sw
                 {
                     listPacked.push_back( unitID.packed() );
                 }
-                StateIO::writeIDList( outArchive, listPacked );
-            }
-
-            /** @brief `writeList` 가 쓴 유닛 id 목록 하나를 읽습니다. */
-            [[nodiscard]] static bool readList( Archive& archive, vector<RTSUnitID>& outListUnit )
-            {
-                vector<uint64> listPacked;
-                if ( StateIO::readIDList( archive, listPacked ) == false )
-                    return false;
+                io.list( listPacked );
+                if ( io.isWriting() || io.isOk() == false )
+                    return;
                 // 선택과 부대는 유닛마다 한 번이다(`addUnit`). 꾸민 바이트의 긴 목록이 제곱 시간을 쓰지 않게 정렬해 본다.
                 vector<uint64> listSorted = listPacked;
                 VectorUtil::sort( listSorted );
-                if ( std::adjacent_find( listSorted.begin(), listSorted.end() ) != listSorted.end() )
-                    return false;
-                outListUnit.clear();
-                outListUnit.reserve( listPacked.size() );
+                if ( io.check( std::adjacent_find( listSorted.begin(), listSorted.end() ) == listSorted.end() ) == false )
+                    return;
+                listUnit.clear();
+                listUnit.reserve( listPacked.size() );
                 for ( const uint64 packed : listPacked )
                 {
-                    outListUnit.push_back( RTSUnitID::fromPacked( packed ) );
+                    listUnit.push_back( RTSUnitID::fromPacked( packed ) );
                 }
-                return true;
             }
 
             static void sortCorners( const float3& cornerA, const float3& cornerB, float3& outMin, float3& outMax )
@@ -67,34 +59,14 @@ namespace sw
 
 namespace sw
 {
-    void RTSSelection::writeState( Archive& outArchive ) const
+    void RTSSelection::serializeState( StateIO& io )
     {
-        RTSSelectionInternal::writeList( outArchive, _listSelected );
-        for ( const vector<RTSUnitID>& listGroup : _arrGroup )
+        RTSSelectionInternal::serializeList( io, _listSelected );
+        io.check( _maxCount <= 0 || static_cast<int32>( _listSelected.size() ) <= _maxCount );
+        for ( vector<RTSUnitID>& listGroup : _arrGroup )
         {
-            RTSSelectionInternal::writeList( outArchive, listGroup );
+            RTSSelectionInternal::serializeList( io, listGroup );
         }
-    }
-
-    bool RTSSelection::readState( Archive& archive )
-    {
-        vector<RTSUnitID> listSelected;
-        vector<RTSUnitID> arrGroup[kGroupCount];
-        if ( RTSSelectionInternal::readList( archive, listSelected ) == false )
-            return false;
-        if ( _maxCount > 0 && static_cast<int32>( listSelected.size() ) > _maxCount )
-            return false;
-        for ( vector<RTSUnitID>& listGroup : arrGroup )
-        {
-            if ( RTSSelectionInternal::readList( archive, listGroup ) == false )
-                return false;
-        }
-        _listSelected = std::move( listSelected );
-        for ( int32 group = 0; group < kGroupCount; ++group )
-        {
-            _arrGroup[group] = std::move( arrGroup[group] );
-        }
-        return true;
     }
 
     RTSSelection::RTSSelection()

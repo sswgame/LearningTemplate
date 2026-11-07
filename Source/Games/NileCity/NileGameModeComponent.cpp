@@ -464,57 +464,46 @@ namespace sw
         return _wallet.getBalance( _city.getCurrency() );
     }
 
-    void NileGameModeComponent::writeState( Archive& outArchive ) const
+    void NileGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
-        _city.writeState( outArchive );
-        _planner.writeState( outArchive );
-        _wallet.writeState( outArchive );
-        _clock.writeState( outArchive );
-        outArchive << _timeScale;
-        outArchive << _selectedTool;
-        outArchive << _monthCount;
-        outArchive << _evolvedCount;
-        outArchive << static_cast<uint8>( _bPaused );
-        outArchive << static_cast<uint8>( _bAutoPlanToggle );
-    }
-
-    bool NileGameModeComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        CitySimulation  city;
-        NileCityPlanner planner;
-        Wallet          wallet;
-        WorldClock      clock;
-        if ( planner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) == false )
-            return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
-        if ( clock.initialize( makeClockSettings() ) == false )
-            return false;
-        if ( city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() ) == false )
-            return false;
-        const bool bStateReadFailed = city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false;
-        if ( bStateReadFailed )
-            return false;
-        float32 timeScale       = 1.0f;
-        int32   selectedTool    = 0;
-        int32   monthCount      = 0;
-        int32   evolvedCount    = 0;
-        uint8   bPaused         = SW_FALSE;
-        uint8   bAutoPlanToggle = SW_FALSE;
-        archive >> timeScale;
-        archive >> selectedTool;
-        archive >> monthCount;
-        archive >> evolvedCount;
-        archive >> bPaused;
-        archive >> bAutoPlanToggle;
-        const bool bInvalidDirectorState = archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f;
-        if ( bInvalidDirectorState )
-            return false;
-        _city            = std::move( city );
-        _planner         = std::move( planner );
-        _wallet          = std::move( wallet );
-        _clock           = std::move( clock );
+        io.header( NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        CitySimulation  restoredCity;
+        NileCityPlanner restoredPlanner;
+        Wallet          restoredWallet;
+        WorldClock      restoredClock;
+        if ( io.isReading() )
+        {
+            // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
+            if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
+                 io.check( restoredCity.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() ) ) == false )
+                return;
+        }
+        io.value( io.isWriting() ? _city : restoredCity );
+        io.value( io.isWriting() ? _planner : restoredPlanner );
+        io.value( io.isWriting() ? _wallet : restoredWallet );
+        io.value( io.isWriting() ? _clock : restoredClock );
+        float32 timeScale       = _timeScale;
+        int32   selectedTool    = _selectedTool;
+        int32   monthCount      = _monthCount;
+        int32   evolvedCount    = _evolvedCount;
+        uint8   bPaused         = static_cast<uint8>( _bPaused );
+        uint8   bAutoPlanToggle = static_cast<uint8>( _bAutoPlanToggle );
+        io.value( timeScale );
+        io.value( selectedTool );
+        io.value( monthCount );
+        io.value( evolvedCount );
+        io.value( bPaused );
+        io.value( bAutoPlanToggle );
+        io.end();
+        io.check( timeScale > 0.0f );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _city            = std::move( restoredCity );
+        _planner         = std::move( restoredPlanner );
+        _wallet          = std::move( restoredWallet );
+        _clock           = std::move( restoredClock );
         _timeScale       = timeScale;
         _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
         _monthCount      = monthCount;
@@ -522,7 +511,6 @@ namespace sw
         _bPaused         = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
         _bAutoPlanToggle = bAutoPlanToggle != SW_FALSE ? SW_TRUE : SW_FALSE;
         _listEvent.clear();
-        return true;
     }
 
     void NileGameModeComponent::onStateRestored( bool bRestored )

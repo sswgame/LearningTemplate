@@ -69,7 +69,11 @@ namespace
             sw::StateIO::writeName( written, "rust" );
             written << seed;
             written << static_cast<uint32>( 1 );
-            sw::ScavengerFacility::writeScrap( written, scrap );
+            {
+                sw::ScavengerScrap scrapCopy = scrap;
+                sw::StateIO        io( written );
+                sw::ScavengerFacility::serializeScrap( io, scrapCopy );
+            }
             written << static_cast<uint32>( 0 );
             written << nextUid;
             written << static_cast<int32>( 3 );
@@ -406,7 +410,11 @@ SW_TEST_CASE( ScavengerCarryTest, SpeedAndState )
         forged << static_cast<uint32>( listScrap.size() );
         for ( const sw::ScavengerScrap& scrap : listScrap )
         {
-            sw::ScavengerFacility::writeScrap( forged, scrap );
+            {
+                sw::ScavengerScrap scrapCopy = scrap;
+                sw::StateIO        io( forged );
+                sw::ScavengerFacility::serializeScrap( io, scrapCopy );
+            }
         }
         sw::Archive forgedReading( forged.getData(), forged.getSize() );
         return restored.readState( forgedReading );

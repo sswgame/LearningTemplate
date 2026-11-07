@@ -14,6 +14,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
@@ -80,10 +82,11 @@ namespace sw
         uint32                    getStepCount() const { return _stepCount; }
         const ElementRuleCatalog* getTable() const { return _pTable; }
 
-        /** @brief 크기, 셀(재질, 상태 비트, 상태 값), 바람, 고정 스텝의 남은 시간, 스텝 수를 씁니다. 규칙 테이블은 `initialize` 가 받은 것이므로 저장하지 않습니다. 스텝 안의 대기 변화와 번짐 스크래치는 스텝 사이에 비어 있으므로 저장하지 않고, 알림은 읽을 때 비웁니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 크기가 `initialize` 의 크기와 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. 격자 크기는 맵이 정하므로 바이트로 바꾸지 않습니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 크기, 셀(재질, 상태 비트, 상태 값), 바람, 고정 스텝의 남은 시간, 스텝 수를 씁니다. 규칙 테이블은 `initialize` 가 받은 것이므로 저장하지 않습니다. 스텝 안의 대기 변화와 번짐 스크래치는 스텝 사이에 비어 있으므로 저장하지 않고, 알림은 읽을 때 비웁니다.
+         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 크기가 `initialize` 의 크기와 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. 격자 크기는 맵이 정하므로 바이트로 바꾸지 않습니다.
+         */
+        SW_DECLARE_STATE_IO();
 
     private:
         /** @brief 셀 하나입니다. 재질과 상태(비트와 값)를 담습니다. */
@@ -96,10 +99,8 @@ namespace sw
             /** @brief `write` 가 쓰는 바이트 수입니다. 필드의 크기를 더해 만들고, 필드를 늘리고 여기에 더하지 않으면 `write` 의 정적 검사가 막습니다. */
             static constexpr uint64 kStateBytes = sizeof( _material ) + sizeof( _statusBits ) + sizeof( _arrStatusValue );
 
-            /** @brief 재질, 상태 비트, 상태 값(남은 시간, 세기)을 씁니다. 비트만 실으면 복원한 불이 처음부터 다시 탄다. */
-            void write( Archive& outArchive ) const;
-            /** @brief `write` 가 쓴 바이트를 읽습니다. 오류는 아카이브가 기억합니다. */
-            void read( Archive& archive );
+            /** @brief 재질, 상태 비트, 상태 값(남은 시간, 세기)을 놓습니다. 비트만 실으면 복원한 불이 처음부터 다시 탄다. 오류는 아카이브가 기억합니다. */
+            void serializeState( StateIO& io );
         };
 
         /** @brief 스텝 규칙이 모은 작업 하나입니다. */

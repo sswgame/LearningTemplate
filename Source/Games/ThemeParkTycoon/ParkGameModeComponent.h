@@ -54,7 +54,7 @@ namespace sw
         virtual ~ParkGameModeComponent() override;
 
         /** @brief 공원 상태(시뮬레이션, 건설한 배치, 열차 위치, 타이머, 선택한 배치)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const ThemeParkSimulation& getSimulation() const { return _simulation; }
@@ -68,8 +68,6 @@ namespace sw
     protected:
         /** @brief 배치 데이터를 읽고 공원을 열어 처음 두 개(가장 싼 평지 놀이기구와 코스터)를 건설합니다. */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

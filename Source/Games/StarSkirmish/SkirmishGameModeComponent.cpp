@@ -305,32 +305,25 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
-    void SkirmishGameModeComponent::writeState( Archive& outArchive ) const
+    void SkirmishGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
-        _match.writeState( outArchive );
-        _selection.writeState( outArchive );
-        outArchive << _timeScale;
-        outArchive << static_cast<uint8>( _bPaused );
-    }
-
-    bool SkirmishGameModeComponent::readState( Archive& archive )
-    {
-        if ( StateIO::readHeader( archive, SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        if ( _match.readState( archive ) == false || _selection.readState( archive ) == false )
-            return false;
-        float32 timeScale = 1.0f;
-        uint8   bPaused   = SW_FALSE;
-        archive >> timeScale;
-        archive >> bPaused;
-        const bool bInvalidDirectorState = archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f;
-        if ( bInvalidDirectorState )
-            return false;
-        _timeScale = timeScale;
-        _bPaused   = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
-        _listEvent.clear();
-        return true;
+        io.header( SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        io.value( _match );
+        io.valueAtomic( _selection );
+        float32 timeScale = _timeScale;
+        uint8   bPaused   = static_cast<uint8>( _bPaused );
+        io.value( timeScale );
+        io.value( bPaused );
+        io.end();
+        io.check( timeScale > 0.0f );
+        if ( io.isReading() && io.isOk() )
+        {
+            _timeScale = timeScale;
+            _bPaused   = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
+            _listEvent.clear();
+        }
     }
 
     void SkirmishGameModeComponent::onStateRestored( bool bRestored )

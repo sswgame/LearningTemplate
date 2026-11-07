@@ -79,7 +79,7 @@ namespace sw
         virtual ~ArenaGameModeComponent() override;
 
         /** @brief 판의 진행(웨이브, 처치 수)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 유닛과 투사체는 모습이라 정리하고 다시 스폰합니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
         /** @brief 이번 프레임의 유닛 스냅샷입니다. 워커에서는 인덱스 대신 `data()` 로 읽습니다. */
@@ -137,7 +137,6 @@ namespace sw
     protected:
         /** @brief 어빌리티 카탈로그가 로드돼 있으면 판을 엽니다(웨이브 0이며, 첫 틱이 플레이어와 웨이브 1 을 스폰합니다). */
         [[nodiscard]] bool startGame() override;
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

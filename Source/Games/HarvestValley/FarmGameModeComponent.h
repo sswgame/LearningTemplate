@@ -110,7 +110,7 @@ namespace sw
         virtual ~FarmGameModeComponent() override;
 
         /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력, 가방, 돈은 공유 상태(`SessionStateComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
         /** @brief 상태 해시에 날씨 난수 상태를 접습니다(서버 ↔ 클라이언트가 같은 날씨를 굴렸는지). */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
@@ -166,8 +166,6 @@ namespace sw
     protected:
         /** @brief 작물 카탈로그를 읽고 밭과 출하함을 새로 만들며, 같은 오브젝트의 공유 상태를 엽니다(새 판일 때만 시작 돈과 씨앗을 줍니다). */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

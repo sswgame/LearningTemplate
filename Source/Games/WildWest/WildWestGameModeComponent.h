@@ -43,7 +43,7 @@ namespace sw
         WildWestGameModeComponent();
         virtual ~WildWestGameModeComponent() override;
 
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         /** @brief 판이 열렸으면 읽은 서부극 카탈로그이고, 아니면 nullptr 입니다(말 컴포넌트가 품종을 찾는다). */
         const WesternCatalog* findWesternCatalog() const override { return isStarted() ? _pWesternCatalog.get() : nullptr; }
@@ -54,7 +54,6 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;

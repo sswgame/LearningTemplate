@@ -10,6 +10,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
@@ -113,7 +114,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 구간 여덟 개(지갑, 플래그, 시계, 일지, 평판, 가방, 날씨, 땅)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 보관하고 있던 바이트를 그대로 씁니다. */
-        void writeState( Archive& outArchive ) const;
+        SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief 열리기 전이면 보관해 두었다가 `initialize` 에서 적용하고, 열린 뒤면 바로 적용합니다. `ComponentStateStore::restore` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
@@ -152,8 +153,6 @@ namespace sw
     private:
         /** @brief 보관하고 있던 복원 바이트를 적용합니다. 구조가 깨졌으면 경고를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool applyPendingState();
-        /** @brief 구간을 읽어서 아는 것만 바꿉니다. 구조(헤더와 구간 헤더)가 깨졌으면 false 를 반환하고 아무것도 바꾸지 않습니다. 구간 하나만 깨졌으면 그 구간만 새 판으로 둡니다. */
-        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         Wallet                  _wallet;

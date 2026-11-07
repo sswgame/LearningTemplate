@@ -36,85 +36,6 @@ namespace sw
                 const float32 side = targetX > x ? 1.0f : -1.0f;
                 return targetX - side * range * kApproachRatio;
             }
-
-            /** @brief `writeState` 가 쓴 거점 하나를 읽습니다. @p outSite 는 `initialize` 가 둔 그 자리의 거점입니다. 다른 거점이거나 편 · 체력 · 점령 진행이 범위 밖이면 false 입니다. */
-            [[nodiscard]] static bool readSite( Archive& archive, const ConquestCatalog& catalog, ConquestSite& outSite )
-            {
-                hashed_string siteID;
-                uint8         owner       = 0;
-                uint8         captureTeam = 0;
-                if ( StateIO::readName( archive, siteID ) == false || catalog.findSite( siteID ) != outSite._pDef )
-                    return false;
-                archive >> outSite._gateHealth;
-                archive >> outSite._wallHealth;
-                archive >> outSite._captureProgress;
-                archive >> owner;
-                archive >> captureTeam;
-                const bool bValid = archive.isOk() && owner <= static_cast<uint8>( ConquestTeam::Enemy ) && captureTeam <= static_cast<uint8>( ConquestTeam::Enemy ) &&
-                                    0.0f <= outSite._gateHealth && outSite._gateHealth <= outSite._pDef->_gateHealth && 0.0f <= outSite._wallHealth && outSite._wallHealth <= outSite._pDef->_wallHealth &&
-                                    0.0f <= outSite._captureProgress && outSite._captureProgress <= catalog.getRules()._captureTime;
-                if ( bValid == false )
-                    return false;
-                outSite._owner       = static_cast<ConquestTeam>( owner );
-                outSite._captureTeam = static_cast<ConquestTeam>( captureTeam );
-                return true;
-            }
-
-            /** @brief `writeState` 가 쓴 건물 하나를 읽습니다. 카탈로그에 없는 건물이거나, 이 건물이 훈련하지 않는 병사가 대기열에 있거나, 거점 번호가 @p siteCount 밖이거나, 진행 · 일꾼이 범위 밖이면 false 입니다. */
-            [[nodiscard]] static bool readBuilding( Archive& archive, const ConquestCatalog& catalog, int32 siteCount, ConquestBuilding& outBuilding )
-            {
-                hashed_string buildingID;
-                uint32        queueCount = 0;
-                if ( StateIO::readName( archive, buildingID ) == false || archive.readCount( 4, queueCount ) == false )
-                    return false;
-                outBuilding._pDef = catalog.findBuilding( buildingID );
-                if ( outBuilding._pDef == nullptr )
-                    return false;
-                outBuilding._listQueue.assign( queueCount, hashed_string{} );
-                for ( hashed_string& unitID : outBuilding._listQueue )
-                {
-                    if ( StateIO::readName( archive, unitID ) == false || VectorUtil::contains( outBuilding._pDef->_listTrainable, unitID ) == false || catalog.findUnit( unitID ) == nullptr )
-                        return false;
-                }
-                archive >> outBuilding._cycleProgress;
-                archive >> outBuilding._trainProgress;
-                archive >> outBuilding._siteIndex;
-                archive >> outBuilding._workers;
-                return archive.isOk() && 0 <= outBuilding._siteIndex && outBuilding._siteIndex < siteCount && 0 <= outBuilding._workers && outBuilding._workers <= outBuilding._pDef->_workerSlots &&
-                       0.0f <= outBuilding._cycleProgress && 0.0f <= outBuilding._trainProgress;
-            }
-
-            /** @brief `writeState` 가 쓴 병사 하나를 읽습니다. 카탈로그에 없는 병사이거나 열거형 · 플래그가 깨졌거나 판이 만들 수 없는 값(중립, 플레이어가 아닌 부대원, 사다리가 아닌 걸침, 체력 범위 밖)이면 false 입니다. */
-            [[nodiscard]] static bool readUnit( Archive& archive, const ConquestCatalog& catalog, ConquestUnit& outUnit )
-            {
-                hashed_string unitID;
-                uint8         team  = 0;
-                uint8         order = 0;
-                if ( StateIO::readName( archive, unitID ) == false )
-                    return false;
-                outUnit._pDef = catalog.findUnit( unitID );
-                archive >> outUnit._x;
-                archive >> outUnit._health;
-                const bool bCooldownRead = StateIO::readCountdown( archive, outUnit._attackCooldown );
-                archive >> outUnit._holdX;
-                archive >> outUnit._damageDealt;
-                archive >> outUnit._unitID;
-                archive >> outUnit._squadSlot;
-                archive >> team;
-                archive >> order;
-                archive >> outUnit._bAlive;
-                archive >> outUnit._bPlanted;
-                const bool bValid = bCooldownRead && archive.isOk() && outUnit._pDef != nullptr && team <= static_cast<uint8>( ConquestTeam::Enemy ) &&
-                                    order <= static_cast<uint8>( ConquestOrder::Charge ) && outUnit._bAlive == SW_TRUE && outUnit._bPlanted <= SW_TRUE;
-                if ( bValid == false )
-                    return false;
-                outUnit._team  = static_cast<ConquestTeam>( team );
-                outUnit._order = static_cast<ConquestOrder>( order );
-                // 걸음 끝에 죽은 병사를 지우므로 상태에 든 병사는 살아 있다.
-                const bool bSquadValid   = outUnit._squadSlot >= -1 && ( outUnit._team == ConquestTeam::Player || outUnit._squadSlot == -1 );
-                const bool bPlantedValid = outUnit._bPlanted == SW_FALSE || outUnit._pDef->_siegeRole == ConquestSiegeRole::Ladder;
-                return outUnit._team != ConquestTeam::Neutral && 0.0f < outUnit._health && outUnit._health <= outUnit._pDef->_health && outUnit._unitID >= 1 && bSquadValid && bPlantedValid;
-            }
         };
     } // namespace
 } // namespace sw
@@ -319,125 +240,98 @@ namespace sw
         _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
-    void ConquestWorld::writeState( Archive& outArchive ) const
+    void ConquestWorld::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listSite.size() );
-        for ( const ConquestSite& site : _listSite )
-        {
-            StateIO::writeName( outArchive, site._pDef->_id );
-            outArchive << site._gateHealth;
-            outArchive << site._wallHealth;
-            outArchive << site._captureProgress;
-            outArchive << static_cast<uint8>( site._owner );
-            outArchive << static_cast<uint8>( site._captureTeam );
-        }
-        outArchive << static_cast<uint32>( _listBuilding.size() );
-        for ( const ConquestBuilding& building : _listBuilding )
-        {
-            StateIO::writeName( outArchive, building._pDef->_id );
-            outArchive << static_cast<uint32>( building._listQueue.size() );
-            for ( const hashed_string& unitID : building._listQueue )
-            {
-                StateIO::writeName( outArchive, unitID );
-            }
-            outArchive << building._cycleProgress;
-            outArchive << building._trainProgress;
-            outArchive << building._siteIndex;
-            outArchive << building._workers;
-        }
-        outArchive << static_cast<uint32>( _listUnit.size() );
-        for ( const ConquestUnit& unit : _listUnit )
-        {
-            StateIO::writeName( outArchive, unit._pDef->_id );
-            outArchive << unit._x;
-            outArchive << unit._health;
-            StateIO::writeCountdown( outArchive, unit._attackCooldown );
-            outArchive << unit._holdX;
-            outArchive << unit._damageDealt;
-            outArchive << unit._unitID;
-            outArchive << unit._squadSlot;
-            outArchive << static_cast<uint8>( unit._team );
-            outArchive << static_cast<uint8>( unit._order );
-            outArchive << unit._bAlive;
-            outArchive << unit._bPlanted;
-        }
-        _resource.writeState( outArchive );
-        outArchive << _commander._x;
-        outArchive << _commander._health;
-        StateIO::writeCountdown( outArchive, _commander._attackCooldown );
-        StateIO::writeCountdown( outArchive, _commander._respawnTimer );
-        outArchive << _commander._moveAxis;
-        outArchive << _commander._facing;
-        outArchive << _commander._bAlive;
-        StateIO::writeStepTimer( outArchive, _timer );
-        outArchive << _elapsed;
-        outArchive << _incomeTimer;
-        outArchive << _waveTimer;
-        outArchive << _nextUnitID;
-        outArchive << _bVictory;
-        outArchive << _bDefeat;
-    }
-
-    bool ConquestWorld::readState( Archive& archive )
-    {
-        if ( _pCatalog == nullptr )
-            return false;
-        // 사본에 읽고, 끝까지 맞으면 그때 바꾼다. 카탈로그는 사본도 그대로 가지고 있다.
-        ConquestWorld restored = *this;
-        uint32        count    = 0;
+        if ( io.check( _pCatalog != nullptr ) == false )
+            return;
         // 거점은 카탈로그의 거점마다 하나이다. 이름(4) + 성문, 성벽, 점령(12) + 주인, 점령 편(2)
-        if ( archive.readCount( 18, count ) == false || count != _listSite.size() )
-            return false;
-        for ( ConquestSite& site : restored._listSite )
+        io.expect( static_cast<uint32>( _listSite.size() ) );
+        if ( io.isOk() == false )
+            return;
+        for ( ConquestSite& site : _listSite )
         {
-            if ( ConquestWorldInternal::readSite( archive, *_pCatalog, site ) == false )
-                return false;
+            io.expect( site._pDef->_id );
+            io.value( site._gateHealth );
+            io.value( site._wallHealth );
+            io.value( site._captureProgress );
+            io.enumValue( site._owner, ConquestTeam::Enemy );
+            io.enumValue( site._captureTeam, ConquestTeam::Enemy );
+            if ( io.isReading() && io.check( 0.0f <= site._gateHealth && site._gateHealth <= site._pDef->_gateHealth && 0.0f <= site._wallHealth && site._wallHealth <= site._pDef->_wallHealth && 0.0f <= site._captureProgress && site._captureProgress <= _pCatalog->getRules()._captureTime ) == false )
+                return;
         }
-
+        const int32 siteCount = static_cast<int32>( _listSite.size() );
         // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 슬롯, 일꾼(8)
-        if ( archive.readCount( 24, count ) == false )
-            return false;
-        const int32 siteCount = static_cast<int32>( restored._listSite.size() );
-        restored._listBuilding.assign( count, ConquestBuilding{} );
-        for ( ConquestBuilding& building : restored._listBuilding )
+        io.list( _listBuilding, 24, [&]( ConquestBuilding& building )
         {
-            if ( ConquestWorldInternal::readBuilding( archive, *_pCatalog, siteCount, building ) == false )
-                return false;
-        }
-
+            hashed_string buildingID = io.isWriting() ? building._pDef->_id : hashed_string{};
+            io.value( buildingID );
+            if ( io.isReading() )
+            {
+                building._pDef = _pCatalog->findBuilding( buildingID );
+                if ( io.check( building._pDef != nullptr ) == false )
+                    return;
+            }
+            io.list( building._listQueue, 4, [&]( hashed_string& unitID )
+            {
+                io.value( unitID );
+                if ( io.isReading() )
+                {
+                    io.check( VectorUtil::contains( building._pDef->_listTrainable, unitID ) && _pCatalog->findUnit( unitID ) != nullptr );
+                }
+            } );
+            io.value( building._cycleProgress );
+            io.value( building._trainProgress );
+            io.value( building._siteIndex );
+            io.value( building._workers );
+            io.check( 0 <= building._siteIndex && building._siteIndex < siteCount && 0 <= building._workers && building._workers <= building._pDef->_workerSlots && 0.0f <= building._cycleProgress && 0.0f <= building._trainProgress );
+        } );
         // 병사마다 이름(4) + 위치, 체력, 쿨다운, 대기 위치, 준 피해(20) + 번호, 부대 슬롯(8) + 편, 명령, 생존, 사다리(4)
-        if ( archive.readCount( 36, count ) == false )
-            return false;
-        restored._listUnit.assign( count, ConquestUnit{} );
-        for ( ConquestUnit& unit : restored._listUnit )
+        io.list( _listUnit, 36, [&]( ConquestUnit& unit )
         {
-            if ( ConquestWorldInternal::readUnit( archive, *_pCatalog, unit ) == false )
-                return false;
+            hashed_string unitID = io.isWriting() ? unit._pDef->_id : hashed_string{};
+            io.value( unitID );
+            if ( io.isReading() )
+            {
+                unit._pDef = _pCatalog->findUnit( unitID );
+            }
+            io.value( unit._x );
+            io.value( unit._health );
+            io.value( unit._attackCooldown );
+            io.value( unit._holdX );
+            io.value( unit._damageDealt );
+            io.value( unit._unitID );
+            io.value( unit._squadSlot );
+            io.enumValue( unit._team, ConquestTeam::Enemy );
+            io.enumValue( unit._order, ConquestOrder::Charge );
+            io.flag( unit._bAlive );
+            io.flag( unit._bPlanted );
+            if ( io.isWriting() || io.check( unit._pDef != nullptr && unit._bAlive == SW_TRUE ) == false )
+                return;
+            // 걸음 끝에 죽은 병사를 지우므로 상태에 든 병사는 살아 있다.
+            const bool bSquadValid   = unit._squadSlot >= -1 && ( unit._team == ConquestTeam::Player || unit._squadSlot == -1 );
+            const bool bPlantedValid = unit._bPlanted == SW_FALSE || unit._pDef->_siegeRole == ConquestSiegeRole::Ladder;
+            io.check( unit._team != ConquestTeam::Neutral && 0.0f < unit._health && unit._health <= unit._pDef->_health && unit._unitID >= 1 && bSquadValid && bPlantedValid );
+        } );
+        io.value( _resource );
+        io.value( _commander._x );
+        io.value( _commander._health );
+        io.value( _commander._attackCooldown );
+        io.value( _commander._respawnTimer );
+        io.value( _commander._moveAxis );
+        io.value( _commander._facing );
+        io.flag( _commander._bAlive );
+        io.value( _timer );
+        io.value( _elapsed );
+        io.value( _incomeTimer );
+        io.value( _waveTimer );
+        io.value( _nextUnitID );
+        io.flag( _bVictory );
+        io.flag( _bDefeat );
+        if ( io.isReading() && io.isOk() )
+        {
+            io.check( isStateConsistent() );
+            _eventBuffer.clear();
         }
-
-        if ( restored._resource.readState( archive ) == false )
-            return false;
-        archive >> restored._commander._x;
-        archive >> restored._commander._health;
-        const bool bCommanderTimerRead =
-            StateIO::readCountdown( archive, restored._commander._attackCooldown ) && StateIO::readCountdown( archive, restored._commander._respawnTimer );
-        archive >> restored._commander._moveAxis;
-        archive >> restored._commander._facing;
-        archive >> restored._commander._bAlive;
-        const bool bStepRead = StateIO::readStepTimer( archive, restored._timer );
-        archive >> restored._elapsed;
-        archive >> restored._incomeTimer;
-        archive >> restored._waveTimer;
-        archive >> restored._nextUnitID;
-        archive >> restored._bVictory;
-        archive >> restored._bDefeat;
-        const bool bValid = bCommanderTimerRead && bStepRead && archive.isOk() && restored._commander._bAlive <= SW_TRUE && restored._bVictory <= SW_TRUE &&
-                            restored._bDefeat <= SW_TRUE;
-        if ( bValid == false || restored.isStateConsistent() == false )
-            return false;
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
     }
 
     bool ConquestWorld::isStateConsistent() const

@@ -23,6 +23,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
@@ -267,14 +268,11 @@ namespace sw
          * @brief 세이브와 핫 리로드용 전체 상태를 씁니다. 팀 이름, 판(`MatchState`), 걸음, 조종사(덱과 스킬 id, 위치, 속도, 입력, 타이머, 체력, 부스트,
          *        록온, 근접 타임라인, 무기, 쿨다운, 전적), 탄을 씁니다. 넷 스냅샷(`writeSnapshotMessage`)은 화면용으로 양자화되어 복원할 수 없으므로 따로 둡니다.
          *        설정과 카탈로그는 `initialize` 에서 받은 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
-         */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState( Archive& )` 가 쓴 바이트로 상태를 바꿉니다. 팀과 조종사는 바이트가 정하고, 기체, 스킬, 기술은 `initialize` 의 카탈로그에서 id 로 찾습니다.
+         *        `writeState( Archive& )` 가 쓴 바이트로 상태를 바꿉니다. 팀과 조종사는 바이트가 정하고, 기체, 스킬, 기술은 `initialize` 의 카탈로그에서 id 로 찾습니다.
          *        `initialize` 하지 않았거나, 없는 id 이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
-        [[nodiscard]] bool readState( Archive& archive );
-        void               pollEvents( vector<MechArenaEvent>& outListEvent );
+        SW_DECLARE_STATE_IO();
+        void pollEvents( vector<MechArenaEvent>& outListEvent );
 
         const MechPilot*               findPilot( int32 pilot ) const { return isValidPilot( pilot ) ? &_listPilot[static_cast<size_t>( pilot )] : nullptr; }
         int32                          getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
@@ -320,14 +318,14 @@ namespace sw
         static void retirePilot( MechPilot& pilot );
         /** @brief `start` 가 판에 주는 설정입니다(복원할 때 같은 설정으로 판을 다시 엽니다). */
         MatchSettings makeMatchSettings() const;
-        /** @brief 조종사 하나를 읽어 덱과 스킬을 카탈로그에서 찾고, 탄 기체를 장착한 뒤 상태를 덮어씁니다. 바이트가 깨졌으면 false 를 반환합니다. */
-        [[nodiscard]] bool readPilot( Archive& archive, int32 pilotIndex, MechPilot& outPilot );
-        void               collectCandidates( int32 pilot, vector<LockOnCandidate>& outListCandidate ) const;
-        float3             computeCenter( const MechPilot& pilot ) const;
-        int32              findLockTarget( int32 pilot );
-        int32              countActiveSkills( const MechPilot& pilot ) const;
-        int32              findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
-        bool               isTargetable( int32 pilot ) const;
+        /** @brief 조종사 하나를 놓습니다. 읽을 때는 덱과 스킬을 카탈로그에서 찾고, 탄 기체를 장착한 뒤 상태를 덮어씁니다. */
+        void   serializePilot( StateIO& io, int32 pilotIndex, MechPilot& pilot );
+        void   collectCandidates( int32 pilot, vector<LockOnCandidate>& outListCandidate ) const;
+        float3 computeCenter( const MechPilot& pilot ) const;
+        int32  findLockTarget( int32 pilot );
+        int32  countActiveSkills( const MechPilot& pilot ) const;
+        int32  findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
+        bool   isTargetable( int32 pilot ) const;
         /** @brief @p other 가 @p team 의 적이고 지금 맞힐 수 있는지 반환합니다(근접, 광선, 탄, 록온 후보가 같은 판정을 씁니다). */
         bool isEnemyTarget( int32 team, int32 other ) const;
         void pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );

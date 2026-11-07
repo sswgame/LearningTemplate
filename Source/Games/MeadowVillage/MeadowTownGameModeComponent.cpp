@@ -51,12 +51,26 @@ namespace sw
 
     MeadowTownGameModeComponent::~MeadowTownGameModeComponent() = default;
 
-    void MeadowTownGameModeComponent::writeState( Archive& outArchive ) const
+    void MeadowTownGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        Archive body;
-        _town.writeState( body );
-        StateIO::writeSection( outArchive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
+        SessionStateComponent* pState = io.isReading() ? SessionStateComponent::findOnOwner( *this ) : nullptr;
+        if ( io.check( pState != nullptr ) == false )
+            return;
+        io.header( kStateTag, kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        CreatureTown restoredTown;
+        if ( io.isReading() && io.check( initializeTown( restoredTown, *pState ) ) == false )
+            return;
+        CreatureTown& town = io.isWriting() ? _town : restoredTown;
+        io.section( CreatureTown::kStateTag, CreatureTown::kStateVersion, [&town]( StateIO& bodyIO )
+        { bodyIO.value( town ); } );
+        io.end();
+        if ( io.isReading() && io.isOk() )
+        {
+            _town        = std::move( restoredTown );
+            _bViewsDirty = SW_TRUE;
+        }
     }
 
     bool MeadowTownGameModeComponent::startGame()
@@ -77,25 +91,6 @@ namespace sw
             (void)_town.setObject( 0, 0, "grass" );
             (void)_town.setObject( 1, 0, "grass" );
         }
-        _bViewsDirty = SW_TRUE;
-        return true;
-    }
-
-    bool MeadowTownGameModeComponent::readState( Archive& archive )
-    {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        Archive                body;
-        const bool             bFrameRead = pState != nullptr && StateIO::readHeader( archive, kStateTag, kStateVersion ) &&
-                                StateIO::readExpectedSection( archive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
-        if ( bFrameRead == false )
-            return false;
-        CreatureTown town;
-        if ( initializeTown( town, *pState ) == false )
-            return false;
-        const bool bRead = town.readState( body ) && body.getRemainingBytes() == 0 && archive.getRemainingBytes() == 0;
-        if ( bRead == false )
-            return false;
-        _town        = std::move( town );
         _bViewsDirty = SW_TRUE;
         return true;
     }

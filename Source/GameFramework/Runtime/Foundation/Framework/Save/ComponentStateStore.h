@@ -27,7 +27,7 @@ namespace sw
      *          언리얼의 `UObject::Serialize` 오버라이드와 유니티의 `ISerializationCallbackReceiver` 에 해당한다.
      *
      *          컴포넌트 쪽 약속은 다음과 같다. 템플릿이 이름으로 부른다.
-     *          - `void writeState( Archive& outArchive ) const`: 지금 상태를 쓴다. 첫 값은 그 컴포넌트의 형식 버전으로 둔다.
+     *          - `void writeState( Archive& outArchive ) const`: 지금 상태를 쓴다(`SW_DECLARE_STATE_IO` 가 낸다). 첫 값은 그 컴포넌트의 형식 버전으로 둔다.
      *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 보관했다가 시작할 때 적용한다.
      *            읽지 못하면(버전이나 길이가 맞지 않음) 알리고 새 판으로 시작한다.
      *

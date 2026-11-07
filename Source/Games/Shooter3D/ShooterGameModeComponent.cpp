@@ -195,32 +195,25 @@ namespace sw
         updatePlayerView();
     }
 
-    void ShooterGameModeComponent::writeState( Archive& outArchive ) const
+    void ShooterGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
-        outArchive << _killCount;
-        outArchive << static_cast<uint8>( _bPacingReady );
-        if ( _bPacingReady == SW_TRUE )
-            _director.writeState( outArchive );
-    }
-
-    bool ShooterGameModeComponent::readState( Archive& archive )
-    {
-        uint32 killCount = 0;
-        uint8  bPacing   = SW_FALSE;
-        if ( StateIO::readHeader( archive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion ) == false )
-            return false;
-        archive >> killCount;
-        archive >> bPacing;
-        if ( archive.isError() || ( bPacing == SW_TRUE && _bPacingReady == SW_FALSE ) )
-            return false;
+        uint32 killCount = _killCount;
+        uint8  bPacing   = static_cast<uint8>( _bPacingReady );
+        io.header( ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
+        io.value( killCount );
+        io.value( bPacing );
+        if ( io.check( bPacing != SW_TRUE || _bPacingReady != SW_FALSE ) == false )
+            return;
         // 감독은 단계 · 웨이브 · 예산 · 산 스폰까지 잇는다. 적 모습은 복원 뒤 걷히고(`onViewsDespawned`) 감독 예산으로 섰던 것만 같은 스폰 id 로 다시 선다.
-        if ( bPacing == SW_TRUE && _director.readState( archive ) == false )
-            return false;
-        if ( archive.getRemainingBytes() != 0 )
-            return false;
-        _killCount = killCount;
-        return true;
+        if ( bPacing == SW_TRUE )
+        {
+            io.valueAtomic( _director );
+        }
+        io.end();
+        if ( io.isReading() && io.isOk() )
+        {
+            _killCount = killCount;
+        }
     }
 
     void ShooterGameModeComponent::onStateRestored( bool bRestored )

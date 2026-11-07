@@ -73,75 +73,35 @@ namespace sw
                 return name;
             }
 
-            static void writePlayer( Archive& outArchive, const TrampolinePlayer& body )
+            static void serializePlayer( StateIO& io, int32 playerCount, int32 maxCombo, TrampolinePlayer& body )
             {
-                outArchive << body._position;
-                outArchive << body._velocity;
-                outArchive << body._facing;
-                outArchive << body._input._moveX;
-                outArchive << body._input._moveZ;
-                outArchive << body._input._bJumpPressed;
-                outArchive << body._input._bAttackPressed;
-                outArchive << body._input._bPoundPressed;
-                outArchive << body._landTime;
-                outArchive << body._jumpPressTime;
-                StateIO::writeCountdown( outArchive, body._contactTimer );
-                StateIO::writeCountdown( outArchive, body._attackTimer );
-                StateIO::writeCountdown( outArchive, body._attackCooldown );
-                StateIO::writeCountdown( outArchive, body._stunTimer );
-                StateIO::writeCountdown( outArchive, body._invulnerableTimer );
-                outArchive << body._lastHitTime;
-                StateIO::writeCountdown( outArchive, body._heavyTimer );
-                outArchive << body._knockbackTaken;
-                outArchive << body._knockbackDealt;
-                outArchive << body._combo;
-                outArchive << body._lastHitter;
-                outArchive << body._bPounding;
-                outArchive << body._bSuperBounce;
-                outArchive << body._bShield;
-                outArchive << body._bHitThisDash;
-                outArchive << static_cast<uint8>( body._state );
-            }
-
-            [[nodiscard]] static bool readPlayer( Archive& archive, int32 playerCount, int32 maxCombo, TrampolinePlayer& outBody )
-            {
-                archive >> outBody._position;
-                archive >> outBody._velocity;
-                archive >> outBody._facing;
-                archive >> outBody._input._moveX;
-                archive >> outBody._input._moveZ;
-                archive >> outBody._input._bJumpPressed;
-                archive >> outBody._input._bAttackPressed;
-                archive >> outBody._input._bPoundPressed;
-                archive >> outBody._landTime;
-                archive >> outBody._jumpPressTime;
-                const bool bTimersRead = StateIO::readCountdown( archive, outBody._contactTimer ) && StateIO::readCountdown( archive, outBody._attackTimer ) &&
-                                         StateIO::readCountdown( archive, outBody._attackCooldown ) && StateIO::readCountdown( archive, outBody._stunTimer ) &&
-                                         StateIO::readCountdown( archive, outBody._invulnerableTimer );
-                archive >> outBody._lastHitTime;
-                const bool bHeavyRead = StateIO::readCountdown( archive, outBody._heavyTimer );
-                uint8      state      = 0;
-                archive >> outBody._knockbackTaken;
-                archive >> outBody._knockbackDealt;
-                archive >> outBody._combo;
-                archive >> outBody._lastHitter;
-                archive >> outBody._bPounding;
-                archive >> outBody._bSuperBounce;
-                archive >> outBody._bShield;
-                archive >> outBody._bHitThisDash;
-                archive >> state;
-                const bool bInputValid       = outBody._input._bJumpPressed <= SW_TRUE && outBody._input._bAttackPressed <= SW_TRUE && outBody._input._bPoundPressed <= SW_TRUE;
-                const bool bFlagsValid       = outBody._bPounding <= SW_TRUE && outBody._bSuperBounce <= SW_TRUE && outBody._bShield <= SW_TRUE && outBody._bHitThisDash <= SW_TRUE;
-                const bool bHitterValid      = -1 <= outBody._lastHitter && outBody._lastHitter < playerCount;
-                const bool bStateValid       = state <= static_cast<uint8>( TrampolinePlayerState::Respawning );
-                const bool bComboValid       = 0 <= outBody._combo && outBody._combo <= maxCombo;
-                const bool bKnockbackValid   = outBody._knockbackTaken >= 0.0f && outBody._knockbackDealt >= 0.0f;
-                const bool bInvalidBodyState = bTimersRead == false || bHeavyRead == false || archive.isError() || bInputValid == false || bFlagsValid == false || bHitterValid == false ||
-                                               bStateValid == false || bComboValid == false || bKnockbackValid == false;
-                if ( bInvalidBodyState )
-                    return false;
-                outBody._state = static_cast<TrampolinePlayerState>( state );
-                return true;
+                io.value( body._position );
+                io.value( body._velocity );
+                io.value( body._facing );
+                io.value( body._input._moveX );
+                io.value( body._input._moveZ );
+                io.flag( body._input._bJumpPressed );
+                io.flag( body._input._bAttackPressed );
+                io.flag( body._input._bPoundPressed );
+                io.value( body._landTime );
+                io.value( body._jumpPressTime );
+                io.value( body._contactTimer );
+                io.value( body._attackTimer );
+                io.value( body._attackCooldown );
+                io.value( body._stunTimer );
+                io.value( body._invulnerableTimer );
+                io.value( body._lastHitTime );
+                io.value( body._heavyTimer );
+                io.value( body._knockbackTaken );
+                io.value( body._knockbackDealt );
+                io.value( body._combo );
+                io.value( body._lastHitter );
+                io.flag( body._bPounding );
+                io.flag( body._bSuperBounce );
+                io.flag( body._bShield );
+                io.flag( body._bHitThisDash );
+                io.enumValue( body._state, TrampolinePlayerState::Respawning );
+                io.check( -1 <= body._lastHitter && body._lastHitter < playerCount && 0 <= body._combo && body._combo <= maxCombo && body._knockbackTaken >= 0.0f && body._knockbackDealt >= 0.0f );
             }
         };
     } // namespace
@@ -330,53 +290,35 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void TrampolineArena::writeState( Archive& outArchive ) const
+    void TrampolineArena::serializeState( StateIO& io )
     {
-        outArchive << static_cast<uint32>( _listPlayer.size() );
-        for ( const TrampolinePlayer& body : _listPlayer )
+        io.expect( static_cast<uint32>( _listPlayer.size() ) );
+        if ( io.isOk() == false )
+            return;
+        const int32 peopleCount = static_cast<int32>( _listPlayer.size() );
+        for ( TrampolinePlayer& body : _listPlayer )
         {
-            TrampolineArenaInternal::writePlayer( outArchive, body );
+            TrampolineArenaInternal::serializePlayer( io, peopleCount, _settings._maxCombo, body );
         }
-        _itemSpawner.writeState( outArchive );
-        _match.writeState( outArchive );
-        StateIO::writeStepTimer( outArchive, _timer );
-        outArchive << _time;
-    }
-
-    bool TrampolineArena::readState( Archive& archive )
-    {
-        uint32 playerCount = 0;
-        archive >> playerCount;
-        if ( archive.isError() || playerCount != _listPlayer.size() )
-            return false;
-        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정, 판정 창, 아이템 정의는 사본도 그대로 가지고 있다.
-        TrampolineArena arena = *this;
-        for ( TrampolinePlayer& body : arena._listPlayer )
-        {
-            if ( TrampolineArenaInternal::readPlayer( archive, static_cast<int32>( playerCount ), _settings._maxCombo, body ) == false )
-                return false;
-        }
-        const bool bPartsRead = arena._itemSpawner.readState( archive ) && arena._match.readState( archive ) && StateIO::readStepTimer( archive, arena._timer );
-        archive >> arena._time;
-        if ( bPartsRead == false || archive.isError() || arena._time < 0.0f )
-            return false;
+        io.value( _itemSpawner );
+        io.value( _match );
+        io.value( _timer );
+        io.value( _time );
+        if ( io.check( 0.0f <= _time ) == false || io.isWriting() )
+            return;
         // 사람마다 팀과 참가자가 하나다. `reportKill` 과 점수가 사람 번호를 그대로 쓴다.
-        const int32 peopleCount = static_cast<int32>( playerCount );
-        if ( arena._match.getTeamCount() != peopleCount || arena._match.getParticipantCount() != peopleCount )
-            return false;
-        if ( arena._match.getPhase() == MatchPhase::InProgress )
+        if ( io.check( _match.getTeamCount() == peopleCount && _match.getParticipantCount() == peopleCount ) == false )
+            return;
+        if ( _match.getPhase() == MatchPhase::InProgress )
         {
             // 진행 중이면 몸과 경기가 함께 움직인다. 어긋나면 탈락한 몸이 오지 않을 부활을 기다리거나, 산 몸이 부활 지점으로 튄다.
             for ( int32 player = 0; player < peopleCount; ++player )
             {
-                const bool bRespawning = arena._listPlayer[static_cast<size_t>( player )]._state == TrampolinePlayerState::Respawning;
-                if ( bRespawning == ( arena._match.findParticipant( player )->_bAlive == SW_TRUE ) )
-                    return false;
+                const bool bRespawning = _listPlayer[static_cast<size_t>( player )]._state == TrampolinePlayerState::Respawning;
+                io.check( bRespawning != ( _match.findParticipant( player )->_bAlive == SW_TRUE ) );
             }
         }
-        arena._eventBuffer.clear();
-        *this = std::move( arena );
-        return true;
+        _eventBuffer.clear();
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------

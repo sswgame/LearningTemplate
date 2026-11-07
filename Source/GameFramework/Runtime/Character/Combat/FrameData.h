@@ -19,6 +19,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -280,9 +281,20 @@ namespace sw
         static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardOutcome( height, stance ) == GuardResult::Blocked; }
 
         /** @brief 재생 중이면 기술 id, 프레임, 히트스톱, 접촉, 막힘을 씁니다. 기술 정의는 카탈로그의 것이므로 id 만 싣습니다. */
-        void writeState( Archive& outArchive ) const;
+        void writeState( Archive& outArchive ) const
+        {
+            StateIO io( outArchive );
+            const_cast<MoveTimeline*>( this )->serializeState( io, nullptr );
+        }
         /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 기술은 @p catalog 에서 id 로 찾으며, 바이트가 깨졌거나 없는 기술이면 false 를 반환하고 상태는 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive, const MoveCatalog& catalog );
+        [[nodiscard]] bool readState( Archive& archive, const MoveCatalog& catalog )
+        {
+            StateIO io( archive );
+            serializeState( io, &catalog );
+            return io.isOk();
+        }
+        /** @brief 쓰기와 읽기를 함께 적은 본문입니다. 읽을 때는 @p pCatalog 가 필수이고 쓸 때는 쓰지 않습니다(기술은 id 로 다시 찾는다). */
+        void serializeState( StateIO& io, const MoveCatalog* pCatalog );
 
     private:
         MoveFrameData _move;

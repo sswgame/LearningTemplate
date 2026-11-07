@@ -40,13 +40,12 @@ namespace sw
         FrontierSkirmishGameModeComponent();
         virtual ~FrontierSkirmishGameModeComponent() override;
 
-        void writeState( Archive& outArchive ) const override;
+        void serializeState( StateIO& io ) override;
 
         const RTSWorld& getWorld() const { return _world; }
 
     protected:
         [[nodiscard]] bool startGame() override;
-        [[nodiscard]] bool readState( Archive& archive ) override;
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;

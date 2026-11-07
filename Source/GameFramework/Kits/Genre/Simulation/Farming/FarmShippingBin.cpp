@@ -16,13 +16,9 @@ namespace sw
     {
     }
 
-    bool FarmShippingBin::readState( Archive& archive )
+    void FarmShippingBin::serializeState( StateIO& io )
     {
-        ItemStackList bin;
-        if ( bin.readState( archive ) == false )
-            return false;
-        _bin = std::move( bin );
-        return true;
+        io.value( _bin );
     }
 
     bool FarmShippingBin::shipItem( Inventory& inoutBag, const hashed_string& itemID, int32 count )

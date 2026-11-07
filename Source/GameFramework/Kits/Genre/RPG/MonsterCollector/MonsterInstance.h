@@ -172,20 +172,17 @@ namespace sw
         [[nodiscard]] bool  swapPartyOrder( int32 firstIndex, int32 secondIndex );
         /** @brief 파티를 모두 회복합니다. */
         void restoreParty();
-        /** @brief 파티와 박스의 개체를 씁니다. 박스 정원은 `initialize` 에서 받은 설정이라 싣지 않습니다. */
-        void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 파티가 6을 넘거나 박스가 정원을 넘거나 카탈로그에 없는 개체이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool readState( Archive& archive );
+        /**
+         * @brief 파티와 박스의 개체를 씁니다. 박스 정원은 `initialize` 에서 받은 설정이라 싣지 않습니다.
+         *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 파티가 6을 넘거나 박스가 정원을 넘거나 카탈로그에 없는 개체이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         */
+        SW_DECLARE_STATE_IO();
 
         bool                           hasUsableMonster() const;
         const vector<MonsterInstance>& getParty() const { return _listParty; }
         vector<MonsterInstance>&       getParty() { return _listParty; }
         const vector<MonsterInstance>& getBox() const { return _listBox; }
         int32                          getBoxCapacity() const { return _boxCapacity; }
-
-    private:
-        /** @brief 개체 @p count 마리를 읽어 @p outListMonster 를 채웁니다. 깨졌거나 카탈로그에 없으면 false 입니다. */
-        [[nodiscard]] bool readMonsters( Archive& archive, uint32 count, vector<MonsterInstance>& outListMonster ) const;
 
     private:
         vector<MonsterInstance>        _listParty;

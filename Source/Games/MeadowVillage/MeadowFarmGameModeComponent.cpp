@@ -61,12 +61,25 @@ namespace sw
 
     MeadowFarmGameModeComponent::~MeadowFarmGameModeComponent() = default;
 
-    void MeadowFarmGameModeComponent::writeState( Archive& outArchive ) const
+    void MeadowFarmGameModeComponent::serializeState( StateIO& io )
     {
-        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
-        Archive body;
-        _field.writeState( body );
-        StateIO::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, body );
+        io.header( kStateTag, kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        FarmField restoredField;
+        if ( io.isReading() )
+        {
+            restoredField.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<const CropCatalog>() );
+        }
+        FarmField& field = io.isWriting() ? _field : restoredField;
+        io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
+        { bodyIO.value( field ); } );
+        io.end();
+        if ( io.isReading() && io.isOk() )
+        {
+            _field       = std::move( restoredField );
+            _bViewsDirty = SW_TRUE;
+        }
     }
 
     bool MeadowFarmGameModeComponent::startGame()
@@ -93,23 +106,6 @@ namespace sw
                 replant( x, y, season );
             }
         }
-        _bViewsDirty = SW_TRUE;
-        return true;
-    }
-
-    bool MeadowFarmGameModeComponent::readState( Archive& archive )
-    {
-        Archive    body;
-        const bool bFrameRead = StateIO::readHeader( archive, kStateTag, kStateVersion ) &&
-                                StateIO::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, body );
-        if ( bFrameRead == false )
-            return false;
-        FarmField field;
-        field.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<const CropCatalog>() );
-        const bool bRead = field.readState( body ) && body.getRemainingBytes() == 0 && archive.getRemainingBytes() == 0;
-        if ( bRead == false )
-            return false;
-        _field       = std::move( field );
         _bViewsDirty = SW_TRUE;
         return true;
     }
