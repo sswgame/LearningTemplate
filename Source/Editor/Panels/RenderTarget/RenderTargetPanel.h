@@ -13,6 +13,7 @@
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 // `vector<RenderTargetInfo>` 와 `RenderTargetReadback` 을 멤버로 가지므로 완전한 타입이 필요하다. 전방 선언으로는 안 된다.
 
@@ -129,7 +130,8 @@ namespace sw::editor
         /** @brief 미리보기 이미지를 만들 때 쓴 깊이 범위입니다. 회색 0 ~ 1 에 대응합니다. */
         float2 _snapshotDepthRange;
         /** @brief 마지막으로 읽은 픽셀 값입니다. */
-        float4 _probedPixel;
+        float4                      _probedPixel;
+        vector<GBufferDecodedValue> _listDecodedValue; ///< G버퍼 첨부의 칸을 명세로 푼 값(툴팁마다 다시 채운다)
         /** @brief 마지막으로 읽은 픽셀 좌표입니다. */
         int2 _probedTexel;
         /** @brief 처리를 기다리는 읽기 요청 번호입니다. 0 이면 없습니다. */

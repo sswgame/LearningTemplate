@@ -101,7 +101,7 @@ static uint LightGrid::computeVisitCount( float3 worldPosition )
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
 #if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) ||               \
     defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY ) || \
-    defined( SW_VIEWMODE_WIREOVERLAY ) || defined( SW_VIEWMODE_LODLEVEL ) || defined( SW_VIEWMODE_LODFADE )
+    defined( SW_VIEWMODE_WIREOVERLAY ) || defined( SW_VIEWMODE_LODLEVEL ) || defined( SW_VIEWMODE_LODFADE ) || defined( SW_VIEWMODE_SHADINGPATH )
     #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
     #define SW_VIEWMODE_SKIPS_LIGHTING 0
@@ -179,6 +179,28 @@ static float3 ViewMode::computeLODFadeColor( uint entry )
 }
 
 /**
+ * @brief 보기 모드 ShadingPath 의 색 — 이 셰이더 변형이 어느 경로로 그리는지는 컴파일 때 정해진다(패스 define · 머티리얼 define).
+ * @details 디퍼드 G버퍼 조명 파랑 · G버퍼 조명 없음 청회색 · 포워드 전용(MATERIAL_FORWARD_ONLY — 디퍼드가 G버퍼에서 뺀 배치) 주황 · 반투명 보라 · 포워드 초록 · 포워드 조명 없음 짙은 초록.
+ *          C++ 정본은 RenderViewSettings.h 의 `RenderViewMode::ShadingPath` 설명이다.
+ */
+static float3 ViewMode::computeShadingPathColor()
+{
+#if defined( SW_PASS_GBUFFER ) && defined( SW_MATERIAL_UNLIT )
+    return float3( 0.35f, 0.55f, 0.60f );
+#elif defined( SW_PASS_GBUFFER )
+    return float3( 0.20f, 0.45f, 0.95f );
+#elif defined( MATERIAL_BLEND_TRANSLUCENT )
+    return float3( 0.75f, 0.35f, 0.90f );
+#elif defined( MATERIAL_FORWARD_ONLY )
+    return float3( 0.95f, 0.55f, 0.15f );
+#elif defined( SW_MATERIAL_UNLIT )
+    return float3( 0.10f, 0.45f, 0.20f );
+#else
+    return float3( 0.25f, 0.80f, 0.35f );
+#endif
+}
+
+/**
  * @brief 보기 모드가 바꾼 표면 색이다. Lit 에서는 부르지 않는다(SW_VIEWMODE_SKIPS_LIGHTING 이 0).
  * @details Overdraw 는 알파 0 을 낸다 — PSO 가 프리멀티플라이 블렌드(색 One / InvSrcAlpha)라 알파 0 이 더하기가 된다.
  *          Depth 는 클립 w(원근 카메라의 뷰 공간 깊이)다. 직교 카메라는 w 가 1 이라 한 색이다.
@@ -225,6 +247,11 @@ static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 
     // ShadedWireframe 의 두 번째 드로우 — PSO 가 삼각형을 선으로 그리므로 단색이면 외곽선이다.
     return float4( kViewModeWireOverlayColor, 1.0f );
 }
+#elif defined( SW_VIEWMODE_SHADINGPATH )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
+    return float4( ViewMode::computeShadingPathColor(), 1.0f );
+}
 #elif defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
 static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
@@ -255,8 +282,11 @@ static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 i
 
 // G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferred_lighting 이 읽는다).
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
-#define SW_GBUFFER_SHADING_LIT   1.0f
-#define SW_GBUFFER_SHADING_UNLIT 0.0f
+// G버퍼 명세의 판이다 — C++ `GBufferLayout::kVersion`(Renderer/Pipeline/GBufferLayout.h)과 같아야 한다(단위 테스트 GBufferLayoutTest 가 맞춘다).
+// 첨부 · 채널 · 인코딩(아래 셰이딩 모델 · 그려짐 · 옥타헤드럴 노멀)을 바꾸면 두 곳을 함께 올린다.
+#define SW_GBUFFER_LAYOUT_VERSION 1
+#define SW_GBUFFER_SHADING_LIT    1.0f
+#define SW_GBUFFER_SHADING_UNLIT  0.0f
 #if SW_VIEWMODE_SKIPS_LIGHTING
     #define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_UNLIT
 #else

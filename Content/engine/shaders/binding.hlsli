@@ -190,6 +190,7 @@ struct ViewMode
     static float3 computeLightComplexityColor( uint visitCount );
     static float3 computeLODLevelColor( uint entry );
     static float3 computeLODFadeColor( uint entry );
+    static float3 computeShadingPathColor(); // 보기 모드 ShadingPath — 이 변형이 그리는 셰이딩 경로의 색
     static float4 computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
     static float3 overrideLightingAlbedo( float3 albedo ); // LightingOnly 만 표면 색을 회색으로 바꾼다
     static void applyToSurface( inout float4 inoutLitColor, inout float4 inoutAlbedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );

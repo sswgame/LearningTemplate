@@ -1337,6 +1337,7 @@
 		<entry key="EdViewMode.Overdraw" text="오버드로" sourceHash="a88c71117100df4d" />
 		<entry key="EdViewMode.Roughness" text="거칠기" sourceHash="dea02d9fafe208b5" />
 		<entry key="EdViewMode.ShadedWireframe" text="셰이드 와이어프레임" sourceHash="eedf8d2e1a0c0f80" />
+		<entry key="EdViewMode.ShadingPath" text="셰이딩 경로" sourceHash="42c1cd79e1cd0620" />
 		<entry key="EdViewMode.Unlit" text="조명 없음" sourceHash="2435a2b51ac7281f" />
 		<entry key="EdViewMode.Wireframe" text="와이어프레임" sourceHash="96f013195da95865" />
 		<entry key="EdVisualizer.BillboardLabel" text="아이콘" sourceHash="b321dddd2d6e46f9" />

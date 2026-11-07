@@ -134,6 +134,8 @@ namespace sw::editor
                     return SW_LOCKEY( "EdViewMode", "LODFadeCode" );
                 case RenderViewMode::MarkerSlots:
                     return SW_LOCKEY( "EdViewMode", "MarkerSlots" );
+                case RenderViewMode::ShadingPath:
+                    return SW_LOCKEY( "EdViewMode", "ShadingPath" );
                 case RenderViewMode::Count:
                     break;
             }

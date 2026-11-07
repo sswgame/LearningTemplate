@@ -6,14 +6,14 @@
 
 #include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 namespace sw
 {
     namespace
     {
-        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도(알파 = 셰이딩 모델), [1] 노멀(옥타헤드럴 좌표 snorm16 둘 — binding.hlsli Octahedral::encode),
-        /// [2] 머티리얼(r 금속도, g 거칠기, a 그려졌다 표시 — binding.hlsli SurfaceOutput::encodeGbufferMaterial).
-        constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16_SNORM, RHIFormat::R8G8B8A8_UNORM };
+        /// G버퍼 MRT 의 고정 포맷입니다. 명세 한 벌(`GBufferLayout` — 알베도 · 노멀 · 머티리얼, 판 번호 있음)에서 온다 — 포맷을 여기 따로 적지 않는다.
+        constexpr const RHIFormat* kArrGBufferColorFormat = GBufferLayout::kArrColorFormat;
 
         /// 깊이 히스토리의 고정 포맷입니다(깊이 하나 — 컴퓨트가 RW 텍스처로 읽는다. R32 실수는 네 백엔드 모두 형식 있는 UAV 읽기가 된다).
         constexpr RHIFormat kArrDepthHistoryFormat[] = { RHIFormat::R32_FLOAT };
@@ -91,7 +91,7 @@ namespace sw
                         info._pPassDefine             = kPassGBufferDefine;
                         info._pExcludedMaterialDefine = kMaterialForwardOnlyDefine;
                         info._pColorFormat            = kArrGBufferColorFormat;
-                        info._colorTargetCount        = static_cast<uint32>( sizeof( kArrGBufferColorFormat ) / sizeof( kArrGBufferColorFormat[0] ) );
+                        info._colorTargetCount        = GBufferLayout::kAttachmentCount;
                         info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | kSceneColorPassFlags;
                         break;
                     }

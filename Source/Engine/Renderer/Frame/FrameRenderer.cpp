@@ -71,13 +71,13 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( LightGridProducer, gv_lightCulling, LightGridProducer::GPU, "라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드)" );
 
     /**
-     * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe, LODLevel, LODFadeCode, MarkerSlots).
+     * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe, LODLevel, LODFadeCode, MarkerSlots, ShadingPath).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
      *          명령줄은 열거자 이름만 받는다(숫자는 오류).
      */
-    SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LODLevel / LODFadeCode / MarkerSlots)" );
+    SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LODLevel / LODFadeCode / MarkerSlots / ShadingPath)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }

@@ -4515,6 +4515,11 @@
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdViewMode.ShadingPath" source="Shading Path">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdViewMode.Unlit" source="Unlit">
 			<origins>
 				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>

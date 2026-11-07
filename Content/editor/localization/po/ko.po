@@ -4333,6 +4333,11 @@ msgid "Shaded Wireframe"
 msgstr "셰이드 와이어프레임"
 
 #: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdViewMode.ShadingPath"
+msgid "Shading Path"
+msgstr "셰이딩 경로"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
 msgctxt "EdViewMode.Unlit"
 msgid "Unlit"
 msgstr "조명 없음"

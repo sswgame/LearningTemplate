@@ -62,6 +62,12 @@ namespace sw
          * @details 장면 지오메트리는 Lit 그대로 그린다(셰이더 define 이 없다). 마커 투영 컴퓨트가 앵커의 네 번째 값에 코드를 쓰고(canvas_marker.hlsl) 캔버스 셰이더가 그 위젯을 칠한다(canvas.hlsl). 주 출력 모드만 본다.
          */
         MarkerSlots,
+        /**
+         * @brief 표면이 어느 셰이딩 경로로 그려졌는지 색으로 보인다 — 디퍼드 G버퍼 조명(파랑) · G버퍼 조명 없음(청회색) · 포워드 전용(주황, `MATERIAL_FORWARD_ONLY`) ·
+         *        반투명(보라) · 포워드 파이프라인(초록) · 포워드 조명 없음(짙은 초록). 언리얼 Buffer Visualization 의 Shading Model 과 같은 자리다.
+         * @details 디퍼드에서 기본 PBR 머티리얼이 실수로 포워드 전용으로 분류되면(디퍼드 · 타일 라이트 이득을 잃는다) 주황으로 드러난다. 색은 binding_output.hlsli `ViewMode::computeShadingPathColor`.
+         */
+        ShadingPath,
 
         Count
     };
@@ -98,6 +104,7 @@ namespace sw
         {       "LODLevel",        "SW_VIEWMODE_LODLEVEL=1", false, false,  true, false},
         {    "LODFadeCode",         "SW_VIEWMODE_LODFADE=1", false, false,  true, false},
         {    "MarkerSlots",                         nullptr, false, false, false, false},
+        {    "ShadingPath",     "SW_VIEWMODE_SHADINGPATH=1", false, false,  true, false},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );
