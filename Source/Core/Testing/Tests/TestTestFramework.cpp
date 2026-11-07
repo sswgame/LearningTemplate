@@ -95,3 +95,44 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline, ._tags = "sl
     SW_EXPECT_NOT_EQUAL( 0, child._exitCode );
     SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 30000, "the harness waited for a child past its 3 s deadline" );
 }
+
+namespace
+{
+    /** @brief 안정 이름을 가진 매개변수 원소입니다 — 이름이 `TestFrameworkTest.NamedParam/<이름>` 이 된다. */
+    struct NamedTestParam
+    {
+        const utf8* _pTestName;
+        int32       _value;
+    };
+    constexpr NamedTestParam kArrNamedParam[] = {
+        {"alpha", 1},
+        { "beta", 2}
+    };
+} // namespace
+
+/** @brief 매개변수 원소가 `_pTestName` 을 가지면 케이스 이름이 번호가 아니라 그 이름이다 — 배열 순서를 바꿔도 같은 입력을 가리킨다 */
+SW_TEST_CASE_EACH( TestFrameworkTest, NamedParam, kArrNamedParam )
+{
+    SW_EXPECT_TRUE( param._value > 0 );
+}
+
+/** @brief 안정 이름으로 등록된 케이스가 목록에 이름으로 있다(번호 이름은 없다) */
+SW_TEST_CASE( TestFrameworkTest, NamedParamsRegisterByName )
+{
+    const vector<string> listName = test::TestRunner::collectCaseNames();
+    SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), string( "TestFrameworkTest.NamedParam/alpha" ) ) != listName.end() );
+    SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), string( "TestFrameworkTest.NamedParam/beta" ) ) != listName.end() );
+    SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), string( "TestFrameworkTest.NamedParam/0" ) ) == listName.end() );
+}
+
+/** @brief 격리 케이스는 자식 프로세스에서 돈다(부모 실행기가 `--test-isolated-case` 로 띄운다). 자식의 판정이 부모 실행의 이 케이스 결과다 */
+SW_TEST_CASE( TestFrameworkTest, IsolatedCaseRunsInAChild, ._timeoutSeconds = 60.0f, ._bIsolated = true )
+{
+    SW_EXPECT_TRUE( test::isRunningIsolated() );
+}
+
+/** @brief 보통 케이스는 부모 프로세스에서 돈다 */
+SW_TEST_CASE( TestFrameworkTest, PlainCaseRunsInProcess )
+{
+    SW_EXPECT_FALSE( test::isRunningIsolated() );
+}

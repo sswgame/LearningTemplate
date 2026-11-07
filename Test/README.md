@@ -52,6 +52,10 @@ static constexpr uint32 kArrSize[] = { 1, 2, 64 };
 SW_TEST_CASE_EACH( PoolTest, KeepsCapacity, kArrSize ) { SW_EXPECT_TRUE( Pool( param ).capacity() >= param ); } // PoolTest.KeepsCapacity/0 · /1 · /2
 ```
 
+- 원소 형식에 `const utf8* _pTestName` 칸을 두면 매개변수 케이스 이름이 번호가 아니라 그 글이다(`PoolTest.KeepsCapacity/small`) — 배열 순서를 바꿔도 같은 입력을 가리킨다.
+- `._bIsolated = true` 인 케이스는 실행기가 이 실행 파일을 자식으로 다시 띄워(`--test-isolated-case=<이름>`) 그 하나만 돌린다. 크래시 · 교착 · 강제 종료가 그 케이스의 실패(자식 출력 꼬리와 함께)로 남고
+  나머지 케이스 · 보고는 이어진다. 자식 기동 비용이 붙으니 프로세스를 죽일 수 있는 케이스만 쓴다. App 에 등록된 케이스만 된다(에디터 케이스는 격리하지 못한다).
+- CTest 항목은 JSON 보고를 `<빌드>/Testing/Reports/<항목>.json` 에 남긴다(판 번호 `schemaVersion` · 케이스마다 이름 · 파일 · 줄 · 회차 · 격리 · 결과 · 시간 · 실패 글).
 - 케이스 시한은 기본 30 초다(`._timeoutSeconds`). 넘기면 `[ TIMEOUT ]` 에 이름을 남기고 실행을 끝낸다(종료 코드 12) — 멈춘 케이스는 되살릴 수 없다. 디버거가 붙어 있으면 시한을 보지 않는다. 크래시 보고의 문맥에는 지금 케이스(`TestCase`)가 남는다.
 
 ```

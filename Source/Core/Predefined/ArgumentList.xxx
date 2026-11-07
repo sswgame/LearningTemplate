@@ -170,6 +170,8 @@ SW_REGISTER_ARGUMENT( TEST_RUN_DISABLED, false, false, "test-run-disabled" )
 SW_REGISTER_ARGUMENT( TEST_CHILD_ROLE, "", false, "test-child-role" )
 // 자식 역할이 `test::getChildRoleArgument()` 로 받는 값(환경 변수 대신 — 자식 하나를 명령줄로 손수 다시 돌릴 수 있다).
 SW_REGISTER_ARGUMENT( TEST_CHILD_ARG, "", false, "test-child-arg" )
+// 격리 케이스(`._bIsolated`) 하나만 이 프로세스에서 돈다 — 부모 실행기가 격리 케이스마다 이 실행 파일을 다시 띄울 때 준다. 거르개 · 샤드 · 반복은 보지 않는다.
+SW_REGISTER_ARGUMENT( TEST_ISOLATED_CASE, "", false, "test-isolated-case" )
 // 정의한 파일 경로에 이 폴더(쉼표로 여럿, `/` 구분)가 든 케이스만 돈다 — 게임마다 그 게임이 싣는 키트 · 게임 케이스만 돌릴 때(`UnitTests.<게임>`).
 SW_REGISTER_ARGUMENT( TEST_SOURCE, "", false, "test-source" )
 // 결과 JSON(케이스 수 · 씨앗 · 케이스별 시간 · 실패 글)을 쓸 경로.

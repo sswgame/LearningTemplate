@@ -10,10 +10,11 @@
  *          - 쓰기는 `makeScratchPath` 의 케이스별 폴더에만 한다(프로세스 · 케이스 · 회차마다 다르다).
  *          - 손으로 옮겨 적는 기대값 대신 스냅숏(`SW_EXPECT_SNAPSHOT`, `--update-snapshots` 로 갱신)을 쓴다.
  *          - 멈춘 케이스는 시한(`TestCaseOptions::_timeoutSeconds`, 기본 `kDefaultCaseTimeoutSeconds`)이 끝내고 이름을 남긴다. 크래시 문맥에도 지금 케이스가 있다.
- *          선언 넷 — 모두 끝에 케이스 옵션(지정 초기화)을 붙일 수 있다(`._tags = "slow"` · `._disabledReason = "…"` · `._timeoutSeconds = 60`):
+ *          선언 넷 — 모두 끝에 케이스 옵션(지정 초기화)을 붙일 수 있다(`._tags = "slow"` · `._disabledReason = "…"` · `._timeoutSeconds = 60` · `._bIsolated = true`):
  *          - `SW_TEST_CASE( Suite, Name )` — 함수 하나.
  *          - `SW_TEST_CASE_F( Fixture, Name )` — 케이스마다 `Fixture` 를 새로 만들고(생성자 = 준비, 소멸자 = 정리) 본문은 그 멤버 함수다(GoogleTest TEST_F).
  *          - `SW_TEST_CASE_EACH( Suite, Name, 배열 )` — 배열 원소마다 케이스 `Name/<번호>` 하나, 본문은 `param` 을 받는다(GoogleTest TEST_P · Catch2 GENERATE).
+ *            원소 형식에 `const utf8* _pTestName` 칸이 있으면 이름은 `Name/<그 글>` 이다 — 배열 순서를 바꿔도 케이스 이름 · 거르개 · 보고가 같은 입력을 가리킨다(GoogleTest 의 이름 생성기 자리).
  *          - `SW_TEST_CHILD_ROLE( Suite, Name )` — 자식 역할. 평소에는 돌지 않고 부모 케이스가 `runChildRole` 로 자식 프로세스에서 띄운다(크래시 · 교착 · 표준 출력).
  *          `SW_REQUIRE_*` 는 실패하면 케이스 함수에서 `return` 한다 — 케이스 본문에서만 쓴다.
  */
@@ -27,6 +28,7 @@
 
 #include <iterator>
 #include <type_traits>
+#include <utility>
 
 #if !defined( SW_SHIPPING )
     #define SW_TESTS_ENABLED 1
@@ -55,6 +57,7 @@ namespace sw::test
         const utf8* _tags{ "" };                ///< 공백으로 가른 태그 — 거르개의 `[태그]` 가 고른다(`--test-filter=[slow]`, 빼기는 `-[slow]`)
         const utf8* _disabledReason{ nullptr }; ///< 주면 돌리지 않는다. 까닭은 보고에 남는다(`--test-run-disabled` 면 돈다) — 지우지 않고 끄는 자리
         float32     _timeoutSeconds{ 0.0f };    ///< 0 이면 `kDefaultCaseTimeoutSeconds`
+        bool        _bIsolated{ false };        ///< 자식 프로세스에서 돈다 — 크래시 · 교착 · 강제 종료가 이 케이스의 실패로 남고 나머지 케이스와 보고는 이어진다(엔진 기동 비용이 붙어 필요한 케이스만) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @struct TestCaseRegistration @brief 케이스 하나의 등록 줄입니다. 글자는 등록한 이미지(모듈)의 정적 저장소(매개변수 케이스는 그 등록자)에 있습니다. */
@@ -82,10 +85,37 @@ namespace sw::test
         TestCaseRegistrar& operator=( const TestCaseRegistrar& ) = delete;
     };
 
-    /** @brief `SW_TEST_CASE_EACH` 가 두는 정적 등록자입니다 — 원소마다 이름(`<기본 이름>/<번호>`)과 등록 줄을 만들어 올린다. */
+    /** @brief 매개변수 케이스 원소의 안정 이름입니다(`_pTestName` 칸). 없으면 nullptr 이고 이름은 번호다. */
+    using TestParamNameFunction = const utf8* (*)( size_t index );
+
+    /** @brief 원소 형식 @p TParam 에 `_pTestName` 칸이 있는지입니다. */
+    template <typename TParam, typename = void>
+    struct HasTestName : std::false_type
+    {
+    };
+    template <typename TParam>
+    struct HasTestName<TParam, std::void_t<decltype( std::declval<const TParam&>()._pTestName )>> : std::true_type
+    {
+    };
+
+    /** @brief 원소 @p param 의 안정 이름입니다(`_pTestName`). 칸이 없는 형식은 nullptr 입니다. */
+    template <typename TParam>
+    const utf8* findTestParamName( const TParam& param )
+    {
+        if constexpr ( HasTestName<TParam>::value )
+            return param._pTestName;
+        else
+            return nullptr;
+    }
+
+    /**
+     * @brief `SW_TEST_CASE_EACH` 가 두는 정적 등록자입니다 — 원소마다 이름(`<기본 이름>/<안정 이름 또는 번호>`)과 등록 줄을 만들어 올린다.
+     * @details 안정 이름이 비었거나 겹치면 등록표가 거절하고 알린다(같은 이름의 케이스 둘은 거르개 · 보고가 가르지 못한다).
+     */
     struct SW_API TestCaseEachRegistrar
     {
-        TestCaseEachRegistrar( const utf8* pBaseName, size_t count, TestIndexedFunction pfnRun, const utf8* pFile, int32 line, const TestCaseOptions& options );
+        TestCaseEachRegistrar( const utf8* pBaseName, size_t count, TestIndexedFunction pfnRun, TestParamNameFunction pfnName, const utf8* pFile, int32 line,
+                               const TestCaseOptions& options );
         ~TestCaseEachRegistrar();
         TestCaseEachRegistrar( const TestCaseEachRegistrar& )            = delete;
         TestCaseEachRegistrar& operator=( const TestCaseEachRegistrar& ) = delete;
@@ -221,6 +251,8 @@ namespace sw::test
      * @details 자식 역할 케이스 밖에서 부르면 실패다(평소 실행에서 빈 값으로 이어 가지 않는다).
      */
     SW_API string getChildRoleArgument();
+    /** @brief 지금 케이스가 격리 케이스의 자식 프로세스(`._bIsolated` — `--test-isolated-case`)에서 도는지입니다. 격리가 실제로 일어났는지 보는 케이스가 쓴다. */
+    SW_API bool isRunningIsolated();
 
     /** @brief `SW_EXPECT_NEAR` 의 본체입니다. */
     SW_API bool checkNear( float64 expected, float64 actual, float64 tolerance, const utf8* pExpression, const utf8* pFile, int32 line );
@@ -276,15 +308,20 @@ namespace sw::test
      * @brief 매개변수 케이스 — `static constexpr int32 kArrSize[] = { 1, 2, 4 }; SW_TEST_CASE_EACH( Pool, Grows, kArrSize ) { … param … }`.
      * @details 원소마다 케이스 `<스위트>.<케이스>/<번호>` 가 따로 돌고(거르개 · 보고 · 실패가 원소 단위) 본문은 그 원소를 `param` 으로 받는다. 배열은 이 줄보다 앞에 둔다.
      */
-    #define SW_TEST_CASE_EACH( suite, name, values, ... )                                                                                    \
-        static void sw_testBody_##suite##_##name( const std::remove_cv_t<std::remove_reference_t<decltype( ( values )[0] )>>& param );       \
-        static void sw_testEach_##suite##_##name( size_t index )                                                                             \
-        {                                                                                                                                    \
-            sw_testBody_##suite##_##name( ( values )[index] );                                                                               \
-        }                                                                                                                                    \
-        static const ::sw::test::TestCaseEachRegistrar sw_testRegistrar_##suite##_##name{ #suite "." #name, std::size( values ),             \
-                                                                                          &sw_testEach_##suite##_##name, __FILE__, __LINE__, \
-                                                                                          ::sw::test::TestCaseOptions{ __VA_ARGS__ } };      \
+    #define SW_TEST_CASE_EACH( suite, name, values, ... )                                                                                         \
+        static void sw_testBody_##suite##_##name( const std::remove_cv_t<std::remove_reference_t<decltype( ( values )[0] )>>& param );            \
+        static void sw_testEach_##suite##_##name( size_t index )                                                                                  \
+        {                                                                                                                                         \
+            sw_testBody_##suite##_##name( ( values )[index] );                                                                                    \
+        }                                                                                                                                         \
+        static const utf8* sw_testEachName_##suite##_##name( size_t index )                                                                       \
+        {                                                                                                                                         \
+            return ::sw::test::findTestParamName( ( values )[index] );                                                                            \
+        }                                                                                                                                         \
+        static const ::sw::test::TestCaseEachRegistrar sw_testRegistrar_##suite##_##name{ #suite "." #name, std::size( values ),                  \
+                                                                                          &sw_testEach_##suite##_##name,                          \
+                                                                                          &sw_testEachName_##suite##_##name, __FILE__,            \
+                                                                                          __LINE__, ::sw::test::TestCaseOptions{ __VA_ARGS__ } }; \
         static void                                    sw_testBody_##suite##_##name( const std::remove_cv_t<std::remove_reference_t<decltype( ( values )[0] )>>& param )
 #else
     #define SW_TEST_CASE( suite, name, ... )       [[maybe_unused]] static void sw_testBody_##suite##_##name()

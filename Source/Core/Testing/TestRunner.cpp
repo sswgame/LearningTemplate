@@ -71,7 +71,8 @@ namespace sw::test
                 vector<string>              _listFailure;
                 vector<string>              _listUpdatedSnapshot;
                 string                      _scratchFolder;
-                string                      _childArgument; ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
+                string                      _childArgument;         ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
+                bool                        _bIsolatedRun{ false }; ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint32                      _assertionCount{ 0 };
                 bool                        _bUpdateSnapshots{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
                 bool                        _bActive{ SW_FALSE };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -252,6 +253,11 @@ namespace sw::test
                 }
             }
 
+            /** @brief 이 실행 파일을 @p listArgument 로 자식으로 띄워 끝까지 기다립니다. 시한을 넘기면 죽이고 `_bTimedOut` 이다. 띄우지 못하면 실패로 적는다(케이스 안에서만 부른다). */
+            static void launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult );
+            /** @brief 격리 케이스(`._bIsolated`) 하나를 자식에서 돌리고 결과를 지금 케이스에 적습니다. 자식이 0 이 아닌 종료 코드면 출력 꼬리와 함께 실패다. */
+            static void runIsolated( const TestCaseRegistration& testCase, float32 timeoutSeconds );
+
             static string escapeJSON( string_view text )
             {
                 string out;
@@ -287,14 +293,19 @@ namespace sw::test
         (void)registry._registration.remove( _pRegistration );
     }
 
-    TestCaseEachRegistrar::TestCaseEachRegistrar( const utf8* pBaseName, size_t count, TestIndexedFunction pfnRun, const utf8* pFile, int32 line,
+    TestCaseEachRegistrar::TestCaseEachRegistrar( const utf8* pBaseName, size_t count, TestIndexedFunction pfnRun, TestParamNameFunction pfnName, const utf8* pFile, int32 line,
                                                   const TestCaseOptions& options )
     {
         _listName.reserve( count );
         _listRegistration.reserve( count ); // 크기를 먼저 정한다 — 등록표가 원소의 주소를 쥔다
         for ( size_t index = 0; index < count; ++index )
         {
-            _listName.push_back( formatToString( "%#/%#", string( pBaseName ), index ) );
+            // 안정 이름(`_pTestName`)이 있으면 그것 — 배열 순서가 바뀌어도 이름이 같은 입력을 가리킨다. 비면 등록표가 이름 없는 줄로 거절한다.
+            const utf8* const pParamName = pfnName != nullptr ? pfnName( index ) : nullptr;
+            if ( pfnName != nullptr && pfnName( 0 ) != nullptr )
+                _listName.push_back( formatToString( "%#/%#", string( pBaseName ), string( pParamName != nullptr ? pParamName : "" ) ) );
+            else
+                _listName.push_back( formatToString( "%#/%#", string( pBaseName ), index ) );
         }
         for ( size_t index = 0; index < count; ++index )
         {
@@ -425,17 +436,24 @@ namespace sw::test
             reportFailure( __FILE__, __LINE__, "no child role named " + string( roleName ) + " is registered (declare it with SW_TEST_CHILD_ROLE)" );
             return result;
         }
-        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-        if ( executable.has_value() == false )
-        {
-            reportFailure( __FILE__, __LINE__, "the test executable path is not absolute: " + FileUtil::getExecutablePath() );
-            return result;
-        }
         // 자식의 로그 파일은 이 케이스의 쓰기 폴더에 둔다 — 자식마다 `Saved/Logs` 에 파일이 쌓이지 않게.
         vector<string> listArgument{ "-test", "-test-child-role=" + string( roleName ), "-unattended",
                                      "-log-file=" + makeScratchPath( TestRunnerInternal::toFileName( roleName ) + ".child.log" ) };
         if ( argument.empty() == false )
             listArgument.push_back( "-test-child-arg=" + string( argument ) );
+        TestRunnerInternal::launchSelf( std::move( listArgument ), timeoutSeconds, result );
+        return result;
+    }
+
+    void TestRunnerInternal::launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult )
+    {
+        ChildRunResult&                   result     = outResult;
+        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+        if ( executable.has_value() == false )
+        {
+            reportFailure( __FILE__, __LINE__, "the test executable path is not absolute: " + FileUtil::getExecutablePath() );
+            return;
+        }
         const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );
         ProcessOptions       options;
         options._workingDirectory = FileUtil::getCurrentPath();
@@ -444,7 +462,7 @@ namespace sw::test
         if ( result._bLaunched == false )
         {
             reportFailure( __FILE__, __LINE__, "could not launch the child " + command.toCommandLine() );
-            return result;
+            return;
         }
         // 출력을 읽는 이 스레드는 자식이 말없이 멈추면 깨지 않는다 — 감시 스레드가 시한에 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전한 계약).
         atomic<bool>   bTimedOut{ false };
@@ -471,7 +489,30 @@ namespace sw::test
         result._exitCode  = process.waitForExit();
         watchThread       = thread{};                                    // 정지를 요청하고 합류한다
         result._bTimedOut = bTimedOut.load( std::memory_order_acquire ); // 실패로 적지 않는다 — 시한에 죽이는 것을 보는 케이스도 있다. 죽은 자식은 종료 코드가 0 이 아니다
-        return result;
+    }
+
+    void TestRunnerInternal::runIsolated( const TestCaseRegistration& testCase, float32 timeoutSeconds )
+    {
+        // 자식은 이 케이스 하나만 같은 판정 규칙으로 돈다(`--test-isolated-case`). 크래시 · 교착 · 강제 종료는 종료 코드로 이 케이스의 실패가 되고 부모 실행은 이어진다.
+        vector<string> listArgument{ "-test", "-test-isolated-case=" + string( testCase._pName ), "-unattended",
+                                     "-log-file=" + makeScratchPath( toFileName( testCase._pName ) + ".isolated.log" ) };
+        ChildRunResult child;
+        launchSelf( std::move( listArgument ), timeoutSeconds, child );
+        countAssertion();
+        if ( child._bLaunched == false )
+            return; // 띄우지 못한 까닭은 위에서 적었다
+        if ( child._exitCode == 0 )
+            return;
+        reportFailure( testCase._pFile, testCase._line,
+                       formatToString( "the isolated case %# (exit code %#) - child output:\n%#", child._bTimedOut ? "timed out and was killed" : "failed", child._exitCode,
+                                       child.getOutputTail( 20 ) ) );
+    }
+
+    bool isRunningIsolated()
+    {
+        TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
+        ScopedLock<mutex>              lock{ state._mutex };
+        return state._bIsolatedRun;
     }
 
     string getChildRoleArgument()
@@ -613,8 +654,9 @@ namespace sw::test
 
     bool TestRunner::run( const TestRunOptions& options, vector<string>* pOutListFailure )
     {
-        using Internal                                = TestRunnerInternal;
-        const bool                          bChildRun = options._childRole.empty() == false;
+        using Internal                                   = TestRunnerInternal;
+        const bool                          bChildRun    = options._childRole.empty() == false;
+        const bool                          bIsolatedRun = options._isolatedCase.empty() == false; // 부모가 격리 케이스 하나를 돌리라고 띄운 자식
         vector<const TestCaseRegistration*> listCase;
         {
             Internal::Registry& registry = Internal::getRegistry();
@@ -622,10 +664,11 @@ namespace sw::test
             for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
             {
                 // 자식 실행은 그 역할 하나만, 평소 실행은 자식 역할을 빼고 고른다.
-                const bool bSelected = bChildRun ? ( pCase->_bChildRole && options._childRole == pCase->_pName )
-                                                 : ( pCase->_bChildRole == false && matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) &&
-                                                     getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex &&
-                                                     Internal::isInSourceFolder( pCase->_pFile, options._sourceFolder ) );
+                const bool bSelected = bChildRun    ? ( pCase->_bChildRole && options._childRole == pCase->_pName )
+                                     : bIsolatedRun ? ( pCase->_bChildRole == false && options._isolatedCase == pCase->_pName )
+                                                    : ( pCase->_bChildRole == false && matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) &&
+                                                        getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex &&
+                                                        Internal::isInSourceFolder( pCase->_pFile, options._sourceFolder ) );
                 if ( bSelected )
                     listCase.push_back( pCase );
             }
@@ -633,6 +676,11 @@ namespace sw::test
         if ( bChildRun && listCase.empty() )
         {
             Internal::writeLine( string( "[  NO TESTS ] no child role (SW_TEST_CHILD_ROLE) is named '" ) + options._childRole + "'" );
+            return false;
+        }
+        if ( bIsolatedRun && listCase.empty() )
+        {
+            Internal::writeLine( string( "[  NO TESTS ] no case is named '" ) + options._isolatedCase + "' for --test-isolated-case" );
             return false;
         }
         // 이름 순으로 놓은 뒤 섞는다 — 등록 순서(링크 순서)에 기대지 않고, 씨앗이 같으면 어느 빌드에서나 같은 순서다.
@@ -681,7 +729,7 @@ namespace sw::test
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( &Internal::watchCaseDeadline );
-        const uint32   repeatCount = bChildRun ? 1u : MathUtil::max( options._repeatCount, 1u );
+        const uint32   repeatCount = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
         uint32         failedCount = 0;
         uint32         ranCount    = 0;
         string         caseReport;
@@ -710,20 +758,26 @@ namespace sw::test
                     state._bUpdateSnapshots = options._bUpdateSnapshots;
                     state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
                     state._childArgument    = options._childArgument;
+                    state._bIsolatedRun     = bIsolatedRun;
                     state._bActive          = SW_TRUE;
                 }
                 LogOnce::beginScope(); // 한 번만 알리는 로그(`LogOnce`)도 케이스마다 처음이다 — 앞 케이스 · 앞 회차가 알렸다고 기대 로그가 사라지지 않게
                 Internal::writeLine( string( "[ RUN      ] " ) + pCase->_pName );
                 if ( options._pCrashHandler != nullptr )
                     options._pCrashHandler->setContextValue( "TestCase", pCase->_pName ); // 크래시 보고에 어느 케이스였는지 남는다
-                const float32       timeoutSeconds = pCase->_options._timeoutSeconds > 0.0f ? pCase->_options._timeoutSeconds : kDefaultCaseTimeoutSeconds;
-                const int64         timeoutNanos   = static_cast<int64>( static_cast<float64>( timeoutSeconds ) * 1.0e9 );
-                const int64         caseStart      = MonotonicClock::nowNanoseconds();
-                Internal::Watchdog& watchdog       = Internal::getWatchdog();
+                const float32 timeoutSeconds = pCase->_options._timeoutSeconds > 0.0f ? pCase->_options._timeoutSeconds : kDefaultCaseTimeoutSeconds;
+                const bool    bIsolate       = pCase->_options._bIsolated && bIsolatedRun == false;
+                // 격리 케이스의 부모는 자식 기동(Debug 에서 몇 초)까지 기다린다 — 자식 시한은 케이스 시한이고 부모 시한은 그 두 배에 기동 몫을 더한다.
+                const float32       parentSeconds = bIsolate ? timeoutSeconds * 2.0f + 60.0f : timeoutSeconds;
+                const int64         timeoutNanos  = static_cast<int64>( static_cast<float64>( parentSeconds ) * 1.0e9 );
+                const int64         caseStart     = MonotonicClock::nowNanoseconds();
+                Internal::Watchdog& watchdog      = Internal::getWatchdog();
                 watchdog._pCaseName.store( pCase->_pName, std::memory_order_release );
                 watchdog._timeoutMilliseconds.store( timeoutNanos / constant::time::kNanosecondsPerMillisecond, std::memory_order_release );
                 watchdog._deadlineNanoseconds.store( caseStart + timeoutNanos, std::memory_order_release );
-                if ( pCase->_pfnRunIndexed != nullptr )
+                if ( bIsolate )
+                    Internal::runIsolated( *pCase, timeoutSeconds );
+                else if ( pCase->_pfnRunIndexed != nullptr )
                     pCase->_pfnRunIndexed( pCase->_index );
                 else
                     pCase->_pfnRun();
@@ -767,8 +821,9 @@ namespace sw::test
                 Internal::writeLine( arrBuffer );
 
                 caseReport += caseReport.empty() ? "\n" : ",\n";
-                caseReport += string( "    {\"name\": \"" ) + Internal::escapeJSON( pCase->_pName ) + "\", \"round\": " + to_string( roundIndex ) + ", \"passed\": " +
-                              formatToString( "%#, \"milliseconds\": %#, \"failures\": [", ( bPassed ? "true" : "false" ), caseMilliseconds );
+                caseReport += string( "    {\"name\": \"" ) + Internal::escapeJSON( pCase->_pName ) + "\", \"file\": \"" + Internal::escapeJSON( pCase->_pFile ) +
+                              "\", \"line\": " + to_string( pCase->_line ) + ", \"round\": " + to_string( roundIndex ) + ", \"isolated\": " + ( bIsolate ? "true" : "false" ) +
+                              ", \"passed\": " + formatToString( "%#, \"milliseconds\": %#, \"failures\": [", ( bPassed ? "true" : "false" ), caseMilliseconds );
                 for ( size_t failureIndex = 0; failureIndex < listFailure.size(); ++failureIndex )
                 {
                     caseReport += ( failureIndex == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listFailure[failureIndex] ) + "\"";
@@ -798,7 +853,7 @@ namespace sw::test
                                                                                                             : string{};
         if ( reportPath.empty() == false )
         {
-            string report = "{\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
+            string report = "{\n  \"schemaVersion\": " + to_string( kReportSchemaVersion ) + ",\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
                             to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) +
                             ",\n  \"milliseconds\": " + to_string( runMilliseconds ) + ",\n  \"shard\": \"" + to_string( options._shardIndex ) + "/" +
                             formatToString( "%#\",\n  \"disabled\": [", options._shardCount );
