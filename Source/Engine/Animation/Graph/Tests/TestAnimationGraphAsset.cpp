@@ -178,7 +178,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, ChildThatDisagreesWithBaseIsRejected )
 }
 
 /**
- * @brief [AnimationGraphAssetTest] 저장은 부모와 다른 칸만 쓰고, 칸을 형식 기본값으로 되돌려 차이로 적을 수 없으면 부모 없는 한 벌을 쓴다
+ * @brief [AnimationGraphAssetTest] 저장은 부모와 다른 칸만 쓰고, 칸을 형식 기본값으로 되돌려 차이로 적을 수 없으면 쓰지 않는다(부모 없는 한 벌로 끊지 않는다)
  */
 SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
 {
@@ -201,9 +201,9 @@ SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
 
     graph._listLink[0]._blendSeconds = -1.0f; // 형식 기본값은 쓰지 않으므로 부모의 0.2 를 덮을 수 없다
     SW_EXPECT_LOG( "AnimationGraphAsset.DeltaMismatch" );
-    SW_REQUIRE_TRUE( graph.saveToFile( *absPath ) );
+    SW_EXPECT_FALSE( graph.saveToFile( *absPath ) ); // 부모 없는 한 벌로 끊지 않는다
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
-    SW_EXPECT_TRUE( written.find( "_base=" ) == sw::string::npos );
+    SW_EXPECT_TRUE( written.find( "_base=" ) != sw::string::npos ); // 앞 저장이 그대로 남는다
 }
 
 /**

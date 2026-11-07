@@ -253,7 +253,7 @@ namespace sw
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 경고하고 부모 없는 한 벌로 씁니다. */
+        /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 쓰지 않고 오류입니다(부모를 끊지 않는다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 파싱합니다. 루트가 `_base` 를 적었으면 부모를 합칩니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml );

@@ -159,12 +159,12 @@ namespace sw
             }
             if ( DataInheritance::makeDelta( fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, deltaText ) == false )
                 return false;
-            // 프리팹처럼 뺀 글을 다시 읽어 같을 때만 쓴다 — 칸을 형식 기본값으로 되돌리면 차이로 적을 수 없다.
+            // 프리팹처럼 뺀 글을 다시 읽어 같을 때만 쓴다 — 칸을 형식 기본값으로 되돌리면 차이로 적을 수 없다. 그때 부모 없는 한 벌로 쓰면 변형이 끊기므로 쓰지 않고 오류다.
             AnimationGraphAsset reread;
             if ( reread.parseText( deltaText, absPath.str() ) == false || reread.toXML() != fullText )
             {
-                SW_LOG_WARNING_ID( "AnimationGraphAsset.DeltaMismatch", "Animation graph '%#': the difference from base '%#' does not read back the same - saving the whole graph without a base", absPath.str(), _baseID );
-                deltaText.clear();
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.DeltaMismatch", "Animation graph '%#': the difference from base '%#' does not read back the same - not saved (a value the base writes cannot be reset to the default by a variant)", absPath.str(), _baseID );
+                return false;
             }
         }
         return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), deltaText.empty() ? fullText : deltaText );
