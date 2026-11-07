@@ -116,25 +116,43 @@ namespace sw
             GenreGimmickUtil::setBodyActive( owner, false, this );
         if ( pManager == nullptr || _radius <= 0.0f )
             return;
+        pManager->executeOrDeferPostTickOnComponent( *this, [center]( ExplosiveBarrelComponent& self, GameObjectManager& manager )
+        { self.applyBlast( manager, center ); } );
+    }
+
+    void ExplosiveBarrelComponent::applyBlast( GameObjectManager& manager, const float3& center ) const
+    {
         // 반경 안의 것에 거리 감쇠 피해를 준다. 다른 드럼통은 자기 스텝에 터지며 연쇄가 이어진다. 파괴 오브젝트는 경계가 반경에 닿으면 위치 기반 폭발로 깬다.
-        const uint64      selfID         = owner.getObjectID();
-        const float32     radius         = _radius;
-        const float32     damage         = _damage;
-        const float32     fractureStrain = _fractureStrain;
-        const float32     blastImpulse   = _blastImpulse;
-        const GameObject* pSource        = &owner;
-        pManager->forEachGameObject( [selfID, radius, damage, fractureStrain, blastImpulse, center, pSource]( GameObject* pObject )
+        // 대상이 "반경 안 무엇이든" 이라 등록 목록이 없다 — 폭발 순간 한 번 씬을 돈다(틱마다가 아니다, Config/Dev/TickSceneWalkExceptions.json).
+        // 순회는 공유 잠금 안이라 고르기만 하고, 쓰기(조각 깨기 · 피해 이벤트)는 순회 뒤에 한다.
+        struct BlastTarget
+        {
+            GameObject*            _pObject;
+            FractureComponentBase* _pFracture; ///< 경계가 반경에 닿은 파괴 컴포넌트(없으면 nullptr)
+            float32                _distance;
+        };
+        GameObject* const   pSource = getOwner();
+        const uint64        selfID  = pSource != nullptr ? pSource->getObjectID() : 0;
+        const float32       radius  = _radius;
+        vector<BlastTarget> listTarget;
+        manager.forEachGameObject( [selfID, radius, center, &listTarget]( GameObject* pObject )
         {
             const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
             if ( pOther == nullptr || pObject->getObjectID() == selfID )
                 return;
             FractureComponentBase* pFracture = ShooterGimmicksInternal::findFracture( *pObject );
-            if ( pFracture != nullptr && pFracture->isReachedBy( center, radius ) )
-                pFracture->applyRadialDamageAtWorld( center, radius, fractureStrain, blastImpulse );
-            const float32 distance = float3::getDistance( pOther->getWorldPosition(), center );
-            if ( distance <= radius )
-                GimmickDamageUtil::applyDamage( *pObject, pSource, hashed_string( "Explosion" ), damage * ( 1.0f - distance / radius ) );
+            const bool             bReached  = pFracture != nullptr && pFracture->isReachedBy( center, radius );
+            const float32          distance  = float3::getDistance( pOther->getWorldPosition(), center );
+            if ( bReached || distance <= radius )
+                listTarget.push_back( BlastTarget{ pObject, bReached ? pFracture : nullptr, distance } );
         } );
+        for ( const BlastTarget& target : listTarget )
+        {
+            if ( target._pFracture != nullptr )
+                target._pFracture->applyRadialDamageAtWorld( center, radius, _fractureStrain, _blastImpulse );
+            if ( target._distance <= radius )
+                GimmickDamageUtil::applyDamage( *target._pObject, pSource, hashed_string( "Explosion" ), _damage * ( 1.0f - target._distance / radius ) );
+        }
     }
 
     TurretShotWorld::TurretShotWorld( const vector<TurretShotTarget>& listTarget, float32 hitRadius, const IWorldQuery& blockers, uint64 ownerID )
