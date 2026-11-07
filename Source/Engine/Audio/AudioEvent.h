@@ -21,6 +21,8 @@
 
 namespace sw
 {
+    struct ResourceContext;
+
     /** @brief 이벤트가 클립을 고르는 방식입니다. */
     ENUM()
     enum class AudioContainerType : uint8
@@ -215,6 +217,12 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 펼쳐(파일 `_base`, 이벤트 `_parentEvent`) 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
+
+    private:
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+
+    public:
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
         /**

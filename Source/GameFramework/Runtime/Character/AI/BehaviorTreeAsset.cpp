@@ -11,6 +11,7 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -395,7 +396,16 @@ namespace sw
             SW_LOG_ERROR_ID( "BehaviorTreeAsset.FileNotFound", "Behavior tree '%#' cannot be read", assetID.view() );
             return false;
         }
-        return loadFromXMLText( text, assetID.view() );
+        // 리소스 id 로 읽는다 - 조건 · 덮어쓰기 층 · 다시 읽기 기록이 이 합성 한 길을 지난다.
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( text, assetID.view(), ResourceContext::forSchema( &BehaviorTreeSchema::make ).withAsset( assetID ), flatText, bComposed ) == false )
+        {
+            _tree = BehaviorTree{};
+            return false;
+        }
+        DataInheritanceResourceSource source;
+        return readFlatText( bComposed ? string_view( flatText ) : string_view( text ), assetID.view(), source );
     }
 
     bool BehaviorTreeAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -413,6 +423,11 @@ namespace sw
             _tree = BehaviorTree{};
             return false;
         }
+        return readFlatText( flatText, sourceName, source );
+    }
+
+    bool BehaviorTreeAsset::readFlatText( string_view flatText, string_view sourceName, IDataInheritanceSource& source )
+    {
         _pSource           = &source;
         const bool bLoaded = XMLCatalog<BehaviorTreeAsset>::loadFromXMLText( flatText, sourceName );
         _pSource           = nullptr;

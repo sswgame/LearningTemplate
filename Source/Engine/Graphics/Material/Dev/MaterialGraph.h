@@ -33,6 +33,8 @@
 
 namespace sw
 {
+    struct ResourceContext;
+
     /** @brief 받는 노드의 입력 핀 하나에 이어진 출력 핀입니다. */
     REFLECT()
     struct SW_API MaterialGraphLink
@@ -121,6 +123,12 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 글을 읽습니다(`_base` 를 펼친다). 모르는 칸 · 다른 판은 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
+
+    private:
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+
+    public:
         /** @brief 모든 칸을 적은 글입니다(되돌리기 기록 · 복사 버퍼). `loadFromXMLText` 가 다시 읽습니다. */
         [[nodiscard]] string saveToXMLText() const;
         /** @brief 파일에 씁니다. @p baseID 가 있으면 그 부모와 다른 칸만 적습니다(`ReflectedXMLFile::saveDescAsChild`). */

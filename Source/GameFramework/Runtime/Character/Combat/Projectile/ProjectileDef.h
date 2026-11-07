@@ -4,7 +4,7 @@
  * @details 무기(`WeaponDef`)는 쏘는 법만, 탄은 날아가는 법 · 피해 · 궤적 · 맞을 때의 동작만 가진다. 그래서 무기 N 종과 탄 M 종이 파일 N + M 줄로 조합된다.
  *          무기가 어떤 탄을 받는지는 조합 표가 아니라 탄의 태그에 대한 조건식이다(`WeaponDef::_accepts`). 표로 적으면 M × N 이 그대로 돌아온다.
  *          맞음 효과는 탄과 표면의 조합이라 탄이 들지 않고 맞음 표에서 찾는다(언리얼 Physical Material 의 표면 반응, 유니티 탄 정의 ScriptableObject 와 같은 방향 — 기억에 의존한 비교).
- *          탄 항목은 `_base` 로 다른 탄을 물려받는다(`Config/Dev/DataCatalogInheritance.json` 의 `ProjectileCatalog` 줄).
+ *          탄 항목은 `_base` 로 다른 탄을 물려받는다(`Content/engine/settings/datacataloginheritance.xml` 의 `ProjectileCatalog` 줄).
  */
 #pragma once
 #include "Core/Container/string.h"

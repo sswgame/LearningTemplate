@@ -53,6 +53,8 @@ namespace sw
 
         /** @brief 폴더의 데이터를 모두 읽고 검사합니다. 오류가 없으면 true 입니다. @p pItemCatalog 는 소유하지 않고 참조만 하므로 데이터보다 오래 살아 있어야 합니다. */
         [[nodiscard]] bool loadFromFolder( string_view folder, const ItemCatalog* pItemCatalog );
+        /** @brief @p fileName 이 `loadFromFolder` 가 읽는 파일 표에 있으면 true 입니다(쿠킹 표 `_listEntryCatalog` 와 대조하는 테스트가 본다). */
+        [[nodiscard]] static bool isDataFile( string_view fileName );
         /** @brief 데이터 한 덩어리를 읽습니다. 루트 원소로 종류를 정하며, 테스트와 미리보기에 씁니다. 검사는 `finishLoad` 에서 합니다. */
         [[nodiscard]] bool loadSectionFromXMLText( string_view xmlText, string_view sourceName );
         /**

@@ -109,7 +109,7 @@ namespace sw
      * @struct PackRequiredDataPath
      * @brief 게임 설정 `<RequiredData kind pack>` 의 종류 하나가 팩 안에서 차지하는 자리(`data/items.xml` · 폴더 `data/appearance`)입니다.
      * @details 런타임은 종류 등록 줄의 경로 규칙으로 자리를 만든다(`GamePackDataUtil::tryMakeKindPath`). 팩 쿠킹은 게임 · 키트 모듈을 올리기 전에 돌아 그 등록을 보지 못하므로
-     *          같은 자리를 데이터로 적는다(`DataCatalogInheritance.json` 과 같은 까닭). 둘이 같은지는 `PackCookRulesTest.RequiredDataPathsMatchTheKindRegistry` 가 본다.
+     *          같은 자리를 데이터로 적는다(`datacataloginheritance.xml` 과 같은 까닭). 둘이 같은지는 `PackCookRulesTest.RequiredDataPathsMatchTheKindRegistry` 가 본다.
      */
     REFLECT()
     struct SW_API PackRequiredDataPath

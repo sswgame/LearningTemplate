@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    struct ResourceContext;
+
     class IDataInheritanceSource;
 
     struct MeshSkinBinding;
@@ -301,6 +303,8 @@ namespace sw
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
 
     private:
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<Skeleton>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 읽은 본과 부착을 검증하며 다시 쌓습니다(부모가 앞에 있는지, 부착 · 소켓 본이 있는지). `_listParentIndex` 도 여기서 채웁니다. */

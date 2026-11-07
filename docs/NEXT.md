@@ -24,11 +24,11 @@
 **상태(2026-11-07):** 3 차 작업자 W1 ~ W6 을 모두 본 트리 `main` 에 합쳤다. origin 은 `e3b2cbd81a` 이고, 그 뒤 로컬 커밋은 아직 검증 · push 하지 않았다(`git log origin/main..HEAD`). 먼저 할 일은 **아래 1 번**이다.
 
 **1. 합친 것을 검증하고 push.** `bash Scripts/dev/VerifyBundle.sh --no-linux` 를 한 번 돌리고 지면 고친다. 끝 줄 `VERIFIED=<sha>` 만 `git push origin <sha>:main`. 그 뒤 작업자 워크트리(`.claude/worktrees/agent-*`)와 브랜치를 지운다. 특히 볼 곳:
-- 쓰는 것만 담는 쿠킹(W2): engine 팩이 0.4MB 까지 준다는 추정이 의심스럽다(코드가 경로를 조립해 읽는 에셋이 빠졌을 수 있다) — 게임을 `-cooked-content` 로 띄워 본다. `PackConfig.json` 의 항목 id 칸 표(`_listEntryIDField`)에 없는 칸이나 세이브에 든 id 로 부르는 항목은 쿠킹이 통과한 채 빠진다 — 런타임 등록 줄과 대조하는 테스트를 둔다. `StressTestSceneSettings::_combatEnemyData` 는 접두 경로라 따라가지 못한다.
+- 쓰는 것만 담는 쿠킹(W2): engine 팩이 0.4MB 까지 준다는 추정이 의심스럽다(코드가 경로를 조립해 읽는 에셋이 빠졌을 수 있다) — 게임을 `-cooked-content` 로 띄워 본다.
 - 참조 칸 전환(W3): `AssetReferenceFields.generated.json` 이 빌드로 다시 쓰였는지, 새 이름(`clip` · `tree` · `sound`)이 다른 뜻의 칸을 참조로 오판하지 않는지. `catalogcascade` 표가 `.interactions.xml` 이 되어 "표에 없는 .xml" 다시 읽기 길은 이 시나리오로 더는 보지 않는다.
 - 단계 5(W1): 새 시나리오 `game.empty.resourcecondition`, `kCore` 9, 엔진 영역 처리기가 서버에도 달린 뒤의 접속. 빈 이름 칸을 이제 `"None"` 이 아니라 빈 글로 쓴다(통합 고침) — 저장 글을 비교하는 곳을 본다.
 
-**2. 단계 5 가 남긴 것(W1).** 형식별 입구 12 곳(`Skeleton` · `Material` · `RigAsset` · `SpriteLibrary` · `PhysicsAsset` · `SceneDocument` 등)이 리소스 id 를 넘기지 않아 층 · 다시 읽기 · 해시 대조를 받지 못한다. 배포 구성에는 규칙 표가 없어 카탈로그 층이 오류로 멈춘다(표를 `Config/Dev` 밖으로 옮긴다). 편집기 저장이 `_when` 을 지금 태그로 푼 값으로 굳힌다. 접속 뒤에 합성한 리소스는 대조하지 않는다. 위 코드의 근거는 `docs/ResourceStructure.md` 끝 절.
+**2. 단계 5 가 남긴 것.** 조건을 받지 않거나 글 입구로 읽는 형식의 목록은 `docs/ResourceStructure.md` 끝 절(쓸 일이 생기면 그 형식을 옮긴다). 접속 뒤 대조 · 저장의 조건 지킴은 단위 테스트까지다 — 멀티 프로세스 · 에디터 저장 시나리오가 없다.
 
 **3. 이름 정리 남은 것(규칙은 [NamingCpp](agents/NamingCpp.md) 용어 표).** 통합 뒤 개명 표의 옛 이름은 남지 않았다(2026-11-07 확인). 표와 도구는 `.claude/handoff/surveys/`(`rename.py` · `r*.txt` · `sortinc.py`, `rename.py` 는 단어 경계 치환 + 파일 줄기 `git mv`). 남은 것:
 - `CombatHealth` → 체력 상태 기계 이름: `HealthState` 는 서버 상태 점검이 쓰고, `getCombatHealth().getHealth()` · 멤버 `_combatHealth` 와 기존 `_health` 칸이 섞여 기계적으로 못 바꿨다. 형식과 멤버를 함께 손으로 바꾼다.
@@ -54,7 +54,7 @@
 - 1 인칭 탄도선이 시점 총에 가려 화면에 남지 않는다(`ShooterPlayerComponent` 총구가 몸 무기). 시나리오 `projectilecombo` 는 값(`Shooter3D.TracerWidth`)으로 본다.
 - 엔진 서비스 생성 순서가 목록 위치에서 의존 · 이름 순으로 바뀌었다(K7). 생성자 안에서 다른 서비스를 찾는 공장이 있으면 드러난다.
 - 자식이 더한 전이 id 가 부모와 겹치면 조용히 합쳐진다(R4). 머티리얼 파라미터 묶음은 핫 리로드가 없다(R5).
-- 리플렉션 형식의 `_base` 는 개발 실행도 문서 표(`listDocument`)만 읽는다 — 새 문서 형식에 `_base` 를 쓰면 표에 줄을 함께 더한다.
+- 리플렉션 형식의 `_base` 는 개발 실행도 문서 표(`Content/engine/settings/datacataloginheritance.xml` 의 `<Document>`)만 읽는다 — 새 문서 형식에 `_base` 를 쓰면 표에 줄을 함께 더한다.
 
 **사용자에게 알릴 것:** 스크립팅은 Lua 로 추천했고 답이 없으면 Lua 로 한다. 런타임 아틀라스는 하지 않기로 했다.
 

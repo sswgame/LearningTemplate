@@ -75,9 +75,9 @@ namespace sw
         pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
         pAnimator->setAnimationSetPath( settings._combatEnemyClips );
         pAnimator->setInitialState( "Walking_A" );
-        pNotify->setNotifyTablePath( settings._combatEnemyData + ".notifies.xml" );
-        pSockets->setSocketSetPath( settings._combatEnemyData + ".sockets.xml" );
-        pRagdoll->setPhysicsAssetPath( settings._combatEnemyData + ".physics.xml" );
+        pNotify->setNotifyTablePath( settings._combatEnemyNotifies );
+        pSockets->setSocketSetPath( settings._combatEnemySockets );
+        pRagdoll->setPhysicsAssetPath( settings._combatEnemyPhysics );
         pRagdoll->setFlinchClip( hashed_string( "Hit_A" ) );
         pRagdoll->setGetUpClips( hashed_string( "Lie_StandUp" ), hashed_string{}, hashed_string( "Idle" ) );
         return pEnemy;

@@ -4,9 +4,12 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -200,6 +203,257 @@ namespace sw
             }
         };
 
+        /** @brief 저장할 글에 원본의 조건을 되돌리는 일입니다(`ResourceComposer::restoreConditions`). */
+        struct ResourceConditionRestoreInternal
+        {
+            using Stage = ResourceConditionStageInternal;
+
+            /** @brief 원소에 적힌 조건 하나입니다. */
+            struct When
+            {
+                XMLNode _node;
+                uint8   _bTrue   : 1;
+                uint8   _bRemove : 1;
+
+                When()
+                    : _node{}
+                    , _bTrue{ SW_FALSE }
+                    , _bRemove{ SW_FALSE }
+                {
+                }
+            };
+
+            [[nodiscard]] static bool isConditionName( string_view name ) { return name == DataInheritance::kIfAttribute || name == DataInheritance::kOpAttribute; }
+
+            /** @brief @p element 의 조건을 지금 태그로 풀어 적힌 차례로 모읍니다. 틀린 조건은 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readWhens( const XMLNode& element, string_view id, const ResourceTagSet& tags, vector<When>& outListWhen )
+            {
+                for ( XMLNode node = element.findChild( DataInheritance::kWhenElement ); node.isValid(); node = node.findNextSibling( DataInheritance::kWhenElement ) )
+                {
+                    const utf8* pTest = node.findAttribute( DataInheritance::kIfAttribute );
+                    if ( pTest == nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "ResourceCondition.NoTest", "'%#': <%#> in <%#> has no %#", id, DataInheritance::kWhenElement, element.getName(), DataInheritance::kIfAttribute );
+                        return false;
+                    }
+                    ResourceTagTest test;
+                    if ( ResourceTags::compileTest( pTest, id, test ) == false )
+                        return false;
+                    When& when    = outListWhen.emplace_back();
+                    when._node    = node;
+                    when._bTrue   = test.evaluate( tags ) ? SW_TRUE : SW_FALSE;
+                    when._bRemove = node.getAttributeText( DataInheritance::kOpAttribute ) == DataInheritance::kOpRemove ? SW_TRUE : SW_FALSE;
+                }
+                return true;
+            }
+
+            /** @brief 칸 @p name 을 정한 조건(참인 것 중 마지막)의 차례입니다. 없으면 -1 입니다. */
+            [[nodiscard]] static int32 findWinner( const vector<When>& listWhen, string_view name )
+            {
+                for ( int32 index = static_cast<int32>( listWhen.size() ) - 1; index >= 0; --index )
+                {
+                    const When& when = listWhen[static_cast<size_t>( index )];
+                    if ( when._bTrue == SW_TRUE && when._node.findAttribute( string( name ).c_str() ) != nullptr )
+                        return index;
+                }
+                return -1;
+            }
+
+            /** @brief 아래 어디든 조건이 있으면 true 입니다. */
+            [[nodiscard]] static bool hasConditions( const XMLNode& element )
+            {
+                for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( Stage::isWhen( child ) || ( Stage::isElement( child ) && hasConditions( child ) ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 같은 값의 속성 수입니다. */
+            [[nodiscard]] static uint32 countSameAttributes( const XMLNode& left, const XMLNode& right )
+            {
+                uint32 count = 0;
+                for ( XMLAttribute attribute = left.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                {
+                    const utf8* pOther = right.findAttribute( attribute.getName() );
+                    if ( pOther != nullptr && string_view( pOther ) == string_view( attribute.getValue() ) )
+                        ++count;
+                }
+                return count;
+            }
+
+            /** @brief 원본 자식 하나가 사본에서 어떻게 되었는가입니다. */
+            struct SourceChild
+            {
+                XMLNode _node;
+                int32   _targetIndex;  ///< 짝인 사본 자식의 차례. 음수면 짝이 없다
+                uint8   _bRemoved : 1; ///< 참인 조건이 뺐다(사본에 없다)
+                uint8   _bWritten : 1; ///< 결과에 썼다
+
+                SourceChild()
+                    : _node{}
+                    , _targetIndex{ -1 }
+                    , _bRemoved{ SW_FALSE }
+                    , _bWritten{ SW_FALSE }
+                {
+                }
+            };
+
+            /** @brief 원본 자식을 사본 자식과 짝짓습니다. 같은 이름 안에서 같은 값의 속성이 가장 많은 것이 짝이고, 그 이름이 양쪽에 하나뿐이면 값이 모두 달라도 짝이다. */
+            static void pairChildren( const vector<XMLNode>& listTarget, vector<SourceChild>& inoutListSource )
+            {
+                vector<uint8> listUsed( listTarget.size(), SW_FALSE );
+                const auto    countNamed = []( auto&& getNode, size_t count, string_view name )
+                {
+                    uint32 total = 0;
+                    for ( size_t index = 0; index < count; ++index )
+                    {
+                        total += string_view( getNode( index ).getName() ) == name ? 1u : 0u;
+                    }
+                    return total;
+                };
+                const auto getTarget = [&listTarget]( size_t index ) -> const XMLNode&
+                { return listTarget[index]; };
+                const auto getSource = [&inoutListSource]( size_t index ) -> const XMLNode&
+                { return inoutListSource[index]._node; };
+                for ( SourceChild& source : inoutListSource )
+                {
+                    if ( source._bRemoved == SW_TRUE )
+                        continue;
+                    const string_view name      = source._node.getName();
+                    int32             bestIndex = -1;
+                    uint32            bestScore = 0;
+                    const bool        bOnlyPair = countNamed( getTarget, listTarget.size(), name ) == 1u && countNamed( getSource, inoutListSource.size(), name ) == 1u;
+                    const bool        bNoValues = source._node.getFirstAttribute().isValid() == false;
+                    for ( size_t index = 0; index < listTarget.size(); ++index )
+                    {
+                        if ( listUsed[index] == SW_TRUE || string_view( listTarget[index].getName() ) != name )
+                            continue;
+                        const uint32 score = countSameAttributes( source._node, listTarget[index] );
+                        if ( bestIndex < 0 ? ( score > 0u || bOnlyPair || bNoValues ) : score > bestScore )
+                        {
+                            bestIndex = static_cast<int32>( index );
+                            bestScore = score;
+                        }
+                    }
+                    if ( bestIndex >= 0 )
+                    {
+                        source._targetIndex                        = bestIndex;
+                        listUsed[static_cast<size_t>( bestIndex )] = SW_TRUE;
+                    }
+                }
+            }
+
+            /** @brief 짝이 없는 조건 든 원본 원소를 남기는가입니다. 목록 원소(같은 이름이 또 있거나 `item` · `_list…` 아래)는 지운 것이고, 차이 저장은 부모와 같아 빠진 것일 수 있다. */
+            [[nodiscard]] static bool keepsUnpaired( const XMLNode& source, const XMLNode& sourceParent, const vector<XMLNode>& listTarget, bool bDelta )
+            {
+                if ( hasConditions( source ) == false )
+                    return false;
+                if ( bDelta )
+                    return true;
+                const string_view name       = source.getName();
+                const string_view parentName = sourceParent.getName();
+                uint32            sameNamed  = 0;
+                for ( XMLNode other = sourceParent.findChild( source.getName() ); other.isValid(); other = other.findNextSibling( source.getName() ) )
+                {
+                    ++sameNamed;
+                }
+                const bool bTargetHasSame = VectorUtil::containsIf( listTarget, [name]( const XMLNode& target )
+                { return string_view( target.getName() ) == name; } );
+                return sameNamed <= 1u && bTargetHasSame == false && StringUtil::startsWith( parentName, "_list" ) == false;
+            }
+
+            /** @brief 원본 @p source 의 조건을 사본 @p target 에 되돌려 @p out 에 씁니다. */
+            [[nodiscard]] static bool writeRestored( const XMLNode& source, const XMLNode& target, const XMLNode& out, string_view id, const ResourceTagSet& tags, bool bDelta )
+            {
+                vector<When> listWhen;
+                if ( readWhens( source, id, tags, listWhen ) == false )
+                    return false;
+                // 1. 칸: 참인 조건이 정한 칸은 원본의 값으로 되돌린다.
+                for ( XMLAttribute attribute = target.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                {
+                    if ( findWinner( listWhen, attribute.getName() ) < 0 )
+                        out.setAttribute( attribute.getName(), attribute.getValue() );
+                }
+                for ( XMLAttribute attribute = source.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                {
+                    if ( findWinner( listWhen, attribute.getName() ) >= 0 )
+                        out.setAttribute( attribute.getName(), attribute.getValue() );
+                }
+                if ( StringUtil::isNullOrEmpty( target.getText() ) == false )
+                    out.setValue( target.getText() );
+                // 2. 조건: 그대로 남기되, 참인 조건이 정한 칸을 편집했으면 그 값이 조건의 값이다.
+                for ( size_t index = 0; index < listWhen.size(); ++index )
+                {
+                    const XMLNode clone = out.appendClone( listWhen[index]._node );
+                    for ( XMLAttribute attribute = listWhen[index]._node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                    {
+                        if ( isConditionName( attribute.getName() ) || findWinner( listWhen, attribute.getName() ) != static_cast<int32>( index ) )
+                            continue;
+                        const utf8* pEdited = target.findAttribute( attribute.getName() );
+                        if ( pEdited != nullptr )
+                            clone.setAttribute( attribute.getName(), pEdited );
+                    }
+                }
+                // 3. 자식: 사본의 차례를 따르고, 사본에 없는 원본 원소는 원본에서 앞선 짝 뒤에 둔다.
+                vector<XMLNode> listTarget;
+                for ( XMLNode child = target.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( Stage::isElement( child ) )
+                        listTarget.push_back( child );
+                }
+                vector<SourceChild> listSource;
+                for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( Stage::isElement( child ) == false || Stage::isWhen( child ) )
+                        continue;
+                    vector<When> listChildWhen;
+                    if ( readWhens( child, id, tags, listChildWhen ) == false )
+                        return false;
+                    SourceChild& entry = listSource.emplace_back();
+                    entry._node        = child;
+                    entry._bRemoved    = VectorUtil::containsIf( listChildWhen, []( const When& when )
+                       { return when._bTrue == SW_TRUE && when._bRemove == SW_TRUE; } )
+                                           ? SW_TRUE
+                                           : SW_FALSE;
+                }
+                pairChildren( listTarget, listSource );
+                const auto writeUnpairedBefore = [&]( size_t endIndex )
+                {
+                    for ( size_t index = 0; index < endIndex; ++index )
+                    {
+                        SourceChild& entry = listSource[index];
+                        if ( entry._bWritten == SW_TRUE || entry._targetIndex >= 0 )
+                            continue;
+                        entry._bWritten = SW_TRUE;
+                        if ( entry._bRemoved == SW_TRUE || keepsUnpaired( entry._node, source, listTarget, bDelta ) )
+                            (void)out.appendClone( entry._node );
+                    }
+                };
+                for ( size_t targetIndex = 0; targetIndex < listTarget.size(); ++targetIndex )
+                {
+                    const XMLNode& child       = listTarget[targetIndex];
+                    size_t         sourceIndex = listSource.size();
+                    for ( size_t index = 0; index < listSource.size(); ++index )
+                    {
+                        if ( listSource[index]._targetIndex == static_cast<int32>( targetIndex ) )
+                            sourceIndex = index;
+                    }
+                    if ( sourceIndex == listSource.size() )
+                    {
+                        (void)out.appendClone( child ); // 편집이 더한 원소
+                        continue;
+                    }
+                    writeUnpairedBefore( sourceIndex );
+                    if ( writeRestored( listSource[sourceIndex]._node, child, out.appendChild( child.getName() ), id, tags, bDelta ) == false )
+                        return false;
+                }
+                writeUnpairedBefore( listSource.size() );
+                return true;
+            }
+        };
+
         struct ResourceComposerInternal
         {
             /** @brief 쿠킹본만 읽는 구성에서 `_base` 가 남아 있으면 오류를 남기고 false 입니다 — 런타임은 펼친 결과만 읽는다(`PackCooker`). */
@@ -247,8 +501,8 @@ namespace sw
                 if ( pfnMakeSchema != nullptr )
                     return DataInheritance::flatten( text, id, pfnMakeSchema(), source, outText );
                 // 리플렉션 형식은 보지 않는다 — 쿠킹 프로세스에 어떤 형식이 지어졌는지(서버는 Renderer 가 없다 · 게임 모듈은 아직 없다)에 쿠킹본이 갈리면 안 된다.
-                SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no merge rule the cook can see - add it to listDocument in %# (the cook does not read reflection)", id, rootName,
-                                 DataInheritance::kBaseAttribute, DataCatalogInheritance::kConfigPath );
+                SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no merge rule the cook can see - add a <Document> row to %# (the cook does not read reflection)", id, rootName,
+                                 DataInheritance::kBaseAttribute, DataCatalogInheritance::kTableAssetID );
                 return false;
             }
 
@@ -284,8 +538,8 @@ namespace sw
                             return false;
                         if ( bListed == false )
                         {
-                            SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no row in listDocument of %# - the cook could not flatten it either", id, pRootName, DataInheritance::kBaseAttribute,
-                                             DataCatalogInheritance::kConfigPath );
+                            SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no <Document> row in %# - the cook could not flatten it either", id, pRootName, DataInheritance::kBaseAttribute,
+                                             DataCatalogInheritance::kTableAssetID );
                             return false;
                         }
                         return flattenFromResources( text, id, schema, outText );
@@ -312,8 +566,8 @@ namespace sw
 
             /**
              * @brief 층 파일 하나(@p layerText, 부모를 적었다)를 @p source 의 암묵적 부모 위에 얹습니다. 규칙은 읽는 쪽의 형식에서 옵니다.
-             * @details 리플렉션 형식은 리플렉션에서 규칙을 만든다 — 층은 배포 런타임에서도 얹고(DLC · 모드) 그때 규칙 표(`Config/Dev`)가 없다. 표와 리플렉션이 같은지는
-             *          `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다. 카탈로그 표 문맥(`forDocument`)은 표를 읽는다.
+             * @details 리플렉션 형식은 리플렉션에서 규칙을 만든다(코드가 곁에 있으니 표를 읽지 않는다). 표와 리플렉션이 같은지는
+             *          `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다. 카탈로그 표 문맥(`forDocument`)은 표를 읽는다 — 표는 엔진 팩에 담겨 배포 런타임의 층(DLC · 모드)도 읽는다.
              */
             [[nodiscard]] static bool mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, IDataInheritanceSource& source, string& outText )
             {
@@ -345,7 +599,7 @@ namespace sw
                         if ( bListed )
                             return DataInheritance::flatten( layerText, layerID, schema, source, outText );
                         SW_LOG_ERROR_ID( "ResourceLayer.NoRule", "Resource layer '%#': <%#> has no merge rule - add it to %# or read it through its own reader", layerID, rootName,
-                                         DataCatalogInheritance::kConfigPath );
+                                         DataCatalogInheritance::kTableAssetID );
                         return false;
                     }
                     case ResourceContext::ParentRule::RootName:
@@ -519,5 +773,51 @@ namespace sw
         outText     = outDoc.saveToString();
         outbChanged = true;
         return true;
+    }
+
+    bool ResourceComposer::restoreConditions( string_view savedText, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText )
+    {
+        using Internal = ResourceConditionRestoreInternal;
+        outText        = string{ savedText };
+        if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || ResourceConditionStageInternal::looksLikeXML( sourceText ) == false )
+            return true;
+        XMLDocument sourceDoc;
+        if ( sourceDoc.parse( sourceText, id ) == false || Internal::hasConditions( sourceDoc.getRoot() ) == false )
+            return true; // 깨진 원본에는 지킬 조건이 없다 - 글자 `_when` 이 주석 · 값에 있었을 뿐이어도 여기로 온다
+        XMLDocument savedDoc;
+        if ( savedDoc.parse( savedText, id ) == false || savedDoc.getRoot().isValid() == false || string_view( savedDoc.getRoot().getName() ) != string_view( sourceDoc.getRoot().getName() ) )
+        {
+            SW_LOG_ERROR_ID( "ResourceCondition.SaveShapeChanged", "'%#' holds resource conditions but the text to save has another root - not saved, the conditions would be lost", id );
+            return false;
+        }
+        XMLDocument   outDoc;
+        const bool    bDelta = savedDoc.getRoot().getAttributeText( DataInheritance::kBaseAttribute ).empty() == false;
+        const XMLNode root   = outDoc.appendRoot( savedDoc.getRoot().getName() );
+        if ( Internal::writeRestored( sourceDoc.getRoot(), savedDoc.getRoot(), root, id, tags, bDelta ) == false )
+            return false;
+        outText = outDoc.saveToString();
+        return true;
+    }
+
+    bool ResourceComposer::saveText( string_view absPath, string_view text )
+    {
+        // 덮어쓰기 층을 얹어 읽은 사본을 원본 자리에 쓰면 층 값이 원본에 박힌다 - 고칠 자리는 층 파일이다.
+        if ( ResourceLayers::getLayers().empty() == false )
+        {
+            const AssetPaths* pPaths = engine::findSubsystem<AssetPaths>();
+            const string      id     = pPaths != nullptr ? pPaths->toAssetID( absPath ) : string{};
+            if ( id.empty() == false && ResourceComposition::isLayered( id ) )
+            {
+                SW_LOG_ERROR_ID( "ResourceLayer.SaveWouldBake", "'%#' was read with a resource layer over it - not saved, the layer's values would be written into the original (edit the layer file instead)", id );
+                return false;
+            }
+        }
+        string sourceText;
+        if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
+            return FileUtil::writeTextFile( absPath, text );
+        string restoredText;
+        if ( restoreConditions( text, sourceText, absPath, ResourceTags::capture(), restoredText ) == false )
+            return false;
+        return FileUtil::writeTextFile( absPath, restoredText );
     }
 } // namespace sw

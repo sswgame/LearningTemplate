@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialParameterCollection.h"
@@ -1075,10 +1076,10 @@ namespace sw
 
     bool Material::loadFromFile( const AssetID& assetID )
     {
-        XMLDocument doc;
-        if ( doc.loadResource( assetID ) == false )
+        string text;
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        return loadFromXML( doc.saveToString() );
+        return loadComposed( text, assetID.view(), ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     bool Material::loadFromDiskFile( string_view diskPath )
@@ -1201,11 +1202,16 @@ namespace sw
 
     bool Material::loadFromXML( string_view xmlText )
     {
+        return loadComposed( xmlText, "<material>", ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ) );
+    }
+
+    bool Material::loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context )
+    {
         // 부모를 가리키면(`_base="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
         const string parentPath = DataInheritance::findBasePath( xmlText ); // 저장이 부모와의 차이로 쓴다
         string       flatText;
         bool         bComposed = false;
-        if ( ResourceComposer::compose( xmlText, "<material>", ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xmlText, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument doc;
         if ( doc.parse( bComposed ? string_view( flatText ) : xmlText ) == false )

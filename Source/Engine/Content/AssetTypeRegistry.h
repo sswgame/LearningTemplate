@@ -263,7 +263,7 @@ namespace sw
 {
     /**
      * @brief `SW_ASSET_TYPE` 가 두는 정적 등록자입니다. 만들 때 올리고 사라질 때 내립니다. 정의는 사본으로 들어, 등록 줄이 더한 경로 규칙 · 로더가 등록자와 수명이 같습니다.
-     * @details 표는 프로세스 값이고 게임 모듈을 올리기 전의 쿠킹(`HeadlessSubsystem::runCookTask`)은 게임 · 키트 종류를 보지 못한다 — 쿠킹이 알아야 하는 합성 규칙은 이 표가 아니라 데이터에 둔다(`Config/Dev/DataCatalogInheritance.json`).
+     * @details 표는 프로세스 값이고 게임 모듈을 올리기 전의 쿠킹(`HeadlessSubsystem::runCookTask`)은 게임 · 키트 종류를 보지 못한다 — 쿠킹이 알아야 하는 합성 규칙은 이 표가 아니라 데이터에 둔다(`Content/engine/settings/datacataloginheritance.xml`).
      */
     class SW_API AssetTypeRegistrar
     {

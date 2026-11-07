@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    struct ResourceContext;
+
     class XMLNode;
 
     /** @brief 루트와 골반 이동을 옮기는 방법입니다(파일에는 이름으로 적는다). */
@@ -209,6 +211,8 @@ namespace sw
                                RetargetTranslationMode mode );
 
     private:
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RetargetProfile>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );

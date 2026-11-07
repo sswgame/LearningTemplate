@@ -405,7 +405,7 @@ namespace sw
         UIStyleSheetAsset sheet{};
         sheet._path = FileUtil::normalizePath( path );
         XMLDocument document;
-        // 부모(`_base`)는 데이터 읽기가 펼친다 — 규칙은 `Config/Dev/DataCatalogInheritance.json` 한 줄이고 합치기 코드는 여기 없다.
+        // 부모(`_base`)는 데이터 읽기가 펼친다 — 규칙은 `Content/engine/settings/datacataloginheritance.xml` 한 줄이고 합치기 코드는 여기 없다.
         if ( document.parseData( text, path ) == false )
         {
             outError = document.getLastError();

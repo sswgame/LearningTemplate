@@ -622,6 +622,11 @@ namespace sw
 
     bool XMLDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
     {
+        return loadResourceAs( assetID, ResourceContext::forDocument(), pOutAbsPath, nullptr );
+    }
+
+    bool XMLDocument::loadResourceAs( const AssetID& assetID, const ResourceContext& context, string* pOutAbsPath, string* pOutBaseID )
+    {
         const string_view relativePath = assetID.view();
         if ( relativePath.empty() )
         {
@@ -639,8 +644,15 @@ namespace sw
         }
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
+        if ( pOutBaseID != nullptr )
+            *pOutBaseID = DataInheritance::findBasePath( text );
         // 리소스 id 로 읽었으니 덮어쓰기 층과 다시 읽기 기록이 이 id 를 쓴다(`ResourceContext::withAsset`).
-        return parseComposed( text, absPath, ResourceContext::forDocument().withAsset( assetID ) );
+        return parseComposed( text, absPath, context.withAsset( assetID ) );
+    }
+
+    bool XMLDocument::parseResourceText( string_view xmlText, const AssetID& assetID )
+    {
+        return parseComposed( xmlText, assetID.view(), ResourceContext::forDocument().withAsset( assetID ) );
     }
 
     bool XMLDocument::parseData( string_view xmlText, string_view sourceName )
@@ -713,7 +725,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", string{ absPath }.c_str() );
             return false;
         }
-        return FileUtil::writeTextFile( absPath, text );
+        return ResourceComposer::saveText( absPath, text );
     }
 
     string XMLDocument::unescapeString( string_view text )

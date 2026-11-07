@@ -43,6 +43,8 @@ namespace sw
          * @param pRootName 루트 원소 이름입니다(대소문자 무시).
          */
         [[nodiscard]] bool parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot );
+        /** @brief 부르는 쪽이 이미 읽은 리소스 @p assetID 의 글로 `parseRoot` 합니다(덮어쓰기 층 · 다시 읽기 기록을 받는다). */
+        [[nodiscard]] bool parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot );
         /** @brief 리소스 경로(또는 절대 경로)의 문서를 읽고 루트 원소를 찾습니다. */
         [[nodiscard]] bool loadRoot( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot );
 

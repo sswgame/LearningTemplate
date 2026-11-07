@@ -25,6 +25,11 @@ namespace sw
         return reportRootStatus( outDocument, XMLReadUtil::parseRoot( outDocument, xmlText, _sourceName, pRootName, outRoot ), pRootName );
     }
 
+    bool CharacterDataReader::parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot )
+    {
+        return reportRootStatus( outDocument, XMLReadUtil::parseResourceRoot( outDocument, xmlText, assetID, pRootName, outRoot ), pRootName );
+    }
+
     bool CharacterDataReader::loadRoot( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot )
     {
         return reportRootStatus( outDocument, XMLReadUtil::loadRoot( outDocument, assetID, pRootName, outRoot ), pRootName );

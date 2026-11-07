@@ -110,10 +110,15 @@ namespace sw
 
     bool RetargetProfile::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ) );
+    }
+
+    bool RetargetProfile::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         clear();
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         XMLNode     root;
@@ -152,7 +157,7 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), text ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "RetargetProfile.WriteFailed", "Retarget profile could not be written: %#", absPath.str() );
             return false;
@@ -170,7 +175,7 @@ namespace sw
             clear();
             return false;
         }
-        return loadFromXMLText( text, path );
+        return loadComposed( text, path, ResourceContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     string RetargetProfile::toXML() const

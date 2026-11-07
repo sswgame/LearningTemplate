@@ -25,6 +25,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
@@ -161,7 +162,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeVariantNotSaved", "Behavior tree '%#' was not saved: %#", path.c_str(), saveError.c_str() );
             return false;
         }
-        if ( FileUtil::writeTextFile( diskPath->str(), saveText ) == false )
+        if ( ResourceComposer::saveText( diskPath->str(), saveText ) == false )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );

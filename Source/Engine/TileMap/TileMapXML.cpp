@@ -8,6 +8,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -657,7 +658,7 @@ namespace sw
         const string xml = toXML();
         if ( xml.empty() )
             return false;
-        const bool bOk = FileUtil::writeTextFile( absPath.str(), xml );
+        const bool bOk = ResourceComposer::saveText( absPath.str(), xml );
         if ( bOk )
             SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;

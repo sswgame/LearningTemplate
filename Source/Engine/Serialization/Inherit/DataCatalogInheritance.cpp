@@ -5,12 +5,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -24,6 +22,11 @@ namespace sw
              * @details 합치기는 `_base` 를 파일에만 있는 칸으로 보고 지운다. 항목의 부모는 파일을 다 합친 뒤에 찾아야 하므로(자식 파일이 부모 파일의 항목을 고치고, 부모로 삼는다) 그때까지 보통 칸으로 남긴다.
              */
             static constexpr const utf8* kEntryBaseTransit = "_entryBaseTransit";
+
+            static constexpr const utf8* kDocumentElement = "Document"; ///< 규칙 표: 문서 형식 한 줄
+            static constexpr const utf8* kCatalogElement  = "Catalog";  ///< 규칙 표: 카탈로그 한 줄
+            static constexpr const utf8* kEntryElement    = "Entry";    ///< 규칙 표: 카탈로그의 항목 종류(`key` 필수)
+            static constexpr const utf8* kFieldElement    = "Field";    ///< 규칙 표: 칸(`key` 가 있으면 목록 원소의 열쇠)
 
             static bool isElement( const XMLNode& node )
             {
@@ -273,7 +276,7 @@ namespace sw
                 if ( pKind == nullptr || pKind->_keyAttribute.empty() )
                 {
                     SW_LOG_ERROR_ID( "DataCatalogInheritance.KindNotListed", "'%#': <%#> has %# but it is not an entry kind of <%#> in %#", sourceName, entry.getName(), DataInheritance::kBaseAttribute, fileRoot.getName(),
-                                     DataCatalogInheritance::kConfigPath );
+                                     DataCatalogInheritance::kTableAssetID );
                     return false;
                 }
                 DataInheritanceSchema entrySchema = *pKind; // 항목 문서의 맨 위는 목록이 아니라 칸이다
@@ -296,25 +299,59 @@ namespace sw
                 return true;
             }
 
-            /** @brief 규칙 표의 노드 하나를 읽습니다. */
-            [[nodiscard]] static bool readSchemaFields( const JSONValue& value, const utf8* pListName, DataInheritanceSchema& out, bool bKeyRequired )
+            /** @brief 규칙 표의 줄 하나(@p node)의 @p pChildName 자식을 @p out 의 칸으로 읽습니다. */
+            [[nodiscard]] static bool readSchemaFields( const XMLNode& node, const utf8* pChildName, DataInheritanceSchema& out, bool bKeyRequired )
             {
                 bool bValid = true;
-                forEachObjectInArray( value, pListName, [&]( const JSONValue& element, size_t )
+                for ( XMLNode element = node.findChild( pChildName ); element.isValid(); element = element.findNextSibling( pChildName ) )
                 {
-                    if ( element.has( "name" ) == false || ( bKeyRequired && element.has( "key" ) == false ) )
+                    const string_view name = element.getAttributeText( "name" );
+                    const string_view key  = element.getAttributeText( "key" );
+                    if ( name.empty() || ( bKeyRequired && key.empty() ) )
                     {
-                        SW_LOG_ERROR_ID( "DataCatalogInheritance.RuleInvalid", "%#: a rule of <%#> has no name or no key", DataCatalogInheritance::kConfigPath, out._name );
+                        SW_LOG_ERROR_ID( "DataCatalogInheritance.RuleInvalid", "%#: a rule of <%#> has no name or no key", DataCatalogInheritance::kTableAssetID, out._name );
                         bValid = false;
-                        return;
+                        continue;
                     }
-                    DataInheritanceSchema field{ element.get( "name" ).asString() };
-                    if ( element.has( "key" ) )
-                        field._keyAttribute = element.get( "key" ).asString();
-                    bValid = readSchemaFields( element, "listField", field, false ) && bValid;
+                    DataInheritanceSchema field{ name };
+                    field._keyAttribute = string{ key };
+                    bValid              = readSchemaFields( element, kFieldElement, field, false ) && bValid;
                     out._listField.push_back( std::move( field ) );
-                } );
+                }
                 return bValid;
+            }
+
+            /** @brief 표 글에서 @p pRowElement 줄 중 루트가 @p rootName 인 줄을 규칙으로 읽습니다. */
+            [[nodiscard]] static bool parseRow( string_view tableText, const utf8* pRowElement, const utf8* pChildName, bool bKeyRequired, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
+            {
+                outbListed = false;
+                XMLDocument doc;
+                if ( doc.parse( tableText, DataCatalogInheritance::kTableAssetID ) == false )
+                {
+                    SW_LOG_ERROR_ID( "DataCatalogInheritance.TableInvalid", "Inheritance rule table '%#' could not be parsed: %#", DataCatalogInheritance::kTableAssetID, doc.getLastError() );
+                    return false;
+                }
+                for ( XMLNode row = doc.getRoot().findChild( pRowElement ); row.isValid(); row = row.findNextSibling( pRowElement ) )
+                {
+                    if ( row.getAttributeText( "root" ) != rootName )
+                        continue;
+                    DataInheritanceSchema schema{ rootName };
+                    if ( readSchemaFields( row, pChildName, schema, bKeyRequired ) == false )
+                        return false;
+                    outSchema  = std::move( schema );
+                    outbListed = true;
+                    return true;
+                }
+                return true;
+            }
+
+            /** @brief 표를 읽습니다. 리소스라 쿠킹 작업 안이면 그 작업의 입력이 되고, 배포 구성은 엔진 팩에서 읽습니다. 읽지 못하면 오류입니다. */
+            [[nodiscard]] static bool readTable( string& outText )
+            {
+                if ( AssetIO::readTextAsset( AssetID{ DataCatalogInheritance::kTableAssetID }, outText ) )
+                    return true;
+                SW_LOG_ERROR_ID( "DataCatalogInheritance.TableUnreadable", "Inheritance rule table '%#' could not be read", DataCatalogInheritance::kTableAssetID );
+                return false;
             }
         };
     } // namespace
@@ -322,44 +359,17 @@ namespace sw
 
 namespace sw
 {
-    bool DataCatalogInheritance::parseSchema( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
+    bool DataCatalogInheritance::parseSchema( string_view tableText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
     {
-        outbListed = false;
-        JSONDocument doc;
-        if ( doc.parse( jsonText, kConfigPath ) == false )
-            return false;
-        const JSONValue listCatalog = doc.getRoot().get( "listCatalog" );
-        if ( listCatalog.isArray() == false )
-        {
-            SW_LOG_ERROR_ID( "DataCatalogInheritance.TableInvalid", "%#: 'listCatalog' is missing", kConfigPath );
-            return false;
-        }
-        for ( size_t index = 0; index < listCatalog.size(); ++index )
-        {
-            const JSONValue catalog = listCatalog.at( index );
-            if ( catalog.get( "root" ).asString() != rootName )
-                continue;
-            DataInheritanceSchema schema{ rootName };
-            if ( DataCatalogInheritanceInternal::readSchemaFields( catalog, "listEntry", schema, true ) == false )
-                return false;
-            outSchema  = std::move( schema );
-            outbListed = true;
-            return true;
-        }
-        return true;
+        using Internal = DataCatalogInheritanceInternal;
+        return Internal::parseRow( tableText, Internal::kCatalogElement, Internal::kEntryElement, true, rootName, outSchema, outbListed );
     }
 
     bool DataCatalogInheritance::loadSchema( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
     {
-        outbListed        = false;
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigPath );
-        string       text;
-        if ( AssetIO::readTextFile( path, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "DataCatalogInheritance.TableUnreadable", "Catalog inheritance rules '%#' could not be read", path );
-            return false;
-        }
-        return parseSchema( text, rootName, outSchema, outbListed );
+        outbListed = false;
+        string text;
+        return DataCatalogInheritanceInternal::readTable( text ) && parseSchema( text, rootName, outSchema, outbListed );
     }
 
     bool DataCatalogInheritance::flatten( string_view text, string_view sourceName, const DataInheritanceSchema& schema, IDataInheritanceSource& source, string& outText )
@@ -444,42 +454,19 @@ namespace sw
         return flatten( text, sourceName, schema, source, outText );
     }
 
-    bool DataCatalogInheritance::parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
+    bool DataCatalogInheritance::parseDocumentRule( string_view tableText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
     {
-        outbListed = false;
-        JSONDocument doc;
-        if ( doc.parse( jsonText, kConfigPath ) == false )
-            return false;
-        const JSONValue listDocument = doc.getRoot().get( "listDocument" );
-        if ( listDocument.isArray() == false )
-        {
-            SW_LOG_ERROR_ID( "DataCatalogInheritance.DocumentTableInvalid", "%#: 'listDocument' is missing", kConfigPath );
-            return false;
-        }
-        for ( size_t index = 0; index < listDocument.size(); ++index )
-        {
-            const JSONValue document = listDocument.at( index );
-            if ( document.get( "root" ).asString() != rootName )
-                continue;
-            DataInheritanceSchema schema{ rootName };
-            if ( DataCatalogInheritanceInternal::readSchemaFields( document, "listField", schema, false ) == false )
-                return false;
-            outSchema  = std::move( schema );
-            outbListed = true;
-            return true;
-        }
-        return true;
+        using Internal = DataCatalogInheritanceInternal;
+        return Internal::parseRow( tableText, Internal::kDocumentElement, Internal::kFieldElement, false, rootName, outSchema, outbListed );
     }
 
     bool DataCatalogInheritance::loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
     {
-        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigPath );
-        string       text;
-        if ( AssetIO::readTextFile( path, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "DataCatalogInheritance.TableUnreadable", "Catalog inheritance rules '%#' could not be read", path );
-            return false;
-        }
-        return parseDocumentRule( text, rootName, outSchema, outbListed );
+        outbListed = false;
+        string text;
+        return DataCatalogInheritanceInternal::readTable( text ) && parseDocumentRule( text, rootName, outSchema, outbListed );
     }
 } // namespace sw
+
+// 표는 코드가 이름으로 읽는다 — 배포 런타임이 덮어쓰기 층을 얹을 때 읽으므로 엔진 팩에 담는다.
+SW_ASSET_COOK_ROOT( DataCatalogInheritanceTable, ::sw::DataCatalogInheritance::kTableAssetID );

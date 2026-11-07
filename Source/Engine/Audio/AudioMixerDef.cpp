@@ -24,15 +24,20 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioMixerDef.AudioMixerNotFound", "Audio mixer not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, assetPath );
+        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioMixerDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
+        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool AudioMixerDef::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    {
         *this = AudioMixerDef{};
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
             return false;
         if ( XMLSerializer::deserialize( this, *StaticType(), flatText.empty() ? xmlText : string_view( flatText ) ) == false )
         {

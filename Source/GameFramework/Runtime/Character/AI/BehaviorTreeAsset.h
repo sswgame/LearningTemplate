@@ -130,6 +130,8 @@ namespace sw
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         uint32             loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief 부모를 펼친 글을 읽습니다. 하위 파일은 @p source 에서 찾습니다. */
+        [[nodiscard]] bool readFlatText( string_view flatText, string_view sourceName, IDataInheritanceSource& source );
 
     private:
         BehaviorTree            _tree;

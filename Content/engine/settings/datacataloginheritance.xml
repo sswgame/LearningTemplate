@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  항목 · 파일 상속의 합치기 규칙 표입니다(`DataCatalogInheritance`). 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 코드 옆 등록을 보지 못하고, 배포 런타임은 덮어쓰기 층을 얹을 때 이 표를 읽어 엔진 팩에 담깁니다.
+  <Document> 는 한 문서 형식의 칸 규칙(리플렉션 형식 줄은 ResourceComposerTest.DocumentTableMatchesReflection 이 코드와 대조합니다), <Catalog> 는 항목이 되풀이되는 카탈로그입니다.
+  <Field name key> · <Entry name key> 의 key 는 목록 원소의 열쇠 칸입니다. key 가 없으면 구조체 칸입니다.
+-->
+<DataCatalogInheritanceTable>
+	<Document root="AudioEventLibrary">
+		<Field name="_listParameter" key="_name"/>
+		<Field name="_listAttenuation" key="_name"/>
+		<Field name="_listEvent" key="_name"/>
+	</Document>
+	<Document root="AudioGraphDef">
+		<Field name="_listNode" key="_name">
+			<Field name="_listParameter" key="_name"/>
+		</Field>
+	</Document>
+	<Document root="AudioMixerDef">
+		<Field name="_listBus" key="_name">
+			<Field name="_listSend" key="_bus"/>
+			<Field name="_listDuck" key="_sourceBus"/>
+		</Field>
+		<Field name="_listAttenuation" key="_name"/>
+		<Field name="_occlusion"/>
+		<Field name="_listSnapshot" key="_name">
+			<Field name="_listBusVolume" key="_bus"/>
+		</Field>
+	</Document>
+	<Document root="AudioMusicDef">
+		<Field name="_listSegment" key="_name"/>
+	</Document>
+	<Document root="MaterialGraphDef">
+		<Field name="_listNode" key="_name">
+			<Field name="_listLink" key="_pin"/>
+			<Field name="_listValue" key="_name"/>
+		</Field>
+	</Document>
+	<Document root="MaterialParameterCollectionDef">
+		<Field name="_listParameter" key="_name"/>
+	</Document>
+	<Document root="PhysicsAsset">
+		<Field name="_listBody" key="_bone">
+			<Field name="_joint"/>
+			<Field name="_hitZone"/>
+		</Field>
+	</Document>
+	<Document root="RenderPipelineDesc">
+		<Field name="_listAttachment" key="_name"/>
+		<Field name="_listPass" key="_name"/>
+	</Document>
+	<Document root="SpriteLibrary">
+		<Field name="_listCategory" key="_name">
+			<Field name="_listLabel" key="_name"/>
+		</Field>
+	</Document>
+	<Document root="VFXEffectDef">
+		<Field name="_listEmitter" key="_name">
+			<Field name="_mesh"/>
+			<Field name="_sizeOverLife"/>
+			<Field name="_colorOverLife">
+				<Field name="_red"/>
+				<Field name="_green"/>
+				<Field name="_blue"/>
+				<Field name="_alpha"/>
+			</Field>
+			<Field name="_collision"/>
+			<Field name="_light"/>
+		</Field>
+		<Field name="_listUserParameter" key="_name"/>
+	</Document>
+	<Catalog root="ItemCatalog">
+		<Entry name="Item" key="id">
+			<Field name="Stats"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="ItemVisualCatalog">
+		<Entry name="ItemVisual" key="id">
+			<Field name="Part" key="name">
+				<Field name="Variant" key="name">
+					<Field name="Section" key="name"/>
+				</Field>
+				<Field name="MaterialVariant" key="name">
+					<Field name="Section" key="name"/>
+				</Field>
+				<Field name="Section" key="name"/>
+			</Field>
+			<Field name="State" key="name"/>
+			<Field name="DamageStage" key="name"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="EquipmentSetCatalog">
+		<Entry name="Set" key="id"/>
+	</Catalog>
+	<Catalog root="AbilityCatalog">
+		<Entry name="AbilityEffect" key="id">
+			<Field name="AssetTag" key="tag"/>
+			<Field name="BlockedTag" key="tag"/>
+			<Field name="GrantedTag" key="tag"/>
+			<Field name="RemoveEffectsWithTag" key="tag"/>
+			<Field name="Cue" key="tag"/>
+		</Entry>
+		<Entry name="Ability" key="id">
+			<Field name="AbilityTag" key="tag"/>
+			<Field name="BlockTag" key="tag"/>
+			<Field name="BlockedTag" key="tag"/>
+			<Field name="TriggerTag" key="tag"/>
+			<Field name="Param" key="name"/>
+		</Entry>
+		<Entry name="AbilitySet" key="id">
+			<Field name="AttributeSet" key="class">
+				<Field name="Attribute" key="name"/>
+			</Field>
+			<Field name="Ability" key="id"/>
+			<Field name="Effect" key="id"/>
+			<Field name="Tag" key="tag"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="CameraPresetCatalog">
+		<Entry name="Preset" key="id">
+			<Field name="View"/>
+			<Field name="Lens"/>
+			<Field name="Damping"/>
+			<Field name="BlendIn"/>
+			<Field name="Input"/>
+			<Field name="Confiner"/>
+			<Field name="Sweep"/>
+			<Field name="Collision"/>
+			<Field name="Framing"/>
+			<Field name="Noise"/>
+			<Field name="Dolly"/>
+			<Field name="PostProcess"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="SocketSet">
+		<Entry name="Socket" key="name"/>
+		<Entry name="VirtualBone" key="name"/>
+	</Catalog>
+	<Catalog root="SocketKinds">
+		<Entry name="Kind" key="name"/>
+	</Catalog>
+	<Catalog root="AnimationNotifies">
+		<Entry name="Notify" key="name"/>
+		<Entry name="FootContact" key="notify"/>
+	</Catalog>
+	<Catalog root="VoxelBlockCatalog">
+		<Entry name="Block" key="id"/>
+	</Catalog>
+	<Catalog root="CityCatalog">
+		<Entry name="Building" key="id"/>
+		<Entry name="Good" key="id"/>
+	</Catalog>
+	<Catalog root="CoasterLayoutCatalog">
+		<Entry name="Layout" key="id"/>
+	</Catalog>
+	<Catalog root="CreatureLifeCatalog">
+		<Entry name="Habitat" key="id"/>
+		<Entry name="Species" key="id"/>
+	</Catalog>
+	<Catalog root="CropCatalog">
+		<Entry name="Crop" key="id"/>
+	</Catalog>
+	<Catalog root="Interactions">
+		<Entry name="Interaction" key="id"/>
+		<Entry name="SmartObject" key="id"/>
+	</Catalog>
+	<Catalog root="LootCatalog">
+		<Entry name="Table" key="id"/>
+	</Catalog>
+	<Catalog root="ProjectileCatalog">
+		<Entry name="Projectile" key="id">
+			<Field name="OnHit" key="call"/>
+		</Entry>
+		<Entry name="Impact" key="id"/>
+	</Catalog>
+	<Catalog root="QuestCatalog">
+		<Entry name="Quest" key="id">
+			<Field name="Stage" key="id"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="RTSCatalog">
+		<Entry name="Unit" key="id"/>
+	</Catalog>
+	<Catalog root="ReputationCatalog">
+		<Entry name="Faction" key="id"/>
+	</Catalog>
+	<Catalog root="Schedules">
+		<Entry name="Place" key="id"/>
+		<Entry name="Spot" key="id"/>
+		<Entry name="Interrupt" key="id"/>
+		<Entry name="Appointment" key="id"/>
+		<Entry name="Archetype" key="id"/>
+		<Entry name="NPC" key="id"/>
+		<Entry name="Event" key="id"/>
+	</Catalog>
+	<Catalog root="ShopCatalog">
+		<Entry name="Shop" key="id">
+			<Field name="Stock" key="item"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="SkirmishUnitModelCatalog">
+		<Entry name="Model" key="id"/>
+	</Catalog>
+	<Catalog root="SpawnTable">
+		<Entry name="Entry" key="id"/>
+	</Catalog>
+	<Catalog root="WeaponCatalog">
+		<Entry name="Weapon" key="id">
+			<Field name="Modifier" key="field"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="UIStyleSheet">
+		<Entry name="Variable" key="_name"/>
+		<Entry name="TypeVariation" key="_name"/>
+		<Entry name="Rule" key="_selector">
+			<Field name="_font"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="WesternCatalog">
+		<Entry name="Horse" key="id"/>
+		<Entry name="Food" key="id"/>
+	</Catalog>
+</DataCatalogInheritanceTable>

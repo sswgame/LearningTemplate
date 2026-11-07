@@ -82,7 +82,7 @@ namespace sw
 
         string deltaText;
         if ( DataInheritance::makeDelta( XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID, deltaText ) == false ||
-             FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), deltaText ) == false )
+             FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), deltaText ) == false )
         {
             SW_LOG_ERROR_ID( "Xml.WriteFailed", "XML write failed: %# (%#)", absPath.str(), pTypeInfo->_name.c_str() );
             return false;

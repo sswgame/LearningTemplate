@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
+
 namespace sw::editor
 {
     namespace
@@ -72,7 +74,7 @@ namespace sw::editor
             return false;
         }
         const string text = saveToXMLText();
-        if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
         {
             outError = "The file could not be written";
             return false;

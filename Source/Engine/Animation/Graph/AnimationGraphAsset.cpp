@@ -127,7 +127,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        return parseText( text, path );
+        return parseText( text, path, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
@@ -140,7 +140,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
             return false;
-        return parseText( text, diskPath );
+        return parseText( text, diskPath, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
     }
 
     bool AnimationGraphAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -161,34 +161,34 @@ namespace sw
                 return false;
             // 프리팹처럼 뺀 글을 다시 읽어 같을 때만 쓴다 — 칸을 형식 기본값으로 되돌리면 차이로 적을 수 없다. 그때 부모 없는 한 벌로 쓰면 변형이 끊기므로 쓰지 않고 오류다.
             AnimationGraphAsset reread;
-            if ( reread.parseText( deltaText, absPath.str() ) == false || reread.toXML() != fullText )
+            if ( reread.parseText( deltaText, absPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) ) == false || reread.toXML() != fullText )
             {
                 SW_LOG_ERROR_ID( "AnimationGraphAsset.DeltaMismatch", "Animation graph '%#': the difference from base '%#' does not read back the same - not saved (a value the base writes cannot be reset to the default by a variant)", absPath.str(), _baseID );
                 return false;
             }
         }
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), deltaText.empty() ? fullText : deltaText );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && ResourceComposer::saveText( absPath.str(), deltaText.empty() ? fullText : deltaText );
     }
 
     bool AnimationGraphAsset::loadFromXMLText( string_view xmlView )
     {
         clear();
-        return parseText( xmlView, "<animation graph text>" );
+        return parseText( xmlView, "<animation graph text>", ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
     }
 
-    bool AnimationGraphAsset::parseText( string_view text, string_view sourceLabel )
+    bool AnimationGraphAsset::parseText( string_view text, string_view sourceLabel, const ResourceContext& context )
     {
         clear();
         _baseID = DataInheritance::findBasePath( text );
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( text, sourceLabel, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( text, sourceLabel, context, flatText, bComposed ) == false )
         {
             clear();
             return false;
         }
         XMLDocument doc;
-        if ( doc.parse( _baseID.empty() ? text : string_view{ flatText }, sourceLabel ) == false )
+        if ( doc.parse( bComposed ? string_view{ flatText } : text, sourceLabel ) == false )
         {
             clear();
             return false;

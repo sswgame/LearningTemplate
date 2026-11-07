@@ -301,10 +301,15 @@ namespace sw
 
     bool Skeleton::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forMerge( &Skeleton::mergeVariantText ) );
+    }
+
+    bool Skeleton::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         clear();
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forMerge( &Skeleton::mergeVariantText ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         return parseFlat( bComposed ? string_view( flatText ) : xml, sourceLabel );
     }
@@ -356,7 +361,7 @@ namespace sw
             clear();
             return false;
         }
-        return loadFromXMLText( text, path );
+        return loadComposed( text, path, ResourceContext::forMerge( &Skeleton::mergeVariantText ).withAsset( assetID ) );
     }
 
     bool Skeleton::rebuildFromLoaded( string_view sourceLabel )
@@ -421,7 +426,7 @@ namespace sw
     {
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeTextFile( absPath.str(), toXML() );
+        return ResourceComposer::saveText( absPath.str(), toXML() );
     }
 } // namespace sw
 

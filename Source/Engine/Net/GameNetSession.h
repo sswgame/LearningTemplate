@@ -59,6 +59,7 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 /** @brief 클라이언트가 서버에 붙었을 때 남기는 줄의 로그 id 입니다. 에디터 멀티플레이 세션이 자식 클라이언트의 이 줄로 접속을 안다(`EditorNetPlaySession`). */
 #define SW_LOG_ID_NET_SESSION_CONNECTED "Net.SessionConnected"
@@ -144,8 +145,8 @@ namespace sw
         static constexpr uint8 kServerTick     = NetMessageRange::kEngine + 0x00; ///< 서버 → 모두(비신뢰 순서). 방금 끝낸 서버 틱 번호(varuint)
         static constexpr uint8 kShutdownNotice = NetMessageRange::kEngine + 0x01; ///< 서버 → 모두(신뢰 순서). 서버가 내려가기 시작한다 — 사유(1 바이트 `GameShutdownReason`) + 기다려 주는 시간(varuint 초)
         /**
-         * @brief 클라이언트 → 서버(신뢰 순서). 접속하자마자 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`).
-         * @details 서버가 같은 리소스를 다르게 합성했으면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
+         * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
+         * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
         static constexpr uint8 kResourceDigest   = NetMessageRange::kEngine + 0x02;
         static constexpr int32 kMaxDigestIDBytes = 512; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
@@ -334,6 +335,8 @@ namespace sw
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleEngineMessage( context, body ); }
             /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */
             void onConnectionOpened( int32 connectionID ) override;
+            /** @brief 연결이 닫혔다 — 합성 대조의 그 연결 상태를 버린다. */
+            void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         private:
             GameNetSession& _owner;
@@ -346,8 +349,10 @@ namespace sw
         int32 onClientHostFrameEnd( const EngineFrameContext& context );
         /** @brief 엔진 영역 메시지 하나를 처리합니다(`EngineMessageHandler::handleNetMessage`). */
         NetHandleResult handleEngineMessage( const NetMessageContext& context, BitReader& body );
-        /** @brief 로드 축 조건 · 층에 기댄 합성 목록(`ResourceComposition::collectDigest`)을 한 줄씩 @p connectionID 에 보냅니다(클라이언트 → 서버). */
+        /** @brief 지난번 뒤에 바뀐 로드 축 조건 · 층 합성(`ResourceComposition::collectTagDependentChanges`)을 한 줄씩 서버에 보냅니다(클라이언트). 접속 때는 번호를 0 으로 돌려 모두 보낸다. */
         void sendResourceDigest( int32 connectionID );
+        /** @brief 합성 대조의 프레임 일입니다 — 클라이언트는 바뀐 줄을 보내고, 서버는 유예가 지나도 어긋난 연결을 끊는다. */
+        void updateResourceDigest();
 
         /** @brief 샤드 하나의 소켓을 열고 (건 데코레이터로 감싼) 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
         unique_ptr<Shard> createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex );
@@ -385,6 +390,9 @@ namespace sw
         GameNetRole                       _role;
         uint8                             _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
+        ResourceDigestComparer            _digestComparer;          ///< 서버 — 클라이언트마다 받은 합성 줄과 자기 합성을 맞댄다
+        uint64                            _digestSentRevision;      ///< 클라이언트 — 합성 줄을 어디까지 보냈는가
+        int32                             _digestServerConnection;  ///< 클라이언트 — 합성 줄을 보낼 연결. 음수면 붙어 있지 않다
         GameShutdownNotice                _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
         uint8                             _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
         uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다

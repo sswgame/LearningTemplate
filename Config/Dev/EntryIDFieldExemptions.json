@@ -1,0 +1,14 @@
+{
+  "listExempt": [
+    { "field": "_attachOwner", "reason": "부모 오브젝트 이름 - 씬 오브젝트 이름이 프리셋 id 와 같을 뿐이다" },
+    { "field": "_kind", "reason": "컴포넌트의 열거형 값(FarmerViewKind)" },
+    { "field": "_name", "reason": "오브젝트 · 칸의 표시 이름" },
+    { "field": "id", "reason": "다른 표의 자기 id(외형 규칙 Rule) - 항목을 부르지 않는다" },
+    { "field": "key", "reason": "현지화 열쇠" },
+    { "field": "name", "reason": "표시 이름 · 소켓 이름" },
+    { "field": "socket", "reason": "소켓 이름" },
+    { "field": "source", "reason": "번역 원문" },
+    { "field": "spawnTags", "reason": "스폰 태그 이름" },
+    { "field": "tags", "reason": "스폰 태그 이름" }
+  ]
+}

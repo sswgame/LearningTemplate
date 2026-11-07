@@ -322,6 +322,13 @@ namespace sw
          * @return 펼치지 못하면 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
         [[nodiscard]] bool parseData( string_view xmlText, string_view sourceName = {} );
+        /** @brief 부르는 쪽이 이미 읽은 리소스 @p assetID 의 글을 `parseData` 처럼 읽되 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받습니다(글이 먼저 필요한 형식 — 부모 id 를 드는 저장). */
+        [[nodiscard]] bool parseResourceText( string_view xmlText, const AssetID& assetID );
+        /**
+         * @brief `loadResource` 와 같되 합치기 규칙을 읽는 쪽이 고릅니다(@p context — 카탈로그 표에 없는 손 형식 · 리플렉션 형식의 부모와 층).
+         * @param pOutBaseID 펼치기 전 원문의 `_base` 입니다(저장이 부모와의 차이로 쓰려고 든다. 펼친 글에는 없다).
+         */
+        [[nodiscard]] bool loadResourceAs( const AssetID& assetID, const ResourceContext& context, string* pOutAbsPath = nullptr, string* pOutBaseID = nullptr );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
         [[nodiscard]] bool loadFromFile( string_view absPath );

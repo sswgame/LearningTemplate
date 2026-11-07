@@ -6,13 +6,13 @@
  *          읽는 코드가 변형을 모르고, 쿠킹본과 런타임이 같은 결과를 본다.
  *
  *          - **조건(`<_when _if="식" 칸="값"/>`)**: 원소 안에 적어 그 원소의 속성을 바꾸거나(`칸="값"`) 그 원소를 뺀다(`_op="Remove"`). 한 원소의 조건은 적힌 차례로 얹는다.
- *            조건이 고치는 것은 자기를 품은 원소 하나뿐이라 합치기 규칙(열쇠 · 스키마)이 필요 없다 — 쿠커(규칙 표) · 개발 실행(리플렉션) · 배포 런타임(규칙 표가 없다)이 같은 답을 낸다.
+ *            조건이 고치는 것은 자기를 품은 원소 하나뿐이라 합치기 규칙(열쇠 · 스키마)이 필요 없다 — 쿠커 · 개발 실행 · 배포 런타임이 형식을 몰라도 같은 답을 낸다.
  *            조건부로 더하는 원소는 "원소를 적고 반대 조건으로 뺀다" 로 쓴다. 팩 쿠킹은 쿠킹 축 조건만 풀고(`ResourceTagTiming::Cook`), 한 원소에서 로드 축 조건이 나온 뒤의 조건은
  *            차례를 지키려 함께 남긴다. 런타임은 남은 조건을 모두 푼다(쿠킹 축 값은 런타임도 같은 값을 든다 — 엔진 기동이 넣는다).
  *          - **덮어쓰기 층(`ResourceLayers`)**: 리소스 id 로 읽을 때(`ResourceContext::withAsset`)만 얹는다. 층 파일 `<뿌리>/<id>` 는 원본을 암묵적 부모로 가진 차이이고,
  *            합치기 규칙은 읽는 쪽의 형식에서 온다(리플렉션 · 손 규칙 · 합치기 함수 · 카탈로그 표). 팩 쿠킹은 층을 펼치지 않는다 — 공용 도메인 팩(`common` · `engine`)은 게임마다 같아야 한다.
  *
- *          규칙의 출처는 문서 루트 이름입니다: 카탈로그 표 · 문서 표(`Config/Dev/DataCatalogInheritance.json`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식(`SW_DATA_INHERITANCE_SCHEMA`). 읽기는 리플렉션 형식에서도 규칙을 만들지만 쿠킹은 그러지 않습니다. 어느 규칙이든 결과는 부모 없는 글입니다.
+ *          규칙의 출처는 문서 루트 이름입니다: 카탈로그 표 · 문서 표(`Content/engine/settings/datacataloginheritance.xml`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식(`SW_DATA_INHERITANCE_SCHEMA`). 읽기는 리플렉션 형식에서도 규칙을 만들지만 쿠킹은 그러지 않습니다. 어느 규칙이든 결과는 부모 없는 글입니다.
  *          **팩 쿠킹은 게임 모듈을 올리기 전에 돕니다**(`HeadlessSubsystem::runCookTask`). 쿠커는 대상마다 지어진 형식도 다릅니다(서버는 Renderer 가 없다). 그래서 리플렉션 형식이 `_base` 를 쓰면 문서 표에 한 줄을 적습니다(Engine 형식도).
  */
 #pragma once
@@ -90,5 +90,23 @@ namespace sw
          */
         [[nodiscard]] static bool resolveConditions( string_view text, string_view id, ResourceTagTiming resolvedTiming, const ResourceTagSet& tags, string& outText, bool& outbChanged,
                                                      vector<string>& inoutListLoadTag );
+
+        /**
+         * @brief 저장할 글 @p savedText 에 원본 @p sourceText 의 조건을 되돌립니다. 편집기 사본은 지금 태그로 푼 값을 들어(형식의 칸에 조건이 들 자리가 없다) 그대로 쓰면 `_when` 이 사라지고 푼 값이 파일에 박힌다.
+         * @details 언리얼이 플랫폼별 값을 편집 값과 따로 두는 것과 같은 결과를 글 수준에서 얻는다(기억에 의존). 규칙(열쇠 · 스키마)을 쓰지 않는다 — 읽기의 조건 단계와 같은 까닭이다.
+         *          - 참인 조건이 정한 칸: 값이 그대로면 원본의 값을 되돌리고, 바뀌었으면 편집이 그 조건의 값이다(같은 태그로 다시 읽으면 편집한 값이다. 다른 태그의 값은 건드리지 않는다).
+         *          - 그 밖의 칸: 저장할 글이 맞다. 거짓인 조건은 그대로 남는다.
+         *          - 참인 조건이 뺀 원소: 사본에 없으니 원본에서 되돌린다.
+         *          - 원소 짝: 같은 이름 안에서 같은 값의 속성이 가장 많은 것이다. 짝이 없는 조건 든 원소는 목록 원소면 지운 것으로 보고, 차이 저장(`_base`)이나 구조체 칸이면 남긴다(부모 · 기본값과 같아 저장이 뺀 것일 수 있다).
+         *          shortcut: 참인 조건이 정한 칸을 기본값으로 되돌린 편집은 저장할 글에 칸이 없어 "그대로" 와 가릴 수 없다(조건 값이 남는다) - 형식이 푼 값과 기본값을 함께 넘기는 저장 입구가 생기면 고친다.
+         * @return 원본의 조건이 틀렸거나 두 글의 루트가 다르면 오류를 남기고 false 입니다(저장하지 않는다). 원본에 조건이 없으면 @p savedText 그대로입니다.
+         */
+        [[nodiscard]] static bool restoreConditions( string_view savedText, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText );
+
+        /**
+         * @brief 글 리소스를 디스크에 씁니다. 저장 입구(직렬화기 · 형식의 `saveToFile`)가 모두 이 함수를 지납니다 — 있던 파일의 조건을 지키고(`restoreConditions`), 덮어쓰기 층을 얹어 읽은 리소스는 층 값이 원본에 박히므로 쓰지 않습니다.
+         * @return 쓰지 못하면 false 입니다(까닭은 로그).
+         */
+        [[nodiscard]] static bool saveText( string_view absPath, string_view text );
     };
 } // namespace sw

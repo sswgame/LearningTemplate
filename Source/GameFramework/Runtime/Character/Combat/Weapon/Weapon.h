@@ -102,7 +102,7 @@ namespace sw
 {
     /**
      * @brief `<WeaponCatalog><Weapon id="rifle" projectile="rifle_round" accepts="Ammo.Rifle" fireInterval="0.1" ...><Modifier field="Damage" value="1.1"/></Weapon></WeaponCatalog>` 를 읽습니다.
-     * @details 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다. 항목은 `_base` 로 다른 무기를 물려받고 `<Modifier>` 는 `field` 가 열쇠다(`DataCatalogInheritance.json`).
+     * @details 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다. 항목은 `_base` 로 다른 무기를 물려받고 `<Modifier>` 는 `field` 가 열쇠다(`datacataloginheritance.xml`).
      */
     class SW_GF_API WeaponCatalog : public GameCatalog<WeaponDef, XMLCatalog<WeaponCatalog>>
     {

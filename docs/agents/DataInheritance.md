@@ -59,10 +59,10 @@ struct RenderGraphPassDesc
 
 **그리고 문서 표에 한 줄을 적는다(Engine 형식도).** 팩 쿠커는 리플렉션을 읽지 않는다 — 게임 모듈을 올리기 전에 돌고(`HeadlessSubsystem::runCookTask`), 대상마다 지어진 형식이 다르다(서버는 `Renderer/` 가 없어 `RenderPipelineDesc` 가 없다). 안 적으면 쿠킹이 `DataInheritance.NoSchema` 로 멈춘다. 표 줄이 코드와 다르면 `ResourceComposerTest` 가 진다.
 
-```json
-"listDocument": [
-    { "root": "MyKitDesc", "listField": [ { "name": "_listStage", "key": "_name" } ] }
-]
+```xml
+<Document root="MyKitDesc">
+	<Field name="_listStage" key="_name"/>
+</Document>
 ```
 
 칸 덮어쓰기로 풀리지 않는 Engine 형식은 `SW_DATA_INHERITANCE_MERGE` 로 합치기 함수를 올린다. 결과는 다른 형식과 같은 부모 없는 글이고 읽기와 쿠커가 같은 함수를 지난다. 층의 차이가 쌓임이고 부모(`<Skeleton>`)와 루트가 다른 `SkeletonVariant` 가 그렇다(사슬 규칙은 공통 `DataInheritance::collectChain`).
@@ -122,6 +122,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | `_if` 는 리소스 태그(`축.값`)만 묻는다. 게임 상태 조건(`flag` · `chance`) · 모르는 축 · 닫힌 값 밖은 읽기 오류다 | 리소스 문맥에 게임 세계 칸이 없다. 게임 플래그는 `flag` 축 태그로 넣는다 |
 | 부모와 자식이 같은 원소에 적은 조건은 쌓인다(부모 다음 자식). 열쇠 목록 아래의 조건은 목록 원소가 아니다. 차이 저장은 자식이 더한 조건만 적고, 부모의 조건을 지운 결과는 저장 오류다(`DataInheritance.WhenDropped`) | 자식이 값을 적어도 부모의 품질 조건이 사라지면 안 된다 |
 | 팩 쿠커는 쿠킹 축(`platform` · `target`) 조건을 풀고, 로드 축 조건과 그 뒤 조건은 남긴다 | 한 원소에서 차례가 뒤집히지 않게 한다. 남은 쿠킹 축 조건은 런타임이 같은 값으로 푼다 |
+| 저장은 있던 파일의 조건을 지킨다(`ResourceComposer::saveText`). 새 형식의 저장은 `FileUtil::writeTextFile` 이 아니라 이 입구를 쓴다 | 편집기 사본은 지금 태그로 푼 값을 들어, 그대로 쓰면 푼 값이 파일에 박히고 조건이 사라진다 |
 
 덮어쓰기 층은 게임 팩 설정의 `<Engine _listResourceLayer>` 뿌리다. 리소스 `X` 를 리소스 id 로 읽을 때 `<뿌리>/X` 가 있으면 원본을 부모로 얹는다(층 파일에 `_base` 를 적으면 오류). 규칙은 읽는 쪽의 형식에서 온다 — 리플렉션 형식은 리플렉션(배포 런타임에도 있다), 손 형식은 그 규칙 함수, 카탈로그는 표. 경로 교체는 `<Engine _resourceRemap>` 표의 `<Remap id when to>` 다.
 
@@ -167,7 +168,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 오류는 파일 상속과 같다: 순환, 없는 부모, 깊이 초과. 더해서 규칙에 없는 종류의 `_base`(`DataCatalogInheritance.KindNotListed`), 구조체 칸을 두 번 적음(`FieldRepeated`). 오류면 그 파일을 읽지 못한다.
 
-규칙은 코드가 아니라 `Config/Dev/DataCatalogInheritance.json` 에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 돌기(`HeadlessSubsystem::runCookTask`) 때문에 `GameFramework` 나 키트의 정적 등록을 볼 수 없다. 새 카탈로그는 이 표에 한 줄을 더하면 된다. 읽는 코드는 고치지 않는다.
+규칙은 코드가 아니라 `Content/engine/settings/datacataloginheritance.xml` 에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 돌기(`HeadlessSubsystem::runCookTask`) 때문에 `GameFramework` 나 키트의 정적 등록을 볼 수 없다. 새 카탈로그는 이 표에 한 줄을 더하면 된다. 읽는 코드는 고치지 않는다.
 
 읽기는 `XMLDocument::loadResource` · `parseData` 가 `ResourceComposer` 로 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
 
@@ -177,7 +178,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 같은 메시를 머티리얼만 달리한 아이템은 외형 항목을 물려받아 `material` 만 적는다. 소켓 프리팹 부품은 프리팹의 모든 메시에 그 머티리얼을 입히고, 쉬는 부품 풀은 머티리얼별로 나뉜다. 꾸미기로 고르는 변형은 `<MaterialVariant>` 다. 시나리오: `game/shooter3d/automation/showcase/itemvariant`.
 
-머티리얼이 여럿인 스킨드 부품은 메시 구간 이름마다 머티리얼을 적는다(`<Section name material>`). 변형(`<Variant>` · `<MaterialVariant>`)은 안에 `<Section>` 을 적어 그 구간만 바꾸고 `<Material section>` 으로 그 구간에만 매개변수를 건다. 규칙은 `<SwapMaterial section>` · `<MaterialValue section>` 이고, 넓은 교체(부품 전체) 위에 좁은 교체(구간)가 덮는다. 구간은 번호가 아니라 이름이다(언리얼 Material Slot · 유니티 `Renderer.materials` 는 슬롯 · 번호) — 다시 임포트해 구간 순서가 바뀌어도 데이터가 맞다. 병합(`_bMergeParts`)해도 구간마다 머티리얼이 남고, 구간 머티리얼은 메시 해시(병합 캐시 키)에 든다. 물려받은 항목은 변형의 `<Section>` 을 이름으로 덮는다(`DataCatalogInheritance.json`). 시나리오: `game/empty/automation/sectionmaterial`.
+머티리얼이 여럿인 스킨드 부품은 메시 구간 이름마다 머티리얼을 적는다(`<Section name material>`). 변형(`<Variant>` · `<MaterialVariant>`)은 안에 `<Section>` 을 적어 그 구간만 바꾸고 `<Material section>` 으로 그 구간에만 매개변수를 건다. 규칙은 `<SwapMaterial section>` · `<MaterialValue section>` 이고, 넓은 교체(부품 전체) 위에 좁은 교체(구간)가 덮는다. 구간은 번호가 아니라 이름이다(언리얼 Material Slot · 유니티 `Renderer.materials` 는 슬롯 · 번호) — 다시 임포트해 구간 순서가 바뀌어도 데이터가 맞다. 병합(`_bMergeParts`)해도 구간마다 머티리얼이 남고, 구간 머티리얼은 메시 해시(병합 캐시 키)에 든다. 물려받은 항목은 변형의 `<Section>` 을 이름으로 덮는다(`datacataloginheritance.xml`). 시나리오: `game/empty/automation/sectionmaterial`.
 
 외형 프리셋(`CharacterAppearance` 의 `parent`)은 여기에 올리지 않았다. 값은 씨앗으로 뽑고 세트는 쌓이는 규칙이라 칸을 덮는 합치기와 다르다(`presets.xml` 머리말).
 

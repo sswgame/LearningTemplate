@@ -24,6 +24,7 @@ namespace sw
     enum class ShaderTargetFormat : uint8;
 
     struct float4;
+    struct ResourceContext;
     struct ShaderBufferInfo;
     struct ShaderCompileResult;
     struct ShaderReflectionData;
@@ -302,6 +303,9 @@ namespace sw
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromFile` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context );
+
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
         static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";
 

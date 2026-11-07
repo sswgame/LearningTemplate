@@ -101,6 +101,16 @@ namespace sw
         ++_revision;
     }
 
+    bool AppearanceDatabase::isDataFile( string_view fileName )
+    {
+        for ( const AppearanceDatabaseInternal::DataFile& file : AppearanceDatabaseInternal::kArrDataFile )
+        {
+            if ( fileName == file._pFileName )
+                return true;
+        }
+        return false;
+    }
+
     bool AppearanceDatabase::loadFromFolder( string_view folder, const ItemCatalog* pItemCatalog )
     {
         clear();

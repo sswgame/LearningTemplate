@@ -25,7 +25,7 @@ namespace sw::editor
 
         /** @brief 부모 파일을 읽는 곳입니다. 없으면 보기가 꺼져 있습니다. 소유하지 않습니다. */
         void setSource( IDataInheritanceSource* pSource ) { _pSource = pSource; }
-        /** @brief 원문이 바뀔 때마다 다시 펼칩니다. 규칙 표(`DataCatalogInheritance::kConfigPath`)에 없는 루트이면 꺼집니다. */
+        /** @brief 원문이 바뀔 때마다 다시 펼칩니다. 규칙 표(`DataCatalogInheritance::kTableAssetID`)에 없는 루트이면 꺼집니다. */
         void rebuild( string_view text, const CatalogXMLText& parsed );
 
         /** @brief 규칙 표에 있는 카탈로그를 보고 있으면 true 입니다. */

@@ -52,6 +52,8 @@ namespace sw
         /** @brief 텍스트를 파싱하고 루트 원소를 찾습니다. @p sourceName 은 구문 오류에 적는 이름입니다. */
         [[nodiscard]] static XMLRootStatus parseRoot( XMLDocument& outDocument, string_view xmlText, string_view sourceName, const utf8* pRootName,
                                                       XMLNode& outRoot );
+        /** @brief 부르는 쪽이 이미 읽은 리소스 @p assetID 의 글로 `parseRoot` 합니다(`XMLDocument::parseResourceText`). */
+        [[nodiscard]] static XMLRootStatus parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot );
 
         /**
          * @brief **선택** 이름 속성을 앞뒤 공백을 뺀 이름으로 읽습니다. 없거나 비었으면(공백뿐이어도) 빈 이름입니다.

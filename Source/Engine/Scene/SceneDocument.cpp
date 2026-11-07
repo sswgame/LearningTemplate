@@ -275,8 +275,9 @@ namespace sw
         AssetLoadScope loadScope( "Scene", assetID.view() );
         XMLDocument    doc;
         string         absPath;
-        const bool     bRead = doc.loadResource( assetID, &absPath );
-        return readXMLSource( doc, bRead, absPath, loadScope, inoutListChain );
+        string         baseID; // 펼친 글에는 `_base` 가 없다 - 저장이 부모와의 차이로 쓰려고 원문에서 받는다
+        const bool     bRead = doc.loadResourceAs( assetID, ResourceContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &absPath, &baseID );
+        return readXMLSource( doc, bRead, absPath, baseID, loadScope, inoutListChain );
     }
 
     bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
@@ -288,10 +289,10 @@ namespace sw
         XMLDocument    doc;
         const bool     bRead = doc.loadFromFile( diskPath );
         vector<string> listChain;
-        return readXMLSource( doc, bRead, string( diskPath ), loadScope, listChain );
+        return readXMLSource( doc, bRead, string( diskPath ), string{}, loadScope, listChain );
     }
 
-    bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, AssetLoadScope& loadScope, vector<string>& inoutListChain )
+    bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, const string& flattenedBaseID, AssetLoadScope& loadScope, vector<string>& inoutListChain )
     {
         if ( bRead == false )
         {
@@ -312,7 +313,8 @@ namespace sw
         }
 
         // 씬 상속: 부모 위에 차이를 얹어 한 벌로 펼친 뒤 읽는다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
-        // 카탈로그 표에 없는 루트라 `parseData` 는 이 칸을 그대로 둔다("자기 입구가 펼친다").
+        // 리소스 id 읽기는 규칙을 골라 이미 펼쳤다(@p flattenedBaseID 가 부모다). 디스크 파일은 `parseData` 가 카탈로그 표에 없는 이 칸을 그대로 둔다("자기 입구가 펼친다").
+        _baseScenePath = flattenedBaseID;
         const string basePath{ root.getAttributeText( DataInheritance::kBaseAttribute ) };
         if ( basePath.empty() == false )
         {
@@ -550,7 +552,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneDocument.DeltaNotMade", "Scene '%#' could not be written as a difference from '%#' - it is not saved", _name, _baseScenePath );
             return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), deltaText ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), deltaText ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;

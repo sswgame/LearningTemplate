@@ -183,7 +183,7 @@ namespace sw
          * @brief XML 읽기 입구 둘(`loadXML` · `loadXMLFromDiskFile`)이 읽은 문서를 풉니다.
          * @details 리소스 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 글이 어느 쪽으로도 흘러간다.
          */
-        [[nodiscard]] bool readXMLSource( XMLDocument& doc, bool bRead, const string& absPath, AssetLoadScope& loadScope, vector<string>& inoutListChain );
+        [[nodiscard]] bool readXMLSource( XMLDocument& doc, bool bRead, const string& absPath, const string& flattenedBaseID, AssetLoadScope& loadScope, vector<string>& inoutListChain );
         /** @brief 리소스 id 의 XML 을 읽습니다. @p inoutListChain 은 지금 펼치는 씬 사슬입니다(자기 포함 · 깊이 검사). */
         [[nodiscard]] bool loadXMLChained( const AssetID& assetID, vector<string>& inoutListChain );
         /** @brief 씬 인스턴스 앵커마다 넣은 씬의 엔티티를 앵커 뒤에 펼칩니다(런타임은 이 평평한 목록만 본다). 없는 씬 · 자기 포함 · 겹친 id 는 오류입니다. */

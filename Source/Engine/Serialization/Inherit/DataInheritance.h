@@ -221,13 +221,13 @@ namespace sw
 
 /**
  * @brief 루트 이름 @p RootName 의 손 XML 형식이 부모를 가리킬 수 있게 올립니다. 팩 쿠커가 이 규칙으로 펼칩니다.
- * @details 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 모듈의 정적 등록을 보지 못하므로 Engine 만 쓴다. 게임 · 키트 형식은 `Config/Dev/DataCatalogInheritance.json` 의 `listDocument` 에 적는다.
+ * @details 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 모듈의 정적 등록을 보지 못하므로 Engine 만 쓴다. 게임 · 키트 형식은 `Content/engine/settings/datacataloginheritance.xml` 의 `<Document>` 줄에 적는다.
  */
-#define SW_DATA_INHERITANCE_SCHEMA( RootName, pfnMakeSchema )                                                                                                       \
-    static_assert( ::sw::string_view( SW_REGISTRAR_MODULE ) == ::sw::string_view( "Engine" ), "the pack cook cannot see a module's registrar - use listDocument" ); \
-    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceSchema##RootName                                                                             \
-    {                                                                                                                                                               \
-        #RootName, pfnMakeSchema                                                                                                                                    \
+#define SW_DATA_INHERITANCE_SCHEMA( RootName, pfnMakeSchema )                                                                                                                           \
+    static_assert( ::sw::string_view( SW_REGISTRAR_MODULE ) == ::sw::string_view( "Engine" ), "the pack cook cannot see a module's registrar - use a Document row of the rule table" ); \
+    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceSchema##RootName                                                                                                 \
+    {                                                                                                                                                                                   \
+        #RootName, pfnMakeSchema                                                                                                                                                        \
     }
 
 /**

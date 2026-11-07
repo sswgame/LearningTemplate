@@ -108,16 +108,21 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNotFound", "Audio graph not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, assetPath );
+        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioGraphDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
+        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool AudioGraphDef::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    {
         *this = AudioGraphDef{};
-        // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 노드 · 노드 값은 이름이 열쇠다(규칙은 문서 표 `listDocument`).
+        // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 노드 · 노드 값은 이름이 열쇠다(규칙은 문서 표 `<Document>`).
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
             return false;
         if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
         {
@@ -183,7 +188,7 @@ namespace sw
         }
         if ( _baseID.empty() == false )
             return ReflectedXMLFile::saveDescAsChild( absPath, *this, AssetID{ _baseID } ); // 부모와 다른 칸만 쓴다. 부모를 읽지 못하면 쓰지 않는다
-        if ( FileUtil::writeTextFile( absPath.str(), saveToXMLText() ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), saveToXMLText() ) == false )
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot2", "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

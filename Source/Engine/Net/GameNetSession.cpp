@@ -15,6 +15,7 @@
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/Server/ServerConfig.h"
@@ -186,6 +187,11 @@ namespace sw
     } // namespace
 
     /**
+     * @brief 합성 대조가 어긋난 뒤 끊기 전에 기다리는 시간(초)입니다.
+     * @details 복제되는 태그(서버가 켠 데이터 레이어)는 양쪽이 다른 프레임에 바뀌어 잠깐 어긋나는 것이 정상이다. 회선이 나쁜 게임은 늘린다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_netResourceDigestGraceSeconds, 5.0f, "합성 해시가 어긋난 클라이언트를 끊기 전에 기다리는 시간(초)" );
+    /**
      * @brief `-gv_netListenPort=<포트>`: 게임 인스턴스가 이 UDP 포트를 열고 클라이언트를 받습니다(0=끄기). 전용 서버 · 리슨 호스트 모두.
      * @details 언리얼 `?listen` · `-port=` 의 자리. 리슨 호스트(App)는 이것으로만 연다. 전용 서버는 이것이 없으면 서버 설정(`ServerConfig::_gamePort`)을
      *          열고, 있으면 개발 덮어쓰기로 설정보다 우선한다(에디터 멀티 프로세스 재생이 고른 포트). 테스트 변수라 Shipping 에는 없다.
@@ -241,6 +247,9 @@ namespace sw
         , _role{ GameNetRole::None }
         , _bTicketBound{ SW_FALSE }
         , _bConnectFailureReported{ SW_FALSE }
+        , _digestComparer{}
+        , _digestSentRevision{ 0 }
+        , _digestServerConnection{ -1 }
         , _shutdownNotice{}
         , _bShutdownNoticeKnown{ SW_FALSE }
         , _bServerTickKnown{ SW_FALSE }
@@ -543,6 +552,9 @@ namespace sw
         _connectFuture = TaskFuture<NetConnectResult>{};
         _credentials   = NetConnectCredentials{};
         _bTicketBound  = SW_FALSE;
+        _digestComparer.clear();
+        _digestSentRevision     = 0;
+        _digestServerConnection = -1;
         _listEventScratch.clear();
         _latestServerTick        = 0;
         _listenPort              = 0;
@@ -560,6 +572,7 @@ namespace sw
         _listEventScratch.clear();
         (void)_router.pump( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
         logEvents( EventPhase::Running );
+        updateResourceDigest();
     }
 
     void GameNetSession::logEvents( EventPhase phase ) const
@@ -682,14 +695,50 @@ namespace sw
 
     void GameNetSession::EngineMessageHandler::onConnectionOpened( int32 connectionID )
     {
+        if ( _role != GameNetRole::Client )
+            return;
+        _owner._digestServerConnection = connectionID;
+        _owner._digestSentRevision     = 0;
+        _owner.sendResourceDigest( connectionID );
+    }
+
+    void GameNetSession::EngineMessageHandler::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
+    {
+        (void)reason;
         if ( _role == GameNetRole::Client )
-            _owner.sendResourceDigest( connectionID );
+            _owner._digestServerConnection = -1;
+        else
+            _owner._digestComparer.removePeer( connectionID );
+    }
+
+    void GameNetSession::updateResourceDigest()
+    {
+        if ( _role == GameNetRole::Client )
+        {
+            if ( _digestServerConnection >= 0 )
+                sendResourceDigest( _digestServerConnection );
+            return;
+        }
+        vector<ResourceDigestMismatch> listMismatch;
+        const float32                  graceSeconds     = gv_netResourceDigestGraceSeconds;
+        const int64                    graceNanoseconds = MonotonicClock::secondsToNanoseconds( static_cast<float64>( graceSeconds ) );
+        _digestComparer.update( MonotonicClock::nowNanoseconds(), graceNanoseconds, listMismatch );
+        for ( const ResourceDigestMismatch& mismatch : listMismatch )
+        {
+            // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/ResourceStructure.md` 의 네트워크).
+            SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
+                             mismatch._peer, mismatch._assetID );
+            _peers.disconnect( mismatch._peer );
+            _digestComparer.removePeer( mismatch._peer );
+        }
     }
 
     void GameNetSession::sendResourceDigest( int32 connectionID )
     {
         vector<ResourceDigestEntry> listEntry;
-        ResourceComposition::collectDigest( listEntry );
+        ResourceComposition::collectTagDependentChanges( _digestSentRevision, listEntry );
+        if ( listEntry.empty() )
+            return;
         int32 sentCount = 0;
         for ( const ResourceDigestEntry& entry : listEntry )
         {
@@ -719,12 +768,11 @@ namespace sw
             entry._hash    = body.readVarUint();
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
-            if ( ResourceComposition::isDigestMismatch( entry ) )
+            if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
             {
-                // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/ResourceStructure.md` 의 네트워크).
-                SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
-                                 context._connectionID, entry._assetID );
+                SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
                 _peers.disconnect( context._connectionID );
+                _digestComparer.removePeer( context._connectionID );
             }
             return NetHandleResult::Handled;
         }

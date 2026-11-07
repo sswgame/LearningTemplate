@@ -41,7 +41,7 @@
 - 검증 로더는 따로 두지 않는다. 스키마 테스트도 진짜 로더를 부른다.
 - 등록은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 태그, 방식 ) ) )` 한 줄이다. 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만 들고, 로더는 표의 사본에만 있다(로더 함수가 기능 .cpp 에 있다).
 - 공유 캐시가 있는 종류는 `SW_SHARED_ASSET_CACHE( id, T, 정의 )`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE( id, T, 내보내기, 정의 )`(모듈) 한 줄이 같은 정의로 종류 등록 · 캐시 인스턴스화 · 레지스트리 등록을 함께 한다. 캐시는 정의의 이름 · 로더 · 다시 읽기 방식만 읽고 따로 적는 특성 표가 없다 — 이름이 둘이던 짝(`Rig`/`RigAsset`, `SpriteClip`/`SpriteClipAsset`, `Fracture`/`FractureAsset`, `BodyShapeSet`/`bodyshape`, `InteractionCatalog`/`interactions`, `ElementRuleCatalog`/`elementrules`)은 정의의 이름 하나가 되었고 에디터 리로드 길도 `AssetReloadRoute::sharedCache( 정의 )` 로 이름을 정의에서 꺼낸다.
-- 제약: 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 정적 등록이 아니라 데이터(`Config/Dev/`)에 둔다. 이 까닭은 `DataCatalogInheritance.json` 과 같다.
+- 제약: 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 정적 등록이 아니라 데이터(`Content/engine/settings/datacataloginheritance.xml`)에 둔다. 배포 런타임도 이 표를 읽는다(덮어쓰기 층).
 
 ### 2. 합성 읽기 `ResourceComposer`
 
@@ -59,7 +59,7 @@
 
 **스켈레톤:** `SkeletonVariant` 의 자체 사슬과 깊이 검사를 지우고 공통 사슬(`DataInheritance::collectChain`)로 옮겼다. "부모 본 번호를 바꾸지 않는다" 는 합친 뒤의 검증으로 남긴다. 칸 덮어쓰기로는 풀리지 않으므로(뼈 비율은 곱해지고 클립 규칙은 쌓이며 부모 루트 `<Skeleton>` 과 형식도 다르다) 합치기 함수(`SW_DATA_INHERITANCE_MERGE`)가 평평한 `<Skeleton>` 글을 낸다. 예외 길은 없다 — 읽기와 쿠커가 같은 함수를 지나고 쿠킹본에 `_base` 가 남지 않는다. 임포터의 54 개 파일은 고치지 않는다. 쌓인 값(`SkipIfEmpty` 칸 `_listVariantState`)은 펼친 글에만 있어 공용 스켈레톤의 글 지문은 그대로다.
 
-**규칙 출처의 순서:** 문서 표 · 카탈로그 표(`Config/Dev/DataCatalogInheritance.json`) → 합치기 함수 → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 되고, 표와 코드가 어긋나지 않는지는 테스트가 본다.
+**규칙 출처의 순서:** 문서 표 · 카탈로그 표(`Content/engine/settings/datacataloginheritance.xml`) → 합치기 함수 → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 되고, 표와 코드가 어긋나지 않는지는 테스트가 본다.
 
 #### 조건별 값
 
@@ -106,7 +106,7 @@
 
 **한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다. 에디터처럼 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다.
 
-**네트워크:** 게임플레이 값이 클라이언트마다 달라지면 판정이 어긋난다. 클라이언트는 서버에 붙자마자 로드 축 · 층에 기댄 합성 한 줄씩(리소스 id + 결과 해시)을 보내고(`GameNetSessionMessage::kResourceDigest`), 서버는 같은 리소스를 다르게 합성했으면 그 연결을 끊는다(`Net.ResourceDigestMismatch`). 서버가 읽지 않는 리소스(전용 서버의 시각 효과)는 대조하지 않으므로 품질 축이 시각 값만 바꾸면 붙고, 시뮬레이션 값을 바꾸면 거절된다. 언리얼은 접속 때 패키지 · 네트워크 버전을 대조하고 Godot 은 대조하지 않는다(기억에 의존) — 여기는 합성 결과 자체를 본다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트는 거짓을 보낼 수 있다).
+**네트워크:** 게임플레이 값이 클라이언트마다 달라지면 판정이 어긋난다. 클라이언트는 서버에 붙자마자 로드 축 · 층에 기댄 합성 한 줄씩(리소스 id + 결과 해시)을 보내고 붙은 뒤 새로 읽거나 바뀐 합성도 그때마다 보낸다(`GameNetSessionMessage::kResourceDigest`). 서버는 받은 줄을 들고 있어(`ResourceDigestComparer`) 어느 쪽이 나중에 읽든 만나고, 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`, 복제되는 태그는 양쪽이 다른 프레임에 바뀐다)가 지나도 다르면 그 연결을 끊는다(`Net.ResourceDigestMismatch`). 서버가 조건 · 층 없이 읽은 표도 해시를 들어, 클라이언트만 모드 층을 얹으면 거절된다. 서버가 읽지 않는 리소스(전용 서버의 시각 효과)는 대조하지 않으므로 품질 축이 시각 값만 바꾸면 붙고, 시뮬레이션 값을 바꾸면 거절된다. 언리얼은 접속 때 패키지 · 네트워크 버전을 대조하고 Godot 은 대조하지 않는다(기억에 의존) — 여기는 합성 결과 자체를 세션 내내 본다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트는 거짓을 보낼 수 있다). 쿠킹 축 조건과 로드 축 조건을 한 파일에 섞으면 클라이언트와 서버의 글이 달라 해시가 어긋난다 — 시뮬레이션 데이터에는 섞지 않는다.
 
 #### 덮어쓰기 층
 
@@ -115,7 +115,7 @@
 - 목록은 게임 팩 설정 `<Engine _listResourceLayer>` 의 뿌리(리소스 id 폴더 — `game/<팩>/layers/<이름>`)이고, DLC · 모드 팩을 올리는 쪽이 늘린다(`ResourceLayers::setLayers` — 바뀐 층에 파일이 있던 · 있는 리소스를 다시 읽는다).
 - 층의 조건(`_when`)은 층의 차이에 얹는다 — 거짓이면 그 차이를 얹지 않는다. 합치기 규칙은 읽는 쪽의 형식에서 온다(리플렉션 형식은 리플렉션 — 배포 런타임에도 있다, 손 형식은 그 규칙 함수, 합치기 함수 형식은 그 함수, 카탈로그는 표).
 - **처음 설계를 바꾼 것:** "게임 쿠킹은 자기 층까지 펼친다" 를 버리고 모든 층을 읽을 때 얹는다. 팩 쿠커는 도메인마다 팩을 굽고(`PackCooker::cookDomainPack`) 공용 도메인(`common` · `engine`) 팩은 게임마다 같아야 하므로, 게임 층을 공용 팩에 펼칠 자리가 없다. 층이 없는 게임은 글 검색 한 번으로 지나간다.
-- 층은 리소스 id 로 읽을 때만 얹는다. 글로 받는 입구(`loadFromXMLText` — 편집기 미리 보기 · 테스트)는 id 가 없어 얹지 않는다.
+- 층은 리소스 id 로 읽을 때만 얹는다. 글로 받는 입구(`loadFromXMLText` — 편집기 미리 보기 · 테스트)는 id 가 없어 얹지 않는다. 형식의 `loadFromAsset` 은 그 형식의 문맥에 `withAsset` 을 실어 넘긴다(`loadComposed`). 머티리얼 · 씬처럼 범용 문서 입구로 읽던 손 형식은 `XMLDocument::loadResourceAs` 로 규칙을 골라 층이 표에 없는 규칙을 찾다 멈추지 않는다.
 - 항목 id 를 바꾸지 않으므로 세이브는 그대로다.
 - 신뢰 경계: 층 파일은 외부 입력이다. 합성 뒤에 그 형식의 검증이 그대로 돌고(읽는 쪽은 펼친 글만 받는다), 온라인 게임은 위 해시 대조로 거른다.
 
@@ -204,7 +204,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 행동 트리 | 노드 `id` 를 `InheritKey` 로 두어 `_base` 트리에서 가지만 교체, `<SubTree tree="…"/>` 는 읽을 때 펼침(순환 오류) | 언리얼 Run Behavior |
 | 행동 트리 슬롯 | `<SubTree slot="combat"/>` 를 쓰는 쪽의 표가 채움 | 언리얼 Run Behavior Dynamic |
 | 스케줄 | `<Archetype>` 은 남긴다. 아래 까닭 | — |
-| 퀘스트 · 루트 · 스폰 · 상점 | `DataCatalogInheritance.json` 에 줄 추가(퀘스트 · 스폰은 있었고 루트 · 상점을 더함) | — |
+| 퀘스트 · 루트 · 스폰 · 상점 | `datacataloginheritance.xml` 에 줄 추가(퀘스트 · 스폰은 있었고 루트 · 상점을 더함) | — |
 
 행동 트리 변형은 구현했다. 노드 `id` 가 열쇠이고(`BehaviorTreeSchema` — 쿠커가 루트 이름으로 찾도록 Engine 에 둔다), 노드의 자식이 곧 같은 규칙의 목록이다(`DataInheritanceSchema::_bSelfNested`). 부모에 없는 가지는 안쪽에 열쇠를 적지 않아도 된다. `<SubTree tree>` 는 읽을 때 펼치고 순환은 오류다. `<SubTree slot>` 은 러너마다 `setSlotTree` 로 채운다.
 
@@ -238,7 +238,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **노드 · 레이어 LOD:** 등급은 한 축이다(`AnimationLODState::_lodGrade` = `animationlod.xml` 의 주기 단계 + 예산이 주기를 두 배로 늘린 횟수). 그래프 `<layer>` · 블렌드 스페이스 `<node>` 와 리그 노드(IK · 룩앳 · 스프링 본)가 `max_lod` 칸으로 그 등급에서 꺼지고, `_nodeFadeSeconds` 동안 가중치를 옮겨 튀지 않는다(`AnimationLODFade`, 언리얼 LOD Threshold 는 끊는다). 칸이라 먼 NPC 변형은 `<layer name="Aim" max_lod="1"/>` 만 적는다. 본 LOD 와는 따로 돈다 — 리그 노드가 쓰는 본은 본 LOD(`SkeletonBoneLOD`)의 핵심 본(`SkeletalMeshComponent::requireBones`)이라 빠지지 않고, 레이어가 빠진 본을 써도 그 본은 그리는 메시가 쓰지 않는다.
 - **2 차 물리 LOD:** 흔들림 본 · 망토 · 머리 가닥은 리그 `SpringChain` 이라 위 `max_lod` 로 끈다(다 꺼지면 상태를 버리고, 켜지면 애니메이션 포즈에서 섞여 들어온다). 물리 천(`ClothComponent`, Jolt 소프트 바디)은 조상 스켈레탈 메시의 같은 등급을 읽어 반복 수를 낮추고(`_listLODIterationCount` — 등급 g 는 g − 1 번째, 끝을 넘으면 마지막, 등급 0 은 `_iterationCount`. 다시 만들지 않고 `IPhysicsSoftBodyScene::setSoftBodyIterationCount`) `_maxLOD` 를 넘으면 내린다. 내린 동안은 고정 자세에 건 쉬는 격자를 그린다(언리얼 Chaos Cloth 가 시뮬레이션을 끈 LOD 에서 스킨 메시를 그리는 자리 — 그쪽은 LOD 마다 시뮬레이션 메시를 따로 두지만 여기 격자는 하나다, 기억에 의존한 비교). 다시 켜면 지금 고정 자세에서 새로 만든다(스킨이면 그 프레임에 스킨 위치로) — 옛 정점에서 이으면 내린 동안 옮겨 간 고정점이 천을 잡아채 튄다. 스켈레탈 메시 조상이 없는 천(커튼 · 깃발)은 등급 0 이다. 확인은 단위 테스트 `ClothLODTest` 와 값 시나리오 `game.empty.clothlod`(기사 등의 천 `maps/clothlod.scene.xml` — 카메라를 `object.place` 로 멀리 옮기면 감시 값 `Cloth.LODGrade` · `Cloth.IterationCount` · `Cloth.LODSuspended` 가 6 → 4 → 2 → 내림 → 6 으로 바뀐다)다.
 - **스프라이트 라이브러리:** 아틀라스는 파일에 하나다. 라벨마다 텍스처가 다르면 프레임을 넘길 때 머티리얼 인스턴스가 바뀌어 배치가 깨진다.
-- **소켓 · 알림 표:** 원소 종류가 섞이고 열쇠 칸이 달라 `DataCatalogInheritance.json` 규칙 한 줄이다. 리그 · 리타겟은 `SW_DATA_INHERITANCE_SCHEMA`, 물리 에셋은 `PROPERTY( InheritKey )` 다.
+- **소켓 · 알림 표:** 원소 종류가 섞이고 열쇠 칸이 달라 `datacataloginheritance.xml` 규칙 한 줄이다. 리그 · 리타겟은 `SW_DATA_INHERITANCE_SCHEMA`, 물리 에셋은 `PROPERTY( InheritKey )` 다.
 - **뺀 것:** 물리 셰이프(이름이 없다) · 충돌 쌍(열쇠가 뼈 둘이다), 리그 · 리타겟 안의 뼈 목록(순서가 뜻이다)은 통째로 바뀐다. 입력 레이어는 이번에 하지 않았다.
 
 ### 7. 무기와 발사체 조합
@@ -285,7 +285,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 1 | 종류 정의 통합, `ResourceComposer` 로 읽는 길 통합(동작 변화 없음) | 기존 시나리오 그대로 통과, 읽는 길 한 곳 |
 | 2 | 공유 캐시 통합, `GameDataCache` 삭제, `acquire` 도입 | 같은 경로가 같은 객체라는 테스트, 다시 읽기가 쓰는 쪽에 닿는 시나리오 |
 | 3 | `AssetRef<T>` 와 생성 목록, `string` 칸 전환 | 잘못된 종류 연결이 로드 오류, 손 표가 줄어듦 |
-| 4 | 카탈로그 공유 전환(코드 끝남, 컴파일 전) | 공개 `loadFromAsset` 제거가 컴파일됨 |
+| 4 | 카탈로그 공유 전환(코드 끝남) | 공개 `loadFromAsset` 제거가 컴파일됨 |
 | 5 | 조건 · 층, 경로 교체, 합성 해시 대조(코드 끝남, 컴파일 전 — 위 2 절) | 단위 테스트 `ResourceTagsTest` · `ResourceConditionTest` · `ResourceLayerTest` · `ResourceRemapTest` · `ResourceCompositionTest`, 시나리오 `game/empty/automation/resourcecondition`(품질 · 데이터 레이어로 쥔 쪽의 값이 바뀐다) |
 | 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리(구현 — 시나리오 `game/empty/automation/vocabulary`. `<Archetype>` 은 위 까닭으로 남김) | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
 | 7 | 종류별 변형(위 표) | 표 한 줄마다 효과를 확인하는 시나리오 |
@@ -317,8 +317,6 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 구현 전에 코드를 읽어 정한다. 사용자 결정이 필요한 항목은 없다.
 
 - 메시 런타임 조립(언리얼 Mutable)은 `BodyShape` · 메시 병합 코드를 조사한 뒤 넣을지 정한다. 이 설계에 포함하지 않았다.
-- 형식마다의 입구(`Skeleton` · `Material` · `RigAsset` · `RetargetProfile` · `AnimationSet` · `AnimationGraphAsset` · `SpriteLibrary` · `AudioEventLibrary` · `AudioMixerDef` · `MaterialGraphDef` · `PhysicsAsset` · `SceneDocument`)는 `loadFromAsset` 이 `loadFromXMLText( 글, 이름 )` 로 넘겨 리소스 id 를 잃는다. 조건은 풀리지만 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 범용 입구(`XMLDocument::loadResource` · `XMLSerializer::loadFromAsset` · `ReflectedXMLFile`)로 읽는 리소스만 받는다. 할 일: 글 입구가 `ResourceContext` 를 받게 바꾸고 `loadFromAsset` 이 `withAsset` 을 넘긴다(그 형식들을 다른 작업자가 고치는 중이라 이번에 하지 않았다).
-- 카탈로그(`forDocument`)의 덮어쓰기 층은 규칙을 `Config/Dev/DataCatalogInheritance.json` 에서 읽는다. 배포 구성에 그 표가 없으면 카탈로그 층은 오류로 멈춘다(`ResourceLayer.NoRule` 앞의 표 읽기 오류). 할 일: 규칙 표를 배포 구성이 읽는 자리로 옮긴다(조건은 규칙이 필요 없어 해당하지 않는다).
-- 편집기가 조건이 든 리소스를 열면 지금 태그로 푼 값을 들고, 저장하면 그 값이 파일에 박히고 `_when` 이 사라진다(차이 저장도 푼 글을 본다). 할 일: 편집기 사본은 조건을 풀지 않은 글(`resolveConditions` 를 건너뛴 합성)을 들고 조건 원소를 편집 대상으로 보인다.
-- 접속 대조는 클라이언트가 붙을 때까지 합성한 리소스만 본다. 붙은 뒤에 읽은 게임플레이 데이터는 대조하지 않는다.
+- 조건을 받지 않는 형식: `FacialRig` · `LipSyncSettings` · `LiveLinkFace` · `AnimationLOD` · `SpriteClipAsset` · `DialogueGraphAsset` · `SequenceAsset` · `TileSetAsset` · `MeshLODSettings` · 엔진 설정 표는 `readConfigXMLDocument` · `document.parse` 로 바로 읽어 `_when` 이 모르는 원소 오류다(조용히 틀리지 않는다). `AnimationCrowdSettings` · `CharacterLODSettings` · `VisemeTrack` · `SkeletonBoneLOD` · 현지화 문서는 조건은 풀지만 글 입구라 층 · 다시 읽기를 받지 않는다. 쓸 일이 생기면 그 형식의 `loadFromAsset` 이 `withAsset` 문맥(`loadComposed`) · `XMLReadUtil::parseResourceRoot` 를 지나게 한다.
+- 편집기 저장: 사본은 지금 태그로 푼 값을 든다(형식의 칸에 조건이 들 자리가 없다). 저장 입구(`ResourceComposer::saveText`)가 있던 파일의 조건을 되돌리므로 `_when` 은 파일에 남고, 참인 조건이 정한 칸의 편집은 그 조건의 값이 된다(규칙은 `restoreConditions` 머리말). 조건 원소 자체를 고치는 화면은 없다 — 원문을 고치는 창(카탈로그 · 데이터 표)이나 텍스트 편집기로 고친다. 참인 조건이 정한 칸을 기본값으로 되돌린 편집은 글에 칸이 없어 가릴 수 없어 조건 값이 남는다. 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다(`ResourceLayer.SaveWouldBake`).
 - `XMLCatalog` 계열 중 파일에서 읽는 쪽이 저장소에 없는 키트 카탈로그(약 20 종 — SRPG · 정복 · 메트로배니아 · 공포 · 몬스터 · 파티 · 카트 등)는 지우지 않았다. 규칙 클래스가 `const T*` 를 받는 라이브러리이고 아직 그것을 쓰는 게임이 없을 뿐이라, 캐시 등록과 접미사(`.shops.xml` · `.loot.xml` · `.monsters.xml` …)만 정했다. 접미사가 있어 칸은 `AssetRef<T>` 로 받는다.

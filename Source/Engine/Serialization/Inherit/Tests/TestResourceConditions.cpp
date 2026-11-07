@@ -410,3 +410,115 @@ SW_TEST_CASE( ResourceCompositionTest, DigestMismatchComparesOnlyKnownCompositio
     SW_EXPECT_TRUE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( highText ) } ) );
     SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ "testproject/data/never-composed.xml", 1 } ) );
 }
+
+/** @brief [ResourceCompositionTest] 서버가 층 · 조건 없이 읽은 표도 대조한다 — 클라이언트만 층을 얹으면 서버 쪽에 기댄 것이 없어도 어긋남이다 */
+SW_TEST_CASE( ResourceCompositionTest, DigestComparesPlainCompositionsToo )
+{
+    const AssetID id{ "testproject/data/digest-plain.xml" };
+    string        flatText;
+    bool          bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1" />)", id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
+    SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( R"(<Doc a="1" />)" ) } ) );
+    SW_EXPECT_TRUE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( R"(<Doc a="layer" />)" ) } ) );
+}
+
+/** @brief [ResourceCompositionTest] 번호 뒤의 합성만 나온다 — 접속 뒤에 새로 읽은 리소스와 태그로 바뀐 결과가 서버에 간다. 기대지 않은 합성은 보낼 줄이 아니다 */
+SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
+{
+    const XTestTagScope         scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    uint64                      revision = 0;
+    vector<ResourceDigestEntry> listEntry;
+    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    SW_EXPECT_TRUE( listEntry.empty() );
+
+    const AssetID         varying{ "testproject/data/since-varying.xml" };
+    const AssetID         plain{ "testproject/data/since-plain.xml" };
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)";
+    string                flatText;
+    bool                  bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
+    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1" />)", plain.view(), ResourceContext::forDocument().withAsset( plain ), flatText, bComposed ) );
+    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listEntry.size() );
+    SW_EXPECT_EQUAL( varying.str(), listEntry[0]._assetID );
+
+    // 같은 결과로 다시 읽으면 보낼 것이 없다.
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
+    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    SW_EXPECT_TRUE( listEntry.empty() );
+
+    // 태그가 바뀌어 다시 읽으면 새 해시가 나간다.
+    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "high" ) );
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
+    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listEntry.size() );
+    SW_EXPECT_EQUAL( ResourceComposition::hashText( flatText ), listEntry[0]._hash );
+}
+
+/** @brief [ResourceDigestComparerTest] 상대 줄이 먼저 오고 서버가 나중에 읽어도 만난다 — 접속 뒤에 합성한 리소스의 어긋남을 유예가 지난 뒤 알린다 */
+SW_TEST_CASE( ResourceDigestComparerTest, ServerReadingLaterStillCompares )
+{
+    const XTestTagScope    scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    const AssetID          id{ "testproject/data/compare-later.xml" };
+    ResourceDigestComparer comparer;
+    SW_REQUIRE_TRUE( comparer.addPeerLine( 7, ResourceDigestEntry{ id.str(), 12345u }, 0 ) ); // 서버는 아직 이 리소스를 읽지 않았다
+
+    vector<ResourceDigestMismatch> listMismatch;
+    comparer.update( 1, 100, listMismatch );
+    SW_EXPECT_TRUE( listMismatch.empty() );
+
+    string flatText;
+    bool   bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
+    comparer.update( 10, 100, listMismatch );
+    SW_EXPECT_TRUE( listMismatch.empty() ); // 유예 안이다
+    comparer.update( 110, 100, listMismatch );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listMismatch.size() );
+    SW_EXPECT_EQUAL( 7, listMismatch[0]._peer );
+    SW_EXPECT_EQUAL( id.str(), listMismatch[0]._assetID );
+}
+
+/** @brief [ResourceDigestComparerTest] 유예 안에 맞으면 끊지 않는다 — 복제되는 태그는 양쪽이 다른 프레임에 바뀐다. 닫힌 연결의 줄은 맞대지 않는다 */
+SW_TEST_CASE( ResourceDigestComparerTest, GraceHealsAndClosedPeersAreForgotten )
+{
+    const XTestTagScope   scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    const AssetID         id{ "testproject/data/compare-grace.xml" };
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)";
+    string                flatText;
+    bool                  bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
+    const uint64 lowHash = ResourceComposition::hashText( flatText );
+
+    ResourceDigestComparer comparer;
+    SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ id.str(), lowHash }, 0 ) );
+    SW_REQUIRE_TRUE( comparer.addPeerLine( 2, ResourceDigestEntry{ id.str(), lowHash }, 0 ) );
+    vector<ResourceDigestMismatch> listMismatch;
+    comparer.update( 1, 100, listMismatch );
+    SW_EXPECT_TRUE( listMismatch.empty() );
+
+    // 서버의 태그가 먼저 바뀌었다 — 두 연결 모두 잠깐 어긋난다.
+    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "high" ) );
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
+    comparer.update( 10, 100, listMismatch );
+    SW_EXPECT_TRUE( listMismatch.empty() );
+
+    // 연결 1 은 유예 안에 따라왔고, 연결 2 는 닫혔다.
+    SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ id.str(), ResourceComposition::hashText( flatText ) }, 20 ) );
+    comparer.removePeer( 2 );
+    comparer.update( 1000, 100, listMismatch );
+    SW_EXPECT_TRUE( listMismatch.empty() );
+}
+
+/** @brief [ResourceDigestComparerTest] 상대 하나가 드는 줄 수에는 상한이 있다 — 신뢰 경계다. 같은 id 는 줄을 늘리지 않는다 */
+SW_TEST_CASE( ResourceDigestComparerTest, LinesPerPeerAreBounded )
+{
+    ResourceDigestComparer comparer;
+    for ( uint32 index = 0; index < ResourceDigestComparer::kMaxLinesPerPeer; ++index )
+    {
+        SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/" + sw::to_string( index ), 1u }, 0 ) );
+    }
+    SW_EXPECT_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/0", 2u }, 0 ) );
+    SW_EXPECT_FALSE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/over", 1u }, 0 ) );
+    SW_EXPECT_TRUE( comparer.addPeerLine( 2, ResourceDigestEntry{ "testproject/flood/over", 1u }, 0 ) );
+}

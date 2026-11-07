@@ -21,6 +21,8 @@
 
 namespace sw
 {
+    struct ResourceContext;
+
     /**
      * @enum AnimationLayerBlend
      * @brief 레이어가 아래 포즈에 합쳐지는 방법입니다(XML "blend"). 모르는 표기는 로드 오류입니다.
@@ -276,7 +278,7 @@ namespace sw
 
     private:
         /** @brief 글을 펼치고(`_base`) 읽습니다. 세 읽기 입구의 공통 단계입니다. @p sourceLabel 은 오류에 적는 이름입니다. */
-        [[nodiscard]] bool parseText( string_view text, string_view sourceLabel );
+        [[nodiscard]] bool parseText( string_view text, string_view sourceLabel, const ResourceContext& context );
         /** @brief 노드 id 가 겹치거나, 링크 id 가 겹치거나, 링크가 없는 노드를 가리키면 오류를 남기고 false 입니다(차이 파일이 부모와 어긋난 것이 여기서 드러난다). */
         [[nodiscard]] bool validateGraphIDs( string_view sourceLabel ) const;
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */

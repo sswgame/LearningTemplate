@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    struct ResourceContext;
+
     /** @brief 전환이 기다리는 맞춤 지점입니다. */
     ENUM()
     enum class AudioMusicSync : uint8
@@ -143,6 +145,12 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
+
+    private:
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+
+    public:
         /** @brief 이름, 레이어, 길이, 템포, 시작 구간, 다음 구간, 전환 이름, 곡선 순서를 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 

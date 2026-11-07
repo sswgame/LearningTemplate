@@ -51,7 +51,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 구역이 원소를 합치는 규칙입니다(`Config/Dev/DataCatalogInheritance.json`). */
+    /** @brief 구역이 원소를 합치는 규칙입니다(`Content/engine/settings/datacataloginheritance.xml`). */
     enum class CatalogChildSectionKind : uint8
     {
         List,  ///< 규칙의 `key` 있는 칸: 원소마다 합친다. 더하기 · 지우기 · 순서

@@ -11,6 +11,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -415,7 +416,7 @@ namespace sw
     {
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeTextFile( absPath.str(), toXML() );
+        return ResourceComposer::saveText( absPath.str(), toXML() );
     }
 
     string VisemeTrack::makePathForAudio( string_view audioPath )

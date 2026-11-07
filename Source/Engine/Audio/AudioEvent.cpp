@@ -211,16 +211,21 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryNot", "Audio event library not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, assetPath );
+        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioEventLibrary::loadFromXMLText( string_view xmlText, string_view sourceName )
+    {
+        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool AudioEventLibrary::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
     {
         *this = AudioEventLibrary{};
         // 파일 상속을 먼저 합친다 — 프리셋의 부모는 합친 결과에서 찾는다(자식 파일이 부모 파일의 이벤트를 고치고 부모로 삼는다).
         string fileText;
         bool   bComposed = false; // 펼치지 않으면 fileText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), fileText, bComposed ) == false )
+        if ( ResourceComposer::compose( xmlText, sourceName, context, fileText, bComposed ) == false )
             return false;
         const string_view mergedFile = fileText.empty() ? xmlText : string_view( fileText );
         string            presetText;
@@ -387,7 +392,7 @@ namespace sw
                 saveText = std::move( deltaText );
             }
         }
-        if ( FileUtil::writeTextFile( absPath.str(), saveText ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), saveText ) == false )
         {
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould2", "%#: audio event library could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

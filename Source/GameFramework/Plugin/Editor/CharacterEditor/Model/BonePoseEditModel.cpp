@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw::editor
 {
@@ -219,7 +220,7 @@ namespace sw::editor
     bool BonePoseEditModel::saveToFile( const AbsolutePath& absPath )
     {
         const string text = _override.saveToXMLText();
-        if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
+        if ( ResourceComposer::saveText( absPath.str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
             return false;

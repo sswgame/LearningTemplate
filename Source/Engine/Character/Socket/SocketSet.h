@@ -256,8 +256,10 @@ namespace sw
 
     private:
         void readRoot( const XMLNode& root, const SocketKindTable& kinds, CharacterDataReader& reader );
-        void readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader );
-        void readVirtualBone( const XMLNode& node, CharacterDataReader& reader );
+        /** @brief 뼈 검사(@p pBones 가 있으면)를 더하고 읽개를 끝냅니다. 글 입구와 리소스 입구의 공통 끝입니다. */
+        [[nodiscard]] bool finishLoad( CharacterDataReader& reader, const CharacterBoneArray* pBones );
+        void               readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader );
+        void               readVirtualBone( const XMLNode& node, CharacterDataReader& reader );
 
     private:
         vector<SocketDef>      _listSocket;

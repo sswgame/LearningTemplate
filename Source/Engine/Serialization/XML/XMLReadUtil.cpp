@@ -82,6 +82,14 @@ namespace sw
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;
     }
 
+    XMLRootStatus XMLReadUtil::parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot )
+    {
+        if ( outDocument.parseResourceText( xmlText, assetID ) == false )
+            return XMLRootStatus::NotLoaded;
+        outRoot = outDocument.getRoot( pRootName );
+        return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;
+    }
+
     hashed_string XMLReadUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )
     {
         const string_view text = StringUtil::trim( node.getAttributeText( pAttribute ) );

@@ -23,15 +23,20 @@ namespace sw
             SW_LOG_ERROR_ID( "SpriteLibrary.CouldNotRead", "Sprite library '%#' could not be read", assetID.view() );
             return false;
         }
-        return loadFromXMLText( text, assetID.view() );
+        return loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool SpriteLibrary::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+    }
+
+    bool SpriteLibrary::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         clear();
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         const string label{ sourceLabel };
         if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), flatText.empty() ? xml : string_view{ flatText }, label.c_str() ) && resolveLoadedValues( sourceLabel ) )

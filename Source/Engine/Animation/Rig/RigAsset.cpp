@@ -155,11 +155,16 @@ namespace sw
 
     bool RigAsset::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
+        return loadComposed( xml, sourceLabel, ResourceContext::forSchema( &RigAssetInternal::makeInheritanceSchema ) );
+    }
+
+    bool RigAsset::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    {
         SW_MEMORY_SCOPE( Animation );
         clear();
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forSchema( &RigAssetInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xml, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         XMLNode     root;
@@ -187,7 +192,7 @@ namespace sw
             clear();
             return false;
         }
-        return loadFromXMLText( text, path );
+        return loadComposed( text, path, ResourceContext::forSchema( &RigAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     bool RigAsset::parseRoot( const XMLNode& root, string_view sourceLabel )

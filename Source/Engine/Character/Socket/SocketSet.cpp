@@ -17,6 +17,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -140,6 +141,11 @@ namespace sw
         XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "SocketSet", root ) )
             readRoot( root, kinds, reader );
+        return finishLoad( reader, pBones );
+    }
+
+    bool SocketSet::finishLoad( CharacterDataReader& reader, const CharacterBoneArray* pBones )
+    {
         if ( pBones != nullptr )
         {
             CharacterIssueList boneIssues;
@@ -160,7 +166,14 @@ namespace sw
             reader.addError( "Character.FileUnreadable", "cannot read" );
             return reader.finish();
         }
-        return loadFromXMLText( text, assetID.view(), kinds, pBones );
+        clear();
+        _baseID = DataInheritance::findBasePath( text ); // 저장이 부모와의 차이로 쓰려고 든다(읽기는 펼친 한 벌이다)
+        CharacterDataReader reader( assetID.view() );
+        XMLDocument         document;
+        XMLNode             root;
+        if ( reader.parseResourceRoot( document, text, assetID, "SocketSet", root ) )
+            readRoot( root, kinds, reader );
+        return finishLoad( reader, pBones );
     }
 
     bool SocketSet::saveToFile( const AbsolutePath& absPath, const SocketKindTable& kinds ) const
@@ -180,7 +193,7 @@ namespace sw
             if ( DataCatalogInheritance::loadSchema( "SocketSet", schema, bListed ) == false || bListed == false ||
                  DataCatalogInheritance::makeFileDelta( fullText, parent.saveToXMLText(), schema, _baseID, text ) == false )
             {
-                SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kConfigPath );
+                SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kTableAssetID );
                 return false;
             }
             SocketSet reread;
@@ -190,7 +203,7 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), text ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || ResourceComposer::saveText( absPath.str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "SocketSet.WriteFailed", "Socket set could not be written: %#", absPath.str() );
             return false;

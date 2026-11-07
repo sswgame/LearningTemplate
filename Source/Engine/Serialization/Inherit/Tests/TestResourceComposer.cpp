@@ -2,17 +2,15 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -91,19 +89,25 @@ SW_TEST_CASE( ResourceComposerTest, CookStopsWhenNoRuleIsVisible )
 /** @brief [ResourceComposerTest] 문서 표의 줄이 규칙이 되고, 그 규칙으로 쿠킹이 펼친다 */
 SW_TEST_CASE( ResourceComposerTest, DocumentTableRowParses )
 {
-    constexpr const utf8* kJson = R"({ "listDocument": [
-        { "root": "Kit", "listField": [ { "name": "_listX", "key": "_name" } ] }
-    ] })";
+    constexpr const utf8* kTable = R"(<Table><Document root="Kit"><Field name="_listX" key="_name" /></Document></Table>)";
 
     DataInheritanceSchema schema{ "Kit" };
     bool                  bListed = false;
-    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Kit", schema, bListed ) );
+    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kTable, "Kit", schema, bListed ) );
     SW_EXPECT_TRUE( bListed );
     SW_REQUIRE_TRUE( schema.findField( "_listX" ) != nullptr );
     SW_EXPECT_EQUAL( string( "_name" ), schema.findField( "_listX" )->_keyAttribute );
 
-    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Other", schema, bListed ) );
+    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kTable, "Other", schema, bListed ) );
     SW_EXPECT_FALSE( bListed );
+}
+
+/** @brief [ResourceComposerTest] 규칙 표는 코드 뿌리라 배포 팩에 담긴다 — 표가 `Config/Dev` 에 있던 때는 배포 구성의 카탈로그 층이 표를 읽지 못해 오류로 멈췄다 */
+SW_TEST_CASE( ResourceComposerTest, RuleTableIsACookRootResource )
+{
+    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( DataCatalogInheritance::kTableAssetID ) );
+    string text;
+    SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ DataCatalogInheritance::kTableAssetID }, text ) );
 }
 
 /**
@@ -113,14 +117,13 @@ SW_TEST_CASE( ResourceComposerTest, DocumentTableRowParses )
 SW_TEST_CASE( ResourceComposerTest, DocumentTableMatchesReflection )
 {
     string text;
-    SW_REQUIRE_TRUE( AssetIO::readTextFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), DataCatalogInheritance::kConfigPath ), text ) );
-    JSONDocument doc;
-    SW_REQUIRE_TRUE( doc.parse( text, DataCatalogInheritance::kConfigPath ) );
-    const JSONValue listDocument = doc.getRoot().get( "listDocument" );
-    SW_REQUIRE_TRUE( listDocument.isArray() );
-    for ( size_t index = 0; index < listDocument.size(); ++index )
+    SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ DataCatalogInheritance::kTableAssetID }, text ) );
+    XMLDocument doc;
+    SW_REQUIRE_TRUE( doc.parse( text, DataCatalogInheritance::kTableAssetID ) );
+    SW_REQUIRE_TRUE( doc.getRoot().findChild( "Document" ).isValid() );
+    for ( XMLNode row = doc.getRoot().findChild( "Document" ); row.isValid(); row = row.findNextSibling( "Document" ) )
     {
-        const string          rootName = listDocument.at( index ).get( "root" ).asString();
+        const string          rootName{ row.getAttributeText( "root" ) };
         DataInheritanceSchema schema{ rootName };
         bool                  bListed = false;
         SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( text, rootName, schema, bListed ) );

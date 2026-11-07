@@ -1033,7 +1033,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Serialization.EmptyOutput", "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), string{ absPath }.c_str() );
             return false;
         }
-        return FileUtil::writeTextFile( absPath, text );
+        return ResourceComposer::saveText( absPath, text );
     }
 
     bool XMLSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )

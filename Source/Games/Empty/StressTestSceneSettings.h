@@ -18,9 +18,11 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Audio/AudioClip.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -107,8 +109,12 @@ namespace sw
         AssetRef<Skeleton> _combatEnemySkeleton{};
         PROPERTY( Category = "Assets" )
         AssetRef<AnimationSet> _combatEnemyClips{};
-        PROPERTY( Category = "Assets", Tooltip = "Path stem of the enemy's character data (.notifies.xml, .sockets.xml, .physics.xml are appended)" )
-        string _combatEnemyData{};
+        PROPERTY( Category = "Assets", Tooltip = "Animation notify table of the enemy" )
+        AssetRef<AnimationNotifyTable> _combatEnemyNotifies{};
+        PROPERTY( Category = "Assets", Tooltip = "Socket table of the enemy" )
+        AssetRef<SocketSet> _combatEnemySockets{};
+        PROPERTY( Category = "Assets", Tooltip = "Ragdoll physics asset of the enemy" )
+        AssetRef<PhysicsAsset> _combatEnemyPhysics{};
         PROPERTY( Category = "Assets", Tooltip = "Sword mesh held in the enemy's right hand" )
         AssetRef<MeshAssetFormat> _combatSwordMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the sword (KayKit atlas)" )

@@ -10,6 +10,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 #include <algorithm>
 
@@ -94,7 +95,7 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && ResourceComposer::saveText( absPath.str(), toXML() );
     }
 
     bool SequenceAsset::loadFromXMLText( string_view xmlView )
