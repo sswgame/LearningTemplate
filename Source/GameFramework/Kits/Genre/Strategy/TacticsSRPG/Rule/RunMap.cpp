@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
@@ -29,40 +30,35 @@ namespace sw
         if ( bValid == false )
             return false; // 범위 밖 층 수(음수)로 아래 표를 만들면 터무니없는 크기를 할당한다
         settings._listForcedFloor.assign( static_cast<size_t>( settings._floorCount ), hashed_string{} );
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+        /** 설정은 끝까지 읽혀야 바깥으로 나가므로 지역 값을 든 읽는 쪽을 둔다. */
+        struct RunMapElementReader
         {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( name == "Node" )
+            RunMapSettings& _settings;
+
+            bool loadNode( const XMLNode& node, string_view sourceName ) { return GameDataXML::readInto( node, sourceName, _settings._listRule ); }
+            bool loadFloor( const XMLNode& node, string_view sourceName )
             {
-                RunNodeRule rule;
-                if ( XMLFields::readFields( node, rule, sourceName ) )
-                    settings._listRule.push_back( rule );
-                else
-                    bValid = false;
-                continue;
+                RunForcedFloorDef forced;
+                if ( XMLFields::readFields( node, forced, sourceName ) == false )
+                    return false;
+                const int32 index        = forced._index < 0 ? forced._index + _settings._floorCount : forced._index; // −1 은 마지막 층이다
+                const bool  bInsideFloor = index >= 0 && index < _settings._floorCount;
+                if ( bInsideFloor == false )
+                {
+                    SW_LOG_ERROR_ID( "RunMap.FloorIndexOutsideFloors", "%#: <Floor index=\"%#\"> is outside the %# floors", sourceName, forced._index, _settings._floorCount );
+                    return false;
+                }
+                _settings._listForcedFloor[static_cast<size_t>( index )] = forced._kind;
+                return true;
             }
-            if ( name != "Floor" )
-            {
-                SW_LOG_ERROR_ID( "RunMap.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-                bValid = false;
-                continue;
-            }
-            RunForcedFloorDef forced;
-            if ( XMLFields::readFields( node, forced, sourceName ) == false )
-            {
-                bValid = false;
-                continue;
-            }
-            const int32 index        = forced._index < 0 ? forced._index + settings._floorCount : forced._index; // −1 은 마지막 층이다
-            const bool  bInsideFloor = index >= 0 && index < settings._floorCount;
-            if ( bInsideFloor == false )
-            {
-                SW_LOG_ERROR_ID( "RunMap.FloorIndexOutsideFloors", "%#: <Floor index=\"%#\"> is outside the %# floors", sourceName, forced._index, settings._floorCount );
-                bValid = false;
-                continue;
-            }
-            settings._listForcedFloor[static_cast<size_t>( index )] = forced._kind;
-        }
+        };
+        using Element                          = XMLCatalogElement<RunMapElementReader>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&RunMapElementReader::loadNode>( "Node" ).uncounted(),
+            Element::of<&RunMapElementReader::loadFloor>( "Floor" ).uncounted(),
+        };
+        RunMapElementReader reader{ settings };
+        bValid = XMLCatalogReader::readInDocumentOrder( reader, root, sourceName, kArrElement ).isClean();
         if ( settings._listRule.empty() )
         {
             SW_LOG_ERROR_ID( "RunMap.RunMapNeedsLeastOne", "%#: <RunMap> needs at least one <Node kind=\"...\"/>", sourceName );

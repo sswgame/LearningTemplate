@@ -3,7 +3,7 @@
 """
 Scripts/lint/PreCommit.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · C++ 모양 검사(`CppShape.py`) · 파일 읽기 모양 검사(`ByteReadShape.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · C++ 모양 검사(`CppShape.py`) · 파일 읽기 모양 검사(`ByteReadShape.py`) · 카탈로그 루트 모양 검사(`CatalogRootShape.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
 Content · 테스트 CMake 의 변경에 에셋 참조 검사(`AssetReferences.py` — 지우기 · 옮기기만 한 커밋도)를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
@@ -26,6 +26,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
 from lint.AssetReferences import checkStagedAssetReferences  # noqa: E402
 from lint.ByteReadShape import checkByteReadShape  # noqa: E402
+from lint.CatalogRootShape import checkCatalogRootShape  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
@@ -101,6 +102,15 @@ def main(argv: list[str] | None = None) -> int:
             hasErrors = True
             print(f"[ByteReadShape] FAIL — 파일 읽기 모양 위반 {len(listByteReadViolation)}건")
             for line in listByteReadViolation:
+                print(f"  - {line}")
+
+    # --- 게임 데이터 루트의 원소를 손으로 고르는 모양(`findChild` 를 형식으로 막지 못하는 자리 — CatalogRootShape.py 머리말) ---------------
+    if stagedCppFiles:
+        listCatalogRootViolation = checkCatalogRootShape(projectRoot, [str(path) for path in stagedCppFiles])
+        if listCatalogRootViolation:
+            hasErrors = True
+            print(f"[CatalogRootShape] FAIL — 카탈로그 루트 모양 위반 {len(listCatalogRootViolation)}건")
+            for line in listCatalogRootViolation:
                 print(f"  - {line}")
 
     # --- Core 높은 티어 사이 역류(빌드가 가르지 않는 자리 — CoreTiers.py 머리말) ---------------

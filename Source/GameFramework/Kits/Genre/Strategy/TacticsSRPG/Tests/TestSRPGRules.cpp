@@ -1174,7 +1174,7 @@ SW_TEST_CASE( SRPGRunMapTest, LoadSettingsRefusesBrokenData )
     constexpr const utf8* kNoRuleXML = R"(<RunMap floors="4"/>)";
     SW_EXPECT_FALSE( sw::RunMap::loadSettings( kNoRuleXML, "SRPGTest", settings ) );
 
-    SW_EXPECT_LOG( "RunMap.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     constexpr const utf8* kUnknownXML = R"(<RunMap floors="4"><Node kind="Battle"/><Mystery/></RunMap>)";
     SW_EXPECT_FALSE( sw::RunMap::loadSettings( kUnknownXML, "SRPGTest", settings ) );
 }

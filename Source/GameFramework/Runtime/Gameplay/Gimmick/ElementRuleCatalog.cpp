@@ -237,11 +237,11 @@ namespace sw
 
     bool ElementRuleCatalog::readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const
     {
-        if ( XMLReadUtil::isElement( node.getName(), "Expire" ) )
+        if ( StringUtil::equals( node.getName(), "Expire" ) )
             outRule._kind = ElementStepRuleKind::Expire;
-        else if ( XMLReadUtil::isElement( node.getName(), "Convert" ) )
+        else if ( StringUtil::equals( node.getName(), "Convert" ) )
             outRule._kind = ElementStepRuleKind::Convert;
-        else if ( XMLReadUtil::isElement( node.getName(), "Spread" ) )
+        else if ( StringUtil::equals( node.getName(), "Spread" ) )
             outRule._kind = ElementStepRuleKind::Spread;
         else
         {

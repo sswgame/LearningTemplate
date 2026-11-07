@@ -42,7 +42,7 @@ namespace sw
     /**
      * @class XMLCatalog
      * @brief 카탈로그가 물려받으면 종류의 로더가 부르는 `loadFromAsset( path )` 와 공개 `loadFromXMLText( xmlText, sourceName )` 가 생깁니다.
-     * @details 카탈로그는 루트 원소 이름 `kXMLRootName` 과 루트 읽기 `loadRoot( const XMLNode&, string_view sourceName )` 만 두면 된다.
+     * @details 카탈로그는 루트 원소 이름 `kXMLRootName` 과 루트 읽기 `loadRoot( const XMLNode&, string_view sourceName )` 만 두면 된다. 루트 읽기는 원소를 손으로 고르지 않고 `XMLCatalogElement` 표로 돌린다(`XMLCatalogTable.h`).
      *          루트 읽기는 읽은 항목 수(`uint32`, 0 이면 실패)나 성공 여부(`bool`)를 반환한다.
      *          둘 다 비공개로 두고 베이스를 friend 로 연다.
      *          다른 카탈로그를 함께 받는 루트 읽기(기술, 코스터 설계)는 `GameDataXML::loadFromFile` 의 문맥 버전을 그대로 쓴다.
