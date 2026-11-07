@@ -187,6 +187,15 @@ namespace sw
         /** @brief 카메라가 보는 방향(월드, 정규화)입니다. 로컬 +Z 를 월드 회전으로 돌린 것이며 뷰 행렬과 같은 축입니다. */
         float3 getCameraForward() const;
 
+        /**
+         * @brief 이 카메라가 마지막으로 그린 뷰의 가로세로 비입니다(그리는 크기 기준 — 분할 화면 칸 · 세로 화면 · 렌더 텍스처). 그린 적이 없으면 0 입니다. 저장하지 않습니다.
+         * @details 렌더 뷰를 모으는 쪽(주 시점 `RenderPacketViewSetup`, 추가 뷰 `RenderViewCollector`)이 뷰-투영을 만들 때 쓴 비를 적는다(게임 스레드).
+         *          게임 쪽이 같은 비로 투영해야 할 때(대기 뷰의 LOD 미리 보기) 비를 짐작하지 않고 이 값을 읽는다.
+         */
+        float32 getDrawnAspect() const { return _drawnAspect; }
+        /** @brief 이 카메라로 그린 뷰의 가로세로 비를 적습니다(렌더 뷰 수집만 부른다). */
+        void setDrawnAspect( float32 aspect ) { _drawnAspect = aspect; }
+
         /** @brief 출력 설정(렌더 텍스처, 화면 사각형, 갱신 주기, 끌 기능)입니다. */
         const CameraRenderOutput& getRenderOutput() const { return _renderOutput; }
         /** @brief 출력 설정을 바꿉니다. 렌더 텍스처면 그 크기를 텍스처 캐시에 알립니다. */
@@ -239,7 +248,8 @@ namespace sw
         float32 _farZ;
         PROPERTY( Category = "Projection", DisplayName = "Ortho Height", Tooltip = "Orthographic view height", Min = 0.1, Max = 1000.0 )
         float32 _orthoHeight;
-        float3  _viewOffset; ///< 그리기 전용 눈 위치 오프셋(월드). 저장하지 않습니다
+        float3  _viewOffset;  ///< 그리기 전용 눈 위치 오프셋(월드). 저장하지 않습니다
+        float32 _drawnAspect; ///< 마지막으로 그린 뷰의 가로세로 비(0 은 그린 적 없음). 저장하지 않습니다
         PROPERTY( Category = "General", DisplayName = "Priority", Tooltip = "Camera selection priority" )
         int32 _priority;
         PROPERTY( Category = "General", DisplayName = "Role", Tooltip = "Camera usage role" )

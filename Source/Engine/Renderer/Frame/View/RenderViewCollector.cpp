@@ -209,11 +209,12 @@ namespace sw
                 request._outputHeight              = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
             }
             // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다(주 시점의 computeAspect 와 같은 규칙).
-            const uint32  zoom           = request._settings._upscaleZoom;
-            const float32 drawnWidth     = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputWidth ), 1.0f, zoom ) );
-            const float32 drawnHeight    = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputHeight ), 1.0f, zoom ) );
-            const float32 aspect         = drawnWidth / drawnHeight;
-            request._viewProj            = pCamera->getViewProjectionMatrix( aspect );
+            const uint32  zoom        = request._settings._upscaleZoom;
+            const float32 drawnWidth  = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputWidth ), 1.0f, zoom ) );
+            const float32 drawnHeight = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputHeight ), 1.0f, zoom ) );
+            const float32 aspect      = drawnWidth / drawnHeight;
+            request._viewProj         = pCamera->getViewProjectionMatrix( aspect );
+            pCamera->setDrawnAspect( aspect ); // 게임 쪽이 같은 비로 투영하게 적는다(대기 뷰 LOD)
             request._position            = pCamera->getCameraPosition();
             request._transparentSortAxis = engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );
 

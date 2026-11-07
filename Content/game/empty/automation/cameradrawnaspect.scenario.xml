@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  카메라가 그린 뷰의 가로세로 비 — 주 시점 카메라가 실제로 그린 뷰의 비(Camera.DrawnAspect)가 창 크기를 따른다.
+  대기 카메라(컷 프리롤)의 LOD 미리 보기가 이 값으로 투영한다(CameraManagerComponent::updatePendingLODView). 예전에는 16:9 로 짐작해 세로 화면 · 분할 화면에서 어긋났다.
+  창 크기는 900x720(1.25) 과 1600x900(1.778) 이다. 게임 뷰가 창 크기와 다르게 잡히는 실행이면 값이 다르니 통합에서 값을 맞춘다.
+  실행: App -scenario=game/empty/automation/cameradrawnaspect.scenario.xml -unattended
+-->
+<Scenario name="game.empty.cameradrawnaspect" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/matparamcollection.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Camera.DrawnAspect" target="GameCamera" atLeast="0.1" timeoutFrames="60"/>
+	<ResizeWindow width="900" height="720"/>
+	<WaitUntil watch="Camera.DrawnAspect" target="GameCamera" near="1.25" tolerance="0.02" timeoutFrames="60"/>
+	<ResizeWindow width="1600" height="900"/>
+	<WaitUntil watch="Camera.DrawnAspect" target="GameCamera" near="1.7778" tolerance="0.02" timeoutFrames="60"/>
+	<Pass/>
+</Scenario>

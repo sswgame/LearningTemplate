@@ -38,6 +38,7 @@ namespace sw
         , _farZ{ kDefaultFarZ }
         , _orthoHeight{ kDefaultOrthoHeight }
         , _viewOffset{ 0.0f, 0.0f, 0.0f }
+        , _drawnAspect{ 0.0f }
         , _priority{ 0 }
         , _role{ CameraRole::Game }
         , _renderOutput{}

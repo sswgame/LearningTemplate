@@ -1,6 +1,6 @@
 /**
  * @file ObjectWatches.cpp
- * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo` · `Camera.FrameObject`.
+ * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo` · `Camera.FrameObject` · `Camera.DrawnAspect`.
  * @details 대상 고르기 규칙은 `AutomationTarget`(`Engine/Automation/Watch/AutomationWatch.h`)이 정한다.
  */
 #include "pch.h"
@@ -154,6 +154,19 @@ namespace sw
             outValue.setText( pOwner->getName().c_str() );
             return true;
         }
+        /** @brief 감시 값 `Camera.DrawnAspect` 입니다. 대상 오브젝트의 카메라가 마지막으로 그린 뷰의 가로세로 비이고, 그린 적이 없으면 0 입니다. */
+        [[nodiscard]] bool readCameraDrawnAspect( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const GameObject*      pTarget = query.findTargetObject();
+            const CameraComponent* pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
+            if ( pCamera == nullptr )
+            {
+                outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "CameraComponent" ) );
+                return false;
+            }
+            outValue.setNumber( static_cast<float64>( pCamera->getDrawnAspect() ) );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( objectX, "Object.X", "World X of the target object (m)", &readObjectX, true, false );
@@ -163,5 +176,6 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( objectProperty, "Object.Property", "Component property of the target object (key = <ComponentType>.<property>; numbers and strings)",
                                &readObjectProperty, true, true );
     SW_AUTOMATION_QUERY_WATCH( objectDistanceTo, "Object.DistanceTo", "World distance from the target object to the object named key (m)", &readObjectDistanceTo, true, true );
+    SW_AUTOMATION_QUERY_WATCH( cameraDrawnAspect, "Camera.DrawnAspect", "Width over height of the view the target object's camera drew last (0 = never drawn)", &readCameraDrawnAspect, true, false );
     SW_AUTOMATION_QUERY_WATCH( cameraFrameObject, "Camera.FrameObject", "Name of the object whose camera draws this frame (a sequencer cut camera while one covers the frame)", &readFrameCameraObject, false, false );
 } // namespace sw

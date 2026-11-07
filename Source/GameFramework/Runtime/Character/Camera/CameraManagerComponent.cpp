@@ -282,7 +282,10 @@ namespace sw
         AnimationSystem&       animation      = pManager->getSubsystem<AnimationSystem>();
         MeshLODSystem&         meshLOD        = pManager->getSubsystem<MeshLODSystem>();
         const CameraComponent* pPendingCamera = hasPendingView() ? findTargetCamera( _pendingView._camera ) : nullptr;
-        if ( pPendingCamera == nullptr )
+        // 대기 뷰는 컷 뒤 이 매니저의 카메라가 그린다 — 그 카메라가 실제로 그린 뷰의 비로 투영한다(분할 화면 칸 · 세로 화면). 아직 그린 적이 없으면 비를 모르므로 미리 보지 않는다.
+        const CameraComponent* pOwnCamera  = pOwner->getComponent<CameraComponent>();
+        const float32          drawnAspect = pOwnCamera != nullptr ? pOwnCamera->getDrawnAspect() : 0.0f;
+        if ( pPendingCamera == nullptr || drawnAspect <= 0.0f )
         {
             if ( animation.hasPendingLODView() )
                 animation.clearPendingLODView();
@@ -290,9 +293,7 @@ namespace sw
                 meshLOD.clearPendingView();
             return;
         }
-        // shortcut: 대기 카메라가 그릴 화면의 가로세로 비를 모르므로 이 카메라와 같은 화면이라고 보고 16:9 로 잡는다 — 분할 화면 · 세로 화면이 생기면 뷰의 비를 받는다.
-        constexpr float32 kPendingViewAspect = 16.0f / 9.0f;
-        const LODView     pendingView        = LODView::make( pPendingCamera->getViewProjectionMatrix( kPendingViewAspect ), pPendingCamera->getCameraPosition() );
+        const LODView pendingView = LODView::make( pPendingCamera->getViewProjectionMatrix( drawnAspect ), pPendingCamera->getCameraPosition() );
         animation.setPendingLODView( pendingView );
         // 메시 LOD 도 그 시점의 단계로 미리 둔다 — 컷 첫 프레임에 단계가 바뀌어 보이지 않게.
         meshLOD.setPendingView( pendingView );

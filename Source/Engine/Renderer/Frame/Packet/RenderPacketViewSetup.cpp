@@ -107,8 +107,10 @@ namespace sw
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-            packet._mainView = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
-            packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
+            packet._mainView         = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
+            const float32 mainAspect = RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight );
+            packet.setMainView( pCam->getViewProjectionMatrix( mainAspect ), pCam->getCameraPosition() );
+            pCam->setDrawnAspect( mainAspect ); // 게임 쪽이 같은 비로 투영하게 적는다(대기 뷰 LOD)
             _bMissingCameraReported = SW_FALSE;
         }
         else if ( _bMissingCameraReported == false )
