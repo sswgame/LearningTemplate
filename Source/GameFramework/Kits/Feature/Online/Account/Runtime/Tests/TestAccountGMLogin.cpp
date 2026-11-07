@@ -22,7 +22,7 @@ namespace
     {
     public:
         vector<uint16> _listMethod{};
-        LoginResult    _result{ LoginResult::Ok };
+        LoginOutcome   _result{ LoginResult::Ok };
 
         const OnlineProtocolEntry& getProtocol() const override { return AccountProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override
@@ -35,8 +35,13 @@ namespace
         {
             (void)body;
             _listMethod.push_back( context._method );
+            if ( _result.isFailed() )
+            {
+                (void)host.respondError( context._token, _result._errorCode ); // 공통 범주는 오류 코드로만 간다
+                return;
+            }
             AccountGrantReply reply;
-            reply._result = _result;
+            reply._result = _result._result;
             if ( _result == LoginResult::Ok )
             {
                 reply._grant._identity._accountID   = kAccountID;

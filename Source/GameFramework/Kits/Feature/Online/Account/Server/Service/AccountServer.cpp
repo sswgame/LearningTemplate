@@ -288,32 +288,32 @@ namespace sw
         {
             case LoginOperation::IssueGameTicket:
             {
-                bWritten = AccountProtocol::MessageTypes::write( body, AccountTicketReply{ completion._ticket, completion._result } );
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountTicketReply{ completion._ticket, completion._result._result } );
                 break;
             }
             case LoginOperation::ListLinks:
             {
-                bWritten = AccountProtocol::MessageTypes::write( body, AccountLinkReply{ completion._linkSummary, completion._result } );
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountLinkReply{ completion._linkSummary, completion._result._result } );
                 break;
             }
             case LoginOperation::Register:
             case LoginOperation::LinkCredential:
             case LoginOperation::LinkPlatform:
             {
-                AccountGrantReply reply{ completion._grant, completion._result };
+                AccountGrantReply reply{ completion._grant, completion._result._result };
                 reply._grant._identity = completion._identity;
                 bWritten               = AccountProtocol::MessageTypes::write( body, reply );
                 break;
             }
             default:
             {
-                bWritten = AccountProtocol::MessageTypes::write( body, AccountGrantReply{ completion._grant, completion._result } );
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountGrantReply{ completion._grant, completion._result._result } );
                 break;
             }
         }
         const bool bOk = completion._result == LoginResult::Ok;
         // 응답 형식 셋의 보존 판정은 결과 하나가 정한다(`AccountProtocol::isRetryable`) — 다시 시도할 결과를 기억하면 같은 키의 재시도가 같은 답만 받는다.
-        const NetResponseRetention retention = AccountProtocol::isRetryable( completion._result ) ? NetResponseRetention::Discard : NetResponseRetention::Keep;
+        const NetResponseRetention retention = AccountProtocol::isRetryable( completion._result._result ) ? NetResponseRetention::Discard : NetResponseRetention::Keep;
         if ( bWritten == false )
         {
             // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
@@ -336,7 +336,7 @@ namespace sw
                 {
                     // 그사이 이 연결이 닫혔으므로 세션은 재접속 유예로 둔다.
                     _pLoginService->markDisconnected( completion._grant._token._sessionID, _nowMs );
-                    (void)_calls.respondBody( callID, body, retention, static_cast<int32>( completion._result ) );
+                    (void)_calls.respondBody( callID, body, retention, static_cast<int32>( completion._result._result ) );
                     return;
                 }
             }
@@ -347,7 +347,7 @@ namespace sw
         const bool bPresenceRefresh = bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end();
         if ( bPresenceRefresh )
             _presence.recordOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
-        (void)_calls.respondBody( callID, body, retention, static_cast<int32>( completion._result ) );
+        (void)_calls.respondBody( callID, body, retention, static_cast<int32>( completion._result._result ) );
         if ( bOk && completion._operation == LoginOperation::Logout )
         {
             for ( auto sessionIt = _mapAccountToSession.begin(); sessionIt != _mapAccountToSession.end(); ++sessionIt )
@@ -372,23 +372,20 @@ namespace sw
         revokeBound( host, event._accountID, event._reason );
     }
 
-    bool AccountServer::respondCommonError( uint64 callID, LoginResult result, const LoginGrant& grant )
+    bool AccountServer::respondCommonError( uint64 callID, LoginOutcome result, const LoginGrant& grant )
     {
+        if ( result.isFailed() == false )
+            return false;
         BitWriter detail;
-        switch ( result )
+        switch ( result._errorCode )
         {
-            case LoginResult::RateLimited:
+            case OnlineError::kRateLimited:
             {
                 detail.writeVarUint( static_cast<uint64>( grant._retryAfterMs < 0 ? 0 : grant._retryAfterMs ) );
                 (void)_calls.fail( callID, OnlineError::kRateLimited, &detail );
                 return true;
             }
-            case LoginResult::StoreUnavailable:
-            {
-                (void)_calls.fail( callID, OnlineError::kUnavailable );
-                return true;
-            }
-            case LoginResult::UpdateRequired:
+            case OnlineError::kUpdateRequired:
             {
                 if ( AccountProtocol::MessageTypes::write( detail, AccountUpdateDetail{ grant._storeURL } ) )
                     (void)_calls.fail( callID, OnlineError::kUpdateRequired, &detail );
@@ -398,7 +395,8 @@ namespace sw
             }
             default:
             {
-                return false;
+                (void)_calls.fail( callID, result._errorCode ); // 저장소 장애 · 깨진 본문 등 — 자세한 몸이 없다
+                return true;
             }
         }
     }

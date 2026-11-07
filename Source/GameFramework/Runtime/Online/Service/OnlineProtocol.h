@@ -7,6 +7,7 @@
  *          - 영역이 겹치는 키트 둘을 한 호스트에 올리면 `OnlineServiceHost::registerServerService` 가 거절한다(조립 실수를 기동에서 잡는다).
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 
@@ -150,18 +151,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 공통 오류 코드 하나를 키트 결과 하나로 바꾸는 테이블의 한 줄입니다(`OnlineError::toResult`). */
-    template <typename TResult>
-    struct OnlineErrorResult
-    {
-        uint16  _errorCode;
-        TResult _result;
-        bool    _bClientOnly{ false }; // NOLINT(sw-bool-flag): constexpr 표의 집합 초기화 칸이다.  클라이언트가 공통 오류를 키트 결과로 바꿀 때만 쓴다. 서버의 같은 값은 업무 결과로 답한다(기다릴 시간을 싣는 도배 제한)
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 응답 오류 코드입니다. `NetRequestStatus::ApplicationError` 본문의 첫 2 바이트(리틀 엔디언)이고, 뒤는 자세한 본문입니다. */
     struct OnlineError
     {
@@ -181,33 +170,6 @@ namespace sw
 
         /** @brief 같은 멱등 키로 다시 시도할 오류(`kRateLimited` · `kUnavailable` · `kBusy`)인지입니다. 서버는 이 오류를 멱등 응답으로 기억하지 않는다(`OnlineServiceHost::respondError`). */
         static constexpr bool isRetryable( uint16 errorCode ) { return errorCode == kRateLimited || errorCode == kUnavailable || errorCode == kBusy; }
-
-        /**
-         * @brief @p errorCode 를 키트 테이블 @p arrRow 에서 찾아 키트 결과로 바꿉니다. 테이블에 없으면 @p fallback 입니다.
-         * @details 결과 열거형과 테이블, 기본값(대개 `Unavailable`)은 키트가 가진다. 키트마다 받는 코드가 다르기 때문이다.
-         */
-        template <typename TResult, size_t Count>
-        static constexpr TResult toResult( uint16 errorCode, const OnlineErrorResult<TResult> ( &arrRow )[Count], TResult fallback )
-        {
-            for ( const OnlineErrorResult<TResult>& row : arrRow )
-            {
-                if ( row._errorCode == errorCode )
-                    return row._result;
-            }
-            return fallback;
-        }
-
-        /** @brief 키트 결과 @p result 가 표 @p arrRow 에 있는 공통 범주이면 그 코드, 아니면 `kOk`(키트 업무 결과) 입니다. 같은 결과가 여러 줄이면 첫 줄입니다. */
-        template <typename TResult, size_t Count>
-        static constexpr uint16 toErrorCode( TResult result, const OnlineErrorResult<TResult> ( &arrRow )[Count] )
-        {
-            for ( const OnlineErrorResult<TResult>& row : arrRow )
-            {
-                if ( row._result == result && row._bClientOnly == false )
-                    return row._errorCode;
-            }
-            return kOk;
-        }
     };
 } // namespace sw
 
@@ -229,6 +191,7 @@ namespace sw
     struct OnlineResult
     {
         TReply            _reply{};          ///< `_errorCode` 가 `kOk` 일 때만 서버가 보낸 값이다
+        vector<uint8>     _errorDetail{};    ///< 공통 오류의 자세한 몸이다(`kRateLimited` 의 기다릴 ms, 키트 오류 몸). 없으면 비어 있다
         NetIdempotencyKey _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘기는 키이다. 키 없이 보낸 요청이면 비어 있다
         uint64            _requestID{ 0 };   ///< `call` 이 반환한 번호이다
         uint16            _method{ 0 };      ///< 서술자의 번호(`kID`)이다. 메서드를 실행 때 고르는 도구(GM)가 응답을 가른다
@@ -250,17 +213,6 @@ namespace sw
         [[nodiscard]] bool isUpdateRequired() const { return _errorCode == OnlineError::kVersionMismatch || _errorCode == OnlineError::kUpdateRequired; }
     };
 
-    /** @brief 키트 프로토콜에 공통 범주 표 `kArrCommonResult` 가 있는지입니다. 표는 키트 결과와 공통 범주(`OnlineError`)의 짝이고, 지표 · 보존 · 클라이언트 결과가 모두 여기서 나옵니다. */
-    template <typename TProtocol, typename = void>
-    struct OnlineProtocolHasCommonResult : std::false_type
-    {
-    };
-
-    template <typename TProtocol>
-    struct OnlineProtocolHasCommonResult<TProtocol, std::void_t<decltype( TProtocol::kArrCommonResult )>> : std::true_type
-    {
-    };
-
     /** @brief 응답에 재시도 판정 `isRetryable()` 이 있는지입니다. 공통 범주가 아니면서 같은 키로 다시 할 업무 결과(스토어 대기)를 가진 키트만 둡니다. */
     template <typename TReply, typename = void>
     struct OnlineReplyHasRetryCheck : std::false_type
@@ -274,7 +226,8 @@ namespace sw
 
     /**
      * @brief 서버 저장 함수의 결과입니다. 키트 업무 결과(`TResult`, 끝난 결과) 또는 공통 범주(`OnlineError`, `fail`)입니다.
-     * @details 키트 결과 열거형에서 `Busy` · `Unavailable` 을 없앨 수 있게 둘을 나눕니다. `TResult` 는 `Ok` 를 가지고 암시 변환으로 받으므로 저장 함수는 `return XResult::NotFound;` 로 씁니다.
+     * @details 키트 결과 열거형에는 공통 범주(`Busy` · `Unavailable` · 로그인 · 버전)를 두지 않는다 — 공통 범주는 `fail` 로만 나가서 보존 · 지표가 형식에서 나온다
+     *          (예전에는 키트마다 공통 범주 변환 표를 두었다). `TResult` 는 `Ok` 를 가지고 암시 변환으로 받으므로 저장 함수는 `return XResult::NotFound;` 로 씁니다.
      */
     template <typename TResult>
     struct OnlineOutcome

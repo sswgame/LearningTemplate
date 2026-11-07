@@ -14,6 +14,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw
 {
@@ -54,22 +55,26 @@ namespace sw
         NameTaken,           ///< 가입에서 이미 있는 이름이다
         WrongCredentials,    ///< 없는 계정이거나 틀린 비밀번호이다. 둘을 구분하지 않는다
         AccountLocked,       ///< 실패가 누적되어 잠겼다. `_retryAfterMs` 뒤에 다시 시도한다
-        RateLimited,         ///< 이 연결(주소)의 시도가 너무 많다. `_retryAfterMs` 뒤에 다시 시도한다
         InvalidToken,        ///< 형식이나 비밀이 틀렸거나 없는 세션이다
         Expired,             ///< 세션 수명이나 재접속 유예 시간이 지났다
         Revoked,             ///< 다른 곳에서 로그인했거나 운영 조치로 세션에서 밀려났다. 이유는 `_revokeReason` 에 있다
         AlreadyLoggedIn,     ///< `RejectNew` 정책에서 이미 접속해 있는 계정이다
-        StoreUnavailable,    ///< 저장소에 닿지 못했거나 레코드가 깨졌다. 다시 시도한다
         AlreadyLinked,       ///< 연동에서 이름이나 외부 계정이 이미 다른 계정에 묶여 있거나, 이 계정에 이미 이름이 있다. 계정을 자동으로 합치지는 않는다
         AccountSuspended,    ///< 정지 또는 영구 정지 상태이다. 종료 시각은 `_sanctionUntilMs`, 사유는 `_sanctionReasonCode` 에 있다
-        UpdateRequired,      ///< 클라이언트 빌드가 최소 버전보다 낮다(상점 주소는 `_storeURL`). 온라인 스키마 해시가 달라도(`kVersionMismatch`) 이 값이며, 그때 `_storeURL` 은 비어 있다
         ProviderUnavailable, ///< 없는 제공자이거나 제공자 서버에 닿지 못했다. 다시 시도한다
         ProviderRejected,    ///< 제공자가 티켓을 거절했다. 서명, 만료, 대상이 틀린 경우이다
         LastLoginMethod,     ///< 연동 해제에서 마지막 로그인 수단은 해제할 수 없다
         NotLinked,           ///< 연동 해제에서 이 계정에 그 제공자가 연동돼 있지 않다
-        InvalidRequest,      ///< 본문이 깨졌거나 상한을 넘었다
         Count
     };
+
+    /**
+     * @brief 계정 요청의 결과입니다. 업무 결과(`LoginResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 저장소 장애 · 깨진 레코드는 `kUnavailable`, 연결(주소)의 시도가 너무 많으면 `kRateLimited`(기다릴 ms 는 `LoginGrant::_retryAfterMs`),
+     *          빌드가 최소 판보다 낮으면 `kUpdateRequired`(상점 주소는 `LoginGrant::_storeURL`), 깨진 본문 · 상한 초과는 `kInvalidRequest` 이다.
+     *          서버 로직 · 바인딩 · 클라이언트 응답(`AccountClientReply`)이 같은 형식을 쓴다.
+     */
+    using LoginOutcome = OnlineOutcome<LoginResult>;
 
     /** @brief 세션이 끝난 이유입니다. 묘비와 알림에 남으며 와이어 형식입니다. */
     ENUM()

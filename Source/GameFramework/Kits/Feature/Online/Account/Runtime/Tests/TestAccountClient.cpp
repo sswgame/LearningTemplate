@@ -249,31 +249,31 @@ SW_TEST_CASE( AccountClientTest, TruncatedOrJunkOkBodyIsRefused )
         rig._service.setBody( AccountMethod::Login::kID, body );
         (void)rig._account.login( "alice", "password123" );
         const AccountClientReply reply = rig.take();
-        SW_EXPECT_TRUE( reply._result == LoginResult::InvalidRequest );
-        SW_EXPECT_EQUAL( OnlineError::kOk, reply._errorCode );
+        SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kUnavailable ) ); // 같은 스키마 해시인데 못 읽은 몸은 기반이 일시 장애로 알린다(`OnlineProtocolClient::onResponse`)
+        SW_EXPECT_EQUAL( OnlineError::kUnavailable, reply._errorCode );
         SW_EXPECT_FALSE( rig._account.isLoggedIn() );
         SW_EXPECT_TRUE( rig._account.getToken().isEmpty() );
     }
 }
 
-/** @brief [AccountClientTest] 그 요청의 타입이 아닌 몸(메서드와 타입의 짝이 어긋남)은 스키마 해시 머리로 걸러 InvalidRequest 다. 티켓 · 연동 목록도 같다 */
+/** @brief [AccountClientTest] 그 요청의 타입이 아닌 몸(메서드와 타입의 짝이 어긋남)은 스키마 해시 머리로 걸러 공통 범주 kUnavailable 이다. 티켓 · 연동 목록도 같다 */
 SW_TEST_CASE( AccountClientTest, BodyOfAnotherTypeIsRefused )
 {
     AccountClientFixture rig;
     rig._service.setBody( AccountMethod::Login::kID, AccountClientTestUtil::makeTicketBody() );
     (void)rig._account.login( "alice", "password123" );
-    SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
 
     rig._service.setBody( AccountMethod::IssueGameTicket::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     (void)rig._account.issueGameTicket( "game" );
     const AccountClientReply ticket = rig.take();
-    SW_EXPECT_TRUE( ticket._result == LoginResult::InvalidRequest );
+    SW_EXPECT_TRUE( ticket._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( int64( 0 ), ticket._ticket._expiresAtMs );
 
     rig._service.setBody( AccountMethod::ListLinks::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     (void)rig._account.listLinks();
-    SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kUnavailable ) );
 }
 
 /** @brief [AccountClientTest] 티켓 · 연동 목록 응답은 자기 칸에 담는다 */
@@ -289,34 +289,20 @@ SW_TEST_CASE( AccountClientTest, TicketAndLinkRepliesFillTheirFields )
     SW_EXPECT_TRUE( rig.take()._linkSummary._bHasCredential == SW_TRUE );
 }
 
-/** @brief [AccountClientTest] 공통 오류의 대응: 표에 없는 코드는 StoreUnavailable(다시 시도)이고, `_errorCode` 는 받은 그대로다 */
-SW_TEST_CASE( AccountClientTest, ErrorCodesMapToResults )
+/** @brief [AccountClientTest] 공통 오류는 결과에도 같은 범주로 남는다(업무 결과로 바꾸지 않는다). `_errorCode` 는 받은 그대로다 */
+SW_TEST_CASE( AccountClientTest, ErrorCodesStayCommonCategories )
 {
     AccountClientFixture rig;
-    struct Row
+    const uint16         arrErrorCode[] = { OnlineError::kRateLimited, OnlineError::kUpdateRequired, OnlineError::kVersionMismatch, OnlineError::kUnauthenticated, OnlineError::kInvalidRequest,
+                                            OnlineError::kUnavailable, OnlineError::kForbidden, OnlineError::kNotFound, OnlineError::kInternal, uint16( 999 ) };
+    for ( const uint16 errorCode : arrErrorCode )
     {
-        uint16      _errorCode;
-        LoginResult _result;
-    };
-    const Row arrRow[] = {
-        {    OnlineError::kRateLimited,      LoginResult::RateLimited},
-        { OnlineError::kUpdateRequired,   LoginResult::UpdateRequired},
-        {OnlineError::kVersionMismatch,   LoginResult::UpdateRequired},
-        {OnlineError::kUnauthenticated,     LoginResult::InvalidToken},
-        { OnlineError::kInvalidRequest,   LoginResult::InvalidRequest},
-        {    OnlineError::kUnavailable, LoginResult::StoreUnavailable},
-        {      OnlineError::kForbidden, LoginResult::StoreUnavailable},
-        {       OnlineError::kNotFound, LoginResult::StoreUnavailable},
-        {       OnlineError::kInternal, LoginResult::StoreUnavailable},
-        {                uint16( 999 ), LoginResult::StoreUnavailable},
-    };
-    for ( const Row& row : arrRow )
-    {
-        rig._service._errorCode = row._errorCode;
+        rig._service._errorCode = errorCode;
         (void)rig._account.login( "alice", "password123" );
         const AccountClientReply reply = rig.take();
-        SW_EXPECT_TRUE( reply._result == row._result );
-        SW_EXPECT_EQUAL( row._errorCode, reply._errorCode );
+        SW_EXPECT_TRUE( reply._result.hasError( errorCode ) );
+        SW_EXPECT_FALSE( reply._result == LoginResult::Ok );
+        SW_EXPECT_EQUAL( errorCode, reply._errorCode );
         SW_EXPECT_FALSE( rig._account.isLoggedIn() );
     }
 }
@@ -338,7 +324,7 @@ SW_TEST_CASE( AccountClientTest, RateLimitDetailIsBounded )
     rig._service._detailBytes = AccountClientTestUtil::makeVarUintBody( 0xFFFFFFFFFFFFFFFFull );
     (void)rig._account.login( "alice", "password123" );
     const AccountClientReply overflowed = rig.take();
-    SW_EXPECT_TRUE( overflowed._result == LoginResult::RateLimited );
+    SW_EXPECT_TRUE( overflowed._result.hasError( OnlineError::kRateLimited ) );
     SW_EXPECT_EQUAL( int64( 0 ), overflowed._grant._retryAfterMs );
 
     rig._service._detailBytes = { 0xFF };
@@ -361,7 +347,7 @@ SW_TEST_CASE( AccountClientTest, UpdateDetailIsOptional )
         rig._service._detailBytes = detail;
         (void)rig._account.login( "alice", "password123" );
         const AccountClientReply reply = rig.take();
-        SW_EXPECT_TRUE( reply._result == LoginResult::UpdateRequired );
+        SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kUpdateRequired ) );
         SW_EXPECT_TRUE( reply._grant._storeURL.empty() );
     }
 }
@@ -383,14 +369,15 @@ SW_TEST_CASE( AccountClientTest, ResumeDropsTokenOnlyWhenDead )
 {
     AccountClientFixture rig;
     rig.logIn();
-    rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::StoreUnavailable ) );
+    rig._service._errorCode = OnlineError::kUnavailable; // 저장소 장애는 공통 범주로 온다
     (void)rig._account.resume();
-    SW_EXPECT_TRUE( rig.take()._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
+    rig._service._errorCode = OnlineError::kOk;
 
     rig._service.setBody( AccountMethod::Resume::kID, vector<uint8>{ 1, 2, 3 } );
     (void)rig._account.resume();
-    SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kUnavailable ) ); // 못 읽은 몸
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
 
     for ( LoginResult dead : { LoginResult::InvalidToken, LoginResult::Expired, LoginResult::Revoked } )
@@ -414,14 +401,14 @@ SW_TEST_CASE( AccountClientTest, ResumeReplacesTheSecret )
     SW_EXPECT_EQUAL( uint8( 9 ), rig._account.getToken()._arrSecret[0] );
 }
 
-/** @brief [AccountClientTest] Hello 뒤 자동 재접속: 문을 닫고 세션 요청을 모았다가, 성공하면 순서대로 보내고 문을 연다. 다른 키트의 요청도 그때 나간다 */
+/** @brief [AccountClientTest] Hello 뒤 자동 재접속: 세션 요청을 보류해 모았다가, 성공하면 순서대로 보내고 보류를 푼다. 다른 키트의 요청도 그때 나간다 */
 SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
     AccountClientFixture    rig( &token );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._service._listMethod.size() );
     SW_EXPECT_EQUAL( AccountMethod::Resume::kID, rig._service._listMethod[0] );
-    SW_EXPECT_TRUE( rig.getClient().isRequestGateClosed() );
+    SW_EXPECT_TRUE( rig.getClient().isHoldingSessionRequests() );
 
     const uint64 listRequestID = rig._account.listLinks();
     rig._rig._clients.login( rig._clientIndex, kAccountID ); // 다른 영역(테스트 로그인) — 문 앞에서 기다린다
@@ -440,12 +427,12 @@ SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
     SW_EXPECT_EQUAL( listRequestID, listReply[1]._requestID );
     SW_EXPECT_TRUE( listReply[1]._result == LoginResult::Ok );
     SW_EXPECT_TRUE( rig._account.isLoggedIn() );
-    SW_EXPECT_FALSE( rig.getClient().isRequestGateClosed() );
+    SW_EXPECT_FALSE( rig.getClient().isHoldingSessionRequests() );
     StreamConnectionHandle connection;
     SW_EXPECT_TRUE( rig._rig._server._host.findConnection( kAccountID, connection ) ); // 문 뒤의 테스트 로그인이 닿았다
 }
 
-/** @brief [AccountClientTest] 자동 재접속이 저장소 오류로 지면 모은 요청도 같은 결과로 끝난다 — 토큰이 산 세션을 InvalidToken 으로 알리지 않는다. 문은 열린다 */
+/** @brief [AccountClientTest] 자동 재접속이 저장소 오류로 지면 모은 요청도 같은 범주(kUnavailable)로 끝난다 — 산 세션을 "로그인 안 됨" 으로 알리지 않는다. 보류는 풀린다 */
 SW_TEST_CASE( AccountClientTest, DeferredRequestsEndWithTheResumeResult )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
@@ -459,17 +446,17 @@ SW_TEST_CASE( AccountClientTest, DeferredRequestsEndWithTheResumeResult )
 
     const vector<AccountClientReply> listReply = rig.takeAll();
     SW_REQUIRE_EQUAL( size_t( 3 ), listReply.size() );
-    SW_EXPECT_TRUE( listReply[0]._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( listReply[0]._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( listRequestID, listReply[1]._requestID );
-    SW_EXPECT_TRUE( listReply[1]._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( listReply[1]._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( ticketID, listReply[2]._requestID );
-    SW_EXPECT_TRUE( listReply[2]._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( listReply[2]._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
-    SW_EXPECT_FALSE( rig.getClient().isRequestGateClosed() );
+    SW_EXPECT_FALSE( rig.getClient().isHoldingSessionRequests() );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listMethod.size() ); // 모은 요청은 나가지 않았다
 }
 
-/** @brief [AccountClientTest] 자동 재접속이 죽은 토큰으로 지면 토큰을 버리고 모은 요청은 그 결과(Expired)로 끝난다 */
+/** @brief [AccountClientTest] 자동 재접속이 죽은 토큰으로 지면 토큰을 버리고 모은 요청은 "로그인 안 됨"(kUnauthenticated)으로 끝난다 */
 SW_TEST_CASE( AccountClientTest, DeadTokenEndsDeferredRequests )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
@@ -482,13 +469,14 @@ SW_TEST_CASE( AccountClientTest, DeadTokenEndsDeferredRequests )
 
     const vector<AccountClientReply> listReply = rig.takeAll();
     SW_REQUIRE_EQUAL( size_t( 2 ), listReply.size() );
+    SW_EXPECT_TRUE( listReply[0]._result == LoginResult::Expired );
     SW_EXPECT_TRUE( listReply[1]._operation == AccountClientOperation::Logout );
-    SW_EXPECT_TRUE( listReply[1]._result == LoginResult::Expired );
+    SW_EXPECT_TRUE( listReply[1]._result.hasError( OnlineError::kUnauthenticated ) );
     SW_EXPECT_TRUE( rig._account.getToken().isEmpty() );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
 }
 
-/** @brief [AccountClientTest] 재접속 도중 끊기면 재접속과 모은 요청이 모두 StoreUnavailable 로 끝난다(멈춰 있지 않다). 토큰은 다음 연결을 위해 남는다 */
+/** @brief [AccountClientTest] 재접속 도중 끊기면 재접속과 모은 요청이 모두 kUnavailable 로 끝난다(멈춰 있지 않다). 토큰은 다음 연결을 위해 남는다 */
 SW_TEST_CASE( AccountClientTest, DisconnectDuringResumeFinishesEverything )
 {
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
@@ -499,9 +487,9 @@ SW_TEST_CASE( AccountClientTest, DisconnectDuringResumeFinishesEverything )
     const vector<AccountClientReply> listReply = rig.takeAll();
     SW_REQUIRE_EQUAL( size_t( 2 ), listReply.size() );
     SW_EXPECT_TRUE( listReply[0]._operation == AccountClientOperation::Resume );
-    SW_EXPECT_TRUE( listReply[0]._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( listReply[0]._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, listReply[0]._errorCode );
-    SW_EXPECT_TRUE( listReply[1]._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( listReply[1]._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
 }
 
@@ -576,7 +564,7 @@ SW_TEST_CASE( AccountClientTest, RevokedPush )
     SW_EXPECT_EQUAL( 0, rig._account.pollEvents( listEvent ) ); // 꺼낸 이벤트는 다시 나오지 않는다
 }
 
-/** @brief [AccountClientTest] 범위 밖 값(상한을 넘는 이름 · 서버 id)은 보내지 않고 InvalidRequest 로 끝난다. 재접속 중의 세션 요청도 몸을 먼저 쓰므로 같다 */
+/** @brief [AccountClientTest] 범위 밖 값(상한을 넘는 이름 · 서버 id)은 보내지 않고 kInvalidRequest 로 끝난다. 재접속 중의 세션 요청도 몸을 먼저 쓰므로 같다 */
 SW_TEST_CASE( AccountClientTest, OutOfRangeRequestIsNotSent )
 {
     SW_EXPECT_LOG( "OnlineProtocol.MessageOutOfRange" );
@@ -586,18 +574,18 @@ SW_TEST_CASE( AccountClientTest, OutOfRangeRequestIsNotSent )
         const uint64             requestID = rig._account.login( tooLong, "password123" );
         const AccountClientReply reply     = rig.take();
         SW_EXPECT_EQUAL( requestID, reply._requestID );
-        SW_EXPECT_TRUE( reply._result == LoginResult::InvalidRequest );
+        SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kInvalidRequest ) );
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, reply._errorCode );
         SW_EXPECT_TRUE( rig._service._listMethod.empty() );
 
         (void)rig._account.issueGameTicket( string( static_cast<size_t>( LoginConstant::kMaxServerIDSize ) + 1, 's' ) );
-        SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
+        SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kInvalidRequest ) );
         SW_EXPECT_TRUE( rig._service._listMethod.empty() );
     }
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
     AccountClientFixture    resuming( &token );
     (void)resuming._account.issueGameTicket( string( static_cast<size_t>( LoginConstant::kMaxServerIDSize ) + 1, 's' ) );
-    SW_EXPECT_TRUE( resuming.take()._result == LoginResult::InvalidRequest ); // 재접속을 기다리지 않는다
+    SW_EXPECT_TRUE( resuming.take()._result.hasError( OnlineError::kInvalidRequest ) ); // 재접속을 기다리지 않는다
 }
 
 /** @brief [AccountClientTest] 접속 자격: 티켓과 비밀을 그대로 옮기고 티켓 길이를 적는다 */

@@ -65,14 +65,14 @@ namespace
             ticketAuthority.initialize( &crypto, arrMasterKey );
         }
 
-        LoginResult registerAccount( string_view name, string_view password )
+        LoginOutcome registerAccount( string_view name, string_view password )
         {
             LoginStoreResult result;
             LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
             return logic.registerAccount( LoginCredential{ string( name ), string( password ) }, nullptr );
         }
 
-        LoginResult login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
+        LoginOutcome login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
         {
             LoginStoreResult result;
             LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );

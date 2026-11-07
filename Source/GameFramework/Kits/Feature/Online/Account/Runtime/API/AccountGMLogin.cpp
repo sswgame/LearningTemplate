@@ -73,7 +73,7 @@ namespace sw
                 continue;
             }
             _state       = AccountGMLoginState::Failed;
-            _failureText = formatToString( "login refused: error %#, result %#", static_cast<int32>( reply._errorCode ), static_cast<int32>( reply._result ) );
+            _failureText = formatToString( "login refused: error %#, result %#", static_cast<int32>( reply._errorCode ), static_cast<int32>( reply._result._result ) );
         }
     }
 } // namespace sw

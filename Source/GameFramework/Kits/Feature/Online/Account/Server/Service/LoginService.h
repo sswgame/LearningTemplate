@@ -69,7 +69,7 @@ namespace sw
         AccountIdentity    _identity{};    ///< Validate, Register(계정 id), Link* 의 결과이다
         AccountLinkSummary _linkSummary{}; ///< ListLinks
         uint64             _requestTag{ 0 };
-        LoginResult        _result{ LoginResult::Ok };
+        LoginOutcome       _result{ LoginResult::Ok };
         LoginOperation     _operation{ LoginOperation::Login };
     };
 } // namespace sw
@@ -193,13 +193,13 @@ namespace sw
         [[nodiscard]] bool consumeAttempt( uint64 clientKey, UnixMilliseconds nowMs, int64& outRetryAfterMs );
         /** @brief 철회할 제공자가 있으면 주기마다 철회 대기열을 읽고, 끝난 철회의 항목을 지웁니다. `update` 가 부릅니다. */
         void updateRevocations( UnixMilliseconds nowMs );
-        void pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant );
+        void pushImmediate( LoginOperation operation, uint64 requestTag, LoginOutcome result, const LoginGrant& grant );
         /** @brief 빌드 버전을 확인합니다. 최소 버전 미만이면 `UpdateRequired` 이고 @p outGrant 에 상점 주소를 채웁니다. 권장 버전 미만이면 Ok 와 `_bUpdateRecommended` 를 반환합니다. */
-        LoginResult evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
-        void        beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
-                                       const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag );
-        void        finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
-        void        removeOfflineIdentities();
+        LoginOutcome evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
+        void         beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
+                                        const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag );
+        void         finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
+        void         removeOfflineIdentities();
 
     private:
         EventBuffer<LoginEvent>                  _eventBuffer;

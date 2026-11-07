@@ -7,7 +7,7 @@
  *          - 응답 타입이 표지의 메서드에서 나오므로 메서드에 맞지 않는 응답은 컴파일되지 않습니다.
  *          - 결과는 두 길입니다. 키트 업무 결과는 `respond`(응답 칸 `_result` — 끝난 결과이므로 요청 층이 기억합니다), 공통 범주는 `fail`(`OnlineError` — 재시도할 범주는 기억하지 않습니다,
  *            `OnlineServiceHost::respondError`). 어느 길인지가 보존을 정하므로 키트가 보존을 고를 일이 없습니다.
- *          - 공통 범주 표(`XxxProtocol::kArrCommonResult`)가 있는 키트는 로직이 낸 결과가 표에 있으면 `respond` 가 `fail` 로 바꿉니다. 그래서 지표 · 보존이 표 하나에서 나오고 그런 값은 응답 본문에 오르지 않습니다.
+ *          - 키트 결과 열거형에는 공통 범주가 없다. 로직은 `OnlineOutcome::fail` 로 내고 `finish` · `finishCall` 이 공통 오류로 끝낸다. 그래서 지표 · 보존이 형식에서 나온다.
  *            응답에 `isRetryable()` 이 있으면(공통 범주가 아니면서 같은 키로 다시 할 업무 결과, 스토어 대기) 그 응답은 기억하지 않습니다.
  *          - 완료 큐로 답하는 로직(`XxxService::takeCompletions`)은 호출 번호(`call._callID`)를 요청 태그로 받고, 바인딩이 `completeCall` 로 답합니다. 표에 없는 태그(내부 작업 · 끝난 호출)는 조용히 버립니다.
  *          - 모르는 메서드와 깨진 본문의 답은 모든 키트가 `kInvalidRequest` 로 같습니다. 멱등 키가 필수인 메서드(`RequiresIdempotencyKey`)에 키가 없어도 같습니다.
@@ -254,16 +254,13 @@ namespace sw
 
         /**
          * @brief 호출 번호 @p callID 를 키트 응답 @p reply 로 끝냅니다. 로직의 완료 큐처럼 메서드를 모르는 자리가 씁니다(메서드마다 응답 형식이 같은 키트).
-         * @details 표에 없는 번호(내부 작업의 태그, 이미 끝난 호출)는 조용히 false 입니다. 결과가 공통 범주 표에 있으면 `fail` 로 끝냅니다.
+         * @details 표에 없는 번호(내부 작업의 태그, 이미 끝난 호출)는 조용히 false 입니다.
          */
         template <typename TReply>
         bool completeCall( uint64 callID, const TReply& reply )
         {
             if ( _calls.isOpen( callID ) == false )
                 return false;
-            const uint16 errorCode = findCommonError( reply );
-            if ( errorCode != OnlineError::kOk )
-                return _calls.fail( callID, errorCode );
             return _calls.template respond<typename TProtocol::MessageTypes>( callID, reply, getResultIndex( reply ) );
         }
 
@@ -416,19 +413,6 @@ namespace sw
                 return;
             }
             static_cast<TService*>( this )->handleCall( call, context, request );
-        }
-
-        /** @brief 응답 결과의 공통 범주입니다. 표가 없거나 표에 없는 결과는 `kOk`(키트 업무 결과)입니다. */
-        template <typename TReply>
-        static uint16 findCommonError( const TReply& reply )
-        {
-            if constexpr ( OnlineProtocolHasCommonResult<TProtocol>::value && OnlineReplyHasResult<TReply>::value )
-                return OnlineError::toErrorCode( reply._result, TProtocol::kArrCommonResult );
-            else
-            {
-                (void)reply;
-                return OnlineError::kOk;
-            }
         }
 
         /** @brief 지표의 결과 번호입니다. 결과 칸이 없는 응답은 끝났으면 언제나 `Ok`(0)입니다. */

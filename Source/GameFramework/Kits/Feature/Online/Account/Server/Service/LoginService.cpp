@@ -442,7 +442,7 @@ namespace sw
         LoginGrant limited; // 가입도 비싼 비밀번호 해시를 돌린다 - 로그인과 같은 버킷으로 막지 않으면 해시로 서버를 묶을 수 있다
         if ( consumeAttempt( clientKey, nowMs, limited._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::Register, requestTag, LoginResult::RateLimited, limited );
+            pushImmediate( LoginOperation::Register, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), limited );
             return;
         }
         seedAccount( credential, nowMs, requestTag );
@@ -458,8 +458,8 @@ namespace sw
 
     void LoginService::login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        LoginGrant        buildGrant;
-        const LoginResult build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant         buildGrant;
+        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::Login, requestTag, build, buildGrant );
@@ -467,7 +467,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::Login, requestTag, LoginResult::RateLimited, buildGrant );
+            pushImmediate( LoginOperation::Login, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Login, requestTag, nowMs );
@@ -481,8 +481,8 @@ namespace sw
     void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                                    uint64 requestTag )
     {
-        LoginGrant        buildGrant;
-        const LoginResult build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant         buildGrant;
+        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::GuestLogin, requestTag, build, buildGrant );
@@ -490,7 +490,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::GuestLogin, requestTag, LoginResult::RateLimited, buildGrant );
+            pushImmediate( LoginOperation::GuestLogin, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         unique_ptr<LoginServiceInternal::LoginJob> work =
@@ -505,8 +505,8 @@ namespace sw
     void LoginService::platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                                       uint64 requestTag )
     {
-        LoginGrant        buildGrant;
-        const LoginResult build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant         buildGrant;
+        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::PlatformLogin, requestTag, build, buildGrant );
@@ -514,7 +514,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::PlatformLogin, requestTag, LoginResult::RateLimited, buildGrant );
+            pushImmediate( LoginOperation::PlatformLogin, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         beginVerification( LoginOperation::PlatformLogin, provider, ticketBytes, LoginSessionToken{}, buildGrant, nowMs, requestTag );
@@ -522,8 +522,8 @@ namespace sw
 
     void LoginService::resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        LoginGrant        buildGrant;
-        const LoginResult build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant         buildGrant;
+        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::Resume, requestTag, build, buildGrant );
@@ -531,7 +531,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::Resume, requestTag, LoginResult::RateLimited, buildGrant );
+            pushImmediate( LoginOperation::Resume, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         unique_ptr<LoginServiceInternal::LoginJob> work = make_unique<LoginServiceInternal::LoginJob>( this, _pCrypto, _settings, LoginOperation::Resume, requestTag, nowMs );
@@ -773,7 +773,7 @@ namespace sw
         return _mapClientToAttemptBucket.tryConsume( clientKey, nowMs.count(), outRetryAfterMs );
     }
 
-    void LoginService::pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant )
+    void LoginService::pushImmediate( LoginOperation operation, uint64 requestTag, LoginOutcome result, const LoginGrant& grant )
     {
         LoginCompletion completion;
         completion._operation  = operation;
@@ -783,7 +783,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    LoginResult LoginService::evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const
+    LoginOutcome LoginService::evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const
     {
         if ( _pRemoteConfig == nullptr )
             return LoginResult::Ok;
@@ -796,7 +796,7 @@ namespace sw
         const bool bRecommended = _pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kRecommendedBuildKey, clientInfo._platform ),
                                                             recommendedBuild );
         if ( bMinimum && AccountUtil::compareBuild( clientInfo._build, minimumBuild ) < 0 )
-            return LoginResult::UpdateRequired;
+            return LoginOutcome::fail( OnlineError::kUpdateRequired );
         if ( bRecommended && AccountUtil::compareBuild( clientInfo._build, recommendedBuild ) < 0 )
             outGrant._bUpdateRecommended = SW_TRUE;
         else
@@ -835,7 +835,7 @@ namespace sw
     {
         if ( verification.isVerified() == false )
         {
-            const LoginResult result = verification._bUnavailable == SW_TRUE ? LoginResult::ProviderUnavailable : LoginResult::ProviderRejected;
+            const LoginOutcome result = verification._bUnavailable == SW_TRUE ? LoginResult::ProviderUnavailable : LoginResult::ProviderRejected;
             pushImmediate( pending._operation, pending._requestTag, result, LoginGrant{} );
             return;
         }

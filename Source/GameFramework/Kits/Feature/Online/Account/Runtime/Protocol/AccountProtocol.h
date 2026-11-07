@@ -278,26 +278,14 @@ namespace sw
         using MessageTypes = Table::MessageTypes;
         using ResultName   = LoginResult;
 
-        /** @brief 공통 오류를 의미가 가까운 업무 결과로 바꾸는 클라이언트 표입니다. 서버는 자세한 본문(기다릴 시간, 상점 주소)을 실어야 해 바인딩이 직접 공통 오류로 답합니다(`AccountServer`). 표에 없는 코드는 `StoreUnavailable` 입니다. */
-        static constexpr OnlineErrorResult<LoginResult> kArrCommonResult[] = {
-            {    OnlineError::kRateLimited,      LoginResult::RateLimited, true},
-            { OnlineError::kUpdateRequired,   LoginResult::UpdateRequired, true},
-            {OnlineError::kVersionMismatch,   LoginResult::UpdateRequired, true},
-            {OnlineError::kUnauthenticated,     LoginResult::InvalidToken, true},
-            { OnlineError::kInvalidRequest,   LoginResult::InvalidRequest, true},
-            {    OnlineError::kUnavailable, LoginResult::StoreUnavailable, true},
-        };
-
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 
         /**
-         * @brief @p result 가 같은 멱등 키로 다시 시도할 결과(저장소 · 제공자 일시 장애, 시간이 지나면 풀리는 잠금 · 제한)인지입니다.
+         * @brief @p result 가 같은 멱등 키로 다시 시도할 업무 결과(제공자 일시 장애, 시간이 지나면 풀리는 잠금)인지입니다.
          * @details 서버는 이 결과를 멱등 응답으로 기억하지 않는다(`NetResponseRetention::Discard`) — 기억하면 같은 키의 재시도가 서비스에 닿지 못하고 같은 답을 받는다. 응답 형식 셋이 함께 쓴다.
+         *          저장소 장애 · 주소 제한은 공통 범주(`kUnavailable` · `kRateLimited`)로 오고 보존은 그 범주가 정한다 — 이 판정은 업무 결과만 본다.
          */
-        [[nodiscard]] static constexpr bool isRetryable( LoginResult result )
-        {
-            return result == LoginResult::StoreUnavailable || result == LoginResult::ProviderUnavailable || result == LoginResult::RateLimited || result == LoginResult::AccountLocked;
-        }
+        [[nodiscard]] static constexpr bool isRetryable( LoginResult result ) { return result == LoginResult::ProviderUnavailable || result == LoginResult::AccountLocked; }
     };
 
     inline bool AccountGrantReply::isRetryable() const

@@ -3,7 +3,7 @@
  * @brief 경제 서비스의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kEconomy`), 결과, 요청과 응답 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
  * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 아래 `PROPERTY` 선언 순서와 키가 정하며 손 코덱과 손 버전 상수는 없다.
  *          업무 결과는 응답 본문(`EconomyReply::_result`)에 담으며 거래와 계정 키트도 같다.
- *          공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 공통 범주 표(`kArrCommonResult`)로 이를 결과에 맞춘다.
+ *          공통 범주(`OnlineError`)는 오류 코드로만 오며 로그인 없음, 손상된 본문, 충돌, 일시 장애, 시한 초과가 해당한다. 업무 결과(`EconomyResult`)는 도메인 값만이다.
  */
 #pragma once
 #include "Core/Container/string.h"

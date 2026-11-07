@@ -293,7 +293,7 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, method, AccountServerTestUtil::makeJunk( 16 ) )._errorCode );
     }
     (void)rig.getAccount( client ).issueGameTicket( "" );
-    SW_EXPECT_TRUE( rig.take( client )._result == LoginResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.take( client )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, static_cast<uint16>( OnlineMethodRange::kAccount + 0x70 ), BitWriter{} )._errorCode );
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }
@@ -337,7 +337,7 @@ SW_TEST_CASE( AccountServerTest, LoggedInConnectionCannotLogInAgain )
     (void)rig.getAccount( first ).login( "bob_0001", kPassword );
     const AccountClientReply reply = rig.take( first );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, reply._errorCode );
-    SW_EXPECT_TRUE( reply._result == LoginResult::InvalidRequest );
+    SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( sessionID, rig._accountServer.findSessionID( firstID ) );
     SW_EXPECT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( secondID ) );
 }
@@ -515,7 +515,7 @@ SW_TEST_CASE( AccountServerTest, RateLimitReachesTheClient )
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
     const AccountClientReply reply = rig.take( client );
     SW_EXPECT_EQUAL( OnlineError::kRateLimited, reply._errorCode );
-    SW_EXPECT_TRUE( reply._result == LoginResult::RateLimited );
+    SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kRateLimited ) );
     SW_EXPECT_TRUE( reply._grant._retryAfterMs > 0 );
     SW_EXPECT_FALSE( rig.getAccount( client ).isLoggedIn() );
 }
@@ -531,7 +531,7 @@ SW_TEST_CASE( AccountServerTest, StoreFailureIsUnavailable )
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
     const AccountClientReply reply = rig.take( client );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, reply._errorCode );
-    SW_EXPECT_TRUE( reply._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
@@ -567,7 +567,7 @@ SW_TEST_CASE( AccountServerTest, UpdateRequiredCarriesTheStoreURL )
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
     const AccountClientReply reply = rig.take( client );
     SW_EXPECT_EQUAL( OnlineError::kUpdateRequired, reply._errorCode );
-    SW_EXPECT_TRUE( reply._result == LoginResult::UpdateRequired );
+    SW_EXPECT_TRUE( reply._result.hasError( OnlineError::kUpdateRequired ) );
     SW_EXPECT_EQUAL( string( "https://store.example/x" ), reply._grant._storeURL );
     rig._loginService.setRemoteConfig( nullptr );
 }
@@ -608,12 +608,12 @@ SW_TEST_CASE( AccountServerTest, GameTicketNeedsASession )
     SW_EXPECT_TRUE( reply._ticket._expiresAtMs > kNowMs );
 }
 
-/** @brief [AccountServerTest] 다시 시도할 결과는 멱등 응답으로 기억하지 않는다 — 저장소 오류 뒤 같은 키의 재시도가 서비스에 닿아 로그인된다. 판정은 `AccountProtocol::isRetryable` 하나다 */
+/** @brief [AccountServerTest] 다시 시도할 결과는 멱등 응답으로 기억하지 않는다 — 저장소 오류(공통 범주) 뒤 같은 키의 재시도가 서비스에 닿아 로그인된다. 업무 결과의 판정은 `AccountProtocol::isRetryable` 이다 */
 SW_TEST_CASE( AccountServerTest, RetryableResultReachesTheServiceAgain )
 {
-    SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::StoreUnavailable ) );
+    SW_EXPECT_TRUE( OnlineError::isRetryable( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::ProviderUnavailable ) );
-    SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::RateLimited ) );
+    SW_EXPECT_TRUE( OnlineError::isRetryable( OnlineError::kRateLimited ) );
     SW_EXPECT_TRUE( AccountProtocol::isRetryable( LoginResult::AccountLocked ) );
     SW_EXPECT_FALSE( AccountProtocol::isRetryable( LoginResult::Ok ) );
     SW_EXPECT_FALSE( AccountProtocol::isRetryable( LoginResult::WrongCredentials ) );

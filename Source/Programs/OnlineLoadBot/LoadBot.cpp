@@ -579,7 +579,7 @@ namespace sw
                 if ( _awaitKind == AwaitKind::Ready ) // 다시 연결 — 재접속 응답까지
                 {
                     _awaitKind = AwaitKind::Response;
-                    finishWithResult( reply._errorCode, static_cast<uint8>( reply._result ) );
+                    finishWithResult( reply._errorCode, static_cast<uint8>( reply._result._result ) );
                 }
                 continue;
             }
@@ -596,7 +596,7 @@ namespace sw
                                    ( reply._operation == AccountClientOperation::Login || reply._operation == AccountClientOperation::GuestLogin );
             if ( bLoggedIn )
                 _accountID = reply._grant._identity._accountID;
-            finishWithResult( reply._errorCode, static_cast<uint8>( reply._result ) );
+            finishWithResult( reply._errorCode, static_cast<uint8>( reply._result._result ) );
         }
     }
 

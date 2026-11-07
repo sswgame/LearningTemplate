@@ -1,28 +1,25 @@
 /**
  * @file AccountClient.h
- * @brief 계정 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 가입, 로그인, 게스트 로그인, 외부 로그인, 재접속, 로그아웃, 연동, 연동 해제,
+ * @brief 계정 키트의 클라이언트입니다. 프로토콜 표(`OnlineProtocolClient`)로 서며, 가입, 로그인, 게스트 로그인, 외부 로그인, 재접속, 로그아웃, 연동, 연동 해제,
  *        탈퇴, 게임 접속 티켓 요청을 보내고 응답과 알림(밀려남)을 꺼냅니다.
  * @details - 로그인이나 재접속에 성공하면 세션 토큰을 메모리에 보관한다. 다시 연결되면(Hello 뒤 `onClientReady`) 그 토큰으로 재접속을 먼저 보낸다.
- *            그동안 낸 세션 요청은 재접속 응답까지 모았다가 보낸다. 서버가 아직 주체를 모르는 순간에 요청이 닿지 않게 하려는 것이다. 재접속이 실패하면 모은 요청은 그 결과로 끝난다.
+ *            재접속을 보내기 전에 서비스 클라이언트의 세션 요청 보류(`OnlineServiceClient::holdSessionRequests`)를 걸어, 그동안 모든 키트(이 키트 포함)의 세션 요청을
+ *            재접속 응답까지 모은다. 서버가 아직 주체를 모르는 순간에 요청이 닿지 않게 하려는 것이다. 재접속이 실패하면 모은 요청은 그 이유로 끝난다
+ *            (공통 범주면 그 범주, 죽은 토큰이면 `kUnauthenticated`).
  *          - 밀려남 알림(`AccountMethod::Revoked`)을 받으면 토큰을 버리고 이벤트를 낸다. 서버가 곧 연결을 닫는다. 토큰을 디스크에 저장할지는 게임이 정한다(`getToken`, `setToken`).
  *          - 게스트 장치 비밀은 부르는 쪽(게임)이 만들어 넘긴다(`guestLogin`). 보관은 게임의 로컬 저장소 슬롯이다(`GameLocalStore`, 장치 키로 봉인).
- *          - 모든 호출과 꺼내기는 `OnlineServiceClient::update` 을 부르는 스레드에서 한다.
- *          - 다른 키트와 달리 `OnlineProtocolClient` 를 쓰지 않는다. 재접속 응답까지 미루는 요청이 쓴 몸을 들고 기다리고, 응답이 `pollReplies` 큐로 간다. 요청과 메서드의 짝은 서술자로 맞춘다(`sendRequest<TMethod>`).
+ *          - 모든 호출과 꺼내기는 `OnlineServiceClient::update` 을 부르는 스레드에서 한다. 응답은 `pollReplies` 큐로 간다(로그인 흐름이 틱마다 꺼낸다).
  */
 #pragma once
-#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/Message/NetRequest.h"
-#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Runtime/Online/Service/ServiceClientCallTable.h"
 
 namespace sw
 {
@@ -46,15 +43,15 @@ namespace sw
         CancelDeletion
     };
 
-    /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 오류이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 는 그 의미에 가까운 값입니다. */
+    /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginOutcome`). */
     struct AccountClientReply
     {
-        LoginGrant             _grant{};
+        LoginGrant             _grant{}; ///< 공통 범주면 그 자세한 몸만 담긴다(`kRateLimited` 의 `_retryAfterMs`, `kUpdateRequired` 의 `_storeURL`)
         NetGameTicket          _ticket{};
         AccountLinkSummary     _linkSummary{};
         uint64                 _requestID{ 0 };
         uint16                 _errorCode{ 0 };
-        LoginResult            _result{ LoginResult::Ok };
+        LoginOutcome           _result{ LoginResult::Ok };
         AccountClientOperation _operation{ AccountClientOperation::Login };
         uint8                  _bAutomatic{ SW_FALSE }; ///< 다시 연결된 뒤 이 객체가 스스로 보낸 재접속이다
     };
@@ -76,7 +73,7 @@ namespace sw
      * @class AccountClient
      * @brief 계정 클라이언트입니다.
      */
-    class SW_KIT_API AccountClient final : public IOnlineClientService // NOLINT(sw-online-table): 재접속 응답까지 미루는 요청이 쓴 몸을 들고 기다리고 응답이 큐로 간다
+    class SW_KIT_API AccountClient final : public OnlineProtocolClient<AccountClient, AccountProtocol>
     {
     public:
         AccountClient();
@@ -110,47 +107,32 @@ namespace sw
         /** @brief 접속 티켓으로 UDP 자격(티켓 64 B, 티켓 비밀)을 채웁니다. */
         static void makeConnectCredentials( const NetGameTicket& ticket, NetConnectCredentials& outCredentials );
 
+        // OnlineProtocolClient 의 훅
+        void onPush( AccountMethod::Revoked, const AccountRevokedPush& body );
         // IOnlineClientService
-        const OnlineProtocolEntry& getProtocol() const override;
-        void                       onServicePush( uint16 kind, BitReader& body ) override;
-        void                       onClientReady( OnlineServiceClient& client ) override;
-        void                       onClientDisconnected( OnlineServiceClient& client ) override;
+        void onClientReady( OnlineServiceClient& client ) override;
+        void onClientDisconnected( OnlineServiceClient& client ) override;
 
     private:
-        struct PendingCall
-        {
-            uint64                 _requestID{ 0 };
-            AccountClientOperation _operation{ AccountClientOperation::Login };
-            uint8                  _bAutomatic{ SW_FALSE };
-        };
-
-        struct DeferredCall
-        {
-            vector<uint8>          _bodyBytes{};
-            uint64                 _requestID{ 0 };
-            uint16                 _method{ 0 };
-            AccountClientOperation _operation{ AccountClientOperation::Logout };
-        };
-
-        /** @brief 메서드 @p TMethod 의 @p request 를 키트 메시지로 써서 보냅니다. 범위 밖 값이 있으면 보내지 않고 `InvalidRequest` 응답을 바로 남깁니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
-        template <typename TMethod>
-        uint64 sendRequest( AccountClientOperation operation, const typename TMethod::Request& request, bool bNeedsSession, bool bAutomatic = false );
-        uint64 send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic = false );
-        void   transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestID, bool bAutomatic );
-        void   onResponse( const OnlineResponse& response );
-        void   finishDeferred( LoginResult failure );
+        /** @brief 재접속을 보냅니다. 세션 요청 보류를 먼저 건다 — 응답(`finishResume`)이 푼다. */
+        uint64 sendResume( bool bAutomatic );
+        void   onGrantReply( const OnlineResult<AccountGrantReply>& result );
+        void   onTicketReply( const OnlineResult<AccountTicketReply>& result );
+        void   onLinkReply( const OnlineResult<AccountLinkReply>& result );
+        /** @brief 응답의 공통 부분(번호, 종류, 결과, 공통 오류의 자세한 몸)을 채웁니다. */
+        static AccountClientReply makeReply( uint64 requestID, uint16 method, uint16 errorCode, const vector<uint8>& errorDetail );
+        /** @brief 재접속 응답 뒤입니다. 죽은 토큰을 버리고 세션 요청 보류를 풉니다(실패면 모은 요청을 그 이유로 끝낸다). */
+        void finishResume( const AccountClientReply& reply );
 
     private:
-        ServiceClientCallTable<PendingCall> _callTable;
-        vector<AccountClientReply>          _listReply;
-        vector<AccountClientEvent>          _listEvent;
-        vector<DeferredCall>                _listDeferred;
-        AccountClientInfo                   _clientInfo;
-        AccountIdentity                     _identity;
-        LoginSessionToken                   _token;
-        OnlineServiceClient*                _pClient;
-        IDAllocator<uint64>                 _requestIDAllocator;
-        uint8                               _bLoggedIn;
-        uint8                               _bResuming;
+        vector<AccountClientReply> _listReply;
+        vector<AccountClientEvent> _listEvent;
+        AccountClientInfo          _clientInfo;
+        AccountIdentity            _identity;
+        LoginSessionToken          _token;
+        OnlineServiceClient*       _pServiceClient; ///< 세션 요청 보류를 걸고 푸는 데 쓴다. 기반의 서비스 클라이언트와 같다
+        uint8                      _bLoggedIn;
+        uint8                      _bResuming;
+        uint8                      _bAutomaticResume; ///< 날아가는 재접속이 다시 연결된 뒤 이 객체가 스스로 보낸 것이다
     };
 } // namespace sw

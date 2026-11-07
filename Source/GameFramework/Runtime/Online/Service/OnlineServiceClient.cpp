@@ -45,9 +45,8 @@ namespace sw
         , _remoteConfigHash{ 0 }
         , _schemaHash{ 0 }
         , _requestIDAllocator{}
-        , _gateOwnerRange{ 0 }
         , _state{ OnlineClientState::Disconnected }
-        , _bGateClosed{ SW_FALSE }
+        , _bSessionHeld{ SW_FALSE }
         , _bSharedEndpoint{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
     {
@@ -211,7 +210,7 @@ namespace sw
         }
     }
 
-    uint64 OnlineServiceClient::sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse )
+    uint64 OnlineServiceClient::sendRequest( uint16 method, const BitWriter& body, const OnlineRequestOptions& options, OnlineResponseDelegate onResponse )
     {
         QueuedCall call;
         call._bodyBytes.assign( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
@@ -222,6 +221,7 @@ namespace sw
         call._requestID        = _requestIDAllocator.allocate();
         call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * constant::time::kMillisecondsPerSecond );
         call._method           = method;
+        call._kind             = options._kind;
         const uint64 requestID = call._requestID;
         if ( _bInitialized == SW_FALSE || isStopped() )
         {
@@ -235,7 +235,7 @@ namespace sw
                 onResponse( response );
             return requestID;
         }
-        if ( _state != OnlineClientState::Ready || isGated( method ) )
+        if ( _state != OnlineClientState::Ready || isHeld( call._kind ) )
         {
             _listQueuedCall.push_back( std::move( call ) );
             return requestID;
@@ -255,17 +255,47 @@ namespace sw
         return response._requestID;
     }
 
-    void OnlineServiceClient::setRequestGate( uint16 ownerRange, bool bClosed )
+    void OnlineServiceClient::holdSessionRequests()
     {
-        _gateOwnerRange = ownerRange;
-        _bGateClosed    = bClosed ? SW_TRUE : SW_FALSE;
-        if ( bClosed == false && _state == OnlineClientState::Ready )
+        _bSessionHeld = SW_TRUE;
+    }
+
+    void OnlineServiceClient::releaseSessionRequests( uint16 failureCode )
+    {
+        _bSessionHeld = SW_FALSE;
+        if ( failureCode != OnlineError::kOk )
+        {
+            // 세션이 돌아오지 않았다. 모은 세션 요청은 보내도 "로그인 안 됨" 이므로 그 이유로 바로 끝낸다. 익명 요청과 Hello 전의 요청은 그대로 둔다
+            vector<QueuedCall> listCall = std::move( _listQueuedCall );
+            _listQueuedCall.clear();
+            _listDrainingCall.push_back( &listCall );
+            for ( size_t index = 0; index < listCall.size(); ++index )
+            {
+                QueuedCall& call = listCall[index];
+                if ( call._bCancelled == SW_TRUE )
+                    continue;
+                if ( call._kind == OnlineRequestKind::Anonymous || _state != OnlineClientState::Ready )
+                {
+                    _listQueuedCall.push_back( std::move( call ) );
+                    continue;
+                }
+                OnlineResponse response;
+                response._requestID = call._requestID;
+                response._status    = NetRequestStatus::ApplicationError;
+                response._errorCode = failureCode;
+                if ( call._onResponse.isBound() )
+                    call._onResponse( response );
+            }
+            _listDrainingCall.pop_back();
+            return;
+        }
+        if ( _state == OnlineClientState::Ready )
             flushQueuedCalls();
     }
 
-    bool OnlineServiceClient::isGated( uint16 method ) const
+    bool OnlineServiceClient::isHeld( OnlineRequestKind kind ) const
     {
-        return _bGateClosed == SW_TRUE && OnlineMethodRange::getRangeBase( method ) != _gateOwnerRange;
+        return _bSessionHeld == SW_TRUE && kind == OnlineRequestKind::Session;
     }
 
     bool OnlineServiceClient::isStopped() const
@@ -366,7 +396,7 @@ namespace sw
             QueuedCall& call = listCall[index];
             if ( call._bCancelled == SW_TRUE )
                 continue;
-            if ( _state == OnlineClientState::Ready && isGated( call._method ) == false )
+            if ( _state == OnlineClientState::Ready && isHeld( call._kind ) == false )
                 sendQueuedCall( call );
             else
                 _listQueuedCall.push_back( std::move( call ) ); // 보내는 도중 끊겼다 · 문이 닫혔다 — 다음 Hello · 문 열림을 기다린다

@@ -113,7 +113,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        LoginResult registerAccount( string_view name, uint64 clientKey = kClientKey )
+        LoginOutcome registerAccount( string_view name, uint64 clientKey = kClientKey )
         {
             const uint64 tag = _nextTag++;
             _service.registerAccount( LoginCredential{ string( name ), "password123" }, clientKey, UnixMilliseconds{ kNowMs }, tag );
@@ -169,11 +169,11 @@ SW_TEST_CASE( LoginServiceTest, AttemptsAreLimitedPerClientIncludingRegister )
     const uint64 tag = 90;
     rig._service.registerAccount( LoginCredential{ "bob", "password123" }, kClientKey, UnixMilliseconds{ kNowMs }, tag );
     const LoginCompletion limited = rig.take( tag );
-    SW_EXPECT_TRUE( limited._result == LoginResult::RateLimited );
+    SW_EXPECT_TRUE( limited._result.hasError( OnlineError::kRateLimited ) );
     SW_EXPECT_TRUE( limited._grant._retryAfterMs > 0 );
     SW_EXPECT_EQUAL( commitsBefore, database.getCommitCount() ); // 비싼 해시도 저장도 돌지 않았다
 
-    SW_EXPECT_TRUE( rig.login( "alice" )._result == LoginResult::RateLimited );
+    SW_EXPECT_TRUE( rig.login( "alice" )._result.hasError( OnlineError::kRateLimited ) );
     SW_EXPECT_TRUE( rig.registerAccount( "bob", kClientKey + 1 ) == LoginResult::Ok );
 }
 
@@ -222,7 +222,7 @@ SW_TEST_CASE( LoginServiceTest, ClientBuildIsChecked )
     clientInfo._platform         = "windows";
     clientInfo._build            = "1.1.9";
     const LoginCompletion tooOld = rig.login( "alice", clientInfo );
-    SW_EXPECT_TRUE( tooOld._result == LoginResult::UpdateRequired );
+    SW_EXPECT_TRUE( tooOld._result.hasError( OnlineError::kUpdateRequired ) );
     SW_EXPECT_EQUAL( string( "https://store.example/x" ), tooOld._grant._storeURL );
 
     clientInfo._build                 = "1.3.0";
@@ -447,7 +447,7 @@ SW_TEST_CASE( LoginServiceTest, StoreFailureAndProviderRegistration )
     LoginFixture          rig( database );
     SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
     database.armFault( ServiceStoreFault::RejectRead );
-    SW_EXPECT_TRUE( rig.login( "alice" )._result == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( rig.login( "alice" )._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 0, rig._service.getOnlineCount() );
 
     FakePlatformLoginProvider sameName( "fake" );

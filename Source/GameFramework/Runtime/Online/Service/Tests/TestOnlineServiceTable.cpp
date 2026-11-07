@@ -36,14 +36,7 @@ namespace
     {
         Ok,
         NotFound,
-        Unavailable,
-        UpdateRequired
-    };
-
-    constexpr sw::OnlineErrorResult<TestResult> kArrErrorRow[] = {
-        { sw::OnlineError::kNotFound, TestResult::NotFound },
-        { sw::OnlineError::kUnavailable, TestResult::Unavailable },
-        { sw::OnlineError::kVersionMismatch, TestResult::UpdateRequired, true }, // 클라이언트만 쓰는 줄이다
+        Count
     };
 } // namespace
 
@@ -86,17 +79,20 @@ SW_TEST_CASE( OnlineServiceTableTest, MethodTableNumbersFollowEnumeratorOrder )
 }
 
 /**
- * @brief [OnlineServiceTableTest] 공통 범주 표: 공통 오류 → 키트 결과는 표에 있으면 그 결과, 없으면 기본값이다. 키트 결과 → 공통 오류는 표에 없으면 kOk(업무 결과)이고 클라이언트 전용 줄을 보지 않는다
+ * @brief [OnlineServiceTableTest] 로직의 결과: 업무 결과는 그 값과만 같고, 공통 범주로 끝난 결과는 어떤 업무 결과(Ok 포함)와도 같지 않으며 그 범주만 갖는다
  */
-SW_TEST_CASE( OnlineServiceTableTest, CommonResultTableMapsBothWays )
+SW_TEST_CASE( OnlineServiceTableTest, OutcomeSeparatesDomainResultAndCommonCategory )
 {
-    SW_EXPECT_TRUE( sw::OnlineError::toResult( sw::OnlineError::kNotFound, kArrErrorRow, TestResult::Unavailable ) == TestResult::NotFound );
-    SW_EXPECT_TRUE( sw::OnlineError::toResult( sw::OnlineError::kConflict, kArrErrorRow, TestResult::Unavailable ) == TestResult::Unavailable );
-    SW_EXPECT_TRUE( sw::OnlineError::toResult( sw::OnlineError::kVersionMismatch, kArrErrorRow, TestResult::Unavailable ) == TestResult::UpdateRequired );
-
-    SW_EXPECT_EQUAL( sw::OnlineError::kNotFound, sw::OnlineError::toErrorCode( TestResult::NotFound, kArrErrorRow ) );
-    SW_EXPECT_EQUAL( sw::OnlineError::kOk, sw::OnlineError::toErrorCode( TestResult::Ok, kArrErrorRow ) );
-    SW_EXPECT_EQUAL( sw::OnlineError::kOk, sw::OnlineError::toErrorCode( TestResult::UpdateRequired, kArrErrorRow ) ); // 서버는 보내지 않는 값이다
+    using TestOutcome             = sw::OnlineOutcome<TestResult>;
+    const TestOutcome found       = TestResult::NotFound;
+    const TestOutcome unavailable = TestOutcome::fail( sw::OnlineError::kUnavailable );
+    SW_EXPECT_TRUE( found == TestResult::NotFound );
+    SW_EXPECT_FALSE( found.isFailed() );
+    SW_EXPECT_TRUE( unavailable.isFailed() );
+    SW_EXPECT_TRUE( unavailable.hasError( sw::OnlineError::kUnavailable ) );
+    SW_EXPECT_FALSE( unavailable == TestResult::Ok ); // 실패한 결과의 기본값(Ok)을 성공으로 읽지 않는다
+    SW_EXPECT_TRUE( unavailable != TestResult::NotFound );
+    SW_EXPECT_TRUE( sw::OnlineError::isRetryable( unavailable._errorCode ) );
 }
 
 /**

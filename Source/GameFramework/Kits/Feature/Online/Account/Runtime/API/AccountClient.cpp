@@ -14,13 +14,44 @@ namespace sw
     {
         struct AccountClientInternal
         {
-            /** @brief 공통 오류 코드를 의미가 가까운 업무 결과로 바꿉니다(`AccountProtocol::kArrCommonResult`). */
-            static LoginResult toResult( uint16 errorCode ) { return OnlineError::toResult( errorCode, AccountProtocol::kArrCommonResult, LoginResult::StoreUnavailable ); }
-
             static bool isGrantOperation( AccountClientOperation operation )
             {
                 return operation == AccountClientOperation::Login || operation == AccountClientOperation::GuestLogin ||
                        operation == AccountClientOperation::PlatformLogin || operation == AccountClientOperation::Resume;
+            }
+
+            /** @brief 서술자 번호를 요청 종류로 바꿉니다. 표의 메서드는 모두 짝이 있다. */
+            static AccountClientOperation toOperation( uint16 method )
+            {
+                switch ( method )
+                {
+                    case AccountMethod::Register::kID:
+                        return AccountClientOperation::Register;
+                    case AccountMethod::Login::kID:
+                        return AccountClientOperation::Login;
+                    case AccountMethod::GuestLogin::kID:
+                        return AccountClientOperation::GuestLogin;
+                    case AccountMethod::PlatformLogin::kID:
+                        return AccountClientOperation::PlatformLogin;
+                    case AccountMethod::Resume::kID:
+                        return AccountClientOperation::Resume;
+                    case AccountMethod::Logout::kID:
+                        return AccountClientOperation::Logout;
+                    case AccountMethod::LinkCredential::kID:
+                        return AccountClientOperation::LinkCredential;
+                    case AccountMethod::LinkPlatform::kID:
+                        return AccountClientOperation::LinkPlatform;
+                    case AccountMethod::IssueGameTicket::kID:
+                        return AccountClientOperation::IssueGameTicket;
+                    case AccountMethod::UnlinkPlatform::kID:
+                        return AccountClientOperation::UnlinkPlatform;
+                    case AccountMethod::ListLinks::kID:
+                        return AccountClientOperation::ListLinks;
+                    case AccountMethod::RequestDeletion::kID:
+                        return AccountClientOperation::RequestDeletion;
+                    default:
+                        return AccountClientOperation::CancelDeletion;
+                }
             }
         };
     } // namespace
@@ -29,34 +60,34 @@ namespace sw
 namespace sw
 {
     AccountClient::AccountClient()
-        : _callTable{}
-        , _listReply{}
+        : _listReply{}
         , _listEvent{}
-        , _listDeferred{}
         , _clientInfo{}
         , _identity{}
         , _token{}
-        , _pClient{ nullptr }
-        , _requestIDAllocator{}
+        , _pServiceClient{ nullptr }
         , _bLoggedIn{ SW_FALSE }
         , _bResuming{ SW_FALSE }
+        , _bAutomaticResume{ SW_FALSE }
     {
     }
 
     void AccountClient::initialize( OnlineServiceClient* pClient, const AccountClientInfo& clientInfo )
     {
-        _pClient    = pClient;
-        _clientInfo = clientInfo;
+        OnlineProtocolClient::initialize( pClient );
+        _pServiceClient = pClient;
+        _clientInfo     = clientInfo;
     }
 
     uint64 AccountClient::registerAccount( string_view loginName, string_view password )
     {
-        return sendRequest<AccountMethod::Register>( AccountClientOperation::Register, AccountCredentialRequest{ string( loginName ), string( password ) }, false );
+        return call<AccountMethod::Register>( AccountCredentialRequest{ string( loginName ), string( password ) },
+                                              OnlineReplyDelegate<AccountMethod::Register>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::login( string_view loginName, string_view password )
     {
-        return sendRequest<AccountMethod::Login>( AccountClientOperation::Login, AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, false );
+        return call<AccountMethod::Login>( AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, OnlineReplyDelegate<AccountMethod::Login>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize] )
@@ -64,12 +95,13 @@ namespace sw
         AccountGuestLoginRequest request;
         Memory::copy( request._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         request._clientInfo = _clientInfo;
-        return sendRequest<AccountMethod::GuestLogin>( AccountClientOperation::GuestLogin, request, false );
+        return call<AccountMethod::GuestLogin>( request, OnlineReplyDelegate<AccountMethod::GuestLogin>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::platformLogin( string_view provider, const vector<uint8>& ticketBytes )
     {
-        return sendRequest<AccountMethod::PlatformLogin>( AccountClientOperation::PlatformLogin, AccountPlatformRequest{ string( provider ), ticketBytes, _clientInfo }, false );
+        return call<AccountMethod::PlatformLogin>( AccountPlatformRequest{ string( provider ), ticketBytes, _clientInfo },
+                                                   OnlineReplyDelegate<AccountMethod::PlatformLogin>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::resume()
@@ -77,53 +109,54 @@ namespace sw
         if ( _token.isEmpty() )
         {
             AccountClientReply& reply = _listReply.emplace_back();
-            reply._requestID          = _requestIDAllocator.allocate();
+            reply._requestID          = allocateRequestID();
             reply._operation          = AccountClientOperation::Resume;
             reply._result             = LoginResult::InvalidToken;
             return reply._requestID;
         }
-        _bResuming = SW_TRUE;
-        return sendRequest<AccountMethod::Resume>( AccountClientOperation::Resume, AccountResumeRequest{ _token, _clientInfo }, false );
+        return sendResume( false );
     }
 
     uint64 AccountClient::logout()
     {
-        return send( AccountClientOperation::Logout, AccountMethod::Logout::kID, BitWriter{}, true );
+        return call<AccountMethod::Logout>( OnlineReplyDelegate<AccountMethod::Logout>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::linkCredential( string_view loginName, string_view password )
     {
-        return sendRequest<AccountMethod::LinkCredential>( AccountClientOperation::LinkCredential, AccountCredentialRequest{ string( loginName ), string( password ) }, true );
+        return call<AccountMethod::LinkCredential>( AccountCredentialRequest{ string( loginName ), string( password ) },
+                                                    OnlineReplyDelegate<AccountMethod::LinkCredential>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::linkPlatform( string_view provider, const vector<uint8>& ticketBytes )
     {
-        return sendRequest<AccountMethod::LinkPlatform>( AccountClientOperation::LinkPlatform, AccountPlatformRequest{ string( provider ), ticketBytes, AccountClientInfo{} }, true );
+        return call<AccountMethod::LinkPlatform>( AccountPlatformRequest{ string( provider ), ticketBytes, AccountClientInfo{} },
+                                                  OnlineReplyDelegate<AccountMethod::LinkPlatform>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::issueGameTicket( string_view serverID )
     {
-        return sendRequest<AccountMethod::IssueGameTicket>( AccountClientOperation::IssueGameTicket, AccountGameTicketRequest{ string( serverID ) }, true );
+        return call<AccountMethod::IssueGameTicket>( AccountGameTicketRequest{ string( serverID ) }, OnlineReplyDelegate<AccountMethod::IssueGameTicket>::create<&AccountClient::onTicketReply>( this ) );
     }
 
     uint64 AccountClient::unlinkPlatform( string_view provider )
     {
-        return sendRequest<AccountMethod::UnlinkPlatform>( AccountClientOperation::UnlinkPlatform, AccountProviderRequest{ string( provider ) }, true );
+        return call<AccountMethod::UnlinkPlatform>( AccountProviderRequest{ string( provider ) }, OnlineReplyDelegate<AccountMethod::UnlinkPlatform>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::listLinks()
     {
-        return send( AccountClientOperation::ListLinks, AccountMethod::ListLinks::kID, BitWriter{}, true );
+        return call<AccountMethod::ListLinks>( OnlineReplyDelegate<AccountMethod::ListLinks>::create<&AccountClient::onLinkReply>( this ) );
     }
 
     uint64 AccountClient::requestDeletion()
     {
-        return send( AccountClientOperation::RequestDeletion, AccountMethod::RequestDeletion::kID, BitWriter{}, true );
+        return call<AccountMethod::RequestDeletion>( OnlineReplyDelegate<AccountMethod::RequestDeletion>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     uint64 AccountClient::cancelDeletion()
     {
-        return send( AccountClientOperation::CancelDeletion, AccountMethod::CancelDeletion::kID, BitWriter{}, true );
+        return call<AccountMethod::CancelDeletion>( OnlineReplyDelegate<AccountMethod::CancelDeletion>::create<&AccountClient::onGrantReply>( this ) );
     }
 
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
@@ -157,21 +190,11 @@ namespace sw
         Memory::copy( outCredentials._secret._arrByte, ticket._arrSecret, NetGameTicket::kSecretSize );
     }
 
-    const OnlineProtocolEntry& AccountClient::getProtocol() const
+    void AccountClient::onPush( AccountMethod::Revoked, const AccountRevokedPush& body )
     {
-        return AccountProtocol::kOnlineEntry;
-    }
-
-    void AccountClient::onServicePush( uint16 kind, BitReader& body )
-    {
-        if ( kind != AccountMethod::Revoked::kKind )
-            return;
-        AccountRevokedPush push;
-        if ( AccountProtocol::MessageTypes::read( body, push ) != FixedReadResult::Ok )
-            return;
         AccountClientEvent event;
-        event._reason     = push._reason;
-        event._reasonCode = std::move( push._reasonCode );
+        event._reason     = body._reason;
+        event._reasonCode = body._reasonCode;
         _bLoggedIn        = SW_FALSE;
         _token            = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없으므로 다시 로그인해야 한다
         _listEvent.push_back( std::move( event ) );
@@ -179,13 +202,10 @@ namespace sw
 
     void AccountClient::onClientReady( OnlineServiceClient& client )
     {
+        (void)client;
         _bLoggedIn = SW_FALSE; // 새 연결이므로 서버는 아직 주체를 모른다
         if ( _token.isEmpty() == false && _bResuming == SW_FALSE )
-        {
-            client.setRequestGate( OnlineMethodRange::kAccount, true ); // 다른 키트의 요청은 재접속 응답 뒤에 보낸다
-            _bResuming = SW_TRUE;
-            (void)sendRequest<AccountMethod::Resume>( AccountClientOperation::Resume, AccountResumeRequest{ _token, _clientInfo }, false, true );
-        }
+            (void)sendResume( true );
     }
 
     void AccountClient::onClientDisconnected( OnlineServiceClient& client )
@@ -194,137 +214,108 @@ namespace sw
         _bLoggedIn = SW_FALSE;
     }
 
-    template <typename TMethod>
-    uint64 AccountClient::sendRequest( AccountClientOperation operation, const typename TMethod::Request& request, bool bNeedsSession, bool bAutomatic )
+    uint64 AccountClient::sendResume( bool bAutomatic )
     {
-        BitWriter body;
-        if ( AccountProtocol::MessageTypes::write( body, request ) )
-            return send( operation, TMethod::kID, body, bNeedsSession, bAutomatic );
-        // 범위 밖 값이라 보내지 않는다. 재접속 응답 뒤로 미루는 요청이 있어 몸을 먼저 쓰므로 sendMessage 대신 reject 로 같은 응답 처리기를 지난다
-        const PendingCall pendingCall{ _requestIDAllocator.allocate(), operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
-        (void)_callTable.reject( *_pClient, OnlineError::kInvalidRequest, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ), pendingCall );
-        return pendingCall._requestID;
+        if ( _pServiceClient != nullptr )
+            _pServiceClient->holdSessionRequests(); // 모든 키트의 세션 요청(이 키트 포함)은 재접속 응답 뒤에 간다. 재접속 자신은 익명이라 바로 간다
+        _bResuming        = SW_TRUE;
+        _bAutomaticResume = bAutomatic ? SW_TRUE : SW_FALSE;
+        return call<AccountMethod::Resume>( AccountResumeRequest{ _token, _clientInfo }, OnlineReplyDelegate<AccountMethod::Resume>::create<&AccountClient::onGrantReply>( this ) );
     }
 
-    uint64 AccountClient::send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic )
+    AccountClientReply AccountClient::makeReply( uint64 requestID, uint16 method, uint16 errorCode, const vector<uint8>& errorDetail )
     {
-        const uint64        requestID = _requestIDAllocator.allocate();
-        const vector<uint8> bodyBytes( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
-        if ( bNeedsSession && _bResuming == SW_TRUE )
-        {
-            _listDeferred.push_back( DeferredCall{ bodyBytes, requestID, method, operation } ); // 재접속 응답 뒤에 보내도록 모아 둔다
-            return requestID;
-        }
-        transmit( operation, method, bodyBytes, requestID, bAutomatic );
-        return requestID;
-    }
-
-    void AccountClient::transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestID, bool bAutomatic )
-    {
-        BitWriter body;
-        if ( bodyBytes.empty() == false )
-            body.writeBytes( bodyBytes.data(), static_cast<int32>( bodyBytes.size() ) );
-        NetRequestOptions options;
-        const PendingCall pendingCall{ requestID, operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
-        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
-    }
-
-    void AccountClient::onResponse( const OnlineResponse& response )
-    {
-        PendingCall call;
-        if ( _callTable.take( response._requestID, call ) == false )
-            return;
-
         AccountClientReply reply;
-        reply._requestID  = call._requestID;
-        reply._operation  = call._operation;
-        reply._bAutomatic = call._bAutomatic;
-        reply._errorCode  = response._errorCode;
-        if ( response.isOk() == false )
+        reply._requestID = requestID;
+        reply._operation = AccountClientInternal::toOperation( method );
+        reply._errorCode = errorCode;
+        if ( errorCode == OnlineError::kOk )
+            return reply;
+        reply._result = LoginOutcome::fail( errorCode );
+        BitReader detail( errorDetail.data(), static_cast<int32>( errorDetail.size() ) );
+        if ( errorCode == OnlineError::kUpdateRequired )
         {
-            reply._result = AccountClientInternal::toResult( response._errorCode );
-            BitReader           detail( response._pBody, response._bodySize );
             AccountUpdateDetail updateDetail;
-            if ( response._errorCode == OnlineError::kUpdateRequired && AccountProtocol::MessageTypes::read( detail, updateDetail ) == FixedReadResult::Ok )
-                reply._grant._storeURL = std::move( updateDetail._storeURL ); // 상세가 없거나 깨졌으면 상점 주소만 빈다. 결과 코드는 위에서 이미 정했다
-            else if ( response._errorCode == OnlineError::kRateLimited )
-                reply._grant._retryAfterMs = detail.readVarUint63();
+            if ( errorDetail.empty() == false && AccountProtocol::MessageTypes::read( detail, updateDetail ) == FixedReadResult::Ok )
+                reply._grant._storeURL = std::move( updateDetail._storeURL ); // 상세가 없거나 깨졌으면 상점 주소만 빈다(스키마 해시가 다를 때도 그렇다)
         }
-        else
+        else if ( errorCode == OnlineError::kRateLimited && errorDetail.empty() == false )
         {
-            BitReader body( response._pBody, response._bodySize );
-            bool      bRead = false;
-            if ( call._operation == AccountClientOperation::IssueGameTicket )
-            {
-                AccountTicketReply received;
-                bRead         = AccountProtocol::MessageTypes::read( body, received ) == FixedReadResult::Ok;
-                reply._result = received._result;
-                reply._ticket = received._ticket;
-            }
-            else if ( call._operation == AccountClientOperation::ListLinks )
-            {
-                AccountLinkReply received;
-                bRead              = AccountProtocol::MessageTypes::read( body, received ) == FixedReadResult::Ok;
-                reply._result      = received._result;
-                reply._linkSummary = std::move( received._summary );
-            }
-            else
-            {
-                AccountGrantReply received;
-                bRead         = AccountProtocol::MessageTypes::read( body, received ) == FixedReadResult::Ok;
-                reply._result = received._result;
-                reply._grant  = std::move( received._grant );
-            }
-            if ( bRead == false )
-                reply._result = LoginResult::InvalidRequest;
+            reply._grant._retryAfterMs = detail.readVarUint63();
         }
+        return reply;
+    }
 
+    void AccountClient::onGrantReply( const OnlineResult<AccountGrantReply>& result )
+    {
+        AccountClientReply reply = makeReply( result._requestID, result._method, result._errorCode, result._errorDetail );
+        if ( result._errorCode == OnlineError::kOk )
+        {
+            reply._result = result._reply._result;
+            reply._grant  = result._reply._grant;
+        }
         const bool bOk = reply._result == LoginResult::Ok;
-        if ( bOk && AccountClientInternal::isGrantOperation( call._operation ) )
+        if ( bOk && AccountClientInternal::isGrantOperation( reply._operation ) )
         {
             _bLoggedIn = SW_TRUE;
             _token     = reply._grant._token;
             _identity  = reply._grant._identity;
         }
-        if ( bOk && ( call._operation == AccountClientOperation::LinkCredential || call._operation == AccountClientOperation::LinkPlatform ) )
+        if ( bOk && ( reply._operation == AccountClientOperation::LinkCredential || reply._operation == AccountClientOperation::LinkPlatform ) )
             _identity = reply._grant._identity;
-        if ( bOk && ( call._operation == AccountClientOperation::Logout || call._operation == AccountClientOperation::RequestDeletion ) )
+        if ( bOk && ( reply._operation == AccountClientOperation::Logout || reply._operation == AccountClientOperation::RequestDeletion ) )
         {
             _bLoggedIn = SW_FALSE;
             _token     = LoginSessionToken{};
         }
-        if ( call._operation == AccountClientOperation::Resume )
+        if ( reply._operation != AccountClientOperation::Resume )
         {
-            const bool bTokenDead = reply._result == LoginResult::InvalidToken || reply._result == LoginResult::Expired || reply._result == LoginResult::Revoked;
-            if ( bTokenDead )
-                _token = LoginSessionToken{};
-            _bResuming                     = SW_FALSE;
-            const LoginResult resumeResult = reply._result; // 모은 요청도 같은 결과로 끝난다 — 저장소 오류를 InvalidToken 으로 바꾸면 산 세션을 죽었다고 알린다
             _listReply.push_back( std::move( reply ) );
-            finishDeferred( resumeResult );
-            if ( _pClient != nullptr && _pClient->isRequestGateClosed() )
-                _pClient->setRequestGate( OnlineMethodRange::kAccount, false ); // 다른 키트가 모아 둔 요청을 보낸다. 실패해도 그쪽이 kUnauthenticated 로 알 수 있다
             return;
+        }
+        reply._bAutomatic = _bAutomaticResume;
+        _listReply.push_back( reply );
+        finishResume( reply );
+    }
+
+    void AccountClient::onTicketReply( const OnlineResult<AccountTicketReply>& result )
+    {
+        AccountClientReply reply = makeReply( result._requestID, result._method, result._errorCode, result._errorDetail );
+        if ( result._errorCode == OnlineError::kOk )
+        {
+            reply._result = result._reply._result;
+            reply._ticket = result._reply._ticket;
         }
         _listReply.push_back( std::move( reply ) );
     }
 
-    void AccountClient::finishDeferred( LoginResult failure )
+    void AccountClient::onLinkReply( const OnlineResult<AccountLinkReply>& result )
     {
-        vector<DeferredCall> listDeferred;
-        listDeferred.swap( _listDeferred );
-        for ( const DeferredCall& deferred : listDeferred )
+        AccountClientReply reply = makeReply( result._requestID, result._method, result._errorCode, result._errorDetail );
+        if ( result._errorCode == OnlineError::kOk )
         {
-            if ( failure == LoginResult::Ok )
-            {
-                transmit( deferred._operation, deferred._method, deferred._bodyBytes, deferred._requestID, false );
-                continue;
-            }
-            AccountClientReply& reply = _listReply.emplace_back();
-            reply._requestID          = deferred._requestID;
-            reply._operation          = deferred._operation;
-            reply._result             = failure;
+            reply._result      = result._reply._result;
+            reply._linkSummary = result._reply._summary;
         }
+        _listReply.push_back( std::move( reply ) );
+    }
+
+    void AccountClient::finishResume( const AccountClientReply& reply )
+    {
+        const bool bTokenDead = reply._result == LoginResult::InvalidToken || reply._result == LoginResult::Expired || reply._result == LoginResult::Revoked;
+        if ( bTokenDead )
+            _token = LoginSessionToken{};
+        _bResuming        = SW_FALSE;
+        _bAutomaticResume = SW_FALSE;
+        if ( _pServiceClient == nullptr || _pServiceClient->isHoldingSessionRequests() == false )
+            return;
+        // 모은 세션 요청은 재접속의 결과로 끝난다 — 저장소 장애(공통 범주)를 "로그인 안 됨" 으로 바꾸면 산 세션을 죽었다고 알린다
+        uint16 failureCode = OnlineError::kOk;
+        if ( reply._result.isFailed() )
+            failureCode = reply._result._errorCode;
+        else if ( reply._result != LoginResult::Ok )
+            failureCode = OnlineError::kUnauthenticated;
+        _pServiceClient->releaseSessionRequests( failureCode );
     }
 } // namespace sw
 

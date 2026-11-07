@@ -1,7 +1,7 @@
 /**
  * @file MatchmakingClient.h
  * @brief 매칭 클라이언트입니다. 요청은 `call<MatchmakingMethod::QueueJoin>( request, onReply )` 이고, 이 클래스는 알림(파티, 초대, 로비, 매칭 결과)을 모아 둡니다.
- * @details - 요청 · 응답 규칙은 `OnlineProtocolClient` 에 있다. 업무 결과는 `_reply._result` 에 있고, 전송 오류와 공통 오류는 `_errorCode` 와 그에 대응하는 결과(`MatchmakingProtocol::kArrCommonResult`)로 온다.
+ * @details - 요청 · 응답 규칙은 `OnlineProtocolClient` 에 있다. 응답은 메서드마다 따로이고 업무 결과는 `_reply._result`(도메인 값만), 전송 오류와 공통 범주는 `_errorCode` 로 온다.
  *          - 매칭 결과가 `Found` 이면 게임은 계정 클라이언트로 그 서버(`_serverID`, 16진)의 접속 티켓을 받아 `_address:_port` 에 UDP 로 접속한다.
  *          - 마지막으로 받은 파티 스냅샷(알림이나 응답)을 보관한다. 멤버가 비어 있으면 파티가 없는 것이다.
  *

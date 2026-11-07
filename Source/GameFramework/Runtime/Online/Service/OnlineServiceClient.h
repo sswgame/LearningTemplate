@@ -12,7 +12,7 @@
  *            끊길 때 날아가던 요청은 ConnectionLost 로 끝난다. 재시도는 부르는 쪽이 같은 멱등 키로 해야 한다.
  *          - Hello 첫 필드는 `initialize` 때 정한 온라인 스키마 해시(`OnlineProtocolRegistry`)이다. 서버 해시와 다르면 서버가 `kVersionMismatch` 와 서버 해시로 답한다.
  *            그러면 상태가 `VersionMismatch` 가 되고 다시 연결하지 않는다. 모은 요청과 이 뒤의 요청은 모두 `kVersionMismatch` 로 끝난다.
- *            "업데이트 필요" 를 보이는 신호는 `getState()` 와 응답의 `_errorCode` 이다. 계정 키트는 이것을 `LoginResult::UpdateRequired` 로 바꾼다.
+ *            "업데이트 필요" 를 보이는 신호는 `getState()` 와 응답의 `_errorCode`(`kVersionMismatch` · `kUpdateRequired`)이다.
  *            지금 이 신호를 화면으로 보이는 게임 UI 는 없다.
  *          - Hello 에 다른 오류 코드나 깨진 답이 오면 `HandshakeFailed` 로 멈추고 요청은 `kInvalidRequest` 로 끝난다. 시한 초과와 과부하는 연결을 닫아 물러남 뒤 다시 연결한다.
  *          - 모든 콜백은 `tick`(공유 모드는 `handleFrame`, `handleClosed`)을 부른 스레드에서 불린다.
@@ -53,6 +53,19 @@ namespace sw
     };
 
     using OnlineResponseDelegate = Delegate<void( const OnlineResponse& )>;
+
+    /** @brief 요청이 세션(로그인한 주체)을 요구하는지입니다. 세션 요청 보류(`OnlineServiceClient::holdSessionRequests`) 동안 세션 요청만 모읍니다. */
+    enum class OnlineRequestKind : uint8
+    {
+        Session = 0, ///< 로그인한 주체가 필요하다(기본값)
+        Anonymous    ///< 로그인 없이 부른다(로그인 · 재접속). 보류 중에도 바로 간다
+    };
+
+    /** @brief 서비스 요청의 옵션입니다. 전송 옵션에 요청 종류를 더합니다. 키트 클라이언트(`OnlineProtocolClient::call`)가 메서드 서술자의 `kAnonymous` 로 채웁니다. */
+    struct OnlineRequestOptions : NetRequestOptions
+    {
+        OnlineRequestKind _kind{ OnlineRequestKind::Session };
+    };
 } // namespace sw
 
 namespace sw
@@ -198,8 +211,15 @@ namespace sw
         /** @brief 자기 엔드포인트 모드에서는 전송, 엔드포인트, 요청 시한, 다시 연결을 돌립니다. 두 모드 모두 모은 요청의 시한을 봅니다. @p nowMs 는 단조 시각이라 벽시계 보정에 시한 · 백오프가 흔들리지 않습니다. */
         void update( MonotonicMilliseconds nowMs );
 
-        /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 문이 닫혀 있으면 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
-        uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
+        /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 세션 요청을 보류 중이면(세션 요청만) 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
+        uint64 sendRequest( uint16 method, const BitWriter& body, const OnlineRequestOptions& options, OnlineResponseDelegate onResponse );
+        /** @brief 세션 요청(`OnlineRequestKind::Session`)으로 보냅니다. */
+        uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse )
+        {
+            OnlineRequestOptions sessionOptions;
+            static_cast<NetRequestOptions&>( sessionOptions ) = options;
+            return sendRequest( method, body, sessionOptions, std::move( onResponse ) );
+        }
         /**
          * @brief 보내지 않은 요청 하나를 @p errorCode 응답으로 끝내고 id 를 반환합니다. 본문을 쓰지 못한 요청(범위 밖 값)이 씁니다(`ServiceClientCallTable::sendMessage`).
          * @details `sendRequest` 가 즉시 끝내는 실패(초기화 전, 멈춤)와 같은 계약입니다. id 는 `sendRequest` 와 같은 순서에서 나오며 0 이 아니고,
@@ -209,12 +229,14 @@ namespace sw
         /** @brief 다음 `sendRequest` 가 돌려줄 id 입니다. 보내는 중에 바로 온 응답을 그 요청의 것으로 맞춰 보는 데 씁니다(`ServiceClientCallTable`). */
         uint64 peekNextRequestID() const { return _requestIDAllocator.getNextValue(); }
         /**
-         * @brief 요청 문을 열고 닫습니다. 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모읍니다.
-         * @details 다시 연결한 뒤 재접속 응답이 오기 전에 다른 키트의 요청이 서버에 닿으면 "로그인 안 됨" 으로 끝난다. 그것을 막으려고 계정 키트가 문을 닫고 연다.
-         *          열면 모은 요청을 맡긴 순서대로 보낸다.
+         * @brief 세션 요청을 보류합니다(재접속 게이트). 해제(`releaseSessionRequests`)까지 모든 키트의 세션 요청을 모으고, 익명 요청(로그인 · 재접속)은 바로 보냅니다.
+         * @details 다시 연결한 뒤 재접속 응답이 오기 전에 세션 요청이 서버에 닿으면 "로그인 안 됨" 으로 끝난다. 계정 키트가 재접속을 보내기 전에 보류하고 응답에서 해제한다.
+         *          예전에는 계정 영역만 빼고 문을 닫아 계정 키트가 자기 세션 요청을 따로 모았다 — 보류가 요청 종류로 가르므로 키트마다 모으는 길이 없다.
          */
-        void setRequestGate( uint16 ownerRange, bool bClosed );
-        bool isRequestGateClosed() const { return _bGateClosed == SW_TRUE; }
+        void holdSessionRequests();
+        /** @brief 보류를 풉니다. @p failureCode 가 `kOk` 이면 모은 세션 요청을 맡긴 순서대로 보내고, 아니면(재접속 실패) 그 코드로 끝냅니다. */
+        void releaseSessionRequests( uint16 failureCode );
+        bool isHoldingSessionRequests() const { return _bSessionHeld == SW_TRUE; }
 
         /** @brief 공유 엔드포인트 모드에서 프레임을 받습니다. Message 프레임(알림)이면 영역의 서비스 `onServicePush` 로 넘깁니다. 요청 응답은 부르는 쪽이 `NetRequestClient::handleFrame` 으로 먼저 거릅니다. */
         void handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize );
@@ -240,6 +262,7 @@ namespace sw
             uint64                 _requestID{ 0 };
             MonotonicMilliseconds  _deadlineMs{ 0 };
             uint16                 _method{ 0 };
+            OnlineRequestKind      _kind{ OnlineRequestKind::Session };
             uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 처리하던 중 `cancelRequestsOf` 가 취소 표시했다. 부르지도 보내지도 않는다
         };
 
@@ -253,7 +276,8 @@ namespace sw
         void sendHello();
         void sendQueuedCall( QueuedCall& call );
         void flushQueuedCalls();
-        bool isGated( uint16 method ) const;
+        /** @brief 세션 요청 보류에 걸리는 요청인지입니다. */
+        bool isHeld( OnlineRequestKind kind ) const;
         /** @brief Hello 가 끝내 실패한 상태(`VersionMismatch` · `HandshakeFailed`)인가입니다. 이 상태에서는 다시 연결하지 않고 요청은 바로 실패합니다. */
         bool isStopped() const;
         /** @brief @p state 로 멈추고 모은 요청을 @p errorCode 로 끝낸 뒤 연결을 닫습니다. */
@@ -286,9 +310,8 @@ namespace sw
         uint64                             _remoteConfigHash;
         uint64                             _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         IDAllocator<uint64>                _requestIDAllocator;
-        uint16                             _gateOwnerRange;
         OnlineClientState                  _state;
-        uint8                              _bGateClosed;
+        uint8                              _bSessionHeld;
         uint8                              _bSharedEndpoint;
         uint8                              _bInitialized;
     };

@@ -17,7 +17,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 일곱을 본다. 규칙 문
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
 6. 끊긴 비트필드 묶음: 같은 접근 구역의 비트필드 사이에 다른 칸이 있으면 묶음마다 바이트를 따로 먹는다(전처리 갈래로 끊긴 것은 보지 않는다).
 7. 온라인 키트의 프로토콜 표: 키트 서버는 `OnlineProtocolService`, 키트 클라이언트는 `OnlineProtocolClient` 로 선다. 인터페이스(`IOnlineServerService` · `IOnlineClientService`)를 직접 잇는 것은 C++ 로 막을 수 없다 — 테스트의 가짜가 같은 인터페이스를 이어야 한다.
-   그럴 까닭이 있는 클래스(계정 클라이언트의 재접속 게이트)는 그 줄에 `NOLINT(sw-online-table): <이유>` 를 적는다.
+   예외는 없다. 계정 클라이언트의 재접속 게이트도 기반(`OnlineServiceClient::holdSessionRequests`)으로 옮겼다(2026-11-07).
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -38,7 +38,6 @@ from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kSkipFolders = ("ThirdParty", "Generated", ".gen.")
 kBoolFlagExempt = "NOLINT(sw-bool-flag)"
-kOnlineTableExempt = "NOLINT(sw-online-table)"
 kOnlineKitFolder = "Source/GameFramework/Kits/Feature/Online/"
 kOnlineInterfacePattern = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)\b")
 kAccessKeywords = ("public", "protected", "private")
@@ -452,13 +451,10 @@ def checkOnlineProtocolTable(raw: str, code: str, relative: str) -> list[tuple[i
     normalized = relative.replace("\\", "/")
     if normalized.startswith(kOnlineKitFolder) is False or "/Tests/" in normalized:
         return []
-    rawLines = raw.splitlines()
+    del raw
     listProblem: list[tuple[int, str]] = []
     for match in kOnlineInterfacePattern.finditer(code):
-        line = lineOf(code, match.start())
-        if line <= len(rawLines) and kOnlineTableExempt in rawLines[line - 1]:
-            continue
-        listProblem.append((line, f"온라인 키트는 {match.group(1)} 를 직접 잇지 않고 OnlineProtocolService · OnlineProtocolClient 로 선다. 까닭이 있으면 그 줄에 {kOnlineTableExempt}: <이유>"))
+        listProblem.append((lineOf(code, match.start()), f"온라인 키트는 {match.group(1)} 를 직접 잇지 않고 OnlineProtocolService · OnlineProtocolClient 로 선다(예외 없음)"))
     return listProblem
 
 
