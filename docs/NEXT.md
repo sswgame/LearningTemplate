@@ -34,7 +34,6 @@
 - 단계 5: `_when` 조건, 덮어쓰기 층, 경로 교체, 접속 때 합성 해시 대조.
 - R2 나머지 칸 전환: `SocketSet` · `PhysicsAsset` · 카탈로그 칸, `Cube` · `None` 을 받는 칸, 손 표(`AssetReferenceFields.json`)에 남은 칸, `SpriteComponent::_spriteLibraryPath`(R4 가 `string` 으로 더했다), `SaveGame` 칸의 세이브 호환.
 - 쓰는 것만 담는 쿠킹: 참조를 따라가 담는다(`common.pack` 359MB 대 `game_empty.pack` 6MB, 효과는 재지 않았다).
-- XMLCatalog 가 아닌 데이터 종류 약 20(`PhysicsSettings` · `UIScaleSettings` · `ParkLayout` · `FighterCatalog` · `AIDirectorProfile` …)은 아직 사본 읽기다(K3 범위 밖).
 
 **3. 통합에서 드러난 확인거리.**
 - 1 인칭 탄도선이 시점 총에 가려 화면에 남지 않는다(`ShooterPlayerComponent` 총구가 몸 무기). 시나리오 `projectilecombo` 는 값(`Shooter3D.TracerWidth`)으로 본다.
