@@ -27,6 +27,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Service/ServiceServerCallTableBase.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
@@ -301,6 +302,14 @@ namespace sw
             return visitor._bDone == SW_TRUE;
         }
 
+        /** @brief 열린 호출이 없고 저장소에 맡긴 일도 없으면 true 입니다. 종료 대기(`flushUntilIdle`)가 이것을 본다. */
+        bool isIdle() const { return _calls.isEmpty() && _store.isIdle(); }
+        /**
+         * @brief 종료 드레인이 기다리는 일 수입니다 — 열린 호출 + 저장소에 맡긴 일(`IOnlineServerKit::getOpenWorkCount`).
+         * @details 저장소 왕복 중인 요청은 둘로 센다. 드레인은 0 이 되는지만 보고, 수는 로그에만 나온다.
+         */
+        int32 getOpenWorkCount() const { return _calls.getCount() + _store.getOpenCount(); }
+
         /** @brief 공통 범주 @p errorCode 로 끝냅니다. 저장소 완료가 부릅니다. */
         template <typename TMethod>
         bool fail( OnlineServerCall<TMethod> call, uint16 errorCode )
@@ -430,6 +439,7 @@ namespace sw
 
     protected:
         OnlineServerCallTable _calls{};
+        ServiceStoreTracker   _store{}; ///< 저장소에 맡긴 일의 앞이다. 파생의 `initialize` 가 `bindStore` 로 잇고, 종료가 `flushUntilIdle` 로 기다린다
 
     private:
         OnlineServiceHost* _pRequestHost{ nullptr };

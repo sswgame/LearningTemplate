@@ -31,10 +31,12 @@
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
     struct EphemeralReply;
+    struct LeaderboardWriteInput;
 
     class EphemeralStoreRouter;
     class IServiceStore;
@@ -168,8 +170,9 @@ namespace sw
         // 예약 작업
         void onScheduledRun( const ScheduledRun& run );
 
-        void  takeCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
-        int32 getPendingCount() const { return _pendingCount; }
+        void takeCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        /** @brief 저장소에 맡긴 일과 진행 중인 정산의 수입니다. 정산은 페이지가 몇이든 하나로 센다. */
+        int32 getPendingCount() const { return _store.getOpenCount() + static_cast<int32>( _mapSettlement.size() ); }
 
         /**
          * @brief 기간 보드의 캐시 순위(정렬 집합과 준비 표시)를 남겨 둘 시간(밀리초)입니다. 초기화가 없는 보드는 0(지우지 않음)입니다.
@@ -181,7 +184,8 @@ namespace sw
         static int64  toCacheScore( LeaderboardOrder order, int64 score ) { return order == LeaderboardOrder::Ascending ? -score : score; }
         static string makeRankKey( string_view boardID, uint64 periodID );
 
-        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
+    private:
+        /** @brief 저장소 일의 완료입니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
                               LeaderboardOutcome result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
         void applyStats( uint64 requestTag, LeaderboardOutcome result, vector<LeaderboardStat>&& listStat );
@@ -197,7 +201,6 @@ namespace sw
         /** @brief 정산 페이지 하나가 끝났습니다. 다 썼으면 다음 페이지를, 실패했거나 끝이면 정산을 마칩니다. */
         void applySettlementPage( uint64 settlementID, bool bCommitted );
 
-    private:
         struct PendingRead
         {
             string               _boardID{};
@@ -250,6 +253,8 @@ namespace sw
         void completeRead( const PendingRead& read, LeaderboardOutcome result );
         void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardOutcome result );
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
+        /** @brief 점수 · 통계 쓰기 일 하나를 맡깁니다. 완료가 `applyScoreWrite` 로 간다. */
+        void submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag, LeaderboardOperation operation );
         /** @brief 정산 하나를 시작합니다. 순위 읽기 일을 맡깁니다. */
         void startSettlement( const LeaderboardDef& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );
         /** @brief 다음 페이지를 맡기거나, 남은 사람이 없으면 성공으로 마칩니다. */
@@ -278,6 +283,6 @@ namespace sw
         ServiceScheduler*                                  _pScheduler;
         IDAllocator<uint64>                                _queryIDAllocator;
         IDAllocator<uint64>                                _settlementIDAllocator;
-        int32                                              _pendingCount;
+        ServiceStoreTracker                                _store; ///< 저장소에 맡긴 일의 앞이다(`initialize` 가 잇는다)
     };
 } // namespace sw

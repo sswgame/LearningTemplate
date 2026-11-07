@@ -53,7 +53,7 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 우편 호출. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCallCount(); }
+            int32 getOpenWorkCount() const override { return _service.getOpenWorkCount(); }
 
             void stop() override
             {

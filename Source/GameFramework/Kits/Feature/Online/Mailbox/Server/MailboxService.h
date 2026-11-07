@@ -19,6 +19,7 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
@@ -92,41 +93,31 @@ namespace sw
         // 예약 작업 — 만료 정리 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run );
 
-        /** @brief 만료 정리 작업의 `complete` 입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
-        void completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion );
-        /** @brief 새 우편 알림 작업의 `complete` 입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
-        void completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice );
-        /** @brief 캠페인 작업의 `complete` 입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
-        void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion );
-
         const vector<ServiceMailCampaign>& getCampaigns() const { return _listCampaign; }
-        int32                              getPendingCallCount() const { return _calls.getCount(); }
 
     private:
+        /** @brief 만료 정리의 완료입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
+        void completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion );
+        /** @brief 새 우편 알림의 완료입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
+        void completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice );
+        /** @brief 캠페인 다시 읽기의 완료입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
+        void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion );
         /** @brief 요청 하나의 저장소 작업을 맡깁니다. 내려가는 중이면 일시 장애로 답합니다. */
         template <typename TMethod>
         void submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns );
         void onNoticePresenceFound( const AccountPresenceResult& result );
         void sendOfflinePush( AccountID accountID );
-        bool isIdle() const;
 
     private:
         vector<ServiceMailCampaign>           _listCampaign;
         MailboxServiceConfig                  _settings;
         Subscription                          _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         unordered_map<uint64, MailboxNewMail> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 알림(받는 계정은 결과에 있다)
-        IServiceStore*                        _pStore;
-        OnlineServiceHost*                    _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
-        MetricCounter*                        _arrExpiredCounter[3]; ///< discarded · returned · removed
+        OnlineServiceHost*                    _pHost;                      ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
+        MetricCounter*                        _arrExpiredCounter[3];       ///< discarded · returned · removed
         UnixMilliseconds                      _nowMs;
-        UnixMilliseconds                      _nextSweepMs;
-        UnixMilliseconds                      _nextCampaignRefreshMs;
-        UnixMilliseconds                      _nextNoticeMs;
-        uint8                                 _bSweepPending;
-        uint8                                 _bSweepRequested;
-        uint8                                 _bCampaignRefreshPending;
-        uint8                                 _bNoticePending;
-        uint8                                 _bSweepRunHeld; ///< 예약 회차를 차지해 정리하는 중이다. 끝나면 `completeRun`
-        ScheduledRun                          _sweepRun;      ///< 차지한 회차이다
+        ServicePeriodicJob                    _sweepJob;    ///< 만료 정리이다. 예약 테이블이 있으면 주기 없이 회차로만 돈다
+        ServicePeriodicJob                    _campaignJob; ///< 캠페인 다시 읽기이다
+        ServicePeriodicJob                    _noticeJob;   ///< 새 우편 알림 가져가기이다
     };
 } // namespace sw

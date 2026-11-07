@@ -12,7 +12,6 @@
 #include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {
@@ -21,28 +20,6 @@ namespace sw
         struct MailboxServiceInternal
         {
             static constexpr const utf8* kArrExpiryAction[] = { "discarded", "returned", "removed" };
-        };
-
-        /** @brief 새 우편 알림을 가져가며 지우는 작업입니다(`ServiceMail::claimNotices`). */
-        class MailboxNoticeJob final : public IServiceStoreJob
-        {
-        public:
-            MailboxNoticeJob( MailboxService* pService, int32 batchCount )
-                : _listNotice{}
-                , _pService{ pService }
-                , _batchCount{ batchCount }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = ServiceMail::claimNotices( connection, _batchCount, _listNotice ); }
-            void complete() override { _pService->completeNotices( _result, _listNotice ); }
-
-        private:
-            vector<ServiceMailNotification> _listNotice;
-            MailboxService*                 _pService;
-            int32                           _batchCount;
-            ServiceStoreResult              _result;
         };
 
         /** @brief 저장소 스레드가 쓰는 요청 쪽 값입니다. 복사한 값이며 서비스 멤버를 건드리지 않습니다. */
@@ -95,74 +72,6 @@ namespace sw
             }
         };
 
-        /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
-        template <typename TMethod>
-        class MailboxRequestJob final : public IServiceStoreJob
-        {
-        public:
-            MailboxRequestJob( MailboxService* pService, OnlineServerCall<TMethod> call, const typename TMethod::Request& request, MailboxCallInput input )
-                : _input{ std::move( input ) }
-                , _request{ request }
-                , _reply{}
-                , _outcome{}
-                , _pService{ pService }
-                , _call{ call }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _outcome = MailboxStoreCall::run( TMethod{}, connection, _request, _input, _reply ); }
-            void complete() override { (void)_pService->finish( _call, _outcome, _reply ); } // 모르는 표지는 호출 표가 경고한다
-
-        private:
-            MailboxCallInput          _input;
-            typename TMethod::Request _request;
-            typename TMethod::Reply   _reply;
-            MailboxOutcome            _outcome;
-            MailboxService*           _pService;
-            OnlineServerCall<TMethod> _call;
-        };
-
-        /** @brief 만료 정리 한 번입니다. */
-        class MailboxSweepJob final : public IServiceStoreJob
-        {
-        public:
-            MailboxSweepJob( MailboxService* pService, UnixMilliseconds nowMs, int32 batchCount )
-                : _stats{}
-                , _pService{ pService }
-                , _nowMs{ nowMs }
-                , _batchCount{ batchCount }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { MailboxStoreLogic::sweepExpired( connection, _nowMs.count(), _batchCount, _stats ); }
-            void complete() override { _pService->completeSweep( _stats, getCompletion() ); }
-
-        private:
-            MailboxSweepStats _stats;
-            MailboxService*   _pService;
-            UnixMilliseconds  _nowMs;
-            int32             _batchCount;
-        };
-
-        /** @brief 캠페인 목록 다시 읽기입니다. */
-        class MailboxCampaignJob final : public IServiceStoreJob
-        {
-        public:
-            explicit MailboxCampaignJob( MailboxService* pService )
-                : _listCampaign{}
-                , _pService{ pService }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = ServiceMailCampaignTable::listCampaigns( connection, _listCampaign ); }
-            void complete() override { _pService->completeCampaignRefresh( _result, _listCampaign, getCompletion() ); }
-
-        private:
-            vector<ServiceMailCampaign> _listCampaign;
-            MailboxService*             _pService;
-            ServiceStoreResult          _result;
-        };
     } // namespace
 } // namespace sw
 
@@ -172,19 +81,12 @@ namespace sw
         : _listCampaign{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
-        , _pStore{ nullptr }
         , _pHost{ nullptr }
         , _arrExpiredCounter{}
         , _nowMs{ 0 }
-        , _nextSweepMs{ 0 }
-        , _nextCampaignRefreshMs{ 0 }
-        , _nextNoticeMs{ 0 }
-        , _bSweepPending{ SW_FALSE }
-        , _bSweepRequested{ SW_FALSE }
-        , _bCampaignRefreshPending{ SW_FALSE }
-        , _bNoticePending{ SW_FALSE }
-        , _bSweepRunHeld{ SW_FALSE }
-        , _sweepRun{}
+        , _sweepJob{}
+        , _campaignJob{}
+        , _noticeJob{}
     {
     }
 
@@ -200,8 +102,11 @@ namespace sw
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNeedsStore", "MailboxService needs a store" );
             return false;
         }
-        _pStore    = pStore;
-        _settings  = settings;
+        _store.bindStore( pStore );
+        _settings = settings;
+        _sweepJob.setPeriod( settings._pScheduler == nullptr ? settings._sweepIntervalMs : 0 ); // 예약 테이블이 있으면 회차가 부른다
+        _campaignJob.setPeriod( settings._campaignRefreshMs );
+        _noticeJob.setPeriod( settings._noticeIntervalMs ); // 0 이면 알림을 보내지 않는다
         _findOwner = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
         initializeCalls( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
@@ -231,54 +136,64 @@ namespace sw
 
     void MailboxService::shutdown()
     {
-        ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
+        _store.flushUntilIdle( [this]()
         { return isIdle(); } );
         _calls.abandonAll();
         _findOwner.reset(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
         _mapPresenceRequestToNotice.clear();
-        _pStore = nullptr;
-        _pHost  = nullptr;
+        _store.bindStore( nullptr );
+        _pHost = nullptr;
     }
 
     void MailboxService::update( UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
-        if ( _pStore == nullptr )
+        if ( _store.hasStore() == false )
             return;
-        if ( _bCampaignRefreshPending == SW_FALSE && nowMs >= _nextCampaignRefreshMs )
+        if ( _campaignJob.tryStart( nowMs ) )
         {
-            _bCampaignRefreshPending = SW_TRUE;
-            _nextCampaignRefreshMs   = nowMs + _settings._campaignRefreshMs;
-            _pStore->submit( make_unique<MailboxCampaignJob>( this ) );
+            _store.submit( []( IServiceStoreConnection& connection )
+            {
+                ServiceStoreRead<vector<ServiceMailCampaign>> read;
+                read._result = ServiceMailCampaignTable::listCampaigns( connection, read._value );
+                return read;
+            }, [this]( ServiceStoreRead<vector<ServiceMailCampaign>>& read, ServiceStoreCompletion completion )
+            { completeCampaignRefresh( read._result, read._value, completion ); } );
         }
-        const bool bTickSweep = _settings._pScheduler == nullptr && _settings._sweepIntervalMs > 0 && nowMs >= _nextSweepMs; // 예약 테이블이 있으면 회차가 부른다
-        const bool bSweepDue  = bTickSweep || _bSweepRequested == SW_TRUE;
-        if ( _bSweepPending == SW_FALSE && bSweepDue )
+        if ( _sweepJob.tryStart( nowMs ) )
         {
-            _bSweepPending   = SW_TRUE;
-            _bSweepRequested = SW_FALSE;
-            _nextSweepMs     = nowMs + _settings._sweepIntervalMs;
-            _pStore->submit( make_unique<MailboxSweepJob>( this, nowMs, _settings._sweepBatchCount ) );
+            const int32 batchCount = _settings._sweepBatchCount;
+            _store.submit( [nowMs, batchCount]( IServiceStoreConnection& connection )
+            {
+                MailboxSweepStats stats;
+                MailboxStoreLogic::sweepExpired( connection, nowMs.count(), batchCount, stats );
+                return stats;
+            }, [this]( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
+            { completeSweep( stats, completion ); } );
         }
-        const bool bNoticeDue = _settings._noticeIntervalMs > 0 && nowMs >= _nextNoticeMs && _pHost != nullptr;
-        if ( _bNoticePending == SW_FALSE && bNoticeDue )
+        if ( _pHost != nullptr && _noticeJob.tryStart( nowMs ) )
         {
-            _bNoticePending = SW_TRUE;
-            _nextNoticeMs   = nowMs + _settings._noticeIntervalMs;
-            _pStore->submit( make_unique<MailboxNoticeJob>( this, _settings._noticeBatchCount ) );
+            const int32 batchCount = _settings._noticeBatchCount;
+            _store.submit( [batchCount]( IServiceStoreConnection& connection )
+            {
+                ServiceStoreRead<vector<ServiceMailNotification>> read;
+                read._result = ServiceMail::claimNotices( connection, batchCount, read._value );
+                return read;
+            }, [this]( ServiceStoreRead<vector<ServiceMailNotification>>& read )
+            { completeNotices( read._result, read._value ); } );
         }
         _calls.publishPendingCount();
     }
 
     void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice )
     {
-        _bNoticePending = SW_FALSE;
+        _noticeJob.finish();
         if ( result == ServiceStoreResult::Invalid )
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotice", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
         if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
         if ( static_cast<int32>( inoutListNotice.size() ) == _settings._noticeBatchCount )
-            _nextNoticeMs = _nowMs; // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
+            _noticeJob.request(); // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
         for ( ServiceMailNotification& notice : inoutListNotice )
         {
             const AccountID accountID = notice._recipientAccountID;
@@ -319,14 +234,12 @@ namespace sw
 
     void MailboxService::onScheduledRun( const ScheduledRun& run )
     {
-        _sweepRun      = run;
-        _bSweepRunHeld = SW_TRUE;
-        requestSweep();
+        _sweepJob.holdRun( run );
     }
 
     void MailboxService::requestSweep()
     {
-        _bSweepRequested = SW_TRUE;
+        _sweepJob.request();
     }
 
     void MailboxService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -338,7 +251,7 @@ namespace sw
     template <typename TMethod>
     void MailboxService::submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns )
     {
-        if ( _pStore == nullptr )
+        if ( _store.hasStore() == false )
         {
             (void)fail( call, OnlineError::kUnavailable ); // 내려가는 중이다
             return;
@@ -349,7 +262,13 @@ namespace sw
         input._nowMs     = context._nowMs.count();
         if ( bWithCampaigns )
             input._listCampaign = _listCampaign;
-        _pStore->submit( sw::make_unique<MailboxRequestJob<TMethod>>( this, call, request, std::move( input ) ) );
+        _store.submit( [request, input = std::move( input )]( IServiceStoreConnection& connection )
+        {
+            ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply> done;
+            done._outcome = MailboxStoreCall::run( TMethod{}, connection, request, input, done._reply );
+            return done;
+        }, [this, call]( const ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply>& done )
+        { (void)finish( call, done._outcome, done._reply ); } ); // 모르는 표지는 호출 표가 경고한다
     }
 
     void MailboxService::handleCall( OnlineServerCall<MailboxMethod::List> call, const OnlineCallContext& context, const MailboxListRequest& request )
@@ -379,7 +298,7 @@ namespace sw
 
     void MailboxService::completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
     {
-        _bSweepPending         = SW_FALSE;
+        _sweepJob.finish();
         const int32 arrCount[] = { stats._discardedCount, stats._returnedCount, stats._removedCount };
         for ( int32 actionIndex = 0; actionIndex < static_cast<int32>( SW_COUNT_OF( arrCount ) ); ++actionIndex )
         {
@@ -397,17 +316,17 @@ namespace sw
             SW_LOG_WARNING_ID( "MailboxService.MailSweepLeftExpired", "Mail sweep left %# expired mails for the next pass", stats._failedCount );
         if ( stats._bMore == SW_TRUE )
         {
-            _bSweepRequested = SW_TRUE; // 상한까지 채웠으므로 다음 틱에 바로 다시 정리한다
+            _sweepJob.request(); // 상한까지 채웠으므로 다음 틱에 바로 다시 정리한다
             return;
         }
-        if ( _bSweepRunHeld == SW_TRUE && _settings._pScheduler != nullptr )
-            _settings._pScheduler->completeRun( _sweepRun, stats._failedCount == 0 ); // 남은 것이 있으면 실패로 적어 다음 회차가 다시 본다
-        _bSweepRunHeld = SW_FALSE;
+        ScheduledRun run;
+        if ( _sweepJob.takeHeldRun( run ) && _settings._pScheduler != nullptr )
+            _settings._pScheduler->completeRun( run, stats._failedCount == 0 ); // 남은 것이 있으면 실패로 적어 다음 회차가 다시 본다
     }
 
     void MailboxService::completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion )
     {
-        _bCampaignRefreshPending = SW_FALSE;
+        _campaignJob.finish();
         if ( result != ServiceStoreResult::Ok )
         {
             if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않고 캐시를 그대로 둔다
@@ -422,10 +341,6 @@ namespace sw
         }
     }
 
-    bool MailboxService::isIdle() const
-    {
-        return _calls.isEmpty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE && _bNoticePending == SW_FALSE;
-    }
 } // namespace sw
 
 namespace sw

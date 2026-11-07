@@ -19,7 +19,6 @@
 #include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerAudit.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {
@@ -45,257 +44,12 @@ namespace sw
             static constexpr int32 kWithdrawIndex = EconomyMethod::toIndex( EconomyMethod::WithdrawPurchase::kID );
         };
 
-        /** @brief 경제 요청 하나의 저장소 왕복입니다. 입력은 공개 필드에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘깁니다. */
-        class EconomyRequestJob final : public IServiceStoreJob
+        /** @brief 환불 회수 한 번이 완료로 넘기는 값입니다. */
+        struct EconomyRefundResult
         {
-        public:
-            EconomyPurchaseInput  _purchase;
-            EconomyRedeemInput    _redeem;
-            EconomyHistoryRequest _history;
-            EconomyWithdrawInput  _withdraw;
-            AccountID             _accountID;
-
-            EconomyRequestJob( EconomyService* pService, const EconomyServiceConfig& settings, uint64 callID, int32 methodIndex )
-                : _purchase{}
-                , _redeem{}
-                , _history{}
-                , _withdraw{}
-                , _accountID{ kInvalidAccountID }
-                , _walletReply{}
-                , _historyReply{}
-                , _purchaseReply{}
-                , _redeemReply{}
-                , _withdrawReply{}
-                , _outcome{ EconomyOutcome::fail( OnlineError::kInvalidRequest ) }
-                , _settings{ settings }
-                , _pService{ pService }
-                , _callID{ callID }
-                , _methodIndex{ methodIndex }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                switch ( _methodIndex )
-                {
-                    case EconomyServiceInternal::kWalletIndex:
-                    {
-                        _outcome = EconomyStoreLogic::readWallet( connection, _accountID, _walletReply );
-                        break;
-                    }
-                    case EconomyServiceInternal::kHistoryIndex:
-                    {
-                        _outcome = EconomyStoreLogic::readHistory( connection, _accountID, _history, _historyReply );
-                        break;
-                    }
-                    case EconomyServiceInternal::kPurchaseIndex:
-                    {
-                        _outcome = EconomyStoreLogic::purchase( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _purchase, _purchaseReply );
-                        break;
-                    }
-                    case EconomyServiceInternal::kRedeemIndex:
-                    {
-                        _outcome = EconomyStoreLogic::redeemReceipt( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _redeem, _redeemReply );
-                        break;
-                    }
-                    case EconomyServiceInternal::kWithdrawIndex:
-                    {
-                        _outcome = EconomyStoreLogic::withdrawPurchase( connection, *_settings._pCurrencyCatalog, _withdraw, _withdrawReply );
-                        break;
-                    }
-                    default:
-                    {
-                        _outcome = EconomyOutcome::fail( OnlineError::kInvalidRequest );
-                        break;
-                    }
-                }
-            }
-
-            void complete() override
-            {
-                switch ( _methodIndex )
-                {
-                    case EconomyServiceInternal::kWalletIndex:
-                    {
-                        _pService->completeCall( _callID, _outcome, _walletReply );
-                        return;
-                    }
-                    case EconomyServiceInternal::kHistoryIndex:
-                    {
-                        _pService->completeCall( _callID, _outcome, _historyReply );
-                        return;
-                    }
-                    case EconomyServiceInternal::kPurchaseIndex:
-                    {
-                        _pService->completeCall( _callID, _outcome, _purchaseReply );
-                        return;
-                    }
-                    case EconomyServiceInternal::kRedeemIndex:
-                    {
-                        if ( _outcome == EconomyResult::Ok )
-                            _pService->confirmDelivery( _redeem._receipt ); // 지급이 커밋된 뒤다
-                        _pService->completeCall( _callID, _outcome, _redeemReply );
-                        return;
-                    }
-                    case EconomyServiceInternal::kWithdrawIndex:
-                    {
-                        _pService->completeCall( _callID, _outcome, _withdrawReply );
-                        return;
-                    }
-                    default:
-                    {
-                        _pService->failCallOf( _callID, _outcome._errorCode );
-                        return;
-                    }
-                }
-            }
-
-        private:
-            EconomyWalletReply   _walletReply; ///< 메서드마다 그 응답 형식이다(`_methodIndex` 가 고른다)
-            EconomyHistoryReply  _historyReply;
-            EconomyPurchaseReply _purchaseReply;
-            EconomyRedeemReply   _redeemReply;
-            EconomyWithdrawReply _withdrawReply;
-            EconomyOutcome       _outcome; ///< 저장 로직의 결과이다. 공통 범주면 응답은 뜻이 없다
-            EconomyServiceConfig _settings;
-            EconomyService*      _pService;
-            uint64               _callID;
-            int32                _methodIndex;
-        };
-        /** @brief 원장 보존 검사 한 번입니다. 테이블 전체를 읽는다. */
-        class EconomyLedgerAuditJob final : public IServiceStoreJob
-        {
-        public:
-            explicit EconomyLedgerAuditJob( EconomyService* pService )
-                : _report{}
-                , _pService{ pService }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = LedgerAudit::computeReport( connection, _report ); }
-            void complete() override { _pService->completeLedgerAudit( _result, _report, getCompletion() ); }
-
-        private:
-            LedgerAuditReport  _report;
-            EconomyService*    _pService;
-            ServiceStoreResult _result;
-        };
-
-        /** @brief 환불 알림 하나의 회수입니다. 응답이 없다. */
-        class EconomyRefundJob final : public IServiceStoreJob
-        {
-        public:
-            EconomyRefundJob( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotification&& notice, UnixMilliseconds nowMs )
-                : _notice{ std::move( notice ) }
-                , _pService{ pService }
-                , _pCurrencies{ pCurrencies }
-                , _nowMs{ nowMs }
-                , _result{ EconomyOutcome::fail( OnlineError::kUnavailable ) }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs.count(), _listChange ); }
-            void complete() override { _pService->completeRefund( _notice, _result, _listChange, getCompletion() ); }
-
-        private:
-            ReceiptRefundNotification    _notice;
-            vector<EconomyBalanceChange> _listChange;
-            EconomyService*              _pService;
-            const CurrencyCatalog*       _pCurrencies;
-            UnixMilliseconds             _nowMs;
-            EconomyOutcome               _result;
-        };
-
-        /** @brief 저장소에 남은 환불 조회 기준 시각을 스토어마다 읽습니다. */
-        class EconomyRefundCursorReadJob final : public IServiceStoreJob
-        {
-        public:
-            EconomyRefundCursorReadJob( EconomyService* pService, vector<EconomyRefundCursor>&& listCursor )
-                : _listCursor{ std::move( listCursor ) }
-                , _pService{ pService }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override
-            {
-                for ( EconomyRefundCursor& cursor : _listCursor )
-                {
-                    _result = EconomyStoreLogic::readRefundCursor( connection, cursor._storeName, cursor._lastReadMs );
-                    if ( _result != ServiceStoreResult::Ok )
-                        return; // 하나라도 못 읽으면 다시 읽는다 — 그 스토어를 기준 없이 시작하면 구간을 건너뛴다
-                }
-            }
-
-            void complete() override { _pService->completeRefundCursorRead( _listCursor, _result, getCompletion() ); }
-
-        private:
-            vector<EconomyRefundCursor> _listCursor;
-            EconomyService*             _pService;
-            ServiceStoreResult          _result;
-        };
-
-        /** @brief 환불 조회 기준 시각 하나를 씁니다. */
-        class EconomyRefundCursorWriteJob final : public IServiceStoreJob
-        {
-        public:
-            EconomyRefundCursorWriteJob( EconomyService* pService, EconomyRefundCursor cursor )
-                : _cursor{ std::move( cursor ) }
-                , _pService{ pService }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::writeRefundCursor( connection, _cursor._storeName, _cursor._lastReadMs ); }
-            void complete() override { _pService->completeRefundCursorWrite( _cursor, _result, getCompletion() ); }
-
-        private:
-            EconomyRefundCursor _cursor;
-            EconomyService*     _pService;
-            ServiceStoreResult  _result;
-        };
-
-        /** @brief 남은 지급 알림을 읽습니다. */
-        class EconomyDeliveryListJob final : public IServiceStoreJob
-        {
-        public:
-            EconomyDeliveryListJob( EconomyService* pService, int32 maxCount )
-                : _listTask{}
-                , _pService{ pService }
-                , _maxCount{ maxCount }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::listDeliveries( connection, _maxCount, _listTask ); }
-            void complete() override { _pService->completeDeliveryList( _listTask, _result, getCompletion() ); }
-
-        private:
-            vector<ReceiptDeliveryTask> _listTask;
-            EconomyService*             _pService;
-            int32                       _maxCount;
-            ServiceStoreResult          _result;
-        };
-
-        /** @brief 끝난 지급 알림의 레코드를 지웁니다. */
-        class EconomyDeliveryEraseJob final : public IServiceStoreJob
-        {
-        public:
-            EconomyDeliveryEraseJob( EconomyService* pService, string recordKey )
-                : _recordKey{ std::move( recordKey ) }
-                , _pService{ pService }
-                , _result{ ServiceStoreResult::Unavailable }
-            {
-            }
-
-            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::eraseDelivery( connection, _recordKey ); }
-            void complete() override { _pService->completeDeliveryErase( _recordKey, _result, getCompletion() ); }
-
-        private:
-            string             _recordKey;
-            EconomyService*    _pService;
-            ServiceStoreResult _result;
+            ReceiptRefundNotification    _notice{};
+            vector<EconomyBalanceChange> _listChange{};
+            EconomyOutcome               _outcome{ EconomyOutcome::fail( OnlineError::kUnavailable ) };
         };
 
         struct EconomyDevOnlineInternal
@@ -323,19 +77,12 @@ namespace sw
         , _uniqueSetDeliveryAlarmed{}
         , _balanceNotice{ *this }
         , _pHost{ nullptr }
-        , _pStore{ nullptr }
         , _pMetricRegistry{ nullptr }
-        , _pendingRefundCount{ 0 }
-        , _pendingUpkeepCount{ 0 }
-        , _nextRefundCursorReadMs{ 0 }
-        , _nextDeliveryScanMs{ 0 }
-        , _auditRun{}
-        , _bAuditPending{ SW_FALSE }
-        , _bAuditRunHeld{ SW_FALSE }
+        , _auditJob{}
+        , _refundCursorJob{}
+        , _deliveryJob{}
         , _bLastAuditBalanced{ SW_FALSE }
         , _bRefundCursorsRestored{ SW_FALSE }
-        , _bRefundCursorReadPending{ SW_FALSE }
-        , _bDeliveryScanPending{ SW_FALSE }
         , _nowMs{ 0 }
     {
         setReady( false );
@@ -367,8 +114,10 @@ namespace sw
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsExternalLinks", "EconomyService: a receipt validator binds buyers to linked logins but the account kit's link port is missing" );
             return false;
         }
-        _pStore          = pStore;
-        _settings        = settings;
+        _store.bindStore( pStore );
+        _settings = settings;
+        _refundCursorJob.setPeriod( settings._refundCursorRetryMs ); // 첫 틱에 읽고, 못 읽었으면 이 간격 뒤에 다시 읽는다
+        _deliveryJob.setPeriod( settings._deliveryScanIntervalMs );  // 기동 직후 한 번 읽는다
         _findOwner       = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
         _pMetricRegistry = settings._pMetricRegistry;
         if ( settings._pScheduler != nullptr )
@@ -391,8 +140,8 @@ namespace sw
     void EconomyService::shutdown()
     {
         // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
-        ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
-        { return _calls.isEmpty() && _localCalls.isEmpty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
+        _store.flushUntilIdle( [this]()
+        { return getOpenWorkCount() == 0; }, [this]()
         { pollReceipts(); } );
         _calls.abandonAll();
         _localCalls.clear();
@@ -400,7 +149,7 @@ namespace sw
         setReady( false );
         _findOwner.reset(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다)
         _mapPresenceRequestToNotice.clear();
-        _pStore = nullptr;
+        _store.bindStore( nullptr );
     }
 
     void EconomyService::submitCall( const EconomyCall& call, ReplyDelegate onReply )
@@ -459,7 +208,7 @@ namespace sw
     void EconomyService::update( UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
-        if ( _pStore == nullptr )
+        if ( _store.hasStore() == false )
             return;
         if ( _settings._pReceiptRegistry != nullptr )
             _settings._pReceiptRegistry->update( nowMs );
@@ -499,21 +248,26 @@ namespace sw
             if ( outcome._status == ReceiptDeliveryStatus::Retry )
                 continue; // 레코드가 남아 다음 훑기가 다시 보낸다
             _uniqueSetDeliveryAlarmed.erase( outcome._recordKey );
-            ++_pendingUpkeepCount;
-            _pStore->submit( make_unique<EconomyDeliveryEraseJob>( this, std::move( outcome._recordKey ) ) );
+            _store.submit( [recordKey = outcome._recordKey]( IServiceStoreConnection& connection )
+            { return EconomyStoreLogic::eraseDelivery( connection, recordKey ); },
+                           [this, recordKey = outcome._recordKey]( ServiceStoreResult result, ServiceStoreCompletion completion )
+            { completeDeliveryErase( recordKey, result, completion ); } );
         }
-        if ( _bDeliveryScanPending == SW_TRUE || nowMs.count() < _nextDeliveryScanMs )
+        if ( _deliveryJob.tryStart( nowMs ) == false )
             return;
-        _nextDeliveryScanMs   = nowMs.count() + _settings._deliveryScanIntervalMs;
-        _bDeliveryScanPending = SW_TRUE;
-        ++_pendingUpkeepCount;
-        _pStore->submit( make_unique<EconomyDeliveryListJob>( this, _settings._deliveryScanMaxCount ) );
+        const int32 maxCount = _settings._deliveryScanMaxCount;
+        _store.submit( [maxCount]( IServiceStoreConnection& connection )
+        {
+            ServiceStoreRead<vector<ReceiptDeliveryTask>> read;
+            read._result = EconomyStoreLogic::listDeliveries( connection, maxCount, read._value );
+            return read;
+        }, [this]( const ServiceStoreRead<vector<ReceiptDeliveryTask>>& read, ServiceStoreCompletion completion )
+        { completeDeliveryList( read._value, read._result, completion ); } );
     }
 
     void EconomyService::completeDeliveryList( const vector<ReceiptDeliveryTask>& listTask, ServiceStoreResult result, ServiceStoreCompletion completion )
     {
-        --_pendingUpkeepCount;
-        _bDeliveryScanPending = SW_FALSE;
+        _deliveryJob.finish();
         if ( result != ServiceStoreResult::Ok )
         {
             if ( completion.isCancelled() == false )
@@ -531,7 +285,6 @@ namespace sw
 
     void EconomyService::completeDeliveryErase( const string& recordKey, ServiceStoreResult result, ServiceStoreCompletion completion )
     {
-        --_pendingUpkeepCount;
         if ( result != ServiceStoreResult::Ok && completion.isCancelled() == false ) // 다음 훑기가 다시 보내고 스토어가 거절하면 그때 지운다
             SW_LOG_WARNING_ID( "EconomyService.DeliveryEraseFailed", "EconomyService: the finished delivery record '%#' could not be erased", recordKey.c_str() );
     }
@@ -547,12 +300,15 @@ namespace sw
                 int64 lastReadMs = 0;
                 if ( pValidator->takeRefundCursor( lastReadMs ) == false )
                     continue;
-                ++_pendingUpkeepCount;
-                _pStore->submit( make_unique<EconomyRefundCursorWriteJob>( this, EconomyRefundCursor{ pValidator->getStoreName(), lastReadMs } ) );
+                const EconomyRefundCursor cursor{ pValidator->getStoreName(), lastReadMs };
+                _store.submit( [cursor]( IServiceStoreConnection& connection )
+                { return EconomyStoreLogic::writeRefundCursor( connection, cursor._storeName, cursor._lastReadMs ); },
+                               [this, cursor]( ServiceStoreResult result, ServiceStoreCompletion completion )
+                { completeRefundCursorWrite( cursor, result, completion ); } );
             }
             return;
         }
-        if ( _bRefundCursorReadPending == SW_TRUE || nowMs.count() < _nextRefundCursorReadMs )
+        if ( _refundCursorJob.tryStart( nowMs ) == false )
             return;
         vector<EconomyRefundCursor> listCursor;
         for ( const IReceiptValidator* pValidator : _settings._pReceiptRegistry->getValidators() )
@@ -562,21 +318,31 @@ namespace sw
         }
         if ( listCursor.empty() )
         {
+            _refundCursorJob.finish();
             _bRefundCursorsRestored = SW_TRUE;
             return;
         }
-        _bRefundCursorReadPending = SW_TRUE;
-        ++_pendingUpkeepCount;
-        _pStore->submit( make_unique<EconomyRefundCursorReadJob>( this, std::move( listCursor ) ) );
+        _store.submit( [listCursor = std::move( listCursor )]( IServiceStoreConnection& connection ) mutable
+        {
+            ServiceStoreRead<vector<EconomyRefundCursor>> read;
+            read._result = ServiceStoreResult::Ok;
+            for ( EconomyRefundCursor& cursor : listCursor )
+            {
+                read._result = EconomyStoreLogic::readRefundCursor( connection, cursor._storeName, cursor._lastReadMs );
+                if ( read._result != ServiceStoreResult::Ok )
+                    break; // 하나라도 못 읽으면 다시 읽는다 — 그 스토어를 기준 없이 시작하면 구간을 건너뛴다
+            }
+            read._value = std::move( listCursor );
+            return read;
+        }, [this]( const ServiceStoreRead<vector<EconomyRefundCursor>>& read, ServiceStoreCompletion completion )
+        { completeRefundCursorRead( read._value, read._result, completion ); } );
     }
 
     void EconomyService::completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion )
     {
-        --_pendingUpkeepCount;
-        _bRefundCursorReadPending = SW_FALSE;
+        _refundCursorJob.finish(); // 못 읽었으면 다음 주기(`_refundCursorRetryMs`)에 다시 읽는다
         if ( result != ServiceStoreResult::Ok )
         {
-            _nextRefundCursorReadMs = _nowMs.count() + _settings._refundCursorRetryMs;
             if ( completion.isCancelled() == false )
                 SW_LOG_WARNING_ID( "EconomyService.RefundCursorReadFailed", "EconomyService: the refund cursors could not be read - refund polling waits and reads them again" );
             return;
@@ -592,7 +358,6 @@ namespace sw
 
     void EconomyService::completeRefundCursorWrite( const EconomyRefundCursor& cursor, ServiceStoreResult result, ServiceStoreCompletion completion )
     {
-        --_pendingUpkeepCount;
         if ( result != ServiceStoreResult::Ok && completion.isCancelled() == false ) // 다음 조회가 다시 쓴다. 그 사이 재시작하면 옛 기준에서 더 겹쳐 읽을 뿐이다
             SW_LOG_WARNING_ID( "EconomyService.RefundCursorWriteFailed", "EconomyService: the refund cursor of store '%#' could not be written", cursor._storeName.c_str() );
     }
@@ -602,7 +367,7 @@ namespace sw
         const int32 methodIndex = EconomyMethod::toIndex( call._method );
 
         EconomyOutcome refused{ EconomyResult::Ok };
-        if ( methodIndex < 0 || _pStore == nullptr )
+        if ( methodIndex < 0 || _store.hasStore() == false )
             refused = EconomyOutcome::fail( OnlineError::kInvalidRequest );
         else if ( call._accountID == kInvalidAccountID )
             refused = EconomyOutcome::fail( OnlineError::kUnauthenticated ); // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
@@ -628,22 +393,66 @@ namespace sw
             _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, call._accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
-        const UnixMilliseconds        nowMs = call._nowMs;
-        unique_ptr<EconomyRequestJob> work  = make_unique<EconomyRequestJob>( this, _settings, callID, methodIndex );
-        work->_accountID                    = call._accountID;
-        work->_history                      = call._history;
-        work->_purchase._offerID            = call._purchase._offerID;
-        work->_purchase._count              = call._purchase._count;
-        work->_purchase._accountID          = call._accountID;
-        work->_purchase._nowMs              = nowMs.count();
-        work->_purchase._journalKey         = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountID ), call._idempotencyKey._high,
-                                                                                     call._idempotencyKey._low );
-        work->_withdraw._storeName          = call._withdraw._storeName;
-        work->_withdraw._transactionID      = call._withdraw._transactionID;
-        work->_withdraw._accountID          = call._accountID;
-        work->_withdraw._nowMs              = nowMs.count();
-        work->_withdraw._windowMs           = _settings._withdrawalWindowMs;
-        _pStore->submit( std::move( work ) );
+        const AccountID        accountID   = call._accountID;
+        const int64            nowMs       = call._nowMs.count();
+        const CurrencyCatalog* pCurrencies = _settings._pCurrencyCatalog; // 저장소 스레드는 서비스 멤버를 만지지 않으므로 값을 잡는다
+        const OfferCatalog*    pOffers     = _settings._pOfferCatalog;
+        switch ( methodIndex )
+        {
+            case EconomyServiceInternal::kWalletIndex:
+            {
+                submitStoreCall<EconomyWalletReply>( callID, [accountID]( IServiceStoreConnection& connection, EconomyWalletReply& outReply )
+                { return EconomyStoreLogic::readWallet( connection, accountID, outReply ); } );
+                return;
+            }
+            case EconomyServiceInternal::kHistoryIndex:
+            {
+                submitStoreCall<EconomyHistoryReply>( callID, [accountID, history = call._history]( IServiceStoreConnection& connection, EconomyHistoryReply& outReply )
+                { return EconomyStoreLogic::readHistory( connection, accountID, history, outReply ); } );
+                return;
+            }
+            case EconomyServiceInternal::kPurchaseIndex:
+            {
+                EconomyPurchaseInput purchase;
+                purchase._offerID    = call._purchase._offerID;
+                purchase._count      = call._purchase._count;
+                purchase._accountID  = accountID;
+                purchase._nowMs      = nowMs;
+                purchase._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( accountID ), call._idempotencyKey._high, call._idempotencyKey._low );
+                submitStoreCall<EconomyPurchaseReply>( callID, [pCurrencies, pOffers, purchase]( IServiceStoreConnection& connection, EconomyPurchaseReply& outReply )
+                { return EconomyStoreLogic::purchase( connection, *pCurrencies, *pOffers, purchase, outReply ); } );
+                return;
+            }
+            case EconomyServiceInternal::kWithdrawIndex:
+            {
+                EconomyWithdrawInput withdraw;
+                withdraw._storeName     = call._withdraw._storeName;
+                withdraw._transactionID = call._withdraw._transactionID;
+                withdraw._accountID     = accountID;
+                withdraw._nowMs         = nowMs;
+                withdraw._windowMs      = _settings._withdrawalWindowMs;
+                submitStoreCall<EconomyWithdrawReply>( callID, [pCurrencies, withdraw]( IServiceStoreConnection& connection, EconomyWithdrawReply& outReply )
+                { return EconomyStoreLogic::withdrawPurchase( connection, *pCurrencies, withdraw, outReply ); } );
+                return;
+            }
+            default:
+            {
+                failCallOf( callID, OnlineError::kInvalidRequest ); // 지급은 위에서 검증으로 갔다
+                return;
+            }
+        }
+    }
+
+    template <typename TReply, typename TRun>
+    void EconomyService::submitStoreCall( uint64 callID, TRun&& run )
+    {
+        _store.submit( [run = std::forward<TRun>( run )]( IServiceStoreConnection& connection )
+        {
+            ServiceStoreCallResult<EconomyOutcome, TReply> done;
+            done._outcome = run( connection, done._reply );
+            return done;
+        }, [this, callID]( const ServiceStoreCallResult<EconomyOutcome, TReply>& done )
+        { completeCall( callID, done._outcome, done._reply ); } );
     }
 
     void EconomyService::pollReceipts()
@@ -657,38 +466,56 @@ namespace sw
             const auto callIt = _mapTicketToCall.find( result._ticket );
             if ( callIt == _mapTicketToCall.end() )
                 continue;
-            const EconomyReceiptCall      receiptCall = callIt->second;
-            const AccountID               accountID   = receiptCall._accountID;
-            unique_ptr<EconomyRequestJob> work        = make_unique<EconomyRequestJob>( this, _settings, receiptCall._callID, EconomyServiceInternal::kRedeemIndex );
+            const EconomyReceiptCall receiptCall = callIt->second;
             _mapTicketToCall.erase( callIt );
-            work->_accountID              = accountID;
-            work->_redeem._receipt        = std::move( result );
-            work->_redeem._pExternalLinks = _settings._pExternalLinks;
-            work->_redeem._accountID      = accountID;
-            work->_redeem._nowMs          = _nowMs.count();
-            work->_redeem._bAcceptSandbox = _settings._bAcceptSandboxReceipts;
-            _pStore->submit( std::move( work ) );
+            EconomyRedeemInput redeem;
+            redeem._receipt                     = std::move( result );
+            redeem._pExternalLinks              = _settings._pExternalLinks;
+            redeem._accountID                   = receiptCall._accountID;
+            redeem._nowMs                       = _nowMs.count();
+            redeem._bAcceptSandbox              = _settings._bAcceptSandboxReceipts;
+            const CurrencyCatalog*  pCurrencies = _settings._pCurrencyCatalog;
+            const OfferCatalog*     pOffers     = _settings._pOfferCatalog;
+            ReceiptValidationResult receipt     = redeem._receipt; // 지급이 커밋되면 완료가 스토어에 알린다
+            _store.submit( [pCurrencies, pOffers, redeem = std::move( redeem )]( IServiceStoreConnection& connection )
+            {
+                ServiceStoreCallResult<EconomyOutcome, EconomyRedeemReply> done;
+                done._outcome = EconomyStoreLogic::redeemReceipt( connection, *pCurrencies, *pOffers, redeem, done._reply );
+                return done;
+            }, [this, callID = receiptCall._callID, receipt = std::move( receipt )]( const ServiceStoreCallResult<EconomyOutcome, EconomyRedeemReply>& done )
+            {
+                if ( done._outcome == EconomyResult::Ok )
+                    confirmDelivery( receipt ); // 지급이 커밋된 뒤다
+                completeCall( callID, done._outcome, done._reply );
+            } );
         }
     }
 
     void EconomyService::onScheduledRun( const ScheduledRun& run )
     {
-        _auditRun      = run;
-        _bAuditRunHeld = SW_TRUE;
+        _auditJob.holdRun( run );
         requestLedgerAudit();
     }
 
     void EconomyService::requestLedgerAudit()
     {
-        if ( _pStore == nullptr || _bAuditPending == SW_TRUE )
+        if ( _store.hasStore() == false || _auditJob.isRunning() )
+            return; // 도는 중이면 그 검사가 끝나며 차지한 회차를 돌려준다
+        _auditJob.request();
+        if ( _auditJob.tryStart( _nowMs ) == false )
             return;
-        _bAuditPending = SW_TRUE;
-        _pStore->submit( make_unique<EconomyLedgerAuditJob>( this ) );
+        _store.submit( []( IServiceStoreConnection& connection )
+        {
+            ServiceStoreRead<LedgerAuditReport> read;
+            read._result = LedgerAudit::computeReport( connection, read._value );
+            return read;
+        }, [this]( const ServiceStoreRead<LedgerAuditReport>& read, ServiceStoreCompletion completion )
+        { completeLedgerAudit( read._result, read._value, completion ); } );
     }
 
     void EconomyService::completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion )
     {
-        _bAuditPending      = SW_FALSE;
+        _auditJob.finish();
         const bool bRead    = result == ServiceStoreResult::Ok;
         _bLastAuditBalanced = bRead && report.isBalanced() ? SW_TRUE : SW_FALSE;
         if ( bRead == false )
@@ -719,9 +546,9 @@ namespace sw
                     pImbalance->set( static_cast<float64>( asset._held - ( asset._issued - asset._burned ) ) );
             }
         }
-        if ( _bAuditRunHeld == SW_TRUE && _settings._pScheduler != nullptr )
-            _settings._pScheduler->completeRun( _auditRun, bRead );
-        _bAuditRunHeld = SW_FALSE;
+        ScheduledRun run;
+        if ( _auditJob.takeHeldRun( run ) && _settings._pScheduler != nullptr )
+            _settings._pScheduler->completeRun( run, bRead );
     }
 
     void EconomyService::onHostShutdown( OnlineServiceHost& host )
@@ -771,14 +598,21 @@ namespace sw
         _settings._pReceiptRegistry->pollRefunds( listNotice );
         for ( ReceiptRefundNotification& notice : listNotice )
         {
-            ++_pendingRefundCount;
-            _pStore->submit( make_unique<EconomyRefundJob>( this, _settings._pCurrencyCatalog, std::move( notice ), _nowMs ) );
+            const CurrencyCatalog* pCurrencies = _settings._pCurrencyCatalog;
+            const int64            nowMs       = _nowMs.count();
+            _store.submit( [pCurrencies, nowMs, notice = std::move( notice )]( IServiceStoreConnection& connection )
+            {
+                EconomyRefundResult done;
+                done._notice  = notice;
+                done._outcome = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notice, nowMs, done._listChange );
+                return done;
+            }, [this]( const EconomyRefundResult& done, ServiceStoreCompletion completion )
+            { completeRefund( done._notice, done._outcome, done._listChange, completion ); } );
         }
     }
 
     void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
-        --_pendingRefundCount;
         for ( const EconomyBalanceChange& change : listChange )
         {
             notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } );
