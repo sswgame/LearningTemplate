@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Client/DebugHUD/DebugHUD.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"

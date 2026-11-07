@@ -20,7 +20,7 @@
     #include "Core/Path/AbsolutePath.h"
     #include "Core/Subsystem/SubsystemScope.h"
     #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
-    #include "DevTools/DebugHUD/DebugHUD.h"
+    #include "DevTools/Client/DebugHUD/DebugHUD.h"
     #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
 

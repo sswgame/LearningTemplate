@@ -35,6 +35,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Graphics/Shader/Compile/IShaderCookService.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -51,10 +52,6 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/SplashSubsystem.h"
-
-#if defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Renderer/Cook/ShaderCookDriver.h" // 셰이더 쿠킹은 렌더러의 일이다 — 전용 서버는 그 폴더를 짓지 않는다
-#endif
 
 namespace sw
 {
@@ -108,19 +105,14 @@ namespace sw
                 return RHI::getShaderTargetFormat( backend );
             }
 
-#if defined( SW_WITH_CLIENT_CODE )
-            /** @brief 쿠킹 스테이징(@p cookedDir)의 @p format 셰이더 바이너리를 판정하고 문제를 오류로 남깁니다. 문제가 없으면 true 입니다. */
-            static bool verifyShaderTarget( string_view cookedDir, ShaderTargetFormat format )
+            /** @brief 셰이더 쿠킹 창구입니다(렌더러). 렌더러를 짓지 않는 구성(전용 서버)에서 셰이더 작업을 청했으면 오류를 남기고 nullptr 입니다. */
+            static IShaderCookService* requireShaderCookService( const utf8* pTask )
             {
-                vector<string> listProblem;
-                ShaderCookDriver::verifyCookedShaders( cookedDir, format, listProblem );
-                for ( const string& problem : listProblem )
-                {
-                    SW_LOG_ERROR_ID( "Headless.ShaderCookProblem", "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
-                }
-                return listProblem.empty();
+                IShaderCookService* const pService = IShaderCookService::find();
+                if ( pService == nullptr )
+                    SW_LOG_ERROR_ID( "Headless.ShaderCookerNotBuilt", "%#: this build has no shader cooker (the renderer is not built - dedicated server target)", pTask );
+                return pService;
             }
-#endif
 
             /**
              * @brief 팩에 담을 셰이더를 쿠킹 스테이징에 굽고(바뀐 것만 — 내용 해시) 소스와 맞는지 판정합니다. 맞지 않으면 false 입니다.
@@ -129,22 +121,17 @@ namespace sw
              */
             [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, string_view cookedDir )
             {
+                // 셰이더 쿠커는 렌더러에 있다 — 렌더러를 짓지 않는 구성(전용 서버)의 팩에는 셰이더 바이너리가 없어 할 일이 없다.
+                IShaderCookService* const pService = IShaderCookService::find();
+                if ( pService == nullptr )
+                    return true;
                 const ShaderTargetFormat shaderTarget = resolveShaderTarget( commandLine );
-#if defined( SW_WITH_CLIENT_CODE )
-                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir );
-                ShaderCookStamp::invalidateSharedHeaderCache();
-                if ( summary.isClean() == false || verifyShaderTarget( cookedDir, shaderTarget ) == false )
+                if ( pService->cookAllShaders( cookedDir ) == false || pService->verifyCookedShaders( cookedDir, shaderTarget ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.CookedShadersDoNot", "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
                     return false;
                 }
                 return true;
-#else
-                // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않고, 서버 팩에는 셰이더 바이너리가 없다 — 할 일이 없다.
-                (void)shaderTarget;
-                (void)cookedDir;
-                return true;
-#endif
             }
 
             /**
@@ -334,26 +321,19 @@ namespace sw
 #endif
             }
 
-            /** @brief 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 — Server 타깃은 그 폴더를 짓지 않고, 전용 서버는 위에서 거절했다. 작업을 돌렸으면 true 입니다. */
+            /** @brief 셰이더 쿠킹은 렌더러의 일이다(`IShaderCookService`) — 렌더러를 짓지 않는 구성은 쿠커가 없다는 오류로 멈춘다. 작업을 돌렸으면 true 입니다. */
             [[nodiscard]] static bool runCookShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
-#if defined( SW_WITH_CLIENT_CODE )
                 bool bCookShaders = false;
-                if ( commandLine.getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
-                {
-                    inoutState.enterHeadless();
-                    string cookedDir;
-                    commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-                    SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir );
-                    const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir ); // 비면 쿠커가 오류로 멈춘다
-                    inoutState._bFailed             = summary.isClean() == false;
-                    return true;
-                }
-#else
-                (void)commandLine;
-                (void)inoutState;
-#endif
-                return false;
+                if ( commandLine.getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) == false || bCookShaders == false )
+                    return false;
+                inoutState.enterHeadless();
+                string cookedDir;
+                commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir );
+                IShaderCookService* const pService = requireShaderCookService( "--cook-shaders" );
+                inoutState._bFailed                = pService == nullptr || pService->cookAllShaders( cookedDir ) == false; // 비면 쿠커가 오류로 멈춘다
+                return true;
             }
 
             /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleLoadStage)라 게임 · 킷의 타입까지 든다. */
@@ -399,7 +379,6 @@ namespace sw
             /** @brief 셰이더 판정만 — 쿠킹 스테이징(`-cooked-dir`)의 쿠킹 표 모든 백엔드를 본다. 고치지 않는다. 쿠킹과 함께 주어지면 쿠킹이 먼저다. */
             [[nodiscard]] static bool runVerifyShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
-#if defined( SW_WITH_CLIENT_CODE ) // 셰이더 쿠커는 렌더러에 있고 Server 타깃은 그 폴더를 짓지 않는다
                 bool bVerifyShaders = false;
                 commandLine.getArgument( CommandLineArgument::VERIFY_SHADERS, bVerifyShaders );
                 if ( bVerifyShaders == false || isAnyCookRequested( commandLine ) )
@@ -407,20 +386,16 @@ namespace sw
                 inoutState.enterHeadless();
                 string cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-                bool bAllCurrent = true;
+                IShaderCookService* const pService    = requireShaderCookService( "--verify-shaders" );
+                bool                      bAllCurrent = pService != nullptr;
                 for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
                 {
-                    bAllCurrent = verifyShaderTarget( cookedDir, info._shaderTarget ) && bAllCurrent;
+                    bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }
                 if ( bAllCurrent )
                     SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for every backend", cookedDir );
                 inoutState._bFailed = bAllCurrent == false;
                 return true;
-#else
-                (void)commandLine;
-                (void)inoutState;
-                return false;
-#endif
             }
 
             /** @brief 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다. */

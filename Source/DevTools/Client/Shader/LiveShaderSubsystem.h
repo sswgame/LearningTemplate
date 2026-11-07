@@ -1,5 +1,5 @@
 /**
- * @file DevTools/Shader/LiveShaderSubsystem.h
+ * @file DevTools/Client/Shader/LiveShaderSubsystem.h
  * @brief 기동 순서에서 LiveShader 를 맡는 서브시스템입니다. 셰이더 라이브 리로드(개발 도구, Debug 클라이언트만)를 시작합니다. 다른 구성은 자리만 둡니다(순서와 백엔드 교체의
  *        재시작 목록이 구성마다 같습니다).
  * @details `onShaderRecompiled` 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데, 렌더러의 PSO 레이아웃 테이블과 패스 컨텍스트의 1-entry 캐시가 그 실체를

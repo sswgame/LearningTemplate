@@ -237,7 +237,7 @@ namespace sw
             // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
             engine::StartupSetup startupSetup{ _headlessState };
             startupSetup._bDedicatedServer = bDedicatedServer;
-            startupSetup._bRenderer        = true;
+            startupSetup._bRenderer        = bDedicatedServer == false; // 전용 서버 역할은 창 · RHI · 렌더러를 두지 않는다(그 구성은 렌더러를 짓지도 않는다)
             startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
             // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드 · 디버그 HUD)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
             if ( _startupExtension.isBound() )

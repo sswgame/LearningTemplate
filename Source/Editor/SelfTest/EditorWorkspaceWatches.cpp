@@ -13,7 +13,7 @@
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Client/DebugHUD/DebugHUD.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"

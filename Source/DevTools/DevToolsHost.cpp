@@ -11,13 +11,12 @@
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 #include "DevTools/AssetReload/ContentFolderWatchService.h"
 #include "DevTools/Console/DevConsoleHost.h"
+#include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
-#include "DevTools/Shader/LiveShaderSubsystem.h"
-#include "DevTools/Shader/ShaderRecompiler.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"
@@ -28,10 +27,6 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-
-#if defined( SW_WITH_CLIENT_CODE )
-    #include "DevTools/DebugHUD/DebugHUD.h"
-#endif
 
 namespace sw
 {
@@ -89,12 +84,6 @@ namespace sw
         }
         // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
         (void)startup.emplaceSubsystem<SavedRetentionSubsystem>();
-        // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(전용 서버 · 렌더러를 끈 기동은 렌더 쪽이 nullptr).
-        if constexpr ( build::kWithClientCode )
-        {
-            if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
-                (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
-        }
         // 설정 파일 리로드는 서버에도 선다.
         if ( parts._pConfigManager != nullptr )
         {
@@ -109,11 +98,9 @@ namespace sw
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
         if ( parts._pUserSettings != nullptr )
             parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
-        // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( parts._pUISystem != nullptr )
-            (void)startup.emplaceSubsystem<DebugHUD>( *parts._pUISystem, parts._pUserSettings );
-#endif
+        // 클라이언트 전용 부분(셰이더 라이브 리로드 · 디버그 HUD) — 전용 서버는 그 소스를 짓지 않아 창구가 없다.
+        if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
+            pClientPart->addStartupSubsystems( startup, parts );
     }
 
     void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
@@ -126,12 +113,8 @@ namespace sw
             if ( SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>() )
                 pServerPose->update( pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
         InputMap* const pShellMap = engine::getSubsystem<DebugKeyActions>().getInputMap(); // 호스트 루프가 처음 돌리기 전에는 nullptr
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
-            pDebugHUD->update( pShellMap );
-#else
-        (void)pShellMap; // 디버그 HUD 는 런타임 UI 위에 그린다 — 전용 서버는 짓지 않는다
-#endif
+        if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
+            pClientPart->onAfterSceneTick( pShellMap ); // 디버그 HUD(클라이언트 전용)
         // 게임 창 콘솔 — 호스트가 이번 프레임의 디버그 키 액션을 갱신한 뒤다(App 루프가 `beginFrame` 뒤에 갱신한다).
         if ( _pConsole != nullptr )
             _pConsole->update( pShellMap );
@@ -139,22 +122,9 @@ namespace sw
 
     int32 DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
     {
-#if defined( SW_DEBUG )
-        // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 Debug 클라이언트만 — 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
-        if constexpr ( build::kWithClientCode )
-        {
-            LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
-            if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
-            {
-                pRecompiler->update();
-                if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
-                {
-                    pRecompiler->triggerReloadAll();
-                    SW_LOG_INFO_ID( "DevTools.ForceShaderReload", "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
-                }
-            }
-        }
-#endif
+        // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) — 클라이언트 전용 부분이 한다.
+        if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
+            pClientPart->onFrameEnd();
         if ( ConfigReloadSubsystem* const pConfigReload = engine::findSubsystem<ConfigReloadSubsystem>() )
             pConfigReload->update();
         _pContentFolderWatch->update(); // 기능 · 게임이 건 데이터 폴더 감시(외형 데이터 등)

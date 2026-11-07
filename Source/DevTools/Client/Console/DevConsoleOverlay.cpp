@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Console/DevConsoleOverlay.h"
+#include "DevTools/Client/Console/DevConsoleOverlay.h"
 
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"

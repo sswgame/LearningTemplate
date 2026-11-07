@@ -8,16 +8,12 @@
 #include "Core/String/string_splitter.h"
 
 #include "DevTools/Console/DevConsoleController.h"
+#include "DevTools/DevToolsClientPart.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Scene/SceneManager.h"
-
-#if defined( SW_WITH_CLIENT_CODE )
-    #include "DevTools/Console/DevConsoleOverlay.h"
-    #include "Engine/UI/UISystem.h"
-#endif
 
 namespace sw
 {
@@ -49,12 +45,9 @@ namespace sw
         // 에디터가 있으면 입력을 받지 않는다(Output Log 입력 줄이 같은 콘솔이다). 시작 명령만 실행한다.
         if ( bEnableEditor == false && engine::areEngineServicesBound() )
         {
-            unique_ptr<IDevConsoleView> view;
-#if defined( SW_WITH_CLIENT_CODE )
-            // 그리는 쪽은 런타임 UI 오버레이다 — 전용 서버는 UI 를 짓지 않아 그리는 쪽 없이 입력과 시작 명령만 돈다.
-            if ( UISystem* const pUI = engine::findSubsystem<UISystem>() )
-                view = make_unique<DevConsoleOverlay>( *pUI );
-#endif
+            // 그리는 쪽은 런타임 UI 오버레이다(클라이언트 전용 부분) — 전용 서버는 그 소스를 짓지 않아 그리는 쪽 없이 입력과 시작 명령만 돈다.
+            IDevToolsClientPart* const  pClientPart = IDevToolsClientPart::find();
+            unique_ptr<IDevConsoleView> view        = pClientPart != nullptr ? pClientPart->createConsoleView() : nullptr;
             (void)_devConsoleController->initialize( &engine::getSubsystem<InputManager>(), std::move( view ) ); // UI 가 없어도 입력과 시작 명령은 돈다
         }
         _bExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;

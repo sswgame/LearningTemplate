@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
-#include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Client/DebugHUD/DebugHUD.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"

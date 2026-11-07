@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "DevTools/Shader/LiveShaderSubsystem.h"
+#include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 
-#include "DevTools/Shader/ShaderRecompiler.h"
+#include "DevTools/Client/Shader/ShaderRecompiler.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"

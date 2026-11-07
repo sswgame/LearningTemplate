@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Client/DebugHUD/DebugHUD.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
