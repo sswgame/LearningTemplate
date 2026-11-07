@@ -233,10 +233,7 @@ namespace sw::editor
         {
             _pImportJob->cancel();
             EditorAssetImportResult discarded{};
-            while ( _pImportJob->take( discarded ) == EditorTaskPoll::Running )
-            {
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::time::kNanosecondsPerMillisecond );
-            }
+            (void)_pImportJob->waitAndTake( discarded ); // 결과는 버린다 — 끝나는 순간 돌아온다(1 ms 잠자기 폴링을 대신한다)
         }
         _listQueuedImport.clear();
         _listRunningImport.clear();

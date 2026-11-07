@@ -11,21 +11,47 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct EditorBackgroundTaskInternal
+        {
+            /** @brief 잡 하나를 내고 에디터 전체 스테이지(와 있으면 잡 객체의 스테이지)에 넣습니다. 작업 시스템이 없으면 이 스레드에서 바로 돈다. */
+            static void submitJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args, TaskStageHandle* pJobStage )
+            {
+                // 선택 조회(②): 작업 시스템 없이 도는 도구 · 테스트는 호출 스레드에서 바로 실행한다(결과는 같고 비동기만 빠진다).
+                TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
+                if ( pTaskManager == nullptr )
+                {
+                    delegate( args );
+                    return;
+                }
+
+                TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
+                // 스테이지는 에디터 컨텍스트가 만든 상태 저장소에 산다(게임 스레드에서만 낸다). 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 넣지 않는다.
+                if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
+                    pTaskManager->addToStage( pStore->get<EditorBackgroundJob>()._stage, handle, "EditorBackgroundJobs" );
+                if ( pJobStage != nullptr )
+                    pTaskManager->addToStage( *pJobStage, handle, name ); // 제출 전에 넣는다
+                handle.submit();
+            }
+        };
+    } // namespace
+
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
     {
-        // 선택 조회(②): 작업 시스템 없이 도는 도구 · 테스트는 호출 스레드에서 바로 실행한다(결과는 같고 비동기만 빠진다).
-        TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
-        if ( pTaskManager == nullptr )
-        {
-            delegate( args );
-            return;
-        }
+        EditorBackgroundTaskInternal::submitJob( name, delegate, args, nullptr );
+    }
 
-        TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
-        // 스테이지는 에디터 컨텍스트가 만든 상태 저장소에 산다(게임 스레드에서만 낸다). 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 넣지 않는다.
-        if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-            pTaskManager->addToStage( pStore->get<EditorBackgroundJob>()._stage, handle, "EditorBackgroundJobs" );
-        handle.submit();
+    void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args, TaskStageHandle& inoutJobStage )
+    {
+        EditorBackgroundTaskInternal::submitJob( name, delegate, args, &inoutJobStage );
+    }
+
+    void waitEditorBackgroundJob( const TaskStageHandle& jobStage, string_view owner )
+    {
+        TaskManager* pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 제출이 같은 자리에서 돌았다(위) — 기다릴 것이 없다
+        if ( pTaskManager != nullptr )
+            pTaskManager->waitStage( jobStage, owner );
     }
 
     void requestEditorBackgroundStop()

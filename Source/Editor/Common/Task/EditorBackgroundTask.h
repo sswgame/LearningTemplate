@@ -37,6 +37,13 @@ namespace sw::editor
      * @details 작업 시스템은 부르는 스레드(에디터 서비스 범위를 등록한 스레드)에서 찾는다 — 워커 본문은 범위를 찾지 않는다(`findEditorScope`).
      */
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
+    /** @brief 위와 같되 잡을 @p inoutJobStage 에도 넣습니다(잡 객체 하나의 스테이지 — `waitEditorBackgroundJob` 이 그 잡만 기다린다). 게임 스레드에서 부른다. */
+    void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args, TaskStageHandle& inoutJobStage );
+    /**
+     * @brief 잡 객체 하나가 낸 잡이 모두 끝날 때까지 기다립니다(기다리는 동안 다른 태스크를 돕는다). 작업 시스템이 없으면(테스트 — 제출 자리에서 이미 돌았다) 바로 돌아갑니다.
+     * @details 결과를 주기적으로 묻고 잠드는 대기(`take` + 잠자기)를 대신한다 — 끝나는 순간 돌아온다.
+     */
+    void waitEditorBackgroundJob( const TaskStageHandle& jobStage, string_view owner );
     /**
      * @brief 에디터가 낸 모든 잡에게 "종료가 시작됐다"는 협조 신호를 올립니다. 잡 본문(긴 스캔 · 파싱)이 `readStopSignal` 로 받은 신호를 읽고 일찍 끝낸다.
      * @details 종료 경로는 에디터 모듈을 내리기 **앞에서** 엔진 전체 태스크를 기다린다(`GameModuleManager::flushRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
@@ -109,6 +116,16 @@ namespace sw::editor
         }
 
         /**
+         * @brief 낸 잡이 끝날 때까지 기다린 뒤 `take` 합니다. 종료 · 정지처럼 결과가 나야 다음으로 가는 자리가 씁니다 — 프레임 루프는 `take` 로 묻는다.
+         * @details 잡이 결과를 싣지 않고 끝났으면(중단 신호 · 낡은 세대) `Running` 이 그대로 돌아온다 — 다시 기다려도 바뀌지 않으므로 부르는 쪽은 그때 멈춘다.
+         */
+        EditorTaskPoll waitAndTake( TResult& outResult )
+        {
+            waitEditorBackgroundJob( _jobStage, "EditorBackgroundTask::waitAndTake" );
+            return take( outResult );
+        }
+
+        /**
          * @brief 워커가 아직 실행 중이면 true 입니다. 화면 표시용입니다.
          * @details 이 값으로 요청 여부를 정하지 않는다 — 결과를 꺼내는 `take` 와 따로 읽으면 어긋난다. 판단에는 `take` 의 반환값을 쓴다.
          */
@@ -162,6 +179,9 @@ namespace sw::editor
             return _pState->_generation;
         }
 
+        /** @brief 잡을 냅니다(게임 스레드). 이 객체의 스테이지에 넣어 `waitAndTake` 가 이 잡만 기다리게 한다. */
+        void submitJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args ) { submitEditorBackgroundJob( name, delegate, args, _jobStage ); }
+
         /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 입력을 복사하고, 오래된 세대면 false 를 반환합니다. */
         [[nodiscard]] static bool readInput( const shared_ptr<State>& pState, uint32 generation, TInput& outInput )
         {
@@ -205,5 +225,6 @@ namespace sw::editor
 
     protected:
         shared_ptr<State> _pState;
+        TaskStageHandle   _jobStage; ///< 이 객체가 낸 잡(게임 스레드가 `submitJob` 으로 넣는다). 오래 사는 주인이라 한 스테이지를 계속 쓴다
     };
 } // namespace sw::editor

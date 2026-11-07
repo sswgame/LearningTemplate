@@ -144,7 +144,7 @@ namespace sw::editor
         void request( EditorNetPlayStopInput input )
         {
             const uint32 generation = beginRequest( std::move( input ) );
-            submitEditorBackgroundJob( "EditorNetPlayStop", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorNetPlayStopJob::runJob ), MakeTaskArgs( _pState, generation ) );
+            submitJob( "EditorNetPlayStop", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorNetPlayStopJob::runJob ), MakeTaskArgs( _pState, generation ) );
         }
 
         /** @brief 합류와 합치기입니다. 워커 잡과 이 스레드에서 끝까지 기다리는 길(`stopAndWait`)이 같이 쓴다. */
@@ -743,11 +743,12 @@ namespace sw::editor
             if ( _stopPhase == StopPhase::WaitingForExit )
                 ThreadUtil::sleepForMilliseconds( kUpdatePollMilliseconds );
         }
-        while ( _stopPhase == StopPhase::Merging )
+        if ( _stopPhase == StopPhase::Merging )
         {
-            advanceStop( false );
-            if ( _stopPhase == StopPhase::Merging )
-                ThreadUtil::sleepForMilliseconds( kUpdatePollMilliseconds );
+            // 합치기 잡의 완료를 기다린다(돕는다) — 결과를 주기적으로 묻고 잠들지 않는다.
+            EditorNetPlayStopResult result;
+            if ( _pStopJob->waitAndTake( result ) == EditorTaskPoll::Ready )
+                finishStop( result._mergedTracePath );
         }
     }
 

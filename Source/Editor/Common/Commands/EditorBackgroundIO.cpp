@@ -22,9 +22,9 @@ namespace sw::editor
         input._bRecursive = recursive;
 
         const uint32 generation = beginRequest( std::move( input ) );
-        submitEditorBackgroundJob( "EditorFileCollect",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+        submitJob( "EditorFileCollect",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
+                   MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorFileCollectJob::runJob( const TaskArgs& args )
@@ -53,9 +53,9 @@ namespace sw::editor
     void EditorLocalizationLoadJob::request( string_view projectPath )
     {
         const uint32 generation = beginRequest( string( projectPath ) );
-        submitEditorBackgroundJob( "EditorLocalizationLoad",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+        submitJob( "EditorLocalizationLoad",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
+                   MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorLocalizationLoadJob::runJob( const TaskArgs& args )
@@ -86,9 +86,9 @@ namespace sw::editor
     void EditorGameDataScanJob::request()
     {
         const uint32 generation = beginRequest( EditorDataTableCommands::getGameDataFolderPath() );
-        submitEditorBackgroundJob( "EditorGameDataScan",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+        submitJob( "EditorGameDataScan",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
+                   MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorGameDataScanJob::runJob( const TaskArgs& args )
@@ -121,9 +121,9 @@ namespace sw::editor
         const uint32 generation = beginRequest( {} );
         // 경로 상태는 여기(에디터 스레드)서 찾아 넘긴다 — 워커는 에디터 서비스 범위를 읽지 않는다.
         const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>();
-        submitEditorBackgroundJob( "EditorAssetIndex",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetIndexJob::runJob ),
-                                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
+        submitJob( "EditorAssetIndex",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetIndexJob::runJob ),
+                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
     }
 
     void EditorAssetIndexJob::runJob( const TaskArgs& args )
@@ -156,9 +156,9 @@ namespace sw::editor
 
         const uint32            generation  = beginRequest( std::move( input ) );
         const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>(); // 워커는 서비스를 찾지 않는다 — 여기서 넘긴다
-        submitEditorBackgroundJob( "EditorFolderListing",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
-                                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
+        submitJob( "EditorFolderListing",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
+                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
     }
 
     void EditorFolderListingJob::runJob( const TaskArgs& args )
@@ -187,9 +187,9 @@ namespace sw::editor
     {
         const uint32            generation  = beginRequest( {} );
         const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>(); // 워커는 서비스를 찾지 않는다 — 여기서 넘긴다
-        submitEditorBackgroundJob( "EditorResourceCatalog",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
-                                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
+        submitJob( "EditorResourceCatalog",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
+                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
     }
 
     void EditorResourceCatalogJob::runJob( const TaskArgs& args )

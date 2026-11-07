@@ -134,8 +134,8 @@ namespace sw::editor
         void request( EditorReflectionProbeFilterInput input )
         {
             const uint32 generation = beginRequest( std::move( input ) );
-            submitEditorBackgroundJob( "EditorReflectionProbeFilter", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReflectionProbeFilterJob::runJob ),
-                                       MakeTaskArgs( _pState, generation ) );
+            submitJob( "EditorReflectionProbeFilter", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReflectionProbeFilterJob::runJob ),
+                       MakeTaskArgs( _pState, generation ) );
         }
 
     private:

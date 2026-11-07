@@ -25,9 +25,9 @@ namespace sw::editor
         _pCancel           = sw::make_shared<atomic<bool>>( false );
 
         const uint32 generation = beginRequest( std::move( input ) );
-        submitEditorBackgroundJob( "EditorAssetImport",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetImportJob::runJob ),
-                                   MakeTaskArgs( _pState, generation, _pCancel ) );
+        submitJob( "EditorAssetImport",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetImportJob::runJob ),
+                   MakeTaskArgs( _pState, generation, _pCancel ) );
         return true;
     }
 

@@ -372,9 +372,9 @@ namespace sw::editor
     void EditorReferenceIndexJob::request( string_view resourceRoot, TaskManager* pTaskManager )
     {
         const uint32 generation = beginRequest( string{ resourceRoot } );
-        submitEditorBackgroundJob( "EditorReferenceIndex",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
-                                   MakeTaskArgs( _pState, generation, pTaskManager ) );
+        submitJob( "EditorReferenceIndex",
+                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
+                   MakeTaskArgs( _pState, generation, pTaskManager ) );
     }
 
     void EditorReferenceIndexJob::runJob( const TaskArgs& args )
