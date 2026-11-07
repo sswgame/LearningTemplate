@@ -129,11 +129,11 @@ namespace sw
             return true;
         }
 
-        void registerHostImageTypes()
+        void registerHostLibraryTypes()
         {
             const ModuleRegistrarHeads heads = peekGlobalRegistrarHeads();
             setGlobalRegistrarHeads( ModuleRegistrarHeads{} );
-            registerModuleTypes( "Engine", heads ); // 타입 머리 캐시 · 모듈 서브시스템 자리의 이름 — 호스트 이미지는 내리지 않는다
+            registerModuleTypes( "Engine", heads ); // 타입 머리 캐시 · 모듈 서브시스템 자리의 이름 — 호스트 라이브러리는 내리지 않는다
         }
 
         ModuleRegistrarHeads peekGlobalRegistrarHeads()

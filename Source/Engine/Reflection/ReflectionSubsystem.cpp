@@ -18,7 +18,7 @@ namespace sw
 
     SubsystemInitResult ReflectionSubsystem::initializeSubsystem()
     {
-        engine::registerHostImageTypes();
+        engine::registerHostLibraryTypes();
         return bindEnumNames();
     }
 

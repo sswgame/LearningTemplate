@@ -52,10 +52,10 @@ namespace sw
         SW_API void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads );
 
         /**
-         * @brief 기동 때 호스트 이미지(Engine · App · Server · DevTools, 배포는 정적 링크한 모든 모듈)의 등록자를 걷어 올립니다(`ReflectionSubsystem`).
-         * @details 여러 대상의 등록자가 한 이미지에 있어 이름을 대조하지 않는다 — 각자 찍힌 이름으로 오르고, 호스트 이미지는 내리지 않는다.
+         * @brief 기동 때 호스트에 링크된 라이브러리(Engine · App · Server · DevTools, 배포는 정적 링크한 모든 모듈)의 등록자를 걷어 올립니다(`ReflectionSubsystem`).
+         * @details 여러 대상의 등록자가 한 이미지에 있어 이름을 대조하지 않는다 — 각자 찍힌 이름으로 오르고, 호스트 라이브러리는 내리지 않는다.
          */
-        SW_API void registerHostImageTypes();
+        SW_API void registerHostLibraryTypes();
 
         /**
          * @brief enum 전역 변수가 열거자 이름(`-gv_rhiBackend=Vulkan`)을 받도록 리플렉션 enum 표를 파서로 겁니다. 엔진 타입을 등록한 뒤 부릅니다.
