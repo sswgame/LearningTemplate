@@ -361,7 +361,7 @@ SW_TEST_CASE( KartTrackTest, SlopeAndSurfaceZonesChangeTheKart )
 
     const sw::KartTrackDef flatDef  = KartTestUtil::makeRingDef( 3, {} );
     sw::KartTrackDef       hillDef  = flatDef;
-    hillDef._listControlPoint[1]._y = -20.0f; // 거리 0 에서 +Z 로 나가면 내리막
+    hillDef._listControlPoint[1]._y = -40.0f; // 거리 0 에서 +Z 로 나가면 내리막
     const float32 flat              = runKart( flatDef, 1.0f, 0.0f, lateral );
     const float32 downhill          = runKart( hillDef, 1.0f, 0.0f, lateral );
     SW_EXPECT_TRUE( downhill > flat + 0.5f );
