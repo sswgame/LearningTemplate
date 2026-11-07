@@ -137,6 +137,9 @@ namespace sw
         int64 _score{ 0 }; ///< 적용한 뒤의 값이다
         PROPERTY()
         LeaderboardResult _result{ LeaderboardResult::Ok }; ///< `UnknownBoard` · `NotAllowed` · `NotRanked`(기간 밖)
+
+        /** @brief 다시 시도할 업무 결과가 없다 — 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다. */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 
     /** @brief 달성한 업적(`GetAchievements`)의 응답입니다. */

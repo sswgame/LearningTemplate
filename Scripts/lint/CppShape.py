@@ -42,6 +42,7 @@ from lint.Parallel import flatMapInProcesses  # noqa: E402
 kSkipFolders = ("ThirdParty", "Generated", ".gen.")
 kBoolFlagExempt = "NOLINT(sw-bool-flag)"
 kOnlineKitFolder = "Source/GameFramework/Kits/Feature/Online/"
+kOnlineCoreFolder = "Source/GameFramework/Kits/Feature/Online/OnlineCore/"  # 프로토콜 표의 기반(OnlineProtocolService)이 사는 곳 — 기반은 인터페이스를 잇는다
 kOnlineInterfacePattern = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)\b")
 kAccessKeywords = ("public", "protected", "private")
 
@@ -452,7 +453,7 @@ def checkHandDepletion(code: str, relative: str) -> list[tuple[int, str]]:
 def checkOnlineProtocolTable(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
     """온라인 키트의 서버 · 클라이언트는 프로토콜 표로 선다 — 손 switch 와 메서드마다 다른 지표 · 보존이 되돌아오지 않게 한다."""
     normalized = relative.replace("\\", "/")
-    if normalized.startswith(kOnlineKitFolder) is False or "/Tests/" in normalized:
+    if normalized.startswith(kOnlineKitFolder) is False or normalized.startswith(kOnlineCoreFolder) or "/Tests/" in normalized:
         return []
     del raw
     listProblem: list[tuple[int, str]] = []

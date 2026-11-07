@@ -1,11 +1,12 @@
 #include "pch.h"
 
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
-#include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 // JSONWebTokenTest — 신뢰 경계: 서명 · 클레임(iss · aud · exp) 확인을 통과해야 본문을 읽는다. 바꾼 본문 · 다른 키 · 지난 토큰 · 알고리즘 none 을 거절하는지 본다(nogpu).
 
@@ -70,9 +71,9 @@ namespace
  */
 SW_TEST_CASE( JSONWebTokenTest, AcceptsAValidToken )
 {
-    sw::OpenSSLNetSecurityProvider provider;
-    const SigningKey               key     = makeKey( provider );
-    const sw::string               compact = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );
+    sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
+    const SigningKey          key      = makeKey( provider );
+    const sw::string          compact  = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );
 
     const std::optional<sw::JWTVerified> verified = verifyIDToken( provider, compact, key._publicKey );
     SW_REQUIRE_TRUE( verified.has_value() );
@@ -87,10 +88,10 @@ SW_TEST_CASE( JSONWebTokenTest, AcceptsAValidToken )
  */
 SW_TEST_CASE( JSONWebTokenTest, RejectsForgedOrStaleTokens )
 {
-    sw::OpenSSLNetSecurityProvider provider;
-    const SigningKey               key   = makeKey( provider );
-    const SigningKey               other = makeKey( provider );
-    const sw::string               valid = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );
+    sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
+    const SigningKey          key      = makeKey( provider );
+    const SigningKey          other    = makeKey( provider );
+    const sw::string          valid    = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );
 
     SW_EXPECT_FALSE( verifyIDToken( provider, valid, other._publicKey ).has_value() );
 

@@ -227,6 +227,9 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE };
         uint8 _bRevokeSessions{ SW_FALSE }; ///< 서버 안에서만 쓴다. 정지나 영구 정지가 걸렸다는 뜻이며 `PROPERTY` 가 아니어서 와이어에 싣지 않는다
+
+        /** @brief 다시 시도할 업무 결과가 없다 — 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다. */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 } // namespace sw
 

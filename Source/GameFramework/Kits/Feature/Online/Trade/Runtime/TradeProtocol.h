@@ -143,6 +143,9 @@ namespace sw
         vector<TradeBalance> _listBalance{}; ///< 상한은 양쪽 항목 수(`TradeConstant::kMaxLegsPerSide` 의 두 배)이다
         PROPERTY()
         TradeResult _result{ TradeResult::Ok };
+
+        /** @brief 다시 시도할 업무 결과가 없다 — 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다. */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 
     /** @brief 거래 알림(초대 · 바뀜 · 닫힘)의 본문입니다. 스냅샷과, 정산이면 이 계정의 이동 뒤 잔액입니다. 알림에는 결과가 없다. */

@@ -166,6 +166,9 @@ namespace sw
         AccountID _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
         PROPERTY()
         SocialResult _result{ SocialResult::Ok };
+
+        /** @brief 다시 시도할 업무 결과가 없다 — 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다. */
+        [[nodiscard]] bool isRetryable() const { return false; }
     };
 
     /** @brief 관계 목록(`ListLinks`)의 응답입니다. */

@@ -126,12 +126,8 @@ namespace sw
         /** @brief 아직 응답을 기다리는 @p callID 의 메서드 번호(0부터, 열거자 순서)입니다. 없으면 -1 이고 로그를 남기지 않습니다. */
         [[nodiscard]] int32 findMethodIndex( uint64 callID ) const
         {
-            for ( const Call& call : _listCall )
-            {
-                if ( call._callID == callID )
-                    return call._methodIndex;
-            }
-            return -1;
+            const auto found = _mapCall.find( callID );
+            return found != _mapCall.end() ? found->second._methodIndex : -1;
         }
 
         /** @brief 기다리는 호출 수를 지표 `service_store_pending` 에 씁니다. 서비스가 틱마다 부릅니다. */
@@ -165,6 +161,24 @@ namespace sw
 
     private:
         unordered_map<uint64, Call> _mapCall{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 서비스 @p TService 에 `fillReply( TReply&, TCompletion& )` 가 있는지입니다. 클래스 밖에 두어 파생이 완성된 뒤(호출 자리)에 평가된다. */
+    struct OnlineFillReplyTraits
+    {
+        template <typename TService, typename TReply, typename TCompletion, typename = void>
+        struct HasFillReply : std::false_type
+        {
+        };
+
+        template <typename TService, typename TReply, typename TCompletion>
+        struct HasFillReply<TService, TReply, TCompletion, std::void_t<decltype( std::declval<TService&>().fillReply( std::declval<TReply&>(), std::declval<TCompletion&>() ) )>>
+            : std::true_type
+        {
+        };
     };
 } // namespace sw
 
@@ -354,17 +368,6 @@ namespace sw
             }
         };
 
-        /** @brief 파생에 `fillReply( TReply&, TCompletion& )` 가 있는지입니다. */
-        template <typename TReply, typename TCompletion, typename = void>
-        struct HasFillReply : std::false_type
-        {
-        };
-
-        template <typename TReply, typename TCompletion>
-        struct HasFillReply<TReply, TCompletion, std::void_t<decltype( std::declval<TService&>().fillReply( std::declval<TReply&>(), std::declval<TCompletion&>() ) )>> : std::true_type
-        {
-        };
-
         template <typename TCompletion>
         struct CompletionVisitor
         {
@@ -377,7 +380,8 @@ namespace sw
             void visit()
             {
                 using Reply = typename TMethod::Reply;
-                if constexpr ( HasFillReply<Reply, TCompletion>::value )
+                // 파생에 이 응답의 `fillReply` 가 있는지는 여기(파생이 완성된 뒤)에서 본다 — 클래스 본문 안의 특성은 미완성 파생을 들여다봤다
+                if constexpr ( OnlineFillReplyTraits::HasFillReply<TService, Reply, TCompletion>::value )
                 {
                     Reply reply{};
                     static_cast<TService&>( _service ).fillReply( reply, _completion );
