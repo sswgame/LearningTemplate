@@ -1,6 +1,10 @@
 <!-- KayKit 스켈레톤 리그(41 뼈)의 몸 영역 — 본 가중치로 정한다(칠한 정점 그룹이 없다). 절단(DismembermentComponent)이 잘라 낼 영역 이름을 이 표에서 고르고,
      표면 상태(피)가 영역마다 값을 든다. 앞 줄이 먼저 맞으므로 손 · 발 같은 끝 영역을 팔 · 다리 앞에 두지 않고 한 덩어리로 묶었다. -->
+<!-- 외형의 몸 피팅 표이기도 하다(itemvisuals.xml 의 body_skeleton_* fitTables) — 외형 표면 상태의 영역이 이 표의 순서라 절단의 피가 그 영역에 오른다.
+     해골 장비는 피팅 데이터가 없어(소켓 · 같은 리그) 몸 하나만 Body 겹이다 — 겹 · 프로필은 몸 피팅 데이터(skeleton_body.partfit.xml)가 고르는 것만 둔다. -->
 <FitTables>
+    <Layer name="Body" order="0"/>
+    <Profile name="Skin" rigidity="0" coverageDistance="0.02"/>
     <Region name="Head" bones="head" minWeight="0.5"/>
     <Region name="Arm_L" bones="upperarm.l lowerarm.l wrist.l hand.l handslot.l" minWeight="0.5"/>
     <Region name="Arm_R" bones="upperarm.r lowerarm.r wrist.r hand.r handslot.r" minWeight="0.5"/>

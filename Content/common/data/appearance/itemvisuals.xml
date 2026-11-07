@@ -25,7 +25,8 @@
   </ItemVisual>
   <ItemVisual id="body_skeleton_minion">
     <Part name="Body" kind="Skinned" mesh="common/models/kaykit/skeleton_minion.mesh" skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
-          material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
+          material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"
+          fitTables="common/characters/skeleton_warrior/skeleton_warrior.fit.xml" fit="common/characters/skeleton_warrior/skeleton_body.partfit.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_warrior" _base="body_skeleton_minion">
     <Part name="Body" mesh="common/models/kaykit/skeleton_warrior.mesh" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"/>

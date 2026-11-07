@@ -879,6 +879,7 @@
 					<FarmGameModeComponent _componentName="FarmGameModeComponent"
 					                       _bActive="true"
 					                       _cropDataPath="game/harvestvalley/data/crops.xml"
+					                       _weatherPath="game/harvestvalley/data/farm.weather.xml"
 					                       _soilPrefab="game/harvestvalley/prefabs/farmsoil.prefab.xml"
 					                       _cropPrefab="game/harvestvalley/prefabs/farmcrop.prefab.xml"
 					                       _grassSoilColor="0.4,0.62,0.28,1"

@@ -13,7 +13,6 @@
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
-#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -25,6 +24,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 namespace sw
 {
@@ -280,7 +280,13 @@ namespace sw
                     outValue.setText( "no such body region" );
                     return false;
                 }
-                outValue.setNumber( static_cast<float64>( pFound->getSurfaceState().getRegionValue( static_cast<uint32>( regionIndex ), pFound->getBloodChannel() ) ) );
+                const CharacterSurfaceState* pSurface = pFound->findSurfaceState();
+                if ( pSurface == nullptr )
+                {
+                    outValue.setText( "no appearance surface state" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pSurface->getRegionValue( static_cast<uint32>( regionIndex ), pFound->getBloodChannel() ) ) );
                 return true;
             }
         };
@@ -302,7 +308,6 @@ namespace sw
         , _bloodChannel{ "Blood" }
         , _pieceMass{ 4.0f }
         , _pRegionTable{}
-        , _surfaceState{}
         , _listSeveredRegion{}
         , _listPiece{}
         , _bTableLoaded{ false }
@@ -363,22 +368,14 @@ namespace sw
                 SW_LOG_ERROR_ID( "Dismemberment.SeverableRegionNot", "'%#': severable region '%#' is not in '%#'", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", region.c_str(),
                                  _regionTablePath.c_str() );
         }
-        const EngineDefaultAssets* pDefaultAssets = game::findSubsystem<EngineDefaultAssets>();
-        if ( pDefaultAssets == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Dismemberment.DismembermentNeedsEngineDefault", "Dismemberment needs the engine default assets for its surface channels - dismemberment stays off" );
-            return;
-        }
-        const string&                               channelsPath = pDefaultAssets->_defaultSurfaceChannels.get();
-        const shared_ptr<const SurfaceChannelTable> pChannels    = SharedAssetCache<SurfaceChannelTable>::acquire( channelsPath );
-        if ( pChannels == nullptr )
-        {
-            // 채널 없는 표면 상태로 자르면 상처 · 피가 조용히 빠진다 — 표를 읽지 않은 것으로 두고 멈춘다.
-            SW_LOG_ERROR_ID( "Dismemberment.DefaultSurfaceChannelsCould", "Default surface channels '%#' could not be loaded - dismemberment stays off", channelsPath.c_str() );
-            return;
-        }
-        _surfaceState.initialize( *pChannels, static_cast<uint32>( _pRegionTable->getRegions().size() ), 0 );
         _bTableLoaded = true;
+    }
+
+    const CharacterSurfaceState* DismembermentComponent::findSurfaceState() const
+    {
+        const GameObject*                   pOwner      = getOwner();
+        const CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
+        return pAppearance != nullptr && pAppearance->hasSurfaceState() ? &pAppearance->getSurfaceState() : nullptr;
     }
 
     const vector<BodyRegionDef>& DismembermentComponent::getRegions() const
@@ -496,8 +493,15 @@ namespace sw
         if ( pRagdoll != nullptr )
             pRagdoll->detachBoneBodies( getRegions()[static_cast<size_t>( regionIndex )]._listBone );
 
-        // 5) 표면 상태: 잘린 영역에 피를 올린다.
-        (void)_surfaceState.setRegionValue( static_cast<uint32>( regionIndex ), _bloodChannel, 1.0f );
+        // 5) 표면 상태: 잘린 영역에 피를 올린다 — 외형의 한 벌에(그래야 머티리얼로 올라간다). 외형 영역은 몸 피팅 표 순서라 절단 표와 같은 표여야 한다.
+        CharacterAppearanceComponent* pAppearance = pOwner->getComponent<CharacterAppearanceComponent>();
+        CharacterSurfaceState*        pSurface    = pAppearance != nullptr && pAppearance->hasSurfaceState() ? &pAppearance->getSurfaceState() : nullptr;
+        if ( pSurface == nullptr || pSurface->getRegionCount() != static_cast<uint32>( getRegions().size() ) )
+            SW_LOG_ERROR_ID( "Dismemberment.AppearanceSurfaceMissing",
+                             "'%#': no appearance surface state with the %# regions of '%#' - give the appearance _surfaceChannelsPath and the body the same fitTables (the blood of '%#' is not shown)",
+                             pOwner->getName().c_str(), static_cast<uint32>( getRegions().size() ), _regionTablePath.c_str(), region.c_str() );
+        else
+            (void)pSurface->setRegionValue( static_cast<uint32>( regionIndex ), _bloodChannel, 1.0f );
         _listSeveredRegion.push_back( region );
         return true;
     }

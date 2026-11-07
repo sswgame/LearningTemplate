@@ -44,7 +44,15 @@ namespace sw
         struct FarmGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCcUtil::make( "FARM" );
-            static constexpr uint32 kStateVersion = 3;
+            static constexpr uint32 kStateVersion = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
+
+            /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
+            static constexpr const utf8* kWetnessValue     = "wetness";
+            static constexpr float32     kRainingWetness   = 0.5f;
+            static constexpr float32     kGameSecondsInDay = 86400.0f; ///< 판 상태 날씨의 시간 단위(하루 = 86400 게임 초, `SessionStateComponent::update`)
+
+            /** @brief 판 상태의 지금 날씨가 비인지입니다. 날씨가 없는 판이면 false 다(시작이 카탈로그를 요구하므로 없을 수 없다). */
+            static bool isRaining( const SessionStateComponent& state ) { return state.getWeather().computeValue( hashed_string( kWetnessValue ) ) >= kRainingWetness; }
 
             /** @brief 폰 버튼 이름입니다. `FarmButton` 순서이며 입력 맵 묶음의 액션 이름과 같습니다. */
             static constexpr const utf8* kArrButtonName[] = { "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
@@ -101,6 +109,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &FarmGameModeComponent::getTool );
     SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmGameModeComponent, &readTilledCount );
     SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmGameModeComponent, &readCropCount );
+    SW_AUTOMATION_GETTER_WATCH( farmRaining, "Farm.Raining", "1 while the shared session weather is rain (its wetness is half or more)", FarmGameModeComponent, &FarmGameModeComponent::isRaining );
     SW_AUTOMATION_GETTER_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", FarmGameModeComponent, &FarmGameModeComponent::isFarmerDrivenByAI );
 } // namespace sw
 
@@ -123,7 +132,7 @@ namespace sw
         , _walkSpeed{ 4.0f }
         , _reach{ 0.9f }
         , _nearDistance{ 1.7f }
-        , _rainChance{ 0.25f }
+        , _weatherPath{}
         , _cameraFollow{ 0.4f }
         , _maxStamina{ 100 }
         , _startingGold{ 500 }
@@ -139,6 +148,7 @@ namespace sw
         , _listCropModel{}
         , _listDefaultGrowingModel{}
         , _pCropCatalog{}
+        , _pWeatherCatalog{}
         , _itemCatalog{}
         , _field{}
         , _shipment{}
@@ -153,7 +163,6 @@ namespace sw
         , _facing{ 0.0f, 0.0f, 1.0f }
         , _shippingBinPosition{}
         , _shopPosition{}
-        , _random{ 0x2545f491u }
         , _autoFarmerObject{}
         , _stamina{ _maxStamina }
         , _selectedSeedIndex{ 0 }
@@ -197,6 +206,7 @@ namespace sw
         {
             const WorldClock& clock = pState->getClock();
             _hourOfDay              = clock.getHour();
+            _bRaining               = FarmGameModeComponentInternal::isRaining( *pState ) ? SW_TRUE : SW_FALSE; // 뷰가 읽는 사본 — 날씨는 판 상태가 흘린다
             const bool bPassedOut   = _dayStarted < clock.getDay() && _passOutHour <= clock.getHour();
             if ( bPassedOut )
             {
@@ -210,8 +220,7 @@ namespace sw
 
     void FarmGameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
     {
-        GameModeComponent::foldStateHash( inoutBuilder );
-        inoutBuilder.addUint32( _random.getState() );
+        GameModeComponent::foldStateHash( inoutBuilder ); // 날씨 난수는 판 상태(`SessionStateComponent` 의 날씨)가 쥐고 싣는다
     }
 
     void FarmGameModeComponent::serializeState( StateIO& io )
@@ -231,21 +240,18 @@ namespace sw
         { bodyIO.value( field ); } );
         io.section( FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, [&shipment]( StateIO& bodyIO )
         { bodyIO.value( shipment ); } );
-        GameRandom random            = _random;
-        float3     playerPosition    = _playerPosition;
-        float3     facing            = _facing;
-        int32      stamina           = _stamina;
-        int32      selectedSeedIndex = _selectedSeedIndex;
-        FarmTool   tool              = _tool;
-        uint8      bRaining          = static_cast<uint8>( _bRaining );
-        int32      dayStarted        = _dayStarted;
-        io.value( random );
+        // 날씨(난수 · 지금 날씨)는 판 상태가 싣는다 — 판 4 부터 이 칸에 비 · 난수가 없다.
+        float3   playerPosition    = _playerPosition;
+        float3   facing            = _facing;
+        int32    stamina           = _stamina;
+        int32    selectedSeedIndex = _selectedSeedIndex;
+        FarmTool tool              = _tool;
+        int32    dayStarted        = _dayStarted;
         io.value( playerPosition );
         io.value( facing );
         io.value( stamina );
         io.value( selectedSeedIndex );
         io.enumValue( tool, FarmTool::Hand );
-        io.value( bRaining );
         io.value( dayStarted );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
@@ -253,13 +259,11 @@ namespace sw
         _field             = std::move( restoredField );
         _shipment          = std::move( restoredShipment );
         _dayStarted        = dayStarted;
-        _random            = random;
         _playerPosition    = playerPosition;
         _facing            = facing;
         _stamina           = MathUtil::clamp( stamina, 0, _maxStamina );
         _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
         _tool              = tool;
-        _bRaining          = bRaining != SW_FALSE ? SW_TRUE : SW_FALSE;
     }
 
     void FarmGameModeComponent::onStateRestored( bool bRestored )
@@ -335,6 +339,8 @@ namespace sw
     bool FarmGameModeComponent::startGame()
     {
         // 작물이 적을 수 있는 계절은 작물 파일의 루트(`seasons`)가 정한다 — 공유 캐시가 읽으므로 읽기 전에 알려 줄 자리가 없다.
+        if ( acquireRequired( _weatherPath, _pWeatherCatalog ) == false )
+            return false;
         if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false )
             return false;
         if ( _pCropCatalog->getCrops().empty() )
@@ -371,6 +377,7 @@ namespace sw
         settings._clock._daysPerSeason    = _daysPerSeason;
         settings._pItemCatalog            = &_itemCatalog;
         settings._inventorySlotCount      = kBagSlotCount;
+        settings._pWeatherCatalog         = _pWeatherCatalog.get(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
         SessionStateInitResult initResult = SessionStateInitResult::Refused;
         SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, settings, initResult );
         if ( pState == nullptr )
@@ -736,12 +743,16 @@ namespace sw
         WorldClock&                  clock        = pState->getClock();
         [[maybe_unused]] const int64 earned       = _shipment.settleShipping( *_pCropCatalog, pState->getWallet() );
         const hashed_string          seasonBefore = clock.getSeasonName();
+        const float32                hoursBefore  = static_cast<float32>( clock.getDay() ) * 24.0f + clock.getHour();
         clock.advanceToHour( _wakeHour ); // 수면. 다음 날 아침이 된다.
         _dayStarted                               = clock.getDay();
         _hourOfDay                                = clock.getHour();
         [[maybe_unused]] const bool bSeasonChange = clock.getSeasonName() != seasonBefore;
-        const bool                  bRaining      = clock.getSeasonName() != hashed_string( "Winter" ) && _random.nextChance( _rainChance );
-        _bRaining                                 = bRaining ? SW_TRUE : SW_FALSE;
+        // 잠은 시계를 건너뛴다 — 판 상태 날씨도 같은 시간만큼 흘린다(틱으로는 흐르지 않은 몫). 오늘 비는 그 날씨가 정한다(계절 가중치는 카탈로그 데이터).
+        const float32 sleptHours = static_cast<float32>( clock.getDay() ) * 24.0f + clock.getHour() - hoursBefore;
+        (void)pState->getWeather().update( sleptHours * FarmGameModeComponentInternal::kGameSecondsInDay / 24.0f, clock.getSeasonName() );
+        const bool bRaining = FarmGameModeComponentInternal::isRaining( *pState );
+        _bRaining           = bRaining ? SW_TRUE : SW_FALSE;
         _field.advanceDay( clock.getSeasonName(), bRaining );
         _stamina        = bPassedOut ? _maxStamina / 2 : _maxStamina;
         _playerPosition = _playerStart;

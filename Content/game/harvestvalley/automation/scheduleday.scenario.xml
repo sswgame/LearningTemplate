@@ -11,6 +11,8 @@
 	<Variable name="gv_farmAutoPlay" value="0"/>
 	<Variable name="gv_timeScale" value="16"/>
 	<WaitUntil watch="Object.Exists" target="Villager.pierre" equals="1" timeoutFrames="60"/>
+	<!-- 0 일은 맑음으로 고정한다(비는 판 상태 날씨가 씨앗으로 고른다 — 비 오는 날은 pierre 의 저녁이 집이다) -->
+	<DevCommand line="cheat.weather sunny 200000"/>
 	<Expect watch="Clock.Day" equals="0"/>
 	<Expect watch="Schedule.Activity" target="pierre" is="Sleep"/>
 	<!-- 블록 경계는 시간이 흘러 지난다 — 조건이 설 때까지 기다린다(9:00 은 약 68 프레임, 17:00 은 약 248 프레임 뒤). -->

@@ -108,8 +108,6 @@ namespace sw
         PROPERTY( Required )
         DataPath _defaultSocketKinds; ///< 소켓 종류 표(`SocketKindTable`) — 소켓 세트가 종류 이름을 검사한다
         PROPERTY( Required )
-        DataPath _defaultSurfaceChannels; ///< 절단면 채널 표(`DismembermentComponent`)
-        PROPERTY( Required )
         DataPath _surfaceKinds; ///< 표면 종류 표(`SurfaceKindTable`) — 발소리 분류 · 이동 계수 · 발자국. 이름은 물리 재질 이름과 같다
         PROPERTY( Required )
         DataPath _animationCrowdSettings; ///< 애니메이션 군중 설정 표(`AnimationSystem`, `AnimationCrowdSettings`)

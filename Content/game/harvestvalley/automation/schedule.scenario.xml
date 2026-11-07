@@ -9,6 +9,10 @@
 	<Variable name="gv_farmAutoPlay" value="0"/>
 	<!-- 6 시 — 모두 집에서 잔다. 몸은 집 위치(pierre_house 22,0,2)에 서 있다. -->
 	<WaitUntil watch="Object.Exists" target="Villager.pierre" equals="1" timeoutFrames="60"/>
+	<!-- 0 일은 맑음으로 고정한다 — 비는 판 상태 날씨(farm.weather.xml)가 씨앗으로 고르고, 비 오는 날은 pierre 의 저녁이 집(rain_indoors)이다 -->
+	<DevCommand line="cheat.weather sunny 200000"/>
+	<Wait frames="1"/>
+	<Expect watch="Farm.Raining" equals="0"/>
 	<Expect watch="Clock.Day" equals="0"/>
 	<Expect watch="Schedule.Activity" target="pierre" is="Sleep"/>
 	<Expect watch="Schedule.Activity" target="harvey" is="Sleep"/>
@@ -48,5 +52,8 @@
 	<Record watch="Schedule.MinuteOfDay"/>
 	<Record watch="Object.X" target="Villager.pierre"/>
 	<Record watch="Object.Z" target="Villager.pierre"/>
+	<!-- 비: 판 상태 날씨를 비로 바꾸면 농장 디렉터 · 마을 일정이 같은 값을 읽는다(농장의 비 판정은 따로 굴리지 않는다) -->
+	<DevCommand line="cheat.weather rain 200000"/>
+	<WaitUntil watch="Farm.Raining" equals="1" timeoutFrames="5"/>
 	<Pass/>
 </Scenario>

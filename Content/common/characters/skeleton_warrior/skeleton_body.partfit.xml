@@ -1,0 +1,2 @@
+<!-- KayKit 해골 몸의 피팅 데이터 — 가장 안쪽 겹(Body)이다. 해골 장비는 피팅하지 않으므로 몸을 깎지 않는다. 몸 피팅 표(skeleton_warrior.fit.xml)의 영역이 외형 표면 상태의 영역이 된다. -->
+<PartFit layer="Body" profile="Skin"/>

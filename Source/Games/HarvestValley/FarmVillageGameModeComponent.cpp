@@ -18,7 +18,6 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
-#include "Games/HarvestValley/FarmGameModeComponent.h"
 #include "Games/HarvestValley/FarmVillagerComponent.h"
 
 namespace sw
@@ -218,9 +217,8 @@ namespace sw
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
-        // 농장 디렉터는 같은 오브젝트의 앞 컴포넌트라 이번 틱의 날씨를 이미 정했다.
-        const FarmGameModeComponent* pFarm = getOwner()->getComponent<FarmGameModeComponent>();
-        _schedule.setWeather( hashed_string( pFarm != nullptr && pFarm->isRaining() ? "rain" : "sunny" ) );
+        // 일정의 날씨는 판 상태 날씨의 id 다(farm.weather.xml 의 sunny · rain — 일정 달력 villagers.schedules.xml 의 weathers 와 같은 이름).
+        _schedule.setWeather( pState->getWeather().getCurrent() );
         const WorldClock& clock = pState->getClock();
         _schedule.update( clock );
         // 일정의 걸음(게임 분당 거리)을 실제 초당 거리로 — 시계가 빨라지면(빨리 감기) 몸도 그만큼 빨리 걷는다.

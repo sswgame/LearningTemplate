@@ -7,7 +7,9 @@
  *          2. 잘린 삼각형은 유닛 메시에서 빼고(남은 삼각형은 원래 정점 그대로이므로 UV 이음매가 유지된다) 남은 몸 캡을 스킨 정점으로 붙인다(보임 마스크 경로).
  *          3. 떨어진 조각(삼각형과 조각 캡)은 현재 포즈로 CPU 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질을 셰이프로 한 동적 강체 오브젝트로 띄운다
  *             (같은 머티리얼, 레이어 `_pieceLayer`, 충격량 = 맞음 방향 × 충격량). 래그돌이 있으면 그 영역 뼈의 바디는 끈다(보이지 않는 바디가 남지 않게 하려는 것이다).
- *          4. 표면 상태(`CharacterSurfaceState`, 엔진 기본 채널 테이블)의 그 영역에서 `_bloodChannel` 을 1 로 설정한다.
+ *          4. 같은 오브젝트 외형(`CharacterAppearanceComponent`)의 표면 상태 — 머티리얼로 올라가는 그 한 벌 — 의 그 영역에서 `_bloodChannel` 을 1 로 설정한다.
+ *             절단이 따로 표면 상태를 갖지 않는다(예전에는 아무 머티리얼에도 올라가지 않는 사본에 피를 적었다). 외형의 영역은 몸의 피팅 표 순서이므로
+ *             `_regionTablePath` 와 같은 표여야 하고, 외형에 표면 상태가 없거나 영역 수가 다르면 오류로 알린다(데이터를 채운다 — 폴백 없음).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -20,7 +22,6 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/Fit/FitTables.h"
-#include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -29,6 +30,7 @@
 
 namespace sw
 {
+    class CharacterSurfaceState;
     class ValidationContext;
 } // namespace sw
 
@@ -69,8 +71,8 @@ namespace sw
         const vector<hashed_string>& getSeveredRegions() const { return _listSeveredRegion; }
         /** @brief 띄운 조각 오브젝트들입니다(자른 순서). 이 컴포넌트가 끝날 때 함께 지운다. */
         const vector<GameObjectHandle>& getPieces() const { return _listPiece; }
-        /** @brief 표면 상태(영역 × 채널)를 반환합니다. 머티리얼 파라미터가 읽는 값입니다. */
-        const CharacterSurfaceState& getSurfaceState() const { return _surfaceState; }
+        /** @brief 피를 올리는 표면 상태 — 같은 오브젝트 외형의 것입니다. 외형이 없거나 표면 상태가 꺼져 있으면 nullptr 입니다. */
+        const CharacterSurfaceState* findSurfaceState() const;
         /** @brief 잘린 영역에 올리는 표면 채널 이름입니다. */
         const hashed_string& getBloodChannel() const { return _bloodChannel; }
         /** @brief 이름의 영역 번호를 반환합니다(테이블 순서). 없으면 -1 입니다. */
@@ -101,7 +103,6 @@ namespace sw
         float32 _pieceMass;
 
         shared_ptr<const FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
-        CharacterSurfaceState       _surfaceState;
         vector<hashed_string>       _listSeveredRegion;
         vector<GameObjectHandle>    _listPiece;
         bool                        _bTableLoaded;

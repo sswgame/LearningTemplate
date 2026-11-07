@@ -36,7 +36,6 @@
                      _uiResolutionPresets="engine/settings/uiresolutions.xml"
                      _netEmulationPresets="engine/settings/netemulation.presets.xml"
                      _defaultSocketKinds="engine/character/default.socketkinds.xml"
-                     _defaultSurfaceChannels="engine/character/default.surfacechannels.xml"
                      _surfaceKinds="engine/environment/default.surfacekinds.xml"
                      _animationCrowdSettings="engine/animation/animationcrowd.xml"
                      _animationLODSettings="engine/animation/animationlod.xml"

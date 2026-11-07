@@ -22,7 +22,7 @@
 			</DismembermentComponent>
 		</Add>
 		<Override key="CharacterAppearanceComponent#0">
-			<CharacterAppearanceComponent _presetID="SkeletonMinion" _bMergeParts="true" />
+			<CharacterAppearanceComponent _presetID="SkeletonMinion" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
 		</Override>
 		<Override key="WidgetComponent#0">
 			<WidgetComponent _worldOffset="0,2.45,0" />

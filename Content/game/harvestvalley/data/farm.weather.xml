@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HarvestValley 판 상태 날씨(SessionStateComponent 의 WeatherSystem) — 농장 디렉터(FarmGameModeComponent)가 wetness 가 반 이상이면 비로 본다:
+     아침에 밭에 물을 준다(FarmField::advanceDay), 마을 일정(FarmVillage)과 하늘(readDaylight)이 같은 값을 읽는다.
+     날씨는 하루(86400 게임 초) 동안 이어진다. 겨울에는 비가 오지 않는다(계절 가중치에 Winter 가 없다). 비 · 맑음 무게는 예전 비 확률 25 % 와 같다(1 : 3). -->
+<WeatherCatalog transition="600">
+	<Weather id="sunny" weight="3" minDuration="86400" maxDuration="86400">
+		<Values wetness="0"/>
+	</Weather>
+	<Weather id="rain" weight="1" seasons="Spring:1,Summer:1,Fall:1" minDuration="86400" maxDuration="86400">
+		<Values wetness="1"/>
+	</Weather>
+</WeatherCatalog>
