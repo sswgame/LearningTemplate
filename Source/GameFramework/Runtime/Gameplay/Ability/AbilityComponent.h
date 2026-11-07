@@ -221,6 +221,12 @@ namespace sw
         uint32 getActiveEffectCount() const;
         /** @brief 적용된 이펙트 목록입니다(적용 순서). 지우는 중인 항목(`_bPendingRemove`)도 들어 있으므로 읽는 쪽이 거릅니다. 디버그 창이 씁니다. */
         const vector<unique_ptr<ActiveGameplayEffect>>& getActiveEffects() const { return _listActiveEffect; }
+        /**
+         * @brief 건 길이 @p sourceName 인 이펙트를 모두 지웁니다(효과 영역 이탈 · 상호작용 취소). 지운 수입니다.
+         * @details 핸들을 들지 않고 건 길로 지우는 까닭: 영역의 적용은 틱 중이면 미뤄져 핸들을 돌려받지 못하고, 같은 대상이 다시 들어오면 스택 정책이 핸들을 합친다 —
+         *          건 길이 곧 그 효과의 주인이다.
+         */
+        int32 removeActiveEffectsFromSource( const hashed_string& sourceName );
         /** @brief 이펙트 기록의 칸 수입니다(고정 용량). */
         static constexpr uint32 kEffectLogCapacity = 16;
         /**

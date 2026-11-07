@@ -1,6 +1,7 @@
 {
     "_folders": {},
     "_components": {
+        "AbilityEffectVolumeComponent": "지역 효과의 범용 구조(DesignBacklog — 지역 프로필 *.zone.xml)에서 Empty 시연 씬에 놓는다. 그 일이 이 줄을 지운다"
     },
     "_watches": {
         "Editor.LoadingScreenShown": "에디터 체인에서는 앞 단계의 상태를 따라가 값으로 판정하면 흔들린다. 로딩 화면은 시나리오 loadingscreen 이 그림으로 본다",

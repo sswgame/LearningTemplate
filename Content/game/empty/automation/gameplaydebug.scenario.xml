@@ -30,6 +30,9 @@
 	<DevCommand line="hud.print movement"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[movement] target: " atLeast="1"/>
 	<DevCommand line="movement.history off"/>
+	<!-- 상호작용 · 효과 영역: 하는 쪽이 없는 무대면 interactor: none 한 줄과 상호작용마다 판정(-) -->
+	<DevCommand line="hud.print interaction"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[interaction] interactor: " atLeast="1"/>
 	<DevCommand line="hud.print action"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[action] " atLeast="1"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[action] trace: off" count="0"/>

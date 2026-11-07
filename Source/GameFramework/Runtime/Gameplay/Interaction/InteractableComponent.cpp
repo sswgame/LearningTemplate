@@ -155,10 +155,20 @@ namespace sw
         resolveDefinition();
     }
 
-    bool InteractableComponent::isAvailableFor( const GameObject& interactor ) const
+    InteractionBlockReason InteractableComponent::findBlockReason( const GameObject& interactor ) const
     {
         const InteractionDef* pDef = getDefinition();
-        return pDef != nullptr && _bEnabled && _cooldownRemaining <= 0.0f && pDef->allowsInteractor( interactor.getTags() );
+        if ( pDef == nullptr )
+            return InteractionBlockReason::NoDefinition;
+        if ( _bEnabled == false )
+            return InteractionBlockReason::Disabled;
+        if ( _cooldownRemaining > 0.0f )
+            return InteractionBlockReason::Cooldown;
+        if ( interactor.getTags().hasAllTags( pDef->_requiredTags ) == false )
+            return InteractionBlockReason::MissingRequiredTag;
+        if ( pDef->allowsInteractor( interactor.getTags() ) == false )
+            return InteractionBlockReason::ForbiddenTag; // 필수는 맞았으니 금지 태그다(판정은 allowsInteractor 하나 — 사유만 나눈다)
+        return InteractionBlockReason::None;
     }
 
     bool InteractableComponent::computeAlignmentPoint( float3& outPosition, float32& outYaw ) const

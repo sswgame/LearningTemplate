@@ -128,8 +128,16 @@ namespace sw
         float3 _highlightColor; ///< 강조 외곽선 색(RGB, 0..1). XML `highlightColor="r,g,b"`
         PROPERTY()
         InteractionAuthority _authority;
+        PROPERTY( Name = "startEffect", Tooltip = "Ability effect applied to the interactor when the interaction starts (ends with it unless endStartEffect is false)" )
+        hashed_string _startEffect; ///< 시작에 하는 쪽에 거는 이펙트(채널링 중 이동 금지 · 무적). 건 길 `interaction:<id>`
+        PROPERTY( Name = "completeEffect", Tooltip = "Ability effect applied to the interactor when the interaction completes" )
+        hashed_string _completeEffect; ///< 완료에 거는 이펙트(버프 · 치유). 건 길 `interaction:<id>:complete`
+        PROPERTY( Name = "cancelEffect", Tooltip = "Ability effect applied to the interactor when the interaction is cancelled" )
+        hashed_string _cancelEffect; ///< 취소에 거는 이펙트(실패 벌). 건 길 `interaction:<id>:cancel`
         PROPERTY()
         uint8 _bLineOfSight : 1;
+        PROPERTY( Name = "endStartEffect", Tooltip = "Remove the start effect when the interaction completes or is cancelled" )
+        uint8 _bEndStartEffect : 1; ///< 끝(완료 · 취소)에 시작 효과를 지운다 — 지속형 상태 효과의 종료 규칙
 
         /** @brief 하는 쪽의 태그가 조건을 만족하면 true 입니다. */
         bool allowsInteractor( const TagContainer& interactorTags ) const;

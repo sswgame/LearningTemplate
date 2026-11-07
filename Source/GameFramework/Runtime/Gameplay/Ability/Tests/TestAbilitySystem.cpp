@@ -6,8 +6,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityEffectVolumeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
@@ -495,6 +497,39 @@ SW_TEST_CASE( AbilityEffectTest, MovementConstraintComposesByEffectLifetime )
     SW_EXPECT_TRUE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
     SW_REQUIRE_TRUE( rig._pAbilities->removeActiveEffect( root ) );
     SW_EXPECT_FALSE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
+}
+
+// 공간 효과 영역: 진입이 이펙트를 걸고(건 길 volume:<이름>), 같은 개체의 두 번째 겹침은 무시하고, 이탈이 그 영역의 것만 지운다(겹친 다른 영역의 효과는 남는다).
+SW_TEST_CASE( AbilityEffectTest, EffectVolumeAppliesOnEnterAndRemovesItsOwnOnExit )
+{
+    Rig            rig;
+    AbilityCatalog catalog;
+    auto           pSlow = Rig::makeEffect( EffectDurationPolicy::Infinite );
+    pSlow->_id           = hashed_string( "GE_Test_Slow" );
+    pSlow->_grantedTags  = Util::makeTags( { "State.MoveBlocked.Rooted"_tag } );
+    (void)catalog.addEffect( *pSlow );
+    rig._pAbilities->setCatalog( &catalog );
+    GameObject& hero = *rig._pAbilities->getOwner();
+
+    AbilityEffectVolumeComponent* pSwamp = rig._manager.createGameObject( hashed_string( "Swamp" ) )->addComponent<AbilityEffectVolumeComponent>();
+    AbilityEffectVolumeComponent* pBog   = rig._manager.createGameObject( hashed_string( "Bog" ) )->addComponent<AbilityEffectVolumeComponent>();
+    pSwamp->configure( hashed_string( "GE_Test_Slow" ), EffectVolumeExitPolicy::RemoveOnExit, 0.0f );
+    pBog->configure( hashed_string( "GE_Test_Slow" ), EffectVolumeExitPolicy::RemoveOnExit, 0.0f );
+
+    SW_EXPECT_TRUE( pSwamp->enter( hero ) );
+    SW_EXPECT_FALSE( pSwamp->enter( hero ) ); // 같은 개체의 두 번째 겹침
+    SW_EXPECT_TRUE( pBog->enter( hero ) );
+    SW_EXPECT_TRUE( MovementConstraint::read( hero )._bMoveBlocked == SW_TRUE );
+    vector<AbilityEffectLogEntry> listLog;
+    rig._pAbilities->collectEffectLog( listLog );
+    SW_REQUIRE_TRUE( listLog.empty() == false );
+    SW_EXPECT_TRUE( listLog[0]._sourceName == hashed_string( "volume:Swamp" ) );
+
+    SW_EXPECT_TRUE( pSwamp->exit( hero ) );
+    SW_EXPECT_TRUE( MovementConstraint::read( hero )._bMoveBlocked == SW_TRUE ); // 늪(Bog) 것은 남는다
+    SW_EXPECT_TRUE( pBog->exit( hero ) );
+    SW_EXPECT_FALSE( MovementConstraint::read( hero )._bMoveBlocked == SW_TRUE );
+    SW_EXPECT_FALSE( pBog->exit( hero ) ); // 안에 없었다
 }
 
 SW_TEST_CASE( AbilityEffectTest, EffectsCanRemoveOthersByTag )

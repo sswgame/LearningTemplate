@@ -51,5 +51,5 @@ namespace sw
     }
 
     SW_DEV_COMMAND( DebugTarget, "debug.target", "debug.target [object|clear]",
-                    "Pick the object the gameplay debug HUD sections (quest, progress, gimmick, npc, action, contacts, movement, ability) show", &GameplayDebugTargetInternal::runTarget );
+                    "Pick the object the gameplay debug HUD sections (quest, progress, gimmick, npc, contacts, movement, ability, interaction) show", &GameplayDebugTargetInternal::runTarget );
 } // namespace sw

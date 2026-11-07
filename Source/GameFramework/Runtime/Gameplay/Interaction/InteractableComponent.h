@@ -22,6 +22,18 @@
 
 namespace sw
 {
+    /** @brief 상호작용을 시작할 수 없는 까닭입니다(디버거가 판정 결과를 사유별로 보인다). 거리 · 각 · 시야는 고르는 쪽(`InteractionSelector`)이 따로 본다. */
+    ENUM()
+    enum class InteractionBlockReason : uint8
+    {
+        None = 0,           ///< 시작할 수 있다
+        NoDefinition,       ///< 정의가 테이블에 없다
+        Disabled,           ///< 꺼져 있다
+        Cooldown,           ///< 쿨다운 중이다
+        MissingRequiredTag, ///< 하는 쪽이 필수 태그를 갖지 않았다
+        ForbiddenTag        ///< 하는 쪽이 금지 태그(기절 등)를 가졌다
+    };
+
     /**
      * @class InteractableComponent
      * @brief 종류(`_interactionID`)는 상호작용 테이블(`_catalogPath`)에서 찾습니다. 코드로 정의를 넣으면(`setDefinition`) 그 정의가 우선합니다.
@@ -55,8 +67,12 @@ namespace sw
         const InteractionDef* getDefinition() const;
         /** @brief 현재 정의를 테이블째 쥐는 포인터입니다(세션이 쥔다 — 테이블을 다시 읽어도 진행 중인 세션은 옛 정의를 끝까지 읽는다). 코드로 넣은 정의는 이 컴포넌트가 가진다. */
         shared_ptr<const InteractionDef> shareDefinition() const;
-        /** @brief 켜져 있고, 쿨다운이 끝났고, @p interactor 의 태그가 조건을 만족하면 true 입니다. */
-        bool isAvailableFor( const GameObject& interactor ) const;
+        /** @brief 켜져 있고, 쿨다운이 끝났고, @p interactor 의 태그가 조건을 만족하면 true 입니다(`findBlockReason` 이 `None`). */
+        bool isAvailableFor( const GameObject& interactor ) const { return findBlockReason( interactor ) == InteractionBlockReason::None; }
+        /** @brief @p interactor 가 지금 이것을 시작할 수 없는 첫 까닭입니다(정의 · 꺼짐 · 쿨다운 · 필수 태그 · 금지 태그 순). 시작할 수 있으면 `None` — 상호작용 디버거가 보인다. */
+        InteractionBlockReason findBlockReason( const GameObject& interactor ) const;
+        /** @brief 남은 쿨다운(초)입니다. */
+        float32 getCooldownRemaining() const { return _cooldownRemaining; }
         /**
          * @brief 하는 쪽이 설 월드 위치와 방향입니다. 방향은 요이며 라디안이고, `atan2( 앞.x, 앞.z )` 로 구합니다.
          * @return 정의의 마커를 소켓 테이블에서 찾았으면 true 입니다. 못 찾았으면 false 이고, 오브젝트의 원점과 앞 방향을 씁니다.

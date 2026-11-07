@@ -1258,6 +1258,24 @@ namespace sw
         return true;
     }
 
+    int32 AbilityComponent::removeActiveEffectsFromSource( const hashed_string& sourceName )
+    {
+        if ( sourceName.size() == 0 )
+            return 0;
+        const ScopedListLock lock{ *this };
+        int32                removedCount = 0;
+        const size_t         effectCount  = _listActiveEffect.size();
+        for ( size_t effectIndex = 0; effectIndex < effectCount; ++effectIndex )
+        {
+            ActiveGameplayEffect* pActiveEffect = _listActiveEffect[effectIndex].get();
+            if ( pActiveEffect->_bPendingRemove == SW_TRUE || pActiveEffect->_spec._context._sourceName != sourceName )
+                continue;
+            removeActiveEffectInternal( *pActiveEffect, AbilityEffectLogKind::RemovedExplicitly );
+            ++removedCount;
+        }
+        return removedCount;
+    }
+
     int32 AbilityComponent::removeActiveEffectsWithTags( const TagContainer& tags )
     {
         if ( tags.getTagCount() == 0 )

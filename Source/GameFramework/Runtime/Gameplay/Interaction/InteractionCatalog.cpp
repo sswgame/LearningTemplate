@@ -23,7 +23,8 @@ namespace sw
         {
             // <Interaction> 은 상호작용 칸(InteractionDef)과 첫 단계 칸(InteractionStepDef)을 함께 적는다 — 두 스키마가 서로의 칸을 손 읽기로 넘긴다.
             static constexpr const utf8* kArrStepField[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage", "pairedAnimation", "interactorRole", "interactableRole" };
-            static constexpr const utf8* kArrInteractionField[] = { "id", "maxDistance", "maxAngle", "cooldown", "lineOfSight", "requiredTags", "forbiddenTags", "alignment", "highlight", "highlightColor", "authority" };
+            static constexpr const utf8* kArrInteractionField[] = { "id", "maxDistance", "maxAngle", "cooldown", "lineOfSight", "requiredTags", "forbiddenTags", "alignment", "highlight", "highlightColor", "authority",
+                                                                    "startEffect", "completeEffect", "cancelEffect", "endStartEffect" };
 
             template <size_t Count>
             static bool isIn( const utf8* pName, const utf8* const ( &arrName )[Count] )
@@ -101,7 +102,11 @@ namespace sw
         , _highlight{ InteractionHighlight::Outline }
         , _highlightColor{ 1.0f, 0.85f, 0.3f }
         , _authority{ InteractionAuthority::Local }
+        , _startEffect{}
+        , _completeEffect{}
+        , _cancelEffect{}
         , _bLineOfSight{ SW_TRUE }
+        , _bEndStartEffect{ SW_TRUE }
     {
     }
 

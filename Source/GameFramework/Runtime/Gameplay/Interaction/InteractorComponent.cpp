@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractorComponent.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Scene/MotionWarpingComponent.h"
 #include "Engine/Character/CharacterDataCache.h"
@@ -13,6 +15,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionSpatialIndex.h"
@@ -23,6 +26,42 @@ namespace sw
     {
         struct InteractorComponentInternal
         {
+            /**
+             * @brief 상호작용 정의가 이름 붙인 이펙트를 하는 쪽에 겁니다(건 길 @p sourceName). 이름이 비면 아무것도 하지 않습니다.
+             * @details 하는 쪽에 AbilityComponent 가 없는데 정의가 이펙트를 적었으면 데이터와 개체가 맞지 않는 것이라 오류다(대신 아무 일도 없는 것으로 넘기지 않는다).
+             */
+            static void applyInteractionEffect( GameObject& owner, const InteractionDef& def, const hashed_string& effectID, const hashed_string& sourceName )
+            {
+                if ( effectID.size() == 0 )
+                    return;
+                AbilityComponent* const pAbility = owner.getComponent<AbilityComponent>();
+                if ( pAbility == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "Interactor.EffectWithoutAbilityComponent", "interaction '%#' applies effect '%#' but the interactor '%#' has no AbilityComponent", def._id.c_str(),
+                                     effectID.c_str(), owner.getName().c_str() );
+                    return;
+                }
+                AbilityEffectSpec spec = pAbility->makeOutgoingSpecByID( effectID ); // 카탈로그에 없으면 경고를 남기고 빈 스펙이다
+                if ( spec.isValid() == false )
+                    return;
+                spec._context._sourceName = sourceName;
+                (void)pAbility->applyGameplayEffectSpecToTarget( spec, pAbility ); // 거부되면 까닭이 대상의 이펙트 기록에 남는다
+            }
+
+            /** @brief 상호작용 @p def 의 건 길입니다 — 시작 효과는 `interaction:<id>`(끝날 때 지운다), 완료 · 취소 효과는 뒤에 `:complete` · `:cancel`(남는다). */
+            static hashed_string makeSourceName( const InteractionDef& def, const utf8* pSuffix )
+            {
+                return hashed_string( string( "interaction:" ) + def._id.c_str() + pSuffix );
+            }
+
+            /** @brief 진행 동안만 걸린 시작 효과를 지웁니다(`_bEndStartEffect`, 채널링 중 이동 금지 같은 것). */
+            static void endStartEffect( GameObject& owner, const InteractionDef& def )
+            {
+                if ( def._startEffect.size() == 0 || def._bEndStartEffect == SW_FALSE )
+                    return;
+                if ( AbilityComponent* const pAbility = owner.getComponent<AbilityComponent>() )
+                    (void)pAbility->removeActiveEffectsFromSource( makeSourceName( def, "" ) );
+            }
 
             /**
              * @brief 하는 쪽에 모션 워핑이 있으면 대상의 맞춤 지점을 마커 이름(없으면 "Interaction")의 워프 목표로 넣습니다. 상호작용 클립의
@@ -374,7 +413,11 @@ namespace sw
         for ( const InteractionSessionEvent event : _listSessionEvent )
         {
             if ( event == InteractionSessionEvent::Started )
+            {
                 _montageStep = 0;
+                if ( pEventDef != nullptr )
+                    InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_startEffect, InteractorComponentInternal::makeSourceName( *pEventDef, "" ) );
+            }
             else if ( event == InteractionSessionEvent::StepCompleted )
                 ++_montageStep;
             const bool bStepStarts       = event == InteractionSessionEvent::Started || event == InteractionSessionEvent::StepCompleted;
@@ -385,6 +428,16 @@ namespace sw
                 InteractorComponentInternal::playStepMontage( owner, step, _resumeState );
                 if ( step._listPairedAnimationPath.empty() == false )
                     deferPairedAnimationStart( manager, step );
+            }
+            if ( event == InteractionSessionEvent::Cancelled && pEventDef != nullptr )
+            {
+                InteractorComponentInternal::endStartEffect( owner, *pEventDef );
+                InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_cancelEffect, InteractorComponentInternal::makeSourceName( *pEventDef, ":cancel" ) );
+            }
+            if ( event == InteractionSessionEvent::Completed && pEventDef != nullptr )
+            {
+                InteractorComponentInternal::endStartEffect( owner, *pEventDef );
+                InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_completeEffect, InteractorComponentInternal::makeSourceName( *pEventDef, ":complete" ) );
             }
             if ( event == InteractionSessionEvent::Cancelled )
             {
