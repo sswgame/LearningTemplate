@@ -8,7 +8,8 @@
  *          여기는 바꾼 값이 그 묶음을 쓰는 머티리얼 수만큼의 패킹이다. 머티리얼 원소는 프레임마다 어차피 사본을 비교하므로 값이 프레임마다 바뀌는 묶음을 머티리얼 수백 개가 쓰게 되면 그때 버퍼를 둔다.
  *
  *          게임 스레드 객체다. 같은 경로는 같은 객체이고 쥔 쪽(머티리얼)이 없어지면 사라져 다음에 파일 값으로 다시 시작한다.
- *          shortcut: 핫 리로드가 없다 — 파일을 고치면 다시 실행한다. 공유 캐시(`SharedAssetCache`)가 합쳐진 뒤 그 표에 올리면 된다.
+ *          표는 에셋 매니저의 내장 캐시(`MaterialParameterCollectionCache`)다 — 파일을 고치면 핫 리로드가 쥔 묶음을 제자리에서 파일 값으로 바꾸고(`replaceValues`)
+ *          세대를 올려, 묶은 머티리얼이 다음 프레임에 다시 패킹한다. 공유 캐시(`SharedAssetCache`)는 `const` 에셋을 나눠 주는데 묶음은 런타임에 값을 바꾸므로 쓰지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -18,6 +19,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
@@ -79,7 +82,7 @@ namespace sw
     class SW_API MaterialParameterCollection
     {
     public:
-        /** @brief 같은 경로의 묶음을 나눠 받습니다. 처음이면 파일을 읽습니다. 읽지 못하면 오류를 남기고 nullptr 입니다. */
+        /** @brief 같은 경로의 묶음을 나눠 받습니다(에셋 매니저의 `MaterialParameterCollectionCache`). 처음이면 파일을 읽습니다. 읽지 못하면 오류를 남기고 nullptr 입니다. */
         [[nodiscard]] static shared_ptr<MaterialParameterCollection> acquire( const AssetID& assetID );
 
         /** @brief @p desc 의 값으로 만듭니다(`acquire` · 테스트). */
@@ -89,6 +92,11 @@ namespace sw
         [[nodiscard]] const float4* findValue( const hashed_string& name ) const;
         /** @brief 값을 바꿉니다. 묶은 모든 머티리얼이 다음 프레임에 따릅니다. 없는 이름이면 오류를 남기고 false 입니다. 같은 값이면 세대가 그대로입니다. */
         bool setValue( const hashed_string& name, const float4& value );
+        /**
+         * @brief 값 전체를 @p desc(다시 읽은 파일)로 바꾸고 세대를 올립니다. 런타임에 바꾼 값은 파일 값으로 돌아갑니다(파일이 정본이다 — 언리얼에서 묶음 에셋의 기본값을 고친 것과 같다).
+         * @details 같은 객체를 고치므로 쥔 머티리얼이 새 객체를 찾지 않는다. 없어진 이름을 묶은 머티리얼은 다음 동기화에서 오류를 남긴다.
+         */
+        void replaceValues( MaterialParameterCollectionDef desc );
         /** @brief 값이 바뀔 때마다 오르는 세대입니다. */
         [[nodiscard]] uint32 getGeneration() const { return _generation.get(); }
 
@@ -104,5 +112,48 @@ namespace sw
 
         vector<Entry>         _listEntry;
         MaterialRenderVersion _generation; ///< 값이 바뀔 때마다 오른다 — 묶은 머티리얼이 다시 패킹하므로 렌더 값의 전역 번호도 오른다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class MaterialParameterCollectionCache
+     * @brief 쥔 쪽이 있는 묶음의 표입니다. 에셋 매니저가 내장 캐시로 소유합니다(`SW_BUILT_IN_ASSET_CACHE`).
+     * @details 예전에는 함수 정적 표라 레지스트리에 보이지 않아 핫 리로드 · 합성 문맥 다시 읽기 · 재초기화 비우기가 닿지 않았다. 이제 다른 경로 캐시와 같은 길을 탄다:
+     *          핫 리로드(개발 전용)와 합성 문맥 변경은 쥔 묶음을 제자리에서 파일 값으로 바꾸고, `clear` 는 표만 비운다(쥔 쪽의 묶음은 산다).
+     */
+    class SW_API MaterialParameterCollectionCache final : public AssetCacheBase
+    {
+    public:
+        /** @brief 레지스트리의 종류 이름입니다(`AssetManager::getAssetCache<T>()`). 에셋 종류 이름과 같다. */
+        static constexpr const utf8* kAssetKindName = "MaterialParameterCollection";
+
+        MaterialParameterCollectionCache();
+
+        /** @brief 같은 경로의 묶음을 나눠 받습니다. 처음이면 파일을 읽고, 읽지 못하면 오류를 남기고 nullptr 입니다. */
+        [[nodiscard]] shared_ptr<MaterialParameterCollection> acquire( const AssetID& assetID );
+        /** @brief 지금 쥔 묶음입니다. 없으면 nullptr 이고 파일을 읽지 않습니다(감시 값 · 진단). */
+        [[nodiscard]] shared_ptr<MaterialParameterCollection> findLive( const AssetID& assetID ) const;
+        /** @brief 쥔 묶음이면 파일을 다시 읽어 제자리에서 값을 바꿉니다(핫 리로드). 읽지 못하면 오류를 남기고 지금 값을 그대로 씁니다. */
+        void reload( const AssetID& assetID );
+
+        const utf8* getAssetKindName() const override { return kAssetKindName; }
+        /** @brief 그 경로의 묶음을 누가 쥐고 있으면 true 입니다. */
+        bool   isCached( string_view relativePath ) const override;
+        size_t getCachedCount() const override { return _table.countLive(); }
+        /** @brief 표를 비웁니다. 쥔 쪽의 묶음은 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
+        void clear() override;
+        /** @brief 쥔 묶음이면 합성 문맥이 바뀐 파일을 다시 읽어 제자리에서 바꿉니다. 바꿨으면 true 입니다. */
+        bool reloadComposed( string_view relativePath ) override;
+
+    private:
+        /** @brief 파일을 읽어 검사합니다. 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool readDesc( const AssetID& assetID, MaterialParameterCollectionDef& outDesc );
+        /** @brief 쥔 묶음을 다시 읽습니다(`reload` · `reloadComposed` 의 본문). 쥔 쪽이 없거나 읽지 못하면 false 입니다. */
+        [[nodiscard]] bool reloadLive( const AssetID& assetID );
+
+    private:
+        WeakInternTable<string, MaterialParameterCollection> _table;
     };
 } // namespace sw

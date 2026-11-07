@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 핫 리로드 확인(editor/matparamreload)의 머티리얼 — 색이 사본 묶음의 WorldTint 를 읽는다. -->
+<MaterialDef formatVersion="0" name="matparamreload_bound" _base="engine/materials/defaultmaterial.material">
+	<_properties>
+		<item name="_color" collection="game/empty/automation/editor/matparamreload/world.matparams.xml" collectionParameter="WorldTint"/>
+	</_properties>
+</MaterialDef>

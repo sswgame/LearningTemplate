@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 핫 리로드 확인(editor/matparamreload)의 고친 묶음 — 사본의 world.matparams.xml 을 이 글로 덮어쓴다. 파랑이 0.8 이 된다. -->
+<MaterialParameterCollectionDef>
+	<_listParameter>
+		<MaterialCollectionParameterDef _name="WorldTint" _value="0.1, 0.2, 0.8, 1" />
+	</_listParameter>
+</MaterialParameterCollectionDef>

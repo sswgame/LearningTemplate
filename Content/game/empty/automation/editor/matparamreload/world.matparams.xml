@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 핫 리로드 확인(editor/matparamreload)의 묶음 — 시나리오가 사본을 world_edited.matparams.xml 로 덮어쓰면 쥔 묶음이 제자리에서 그 값으로 바뀐다. -->
+<MaterialParameterCollectionDef>
+	<_listParameter>
+		<MaterialCollectionParameterDef _name="WorldTint" _value="0.9, 0.1, 0.1, 1" />
+	</_listParameter>
+</MaterialParameterCollectionDef>

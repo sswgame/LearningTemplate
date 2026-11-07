@@ -68,6 +68,33 @@ SW_TEST_CASE( MaterialParameterCollectionTest, SetValueBumpsTheGeneration )
     SW_EXPECT_TRUE( collection.findValue( hashed_string( "Nope" ) ) == nullptr );
 }
 
+/** @brief [MaterialParameterCollectionTest] 다시 읽은 파일 값으로 제자리에서 바꾸면 세대가 오르고 런타임 값 · 없어진 이름은 파일을 따른다(핫 리로드) */
+SW_TEST_CASE( MaterialParameterCollectionTest, ReplaceValuesFollowsTheReloadedFile )
+{
+    MaterialParameterCollection collection{ Util::makeDesc() };
+    const hashed_string         tint( "Tint" );
+    SW_REQUIRE_TRUE( collection.setValue( tint, float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) );
+    const uint32 before = collection.getGeneration();
+
+    MaterialParameterCollectionDef reloaded;
+    MaterialCollectionParameterDef wind;
+    wind._name  = "Wind";
+    wind._value = float4{ 3.0f, 0.0f, 0.0f, 0.0f };
+    reloaded._listParameter.push_back( wind );
+    collection.replaceValues( reloaded );
+
+    SW_EXPECT_TRUE( collection.getGeneration() != before );
+    SW_EXPECT_TRUE( collection.findValue( tint ) == nullptr );
+    const float4* pWind = collection.findValue( hashed_string( "Wind" ) );
+    SW_REQUIRE_NOT_NULL( pWind );
+    SW_EXPECT_NEAR( 3.0f, pWind->_x, 0.0f );
+
+    // 같은 파일을 다시 읽어도 세대는 오른다 — 쥔 머티리얼이 한 번 더 패킹할 뿐 틀린 값이 남지 않는다.
+    const uint32 second = collection.getGeneration();
+    collection.replaceValues( reloaded );
+    SW_EXPECT_TRUE( collection.getGeneration() != second );
+}
+
 /** @brief [MaterialParameterCollectionTest] 이름이 비거나 겹치면 읽기 오류다 */
 SW_TEST_CASE( MaterialParameterCollectionTest, ValidateRejectsBadNames )
 {

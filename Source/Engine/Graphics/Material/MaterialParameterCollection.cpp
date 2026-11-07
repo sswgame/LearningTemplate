@@ -4,11 +4,13 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
@@ -17,13 +19,6 @@ namespace sw
     {
         struct MaterialParameterCollectionInternal
         {
-            /** @brief 쥔 쪽이 있는 묶음의 표입니다. 쥔 쪽이 없어지면 값도 사라진다(게임 스레드에서만 쓴다). */
-            static unordered_map<string, weak_ptr<MaterialParameterCollection>>& getTable()
-            {
-                static unordered_map<string, weak_ptr<MaterialParameterCollection>> s_table;
-                return s_table;
-            }
-
             /** @brief `matparam <경로> <이름> <x> [y] [z] [w]` — 묶음의 값을 바꿉니다. 시나리오가 런타임 변경을 확인할 때 쓴다. */
             static bool runSetValue( const vector<string>& listArgument, string& outReply )
             {
@@ -84,21 +79,7 @@ namespace sw
 
     shared_ptr<MaterialParameterCollection> MaterialParameterCollection::acquire( const AssetID& assetID )
     {
-        unordered_map<string, weak_ptr<MaterialParameterCollection>>& table = MaterialParameterCollectionInternal::getTable();
-        const string                                                  key{ assetID.view() };
-        const auto                                                    found = table.find( key );
-        if ( found != table.end() )
-        {
-            shared_ptr<MaterialParameterCollection> pExisting = found->second.lock();
-            if ( pExisting != nullptr )
-                return pExisting;
-        }
-        MaterialParameterCollectionDef desc;
-        if ( ReflectedXMLFile::loadDesc( assetID, desc ) == false || desc.validate( assetID.view() ) == false )
-            return nullptr;
-        shared_ptr<MaterialParameterCollection> pCollection = sw::make_shared<MaterialParameterCollection>( std::move( desc ) );
-        table[key]                                          = pCollection;
-        return pCollection;
+        return engine::getSubsystem<AssetManager>().getAssetCache<MaterialParameterCollectionCache>().acquire( assetID );
     }
 
     MaterialParameterCollection::MaterialParameterCollection( MaterialParameterCollectionDef desc )
@@ -110,6 +91,17 @@ namespace sw
         {
             _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value } );
         }
+    }
+
+    void MaterialParameterCollection::replaceValues( MaterialParameterCollectionDef desc )
+    {
+        _listEntry.clear();
+        _listEntry.reserve( desc._listParameter.size() );
+        for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
+        {
+            _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value } );
+        }
+        _generation.bump();
     }
 
     const float4* MaterialParameterCollection::findValue( const hashed_string& name ) const
@@ -151,5 +143,70 @@ namespace sw
 
 namespace sw
 {
+    MaterialParameterCollectionCache::MaterialParameterCollectionCache()
+        : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
+        , _table{}
+    {
+    }
+
+    bool MaterialParameterCollectionCache::readDesc( const AssetID& assetID, MaterialParameterCollectionDef& outDesc )
+    {
+        return ReflectedXMLFile::loadDesc( assetID, outDesc ) && outDesc.validate( assetID.view() );
+    }
+
+    shared_ptr<MaterialParameterCollection> MaterialParameterCollectionCache::acquire( const AssetID& assetID )
+    {
+        const string                            key{ assetID.view() };
+        shared_ptr<MaterialParameterCollection> pLive = _table.findLive( key );
+        if ( pLive != nullptr )
+        {
+            getCacheStats().recordHit();
+            return pLive;
+        }
+        getCacheStats().recordMiss();
+        MaterialParameterCollectionDef desc;
+        if ( readDesc( assetID, desc ) == false )
+            return nullptr;
+        return _table.insertOrGetLive( key, sw::make_shared<MaterialParameterCollection>( std::move( desc ) ) );
+    }
+
+    shared_ptr<MaterialParameterCollection> MaterialParameterCollectionCache::findLive( const AssetID& assetID ) const
+    {
+        return _table.findLive( string{ assetID.view() } );
+    }
+
+    bool MaterialParameterCollectionCache::reloadLive( const AssetID& assetID )
+    {
+        const shared_ptr<MaterialParameterCollection> pLive = findLive( assetID );
+        MaterialParameterCollectionDef                desc;
+        if ( pLive == nullptr || readDesc( assetID, desc ) == false )
+            return false;
+        pLive->replaceValues( std::move( desc ) );
+        SW_LOG_INFO_ID( "MaterialParameterCollection.Reloaded", "Material parameter collection '%#' reloaded (generation %#)", assetID.view(), pLive->getGeneration() );
+        return true;
+    }
+
+    void MaterialParameterCollectionCache::reload( const AssetID& assetID )
+    {
+        (void)reloadLive( assetID ); // 읽지 못하면 읽기가 오류를 남겼다 — 지금 값을 그대로 쓴다
+    }
+
+    bool MaterialParameterCollectionCache::isCached( string_view relativePath ) const
+    {
+        return _table.findLive( string{ relativePath } ) != nullptr;
+    }
+
+    void MaterialParameterCollectionCache::clear()
+    {
+        _table.clear();
+        getCacheStats().recordClear();
+    }
+
+    bool MaterialParameterCollectionCache::reloadComposed( string_view relativePath )
+    {
+        return reloadLive( AssetID{ relativePath } );
+    }
+
+    SW_BUILT_IN_ASSET_CACHE( MaterialParameterCollectionCache );
     SW_ASSET_TYPE( MaterialParameterCollection, MaterialParameterCollectionDef::kAssetType );
 } // namespace sw

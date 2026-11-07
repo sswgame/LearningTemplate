@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 머티리얼 파라미터 묶음 핫 리로드: 사본 묶음을 바깥에서 고치면 감시가 알리고, 쥔 묶음(MaterialParameterCollectionCache)이 제자리에서 파일 값으로 바뀐다.
+  묶음은 그것을 묶은 머티리얼이 그릴 때 쥔다 — 씬 뷰가 사본 씬을 그리는 동안 표가 묶음을 든다. 판정은 쥔 묶음의 값(Material.CollectionValue)과 다시 읽은 로그다(골든 없음).
+  예전에는 묶음 표가 레지스트리 밖의 함수 정적이라 파일을 고쳐도 다시 실행하기 전에는 바뀌지 않았다.
+  실행: App -EnableEditor -scenario=game/empty/automation/editor/matparamreload.scenario.xml -unattended
+-->
+<Scenario name="editor.matparamreload" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<Scratch from="game/empty/automation/editor/matparamreload" as="scratch/matparamreload"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.open scratch/matparamreload/matparamreload.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Material.CollectionValue" target="scratch/matparamreload/world.matparams.xml" key="WorldTint.z" equals="0.1" timeoutFrames="120"/>
+	<DevCommand line="asset.overwriteScratch scratch/matparamreload/world_edited.matparams.xml scratch/matparamreload/world.matparams.xml"/>
+	<WaitUntil watch="Material.CollectionValue" target="scratch/matparamreload/world.matparams.xml" key="WorldTint.z" equals="0.8" timeoutWallSeconds="30"/>
+	<Expect watch="Material.CollectionValue" target="scratch/matparamreload/world.matparams.xml" key="WorldTint.x" equals="0.1"/>
+	<ExpectLog id="MaterialParameterCollection.Reloaded" contains="scratch/matparamreload/world.matparams.xml" count="1"/>
+	<Pass/>
+</Scenario>
