@@ -422,6 +422,40 @@ SW_TEST_CASE( AbilityEffectTest, ApplicationTagsDecideWhetherItApplies )
     rig._pAbilities->getOwnedTagCounts().updateCount( wet, 1 );
     SW_EXPECT_TRUE( rig.apply( pNeeds ).isValid() );
     SW_EXPECT_FALSE( rig.apply( pBlocked ).isValid() );
+
+    // 디버거 기록: 거부는 까닭으로, 적용은 적용으로 남는다(늦은 것이 뒤)
+    vector<AbilityEffectLogEntry> listLog;
+    rig._pAbilities->collectEffectLog( listLog );
+    SW_REQUIRE_EQUAL( size_t( 4 ), listLog.size() );
+    SW_EXPECT_TRUE( listLog[0]._kind == AbilityEffectLogKind::RejectedMissingTag );
+    SW_EXPECT_TRUE( listLog[1]._kind == AbilityEffectLogKind::Applied );
+    SW_EXPECT_TRUE( listLog[2]._kind == AbilityEffectLogKind::Applied );
+    SW_EXPECT_TRUE( listLog[3]._kind == AbilityEffectLogKind::RejectedBlockedTag );
+}
+
+// 디버거 기록: 건 길이 적히고, 제거 원인이 남으며, 고정 용량을 넘으면 오래된 것이 밀린다.
+SW_TEST_CASE( AbilityEffectTest, EffectLogKeepsSourceAndRemovalCause )
+{
+    Rig               rig;
+    auto              pEffect       = Rig::makeEffect( EffectDurationPolicy::Infinite );
+    AbilityEffectSpec spec          = rig._pAbilities->makeOutgoingSpec( pEffect );
+    spec._context._sourceName       = hashed_string( "volume:Swamp" );
+    const ActiveEffectHandle handle = rig._pAbilities->applyGameplayEffectSpecToSelf( spec );
+    SW_REQUIRE_TRUE( handle.isValid() );
+    SW_REQUIRE_TRUE( rig._pAbilities->removeActiveEffect( handle ) );
+    vector<AbilityEffectLogEntry> listLog;
+    rig._pAbilities->collectEffectLog( listLog );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listLog.size() );
+    SW_EXPECT_TRUE( listLog[0]._sourceName == hashed_string( "volume:Swamp" ) );
+    SW_EXPECT_TRUE( listLog[1]._kind == AbilityEffectLogKind::RemovedExplicitly );
+
+    for ( uint32 index = 0; index < AbilityComponent::kEffectLogCapacity; ++index )
+    {
+        (void)rig.apply( Rig::makeEffect( EffectDurationPolicy::Infinite ) );
+    }
+    rig._pAbilities->collectEffectLog( listLog );
+    SW_EXPECT_EQUAL( size_t( AbilityComponent::kEffectLogCapacity ), listLog.size() );
+    SW_EXPECT_TRUE( listLog[0]._kind == AbilityEffectLogKind::Applied );
 }
 
 SW_TEST_CASE( AbilityEffectTest, GrantedTagsLastAsLongAsTheEffect )

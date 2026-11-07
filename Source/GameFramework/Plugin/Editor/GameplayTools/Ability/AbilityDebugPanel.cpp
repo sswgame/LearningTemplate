@@ -3,6 +3,8 @@
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -42,6 +44,15 @@ namespace sw::editor
                 if ( pSnapshot == nullptr )
                     return false;
                 outValue = static_cast<float64>( pSnapshot->_listAttribute.size() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readLogCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AbilityDebugSnapshot* pSnapshot = findOpenSnapshot();
+                if ( pSnapshot == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pSnapshot->_listLog.size() );
                 return true;
             }
 
@@ -168,11 +179,12 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdAbilityDebug", "SectionEffects" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            if ( ImGui::BeginTable( "##Effects", 3, kTableFlags ) )
+            if ( ImGui::BeginTable( "##Effects", 4, kTableFlags ) )
             {
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnName" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnRemaining" ) );
                 ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnStacks" ) );
+                ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnSource" ) );
                 ImGui::TableHeadersRow();
                 for ( const AbilityDebugEffectRow& row : _snapshot._listEffect )
                 {
@@ -186,6 +198,8 @@ namespace sw::editor
                         ImGui::Text( "%.2f", static_cast<float64>( row._remainingTime ) );
                     ImGui::TableNextColumn();
                     ImGui::Text( "%d", row._stackCount );
+                    ImGui::TableNextColumn();
+                    drawSource( row._source );
                 }
                 ImGui::EndTable();
             }
@@ -234,12 +248,56 @@ namespace sw::editor
                 ImGui::EndTable();
             }
         }
+
+        // 최근 적용 · 거부(까닭) · 제거(원인) — 늦은 것부터. 거부만 상태 색이다(까닭이 글에 있어 색만으로 말하지 않는다).
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdAbilityDebug", "SectionLog" ), ImGuiTreeNodeFlags_DefaultOpen ) )
+        {
+            EditorSelfTestMarks::record( "abilityDebug.log" );
+            if ( _snapshot._listLog.empty() )
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdAbilityDebug", "HintNoLog" ) );
+            else if ( ImGui::BeginTable( "##EffectLog", 4, kTableFlags ) )
+            {
+                ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnTime" ) );
+                ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnEvent" ) );
+                ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnName" ) );
+                ImGui::TableSetupColumn( SW_LOCKEY( "EdAbilityDebug", "ColumnSource" ) );
+                ImGui::TableHeadersRow();
+                for ( const AbilityDebugLogRow& row : _snapshot._listLog )
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%.2f", static_cast<float64>( row._time ) );
+                    ImGui::TableNextColumn();
+                    if ( row._bRejected )
+                        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "%s", row._event.c_str() );
+                    else
+                        ImGui::TextUnformatted( row._event.c_str() );
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted( row._effect.c_str() );
+                    ImGui::TableNextColumn();
+                    drawSource( row._source );
+                }
+                ImGui::EndTable();
+            }
+        }
+    }
+
+    void AbilityDebugPanel::drawSource( const string& source )
+    {
+        // 건 길이 없으면 어빌리티 · 코드가 건 것이다 — 없는 값은 회색 대시(app-screens 규칙).
+        if ( source.empty() )
+            ImGui::TextDisabled( "-" );
+        else
+            ImGui::TextUnformatted( source.c_str() );
     }
 
     SW_EDITOR_PANEL( AbilityDebugPanel, AbilityDebugPanel::kPanelID, EditorPanelCategory::Custom, 9310 );
     SW_AUTOMATION_WATCH( editorAbilityDebugAttributeCount, "Editor.AbilityDebugAttributeCount",
                          "Attributes of the Ability Debugger's target as it last drew (fails while closed, stopped or without a target)",
                          &AbilityDebugPanelInternal::readAttributeCount );
+    SW_AUTOMATION_WATCH( editorAbilityDebugLogCount, "Editor.AbilityDebugLogCount",
+                         "Recent effect log rows (applied, rejected with the reason, removed with the cause) of the Ability Debugger's target as it last drew",
+                         &AbilityDebugPanelInternal::readLogCount );
     SW_AUTOMATION_WATCH( editorAbilityDebugAbilityCount, "Editor.AbilityDebugAbilityCount", "Granted abilities of the Ability Debugger's target as it last drew",
                          &AbilityDebugPanelInternal::readAbilityCount );
 } // namespace sw::editor

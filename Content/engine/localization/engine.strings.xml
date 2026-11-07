@@ -224,6 +224,11 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdAbilityDebug.ColumnEvent" source="Event">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdAbilityDebug.ColumnName" source="Name">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
@@ -234,12 +239,27 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdAbilityDebug.ColumnSource" source="Source">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdAbilityDebug.ColumnStacks" source="Stacks">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnTag" source="Tag">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityDebug.ColumnTime" source="Time">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityDebug.HintNoLog" source="No effect applied, rejected or removed yet.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
@@ -281,6 +301,11 @@
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.SectionEffects" source="Active Effects">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityDebug.SectionLog" source="Recent effects">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
 			</origins>

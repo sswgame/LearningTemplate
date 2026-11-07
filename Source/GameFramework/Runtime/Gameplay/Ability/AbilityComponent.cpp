@@ -58,6 +58,8 @@ namespace sw
         , _pClassRegistry{ nullptr }
         , _time{ 0.0f }
         , _nextHandleID{ 0 }
+        , _arrEffectLog{}
+        , _effectLogCount{ 0 }
         , _listLockDepth{ 0 }
         , _blockedHealthDecreaseCount{ 0 }
         , _pExecutingContext{ nullptr }
@@ -381,7 +383,7 @@ namespace sw
                 {
                     if ( isOfModule( pExecution->getTypeInfo() ) )
                     {
-                        removeActiveEffectInternal( activeEffect );
+                        removeActiveEffectInternal( activeEffect, AbilityEffectLogKind::RemovedUnloaded );
                         break;
                     }
                 }
@@ -1183,14 +1185,21 @@ namespace sw
 
     ActiveEffectHandle AbilityComponent::applyGameplayEffectSpecToSelf( const AbilityEffectSpec& spec )
     {
-        if ( spec.isValid() == false || canApplySpec( spec ) == false )
+        if ( spec.isValid() == false )
             return ActiveEffectHandle{};
+        const AbilityEffectLogKind rejection = findApplicationRejection( spec );
+        if ( rejection != AbilityEffectLogKind::Applied )
+        {
+            recordEffectLog( spec, rejection );
+            return ActiveEffectHandle{};
+        }
 
         const ScopedListLock    lock{ *this };
         const AbilityEffectDef& def = *spec._pDef;
         if ( def._removeEffectsWithTags.getTagCount() > 0 )
             (void)removeActiveEffectsWithTags( def._removeEffectsWithTags ); // 지울 이펙트가 없어도 된다
 
+        recordEffectLog( spec, AbilityEffectLogKind::Applied );
         if ( def._durationPolicy == EffectDurationPolicy::Instant )
         {
             executeSpec( spec, 1 );
@@ -1245,7 +1254,7 @@ namespace sw
             }
             return true;
         }
-        removeActiveEffectInternal( *pActiveEffect );
+        removeActiveEffectInternal( *pActiveEffect, AbilityEffectLogKind::RemovedExplicitly );
         return true;
     }
 
@@ -1266,7 +1275,7 @@ namespace sw
                                   AbilityComponentInternal::matchesAnyTag( pActiveEffect->_grantedTags, tags );
             if ( bMatches == false )
                 continue;
-            removeActiveEffectInternal( *pActiveEffect );
+            removeActiveEffectInternal( *pActiveEffect, AbilityEffectLogKind::RemovedByTag );
             ++removedCount;
         }
         return removedCount;
@@ -1365,12 +1374,34 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 7) 내부: 이펙트
     // ------------------------------------------------------------------------------
-    bool AbilityComponent::canApplySpec( const AbilityEffectSpec& spec ) const
+    AbilityEffectLogKind AbilityComponent::findApplicationRejection( const AbilityEffectSpec& spec ) const
     {
         const AbilityEffectDef& def = *spec._pDef;
         if ( _ownedTagCounts.hasAllMatchingTags( def._applicationRequiredTags ) == false )
-            return false;
-        return _ownedTagCounts.hasAnyMatchingTags( def._applicationBlockedTags ) == false;
+            return AbilityEffectLogKind::RejectedMissingTag;
+        if ( _ownedTagCounts.hasAnyMatchingTags( def._applicationBlockedTags ) )
+            return AbilityEffectLogKind::RejectedBlockedTag;
+        return AbilityEffectLogKind::Applied;
+    }
+
+    void AbilityComponent::recordEffectLog( const AbilityEffectSpec& spec, AbilityEffectLogKind kind )
+    {
+        AbilityEffectLogEntry& entry = _arrEffectLog[_effectLogCount % kEffectLogCapacity];
+        entry._effectID              = spec._pDef != nullptr ? spec._pDef->_id : hashed_string{};
+        entry._sourceName            = spec._context._sourceName;
+        entry._time                  = _time;
+        entry._kind                  = kind;
+        ++_effectLogCount;
+    }
+
+    void AbilityComponent::collectEffectLog( vector<AbilityEffectLogEntry>& outListEntry ) const
+    {
+        outListEntry.clear();
+        const uint32 count = _effectLogCount < kEffectLogCapacity ? _effectLogCount : kEffectLogCapacity;
+        for ( uint32 index = _effectLogCount - count; index < _effectLogCount; ++index )
+        {
+            outListEntry.push_back( _arrEffectLog[index % kEffectLogCapacity] );
+        }
     }
 
     bool AbilityComponent::computeModifierMagnitude( const AbilityEffectModifier& modifier, const AbilityEffectSpec& spec, float32& outMagnitude ) const
@@ -1565,10 +1596,11 @@ namespace sw
         return pActiveEffect->_handle;
     }
 
-    void AbilityComponent::removeActiveEffectInternal( ActiveGameplayEffect& activeEffect )
+    void AbilityComponent::removeActiveEffectInternal( ActiveGameplayEffect& activeEffect, AbilityEffectLogKind cause )
     {
         if ( activeEffect._bPendingRemove == SW_TRUE )
             return;
+        recordEffectLog( activeEffect._spec, cause );
         activeEffect._bPendingRemove = SW_TRUE;
         _bHasPendingRemoval          = SW_TRUE;
 
@@ -1685,7 +1717,7 @@ namespace sw
                     }
                     else
                     {
-                        removeActiveEffectInternal( *pActiveEffect );
+                        removeActiveEffectInternal( *pActiveEffect, AbilityEffectLogKind::RemovedExpired );
                     }
                 }
             }

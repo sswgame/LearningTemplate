@@ -221,6 +221,13 @@ namespace sw
         uint32 getActiveEffectCount() const;
         /** @brief 적용된 이펙트 목록입니다(적용 순서). 지우는 중인 항목(`_bPendingRemove`)도 들어 있으므로 읽는 쪽이 거릅니다. 디버그 창이 씁니다. */
         const vector<unique_ptr<ActiveGameplayEffect>>& getActiveEffects() const { return _listActiveEffect; }
+        /** @brief 이펙트 기록의 칸 수입니다(고정 용량). */
+        static constexpr uint32 kEffectLogCapacity = 16;
+        /**
+         * @brief 최근 이펙트 적용 · 거부(까닭) · 제거(원인)를 오래된 것부터 @p outListEntry 에 채웁니다(먼저 비운다). Ability 디버거가 읽는다.
+         * @details 기록은 그 일이 일어날 때만 한 줄이라 프레임 비용이 없다. 건 길(`AbilityEffectContext::_sourceName`)도 같이 적는다 — 영역 · 상호작용 · 기믹 가운데 어디서 왔나.
+         */
+        void collectEffectLog( vector<AbilityEffectLogEntry>& outListEntry ) const;
         /** @brief 적용된 이펙트의 남은 시간입니다. 무한 이펙트이거나 이펙트가 없으면 0 입니다. */
         float32 getActiveEffectRemainingTime( ActiveEffectHandle handle ) const;
         /** @brief 적용된 이펙트의 스택 수입니다. 없으면 0 입니다. */
@@ -336,7 +343,10 @@ namespace sw
 
         // ---- 이펙트 ----
         /** @brief 태그 조건상 지금 대상에게 걸 수 있으면 true 입니다. */
-        bool canApplySpec( const AbilityEffectSpec& spec ) const;
+        /** @brief 이 컴포넌트에 @p spec 을 걸 수 있으면 `Applied`, 아니면 거부 까닭(필수 태그 없음 · 차단 태그 있음)입니다. */
+        AbilityEffectLogKind findApplicationRejection( const AbilityEffectSpec& spec ) const;
+        /** @brief 이펙트 기록 고리에 한 줄을 적습니다(적용 · 거부 · 제거 때만 — 프레임 비용이 없다). */
+        void recordEffectLog( const AbilityEffectSpec& spec, AbilityEffectLogKind kind );
         /** @brief 모디파이어 하나의 크기를 계산합니다. 계산하지 못하면 false 입니다. */
         bool computeModifierMagnitude( const AbilityEffectModifier& modifier, const AbilityEffectSpec& spec, float32& outMagnitude ) const;
         /** @brief 스펙의 모디파이어와 실행 계산을 돌려, base 에 쓸 변경 목록을 만듭니다. 스택 하나에 해당하는 양입니다. */
@@ -348,7 +358,7 @@ namespace sw
         /** @brief 지속 이펙트나 무한 이펙트를 새로 걸거나 스택을 올립니다. */
         ActiveEffectHandle applyDurationSpec( const AbilityEffectSpec& spec );
         /** @brief 적용된 이펙트를 활성 목록에서 해제합니다. 태그, 집계, 큐, 알림을 함께 정리합니다. */
-        void removeActiveEffectInternal( ActiveGameplayEffect& activeEffect );
+        void removeActiveEffectInternal( ActiveGameplayEffect& activeEffect, AbilityEffectLogKind cause );
         /**
          * @brief 걸린 이펙트가 대상에 주는 것(부여 태그 · 부여 어빌리티 · 모디파이어 집계)을 붙입니다. `disengageActiveEffect` 와 짝입니다.
          * @details 걸 때 · 해제할 때 · 걸린 동안의 태그 조건이 바뀔 때가 모두 이 짝 하나를 지나므로, 주는 것이 하나 늘어도 빠뜨릴 곳이 없습니다.
@@ -427,6 +437,8 @@ namespace sw
         const AbilityClassRegistry*                                                                     _pClassRegistry;
         float32                                                                                         _time;
         uint64                                                                                          _nextHandleID;
+        AbilityEffectLogEntry                                                                           _arrEffectLog[kEffectLogCapacity]; ///< 적용 · 거부 · 제거 기록 고리(진단 — 저장하지 않는다)
+        uint32                                                                                          _effectLogCount;                   ///< 적은 누계(다음 칸은 `% kEffectLogCapacity`)
         uint32                                                                                          _listLockDepth;
         uint32                                                                                          _blockedHealthDecreaseCount; ///< 무적이 체력 내림을 막은 횟수(`guardHealthBaseChange`) — `executeSpec` 이 앞뒤를 견줘 막힌 피격의 즉시 큐를 거른다
         const AbilityEffectContext*                                                                     _pExecutingContext;          ///< 지금 적용 중인 즉시 이펙트의 컨텍스트(`executeSpec` 안만). 체력이 0 에 닿으면 그 맞힌 자리로 치명 신호를 낸다

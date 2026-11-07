@@ -49,6 +49,8 @@ namespace sw::editor
         AbilityComponent* findTarget();
         void              drawTargetPicker( const AbilityComponent* pCurrent );
         void              drawSnapshot();
+        /** @brief 건 길 칸 — 비면 회색 대시(어빌리티 · 코드가 건 것). */
+        static void drawSource( const string& source );
 
     private:
         AbilityDebugSnapshot     _snapshot;

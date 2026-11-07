@@ -2,6 +2,8 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugModel.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
@@ -13,6 +15,7 @@ namespace sw::editor
         _listEffect.clear();
         _listTag.clear();
         _listAbility.clear();
+        _listLog.clear();
         _time = 0.0f;
     }
 
@@ -47,6 +50,7 @@ namespace sw::editor
             row._bInfinite     = pEffect->_duration <= 0.0f;
             row._remainingTime = row._bInfinite ? 0.0f : pEffect->_remainingTime;
             row._stackCount    = pEffect->_stackCount;
+            row._source        = pEffect->_spec._context._sourceName.c_str();
             outSnapshot._listEffect.push_back( std::move( row ) );
         }
 
@@ -72,6 +76,19 @@ namespace sw::editor
             row._bActive              = pAbility->isActive();
             row._cooldownRemaining    = pAbility->getCooldownRemaining();
             outSnapshot._listAbility.push_back( std::move( row ) );
+        }
+
+        vector<AbilityEffectLogEntry> listLog;
+        abilitySystem.collectEffectLog( listLog );
+        for ( auto it = listLog.rbegin(); it != listLog.rend(); ++it )
+        {
+            AbilityDebugLogRow row;
+            row._event     = getEnumName( it->_kind );
+            row._effect    = it->_effectID.c_str();
+            row._source    = it->_sourceName.c_str();
+            row._time      = it->_time;
+            row._bRejected = it->_kind == AbilityEffectLogKind::RejectedMissingTag || it->_kind == AbilityEffectLogKind::RejectedBlockedTag;
+            outSnapshot._listLog.push_back( std::move( row ) );
         }
     }
 } // namespace sw::editor

@@ -31,6 +31,7 @@ namespace sw::editor
     struct AbilityDebugEffectRow
     {
         string  _name{};
+        string  _source{};              ///< 건 길(`AbilityEffectContext::_sourceName` — 영역 · 상호작용 · 기믹). 비면 어빌리티 · 코드
         float32 _remainingTime{ 0.0f }; ///< 무한 이펙트이면 0
         int32   _stackCount{ 1 };
         bool    _bInfinite{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -60,6 +61,19 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 최근 이펙트 기록(적용 · 거부 까닭 · 제거 원인) 한 줄입니다(`AbilityComponent::collectEffectLog`). */
+    struct AbilityDebugLogRow
+    {
+        string  _event{};  ///< 기록 종류 이름(`AbilityEffectLogKind`)
+        string  _effect{}; ///< 이펙트 id
+        string  _source{}; ///< 건 길. 비면 어빌리티 · 코드
+        float32 _time{ 0.0f };
+        bool    _bRejected{ false }; ///< 거부된 적용이다(상태 색으로 보인다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 컴포넌트 하나의 한 순간 상태입니다. */
     struct AbilityDebugSnapshot
     {
@@ -67,6 +81,7 @@ namespace sw::editor
         vector<AbilityDebugEffectRow>    _listEffect;
         vector<AbilityDebugTagRow>       _listTag;
         vector<AbilityDebugAbilityRow>   _listAbility;
+        vector<AbilityDebugLogRow>       _listLog; ///< 늦은 것부터
         float32                          _time{ 0.0f };
 
         void clear();

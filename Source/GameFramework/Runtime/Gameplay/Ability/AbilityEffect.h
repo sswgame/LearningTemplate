@@ -125,6 +125,33 @@ namespace sw
         HitInfo          _hit{};               ///< 맞힌 자리. `_bHasHit` 가 SW_FALSE 면 뜻이 없다
         uint8            _bHasHit{ SW_FALSE }; ///< 맞힌 자리가 있는지(근접 · 탄의 피해). 주기 피해 · 비용은 없다
         uint8            _arrReserved[3]{};
+        /** @brief 건 길의 이름입니다(디버거 표시 — 효과 영역 `volume:<오브젝트>` · 상호작용 `interaction:<id>` · 기믹). 비면 어빌리티 · 코드가 건 것이다. 판정에 쓰지 않는다. */
+        hashed_string _sourceName{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 이펙트 기록 한 줄의 종류입니다(Ability 디버거의 적용 · 거부 · 제거 원인). */
+    ENUM()
+    enum class AbilityEffectLogKind : uint8
+    {
+        Applied = 0,        ///< 걸렸다(즉시 이펙트 포함)
+        RejectedMissingTag, ///< 대상이 적용 필수 태그(`_applicationRequiredTags`)를 갖지 않았다
+        RejectedBlockedTag, ///< 대상이 적용 차단 태그(`_applicationBlockedTags`)를 가졌다
+        RemovedExpired,     ///< 지속 시간이 끝났다(스택 하나씩 줄어드는 정책의 마지막 스택 포함)
+        RemovedByTag,       ///< 태그로 지웠다(다른 이펙트의 `_removeEffectsWithTags` · 코드)
+        RemovedExplicitly,  ///< 핸들로 지웠다(영역 이탈 · 상호작용 끝 · 코드)
+        RemovedUnloaded     ///< 실행 계산을 담은 모듈을 내렸다
+    };
+
+    /** @brief 이펙트 기록 한 줄입니다. 컴포넌트가 고정 용량 고리로 든다(`AbilityComponent::collectEffectLog`). */
+    struct AbilityEffectLogEntry
+    {
+        hashed_string        _effectID{};   ///< 이펙트 정의 id
+        hashed_string        _sourceName{}; ///< 건 길(`AbilityEffectContext::_sourceName`, 비면 어빌리티 · 코드)
+        float32              _time{ 0.0f }; ///< 컴포넌트 시간(`AbilityComponent::getTime`)
+        AbilityEffectLogKind _kind{ AbilityEffectLogKind::Applied };
     };
 } // namespace sw
 

@@ -28,6 +28,16 @@
 	<WaitUntil watch="Editor.AbilityDebugAttributeCount" atLeast="2" timeoutFrames="60"/>
 	<Expect watch="Editor.AbilityDebugAbilityCount" atLeast="1"/>
 	<EditorWaitSettled/>
+	<!-- ②-1 적용 출처 · 기록: 시험 조작으로 대시 이펙트를 건다(건 길 devcommand). 기록 표에 Applied 한 줄 이상, 런타임 HUD 섹션도 같은 줄 -->
+	<DevCommand line="debug.target ArenaPlayer"/>
+	<DevCommand line="ability.apply GE_Dash"/>
+	<WaitUntil watch="Editor.AbilityDebugLogCount" atLeast="1" timeoutFrames="60"/>
+	<DevCommand line="hud.print ability"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="Applied GE_Dash from devcommand" atLeast="1"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="abilitydebugger/log.png" maxMagentaFraction="0"/>
+	<DevCommand line="debug.target clear"/>
+	<EditorWaitSettled/>
 	<!-- ③ 멈춤 -->
 	<DevCommand line="stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
