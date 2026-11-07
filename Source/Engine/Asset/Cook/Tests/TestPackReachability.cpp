@@ -78,6 +78,54 @@ namespace
         }
     };
     using Util = PackReachabilityTestUtil;
+
+    struct PackEntryCatalogTestUtil
+    {
+        /** @brief 외형 카탈로그 둘(프리셋 · 외형)과 그 칸을 아는 규칙입니다. */
+        static PackCookRules makeRules()
+        {
+            PackCookRules     rules   = Util::makeRules();
+            PackEntryCatalog& presets = rules._listEntryCatalog.emplace_back();
+            presets._kind             = "preset";
+            presets._path             = "data/appearance/presets.xml";
+            presets._entryElement     = "CharacterAppearance";
+            presets._idAttribute      = "id";
+            PackEntryCatalog& visuals = rules._listEntryCatalog.emplace_back();
+            visuals._kind             = "visual";
+            visuals._path             = "data/appearance/itemvisuals.xml";
+            visuals._entryElement     = "ItemVisual";
+            visuals._idAttribute      = "id";
+            addField( rules, "_presetID", "preset" );
+            addField( rules, "body", "visual" );
+            return rules;
+        }
+
+        static void addField( PackCookRules& ioRules, const utf8* pField, const utf8* pKind )
+        {
+            PackEntryIDField& field = ioRules._listEntryIDField.emplace_back();
+            field._field            = pField;
+            field._kind             = pKind;
+        }
+
+        /** @brief 쓰는 프리셋 Farmer(외형 body_farmer → 부모 body_base) · 안 쓰는 Knight 를 둡니다. @p requiredData 는 게임 설정의 줄입니다. */
+        static void addCatalogs( PackReachFiles& ioFiles, Util::MemorySource& ioSource, string_view requiredData, const utf8* pExtraMapText )
+        {
+            Util::addGame( ioFiles, ioSource, requiredData );
+            Util::addText( ioFiles, ioSource, "game/x/maps/a.scene.xml", pExtraMapText );
+            Util::addText( ioFiles, ioSource, "common/data/appearance/presets.xml",
+                           R"(<CharacterAppearanceCatalog><CharacterAppearance id="Farmer" body="body_farmer"/><CharacterAppearance id="Knight" body="body_knight"/></CharacterAppearanceCatalog>)" );
+            Util::addText( ioFiles, ioSource, "common/data/appearance/itemvisuals.xml", R"(<ItemVisualCatalog>
+  <ItemVisual id="body_base"><Part mesh="common/models/base.mesh"/></ItemVisual>
+  <ItemVisual id="body_farmer" _base="body_base"><Part mesh="common/models/farmer.mesh"/></ItemVisual>
+  <ItemVisual id="body_knight"><Part mesh="common/models/knight.mesh"/></ItemVisual>
+</ItemVisualCatalog>)" );
+            for ( const utf8* pMesh : { "common/models/base.mesh", "common/models/farmer.mesh", "common/models/knight.mesh" } )
+            {
+                Util::addBinary( ioFiles, pMesh );
+            }
+        }
+    };
+    using EntryUtil = PackEntryCatalogTestUtil;
 } // namespace
 
 /** @brief [PackReachabilityTest] 뿌리(맵)에서 메시 · 머티리얼 · 부모(`_base`) · 텍스처까지 따라가고, 아무도 가리키지 않는 파일은 담지 않는다. 메시 곁의 파쇄도 담긴다 */
@@ -282,4 +330,83 @@ SW_TEST_CASE( PackReachabilityTest, AutomationRulesNeedTheAutomationRuntime )
     SW_REQUIRE_TRUE( PackReachability::collect( fields, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/automation/a.scenario.xml" ) ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/maps/test.scene.xml" ) ) );
+}
+
+/** @brief [PackReachabilityTest] 필수 데이터로 닿은 카탈로그는 불린 항목(씬의 프리셋 → 외형 → `_base` 부모)의 에셋만 담고, 안 불린 항목의 에셋은 뺀다. 파일 자체는 담긴다 */
+SW_TEST_CASE( PackReachabilityTest, EntryCatalogFollowsNamedEntriesOnly )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    EntryUtil::addCatalogs( files, source, R"(<RequiredData kind="appearance" pack="common"/>)", R"(<Scene><Component _presetID="Farmer"/></Scene>)" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, EntryUtil::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/data/appearance/itemvisuals.xml" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/base.mesh" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
+}
+
+/** @brief [PackReachabilityTest] 폴더 참조로 닿은 카탈로그(표 전체를 보여 주는 화면)는 모든 항목의 에셋을 담는다 */
+SW_TEST_CASE( PackReachabilityTest, EntryCatalogReachedByFolderIsWhole )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    EntryUtil::addCatalogs( files, source, "", R"(<Scene><Editor appearance="common/data/appearance"/></Scene>)" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, EntryUtil::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
+}
+
+/** @brief [PackReachabilityTest] `파일#id` 참조는 그 항목만 부른다 */
+SW_TEST_CASE( PackReachabilityTest, EntryCatalogFileHashIdNamesOneEntry )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    EntryUtil::addCatalogs( files, source, "", R"(<Scene><Item _base="common/data/appearance/itemvisuals.xml#body_knight"/></Scene>)" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, EntryUtil::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/models/knight.mesh" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/models/farmer.mesh" ) ) );
+}
+
+/** @brief [PackReachabilityTest] 스테이징 산출물은 원본이 쓰일 때만 담는다 — 같은 줄기의 원본, 셰이더는 가장 긴 줄기. 원본을 가릴 수 없는 것(스탬프 · 원본 없는 산출물)은 담는다 */
+SW_TEST_CASE( PackReachabilityTest, StagedOutputsFollowTheirSource )
+{
+    PackReachResult reach;
+    reach._setIncluded.insert( "game/x/maps/used.scene.xml" );
+    reach._setReferencedExcluded.insert( "engine/shaders/post_bloom.hlsl" );
+
+    vector<PackDomainSources> listSources;
+    PackDomainSources&        gameSources = listSources.emplace_back();
+    gameSources._domain                   = "game/x";
+    gameSources._listExistingID.push_back( "game/x/maps/used.scene.xml" );
+    gameSources._listExistingID.push_back( "game/x/maps/unused.scene.xml" );
+    PackDomainSources& engineSources = listSources.emplace_back();
+    engineSources._domain            = "engine";
+    engineSources._listExistingID.push_back( "engine/shaders/post.hlsl" );
+    engineSources._listExistingID.push_back( "engine/shaders/post_bloom.hlsl" );
+    engineSources._listExistingID.push_back( "engine/shaders/matgraph/fog.hlsl" );
+
+    PackStagedSelection staged;
+    staged.build( listSources, reach );
+    SW_EXPECT_TRUE( staged.selects( "game/x", "maps/used.scene.bin" ) );
+    SW_EXPECT_TRUE( staged.selects( "game/x", "maps/used.preload.json" ) );
+    SW_EXPECT_FALSE( staged.selects( "game/x", "maps/unused.scene.bin" ) );
+    SW_EXPECT_TRUE( staged.selects( "game/x", "registry/generated.bin" ) ); // 원본이 없다
+    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/post_bloom_ps.dxil" ) );
+    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/post_bloom_ps_0076c9bf.dxil" ) );
+    SW_EXPECT_FALSE( staged.selects( "engine", "shaders/bin/dx12/post_vs.dxil" ) );
+    SW_EXPECT_FALSE( staged.selects( "engine", "shaders/bin/dx12/fog_ps.dxil" ) );
+    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/cook.stamp" ) );
+    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/reflection.manifest" ) );
 }

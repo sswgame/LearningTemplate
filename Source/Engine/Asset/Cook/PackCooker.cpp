@@ -45,11 +45,12 @@ namespace sw
                 int64          _readNanos{ 0 }; ///< 원본 · 스테이징 파일 읽기
             };
 
-            /** @brief 고르기 결과입니다 — 담을 원본 id 와, 그 가운데 씬 · 프리팹 원본의 쿠킹본 id(스테이징에서 그것만 담는다). 모두 정규화한 리소스 id 다. */
+            /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 리소스 id), 스테이징 산출물의 고르기입니다. */
             struct PackSelection
             {
                 unordered_set<string> _setIncluded;
-                unordered_set<string> _setIncludedCooked;
+                unordered_set<string> _setReferencedExcluded;
+                PackStagedSelection   _staged;
             };
 
             /** @brief 고르기가 글을 읽는 디스크 입구입니다. 읽기는 `AssetIO::readBinaryFile` 이라 고르기 범위(`PackReach`)가 받아 준다(그 범위의 기록은 쓰지 않는다). */
@@ -80,7 +81,8 @@ namespace sw
             struct PackDomainCandidates
             {
                 string                    _domain;
-                vector<PackCandidateFile> _listFile;
+                vector<PackCandidateFile> _listFile;     ///< 담을 수 있는 원본
+                vector<string>            _listExisting; ///< 있는 모든 원본(제외 규칙이 뺀 것 포함) — 스테이징 산출물의 원본 표를 만든다
             };
 
             /** @brief 원본 파일 하나가 팩에 담길 수 있는지(제외 규칙 · 위 층이 뺀 파일 · 낡은 쿠킹본이 아닌지)입니다. 고르기의 후보 판정이다. */
@@ -162,6 +164,7 @@ namespace sw
                             continue;
                         string assetID = makeAssetID( domain, relativePath );
                         files._setExisting.insert( assetID );
+                        candidates._listExisting.push_back( assetID );
                         if ( isPackableSource( relativePath, absPath, config, params ) == false )
                             continue;
                         files._setPackable.insert( assetID );
@@ -182,13 +185,16 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackCooker.PackReachFailed", "Pack cook: following references from the cook roots failed (reasons above) - no pack is written" );
                     return false;
                 }
-                outSelection._setIncluded = std::move( reach._setIncluded );
-                outSelection._setIncludedCooked.clear();
-                for ( const string& assetID : outSelection._setIncluded )
+                vector<PackDomainSources> listSources;
+                for ( const PackDomainCandidates& candidates : listCandidates )
                 {
-                    if ( AssetCookPath::isCookableSource( assetID ) )
-                        outSelection._setIncludedCooked.insert( FileUtil::normalizePath( AssetCookPath::toCookedPath( assetID ) ) );
+                    PackDomainSources& sources = listSources.emplace_back();
+                    sources._domain            = candidates._domain;
+                    sources._listExistingID    = candidates._listExisting;
                 }
+                outSelection._staged.build( listSources, reach );
+                outSelection._setIncluded           = std::move( reach._setIncluded );
+                outSelection._setReferencedExcluded = std::move( reach._setReferencedExcluded );
                 return true;
             }
 
@@ -197,10 +203,13 @@ namespace sw
             {
                 const string   prefix = FileUtil::normalizePath( domain ) + "/";
                 vector<string> listID;
-                for ( const string& assetID : selection._setIncluded )
+                for ( const unordered_set<string>* pSet : { &selection._setIncluded, &selection._setReferencedExcluded } )
                 {
-                    if ( StringUtil::startsWith( assetID, prefix ) )
-                        listID.push_back( assetID );
+                    for ( const string& assetID : *pSet )
+                    {
+                        if ( StringUtil::startsWith( assetID, prefix ) )
+                            listID.push_back( assetID );
+                    }
                 }
                 std::sort( listID.begin(), listID.end() );
                 uint64 hash = settingsHash;
@@ -430,8 +439,8 @@ namespace sw
                         continue;
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;
-                    // 씬 · 프리팹 쿠킹본은 원본이 담길 때만 담는다. 셰이더 바이너리 같은 나머지 산출물은 원본이 팩에 들지 않아 그대로 담는다.
-                    if ( AssetCookPath::isCookedOutput( relativePath ) && selection._setIncludedCooked.contains( makeAssetID( domain, relativePath ) ) == false )
+                    // 산출물은 그 원본(같은 줄기의 원본 · 셰이더 원본)이 쓰일 때만 담는다 - 쓰지 않는 씬의 쿠킹본 · 쓰지 않는 셰이더의 바이너리를 싣지 않는다.
+                    if ( selection._staged.selects( domain, relativePath ) == false )
                         continue;
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
                         return CookStep::Failed;

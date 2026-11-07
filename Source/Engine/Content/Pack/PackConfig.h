@@ -124,6 +124,46 @@ namespace sw
     };
 
     /**
+     * @struct PackEntryCatalog
+     * @brief 항목 단위로 고르는 카탈로그 파일 하나입니다 — 쓰는 항목이 가리키는 에셋만 담는다(파일 자체는 통째로 담긴다. 런타임이 표를 읽어 id 로 찾는다).
+     * @details 파일을 통째로 쓰겠다고 말한 길(폴더 참조 · 항상 담기 · `#` 없는 파일 참조)로 닿으면 모든 항목이 쓰인다. 필수 데이터(`<RequiredData>`)나 `파일#id` 로 닿으면 이름이 불린 항목만 쓰인다.
+     */
+    REFLECT()
+    struct SW_API PackEntryCatalog
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _kind; ///< 항목 id 의 이름 공간(`PackEntryIDField::_kind` 가 가리킨다)
+
+        PROPERTY( Required )
+        string _path; ///< 팩 루트 기준 파일(`data/items.xml`) — 어느 팩에 있든 같다
+
+        PROPERTY( Required )
+        string _entryElement; ///< 루트 아래 항목 요소 이름(`Item`)
+
+        PROPERTY( Required )
+        string _idAttribute; ///< 항목 id 속성(`id`)
+    };
+
+    /**
+     * @struct PackEntryIDField
+     * @brief 카탈로그 항목을 id 로 가리키는 칸 하나입니다(속성 · 요소 글 · `<item>` 목록, 쉼표로 여럿). 경로가 아니라 이름이라 참조 칸 표로는 보이지 않는다.
+     * @details 표에 없는 칸으로만 불리는 항목의 에셋은 빠진다. 없는 id 는 담을 것이 없어 넘어간다(이름을 찾는 일은 런타임 검증의 몫이다).
+     */
+    REFLECT()
+    struct SW_API PackEntryIDField
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _field; ///< 칸 이름(`visual`)
+
+        PROPERTY( Required )
+        string _kind; ///< 가리키는 카탈로그의 이름 공간(`visual`)
+    };
+
+    /**
      * @struct PackCookRules
      * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachability`).
      * @details 담는 것은 뿌리(항상 담기 묶음 · 게임 설정의 필수 데이터)에서 참조 칸(`AssetReferenceFields`)과 곁 파일(`SW_ASSET_COMPANION`)을 따라 닿는 파일이다.
@@ -145,6 +185,12 @@ namespace sw
 
         PROPERTY( Required )
         vector<string> _listUnfollowedField; ///< 따라가지 않는 경로 칸 — 런타임이 읽지 않는 개발 도구 입력(현지화 수집 뿌리 `assetRoots`)
+
+        PROPERTY( Required )
+        vector<PackEntryCatalog> _listEntryCatalog; ///< 항목 단위로 고르는 카탈로그
+
+        PROPERTY( Required )
+        vector<PackEntryIDField> _listEntryIDField; ///< 카탈로그 항목을 id 로 가리키는 칸
     };
 } // namespace sw
 

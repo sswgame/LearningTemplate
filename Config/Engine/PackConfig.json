@@ -56,7 +56,7 @@
   "_cookRules": {
     "_listAlwaysCook": [
       { "_name": "EngineLocalizationTables_NamedRelativeToTheProject", "_listPattern": [ "engine/localization/*" ], "_bAutomationOnly": false },
-      { "_name": "GameCodeLiterals_EngineAssets", "_listPattern": [ "engine/textures/test/checker.dds" ], "_bAutomationOnly": false },
+      { "_name": "GameCodeLiterals_EngineAssets", "_listPattern": [ "engine/textures/test/checker.dds", "engine/shaders/extension_pass_demo.hlsl", "engine/shaders/extension_draw_demo.hlsl" ], "_bAutomationOnly": false },
       { "_name": "GameData_FoundByKindPathRule", "_listPattern": [ "game/*/data/**" ], "_bAutomationOnly": false },
       { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ], "_bAutomationOnly": false },
       { "_name": "Scenarios_RunByName", "_listPattern": [ "game/*/automation/**", "engine/automation/**" ], "_bAutomationOnly": true },
@@ -69,6 +69,28 @@
       { "_kind": "items", "_path": "data/items.xml" },
       { "_kind": "appearance", "_path": "data/appearance" }
     ],
-    "_listUnfollowedField": [ "assetRoots" ]
+    "_listUnfollowedField": [ "assetRoots" ],
+    "_listEntryCatalog": [
+      { "_kind": "item", "_path": "data/items.xml", "_entryElement": "Item", "_idAttribute": "id" },
+      { "_kind": "visual", "_path": "data/appearance/itemvisuals.xml", "_entryElement": "ItemVisual", "_idAttribute": "id" },
+      { "_kind": "set", "_path": "data/appearance/sets.xml", "_entryElement": "Set", "_idAttribute": "id" },
+      { "_kind": "schema", "_path": "data/appearance/customization.xml", "_entryElement": "Schema", "_idAttribute": "id" },
+      { "_kind": "preset", "_path": "data/appearance/presets.xml", "_entryElement": "CharacterAppearance", "_idAttribute": "id" }
+    ],
+    "_listEntryIDField": [
+      { "_field": "item", "_kind": "item" },
+      { "_field": "items", "_kind": "item" },
+      { "_field": "visual", "_kind": "visual" },
+      { "_field": "visible", "_kind": "visual" },
+      { "_field": "body", "_kind": "visual" },
+      { "_field": "set", "_kind": "set" },
+      { "_field": "schema", "_kind": "schema" },
+      { "_field": "customization", "_kind": "schema" },
+      { "_field": "parent", "_kind": "preset" },
+      { "_field": "_presetID", "_kind": "preset" },
+      { "_field": "_preset", "_kind": "preset" },
+      { "_field": "previewPreset", "_kind": "preset" },
+      { "_field": "_listVillagerPreset", "_kind": "preset" }
+    ]
   }
 }
