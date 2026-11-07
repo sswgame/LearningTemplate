@@ -108,6 +108,22 @@ namespace sw
         return 1.0f / ( 1.0f + float3::getHorizontalDistance( pObserver->_center, positionIt->second ) * 0.1f );
     }
 
+    bool InterestReplicationPolicy::evaluateEntity( int32 connectionID, const NetEntityState& entity, float32& outPriority ) const
+    {
+        // 자리 표를 한 번만 찾는다(두 질문을 따로 물으면 엔티티 × 연결마다 셋이다). 답은 `isRelevant` · `computePriority` 와 같다.
+        const auto positionIt = _mapPosition.find( entity._entityID );
+        if ( positionIt == _mapPosition.end() )
+        {
+            outPriority = 1.0f;
+            return true;
+        }
+        const Observer* pObserver = findObserver( connectionID );
+        if ( pObserver == nullptr || pObserver->_uniqueVisible.find( entity._entityID ) == pObserver->_uniqueVisible.end() )
+            return false;
+        outPriority = 1.0f / ( 1.0f + float3::getHorizontalDistance( pObserver->_center, positionIt->second ) * 0.1f );
+        return true;
+    }
+
     int32 InterestReplicationPolicy::getVisibleCount( int32 connectionID ) const
     {
         const Observer* pObserver = findObserver( connectionID );

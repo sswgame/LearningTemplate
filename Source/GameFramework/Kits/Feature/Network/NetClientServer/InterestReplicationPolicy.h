@@ -50,6 +50,7 @@ namespace sw
 
         bool    isRelevant( int32 connectionID, const NetEntityState& entity ) const override;
         float32 computePriority( int32 connectionID, const NetEntityState& entity ) const override;
+        bool    evaluateEntity( int32 connectionID, const NetEntityState& entity, float32& outPriority ) const override;
 
         int32 getVisibleCount( int32 connectionID ) const;
 

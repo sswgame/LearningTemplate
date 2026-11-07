@@ -170,14 +170,15 @@ namespace sw
         size_t relevantCount = 0;
         for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
         {
-            if ( _pPolicy->isRelevant( connectionID, entity ) == false )
+            float32 priority{ 0.0f };
+            if ( _pPolicy->evaluateEntity( connectionID, entity, priority ) == false )
                 continue;
             if ( relevantCount < filtered._listEntity.size() )
                 filtered._listEntity[relevantCount] = entity;
             else
                 filtered._listEntity.push_back( entity );
             ++relevantCount;
-            prioritizer.accumulate( entity._entityID, _pPolicy->computePriority( connectionID, entity ), 1.0f ); // 스냅샷 하나에 한 번 누적한다
+            prioritizer.accumulate( entity._entityID, priority, 1.0f ); // 스냅샷 하나에 한 번 누적한다
         }
         filtered._listEntity.resize( relevantCount );
         prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다. 다시 관련되면 0부터 쌓는다

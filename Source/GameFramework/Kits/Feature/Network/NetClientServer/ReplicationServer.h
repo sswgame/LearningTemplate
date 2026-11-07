@@ -66,6 +66,18 @@ namespace sw
             (void)entity;
             return 1.0f;
         }
+        /**
+         * @brief 관련 여부와 우선도를 함께 구합니다. 답은 `isRelevant` · `computePriority` 와 같아야 합니다.
+         * @details 엔티티 × 연결마다 불리므로 두 질문이 같은 표를 찾는 정책은 한 번에 답하게 재정의한다(`InterestReplicationPolicy`).
+         * @return 관련 있으면 true 이고 @p outPriority 를 채웁니다.
+         */
+        virtual bool evaluateEntity( int32 connectionID, const NetEntityState& entity, float32& outPriority ) const
+        {
+            if ( isRelevant( connectionID, entity ) == false )
+                return false;
+            outPriority = computePriority( connectionID, entity );
+            return true;
+        }
     };
 } // namespace sw
 
