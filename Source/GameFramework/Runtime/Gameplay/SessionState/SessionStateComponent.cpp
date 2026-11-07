@@ -122,8 +122,33 @@ namespace sw
                 outReply = formatToString( "cheat.money balance %#%#", wallet.getBalance( currency ), ( listArgument.size() == 2 ? " " + listArgument[1] : string( " (default currency)" ) ) );
                 return true;
             }
+
+            /** @brief `cheat.weather <weatherID> [duration]` — 판 상태의 날씨를 곧바로 바꿉니다(전환 없이). 기간을 빼면 정의의 범위에서 고른다. 표면 젖음 · 강수 시나리오가 쓴다. */
+            static bool runWeather( const vector<string>& listArgument, string& outReply )
+            {
+                float32    duration                 = 0.0f;
+                const bool bInvalidWeatherArguments = listArgument.empty() || listArgument.size() > 2 || ( listArgument.size() == 2 && ( StringUtil::parseFloat( listArgument[1], duration ) == false || duration < 0.0f ) );
+                if ( bInvalidWeatherArguments )
+                    return false;
+                SessionStateComponent* pState = findSessionState( outReply );
+                if ( pState == nullptr )
+                    return true;
+                WeatherSystem&      weather   = pState->getWeather();
+                const hashed_string weatherID = hashed_string( listArgument[0] );
+                weather.forceWeather( weatherID, duration, true );
+                outReply = weather.getCurrent() == weatherID ? "cheat.weather " + listArgument[0] : "cheat.weather: the session state has no weather '" + listArgument[0] + "' (no weather catalog or unknown id)";
+                return true;
+            }
         };
     } // namespace
+
+    // 등록 줄은 기능 파일로 옮길 때(165e16647c) 빠졌다 — 함수만 남아 명령이 없었다.
+    SW_DEV_COMMAND( CheatGive, "cheat.give", "cheat.give <itemID> [count]", "Add items to the session state's inventory (partly when slots or weight run out)",
+                    &SessionStateDevCommandsInternal::runGive );
+    SW_DEV_COMMAND( CheatMoney, "cheat.money", "cheat.money <amount> [currency]", "Add money to the session state's wallet (default currency when none is given)",
+                    &SessionStateDevCommandsInternal::runMoney );
+    SW_DEV_COMMAND( CheatWeather, "cheat.weather", "cheat.weather <weatherID> [duration]", "Switch the session state's weather now, without the transition (duration in game seconds; none picks from the definition)",
+                    &SessionStateDevCommandsInternal::runWeather );
 } // namespace sw
 
 namespace sw

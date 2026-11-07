@@ -1,6 +1,6 @@
 /**
  * @file AppearanceWatches.cpp
- * @brief 외형의 자동화 감시 값(`Appearance.Preset` · `Appearance.MergedSections` · `Appearance.SlotItem`)입니다.
+ * @brief 외형의 자동화 감시 값(`Appearance.Preset` · `Appearance.MergedSections` · `Appearance.SlotItem` · `Appearance.SurfaceChannel`)입니다.
  * @details 시나리오만 읽는 감시 값이라 컴포넌트 파일이 아니라 이 파일에 둔다(`VehicleWatches` · `PawnWatches` 와 같은 자리). 컴포넌트의 공개 읽기만 쓴다.
  */
 #include "pch.h"
@@ -69,6 +69,28 @@ namespace sw
                 outValue.setText( "(empty)" );
                 return true;
             }
+
+            /** @brief 몸 표면 채널(@p query 의 key — `Wet` · `Dirt` …)의 모든 영역 가운데 가장 큰 값입니다(머티리얼 스칼라와 같은 값). 표면 상태가 꺼졌거나 모르는 채널이면 값이 없습니다. */
+            [[nodiscard]] static bool readSurfaceChannel( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
+                if ( pAppearance == nullptr )
+                    return false;
+                const hashed_string          channel( query._key );
+                const CharacterSurfaceState& state  = pAppearance->getSurfaceState();
+                bool                         bKnown = false;
+                for ( const SurfaceChannelDef& def : state.getChannels() )
+                {
+                    bKnown = bKnown || def._name == channel;
+                }
+                if ( bKnown == false )
+                {
+                    outValue.setText( pAppearance->hasSurfaceState() ? "no such surface channel" : "the surface state is off (no _surfaceChannelsPath)" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( state.computeMaxValue( channel ) ) );
+                return true;
+            }
         };
     } // namespace
 
@@ -79,4 +101,6 @@ namespace sw
                                &AppearanceWatchesInternal::readMergedSections, true, false );
     SW_AUTOMATION_QUERY_WATCH( appearanceSlotItem, "Appearance.SlotItem", "Item the assembled appearance wears in the slot named by key ('(empty)' when the slot is empty)",
                                &AppearanceWatchesInternal::readSlotItem, true, true );
+    SW_AUTOMATION_QUERY_WATCH( appearanceSurfaceChannel, "Appearance.SurfaceChannel", "Largest value of the body surface channel named key (Wet, Dirt, Blood...) over all regions",
+                               &AppearanceWatchesInternal::readSurfaceChannel, true, true );
 } // namespace sw

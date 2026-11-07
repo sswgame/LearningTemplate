@@ -17,6 +17,7 @@ namespace sw
     SurfaceChannelDef::SurfaceChannelDef()
         : _name{}
         , _decayPerSecond{ 0.0f }
+        , _washPerSecond{ 0.0f }
         , _maxValue{ 1.0f }
         , _maskResolution{ 0 }
         , _bClip{ SW_FALSE }
@@ -288,6 +289,45 @@ namespace sw
                     ++_revision;
             }
         }
+    }
+
+    void CharacterSurfaceState::applyWater( float32 deltaSeconds, float32 submersion )
+    {
+        const float32 exposure = deltaSeconds * MathUtil::saturate( submersion );
+        if ( exposure <= 0.0f )
+            return;
+        const size_t channelCount = _listChannel.size();
+        for ( size_t channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+        {
+            const float32 amount = _listChannel[channelIndex]._washPerSecond * exposure;
+            if ( amount <= 0.0f )
+                continue;
+            for ( uint32 region = 0; region < _regionCount; ++region )
+            {
+                float32& value = _listRegionValue[region * channelCount + channelIndex];
+                if ( value > 0.0f )
+                    ++_revision;
+                value = MathUtil::max( 0.0f, value - amount );
+            }
+            for ( uint32 part = 0; part < _partCount; ++part )
+            {
+                SurfaceMask& mask           = _listMask[part * channelCount + channelIndex];
+                const uint32 revisionBefore = mask.getRevision();
+                mask.decay( amount );
+                if ( mask.getRevision() != revisionBefore )
+                    ++_revision;
+            }
+        }
+    }
+
+    float32 CharacterSurfaceState::computeMaxValue( const hashed_string& channel ) const
+    {
+        float32 maxValue = 0.0f;
+        for ( uint32 region = 0; region < _regionCount; ++region )
+        {
+            maxValue = MathUtil::max( maxValue, getRegionValue( region, channel ) );
+        }
+        return maxValue;
     }
 } // namespace sw
 

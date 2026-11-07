@@ -10,7 +10,7 @@
  *          @code
  *          <SurfaceChannels>
  *            <Channel name="Wet" decayPerSecond="0.05"/>
- *            <Channel name="Blood" decayPerSecond="0.01" maskResolution="64"/>
+ *            <Channel name="Blood" decayPerSecond="0.01" washPerSecond="0.2" maskResolution="64"/>
  *            <Channel name="Tear" maskResolution="128" clip="true"/>
  *          </SurfaceChannels>
  *          @endcode
@@ -47,6 +47,8 @@ namespace sw
         hashed_string _name;
         PROPERTY( Min = 0.0 )
         float32 _decayPerSecond;
+        PROPERTY( Min = 0.0, Tooltip = "Extra decay per second while the body is under water, scaled by how deep it is (0 = water does not wash this channel: wounds, tears)" )
+        float32 _washPerSecond; ///< 물이 씻는 빠르기(초당, 완전히 잠겼을 때) — 흙 · 피만 쓰고 상처 · 찢김은 0 으로 보존한다
         PROPERTY( Name = "max", Min = 0.0001 )
         float32 _maxValue;
         PROPERTY( Max = 4096 )
@@ -155,6 +157,13 @@ namespace sw
 
         /** @brief 시간을 흘립니다. 채널마다 초당 감쇠만큼 영역 값과 마스크를 내립니다(감쇠가 0 인 채널, 즉 찢김은 그대로 둡니다). */
         void update( float32 deltaSeconds );
+        /**
+         * @brief 물이 씻습니다. 씻김 빠르기(`_washPerSecond`)가 있는 채널만 @p deltaSeconds × @p submersion(0..1, 잠긴 비율)만큼 영역 값과 마스크를 더 내립니다.
+         * @details 씻김이 0 인 채널(젖음 · 상처 · 찢김)은 건드리지 않는다 — 물에 들어갔다고 모든 표시를 지우지 않는다. 젖음을 올리는 일은 부르는 쪽(`SurfaceExposureComponent`)이다.
+         */
+        void applyWater( float32 deltaSeconds, float32 submersion );
+        /** @brief 채널의 모든 영역 가운데 가장 큰 값입니다(머티리얼 스칼라 `_surface<채널>` 과 같은 값). 모르는 채널이면 0 입니다. */
+        float32 computeMaxValue( const hashed_string& channel ) const;
         /** @brief 영역 값이나 마스크 셀이 바뀔 때마다 오르는 번호입니다. 머티리얼에 다시 올릴지 이 값으로 가른다(바뀐 것이 없는 프레임은 올리지 않는다). */
         uint64 getRevision() const { return _revision; }
         /** @brief 채널 정의입니다(순서는 `getRegionParameters` 의 값 순서와 같다). */

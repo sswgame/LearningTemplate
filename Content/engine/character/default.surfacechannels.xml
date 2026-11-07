@@ -1,9 +1,10 @@
 <!-- 몸 표면 상태 채널 — SurfaceChannelTable 이 읽는다. 감쇠는 초당, maskResolution 이 0 이 아니면 부품마다 UV 마스크(맞은 자리 도장)가 있고,
-     clip 은 머티리얼이 알파로 잘라 구멍을 내는 채널(찢김)이다. -->
+     clip 은 머티리얼이 알파로 잘라 구멍을 내는 채널(찢김)이다. washPerSecond 는 물에 잠겼을 때 더 빠지는 빠르기(잠긴 비율을 곱한다)다 —
+     흙 · 피만 씻기고 상처 · 찢김은 0 으로 남는다(CharacterSurfaceState::applyWater). 젖음은 물이 올리고 decayPerSecond 로 마른다. -->
 <SurfaceChannels>
     <Channel name="Wet" decayPerSecond="0.05"/>
-    <Channel name="Dirt" decayPerSecond="0.002" maskResolution="64"/>
-    <Channel name="Blood" decayPerSecond="0.01" maskResolution="128"/>
+    <Channel name="Dirt" decayPerSecond="0.002" washPerSecond="0.25" maskResolution="64"/>
+    <Channel name="Blood" decayPerSecond="0.01" washPerSecond="0.15" maskResolution="128"/>
     <Channel name="Wound" maskResolution="128"/>
     <Channel name="Tear" maskResolution="128" clip="true"/>
 </SurfaceChannels>
