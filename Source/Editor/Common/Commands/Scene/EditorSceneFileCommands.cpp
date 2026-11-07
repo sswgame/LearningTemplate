@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -275,6 +276,10 @@ namespace sw::editor
             return false;
         }
         editor::getSubsystem<EditorWorkspace>().clearSceneDirty();
+        // 정상 저장한 씬의 자동 저장 사본은 지운다 — 남겨 두면 다음 비정상 종료 뒤 이미 저장한 일을 복구하라고 묻는다
+        const Scene* pSavedScene = editor::getActiveScene();
+        if ( pSavedScene != nullptr )
+            EditorAutosaveCommands::onSceneSaved( pSavedScene->getSourcePath() );
         return true;
     }
 

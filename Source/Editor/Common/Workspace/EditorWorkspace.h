@@ -148,6 +148,8 @@ namespace sw::editor
         void clearSceneDirty() { _bSceneDirty = SW_FALSE; }
         /** @brief 저장하지 않은 씬 변경이 있으면 true 입니다. */
         bool isSceneDirty() const { return _bSceneDirty == SW_TRUE; }
+        /** @brief 씬을 바꾼 편집(`markSceneDirty`)마다 하나씩 오르는 번호입니다. 자동 저장이 지난 사본 뒤 편집이 있었는지 본다. */
+        uint32 getSceneEditSerial() const { return _sceneEditSerial; }
 
         // ------------------------------------------------------------------------------
         // 6) 스크롤 타깃과 본 계층 팝업
@@ -211,6 +213,7 @@ namespace sw::editor
         vector<uint64>           _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
         int32                    _gizmoOperation;
         EditorPendingSceneAction _pendingSceneAction;
+        uint32                   _sceneEditSerial; ///< `markSceneDirty` 횟수(`getSceneEditSerial`)
         uint8                    _bGizmoLocalSpace  : 1;
         uint8                    _bSceneDirty       : 1;
         [[maybe_unused]] uint8   _reservedWorkspace : 5;

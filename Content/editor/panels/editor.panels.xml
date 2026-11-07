@@ -47,6 +47,7 @@
 		<EditorPanelText _title="Project Settings" _label="Project Settings" />
 		<EditorPanelText _title="Quick Open" _label="Quick Open" />
 		<EditorPanelText _title="Ragdoll Preview" _label="Ragdoll Preview" />
+		<EditorPanelText _title="Recovered Work" _label="Recovered Work" />
 		<EditorPanelText _title="Render Targets" _label="Render Targets" />
 		<EditorPanelText _title="Retarget Profile" _label="Retarget Profile" />
 		<EditorPanelText _title="Rig Debug" _label="Rig Debug" />

@@ -47,6 +47,7 @@ namespace sw::editor
         , _listLockedObjectID{}
         , _gizmoOperation{ 0 }
         , _pendingSceneAction{ EditorPendingSceneAction::None }
+        , _sceneEditSerial{ 0 }
         , _bGizmoLocalSpace{ SW_TRUE }
         , _bSceneDirty{ SW_FALSE }
         , _reservedWorkspace{ 0 }
@@ -308,5 +309,6 @@ namespace sw::editor
             EditorPlaySession::recordSceneEditWhileHeld();
         }
         _bSceneDirty = SW_TRUE;
+        ++_sceneEditSerial;
     }
 } // namespace sw::editor

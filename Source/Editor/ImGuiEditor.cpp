@@ -16,6 +16,7 @@
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
+#include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
@@ -538,7 +539,8 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownEditorData()
     {
-        EditorPreferencesStore::close(); // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
+        EditorAutosaveCommands::endSession(); // 정상 종료 — 자동 저장 사본과 세션 잠금을 지운다(남으면 다음 기동이 비정상 종료로 보고 복구를 묻는다)
+        EditorPreferencesStore::close();      // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
         EditorIconGlyphTable::publish( nullptr, nullptr );
         _pComponentIconTable.reset();
         _pIconGlyphTable.reset();

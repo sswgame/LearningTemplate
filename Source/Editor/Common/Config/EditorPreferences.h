@@ -98,6 +98,28 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @brief 자동 저장 — 씬 사본의 주기와 남길 세대 수입니다(`EditorAutosaveCommands`). 사본은 원본을 덮지 않고 에디터 상태 폴더에만 쓴다.
+     * @details 언리얼 Loading & Saving 의 Auto Save(기본 10 분)보다 짧게 둔다 — 잃어도 되는 일의 상한을 5 분으로 정했다. 세대는 무제한으로 두지 않는다.
+     */
+    REFLECT()
+    struct EditorAutosavePreferences
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Write a copy of the scene you are editing every interval while it has unsaved changes (the original file is never overwritten)" )
+        bool _bEnabled{ true };
+
+        PROPERTY( Min = 30.0, Max = 3600.0, Units = s, Tooltip = "Seconds between autosave copies" )
+        float32 _intervalSeconds{ 300.0f };
+
+        PROPERTY( Min = 1, Max = 20, Tooltip = "Copies kept per scene - the oldest is removed when a new one is written" )
+        uint32 _keepGenerations{ 3 };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
      * @brief 진단 — 단언 대화상자(Windows Debug 대화형 실행에서 App 이 건다)를 띄울지와 "이 자리 늘 무시" 를 기억할지입니다.
      * @details 값은 `EditorAssertControl.cpp` 가 바뀔 때마다 Core 의 대화상자 설정(`internal::setAssertDialogOptions`)에 입힌다. 환경설정을 읽기 전의
      *          초기화 구간은 Core 의 기본값(둘 다 켬)으로 돈다. 자동 실행(-scenario · -unattended)은 대화상자를 걸지 않으므로 이 값과 상관없이 멈춘다.
