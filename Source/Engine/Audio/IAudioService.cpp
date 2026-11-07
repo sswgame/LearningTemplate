@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -592,3 +593,6 @@ namespace sw
         build._pStartupParts->_pAudio = &scope.addSubsystem( std::move( setup._audio ) );
     } );
 } // namespace sw
+
+// 기본 믹서 그래프는 상수로 읽는다 - 쓰는 것만 담는 팩 쿠킹의 뿌리다(`AssetCookRoot.h`).
+SW_ASSET_COOK_ROOT( DefaultAudioMixer, ::sw::IAudioService::kDefaultMixerPath );

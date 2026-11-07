@@ -12,6 +12,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackReachability.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
@@ -171,6 +172,7 @@ namespace sw
                         files._listGameDomain.push_back( FileUtil::normalizePath( domain ) );
                 }
 
+                AssetCookRootRegistry::appendRoots( files._listCodeRoot );
                 PackReachResult reach;
                 const bool      bReached = PackReachability::collect( fields, config._cookRules, files, source, reach );
                 logSelection( listCandidates, reach );

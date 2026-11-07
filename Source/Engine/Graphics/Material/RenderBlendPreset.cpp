@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 
+#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
@@ -25,3 +26,6 @@ namespace sw
         return nullptr;
     }
 } // namespace sw
+
+// 블렌드 프리셋 표는 상수로 읽는다(서비스 없는 도구에서도) - 쓰는 것만 담는 팩 쿠킹의 뿌리다(`AssetCookRoot.h`).
+SW_ASSET_COOK_ROOT( RenderBlendPresets, ::sw::RenderBlendPresetTable::kAssetPath );

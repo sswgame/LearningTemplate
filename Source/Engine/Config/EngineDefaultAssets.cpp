@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/BuildInfo.h"
 
+#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -75,3 +76,6 @@ namespace sw
         return true;
     }
 } // namespace sw
+
+// 엔진 기본 에셋 표 - 그 칸들이 나머지 엔진 에셋(머티리얼 · 셰이더 · 파이프라인 · UI · 설정 표)을 끌고 오는 엔진 쪽 뿌리다(`AssetCookRoot.h`).
+SW_ASSET_COOK_ROOT( EngineDefaultAssets, ::sw::constant::path::kEngineDefaultAssets );

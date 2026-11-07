@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
+#include "Engine/Asset/Cook/AssetCookRoot.h"
 #include "Engine/Asset/Cook/PackReachability.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -227,4 +228,29 @@ SW_TEST_CASE( PackReachabilityTest, UnfollowedFieldsAreNotFollowed )
     SW_REQUIRE_TRUE( PackReachability::collect( fields, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/data/x.locproject.xml" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/props/crate.mesh" ) ) );
+}
+
+/** @brief [PackReachabilityTest] 코드가 상수로 읽는 에셋(`SW_ASSET_COOK_ROOT`)은 뿌리이고 그 참조도 따라간다. 어디에도 없으면 빠진 참조와 같은 오류다. 엔진 기본 에셋 표가 등록돼 있다 */
+SW_TEST_CASE( PackReachabilityTest, CodeRootsAreRoots )
+{
+    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( "engine/data/enginedefaultassets.xml" ) );
+    SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( "engine/physics/physicssettings.xml" ) );
+
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( Util::loadRepositoryFields( fields ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addText( files, source, "engine/data/defaults.xml", R"(<Defaults _defaultMaterial="engine/materials/default.material"/>)" );
+    Util::addText( files, source, "engine/materials/default.material", "<MaterialDesc/>" );
+    Util::addText( files, source, "engine/materials/unused.material", "<MaterialDesc/>" );
+    files._listCodeRoot.push_back( "engine/data/defaults.xml" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "engine/materials/default.material" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "engine/materials/unused.material" ) ) );
+
+    files._listCodeRoot.push_back( "engine/data/gone.xml" );
+    SW_EXPECT_LOG( "PackReachability.MissingReference" );
+    SW_EXPECT_FALSE( PackReachability::collect( fields, Util::makeRules(), files, source, result ) );
 }

@@ -128,6 +128,16 @@ namespace sw
                     return rootCount;
                 }
 
+                /** @brief 코드가 상수로 읽는 에셋을 뿌리로 담습니다. 뿌리 수를 돌려준다. */
+                uint32 addCodeRoots()
+                {
+                    for ( const string& root : _files._listCodeRoot )
+                    {
+                        resolve( FileUtil::normalizePath( root ), "SW_ASSET_COOK_ROOT", root );
+                    }
+                    return static_cast<uint32>( _files._listCodeRoot.size() );
+                }
+
                 /** @brief 굽는 게임마다 게임 설정의 `<RequiredData kind pack>` 이 가리키는 자리를 뿌리로 담습니다. 뿌리 수를 돌려준다. */
                 uint32 addRequiredDataRoots()
                 {
@@ -238,6 +248,7 @@ namespace sw
         outResult._setIncluded.clear();
         outResult._rootCount = 0;
         PackReachabilityInternal::Walker walker( fields, rules, files, source, outResult._setIncluded );
+        outResult._rootCount += walker.addCodeRoots();
         outResult._rootCount += walker.addAlwaysCookRoots();
         outResult._rootCount += walker.addRequiredDataRoots();
         walker.run();
