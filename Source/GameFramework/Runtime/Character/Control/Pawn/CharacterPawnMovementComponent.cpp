@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 
 namespace sw
 {
@@ -87,13 +88,15 @@ namespace sw
         const ControlIntent& intent = pPawn->getIntent();
 
         // 목표 수평 속도 — 의도의 월드 이동(길이 1 이하) × 걸음 · 달리기 속도.
-        const float3  worldMove = intent.computeWorldMove();
-        const float32 speed     = intent.isDown( _sprintIndex ) ? _sprintSpeed : _walkSpeed;
-        const float3  target{ worldMove._x * speed, 0.0f, worldMove._z * speed };
-        const bool    bHasTarget = target._x != 0.0f || target._z != 0.0f;
-        _velocity                = Internal::moveTowards( _velocity, target, ( bHasTarget ? _acceleration : _deceleration ) * deltaTime );
+        // 이펙트의 이동 제약(둔화 배율 · 속박/기절 · 점프 차단) — 이동기는 이 한 곳에서 읽는다(`MovementConstraint`).
+        const MovementConstraint constraint = MovementConstraint::read( *pOwner );
+        const float3             worldMove  = constraint._bMoveBlocked == SW_TRUE ? float3{} : intent.computeWorldMove();
+        const float32            speed      = ( intent.isDown( _sprintIndex ) ? _sprintSpeed : _walkSpeed ) * constraint._speedScale;
+        const float3             target{ worldMove._x * speed, 0.0f, worldMove._z * speed };
+        const bool               bHasTarget = target._x != 0.0f || target._z != 0.0f;
+        _velocity                           = Internal::moveTowards( _velocity, target, ( bHasTarget ? _acceleration : _deceleration ) * deltaTime );
         pController->setMoveVelocity( _velocity );
-        if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() )
+        if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() && constraint._bJumpBlocked == SW_FALSE )
             pController->jump( _jumpSpeed );
 
         // 몸 방향 — 조종 요, 또는 움직이는 쪽.

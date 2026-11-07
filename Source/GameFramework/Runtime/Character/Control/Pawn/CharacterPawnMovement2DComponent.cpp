@@ -9,6 +9,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 
 namespace sw
 {
@@ -49,9 +50,12 @@ namespace sw
         if ( pPawn == nullptr || pController == nullptr )
             return;
         const ControlIntent& intent = pPawn->getIntent();
-        _velocity                   = computeVelocity( _velocity, intent._move._x, _walkSpeed, _acceleration, _deceleration, deltaTime );
+        // 이펙트의 이동 제약 — 3D 이동기와 같은 계약(`MovementConstraint`).
+        const MovementConstraint constraint = MovementConstraint::read( *pOwner );
+        const float32            moveInput  = constraint._bMoveBlocked == SW_TRUE ? 0.0f : intent._move._x;
+        _velocity                           = computeVelocity( _velocity, moveInput, _walkSpeed * constraint._speedScale, _acceleration, _deceleration, deltaTime );
         pController->setMoveVelocity( _velocity );
-        if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() )
+        if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() && constraint._bJumpBlocked == SW_FALSE )
             pController->jump( _jumpSpeed );
     }
 } // namespace sw

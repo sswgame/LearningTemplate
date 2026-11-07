@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
+#include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
 
 using namespace sw;
@@ -470,6 +471,30 @@ SW_TEST_CASE( AbilityEffectTest, GrantedTagsLastAsLongAsTheEffect )
     rig._pAbilities->advanceTime( 2.0f );
     SW_EXPECT_FALSE( rig._pAbilities->getOwnedTagCounts().hasMatchingTag( slow ) );
     SW_EXPECT_EQUAL( 0.0f, rig._pAbilities->findLongestRemainingTimeWithGrantedTags( Util::makeTags( { slow } ) ) );
+}
+
+// 이동 제약 계약: 속박 · 기절 태그는 계층으로 이동 차단이 되고, 겹친 효과 하나가 풀려도 다른 것의 차단은 남는다(소유 수명으로 합성).
+SW_TEST_CASE( AbilityEffectTest, MovementConstraintComposesByEffectLifetime )
+{
+    Rig rig;
+    SW_REQUIRE_TRUE( rig._pAbilities->getOwner() != nullptr );
+    const GameObject& owner = *rig._pAbilities->getOwner();
+    SW_EXPECT_FALSE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
+    SW_EXPECT_EQUAL( 1.0f, MovementConstraint::read( owner )._speedScale ); // 배율 속성이 없는 개체
+
+    auto pRoot                    = Rig::makeEffect( EffectDurationPolicy::Infinite );
+    pRoot->_grantedTags           = Util::makeTags( { "State.MoveBlocked.Rooted"_tag } );
+    auto pStun                    = Rig::makeEffect( EffectDurationPolicy::HasDuration, 1.0f );
+    pStun->_grantedTags           = Util::makeTags( { "State.MoveBlocked.Stunned"_tag } );
+    const ActiveEffectHandle root = rig.apply( pRoot );
+    (void)rig.apply( pStun );
+    SW_EXPECT_TRUE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
+    SW_EXPECT_TRUE( MovementConstraint::read( owner )._bJumpBlocked == SW_TRUE ); // 이동 차단이면 점프도
+
+    rig._pAbilities->advanceTime( 2.0f ); // 기절이 끝났다 — 속박은 남는다
+    SW_EXPECT_TRUE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
+    SW_REQUIRE_TRUE( rig._pAbilities->removeActiveEffect( root ) );
+    SW_EXPECT_FALSE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
 }
 
 SW_TEST_CASE( AbilityEffectTest, EffectsCanRemoveOthersByTag )
