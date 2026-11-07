@@ -1,8 +1,6 @@
 #include "pch.h"
 
-#include "Engine/UI/Binding/UIViewModel.h"
-
-#include "Engine/UI/Binding/UIBindingSet.h"
+#include "Engine/Presentation/UIViewModel.h"
 
 namespace sw
 {
@@ -10,17 +8,17 @@ namespace sw
         : _listFieldChange{}
         , _listObserver{}
         , _changeSerial{ 0 }
-        , _observerSubscriptions{ ItemSubscriptionList<UIBindingSet>::ReleaseFunction::create<&UIViewModel::removeObserver>( this ) }
+        , _observerSubscriptions{ ItemSubscriptionList<IUIViewModelObserver>::ReleaseFunction::create<&UIViewModel::removeObserver>( this ) }
     {
     }
 
     UIViewModel::~UIViewModel()
     {
         // 묶인 화면이 남아 있으면 이 뷰모델을 해제하게 한다. 관찰자가 스스로 제거하므로 사본을 순회한다.
-        const vector<UIBindingSet*> listObserver = _listObserver;
-        for ( UIBindingSet* pBindingSet : listObserver )
+        const vector<IUIViewModelObserver*> listObserver = _listObserver;
+        for ( IUIViewModelObserver* pObserver : listObserver )
         {
-            pBindingSet->onViewModelDestroyed( *this );
+            pObserver->onViewModelDestroyed( *this );
         }
     }
 

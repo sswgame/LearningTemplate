@@ -34,6 +34,7 @@ Console = 1
 Asset = 2
 Text = 2
 Localization = 2
+Presentation = 2                     # 게임 코드가 UI 없이 아는 표현의 낱말: 뷰모델(필드 통지) · 화면 레이어 · 위젯 보임 — 전용 서버도 짓는다(UI 폴더는 짓지 않는다)
 # 3 — 플랫폼: 창 · 입력
 Window = 3
 Input = 3

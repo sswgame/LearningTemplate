@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Presentation/UIViewModel.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Binding/UIBindingExpression.h"
 #include "Engine/UI/Binding/UIBindingValue.h"
@@ -55,11 +56,11 @@ namespace sw
      *          거절된 값은 위젯이 설정 값으로 돌아간다). 다른 곳의 변경(되돌리기, 기본값, 확인 카운트다운의 자동 되돌림)은 변경 통보로 받고, 리스너는
      *          이 집합(곧 화면)이 지워질 때 해제한다. 게임 스레드에서만 쓴다.
      */
-    class SW_API UIBindingSet
+    class SW_API UIBindingSet final : public IUIViewModelObserver
     {
     public:
         explicit UIBindingSet( UIScreen& screen );
-        ~UIBindingSet();
+        ~UIBindingSet() override;
         UIBindingSet( const UIBindingSet& )            = delete;
         UIBindingSet& operator=( const UIBindingSet& ) = delete;
 
@@ -77,7 +78,7 @@ namespace sw
         /** @brief 사용자 입력이 위젯 @p widget 의 필드 @p propertyName 을 바꿨을 때 부릅니다. 양방향 바인딩이면 소스에 되씁니다. */
         void onWidgetValueEdited( Widget& widget, const hashed_string& propertyName );
         /** @brief 뷰모델 @p viewModel 이 지워질 때 부릅니다. 바인딩을 해제하고, 다음 `setViewModel` 까지 쉽니다. */
-        void onViewModelDestroyed( UIViewModel& viewModel );
+        void onViewModelDestroyed( UIViewModel& viewModel ) override;
         /** @brief 사용자 설정이 바뀌었을 때(변경 통보) 부릅니다. 다음 `update` 가 설정 바인딩을 다시 읽습니다. */
         void onSettingEvent( const UserSettingEvent& event );
 

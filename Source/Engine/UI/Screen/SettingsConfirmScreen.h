@@ -7,8 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Presentation/UIViewModel.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Binding/UIViewModel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
 namespace sw

@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/Ray.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -26,6 +27,7 @@
 
 namespace sw
 {
+    class ShooterHUDViewModel;
     class FirstPersonCameraComponent;
     class GameObjectManager;
     class PawnComponent;
@@ -35,7 +37,7 @@ namespace sw
     /**
      * @class ShooterPlayerComponent
      * @brief 플레이어 오브젝트의 게임 규칙입니다. 같은 오브젝트에 카메라, `FirstPersonCameraComponent`, `PawnComponent`, `ShooterBodyMovementComponent`,
-     *        1인칭 손에 든 총, HUD(`HUDControllerComponent`)가 있습니다.
+     *        1인칭 손에 든 총, HUD(클라이언트 전용 `HUDControllerComponent`)가 있습니다.
      * @details 기본 틱 그룹(`DuringPhysics`)에서 돈다. 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 정한 뒤라, 그 시점으로
      *          걷고 쏘고 `setEyePosition` 으로 눈 위치를 넣는다. **폰의 의도만 읽는다**(버튼 Jump, Sprint, Fire, Reload, SwitchWeapon, Weapon1..3, 아날로그
      *          SwitchWeapon). 사람(플레이어 조종자가 입력 맵 `data/shooter.input.xml` 에서 만든다)이든 자동 플레이 AI(`ShooterAutoAimControllerComponent`)든 같다.
@@ -47,7 +49,7 @@ namespace sw
      *          손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이다(없으면 `_eyeHeight`).
      *
-     *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 에 게임의 뷰모델(`ShooterHUDViewModel`)을 걸고 틱이 끝난 뒤 값을 넣는다. 조준선(1인칭이고 살아 있을 때),
+     *          **HUD**: 게임의 뷰모델(`ShooterHUDViewModel`)을 이 컴포넌트가 들고 틱이 끝난 뒤 값을 넣으며, `IHUDViewModelBinder` 로 같은 오브젝트의 HUD 에 건다(전용 서버는 창구가 없어 걸지 않는다). 조준선(1인칭이고 살아 있을 때),
      *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기의 장비 아이템 표의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
      *          `{bind:필드}` 가 연결한다. 이 컴포넌트는 위젯 이름을 모른다.
      *
@@ -253,38 +255,39 @@ namespace sw
         PROPERTY( Category = "Effects", DisplayName = "Muzzle Flash Color", Tooltip = "HDR colour of the muzzle flash (above 1 glows)" )
         float4 _muzzleFlashColor;
 
-        WeaponState              _arrWeapon[kWeaponCount];
-        HealthStateMachine       _healthMachine;
-        AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
-        vector<PendingShot>      _listPendingShot;
-        vector<float3>           _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
-        vector<float3>           _listMeleeCurrent;   ///< 이번 프레임의 칼날
-        vector<GameObjectHandle> _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트
-        vector<EffectRequest>    _listPendingEffect;
-        vector<TracerRequest>    _listPendingTracer;
-        GameSoundQueue           _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
-        GameObjectHandle         _body;
-        float32                  _hitMarkerTimer;
-        float32                  _timeSinceShot;
-        float32                  _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
-        float32                  _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
-        float32                  _lookYaw;
-        float32                  _lastTracerWidth; ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
-        float32                  _serverHealth;    ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
-        float32                  _meleeElapsed;    ///< 근접 창이 시작하고 지난 시간
-        int32                    _weaponIndex;
-        uint32                   _shotCount;
-        uint32                   _hitCount;
-        uint32                   _hitReactionCount;
-        uint8                    _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
-        uint8                    _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
-        uint8                    _bFlushScheduled     : 1;
-        uint8                    _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임. 같은 틱이 끝난 뒤에 남은 공격은 무시한다.
-        uint8                    _bFirstPerson        : 1;
-        uint8                    _bViewModeDirty      : 1; ///< 틱이 끝난 뒤 1인칭 여부에 따른 가시성을 맞춘다.
-        uint8                    _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
-        uint8                    _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
-        uint8                    _bMeleeActive        : 1; ///< 근접 창이 열려 있다
-        uint8                    _reserved            : 6;
+        WeaponState                     _arrWeapon[kWeaponCount];
+        HealthStateMachine              _healthMachine;
+        AppearanceSocketSetCache        _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
+        vector<PendingShot>             _listPendingShot;
+        vector<float3>                  _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
+        vector<float3>                  _listMeleeCurrent;   ///< 이번 프레임의 칼날
+        vector<GameObjectHandle>        _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트
+        vector<EffectRequest>           _listPendingEffect;
+        vector<TracerRequest>           _listPendingTracer;
+        GameSoundQueue                  _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
+        GameObjectHandle                _body;
+        float32                         _hitMarkerTimer;
+        float32                         _timeSinceShot;
+        float32                         _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
+        float32                         _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
+        float32                         _lookYaw;
+        float32                         _lastTracerWidth; ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
+        float32                         _serverHealth;    ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
+        unique_ptr<ShooterHUDViewModel> _hudViewModel;    ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다). 처음 `updateHUD` 에 만든다
+        float32                         _meleeElapsed;    ///< 근접 창이 시작하고 지난 시간
+        int32                           _weaponIndex;
+        uint32                          _shotCount;
+        uint32                          _hitCount;
+        uint32                          _hitReactionCount;
+        uint8                           _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
+        uint8                           _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
+        uint8                           _bFlushScheduled     : 1;
+        uint8                           _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임. 같은 틱이 끝난 뒤에 남은 공격은 무시한다.
+        uint8                           _bFirstPerson        : 1;
+        uint8                           _bViewModeDirty      : 1; ///< 틱이 끝난 뒤 1인칭 여부에 따른 가시성을 맞춘다.
+        uint8                           _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
+        uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
+        uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
+        uint8                           _reserved            : 6;
     };
 } // namespace sw

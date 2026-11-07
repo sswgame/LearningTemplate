@@ -1,6 +1,8 @@
 /**
- * @file UIViewModel.h
+ * @file Engine/Presentation/UIViewModel.h
  * @brief 화면이 보여 주는 데이터(뷰모델)입니다. 게임 코드가 값을 넣고 바뀐 필드를 알립니다(UE5 MVVM 의 ViewModel 과 FieldNotify 에 해당).
+ * @details UI 폴더가 아니라 표현 폴더(`Engine/Presentation`)에 둔다 — 게임 코드가 뷰모델을 들고 값을 넣는데, 그 게임 코드는 UI 를 짓지 않는 전용 서버도 짓는다.
+ *          언리얼도 필드 통지(`INotifyFieldValueChanged`)는 UMG 가 아니라 CoreUObject 에 있다(기억). 관찰자(UI 의 바인딩 집합)는 `IUIViewModelObserver` 로 단다.
  */
 #pragma once
 #include "Core/Container/VectorUtil.h"
@@ -17,7 +19,17 @@ namespace sw
 {
     struct TypeInfo;
 
-    class UIBindingSet;
+    class UIViewModel;
+
+    /** @class IUIViewModelObserver @brief 뷰모델을 보는 쪽(UI 의 바인딩 집합)입니다. 뷰모델이 먼저 지워지면 알림을 받습니다. */
+    class IUIViewModelObserver
+    {
+    public:
+        virtual ~IUIViewModelObserver() = default;
+
+        /** @brief @p viewModel 이 지워집니다. 묶은 것을 풉니다. */
+        virtual void onViewModelDestroyed( UIViewModel& viewModel ) = 0;
+    };
 } // namespace sw
 
 namespace sw
@@ -63,9 +75,14 @@ namespace sw
         /** @brief 필드 @p field 가 마지막으로 알려진 번호입니다(알린 적 없으면 0). */
         uint64 findFieldChangeSerial( const hashed_string& field ) const;
 
-    private:
-        friend class UIBindingSet;
+        /** @brief 이 뷰모델을 보는 쪽(바인딩 집합 · HUD)을 등록하고 그 구독을 돌려줍니다(지울 때 알립니다). 관찰자 하나에 구독 하나입니다. 구독이 사라지면 빠진다. */
+        [[nodiscard]] Subscription registerObserver( IUIViewModelObserver& observer )
+        {
+            _listObserver.push_back( &observer );
+            return _observerSubscriptions.issue( &observer );
+        }
 
+    private:
         /** @struct FieldChange @brief 필드 하나의 마지막 알림 번호입니다. */
         struct FieldChange
         {
@@ -73,20 +90,13 @@ namespace sw
             uint64        _serial;
         };
 
-        /** @brief 이 뷰모델을 보는 바인딩 집합을 등록하고 그 구독을 돌려줍니다(지울 때 알립니다). 바인딩 집합 하나에 구독 하나입니다. 구독이 사라지면 빠진다. */
-        [[nodiscard]] Subscription registerObserver( UIBindingSet& bindingSet )
-        {
-            _listObserver.push_back( &bindingSet );
-            return _observerSubscriptions.issue( &bindingSet );
-        }
-
     private:
         /** @brief 바인딩 집합의 등록 구독이 풀렸습니다. 목록에서 뺍니다(주소로만 찾는다). */
-        void removeObserver( UIBindingSet* pBindingSet ) { VectorUtil::removeFirst( _listObserver, pBindingSet ); }
+        void removeObserver( IUIViewModelObserver* pObserver ) { VectorUtil::removeFirst( _listObserver, pObserver ); }
 
-        vector<FieldChange>                _listFieldChange; ///< 필드마다 한 줄입니다(중복 없이 필드 수만큼만 늘어납니다).
-        vector<UIBindingSet*>              _listObserver;    ///< 이 뷰모델을 보는 바인딩 집합입니다(지울 때 해제하게 합니다).
-        uint64                             _changeSerial;
-        ItemSubscriptionList<UIBindingSet> _observerSubscriptions; ///< `_listObserver` 의 등록 구독(풀리면 `removeObserver`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다
+        vector<FieldChange>                        _listFieldChange; ///< 필드마다 한 줄입니다(중복 없이 필드 수만큼만 늘어납니다).
+        vector<IUIViewModelObserver*>              _listObserver;    ///< 이 뷰모델을 보는 바인딩 집합입니다(지울 때 해제하게 합니다).
+        uint64                                     _changeSerial;
+        ItemSubscriptionList<IUIViewModelObserver> _observerSubscriptions; ///< `_listObserver` 의 등록 구독(풀리면 `removeObserver`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다
     };
 } // namespace sw

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
+#include "GameFramework/Client/HUD/HUDControllerComponent.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -15,9 +15,12 @@ namespace sw
         : Component{}
         , _pUISystem{ nullptr }
         , _screen{ kInvalidUIScreenHandle }
-        , _viewModel{}
+        , _pViewModel{ nullptr }
+        , _viewModelWatch{}
+        , _viewModelSubscription{}
         , _documentPath{}
     {
+        _viewModelWatch._pOwner = this;
     }
 
     HUDControllerComponent::~HUDControllerComponent()
@@ -78,7 +81,7 @@ namespace sw
         _screen           = _pUISystem->openScreen( _documentPath );
         UIScreen* pScreen = getScreen();
         if ( pScreen != nullptr )
-            pScreen->setViewModel( _viewModel.get() );
+            pScreen->setViewModel( _pViewModel );
         if ( pScreen != nullptr && pScreen->getDesc()._layer != UILayer::HUD )
             SW_LOG_WARNING_ID( "HUDController.HUDDocumentNotHUD", "HUD document '%#' is not on the HUD layer - it takes focus and may block game input", _documentPath.c_str() );
     }
@@ -94,18 +97,41 @@ namespace sw
         _screen = kInvalidUIScreenHandle;
     }
 
-    void HUDControllerComponent::installViewModel( unique_ptr<UIViewModel> viewModel )
+    bool HUDControllerComponent::attachViewModel( UIViewModel* pViewModel )
     {
-        _viewModel        = std::move( viewModel );
-        UIScreen* pScreen = getScreen();
-        if ( pScreen != nullptr )
-            pScreen->setViewModel( _viewModel.get() );
+        if ( _pViewModel == pViewModel )
+            return true;
+        if ( _pViewModel != nullptr && pViewModel != nullptr )
+        {
+            const TypeInfo* pHeldType      = _pViewModel->getTypeInfo();
+            const TypeInfo* pRequestedType = pViewModel->getTypeInfo();
+            SW_LOG_ERROR_ID( "HUDController.HUDAlreadyHoldsView", "HUD '%#' already holds view model %# - %# was attached; one HUD serves one game view model", _documentPath.c_str(),
+                             pHeldType != nullptr ? pHeldType->_name.c_str() : "<unreflected>", pRequestedType != nullptr ? pRequestedType->_name.c_str() : "<unreflected>" );
+            return false;
+        }
+        _viewModelSubscription.reset();
+        _pViewModel = pViewModel;
+        if ( _pViewModel != nullptr )
+            _viewModelSubscription = _pViewModel->registerObserver( _viewModelWatch );
+        applyViewModelToScreen();
+        return true;
     }
 
-    void HUDControllerComponent::reportViewModelTypeMismatch( const TypeInfo* pRequestedType ) const
+    void HUDControllerComponent::applyViewModelToScreen()
     {
-        const TypeInfo* pInstalledType = _viewModel != nullptr ? _viewModel->getTypeInfo() : nullptr;
-        SW_LOG_ERROR_ID( "HUDController.HUDAlreadyHoldsView", "HUD '%#' already holds view model %# - %# was requested; one HUD serves one game view model", _documentPath.c_str(),
-                         pInstalledType != nullptr ? pInstalledType->_name.c_str() : "<unreflected>", pRequestedType != nullptr ? pRequestedType->_name.c_str() : "<unreflected>" );
+        UIScreen* pScreen = getScreen();
+        if ( pScreen != nullptr )
+            pScreen->setViewModel( _pViewModel );
     }
+
+    void HUDControllerComponent::ViewModelWatch::onViewModelDestroyed( UIViewModel& viewModel )
+    {
+        // 게임이 뷰모델을 먼저 지웠다 — 화면의 바인딩은 스스로 풀리고, 여기서는 빌린 주소를 버린다.
+        if ( _pOwner == nullptr || _pOwner->_pViewModel != &viewModel )
+            return;
+        _pOwner->_viewModelSubscription.reset();
+        _pOwner->_pViewModel = nullptr;
+        _pOwner->applyViewModelToScreen();
+    }
+
 } // namespace sw

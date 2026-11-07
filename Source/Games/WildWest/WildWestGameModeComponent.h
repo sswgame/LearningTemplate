@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -20,6 +21,7 @@
 namespace sw
 {
     class PawnComponent;
+    class WildWestHUDViewModel;
 
     /**
      * @class WildWestGameModeComponent
@@ -27,7 +29,7 @@ namespace sw
      *        말을 몰고(`MountMovementComponent` · `WesternHorseMountComponent`), 같은 버튼으로 내립니다(`VehicleExitComponent`). 이 디렉터는 그 흐름을 돌리지 않고 둘레만 맡습니다.
      * @details 타기 · 몰기 · 내리기는 키트와 기반 컴포넌트가 하고, 말 한 마리의 상태(`WesternHorse`)는 말 오브젝트의 `WesternHorseComponent`(키트) 가 가진다.
      *          이 디렉터가 하는 일은 다섯이다. 판을 열 때 서부극 카탈로그 · 날씨를 읽고 같은 오브젝트의 판 상태(`SessionStateComponent`, 맨 앞)를 연다(없으면 판을 열지 않는다). 매 프레임 카메라 리그 초점을 기수에 둔다.
-     *          기수가 걷는 동안 휘파람 버튼이 발동하면 그 기수를 주인으로 둔 말 AI(`HorseFollowAIController`)를 모두 부른다. 행동 버튼이 발동하면 곁의 자리(`WesternDeedComponent`)를 쓴다. 틱 뒤에 같은 오브젝트의 HUD 를 쓴다.
+     *          기수가 걷는 동안 휘파람 버튼이 발동하면 그 기수를 주인으로 둔 말 AI(`HorseFollowAIController`)를 모두 부른다. 행동 버튼이 발동하면 곁의 자리(`WesternDeedComponent`)를 쓴다. 틱 뒤에 HUD 뷰모델(이 디렉터가 든다)을 쓰고 `IHUDViewModelBinder` 로 같은 오브젝트의 HUD 에 건다.
      *          판 상태는 플레이어의 삶(`WesternOutlaw`)이고 지갑 · 평판 · 시계 · 날씨는 판 상태가 싣는다. 말 상태는 말 컴포넌트가 스냅숏에 싣는다. 자동 플레이(`-gv_wildWestAutoPlay=1`)는 기수를 가장 가까운 말에 태운다.
      *          HUD 는 게임의 `WildWestHUDViewModel` 을 HUD 컨트롤러에 건다 — 탑승 상태 글(`_rideStatus`), 말 스태미나(`_stamina` · `_staminaRatio`), 무법자 글(`_outlawStatus`)이고 문서(`ui/hud.ui.xml`)가 그렇게 잇는다.
      */
@@ -103,6 +105,7 @@ namespace sw
         WesternOutlaw                    _outlaw;
         shared_ptr<const WesternCatalog> _pWesternCatalog;
         shared_ptr<const WeatherCatalog> _pWeatherCatalog;
+        unique_ptr<WildWestHUDViewModel> _hudViewModel;            ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
         uint8                            _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
         [[maybe_unused]] uint8           _reserved            : 7;
     };

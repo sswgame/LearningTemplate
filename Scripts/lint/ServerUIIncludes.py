@@ -81,7 +81,7 @@ def runSelfCheck() -> None:
     assert len(findProblems([("Source/Games/X/A.cpp", '#include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"\n')], table)) == 1, "게임"
     clean = [("Source/GameFramework/Runtime/UI/A.cpp", bad), ("Source/GameFramework/Kits/Feature/Online/Chat/Client/A.cpp", bad),
              ("Source/GameFramework/Plugin/Editor/X/A.cpp", bad), ("Source/GameFramework/Runtime/X/Tests/A.cpp", bad),
-             ("Source/GameFramework/Runtime/X/A.cpp", '#include "Engine/Window/UILayer.h"\n')]
+             ("Source/GameFramework/Runtime/X/A.cpp", '#include "Engine/Presentation/UILayer.h"\n')]
     assert findProblems(clean, table) == [], "대기 · 클라이언트 · 에디터 · 테스트 · 창구는 통과한다"
 
 

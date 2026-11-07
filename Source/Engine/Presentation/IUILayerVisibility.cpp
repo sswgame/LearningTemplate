@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Window/IUILayerVisibility.h"
+#include "Engine/Presentation/IUILayerVisibility.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 

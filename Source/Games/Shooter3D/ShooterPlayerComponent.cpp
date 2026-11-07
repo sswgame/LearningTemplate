@@ -32,11 +32,11 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
@@ -283,6 +283,7 @@ namespace sw
         , _lookYaw{ 0.0f }
         , _lastTracerWidth{ 0.0f }
         , _serverHealth{ 0.0f }
+        , _hudViewModel{}
         , _meleeElapsed{ 0.0f }
         , _weaponIndex{ 0 }
         , _shotCount{ 0 }
@@ -344,6 +345,10 @@ namespace sw
 
     void ShooterPlayerComponent::onEndPlay()
     {
+        GameObject*          pHUDOwner = getOwner();
+        IHUDViewModelBinder* pBinder   = game::findSubsystem<IHUDViewModelBinder>();
+        if ( pHUDOwner != nullptr && pBinder != nullptr && _hudViewModel != nullptr )
+            (void)pBinder->bindHUDViewModel( *pHUDOwner, nullptr ); // 뷰모델은 이 컴포넌트와 함께 사라진다 — HUD 에서 먼저 뗀다
         despawnViews();
         Component::onEndPlay();
     }
@@ -908,15 +913,17 @@ namespace sw
 
     void ShooterPlayerComponent::updateHUD()
     {
-        GameObject*             pOwner = getOwner();
-        HUDControllerComponent* pHUD   = pOwner != nullptr ? pOwner->getComponent<HUDControllerComponent>() : nullptr;
-        if ( pHUD == nullptr )
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
             return;
         // 값만 넣는다. 위젯은 HUD 문서의 바인딩이 연결한다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만 보이고(다른 시점에서는 몸이 보인다),
         // 맞음 표시는 맞힌 직후 1인칭에서만 보인다. 무기 이름은 무기 테이블의 이름(원문)이 현지화 키이며, 글 위젯이 문화권에 맞게 해석한다.
-        ShooterHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<ShooterHUDViewModel>();
-        if ( pViewModel == nullptr )
-            return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
+        if ( _hudViewModel == nullptr )
+            _hudViewModel = make_unique<ShooterHUDViewModel>();
+        ShooterHUDViewModel* pViewModel = _hudViewModel.get();
+        // HUD 는 클라이언트 전용이다 — 창구가 없으면(전용 서버) 값만 들고 보일 곳이 없다. 같은 뷰모델이면 거는 일은 아무것도 하지 않는다.
+        if ( IHUDViewModelBinder* pBinder = game::findSubsystem<IHUDViewModelBinder>() )
+            (void)pBinder->bindHUDViewModel( *pOwner, pViewModel );
         const bool bCrosshair = _bFirstPerson == SW_TRUE && _healthMachine.isAlive();
         pViewModel->setCrosshairShown( bCrosshair );
         pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );

@@ -20,10 +20,11 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
-#include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
 
 #include "Games/WildWest/WildWestHUDViewModel.h"
 
@@ -77,6 +78,7 @@ namespace sw
         , _outlaw{}
         , _pWesternCatalog{}
         , _pWeatherCatalog{}
+        , _hudViewModel{}
         , _bAutoMountRequested{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -276,14 +278,16 @@ namespace sw
 
     void WildWestGameModeComponent::updateHUD()
     {
-        GameObject*             pOwner      = getOwner();
-        HUDControllerComponent* pHUD        = pOwner != nullptr ? pOwner->getComponent<HUDControllerComponent>() : nullptr;
-        const PawnComponent*    pPlayerPawn = findPlayerPawn();
-        if ( pHUD == nullptr || pPlayerPawn == nullptr )
+        GameObject*          pOwner      = getOwner();
+        const PawnComponent* pPlayerPawn = findPlayerPawn();
+        if ( pOwner == nullptr || pPlayerPawn == nullptr )
             return;
-        WildWestHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<WildWestHUDViewModel>();
-        if ( pViewModel == nullptr )
-            return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
+        if ( _hudViewModel == nullptr )
+            _hudViewModel = make_unique<WildWestHUDViewModel>();
+        WildWestHUDViewModel* pViewModel = _hudViewModel.get();
+        // HUD 는 클라이언트 전용이다 — 창구가 없으면(전용 서버) 값만 들고 보일 곳이 없다. 같은 뷰모델이면 거는 일은 아무것도 하지 않는다.
+        if ( IHUDViewModelBinder* pBinder = game::findSubsystem<IHUDViewModelBinder>() )
+            (void)pBinder->bindHUDViewModel( *pOwner, pViewModel );
         pViewModel->setOutlawStatus( formatOutlawStatus() );
         const VehicleSeatComponent* pSeat        = VehicleSeatComponent::findSeatOf( *pPlayerPawn );
         const GameObject*           pHorseObject = pSeat != nullptr ? pSeat->getOwner() : nullptr;

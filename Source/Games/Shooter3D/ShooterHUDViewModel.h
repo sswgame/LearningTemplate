@@ -6,16 +6,16 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Presentation/UIViewModel.h"
+#include "Engine/Presentation/WidgetVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Binding/UIViewModel.h"
-#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {
     /**
      * @class ShooterHUDViewModel
-     * @brief 슈터 플레이어 HUD 의 뷰모델입니다(Lyra 의 HUD 위젯이 보는 값 · UE5 MVVM ViewModel 자리). `HUDControllerComponent` 가 소유하고 HUD 화면에 겁니다.
-     * @details 칸은 슈터의 것이라 게임이 가집니다 — HUD 컨트롤러는 게임이 고른 뷰모델을 걸기만 합니다(`HUDControllerComponent::getOrCreateViewModel`).
+     * @brief 슈터 플레이어 HUD 의 뷰모델입니다(Lyra 의 HUD 위젯이 보는 값 · UE5 MVVM ViewModel 자리). `ShooterPlayerComponent` 가 소유하고 `IHUDViewModelBinder` 로 HUD 화면에 겁니다(UI 를 모른다 — 전용 서버도 짓는다).
+     * @details 칸은 슈터의 것이라 게임이 가집니다 — HUD 컨트롤러(클라이언트 전용)는 게임이 건 뷰모델을 빌려 쓰기만 합니다(`HUDControllerComponent::attachViewModel`).
      *          값은 보일 모양이 아니라 데이터입니다 — 탄약은 탄창 · 예비 두 수, 무기 이름은 현지화 키(글 위젯이 문화권으로 푼다 — 언어를 바꾸면 다시 풀린다).
      *          보임은 `WidgetVisibility` 칸이라 문서가 `_visibility="{bind:_crosshairVisibility}"` 로 그대로 잇습니다(보이면 `HitTestInvisible` — HUD 는 클릭을 받지 않는다).
      *          세터는 값이 같으면 알리지 않으므로 게임이 매 프레임 불러도 바인딩은 바뀐 칸만 씁니다. 게임 스레드만(틱 안이면 틱 뒤 큐에서).

@@ -20,6 +20,7 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/IInputCaptureQuery.h"
+#include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
@@ -30,7 +31,6 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
-#include "Engine/Window/IUILayerVisibility.h"
 
 namespace sw
 {

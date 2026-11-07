@@ -14,8 +14,8 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Window/IUILayerVisibility.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraBlend.h"

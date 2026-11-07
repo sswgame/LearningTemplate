@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Presentation/WidgetVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -17,16 +18,7 @@ namespace sw
     /** @brief 위젯이 없음을 뜻하는 번호입니다(위젯 번호는 1 부터 시작합니다). */
     inline constexpr WidgetID kInvalidWidgetID = 0;
 
-    /** @brief 보임과 히트 테스트 방식입니다(언리얼 ESlateVisibility 와 같은 다섯 가지). */
-    ENUM()
-    enum class WidgetVisibility : uint8
-    {
-        Visible,             ///< 보이고 클릭을 받습니다.
-        Collapsed,           ///< 보이지 않고 공간도 차지하지 않습니다(레이아웃 크기 0).
-        Hidden,              ///< 보이지 않지만 공간은 차지합니다.
-        HitTestInvisible,    ///< 보이지만 자기와 자식 모두 클릭을 받지 않습니다(HUD 장식).
-        SelfHitTestInvisible ///< 보이고 자기만 클릭을 받지 않으며 자식은 받습니다(겹친 패널).
-    };
+    // `WidgetVisibility` 는 표현 폴더에 있다(`Engine/Presentation/WidgetVisibility.h` — 게임의 뷰모델이 칸으로 든다).
 } // namespace sw
 
 namespace sw
