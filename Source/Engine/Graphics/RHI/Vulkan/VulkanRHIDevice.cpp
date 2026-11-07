@@ -229,6 +229,7 @@ namespace sw
                 _bEnableValidationLayers = SW_FALSE;
             }
         }
+        markInitPhase( "validation" );
 
         BLOCK( "Instance / Surface / Logical Device" )
         {
@@ -236,12 +237,15 @@ namespace sw
                 return false;
 
             createDebugMessenger();
+            markInitPhase( "instance" );
 
             if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
                 return false;
+            markInitPhase( "surface" );
 
             if ( pickPhysicalDevice( desc._bSoftwareAdapter, desc._bPreferMinimumPower ) == false )
                 return false;
+            markInitPhase( "adapter" );
 
             if ( selectDepthFormat() == false )
             {
@@ -254,6 +258,7 @@ namespace sw
 
             if ( createLogicalDevice() == false )
                 return false;
+            markInitPhase( "device" );
         }
 
         BLOCK( "Swapchain / RenderPass / Framebuffers" )
@@ -266,6 +271,7 @@ namespace sw
 
             if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
                 return false;
+            markInitPhase( "swapchain" );
         }
 
         BLOCK( "Command Pool / Sync Objects" )
@@ -281,12 +287,14 @@ namespace sw
 
             if ( createFrameFences() == false )
                 return false;
+            markInitPhase( "commands" );
         }
 
         BLOCK( "Transfer Pool / Staging Rings" )
         {
             if ( initializeTransfers( desc ) == false )
                 return false;
+            markInitPhase( "transfers" );
         }
 
         BLOCK( "Descriptor / Pipeline Layout" )
@@ -301,9 +309,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "Vulkan.FailedCreateBindlessTexture", "Failed to create the bindless texture set." );
                 return false;
             }
+            markInitPhase( "descriptors" );
         }
 
         (void)initializePipelineCache(); // 캐시가 없으면 파이프라인을 처음부터 만들 뿐이다 — 실패는 initializePipelineCache 가 경고로 남긴다
+        markInitPhase( "pipelineCache" );
         _frameStreamContext = sw::make_unique<VulkanRHICommandContext>( this );
 
         SW_LOG_INFO_ID( "Vulkan.VulkanRHIBackendDevice", "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );

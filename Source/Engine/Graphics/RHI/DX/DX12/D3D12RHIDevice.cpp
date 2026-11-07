@@ -573,6 +573,7 @@ namespace sw
             engine::getSubsystem<CrashHandler>().setContextValue( "GPU", arrName );
             SW_LOG_INFO_ID( "D3D12.AdapterSelected", "Direct3D 12 adapter: %#", arrName );
         }
+        markInitPhase( "adapter" );
 
         if ( FAILED( D3D12CreateDevice( adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
@@ -626,6 +627,7 @@ namespace sw
         }
     #endif
 
+        markInitPhase( "device" );
         D3D12_COMMAND_QUEUE_DESC queueDesc{};
         queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -635,6 +637,7 @@ namespace sw
         _swapChain.setBarrierWatcher( this );
         if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
             return false;
+        markInitPhase( "swapchain" );
 
         _bBindlessRootSignature = SW_FALSE;
         _frameStreamState       = D3D12RecordingState{};

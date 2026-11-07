@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -596,6 +597,12 @@ namespace sw
         /** @brief `acquireSwapChainImage` 의 백엔드 훅입니다(렌더 스레드, 프레임 안). */
         [[nodiscard]] virtual bool acquireSwapChainImageInternal( IRHISwapChain& swapChain ) = 0;
 
+        /**
+         * @brief `initializeInternal` 안에서 단계 하나가 끝났음을 찍습니다(이름은 문자열 상수). `initialize` 가 끝나면 단계별 ms 를 한 줄(`RHI.InitPhasesMs`)로 남긴다.
+         * @details 기동의 60% 안팎이 RHI 다(실측). 어느 단계(인스턴스 · 어댑터 · 디바이스 · 스왑체인 · 디스크립터 · 파이프라인 캐시)가 무거운지 보고 비동기화를 정한다.
+         */
+        void markInitPhase( const utf8* pPhaseName ) { _initPhaseTimings.mark( pPhaseName ); }
+
     private:
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
@@ -631,5 +638,7 @@ namespace sw
         unique_ptr<RHIMemoryTracker> _memoryTracker;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
+        /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
+        RHIInitPhaseTimings _initPhaseTimings;
     };
 } // namespace sw

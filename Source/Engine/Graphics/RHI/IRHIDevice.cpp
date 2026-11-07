@@ -370,6 +370,7 @@ namespace sw
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
+        , _initPhaseTimings{}
     {
     }
 
@@ -471,9 +472,12 @@ namespace sw
         // 채택값을 디바이스에 되돌려 적는다. 프레젠트 경로(`RenderThread`)가 이것을 읽는다.
         _bPreferredVSync = swapChainDesc._bVSync;
 
+        _initPhaseTimings.begin();
         if ( initializeInternal( swapChainDesc ) == false )
             return false;
         _initResult = RHIInitResult::Succeeded;
+        // 기동 요약(`App.StartupPhasesHostScopeMs`)의 RHI 몫을 단계로 나눈 줄이다. 로그 중앙값을 시나리오 전체에서 모아 비교한다.
+        SW_LOG_INFO_ID( "RHI.InitPhasesMs", "RHI %# init phases: %#", getBackendName(), _initPhaseTimings.describe().c_str() );
         if ( swapChainDesc._bSoftwareAdapter )
         {
             // 요청대로 섰으면 알림이다(소프트웨어 렌더러 CI 묶음 `swrender` 가 일부러 켠다 — 호스트 스위트는 Warning 을 실패로 센다). 요청을 무시한 것만 경고다.

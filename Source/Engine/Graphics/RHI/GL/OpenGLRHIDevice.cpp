@@ -358,9 +358,11 @@ namespace sw
         }
         _pHDC = contextHandles._pDeviceContext;
         _pHRC = contextHandles._pRenderContext;
+        markInitPhase( "context" );
 
         if ( gladLoadGL() != 0 )
         {
+            markInitPhase( "glad" );
             SW_LOG_INFO_ID( "OpenGL.OpenGLGladLoadedSuccessfully", "OpenGL glad Loaded Successfully." );
 
             // 쿠킹 변형을 고를 때 묻는 값이다(`supportsTextureFormat` — 아무 스레드에서나 불리므로 컨텍스트가 있는 지금 물어 둔다).

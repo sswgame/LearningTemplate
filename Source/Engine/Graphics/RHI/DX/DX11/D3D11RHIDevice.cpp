@@ -552,6 +552,7 @@ namespace sw
                 SW_LOG_INFO_ID( "D3D11.AdapterSelected", "Direct3D 11 adapter: %# (VRAM %# MB)", StringUtil::utf16ToUTF8( adapterDesc.Description ).c_str(),
                                 static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
         }
+        markInitPhase( "adapter" );
         // 어댑터를 넘기면 드라이버 종류는 UNKNOWN 이어야 한다(D3D11CreateDevice 규칙).
         const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_UNKNOWN;
         HRESULT               hr         = D3D11CreateDeviceAndSwapChain( adapter.Get(),
@@ -575,6 +576,7 @@ namespace sw
         // 즉시 컨텍스트는 렌더 스레드와 전송 · 폴링 스레드가 함께 쓴다. 런타임 보호를 켜지 못하면 초기화를 실패시킨다(폴백 없음).
         if ( _immediateContext.initialize( std::move( createdContext ) ) == false )
             return false;
+        markInitPhase( "device+swapchain" );
 
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다. DXGI 1.4 가 없으면 드라이버 값은 "모름" 이다.
         {
