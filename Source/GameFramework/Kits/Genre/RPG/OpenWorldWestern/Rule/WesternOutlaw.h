@@ -124,6 +124,5 @@ namespace sw
         float32                _regionBaseTemperature;
         int32                  _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
         uint8                  _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
-        uint8                  _reserved   : 7;
     };
 } // namespace sw

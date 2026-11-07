@@ -429,7 +429,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        return formatToString( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_listOption": [ { "_key": "pushProvidersFile", "_value": "%#" }%# ] } ] })", providersFile, trustOption );
+        return formatToString( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
     };
     const int64 nowMs = WallClock::nowUnixMilliseconds().count();
 
@@ -442,7 +442,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
 
     test::OnlineRuntimeFixture rig;
     string                     error;
-    SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( formatToString( R"(, { "_key": "pushTrustFile", "_value": "%#" })", apns.getTrustFile() ) ), nowMs, error ), error.c_str() );
+    SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( formatToString( R"(, "_pushTrustFile": "%#")", apns.getTrustFile() ) ), nowMs, error ), error.c_str() );
     SW_EXPECT_TRUE( rig._runtime.getContext()._kits.find<IOfflinePushSender>() != nullptr );
 }
 

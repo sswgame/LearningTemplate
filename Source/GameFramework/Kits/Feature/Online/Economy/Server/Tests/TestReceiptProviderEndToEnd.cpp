@@ -345,10 +345,10 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        return formatToString( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_listOption": [
-            { "_key": "currencyCatalog", "_value": "%#/e2e.currencies.xml" },
-            { "_key": "offerCatalog", "_value": "%#/e2e.offers.xml" },
-            { "_key": "receiptProvidersFile", "_value": "%#" }%# ] } ] })",
+        return formatToString( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_settings": {
+            "_currencyCatalog": "%#/e2e.currencies.xml",
+            "_offerCatalog": "%#/e2e.offers.xml",
+            "_receiptProvidersFile": "%#"%# } } ] })",
                                test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
     };
 
@@ -359,7 +359,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         SW_EXPECT_TRUE( error.find( "receiptTrustFile" ) != string::npos );
     }
 
-    const string               trustOption = formatToString( R"(, { "_key": "receiptTrustFile", "_value": "%#" })", endpoint._trustFile );
+    const string               trustOption = formatToString( R"(, "_receiptTrustFile": "%#")", endpoint._trustFile );
     test::OnlineRuntimeFixture rig;
     string                     error;
     SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs(), error ), error.c_str() );

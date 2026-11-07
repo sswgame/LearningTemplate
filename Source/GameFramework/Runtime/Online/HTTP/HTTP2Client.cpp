@@ -184,7 +184,8 @@ namespace sw
         const StreamConnectionHandle handle = _transport->connect( session._address );
         if ( handle.isValid() == false )
             return false;
-        session._handle                      = handle;
+        session._handle = handle;
+        session._link.setHandle( handle );
         session._state                       = SessionState::Connecting;
         _mapHandleToSession[handle.packed()] = session._sessionID;
         return true;

@@ -42,7 +42,6 @@ namespace sw
         , _regionBaseTemperature{ 0.0f }
         , _centsCarry{ 0 }
         , _bClockSeen{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
