@@ -12,6 +12,9 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
+#include <type_traits>
+#include <utility>
+
 namespace sw
 {
     struct ObjectIdentity;
@@ -148,8 +151,10 @@ namespace sw
     public:
         using CaptureFn = void ( * )( ComponentStateStore& store, GameObjectManager& manager );
         using RestoreFn = void ( * )( const ComponentStateStore& store, GameObjectManager& manager );
+        using DespawnFn = void ( * )( GameObjectManager& manager );
 
-        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore );
+        /** @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다. */
+        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn );
         ~StatefulComponentRegistration();
         StatefulComponentRegistration( const StatefulComponentRegistration& )            = delete;
         StatefulComponentRegistration& operator=( const StatefulComponentRegistration& ) = delete;
@@ -160,31 +165,71 @@ namespace sw
         const utf8* getTypeName() const { return _pTypeName; }
         CaptureFn   getCapture() const { return _pCapture; }
         RestoreFn   getRestore() const { return _pRestore; }
+        DespawnFn   getDespawn() const { return _pDespawn; }
 
     private:
         const utf8* _pTypeName;
         CaptureFn   _pCapture;
         RestoreFn   _pRestore;
+        DespawnFn   _pDespawn;
     };
 } // namespace sw
 
 namespace sw
 {
+    namespace ComponentStateStoreTraits
+    {
+        /** @brief @p T 에 세운 오브젝트를 걷는 `despawnViews()` 가 있는지 봅니다(C++17 이라 `requires` 를 쓰지 않는다). */
+        template <typename T, typename = void>
+        struct HasDespawnViews : std::false_type
+        {
+        };
+        template <typename T>
+        struct HasDespawnViews<T, std::void_t<decltype( std::declval<T&>().despawnViews() )>> : std::true_type
+        {
+        };
+    } // namespace ComponentStateStoreTraits
+
     /**
      * @class StatefulComponentRegistrar
      * @brief @p TComponent 의 `writeState` / `restoreState` 를 `ComponentStateStore` 에 연결하는 정적 등록입니다.
      * @details 오브젝트 매니저를 include 한 .cpp 에서 만든다(순회 템플릿이 그때 인스턴스화된다).
+     *          `despawnViews()` 가 있는 타입(`GameModeComponent` 파생 — 키트의 부지 · 디렉터)은 상태를 실은 뒤 세운 것도 걷는다. 걷지 않으면 세운 오브젝트가 씬 섹션에 실려
+     *          복원한 뒤 다시 세운 것과 겹친다 — 그래서 등록 한 줄이 둘을 함께 정한다(게임마다 `registerGameMode` 를 적지 않는다).
      */
     template <typename TComponent>
     class StatefulComponentRegistrar final : public StatefulComponentRegistration
     {
     public:
         explicit StatefulComponentRegistrar( const utf8* pTypeName )
-            : StatefulComponentRegistration( pTypeName, &StatefulComponentRegistrar::captureOf, &StatefulComponentRegistrar::restoreOf )
+            : StatefulComponentRegistration( pTypeName, &StatefulComponentRegistrar::captureOf, &StatefulComponentRegistrar::restoreOf, selectDespawn() )
         {
         }
 
     private:
+        static DespawnFn selectDespawn()
+        {
+            if constexpr ( ComponentStateStoreTraits::HasDespawnViews<TComponent>::value )
+                return &StatefulComponentRegistrar::despawnOf;
+            else
+                return nullptr;
+        }
+        /** @brief 컴포넌트를 먼저 모으고 순회 밖에서 걷는다 — 순회 콜백 안(매니저 잠금)에서는 오브젝트를 지울 수 없다. */
+        static void despawnOf( GameObjectManager& manager )
+        {
+            if constexpr ( ComponentStateStoreTraits::HasDespawnViews<TComponent>::value )
+            {
+                vector<TComponent*> listComponent;
+                manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
+                { listComponent.push_back( pComponent ); } );
+                for ( TComponent* pComponent : listComponent )
+                    pComponent->despawnViews();
+            }
+            else
+            {
+                (void)manager;
+            }
+        }
         static void captureOf( ComponentStateStore& store, GameObjectManager& manager ) { (void)store.capture<TComponent>( manager ); }
         static void restoreOf( const ComponentStateStore& store, GameObjectManager& manager )
         {

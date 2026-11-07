@@ -33,10 +33,11 @@ namespace sw
 
 namespace sw
 {
-    StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore )
+    StatefulComponentRegistration::StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn )
         : _pTypeName{ pTypeName }
         , _pCapture{ pCapture }
         , _pRestore{ pRestore }
+        , _pDespawn{ pDespawn }
     {
         (void)ComponentStateStoreInternal::getRegistrationList().addLogged( this, "Stateful component type", string_view( pTypeName ) );
     }

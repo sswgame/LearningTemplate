@@ -58,6 +58,7 @@ namespace sw
             StatefulComponentType type;
             type._pCapture = pRegistration->getCapture();
             type._pRestore = pRegistration->getRestore();
+            type._pDespawn = pRegistration->getDespawn();
             _listStatefulType.push_back( type );
         }
     }
