@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -95,4 +96,31 @@ SW_TEST_CASE( ReflectionValidationTest, FixDefaultsToScopeProperty )
     SW_EXPECT_TRUE( listIssue[0]._fix._propertyName == sw::hashed_string( "_radius" ) );
     SW_EXPECT_EQUAL( sw::string( "6" ), listIssue[0]._fix._valueText );
     SW_EXPECT_FALSE( listIssue[1]._fix.isValid() );
+}
+
+/**
+ * @brief [ReflectionValidationTest] 시퀀스 원소가 많은 값의 검증 비용(ns/원소)을 로그로 남깁니다. 원소마다 프로퍼티 타입을 레지스트리에서 다시 찾는 길이다 — 시간 문턱은 두지 않는다
+ * @details 재는 법: Release `App --test --test-filter=ReflectionValidationTest.NestedElementCost` 5 번, 로그 `ReflectionValidationTest.NestedElementCost` 의 중앙값.
+ *          판정: 중첩 타입 기억(다음 커밋)과 그 앞의 값 차이가 흔들림보다 크면 둔다. 대형 씬 Map Check 의 `Editor.MapCheck` 시간에서 검증 몫이 작으면 되돌린다.
+ */
+SW_TEST_CASE( ReflectionValidationTest, NestedElementCost, ._tags = "bench" )
+{
+    static constexpr size_t kElementCount = 20000;
+    static constexpr int32  kRepeatCount  = 10;
+
+    const sw::TypeInfo* pType = sw::ValidatedActor::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+    sw::ValidatedActor actor;
+    actor._listPart.resize( kElementCount );
+    actor._listPart[kElementCount / 2]._weight = -1.0f;
+
+    const sw::int64 startNanoseconds = sw::MonotonicClock::nowNanoseconds();
+    for ( sw::int32 repeat = 0; repeat < kRepeatCount; ++repeat )
+    {
+        sw::ValidationContext context;
+        SW_EXPECT_EQUAL( 1u, sw::ReflectionValidation::validateObject( *pType, &actor, context ) );
+    }
+    const sw::int64 elapsedNanoseconds = sw::MonotonicClock::nowNanoseconds() - startNanoseconds;
+    SW_LOG_INFO_ID( "ReflectionValidationTest.NestedElementCost", "Validation of %# sequence elements: %# ns per element", kElementCount,
+                    elapsedNanoseconds / static_cast<sw::int64>( kElementCount * kRepeatCount ) );
 }
