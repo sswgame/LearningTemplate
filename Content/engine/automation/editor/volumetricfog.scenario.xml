@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 볼륨 안개 창(Volumetric Fog): 볼륨 안개 무대(game/empty/maps/fogvolumetric.scene.xml)를 열면 창이 주 화면의 볼륨 상태를 "켜짐" 으로 보인다(Render.FogVolumeState = 6).
+  비교(왼쪽 반 볼륨 · 오른쪽 반 평범한 안개) · 산란 단면 · 투과율 단면을 차례로 켜 그림을 찍고(volumetricfog/*.png — 씬 뷰가 바뀌는지 눈으로 본다), 끝에서 보통 그림으로 돌린다.
+  "Select fog" 는 안개 오브젝트를 메인 씬 선택에 올린다 — 값은 인스펙터의 FogComponent 가 정본이다(이 창은 사본을 두지 않는다). 씬은 저장하지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/volumetricfog.scenario.xml -unattended
+-->
+<Scenario name="editor.volumetricfog" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.open game/empty/maps/fogvolumetric.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="panel.focus volumetric_fog"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Render.FogVolumeState" equals="6" timeoutFrames="300"/>
+	<CaptureEditorUI file="volumetricfog/state.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="volumetricFog.view.Compare"/>
+	<Wait frames="5"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="volumetricfog/compare.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="volumetricFog.view.Scattering"/>
+	<Wait frames="5"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="volumetricfog/scattering.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="volumetricFog.view.Transmittance"/>
+	<Wait frames="5"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="volumetricfog/transmittance.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="volumetricFog.view.None"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="volumetricFog.selectFog"/>
+	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

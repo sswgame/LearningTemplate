@@ -176,6 +176,8 @@ namespace sw
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
         /** @brief 마지막 프레임에서 머티리얼 PSO 가 아직 만드는 중이라 그리지 못한 배치 묶음 수입니다. 캡처는 0 인 프레임만 읽는다(`SceneCapture`). */
         uint32 getLastPendingPSOBatchCount() const { return _lastPendingPSOBatchCount; }
+        /** @brief 마지막 프레임의 볼륨 안개 상태(켜졌거나 왜 꺼졌는지)입니다. 렌더 스레드가 주 렌더러의 값을 올린다(`FrameFog::publishMainVolumeState`). */
+        FogVolumeState getFogVolumeState() const { return _fog.getVolumeState(); }
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.

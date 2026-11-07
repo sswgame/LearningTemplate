@@ -3,6 +3,9 @@
   볼륨 안개(froxel, FogComponent._bVolumetric) — 같은 무대의 안개를 평범한 안개(fogshowcase)와 볼륨 안개(fogvolumetric, 그 씬을 물려받아 안개만 바꿨다)로 찍어 견준다.
   컴퓨트(volumetric_fog.hlsl)가 돌지 않거나 안개 패스(fog.hlsl)가 볼륨을 읽지 않으면 두 장이 같아서 진다. 골든이 아니라 같은 실행의 두 장이다.
   평범한 안개와 볼륨의 빛 1(앰비언트)은 같은 식이므로, 차이는 산란 배율 × (해 + 점광) 뿐이다. 화면 위쪽 먼 띠로 본다. 화면 아래 가까운 바닥은 안개가 얇아 차이가 작으니 보지 않는다.
+  볼륨 상태(Render.FogVolumeState)는 평범한 안개 씬에서 1(설정이 끔), 볼륨 씬에서 6(켜짐)이다 — 볼륨이 못 켜진 화면을 볼륨으로 오인하지 않는다.
+  진단 보기(gv_fogDebugView — 에디터 Volumetric Fog 창이 고른다): Compare 는 화면 오른쪽 반을 평범한 안개로 그려 볼륨 그림과 오른쪽 띠에서 달라야 하고,
+  Scattering 은 froxel 단면(gv_fogDebugSlice 번째 조각까지의 산란)을 화면 전체에 내 볼륨 그림과 달라야 한다. 그림 fog_compare · fog_slice 를 눈으로 본다(왼쪽 반 = 볼륨, 오른쪽 반 = 평범).
   실행: App -scenario=game/empty/automation/fogvolumetric.scenario.xml -unattended (체인: ctest -R Scenario.empty)
 -->
 <Scenario name="game.empty.fogvolumetric" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -12,6 +15,7 @@
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Wait frames="10"/>
+	<Expect watch="Render.FogVolumeState" equals="1"/>
 	<Screenshot file="fog_plain.ppm"/>
 	<Wait frames="2"/>
 	<LoadScene path="game/empty/maps/fogvolumetric.scene.xml" timeoutFrames="600"/>
@@ -20,5 +24,18 @@
 	<Screenshot file="fog_volume.ppm"/>
 	<Wait frames="5"/>
 	<ExpectImagesDiffer first="fog_plain.ppm" second="fog_volume.ppm" region="0.2,0.3,0.8,0.45" minDiffering="0.2"/>
+	<Expect watch="Render.FogVolumeState" equals="6"/>
+	<Variable name="gv_fogDebugView" value="Compare"/>
+	<Wait frames="5"/>
+	<Screenshot file="fog_compare.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="fog_volume.ppm" second="fog_compare.ppm" region="0.55,0.3,0.8,0.45" minDiffering="0.2"/>
+	<Variable name="gv_fogDebugView" value="Scattering"/>
+	<Variable name="gv_fogDebugSlice" value="24"/>
+	<Wait frames="5"/>
+	<Screenshot file="fog_slice.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="fog_volume.ppm" second="fog_slice.ppm" region="0.2,0.3,0.8,0.45" minDiffering="0.2"/>
+	<Variable name="gv_fogDebugView" value="None"/>
 	<Pass/>
 </Scenario>

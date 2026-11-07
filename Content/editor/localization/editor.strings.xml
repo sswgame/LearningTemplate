@@ -9207,6 +9207,112 @@
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorVolumetricFog.DebugView" source="Debug view">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.DebugViewTip"
+		       source="Compare draws the left half with the volume and the right half as plain fog. The slice views show the froxel volume up to one distance slice.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.NoFogHint"
+		       source="No Fog component in the open scene. Add one to an object to start.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.SelectFog" source="Select fog">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.SelectFogTip"
+		       source="Select the fog object so the Inspector edits its values. The view updates as you change them.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.Settings" source="Fog settings">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.Slice" source="Distance slice">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.SliceTip"
+		       source="Which distance slice the slice views show. Higher is farther from the camera.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateActive"
+		       source="Volumetric fog is on: the light-scattering volume is drawn in the main view.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateBufferFailed"
+		       source="Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateDisabled"
+		       source="Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateMissingPipeline"
+		       source="Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateNoDevice"
+		       source="The renderer has no device this frame, so nothing is drawn.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateNoFog"
+		       source="No fog in this scene. Add a Fog component to see volumetric fog.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.StateUnderwater"
+		       source="The camera is under water. Underwater fog has no volume.">
+			<origins>
+				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.ViewCompare" source="Compare">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.ViewNormal" source="Normal">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.ViewScattering" source="Scattering slice">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorVolumetricFog.ViewTransmittance" source="Transmittance slice">
+			<origins>
+				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Eject / Possess" source="Eject / Possess" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
@@ -10074,6 +10180,11 @@
 			</origins>
 		</entry>
 		<entry key="VFX Preview" source="VFX Preview" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
+		<entry key="Volumetric Fog" source="Volumetric Fog" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>

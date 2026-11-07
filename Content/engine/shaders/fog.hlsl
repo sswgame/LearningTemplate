@@ -13,7 +13,10 @@
  * 누적 값을 읽는다(화면 칸 쌍선형 × 거리 조각 선형). 볼륨 거리 밖은 평범한 안개 식으로 이어 붙인다. 볼륨이 안개 색을 앰비언트로 이미 포함하므로 안쪽 구간에서 평범한 안개를 더하지 않는다.
  * 표면 값 보기 모드(Normals · Depth · Overdraw)와 와이어프레임은 C++ 가 이 패스를 그리지 않는다(값 위를 덮는다). 후처리를 끈 뷰(CCTV)도 안개는 그린다 — 장면의 일이다.
  *
- * 바인딩 계약: 패스 상수 g_FogColorDensity · g_FogHeightParams · g_FogInscatter · g_FogVolumeParams, 장면 깊이(역할 SceneDepth), 볼륨 버퍼 t11(SW_SLOT_PASS_SRV, 볼륨이 켜진 때만 걸린다).
+ * 진단 보기(g_FogDebugParams.x, C++ FrameFog::makeDebugParams — 볼륨이 켜진 주 시점에서만 0 이 아니다): 1 비교는 화면 uv.x 가 경계(z) 오른쪽인 픽셀을 평범한 안개로 그려
+ * 같은 프레임 · 같은 설정의 두 결과를 나란히 보인다. 2 · 3 은 froxel 단면 — y 번째 거리 조각까지 누적한 산란(rgb, x/(1+x) 로 눌러 보인다) 또는 투과율을 화면 칸 그대로 불투명하게 낸다.
+ *
+ * 바인딩 계약: 패스 상수 g_FogColorDensity · g_FogHeightParams · g_FogInscatter · g_FogVolumeParams · g_FogDebugParams, 장면 깊이(역할 SceneDepth), 볼륨 버퍼 t11(SW_SLOT_PASS_SRV, 볼륨이 켜진 때만 걸린다).
  */
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
@@ -54,8 +57,22 @@ float4 sampleFogVolume( float2 uv, float distance, float farDistance )
     return lerp( sampleFogVolumeColumn( uv, lower - 1 ), sampleFogVolumeColumn( uv, upper - 1 ), ratio );
 }
 
+/** @brief 진단 보기 번호입니다(`FogDebugView` 순서). */
+static const uint kFogDebugCompare       = 1u;
+static const uint kFogDebugScattering    = 2u;
+static const uint kFogDebugTransmittance = 3u;
+
 float4 PSMain( PSInput input ) : SV_TARGET
 {
+    // froxel 단면 — 볼륨이 켜진 주 시점에서만 0 이 아니다(C++ 가 꺼진 뷰에서는 0 을 준다). 하늘까지 화면 전체를 칸 그대로 덮는다.
+    const uint debugView = (uint)( g_FogDebugParams.x + 0.5f );
+    SW_BRANCH if ( debugView >= kFogDebugScattering && g_FogVolumeParams.x > 0.5f )
+    {
+        const float4 column = sampleFogVolumeColumn( input._uv, (int)( g_FogDebugParams.y + 0.5f ) );
+        const float3 shown  = debugView == kFogDebugTransmittance ? column.aaa : column.rgb / ( 1.0f + column.rgb );
+        return float4( shown, 1.0f );
+    }
+
     const float  deviceDepth = PassTexture::sampleDepthPoint( input._uv ).r;
     const float2 ndcXy       = input._uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
 
@@ -75,8 +92,10 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float  sunWeight     = pow( saturate( dot( direction, -g_KeyLightDirIntensity.xyz ) ), g_FogInscatter.w );
     const float3 fogColor      = g_FogColorDensity.rgb + g_FogInscatter.rgb * sunWeight;
     const float  startDistance = g_FogHeightParams.z;
-    const bool   bVolume       = g_FogVolumeParams.x > 0.5f;
-    const float  farDistance   = g_FogVolumeParams.y;
+    // 비교 보기는 경계 오른쪽을 평범한 안개(볼륨 거리 0)로 그린다 — 같은 상수 · 같은 깊이라 차이는 볼륨뿐이다.
+    const bool  bCompareRight = debugView == kFogDebugCompare && input._uv.x >= g_FogDebugParams.z;
+    const bool  bVolume       = g_FogVolumeParams.x > 0.5f && bCompareRight == false;
+    const float farDistance   = g_FogVolumeParams.y;
 
     // 볼륨 안(거리 ≤ 볼륨 거리)은 froxel 값, 밖은 평범한 안개 식으로 이어 붙인다. 볼륨이 꺼졌으면 볼륨 거리를 0 으로 보아 전부 평범한 식이다.
     // 볼륨 버퍼는 켠 프레임에만 걸린다 — 꺼졌을 때 읽지 않도록 값 선택이 아니라 분기로 읽는다.

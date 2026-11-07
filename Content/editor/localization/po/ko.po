@@ -8635,6 +8635,101 @@ msgctxt "EditorUIPreview.WaitingForTexture"
 msgid "Waiting for the render thread to create the preview texture..."
 msgstr "렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
 
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.DebugView"
+msgid "Debug view"
+msgstr "진단 보기"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.DebugViewTip"
+msgid "Compare draws the left half with the volume and the right half as plain fog. The slice views show the froxel volume up to one distance slice."
+msgstr "비교는 왼쪽 반을 볼륨으로, 오른쪽 반을 평범한 안개로 그립니다. 단면 보기는 거리 조각 하나까지의 froxel 볼륨을 보입니다."
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.NoFogHint"
+msgid "No Fog component in the open scene. Add one to an object to start."
+msgstr "연 씬에 Fog 컴포넌트가 없습니다. 오브젝트에 하나 더해 시작하세요."
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.SelectFog"
+msgid "Select fog"
+msgstr "안개 고르기"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.SelectFogTip"
+msgid "Select the fog object so the Inspector edits its values. The view updates as you change them."
+msgstr "안개 오브젝트를 골라 인스펙터에서 값을 고칩니다. 바꾸는 대로 화면이 다시 그려집니다."
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.Settings"
+msgid "Fog settings"
+msgstr "안개 설정"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.Slice"
+msgid "Distance slice"
+msgstr "거리 조각"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.SliceTip"
+msgid "Which distance slice the slice views show. Higher is farther from the camera."
+msgstr "단면 보기가 보일 거리 조각입니다. 클수록 카메라에서 멉니다."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateActive"
+msgid "Volumetric fog is on: the light-scattering volume is drawn in the main view."
+msgstr "볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateBufferFailed"
+msgid "Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log."
+msgstr "볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateDisabled"
+msgid "Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component."
+msgstr "안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateMissingPipeline"
+msgid "Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log."
+msgstr "볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateNoDevice"
+msgid "The renderer has no device this frame, so nothing is drawn."
+msgstr "이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateNoFog"
+msgid "No fog in this scene. Add a Fog component to see volumetric fog."
+msgstr "이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요."
+
+#: Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp
+msgctxt "EditorVolumetricFog.StateUnderwater"
+msgid "The camera is under water. Underwater fog has no volume."
+msgstr "카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.ViewCompare"
+msgid "Compare"
+msgstr "비교"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.ViewNormal"
+msgid "Normal"
+msgstr "보통"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.ViewScattering"
+msgid "Scattering slice"
+msgstr "산란 단면"
+
+#: Source/Editor/Panels/Fog/VolumetricFogPanel.cpp
+msgctxt "EditorVolumetricFog.ViewTransmittance"
+msgid "Transmittance slice"
+msgstr "투과율 단면"
+
 #. Context: Editor command name
 #: editor/commands/editor.commands.xml
 msgctxt "Eject / Possess"
@@ -9552,6 +9647,12 @@ msgstr "사용자 설정"
 msgctxt "VFX Preview"
 msgid "VFX Preview"
 msgstr "VFX 미리보기"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
+msgctxt "Volumetric Fog"
+msgid "Volumetric Fog"
+msgstr "볼륨 안개"
 
 #. Context: EditorMenuText._label
 #: editor/commands/editor.commands.xml

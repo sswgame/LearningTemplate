@@ -6,8 +6,10 @@
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 // 안개 — 높이 · 거리 지수 안개의 광학 두께 식(셰이더 fog.hlsl · fog_common.hlsli 가 같은 식)과 컴포넌트 찾기 · 물속 덮어쓰기.
@@ -171,4 +173,34 @@ SW_TEST_CASE( FogTest, PassTypeRowDeclaresDepthOnlyBlendedDraw )
     // 컴퓨트 둘은 파이프라인 XML 에 나올 수 없는 엔진 내부 PSO 슬롯이다.
     SW_EXPECT_FALSE( isPipelinePassType( RenderPassType::VolumetricFog ) );
     SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::VolumetricFog ).hasFlag( RenderPassTraitFlag::kCompute ) );
+}
+
+/**
+ * @brief [FogTest] 안개 진단 상수는 볼륨이 켜진 뷰에서만 진단 보기를 싣고, 단면 번호는 froxel 조각 범위로 묶인다 — 꺼진 뷰가 없는 볼륨을 읽지 않는다
+ */
+SW_TEST_CASE( FogTest, DebugParamsNeedTheVolume )
+{
+    const FogDebugView previousView  = gv_fogDebugView;
+    const int32        previousSlice = gv_fogDebugSlice;
+    gv_fogDebugView                  = FogDebugView::Compare;
+    gv_fogDebugSlice                 = 99;
+    const float4 withVolume          = FrameFog::makeDebugParams( true );
+    const float4 withoutVolume       = FrameFog::makeDebugParams( false );
+    gv_fogDebugView                  = previousView;
+    gv_fogDebugSlice                 = previousSlice;
+    SW_EXPECT_NEAR( static_cast<float32>( FogDebugView::Compare ), withVolume._x, 1.0e-6f );
+    SW_EXPECT_NEAR( static_cast<float32>( SW_FOG_VOLUME_DIM_Z - 1u ), withVolume._y, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5f, withVolume._z, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, withoutVolume._x, 1.0e-6f );
+}
+
+/**
+ * @brief [FogTest] 주 렌더러가 올린 볼륨 상태를 게임 스레드가 그대로 읽는다(에디터 창 · 감시 값 `Render.FogVolumeState` 의 원천)
+ */
+SW_TEST_CASE( FogTest, MainVolumeStateIsPublished )
+{
+    const FogVolumeState previous = FrameFog::getLastMainVolumeState();
+    FrameFog::publishMainVolumeState( FogVolumeState::MissingPipeline );
+    SW_EXPECT_TRUE( FrameFog::getLastMainVolumeState() == FogVolumeState::MissingPipeline );
+    FrameFog::publishMainVolumeState( previous );
 }

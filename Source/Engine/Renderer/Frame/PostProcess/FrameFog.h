@@ -8,10 +8,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -26,6 +28,35 @@ namespace sw
     class IRHICommandList;
     class IRHIDevice;
     class RenderPipelineAsset;
+
+    /**
+     * @brief 주 시점의 볼륨 안개가 이번 프레임에 어떤 상태인지 — 켜졌거나 왜 꺼졌는지입니다(에디터 · 자동화가 이유를 보인다).
+     * @details 볼륨을 못 켜면 같은 안개 패스가 평범한 안개로 그린다. 그 그림을 "볼륨 안개가 된다" 로 오인하지 않게 이유를 값으로 낸다(언리얼 Volumetric Fog 의 Show 플래그 · 경고와 같은 자리).
+     */
+    ENUM()
+    enum class FogVolumeState : uint8
+    {
+        NoFog,           ///< 씬에 안개(`FogComponent` · 물속)가 없다
+        Disabled,        ///< 안개 설정이 볼륨 안개를 켜지 않았다
+        Underwater,      ///< 물속 안개는 볼륨이 없다
+        NoDevice,        ///< 디바이스가 없다(그리지 않는 프레임)
+        MissingPipeline, ///< 볼륨 안개 컴퓨트 PSO 가 없다(셰이더 쿠킹 · 백엔드 컴퓨트 지원)
+        BufferFailed,    ///< froxel 버퍼나 입력 버퍼를 만들지 못했다
+        Active,          ///< 컴퓨트가 돌고 안개 패스가 볼륨을 읽는다
+    };
+
+    /**
+     * @brief 안개 패스의 진단 보기입니다(개발 빌드 `gv_fogDebugView`). 저작 값은 바꾸지 않는다 — 같은 프레임 조건에서 그림만 다르게 낸다.
+     * @details 언리얼의 Buffer Visualization · 분할 비교와 같은 자리다. 진단 보기는 볼륨이 켜진 주 시점에서만 뜻이 있고, 꺼졌으면 단면은 검정이다(이유는 `FogVolumeState`).
+     */
+    ENUM()
+    enum class FogDebugView : uint8
+    {
+        None,          ///< 보통 그림
+        Compare,       ///< 화면 왼쪽 반은 볼륨 안개, 오른쪽 반은 평범한 안개(같은 프레임 · 같은 설정)
+        Scattering,    ///< froxel 단면(`gv_fogDebugSlice` 번째 거리 조각까지 누적한 산란 rgb)을 화면 칸 그대로
+        Transmittance, ///< 같은 단면의 투과율(흰색 1 = 안개 없음)
+    };
 
     /**
      * @brief 이번 프레임의 안개를 셰이더 상수 모양으로 둔 것입니다(`g_FogColorDensity` · `g_FogHeightParams` · `g_FogInscatter` · `g_FogVolumeParams`, 배치는 `FogSettings` 머리 주석).
@@ -76,6 +107,17 @@ namespace sw
         bool isFogVolumeActive() const { return _bFogVolumeActive == SW_TRUE; }
         /** @brief 볼륨 안개의 froxel 출력(구조 버퍼 float4 — 산란 rgb, 투과율 a)입니다. 안개 패스가 t11 로 읽습니다. */
         const RHIStructuredBuffer& getFogVolumeBuffer() const { return _fogVolumeBuffer; }
+        /** @brief 이번 프레임의 볼륨 상태(켜졌거나 왜 꺼졌는지)입니다. `prepareVolumetricFog` 가 정한다. */
+        FogVolumeState getVolumeState() const { return _volumeState; }
+        /**
+         * @brief 안개 패스의 진단 상수(`g_FogDebugParams` — x 보기 번호, y 단면 조각, z 비교 경계 uv.x)입니다. 개발 빌드의 `gv_fogDebugView` · `gv_fogDebugSlice` 를 읽습니다.
+         * @param bVolume 이 뷰가 볼륨을 읽는지(주 시점이고 컴퓨트가 돌았는지). 아니면 진단 보기를 끈다 — 읽을 볼륨이 없다.
+         */
+        static float4 makeDebugParams( bool bVolume );
+        /** @brief 주 렌더러가 마지막으로 낸 볼륨 상태입니다(게임 스레드 · 에디터 · 감시 값이 읽는다). 아직 그리지 않았으면 `NoFog` 입니다. */
+        static FogVolumeState getLastMainVolumeState();
+        /** @brief 주 렌더러가 프레임을 그린 뒤 그 상태를 올립니다(렌더 스레드 하나가 쓴다 — 미리보기 렌더러는 올리지 않는다). */
+        static void publishMainVolumeState( FogVolumeState state );
 
     private:
         IRHIDevice* const&     _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
@@ -88,5 +130,11 @@ namespace sw
         vector<float4>      _listScratchFogVolumeParam; ///< 그 행의 업로드 임시 버퍼(프레임마다 다시 쓴다)
         uint8               _bHasFrameFog{ SW_FALSE };
         uint8               _bFogVolumeActive{ SW_FALSE };
+        FogVolumeState      _volumeState{ FogVolumeState::NoFog };
     };
+
+    /** @brief 안개 패스의 진단 보기입니다(`FogDebugView`). 에디터의 볼륨 안개 창이 고른다. */
+    SW_EXTERN_GLOBAL_VARIABLE( FogDebugView, gv_fogDebugView );
+    /** @brief 진단 단면의 거리 조각 번호(0 .. `SW_FOG_VOLUME_DIM_Z` - 1)입니다. 큰 번호가 먼 조각이고 그 조각까지 누적한 값이다. */
+    SW_EXTERN_GLOBAL_VARIABLE( int32, gv_fogDebugSlice );
 } // namespace sw

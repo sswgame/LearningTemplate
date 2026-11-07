@@ -3273,6 +3273,47 @@
 		<entry key="EditorUIPreview.WaitingForTexture"
 		       text="렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
 		       sourceHash="98fcdf13e55ddd57" />
+		<entry key="EditorVolumetricFog.DebugView" text="진단 보기" sourceHash="f685d029a6b050a9" />
+		<entry key="EditorVolumetricFog.DebugViewTip"
+		       text="비교는 왼쪽 반을 볼륨으로, 오른쪽 반을 평범한 안개로 그립니다. 단면 보기는 거리 조각 하나까지의 froxel 볼륨을 보입니다."
+		       sourceHash="273b9d07567f3d24" />
+		<entry key="EditorVolumetricFog.NoFogHint"
+		       text="연 씬에 Fog 컴포넌트가 없습니다. 오브젝트에 하나 더해 시작하세요."
+		       sourceHash="8aac293e71d41050" />
+		<entry key="EditorVolumetricFog.SelectFog" text="안개 고르기" sourceHash="a55c3222208747f9" />
+		<entry key="EditorVolumetricFog.SelectFogTip"
+		       text="안개 오브젝트를 골라 인스펙터에서 값을 고칩니다. 바꾸는 대로 화면이 다시 그려집니다."
+		       sourceHash="5adea191af2b981b" />
+		<entry key="EditorVolumetricFog.Settings" text="안개 설정" sourceHash="b60df13cd4e3f450" />
+		<entry key="EditorVolumetricFog.Slice" text="거리 조각" sourceHash="5a4f90c2946170e4" />
+		<entry key="EditorVolumetricFog.SliceTip"
+		       text="단면 보기가 보일 거리 조각입니다. 클수록 카메라에서 멉니다."
+		       sourceHash="5a830432768bad06" />
+		<entry key="EditorVolumetricFog.StateActive"
+		       text="볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다."
+		       sourceHash="ce64e124f44ddda8" />
+		<entry key="EditorVolumetricFog.StateBufferFailed"
+		       text="볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요."
+		       sourceHash="bc22f1490b6b1fc9" />
+		<entry key="EditorVolumetricFog.StateDisabled"
+		       text="안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요."
+		       sourceHash="9e22c297cb5e12ce" />
+		<entry key="EditorVolumetricFog.StateMissingPipeline"
+		       text="볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요."
+		       sourceHash="4c162f8b67519ad9" />
+		<entry key="EditorVolumetricFog.StateNoDevice"
+		       text="이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다."
+		       sourceHash="baf721c36acd278c" />
+		<entry key="EditorVolumetricFog.StateNoFog"
+		       text="이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요."
+		       sourceHash="9ad3e9cbc8287fe0" />
+		<entry key="EditorVolumetricFog.StateUnderwater"
+		       text="카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
+		       sourceHash="19a2cac2b1c44306" />
+		<entry key="EditorVolumetricFog.ViewCompare" text="비교" sourceHash="7c54f95c59141594" />
+		<entry key="EditorVolumetricFog.ViewNormal" text="보통" sourceHash="9ff3121d30f88d52" />
+		<entry key="EditorVolumetricFog.ViewScattering" text="산란 단면" sourceHash="0ea9db71da57c2c9" />
+		<entry key="EditorVolumetricFog.ViewTransmittance" text="투과율 단면" sourceHash="992ce72c0ba6db52" />
 		<entry key="Eject / Possess" text="빠져나오기 / 조종" sourceHash="92cdc8eb70f1077f" />
 		<entry key="Evenly space selected objects on X"
 		       text="선택한 오브젝트를 X 로 고르게 띄웁니다"
@@ -3533,6 +3574,7 @@
 		<entry key="Unparent" text="부모에서 떼기" sourceHash="f2e7c9227ea7c462" />
 		<entry key="User Settings" text="사용자 설정" sourceHash="dd998e7324ae4083" />
 		<entry key="VFX Preview" text="VFX 미리보기" sourceHash="68f1e5fbdd88d3df" />
+		<entry key="Volumetric Fog" text="볼륨 안개" sourceHash="b503cf8298cd50ed" />
 		<entry key="Window" text="창" sourceHash="5c49cfa8045bc89d" />
 		<entry key="Write instance overrides back to the prefab template"
 		       text="인스턴스의 덮어쓴 값을 프리팹 원본에 다시 씁니다"

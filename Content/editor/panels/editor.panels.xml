@@ -62,5 +62,6 @@
 		<EditorPanelText _title="UI Preview" _label="UI Preview" />
 		<EditorPanelText _title="User Settings" _label="User Settings" />
 		<EditorPanelText _title="VFX Preview" _label="VFX Preview" />
+		<EditorPanelText _title="Volumetric Fog" _label="Volumetric Fog" />
 	</_listPanel>
 </EditorPanelTextTable>

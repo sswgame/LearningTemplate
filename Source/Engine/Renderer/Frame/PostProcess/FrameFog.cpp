@@ -9,6 +9,7 @@
 
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -26,10 +27,22 @@
 
 namespace sw
 {
+    SW_TEST_GLOBAL_VARIABLE( FogDebugView, gv_fogDebugView, FogDebugView::None, "안개 진단 보기 (None / Compare=왼쪽 볼륨 · 오른쪽 평범 / Scattering / Transmittance=froxel 단면)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_fogDebugSlice, 16, "안개 진단 단면의 거리 조각 (0 .. 31, 큰 번호가 먼 조각)" );
+
     namespace
     {
         struct FrameFogInternal
         {
+            /// 비교 보기의 경계(화면 uv.x)입니다 — 화면 반이다(언리얼 분할 비교와 같이 가운데).
+            static constexpr float32 kCompareSplit = 0.5f;
+            /// 주 렌더러의 마지막 볼륨 상태입니다. 렌더 스레드 하나가 쓰고(`publishMainVolumeState`) 게임 스레드가 읽는다 — 값 하나라 원자 변수로 둔다.
+            static std::atomic<uint8>& lastMainVolumeState()
+            {
+                static std::atomic<uint8> s_state{ static_cast<uint8>( FogVolumeState::NoFog ) };
+                return s_state;
+            }
+
             /// 볼륨 안개 컴퓨트 입력의 행 번호입니다(volumetric_fog.hlsl 의 kRow* 와 같은 순서).
             static constexpr uint32 kRowInverseViewProj = 0;
             static constexpr uint32 kRowViewProj        = 4;
@@ -85,7 +98,8 @@ namespace sw
         _bHasFrameFog = bHasFog ? SW_TRUE : SW_FALSE;
         if ( bHasFog == false )
         {
-            _frameFog = FrameFogState{};
+            _frameFog    = FrameFogState{};
+            _volumeState = FogVolumeState::NoFog;
             return;
         }
         // 방향광 산란 세기가 0 이면 색도 0 으로 보내 셰이더가 분기 없이 더하게 한다.
@@ -98,6 +112,29 @@ namespace sw
         const bool bVolumetric  = fog._bVolumetric == SW_TRUE && fog._bUnderwater == SW_FALSE;
         _frameFog._volumeParams = float4{ 0.0f, MathUtil::max( fog._volumeDistance, 1.0f ), MathUtil::max( fog._scattering, 0.0f ), MathUtil::clamp( fog._anisotropy, -0.95f, 0.95f ) };
         _frameFog._bVolumetric  = bVolumetric ? SW_TRUE : SW_FALSE;
+        if ( fog._bUnderwater == SW_TRUE )
+            _volumeState = FogVolumeState::Underwater;
+        else if ( fog._bVolumetric == SW_FALSE )
+            _volumeState = FogVolumeState::Disabled;
+        else
+            _volumeState = FogVolumeState::Active; // 준비(`prepareVolumetricFog`)가 못 켜면 그 이유로 바꾼다
+    }
+
+    float4 FrameFog::makeDebugParams( bool bVolume )
+    {
+        const FogDebugView view  = bVolume ? gv_fogDebugView : FogDebugView::None;
+        const int32        slice = MathUtil::clamp( gv_fogDebugSlice, 0, static_cast<int32>( SW_FOG_VOLUME_DIM_Z ) - 1 );
+        return float4{ static_cast<float32>( view ), static_cast<float32>( slice ), FrameFogInternal::kCompareSplit, 0.0f };
+    }
+
+    FogVolumeState FrameFog::getLastMainVolumeState()
+    {
+        return static_cast<FogVolumeState>( FrameFogInternal::lastMainVolumeState().load( std::memory_order_relaxed ) );
+    }
+
+    void FrameFog::publishMainVolumeState( FogVolumeState state )
+    {
+        FrameFogInternal::lastMainVolumeState().store( static_cast<uint8>( state ), std::memory_order_relaxed );
     }
 
     void FrameFog::prepareVolumetricFog( IRHIDevice* pDevice, const RenderView& mainView, const float4& keyLightDirIntensity, const float4& keyLightColorAmbient,
@@ -105,13 +142,19 @@ namespace sw
     {
         using Internal     = FrameFogInternal;
         _bFogVolumeActive  = SW_FALSE;
-        const bool bWanted = pDevice != nullptr && _bHasFrameFog == SW_TRUE && _frameFog._bVolumetric == SW_TRUE;
+        const bool bWanted = _bHasFrameFog == SW_TRUE && _frameFog._bVolumetric == SW_TRUE;
         if ( bWanted == false )
+            return; // 이유(안개 없음 · 꺼짐 · 물속)는 `applyFrameFog` 가 정했다
+        if ( pDevice == nullptr )
+        {
+            _volumeState = FogVolumeState::NoDevice;
             return;
+        }
         // 못 켜는 이유는 이유마다 한 번만 알린다(`SW_LOG_ERROR_ONCE`). 볼륨 없이 평범한 안개로 그린다 — 안개 패스의 꺼진 상태이지 다른 경로가 아니다.
         const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) != 0;
         if ( bPipelineReady == false )
         {
+            _volumeState = FogVolumeState::MissingPipeline;
             SW_LOG_ERROR_ONCE_ID( "FrameFog.VolumetricFogComputePSO", "The volumetric fog compute PSO is missing - the fog is drawn without the light-scattering volume" );
             return;
         }
@@ -124,6 +167,7 @@ namespace sw
                                   _fogVolumeBuffer._uav != kInvalidDescriptorIndex && _fogVolumeBuffer._srv != kInvalidDescriptorIndex;
         if ( bVolumeReady == false )
         {
+            _volumeState = FogVolumeState::BufferFailed;
             SW_LOG_ERROR_ONCE_ID( "FrameFog.FailedCreateVolumetricFog", "Failed to create the volumetric fog buffer (%# cells) - the fog is drawn without the light-scattering volume", kCellCount );
             return;
         }
@@ -158,11 +202,13 @@ namespace sw
         const uint32 paramRowCount = static_cast<uint32>( _listScratchFogVolumeParam.size() );
         if ( _fogVolumeParamBuffer.ensureCapacity( pDevice, rowStride, paramRowCount, kParamUsage, true, false, _listScratchFogVolumeParam.data() ) == false )
         {
+            _volumeState = FogVolumeState::BufferFailed;
             SW_LOG_ERROR_ONCE_ID( "FrameFog.FailedCreateVolumetricFog2", "Failed to create the volumetric fog parameter buffer - the fog is drawn without the light-scattering volume" );
             return;
         }
         _fogVolumeParamBuffer.upload( pDevice, _listScratchFogVolumeParam.data(), paramRowCount * rowStride );
         _bFogVolumeActive = SW_TRUE;
+        _volumeState      = FogVolumeState::Active;
     }
 
     void FrameFog::dispatchVolumetricFog( IRHICommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const

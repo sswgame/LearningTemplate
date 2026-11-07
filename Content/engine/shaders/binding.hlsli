@@ -245,6 +245,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogHeightParams;
     float4 g_FogInscatter;
     float4 g_FogVolumeParams;
+    float4 g_FogDebugParams; // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     uint   g_ShadowMapIndex;
     uint   g_GBufferAlbedoIndex;
     uint   g_GBufferNormalIndex;
