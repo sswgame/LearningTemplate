@@ -17,35 +17,48 @@
 
 ## 남은 일
 
-### A. 리소스 공통 구조 — 통합 뒤 남은 일(2026-11-07)
+### A. 지금 할 일(2026-11-07 인계 — 계정을 옮겨도 이 절부터)
 
 설계 정본: [ResourceStructure](ResourceStructure.md). 사용자가 2026-11-07 "**Linux 는 큰 작업이 모두 끝난 뒤**" 로 정했다 — 그때까지 `bash Scripts/dev/VerifyBundle.sh --no-linux`. 설계는 지금 사용처가 아니라 앞으로의 기능 확장 기준이고, 공유할 수 있는 것은 한 벌 · 변형은 차이만이다.
 
-**상태:** 작업자 R1 ~ R10 · K1 ~ K7 을 모두 합쳐 `453708603b` 를 Windows 검증(Debug · Release · 서버 · shipping-check) 뒤 push 했다. Linux 는 돌리지 않았다.
+**상태(2026-11-07):** 3 차 작업자 W1 ~ W6 을 모두 본 트리 `main` 에 합쳤다. origin 은 `e3b2cbd81a` 이고, 그 뒤 로컬 커밋은 아직 검증 · push 하지 않았다(`git log origin/main..HEAD`). 먼저 할 일은 **아래 1 번**이다.
 
-**1. 이름 정리 남은 것(2026-11-07 사용자 요청 — 규칙은 [NamingCpp](agents/NamingCpp.md) 용어 표).** 한 일: GameMode · SmartObject · Def · Kind · 매크로 띄어쓰기 · Stats · InstancedStruct · `Engine/Gameplay` · 창 Model · 알림 이름 · Equipment · 읽기 · 쓰기 동사 일부 · 카탈로그 루트. 컴포넌트 상태 저장소 판을 2 로 올렸다(옛 세이브는 읽지 않는다 — 사용자가 지킬 세이브를 말하면 옛 이름 표). 남은 것:
+**1. 합친 것을 검증하고 push.** `bash Scripts/dev/VerifyBundle.sh --no-linux` 를 한 번 돌리고 지면 고친다. 끝 줄 `VERIFIED=<sha>` 만 `git push origin <sha>:main`. 그 뒤 작업자 워크트리(`.claude/worktrees/agent-*`)와 브랜치를 지운다. 특히 볼 곳:
+- 쓰는 것만 담는 쿠킹(W2): engine 팩이 0.4MB 까지 준다는 추정이 의심스럽다(코드가 경로를 조립해 읽는 에셋이 빠졌을 수 있다) — 게임을 `-cooked-content` 로 띄워 본다. `PackConfig.json` 의 항목 id 칸 표(`_listEntryIDField`)에 없는 칸이나 세이브에 든 id 로 부르는 항목은 쿠킹이 통과한 채 빠진다 — 런타임 등록 줄과 대조하는 테스트를 둔다. `StressTestSceneSettings::_combatEnemyData` 는 접두 경로라 따라가지 못한다.
+- 참조 칸 전환(W3): `AssetReferenceFields.generated.json` 이 빌드로 다시 쓰였는지, 새 이름(`clip` · `tree` · `sound`)이 다른 뜻의 칸을 참조로 오판하지 않는지. `catalogcascade` 표가 `.interactions.xml` 이 되어 "표에 없는 .xml" 다시 읽기 길은 이 시나리오로 더는 보지 않는다.
+- 단계 5(W1): 새 시나리오 `game.empty.resourcecondition`, `kCore` 9, 엔진 영역 처리기가 서버에도 달린 뒤의 접속. 빈 이름 칸을 이제 `"None"` 이 아니라 빈 글로 쓴다(통합 고침) — 저장 글을 비교하는 곳을 본다.
+
+**2. 단계 5 가 남긴 것(W1).** 형식별 입구 12 곳(`Skeleton` · `Material` · `RigAsset` · `SpriteLibrary` · `PhysicsAsset` · `SceneDocument` 등)이 리소스 id 를 넘기지 않아 층 · 다시 읽기 · 해시 대조를 받지 못한다. 배포 구성에는 규칙 표가 없어 카탈로그 층이 오류로 멈춘다(표를 `Config/Dev` 밖으로 옮긴다). 편집기 저장이 `_when` 을 지금 태그로 푼 값으로 굳힌다. 접속 뒤에 합성한 리소스는 대조하지 않는다. 위 코드의 근거는 `docs/ResourceStructure.md` 끝 절.
+
+**3. 이름 정리 남은 것(규칙은 [NamingCpp](agents/NamingCpp.md) 용어 표).** 작업자 코드가 옛 이름을 썼을 수 있어 먼저 표를 다시 돌린다: `py -3 .claude/handoff/surveys/rename.py .claude/handoff/surveys/r<번호>.txt`(단어 경계 치환 + 파일 줄기 `git mv`, 표 r1 ~ r8 · r1_gamemode · ru*). include 정렬은 `sortinc.py`. 그 뒤:
 - `Vitality` → 체력 상태 기계 이름: `HealthState` 는 서버 상태 점검이 쓰고, `getVitality().getHealth()` · 멤버 `_vitality` 와 기존 `_health` 칸이 섞여 기계적으로 못 바꿨다. 형식과 멤버를 함께 손으로 바꾼다.
 - 지역 이름 `director` · `pDirector`(게임 모드를 가리키는 것만 `gameMode` 로 — 카메라 디렉터와 섞여 있다).
-- 읽기 동사 나머지: `loadText` · `loadFromText`(XML 일 때), `loadElement` · `loadFromNode` · `readFromNode` · `parseNode` → `loadFromXML( const XMLNode& )`, 에셋 id 를 받는 `loadFromFile( AssetID )`(머티리얼 · 그래프 등 → `loadFromAsset`, 같은 클래스의 기존 `loadFromAsset` 과 겹치는지 먼저 본다), `SceneDocument::saveXML( 경로 )` → `saveToFile`.
+- 읽기 동사 나머지: `loadText` · `loadFromText`(XML 일 때), `loadElement` · `loadFromNode` · `readFromNode` · `parseNode` → `loadFromXML( const XMLNode& )`, 에셋 id 를 받는 `loadFromFile( AssetID )`(머티리얼 · 그래프 등 → `loadFromAsset`, 겹치는지 먼저 본다), `SceneDocument::saveXML( 경로 )` → `saveToFile`.
 - `AppearanceRuleTable` · `SlotTable` → `…Catalog`(루트 원소 함께), 애니메이션 시스템의 "유닛"(`getUnits` · `_listUnit` · 감시 값 `Animation.Crowd*Units`) → SkeletalMesh, 키트 형식 접두어(`DeckBattle` 은 CardGame 키트, `Horror` 가 두 키트에 겹침), 자동화 단계 인자 `…Fields` → `…Params`.
-- 판단해 둔 것(바꾸지 않음): `Gimmick*`, `gv_` · `GlobalVariable`, `ControlIntent`, `*EditModel`, `LootCatalog`(루트 테이블 정의 여럿을 담아 규칙에 맞다), `Ledger`(경제 원장).
+- 바꾸지 않기로 한 것: `Gimmick*`, `gv_` · `GlobalVariable`, `ControlIntent`, `*EditModel`, `LootCatalog`, `Ledger`.
 
-**2. 설계 단계 남은 것.**
-- 단계 5: `_when` 조건, 덮어쓰기 층, 경로 교체, 접속 때 합성 해시 대조.
-- R2 나머지 칸 전환: `SocketSet` · `PhysicsAsset` · 카탈로그 칸, `Cube` · `None` 을 받는 칸, 손 표(`AssetReferenceFields.json`)에 남은 칸, `SpriteComponent::_spriteLibraryPath`(R4 가 `string` 으로 더했다), `SaveGame` 칸의 세이브 호환.
-- 쓰는 것만 담는 쿠킹: 참조를 따라가 담는다(`common.pack` 359MB 대 `game_empty.pack` 6MB, 효과는 재지 않았다).
+**4. 구조 개선(사용자가 "시급" 으로 지목, 2026-11-07).** 조사 결과는 `.claude/handoff/surveys/` 에 있다(Git 밖). 구조는 장기 이득이면 과감히 바꾼다.
+- `structure_survey.md` 파일 이동 표 20 줄: App/Tests 둘 → ModuleManager/Tests, `GameObjectHandle` · `ComponentHandle` → Engine/Foundation, `AssetTypeRegistry` → Engine/Content, `EngineCoreServiceSubsystems.cpp` → CoreServices, Editor/Popups 해체, ModuleManager 호스트 부품 → `ModuleManager/Host`. Popups 경로는 `editor.strings.xml` · `po/ko.po` 도 고친다. **App 파일은 런타임 기능이 아니라 App 에 있는 것이 맞다(사용자 확인) — Engine 으로 옮기지 않는다.**
+- App 정리: `App::run` 쪼개기(`runFrame` · `makeFramePacingInputs`), 넷 세션 일 둘을 엔진 프레임 훅으로, 초상화 굽기를 `AppHeadlessTasks` 표로, App · Server 공용 부팅 `HostLaunch`(수명 순서 표는 조사 문서), 개명 `loadModuleLibrarys` → `loadModuleLibraries` · `_pModuleImageHost` → `_pModuleLoader` · `isEditorImageUsable` → `isEditorLibraryUsable` · `_gameModuleManager` → `_moduleManager` · `_backendSwap` → `_backendSwitcher`, 죽은 `SW_APP_SMOKE_TEST_SOURCES`, 낡은 SmokeTest 주석 약 10 곳.
+- `server_online_survey.md` 서버 · 온라인 키트 단계 0 ~ 6: 메모리 저장소 폴백 제거 → 견본 게임 · Debug 에서 키트 짓기 → 프로토콜 서술자(메서드 · 알림 표, 핸들러 표, 클라이언트 `call<>`) → 키트별 이전 → `OnlineSession` → 형식 있는 키트 설정 · 서버 설정 하나 → 온라인 코어 · 서버 전용 모듈 분리 → 키트별 스키마 해시. 응답 보존 항목은 W6 이 끝냈다(0 단계에서 뺀다). 사용처 없는 키트 · 제공자 삭제(P15)는 되돌리기 어려우니 **사용자에게 묻는다.**
 
-**3. 통합에서 드러난 확인거리.**
+**5. 미완성 · 미사용 기능 완성(사용자 요청 2026-11-07).** `unfinished_survey.md` 의 상위 25 를 위부터: 서버 권위 명중 확인(`LagCompensation`), 네트 입력 두 길 합치기, 시네마틱 묶음, 온라인 키트 Shooter3D 싣기, WildWest 규칙 … 그리고 지울 것(`SpatialOctree` · `SpatialQuadTree` · `FrameArenaAllocator` · `AtomicSlot` · `DualQuaternion` · `GravityComponent` · 쓰지 않는 RHI 깃발). 엔드포인트 · Steam SDK 연동은 비용 · 외부라 사용자에게 묻는다. 완료 조건에 콘텐츠 배치와 시나리오를 넣고, 참조 0 을 세는 린트를 둔다.
+
+**6. 플랫폼(사용자 결정 2026-11-07).** Android · 웹(최신 브라우저 WebGPU 만) 지원, iOS 제외, 콘솔은 대기(분기를 만들지도 막지도 않는다). 순서: (1) `waitIdle` 을 펜스 기반 지연 해제로(씬 활성화 · 핫 리로드 · 캡처, 데스크톱도 이득) → (2) 텍스처 압축을 쿠킹으로 — 임포트는 중간본, Config 의 대상별 형식 목록(BC · ASTC · ETC2) · 실행 때 장치가 지원하는 첫 형식(웹은 두 벌) → (3) Dawn 데스크톱 WebGPU 백엔드(시나리오 · 골든으로 검증, 셰이더는 SPIR-V → WGSL Tint) → (4) Emscripten 빌드(스레드 · 대기 모델, OffscreenCanvas, COOP/COEP) → (5) Android Vulkan. RHI 조사: 능력 깃발은 있다, 슬롯 바인딩 → 그리기별 바인드 그룹, 루트 상수는 DX11 처럼 상수 버퍼 슬롯으로 흉내, wave · 지오메트리 · 테셀레이션 쓰지 않음, 아토믹은 버퍼만, 바인드리스는 `SW_NATIVE_BINDLESS` 뒤, `R16G16_SNORM`(GBuffer)은 대체가 필요, `R32G32B32_FLOAT` 텍스처 없음, 모바일 BC 없음.
+
+**7. Linux.** 사용자가 "해 보라" 고 했다. 합치기 전 `LinuxScenarios.py all` 은 `X11Window.cpp` 컴파일에서 졌고 고쳤다 — 검증 뒤 `all` 을 다시 돌려 결과대로 고친다. dzn(Mesa Dozen, D3D12 위의 Vulkan — WSL 의 `/dev/dxg` 를 쓴다): Ubuntu 패키지에 없고 sudo · meson · mako · libdrm-dev 가 없어, `~/lt-deps` 에 사용자 공간으로 Mesa 를 `-Dvulkan-drivers=microsoft-experimental` 로 짓는다(pip --user, dev deb 풀기). vulkaninfo → 시나리오 하나 → 되면 `LinuxScenarios.py` 에 선택지를 더한다. sudo 가 꼭 필요하면 사용자에게 말한다. 5 절의 18 단계와 `.linux` 골든도 이때.
+
+**8. 메모리 풀 · GC:** 사용자에게 답했다 — GC 는 권하지 않고, 풀은 측정 뒤에. 지금은 구조 개선이 먼저다.
+
+**9. 통합에서 드러난 확인거리.**
 - 1 인칭 탄도선이 시점 총에 가려 화면에 남지 않는다(`ShooterPlayerComponent` 총구가 몸 무기). 시나리오 `projectilecombo` 는 값(`Shooter3D.TracerWidth`)으로 본다.
-- 응답 보존(`NetResponseRetention::Forget`)은 경제만 쓴다. 우편함 · GM 등 "같은 키로 다시 시도하라" 는 결과를 내는 다른 온라인 키트도 같은 결함인지 본다.
-- 스팀 티켓 확인(`TicketQueryLoginProvider`)이 `identity` 인자를 싣지 않는다 — `GetAuthTicketForWebApi(identity)` 티켓이면 운영에서 거절될 수 있다(K1, 문서 확인 필요).
 - 엔진 서비스 생성 순서가 목록 위치에서 의존 · 이름 순으로 바뀌었다(K7). 생성자 안에서 다른 서비스를 찾는 공장이 있으면 드러난다.
-- R4: 리타겟 · 소켓 · 물리를 에디터로 저장하면 펼친 한 벌로 저장되어 `_base` 를 잃는다. 자식이 더한 전이 id 가 부모와 겹치면 조용히 합쳐진다. R5: 오디오 이벤트 `_parentEvent` 는 에디터 저장에서 끊기고, 머티리얼 파라미터 묶음은 핫 리로드가 없다. `AudioMusicDesc` · `AudioGraphDef` 의 `_base` 는 문서 표에 줄이 없다(필요하면 리플렉션에서 뽑아 더한다).
-- 리플렉션 형식의 `_base` 는 이제 개발 실행도 문서 표(`listDocument`)만 읽는다 — 새 문서 형식에 `_base` 를 쓰면 표에 줄을 함께 더한다.
+- 자식이 더한 전이 id 가 부모와 겹치면 조용히 합쳐진다(R4). 머티리얼 파라미터 묶음은 핫 리로드가 없다(R5).
+- 리플렉션 형식의 `_base` 는 개발 실행도 문서 표(`listDocument`)만 읽는다 — 새 문서 형식에 `_base` 를 쓰면 표에 줄을 함께 더한다.
 
-**4. 그 다음.** Linux 체인 · `.linux` 골든을 한 번에(5 절의 18 단계 포함).
+**사용자에게 알릴 것:** 스크립팅은 Lua 로 추천했고 답이 없으면 Lua 로 한다. 런타임 아틀라스는 하지 않기로 했다.
 
-**결정 대기가 아니라 사용자에게 알릴 것:** 스크립팅은 Lua 로 추천했고 답이 없으면 Lua 로 한다. 다음 플랫폼(모바일 · 웹 · 콘솔)은 답이 있어야 시작한다. 스킬 파일(`.claude/` 는 Git 밖)을 저장소에 넣을지, Linux 에서 dzn 시험을 할지 답을 못 받았다. 런타임 아틀라스는 하지 않기로 했다(부품 · 구간마다 머티리얼로 셰이더 효과를 주므로 맞지 않는다는 사용자 판단).
+**줄끝:** `.gitattributes` 가 `* text=auto eol=lf` 다(본 트리는 변환해 두었다). 워크트리에 CRLF 경고가 보이면 그 워크트리의 옛 파일이다.
 
 사람이 보는 실행: `py -3 Scripts/dev/WatchScenarios.py [--preset 프리셋] [--backend 백엔드] [--stages a,b] [체인…]`.
 
