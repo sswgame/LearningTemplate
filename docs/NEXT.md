@@ -32,11 +32,9 @@
 - 그 뒤: Empty 게임 이름을 TestBed 로 전수 개명(옛 이름 린트로 막기), S8 측정 6 건, dzn SPIR-V→DXIL 충돌, 웹 · Android 실제 빌드.
 
 **1. 통합 대기(작업자가 끝낸 커밋 — 볼 값은 각 보고).** 6 차 R2 · R3 · R5 · R6 · R7 · R8, 7 차 S1 · S2. 합치면서 함께 할 것:
-- R3: 전용 서버에서 `Engine/Audio` 빼기(`IAudioService` Optional · 엔진 루프 · 볼륨 · 립싱크 · 알림 소리 · 씬 오디오 컴포넌트), 엔진 컴포넌트의 RHI 형식 칸(`GPUInstanceCustomData` · `GPUSpriteInstanceData`).
-- R2: 손으로 세는 대기(Chat `_mapPresenceRequestToWhisper` · Login `_listPendingVerification`)를 `ServiceStoreTracker` 모양으로. 스캐폴드 `new-online-kit` 로 키트 하나를 실제로 지어 본다.
-- R7: `loadFromAsset` 밖 이름의 리소스 입구(`loadFromPack` 등)도 린트로. 게임을 `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지 본다.
+- R2: 스캐폴드 `new-online-kit` 로 키트 하나를 실제로 지어 본다.
+- R7: 게임을 `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지 본다.
 - R8: Dawn · Tint 를 `ThirdParty/dawn`(vcpkg `dawn[vulkan,d3d12,tint-tools]`)으로, 프리셋은 `Tools/emsdk` · `Tools/Android`(설치 `py -3 Scripts/setup/PlatformSdk.py all`)를 가리키게. 웹 · Android 를 실제로 짓고 고친다. WebGPU 깊이 복사 패스 · bind group 캐시 · 타임스탬프, 브라우저 게임패드 · 포인터 잠금, Android 패드 · intent 명령줄 · pre-rotation.
-- S2: Schedule · Metroidvania · Weapon 카탈로그의 엄격도.
 
 **1b. 7 차 작업자 범위(2026-11-07 감사 — 본문 · 판단은 [DesignBacklog](DesignBacklog.md) 의 "통합 담당 판단" 절이 정본).**
 - S3 에디터 작업 안전: 자동 저장 · 복구, 이동 트랜잭션 · 폴더 이동, 저장 검색 · 통합 검색, Map Check Fix, Assert 설정, `CallInEditor`, 소스 관리 변경 목록, 배치 고스트 · 표면.
