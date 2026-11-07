@@ -1,12 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 단언 대화상자(EditorPlus H1): 자동 실행(-scenario · -unattended)에는 대화상자를 걸지 않는다. 대화상자는 모달 창이라 시나리오가 누를 수 없으므로,
-  세 단추(이번만 · 디버거 · 이 자리 늘 무시)는 CoreTest 의 AssertDialogTest 가 테스트 함수로 본다.
+  에디터 시나리오 — 단언 대화상자(EditorPlus H1 · S3): 자동 실행(-scenario · -unattended)에는 대화상자를 걸지 않는다. 대화상자는 모달 창이라 시나리오가 누를 수 없으므로,
+  세 단추(이번만 · 디버거 · 이 자리 늘 무시)와 설정(띄우지 않음 · 늘 무시를 기억하지 않음 · 기억 지우기)은 CoreTest 의 AssertDialogTest 가 테스트 함수로 본다.
+  여기서는 환경설정 Editor/Diagnostics 의 두 칸이 Core 의 대화상자 설정(internal::setAssertDialogOptions — 모든 구성에 있다)에 실제로 입혀지는지 본다.
+  볼 그림: assertdialog/preferences.png(Diagnostics 섹션의 두 체크 상자, 끈 쪽은 비어 있다).
   실행: App -EnableEditor -scenario=engine/automation/editor/assertdialog.scenario.xml -unattended
 -->
-<Scenario name="editor.assertdialog" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.assertdialog" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<Expect watch="App.AssertDialogInstalled" equals="0"/>
+	<Expect watch="Editor.AssertDialogShown" equals="1"/>
+	<Expect watch="Editor.AssertIgnoreRemembered" equals="1"/>
+	<Expect watch="Editor.AssertIgnoredSites" equals="0"/>
+	<!-- 환경설정 창에서 끈다 -->
+	<DevCommand line="panel.focus preferences"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="preferences.search"/>
+	<EditorWaitSettled/>
+	<EditorText value="assert"/>
+	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bShowAssertDialog"/>
+	<WaitUntil watch="Editor.AssertDialogShown" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bRememberIgnoredAsserts"/>
+	<WaitUntil watch="Editor.AssertIgnoreRemembered" equals="0" timeoutFrames="60"/>
+	<CaptureEditorUI file="assertdialog/preferences.png" maxMagentaFraction="0"/>
+	<!-- 되돌린다(환경설정 파일은 빈 에디터 상태 폴더라 다음 실행에 남지 않는다) -->
+	<EditorWaitSettled/>
+	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bShowAssertDialog"/>
+	<WaitUntil watch="Editor.AssertDialogShown" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bRememberIgnoredAsserts"/>
+	<WaitUntil watch="Editor.AssertIgnoreRemembered" equals="1" timeoutFrames="60"/>
+	<DevCommand line="assert.clearIgnored"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.AssertIgnoredSites" equals="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

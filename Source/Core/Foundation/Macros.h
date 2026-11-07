@@ -215,6 +215,10 @@ namespace sw::internal
     SW_API void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
     /** @brief 대화상자가 설치돼 있으면 true 를 반환합니다. */
     [[nodiscard]] SW_API bool hasAssertDialog() noexcept;
+    /** @brief "늘 무시" 로 기억한 자리 수입니다(최대 256). */
+    [[nodiscard]] SW_API uint32 getIgnoredAssertSiteCount() noexcept;
+    /** @brief "늘 무시" 로 기억한 자리를 모두 잊습니다. 다음 단언부터 다시 묻습니다. */
+    SW_API void clearIgnoredAssertSites() noexcept;
     /**
      * @brief 단언이 멈춰야 하면 true 를 반환합니다. 이 위치가 "항상 무시"이면 false, 대화상자가 없으면 true(기존 동작), 있으면 대화상자에 묻습니다.
      * @details 대화상자는 한 번에 하나만 뜬다. 떠 있는 동안 다른 스레드의 단언은 잠금에서 기다린다.
@@ -222,6 +226,22 @@ namespace sw::internal
     [[nodiscard]] SW_API bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
 } // namespace sw::internal
 #endif
+
+// 단언 대화상자의 사용자 설정. 대화상자는 Debug 에만 있지만 설정은 모든 구성에 둔다 — 에디터 환경설정이 구성마다 다른 길 없이 입히고 읽는다.
+namespace sw::internal
+{
+    /**
+     * @brief 사용자 설정을 입힙니다(에디터 환경설정 Editor/Diagnostics). 설치와 따로다 — 설치는 App 이 실행 종류로 정하고, 이것은 설치된 대화상자를 띄울지만 정한다.
+     * @param bShowDialog false 면 대화상자 없이 멈춘다(설치하지 않은 실행과 같다). 이미 "늘 무시" 로 고른 자리는 계속 넘긴다.
+     * @param bRememberIgnoredSites false 면 "늘 무시" 를 이번만 넘기기로 다룬다(같은 자리에서 다시 묻는다).
+     * @details 설정을 읽기 전(초기화 구간)은 둘 다 true 다. Debug 가 아니면 단언이 멈추지 않으므로 값만 남는다.
+     */
+    SW_API void setAssertDialogOptions( bool bShowDialog, bool bRememberIgnoredSites ) noexcept;
+    /** @brief 설치된 대화상자를 띄우는 설정이면 true 입니다(`setAssertDialogOptions`). */
+    [[nodiscard]] SW_API bool isAssertDialogShown() noexcept;
+    /** @brief "늘 무시" 를 기억하는 설정이면 true 입니다. */
+    [[nodiscard]] SW_API bool isIgnoredAssertSiteRemembered() noexcept;
+} // namespace sw::internal
 
 // ------------------------------------------------------------------------------
 // 10) 로그보다 아래 티어의 보고. `Core/Log` 는 컨테이너 · 메모리 · 수학보다 위라서 그 아래 티어는 `SW_LOG_*` 를 쓸 수 없다.

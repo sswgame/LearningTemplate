@@ -14,6 +14,12 @@ namespace sw::internal
     {
         /** @brief 로그가 설치한 보고자입니다. 상수 초기화라 정적 초기화 순서를 타지 않습니다. */
         std::atomic<LowLevelReporterFunc> s_pfnLowLevelReporter{ nullptr };
+        /**
+         * @brief 단언 대화상자의 사용자 설정입니다(에디터 환경설정 Editor/Diagnostics). 대화상자는 Debug 에만 있지만 설정은 모든 구성에 둔다 —
+         *        에디터가 구성마다 다른 길 없이 입히고 읽게 한다. 설정을 읽기 전의 초기화 구간은 이 기본값(띄움 · 기억함)으로 돈다.
+         */
+        std::atomic<bool> s_bShowAssertDialog{ true };
+        std::atomic<bool> s_bRememberIgnoredAssertSites{ true };
 
         struct LowLevelReportInternal
         {
@@ -76,6 +82,22 @@ namespace sw::internal
         utf8 arrText[LowLevelReportInternal::kAssertTextCapacity];
         std::snprintf( arrText, sizeof( arrText ), "ASSERT failed\nExpression : %s\nMessage    : %s\nFileName   : %s\nLine       : %d", pExpression, pMessage, pFile, line );
         reportLowLevel( LowLevelReportLevel::Error, pFile, line, arrText, SW_ASSERT_LOG_ID );
+    }
+
+    void setAssertDialogOptions( bool bShowDialog, bool bRememberIgnoredSites ) noexcept
+    {
+        s_bShowAssertDialog.store( bShowDialog, std::memory_order_release );
+        s_bRememberIgnoredAssertSites.store( bRememberIgnoredSites, std::memory_order_release );
+    }
+
+    bool isAssertDialogShown() noexcept
+    {
+        return s_bShowAssertDialog.load( std::memory_order_acquire );
+    }
+
+    bool isIgnoredAssertSiteRemembered() noexcept
+    {
+        return s_bRememberIgnoredAssertSites.load( std::memory_order_acquire );
     }
 } // namespace sw::internal
 
@@ -157,6 +179,20 @@ namespace sw::internal
         return s_dialogState._pfnDialog.load( std::memory_order_acquire ) != nullptr;
     }
 
+    uint32 getIgnoredAssertSiteCount() noexcept
+    {
+        AssertDialogState&                state = s_dialogState;
+        const std::lock_guard<std::mutex> lock{ state._mutex };
+        return state._ignoredSiteCount < AssertDialogState::kMaxIgnoredSiteCount ? state._ignoredSiteCount : AssertDialogState::kMaxIgnoredSiteCount;
+    }
+
+    void clearIgnoredAssertSites() noexcept
+    {
+        AssertDialogState&                state = s_dialogState;
+        const std::lock_guard<std::mutex> lock{ state._mutex };
+        state._ignoredSiteCount = 0;
+    }
+
     bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept
     {
         AssertDialogState&                state = s_dialogState;
@@ -170,6 +206,9 @@ namespace sw::internal
             if ( isSameSite( state._arrIgnoredSite[index], pFile, line ) )
                 return false;
         }
+        // 설정에서 껐으면 대화상자 없이 멈춘다(대화상자를 걸지 않은 실행과 같다). 이미 "늘 무시" 로 고른 자리는 위에서 계속 넘긴다.
+        if ( isAssertDialogShown() == false )
+            return true;
 
         switch ( pfnDialog( pExpression, pMessage, pFile, line ) )
         {
@@ -183,6 +222,8 @@ namespace sw::internal
             }
             case AssertAction::IgnoreAlways:
             {
+                if ( isIgnoredAssertSiteRemembered() == false )
+                    return false; // 설정이 "기억하지 않음" 이면 이번만 넘긴다 — 다음에 같은 자리에서 다시 묻는다
                 IgnoredAssertSite& site = state._arrIgnoredSite[state._ignoredSiteCount % AssertDialogState::kMaxIgnoredSiteCount];
                 site._pFile             = pFile;
                 site._line              = line;

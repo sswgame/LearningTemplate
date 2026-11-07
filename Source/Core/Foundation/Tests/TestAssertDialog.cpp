@@ -48,6 +48,15 @@ namespace
         ScopedAssertDialogForTest( const ScopedAssertDialogForTest& )            = delete;
         ScopedAssertDialogForTest& operator=( const ScopedAssertDialogForTest& ) = delete;
     };
+
+    /** @brief 설정(에디터 환경설정 Editor/Diagnostics)을 입힌 뒤 기본값(둘 다 켬)으로 되돌린다 — 다른 케이스가 기본 설정을 본다. */
+    struct ScopedAssertDialogOptionsForTest
+    {
+        ScopedAssertDialogOptionsForTest( bool bShowDialog, bool bRememberIgnoredSites ) { internal::setAssertDialogOptions( bShowDialog, bRememberIgnoredSites ); }
+        ~ScopedAssertDialogOptionsForTest() { internal::setAssertDialogOptions( true, true ); }
+        ScopedAssertDialogOptionsForTest( const ScopedAssertDialogOptionsForTest& )            = delete;
+        ScopedAssertDialogOptionsForTest& operator=( const ScopedAssertDialogOptionsForTest& ) = delete;
+    };
 } // namespace
 
 SW_TEST_CASE( AssertDialogTest, IgnoreAlwaysAsksOncePerSite )
@@ -91,5 +100,36 @@ SW_TEST_CASE( AssertDialogTest, CaptureComesBeforeTheDialog )
     AssertDialogTestInternal::failAtOneSite( false );
     SW_EXPECT_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_EQUAL( 0u, AssertDialogTestInternal::_s_callCount );
+}
+
+/** @brief 대화상자를 끄는 설정이면 묻지 않고 멈춰야 한다고 답한다(대화상자를 걸지 않은 실행과 같다). */
+SW_TEST_CASE( AssertDialogTest, HiddenDialogBreaksWithoutAsking )
+{
+    const ScopedAssertDialogForTest        dialog( &AssertDialogTestInternal::answerIgnoreOnce );
+    const ScopedAssertDialogOptionsForTest options( false, true );
+    SW_EXPECT_FALSE( internal::isAssertDialogShown() );
+    SW_EXPECT_TRUE( internal::shouldBreakOnAssert( "false", nullptr, __FILE__, __LINE__ ) );
+    SW_EXPECT_EQUAL( 0u, AssertDialogTestInternal::_s_callCount );
+}
+
+/** @brief "늘 무시" 를 기억하지 않는 설정이면 같은 자리에서 다시 묻고, 기억한 자리는 지우면 다시 묻는다. */
+SW_TEST_CASE( AssertDialogTest, IgnoreAlwaysRespectsRememberOptionAndClear )
+{
+    const ScopedAssertDialogForTest dialog( &AssertDialogTestInternal::answerIgnoreAlways );
+    {
+        const ScopedAssertDialogOptionsForTest options( true, false );
+        AssertDialogTestInternal::failAtOneSite( false );
+        AssertDialogTestInternal::failAtOneSite( false );
+        SW_EXPECT_EQUAL( 2u, AssertDialogTestInternal::_s_callCount );
+        SW_EXPECT_EQUAL( 0u, internal::getIgnoredAssertSiteCount() );
+    }
+    AssertDialogTestInternal::failAtOneSite( false );
+    AssertDialogTestInternal::failAtOneSite( false );
+    SW_EXPECT_EQUAL( 3u, AssertDialogTestInternal::_s_callCount );
+    SW_EXPECT_EQUAL( 1u, internal::getIgnoredAssertSiteCount() );
+    internal::clearIgnoredAssertSites();
+    SW_EXPECT_EQUAL( 0u, internal::getIgnoredAssertSiteCount() );
+    AssertDialogTestInternal::failAtOneSite( false );
+    SW_EXPECT_EQUAL( 4u, AssertDialogTestInternal::_s_callCount );
 }
 #endif

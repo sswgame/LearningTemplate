@@ -17,7 +17,7 @@
 	<EditorKey key="Enter"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus preferences"/>
-	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="7" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="8" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="preferences.search"/>
 	<EditorWaitSettled/>

@@ -1,7 +1,8 @@
 /**
  * @file EditorPreferences.h
- * @brief 에디터 환경설정 섹션의 값 형식입니다(General, Viewport, Play, Content Browser, Multiplayer Sync). 테마(Appearance)는 `EditorConfig` 입니다.
- * @details 기본 섹션의 등록은 `EditorPreferences.cpp`, Multiplayer Sync 의 등록은 그 탭(`MultiplayerSyncTab.cpp`)이 `SW_EDITOR_SETTINGS` 로 한다.
+ * @brief 에디터 환경설정 섹션의 값 형식입니다(General, Viewport, Play, Content Browser, Diagnostics, Multiplayer Sync). 테마(Appearance)는 `EditorConfig` 입니다.
+ * @details 기본 섹션의 등록은 `EditorPreferences.cpp`, Diagnostics 는 값을 Core 에 입히는 `EditorAssertControl.cpp`, Multiplayer Sync 의 등록은 그 탭(`MultiplayerSyncTab.cpp`)이
+ *          `SW_EDITOR_SETTINGS` 로 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -87,6 +88,26 @@ namespace sw::editor
 
         PROPERTY( Tooltip = "Show every game pack under game/ instead of the active one only" )
         bool _bShowAllPacksByDefault{ false };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 진단 — 단언 대화상자(Windows Debug 대화형 실행에서 App 이 건다)를 띄울지와 "이 자리 늘 무시" 를 기억할지입니다.
+     * @details 값은 `EditorAssertControl.cpp` 가 바뀔 때마다 Core 의 대화상자 설정(`internal::setAssertDialogOptions`)에 입힌다. 환경설정을 읽기 전의
+     *          초기화 구간은 Core 의 기본값(둘 다 켬)으로 돈다. 자동 실행(-scenario · -unattended)은 대화상자를 걸지 않으므로 이 값과 상관없이 멈춘다.
+     */
+    REFLECT()
+    struct EditorDiagnosticsPreferences
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Ask in a dialog when an assert fails (Windows Debug editor runs). Off: stop at the assert as automated runs do" )
+        bool _bShowAssertDialog{ true };
+
+        PROPERTY( Tooltip = "Cancel in the assert dialog ignores that file and line until the editor closes. Off: Cancel ignores it this time only" )
+        bool _bRememberIgnoredAsserts{ true };
     };
 } // namespace sw::editor
 
