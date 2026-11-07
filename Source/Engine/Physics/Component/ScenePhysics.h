@@ -27,6 +27,7 @@
 namespace sw
 {
     enum class PhysicsComponentPhase : uint8;
+    enum class PhysicsFrameHook : uint8;
 
     struct PhysicsSettings;
 

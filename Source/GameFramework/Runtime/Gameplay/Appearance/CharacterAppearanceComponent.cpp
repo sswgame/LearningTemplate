@@ -619,8 +619,8 @@ namespace sw
             return false;
         // 유닛 번호 순서의 월드이다. 몸은 이 오브젝트이고, 부품은 그 부품 오브젝트이며, 지난 프레임에 적용된 위치를 쓴다.
         vector<float4x4> listUnitWorld;
-        listUnitWorld.reserve( _rig.getSkeletalMeshCount() );
-        for ( uint32 unitIndex = 0; unitIndex < _rig.getSkeletalMeshCount(); ++unitIndex )
+        listUnitWorld.reserve( _rig.getUnitCount() );
+        for ( uint32 unitIndex = 0; unitIndex < _rig.getUnitCount(); ++unitIndex )
         {
             const GameObject*     pObject = findUnitObject( *pManager, unitIndex );
             const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;

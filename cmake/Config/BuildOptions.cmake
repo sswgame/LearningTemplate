@@ -144,7 +144,7 @@ endif()
 # Tracy 프로파일러 클라이언트(엔진 프로파일러의 두 번째 출력, Source/Engine/Profiling). Shipping 은 언제나 뺀다.
 # Windows 는 TracyClient.dll 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 DLL 도, 수집 스레드도 없다.
 # 리눅스(vcpkg 정적 라이브러리)는 지연 로드가 없어 링크하면 기동부터 수집 스레드 · 리슨 소켓이 선다 — 그래서 기본 꺼짐이다.
-if(WIN32 AND NOT SW_SHIPPING_BUILD)
+if(CMAKE_HOST_WIN32 AND NOT SW_SHIPPING_BUILD) # project() 앞이라 WIN32 는 아직 없다
 	set(swTracyDefault ON)
 else()
 	set(swTracyDefault OFF)
