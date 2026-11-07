@@ -2876,6 +2876,9 @@
 		<entry key="EditorSpriteClip.AtlasCellTip"
 		       text="칸을 클릭하면 선택한 프레임의 사각형이 그 칸이 됩니다. Shift+클릭하면 새 프레임을 추가합니다."
 		       sourceHash="183c36032d069a56" />
+		<entry key="EditorSpriteClip.AtlasDragTip"
+		       text="시트 위를 끌면 크기와 상관없이 프레임을 자르고, 고른 프레임의 가장자리를 끌면 고칩니다. 아틀라스 크기를 적었으면 가장자리가 아틀라스 픽셀에 맞습니다."
+		       sourceHash="0a14e8afbb7d0fd7" />
 		<entry key="EditorSpriteClip.AtlasSize" text="아틀라스 크기" sourceHash="0641388eabe0161d" />
 		<entry key="EditorSpriteClip.AtlasSizeTip"
 		       text="아틀라스의 픽셀 너비와 높이입니다. 픽셀 테두리에 필요합니다."

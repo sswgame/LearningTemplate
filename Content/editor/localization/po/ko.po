@@ -7706,6 +7706,11 @@ msgid "Click a cell to set the selected frame's rectangle to it. Shift+click add
 msgstr "칸을 클릭하면 선택한 프레임의 사각형이 그 칸이 됩니다. Shift+클릭하면 새 프레임을 추가합니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.AtlasDragTip"
+msgid "Drag on the sheet to cut a frame of any size, or drag an edge of the selected frame to adjust it. Edges snap to atlas pixels when the atlas size is set."
+msgstr "시트 위를 끌면 크기와 상관없이 프레임을 자르고, 고른 프레임의 가장자리를 끌면 고칩니다. 아틀라스 크기를 적었으면 가장자리가 아틀라스 픽셀에 맞습니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AtlasSize"
 msgid "Atlas size"
 msgstr "아틀라스 크기"

@@ -350,6 +350,85 @@ namespace sw::editor
         return bAdded ? AtlasPickResult::AddedFrame : AtlasPickResult::EditedFrame;
     }
 
+    float32 SpriteClipModel::snapToAtlasPixel( float32 value, bool bHorizontal ) const
+    {
+        const float32 pixels = bHorizontal ? _clip._atlasPixelSize._x : _clip._atlasPixelSize._y;
+        if ( pixels <= 0.0f )
+            return MathUtil::saturate( value );
+        return MathUtil::saturate( MathUtil::round( value * pixels ) / pixels );
+    }
+
+    bool SpriteClipModel::findSelectedFrameBounds( float4& outBounds ) const
+    {
+        if ( Internal::isValidIndex( _clip._listFrame, _selectedFrame ) == false )
+            return false;
+        const float4& uv   = _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
+        const float32 left = MathUtil::min( uv._x, uv._x + uv._z );
+        const float32 top  = MathUtil::min( uv._y, uv._y + uv._w );
+        outBounds          = float4{ left, top, left + MathUtil::abs( uv._z ), top + MathUtil::abs( uv._w ) };
+        return true;
+    }
+
+    SpriteClipModel::AtlasPickResult SpriteClipModel::setFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame )
+    {
+        const float32 left   = snapToAtlasPixel( MathUtil::min( uvFrom._x, uvTo._x ), true );
+        const float32 right  = snapToAtlasPixel( MathUtil::max( uvFrom._x, uvTo._x ), true );
+        const float32 top    = snapToAtlasPixel( MathUtil::min( uvFrom._y, uvTo._y ), false );
+        const float32 bottom = snapToAtlasPixel( MathUtil::max( uvFrom._y, uvTo._y ), false );
+        if ( right - left <= 0.0f || bottom - top <= 0.0f )
+            return AtlasPickResult::None;
+        const bool bAdded = bAddFrame || Internal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
+        if ( bAdded )
+            addFrame();
+        _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = float4{ left, top, right - left, bottom - top };
+        return bAdded ? AtlasPickResult::AddedFrame : AtlasPickResult::EditedFrame;
+    }
+
+    bool SpriteClipModel::moveSelectedFrameEdge( SpriteFrameEdge edge, float32 position )
+    {
+        float4 bounds{};
+        if ( findSelectedFrameBounds( bounds ) == false )
+            return false;
+        const bool    bHorizontal = edge == SpriteFrameEdge::Left || edge == SpriteFrameEdge::Right;
+        const float32 snapped     = snapToAtlasPixel( position, bHorizontal );
+        float4        moved       = bounds;
+        switch ( edge )
+        {
+            case SpriteFrameEdge::Left:
+            {
+                moved._x = snapped;
+                break;
+            }
+            case SpriteFrameEdge::Top:
+            {
+                moved._y = snapped;
+                break;
+            }
+            case SpriteFrameEdge::Right:
+            {
+                moved._z = snapped;
+                break;
+            }
+            case SpriteFrameEdge::Bottom:
+            {
+                moved._w = snapped;
+                break;
+            }
+        }
+        // 맞은편을 넘거나 닿으면 폭 · 높이가 0 이하라 읽기가 버리는 프레임이 된다 — 옮기지 않는다.
+        const bool bCollapsed = moved._z - moved._x <= 0.0f || moved._w - moved._y <= 0.0f;
+        const bool bSame      = moved._x == bounds._x && moved._y == bounds._y && moved._z == bounds._z && moved._w == bounds._w;
+        if ( bCollapsed || bSame )
+            return false;
+        float4&       uv        = _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
+        const bool    bFlippedX = uv._z < 0.0f;
+        const bool    bFlippedY = uv._w < 0.0f;
+        const float32 width     = moved._z - moved._x;
+        const float32 height    = moved._w - moved._y;
+        uv                      = float4{ bFlippedX ? moved._z : moved._x, bFlippedY ? moved._w : moved._y, bFlippedX ? -width : width, bFlippedY ? -height : height };
+        return true;
+    }
+
     void SpriteClipModel::togglePreview()
     {
         _bPreviewPlaying = isPreviewPlaying() ? SW_FALSE : SW_TRUE;

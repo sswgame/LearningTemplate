@@ -1,0 +1,12 @@
+<SpriteClipAsset _atlasPath="engine/textures/pixel/zelda_like/character.dds" _atlasPixelSize="272,256">
+	<_listFrame>
+		<SpriteClipFrame _uvRect="0.0,0.0,0.05882353,0.125" _borderPixels="0,0,0,0" _durationMs="120" />
+		<SpriteClipFrame _uvRect="0.05882353,0.0,0.05882353,0.125" _borderPixels="0,0,0,0" _durationMs="120" />
+	</_listFrame>
+	<_listKey />
+	<_listAnimation>
+		<SpriteClipAnimation _name="walk_down" _firstFrame="0" _frameCount="2" _bLoop="1">
+			<_listNotify />
+		</SpriteClipAnimation>
+	</_listAnimation>
+</SpriteClipAsset>

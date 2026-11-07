@@ -408,3 +408,48 @@ SW_TEST_CASE( SpriteClipModelTest, PreviewWithoutFramesShowsNothing )
     model.advancePreview( 1.0f );
     SW_EXPECT_FALSE( model.isPreviewPlaying() );
 }
+
+// ---------------------------------------------------------------------- 불규칙 프레임(아틀라스 위에서 끈 사각형 · 가장자리)
+
+// 끈 사각형은 순서와 상관없이 프레임 uv 가 되고, 아틀라스 크기를 알면 모서리가 픽셀 경계에 맞는다(옆 그림이 번지지 않게).
+SW_TEST_CASE( SpriteClipModelTest, DraggedRegionSnapsToAtlasPixels )
+{
+    SpriteClipModel model;
+    model.editAtlasPixelSize() = float2{ 272.0f, 256.0f };
+    SW_REQUIRE_TRUE( model.commitAtlasPixelSize() );
+    model.selectFrame( 0 );
+    const SpriteClipModel::AtlasPickResult result = model.setFrameRegion( float2{ 0.30f, 0.40f }, float2{ 0.10f, 0.05f }, false );
+    SW_EXPECT_TRUE( result == SpriteClipModel::AtlasPickResult::EditedFrame );
+    const float4& uv = model.getFrames()[0]._uvRect;
+    // 0.10 × 272 = 27.2 → 27 px, 0.30 × 272 = 81.6 → 82 px. 0.05 × 256 = 12.8 → 13 px, 0.40 × 256 = 102.4 → 102 px.
+    SW_EXPECT_NEAR( 27.0f / 272.0f, uv._x, 1e-6f );
+    SW_EXPECT_NEAR( 13.0f / 256.0f, uv._y, 1e-6f );
+    SW_EXPECT_NEAR( 55.0f / 272.0f, uv._z, 1e-6f );
+    SW_EXPECT_NEAR( 89.0f / 256.0f, uv._w, 1e-6f );
+    // 맞춘 뒤 크기가 0 이면 프레임을 만들지 않는다.
+    SW_EXPECT_TRUE( model.setFrameRegion( float2{ 0.5f, 0.5f }, float2{ 0.5005f, 0.7f }, true ) == SpriteClipModel::AtlasPickResult::None );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( model.getFrames().size() ) );
+}
+
+// 가장자리는 맞은편을 넘지 않고, 좌우가 뒤집힌 프레임은 뒤집힘을 지킨 채 같은 그림 영역의 가장자리가 옮겨진다.
+SW_TEST_CASE( SpriteClipModelTest, EdgeDragKeepsFlipAndSize )
+{
+    SpriteClipModel model;
+    model.editAtlasPixelSize() = float2{ 100.0f, 100.0f };
+    SW_REQUIRE_TRUE( model.commitAtlasPixelSize() );
+    model.selectFrame( 0 );
+    model.editSelectedFrame()->_uvRect = float4{ 0.5f, 0.0f, -0.25f, 0.5f }; // 그림 영역 0.25 .. 0.5, 좌우 뒤집힘
+    SW_REQUIRE_TRUE( model.moveSelectedFrameEdge( SpriteFrameEdge::Left, 0.2f ) );
+    const float4& uv = model.getFrames()[0]._uvRect;
+    SW_EXPECT_NEAR( 0.5f, uv._x, 1e-6f );
+    SW_EXPECT_NEAR( -0.3f, uv._z, 1e-6f );
+    SW_EXPECT_FALSE( model.moveSelectedFrameEdge( SpriteFrameEdge::Left, 0.6f ) ); // 오른쪽(0.5)을 넘는다
+    SW_EXPECT_FALSE( model.moveSelectedFrameEdge( SpriteFrameEdge::Left, 0.2f ) ); // 그대로
+    SW_REQUIRE_TRUE( model.moveSelectedFrameEdge( SpriteFrameEdge::Bottom, 0.333f ) );
+    SW_EXPECT_NEAR( 0.33f, model.getFrames()[0]._uvRect._w, 1e-6f ); // 픽셀 경계(33 px)
+
+    // 저장 글을 런타임이 같은 uv 로 읽는다.
+    SpriteClipAsset readBack;
+    SW_REQUIRE_TRUE( readBack.loadFromXMLText( model.captureText() ) );
+    SW_EXPECT_NEAR( -0.3f, readBack._listFrame[0]._uvRect._z, 1e-5f );
+}

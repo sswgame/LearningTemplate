@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 스프라이트 클립 창의 불규칙 프레임: PixelTown 주인공 시트(hero.sprite.xml 이 쓰는 zelda_like/character.dds, 272 × 256 px)를 쓰는 테스트 클립 사본
+  (scratch/spriteclipregion — 프레임 둘)을 연다. 원본은 건드리지 않는다.
+  아틀라스 위를 끌면 격자와 상관없는 사각형이 고른 프레임이 되고 가장자리는 아틀라스 픽셀 경계에 맞는다(Editor.SpriteClipSelectedFrameOnPixels = 1, 폭 약 42 px).
+  고른 프레임의 오른쪽 가장자리를 끌면 폭이 는다(약 +21 px). 저장 · 다시 읽기 뒤에도 같은 폭이고 프레임 수는 그대로다 — 미리보기와 런타임이 같은 uv 를 쓴다.
+  그림 spriteregion/*.png 에서 강조색 틀이 끈 영역과 맞는지 본다. 화면 끌기 거리는 gv_editorUiScale 1 기준이다(아틀라스 그림 한 변 256 px).
+  실행: App -EnableEditor -scenario=engine/automation/editor/spriteclipregion.scenario.xml -unattended
+-->
+<Scenario name="editor.spriteclipregion" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/spriteclipregion"/>
+	<EditorWaitSettled/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus sprite_clip"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/spriteclipregion/hero.sprite.xml"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="spriteClip.frame.0"/>
+	<EditorWaitSettled/>
+	<!-- 시트 가운데 근처에서 40 × 50 px 를 끈다 — 고른 프레임 0 이 그 사각형이 된다 -->
+	<EditorDrag mark="spriteClip.atlas" anchor="0.55,0.55" dx="40" dy="50"/>
+	<WaitUntil watch="Editor.SpriteClipSelectedFrameWidthPx" atLeast="36" timeoutFrames="60"/>
+	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" atMost="50"/>
+	<Expect watch="Editor.SpriteClipSelectedFrameOnPixels" equals="1"/>
+	<Expect watch="Editor.SpriteClipFrameCount" equals="2"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="spriteregion/region.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<!-- 오른쪽 가장자리를 20 px 끈다 -->
+	<Remember watch="Editor.SpriteClipSelectedFrameWidthPx" as="regionWidth"/>
+	<EditorDrag mark="spriteClip.frameEdge.right" dx="20" dy="0"/>
+	<WaitUntil watch="Editor.SpriteClipSelectedFrameWidthPx" differsFrom="regionWidth" timeoutFrames="60"/>
+	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" atLeast="54"/>
+	<Expect watch="Editor.SpriteClipSelectedFrameOnPixels" equals="1"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="spriteregion/edge.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.SpriteClipSelectedFrameWidthPx" as="edgeWidth"/>
+	<EditorClick mark="spriteClip.save"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="spriteClip.load"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="90"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="spriteClip.frame.0"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" sameAs="edgeWidth"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

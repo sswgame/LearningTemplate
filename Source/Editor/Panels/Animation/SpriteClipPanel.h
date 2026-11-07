@@ -36,6 +36,8 @@ namespace sw::editor
         uint32 getFrameCount() const { return static_cast<uint32>( _model.getFrames().size() ); }
         /** @brief 문서의 이름 붙은 애니메이션 구간 수입니다(감시 값 `Editor.SpriteClipAnimationCount`). */
         uint32 getAnimationCount() const { return static_cast<uint32>( _model.getAnimations().size() ); }
+        /** @brief 창의 모델입니다(감시 값이 고른 프레임의 크기를 읽는다). */
+        const SpriteClipModel& getModel() const { return _model; }
 
     private:
         /** @brief 아틀라스 경로 입력, 불러오기 · 저장 단추입니다. */
@@ -59,6 +61,13 @@ namespace sw::editor
          * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `SpriteClipModel::pickAtlasCell`(`AtlasGridUtil`).
          */
         void drawAtlasPicker();
+        /**
+         * @brief 아틀라스 위 끌기입니다 — 고른 프레임의 가장자리 가까이에서 누르면 그 가장자리를, 아니면 새 사각형을 끈다(불규칙 프레임). 문턱 안에서 떼면 셀 고르기입니다.
+         * @details 끄는 동안 가장자리는 바로 따라오고(미리보기 · 런타임과 같은 uv), 되돌리기는 뗄 때 한 번 남긴다. 사각형은 뗄 때 프레임이 된다(Shift 는 새 프레임).
+         */
+        void handleAtlasPointer( const float2& imageMin, float32 side, bool bHovered );
+        /** @brief 고른 프레임 가장자리의 화면 자리(자동화 표시 `spriteClip.frameEdge.<left|top|right|bottom>`)를 적고, @p mouse 가 가까운 가장자리를 돌려줍니다. 없으면 -1 입니다. */
+        int32 findFrameEdgeNear( const float2& imageMin, float32 side, const float2& mouse ) const;
 
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
@@ -66,5 +75,9 @@ namespace sw::editor
     private:
         SpriteClipModel      _model;
         EditorThumbnailCache _atlasThumbnail;
+        float2               _dragStartUv;     ///< 아틀라스 끌기를 시작한 uv
+        int32                _dragEdge;        ///< 끄는 가장자리(`SpriteFrameEdge`). -1 이면 사각형 끌기거나 끌지 않는다
+        uint8                _bAtlasPress : 1; ///< 아틀라스 위에서 눌러 아직 떼지 않았다
+        uint8                _bEdgeMoved  : 1; ///< 이번 끌기에서 가장자리가 옮겨졌다(뗄 때 되돌리기 하나)
     };
 } // namespace sw::editor

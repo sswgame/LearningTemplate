@@ -17,6 +17,15 @@
 
 namespace sw::editor
 {
+    /** @brief 프레임 사각형의 가장자리 하나입니다(아틀라스 위에서 끌어 고친다). */
+    enum class SpriteFrameEdge : uint8
+    {
+        Left = 0,
+        Top,
+        Right,
+        Bottom,
+    };
+
     /**
      * @class SpriteClipModel
      * @brief 스프라이트 클립 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -107,6 +116,8 @@ namespace sw::editor
         bool                                     hasAtlasPath() const { return _atlasPath.empty() == false; }
         /** @brief 아틀라스 픽셀 크기 입력란입니다. 입력을 마치면 `commitAtlasPixelSize` 로 클립에 옮긴다. */
         float2& editAtlasPixelSize() { return _atlasPixelSizeInput; }
+        /** @brief 클립에 적힌 아틀라스 픽셀 크기입니다(입력란이 아니라 확정된 값). 모르면 0 입니다. */
+        const float2& getAtlasPixelSize() const { return _clip._atlasPixelSize; }
         /** @brief 입력란을 클립의 아틀라스 크기로 둡니다. 음수는 0 으로 올립니다. 테두리가 있는 프레임이 쓸 수 없게 되면 입력란을 되돌리고 상태 줄에 알리며 false 입니다. 바뀌지 않아도 false 입니다. */
         bool   commitAtlasPixelSize();
         int32& editSliceColumns() { return _sliceColumns; }
@@ -124,6 +135,21 @@ namespace sw::editor
         };
         /** @brief 아틀라스의 uv(@p u, @p v) 셀을 고른 프레임의 uv 사각형으로 넣습니다. @p bAddFrame 이거나 고른 프레임이 없으면 새 프레임을 더해 넣습니다. */
         AtlasPickResult pickAtlasCell( float32 u, float32 v, bool bAddFrame );
+        /**
+         * @brief 아틀라스 위에서 끈 사각형(두 모서리 uv, 순서 무관)을 프레임 uv 로 둡니다 — 격자에 맞지 않는 불규칙한 프레임(유니티 Sprite Editor 의 손 사각형, Godot 의 Region).
+         * @details 아틀라스 픽셀 크기(`_atlasPixelSize`)를 알면 모서리를 픽셀 경계로 맞춘다(런타임 UV 가 픽셀 사이에 걸려 옆 그림이 번지지 않게). 0 .. 1 로 자른다.
+         *          @p bAddFrame 이거나 고른 프레임이 없으면 새 프레임을 더한다. 맞춘 뒤 폭이나 높이가 0 이면 아무것도 하지 않는다(`None`).
+         */
+        AtlasPickResult setFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame );
+        /**
+         * @brief 고른 프레임의 가장자리 @p edge 를 uv @p position 으로 옮깁니다(픽셀 경계로 맞춘다). 맞은편 가장자리를 넘거나 같아지게는 옮기지 않습니다.
+         * @details 좌우가 뒤집힌 프레임(폭 음수)은 뒤집힘을 지킨 채 같은 그림 영역의 가장자리를 옮긴다. 바뀌지 않았으면 false 입니다.
+         */
+        bool moveSelectedFrameEdge( SpriteFrameEdge edge, float32 position );
+        /** @brief uv @p value 를 아틀라스 픽셀 경계로 맞춥니다(@p bHorizontal 이면 가로 크기). 크기를 모르면 그대로입니다. */
+        float32 snapToAtlasPixel( float32 value, bool bHorizontal ) const;
+        /** @brief 고른 프레임의 그림 영역(뒤집힘을 푼 왼 · 위 · 오른 · 아래 uv)입니다. 고른 것이 없으면 false 입니다. */
+        [[nodiscard]] bool findSelectedFrameBounds( float4& outBounds ) const;
 
         const string& getStatus() const { return _status; }
 

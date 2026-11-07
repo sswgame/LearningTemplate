@@ -53,6 +53,39 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 고른 프레임의 그림 영역입니다(뒤집힘을 푼 uv). 창 · 프레임이 없으면 false 입니다. */
+            [[nodiscard]] static bool findSelectedBounds( const SpriteClipPanel*& outPanel, float4& outBounds )
+            {
+                outPanel = findLoadedPanel();
+                return outPanel != nullptr && outPanel->getModel().findSelectedFrameBounds( outBounds );
+            }
+
+            /** @brief 고른 프레임의 폭(아틀라스 픽셀)입니다. 아틀라스 크기를 모르면 uv 폭입니다. */
+            [[nodiscard]] static bool readSelectedFrameWidthPixels( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const SpriteClipPanel* pPanel = nullptr;
+                float4                 bounds{};
+                if ( findSelectedBounds( pPanel, bounds ) == false )
+                    return false;
+                const float32 atlasWidth = pPanel->getModel().getAtlasPixelSize()._x;
+                outValue                 = static_cast<float64>( ( bounds._z - bounds._x ) * ( atlasWidth > 0.0f ? atlasWidth : 1.0f ) );
+                return true;
+            }
+
+            /** @brief 고른 프레임의 네 가장자리가 모두 아틀라스 픽셀 경계 위면 1 입니다(불규칙 프레임 끌기가 픽셀에 맞췄는지). */
+            [[nodiscard]] static bool readSelectedFrameOnPixels( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const SpriteClipPanel* pPanel = nullptr;
+                float4                 bounds{};
+                if ( findSelectedBounds( pPanel, bounds ) == false )
+                    return false;
+                const SpriteClipModel& model   = pPanel->getModel();
+                const bool             bOnGrid = model.snapToAtlasPixel( bounds._x, true ) == bounds._x && model.snapToAtlasPixel( bounds._z, true ) == bounds._z &&
+                                     model.snapToAtlasPixel( bounds._y, false ) == bounds._y && model.snapToAtlasPixel( bounds._w, false ) == bounds._w;
+                outValue = bOnGrid ? 1.0 : 0.0;
+                return true;
+            }
+
             [[nodiscard]] static bool readAnimationCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const SpriteClipPanel* pPanel = findLoadedPanel();
@@ -67,6 +100,10 @@ namespace sw::editor
     SW_EDITOR_PANEL( SpriteClipPanel, SpriteClipPanel::kPanelID, EditorPanelCategory::Tool, 1600 );
     SW_AUTOMATION_WATCH( editorSpriteClipFrameCount, "Editor.SpriteClipFrameCount", "Frames of the document the Sprite Clip window holds (fails while it is closed or has no document)",
                          &SpriteClipPanelInternal::readFrameCount );
+    SW_AUTOMATION_WATCH( editorSpriteClipSelectedFrameWidth, "Editor.SpriteClipSelectedFrameWidthPx", "Width in atlas pixels of the frame selected in the Sprite Clip window",
+                         &SpriteClipPanelInternal::readSelectedFrameWidthPixels );
+    SW_AUTOMATION_WATCH( editorSpriteClipSelectedFrameOnPixels, "Editor.SpriteClipSelectedFrameOnPixels", "1 when every edge of the selected sprite frame sits on an atlas pixel boundary",
+                         &SpriteClipPanelInternal::readSelectedFrameOnPixels );
     SW_AUTOMATION_WATCH( editorSpriteClipAnimationCount, "Editor.SpriteClipAnimationCount", "Named animations of the document the Sprite Clip window holds",
                          &SpriteClipPanelInternal::readAnimationCount );
 
@@ -74,6 +111,10 @@ namespace sw::editor
         : EditorDocumentPanel{ EditorAssetType{ SpriteClipAsset::kAssetType }, false }
         , _model{}
         , _atlasThumbnail{}
+        , _dragStartUv{}
+        , _dragEdge{ -1 }
+        , _bAtlasPress{ SW_FALSE }
+        , _bEdgeMoved{ SW_FALSE }
     {
     }
 
@@ -85,8 +126,9 @@ namespace sw::editor
         _atlasThumbnail.update();
 
         drawFileBar();
-        drawFrameSection();
+        // 아틀라스가 창의 주 캔버스다(유니티 Sprite Editor · Godot SpriteFrames 처럼 그림 위에서 자르고 고른다) — 프레임 칸보다 위에 둔다.
         drawAtlasPicker();
+        drawFrameSection();
 
         drawAnimationSection();
         drawPreviewSection();
@@ -276,6 +318,7 @@ namespace sw::editor
     {
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AtlasCellsClickSelectedFrameShiftClickNew" ) );
+        EditorWidgets::drawHelpMarker( SW_LOCKEY( "EditorSpriteClip", "AtlasDragTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Columns" ) );
         ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
         ImGui::InputInt( "##Columns", &_model.editSliceColumns() );
@@ -304,6 +347,7 @@ namespace sw::editor
         const ImVec2  imageMin = ImGui::GetCursorScreenPos();
         ImGui::Image( reinterpret_cast<ImTextureID>( pTexture ), ImVec2( side, side ) );
         const bool bHovered = ImGui::IsItemHovered();
+        EditorSelfTestMarks::recordRect( "spriteClip.atlas", float2{ imageMin.x, imageMin.y }, float2{ imageMin.x + side, imageMin.y + side } );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasCellTip" ) );
 
         // 셀 격자와 고른 프레임 사각형을 이미지 위에 그린다.
@@ -329,15 +373,104 @@ namespace sw::editor
                                 0.0f, 0, 2.0f );
         }
 
-        if ( bHovered == false || EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) == false )
+        handleAtlasPointer( float2{ imageMin.x, imageMin.y }, side, bHovered );
+    }
+
+    int32 SpriteClipPanel::findFrameEdgeNear( const float2& imageMin, float32 side, const float2& mouse ) const
+    {
+        float4 bounds{};
+        if ( _model.findSelectedFrameBounds( bounds ) == false )
+            return -1;
+        const float32 left    = imageMin._x + bounds._x * side;
+        const float32 top     = imageMin._y + bounds._y * side;
+        const float32 right   = imageMin._x + bounds._z * side;
+        const float32 bottom  = imageMin._y + bounds._w * side;
+        const float32 middleX = ( left + right ) * 0.5f;
+        const float32 middleY = ( top + bottom ) * 0.5f;
+        // 잡는 폭은 글자 높이의 1/4 이다(DPI 를 따른다). 표시는 가장자리 가운데 작은 사각형이다.
+        const float32 reach            = ImGui::GetFontSize() * 0.25f;
+        const float2  arrEdgeCenter[4] = {
+            float2{   left, middleY},
+            float2{middleX,     top},
+            float2{  right, middleY},
+            float2{middleX,  bottom}
+        };
+        const utf8* const arrEdgeMark[4] = { "spriteClip.frameEdge.left", "spriteClip.frameEdge.top", "spriteClip.frameEdge.right", "spriteClip.frameEdge.bottom" };
+        for ( uint32 edge = 0; edge < 4; ++edge )
+        {
+            const float2& center = arrEdgeCenter[edge];
+            EditorSelfTestMarks::recordRect( arrEdgeMark[edge], float2{ center._x - reach, center._y - reach }, float2{ center._x + reach, center._y + reach } );
+        }
+        const bool bInsideY = top - reach <= mouse._y && mouse._y <= bottom + reach;
+        const bool bInsideX = left - reach <= mouse._x && mouse._x <= right + reach;
+        if ( bInsideY && MathUtil::abs( mouse._x - left ) <= reach )
+            return static_cast<int32>( SpriteFrameEdge::Left );
+        if ( bInsideY && MathUtil::abs( mouse._x - right ) <= reach )
+            return static_cast<int32>( SpriteFrameEdge::Right );
+        if ( bInsideX && MathUtil::abs( mouse._y - top ) <= reach )
+            return static_cast<int32>( SpriteFrameEdge::Top );
+        if ( bInsideX && MathUtil::abs( mouse._y - bottom ) <= reach )
+            return static_cast<int32>( SpriteFrameEdge::Bottom );
+        return -1;
+    }
+
+    void SpriteClipPanel::handleAtlasPointer( const float2& imageMin, float32 side, bool bHovered )
+    {
+        const EditorPointerState& pointer = EditorInputGUI::readPointer();
+        const float2              mouse   = pointer._position;
+        const float2              uv{ ( mouse._x - imageMin._x ) / side, ( mouse._y - imageMin._y ) / side };
+        const int32               nearEdge = findFrameEdgeNear( imageMin, side, mouse );
+        if ( bHovered && pointer.wasPressed( EditorMouseButton::Left ) )
+        {
+            _bAtlasPress = SW_TRUE;
+            _bEdgeMoved  = SW_FALSE;
+            _dragStartUv = uv;
+            _dragEdge    = nearEdge;
+        }
+        if ( _bAtlasPress == SW_FALSE )
             return;
-        const ImVec2                           mouse  = ImGui::GetMousePos();
-        const SpriteClipModel::AtlasPickResult result = _model.pickAtlasCell( ( mouse.x - imageMin.x ) / side, ( mouse.y - imageMin.y ) / side,
-                                                                              EditorInputGUI::readPointer().hasModifier( ModifierKey::Shift ) );
-        if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
-            notifyDocumentEdited( "Add Sprite Frame" );
-        else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
-            notifyDocumentEdited( "Edit Sprite Frame" );
+        const bool bDragging = pointer.isDragging( EditorMouseButton::Left );
+        if ( bDragging && _dragEdge >= 0 )
+        {
+            const bool bHorizontal = _dragEdge == static_cast<int32>( SpriteFrameEdge::Left ) || _dragEdge == static_cast<int32>( SpriteFrameEdge::Right );
+            if ( _model.moveSelectedFrameEdge( static_cast<SpriteFrameEdge>( _dragEdge ), bHorizontal ? uv._x : uv._y ) )
+                _bEdgeMoved = SW_TRUE;
+        }
+        else if ( bDragging )
+        {
+            // 끄는 사각형은 선택이라 강조색 틀이다(뗄 때 프레임이 된다).
+            const float32 fromX = imageMin._x + MathUtil::saturate( _dragStartUv._x ) * side;
+            const float32 fromY = imageMin._y + MathUtil::saturate( _dragStartUv._y ) * side;
+            const float32 toX   = imageMin._x + MathUtil::saturate( uv._x ) * side;
+            const float32 toY   = imageMin._y + MathUtil::saturate( uv._y ) * side;
+            ImGui::GetWindowDrawList()->AddRect( ImVec2( MathUtil::min( fromX, toX ), MathUtil::min( fromY, toY ) ), ImVec2( MathUtil::max( fromX, toX ), MathUtil::max( fromY, toY ) ),
+                                                 EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) ), 0.0f, 0, 1.5f );
+        }
+        if ( pointer.wasReleased( EditorMouseButton::Left ) == false )
+            return;
+        _bAtlasPress    = SW_FALSE;
+        const bool bAdd = pointer.hasModifier( ModifierKey::Shift );
+        if ( _dragEdge >= 0 && _bEdgeMoved == SW_TRUE )
+        {
+            notifyDocumentEdited( "Edit Sprite Frame" ); // 끄는 동안의 가장자리 이동은 되돌리기 하나다
+        }
+        else if ( pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) )
+        {
+            const SpriteClipModel::AtlasPickResult result = _model.pickAtlasCell( _dragStartUv._x, _dragStartUv._y, bAdd );
+            if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
+                notifyDocumentEdited( "Add Sprite Frame" );
+            else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
+                notifyDocumentEdited( "Edit Sprite Frame" );
+        }
+        else if ( _dragEdge < 0 )
+        {
+            const SpriteClipModel::AtlasPickResult result = _model.setFrameRegion( _dragStartUv, uv, bAdd );
+            if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
+                notifyDocumentEdited( "Add Sprite Frame" );
+            else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
+                notifyDocumentEdited( "Edit Sprite Frame" );
+        }
+        _dragEdge = -1;
     }
 
     void SpriteClipPanel::shutdown()

@@ -8222,6 +8222,12 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSpriteClip.AtlasDragTip"
+		       source="Drag on the sheet to cut a frame of any size, or drag an edge of the selected frame to adjust it. Edges snap to atlas pixels when the atlas size is set.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSpriteClip.AtlasSize" source="Atlas size">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
