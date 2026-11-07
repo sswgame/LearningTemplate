@@ -29,6 +29,22 @@ namespace sw
             /** @brief 한 변의 격자 셀 수 상한입니다. 정점 수가 폭주하지 않게 합니다. */
             static constexpr uint32 kMaxCellsPerSide = 512;
 
+            /** @brief 틱마다 쓰는 머티리얼 값 이름입니다. 틱은 워커라 프레임마다 intern 하면 샤드 뮤텍스를 지난다. */
+            struct MaterialNames
+            {
+                hashed_string _waterParams{ "_waterParams" };
+                hashed_string _shallowColor{ "_shallowColor" };
+                hashed_string _deepColor{ "_deepColor" };
+                hashed_string _skyColor{ "_skyColor" };
+                hashed_string _waveParams{ "_waveParams" };
+            };
+
+            static const MaterialNames& getMaterialNames()
+            {
+                static const MaterialNames s_names;
+                return s_names;
+            }
+
             static const hashed_string& getWaveName( uint32 waveIndex )
             {
                 static const hashed_string s_arrName[shaderslot::kGerstnerWaveCount] = { hashed_string( "_wave0" ), hashed_string( "_wave1" ), hashed_string( "_wave2" ),
@@ -284,12 +300,13 @@ namespace sw
             _material.setVector( Internal::getWaveName( waveIndex ), arrWave[waveIndex] );
         }
         // x = 파도 시간, y = 깊은 물 깊이, z = 거품 폭, w = 잔물결 세기
-        _material.setVector( hashed_string( "_waterParams" ), float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
-        _material.setVector( hashed_string( "_shallowColor" ), _shallowColor );
-        _material.setVector( hashed_string( "_deepColor" ), _deepColor );
-        _material.setVector( hashed_string( "_skyColor" ), _skyColor );
+        const Internal::MaterialNames& names = Internal::getMaterialNames();
+        _material.setVector( names._waterParams, float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
+        _material.setVector( names._shallowColor, _shallowColor );
+        _material.setVector( names._deepColor, _deepColor );
+        _material.setVector( names._skyColor, _skyColor );
         // 파도 분산의 중력이다. CPU 수면 질의(WaterWaveMath)와 같은, 설정된 물리 중력 하나를 쓴다.
-        _material.setVector( hashed_string( "_waveParams" ), float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
+        _material.setVector( names._waveParams, float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
     }
 
     void WaterBodyComponent::rebuildSurface()

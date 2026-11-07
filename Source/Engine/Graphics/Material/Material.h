@@ -178,6 +178,8 @@ namespace sw
          * @details MaterialInstance 가 마스터를 건드리지 않고 오버라이드 CB 를 만들 때 쓴다.
          */
         bool packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const;
+        /** @brief `packNamedValueIntoBuffer` 의 float 판입니다. 글을 거치지 않는다(`MaterialPacking::packFloatsIntoBuffer`). */
+        bool packNamedFloatsIntoBuffer( hashed_string name, const float32* pValue, uint32 count, vector<uint8>& inoutBuffer ) const;
 
         /**
          * @brief 텍스처 디스크립터 인덱스를 대상 버퍼에 바로 패킹합니다(문자열 변환 없음).
@@ -318,6 +320,8 @@ namespace sw
         /** @brief 레이아웃 오류 뒤 바이트와 stride 를 비운다 — 틀린 바이트(적지 않은 칸의 0)가 GPU 에 올라가지 않게 한다. */
         void discardBytesAfterLayoutError();
 
+        /** @brief 프로퍼티 목록이 바뀐 뒤 이름 표(`_listPropertyName`)를 다시 만듭니다. */
+        void rebuildPropertyNames();
         /** @brief Desc 를 런타임 상태에 적용합니다. */
         void applyDescToRuntime();
         /** @brief 프로퍼티의 묶음 칸으로 묶음 목록을 다시 만듭니다(값은 다음 동기화에 받는다). */
@@ -361,6 +365,7 @@ namespace sw
         vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         vector<CollectionBinding>            _listCollectionBinding;   ///< 묶음을 가리키는 프로퍼티(`MaterialParameterCollection`)
+        vector<hashed_string>                _listPropertyName;        ///< `_data._listProperty` 와 같은 순서의 이름. `findProperty` 가 프로퍼티마다 intern 하지 않고 정수로 비교한다
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

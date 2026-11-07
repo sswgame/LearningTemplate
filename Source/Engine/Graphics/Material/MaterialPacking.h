@@ -65,5 +65,17 @@ namespace sw
         [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, const utf8* pID, bool& outValue );
 
         static bool packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
+
+        /** @brief 값 글 @p value 를 프로퍼티 자리에 묶습니다. 프로퍼티는 고치지 않으므로 복사 없이 부모 레이아웃을 빌린다(`MaterialInstance` 의 덮어쓰기). */
+        static bool packValueIntoBuffer( const MaterialProperty& prop, string_view value, vector<uint8>& buffer );
+
+        /**
+         * @brief float 값을 글을 거치지 않고 프로퍼티 자리에 묶습니다. 결과 바이트는 `formatFloats` 글을 `packValueIntoBuffer` 로 묶은 것과 같습니다.
+         * @details 값마다 프레임마다 글을 만들고 읽던 길을 없앤다(물 · 식생은 틱마다 값을 쓴다). 언리얼 `FMaterialInstanceDynamic` 도 값을 이진으로 든다(기억에 의존한 비교).
+         */
+        static bool packFloatsIntoBuffer( const MaterialProperty& prop, const float32* pValue, uint32 count, vector<uint8>& buffer );
+
+        /** @brief float 값을 저장 · 표시용 글로 만듭니다(공백으로 나눈 최단 왕복 표현). */
+        static string formatFloats( const float32* pValue, uint32 count );
     };
 } // namespace sw

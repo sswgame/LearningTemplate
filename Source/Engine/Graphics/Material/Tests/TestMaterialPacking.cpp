@@ -311,6 +311,56 @@ SW_TEST_CASE( MaterialPackingTest, PackGrowsBufferAndFillsLayout )
 }
 
 /**
+ * @brief [MaterialPackingTest] float 값을 바로 묶은 바이트는 그 값의 글을 묶은 바이트와 비트까지 같다(종류마다, 끝자리 값 포함)
+ */
+SW_TEST_CASE( MaterialPackingTest, PackFloatsMatchesPackedText )
+{
+    using Util                              = MaterialPackingTestUtil;
+    const MaterialPropertyType arrTypes[]   = { MaterialPropertyType::Float, MaterialPropertyType::Float2, MaterialPropertyType::Float3, MaterialPropertyType::Float4, MaterialPropertyType::Color, MaterialPropertyType::Range };
+    const float32              arrValue[4]  = { 0.1f, -1.17549435e-38f, 16777216.0f, 3.14159274f };
+    const float32              arrScalar[1] = { 0.30000001f };
+    for ( const MaterialPropertyType type : arrTypes )
+    {
+        MaterialProperty prop = Util::makeProperty( type, "" );
+        prop._offset          = 8;
+        prop._min             = 0.0f;
+        prop._max             = 0.25f;
+
+        const bool     bVectorShape = type != MaterialPropertyType::Float && type != MaterialPropertyType::Range;
+        const uint32   count        = bVectorShape ? 4u : 1u;
+        const float32* pValue       = bVectorShape ? arrValue : arrScalar;
+
+        vector<uint8> direct( 64, 0xCD );
+        vector<uint8> textBuffer( 64, 0xCD );
+        SW_REQUIRE_TRUE( MaterialPacking::packFloatsIntoBuffer( prop, pValue, count, direct ) );
+        SW_REQUIRE_TRUE( MaterialPacking::packValueIntoBuffer( prop, MaterialPacking::formatFloats( pValue, count ), textBuffer ) );
+        SW_EXPECT_EQUAL( 0, Memory::compare( direct.data(), textBuffer.data(), direct.size() ) );
+    }
+
+    // 색에 스칼라 하나를 쓰면 글과 같이 나머지는 0, 알파는 1 이다.
+    MaterialProperty color = Util::makeProperty( MaterialPropertyType::Color, "" );
+    vector<uint8>    direct( 16, 0xCD );
+    vector<uint8>    textBuffer( 16, 0xCD );
+    SW_REQUIRE_TRUE( MaterialPacking::packFloatsIntoBuffer( color, arrScalar, 1, direct ) );
+    SW_REQUIRE_TRUE( MaterialPacking::packValueIntoBuffer( color, MaterialPacking::formatFloats( arrScalar, 1 ), textBuffer ) );
+    SW_EXPECT_EQUAL( 0, Memory::compare( direct.data(), textBuffer.data(), direct.size() ) );
+    SW_EXPECT_NEAR( 1.0f, Util::readFloat( direct, 12 ), 1e-6f );
+
+    // 글로 읽어야 뜻이 같은 종류(불리언)와 글이 거절하는 값(무한)은 글 길을 지난다.
+    MaterialProperty boolProp = Util::makeProperty( MaterialPropertyType::Bool, "" );
+    const float32    one      = 1.0f;
+    vector<uint8>    boolBuffer;
+    SW_REQUIRE_TRUE( MaterialPacking::packFloatsIntoBuffer( boolProp, &one, 1, boolBuffer ) );
+    SW_EXPECT_EQUAL( 1u, Util::readUint( boolBuffer, 0 ) );
+
+    MaterialProperty floatProp = Util::makeProperty( MaterialPropertyType::Float, "" );
+    const float32    infinite  = std::numeric_limits<float32>::infinity();
+    vector<uint8>    infiniteBuffer;
+    SW_EXPECT_LOG( "Material.VectorNumberUnreadable" );
+    SW_EXPECT_FALSE( MaterialPacking::packFloatsIntoBuffer( floatProp, &infinite, 1, infiniteBuffer ) );
+}
+
+/**
  * @brief [MaterialPackingTest] 숫자 글은 공백 · 탭 · 쉼표로 나뉘고, 모자란 칸은 0 이며, 빈 글은 모두 0 이다
  */
 SW_TEST_CASE( MaterialPackingTest, PackNumericSplitsTokensAndZeroFills )

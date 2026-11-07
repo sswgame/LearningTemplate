@@ -139,6 +139,35 @@ namespace sw
             Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getOperation()->getTexture() : nullptr; }
         };
 
+        /** @brief 값 덮어쓰기의 모양입니다. 스칼라 · 벡터는 이진으로 들고 글은 저장 · 조회 때만 만든다. */
+        enum class ValueKind : uint8
+        {
+            Text,   ///< 글 그대로(`setParameter`, XML 에서 읽은 값). 패킹 때 프로퍼티 종류대로 읽는다.
+            Scalar, ///< `setScalarParameter`
+            Vector  ///< `setVectorParameter`
+        };
+
+        /**
+         * @struct ValueOverride
+         * @brief 값 덮어쓰기 하나입니다.
+         */
+        struct ValueOverride
+        {
+            hashed_string _name;
+            string        _text;          ///< `ValueKind::Text` 일 때만 쓴다
+            float32       _arrValue[4]{}; ///< `Scalar` 는 앞 한 칸, `Vector` 는 네 칸
+            ValueKind     _kind{ ValueKind::Text };
+
+            /** @brief float 칸 수입니다. */
+            uint32 getFloatCount() const { return _kind == ValueKind::Vector ? 4u : 1u; }
+            /** @brief 저장 · 조회용 글입니다. */
+            string makeText() const;
+        };
+
+        /** @brief 이름의 값 덮어쓰기입니다. 없으면 nullptr 입니다. */
+        ValueOverride* findValueOverride( hashed_string name );
+        /** @brief float 덮어쓰기를 씁니다. 같은 모양의 같은 값(비트)이면 사본을 낡게 하지 않는다 — 틱마다 값을 쓰는 물 · 식생이 값이 그대로일 때 사본을 다시 만들지 않는다. */
+        void assignFloats( hashed_string name, ValueKind kind, const float32* pValue, uint32 count );
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
         void syncDescOverrides() const;
         /** @brief 부모 바이트에 덮어쓰기를 패킹하고 텍스처 슬롯을 채운 새 사본을 만듭니다(`getRenderBinding`). */
@@ -171,13 +200,11 @@ namespace sw
         Material*           _pParentMaterial;
         MaterialInstanceDef _desc;
 
-        vector<pair<hashed_string, string>>            _listValueOverride;
-        vector<pair<hashed_string, float32>>           _listScalarOverride;
-        vector<pair<hashed_string, array<float32, 4>>> _listVectorOverride;
-        vector<TextureOverride>                        _listTextureOverride;
-        vector<pair<hashed_string, bool>>              _listKeywordOverride;
-        vector<pair<hashed_string, string>>            _listMultiCompileOverride;
-        MaterialQualityLevel                           _qualityOverride;
+        vector<ValueOverride>               _listValueOverride;
+        vector<TextureOverride>             _listTextureOverride;
+        vector<pair<hashed_string, bool>>   _listKeywordOverride;
+        vector<pair<hashed_string, string>> _listMultiCompileOverride;
+        MaterialQualityLevel                _qualityOverride;
 
         /** @brief 렌더 스레드 쪽 객체(인스턴스 상수 버퍼)입니다. 렌더 스레드만 고친다. */
         shared_ptr<MaterialRenderProxy> _renderProxy;

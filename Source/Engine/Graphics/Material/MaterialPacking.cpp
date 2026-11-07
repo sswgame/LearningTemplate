@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -277,10 +278,10 @@ namespace sw
             // `packPropertyIntoBuffer` 의 종류별 쓰기 — 셰이더 타입에 맞는 바이트를 pDst 의 packSize 안에 쓴다.
 
             /** @brief Bool — 셰이더가 float(Range 포함)면 1.0 · 0.0, 아니면 1 · 0 입니다. 읽지 못한 글이면 false 입니다. */
-            [[nodiscard]] static bool packBool( const MaterialProperty& prop, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
+            [[nodiscard]] static bool packBool( const MaterialProperty& prop, string_view value, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
             {
                 bool bValue{ false };
-                if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanValueUnreadable", bValue ) == false )
+                if ( MaterialPacking::parseBoolToken( value, prop._name, "Material.BooleanValueUnreadable", bValue ) == false )
                     return false;
                 const uint32 boolVal = bValue ? 1u : 0u;
                 if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Range )
@@ -292,12 +293,12 @@ namespace sw
             }
 
             /** @brief Enum · BitFlag — 열거자 이름(BitFlag 면 `|` 조합)을 값으로 풀어 셰이더 타입(Int · Float · Uint)으로 씁니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool packEnum( MaterialProperty& prop, MaterialPropertyType shaderType, bool bFlags, uint8* pDst, uint32 packSize )
+            [[nodiscard]] static bool packEnum( const MaterialProperty& prop, string_view value, MaterialPropertyType shaderType, bool bFlags, uint8* pDst, uint32 packSize )
             {
                 int64 enumVal{ 0 };
-                if ( tryParseEnumOrFlags( prop, prop._value, bFlags, enumVal ) == false )
+                if ( tryParseEnumOrFlags( prop, value, bFlags, enumVal ) == false )
                 {
-                    SW_LOG_WARNING_ID( "Material.UnknownEnumValue", "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
+                    SW_LOG_WARNING_ID( "Material.UnknownEnumValue", "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, value );
                     return false;
                 }
                 if ( bFlags == false && shaderType == MaterialPropertyType::Int )
@@ -315,12 +316,12 @@ namespace sw
             }
 
             /** @brief ChannelMask — 셰이더가 float4 면 채널마다 1.0 · 0.0, 아니면 비트 마스크입니다. 읽지 못한 글이면 false 입니다. */
-            [[nodiscard]] static bool packChannelMask( const MaterialProperty& prop, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
+            [[nodiscard]] static bool packChannelMask( const MaterialProperty& prop, string_view value, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
             {
                 uint32 mask{ 0 };
-                if ( tryParseChannelMask( prop._value, mask ) == false )
+                if ( tryParseChannelMask( value, mask ) == false )
                 {
-                    SW_LOG_ERROR_ID( "Material.ChannelMaskUnreadable", "Material parameter '%#' has an unreadable channel mask '%#'", prop._name, prop._value );
+                    SW_LOG_ERROR_ID( "Material.ChannelMaskUnreadable", "Material parameter '%#' has an unreadable channel mask '%#'", prop._name, value );
                     return false;
                 }
                 if ( shaderType == MaterialPropertyType::Float4 )
@@ -341,30 +342,76 @@ namespace sw
              * @details 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 Vulkan 에서 첫 번째 텍스처라는 **유효한** 인덱스다(DX12 는 0 을
              *          null 텍스처로 비워 둔다 — D3D12RHIDevice::kNullTextureBindlessIndex). 셰이더의 Bindless::sampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 처리한다.
              */
-            [[nodiscard]] static bool packTextureIndex( const MaterialProperty& prop, uint8* pDst, uint32 packSize )
+            [[nodiscard]] static bool packTextureIndex( const MaterialProperty& prop, string_view value, uint8* pDst, uint32 packSize )
             {
                 uint32 textureIndex = prop._textureIndex;
-                if ( textureIndex == kInvalidDescriptorIndex && prop._value.empty() == false )
+                if ( textureIndex == kInvalidDescriptorIndex && value.empty() == false )
                 {
                     uint64 numericVal{ 0 };
-                    if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) && numericVal <= MathUtil::kMaxUInt32 ) // 넘치는 값이 잘려 유효한 인덱스가 되지 않는다
+                    if ( StringUtil::parseUint64( value, numericVal, 0 ) && numericVal <= MathUtil::kMaxUInt32 ) // 넘치는 값이 잘려 유효한 인덱스가 되지 않는다
                         textureIndex = static_cast<uint32>( numericVal );
                 }
                 return writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
             }
 
             /** @brief Range — float 로 읽어 [min, max] 로 자릅니다(min < max 일 때). 못 읽는 글(빈 글 포함)이면 0 으로 쓰지 않고 false 입니다. */
-            [[nodiscard]] static bool packRange( const MaterialProperty& prop, uint8* pDst, uint32 packSize )
+            [[nodiscard]] static bool packRange( const MaterialProperty& prop, string_view value, uint8* pDst, uint32 packSize )
             {
                 float32 floatVal{ 0.0f };
-                if ( StringUtil::parseFloat( prop._value, floatVal ) == false )
+                if ( StringUtil::parseFloat( value, floatVal ) == false )
                 {
-                    SW_LOG_ERROR_ID( "Material.ParameterNumberUnreadable", "Material parameter '%#' has an unreadable number '%#'", prop._name, prop._value );
+                    SW_LOG_ERROR_ID( "Material.ParameterNumberUnreadable", "Material parameter '%#' has an unreadable number '%#'", prop._name, value );
                     return false;
                 }
                 if ( prop._min < prop._max )
                     floatVal = MathUtil::clamp( floatVal, prop._min, prop._max );
                 return writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );
+            }
+
+            /** @brief 프로퍼티의 셰이더 타입입니다. 비어 있으면(리플렉션 전) 종류의 기본입니다. */
+            static MaterialPropertyType resolveShaderType( const MaterialProperty& prop )
+            {
+                return prop._shaderType != MaterialPropertyType::Unknown ? prop._shaderType : MaterialPacking::defaultShaderTypeFor( prop._type );
+            }
+
+            /** @brief 칸 크기입니다. 프로퍼티 크기가 먼저이고, 없으면 셰이더 타입의 크기(모르면 4)입니다. */
+            static uint32 resolvePackSize( const MaterialProperty& prop, MaterialPropertyType shaderType )
+            {
+                if ( prop._size != 0 )
+                    return prop._size;
+                const uint32 packSize = MaterialPacking::packedSizeOf( shaderType );
+                return packSize != 0 ? packSize : 4u;
+            }
+
+            /** @brief 글을 float 칸으로 읽는 셰이더 타입이면 true 입니다(`writeNumericValue` 의 float 갈래). */
+            static bool isFloatShaderType( MaterialPropertyType shaderType )
+            {
+                return shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color;
+            }
+
+            /** @brief 글을 그대로 `writeNumericValue` 로 넘기는 종류면 true 입니다(불리언 · 열거 · 채널 · 텍스처 · Range 는 글을 저마다 읽는다). */
+            static bool isNumericPropertyType( MaterialPropertyType type )
+            {
+                switch ( type )
+                {
+                    case MaterialPropertyType::Color:
+                    case MaterialPropertyType::Float:
+                    case MaterialPropertyType::Float2:
+                    case MaterialPropertyType::Float3:
+                    case MaterialPropertyType::Float4:
+                    case MaterialPropertyType::Float4x4:
+                    case MaterialPropertyType::Uint:
+                    case MaterialPropertyType::Uint2:
+                    case MaterialPropertyType::Uint3:
+                    case MaterialPropertyType::Uint4:
+                    case MaterialPropertyType::Int:
+                    case MaterialPropertyType::Int2:
+                    case MaterialPropertyType::Int3:
+                    case MaterialPropertyType::Int4:
+                        return true;
+                    default:
+                        return false;
+                }
             }
         };
     } // namespace
@@ -538,18 +585,18 @@ namespace sw
             return true;
         }
 
-        MaterialPropertyType shaderType = prop._shaderType;
-        if ( shaderType == MaterialPropertyType::Unknown )
-            shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
-        prop._shaderType = shaderType;
+        prop._shaderType = MaterialPackingInternal::resolveShaderType( prop );
+        prop._size       = MaterialPackingInternal::resolvePackSize( prop, prop._shaderType );
+        return packValueIntoBuffer( prop, prop._value, buffer );
+    }
 
-        uint32 packSize = MaterialPacking::packedSizeOf( shaderType );
-        if ( packSize == 0 )
-            packSize = 4;
-        if ( prop._size == 0 )
-            prop._size = packSize;
-        else
-            packSize = prop._size;
+    bool MaterialPacking::packValueIntoBuffer( const MaterialProperty& prop, string_view value, vector<uint8>& buffer )
+    {
+        if ( MaterialPacking::isNonBufferType( prop._type ) )
+            return true;
+
+        const MaterialPropertyType shaderType = MaterialPackingInternal::resolveShaderType( prop );
+        const uint32               packSize   = MaterialPackingInternal::resolvePackSize( prop, shaderType );
 
         if ( buffer.size() < prop._offset + packSize )
             buffer.resize( prop._offset + packSize, 0 );
@@ -561,20 +608,20 @@ namespace sw
         switch ( prop._type )
         {
             case MaterialPropertyType::Bool:
-                return Pack::packBool( prop, shaderType, pDst, packSize );
+                return Pack::packBool( prop, value, shaderType, pDst, packSize );
             case MaterialPropertyType::Enum:
-                return Pack::packEnum( prop, shaderType, false, pDst, packSize );
+                return Pack::packEnum( prop, value, shaderType, false, pDst, packSize );
             case MaterialPropertyType::BitFlag:
-                return Pack::packEnum( prop, shaderType, true, pDst, packSize );
+                return Pack::packEnum( prop, value, shaderType, true, pDst, packSize );
             case MaterialPropertyType::ChannelMask:
-                return Pack::packChannelMask( prop, shaderType, pDst, packSize );
+                return Pack::packChannelMask( prop, value, shaderType, pDst, packSize );
             case MaterialPropertyType::Texture2D:
             case MaterialPropertyType::TextureCube:
             case MaterialPropertyType::Texture3D:
             case MaterialPropertyType::Texture2DArray:
-                return Pack::packTextureIndex( prop, pDst, packSize );
+                return Pack::packTextureIndex( prop, value, pDst, packSize );
             case MaterialPropertyType::Range:
-                return Pack::packRange( prop, pDst, packSize );
+                return Pack::packRange( prop, value, pDst, packSize );
             case MaterialPropertyType::Color:
             case MaterialPropertyType::Float:
             case MaterialPropertyType::Float2:
@@ -589,11 +636,61 @@ namespace sw
             case MaterialPropertyType::Int2:
             case MaterialPropertyType::Int3:
             case MaterialPropertyType::Int4:
-                return MaterialPackingInternal::writeNumericValue( pDst, packSize, prop._type, shaderType, prop._value );
+                return MaterialPackingInternal::writeNumericValue( pDst, packSize, prop._type, shaderType, value );
             case MaterialPropertyType::Keyword:
             case MaterialPropertyType::Unknown:
                 return false;
         }
-        return MaterialPackingInternal::writeNumericValue( pDst, packSize, prop._type, shaderType, prop._value );
+        return MaterialPackingInternal::writeNumericValue( pDst, packSize, prop._type, shaderType, value );
+    }
+
+    bool MaterialPacking::packFloatsIntoBuffer( const MaterialProperty& prop, const float32* pValue, uint32 count, vector<uint8>& buffer )
+    {
+        const MaterialPropertyType shaderType = MaterialPackingInternal::resolveShaderType( prop );
+        bool                       bFinite{ true };
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            bFinite = bFinite && std::isfinite( pValue[index] );
+        }
+        const bool bPlainFloats = MaterialPackingInternal::isNumericPropertyType( prop._type ) && MaterialPackingInternal::isFloatShaderType( shaderType );
+        const bool bRange       = prop._type == MaterialPropertyType::Range && count == 1;
+        // 글로 읽어야 뜻이 같은 경우(불리언 · 열거 · 정수 칸, 글이 거절하는 NaN · 무한)는 글로 간다. 최단 왕복 글이라 float 칸은 어느 길이든 같은 비트다.
+        if ( bFinite == false || ( bPlainFloats == false && bRange == false ) )
+            return packValueIntoBuffer( prop, formatFloats( pValue, count ), buffer );
+
+        const uint32 packSize = MaterialPackingInternal::resolvePackSize( prop, shaderType );
+        if ( buffer.size() < prop._offset + packSize )
+            buffer.resize( prop._offset + packSize, 0 );
+        uint8* pDst = buffer.data() + prop._offset;
+        if ( bRange )
+        {
+            const float32 floatVal = prop._min < prop._max ? MathUtil::clamp( pValue[0], prop._min, prop._max ) : pValue[0];
+            return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );
+        }
+
+        const uint32 need = MaterialPacking::packedSizeOf( shaderType );
+        if ( need == 0 || packSize < need )
+            return false;
+        // 모자란 칸의 규칙은 `writeNumericValue` 와 같다(0, 색의 알파는 1).
+        float32      arrWord[16]{};
+        const uint32 wordCount = need / 4;
+        for ( uint32 index = 0; index < wordCount && index < count; ++index )
+        {
+            arrWord[index] = pValue[index];
+        }
+        if ( count <= 3 && wordCount > 3 && prop._type == MaterialPropertyType::Color )
+            arrWord[3] = 1.0f;
+        Memory::copy( pDst, arrWord, need );
+        return true;
+    }
+
+    string MaterialPacking::formatFloats( const float32* pValue, uint32 count )
+    {
+        StringBuilder<constant::buffer::kMax64> text;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            text.appendFormat( index == 0 ? "%#" : " %#", pValue[index] );
+        }
+        return string{ text.c_str(), text.size() };
     }
 } // namespace sw

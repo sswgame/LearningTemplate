@@ -4,7 +4,6 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
@@ -123,8 +122,6 @@ namespace sw
         : _pParentMaterial{ pParentMaterial }
         , _desc{}
         , _listValueOverride{}
-        , _listScalarOverride{}
-        , _listVectorOverride{}
         , _listTextureOverride{}
         , _listKeywordOverride{}
         , _listMultiCompileOverride{}
@@ -238,9 +235,12 @@ namespace sw
         if ( data->_bytes.empty() == false )
         {
             dropShapeMismatchedOverrides();
-            for ( const auto& [name, valueText] : _listValueOverride )
+            for ( const ValueOverride& valueOverride : _listValueOverride )
             {
-                _pParentMaterial->packNamedValueIntoBuffer( name, valueText, data->_bytes );
+                if ( valueOverride._kind == ValueKind::Text )
+                    _pParentMaterial->packNamedValueIntoBuffer( valueOverride._name, valueOverride._text, data->_bytes );
+                else
+                    _pParentMaterial->packNamedFloatsIntoBuffer( valueOverride._name, valueOverride._arrValue, valueOverride.getFloatCount(), data->_bytes );
             }
             // 덮어쓴 텍스처: 네이티브 bindless 는 지금 SRV 인덱스를, 슬롯 바인딩 백엔드(DX11 · GL)는 슬롯 서수를 넣는다(부모와 같은 규칙).
             const bool bNativeBindless = pDevice != nullptr && pDevice->supportsNativeBindlessSampling();
@@ -261,25 +261,42 @@ namespace sw
     void MaterialInstance::dropShapeMismatchedOverrides()
     {
         // 어긋난 값은 한 번 알리고 버린다(쓸 때 거절하던 것과 같은 결과) — 남겨 두면 사본을 만들 때마다 다시 알린다.
-        const auto drop = [this]( auto& listOverride, bool bScalar )
+        const Material* pParent = _pParentMaterial;
+        VectorUtil::removeIf( _listValueOverride, [pParent]( const ValueOverride& valueOverride )
+        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::acceptsShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
+    }
+
+    string MaterialInstance::ValueOverride::makeText() const
+    {
+        return _kind == ValueKind::Text ? _text : MaterialPacking::formatFloats( _arrValue, getFloatCount() );
+    }
+
+    MaterialInstance::ValueOverride* MaterialInstance::findValueOverride( hashed_string name )
+    {
+        for ( ValueOverride& valueOverride : _listValueOverride )
         {
-            for ( size_t i = listOverride.size(); i-- > 0; )
-            {
-                const hashed_string name = listOverride[i].first;
-                if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, bScalar ) )
-                    continue;
-                listOverride.erase( listOverride.begin() + static_cast<std::ptrdiff_t>( i ) );
-                for ( size_t j = 0; j < _listValueOverride.size(); ++j )
-                {
-                    if ( _listValueOverride[j].first != name )
-                        continue;
-                    _listValueOverride.erase( _listValueOverride.begin() + static_cast<std::ptrdiff_t>( j ) );
-                    break;
-                }
-            }
-        };
-        drop( _listScalarOverride, true );
-        drop( _listVectorOverride, false );
+            if ( valueOverride._name == name )
+                return &valueOverride;
+        }
+        return nullptr;
+    }
+
+    void MaterialInstance::assignFloats( hashed_string name, ValueKind kind, const float32* pValue, uint32 count )
+    {
+        ValueOverride* pOverride = findValueOverride( name );
+        if ( pOverride == nullptr )
+        {
+            pOverride        = &_listValueOverride.emplace_back();
+            pOverride->_name = name;
+        }
+        else if ( pOverride->_kind == kind && Memory::compare( pOverride->_arrValue, pValue, count * sizeof( float32 ) ) == 0 )
+        {
+            return;
+        }
+        pOverride->_text.clear();
+        pOverride->_kind = kind;
+        Memory::copy( pOverride->_arrValue, pValue, count * sizeof( float32 ) );
+        _bGPUDirty = SW_TRUE;
     }
 
     bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRHI )
@@ -383,8 +400,6 @@ namespace sw
     void MaterialInstance::clearOverrides()
     {
         _listValueOverride.clear();
-        _listScalarOverride.clear();
-        _listVectorOverride.clear();
         // 텍스처는 돌려준 뒤 뺀다(syncTextureOverrides) — 여기서 지우면 빌린 참조를 잃는다.
         for ( TextureOverride& texture : _listTextureOverride )
         {
@@ -424,25 +439,30 @@ namespace sw
 
     void MaterialInstance::setParameter( hashed_string name, string_view value )
     {
-        MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string( value ) );
-        _bGPUDirty = SW_TRUE;
+        ValueOverride* pOverride = findValueOverride( name );
+        if ( pOverride == nullptr )
+        {
+            pOverride        = &_listValueOverride.emplace_back();
+            pOverride->_name = name;
+        }
+        else if ( pOverride->_kind == ValueKind::Text && pOverride->_text == value )
+        {
+            return;
+        }
+        pOverride->_kind = ValueKind::Text;
+        pOverride->_text = value;
+        _bGPUDirty       = SW_TRUE;
     }
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
     {
-        MaterialInstanceInternal::insertOrAssign( _listScalarOverride, name, value );
-        MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, to_string( value ) );
-        _bGPUDirty = SW_TRUE;
+        assignFloats( name, ValueKind::Scalar, &value, 1 );
     }
 
     void MaterialInstance::setVectorParameter( hashed_string name, const float4& value )
     {
-        const array<float32, 4> val = { value._x, value._y, value._z, value._w };
-        MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
-        StringBuilder<constant::buffer::kMax64> sb;
-        sb.appendFormat( "%# %# %# %#", value._x, value._y, value._z, value._w );
-        MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string{ sb.c_str(), sb.size() } );
-        _bGPUDirty = SW_TRUE;
+        const float32 arrValue[4] = { value._x, value._y, value._z, value._w };
+        assignFloats( name, ValueKind::Vector, arrValue, 4 );
     }
 
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
@@ -488,11 +508,13 @@ namespace sw
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
     {
-        const string* val = MaterialInstanceInternal::findValue( _listValueOverride, name );
-        if ( val != nullptr )
+        for ( const ValueOverride& valueOverride : _listValueOverride )
         {
-            outValue = *val;
-            return true;
+            if ( valueOverride._name == name )
+            {
+                outValue = valueOverride.makeText();
+                return true;
+            }
         }
         if ( _pParentMaterial != nullptr )
         {
@@ -596,12 +618,11 @@ namespace sw
 
     bool MaterialInstance::isParameterOverridden( hashed_string name ) const
     {
-        if ( MaterialInstanceInternal::findValue( _listValueOverride, name ) != nullptr )
-            return true;
-        if ( MaterialInstanceInternal::findValue( _listScalarOverride, name ) != nullptr )
-            return true;
-        if ( MaterialInstanceInternal::findValue( _listVectorOverride, name ) != nullptr )
-            return true;
+        for ( const ValueOverride& valueOverride : _listValueOverride )
+        {
+            if ( valueOverride._name == name )
+                return true;
+        }
         for ( const TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._name == name && texture._assetPath.empty() == false )
@@ -616,10 +637,9 @@ namespace sw
 
     bool MaterialInstance::validateParametersWithReflection( const ShaderReflectionData& reflectionData ) const
     {
-        for ( const auto& [name, val] : _listValueOverride )
+        for ( const ValueOverride& valueOverride : _listValueOverride )
         {
-            (void)val;
-            if ( MaterialInstanceInternal::reflectionHasParam( reflectionData, name ) == false )
+            if ( MaterialInstanceInternal::reflectionHasParam( reflectionData, valueOverride._name ) == false )
                 return false;
         }
         return true;
@@ -629,11 +649,11 @@ namespace sw
     {
         auto self = const_cast<MaterialInstance*>( this );
         self->_desc._listOverride.clear();
-        for ( const auto& [name, valueText] : _listValueOverride )
+        for ( const ValueOverride& valueOverride : _listValueOverride )
         {
             MaterialInstanceDef::Override overrideItem{};
-            overrideItem._name  = name.c_str() ? name.c_str() : "";
-            overrideItem._value = valueText;
+            overrideItem._name  = valueOverride._name.c_str() ? valueOverride._name.c_str() : "";
+            overrideItem._value = valueOverride.makeText();
             self->_desc._listOverride.push_back( std::move( overrideItem ) );
         }
         // 텍스처 덮어쓰기는 값이 아니라 에셋 경로다(`assetPath`). 날 인덱스는 다시 올리면 낡으므로 저장하지 않는다.
@@ -743,7 +763,7 @@ namespace sw
             if ( overrideItem._assetPath.empty() == false )
                 setTextureParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._assetPath );
             else
-                MaterialInstanceInternal::insertOrAssign( _listValueOverride, hashed_string( overrideItem._name.c_str() ), overrideItem._value );
+                setParameter( hashed_string( overrideItem._name.c_str() ), overrideItem._value );
         }
         for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
         {

@@ -81,6 +81,7 @@ namespace sw
         , _listMaterialTextureSRV{}
         , _listMaterialTextureName{}
         , _listCollectionBinding{}
+        , _listPropertyName{}
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _cachedShaderPathHash{ 0 }
@@ -600,6 +601,7 @@ namespace sw
                 prop._type = MaterialPropertyType::Texture2D;
             _data._listProperty.push_back( prop );
         }
+        rebuildPropertyNames();
         rebuildPackedBuffer();
         // 순서대로 다시 쌓은 뒤 리플렉션 오프셋을 되돌린다
         for ( MaterialProperty& prop : _data._listProperty )
@@ -786,12 +788,18 @@ namespace sw
 
     bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
     {
-        const MaterialProperty* pSrc = findProperty( name );
-        if ( pSrc == nullptr )
+        const MaterialProperty* pProp = findProperty( name );
+        if ( pProp == nullptr )
             return false;
-        MaterialProperty prop = *pSrc;
-        prop._value           = value;
-        return MaterialPacking::packPropertyIntoBuffer( prop, inoutBuffer );
+        return MaterialPacking::packValueIntoBuffer( *pProp, value, inoutBuffer );
+    }
+
+    bool Material::packNamedFloatsIntoBuffer( hashed_string name, const float32* pValue, uint32 count, vector<uint8>& inoutBuffer ) const
+    {
+        const MaterialProperty* pProp = findProperty( name );
+        if ( pProp == nullptr )
+            return false;
+        return MaterialPacking::packFloatsIntoBuffer( *pProp, pValue, count, inoutBuffer );
     }
 
     bool Material::packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
@@ -850,21 +858,18 @@ namespace sw
 
     bool Material::setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx )
     {
-        for ( MaterialProperty& prop : _data._listProperty )
-        {
-            if ( hashed_string( prop._name.c_str() ) != name )
-                continue;
-            if ( MaterialPacking::isTextureType( prop._type ) == false && prop._shaderType != MaterialPropertyType::Uint )
-                return false;
-            prop._textureIndex = descIdx;
-            prop._value        = to_string( descIdx );
-            if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
-                return false;
-            ++_bufferGeneration;
-            _desc._listProperty = _data._listProperty;
-            return true;
-        }
-        return false;
+        MaterialProperty* pProp = findProperty( name );
+        if ( pProp == nullptr )
+            return false;
+        if ( MaterialPacking::isTextureType( pProp->_type ) == false && pProp->_shaderType != MaterialPropertyType::Uint )
+            return false;
+        pProp->_textureIndex = descIdx;
+        pProp->_value        = to_string( descIdx );
+        if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
+            return false;
+        ++_bufferGeneration;
+        _desc._listProperty = _data._listProperty;
+        return true;
     }
 
     void Material::setQualityLevel( MaterialQualityLevel level )
@@ -926,35 +931,32 @@ namespace sw
 
     bool Material::setScalarParameter( hashed_string name, float32 value )
     {
-        for ( MaterialProperty& prop : _data._listProperty )
-        {
-            if ( hashed_string( prop._name.c_str() ) != name )
-                continue;
-            prop._value = to_string( value );
-            if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
-                return false;
-            ++_bufferGeneration;
-            return true;
-        }
-        return false;
+        MaterialProperty* pProp = findProperty( name );
+        if ( pProp == nullptr )
+            return false;
+        pProp->_value = to_string( value );
+        if ( MaterialPacking::packPropertyIntoBuffer( *pProp, _data._bytes ) == false )
+            return false;
+        ++_bufferGeneration;
+        return true;
     }
 
     const MaterialProperty* Material::findProperty( hashed_string name ) const
     {
-        for ( const MaterialProperty& prop : _data._listProperty )
+        for ( size_t index = 0; index < _listPropertyName.size(); ++index )
         {
-            if ( hashed_string( prop._name.c_str() ) == name )
-                return &prop;
+            if ( _listPropertyName[index] == name )
+                return &_data._listProperty[index];
         }
         return nullptr;
     }
 
     MaterialProperty* Material::findProperty( hashed_string name )
     {
-        for ( MaterialProperty& prop : _data._listProperty )
+        for ( size_t index = 0; index < _listPropertyName.size(); ++index )
         {
-            if ( hashed_string( prop._name.c_str() ) == name )
-                return &prop;
+            if ( _listPropertyName[index] == name )
+                return &_data._listProperty[index];
         }
         return nullptr;
     }
@@ -1278,12 +1280,23 @@ namespace sw
     void Material::applyDescToRuntime()
     {
         _data._listProperty = _desc._listProperty;
+        rebuildPropertyNames();
         // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
         _bShaderLayoutSynced = SW_FALSE;
         _elementStride       = 0;
         rebuildCollectionBindings();
         rebuildPackedBuffer();
+    }
+
+    void Material::rebuildPropertyNames()
+    {
+        _listPropertyName.clear();
+        _listPropertyName.reserve( _data._listProperty.size() );
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            _listPropertyName.push_back( hashed_string( prop._name.c_str() ) );
+        }
     }
 
     void Material::syncDescFromRuntime() const
