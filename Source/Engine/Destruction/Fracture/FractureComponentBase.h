@@ -208,15 +208,15 @@ namespace sw
         /** @brief 아직 적용하지 않은 피해나 스냅샷이 있는지 반환합니다. 해시를 비교하기 전에 확인합니다. */
         bool hasPendingDamage() const;
         /** @brief 이 부피(배율을 곱한 세제곱미터)의 떨어진 그룹이 덩어리인지 반환합니다. 프로필의 `keepCollisionVolume` 이상이면 덩어리이고, 서버가 자세를 보냅니다. 그보다 작으면 꾸밈용 파편입니다. */
-        bool isChunkVolume( float32 volume ) const { return volume >= _profile._keepCollisionVolume; }
+        bool isChunkVolume( float32 volume ) const { return volume >= getProfile()._keepCollisionVolume; }
         /**
          * @brief 받는 쪽(권한 없음)이 사건 수 @p eventCount 에 이르렀을 때의 상태 해시를 반환합니다(최근 `FractureNetworkSync::kRecentHashCount` 개). 없으면 false 를 반환합니다.
          * @details 사건은 물리 프레임마다 모아서 적용하므로, 서버가 보낸 (사건 수, 해시)와 같은 순간이 현재 상태로 오지 않을 수 있다.
          *          그래서 사건마다 해시를 기록해 둔다.
          */
         [[nodiscard]] bool findRecentStateHash( uint32 eventCount, uint64& outHash ) const;
-        /** @brief 파괴 재질 테이블입니다. 상태를 시작한 뒤의 값입니다. */
-        const DestructionProfile& getProfile() const { return _profile; }
+        /** @brief 파괴 재질 테이블입니다. 상태를 시작할 때 공유 프로필에서 받은 값입니다(시작 전에는 기본값). */
+        const DestructionProfile& getProfile() const { return _state.getProfile(); }
         /** @brief 떨어진(앵커가 아닌) 그룹들의 현재 자세입니다. 그룹 번호 순입니다. */
         void collectGroupPoses( vector<FractureGroupPose>& outListPose ) const;
         /**
@@ -239,6 +239,8 @@ namespace sw
         virtual shared_ptr<const FractureAsset> acquireFracture() = 0;
         /** @brief 파쇄 데이터를 다시 받아야 하는지입니다(핫 리로드). 쪼갠 뒤에는 묻지 않습니다. */
         virtual bool isFractureStale() const { return false; }
+        /** @brief 쥔 프로필을 받은 뒤 프로필 캐시가 다시 읽었는지 봅니다(제자리 다시 읽기 — 상태가 든 값을 새로 받아야 한다). */
+        bool isProfileStale() const { return _seenProfileReloadCount != SharedAssetCache<DestructionProfile>::getReloadCount(); }
         /** @brief 붙어 있는 조각의 형태가 바뀌었을 때 불립니다. 처음 쪼갰을 때, 붙은 그룹이 갈라졌을 때, 떨어졌을 때입니다. 게임 스레드의 물리 프레임 안에서 호출됩니다. */
         virtual void onAnchoredShapeChanged() {}
 
@@ -346,7 +348,7 @@ namespace sw
 
         shared_ptr<const FractureAsset>        _asset;
         unique_ptr<IFracturePhysics>           _physics;
-        DestructionProfile                     _profile;
+        shared_ptr<const DestructionProfile>   _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
         DestructionState                       _state;
         DestructionEventLog                    _eventLog;
         vector<FractureGroupPose>              _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.
@@ -369,10 +371,11 @@ namespace sw
         float32                                _lastPoseMicroseconds;
         float32                                _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
         uint32                                 _nextSpawnOrder;
-        uint32                                 _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
+        uint32                                 _stillFrameCount;        ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
+        uint32                                 _seenProfileReloadCount; ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수
         uint8                                  _bStateReady;
         uint8                                  _bFractured;
         uint8                                  _bPoseDirty;
-        uint8                                  _bFractureMissing; ///< 데이터를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
+        uint8                                  _bFractureMissing; ///< 데이터(파쇄 에셋 · 프로필)를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
     };
 } // namespace sw

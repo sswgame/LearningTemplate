@@ -592,7 +592,7 @@ namespace sw
         , _bAuthority{ true }
         , _asset{}
         , _physics{}
-        , _profile{}
+        , _pProfile{}
         , _state{}
         , _eventLog{}
         , _listEventGroupPose{}
@@ -616,6 +616,7 @@ namespace sw
         , _frameSimulatedTime{ 0.0f }
         , _nextSpawnOrder{ 0 }
         , _stillFrameCount{ 0 }
+        , _seenProfileReloadCount{ 0 }
         , _bStateReady{ SW_FALSE }
         , _bFractured{ SW_FALSE }
         , _bPoseDirty{ SW_FALSE }
@@ -714,7 +715,7 @@ namespace sw
     void FractureComponentBase::onCollisionBegin( const CollisionInfo& collision )
     {
         PhysicsComponent::onCollisionBegin( collision );
-        const bool bIgnoreCollision = _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= _profile._minImpulse;
+        const bool bIgnoreCollision = _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= getProfile()._minImpulse;
         if ( bIgnoreCollision )
             return;
         // 갓 갈라진 조각끼리는 맞닿은 채 생성된다. 그 밀어냄은 피해가 아니다(같은 오브젝트 조각끼리, 생성 후 kSpawnGraceTime 안).
@@ -732,7 +733,7 @@ namespace sw
         pending._worldPoint     = collision._point;
         pending._worldDirection = -collision._normal;
         pending._hitBody        = collision._selfBody;
-        pending._event          = DestructionDamageEvent::makeImpactEvent( _profile, float3{}, float3{}, collision._impulse );
+        pending._event          = DestructionDamageEvent::makeImpactEvent( getProfile(), float3{}, float3{}, collision._impulse );
         if ( pending._event._strain <= 0.0f )
             return;
         _pendingDamage.push( pending );
@@ -766,10 +767,11 @@ namespace sw
                 return;
         }
         // 온전한 동안 데이터가 다시 읽혔으면(핫 리로드) 상태를 다시 시작한다. 쪼갠 뒤에는 현재 조각을 유지한다.
-        const bool bIntactStateStale = _bStateReady == SW_TRUE && _bFractured == SW_FALSE && isFractureStale();
+        const bool bDataStale        = isFractureStale() || isProfileStale();
+        const bool bIntactStateStale = _bStateReady == SW_TRUE && _bFractured == SW_FALSE && bDataStale;
         if ( bIntactStateStale )
             _bStateReady = SW_FALSE;
-        if ( _bFractureMissing == SW_TRUE && isFractureStale() == false )
+        if ( _bFractureMissing == SW_TRUE && bDataStale == false )
             return;
         if ( _bStateReady == SW_FALSE && initializeState( physics ) == false )
             return;
@@ -871,17 +873,25 @@ namespace sw
     bool FractureComponentBase::initializeState( ScenePhysics& physics )
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureState" );
-        _asset            = acquireFracture();
-        _bFractureMissing = _asset == nullptr ? SW_TRUE : SW_FALSE;
+        _seenProfileReloadCount = SharedAssetCache<DestructionProfile>::getReloadCount(); // 데이터를 받지 못해도 세대를 적는다 — 세대가 바뀔 때까지 다시 묻지 않는다
+        _asset                  = acquireFracture();
+        _bFractureMissing       = _asset == nullptr ? SW_TRUE : SW_FALSE;
         if ( _asset == nullptr )
             return false;
+        // 프로필은 공유 캐시의 한 벌이다 — 같은 프로필을 쓰는 파괴 오브젝트가 파일을 다시 읽지 않는다. 구조 상태는 시작할 때의 값을 들고(결정적 재생 · 네트워크 해시),
+        // 다시 읽은 횟수가 바뀌면 온전한 동안 상태를 다시 시작한다(`isProfileStale`). 읽지 못하면 코드 값으로 대신하지 않고 쪼개지 않는다.
         const string profilePath = _profilePath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._defaultDestructionProfile.get() : _profilePath;
-        if ( _profile.loadFromAsset( AssetID{ profilePath } ) == false )
-            SW_LOG_ERROR_ID( "FractureComponent.DestructionProfileCouldNot", "'%#': destruction profile '%#' could not be read - using built-in values", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
+        _pProfile                = SharedAssetCache<DestructionProfile>::acquire( profilePath );
+        if ( _pProfile == nullptr )
+        {
+            SW_LOG_ERROR_ID( "FractureComponent.DestructionProfileCouldNot", "'%#': destruction profile '%#' could not be read - the object stays intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
                              profilePath.c_str() );
+            _bFractureMissing = SW_TRUE;
+            return false;
+        }
         vector<uint8> listAnchor;
         computeAnchors( physics, listAnchor );
-        _state.initialize( _asset->_graph, _profile, listAnchor );
+        _state.initialize( _asset->_graph, *_pProfile, listAnchor );
         _listPiecePose.assign( _asset->getPieceCount(), BoneTransform{} );
         for ( uint32 leaf = 0; leaf < _asset->getPieceCount(); ++leaf )
         {
@@ -971,7 +981,7 @@ namespace sw
             event._direction             = float3::transform( pending._worldDirection, FractureComponentBaseInternal::invert( rotation ) );
             event._radius                = pending._event._radius / scale;
             if ( pending._kind == FracturePendingDamage::Kind::WorldPoint && pending._event._kind == DestructionDamageKind::Impact )
-                event._radius = _profile._impactRadius / scale;
+                event._radius = getProfile()._impactRadius / scale;
             outListEvent.push_back( event );
             return;
         }
@@ -997,7 +1007,7 @@ namespace sw
             event._position              = toMeshSpace( *pRuntime, pending._worldPoint );
             event._direction             = float3::transform( pending._worldDirection, FractureComponentBaseInternal::invert( pRuntime->_rotation ) );
             event._groupID               = pRuntime->_groupID;
-            event._radius                = pending._event._kind == DestructionDamageKind::Impact ? _profile._impactRadius / _objectScale : pending._event._radius / _objectScale;
+            event._radius                = pending._event._kind == DestructionDamageKind::Impact ? getProfile()._impactRadius / _objectScale : pending._event._radius / _objectScale;
             outListEvent.push_back( event );
             return;
         }
@@ -1078,7 +1088,7 @@ namespace sw
         const bool bNothingToRebuildLeafPoints = _physics == nullptr || _asset == nullptr || scale == _leafShapeScale;
         if ( bNothingToRebuildLeafPoints )
             return;
-        _physics->prepareLeafPoints( *_asset, scale, _profile._hullShrink, _profile._physicsMaterial );
+        _physics->prepareLeafPoints( *_asset, scale, getProfile()._hullShrink, getProfile()._physicsMaterial );
         _leafShapeScale = scale;
     }
 
@@ -1296,12 +1306,12 @@ namespace sw
         }
         inoutRuntime._volume       = volume * cube;
         inoutRuntime._spawnOrder   = _nextSpawnOrder++;
-        const bool          bChunk = inoutRuntime._volume >= _profile._keepCollisionVolume;
+        const bool          bChunk = inoutRuntime._volume >= getProfile()._keepCollisionVolume;
         const ScenePhysics* pScene = getScenePhysics();
         const uint8         layer  = pScene != nullptr ? pScene->resolveLayer( bChunk ? _chunkLayer : _debrisLayer ) : 0;
         inoutRuntime._layer        = layer;
         const uint64 selfID        = getOwner() != nullptr ? getOwner()->getObjectID() : 0;
-        inoutRuntime._body         = _physics->createGroupBody( listLeaf, inoutRuntime._position, inoutRuntime._rotation, inoutRuntime._volume * _profile._density, linearVelocity,
+        inoutRuntime._body         = _physics->createGroupBody( listLeaf, inoutRuntime._position, inoutRuntime._rotation, inoutRuntime._volume * getProfile()._density, linearVelocity,
                                                                 angularVelocity, layer, selfID, inoutRuntime._shape );
         if ( inoutRuntime._body.isValid() )
             changeDebrisBodyCount( 1 );
@@ -1388,7 +1398,7 @@ namespace sw
                 }
                 runtime._sleepTime = _physics->isSleeping( runtime._body ) ? runtime._sleepTime + deltaTime : 0.0f;
                 // 잠들어 쉰 덩어리다. 작은 것은 바디를 제거하고(자세 고정, 정적 렌더링에 합쳐진다), 큰 것은 잠든 바디로 충돌을 유지한다.
-                const bool bRemoveOnSleep = runtime._sleepTime >= _profile._sleepRemoveTime && runtime._volume < _profile._keepCollisionVolume;
+                const bool bRemoveOnSleep = runtime._sleepTime >= getProfile()._sleepRemoveTime && runtime._volume < getProfile()._keepCollisionVolume;
                 if ( bRemoveOnSleep )
                 {
                     outListDestroy.push_back( runtime._body );
@@ -1397,13 +1407,13 @@ namespace sw
                     runtime._bFrozen = SW_TRUE;
                 }
             }
-            const bool bSmall              = runtime._volume < _profile._smallDebrisVolume;
-            const bool bSmallDebrisExpired = bSmall && runtime._bFading == SW_FALSE && runtime._age >= _profile._debrisLifetime;
+            const bool bSmall              = runtime._volume < getProfile()._smallDebrisVolume;
+            const bool bSmallDebrisExpired = bSmall && runtime._bFading == SW_FALSE && runtime._age >= getProfile()._debrisLifetime;
             if ( bSmallDebrisExpired )
                 runtime._bFading = SW_TRUE;
             if ( runtime._bFading == SW_TRUE )
             {
-                runtime._fade = _profile._fadeTime > 0.0f ? runtime._fade - deltaTime / _profile._fadeTime : 0.0f;
+                runtime._fade = getProfile()._fadeTime > 0.0f ? runtime._fade - deltaTime / getProfile()._fadeTime : 0.0f;
                 bMoved        = true;
                 if ( runtime._fade <= 0.0f )
                 {
@@ -1432,7 +1442,7 @@ namespace sw
         // 사라질 순서는 (큰 덩어리 여부, 생성 순서, 목록 위치)의 오름차순이다. 한 번 지울 때 바뀌는 것은 지운 덩어리뿐이라 한 번 정렬해 앞에서부터 꺼내면
         // 매번 전체를 훑는 것과 같은 순서이며(생성 순서가 같으면 앞선 목록 위치가 먼저), 초과분이 커도 O(N log N) 이다.
         vector<uint32> listEvictOrder;
-        if ( liveBodyCount > _profile._maxDebrisBody || globalCount > globalLimit )
+        if ( liveBodyCount > getProfile()._maxDebrisBody || globalCount > globalLimit )
         {
             for ( uint32 index = 0; index < static_cast<uint32>( _listRuntime.size() ); ++index )
             {
@@ -1444,8 +1454,8 @@ namespace sw
             {
                 const FractureGroupRuntime& left        = _listRuntime[lhs];
                 const FractureGroupRuntime& right       = _listRuntime[rhs];
-                const bool                  bLeftLarge  = left._volume >= _profile._keepCollisionVolume;
-                const bool                  bRightLarge = right._volume >= _profile._keepCollisionVolume;
+                const bool                  bLeftLarge  = left._volume >= getProfile()._keepCollisionVolume;
+                const bool                  bRightLarge = right._volume >= getProfile()._keepCollisionVolume;
                 if ( bLeftLarge != bRightLarge )
                     return bLeftLarge == false;
                 if ( left._spawnOrder != right._spawnOrder )
@@ -1454,7 +1464,7 @@ namespace sw
             } );
         }
         size_t evictCursor = 0;
-        while ( liveBodyCount > _profile._maxDebrisBody || globalCount > globalLimit )
+        while ( liveBodyCount > getProfile()._maxDebrisBody || globalCount > globalLimit )
         {
             if ( evictCursor >= listEvictOrder.size() )
                 break;

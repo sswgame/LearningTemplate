@@ -19,6 +19,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -99,6 +100,8 @@ namespace sw
     /** @brief 파괴 재질 테이블 하나입니다. 파일 머리말을 참고하세요. 단위는 변형(피해와 같은 단위), 미터, 킬로그램, 초, 뉴턴입니다. */
     struct SW_API DestructionProfile
     {
+        friend struct AssetTypeLoader;
+
         vector<float32> _listStrainThreshold; ///< 깊이별 변형 임계값이다. 이만큼 쌓이면 묶음은 자식으로 갈라지고 잎은 떨어져 나간다. 더 깊으면 마지막 값을 쓴다.
         hashed_string   _physicsMaterial;     ///< 조각 바디의 물리 재질 이름이다.
         float32         _density;             ///< 킬로그램/세제곱미터다(2D 는 /제곱미터). 지지 하중과 바디 질량에 쓴다.
@@ -122,10 +125,16 @@ namespace sw
         float32 getStrainThreshold( uint32 depth ) const;
         /** @brief 텍스트에서 읽습니다. 오류는 모아 로그로 남기고 false 를 반환하며, 이때 값은 기본값입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        /** @brief 리소스 경로를 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
     private:
-        void readRoot( const XMLNode& root, CharacterDataReader& reader );
+        /** @brief 리소스 경로를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<DestructionProfile>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        void               readRoot( const XMLNode& root, CharacterDataReader& reader );
     };
+
+    /**
+     * @brief 파괴 프로필을 경로마다 한 벌 나눠 줍니다("destruction", 인스턴스화는 `DestructionProfile.cpp`). 제자리에서 다시 읽습니다.
+     * @details 쥔 쪽(`FractureComponentBase`)은 다시 읽은 횟수가 바뀌면 온전한 동안 구조 상태를 다시 시작한다 — 상태는 시작할 때의 값을 들어 결정적 재생 · 네트워크 해시가 흔들리지 않는다.
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<DestructionProfile>;
 } // namespace sw
