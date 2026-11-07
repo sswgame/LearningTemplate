@@ -10,6 +10,7 @@
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
@@ -222,7 +223,11 @@ SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
 SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
 {
     if constexpr ( build::kWithClientCode == false )
-        return; // 전용 서버는 소리 그래프 파일을 읽지 않는다(`AssetPaths::isExcludedForHost`)
+    {
+        // 전용 서버는 소리 그래프 파일을 읽지 않는다 — 이 변형 길이 돌지 않는 까닭을 확인만 한다.
+        SW_EXPECT_TRUE( engine::getSubsystem<AssetPaths>().isExcludedForHost( "testproject/base.audiograph.xml" ) );
+        return;
+    }
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.audiograph.xml" ),
                                               R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDef _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
