@@ -18,6 +18,8 @@ namespace sw
 {
     class XMLDocument; // Windows SDK msxml.h 의 전역 XMLDocument 대신 이것을 friend 로 찾게 먼저 선언한다
 
+    struct ResourceContext;
+
     /**
      * @class XMLAttribute
      * @brief XML 속성의 가벼운 핸들입니다.
@@ -361,6 +363,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief XML 엔티티 문자열(&amp;, &lt;, &gt;, &quot;, &apos;)을 원래 문자로 복원합니다. 쓰는 쪽(이스케이프)은 `XMLWriter::appendEscaped` 하나다. */
         static string unescapeString( string_view text );
+
+    private:
+        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadResource` 의 본문). */
+        [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
 
     private:
         struct Impl;

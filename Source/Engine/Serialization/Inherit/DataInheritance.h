@@ -138,6 +138,12 @@ namespace sw
         static constexpr const utf8* kAfterAttribute  = "_after";  ///< 목록 원소: 이 열쇠 뒤로
         static constexpr const utf8* kOpRemove        = "Remove";
         static constexpr const utf8* kOpReplace       = "Replace";
+        /**
+         * @brief 조건 원소(`<_when _if="…" 칸="값"/>`)입니다. 칸이 아니라 그 원소에 얹는 조건부 차이라 합치기가 다르게 다룬다 —
+         *        부모와 자식의 조건을 차례로 쌓고(자식이 적어도 부모의 조건이 사라지지 않는다), 열쇠 목록의 원소로 세지 않는다. 푸는 일은 `ResourceComposer` 의 조건 단계다.
+         */
+        static constexpr const utf8* kWhenElement = "_when";
+        static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 리소스 조건식(`ResourceTags::compileTest`)
 
         /** @brief @p text 의 루트가 `_base` 를 적었으면 그 값입니다. XML 이 아니거나 없으면 빈 글입니다. 부모를 가리키지 않는 파일은 글 검색 한 번으로 끝납니다. */
         [[nodiscard]] static string findBasePath( string_view text );

@@ -141,6 +141,12 @@ namespace sw
     }
 
     template <typename AssetType>
+    bool SharedAssetCache<AssetType>::reloadComposed( string_view relativePath )
+    {
+        return isCached( relativePath ) && reloadIn( *_pTable, relativePath );
+    }
+
+    template <typename AssetType>
     size_t SharedAssetCache<AssetType>::getCachedCount() const
     {
         return _pTable->countLive();

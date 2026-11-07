@@ -96,6 +96,7 @@
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
@@ -212,6 +213,11 @@ namespace sw
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
         // 서비스 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
         coreParts._pContentRoot->getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
+        // 리소스 조건의 쿠킹 축(`ResourceTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
+        const bool bPlatformTagged = ResourceTags::setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
+        const bool bTargetTagged   = ResourceTags::setAxisValue( "target", bDedicatedServer ? "server" : "client" );
+        if ( bPlatformTagged == false || bTargetTagged == false )
+            return false; // 플랫폼 이름이 축의 값 목록에 없다(`ResourceTagsInternal::kArrPlatformValue` 에 한 줄 — 오류는 위에서 남겼다)
         // 외부 프로파일러(서비스 범위의 `ProfilerBackend`)의 스레드 이름 — 서비스 범위가 서기 전에 둔다.
         ThreadName::setCurrentThreadName( "GameThread" );
 
@@ -486,6 +492,8 @@ namespace sw
                 drainRenderThreadPackets();
             engine::getSubsystem<AssetManager>().finishPendingAssetWork();
         }
+        // 품질 · 언어 · 데이터 레이어 태그나 덮어쓰기 층이 바뀌었으면 그 값에 기댄 리소스를 쥔 캐시가 다시 읽는다(틱 밖 — 쥔 쪽은 다음 틱에 새 값을 본다).
+        (void)engine::getSubsystem<AssetManager>().reloadComposedDependents();
         BLOCK( "스트리밍 / 씬 트랜지션 / 이벤트" )
         {
             // 결정적 실행이면 끝난 스트리밍 완료를 상한 없이 이번 프레임에 모두 부른다(상한이면 몇 개가 넘어갈지가 도착 순서에 달린다).

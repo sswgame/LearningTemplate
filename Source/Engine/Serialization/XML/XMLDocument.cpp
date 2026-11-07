@@ -639,14 +639,20 @@ namespace sw
         }
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
-        return parseData( text, absPath );
+        // 리소스 id 로 읽었으니 덮어쓰기 층과 다시 읽기 기록이 이 id 를 쓴다(`ResourceContext::withAsset`).
+        return parseComposed( text, absPath, ResourceContext::forDocument().withAsset( assetID ) );
     }
 
     bool XMLDocument::parseData( string_view xmlText, string_view sourceName )
     {
+        return parseComposed( xmlText, sourceName, ResourceContext::forDocument() );
+    }
+
+    bool XMLDocument::parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    {
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forDocument(), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
         {
             clear();
             _lastError          = string( sourceName ) + ": its catalog inheritance could not be flattened (the log says why)";

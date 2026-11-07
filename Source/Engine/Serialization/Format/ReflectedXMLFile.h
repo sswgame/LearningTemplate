@@ -88,8 +88,11 @@ namespace sw
         [[nodiscard]] static bool loadDescInternal( const AssetID& assetID, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 디스크 파일 판입니다. */
         [[nodiscard]] static bool loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo );
-        /** @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다. */
-        [[nodiscard]] static bool parseDesc( string_view sourceName, const string& text, void* pDesc, const TypeInfo* pTypeInfo );
+        /**
+         * @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다.
+         * @param assetID 리소스 입구면 그 id(덮어쓰기 층 · 다시 읽기 기록), 디스크 입구면 빈 id 입니다.
+         */
+        [[nodiscard]] static bool parseDesc( string_view sourceName, const AssetID& assetID, const string& text, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 쓰기 쪽의 같은 구현입니다. @p pParent 와 같은 칸은 쓰지 않습니다. @p baseID 가 있으면 @p pParent 는 그 부모이고, 없으면 형식 기본값입니다. */
         [[nodiscard]] static bool saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const void* pParent, string_view baseID, const TypeInfo* pTypeInfo );
     };

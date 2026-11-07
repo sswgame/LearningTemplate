@@ -115,6 +115,17 @@ namespace sw
         /** @brief 캐시를 통째로 비웁니다(종료 · 재초기화). */
         virtual void clear() = 0;
 
+        /**
+         * @brief 지금 쥔 @p relativePath 를 다시 읽습니다 — 합성 문맥(로드 축 태그 · 덮어쓰기 층)이 바뀌어 같은 파일이 다른 결과가 됐다(`ResourceComposition`). 다시 읽었으면 true 입니다.
+         * @details 핫 리로드(`AssetCacheReloadFunction`, 개발 전용)와 달리 배포 구성에도 있다 — 품질 · 언어를 바꾸는 것은 플레이어다. 기본은 다시 읽지 않는 캐시다:
+         *          GPU 수명 · 쓰는 쪽의 수정이 있는 캐시(텍스처 · 머티리얼 · 메시 · 프리팹)는 다음 읽기가 새 결과를 본다. 공유 캐시(`SharedAssetCache`)는 종류의 다시 읽기 방식대로 바꾼다.
+         */
+        virtual bool reloadComposed( string_view relativePath )
+        {
+            (void)relativePath;
+            return false;
+        }
+
         /** @brief 계측 칸을 올린 캐시인지 반환합니다. false 면 `[CacheStats]` 가 `n/a` 로 찍습니다. */
         bool isCounted() const { return _pUncountedReason == nullptr; }
         /** @brief 세지 않는 사유입니다(`isCounted` 면 nullptr). */

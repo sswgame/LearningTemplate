@@ -1045,7 +1045,7 @@ namespace sw
         // 부모를 가리키면 한 벌로 펼친 뒤 읽는다(`ResourceComposer`).
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( text, assetID.view(), ResourceContext::forType( typeInfo ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( text, assetID.view(), ResourceContext::forType( typeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
             return false;
         return deserialize( pInstance, typeInfo, bComposed ? flatText : text, context );
     }

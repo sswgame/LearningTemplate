@@ -20,9 +20,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Gameplay/GameplayContext.h"
 #include "Engine/Gameplay/InstancedStruct.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -175,6 +175,20 @@ namespace sw
 
         bool          isEmpty() const { return _listInstruction.empty(); }
         const string& getText() const { return _text; }
+
+        /**
+         * @brief 식이 부르는 조건마다 @p visit( 함수, 인자 ) 를 식의 순서대로 부릅니다. 인자는 그 조건의 칸 구조체입니다.
+         * @details 함수 포인터는 무엇을 묻는지 답하지 못한다 — 식을 읽는 쪽이 "어느 이름을 묻는가" 를 알아야 할 때 쓴다(리소스 조건 `_when` 이 쿠킹 축과 로드 축을 가른다).
+         */
+        template <typename TVisit>
+        void forEachCall( TVisit&& visit ) const
+        {
+            for ( const ConditionInstruction& instruction : _listInstruction )
+            {
+                if ( instruction._opCode == ConditionOpCode::Call )
+                    visit( instruction._function, instruction._pArgs );
+            }
+        }
 
     private:
         friend struct ConditionExprInternal;

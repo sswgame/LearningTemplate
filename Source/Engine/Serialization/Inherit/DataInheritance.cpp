@@ -31,6 +31,47 @@ namespace sw
                 return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
             }
 
+            /** @brief 조건 원소(`_when`)인지 봅니다. 칸 · 목록 원소가 아니라 쌓이는 조건부 차이입니다. */
+            static bool isWhen( const XMLNode& node )
+            {
+                return isElement( node ) && string_view( node.getName() ) == DataInheritance::kWhenElement;
+            }
+
+            /** @brief 부모의 조건 원소 다음에 자식의 조건 원소를 붙입니다 — 조건은 바꾸지 않고 쌓는다(합친 결과에서 위에서 아래로 얹는다). */
+            static void appendWhens( const XMLNode& parent, const XMLNode& child, const XMLNode& out )
+            {
+                for ( const XMLNode& source : { parent, child } )
+                {
+                    if ( source.isValid() )
+                        appendAllNamed( source, DataInheritance::kWhenElement, out );
+                }
+            }
+
+            /**
+             * @brief 차이에 적을 조건 원소입니다 — @p full 의 조건이 @p parent 의 조건으로 시작하면 그 뒤만 적습니다.
+             * @return 부모의 조건을 지우거나 바꾼 결과라 쌓기로 적을 수 없으면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writeWhenDelta( const XMLNode& full, const XMLNode& parent, const XMLNode& out )
+            {
+                XMLNode fullWhen   = full.isValid() ? full.findChild( DataInheritance::kWhenElement ) : XMLNode{};
+                XMLNode parentWhen = parent.isValid() ? parent.findChild( DataInheritance::kWhenElement ) : XMLNode{};
+                for ( ; parentWhen.isValid(); parentWhen = parentWhen.findNextSibling( DataInheritance::kWhenElement ) )
+                {
+                    if ( fullWhen.isValid() == false || fullWhen.toString() != parentWhen.toString() )
+                    {
+                        SW_LOG_ERROR_ID( "DataInheritance.WhenDropped", "A delta of <%#> cannot drop or change a %# its base has - conditions stack (write a later %# that sets the values back)",
+                                         full.isValid() ? full.getName() : parent.getName(), DataInheritance::kWhenElement, DataInheritance::kWhenElement );
+                        return false;
+                    }
+                    fullWhen = fullWhen.findNextSibling( DataInheritance::kWhenElement );
+                }
+                for ( ; fullWhen.isValid(); fullWhen = fullWhen.findNextSibling( DataInheritance::kWhenElement ) )
+                {
+                    (void)out.appendClone( fullWhen );
+                }
+                return true;
+            }
+
             /** @brief 파일에만 있고 합친 결과에는 남지 않는 속성입니다. */
             static bool isMetaAttribute( const utf8* pName )
             {
@@ -119,7 +160,7 @@ namespace sw
                     vector<string> listReplacedName;
                     for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                     {
-                        if ( isElement( element ) == false )
+                        if ( isElement( element ) == false || isWhen( element ) )
                             continue;
                         const XMLNode                childElement = findChildElement( child, element.getName() );
                         const DataInheritanceSchema* pField       = schema.findField( element.getName() );
@@ -142,18 +183,20 @@ namespace sw
                         }
                     }
                 }
-                if ( child.isValid() == false )
-                    return true;
-                for ( XMLNode element = child.findChild(); element.isValid(); element = element.findNextSibling() )
+                if ( child.isValid() )
                 {
-                    if ( isElement( element ) == false || findChildElement( parent, element.getName() ).isValid() )
-                        continue;
-                    const DataInheritanceSchema* pField = schema.findField( element.getName() );
-                    if ( pField == nullptr )
-                        (void)out.appendClone( element );
-                    else if ( isSingleField( element, sourceName ) == false || mergeElement( XMLNode{}, element, *pField, out.appendChild( element.getName() ), sourceName ) == false )
-                        return false;
+                    for ( XMLNode element = child.findChild(); element.isValid(); element = element.findNextSibling() )
+                    {
+                        if ( isElement( element ) == false || isWhen( element ) || findChildElement( parent, element.getName() ).isValid() )
+                            continue;
+                        const DataInheritanceSchema* pField = schema.findField( element.getName() );
+                        if ( pField == nullptr )
+                            (void)out.appendClone( element );
+                        else if ( isSingleField( element, sourceName ) == false || mergeElement( XMLNode{}, element, *pField, out.appendChild( element.getName() ), sourceName ) == false )
+                            return false;
+                    }
                 }
+                appendWhens( parent, child, out );
                 return true;
             }
 
@@ -164,8 +207,8 @@ namespace sw
                     return true;
                 for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    if ( isElement( element ) == false )
-                        continue;
+                    if ( isElement( element ) == false || isWhen( element ) )
+                        continue; // 조건 원소는 목록 원소가 아니다 — 목록 원소 자신에 얹는 차이다(`appendWhens`)
                     const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
                     if ( pKey == nullptr )
                     {
@@ -260,10 +303,11 @@ namespace sw
                 {
                     for ( XMLNode element = child.findChild(); element.isValid(); element = element.findNextSibling() )
                     {
-                        if ( isElement( element ) && applyChildEntry( element, schema, listEntry, sourceName ) == false )
+                        if ( isElement( element ) && isWhen( element ) == false && applyChildEntry( element, schema, listEntry, sourceName ) == false )
                             return false;
                     }
                 }
+                appendWhens( parent, child, out );
                 for ( const ListEntry& entry : listEntry )
                 {
                     if ( entry._childNode.isValid() == false )
@@ -401,7 +445,7 @@ namespace sw
                 vector<string> listComparedName;
                 for ( XMLNode element = full.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    if ( isElement( element ) == false )
+                    if ( isElement( element ) == false || isWhen( element ) )
                         continue;
                     const XMLNode                inherited = findChildElement( parent, element.getName() );
                     const DataInheritanceSchema* pField    = schema.findField( element.getName() );
@@ -424,11 +468,13 @@ namespace sw
                     if ( writeElementDeltaIfAny( element, inherited, *pField, out ) == false )
                         return false;
                 }
+                if ( writeWhenDelta( full, parent, out ) == false )
+                    return false;
                 if ( parent.isValid() == false )
                     return true;
                 for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    if ( isElement( element ) == false || findChildElement( full, element.getName() ).isValid() )
+                    if ( isElement( element ) == false || isWhen( element ) || findChildElement( full, element.getName() ).isValid() )
                         continue;
                     const DataInheritanceSchema* pField = schema.findField( element.getName() );
                     if ( pField != nullptr && pField->_keyAttribute.empty() == false )
@@ -469,6 +515,8 @@ namespace sw
                     return false;
                 vector<ListEntry> listFull;
                 if ( collectParentEntries( full, schema, listFull, "delta" ) == false )
+                    return false;
+                if ( writeWhenDelta( full, parent, out ) == false )
                     return false;
                 for ( size_t index = listWorking.size(); index > 0; --index )
                 {
@@ -672,8 +720,8 @@ namespace sw
         }
         for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
         {
-            if ( DataInheritanceInternal::isElement( child ) == false )
-                continue;
+            if ( DataInheritanceInternal::isElement( child ) == false || DataInheritanceInternal::isWhen( child ) )
+                continue; // 조건 원소는 칸이 아니다 — 어느 층이 그 칸을 적었는지는 펼친 뒤 조건 단계 앞의 값이다
             const DataInheritanceSchema* pField = schema.findField( child.getName() );
             const string                 path   = prefix + child.getName();
             if ( pField == nullptr )
@@ -688,7 +736,7 @@ namespace sw
             }
             for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling() )
             {
-                if ( DataInheritanceInternal::isElement( item ) == false )
+                if ( DataInheritanceInternal::isElement( item ) == false || DataInheritanceInternal::isWhen( item ) )
                     continue;
                 const string      itemPath = path + "[" + string{ item.getAttributeText( pField->_keyAttribute.c_str() ) } + "]";
                 const string_view op       = item.getAttributeText( DataInheritance::kOpAttribute );

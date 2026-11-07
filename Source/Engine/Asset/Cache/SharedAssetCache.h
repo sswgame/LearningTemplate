@@ -109,6 +109,8 @@ namespace sw
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 다시 읽습니다(`reloadShared`). */
         void reload( const AssetID& assetID );
+        /** @brief 쥔 경로면 종류의 다시 읽기 방식대로 다시 읽습니다(합성 문맥이 바뀌었다 — `AssetCacheBase::reloadComposed`). */
+        bool reloadComposed( string_view relativePath ) override;
         /** @brief 지금 누가 쥔 에셋 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 표를 비웁니다. 쥔 쪽의 에셋은 그대로이고, 다음 요청은 파일을 새로 읽습니다. */

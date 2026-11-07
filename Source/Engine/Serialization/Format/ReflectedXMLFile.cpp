@@ -23,7 +23,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Xml.FileNotFound", "XML load failed: %# (%#) - file not found", assetID.view(), pTypeInfo->_name.c_str() );
             return false;
         }
-        return parseDesc( assetID.view(), text, pDesc, pTypeInfo );
+        return parseDesc( assetID.view(), assetID, text, pDesc, pTypeInfo );
     }
 
     bool ReflectedXMLFile::loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo )
@@ -35,10 +35,10 @@ namespace sw
             SW_LOG_ERROR_ID( "Xml.FileNotFound", "XML load failed: %# (%#) - file not found", diskPath, pTypeInfo->_name.c_str() );
             return false;
         }
-        return parseDesc( diskPath, text, pDesc, pTypeInfo );
+        return parseDesc( diskPath, AssetID{}, text, pDesc, pTypeInfo );
     }
 
-    bool ReflectedXMLFile::parseDesc( string_view sourceName, const string& text, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::parseDesc( string_view sourceName, const AssetID& assetID, const string& text, void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
@@ -52,7 +52,7 @@ namespace sw
         // 부모를 가리키면 한 벌로 펼친 뒤 읽는다 — 읽기 규칙(모르는 이름 · 범위)은 펼친 결과에 그대로 걸린다.
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( text, sourceName, ResourceContext::forType( *pTypeInfo ), flatText, bComposed ) == false )
+        if ( ResourceComposer::compose( text, sourceName, ResourceContext::forType( *pTypeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
             return false;
         vector<SchemaOrphanValue> listOrphan;
         const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, bComposed ? string_view( flatText ) : string_view( text ), &listOrphan );

@@ -23,6 +23,7 @@
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 namespace sw
 {
@@ -186,6 +187,27 @@ namespace sw
         engine::getSubsystem<AssetStreamingQueue>().clearCompletionRecord();
         // 캐시 자체는 참조가 0 이 되는 자리에서 스스로 지운다(`MaterialCache::release`).
         // 여기서는 아직 할 일이 없다. 있게 되면 레지스트리를 훑는다.
+    }
+
+    uint32 AssetManager::reloadComposedDependents()
+    {
+        vector<string> listAssetID;
+        ResourceComposition::takePendingReload( listAssetID );
+        if ( listAssetID.empty() )
+            return 0;
+        const vector<AssetCacheBase*> listCache     = getAllAssetCache();
+        uint32                        reloadedCount = 0;
+        for ( const string& assetID : listAssetID )
+        {
+            for ( AssetCacheBase* pCache : listCache )
+            {
+                if ( pCache->reloadComposed( assetID ) )
+                    ++reloadedCount;
+            }
+        }
+        if ( reloadedCount > 0 )
+            SW_LOG_INFO_ID( "Asset.ReloadedComposed", "Reloaded %# held asset(s) whose resource tags or layers changed", reloadedCount );
+        return reloadedCount;
     }
 
     Subscription AssetManager::registerAssetCache( AssetCacheBase* pCache, AssetCacheReloadFunction pReload )
