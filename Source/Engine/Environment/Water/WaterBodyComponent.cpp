@@ -147,6 +147,8 @@ namespace sw
         , _riverWidth{ 6.0f }
         , _bRiverPathDriven{ false }
         , _listWave{}
+        , _flowSpeed{ 0.0f }
+        , _flowDirection{ 0.0f }
         , _shallowColor{ 0.10f, 0.45f, 0.45f, 0.35f }
         , _deepColor{ 0.01f, 0.08f, 0.16f, 0.92f }
         , _skyColor{ 0.55f, 0.70f, 0.85f, 1.0f }
@@ -161,6 +163,9 @@ namespace sw
         , _pPrimitiveRegistry{ nullptr }
         , _surfaceOrigin{}
         , _waveTime{ 0.0f }
+        , _waveAmplitudeScale{ 1.0f }
+        , _boundsWaveScale{ 1.0f }
+        , _surfaceBoundsRadius{ 0.0f }
         , _surfaceVertexCount{ 0 }
         , _bOriginDirty{ false }
         , _bBuiltOnTerrain{ false }
@@ -246,7 +251,18 @@ namespace sw
             pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
             { water.rebuildSurface(); } );
         }
+        // 날씨가 진폭 배율을 바꿨으면 바운드만 고친다(메시는 그대로 — 정점 셰이더가 파도를 민다).
+        if ( _batch != nullptr && _boundsWaveScale != _waveAmplitudeScale )
+        {
+            _boundsWaveScale = _waveAmplitudeScale;
+            _batch->setBoundsRadius( 0, computeBoundsRadius() );
+        }
         writeMaterialValues();
+    }
+
+    void WaterBodyComponent::setWaveAmplitudeScale( float32 scale )
+    {
+        _waveAmplitudeScale = MathUtil::max( scale, 0.0f );
     }
 
     void WaterBodyComponent::setWaveTime( float32 time )
@@ -287,7 +303,18 @@ namespace sw
         for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
         {
             outArrWave[waveIndex] = waveIndex < _listWave.size() ? _listWave[waveIndex].toVector() : float4{ 0.0f, 1.0f, 0.0f, 0.0f };
+            outArrWave[waveIndex]._z *= _waveAmplitudeScale; // 진폭 칸 — 화면과 질의가 같은 배율을 본다
         }
+    }
+
+    float32 WaterBodyComponent::computeBoundsRadius() const
+    {
+        float32 boundsRadius = _surfaceBoundsRadius;
+        for ( const GerstnerWave& wave : _listWave )
+        {
+            boundsRadius += wave._amplitude * _waveAmplitudeScale * 2.0f;
+        }
+        return boundsRadius;
     }
 
     void WaterBodyComponent::writeMaterialValues()
@@ -335,11 +362,8 @@ namespace sw
         if ( listVertex.empty() )
             return;
 
-        // 파도가 메시를 위아래와 옆으로 민다. 바운드에 진폭 합만큼 더한다.
-        for ( const GerstnerWave& wave : _listWave )
-        {
-            boundsRadius += wave._amplitude * 2.0f;
-        }
+        _surfaceBoundsRadius = boundsRadius;
+        _boundsWaveScale     = _waveAmplitudeScale;
 
         // 칸이 비면 엔진 기본 물 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath.path();
@@ -363,7 +387,7 @@ namespace sw
         _batch              = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
         _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
-        _batch->setBoundsRadius( 0, boundsRadius );
+        _batch->setBoundsRadius( 0, computeBoundsRadius() );
         _pPrimitiveRegistry->addInstanceBatch( _batch.get() );
         writeMaterialValues();
     }
@@ -428,7 +452,7 @@ namespace sw
         }
     }
 
-    bool WaterBodyComponent::findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight ) const
+    bool WaterBodyComponent::findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight, float2& outDirection ) const
     {
         const float32 localX       = worldX - _surfaceOrigin._x;
         const float32 localZ       = worldZ - _surfaceOrigin._z;
@@ -450,6 +474,7 @@ namespace sw
             {
                 bestDistance  = distance;
                 outBaseHeight = _surfaceOrigin._y + start._y + ( end._y - start._y ) * ratio;
+                outDirection  = lengthSquare > MathUtil::kEpsilon ? axis * ( 1.0f / MathUtil::sqrt( lengthSquare ) ) : float2{};
             }
         }
         return bestDistance <= halfWidth;
@@ -458,7 +483,10 @@ namespace sw
     bool WaterBodyComponent::findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const
     {
         if ( _shape == WaterBodyShape::River )
-            return findRiverBase( worldX, worldZ, outBaseHeight );
+        {
+            float2 direction{};
+            return findRiverBase( worldX, worldZ, outBaseHeight, direction );
+        }
         const bool bInside = MathUtil::abs( worldX - _surfaceOrigin._x ) <= 0.5f * _size._x && MathUtil::abs( worldZ - _surfaceOrigin._z ) <= 0.5f * _size._y;
         outBaseHeight      = _surfaceOrigin._y;
         return bInside;
@@ -493,6 +521,23 @@ namespace sw
         const float32 gravity = PhysicsSystem::getConfiguredGravityMagnitude();
         (void)WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, waveTime, gravity, arrWave, 4u, &origin );
         outNormal = WaterWaveMath::computeNormal( origin, waveTime, gravity, arrWave );
+        return true;
+    }
+
+    bool WaterBodyComponent::computeFlowVelocity( float32 worldX, float32 worldZ, float3& outVelocity ) const
+    {
+        float32 baseHeight{ 0.0f };
+        if ( _shape == WaterBodyShape::River )
+        {
+            float2 direction{};
+            if ( findRiverBase( worldX, worldZ, baseHeight, direction ) == false )
+                return false;
+            outVelocity = float3{ direction._x, 0.0f, direction._y } * _flowSpeed;
+            return true;
+        }
+        if ( findBaseHeight( worldX, worldZ, baseHeight ) == false )
+            return false;
+        outVelocity = float3{ MathUtil::cos( _flowDirection ), 0.0f, MathUtil::sin( _flowDirection ) } * _flowSpeed;
         return true;
     }
 

@@ -52,6 +52,11 @@ namespace sw
         void setButton( int32 buttonIndex, bool bDown, bool bTriggered );
         /** @brief 이동을 월드 방향으로 바꿉니다. 조종 요로 XZ 를 돌리고 Y 에 위아래를 넣으며, 길이는 그대로입니다. */
         float3 computeWorldMove() const;
+        /**
+         * @brief 월드 이동을 앞 방향 @p worldForward(XZ) 기준 축으로 바꿉니다 — x 는 오른쪽(앞을 시계 방향으로 90°), y 는 앞 성분이고 각각 -1..1 로 자릅니다.
+         * @details 탈것이 의도("가고 싶은 월드 방향")를 페달 · 조향(물리 차) · 추진 · 키(배)로 읽는 한 길이다. 앞이 0 길이면 +Z 를 앞으로 본다.
+         */
+        float2 computeLocalMove( const float3& worldForward ) const;
         /** @brief 월드 방향 @p worldDirection(XZ)을 이 의도의 조종 요 기준 이동 축으로 넣습니다(AI 가 경로 방향을 넣을 때). 길이는 1 로 자릅니다. */
         void setWorldMove( const float3& worldDirection );
         /** @brief 발동한 순간의 조종 회전을 넣습니다(요는 [-π, π) 로 감는다). 이 값을 읽는 쪽은 `_bTriggerLook` 이 참일 때만 쓰고, 아니면 `_controlYaw` · `_controlPitch` 를 쓴다. */

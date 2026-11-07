@@ -1,6 +1,6 @@
 /**
  * @file WaterBodyComponent.h
- * @brief 물입니다. 호수(사각 수면)와 강(경로를 따르는 띠)에 거스트너 파도, 깊이 색, 프레넬, 물가 거품을 입히고, 수면 높이, 노멀, 물속 질의를 제공합니다.
+ * @brief 물입니다. 호수(사각 수면)와 강(경로를 따르는 띠)에 거스트너 파도, 깊이 색, 프레넬, 물가 거품을 입히고, 수면 높이, 노멀, 흐름, 물속 질의를 제공합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -60,6 +60,9 @@ namespace sw
      *          화면 공간에서 두께를 측정할 수 없기 때문이다. 지형이 없으면 깊은 물이다. 강은 정점 색 rg 에 흐름 방향을 싣는다(물결이 흐른다).
      *          강 경로는 점 목록이다. 같은 오브젝트에 스플라인 어댑터(GameFramework `SplineRiverPathComponent`)가 있으면 어댑터가 점을 만들어 넘기고(`setRiverPathFromSource`)
      *          점 목록은 읽기 전용이 된다 — Engine 이 GameFramework 의 스플라인을 읽을 수 없어(층 방향) 어댑터가 쪽에서 밀어 넣는다.
+     *          흐름(`computeFlowVelocity`)은 물 자체의 해류다 — 강은 경로를 따라(첫 점 → 끝 점, 정점 색의 흐름 방향과 같다), 호수는 `_flowDirection` 쪽으로 `_flowSpeed`.
+     *          뜨는 바디(`BuoyancyComponent`)와 배(`BoatComponent`)가 물 저항을 이 흐름에 대한 상대 속도로 계산해 흐름을 탄다(언리얼 Water 강의 Velocity 칸 자리).
+     *          지역 효과의 흐름 · 소용돌이 필드는 이 위에 더해진다. 파도 진폭은 런타임 배율(`setWaveAmplitudeScale` — 날씨가 폭풍에 키운다)을 곱해 화면과 질의에 함께 싣는다.
      *          스레드: 질의는 읽기만 한다. 메시 다시 만들기(`rebuildSurface`)는 틱 밖에서만 호출한다.
      */
     REFLECT( Category = "Environment", DisplayName = "Water Body", Tooltip = "Lake or river surface with Gerstner waves and surface queries", Meta = "Icon=Water, IconColor=Environment" )
@@ -93,16 +96,27 @@ namespace sw
         [[nodiscard]] bool computeSurfaceHeight( float32 worldX, float32 worldZ, float32& outHeight, float32 time = -1.0f ) const;
         /** @brief 월드 (x, z) 의 수면 노멀을 구합니다. 덮지 않는 위치면 false 를 반환합니다. */
         [[nodiscard]] bool computeSurfaceNormal( float32 worldX, float32 worldZ, float3& outNormal, float32 time = -1.0f ) const;
+        /**
+         * @brief 월드 (x, z) 의 물 흐름 속도(m/s, 수평)를 구합니다. 덮지 않는 위치면 false 를 반환합니다.
+         * @details 강은 가장 가까운 경로 구간의 방향(첫 점에서 끝 점 쪽), 호수는 `_flowDirection` 방향이다. 크기는 둘 다 `_flowSpeed` 다.
+         */
+        [[nodiscard]] bool computeFlowVelocity( float32 worldX, float32 worldZ, float3& outVelocity ) const;
         /** @brief 월드 점이 이 물의 수면 아래면 true 를 반환합니다(부력과 물속 판정). @p outDepth 는 수면에서 아래로 측정한 깊이입니다. */
         bool isUnderwater( const float3& worldPosition, float32& outDepth ) const;
         /** @brief 이 물이 덮는 위치(파도 없는 기준면 기준)면 true 를 반환합니다. */
         bool coversPosition( float32 worldX, float32 worldZ ) const;
-        /** @brief 파도 값 넷(방향, 파장, 진폭, 가파름)을 반환합니다. 셰이더에 싣는 값과 같습니다. */
+        /** @brief 파도 값 넷(방향, 파장, 진폭 × 진폭 배율, 가파름)을 반환합니다. 셰이더에 싣는 값과 같습니다. */
         void getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const;
         /** @brief 지금 파도 시간(초)입니다. */
         float32 getWaveTime() const { return _waveTime; }
         /** @brief 파도 시간을 정합니다(테스트와 시퀀서용). 다음 틱부터 그 값에서 쌓입니다. */
         void setWaveTime( float32 time );
+        /**
+         * @brief 모든 파도 진폭에 곱하는 배율입니다(1 = 적은 그대로). 날씨(GameFramework `WeatherWaveComponent`)가 폭풍에 키운다.
+         * @details 저장하지 않는 런타임 값이다. 화면(머티리얼)과 질의(부력)가 같은 `getWaveVectors` 를 지나 같은 수면을 본다. 바운드는 다음 틱에 고친다.
+         */
+        void    setWaveAmplitudeScale( float32 scale );
+        float32 getWaveAmplitudeScale() const { return _waveAmplitudeScale; }
         /** @brief 수면 메시 정점 수입니다(테스트). */
         uint32 getSurfaceVertexCount() const { return _surfaceVertexCount; }
 
@@ -117,6 +131,12 @@ namespace sw
         void setShape( WaterBodyShape shape ) { _shape = shape; }
         void setSize( const float2& size ) { _size = size; }
         void setWaves( const vector<GerstnerWave>& listWave ) { _listWave = listWave; }
+        /** @brief 흐름을 정합니다. @p direction 은 호수만 읽습니다(라디안, +x 에서 +z 쪽으로). */
+        void setFlow( float32 speed, float32 direction )
+        {
+            _flowSpeed     = speed;
+            _flowDirection = direction;
+        }
         void setRiverPath( const vector<float3>& listPoint, float32 width );
         /**
          * @brief 강 경로를 다른 곳(스플라인 어댑터, GameFramework `SplineRiverPathComponent`)이 정한 값으로 덮고 수면을 다시 만듭니다.
@@ -134,8 +154,8 @@ namespace sw
         void                  setMaterialPath( string_view path ) { _materialPath = path; }
 
     private:
-        /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 경로 거리를 찾습니다. 띠 밖이면 false 를 반환합니다. */
-        [[nodiscard]] bool findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
+        /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 그 구간의 진행 방향(xz, 정규화)을 찾습니다. 띠 밖이면 false 를 반환합니다. */
+        [[nodiscard]] bool findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight, float2& outDirection ) const;
         /** @brief (x, z) 의 파도 없는 기준면 높이입니다. 덮지 않으면 false 입니다. */
         [[nodiscard]] bool findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
         /** @brief 호수 격자 정점을 만듭니다(깊이는 @p pTerrain 에서). */
@@ -144,6 +164,8 @@ namespace sw
         void makeRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 머티리얼 인스턴스에 파도, 색, 시간을 싣습니다. */
         void writeMaterialValues();
+        /** @brief 지금 진폭 배율의 파도를 더한 수면 바운드 반지름입니다(파도가 메시를 위아래와 옆으로 민다). */
+        float32 computeBoundsRadius() const;
 
     private:
         PROPERTY( Category = "Water", DisplayName = "Shape" )
@@ -163,6 +185,10 @@ namespace sw
         bool _bRiverPathDriven;
         PROPERTY( Category = "Waves", DisplayName = "Waves", Tooltip = "Up to four Gerstner waves" )
         vector<GerstnerWave> _listWave;
+        PROPERTY( Category = "Flow", DisplayName = "Flow Speed", Min = 0.0, Units = "m/s", Tooltip = "Current that floating bodies and boats drift with (rivers: along the path, first point to last)" )
+        float32 _flowSpeed;
+        PROPERTY( Category = "Flow", DisplayName = "Flow Direction", Units = rad, Tooltip = "Lake current direction, from +x towards +z (rivers follow their path)" )
+        float32 _flowDirection;
         PROPERTY( Category = "Shading", DisplayName = "Shallow Color", Tooltip = "Linear RGB; alpha = opacity at the shore" )
         float4 _shallowColor;
         PROPERTY( Category = "Shading", DisplayName = "Deep Color", Tooltip = "Linear RGB; alpha = opacity in deep water" )
@@ -187,6 +213,9 @@ namespace sw
         PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치다.
         float32                       _waveTime;
+        float32                       _waveAmplitudeScale;  ///< 런타임 진폭 배율(저장하지 않는다 — 날씨가 정한다)
+        float32                       _boundsWaveScale;     ///< 지금 바운드가 든 진폭 배율. 배율이 바뀌면 틱이 바운드를 고친다
+        float32                       _surfaceBoundsRadius; ///< 파도를 뺀 수면 바운드 반지름(메시를 만들 때)
         uint32                        _surfaceVertexCount;
         atomic<bool>                  _bOriginDirty;    ///< 오너가 움직여 수면 원점이 낡았다
         bool                          _bBuiltOnTerrain; ///< 마지막 수면이 지형 깊이를 구웠다

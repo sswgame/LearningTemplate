@@ -15,6 +15,7 @@ namespace sw
         , _gustStrength{ 0.25f }
         , _gustFrequency{ 0.25f }
         , _swayFrequency{ 1.2f }
+        , _speed{ 2.0f }
     {
     }
 
@@ -26,6 +27,7 @@ namespace sw
         settings._gustStrength  = _gustStrength;
         settings._gustFrequency = _gustFrequency;
         settings._swayFrequency = _swayFrequency;
+        settings._speed         = _speed;
         return settings;
     }
 

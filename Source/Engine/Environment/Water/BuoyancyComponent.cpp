@@ -86,9 +86,11 @@ namespace sw
             if ( fraction <= 0.0f )
                 continue;
             ++_submergedPontoonCount;
-            const float32 buoyantForce  = pontoon.computeBuoyantForce( fraction, _waterDensity, gravityMagnitude );
-            const float3  pointVelocity = linearVelocity + angularVelocity.cross( offset );
-            const float3  force         = up * buoyantForce - pointVelocity * ( _linearDrag * fraction );
+            const float32 buoyantForce = pontoon.computeBuoyantForce( fraction, _waterDensity, gravityMagnitude );
+            float3        flowVelocity{};
+            (void)pWater->computeFlowVelocity( center._x, center._z, flowVelocity ); // 같은 자리를 덮는 물이라 늘 참이다
+            const float3 pointVelocity = linearVelocity + angularVelocity.cross( offset ) - flowVelocity;
+            const float3 force         = up * buoyantForce - pointVelocity * ( _linearDrag * fraction );
             pScene->addImpulseAtPoint( body, force * fixedDeltaTime, center );
         }
     }

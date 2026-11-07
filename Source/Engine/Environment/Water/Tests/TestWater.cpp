@@ -170,3 +170,87 @@ SW_TEST_CASE( WaterTest, RiverFollowsItsPath )
     SW_EXPECT_FALSE( pWater->computeSurfaceHeight( 10.0f, 3.0f, height ) ); // 반폭 2 밖
     SW_EXPECT_FALSE( pWater->coversPosition( 10.0f, 10.0f ) );
 }
+
+/**
+ * @brief [WaterTest] 흐름 — 강은 가장 가까운 구간의 진행 방향(첫 점 → 끝 점)으로, 호수는 흐름 방향으로 흐름 속도만큼 흐르고, 덮지 않는 자리는 값이 없다
+ */
+SW_TEST_CASE( WaterTest, FlowFollowsRiverPathAndLakeDirection )
+{
+    GameObjectManager manager;
+    GameObject*       pRiverObject = manager.createGameObject( hashed_string( "River" ) );
+    GameObject*       pLakeObject  = manager.createGameObject( hashed_string( "Lake" ) );
+    SW_REQUIRE_NOT_NULL( pRiverObject );
+    SW_REQUIRE_NOT_NULL( pLakeObject );
+    WaterBodyComponent* pRiver = pRiverObject->addComponent<WaterBodyComponent>();
+    WaterBodyComponent* pLake  = pLakeObject->addComponent<WaterBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pRiver );
+    SW_REQUIRE_NOT_NULL( pLake );
+    pRiver->setShape( WaterBodyShape::River );
+    pRiver->setRiverPath( {
+                              float3{ 0.0f, 0.0f,  0.0f},
+                              float3{20.0f, 0.0f,  0.0f},
+                              float3{20.0f, 0.0f, 20.0f}
+    },
+                          4.0f );
+    pRiver->setFlow( 1.5f, 0.0f );
+    pRiver->setMaterialPath( "" );
+    pRiver->rebuildSurface();
+    pLake->setLocalPosition( float3{ 100.0f, 0.0f, 0.0f } );
+    pLake->setSize( float2{ 10.0f, 10.0f } );
+    pLake->setFlow( 2.0f, 0.5f * MathUtil::kPi ); // +z 쪽
+    pLake->setMaterialPath( "" );
+    pLake->rebuildSurface();
+
+    float3 flow{};
+    SW_REQUIRE_TRUE( pRiver->computeFlowVelocity( 10.0f, 1.0f, flow ) );
+    SW_EXPECT_NEAR( 1.5f, flow._x, 1.0e-5f );
+    SW_EXPECT_NEAR( 0.0f, flow._z, 1.0e-5f );
+    SW_REQUIRE_TRUE( pRiver->computeFlowVelocity( 21.0f, 12.0f, flow ) );
+    SW_EXPECT_NEAR( 0.0f, flow._x, 1.0e-5f );
+    SW_EXPECT_NEAR( 1.5f, flow._z, 1.0e-5f );
+    SW_EXPECT_FALSE( pRiver->computeFlowVelocity( 10.0f, 10.0f, flow ) );
+
+    SW_REQUIRE_TRUE( pLake->computeFlowVelocity( 102.0f, 3.0f, flow ) );
+    SW_EXPECT_NEAR( 0.0f, flow._x, 1.0e-5f );
+    SW_EXPECT_NEAR( 0.0f, flow._y, 1.0e-5f );
+    SW_EXPECT_NEAR( 2.0f, flow._z, 1.0e-5f );
+    SW_EXPECT_FALSE( pLake->computeFlowVelocity( 120.0f, 0.0f, flow ) );
+}
+
+/**
+ * @brief [WaterTest] 진폭 배율 — 셰이더에 싣는 파도 값과 수면 질의가 같은 배율을 본다(배율 3 이면 진폭 3 배인 파도와 같은 수면), 음수는 0(잔잔한 수면)이다
+ */
+SW_TEST_CASE( WaterTest, WaveAmplitudeScaleReachesShaderValuesAndQueries )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Sea" ) );
+    SW_REQUIRE_NOT_NULL( pObject );
+    WaterBodyComponent* pWater = pObject->addComponent<WaterBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pWater );
+    pWater->setSize( float2{ 40.0f, 40.0f } );
+    pWater->setWaves( {
+        GerstnerWave{ 0.3f, 10.0f, 0.2f, 0.4f }
+    } );
+    pWater->setMaterialPath( "" );
+    pWater->rebuildSurface();
+    pWater->setWaveTime( 0.7f );
+
+    pWater->setWaveAmplitudeScale( 3.0f );
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
+    pWater->getWaveVectors( arrWave );
+    SW_EXPECT_NEAR( 0.6f, arrWave[0]._z, 1.0e-6f );
+
+    float4 arrExpected[shaderslot::kGerstnerWaveCount];
+    for ( float4& wave : arrExpected )
+    {
+        wave = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
+    }
+    arrExpected[0] = GerstnerWave{ 0.3f, 10.0f, 0.6f, 0.4f }.toVector();
+    float32 height{ 0.0f };
+    SW_REQUIRE_TRUE( pWater->computeSurfaceHeight( 3.0f, -2.0f, height ) );
+    SW_EXPECT_NEAR( WaterWaveMath::computeSurfaceHeight( float2{ 3.0f, -2.0f }, 0.7f, WaterTestUtil::kGravity, arrExpected ), height, 1.0e-5f );
+
+    pWater->setWaveAmplitudeScale( -1.0f );
+    SW_REQUIRE_TRUE( pWater->computeSurfaceHeight( 3.0f, -2.0f, height ) );
+    SW_EXPECT_NEAR( 0.0f, height, 1.0e-6f );
+}

@@ -100,6 +100,17 @@ namespace sw
         return float3{ _move._x * cosYaw + _move._y * sinYaw, _moveUp, -_move._x * sinYaw + _move._y * cosYaw };
     }
 
+    float2 ControlIntent::computeLocalMove( const float3& worldForward ) const
+    {
+        // 앞(XZ)과 오른쪽(앞을 시계 방향으로 90° 돌린 방향)이다. 요가 0 이면 앞은 +Z 이고 오른쪽은 +X 이다.
+        const float32 forwardLength = MathUtil::sqrt( worldForward._x * worldForward._x + worldForward._z * worldForward._z );
+        const float32 forwardX      = forwardLength > 0.0f ? worldForward._x / forwardLength : 0.0f;
+        const float32 forwardZ      = forwardLength > 0.0f ? worldForward._z / forwardLength : 1.0f;
+        const float3  worldMove     = computeWorldMove();
+        return float2{ MathUtil::clamp( worldMove._x * forwardZ - worldMove._z * forwardX, -1.0f, 1.0f ),
+                       MathUtil::clamp( worldMove._x * forwardX + worldMove._z * forwardZ, -1.0f, 1.0f ) };
+    }
+
     void ControlIntent::setWorldMove( const float3& worldDirection )
     {
         const float32 sinYaw = MathUtil::sin( _controlYaw );

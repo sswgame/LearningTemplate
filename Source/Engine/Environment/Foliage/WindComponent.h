@@ -1,6 +1,6 @@
 /**
  * @file WindComponent.h
- * @brief 씬의 바람입니다. 방향, 세기, 돌풍을 담습니다. 식생(`FoliageComponent`)이 틱마다 읽어 머티리얼에 싣고, 나중에 천, 파티클, 소리가 같은 값을 읽습니다.
+ * @brief 씬의 바람입니다. 방향, 세기, 돌풍, 풍속을 담습니다. 식생(`FoliageComponent`)이 틱마다 읽어 머티리얼에 싣고, 돛(`BoatComponent`)이 풍속을 힘으로 읽습니다. 나중에 천, 파티클, 소리가 같은 값을 읽습니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -21,6 +21,7 @@ namespace sw
         float32 _gustStrength{ 0.25f };   ///< 돌풍이 더하는 세기다.
         float32 _gustFrequency{ 0.25f };  ///< 돌풍 주파수(Hz)
         float32 _swayFrequency{ 1.2f };   ///< 흔들림 주파수(Hz)
+        float32 _speed{ 2.0f };           ///< 풍속(m/s). 힘을 받는 쪽(돛)이 읽는다 — 흔들림 세기(`_strength`)는 그림의 값이라 따로 둔다
     };
 } // namespace sw
 
@@ -46,6 +47,7 @@ namespace sw
         WindSettings makeSettings() const;
         void         setDirection( float32 radians ) { _direction = radians; }
         void         setStrength( float32 strength ) { _strength = strength; }
+        void         setSpeed( float32 speed ) { _speed = speed; }
 
         /** @brief @p manager 의 첫 바람입니다. 없으면 기본값을 채우고 false 입니다. 병렬 틱 안에서 불러도 됩니다(읽기만 합니다). */
         [[nodiscard]] static bool findWind( const GameObjectManager& manager, WindSettings& outSettings );
@@ -61,5 +63,7 @@ namespace sw
         float32 _gustFrequency;
         PROPERTY( Category = "Wind", DisplayName = "Sway Frequency", Min = 0.0, Units = Hz )
         float32 _swayFrequency;
+        PROPERTY( Category = "Wind", DisplayName = "Speed", Min = 0.0, Units = "m/s", Tooltip = "Wind speed that pushes sails (foliage sway uses Strength)" )
+        float32 _speed;
     };
 } // namespace sw
