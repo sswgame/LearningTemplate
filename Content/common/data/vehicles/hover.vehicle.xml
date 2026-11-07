@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 반중력 탈것 — 카트의 변형. 호버 · 부스트만: 땅 위에 떠서 구름 저항이 없고 경사는 덜 당기며, 그립이 약해 옆으로 흐른다. 드리프트 · 점프는 없다. -->
+<KinematicVehicleSettings _base="common/data/vehicles/kart.vehicle.xml" _maxSpeed="40" _maxDriveForce="5000">
+	<_inertia _mass="250" _airDrag="0.6" />
+	<_grip _lateralGrip="2.5" />
+	<_drift _bEnabled="false" />
+	<_airControl _bEnabled="false" />
+	<_hover _bEnabled="true" _height="0.8" _stiffness="60" _damping="10" _slopeScale="0.3" />
+</KinematicVehicleSettings>

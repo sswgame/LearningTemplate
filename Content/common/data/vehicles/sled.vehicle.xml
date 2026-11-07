@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  썰매 — 구동 없음(밀어 주거나 경사로만 간다), 약한 그립, 조향은 기울임(의도의 옆 성분). 속도 상한 · 엔진 브레이크가 없어 내리막에서 끝속도까지 빨라지고
+  오르막 · 눈(높은 구름 저항)에서 느려진다. 스노보드 · 스키 · 수레 미끄럼이 같은 줄이다. 무거운 썰매는 sled_heavy.vehicle.xml(질량 한 칸).
+-->
+<KinematicVehicleSettings _maxSpeed="60" _maxDriveForce="0" _brakeForce="400" _reverseMaxSpeed="0" _coastDrag="0" _overSpeedDeceleration="0"
+                          _steerRate="1.2" _steerRateAtMaxSpeed="0.6" _steerMinSpeed="1" _offroadSensitivity="0" _groundSnapDistance="0.4">
+	<_inertia _mass="90" _gravity="9.81" _slopeScale="1" _rollingResistanceScale="0.6" _airDrag="0.35" />
+	<_grip _bEnabled="true" _lateralGrip="3" />
+	<_drift _bEnabled="false" />
+	<_boost _bEnabled="false" />
+	<_airControl _bEnabled="false" />
+	<_hover _bEnabled="false" />
+	<_rail _bEnabled="false" />
+</KinematicVehicleSettings>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 무거운 썰매 — 썰매의 변형. 질량 한 칸만 바꾼다: 경사 중력 · 구름 저항은 질량과 상관없고 공기 저항만 덜 걸려 내리막 끝속도가 높다. -->
+<KinematicVehicleSettings _base="common/data/vehicles/sled.vehicle.xml">
+	<_inertia _mass="240" />
+</KinematicVehicleSettings>

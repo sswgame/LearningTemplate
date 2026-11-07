@@ -47,6 +47,7 @@ namespace sw
         , _canterTurnRate{ 1.4f }
         , _gallopTurnRate{ 1.0f }
         , _bUseRootMotion{ false }
+        , _inertia{}
         , _forwardSpeed{ 0.0f }
         , _facingYaw{ 0.0f }
         , _sprintIndex{ -1 }
@@ -55,6 +56,8 @@ namespace sw
         , _bGallopAllowed{ SW_TRUE }
         , _reserved{ 0 }
     {
+        _inertia._mass                   = 500.0f;
+        _inertia._rollingResistanceScale = 0.0f; // 표면은 걷는 이동 계수가 이미 줄인다
         setCanEverTick( true );
     }
 
@@ -147,15 +150,21 @@ namespace sw
             turn                  = MathUtil::clamp( MathUtil::wrapAngle( wantYaw - _facingYaw ), -1.0f, 1.0f );
             _facingYaw            = MathUtil::wrapAngle( newYaw );
         }
+        // 바깥 힘(경사 중력 · 공기 저항)을 먼저 더하고 걸음새 속도로 다가간다 — 다리가 미는 힘(가속 · 감속)이 당김보다 크면 걸음새를 지키고, 서 있는 말이 비탈에서 밀려 내려가지 않는다.
+        // 디딘 면이 진행 방향으로 오르면 법선이 뒤로 눕는다(오르막 사인 = −법선·진행). 디딘 데가 없으면 경사 없음.
+        const float3                  facing{ MathUtil::sin( _facingYaw ), 0.0f, MathUtil::cos( _facingYaw ) };
+        CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>();
+        const bool                    bGrounded   = pController != nullptr && pController->isGrounded();
+        const float32                 slopeSin    = bGrounded ? -pController->getGroundNormal().dot( facing ) : 0.0f;
+        _forwardSpeed += _inertia.computeAlongAcceleration( _forwardSpeed, slopeSin, 0.0f, deltaTime ) * deltaTime;
         const float32 targetSpeed = computeGaitSpeed( gait );
         const float32 rate        = targetSpeed > _forwardSpeed ? _acceleration : _deceleration;
         _forwardSpeed             = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * deltaTime );
 
         // 자기 요 방향으로 간다. 요가 0 이면 +Z 쪽이고 +X 쪽으로 돈다. 루트 모션이면 애니메이션이 옮긴다.
-        const float3                  velocity{ MathUtil::sin( _facingYaw ) * _forwardSpeed, 0.0f, MathUtil::cos( _facingYaw ) * _forwardSpeed };
-        CharacterControllerComponent* pController       = pOwner->getComponent<CharacterControllerComponent>();
-        SceneComponent*               pRoot             = pOwner->getPrimarySceneComponent();
-        const bool                    bMoveRootDirectly = pRoot != nullptr && _bUseRootMotion == false && _forwardSpeed != 0.0f;
+        const float3    velocity          = facing * _forwardSpeed;
+        SceneComponent* pRoot             = pOwner->getPrimarySceneComponent();
+        const bool      bMoveRootDirectly = pRoot != nullptr && _bUseRootMotion == false && _forwardSpeed != 0.0f;
         if ( pController != nullptr )
             pController->setMoveVelocity( _bUseRootMotion ? float3{} : velocity );
         else if ( bMoveRootDirectly )

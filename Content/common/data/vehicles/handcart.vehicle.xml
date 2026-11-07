@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 손수레 — 사람이 미는 약한 구동, 낮은 상한, 높은 그립. 내리막에서는 밀지 않아도 구르고 오르막에서는 밀어도 느리다. -->
+<KinematicVehicleSettings _base="common/data/vehicles/sled.vehicle.xml" _maxSpeed="4" _maxDriveForce="160" _brakeForce="600" _reverseMaxSpeed="1.5"
+                          _coastDrag="0.5" _overSpeedDeceleration="2" _steerRate="1.6" _steerRateAtMaxSpeed="1.2" _steerMinSpeed="0.3">
+	<_inertia _mass="120" _rollingResistanceScale="1" _airDrag="0.2" />
+	<_grip _lateralGrip="12" />
+</KinematicVehicleSettings>

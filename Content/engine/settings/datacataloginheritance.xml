@@ -29,6 +29,15 @@
 	<Document root="AudioMusicDef">
 		<Field name="_listSegment" key="_name"/>
 	</Document>
+	<Document root="KinematicVehicleSettings">
+		<Field name="_inertia"/>
+		<Field name="_grip"/>
+		<Field name="_drift"/>
+		<Field name="_boost"/>
+		<Field name="_airControl"/>
+		<Field name="_hover"/>
+		<Field name="_rail"/>
+	</Document>
 	<Document root="MaterialGraphDef">
 		<Field name="_listNode" key="_name">
 			<Field name="_listLink" key="_pin"/>

@@ -231,7 +231,7 @@ SW_TEST_CASE( KartTrackTest, Projection )
     SW_EXPECT_FALSE( empty.isValid() );
     SW_EXPECT_NEAR( 0.0f, empty.project( opposite )._distance, kKartTolerance );
     SW_EXPECT_NEAR( 0.0f, empty.wrapDistance( 50.0f ), kKartTolerance );
-    SW_EXPECT_NEAR( 1.0f, empty.sampleSpeedScale( 0.0f, 0.0f ), kKartTolerance );
+    SW_EXPECT_NEAR( 1.0f, empty.sampleSurface( 0.0f, 0.0f )._speedScale, kKartTolerance );
 }
 
 /**
@@ -300,12 +300,12 @@ SW_TEST_CASE( KartTrackTest, BoostPadOncePerEntry )
  */
 SW_TEST_CASE( KartTrackTest, SpeedScaleZones )
 {
-    sw::KartOffroadZoneDef wrapped;
+    sw::KartSurfaceZoneDef wrapped;
     wrapped._from        = 0.9f;
     wrapped._to          = 0.1f;
     wrapped._speedScale  = 0.25f;
     sw::KartTrackDef def = KartTestUtil::makeRingDef( 3, {} );
-    def._listOffroadZone.push_back( wrapped );
+    def._listSurfaceZone.push_back( wrapped );
     def._offroadScale = 0.5f;
     sw::KartTrack track;
     SW_REQUIRE_TRUE( track.initialize( def ) );
@@ -313,7 +313,7 @@ SW_TEST_CASE( KartTrackTest, SpeedScaleZones )
     const auto    scaleAt = [&track]( float32 distance, float32 offset )
     {
         const sw::float3 point = KartTestUtil::makeOffsetPoint( track, distance, offset );
-        return track.sampleSpeedScale( point._x, point._z );
+        return track.sampleSurface( point._x, point._z )._speedScale;
     };
     SW_EXPECT_NEAR( 0.25f, scaleAt( length * 0.95f, 0.0f ), kKartTolerance );
     SW_EXPECT_NEAR( 0.25f, scaleAt( length * 0.05f, 0.0f ), kKartTolerance );
@@ -321,20 +321,70 @@ SW_TEST_CASE( KartTrackTest, SpeedScaleZones )
     SW_EXPECT_NEAR( 0.5f, scaleAt( length * 0.5f, 8.0f ), kKartTolerance );   // 길 밖
     SW_EXPECT_NEAR( 0.25f, scaleAt( length * 0.95f, 8.0f ), kKartTolerance ); // 둘 중 작은 쪽
 
-    sw::KartOffroadZoneDef side;
+    sw::KartSurfaceZoneDef side;
     side._from               = 0.0f;
     side._to                 = 1.0f;
     side._minOffset          = 1.0f;
     side._maxOffset          = 5.0f;
     side._speedScale         = 0.75f;
     sw::KartTrackDef fullDef = KartTestUtil::makeRingDef( 3, {} );
-    fullDef._listOffroadZone.push_back( side );
+    fullDef._listSurfaceZone.push_back( side );
     sw::KartTrack full;
     SW_REQUIRE_TRUE( full.initialize( fullDef ) );
     const sw::float3 inZone  = KartTestUtil::makeOffsetPoint( full, full.getLength() * 0.5f, 3.0f );
     const sw::float3 outZone = KartTestUtil::makeOffsetPoint( full, full.getLength() * 0.5f, -3.0f );
-    SW_EXPECT_NEAR( 0.75f, full.sampleSpeedScale( inZone._x, inZone._z ), kKartTolerance );
-    SW_EXPECT_NEAR( 1.0f, full.sampleSpeedScale( outZone._x, outZone._z ), kKartTolerance );
+    SW_EXPECT_NEAR( 0.75f, full.sampleSurface( inZone._x, inZone._z )._speedScale, kKartTolerance );
+    SW_EXPECT_NEAR( 1.0f, full.sampleSurface( outZone._x, outZone._z )._speedScale, kKartTolerance );
+}
+
+/**
+ * @brief [KartTrackTest] 관성 이동: 같은 페달로 1 초 — 내리막 트랙이 평지보다 빠르고, 눈 구간(높은 구름 저항)이 빙판 구간보다 느리며, 빙판은 옆으로 더 미끄러진다
+ */
+SW_TEST_CASE( KartTrackTest, SlopeAndSurfaceZonesChangeTheKart )
+{
+    const auto runKart = []( const sw::KartTrackDef& def, float32 seconds, float32 steer, float32& outLateral )
+    {
+        sw::KartTrack track;
+        SW_EXPECT_TRUE( track.initialize( def ) );
+        sw::KinematicVehicleMotor motor;
+        motor.setGround( &track );
+        motor.reset( track.sample( 0.0f )._position, KartTestUtil::computeTrackYaw( track, 0.0f ) );
+        sw::KinematicVehicleInput input;
+        input._throttle = 1.0f;
+        input._steer    = steer;
+        for ( int32 stepIndex = 0; stepIndex < static_cast<int32>( seconds * 60.0f + 0.5f ); ++stepIndex )
+            motor.update( input, 1.0f / 60.0f );
+        outLateral = sw::MathUtil::abs( motor.getLateralSpeed() );
+        return motor.getForwardSpeed();
+    };
+    float32 lateral = 0.0f;
+
+    const sw::KartTrackDef flatDef  = KartTestUtil::makeRingDef( 3, {} );
+    sw::KartTrackDef       hillDef  = flatDef;
+    hillDef._listControlPoint[1]._y = -20.0f; // 거리 0 에서 +Z 로 나가면 내리막
+    const float32 flat              = runKart( flatDef, 1.0f, 0.0f, lateral );
+    const float32 downhill          = runKart( hillDef, 1.0f, 0.0f, lateral );
+    SW_EXPECT_TRUE( downhill > flat + 0.5f );
+
+    sw::KartSurfaceZoneDef zone;
+    zone._from                = 0.0f;
+    zone._to                  = 1.0f;
+    sw::KartTrackDef iceDef   = flatDef;
+    zone._rollingResistance   = 0.005f;
+    zone._gripScale           = 0.15f;
+    iceDef._listSurfaceZone   = { zone };
+    sw::KartTrackDef snowDef  = flatDef;
+    zone._rollingResistance   = 0.3f;
+    zone._gripScale           = 0.6f;
+    snowDef._listSurfaceZone  = { zone };
+    float32       iceLateral  = 0.0f;
+    float32       snowLateral = 0.0f;
+    const float32 ice         = runKart( iceDef, 1.0f, 0.0f, lateral );
+    const float32 snow        = runKart( snowDef, 1.0f, 0.0f, lateral );
+    SW_EXPECT_TRUE( ice > snow + 1.0f ); // 0.3·9.81 ≈ 2.9 m/s² 를 1 초 덜 민다
+    (void)runKart( iceDef, 1.5f, 1.0f, iceLateral );
+    (void)runKart( flatDef, 1.5f, 1.0f, snowLateral );
+    SW_EXPECT_TRUE( iceLateral > snowLateral ); // 같은 조향에 빙판은 옆 미끄러짐이 남는다
 }
 
 /**
@@ -384,7 +434,7 @@ SW_TEST_CASE( KartTrackTest, CatalogReportsBrokenTracks )
     <Checkpoint at="0.5"/><Checkpoint at="0.25"/>
     <ItemBox at="0.5" offset="-3"/>
     <BoostPad at="0.2" duration="1"/>
-    <Offroad from="0.6" to="0.65" scale="0.4"/>
+    <Surface from="0.6" to="0.65" scale="0.4"/>
   </Track>
   <Track id="ring" name="First" width="20" laps="9"><Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/></Track>
   <Track id="short" name="Short"><Point x="0" z="0"/></Track>
@@ -552,7 +602,7 @@ SW_TEST_CASE( KartAITest, SteeringAndDrift )
     sw::KartTrack track;
     SW_REQUIRE_TRUE( track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
     sw::KinematicVehicleSettings vehicle;
-    vehicle._driftMinSpeed = 0.0f;
+    vehicle._drift._minSpeed = 0.0f;
     sw::KinematicVehicleMotor motor;
     motor.setSettings( vehicle );
     motor.setGround( &track );

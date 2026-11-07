@@ -1,8 +1,8 @@
 /**
  * @file KartTrack.h
- * @brief 카트 트랙을 정의합니다. 닫힌 중심선(Catmull-Rom 보간과 누적 거리 테이블), 폭, 체크포인트 문(지름길 방지), 아이템 상자, 부스트 패드, 오프로드 구간과 XML 카탈로그를 다룹니다.
+ * @brief 카트 트랙을 정의합니다. 닫힌 중심선(Catmull-Rom 보간과 누적 거리 테이블), 폭, 체크포인트 문(지름길 방지), 아이템 상자, 부스트 패드, 표면 구간(오프로드 · 빙판 · 눈)과 XML 카탈로그를 다룹니다.
  * @details 좌표는 기반 `KinematicVehicleMotor` 와 같다. +Y 가 위이고, 요 0 이 +Z 이며, 오른쪽은 (tz, 0, -tx) 이다. 트랙 위의 위치는 "중심선 거리(0..길이) + 옆 비킴(오른쪽 +)" 으로 나타낸다.
- *          트랙은 `IVehicleGround` 이므로 차가 그대로 밟는다. 높이는 중심선 높이이고, 폭 밖과 오프로드 구간은 속도 배율이 1 보다 작다.
+ *          트랙은 `IVehicleGround` 이므로 차가 그대로 밟는다. 높이는 중심선 높이이고, 폭 밖은 속도 배율이 1 보다 작으며 표면 구간이 속도 배율 · 구름 저항 · 그립을 바꾼다.
  *          결승선은 거리 0 이고 체크포인트는 그 사이의 거리이다. 문은 중심선에 직각인 선분이므로, 안쪽 풀밭을 가로지르는 지름길은 문을 지나지 않는다.
  */
 #pragma once
@@ -92,9 +92,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 오프로드 구간입니다. 거리 `_from`..`_to`(비율이며 결승선을 넘어 감겨도 됩니다)와 옆 비킴 범위 안의 속도 배율을 정합니다(모래, 잔디, 물웅덩이). */
+    /**
+     * @brief 표면 구간입니다. 거리 `_from`..`_to`(비율이며 결승선을 넘어 감겨도 됩니다)와 옆 비킴 범위 안의 표면(속도 배율 · 구름 저항 · 그립 배율)을 정합니다.
+     * @details 모래 · 잔디 · 물웅덩이(속도 배율), 빙판(낮은 구름 저항 · 그립), 눈(높은 구름 저항)이 같은 원소다. 겹치면 속도 배율 · 그립은 작은 쪽, 구름 저항은 뒤의 구간이 이긴다.
+     */
     REFLECT()
-    struct KartOffroadZoneDef
+    struct KartSurfaceZoneDef
     {
         REFLECT_BODY();
 
@@ -107,7 +110,11 @@ namespace sw
         PROPERTY( Min = "_minOffset" )
         float32 _maxOffset{ 1000.0f };
         PROPERTY( Name = "scale", Min = 0.0 )
-        float32 _speedScale{ 0.5f };
+        float32 _speedScale{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Rolling resistance coefficient in the zone (ice low, sand and snow high)" )
+        float32 _rollingResistance{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Side grip scale in the zone (ice below 1)" )
+        float32 _gripScale{ 1.0f };
     };
 } // namespace sw
 
@@ -127,11 +134,13 @@ namespace sw
         vector<float32>            _listCheckpoint{};   ///< 체크포인트 위치이다(비율 0..1이며 오름차순으로 정리된다)
         vector<KartItemBoxDef>     _listItemBox{};
         vector<KartBoostPadDef>    _listBoostPad{};
-        vector<KartOffroadZoneDef> _listOffroadZone{};
+        vector<KartSurfaceZoneDef> _listSurfaceZone{};
         PROPERTY( Min = 0.1 )
         float32 _width{ 12.0f }; ///< 길 폭(m)이다. 밖은 오프로드이다
         PROPERTY( Min = 0.0 )
         float32 _offroadScale{ 0.5f }; ///< 길 밖의 속도 배율
+        PROPERTY( Min = 0.0 )
+        float32 _rollingResistance{ 0.0f }; ///< 구간 밖 길의 구름 저항 계수(0 이면 경사 중력과 공기 저항만 남는다)
         PROPERTY( Min = 0.0 )
         float32 _gateMargin{ 6.0f }; ///< 문이 길 가장자리 밖으로 더 뻗는 길이(m)이다. 길을 살짝 벗어나도 지나간 것으로 본다
         PROPERTY( Name = "laps", Min = 1 )
@@ -232,8 +241,8 @@ namespace sw
         /** @brief 길 폭 안에 있는지 반환합니다. */
         bool isOnRoad( const float3& position ) const;
 
-        float32 sampleHeight( float32 x, float32 z ) const override;
-        float32 sampleSpeedScale( float32 x, float32 z ) const override;
+        float32        sampleHeight( float32 x, float32 z ) const override;
+        VehicleSurface sampleSurface( float32 x, float32 z ) const override;
 
         bool    isValid() const { return _listSample.size() >= 3; }
         float32 getLength() const { return _length; }
@@ -271,7 +280,7 @@ namespace sw
      * @class KartTrackCatalog
      * @brief `<KartTrackCatalog><Track id="ring" name="Ring" width="12" laps="3" offroadScale="0.5" samples="16"><Point x="0" y="0" z="0"/>...
      *        <Checkpoint at="0.33"/><ItemBox at="0.5" offset="-3"/><BoostPad at="0.2" offset="0" length="4" width="4" duration="1"/>
-     *        <Offroad from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4"/></Track></KartTrackCatalog>` 를 읽습니다.
+     *        <Surface from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4" rollingResistance="0.1" gripScale="1"/></Track></KartTrackCatalog>` 를 읽습니다.
      * @details 점이 3개보다 적은 트랙은 경고하고 건너뛴다. 같은 id 가 둘이면 뒤의 것이 이긴다.
      */
     class SW_KIT_API KartTrackCatalog : public GameCatalog<KartTrackDef, XMLCatalog<KartTrackCatalog>>

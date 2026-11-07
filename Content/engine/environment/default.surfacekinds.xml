@@ -1,28 +1,28 @@
 <!--
 	표면 종류 표 — SurfaceKindTable 이 읽는다(엔진 기본 에셋 표 _surfaceKinds). 종류 이름은 물리 재질 이름(physicssettings.xml _listMaterial)과 같고,
 	모든 물리 재질이 여기에 종류를 가져야 한다(테스트 SurfaceKindTest.ShippedTableCoversPhysicsMaterials). 물 속에 선 발은 _waterKind 를 낸다(SurfaceQuery).
-	_footstep 은 발소리 경로의 {surface} 자리, _moveScale 은 걷는 속도 배율(물리 마찰이 아니다), <_footprint> 도장이 있는 종류만 발자국을 남긴다 —
+	_footstep 은 발소리 경로의 {surface} 자리, _moveScale 은 걷는 속도 배율(물리 마찰이 아니다), _rollingResistance · _gripScale 은 바디 없는 탈것(KinematicVehicle)의 구름 저항 계수 · 옆 그립 배율, <_footprint> 도장이 있는 종류만 발자국을 남긴다 —
 	도장은 표면 변형 층(SurfaceDeformSystem)에 찍혀 지면 머티리얼(surface_deform.hlsl)이 꺼져 보이고 _fillSpeed 로 메워진다(눈은 깊고 느리게, 모래는 얕고 빠르게).
 	높이장 · 충돌은 고치지 않는다. 변형 층은 카메라 앞 _deformExtent m 정사각 창을 _deformResolution 칸(640 / 20 m = 3 cm)으로 나누고 _deformDepthRange m 까지 담는다.
 -->
 <SurfaceKindTable _waterKind="Water" _deformResolution="640" _deformExtent="20" _deformDepthRange="0.15">
 	<_listKind>
-		<SurfaceKindDef _name="Default" _footstep="default" />
-		<SurfaceKindDef _name="Stone" _footstep="stone" />
-		<SurfaceKindDef _name="Wood" _footstep="wood" />
-		<SurfaceKindDef _name="Metal" _footstep="metal" />
-		<SurfaceKindDef _name="Ice" _footstep="ice" />
-		<SurfaceKindDef _name="Rubber" _footstep="rubber" />
-		<SurfaceKindDef _name="Flesh" _footstep="flesh" />
-		<SurfaceKindDef _name="Snow" _footstep="snow" _moveScale="0.8">
+		<SurfaceKindDef _name="Default" _footstep="default" _rollingResistance="0.015" _gripScale="1" />
+		<SurfaceKindDef _name="Stone" _footstep="stone" _rollingResistance="0.015" _gripScale="1" />
+		<SurfaceKindDef _name="Wood" _footstep="wood" _rollingResistance="0.02" _gripScale="1" />
+		<SurfaceKindDef _name="Metal" _footstep="metal" _rollingResistance="0.01" _gripScale="0.9" />
+		<SurfaceKindDef _name="Ice" _footstep="ice" _rollingResistance="0.005" _gripScale="0.15" />
+		<SurfaceKindDef _name="Rubber" _footstep="rubber" _rollingResistance="0.02" _gripScale="1" />
+		<SurfaceKindDef _name="Flesh" _footstep="flesh" _rollingResistance="0.05" _gripScale="0.8" />
+		<SurfaceKindDef _name="Snow" _footstep="snow" _rollingResistance="0.06" _gripScale="0.6" _moveScale="0.8">
 			<_footprint _shape="Print" _size="0.14,0.3" _depth="0.07" _rimHeight="0.012" _rimWidth="0.04" _fillSpeed="0.003" />
 		</SurfaceKindDef>
-		<SurfaceKindDef _name="Sand" _footstep="sand" _moveScale="0.85">
+		<SurfaceKindDef _name="Sand" _footstep="sand" _rollingResistance="0.15" _gripScale="0.7" _moveScale="0.85">
 			<_footprint _shape="Print" _size="0.13,0.28" _depth="0.03" _rimHeight="0.008" _rimWidth="0.03" _fillSpeed="0.01" />
 		</SurfaceKindDef>
-		<SurfaceKindDef _name="Mud" _footstep="mud" _moveScale="0.7">
+		<SurfaceKindDef _name="Mud" _footstep="mud" _rollingResistance="0.2" _gripScale="0.5" _moveScale="0.7">
 			<_footprint _shape="Print" _size="0.13,0.28" _depth="0.04" _fillSpeed="0.002" />
 		</SurfaceKindDef>
-		<SurfaceKindDef _name="Water" _footstep="water" _moveScale="0.6" />
+		<SurfaceKindDef _name="Water" _footstep="water" _rollingResistance="0.3" _gripScale="0.4" _moveScale="0.6" />
 	</_listKind>
 </SurfaceKindTable>

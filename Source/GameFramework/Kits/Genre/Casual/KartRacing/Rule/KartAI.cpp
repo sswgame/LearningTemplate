@@ -40,7 +40,7 @@ namespace sw
         input._throttle         = absCorner > _settings._brakeAngle ? 0.4f : 1.0f;
 
         // 3) 드리프트: 큰 곡선 앞에서 그쪽으로 걸고, 곡선이 펴지면 놓는다(미니터보를 받는다).
-        const float32 driftMinSpeed = motor.getSettings()._driftMinSpeed;
+        const float32 driftMinSpeed = motor.getSettings()._drift._minSpeed;
         const int32   cornerSide    = corner > 0.0f ? 1 : -1;
         if ( _driftSide == 0 )
         {

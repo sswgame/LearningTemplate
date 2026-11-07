@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Movement/InertiaSettings.h"
 
 namespace sw
 {
@@ -37,7 +38,10 @@ namespace sw
      *          애니메이터 파라미터(`Gait` 0..4, `Turn` -1..1)만 쓰고 이동은 애니메이션 루트 모션이 한다(`CharacterControllerComponent::addRootMotionDisplacement` 를
      *          애니메이션 단계가 부른다). 캐릭터 컨트롤러가 없으면 루트를 직접 옮긴다(물리 없는 탈것). 질주 허용(`setGallopAllowed`)과
      *          걸음새 상한(`setMaxGait`)은 키트가 정한다(스태미나, 유대).
-     *          언리얼의 Red Dead 류 말 이동과 같은 구조이다. 같은 의도이면 플레이어가 타든 AI 가 몰든 같은 궤적이 나온다.
+     *          관성 이동의 바깥 힘(`InertiaSettings` — 경사 중력 · 공기 저항, 바퀴 탈것 · 썰매와 같은 식)을 더한 뒤 걸음새 속도로 다가간다. 경사는 캐릭터 컨트롤러가 디딘 면의 법선으로 잰다.
+     *          걸음새의 가속 · 감속이 경사의 당김보다 크면 걸음새 속도를 지키고, 가파르면 오르막에서 처지고 내리막에서 빨라진다. 표면은 이동 계수(`GroundSurfaceComponent`)가 이미 줄이므로
+     *          구름 저항 배율은 기본 0 이다(발굽은 바퀴가 아니다).
+     *          언리얼 CharacterMovement 위의 말 이동과 같은 구조이다. 같은 의도이면 플레이어가 타든 AI 가 몰든 같은 궤적이 나온다.
      */
     REFLECT( Category = "Vehicle", DisplayName = "Mount Movement", Tooltip = "Control intent -> gait (idle, walk, trot, canter, gallop), steering and root motion for a ridden animal" )
     class SW_GF_API MountMovementComponent : public Component
@@ -100,6 +104,8 @@ namespace sw
         float32 _gallopTurnRate;
         PROPERTY( Category = "Mount", DisplayName = "Use Root Motion", Tooltip = "Animation root motion moves the mount; this component only sets the animator parameters" )
         bool _bUseRootMotion;
+        PROPERTY( Category = "Mount", DisplayName = "Inertia", Tooltip = "Slope pull and air drag on top of the gait speed (same model as kinematic vehicles)" )
+        InertiaSettings _inertia;
 
         float32                _forwardSpeed;
         float32                _facingYaw;

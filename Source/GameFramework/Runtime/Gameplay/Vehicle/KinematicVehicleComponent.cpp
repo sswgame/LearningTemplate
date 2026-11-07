@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Environment/Surface/SurfaceKind.h"
+#include "Engine/Environment/Surface/SurfaceQuery.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -13,6 +15,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/World/Spline/SplineComponent.h"
 
 namespace sw
 {
@@ -32,6 +35,8 @@ namespace sw
 {
     KinematicVehicleComponent::PhysicsGround::PhysicsGround()
         : _pManager{ nullptr }
+        , _pSurfaceTable{}
+        , _ownerID{ 0 }
         , _fallbackHeight{ 0.0f }
         , _probeTop{ 0.0f }
     {
@@ -50,16 +55,28 @@ namespace sw
         return _probeTop - hit._distance;
     }
 
+    VehicleSurface KinematicVehicleComponent::PhysicsGround::sampleSurface( float32 x, float32 z ) const
+    {
+        using Internal = KinematicVehicleComponentInternal;
+        VehicleSurface surface;
+        SurfaceSample  sample;
+        if ( _pManager == nullptr || _pSurfaceTable == nullptr )
+            return surface;
+        const float3 from{ x, _probeTop, z };
+        const float3 to{ x, _probeTop - Internal::kProbeLength, z };
+        if ( SurfaceQuery::sampleBelow( *_pManager, *_pSurfaceTable, from, to, _ownerID, false, sample ) == false || sample._pKind == nullptr )
+            return surface; // 맞은 것이 없다 — 평면 위(구름 저항 0). 표에 없는 재질은 질의가 이름마다 오류를 남겼다
+        surface._rollingResistance = sample._pKind->_rollingResistance;
+        surface._gripScale         = sample._pKind->_gripScale;
+        return surface;
+    }
+
     KinematicVehicleComponent::KinematicVehicleComponent()
-        : _driftButton{ "Drift" }
+        : _tuning{}
+        , _rail{}
+        , _driftButton{ "Drift" }
         , _boostButton{ "Boost" }
         , _jumpButton{ "Jump" }
-        , _maxSpeed{ 30.0f }
-        , _acceleration{ 18.0f }
-        , _brakeDeceleration{ 40.0f }
-        , _reverseMaxSpeed{ 8.0f }
-        , _steerRate{ 2.4f }
-        , _steerRateAtMaxSpeed{ 1.1f }
         , _bUsePhysicsGround{ true }
         , _motor{}
         , _ground{}
@@ -67,38 +84,67 @@ namespace sw
         , _driftIndex{ -1 }
         , _boostIndex{ -1 }
         , _jumpIndex{ -1 }
+        , _bReady{ false }
     {
         setCanEverTick( true );
     }
 
-    KinematicVehicleSettings KinematicVehicleComponent::makeSettings() const
-    {
-        KinematicVehicleSettings settings;
-        settings._maxSpeed            = _maxSpeed;
-        settings._acceleration        = _acceleration;
-        settings._brakeDeceleration   = _brakeDeceleration;
-        settings._reverseMaxSpeed     = _reverseMaxSpeed;
-        settings._steerRate           = _steerRate;
-        settings._steerRateAtMaxSpeed = _steerRateAtMaxSpeed;
-        return settings;
-    }
+    KinematicVehicleComponent::~KinematicVehicleComponent() = default;
 
     void KinematicVehicleComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
+        _bReady                     = false;
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         _driftIndex                 = pPawn != nullptr ? pPawn->findButton( _driftButton ) : -1;
         _boostIndex                 = pPawn != nullptr ? pPawn->findButton( _boostButton ) : -1;
         _jumpIndex                  = pPawn != nullptr ? pPawn->findButton( _jumpButton ) : -1;
         const SceneComponent* pRoot = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const float3          start = pRoot != nullptr ? pRoot->getWorldPosition() : float3{};
-        _ground._pManager           = _bUsePhysicsGround && pOwner != nullptr ? pOwner->getManager() : nullptr;
-        _ground._fallbackHeight     = start._y;
-        _motor.setSettings( makeSettings() );
+        if ( pOwner == nullptr || pRoot == nullptr )
+            return;
+
+        const shared_ptr<const KinematicVehicleSettings> pTuning = _tuning.acquire();
+        if ( pTuning == nullptr )
+        {
+            SW_LOG_ERROR_ID( "KinematicVehicle.TuningMissing", "'%#': vehicle tuning '%#' did not load; the vehicle does not move", pOwner->getName().c_str(), _tuning.c_str() );
+            return;
+        }
+        const float3 start      = pRoot->getWorldPosition();
+        _ground._pManager       = _bUsePhysicsGround ? pOwner->getManager() : nullptr;
+        _ground._ownerID        = pOwner->getObjectID();
+        _ground._fallbackHeight = start._y;
+        _ground._probeTop       = start._y + KinematicVehicleComponentInternal::kProbeAbove;
+        if ( _bUsePhysicsGround )
+        {
+            _ground._pSurfaceTable = SurfaceKindTable::findDefault();
+            if ( _ground._pSurfaceTable == nullptr )
+                return; // 표를 읽지 못했다 — `findDefault` 가 오류를 남겼다. 표면 없이 달리지 않는다
+        }
+        _motor.setSettings( *pTuning );
         _motor.setGround( &_ground );
-        _motor.reset( start, pRoot != nullptr ? pRoot->getLocalRotation()._y : 0.0f );
+        _motor.reset( start, pRoot->getLocalRotation()._y );
+        if ( pTuning->_rail._bEnabled && attachRail() == false )
+            return;
+        _bReady = true;
+    }
+
+    bool KinematicVehicleComponent::attachRail()
+    {
+        GameObject*             pOwner   = getOwner();
+        GameObjectManager*      pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObject*             pRail    = pManager != nullptr && _rail.isValid() ? pManager->resolveGameObject( _rail ) : nullptr;
+        const SplineComponent*  pSpline  = pRail != nullptr ? pRail->getComponent<SplineComponent>() : nullptr;
+        const SplinePath* const pPath    = pSpline != nullptr ? &pSpline->getWorldPath() : nullptr;
+        if ( pPath == nullptr || pPath->isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "KinematicVehicle.RailMissing", "'%#': the rail module needs a Rail object with a spline of two or more points; the vehicle does not move",
+                             pOwner != nullptr ? pOwner->getName().c_str() : "" );
+            return false;
+        }
+        _motor.setRail( pPath );
+        return true;
     }
 
     KinematicVehicleInput KinematicVehicleComponent::toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex )
@@ -120,16 +166,16 @@ namespace sw
     {
         using Internal = KinematicVehicleComponentInternal;
         Component::onTick( deltaTime );
+        _listFrameEvent.clear();
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         SceneComponent*      pRoot  = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        if ( pRoot == nullptr )
+        if ( pRoot == nullptr || _bReady == false )
             return;
         const ControlIntent         intent = pPawn != nullptr ? pPawn->getIntent() : ControlIntent{};
         const KinematicVehicleInput input  = toVehicleInput( intent, _motor.getYaw(), _driftIndex, _boostIndex, _jumpIndex );
         _ground._probeTop                  = _motor.getPosition()._y + Internal::kProbeAbove;
         (void)_motor.advance( input, deltaTime );
-        _listFrameEvent.clear();
         _motor.pollEvents( _listFrameEvent );
 
         pRoot->setWorldPosition( _motor.getPosition() );

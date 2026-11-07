@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  카트 — 바디 없는 탈것 튜닝(KinematicVehicleSettings, 관성 이동 + 조작감 모듈). 모듈: 그립 · 드리프트 · 부스트 · 공중 제어(점프).
+  변형은 _base="common/data/vehicles/kart.vehicle.xml" 에 바뀌는 칸만 적는다(DataInheritance). 바퀴 구름 저항은 표면 종류 표(_rollingResistance) × _inertia._rollingResistanceScale 이다.
+-->
+<KinematicVehicleSettings _maxSpeed="30" _maxDriveForce="3600" _brakeForce="8000" _reverseMaxSpeed="8" _coastDrag="6" _overSpeedDeceleration="25"
+                          _steerRate="2.4" _steerRateAtMaxSpeed="1.1" _steerMinSpeed="2" _offroadSensitivity="1" _groundSnapDistance="0.3">
+	<_inertia _mass="200" _gravity="9.81" _slopeScale="1" _rollingResistanceScale="1" _airDrag="0.4" />
+	<_grip _bEnabled="true" _lateralGrip="10" />
+	<_drift _bEnabled="true" _driftGrip="4" _baseSteer="0.7" _steerBonus="0.5" _minSpeed="10" _nitroFillPerSecond="0.35" _maxNitroCount="2" />
+	<_boost _bEnabled="true" _speedBonus="8" _acceleration="45" _impulse="3" _nitroBoostTime="2" _bIgnoresOffroad="true" />
+	<_airControl _bEnabled="true" _jumpSpeed="7" _airSteerScale="0.3" _fallGravity="25" />
+	<_hover _bEnabled="false" />
+	<_rail _bEnabled="false" />
+</KinematicVehicleSettings>

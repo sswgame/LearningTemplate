@@ -343,22 +343,27 @@ namespace sw
         return project( float3{ x, 0.0f, z } )._position._y;
     }
 
-    float32 KartTrack::sampleSpeedScale( float32 x, float32 z ) const
+    VehicleSurface KartTrack::sampleSurface( float32 x, float32 z ) const
     {
+        VehicleSurface surface;
         if ( isValid() == false )
-            return 1.0f;
+            return surface;
         const KartTrackProjection projection = project( float3{ x, 0.0f, z } );
-        float32                   scale      = 1.0f;
+        surface._rollingResistance           = _def._rollingResistance;
         if ( MathUtil::abs( projection._offset ) > _def._width * 0.5f )
-            scale = _def._offroadScale;
-        for ( const KartOffroadZoneDef& zone : _def._listOffroadZone )
+            surface._speedScale = _def._offroadScale;
+        for ( const KartSurfaceZoneDef& zone : _def._listSurfaceZone )
         {
             const bool bAlong = isWithinSpan( projection._distance, zone._from * _length, zone._to * _length );
             const bool bSide  = zone._minOffset <= projection._offset && projection._offset <= zone._maxOffset;
             if ( bAlong && bSide )
-                scale = MathUtil::min( scale, zone._speedScale );
+            {
+                surface._speedScale        = MathUtil::min( surface._speedScale, zone._speedScale );
+                surface._gripScale         = MathUtil::min( surface._gripScale, zone._gripScale );
+                surface._rollingResistance = zone._rollingResistance;
+            }
         }
-        return scale;
+        return surface;
     }
 
     KartTrackGate KartTrack::makeGate( float32 distance ) const
@@ -434,11 +439,11 @@ namespace sw
                 bValid = XMLFields::readFields( node, pad, sourceName ) && bValid;
                 def._listBoostPad.push_back( pad );
             }
-            else if ( name == "Offroad" )
+            else if ( name == "Surface" )
             {
-                KartOffroadZoneDef zone;
+                KartSurfaceZoneDef zone;
                 bValid = XMLFields::readFields( node, zone, sourceName ) && bValid;
-                def._listOffroadZone.push_back( zone );
+                def._listSurfaceZone.push_back( zone );
             }
             else
             {

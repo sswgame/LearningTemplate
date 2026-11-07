@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Runtime/Character/Movement/InertiaSettings.h"
+
 namespace sw
 {
     namespace
@@ -145,23 +147,17 @@ namespace sw
 
     void CoasterTrain::integrate( float32 deltaTime )
     {
-        const CoasterTrackFrame frame   = _pTrack->sample( _distance );
-        const float32           gravity = _params._gravity;
+        const CoasterTrackFrame frame = _pTrack->sample( _distance );
 
-        // 경사 방향의 중력 성분과 저항을 구한다. 멈춰 있고 경사가 마찰을 못 이기면 그대로 선다(정지 마찰).
-        const float32 slopeAcceleration = -gravity * frame._forward._y;
-        const float32 friction          = _params._rollingResistance * gravity;
-        float32       acceleration      = slopeAcceleration;
-        if ( MathUtil::abs( _speed ) > 1.0e-3f )
-        {
-            acceleration -= ( _speed > 0.0f ? 1.0f : -1.0f ) * friction;
-            acceleration -= _params._dragCoefficient * _speed * MathUtil::abs( _speed );
-        }
-        else if ( MathUtil::abs( slopeAcceleration ) <= friction )
-        {
-            acceleration = 0.0f;
-        }
-        float32 speed = _speed + acceleration * deltaTime;
+        // 경사 방향의 중력 성분과 저항 — 탈것 · 말 · 썰매와 같은 관성 계산(`InertiaSettings`) 한 벌이다. 공기 저항 계수가 이미 질량당 값이라 질량은 1 이다.
+        // 멈춰 있고 경사가 마찰을 못 이기면 그대로 선다(정지 마찰).
+        InertiaSettings inertia;
+        inertia._mass                   = 1.0f;
+        inertia._gravity                = _params._gravity;
+        inertia._slopeScale             = 1.0f;
+        inertia._rollingResistanceScale = 1.0f;
+        inertia._airDrag                = _params._dragCoefficient;
+        float32 speed                   = _speed + inertia.computeAlongAcceleration( _speed, frame._forward._y, _params._rollingResistance, deltaTime ) * deltaTime;
 
         // 구간 장치: 체인은 아래로 못 가게 끌고, 스테이션은 정한 속도로 맞추고, 부스터는 올리고, 브레이크는 내린다.
         const uint8 flags = frame._flags;

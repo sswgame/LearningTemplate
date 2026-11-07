@@ -174,16 +174,11 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<KinematicVehicleComponent _driftButton="Drift"
-					                        _boostButton="Boost"
-					                        _jumpButton="Jump"
-					                        _maxSpeed="30"
-					                        _acceleration="18"
-					                        _brakeDeceleration="40"
-					                        _reverseMaxSpeed="8"
-					                        _steerRate="2.4"
-					                        _steerRateAtMaxSpeed="1.1"
-					                        _bUsePhysicsGround="true" />
+					<KinematicVehicleComponent _tuning="common/data/vehicles/kart.vehicle.xml"
+					                           _driftButton="Drift"
+					                           _boostButton="Boost"
+					                           _jumpButton="Jump"
+					                           _bUsePhysicsGround="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

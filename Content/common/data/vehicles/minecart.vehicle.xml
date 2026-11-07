@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 광산 수레 — 썰매의 변형. 레일 모듈: 배치한 오브젝트의 스플라인(KinematicVehicleComponent._rail) 위 거리만 움직이고, 경사는 레일의 기울기, 열린 끝에서 선다. 약한 손 구동이 있다. -->
+<KinematicVehicleSettings _base="common/data/vehicles/sled.vehicle.xml" _maxSpeed="12" _maxDriveForce="200" _brakeForce="1500" _reverseMaxSpeed="3">
+	<_inertia _mass="300" _airDrag="0.3" />
+	<_grip _bEnabled="false" />
+	<_rail _bEnabled="true" _rollingResistance="0.002" />
+</KinematicVehicleSettings>
