@@ -193,9 +193,9 @@ namespace sw
             const RHIFormat format = attachment._format;
             const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
             if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
-                (void)pool.allocateSized( _pDevice, attachment._name, format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
+                (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
-                pool.allocate( _pDevice, attachment._name, format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
         }
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
@@ -214,7 +214,7 @@ namespace sw
     {
         if ( _pDevice == nullptr || view._depthHistory != 0 )
             return;
-        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         if ( depth._texture == 0 )
             return; // 장면 깊이가 없는 파이프라인(2D) — 옮길 깊이가 없다
 
@@ -256,7 +256,7 @@ namespace sw
         TransientAttachmentPool::Attachment taaTarget{};
         for ( const hashed_string& output : pTAAPass->_listResolvedOutput )
         {
-            taaTarget = pool.find( output.view() );
+            taaTarget = pool.find( output );
             if ( taaTarget._texture != 0 )
                 break;
         }
@@ -283,7 +283,7 @@ namespace sw
         const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || view._occlusionTiles.isValid();
         if ( bNotNeeded )
             return;
-        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         if ( depth._texture == 0 )
             return;
         view._occlusionColumns = FrameRendererUtil::divideRoundUp( depth._width, FrameRendererUtil::kOcclusionTileSize );
@@ -360,20 +360,20 @@ namespace sw
         auto ageOutput = [&]( const hashed_string& name, bool bUsedThisFrame )
         {
             if ( Internal::isMadeOnFirstUse( listPass, name ) )
-                bReleased = pool.releaseIfIdle( _pDevice, name.view(), bUsedThisFrame ) || bReleased;
+                bReleased = pool.releaseIfIdle( _pDevice, name, bUsedThisFrame ) || bReleased;
         };
         // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과 — 출력이 이어졌는지 — 를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
         view._bTAAHistoryWritten = SW_FALSE;
         auto ensureMade          = [&]( const hashed_string& name )
         {
-            if ( pool.contains( name.view() ) )
+            if ( pool.contains( name ) )
                 return;
             for ( const RenderPassAttachment& attachment : listAttachment )
             {
                 if ( string_view( attachment._name ) != name.view() )
                     continue;
                 const RHIFormat format = attachment._format;
-                pool.allocate( _pDevice, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                pool.allocate( _pDevice, hashed_string( attachment._name.c_str() ), format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
                 bAllocated = true;
             }
         };
@@ -401,7 +401,7 @@ namespace sw
             if ( bForwards )
             {
                 // 꺼진 효과의 출력은 원본을 가리킨다 — 출력을 읽는 쪽이 원본을 읽는다.
-                bForwardSet = pool.forward( pass._listResolvedColorOutput[0]._attachment.view(), pSource->view() ) || bForwardSet;
+                bForwardSet = pool.forward( pass._listResolvedColorOutput[0]._attachment, *pSource ) || bForwardSet;
                 ageOutput( pass._listResolvedColorOutput[0]._attachment, false );
                 if ( bOutputNeeded )
                     Internal::markNeeded( listAttachment, *pSource, listNeeded );
@@ -412,7 +412,7 @@ namespace sw
                 // 꺼진 원본 없는 효과(SSAO)와 읽는 패스가 모두 빠진 패스는 출력이 없다 — 읽는 쪽은 그 역할을 바인딩하지 않는다.
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
-                    bForwardSet = pool.markAbsent( output._attachment.view() ) || bForwardSet;
+                    bForwardSet = pool.markAbsent( output._attachment ) || bForwardSet;
                     ageOutput( output._attachment, false );
                 }
                 continue;
@@ -421,7 +421,7 @@ namespace sw
                 view._bTAAHistoryWritten = SW_TRUE;
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
-                bForwardSet = pool.stopForward( output._attachment.view() ) || bForwardSet;
+                bForwardSet = pool.stopForward( output._attachment ) || bForwardSet;
                 ensureMade( output._attachment );
                 ageOutput( output._attachment, true );
             }

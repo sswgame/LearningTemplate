@@ -74,7 +74,7 @@ namespace sw
         const bool bBuilds               = static_cast<bool>( gv_occlusionCulling ) && pso != 0 && target._occlusionTiles.isValid() && bDepthHistoryReady;
         if ( bBuilds == false || pCmd == nullptr )
             return;
-        const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth );
 
         // 깊이 히스토리는 방금 RT 로 썼다 — RW 텍스처로 읽도록 옮긴다(GPU 입자 시뮬레이션도 같은 상태로 읽는다).
         pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
@@ -154,7 +154,7 @@ namespace sw
         if ( _readback.isInitialized() == false && _readback.initialize( pDevice, sizeof( float32 ), elementCount ) == false )
             return; // 만들지 못했다 — 이유는 initialize 가 남겼다. 가림을 보지 않는 채로 둔다.
 
-        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         const uint64                              next  = _readbackSerial + 1;
         ReadbackMeta&                             meta  = _arrReadbackMeta[next % kReadbackMetaCount];
         meta._viewProj                                  = view._depthHistoryViewProj;
@@ -174,7 +174,7 @@ namespace sw
         inoutParams._arrOcclusionGrid[3] = bOccludes ? 1u : 0u;
         if ( bOccludes == false )
             return;
-        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth );
         Memory::copy( inoutParams._arrOcclusionViewProj, &view._depthHistoryViewProj, sizeof( inoutParams._arrOcclusionViewProj ) );
         inoutParams._arrOcclusionGrid[0]      = view._occlusionColumns;
         inoutParams._arrOcclusionGrid[1]      = view._occlusionRows;

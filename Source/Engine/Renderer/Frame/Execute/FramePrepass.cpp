@@ -463,7 +463,7 @@ namespace sw
         const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
         if ( bHasSource == false || _psoManager.getEnginePSO( RenderPassType::DepthHistory ) == 0 )
             return false;
-        return view._transientPool.find( attachmentNames()._sceneDepth.view() )._texture != 0;
+        return view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
     }
 
     void FramePrepass::recordDepthHistories()
@@ -490,7 +490,7 @@ namespace sw
     {
         if ( canCopyDepthHistory( target ) == false )
             return;
-        const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth );
         _pCmd->prepareTextureForShaderRead( depth._texture );
         _pCmd->prepareTextureForRenderTarget( target._depthHistory );
 
@@ -554,7 +554,7 @@ namespace sw
         // 깊이 충돌은 주 시점의 지난 깊이만 본다(VFXCollisionDef 설명의 한계). 옮길 수 없는 프레임(첫 프레임 · 크기가 바뀐 프레임)은 히스토리가 없다.
         if ( canCopyDepthHistory( _state._mainView ) )
         {
-            const TransientAttachmentPool::Attachment depth = _state._mainView._transientPool.find( attachmentNames()._sceneDepth.view() );
+            const TransientAttachmentPool::Attachment depth = _state._mainView._transientPool.find( attachmentNames()._sceneDepth );
             input._depth._texture                           = _state._mainView._depthHistory;
             input._depth._uav                               = _state._mainView._depthHistoryUAV;
             input._depth._width                             = depth._width;

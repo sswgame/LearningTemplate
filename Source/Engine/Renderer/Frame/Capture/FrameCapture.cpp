@@ -117,7 +117,7 @@ namespace sw
     {
         if ( _pDevice == nullptr )
             return false;
-        const RHITextureHandle texture = _mainPool.findTexture( attachmentName );
+        const RHITextureHandle texture = _mainPool.findTexture( hashed_string::findInterned( attachmentName ) ); // 첨부 이름은 이미 intern 되어 있다 — 요청 글을 표에 넣지 않는다
         if ( texture == 0 )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.ReadbackTransientTransientNotFound", "readbackTransient: transient '%#' not found.", string( attachmentName ).c_str() );

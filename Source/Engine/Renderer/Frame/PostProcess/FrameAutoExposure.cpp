@@ -143,7 +143,7 @@ namespace sw
         for ( const RenderGraphPassDesc::ResolvedAttachment& input : passDesc._listResolvedInput )
         {
             if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
-                source = view._transientPool.find( input._attachment.view() );
+                source = view._transientPool.find( input._attachment );
         }
         // 톤맵하는 패스는 원본이 필수 입력이다(계약) — 이번 프레임에 없으면 그 패스도 그리지 못한다.
         if ( source._texture == 0 )

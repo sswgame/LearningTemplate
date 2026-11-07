@@ -852,7 +852,7 @@ namespace sw
         for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
             const uint64 kilobytes = static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format ) / 1024u;
-            SW_LOG_INFO_ID( "FrameRenderer.XKB", "[RenderTargets]   %#  %#x%#  %# KB", name, attachment._width, attachment._height, kilobytes );
+            SW_LOG_INFO_ID( "FrameRenderer.XKB", "[RenderTargets]   %#  %#x%#  %# KB", name.c_str(), attachment._width, attachment._height, kilobytes );
         }
 #endif
     }
@@ -884,7 +884,7 @@ namespace sw
         // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 **지금 보이는 그림**을
         // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
         // 꺼진 효과의 출력이면 그것이 가리키는 원본이 화면에 나간다(`TransientAttachmentPool::forward`).
-        const string_view presented = _state._mainView._transientPool.resolveName( getPresentedAttachmentName() );
+        const hashed_string presented = _state._mainView._transientPool.resolveName( hashed_string::findInterned( getPresentedAttachmentName() ) );
 
         vector<RenderTargetInfo> listTarget;
         listTarget.reserve( _state._mainView._transientPool.getAll().size() );
@@ -893,7 +893,7 @@ namespace sw
             if ( attachment._texture == 0 )
                 continue;
             RenderTargetInfo info{};
-            info._name       = name;
+            info._name       = name.c_str();
             info._bPresented = ( presented.empty() == false && name == presented ) ? SW_TRUE : SW_FALSE;
             info._texture    = attachment._texture;
             info._width      = attachment._width;

@@ -114,7 +114,8 @@ namespace sw
                     }
                     for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
                     {
-                        if ( desc._listAttachment[otherIndex]._name == attachment._name )
+                        // 대소문자만 달라도 겹침이다 — 실행 때 첨부는 `hashed_string` 이름(대소문자 무시)으로 찾는다.
+                        if ( StringUtil::equals( desc._listAttachment[otherIndex]._name, attachment._name, true ) )
                         {
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentNameDuplicated", "[%#] attachment '%#' name is duplicated", sourcePath, attachment._name );
                             ++issueCount;

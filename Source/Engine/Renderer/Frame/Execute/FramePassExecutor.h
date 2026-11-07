@@ -249,24 +249,24 @@ namespace sw
          */
         void drawShadowTiles( FramePassContext& context, bool bTransparentBatch );
         /** @brief 컬러(및 깊이) 패스를 시작합니다. 열지 못하면 false 를 반환하며, 그때는 그리지도 닫지도 않습니다(`beginColorPassMrt` 도 같습니다). */
-        bool beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
+        bool beginColorPass( FramePassContext& context, const hashed_string& colorName, const hashed_string& depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
         /**
          * @brief MRT 컬러 패스를 시작합니다.
          * @return 열었으면 true 입니다. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 반환하며 오류를 한 번 남깁니다.
          *         없는 첨부의 핸들 0 은 백버퍼를 가리키므로, 그대로 열면 패스가 화면에 그립니다.
          */
-        bool beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor,
-                                const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
+        bool beginColorPassMrt( FramePassContext& context, const hashed_string* pColorNames, const float4* pTargetClearColor,
+                                const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, const hashed_string& depthName,
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
-        void beginDepthOnlyPass( FramePassContext& context, string_view depthName, RHIRenderPassLoadOp depthLoad );
+        void beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad );
         /**
          * @brief 트랜지언트 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다(bindless SRV 자동 매칭).
          * @param canonicalName **미리 intern 해 둔** 이름입니다. 문자열을 받으면 패스마다 다시 intern 하게 되므로
          *        attachmentNames() 의 캐시를 넘기세요.
          */
-        void registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName );
+        void registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName );
         /** @brief bindless 텍스처 바인딩을 커밋합니다. PassConstantValues 를 갱신하고, 에뮬레이션 백엔드에는 폴백 바인딩을 합니다. */
         void commitBindlessTextureBindings( FramePassContext& context );
         /**
@@ -385,20 +385,20 @@ namespace sw
          * @brief 패스 타깃의 클리어 색입니다. 파이프라인 XML 의 첨부 선언(풀이 든 값)이 원본이고, 풀에 없는 이름(백버퍼)은 렌더러의 클리어 색입니다.
          * @details 호출부가 기본값을 넘기지 않는다 — 패스마다 적던 기본값이 선언과 갈라지는 길을 형식으로 막는다.
          */
-        float4 getTargetClearColor( string_view attachmentName ) const;
+        float4 getTargetClearColor( const hashed_string& attachmentName ) const;
         /**
          * @brief 트랜지언트 텍스처와 그 SRV 를 한 번의 조회로 찾습니다. 없으면 빈 값입니다.
          * @details 이름 하나로 둘 다 필요한 곳(registerPassTexture)이 패스마다 여러 번 돈다. 조회를 한 번만 하므로 해시도 한 번이다.
          */
-        TransientAttachmentPool::Attachment findTransientAttachment( string_view name ) const;
+        TransientAttachmentPool::Attachment findTransientAttachment( const hashed_string& name ) const;
         /** @brief 트랜지언트 텍스처 핸들을 찾습니다. 없으면 0 입니다. */
-        RHITextureHandle findTransient( string_view name ) const;
+        RHITextureHandle findTransient( const hashed_string& name ) const;
         /**
          * @brief Present 소스 어태치먼트 이름을 정합니다. 없으면 빈 뷰입니다.
          * @details 반환한 뷰는 파이프라인 선언(`_listResolvedInput`)이나 폴백 리터럴을 가리킨다. 매 프레임 불리므로 사본을 만들지 않는다.
          *          파이프라인을 바꾸기 전까지만 유효하므로 프레임을 넘겨 보관하지 않는다.
          */
-        string_view resolvePresentSource() const;
+        hashed_string resolvePresentSource() const;
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }

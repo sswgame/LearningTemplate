@@ -155,6 +155,19 @@ SW_TEST_CASE( RenderPipelineAssetTest, BadRenderPassRefFails )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( duplicated, RenderPipelineTestUtil::makeXML( passAttributes, "", "<_listRenderPassRef><item>engine/renderpass/defaultrenderpass.xml</item></_listRenderPassRef>" ) ) );
 }
 
+/** @brief [RenderPipelineAssetTest] 대소문자만 다른 첨부 이름은 겹침이다 — 실행 때 첨부를 대소문자를 무시하는 이름으로 찾는다 */
+SW_TEST_CASE( RenderPipelineAssetTest, AttachmentNamesDifferingOnlyInCaseAreDuplicates )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentNameDuplicated" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    const string        attachments    = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                                         "<RenderPassAttachment _name=\"scenedepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes, "", "", attachments ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 셰이딩 방식은 패스 구성과 맞아야 한다. 진입점은 적은 값을 그대로 가진다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ShadingModelMatchesPasses )
 {

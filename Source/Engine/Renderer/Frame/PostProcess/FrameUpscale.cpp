@@ -125,7 +125,7 @@ namespace sw
         view._bUpscaleThisFrame = SW_TRUE;
     }
 
-    bool FrameUpscale::recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, string_view sourceName ) const
+    bool FrameUpscale::recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, const hashed_string& sourceName ) const
     {
         if ( view._bUpscaleThisFrame == SW_FALSE )
             return false;

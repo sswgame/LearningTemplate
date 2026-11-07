@@ -521,7 +521,7 @@ namespace sw
         activePool().resetCleared();
     }
 
-    float4 FramePassExecutor::getTargetClearColor( string_view attachmentName ) const
+    float4 FramePassExecutor::getTargetClearColor( const hashed_string& attachmentName ) const
     {
         // 첨부의 클리어 색은 파이프라인 XML 의 선언 하나가 원본이다(풀이 할당할 때 선언 값을 든다). 패스마다 코드가 따로 적던
         // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(핸들 0)이고,
@@ -530,17 +530,17 @@ namespace sw
         return attachment._texture != 0 ? attachment._ops._clearColor : _state._clearColor;
     }
 
-    TransientAttachmentPool::Attachment FramePassExecutor::findTransientAttachment( string_view name ) const
+    TransientAttachmentPool::Attachment FramePassExecutor::findTransientAttachment( const hashed_string& name ) const
     {
         return activePool().find( name );
     }
 
-    RHITextureHandle FramePassExecutor::findTransient( string_view name ) const
+    RHITextureHandle FramePassExecutor::findTransient( const hashed_string& name ) const
     {
         return activePool().findTexture( name );
     }
 
-    string_view FramePassExecutor::resolvePresentSource() const
+    hashed_string FramePassExecutor::resolvePresentSource() const
     {
         // Present 의 SourceColor 입력이 원본이다(계약의 필수 입력 — 로드가 선언을 요구한다). 이름 후보로 "가장 나중 컬러" 를 짐작하지 않는다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
@@ -549,11 +549,11 @@ namespace sw
                 continue;
             for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
             {
-                if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor && findTransient( input._attachment.view() ) != 0 )
-                    return input._attachment.view();
+                if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor && findTransient( input._attachment ) != 0 )
+                    return input._attachment;
             }
         }
-        return string_view{};
+        return hashed_string{};
     }
 
     void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
@@ -578,7 +578,7 @@ namespace sw
         {
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
-                const TransientAttachmentPool::Attachment attachment = _state._mainView._transientPool.find( output._attachment.view() );
+                const TransientAttachmentPool::Attachment attachment = _state._mainView._transientPool.find( output._attachment );
                 const bool                                bScannable = attachment._texture != 0 && attachment._srv != kInvalidDescriptorIndex && GPUNanCheck::isScannableFormat( attachment._format );
                 if ( bScannable == false || VectorUtil::contains( listScanned, attachment._texture ) )
                     continue;
@@ -739,13 +739,13 @@ namespace sw
                     levelContext._pCmdList->prepareTextureForRenderTarget( 0 );
                     continue;
                 }
-                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource.c_str() );
+                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
                 if ( texture != 0 )
                     levelContext._pCmdList->prepareTextureForRenderTarget( texture );
             }
             else if ( barrier._after == RenderGraphResourceState::Read )
             {
-                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource.c_str() );
+                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
                 if ( texture != 0 )
                     levelContext._pCmdList->prepareTextureForShaderRead( texture );
             }
@@ -875,9 +875,9 @@ namespace sw
             if ( ( _disabledInputRoleMask & ( 1u << input._role ) ) != 0 )
                 continue;
             // 이 뷰에서 빠진 패스의 출력(`TransientAttachmentPool::markAbsent`, 꺼진 SSAO)은 걸지 않는다 — 셰이더는 그 역할의 기본값(AO = 1)을 쓴다. 로드 검증 3-7 이 선택 입력만 그렇게 읽게 한다.
-            if ( activePool().resolveName( input._attachment.view() ).empty() )
+            if ( activePool().resolveName( input._attachment ).empty() )
                 continue;
-            registerPassTexture( context, inputRoleName( role ), input._attachment.view() );
+            registerPassTexture( context, inputRoleName( role ), input._attachment );
         }
     }
 
@@ -916,7 +916,7 @@ namespace sw
         // 이 패스가 바인딩할 뎁스다. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
         // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 쓰지 않는다" 를 선언으로 표현할 수 있어야 한다.
         // 선언한 이름이 이번 프레임에 실제로 없으면(트랜지언트가 할당되지 않았으면) 뎁스 없이 진행한다.
-        const hashed_string passDepth = ( depthAttachment.empty() == false && findTransient( depthAttachment.view() ) != 0 )
+        const hashed_string passDepth = ( depthAttachment.empty() == false && findTransient( depthAttachment ) != 0 )
                                           ? depthAttachment
                                           : hashed_string{};
 
@@ -946,7 +946,7 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
-                    beginDepthOnlyPass( context, passDepth.view(), colorLoadFor( passDepth ) );
+                    beginDepthOnlyPass( context, passDepth, colorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
                         drawShadowTiles( context, input._bTransparentBatch );
@@ -955,7 +955,7 @@ namespace sw
                 }
                 case RenderPassType::DepthPrepass:
                 {
-                    beginDepthOnlyPass( context, passDepth.view(), colorLoadFor( passDepth ) );
+                    beginDepthOnlyPass( context, passDepth, colorLoadFor( passDepth ) );
                     drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
@@ -1067,12 +1067,12 @@ namespace sw
         // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
         // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
         // 프레임의 첫 사용만 선언의 로드 동작을 따르고(풀에 없는 이름 — 백버퍼 — 은 Clear), 그 뒤의 패스는 앞 패스가 쓴 것을 읽는다.
-        return markAttachmentCleared( name ) ? findTransientAttachment( name.view() )._ops._loadOp : RHIRenderPassLoadOp::Load;
+        return markAttachmentCleared( name ) ? findTransientAttachment( name )._ops._loadOp : RHIRenderPassLoadOp::Load;
     }
 
     void FramePassExecutor::executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
     {
-        if ( beginColorPass( context, targetName.view(), "", passClearColor, colorLoadFor( targetName ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, targetName, hashed_string{}, passClearColor, colorLoadFor( targetName ), RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, pso );
         context._pCmd->endRenderPass();
@@ -1088,7 +1088,7 @@ namespace sw
         const hashed_string*       pTarget  = &input._declaredColor[0]._attachment;
         // 이 뷰에서 빠진 패스는 셋업이 출력 이름을 원본에 잇거나 비웠다(`applyViewPassSelection` — 꺼진 효과, 읽는 패스가 모두 빠진 패스). 아무것도 기록하지 않는다.
         // 후처리를 끈 뷰 · 품질로 꺼지는 효과(kSkipsWithoutPostProcess)도 모두 이 길이다 — 원본을 복사하거나 셰이더가 원본을 고르던 길은 지웠다.
-        if ( activePool().isForwarded( pTarget->view() ) )
+        if ( activePool().isForwarded( *pTarget ) )
             return;
         registerDeclaredInputs( context, passDesc );
         _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
@@ -1097,7 +1097,7 @@ namespace sw
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( input._passType );
 
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
-        const float4 targetClear = getTargetClearColor( pTarget->view() );
+        const float4 targetClear = getTargetClearColor( *pTarget );
         executeFullscreenInto( context, pso, *pTarget, targetClear );
     }
 
@@ -1115,7 +1115,7 @@ namespace sw
         const RenderGraphPassDesc&                passDesc = input._passDesc;
         const hashed_string&                      target   = input._declaredColor[0]._attachment;
         const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
-        const TransientAttachmentPool::Attachment output   = activePool().find( target.view() );
+        const TransientAttachmentPool::Attachment output   = activePool().find( target );
         if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassNotReady", "Compute pass '%#' has no PSO or no RW output - it does not run", passDesc._name );
@@ -1132,7 +1132,7 @@ namespace sw
         vector<RHITextureHandle> listInputTexture;
         for ( uint32 inputIndex = 0; inputIndex < passDesc._listResolvedInput.size(); ++inputIndex )
         {
-            const TransientAttachmentPool::Attachment source = activePool().find( passDesc._listResolvedInput[inputIndex]._attachment.view() );
+            const TransientAttachmentPool::Attachment source = activePool().find( passDesc._listResolvedInput[inputIndex]._attachment );
             if ( source._uav == kInvalidDescriptorIndex )
             {
                 SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassInputNotReady", "Compute pass '%#' input %# has no RW view - it does not run", passDesc._name, inputIndex );
@@ -1166,10 +1166,10 @@ namespace sw
         const hashed_string&                           passDepth    = input._passDepth;
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
-            registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment.view() );
+            registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
         const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
-        if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        const float4         sceneClear  = getTargetClearColor( colorTarget );
+        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
         const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
                                           _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
@@ -1188,16 +1188,16 @@ namespace sw
         const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
         const hashed_string* pNormalTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
         const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
-        const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0 &&
-                                 pMaterialTarget != nullptr && findTransient( pMaterialTarget->view() ) != 0;
+        const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( *pNormalTarget ) != 0 &&
+                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0;
         if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
-        const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view(), pMaterialTarget->view() };
-        const float4              arrClears[]  = { getTargetClearColor( albedoTarget.view() ), getTargetClearColor( pNormalTarget->view() ),
-                                                   getTargetClearColor( pMaterialTarget->view() ) };
+        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget };
+        const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ),
+                                                   getTargetClearColor( *pMaterialTarget ) };
         const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ) };
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth.view(), colorLoadFor( passDepth ) ) == false )
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -1214,8 +1214,8 @@ namespace sw
             const bool bSeparateSource = static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor && sourceInput._attachment != colorTarget;
             if ( bSeparateSource == false )
                 continue;
-            const RHITextureHandle src = findTransient( sourceInput._attachment.view() );
-            const RHITextureHandle dst = findTransient( colorTarget.view() );
+            const RHITextureHandle src = findTransient( sourceInput._attachment );
+            const RHITextureHandle dst = findTransient( colorTarget );
             if ( src != 0 && dst != 0 )
             {
                 context._pCmd->blitTexture( src, dst );
@@ -1228,13 +1228,13 @@ namespace sw
         using Internal                   = FramePassExecutorInternal;
         const auto* pSceneColorCopyInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SceneColorCopy );
         if ( pSceneColorCopyInput != nullptr )
-            registerPassTexture( context, attachmentNames()._sceneColorCopy, pSceneColorCopyInput->_attachment.view() );
+            registerPassTexture( context, attachmentNames()._sceneColorCopy, pSceneColorCopyInput->_attachment );
         // 장면 깊이 사본(SceneDepthCopy 패스 출력)도 같다 — 물의 화면 공간 두께가 읽는다. 반투명은 장면 깊이를 깊이 붙임으로 쥐고 있어 그 깊이를 샘플할 수 없다.
         const auto* pSceneDepthCopyInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SceneDepthCopy );
         if ( pSceneDepthCopyInput != nullptr )
-            registerPassTexture( context, attachmentNames()._sceneDepthCopy, pSceneDepthCopyInput->_attachment.view() );
+            registerPassTexture( context, attachmentNames()._sceneDepthCopy, pSceneDepthCopyInput->_attachment );
 
-        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, colorTarget, input._passDepth, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
         SW_ASSERT( input._bTransparentBatch );
@@ -1255,8 +1255,8 @@ namespace sw
         if ( pSourceInput == nullptr )
             return;
         const hashed_string&   copyTarget = input._declaredColor[0]._attachment;
-        const RHITextureHandle src        = findTransient( pSourceInput->_attachment.view() );
-        const RHITextureHandle dst        = findTransient( copyTarget.view() );
+        const RHITextureHandle src        = findTransient( pSourceInput->_attachment );
+        const RHITextureHandle dst        = findTransient( copyTarget );
         if ( src == 0 || dst == 0 )
             return;
         input._context._pCmd->blitTexture( src, dst );
@@ -1273,8 +1273,8 @@ namespace sw
         FramePassContext&    context     = input._context;
         const hashed_string& passDepth   = input._passDepth;
         const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
-        if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        const float4         sceneClear  = getTargetClearColor( colorTarget );
+        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::MeshOutline ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -1294,13 +1294,13 @@ namespace sw
         FramePassContext&            context     = input._context;
         const hashed_string&         passDepth   = input._passDepth;
         const hashed_string&         colorTarget = input._declaredColor[0]._attachment;
-        const float4                 sceneClear  = getTargetClearColor( colorTarget.view() );
+        const float4                 sceneClear  = getTargetClearColor( colorTarget );
         const RHIPipelineStateHandle pso         = _psoManager.getEnginePSO( input._passType );
         // 렌더 패스의 깊이 붙임은 PSO 의 깊이 형식을 따른다 — 깊이 테스트를 끈 감각 패스의 PSO 는 깊이가 없고, 둘이 다르면 Vulkan 은 그리지 않는다.
         RHIPipelineStateDesc psoDesc{};
         const bool           bUsesDepth = _psoManager.findDesc( pso, psoDesc ) && psoDesc._depthStencilFormat != RHIFormat::Unknown;
-        const string_view    depthName  = bUsesDepth ? passDepth.view() : string_view{};
-        if ( beginColorPass( context, colorTarget.view(), depthName, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        const hashed_string  depthName  = bUsesDepth ? passDepth : hashed_string{};
+        if ( beginColorPass( context, colorTarget, depthName, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, pso, false );
         context._pCmd->endRenderPass();
@@ -1325,7 +1325,7 @@ namespace sw
         const Texture2D* pHdri = _state._skyHdriLoad.isReady() ? _state._skyHdriLoad.getOperation()->getTexture() : nullptr;
         if ( pHdri != nullptr && pHdri->isRHIValid() )
             context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, pHdri->getHandle(), pHdri->getSRV() );
-        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, colorTarget, input._passDepth, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, skyPSO );
         context._pCmd->endRenderPass();
@@ -1353,7 +1353,7 @@ namespace sw
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
 
-        if ( beginColorPass( context, target.view(), "", getTargetClearColor( target.view() ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
         // drawFullscreen 과 같은 순서다. 볼륨 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다.
         setIdentityWorld( context );
@@ -1372,16 +1372,16 @@ namespace sw
         FramePassContext&      context   = input._context;
         const AttachmentNames& names     = attachmentNames();
         const hashed_string&   taaTarget = input._declaredColor[0]._attachment;
-        const utf8*            pSrcName{ nullptr };
+        const hashed_string*   pSrcName{ nullptr };
         // 후처리를 끈 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`, kBypassesToSource). 기록하지 않고 히스토리도 건드리지 않는다
         // — 원본을 TAAColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 `_bTAAHistoryReset` 이 기록을 버린다.
-        if ( activePool().isForwarded( taaTarget.view() ) )
+        if ( activePool().isForwarded( taaTarget ) )
             return;
         registerDeclaredInputs( context, input._passDesc );
         for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : input._passDesc._listResolvedInput )
         {
             if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
-                pSrcName = sourceInput._attachment.c_str();
+                pSrcName = &sourceInput._attachment;
         }
         // 히스토리 생성과 bindless 등록은 ensureTAAHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
@@ -1391,17 +1391,17 @@ namespace sw
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
         const bool bCut = activeView._bTAAHistoryReset == SW_TRUE && pSrcName != nullptr;
         if ( bCut )
-            registerPassTexture( context, names._gbufferAlbedo, pSrcName );
+            registerPassTexture( context, names._gbufferAlbedo, *pSrcName );
         else if ( activeView._taaHistory != 0 )
             context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySRV );
-        if ( beginColorPass( context, taaTarget.view(), "", _state._clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
+        if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
             drawFullscreen( context, _psoManager.getEnginePSO( RenderPassType::TAA ) );
             context._pCmd->endRenderPass();
         }
 
-        const RHITextureHandle taaOut              = findTransient( taaTarget.view() );
+        const RHITextureHandle taaOut              = findTransient( taaTarget );
         const bool             bTAAHistoryWritable = taaOut != 0 && activeView._taaHistory != 0;
         if ( bTAAHistoryWritable )
             context._pCmd->blitTexture( taaOut, activeView._taaHistory );
@@ -1411,7 +1411,7 @@ namespace sw
     {
         FramePassContext&          context  = input._context;
         const RenderGraphPassDesc& passDesc = input._passDesc;
-        const string_view          srcName  = resolvePresentSource();
+        const hashed_string        srcName  = resolvePresentSource();
         const RHITextureHandle     src      = srcName.empty() ? 0 : findTransient( srcName );
         // 출력은 뷰가 정한다(resolvePresentTarget. Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
         // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다. 여기서 복사하면 뒤의 UI 가 캡처에 없다.
@@ -1524,17 +1524,17 @@ namespace sw
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
     }
 
-    bool FramePassExecutor::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
+    bool FramePassExecutor::beginColorPass( FramePassContext& context, const hashed_string& colorName, const hashed_string& depthName, const float4& clearColor,
                                             RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
     {
-        const string_view         arrName[]  = { colorName };
+        const hashed_string       arrName[]  = { colorName };
         const float4              arrClear[] = { clearColor };
         const RHIRenderPassLoadOp arrLoad[]  = { colorLoad };
         return beginColorPassMrt( context, arrName, arrClear, arrLoad, 1, depthName, depthLoad );
     }
 
-    bool FramePassExecutor::beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
-                                               uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
+    bool FramePassExecutor::beginColorPassMrt( FramePassContext& context, const hashed_string* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
+                                               uint32 colorCount, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad )
     {
         const bool bInvalidPassTargets = _pDevice == nullptr || context._pCmd == nullptr || pColorNames == nullptr || colorCount == 0;
         if ( bInvalidPassTargets )
@@ -1567,7 +1567,7 @@ namespace sw
                 if ( _bMissingColorTargetLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
                     SW_LOG_ERROR_ID( "FramePassExecutor.ColorTargetDoesNot", "Color target '%#' does not exist this frame - skipping the pass (handle 0 of a missing attachment is the back buffer, so opening it as is would draw to the screen). "
                                                                              "Check _listOutput and _listAttachment of the pipeline.",
-                                     pColorNames[colorTargetIndex] );
+                                     pColorNames[colorTargetIndex].c_str() );
                 return false;
             }
             beginInfo._arrLoadOp[colorTargetIndex]  = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
@@ -1579,7 +1579,7 @@ namespace sw
         return true;
     }
 
-    void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, string_view depthName, RHIRenderPassLoadOp depthLoad )
+    void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad )
     {
         if ( context._pCmd == nullptr )
             return;
@@ -1647,7 +1647,7 @@ namespace sw
         context._cullViewIndex = viewCull;
     }
 
-    void FramePassExecutor::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName )
+    void FramePassExecutor::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName )
     {
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
         if ( attachment._texture != 0 && context._pCmd != nullptr )
@@ -2299,14 +2299,15 @@ namespace sw
         for ( const ExtensionPassRead& read : pass._params._listRead )
         {
             // 이 뷰에서 빠진 첨부(꺼진 효과의 출력)는 걸지 않는다 — 셰이더는 그 역할의 기본값을 쓴다.
-            if ( activePool().resolveName( read._attachment ).empty() == false )
-                registerPassTexture( context, inputRoleName( read._role ), read._attachment );
+            const hashed_string readName( read._attachment.c_str() );
+            if ( activePool().resolveName( readName ).empty() == false )
+                registerPassTexture( context, inputRoleName( read._role ), readName );
         }
         ExtensionConstantScope<FramePassContext> constantScope( context );
         constantScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
-        const float4              targetClear = getTargetClearColor( pass._colorTarget.view() );
+        const float4              targetClear = getTargetClearColor( pass._colorTarget );
         const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : colorLoadFor( pass._depthTarget );
-        if ( beginColorPass( context, pass._colorTarget.view(), pass._depthTarget.view(), targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
+        if ( beginColorPass( context, pass._colorTarget, pass._depthTarget, targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
             return false;
         drawFullscreen( context, pass._pso );
         context._pCmd->endRenderPass();
@@ -2329,14 +2330,15 @@ namespace sw
             return true; // 그릴 것이 없으면 렌더 패스를 열지 않는다(열면 타깃의 첫 접근이 클리어로 소비된다)
         for ( const ExtensionPassRead& read : pass._params._listRead )
         {
-            if ( activePool().resolveName( read._attachment ).empty() == false )
-                registerPassTexture( context, inputRoleName( read._role ), read._attachment );
+            const hashed_string readName( read._attachment.c_str() );
+            if ( activePool().resolveName( readName ).empty() == false )
+                registerPassTexture( context, inputRoleName( read._role ), readName );
         }
         ExtensionConstantScope<FramePassContext> passScope( context );
         passScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
-        const float4              targetClear = getTargetClearColor( pass._colorTarget.view() );
+        const float4              targetClear = getTargetClearColor( pass._colorTarget );
         const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : colorLoadFor( pass._depthTarget );
-        if ( beginColorPass( context, pass._colorTarget.view(), pass._depthTarget.view(), targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
+        if ( beginColorPass( context, pass._colorTarget, pass._depthTarget, targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
             return false;
         bool bAllDrawn{ true };
         for ( const ExtensionDrawElement& element : _extensionHost.getDrawElements() )

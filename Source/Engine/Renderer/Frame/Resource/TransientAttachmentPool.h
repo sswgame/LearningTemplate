@@ -86,41 +86,41 @@ namespace sw
          * @brief 이름으로 첨부를 만듭니다. 크기는 현재 크기를 `resolutionDivisor` 로 나눈 값(올림)입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
-        bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 resolutionDivisor, bool bUnorderedAccess = false );
+        bool allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 resolutionDivisor, bool bUnorderedAccess = false );
         /**
          * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다. 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
-        bool allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false );
+        bool allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false );
         /** @brief 이름의 첨부(텍스처 + SRV)입니다. 원본을 가리키는 이름(`forward`)은 원본의 첨부입니다. 없으면 빈 값입니다. */
-        Attachment find( string_view name ) const;
+        Attachment find( const hashed_string& name ) const;
         /** @brief 이름의 텍스처 핸들입니다. 원본을 가리키는 이름은 원본의 핸들입니다. 없으면 0 입니다. */
-        RHITextureHandle findTexture( string_view name ) const;
+        RHITextureHandle findTexture( const hashed_string& name ) const;
         /** @brief 이름이 가리키는 원본을 따라가지 않고 그 이름으로 만든 텍스처 핸들입니다(그래프 배리어용 — 원본의 상태는 원본 이름의 배리어가 맡는다). 없으면 0 입니다. */
-        RHITextureHandle findOwnTexture( string_view name ) const;
+        RHITextureHandle findOwnTexture( const hashed_string& name ) const;
         /** @brief 그 이름으로 만든 첨부가 있는지 반환합니다(원본을 가리키는지와 상관없다). */
-        bool contains( string_view name ) const { return _mapAttachment.find( name ) != _mapAttachment.end(); }
+        bool contains( const hashed_string& name ) const { return _mapAttachment.find( name ) != _mapAttachment.end(); }
 
         /**
          * @brief 이번 프레임에 @p name 이 @p source 의 첨부를 가리키게 합니다(꺼진 효과의 출력 — `RenderPassTraitFlag::kBypassesToSource`).
          * @details @p source 가 다시 다른 이름을 가리키면 끝까지 따라간다(꺼진 효과가 잇달아 있을 때). 고리는 로드 검증이 막는다(출력은 그 패스만 쓴다).
          * @return 가리키는 곳이 바뀌었으면 true 입니다.
          */
-        bool forward( string_view name, string_view source );
+        bool forward( const hashed_string& name, const hashed_string& source );
         /**
          * @brief 이번 프레임에 @p name 이 아무 첨부도 가리키지 않게 합니다(꺼진 SSAO처럼 원본이 없는 효과, 읽는 패스가 모두 꺼져 기록하지 않는 패스의 출력).
          * @details `find` 는 빈 값이고 `resolveName` 은 빈 이름이다. 읽는 쪽은 그 역할을 바인딩하지 않아 셰이더의 기본값(AO = 1)을 쓴다.
          * @return 가리키는 곳이 바뀌었으면 true 입니다.
          */
-        bool markAbsent( string_view name ) { return forward( name, string_view{} ); }
+        bool markAbsent( const hashed_string& name ) { return forward( name, hashed_string{} ); }
         /** @brief @p name 이 다시 자기 첨부를 쓰게 합니다. @return 바뀌었으면 true 입니다. */
-        bool stopForward( string_view name );
+        bool stopForward( const hashed_string& name );
         /** @brief @p name 이 지금 원본을 가리키거나 비어 있으면 true 입니다(그 이름을 쓰는 패스는 기록하지 않는다). */
-        bool isForwarded( string_view name ) const { return _mapForward.find( name ) != _mapForward.end(); }
+        bool isForwarded( const hashed_string& name ) const { return _mapForward.find( name ) != _mapForward.end(); }
         /** @brief 가리키는 곳을 끝까지 따라간 이름입니다. 가리키지 않으면 @p name 그대로, 비어 있으면(`markAbsent`) 빈 이름입니다. */
-        string_view resolveName( string_view name ) const;
+        hashed_string resolveName( const hashed_string& name ) const;
         /** @brief 전체 첨부입니다. 레지스트리 등록이나 Present 소스 선택처럼 목록을 훑는 곳에서 씁니다. */
-        const unordered_map<string, Attachment>& getAll() const { return _mapAttachment; }
+        const unordered_map<hashed_string, Attachment>& getAll() const { return _mapAttachment; }
 
         /** @brief 모두 놓고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. 텍스처 SRV 는 텍스처용 해제로 돌려줍니다(버퍼용과 인덱스 공간이 다릅니다). */
         void release( IRHIDevice* pDevice );
@@ -128,7 +128,7 @@ namespace sw
          * @brief 그 이름으로 만든 첨부의 쉰 프레임 수를 나아가게 하고, `kIdleFramesBeforeRelease` 프레임 이어서 쓰이지 않았으면 놓습니다. 셋업(기록 전)에서 프레임마다 부릅니다.
          * @return 이번에 놓았으면 true 입니다. 첨부가 없으면 false 입니다.
          */
-        bool releaseIfIdle( IRHIDevice* pDevice, string_view name, bool bUsedThisFrame );
+        bool releaseIfIdle( IRHIDevice* pDevice, const hashed_string& name, bool bUsedThisFrame );
         /** @brief 이 풀이 지금까지 만든 첨부 수입니다(놓았다 다시 만든 것도 센다 — 진단과 테스트용). */
         uint32 getAllocationCount() const { return _allocationCount; }
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
@@ -145,10 +145,11 @@ namespace sw
         void resetCleared();
 
     private:
-        unordered_map<string, Attachment> _mapAttachment;
+        /// @brief 이름은 대소문자를 무시한다(`hashed_string`). 대소문자만 다른 첨부는 파이프라인 로드가 거절한다(`RenderPipelineAsset`).
+        unordered_map<hashed_string, Attachment> _mapAttachment;
         /// @brief 꺼진 효과의 출력 이름 → 그 원본 이름입니다(`forward`). 뷰가 프레임마다 정하고 패스 기록 중에는 읽기만 한다.
-        unordered_map<string, string> _mapForward;
-        mutable mutex                 _clearedMutex;
+        unordered_map<hashed_string, hashed_string> _mapForward;
+        mutable mutex                               _clearedMutex;
         /// @brief 이번 프레임에 이미 클리어한 첨부들입니다. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호합니다.
         vector<hashed_string> _listClearedThisFrame SW_GUARDED_BY( _clearedMutex );
         uint32                                      _width;

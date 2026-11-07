@@ -49,7 +49,7 @@ namespace sw
          * @brief Present 렌더 패스를 열기 **전에** EASU(배율 크기 원본 → 중간 RT)를 기록합니다. 이번 프레임에 FSR 로 키우지 않는 뷰면 false 이고 아무것도 하지 않습니다.
          * @return true 면 Present 는 블릿 대신 `drawUpscaleRcas` 로 그린다
          */
-        bool recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, string_view sourceName ) const;
+        bool recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, const hashed_string& sourceName ) const;
         /** @brief 열린 Present 렌더 패스(뷰포트를 건 뒤)에 RCAS(중간 RT → 대상)를 그립니다. @p viewportX · @p viewportY 는 대상 안의 뷰포트 왼쪽 위(px)입니다. */
         void drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat ) const;
 
