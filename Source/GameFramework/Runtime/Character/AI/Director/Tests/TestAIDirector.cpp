@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
