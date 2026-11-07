@@ -9,9 +9,20 @@
 
 namespace sw
 {
+    /** @brief 파서 한 번 실행의 토큰화 누계입니다. 끝 줄(`ReflectionParser.TokenizeStats`)이 전체 시간과 나란히 적는다 — 토큰화 몫이 클 때만 저장소 재사용을 검토한다. */
+    struct SourceTokenStats
+    {
+        int64 _callCount{ 0 };
+        int64 _tokenCount{ 0 };
+        int64 _nanoseconds{ 0 };
+    };
+
     /** @brief 인자 이름 · 기본 인자처럼 AST 타입에 남지 않는 것을 소스 토큰에서 읽습니다. */
     struct SourceTokens
     {
+        /** @brief 지금까지의 토큰화 누계입니다. 병렬 파싱 워커가 함께 더하므로 원자값에서 읽습니다. */
+        [[nodiscard]] static SourceTokenStats getStats();
+
         /** @brief 커서 선언의 소스 토큰에 식별자 @p name 이 그대로 적혀 있는지 봅니다(매크로가 만든 이름이면 false). */
         [[nodiscard]] static bool isSpelledInSource( CXCursor cursor, const string& name );
 

@@ -2,13 +2,39 @@
 
 #include "Programs/ReflectionParser/SourceTokens.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Programs/ReflectionParser/CursorReader.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct SourceTokensInternal
+        {
+            /** @brief 토큰화 누계입니다. 프로세스 하나가 파서 한 번이라 지우지 않는다. 더하기만 해서 워커끼리 겹쳐도 값이 맞다. */
+            static atomic<int64> s_callCount;
+            static atomic<int64> s_tokenCount;
+            static atomic<int64> s_nanoseconds;
+        };
+
+        atomic<int64> SourceTokensInternal::s_callCount{ 0 };
+        atomic<int64> SourceTokensInternal::s_tokenCount{ 0 };
+        atomic<int64> SourceTokensInternal::s_nanoseconds{ 0 };
+    } // namespace
+
+    SourceTokenStats SourceTokens::getStats()
+    {
+        SourceTokenStats stats;
+        stats._callCount   = SourceTokensInternal::s_callCount.load( std::memory_order_relaxed );
+        stats._tokenCount  = SourceTokensInternal::s_tokenCount.load( std::memory_order_relaxed );
+        stats._nanoseconds = SourceTokensInternal::s_nanoseconds.load( std::memory_order_relaxed );
+        return stats;
+    }
+
     struct SourceTokens::SourceToken
     {
         string      _spelling;
@@ -26,6 +52,7 @@ namespace sw
 
     vector<SourceTokens::SourceToken> SourceTokens::tokenizeCursor( const CXCursor cursor )
     {
+        const int64             startNanoseconds = MonotonicClock::nowNanoseconds();
         vector<SourceToken>     listToken;
         const CXTranslationUnit translationUnit = clang_Cursor_getTranslationUnit( cursor );
         const CXSourceRange     extent          = clang_getCursorExtent( cursor );
@@ -41,6 +68,9 @@ namespace sw
                                               clang_getTokenKind( pToken[tokenIndex] ) } );
         }
         clang_disposeTokens( translationUnit, pToken, tokenCount );
+        SourceTokensInternal::s_callCount.fetch_add( 1, std::memory_order_relaxed );
+        SourceTokensInternal::s_tokenCount.fetch_add( tokenCount, std::memory_order_relaxed );
+        SourceTokensInternal::s_nanoseconds.fetch_add( MonotonicClock::nowNanoseconds() - startNanoseconds, std::memory_order_relaxed );
         return listToken;
     }
 

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Diagnostics/DataRaceReporter.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/AsyncLogSink.h"
@@ -12,6 +13,7 @@
 #include "Programs/ReflectionParser/ParserSession.h"
 #include "Programs/ReflectionParser/ReflectBuiltinsLoader.h"
 #include "Programs/ReflectionParser/ReflectionPipeline.h"
+#include "Programs/ReflectionParser/SourceTokens.h"
 
 namespace sw
 {
@@ -129,6 +131,10 @@ int32 main( int32 argc, utf8* argv[] )
 
     timer.updateTimer();
     [[maybe_unused]] const float32 elapsedMs = timer.getDeltaTime() * 1000.0f;
+    // 토큰화 몫(DesignBacklog "ReflectionParser" 후보): 워커 시간의 합이라 병렬 파싱에서는 벽시계보다 클 수 있다.
+    [[maybe_unused]] const sw::SourceTokenStats tokenStats = sw::SourceTokens::getStats();
+    SW_LOG_INFO_ID( "ReflectionParser.TokenizeStats", "Tokenize: %# calls, %# tokens, %# ms (sum over workers)", tokenStats._callCount, tokenStats._tokenCount,
+                    static_cast<float64>( tokenStats._nanoseconds ) / static_cast<float64>( sw::constant::time::kNanosecondsPerMillisecond ) );
     if ( errorCount == 0 )
         SW_LOG_INFO_ID( "ReflectionParser.DoneMsAllFiles", "Done in %# ms. All files processed successfully.", elapsedMs );
     else
