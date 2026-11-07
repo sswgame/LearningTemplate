@@ -26,6 +26,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureFormatSelection.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <condition_variable>
@@ -139,6 +140,7 @@ namespace sw
         std::condition_variable_any                    _cvLoaded;
         atomic<uint32>                                 _reloadGeneration{ 0 };   ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
         atomic<IRHIDevice*>                            _pBoundDevice{ nullptr }; ///< 엔진이 붙인 디바이스(`bindDevice`) — 게임 스레드 요청 · 해제가 쓴다
+        string _formatVariantSuffix                    SW_GUARDED_BY( _mutex );  ///< 붙은 장치가 고른 형식 변형 접미사(`getFormatVariantSuffix` — 비면 임포트한 DDS 그대로)
         mutex                                          _awaitingMutex;
         vector<shared_ptr<TextureLoadOperation>>       _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)
         vector<shared_ptr<TextureLoadOperation>>       _listUploading;      ///< 업로드를 제출했고 끝남 확인을 기다리는 로드(`completePendingLoads` 가 폴링한다, `_awaitingMutex`)
@@ -335,7 +337,19 @@ namespace sw
 
     void TextureCache::bindDevice( IRHIDevice* pDevice )
     {
+        // 접미사를 먼저 정한다 — 장치를 본 워커 읽기가 이 장치의 형식을 읽게 한다.
+        string formatSuffix = pDevice != nullptr ? TextureFormatSelection::selectVariantSuffix( *pDevice ) : string{};
+        {
+            const UniqueLock<shared_mutex> lock{ _impl->_mutex };
+            _impl->_formatVariantSuffix = std::move( formatSuffix );
+        }
         _impl->_pBoundDevice.store( pDevice, std::memory_order_release );
+    }
+
+    string TextureCache::getFormatVariantSuffix() const
+    {
+        const ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
+        return _impl->_formatVariantSuffix;
     }
 
     TextureHandle TextureCache::request( string_view relativePath, AssetLoadStart start )
@@ -1146,7 +1160,7 @@ namespace sw
             return;
         const string key = FileUtil::normalizePath( relativePath );
 
-        // 기다림(waitIdle)과 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 waitIdle 을 부르면 같은 잠금을 기다리는
+        // 렌더 스레드 비우기와 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 비우면 같은 잠금을 기다리는
         // 렌더 스레드와 서로 기다릴 수 있다. 진행 중 표시를 세워 두면 그사이 acquire 는 기다리고 release 는 지우지 않는다.
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Texture2D*               pTexture = nullptr;
@@ -1167,11 +1181,9 @@ namespace sw
         }
         lock.unlock();
 
-        // 이전 프레임이 아직 이 텍스처와 그 bindless SRV 인덱스를 읽고 있을 수 있다. 인덱스를 돌려주는 때는 백엔드마다 다르다:
-        // DX12 · Vulkan 은 해제 큐(enqueueGPURelease)를 거쳐 GPU 펜스가 지난 뒤에 프리리스트로 돌려주지만,
-        // DX11 · GL 은 unregisterBindlessTexture 에서 곧바로 돌려준다. 그 둘에서 기다리지 않고 다시 올리면 같은 인덱스를 받은
-        // 다른 텍스처를 읽는 조용한 오염이 된다(MaterialCache::reload 와 같은 이유). 텍스처 객체 해제도 같은 대기에 기댄다.
-        pDevice->waitIdle( RHIWaitIdleReason::HotReload );
+        // 이전 프레임이 아직 이 텍스처와 그 bindless SRV 인덱스를 읽고 있을 수 있어도 GPU 를 기다리지 않는다. `releaseRHI` 의 `releaseHandle` 이 이미 만든 패킷 뒤로 반환을 미루므로
+        // 새 텍스처는 새 인덱스를 받고, DX12 · Vulkan 은 그 뒤 펜스까지, DX11 · GL 은 기록 때 슬롯으로 풀었으니 그 패킷이 끝난 것으로 충분하다. 렌더 스레드만 비운다 — 등록은 병렬 기록 중에 할 수 없다.
+        pDevice->flushRenderThread();
         pTexture->releaseRHI( pDevice );
         if ( pTexture->loadFromAsset( pDevice, AssetID{ key } ) == false )
             SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );

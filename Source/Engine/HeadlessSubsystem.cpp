@@ -248,6 +248,8 @@ namespace sw
                     CommandLineArgument::VERIFY_SHADERS,
                     CommandLineArgument::IMPORT_TEXTURES,
                     CommandLineArgument::CHECK_TEXTURES,
+                    CommandLineArgument::COOK_TEXTURE_VARIANTS,
+                    CommandLineArgument::CHECK_TEXTURE_VARIANTS,
                     CommandLineArgument::IMPORT_MODELS,
                     CommandLineArgument::CHECK_MODELS,
                     CommandLineArgument::IMPORT_HEIGHTFIELDS,

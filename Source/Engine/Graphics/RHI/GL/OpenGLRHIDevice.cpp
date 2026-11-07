@@ -76,6 +76,8 @@ namespace sw
         , _bInitialized{ SW_FALSE }
         , _bNvxMemoryInfo{ SW_FALSE }
         , _bAtiMemInfo{ SW_FALSE }
+        , _bTextureASTC{ SW_FALSE }
+        , _bTextureETC2{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
         _resourceImpl          = sw::make_unique<OpenGLRHIResourceFactory>( this );
@@ -360,6 +362,19 @@ namespace sw
         if ( gladLoadGL() != 0 )
         {
             SW_LOG_INFO_ID( "OpenGL.OpenGLGladLoadedSuccessfully", "OpenGL glad Loaded Successfully." );
+
+            // 쿠킹 변형을 고를 때 묻는 값이다(`supportsTextureFormat` — 아무 스레드에서나 불리므로 컨텍스트가 있는 지금 물어 둔다).
+            if ( glad_glGetInternalformativ != nullptr )
+            {
+                const auto isFormatSupported = []( GLenum internalFormat )
+                {
+                    GLint supported{ GL_FALSE };
+                    glGetInternalformativ( GL_TEXTURE_2D, internalFormat, GL_INTERNALFORMAT_SUPPORTED, 1, &supported );
+                    return supported == GL_TRUE;
+                };
+                _bTextureASTC = isFormatSupported( OpenGLRHIDeviceFormat::kCompressedRGBAASTC4x4 ) ? SW_TRUE : SW_FALSE;
+                _bTextureETC2 = isFormatSupported( OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC ) ? SW_TRUE : SW_FALSE;
+            }
 
             // ZERO_TO_ONE = Direct3D 의 깊이 NDC [0,1]. 클립 **원점**은 대상마다 달라야 해서 여기서 고정하지 않는다.
             // 오프스크린 FBO 는 UPPER_LEFT(행 순서를 DX 와 맞춤), 기본 프레임버퍼는 LOWER_LEFT(창 표시가 아래에서 위)로

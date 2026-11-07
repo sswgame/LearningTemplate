@@ -161,6 +161,7 @@ namespace sw
                 &runLocalizationTools,
                 &runAssetReferenceCheck,
                 &runEditorImport<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>,
+                &runEditorImport<EditorImportKind::TextureVariant, CommandLineArgument::COOK_TEXTURE_VARIANTS, CommandLineArgument::CHECK_TEXTURE_VARIANTS>,
                 &runEditorImport<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>,
                 &runEditorImport<EditorImportKind::Heightfield, CommandLineArgument::IMPORT_HEIGHTFIELDS, CommandLineArgument::CHECK_HEIGHTFIELDS>,
             };

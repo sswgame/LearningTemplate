@@ -72,12 +72,14 @@ namespace sw
         vector<Entry>  _listHandle;        ///< `_mutex` 아래
         atomic<uint64> _queuedFrameCount;  ///< 렌더 스레드에 넘긴 프레임 수(누적)
         atomic<uint64> _retiredFrameCount; ///< 렌더 스레드가 끝낸 프레임 수(누적, 넘긴 수를 넘지 않는다)
+        atomic<uint64> _gpuIdleWaitCount;  ///< `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적, `getGPUIdleWaitCount`)
 
         RHIDeferredHandleQueue()
             : _mutex{}
             , _listHandle{}
             , _queuedFrameCount{ 0 }
             , _retiredFrameCount{ 0 }
+            , _gpuIdleWaitCount{ 0 }
         {
         }
     };
@@ -145,12 +147,23 @@ namespace sw
         SW_LOG_TRACE_ID( "RHI.WaitIdle", "waitIdle (%#)", getEnumName( reason ) );
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
+        flushRenderThread();
+        // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
+        flushDeferredHandleReleases();
+        _pDeferredHandleQueue->_gpuIdleWaitCount.fetch_add( 1, std::memory_order_relaxed );
+        waitIdleInternal();
+    }
+
+    void IRHIDevice::flushRenderThread()
+    {
         const RenderThreadFlushFunction pfnFlush = _pfnRenderThreadFlush.load( std::memory_order_acquire );
         if ( pfnFlush != nullptr && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
             pfnFlush( _pRenderThreadFlushContext.load( std::memory_order_relaxed ) );
-        // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
-        flushDeferredHandleReleases();
-        waitIdleInternal();
+    }
+
+    uint64 IRHIDevice::getGPUIdleWaitCount() const
+    {
+        return _pDeferredHandleQueue->_gpuIdleWaitCount.load( std::memory_order_relaxed );
     }
 
     bool IRHIDevice::queryNativeHandles( RHIBackend expectedBackend, RHINativeHandles& inoutHandles ) const

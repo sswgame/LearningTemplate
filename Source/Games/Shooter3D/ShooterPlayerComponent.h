@@ -55,6 +55,7 @@ namespace sw
      *          적에게 주는 피해, 효과, 효과음, 손에 든 총 교체는 쌓아 두었다가 틱이 끝난 뒤 한 번에 처리한다(게임 스레드).
      *          **히트스캔**: 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고(`traceCover`), 적은 틱 뒤에 그 거리 안에서 물리 질의로 래그돌 히트박스를 묻는다
      *          (`resolveShots`, 레이어 `_hitboxLayer`). 피해는 장전한 탄의 피해(`WeaponState::getShot`) × 맞은 바디의 히트 존 배율이다.
+     *          **근접**(버튼 Melee): 눈앞의 짧은 호를 칼날로 쓸어(`MeleeHit::sweep`, 틱 뒤 · 게임 스레드) 히트박스를 맞힌다. 네트 클라이언트는 맞음을 찾아 서버에 주장하고, 서버는 자기 스윕과 주장을 맞춰 정한다(`MeleeSweepHistory`).
      *          **탄**: 사거리 · 피해 · 궤적(탄도선 색 · 두께)은 장전한 탄(`ProjectileCatalog`, projectiles.xml)이고, 탄착 효과(색 · 크기)는 탄과 표면(`Body` · `Cover`)의 맞음 표다.
      *          탄은 무기가 받는 것만 넣는다(`WeaponDef::_accepts`). 적을 맞히면 그 탄의 맞음 동작(`<OnHit>`)을 적의 태그 문맥으로 부른다.
      */
@@ -75,6 +76,17 @@ namespace sw
 
         /** @brief 적에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 판을 처음부터 다시 시작합니다. */
         void takeDamage( float32 amount );
+        /**
+         * @brief 서버 판정 결과를 받습니다(클라이언트의 넷 폰이 소유자 상태에서 부른다). 맞힌 발 수가 오르면 맞음 표시 · 소리를 내고, HUD 체력은 이 값을 보입니다.
+         * @details 클라이언트의 사격은 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않고 표시도 서버가 인정한 뒤에 낸다(언리얼 Lyra 의 서버 확인 맞음 표시와 같은 자리, 기억에 의존).
+         */
+        void applyServerReport( uint32 confirmedHitCount, float32 health );
+        /** @brief 지금 근접 창에서 이미 맞힌 오브젝트입니다. 서버가 주장을 인정할 때 스윕과 같은 목록을 써 창 하나에 한 번만 맞게 합니다. */
+        vector<GameObjectHandle>& getMeleeHitTargets() { return _listMeleeHitTarget; }
+        /** @brief 근접이 닿는 거리입니다(자동 플레이 AI 가 휘두를지 정한다). */
+        float32 getMeleeReach() const { return _meleeReach; }
+        /** @brief 맞힌 발을 하나 셉니다(근접 스윕 · 인정된 맞음 주장). 맞음 표시 · 소리를 냅니다. */
+        void recordMeleeHit();
         /** @brief 탄 보상입니다. 무기마다 탄창 두 개를 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void addWaveAmmo();
         /** @brief 수리 보상입니다. 체력을 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
@@ -181,6 +193,8 @@ namespace sw
          * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterRayHit::makeHitInfo`).
          */
         void resolveShots( GameObjectManager& manager );
+        /** @brief 근접 창의 이번 프레임 칼날을 쓸어 맞힙니다(틱 뒤 · 게임 스레드). 클라이언트는 맞음을 서버에 주장합니다. */
+        void resolveMelee( GameObjectManager& manager );
         /** @brief 총구의 월드 위치를 반환합니다. 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle` 입니다. 찾지 못하면 눈 아래입니다. */
         float3 findMuzzlePosition();
         void   switchWeapon( int32 weaponIndex );
@@ -222,6 +236,18 @@ namespace sw
         hashed_string _hitboxLayer;
         PROPERTY( Category = "Weapons", DisplayName = "Shot Impulse", Tooltip = "Impulse a bullet gives the body it hits (hit reaction, ragdoll push)", Min = 0.0, Units = "N*s" )
         float32 _shotImpulse;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Damage", Tooltip = "Base damage of a melee hit (the hit zone multiplies it)", Min = 0.0 )
+        float32 _meleeDamage;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Impulse", Tooltip = "Impulse a melee hit gives the body it hits", Min = 0.0, Units = "N*s" )
+        float32 _meleeImpulse;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Reach", Tooltip = "Blade length from the eye", Min = 0.0, Units = m )
+        float32 _meleeReach;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Radius", Tooltip = "Blade thickness", Min = 0.0, Units = m )
+        float32 _meleeRadius;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Arc", Tooltip = "Yaw the blade sweeps across the look direction", Min = 0.0, Units = rad )
+        float32 _meleeArc;
+        PROPERTY( Category = "Melee", DisplayName = "Melee Duration", Tooltip = "Seconds of one swing", Min = 0.001, Units = s )
+        float32 _meleeDuration;
         PROPERTY( Category = "Effects", DisplayName = "Hit Effect Lifetime", Tooltip = "Seconds a hit or muzzle flash sphere stays", Min = 0.0, Units = s )
         float32 _hitEffectLifetime;
         PROPERTY( Category = "Effects", DisplayName = "Tracer Lifetime", Tooltip = "Seconds a tracer stays", Min = 0.0, Units = s )
@@ -233,6 +259,9 @@ namespace sw
         CombatHealth             _combatHealth;
         AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
         vector<PendingShot>      _listPendingShot;
+        vector<float3>           _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)
+        vector<float3>           _listMeleeCurrent;   ///< 이번 프레임의 칼날
+        vector<GameObjectHandle> _listMeleeHitTarget; ///< 이번 근접 창에서 이미 맞힌 오브젝트
         vector<EffectRequest>    _listPendingEffect;
         vector<TracerRequest>    _listPendingTracer;
         GameSoundQueue           _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
@@ -243,6 +272,8 @@ namespace sw
         float32                  _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
         float32                  _lookYaw;
         float32                  _lastTracerWidth; ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
+        float32                  _serverHealth;    ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
+        float32                  _meleeElapsed;    ///< 근접 창이 시작하고 지난 시간
         int32                    _weaponIndex;
         uint32                   _shotCount;
         uint32                   _hitCount;
@@ -254,6 +285,8 @@ namespace sw
         uint8                    _bFirstPerson        : 1;
         uint8                    _bViewModeDirty      : 1; ///< 틱이 끝난 뒤 1인칭 여부에 따른 가시성을 맞춘다.
         uint8                    _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
-        uint8                    _reserved            : 2;
+        uint8                    _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
+        uint8                    _bMeleeActive        : 1; ///< 근접 창이 열려 있다
+        uint8                    _reserved            : 6;
     };
 } // namespace sw

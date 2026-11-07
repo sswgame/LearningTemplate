@@ -6,10 +6,16 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Graphics/Texture/TextureFormatSelection.h"
 
 /**
  * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
@@ -19,6 +25,21 @@ SW_GLOBAL_VARIABLE( int32, gv_textureMipDrop, 0, "텍스처를 읽을 때 버리
 
 namespace sw
 {
+    namespace
+    {
+        struct Texture2DInternal
+        {
+            /** @brief 텍스처 캐시가 장치에 맞춰 고른 형식 변형 접미사입니다. 엔진 서비스가 없는 도구 · 테스트는 빈 글(원본 그대로)입니다. */
+            static string findFormatVariantSuffix()
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return {};
+                const AssetManager* const pAssets = engine::findSubsystem<AssetManager>();
+                return pAssets != nullptr ? pAssets->getAssetCache<TextureCache>().getFormatVariantSuffix() : string{};
+            }
+        };
+    } // namespace
+
     SW_ASSET_TYPE( Texture, Texture2D::kAssetType );
 
     Texture2D::Texture2D()
@@ -81,6 +102,14 @@ namespace sw
             case 98: // DXGI_FORMAT_BC7_UNORM
             case 99:
                 return RHIFormat::BC7_UNORM;
+            case DDSFormat::kDxgiASTC4x4Unorm: // 쿠킹한 형식 변형(`TextureFormatSelection`)
+                return RHIFormat::ASTC_4x4_UNORM;
+            case DDSFormat::kEngineDxgiETC2RGBA8:
+                return RHIFormat::ETC2_RGBA8_UNORM;
+            case DDSFormat::kEngineDxgiEACR11:
+                return RHIFormat::EAC_R11_UNORM;
+            case DDSFormat::kEngineDxgiEACRG11:
+                return RHIFormat::EAC_RG11_UNORM;
             default:
                 return RHIFormat::Unknown;
         }
@@ -122,7 +151,11 @@ namespace sw
     {
         const string_view relativePath = assetID.view();
         AssetLoadScope    loadScope( "Texture", relativePath );
-        if ( DDSLoader::loadFromAsset( assetID, outImage ) == false || outImage.isValid() == false )
+        // 이 장치가 고른 형식 변형이 쿠킹돼 있으면 그것을 읽는다. 접미사가 비면(BC — 데스크톱) 파일을 묻지도 않아 지금까지와 같은 길이다. 변형이 없는 파일(원본 없는 손 DDS)은 그대로 읽고, 장치가 못 쓰는 형식이면 `createTexture2D` 가 오류로 멈춘다.
+        const string formatSuffix = Texture2DInternal::findFormatVariantSuffix();
+        const string variantPath  = formatSuffix.empty() ? string{} : TextureFormatSelection::makeVariantPath( relativePath, formatSuffix );
+        const bool   bReadVariant = variantPath.empty() == false && AssetIO::hasAsset( AssetID{ variantPath } );
+        if ( DDSLoader::loadFromAsset( bReadVariant ? AssetID{ variantPath } : assetID, outImage ) == false || outImage.isValid() == false )
         {
             SW_LOG_ERROR_ID( "Texture.LoadFailed", "Texture2D: failed to load '%#'", relativePath );
             return false;

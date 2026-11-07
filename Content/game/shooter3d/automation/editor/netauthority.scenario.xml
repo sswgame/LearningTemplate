@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 서버 권위 판 — 한 프로세스 재생(서버 월드 0 · 클라이언트 월드 1)에서 입력 → 복제 → 명중의 한 바퀴를 값으로 본다. 그림은 판정하지 않는다.
+  ① 적은 서버 몫이다: 서버의 적이 스냅샷으로 가서 클라이언트 월드에 복제 모습으로 선다(EnemyCount).
+  ② 입력은 의도 한 길이다: 클라이언트 월드의 폰을 자동 플레이 AI 가 쥐고, 그 의도(사격 버튼 · 시선)가 선을 지나 서버의 폰을 몬다(서버의 ShotCount).
+  ③ 명중은 서버가 정한다: 서버는 클라이언트가 보던 틱으로 되감아 판정하고(RewoundShots · RewoundHits · RewindTicks — 보간 지연이 있어 0 이 아니다), 클라이언트는 그 결과를 소유자 상태로 받는다(클라이언트의 HitCount).
+  ④ 근접은 주장을 확인한다: 자동 플레이 AI 가 닿는 거리에서 Melee 를 누르면(gv_shooterAutoMelee) 서버 장부에 스윕이 적히고(MeleeSweeps), 클라이언트의 예측 맞음이 주장으로 가서 서버가 인정한다(ClaimsSent · ClaimsConfirmed).
+  자동화 입력(키)은 쓰지 않는다 — AI 조종자가 낸 의도도 사람의 것과 같은 길을 지난다. 월드마다의 값은 감시 값 Editor.NetSimValue(target = 월드, key = 값 이름 — ShooterNetSimGame)다.
+  실행: App -EnableEditor -scenario=game/shooter3d/automation/editor/netauthority.scenario.xml -unattended (체인: Scenario.shooter3d.editor)
+-->
+<Scenario name="game.shooter3d.netauthority" requiresModule="GF_EditorPlugin_NetSimulation" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_shooterAutoPlay" value="1"/>
+	<Variable name="gv_shooterAutoMelee" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus multiplayer"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<DevCommand line="netsim.start 1 Shooter3D: arena"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.NetSimWorldCount" equals="2"/>
+	<!-- ① 서버의 적이 클라이언트 월드에 선다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="EnemyCount" atLeast="1" timeoutFrames="2400"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="EnemyCount" atLeast="1" timeoutFrames="600"/>
+	<!-- ② 클라이언트 AI 의 사격이 서버에서 쏜다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="ShotCount" atLeast="1" timeoutFrames="2400"/>
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="RewoundShots" atLeast="1" timeoutFrames="60"/>
+	<!-- ③ 되감아 맞히고 결과가 클라이언트로 돌아온다. 되감은 틱은 보간 지연(0.1 초 = 3 틱) 이상, 서버 클램프(32 틱) 이하다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="RewoundHits" atLeast="1" timeoutFrames="2400"/>
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="HitCount" atLeast="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="HitCount" atLeast="1" timeoutFrames="60"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="RewindTicks" atLeast="2"/>
+	<Expect watch="Editor.NetSimValue" target="0" key="RewindTicks" atMost="33"/>
+	<!-- ④ 근접: 서버 스윕이 적히고 예측 맞음의 주장이 인정된다 -->
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="MeleeSweeps" atLeast="1" timeoutFrames="2400"/>
+	<WaitUntil watch="Editor.NetSimValue" target="1" key="ClaimsSent" atLeast="1" timeoutFrames="2400"/>
+	<WaitUntil watch="Editor.NetSimValue" target="0" key="ClaimsConfirmed" atLeast="1" timeoutFrames="600"/>
+	<!-- 끝: 다음 시나리오에 스위치와 세션을 남기지 않는다 -->
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Variable name="gv_shooterAutoMelee" value="0"/>
+	<EditorClick mark="multiplayer.inprocess.stop" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="multiplayer.inprocess.stop" state="Up"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
+	<Pass/>
+</Scenario>

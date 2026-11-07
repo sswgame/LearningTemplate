@@ -67,6 +67,14 @@ namespace sw
                     return VK_FORMAT_R8_UNORM;
                 case RHIFormat::R16G16_SNORM:
                     return VK_FORMAT_R16G16_SNORM;
+                case RHIFormat::ASTC_4x4_UNORM:
+                    return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
+                case RHIFormat::ETC2_RGBA8_UNORM:
+                    return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+                case RHIFormat::EAC_R11_UNORM:
+                    return VK_FORMAT_EAC_R11_UNORM_BLOCK;
+                case RHIFormat::EAC_RG11_UNORM:
+                    return VK_FORMAT_EAC_R11G11_UNORM_BLOCK;
                 case RHIFormat::Unknown: ///< 첨부 없음. Vulkan 에는 대응 값이 없다.
                     break;
             }

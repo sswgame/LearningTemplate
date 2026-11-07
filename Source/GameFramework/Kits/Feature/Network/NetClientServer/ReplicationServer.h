@@ -25,6 +25,7 @@
 namespace sw
 {
     struct ControlIntent;
+    struct MeleeHitClaim;
 
     class INetPeers;
 
@@ -140,18 +141,20 @@ namespace sw
          */
         [[nodiscard]] bool popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
         /**
-         * @brief `popInput` 의 바이트를 의도(`ControlIntent::read`)로 읽습니다. 클라이언트의 `ReplicationClient::sendIntent` 와 짝입니다.
-         * @details 되풀이한 입력(@p outbExact 가 false)이면 발동 비트를 지웁니다. 받은 입력이 없거나 깨졌으면 false 이고 @p outIntent 는 그대로입니다.
+         * @brief `popInput` 의 바이트를 의도와 근접 맞음 주장으로 읽습니다. 클라이언트의 `ReplicationClient::sendIntent` 와 짝입니다.
+         * @details 되풀이한 입력(@p outbExact 가 false)이면 발동 비트 · 발동 순간의 시선 · 주장을 지웁니다 — 한 번 누름 · 한 번 맞음이 두 번 되지 않게. 받은 입력이 없거나 깨졌으면 false 이고
+         *          @p outIntent 는 그대로입니다. @p outListClaim 은 늘 비우고 시작합니다. 주장의 `_frame` 은 입력 틱입니다.
          */
-        [[nodiscard]] bool popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact );
+        [[nodiscard]] bool popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim );
         /**
          * @brief 이 클라이언트가 조종하는 엔티티의 상태를, 그 상태를 만든 마지막 입력 틱과 함께 정합니다. 다음 스냅샷부터 예산과 관련 정책에 상관없이 통째로 싣습니다.
          * @details 틱과 상태는 늘 한 번에 정한다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 오류를 남기고 정하지 않으며 false 를 반환한다.
          */
         [[nodiscard]] bool setOwnerState( int32 connectionID, uint32 inputTick, const vector<uint8>& buffer );
         /**
-         * @brief 마지막으로 꺼낸 입력(`popInput`)을 만들 때 클라이언트가 보던 틱입니다. 보간 지연만큼 과거이며 소수이고, 랙 보정에서 되감을 때 씁니다.
-         * @details 입력 항목마다 온 스탬프이므로 다시 보낸 옛 입력은 그 입력의 시점이다. 꺼내는 틱 이후와 `_maxViewLagTicks` 보다 오래된 값은 잘라 낸다.
+         * @brief 마지막으로 꺼낸 입력(`popInput`)을 만들 때 클라이언트가 보던 **서버 틱**입니다. 보간 지연만큼 과거이며 소수이고, 랙 보정에서 되감을 때 씁니다.
+         * @details 입력 항목마다 온 스탬프이므로 다시 보낸 옛 입력은 그 입력의 시점이다. 서버의 지금 틱(`beginTick`) 이후와 `_maxViewLagTicks` 보다 오래된 값은 잘라 낸다.
+         *          입력 틱과 서버 틱은 다른 시계다 — 늦게 붙은 클라이언트의 입력 틱은 서버 틱보다 한참 작다. `popInput` 앞에 `beginTick` 을 부른다.
          */
         float32            getClientViewTick( int32 connectionID ) const;
         uint32             getAckedTick( int32 connectionID ) const;

@@ -21,9 +21,7 @@ namespace sw
         Shutdown = 0,    ///< 엔진 · 서브시스템 종료. 모든 GPU 일을 끝내고 자원을 거둔다
         BackendSwap,     ///< 백엔드 교체(옛 디바이스를 내리기 전)
         Resize,          ///< 창 · 스왑체인 크기 변경(렌더 스레드가 스왑체인을 건드리지 않게 비운다)
-        HotReload,       ///< 에셋 · 셰이더 · 모듈 핫 리로드(도구 경로). 이전 프레임이 옛 자원을 읽는 것이 끝나야 한다
-        SceneActivation, ///< 씬 전환 — 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 자원을 잡는다
-        Capture,         ///< 초상 · 반사 프로브 베이크 같은 캡처가 한 번 GPU 결과를 기다린다(프레임 경로 밖)
+        HotReload,       ///< 셰이더 · 모듈 핫 리로드(도구 경로) — 패스 자원 전체를 다시 짓거나 코드를 내린다. 에셋 핫 리로드 · 씬 활성화는 기다리지 않는다(`IRHIDevice::flushRenderThread` + 지연 해제)
         Tool,            ///< 에디터 · 테스트 · 개발 토글 같은 도구 경로(프레임 경로가 아니다)
         PipelineSwitch,  ///< 렌더 파이프라인을 실행 중에 바꾼다(`gv_renderPipeline` · `gv_deferredShading`) — 옛 파이프라인의 패스 자원을 거두기 전
         WindowSwapChain, ///< 창 하나의 스왑체인을 만들거나 크기를 바꾸거나 부순다(에디터 플로팅 창 — `IRHIDevice::createSwapChain`)

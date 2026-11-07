@@ -131,8 +131,7 @@ namespace sw
         device.beginFrame();
         OffscreenSceneRenderers* const pOffscreen = _pRenderThread->getOffscreenRenderers();
         FrameRenderer* const           pRenderer  = pOffscreen != nullptr ? pOffscreen->execute( *_pRenderThread->getFrameRenderer(), &device, _job._packet, request._clearColor, _pipelinePath ) : nullptr;
-        device.endFrame( false, false );
-        device.waitIdle( RHIWaitIdleReason::Capture );
+        device.endFrame( false, false ); // GPU 를 기다리지 않는다 — 읽기 전송이 앞서 제출한 이 프레임 뒤에 실행된다(전송 계약). 다 그려지지 않은 장은 읽지 않으니 기다릴 까닭이 없다
         if ( pRenderer == nullptr )
         {
             SW_LOG_ERROR_ID( "SceneCapture.CaptureCouldNotDraw", "The capture could not draw the frame ('%#')", _pipelinePath.c_str() );

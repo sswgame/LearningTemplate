@@ -32,6 +32,10 @@ namespace sw
             case RHIFormat::R32_FLOAT:
                 return DXGI_FORMAT_R32_FLOAT;
             case RHIFormat::Unknown:
+            case RHIFormat::ASTC_4x4_UNORM: // D3D 에 없다 — `supportsTextureFormat` 이 거짓이라 쿠킹 변형을 고르지 않는다
+            case RHIFormat::ETC2_RGBA8_UNORM:
+            case RHIFormat::EAC_R11_UNORM:
+            case RHIFormat::EAC_RG11_UNORM:
                 return DXGI_FORMAT_UNKNOWN;
             case RHIFormat::BC1_UNORM:
                 return DXGI_FORMAT_BC1_UNORM;

@@ -4,6 +4,7 @@
  * @details 보간 지연만큼 과거를 그리도록 렌더 시각을 맞추고, 입력은 서버가 확인한 다음 틱부터 보낸다.
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -21,6 +22,7 @@
 namespace sw
 {
     struct ControlIntent;
+    struct MeleeHitClaim;
 
     class INetPeers;
 
@@ -72,10 +74,11 @@ namespace sw
          */
         bool sendInput( uint32 tick, const vector<uint8>& listInput );
         /**
-         * @brief 폰을 조종하는 게임의 입력입니다 — 의도 하나를 그 형식(`ControlIntent::write`)으로 써서 `sendInput` 으로 보냅니다.
-         * @details 바이트를 게임이 직접 짓지 않으므로 서버의 `ReplicationServer::popIntent` 와 형식이 어긋날 수 없습니다. 쓰지 못하면 알리고 false 입니다.
+         * @brief 폰을 조종하는 게임의 입력입니다 — 의도 하나와 이 입력 틱의 근접 맞음 주장을 한 형식으로 써서 `sendInput` 으로 보냅니다.
+         * @details 바이트를 게임이 직접 짓지 않으므로 서버의 `ReplicationServer::popIntent` 와 형식이 어긋날 수 없습니다. 주장의 `_frame` 은 입력 틱이다 — 서버 프레임은 서버만 안다.
+         *          쓰지 못하거나 주장이 `NetClientServerMessage::kMaxClaimsPerIntent` 를 넘으면 알리고 false 입니다.
          */
-        [[nodiscard]] bool sendIntent( uint32 tick, const ControlIntent& intent );
+        [[nodiscard]] bool sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim );
 
         /**
          * @brief 렌더 시각의 엔티티를 앞뒤 스냅샷의 상태와 그 사이 비율(0~1)로 돌려줍니다. 앞 스냅샷에만 있으면 그것 하나만 돌려주고 @p pOutTo 도 같은 것을 가리킵니다.

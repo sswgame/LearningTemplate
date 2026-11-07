@@ -65,6 +65,18 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 모바일 압축 형식의 GL 번호입니다(`GL_KHR_texture_compression_astc_ldr` · GL 4.3 코어). glad 생성 범위에 없을 수 있어 번호로 둡니다. */
+    struct OpenGLRHIDeviceFormat
+    {
+        static constexpr uint32 kCompressedRGBAASTC4x4  = 0x93B0;
+        static constexpr uint32 kCompressedRGBA8ETC2EAC = 0x9278;
+        static constexpr uint32 kCompressedR11EAC       = 0x9270;
+        static constexpr uint32 kCompressedRG11EAC      = 0x9272;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class OpenGLRHIDevice
      * @brief OpenGL 4.6 그래픽스와 컴퓨트 디바이스 구현입니다(SSBO, UBO 바인딩).
@@ -161,6 +173,9 @@ namespace sw
             caps._bPersistentReadbackRing = _readbackRingBuffer != 0 ? SW_TRUE : SW_FALSE;
             return caps;
         }
+
+        /** @brief 초기화가 물어 둔 값으로 답합니다(ASTC · ETC2 — `GL_INTERNALFORMAT_SUPPORTED`). 다른 형식은 GL 4.6 의 정적 형식 표에 있으면 참입니다. */
+        bool supportsTextureFormat( RHIFormat format ) const override;
 
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
@@ -566,7 +581,9 @@ namespace sw
         uint8                  _bInitialized   : 1;
         uint8                  _bNvxMemoryInfo : 1; ///< GL_NVX_gpu_memory_info 가 있다(총량과 남은 양).
         uint8                  _bAtiMemInfo    : 1; ///< GL_ATI_meminfo 가 있다(남은 양).
-        [[maybe_unused]] uint8 _reservedFlags  : 5;
+        uint8                  _bTextureASTC   : 1; ///< 드라이버가 ASTC 4x4 를 받는다(`supportsTextureFormat`).
+        uint8                  _bTextureETC2   : 1; ///< 드라이버가 ETC2 · EAC 를 받는다(GL 4.3 코어지만 소프트웨어 디코드뿐인 드라이버도 있어 묻는다).
+        [[maybe_unused]] uint8 _reservedFlags  : 3;
     };
 } // namespace sw
 

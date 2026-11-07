@@ -11,5 +11,18 @@
     "_listResourcePriority": [ "game", "common", "engine", "editor" ],
     "_dataInheritanceMaxDepth": 8,
     "_patchTrustPublicKeyXHex": "",
-    "_patchTrustPublicKeyYHex": ""
+    "_patchTrustPublicKeyYHex": "",
+    "_textureFormats": {
+        "_target": "Desktop",
+        "_listTarget": [
+            { "_name": "Desktop", "_listFamily": [ "BC" ] },
+            { "_name": "Android", "_listFamily": [ "ASTC", "ETC2" ] },
+            { "_name": "Web", "_listFamily": [ "BC", "ASTC" ] }
+        ],
+        "_listFamily": [
+            { "_name": "BC", "_suffix": "", "_color": "BC7_UNORM", "_normal": "BC5_UNORM", "_mask": "BC4_UNORM", "_hdr": "BC6H_UF16" },
+            { "_name": "ASTC", "_suffix": ".astc", "_color": "ASTC_4x4_UNORM", "_normal": "ASTC_4x4_UNORM", "_mask": "ASTC_4x4_UNORM", "_hdr": "R16G16B16A16_FLOAT" },
+            { "_name": "ETC2", "_suffix": ".etc2", "_color": "ETC2_RGBA8_UNORM", "_normal": "EAC_RG11_UNORM", "_mask": "EAC_R11_UNORM", "_hdr": "R16G16B16A16_FLOAT" }
+        ]
+    }
 }

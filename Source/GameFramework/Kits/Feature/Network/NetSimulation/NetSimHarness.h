@@ -25,6 +25,7 @@
  *          조건이 깨끗하면 틱 N 끝에 보낸 메시지를 틱 N + 1 이 받는다. 지연이 L 이면 보낸 시각 + L 이 지난 첫 틱에 받는다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -196,6 +197,16 @@ namespace sw
         }
         /** @brief 월드가 종료되기 직전에 호출합니다. 플레이 종료와 씬 파괴보다 앞선다. */
         virtual void onWorldStopping( NetSimWorld& world ) { (void)world; }
+        /**
+         * @brief 자동화가 읽을 이 월드의 값입니다(감시 값 `Editor.NetSimValue` — 월드가 여럿이라 게임의 전역 감시 값은 어느 월드인지 모른다). 이름은 게임이 정합니다.
+         * @return 모르는 이름이면 false 입니다.
+         */
+        virtual bool readValue( string_view key, float64& outValue ) const
+        {
+            (void)key;
+            (void)outValue;
+            return false;
+        }
     };
 } // namespace sw
 

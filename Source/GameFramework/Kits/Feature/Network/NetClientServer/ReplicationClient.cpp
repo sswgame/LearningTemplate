@@ -8,6 +8,8 @@
 #include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Character/Hit/MeleeSweepHistory.h"
+
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
@@ -213,13 +215,24 @@ namespace sw
         return true;
     }
 
-    bool ReplicationClient::sendIntent( uint32 tick, const ControlIntent& intent )
+    bool ReplicationClient::sendIntent( uint32 tick, const ControlIntent& intent, vector_reference<const MeleeHitClaim> listClaim )
     {
+        if ( static_cast<int32>( listClaim.size() ) > NetClientServerMessage::kMaxClaimsPerIntent )
+        {
+            SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientTooManyClaims", "ReplicationClient: %# melee claims for tick %#, more than the limit %# - not sent", static_cast<int32>( listClaim.size() ), tick,
+                             NetClientServerMessage::kMaxClaimsPerIntent );
+            return false;
+        }
         BitWriter intentWriter;
         if ( intent.write( intentWriter ) == false )
         {
             SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientControlIntentTick", "ReplicationClient: control intent for tick %# could not be written - not sent", tick );
             return false;
+        }
+        intentWriter.writeVarUint( listClaim.size() );
+        for ( const MeleeHitClaim& claim : listClaim )
+        {
+            claim.write( intentWriter );
         }
         const uint8*        pBytes = intentWriter.getBytes().data();
         const vector<uint8> listInput( pBytes, pBytes + intentWriter.getByteCount() );

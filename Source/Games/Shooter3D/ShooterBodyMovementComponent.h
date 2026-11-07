@@ -16,7 +16,9 @@
 
 namespace sw
 {
-    /** @brief 몸 이동 한 걸음의 입력입니다. 폰 의도에서 만들고(`ShooterBodyMovementComponent::makeInput`) 네트워크로도 보낸다(클라이언트 예측의 입력). */
+    struct ControlIntent;
+
+    /** @brief 몸 이동 한 걸음의 입력입니다. 폰 의도에서 만드는 모터 형식이다(`ShooterBodyMovementComponent::makeInput`) — 선에는 의도(`ControlIntent`)가 간다. */
     struct ShooterMoveInput
     {
         float3 _move{ 0.0f, 0.0f, 0.0f }; ///< 월드 XZ 이동(길이 1 이하)
@@ -60,8 +62,8 @@ namespace sw
          * @return 이 걸음에서 땅에 내려앉았으면 true 입니다(착지음).
          */
         bool stepMovement( const vector<ShooterArenaBox>& listBox, float32 deltaTime );
-        /** @brief 지금 폰 의도를 걸음 입력으로 만듭니다. 멈춤이거나 폰이 없으면 빈 입력입니다. */
-        ShooterMoveInput makeInput() const;
+        /** @brief 의도를 걸음 입력으로 바꿉니다(순수 — 같은 의도면 서버와 클라이언트가 같은 입력을 낸다). 버튼 이름은 폰의 스키마로 찾고, 폰이 없으면 빈 입력입니다. 멈춤은 보지 않습니다. */
+        ShooterMoveInput makeInput( const ControlIntent& intent ) const;
         /**
          * @brief 한 걸음의 순수 계산입니다 — 이 컴포넌트의 속도 · 중력 · 반경으로 @p state 에 @p input 을 적용한 다음 상태를 돌려줍니다(멤버는 바꾸지 않는다).
          * @details `stepMovement` 와 네트워크 예측(`ShooterNetPawnComponent` — 서버 시뮬레이션 · 클라이언트 재시뮬레이션)이 이 한 함수를 쓴다. @p outbLanded 는 이 걸음에 내려앉았으면 true.

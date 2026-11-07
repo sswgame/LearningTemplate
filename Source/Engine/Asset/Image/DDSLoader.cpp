@@ -166,31 +166,35 @@ namespace sw
              * @details 압축 여부도 이 표가 정한다(블록 너비 > 1) — 번호 범위로 어림하지 않는다. DirectXTex `BitsPerPixel` · `ComputePitch` 와 같은 값이다.
              */
             static constexpr DDSFormatSize kArrFormatSizeRow[] = {
-                { 2, 1, 1, 16}, // R32G32B32A32_FLOAT
-                { 6, 1, 1, 12}, // R32G32B32_FLOAT
-                {10, 1, 1,  8}, // R16G16B16A16_FLOAT
-                {16, 1, 1,  8}, // R32G32_FLOAT
-                {24, 1, 1,  4}, // R10G10B10A2_UNORM
-                {28, 1, 1,  4}, // R8G8B8A8_UNORM
-                {29, 1, 1,  4}, // R8G8B8A8_UNORM_SRGB
-                {34, 1, 1,  4}, // R16G16_FLOAT
-                {41, 1, 1,  4}, // R32_FLOAT
-                {54, 1, 1,  2}, // R16_FLOAT
-                {61, 1, 1,  1}, // R8_UNORM
-                {71, 4, 4,  8}, // BC1_UNORM
-                {72, 4, 4,  8}, // BC1_UNORM_SRGB
-                {74, 4, 4, 16}, // BC2_UNORM
-                {75, 4, 4, 16}, // BC2_UNORM_SRGB
-                {77, 4, 4, 16}, // BC3_UNORM
-                {78, 4, 4, 16}, // BC3_UNORM_SRGB
-                {80, 4, 4,  8}, // BC4_UNORM
-                {83, 4, 4, 16}, // BC5_UNORM
-                {87, 1, 1,  4}, // B8G8R8A8_UNORM
-                {88, 1, 1,  4}, // B8G8R8X8_UNORM
-                {91, 1, 1,  4}, // B8G8R8A8_UNORM_SRGB
-                {95, 4, 4, 16}, // BC6H_UF16
-                {98, 4, 4, 16}, // BC7_UNORM
-                {99, 4, 4, 16}, // BC7_UNORM_SRGB
+                {                              2, 1, 1, 16}, // R32G32B32A32_FLOAT
+                {                              6, 1, 1, 12}, // R32G32B32_FLOAT
+                {                             10, 1, 1,  8}, // R16G16B16A16_FLOAT
+                {                             16, 1, 1,  8}, // R32G32_FLOAT
+                {                             24, 1, 1,  4}, // R10G10B10A2_UNORM
+                {                             28, 1, 1,  4}, // R8G8B8A8_UNORM
+                {                             29, 1, 1,  4}, // R8G8B8A8_UNORM_SRGB
+                {                             34, 1, 1,  4}, // R16G16_FLOAT
+                {                             41, 1, 1,  4}, // R32_FLOAT
+                {                             54, 1, 1,  2}, // R16_FLOAT
+                {                             61, 1, 1,  1}, // R8_UNORM
+                {                             71, 4, 4,  8}, // BC1_UNORM
+                {                             72, 4, 4,  8}, // BC1_UNORM_SRGB
+                {                             74, 4, 4, 16}, // BC2_UNORM
+                {                             75, 4, 4, 16}, // BC2_UNORM_SRGB
+                {                             77, 4, 4, 16}, // BC3_UNORM
+                {                             78, 4, 4, 16}, // BC3_UNORM_SRGB
+                {                             80, 4, 4,  8}, // BC4_UNORM
+                {                             83, 4, 4, 16}, // BC5_UNORM
+                {                             87, 1, 1,  4}, // B8G8R8A8_UNORM
+                {                             88, 1, 1,  4}, // B8G8R8X8_UNORM
+                {                             91, 1, 1,  4}, // B8G8R8A8_UNORM_SRGB
+                {                             95, 4, 4, 16}, // BC6H_UF16
+                {                             98, 4, 4, 16}, // BC7_UNORM
+                {                             99, 4, 4, 16}, // BC7_UNORM_SRGB
+                {   DDSFormat::kDxgiASTC4x4Unorm, 4, 4, 16},
+                {DDSFormat::kEngineDxgiETC2RGBA8, 4, 4, 16},
+                {   DDSFormat::kEngineDxgiEACR11, 4, 4,  8},
+                {  DDSFormat::kEngineDxgiEACRG11, 4, 4, 16},
             };
 
             /** @brief @p dxgiFormat 의 블록 크기 줄입니다. 표에 없으면 nullptr 입니다(읽기가 거절한다). */

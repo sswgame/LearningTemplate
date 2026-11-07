@@ -5,7 +5,9 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Diagnostics/CrashHandler.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -14,6 +16,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
@@ -116,6 +119,47 @@ namespace sw
     {
         return EngineSubsystemHost::kClient;
     }
+
+    namespace
+    {
+        struct RHISubsystemInternal
+        {
+            /** @brief 감시 값 `RHI.GPUIdleWaits` 입니다. 장치가 없으면(전용 서버 · 헤드리스) 읽지 못합니다. */
+            [[nodiscard]] static bool readGPUIdleWaits( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
+                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
+                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                    return false;
+                outValue = static_cast<float64>( pRHI->getDevice().getGPUIdleWaitCount() );
+                return true;
+            }
+
+            /** @brief 감시 값 `RHI.SupportsBC7` 입니다. 네 데스크톱 백엔드가 모두 1 이어야 합니다(`IRHIDevice::supportsTextureFormat` 의 실제 장치 답). */
+            [[nodiscard]] static bool readSupportsBC7( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
+                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
+                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                    return false;
+                outValue = pRHI->getDevice().supportsTextureFormat( RHIFormat::BC7_UNORM ) ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 감시 값 `Texture.FormatVariantActive` 입니다. 이 장치가 임포트한 DDS 가 아닌 쿠킹 변형을 읽으면 1 입니다(데스크톱 대상은 0 — 그림이 바뀌지 않는다는 뜻이다). */
+            [[nodiscard]] static bool readFormatVariantActive( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return false;
+                outValue = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getFormatVariantSuffix().empty() ? 0.0 : 1.0;
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_WATCH( rhiGPUIdleWaits, "RHI.GPUIdleWaits", "Times waitIdle stalled for the whole GPU (cumulative) - scene activation and asset hot reload must not raise it", &RHISubsystemInternal::readGPUIdleWaits );
+    SW_AUTOMATION_WATCH( rhiSupportsBC7, "RHI.SupportsBC7", "1 when this device can sample BC7 textures", &RHISubsystemInternal::readSupportsBC7 );
+    SW_AUTOMATION_WATCH( textureFormatVariantActive, "Texture.FormatVariantActive", "1 when textures read a cooked format variant instead of the imported DDS (0 on the desktop target)", &RHISubsystemInternal::readFormatVariantActive );
 } // namespace sw
 
 namespace sw

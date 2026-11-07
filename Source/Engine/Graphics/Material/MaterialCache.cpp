@@ -371,7 +371,7 @@ namespace sw
 
         const string key{ FileUtil::normalizePath( relativePath ) };
 
-        // 대기와 초기화는 잠금 밖에서 한다. `waitIdle` 은 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
+        // 대기와 초기화는 잠금 밖에서 한다. `flushRenderThread` 는 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
         // `takePSOWarmEntries` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
         shared_ptr<Material> material;
         {
@@ -388,9 +388,9 @@ namespace sw
         const Impl::DeviceInitScope initScope{ *_impl };
         if ( material->getInitState() == MaterialInitState::Ready )
         {
-            // 이전 프레임(들)이 GPU 에서 이 Material 이 빌린 텍스처를 아직 읽고 있을 수 있다. 다시 로드는 텍스처를 놓고 새로 빌리므로(참조가 0 이 되면
-            // 캐시가 텍스처와 그 bindless 인덱스를 돌려준다) 그 프레임이 끝나기를 기다린다. 상수 버퍼는 프록시의 것이라 다시 로드와 무관하다.
-            pDevice->waitIdle( RHIWaitIdleReason::HotReload );
+            // 다시 로드는 텍스처를 놓고 새로 빌린다. 참조가 0 이 된 텍스처의 핸들과 bindless 인덱스는 `releaseHandle` 이 이미 만든 패킷과 GPU 뒤로 미루므로 GPU 를 기다리지 않고
+            // 렌더 스레드만 비운다(새 텍스처 등록은 병렬 기록 중에 할 수 없다). 상수 버퍼는 프록시의 것이라 다시 로드와 무관하다.
+            pDevice->flushRenderThread();
             material->releaseRHI( pDevice );
         }
 

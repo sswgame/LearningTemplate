@@ -2,6 +2,7 @@
 
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -18,6 +19,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -33,6 +35,7 @@
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 #include "Games/Shooter3D/ShooterEffectComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
+#include "Games/Shooter3D/ShooterNetPawnComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -144,6 +147,8 @@ namespace sw
         , _tracerPool{}
         , _listPendingEnemy{}
         , _listPendingEffect{}
+        , _listReplicaSample{}
+        , _listPendingReplica{}
         , _tintCache{}
         , _motionTrace{}
         , _autoPlayController{}
@@ -155,10 +160,12 @@ namespace sw
         , _killCount{ 0 }
         , _traceFrame{ 0 }
         , _seenProfileReloadCount{ 0 }
+        , _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u }
         , _appliedAutoPlay{ -1 }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
         , _bPlayerAlive{ SW_TRUE }
+        , _bReplica{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -168,7 +175,10 @@ namespace sw
     bool ShooterGameModeComponent::startGame()
     {
         collectBoxes();
-        startPacing();
+        const SceneNetLink* pLink = SceneNetLink::findFor( *this );
+        _bReplica                 = pLink != nullptr && pLink->isBound() && pLink->get()._role == NetLinkRole::Client ? SW_TRUE : SW_FALSE;
+        if ( _bReplica == SW_FALSE )
+            startPacing();
         _killCount = 0;
         // 자동 플레이로 시작하면 플레이어 조종자가 폰을 먼저 조종하지 않게 한다(마우스를 잠갔다 풀지 않게 하려는 것이다). 첫 플러시가 자동 조준 AI 에게 넘긴다.
         GameObjectManager* pManager = getObjectManager();
@@ -261,6 +271,11 @@ namespace sw
         if ( gv_shooterMotionTrace.empty() == false )
             appendMotionTrace( deltaTime );
         updatePlayerView();
+        if ( step > 0.0f && _bReplica == SW_TRUE )
+        {
+            updateReplicaEnemies();
+            return;
+        }
         if ( step > 0.0f )
         {
             updateEnemies();
@@ -277,7 +292,7 @@ namespace sw
     bool ShooterGameModeComponent::hasPendingSpawn() const
     {
         const bool bAutoPlayChanged = _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
-        return _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f || bAutoPlayChanged;
+        return _listPendingEnemy.empty() == false || _listPendingReplica.empty() == false || _listPendingEffect.empty() == false || _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f || bAutoPlayChanged;
     }
 
     void ShooterGameModeComponent::onViewsDespawned()
@@ -513,6 +528,11 @@ namespace sw
             spawnEnemy( manager, request );
         }
         _listPendingEnemy.clear();
+        for ( const ShooterReplicatedEnemy& replica : _listPendingReplica )
+        {
+            spawnReplicaEnemy( manager, replica );
+        }
+        _listPendingReplica.clear();
         for ( const EffectRequest& effect : _listPendingEffect )
         {
             spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
@@ -541,6 +561,10 @@ namespace sw
         PawnComponent* pPawn         = pPlayerObject != nullptr ? pPlayerObject->getComponent<PawnComponent>() : nullptr;
         _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 맞춘 것으로 친다. 매 틱 플러시를 잡지 않게 하기 위해서다.
         if ( pPawn == nullptr )
+            return;
+        // 네트 서버의 폰은 원격 조종자가 쥔다 — 자동 플레이는 클라이언트 쪽 조종자가 하고, 그 의도가 선으로 온다.
+        const ShooterNetPawnComponent* pNetPawn = pPlayerObject->getComponent<ShooterNetPawnComponent>();
+        if ( pNetPawn != nullptr && pNetPawn->isServer() )
             return;
         GameObject* pAIObject = manager.resolveGameObject( _autoPlayController );
         if ( bAutoPlay )
@@ -620,7 +644,9 @@ namespace sw
     void ShooterGameModeComponent::spawnEnemy( GameObjectManager& manager, const EnemyRequest& request )
     {
         // 종류는 정예면 정예, 나머지는 목록을 차례로 쓴다. 시드는 스폰 순번이라 같은 판은 같은 얼굴이 나온다.
-        const ShooterEnemyKind&       kind        = request._bElite == SW_TRUE ? _eliteEnemyKind : _listEnemyKind[request._slot % static_cast<uint32>( _listEnemyKind.size() )];
+        const uint8                   kindIndex   = request._bElite == SW_TRUE ? kEliteKindIndex : static_cast<uint8>( request._slot % static_cast<uint32>( _listEnemyKind.size() ) );
+        const ShooterEnemyKind&       kind        = kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[kindIndex];
+        const uint32                  seed        = static_cast<uint32>( _pacingSeed ) * 7919u + request._slot;
         GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, "Enemy" );
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
@@ -633,7 +659,7 @@ namespace sw
             return;
         }
         if ( pAppearance != nullptr )
-            pAppearance->setPreset( hashed_string( kind._preset ), static_cast<uint32>( _pacingSeed ) * 7919u + request._slot );
+            pAppearance->setPreset( hashed_string( kind._preset ), seed );
         // 스폰 위치를 차례로 돈다. 한 바퀴를 돌 때마다 옆으로 1.2m 비켜서 같은 위치에 겹쳐 스폰하지 않게 한다.
         float3 position{ 0.0f, 0.0f, 0.0f };
         if ( _listSpawnPoint.empty() == false )
@@ -655,14 +681,100 @@ namespace sw
             return;
         }
         EnemyRecord record;
-        record._object  = pObject->getHandle();
-        record._spawnID = request._spawnID;
+        record._object         = pObject->getHandle();
+        record._spawnID        = request._spawnID;
+        record._netEntityID    = _nextEnemyNetID++;
+        record._appearanceSeed = seed;
+        record._kindIndex      = kindIndex;
+        pEnemy->setNetEntityID( record._netEntityID );
+        _listEnemy.push_back( record );
+    }
+
+    void ShooterGameModeComponent::spawnReplicaEnemy( GameObjectManager& manager, const ShooterReplicatedEnemy& replica )
+    {
+        const bool bKnownKind = replica._kindIndex == kEliteKindIndex || replica._kindIndex < _listEnemyKind.size();
+        if ( bKnownKind == false )
+        {
+            SW_LOG_ERROR_ID( "ShooterGameMode.ReplicaEnemyKindUnknown", "[Shooter] the server sent enemy kind %# but this scene has %# kinds - the enemy is not drawn", static_cast<int32>( replica._kindIndex ),
+                             static_cast<int32>( _listEnemyKind.size() ) );
+            return;
+        }
+        const ShooterEnemyKind&       kind        = replica._kindIndex == kEliteKindIndex ? _eliteEnemyKind : _listEnemyKind[replica._kindIndex];
+        GameObject*                   pObject     = spawnPrefab( manager, kind._prefab, "Enemy" );
+        ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
+        CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
+        if ( pEnemy == nullptr )
+        {
+            if ( pObject != nullptr )
+                manager.destroyGameObject( pObject );
+            return;
+        }
+        if ( pAppearance != nullptr )
+            pAppearance->setPreset( hashed_string( kind._preset ), replica._appearanceSeed );
+        pEnemy->launchReplica( getOwner()->getHandle(), replica._position, replica._yaw );
+        pEnemy->setNetEntityID( replica._netEntityID );
+        EnemyRecord record;
+        record._object         = pObject->getHandle();
+        record._netEntityID    = replica._netEntityID;
+        record._appearanceSeed = replica._appearanceSeed;
+        record._kindIndex      = replica._kindIndex;
         _listEnemy.push_back( record );
     }
 
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics). 플레이어와 적이 쓰지 않는 그룹이다.
     // ------------------------------------------------------------------------------
+    void ShooterGameModeComponent::updateReplicaEnemies()
+    {
+        GameObjectManager*             pManager = getObjectManager();
+        const GameObject*              pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
+        const ShooterNetPawnComponent* pNetPawn = pPlayer != nullptr ? pPlayer->getComponent<ShooterNetPawnComponent>() : nullptr;
+        _listEnemyView.clear();
+        _listReplicaSample.clear();
+        if ( pNetPawn == nullptr )
+            return;
+        pNetPawn->collectReplicatedEnemies( _listReplicaSample );
+        for ( size_t enemyIndex = 0; enemyIndex < _listEnemy.size(); )
+        {
+            const EnemyRecord&            record  = _listEnemy[enemyIndex];
+            GameObject*                   pObject = pManager->resolveGameObject( record._object );
+            ShooterEnemyComponent*        pEnemy  = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
+            const ShooterReplicatedEnemy* pSample = VectorUtil::findBy<&ShooterReplicatedEnemy::_netEntityID>( _listReplicaSample, record._netEntityID );
+            if ( pEnemy == nullptr || pSample == nullptr )
+            {
+                // 스냅샷에서 빠졌다(서버에서 쓰러졌거나 관심 영역 밖) — 복제 모습은 시체를 남기지 않는다.
+                CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
+                if ( pAppearance != nullptr )
+                    pAppearance->destroyOwnerStowingParts();
+                else if ( pObject != nullptr )
+                    pManager->destroyGameObject( pObject );
+                _listEnemy[enemyIndex] = _listEnemy.back();
+                _listEnemy.pop_back();
+                continue;
+            }
+            ++enemyIndex;
+            pEnemy->setReplicatedPose( pSample->_position, pSample->_yaw, pSample->_phase );
+            ShooterEnemyView view;
+            view._object         = record._object;
+            view._position       = pSample->_position;
+            view._radius         = pEnemy->getRadius();
+            view._height         = pEnemy->getHeight();
+            view._netEntityID    = record._netEntityID;
+            view._appearanceSeed = record._appearanceSeed;
+            view._yaw            = pSample->_yaw;
+            view._phase          = pSample->_phase;
+            view._kindIndex      = record._kindIndex;
+            _listEnemyView.push_back( view );
+        }
+        for ( const ShooterReplicatedEnemy& sample : _listReplicaSample )
+        {
+            const bool bSpawned = VectorUtil::findBy<&EnemyRecord::_netEntityID>( _listEnemy, sample._netEntityID ) != nullptr;
+            const bool bPending = VectorUtil::findBy<&ShooterReplicatedEnemy::_netEntityID>( _listPendingReplica, sample._netEntityID ) != nullptr;
+            if ( bSpawned == false && bPending == false )
+                _listPendingReplica.push_back( sample );
+        }
+    }
+
     void ShooterGameModeComponent::updateEnemies()
     {
         GameObjectManager* pManager = getObjectManager();
@@ -709,10 +821,15 @@ namespace sw
             if ( pEnemy->isAlive() == false )
                 continue;
             ShooterEnemyView view;
-            view._object   = record._object;
-            view._position = pEnemy->getPosition();
-            view._radius   = pEnemy->getRadius();
-            view._height   = pEnemy->getHeight();
+            view._object         = record._object;
+            view._position       = pEnemy->getPosition();
+            view._radius         = pEnemy->getRadius();
+            view._height         = pEnemy->getHeight();
+            view._netEntityID    = record._netEntityID;
+            view._appearanceSeed = record._appearanceSeed;
+            view._yaw            = pEnemy->getYaw();
+            view._phase          = pEnemy->getPhase();
+            view._kindIndex      = record._kindIndex;
             _listEnemyView.push_back( view );
             const float3 toPlayer = view._position - _playerFeet;
             nearCount += toPlayer.getLength() < _nearEnemyDistance ? 1 : 0;

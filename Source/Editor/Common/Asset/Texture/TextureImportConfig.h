@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
+#include "Engine/Graphics/Texture/TextureFormatSelection.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -73,6 +74,11 @@ namespace sw::editor
          * @details 임포터(`TextureImporter`)는 이 함수로만 DXGI 를 고른다 — 이름 · 번호 · sRGB 짝이 한 표에 있다.
          */
         [[nodiscard]] static uint32 getDxgiFormat( TextureImportFormat format, bool bSRGB );
+        /**
+         * @brief 규칙의 형식이 뜻하는 용도입니다(BC5 노멀 · BC4 마스크 · BC6H HDR · 비압축 Raw · 나머지 색). 쿠킹이 대상 묶음에서 이 용도의 형식을 고릅니다(`TextureImporter::cookTextureVariants`).
+         * @details 규칙에 칸을 더하지 않는다 — 형식이 이미 용도를 말하고, BC 결과(원본 해시)가 그대로여야 한다. 언리얼의 압축 설정(`TC_Normalmap` · `TC_HDR`)에 해당한다(기억에 의존한 비교).
+         */
+        [[nodiscard]] static TextureFormatUsage getUsage( TextureImportFormat format );
     };
 } // namespace sw::editor
 

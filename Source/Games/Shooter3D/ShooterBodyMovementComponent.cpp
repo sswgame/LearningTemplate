@@ -35,30 +35,32 @@ namespace sw
     {
         if ( deltaTime <= 0.0f || _bNetDriven == SW_TRUE )
             return false;
+        const GameObject*      pOwner  = getOwner();
+        const PawnComponent*   pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        const ShooterMoveInput input   = pPawn != nullptr && _bSuspended == SW_FALSE ? makeInput( pPawn->getIntent() ) : ShooterMoveInput{};
         const float3           before  = _position;
         bool                   bLanded = false;
-        const ShooterMoveState next    = simulate( listBox, getState(), makeInput(), deltaTime, bLanded );
+        const ShooterMoveState next    = simulate( listBox, getState(), input, deltaTime, bLanded );
         setState( next, float3{ next._position._x - before._x, 0.0f, next._position._z - before._z } * ( 1.0f / deltaTime ) );
         return bLanded;
     }
 
-    ShooterMoveInput ShooterBodyMovementComponent::makeInput() const
+    ShooterMoveInput ShooterBodyMovementComponent::makeInput( const ControlIntent& intent ) const
     {
         ShooterMoveInput     input;
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        if ( pPawn == nullptr || _bSuspended == SW_TRUE )
+        if ( pPawn == nullptr )
             return input;
         // 이동 축은 조종 요 기준이다 — 월드 XZ 로 돌리고 길이는 1 에서 자른다(아날로그 스틱 · AI 경로 속도는 그 비율로 느리다).
-        const ControlIntent& intent = pPawn->getIntent();
-        const float3         world  = intent.computeWorldMove();
-        float3               move{ world._x, 0.0f, world._z };
-        const float32        length = move.getLength();
+        const float3  world = intent.computeWorldMove();
+        float3        move{ world._x, 0.0f, world._z };
+        const float32 length = move.getLength();
         if ( length > 1.0f )
             move = move * ( 1.0f / length );
         input._move    = move;
-        input._bSprint = _sprintButton.empty() == false && pPawn->isButtonDown( pPawn->findButton( _sprintButton ) ) ? SW_TRUE : SW_FALSE;
-        input._bJump   = _jumpButton.empty() == false && pPawn->wasButtonTriggered( pPawn->findButton( _jumpButton ) ) ? SW_TRUE : SW_FALSE;
+        input._bSprint = _sprintButton.empty() == false && intent.isDown( pPawn->findButton( _sprintButton ) ) ? SW_TRUE : SW_FALSE;
+        input._bJump   = _jumpButton.empty() == false && intent.wasTriggered( pPawn->findButton( _jumpButton ) ) ? SW_TRUE : SW_FALSE;
         return input;
     }
 

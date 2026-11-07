@@ -12,6 +12,10 @@
 		<bind source="Key" code="R"/>
 		<bind source="Gamepad" code="X"/>
 	</action>
+	<action name="Melee" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="V"/>
+		<bind source="Gamepad" code="RightThumb"/>
+	</action>
 	<action name="CycleCamera" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="C"/>
 		<bind source="Gamepad" code="Back"/>

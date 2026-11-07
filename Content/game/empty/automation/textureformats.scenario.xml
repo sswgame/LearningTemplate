@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  텍스처 형식 고르기 — 데스크톱 대상은 네 백엔드 모두 BC 묶음을 고르고(RHI.SupportsBC7 은 실제 장치의 답) 임포트한 DDS 를 그대로 읽는다(Texture.FormatVariantActive 0). 쿠킹 변형 표(EngineConfig `_textureFormats`)가 데스크톱 그림을 건드리지 않는다는 판정이다.
+  실행: ctest -R Scenario.game.empty.textureformats
+-->
+<Scenario name="game.empty.textureformats" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="600" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Wait frames="2"/>
+	<Expect watch="RHI.SupportsBC7" equals="1"/>
+	<Expect watch="Texture.FormatVariantActive" equals="0"/>
+	<Pass/>
+</Scenario>

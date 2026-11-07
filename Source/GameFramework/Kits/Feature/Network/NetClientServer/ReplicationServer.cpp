@@ -7,6 +7,8 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Character/Hit/MeleeSweepHistory.h"
+
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
@@ -288,9 +290,10 @@ namespace sw
             client._lastInput = pEntry->_bytes;
             client._bHasInput = SW_TRUE;
             outbExact         = pEntry->_tick == tick;
-            // 서버 클램프: 클라이언트가 보던 틱은 지금 꺼내는 틱보다 앞일 수 없고, `_maxViewLagTicks` 보다 오래 되감지 않는다(랙 보정 남용을 막는다).
+            // 서버 클램프: 클라이언트가 보던 틱은 서버의 지금 틱보다 앞일 수 없고, `_maxViewLagTicks` 보다 오래 되감지 않는다(랙 보정 남용을 막는다).
+            // 기준은 꺼내는 입력 틱이 아니라 서버 틱이다 — 두 시계는 다르다. 입력 틱으로 자르면 늦게 붙은 클라이언트의 보던 틱이 틱 0 근처로 잘린다.
             const float32 claimedViewTick = static_cast<float32>( pEntry->_stamp ) / static_cast<float32>( NetClientServerMessage::kViewTickStampScale );
-            const float32 newestViewTick  = static_cast<float32>( tick );
+            const float32 newestViewTick  = static_cast<float32>( _world._tick );
             const float32 oldestViewTick  = MathUtil::max( 0.0f, newestViewTick - static_cast<float32>( _settings._maxViewLagTicks ) );
             client._viewTick              = MathUtil::clamp( claimedViewTick, oldestViewTick, newestViewTick );
         }
@@ -302,8 +305,9 @@ namespace sw
         return true;
     }
 
-    bool ReplicationServer::popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact )
+    bool ReplicationServer::popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim )
     {
+        outListClaim.clear();
         vector<uint8> listInput;
         if ( popInput( connectionID, tick, listInput, outbExact ) == false )
             return false;
@@ -315,10 +319,32 @@ namespace sw
                                static_cast<int32>( listInput.size() ) );
             return false;
         }
-        // 되풀이한 입력이면 한 번 누름이 두 번 되지 않게 발동 비트를 지운다(`RemoteControllerComponent` 와 같다).
+        const uint32          claimCount = reader.readVarUint32();
+        bool                  bClaimsOk  = reader.hasOverflowed() == false && claimCount <= static_cast<uint32>( NetClientServerMessage::kMaxClaimsPerIntent );
+        vector<MeleeHitClaim> listClaim;
+        for ( uint32 claimIndex = 0; bClaimsOk && claimIndex < claimCount; ++claimIndex )
+        {
+            MeleeHitClaim claim;
+            bClaimsOk = MeleeHitClaim::read( reader, claim );
+            if ( bClaimsOk )
+                listClaim.push_back( claim );
+        }
+        if ( bClaimsOk == false )
+        {
+            SW_LOG_WARNING_ID( "ReplicationServer.ReplicationServerConnectionSentMalformedClaims", "ReplicationServer: connection %# sent malformed melee claims for tick %# (%# claim(s))", connectionID, tick, claimCount );
+            return false;
+        }
+        // 되풀이한 입력이면 한 번 누름 · 한 번 맞음이 두 번 되지 않게 발동 칸과 주장을 지운다.
         if ( outbExact == false )
+        {
             received._buttonTriggered = 0;
-        outIntent = received;
+            received._bTriggerLook    = false;
+            received._triggerYaw      = 0.0f;
+            received._triggerPitch    = 0.0f;
+            listClaim.clear();
+        }
+        outIntent    = received;
+        outListClaim = std::move( listClaim );
         return true;
     }
 

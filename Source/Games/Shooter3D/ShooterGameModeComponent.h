@@ -28,6 +28,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
+#include "Games/Shooter3D/ShooterEnemyComponent.h"
 
 namespace sw
 {
@@ -53,10 +54,15 @@ namespace sw
     /** @brief 이번 프레임의 살아 있는 적 하나입니다. 디렉터가 `PrePhysics` 에서 기록하고 다른 그룹이 읽습니다. 히트박스는 발에서 `_height` 까지의 캡슐입니다. */
     struct ShooterEnemyView
     {
-        GameObjectHandle _object{};
-        float3           _position{}; ///< 발 위치.
-        float32          _radius{ 0.45f };
-        float32          _height{ 2.0f };
+        GameObjectHandle  _object{};
+        float3            _position{}; ///< 발 위치.
+        float32           _radius{ 0.45f };
+        float32           _height{ 2.0f };
+        uint32            _netEntityID{ 0 };    ///< 복제 엔티티 번호(서버가 스폰마다 매긴다 — 씬 오브젝트 id 는 월드마다 다르다)
+        uint32            _appearanceSeed{ 0 }; ///< 외형 씨앗 — 복제 모습이 같은 얼굴이 되게 함께 보낸다
+        float32           _yaw{ 0.0f };
+        ShooterEnemyPhase _phase{ ShooterEnemyPhase::Rising };
+        uint8             _kindIndex{ 0 }; ///< 적 종류(`_listEnemyKind` 의 자리, `kEliteKindIndex` 는 정예)
     };
 } // namespace sw
 
@@ -79,6 +85,20 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 네트 클라이언트가 스냅샷에서 받아 보간한 적 하나입니다(`ShooterNetPawnComponent::collectReplicatedEnemies`). */
+    struct ShooterReplicatedEnemy
+    {
+        float3            _position{};
+        float32           _yaw{ 0.0f };
+        uint32            _netEntityID{ 0 };
+        uint32            _appearanceSeed{ 0 };
+        ShooterEnemyPhase _phase{ ShooterEnemyPhase::Rising };
+        uint8             _kindIndex{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ShooterGameModeComponent
      * @brief 아레나 한 판을 진행합니다. 플레이가 시작되면 막는 상자를 모으고 페이싱 감독(`AIDirector`, 데이터 `_pacingProfile` 과 `_spawnTable`)을 시작합니다.
@@ -91,12 +111,18 @@ namespace sw
      *          **자동 플레이는 AI 조종자의 빙의로 구현한다.** 자동 플레이 스위치(`gv_shooterAutoPlay`, 씬의 `_bAutoPlay`, 에디터 툴바)가 바뀌면 틱이 끝난 뒤 플러시에서 플레이어 폰을
      *          `ShooterAutoAimControllerComponent`(스폰한 오브젝트) 또는 플레이어 0 의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 넘긴다.
      *          플레이어 몸에는 자동 플레이 분기가 없다.
+     *
+     *          **네트 클라이언트의 월드**(넷 링크 역할이 Client)는 판을 돌리지 않는다 — 페이싱 감독 · 적 규칙은 서버 몫이고, 스냅샷의 적을 복제 모습으로 세워(`ShooterEnemyComponent::launchReplica`)
+     *          적 목록(`getEnemyViews`)을 그 자리로 채운다. 그래서 자동 플레이 AI · 사격 예측 · 근접 예측이 혼자 하는 게임과 같은 목록을 본다. 역할은 프로세스 구성(한 프로세스 재생 · 전용 서버 + 앱)을 가리지 않고 링크가 정한다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Director", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
     class ShooterGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
+
+        /** @brief `ShooterEnemyView::_kindIndex` 의 정예 표시입니다. */
+        static constexpr uint8 kEliteKindIndex = 255;
 
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
@@ -159,6 +185,9 @@ namespace sw
         {
             GameObjectHandle _object{};
             uint32           _spawnID{ 0 };
+            uint32           _netEntityID{ 0 };
+            uint32           _appearanceSeed{ 0 };
+            uint8            _kindIndex{ 0 };
             uint8            _bCounted{ SW_FALSE };
         };
 
@@ -190,8 +219,12 @@ namespace sw
         /** @brief 풀에서 숨어 있는 것 하나를 꺼냅니다. 모두 쓰고 있으면 순번 위치의 것을 다시 씁니다. 없으면 nullptr 을 반환합니다. */
         MeshComponent* acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime );
         void           spawnEnemy( GameObjectManager& manager, const EnemyRequest& request );
-        void           updateEnemies();
-        void           updatePlayerView();
+        /** @brief 스냅샷의 적 하나를 복제 모습으로 세웁니다(네트 클라이언트, 틱 뒤). */
+        void spawnReplicaEnemy( GameObjectManager& manager, const ShooterReplicatedEnemy& replica );
+        void updateEnemies();
+        /** @brief 받은 스냅샷에 맞춰 복제 모습을 옮기고 · 세울 것을 쌓고 · 사라진 것을 지우며 적 목록을 채웁니다(네트 클라이언트). */
+        void updateReplicaEnemies();
+        void updatePlayerView();
         /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자(자동 조준 AI 또는 플레이어 0)에게 넘깁니다(게임 스레드, 틱 밖). */
         void syncAutoPlayPossession( GameObjectManager& manager );
         void clearEnemies();
@@ -242,6 +275,8 @@ namespace sw
         EffectPool                          _tracerPool;
         vector<EnemyRequest>                _listPendingEnemy;
         vector<EffectRequest>               _listPendingEffect;
+        vector<ShooterReplicatedEnemy>      _listReplicaSample;  ///< 이번 프레임에 받은 적(네트 클라이언트)
+        vector<ShooterReplicatedEnemy>      _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
         MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
         string                              _motionTrace;        ///< 움직임 기록 CSV(진단용이며 끝날 때 파일로 쓴다).
         GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
@@ -253,10 +288,12 @@ namespace sw
         uint32                              _killCount;
         uint32                              _traceFrame;             ///< 움직임 기록의 프레임 번호.
         uint32                              _seenProfileReloadCount; ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
+        uint32                              _nextEnemyNetID;         ///< 다음 적의 복제 엔티티 번호
         int8                                _appliedAutoPlay;        ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
         uint8                               _bAmmoPending : 1;       ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
         uint8                               _bPacingReady : 1;       ///< 프로필과 스폰 테이블을 읽었다.
         uint8                               _bPlayerAlive : 1;
-        uint8                               _reserved     : 5;
+        uint8                               _bReplica     : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
+        uint8                               _reserved     : 4;
     };
 } // namespace sw

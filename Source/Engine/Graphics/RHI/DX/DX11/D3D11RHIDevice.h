@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
+#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
@@ -200,6 +201,9 @@ namespace sw
             caps._bParallelCommandRecording = _bDriverCommandLists != SW_FALSE ? 1u : 0u;
             return caps;
         }
+
+        /** @brief DXGI 에 대응이 있는 형식은 FL11 이 샘플링을 보장합니다(ASTC · ETC2 는 대응이 없다). */
+        bool supportsTextureFormat( RHIFormat format ) const override { return toDxgiFormat( format ) != DXGI_FORMAT_UNKNOWN; }
 
         /** @brief 백엔드 이름을 반환합니다. */
         const utf8* getBackendName() const override { return "Direct3D 11"; }

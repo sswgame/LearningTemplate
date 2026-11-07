@@ -1084,6 +1084,16 @@ namespace sw
         return true;
     }
 
+    bool VulkanRHIDevice::supportsTextureFormat( RHIFormat format ) const
+    {
+        const VkFormat vkFormat = VulkanRHIUtil::toVulkanTextureFormat( format );
+        if ( vkFormat == VK_FORMAT_UNDEFINED )
+            return false;
+        VkFormatProperties props{};
+        vkGetPhysicalDeviceFormatProperties( _physicalDevice, vkFormat, &props );
+        return ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) != 0;
+    }
+
     uint32 VulkanRHIDevice::depthAspectMask() const
     {
         return _bDepthHasStencil != 0
@@ -1106,6 +1116,10 @@ namespace sw
 
         VkPhysicalDeviceFeatures deviceFeatures{};
         deviceFeatures.multiDrawIndirect = availableFeatures.multiDrawIndirect;
+        // 블록 압축 형식은 기능을 켜야 쓸 수 있다(Vulkan 명세). 장치가 지원하는 것을 켠다 — 실제 고르기는 `supportsTextureFormat` 의 형식 조회가 본다.
+        deviceFeatures.textureCompressionBC       = availableFeatures.textureCompressionBC;
+        deviceFeatures.textureCompressionETC2     = availableFeatures.textureCompressionETC2;
+        deviceFeatures.textureCompressionASTC_LDR = availableFeatures.textureCompressionASTC_LDR;
         // 범위 밖 버퍼 읽기가 0 이 되도록 한다. DX11/GL 과 같은 결과를 내고, 잘못된 인스턴스 · 머티리얼 인덱스가 GPU 폴트 대신
         // 검은 픽셀로 드러난다(셰이더 쪽 클램프도 따로 있다: binding.hlsli InstanceData::load).
         deviceFeatures.robustBufferAccess = availableFeatures.robustBufferAccess;

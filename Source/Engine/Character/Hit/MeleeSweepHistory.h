@@ -10,7 +10,7 @@
  *            표적 구(중심 · 반지름)가 그 프레임 안팎(`kClaimSlackFrames`)의 칼날 토막에서 칼날 두께 안에 들면 인정한다. 서버가 그 휘두름을 한 적이 없으면(기록 없음)
  *            거절한다 — 클라이언트가 휘두르지 않은 맞음을 지어낼 수 없다.
  *          - 피해: 인정된 주장만 `claimHit` 이 기록한 피해 · 충격량으로 전달한다(창에서 이미 맞힌 오브젝트는 건너뛴다). 그 밖의 판정 · 전달은 스윕 한 길 그대로다.
- *          주장의 전송 형식(`write` · `read`)만 정하고, 어디에 실을지는 게임이 정한다(입력 바이트 안에 싣는다 — 키트의 와이어 형식은 바꾸지 않는다).
+ *          주장의 전송 형식(`write` · `read`)만 정한다. 싣는 곳은 네트 키트의 의도 입력이다(`ReplicationClient::sendIntent`). 사용처: Shooter3D 플레이어의 근접(`ShooterNetPawnComponent`).
  */
 #pragma once
 #include "Core/Container/vector.h"

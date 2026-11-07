@@ -43,6 +43,59 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct TextureFormatFamilySettings
+     * @brief 압축 형식 묶음 하나입니다(BC · ASTC · ETC2). 용도마다 쓸 RHIFormat 이름을 적습니다 — 이 층은 RHI 를 모르므로 글이고 `TextureFormatSelection` 이 풀며, 모르는 이름은 오류입니다.
+     * @details `_suffix` 는 쿠킹 변형의 파일 접미사입니다(`a.dds` → `a.astc.dds`). 비면 임포트한 DDS 자체가 이 묶음입니다. BC 의 색 형식은 임포트 규칙이 정해 여기 값은 장치 지원을 묻는 대표입니다.
+     */
+    REFLECT()
+    struct SW_API TextureFormatFamilySettings
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+        PROPERTY()
+        string _suffix{};
+        PROPERTY()
+        string _color{}; ///< 색 · 일반 데이터(임포트 규칙의 BC7 · BC3 · BC1)
+        PROPERTY()
+        string _normal{}; ///< 2채널 노멀맵(BC5)
+        PROPERTY()
+        string _mask{}; ///< 단일 채널(BC4)
+        PROPERTY()
+        string _hdr{}; ///< HDR(BC6H)
+    };
+
+    /** @struct TextureFormatTargetSettings @brief 배포 대상 하나의 형식 묶음 우선순위입니다. 실행 때 장치가 지원하는 첫 묶음을 고릅니다(웹은 두 벌 — 데스크톱 브라우저 BC, 모바일 브라우저 ASTC). */
+    REFLECT()
+    struct SW_API TextureFormatTargetSettings
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+        PROPERTY()
+        vector<string> _listFamily{};
+    };
+
+    /** @struct TextureFormatSettings @brief 텍스처 형식 쿠킹 표입니다. Godot 의 플랫폼별 압축 형식 파일 · 언리얼 `TextureFormatPriority` 자리입니다(기억에 의존한 비교). */
+    REFLECT()
+    struct SW_API TextureFormatSettings
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _target{}; ///< 이 구성의 대상(`_listTarget` 의 이름) — 쿠킹이 무엇을 굽고 실행이 무엇을 고를지 정한다
+        PROPERTY()
+        vector<TextureFormatTargetSettings> _listTarget{};
+        PROPERTY()
+        vector<TextureFormatFamilySettings> _listFamily{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct EngineConfig
      * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
      * @details 이 헤더는 형식(타입 · 범위)만 정하고 값은 모두 그 파일에 있습니다(언리얼 `BaseEngine.ini` 와 같은 바탕 층). 그래서 파일은 모든 키를 적고
@@ -96,6 +149,9 @@ namespace sw
         /** @brief 패치 목록 서명 확인용 공개 키의 y 좌표입니다(64 자리 16 진). */
         PROPERTY()
         string _patchTrustPublicKeyYHex{};
+
+        PROPERTY()
+        TextureFormatSettings _textureFormats{}; ///< 대상별 텍스처 압축 형식 목록
     };
 
     SW_SERVICE_SLOT_CONST( EngineConfig, Required );

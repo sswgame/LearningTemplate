@@ -586,8 +586,9 @@ namespace sw
             return;
         }
 
+        // 렌더 스레드만 비운다 — 새 씬이 기본 자원을 표에 올리는 동안 기록하지 않게 한다. 이전 씬의 자원은 `releaseHandle` 과 해제 큐가 GPU 뒤로 미루므로 GPU 를 기다리지 않는다.
         if ( _pRHIDevice != nullptr )
-            _pRHIDevice->waitIdle( RHIWaitIdleReason::SceneActivation ); // 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 머티리얼을 잡는다
+            _pRHIDevice->flushRenderThread();
 
         // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `applyScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
         Scene* const pAdopted = applyScene( std::move( pendingScene ), SceneRole::Active );

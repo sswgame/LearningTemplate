@@ -17,7 +17,10 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 
@@ -71,6 +74,31 @@ namespace sw::editor
                     {
                         summary    = HeightfieldImporter::importAllHeightfields( assetPaths.getRootFolderPath(), mode );
                         pKindLabel = "Heightfield";
+                        break;
+                    }
+                    case EditorImportKind::TextureVariant:
+                    {
+                        const string        configPath = TextureImporter::makeDefaultImportConfigPath();
+                        TextureImportConfig config;
+                        if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
+                        {
+                            SW_LOG_ERROR_ID( "AssetImportEntry.CannotCookVariantsWithout", "Cannot cook texture variants without the import config: %#", configPath.c_str() );
+                            return -1;
+                        }
+                        const TextureFormatSettings& settings = editor::getSubsystem<EngineConfig>()._textureFormats;
+                        vector<TextureFormatFamily>  listFamily;
+                        if ( TextureFormatSelection::resolveTarget( settings, settings._target, editor::getSubsystem<TypeRegistry>(), listFamily ) == false )
+                            return -1; // 까닭은 표를 푸는 쪽이 남겼다
+                        for ( const TextureFormatFamily& family : listFamily )
+                        {
+                            if ( family._suffix.empty() )
+                                continue; // 임포트한 DDS 가 이 묶음이다
+                            AssetImportSummary familySummary = TextureImporter::cookTextureVariants( assetPaths.getRootFolderPath(), config, family, mode );
+                            summary._sourceCount += familySummary._sourceCount;
+                            summary._importedCount += familySummary._importedCount;
+                            summary._listProblem.insert( summary._listProblem.end(), familySummary._listProblem.begin(), familySummary._listProblem.end() );
+                        }
+                        pKindLabel = "Texture variant";
                         break;
                     }
                 }

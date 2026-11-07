@@ -210,6 +210,27 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
 }
 
 /**
+ * @brief [RHIDeferredHandleTest] 렌더 스레드 비우기(`flushRenderThread`)는 GPU 를 기다리지도, 미룬 핸들을 내리지도 않는다 — 옛 자원은 패킷 · GPU 뒤로 계속 미뤄진다
+ * @details 씬 활성화 · 에셋 핫 리로드 · 캡처가 쓰는 길이다. 비우기가 핸들을 내리면 게임 스레드가 짓고 있는 패킷의 옛 인덱스가 다른 텍스처로 다시 쓰인다.
+ */
+SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForNoGPUWork )
+{
+    test::FakeRHIDevice device;
+    device.notifyRenderFrameQueued();
+    device.releaseHandle( RHIHandleKind::BindlessTexture, 13 );
+
+    device.flushRenderThread();
+    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    SW_EXPECT_EQUAL( uint64( 0 ), device.getGPUIdleWaitCount() );
+    SW_EXPECT_TRUE( device._listShutdownStep.empty() ); // `waitIdleInternal` 이 불리지 않았다
+
+    device.waitIdle( RHIWaitIdleReason::Tool );
+    SW_EXPECT_EQUAL( uint64( 1 ), device.getGPUIdleWaitCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+    device.notifyRenderFrameRetired();
+}
+
+/**
  * @brief [RHIDeferredHandleTest] 해제는 그때 든 프레임이 아니라 **다음에 넘길 프레임**이 끝나야 내린다 — 렌더 스레드가 쉬고 있어도 미룬다
  * @details 게임 스레드가 지었지만 아직 넘기지 않은 패킷도 옛 인덱스를 값으로 들고 있다(배치의 머티리얼 텍스처 SRV). 로드 중 텍스처를 진짜로 바꾼 머티리얼이
  *          그 텍스처를 놓자 바로 내려, 다음 패킷의 그림자 · 불투명 패스가 죽은 슬롯을 읽었다.

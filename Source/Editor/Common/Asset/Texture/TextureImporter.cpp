@@ -16,12 +16,17 @@
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
+#include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/Image/DDSFormat.h"
+#include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/Texture/TextureFormatSelection.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -223,9 +228,15 @@ namespace sw::editor
          *          스탬프에 기록하므로, 어디서 임포트하든 같은 바이트가 나오는 DirectXTex 자체 필터만 씁니다. 실패하면 단계와 HRESULT 를 남기고 false 입니다.
          */
         [[nodiscard]] bool encodeTextureMipsInternal( const DirectX::Image& baseImage, bool bGenerateMips, DXGI_FORMAT targetFormat, DirectX::TEX_COMPRESS_FLAGS compressFlags,
-                                                      string_view sourcePath, TaskManager* pTaskManager, DirectX::ScratchImage& outFinalImage )
+                                                      string_view sourcePath, TaskManager* pTaskManager, DirectX::ScratchImage& outFinalImage );
+
+        /** @brief 임포트 · 쿠킹의 필터입니다 — WIC 를 쓰지 않아 어디서나 같은 바이트입니다(`encodeTextureMipsInternal`). */
+        constexpr DirectX::TEX_FILTER_FLAGS kMipFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
+
+        /** @brief 원본 한 장의 밉 체인(중간본)을 만듭니다. @p bBlockCompressed 면 맨 위 크기를 4 의 배수로 다시 표본합니다. BC 임포트와 쿠킹 변형이 함께 씁니다. 실패하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool buildMipChainInternal( const DirectX::Image& baseImage, bool bGenerateMips, bool bBlockCompressed, string_view sourcePath, DirectX::ScratchImage& outMipChain )
         {
-            constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
+            constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = kMipFilterFlags;
 
             // BC 압축은 맨 위 크기가 4 의 배수여야 한다 — D3D11 은 아니면 텍스처를 만들지 못한다(1008x981 의 꽃 아틀라스가 DX11 에서만 체크무늬였다. D3D12 · Vulkan · GL 은 받아 준다).
             // 덧대면 UV 가 어긋나므로 4 의 배수로 다시 표본한다(언리얼도 BC 원본은 4 배수를 요구한다). 밉은 그 크기에서 만든다.
@@ -233,7 +244,7 @@ namespace sw::editor
             const DirectX::Image* pBaseImage    = &baseImage;
             const size_t          alignedWidth  = ( baseImage.width + 3 ) & ~static_cast<size_t>( 3 );
             const size_t          alignedHeight = ( baseImage.height + 3 ) & ~static_cast<size_t>( 3 );
-            if ( DirectX::IsCompressed( targetFormat ) && ( alignedWidth != baseImage.width || alignedHeight != baseImage.height ) )
+            if ( bBlockCompressed && ( alignedWidth != baseImage.width || alignedHeight != baseImage.height ) )
             {
                 const HRESULT hrResize = DirectX::Resize( baseImage, alignedWidth, alignedHeight, kFilterFlags, alignedImage );
                 if ( FAILED( hrResize ) )
@@ -247,15 +258,25 @@ namespace sw::editor
                 pBaseImage = alignedImage.GetImage( 0, 0, 0 );
             }
 
-            DirectX::ScratchImage mipChain;
-            HRESULT               hr = bGenerateMips ? DirectX::GenerateMipMaps( *pBaseImage, kFilterFlags, 0, mipChain ) : mipChain.InitializeFromImage( *pBaseImage );
+            const HRESULT hr = bGenerateMips ? DirectX::GenerateMipMaps( *pBaseImage, kFilterFlags, 0, outMipChain ) : outMipChain.InitializeFromImage( *pBaseImage );
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR_ID( "TextureImporter.FailedHrX", "%# failed (hr=0x%#) for %#", bGenerateMips ? "DirectX::GenerateMipMaps" : "DirectX::InitializeFromImage",
                                  Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ), sourcePath );
                 return false;
             }
+            return true;
+        }
 
+        [[nodiscard]] bool encodeTextureMipsInternal( const DirectX::Image& baseImage, bool bGenerateMips, DXGI_FORMAT targetFormat, DirectX::TEX_COMPRESS_FLAGS compressFlags,
+                                                      string_view sourcePath, TaskManager* pTaskManager, DirectX::ScratchImage& outFinalImage )
+        {
+            constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = kMipFilterFlags;
+            DirectX::ScratchImage               mipChain;
+            if ( buildMipChainInternal( baseImage, bGenerateMips, DirectX::IsCompressed( targetFormat ), sourcePath, mipChain ) == false )
+                return false;
+
+            HRESULT hr = S_OK;
             if ( DirectX::IsCompressed( targetFormat ) )
             {
                 hr = BandCompressJob::compress( mipChain, targetFormat, compressFlags, pTaskManager, outFinalImage );
@@ -389,7 +410,7 @@ namespace sw::editor
          * @brief 텍스처 원본이 일괄 임포트에 제공하는 함수들입니다. 원본마다 임포트 설정에서 규칙을 고릅니다.
          * @details `importSource` 는 워커에서 불린다. 밴드 압축에 쓸 작업 시스템은 만든 쪽(`importAllTextures`, 호출 스레드)이 찾아 넘기고, 여기서는 에디터 서비스를 찾지 않는다.
          */
-        class TextureRawImporter final : public IRawAssetImporter
+        class TextureRawImporter : public IRawAssetImporter
         {
         public:
             TextureRawImporter( const TextureImportConfig& config, TaskManager* pTaskManager )
@@ -423,7 +444,7 @@ namespace sw::editor
                 return TextureImporter::importTexture( sourcePath, importedPath, rule, nullptr, _pTaskManager );
             }
 
-        private:
+        protected:
             /** @brief 리소스 루트 기준 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
             [[nodiscard]] bool findRule( string_view assetPath, TextureImportRule& outRule ) const
             {
@@ -437,11 +458,136 @@ namespace sw::editor
                 return true;
             }
 
-        private:
+        protected:
             const TextureImportConfig& _config;
             TaskManager* const         _pTaskManager; ///< 밴드 압축을 나눠 돌릴 작업 시스템(빌림). nullptr 이면 호출한 스레드가 차례로 압축한다
         };
+
+        /**
+         * @class TextureVariantRawImporter
+         * @brief 형식 묶음 하나의 쿠킹 변형을 일괄 절차(`AssetImportStampUtil`)에 태웁니다. 결과는 임포트한 DDS 곁(`a.astc.dds`)이고 스탬프는 묶음마다 따로입니다.
+         */
+        class TextureVariantRawImporter final : public TextureRawImporter
+        {
+        public:
+            TextureVariantRawImporter( const TextureImportConfig& config, TaskManager* pTaskManager, const TextureFormatFamily& family )
+                : TextureRawImporter{ config, pTaskManager }
+                , _family{ family }
+                , _stampFileName{ "import" + family._suffix + ".stamp" }
+            {
+            }
+
+            string_view getStampHeader() const override { return "SWTEXVARIANT 1"; }
+            string_view getStampFileName() const override { return _stampFileName; }
+            string_view getImportedLabel() const override { return "variant DDS"; }
+            string      makeImportedPath( string_view sourcePath ) const override { return TextureFormatSelection::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ), _family._suffix ); }
+            uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
+            {
+                const uint64 sourceHash = TextureRawImporter::computeSourceHash( sourcePath, assetPath );
+                if ( sourceHash == 0 )
+                    return 0;
+                // 인코더 판과 그 묶음의 형식이 결과를 정한다 — 표를 고치거나 인코더를 바꾸면 다시 굽는다.
+                uint64 hash = HashUtil::combine( sourceHash, kVariantEncoderVersion );
+                for ( const RHIFormat format : { _family._color, _family._normal, _family._mask, _family._hdr } )
+                {
+                    hash = HashUtil::combine( hash, static_cast<uint64>( format ) );
+                }
+                return hash;
+            }
+            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
+            {
+                TextureImportRule rule;
+                if ( findRule( assetPath, rule ) == false )
+                    return false;
+                return TextureImporter::cookTextureVariant( sourcePath, importedPath, rule, _family, _pTaskManager );
+            }
+
+        private:
+            /** @brief `TextureBlockEncoder` 의 판입니다. 같은 입력에서 다른 바이트가 나오게 바꾸면 올립니다. */
+            static constexpr uint64 kVariantEncoderVersion = 1;
+
+            const TextureFormatFamily& _family;
+            const string               _stampFileName;
+        };
+
+        /** @brief 변형 DDS 머리에 적을 형식 번호입니다(`DDSFormat`). 인코더가 만드는 형식만 받습니다. */
+        [[nodiscard]] uint32 variantDxgiFormatInternal( RHIFormat format )
+        {
+            if ( format == RHIFormat::ASTC_4x4_UNORM )
+                return DDSFormat::kDxgiASTC4x4Unorm;
+            if ( format == RHIFormat::ETC2_RGBA8_UNORM )
+                return DDSFormat::kEngineDxgiETC2RGBA8;
+            return format == RHIFormat::EAC_R11_UNORM ? DDSFormat::kEngineDxgiEACR11 : DDSFormat::kEngineDxgiEACRG11;
+        }
     } // namespace
+
+    bool TextureImporter::cookTextureVariant( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager )
+    {
+        const TextureFormatUsage usage = TextureImportFormatUtil::getUsage( rule._format );
+        if ( usage == TextureFormatUsage::Raw )
+            return importTexture( sourcePath, outputPath, rule, nullptr, pTaskManager ); // 어느 장치나 읽는다 — 묶음의 파일 이름으로 그대로 둔다
+        const RHIFormat format = family.getFormat( usage );
+        if ( usage == TextureFormatUsage::HDR )
+        {
+            if ( format != RHIFormat::R16G16B16A16_FLOAT )
+            {
+                SW_LOG_ERROR_ID( "TextureImporter.VariantHDRFormat", "Texture format family '%#' needs R16G16B16A16_FLOAT for HDR sources (no HDR encoder for the others): %#", family._name, sourcePath );
+                return false;
+            }
+            TextureImportRule hdrRule = rule;
+            hdrRule._format           = TextureImportFormat::R16G16B16A16Float;
+            return importTexture( sourcePath, outputPath, hdrRule, nullptr, pTaskManager );
+        }
+        if ( TextureBlockEncoder::isEncodable( format ) == false )
+        {
+            SW_LOG_ERROR_ID( "TextureImporter.VariantNoEncoder", "Texture format family '%#' names a format the cooker cannot encode (RHIFormat %#): %#", family._name, static_cast<uint32>( format ), sourcePath );
+            return false;
+        }
+
+        RawImageData rawImage;
+        if ( RawImageData::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "TextureImporter.VariantDecodeFailed", "Failed to decode source image: %#", sourcePath );
+            return false;
+        }
+        // 인코더는 RGBA 순서를 읽는다 — 규칙의 BGRA 는 BC 파일의 바이트 배치라 여기서는 뜻이 없다.
+        TextureImportRule variantRule = rule;
+        if ( variantRule._swizzle == TextureSwizzle::BGRA || variantRule._swizzle == TextureSwizzle::ARGB )
+            variantRule._swizzle = TextureSwizzle::RGBA;
+        applyChannelManipulations( rawImage, variantRule, static_cast<size_t>( rawImage._width ) * static_cast<size_t>( rawImage._height ) );
+
+        DirectX::Image baseImage{};
+        baseImage.width      = static_cast<size_t>( rawImage._width );
+        baseImage.height     = static_cast<size_t>( rawImage._height );
+        baseImage.format     = rule._bSRGB == SW_TRUE ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM; // 밉 필터가 이 이름을 보고 선형 공간에서 섞는다(`importTexture` 와 같다)
+        baseImage.rowPitch   = static_cast<size_t>( rawImage._width ) * RawImageData::kChannelCount;
+        baseImage.slicePitch = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
+        baseImage.pixels     = rawImage._bytes.data();
+        DirectX::ScratchImage mipChain;
+        if ( buildMipChainInternal( baseImage, rule._bGenerateMips == SW_TRUE, true, sourcePath, mipChain ) == false )
+            return false;
+
+        const DirectX::TexMetadata& metadata = mipChain.GetMetadata();
+        vector<uint8>               payload;
+        for ( size_t mip = 0; mip < metadata.mipLevels; ++mip )
+        {
+            const DirectX::Image* pImage = mipChain.GetImage( mip, 0, 0 );
+            if ( pImage == nullptr || TextureBlockEncoder::encodeMip( format, pImage->pixels, static_cast<uint32>( pImage->width ), static_cast<uint32>( pImage->height ), payload ) == false )
+                return false;
+        }
+        if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( outputPath ) == false )
+            return false;
+        const uint32 width    = static_cast<uint32>( metadata.width );
+        const uint32 rowBytes = ( width + 3 ) / 4 * getRHIFormatBlockInfo( format )._blockBytes;
+        return ImageFileWriter::writeDDS( outputPath, payload, width, static_cast<uint32>( metadata.height ), static_cast<uint32>( metadata.mipLevels ), variantDxgiFormatInternal( format ), rowBytes );
+    }
+
+    AssetImportSummary TextureImporter::cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode )
+    {
+        TaskManager* const              pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 굽는다(`importAllTextures` 와 같다)
+        const TextureVariantRawImporter importer{ config, pTaskManager, family };
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
+    }
 
     bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
     {

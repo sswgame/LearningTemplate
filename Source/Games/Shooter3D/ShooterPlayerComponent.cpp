@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -43,6 +44,7 @@
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterHUDViewModel.h"
+#include "Games/Shooter3D/ShooterNetPawnComponent.h"
 
 namespace sw
 {
@@ -53,6 +55,8 @@ namespace sw
             static constexpr const utf8* kArrWeaponAction[ShooterPlayerComponent::kWeaponCount] = { "Weapon1", "Weapon2", "Weapon3" };
             // 폰 스키마의 버튼과 아날로그 이름이다(플레이어는 같은 이름의 입력 맵 액션을 쓰고, 자동 플레이 AI 는 그 이름을 누른다).
             static constexpr const utf8* kFireButton         = "Fire";
+            static constexpr const utf8* kMeleeButton        = "Melee";
+            static constexpr uint32      kMeleeBladeSamples  = 4;
             static constexpr const utf8* kReloadButton       = "Reload";
             static constexpr const utf8* kSwitchWeaponButton = "SwitchWeapon";
             static constexpr const utf8* kViewWeaponName     = "ViewWeapon";
@@ -320,6 +324,12 @@ namespace sw
         , _downTime{ 2.5f }
         , _hitboxLayer{ "Ragdoll" }
         , _shotImpulse{ 30.0f }
+        , _meleeDamage{ 25.0f }
+        , _meleeImpulse{ 40.0f }
+        , _meleeReach{ 2.2f }
+        , _meleeRadius{ 0.15f }
+        , _meleeArc{ 1.4f }
+        , _meleeDuration{ 0.25f }
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
         , _muzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f }
@@ -327,6 +337,9 @@ namespace sw
         , _combatHealth{}
         , _weaponSockets{}
         , _listPendingShot{}
+        , _listMeleePrevious{}
+        , _listMeleeCurrent{}
+        , _listMeleeHitTarget{}
         , _listPendingEffect{}
         , _listPendingTracer{}
         , _soundQueue{}
@@ -337,6 +350,8 @@ namespace sw
         , _bodyEyeHeight{ 0.0f }
         , _lookYaw{ 0.0f }
         , _lastTracerWidth{ 0.0f }
+        , _serverHealth{ 0.0f }
+        , _meleeElapsed{ 0.0f }
         , _weaponIndex{ 0 }
         , _shotCount{ 0 }
         , _hitCount{ 0 }
@@ -348,6 +363,8 @@ namespace sw
         , _bFirstPerson{ SW_TRUE }
         , _bViewModeDirty{ SW_TRUE }
         , _bBodyRequested{ SW_FALSE }
+        , _bServerHealth{ SW_FALSE }
+        , _bMeleeActive{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -464,11 +481,12 @@ namespace sw
         }
 
         // 조종자(사람 또는 자동 플레이 AI)가 틱 앞에 폰에 넣은 의도만 읽는다. 조종자가 없으면 의도는 0 이다(서 있는다).
-        using Internal             = ShooterPlayerComponentInternal;
-        const PawnComponent* pPawn = pOwner->getComponent<PawnComponent>();
+        using Internal = ShooterPlayerComponentInternal;
+        // 멈춘 몸(입력 초점이 없는 네트 월드)은 의도를 쓰지 않는다 — 이동처럼 무기도 같다.
+        ShooterBodyMovementComponent* pMovement = findMovement();
+        const PawnComponent*          pPawn     = pMovement == nullptr || pMovement->isSuspended() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
             applyWeaponIntent( *pPawn );
-        ShooterBodyMovementComponent* pMovement = findMovement();
         if ( pMovement != nullptr && pMovement->stepMovement( pDirector->getBoxes(), step ) )
             _soundQueue.queueEvent( Internal::kSoundLand );
         const bool bTrigger     = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
@@ -481,6 +499,17 @@ namespace sw
             if ( bJustPressed && intent._bTriggerLook )
                 aimDirection = RayMath::computeLookDirection( intent._triggerYaw, intent._triggerPitch );
             fireWeapon( *pDirector, *pCamera, aimDirection, bJustPressed );
+        }
+        if ( _bMeleeActive == SW_TRUE )
+        {
+            _meleeElapsed += step;
+        }
+        else if ( pPawn != nullptr && pPawn->wasButtonTriggered( pPawn->findButton( hashed_string( Internal::kMeleeButton ) ) ) )
+        {
+            _bMeleeActive = SW_TRUE;
+            _meleeElapsed = 0.0f;
+            _listMeleePrevious.clear();
+            _listMeleeHitTarget.clear();
         }
 
         _lookYaw = pCamera->getLook().getYaw();
@@ -519,6 +548,24 @@ namespace sw
                 (void)pTelemetry->record( roundEnded );
             }
         }
+    }
+
+    void ShooterPlayerComponent::applyServerReport( uint32 confirmedHitCount, float32 health )
+    {
+        _serverHealth  = health;
+        _bServerHealth = SW_TRUE;
+        if ( confirmedHitCount <= _hitCount )
+            return;
+        _hitCount       = confirmedHitCount;
+        _hitMarkerTimer = 0.15f;
+        _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundHitEnemy );
+    }
+
+    void ShooterPlayerComponent::recordMeleeHit()
+    {
+        ++_hitCount;
+        _hitMarkerTimer = 0.15f;
+        _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundHitEnemy );
     }
 
     void ShooterPlayerComponent::addWaveAmmo()
@@ -742,7 +789,11 @@ namespace sw
         GameObject*              pOwner       = getOwner();
         const uint64             ownerID      = pOwner != nullptr ? pOwner->getObjectID() : 0;
         const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
-        size_t                   shotHead     = 0;
+        // 네트: 서버는 쏜 클라이언트가 보던 시각으로 되감아 정하고(랙 보정), 클라이언트는 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않는다.
+        ShooterNetPawnComponent* pNetPawn   = pOwner != nullptr ? pOwner->getComponent<ShooterNetPawnComponent>() : nullptr;
+        const bool               bRewound   = pNetPawn != nullptr && pNetPawn->isServer();
+        const bool               bPredicted = pNetPawn != nullptr && pNetPawn->isClient();
+        size_t                   shotHead   = 0;
         while ( shotHead < _listPendingShot.size() )
         {
             // 한 방아쇠(산탄은 광선 여럿)에 소리 · 맞음 수는 하나만 낸다. 적을 맞혔으면 쇳소리, 상자나 벽을 맞혔으면 나무 소리다.
@@ -756,9 +807,15 @@ namespace sw
                 float32                distance    = shot._coverDistance;
                 bool                   bHitBody    = false;
                 CharacterRayHit        rayHit;
-                const bool             bRayHit = bHasMask && CharacterRayHit::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit );
+                const bool             bRayHit = bHasMask && ( bRewound ? pNetPawn->raycastRewound( manager, shot._ray, shot._coverDistance, hitboxMask, ownerID, rayHit )
+                                                                        : CharacterRayHit::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit ) );
                 ShooterEnemyComponent* pEnemy  = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
-                if ( pEnemy != nullptr )
+                if ( pEnemy != nullptr && bPredicted )
+                {
+                    distance = rayHit._distance;
+                    bHitBody = true;
+                }
+                else if ( pEnemy != nullptr )
                 {
                     // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
                     const bool    bAlive = pEnemy->isAlive();
@@ -808,6 +865,52 @@ namespace sw
             }
         }
         _listPendingShot.clear();
+    }
+
+    void ShooterPlayerComponent::resolveMelee( GameObjectManager& manager )
+    {
+        using Internal                            = ShooterPlayerComponentInternal;
+        GameObject*                       pOwner  = getOwner();
+        const FirstPersonCameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
+        if ( _bMeleeActive == SW_FALSE || pCamera == nullptr )
+            return;
+        uint32 hitboxMask = 0;
+        if ( Internal::findLayerMask( manager, _hitboxLayer, hitboxMask ) == false )
+        {
+            SW_LOG_ERROR_ID( "ShooterPlayer.MeleeHitboxLayerNotPhysics", "Hitbox layer '%#' is not in the physics settings - melee cannot hit enemies", _hitboxLayer.c_str() );
+            _bMeleeActive = SW_FALSE;
+            return;
+        }
+        // 칼날은 눈에서 시선 앞으로 뻗은 선이고, 창 동안 요로 호를 그린다. 시선은 서버 · 클라이언트가 같은 의도에서 온다.
+        const float32 fraction = MathUtil::min( _meleeElapsed / _meleeDuration, 1.0f );
+        const float32 yaw      = pCamera->getLook().getYaw() + ( fraction - 0.5f ) * _meleeArc;
+        const float3  forward  = RayMath::computeLookDirection( yaw, pCamera->getLook().getPitch() );
+        const float3  eye      = getEyePosition();
+        MeleeHit::makeBlade( eye + forward * ( _meleeReach * 0.25f ), eye + forward * _meleeReach, Internal::kMeleeBladeSamples, _listMeleeCurrent );
+
+        MeleeHitParams params;
+        params._kind                        = hashed_string( Internal::kMeleeButton );
+        params._radius                      = _meleeRadius;
+        params._damage                      = _meleeDamage;
+        params._impulse                     = _meleeImpulse;
+        params._layerMask                   = hitboxMask;
+        ShooterNetPawnComponent* pNetPawn   = pOwner->getComponent<ShooterNetPawnComponent>();
+        const bool               bPredicted = pNetPawn != nullptr && pNetPawn->isClient();
+        vector<MeleeHit>         listHit;
+        const uint32             hitCount = MeleeHit::sweep( *pOwner, _listMeleePrevious, _listMeleeCurrent, params, bPredicted ? MeleeHitAuthority::Predicted : MeleeHitAuthority::Authority, _listMeleeHitTarget, listHit );
+        for ( const MeleeHit& hit : listHit )
+        {
+            // 예측이다 — 맞은 것을 서버에 주장하고 표시는 서버가 인정한 뒤에 낸다(`applyServerReport`).
+            const GameObject*            pTarget = manager.resolveGameObject( hit._target );
+            const ShooterEnemyComponent* pEnemy  = pTarget != nullptr ? pTarget->getComponent<ShooterEnemyComponent>() : nullptr;
+            if ( bPredicted && pEnemy != nullptr )
+                pNetPawn->queueMeleeClaim( pEnemy->getNetEntityID() );
+        }
+        if ( bPredicted == false && hitCount > 0 )
+            recordMeleeHit();
+        _listMeleePrevious.swap( _listMeleeCurrent );
+        if ( fraction >= 1.0f )
+            _bMeleeActive = SW_FALSE;
     }
 
     float3 ShooterPlayerComponent::findMuzzlePosition()
@@ -886,7 +989,10 @@ namespace sw
         const bool bCrosshair = _bFirstPerson == SW_TRUE && _combatHealth.isAlive();
         pViewModel->setCrosshairShown( bCrosshair );
         pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
-        pViewModel->setHealth( _combatHealth.getHealth(), _combatHealth.getHealthRatio() );
+        if ( _bServerHealth == SW_TRUE )
+            pViewModel->setHealth( _serverHealth, _maxHealth > 0.0f ? _serverHealth / _maxHealth : 0.0f );
+        else
+            pViewModel->setHealth( _combatHealth.getHealth(), _combatHealth.getHealthRatio() );
         const WeaponState& weapon = getCurrentWeapon();
         pViewModel->setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
         // 무기의 이름은 무기의 장비 아이템(무기 표의 item)의 이름 하나가 원본이고, 아이템 표의 원문이 현지화 키다. 두 줄(WeaponName · ItemName)이 같은 값을 읽는다.
@@ -951,6 +1057,7 @@ namespace sw
             spawnBody();
         // 쏜 광선을 적의 히트박스에 묻고 맞음을 보낸다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다. 탄도선 · 탄착 · 소리도 여기서 쌓인다.
         resolveShots( *pManager );
+        resolveMelee( *pManager );
         const GameObject*         pDirectorObject = pManager->resolveGameObject( _director );
         ShooterGameModeComponent* pDirector       = pDirectorObject != nullptr ? pDirectorObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( pDirector != nullptr )

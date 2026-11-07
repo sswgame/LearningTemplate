@@ -537,6 +537,7 @@
 							<item>Weapon1</item>
 							<item>Weapon2</item>
 							<item>Weapon3</item>
+							<item>Melee</item>
 						</_listButton>
 						<_listAnalog>
 							<item>SwitchWeapon</item>

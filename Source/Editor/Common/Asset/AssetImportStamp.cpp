@@ -28,9 +28,6 @@ namespace sw::editor
          */
         struct AssetImportStampInternal
         {
-            /** @brief 원본 폴더마다 하나 두는 스탬프 파일 이름입니다. */
-            static constexpr string_view kImportStampFileName = "import.stamp";
-
             /** @brief 스탬프 한 줄입니다. */
             struct StampEntry
             {
@@ -333,7 +330,7 @@ namespace sw::editor
             static void importRawFolder( const string& rootDir, const string& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
                                          const unordered_set<string>* pScope, TaskManager* pTaskManager, AssetImportSummary& inoutSummary )
             {
-                const string            stampPath = FileUtil::joinPath( rawFolder, kImportStampFileName );
+                const string            stampPath = FileUtil::joinPath( rawFolder, importer.getStampFileName() );
                 map<string, StampEntry> mapStamped;
                 readStamp( stampPath, importer.getStampHeader(), mapStamped );
 

@@ -61,10 +61,12 @@ namespace sw
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
+        , _replicaPreviousPosition{ 0.0f, 0.0f, 0.0f }
         , _combatHealth{}
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
         , _attackCooldown{}
+        , _netEntityID{ 0 }
         , _phase{ ShooterEnemyPhase::Rising }
         , _bLaunched{ SW_FALSE }
         , _bHitPending{ SW_FALSE }
@@ -72,6 +74,7 @@ namespace sw
         , _bAttackStarting{ SW_FALSE }
         , _bAttackHitEvent{ SW_FALSE }
         , _bHitEventMissingReported{ SW_FALSE }
+        , _bReplica{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -118,6 +121,57 @@ namespace sw
         if ( pPawn != nullptr )
             pPawn->requestControlRotation( yaw, 0.0f );
         return true;
+    }
+
+    void ShooterEnemyComponent::launchReplica( GameObjectHandle gameMode, const float3& position, float32 yaw )
+    {
+        (void)_combatHealth.initialize( ShooterEnemyComponentInternal::makeCombatHealthSettings( 1.0f ) ); // 1 은 범위 안이다 — 체력은 서버 몫이고 살아 있음만 뜻한다
+        _gameMode                = gameMode;
+        _position                = position;
+        _replicaPreviousPosition = position;
+        _yaw                     = yaw;
+        _bLaunched               = SW_TRUE;
+        _bReplica                = SW_TRUE;
+        enterPhase( ShooterEnemyPhase::Rising );
+        GameObject*     pOwner = getOwner();
+        SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene != nullptr )
+        {
+            pScene->setLocalPosition( _position );
+            pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
+        }
+        PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        if ( pPawn != nullptr )
+            pPawn->setAutoPossess( PawnAutoPossess::None );
+    }
+
+    void ShooterEnemyComponent::setReplicatedPose( const float3& position, float32 yaw, ShooterEnemyPhase phase )
+    {
+        _position = position;
+        _yaw      = yaw;
+        if ( phase == _phase )
+            return;
+        _bHitPending = phase == ShooterEnemyPhase::Staggered ? SW_TRUE : SW_FALSE;
+        enterPhase( phase );
+    }
+
+    void ShooterEnemyComponent::tickReplica( float32 step )
+    {
+        _phaseTime += step;
+        const float3  moved    = float3{ _position._x - _replicaPreviousPosition._x, 0.0f, _position._z - _replicaPreviousPosition._z };
+        const float32 speed    = moved.getLength() / step;
+        float32       moveCode = ShooterAnimationParameter::kMoveIdle;
+        if ( speed > _walkClipSpeed )
+            moveCode = speed >= _runSpeed ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
+        _replicaPreviousPosition = _position;
+        GameObject*     pOwner   = getOwner();
+        SceneComponent* pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene != nullptr )
+        {
+            pScene->setLocalPosition( _position );
+            pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
+        }
+        updateAnimator( moveCode );
     }
 
     bool ShooterEnemyComponent::applyDamage( float32 amount )
@@ -193,6 +247,11 @@ namespace sw
         Component::onTick( deltaTime );
         if ( _bLaunched == SW_FALSE || deltaTime <= 0.0f )
             return;
+        if ( _bReplica == SW_TRUE )
+        {
+            tickReplica( MathUtil::min( deltaTime, 0.1f ) );
+            return;
+        }
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ShooterGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _gameMode ) : nullptr;

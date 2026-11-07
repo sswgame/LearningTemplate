@@ -80,6 +80,10 @@ namespace sw
         /** @brief 올릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). 붙은 디바이스가 없으면 `request` 는 실패 핸들을 돌려준다. */
         void bindDevice( IRHIDevice* pDevice );
         /**
+         * @brief 붙은 장치가 지원하는 첫 형식 묶음의 파일 접미사입니다(`TextureFormatSelection`, `bindDevice` 가 정한다). BC(데스크톱)는 빈 글이고 임포트한 DDS 를 그대로 읽습니다. 어느 스레드에서든 부릅니다.
+         */
+        string getFormatVariantSuffix() const;
+        /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 업로드합니다(렌더 텍스처 경로면 렌더 타깃을 만듭니다). 실패하면 nullptr 입니다.
          * @details `request` 와 같은 로드 작업을 기다린다(새 로드는 이 자리에서 읽는다) — 디바이스를 쓰는 스레드에서만 부른다(업로드를 그 자리에서 한다).
          *          **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라

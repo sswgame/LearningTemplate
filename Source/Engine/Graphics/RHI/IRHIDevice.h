@@ -162,14 +162,22 @@ namespace sw
         /**
          * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다. 돌아오면 앞서 제출한 모든 작업이 GPU 에서 끝나 있고 해제 큐가 비어 있습니다(클래스 머리말의 완료 계약).
          * @details **렌더 스레드가 실행 중일 때 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다린다**
-         *          (`setRenderThreadFlush`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료인 `SceneManager::updateTransitions`, 텍스처와 머티리얼
-         *          핫 리로드)도 이 순서를 따른다. 실제 대기는 백엔드의 `waitIdleInternal` 이 한다.
+         *          (`setRenderThreadFlush`). 실제 대기는 백엔드의 `waitIdleInternal` 이 한다. 자원을 바꿔 끼우는 일은 이것을 쓰지 않는다 — `flushRenderThread` 와 지연 해제가 그 길이다.
          * @warning 렌더 스레드가 프레임을 기록하거나 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면, DX12 는 아직 실행 전인 커맨드
          *          얼로케이터를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어긴다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
          *          이 문제를 가리므로, 이 경로는 에디터가 없는 빌드(Shipping)로 확인한다.
          * @param reason 기다리는 이유(필수, RHIAsyncUploads U14). 프레임마다 도는 경로에는 맞는 이유가 없다 — 이름이 있어야 호출처가 "왜" 를 적고 새 호출이 눈에 띈다(`RHIWaitIdleReason`).
          */
         void waitIdle( RHIWaitIdleReason reason );
+        /**
+         * @brief 렌더 스레드가 받은 패킷을 다 끝낼 때까지만 기다립니다. GPU 는 기다리지 않고 해제 큐도 비우지 않습니다. 렌더 스레드 자신이 부르거나 렌더 스레드가 없으면 할 일이 없습니다.
+         * @details 게임 스레드가 씬 활성화 · 핫 리로드에서 표(bindless)와 자원을 바꿔 끼우는 동안 렌더 스레드가 기록하지 않게 하는 CPU 동기화다(패킷을 내는 쪽이 게임 스레드라 그동안 쉰다).
+         *          옛 자원은 `releaseHandle` 로 놓으면 이미 만든 패킷 · GPU 가 끝난 뒤에 내려간다(`enqueueGPURelease` 의 펜스). WebGPU 는 GPU 를 동기로 기다릴 수 없어 이 길만 남는다.
+         *          언리얼 `FlushRenderingCommands` + 지연 해제와 같은 짝이다(기억에 의존한 비교).
+         */
+        void flushRenderThread();
+        /** @brief `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적)입니다. 씬 활성화 · 에셋 핫 리로드 · 캡처가 늘리지 않는지 시나리오가 본다(감시 값 `RHI.GPUIdleWaits`). */
+        uint64 getGPUIdleWaitCount() const;
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.
@@ -253,6 +261,11 @@ namespace sw
          *       supportsNativeBindlessSampling() 과 getCapabilities() override 가 런타임에 확정합니다.
          */
         virtual RHICapabilities getCapabilities() const;
+        /**
+         * @brief 이 장치가 @p format 의 텍스처를 만들어 샘플링할 수 있으면 true 입니다. 쿠킹 변형을 고를 때 묻습니다(`TextureFormatSelection`). 어느 스레드에서 불러도 됩니다.
+         * @details 언리얼 `GPixelFormats[].Supported` · Godot `RenderingDevice::texture_is_format_supported_for_usage` 자리다(기억에 의존한 비교).
+         */
+        [[nodiscard]] virtual bool supportsTextureFormat( RHIFormat format ) const = 0;
         /**
          * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
          * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.

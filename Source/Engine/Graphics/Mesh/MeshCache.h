@@ -90,7 +90,7 @@ namespace sw
          * @return 사용 중이었고 다시 읽었으면 true. 아무도 쓰지 않거나 읽을 수 없으면(옛 정점 그대로) false 입니다.
          */
         [[nodiscard]] static bool reloadShared( string_view path );
-        /** @brief 다시 읽기 전에 기다릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr). 붙은 디바이스가 있으면 정점을 바꾸기 전에 `waitIdle` 한다 — 지난 프레임이 아직 옛 정점 버퍼로 그리고 있을 수 있다. */
+        /** @brief 다시 읽기 전에 기다릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr). 붙은 디바이스가 있으면 정점을 바꾸기 전에 렌더 스레드를 비운다(`flushRenderThread`) — 옛 정점 버퍼는 지연 해제가 GPU 뒤로 미룬다. */
         void bindDevice( IRHIDevice* pDevice );
 
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */

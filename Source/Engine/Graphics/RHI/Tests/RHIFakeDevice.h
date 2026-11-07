@@ -103,6 +103,7 @@ namespace sw::test
         uint32                             _pendingReleaseCount{ 0 };    /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
         vector<RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
         vector<RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
+        vector<RHIFormat>                  _listUnsupportedFormat;       /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
 
         [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
@@ -125,6 +126,11 @@ namespace sw::test
             caps._bParallelCommandRecording = SW_TRUE;
             caps._bWireframeFill            = SW_TRUE; // 그리지 않으므로 모든 보기 모드를 받는다
             return caps;
+        }
+
+        bool supportsTextureFormat( RHIFormat format ) const override
+        {
+            return std::find( _listUnsupportedFormat.begin(), _listUnsupportedFormat.end(), format ) == _listUnsupportedFormat.end();
         }
 
         unique_ptr<IRHICommandList> createCommandList() override

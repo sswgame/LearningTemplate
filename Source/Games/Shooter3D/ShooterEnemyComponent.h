@@ -67,8 +67,16 @@ namespace sw
          * @return 체력이 범위 밖(1 보다 작음)이라 거절되면 false 이다. 거절하면 아무것도 바꾸지 않으므로 부르는 쪽이 오브젝트를 정리한다(체력을 올려 대신 서지 않는다).
          */
         [[nodiscard]] bool launch( GameObjectHandle gameMode, const float3& position, float32 yaw, float32 health, float32 speed );
+        /**
+         * @brief 네트 클라이언트의 복제 모습으로 세웁니다(게임 스레드). 규칙은 돌지 않는다 — 판단 · 체력 · 맞음은 서버 몫이고, 자리와 단계를 서버가 보낸 값으로 받아(`setReplicatedPose`) 그리기와 히트박스만 맡는다.
+         * @details 언리얼의 Simulated Proxy 자리다. 폰의 자동 빙의는 끈다(AI 조종자가 서지 않는다).
+         */
+        void launchReplica( GameObjectHandle gameMode, const float3& position, float32 yaw );
+        /** @brief 복제 모습의 이번 프레임 자리 · 요 · 단계입니다(감독이 받은 스냅샷을 보간해 부른다). */
+        void setReplicatedPose( const float3& position, float32 yaw, ShooterEnemyPhase phase );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
+        bool isReplica() const { return _bReplica == SW_TRUE; }
         bool isAlive() const { return _bLaunched == SW_TRUE && _combatHealth.isAlive(); }
         bool isDead() const { return _bLaunched == SW_TRUE && _combatHealth.isAlive() == false; }
         /** @brief 체력 원천의 읽기입니다 — 쓰러짐은 `isDead()`. */
@@ -76,6 +84,7 @@ namespace sw
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
         bool              isRemovable() const { return isDead() && _phaseTime >= _corpseTime; }
         ShooterEnemyPhase getPhase() const { return _phase; }
+        float32           getYaw() const { return _yaw; }
         /** @brief 발 위치입니다(몸 이동의 위치 — 틱마다 옮겨 적는다). */
         const float3& getPosition() const { return _position; }
         float32       getRadius() const { return _radius; }
@@ -85,11 +94,16 @@ namespace sw
         /** @brief 손 닿는 거리의 이 비율 안이면 멈춰 섭니다(내비 에이전트 정지 거리와 AI 조종자가 같이 읽습니다). */
         float32          getStopFraction() const { return _stopFraction; }
         GameObjectHandle getGameMode() const { return _gameMode; }
+        /** @brief 복제 엔티티 번호입니다(감독이 스폰할 때 매깁니다). 랙 보정 · 맞음 주장이 이 번호로 적을 가리킵니다. */
+        uint32 getNetEntityID() const { return _netEntityID; }
+        void   setNetEntityID( uint32 netEntityID ) { _netEntityID = netEntityID; }
 
     private:
         /** @brief 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). 이번 피해로 쓰러졌으면 true 입니다(이미 쓰러졌으면 false). */
         [[nodiscard]] bool applyDamage( float32 amount );
         void               enterPhase( ShooterEnemyPhase phase );
+        /** @brief 복제 모습의 한 틱입니다 — 받은 자리를 씬에 옮기고 애니메이터를 맞춥니다. */
+        void tickReplica( float32 step );
         /** @brief 같은 오브젝트의 애니메이터 파라미터를 씁니다(자기 오브젝트). */
         void updateAnimator( float32 moveCode );
         /** @brief 플레이어를 때리는 것을 틱 뒤로 미룹니다. */
@@ -134,10 +148,12 @@ namespace sw
 
         float3            _position; ///< 발
         float32           _yaw;
-        CombatHealth      _combatHealth; ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
+        float3            _replicaPreviousPosition; ///< 복제 모습 — 지난 틱의 자리(걷기 클립을 고르는 빠르기)
+        CombatHealth      _combatHealth;            ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
         float32           _speed;
         float32           _phaseTime;
         Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
+        uint32            _netEntityID;    ///< 복제 엔티티 번호(0 은 아직 없음)
         ShooterEnemyPhase _phase;
         uint8             _bLaunched                : 1;
         uint8             _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
@@ -145,6 +161,7 @@ namespace sw
         uint8             _bAttackStarting          : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
         uint8             _bAttackHitEvent          : 1; ///< 이번 휘두름의 맞는 알림을 받았다(다음 틱이 맞힘을 처리한다)
         uint8             _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
-        uint8             _reserved                 : 2;
+        uint8             _bReplica                 : 1; ///< 네트 클라이언트의 복제 모습이다(규칙이 돌지 않는다)
+        uint8             _reserved                 : 1;
     };
 } // namespace sw

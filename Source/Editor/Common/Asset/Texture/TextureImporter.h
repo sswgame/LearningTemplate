@@ -6,6 +6,8 @@
 
 namespace sw
 {
+    struct TextureFormatFamily;
+
     class AssetPaths;
     class TaskManager;
 } // namespace sw
@@ -102,6 +104,18 @@ namespace sw::editor
          * @param config 원본마다 규칙을 고르는 임포트 설정입니다. 리소스 루트 기준 상대 경로로 매칭합니다.
          */
         [[nodiscard]] static AssetImportSummary importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode );
+
+        /**
+         * @brief 원본 하나를 형식 묶음 @p family 의 쿠킹 변형으로 @p outputPath 에 씁니다. 원본 + 규칙이 중간본이고, 압축은 묶음마다 여기서 한다.
+         * @details 밉 체인까지는 BC 임포트와 같은 함수다(같은 4 배수 다시 표본 · 같은 필터). 비압축 용도는 규칙 그대로, HDR 은 묶음의 형식(R16G16B16A16_FLOAT)으로 임포트한다. 인코더가 없는 형식이면 오류다.
+         */
+        [[nodiscard]] static bool cookTextureVariant( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager = nullptr );
+
+        /**
+         * @brief 이 구성의 대상(`EngineConfig::_textureFormats`)이 접미사를 가진 묶음(ASTC · ETC2)을 고르면 모든 원본의 변형을 굽습니다(`App --cook-texture-variants` · `--check-texture-variants`).
+         * @details 임포트한 DDS 곁에 쓰고 원본 폴더의 `import<접미사>.stamp` 로 대조한다(`AssetImportStampUtil`). 곁 파일 규칙으로 팩에 담긴다(`SW_ASSET_COMPANION`). 대상이 BC 뿐이면(데스크톱) 할 일이 없다.
+         */
+        [[nodiscard]] static AssetImportSummary cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode );
 
         /**
          * @brief 원본 경로에 해당하는 DDS 경로를 만듭니다(`<x>/textures_raw/<y>.png` → `<x>/textures/<y>.dds`). `textures_raw/` 구간이 없으면 빈 문자열입니다.

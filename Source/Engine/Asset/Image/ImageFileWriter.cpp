@@ -56,16 +56,23 @@ namespace sw
         using Internal = ImageFileWriterInternal;
         if ( Internal::isSizeValid( rgbaBytes, width, height ) == false )
             return false;
+        const vector<uint8> payload( rgbaBytes.begin(), rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4u ) );
+        return writeDDS( path, payload, width, height, 1, Internal::kDxgiR8G8B8A8Unorm, width * 4u );
+    }
+
+    bool ImageFileWriter::writeDDS( string_view path, const vector<uint8>& payload, uint32 width, uint32 height, uint32 mipCount, uint32 dxgiFormat, uint32 rowBytes )
+    {
+        using Internal = ImageFileWriterInternal;
         vector<uint8> bytes;
-        bytes.reserve( 4 + DDSFormat::kHeaderSize + 20 + static_cast<size_t>( width ) * height * 4u );
+        bytes.reserve( 4 + DDSFormat::kHeaderSize + 20 + payload.size() );
         LittleEndianUtil::appendUint32( bytes, DDSFormat::kMagic );
         LittleEndianUtil::appendUint32( bytes, DDSFormat::kHeaderSize );
         LittleEndianUtil::appendUint32( bytes, Internal::kDDSFlags );
         LittleEndianUtil::appendUint32( bytes, height );
         LittleEndianUtil::appendUint32( bytes, width );
-        LittleEndianUtil::appendUint32( bytes, width * 4u ); // 행 바이트 수
-        LittleEndianUtil::appendUint32( bytes, 0 );          // 깊이
-        LittleEndianUtil::appendUint32( bytes, 1 );          // 밉 수
+        LittleEndianUtil::appendUint32( bytes, rowBytes ); // 행 바이트 수
+        LittleEndianUtil::appendUint32( bytes, 0 );        // 깊이
+        LittleEndianUtil::appendUint32( bytes, mipCount ); // 밉 수
         for ( uint32 index = 0; index < 11; ++index )
         {
             LittleEndianUtil::appendUint32( bytes, 0 ); // 예약
@@ -82,12 +89,12 @@ namespace sw
         {
             LittleEndianUtil::appendUint32( bytes, 0 ); // caps2 · caps3 · caps4 · 예약
         }
-        LittleEndianUtil::appendUint32( bytes, Internal::kDxgiR8G8B8A8Unorm );
+        LittleEndianUtil::appendUint32( bytes, dxgiFormat );
         LittleEndianUtil::appendUint32( bytes, Internal::kDimensionTexture2D );
         LittleEndianUtil::appendUint32( bytes, 0 ); // misc
         LittleEndianUtil::appendUint32( bytes, 1 ); // 배열 크기
         LittleEndianUtil::appendUint32( bytes, 0 ); // misc2
-        bytes.insert( bytes.end(), rgbaBytes.begin(), rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4u ) );
+        bytes.insert( bytes.end(), payload.begin(), payload.end() );
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ImageFileWriter.FailedWriteDDS", "Failed to write DDS '%#'", string( path ).c_str() );

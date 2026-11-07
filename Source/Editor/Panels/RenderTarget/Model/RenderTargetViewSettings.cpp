@@ -80,6 +80,10 @@ namespace sw::editor
             case RHIFormat::BC5_UNORM:
             case RHIFormat::BC7_UNORM:
             case RHIFormat::BC6H_UF16:
+            case RHIFormat::ASTC_4x4_UNORM:
+            case RHIFormat::ETC2_RGBA8_UNORM:
+            case RHIFormat::EAC_R11_UNORM:
+            case RHIFormat::EAC_RG11_UNORM:
                 return false;
         }
     }
@@ -111,6 +115,10 @@ namespace sw::editor
             case RHIFormat::BC5_UNORM:
             case RHIFormat::BC7_UNORM:
             case RHIFormat::BC6H_UF16:
+            case RHIFormat::ASTC_4x4_UNORM:
+            case RHIFormat::ETC2_RGBA8_UNORM:
+            case RHIFormat::EAC_R11_UNORM:
+            case RHIFormat::EAC_RG11_UNORM:
                 return 0;
         }
     }
@@ -190,6 +198,10 @@ namespace sw::editor
             case RHIFormat::BC5_UNORM:
             case RHIFormat::BC7_UNORM:
             case RHIFormat::BC6H_UF16:
+            case RHIFormat::ASTC_4x4_UNORM:
+            case RHIFormat::ETC2_RGBA8_UNORM:
+            case RHIFormat::EAC_R11_UNORM:
+            case RHIFormat::EAC_RG11_UNORM:
             {
                 return false;
             }

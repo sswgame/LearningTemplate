@@ -226,6 +226,9 @@ namespace sw
         /** @brief 백엔드 타입(Vulkan)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::Vulkan; }
 
+        /** @brief 물리 장치의 형식 조회로 샘플링할 수 있는지 답합니다. */
+        bool supportsTextureFormat( RHIFormat format ) const override;
+
         RHICapabilities getCapabilities() const override
         {
             RHICapabilities caps     = RHIAvailability::query( RHIBackend::Vulkan );

@@ -21,6 +21,11 @@ namespace sw
     {
         /** @brief RGBA8 을 DDS 로 씁니다. 실패하면 false 입니다. */
         [[nodiscard]] static bool writeDDSRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height );
+        /**
+         * @brief 이미 형식대로 놓인 밉 사슬(@p payload — 밉 0 부터 빈틈없이)을 DX10 머리말의 DDS 로 씁니다(쿠킹한 형식 변형). 실패하면 false 입니다.
+         * @param rowBytes 밉 0 의 행 바이트 수입니다(머리 칸 — 로더는 읽지 않는다). @param dxgiFormat 머리의 형식 번호입니다(`DDSFormat`).
+         */
+        [[nodiscard]] static bool writeDDS( string_view path, const vector<uint8>& payload, uint32 width, uint32 height, uint32 mipCount, uint32 dxgiFormat, uint32 rowBytes );
         /** @brief RGBA8 을 PNG 로 씁니다. 실패하면 false 입니다. */
         [[nodiscard]] static bool writePNGRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height );
         /** @brief RGBA8 의 PNG 바이트입니다(파일 없이 — 테스트 · 업로드). */

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
 namespace sw
@@ -34,20 +36,55 @@ namespace sw
     {
         (void)context;
         (void)pawn;
-        const uint32         tick      = _nextInputTick++;
-        const ControlIntent* pReceived = _received.find( tick );
-        if ( pReceived != nullptr )
+        if ( _received.hasNewest() && _received.getNewestTick() >= _nextInputTick )
         {
-            outIntent                    = *pReceived;
-            _lastIntent                  = *pReceived;
-            _lastIntent._buttonTriggered = 0;
-            _bHasLastIntent              = true;
-            setControlRotation( pReceived->_controlYaw, pReceived->_controlPitch );
-            _received.remove( tick );
-            return;
+            const uint32 newestTick = _received.getNewestTick();
+            const uint32 firstTick  = MathUtil::max( _nextInputTick, _received.computeOldestTick() );
+            _missingTickCount += firstTick - _nextInputTick; // 고리에서 밀려난 틱
+            _nextInputTick = newestTick + 1u;
+            ControlIntent merged{};
+            uint32        triggered    = 0;
+            bool          bTriggerLook = false;
+            float32       triggerYaw   = 0.0f;
+            float32       triggerPitch = 0.0f;
+            bool          bRead        = false;
+            for ( uint32 tick = firstTick; tick <= newestTick; ++tick )
+            {
+                const ControlIntent* pReceived = _received.find( tick );
+                if ( pReceived == nullptr )
+                {
+                    ++_missingTickCount;
+                    continue;
+                }
+                merged = *pReceived;
+                triggered |= pReceived->_buttonTriggered;
+                if ( pReceived->_bTriggerLook )
+                {
+                    bTriggerLook = true;
+                    triggerYaw   = pReceived->_triggerYaw;
+                    triggerPitch = pReceived->_triggerPitch;
+                }
+                bRead = true;
+                _received.remove( tick );
+            }
+            if ( bRead )
+            {
+                _lastIntent                  = merged;
+                _lastIntent._buttonTriggered = 0;
+                _lastIntent._bTriggerLook    = false;
+                _lastIntent._triggerYaw      = 0.0f;
+                _lastIntent._triggerPitch    = 0.0f;
+                _bHasLastIntent              = true;
+                merged._buttonTriggered      = triggered;
+                merged._bTriggerLook         = bTriggerLook;
+                merged._triggerYaw           = triggerYaw;
+                merged._triggerPitch         = triggerPitch;
+                outIntent                    = merged;
+                setControlRotation( merged._controlYaw, merged._controlPitch );
+                return;
+            }
         }
-        // 못 받은 틱 — 마지막 의도를 되풀이한다(받은 적이 없으면 서 있는다).
-        ++_missingTickCount;
+        // 이 프레임에 새 틱이 없다 — 마지막 의도를 되풀이한다(받은 적이 없으면 서 있는다).
         if ( _bHasLastIntent == false )
             return;
         outIntent = _lastIntent;

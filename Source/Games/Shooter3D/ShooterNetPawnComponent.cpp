@@ -2,19 +2,24 @@
 
 #include "Games/Shooter3D/ShooterNetPawnComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
+#include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
+#include "Games/Shooter3D/ShooterEnemyComponent.h"
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
@@ -29,10 +34,43 @@ namespace sw
 
             /** @brief 같은 오브젝트 몸 이동 하나의 한 틱입니다 — 서버 시뮬레이션과 클라이언트 재시뮬레이션이 같은 이 함수를 쓴다. */
             static ShooterMoveState simulateTick( const ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ShooterMoveState& state,
-                                                  const ShooterMoveInput& input, float32 tickInterval )
+                                                  const ControlIntent& intent, float32 tickInterval )
             {
                 bool bLanded = false;
-                return movement.simulate( listBox, state, input, tickInterval, bLanded );
+                return movement.simulate( listBox, state, movement.makeInput( intent ), tickInterval, bLanded );
+            }
+
+            /** @brief 적 하나의 엔티티 상태를 씁니다 — 자리 · 요 · 단계 · 종류 · 외형 씨앗. */
+            static void writeEnemy( const ShooterEnemyView& view, vector<uint8>& outBytes )
+            {
+                BitWriter writer{ std::move( outBytes ) };
+                writer.clear();
+                writer.writeFloat( view._position._x );
+                writer.writeFloat( view._position._y );
+                writer.writeFloat( view._position._z );
+                writer.writeFloat( view._yaw );
+                writer.writeVarUint( static_cast<uint32>( view._phase ) );
+                writer.writeVarUint( view._kindIndex );
+                writer.writeVarUint( view._appearanceSeed );
+                outBytes = writer.releaseBytes();
+            }
+
+            /** @brief 적 하나의 엔티티 상태를 읽습니다. 깨졌거나 단계 · 종류가 범위 밖이면 false 입니다. */
+            [[nodiscard]] static bool readEnemy( const vector<uint8>& bytes, ShooterReplicatedEnemy& outEnemy )
+            {
+                BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                const bool bFinite = reader.readFiniteFloat( outEnemy._position._x ) && reader.readFiniteFloat( outEnemy._position._y ) &&
+                                     reader.readFiniteFloat( outEnemy._position._z ) && reader.readFiniteFloat( outEnemy._yaw );
+                if ( bFinite == false )
+                    return false;
+                const uint32 phase       = reader.readVarUint32();
+                const uint32 kindIndex   = reader.readVarUint32();
+                outEnemy._appearanceSeed = reader.readVarUint32();
+                if ( reader.hasOverflowed() || phase > static_cast<uint32>( ShooterEnemyPhase::Dying ) || kindIndex > ShooterGameModeComponent::kEliteKindIndex )
+                    return false;
+                outEnemy._phase     = static_cast<ShooterEnemyPhase>( phase );
+                outEnemy._kindIndex = static_cast<uint8>( kindIndex );
+                return true;
             }
 
             /**
@@ -67,15 +105,36 @@ namespace sw
         , _prediction{}
         , _smoother{}
         , _bytesScratch{}
+        , _listClaim{}
+        , _listPendingClaim{}
+        , _listLagScratch{}
+        , _listEnemyEntityID{}
+        , _listEntityScratch{}
+        , _lagHistory{ ReplicationServerConfig{}._maxViewLagTicks + 1 } // 입력 스탬프의 되감기 한도(서버 클램프)까지 기억한다
+        , _viewTickByInput{}
+        , _remoteController{}
         , _accumulator{ 0.0f }
+        , _pendingTriggerYaw{ 0.0f }
+        , _pendingTriggerPitch{ 0.0f }
+        , _pendingTriggered{ 0 }
         , _tick{ 0 }
         , _nextInputTick{ 1 }
         , _reconciledTick{ 0 }
+        , _rewoundShotCount{ 0 }
+        , _rewoundHitCount{ 0 }
+        , _lastRewindTicks{ 0.0f }
+        , _sentClaimCount{ 0 }
+        , _confirmedClaimCount{ 0 }
+        , _rejectedClaimCount{ 0 }
         , _controllerID{ -1 }
         , _role{ Role::None }
-        , _bJumpPending{ SW_FALSE }
+        , _bPendingTriggerLook{ SW_FALSE }
+        , _bRemoteRequested{ SW_FALSE }
+        , _bClaimsScheduled{ SW_FALSE }
+        , _reserved{ 0 }
     {
         setCanEverTick( true );
+        _viewTickByInput.initialize( RemoteControllerComponent::kReceiveCapacity );
     }
 
     ShooterNetPawnComponent::~ShooterNetPawnComponent() = default;
@@ -114,6 +173,7 @@ namespace sw
                 return;
             }
             _role = Role::Server;
+            (void)MeleeSweepHistory::ensureFor( *getOwner()->getManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
         }
         else
         {
@@ -140,6 +200,8 @@ namespace sw
     void ShooterNetPawnComponent::onEndPlay()
     {
         _routerSubscription.reset();
+        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getManager() != nullptr )
+            MeleeSweepHistory::release( *getOwner()->getManager() );
         ShooterBodyMovementComponent* pMovement = findMovement();
         if ( pMovement != nullptr )
         {
@@ -158,9 +220,15 @@ namespace sw
         const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || deltaTime <= 0.0f;
         if ( bIdle )
             return;
-        // 점프 눌림은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 눌림이 사라지지 않게 매 프레임 쌓는다.
-        if ( _role == Role::Client && pMovement->makeInput()._bJump == SW_TRUE )
-            _bJumpPending = SW_TRUE;
+        // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
+        if ( _role == Role::Client )
+            collectPendingTriggers( *pMovement );
+        if ( _role == Role::Server && _bRemoteRequested == SW_FALSE )
+        {
+            _bRemoteRequested = SW_TRUE;
+            getOwner()->getManager()->executeOrDeferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            { netPawn.possessRemote(); } );
+        }
         _accumulator += deltaTime;
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
@@ -174,6 +242,12 @@ namespace sw
         }
         if ( _accumulator >= _tickInterval )
             _accumulator = 0.0f; // 따라잡지 못한 시간은 버린다 — 몰아 돌린 틱이 다음 프레임을 또 밀지 않게
+        if ( _listPendingClaim.empty() == false && _bClaimsScheduled == SW_FALSE )
+        {
+            _bClaimsScheduled = SW_TRUE;
+            getOwner()->getManager()->executeOrDeferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            { netPawn.resolveClaims(); } );
+        }
         if ( _role == Role::Client )
         {
             _client.update( deltaTime );
@@ -189,7 +263,9 @@ namespace sw
         const SceneNetLink* pLink = findLink();
         if ( pLink == nullptr || pLink->isBound() == false )
             return;
-        INetPeers& peers = *pLink->get()._pPeers;
+        INetPeers&                 peers   = *pLink->get()._pPeers;
+        RemoteControllerComponent* pRemote = findRemoteController();
+        _server.beginTick( _tick ); // 입력을 꺼내기 전에 — 보던 틱은 서버의 지금 틱으로 자른다(`getClientViewTick`)
         // 조종 연결 — 처음 붙은 클라이언트가 이 몸을 맡고, 끊기면 다음 클라이언트가 처음부터 맡는다.
         vector<int32> listConnection;
         peers.collectConnected( listConnection );
@@ -198,23 +274,38 @@ namespace sw
         {
             _controllerID  = listConnection.empty() ? -1 : listConnection.front();
             _nextInputTick = 1;
+            if ( pRemote != nullptr )
+            {
+                pRemote->clearReceived();
+                pRemote->setNextInputTick( _nextInputTick );
+            }
         }
-        ShooterMoveInput input;
-        vector<uint8>&   inputBytes = _bytesScratch;
-        bool             bExact     = false;
-        uint32           inputTick  = 0;
-        const bool       bHasInput  = _controllerID >= 0 && _server.popInput( _controllerID, _nextInputTick, inputBytes, bExact ) && readInput( inputBytes, input );
+        ControlIntent intent;
+        bool          bExact    = false;
+        uint32        inputTick = 0;
+        const bool    bHasInput = _controllerID >= 0 && _server.popIntent( _controllerID, _nextInputTick, intent, bExact, _listClaim );
         if ( bHasInput )
         {
             inputTick = _nextInputTick;
             ++_nextInputTick;
+            if ( pRemote != nullptr )
+                pRemote->receiveIntent( inputTick, intent ); // 서버의 폰은 이 의도로 쏘고 무기를 바꾼다(다음 조종 시스템 틱)
+            _viewTickByInput.acquire( inputTick ) = _server.getClientViewTick( _controllerID );
+            const MeleeSweepHistory* pLedger      = MeleeSweepHistory::find( *getOwner()->getManager() );
+            for ( const MeleeHitClaim& claim : _listClaim )
+            {
+                PendingClaim& pending = _listPendingClaim.emplace_back();
+                pending._claim        = claim;
+                pending._claim._frame = pLedger != nullptr ? pLedger->getFrame() : 0u;
+                pending._viewTick     = _server.getClientViewTick( _controllerID );
+            }
         }
         const ShooterMoveState before = movement.getState();
-        const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, input, _tickInterval );
+        const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, intent, _tickInterval );
         movement.setState( next, float3{ next._position._x - before._position._x, 0.0f, next._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
 
+        recordEnemies();
         writeState( next, _bytesScratch );
-        _server.beginTick( _tick );
         _server.setEntity( kPawnEntityID, kPawnTypeID, _bytesScratch );
         _server.endTick();
         _interest.setEntityPosition( kPawnEntityID, next._position );
@@ -222,7 +313,11 @@ namespace sw
         {
             _interest.setObserver( _controllerID, next._position );
             if ( bHasInput )
+            {
+                const ShooterPlayerComponent* pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
+                writeOwnerState( next, pPlayer != nullptr ? pPlayer->getHitCount() : 0u, pPlayer != nullptr ? pPlayer->getHealth() : 0.0f, _bytesScratch );
                 (void)_server.setOwnerState( _controllerID, inputTick, _bytesScratch ); // 상태는 상한(작은 고정 크기) 안이다
+            }
         }
         _interest.updateRelevancy();
         _server.sendSnapshots();
@@ -235,32 +330,39 @@ namespace sw
         const std::optional<int64> serverTickOffset = _client.findServerTickOffset();
         if ( serverTickOffset.has_value() )
             ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
-        ShooterMoveInput input = movement.makeInput();
-        if ( _bJumpPending == SW_TRUE )
+        const ControlIntent intent = takeNetIntent( movement );
+        // 입력 하나의 상한을 넘는 주장은 다음 입력 틱에 싣는다. `_frame` 은 입력 틱이다 — 서버가 그 입력을 꺼낸 프레임으로 옮긴다.
+        const size_t claimCount = MathUtil::min( _listClaim.size(), static_cast<size_t>( NetClientServerMessage::kMaxClaimsPerIntent ) );
+        for ( size_t claimIndex = 0; claimIndex < claimCount; ++claimIndex )
         {
-            input._bJump  = SW_TRUE; // 이 틱 전에 쌓인 눌림을 이 입력 틱에 싣고 비운다
-            _bJumpPending = SW_FALSE;
+            _listClaim[claimIndex]._frame = _tick;
         }
-        writeInput( input, _bytesScratch );
-        if ( _client.sendInput( _tick, _bytesScratch ) == false )
-            SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnInput", "Shooter net pawn: input of tick %# was not sent (too large)", _tick );
+        if ( _client.sendIntent( _tick, intent, vector_reference<const MeleeHitClaim>( _listClaim.data(), claimCount ) ) == false )
+            SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnInput", "Shooter net pawn: intent of tick %# was not sent", _tick );
+        _sentClaimCount += static_cast<uint32>( claimCount );
+        _listClaim.erase( _listClaim.begin(), _listClaim.begin() + static_cast<std::ptrdiff_t>( claimCount ) );
         const ShooterMoveState before  = movement.getState();
-        ShooterMoveState       current = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, input, _tickInterval );
-        if ( _prediction.record( _tick, input, current ) == false )
+        ShooterMoveState       current = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, intent, _tickInterval );
+        if ( _prediction.record( _tick, intent, current ) == false )
             SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnPrediction", "Shooter net pawn: prediction tick %# does not follow %# - not recorded", _tick, _prediction.getLatestTick() );
 
         // 서버가 새 소유자 상태(그 입력 틱까지 처리한 내 몸)를 보냈으면 예측을 맞춘다.
         const NetOwnerState* pOwner = _client.findOwnerState();
         ShooterMoveState     serverState;
-        const bool           bNewOwnerState = pOwner != nullptr && pOwner->_bPresent == SW_TRUE && pOwner->_inputTick > _reconciledTick && readState( pOwner->_buffer, serverState );
+        uint32               confirmedHitCount = 0;
+        float32              serverHealth      = 0.0f;
+        const bool           bNewOwnerState    = pOwner != nullptr && pOwner->_bPresent == SW_TRUE && pOwner->_inputTick > _reconciledTick && readOwnerState( pOwner->_buffer, serverState, confirmedHitCount, serverHealth );
         if ( bNewOwnerState )
         {
-            _reconciledTick                        = pOwner->_inputTick;
+            _reconciledTick                 = pOwner->_inputTick;
+            ShooterPlayerComponent* pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
+            if ( pPlayer != nullptr )
+                pPlayer->applyServerReport( confirmedHitCount, serverHealth );
             const float3                    shown  = current._position;
             const PredictionReconcileResult result = _prediction.reconcile(
                 pOwner->_inputTick, serverState, current,
-                [&movement, &listBox, this]( const ShooterMoveState& state, const ShooterMoveInput& tickInput )
-            { return ShooterNetPawnComponentInternal::simulateTick( movement, listBox, state, tickInput, _tickInterval ); },
+                [&movement, &listBox, this]( const ShooterMoveState& state, const ControlIntent& tickIntent )
+            { return ShooterNetPawnComponentInternal::simulateTick( movement, listBox, state, tickIntent, _tickInterval ); },
                 [this]( const ShooterMoveState& left, const ShooterMoveState& right )
             { return isClose( left, right ); } );
             switch ( result )
@@ -293,18 +395,244 @@ namespace sw
         return pOwner != nullptr ? pOwner->getComponent<ShooterBodyMovementComponent>() : nullptr;
     }
 
+    const PawnComponent* ShooterNetPawnComponent::findPawn() const
+    {
+        const GameObject* pOwner = getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+    }
+
+    RemoteControllerComponent* ShooterNetPawnComponent::findRemoteController() const
+    {
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _remoteController ) : nullptr;
+        return pObject != nullptr ? pObject->getComponent<RemoteControllerComponent>() : nullptr;
+    }
+
+    void ShooterNetPawnComponent::possessRemote()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        PawnComponent*     pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        if ( pManager == nullptr || pPawn == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ShooterNetPawn.ShooterNetPawnNoPawn", "Shooter net pawn: the server body has no pawn - the client's shots and weapons do not reach it" );
+            return;
+        }
+        // 언리얼 서버가 접속마다 PlayerController 를 세우는 자리다 — 씬 데이터가 아니라 네트 역할이 정한다(혼자 하는 게임에는 없다). 씬과 함께 지워진다.
+        GameObject*                pObject = pManager->createGameObject( hashed_string( "ShooterRemoteController" ) );
+        RemoteControllerComponent* pRemote = pObject != nullptr ? pObject->addComponent<RemoteControllerComponent>() : nullptr;
+        if ( pRemote == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ShooterNetPawn.ShooterNetPawnNoRemote", "Shooter net pawn: the remote controller could not be created - the client's shots and weapons do not reach the server body" );
+            return;
+        }
+        pRemote->setNextInputTick( _nextInputTick );
+        pRemote->possess( *pPawn );
+        _remoteController = pObject->getHandle();
+    }
+
+    void ShooterNetPawnComponent::collectPendingTriggers( const ShooterBodyMovementComponent& movement )
+    {
+        const PawnComponent* pPawn = findPawn();
+        if ( pPawn == nullptr || movement.isSuspended() )
+            return;
+        const ControlIntent& intent = pPawn->getIntent();
+        _pendingTriggered |= intent._buttonTriggered;
+        if ( intent._bTriggerLook )
+        {
+            _bPendingTriggerLook = SW_TRUE;
+            _pendingTriggerYaw   = intent._triggerYaw;
+            _pendingTriggerPitch = intent._triggerPitch;
+        }
+    }
+
+    ControlIntent ShooterNetPawnComponent::takeNetIntent( const ShooterBodyMovementComponent& movement )
+    {
+        ControlIntent        intent;
+        const PawnComponent* pPawn = findPawn();
+        if ( pPawn != nullptr )
+        {
+            if ( movement.isSuspended() )
+            {
+                intent._controlYaw   = pPawn->getIntent()._controlYaw;
+                intent._controlPitch = pPawn->getIntent()._controlPitch;
+            }
+            else
+            {
+                intent = pPawn->getIntent();
+            }
+        }
+        intent._buttonTriggered = _pendingTriggered;
+        intent._bTriggerLook    = _bPendingTriggerLook == SW_TRUE;
+        intent._triggerYaw      = _pendingTriggerYaw;
+        intent._triggerPitch    = _pendingTriggerPitch;
+        _pendingTriggered       = 0;
+        _bPendingTriggerLook    = SW_FALSE;
+        _pendingTriggerYaw      = 0.0f;
+        _pendingTriggerPitch    = 0.0f;
+        return intent;
+    }
+
     const SceneNetLink* ShooterNetPawnComponent::findLink() const
     {
         return SceneNetLink::findFor( *this );
     }
 
+    const ShooterGameModeComponent* ShooterNetPawnComponent::findGameMode() const
+    {
+        GameObject*                   pOwner   = getOwner();
+        GameObjectManager*            pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const ShooterPlayerComponent* pPlayer  = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
+        return pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
+    }
+
     const vector<ShooterArenaBox>* ShooterNetPawnComponent::findArenaBoxes() const
     {
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        return pGameMode != nullptr ? &pGameMode->getBoxes() : nullptr;
+    }
+
+    void ShooterNetPawnComponent::recordEnemies()
+    {
+        _listLagScratch.clear();
+        _listEntityScratch.clear();
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        if ( pGameMode != nullptr )
+        {
+            for ( const ShooterEnemyView& view : pGameMode->getEnemyViews() )
+            {
+                LagRecord& record = _listLagScratch.emplace_back();
+                record._position  = view._position;
+                record._radius    = view._radius;
+                record._height    = view._height;
+                record._entityID  = view._netEntityID;
+                ShooterNetPawnComponentInternal::writeEnemy( view, _bytesScratch );
+                _server.setEntity( view._netEntityID, kEnemyTypeID, _bytesScratch );
+                _interest.setEntityPosition( view._netEntityID, view._position );
+                _listEntityScratch.push_back( view._netEntityID );
+            }
+        }
+        _lagHistory.record( _tick, _listLagScratch );
+        for ( const uint32 entityID : _listEnemyEntityID )
+        {
+            if ( VectorUtil::contains( _listEntityScratch, entityID ) == false )
+                _interest.removeEntity( entityID );
+        }
+        _listEnemyEntityID.swap( _listEntityScratch );
+    }
+
+    void ShooterNetPawnComponent::queueMeleeClaim( uint32 enemyEntityID )
+    {
+        MeleeHitClaim& claim = _listClaim.emplace_back();
+        claim._targetID      = enemyEntityID;
+    }
+
+    void ShooterNetPawnComponent::resolveClaims()
+    {
+        _bClaimsScheduled                         = SW_FALSE;
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ShooterPlayerComponent*   pPlayer   = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
-        const ShooterGameModeComponent* pGameMode = pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
-        return pGameMode != nullptr ? &pGameMode->getBoxes() : nullptr;
+        ShooterPlayerComponent*         pPlayer   = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
+        const MeleeSweepHistory*        pLedger   = pManager != nullptr ? MeleeSweepHistory::find( *pManager ) : nullptr;
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        if ( pLedger == nullptr || pPlayer == nullptr || pGameMode == nullptr )
+        {
+            _listPendingClaim.clear();
+            return;
+        }
+        size_t keptCount = 0;
+        for ( const PendingClaim& pending : _listPendingClaim )
+        {
+            // 서버의 폰은 꺼낸 다음 프레임부터 그 의도로 휘두른다 — 맞춰 볼 프레임 안팎의 스윕이 모두 기록될 때까지 기다린다.
+            if ( pLedger->getFrame() <= pending._claim._frame + MeleeSweepHistory::kClaimSlackFrames + 1u )
+            {
+                _listPendingClaim[keptCount++] = pending;
+                continue;
+            }
+            const uint32            entityID = static_cast<uint32>( pending._claim._targetID );
+            const ShooterEnemyView* pView    = nullptr;
+            for ( const ShooterEnemyView& view : pGameMode->getEnemyViews() )
+            {
+                if ( view._netEntityID == entityID )
+                    pView = &view;
+            }
+            LagRecord   past;
+            GameObject* pTarget = pView != nullptr ? pManager->resolveGameObject( pView->_object ) : nullptr;
+            if ( pTarget == nullptr || _lagHistory.sampleAt( pending._viewTick, entityID, past ) == false )
+            {
+                ++_rejectedClaimCount; // 표적이 그 사이 쓰러졌거나 지어낸 번호다
+                continue;
+            }
+            // 장부는 표적을 구로 본다 — 몸 가운데에 몸 전체를 덮는 구다(근접은 뼈마다 가르지 않는다).
+            const float3              center         = past._position + float3{ 0.0f, past._height * 0.5f, 0.0f };
+            const float32             radius         = MathUtil::max( past._radius, past._height * 0.5f );
+            vector<GameObjectHandle>& listHit        = pPlayer->getMeleeHitTargets();
+            const size_t              hitCountBefore = listHit.size();
+            if ( pLedger->claimHit( *pOwner, *pTarget, pending._claim, center, radius, listHit ) != MeleeClaimResult::Confirmed )
+            {
+                ++_rejectedClaimCount;
+                continue;
+            }
+            ++_confirmedClaimCount;
+            if ( listHit.size() > hitCountBefore )
+                pPlayer->recordMeleeHit(); // 서버 스윕이 먼저 맞히지 못한 것만 — 창 하나에 한 번이다
+        }
+        _listPendingClaim.resize( keptCount );
+    }
+
+    void ShooterNetPawnComponent::collectReplicatedEnemies( vector<ShooterReplicatedEnemy>& outListEnemy ) const
+    {
+        vector<uint32> listEntity;
+        _client.collectVisibleEntities( listEntity );
+        for ( const uint32 entityID : listEntity )
+        {
+            const NetEntityState* pFrom = nullptr;
+            const NetEntityState* pTo   = nullptr;
+            float32               alpha = 0.0f;
+            if ( _client.sampleEntity( entityID, pFrom, pTo, alpha ) == false || pFrom->_typeID != kEnemyTypeID || pTo->_typeID != kEnemyTypeID )
+                continue;
+            ShooterReplicatedEnemy from;
+            ShooterReplicatedEnemy to;
+            if ( ShooterNetPawnComponentInternal::readEnemy( pFrom->_buffer, from ) == false || ShooterNetPawnComponentInternal::readEnemy( pTo->_buffer, to ) == false )
+                continue;
+            to._netEntityID = entityID;
+            to._position    = from._position + ( to._position - from._position ) * alpha;
+            to._yaw         = from._yaw + MathUtil::wrapAngle( to._yaw - from._yaw ) * alpha;
+            outListEnemy.push_back( to );
+        }
+    }
+
+    float32 ShooterNetPawnComponent::findShotViewTick() const
+    {
+        const RemoteControllerComponent* pRemote   = findRemoteController();
+        const uint32                     nextTick  = pRemote != nullptr ? pRemote->getNextInputTick() : 0u;
+        const float32*                   pViewTick = nextTick > 0u ? _viewTickByInput.find( nextTick - 1u ) : nullptr;
+        return pViewTick != nullptr ? *pViewTick : _server.getClientViewTick( _controllerID );
+    }
+
+    bool ShooterNetPawnComponent::raycastRewound( const GameObjectManager& manager, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit )
+    {
+        ++_rewoundShotCount;
+        const float32 viewTick   = findShotViewTick();
+        const float32 newestTick = static_cast<float32>( _lagHistory.getNewestTick() );
+        _lastRewindTicks         = newestTick - viewTick;
+        float32      distance    = 0.0f;
+        const uint32 entityID    = _lagHistory.raycastAt( viewTick, ray._origin, ray._direction, maxDistance, 0, distance );
+        LagRecord    past;
+        LagRecord    now;
+        const bool   bTracked = entityID != 0 && _lagHistory.sampleAt( viewTick, entityID, past ) && _lagHistory.sampleAt( newestTick, entityID, now );
+        if ( bTracked == false )
+            return false;
+        // 포즈는 되감지 않는다 — 몸의 이동만 되감아 히트 존(뼈마다의 바디)은 지금 포즈로 본다.
+        const float3 origin = ray._origin + ( now._position - past._position );
+        if ( CharacterRayHit::raycast3D( manager, origin, ray._direction, maxDistance, layerMask, ignoreObjectID, outHit ) == false || outHit._pObject == nullptr )
+            return false;
+        const ShooterEnemyComponent* pEnemy = outHit._pObject->getComponent<ShooterEnemyComponent>();
+        if ( pEnemy == nullptr || pEnemy->getNetEntityID() != entityID )
+            return false;
+        ++_rewoundHitCount;
+        return true;
     }
 
     void ShooterNetPawnComponent::writeState( const ShooterMoveState& state, vector<uint8>& outBytes )
@@ -334,32 +662,36 @@ namespace sw
         return true;
     }
 
-    void ShooterNetPawnComponent::writeInput( const ShooterMoveInput& input, vector<uint8>& outBytes )
+    void ShooterNetPawnComponent::writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes )
     {
         BitWriter writer{ std::move( outBytes ) };
         writer.clear();
-        writer.writeFloat( input._move._x );
-        writer.writeFloat( input._move._z );
-        writer.writeBool( input._bSprint == SW_TRUE );
-        writer.writeBool( input._bJump == SW_TRUE );
+        writer.writeFloat( state._position._x );
+        writer.writeFloat( state._position._y );
+        writer.writeFloat( state._position._z );
+        writer.writeFloat( state._verticalSpeed );
+        writer.writeBool( state._bOnGround == SW_TRUE );
+        writer.writeVarUint( confirmedHitCount );
+        writer.writeFloat( health );
         outBytes = writer.releaseBytes();
     }
 
-    bool ShooterNetPawnComponent::readInput( const vector<uint8>& bytes, ShooterMoveInput& outInput )
+    bool ShooterNetPawnComponent::readOwnerState( const vector<uint8>& bytes, ShooterMoveState& outState, uint32& outConfirmedHitCount, float32& outHealth )
     {
         BitReader        reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        ShooterMoveInput input;
-        // NaN 이면 아래 길이 검사(`> 1`)가 거짓이 되어 통과한다 — 유한한 값만 받는다.
-        if ( ( reader.readFiniteFloat( input._move._x ) && reader.readFiniteFloat( input._move._z ) ) == false )
+        ShooterMoveState state;
+        const bool       bFinite = reader.readFiniteFloat( state._position._x ) && reader.readFiniteFloat( state._position._y ) &&
+                             reader.readFiniteFloat( state._position._z ) && reader.readFiniteFloat( state._verticalSpeed );
+        if ( bFinite == false )
             return false;
-        input._bSprint = reader.readBool() ? SW_TRUE : SW_FALSE;
-        input._bJump   = reader.readBool() ? SW_TRUE : SW_FALSE;
-        // 이동 길이는 1 이하다(`makeInput`) — 넘는 입력은 손상이거나 속인 입력이다. 서버가 잘라 받지 않고 버린다.
-        // "1 이하인가" 로 묻는다 — "1 을 넘는가" 로 물으면 NaN 이 거짓이 되어 통과한다.
-        const bool bLengthOk = input._move.getLength() <= 1.0f + MathUtil::kEpsilon;
-        if ( reader.hasOverflowed() || bLengthOk == false )
+        state._bOnGround               = reader.readBool() ? SW_TRUE : SW_FALSE;
+        const uint32 confirmedHitCount = reader.readVarUint32();
+        float32      health            = 0.0f;
+        if ( reader.readFiniteFloat( health ) == false || reader.hasOverflowed() )
             return false;
-        outInput = input;
+        outState             = state;
+        outConfirmedHitCount = confirmedHitCount;
+        outHealth            = health;
         return true;
     }
 

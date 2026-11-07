@@ -183,6 +183,29 @@ namespace sw::editor
         return bSRGB ? entry._srgbDxgiFormat : entry._dxgiFormat;
     }
 
+    TextureFormatUsage TextureImportFormatUtil::getUsage( TextureImportFormat format )
+    {
+        switch ( format )
+        {
+            case TextureImportFormat::BC1:
+            case TextureImportFormat::BC3:
+            case TextureImportFormat::BC7:
+                return TextureFormatUsage::Color;
+            case TextureImportFormat::BC4:
+                return TextureFormatUsage::Mask;
+            case TextureImportFormat::BC5:
+                return TextureFormatUsage::Normal;
+            case TextureImportFormat::BC6H:
+                return TextureFormatUsage::HDR;
+            case TextureImportFormat::B8G8R8A8:
+            case TextureImportFormat::R8G8B8A8:
+            case TextureImportFormat::R16G16B16A16Float:
+            case TextureImportFormat::R8:
+                return TextureFormatUsage::Raw;
+        }
+        return TextureFormatUsage::Raw;
+    }
+
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )
     {
         return rule._filter.isCatchAll();

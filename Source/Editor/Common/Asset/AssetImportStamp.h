@@ -76,6 +76,8 @@ namespace sw::editor
         virtual string_view getRawFolderName() const = 0;
         /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
         virtual string_view getStampHeader() const = 0;
+        /** @brief 원본 폴더마다 하나 두는 스탬프 파일 이름입니다. 같은 원본에서 다른 결과를 내는 종류(텍스처 형식 변형)만 자기 이름을 씁니다. */
+        virtual string_view getStampFileName() const { return "import.stamp"; }
         /** @brief 문제 메시지에 쓰는 결과의 이름입니다("DDS", "메시"). */
         virtual string_view getImportedLabel() const = 0;
         /** @brief 임포트하는 원본 확장자인지 확인합니다. `import.stamp` 같은 파일은 원본이 아닙니다. */

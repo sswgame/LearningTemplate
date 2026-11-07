@@ -255,10 +255,10 @@ namespace sw
             return false;
         }
 
-        // 지난 프레임이 아직 이전 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 반환하므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
+        // 렌더 스레드가 받은 패킷이 이 메시를 읽는 동안 정점을 바꾸지 않는다. 옛 버퍼는 `releaseHandle` 과 해제 큐가 GPU 뒤로 미루므로 GPU 는 기다리지 않는다(TextureCache::reload 와 같다).
         IRHIDevice* const pDevice = MeshCacheInternal::getState()._pBoundDevice.load( std::memory_order_acquire );
         if ( pDevice != nullptr )
-            pDevice->waitIdle( RHIWaitIdleReason::HotReload );
+            pDevice->flushRenderThread();
         const bool bGeometry = live->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
         live->setSkin( std::move( data._listSkinVertex ), std::move( data._skinBinding ) );
         live->setMorphTargets( std::move( data._listMorphTarget ) );

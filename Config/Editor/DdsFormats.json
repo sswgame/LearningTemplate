@@ -25,7 +25,11 @@
     { "dxgi": 91, "name": "B8G8R8A8_UNORM_SRGB" },
     { "dxgi": 95, "name": "BC6H_UF16" },
     { "dxgi": 98, "name": "BC7_UNORM" },
-    { "dxgi": 99, "name": "BC7_UNORM_SRGB" }
+    { "dxgi": 99, "name": "BC7_UNORM_SRGB" },
+    { "dxgi": 134, "name": "ASTC_4X4_UNORM" },
+    { "dxgi": 1001, "name": "ENGINE_ETC2_RGBA8" },
+    { "dxgi": 1002, "name": "ENGINE_EAC_R11" },
+    { "dxgi": 1003, "name": "ENGINE_EAC_RG11" }
   ],
   "legacy_fourcc": [
     { "fourcc": "DXT1", "dxgi": 71 },
