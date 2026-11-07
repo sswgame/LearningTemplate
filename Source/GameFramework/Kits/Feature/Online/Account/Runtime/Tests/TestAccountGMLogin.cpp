@@ -51,7 +51,7 @@ namespace
             int32 count = 0;
             for ( const uint16 method : _listMethod )
             {
-                count += method == AccountMethod::kLogin ? 1 : 0;
+                count += method == AccountMethod::Login::kID ? 1 : 0;
             }
             return count;
         }

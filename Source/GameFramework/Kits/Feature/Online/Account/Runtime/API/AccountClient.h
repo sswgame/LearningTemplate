@@ -4,9 +4,10 @@
  *        탈퇴, 게임 접속 티켓 요청을 보내고 응답과 알림(밀려남)을 꺼냅니다.
  * @details - 로그인이나 재접속에 성공하면 세션 토큰을 메모리에 보관한다. 다시 연결되면(Hello 뒤 `onClientReady`) 그 토큰으로 재접속을 먼저 보낸다.
  *            그동안 낸 세션 요청은 재접속 응답까지 모았다가 보낸다. 서버가 아직 주체를 모르는 순간에 요청이 닿지 않게 하려는 것이다. 재접속이 실패하면 모은 요청은 그 결과로 끝난다.
- *          - 밀려남 알림(`kPushRevoked`)을 받으면 토큰을 버리고 이벤트를 낸다. 서버가 곧 연결을 닫는다. 토큰을 디스크에 저장할지는 게임이 정한다(`getToken`, `setToken`).
+ *          - 밀려남 알림(`AccountMethod::Revoked`)을 받으면 토큰을 버리고 이벤트를 낸다. 서버가 곧 연결을 닫는다. 토큰을 디스크에 저장할지는 게임이 정한다(`getToken`, `setToken`).
  *          - 게스트 장치 비밀은 부르는 쪽(게임)이 만들어 넘긴다(`guestLogin`). 보관은 게임의 로컬 저장소 슬롯이다(`GameLocalStore`, 장치 키로 봉인).
  *          - 모든 호출과 꺼내기는 `OnlineServiceClient::update` 을 부르는 스레드에서 한다.
+ *          - 다른 키트와 달리 `OnlineProtocolClient` 를 쓰지 않는다. 재접속 응답까지 미루는 요청이 쓴 몸을 들고 기다리고, 응답이 `pollReplies` 큐로 간다. 요청과 메서드의 짝은 서술자로 맞춘다(`sendRequest<TMethod>`).
  */
 #pragma once
 #include "Core/Container/IDAllocator.h"
@@ -18,8 +19,8 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Runtime/Online/Service/ServiceClientCallTable.h"
 
@@ -75,7 +76,7 @@ namespace sw
      * @class AccountClient
      * @brief 계정 클라이언트입니다.
      */
-    class SW_KIT_API AccountClient final : public IOnlineClientService
+    class SW_KIT_API AccountClient final : public IOnlineClientService // NOLINT(sw-online-table): 재접속 응답까지 미루는 요청이 쓴 몸을 들고 기다리고 응답이 큐로 간다
     {
     public:
         AccountClient();
@@ -131,9 +132,9 @@ namespace sw
             AccountClientOperation _operation{ AccountClientOperation::Logout };
         };
 
-        /** @brief @p request 를 키트 메시지로 써서 보냅니다. 범위 밖 값이 있으면 보내지 않고 `InvalidRequest` 응답을 바로 남깁니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
-        template <typename TRequest>
-        uint64 sendRequest( AccountClientOperation operation, uint16 method, const TRequest& request, bool bNeedsSession, bool bAutomatic = false );
+        /** @brief 메서드 @p TMethod 의 @p request 를 키트 메시지로 써서 보냅니다. 범위 밖 값이 있으면 보내지 않고 `InvalidRequest` 응답을 바로 남깁니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
+        template <typename TMethod>
+        uint64 sendRequest( AccountClientOperation operation, const typename TMethod::Request& request, bool bNeedsSession, bool bAutomatic = false );
         uint64 send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic = false );
         void   transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestID, bool bAutomatic );
         void   onResponse( const OnlineResponse& response );

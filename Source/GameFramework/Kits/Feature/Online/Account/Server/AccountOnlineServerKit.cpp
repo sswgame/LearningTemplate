@@ -124,7 +124,9 @@ namespace sw
             [[nodiscard]] bool exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError )
             {
                 _loginService.setRemoteConfig( context._pRemoteConfig );
-                _accountServer.initialize( &_loginService, AccountServerConfig{} );
+                AccountServerConfig serverSettings;
+                serverSettings._pMetricRegistry = context._pMetricRegistry;
+                _accountServer.initialize( &_loginService, serverSettings );
                 return registerServerService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl(), outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError ) && exposeInterface<IAccountExternalLinks>( context, entry, _externalLinks, outError );
             }
 

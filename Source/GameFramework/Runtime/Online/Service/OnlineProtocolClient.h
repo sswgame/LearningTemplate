@@ -34,6 +34,7 @@ namespace sw
         TReply            _reply{};          ///< `_errorCode` 가 `kOk` 일 때만 서버가 보낸 값이다
         NetIdempotencyKey _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘기는 키이다. 키 없이 보낸 요청이면 비어 있다
         uint64            _requestID{ 0 };   ///< `call` 이 반환한 번호이다
+        uint16            _method{ 0 };      ///< 서술자의 번호(`kID`)이다. 메서드를 실행 때 고르는 도구(GM)가 응답을 가른다
         uint16            _errorCode{ OnlineError::kOk };
 
         /** @brief 공통 오류 없이 답을 받았고 키트 결과(`_result` 가 있는 응답)가 `Ok` 이면 true 입니다. */
@@ -162,6 +163,7 @@ namespace sw
         {
             OnlineResult<typename TMethod::Reply> result;
             result._requestID      = _requestIDAllocator.allocate();
+            result._method         = TMethod::kID;
             result._idempotencyKey = key;
             result._errorCode      = errorCode;
             markCommonResult( result );
@@ -197,6 +199,7 @@ namespace sw
                 return;
             OnlineResult<Reply> result;
             result._requestID      = pending._requestID;
+            result._method         = TMethod::kID;
             result._idempotencyKey = pending._key;
             result._errorCode      = response._errorCode;
             if ( response.isOk() )

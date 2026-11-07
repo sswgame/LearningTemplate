@@ -54,46 +54,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief GM 명령 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
-    {
-        static constexpr uint16 kLookupAccount    = toMethod( AdminMethodName::LookupAccount );
-        static constexpr uint16 kAdjustAsset      = toMethod( AdminMethodName::AdjustAsset );
-        static constexpr uint16 kSetSanction      = toMethod( AdminMethodName::SetSanction );
-        static constexpr uint16 kSendMail         = toMethod( AdminMethodName::SendMail );
-        static constexpr uint16 kBulkMail         = toMethod( AdminMethodName::BulkMail );
-        static constexpr uint16 kCreateCampaign   = toMethod( AdminMethodName::CreateCampaign );
-        static constexpr uint16 kListAudit        = toMethod( AdminMethodName::ListAudit );
-        static constexpr uint16 kSetRole          = toMethod( AdminMethodName::SetRole );
-        static constexpr uint16 kListReports      = toMethod( AdminMethodName::ListReports );      ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
-        static constexpr uint16 kResolveReport    = toMethod( AdminMethodName::ResolveReport );    ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
-        static constexpr uint16 kSetMaintenance   = toMethod( AdminMethodName::SetMaintenance );   ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
-        static constexpr uint16 kClearMaintenance = toMethod( AdminMethodName::ClearMaintenance ); ///< 점검 창 `_scope` 를 푼다
-        static constexpr uint16 kPostNotice       = toMethod( AdminMethodName::PostNotice );       ///< 공지 `_noticeID` 를 게시한다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
-        static constexpr uint16 kRemoveNotice     = toMethod( AdminMethodName::RemoveNotice );     ///< 공지 `_noticeID` 를 삭제한다
-        static constexpr uint16 kListLiveEvents   = toMethod( AdminMethodName::ListLiveEvents );   ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
-        static constexpr uint16 kPutLiveEvent     = toMethod( AdminMethodName::PutLiveEvent );     ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
-        static constexpr uint16 kRemoveLiveEvent  = toMethod( AdminMethodName::RemoveLiveEvent );  ///< 이벤트 `_eventID` 를 지운다
-
-        /** @brief 상태를 바꾸는 명령이면 true 입니다. 이 경우 멱등 키와 메모가 필수입니다. */
-        static constexpr bool isMutating( uint16 method )
-        {
-            return method != kLookupAccount && method != kListAudit && method != kListReports && method != kListLiveEvents;
-        }
-        /** @brief 서버 디렉터리 키트(`IServerDirectoryControl`)가 효과를 쓰는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
-        static constexpr bool isDirectoryMethod( uint16 method )
-        {
-            return method == kSetMaintenance || method == kClearMaintenance || method == kPostNotice || method == kRemoveNotice;
-        }
-        /** @brief 라이브 운영 키트(`ILiveEventControl`)가 처리하는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
-        static constexpr bool isLiveEventMethod( uint16 method ) { return method == kListLiveEvents || method == kPutLiveEvent || method == kRemoveLiveEvent; }
-        /** @brief 다른 키트에 넘기는 명령이면 true 입니다(저장소 작업은 등급과 형식만 확인한다). */
-        static constexpr bool isForwardedMethod( uint16 method ) { return isDirectoryMethod( method ) || isLiveEventMethod( method ); }
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 권한 등급입니다. 큰 등급이 작은 등급을 포함합니다. 저장 값이므로 순서를 바꾸지 않습니다. `Count` 는 누구도 가질 수 없는 등급이며 와이어에 오르지 않습니다. */
     ENUM( Count = Count )
     enum class AdminRole : uint8
@@ -274,13 +234,67 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Admin 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
+    {
+        using LookupAccount    = Method<MethodName::LookupAccount, AdminRequest, AdminReply>;
+        using AdjustAsset      = Method<MethodName::AdjustAsset, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using SetSanction      = Method<MethodName::SetSanction, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using SendMail         = Method<MethodName::SendMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using BulkMail         = Method<MethodName::BulkMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using CreateCampaign   = Method<MethodName::CreateCampaign, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ListAudit        = Method<MethodName::ListAudit, AdminRequest, AdminReply>;
+        using SetRole          = Method<MethodName::SetRole, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ListReports      = Method<MethodName::ListReports, AdminRequest, AdminReply>;                                                ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
+        using ResolveReport    = Method<MethodName::ResolveReport, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;    ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
+        using SetMaintenance   = Method<MethodName::SetMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
+        using ClearMaintenance = Method<MethodName::ClearMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 점검 창 `_scope` 를 푼다
+        using PostNotice       = Method<MethodName::PostNotice, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< 공지 `_noticeID` 를 게시한다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
+        using RemoveNotice     = Method<MethodName::RemoveNotice, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< 공지 `_noticeID` 를 삭제한다
+        using ListLiveEvents   = Method<MethodName::ListLiveEvents, AdminRequest, AdminReply>;                                             ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
+        using PutLiveEvent     = Method<MethodName::PutLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
+        using RemoveLiveEvent  = Method<MethodName::RemoveLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;  ///< 이벤트 `_eventID` 를 지운다
+
+        /** @brief 상태를 바꾸는 명령이면 true 입니다. 이 경우 멱등 키와 메모가 필수입니다. 멱등 키는 서술자의 호출 규칙과 같습니다. */
+        static constexpr bool isMutating( uint16 method )
+        {
+            return method != LookupAccount::kID && method != ListAudit::kID && method != ListReports::kID && method != ListLiveEvents::kID;
+        }
+        /** @brief 서버 디렉터리 키트(`IServerDirectoryControl`)가 효과를 쓰는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
+        static constexpr bool isDirectoryMethod( uint16 method )
+        {
+            return method == SetMaintenance::kID || method == ClearMaintenance::kID || method == PostNotice::kID || method == RemoveNotice::kID;
+        }
+        /** @brief 라이브 운영 키트(`ILiveEventControl`)가 처리하는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
+        static constexpr bool isLiveEventMethod( uint16 method ) { return method == ListLiveEvents::kID || method == PutLiveEvent::kID || method == RemoveLiveEvent::kID; }
+        /** @brief 다른 키트에 넘기는 명령이면 true 입니다(저장소 작업은 등급과 형식만 확인한다). */
+        static constexpr bool isForwardedMethod( uint16 method ) { return isDirectoryMethod( method ) || isLiveEventMethod( method ); }
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct AdminProtocol
      * @brief GM 명령의 메시지 타입 목록, 등록 항목, 상한, 등급 테이블입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API AdminProtocol
     {
-        using MessageTypes = OnlineMessageTypes<AdminRequest, AdminReply>;
+        using Table        = OnlineProtocolTable<AdminMethod, OnlineMethodList<AdminMethod::LookupAccount, AdminMethod::AdjustAsset, AdminMethod::SetSanction, AdminMethod::SendMail, AdminMethod::BulkMail, AdminMethod::CreateCampaign, AdminMethod::ListAudit, AdminMethod::SetRole, AdminMethod::ListReports, AdminMethod::ResolveReport, AdminMethod::SetMaintenance, AdminMethod::ClearMaintenance, AdminMethod::PostNotice, AdminMethod::RemoveNotice, AdminMethod::ListLiveEvents, AdminMethod::PutLiveEvent, AdminMethod::RemoveLiveEvent>, OnlinePushList<>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = AdminResult;
+
+        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
+        static constexpr OnlineErrorResult<AdminResult> kArrCommonResult[] = {
+            { OnlineError::kUnauthenticated, AdminResult::NotSignedIn },
+            { OnlineError::kForbidden, AdminResult::Forbidden },
+            { OnlineError::kInvalidRequest, AdminResult::InvalidRequest },
+            { OnlineError::kUnavailable, AdminResult::Unavailable },
+            { OnlineError::kBusy, AdminResult::Busy },
+            { OnlineError::kConflict, AdminResult::Busy, true },
+            { OnlineError::kVersionMismatch, AdminResult::UpdateRequired },
+            { OnlineError::kUpdateRequired, AdminResult::UpdateRequired },
+        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxBulkCount       = 12;
@@ -294,8 +308,6 @@ namespace sw
         static constexpr int32           kMaxMessageKeySize  = 64;
         static constexpr int32           kMaxEventIDSize     = 48;
 
-        /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. */
-        static AdminResult fromErrorCode( uint16 errorCode );
         /** @brief 명령에 필요한 등급을 반환합니다. 제재는 종류에 따라 다릅니다. 모르는 메서드는 `Count` 이며 누구도 가질 수 없는 등급입니다. */
         static AdminRole getRequiredRole( uint16 method, ServiceSanctionKind sanctionKind );
     };

@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     /** @brief 계정 호출의 결과입니다. 와이어 형식이며 새 값은 뒤에만 추가합니다. */
-    ENUM()
+    ENUM( Count = Count )
     enum class LoginResult : uint8
     {
         Ok = 0,
@@ -67,7 +67,8 @@ namespace sw
         ProviderRejected,    ///< 제공자가 티켓을 거절했다. 서명, 만료, 대상이 틀린 경우이다
         LastLoginMethod,     ///< 연동 해제에서 마지막 로그인 수단은 해제할 수 없다
         NotLinked,           ///< 연동 해제에서 이 계정에 그 제공자가 연동돼 있지 않다
-        InvalidRequest       ///< 본문이 깨졌거나 상한을 넘었다
+        InvalidRequest,      ///< 본문이 깨졌거나 상한을 넘었다
+        Count
     };
 
     /** @brief 세션이 끝난 이유입니다. 묘비와 알림에 남으며 와이어 형식입니다. */

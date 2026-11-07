@@ -3,7 +3,7 @@
 """
 Scripts/lint/CppShape.py
 
-C++ 모양 규칙 중 컴파일러가 보지 않는 여섯을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
+C++ 모양 규칙 중 컴파일러가 보지 않는 일곱을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
 **왜 형식이 아니라 린트인가.** 여섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
 1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
@@ -16,6 +16,8 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 여섯을 본다. 규칙 문
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
 6. 끊긴 비트필드 묶음: 같은 접근 구역의 비트필드 사이에 다른 칸이 있으면 묶음마다 바이트를 따로 먹는다(전처리 갈래로 끊긴 것은 보지 않는다).
+7. 온라인 키트의 프로토콜 표: 키트 서버는 `OnlineProtocolService`, 키트 클라이언트는 `OnlineProtocolClient` 로 선다. 인터페이스(`IOnlineServerService` · `IOnlineClientService`)를 직접 잇는 것은 C++ 로 막을 수 없다 — 테스트의 가짜가 같은 인터페이스를 이어야 한다.
+   그럴 까닭이 있는 클래스(계정 클라이언트의 재접속 게이트)는 그 줄에 `NOLINT(sw-online-table): <이유>` 를 적는다.
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -36,6 +38,9 @@ from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kSkipFolders = ("ThirdParty", "graphify-out", "Generated", ".gen.")
 kBoolFlagExempt = "NOLINT(sw-bool-flag)"
+kOnlineTableExempt = "NOLINT(sw-online-table)"
+kOnlineKitFolder = "Source/GameFramework/Kits/Feature/Online/"
+kOnlineInterfacePattern = re.compile(r"public\s+(IOnlineServerService|IOnlineClientService)")
 kAccessKeywords = ("public", "protected", "private")
 
 
@@ -442,6 +447,21 @@ def checkHandDepletion(code: str, relative: str) -> list[tuple[int, str]]:
     return [(lineOf(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in kHandDepletion.finditer(code)]
 
 
+def checkOnlineProtocolTable(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
+    """온라인 키트의 서버 · 클라이언트는 프로토콜 표로 선다 — 손 switch 와 메서드마다 다른 지표 · 보존이 되돌아오지 않게 한다."""
+    normalized = relative.replace("\\", "/")
+    if normalized.startswith(kOnlineKitFolder) is False or "/Tests/" in normalized:
+        return []
+    rawLines = raw.splitlines()
+    listProblem: list[tuple[int, str]] = []
+    for match in kOnlineInterfacePattern.finditer(code):
+        line = lineOf(code, match.start())
+        if line <= len(rawLines) and kOnlineTableExempt in rawLines[line - 1]:
+            continue
+        listProblem.append((line, f"온라인 키트는 {match.group(1)} 를 직접 잇지 않고 OnlineProtocolService · OnlineProtocolClient 로 선다. 까닭이 있으면 그 줄에 {kOnlineTableExempt}: <이유>"))
+    return listProblem
+
+
 def inspectFile(path: Path, relative: str) -> list[str]:
     raw = path.read_text(encoding="utf-8-sig", errors="ignore")
     code = stripCode(raw)
@@ -457,6 +477,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
     listProblem += checkIncludesInsideBraces(raw, code)
     listProblem += checkSharedTempInTests(code, relative)
     listProblem += checkHandDepletion(code, relative)
+    listProblem += checkOnlineProtocolTable(raw, code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(listProblem))]
 
 

@@ -1,14 +1,12 @@
 /**
  * @file TradeClient.h
- * @brief 거래 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 신청, 수락, 제시, 잠금, 확정, 취소를 보내고 응답과 알림(스냅샷)을 꺼냅니다.
+ * @brief 거래 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 신청, 수락, 제시, 잠금, 확정, 취소를 보내고(`OnlineProtocolClient`) 응답과 알림(스냅샷)을 꺼냅니다.
  * @details - 모든 요청에 멱등 키를 싣는다. 같은 버튼을 두 번 누르거나 다시 연결한 뒤 재시도해도 두 번 적용되지 않는다. 정산은 분개 키로도 막힌다. 재시도할 때는 응답에 실린 키를 다시 넘긴다.
  *          - 화면이 비추는 스냅샷 하나(`getSnapshot`)를 보관한다. 확정은 그 스냅샷의 두 버전을 싣는다. 내가 본 것만 확정한다는 뜻이다.
  *          - 정산 잔액(`TradeBalance`)은 게임이 지갑과 인벤토리 미러에 넣는다. 키트끼리는 서로 모르며 원장이 소유의 원본이다. 사용자가 정한 정책이다.
  */
 #pragma once
-#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -16,9 +14,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Runtime/Online/Service/ServiceClientCallTable.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw
 {
@@ -46,7 +42,7 @@ namespace sw
     {
         TradeSnapshot        _snapshot{};
         vector<TradeBalance> _listBalance{};
-        uint16               _kind{ 0 }; ///< kPushInvited, kPushUpdate, kPushClosed 중 하나이다
+        uint16               _kind{ 0 }; ///< `TradeMethod` 의 `Invited`, `Update`, `Closed` 번호(`kKind`) 중 하나이다
     };
 } // namespace sw
 
@@ -56,7 +52,7 @@ namespace sw
      * @class TradeClient
      * @brief 거래 클라이언트입니다.
      */
-    class SW_KIT_API TradeClient final : public IOnlineClientService
+    class SW_KIT_API TradeClient final : public OnlineProtocolClient<TradeClient, TradeProtocol>
     {
     public:
         /**
@@ -67,9 +63,6 @@ namespace sw
         static TradeResult makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );
 
         TradeClient();
-
-        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 부릅니다. */
-        void initialize( OnlineServiceClient* pClient );
 
         uint64 invite( string_view peerDisplayName, const NetIdempotencyKey& key = NetIdempotencyKey{} );
         uint64 respond( uint64 tradeID, bool bAccept, const NetIdempotencyKey& key = NetIdempotencyKey{} );
@@ -88,31 +81,23 @@ namespace sw
         void                 setAccountID( AccountID accountID ) { _accountID = accountID; }
         const TradeSnapshot& getSnapshot() const { return _snapshot; }
 
-        // IOnlineClientService
-        const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
-        void                       onServicePush( uint16 kind, BitReader& body ) override;
+        // OnlineProtocolClient 의 훅
+        void onPush( TradeMethod::Invited, const TradeReply& body );
+        void onPush( TradeMethod::Update, const TradeReply& body );
+        void onPush( TradeMethod::Closed, const TradeReply& body );
 
     private:
-        struct PendingCall
-        {
-            NetIdempotencyKey _key{};
-            uint64            _requestID{ 0 };
-            uint16            _method{ 0 };
-        };
-
-        /** @brief @p request 를 써서 보냅니다. 범위 밖 값이 있으면 보내지 않고 `kInvalidRequest` 응답을 바로 남깁니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
-        template <typename TRequest>
-        uint64 send( uint16 method, const TRequest& request, const NetIdempotencyKey& key );
-        void   onResponse( const OnlineResponse& response );
+        /** @brief 메서드 @p TMethod 를 보냅니다. 응답은 `pollReplies` 로 꺼냅니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
+        template <typename TMethod>
+        uint64 send( const typename TMethod::Request& request, const NetIdempotencyKey& key );
+        void   onReply( const OnlineResult<TradeReply>& result );
+        void   recordUpdate( uint16 kind, const TradeReply& body );
         void   observe( const TradeSnapshot& snapshot );
 
     private:
-        ServiceClientCallTable<PendingCall> _callTable;
-        vector<TradeClientReply>            _listReply;
-        vector<TradeClientUpdate>           _listUpdate;
-        TradeSnapshot                       _snapshot;
-        OnlineServiceClient*                _pClient;
-        AccountID                           _accountID;
-        IDAllocator<uint64>                 _requestIDAllocator;
+        vector<TradeClientReply>  _listReply;
+        vector<TradeClientUpdate> _listUpdate;
+        TradeSnapshot             _snapshot;
+        AccountID                 _accountID;
     };
 } // namespace sw

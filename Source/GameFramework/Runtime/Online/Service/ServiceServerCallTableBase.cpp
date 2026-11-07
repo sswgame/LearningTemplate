@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
+#include "GameFramework/Runtime/Online/Service/ServiceServerCallTableBase.h"
 
 #include "Core/Time/MonotonicClock.h"
 

@@ -76,7 +76,7 @@ namespace sw
     };
 
     /** @brief 거래 호출의 결과입니다. 와이어 값입니다. */
-    ENUM()
+    ENUM( Count = Count )
     enum class TradeResult : uint8
     {
         Ok = 0,
@@ -93,7 +93,8 @@ namespace sw
         CapExceeded,
         Unavailable, ///< 저장소를 쓸 수 없다. 같은 멱등 키로 다시 시도한다
         Invalid,
-        UpdateRequired ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        Count
     };
 } // namespace sw
 

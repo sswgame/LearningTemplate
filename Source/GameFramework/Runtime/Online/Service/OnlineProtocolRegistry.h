@@ -114,7 +114,13 @@ namespace sw
     {
     };
 
-    template <typename TMethodTable, typename TMethodList, typename TPushList>
+    /** @brief 공통 오류의 자세한 본문 타입 목록입니다(`kUpdateRequired` 의 상점 주소). 메서드 · 알림이 아니어도 와이어에 오르므로 표의 메시지 목록과 해시에 섞습니다. */
+    template <typename... TBody>
+    struct OnlineErrorBodyList
+    {
+    };
+
+    template <typename TMethodTable, typename TMethodList, typename TPushList, typename TErrorBodyList = OnlineErrorBodyList<>>
     struct OnlineProtocolTable;
 
     /**
@@ -122,11 +128,11 @@ namespace sw
      * @details 표에는 열거자마다 서술자가 열거자 순서로 하나씩 있어야 합니다. 빠지거나 순서가 다르면 컴파일이 멈춥니다 — 메서드를 더할 때 고칠 곳은 열거자 · 메시지 · 서술자 줄 · 서버 `handleCall` 넷이고, 넷째를 빠뜨려도 컴파일이 잡습니다.
      * @tparam TMethodTable 키트의 `XxxMethod`(`OnlineMethodTable` 상속)
      */
-    template <typename TMethodTable, typename... TMethod, typename... TPush>
-    struct OnlineProtocolTable<TMethodTable, OnlineMethodList<TMethod...>, OnlinePushList<TPush...>>
+    template <typename TMethodTable, typename... TMethod, typename... TPush, typename... TErrorBody>
+    struct OnlineProtocolTable<TMethodTable, OnlineMethodList<TMethod...>, OnlinePushList<TPush...>, OnlineErrorBodyList<TErrorBody...>>
     {
         using MethodTable  = TMethodTable;
-        using MessageTypes = OnlineMessageTypes<typename TMethod::Request..., typename TMethod::Reply..., typename TPush::Body...>;
+        using MessageTypes = OnlineMessageTypes<typename TMethod::Request..., typename TMethod::Reply..., typename TPush::Body..., TErrorBody...>;
         /** @brief 메서드마다 @p TPerMethod 하나를 담는 튜플입니다(클라이언트의 메서드별 대기 표). */
         template <template <typename> class TPerMethod>
         using MethodTuple = std::tuple<TPerMethod<TMethod>...>;
@@ -159,6 +165,7 @@ namespace sw
             uint64 hash = 0;
             ( ( hash = HashUtil::combine( HashUtil::combine( HashUtil::combine( hash, computeBodyHash<typename TMethod::Request>() ), computeBodyHash<typename TMethod::Reply>() ), TMethod::kFlagBits ) ), ... );
             ( ( hash = HashUtil::combine( hash, computeBodyHash<typename TPush::Body>() ) ), ... );
+            ( ( hash = HashUtil::combine( hash, computeBodyHash<TErrorBody>() ) ), ... );
             return hash;
         }
 
@@ -206,10 +213,10 @@ namespace sw
         {
         }
         /** @param pName 위와 같습니다. 두 번째 인자는 키트의 프로토콜 표입니다. 영역, 이름 순서, 메서드와 타입의 짝을 여기서 가져옵니다. */
-        template <typename TMethodTable, typename TMethodList, typename TPushList>
-        OnlineProtocolEntry( const utf8* pName, OnlineProtocolTable<TMethodTable, TMethodList, TPushList> )
+        template <typename TMethodTable, typename TMethodList, typename TPushList, typename TErrorBodyList>
+        OnlineProtocolEntry( const utf8* pName, OnlineProtocolTable<TMethodTable, TMethodList, TPushList, TErrorBodyList> )
             : OnlineProtocolEntry( pName, TMethodTable::kRangeBase, &computeMethodHash<typename TMethodTable::MethodName, typename TMethodTable::PushName>,
-                                   &OnlineProtocolTable<TMethodTable, TMethodList, TPushList>::computeMessageHash )
+                                   &OnlineProtocolTable<TMethodTable, TMethodList, TPushList, TErrorBodyList>::computeMessageHash )
         {
         }
         ~OnlineProtocolEntry();

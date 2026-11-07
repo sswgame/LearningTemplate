@@ -47,24 +47,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 거래 키트의 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct TradeMethod : OnlineMethodTable<TradeMethodName, OnlineMethodRange::kTrade, TradePushName>
-    {
-        static constexpr uint16 kInvite      = toMethod( TradeMethodName::Invite );   ///< 상대의 표시 이름을 받는다
-        static constexpr uint16 kRespond     = toMethod( TradeMethodName::Respond );  ///< 거래 id 와 수락 여부를 받는다
-        static constexpr uint16 kSetOffer    = toMethod( TradeMethodName::SetOffer ); ///< 거래 id 와 항목을 받는다
-        static constexpr uint16 kLock        = toMethod( TradeMethodName::Lock );     ///< 거래 id
-        static constexpr uint16 kConfirm     = toMethod( TradeMethodName::Confirm );  ///< 거래 id, 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
-        static constexpr uint16 kCancel      = toMethod( TradeMethodName::Cancel );   ///< 거래 id
-        static constexpr uint16 kPushInvited = toPush( TradePushName::Invited );      ///< 초대받았다는 알림이며 스냅샷을 싣는다
-        static constexpr uint16 kPushUpdate  = toPush( TradePushName::Update );       ///< 바뀌었다는 알림이며 스냅샷을 싣는다
-        static constexpr uint16 kPushClosed  = toPush( TradePushName::Closed );       ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 신청(`kInvite`)의 요청입니다. */
+    /** @brief 신청(`Invite`)의 요청입니다. */
     REFLECT()
     struct TradeInviteRequest
     {
@@ -76,7 +59,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 거래 id 하나를 받는 요청(`kLock`, `kCancel`)입니다. */
+    /** @brief 거래 id 하나를 받는 요청(`Lock`, `Cancel`)입니다. */
     REFLECT()
     struct TradeIDRequest
     {
@@ -88,7 +71,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 수락과 거절(`kRespond`)의 요청입니다. */
+    /** @brief 수락과 거절(`Respond`)의 요청입니다. */
     REFLECT()
     struct TradeRespondRequest
     {
@@ -102,7 +85,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 제시(`kSetOffer`)의 요청입니다. 한쪽 상한(`TradeConstant::kMaxLegsPerSide`)을 넘는 항목은 서비스가 TooManyLegs 로 끝내므로 와이어 상한은 그 두 배입니다. */
+    /** @brief 제시(`SetOffer`)의 요청입니다. 한쪽 상한(`TradeConstant::kMaxLegsPerSide`)을 넘는 항목은 서비스가 TooManyLegs 로 끝내므로 와이어 상한은 그 두 배입니다. */
     REFLECT()
     struct TradeOfferRequest
     {
@@ -116,7 +99,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 확정(`kConfirm`)의 요청입니다. 내가 본 두 제시 버전을 싣습니다. */
+    /** @brief 확정(`Confirm`)의 요청입니다. 내가 본 두 제시 버전을 싣습니다. */
     REFLECT()
     struct TradeConfirmRequest
     {
@@ -182,13 +165,40 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Trade 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct TradeMethod : OnlineMethodTable<TradeMethodName, OnlineMethodRange::kTrade, TradePushName>
+    {
+        using Invite   = Method<MethodName::Invite, TradeInviteRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 상대의 표시 이름을 받는다
+        using Respond  = Method<MethodName::Respond, TradeRespondRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using SetOffer = Method<MethodName::SetOffer, TradeOfferRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Lock     = Method<MethodName::Lock, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Confirm  = Method<MethodName::Confirm, TradeConfirmRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
+        using Cancel   = Method<MethodName::Cancel, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Invited  = Push<PushName::Invited, TradeReply>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
+        using Update   = Push<PushName::Update, TradeReply>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
+        using Closed   = Push<PushName::Closed, TradeReply>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct TradeProtocol
      * @brief 거래 키트의 메시지 타입 목록, 등록 항목, 저장소 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API TradeProtocol
     {
-        using MessageTypes = OnlineMessageTypes<TradeInviteRequest, TradeIDRequest, TradeRespondRequest, TradeOfferRequest, TradeConfirmRequest, TradeReply>;
+        using Table        = OnlineProtocolTable<TradeMethod, OnlineMethodList<TradeMethod::Invite, TradeMethod::Respond, TradeMethod::SetOffer, TradeMethod::Lock, TradeMethod::Confirm, TradeMethod::Cancel>, OnlinePushList<TradeMethod::Invited, TradeMethod::Update, TradeMethod::Closed>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = TradeResult;
+
+        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
+        static constexpr OnlineErrorResult<TradeResult> kArrCommonResult[] = {
+            { OnlineError::kUnavailable, TradeResult::Unavailable },
+            { OnlineError::kInvalidRequest, TradeResult::Invalid, true },
+            { OnlineError::kVersionMismatch, TradeResult::UpdateRequired },
+            { OnlineError::kUpdateRequired, TradeResult::UpdateRequired },
+        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 
@@ -199,8 +209,5 @@ namespace sw
          */
         [[nodiscard]] static bool encodeSession( const TradeSessionRecord& record, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeSession( string_view key, const vector<uint8>& bytes, TradeSessionRecord& outRecord );
-
-        /** @brief 공통 오류 코드를 거래 결과로 바꿉니다. `kVersionMismatch` 는 그 앞에서 `OnlineReplyUtil::markError` 가 `UpdateRequired` 로 바꿉니다. */
-        static constexpr TradeResult fromErrorCode( uint16 errorCode ) { return errorCode == OnlineError::kInvalidRequest ? TradeResult::Invalid : TradeResult::Unavailable; }
     };
 } // namespace sw

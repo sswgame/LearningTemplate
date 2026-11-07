@@ -230,17 +230,17 @@ namespace sw
                 AdminResult staged = AdminResult::InvalidRequest;
                 switch ( command._method )
                 {
-                    case AdminMethod::kAdjustAsset:
+                    case AdminMethod::AdjustAsset::kID:
                     {
                         staged = stageAdjust( connection, command, inoutTransaction, outReply, audit );
                         break;
                     }
-                    case AdminMethod::kSetSanction:
+                    case AdminMethod::SetSanction::kID:
                     {
                         staged = stageSanction( connection, command, inoutTransaction, outReply, audit );
                         break;
                     }
-                    case AdminMethod::kSendMail:
+                    case AdminMethod::SendMail::kID:
                     {
                         string             mailKey;
                         bool               bReplayed = false;
@@ -251,12 +251,12 @@ namespace sw
                         audit._after                 = mailKey;
                         break;
                     }
-                    case AdminMethod::kBulkMail:
+                    case AdminMethod::BulkMail::kID:
                     {
                         staged = stageBulkMail( connection, command, inoutTransaction, outReply, audit );
                         break;
                     }
-                    case AdminMethod::kCreateCampaign:
+                    case AdminMethod::CreateCampaign::kID:
                     {
                         ServiceMailCampaign campaign;
                         campaign._campaignID     = request._batchID;
@@ -273,12 +273,12 @@ namespace sw
                         audit._subject           = "campaign." + ServiceKeyUtil::makeHex64( request._batchID );
                         break;
                     }
-                    case AdminMethod::kSetRole:
+                    case AdminMethod::SetRole::kID:
                     {
                         staged = stageSetRole( connection, command, inoutTransaction, audit );
                         break;
                     }
-                    case AdminMethod::kResolveReport:
+                    case AdminMethod::ResolveReport::kID:
                     {
                         staged = stageResolveReport( connection, command, inoutTransaction, outReply, audit );
                         break;
@@ -306,28 +306,28 @@ namespace sw
                 const bool bHasAccount = request._accountID != kInvalidAccountID;
                 switch ( command._method )
                 {
-                    case AdminMethod::kAdjustAsset:
+                    case AdminMethod::AdjustAsset::kID:
                         return bHasAccount && request._amount != 0 && request._amount != std::numeric_limits<int64>::min() && LedgerUtil::isValidAssetID( request._assetID ); // 최솟값은 부호를 뒤집지 못한다
-                    case AdminMethod::kSetSanction:
+                    case AdminMethod::SetSanction::kID:
                         return bHasAccount && request._untilMs >= 0;
-                    case AdminMethod::kSendMail:
+                    case AdminMethod::SendMail::kID:
                         return bHasAccount;
-                    case AdminMethod::kBulkMail:
+                    case AdminMethod::BulkMail::kID:
                         return request._listAccountID.empty() == false && static_cast<int32>( request._listAccountID.size() ) <= AdminProtocol::kMaxBulkCount &&
                                request._batchID != 0;
-                    case AdminMethod::kSetRole:
+                    case AdminMethod::SetRole::kID:
                         return bHasAccount;
-                    case AdminMethod::kResolveReport:
+                    case AdminMethod::ResolveReport::kID:
                         return request._reportKey.empty() == false && request._reportStatus != ServiceReportStatus::Open;
-                    case AdminMethod::kSetMaintenance:
-                    case AdminMethod::kClearMaintenance:
+                    case AdminMethod::SetMaintenance::kID:
+                    case AdminMethod::ClearMaintenance::kID:
                         return request._scope.empty() == false;
-                    case AdminMethod::kPostNotice:
-                    case AdminMethod::kRemoveNotice:
+                    case AdminMethod::PostNotice::kID:
+                    case AdminMethod::RemoveNotice::kID:
                         return request._noticeID != 0;
-                    case AdminMethod::kPutLiveEvent:
+                    case AdminMethod::PutLiveEvent::kID:
                         return request._eventJSON.empty() == false;
-                    case AdminMethod::kRemoveLiveEvent:
+                    case AdminMethod::RemoveLiveEvent::kID:
                         return request._eventID.empty() == false;
                     default:
                         return true;
@@ -434,15 +434,15 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, AdminResult::InvalidRequest );
         if ( AdminMethod::isForwardedMethod( command._method ) )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급과 형식만 확인했다. 효과와 감사 기록은 서비스가 넘긴 키트(서버 디렉터리, 라이브 운영)가 쓴다
-        if ( command._method == AdminMethod::kLookupAccount )
+        if ( command._method == AdminMethod::LookupAccount::kID )
             return AdminStoreLogicInternal::finish( outReply, AdminStoreLogicInternal::lookup( connection, command, outReply ) );
-        if ( command._method == AdminMethod::kListAudit )
+        if ( command._method == AdminMethod::ListAudit::kID )
         {
             const ServiceStoreResult listed = ServiceAuditLog::listEntries( connection, command._request._subject, command._request._cursor, command._request._maxCount,
                                                                             outReply._listAudit, outReply._nextCursor );
             return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminResult::Unavailable );
         }
-        if ( command._method == AdminMethod::kListReports )
+        if ( command._method == AdminMethod::ListReports::kID )
         {
             const bool               bOpen    = command._request._reportStatus == ServiceReportStatus::Open;
             const int32              maxCount = command._request._maxCount < AdminProtocol::kMaxReportListCount ? command._request._maxCount : AdminProtocol::kMaxReportListCount;

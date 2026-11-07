@@ -42,7 +42,7 @@ namespace
         {
             _listMethod.push_back( context._method );
             _listKey.push_back( context._idempotencyKey );
-            if ( context._method == EconomyMethod::kRedeemReceipt )
+            if ( context._method == EconomyMethod::RedeemReceipt::kID )
             {
                 EconomyRedeemRequest request;
                 SW_EXPECT_TRUE( EconomyProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok );
@@ -152,7 +152,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
         LedgerBalance{"cur.gold", 10},
         LedgerBalance{ "cur.gem",  5}
     };
-    (void)rig._economy.requestWallet( recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_EQUAL( int64( 10 ), rig._economy.getBalance( "cur.gold" ) );
@@ -164,7 +164,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
     };
     EconomyPurchaseRequest purchase;
     purchase._offerID = "offer";
-    (void)rig._economy.requestPurchase( purchase, NetIdempotencyKey{}, recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate(), NetIdempotencyKey{} );
     rig.pump();
     SW_EXPECT_EQUAL( int64( 3 ), rig._economy.getBalance( "cur.gold" ) );
     SW_EXPECT_EQUAL( int64( 5 ), rig._economy.getBalance( "cur.gem" ) ); // 답에 없는 자산은 그대로다
@@ -173,7 +173,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
     rig._service._reply._listBalance = {
         LedgerBalance{ "cur.gold", 1 }
     };
-    (void)rig._economy.requestWallet( recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
     rig.pump();
     SW_EXPECT_EQUAL( int64( 0 ), rig._economy.getBalance( "cur.gem" ) ); // 스냅샷에 없으면 없다
 }
@@ -189,7 +189,7 @@ SW_TEST_CASE( EconomyClientTest, FailedReplyChangesNothing )
     };
     EconomyPurchaseRequest purchase;
     purchase._offerID = "offer";
-    (void)rig._economy.requestPurchase( purchase, NetIdempotencyKey{}, recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate(), NetIdempotencyKey{} );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == EconomyResult::InsufficientFunds );
@@ -204,7 +204,7 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     EconomyRedeemRequest redeem;
     redeem._storeName = "google";
     redeem._payload   = "p|t";
-    (void)rig._economy.requestRedeem( redeem, NetIdempotencyKey{}, recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate(), NetIdempotencyKey{} );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     const NetIdempotencyKey first = recorder._listReply[0]._idempotencyKey;
@@ -212,13 +212,13 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._service._listKey.size() );
     SW_EXPECT_TRUE( rig._service._listKey[0] == first );
 
-    (void)rig._economy.requestRedeem( redeem, first, recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate(), first );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 2 ), recorder._listReply.size() );
     SW_EXPECT_TRUE( recorder._listReply[1]._idempotencyKey == first );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listKey.size() ); // 다른 키를 보냈다면 서비스가 다시 불렸다
 
-    (void)rig._economy.requestRedeem( redeem, NetIdempotencyKey{}, recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate(), NetIdempotencyKey{} );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._service._listKey.size() );
     SW_EXPECT_FALSE( rig._service._listKey[1] == first );
@@ -229,7 +229,7 @@ SW_TEST_CASE( EconomyClientTest, RequestBeforeInitializeFailsAtOnce )
 {
     EconomyClient        client;
     EconomyReplyRecorder recorder;
-    const uint64         requestID = client.requestWallet( recorder.makeDelegate() );
+    const uint64         requestID = client.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_EQUAL( requestID, recorder._listReply[0]._requestID );
     SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == EconomyResult::Unavailable );
@@ -252,12 +252,12 @@ SW_TEST_CASE( EconomyClientTest, BalancePushOverwritesTheCache )
     SW_REQUIRE_TRUE( EconomyProtocol::MessageTypes::write( writer, changed ) );
     {
         BitReader reader( writer.getBytes().data(), writer.getByteCount() );
-        client.onServicePush( static_cast<uint16>( EconomyMethod::kPushBalanceChanged + 1 ), reader );
+        client.onServicePush( static_cast<uint16>( EconomyMethod::BalanceChanged::kKind + 1 ), reader );
     }
     SW_EXPECT_EQUAL( int64( 10 ), client.getBalance( "cur.gold" ) );
     {
         BitReader reader( writer.getBytes().data(), writer.getByteCount() );
-        client.onServicePush( EconomyMethod::kPushBalanceChanged, reader );
+        client.onServicePush( EconomyMethod::BalanceChanged::kKind, reader );
     }
     SW_EXPECT_EQUAL( int64( -5 ), client.getBalance( "cur.gold" ) );
 

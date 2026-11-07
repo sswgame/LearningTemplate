@@ -1,21 +1,22 @@
 /**
  * @file AdminService.h
  * @brief GM 서비스(서버)입니다. GM 명령을 저장소 작업으로 맡기고 완료에서 응답합니다. 정지나 영구 정지가 걸리면 세션 끊기 인터페이스로 그 계정을 내보냅니다. 서비스 스레드 하나에서 씁니다.
- * @details - 경제 서비스와 같은 구조이다. 요청이 들어오는 경로는 둘이며 `onServiceRequest` 는 로그인한 GM 연결의 요청이고 `submitCall` 은 같은 프로세스와 테스트의 요청이다. 작업 하나가 명령 하나이다.
+ * @details - 경제 서비스와 같은 구조이다. 프로토콜 표(`OnlineProtocolService`)로 선다. 요청이 들어오는 경로는 둘이며 `handleCall` 은 로그인한 GM 연결의 요청이고 `submitCall` 은 같은 프로세스와 테스트의 요청이다. 작업 하나가 명령 하나이다.
  *          - 조회는 계정 키트의 이름 색인(`IAccountNameIndex`, 저장소)으로 이름이나 id 를 찾으므로 접속하지 않은 계정도 찾는다. 접속 여부만 이 프로세스의 계정 디렉터리로 채운다.
  *          - 세션 끊기는 새로 적용된 정지에서만 한다. 재시도로 받은 지난 결과에서는 다시 끊지 않는다.
  *          - 점검과 공지 명령은 등급만 저장소에서 확인하고 서버 디렉터리 키트(`IServerDirectoryControl`)에 넘긴다. 효과와 감사 기록은 그 키트가 쓰고, 완료는 `update` 가 회수한다.
  *          - 운영 포트는 GM 전용 호스트로 따로 두는 것을 권한다. 사설망과 TLS 를 쓴다. 첫 관리자는 서버 조립 단계가 기동할 때 `seedRole` 로 넣는다.
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -48,7 +49,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief GM 명령 하나가 응답을 기다리는 동안 드는 칸입니다(호출 표의 키트 칸). 저장소 완료 뒤 세션 끊기 · 넘기기 · 알림이 읽는다. */
+    /** @brief GM 명령 하나가 응답을 기다리는 동안 드는 칸입니다. 저장소 완료 뒤 세션 끊기 · 넘기기 · 알림이 읽는다. */
     struct AdminCallExtra
     {
         UnixMilliseconds _nowMs{ 0 };
@@ -62,11 +63,11 @@ namespace sw
 namespace sw
 {
     /** @class AdminService @brief GM 명령 처리기입니다. */
-    class SW_KIT_SERVER_API AdminService final : public IOnlineServerService
+    class SW_KIT_SERVER_API AdminService final : public OnlineProtocolService<AdminService, AdminProtocol>
     {
     public:
-        using CallTable     = ServiceServerCallTable<AdminReply, AdminProtocol::MessageTypes, AdminCallExtra>;
-        using ReplyDelegate = CallTable::ReplyDelegate;
+        using LocalCallTable = OnlineLocalCallTable<AdminReply>;
+        using ReplyDelegate  = LocalCallTable::ReplyDelegate;
 
         AdminService();
         ~AdminService() override;
@@ -85,33 +86,41 @@ namespace sw
         void seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs );
         void update( UnixMilliseconds nowMs );
 
+        // 프로토콜 표의 메서드 - 명령마다 요청 형식이 같아 하나로 받고 번호로 가른다(권한 표 · 저장 로직이 번호를 본다)
+        template <typename TMethod>
+        void handleCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const AdminRequest& request )
+        {
+            startCall( call._callID, context._accountID, TMethod::kID, request, context._idempotencyKey, context._nowMs );
+        }
+
         // IOnlineServerService
-        const OnlineProtocolEntry& getProtocol() const override { return AdminProtocol::kOnlineEntry; }
         /** @brief GM 리슨(서버 설정 `_adminServicePort`)이 있으면 그 연결만 받습니다 — 플레이어 포트에서는 없는 영역과 같은 답입니다. */
         OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::Admin; }
-        void                  onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                  onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );
         void  completeSeed( AdminResult result, ServiceStoreCompletion completion );
-        int32 getPendingCallCount() const { return _calls.getCount(); }
+        int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
 
     private:
-        void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, const CallTable::Origin& origin );
+        void startCall( uint64 callID, AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs );
+        /** @brief 호출을 @p reply 로 끝냅니다. 같은 프로세스 호출이면 델리게이트로, 호스트 호출이면 표(공통 범주 · 보존 · 지표)로 갑니다. */
+        void finishCall( uint64 callID, const AdminReply& reply );
         /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 회수한다. */
-        [[nodiscard]] bool forwardDirectoryCall( const CallTable::Call& call );
+        [[nodiscard]] bool forwardDirectoryCall( uint64 callID, const AdminCallExtra& pending );
         /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */
-        [[nodiscard]] bool forwardLiveEventCall( const CallTable::Call& call, AdminReply& inoutReply );
+        [[nodiscard]] bool forwardLiveEventCall( uint64 callID, const AdminCallExtra& pending, AdminReply& inoutReply );
         /** @brief 넘긴 키트(서버 디렉터리, 라이브 운영)의 완료를 거두어 응답합니다. */
         void pollForwardedCompletions();
         /** @brief 넘긴 명령 하나를 그 결과로 끝냅니다. */
         void finishForwardedCall( uint64 callID, AdminResult result );
 
     private:
-        CallTable          _calls;
-        AdminServiceConfig _settings;
-        IServiceStore*     _pStore;
-        int32              _pendingSeedCount;
+        LocalCallTable                        _localCalls;
+        unordered_map<uint64, AdminCallExtra> _mapCallToExtra; ///< 응답을 기다리는 명령의 칸이다
+        AdminServiceConfig                    _settings;
+        IServiceStore*                        _pStore;
+        int32                                 _pendingSeedCount;
     };
 } // namespace sw

@@ -2,36 +2,25 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
 
-#include "Core/Serialization/BitStream.h"
-
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
-#include "GameFramework/Runtime/Online/Service/OnlineReplyUtil.h"
 
 namespace sw
 {
     TradeClient::TradeClient()
-        : _callTable{}
-        , _listReply{}
+        : _listReply{}
         , _listUpdate{}
         , _snapshot{}
-        , _pClient{ nullptr }
         , _accountID{ kInvalidAccountID }
-        , _requestIDAllocator{}
     {
-    }
-
-    void TradeClient::initialize( OnlineServiceClient* pClient )
-    {
-        _pClient = pClient;
     }
 
     uint64 TradeClient::invite( string_view peerDisplayName, const NetIdempotencyKey& key )
     {
         TradeInviteRequest request;
         request._peerDisplayName = string( peerDisplayName );
-        return send( TradeMethod::kInvite, request, key );
+        return send<TradeMethod::Invite>( request, key );
     }
 
     uint64 TradeClient::respond( uint64 tradeID, bool bAccept, const NetIdempotencyKey& key )
@@ -39,7 +28,7 @@ namespace sw
         TradeRespondRequest request;
         request._tradeID = tradeID;
         request._bAccept = bAccept ? SW_TRUE : SW_FALSE;
-        return send( TradeMethod::kRespond, request, key );
+        return send<TradeMethod::Respond>( request, key );
     }
 
     uint64 TradeClient::setOffer( uint64 tradeID, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key )
@@ -47,12 +36,12 @@ namespace sw
         TradeOfferRequest request;
         request._listLeg = listLeg;
         request._tradeID = tradeID;
-        return send( TradeMethod::kSetOffer, request, key );
+        return send<TradeMethod::SetOffer>( request, key );
     }
 
     uint64 TradeClient::lock( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        return send( TradeMethod::kLock, TradeIDRequest{ tradeID }, key );
+        return send<TradeMethod::Lock>( TradeIDRequest{ tradeID }, key );
     }
 
     uint64 TradeClient::confirm( uint64 tradeID, const NetIdempotencyKey& key )
@@ -69,12 +58,12 @@ namespace sw
         request._tradeID          = tradeID;
         request._seenOwnRevision  = seenOwnRevision;
         request._seenPeerRevision = seenPeerRevision;
-        return send( TradeMethod::kConfirm, request, key );
+        return send<TradeMethod::Confirm>( request, key );
     }
 
     uint64 TradeClient::cancel( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        return send( TradeMethod::kCancel, TradeIDRequest{ tradeID }, key );
+        return send<TradeMethod::Cancel>( TradeIDRequest{ tradeID }, key );
     }
 
     int32 TradeClient::pollReplies( vector<TradeClientReply>& outListReply )
@@ -99,61 +88,50 @@ namespace sw
         return count;
     }
 
-    void TradeClient::onServicePush( uint16 kind, BitReader& body )
+    void TradeClient::onPush( TradeMethod::Invited, const TradeReply& body )
     {
-        TradeReply push;
-        if ( TradeProtocol::MessageTypes::read( body, push ) != FixedReadResult::Ok )
-            return;
+        recordUpdate( TradeMethod::Invited::kKind, body );
+    }
+
+    void TradeClient::onPush( TradeMethod::Update, const TradeReply& body )
+    {
+        recordUpdate( TradeMethod::Update::kKind, body );
+    }
+
+    void TradeClient::onPush( TradeMethod::Closed, const TradeReply& body )
+    {
+        recordUpdate( TradeMethod::Closed::kKind, body );
+    }
+
+    void TradeClient::recordUpdate( uint16 kind, const TradeReply& body )
+    {
         TradeClientUpdate update;
         update._kind        = kind;
-        update._snapshot    = std::move( push._snapshot );
-        update._listBalance = std::move( push._listBalance );
+        update._snapshot    = body._snapshot;
+        update._listBalance = body._listBalance;
         observe( update._snapshot );
         _listUpdate.push_back( std::move( update ) );
     }
 
-    template <typename TRequest>
-    uint64 TradeClient::send( uint16 method, const TRequest& request, const NetIdempotencyKey& key )
+    template <typename TMethod>
+    uint64 TradeClient::send( const typename TMethod::Request& request, const NetIdempotencyKey& key )
     {
-        NetRequestOptions options;
-        options._idempotencyKey     = key.isValid() ? key : NetIdempotencyKey::makeRandom();
-        const uint64      requestID = _requestIDAllocator.allocate();
-        const PendingCall pendingCall{ options._idempotencyKey, requestID, method };
-        // 범위 밖 값이라 쓰지 못하면 보내지 않고 kInvalidRequest 응답으로 끝난다. 그 응답도 onResponse 를 지난다
-        (void)_callTable.sendMessage<TradeProtocol::MessageTypes>( *_pClient, method, request, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ),
-                                                                   pendingCall ); // 응답은 pendingCall._requestID 로 알린다
-        return requestID;
+        return call<TMethod>( request, OnlineReplyDelegate<TMethod>::template create<&TradeClient::onReply>( this ), key );
     }
 
-    void TradeClient::onResponse( const OnlineResponse& response )
+    void TradeClient::onReply( const OnlineResult<TradeReply>& result )
     {
-        PendingCall call;
-        if ( _callTable.take( response._requestID, call ) == false )
-            return;
         TradeClientReply reply;
-        reply._requestID      = call._requestID;
-        reply._method         = call._method;
-        reply._idempotencyKey = call._key;
-        reply._errorCode      = response._errorCode;
-        if ( response.isOk() == false )
+        reply._requestID      = result._requestID;
+        reply._method         = result._method;
+        reply._idempotencyKey = result._idempotencyKey;
+        reply._errorCode      = result._errorCode;
+        reply._result         = result._reply._result; // 공통 오류면 표(`kArrCommonResult`)가 채웠다
+        if ( result._errorCode == OnlineError::kOk )
         {
-            OnlineReplyUtil::markError<TradeProtocol>( response._errorCode, reply ); // 공통 오류(해시 불일치)는 키트 표보다 먼저
-        }
-        else
-        {
-            BitReader  body( response._pBody, response._bodySize );
-            TradeReply received;
-            if ( TradeProtocol::MessageTypes::read( body, received ) != FixedReadResult::Ok )
-            {
-                reply._result = TradeResult::Invalid;
-            }
-            else
-            {
-                reply._result      = received._result;
-                reply._snapshot    = std::move( received._snapshot );
-                reply._listBalance = std::move( received._listBalance );
-                observe( reply._snapshot );
-            }
+            reply._snapshot    = result._reply._snapshot;
+            reply._listBalance = result._reply._listBalance;
+            observe( reply._snapshot );
         }
         _listReply.push_back( std::move( reply ) );
     }

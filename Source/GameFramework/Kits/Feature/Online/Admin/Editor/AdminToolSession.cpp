@@ -114,7 +114,7 @@ namespace sw::editor
 
     void AdminToolSession::requestLookup( AccountID accountID )
     {
-        send( AdminMethod::kLookupAccount, makeLookupRequest( accountID ), NetIdempotencyKey{} );
+        send( AdminMethod::LookupAccount::kID, makeLookupRequest( accountID ), NetIdempotencyKey{} );
     }
 
     void AdminToolSession::requestAdjust( AccountID accountID, string_view assetID, int64 amount, bool bRefund, string_view memo )
@@ -126,7 +126,7 @@ namespace sw::editor
         request._bRefund   = bRefund ? SW_TRUE : SW_FALSE;
         request._memo      = string( memo );
         _actedAccountID    = accountID;
-        send( AdminMethod::kAdjustAsset, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::AdjustAsset::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestSanction( AccountID accountID, ServiceSanctionKind kind, int64 durationSeconds, string_view reasonCode, string_view memo )
@@ -139,11 +139,11 @@ namespace sw::editor
         // 예전에는 음수 기간이 0(해제)이 되고 큰 기간은 넘쳐 음수 시각이 되었다.
         if ( AdminToolModel::tryMakeEndMs( WallClock::nowUnixMilliseconds().count(), durationSeconds, request._untilMs ) == false )
         {
-            rejectLocally( AdminMethod::kSetSanction );
+            rejectLocally( AdminMethod::SetSanction::kID );
             return;
         }
         _actedAccountID = accountID;
-        send( AdminMethod::kSetSanction, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::SetSanction::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestAudit( string_view subjectPrefix )
@@ -151,12 +151,12 @@ namespace sw::editor
         AdminRequest request;
         request._subject  = string( subjectPrefix );
         request._maxCount = kAuditRequestCount;
-        send( AdminMethod::kListAudit, request, NetIdempotencyKey{} );
+        send( AdminMethod::ListAudit::kID, request, NetIdempotencyKey{} );
     }
 
     void AdminToolSession::requestReports( bool bOpen )
     {
-        send( AdminMethod::kListReports, makeReportsRequest( bOpen ), NetIdempotencyKey{} );
+        send( AdminMethod::ListReports::kID, makeReportsRequest( bOpen ), NetIdempotencyKey{} );
     }
 
     void AdminToolSession::requestResolveReport( string_view reportKey, ServiceReportStatus status, string_view memo )
@@ -165,7 +165,7 @@ namespace sw::editor
         request._reportKey    = string( reportKey );
         request._reportStatus = status;
         request._memo         = string( memo );
-        send( AdminMethod::kResolveReport, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::ResolveReport::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestSetMaintenance( string_view scope, string_view messageKey, int64 durationSeconds, string_view memo )
@@ -179,10 +179,10 @@ namespace sw::editor
         // 예전에는 음수 기간이 0(해제할 때까지)이 되어 끝나지 않는 점검이 걸렸다.
         if ( AdminToolModel::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
         {
-            rejectLocally( AdminMethod::kSetMaintenance );
+            rejectLocally( AdminMethod::SetMaintenance::kID );
             return;
         }
-        send( AdminMethod::kSetMaintenance, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::SetMaintenance::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestClearMaintenance( string_view scope, string_view memo )
@@ -190,7 +190,7 @@ namespace sw::editor
         AdminRequest request;
         request._scope = string( scope );
         request._memo  = string( memo );
-        send( AdminMethod::kClearMaintenance, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::ClearMaintenance::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo )
@@ -205,10 +205,10 @@ namespace sw::editor
         request._memo         = string( memo );
         if ( AdminToolModel::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
         {
-            rejectLocally( AdminMethod::kPostNotice );
+            rejectLocally( AdminMethod::PostNotice::kID );
             return;
         }
-        send( AdminMethod::kPostNotice, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::PostNotice::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestRemoveNotice( uint64 noticeID, string_view memo )
@@ -216,12 +216,12 @@ namespace sw::editor
         AdminRequest request;
         request._noticeID = noticeID;
         request._memo     = string( memo );
-        send( AdminMethod::kRemoveNotice, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::RemoveNotice::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestLiveEvents()
     {
-        send( AdminMethod::kListLiveEvents, AdminRequest{}, NetIdempotencyKey{} );
+        send( AdminMethod::ListLiveEvents::kID, AdminRequest{}, NetIdempotencyKey{} );
     }
 
     void AdminToolSession::requestPutLiveEvent( string_view definitionJSON, string_view memo )
@@ -229,7 +229,7 @@ namespace sw::editor
         AdminRequest request;
         request._eventJSON = string( definitionJSON );
         request._memo      = string( memo );
-        send( AdminMethod::kPutLiveEvent, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::PutLiveEvent::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestRemoveLiveEvent( string_view eventID, string_view memo )
@@ -237,7 +237,7 @@ namespace sw::editor
         AdminRequest request;
         request._eventID = string( eventID );
         request._memo    = string( memo );
-        send( AdminMethod::kRemoveLiveEvent, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::RemoveLiveEvent::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key )
@@ -291,18 +291,18 @@ namespace sw::editor
             return;
         storeResult( reply );
         // 새로 고침은 결과 칸을 덮지 않는 길로 보낸다. 예전에는 같은 길이라 지급 뒤의 상태 줄 · 결과 · 재전송 표시가 조회의 것이 되어 GM 이 명령의 답을 보지 못했다.
-        if ( reply._method == AdminMethod::kResolveReport )
+        if ( reply._method == AdminMethod::ResolveReport::kID )
         {
-            sendRefresh( AdminMethod::kListReports, makeReportsRequest( true ) ); // 처리한 신고가 열린 목록에서 빠진다
+            sendRefresh( AdminMethod::ListReports::kID, makeReportsRequest( true ) ); // 처리한 신고가 열린 목록에서 빠진다
         }
-        else if ( reply._method == AdminMethod::kPutLiveEvent || reply._method == AdminMethod::kRemoveLiveEvent )
+        else if ( reply._method == AdminMethod::PutLiveEvent::kID || reply._method == AdminMethod::RemoveLiveEvent::kID )
         {
-            sendRefresh( AdminMethod::kListLiveEvents, AdminRequest{} ); // 서버가 다시 읽은 뒤의 목록이다. 다른 서버는 주기와 버스로 따라온다
+            sendRefresh( AdminMethod::ListLiveEvents::kID, AdminRequest{} ); // 서버가 다시 읽은 뒤의 목록이다. 다른 서버는 주기와 버스로 따라온다
         }
-        else if ( reply._method == AdminMethod::kAdjustAsset || reply._method == AdminMethod::kSetSanction )
+        else if ( reply._method == AdminMethod::AdjustAsset::kID || reply._method == AdminMethod::SetSanction::kID )
         {
             // 명령의 대상을 다시 읽는다. 예전에는 보이던 계정을 읽어, 다른 계정에 지급하면 화면이 그 결과를 보이지 않았고 조회 전이면 아무것도 읽지 않았다. 공지 · 점검 뒤에도 쓸데없이 읽었다.
-            sendRefresh( AdminMethod::kLookupAccount, makeLookupRequest( _actedAccountID ) );
+            sendRefresh( AdminMethod::LookupAccount::kID, makeLookupRequest( _actedAccountID ) );
         }
     }
 
@@ -321,21 +321,21 @@ namespace sw::editor
 
     void AdminToolSession::storeResult( const AdminClient::Reply& reply )
     {
-        if ( reply._method == AdminMethod::kLookupAccount )
+        if ( reply._method == AdminMethod::LookupAccount::kID )
         {
             _lookup          = reply._reply;
             _lookupAccountID = reply._reply._identity._accountID; // 실패한 조회는 보이는 계정을 바꾸지 않는다
             _bHasLookup      = SW_TRUE;
         }
-        else if ( reply._method == AdminMethod::kListAudit )
+        else if ( reply._method == AdminMethod::ListAudit::kID )
         {
             _lookupAudit = reply._reply;
         }
-        else if ( reply._method == AdminMethod::kListReports )
+        else if ( reply._method == AdminMethod::ListReports::kID )
         {
             _reports = reply._reply;
         }
-        else if ( reply._method == AdminMethod::kListLiveEvents )
+        else if ( reply._method == AdminMethod::ListLiveEvents::kID )
         {
             _liveEvents = reply._reply;
         }

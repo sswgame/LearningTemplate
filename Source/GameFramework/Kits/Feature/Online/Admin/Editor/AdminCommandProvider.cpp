@@ -159,13 +159,13 @@ namespace sw::editor
             if ( bMemoValid == false )
                 return AdminResult::InvalidRequest;
         }
-        if ( method == AdminMethod::kLookupAccount )
+        if ( method == AdminMethod::LookupAccount::kID )
             return executeLookup( request, outReply );
-        if ( method == AdminMethod::kAdjustAsset )
+        if ( method == AdminMethod::AdjustAsset::kID )
             return executeAdjust( request, outReply );
-        if ( method == AdminMethod::kSetSanction )
+        if ( method == AdminMethod::SetSanction::kID )
             return executeSanction( request, outReply );
-        if ( method == AdminMethod::kListAudit )
+        if ( method == AdminMethod::ListAudit::kID )
             return executeListAudit( request, outReply );
         return AdminResult::Unavailable; // 우편, 캠페인, 권한은 서버 저장소가 필요하다
     }

@@ -4,5 +4,5 @@
 
 namespace sw
 {
-    const OnlineProtocolEntry AccountProtocol::kOnlineEntry{ "Account", AccountMethod{}, AccountProtocol::MessageTypes{} };
+    const OnlineProtocolEntry AccountProtocol::kOnlineEntry{ "Account", AccountProtocol::Table{} };
 } // namespace sw

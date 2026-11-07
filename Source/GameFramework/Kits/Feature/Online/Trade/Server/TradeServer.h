@@ -1,6 +1,6 @@
 /**
  * @file TradeServer.h
- * @brief 거래 서비스의 스트림 바인딩입니다. `IOnlineServerService`(영역 `kTrade`)를 구현합니다.
+ * @brief 거래 서비스의 스트림 바인딩입니다. 프로토콜 표(`OnlineProtocolService`, 영역 `kTrade`)로 섭니다.
  * @details 요청을 `TradeService` 에 맡기고 완료는 응답으로, 바뀐 거래는 두 당사자에게 알림으로 보낸다.
  *          - 상대는 표시 이름으로 찾는다. 이 프로세스에 접속한 계정은 `IAccountDirectory`(계정 키트)에서 찾고, 없으면 접속 상태 관리자(`IAccountPresence`)에 묻는다. 서버가 여러 대일 때 쓰며 비동기이다.
  *          - 상대가 이 프로세스에 없으면 알림을 접속 상태 관리자에 맡긴다(버스). 상태가 저장소에 있으므로 상대 서버의 바인딩이 같은 레코드를 바꾼다. 주인 서버를 거치지 않는다.
@@ -11,7 +11,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,53 +18,58 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 namespace sw
 {
+    class MetricRegistry;
+
     /**
      * @class TradeServer
      * @brief 거래 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API TradeServer final : public IOnlineServerService
+    class SW_KIT_SERVER_API TradeServer final : public OnlineProtocolService<TradeServer, TradeProtocol>
     {
     public:
         static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
         TradeServer();
 
         /** @brief 넘긴 객체는 빌려 씁니다. @p pPresence 는 서버가 여러 대일 때만 넘기며, 없으면 nullptr 이고 서버가 한 대입니다. */
-        void initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence );
+        void initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
         void shutdown();
 
-        const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
-        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
-        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+        // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다.
+        void handleCall( OnlineServerCall<TradeMethod::Invite> call, const OnlineCallContext& context, const TradeInviteRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Respond> call, const OnlineCallContext& context, const TradeRespondRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::SetOffer> call, const OnlineCallContext& context, const TradeOfferRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Lock> call, const OnlineCallContext& context, const TradeIDRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Confirm> call, const OnlineCallContext& context, const TradeConfirmRequest& request );
+        void handleCall( OnlineServerCall<TradeMethod::Cancel> call, const OnlineCallContext& context, const TradeIDRequest& request );
+
+        // IOnlineServerService
+        void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
+        void onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+
+    protected:
+        /** @brief 원격 설정의 기능 플래그가 꺼져 있으면 본문을 읽기 전에 `kFeatureDisabled` 로 끝냅니다. */
+        uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
 
     private:
-        struct PendingCall
-        {
-            NetRequestToken _token{};
-            AccountID       _accountID{ kInvalidAccountID };
-        };
-
         struct PendingLookup
         {
-            NetRequestToken  _token{};
+            uint64           _callID{ 0 };
             AccountID        _accountID{ kInvalidAccountID };
             UnixMilliseconds _nowMs{ 0 };
         };
 
-        void pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
-        void respondImmediately( OnlineServiceHost& host, const NetRequestToken& token, TradeResult result );
-        /** @brief 응답을 씁니다. 범위 밖 값이 있어 쓰지 못하면(로그가 남는다) `kInternal` 로 답합니다. */
-        void        respond( OnlineServiceHost& host, const NetRequestToken& token, const TradeReply& reply );
+        void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
+        void        respondImmediately( uint64 callID, TradeResult result );
         void        onPresenceFound( const AccountPresenceResult& found );
         static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
 
     private:
-        unordered_map<uint64, PendingCall>          _mapTagToCall;
+        unordered_map<uint64, AccountID>            _mapCallToAccount; ///< 응답을 기다리는 호출의 계정이다. 정산 잔액을 그 계정 몫만 싣는다
         unordered_map<uint64, PendingLookup>        _mapLookupToCall;  ///< 접속 상태 관리자의 이름 찾기에서 신청으로 가는 맵이다
         unordered_map<uint64, LedgerTransferResult> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액이다. 알림에 싣는다
         vector<TradeCompletion>                     _listCompletionScratch;
@@ -76,7 +80,6 @@ namespace sw
         const IAccountDirectory*                    _pDirectory;
         IAccountPresence*                           _pPresence;
         Subscription                                _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        uint64                                      _nextTag;
         UnixMilliseconds                            _nowMs;
     };
 } // namespace sw

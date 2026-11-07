@@ -104,12 +104,12 @@ SW_TEST_CASE( AdminToolModelTest, EndTimeRefusesNegativeAndOverflow )
 
 SW_TEST_CASE( AdminToolModelTest, MethodNames )
 {
-    SW_EXPECT_EQUAL( string( "LookupAccount" ), string( AdminToolModel::getMethodName( AdminMethod::kLookupAccount ) ) ); // 시나리오가 로그 줄로 센다(`admintool.scenario.xml`)
-    SW_EXPECT_EQUAL( string( "AdjustAsset" ), string( AdminToolModel::getMethodName( AdminMethod::kAdjustAsset ) ) );
-    SW_EXPECT_EQUAL( string( "SetSanction" ), string( AdminToolModel::getMethodName( AdminMethod::kSetSanction ) ) );
-    SW_EXPECT_EQUAL( string( "ListAudit" ), string( AdminToolModel::getMethodName( AdminMethod::kListAudit ) ) );
-    SW_EXPECT_EQUAL( string( "Report" ), string( AdminToolModel::getMethodName( AdminMethod::kResolveReport ) ) );
-    SW_EXPECT_EQUAL( string( "ServerDirectory" ), string( AdminToolModel::getMethodName( AdminMethod::kPostNotice ) ) );
-    SW_EXPECT_EQUAL( string( "LiveEvent" ), string( AdminToolModel::getMethodName( AdminMethod::kPutLiveEvent ) ) );
-    SW_EXPECT_EQUAL( string( "Command" ), string( AdminToolModel::getMethodName( AdminMethod::kSendMail ) ) );
+    SW_EXPECT_EQUAL( string( "LookupAccount" ), string( AdminToolModel::getMethodName( AdminMethod::LookupAccount::kID ) ) ); // 시나리오가 로그 줄로 센다(`admintool.scenario.xml`)
+    SW_EXPECT_EQUAL( string( "AdjustAsset" ), string( AdminToolModel::getMethodName( AdminMethod::AdjustAsset::kID ) ) );
+    SW_EXPECT_EQUAL( string( "SetSanction" ), string( AdminToolModel::getMethodName( AdminMethod::SetSanction::kID ) ) );
+    SW_EXPECT_EQUAL( string( "ListAudit" ), string( AdminToolModel::getMethodName( AdminMethod::ListAudit::kID ) ) );
+    SW_EXPECT_EQUAL( string( "Report" ), string( AdminToolModel::getMethodName( AdminMethod::ResolveReport::kID ) ) );
+    SW_EXPECT_EQUAL( string( "ServerDirectory" ), string( AdminToolModel::getMethodName( AdminMethod::PostNotice::kID ) ) );
+    SW_EXPECT_EQUAL( string( "LiveEvent" ), string( AdminToolModel::getMethodName( AdminMethod::PutLiveEvent::kID ) ) );
+    SW_EXPECT_EQUAL( string( "Command" ), string( AdminToolModel::getMethodName( AdminMethod::SendMail::kID ) ) );
 }

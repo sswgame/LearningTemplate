@@ -1,7 +1,7 @@
 /**
  * @file StorePurchaseFlow.h
  * @brief 스토어 결제의 클라이언트 길입니다. 구매 요청에 계정 토큰을 싣고, 스토어가 낸 영수증을 서버에 내어 지급받고, 지급되면 스토어 거래를 마칩니다.
- * @details 순서: `begin` 이 `ReceiptBuyerToken` 을 만들어 다리(`IStoreBillingBridge`)에 넘긴다 → 스토어 결제 → 다리가 영수증을 낸다 → `update` 가 서버에 낸다(`EconomyClient::requestRedeem`) →
+ * @details 순서: `begin` 이 `ReceiptBuyerToken` 을 만들어 다리(`IStoreBillingBridge`)에 넘긴다 → 스토어 결제 → 다리가 영수증을 낸다 → `update` 가 서버에 낸다(`EconomyMethod::RedeemReceipt`) →
  *          지급(Ok)이면 다리의 `finishPurchase`(구글 소비 · 확인, 애플 `finish`).
  *          서버가 토큰을 대조하므로(`ReceiptBuyerBinding::AccountToken`) 다리가 토큰을 빠뜨리면 결제는 됐는데 지급이 거절된다(`EconomyResult::BuyerTokenMissing`, 양쪽 로그가 원인을 말한다).
  *          토큰을 만드는 곳을 이 흐름 하나로 두어 게임 코드가 빠뜨릴 수 없게 한다 — 다리의 요청 구조체에 토큰이 필수로 온다.

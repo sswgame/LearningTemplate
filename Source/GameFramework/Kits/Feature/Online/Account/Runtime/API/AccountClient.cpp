@@ -14,18 +14,8 @@ namespace sw
     {
         struct AccountClientInternal
         {
-            /** @brief 공통 오류 코드를 의미가 가까운 업무 결과로 바꿉니다. */
-            static LoginResult toResult( uint16 errorCode )
-            {
-                static constexpr OnlineErrorResult<LoginResult> kArrErrorResult[] = {
-                    {    OnlineError::kRateLimited,    LoginResult::RateLimited},
-                    { OnlineError::kUpdateRequired, LoginResult::UpdateRequired},
-                    {OnlineError::kVersionMismatch, LoginResult::UpdateRequired}, // 스키마 해시가 다르다. 다시 접속하지 않으므로 "저장소 오류" 로 두면 재시도만 부른다
-                    {OnlineError::kUnauthenticated,   LoginResult::InvalidToken},
-                    { OnlineError::kInvalidRequest, LoginResult::InvalidRequest},
-                };
-                return OnlineError::toResult( errorCode, kArrErrorResult, LoginResult::StoreUnavailable );
-            }
+            /** @brief 공통 오류 코드를 의미가 가까운 업무 결과로 바꿉니다(`AccountProtocol::kArrCommonResult`). */
+            static LoginResult toResult( uint16 errorCode ) { return OnlineError::toResult( errorCode, AccountProtocol::kArrCommonResult, LoginResult::StoreUnavailable ); }
 
             static bool isGrantOperation( AccountClientOperation operation )
             {
@@ -61,12 +51,12 @@ namespace sw
 
     uint64 AccountClient::registerAccount( string_view loginName, string_view password )
     {
-        return sendRequest( AccountClientOperation::Register, AccountMethod::kRegister, AccountCredentialRequest{ string( loginName ), string( password ) }, false );
+        return sendRequest<AccountMethod::Register>( AccountClientOperation::Register, AccountCredentialRequest{ string( loginName ), string( password ) }, false );
     }
 
     uint64 AccountClient::login( string_view loginName, string_view password )
     {
-        return sendRequest( AccountClientOperation::Login, AccountMethod::kLogin, AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, false );
+        return sendRequest<AccountMethod::Login>( AccountClientOperation::Login, AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, false );
     }
 
     uint64 AccountClient::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize] )
@@ -74,12 +64,12 @@ namespace sw
         AccountGuestLoginRequest request;
         Memory::copy( request._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         request._clientInfo = _clientInfo;
-        return sendRequest( AccountClientOperation::GuestLogin, AccountMethod::kGuestLogin, request, false );
+        return sendRequest<AccountMethod::GuestLogin>( AccountClientOperation::GuestLogin, request, false );
     }
 
     uint64 AccountClient::platformLogin( string_view provider, const vector<uint8>& ticketBytes )
     {
-        return sendRequest( AccountClientOperation::PlatformLogin, AccountMethod::kPlatformLogin, AccountPlatformRequest{ string( provider ), ticketBytes, _clientInfo }, false );
+        return sendRequest<AccountMethod::PlatformLogin>( AccountClientOperation::PlatformLogin, AccountPlatformRequest{ string( provider ), ticketBytes, _clientInfo }, false );
     }
 
     uint64 AccountClient::resume()
@@ -93,47 +83,47 @@ namespace sw
             return reply._requestID;
         }
         _bResuming = SW_TRUE;
-        return sendRequest( AccountClientOperation::Resume, AccountMethod::kResume, AccountResumeRequest{ _token, _clientInfo }, false );
+        return sendRequest<AccountMethod::Resume>( AccountClientOperation::Resume, AccountResumeRequest{ _token, _clientInfo }, false );
     }
 
     uint64 AccountClient::logout()
     {
-        return send( AccountClientOperation::Logout, AccountMethod::kLogout, BitWriter{}, true );
+        return send( AccountClientOperation::Logout, AccountMethod::Logout::kID, BitWriter{}, true );
     }
 
     uint64 AccountClient::linkCredential( string_view loginName, string_view password )
     {
-        return sendRequest( AccountClientOperation::LinkCredential, AccountMethod::kLinkCredential, AccountCredentialRequest{ string( loginName ), string( password ) }, true );
+        return sendRequest<AccountMethod::LinkCredential>( AccountClientOperation::LinkCredential, AccountCredentialRequest{ string( loginName ), string( password ) }, true );
     }
 
     uint64 AccountClient::linkPlatform( string_view provider, const vector<uint8>& ticketBytes )
     {
-        return sendRequest( AccountClientOperation::LinkPlatform, AccountMethod::kLinkPlatform, AccountPlatformRequest{ string( provider ), ticketBytes, AccountClientInfo{} }, true );
+        return sendRequest<AccountMethod::LinkPlatform>( AccountClientOperation::LinkPlatform, AccountPlatformRequest{ string( provider ), ticketBytes, AccountClientInfo{} }, true );
     }
 
     uint64 AccountClient::issueGameTicket( string_view serverID )
     {
-        return sendRequest( AccountClientOperation::IssueGameTicket, AccountMethod::kIssueGameTicket, AccountGameTicketRequest{ string( serverID ) }, true );
+        return sendRequest<AccountMethod::IssueGameTicket>( AccountClientOperation::IssueGameTicket, AccountGameTicketRequest{ string( serverID ) }, true );
     }
 
     uint64 AccountClient::unlinkPlatform( string_view provider )
     {
-        return sendRequest( AccountClientOperation::UnlinkPlatform, AccountMethod::kUnlinkPlatform, AccountProviderRequest{ string( provider ) }, true );
+        return sendRequest<AccountMethod::UnlinkPlatform>( AccountClientOperation::UnlinkPlatform, AccountProviderRequest{ string( provider ) }, true );
     }
 
     uint64 AccountClient::listLinks()
     {
-        return send( AccountClientOperation::ListLinks, AccountMethod::kListLinks, BitWriter{}, true );
+        return send( AccountClientOperation::ListLinks, AccountMethod::ListLinks::kID, BitWriter{}, true );
     }
 
     uint64 AccountClient::requestDeletion()
     {
-        return send( AccountClientOperation::RequestDeletion, AccountMethod::kRequestDeletion, BitWriter{}, true );
+        return send( AccountClientOperation::RequestDeletion, AccountMethod::RequestDeletion::kID, BitWriter{}, true );
     }
 
     uint64 AccountClient::cancelDeletion()
     {
-        return send( AccountClientOperation::CancelDeletion, AccountMethod::kCancelDeletion, BitWriter{}, true );
+        return send( AccountClientOperation::CancelDeletion, AccountMethod::CancelDeletion::kID, BitWriter{}, true );
     }
 
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
@@ -174,7 +164,7 @@ namespace sw
 
     void AccountClient::onServicePush( uint16 kind, BitReader& body )
     {
-        if ( kind != AccountMethod::kPushRevoked )
+        if ( kind != AccountMethod::Revoked::kKind )
             return;
         AccountRevokedPush push;
         if ( AccountProtocol::MessageTypes::read( body, push ) != FixedReadResult::Ok )
@@ -194,7 +184,7 @@ namespace sw
         {
             client.setRequestGate( OnlineMethodRange::kAccount, true ); // 다른 키트의 요청은 재접속 응답 뒤에 보낸다
             _bResuming = SW_TRUE;
-            (void)sendRequest( AccountClientOperation::Resume, AccountMethod::kResume, AccountResumeRequest{ _token, _clientInfo }, false, true );
+            (void)sendRequest<AccountMethod::Resume>( AccountClientOperation::Resume, AccountResumeRequest{ _token, _clientInfo }, false, true );
         }
     }
 
@@ -204,12 +194,12 @@ namespace sw
         _bLoggedIn = SW_FALSE;
     }
 
-    template <typename TRequest>
-    uint64 AccountClient::sendRequest( AccountClientOperation operation, uint16 method, const TRequest& request, bool bNeedsSession, bool bAutomatic )
+    template <typename TMethod>
+    uint64 AccountClient::sendRequest( AccountClientOperation operation, const typename TMethod::Request& request, bool bNeedsSession, bool bAutomatic )
     {
         BitWriter body;
         if ( AccountProtocol::MessageTypes::write( body, request ) )
-            return send( operation, method, body, bNeedsSession, bAutomatic );
+            return send( operation, TMethod::kID, body, bNeedsSession, bAutomatic );
         // 범위 밖 값이라 보내지 않는다. 재접속 응답 뒤로 미루는 요청이 있어 몸을 먼저 쓰므로 sendMessage 대신 reject 로 같은 응답 처리기를 지난다
         const PendingCall pendingCall{ _requestIDAllocator.allocate(), operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
         (void)_callTable.reject( *_pClient, OnlineError::kInvalidRequest, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ), pendingCall );

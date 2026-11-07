@@ -2,8 +2,6 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyClient.h"
 
-#include "Core/Serialization/BitStream.h"
-
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyMirror.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
@@ -15,38 +13,9 @@ namespace sw
     {
     }
 
-    void EconomyClient::onServicePush( uint16 kind, BitReader& body )
+    void EconomyClient::onPush( EconomyMethod::BalanceChanged, const EconomyBalanceChanged& body )
     {
-        if ( kind != EconomyMethod::kPushBalanceChanged )
-            return;
-        EconomyBalanceChanged changed;
-        if ( EconomyProtocol::MessageTypes::read( body, changed ) == FixedReadResult::Ok )
-            applyBalances( changed._listBalance, false );
-    }
-
-    uint64 EconomyClient::requestWallet( const ReplyDelegate& onReply )
-    {
-        return sendCall( EconomyMethod::kGetWallet, BitWriter{}, NetIdempotencyKey{}, onReply );
-    }
-
-    uint64 EconomyClient::requestHistory( const EconomyHistoryRequest& request, const ReplyDelegate& onReply )
-    {
-        return sendRequest( EconomyMethod::kGetHistory, request, NetIdempotencyKey{}, onReply );
-    }
-
-    uint64 EconomyClient::requestPurchase( const EconomyPurchaseRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply )
-    {
-        return sendRequest( EconomyMethod::kPurchase, request, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
-    }
-
-    uint64 EconomyClient::requestRedeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply )
-    {
-        return sendRequest( EconomyMethod::kRedeemReceipt, request, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
-    }
-
-    uint64 EconomyClient::requestWithdraw( const EconomyWithdrawRequest& request, const ReplyDelegate& onReply )
-    {
-        return sendRequest( EconomyMethod::kWithdrawPurchase, request, NetIdempotencyKey::makeRandom(), onReply ); // 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다
+        applyBalances( body._listBalance, false );
     }
 
     void EconomyClient::applyBalances( const vector<LedgerBalance>& listBalance, bool bSnapshot )
@@ -89,11 +58,31 @@ namespace sw
         return 0;
     }
 
-    void EconomyClient::onCallSucceeded( const Call& call, const EconomyReply& reply )
+    void EconomyClient::onCallSucceeded( EconomyMethod::GetWallet, const OnlineNoBody& request, const EconomyReply& reply )
     {
-        const bool bSnapshot = call._method == EconomyMethod::kGetWallet;
-        if ( bSnapshot || reply._listBalance.empty() == false )
-            applyBalances( reply._listBalance, bSnapshot );
+        (void)request;
+        applyBalances( reply._listBalance, true ); // 지갑 응답은 전체 스냅샷이다
+    }
+
+    void EconomyClient::onCallSucceeded( EconomyMethod::Purchase, const EconomyPurchaseRequest& request, const EconomyReply& reply )
+    {
+        (void)request;
+        if ( reply._listBalance.empty() == false )
+            applyBalances( reply._listBalance, false );
+    }
+
+    void EconomyClient::onCallSucceeded( EconomyMethod::RedeemReceipt, const EconomyRedeemRequest& request, const EconomyReply& reply )
+    {
+        (void)request;
+        if ( reply._listBalance.empty() == false )
+            applyBalances( reply._listBalance, false );
+    }
+
+    void EconomyClient::onCallSucceeded( EconomyMethod::WithdrawPurchase, const EconomyWithdrawRequest& request, const EconomyReply& reply )
+    {
+        (void)request;
+        if ( reply._listBalance.empty() == false )
+            applyBalances( reply._listBalance, false );
     }
 } // namespace sw
 

@@ -3,7 +3,7 @@
  * @brief 경제 서비스의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kEconomy`), 결과, 요청과 응답 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
  * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 아래 `PROPERTY` 선언 순서와 키가 정하며 손 코덱과 손 버전 상수는 없다.
  *          업무 결과는 응답 본문(`EconomyReply::_result`)에 담으며 거래와 계정 키트도 같다.
- *          공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
+ *          공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 공통 범주 표(`kArrCommonResult`)로 이를 결과에 맞춘다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -39,20 +39,6 @@ namespace sw
     {
         BalanceChanged,
         Count,
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 경제 서비스 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, EconomyPushName>
-    {
-        static constexpr uint16 kGetWallet          = toMethod( EconomyMethodName::GetWallet );
-        static constexpr uint16 kGetHistory         = toMethod( EconomyMethodName::GetHistory );
-        static constexpr uint16 kPurchase           = toMethod( EconomyMethodName::Purchase ); ///< 멱등 키가 필수이다
-        static constexpr uint16 kRedeemReceipt      = toMethod( EconomyMethodName::RedeemReceipt );
-        static constexpr uint16 kWithdrawPurchase   = toMethod( EconomyMethodName::WithdrawPurchase ); ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다
-        static constexpr uint16 kPushBalanceChanged = toPush( EconomyPushName::BalanceChanged );       ///< `EconomyBalanceChanged`. 요청 없이 잔액이 바뀌었다(GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
     };
 } // namespace sw
 
@@ -184,7 +170,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE }; ///< 같은 멱등 키나 같은 영수증의 지난 결과이다
 
-        /** @brief 같은 멱등 키로 다시 시도할 결과(스토어 대기 · 충돌 · 일시 장애)인지입니다. 서버는 이 답을 기억하지 않고, 클라이언트 흐름은 거래를 마치지 않는다. */
+        /** @brief 같은 멱등 키로 다시 시도할 결과(스토어 대기 · 충돌 · 일시 장애)인지입니다. 충돌 · 일시 장애는 공통 범주로 오고(`kArrCommonResult`), 스토어 대기는 이 판정으로 서버가 기억하지 않는다. 클라이언트 흐름은 거래를 마치지 않는다. */
         [[nodiscard]] bool isRetryable() const { return _result == EconomyResult::ReceiptPending || _result == EconomyResult::Busy || _result == EconomyResult::Unavailable; }
     };
 } // namespace sw
@@ -204,6 +190,20 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Economy 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, EconomyPushName>
+    {
+        using GetWallet        = Method<MethodName::GetWallet, OnlineNoBody, EconomyReply>;
+        using GetHistory       = Method<MethodName::GetHistory, EconomyHistoryRequest, EconomyReply>;
+        using Purchase         = Method<MethodName::Purchase, EconomyPurchaseRequest, EconomyReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using RedeemReceipt    = Method<MethodName::RedeemReceipt, EconomyRedeemRequest, EconomyReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using WithdrawPurchase = Method<MethodName::WithdrawPurchase, EconomyWithdrawRequest, EconomyReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다. 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다
+        using BalanceChanged   = Push<PushName::BalanceChanged, EconomyBalanceChanged>;                                                                ///< 요청 없이 잔액이 바뀌었다(GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct EconomyProtocol
      * @brief 경제 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
@@ -211,7 +211,20 @@ namespace sw
      */
     struct SW_KIT_API EconomyProtocol
     {
-        using MessageTypes = OnlineMessageTypes<EconomyPurchaseRequest, EconomyRedeemRequest, EconomyWithdrawRequest, EconomyHistoryRequest, EconomyReply, EconomyBalanceChanged>;
+        using Table        = OnlineProtocolTable<EconomyMethod, OnlineMethodList<EconomyMethod::GetWallet, EconomyMethod::GetHistory, EconomyMethod::Purchase, EconomyMethod::RedeemReceipt, EconomyMethod::WithdrawPurchase>, OnlinePushList<EconomyMethod::BalanceChanged>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = EconomyResult;
+
+        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
+        static constexpr OnlineErrorResult<EconomyResult> kArrCommonResult[] = {
+            { OnlineError::kInvalidRequest, EconomyResult::InvalidRequest },
+            { OnlineError::kUnavailable, EconomyResult::Unavailable },
+            { OnlineError::kBusy, EconomyResult::Busy },
+            { OnlineError::kConflict, EconomyResult::Busy, true },
+            { OnlineError::kUnauthenticated, EconomyResult::NotSignedIn },
+            { OnlineError::kVersionMismatch, EconomyResult::UpdateRequired },
+            { OnlineError::kUpdateRequired, EconomyResult::UpdateRequired },
+        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxOfferIDSize        = 64;
@@ -220,8 +233,5 @@ namespace sw
         static constexpr int32           kMaxReceiptPayloadSize = 16384; ///< 영수증 한 장의 크기이다. Apple JWS 는 수 KB 이다
         static constexpr int32           kMaxCursorSize         = 512;
         static constexpr int32           kMaxHistoryCount       = 100; ///< 내역 응답 한 번의 항목 수이며 요청의 `_maxCount` 상한(`Max`)이기도 하다
-
-        /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지(전송, 저장소, 시한)는 Unavailable 로 바꿉니다. */
-        static EconomyResult fromErrorCode( uint16 errorCode );
     };
 } // namespace sw

@@ -258,14 +258,14 @@ SW_TEST_CASE( AdminServiceTest, EntryRules )
 {
     SW_EXPECT_LOG( "AdminService.AdminServiceNeedsStore" );
     AdminFixture rig;
-    SW_EXPECT_TRUE( rig.call( kInvalidAccountID, AdminMethod::kLookupAccount, makeRequest() )._result == AdminResult::NotSignedIn );
+    SW_EXPECT_TRUE( rig.call( kInvalidAccountID, AdminMethod::LookupAccount::kID, makeRequest() )._result == AdminResult::NotSignedIn );
     SW_EXPECT_TRUE( rig.call( kSuper, 9999, makeRequest() )._result == AdminResult::Forbidden );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCallCount() );
 
     AdminService   unstarted;
     AdminReplySink sink;
     SW_EXPECT_FALSE( unstarted.initialize( nullptr, AdminServiceConfig{} ) );
-    unstarted.submitCall( kSuper, AdminMethod::kLookupAccount, makeRequest(), NetIdempotencyKey{ 1, 1 }, UnixMilliseconds{ kNowMs }, AdminService::ReplyDelegate::create<&AdminReplySink::onReply>( &sink ) );
+    unstarted.submitCall( kSuper, AdminMethod::LookupAccount::kID, makeRequest(), NetIdempotencyKey{ 1, 1 }, UnixMilliseconds{ kNowMs }, AdminService::ReplyDelegate::create<&AdminReplySink::onReply>( &sink ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), sink._listReply.size() );
     SW_EXPECT_TRUE( sink._listReply[0]._result == AdminResult::Unavailable );
     unstarted.shutdown();
@@ -278,24 +278,24 @@ SW_TEST_CASE( AdminServiceTest, LookupFillsOnlineAndUsesNameIndex )
 
     AdminRequest byName = makeRequest();
     byName._displayName = "player";
-    AdminReply reply    = rig.call( kViewer, AdminMethod::kLookupAccount, byName );
+    AdminReply reply    = rig.call( kViewer, AdminMethod::LookupAccount::kID, byName );
     SW_EXPECT_TRUE( reply._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( kPlayer, reply._identity._accountID );
     SW_EXPECT_EQUAL( SW_TRUE, reply._bOnline );
 
     AdminRequest byID = makeRequest();
     byID._accountID   = kOperator;
-    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::kLookupAccount, byID )._result == AdminResult::UnknownAccount ); // 색인이 모르는 id 이다
+    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::LookupAccount::kID, byID )._result == AdminResult::UnknownAccount ); // 색인이 모르는 id 이다
 
     AdminRequest unknownName = makeRequest();
     unknownName._displayName = "nobody";
-    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::kLookupAccount, unknownName )._result == AdminResult::UnknownAccount );
+    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::LookupAccount::kID, unknownName )._result == AdminResult::UnknownAccount );
 
     AdminFixture noPorts( false );
-    SW_EXPECT_TRUE( noPorts.call( kViewer, AdminMethod::kLookupAccount, byName )._result == AdminResult::UnknownAccount );
+    SW_EXPECT_TRUE( noPorts.call( kViewer, AdminMethod::LookupAccount::kID, byName )._result == AdminResult::UnknownAccount );
     AdminRequest playerID = makeRequest();
     playerID._accountID   = kPlayer;
-    reply                 = noPorts.call( kViewer, AdminMethod::kLookupAccount, playerID );
+    reply                 = noPorts.call( kViewer, AdminMethod::LookupAccount::kID, playerID );
     SW_EXPECT_TRUE( reply._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( SW_FALSE, reply._bOnline );
 }
@@ -309,16 +309,16 @@ SW_TEST_CASE( AdminServiceTest, AdjustNotifiesBalanceOnce )
     request._assetID     = "cur.gold";
     request._amount      = 100;
 
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kAdjustAsset, request, 50 )._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::AdjustAsset::kID, request, 50 )._result == AdminResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._balances._listAccount.size() );
     SW_EXPECT_EQUAL( kPlayer, rig._balances._listAccount[0] );
 
-    const AdminReply replay = rig.call( kOperator, AdminMethod::kAdjustAsset, request, 50 );
+    const AdminReply replay = rig.call( kOperator, AdminMethod::AdjustAsset::kID, request, 50 );
     SW_EXPECT_TRUE( replay._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( SW_TRUE, replay._bReplayed );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._balances._listAccount.size() );
 
-    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::kAdjustAsset, request )._result == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::AdjustAsset::kID, request )._result == AdminResult::Forbidden );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._balances._listAccount.size() );
 }
 
@@ -327,15 +327,15 @@ SW_TEST_CASE( AdminServiceTest, SuspendRevokesSessionsOnce )
 {
     AdminFixture       rig;
     const AdminRequest suspend = makeSanction( ServiceSanctionKind::Suspend, kNowMs + 1000 );
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, suspend, 60 )._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, suspend, 60 )._result == AdminResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._sessions._listRevoked.size() );
     SW_EXPECT_EQUAL( kPlayer, rig._sessions._listRevoked[0] );
 
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, suspend, 60 )._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, suspend, 60 )._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._sessions._listRevoked.size() );
 
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, makeSanction( ServiceSanctionKind::ChatMute, kNowMs + 1000 ) )._result == AdminResult::Ok );
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, makeSanction( ServiceSanctionKind::Suspend, 0 ) )._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::ChatMute, kNowMs + 1000 ) )._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Suspend, 0 ) )._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._sessions._listRevoked.size() );
 }
 
@@ -343,10 +343,10 @@ SW_TEST_CASE( AdminServiceTest, SuspendRevokesSessionsOnce )
 SW_TEST_CASE( AdminServiceTest, BanRevokesEvenWithPastTime )
 {
     AdminFixture rig;
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetSanction, makeSanction( ServiceSanctionKind::Ban, 1 ) )._result == AdminResult::Forbidden ); // 영구 정지는 Super 몫이다
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Ban, 1 ) )._result == AdminResult::Forbidden ); // 영구 정지는 Super 몫이다
     SW_EXPECT_TRUE( rig._sessions._listRevoked.empty() );
 
-    const AdminReply reply = rig.call( kSuper, AdminMethod::kSetSanction, makeSanction( ServiceSanctionKind::Ban, 1 ) );
+    const AdminReply reply = rig.call( kSuper, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Ban, 1 ) );
     SW_EXPECT_TRUE( reply._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( ServiceSanctionState::kPermanentMs, reply._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::Ban )] );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._sessions._listRevoked.size() );
@@ -364,10 +364,10 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     maintenance._endMs       = kNowMs + 10;
     maintenance._listAccountID.push_back( kPlayer );
 
-    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::kSetMaintenance, maintenance )._result == AdminResult::Forbidden );
+    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::SetMaintenance::kID, maintenance )._result == AdminResult::Forbidden );
     SW_EXPECT_TRUE( rig._directoryControl._listTag.empty() );
 
-    rig.send( kOperator, AdminMethod::kSetMaintenance, maintenance );
+    rig.send( kOperator, AdminMethod::SetMaintenance::kID, maintenance );
     SW_EXPECT_TRUE( rig._sink._listReply.empty() ); // 아직 끝나지 않았다
     SW_EXPECT_EQUAL( 1, rig._service.getPendingCallCount() );
     SW_EXPECT_EQUAL( string( "game" ), rig._directoryControl._maintenance._scope );
@@ -382,7 +382,7 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     notice._body         = "hello";
     notice._priority     = 3;
     notice._bLiteralText = SW_TRUE;
-    rig.send( kOperator, AdminMethod::kPostNotice, notice );
+    rig.send( kOperator, AdminMethod::PostNotice::kID, notice );
     SW_EXPECT_EQUAL( string( "hello" ), rig._directoryControl._notice._text );
     SW_EXPECT_EQUAL( 3, rig._directoryControl._notice._priority );
     SW_EXPECT_EQUAL( SW_TRUE, rig._directoryControl._notice._bLiteralText );
@@ -390,13 +390,13 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._result == AdminResult::InvalidRequest );
 
-    rig.send( kOperator, AdminMethod::kRemoveNotice, notice );
+    rig.send( kOperator, AdminMethod::RemoveNotice::kID, notice );
     SW_EXPECT_EQUAL( uint64( 5 ), rig._directoryControl._removedNoticeID );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::NotFound );
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._result == AdminResult::NotFound );
 
-    rig.send( kOperator, AdminMethod::kClearMaintenance, maintenance );
+    rig.send( kOperator, AdminMethod::ClearMaintenance::kID, maintenance );
     SW_EXPECT_EQUAL( string( "game" ), rig._directoryControl._clearedScope );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Unavailable );
     rig.tick();
@@ -409,13 +409,13 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsForward )
     AdminFixture rig;
     rig._liveControl._listEventJSON.push_back( "{\"id\":\"a\"}" );
     rig._liveControl._listEventJSON.push_back( string( static_cast<size_t>( AdminProtocol::kMaxEventJSONSize ) + 1, 'x' ) );
-    const AdminReply listed = rig.call( kViewer, AdminMethod::kListLiveEvents, makeRequest() );
+    const AdminReply listed = rig.call( kViewer, AdminMethod::ListLiveEvents::kID, makeRequest() );
     SW_EXPECT_TRUE( listed._result == AdminResult::Ok );
     SW_EXPECT_EQUAL( size_t( 1 ), listed._listLiveEvent.size() );
 
     AdminRequest put = makeRequest();
     put._eventJSON   = "{\"id\":\"b\"}";
-    rig.send( kOperator, AdminMethod::kPutLiveEvent, put );
+    rig.send( kOperator, AdminMethod::PutLiveEvent::kID, put );
     SW_EXPECT_TRUE( rig._sink._listReply.empty() );
     SW_EXPECT_EQUAL( put._eventJSON, rig._liveControl._putJSON );
     rig._liveControl.finishLast( LiveEventControlResult::Invalid );
@@ -424,7 +424,7 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsForward )
 
     AdminRequest removal = makeRequest();
     removal._eventID     = "b";
-    rig.send( kOperator, AdminMethod::kRemoveLiveEvent, removal );
+    rig.send( kOperator, AdminMethod::RemoveLiveEvent::kID, removal );
     SW_EXPECT_EQUAL( string( "b" ), rig._liveControl._removedEventID );
     rig._liveControl.finishLast( LiveEventControlResult::NotFound );
     rig.tick();
@@ -438,12 +438,12 @@ SW_TEST_CASE( AdminServiceTest, ForwardWithoutKitIsUnavailable )
 
     AdminRequest maintenance = makeRequest();
     maintenance._scope       = "game";
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kSetMaintenance, maintenance )._result == AdminResult::Unavailable );
-    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::kListLiveEvents, makeRequest() )._result == AdminResult::Unavailable );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetMaintenance::kID, maintenance )._result == AdminResult::Unavailable );
+    SW_EXPECT_TRUE( rig.call( kViewer, AdminMethod::ListLiveEvents::kID, makeRequest() )._result == AdminResult::Unavailable );
 
     AdminRequest removal = makeRequest();
     removal._eventID     = "b";
-    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::kRemoveLiveEvent, removal )._result == AdminResult::Unavailable );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::RemoveLiveEvent::kID, removal )._result == AdminResult::Unavailable );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCallCount() );
 }
 
@@ -492,7 +492,7 @@ SW_TEST_CASE( AdminServiceTest, ShutdownDrainsForwardedCalls )
 
     AdminRequest maintenance = makeRequest();
     maintenance._scope       = "game";
-    rig.send( kOperator, AdminMethod::kSetMaintenance, maintenance );
+    rig.send( kOperator, AdminMethod::SetMaintenance::kID, maintenance );
     SW_REQUIRE_EQUAL( 1, rig._service.getPendingCallCount() );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Ok );
     rig._service.shutdown();
@@ -508,8 +508,8 @@ SW_TEST_CASE( AdminServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = AdminResult::Ok;
     AdminReply busy;
     busy._result = AdminResult::Busy;
-    rig.expectRetryReachesService( AdminMethod::kAdjustAsset, busy, finished );
+    rig.expectRetryReachesService( AdminMethod::AdjustAsset::kID, busy, finished );
     AdminReply unavailable;
     unavailable._result = AdminResult::Unavailable;
-    rig.expectRetryReachesService( AdminMethod::kAdjustAsset, unavailable, finished );
+    rig.expectRetryReachesService( AdminMethod::AdjustAsset::kID, unavailable, finished );
 }

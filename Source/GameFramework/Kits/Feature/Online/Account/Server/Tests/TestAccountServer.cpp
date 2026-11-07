@@ -269,32 +269,32 @@ SW_TEST_CASE( AccountServerTest, MalformedBodiesAreRefused )
     (void)rig.registerAccount( client, "alice_01" );
     const int32 pendingBefore = rig._loginService.getPendingCount();
 
-    for ( const uint16 method : { AccountMethod::kRegister, AccountMethod::kLogin, AccountMethod::kGuestLogin, AccountMethod::kPlatformLogin, AccountMethod::kResume } )
+    for ( const uint16 method : { AccountMethod::Register::kID, AccountMethod::Login::kID, AccountMethod::GuestLogin::kID, AccountMethod::PlatformLogin::kID, AccountMethod::Resume::kID } )
     {
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, method, BitWriter{} )._errorCode );
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, method, AccountServerTestUtil::makeJunk( 32 ) )._errorCode );
     }
-    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, AccountMethod::kLogin, AccountServerTestUtil::makeTruncatedLogin( "alice_01", 12 ) )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, AccountMethod::Login::kID, AccountServerTestUtil::makeTruncatedLogin( "alice_01", 12 ) )._errorCode );
     SW_EXPECT_EQUAL( pendingBefore, rig._loginService.getPendingCount() );
 
     (void)rig.getAccount( client ).login( "alice_01", kPassword );
     SW_EXPECT_TRUE( rig.take( client )._result == LoginResult::Ok );
 }
 
-/** @brief [AccountServerTest] 세션이 있는 연결의 깨진 몸도 kInvalidRequest 이고 세션은 그대로다. 빈 서버 id 는 발급할 곳이 없어 같다. 모르는 메서드는 kNotFound 다 */
+/** @brief [AccountServerTest] 세션이 있는 연결의 깨진 몸도 kInvalidRequest 이고 세션은 그대로다. 빈 서버 id 는 발급할 곳이 없어 같다. 모르는 메서드도 같다 */
 SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
 {
     AccountServerFixture rig;
     const int32          client    = rig.addClient();
     const AccountID      accountID = rig.signIn( client, "alice_01" );
 
-    for ( const uint16 method : { AccountMethod::kLinkCredential, AccountMethod::kLinkPlatform, AccountMethod::kUnlinkPlatform, AccountMethod::kIssueGameTicket } )
+    for ( const uint16 method : { AccountMethod::LinkCredential::kID, AccountMethod::LinkPlatform::kID, AccountMethod::UnlinkPlatform::kID, AccountMethod::IssueGameTicket::kID } )
     {
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, method, AccountServerTestUtil::makeJunk( 16 ) )._errorCode );
     }
     (void)rig.getAccount( client ).issueGameTicket( "" );
     SW_EXPECT_TRUE( rig.take( client )._result == LoginResult::InvalidRequest );
-    SW_EXPECT_EQUAL( OnlineError::kNotFound, rig.sendRaw( client, static_cast<uint16>( OnlineMethodRange::kAccount + 0x70 ), BitWriter{} )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( client, static_cast<uint16>( OnlineMethodRange::kAccount + 0x70 ), BitWriter{} )._errorCode );
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }
 
@@ -625,7 +625,7 @@ SW_TEST_CASE( AccountServerTest, RetryableResultReachesTheServiceAgain )
     NetRequestOptions    options;
     options._idempotencyKey = NetIdempotencyKey::makeRandom();
     rig._pRig->_database.armFault( ServiceStoreFault::RejectRead );
-    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.sendRaw( client, AccountMethod::kLogin, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode );
-    SW_EXPECT_EQUAL( OnlineError::kOk, rig.sendRaw( client, AccountMethod::kLogin, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode ); // 기억했다면 같은 오류다
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.sendRaw( client, AccountMethod::Login::kID, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kOk, rig.sendRaw( client, AccountMethod::Login::kID, AccountServerTestUtil::makeLogin( "alice_01" ), options )._errorCode ); // 기억했다면 같은 오류다
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }

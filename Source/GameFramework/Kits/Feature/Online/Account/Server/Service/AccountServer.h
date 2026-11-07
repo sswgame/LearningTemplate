@@ -1,7 +1,7 @@
 /**
  * @file AccountServer.h
- * @brief 계정 서비스의 스트림 바인딩입니다. `IOnlineServerService`(영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려줍니다.
- * @details 로그인이나 재접속에 성공하면 호스트에 계정을 연결한다. 세션이 밀려나거나 운영 조치로 끊기면 알림(`kPushRevoked`)을 보낸 뒤 연결을 닫고, 연결이 닫히면 재접속 유예를 시작한다.
+ * @brief 계정 서비스의 스트림 바인딩입니다. 프로토콜 표(`OnlineProtocolService`, 영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려줍니다.
+ * @details 로그인이나 재접속에 성공하면 호스트에 계정을 연결한다. 세션이 밀려나거나 운영 조치로 끊기면 알림(`AccountMethod::Revoked`)을 보낸 뒤 연결을 닫고, 연결이 닫히면 재접속 유예를 시작한다.
  *          - 연결의 세션 토큰은 이 객체가 메모리에 보관한다. 로그인 응답으로 클라이언트에 준 토큰이다. 로그아웃, 연동, 티켓 발급은 연결의 주체로 처리하므로 클라이언트가 비밀을 다시 보내지 않는다.
  *          - 이미 로그인했거나 로그인을 맡겨 둔 연결이 로그인, 게스트 로그인, 외부 로그인, 재접속을 요청하면 `kInvalidRequest` 로 거절한다. 한 연결에는 계정 하나만 쓰고, 다른 계정은 새 연결로 접속해야 한다.
  *          - 로그인 응답 몸을 쓰지 못하면 `kInternal` 로 답하고, 저장소 작업이 이미 만든 그 세션은 로그아웃 작업으로 지운다. 응답 몸이 그 세션의 토큰을 실으므로
@@ -17,7 +17,6 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Time/TimePoint.h"
 
@@ -27,14 +26,17 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 namespace sw
 {
+    class MetricRegistry;
+
     /** @brief 계정 바인딩 설정입니다. */
     struct AccountServerConfig
     {
+        MetricRegistry*      _pMetricRegistry{ nullptr }; ///< 없으면 요청 지표를 세지 않는다
         int64                _purgeIntervalMs{ 60000 };   ///< 탈퇴 계정을 정리하는 간격이다
         int64                _refreshIntervalMs{ 10000 }; ///< 접속해 있는 세션을 다시 읽는 간격이다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아낸다
         int32                _refreshCount{ 64 };
@@ -58,7 +60,7 @@ namespace sw
      * @class AccountServer
      * @brief 계정 서비스 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API AccountServer final : public IOnlineServerService
+    class SW_KIT_SERVER_API AccountServer final : public OnlineProtocolService<AccountServer, AccountProtocol>
     {
     public:
         AccountServer();
@@ -67,12 +69,24 @@ namespace sw
         void initialize( LoginService* pLoginService, const AccountServerConfig& settings );
         void shutdown();
 
+        // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다. 응답은 계정을 연결에 묶은 뒤에 보낸다.
+        void handleCall( OnlineServerCall<AccountMethod::Register> call, const OnlineCallContext& context, const AccountCredentialRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::Login> call, const OnlineCallContext& context, const AccountLoginRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::GuestLogin> call, const OnlineCallContext& context, const AccountGuestLoginRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::PlatformLogin> call, const OnlineCallContext& context, const AccountPlatformRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::Resume> call, const OnlineCallContext& context, const AccountResumeRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::Logout> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<AccountMethod::LinkCredential> call, const OnlineCallContext& context, const AccountCredentialRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::LinkPlatform> call, const OnlineCallContext& context, const AccountPlatformRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::IssueGameTicket> call, const OnlineCallContext& context, const AccountGameTicketRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::UnlinkPlatform> call, const OnlineCallContext& context, const AccountProviderRequest& request );
+        void handleCall( OnlineServerCall<AccountMethod::ListLinks> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<AccountMethod::RequestDeletion> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<AccountMethod::CancelDeletion> call, const OnlineCallContext& context, const OnlineNoBody& request );
+
         // IOnlineServerService
-        const OnlineProtocolEntry& getProtocol() const override;
         /** @brief 두 리슨 모두에서 받습니다 — GM 도구도 GM 포트에서 로그인합니다. */
         OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::PlayerAndAdmin; }
-        bool                  isAnonymousMethod( uint16 method ) const override;
-        void                  onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                  onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                  onHostShutdown( OnlineServiceHost& host ) override;
         void                  onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
@@ -87,6 +101,9 @@ namespace sw
         uint64 findSessionID( AccountID accountID ) const;
         /** @brief 접속 상태 관리자입니다. 거래와 채팅이 빌려 쓰며, 서버 한 대이면 찾기는 "없음" 으로 끝납니다. 이 객체와 수명이 같습니다. */
         IAccountPresence* getPresence() { return &_presence; }
+
+    protected:
+        uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context ) override;
 
     private:
         /** @brief 세션 끊기 창구입니다. 바인딩의 `revokeAccountSessions` 로 넘깁니다. 바인딩이 멤버로 들어 수명이 같다. */
@@ -106,9 +123,8 @@ namespace sw
 
         struct PendingCall
         {
-            NetRequestToken        _token{};
             StreamConnectionHandle _connection{};
-            uint16                 _method{ 0 };
+            uint8                  _bLogin{ SW_FALSE }; ///< 로그인 메서드이다. 끝나면 겹친 로그인 표에서 뺀다
         };
 
         struct BoundSession
@@ -117,10 +133,17 @@ namespace sw
             StreamConnectionHandle _connection{};
         };
 
+        /** @brief 로그인 메서드 하나를 받아도 되면 호출을 올리고 true 입니다. 이미 로그인했거나 로그인을 맡겨 둔 연결이면 `kInvalidRequest` 로 끝내고 false 입니다. */
+        template <typename TMethod>
+        [[nodiscard]] bool beginLogin( OnlineServerCall<TMethod> call, const OnlineCallContext& context );
+        /** @brief 세션이 필요한 메서드 하나를 받습니다. 호출을 올리고 세션 토큰을 돌려줍니다. 연결에 세션이 없으면 `kUnauthenticated` 로 끝내고 null 입니다. */
+        template <typename TMethod>
+        [[nodiscard]] const LoginSessionToken* beginSessionCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context );
+
         void handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion );
         void handleEvent( OnlineServiceHost& host, const LoginEvent& event );
         /** @brief 업무 결과가 공통 오류(시도 제한, 저장소, 빌드 버전)이면 그 오류로 응답하고 true 를 반환합니다. */
-        bool respondCommonError( OnlineServiceHost& host, const NetRequestToken& token, LoginResult result, const LoginGrant& grant );
+        bool respondCommonError( uint64 callID, LoginResult result, const LoginGrant& grant );
         /** @brief 세션의 연결에 알림을 보내고 끊습니다. 세션 테이블에서 먼저 빼서 `onAccountLeft` 가 유예를 걸지 않게 합니다. */
         void revokeBound( OnlineServiceHost& host, AccountID accountID, LoginRevokeReason reason );
         /** @brief 처음 틱에서 호스트의 캐시와 버스를 연결하고 주제를 구독합니다. */
@@ -129,7 +152,7 @@ namespace sw
         void publishRemoteRevocations( OnlineServiceHost& host );
 
     private:
-        unordered_map<uint64, PendingCall>     _mapTagToCall;
+        unordered_map<uint64, PendingCall>     _mapCallToPending; ///< 응답을 기다리는 호출(호출 번호 → 연결)이다
         unordered_map<AccountID, BoundSession> _mapAccountToSession;
         unordered_map<AccountID, string>       _mapAccountToReasonCode;
         unordered_set<uint64>                  _uniqueSetLoginConnection; ///< 로그인을 맡겨 두고 완료를 기다리는 연결(packed)이다 — 묶기 전이라 호스트의 연결 주체로는 겹친 로그인을 가리지 못한다
@@ -140,7 +163,6 @@ namespace sw
         SessionControl                         _sessionControl; ///< 세션 끊기 창구(`getSessionControl`)
         AccountServerConfig                    _settings;
         LoginService*                          _pLoginService;
-        uint64                                 _nextTag;
         UnixMilliseconds                       _nowMs;
         UnixMilliseconds                       _nextPurgeMs;
         UnixMilliseconds                       _nextRefreshMs;

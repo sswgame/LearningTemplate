@@ -27,5 +27,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry TradeProtocol::kOnlineEntry{ "Trade", TradeMethod{}, TradeProtocol::MessageTypes{} };
+    const OnlineProtocolEntry TradeProtocol::kOnlineEntry{ "Trade", TradeProtocol::Table{} };
 } // namespace sw

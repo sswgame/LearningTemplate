@@ -16,7 +16,9 @@
  *          gRPC 비동기 서버의 메서드 표, Nakama `RegisterRpc` 의 자리입니다(기억에 의존).
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
@@ -24,7 +26,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
+#include "GameFramework/Runtime/Online/Service/ServiceServerCallTableBase.h"
 
 namespace sw
 {
@@ -75,13 +77,30 @@ namespace sw
             return true;
         }
 
-        /** @brief 공통 오류로 응답하고 그 범주로 셉니다. 다시 시도할 범주는 기억하지 않습니다(`OnlineServiceHost::respondError`). 모르는 id 면 경고를 남기고 false 입니다. */
-        bool fail( uint64 callID, uint16 errorCode )
+        /**
+         * @brief 이미 쓴 몸 @p body 로 응답하고 @p resultIndex 로 셉니다. 응답 전에 몸을 써 봐야 하는 조립(계정 — 못 쓰면 만든 세션을 지운다)만 씁니다. 모르는 id 면 경고를 남기고 false 입니다.
+         * @param retention 키트의 재시도 판정입니다(`NetResponseRetention`).
+         */
+        bool respondBody( uint64 callID, const BitWriter& body, NetResponseRetention retention, int32 resultIndex )
         {
             Call call;
             if ( take( callID, call ) == false )
                 return false;
-            (void)call._pHost->respondError( call._token, errorCode );
+            (void)call._pHost->respondOk( call._token, body, retention );
+            _metrics.observeRequest( call._methodIndex, resultIndex, call._receivedNanoseconds );
+            return true;
+        }
+
+        /**
+         * @brief 공통 오류로 응답하고 그 범주로 셉니다. 다시 시도할 범주는 기억하지 않습니다(`OnlineServiceHost::respondError`). 모르는 id 면 경고를 남기고 false 입니다.
+         * @param pDetail 공통 오류의 자세한 본문입니다(기다릴 시간, 상점 주소). 없으면 null 입니다.
+         */
+        bool fail( uint64 callID, uint16 errorCode, const BitWriter* pDetail = nullptr )
+        {
+            Call call;
+            if ( take( callID, call ) == false )
+                return false;
+            (void)call._pHost->respondError( call._token, errorCode, pDetail );
             _metrics.observeError( call._methodIndex, errorCode, call._receivedNanoseconds );
             return true;
         }
@@ -147,6 +166,53 @@ namespace sw
 namespace sw
 {
     /**
+     * @class OnlineLocalCallTable
+     * @brief 호스트 없이 같은 프로세스에서 온 호출(서버 코드 · 테스트)의 표입니다. 응답은 델리게이트로 한 번 갑니다. 저장소 작업을 공유하는 키트(경제 · GM)가 씁니다.
+     * @details 번호는 호스트 호출과 겹치지 않게 맨 위 비트를 켭니다. 그래서 완료는 번호만 보고 길을 가릅니다. 지표에 들지 않습니다. 응답 안에서 다시 올려도 됩니다.
+     */
+    template <typename TReply>
+    class OnlineLocalCallTable
+    {
+    public:
+        using ReplyDelegate = Delegate<void( const TReply& )>;
+
+        static constexpr uint64 kLocalBit = 1ull << 63;
+
+        [[nodiscard]] static bool isLocal( uint64 callID ) { return ( callID & kLocalBit ) != 0; }
+
+        uint64 open( const ReplyDelegate& onReply )
+        {
+            const uint64 callID = kLocalBit | ++_lastID;
+            _mapCall[callID]    = onReply;
+            return callID;
+        }
+
+        /** @brief 호출을 표에서 빼고 @p reply 로 응답합니다. 모르는 번호면 false 입니다. */
+        bool finish( uint64 callID, const TReply& reply )
+        {
+            const auto callIt = _mapCall.find( callID );
+            if ( callIt == _mapCall.end() )
+                return false;
+            const ReplyDelegate onReply = callIt->second;
+            _mapCall.erase( callIt );
+            if ( onReply.isBound() )
+                onReply( reply );
+            return true;
+        }
+
+        void  clear() { _mapCall.clear(); }
+        int32 getCount() const { return static_cast<int32>( _mapCall.size() ); }
+        bool  isEmpty() const { return _mapCall.empty(); }
+
+    private:
+        unordered_map<uint64, ReplyDelegate> _mapCall{};
+        uint64                               _lastID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class OnlineProtocolService
      * @brief 프로토콜 표로 선 키트 서버의 공통 기반입니다. 호스트 콜백은 `IOnlineServerService` 그대로이고, 요청 받기만 이 기반이 닫습니다.
      * @tparam TService 파생 서비스. 표의 메서드마다 `handleCall` 오버로드를 가집니다
@@ -205,6 +271,16 @@ namespace sw
         }
 
     protected:
+        /**
+         * @brief 요청마다 본문을 읽기 전에 불립니다. `kOk` 가 아닌 값을 돌려주면 그 공통 오류로 끝납니다(원격 기능 플래그 등). 기본은 모두 받습니다.
+         */
+        virtual uint16 checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
+        {
+            (void)host;
+            (void)context;
+            return OnlineError::kOk;
+        }
+
         /** @brief 요청을 받을지 정합니다. 받지 않는 동안(로직을 잇기 전 · 내린 뒤) 모든 요청이 `kUnavailable` 로 끝납니다. 처음에는 받습니다. */
         void setReady( bool bReady ) { _bReady = bReady ? SW_TRUE : SW_FALSE; }
         /** @brief 지금 처리하는 요청의 호스트입니다. `handleCall` 안에서만 있습니다. */
@@ -235,14 +311,20 @@ namespace sw
         void receive( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
         {
             const OnlineServerCall<TMethod> call{ _calls.open( host, context._token, TMethod::kIndex ) };
-            typename TMethod::Request       request{};
-            const bool                      bBodyRead = TProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok;
-            const bool                      bKeyOk    = TMethod::kRequiresIdempotencyKey == false || context._idempotencyKey.isValid();
             if ( _bReady == SW_FALSE )
             {
                 (void)fail( call, OnlineError::kUnavailable );
                 return;
             }
+            const uint16 checkError = checkRequest( host, context );
+            if ( checkError != OnlineError::kOk )
+            {
+                (void)fail( call, checkError );
+                return;
+            }
+            typename TMethod::Request request{};
+            const bool                bBodyRead = TProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok;
+            const bool                bKeyOk    = TMethod::kRequiresIdempotencyKey == false || context._idempotencyKey.isValid();
             if ( bBodyRead == false || bKeyOk == false )
             {
                 (void)fail( call, OnlineError::kInvalidRequest );

@@ -76,15 +76,15 @@ namespace sw::editor
 
     const utf8* AdminToolModel::getMethodName( uint16 method )
     {
-        if ( method == AdminMethod::kLookupAccount )
+        if ( method == AdminMethod::LookupAccount::kID )
             return "LookupAccount";
-        if ( method == AdminMethod::kAdjustAsset )
+        if ( method == AdminMethod::AdjustAsset::kID )
             return "AdjustAsset";
-        if ( method == AdminMethod::kSetSanction )
+        if ( method == AdminMethod::SetSanction::kID )
             return "SetSanction";
-        if ( method == AdminMethod::kListAudit )
+        if ( method == AdminMethod::ListAudit::kID )
             return "ListAudit";
-        if ( method == AdminMethod::kListReports || method == AdminMethod::kResolveReport )
+        if ( method == AdminMethod::ListReports::kID || method == AdminMethod::ResolveReport::kID )
             return "Report";
         if ( AdminMethod::isDirectoryMethod( method ) )
             return "ServerDirectory";

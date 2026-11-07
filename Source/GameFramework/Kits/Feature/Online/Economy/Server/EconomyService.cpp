@@ -27,11 +27,22 @@ namespace sw
     {
         struct EconomyServiceInternal
         {
-            static constexpr int32 kWalletIndex   = EconomyMethod::toIndex( EconomyMethod::kGetWallet );
-            static constexpr int32 kHistoryIndex  = EconomyMethod::toIndex( EconomyMethod::kGetHistory );
-            static constexpr int32 kPurchaseIndex = EconomyMethod::toIndex( EconomyMethod::kPurchase );
-            static constexpr int32 kRedeemIndex   = EconomyMethod::toIndex( EconomyMethod::kRedeemReceipt );
-            static constexpr int32 kWithdrawIndex = EconomyMethod::toIndex( EconomyMethod::kWithdrawPurchase );
+            static constexpr int32 kWalletIndex   = EconomyMethod::toIndex( EconomyMethod::GetWallet::kID );
+            static constexpr int32 kHistoryIndex  = EconomyMethod::toIndex( EconomyMethod::GetHistory::kID );
+            static constexpr int32 kPurchaseIndex = EconomyMethod::toIndex( EconomyMethod::Purchase::kID );
+            static constexpr int32 kRedeemIndex   = EconomyMethod::toIndex( EconomyMethod::RedeemReceipt::kID );
+
+            /** @brief 호스트 호출의 공통 칸을 채운 요청입니다. */
+            template <typename TMethod>
+            static EconomyCall makeCall( const OnlineCallContext& context )
+            {
+                EconomyCall call{ context._nowMs };
+                call._method         = TMethod::kID;
+                call._accountID      = context._accountID;
+                call._idempotencyKey = context._idempotencyKey;
+                return call;
+            }
+            static constexpr int32 kWithdrawIndex = EconomyMethod::toIndex( EconomyMethod::WithdrawPurchase::kID );
         };
 
         /** @brief 경제 요청 하나의 저장소 왕복입니다. 입력은 공개 필드에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘깁니다. */
@@ -265,7 +276,8 @@ namespace sw
     SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "_bFakeReceipts" );
 
     EconomyService::EconomyService()
-        : _calls{}
+        : _localCalls{}
+        , _mapTicketToCall{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
         , _uniqueSetDeliveryInFlight{}
@@ -287,11 +299,12 @@ namespace sw
         , _bDeliveryScanPending{ SW_FALSE }
         , _nowMs{ 0 }
     {
+        setReady( false );
     }
 
     EconomyService::~EconomyService()
     {
-        SW_ASSERT( _calls.isEmpty() );
+        SW_ASSERT( _calls.isEmpty() && _localCalls.isEmpty() );
     }
 
     bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceConfig& settings )
@@ -331,7 +344,8 @@ namespace sw
                 return false;
             }
         }
-        _calls.initialize<EconomyMethodName, EconomyResult>( settings._pMetricRegistry, "economy" );
+        initializeCalls( settings._pMetricRegistry, "economy" );
+        setReady( true );
         return true;
     }
 
@@ -339,9 +353,12 @@ namespace sw
     {
         // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
         ServiceStoreUtil::flushUntilIdle( _pStore, [this]()
-        { return _calls.isEmpty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
+        { return _calls.isEmpty() && _localCalls.isEmpty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
         { pollReceipts(); } );
         _calls.abandonAll();
+        _localCalls.clear();
+        _mapTicketToCall.clear();
+        setReady( false );
         _findOwner.reset(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다)
         _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
@@ -349,58 +366,48 @@ namespace sw
 
     void EconomyService::submitCall( const EconomyCall& call, ReplyDelegate onReply )
     {
-        startCall( call, CallTable::Origin::fromDelegate( onReply ) );
+        startCall( call, _localCalls.open( onReply ) );
     }
 
-    void EconomyService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
+    uint16 EconomyService::checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
     {
-        const bool bMutating = context._method == EconomyMethod::kPurchase || context._method == EconomyMethod::kRedeemReceipt ||
-                               context._method == EconomyMethod::kWithdrawPurchase;
-        const RemoteConfig* pConfig          = host.getRemoteConfig();
-        const bool          bFeatureDisabled = bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false;
-        if ( bFeatureDisabled )
-        {
-            (void)host.respondError( context._token, OnlineError::kFeatureDisabled );
-            return;
-        }
-        EconomyCall call{ context._nowMs };
-        call._method               = context._method;
-        call._accountID            = context._accountID;
-        call._idempotencyKey       = context._idempotencyKey;
-        FixedReadResult readResult = FixedReadResult::Ok;
-        switch ( context._method )
-        {
-            case EconomyMethod::kGetHistory:
-            {
-                readResult = EconomyProtocol::MessageTypes::read( body, call._history );
-                break;
-            }
-            case EconomyMethod::kPurchase:
-            {
-                readResult = EconomyProtocol::MessageTypes::read( body, call._purchase );
-                break;
-            }
-            case EconomyMethod::kRedeemReceipt:
-            {
-                readResult = EconomyProtocol::MessageTypes::read( body, call._redeem );
-                break;
-            }
-            case EconomyMethod::kWithdrawPurchase:
-            {
-                readResult = EconomyProtocol::MessageTypes::read( body, call._withdraw );
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
-        if ( readResult != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
-        }
-        startCall( call, CallTable::Origin::fromHost( host, context._token ) );
+        const bool          bMutating = context._method == EconomyMethod::Purchase::kID || context._method == EconomyMethod::RedeemReceipt::kID || context._method == EconomyMethod::WithdrawPurchase::kID;
+        const RemoteConfig* pConfig   = host.getRemoteConfig();
+        return bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false ? OnlineError::kFeatureDisabled : OnlineError::kOk;
+    }
+
+    void EconomyService::handleCall( OnlineServerCall<EconomyMethod::GetWallet> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        startCall( EconomyServiceInternal::makeCall<EconomyMethod::GetWallet>( context ), call._callID );
+    }
+
+    void EconomyService::handleCall( OnlineServerCall<EconomyMethod::GetHistory> call, const OnlineCallContext& context, const EconomyHistoryRequest& request )
+    {
+        EconomyCall economyCall = EconomyServiceInternal::makeCall<EconomyMethod::GetHistory>( context );
+        economyCall._history    = request;
+        startCall( economyCall, call._callID );
+    }
+
+    void EconomyService::handleCall( OnlineServerCall<EconomyMethod::Purchase> call, const OnlineCallContext& context, const EconomyPurchaseRequest& request )
+    {
+        EconomyCall economyCall = EconomyServiceInternal::makeCall<EconomyMethod::Purchase>( context );
+        economyCall._purchase   = request;
+        startCall( economyCall, call._callID );
+    }
+
+    void EconomyService::handleCall( OnlineServerCall<EconomyMethod::RedeemReceipt> call, const OnlineCallContext& context, const EconomyRedeemRequest& request )
+    {
+        EconomyCall economyCall = EconomyServiceInternal::makeCall<EconomyMethod::RedeemReceipt>( context );
+        economyCall._redeem     = request;
+        startCall( economyCall, call._callID );
+    }
+
+    void EconomyService::handleCall( OnlineServerCall<EconomyMethod::WithdrawPurchase> call, const OnlineCallContext& context, const EconomyWithdrawRequest& request )
+    {
+        EconomyCall economyCall = EconomyServiceInternal::makeCall<EconomyMethod::WithdrawPurchase>( context );
+        economyCall._withdraw   = request;
+        startCall( economyCall, call._callID );
     }
 
     void EconomyService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -551,12 +558,9 @@ namespace sw
             SW_LOG_WARNING_ID( "EconomyService.RefundCursorWriteFailed", "EconomyService: the refund cursor of store '%#' could not be written", cursor._storeName.c_str() );
     }
 
-    void EconomyService::startCall( const EconomyCall& call, const CallTable::Origin& origin )
+    void EconomyService::startCall( const EconomyCall& call, uint64 callID )
     {
-        EconomyCallExtra extra;
-        extra._accountID         = call._accountID;
-        const int32  methodIndex = EconomyMethod::toIndex( call._method );
-        const uint64 callID      = _calls.open( origin, methodIndex, extra );
+        const int32 methodIndex = EconomyMethod::toIndex( call._method );
 
         EconomyReply refused;
         refused._result = EconomyResult::Ok;
@@ -564,14 +568,14 @@ namespace sw
             refused._result = EconomyResult::InvalidRequest;
         else if ( call._accountID == kInvalidAccountID )
             refused._result = EconomyResult::NotSignedIn; // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
-        else if ( call._method == EconomyMethod::kPurchase && call._idempotencyKey.isValid() == false )
+        else if ( call._method == EconomyMethod::Purchase::kID && call._idempotencyKey.isValid() == false )
             refused._result = EconomyResult::InvalidRequest; // 상태를 바꾸는 요청에는 멱등 키가 필수이다
         if ( refused._result != EconomyResult::Ok )
         {
-            (void)_calls.finish( callID, refused );
+            completeCall( callID, refused );
             return;
         }
-        if ( call._method == EconomyMethod::kRedeemReceipt )
+        if ( call._method == EconomyMethod::RedeemReceipt::kID )
         {
             const uint64 ticket = _settings._pReceiptRegistry != nullptr
                                     ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID, call._nowMs )
@@ -579,12 +583,10 @@ namespace sw
             if ( ticket == 0 )
             {
                 refused._result = EconomyResult::ReceiptInvalid;
-                (void)_calls.finish( callID, refused );
+                completeCall( callID, refused );
                 return;
             }
-            CallTable::Call* pCall = _calls.find( callID ); // 방금 올렸다 — 검증 제출은 표를 건드리지 않는다
-            if ( pCall != nullptr )
-                pCall->_extra._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
+            _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, call._accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
         const UnixMilliseconds        nowMs = call._nowMs;
@@ -613,20 +615,19 @@ namespace sw
         _settings._pReceiptRegistry->pollCompletions( listResult );
         for ( ReceiptValidationResult& result : listResult )
         {
-            const uint64     ticket = result._ticket;
-            CallTable::Call* pCall  = _calls.findIf( [ticket]( const CallTable::Call& call )
-            { return call._extra._receiptTicket == ticket; } );
-            if ( pCall == nullptr )
+            const auto callIt = _mapTicketToCall.find( result._ticket );
+            if ( callIt == _mapTicketToCall.end() )
                 continue;
-            pCall->_extra._receiptTicket            = 0;
-            const AccountID               accountID = pCall->_extra._accountID;
-            unique_ptr<EconomyRequestJob> work      = make_unique<EconomyRequestJob>( this, _settings, pCall->_callID, EconomyServiceInternal::kRedeemIndex );
-            work->_accountID                        = accountID;
-            work->_redeem._receipt                  = std::move( result );
-            work->_redeem._pExternalLinks           = _settings._pExternalLinks;
-            work->_redeem._accountID                = accountID;
-            work->_redeem._nowMs                    = _nowMs.count();
-            work->_redeem._bAcceptSandbox           = _settings._bAcceptSandboxReceipts;
+            const EconomyReceiptCall      receiptCall = callIt->second;
+            const AccountID               accountID   = receiptCall._accountID;
+            unique_ptr<EconomyRequestJob> work        = make_unique<EconomyRequestJob>( this, _settings, receiptCall._callID, EconomyServiceInternal::kRedeemIndex );
+            _mapTicketToCall.erase( callIt );
+            work->_accountID              = accountID;
+            work->_redeem._receipt        = std::move( result );
+            work->_redeem._pExternalLinks = _settings._pExternalLinks;
+            work->_redeem._accountID      = accountID;
+            work->_redeem._nowMs          = _nowMs.count();
+            work->_redeem._bAcceptSandbox = _settings._bAcceptSandboxReceipts;
             _pStore->submit( std::move( work ) );
         }
     }
@@ -704,7 +705,7 @@ namespace sw
             SW_LOG_WARNING_ID( "EconomyService.EconomyServiceBalanceNoticeAccount", "EconomyService: a balance notice for account %# is too large to send", accountID );
             return;
         }
-        if ( _pHost->sendPush( accountID, EconomyMethod::kPushBalanceChanged, body ) )
+        if ( _pHost->sendPush( accountID, EconomyMethod::BalanceChanged::kKind, body ) )
             return; // 이 서버에 붙어 있다
         if ( _settings._pPresence == nullptr )
             return; // 서버가 하나이고 붙어 있지 않다. 다음 로그인이 지갑을 읽는다
@@ -763,7 +764,10 @@ namespace sw
 
     void EconomyService::completeCall( uint64 callID, const EconomyReply& reply )
     {
-        (void)_calls.finish( callID, reply ); // 다시 시도할 결과(EconomyReply::isRetryable)는 표가 기억하지 않게 응답한다. 모르는 id 는 표가 경고한다
+        if ( LocalCallTable::isLocal( callID ) )
+            (void)_localCalls.finish( callID, reply );
+        else if ( OnlineProtocolService::completeCall( callID, reply ) == false ) // 공통 범주 · 다시 시도할 결과의 보존은 기반이 표로 정한다
+            _calls.warnUnknownCall( callID );
     }
 } // namespace sw
 

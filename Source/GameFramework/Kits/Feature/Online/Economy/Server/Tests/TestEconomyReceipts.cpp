@@ -299,7 +299,7 @@ namespace
             EconomyCall call{ UnixMilliseconds{ kNowMs } };
             call._redeem._storeName = "fake";
             call._redeem._payload   = string( payload );
-            return this->call( EconomyMethod::kRedeemReceipt, accountID, &call );
+            return this->call( EconomyMethod::RedeemReceipt::kID, accountID, &call );
         }
     };
 
@@ -351,7 +351,7 @@ namespace
         EconomyResult redeem( AccountID accountID, string_view payload )
         {
             EconomyCall call{ UnixMilliseconds{ _nowMs } };
-            call._method            = EconomyMethod::kRedeemReceipt;
+            call._method            = EconomyMethod::RedeemReceipt::kID;
             call._accountID         = accountID;
             call._redeem._storeName = "fake";
             call._redeem._payload   = string( payload );
@@ -625,11 +625,11 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
     EconomyCall other{ UnixMilliseconds{ kNowMs } };
     other._redeem._storeName = "apple";
     other._redeem._payload   = "x";
-    SW_EXPECT_TRUE( rig.call( EconomyMethod::kRedeemReceipt, kBuyer, &other )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.call( EconomyMethod::RedeemReceipt::kID, kBuyer, &other )._result == EconomyResult::ReceiptInvalid );
 
-    SW_EXPECT_TRUE( rig.call( EconomyMethod::kPurchase, kBuyer )._result == EconomyResult::InvalidRequest );
-    SW_EXPECT_TRUE( rig.call( EconomyMethod::kGetWallet, kInvalidAccountID )._result == EconomyResult::NotSignedIn );
-    SW_EXPECT_EQUAL( size_t( 2 ), rig.call( EconomyMethod::kGetWallet, kBuyer )._listBalance.size() );
+    SW_EXPECT_TRUE( rig.call( EconomyMethod::Purchase::kID, kBuyer )._result == EconomyResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.call( EconomyMethod::GetWallet::kID, kInvalidAccountID )._result == EconomyResult::NotSignedIn );
+    SW_EXPECT_EQUAL( size_t( 2 ), rig.call( EconomyMethod::GetWallet::kID, kBuyer )._listBalance.size() );
 }
 
 /** @brief [EconomyReceiptsTest] 서비스: 스토어가 보낸 환불 알림을 회수한다 */

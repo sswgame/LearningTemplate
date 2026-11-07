@@ -75,7 +75,7 @@ namespace sw
                 (void)outError;
                 _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, TradeServiceConfig{} );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
-                _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>() );
+                _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
                 return true;
             }
 

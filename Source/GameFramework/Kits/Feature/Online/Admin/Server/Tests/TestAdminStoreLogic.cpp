@@ -20,7 +20,7 @@ namespace
     AdminCommand makeAdjust( AccountID adminID, int64 amount, uint64 keyLow )
     {
         AdminCommand command;
-        command._method             = AdminMethod::kAdjustAsset;
+        command._method             = AdminMethod::AdjustAsset::kID;
         command._adminID            = adminID;
         command._keyHigh            = 1;
         command._keyLow             = keyLow;

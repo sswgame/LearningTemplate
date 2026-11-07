@@ -52,29 +52,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 키트의 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct AccountMethod : OnlineMethodTable<AccountMethodName, OnlineMethodRange::kAccount, AccountPushName>
-    {
-        static constexpr uint16 kRegister        = toMethod( AccountMethodName::Register );      ///< 익명 — 이름 · 비밀번호
-        static constexpr uint16 kLogin           = toMethod( AccountMethodName::Login );         ///< 익명 호출이다. 이름, 비밀번호, 클라이언트 정보를 받는다
-        static constexpr uint16 kGuestLogin      = toMethod( AccountMethodName::GuestLogin );    ///< 익명 호출이다. 장치 비밀 32바이트와 클라이언트 정보를 받는다
-        static constexpr uint16 kPlatformLogin   = toMethod( AccountMethodName::PlatformLogin ); ///< 익명 호출이다. 제공자, 티켓, 클라이언트 정보를 받는다
-        static constexpr uint16 kResume          = toMethod( AccountMethodName::Resume );        ///< 익명 호출이다. 토큰과 클라이언트 정보를 받는다
-        static constexpr uint16 kLogout          = toMethod( AccountMethodName::Logout );
-        static constexpr uint16 kLinkCredential  = toMethod( AccountMethodName::LinkCredential );  ///< 이름과 비밀번호를 받는다
-        static constexpr uint16 kLinkPlatform    = toMethod( AccountMethodName::LinkPlatform );    ///< 제공자와 티켓을 받는다
-        static constexpr uint16 kIssueGameTicket = toMethod( AccountMethodName::IssueGameTicket ); ///< 서버 id 문자열을 받아 티켓 64바이트, 비밀 32바이트, 시한을 돌려준다
-        static constexpr uint16 kUnlinkPlatform  = toMethod( AccountMethodName::UnlinkPlatform );  ///< 제공자
-        static constexpr uint16 kListLinks       = toMethod( AccountMethodName::ListLinks );
-        static constexpr uint16 kRequestDeletion = toMethod( AccountMethodName::RequestDeletion );
-        static constexpr uint16 kCancelDeletion  = toMethod( AccountMethodName::CancelDeletion );
-        static constexpr uint16 kPushRevoked     = toPush( AccountPushName::Revoked ); ///< 알림이다. 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 가입(`kRegister`)과 이름 연동(`kLinkCredential`)의 요청입니다. 이름 상한은 `LoginConstant::kMaxLoginNameSize` 의 네 배(UTF-8 바이트), 비밀번호 상한은 `kMaxPasswordSize` 와 같습니다. */
+    /** @brief 가입(`Register`)과 이름 연동(`LinkCredential`)의 요청입니다. 이름 상한은 `LoginConstant::kMaxLoginNameSize` 의 네 배(UTF-8 바이트), 비밀번호 상한은 `kMaxPasswordSize` 와 같습니다. */
     REFLECT()
     struct AccountCredentialRequest
     {
@@ -88,7 +66,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 로그인(`kLogin`)의 요청입니다. */
+    /** @brief 로그인(`Login`)의 요청입니다. */
     REFLECT()
     struct AccountLoginRequest
     {
@@ -104,7 +82,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 게스트 로그인(`kGuestLogin`)의 요청입니다. */
+    /** @brief 게스트 로그인(`GuestLogin`)의 요청입니다. */
     REFLECT()
     struct AccountGuestLoginRequest
     {
@@ -118,7 +96,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 외부 로그인(`kPlatformLogin`)과 외부 연동(`kLinkPlatform`)의 요청입니다. 연동은 클라이언트 정보를 비웁니다. 티켓 상한은 `LoginConstant::kMaxPlatformTicketSize` 와 같습니다. */
+    /** @brief 외부 로그인(`PlatformLogin`)과 외부 연동(`LinkPlatform`)의 요청입니다. 연동은 클라이언트 정보를 비웁니다. 티켓 상한은 `LoginConstant::kMaxPlatformTicketSize` 와 같습니다. */
     REFLECT()
     struct AccountPlatformRequest
     {
@@ -134,7 +112,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 재접속(`kResume`)의 요청입니다. */
+    /** @brief 재접속(`Resume`)의 요청입니다. */
     REFLECT()
     struct AccountResumeRequest
     {
@@ -148,7 +126,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 게임 접속 티켓 발급(`kIssueGameTicket`)의 요청입니다. 서버 id 는 비어 있으면 안 됩니다. */
+    /** @brief 게임 접속 티켓 발급(`IssueGameTicket`)의 요청입니다. 서버 id 는 비어 있으면 안 됩니다. */
     REFLECT()
     struct AccountGameTicketRequest
     {
@@ -160,7 +138,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 외부 연동 해제(`kUnlinkPlatform`)의 요청입니다. */
+    /** @brief 외부 연동 해제(`UnlinkPlatform`)의 요청입니다. */
     REFLECT()
     struct AccountProviderRequest
     {
@@ -206,7 +184,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 로그인 수단 목록(`kListLinks`)과 연동 해제의 응답입니다. */
+    /** @brief 로그인 수단 목록(`ListLinks`)과 연동 해제의 응답입니다. */
     REFLECT()
     struct AccountLinkReply
     {
@@ -223,7 +201,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 세션 종료 알림(`kPushRevoked`)의 본문입니다. 사유 코드 상한은 `LoginConstant::kMaxReasonCodeSize` 와 같습니다. */
+    /** @brief 세션 종료 알림(`Revoked`)의 본문입니다. 사유 코드 상한은 `LoginConstant::kMaxReasonCodeSize` 와 같습니다. */
     REFLECT()
     struct AccountRevokedPush
     {
@@ -268,15 +246,47 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Account 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct AccountMethod : OnlineMethodTable<AccountMethodName, OnlineMethodRange::kAccount, AccountPushName>
+    {
+        using Register        = Method<MethodName::Register, AccountCredentialRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;    ///< 이름 · 비밀번호
+        using Login           = Method<MethodName::Login, AccountLoginRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;            ///< 이름, 비밀번호, 클라이언트 정보를 받는다
+        using GuestLogin      = Method<MethodName::GuestLogin, AccountGuestLoginRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;  ///< 장치 비밀 32바이트와 클라이언트 정보를 받는다
+        using PlatformLogin   = Method<MethodName::PlatformLogin, AccountPlatformRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>; ///< 제공자, 티켓, 클라이언트 정보를 받는다
+        using Resume          = Method<MethodName::Resume, AccountResumeRequest, AccountGrantReply, OnlineMethodFlag::Anonymous>;          ///< 토큰과 클라이언트 정보를 받는다
+        using Logout          = Method<MethodName::Logout, OnlineNoBody, AccountGrantReply>;
+        using LinkCredential  = Method<MethodName::LinkCredential, AccountCredentialRequest, AccountGrantReply>;   ///< 이름과 비밀번호를 받는다
+        using LinkPlatform    = Method<MethodName::LinkPlatform, AccountPlatformRequest, AccountGrantReply>;       ///< 제공자와 티켓을 받는다
+        using IssueGameTicket = Method<MethodName::IssueGameTicket, AccountGameTicketRequest, AccountTicketReply>; ///< 서버 id 문자열을 받아 티켓 64바이트, 비밀 32바이트, 시한을 돌려준다
+        using UnlinkPlatform  = Method<MethodName::UnlinkPlatform, AccountProviderRequest, AccountGrantReply>;
+        using ListLinks       = Method<MethodName::ListLinks, OnlineNoBody, AccountLinkReply>;
+        using RequestDeletion = Method<MethodName::RequestDeletion, OnlineNoBody, AccountGrantReply>;
+        using CancelDeletion  = Method<MethodName::CancelDeletion, OnlineNoBody, AccountGrantReply>;
+        using Revoked         = Push<PushName::Revoked, AccountRevokedPush>; ///< 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct AccountProtocol
      * @brief 계정 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API AccountProtocol
     {
-        using MessageTypes = OnlineMessageTypes<AccountCredentialRequest, AccountLoginRequest, AccountGuestLoginRequest, AccountPlatformRequest, AccountResumeRequest,
-                                                AccountGameTicketRequest, AccountProviderRequest, AccountGrantReply, AccountTicketReply, AccountLinkReply,
-                                                AccountRevokedPush, AccountUpdateDetail>;
+        using Table        = OnlineProtocolTable<AccountMethod, OnlineMethodList<AccountMethod::Register, AccountMethod::Login, AccountMethod::GuestLogin, AccountMethod::PlatformLogin, AccountMethod::Resume, AccountMethod::Logout, AccountMethod::LinkCredential, AccountMethod::LinkPlatform, AccountMethod::IssueGameTicket, AccountMethod::UnlinkPlatform, AccountMethod::ListLinks, AccountMethod::RequestDeletion, AccountMethod::CancelDeletion>, OnlinePushList<AccountMethod::Revoked>, OnlineErrorBodyList<AccountUpdateDetail>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = LoginResult;
+
+        /** @brief 공통 오류를 의미가 가까운 업무 결과로 바꾸는 클라이언트 표입니다. 서버는 자세한 본문(기다릴 시간, 상점 주소)을 실어야 해 바인딩이 직접 공통 오류로 답합니다(`AccountServer`). 표에 없는 코드는 `StoreUnavailable` 입니다. */
+        static constexpr OnlineErrorResult<LoginResult> kArrCommonResult[] = {
+            {    OnlineError::kRateLimited,      LoginResult::RateLimited, true},
+            { OnlineError::kUpdateRequired,   LoginResult::UpdateRequired, true},
+            {OnlineError::kVersionMismatch,   LoginResult::UpdateRequired, true},
+            {OnlineError::kUnauthenticated,     LoginResult::InvalidToken, true},
+            { OnlineError::kInvalidRequest,   LoginResult::InvalidRequest, true},
+            {    OnlineError::kUnavailable, LoginResult::StoreUnavailable, true},
+        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

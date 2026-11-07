@@ -196,7 +196,7 @@ namespace
         /** @brief 서버가 Ok 와 토큰으로 답하는 로그인을 마칩니다. */
         void logIn()
         {
-            _service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
+            _service.setBody( AccountMethod::Login::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
             (void)_account.login( "alice", "password123" );
             SW_EXPECT_TRUE( take()._result == LoginResult::Ok );
             SW_EXPECT_TRUE( _account.isLoggedIn() );
@@ -209,7 +209,7 @@ SW_TEST_CASE( AccountClientTest, LoginStoresTokenAndIdentity )
 {
     AccountClientFixture rig;
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
-    rig._service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
+    rig._service.setBody( AccountMethod::Login::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     const uint64             requestID = rig._account.login( "alice", "password123" );
     const AccountClientReply reply     = rig.take();
     SW_EXPECT_EQUAL( requestID, reply._requestID );
@@ -225,7 +225,7 @@ SW_TEST_CASE( AccountClientTest, LoginStoresTokenAndIdentity )
 SW_TEST_CASE( AccountClientTest, FailedLoginChangesNothing )
 {
     AccountClientFixture rig;
-    rig._service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeGrantBody( LoginResult::WrongCredentials ) );
+    rig._service.setBody( AccountMethod::Login::kID, AccountClientTestUtil::makeGrantBody( LoginResult::WrongCredentials ) );
     (void)rig._account.login( "alice", "wrong" );
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::WrongCredentials );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
@@ -246,7 +246,7 @@ SW_TEST_CASE( AccountClientTest, TruncatedOrJunkOkBodyIsRefused )
     listBody.push_back( vector<uint8>( 32, uint8( 0xFF ) ) );
     for ( const vector<uint8>& body : listBody )
     {
-        rig._service.setBody( AccountMethod::kLogin, body );
+        rig._service.setBody( AccountMethod::Login::kID, body );
         (void)rig._account.login( "alice", "password123" );
         const AccountClientReply reply = rig.take();
         SW_EXPECT_TRUE( reply._result == LoginResult::InvalidRequest );
@@ -260,18 +260,18 @@ SW_TEST_CASE( AccountClientTest, TruncatedOrJunkOkBodyIsRefused )
 SW_TEST_CASE( AccountClientTest, BodyOfAnotherTypeIsRefused )
 {
     AccountClientFixture rig;
-    rig._service.setBody( AccountMethod::kLogin, AccountClientTestUtil::makeTicketBody() );
+    rig._service.setBody( AccountMethod::Login::kID, AccountClientTestUtil::makeTicketBody() );
     (void)rig._account.login( "alice", "password123" );
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
 
-    rig._service.setBody( AccountMethod::kIssueGameTicket, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
+    rig._service.setBody( AccountMethod::IssueGameTicket::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     (void)rig._account.issueGameTicket( "game" );
     const AccountClientReply ticket = rig.take();
     SW_EXPECT_TRUE( ticket._result == LoginResult::InvalidRequest );
     SW_EXPECT_EQUAL( int64( 0 ), ticket._ticket._expiresAtMs );
 
-    rig._service.setBody( AccountMethod::kListLinks, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
+    rig._service.setBody( AccountMethod::ListLinks::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     (void)rig._account.listLinks();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
 }
@@ -280,11 +280,11 @@ SW_TEST_CASE( AccountClientTest, BodyOfAnotherTypeIsRefused )
 SW_TEST_CASE( AccountClientTest, TicketAndLinkRepliesFillTheirFields )
 {
     AccountClientFixture rig;
-    rig._service.setBody( AccountMethod::kIssueGameTicket, AccountClientTestUtil::makeTicketBody() );
+    rig._service.setBody( AccountMethod::IssueGameTicket::kID, AccountClientTestUtil::makeTicketBody() );
     (void)rig._account.issueGameTicket( "game" );
     SW_EXPECT_EQUAL( kNowMs + 1000, rig.take()._ticket._expiresAtMs );
 
-    rig._service.setBody( AccountMethod::kListLinks, AccountClientTestUtil::makeLinkBody() );
+    rig._service.setBody( AccountMethod::ListLinks::kID, AccountClientTestUtil::makeLinkBody() );
     (void)rig._account.listLinks();
     SW_EXPECT_TRUE( rig.take()._linkSummary._bHasCredential == SW_TRUE );
 }
@@ -383,12 +383,12 @@ SW_TEST_CASE( AccountClientTest, ResumeDropsTokenOnlyWhenDead )
 {
     AccountClientFixture rig;
     rig.logIn();
-    rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::StoreUnavailable ) );
+    rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::StoreUnavailable ) );
     (void)rig._account.resume();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::StoreUnavailable );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
 
-    rig._service.setBody( AccountMethod::kResume, vector<uint8>{ 1, 2, 3 } );
+    rig._service.setBody( AccountMethod::Resume::kID, vector<uint8>{ 1, 2, 3 } );
     (void)rig._account.resume();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidRequest );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
@@ -396,7 +396,7 @@ SW_TEST_CASE( AccountClientTest, ResumeDropsTokenOnlyWhenDead )
     for ( LoginResult dead : { LoginResult::InvalidToken, LoginResult::Expired, LoginResult::Revoked } )
     {
         rig._account.setToken( AccountClientTestUtil::makeToken() );
-        rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( dead ) );
+        rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( dead ) );
         (void)rig._account.resume();
         SW_EXPECT_TRUE( rig.take()._result == dead );
         SW_EXPECT_TRUE( rig._account.getToken().isEmpty() );
@@ -408,7 +408,7 @@ SW_TEST_CASE( AccountClientTest, ResumeReplacesTheSecret )
 {
     AccountClientFixture rig;
     rig.logIn();
-    rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
+    rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
     (void)rig._account.resume();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::Ok );
     SW_EXPECT_EQUAL( uint8( 9 ), rig._account.getToken()._arrSecret[0] );
@@ -420,7 +420,7 @@ SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
     const LoginSessionToken token = AccountClientTestUtil::makeToken();
     AccountClientFixture    rig( &token );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._service._listMethod.size() );
-    SW_EXPECT_EQUAL( AccountMethod::kResume, rig._service._listMethod[0] );
+    SW_EXPECT_EQUAL( AccountMethod::Resume::kID, rig._service._listMethod[0] );
     SW_EXPECT_TRUE( rig.getClient().isRequestGateClosed() );
 
     const uint64 listRequestID = rig._account.listLinks();
@@ -428,8 +428,8 @@ SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
     rig.pump();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listMethod.size() );
 
-    rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
-    rig._service.setBody( AccountMethod::kListLinks, AccountClientTestUtil::makeLinkBody() );
+    rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
+    rig._service.setBody( AccountMethod::ListLinks::kID, AccountClientTestUtil::makeLinkBody() );
     rig._service._bHold = SW_FALSE;
     rig._service.answerHeld( rig._rig._server._host );
 
@@ -476,7 +476,7 @@ SW_TEST_CASE( AccountClientTest, DeadTokenEndsDeferredRequests )
     AccountClientFixture    rig( &token );
     (void)rig._account.logout();
 
-    rig._service.setBody( AccountMethod::kResume, AccountClientTestUtil::makeGrantBody( LoginResult::Expired ) );
+    rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Expired ) );
     rig._service._bHold = SW_FALSE;
     rig._service.answerHeld( rig._rig._server._host );
 
@@ -510,20 +510,20 @@ SW_TEST_CASE( AccountClientTest, LogoutAndDeletionDropTheToken )
 {
     AccountClientFixture rig;
     rig.logIn();
-    rig._service.setBody( AccountMethod::kLogout, AccountClientTestUtil::makeGrantBody( LoginResult::InvalidToken ) );
+    rig._service.setBody( AccountMethod::Logout::kID, AccountClientTestUtil::makeGrantBody( LoginResult::InvalidToken ) );
     (void)rig._account.logout();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::InvalidToken );
     SW_EXPECT_TRUE( rig._account.isLoggedIn() );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
 
-    rig._service.setBody( AccountMethod::kLogout, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
+    rig._service.setBody( AccountMethod::Logout::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     (void)rig._account.logout();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::Ok );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
     SW_EXPECT_TRUE( rig._account.getToken().isEmpty() );
 
     rig.logIn();
-    rig._service.setBody( AccountMethod::kRequestDeletion, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
+    rig._service.setBody( AccountMethod::RequestDeletion::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok ) );
     (void)rig._account.requestDeletion();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::Ok );
     SW_EXPECT_FALSE( rig._account.isLoggedIn() );
@@ -535,7 +535,7 @@ SW_TEST_CASE( AccountClientTest, LinkUpdatesIdentityOnly )
 {
     AccountClientFixture rig;
     rig.logIn();
-    rig._service.setBody( AccountMethod::kLinkCredential, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9, "renamed" ) );
+    rig._service.setBody( AccountMethod::LinkCredential::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9, "renamed" ) );
     (void)rig._account.linkCredential( "renamed", "password123" );
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::Ok );
     SW_EXPECT_EQUAL( string( "renamed" ), rig._account.getIdentity()._displayName );
@@ -552,21 +552,21 @@ SW_TEST_CASE( AccountClientTest, RevokedPush )
     OnlineServiceHost& host = rig._rig._server._host;
 
     const BitWriter junk = AccountClientTestUtil::toWriter( vector<uint8>( 8, uint8( 0xFF ) ) );
-    SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::kPushRevoked, junk ) );
-    SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::kPushRevoked, BitWriter{} ) );
+    SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::Revoked::kKind, junk ) );
+    SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::Revoked::kKind, BitWriter{} ) );
     AccountRevokedPush push;
     push._reasonCode = "ban.spam";
     push._reason     = LoginRevokeReason::Sanctioned;
     BitWriter body;
     SW_REQUIRE_TRUE( AccountProtocol::MessageTypes::write( body, push ) );
-    SW_EXPECT_TRUE( host.sendPush( kAccountID, static_cast<uint16>( AccountMethod::kPushRevoked + 1 ), body ) );
+    SW_EXPECT_TRUE( host.sendPush( kAccountID, static_cast<uint16>( AccountMethod::Revoked::kKind + 1 ), body ) );
     rig.pump();
     vector<AccountClientEvent> listEvent;
     SW_EXPECT_EQUAL( 0, rig._account.pollEvents( listEvent ) );
     SW_EXPECT_TRUE( rig._account.isLoggedIn() );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
 
-    SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::kPushRevoked, body ) );
+    SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::Revoked::kKind, body ) );
     rig.pump();
     SW_REQUIRE_EQUAL( 1, rig._account.pollEvents( listEvent ) );
     SW_EXPECT_EQUAL( string( "ban.spam" ), listEvent[0]._reasonCode );

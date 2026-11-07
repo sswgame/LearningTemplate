@@ -12,53 +12,41 @@ namespace sw
         return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "unknown";
     }
 
-    AdminResult AdminProtocol::fromErrorCode( uint16 errorCode )
-    {
-        static constexpr OnlineErrorResult<AdminResult> kArrErrorResult[] = {
-            {             OnlineError::kOk,             AdminResult::Ok},
-            {OnlineError::kUnauthenticated,    AdminResult::NotSignedIn},
-            {      OnlineError::kForbidden,      AdminResult::Forbidden},
-            { OnlineError::kInvalidRequest, AdminResult::InvalidRequest},
-            {       OnlineError::kConflict,           AdminResult::Busy},
-        };
-        return OnlineError::toResult( errorCode, kArrErrorResult, AdminResult::Unavailable );
-    }
-
     AdminRole AdminProtocol::getRequiredRole( uint16 method, ServiceSanctionKind sanctionKind )
     {
         switch ( method )
         {
-            case AdminMethod::kLookupAccount:
-            case AdminMethod::kListAudit:
-            case AdminMethod::kListReports:
-            case AdminMethod::kListLiveEvents:
+            case AdminMethod::LookupAccount::kID:
+            case AdminMethod::ListAudit::kID:
+            case AdminMethod::ListReports::kID:
+            case AdminMethod::ListLiveEvents::kID:
             {
                 return AdminRole::Viewer;
             }
-            case AdminMethod::kResolveReport:
+            case AdminMethod::ResolveReport::kID:
             {
                 return AdminRole::Support;
             }
-            case AdminMethod::kSetSanction:
+            case AdminMethod::SetSanction::kID:
             {
                 if ( sanctionKind == ServiceSanctionKind::ChatMute )
                     return AdminRole::Support;
                 return sanctionKind == ServiceSanctionKind::Suspend ? AdminRole::Operator : AdminRole::Super;
             }
-            case AdminMethod::kAdjustAsset:
-            case AdminMethod::kSendMail:
-            case AdminMethod::kSetMaintenance:
-            case AdminMethod::kClearMaintenance:
-            case AdminMethod::kPostNotice:
-            case AdminMethod::kRemoveNotice:
-            case AdminMethod::kPutLiveEvent:
-            case AdminMethod::kRemoveLiveEvent:
+            case AdminMethod::AdjustAsset::kID:
+            case AdminMethod::SendMail::kID:
+            case AdminMethod::SetMaintenance::kID:
+            case AdminMethod::ClearMaintenance::kID:
+            case AdminMethod::PostNotice::kID:
+            case AdminMethod::RemoveNotice::kID:
+            case AdminMethod::PutLiveEvent::kID:
+            case AdminMethod::RemoveLiveEvent::kID:
             {
                 return AdminRole::Operator;
             }
-            case AdminMethod::kBulkMail:
-            case AdminMethod::kCreateCampaign:
-            case AdminMethod::kSetRole:
+            case AdminMethod::BulkMail::kID:
+            case AdminMethod::CreateCampaign::kID:
+            case AdminMethod::SetRole::kID:
             {
                 return AdminRole::Super;
             }
@@ -72,5 +60,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry AdminProtocol::kOnlineEntry{ "Admin", AdminMethod{}, AdminProtocol::MessageTypes{} };
+    const OnlineProtocolEntry AdminProtocol::kOnlineEntry{ "Admin", AdminProtocol::Table{} };
 } // namespace sw

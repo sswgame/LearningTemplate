@@ -265,7 +265,9 @@ namespace
         const TradeResponseSink& sendRaw( int32 slot, uint16 method, const BitWriter& body )
         {
             _response = TradeResponseSink{};
-            (void)_pRig->_clients.getClient( slot ).sendRequest( method, body, NetRequestOptions{}, OnlineResponseDelegate::create<&TradeResponseSink::onResponse>( &_response ) );
+            NetRequestOptions options;
+            options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 표의 호출 규칙이다. 빠진 요청은 kInvalidRequest 다
+            (void)_pRig->_clients.getClient( slot ).sendRequest( method, body, options, OnlineResponseDelegate::create<&TradeResponseSink::onResponse>( &_response ) );
             pump();
             return _response;
         }
@@ -291,7 +293,7 @@ namespace
         {
             TradeInviteRequest request;
             request._peerDisplayName = string( peerName );
-            return call( slot, TradeMethod::kInvite, request );
+            return call( slot, TradeMethod::Invite::kID, request );
         }
 
         TradeReply respond( int32 slot, uint64 tradeID, bool bAccept = true )
@@ -299,7 +301,7 @@ namespace
             TradeRespondRequest request;
             request._tradeID = tradeID;
             request._bAccept = bAccept ? SW_TRUE : SW_FALSE;
-            return call( slot, TradeMethod::kRespond, request );
+            return call( slot, TradeMethod::Respond::kID, request );
         }
 
         TradeReply offer( int32 slot, uint64 tradeID, string_view assetID, int64 amount )
@@ -310,14 +312,14 @@ namespace
             TradeOfferRequest request;
             request._tradeID = tradeID;
             request._listLeg.push_back( leg );
-            return call( slot, TradeMethod::kSetOffer, request );
+            return call( slot, TradeMethod::SetOffer::kID, request );
         }
 
         TradeReply lock( int32 slot, uint64 tradeID )
         {
             TradeIDRequest request;
             request._tradeID = tradeID;
-            return call( slot, TradeMethod::kLock, request );
+            return call( slot, TradeMethod::Lock::kID, request );
         }
 
         TradeReply confirm( int32 slot, const TradeSnapshot& snapshot, AccountID accountID )
@@ -327,7 +329,7 @@ namespace
             request._tradeID          = snapshot._tradeID;
             request._seenOwnRevision  = snapshot._arrSide[sideIndex]._offerRevision;
             request._seenPeerRevision = snapshot._arrSide[1 - sideIndex]._offerRevision;
-            return call( slot, TradeMethod::kConfirm, request );
+            return call( slot, TradeMethod::Confirm::kID, request );
         }
 
         void clearPushes()
@@ -377,7 +379,7 @@ SW_TEST_CASE( TradeServerTest, InvitePushesOnlyToThePeer )
 
     SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listKind.empty() );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listKind.size() );
-    SW_EXPECT_EQUAL( TradeMethod::kPushInvited, rig._arrSink[kBobSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( TradeMethod::Invited::kKind, rig._arrSink[kBobSlot]._listKind[0] );
     SW_EXPECT_EQUAL( reply._snapshot._tradeID, rig._arrSink[kBobSlot]._listReply[0]._snapshot._tradeID );
     SW_EXPECT_TRUE( rig._arrSink[kCarolSlot]._listKind.empty() );
 }
@@ -392,21 +394,21 @@ SW_TEST_CASE( TradeServerTest, UnknownPeerAndSelf )
     SW_EXPECT_EQUAL( 0, rig._tradeService.getOpenTradeCount() );
 }
 
-/** @brief [TradeServerTest] 패킷: 메서드마다 깨진 · 빈 몸은 kInvalidRequest 이고 거래가 생기거나 바뀌지 않는다. 다른 타입의 몸도 같다. 모르는 메서드는 kNotFound 다 */
+/** @brief [TradeServerTest] 패킷: 메서드마다 깨진 · 빈 몸은 kInvalidRequest 이고 거래가 생기거나 바뀌지 않는다. 다른 타입의 몸도 같다. 모르는 메서드도 같다 */
 SW_TEST_CASE( TradeServerTest, MalformedBodiesAreRefused )
 {
     TradeServerFixture rig;
     const uint64       tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
     rig.clearPushes();
-    for ( const uint16 method : { TradeMethod::kInvite, TradeMethod::kRespond, TradeMethod::kSetOffer, TradeMethod::kLock, TradeMethod::kConfirm, TradeMethod::kCancel } )
+    for ( const uint16 method : { TradeMethod::Invite::kID, TradeMethod::Respond::kID, TradeMethod::SetOffer::kID, TradeMethod::Lock::kID, TradeMethod::Confirm::kID, TradeMethod::Cancel::kID } )
     {
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( kBobSlot, method, BitWriter{} )._errorCode );
         SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( kBobSlot, method, TradeServerTestUtil::makeJunk( 24 ) )._errorCode );
     }
     TradeIDRequest idRequest;
     idRequest._tradeID = tradeID;
-    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.send( kBobSlot, TradeMethod::kRespond, idRequest )._errorCode ); // 수락 칸이 없는 다른 메시지
-    SW_EXPECT_EQUAL( OnlineError::kNotFound, rig.sendRaw( kBobSlot, static_cast<uint16>( OnlineMethodRange::kTrade + 0x70 ), BitWriter{} )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.send( kBobSlot, TradeMethod::Respond::kID, idRequest )._errorCode ); // 수락 칸이 없는 다른 메시지
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( kBobSlot, static_cast<uint16>( OnlineMethodRange::kTrade + 0x70 ), BitWriter{} )._errorCode );
 
     SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listKind.empty() );
     SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._snapshot._state == TradeState::Open ); // 앞의 어느 요청도 초대를 건드리지 않았다
@@ -421,7 +423,7 @@ SW_TEST_CASE( TradeServerTest, AnonymousConnectionIsRefused )
     rig.pump();
     TradeInviteRequest request;
     request._peerDisplayName = "bob";
-    SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.send( anonymous, TradeMethod::kInvite, request )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.send( anonymous, TradeMethod::Invite::kID, request )._errorCode );
     SW_EXPECT_EQUAL( 0, rig._tradeService.getOpenTradeCount() );
     rig._pRig.reset(); // 받기를 내린 뒤 지역 알림 받이가 사라진다
 }
@@ -451,7 +453,7 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
         leg._assetID  = "cur.c" + to_string( index );
         leg._amount   = 1;
     }
-    SW_EXPECT_TRUE( rig.call( kAliceSlot, TradeMethod::kSetOffer, tooMany )._result == TradeResult::TooManyLegs );
+    SW_EXPECT_TRUE( rig.call( kAliceSlot, TradeMethod::SetOffer::kID, tooMany )._result == TradeResult::TooManyLegs );
 
     const TradeReply same = rig.lock( kAliceSlot, tradeID );
     SW_EXPECT_TRUE( same._result == TradeResult::Ok ); // 거절된 제시는 없던 일이라 빈 제시를 잠근다
@@ -474,7 +476,7 @@ SW_TEST_CASE( TradeServerTest, StaleConfirmMovesNothing )
     request._tradeID          = tradeID;
     request._seenOwnRevision  = locked._arrSide[1]._offerRevision;
     request._seenPeerRevision = locked._arrSide[0]._offerRevision + 1;
-    SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::kConfirm, request )._result == TradeResult::StaleOffer );
+    SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::Confirm::kID, request )._result == TradeResult::StaleOffer );
     SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kAlice, "cur.gold" ) );
 }
 
@@ -501,7 +503,7 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
     SW_EXPECT_EQUAL( int64( 30 ), TradeServerTestUtil::findBalance( settled._listBalance, "cur.gem" ) );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
-    SW_EXPECT_EQUAL( TradeMethod::kPushClosed, rig._arrSink[kAliceSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
     const TradeReply& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
     SW_EXPECT_TRUE( alicePush._snapshot._state == TradeState::Settled );
     SW_EXPECT_EQUAL( int64( 60 ), TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) );
@@ -526,16 +528,16 @@ SW_TEST_CASE( TradeServerTest, UpdatesAndClosePush )
 
     SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", 10 )._result == TradeResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listKind.size() );
-    SW_EXPECT_EQUAL( TradeMethod::kPushUpdate, rig._arrSink[kBobSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( TradeMethod::Update::kKind, rig._arrSink[kBobSlot]._listKind[0] );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listReply[0]._snapshot._arrSide[0]._listLeg.size() );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
     rig.clearPushes();
 
     TradeIDRequest cancel;
     cancel._tradeID = tradeID;
-    SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::kCancel, cancel )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::Cancel::kID, cancel )._result == TradeResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
-    SW_EXPECT_EQUAL( TradeMethod::kPushClosed, rig._arrSink[kAliceSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
     SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listReply[0]._snapshot._closeReason == TradeCloseReason::CancelledByParty );
 }
 
@@ -550,7 +552,7 @@ SW_TEST_CASE( TradeServerTest, LeavingClosesTheTrade )
     rig._pRig->_clients.drop( kBobSlot );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
-    SW_EXPECT_EQUAL( TradeMethod::kPushClosed, rig._arrSink[kAliceSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
     SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listReply[0]._snapshot._closeReason == TradeCloseReason::PartyLeft );
     SW_EXPECT_EQUAL( 0, rig._tradeService.getOpenTradeCount() );
 }
@@ -562,14 +564,14 @@ SW_TEST_CASE( TradeServerTest, PresenceLookupFinishesTheInvite )
     TradeInviteRequest request;
     request._peerDisplayName = "elsewhere";
 
-    SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::kInvite, request )._count ); // 찾기를 기다린다
+    SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::Invite::kID, request )._count ); // 찾기를 기다린다
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence.getPendingCount() );
     rig._presence.answerFront( kInvalidAccountID );
     rig.pump();
     SW_EXPECT_EQUAL( 1, rig._response._count );
     SW_EXPECT_TRUE( rig._response.readReply()._result == TradeResult::PeerOffline );
 
-    SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::kInvite, request )._count );
+    SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::Invite::kID, request )._count );
     rig._presence.answerFront( kBob );
     rig.pump();
     SW_EXPECT_EQUAL( 1, rig._response._count );
@@ -584,7 +586,7 @@ SW_TEST_CASE( TradeServerTest, LookupOfADepartedAccountOpensNothing )
     TradeServerFixture rig( true );
     TradeInviteRequest request;
     request._peerDisplayName = "elsewhere";
-    (void)rig.send( kAliceSlot, TradeMethod::kInvite, request );
+    (void)rig.send( kAliceSlot, TradeMethod::Invite::kID, request );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence.getPendingCount() );
 
     rig._pRig->_clients.drop( kAliceSlot );
@@ -616,7 +618,7 @@ SW_TEST_CASE( TradeServerTest, StoreFailureIsUnavailable )
     TradeRespondRequest request;
     request._tradeID = tradeID;
     request._bAccept = SW_TRUE;
-    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.send( kBobSlot, TradeMethod::kRespond, request )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.send( kBobSlot, TradeMethod::Respond::kID, request )._errorCode );
     SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
 }
 
@@ -639,8 +641,8 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
 
     TradeInviteRequest request;
     request._peerDisplayName = "carol";
-    SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.send( kBobSlot, TradeMethod::kInvite, request )._errorCode );
-    SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.sendRaw( kBobSlot, TradeMethod::kLock, TradeServerTestUtil::makeJunk( 4 ) )._errorCode ); // 몸을 읽기 전에 막는다
+    SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.send( kBobSlot, TradeMethod::Invite::kID, request )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.sendRaw( kBobSlot, TradeMethod::Lock::kID, TradeServerTestUtil::makeJunk( 4 ) )._errorCode ); // 몸을 읽기 전에 막는다
     SW_EXPECT_EQUAL( 1, rig._tradeService.getOpenTradeCount() );
 }
 
@@ -652,5 +654,5 @@ SW_TEST_CASE( TradeServerTest, RetryableReplyReachesTheServiceAgain )
     finished._result = TradeResult::Ok;
     TradeReply unavailable;
     unavailable._result = TradeResult::Unavailable;
-    rig.expectRetryReachesService( TradeMethod::kInvite, unavailable, finished );
+    rig.expectRetryReachesService( TradeMethod::Invite::kID, unavailable, finished );
 }

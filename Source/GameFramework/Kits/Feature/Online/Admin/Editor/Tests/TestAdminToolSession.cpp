@@ -79,7 +79,7 @@ SW_TEST_CASE( AdminToolSessionTest, RefreshDoesNotOverwriteTheCommandsResult )
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
     session.requestAdjust( AdminToolSessionTestUtil::kPlayer, "cur.gold", 50, false, "ticket" );
     SW_EXPECT_TRUE( session.getLastResult() == AdminResult::Ok );
-    SW_EXPECT_EQUAL( AdminMethod::kAdjustAsset, session.getLastMethod() );
+    SW_EXPECT_EQUAL( AdminMethod::AdjustAsset::kID, session.getLastMethod() );
     SW_EXPECT_EQUAL( string( "AdjustAsset: Ok" ), session.getStatusLine() );
     SW_EXPECT_EQUAL( int64( 150 ), AdminToolSessionTestUtil::findLookupGold( session ) ); // 새로 고침은 돌았다
     SW_EXPECT_EQUAL( 3, session.getCompletedCount() );
@@ -131,7 +131,7 @@ SW_TEST_CASE( AdminToolSessionTest, BadDurationsAreRefusedBeforeSending )
 
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, -1, "gm.notice", "ticket" );
     SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
-    SW_EXPECT_EQUAL( AdminMethod::kSetSanction, session.getLastMethod() );
+    SW_EXPECT_EQUAL( AdminMethod::SetSanction::kID, session.getLastMethod() );
     session.requestSanction( AdminToolSessionTestUtil::kPlayer, ServiceSanctionKind::ChatMute, std::numeric_limits<int64>::max(), "gm.notice", "ticket" );
     SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
     SW_EXPECT_EQUAL( completedBefore, session.getCompletedCount() ); // 제공자에 닿지 않았다
@@ -139,10 +139,10 @@ SW_TEST_CASE( AdminToolSessionTest, BadDurationsAreRefusedBeforeSending )
     SW_EXPECT_EQUAL( untilMs, session.getLookup()._sanction._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] );
 
     session.requestSetMaintenance( "all", "maintenance.default", -5, "ticket" );
-    SW_EXPECT_EQUAL( AdminMethod::kSetMaintenance, session.getLastMethod() );
+    SW_EXPECT_EQUAL( AdminMethod::SetMaintenance::kID, session.getLastMethod() );
     SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
     session.requestPostNotice( 1, "text", 0, -5, "ticket" );
-    SW_EXPECT_EQUAL( AdminMethod::kPostNotice, session.getLastMethod() );
+    SW_EXPECT_EQUAL( AdminMethod::PostNotice::kID, session.getLastMethod() );
     SW_EXPECT_TRUE( session.getLastResult() == AdminResult::InvalidRequest );
     SW_EXPECT_EQUAL( completedBefore, session.getCompletedCount() );
 }

@@ -12,120 +12,10 @@ namespace sw
     {
         struct AccountServerInternal
         {
-            static bool isLoginMethod( uint16 method )
-            {
-                return method == AccountMethod::kLogin || method == AccountMethod::kGuestLogin || method == AccountMethod::kPlatformLogin ||
-                       method == AccountMethod::kResume;
-            }
-
             static bool isGrantOperation( LoginOperation operation )
             {
                 return operation == LoginOperation::Login || operation == LoginOperation::GuestLogin || operation == LoginOperation::PlatformLogin ||
                        operation == LoginOperation::Resume;
-            }
-
-            /** @brief 요청 본문을 읽어 로그인 서비스로 보낸 결과이다. */
-            enum class DispatchStatus : uint8
-            {
-                Ok,
-                UnknownMethod,
-                Malformed,
-            };
-
-            /** @brief `TRequest` 를 읽고, 읽기에 성공하면 `call` 에 넘긴다. 읽기에 실패하면 서비스를 부르지 않는다. */
-            template <typename TRequest, typename TCall>
-            static DispatchStatus readThen( BitReader& body, TCall&& call )
-            {
-                TRequest request;
-                if ( AccountProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                    return DispatchStatus::Malformed;
-                call( request );
-                return DispatchStatus::Ok;
-            }
-
-            /**
-             * @brief 메서드에 맞는 본문을 읽어 로그인 서비스의 해당 함수를 부른다.
-             * @details `pToken` 은 로그인한 세션의 토큰이다. 로그인 전 메서드(등록 · 로그인 · 재개)는 쓰지 않으므로 nullptr 이어도 된다.
-             *          메서드마다 읽는 요청이 달라 경우마다 한 줄씩 부르는 짧은 디스패처라 한 함수로 둔다.
-             */
-            static DispatchStatus dispatch( LoginService& loginService, const OnlineCallContext& context, const LoginSessionToken* pToken, uint64 tag, BitReader& body )
-            {
-                const UnixMilliseconds nowMs = context._nowMs;
-                switch ( context._method )
-                {
-                    case AccountMethod::kRegister:
-                    {
-                        return readThen<AccountCredentialRequest>( body, [&]( const AccountCredentialRequest& request )
-                        { loginService.registerAccount( LoginCredential{ request._loginName, request._password }, context._remoteKey, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kLogin:
-                    {
-                        return readThen<AccountLoginRequest>( body, [&]( const AccountLoginRequest& request )
-                        { loginService.login( LoginCredential{ request._loginName, request._password }, request._clientInfo, context._remoteKey, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kGuestLogin:
-                    {
-                        return readThen<AccountGuestLoginRequest>( body, [&]( const AccountGuestLoginRequest& request )
-                        { loginService.guestLogin( request._arrDeviceSecret, request._clientInfo, context._remoteKey, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kPlatformLogin:
-                    {
-                        return readThen<AccountPlatformRequest>( body, [&]( const AccountPlatformRequest& request )
-                        { loginService.platformLogin( request._provider, request._ticketBytes, request._clientInfo, context._remoteKey, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kResume:
-                    {
-                        return readThen<AccountResumeRequest>( body, [&]( const AccountResumeRequest& request )
-                        { loginService.resumeSession( request._token, request._clientInfo, context._remoteKey, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kLogout:
-                    {
-                        loginService.logout( *pToken, nowMs, tag );
-                        return DispatchStatus::Ok;
-                    }
-                    case AccountMethod::kLinkCredential:
-                    {
-                        return readThen<AccountCredentialRequest>( body, [&]( const AccountCredentialRequest& request )
-                        { loginService.linkCredential( *pToken, LoginCredential{ request._loginName, request._password }, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kLinkPlatform:
-                    {
-                        return readThen<AccountPlatformRequest>( body, [&]( const AccountPlatformRequest& request )
-                        { loginService.linkPlatform( *pToken, request._provider, request._ticketBytes, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kIssueGameTicket:
-                    {
-                        AccountGameTicketRequest request;
-                        if ( AccountProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok || request._serverID.empty() )
-                            return DispatchStatus::Malformed; // 서버 id 가 없으면 발급할 곳이 없다
-                        loginService.issueGameTicket( *pToken, hashed_string( request._serverID ), nowMs, tag );
-                        return DispatchStatus::Ok;
-                    }
-                    case AccountMethod::kUnlinkPlatform:
-                    {
-                        return readThen<AccountProviderRequest>( body, [&]( const AccountProviderRequest& request )
-                        { loginService.unlinkPlatform( *pToken, request._provider, nowMs, tag ); } );
-                    }
-                    case AccountMethod::kListLinks:
-                    {
-                        loginService.listLinks( *pToken, nowMs, tag );
-                        return DispatchStatus::Ok;
-                    }
-                    case AccountMethod::kRequestDeletion:
-                    {
-                        loginService.requestDeletion( *pToken, nowMs, tag );
-                        return DispatchStatus::Ok;
-                    }
-                    case AccountMethod::kCancelDeletion:
-                    {
-                        loginService.cancelDeletion( *pToken, nowMs, tag );
-                        return DispatchStatus::Ok;
-                    }
-                    default:
-                    {
-                        return DispatchStatus::UnknownMethod;
-                    }
-                }
             }
         };
     } // namespace
@@ -134,7 +24,7 @@ namespace sw
 namespace sw
 {
     AccountServer::AccountServer()
-        : _mapTagToCall{}
+        : _mapCallToPending{}
         , _mapAccountToSession{}
         , _mapAccountToReasonCode{}
         , _uniqueSetLoginConnection{}
@@ -145,12 +35,12 @@ namespace sw
         , _sessionControl{ *this }
         , _settings{}
         , _pLoginService{ nullptr }
-        , _nextTag{ 1 }
         , _nowMs{ 0 }
         , _nextPurgeMs{ 0 }
         , _nextRefreshMs{ 0 }
         , _bHostAttached{ SW_FALSE }
     {
+        setReady( false );
     }
 
     void AccountServer::initialize( LoginService* pLoginService, const AccountServerConfig& settings )
@@ -158,11 +48,15 @@ namespace sw
         _pLoginService = pLoginService;
         _settings      = settings;
         _presence.setSettings( settings._presence );
+        initializeCalls( settings._pMetricRegistry, "account" );
+        setReady( pLoginService != nullptr );
     }
 
     void AccountServer::shutdown()
     {
-        _mapTagToCall.clear();
+        _mapCallToPending.clear();
+        _calls.clear();
+        setReady( false );
         _mapAccountToSession.clear();
         _mapAccountToReasonCode.clear();
         _uniqueSetLoginConnection.clear();
@@ -179,55 +73,125 @@ namespace sw
         _bHostAttached = SW_FALSE;
     }
 
-    const OnlineProtocolEntry& AccountServer::getProtocol() const
+    uint16 AccountServer::checkRequest( OnlineServiceHost& host, const OnlineCallContext& context )
     {
-        return AccountProtocol::kOnlineEntry;
+        (void)host;
+        _nowMs = context._nowMs;
+        return OnlineError::kOk;
     }
 
-    bool AccountServer::isAnonymousMethod( uint16 method ) const
+    template <typename TMethod>
+    bool AccountServer::beginLogin( OnlineServerCall<TMethod> call, const OnlineCallContext& context )
     {
-        return method == AccountMethod::kRegister || AccountServerInternal::isLoginMethod( method );
-    }
-
-    void AccountServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
-    {
-        _nowMs                  = context._nowMs;
-        const bool bLoginMethod = AccountServerInternal::isLoginMethod( context._method );
         // 한 연결에는 계정 하나만 쓴다. 겹쳐 보낸 로그인은 둘째 완료에서 묶지 못한 채 Ok 를 답해 응답의 세션과 연결의 주체가 갈린다.
-        if ( bLoginMethod && ( context._accountID != kInvalidAccountID || _uniqueSetLoginConnection.count( context._connection.packed() ) != 0 ) )
+        if ( context._accountID != kInvalidAccountID || _uniqueSetLoginConnection.count( context._connection.packed() ) != 0 )
         {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+            (void)fail( call, OnlineError::kInvalidRequest );
+            return false;
+        }
+        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_TRUE };
+        _uniqueSetLoginConnection.insert( context._connection.packed() );
+        return true;
+    }
+
+    template <typename TMethod>
+    const LoginSessionToken* AccountServer::beginSessionCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context )
+    {
+        const auto sessionIt = _mapAccountToSession.find( context._accountID );
+        if ( sessionIt == _mapAccountToSession.end() )
+        {
+            (void)fail( call, OnlineError::kUnauthenticated );
+            return nullptr;
+        }
+        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
+        return &sessionIt->second._token;
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::Register> call, const OnlineCallContext& context, const AccountCredentialRequest& request )
+    {
+        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
+        _pLoginService->registerAccount( LoginCredential{ request._loginName, request._password }, context._remoteKey, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::Login> call, const OnlineCallContext& context, const AccountLoginRequest& request )
+    {
+        if ( beginLogin( call, context ) )
+            _pLoginService->login( LoginCredential{ request._loginName, request._password }, request._clientInfo, context._remoteKey, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::GuestLogin> call, const OnlineCallContext& context, const AccountGuestLoginRequest& request )
+    {
+        if ( beginLogin( call, context ) )
+            _pLoginService->guestLogin( request._arrDeviceSecret, request._clientInfo, context._remoteKey, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::PlatformLogin> call, const OnlineCallContext& context, const AccountPlatformRequest& request )
+    {
+        if ( beginLogin( call, context ) )
+            _pLoginService->platformLogin( request._provider, request._ticketBytes, request._clientInfo, context._remoteKey, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::Resume> call, const OnlineCallContext& context, const AccountResumeRequest& request )
+    {
+        if ( beginLogin( call, context ) )
+            _pLoginService->resumeSession( request._token, request._clientInfo, context._remoteKey, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::Logout> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->logout( *pToken, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::LinkCredential> call, const OnlineCallContext& context, const AccountCredentialRequest& request )
+    {
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->linkCredential( *pToken, LoginCredential{ request._loginName, request._password }, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::LinkPlatform> call, const OnlineCallContext& context, const AccountPlatformRequest& request )
+    {
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->linkPlatform( *pToken, request._provider, request._ticketBytes, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::IssueGameTicket> call, const OnlineCallContext& context, const AccountGameTicketRequest& request )
+    {
+        if ( request._serverID.empty() )
+        {
+            (void)fail( call, OnlineError::kInvalidRequest ); // 서버 id 가 없으면 발급할 곳이 없다
             return;
         }
-        const auto          sessionIt     = _mapAccountToSession.find( context._accountID );
-        const BoundSession* pSession      = sessionIt != _mapAccountToSession.end() ? &sessionIt->second : nullptr;
-        const bool          bNeedsSession = isAnonymousMethod( context._method ) == false;
-        if ( bNeedsSession && pSession == nullptr )
-        {
-            (void)host.respondError( context._token, OnlineError::kUnauthenticated );
-            return;
-        }
-        const uint64 tag = _nextTag++;
-        switch ( AccountServerInternal::dispatch( *_pLoginService, context, pSession != nullptr ? &pSession->_token : nullptr, tag, body ) )
-        {
-            case AccountServerInternal::DispatchStatus::UnknownMethod:
-            {
-                (void)host.respondError( context._token, OnlineError::kNotFound );
-                return;
-            }
-            case AccountServerInternal::DispatchStatus::Malformed:
-            {
-                (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-                return;
-            }
-            case AccountServerInternal::DispatchStatus::Ok:
-            {
-                break;
-            }
-        }
-        _mapTagToCall[tag] = PendingCall{ context._token, context._connection, context._method };
-        if ( bLoginMethod )
-            _uniqueSetLoginConnection.insert( context._connection.packed() );
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->issueGameTicket( *pToken, hashed_string( request._serverID ), context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::UnlinkPlatform> call, const OnlineCallContext& context, const AccountProviderRequest& request )
+    {
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->unlinkPlatform( *pToken, request._provider, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::ListLinks> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->listLinks( *pToken, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::RequestDeletion> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->requestDeletion( *pToken, context._nowMs, call._callID );
+    }
+
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::CancelDeletion> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        if ( const LoginSessionToken* pToken = beginSessionCall( call, context ); pToken != nullptr )
+            _pLoginService->cancelDeletion( *pToken, context._nowMs, call._callID );
     }
 
     void AccountServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -235,6 +199,7 @@ namespace sw
         _nowMs = nowMs;
         if ( _bHostAttached == SW_FALSE )
             attachHost( host );
+        _calls.publishPendingCount();
         _pLoginService->update( nowMs );
         _listCompletionScratch.clear();
         _pLoginService->takeCompletions( _listCompletionScratch );
@@ -295,7 +260,7 @@ namespace sw
     void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs )
     {
         _mapAccountToReasonCode[accountID] = string( reasonCode );
-        _pLoginService->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, _nextTag++ ); // 짝이 되는 요청 태그가 없으므로 완료는 버리고 이벤트로 끊는다
+        _pLoginService->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, 0 ); // 짝이 되는 호출이 없다(태그 0). 완료는 버리고 이벤트로 끊는다
     }
 
     uint64 AccountServer::findSessionID( AccountID accountID ) const
@@ -306,14 +271,15 @@ namespace sw
 
     void AccountServer::handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion )
     {
-        const auto callIt = _mapTagToCall.find( completion._requestTag );
-        if ( callIt == _mapTagToCall.end() )
+        const uint64 callID = completion._requestTag;
+        const auto   callIt = _mapCallToPending.find( callID );
+        if ( callIt == _mapCallToPending.end() )
             return;
         const PendingCall call = callIt->second;
-        _mapTagToCall.erase( callIt );
-        if ( AccountServerInternal::isLoginMethod( call._method ) )
+        _mapCallToPending.erase( callIt );
+        if ( call._bLogin == SW_TRUE )
             _uniqueSetLoginConnection.erase( call._connection.packed() );
-        if ( respondCommonError( host, call._token, completion._result, completion._grant ) )
+        if ( respondCommonError( callID, completion._result, completion._grant ) )
             return;
 
         BitWriter body;
@@ -350,12 +316,12 @@ namespace sw
         const NetResponseRetention retention = AccountProtocol::isRetryable( completion._result ) ? NetResponseRetention::Discard : NetResponseRetention::Keep;
         if ( bWritten == false )
         {
-            // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 respondMessage 를 쓰지 않고 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
+            // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
             // 응답 몸은 저장소 작업이 만든 세션 토큰을 실으므로 작업 전에 쓸 수 없다. 클라이언트가 받지 못한 세션은 로그아웃 작업으로 지운다.
             // 그 작업의 완료는 짝이 되는 요청이 없어 버려진다.
             if ( bOk && AccountServerInternal::isGrantOperation( completion._operation ) )
-                _pLoginService->logout( completion._grant._token, _nowMs, _nextTag++ );
-            (void)host.respondError( call._token, OnlineError::kInternal );
+                _pLoginService->logout( completion._grant._token, _nowMs, 0 );
+            (void)_calls.fail( callID, OnlineError::kInternal );
             return;
         }
 
@@ -370,7 +336,7 @@ namespace sw
                 {
                     // 그사이 이 연결이 닫혔으므로 세션은 재접속 유예로 둔다.
                     _pLoginService->markDisconnected( completion._grant._token._sessionID, _nowMs );
-                    (void)host.respondOk( call._token, body, retention );
+                    (void)_calls.respondBody( callID, body, retention, static_cast<int32>( completion._result ) );
                     return;
                 }
             }
@@ -381,7 +347,7 @@ namespace sw
         const bool bPresenceRefresh = bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end();
         if ( bPresenceRefresh )
             _presence.recordOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
-        (void)host.respondOk( call._token, body, retention );
+        (void)_calls.respondBody( callID, body, retention, static_cast<int32>( completion._result ) );
         if ( bOk && completion._operation == LoginOperation::Logout )
         {
             for ( auto sessionIt = _mapAccountToSession.begin(); sessionIt != _mapAccountToSession.end(); ++sessionIt )
@@ -406,7 +372,7 @@ namespace sw
         revokeBound( host, event._accountID, event._reason );
     }
 
-    bool AccountServer::respondCommonError( OnlineServiceHost& host, const NetRequestToken& token, LoginResult result, const LoginGrant& grant )
+    bool AccountServer::respondCommonError( uint64 callID, LoginResult result, const LoginGrant& grant )
     {
         BitWriter detail;
         switch ( result )
@@ -414,20 +380,20 @@ namespace sw
             case LoginResult::RateLimited:
             {
                 detail.writeVarUint( static_cast<uint64>( grant._retryAfterMs < 0 ? 0 : grant._retryAfterMs ) );
-                (void)host.respondError( token, OnlineError::kRateLimited, &detail );
+                (void)_calls.fail( callID, OnlineError::kRateLimited, &detail );
                 return true;
             }
             case LoginResult::StoreUnavailable:
             {
-                (void)host.respondError( token, OnlineError::kUnavailable );
+                (void)_calls.fail( callID, OnlineError::kUnavailable );
                 return true;
             }
             case LoginResult::UpdateRequired:
             {
                 if ( AccountProtocol::MessageTypes::write( detail, AccountUpdateDetail{ grant._storeURL } ) )
-                    (void)host.respondError( token, OnlineError::kUpdateRequired, &detail );
+                    (void)_calls.fail( callID, OnlineError::kUpdateRequired, &detail );
                 else
-                    (void)host.respondError( token, OnlineError::kUpdateRequired ); // 상점 주소가 상한을 넘어 write 가 로그를 남겼다. 결과 코드는 그대로 보낸다
+                    (void)_calls.fail( callID, OnlineError::kUpdateRequired ); // 상점 주소가 상한을 넘어 write 가 로그를 남겼다. 결과 코드는 그대로 보낸다
                 return true;
             }
             default:
@@ -449,7 +415,7 @@ namespace sw
         }
         BitWriter push;
         if ( AccountProtocol::MessageTypes::write( push, AccountRevokedPush{ reasonCode, reason } ) ) // 쓰지 못했으면 write 가 로그를 남겼고, 연결은 아래에서 그대로 끊는다
-            (void)host.sendPush( accountID, AccountMethod::kPushRevoked, push );
+            (void)host.sendPush( accountID, AccountMethod::Revoked::kKind, push );
         host.unbindAccount( accountID );
     }
 
