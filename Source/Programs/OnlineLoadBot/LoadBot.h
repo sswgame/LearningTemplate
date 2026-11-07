@@ -104,8 +104,8 @@ namespace sw
         void onLeaderboardReply( const LeaderboardClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onMatchmakingReply( const MatchmakingClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onLiveOpsReply( const LiveOpsClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onDirectoryStatus( uint16 errorCode, const ServerDirectoryStatus& status );
-        void onDirectoryAssignment( uint16 errorCode, const ServerAssignment& assignment );
+        void onDirectoryStatus( const OnlineResult<ServerDirectoryStatus>& result );
+        void onDirectoryAssignment( const OnlineResult<ServerAssignment>& result );
         void onFriendAccepted( const SocialClient::Reply& reply );
 
     private:

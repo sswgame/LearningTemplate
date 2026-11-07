@@ -2,7 +2,8 @@
  * @file OnlineProtocolClient.h
  * @brief 프로토콜 표(`OnlineProtocolTable`)로 선 키트 클라이언트의 공통 기반입니다. `call<XxxMethod::Claim>( request, onReply )` 하나가 키트마다 손으로 쓰던 요청 함수를 대신합니다.
  * @details - 요청 타입과 응답 타입이 메서드 서술자에서 나오므로 메서드에 맞지 않는 요청은 컴파일되지 않습니다.
- *          - 결과는 두 층입니다. 공통 범주(전송 · 인증 · 과부하 · 일시 장애 · 버전)는 `_errorCode`(`OnlineError`), 키트 업무 결과는 응답의 `_result` 입니다. 키트 열거형은 업무 값만 가집니다.
+ *          - 결과는 두 층입니다. 공통 범주(전송 · 인증 · 과부하 · 일시 장애 · 버전)는 `_errorCode`(`OnlineError`), 키트 업무 결과는 응답의 `_result` 입니다.
+ *            공통 범주 표(`XxxProtocol::kArrCommonResult`)가 있는 키트는 `_errorCode` 가 0 이 아닐 때 `_result` 를 그 줄의 값으로 채웁니다. 표에 없는 코드는 `kUnavailable` 줄의 값입니다.
  *            재시도 여부는 `isRetryable` 이 범주에서 끌어내므로 키트가 고를 일이 없습니다.
  *          - 멱등 키가 필수인 메서드(`RequiresIdempotencyKey`)는 키를 넘기지 않으면 새로 만듭니다. 재시도할 때는 결과의 `_idempotencyKey` 를 다시 넘깁니다.
  *          - 캐시를 고치는 키트는 `onCallSucceeded( XxxMethod::Claim, request, reply )` 를 메서드마다 오버로드합니다. 콜백보다 먼저 불립니다. 오버로드가 없는 메서드는 기본 템플릿이 받습니다
@@ -163,9 +164,28 @@ namespace sw
             result._requestID      = _requestIDAllocator.allocate();
             result._idempotencyKey = key;
             result._errorCode      = errorCode;
+            markCommonResult( result );
             if ( onReply.isBound() )
                 onReply( result );
             return result._requestID;
+        }
+
+        /** @brief 공통 범주로 끝난 호출의 키트 결과를 표에서 채웁니다. 화면 · 모델은 결과 하나로 문구를 고른다. */
+        template <typename TReply>
+        static void markCommonResult( OnlineResult<TReply>& inoutResult )
+        {
+            if constexpr ( OnlineProtocolHasCommonResult<TProtocol>::value && OnlineReplyHasResult<TReply>::value )
+            {
+                using TResult = decltype( inoutResult._reply._result );
+                if ( inoutResult._errorCode == OnlineError::kOk )
+                    return;
+                const TResult unavailable  = OnlineError::toResult( OnlineError::kUnavailable, TProtocol::kArrCommonResult, TResult::Ok );
+                inoutResult._reply._result = OnlineError::toResult( inoutResult._errorCode, TProtocol::kArrCommonResult, unavailable );
+            }
+            else
+            {
+                (void)inoutResult;
+            }
         }
 
         template <typename TMethod>
@@ -188,6 +208,7 @@ namespace sw
                     result._errorCode = OnlineError::kUnavailable; // 같은 스키마 해시인데 못 읽었다. 키트 결과로 꾸미지 않고 일시 장애로 알린다
                 }
             }
+            markCommonResult( result );
             if ( result.isOk() )
                 static_cast<TClient*>( this )->onCallSucceeded( TMethod{}, pending._request, result._reply );
             if ( pending._onReply.isBound() )

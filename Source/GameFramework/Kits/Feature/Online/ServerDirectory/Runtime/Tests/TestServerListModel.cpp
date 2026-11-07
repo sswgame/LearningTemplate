@@ -36,13 +36,13 @@ namespace
         {
         }
         const OnlineProtocolEntry& getProtocol() const override { return ServerDirectoryProtocol::kOnlineEntry; }
-        bool                       isAnonymousMethod( uint16 method ) const override { return method == ServerDirectoryMethod::kListServers; }
+        bool                       isAnonymousMethod( uint16 method ) const override { return method == ServerDirectoryMethod::ListServers::kID; }
 
         void onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
         {
             ++_requestCount;
             ServerListRequest request;
-            if ( context._method != ServerDirectoryMethod::kListServers || ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
+            if ( context._method != ServerDirectoryMethod::ListServers::kID || ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
             {
                 (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                 return;

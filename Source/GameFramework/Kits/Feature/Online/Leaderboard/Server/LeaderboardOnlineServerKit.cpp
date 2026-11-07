@@ -67,7 +67,7 @@ namespace sw
                     _service.shutdown(); // 실패한 start 는 `stop` · `shutdown` 이 보지 않으므로 세운 서비스를 여기서 내린다
                     return false;
                 }
-                _server.initialize( &_service, context._kits.find<IAccountDirectory>(), context._kits.find<IAccountPresence>() );
+                _server.initialize( &_service, context._kits.find<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
                 return true;
             }
 

@@ -52,7 +52,10 @@ namespace sw
             return false;
         }
         // 준비되지 않은 클라이언트는 이 호출 안에서 바로 onSendReply(오류)로 끝난다.
-        (void)_pClient->send( channelID, text, ChatClient::ReplyDelegate::create<&ChatLogModel::onSendReply>( this ) );
+        ChatSendRequest request;
+        request._channelID = string( channelID );
+        request._text      = string( text );
+        (void)_pClient->call<ChatMethod::Send>( request, ChatClient::ReplyDelegate::create<&ChatLogModel::onSendReply>( this ) );
         return true;
     }
 

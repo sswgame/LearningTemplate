@@ -11,25 +11,28 @@
 namespace sw
 {
     ChatServer::ChatServer()
-        : _pendingTable{}
-        , _listCompletionScratch{}
+        : _listCompletionScratch{}
         , _listDeliveryScratch{}
         , _listTopicScratch{}
         , _mapTopicSubscription{}
         , _pService{ nullptr }
     {
+        setReady( false );
     }
 
-    void ChatServer::initialize( ChatService* pService )
+    void ChatServer::initialize( ChatService* pService, MetricRegistry* pMetricRegistry )
     {
         _pService = pService;
+        initializeCalls( pMetricRegistry, "chat" );
+        setReady( pService != nullptr );
     }
 
     void ChatServer::shutdown()
     {
         _mapTopicSubscription.clear(); // 구독이 사라지며 버스 구독을 끊는다
-        _pendingTable.clear();
+        _calls.clear();
         _pService = nullptr;
+        setReady( false );
     }
 
     void ChatServer::onHostShutdown( OnlineServiceHost& host )
@@ -38,67 +41,34 @@ namespace sw
         _mapTopicSubscription.clear();
     }
 
-    void ChatServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
+    void ChatServer::handleCall( OnlineServerCall<ChatMethod::Join> call, const OnlineCallContext& context, const ChatChannelRequest& request )
     {
-        if ( _pService == nullptr )
-        {
-            (void)host.respondError( context._token, OnlineError::kUnavailable );
-            return;
-        }
-        switch ( context._method )
-        {
-            case ChatMethod::kJoin:
-            case ChatMethod::kLeave:
-            {
-                ChatChannelRequest request;
-                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                    break;
-                const uint64 requestTag = _pendingTable.add( context._token );
-                if ( context._method == ChatMethod::kJoin )
-                    _pService->joinChannel( context._accountID, request._channelID, context._nowMs, requestTag );
-                else
-                    _pService->leaveChannel( context._accountID, request._channelID, requestTag );
-                return;
-            }
-            case ChatMethod::kSend:
-            {
-                ChatSendRequest request;
-                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                    break;
-                _pService->sendMessage( context._accountID, request._channelID, request._text, context._nowMs, _pendingTable.add( context._token ) );
-                return;
-            }
-            case ChatMethod::kWhisper:
-            {
-                ChatWhisperRequest request;
-                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                    break;
-                _pService->sendWhisper( context._accountID, request._recipientID, request._text, context._nowMs, _pendingTable.add( context._token ) );
-                return;
-            }
-            case ChatMethod::kHistory:
-            {
-                ChatHistoryRequest request;
-                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                    break;
-                _pService->readHistory( context._accountID, request._channelID, request._cursor, request._maxCount, _pendingTable.add( context._token ) );
-                return;
-            }
-            case ChatMethod::kReport:
-            {
-                ChatReportRequest request;
-                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                    break;
-                _pService->reportMessage( context._accountID, request, context._nowMs, _pendingTable.add( context._token ) );
-                return;
-            }
-            default:
-            {
-                (void)host.respondError( context._token, OnlineError::kNotFound );
-                return;
-            }
-        }
-        (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+        _pService->joinChannel( context._accountID, request._channelID, context._nowMs, call._callID );
+    }
+
+    void ChatServer::handleCall( OnlineServerCall<ChatMethod::Leave> call, const OnlineCallContext& context, const ChatChannelRequest& request )
+    {
+        _pService->leaveChannel( context._accountID, request._channelID, call._callID );
+    }
+
+    void ChatServer::handleCall( OnlineServerCall<ChatMethod::Send> call, const OnlineCallContext& context, const ChatSendRequest& request )
+    {
+        _pService->sendMessage( context._accountID, request._channelID, request._text, context._nowMs, call._callID );
+    }
+
+    void ChatServer::handleCall( OnlineServerCall<ChatMethod::Whisper> call, const OnlineCallContext& context, const ChatWhisperRequest& request )
+    {
+        _pService->sendWhisper( context._accountID, request._recipientID, request._text, context._nowMs, call._callID );
+    }
+
+    void ChatServer::handleCall( OnlineServerCall<ChatMethod::History> call, const OnlineCallContext& context, const ChatHistoryRequest& request )
+    {
+        _pService->readHistory( context._accountID, request._channelID, request._cursor, request._maxCount, call._callID );
+    }
+
+    void ChatServer::handleCall( OnlineServerCall<ChatMethod::Report> call, const OnlineCallContext& context, const ChatReportRequest& request )
+    {
+        _pService->reportMessage( context._accountID, request, context._nowMs, call._callID );
     }
 
     void ChatServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -106,6 +76,7 @@ namespace sw
         if ( _pService == nullptr )
             return;
         _pService->update( nowMs );
+        _calls.publishPendingCount();
         flushServiceOutput( host );
     }
 
@@ -126,10 +97,7 @@ namespace sw
         _pService->takeCompletions( _listCompletionScratch );
         for ( const ChatCompletion& completion : _listCompletionScratch )
         {
-            NetRequestToken token;
-            if ( _pendingTable.take( completion._requestTag, token ) == false )
-                continue;
-            (void)host.respondMessage<ChatProtocol::MessageTypes>( token, completion._reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
+            (void)completeCall( completion._requestTag, completion._reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
         }
 
         _listDeliveryScratch.clear();
@@ -138,8 +106,8 @@ namespace sw
         {
             BitWriter body;
             if ( ChatProtocol::MessageTypes::write( body, delivery._message ) == false )
-                continue;                                                                 // write 가 범위 밖 값을 로그에 남겼다
-            (void)host.sendPush( delivery._recipientID, ChatMethod::kPushMessage, body ); // 그사이 떠난 계정이면 버린다
+                continue;                                                                   // write 가 범위 밖 값을 로그에 남겼다
+            (void)host.sendPush( delivery._recipientID, ChatMethod::Message::kKind, body ); // 그사이 떠난 계정이면 버린다
         }
     }
 

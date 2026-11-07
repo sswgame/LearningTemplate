@@ -29,16 +29,18 @@ namespace sw
         _errorCode = OnlineError::kOk;
         ++_revision; // 로딩 표시를 그리게 한다
         // 범위 밖 종류는 보내지 않고 이 호출 안에서 바로 onServerList(kInvalidRequest)로 끝난다.
-        (void)_pClient->requestServerList( kind, ServerDirectoryClient::ServerListDelegate::create<&ServerListModel::onServerList>( this ) );
+        ServerListRequest request;
+        request._kind = string( kind );
+        (void)_pClient->call<ServerDirectoryMethod::ListServers>( request, OnlineReplyDelegate<ServerDirectoryMethod::ListServers>::create<&ServerListModel::onServerList>( this ) );
         return _state != ServerListState::Failed;
     }
 
-    void ServerListModel::onServerList( uint16 errorCode, const vector<ServerListEntry>& listEntry )
+    void ServerListModel::onServerList( const OnlineResult<ServerListReply>& result )
     {
-        _errorCode = errorCode;
-        if ( errorCode == OnlineError::kOk )
+        _errorCode = result._errorCode;
+        if ( result._errorCode == OnlineError::kOk )
         {
-            _listEntry = listEntry;
+            _listEntry = result._reply._listEntry;
             _state     = ServerListState::Loaded;
         }
         else

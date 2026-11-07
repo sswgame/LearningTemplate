@@ -111,6 +111,10 @@ namespace sw
             {
                 return "Message not found";
             }
+            case ChatResult::Count:
+            {
+                break;
+            }
         }
         return "Chat failed";
     }

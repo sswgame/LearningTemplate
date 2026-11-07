@@ -4,7 +4,7 @@
  * @details - 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *            응답 본문(`ChatReply`)은 업무 결과(`ChatResult`, 거래와 경제 키트도 같다), 기다릴 시간(ms), 메서드별 필드로 이루어진다.
  *            말하기와 귓속말은 필터를 거친 메시지를 되울림으로 돌려주고, 기록은 메시지 목록과 다음 커서를 돌려준다.
- *            공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
+ *            공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 공통 범주 표(`kArrCommonResult`)로 이를 결과에 맞춘다.
  *          - 메시지 형식(`ChatMessage`) 하나를 알림, 서버 간 버스, 기록 레코드가 함께 쓴다. 알림은 B 이고,
  *            버스(배포 중 빌드가 섞인다)와 기록 레코드(저장소에 남아 다른 빌드가 읽는다)는 자기 기술형(A, `BinarySerializer`)이다.
  *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 버전은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
@@ -43,21 +43,6 @@ namespace sw
     {
         Message,
         Count,
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 채팅 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct ChatMethod : OnlineMethodTable<ChatMethodName, OnlineMethodRange::kChat, ChatPushName>
-    {
-        static constexpr uint16 kJoin        = toMethod( ChatMethodName::Join );    ///< `ChatChannelRequest`
-        static constexpr uint16 kLeave       = toMethod( ChatMethodName::Leave );   ///< `ChatChannelRequest`
-        static constexpr uint16 kSend        = toMethod( ChatMethodName::Send );    ///< 채널 id 와 글을 받아 거른 메시지(되울림)를 돌려준다
-        static constexpr uint16 kWhisper     = toMethod( ChatMethodName::Whisper ); ///< 받는 계정과 글을 받아 거른 메시지를 돌려준다
-        static constexpr uint16 kHistory     = toMethod( ChatMethodName::History ); ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
-        static constexpr uint16 kReport      = toMethod( ChatMethodName::Report );  ///< `ChatReportRequest`. 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
-        static constexpr uint16 kPushMessage = toPush( ChatPushName::Message );     ///< 메시지 하나이다. 채널 메시지나 귓속말이다
     };
 } // namespace sw
 
@@ -155,7 +140,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 와 `_retryAfterMs` 만 의미가 있습니다. */
+    /** @brief 모든 메서드의 응답입니다. 로직의 완료 큐가 이 형식 하나로 답하므로 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 와 `_retryAfterMs` 만 의미가 있습니다. */
     REFLECT()
     struct ChatReply
     {
@@ -175,6 +160,21 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Chat 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct ChatMethod : OnlineMethodTable<ChatMethodName, OnlineMethodRange::kChat, ChatPushName>
+    {
+        using Join    = Method<MethodName::Join, ChatChannelRequest, ChatReply>;
+        using Leave   = Method<MethodName::Leave, ChatChannelRequest, ChatReply>;
+        using Send    = Method<MethodName::Send, ChatSendRequest, ChatReply>;       ///< 거른 메시지(되울림)를 돌려준다
+        using Whisper = Method<MethodName::Whisper, ChatWhisperRequest, ChatReply>; ///< 거른 메시지를 돌려준다
+        using History = Method<MethodName::History, ChatHistoryRequest, ChatReply>; ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
+        using Report  = Method<MethodName::Report, ChatReportRequest, ChatReply>;   ///< 메시지와 그 앞 기록을 스냅숏으로 신고 테이블에 남긴다
+        using Message = Push<PushName::Message, ChatMessage>;                       ///< 메시지 하나이다. 채널 메시지나 귓속말이다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct ChatProtocol
      * @brief 채팅 키트의 메시지 타입 목록, 등록 항목, 기록 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
@@ -182,7 +182,19 @@ namespace sw
      */
     struct SW_KIT_API ChatProtocol
     {
-        using MessageTypes = OnlineMessageTypes<ChatChannelRequest, ChatSendRequest, ChatWhisperRequest, ChatHistoryRequest, ChatReportRequest, ChatReply, ChatMessage>;
+        using Table        = OnlineProtocolTable<ChatMethod, OnlineMethodList<ChatMethod::Join, ChatMethod::Leave, ChatMethod::Send, ChatMethod::Whisper, ChatMethod::History, ChatMethod::Report>, OnlinePushList<ChatMethod::Message>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = ChatResult;
+
+        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
+        static constexpr OnlineErrorResult<ChatResult> kArrCommonResult[] = {
+            { OnlineError::kInvalidRequest, ChatResult::Invalid },
+            { OnlineError::kUnavailable, ChatResult::Unavailable },
+            { OnlineError::kUnauthenticated, ChatResult::NotSignedIn },
+            { OnlineError::kRateLimited, ChatResult::RateLimited, true },
+            { OnlineError::kVersionMismatch, ChatResult::UpdateRequired },
+            { OnlineError::kUpdateRequired, ChatResult::UpdateRequired },
+        };
 
         static const OnlineProtocolEntry kOnlineEntry;         ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxCursorSize = 128; ///< 기록 키의 상한이다. 채널 id 뒤에 `/` 와 16진 문자열 셋이 붙는다
@@ -195,9 +207,7 @@ namespace sw
         [[nodiscard]] static bool encodeRecord( const ChatMessage& message, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeRecord( string_view key, const vector<uint8>& bytes, ChatMessage& outMessage );
 
-        /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 도배 제한은 각각 대응하는 결과로, 나머지(전송, 저장소, 시한)는 Unavailable 로 바꿉니다. */
-        static ChatResult fromErrorCode( uint16 errorCode );
-        static string     makeChannelTopic( string_view channelID );
-        static string     makeServerTopic( uint64 serverID );
+        static string makeChannelTopic( string_view channelID );
+        static string makeServerTopic( uint64 serverID );
     };
 } // namespace sw

@@ -810,8 +810,8 @@ SW_TEST_CASE( LeaderboardServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = LeaderboardResult::Ok;
     LeaderboardReply unavailable;
     unavailable._result = LeaderboardResult::Unavailable;
-    rig.expectRetryReachesService( LeaderboardMethod::kSubmitScore, unavailable, finished );
+    rig.expectRetryReachesService( LeaderboardMethod::SubmitScore::kID, unavailable, finished );
     LeaderboardReply conflict;
     conflict._result = LeaderboardResult::Conflict;
-    rig.expectRetryReachesService( LeaderboardMethod::kSubmitScore, conflict, finished );
+    rig.expectRetryReachesService( LeaderboardMethod::SubmitScore::kID, conflict, finished );
 }

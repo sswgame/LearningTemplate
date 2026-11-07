@@ -25,17 +25,6 @@ namespace sw
         return ServiceRecordUtil::readDurable( key, bytes, kChatRecordVersion, outMessage );
     }
 
-    ChatResult ChatProtocol::fromErrorCode( uint16 errorCode )
-    {
-        static constexpr OnlineErrorResult<ChatResult> kArrErrorResult[] = {
-            {             OnlineError::kOk,          ChatResult::Ok},
-            {OnlineError::kUnauthenticated, ChatResult::NotSignedIn},
-            { OnlineError::kInvalidRequest,     ChatResult::Invalid},
-            {    OnlineError::kRateLimited, ChatResult::RateLimited},
-        };
-        return OnlineError::toResult( errorCode, kArrErrorResult, ChatResult::Unavailable );
-    }
-
     string ChatProtocol::makeChannelTopic( string_view channelID )
     {
         return ChatBus::kChannelTopic.makeTopic( channelID );
@@ -49,5 +38,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry ChatProtocol::kOnlineEntry{ "Chat", ChatMethod{}, ChatProtocol::MessageTypes{} };
+    const OnlineProtocolEntry ChatProtocol::kOnlineEntry{ "Chat", ChatProtocol::Table{} };
 } // namespace sw

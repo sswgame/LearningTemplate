@@ -41,18 +41,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 메서드와 알림 번호입니다(영역 `OnlineMethodRange::kServerDirectory`). 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct ServerDirectoryMethod : OnlineMethodTable<ServerDirectoryMethodName, OnlineMethodRange::kServerDirectory, ServerDirectoryPushName>
-    {
-        static constexpr uint16 kGetStatus    = toMethod( ServerDirectoryMethodName::GetStatus );    ///< 본문은 없고 상태를 돌려준다. 익명으로 쓸 수 있다
-        static constexpr uint16 kAssignServer = toMethod( ServerDirectoryMethodName::AssignServer ); ///< 배정 요청을 받아 배정을 돌려준다. 점검 허용 목록이 계정을 보므로 로그인한 뒤에 쓴다
-        static constexpr uint16 kListServers  = toMethod( ServerDirectoryMethodName::ListServers );  ///< 종류를 받아 목록을 돌려준다. 서버 고르기 화면이 쓰며 익명으로 쓸 수 있다
-        static constexpr uint16 kPushStatus   = toPush( ServerDirectoryPushName::Status );           ///< 보이는 상태가 바뀌었다는 알림이다. 본문은 상태이다
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 키트 오류 코드입니다. `respondError` 로 보내며 영역에 번호를 더한 값입니다. */
     struct ServerDirectoryError
     {
@@ -62,7 +50,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 목록(`kListServers`)의 요청입니다. */
+    /** @brief 서버 목록(`ListServers`)의 요청입니다. */
     REFLECT()
     struct ServerListRequest
     {
@@ -74,13 +62,25 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 목록(`kListServers`)의 응답입니다. */
+    /** @brief 서버 목록(`ListServers`)의 응답입니다. */
     REFLECT()
     struct ServerListReply
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxServerListCount )
         vector<ServerListEntry> _listEntry{}; ///< 상한은 `ServerDirectoryLimit::kMaxServerListCount` 와 같다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief ServerDirectory 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct ServerDirectoryMethod : OnlineMethodTable<ServerDirectoryMethodName, OnlineMethodRange::kServerDirectory, ServerDirectoryPushName>
+    {
+        using GetStatus    = Method<MethodName::GetStatus, OnlineNoBody, ServerDirectoryStatus, OnlineMethodFlag::Anonymous>;  ///< 상태를 돌려준다. 서버 고르기 · 점검 안내 화면이 로그인 전에 쓴다
+        using AssignServer = Method<MethodName::AssignServer, ServerAssignmentRequest, ServerAssignment>;                      ///< 배정을 돌려준다. 점검 허용 목록이 계정을 보므로 로그인한 뒤에 쓴다
+        using ListServers  = Method<MethodName::ListServers, ServerListRequest, ServerListReply, OnlineMethodFlag::Anonymous>; ///< 종류를 받아 목록을 돌려준다. 서버 고르기 화면이 쓴다
+        using Status       = Push<PushName::Status, ServerDirectoryStatus>;                                                    ///< 보이는 상태가 바뀌었다는 알림이다
     };
 } // namespace sw
 
@@ -93,7 +93,9 @@ namespace sw
      */
     struct SW_KIT_API ServerDirectoryProtocol
     {
-        using MessageTypes = OnlineMessageTypes<ServerDirectoryStatus, ServerAssignmentRequest, ServerAssignment, ServerListRequest, ServerListReply>;
+        using Table        = OnlineProtocolTable<ServerDirectoryMethod, OnlineMethodList<ServerDirectoryMethod::GetStatus, ServerDirectoryMethod::AssignServer, ServerDirectoryMethod::ListServers>, OnlinePushList<ServerDirectoryMethod::Status>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = ServerDirectoryResult;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

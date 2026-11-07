@@ -84,7 +84,7 @@ namespace sw
                 dependencies._pBus          = context._pBus;
                 dependencies._pRemoteConfig = context._pRemoteConfig;
                 _service.initialize( dependencies );
-                _server.initialize( &_service, &_dispatcher );
+                _server.initialize( &_service, &_dispatcher, context._pMetricRegistry );
                 return true;
             }
 

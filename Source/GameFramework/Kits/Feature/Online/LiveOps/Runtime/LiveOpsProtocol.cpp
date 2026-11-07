@@ -50,18 +50,9 @@ namespace sw
         return ServiceRecordUtil::readDurable( key, bytes, kLiveOpsRecordVersion, outRegistration );
     }
 
-    LiveOpsResult LiveOpsProtocol::fromErrorCode( uint16 errorCode )
-    {
-        static constexpr OnlineErrorResult<LiveOpsResult> kArrErrorResult[] = {
-            {            OnlineError::kOk,          LiveOpsResult::Ok},
-            {OnlineError::kInvalidRequest,     LiveOpsResult::Invalid},
-            {   OnlineError::kRateLimited, LiveOpsResult::RateLimited},
-        };
-        return OnlineError::toResult( errorCode, kArrErrorResult, LiveOpsResult::Unavailable );
-    }
 } // namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry LiveOpsProtocol::kOnlineEntry{ "LiveOps", LiveOpsMethod{}, LiveOpsProtocol::MessageTypes{} };
+    const OnlineProtocolEntry LiveOpsProtocol::kOnlineEntry{ "LiveOps", LiveOpsProtocol::Table{} };
 } // namespace sw

@@ -15,18 +15,23 @@ namespace sw
         , _pHost{ nullptr }
         , _busSubscription{}
     {
+        setReady( false );
     }
 
-    void ServerDirectoryServer::initialize( ServerDirectoryService* pService )
+    void ServerDirectoryServer::initialize( ServerDirectoryService* pService, MetricRegistry* pMetricRegistry )
     {
         _pService = pService;
+        initializeCalls( pMetricRegistry, "server_directory" );
+        setReady( pService != nullptr );
     }
 
     void ServerDirectoryServer::shutdown()
     {
         _busSubscription.reset();
+        _calls.clear();
         _pHost    = nullptr;
         _pService = nullptr;
+        setReady( false );
     }
 
     void ServerDirectoryServer::onHostShutdown( OnlineServiceHost& host )
@@ -36,71 +41,32 @@ namespace sw
         _pHost = nullptr;
     }
 
-    const OnlineProtocolEntry& ServerDirectoryServer::getProtocol() const
+    void ServerDirectoryServer::handleCall( OnlineServerCall<ServerDirectoryMethod::GetStatus> call, const OnlineCallContext& context, const OnlineNoBody& request )
     {
-        return ServerDirectoryProtocol::kOnlineEntry;
+        (void)request;
+        (void)respond( call, _pService->makeStatus( context._nowMs ) );
     }
 
-    bool ServerDirectoryServer::isAnonymousMethod( uint16 method ) const
+    void ServerDirectoryServer::handleCall( OnlineServerCall<ServerDirectoryMethod::AssignServer> call, const OnlineCallContext& context, const ServerAssignmentRequest& request )
     {
-        return method == ServerDirectoryMethod::kGetStatus || method == ServerDirectoryMethod::kListServers;
-    }
-
-    void ServerDirectoryServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
-    {
-        if ( _pService == nullptr )
+        const ServerAssignment assignment = _pService->assignServer( context._accountID, request, context._nowMs );
+        if ( assignment._result == ServerDirectoryResult::Invalid )
         {
-            (void)host.respondError( context._token, OnlineError::kUnavailable );
+            (void)fail( call, ServerDirectoryError::kUnknownKind );
             return;
         }
-        using Messages = ServerDirectoryProtocol::MessageTypes;
-        switch ( context._method )
+        (void)respond( call, assignment );
+    }
+
+    void ServerDirectoryServer::handleCall( OnlineServerCall<ServerDirectoryMethod::ListServers> call, const OnlineCallContext& context, const ServerListRequest& request )
+    {
+        ServerListReply listReply;
+        if ( _pService->listServers( request._kind, context._nowMs, listReply._listEntry ) != ServerDirectoryResult::Ok )
         {
-            case ServerDirectoryMethod::kGetStatus:
-            {
-                (void)host.respondMessage<Messages>( context._token, _pService->makeStatus( context._nowMs ) );
-                return;
-            }
-            case ServerDirectoryMethod::kAssignServer:
-            {
-                ServerAssignmentRequest request;
-                if ( ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                {
-                    (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-                    return;
-                }
-                const ServerAssignment assignment = _pService->assignServer( context._accountID, request, context._nowMs );
-                if ( assignment._result == ServerDirectoryResult::Invalid )
-                {
-                    (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
-                    return;
-                }
-                (void)host.respondMessage<Messages>( context._token, assignment );
-                return;
-            }
-            case ServerDirectoryMethod::kListServers:
-            {
-                ServerListRequest request;
-                if ( ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-                {
-                    (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-                    return;
-                }
-                ServerListReply listReply;
-                if ( _pService->listServers( request._kind, context._nowMs, listReply._listEntry ) != ServerDirectoryResult::Ok )
-                {
-                    (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
-                    return;
-                }
-                (void)host.respondMessage<Messages>( context._token, listReply );
-                return;
-            }
-            default:
-            {
-                (void)host.respondError( context._token, OnlineError::kNotFound );
-                return;
-            }
+            (void)fail( call, ServerDirectoryError::kUnknownKind );
+            return;
         }
+        (void)respond( call, listReply );
     }
 
     void ServerDirectoryServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -114,7 +80,7 @@ namespace sw
             return;
         BitWriter body;
         if ( ServerDirectoryProtocol::MessageTypes::write( body, _pService->makeStatus( nowMs ) ) )
-            (void)host.sendPushToAll( ServerDirectoryMethod::kPushStatus, body );
+            (void)host.sendPushToAll( ServerDirectoryMethod::Status::kKind, body );
     }
 
     void ServerDirectoryServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )

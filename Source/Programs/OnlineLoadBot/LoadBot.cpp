@@ -411,7 +411,7 @@ namespace sw
         {
             case LoadBotAction::DirectoryStatus:
             {
-                (void)_directoryClient.requestStatus( ServerDirectoryClient::StatusDelegate::create<&LoadBot::onDirectoryStatus>( this ) );
+                (void)_directoryClient.call<ServerDirectoryMethod::GetStatus>( OnlineReplyDelegate<ServerDirectoryMethod::GetStatus>::create<&LoadBot::onDirectoryStatus>( this ) );
                 return true;
             }
             case LoadBotAction::DirectoryAssign:
@@ -419,22 +419,30 @@ namespace sw
                 ServerAssignmentRequest request;
                 request._kind   = step._text.empty() ? string( LoadBotInternal::kDefaultKind ) : step._text;
                 request._region = region;
-                (void)_directoryClient.requestAssignment( request, ServerDirectoryClient::AssignmentDelegate::create<&LoadBot::onDirectoryAssignment>( this ) );
+                (void)_directoryClient.call<ServerDirectoryMethod::AssignServer>( request, OnlineReplyDelegate<ServerDirectoryMethod::AssignServer>::create<&LoadBot::onDirectoryAssignment>( this ) );
                 return true;
             }
             case LoadBotAction::ChatJoin:
             {
-                (void)_chatClient.join( step._text, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
+                ChatChannelRequest request;
+                request._channelID = step._text;
+                (void)_chatClient.call<ChatMethod::Join>( request, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
                 return true;
             }
             case LoadBotAction::ChatSend:
             {
-                (void)_chatClient.send( step._text, expandText( step._secondText ), ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
+                ChatSendRequest request;
+                request._channelID = step._text;
+                request._text      = expandText( step._secondText );
+                (void)_chatClient.call<ChatMethod::Send>( request, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
                 return true;
             }
             case LoadBotAction::ChatHistory:
             {
-                (void)_chatClient.requestHistory( step._text, string_view{}, step._count, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
+                ChatHistoryRequest request;
+                request._channelID = step._text;
+                request._maxCount  = step._count;
+                (void)_chatClient.call<ChatMethod::History>( request, ChatClient::ReplyDelegate::create<&LoadBot::onChatReply>( this ) );
                 return true;
             }
             case LoadBotAction::SocialPresence:
@@ -445,12 +453,18 @@ namespace sw
             }
             case LoadBotAction::LeaderboardTop:
             {
-                (void)_leaderboardClient.requestTop( step._text, 0, step._count, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
+                LeaderboardTopRequest request;
+                request._boardID = step._text;
+                request._count   = step._count;
+                (void)_leaderboardClient.call<LeaderboardMethod::GetTop>( request, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
                 return true;
             }
             case LoadBotAction::LeaderboardAround:
             {
-                (void)_leaderboardClient.requestAround( step._text, step._count, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
+                LeaderboardAroundRequest request;
+                request._boardID = step._text;
+                request._radius  = step._count;
+                (void)_leaderboardClient.call<LeaderboardMethod::GetAround>( request, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
                 return true;
             }
             case LoadBotAction::MatchmakingQueue:
@@ -602,16 +616,14 @@ namespace sw
             finishStep( "wait_match.timeout" );
     }
 
-    void LoadBot::onDirectoryStatus( uint16 errorCode, const ServerDirectoryStatus& status )
+    void LoadBot::onDirectoryStatus( const OnlineResult<ServerDirectoryStatus>& result )
     {
-        (void)status;
-        finishWithResult( errorCode, 0 );
+        finishWithResult( result._errorCode, 0 );
     }
 
-    void LoadBot::onDirectoryAssignment( uint16 errorCode, const ServerAssignment& assignment )
+    void LoadBot::onDirectoryAssignment( const OnlineResult<ServerAssignment>& result )
     {
-        (void)assignment;
-        finishWithResult( errorCode, 0 );
+        finishWithResult( result._errorCode, 0 );
     }
 
     void LoadBot::onFriendAccepted( const SocialClient::Reply& reply )

@@ -1,7 +1,7 @@
 /**
  * @file LeaderboardClient.h
- * @brief 순위표 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 상위 순위, 내 주변 순위, 통계, 점수 제출, 업적, 시즌 결과를 요청하고 업적 달성 알림을 쌓아 둡니다.
- * @details - 요청 · 응답 규칙은 `OnlineKitClient` 에 있다. 업무 결과는 `_reply._result` 에, 전송 오류와 공통 오류는 `_errorCode` 에 있다.
+ * @brief 순위표 키트의 클라이언트입니다. 요청은 `call<LeaderboardMethod::GetTop>( request, onReply )` 이고, 이 클래스는 업적 달성 알림을 쌓아 둡니다.
+ * @details - 요청 · 응답 규칙은 `OnlineProtocolClient` 에 있다. 업무 결과는 `_reply._result` 에, 전송 오류와 공통 오류는 `_errorCode` 에 있다.
  *          - 점수 제출은 서버가 `_bClientSubmit` 이 켜진 보드만 받으며 아니면 NotAllowed 이다. 보통 점수는 서버 게임 로직이 낸다.
  */
 #pragma once
@@ -12,8 +12,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
-#include "GameFramework/Runtime/Online/Service/OnlineKitClient.h"
-#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw
 {
@@ -21,21 +20,13 @@ namespace sw
      * @class LeaderboardClient
      * @brief 연결 하나의 순위표 클라이언트입니다.
      */
-    class SW_KIT_API LeaderboardClient final : public OnlineKitClient<LeaderboardProtocol, LeaderboardReply>
+    class SW_KIT_API LeaderboardClient final : public OnlineProtocolClient<LeaderboardClient, LeaderboardProtocol>
     {
     public:
-        LeaderboardClient();
+        using Reply         = OnlineResult<LeaderboardReply>;
+        using ReplyDelegate = Delegate<void( const Reply& )>;
 
-        uint64 requestTop( string_view boardID, int32 offset, int32 count, const ReplyDelegate& onReply );
-        uint64 requestAround( string_view boardID, int32 radius, const ReplyDelegate& onReply );
-        uint64 requestStats( const ReplyDelegate& onReply );
-        uint64 submitScore( string_view boardID, int64 score, const ReplyDelegate& onReply );
-        uint64 requestAchievements( const ReplyDelegate& onReply );
-        uint64 requestSeasonResult( string_view boardID, uint32 seasonID, const ReplyDelegate& onReply );
-        /** @brief 친구 순위표입니다. @p listAccountID 는 친구 키트의 친구 목록에 자기를 더한 것이며 응답의 순위는 목록 안 순위입니다. */
-        uint64 requestScoresOf( string_view boardID, const vector<AccountID>& listAccountID, const ReplyDelegate& onReply );
-        /** @brief 등록한 업적마다 진행률입니다. 숨긴 업적은 달성 전에 가려져 옵니다. */
-        uint64 requestAchievementProgress( const ReplyDelegate& onReply );
+        LeaderboardClient();
 
         /** @brief 업적 달성 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
         [[nodiscard]] bool claimAchievementUnlocks( ConsumerLease& outLease ) { return _unlockGate.claim( outLease ); }
@@ -47,12 +38,8 @@ namespace sw
                 _unlockBuffer.moveAllTo( outListAchievement );
         }
 
-        // IOnlineClientService
-        const OnlineProtocolEntry& getProtocol() const override { return LeaderboardProtocol::kOnlineEntry; }
-        void                       onServicePush( uint16 kind, BitReader& body ) override;
-
-    private:
-        uint64 send( uint16 method, const LeaderboardRequest& request, const ReplyDelegate& onReply );
+        // OnlineProtocolClient 의 훅
+        void onPush( LeaderboardMethod::Achievement, const AchievementState& body );
 
     private:
         ConsumerGate                  _unlockGate;

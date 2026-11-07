@@ -13,29 +13,32 @@
 namespace sw
 {
     LiveOpsServer::LiveOpsServer()
-        : _pendingTable{}
-        , _listDeviceCompletionScratch{}
+        : _listDeviceCompletionScratch{}
         , _listStartScratch{}
         , _pService{ nullptr }
         , _pDispatcher{ nullptr }
         , _pHost{ nullptr }
         , _busSubscription{}
     {
+        setReady( false );
     }
 
-    void LiveOpsServer::initialize( LiveOpsService* pService, PushNotificationDispatcher* pDispatcher )
+    void LiveOpsServer::initialize( LiveOpsService* pService, PushNotificationDispatcher* pDispatcher, MetricRegistry* pMetricRegistry )
     {
         _pService    = pService;
         _pDispatcher = pDispatcher;
+        initializeCalls( pMetricRegistry, "liveops" );
+        setReady( pService != nullptr );
     }
 
     void LiveOpsServer::shutdown()
     {
         _busSubscription.reset();
-        _pendingTable.clear();
+        _calls.clear();
         _pHost       = nullptr;
         _pService    = nullptr;
         _pDispatcher = nullptr;
+        setReady( false );
     }
 
     void LiveOpsServer::onHostShutdown( OnlineServiceHost& host )
@@ -45,76 +48,40 @@ namespace sw
         _pHost = nullptr;
     }
 
-    const OnlineProtocolEntry& LiveOpsServer::getProtocol() const
+    void LiveOpsServer::handleCall( OnlineServerCall<LiveOpsMethod::GetLiveState> call, const OnlineCallContext& context, const LiveOpsStateRequest& request )
     {
-        return LiveOpsProtocol::kOnlineEntry;
-    }
-
-    void LiveOpsServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
-    {
-        if ( context._method == LiveOpsMethod::kRegisterDevice || context._method == LiveOpsMethod::kUnregisterDevice )
-        {
-            handleDeviceRequest( host, context, body );
-            return;
-        }
-        if ( _pService == nullptr )
-        {
-            (void)host.respondError( context._token, OnlineError::kUnavailable );
-            return;
-        }
-        if ( context._method != LiveOpsMethod::kGetLiveState )
-        {
-            (void)host.respondError( context._token, OnlineError::kNotFound );
-            return;
-        }
-        LiveOpsStateRequest request;
-        if ( LiveOpsProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
-        }
         LiveOpsReply reply;
         _pService->computeActiveEvents( context._accountID, request._region, request._buildVersion, context._nowMs, true, reply._listEvent );
-        respond( host, context._token, reply );
+        (void)respond( call, reply );
     }
 
-    void LiveOpsServer::respond( OnlineServiceHost& host, const NetRequestToken& token, const LiveOpsReply& reply )
-    {
-        (void)host.respondMessage<LiveOpsProtocol::MessageTypes>( token, reply );
-    }
-
-    void LiveOpsServer::handleDeviceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
+    void LiveOpsServer::handleCall( OnlineServerCall<LiveOpsMethod::RegisterDevice> call, const OnlineCallContext& context, const PushDeviceRegistration& request )
     {
         if ( _pDispatcher == nullptr )
         {
-            (void)host.respondError( context._token, OnlineError::kUnavailable );
+            (void)fail( call, OnlineError::kUnavailable );
             return;
         }
-        if ( context._method == LiveOpsMethod::kRegisterDevice )
+        PushDeviceRegistration registration = request;
+        registration._registeredMs          = context._nowMs.count(); // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
+        _pDispatcher->registerDevice( context._accountID, registration, call._callID );
+    }
+
+    void LiveOpsServer::handleCall( OnlineServerCall<LiveOpsMethod::UnregisterDevice> call, const OnlineCallContext& context, const LiveOpsDeviceKey& request )
+    {
+        if ( _pDispatcher == nullptr )
         {
-            PushDeviceRegistration registration;
-            if ( LiveOpsProtocol::MessageTypes::read( body, registration ) != FixedReadResult::Ok )
-            {
-                (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-                return;
-            }
-            registration._registeredMs = context._nowMs.count(); // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
-            _pDispatcher->registerDevice( context._accountID, registration, _pendingTable.add( context._token ) );
+            (void)fail( call, OnlineError::kUnavailable );
             return;
         }
-        LiveOpsDeviceKey key;
-        if ( LiveOpsProtocol::MessageTypes::read( body, key ) != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
-        }
-        _pDispatcher->unregisterDevice( context._accountID, key._providerID, key._token, _pendingTable.add( context._token ) );
+        _pDispatcher->unregisterDevice( context._accountID, request._providerID, request._token, call._callID );
     }
 
     void LiveOpsServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         if ( _pHost == nullptr )
             attachHost( host );
+        _calls.publishPendingCount();
         if ( _pDispatcher != nullptr )
         {
             _pDispatcher->update( nowMs );
@@ -122,12 +89,9 @@ namespace sw
             _pDispatcher->takeCompletions( _listDeviceCompletionScratch );
             for ( const PushDeviceCompletion& completion : _listDeviceCompletionScratch )
             {
-                NetRequestToken token;
-                if ( _pendingTable.take( completion._requestTag, token ) == false )
-                    continue;
                 LiveOpsReply reply;
                 reply._result = completion._result;
-                respond( host, token, reply );
+                (void)completeCall( completion._requestTag, reply );
             }
         }
         if ( _pService == nullptr )
@@ -135,7 +99,7 @@ namespace sw
         _pService->update( nowMs );
         announceStarts( nowMs );
         if ( _pService->takeStateChange() )
-            (void)host.sendPushToAll( LiveOpsMethod::kPushLiveState, BitWriter{} );
+            (void)host.sendPushToAll( LiveOpsMethod::LiveState::kKind, BitWriter{} );
     }
 
     void LiveOpsServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )

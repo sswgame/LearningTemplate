@@ -155,6 +155,7 @@ namespace sw
     {
         uint16  _errorCode;
         TResult _result;
+        bool    _bClientOnly{ false }; // NOLINT(sw-bool-flag): constexpr 표의 집합 초기화 칸이다.  클라이언트가 공통 오류를 키트 결과로 바꿀 때만 쓴다. 서버의 같은 값은 업무 결과로 답한다(기다릴 시간을 싣는 도배 제한)
     };
 } // namespace sw
 
@@ -194,6 +195,18 @@ namespace sw
             }
             return fallback;
         }
+
+        /** @brief 키트 결과 @p result 가 표 @p arrRow 에 있는 공통 범주이면 그 코드, 아니면 `kOk`(키트 업무 결과) 입니다. 같은 결과가 여러 줄이면 첫 줄입니다. */
+        template <typename TResult, size_t Count>
+        static constexpr uint16 toErrorCode( TResult result, const OnlineErrorResult<TResult> ( &arrRow )[Count] )
+        {
+            for ( const OnlineErrorResult<TResult>& row : arrRow )
+            {
+                if ( row._result == result && row._bClientOnly == false )
+                    return row._errorCode;
+            }
+            return kOk;
+        }
     };
 } // namespace sw
 
@@ -207,6 +220,28 @@ namespace sw
 
     template <typename TReply>
     struct OnlineReplyHasResult<TReply, std::void_t<decltype( std::declval<const TReply&>()._result )>> : std::true_type
+    {
+    };
+
+    /** @brief 키트 프로토콜에 공통 범주 표 `kArrCommonResult` 가 있는지입니다. 표는 키트 결과와 공통 범주(`OnlineError`)의 짝이고, 지표 · 보존 · 클라이언트 결과가 모두 여기서 나옵니다. */
+    template <typename TProtocol, typename = void>
+    struct OnlineProtocolHasCommonResult : std::false_type
+    {
+    };
+
+    template <typename TProtocol>
+    struct OnlineProtocolHasCommonResult<TProtocol, std::void_t<decltype( TProtocol::kArrCommonResult )>> : std::true_type
+    {
+    };
+
+    /** @brief 응답에 재시도 판정 `isRetryable()` 이 있는지입니다. 공통 범주가 아니면서 같은 키로 다시 할 업무 결과(스토어 대기)를 가진 키트만 둡니다. */
+    template <typename TReply, typename = void>
+    struct OnlineReplyHasRetryCheck : std::false_type
+    {
+    };
+
+    template <typename TReply>
+    struct OnlineReplyHasRetryCheck<TReply, std::void_t<decltype( std::declval<const TReply&>().isRetryable() )>> : std::true_type
     {
     };
 

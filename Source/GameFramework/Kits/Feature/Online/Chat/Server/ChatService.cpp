@@ -48,7 +48,7 @@ namespace sw
 
             static bool isClientJoinable( ChatChannelKind kind ) { return kind == ChatChannelKind::World || kind == ChatChannelKind::Custom; }
 
-            static uint16 toMethod( bool bWhisper ) { return bWhisper ? ChatMethod::kWhisper : ChatMethod::kSend; }
+            static uint16 toMethod( bool bWhisper ) { return bWhisper ? ChatMethod::Whisper::kID : ChatMethod::Send::kID; }
         };
 
         /** @brief 제재 상태를 읽는 작업입니다. */
@@ -521,15 +521,15 @@ namespace sw
         ChatChannelKind kind = ChatChannelKind::World;
         if ( ChatChannelID::parseKind( channelID, kind ) == false )
         {
-            completeSimple( ChatMethod::kJoin, requestTag, ChatResult::Invalid );
+            completeSimple( ChatMethod::Join::kID, requestTag, ChatResult::Invalid );
             return;
         }
         if ( ChatServiceInternal::isClientJoinable( kind ) == false )
         {
-            completeSimple( ChatMethod::kJoin, requestTag, ChatResult::NotJoinable );
+            completeSimple( ChatMethod::Join::kID, requestTag, ChatResult::NotJoinable );
             return;
         }
-        completeSimple( ChatMethod::kJoin, requestTag, addMember( accountID, channelID, nowMs ) );
+        completeSimple( ChatMethod::Join::kID, requestTag, addMember( accountID, channelID, nowMs ) );
     }
 
     void ChatService::leaveChannel( AccountID accountID, string_view channelID, uint64 requestTag )
@@ -537,11 +537,11 @@ namespace sw
         ChatChannelKind kind = ChatChannelKind::World;
         if ( ChatChannelID::parseKind( channelID, kind ) == false || ChatServiceInternal::isClientJoinable( kind ) == false )
         {
-            completeSimple( ChatMethod::kLeave, requestTag, ChatResult::NotJoinable );
+            completeSimple( ChatMethod::Leave::kID, requestTag, ChatResult::NotJoinable );
             return;
         }
         removeMember( accountID, channelID );
-        completeSimple( ChatMethod::kLeave, requestTag, ChatResult::Ok );
+        completeSimple( ChatMethod::Leave::kID, requestTag, ChatResult::Ok );
     }
 
     void ChatService::sendMessage( AccountID accountID, string_view channelID, string_view text, UnixMilliseconds nowMs, uint64 requestTag )
@@ -553,7 +553,7 @@ namespace sw
     {
         if ( recipientID == kInvalidAccountID || recipientID == accountID )
         {
-            completeSimple( ChatMethod::kWhisper, requestTag, ChatResult::Invalid );
+            completeSimple( ChatMethod::Whisper::kID, requestTag, ChatResult::Invalid );
             return;
         }
         submitSend( accountID, PendingSend{ ChatChannelID::makeWhisper( accountID, recipientID ), string( text ), requestTag, nowMs, recipientID } );
@@ -679,12 +679,12 @@ namespace sw
         _mapPresenceRequestToWhisper.erase( whisperIt );
         if ( result.isOnline() == false || result._serverID == _dependencies._serverID )
         {
-            completeSimple( ChatMethod::kWhisper, pending._requestTag, ChatResult::TargetOffline ); // 이 서버였다면 그사이 떠난 것이다
+            completeSimple( ChatMethod::Whisper::kID, pending._requestTag, ChatResult::TargetOffline ); // 이 서버였다면 그사이 떠난 것이다
             return;
         }
         publishMessage( ChatBus::kServerTopic, ServiceKeyUtil::makeHex64( result._serverID ), pending._message );
         queueHistory( pending._message );
-        completeMessage( ChatMethod::kWhisper, pending._requestTag, std::move( pending._message ) ); // 받는 서버가 차단으로 버려도 보낸 사람에게는 보낸 것으로 보인다
+        completeMessage( ChatMethod::Whisper::kID, pending._requestTag, std::move( pending._message ) ); // 받는 서버가 차단으로 버려도 보낸 사람에게는 보낸 것으로 보인다
     }
 
     void ChatService::publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message )
@@ -802,12 +802,12 @@ namespace sw
                                             cursor.size() > static_cast<size_t>( ChatProtocol::kMaxCursorSize );
         if ( bInvalidHistoryRequest )
         {
-            completeSimple( ChatMethod::kHistory, requestTag, ChatResult::Invalid );
+            completeSimple( ChatMethod::History::kID, requestTag, ChatResult::Invalid );
             return;
         }
         if ( canReadChannel( accountID, channelID, kind ) == false )
         {
-            completeSimple( ChatMethod::kHistory, requestTag, ChatResult::NotMember );
+            completeSimple( ChatMethod::History::kID, requestTag, ChatResult::NotMember );
             return;
         }
         ++_pendingStoreCount;
@@ -818,7 +818,7 @@ namespace sw
     {
         --_pendingStoreCount;
         ChatCompletion completion;
-        completion._method             = ChatMethod::kHistory;
+        completion._method             = ChatMethod::History::kID;
         completion._requestTag         = requestTag;
         completion._reply._result      = result;
         completion._reply._listHistory = std::move( listMessage );
@@ -844,18 +844,18 @@ namespace sw
                                     ServiceReportStore::isValidCode( request._reason, ChatLimit::kMaxReasonSize ) == false;
         if ( bInvalidReport )
         {
-            completeSimple( ChatMethod::kReport, requestTag, ChatResult::Invalid );
+            completeSimple( ChatMethod::Report::kID, requestTag, ChatResult::Invalid );
             return;
         }
         if ( canReadChannel( accountID, request._channelID, kind ) == false )
         {
-            completeSimple( ChatMethod::kReport, requestTag, ChatResult::NotMember );
+            completeSimple( ChatMethod::Report::kID, requestTag, ChatResult::NotMember );
             return;
         }
         int64 retryAfterMs = 0;
         if ( _reportGuard.tryConsume( accountID, nowMs.count(), retryAfterMs ) == false )
         {
-            completeSimple( ChatMethod::kReport, requestTag, ChatResult::RateLimited, retryAfterMs );
+            completeSimple( ChatMethod::Report::kID, requestTag, ChatResult::RateLimited, retryAfterMs );
             return;
         }
         ++_reportSequence;
@@ -867,6 +867,6 @@ namespace sw
     void ChatService::applyReport( uint64 requestTag, ChatResult result )
     {
         --_pendingStoreCount;
-        completeSimple( ChatMethod::kReport, requestTag, result );
+        completeSimple( ChatMethod::Report::kID, requestTag, result );
     }
 } // namespace sw

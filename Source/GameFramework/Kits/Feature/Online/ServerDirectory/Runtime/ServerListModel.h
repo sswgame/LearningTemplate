@@ -48,7 +48,7 @@ namespace sw
         const vector<ServerListEntry>& getEntries() const { return _listEntry; }
 
     private:
-        void onServerList( uint16 errorCode, const vector<ServerListEntry>& listEntry );
+        void onServerList( const OnlineResult<ServerListReply>& result );
 
     private:
         vector<ServerListEntry> _listEntry;

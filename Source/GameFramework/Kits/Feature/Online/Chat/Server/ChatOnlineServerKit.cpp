@@ -116,7 +116,7 @@ namespace sw
                     outError = "the chat service refused its dependencies";
                     return false;
                 }
-                _server.initialize( &_service );
+                _server.initialize( &_service, context._pMetricRegistry );
                 _groupChannels.setService( &_service );
                 return true;
             }

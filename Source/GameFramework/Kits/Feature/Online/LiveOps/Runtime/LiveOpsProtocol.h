@@ -2,7 +2,7 @@
  * @file LiveOpsProtocol.h
  * @brief 라이브 운영 서비스의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kLiveOps`), 본문, 영속 레코드의 형식을 정의하며 클라이언트, 서버, 운영 도구가 함께 씁니다.
  * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
- *          업무 결과는 응답 본문(`LiveOpsReply::_result`)에 담으며 경제와 매칭 키트도 같다. 공통 오류만 오류 코드로 오고, 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
+ *          업무 결과는 응답 본문(`LiveOpsReply::_result`)에 담으며 경제와 매칭 키트도 같다. 공통 오류만 오류 코드로 오고, 클라이언트는 공통 범주 표(`kArrCommonResult`)로 이를 결과에 맞춘다.
  *          저장소의 이벤트 정의와 기기 레코드는 다른 빌드가 읽으므로 자기 기술형(A, `BinarySerializer`)이다.
  */
 #pragma once
@@ -41,19 +41,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 라이브 운영 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct LiveOpsMethod : OnlineMethodTable<LiveOpsMethodName, OnlineMethodRange::kLiveOps, LiveOpsPushName>
-    {
-        static constexpr uint16 kGetLiveState     = toMethod( LiveOpsMethodName::GetLiveState );     ///< 지역과 빌드 버전을 받아 이 계정에 열린 이벤트 목록을 돌려준다. 출시 비율이 계정을 보므로 로그인한 뒤에 쓴다
-        static constexpr uint16 kRegisterDevice   = toMethod( LiveOpsMethodName::RegisterDevice );   ///< 제공자, 토큰, 언어를 받는다. 로그인한 뒤에 쓰며 같은 토큰은 덮어쓴다
-        static constexpr uint16 kUnregisterDevice = toMethod( LiveOpsMethodName::UnregisterDevice ); ///< 제공자와 토큰을 받는다. 로그아웃이나 알림 끄기에서 쓴다
-        static constexpr uint16 kPushLiveState    = toPush( LiveOpsPushName::LiveState );            ///< 본문은 없다. 열린 이벤트 목록이 바뀌었으니 다시 받으라는 알림이다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 열린 이벤트 조회(`kGetLiveState`)의 요청입니다. */
+    /** @brief 열린 이벤트 조회(`GetLiveState`)의 요청입니다. */
     REFLECT()
     struct LiveOpsStateRequest
     {
@@ -67,7 +55,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기기 해제(`kUnregisterDevice`)의 요청입니다. 등록 요청은 `PushDeviceRegistration` 입니다. */
+    /** @brief 기기 해제(`UnregisterDevice`)의 요청입니다. 등록 요청은 `PushDeviceRegistration` 입니다. */
     REFLECT()
     struct LiveOpsDeviceKey
     {
@@ -95,13 +83,36 @@ namespace sw
 
 namespace sw
 {
+    /** @brief LiveOps 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct LiveOpsMethod : OnlineMethodTable<LiveOpsMethodName, OnlineMethodRange::kLiveOps, LiveOpsPushName>
+    {
+        using GetLiveState     = Method<MethodName::GetLiveState, LiveOpsStateRequest, LiveOpsReply>;      ///< 이 계정에 열린 이벤트 목록을 돌려준다. 출시 비율이 계정을 보므로 로그인한 뒤에 쓴다
+        using RegisterDevice   = Method<MethodName::RegisterDevice, PushDeviceRegistration, LiveOpsReply>; ///< 로그인한 뒤에 쓰며 같은 토큰은 덮어쓴다
+        using UnregisterDevice = Method<MethodName::UnregisterDevice, LiveOpsDeviceKey, LiveOpsReply>;     ///< 로그아웃이나 알림 끄기에서 쓴다
+        using LiveState        = Push<PushName::LiveState, OnlineNoBody>;                                  ///< 열린 이벤트 목록이 바뀌었으니 다시 받으라는 알림이다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct LiveOpsProtocol
      * @brief 라이브 운영 키트의 메시지 타입 목록, 등록 항목, 영속 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API LiveOpsProtocol
     {
-        using MessageTypes = OnlineMessageTypes<LiveOpsStateRequest, PushDeviceRegistration, LiveOpsDeviceKey, LiveOpsReply>;
+        using Table        = OnlineProtocolTable<LiveOpsMethod, OnlineMethodList<LiveOpsMethod::GetLiveState, LiveOpsMethod::RegisterDevice, LiveOpsMethod::UnregisterDevice>, OnlinePushList<LiveOpsMethod::LiveState>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = LiveOpsResult;
+
+        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
+        static constexpr OnlineErrorResult<LiveOpsResult> kArrCommonResult[] = {
+            { OnlineError::kInvalidRequest, LiveOpsResult::Invalid },
+            { OnlineError::kUnavailable, LiveOpsResult::Unavailable },
+            { OnlineError::kRateLimited, LiveOpsResult::RateLimited, true },
+            { OnlineError::kVersionMismatch, LiveOpsResult::UpdateRequired },
+            { OnlineError::kUpdateRequired, LiveOpsResult::UpdateRequired },
+        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 
@@ -119,8 +130,5 @@ namespace sw
         static string             writeEventJSON( const LiveEventDef& definition );
         [[nodiscard]] static bool encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeDevice( string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration );
-
-        /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 손상된 본문은 Invalid, 도배 제한은 RateLimited, 나머지는 Unavailable 입니다. */
-        static LiveOpsResult fromErrorCode( uint16 errorCode );
     };
 } // namespace sw

@@ -37,5 +37,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry ServerDirectoryProtocol::kOnlineEntry{ "ServerDirectory", ServerDirectoryMethod{}, ServerDirectoryProtocol::MessageTypes{} };
+    const OnlineProtocolEntry ServerDirectoryProtocol::kOnlineEntry{ "ServerDirectory", ServerDirectoryProtocol::Table{} };
 } // namespace sw

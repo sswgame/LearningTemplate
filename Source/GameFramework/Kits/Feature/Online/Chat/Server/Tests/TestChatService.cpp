@@ -310,7 +310,7 @@ SW_TEST_CASE( ChatServiceTest, SendDeliversToMembers )
 
     const ChatCompletion sent = rig.send( kAlice, "hello" );
     SW_EXPECT_TRUE( sent._reply._result == ChatResult::Ok );
-    SW_EXPECT_EQUAL( ChatMethod::kSend, sent._method );
+    SW_EXPECT_EQUAL( ChatMethod::Send::kID, sent._method );
     SW_EXPECT_EQUAL( string( "hello" ), sent._reply._message._text );
     SW_EXPECT_EQUAL( string( "user11" ), sent._reply._message._senderName );
     SW_EXPECT_EQUAL( kNowMs, sent._reply._message._sentMs );
@@ -462,7 +462,7 @@ SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
 
     const ChatCompletion whispered = rig.whisper( kAlice, kBob, "psst" );
     SW_EXPECT_TRUE( whispered._reply._result == ChatResult::Ok );
-    SW_EXPECT_EQUAL( ChatMethod::kWhisper, whispered._method );
+    SW_EXPECT_EQUAL( ChatMethod::Whisper::kID, whispered._method );
     SW_EXPECT_TRUE( whispered._reply._message._kind == ChatChannelKind::Whisper );
     const vector<ChatDelivery> listDelivery = rig.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 1 ), listDelivery.size() );
