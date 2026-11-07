@@ -947,6 +947,65 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Nav.CompletedPathRequests` — 수확한 비동기 경로 요청 수(누적)입니다. */
+            [[nodiscard]] static bool readCompletedPathRequests( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pManager->getSubsystem<SceneNavigation>().getCompletedPathRequestCount() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Nav.AgentCount` — 씬에 등록된 내비메시 에이전트 수입니다. */
+            [[nodiscard]] static bool readAgentCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pManager->getSubsystem<SceneNavigation>().getAgentCount() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Nav.AgentStatus` — 대상의 내비메시 에이전트 이동 상태 글(`Idle` · `Moving` · `Arrived` · `Failed`)입니다. 에이전트가 없으면 값이 없습니다. */
+            [[nodiscard]] static bool readAgentStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject* pObject = query.findTargetObject();
+                if ( pObject == nullptr )
+                {
+                    outValue.setText( query.getTargetProblem() );
+                    return false;
+                }
+                const NavMeshAgentComponent* pAgent = pObject->getComponent<NavMeshAgentComponent>();
+                if ( pAgent == nullptr )
+                {
+                    outValue.setText( query.describeMissing( "navmesh agent" ) );
+                    return false;
+                }
+                switch ( pAgent->getMoveStatus() )
+                {
+                    case NavMoveStatus::Idle:
+                    {
+                        outValue.setText( "Idle" );
+                        break;
+                    }
+                    case NavMoveStatus::Moving:
+                    {
+                        outValue.setText( "Moving" );
+                        break;
+                    }
+                    case NavMoveStatus::Arrived:
+                    {
+                        outValue.setText( "Arrived" );
+                        break;
+                    }
+                    case NavMoveStatus::Failed:
+                    {
+                        outValue.setText( "Failed" );
+                        break;
+                    }
+                }
+                return true;
+            }
+
             /** @brief 감시 값 `Nav.PathLinkCount` 입니다. 그 경로가 건너는 오프 메시 링크 수입니다. */
             [[nodiscard]] static bool readPathLinkCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -959,6 +1018,10 @@ namespace sw
         };
     } // namespace
 
+    SW_AUTOMATION_WATCH( navCompletedPathRequests, "Nav.CompletedPathRequests", "Async navmesh path requests harvested so far (cancelled ones are not counted)",
+                         &SceneNavigationWatchesInternal::readCompletedPathRequests );
+    SW_AUTOMATION_WATCH( navAgentCount, "Nav.AgentCount", "NavMesh agents registered in the scene", &SceneNavigationWatchesInternal::readAgentCount );
+    SW_AUTOMATION_QUERY_WATCH( navAgentStatus, "Nav.AgentStatus", "Move status of the target's navmesh agent: Idle, Moving, Arrived or Failed", &SceneNavigationWatchesInternal::readAgentStatus, true, false );
     SW_AUTOMATION_QUERY_WATCH( navAreaCost, "Nav.AreaCost", "Path cost multiplier of a navigation area for an agent type (key = <agent type>:<area>; empty agent = default); -1 when the area is closed to it",
                                &SceneNavigationWatchesInternal::readAreaCost, false, true );
     SW_AUTOMATION_QUERY_WATCH( navPathLength, "Nav.PathLength", "Length (m) of the complete navmesh path from the target to the object named by key; absent without one",

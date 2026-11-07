@@ -1,0 +1,59 @@
+<Scene formatVersion="2" name="NavCrowdLoad">
+	<!-- 내비 부하 시나리오(automation/load/navcrowd)의 무대 — 70 m 바닥(Static 강체 + 메시)과 내비메시 표면(Humanoid). NavLoad 의 NavCrowdSpawnerComponent 가 플레이를 시작하면
+	     떠돌이 에이전트 1 천(목표 규모)을 60 m 상자에 격자로 세우고, 에이전트마다 NavWanderComponent 가 멈추면 둘레 6 m 안의 새 목적지를 건다(네 번에 한 번 비동기 경로 질의).
+	     언리얼 Mass 군중 · 유니티 DOTS 군중 데모와 같은 크기. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,55,-55" _localRotation="0.785398,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="300" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="40" _shadowDistance="120" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="35,0.5,35" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="70,1,70" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="50" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="NavigationSurface">
+			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
+				<_listComponent>
+					<NavMeshSurfaceComponent _geometrySource="Both" _boundsHalfExtents="0,0,0">
+						<_listAgentType>
+							<item>Humanoid</item>
+						</_listAgentType>
+						<_listExcludeTag />
+					</NavMeshSurfaceComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="NavLoad">
+			<GameObject _schemaVersion="0" _name="NavLoad" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<NavCrowdSpawnerComponent _agentType="Humanoid" _agentCount="1000" _halfExtent="30" _wanderRadius="6" _maxSpeed="3.5" _seed="7" _probeInterval="4" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

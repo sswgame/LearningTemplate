@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  부하 시나리오 — 목표 규모 AI 이동(에이전트 1 천이 목적지를 바꿔 가며 걷는다, maps/navcrowd_load): 경로 질의 · 군중 진행이 게임 스레드를 떠난 뒤의 프레임 비용을 잰다.
+  에이전트마다 자기 틱(NavWanderComponent)이 멈추면 둘레의 새 목적지를 걸고 네 번에 한 번 비동기 경로 질의를 낸다. 군중 진행은 Navigation 단계 끝에 워커로 가
+  Animation 단계와 겹치고(FlushPostAnimation 앞에서 쓴다), 비동기 질의는 다음 Navigation 단계에서 수확한다. 볼 값: 프로파일의 GT.Navigation.tick ·
+  GT.Navigation.waitCrowd(기다림이 0 에 가까워야 겹친 것이다) · NavCrowdUpdate · NavPathQuery 태스크, 도착 수 · 질의 결과 수, 버린 질의가 샌 수(0).
+  측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인(Scenario.empty)이 줍지 않는다.
+  실행: ctest -L load (항목 Scenario.empty.load.navcrowd) · App -scenario=game/empty/automation/load/navcrowd.scenario.xml -unattended
+-->
+<Scenario name="game.empty.load.navcrowd" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/navcrowd_load.scene.xml"/>
+	<Load durationSeconds="15"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Nav.AgentCount" atLeast="1000" timeoutFrames="120"/>
+	<WaitUntil watch="EmptyNav.WanderArrivals" atLeast="1000" timeoutSeconds="12"/>
+	<Expect watch="EmptyNav.WanderProbeResults" atLeast="200"/>
+	<Expect watch="Nav.CompletedPathRequests" atLeast="200"/>
+	<Expect watch="EmptyNav.WanderCancelLeaks" equals="0"/>
+</Scenario>

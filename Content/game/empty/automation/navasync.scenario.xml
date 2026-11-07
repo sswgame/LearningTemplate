@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  비동기 경로 요청(maps/navasync) — 탐침(Prober, NavPathProbeComponent)이 Start 자리에서 Goal 까지 SceneNavigation::requestPath 로 계속 묻는다.
+  ① 요청 → 결과: 비동기 경로가 장애물(Barrier)을 돌아간다 — 동기 감시 값(Nav.PathLength)과 같은 길이 범위.
+  ② 결과 → 도착: 첫 완전 경로로 같은 오브젝트의 에이전트를 보내고, 워커로 간 군중 진행이 Goal 에 닿게 한다.
+  ③ 재베이크 중 질의: Barrier 를 치우면(object.place) 타일을 다시 굽는 동안에도 질의가 돌고, 끼운 뒤의 결과는 곧은 길이다(타일 교체는 질의를 수확한 뒤에만).
+  ④ 취소: 하나 걸러 낸 질의를 워커에 넘어간 뒤 버린다 — 수확 뒤에도 결과가 나오면 샌 것이다(0 이어야 한다).
+  실행: App -scenario=game/empty/automation/navasync.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.navasync" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/navasync.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="EmptyNav.ProbePathLength" target="Prober" atLeast="6" timeoutSeconds="5"/>
+	<Expect watch="Nav.PathLength" target="Start" key="Goal" atLeast="6"/>
+
+	<WaitUntil watch="Nav.AgentStatus" target="Prober" is="Arrived" timeoutSeconds="15"/>
+
+	<DevCommand line="object.place Barrier 20 0.5 -2"/>
+	<WaitUntil watch="EmptyNav.ProbePathLength" target="Prober" atMost="5.3" timeoutSeconds="5"/>
+
+	<Expect watch="EmptyNav.ProbeResultCount" target="Prober" atLeast="10"/>
+	<Expect watch="EmptyNav.ProbeCancelLeaks" target="Prober" equals="0"/>
+	<Pass/>
+</Scenario>
