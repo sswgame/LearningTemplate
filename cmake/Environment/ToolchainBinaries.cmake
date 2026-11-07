@@ -18,15 +18,13 @@
 # **실제로 쓰는 컴파일러 옆을 먼저 본다.** 아카이버는 컴파일러가 낸 비트코드를 읽어야 하므로
 # 둘은 같은 LLVM 에서 와야 한다. 컴파일러 경로가 링크(리눅스 `/usr/bin/clang++` → `/usr/lib/llvm-N/bin`)면
 # 링크가 가리키는 폴더도 본다 — `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다.
+#
+# 아카이버 이름은 부르는 쪽이 준다 — 컴파일러 앞단(clang-cl 은 llvm-lib, GNU 앞단 clang 은 llvm-ar)이 정하지 대상 플랫폼이 정하지 않는다.
+# 예전에는 `if(WIN32) … else()` 로 골랐는데 `project()` 전(DetectToolchain)에는 WIN32 가 아직 없어 Windows 에서도 llvm-ar 을 찾았다.
 # ------------------------------------------------------------------------------
-function(sw_pinnedArchiverPath OUT_VAR)
+function(sw_pinnedArchiverPath OUT_VAR ARCHIVER_NAME)
 	set(${OUT_VAR} "" PARENT_SCOPE)
-
-	if(WIN32)
-		set(swArName "llvm-lib.exe")
-	else()
-		set(swArName "llvm-ar")
-	endif()
+	set(swArName "${ARCHIVER_NAME}")
 
 	set(swCandidateDirs "")
 
@@ -58,15 +56,16 @@ endfunction()
 # 거기서 다시 쓴다). 이 매크로는 그 POSIX 짝이다.
 # ------------------------------------------------------------------------------
 macro(sw_bindPinnedArchiver)
-	if(NOT WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		sw_pinnedArchiverPath(swPosixAr)
+	# 플랫폼이 아니라 컴파일러 앞단으로 고른다 — GNU 앞단 clang(Linux · Android NDK · Emscripten)은 llvm-ar, clang-cl 은 `sw_bindClangClWindowsTools` 가 맡는다.
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+		sw_pinnedArchiverPath(swPosixAr "llvm-ar${CMAKE_HOST_EXECUTABLE_SUFFIX}")
 		set(swPosixRanlib "")
 
 		if(swPosixAr)
 			get_filename_component(swPosixArDir "${swPosixAr}" DIRECTORY)
 
-			if(EXISTS "${swPosixArDir}/llvm-ranlib")
-				set(swPosixRanlib "${swPosixArDir}/llvm-ranlib")
+			if(EXISTS "${swPosixArDir}/llvm-ranlib${CMAKE_HOST_EXECUTABLE_SUFFIX}")
+				set(swPosixRanlib "${swPosixArDir}/llvm-ranlib${CMAKE_HOST_EXECUTABLE_SUFFIX}")
 			endif()
 
 			set(CMAKE_AR "${swPosixAr}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)

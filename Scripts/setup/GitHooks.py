@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import platform
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
+from common.HostPlatform import isWindowsHost
 from common.ExitCode import ExitCode  # noqa: E402
 
 
@@ -51,7 +51,7 @@ def installPreCommitHook(projectRoot: Path | None = None) -> bool:
     )
 
     preCommitPath.write_text(hookScript, encoding="utf-8")
-    if platform.system() != "Windows":
+    if not isWindowsHost():
         os.chmod(preCommitPath, 0o755)
 
     print(f"[GitHooks] Git pre-commit 훅이 설치되었습니다: {preCommitPath}")

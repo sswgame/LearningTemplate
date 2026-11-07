@@ -84,8 +84,11 @@ sw_requireJSONValue(swContractDefaultRHI "${CMAKE_CURRENT_LIST_DIR}/../../Config
 
 if(CMAKE_HOST_WIN32)
 	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRHI}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
-else()
+elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
 	set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
+else()
+	# 새 호스트 · 대상(웹은 WebGPU)이 Vulkan 을 조용히 받지 않게 이름으로 고른다.
+	message(FATAL_ERROR "[BuildOptions] no default Shipping RHI backend for host '${CMAKE_HOST_SYSTEM_NAME}' - set SW_SHIPPING_RHI_BACKEND")
 endif()
 
 set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 Vulkan OpenGL)

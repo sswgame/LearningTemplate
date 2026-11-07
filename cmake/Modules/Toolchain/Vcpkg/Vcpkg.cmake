@@ -128,11 +128,7 @@ function(sw_vcpkgPlanManifestInstall swSrcDir OUT_STATUS OUT_REMOVE OUT_BUILD)
         return()
     endif()
 
-    if(CMAKE_HOST_WIN32)
-        set(swVcpkgExe "${sw_vcpkg_root}/vcpkg.exe")
-    else()
-        set(swVcpkgExe "${sw_vcpkg_root}/vcpkg")
-    endif()
+    set(swVcpkgExe "${sw_vcpkg_root}/vcpkg${CMAKE_HOST_EXECUTABLE_SUFFIX}")
 
     if(NOT EXISTS "${swVcpkgExe}")
         return()
@@ -319,10 +315,14 @@ if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
         set(sw_vcpkg_arch "x64")
     endif()
 
-    if(WIN32)
+    # 대상 OS 는 이름으로 고른다 — `else()` 에 Linux 를 두면 Android · Emscripten 툴체인도 조용히 linux 패키지를 받는다.
+    # `project()` 앞이라 교차 툴체인이 없으면 CMAKE_SYSTEM_NAME 이 비어 있다 — 그때는 호스트와 같은 대상이다.
+    if(WIN32 OR (CMAKE_SYSTEM_NAME STREQUAL "" AND CMAKE_HOST_WIN32))
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-windows")
-    else()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR (CMAKE_SYSTEM_NAME STREQUAL "" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux"))
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-linux")
+    else()
+        message(FATAL_ERROR "[vcpkg] no default triplet for target '${CMAKE_SYSTEM_NAME}' (host '${CMAKE_HOST_SYSTEM_NAME}') - set VCPKG_TARGET_TRIPLET in the preset (arm64-android, wasm32-emscripten)")
     endif()
 
     set(VCPKG_TARGET_TRIPLET "${sw_vcpkg_triplet}" CACHE STRING "" FORCE)

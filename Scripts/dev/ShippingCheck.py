@@ -32,6 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
+from common.HostPlatform import isWindowsHost, kHost  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.RunProcess import runProcess  # noqa: E402
 
@@ -44,7 +45,7 @@ kServerExitTicks = 120
 #: 자동화를 뺀 구성이 `-scenario` 를 받았을 때 남기는 오류(`App::startAutomation` — 실행기의 자기 등록 `IAutomationRuntime` 이 없을 때).
 kNoAutomationError = "need a build with SW_ENABLE_AUTOMATION=ON"
 kLogLinePattern = re.compile(r"\[(Error|Warning)\]")
-kExecutableSuffix = ".exe" if sys.platform == "win32" else ""
+kExecutableSuffix = kHost.executableSuffix
 
 
 @dataclass
@@ -83,7 +84,7 @@ def buildPreset(projectRoot: Path, preset: str) -> bool:
 
 def closeProcessWindow(process: subprocess.Popen[bytes]) -> None:
     """창에 닫기를 보낸다 — 사용자가 창을 닫은 것과 같은 길(강제 종료가 아니다)."""
-    if sys.platform == "win32":
+    if isWindowsHost():
         subprocess.run(["taskkill", "/PID", str(process.pid)], capture_output=True, check=False)
     else:
         process.terminate()

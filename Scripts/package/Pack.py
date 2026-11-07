@@ -40,15 +40,15 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.ProjectConstants import kDirRuntimeGamePreset  # noqa: E402
 from common.RunProcess import runProcess  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.HostPlatform import executableName, kHost  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 kListStepName: tuple[str, ...] = ("build", "cook", "stage", "verify")
 #: 타깃마다 Shipping 프리셋과 실행 파일 이름.
 kMapTargetPreset: dict[str, str] = {"Client": "Ninja-Shipping", "Server": "Ninja-Shipping-Server"}
-kMapTargetExecutable: dict[str, str] = {"Client": "App.exe" if sys.platform == "win32" else "App",
-                                        "Server": "Server.exe" if sys.platform == "win32" else "Server"}
+kMapTargetExecutable: dict[str, str] = {"Client": executableName("App"), "Server": executableName("Server")}
 #: 실행 파일 옆에 두는 공유 라이브러리 확장자.
-kListLibrarySuffix: tuple[str, ...] = (".dll",) if sys.platform == "win32" else (".so",)
+kListLibrarySuffix: tuple[str, ...] = (kHost.sharedLibrarySuffix,)
 #: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 빌드가 Bin 에 두는 것은 App 이 쿠커라서이고(`sw_deployRuntimeDependencies`),
 #: 배포 App 은 미리 쿠킹한 셰이더만 읽어 패키지에는 넣지 않는다. 폴더로 가르지 않는 이유: dxcompiler 가 dxil 을 이름으로 다시 찾아 실행 파일 폴더 밖에 두면 서명하지 못한다.
 kListCookOnlyLibraryStem: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")

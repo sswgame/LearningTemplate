@@ -49,6 +49,7 @@ from common.ProjectConstants import (
     kKeyWindowsSdkVersion,
 )
 from common.Paths import getProjectRoot, normalizePath
+from common.HostPlatform import isWindowsHost, kHost
 from common.FileCollect import getOrFindCached, isVcpkgRoot
 from common.ExitCode import ExitCode  # noqa: E402
 from setup.ToolchainDetect import (
@@ -147,9 +148,9 @@ class EnvironmentSetupManager:
         sdkDirectory = self.existing_config.get(kKeyWindowsSdkDir, "")
         sdkVersion = self.existing_config.get(kKeyWindowsSdkVersion, "")
 
-        if platform.system() == "Windows" and (not sdkDirectory or not Path(sdkDirectory).exists()):
+        if isWindowsHost() and (not sdkDirectory or not Path(sdkDirectory).exists()):
             sdkDirectory, sdkVersion = findWindowsSdkPath()
-        elif platform.system() != "Windows":
+        elif not isWindowsHost():
             sdkDirectory, sdkVersion = "", ""
 
         foundDxc, foundDxil = findDxcDlls(sdkDirectory, sdkVersion, self.project_root)
@@ -190,7 +191,7 @@ class EnvironmentSetupManager:
         vcpkgPath, ninjaPath = self.resolveToolsInternal()
 
         config = EngineConfig(
-            target_platform=platform.system().lower(),
+            target_platform=kHost.key,
             target_arch=platform.machine().lower(),
             llvm_path=llvmPath,
             libclang_dll_path=libclangPath,
@@ -220,7 +221,7 @@ class EnvironmentSetupManager:
         self.installPreCommitHookInternal()
 
         self.logger.info(
-            f"[Environment] Resolved {kDirConfigEnv}/{kFileToolchainConfig} for OS '{platform.system()}':"
+            f"[Environment] Resolved {kDirConfigEnv}/{kFileToolchainConfig} for OS '{kHost.name}':"
         )
         for key, value in asdict(config).items():
             self.logger.info(f"  - {key:22}: {value}")

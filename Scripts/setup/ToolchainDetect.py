@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import os
-import platform
 import shutil
 import sys
 from collections.abc import Callable
@@ -23,6 +22,7 @@ from typing import Any
 
 from common.FileCollect import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, findFirstValidRoot, platformSearchRoots, selectLatestVersion
 from common.Paths import normalizePath, platformKey, sharedLibraryNames
+from common.HostPlatform import isWindowsHost
 from common.ProjectConstants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
 from common.RunProcess import runProcess
 from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
@@ -186,7 +186,7 @@ def findDxcDlls(sdkDir: str, sdkVer: str, projectRoot: Path) -> tuple[str, str]:
 
     if vulkanSdk := os.environ.get("VULKAN_SDK"):
         searchRoots.append(Path(vulkanSdk))
-    if platform.system() == "Windows" and sdkDir and sdkVer:
+    if isWindowsHost() and sdkDir and sdkVer:
         searchRoots.append(Path(sdkDir))
 
     dxcPath = findHostLibraryInternal(dxcNames, vcpkgDirs, searchRoots)
@@ -203,7 +203,7 @@ def findMsvcPath() -> str:
     Returns:
         MSVC VC/Tools/MSVC 하위의 최신 버전 디렉터리 경로. 찾지 못하면 빈 문자열.
     """
-    if platform.system() != "Windows":
+    if not isWindowsHost():
         return ""
     if (envVcTools := os.environ.get("VCToolsInstallDir")) and Path(envVcTools).exists():
         return normalizePath(envVcTools)
@@ -245,7 +245,7 @@ def findWindowsSdkPath() -> tuple[str, str]:
     Returns:
         (SDK 설치 경로, SDK 버전) 튜플. (Windows 환경이 아니거나 찾지 못하면 빈 문자열 튜플)
     """
-    if platform.system() != "Windows":
+    if not isWindowsHost():
         return "", ""
     # 개발자 셸의 두 변수가 함께 있을 때만 쓴다 — 버전 없이 폴더만 돌려주면 쓰는 쪽이 판을 모른다. 아니면 레지스트리가 정본이다.
     envSdkDir, envSdkVersion = os.environ.get("WindowsSdkDir"), os.environ.get("WindowsSDKVersion")
@@ -291,7 +291,7 @@ def setupBuildToolInternal(toolName: str,
         name=toolName,
         tools_subdir_key=subdirKey,
         search_roots_key=searchRootsKey,
-        bin_names=(exeName, exeName.replace(".exe", "") if platform.system() == "Windows" else exeName),
+        bin_names=(exeName, exeName.replace(".exe", "") if isWindowsHost() else exeName),
         validate_func=isUsableInternal,
     )
     if found := findToolRoot(spec, search, logger=logger):
@@ -309,7 +309,7 @@ def setupBuildToolInternal(toolName: str,
     extractZipSafe(archivePath, toolsDir)
     if not localExePath.is_file():
         raise RuntimeError(f"[{toolName}] 압축을 풀었지만 {localExePath} 가 없습니다: {archivePath}")
-    if platform.system() != "Windows":
+    if not isWindowsHost():
         os.chmod(localExePath, 0o755)
     logger.info(f"[{toolName}] Installed: {localExePath}")
     return recordEnginePath(f"{toolName.lower()}_path", localExePath)
@@ -317,6 +317,6 @@ def setupBuildToolInternal(toolName: str,
 
 def setupNinja() -> str:
     """시스템 PATH 또는 search_paths.json에서 Ninja 빌드 도구를 탐색하며, 없을 경우 다운로드하여 Tools/Ninja에 설치합니다."""
-    exeName = "ninja.exe" if platform.system() == "Windows" else "ninja"
+    exeName = "ninja.exe" if isWindowsHost() else "ninja"
 
     return setupBuildToolInternal("SetupNinja", exeName, kKeyNinjaToolsSubdir, kKeyNinjaSearchRoots, kKeyNinjaDownloadUrls)

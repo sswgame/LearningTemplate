@@ -18,7 +18,7 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	set(swReDetect FALSE)
 
 	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND NOT "$CACHE{SW_CACHED_WIN_AR}" MATCHES "llvm-lib")
-		sw_pinnedArchiverPath(swProbeAr)
+		sw_pinnedArchiverPath(swProbeAr "llvm-lib.exe")
 
 		if(swProbeAr)
 			set(swReDetect TRUE)
@@ -42,7 +42,7 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 
 	# **고정 LLVM 의 llvm-lib 을 가장 먼저 본다** (왜 그래야 하는지는 ToolchainBinaries.cmake 머리 주석).
 	# 컴파일러가 Tools/LLVM 것이므로 MSVC lib.exe 는 고정 llvm-lib 이 없을 때의 폴백일 뿐이다.
-	sw_pinnedArchiverPath(swPinnedAr)
+	sw_pinnedArchiverPath(swPinnedAr "llvm-lib.exe")
 
 	if(swPinnedAr)
 		set(swAr "${swPinnedAr}")

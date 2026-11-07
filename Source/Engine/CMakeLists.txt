@@ -194,8 +194,12 @@ target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
 # 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(Jolt 와 같은 방식).
 # 링크하지 않는다 — Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`). 리눅스는 링크한다.
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
-	if(NOT WIN32)
+	if(sw_platform_name STREQUAL "Windows")
+		# 링크하지 않는다(위 — 지연 로드).
+	elseif(sw_platform_name STREQUAL "Linux")
 		target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
+	else()
+		message(FATAL_ERROR "[Engine] Tracy link mode for platform '${sw_platform_name}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
 	endif()
 	target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
 	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")

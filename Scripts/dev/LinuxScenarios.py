@@ -26,6 +26,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common.HostPlatform import isWindowsHost  # noqa: E402
+
 DISTRO = 'Ubuntu-26.04'
 WINDOWS_REPO = pathlib.Path(__file__).resolve().parents[2]
 WSL_REPO = '/mnt/d/Projects/Personal/LearningTemplate'
@@ -359,7 +362,7 @@ def stop():
 
 
 def main(argv):
-    if os.name == 'nt':
+    if isWindowsHost():
         return run_in_wsl(argv)
     command = argv[0] if argv else ''
     arguments = argv[1:]

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from common.ExitCode import ExitCode
+from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
 
 _kHashLine = re.compile(r"\[DestructionHash\]\s+side=(?P<side>server|client)\s+id=(?P<id>\d+)\s+events=(?P<events>\d+)\s+hash=(?P<hash>[0-9a-fA-F]+)\s+name=(?P<name>.*)$")
@@ -102,8 +103,8 @@ def _printResult(result: CompareResult) -> int:
 def _runPair(argument: argparse.Namespace) -> int:
     root = getProjectRoot()
     binDir = root / "build" / argument.preset / "Bin"
-    serverExe = binDir / ("Server.exe" if sys.platform == "win32" else "Server")
-    clientExe = binDir / ("App.exe" if sys.platform == "win32" else "App")
+    serverExe = binDir / executableName("Server")
+    clientExe = binDir / executableName("App")
     for exe in (serverExe, clientExe):
         if not exe.exists():
             print(f"[destruction-net] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")

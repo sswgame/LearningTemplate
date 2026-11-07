@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from common.ExitCode import ExitCode
+from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
 
 _kGame = "Empty"
@@ -116,8 +117,8 @@ def _stop(process: subprocess.Popen, quitLine: bool, timeout: float) -> None:
 def _run(argument: argparse.Namespace) -> int:
     root = getProjectRoot()
     binDir = root / "build" / argument.preset / "Bin"
-    serverExe = binDir / ("Server.exe" if sys.platform == "win32" else "Server")
-    clientExe = binDir / ("App.exe" if sys.platform == "win32" else "App")
+    serverExe = binDir / executableName("Server")
+    clientExe = binDir / executableName("App")
     for exe in (serverExe, clientExe):
         if not exe.exists():
             print(f"[net-pair] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")

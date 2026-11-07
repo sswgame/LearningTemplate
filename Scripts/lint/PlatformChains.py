@@ -15,6 +15,14 @@ Scripts/lint/PlatformChains.py
 첫 조건에 다른 매크로가 섞인 사슬(`SW_PLATFORM_LINUX && SW_WITH_CLIENT_CODE`, 내장 함수 고르기)은 기능 검사라 보지 않는다.
 예외는 `Config/Dev/PlatformChains.json` 에 이유와 함께 적는다(데스크톱 전용 폴더 · 플랫폼 폴더 · 매크로 검사 파일).
 
+CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 — `if(WIN32) … else()` 의 `else()` 가 몸을 가지면 Android · Emscripten 이 Linux 가지를
+조용히 탄다. 플랫폼 검사(`WIN32` · `UNIX` · `CMAKE_SYSTEM_NAME STREQUAL` · `sw_platform_name STREQUAL` · 호스트 `CMAKE_HOST_*`)만으로 된 첫 조건의
+사슬은 `else()` + `message(FATAL_ERROR …)` 로 끝나고, 부정(`NOT WIN32`)만으로 된 조건은 `return()` · `FATAL_ERROR` 만 거는 가드일 때만 쓴다.
+POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변수가 섞인 조건(`WIN32 AND NOT SW_SHIPPING_BUILD`)은 기능 검사라 보지 않는다.
+
+스크립트(`Scripts/**.py`)는 호스트 OS 를 `common/HostPlatform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
+다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
+
 `py -3 -m Scripts platform-chains [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
 """
 
@@ -96,9 +104,93 @@ def readSources(projectRoot: Path) -> list[tuple[str, str]]:
     return listSource
 
 
+kCMakeDirective = re.compile(r"^\s*(if|elseif|else|endif)\s*\((.*)\)\s*(?:#.*)?$", re.I)
+kCMakePlatformAtom = re.compile(
+    r'^(?:NOT\s+)?(?:WIN32|UNIX|APPLE|ANDROID|EMSCRIPTEN|CMAKE_HOST_WIN32|CMAKE_HOST_UNIX|CMAKE_HOST_APPLE'
+    r'|(?:CMAKE_SYSTEM_NAME|CMAKE_HOST_SYSTEM_NAME|sw_platform_name)\s+STREQUAL\s+"\w*")$')
+kCMakeGuardBody = re.compile(r"^\s*(?:return\(\)|message\(\s*FATAL_ERROR\b.*|#.*|)\s*$")
+kCMakeFatal = re.compile(r"^\s*message\(\s*FATAL_ERROR\b")
+kPythonHostQuery = re.compile(r"\bsys\.platform\b|\bos\.name\b|\bplatform\.system\(\)")
+kPythonHostTable = "Scripts/common/HostPlatform.py"
+
+
+def isCMakePlatformOnly(condition: str) -> bool:
+    """`OR` 로 이은 원자가 모두 플랫폼 검사면 True 다(다른 변수가 섞이면 기능 검사라 보지 않는다)."""
+    listAtom = [atom.strip() for atom in re.split(r"\s+OR\s+", condition.strip())]
+    return bool(listAtom) and all(kCMakePlatformAtom.match(atom) for atom in listAtom)
+
+
+def findCMakeProblemsInText(path: str, text: str) -> list[str]:
+    """CMake 글 하나의 플랫폼 사슬 위반을 돌려준다."""
+    listProblem: list[str] = []
+    lines = text.split("\n")
+    stack: list[list[tuple[str, str, int]]] = []
+    for lineNumber, line in enumerate(lines, 1):
+        match = kCMakeDirective.match(line)
+        if match is None:
+            continue
+        keyword = match.group(1).lower()
+        condition = match.group(2)
+        if keyword == "if":
+            stack.append([(keyword, condition, lineNumber)])
+        elif keyword in ("elseif", "else"):
+            if stack:
+                stack[-1].append((keyword, condition, lineNumber))
+        elif stack:
+            chain = stack.pop()
+            first = chain[0]
+            if not isCMakePlatformOnly(first[1]):
+                continue
+            if first[1].strip().startswith("NOT") and len(chain) == 1:
+                if not all(kCMakeGuardBody.match(body) for body in lines[first[2]:lineNumber - 1]):
+                    listProblem.append(f"{path}:{first[2]}: 플랫폼 부정(`if(NOT WIN32)`)이 몸을 가진다(남은 플랫폼을 가정한다) — 플랫폼을 이름으로 적고 `else()` + `message(FATAL_ERROR …)` 로 끝낸다")
+                continue
+            if len(chain) < 2:
+                continue
+            last = chain[-1]
+            if last[0] != "else":
+                listProblem.append(f"{path}:{first[2]}: 플랫폼 사슬에 `else()` 가 없어 새 플랫폼에서 몸이 조용히 빈다 — `else()` + `message(FATAL_ERROR …)` 로 끝낸다")
+            elif not any(kCMakeFatal.match(body) for body in lines[last[2]:lineNumber - 1]):
+                listProblem.append(f"{path}:{last[2]}: 플랫폼 사슬의 `else()` 가 몸을 가진다(남은 플랫폼을 가정한다) — `elseif(UNIX)` 처럼 이름으로 적고 `else()` + `message(FATAL_ERROR …)` 로 끝낸다")
+    return listProblem
+
+
+def findPythonProblemsInText(path: str, text: str) -> list[str]:
+    """스크립트 하나가 호스트 OS 를 표 밖에서 묻는 줄을 돌려준다."""
+    if path in (kPythonHostTable, "Scripts/lint/PlatformChains.py"):   # 표 자체와 이 린트(질의 낱말을 글로 든다)
+        return []
+    return [f"{path}:{lineNumber}: 호스트 OS 를 직접 묻는다 — `common/HostPlatform.py`(isWindowsHost · kHost · executableName)를 쓴다"
+            for lineNumber, line in enumerate(text.split("\n"), 1) if kPythonHostQuery.search(line.split("#")[0])]
+
+
+def readBuildSources(projectRoot: Path) -> list[tuple[str, str]]:
+    """CMake · 스크립트 글(ThirdParty · build 밖)."""
+    listSource: list[tuple[str, str]] = []
+    listPath = [projectRoot / "CMakeLists.txt", *(projectRoot / "cmake").rglob("*.cmake"),
+                *(projectRoot / "Source").rglob("CMakeLists.txt"), *(projectRoot / "Scripts").rglob("*.py")]
+    for path in listPath:
+        if not path.is_file() or "__pycache__" in path.parts or "graphify-out" in path.parts:
+            continue
+        try:
+            listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
+        except (UnicodeDecodeError, OSError):
+            continue
+    return listSource
+
+
+def findBuildProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
+    listProblem: list[str] = []
+    for path, text in listSource:
+        if path.endswith(".py"):
+            listProblem.extend(findPythonProblemsInText(path, text))
+        else:
+            listProblem.extend(findCMakeProblemsInText(path, text))
+    return listProblem
+
+
 def checkPlatformChains(projectRoot: Path) -> list[str]:
     table = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
-    return findProblems(readSources(projectRoot), table)
+    return findProblems(readSources(projectRoot), table) + findBuildProblems(readBuildSources(projectRoot))
 
 
 def runSelfCheck() -> None:
@@ -116,6 +208,20 @@ def runSelfCheck() -> None:
     assert len(findProblems([("Source/a.cpp", "#if !defined( SW_PLATFORM_WINDOWS )\nint a;\n#endif\n")], table)) == 1, "부정"
     bad = "#if defined( SW_PLATFORM_WINDOWS )\nint a;\n#else\nint b;\n#endif\n"
     assert findProblems([("Source/Editor/a.cpp", bad), ("Source/Engine/Linux/a.cpp", bad)], table) == [], "예외 폴더"
+    kFatal = 'else()\n\tmessage(FATAL_ERROR "x")\nendif()\n'
+    cleanCMake = (
+        "if(WIN32)\n\tset(a 1)\nendif()\n"
+        + "if(WIN32)\n\tset(a 1)\nelseif(UNIX)\n\tset(a 2)\n" + kFatal
+        + "if(NOT WIN32)\n\treturn()\nendif()\n"
+        + "if(WIN32 AND NOT SW_SHIPPING_BUILD)\n\tset(a 1)\nelse()\n\tset(a 2)\nendif()\n"
+        + 'if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")\n\treturn()\nendif()\n'
+    )
+    assert findBuildProblems([("cmake/a.cmake", cleanCMake)]) == [], "CMake 허용 모양은 통과해야 한다"
+    assert len(findBuildProblems([("cmake/a.cmake", "if(WIN32)\n\tset(a 1)\nelse()\n\tset(a 2)\nendif()\n")])) == 1, "CMake else 몸"
+    assert len(findBuildProblems([("cmake/a.cmake", 'if(WIN32)\n\tset(a 1)\nelseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")\n\tset(a 2)\nendif()\n')])) == 1, "CMake else 없음"
+    assert len(findBuildProblems([("cmake/a.cmake", "if(NOT WIN32)\n\tset(a 1)\nendif()\n")])) == 1, "CMake 부정 몸"
+    assert len(findBuildProblems([("Scripts/a.py", 'x = sys.platform == "win32"\n')])) == 1, "스크립트 직접 질의"
+    assert findBuildProblems([(kPythonHostTable, "platform.system()\n")]) == [], "호스트 표 자체"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -25,6 +25,7 @@ from .ToolDownload import ensureCachedDownload, resolveToolsSubdir, toolsCacheDi
 from .ToolchainConfig import loadSearchPaths, loadToolchainConfig
 from .ProjectConstants import kKeyClangFormatVersion, kKeyLlvmPath, kKeyLlvmToolsSubdir
 from .Paths import normalizePath
+from .HostPlatform import isWindowsHost
 from .RunProcess import runProcess
 
 _kClangFormatWin = "clang-format.exe"
@@ -32,7 +33,7 @@ _kClangFormatPosix = "clang-format"
 
 
 def clangFormatFileNameInternal() -> str:
-    return _kClangFormatWin if platform.system() == "Windows" else _kClangFormatPosix
+    return _kClangFormatWin if isWindowsHost() else _kClangFormatPosix
 
 
 def pinnedClangFormatVersion() -> str:
@@ -89,10 +90,9 @@ def resolveClangFormatWheelUrlInternal(version: str) -> str:
     if not version:
         return ""
 
-    system = platform.system()
     machine = platform.machine().lower()
     bArm = machine in ("arm64", "aarch64")
-    if system == "Windows":
+    if isWindowsHost():
         listTag = ["win_amd64"] if machine.endswith("64") else ["win32"]
     else:
         listTag = ["manylinux", "aarch64"] if bArm else ["manylinux", "x86_64"]
@@ -129,7 +129,7 @@ def installClangFormatFromWheelInternal(wheel: Path, destBin: Path) -> bool:
                 outPath = destBin / wantName
                 with archive.open(member) as source, open(outPath, "wb") as outFile:
                     shutil.copyfileobj(source, outFile)
-                if platform.system() != "Windows":
+                if not isWindowsHost():
                     outPath.chmod(outPath.stat().st_mode | 0o111)
                 print(f"[ClangFormat] Installed {outPath}", file=sys.stderr)
                 return True

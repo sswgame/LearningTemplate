@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .Paths import getProjectRoot
+from .HostPlatform import isWindowsHost
 from .RunProcess import ProcessResult, runProcess
 
 
@@ -24,7 +25,7 @@ def resolveGitExecutable() -> str | None:
     if foundPath := shutil.which("git"):
         return foundPath
 
-    if sys.platform == "win32":
+    if isWindowsHost():
         # 설치 폴더는 환경 변수가 정본이다 — 경로 리터럴로 대신하면 다른 드라이브에 깐 PC 에서 엉뚱한 곳을 본다.
         # ProgramFiles 는 Windows 가 늘 정의하므로 없으면 환경이 깨진 것이다. 나머지 둘은 없는 PC 가 있다(32비트 · 사용자 설치 안 함).
         if "ProgramFiles" not in os.environ:

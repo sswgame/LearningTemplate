@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import functools
 import os
-import platform
 import re
 from pathlib import Path
+
+from .HostPlatform import isWindowsHost, kHost
 
 PathLike = str | Path
 
@@ -69,22 +70,17 @@ def platformKey() -> str:
     """
     현재 시스템에 대한 플랫폼 키('windows', 'linux')를 반환합니다.
     """
-    systemName = platform.system().lower()
-    if systemName.startswith("win"):
-        return "windows"
-    return "linux"
+    return kHost.key
 
 
 def sharedLibraryNames(baseName: str) -> list[str]:
     """
     플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .so).
     """
-    match platform.system():
-        case "Windows":
-            return [f"{baseName}.dll"]
-        case _:
-            name = baseName if baseName.startswith("lib") else f"lib{baseName}"
-            return [f"{name}.so", f"{name}.so.1"]
+    if isWindowsHost():
+        return [f"{baseName}{kHost.sharedLibrarySuffix}"]
+    name = baseName if baseName.startswith(kHost.sharedLibraryPrefix) else f"{kHost.sharedLibraryPrefix}{baseName}"
+    return [f"{name}{kHost.sharedLibrarySuffix}", f"{name}{kHost.sharedLibrarySuffix}.1"]
 
 
 def platformScriptCommand(scriptPath: PathLike) -> list[str]:
@@ -92,7 +88,7 @@ def platformScriptCommand(scriptPath: PathLike) -> list[str]:
     플랫폼별 쉘 스크립트 실행 명령어 리스트를 반환합니다 (Windows: cmd /c, POSIX: bash).
     """
     resolved = str(scriptPath)
-    if platform.system() == "Windows":
+    if isWindowsHost():
         return ["cmd", "/c", resolved]  # .bat · .cmd 는 cmd 만 돌린다(CreateProcess 가 직접 띄우지 못한다)
     return ["bash", resolved]
 

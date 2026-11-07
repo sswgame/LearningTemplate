@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from common.ExitCode import ExitCode
+from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
 from net.NetPairRun import _stop, _waitForText
 
@@ -65,8 +66,8 @@ def _send(process: subprocess.Popen, line: str) -> None:
 def _run(argument: argparse.Namespace) -> int:
     root = getProjectRoot()
     binDir = root / "build" / argument.preset / "Bin"
-    serverExe = binDir / ("Server.exe" if sys.platform == "win32" else "Server")
-    clientExe = binDir / ("App.exe" if sys.platform == "win32" else "App")
+    serverExe = binDir / executableName("Server")
+    clientExe = binDir / executableName("App")
     for exe in (serverExe, clientExe):
         if not exe.exists():
             print(f"[online-local] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")

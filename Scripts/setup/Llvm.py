@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import platform
 import json
 import shutil
 import sys
@@ -36,6 +35,7 @@ from common.ProjectConstants import (
     kKeyLlvmToolsSubdir,
 )
 from common.Paths import getProjectRoot, normalizePath, platformKey, sharedLibraryNames
+from common.HostPlatform import isWindowsHost
 from common.FileCollect import findFirstExistingFile, findFirstExistingFileRecursive
 from setup.ToolchainDetect import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
@@ -136,7 +136,7 @@ def requiredLlvmMajor() -> int:
     Windows 환경의 최신 MSVC STL(VS 2022/18)은 Clang 20 이상 버전을 요구합니다 (STL1000 오류 방지).
     다른 플랫폼은 기본 최소 키트만 만족하면 됩니다.
     """
-    if platform.system() == "Windows":
+    if isWindowsHost():
         return 20
     return 0
 
@@ -152,7 +152,7 @@ def isMinimalLlvmRoot(path: str) -> bool:
         return False
 
     binDir = root / "bin"
-    if platform.system() == "Windows":
+    if isWindowsHost():
         if not (binDir / "clang-cl.exe").is_file():
             return False
         # llvm-lib 도 "최소 유효" 의 일부다. 없으면 LTO 가 통째로 꺼진다 — 그것도 조용히
@@ -332,7 +332,7 @@ def pruneBinInternal(root: Path) -> None:
     binDir = root / "bin"
     if not binDir.is_dir():
         return
-    if platform.system() == "Windows":
+    if isWindowsHost():
         for path in binDir.iterdir():
             lower = path.name.lower()
             if path.is_file() and lower.endswith(".exe") and path.name not in _kWinKeepBinExes:
