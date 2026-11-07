@@ -123,22 +123,9 @@ namespace sw
             outError = step.describe() + ": needs focus, screen or screens";
             return false;
         }
-        for ( const AutomationAttribute& attribute : step._listAttribute )
-        {
-            const bool bUnknownAttribute = attribute._name != "focus" && attribute._name != "screen" && attribute._name != "screens";
-            if ( bUnknownAttribute )
-            {
-                outError = step.describe() + ": unknown attribute '" + attribute._name + "' (focus · screen · screens)";
-                return false;
-            }
-            int32 count = 0;
-            if ( attribute._name == "screens" && ( StringUtil::parseInt( string_view{ attribute._value }, count ) == false || count < 0 ) )
-            {
-                outError = step.describe() + ": screens must be a count, got '" + attribute._value + "'";
-                return false;
-            }
-        }
-        return true;
+        // 칸(모르는 이름 · 개수 · 범위)은 리플렉션 구조체가 정한다 — 화면은 경로 칸이라 참조 검사 · 옮기기가 따라간다.
+        AutomationExpectUIFields fields;
+        return step.readFields( fields, outError );
     }
 
     bool UIScenarioSteps::isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure )

@@ -100,9 +100,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Name = "source_skeleton" )
+        PROPERTY( AssetPath, Name = "source_skeleton" )
         string _sourceSkeleton{};
-        PROPERTY( Name = "target_skeleton" )
+        PROPERTY( AssetPath, Name = "target_skeleton" )
         string _targetSkeleton{};
         PROPERTY( Name = "translation" )
         RetargetTranslationMode _translation{ RetargetTranslationMode::ScaleByPelvisHeight };

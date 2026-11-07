@@ -160,9 +160,9 @@ namespace sw
         hashed_string _region{};
         PROPERTY()
         hashed_string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         hashed_string _mesh{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         hashed_string _material{};
         PROPERTY()
         float32 _weight{ 1.0f }; ///< Morph — 적지 않으면 모프를 다 건다

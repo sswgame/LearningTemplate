@@ -9,13 +9,13 @@
     </_mapUserSettingDefault>
   </Engine>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
-  <inputMap>common/input/base.input.xml</inputMap>
-  <inputMap>common/input/move.input.xml</inputMap>
-  <inputMap>common/input/traversal.input.xml</inputMap>
-  <inputMap>common/input/look.input.xml</inputMap>
-  <inputMap>common/input/camera.input.xml</inputMap>
-  <inputMap>common/input/cameraorbit.input.xml</inputMap>
-  <inputMap>game/shooter3d/data/shooter.input.xml</inputMap>
+  <inputMap path="common/input/base.input.xml"/>
+  <inputMap path="common/input/move.input.xml"/>
+  <inputMap path="common/input/traversal.input.xml"/>
+  <inputMap path="common/input/look.input.xml"/>
+  <inputMap path="common/input/camera.input.xml"/>
+  <inputMap path="common/input/cameraorbit.input.xml"/>
+  <inputMap path="game/shooter3d/data/shooter.input.xml"/>
   <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/shooter3d/audio/shooter3d.audioevents.xml</audioEvents>

@@ -24,6 +24,23 @@ namespace sw
     {
         struct ReflectionPipelineInternal
         {
+            /**
+             * @brief 칸 이름 @p name 의 XML 속성 이름입니다 — `XMLFields::getAttributeName` 과 같은 규칙이다(직접 적은 이름은 그대로, `_` 를 떼고, 불리언 `_bX` 는 `x`).
+             * @details 파서는 엔진을 링크하지 않아 같은 규칙을 여기 둔다. 규칙을 바꾸면 둘을 함께 고친다(칸이 두 이름으로 생성 목록에 드는지 파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefFields.h` 가 본다).
+             */
+            static string makeXMLAttributeName( const string& name )
+            {
+                if ( name.empty() || name.front() != '_' )
+                    return name;
+                string     attribute      = name.substr( 1 );
+                const bool bBooleanPrefix = attribute.size() > 1 && attribute[0] == 'b' && 'A' <= attribute[1] && attribute[1] <= 'Z';
+                if ( bBooleanPrefix == false )
+                    return attribute;
+                attribute.erase( 0, 1 );
+                attribute[0] = static_cast<utf8>( attribute[0] - 'A' + 'a' );
+                return attribute;
+            }
+
             /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
             static void appendParameterList( StringBuilder<constant::buffer::kMax8192>& out, const vector<ParsedParameterInfo>& listParameter )
             {
@@ -538,6 +555,11 @@ namespace sw
                     continue;
                 const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
                 stamp._listAssetField.push_back( formatToString( "%#\t%#", prop._name, target ) );
+                // 속성으로 읽는 문서(`XMLFields::readFields`)는 C++ 이름이 아니라 속성 이름(`_shaderPath` → `shaderPath`)으로 적는다 — 그 이름도 낸다.
+                // 예전에는 그 이름을 손 표(`AssetReferenceFields.json`)가 따로 적었다.
+                const string attribute = ReflectionPipelineInternal::makeXMLAttributeName( prop._name );
+                if ( attribute != prop._name )
+                    stamp._listAssetField.push_back( formatToString( "%#\t%#", attribute, target ) );
                 for ( const string& alias : prop._listAlias )
                 {
                     stamp._listAssetField.push_back( formatToString( "%#\t%#", alias, target ) );

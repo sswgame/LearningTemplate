@@ -1,6 +1,6 @@
 /**
  * @file InputMapBundle.h
- * @brief 게임의 입력 맵 묶음입니다 — `gamesettings.xml` 의 `<inputMap>` 줄들과 키트가 선언한 맵을 읽는 차례로 늘어놓습니다.
+ * @brief 게임의 입력 맵 묶음입니다 — `gamesettings.xml` 의 `<inputMap path>` 줄들과 키트가 선언한 맵을 읽는 차례로 늘어놓습니다.
  * @details 차례는 기본 맵(첫 줄) → 키트의 맵(id 순) → 나머지 줄(공통 묶음, 맨 끝이 게임 차이)입니다. 게임 차이가 맨 뒤라 키트 · 공통 액션을 덮거나 지울 수 있습니다.
  *          키트는 `SW_INPUT_MAP_EXTENSION` 한 줄로 선언합니다. 등록자는 모듈과 함께 올라가고 내려가므로 게임 매니페스트(`_listDependency`)가 닿는 키트만 묶음에 듭니다.
  *          Shipping 은 매니페스트를 복사하지 않지만(정적 링크) 의존한 키트만 링크되므로 같은 결과입니다.
@@ -18,6 +18,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -69,6 +70,19 @@ namespace sw
     private:
         const InputMapExtension* _pExtension;
         uint8                    _bRegistered : 1;
+    };
+
+    /**
+     * @brief `gamesettings.xml` 의 묶음 줄(`<inputMap path="common/input/base.input.xml"/>`) 하나입니다.
+     * @details 예전에는 요소 글(`<inputMap>경로</inputMap>`)을 손으로 읽어 경로 칸을 이름 손 표가 따로 적었다 — 리플렉션 칸이라 참조 검사 · 옮기기가 칸을 안다.
+     */
+    REFLECT()
+    struct SW_API InputMapBundleLine
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath, Required )
+        string _path{};
     };
 
     /**

@@ -5,8 +5,8 @@
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <Engine _windowTitle="Meadow Village" _userSettingsSchema="game/meadowvillage/data/meadow.settings.xml" _bUIPauseMenu="true" />
   <startMap>game/meadowvillage/maps/meadow.scene.xml</startMap>
-  <inputMap>common/input/base.input.xml</inputMap>
-  <inputMap>common/input/fastforward.input.xml</inputMap>
-  <inputMap>common/input/interact.input.xml</inputMap>
+  <inputMap path="common/input/base.input.xml"/>
+  <inputMap path="common/input/fastforward.input.xml"/>
+  <inputMap path="common/input/interact.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
 </GameSettings>

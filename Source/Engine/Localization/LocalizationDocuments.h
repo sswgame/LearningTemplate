@@ -14,6 +14,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -171,22 +172,27 @@ namespace sw
      *          번역 메모리는 `tm/<culture>.tm.xml`, 교환 파일은 `po/<culture>.po` 이다. 파일을 훑지 않고 이름으로 읽으므로 팩 안에서도 같다.
      *          `stagedCultures` 는 출시하는 문화권이다(언리얼 패키징 설정의 Cultures to Stage). `cultures` 의 부분 집합이어야 하고, `--check-text` 는 이 문화권의
      *          빠지거나 낡은 번역을 실패로 본다. 목록 밖 문화권은 번역 중으로 보고 개수만 보고한다.
+     *          자산 뿌리(`assetRoots`)는 리소스 경로 칸이라 리플렉션 칸으로 선언한다 — 참조 검사 · 옮기기가 칸 이름을 생성 목록에서 안다(읽기는 아래 손 읽기가 한다. 목록 모양은 리플렉션 컨테이너와 같다).
      */
+    REFLECT()
     class SW_API LocalizationProject
     {
     public:
+        REFLECT_BODY();
+
         static constexpr const utf8* kExtension = ".locproject.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
 
-        string                        _name;
-        string                        _sourceCulture;
-        vector<string>                _listCulture;
-        vector<string>                _listStagedCulture;
-        vector<string>                _listStringTable;
-        vector<string>                _listCodeRoot;
+        string         _name;
+        string         _sourceCulture;
+        vector<string> _listCulture;
+        vector<string> _listStagedCulture;
+        vector<string> _listStringTable;
+        vector<string> _listCodeRoot;
+        PROPERTY( AssetPath, Name = "assetRoots" )
         vector<string>                _listAssetRoot;
         vector<LocalizationAssetRule> _listAssetRule;
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */

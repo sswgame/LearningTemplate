@@ -31,16 +31,16 @@ namespace sw::editor
         /** @brief 데이터 종류 이름입니다(`SW_ASSET_TYPE` 등록 줄과 팩 경로가 이것을 쓴다). */
         static constexpr const utf8* kDataKind = "charactereditor";
 
-        PROPERTY( Name = "sockets", Required )
+        PROPERTY( AssetPath, Name = "sockets", Required )
         string _socketPath{}; ///< 소켓 파일(`*.sockets.xml`)
-        PROPERTY( Name = "skeleton", Required )
+        PROPERTY( AssetPath, Name = "skeleton", Required )
         string _skeletonPath{}; ///< 스켈레톤(`*.skeleton.xml`)
         string _refPosePath{};  ///< 레퍼런스 포즈(`*.refpose.xml`) — 스켈레톤 경로에서 만든다(데이터 칸 아님)
-        PROPERTY( Name = "items", Required )
+        PROPERTY( AssetPath, Name = "items", Required )
         string _itemsPath{}; ///< 장비 아이템 카탈로그(`items.xml`)
-        PROPERTY( Name = "appearance", Required )
+        PROPERTY( AssetPath, Name = "appearance", Required )
         string _appearanceFolder{}; ///< 외형 데이터 폴더(`data/appearance`)
-        PROPERTY( Required )
+        PROPERTY( AssetPath, Required )
         string _animationSet{}; ///< 미리보기 몸이 재생하는 애니메이션 셋(`*.animset.xml` — 임포트가 스켈레톤 옆에 쓴다)
         /**
          * @brief 미리보기 몸의 외형 프리셋 id(`presets.xml` 의 것)입니다. 외형 선택에 기준 프리셋이 없을 때 창의 미리보기 씬이 이 프리셋 위에 선택을 입힌다.
@@ -52,7 +52,7 @@ namespace sw::editor
          * @brief 미리보기 몸에 얹어 볼 제약 리그(`*.rig.xml` — 스트라이드 워핑 · 양손 IK 같은 후처리)의 경로입니다. **선택 칸**: 비면 게임에 미리볼 리그가 없다는 뜻이고 창은 리그 단추를 그리지 않는다.
          * @details 여섯 칸이 필수인 것은 없으면 창이 일하지 못하기 때문이고, 리그는 없어도 창이 일하므로 선택이다(없다고 다른 게임의 리그를 쓰지 않는다).
          */
-        PROPERTY( Name = "rig" )
+        PROPERTY( AssetPath, Name = "rig" )
         string _rigPath{};
 
         /** @brief 리소스 경로의 파일을 읽어 표를 바꿉니다. 파일이 없거나, 모르는 원소 · 속성이 있거나, 칸이 빠지면 false 이고 표는 비웁니다. */

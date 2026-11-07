@@ -56,7 +56,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _tileSet{};
     };
 

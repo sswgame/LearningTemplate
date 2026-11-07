@@ -11,6 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
@@ -444,9 +445,16 @@ namespace sw
             }
             if ( elementName == "Scratch" )
             {
+                // 칸은 리플렉션 구조체가 정한다 — 원본 폴더는 경로 칸이라 참조 검사 · 옮기기가 따라간다(`AssetPath`).
+                AutomationScratchFields fields;
+                if ( XMLFields::readFields( atNode, fields, _sourcePath ) == false )
+                {
+                    outError = _sourcePath + ": <Scratch> needs from=\"<source folder>\" and as=\"scratch/<folder>\"";
+                    return false;
+                }
                 AutomationScratchFolder folder;
-                folder._sourceID  = string( atNode.getAttributeText( "from" ) );
-                folder._scratchID = string( atNode.getAttributeText( "as" ) );
+                folder._sourceID  = std::move( fields._from );
+                folder._scratchID = std::move( fields._as );
                 if ( AutomationScratch::isValidFolder( folder, reason ) == false )
                 {
                     outError = _sourcePath + ": " + reason;

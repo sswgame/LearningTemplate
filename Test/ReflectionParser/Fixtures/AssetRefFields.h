@@ -4,6 +4,8 @@
 // EXPECT-ASSET-FIELD: _single FixtureAsset
 // EXPECT-ASSET-FIELD: _listMany FixtureAsset
 // EXPECT-ASSET-FIELD: _annotated -
+// EXPECT-ASSET-FIELD: single FixtureAsset
+// EXPECT-ASSET-FIELD: annotated -
 // EXPECT-NOT-GEN: AssetRef<FixtureAsset>"
 #pragma once
 #include "Core/Container/string.h"

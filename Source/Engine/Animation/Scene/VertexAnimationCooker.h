@@ -44,9 +44,9 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `VertexAnimationCooker.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "VertexAnimationCookList", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        PROPERTY( Name = "mesh", Required )
+        PROPERTY( AssetPath, Name = "mesh", Required )
         string _meshPath;
-        PROPERTY( Name = "skeleton", Required )
+        PROPERTY( AssetPath, Name = "skeleton", Required )
         string _skeletonPath;
         PROPERTY( Name = "animation_set", Required )
         string                _animationSetPath;

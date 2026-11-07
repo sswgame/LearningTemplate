@@ -31,7 +31,7 @@ namespace sw
         string _defaultValue{};
         PROPERTY()
         string _value{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _assetPath{};
         PROPERTY()
         string _enumType{};
@@ -43,7 +43,7 @@ namespace sw
         string _tooltip{};
         PROPERTY()
         string _shaderKeyword{};
-        PROPERTY( Tooltip = "Material parameter collection (.matparams.xml) that gives this property its value" )
+        PROPERTY( AssetPath, Tooltip = "Material parameter collection (.matparams.xml) that gives this property its value" )
         string _collection{};
         PROPERTY( Tooltip = "Name inside the collection; required with _collection" )
         string _collectionParameter{};
@@ -85,7 +85,7 @@ namespace sw
 
         PROPERTY()
         string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _shaderPath{};
         PROPERTY()
         MaterialAlphaMode _alphaMode{ MaterialAlphaMode::Opaque };
@@ -165,7 +165,7 @@ namespace sw
         string _name{};
         PROPERTY()
         string _value{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _assetPath{};
     };
 

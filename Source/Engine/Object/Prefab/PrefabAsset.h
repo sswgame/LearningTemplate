@@ -42,7 +42,7 @@ namespace sw
 
         PROPERTY()
         string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _prefab{};
         PROPERTY()
         string _attach{};

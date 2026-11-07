@@ -35,7 +35,7 @@ namespace sw
         string _name{};
         PROPERTY( AssetPath )
         string _path{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _set{};
         PROPERTY()
         string _source{};

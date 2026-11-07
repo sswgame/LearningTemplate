@@ -4,9 +4,9 @@
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <Engine _windowTitle="Ability Arena" _userSettingsSchema="game/abilityarena/data/arena.settings.xml" _bUIPauseMenu="true" />
   <startMap>game/abilityarena/maps/arena.scene.xml</startMap>
-  <inputMap>common/input/base.input.xml</inputMap>
-  <inputMap>common/input/move.input.xml</inputMap>
-  <inputMap>game/abilityarena/data/arena.input.xml</inputMap>
+  <inputMap path="common/input/base.input.xml"/>
+  <inputMap path="common/input/move.input.xml"/>
+  <inputMap path="game/abilityarena/data/arena.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/abilityarena/audio/abilityarena.audioevents.xml</audioEvents>
 </GameSettings>

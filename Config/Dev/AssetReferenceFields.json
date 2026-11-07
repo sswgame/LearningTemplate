@@ -9,11 +9,5 @@
     ],
     "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
     "listCMakeArgument": [ "--render-portraits", "-scenario" ],
-    "listField": [
-        "animationSet", "base", "set", "_albedo", "appearance", "assetPath", "assetRoots", "atlas", "audioEvents",
-        "fit", "fitTables", "from", "inputMap", "items",
-        "loadingScreen", "localizationProject",
-        "material", "mesh", "normalAtlas", "path", "prefab", "rig", "screen", "shaderPath", "skeleton",
-        "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet", "collection"
-    ]
+    "listField": [ "_albedo", "_texture" ]
 }

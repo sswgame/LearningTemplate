@@ -94,7 +94,7 @@ namespace sw
         hashed_string _variant{};
         PROPERTY()
         hashed_string _materialVariant{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         hashed_string _prefab{};
         PROPERTY()
         hashed_string _sprite{};

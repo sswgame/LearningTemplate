@@ -63,13 +63,39 @@ namespace sw
         string _file{};
     };
 
+    /** @brief `<Scratch from as>` 의 인자입니다 — 원본 폴더(추적 중인 픽스처)와 사본 폴더(`scratch/…`). */
+    REFLECT()
+    struct SW_API AutomationScratchFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath, Required )
+        string _from{};
+        PROPERTY( Required )
+        string _as{};
+    };
+
+    /** @brief `ExpectUI` 의 인자입니다. 적은 칸만 본다(셋 중 하나 이상) — 판정은 적었는지를 단계 속성으로 가른다(`screen="None"` 은 화면 없음). */
+    REFLECT()
+    struct SW_API AutomationExpectUIFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _focus{};
+        PROPERTY( AssetPath )
+        string _screen{};
+        PROPERTY( Min = 0 )
+        int32 _screens{ 0 };
+    };
+
     /** @brief `LoadScene` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationLoadSceneFields
     {
         REFLECT_BODY();
 
-        PROPERTY( Required )
+        PROPERTY( AssetPath, Required )
         string _path{};
         PROPERTY( Min = 1 )
         uint32 _timeoutFrames{ 600 };

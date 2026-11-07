@@ -90,9 +90,9 @@ namespace sw
 
         PROPERTY()
         string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _atlas{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _normalAtlas{};
         PROPERTY( Min = 1 )
         int32 _columns{ 1 };

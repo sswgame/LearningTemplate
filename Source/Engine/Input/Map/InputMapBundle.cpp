@@ -12,6 +12,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -85,13 +86,13 @@ namespace sw
         vector<AssetID> listListed;
         for ( XMLNode line = root.findChild( kSettingsElement ); line.isValid(); line = line.findNextSibling( kSettingsElement ) )
         {
-            const utf8* const pText = line.getText();
-            if ( StringUtil::isNullOrEmpty( pText ) )
+            InputMapBundleLine fields;
+            if ( XMLFields::readFields( line, fields, absPath ) == false )
             {
-                SW_LOG_ERROR_ID( "InputMapBundle.EmptyLine", "Input map bundle %#: an <%#> line is empty", absPath, kSettingsElement );
+                SW_LOG_ERROR_ID( "InputMapBundle.LineInvalid", "Input map bundle %#: an <%#> line needs path=\"<input map>\" and nothing else", absPath, kSettingsElement );
                 return false;
             }
-            listListed.push_back( AssetID{ string_view{ pText } } );
+            listListed.push_back( AssetID{ string_view{ fields._path } } );
         }
 
         vector<AssetID> listKit;

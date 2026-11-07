@@ -2,15 +2,15 @@
 
 > 질문: 게임의 입력 맵은 어떤 파일로 이루어지고, 액션 이름은 어떻게 짓는가?
 > 독자: 게임 · 키트의 입력을 더하거나 고치는 사람과 에이전트.
-> 결론: 게임은 `gamesettings.xml` 의 `<inputMap>` 줄들로 기본 맵, 공통 파일, 게임 차이를 쌓는다. 같은 뜻은 접두어 없는 한 이름을 쓰고, 한 게임만 쓰는 것만 접두어를 둔다.
+> 결론: 게임은 `gamesettings.xml` 의 `<inputMap path="…"/>` 줄들로 기본 맵, 공통 파일, 게임 차이를 쌓는다. 같은 뜻은 접두어 없는 한 이름을 쓰고, 한 게임만 쓰는 것만 접두어를 둔다.
 
 ## 모양
 
 ```xml
 <!-- gamesettings.xml - 적은 차례대로 읽는다. 첫 줄이 기본 맵, 맨 끝이 게임 차이다. -->
-<inputMap>common/input/base.input.xml</inputMap>
-<inputMap>common/input/move.input.xml</inputMap>
-<inputMap>game/harvestvalley/data/farm.input.xml</inputMap>
+<inputMap path="common/input/base.input.xml"/>
+<inputMap path="common/input/move.input.xml"/>
+<inputMap path="game/harvestvalley/data/farm.input.xml"/>
 ```
 
 ```xml

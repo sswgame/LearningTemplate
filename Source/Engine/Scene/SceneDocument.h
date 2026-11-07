@@ -45,7 +45,7 @@ namespace sw
         uint64 _id{ 0 };
         PROPERTY()
         string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _prefab{};
         /** @brief 씬 인스턴스의 앵커면 넣을 씬의 리소스 id 입니다(언리얼 Level Instance). 앵커 자리에 그 씬이 펼쳐진다. */
         PROPERTY()

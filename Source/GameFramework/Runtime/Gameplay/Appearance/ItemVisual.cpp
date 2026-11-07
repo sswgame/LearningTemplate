@@ -41,6 +41,24 @@ namespace sw
                 return nullptr;
             }
 
+            /** @brief 종류 @p kind 가 쓰는 에셋 칸의 값입니다(`getAssetAttribute` 와 같은 갈래). 몸 수정은 에셋이 없다. */
+            template <typename TDef>
+            static hashed_string pickAsset( AppearancePartKind kind, const TDef& def )
+            {
+                switch ( kind )
+                {
+                    case AppearancePartKind::Skinned:
+                        return def._meshAsset;
+                    case AppearancePartKind::SocketPrefab:
+                        return def._prefabAsset;
+                    case AppearancePartKind::Sprite:
+                        return def._spriteAsset;
+                    case AppearancePartKind::BodyModification:
+                        return {};
+                }
+                return {};
+            }
+
             /** @brief 종류에 맞지 않는 에셋 속성이 있으면 오류로 처리합니다. */
             static void reportMisplacedAssetAttributes( const XMLNode& node, AppearancePartKind kind, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
             {
@@ -134,9 +152,9 @@ namespace sw
                 {
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
                     AppearancePartVariantDef variant;
-                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, { "mesh", "prefab", "sprite" } ); // 에셋 속성은 부품 종류가 정한다
+                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName ); // 에셋 칸 중 무엇을 쓰는지는 부품 종류가 정한다(`pickAsset`)
                     readVariantChildren( child, inoutPart, variant, report, sourceName, visualID );
-                    variant._asset = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
+                    variant._asset = pickAsset( inoutPart._kind, variant );
                     if ( variant._skeleton.empty() == false && inoutPart._kind != AppearancePartKind::Skinned )
                         report.addErrorWithID( "Appearance.VariantSkeletonNotSkinned", "%#: visual '%#' part '%#' variant '%#' names a skeleton but the part is not Skinned", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
@@ -149,6 +167,10 @@ namespace sw
                     AppearancePartVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, {} );
                     readVariantChildren( child, inoutPart, variant, report, sourceName, visualID );
+                    // 에셋 칸은 메시 변형(`<Variant>`)의 것이다 — 머티리얼 변형이 적으면 읽히고 쓰이지 않으므로 오류다.
+                    if ( variant._meshAsset.empty() == false || variant._prefabAsset.empty() == false || variant._spriteAsset.empty() == false )
+                        report.addErrorWithID( "Appearance.MaterialVariantAsset", "%#: visual '%#' part '%#' material variant '%#' cannot name an asset (mesh · prefab · sprite)", sourceName, visualID.c_str(),
+                                               inoutPart._name.c_str(), variant._name.c_str() );
                     // 머티리얼 변형은 머티리얼 · 구간 머티리얼 · 머티리얼 값 가운데 하나는 바꿔야 한다(아무것도 바꾸지 않는 변형은 철자 실수다).
                     const bool bChangesNothing = variant._material.empty() && variant._listSection.empty() && variant._listMaterialValue.empty();
                     const bool bInvalidVariant = variant._name.empty() || bChangesNothing || variant._skeleton.empty() == false || inoutPart.findMaterialVariant( variant._name ) != nullptr;
@@ -188,7 +210,7 @@ namespace sw
             {
                 AppearancePartDef part;
                 // 에셋은 종류가 속성을 정하고, 배치 · 충격 · 깃발은 적었는지가 기본값을 가른다.
-                if ( AppearanceXMLUtil::readFields( node, part, report, sourceName, { "mesh", "prefab", "sprite", "socket", "offset", "rotation", "deforms", "breakable", "impulse" } ) == false )
+                if ( AppearanceXMLUtil::readFields( node, part, report, sourceName, { "socket", "offset", "rotation", "deforms", "breakable", "impulse" } ) == false )
                     return;
                 if ( part._name.empty() || inoutVisual.findPart( part._name ) != nullptr )
                 {
@@ -196,8 +218,7 @@ namespace sw
                     return;
                 }
                 reportMisplacedAssetAttributes( node, part._kind, report, sourceName, inoutVisual._id );
-                const utf8* pAssetAttribute = getAssetAttribute( part._kind );
-                part._asset                 = pAssetAttribute != nullptr ? XMLReadUtil::readOptionalName( node, pAssetAttribute ) : hashed_string{};
+                part._asset = pickAsset( part._kind, part );
                 // 자기 리그는 자기 뼈를 움직인다 — 스킨드 부품이고 몸과 다른 자기 스켈레톤을 적어야 한다(몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다).
                 const bool bRigWithoutOwnSkeleton = part._rig.empty() == false && ( part._kind != AppearancePartKind::Skinned || part._skeleton.empty() );
                 if ( bRigWithoutOwnSkeleton )
