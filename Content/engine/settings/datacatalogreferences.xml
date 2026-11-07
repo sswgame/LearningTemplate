@@ -28,6 +28,26 @@
 	<Catalog root="SkillTreeCatalog">
 		<Reference owner="Tree/Skill" attribute="requires" target="Skill" inEntry="true" named="true"/>
 	</Catalog>
+	<!-- 스케줄: 같은 파일의 장소 · 약속 · 아키타입 · NPC 연결. 활동 이름(코드 등록)은 ScheduleCatalog::checkActivityNames 가 같은 정책(로드 실패)으로 본다. -->
+	<Catalog root="Schedules">
+		<Reference owner="Appointment" attribute="place" target="Place"/>
+		<Reference owner="NPC" attribute="home" target="Place"/>
+		<Reference owner="NPC" attribute="archetype" target="Archetype"/>
+		<Reference owner="Archetype" attribute="parent" target="Archetype"/>
+		<Reference owner="Event" attribute="archetypes" target="Archetype"/>
+		<Reference owner="Event" attribute="npcs" target="NPC"/>
+		<Reference owner="NPC/Routine/Block" attribute="place" target="Place"/>
+		<Reference owner="NPC/Routine/Block" attribute="appointment" target="Appointment"/>
+		<Reference owner="Archetype/Routine/Block" attribute="place" target="Place"/>
+		<Reference owner="Archetype/Routine/Block" attribute="appointment" target="Appointment"/>
+		<Reference owner="Event/Block" attribute="place" target="Place"/>
+	</Catalog>
+	<Catalog root="Metroidvania">
+		<Reference owner="Pickup" attribute="ability" target="Ability"/>
+		<Reference owner="Pickup" attribute="charm" target="Charm"/>
+	</Catalog>
+	<!-- 무기(WeaponCatalog)의 projectile · item 은 다른 파일(탄 · 아이템 카탈로그)을 가리켜 이 표에 적지 않는다 — 둘을 함께 쥐는 쪽(게임 · 키트 월드)이
+	     시작할 때 WeaponCatalog::checkProjectiles · findUnknownItems 로 보고, 깨지면 서지 않는다(Shooter3DGame · MechArenaWorld). -->
 	<Catalog root="RTSCatalog">
 		<Reference owner="Unit" attribute="producedBy" target="Unit"/>
 		<Reference owner="Unit" attribute="requires" target="Unit"/>

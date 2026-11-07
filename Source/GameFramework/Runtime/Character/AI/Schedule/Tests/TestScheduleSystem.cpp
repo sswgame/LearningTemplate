@@ -97,3 +97,28 @@ SW_TEST_CASE( ScheduleSystemTest, SameInputsGiveTheSameState )
     SW_EXPECT_EQUAL( first.computeStateHash(), second.computeStateHash() );
     SW_EXPECT_TRUE( first.getPlan( first.findNPCIndex( sw::hashed_string( "a" ) ) ).empty() == false );
 }
+
+/**
+ * @brief [ScheduleSystemTest] 엄격도 — 같은 파일의 없는 장소 · 아키타입은 로드 실패다(참조 표), 모르는 활동도 로드 실패다(코드 등록 이름). 예전에는 경고하고 그 칸 · 연결만 뺐다
+ */
+SW_TEST_CASE( ScheduleSystemTest, BrokenLinksFailTheLoad )
+{
+    {
+        SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+        sw::ScheduleCatalog catalog;
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Schedules><Place id="home" position="0 0 0"/><NPC id="a" home="home" archetype="ghost" speed="10">
+  <Routine id="r"><Block start="9:00" end="10:00" activity="GoTo" place="nowhere"/></Routine></NPC></Schedules>)",
+                                                  "BrokenPlace" ) );
+    }
+    {
+        SW_EXPECT_LOG( "Schedule.BlockActivityUnknown" );
+        sw::ScheduleCatalog catalog;
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Schedules><Place id="home" position="0 0 0"/><NPC id="a" home="home" speed="10">
+  <Routine id="r"><Block start="9:00" end="10:00" activity="Fly" place="home"/></Routine></NPC></Schedules>)",
+                                                  "UnknownActivity" ) );
+    }
+    sw::ScheduleCatalog clean;
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<Schedules><Place id="home" position="0 0 0"/><NPC id="a" home="home" speed="10">
+  <Routine id="r"><Block start="9:00" end="10:00" activity="GoTo" place="home"/></Routine></NPC></Schedules>)",
+                                           "Clean" ) );
+}

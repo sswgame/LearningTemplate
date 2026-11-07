@@ -196,6 +196,16 @@ float3 ShooterPlayerComponent::findMuzzlePosition()
 | 중간(게임 규칙의 데이터 소유권) | Shooter3D의 탄착 행은 [`projectiles.xml`](../Content/game/shooter3d/data/projectiles.xml)에 있지만, [`Shooter3DGame::checkImpacts`](../Source/Games/Shooter3D/Shooter3DGame.cpp)는 `Body`·`Cover`를 코드에 열거해 각 탄의 탄착 행을 검사한다. | 표면 종류가 게임 콘텐츠에 따라 바뀌어야 한다는 요구가 있을 때만 필수 표면 목록을 게임 설정/카탈로그 데이터로 옮긴다. 현재 고정 규칙이면 코드 상수로 유지한다. |
 | 검토 후 제외(자동 생성 의도) | [`CropCatalog::fillItemCatalog`](../Source/GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.cpp)는 작물의 씨앗/생산물 ID에 대응하는 아이템이 없으면 기본 아이템 정의를 만든다. 이를 일반적인 미검증 참조로 분류하면 안 된다. | 자동 생성이 콘텐츠 계약인지 확인하고 그 계약을 유지한다. 기존 ID가 있으면 재사용하는 동작을 검사하며, 데이터 소유권 변경 없이는 이 동작을 오류로 바꾸지 않는다. |
 
+**엄격도 계약(2026-11-08 정함 — S2 · T6):**
+
+| 오류 종류 | 정책 | 보는 곳 |
+|---|---|---|
+| 같은 파일의 id 연결(필수) | 로드 · 쿠킹 실패 | 참조 표 `Content/engine/settings/datacatalogreferences.xml`(런타임 `XMLCatalogLoader` · 쿠커 `PackCooker` 가 같은 표). Schedules(장소 · 약속 · 아키타입 · NPC 11 줄) · Metroidvania(줍는 것 → 능력 · 부적)까지 올렸다 |
+| 다른 팩 · 코드가 채울 수 있는 연결 | 경고만(`optional="true"`) | 같은 표 |
+| 코드 등록 이름(스케줄 활동 · 몸 설정 이름) | 오류, 로드 실패 | 그 카탈로그 코드(`ScheduleCatalog::checkActivityNames`) — 표에 적을 수 없다 |
+| 다른 파일 카탈로그로의 연결(무기 → 탄 · 아이템, 격투 기술 → 프레임) | 둘을 함께 쥐는 쪽이 시작할 때 보고 깨지면 서지 않는다 | `WeaponCatalog::checkProjectiles` · `findUnknownItems` 를 Shooter3DGame · MechArenaWorld 가 부른다. 쿠커는 보지 못한다(텍스트로 읽는 카탈로그 · 다른 폴더 조합이 있어 "같은 폴더 형제 파일" 규칙을 두지 않았다) |
+| 원소 자기 칸의 오류(모르는 속성 · 범위 밖 · 시각 · 겹침) | 오류 · 경고와 그 원소 제외 | 각 카탈로그 읽기(`XMLFields`) — `ResourceDataSchemaTest` 가 경고도 실패로 잡는다 |
+
 **현재까지 확정하지 않은 것:** 카탈로그 유형별 오류 정책이 의도에 맞는지, 전체 팩의 잘못된 참조가 실제 배포 콘텐츠에 있는지는 데이터 일괄 검증을 돌리지 않아 판정하지 않았다. 우선순위는 새 프레임워크를 바로 만드는 것이 아니라 위 검사 목록을 바탕으로 엄격도 계약을 정하고, 잘못된 참조가 쿠킹/게임 시작을 통과하는 회귀 테스트를 추가하는 것이다.
 
 ### ReflectionParser · 런타임 Reflection 고도화 후보 (코드 대조 2026-11-07)

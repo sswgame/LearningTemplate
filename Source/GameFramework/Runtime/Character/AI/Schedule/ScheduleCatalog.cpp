@@ -46,6 +46,19 @@ namespace sw
                     return ( *_pListBlock )[static_cast<size_t>( lhs )]._startMinute < ( *_pListBlock )[static_cast<size_t>( rhs )]._startMinute;
                 }
             };
+
+            /** @brief @p node 아래 모든 깊이의 `Block` 원소마다 @p visit 를 부릅니다(NPC · 아키타입의 루틴, 행사). */
+            template <typename TVisit>
+            static void visitBlocks( const XMLNode& node, const TVisit& visit )
+            {
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+                {
+                    if ( StringUtil::equals( child.getName(), "Block" ) )
+                        visit( child );
+                    else
+                        visitBlocks( child, visit );
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -62,6 +75,7 @@ namespace sw
         , _eventCatalog{}
         , _vocabulary{}
         , _pActivityRegistry{ nullptr }
+        , _bUnknownIdleActivity{ SW_FALSE }
     {
     }
 
@@ -74,7 +88,8 @@ namespace sw
         _archetypeCatalog.clear();
         _npcCatalog.clear();
         _eventCatalog.clear();
-        _vocabulary = ScheduleConditionSchema{};
+        _vocabulary           = ScheduleConditionSchema{};
+        _bUnknownIdleActivity = SW_FALSE;
     }
 
     bool ScheduleCatalog::parseClockMinutes( string_view text, int32& outMinutes )
@@ -181,10 +196,13 @@ namespace sw
             Element::of<&ScheduleElementReader::loadNPC>( "NPC" ),
             Element::of<&ScheduleElementReader::loadEvent>( "Event" ).uncounted(),
         };
+        _bUnknownIdleActivity = SW_FALSE;
         ScheduleElementReader reader{ *this };
         const uint32          loadedCount = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
         resolveReferences( sourceName );
-        return loadedCount;
+        // 같은 파일의 id 연결은 참조 표가 본다(로드 실패). 코드 등록 이름(활동)은 여기서 보고 같은 정책(로드 실패)으로 맞춘다.
+        const bool bActivitiesKnown = checkActivityNames( root, sourceName ) && _bUnknownIdleActivity == SW_FALSE;
+        return bActivitiesKnown ? loadedCount : 0;
     }
 
     void ScheduleCatalog::loadCalendar( const XMLNode& node, string_view sourceName )
@@ -231,11 +249,6 @@ namespace sw
         appointment._startMinute = Internal::readClock( node, "start", sourceName, pID, bValid ).value_or( -1 );
         appointment._endMinute   = Internal::readClock( node, "end", sourceName, pID, bValid ).value_or( -1 );
         bValid                   = appointment._condition.loadFromXML( node, _vocabulary, sourceName, pID ) && bValid;
-        if ( findPlace( appointment._place ) == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ScheduleCatalog.AppointmentUnknownPlaceSkipped", "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
-            bValid = false;
-        }
         if ( bValid && ( appointment._startMinute < 0 || appointment._endMinute <= appointment._startMinute ) )
         {
             SW_LOG_ERROR_ID( "Schedule.AppointmentTimeOrder", "%#: appointment '%#' needs start < end - skipped", sourceName, pID );
@@ -279,12 +292,11 @@ namespace sw
         }
         if ( npc._idleActivity.empty() )
             npc._idleActivity = hashed_string( "StayHome" ); // 적지 않으면 집에 머문다
-        if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
-            SW_LOG_WARNING_ID( "ScheduleCatalog.NpcUnknownHome", "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
         const ScheduleActivityDef* pIdle = getActivityRegistry().findActivity( npc._idleActivity );
         if ( pIdle == nullptr || pIdle->_target != ScheduleActivityTarget::Home )
         {
-            SW_LOG_ERROR_ID( "ScheduleCatalog.NpcIdleActivityNot", "%#: npc '%#' has idle activity '%#' that is not a home activity - skipped", sourceName, pID, npc._idleActivity.c_str() );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.NpcIdleActivityNot", "%#: npc '%#' has idle activity '%#' that is not a home activity - the catalog does not load", sourceName, pID, npc._idleActivity.c_str() );
+            _bUnknownIdleActivity = SW_TRUE; // 코드 등록 이름이라 표가 보지 못한다 — 블록의 활동과 같은 정책(로드 실패)
             return false;
         }
         readRoutineChildren( node, sourceName, "npc", pID, npc._listRoutine );
@@ -301,11 +313,6 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.EventInvalidFieldsSkipped", "%#: event '%#' has invalid fields - skipped", sourceName, pID );
             return;
-        }
-        for ( const hashed_string& archetypeID : event._listArchetype )
-        {
-            if ( findArchetype( archetypeID ) == nullptr )
-                SW_LOG_WARNING_ID( "ScheduleCatalog.EventUnknownArchetype", "%#: event '%#' has an unknown archetype '%#'", sourceName, pID, archetypeID.c_str() );
         }
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
@@ -381,17 +388,10 @@ namespace sw
             return false;
         }
 
+        // 모르는 활동 · 장소는 로드 실패다(활동은 `checkActivityNames`, 장소는 참조 표가 남긴다) — 여기서는 그 칸만 빼고 다시 알리지 않는다.
         const ScheduleActivityDef* pActivity = getActivityRegistry().findActivity( outBlock._activity );
-        if ( pActivity == nullptr )
-        {
-            SW_LOG_WARNING_ID( "Schedule.BlockActivityUnknown", "%#: '%#' has a block with an unknown activity '%#' - skipped", sourceName, ownerName, outBlock._activity.c_str() );
+        if ( pActivity == nullptr || ( outBlock._place.empty() == false && findPlace( outBlock._place ) == nullptr ) )
             return false;
-        }
-        if ( outBlock._place.empty() == false && findPlace( outBlock._place ) == nullptr )
-        {
-            SW_LOG_WARNING_ID( "Schedule.BlockPlaceUnknown", "%#: '%#' has a block with an unknown place '%#' - skipped", sourceName, ownerName, outBlock._place.c_str() );
-            return false;
-        }
 
         bool bValid = true;
         switch ( pActivity->_target )
@@ -417,13 +417,14 @@ namespace sw
             }
             case ScheduleActivityTarget::Appointment:
             {
-                const ScheduleAppointmentDef* pAppointment = findAppointment( outBlock._appointment );
-                if ( bInRoutine == false || pAppointment == nullptr )
+                if ( bInRoutine == false )
                 {
-                    SW_LOG_WARNING_ID( "ScheduleCatalog.BlockUnknownAppointmentOutside", "%#: '%#' has a %# block with an unknown appointment '%#' (or outside a routine) - skipped", sourceName, ownerName,
-                                       outBlock._activity.c_str(), outBlock._appointment.c_str() );
+                    SW_LOG_WARNING_ID( "ScheduleCatalog.BlockAppointmentOutsideRoutine", "%#: '%#' has a %# block outside a routine - skipped", sourceName, ownerName, outBlock._activity.c_str() );
                     return false;
                 }
+                const ScheduleAppointmentDef* pAppointment = findAppointment( outBlock._appointment );
+                if ( pAppointment == nullptr )
+                    return false; // 모르는 약속은 참조 표가 남기고 로드를 실패시킨다(빈 약속은 Required 가 아니라 여기서 빠진다)
                 if ( node.findAttribute( "start" ) != nullptr || node.findAttribute( "end" ) != nullptr )
                     SW_LOG_WARNING_ID( "ScheduleCatalog.BlockOwnStartEnd", "%#: '%#' has a %# block with its own start/end - the appointment's time is used", sourceName, ownerName, outBlock._activity.c_str() );
                 outBlock._startMinute = pAppointment->_startMinute;
@@ -491,10 +492,7 @@ namespace sw
             {
                 const ScheduleArchetypeDef* pParent = findArchetype( current );
                 if ( pParent == nullptr )
-                {
-                    SW_LOG_WARNING_ID( "ScheduleCatalog.ArchetypeUnknownParent", "%#: archetype '%#' has an unknown parent '%#'", sourceName, archetype._id.c_str(), current.c_str() );
-                    break;
-                }
+                    break; // 모르는 부모는 참조 표가 남기고 로드를 실패시킨다
                 current = pParent->_parent;
             }
             const bool bCycle = current.empty() == false && ( current == archetype._id || step > archetypeCount );
@@ -510,9 +508,7 @@ namespace sw
         vector<vector<hashed_string>> listAttendeePerAppointment( _appointmentCatalog.getCount() );
         for ( size_t npcIndex = 0; npcIndex < _npcCatalog.getCount(); ++npcIndex )
         {
-            ScheduleNPCDef npc = _npcCatalog.getAt( npcIndex );
-            if ( npc._archetype.empty() == false && findArchetype( npc._archetype ) == nullptr )
-                SW_LOG_WARNING_ID( "ScheduleCatalog.NpcUnknownArchetype", "%#: npc '%#' has an unknown archetype '%#'", sourceName, npc._id.c_str(), npc._archetype.c_str() );
+            ScheduleNPCDef        npc = _npcCatalog.getAt( npcIndex );
             vector<hashed_string> listRoutineID;
             for ( const ScheduleRoutineDef& routine : npc._listRoutine )
             {
@@ -556,14 +552,21 @@ namespace sw
                                    static_cast<uint32>( appointment._listAttendee.size() ) );
             (void)_appointmentCatalog.replace( appointment );
         }
-        for ( const ScheduleEventDef& event : _eventCatalog.getAll() )
+    }
+
+    bool ScheduleCatalog::checkActivityNames( const XMLNode& root, string_view sourceName ) const
+    {
+        const ScheduleActivityRegistry& registry = getActivityRegistry();
+        bool                            bKnown   = true;
+        ScheduleCatalogInternal::visitBlocks( root, [&]( const XMLNode& block )
         {
-            for ( const hashed_string& npcID : event._listNPC )
-            {
-                if ( findNPC( npcID ) == nullptr )
-                    SW_LOG_WARNING_ID( "ScheduleCatalog.EventUnknownNpc", "%#: event '%#' has an unknown npc '%#'", sourceName, event._id.c_str(), npcID.c_str() );
-            }
-        }
+            const string_view activity = block.getAttributeText( "activity" );
+            if ( activity.empty() == false && registry.findActivity( hashed_string( activity ) ) != nullptr )
+                return;
+            SW_LOG_ERROR_ID( "Schedule.BlockActivityUnknown", "%#: a <Block> names an unknown activity '%#' - the catalog does not load", sourceName, activity );
+            bKnown = false;
+        } );
+        return bKnown;
     }
 } // namespace sw
 

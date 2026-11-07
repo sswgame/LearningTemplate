@@ -92,13 +92,11 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, ParryWindowIsRequired )
 }
 
 /**
- * @brief [MetroidvaniaCatalogTest] 모르는 몸 설정 · 없는 능력이나 부적을 주는 줍는 것 · 플래그 없는 보스는 그 원소만 넣지 않는다
+ * @brief [MetroidvaniaCatalogTest] 원소 자기 칸의 오류(모르는 몸 설정 · 플래그 없는 보스)는 그 원소만 넣지 않는다
  */
 SW_TEST_CASE( MetroidvaniaCatalogTest, BrokenElementsAreSkipped )
 {
     SW_EXPECT_LOG( "MetroidvaniaCatalog.AbilityChangesUnknownMotor" );
-    SW_EXPECT_LOG( "MetroidvaniaCatalog.PickupGrantsUnknownAbility" );
-    SW_EXPECT_LOG( "MetroidvaniaCatalog.PickupGrantsUnknownCharm" );
     SW_EXPECT_LOG( "MetroidvaniaCatalog.BossNeedsFlagSet" );
 
     sw::MetroidvaniaCatalog catalog;
@@ -106,8 +104,6 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, BrokenElementsAreSkipped )
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="typo" name="t" flag="f"><Motor jumpp="1"/></Ability>
   <Ability id="fine" name="f" flag="g"><Motor runSpeed="1"/></Ability>
-  <Pickup id="badAbility" area="a" ability="ghost"/>
-  <Pickup id="badCharm" area="a" charm="ghost"/>
   <Pickup id="goodPickup" area="a" ability="fine"/>
   <Enemy id="flagless" boss="true"/>
   <Enemy id="plain"/>
@@ -115,11 +111,34 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, BrokenElementsAreSkipped )
                                               "broken" ) );
     SW_EXPECT_TRUE( catalog.findAbility( sw::hashed_string( "typo" ) ) == nullptr );
     SW_EXPECT_TRUE( catalog.findAbility( sw::hashed_string( "fine" ) ) != nullptr );
-    SW_EXPECT_TRUE( catalog.findPickup( sw::hashed_string( "badAbility" ) ) == nullptr );
-    SW_EXPECT_TRUE( catalog.findPickup( sw::hashed_string( "badCharm" ) ) == nullptr );
     SW_EXPECT_TRUE( catalog.findPickup( sw::hashed_string( "goodPickup" ) ) != nullptr );
     SW_EXPECT_TRUE( catalog.findEnemy( sw::hashed_string( "flagless" ) ) == nullptr );
     SW_EXPECT_TRUE( catalog.findEnemy( sw::hashed_string( "plain" ) ) != nullptr );
+}
+
+/**
+ * @brief [MetroidvaniaCatalogTest] 없는 능력이나 부적을 주는 줍는 것은 로드 실패다(필수 참조 — `engine/settings/datacatalogreferences.xml`). 예전에는 그 줍는 것만 빠진 채 로드가 성공했다
+ */
+SW_TEST_CASE( MetroidvaniaCatalogTest, PickupNamingAnUnknownGrantFailsTheLoad )
+{
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    sw::MetroidvaniaCatalog catalog;
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania>
+  <Parry><Window grade="Perfect"/></Parry>
+  <Ability id="fine" name="f" flag="g"/>
+  <Pickup id="badAbility" area="a" ability="ghost"/>
+  <Pickup id="badCharm" area="a" charm="ghost"/>
+</Metroidvania>)",
+                                              "broken" ) );
+    sw::MetroidvaniaCatalog clean;
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<Metroidvania>
+  <Parry><Window grade="Perfect"/></Parry>
+  <Ability id="fine" name="f" flag="g"/>
+  <Charm id="later" name="c"/>
+  <Pickup id="goodAbility" area="a" ability="fine"/>
+  <Pickup id="goodCharm" area="a" charm="later"/>
+</Metroidvania>)",
+                                           "clean" ) );
 }
 
 /**

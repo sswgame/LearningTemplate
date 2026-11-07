@@ -299,6 +299,9 @@ namespace sw
             SW_LOG_ERROR_ID( "MechArenaWorld.MechArenaWorldRefusedSettings", "MechArenaWorld: refused settings - %#", rangeError.c_str() );
             return false;
         }
+        // 무기 → 탄은 다른 파일의 연결이라 참조 표가 보지 못한다 — 둘을 함께 쥐는 이 월드가 시작할 때 본다(Shooter3DGame 과 같은 정책, 깨지면 서지 않는다).
+        if ( pWeaponCatalog != nullptr && pProjectileCatalog != nullptr && pWeaponCatalog->checkProjectiles( *pProjectileCatalog ) == false )
+            return false; // 오류는 checkProjectiles 가 남겼다
         _settings           = settings;
         _pMechCatalog       = pMechCatalog;
         _pWeaponCatalog     = pWeaponCatalog;

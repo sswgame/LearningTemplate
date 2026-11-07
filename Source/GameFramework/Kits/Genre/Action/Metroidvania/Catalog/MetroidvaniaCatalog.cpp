@@ -85,7 +85,7 @@ namespace sw
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         if ( loadRules( root, sourceName ) == false )
             return 0;
-        // 줍는 것이 능력 · 부적을 가리키므로 표의 순서대로 읽는다.
+        // 줍는 것이 능력 · 부적을 가리킨다 — 연결은 참조 표가 보고, 읽기는 표의 순서다.
         using Element                          = XMLCatalogElement<MetroidvaniaCatalog>;
         static constexpr Element kArrElement[] = {
             Element::known( "Rules" ),
@@ -137,19 +137,9 @@ namespace sw
 
     bool MetroidvaniaCatalog::loadPickup( const XMLNode& node, string_view sourceName )
     {
+        // 주는 능력 · 부적은 같은 파일의 id 다 — 깨지면 참조 표(`engine/settings/datacatalogreferences.xml`)가 로드 · 쿠킹을 실패시킨다(줍는 것만 빼고 서지 않는다).
         MetroidvaniaPickupDef pickup;
-        bool                  bValid = XMLFields::readFields( node, pickup, sourceName );
-        if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.PickupGrantsUnknownAbility", "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pickup._id.c_str(), pickup._ability.c_str() );
-            bValid = false;
-        }
-        if ( pickup._charm.empty() == false && _charmCatalog.find( pickup._charm ) == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.PickupGrantsUnknownCharm", "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pickup._id.c_str(), pickup._charm.c_str() );
-            bValid = false;
-        }
-        if ( bValid == false )
+        if ( XMLFields::readFields( node, pickup, sourceName ) == false )
             return false;
         (void)_pickupCatalog.add( pickup );
         return true;
