@@ -273,6 +273,7 @@ SW_TEST_CASE_F( GhostHuntTest, CatalogReadsEveryElement )
  */
 SW_TEST_CASE( GhostHuntTest, CatalogEmptyRootFails )
 {
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     GhostCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( "<GhostHunt/>", "GhostHuntTest" ) );
 }
@@ -329,7 +330,7 @@ SW_TEST_CASE( GhostHuntTest, CatalogRefusesOutOfRangeGhost )
  */
 SW_TEST_CASE( GhostHuntTest, CatalogRefusesUnknownElement )
 {
-    SW_EXPECT_LOG( "GhostCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     GhostCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( "<GhostHunt><Poltergeist/></GhostHunt>", "GhostHuntTest" ) );
 }
@@ -339,7 +340,7 @@ SW_TEST_CASE( GhostHuntTest, CatalogRefusesUnknownElement )
  */
 SW_TEST_CASE( GhostHuntTest, CatalogReportsRoomWithUnknownGhost )
 {
-    SW_EXPECT_LOG( "GhostCatalog.RoomNamesUnknownGhost" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     GhostCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<GhostHunt><Room id="a" ghosts="later,nobody" lightFlag="f"/><Ghost id="later"/></GhostHunt>)", "GhostHuntTest" ) );
 }
@@ -349,7 +350,7 @@ SW_TEST_CASE( GhostHuntTest, CatalogReportsRoomWithUnknownGhost )
  */
 SW_TEST_CASE( GhostHuntTest, CatalogReportsBooInUnknownFurniture )
 {
-    SW_EXPECT_LOG( "GhostCatalog.BooNamesUnknownFurniture" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     GhostCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<GhostHunt><Boo id="a" furniture="later"/><Boo id="b" furniture="nothing"/><Furniture id="later"/></GhostHunt>)", "GhostHuntTest" ) );
 }

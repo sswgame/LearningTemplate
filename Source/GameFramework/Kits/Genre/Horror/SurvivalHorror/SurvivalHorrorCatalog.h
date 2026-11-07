@@ -312,13 +312,11 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "SurvivalHorrorCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
-        [[nodiscard]] bool loadFromXML( const XMLNode& node, string_view name, string_view sourceName );
-        [[nodiscard]] bool loadCombine( const XMLNode& node, string_view sourceName );
-        [[nodiscard]] bool loadDialLock( const XMLNode& node, string_view sourceName );
-        [[nodiscard]] bool loadSequence( const XMLNode& node, string_view sourceName );
-        [[nodiscard]] bool loadDocument( const XMLNode& node, string_view sourceName );
-        [[nodiscard]] bool loadDeduction( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadCombine( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadDialLock( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadSequence( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadDocument( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadDeduction( const XMLNode& node, string_view sourceName );
 
     private:
         GameCatalog<SurvivalHorrorItemDef>      _itemCatalog;

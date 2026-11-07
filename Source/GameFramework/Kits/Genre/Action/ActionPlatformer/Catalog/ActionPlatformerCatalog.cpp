@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <algorithm>
 
@@ -45,38 +46,23 @@ namespace sw
     uint32 ActionPlatformerCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<ActionPlatformerCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ActionPlatformerCatalog::loadStage>( "Stage" ),
+            Element::of<&ActionPlatformerCatalog::loadCombo>( "Combo" ),
+            Element::of<&ActionPlatformerCatalog::loadPattern>( "Pattern" ),
+            Element::of<&ActionPlatformerCatalog::loadGrading>( "Grading" ),
+            Element::of<&ActionPlatformerCatalog::_bodySettings>( "Body" ),
+            Element::of<&ActionPlatformerCatalog::_parryRules>( "Parry" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 등급표는 점수를 등급으로 바꾸는 유일한 근거다 — 코드가 대신 정한 표를 쓰지 않는다.
         if ( _grading._listGrade.empty() )
         {
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.NeedsGradingLeastOne", "%#: needs <Grading> with at least one <Grade id=\"..\" min=\"..\"/>", sourceName );
             return 0;
         }
-        return loadedCount;
-    }
-
-    bool ActionPlatformerCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( XMLReadUtil::isElement( name, "Stage" ) )
-            return loadStage( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Combo" ) )
-            return loadCombo( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Pattern" ) )
-            return loadPattern( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Grading" ) )
-            return loadGrading( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Body" ) )
-            return GameDataXML::readSetting( node, sourceName, _bodySettings );
-        if ( XMLReadUtil::isElement( name, "Parry" ) )
-            return GameDataXML::readSetting( node, sourceName, _parryRules );
-        SW_LOG_ERROR_ID( "ActionPlatformerCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        return result._loadedCount;
     }
 
     bool ActionPlatformerCatalog::loadGrading( const XMLNode& node, string_view sourceName )

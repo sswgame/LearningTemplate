@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -134,49 +135,25 @@ namespace sw
     uint32 SRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            const bool        bLoaded = loadFromXML( node, name, sourceName );
-            const bool        bCurve  = name == "PilotCurve" || name == "UnitCurve";
-            if ( bLoaded && bCurve == false )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<SRPGCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&SRPGCatalog::_pilotCurve>( "PilotCurve" ).uncounted(),
+            Element::of<&SRPGCatalog::_unitCurve>( "UnitCurve" ).uncounted(),
+            Element::of<&SRPGCatalog::loadTerrain>( "Terrain" ),
+            Element::of<&SRPGCatalog::loadWeapon>( "Weapon" ),
+            Element::of<&SRPGCatalog::loadUnit>( "Unit" ),
+            Element::of<&SRPGCatalog::loadPilot>( "Pilot" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다.
-        for ( const SRPGUnitDef& def : _unitCatalog.getAll() )
-        {
-            for ( const hashed_string& weaponID : def._listWeaponID )
-            {
-                if ( _weaponCatalog.find( weaponID ) == nullptr )
-                    SW_LOG_ERROR_ID( "SRPGCatalog.UnitUnknownWeapon", "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponID.c_str() );
-            }
-            for ( const SRPGDevelopTarget& target : def._listDevelop )
-            {
-                if ( _unitCatalog.find( target._unitID ) == nullptr )
-                    SW_LOG_ERROR_ID( "SRPGCatalog.UnitDevelopsUnknown", "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitID.c_str() );
-            }
-        }
-        return loadedCount;
-    }
-
-    bool SRPGCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( name == "PilotCurve" )
-            return _pilotCurve.loadFromXML( node, sourceName );
-        if ( name == "UnitCurve" )
-            return _unitCurve.loadFromXML( node, sourceName );
-        if ( name == "Terrain" )
-            return loadTerrain( node, sourceName );
-        if ( name == "Weapon" )
-            return loadWeapon( node, sourceName );
-        if ( name == "Unit" )
-            return loadUnit( node, sourceName );
-        if ( name == "Pilot" )
-            return loadPilot( node, sourceName );
-        SW_LOG_ERROR_ID( "SRPGCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        using Reference                            = XMLCatalogReference<SRPGCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&SRPGCatalog::_weaponCatalog, &SRPGCatalog::_unitCatalog, &SRPGUnitDef::_listWeaponID>( "unit", "weapon" ),
+            Reference::of<&SRPGCatalog::_unitCatalog, &SRPGCatalog::_unitCatalog, &SRPGUnitDef::_listDevelop, &SRPGDevelopTarget::_unitID>( "unit", "develop target" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        return result._loadedCount;
     }
 
     bool SRPGCatalog::loadTerrain( const XMLNode& node, string_view sourceName )

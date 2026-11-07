@@ -11,6 +11,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -40,24 +41,19 @@ namespace sw
         if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _roadCost = rootDef._roadCost;
         _listHouseLevel.clear();
-        uint32 buildingCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            const bool        bLoaded = loadFromXML( node, name, sourceName );
-            if ( bLoaded && StringUtil::equals( name, string_view( "Building" ) ) )
-                ++buildingCount;
-        }
+        using Element                          = XMLCatalogElement<CityCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&CityCatalog::_goodCatalog>( "Good" ).uncounted(),
+            Element::of<&CityCatalog::loadBuilding>( "Building" ),
+            Element::of<&CityCatalog::loadHouseLevel>( "HouseLevel" ).uncounted(),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        // 건물이 가리키는 물자는 모두 읽은 뒤에 확인한다(건물이 물자보다 앞에 적혀도 된다).
-        for ( const CityBuildingDef& building : _buildingCatalog.getAll() )
-        {
-            for ( const hashed_string& goodID : building._listGood )
-            {
-                if ( _goodCatalog.find( goodID ) == nullptr )
-                    SW_LOG_ERROR_ID( "CityCatalog.BuildingNamesUnknownGood", "%#: building '%#' names an unknown good '%#'", sourceName, building._id.c_str(), goodID.c_str() );
-            }
-        }
+        using Reference                            = XMLCatalogReference<CityCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&CityCatalog::_goodCatalog, &CityCatalog::_buildingCatalog, &CityBuildingDef::_listGood>( "building", "good" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
         // 집 단계가 없으면 집이 자랄 곳이 없다 — 기본 단계를 지어내지 않고 로드 실패로 본다.
         if ( _listHouseLevel.empty() )
         {
@@ -66,25 +62,7 @@ namespace sw
         }
         if ( findHouseBuilding() == nullptr )
             SW_LOG_ERROR_ID( "CityCatalog.NoBuildingKindHouse", "%#: no building has kind=\"House\" - nobody can live in this city", sourceName );
-        return buildingCount;
-    }
-
-    bool CityCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( XMLReadUtil::isElement( name, "Good" ) )
-        {
-            CityGoodDef good;
-            if ( XMLFields::readFields( node, good, sourceName ) == false )
-                return false;
-            (void)_goodCatalog.add( good ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-            return true;
-        }
-        if ( XMLReadUtil::isElement( name, "Building" ) )
-            return loadBuilding( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "HouseLevel" ) )
-            return loadHouseLevel( node, sourceName );
-        SW_LOG_ERROR_ID( "CityCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        return result._loadedCount;
     }
 
     bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )

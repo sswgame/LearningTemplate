@@ -1575,9 +1575,9 @@ SW_TEST_CASE( SRPGCatalogTest, ReportsBrokenElements )
     SW_EXPECT_LOG( "SRPGCatalog.MAPWeaponBadPattern" );
     SW_EXPECT_LOG( "SRPGCatalog.WeaponPatternButNo" );
     SW_EXPECT_LOG( "SRPGCatalog.UnitBadDevelopLevel" );
-    SW_EXPECT_LOG( "SRPGCatalog.UnitUnknownWeapon" );
-    SW_EXPECT_LOG( "SRPGCatalog.UnitDevelopsUnknown" );
-    SW_EXPECT_LOG( "SRPGCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     constexpr const utf8* kBrokenXML = R"(<SRPGCatalog>
   <Terrain id="short" name="Short" cost="1 1 1"/>
   <Terrain id="long" name="Long" cost="1 1 1 1 1"/>

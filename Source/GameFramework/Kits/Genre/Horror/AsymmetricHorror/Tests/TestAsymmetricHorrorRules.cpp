@@ -262,7 +262,6 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, SkillCheckWindowAcceptsBonus )
 SW_TEST_CASE( AsymmetricHorrorRulesTest, SkillCheckWindowRefusesUnknownField )
 {
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><SkillCheck><Window grade="Great" bonuss="1"/></SkillCheck><Killer id="a"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_TRUE( catalog.getJudge().getWindows().empty() );
@@ -274,7 +273,6 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, SkillCheckWindowRefusesUnknownField )
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesDuplicateKiller )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a" lungeRange="1"/><Killer id="a" lungeRange="2"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_NEAR( 1.0f, catalog.findKiller( "a" )->_lungeRange, kAsymmetricTolerance );
@@ -286,7 +284,6 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesDuplicateKiller )
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesDuplicateCategory )
 {
     SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.DuplicateCategory" );
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Category id="c" cap="1"/><Category id="c" cap="2"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_NEAR( 1.0f, catalog.getCategoryCap( "c" ), kAsymmetricTolerance );
@@ -298,7 +295,6 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesDuplicateCategory )
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesDuplicateScore )
 {
     SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.DuplicateScoreRule" );
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Score action="Hit" category="c" points="1"/><Score action="Hit" category="c" points="2"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_NEAR( 1.0f, catalog.findScoreRule( "Hit" )->_points, kAsymmetricTolerance );
@@ -309,7 +305,7 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesDuplicateScore )
  */
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogNeedsKiller )
 {
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NoKillerRulesNeed" );
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( "<AsymmetricHorrorRules/>", "AsymmetricHorrorRulesTest" ) );
 }
@@ -319,8 +315,7 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogNeedsKiller )
  */
 SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesUnknownElement )
 {
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.UnknownElementSkipped" );
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Campfire/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
 }
@@ -332,7 +327,6 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, CatalogRefusesOutOfRangeSetting )
 {
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    SW_EXPECT_LOG( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove" );
     AsymmetricHorrorRulesCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AsymmetricHorrorRules><Killer id="a"/><Hook stages="0"/></AsymmetricHorrorRules>)", "AsymmetricHorrorRulesTest" ) );
     SW_EXPECT_EQUAL( AsymmetricHorrorHookDef{}._stages, catalog.getRules()._hook._stages );

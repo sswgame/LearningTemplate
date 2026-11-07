@@ -538,7 +538,7 @@ SW_TEST_CASE_F( ScavengerFacilityTest, LockedDoorsUseBorrowedFlags )
  */
 SW_TEST_CASE( ScavengerFacilityUnknownScrapTest, UnknownMoonScrapIsNeverPicked )
 {
-    SW_EXPECT_LOG( "ScavengerCatalog.MoonListsUnknownScrap" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     constexpr const utf8* kUnknownScrapXML = R"(<ScavengerCatalog>
   <Facility rooms="2" roomsMax="2"/>
   <Scrap id="bolt" min="10" max="10"/>
@@ -961,7 +961,7 @@ SW_TEST_CASE_F( ScavengerFacilityTest, BuyRateInterpolates )
 SW_TEST_CASE( ScavengerCatalogTest, ReportsBrokenElements )
 {
     SW_EXPECT_LOG( "ScavengerCatalog.BuyRateDaysLeft" );
-    SW_EXPECT_LOG( "ScavengerCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "ScavengerCatalog.NoMoonsNowhereLand" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );

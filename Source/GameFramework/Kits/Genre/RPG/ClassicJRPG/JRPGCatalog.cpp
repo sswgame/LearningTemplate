@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -77,74 +78,29 @@ namespace sw
     uint32 JRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<JRPGCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&JRPGCatalog::_curve>( "ExperienceCurve" ),
+            Element::of<&JRPGCatalog::loadClass>( "Class" ),
+            Element::of<&JRPGCatalog::_spellCatalog>( "Spell" ),
+            Element::of<&JRPGCatalog::loadCombo>( "Combo" ),
+            Element::of<&JRPGCatalog::loadManual>( "Manual" ),
+            Element::of<&JRPGCatalog::loadEnemy>( "Enemy" ),
+            Element::of<&JRPGCatalog::loadArea>( "Area" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        // 서로 가리키는 id 는 모두 읽은 뒤에 확인한다.
-        for ( const JRPGClassDef& def : _classCatalog.getAll() )
-        {
-            for ( const JRPGLearnEntry& learn : def._listLearn )
-            {
-                if ( _spellCatalog.find( learn._spellID ) == nullptr )
-                    SW_LOG_ERROR_ID( "JRPGCatalog.ClassLearnsUnknownSpell", "%#: class '%#' learns unknown spell '%#'", sourceName, def._id.c_str(), learn._spellID.c_str() );
-            }
-        }
-        for ( const JRPGSpellDef& def : _spellCatalog.getAll() )
-        {
-            if ( def._manualID.empty() == false && _manualCatalog.find( def._manualID ) == nullptr )
-                SW_LOG_ERROR_ID( "JRPGCatalog.SpellNamesUnknownManual", "%#: spell '%#' names unknown manual '%#'", sourceName, def._id.c_str(), def._manualID.c_str() );
-        }
-        for ( const JRPGEnemyDef& def : _enemyCatalog.getAll() )
-        {
-            // 전투는 모르는 주문을 위력 0 으로 터뜨린다 — 오타가 말없이 시전만 하는 적이 되지 않게 여기서 알린다.
-            if ( def._castSpellID.empty() == false && _spellCatalog.find( def._castSpellID ) == nullptr )
-                SW_LOG_ERROR_ID( "JRPGCatalog.EnemyCastsUnknownSpell", "%#: enemy '%#' casts unknown spell '%#'", sourceName, def._id.c_str(), def._castSpellID.c_str() );
-        }
-        for ( const JRPGManualDef& def : _manualCatalog.getAll() )
-        {
-            for ( const JRPGManualStage& stage : def._listStage )
-            {
-                if ( _spellCatalog.find( stage._techniqueID ) == nullptr )
-                    SW_LOG_ERROR_ID( "JRPGCatalog.ManualUnlocksUnknownTechnique", "%#: manual '%#' unlocks unknown technique '%#'", sourceName, def._id.c_str(), stage._techniqueID.c_str() );
-            }
-        }
-        for ( const JRPGAreaDef& def : _areaCatalog.getAll() )
-        {
-            for ( const JRPGEncounterGroup& group : def._listGroup )
-            {
-                for ( const hashed_string& enemyID : group._listEnemyID )
-                {
-                    if ( _enemyCatalog.find( enemyID ) == nullptr )
-                        SW_LOG_ERROR_ID( "JRPGCatalog.AreaNamesUnknownEnemy", "%#: area '%#' names unknown enemy '%#'", sourceName, def._id.c_str(), enemyID.c_str() );
-                }
-            }
-        }
-        return loadedCount;
-    }
-
-    bool JRPGCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( XMLReadUtil::isElement( name, "ExperienceCurve" ) )
-            return _curve.loadFromXML( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Class" ) )
-            return loadClass( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Spell" ) )
-            return GameDataXML::readInto( node, sourceName, _spellCatalog );
-        if ( XMLReadUtil::isElement( name, "Combo" ) )
-            return loadCombo( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Manual" ) )
-            return loadManual( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Enemy" ) )
-            return loadEnemy( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Area" ) )
-            return loadArea( node, sourceName );
-        SW_LOG_ERROR_ID( "JRPGCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        // 전투는 모르는 주문을 위력 0 으로 터뜨린다 — 오타가 말없이 시전만 하는 적이 되지 않게 여기서 알린다.
+        using Reference                            = XMLCatalogReference<JRPGCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&JRPGCatalog::_spellCatalog, &JRPGCatalog::_classCatalog, &JRPGClassDef::_listLearn, &JRPGLearnEntry::_spellID>( "class", "spell" ),
+            Reference::of<&JRPGCatalog::_manualCatalog, &JRPGCatalog::_spellCatalog, &JRPGSpellDef::_manualID>( "spell", "manual" ),
+            Reference::of<&JRPGCatalog::_spellCatalog, &JRPGCatalog::_enemyCatalog, &JRPGEnemyDef::_castSpellID>( "enemy", "spell" ),
+            Reference::of<&JRPGCatalog::_spellCatalog, &JRPGCatalog::_manualCatalog, &JRPGManualDef::_listStage, &JRPGManualStage::_techniqueID>( "manual", "technique" ),
+            Reference::of<&JRPGCatalog::_enemyCatalog, &JRPGCatalog::_areaCatalog, &JRPGAreaDef::_listGroup, &JRPGEncounterGroup::_listEnemyID>( "area", "enemy" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        return result._loadedCount;
     }
 
     bool JRPGCatalog::loadClass( const XMLNode& node, string_view sourceName )

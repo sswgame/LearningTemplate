@@ -2,11 +2,25 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
+    void XMLCatalogReader::reportUnknownReference( string_view sourceName, const utf8* pOwnerLabel, const utf8* pOwnerID, const utf8* pTargetLabel, const utf8* pTargetID )
+    {
+        SW_LOG_ERROR_ID( "XMLCatalog.UnknownReference", "%#: %# '%#' names an unknown %# '%#'", sourceName, pOwnerLabel, pOwnerID, pTargetLabel, pTargetID );
+    }
+
+    void XMLCatalogReader::reportNoEntries( string_view sourceName, const utf8* pRootName )
+    {
+        SW_LOG_WARNING_ID( "XMLCatalog.NoEntries", "%#: <%#> has no entries", sourceName, pRootName );
+    }
+
     bool XMLCatalogLoader::loadFromFile( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName )
     {
         XMLDocument doc;

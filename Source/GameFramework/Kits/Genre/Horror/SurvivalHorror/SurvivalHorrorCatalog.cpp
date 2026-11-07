@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -101,44 +102,25 @@ namespace sw
     uint32 SurvivalHorrorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
-        // 열쇠 자물쇠가 가리키는 열쇠는 모두 읽은 뒤에 확인한다(자물쇠가 아이템보다 앞에 적혀도 된다).
-        for ( const SurvivalHorrorKeyLockDef& lock : _keyLockCatalog.getAll() )
-        {
-            if ( _itemCatalog.find( lock._keyItem ) == nullptr )
-                SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.KeyLockNamesUnknown", "%#: key lock '%#' names an unknown key item '%#'", sourceName, lock._id.c_str(), lock._keyItem.c_str() );
-        }
-        return loadedCount;
-    }
-
-    bool SurvivalHorrorCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( XMLReadUtil::isElement( name, "Rules" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules );
-        if ( XMLReadUtil::isElement( name, "Item" ) )
-            return GameDataXML::readInto( node, sourceName, _itemCatalog );
-        if ( XMLReadUtil::isElement( name, "Combine" ) )
-            return loadCombine( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Monster" ) )
-            return GameDataXML::readInto( node, sourceName, _monsterCatalog );
-        if ( XMLReadUtil::isElement( name, "KeyLock" ) )
-            return GameDataXML::readInto( node, sourceName, _keyLockCatalog );
-        if ( XMLReadUtil::isElement( name, "DialLock" ) )
-            return loadDialLock( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Sequence" ) )
-            return loadSequence( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Document" ) )
-            return loadDocument( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Deduction" ) )
-            return loadDeduction( node, sourceName );
-        SW_LOG_ERROR_ID( "SurvivalHorrorCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        using Element                          = XMLCatalogElement<SurvivalHorrorCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&SurvivalHorrorCatalog::_rules>( "Rules" ),
+            Element::of<&SurvivalHorrorCatalog::_itemCatalog>( "Item" ),
+            Element::of<&SurvivalHorrorCatalog::loadCombine>( "Combine" ),
+            Element::of<&SurvivalHorrorCatalog::_monsterCatalog>( "Monster" ),
+            Element::of<&SurvivalHorrorCatalog::_keyLockCatalog>( "KeyLock" ),
+            Element::of<&SurvivalHorrorCatalog::loadDialLock>( "DialLock" ),
+            Element::of<&SurvivalHorrorCatalog::loadSequence>( "Sequence" ),
+            Element::of<&SurvivalHorrorCatalog::loadDocument>( "Document" ),
+            Element::of<&SurvivalHorrorCatalog::loadDeduction>( "Deduction" ),
+        };
+        const XMLCatalogReadResult result          = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        using Reference                            = XMLCatalogReference<SurvivalHorrorCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&SurvivalHorrorCatalog::_itemCatalog, &SurvivalHorrorCatalog::_keyLockCatalog, &SurvivalHorrorKeyLockDef::_keyItem>( "key lock", "key item" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        return result._loadedCount;
     }
 
     bool SurvivalHorrorCatalog::loadCombine( const XMLNode& node, string_view sourceName )

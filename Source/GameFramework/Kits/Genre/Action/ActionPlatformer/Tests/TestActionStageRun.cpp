@@ -421,7 +421,7 @@ SW_TEST_CASE( ActionPlatformerCatalogTest, BrokenElementsAreSkipped )
     SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternIdNoState" );
     SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternIdStartsUnknown" );
     SW_EXPECT_LOG( "ActionPlatformerCatalog.PatternStateGoesUnknown" );
-    SW_EXPECT_LOG( "ActionPlatformerCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
 
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ActionPlatformer>

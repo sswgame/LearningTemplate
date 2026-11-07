@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -29,49 +30,24 @@ namespace sw
         GhostHuntRootDef rootDef;
         if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _currency = rootDef._currency;
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
-        // 방이 가리키는 유령은 모두 읽은 뒤에 확인한다(방이 유령보다 앞에 적혀도 된다).
-        for ( const GhostRoomDef& room : _roomCatalog.getAll() )
-        {
-            for ( const hashed_string& ghostID : room._listGhost )
-            {
-                if ( _ghostCatalog.find( ghostID ) == nullptr )
-                    SW_LOG_ERROR_ID( "GhostCatalog.RoomNamesUnknownGhost", "%#: room '%#' names an unknown ghost '%#'", sourceName, room._id.c_str(), ghostID.c_str() );
-            }
-        }
-        // 없는 가구에 숨은 부는 뒤져서 찾을 수 없다(가구가 부보다 뒤에 적혀도 된다).
-        for ( const HidingGhostDef& boo : _booCatalog.getAll() )
-        {
-            if ( boo._furniture.empty() == false && _furnitureCatalog.find( boo._furniture ) == nullptr )
-                SW_LOG_ERROR_ID( "GhostCatalog.BooNamesUnknownFurniture", "%#: boo '%#' hides in an unknown furniture '%#'", sourceName, boo._id.c_str(), boo._furniture.c_str() );
-        }
-        return loadedCount;
-    }
-
-    bool GhostCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( XMLReadUtil::isElement( name, "Flashlight" ) )
-            return GameDataXML::readSetting( node, sourceName, _flashlight );
-        if ( XMLReadUtil::isElement( name, "Vacuum" ) )
-            return loadVacuum( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Ghost" ) )
-            return GameDataXML::readInto( node, sourceName, _ghostCatalog );
-        if ( XMLReadUtil::isElement( name, "Room" ) )
-            return loadRoom( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Door" ) )
-            return GameDataXML::readInto( node, sourceName, _doorCatalog );
-        if ( XMLReadUtil::isElement( name, "Furniture" ) )
-            return loadFurniture( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Boo" ) )
-            return GameDataXML::readInto( node, sourceName, _booCatalog );
-        SW_LOG_ERROR_ID( "GhostCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        using Element                          = XMLCatalogElement<GhostCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&GhostCatalog::_flashlight>( "Flashlight" ),
+            Element::of<&GhostCatalog::loadVacuum>( "Vacuum" ),
+            Element::of<&GhostCatalog::_ghostCatalog>( "Ghost" ),
+            Element::of<&GhostCatalog::_roomCatalog>( "Room" ),
+            Element::of<&GhostCatalog::_doorCatalog>( "Door" ),
+            Element::of<&GhostCatalog::loadFurniture>( "Furniture" ),
+            Element::of<&GhostCatalog::_booCatalog>( "Boo" ),
+        };
+        const XMLCatalogReadResult result          = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        using Reference                            = XMLCatalogReference<GhostCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&GhostCatalog::_ghostCatalog, &GhostCatalog::_roomCatalog, &GhostRoomDef::_listGhost>( "room", "ghost" ),
+            Reference::of<&GhostCatalog::_furnitureCatalog, &GhostCatalog::_booCatalog, &HidingGhostDef::_furniture>( "boo", "furniture" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        return result._loadedCount;
     }
 
     bool GhostCatalog::loadVacuum( const XMLNode& node, string_view sourceName )
@@ -87,14 +63,6 @@ namespace sw
         }
         _vacuum = vacuum;
         return true;
-    }
-
-    bool GhostCatalog::loadRoom( const XMLNode& node, string_view sourceName )
-    {
-        GhostRoomDef room;
-        if ( XMLFields::readFields( node, room, sourceName ) == false )
-            return false;
-        return GameDataXML::addUnique( room, sourceName, _roomCatalog );
     }
 
     bool GhostCatalog::loadFurniture( const XMLNode& node, string_view sourceName )

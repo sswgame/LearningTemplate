@@ -11,6 +11,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <algorithm>
 
@@ -133,53 +134,18 @@ namespace sw
         return _listGradeScale[index];
     }
 
-    bool WesternCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
+    bool WesternCatalog::loadPeltGrade( const XMLNode& node, string_view sourceName )
     {
-        using Internal = WesternCatalogInternal;
-        bool bAdd      = false;
-        if ( XMLReadUtil::isElement( name, "Pursuit" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _listPursuit );
-        else if ( XMLReadUtil::isElement( name, "Honor" ) )
-            bAdd = loadHonor( node, sourceName );
-        else if ( XMLReadUtil::isElement( name, "Bond" ) )
-        {
-            WesternBondLevelDef bond;
-            bAdd = XMLFields::readFields( node, bond, sourceName );
-            if ( bAdd )
-                _listBondLevel.push_back( bond );
-        }
-        else if ( XMLReadUtil::isElement( name, "BondExperience" ) )
-            bAdd = GameDataXML::readSetting( node, sourceName, _bondExperience );
-        else if ( XMLReadUtil::isElement( name, "Survival" ) )
-            bAdd = GameDataXML::readSetting( node, sourceName, _survival );
-        else if ( XMLReadUtil::isElement( name, "DeadEye" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _listDeadEyeLevel );
-        else if ( XMLReadUtil::isElement( name, "PeltGrade" ) )
-            bAdd = Internal::readGradeScales( node, sourceName, _listGradeScale );
-        else if ( XMLReadUtil::isElement( name, "Crime" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _crimeCatalog );
-        else if ( XMLReadUtil::isElement( name, "Region" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _regionCatalog );
-        else if ( XMLReadUtil::isElement( name, "Horse" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _horseCatalog );
-        else if ( XMLReadUtil::isElement( name, "Food" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _foodCatalog );
-        else if ( XMLReadUtil::isElement( name, "Clothing" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _clothingCatalog );
-        else if ( XMLReadUtil::isElement( name, "Animal" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _animalCatalog );
-        else if ( XMLReadUtil::isElement( name, "HitZone" ) )
-            bAdd = GameDataXML::readInto( node, sourceName, _hitZoneCatalog );
-        else if ( XMLReadUtil::isElement( name, "HuntWeapon" ) )
-        {
-            WesternHuntWeaponDef weapon;
-            bAdd = XMLFields::readFields( node, weapon, sourceName, { "sizes" } ) && Internal::readSizeMask( node, sourceName, weapon._sizeMask );
-            if ( bAdd )
-                (void)_huntWeaponCatalog.add( weapon );
-        }
-        else
-            SW_LOG_ERROR_ID( "WesternCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return bAdd;
+        return WesternCatalogInternal::readGradeScales( node, sourceName, _listGradeScale );
+    }
+
+    bool WesternCatalog::loadHuntWeapon( const XMLNode& node, string_view sourceName )
+    {
+        WesternHuntWeaponDef weapon;
+        if ( XMLFields::readFields( node, weapon, sourceName, { "sizes" } ) == false || WesternCatalogInternal::readSizeMask( node, sourceName, weapon._sizeMask ) == false )
+            return false;
+        (void)_huntWeaponCatalog.add( weapon );
+        return true;
     }
 
     uint32 WesternCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -191,13 +157,25 @@ namespace sw
             _currency        = rootDef._currency;
             _extraHitPenalty = rootDef._extraHitPenalty;
         }
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<WesternCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&WesternCatalog::_listPursuit>( "Pursuit" ),
+            Element::of<&WesternCatalog::loadHonor>( "Honor" ),
+            Element::of<&WesternCatalog::_listBondLevel>( "Bond" ),
+            Element::of<&WesternCatalog::_bondExperience>( "BondExperience" ),
+            Element::of<&WesternCatalog::_survival>( "Survival" ),
+            Element::of<&WesternCatalog::_listDeadEyeLevel>( "DeadEye" ),
+            Element::of<&WesternCatalog::loadPeltGrade>( "PeltGrade" ),
+            Element::of<&WesternCatalog::_crimeCatalog>( "Crime" ),
+            Element::of<&WesternCatalog::_regionCatalog>( "Region" ),
+            Element::of<&WesternCatalog::_horseCatalog>( "Horse" ),
+            Element::of<&WesternCatalog::_foodCatalog>( "Food" ),
+            Element::of<&WesternCatalog::_clothingCatalog>( "Clothing" ),
+            Element::of<&WesternCatalog::_animalCatalog>( "Animal" ),
+            Element::of<&WesternCatalog::_hitZoneCatalog>( "HitZone" ),
+            Element::of<&WesternCatalog::loadHuntWeapon>( "HuntWeapon" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         VectorUtil::stableSort( _listPursuit, WesternCatalogInternal::isLowerLevel<WesternPursuitDef> );
         VectorUtil::stableSort( _listBondLevel, WesternCatalogInternal::isLowerLevel<WesternBondLevelDef> );
@@ -212,7 +190,7 @@ namespace sw
             listXPToNext.push_back( MathUtil::max( int64{ 1 }, static_cast<int64>( MathUtil::round( gap ) ) ) );
         }
         _bondCurve.setTable( listXPToNext );
-        return loadedCount;
+        return result._loadedCount;
     }
 
     bool WesternCatalog::loadHonor( const XMLNode& node, string_view sourceName )

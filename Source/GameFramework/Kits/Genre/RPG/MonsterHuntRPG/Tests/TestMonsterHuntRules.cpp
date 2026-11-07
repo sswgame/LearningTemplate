@@ -1257,7 +1257,7 @@ SW_TEST_CASE( MonsterHuntCatalogTest, ReportsBrokenElements )
     SW_EXPECT_LOG( "MonsterHuntCatalog.OilNeedsHitsMore" );
     SW_EXPECT_LOG( "MonsterHuntCatalog.MonsterWeaknessNeedsKnowledge" );
     SW_EXPECT_LOG( "MonsterHuntCatalog.MonsterNamesUnknownWeakness" );
-    SW_EXPECT_LOG( "MonsterHuntCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
 

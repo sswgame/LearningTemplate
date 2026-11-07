@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -49,13 +50,19 @@ namespace sw
     uint32 MonsterHuntCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<MonsterHuntCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&MonsterHuntCatalog::_alchemy>( "Alchemy" ),
+            Element::of<&MonsterHuntCatalog::_combat>( "Combat" ),
+            Element::of<&MonsterHuntCatalog::_listSlotGroup>( "SlotGroup" ),
+            Element::of<&MonsterHuntCatalog::_skillColorCatalog>( "SkillColor" ),
+            Element::of<&MonsterHuntCatalog::loadMonster>( "Monster" ),
+            Element::of<&MonsterHuntCatalog::loadAlchemyItem>( "Item" ),
+            Element::of<&MonsterHuntCatalog::_signCatalog>( "Sign" ),
+            Element::of<&MonsterHuntCatalog::_mutagenCatalog>( "Mutagen" ),
+            Element::of<&MonsterHuntCatalog::loadContract>( "Contract" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         for ( const MonsterHuntMonsterDef& monster : _monsterCatalog.getAll() )
         {
             for ( const MonsterHuntWeakness& weakness : monster._listWeakness )
@@ -65,49 +72,16 @@ namespace sw
                     SW_LOG_ERROR_ID( "MonsterHuntCatalog.MonsterNamesUnknownWeakness", "%#: monster '%#' names an unknown weakness '%#'", sourceName, monster._id.c_str(), weakness._id.c_str() );
             }
         }
-        return loadedCount;
+        return result._loadedCount;
     }
 
-    bool MonsterHuntCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
+    bool MonsterHuntCatalog::loadAlchemyItem( const XMLNode& node, string_view sourceName )
     {
-        if ( XMLReadUtil::isElement( name, "Alchemy" ) )
-        {
-            MonsterHuntAlchemyRuleDef rule;
-            if ( GameDataXML::readSetting( node, sourceName, rule ) == false )
-                return false;
-            _alchemy = rule;
-            return true;
-        }
-        if ( XMLReadUtil::isElement( name, "Combat" ) )
-            return GameDataXML::readSetting( node, sourceName, _combat );
-        if ( XMLReadUtil::isElement( name, "SlotGroup" ) )
-        {
-            MonsterHuntSlotGroupDef group;
-            if ( XMLFields::readFields( node, group, sourceName ) == false )
-                return false;
-            _listSlotGroup.push_back( group );
-            return true;
-        }
-        if ( XMLReadUtil::isElement( name, "SkillColor" ) )
-            return GameDataXML::readInto( node, sourceName, _skillColorCatalog );
-        if ( XMLReadUtil::isElement( name, "Monster" ) )
-            return loadMonster( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Item" ) )
-        {
-            MonsterHuntAlchemyDef item;
-            if ( readAlchemyItem( node, sourceName, item ) == false )
-                return false;
-            (void)_alchemyCatalog.add( item );
-            return true;
-        }
-        if ( XMLReadUtil::isElement( name, "Sign" ) )
-            return GameDataXML::readInto( node, sourceName, _signCatalog );
-        if ( XMLReadUtil::isElement( name, "Mutagen" ) )
-            return GameDataXML::readInto( node, sourceName, _mutagenCatalog );
-        if ( XMLReadUtil::isElement( name, "Contract" ) )
-            return loadContract( node, sourceName );
-        SW_LOG_ERROR_ID( "MonsterHuntCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        MonsterHuntAlchemyDef item;
+        if ( readAlchemyItem( node, sourceName, item ) == false )
+            return false;
+        (void)_alchemyCatalog.add( item );
+        return true;
     }
 
     bool MonsterHuntCatalog::loadMonster( const XMLNode& node, string_view sourceName )

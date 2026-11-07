@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -34,66 +35,53 @@ namespace sw
         AsymmetricHorrorRules rules;
         if ( XMLFields::readFields( root, rules, sourceName ) )
             _rules = rules;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) == false )
-                SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.NotLoadedSeeAbove", "%#: <%#> was not loaded (see above)", sourceName, name );
-        }
-        if ( _catalogKiller.isEmpty() )
-            SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.NoKillerRulesNeed", "%#: no <Killer> - the rules need at least one", sourceName );
-        return static_cast<uint32>( _catalogKiller.getAll().size() );
+        // 살인마가 없으면 판을 열 수 없다 — 세는 줄은 살인마뿐이고 없으면 읽기 실패다.
+        using Catalog                          = AsymmetricHorrorRulesCatalog;
+        using Rules                            = AsymmetricHorrorRules;
+        using Element                          = XMLCatalogElement<Catalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&Catalog::_rules, &Rules::_generator>( "Generator" ).uncounted(),
+            Element::of<&Catalog::_rules, &Rules::_heal>( "Heal" ).uncounted(),
+            Element::of<&Catalog::loadSkillCheck>( "SkillCheck" ).uncounted(),
+            Element::of<&Catalog::_rules, &Rules::_hook>( "Hook" ).uncounted(),
+            Element::of<&Catalog::_rules, &Rules::_pallet>( "Pallet" ).uncounted(),
+            Element::of<&Catalog::_rules, &Rules::_window>( "Window" ).uncounted(),
+            Element::of<&Catalog::_rules, &Rules::_locker>( "Locker" ).uncounted(),
+            Element::of<&Catalog::_rules, &Rules::_endgame>( "Endgame" ).uncounted(),
+            Element::of<&Catalog::_catalogKiller>( "Killer" ),
+            Element::of<&Catalog::loadCategory>( "Category" ).uncounted(),
+            Element::of<&Catalog::loadScore>( "Score" ).uncounted(),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
-    bool AsymmetricHorrorRulesCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
+    bool AsymmetricHorrorRulesCatalog::loadCategory( const XMLNode& node, string_view sourceName )
     {
-        if ( XMLReadUtil::isElement( name, "Generator" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._generator );
-        if ( XMLReadUtil::isElement( name, "Heal" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._heal );
-        if ( XMLReadUtil::isElement( name, "SkillCheck" ) )
-            return loadSkillCheck( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Hook" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._hook );
-        if ( XMLReadUtil::isElement( name, "Pallet" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._pallet );
-        if ( XMLReadUtil::isElement( name, "Window" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._window );
-        if ( XMLReadUtil::isElement( name, "Locker" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._locker );
-        if ( XMLReadUtil::isElement( name, "Endgame" ) )
-            return GameDataXML::readSetting( node, sourceName, _rules._endgame );
-        if ( XMLReadUtil::isElement( name, "Killer" ) )
-            return GameDataXML::readInto( node, sourceName, _catalogKiller );
-        if ( XMLReadUtil::isElement( name, "Category" ) )
+        AsymmetricHorrorScoreCategoryDef category;
+        if ( XMLFields::readFields( node, category, sourceName ) == false )
+            return false;
+        if ( _categoryCap.findValue( category._id ).has_value() )
         {
-            AsymmetricHorrorScoreCategoryDef category;
-            if ( XMLFields::readFields( node, category, sourceName ) == false )
-                return false;
-            if ( _categoryCap.findValue( category._id ).has_value() )
-            {
-                SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.DuplicateCategory", "%#: category '%#' is defined twice", sourceName, category._id.c_str() );
-                return false;
-            }
-            _categoryCap.setValue( category._id, category._cap );
-            return true;
+            SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.DuplicateCategory", "%#: category '%#' is defined twice", sourceName, category._id.c_str() );
+            return false;
         }
-        if ( XMLReadUtil::isElement( name, "Score" ) )
+        _categoryCap.setValue( category._id, category._cap );
+        return true;
+    }
+
+    bool AsymmetricHorrorRulesCatalog::loadScore( const XMLNode& node, string_view sourceName )
+    {
+        AsymmetricHorrorScoreRule rule;
+        if ( XMLFields::readFields( node, rule, sourceName ) == false )
+            return false;
+        // 찾기는 앞의 규칙을 돌려주므로, 겹친 뒤 규칙은 말없이 쓰이지 않는다.
+        if ( findScoreRule( rule._action ) != nullptr )
         {
-            AsymmetricHorrorScoreRule rule;
-            if ( XMLFields::readFields( node, rule, sourceName ) == false )
-                return false;
-            // 찾기는 앞의 규칙을 돌려주므로, 겹친 뒤 규칙은 말없이 쓰이지 않는다.
-            if ( findScoreRule( rule._action ) != nullptr )
-            {
-                SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.DuplicateScoreRule", "%#: score of action '%#' is defined twice", sourceName, rule._action.c_str() );
-                return false;
-            }
-            _listScoreRule.push_back( rule );
-            return true;
+            SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.DuplicateScoreRule", "%#: score of action '%#' is defined twice", sourceName, rule._action.c_str() );
+            return false;
         }
-        SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        _listScoreRule.push_back( rule );
+        return true;
     }
 
     bool AsymmetricHorrorRulesCatalog::loadSkillCheck( const XMLNode& node, string_view sourceName )

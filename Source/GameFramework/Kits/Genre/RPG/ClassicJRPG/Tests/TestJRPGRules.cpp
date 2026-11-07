@@ -1210,7 +1210,7 @@ SW_TEST_CASE( JRPGTest, CatalogRefusesBrokenElements )
     SW_EXPECT_LOG( "JRPGCatalog.IdNeedsHpMore" );
     SW_EXPECT_LOG( "JRPGCatalog.ComboNeedsTwoMore" );
     SW_EXPECT_LOG( "JRPGCatalog.AreaGroupWithoutEnemies" );
-    SW_EXPECT_LOG( "JRPGCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
@@ -1246,11 +1246,11 @@ SW_TEST_CASE( JRPGTest, CatalogRefusesBrokenElements )
 SW_TEST_CASE( JRPGTest, CatalogReportsUnknownReferences )
 {
     sw::JRPGCatalog catalog;
-    SW_EXPECT_LOG( "JRPGCatalog.ClassLearnsUnknownSpell" );
-    SW_EXPECT_LOG( "JRPGCatalog.ManualUnlocksUnknownTechnique" );
-    SW_EXPECT_LOG( "JRPGCatalog.AreaNamesUnknownEnemy" );
-    SW_EXPECT_LOG( "JRPGCatalog.EnemyCastsUnknownSpell" );
-    SW_EXPECT_LOG( "JRPGCatalog.SpellNamesUnknownManual" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<JRPGCatalog>
   <Class id="hero" name="Hero"><Learn spell="nope"/></Class>
   <Manual id="m" name="M"><Stage technique="nope"/></Manual>

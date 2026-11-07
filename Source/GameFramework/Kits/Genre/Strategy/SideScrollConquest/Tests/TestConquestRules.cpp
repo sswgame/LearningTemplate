@@ -970,7 +970,7 @@ SW_TEST_CASE( ConquestTest, CatalogRefusesBrokenElements )
     SW_EXPECT_LOG( "ConquestCatalog.ResourceNeedsAmount" );
     SW_EXPECT_LOG( "ConquestCatalog.SiteBadGarrisonCount" );
     SW_EXPECT_LOG( "ConquestCatalog.NeutralSiteGarrison" );
-    SW_EXPECT_LOG( "ConquestCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
@@ -1005,8 +1005,8 @@ SW_TEST_CASE( ConquestTest, CatalogRefusesBrokenElements )
 SW_TEST_CASE( ConquestTest, CatalogReportsUnknownReferences )
 {
     sw::ConquestCatalog catalog;
-    SW_EXPECT_LOG( "ConquestCatalog.BuildingTrainsUnknownUnit" );
-    SW_EXPECT_LOG( "ConquestCatalog.SiteGarrisonsUnknownUnit" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "ConquestCatalog.WaveUnitNotUnitNo" );
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ConquestCatalog>
   <Rules waveUnit="nope"/>

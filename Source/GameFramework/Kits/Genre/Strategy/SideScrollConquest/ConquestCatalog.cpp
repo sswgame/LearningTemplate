@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -80,61 +81,41 @@ namespace sw
     uint32 ConquestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            const bool        bLoaded = loadFromXML( node, name, sourceName );
-            const bool        bDef    = name == "Unit" || name == "Building" || name == "Site";
-            if ( bLoaded && bDef )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<ConquestCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ConquestCatalog::loadRules>( "Rules" ).uncounted(),
+            Element::of<&ConquestCatalog::loadStart>( "Start" ).uncounted(),
+            Element::of<&ConquestCatalog::loadUnit>( "Unit" ),
+            Element::of<&ConquestCatalog::loadBuilding>( "Building" ),
+            Element::of<&ConquestCatalog::loadSite>( "Site" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 서로 가리키는 id 는 모두 읽은 뒤에 확인한다(건물 · 거점이 병종보다 앞에 적혀도 된다).
-        for ( const ConquestBuildingDef& building : _buildingCatalog.getAll() )
-        {
-            for ( const hashed_string& unitID : building._listTrainable )
-            {
-                if ( _unitCatalog.find( unitID ) == nullptr )
-                    SW_LOG_ERROR_ID( "ConquestCatalog.BuildingTrainsUnknownUnit", "%#: building '%#' trains an unknown unit '%#'", sourceName, building._id.c_str(), unitID.c_str() );
-            }
-        }
-        for ( const ConquestSiteDef& site : _siteCatalog.getAll() )
-        {
-            for ( const ConquestGarrisonDef& garrison : site._listGarrison )
-            {
-                if ( _unitCatalog.find( garrison._unitID ) == nullptr )
-                    SW_LOG_ERROR_ID( "ConquestCatalog.SiteGarrisonsUnknownUnit", "%#: site '%#' garrisons an unknown unit '%#'", sourceName, site._id.c_str(), garrison._unitID.c_str() );
-            }
-        }
+        using Reference                            = XMLCatalogReference<ConquestCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&ConquestCatalog::_unitCatalog, &ConquestCatalog::_buildingCatalog, &ConquestBuildingDef::_listTrainable>( "building", "unit" ),
+            Reference::of<&ConquestCatalog::_unitCatalog, &ConquestCatalog::_siteCatalog, &ConquestSiteDef::_listGarrison, &ConquestGarrisonDef::_unitID>( "site", "garrison unit" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
         if ( _rules._waveUnit.empty() == false && _unitCatalog.find( _rules._waveUnit ) == nullptr )
             SW_LOG_ERROR_ID( "ConquestCatalog.WaveUnitNotUnitNo", "%#: waveUnit '%#' is not a unit - no counter-attack waves", sourceName, _rules._waveUnit.c_str() );
-        return loadedCount;
+        return result._loadedCount;
     }
 
-    bool ConquestCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
+    bool ConquestCatalog::loadRules( const XMLNode& node, string_view sourceName )
     {
-        if ( name == "Rules" )
-        {
-            ConquestRules rules;
-            if ( XMLFields::readFields( node, rules, sourceName ) == false )
-                return false;
-            rules._startResources = _rules._startResources; // `<Start>` 는 따로 읽는다(적힌 순서와 상관없게)
-            _rules                = rules;
-            return true;
-        }
-        if ( name == "Start" )
-        {
-            return ConquestCatalogInternal::readResources( node, sourceName, _rules._startResources );
-        }
-        if ( name == "Unit" )
-            return loadUnit( node, sourceName );
-        if ( name == "Building" )
-            return loadBuilding( node, sourceName );
-        if ( name == "Site" )
-            return loadSite( node, sourceName );
-        SW_LOG_ERROR_ID( "ConquestCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        ConquestRules rules;
+        if ( XMLFields::readFields( node, rules, sourceName ) == false )
+            return false;
+        rules._startResources = _rules._startResources; // `<Start>` 는 따로 읽는다(적힌 순서와 상관없게)
+        _rules                = rules;
+        return true;
+    }
+
+    bool ConquestCatalog::loadStart( const XMLNode& node, string_view sourceName )
+    {
+        return ConquestCatalogInternal::readResources( node, sourceName, _rules._startResources );
     }
 
     bool ConquestCatalog::loadUnit( const XMLNode& node, string_view sourceName )

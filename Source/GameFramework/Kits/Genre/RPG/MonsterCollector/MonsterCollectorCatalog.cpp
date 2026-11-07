@@ -11,6 +11,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
 #include <algorithm>
@@ -219,76 +220,42 @@ namespace sw
     uint32 MonsterCollectorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<MonsterCollectorCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&MonsterCollectorCatalog::loadStatusImmunity>( "StatusImmunity" ),
+            Element::of<&MonsterCollectorCatalog::loadMove>( "Move" ),
+            Element::of<&MonsterCollectorCatalog::loadSpecies>( "Species" ),
+            Element::of<&MonsterCollectorCatalog::_natureCatalog>( "Nature" ), // up 과 down 이 같으면(적지 않으면 둘 다 Attack) 보정이 없는 성격이다
+            Element::of<&MonsterCollectorCatalog::_weatherCatalog>( "Weather" ),
+            Element::of<&MonsterCollectorCatalog::loadEncounter>( "Encounter" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다(앞에 적힌 종이 뒤에 적힌 종으로 진화할 수 있다).
-        for ( const MonsterMoveDef& move : _moveCatalog.getAll() )
-        {
-            if ( move._weatherID.empty() == false && _weatherCatalog.find( move._weatherID ) == nullptr )
-                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.MoveCallsUnknownWeather", "%#: move '%#' calls unknown weather '%#'", sourceName, move._id.c_str(), move._weatherID.c_str() );
-        }
-        for ( const MonsterSpeciesDef& species : _speciesCatalog.getAll() )
-        {
-            for ( const MonsterLearnEntry& learn : species._listLearn )
-            {
-                if ( _moveCatalog.find( learn._moveID ) == nullptr )
-                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesLearnsUnknownMove", "%#: species '%#' learns unknown move '%#'", sourceName, species._id.c_str(), learn._moveID.c_str() );
-            }
-            for ( const MonsterEvolutionDef& evolution : species._listEvolution )
-            {
-                if ( _speciesCatalog.find( evolution._targetID ) == nullptr )
-                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesEvolvesUnknown", "%#: species '%#' evolves into unknown '%#'", sourceName, species._id.c_str(), evolution._targetID.c_str() );
-            }
-        }
-        for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
-        {
-            for ( const MonsterEncounterSlot& slot : table._listSlot )
-            {
-                if ( _speciesCatalog.find( slot._speciesID ) == nullptr )
-                    SW_LOG_ERROR_ID( "MonsterCollectorCatalog.EncounterNamesUnknownSpecies", "%#: encounter '%#' names unknown species '%#'", sourceName, table._id.c_str(), slot._speciesID.c_str() );
-            }
-        }
-        return loadedCount;
+        using Catalog                              = MonsterCollectorCatalog;
+        using Reference                            = XMLCatalogReference<Catalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&Catalog::_weatherCatalog, &Catalog::_moveCatalog, &MonsterMoveDef::_weatherID>( "move", "weather" ),
+            Reference::of<&Catalog::_moveCatalog, &Catalog::_speciesCatalog, &MonsterSpeciesDef::_listLearn, &MonsterLearnEntry::_moveID>( "species", "move" ),
+            Reference::of<&Catalog::_speciesCatalog, &Catalog::_speciesCatalog, &MonsterSpeciesDef::_listEvolution, &MonsterEvolutionDef::_targetID>( "species", "evolution" ),
+            Reference::of<&Catalog::_speciesCatalog, &Catalog::_encounterCatalog, &MonsterEncounterDef::_listSlot, &MonsterEncounterSlot::_speciesID>( "encounter", "species" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        return result._loadedCount;
     }
 
-    bool MonsterCollectorCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
+    bool MonsterCollectorCatalog::loadStatusImmunity( const XMLNode& node, string_view sourceName )
     {
-        if ( XMLReadUtil::isElement( name, "StatusImmunity" ) )
+        MonsterStatusImmunityDef immunity;
+        if ( XMLFields::readFields( node, immunity, sourceName ) == false )
+            return false;
+        if ( immunity._status == MonsterStatus::None )
         {
-            MonsterStatusImmunityDef immunity;
-            if ( XMLFields::readFields( node, immunity, sourceName ) == false )
-                return false;
-            if ( immunity._status == MonsterStatus::None )
-            {
-                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.StatusImmunityNeedsKnownStatus", "%#: <StatusImmunity> needs a status other than None", sourceName );
-                return false;
-            }
-            _listStatusImmunity.push_back( immunity );
-            return true;
+            SW_LOG_ERROR_ID( "MonsterCollectorCatalog.StatusImmunityNeedsKnownStatus", "%#: <StatusImmunity> needs a status other than None", sourceName );
+            return false;
         }
-        if ( XMLReadUtil::isElement( name, "Move" ) )
-            return loadMove( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Species" ) )
-            return loadSpecies( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Nature" ) )
-            return GameDataXML::readInto( node, sourceName, _natureCatalog ); // up 과 down 이 같으면(적지 않으면 둘 다 Attack) 보정이 없는 성격이다
-        if ( XMLReadUtil::isElement( name, "Weather" ) )
-        {
-            MonsterWeatherDef def;
-            if ( XMLFields::readFields( node, def, sourceName ) == false )
-                return false;
-            return GameDataXML::addUnique( def, sourceName, _weatherCatalog );
-        }
-        if ( XMLReadUtil::isElement( name, "Encounter" ) )
-            return loadEncounter( node, sourceName );
-        SW_LOG_ERROR_ID( "MonsterCollectorCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        _listStatusImmunity.push_back( immunity );
+        return true;
     }
 
     bool MonsterCollectorCatalog::loadMove( const XMLNode& node, string_view sourceName )

@@ -338,7 +338,7 @@ SW_TEST_CASE( BattleRoyaleCatalogTest, BrokenMapSizeFailsTheLoad )
 SW_TEST_CASE( BattleRoyaleCatalogTest, BrokenElementsAreSkipped )
 {
     SW_EXPECT_LOG( "BattleRoyaleCatalog.ArmorUnknownSlot" );
-    SW_EXPECT_LOG( "BattleRoyaleCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "BattleRoyaleCatalog.NoZonePhasesZone" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );

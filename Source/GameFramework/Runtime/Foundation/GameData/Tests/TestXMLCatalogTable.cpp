@@ -1,0 +1,209 @@
+#include "pch.h"
+
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/hashed_string.h"
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Serialization/XML/XMLDocument.h"
+
+#include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
+using namespace sw;
+
+namespace
+{
+    struct XMLCatalogTableTestSlot
+    {
+        hashed_string _targetID{};
+    };
+
+    struct XMLCatalogTableTestOwner
+    {
+        hashed_string                   _id{};
+        hashed_string                   _single{};
+        vector<hashed_string>           _listTarget{};
+        vector<XMLCatalogTableTestSlot> _listSlot{};
+    };
+
+    struct XMLCatalogTableTestTarget
+    {
+        hashed_string _id{};
+    };
+
+    /** @brief 손 읽기 줄만 가진 작은 카탈로그입니다. 읽은 차례를 남겨 순서를 봅니다. */
+    struct XMLCatalogTableTestCatalog
+    {
+        vector<hashed_string>                  _listOrder{};
+        GameCatalog<XMLCatalogTableTestOwner>  _ownerCatalog{};
+        GameCatalog<XMLCatalogTableTestTarget> _targetCatalog{};
+
+        bool readFirst( const XMLNode& node, string_view sourceName )
+        {
+            (void)node;
+            (void)sourceName;
+            _listOrder.push_back( hashed_string( "First" ) );
+            return true;
+        }
+        bool readSecond( const XMLNode& node, string_view sourceName )
+        {
+            (void)sourceName;
+            _listOrder.push_back( hashed_string( "Second" ) );
+            return node.findAttribute( "bad" ) == nullptr;
+        }
+        bool readNote( const XMLNode& node, string_view sourceName )
+        {
+            (void)node;
+            (void)sourceName;
+            _listOrder.push_back( hashed_string( "Note" ) );
+            return true;
+        }
+    };
+
+    struct XMLCatalogTableTestUtil
+    {
+        using Catalog = XMLCatalogTableTestCatalog;
+        using Element = XMLCatalogElement<Catalog>;
+
+        static constexpr Element kArrElement[] = {
+            Element::of<&Catalog::readFirst>( "First" ),
+            Element::of<&Catalog::readSecond>( "Second" ),
+            Element::of<&Catalog::readNote>( "Note" ).uncounted(),
+        };
+        static constexpr Element kArrUncounted[] = {
+            Element::of<&Catalog::readNote>( "Note" ).uncounted(),
+        };
+
+        static XMLNode parse( XMLDocument& outDocument, string_view xmlText )
+        {
+            SW_EXPECT_TRUE( outDocument.parse( xmlText ) );
+            return outDocument.getRoot( "Root" );
+        }
+    };
+} // namespace
+
+/**
+ * @brief [XMLCatalogTableTest] 문서 순서는 적힌 대로 읽고, 세지 않는 줄은 수에 들어가지 않는다
+ */
+SW_TEST_CASE( XMLCatalogTableTest, DocumentOrderFollowsTheFile )
+{
+    XMLDocument                document;
+    const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Second/><Note/><First/></Root>)" );
+    XMLCatalogTableTestCatalog catalog;
+
+    const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+
+    SW_EXPECT_EQUAL( 2u, result._loadedCount );
+    SW_EXPECT_TRUE( result.isClean() );
+    SW_REQUIRE_TRUE( catalog._listOrder.size() == 3 );
+    SW_EXPECT_TRUE( catalog._listOrder[0] == hashed_string( "Second" ) );
+    SW_EXPECT_TRUE( catalog._listOrder[1] == hashed_string( "Note" ) );
+    SW_EXPECT_TRUE( catalog._listOrder[2] == hashed_string( "First" ) );
+}
+
+/**
+ * @brief [XMLCatalogTableTest] 표 순서는 파일 안의 순서와 상관없이 앞 줄을 먼저 다 읽는다
+ */
+SW_TEST_CASE( XMLCatalogTableTest, TableOrderReadsEarlierRowsFirst )
+{
+    XMLDocument                document;
+    const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Second/><First/><Second/></Root>)" );
+    XMLCatalogTableTestCatalog catalog;
+
+    const XMLCatalogReadResult result = XMLCatalogReader::readInTableOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+
+    SW_EXPECT_EQUAL( 3u, result._loadedCount );
+    SW_REQUIRE_TRUE( catalog._listOrder.size() == 3 );
+    SW_EXPECT_TRUE( catalog._listOrder[0] == hashed_string( "First" ) );
+    SW_EXPECT_TRUE( catalog._listOrder[1] == hashed_string( "Second" ) );
+    SW_EXPECT_TRUE( catalog._listOrder[2] == hashed_string( "Second" ) );
+}
+
+/**
+ * @brief [XMLCatalogTableTest] 표에 없는 이름은 두 순서 모두 오류이고 실패로 센다. 대소문자가 다르면 다른 이름이다
+ */
+SW_TEST_CASE( XMLCatalogTableTest, UnknownElementIsAnError )
+{
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
+    XMLDocument                document;
+    const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><First/><first/><Mystery/></Root>)" );
+    XMLCatalogTableTestCatalog catalog;
+
+    const XMLCatalogReadResult documentResult = XMLCatalogReader::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult tableResult    = XMLCatalogReader::readInTableOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+
+    SW_EXPECT_EQUAL( 1u, documentResult._loadedCount );
+    SW_EXPECT_EQUAL( 2u, documentResult._failedCount );
+    SW_EXPECT_EQUAL( 1u, tableResult._loadedCount );
+    SW_EXPECT_EQUAL( 2u, tableResult._failedCount );
+    SW_EXPECT_FALSE( documentResult.isClean() );
+}
+
+/**
+ * @brief [XMLCatalogTableTest] 읽지 못한 원소는 세지 않고 실패로 센다. 까닭은 읽는 쪽이 남기므로 빈 파일 경고를 더하지 않는다
+ */
+SW_TEST_CASE( XMLCatalogTableTest, FailedElementIsCountedAsFailed )
+{
+    XMLDocument                document;
+    const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Second bad="1"/></Root>)" );
+    XMLCatalogTableTestCatalog catalog;
+
+    const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+
+    SW_EXPECT_EQUAL( 0u, result._loadedCount );
+    SW_EXPECT_EQUAL( 1u, result._failedCount );
+}
+
+/**
+ * @brief [XMLCatalogTableTest] 세는 줄이 있는데 적은 것이 없으면 경고하고, 세는 줄이 없는 표는 경고하지 않는다
+ */
+SW_TEST_CASE( XMLCatalogTableTest, EmptyFileWarnsOnlyWhenRowsCount )
+{
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
+    XMLDocument                document;
+    const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Note/></Root>)" );
+    XMLCatalogTableTestCatalog catalog;
+
+    const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    SW_EXPECT_EQUAL( 0u, result._loadedCount );
+    SW_EXPECT_TRUE( result.isClean() );
+
+    const XMLCatalogReadResult uncounted = XMLCatalogReader::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrUncounted );
+    SW_EXPECT_TRUE( uncounted.isClean() );
+}
+
+/**
+ * @brief [XMLCatalogTableTest] 참조 줄은 칸 · 목록 · 목록 안의 칸을 따라가 없는 id 만 알린다. 빈 id 는 적지 않은 것이다
+ */
+SW_TEST_CASE( XMLCatalogTableTest, ReferencesWalkThePath )
+{
+    using Catalog   = XMLCatalogTableTestCatalog;
+    using Owner     = XMLCatalogTableTestOwner;
+    using Reference = XMLCatalogReference<Catalog>;
+
+    static constexpr Reference kArrClean[] = {
+        Reference::of<&Catalog::_targetCatalog, &Catalog::_ownerCatalog, &Owner::_single>( "owner", "target" ),
+        Reference::of<&Catalog::_targetCatalog, &Catalog::_ownerCatalog, &Owner::_listTarget>( "owner", "target" ),
+    };
+    static constexpr Reference kArrBroken[] = {
+        Reference::of<&Catalog::_targetCatalog, &Catalog::_ownerCatalog, &Owner::_listSlot, &XMLCatalogTableTestSlot::_targetID>( "owner", "target" ),
+    };
+
+    Catalog                   catalog;
+    XMLCatalogTableTestTarget target;
+    target._id = hashed_string( "known" );
+    SW_REQUIRE_TRUE( catalog._targetCatalog.add( target ) >= 0 );
+    Owner owner;
+    owner._id = hashed_string( "a" );
+    owner._listTarget.push_back( hashed_string( "known" ) );
+    XMLCatalogTableTestSlot slot;
+    slot._targetID = hashed_string( "nobody" );
+    owner._listSlot.push_back( slot );
+    SW_REQUIRE_TRUE( catalog._ownerCatalog.add( owner ) >= 0 );
+
+    XMLCatalogReader::checkReferences( catalog, "test", kArrClean );
+
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    XMLCatalogReader::checkReferences( catalog, "test", kArrBroken );
+}

@@ -1108,7 +1108,7 @@ SW_TEST_CASE( WesternCatalogTest, ReportsBrokenTables )
     SW_EXPECT_LOG( "WesternCatalog.PeltGradeScalesNeedsExactly" );
     SW_EXPECT_LOG( "WesternCatalog.PeltGradeScalesNegative" );
     SW_EXPECT_LOG( "WesternCatalog.HuntWeaponSizesUnknownSize" );
-    SW_EXPECT_LOG( "WesternCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "WesternCatalog.BondExperienceNotRising" );
     sw::WesternCatalog    catalog;
     constexpr const utf8* kBrokenXML = R"(<WesternCatalog>

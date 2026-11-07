@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <algorithm>
 
@@ -42,38 +43,21 @@ namespace sw
             return 0;
         _mapSize = rootDef._mapSize;
 
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( loadFromXML( node, name, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<BattleRoyaleCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&BattleRoyaleCatalog::loadArmor>( "Armor" ),
+            Element::of<&BattleRoyaleCatalog::_backpackCatalog>( "Backpack" ),
+            Element::of<&BattleRoyaleCatalog::_lootSpotCatalog>( "LootSpot" ),
+            Element::of<&BattleRoyaleCatalog::_player>( "Player" ),
+            Element::of<&BattleRoyaleCatalog::_flight>( "Flight" ),
+            Element::of<&BattleRoyaleCatalog::_fall>( "Fall" ),
+            Element::of<&BattleRoyaleCatalog::loadZone>( "Zone" ),
+            Element::of<&BattleRoyaleCatalog::loadSupplyDrop>( "SupplyDrop" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         if ( _zone._listPhase.empty() )
             SW_LOG_WARNING_ID( "BattleRoyaleCatalog.NoZonePhasesZone", "%#: no zone phases - the zone never shrinks", sourceName );
-        return loadedCount;
-    }
-
-    bool BattleRoyaleCatalog::loadFromXML( const XMLNode& node, string_view name, string_view sourceName )
-    {
-        if ( XMLReadUtil::isElement( name, "Armor" ) )
-            return loadArmor( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "Backpack" ) )
-            return GameDataXML::readInto( node, sourceName, _backpackCatalog );
-        if ( XMLReadUtil::isElement( name, "LootSpot" ) )
-            return GameDataXML::readInto( node, sourceName, _lootSpotCatalog );
-        if ( XMLReadUtil::isElement( name, "Player" ) )
-            return GameDataXML::readSetting( node, sourceName, _player );
-        if ( XMLReadUtil::isElement( name, "Flight" ) )
-            return GameDataXML::readSetting( node, sourceName, _flight );
-        if ( XMLReadUtil::isElement( name, "Fall" ) )
-            return GameDataXML::readSetting( node, sourceName, _fall );
-        if ( XMLReadUtil::isElement( name, "Zone" ) )
-            return loadZone( node, sourceName );
-        if ( XMLReadUtil::isElement( name, "SupplyDrop" ) )
-            return loadSupplyDrop( node, sourceName );
-        SW_LOG_ERROR_ID( "BattleRoyaleCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        return false;
+        return result._loadedCount;
     }
 
     bool BattleRoyaleCatalog::loadArmor( const XMLNode& node, string_view sourceName )

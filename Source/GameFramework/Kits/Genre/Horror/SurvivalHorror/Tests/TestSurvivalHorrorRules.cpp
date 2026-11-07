@@ -397,7 +397,7 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesSelfLink )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogReportsLockWithUnknownKey )
 {
-    SW_EXPECT_LOG( "SurvivalHorrorCatalog.KeyLockNamesUnknown" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SurvivalHorrorCatalog catalog;
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><KeyLock id="a" key="later" flag="f"/><KeyLock id="b" key="nothing" flag="g"/><Item id="later"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
@@ -407,7 +407,7 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogReportsLockWithUnknownKey )
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesUnknownElement )
 {
-    SW_EXPECT_LOG( "SurvivalHorrorCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SurvivalHorrorCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( "<SurvivalHorrorCatalog><Zombie/></SurvivalHorrorCatalog>", "SurvivalHorrorTest" ) );
 }

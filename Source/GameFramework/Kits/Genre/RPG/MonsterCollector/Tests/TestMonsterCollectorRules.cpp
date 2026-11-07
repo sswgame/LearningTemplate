@@ -1452,7 +1452,7 @@ SW_TEST_CASE( MonsterCollectorTest, CatalogRefusesBrokenElements )
     SW_EXPECT_LOG( "MonsterCollectorCatalog.MoveCannotChangeHP" );
     SW_EXPECT_LOG( "MonsterCollectorCatalog.StatusImmunityNeedsKnownStatus" );
     SW_EXPECT_LOG( "MonsterCollectorCatalog.SpeciesUnknownChild" );
-    SW_EXPECT_LOG( "MonsterCollectorCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCollectorCatalog>
@@ -1486,10 +1486,10 @@ SW_TEST_CASE( MonsterCollectorTest, CatalogRefusesBrokenElements )
 SW_TEST_CASE( MonsterCollectorTest, CatalogReportsUnknownReferences )
 {
     sw::MonsterCollectorCatalog catalog;
-    SW_EXPECT_LOG( "MonsterCollectorCatalog.SpeciesLearnsUnknownMove" );
-    SW_EXPECT_LOG( "MonsterCollectorCatalog.SpeciesEvolvesUnknown" );
-    SW_EXPECT_LOG( "MonsterCollectorCatalog.EncounterNamesUnknownSpecies" );
-    SW_EXPECT_LOG( "MonsterCollectorCatalog.MoveCallsUnknownWeather" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCollectorCatalog>
   <Species id="s" name="S" types="A" stats="1 1 1 1 1 1"><Learn move="nope"/><Evolve to="nope"/></Species>
   <Encounter id="e" area="a"><Slot species="nope" min="1" max="1"/></Encounter>
