@@ -3,6 +3,8 @@
 
   py -3 -m Scripts net-pair run --preset Ninja-Debug      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
+  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # LanternVale 액션 MMO: 첫 접속 시나리오 → 나감(서버 저장) → 재접속 시나리오(같은 진행)
+  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # LanternVale 액션 MMO: 첫 접속 시나리오 → 나감(서버 저장) → 재접속 시나리오(같은 진행)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -59,7 +61,8 @@ def checkLogs(serverText: str, clientText: str) -> CheckResult:
     return result
 
 
-def writeConfigs(outDir: Path, gamePort: int, servicePort: int) -> Path:
+def writeConfigs(outDir: Path, gamePort: int, servicePort: int, account: str = _kAccount, password: str = _kPassword,
+                 serverName: str = _kServerName) -> Path:
     """서버 설정과 온라인 설정을 쓴다. 서버 설정 경로를 돌려준다."""
     serverConfig = {
         "_listenAddress": "127.0.0.1",
@@ -77,11 +80,11 @@ def writeConfigs(outDir: Path, gamePort: int, servicePort: int) -> Path:
             {"_name": "account", "_settings": {
                 "_ticketKeySecretEnvironment": _kTicketKeyEnvironment,
                 "_bLightPasswordHash": True,
-                "_listSeedTestAccount": [{"_loginName": _kAccount, "_password": _kPassword}],
+                "_listSeedTestAccount": [{"_loginName": account, "_password": password}],
             }},
             {"_name": "gameConnect", "_settings": {
                 "_ticketKeySecretEnvironment": _kTicketKeyEnvironment,
-                "_serverName": _kServerName,
+                "_serverName": serverName,
             }},
         ],
     }
@@ -163,6 +166,94 @@ def _run(argument: argparse.Namespace) -> int:
     return _print(checkLogs(serverText, clientText), serverLog, clientLog)
 
 
+# LanternVale 액션 MMO 두 프로세스(T10). 계정 · 서버 이름 · 포트는 클라이언트 시나리오의 `net.ticketconnect` 줄과 같아야 한다(game/lanternvale/automation/netpair/).
+_kMmoGame = "LanternVale"
+_kMmoAccount = "vale_netpair"
+_kMmoPassword = "vale_netpair_pw_1"
+_kMmoServerName = "lanternvale"
+_kMmoGamePort = 17877
+_kMmoServicePort = 17880
+_kMmoScenarios = ("game/lanternvale/automation/netpair/first.scenario.xml", "game/lanternvale/automation/netpair/return.scenario.xml")
+_kMmoAdmitted = re.compile(r"entered the vale as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
+_kMmoSaved = re.compile(r"\[LanternVale\] profile of account \d+ saved")
+
+
+def checkMmoLogs(serverText: str, listClientText: list[str]) -> CheckResult:
+    """MMO 두 프로세스 로그를 판정한다 — 서버가 첫 접속을 새 계정으로, 재접속을 저장된 진행(레벨 2)으로 들였고 그 사이 진행을 저장했으며, 어느 로그에도 오류 · 경고가 없다."""
+    result = CheckResult()
+    listAdmitted = _kMmoAdmitted.findall(serverText)
+    if len(listAdmitted) != 2:
+        result.problems.append(f"the server admitted {len(listAdmitted)} sessions - expected the first login and the return")
+    else:
+        if listAdmitted[0][1] != "new account":
+            result.problems.append(f"the first session was admitted with '{listAdmitted[0][1]}' - the run must start from a fresh in-memory profile")
+        if listAdmitted[1] != ("2", "stored progress"):
+            result.problems.append(f"the return was admitted at level {listAdmitted[1][0]} with '{listAdmitted[1][1]}' - expected level 2 from the stored progress")
+    if _kMmoSaved.search(serverText) is None:
+        result.problems.append("the server log has no 'profile of account N saved' line - the session end did not save")
+    for name, text in [("server", serverText)] + [(f"client {index + 1}", text) for index, text in enumerate(listClientText)]:
+        for line in text.splitlines():
+            if _kProblemLine.search(line):
+                result.problems.append(f"{name} log: {line.strip()}")
+    return result
+
+
+def _runMmo(argument: argparse.Namespace) -> int:
+    root = getProjectRoot()
+    binDir = root / "build" / argument.preset / "Bin"
+    serverExe = binDir / executableName("Server")
+    clientExe = binDir / executableName("App")
+    for exe in (serverExe, clientExe):
+        if not exe.exists():
+            print(f"[net-pair] FAIL: {exe} does not exist - build the '{argument.preset}' preset first")
+            return int(ExitCode.CheckInvalid)
+    outDir = Path(argument.out) if argument.out else root / "Saved" / "NetPairRun" / "mmo"
+    outDir.mkdir(parents=True, exist_ok=True)
+    serverConfig = writeConfigs(outDir, _kMmoGamePort, _kMmoServicePort, _kMmoAccount, _kMmoPassword, _kMmoServerName)
+    serverLog = outDir / "server.log"
+    serverArgs = [str(serverExe), f"-game={_kMmoGame}", f"-server-config={serverConfig}", "-gv_valeMemoryProfiles=1"]
+    print(f"[net-pair] server: {' '.join(serverArgs)}")
+    listClientLog: list[Path] = []
+    with serverLog.open("wb") as serverOut:
+        serverEnvironment = {**os.environ, _kTicketKeyEnvironment: _kTicketKey}
+        server = subprocess.Popen(serverArgs, cwd=str(binDir), env=serverEnvironment, stdin=subprocess.PIPE, stdout=serverOut, stderr=subprocess.STDOUT)
+        if not _waitForText(serverLog, _kListening, argument.timeout, server):
+            print(f"[net-pair] FAIL: the server never opened its game port (log: {serverLog})")
+            _stop(server, False, 5)
+            return int(ExitCode.Violation)
+        for index, scenario in enumerate(_kMmoScenarios):
+            clientLog = outDir / f"client{index + 1}.log"
+            listClientLog.append(clientLog)
+            clientArgs = [str(clientExe), f"-game={_kMmoGame}", "-" + "scenario=" + scenario, "-unattended"]
+            print(f"[net-pair] client {index + 1}: {' '.join(clientArgs)}")
+            with clientLog.open("wb") as clientOut:
+                client = subprocess.Popen(clientArgs, cwd=str(binDir), stdout=clientOut, stderr=subprocess.STDOUT)
+                try:
+                    client.wait(timeout=argument.timeout * 4)
+                except subprocess.TimeoutExpired:
+                    client.kill()
+                    client.wait()
+            if client.returncode != 0:
+                print(f"[net-pair] FAIL: client {index + 1} ({scenario}) exited with code {client.returncode} (log: {clientLog})")
+                _stop(server, True, 20)
+                return int(ExitCode.Violation)
+            time.sleep(1.0)  # 서버가 나간 연결을 알아채고 진행을 저장할 틈
+        _stop(server, True, 20)
+    if server.returncode != 0:
+        print(f"[net-pair] FAIL: the server exited with code {server.returncode} (log: {serverLog})")
+        return int(ExitCode.Violation)
+    serverText = serverLog.read_text(encoding="utf-8", errors="replace")
+    listClientText = [log.read_text(encoding="utf-8", errors="replace") for log in listClientLog]
+    result = checkMmoLogs(serverText, listClientText)
+    for problem in result.problems:
+        print(f"[net-pair] FAIL: {problem}")
+    print(f"[net-pair] logs: {serverLog} {' '.join(str(log) for log in listClientLog)}")
+    if result.bOk:
+        print("[net-pair] OK: LanternVale login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress, no errors or warnings")
+        return int(ExitCode.Passed)
+    return int(ExitCode.Violation)
+
+
 def _print(result: CheckResult, serverLog: Path, clientLog: Path) -> int:
     for problem in result.problems:
         print(f"[net-pair] FAIL: {problem}")
@@ -183,6 +274,10 @@ def main(listArgument: list[str]) -> int:
     runParser.add_argument("--client-delay", type=float, default=5.0, help="클라이언트를 띄운 뒤 명령을 보낼 때까지 기다리는 초")
     runParser.add_argument("--timeout", type=float, default=60.0, help="서버 기동 · 접속을 기다리는 최대 초")
     runParser.add_argument("--out", default="", help="설정 · 로그를 둘 폴더(기본 Saved/NetPairRun)")
+    mmoParser = sub.add_parser("mmo", help="LanternVale 서버와 클라이언트 둘(첫 접속 → 재접속)을 차례로 띄워 서버 권위 행동 · 저장 후 재접속을 본다")
+    mmoParser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    mmoParser.add_argument("--timeout", type=float, default=60.0, help="서버 기동을 기다리는 최대 초(클라이언트 하나는 이 네 배까지)")
+    mmoParser.add_argument("--out", default="", help="설정 · 로그를 둘 폴더(기본 Saved/NetPairRun/mmo)")
     checkParser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     checkParser.add_argument("serverLog")
     checkParser.add_argument("clientLog")
@@ -192,4 +287,6 @@ def main(listArgument: list[str]) -> int:
         serverText = serverLog.read_text(encoding="utf-8", errors="replace")
         clientText = clientLog.read_text(encoding="utf-8", errors="replace")
         return _print(checkLogs(serverText, clientText), serverLog, clientLog)
+    if argument.mode == "mmo":
+        return _runMmo(argument)
     return _run(argument)

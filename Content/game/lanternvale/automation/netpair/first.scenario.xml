@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LanternVale 두 프로세스 — 첫 접속(클라이언트). `py -3 -m Scripts net-pair mmo` 가 전용 서버(-game=LanternVale, 게임 접속 티켓 · -gv_valeMemoryProfiles=1)를 띄운 뒤 이 시나리오로 클라이언트를 돌린다.
+  로그인 → 티켓 → 암호화 UDP 접속 → 서버가 계정 진행(새 계정)을 읽어 아바타를 세움 → 짐승 둘을 세 번씩 쳐 쓰러뜨림(경험 60 씩, 동전 5 씩) → 레벨 2 → 버섯 채집(경험 15)
+  → 사거리 밖 짐승은 서버가 OutOfRange(2) 로 거절 → 비신뢰 이동. 행동은 모두 반사 함수 호출(`ValeAvatarAgent` 의 Server 함수)이고 판정 · 보상은 서버가 한다.
+  끝나면 앱이 나가고 서버가 연결 끝에 진행을 저장한다. 이어 `return.scenario.xml` 이 같은 계정으로 다시 붙어 같은 진행을 읽는지 본다.
+-->
+<Scenario name="game.lanternvale.netpair.first" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Expect watch="LanternVale.RulesValid" equals="1"/>
+	<Expect watch="LanternVale.NetRole" equals="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="net.ticketconnect 127.0.0.1:17880 vale_netpair vale_netpair_pw_1 lanternvale 127.0.0.1:17877"/>
+	<WaitUntil watch="LanternVale.AvatarID" atLeast="1" timeoutSeconds="30"/>
+	<Expect watch="LanternVale.NetRole" equals="2"/>
+	<Expect watch="LanternVale.Level" equals="1"/>
+	<Expect watch="LanternVale.Experience" equals="0"/>
+	<Expect watch="LanternVale.PartySize" equals="1"/>
+	<!-- MMO 복제: 나는 자리 둘레의 짐승 · 버섯 · 자기 아바타가 보인다 -->
+	<WaitUntil watch="LanternVale.FirstCreatureHealth" equals="30" timeoutSeconds="20"/>
+	<Expect watch="LanternVale.VisibleEntities" atLeast="4"/>
+	<!-- 첫 짐승(100000) — 세 번째에 쓰러진다 -->
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100000"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="1" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.FirstCreatureHealth" equals="20" timeoutSeconds="10"/>
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100000"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="2" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100000"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="3" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.Defeats" equals="1" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.Experience" equals="60"/>
+	<Expect watch="LanternVale.Coins" equals="5"/>
+	<Expect watch="LanternVale.Level" equals="1"/>
+	<!-- 둘째 짐승(100001) — 경험 120 으로 레벨 2(단계표 100) -->
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100001"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="4" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100001"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="5" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100001"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="6" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.Defeats" equals="2" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.Level" equals="2"/>
+	<Expect watch="LanternVale.Experience" equals="120"/>
+	<Expect watch="LanternVale.Coins" equals="10"/>
+	<!-- 생활: 버섯(100002) -->
+	<DevCommand line="vale.gather 100002"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="7" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<WaitUntil watch="LanternVale.Herbs" equals="1" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.Experience" equals="135"/>
+	<!-- 서버 권위 거절: 멀리 있는 짐승(100003)은 사거리 밖 -->
+	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="vale.attack 100003"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="8" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="2"/>
+	<!-- 비신뢰 이동 한 걸음(12 m 안) -->
+	<DevCommand line="vale.move 8 6"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="9" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="0"/>
+	<!-- 파티 행동도 서버가 판정한다: 없는 아바타 99999 의 초대 · 수락은 UnknownTarget(1), 파티 없이 떠나기는 NotInParty(9) — 두 클라이언트 파티는 ValeNetLinkTest.PartyIsServerAuthoritative -->
+	<DevCommand line="vale.invite 99999"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="10" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="1"/>
+	<DevCommand line="vale.accept 99999"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="11" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="1"/>
+	<DevCommand line="vale.leave"/>
+	<WaitUntil watch="LanternVale.ResultCount" equals="12" timeoutSeconds="10"/>
+	<Expect watch="LanternVale.LastResult" equals="9"/>
+	<Expect watch="LanternVale.PartySize" equals="1"/>
+	<DevCommand line="vale.status"/>
+	<Pass/>
+</Scenario>

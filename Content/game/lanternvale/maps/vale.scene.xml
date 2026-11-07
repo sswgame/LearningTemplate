@@ -1,0 +1,92 @@
+<Scene formatVersion="2" name="LanternVale">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,30,-24"
+					                 _localRotation="0.9,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.1"
+					                 _farZ="200"
+					                 _orthoHeight="40"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Moon">
+			<GameObject _schemaVersion="0" _name="Moon" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.9,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="0.7,0.75,1"
+					                           _intensity="0.8"
+					                           _ambient="0.35"
+					                           _shadowExtent="60"
+					                           _shadowDistance="80"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Vale">
+			<GameObject _schemaVersion="0" _name="Vale" _bActive="true">
+				<_listComponent>
+					<!-- 골짜기 규칙 — 짐승 100000 · 100001 은 나는 자리 곁(사거리 3 m 안), 버섯 100002 는 채집 거리 2 m 안, 나머지는 걸어가야 닿는다.
+					     단계표: 레벨 2 는 경험 100(짐승 둘), 3 은 250, 4 는 450, 5 는 700. -->
+					<ValeWorldComponent _componentName="ValeWorldComponent"
+					                    _bActive="true"
+					                    _profileFolder="LanternVale/ServerProfiles">
+						<_rules _attackRange="3"
+						        _attackCooldownSeconds="0.5"
+						        _attackPower="10"
+						        _creatureHealth="30"
+						        _creatureExperience="60"
+						        _creatureCoins="5"
+						        _creatureRespawnSeconds="3"
+						        _gatherRange="2"
+						        _herbExperience="15"
+						        _herbRespawnSeconds="5"
+						        _maxMoveStep="12"
+						        _worldHalfExtent="64"
+						        _partyMaxSize="4"
+						        _partyShareRange="30"
+						        _autosaveSeconds="30"
+						        _avatarSpawn="0,0,0">
+							<_listLevelExperience>
+								<item>100</item>
+								<item>250</item>
+								<item>450</item>
+								<item>700</item>
+							</_listLevelExperience>
+							<_listPlacement>
+								<ValePlacement _kind="Creature" _position="2,0,0" />
+								<ValePlacement _kind="Creature" _position="-2,0,1" />
+								<ValePlacement _kind="Herb" _position="0,0,1.5" />
+								<ValePlacement _kind="Creature" _position="20,0,18" />
+								<ValePlacement _kind="Herb" _position="-18,0,22" />
+								<ValePlacement _kind="Creature" _position="40,0,-30" />
+							</_listPlacement>
+						</_rules>
+						<_interestGrid _cellSize="32" _loadingRadius="96" />
+					</ValeWorldComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -1,0 +1,30 @@
+{
+    "_name": "SWGame",
+    "_version": "1.0.0",
+    "_kind": "Game",
+    "_description": "LanternVale — 작은 액션 MMO 수직 슬라이스. 전용 서버가 골짜기(전투 · 채집 · 성장 · 파티)를 서버 권위로 돌리고, 클라이언트는 게임 접속 티켓으로 붙어 반사 함수 호출(GF_NetClientServer RemoteCall)로 행동을 청하며 MMO 복제(GF_NetMMO)로 근처를 본다. 진행은 계정마다 서버가 저장한다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_NetClientServer"
+        },
+        {
+            "_name": "GF_NetMMO"
+        },
+        {
+            "_name": "GF_Account"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true,
+    "_listModuleOverride": []
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LanternVale 팩의 설정 — 시작 맵은 골짜기 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). 조작은 개발 명령(vale.*)이라 공통 입력 맵만 둔다. -->
+<GameSettings>
+  <Engine _windowTitle="Lantern Vale" _bUIPauseMenu="true" />
+  <startMap>game/lanternvale/maps/vale.scene.xml</startMap>
+  <inputMap path="common/input/base.input.xml"/>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+</GameSettings>

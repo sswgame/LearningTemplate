@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LanternVale 두 프로세스 — 재접속(클라이언트). `first.scenario.xml` 의 클라이언트가 나간 뒤 같은 서버 실행에 같은 계정으로 다시 붙는다(`py -3 -m Scripts net-pair mmo`).
+  서버는 앞 연결이 끝날 때 진행을 저장했고(`LanternVale.ProfileSaved`), 이 접속에서 그 진행을 읽어 아바타를 세운다 — 레벨 2 · 경험 135 · 동전 10 · 버섯 1 · 처치 2 가 그대로다.
+-->
+<Scenario name="game.lanternvale.netpair.return" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Expect watch="LanternVale.NetRole" equals="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="net.ticketconnect 127.0.0.1:17880 vale_netpair vale_netpair_pw_1 lanternvale 127.0.0.1:17877"/>
+	<WaitUntil watch="LanternVale.AvatarID" atLeast="1" timeoutSeconds="30"/>
+	<Expect watch="LanternVale.Level" equals="2"/>
+	<Expect watch="LanternVale.Experience" equals="135"/>
+	<Expect watch="LanternVale.Coins" equals="10"/>
+	<Expect watch="LanternVale.Herbs" equals="1"/>
+	<Expect watch="LanternVale.Defeats" equals="2"/>
+	<DevCommand line="vale.status"/>
+	<Pass/>
+</Scenario>

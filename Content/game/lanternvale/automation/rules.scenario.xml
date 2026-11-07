@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LanternVale 혼자 띄운 클라이언트 — 씬의 골짜기 규칙(단계표 · 놓을 것 · 경계)이 골짜기를 세울 수 있고, 세션이 없으니 서버 · 클라이언트 링크를 세우지 않는다.
+  골짜기 자체(전투 · 채집 · 성장 · 파티 · 저장 후 재접속)는 두 프로세스 시나리오(`py -3 -m Scripts net-pair mmo` — automation/netpair/)와 단위 테스트(`UnitTests.LanternVale`)가 본다.
+  실행: App -game=LanternVale -scenario=game/lanternvale/automation/rules.scenario.xml -unattended (체인: ctest -R Scenario.lanternvale)
+-->
+<Scenario name="game.lanternvale.rules" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Wait frames="2"/>
+	<Expect watch="LanternVale.RulesValid" equals="1"/>
+	<Expect watch="LanternVale.NetRole" equals="0"/>
+	<Pass/>
+</Scenario>
