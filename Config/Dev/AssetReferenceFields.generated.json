@@ -57,7 +57,6 @@
         "_meshPath",
         "_missingMaterial",
         "_missingTexture",
-        "_modulePath",
         "_navMeshSettings",
         "_netEmulationPresets",
         "_normalAtlas",
@@ -184,7 +183,6 @@
         "defaultForwardPipeline",
         "defaultMaterial",
         "defaultSocketKinds",
-        "defaultSurfaceChannels",
         "detailTexturePath",
         "document",
         "documentPath",
@@ -320,7 +318,8 @@
         "uiThemes",
         "uiTooltip",
         "userSettingsSchema",
-        "waterMaterial"
+        "waterMaterial",
+        "zoneProfile"
       ]
     },
     {
@@ -383,6 +382,7 @@
         "_materialPath",
         "_mesh",
         "_meshID",
+        "_modulePath",
         "_packRoot",
         "_prefab",
         "_regionTablePath",
@@ -394,7 +394,9 @@
         "_tablePath",
         "_titleScene",
         "_tree",
+        "_tuning",
         "_weatherDataPath",
+        "_zoneProfile",
         "aiControllerPrefab",
         "audioEvents",
         "autosaveSettings",
@@ -412,6 +414,7 @@
         "materialPath",
         "mesh",
         "meshID",
+        "modulePath",
         "packRoot",
         "prefab",
         "regionTablePath",
@@ -425,7 +428,9 @@
         "tablePath",
         "titleScene",
         "tree",
-        "weatherDataPath"
+        "tuning",
+        "weatherDataPath",
+        "zoneProfile"
       ]
     },
     {

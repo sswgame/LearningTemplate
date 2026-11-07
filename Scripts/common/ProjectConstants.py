@@ -124,6 +124,9 @@ kKeyLlvmSearchRoots = "llvm_search_roots"
 kKeyLlvmDownloadUrls = "llvm_download_urls"
 kKeyClangFormatVersion = "clang_format_version"
 kKeyLlvmAutoBootstrap = "llvm_auto_bootstrap"
+# Windows lldb 의 liblldb.dll 이 import 하는 python3XX.dll 과 같은 판(임베드 패키지)이어야 한다 — `Llvm.py` 의 `ensureDebuggerInternal`.
+kKeyLldbPythonVersion = "lldb_python_version"
+kKeyLldbPythonEmbedUrl = "lldb_python_embed_url"
 
 kKeyVcpkgToolsSubdir = "vcpkg_tools_subdir"
 kKeyVcpkgSearchRoots = "vcpkg_search_roots"

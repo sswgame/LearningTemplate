@@ -7,6 +7,9 @@ Ninja/vcpkg 와 같이 find/setup 을 한 파일에 둡니다.
 
   python3 Scripts/setup/Llvm.py
   python3 Scripts/setup/Llvm.py --install
+
+Windows 의 Tools/LLVM 에는 디버거(lldb.exe)와 그것이 부르는 Python 런타임(임베드 패키지)도 둔다 — 핫 리로드 뒤 브레이크포인트를
+자동으로 확인하는 데 쓴다. 이미 있는 키트에 없는 파일만 더하므로 키트를 다시 풀지 않는다(다시 풀면 PCH 를 모두 버린다).
 """
 
 from __future__ import annotations
@@ -16,18 +19,21 @@ import os
 import json
 import shutil
 import sys
+import subprocess
 import tarfile
 from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common.ToolDownload import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
+from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
 from common.ClangFormat import ensureClangFormat
 from common.ToolchainConfig import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
 from common.ProjectConstants import (
     kEnvSwLlvmAutoBootstrap,
     kKeyLibclangDllPath,
+    kKeyLldbPythonEmbedUrl,
+    kKeyLldbPythonVersion,
     kKeyLlvmAutoBootstrap,
     kKeyLlvmDownloadUrls,
     kKeyLlvmPath,
@@ -52,6 +58,7 @@ _kWinKeepBinExes: set[str] = {
     "lld.exe",
     "llvm-lib.exe",
     "llvm-rc.exe",
+    "lldb.exe",  # 핫 리로드 디버그 확인(liblldb.dll 은 bin 의 DLL 로 이미 남는다) — ensureDebuggerInternal
 }
 _kPosixKeepBinNames: set[str] = {
     "clang",
@@ -383,18 +390,57 @@ def pruneLibIncludeInternal(root: Path) -> None:
         if dropPath.is_dir():
             shutil.rmtree(dropPath, ignore_errors=True)
 
+def ensureDebuggerInternal(root: Path, search: dict) -> None:
+    """
+    Windows 키트(`Tools/LLVM`)에 lldb.exe 와 Python 런타임을 둔다. 없는 것만 더한다 — 키트를 다시 풀면 PCH 를 모두 버리므로 그 길로 가지 않는다.
+    lldb.exe 는 키트를 만든 같은 압축본(캐시)에서 한 파일만 꺼낸다. liblldb.dll 이 python3XX.dll 을 import 해 python.org 임베드 패키지를 bin 에 푼다
+    (python.exe · pythonw.exe 는 빼고 DLL · 표준 라이브러리 zip · ._pth · .pyd 만). 마지막에 `lldb --version` 이 돌아야 끝난다.
+    """
+    binDir = root / "bin"
+    if not (binDir / "lldb.exe").is_file():
+        url = search[kKeyLlvmDownloadUrls][platformKey()]
+        archive = ensureCachedDownload(url, toolsCacheDir() / url.rsplit("/", 1)[-1], minSize=50_000_000, label="Llvm")
+        print("[Llvm] Adding lldb.exe from the cached LLVM archive...")
+        with tarfile.open(archive, "r:*") as tarHandle:
+            member = next((m for m in tarHandle if m.isfile() and m.name.endswith("/bin/lldb.exe")), None)
+            if member is None:
+                raise RuntimeError(f"[Llvm] {archive.name} has no bin/lldb.exe")
+            source = tarHandle.extractfile(member)
+            (binDir / "lldb.exe").write_bytes(source.read())
+
+    pythonVersion = search[kKeyLldbPythonVersion]
+    pythonDll = "python" + "".join(pythonVersion.split(".")[:2]) + ".dll"
+    if not (binDir / pythonDll).is_file():
+        url = search[kKeyLldbPythonEmbedUrl]
+        archive = ensureCachedDownload(url, toolsCacheDir() / url.rsplit("/", 1)[-1], minSize=1_000_000, label="Llvm")
+        staging = root / f".python_embed_{os.getpid()}"
+        shutil.rmtree(staging, ignore_errors=True)
+        extractZipSafe(archive, staging)
+        for path in staging.iterdir():
+            if path.is_file() and path.name.lower() not in ("python.exe", "pythonw.exe"):
+                shutil.copy2(path, binDir / path.name)
+        shutil.rmtree(staging, ignore_errors=True)
+
+    result = subprocess.run([str(binDir / "lldb.exe"), "--version"], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"[Llvm] {binDir / 'lldb.exe'} does not run ({result.returncode}): {result.stderr.strip()} — "
+                           f"liblldb.dll needs {pythonDll} ({kKeyLldbPythonVersion} in search_paths)")
+    print(f"[Llvm] Debugger ready: {result.stdout.strip()}")
+
+
 def setupLlvm(allowBootstrap: bool = False) -> str:
     """
     LLVM/Clang 경로를 탐색하거나, 누락되었을 경우 GitHub에서 다운로드하여 설치(Bootstrap)합니다.
     (Windows 환경에서 clang-cl 버전 검증 포함)
     """
     existing = findLlvmPath()
-    if existing:
-        print(f"[Llvm] Using existing LLVM kit: {existing}")
-        return recordInternal(Path(existing))
-
     search = loadSearchPaths()
     tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, search)
+    if existing:
+        print(f"[Llvm] Using existing LLVM kit: {existing}")
+        if isWindowsHost() and Path(existing).resolve() == tools.resolve():
+            ensureDebuggerInternal(tools, search)
+        return recordInternal(Path(existing))
 
     # Stale Tools/LLVM (e.g. Clang 19 vs VS18 STL needing 20): explain before replace.
     if tools.is_dir() and (tools / "bin" / "clang-cl.exe").is_file():
@@ -444,6 +490,8 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
     if not isMinimalLlvmRoot(str(tools)):
         raise RuntimeError(f"[Llvm] Minimal kit check failed under {tools}")
     print(f"[Llvm] Minimal kit ready: {tools}")
+    if isWindowsHost():
+        ensureDebuggerInternal(tools, search)
 
     # 헤더가 바뀌었으니 이 툴체인으로 만든 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
     staleCount = invalidatePrecompiledHeadersInternal(getProjectRoot())
