@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
@@ -409,6 +410,12 @@ namespace sw
             pDevice->executeCommandList( pSerialList );
             pSerialList = nullptr;
         };
+        // 레벨 폭 계측(DesignBacklog "비동기 · 병렬" 렌더 패스 기록): 병렬로 기록한 레벨 · 패스 수, 이어 기록한 패스 수, 가장 넓은 레벨. 병렬 레벨의 시간은
+        // `RT.Graph.parallelLevel`(기록 · 합류 · 제출)이다. 폭이 2 근처에 머물고 그 시간이 패스 본문 합보다 크면 합류 비용이 이득을 지운다.
+        size_t parallelLevelCount = 0;
+        size_t parallelPassCount  = 0;
+        size_t serialPassCount    = 0;
+        size_t maxLevelWidth      = 0;
         for ( const vector<hashed_string>& level : _listCompiledLevel )
         {
             if ( collectLevelPasses( context, level ) == false )
@@ -419,8 +426,10 @@ namespace sw
             const vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
             if ( listPassEntry.empty() )
                 continue;
+            maxLevelWidth = MathUtil::max( maxLevelWidth, listPassEntry.size() );
             if ( listPassEntry.size() == 1 )
             {
+                ++serialPassCount;
                 if ( pSerialList == nullptr )
                 {
                     pSerialList = listPassEntry[0]._pPassCmdList; // 이어 기록하는 동안 다른 패스의 리스트는 이 프레임에 쓰이지 않는다
@@ -431,9 +440,16 @@ namespace sw
                 continue;
             }
             submitSerialList();
+            ++parallelLevelCount;
+            parallelPassCount += listPassEntry.size();
+            SW_PROFILE_SCOPE( "RT.Graph.parallelLevel" );
             recordAndSubmitParallelLevel( pTaskManager, pDevice );
         }
         submitSerialList();
+        SW_PROFILE_COUNT( "RT.Graph.parallelLevels", parallelLevelCount );
+        SW_PROFILE_COUNT( "RT.Graph.parallelPasses", parallelPassCount );
+        SW_PROFILE_COUNT( "RT.Graph.serialPasses", serialPassCount );
+        SW_PROFILE_COUNT( "RT.Graph.maxLevelWidth", maxLevelWidth );
         return true;
     }
 
