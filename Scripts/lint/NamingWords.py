@@ -85,7 +85,7 @@ def findProblems(listSource: Iterable[tuple[str, str]], table: dict) -> list[str
 def readSources(projectRoot: Path) -> list[tuple[str, str]]:
     listSource: list[tuple[str, str]] = []
     for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix in kExtensions and "graphify-out" not in path.parts:
+        if path.suffix in kExtensions:
             try:
                 listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
             except (UnicodeDecodeError, OSError):

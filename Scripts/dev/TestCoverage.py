@@ -24,7 +24,7 @@ scenarios = {p: re.sub(r'<!--.*?-->', '', read(p), flags=re.S) for p in (ROOT / 
 folders = collections.defaultdict(list)
 tests = collections.Counter()
 for cpp in SOURCE.rglob('*.cpp'):
-    if 'graphify-out' in cpp.parts or 'ThirdParty' in cpp.parts:
+    if 'ThirdParty' in cpp.parts:
         continue
     if 'Tests' in cpp.parts:
         owner = pathlib.Path(*cpp.parts[:cpp.parts.index('Tests')])

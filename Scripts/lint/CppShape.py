@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
-kSkipFolders = ("ThirdParty", "graphify-out", "Generated", ".gen.")
+kSkipFolders = ("ThirdParty", "Generated", ".gen.")
 kBoolFlagExempt = "NOLINT(sw-bool-flag)"
 kOnlineTableExempt = "NOLINT(sw-online-table)"
 kOnlineKitFolder = "Source/GameFramework/Kits/Feature/Online/"

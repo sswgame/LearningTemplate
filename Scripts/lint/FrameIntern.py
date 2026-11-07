@@ -63,7 +63,7 @@ def findProblems(listSource: Iterable[tuple[str, str]], exceptions: dict) -> lis
 def readSources(projectRoot: Path) -> list[tuple[str, str]]:
     listSource: list[tuple[str, str]] = []
     for path in (projectRoot / "Source").rglob("*.cpp"):
-        if "Tests" in path.parts or "graphify-out" in path.parts:
+        if "Tests" in path.parts:
             continue
         try:
             listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))

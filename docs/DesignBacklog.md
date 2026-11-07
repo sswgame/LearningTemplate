@@ -41,7 +41,7 @@ float3 ShooterPlayerComponent::findMuzzlePosition()
 
 쿠킹된 팩이 코드가 경로를 이어 붙여 읽는 에셋을 빼먹는지는 `-cooked-content`로 확인하지 않았습니다. 서비스 생성 순서가 의존·이름 순이라 생성자 안에서 다른 서비스를 찾으면 깨진다는 위험도, 그런 생성자는 이번 검색에서 찾지 못했습니다.
 
-그래프(`Source/graphify-out/graph.json`)도 조회했다. `ModuleSharedAssetCache.h`는 여러 온라인·장르 카탈로그에서 직접 가져오고, `RHIModuleABI.h`는 RHI 백엔드 등록·진입점에서 가져온다. 그래프의 가져오기 간선은 의존 방향을 찾는 단서이지 런타임 결합이나 결함의 증거는 아니다. 빌드·시나리오는 돌리지 않았다.
+그래프(`graphify-out/graph.json`)도 조회했다. `ModuleSharedAssetCache.h`는 여러 온라인·장르 카탈로그에서 직접 가져오고, `RHIModuleABI.h`는 RHI 백엔드 등록·진입점에서 가져온다. 그래프의 가져오기 간선은 의존 방향을 찾는 단서이지 런타임 결합이나 결함의 증거는 아니다. 빌드·시나리오는 돌리지 않았다.
 
 ## 구조·시스템·이름 감사
 
@@ -175,7 +175,7 @@ float3 ShooterPlayerComponent::findMuzzlePosition()
 
 ### 데이터 기반 카탈로그 참조 전수 점검 (코드·Graphify 대조 2026-11-07)
 
-**범위와 집계:** 최신 `Source/graphify-out/graph.json`을 탐색에 쓰고 `Source`의 C++에서 공통 참조 검사 호출, 카탈로그 파서의 `find`/unknown 검증, 실제 게임 시작 호출을 검색해 구현을 대조했다. `XMLCatalogReader::checkReferences` 호출은 9개 카탈로그 루트, 20개 참조 규칙이다. 다음은 게임 데이터의 ID·상태 전이 연결을 대상으로 한 결과다. 열거형/고정 토큰(예: 지형·자세 이름), XML 자식 이름 검사, 리소스 경로·AssetRef 검증, 런타임의 일반 조회 호출은 카탈로그 간 ID 참조 집계와 구분했다.
+**범위와 집계:** 최신 `graphify-out/graph.json`을 탐색에 쓰고 `Source`의 C++에서 공통 참조 검사 호출, 카탈로그 파서의 `find`/unknown 검증, 실제 게임 시작 호출을 검색해 구현을 대조했다. `XMLCatalogReader::checkReferences` 호출은 9개 카탈로그 루트, 20개 참조 규칙이다. 다음은 게임 데이터의 ID·상태 전이 연결을 대상으로 한 결과다. 열거형/고정 토큰(예: 지형·자세 이름), XML 자식 이름 검사, 리소스 경로·AssetRef 검증, 런타임의 일반 조회 호출은 카탈로그 간 ID 참조 집계와 구분했다.
 
 | 검증 경로 | 확인된 범위 | 현재 경계 |
 |---|---|---|

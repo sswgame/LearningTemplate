@@ -8,8 +8,6 @@ word = re.compile(r'[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z0-9]+|[A-Z]+')
 # A. 직속 파일이 많은 폴더와 그 안의 첫 낱말 묶음
 out.append('## A. 직속 소스 파일 25+ 폴더 (첫 낱말 묶음 ≥4)')
 for root, dirs, files in os.walk('.'):
-    if 'graphify-out' in root:
-        continue
     stems = sorted({pathlib.Path(f).stem for f in files if f.endswith(('.h', '.cpp'))})
     if len(stems) < 14:  # 헤더+cpp 짝 기준 대략 25 파일
         continue
@@ -25,8 +23,6 @@ out.append('\n## B. 모호한 이름(파일 · 폴더)')
 vague = re.compile(r'(Part|Misc|Stuff|Helper|Helpers|Common|Shared|Base|Core|Data|Info|Impl|Handler|Processor|Wrapper|Object)$')
 hits = collections.defaultdict(list)
 for root, dirs, files in os.walk('.'):
-    if 'graphify-out' in root:
-        continue
     for d in dirs:
         if vague.search(d):
             hits['folder'].append(f'{root[2:]}/{d}')
@@ -42,8 +38,6 @@ out.append('\n## C. 정적 함수만 있는 타입(Util/Internal 접미사 아�
 rx = re.compile(r'\b(class|struct)\s+(?:SW_\w+\s+)?(\w+)\s*(?:final\s*)?\{', re.S)
 byFolder = collections.defaultdict(list)
 for f in pathlib.Path('.').rglob('*.h'):
-    if 'graphify-out' in f.parts:
-        continue
     t = re.sub(r'//[^\n]*|/\*.*?\*/', '', f.read_text('utf-8', 'ignore'), flags=re.S)
     for m in rx.finditer(t):
         name = m.group(2)

@@ -33,7 +33,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 
 kConfigPath = "Config/Dev/CommonShapeExceptions.json"
 kExtensions = (".h", ".cpp", ".inl")
-kSkipParts = ("graphify-out", "ThirdParty", "Tests")
+kSkipParts = ("ThirdParty", "Tests")
 kCommentPattern = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 
 kSwitchPattern = re.compile(r"\bswitch\s*\([^\n]*\)\s*\{")

@@ -36,7 +36,6 @@ from generate.GeneratorOutput import GeneratorError, runGenerator  # noqa: E402
 
 kTag = "ContentModules"
 kContentSuffix = (".scene.xml", ".prefab.xml")
-kSkipSourceFolder = {"graphify-out"}
 kScopeSeparator = "::"
 
 
@@ -51,8 +50,6 @@ def collectManifests(sourceRoot: Path) -> dict[str, dict]:
     """게임 아닌 모듈 이름 → 매니페스트(게임 의존을 따라가는 데 쓴다)."""
     mapManifestByName: dict[str, dict] = {}
     for manifestPath in sourceRoot.rglob("*.module.json"):
-        if kSkipSourceFolder.intersection(manifestPath.parts):
-            continue
         manifest = readManifest(manifestPath)
         if manifest.get("_kind") != "Game":
             mapManifestByName[manifest["_name"]] = manifest

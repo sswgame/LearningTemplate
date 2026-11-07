@@ -94,7 +94,7 @@ def findProblems(listSource: Iterable[tuple[str, str]], table: dict) -> list[str
 def readSources(projectRoot: Path) -> list[tuple[str, str]]:
     listSource: list[tuple[str, str]] = []
     for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix in kExtensions and "graphify-out" not in path.parts:
+        if path.suffix in kExtensions:
             try:
                 text = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
@@ -170,7 +170,7 @@ def readBuildSources(projectRoot: Path) -> list[tuple[str, str]]:
     listPath = [projectRoot / "CMakeLists.txt", *(projectRoot / "cmake").rglob("*.cmake"),
                 *(projectRoot / "Source").rglob("CMakeLists.txt"), *(projectRoot / "Scripts").rglob("*.py")]
     for path in listPath:
-        if not path.is_file() or "__pycache__" in path.parts or "graphify-out" in path.parts:
+        if not path.is_file() or "__pycache__" in path.parts:
             continue
         try:
             listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))

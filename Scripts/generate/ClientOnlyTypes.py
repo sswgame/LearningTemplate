@@ -41,7 +41,7 @@ def collectTypeNames(projectRoot: Path) -> list[str]:
     setName: set[str] = set()
     for path in (projectRoot / "Source").rglob("*.h"):
         relativePath = path.relative_to(projectRoot).as_posix()
-        if "/Tests/" in relativePath or "graphify-out" in relativePath or not isClientOnlySource(relativePath):
+        if "/Tests/" in relativePath or not isClientOnlySource(relativePath):
             continue
         setName.update(kReflectedType.findall(path.read_text(encoding="utf-8")))
     return sorted(setName)
