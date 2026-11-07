@@ -18,6 +18,7 @@ namespace
     <Reference owner="Class/Learn" attribute="spell" target="Spell"/>
     <Reference owner="Site" attribute="garrison" target="Ghost" named="true"/>
     <Reference owner="Hint" attribute="topic" target="Spell" optional="true"/>
+    <Unique owner="Spell" attribute="id"/>
   </Catalog>
 </DataCatalogReferenceTable>)";
 
@@ -35,7 +36,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, CleanReferencesPass )
 {
     DataCatalogReferenceRules rules;
     SW_REQUIRE_TRUE( rules.loadFromXMLText( kTestTable, "table" ) );
-    SW_EXPECT_EQUAL( size_t( 4 ), rules.getRules().size() );
+    SW_EXPECT_EQUAL( size_t( 5 ), rules.getRules().size() );
     SW_EXPECT_TRUE( rules.hasRulesFor( "TestCatalog" ) );
     SW_EXPECT_FALSE( rules.hasRulesFor( "OtherCatalog" ) );
     SW_EXPECT_TRUE( validateText( rules, R"(<TestCatalog>
@@ -105,4 +106,17 @@ SW_TEST_CASE( DataCatalogReferencesTest, ShippedTableLoads )
     SW_REQUIRE_TRUE( rules.loadFromAsset() );
     SW_EXPECT_TRUE( rules.hasRulesFor( "JRPGCatalog" ) );
     SW_EXPECT_TRUE( rules.hasRulesFor( "ConquestCatalog" ) );
+}
+
+/** @brief [DataCatalogReferencesTest] 겹침 줄(`<Unique>`)은 한 파일 안의 같은 값을 하나마다 알리고 false 다. 다른 원소 종류의 같은 값은 겹침이 아니다 */
+SW_TEST_CASE( DataCatalogReferencesTest, UniqueRowRejectsDuplicates )
+{
+    DataCatalogReferenceRules rules;
+    SW_REQUIRE_TRUE( rules.loadFromXMLText( kTestTable, "table" ) );
+    SW_EXPECT_TRUE( validateText( rules, R"(<TestCatalog><Spell id="fire"/><Ghost id="fire"/></TestCatalog>)" ) );
+    SW_EXPECT_LOG( "XMLCatalog.DuplicateID" );
+    SW_EXPECT_FALSE( validateText( rules, R"(<TestCatalog><Spell id="fire"/><Spell id="fire"/></TestCatalog>)" ) );
+    SW_EXPECT_LOG( "DataCatalogReferences.RuleInvalid" );
+    DataCatalogReferenceRules broken;
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<DataCatalogReferenceTable><Catalog root="A"><Unique owner="X" attribute="id" target="Y"/></Catalog></DataCatalogReferenceTable>)", "table" ) );
 }

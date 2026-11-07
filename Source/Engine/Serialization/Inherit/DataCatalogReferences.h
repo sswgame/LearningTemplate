@@ -14,6 +14,7 @@
  *         <Reference owner="Room" attribute="ghosts" target="Ghost"/>             <!-- 목록(쉼표 · 공백 · 세미콜론) -->
  *         <Reference owner="Class/Learn" attribute="spell" target="Spell"/>       <!-- 항목의 자식 원소 -->
  *         <Reference owner="Site" attribute="garrison" target="Unit" named="true"/> <!-- `id:수` 꼴 -->
+ *         <Unique owner="Ghost" attribute="id"/>                                    <!-- 한 파일 안에서 겹치면 오류 -->
  *       </Catalog>
  *     </DataCatalogReferenceTable>
  * @endcode
@@ -37,10 +38,11 @@ namespace sw
         string         _rootName;           ///< 카탈로그 루트 원소 이름
         vector<string> _listOwnerPath;      ///< 루트의 자식(항목)에서 값을 적은 원소까지의 원소 이름들(`Class/Learn`)
         string         _attribute;          ///< id 를 적은 속성
-        string         _target;             ///< 가리키는 원소 이름(루트의 자식)
+        string         _target;             ///< 가리키는 원소 이름(루트의 자식). 겹침 규칙(`<Unique>`)은 비어 있다
         string         _targetKey;          ///< 가리키는 원소의 id 속성(기본 `id`)
         bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool           _bOptional{ false }; ///< 깨져도 경고만 한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**
@@ -66,8 +68,9 @@ namespace sw
          */
         [[nodiscard]] bool isRootMentioned( string_view text ) const;
         /**
-         * @brief 문서 루트 @p root 의 규칙을 모두 봅니다. 없는 id 마다 `XMLCatalog.UnknownReference`(필수) · `XMLCatalog.UnknownOptionalReference`(선택)를 남긴다.
-         * @return 필수 참조가 하나라도 깨졌으면 false 입니다. 규칙이 없는 루트는 true 입니다.
+         * @brief 문서 루트 @p root 의 규칙을 모두 봅니다. 없는 id 마다 `XMLCatalog.UnknownReference`(필수) · `XMLCatalog.UnknownOptionalReference`(선택)를,
+         *        겹침 규칙의 겹친 값마다 `XMLCatalog.DuplicateID` 를 남긴다.
+         * @return 필수 참조가 깨졌거나 겹침이 있으면 false 입니다. 규칙이 없는 루트는 true 입니다.
          */
         [[nodiscard]] bool validateDocument( const XMLNode& root, string_view sourceName ) const;
         /** @brief 표를 읽고(`loadFromAsset`) @p root 를 봅니다 — 카탈로그 읽기의 입구다. 표를 읽지 못하면 false 입니다. */
@@ -75,6 +78,10 @@ namespace sw
 
         /** @brief 읽은 규칙입니다(표 순서). */
         const vector<DataCatalogReferenceRule>& getRules() const { return _listRule; }
+
+    private:
+        /** @brief 겹침 규칙 하나를 봅니다. 겹친 값마다 알리고, 겹침이 있으면 false 입니다. */
+        [[nodiscard]] static bool validateUnique( const XMLNode& root, const DataCatalogReferenceRule& rule, string_view sourceName );
 
     private:
         vector<DataCatalogReferenceRule> _listRule; ///< 표의 줄(루트 · 줄 순서)

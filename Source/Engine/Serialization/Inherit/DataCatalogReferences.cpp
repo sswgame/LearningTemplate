@@ -20,6 +20,7 @@ namespace sw
         {
             static constexpr const utf8* kCatalogElement   = "Catalog";   ///< 표: 카탈로그 루트 하나
             static constexpr const utf8* kReferenceElement = "Reference"; ///< 표: 참조 한 줄
+            static constexpr const utf8* kUniqueElement    = "Unique";    ///< 표: 한 파일 안에서 겹치면 안 되는 값 한 줄
             static constexpr const utf8* kDefaultTargetKey = "id";        ///< 가리키는 원소의 id 속성(적지 않으면)
             static constexpr const utf8* kListSeparators   = ",; \t\r\n"; ///< 목록 값의 구분자 — 카탈로그 읽기(`XMLFields` · `forEachNamedNumber`)가 받는 것과 같다
 
@@ -34,18 +35,22 @@ namespace sw
                 return false;
             }
 
-            /** @brief 표 줄 하나를 규칙으로 읽습니다. */
+            /** @brief 표 줄 하나를 규칙으로 읽습니다. 겹침 줄(`<Unique>`)은 owner · attribute 만 받는다. */
             [[nodiscard]] static bool readRule( const XMLNode& row, string_view rootName, string_view sourceName, DataCatalogReferenceRule& outRule )
             {
-                static constexpr const utf8* kArrKnown[] = { "owner", "attribute", "target", "targetKey", "named", "optional" };
-                bool                         bValid      = true;
+                const bool                   bUnique           = StringUtil::equals( row.getName(), kUniqueElement );
+                static constexpr const utf8* kArrKnown[]       = { "owner", "attribute", "target", "targetKey", "named", "optional" };
+                static constexpr const utf8* kArrUniqueKnown[] = { "owner", "attribute" };
+                bool                         bValid            = true;
                 for ( XMLAttribute attribute = row.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    const bool bKnown = std::any_of( std::begin( kArrKnown ), std::end( kArrKnown ), [&attribute]( const utf8* pKnown )
-                    { return StringUtil::equals( attribute.getName(), pKnown ); } );
+                    const auto matches = [&attribute]( const utf8* pKnown )
+                    { return StringUtil::equals( attribute.getName(), pKnown ); };
+                    const bool bKnown = bUnique ? std::any_of( std::begin( kArrUniqueKnown ), std::end( kArrUniqueKnown ), matches )
+                                                : std::any_of( std::begin( kArrKnown ), std::end( kArrKnown ), matches );
                     if ( bKnown == false )
                     {
-                        SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%#> of <%#> has an unknown attribute '%#'", sourceName, kReferenceElement, rootName, attribute.getName() );
+                        SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%#> of <%#> has an unknown attribute '%#'", sourceName, row.getName(), rootName, attribute.getName() );
                         bValid = false;
                     }
                 }
@@ -56,11 +61,12 @@ namespace sw
                 }
                 outRule._attribute          = string( row.getAttributeText( "attribute" ) );
                 outRule._target             = string( row.getAttributeText( "target" ) );
+                outRule._bUnique            = bUnique;
                 const string_view targetKey = row.getAttributeText( "targetKey" );
                 outRule._targetKey          = targetKey.empty() ? string( kDefaultTargetKey ) : string( targetKey );
-                if ( outRule._listOwnerPath.empty() || outRule._attribute.empty() || outRule._target.empty() )
+                if ( outRule._listOwnerPath.empty() || outRule._attribute.empty() || ( bUnique == false && outRule._target.empty() ) )
                 {
-                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: a <%#> of <%#> needs owner, attribute and target", sourceName, kReferenceElement, rootName );
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: a <%#> of <%#> needs owner, attribute%#", sourceName, row.getName(), rootName, bUnique ? "" : " and target" );
                     bValid = false;
                 }
                 bValid = readFlag( row, "named", sourceName, outRule._bNamed ) && bValid;
@@ -138,9 +144,10 @@ namespace sw
             }
             for ( XMLNode row = catalog.findChild(); row.isValid(); row = row.findNextSibling() )
             {
-                if ( StringUtil::equals( row.getName(), Internal::kReferenceElement ) == false )
+                if ( StringUtil::equals( row.getName(), Internal::kReferenceElement ) == false && StringUtil::equals( row.getName(), Internal::kUniqueElement ) == false )
                 {
-                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%#> of <%#> is not a <%#> row", sourceName, row.getName(), rootName, Internal::kReferenceElement );
+                    SW_LOG_ERROR_ID( "DataCatalogReferences.RuleInvalid", "%#: <%#> of <%#> is not a <%#> or <%#> row", sourceName, row.getName(), rootName, Internal::kReferenceElement,
+                                     Internal::kUniqueElement );
                     bValid = false;
                     continue;
                 }
@@ -189,6 +196,11 @@ namespace sw
         {
             if ( rule._rootName != rootName )
                 continue;
+            if ( rule._bUnique )
+            {
+                bValid = validateUnique( root, rule, sourceName ) && bValid;
+                continue;
+            }
             // 가리킬 수 있는 id — 정렬해 두고 이진 검색한다(항목 수십 · 수백).
             vector<string_view> listTargetID;
             for ( XMLNode target = root.findChild( rule._target.c_str() ); target.isValid(); target = target.findNextSibling( rule._target.c_str() ) )
@@ -224,6 +236,33 @@ namespace sw
                 else
                     Internal::visitOwners( entry, rule._listOwnerPath, 1, checkNode );
             }
+        }
+        return bValid;
+    }
+
+    bool DataCatalogReferenceRules::validateUnique( const XMLNode& root, const DataCatalogReferenceRule& rule, string_view sourceName )
+    {
+        vector<string_view> listSeen;
+        bool                bValid    = true;
+        const auto          checkNode = [&]( const XMLNode& owner )
+        {
+            const string_view value = owner.getAttributeText( rule._attribute.c_str() );
+            if ( value.empty() )
+                return; // 빈 값은 그 원소의 읽기가 오류로 알린다
+            if ( VectorUtil::contains( listSeen, value ) )
+            {
+                SW_LOG_ERROR_ID( "XMLCatalog.DuplicateID", "%#: <%#> %#=\"%#\" is written twice in one file - the catalog does not load", sourceName, owner.getName(), rule._attribute.c_str(), value );
+                bValid = false;
+                return;
+            }
+            listSeen.push_back( value );
+        };
+        for ( XMLNode entry = root.findChild( rule._listOwnerPath[0].c_str() ); entry.isValid(); entry = entry.findNextSibling( rule._listOwnerPath[0].c_str() ) )
+        {
+            if ( rule._listOwnerPath.size() == 1 )
+                checkNode( entry );
+            else
+                DataCatalogReferencesInternal::visitOwners( entry, rule._listOwnerPath, 1, checkNode );
         }
         return bValid;
     }

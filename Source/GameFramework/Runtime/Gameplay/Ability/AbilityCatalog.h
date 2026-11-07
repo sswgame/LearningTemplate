@@ -372,7 +372,8 @@ namespace sw
      *
      *          **데이터**(파일은 공유 캐시, 글은 `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<AbilityEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
      *          파일 안의 순서와 상관없이 이펙트, 어빌리티, 세트 순으로 읽는다. 그래서 비용 이펙트나 쿨다운 이펙트 같은 참조가 앞에 있지 않아도 된다.
-     *          여러 글을 차례로 읽으면 합쳐지고, 같은 id 는 나중에 읽은 것이 우선한다. 형식은 `Source/GameFramework/Runtime/Gameplay/Ability/README.md` 에 있다.
+     *          여러 글을 차례로 읽으면 합쳐지고, 같은 id 는 나중에 읽은 것이 우선한다. 한 글 안에서 같은 종류 id 를 두 번 적으면 오류이고 그 글은 읽히지 않는다(`XMLCatalog.DuplicateID` — 참조 표의 `<Unique>` 줄).
+     *          연결(비용 · 쿨다운 이펙트, 부여 어빌리티, 세트의 어빌리티 · 이펙트)은 참조 표(`engine/settings/datacatalogreferences.xml`)가 보고 없으면 로드 실패다. 형식은 `Source/GameFramework/Runtime/Gameplay/Ability/README.md` 에 있다.
      */
     class SW_GF_API AbilityCatalog : public XMLCatalog<AbilityCatalog>
     {
@@ -388,7 +389,7 @@ namespace sw
         // --------------------------------------------------------------------------
         // 정의. 코드로 추가한다
         // --------------------------------------------------------------------------
-        /** @brief 이펙트 정의를 추가합니다. 같은 id 가 있으면 교체합니다. 이미 적용된 이펙트는 교체 전 정의를 계속 참조합니다. */
+        /** @brief 이펙트 정의를 추가합니다. 같은 id 가 있으면 교체합니다(코드 API — 한 XML 글 안의 겹침은 읽기가 오류로 거절한다, `XMLCatalog.DuplicateID`). 이미 적용된 이펙트는 교체 전 정의를 계속 참조합니다. */
         shared_ptr<const AbilityEffectDef> addEffect( const AbilityEffectDef& def );
         /** @brief 어빌리티 정의를 추가합니다. 같은 id 가 있으면 교체합니다. */
         void addAbility( const AbilityDef& def );

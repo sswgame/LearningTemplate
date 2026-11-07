@@ -559,10 +559,10 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pEffectID ) )
             return nullptr;
-        shared_ptr<const AbilityEffectDef> pDef = findEffect( hashed_string( pEffectID ) );
-        if ( pDef == nullptr )
-            SW_LOG_WARNING_ID( "AbilityCatalog.AbilityRefersEffectWhich", "%#: ability '%#' refers to effect '%#' which is not in the catalog", sourceName, pOwnerID, pEffectID );
-        return pDef;
+        // 없는 이펙트는 참조 표(`engine/settings/datacatalogreferences.xml` 의 AbilityCatalog 줄)가 오류로 알리고 로드를 멈춘다 — 여기서 따로 알리지 않는다.
+        (void)pOwnerID;
+        (void)sourceName;
+        return findEffect( hashed_string( pEffectID ) );
     }
 } // namespace sw
 
