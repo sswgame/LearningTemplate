@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -57,70 +58,76 @@ namespace sw
 
     uint32 QuestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode questNode = root.findChild( "Quest" ); questNode; questNode = questNode.findNextSibling( "Quest" ) )
+        using Element                          = XMLCatalogElement<QuestCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&QuestCatalog::loadQuest>( "Quest" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool QuestCatalog::loadQuest( const XMLNode& questNode, string_view sourceName )
+    {
+
+        // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
+        QuestDef quest;
+        bool     bValid = XMLFields::readFields( questNode, quest, sourceName );
+        if ( quest._id.empty() )
+            return false;
+        const utf8* const pID = quest._id.c_str();
+        if ( quest._name.empty() )
+            quest._name = pID;
+        for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
         {
-            // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
-            QuestDef quest;
-            bool     bValid = XMLFields::readFields( questNode, quest, sourceName );
-            if ( quest._id.empty() )
-                continue;
-            const utf8* const pID = quest._id.c_str();
-            if ( quest._name.empty() )
-                quest._name = pID;
-            for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
+            QuestStage stage;
+            bValid = XMLFields::readFields( stageNode, stage, sourceName ) && bValid;
+            for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
             {
-                QuestStage stage;
-                bValid = XMLFields::readFields( stageNode, stage, sourceName ) && bValid;
-                for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
-                {
-                    QuestObjective objective;
-                    bValid = XMLFields::readFields( node, objective, sourceName ) && bValid;
-                    stage._listObjective.push_back( objective );
-                }
-                for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
-                {
-                    QuestBranch branch;
-                    bValid = XMLFields::readFields( node, branch, sourceName ) && bValid;
-                    stage._listBranch.push_back( branch );
-                }
-                bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;
-                quest._listStage.push_back( stage );
+                QuestObjective objective;
+                bValid = XMLFields::readFields( node, objective, sourceName ) && bValid;
+                stage._listObjective.push_back( objective );
             }
-            // 다음 단계와 분기가 가리키는 단계가 있는지, 끝나지 못하는 단계가 없는지 확인한다.
-            for ( size_t stageIndex = 0; stageIndex < quest._listStage.size(); ++stageIndex )
+            for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
             {
-                const QuestStage& stage = quest._listStage[stageIndex];
-                if ( quest.findStage( stage._id ) != &stage )
-                {
-                    SW_LOG_ERROR_ID( "QuestCatalog.QuestDuplicateStage", "%#: quest '%#' has a duplicate stage '%#'", sourceName, pID, stage._id.c_str() ); // 찾기는 앞의 것만 돌려주어 뒤의 것에는 닿지 못한다
-                    bValid = false;
-                }
-                const bool bDeadEnd = stage._bComplete == false && stage._bFail == false && stage._nextStage.empty() && stage._listBranch.empty();
-                if ( bDeadEnd )
-                    SW_LOG_WARNING_ID( "QuestCatalog.QuestStageDeadEnd", "%#: quest '%#' stage '%#' has no next stage and is neither complete nor fail - the quest stays active forever", sourceName, pID, stage._id.c_str() );
-                if ( stage._nextStage.empty() == false && quest.findStage( stage._nextStage ) == nullptr )
-                    SW_LOG_WARNING_ID( "QuestCatalog.QuestStageGoesUnknown", "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pID, stage._id.c_str(), stage._nextStage.c_str() );
-                for ( const QuestBranch& branch : stage._listBranch )
-                {
-                    if ( quest.findStage( branch._nextStage ) == nullptr )
-                        SW_LOG_WARNING_ID( "QuestCatalog.QuestBranchGoesUnknown", "%#: quest '%#' branch '%#' goes to unknown '%#'", sourceName, pID, branch._choice.c_str(), branch._nextStage.c_str() );
-                }
+                QuestBranch branch;
+                bValid = XMLFields::readFields( node, branch, sourceName ) && bValid;
+                stage._listBranch.push_back( branch );
             }
-            if ( quest._listStage.empty() )
-            {
-                SW_LOG_WARNING_ID( "QuestCatalog.QuestNoStages", "%#: quest '%#' has no stages", sourceName, pID );
-                continue;
-            }
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "QuestCatalog.QuestInvalidFieldsSkipped", "%#: quest '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            (void)add( quest );
-            ++loadedCount;
+            bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;
+            quest._listStage.push_back( stage );
         }
-        return loadedCount;
+        // 다음 단계와 분기가 가리키는 단계가 있는지, 끝나지 못하는 단계가 없는지 확인한다.
+        for ( size_t stageIndex = 0; stageIndex < quest._listStage.size(); ++stageIndex )
+        {
+            const QuestStage& stage = quest._listStage[stageIndex];
+            if ( quest.findStage( stage._id ) != &stage )
+            {
+                SW_LOG_ERROR_ID( "QuestCatalog.QuestDuplicateStage", "%#: quest '%#' has a duplicate stage '%#'", sourceName, pID, stage._id.c_str() ); // 찾기는 앞의 것만 돌려주어 뒤의 것에는 닿지 못한다
+                bValid = false;
+            }
+            const bool bDeadEnd = stage._bComplete == false && stage._bFail == false && stage._nextStage.empty() && stage._listBranch.empty();
+            if ( bDeadEnd )
+                SW_LOG_WARNING_ID( "QuestCatalog.QuestStageDeadEnd", "%#: quest '%#' stage '%#' has no next stage and is neither complete nor fail - the quest stays active forever", sourceName, pID, stage._id.c_str() );
+            if ( stage._nextStage.empty() == false && quest.findStage( stage._nextStage ) == nullptr )
+                SW_LOG_WARNING_ID( "QuestCatalog.QuestStageGoesUnknown", "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pID, stage._id.c_str(), stage._nextStage.c_str() );
+            for ( const QuestBranch& branch : stage._listBranch )
+            {
+                if ( quest.findStage( branch._nextStage ) == nullptr )
+                    SW_LOG_WARNING_ID( "QuestCatalog.QuestBranchGoesUnknown", "%#: quest '%#' branch '%#' goes to unknown '%#'", sourceName, pID, branch._choice.c_str(), branch._nextStage.c_str() );
+            }
+        }
+        if ( quest._listStage.empty() )
+        {
+            SW_LOG_WARNING_ID( "QuestCatalog.QuestNoStages", "%#: quest '%#' has no stages", sourceName, pID );
+            return false;
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "QuestCatalog.QuestInvalidFieldsSkipped", "%#: quest '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        (void)add( quest );
+        return true;
     }
 } // namespace sw
 

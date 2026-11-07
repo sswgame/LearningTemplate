@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -127,29 +128,13 @@ namespace sw
             return 0;
         _deckCostLimit = rootDef._deckCostLimit;
 
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( StringUtil::equals( name, string_view( "Mech" ) ) )
-            {
-                if ( loadMech( node, sourceName ) )
-                    ++loadedCount;
-            }
-            else if ( StringUtil::equals( name, string_view( "Class" ) ) )
-            {
-                if ( loadClass( node, sourceName ) == false )
-                    SW_LOG_ERROR_ID( "MechCatalog.ClassNotRead", "%#: <Class> was not read", sourceName );
-            }
-            else if ( StringUtil::equals( name, string_view( "Skill" ) ) )
-            {
-                if ( loadSkill( node, sourceName ) == false )
-                    SW_LOG_ERROR_ID( "MechCatalog.SkillNotRead", "%#: <Skill> was not read", sourceName );
-            }
-            else
-                SW_LOG_ERROR_ID( "MechCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        }
-        return loadedCount;
+        using Element                          = XMLCatalogElement<MechCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&MechCatalog::loadMech>( "Mech" ),
+            Element::of<&MechCatalog::loadClass>( "Class" ).uncounted(),
+            Element::of<&MechCatalog::loadSkill>( "Skill" ).uncounted(),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool MechCatalog::loadClass( const XMLNode& node, string_view sourceName )

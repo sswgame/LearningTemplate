@@ -9,6 +9,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 namespace sw
@@ -23,35 +24,35 @@ namespace sw
     {
     }
 
-    bool AdventureWorldMap::readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount )
+    bool AdventureWorldMap::loadLandmark( const XMLNode& node, AdventureLandmarkKind kind, string_view sourceName )
     {
-        bool bValid = true;
-        for ( XMLNode node = root.findChild( pNodeName ); node; node = node.findNextSibling( pNodeName ) )
+        AdventureLandmarkDef landmark;
+        landmark._kind = kind;
+        if ( XMLFields::readFields( node, landmark, sourceName ) == false )
+            return false;
+        if ( kind == AdventureLandmarkKind::Tower && landmark._region.empty() )
         {
-            AdventureLandmarkDef landmark;
-            landmark._kind = kind;
-            if ( XMLFields::readFields( node, landmark, sourceName ) == false )
-            {
-                bValid = false;
-                continue;
-            }
-            if ( kind == AdventureLandmarkKind::Tower && landmark._region.empty() )
-            {
-                SW_LOG_ERROR_ID( "AdventureWorldMap.TowerNeedsRegionRegion", "%#: tower '%#' needs region=\"...\" (the region it reveals)", sourceName, landmark._id.c_str() );
-                bValid = false;
-                continue;
-            }
-            // `loadRoot` 가 먼저 비웠으니 이미 있으면 같은 글 안의 겹침이다. 받으면 뒤의 종류가 앞을 덮어(사당이 탑을) 그 표지가 말없이 사라진다.
-            if ( _catalog.find( landmark._id ) != nullptr )
-            {
-                SW_LOG_ERROR_ID( "AdventureWorldMap.DuplicateLandmark", "%#: landmark id '%#' is used twice", sourceName, landmark._id.c_str() );
-                bValid = false;
-                continue;
-            }
-            (void)_catalog.add( landmark );
-            ++inoutCount;
+            SW_LOG_ERROR_ID( "AdventureWorldMap.TowerNeedsRegionRegion", "%#: tower '%#' needs region=\"...\" (the region it reveals)", sourceName, landmark._id.c_str() );
+            return false;
         }
-        return bValid;
+        // `loadRoot` 가 먼저 비웠으니 이미 있으면 같은 글 안의 겹침이다. 받으면 뒤의 종류가 앞을 덮어(사당이 탑을) 그 표지가 말없이 사라진다.
+        if ( _catalog.find( landmark._id ) != nullptr )
+        {
+            SW_LOG_ERROR_ID( "AdventureWorldMap.DuplicateLandmark", "%#: landmark id '%#' is used twice", sourceName, landmark._id.c_str() );
+            return false;
+        }
+        (void)_catalog.add( landmark );
+        return true;
+    }
+
+    bool AdventureWorldMap::loadTower( const XMLNode& node, string_view sourceName )
+    {
+        return loadLandmark( node, AdventureLandmarkKind::Tower, sourceName );
+    }
+
+    bool AdventureWorldMap::loadShrine( const XMLNode& node, string_view sourceName )
+    {
+        return loadLandmark( node, AdventureLandmarkKind::Shrine, sourceName );
     }
 
     uint32 AdventureWorldMap::loadRoot( const XMLNode& root, string_view sourceName )
@@ -61,14 +62,16 @@ namespace sw
         if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
             return 0;
         _catalog.clear();
-        _orbsPerExchange       = rootDef._orbsPerExchange;
-        uint32     loadedCount = 0;
-        const bool bTowers     = readLandmarks( root, "Tower", AdventureLandmarkKind::Tower, sourceName, loadedCount );
-        const bool bShrines    = readLandmarks( root, "Shrine", AdventureLandmarkKind::Shrine, sourceName, loadedCount );
-        if ( bTowers == false || bShrines == false )
-            SW_LOG_ERROR_ID( "AdventureWorldMap.SomeLandmarksNotRead", "%#: some landmarks were not read (listed above)", sourceName );
+        _orbsPerExchange = rootDef._orbsPerExchange;
+        // 카탈로그 순서가 저장 번호이므로 탑을 먼저 다 읽고 사당을 읽는다.
+        using Element                          = XMLCatalogElement<AdventureWorldMap>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&AdventureWorldMap::loadTower>( "Tower" ),
+            Element::of<&AdventureWorldMap::loadShrine>( "Shrine" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
         resetState();
-        return loadedCount;
+        return result._loadedCount;
     }
 
     void AdventureWorldMap::resetState()

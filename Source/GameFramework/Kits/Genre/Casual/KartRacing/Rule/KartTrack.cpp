@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -394,17 +395,12 @@ namespace sw
     uint32 KartTrackCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 트랙을 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Track" ) == false )
-                SW_LOG_ERROR_ID( "KartTrack.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            else if ( loadTrack( node, sourceName ) )
-                ++loadedCount;
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_ERROR_ID( "KartTrack.NoTrackEntries", "%#: no <Track> entries", sourceName );
-        return loadedCount;
+        using Element                          = XMLCatalogElement<KartTrackCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&KartTrackCatalog::loadTrack>( "Track" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
     }
 
     bool KartTrackCatalog::loadTrack( const XMLNode& trackNode, string_view sourceName )

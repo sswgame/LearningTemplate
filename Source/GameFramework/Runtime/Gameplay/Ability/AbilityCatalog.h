@@ -421,8 +421,12 @@ namespace sw
         /** @brief `<AbilityCatalog>` 루트 하나를 읽습니다. 읽은 정의 수를 반환합니다. */
         static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
         /** @brief 실행 계산 클래스를 이름으로 등록합니다(생성자가 기본 어휘를 올린다). */
-        void   registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory );
-        uint32 loadRoot( const XMLNode& root, string_view sourceName );
+        void               registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory );
+        uint32             loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadEffect( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadAbility( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadAbilitySet( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadCue( const XMLNode& node, string_view sourceName );
         /** @brief `<AbilityEffect>` 하나를 읽습니다. */
         [[nodiscard]] bool readEffect( const XMLNode& node, string_view sourceName, AbilityEffectDef& outDef ) const;
         /** @brief `<Ability>` 하나를 읽습니다. */

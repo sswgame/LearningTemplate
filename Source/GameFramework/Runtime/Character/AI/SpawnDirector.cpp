@@ -13,6 +13,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -50,16 +51,13 @@ namespace sw
         _maxBudget                  = rootParams._maxBudget;
         _startBudget                = rootParams._startBudget;
         _bRefundOnDespawn           = rootParams._bRefund ? SW_TRUE : SW_FALSE;
-        for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
-        {
-            SpawnEntryDef entry;
-            const bool    bEntryValid = XMLFields::readFields( node, entry, sourceName );
-            if ( bEntryValid )
-                (void)_catalog.add( entry );
-            bValid = bEntryValid && bValid;
-        }
         // 키가 없으면 곡선이 대체값을 쓴다(곡선의 계약). 모르는 이름 · 깨진 키는 오류다.
-        bValid = GameDataXML::readFloatCurve( root, "Curve", 0.0f, _curve, sourceName ) && bValid;
+        using Element                          = XMLCatalogElement<SpawnTable>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&SpawnTable::loadEntry>( "Entry" ).uncounted(),
+            Element::of<&SpawnTable::loadCurve>( "Curve" ).uncounted(),
+        };
+        bValid = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement ).isClean() && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "SpawnDirector.SpawnTableInvalidParams", "%#: spawn table has invalid fields - not loaded", sourceName );
@@ -67,6 +65,20 @@ namespace sw
             return 0;
         }
         return static_cast<uint32>( _catalog.getCount() );
+    }
+
+    bool SpawnTable::loadEntry( const XMLNode& node, string_view sourceName )
+    {
+        SpawnEntryDef entry;
+        if ( XMLFields::readFields( node, entry, sourceName ) == false )
+            return false;
+        (void)_catalog.add( entry );
+        return true;
+    }
+
+    bool SpawnTable::loadCurve( const XMLNode& node, string_view sourceName )
+    {
+        return GameDataXML::readFloatCurveElement( node, 0.0f, _curve, sourceName );
     }
 
     SpawnDirector::SpawnDirector()

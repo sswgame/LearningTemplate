@@ -896,10 +896,10 @@ SW_TEST_CASE( PartyArenaTest, SpawnerRefusesBrokenSettings )
  */
 SW_TEST_CASE( PartyArenaTest, SpawnerReadsXML )
 {
-    SW_EXPECT_LOG( "PartyItemSpawner.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "PartyItemSpawner.ItemNeedsIdEffect" );
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    SW_EXPECT_LOG( "PartyItemSpawner.NoItemEntries" );
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     PartyItemSpawner spawner;
@@ -1020,8 +1020,8 @@ SW_TEST_CASE( PartyArenaTest, SeriesLoadsXMLAllOrNothing )
     SW_EXPECT_LOG( "PartyRoundSeries.WinScoreNotNumber" );
     SW_EXPECT_LOG( "PartyRoundSeries.WinScoreNeedsMore" );
     SW_EXPECT_LOG( "PartyRoundSeries.PlacementPointsNeedsIntegersMore" );
-    SW_EXPECT_LOG( "PartyRoundSeries.NoRound" );
-    SW_EXPECT_LOG( "PartyRoundSeries.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     PartyRoundSeries series;

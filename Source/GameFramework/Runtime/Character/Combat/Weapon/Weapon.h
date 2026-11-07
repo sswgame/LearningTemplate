@@ -142,6 +142,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "WeaponCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool           loadWeapon( const XMLNode& node, string_view sourceName );
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<WeaponCatalog>::acquire` 로 한 벌을 받습니다. */

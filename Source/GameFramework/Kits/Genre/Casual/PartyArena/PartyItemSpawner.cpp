@@ -11,6 +11,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
 #include <optional>
@@ -186,40 +187,35 @@ namespace sw
         PartyItemSpawnSettings settings;
         if ( XMLFields::readFields( root, settings, sourceName ) == false )
             return 0;
-        settings._center   = _settings._center;
-        _settings          = settings;
-        uint32 loadedCount = 0;
-        for ( XMLNode itemNode = root.findChild(); itemNode; itemNode = itemNode.findNextSibling() )
+        settings._center                       = _settings._center;
+        _settings                              = settings;
+        using Element                          = XMLCatalogElement<PartyItemSpawner>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&PartyItemSpawner::loadItem>( "Item" ),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
+
+    bool PartyItemSpawner::loadItem( const XMLNode& node, string_view sourceName )
+    {
+        // 아이템의 효과 수치는 속성 이름이 곧 스탯 이름이라 스키마가 없다 — id · effect · weight 만 형식이 있다.
+        const utf8*                 pID    = XMLReadUtil::findRequiredID( node, sourceName );
+        const std::optional<string> effect = node.readRequiredAttribute<string>( "effect" );
+        std::optional<float32>      weight;
+        const bool                  bWeight = node.readOptionalAttribute( "weight", weight ) && ( weight.has_value() == false || *weight >= 0.0f );
+        const bool                  bItem   = pID != nullptr && effect.has_value() && bWeight;
+        if ( bItem == false )
         {
-            if ( StringUtil::equals( itemNode.getName(), "Item" ) == false )
-            {
-                SW_LOG_ERROR_ID( "PartyItemSpawner.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, itemNode.getName() );
-                continue;
-            }
-            // 아이템의 효과 수치는 속성 이름이 곧 스탯 이름이라 스키마가 없다 — id · effect · weight 만 형식이 있다.
-            const utf8*                 pID    = XMLReadUtil::findRequiredID( itemNode, sourceName );
-            const std::optional<string> effect = itemNode.readRequiredAttribute<string>( "effect" );
-            std::optional<float32>      weight;
-            const bool                  bWeight = itemNode.readOptionalAttribute( "weight", weight ) && ( weight.has_value() == false || *weight >= 0.0f );
-            const bool                  bItem   = pID != nullptr && effect.has_value() && bWeight;
-            if ( bItem == false )
-            {
-                SW_LOG_ERROR_ID( "PartyItemSpawner.ItemNeedsIdEffect", "%#: <Item> needs id, effect and a weight of 0 or more - skipped", sourceName );
-                continue;
-            }
-            PartyItemDef def;
-            def._id     = hashed_string( pID );
-            def._effect = hashed_string( effect->c_str() );
-            if ( weight.has_value() )
-                def._weight = *weight;
-            def._stats.addAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
-            if ( GameDataXML::addUnique( def, sourceName, _catalog ) == false )
-                continue;
-            ++loadedCount;
+            SW_LOG_ERROR_ID( "PartyItemSpawner.ItemNeedsIdEffect", "%#: <Item> needs id, effect and a weight of 0 or more - skipped", sourceName );
+            return false;
         }
-        if ( loadedCount == 0 )
-            SW_LOG_ERROR_ID( "PartyItemSpawner.NoItemEntries", "%#: no <Item> entries", sourceName );
-        return loadedCount;
+        PartyItemDef def;
+        def._id     = hashed_string( pID );
+        def._effect = hashed_string( effect->c_str() );
+        if ( weight.has_value() )
+            def._weight = *weight;
+        def._stats.addAttributes( node, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
+        return GameDataXML::addUnique( def, sourceName, _catalog );
     }
 } // namespace sw
 

@@ -11,6 +11,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
     namespace
@@ -74,48 +76,46 @@ namespace sw
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이(constant::time::kDefaultFixedStepSeconds)다. 0 이하 · 깨진 값은 오류다.
         GimmickCircuitRootParams rootParams{ _stepTime };
-        bool                     bValid = XMLFields::readFields( root, rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
-        _stepTime                       = bValid ? rootParams._stepTime : _stepTime;
-        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
+        const bool               bRoot         = XMLFields::readFields( root, rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        _stepTime                              = bRoot ? rootParams._stepTime : _stepTime;
+        using Element                          = XMLCatalogElement<GimmickCircuitDef>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&GimmickCircuitDef::loadNode>( "Node" ).uncounted(),
+            Element::of<&GimmickCircuitDef::loadWire>( "Wire" ).uncounted(),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, _sourceName, kArrElement ).isClean() && bRoot;
+    }
+
+    bool GimmickCircuitDef::loadNode( const XMLNode& element, string_view sourceName )
+    {
+        const utf8* pID   = element.findAttribute( "id" );
+        const utf8* pKind = element.findAttribute( "kind" );
+        if ( pID == nullptr || pKind == nullptr )
         {
-            if ( StringUtil::equals( child.getName(), "Node" ) )
-            {
-                const utf8* pID   = child.findAttribute( "id" );
-                const utf8* pKind = child.findAttribute( "kind" );
-                if ( pID == nullptr || pKind == nullptr )
-                {
-                    SW_LOG_WARNING_ID( "GimmickCircuitDef.NodeNeedsBothId", "%#: <Node> needs both id and kind", _sourceName );
-                    bValid = false;
-                    continue;
-                }
-                GimmickNodeDef& node = addNode( hashed_string( pID ), hashed_string( pKind ) );
-                for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    const bool bReserved = StringUtil::equals( attribute.getName(), "id" ) || StringUtil::equals( attribute.getName(), "kind" );
-                    if ( bReserved == false )
-                        node.setParam( hashed_string( attribute.getName() ), string_view( attribute.getValue() ) );
-                }
-                continue;
-            }
-            if ( StringUtil::equals( child.getName(), "Wire" ) )
-            {
-                GimmickWireParams wire;
-                if ( XMLFields::readFields( child, wire, _sourceName ) == false )
-                {
-                    bValid = false;
-                    continue;
-                }
-                if ( addWire( wire._from, wire._to, wire._bInvert ) == false )
-                {
-                    SW_LOG_WARNING_ID( "GimmickCircuitDef.WireNeedsNodePort", "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", _sourceName, wire._from, wire._to );
-                    bValid = false;
-                }
-                continue;
-            }
-            SW_LOG_WARNING_ID( "GimmickCircuitDef.UnknownElementGimmickCircuit", "%#: unknown element <%#> in <GimmickCircuit>", _sourceName, child.getName() );
-            bValid = false;
+            SW_LOG_WARNING_ID( "GimmickCircuitDef.NodeNeedsBothId", "%#: <Node> needs both id and kind", sourceName );
+            return false;
         }
-        return bValid;
+        GimmickNodeDef& node = addNode( hashed_string( pID ), hashed_string( pKind ) );
+        for ( XMLAttribute attribute = element.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        {
+            const bool bReserved = StringUtil::equals( attribute.getName(), "id" ) || StringUtil::equals( attribute.getName(), "kind" );
+            if ( bReserved == false )
+                node.setParam( hashed_string( attribute.getName() ), string_view( attribute.getValue() ) );
+        }
+        return true;
+    }
+
+    bool GimmickCircuitDef::loadWire( const XMLNode& element, string_view sourceName )
+    {
+        GimmickWireParams wire;
+        if ( XMLFields::readFields( element, wire, sourceName ) == false )
+            return false;
+        if ( addWire( wire._from, wire._to, wire._bInvert ) == false )
+        {
+            SW_LOG_WARNING_ID( "GimmickCircuitDef.WireNeedsNodePort", "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", sourceName, wire._from, wire._to );
+            return false;
+        }
+        return true;
     }
 
     GimmickNodeDef& GimmickCircuitDef::addNode( const hashed_string& id, const hashed_string& kind )

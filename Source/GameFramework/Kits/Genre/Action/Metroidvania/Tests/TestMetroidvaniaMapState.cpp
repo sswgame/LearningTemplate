@@ -226,6 +226,7 @@ SW_TEST_CASE( MetroidvaniaMapStateTest, RatiosCountRoomsAndPickups )
     SW_EXPECT_NEAR( 1.0f, noCatalog.computeCollectionRatio(), kMapTolerance );
     SW_EXPECT_TRUE( noCatalog.collectPickup( kMask ) == nullptr );
 
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     sw::MetroidvaniaCatalog empty;
     SW_EXPECT_FALSE( empty.loadFromXMLText( R"(<Metroidvania><Parry><Window grade="Perfect"/></Parry></Metroidvania>)", "empty" ) ); // 원소가 없어 읽기 실패지만 규칙은 들어온다
     sw::AreaGraph            noAreas;

@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -37,30 +38,15 @@ namespace sw
     uint32 MonsterCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 각 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 몬스터를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 rejectedCount = 0;
-        uint32 loadedCount   = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const bool bMonster = StringUtil::equals( node.getName(), "Monster" );
-            if ( bMonster == false )
-                SW_LOG_ERROR_ID( "MonsterCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            if ( bMonster == false || loadMonster( node, sourceName ) == false )
-                ++rejectedCount; // 원인은 위 줄이나 loadMonster 가 남겼다
-            else
-                ++loadedCount;
-        }
-        if ( rejectedCount > 0 )
-            SW_LOG_ERROR_ID( "MonsterCatalog.ElementNotLoadedListed", "%#: %# element(s) were not loaded (listed above)", sourceName, rejectedCount );
-
-        // **읽었는데 하나도 없으면 실패로 본다**(0을 반환하면 호출한 쪽이 폴백을 채운다). 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 잘못 적은 오타 하나가
+        using Element                          = XMLCatalogElement<MonsterCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&MonsterCatalog::loadMonster>( "Monster" ),
+        };
+        // **읽었는데 하나도 없으면 실패로 본다.** 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 잘못 적은 오타 하나가
         // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 을 반환해서 그 널을 다루는 쪽이 조용히 아무것도 하지 않는다.
-        if ( loadedCount == 0 )
-        {
-            SW_LOG_WARNING_ID( "MonsterCatalog.NoMonsterEntries", "No <Monster> entries in %#", sourceName );
-            return 0;
-        }
-
-        SW_LOG_INFO_ID( "MonsterCatalog.LoadedMonsterDefinitions", "Loaded %# monster definitions from %#", static_cast<int32>( loadedCount ), sourceName );
+        const uint32 loadedCount = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        if ( loadedCount > 0 )
+            SW_LOG_INFO_ID( "MonsterCatalog.LoadedMonsterDefinitions", "Loaded %# monster definitions from %#", static_cast<int32>( loadedCount ), sourceName );
         return loadedCount;
     }
 

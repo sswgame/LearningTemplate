@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -124,17 +125,14 @@ namespace sw
         VoxelBlockCatalogRootDef rootDef;
         if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
             return 0;
-        _atlasColumns      = rootDef._atlasColumns;
-        _atlasRows         = rootDef._atlasRows;
-        _tileTexels        = rootDef._tileTexels;
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Block" ) == false )
-                SW_LOG_ERROR_ID( "VoxelBlockCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            else if ( loadBlock( node, sourceName ) )
-                ++loadedCount;
-        }
+        _atlasColumns                          = rootDef._atlasColumns;
+        _atlasRows                             = rootDef._atlasRows;
+        _tileTexels                            = rootDef._tileTexels;
+        using Element                          = XMLCatalogElement<VoxelBlockCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&VoxelBlockCatalog::loadBlock>( "Block" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 얻는 블록은 같은 카탈로그의 블록이어야 한다 — 모든 블록을 읽은 뒤에 본다(앞 블록이 뒤 블록을 가리킬 수 있다).
         bool bDropsKnown = true;
         for ( const VoxelBlockDef& block : getBlocks() )
@@ -144,7 +142,7 @@ namespace sw
             SW_LOG_ERROR_ID( "VoxelBlockCatalog.BlockDropsWhichNot", "%#: block '%#' drops '%#', which is not a block in this catalog", sourceName, block._id.c_str(), block._dropID.c_str() );
             bDropsKnown = false;
         }
-        return bDropsKnown ? loadedCount : 0;
+        return bDropsKnown ? result._loadedCount : 0;
     }
 
     bool VoxelBlockCatalog::loadBlock( const XMLNode& node, string_view sourceName )

@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 namespace sw
 {
     namespace
@@ -75,64 +76,68 @@ namespace sw
 
     uint32 MoveCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Move" ); node; node = node.findNextSibling( "Move" ) )
+        using Element                          = XMLCatalogElement<MoveCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&MoveCatalog::loadMove>( "Move" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool MoveCatalog::loadMove( const XMLNode& node, string_view sourceName )
+    {
+
+        // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 높이는 그 기술을 넣지 않는 오류다(자르지 않는다).
+        MoveFrameData move;
+        bool          bValid = XMLFields::readFields( node, move, sourceName );
+        if ( move._id.empty() )
+            return false;
+        const utf8* const pID = move._id.c_str();
+        if ( move._name.empty() )
+            move._name = pID;
+        const int32 lastFrame = move.getTotalFrames();
+
+        for ( XMLNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
         {
-            // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 높이는 그 기술을 넣지 않는 오류다(자르지 않는다).
-            MoveFrameData move;
-            bool          bValid = XMLFields::readFields( node, move, sourceName );
-            if ( move._id.empty() )
-                continue;
-            const utf8* const pID = move._id.c_str();
-            if ( move._name.empty() )
-                move._name = pID;
-            const int32 lastFrame = move.getTotalFrames();
-
-            for ( XMLNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
+            // 프레임 구간을 적지 않으면 기술의 활성 구간이다(이 기술의 데이터에서 온 값).
+            MoveHitbox hitbox;
+            hitbox._fromFrame = move._startup;
+            hitbox._toFrame   = move.getLastActiveFrame();
+            bool bHitboxValid = XMLFields::readFields( child, hitbox, sourceName ); // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
+            if ( bHitboxValid && hitbox._fromFrame > lastFrame )
             {
-                // 프레임 구간을 적지 않으면 기술의 활성 구간이다(이 기술의 데이터에서 온 값).
-                MoveHitbox hitbox;
-                hitbox._fromFrame = move._startup;
-                hitbox._toFrame   = move.getLastActiveFrame();
-                bool bHitboxValid = XMLFields::readFields( child, hitbox, sourceName ); // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
-                if ( bHitboxValid && hitbox._fromFrame > lastFrame )
-                {
-                    SW_LOG_ERROR_ID( "FrameData.MoveHitboxOutsideFrames", "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
-                    bHitboxValid = false;
-                }
-                if ( bHitboxValid )
-                    move._listHitbox.push_back( hitbox );
-                bValid = bHitboxValid && bValid;
+                SW_LOG_ERROR_ID( "FrameData.MoveHitboxOutsideFrames", "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
+                bHitboxValid = false;
             }
-
-            for ( XMLNode child = node.findChild( "Cancel" ); child; child = child.findNextSibling( "Cancel" ) )
-            {
-                // 구간을 적지 않으면 활성 구간 다음부터 기술 끝까지다.
-                MoveCancelWindow window;
-                window._fromFrame = move.getLastActiveFrame() + 1;
-                window._toFrame   = lastFrame;
-                bool bWindowValid = XMLFields::readFields( child, window, sourceName ); // to >= from 은 PROPERTY 가 본다
-                if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
-                {
-                    SW_LOG_ERROR_ID( "FrameData.MoveEmptyCancelWindow", "%#: move '%#' has an empty cancel window", sourceName, pID );
-                    bWindowValid = false;
-                }
-                if ( bWindowValid )
-                    move._listCancel.push_back( window );
-                bValid = bWindowValid && bValid;
-            }
-
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "FrameData.MoveInvalidFieldsSkipped", "%#: move '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            (void)add( move );
-            ++loadedCount;
+            if ( bHitboxValid )
+                move._listHitbox.push_back( hitbox );
+            bValid = bHitboxValid && bValid;
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "FrameData.NoMoveEntries", "%#: no <Move> entries", sourceName );
-        return loadedCount;
+
+        for ( XMLNode child = node.findChild( "Cancel" ); child; child = child.findNextSibling( "Cancel" ) )
+        {
+            // 구간을 적지 않으면 활성 구간 다음부터 기술 끝까지다.
+            MoveCancelWindow window;
+            window._fromFrame = move.getLastActiveFrame() + 1;
+            window._toFrame   = lastFrame;
+            bool bWindowValid = XMLFields::readFields( child, window, sourceName ); // to >= from 은 PROPERTY 가 본다
+            if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
+            {
+                SW_LOG_ERROR_ID( "FrameData.MoveEmptyCancelWindow", "%#: move '%#' has an empty cancel window", sourceName, pID );
+                bWindowValid = false;
+            }
+            if ( bWindowValid )
+                move._listCancel.push_back( window );
+            bValid = bWindowValid && bValid;
+        }
+
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "FrameData.MoveInvalidFieldsSkipped", "%#: move '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        (void)add( move );
+        return true;
     }
 
     // ------------------------------------------------------------------------------

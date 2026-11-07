@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 namespace sw
 {
     float32 WeatherDef::computeWeight( const hashed_string& season ) const
@@ -32,45 +33,51 @@ namespace sw
         WeatherCatalogRootParams rootParams{ _transitionTime };
         if ( XMLFields::readFields( root, rootParams, sourceName ) == false )
             return 0;
-        _transitionTime    = rootParams._transition;
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
+        _transitionTime                        = rootParams._transition;
+        using Element                          = XMLCatalogElement<WeatherCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&WeatherCatalog::loadWeather>( "Weather" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool WeatherCatalog::loadWeather( const XMLNode& node, string_view sourceName )
+    {
+
+        WeatherDef  weather;
+        bool        bValid = XMLFields::readFields( node, weather, sourceName, { "seasons" } ); // 칸 · 범위는 WeatherDef 의 PROPERTY
+        const utf8* pID    = weather._id.c_str();
+        if ( bValid && weather._maxDuration < weather._minDuration )
         {
-            WeatherDef  weather;
-            bool        bValid = XMLFields::readFields( node, weather, sourceName, { "seasons" } ); // 칸 · 범위는 WeatherDef 의 PROPERTY
-            const utf8* pID    = weather._id.c_str();
-            if ( bValid && weather._maxDuration < weather._minDuration )
-            {
-                SW_LOG_ERROR_ID( "WeatherSystem.WeatherDurationOrder", "%#: weather '%#' needs maxDuration >= minDuration", sourceName, pID );
-                bValid = false;
-            }
-            // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 그 날씨의 `weight`). 읽히지 않거나 음수인 가중치는 오류다.
-            XMLReadUtil::forEachNamedNumber( node.getAttributeText( "seasons" ), ", ", weather._weight, XMLReadUtil::MissingValue::UseDefault,
-                                             [&]( string_view token, string_view seasonName, float32 weight, bool bNumberValid )
-            {
-                if ( bNumberValid == false || weight < 0.0f )
-                {
-                    SW_LOG_ERROR_ID( "WeatherSystem.WeatherInvalidSeasonWeight", "%#: weather '%#' has an invalid season weight '%#'", sourceName, pID, token );
-                    bValid = false;
-                    return;
-                }
-                WeatherSeasonWeight seasonWeight;
-                seasonWeight._season = hashed_string( seasonName );
-                seasonWeight._weight = weight;
-                weather._listSeasonWeight.push_back( seasonWeight );
-            } );
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "WeatherSystem.WeatherInvalidFieldsSkipped", "%#: weather '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            const XMLNode valueNode = node.findChild( "Values" );
-            if ( valueNode )
-                weather._values.addAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
-            (void)add( weather );
-            ++loadedCount;
+            SW_LOG_ERROR_ID( "WeatherSystem.WeatherDurationOrder", "%#: weather '%#' needs maxDuration >= minDuration", sourceName, pID );
+            bValid = false;
         }
-        return loadedCount;
+        // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 그 날씨의 `weight`). 읽히지 않거나 음수인 가중치는 오류다.
+        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "seasons" ), ", ", weather._weight, XMLReadUtil::MissingValue::UseDefault,
+                                         [&]( string_view token, string_view seasonName, float32 weight, bool bNumberValid )
+        {
+            if ( bNumberValid == false || weight < 0.0f )
+            {
+                SW_LOG_ERROR_ID( "WeatherSystem.WeatherInvalidSeasonWeight", "%#: weather '%#' has an invalid season weight '%#'", sourceName, pID, token );
+                bValid = false;
+                return;
+            }
+            WeatherSeasonWeight seasonWeight;
+            seasonWeight._season = hashed_string( seasonName );
+            seasonWeight._weight = weight;
+            weather._listSeasonWeight.push_back( seasonWeight );
+        } );
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "WeatherSystem.WeatherInvalidFieldsSkipped", "%#: weather '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        const XMLNode valueNode = node.findChild( "Values" );
+        if ( valueNode )
+            weather._values.addAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
+        (void)add( weather );
+        return true;
     }
 
     WeatherSystem::WeatherSystem()

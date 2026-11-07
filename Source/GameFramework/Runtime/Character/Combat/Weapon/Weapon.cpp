@@ -13,6 +13,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
@@ -72,35 +73,39 @@ namespace sw
 
     uint32 WeaponCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
+        using Element                          = XMLCatalogElement<WeaponCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&WeaponCatalog::loadWeapon>( "Weapon" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool WeaponCatalog::loadWeapon( const XMLNode& node, string_view sourceName )
+    {
+
+        // 적지 않은 칸은 WeaponDef 의 초기값이다. 깨진 값 · 범위 밖 값(최소 <= 최대 퍼짐 · 감쇠 시작 <= 끝 — 필드 경계)은 그 무기를 넣지 않는 오류다(자르지 않는다).
+        WeaponDef weapon;
+        bool      bValid = XMLFields::readFields( node, weapon, sourceName );
+        if ( weapon._id.empty() )
+            return false;
+        const utf8* const pID = weapon._id.c_str();
+        if ( weapon._name.empty() )
+            weapon._name = pID;
+        bValid = weapon.compileAccepts( sourceName ) && bValid;
+        for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
-            // 적지 않은 칸은 WeaponDef 의 초기값이다. 깨진 값 · 범위 밖 값(최소 <= 최대 퍼짐 · 감쇠 시작 <= 끝 — 필드 경계)은 그 무기를 넣지 않는 오류다(자르지 않는다).
-            WeaponDef weapon;
-            bool      bValid = XMLFields::readFields( node, weapon, sourceName );
-            if ( weapon._id.empty() )
-                continue;
-            const utf8* const pID = weapon._id.c_str();
-            if ( weapon._name.empty() )
-                weapon._name = pID;
-            bValid = weapon.compileAccepts( sourceName ) && bValid;
-            for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
-            {
-                ShotModifierDef modifier;
-                bValid = XMLFields::readFields( modifierNode, modifier, sourceName ) && bValid;
-                weapon._listModifier.push_back( modifier );
-            }
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "Weapon.WeaponInvalidFieldsSkipped", "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            add( weapon );
-            ++loadedCount;
+            ShotModifierDef modifier;
+            bValid = XMLFields::readFields( modifierNode, modifier, sourceName ) && bValid;
+            weapon._listModifier.push_back( modifier );
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "Weapon.NoWeaponEntries", "%#: no <Weapon> entries", sourceName );
-        return loadedCount;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "Weapon.WeaponInvalidFieldsSkipped", "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        add( weapon );
+        return true;
     }
 
     bool WeaponCatalog::checkProjectiles( const ProjectileCatalog& projectiles ) const

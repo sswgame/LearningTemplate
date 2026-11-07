@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -179,51 +180,24 @@ namespace sw
     uint32 CreatureLifeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        // 종은 능력 · 서식지를 가리키므로 원소 종류마다 따로 돌고, 가리키는 id 는 모두 읽은 뒤 확인한다.
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view elementName( node.getName() != nullptr ? node.getName() : "" );
-            const bool        bKnown = elementName == "Habitat" || elementName == "Ability" || elementName == "Species" || elementName == "Appeal";
-            if ( bKnown == false )
-                SW_LOG_ERROR_ID( "CreatureLifeCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, elementName );
-        }
-        for ( XMLNode node = root.findChild( "Habitat" ); node; node = node.findNextSibling( "Habitat" ) )
-        {
-            if ( loadHabitat( node, sourceName ) )
-                ++loadedCount;
-        }
+        // 종은 능력 · 서식지를 가리키므로 표의 순서대로 읽고, 가리키는 id 는 모두 읽은 뒤 확인한다.
+        using Element                          = XMLCatalogElement<CreatureLifeCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&CreatureLifeCatalog::loadHabitat>( "Habitat" ),
+            Element::of<&CreatureLifeCatalog::loadAbility>( "Ability" ),
+            Element::of<&CreatureLifeCatalog::loadSpecies>( "Species" ),
+            Element::of<&CreatureLifeCatalog::loadAppeal>( "Appeal" ).uncounted(), // 틀리면 앞의 단계를 그대로 둔다
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
         rebuildHabitatOrder();
-        for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
-        {
-            if ( loadAbility( node, sourceName ) )
-                ++loadedCount;
-        }
-        for ( XMLNode node = root.findChild( "Species" ); node; node = node.findNextSibling( "Species" ) )
-        {
-            if ( loadSpecies( node, sourceName ) )
-                ++loadedCount;
-        }
-        const XMLNode appealNode = root.findChild( "Appeal" );
-        if ( appealNode && loadAppeal( appealNode, sourceName ) == false )
-            SW_LOG_ERROR_ID( "CreatureLifeCatalog.AppealInvalidTownAppeal", "%#: <Appeal> is invalid - the town appeal keeps its previous tiers", sourceName );
 
-        for ( const CreatureSpeciesDef& species : _speciesCatalog.getAll() )
-        {
-            for ( const hashed_string& habitatID : species._listHabitat )
-            {
-                if ( _habitatCatalog.find( habitatID ) == nullptr )
-                    SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesLikesUnknownHabitat", "%#: species '%#' likes an unknown habitat '%#'", sourceName, species._id.c_str(), habitatID.c_str() );
-            }
-            for ( const hashed_string& abilityID : species._listAbility )
-            {
-                if ( _abilityCatalog.find( abilityID ) == nullptr )
-                    SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesUnknownAbility", "%#: species '%#' has an unknown ability '%#'", sourceName, species._id.c_str(), abilityID.c_str() );
-            }
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "CreatureLifeCatalog.NoHabitatAbilitySpecies", "%#: no <Habitat> / <Ability> / <Species> entries", sourceName );
-        return loadedCount;
+        using Reference                            = XMLCatalogReference<CreatureLifeCatalog>;
+        static constexpr Reference kArrReference[] = {
+            Reference::of<&CreatureLifeCatalog::_habitatCatalog, &CreatureLifeCatalog::_speciesCatalog, &CreatureSpeciesDef::_listHabitat>( "species", "habitat" ),
+            Reference::of<&CreatureLifeCatalog::_abilityCatalog, &CreatureLifeCatalog::_speciesCatalog, &CreatureSpeciesDef::_listAbility>( "species", "ability" ),
+        };
+        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        return result._loadedCount;
     }
 
     bool CreatureLifeCatalog::loadHabitat( const XMLNode& node, string_view sourceName )

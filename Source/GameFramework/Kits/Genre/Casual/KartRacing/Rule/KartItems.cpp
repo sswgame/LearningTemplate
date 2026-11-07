@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
@@ -106,37 +107,27 @@ namespace sw
         KartItemsRootDef rootDef;
         if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _referencePlaceCount = rootDef._referencePlaceCount;
-        uint32 loadedCount = 0;
         // 순위 표는 아이템을 가리키므로 아이템을 모두 읽은 뒤에 읽는다(적힌 순서와 상관없게).
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+        using Element                          = XMLCatalogElement<KartItemCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&KartItemCatalog::loadItem>( "Item" ),
+            Element::of<&KartItemCatalog::loadRankTable>( "RankTable" ).uncounted(),
+        };
+        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
+
+    bool KartItemCatalog::loadItem( const XMLNode& node, string_view sourceName )
+    {
+        KartItemDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
+            return false; // 오류는 readFields 가 남겼고, 그 아이템만 빠진다
+        if ( def.isProjectile() && def._projectileID.empty() )
         {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( name == "RankTable" )
-                continue;
-            if ( name != "Item" )
-            {
-                SW_LOG_ERROR_ID( "KartItems.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-                continue;
-            }
-            KartItemDef def;
-            if ( XMLFields::readFields( node, def, sourceName ) == false )
-                continue; // 오류는 readFields 가 남겼고, 그 아이템만 빠진다
-            if ( def.isProjectile() && def._projectileID.empty() )
-            {
-                SW_LOG_ERROR_ID( "KartItems.ItemNeedsProjectile", "%#: <Item id=\"%#\"> flies or is dropped and needs projectile=\"...\" (a ProjectileCatalog id) - skipped", sourceName, def._id.c_str() );
-                continue;
-            }
-            add( def );
-            ++loadedCount;
+            SW_LOG_ERROR_ID( "KartItems.ItemNeedsProjectile", "%#: <Item id=\"%#\"> flies or is dropped and needs projectile=\"...\" (a ProjectileCatalog id) - skipped", sourceName, def._id.c_str() );
+            return false;
         }
-        for ( XMLNode node = root.findChild( "RankTable" ); node; node = node.findNextSibling( "RankTable" ) )
-        {
-            if ( loadRankTable( node, sourceName ) == false )
-                SW_LOG_ERROR_ID( "KartItems.RankTableNotLoadedSee", "%#: a <RankTable> was not loaded (see above)", sourceName );
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_ERROR_ID( "KartItems.NoItemEntries", "%#: no <Item> entries", sourceName );
-        return loadedCount;
+        add( def );
+        return true;
     }
 
     bool KartItemCatalog::loadRankTable( const XMLNode& node, string_view sourceName )

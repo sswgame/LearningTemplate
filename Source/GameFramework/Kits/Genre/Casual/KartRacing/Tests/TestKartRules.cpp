@@ -377,7 +377,7 @@ SW_TEST_CASE( KartTrackTest, CatalogReportsBrokenTracks )
     SW_EXPECT_LOG( "GameCatalog.DuplicateID" ); // 뒤의 ring 은 버리고 앞 정의를 지킨다
     SW_EXPECT_LOG( "KartTrack.TrackNeedsMorePoint" );
     SW_EXPECT_LOG( "KartTrack.TrackUnknownChild" );
-    SW_EXPECT_LOG( "KartTrack.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     constexpr const utf8* kTrackXML = R"(<KartTrackCatalog>
   <Track id="ring" name="Ring" width="12" laps="2" samples="4">
     <Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/><Point x="0" z="-100"/>
@@ -475,8 +475,7 @@ SW_TEST_CASE( KartItemsTest, ReportsBrokenTables )
     SW_EXPECT_LOG( "KartItems.ItemNeedsProjectile" ); // 탄을 적지 않은 날아가는 아이템은 받지 않는다
     SW_EXPECT_LOG( "KartItems.RankTableEntryNames" );
     SW_EXPECT_LOG( "KartItems.RankTableNeedsEntryChildren" );
-    SW_EXPECT_LOG( "KartItems.RankTableNotLoadedSee" );
-    SW_EXPECT_LOG( "KartItems.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     constexpr const utf8* kBrokenXML = R"(<KartItemCatalog>
@@ -495,7 +494,7 @@ SW_TEST_CASE( KartItemsTest, ReportsBrokenTables )
     SW_EXPECT_EQUAL( 1, pOnly->_toPlace );
     SW_EXPECT_EQUAL( 1, catalog.findRankTable( 5, 0 )->_toPlace ); // 다른 표는 들어가지 않았다
 
-    SW_EXPECT_LOG( "KartItems.NoItemEntries" );
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     sw::KartItemCatalog   noItems;
     constexpr const utf8* kNoItemsXML = R"(<KartItemCatalog/>)";
     SW_EXPECT_FALSE( noItems.loadFromXMLText( kNoItemsXML, "KartTest" ) );

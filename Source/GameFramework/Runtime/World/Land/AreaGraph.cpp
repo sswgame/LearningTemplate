@@ -29,46 +29,54 @@ namespace sw
     uint32 AreaGraph::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
-        const uint32 loadedCount = loadFromXML( root, sourceName );
+        // 연결은 지역을 가리키므로 지역을 먼저 다 읽는다.
+        using Element                          = XMLCatalogElement<AreaGraph>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&AreaGraph::loadArea>( "Area" ),
+            Element::of<&AreaGraph::loadLink>( "Link" ).uncounted(),
+        };
+        const uint32 loadedCount = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
         resetState();
         return loadedCount;
     }
 
-    uint32 AreaGraph::loadFromXML( const XMLNode& node, string_view sourceName )
+    bool AreaGraph::loadArea( const XMLNode& node, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
+        // 적지 않은 칸은 AreaDef 의 초기값이다. 깨진 값 · 음수 크기는 그 지역을 넣지 않는 오류다(자르지 않는다).
+        AreaDef    area;
+        const bool bValid = XMLFields::readFields( node, area, sourceName );
+        if ( area._id.empty() )
+            return false;
+        const utf8* const pID = area._id.c_str();
+        if ( bValid == false )
         {
-            // 적지 않은 칸은 AreaDef 의 초기값이다. 깨진 값 · 음수 크기는 그 지역을 넣지 않는 오류다(자르지 않는다).
-            AreaDef    area;
-            const bool bValid = XMLFields::readFields( areaNode, area, sourceName );
-            if ( area._id.empty() )
-                continue;
-            const utf8* const pID = area._id.c_str();
-            if ( bValid == false )
-                SW_LOG_ERROR_ID( "AreaGraph.AreaInvalidFieldsSkipped", "%#: area '%#' has invalid fields - skipped", sourceName, pID );
-            else if ( addArea( area ) )
-                ++loadedCount;
-            else
-                SW_LOG_WARNING_ID( "AreaGraph.DuplicateAreaSkipped", "%#: duplicate area '%#' - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "AreaGraph.AreaInvalidFieldsSkipped", "%#: area '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
         }
-        for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
+        if ( addArea( area ) == false )
         {
-            AreaLinkParams link;
-            if ( XMLFields::readFields( linkNode, link, sourceName ) == false )
-                continue; // 끝점이 없거나 깨진 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
-            const hashed_string& from     = link._from;
-            const hashed_string& to       = link._to;
-            bool                 bInvalid = false;
-            if ( addLink( from, to, link._kind, link._requires, link._bOneWay, bInvalid ) == false )
-            {
-                SW_LOG_WARNING_ID( "AreaGraph.LinkNeedsTwoDifferent", "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
-                continue;
-            }
-            if ( bInvalid )
-                SW_LOG_WARNING_ID( "AreaGraph.LinkInvalidConditionStays", "%#: link '%#' -> '%#' has an invalid condition and stays locked", sourceName, from.c_str(), to.c_str() );
+            SW_LOG_WARNING_ID( "AreaGraph.DuplicateAreaSkipped", "%#: duplicate area '%#' - skipped", sourceName, pID );
+            return false;
         }
-        return loadedCount;
+        return true;
+    }
+
+    bool AreaGraph::loadLink( const XMLNode& node, string_view sourceName )
+    {
+        AreaLinkParams link;
+        if ( XMLFields::readFields( node, link, sourceName ) == false )
+            return false; // 끝점이 없거나 깨진 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
+        const hashed_string& from     = link._from;
+        const hashed_string& to       = link._to;
+        bool                 bInvalid = false;
+        if ( addLink( from, to, link._kind, link._requires, link._bOneWay, bInvalid ) == false )
+        {
+            SW_LOG_WARNING_ID( "AreaGraph.LinkNeedsTwoDifferent", "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
+            return false;
+        }
+        if ( bInvalid )
+            SW_LOG_WARNING_ID( "AreaGraph.LinkInvalidConditionStays", "%#: link '%#' -> '%#' has an invalid condition and stays locked", sourceName, from.c_str(), to.c_str() );
+        return true;
     }
 
     void AreaGraph::clear()

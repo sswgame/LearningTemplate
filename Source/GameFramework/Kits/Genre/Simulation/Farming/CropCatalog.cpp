@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 #include <algorithm>
@@ -94,7 +95,6 @@ namespace sw
     uint32 CropCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
         _listKnownSeason.clear();
         const utf8* pKnownSeasons = root.findAttribute( "seasons" );
         if ( pKnownSeasons != nullptr )
@@ -102,17 +102,13 @@ namespace sw
             StringUtil::forEachToken( string_view( pKnownSeasons ), ",;| ", [this]( string_view token )
             { _listKnownSeason.push_back( hashed_string( token ) ); } );
         }
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Crop" ) == false )
-                SW_LOG_ERROR_ID( "CropCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            else if ( loadCrop( node, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<CropCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&CropCatalog::loadCrop>( "Crop" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         rebuildItemIndex(); // 인덱스는 한 번에 만들고, 작물마다 다시 만들지 않는다
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "CropCatalog.NoCropEntries", "%#: no <Crop> entries", sourceName );
-        return loadedCount;
+        return result._loadedCount;
     }
 
     bool CropCatalog::loadCrop( const XMLNode& node, string_view sourceName )

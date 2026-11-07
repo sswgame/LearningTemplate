@@ -158,7 +158,6 @@ SW_TEST_CASE( AdventureWorldMapTest, LandmarkDuplicatesAndTowersWithoutRegionAre
 {
     SW_EXPECT_LOG( "AdventureWorldMap.DuplicateLandmark" );
     SW_EXPECT_LOG( "AdventureWorldMap.TowerNeedsRegionRegion" );
-    SW_EXPECT_LOG( "AdventureWorldMap.SomeLandmarksNotRead" );
 
     sw::AdventureWorldMap world;
     SW_REQUIRE_TRUE( world.loadFromXMLText( R"(<AdventureWorld>
@@ -181,6 +180,7 @@ SW_TEST_CASE( AdventureWorldMapTest, LandmarkDuplicatesAndTowersWithoutRegionAre
  */
 SW_TEST_CASE( AdventureWorldMapTest, ReloadReplacesEverything )
 {
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     sw::AdventureWorldMap world;
     SW_EXPECT_FALSE( world.loadFromXMLText( R"(<AdventureWorld/>)", "empty" ) );
     SW_REQUIRE_TRUE( world.loadFromXMLText( kWorldXML, "AdventureWorldMapTest" ) );

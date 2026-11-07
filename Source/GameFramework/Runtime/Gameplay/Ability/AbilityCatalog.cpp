@@ -13,6 +13,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
 namespace sw
@@ -299,48 +300,55 @@ namespace sw
 
     uint32 AbilityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
+        // 어빌리티가 비용 이펙트와 쿨다운 이펙트를 참조하므로, 파일 안의 순서와 상관없이 이펙트를 먼저 모두 읽는다.
+        using Element                          = XMLCatalogElement<AbilityCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&AbilityCatalog::loadEffect>( "AbilityEffect" ),
+            Element::of<&AbilityCatalog::loadAbility>( "Ability" ),
+            Element::of<&AbilityCatalog::loadAbilitySet>( "AbilitySet" ),
+            Element::of<&AbilityCatalog::loadCue>( "AbilityPresentation" ),
+        };
+        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
 
-        // 이펙트, 어빌리티, 세트 순으로 읽는다. 어빌리티가 비용 이펙트와 쿨다운 이펙트를 참조하므로, 파일 안의 순서와 상관없이 이펙트를 먼저 모두 읽는다.
-        for ( XMLNode node = root.findChild( "AbilityEffect" ); node; node = node.findNextSibling( "AbilityEffect" ) )
-        {
-            AbilityEffectDef def;
-            if ( readEffect( node, sourceName, def ) == false )
-                continue;
-            (void)addEffect( def ); // id 가 있으므로 실패하지 않는다
-            ++loadedCount;
-        }
+    bool AbilityCatalog::loadEffect( const XMLNode& node, string_view sourceName )
+    {
 
-        for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
-        {
-            AbilityDef def;
-            if ( readAbility( node, sourceName, def ) == false )
-                continue;
-            addAbility( def );
-            ++loadedCount;
-        }
+        AbilityEffectDef def;
+        if ( readEffect( node, sourceName, def ) == false )
+            return false;
+        (void)addEffect( def ); // id 가 있으므로 실패하지 않는다
+        return true;
+    }
 
-        for ( XMLNode node = root.findChild( "AbilitySet" ); node; node = node.findNextSibling( "AbilitySet" ) )
-        {
-            AbilitySetDef def;
-            if ( readAbilitySet( node, sourceName, def ) == false )
-                continue;
-            addAbilitySet( def );
-            ++loadedCount;
-        }
+    bool AbilityCatalog::loadAbility( const XMLNode& node, string_view sourceName )
+    {
 
-        for ( XMLNode node = root.findChild( "AbilityPresentation" ); node; node = node.findNextSibling( "AbilityPresentation" ) )
-        {
-            AbilityPresentationDef def;
-            if ( readCue( node, sourceName, def ) == false )
-                continue;
-            addCue( def );
-            ++loadedCount;
-        }
+        AbilityDef def;
+        if ( readAbility( node, sourceName, def ) == false )
+            return false;
+        addAbility( def );
+        return true;
+    }
 
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "AbilityCatalog.NoAbilityEffectAbilityAbilitySet", "%#: no <AbilityEffect>, <Ability>, <AbilitySet> or <AbilityPresentation> entries", sourceName );
-        return loadedCount;
+    bool AbilityCatalog::loadAbilitySet( const XMLNode& node, string_view sourceName )
+    {
+
+        AbilitySetDef def;
+        if ( readAbilitySet( node, sourceName, def ) == false )
+            return false;
+        addAbilitySet( def );
+        return true;
+    }
+
+    bool AbilityCatalog::loadCue( const XMLNode& node, string_view sourceName )
+    {
+
+        AbilityPresentationDef def;
+        if ( readCue( node, sourceName, def ) == false )
+            return false;
+        addCue( def );
+        return true;
     }
 
     bool AbilityCatalog::readEffect( const XMLNode& node, string_view sourceName, AbilityEffectDef& outDef ) const

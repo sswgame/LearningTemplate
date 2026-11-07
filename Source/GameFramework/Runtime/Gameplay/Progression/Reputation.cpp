@@ -14,6 +14,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include <algorithm>
 
 namespace sw
@@ -32,52 +33,58 @@ namespace sw
 {
     uint32 ReputationCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Faction" ); node; node = node.findNextSibling( "Faction" ) )
+        using Element                          = XMLCatalogElement<ReputationCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ReputationCatalog::loadFaction>( "Faction" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool ReputationCatalog::loadFaction( const XMLNode& node, string_view sourceName )
+    {
+
+        // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값(최대 >= 최소, 시작은 그 사이)은 그 세력을 넣지 않는 오류다(자르지 않는다).
+        FactionDef faction;
+        bool       bValid = XMLFields::readFields( node, faction, sourceName );
+        if ( faction._id.empty() )
+            return false;
+        const utf8* const pID = faction._id.c_str();
+        if ( faction._name.empty() )
+            faction._name = pID;
+        for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
         {
-            // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값(최대 >= 최소, 시작은 그 사이)은 그 세력을 넣지 않는 오류다(자르지 않는다).
-            FactionDef faction;
-            bool       bValid = XMLFields::readFields( node, faction, sourceName );
-            if ( faction._id.empty() )
-                continue;
-            const utf8* const pID = faction._id.c_str();
-            if ( faction._name.empty() )
-                faction._name = pID;
-            for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
+            // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
+            ReputationTier tier{ hashed_string{}, faction._minValue };
+            const bool     bTierRead = XMLFields::readFields( child, tier, sourceName ); // 이름 필수
+            const bool     bInside   = faction._minValue <= tier._minValue && tier._minValue <= faction._maxValue;
+            if ( bTierRead && bInside )
             {
-                // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
-                ReputationTier tier{ hashed_string{}, faction._minValue };
-                const bool     bTierRead = XMLFields::readFields( child, tier, sourceName ); // 이름 필수
-                const bool     bInside   = faction._minValue <= tier._minValue && tier._minValue <= faction._maxValue;
-                if ( bTierRead && bInside )
-                {
-                    faction._listTier.push_back( tier );
-                }
-                else
-                {
-                    SW_LOG_ERROR_ID( "Reputation.FactionTierInvalid", "%#: faction '%#' has a <Tier> without a name or with min outside [min, max]", sourceName, pID );
-                    bValid = false;
-                }
+                faction._listTier.push_back( tier );
             }
-            VectorUtil::stableSort( faction._listTier, Ascending<&ReputationTier::_minValue>{} );
-            for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
+            else
             {
-                // 연결은 상대 세력과 비율을 반드시 적는다 — 빠진 비율을 0 으로 두지 않는다.
-                ReputationLink link;
-                if ( XMLFields::readFields( child, link, sourceName ) )
-                    faction._listLink.push_back( link );
-                else
-                    bValid = false;
+                SW_LOG_ERROR_ID( "Reputation.FactionTierInvalid", "%#: faction '%#' has a <Tier> without a name or with min outside [min, max]", sourceName, pID );
+                bValid = false;
             }
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "Reputation.FactionInvalidFieldsSkipped", "%#: faction '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            add( faction );
-            ++loadedCount;
         }
-        return loadedCount;
+        VectorUtil::stableSort( faction._listTier, Ascending<&ReputationTier::_minValue>{} );
+        for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
+        {
+            // 연결은 상대 세력과 비율을 반드시 적는다 — 빠진 비율을 0 으로 두지 않는다.
+            ReputationLink link;
+            if ( XMLFields::readFields( child, link, sourceName ) )
+                faction._listLink.push_back( link );
+            else
+                bValid = false;
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "Reputation.FactionInvalidFieldsSkipped", "%#: faction '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        add( faction );
+        return true;
     }
 
     ReputationState::ReputationState()

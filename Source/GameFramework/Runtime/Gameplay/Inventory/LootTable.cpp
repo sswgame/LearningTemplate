@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
@@ -45,42 +46,11 @@ namespace sw
 {
     uint32 LootCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Table" ); node; node = node.findNextSibling( "Table" ) )
-        {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readFields 가 남긴다).
-            LootTableRowDef row;
-            if ( XMLFields::readFields( node, row, sourceName, { "id" } ) == false )
-                continue;
-            const bool bHasRollsMax = node.findAttribute( "rollsMax" ) != nullptr;
-            if ( bHasRollsMax && row._rollsMax < row._rolls )
-            {
-                SW_LOG_ERROR_ID( "LootTable.TableRollsMaxLessRolls", "%#: table '%#' rollsMax=\"%#\" is less than rolls=\"%#\"", sourceName, pID, row._rollsMax, row._rolls );
-                continue;
-            }
-            LootTableDef table;
-            table._id         = hashed_string( pID );
-            table._minRolls   = row._rolls;
-            table._maxRolls   = bHasRollsMax ? row._rollsMax : row._rolls;
-            table._noneWeight = row._none;
-            for ( XMLNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
-            {
-                LootEntry entry;
-                if ( readLootEntry( child, sourceName, entry ) )
-                    table._listEntry.push_back( entry );
-            }
-            for ( XMLNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
-            {
-                LootEntry entry;
-                if ( readLootEntry( child, sourceName, entry ) )
-                    table._listAlways.push_back( entry );
-            }
-            add( table );
-            ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<LootCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&LootCatalog::loadTable>( "Table" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         for ( const LootTableDef& table : getAll() )
         {
             for ( const LootEntry& entry : table._listEntry )
@@ -89,7 +59,44 @@ namespace sw
                     SW_LOG_WARNING_ID( "LootTable.TableRefersUnknownTable", "%#: table '%#' refers to unknown table '%#'", sourceName, table._id.c_str(), entry._tableID.c_str() );
             }
         }
-        return loadedCount;
+        return result._loadedCount;
+    }
+
+    bool LootCatalog::loadTable( const XMLNode& node, string_view sourceName )
+    {
+
+        const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
+        if ( pID == nullptr )
+            return false;
+        // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readFields 가 남긴다).
+        LootTableRowDef row;
+        if ( XMLFields::readFields( node, row, sourceName, { "id" } ) == false )
+            return false;
+        const bool bHasRollsMax = node.findAttribute( "rollsMax" ) != nullptr;
+        if ( bHasRollsMax && row._rollsMax < row._rolls )
+        {
+            SW_LOG_ERROR_ID( "LootTable.TableRollsMaxLessRolls", "%#: table '%#' rollsMax=\"%#\" is less than rolls=\"%#\"", sourceName, pID, row._rollsMax, row._rolls );
+            return false;
+        }
+        LootTableDef table;
+        table._id         = hashed_string( pID );
+        table._minRolls   = row._rolls;
+        table._maxRolls   = bHasRollsMax ? row._rollsMax : row._rolls;
+        table._noneWeight = row._none;
+        for ( XMLNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
+        {
+            LootEntry entry;
+            if ( readLootEntry( child, sourceName, entry ) )
+                table._listEntry.push_back( entry );
+        }
+        for ( XMLNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
+        {
+            LootEntry entry;
+            if ( readLootEntry( child, sourceName, entry ) )
+                table._listAlways.push_back( entry );
+        }
+        add( table );
+        return true;
     }
 
     bool LootCatalog::roll( const hashed_string& tableID, GameRandom& random, ItemStackList& outItems, float32 luck ) const

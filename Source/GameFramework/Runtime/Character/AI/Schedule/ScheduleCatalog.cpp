@@ -13,6 +13,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleActivity.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -20,35 +21,6 @@ namespace sw
     {
         struct ScheduleCatalogInternal
         {
-            /** @brief 원소를 읽는 바퀴입니다 — 가리켜지는 것을 먼저 읽어 파일 안 순서와 상관없이 이름을 검사한다. */
-            struct ElementPass
-            {
-                const utf8* _pName;
-                int32       _pass;
-            };
-            static constexpr int32       kPassCount        = 4;
-            static constexpr ElementPass kArrElementPass[] = {
-                {   "Calendar", 0},
-                {      "Place", 0},
-                {       "Spot", 0},
-                {  "Interrupt", 0},
-                {"Appointment", 1},
-                {  "Archetype", 2},
-                {        "NPC", 3},
-                {      "Event", 3},
-            };
-
-            /** @brief 원소의 바퀴입니다. 모르는 원소면 −1 입니다. */
-            static int32 findElementPass( const utf8* pName )
-            {
-                for ( const ElementPass& entry : kArrElementPass )
-                {
-                    if ( StringUtil::equals( pName, entry._pName ) )
-                        return entry._pass;
-                }
-                return -1;
-            }
-
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 조건 속성도 받습니다. */
             /** @brief 시각 속성을 분으로 읽는다. 속성이 없거나 깨졌으면(깨진 경우 @p inoutbValid 를 내린다) 값이 없다. 없을 때의 값은 호출부가 정한다. */
             [[nodiscard]] static std::optional<int32> readClock( const XMLNode& node, const utf8* pName, string_view sourceName, string_view ownerName, bool& inoutbValid )
@@ -153,52 +125,66 @@ namespace sw
 
     uint32 ScheduleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        using Internal = ScheduleCatalogInternal;
-        // 바퀴마다 그 바퀴의 원소만 읽는다 — 달력 · 장소 · 자리 · 끼어들기 → 약속 → 묶음 → NPC · 행사.
-        uint32 loadedCount = 0;
-        for ( int32 pass = 0; pass < Internal::kPassCount; ++pass )
+        /** 원소를 읽는 쪽은 id 글을 받고 알림은 스스로 남기므로 줄 모양으로 잇는다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. id 는 원소마다의 칸 구조체가 필수로 읽는다 — 여기서는 오류 문장에 쓸 글만 꺼낸다. */
+        struct ScheduleElementReader
         {
-            for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-            {
-                const utf8* pName       = node.getName();
-                const int32 elementPass = Internal::findElementPass( pName );
-                if ( elementPass < 0 && pass == 0 )
-                    SW_LOG_WARNING_ID( "Schedule.UnknownElement", "%#: unknown element <%#>", sourceName, pName );
-                if ( elementPass == pass )
-                    loadedCount += loadFromXML( node, sourceName );
-            }
-        }
-        resolveReferences( sourceName );
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "ScheduleCatalog.NoNPCEntries", "%#: no <NPC> entries", sourceName );
-        return loadedCount;
-    }
+            ScheduleCatalog& _catalog;
 
-    uint32 ScheduleCatalog::loadFromXML( const XMLNode& node, string_view sourceName )
-    {
-        const utf8* pName = node.getName();
-        if ( StringUtil::equals( pName, "Calendar" ) )
-        {
-            loadCalendar( node, sourceName );
-            return 0;
-        }
-        // id 는 원소마다의 칸 구조체가 필수로 읽는다 — 여기서는 오류 문장에 쓸 글만 꺼낸다.
-        const utf8* pID = node.getAttributeText( "id" ).data();
-        if ( StringUtil::equals( pName, "Place" ) )
-            loadPlace( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Spot" ) )
-            loadSpot( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Interrupt" ) )
-            loadInterrupt( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Appointment" ) )
-            loadAppointment( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Archetype" ) )
-            loadArchetype( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "NPC" ) )
-            return loadNPC( node, sourceName, pID ) ? 1 : 0;
-        else
-            loadEvent( node, sourceName, pID );
-        return 0;
+            static const utf8* findID( const XMLNode& node ) { return node.getAttributeText( "id" ).data(); }
+
+            bool loadCalendar( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadCalendar( node, sourceName );
+                return true;
+            }
+            bool loadPlace( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadPlace( node, sourceName, findID( node ) );
+                return true;
+            }
+            bool loadSpot( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadSpot( node, sourceName, findID( node ) );
+                return true;
+            }
+            bool loadInterrupt( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadInterrupt( node, sourceName, findID( node ) );
+                return true;
+            }
+            bool loadAppointment( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadAppointment( node, sourceName, findID( node ) );
+                return true;
+            }
+            bool loadArchetype( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadArchetype( node, sourceName, findID( node ) );
+                return true;
+            }
+            bool loadNPC( const XMLNode& node, string_view sourceName ) { return _catalog.loadNPC( node, sourceName, findID( node ) ); }
+            bool loadEvent( const XMLNode& node, string_view sourceName )
+            {
+                _catalog.loadEvent( node, sourceName, findID( node ) );
+                return true;
+            }
+        };
+        // 가리켜지는 것을 먼저 읽어 파일 안 순서와 상관없이 이름을 검사한다 — 달력 · 장소 · 자리 · 끼어들기 → 약속 → 묶음 → NPC · 행사.
+        using Element                          = XMLCatalogElement<ScheduleElementReader>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ScheduleElementReader::loadCalendar>( "Calendar" ).uncounted(),
+            Element::of<&ScheduleElementReader::loadPlace>( "Place" ).uncounted(),
+            Element::of<&ScheduleElementReader::loadSpot>( "Spot" ).uncounted(),
+            Element::of<&ScheduleElementReader::loadInterrupt>( "Interrupt" ).uncounted(),
+            Element::of<&ScheduleElementReader::loadAppointment>( "Appointment" ).uncounted(),
+            Element::of<&ScheduleElementReader::loadArchetype>( "Archetype" ).uncounted(),
+            Element::of<&ScheduleElementReader::loadNPC>( "NPC" ),
+            Element::of<&ScheduleElementReader::loadEvent>( "Event" ).uncounted(),
+        };
+        ScheduleElementReader reader{ *this };
+        const uint32          loadedCount = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
+        resolveReferences( sourceName );
+        return loadedCount;
     }
 
     void ScheduleCatalog::loadCalendar( const XMLNode& node, string_view sourceName )

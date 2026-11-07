@@ -76,10 +76,16 @@ namespace sw
         {
             return XMLCatalogElement{ pName, &readThrough<pFirst, listRest...>, SW_TRUE, 0 };
         }
+        /** @brief 루트 읽기가 표 앞에서 이미 읽은 원소의 이름입니다(규칙을 한 번에 조립하는 카탈로그). 모르는 원소로 알리지 않고 세지 않습니다. */
+        [[nodiscard]] static constexpr XMLCatalogElement known( const utf8* pName )
+        {
+            return XMLCatalogElement{ pName, &readNothing, SW_FALSE, 0 };
+        }
         /** @brief 읽어도 항목 수로 세지 않는 줄입니다(규칙 · 곡선처럼 그것만 있으면 빈 파일인 원소). */
         [[nodiscard]] constexpr XMLCatalogElement uncounted() const { return XMLCatalogElement{ _pName, _pRead, SW_FALSE, 0 }; }
 
     private:
+        [[nodiscard]] static bool readNothing( TCatalog&, const XMLNode&, string_view ) { return true; }
         template <auto pFirst, auto... listRest>
         [[nodiscard]] static bool readThrough( TCatalog& catalog, const XMLNode& node, string_view sourceName )
         {

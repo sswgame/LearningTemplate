@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -70,46 +71,24 @@ namespace sw
         _closeHour    = rootDef._closeHour;
         _ratingWindow = rootDef._ratingWindow;
 
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const utf8* pElement = node.getName();
-            if ( StringUtil::equals( pElement, "Dish" ) )
-            {
-                if ( loadDish( node, sourceName ) )
-                    ++loadedCount;
-            }
-            else if ( StringUtil::equals( pElement, "Customer" ) )
-            {
-                if ( loadCustomer( node, sourceName ) )
-                    ++loadedCount;
-            }
-            else if ( StringUtil::equals( pElement, "Ingredient" ) )
-            {
-                IngredientDef ingredient;
-                if ( XMLFields::readFields( node, ingredient, sourceName ) )
-                    (void)_ingredientCatalog.add( ingredient ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-            }
-            else if ( StringUtil::equals( pElement, "Arrival" ) )
-            {
-                RestaurantArrivalDef arrival;
-                if ( XMLFields::readFields( node, arrival, sourceName ) )
-                    _arrArrivalRate[arrival._hour] = arrival._rate;
-            }
-            else if ( StringUtil::equals( pElement, "Weather" ) )
-            {
-                RestaurantWeatherDef weather;
-                if ( XMLFields::readFields( node, weather, sourceName ) )
-                    (void)_weatherCatalog.add( weather );
-            }
-            else
-            {
-                SW_LOG_ERROR_ID( "RestaurantCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, pElement );
-            }
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "RestaurantCatalog.NoDishCustomerEntries", "%#: no <Dish> / <Customer> entries", sourceName );
-        return loadedCount;
+        using Element                          = XMLCatalogElement<RestaurantCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&RestaurantCatalog::loadDish>( "Dish" ),
+            Element::of<&RestaurantCatalog::loadCustomer>( "Customer" ),
+            Element::of<&RestaurantCatalog::_ingredientCatalog>( "Ingredient" ).uncounted(),
+            Element::of<&RestaurantCatalog::loadArrival>( "Arrival" ).uncounted(),
+            Element::of<&RestaurantCatalog::_weatherCatalog>( "Weather" ).uncounted(),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
+
+    bool RestaurantCatalog::loadArrival( const XMLNode& node, string_view sourceName )
+    {
+        RestaurantArrivalDef arrival;
+        if ( XMLFields::readFields( node, arrival, sourceName ) == false )
+            return false;
+        _arrArrivalRate[arrival._hour] = arrival._rate;
+        return true;
     }
 
     bool RestaurantCatalog::loadDish( const XMLNode& node, string_view sourceName )

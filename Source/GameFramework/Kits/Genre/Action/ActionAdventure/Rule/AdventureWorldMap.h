@@ -126,7 +126,9 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        [[nodiscard]] bool           readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount );
+        [[nodiscard]] bool           loadLandmark( const XMLNode& node, AdventureLandmarkKind kind, string_view sourceName );
+        [[nodiscard]] bool           loadTower( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadShrine( const XMLNode& node, string_view sourceName );
 
     private:
         GameCatalog<AdventureLandmarkDef> _catalog;

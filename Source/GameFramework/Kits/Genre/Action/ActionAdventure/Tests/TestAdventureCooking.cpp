@@ -177,6 +177,7 @@ SW_TEST_CASE( AdventureCookingTest, IngredientWithUndeclaredEffectIsSkipped )
     SW_EXPECT_TRUE( cooking.findIngredient( sw::hashed_string( "bad" ) ) == nullptr );
     SW_EXPECT_TRUE( cooking.findIngredient( sw::hashed_string( "good" ) ) != nullptr );
 
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     sw::AdventureCooking empty;
     SW_EXPECT_FALSE( empty.loadFromXMLText( R"(<AdventureCooking><Effect id="Chilly"/></AdventureCooking>)", "empty" ) );
 }

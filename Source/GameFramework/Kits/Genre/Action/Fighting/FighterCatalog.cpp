@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -199,43 +200,53 @@ namespace sw
 
     uint32 FighterCatalog::loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
     {
-        using Internal = FighterCatalogInternal;
         InputCommandParser parser;
         const string_view  buttonNames = root.getAttributeText( "buttons" );
         if ( buttonNames.empty() == false )
             parser.setButtonNames( buttonNames );
 
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Fighter" ); node; node = node.findNextSibling( "Fighter" ) )
+        /** 표의 줄은 ( node, sourceName ) 만 받으므로 문맥을 든 읽는 쪽을 둔다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. */
+        struct FighterElementReader
         {
-            FighterDef fighter;
-            bool       bValid = XMLFields::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
-            bValid            = Internal::readRequiredCommand( parser, node, "sidestep", sourceName, fighter._sidestepUp ) && bValid;
-            bValid            = Internal::readRequiredCommand( parser, node, "sidestepDown", sourceName, fighter._sidestepDown ) && bValid;
-            bValid            = Internal::readRequiredCommand( parser, node, "jump", sourceName, fighter._jump ) && bValid;
-            if ( bValid == false )
+            FighterCatalog&           _catalog;
+            const MoveCatalog&        _moveCatalog;
+            const InputCommandParser& _parser;
+
+            bool loadFighter( const XMLNode& node, string_view sourceName )
             {
-                SW_LOG_ERROR_ID( "FighterCatalog.FighterIdErrorsNot", "%#: <Fighter id=\"%#\"> has errors - not added", sourceName, fighter._id.c_str() );
-                continue;
+                using Internal = FighterCatalogInternal;
+                // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+                FighterDef fighter;
+                bool       bValid = XMLFields::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
+                bValid            = Internal::readRequiredCommand( _parser, node, "sidestep", sourceName, fighter._sidestepUp ) && bValid;
+                bValid            = Internal::readRequiredCommand( _parser, node, "sidestepDown", sourceName, fighter._sidestepDown ) && bValid;
+                bValid            = Internal::readRequiredCommand( _parser, node, "jump", sourceName, fighter._jump ) && bValid;
+                if ( bValid == false )
+                {
+                    SW_LOG_ERROR_ID( "FighterCatalog.FighterIdErrorsNot", "%#: <Fighter id=\"%#\"> has errors - not added", sourceName, fighter._id.c_str() );
+                    return false;
+                }
+                // 틀린 기술은 그 기술만 버린다(오류는 남긴다) — 나머지 기술로 캐릭터를 쓸 수 있다.
+                for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )
+                {
+                    FighterMove move;
+                    if ( Internal::readMove( child, _parser, _moveCatalog, sourceName, move ) )
+                        fighter._listMove.push_back( move );
+                    else
+                        SW_LOG_ERROR_ID( "FighterCatalog.FighterMoveNotRead", "%#: fighter '%#' move was not read - skipped", sourceName, fighter._id.c_str() );
+                }
+                if ( fighter._listMove.empty() )
+                    SW_LOG_WARNING_ID( "FighterCatalog.FighterNoUsableMove", "%#: fighter '%#' has no usable <Move>", sourceName, fighter._id.c_str() );
+                _catalog.addFighter( fighter );
+                return true;
             }
-            // 틀린 기술은 그 기술만 버린다(오류는 남긴다) — 나머지 기술로 캐릭터를 쓸 수 있다.
-            for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )
-            {
-                FighterMove move;
-                if ( Internal::readMove( child, parser, moveCatalog, sourceName, move ) )
-                    fighter._listMove.push_back( move );
-                else
-                    SW_LOG_ERROR_ID( "FighterCatalog.FighterMoveNotRead", "%#: fighter '%#' move was not read - skipped", sourceName, fighter._id.c_str() );
-            }
-            if ( fighter._listMove.empty() )
-                SW_LOG_WARNING_ID( "FighterCatalog.FighterNoUsableMove", "%#: fighter '%#' has no usable <Move>", sourceName, fighter._id.c_str() );
-            addFighter( fighter );
-            ++loadedCount;
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "FighterCatalog.NoFighterEntries", "%#: no <Fighter> entries", sourceName );
-        return loadedCount;
+        };
+        using Element                          = XMLCatalogElement<FighterElementReader>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&FighterElementReader::loadFighter>( "Fighter" ),
+        };
+        FighterElementReader reader{ *this, moveCatalog, parser };
+        return XMLCatalogReader::readInDocumentOrder( reader, root, sourceName, kArrElement )._loadedCount;
     }
 } // namespace sw
 

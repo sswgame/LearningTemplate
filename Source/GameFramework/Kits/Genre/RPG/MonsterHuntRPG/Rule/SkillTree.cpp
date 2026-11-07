@@ -11,6 +11,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
     const SkillDef* SkillTreeDef::findSkill( const hashed_string& skillID ) const
@@ -58,71 +60,77 @@ namespace sw
 
     uint32 SkillTreeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
+        using Element                          = XMLCatalogElement<SkillTreeCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&SkillTreeCatalog::loadTree>( "Tree" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool SkillTreeCatalog::loadTree( const XMLNode& treeNode, string_view sourceName )
+    {
+
+        SkillTreeHeadParams head;
+        if ( XMLFields::readFields( treeNode, head, sourceName ) == false )
+            return false;
+        SkillTreeDef tree;
+        tree._id = head._id;
+        for ( XMLNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
         {
-            SkillTreeHeadParams head;
-            if ( XMLFields::readFields( treeNode, head, sourceName ) == false )
+            // 적지 않은 칸은 SkillDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 스킬을 넣지 않는 오류다(자르지 않는다).
+            SkillDef skill;
+            bool     bValid = XMLFields::readFields( node, skill, sourceName, { "requires" } );
+            if ( skill._id.empty() )
                 continue;
-            SkillTreeDef tree;
-            tree._id = head._id;
-            for ( XMLNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
+            const utf8* const pID = skill._id.c_str();
+            if ( skill._name.empty() )
+                skill._name = pID;
+            // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 SkillRequirement 의 초기값(1)이다. 읽히지 않거나 1 아래인 랭크는 오류다.
+            XMLReadUtil::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, XMLReadUtil::MissingValue::UseDefault,
+                                             [&]( string_view token, string_view skillName, int32 rank, bool bNumberValid )
             {
-                // 적지 않은 칸은 SkillDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 스킬을 넣지 않는 오류다(자르지 않는다).
-                SkillDef skill;
-                bool     bValid = XMLFields::readFields( node, skill, sourceName, { "requires" } );
-                if ( skill._id.empty() )
-                    continue;
-                const utf8* const pID = skill._id.c_str();
-                if ( skill._name.empty() )
-                    skill._name = pID;
-                // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 SkillRequirement 의 초기값(1)이다. 읽히지 않거나 1 아래인 랭크는 오류다.
-                XMLReadUtil::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, XMLReadUtil::MissingValue::UseDefault,
-                                                 [&]( string_view token, string_view skillName, int32 rank, bool bNumberValid )
+                if ( bNumberValid == false || rank < 1 )
                 {
-                    if ( bNumberValid == false || rank < 1 )
-                    {
-                        SW_LOG_ERROR_ID( "SkillTree.SkillInvalidRequirement", "%#: skill '%#' has an invalid requirement '%#'", sourceName, pID, token );
-                        bValid = false;
-                        return;
-                    }
-                    SkillRequirement requirement;
-                    requirement._skillID = hashed_string( skillName );
-                    requirement._rank    = rank;
-                    skill._listRequirement.push_back( requirement );
-                } );
-                if ( bValid == false )
-                {
-                    SW_LOG_ERROR_ID( "SkillTree.SkillInvalidFieldsSkipped", "%#: skill '%#' has invalid fields - skipped", sourceName, pID );
-                    continue;
+                    SW_LOG_ERROR_ID( "SkillTree.SkillInvalidRequirement", "%#: skill '%#' has an invalid requirement '%#'", sourceName, pID, token );
+                    bValid = false;
+                    return;
                 }
-                const XMLNode statNode = node.findChild( "Stats" );
-                if ( statNode )
-                    skill._statsPerRank.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
-                if ( tree.findSkill( skill._id ) != nullptr )
-                {
-                    // 찾기는 앞의 것만 돌려주어 뒤의 것은 배울 수 없는 칸으로 남는다
-                    SW_LOG_ERROR_ID( "SkillTree.SkillDuplicateSkipped", "%#: tree '%#' has a duplicate skill '%#' - skipped", sourceName, tree._id.c_str(), pID );
-                    continue;
-                }
-                tree._listSkill.push_back( skill );
-            }
-            for ( const SkillDef& skill : tree._listSkill )
+                SkillRequirement requirement;
+                requirement._skillID = hashed_string( skillName );
+                requirement._rank    = rank;
+                skill._listRequirement.push_back( requirement );
+            } );
+            if ( bValid == false )
             {
-                for ( const SkillRequirement& requirement : skill._listRequirement )
-                {
-                    if ( tree.findSkill( requirement._skillID ) == nullptr )
-                        SW_LOG_WARNING_ID( "SkillTree.SkillRequiresUnknown", "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
-                }
+                SW_LOG_ERROR_ID( "SkillTree.SkillInvalidFieldsSkipped", "%#: skill '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
             }
-            for ( const hashed_string& skillID : tree.collectUnlearnableSkills() )
+            const XMLNode statNode = node.findChild( "Stats" );
+            if ( statNode )
+                skill._statsPerRank.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
+            if ( tree.findSkill( skill._id ) != nullptr )
             {
-                SW_LOG_ERROR_ID( "SkillTree.SkillNeverLearnable", "%#: skill '%#' of tree '%#' can never be learned (missing, unreachable or circular requirements)", sourceName, skillID.c_str(), tree._id.c_str() );
+                // 찾기는 앞의 것만 돌려주어 뒤의 것은 배울 수 없는 칸으로 남는다
+                SW_LOG_ERROR_ID( "SkillTree.SkillDuplicateSkipped", "%#: tree '%#' has a duplicate skill '%#' - skipped", sourceName, tree._id.c_str(), pID );
+                continue;
             }
-            (void)add( tree );
-            ++loadedCount;
+            tree._listSkill.push_back( skill );
         }
-        return loadedCount;
+        for ( const SkillDef& skill : tree._listSkill )
+        {
+            for ( const SkillRequirement& requirement : skill._listRequirement )
+            {
+                if ( tree.findSkill( requirement._skillID ) == nullptr )
+                    SW_LOG_WARNING_ID( "SkillTree.SkillRequiresUnknown", "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
+            }
+        }
+        for ( const hashed_string& skillID : tree.collectUnlearnableSkills() )
+        {
+            SW_LOG_ERROR_ID( "SkillTree.SkillNeverLearnable", "%#: skill '%#' of tree '%#' can never be learned (missing, unreachable or circular requirements)", sourceName, skillID.c_str(), tree._id.c_str() );
+        }
+        (void)add( tree );
+        return true;
     }
 
     // ------------------------------------------------------------------------------

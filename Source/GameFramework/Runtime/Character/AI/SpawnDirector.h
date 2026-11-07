@@ -104,6 +104,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "SpawnTable"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool           loadEntry( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadCurve( const XMLNode& node, string_view sourceName );
 
     private:
         GameCatalog<SpawnEntryDef> _catalog;

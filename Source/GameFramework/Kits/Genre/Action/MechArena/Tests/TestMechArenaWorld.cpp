@@ -1007,8 +1007,7 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenElements )
     SW_EXPECT_LOG( "MechCatalog.MechIdSpeedBelongs" );
     SW_EXPECT_LOG( "MechCatalog.MechWeaponOutsideMode" );
     SW_EXPECT_LOG( "MechCatalog.UnknownMechClassNear" );
-    SW_EXPECT_LOG( "MechCatalog.ClassNotRead" );
-    SW_EXPECT_LOG( "MechCatalog.UnknownElementSkipped" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     MechCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MechCatalog>
   <Mech id="good" name="Good"/>
@@ -1030,7 +1029,6 @@ SW_TEST_CASE( MechArenaTest, CatalogRefusesBrokenElements )
 SW_TEST_CASE( MechArenaTest, CatalogRefusesDuplicateIDs )
 {
     SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
-    SW_EXPECT_LOG( "MechCatalog.SkillNotRead" );
     MechCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MechCatalog>
   <Mech id="a" name="First" cost="100"/>

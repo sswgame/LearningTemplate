@@ -50,6 +50,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "SkirmishUnitModelCatalog";
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool           loadModel( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw
 

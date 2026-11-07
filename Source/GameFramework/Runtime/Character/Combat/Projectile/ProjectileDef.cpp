@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
@@ -216,26 +217,12 @@ namespace sw
 
     uint32 ProjectileCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( name == "Projectile" )
-            {
-                loadedCount += loadProjectile( node, sourceName ) ? 1u : 0u;
-                continue;
-            }
-            if ( name == "Impact" )
-            {
-                if ( loadImpact( node, sourceName ) == false )
-                    SW_LOG_ERROR_ID( "Projectile.ImpactSkipped", "%#: <Impact> has errors - skipped", sourceName );
-                continue;
-            }
-            SW_LOG_ERROR_ID( "Projectile.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "Projectile.NoProjectileEntries", "%#: no <Projectile> entries", sourceName );
-        return loadedCount;
+        using Element                          = XMLCatalogElement<ProjectileCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ProjectileCatalog::loadProjectile>( "Projectile" ),
+            Element::of<&ProjectileCatalog::loadImpact>( "Impact" ).uncounted(),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool ProjectileCatalog::loadProjectile( const XMLNode& node, string_view sourceName )

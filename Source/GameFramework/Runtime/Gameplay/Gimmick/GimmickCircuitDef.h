@@ -139,6 +139,11 @@ namespace sw
         [[nodiscard]] bool loadRoot( const XMLNode& root );
 
     private:
+        [[nodiscard]] bool loadNode( const XMLNode& element, string_view sourceName );
+        [[nodiscard]] bool loadWire( const XMLNode& element, string_view sourceName );
+
+    public:
+    private:
         vector<GimmickNodeDef> _listNode{};
         vector<GimmickWireDef> _listWire{};
         string                 _sourceName{};

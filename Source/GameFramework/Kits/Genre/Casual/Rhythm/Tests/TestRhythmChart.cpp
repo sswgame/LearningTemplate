@@ -140,7 +140,7 @@ SW_TEST_CASE( RhythmChartTest, OverlappingNoteFailsTheChart )
 SW_TEST_CASE( RhythmChartTest, InvalidElementsAndEmptyChartFail )
 {
     SW_EXPECT_LOG( "RhythmChart.InvalidNote" ); // 기대 로그는 동작 앞에 선언해야 받는다
-    SW_EXPECT_LOG( "RhythmChart.UnknownElement" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
     SW_EXPECT_LOG( "RhythmChart.NoNotes" );
     sw::RhythmChart chart;
     SW_EXPECT_FALSE( chart.loadFromXMLText(

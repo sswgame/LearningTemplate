@@ -194,6 +194,8 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "Interactions"; ///< 루트 원소(`XMLCatalog`)
 
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadInteraction( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadSmartObject( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const;
         [[nodiscard]] bool readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const;
 

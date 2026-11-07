@@ -11,6 +11,7 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -260,58 +261,62 @@ namespace sw
     uint32 CameraPresetCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 기본 블렌드를 먼저 — `<BlendIn>` 이 없는 프리셋이 이 값으로 시작한다.
-        const XMLNode defaultNode = root.findChild( "DefaultBlend" );
-        if ( defaultNode.isValid() && CameraPresetInternal::readBlend( defaultNode, _defaultBlend, sourceName ) == false )
-            SW_LOG_ERROR_ID( "CameraPreset.DefaultBlendInvalidParams", "%#: <DefaultBlend> has invalid fields", sourceName );
+        using Element                          = XMLCatalogElement<CameraPresetCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&CameraPresetCatalog::loadDefaultBlend>( "DefaultBlend" ).uncounted(),
+            Element::of<&CameraPresetCatalog::loadPreset>( "Preset" ),
+            Element::of<&CameraPresetCatalog::loadBlendRule>( "Blend" ).uncounted(),
+        };
+        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
 
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+    bool CameraPresetCatalog::loadDefaultBlend( const XMLNode& node, string_view sourceName )
+    {
+        if ( CameraPresetInternal::readBlend( node, _defaultBlend, sourceName ) )
+            return true;
+        SW_LOG_ERROR_ID( "CameraPreset.DefaultBlendInvalidParams", "%#: <DefaultBlend> has invalid fields", sourceName );
+        return false;
+    }
+
+    bool CameraPresetCatalog::loadPreset( const XMLNode& node, string_view sourceName )
+    {
+        CameraPresetHeadParams head;
+        if ( XMLFields::readFields( node, head, sourceName ) == false )
+            return false;
+        const utf8* const pID = head._id.c_str();
+        CameraPresetDef   def;
+        def._id      = head._id;
+        def._blendIn = _defaultBlend;
+        if ( CameraPresetInternal::readPreset( node, def, sourceName ) == false )
         {
-            const utf8* pName = node.getName();
-            if ( StringUtil::equals( pName, "Preset" ) )
-            {
-                CameraPresetHeadParams head;
-                if ( XMLFields::readFields( node, head, sourceName ) == false )
-                    continue;
-                const utf8* const pID = head._id.c_str();
-                CameraPresetDef   def;
-                def._id      = head._id;
-                def._blendIn = _defaultBlend;
-                if ( CameraPresetInternal::readPreset( node, def, sourceName ) == false )
-                {
-                    // 틀린 값으로 반쯤 읽은 프리셋을 쓰지 않는다 — 켜려는 쪽이 없는 id 로 알게 된다.
-                    SW_LOG_ERROR_ID( "CameraPreset.PresetInvalidFieldsSkipped", "%#: preset '%#' has invalid fields - skipped", sourceName, pID );
-                    continue;
-                }
-                add( def );
-                ++loadedCount;
-            }
-            else if ( StringUtil::equals( pName, "Blend" ) )
-            {
-                const utf8* pFrom = node.findAttribute( "from" );
-                const utf8* pTo   = node.findAttribute( "to" );
-                if ( StringUtil::isNullOrEmpty( pFrom ) || StringUtil::isNullOrEmpty( pTo ) )
-                {
-                    SW_LOG_ERROR_ID( "CameraPreset.BlendNeedsBothSkipped", "%#: <Blend> needs both from and to - skipped", sourceName );
-                    continue;
-                }
-                CameraBlendRule rule;
-                rule._from  = hashed_string( pFrom );
-                rule._to    = hashed_string( pTo );
-                rule._blend = _defaultBlend;
-                if ( CameraPresetInternal::readBlend( node, rule._blend, sourceName, { "from", "to" } ) )
-                    addBlendRule( rule );
-                else
-                    SW_LOG_ERROR_ID( "CameraPreset.BlendInvalidFieldsSkipped", "%#: <Blend from=\"%#\" to=\"%#\"> has invalid fields - skipped", sourceName, pFrom, pTo );
-            }
-            else if ( StringUtil::equals( pName, "DefaultBlend" ) == false )
-            {
-                SW_LOG_ERROR_ID( "CameraPreset.UnknownElement", "%#: unknown element <%#>", sourceName, pName );
-            }
+            // 틀린 값으로 반쯤 읽은 프리셋을 쓰지 않는다 — 켜려는 쪽이 없는 id 로 알게 된다.
+            SW_LOG_ERROR_ID( "CameraPreset.PresetInvalidFieldsSkipped", "%#: preset '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "CameraPreset.NoPresetEntries", "%#: no <Preset> entries", sourceName );
-        return loadedCount;
+        add( def );
+        return true;
+    }
+
+    bool CameraPresetCatalog::loadBlendRule( const XMLNode& node, string_view sourceName )
+    {
+        const utf8* pFrom = node.findAttribute( "from" );
+        const utf8* pTo   = node.findAttribute( "to" );
+        if ( StringUtil::isNullOrEmpty( pFrom ) || StringUtil::isNullOrEmpty( pTo ) )
+        {
+            SW_LOG_ERROR_ID( "CameraPreset.BlendNeedsBothSkipped", "%#: <Blend> needs both from and to - skipped", sourceName );
+            return false;
+        }
+        CameraBlendRule rule;
+        rule._from  = hashed_string( pFrom );
+        rule._to    = hashed_string( pTo );
+        rule._blend = _defaultBlend;
+        if ( CameraPresetInternal::readBlend( node, rule._blend, sourceName, { "from", "to" } ) == false )
+        {
+            SW_LOG_ERROR_ID( "CameraPreset.BlendInvalidFieldsSkipped", "%#: <Blend from=\"%#\" to=\"%#\"> has invalid fields - skipped", sourceName, pFrom, pTo );
+            return false;
+        }
+        addBlendRule( rule );
+        return true;
     }
 } // namespace sw
 

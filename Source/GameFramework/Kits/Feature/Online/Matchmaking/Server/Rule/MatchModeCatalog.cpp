@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
@@ -48,18 +49,13 @@ namespace sw
 
     uint32 MatchModeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 `MatchModeDef` 의 초기값, 범위는 그 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Mode" ) == false )
-                SW_LOG_ERROR_ID( "MatchModeCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            else if ( loadMode( node, sourceName ) )
-                ++loadedCount;
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "MatchModeCatalog.NoModeEntries", "%#: no <Mode> entries", sourceName );
-        return loadedCount;
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        using Element                          = XMLCatalogElement<MatchModeCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&MatchModeCatalog::loadMode>( "Mode" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
     }
 
     bool MatchModeCatalog::loadMode( const XMLNode& node, string_view sourceName )

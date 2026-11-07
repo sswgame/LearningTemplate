@@ -128,6 +128,8 @@ namespace sw
          * @endcode
          */
         [[nodiscard]] static bool readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName );
+        /** @brief `readFloatCurve` 의 몸통입니다 — 이미 찾은 곡선 원소(카탈로그 표의 줄)를 읽습니다. */
+        [[nodiscard]] static bool readFloatCurveElement( const XMLNode& curveNode, float32 minValue, FloatCurve& outCurve, string_view sourceName );
 
     private:
         template <typename TLoader, typename TResult>

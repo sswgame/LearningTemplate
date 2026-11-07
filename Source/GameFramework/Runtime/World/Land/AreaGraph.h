@@ -137,10 +137,6 @@ namespace sw
          */
         [[nodiscard]] bool addLink( const hashed_string& from, const hashed_string& to, const hashed_string& kind, string_view condition, bool bOneWay,
                                     bool& outbInvalidCondition );
-        /**
-         * @brief `<Area>` 와 `<Link>` 를 가진 노드를 읽어 **더합니다**. 지우지는 않습니다. 다른 키트의 XML 안에 그래프를 함께 적을 때 쓰며, 더한 방 수를 반환합니다.
-         */
-        uint32 loadFromXML( const XMLNode& node, string_view sourceName );
         /** @brief 방에 들어갑니다. 방문과 발견이 되고 이웃 방도 발견됩니다. 처음 방문이면 true 이고, 없는 방은 false 입니다. */
         bool enterArea( const hashed_string& areaID );
         /** @brief 방을 지도에 드러냅니다. 지도 아이템과 힌트가 씁니다. 새로 드러났으면 true 입니다. */
@@ -184,6 +180,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "AreaGraph"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool           loadArea( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadLink( const XMLNode& node, string_view sourceName );
         /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 -1 이며, 잠금은 보지 않습니다. */
         int32 findOtherSide( const AreaLink& link, int32 fromIndex ) const;
         bool  isUnlocked( const AreaLink& link, const GameFlags& flags ) const;

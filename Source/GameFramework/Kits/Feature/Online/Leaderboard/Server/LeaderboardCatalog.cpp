@@ -8,42 +8,28 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
     uint32 LeaderboardCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 정의의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값 · 모르는 열거 이름은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            const utf8* pElement = node.getName();
-            if ( StringUtil::equals( pElement, "Board" ) )
-            {
-                LeaderboardDef board;
-                if ( readBoard( node, sourceName, board ) )
-                {
-                    _listBoard.push_back( std::move( board ) );
-                    ++loadedCount;
-                }
-            }
-            else if ( StringUtil::equals( pElement, "Achievement" ) )
-            {
-                AchievementDef achievement;
-                if ( XMLFields::readFields( node, achievement, sourceName ) )
-                {
-                    _listAchievement.push_back( std::move( achievement ) );
-                    ++loadedCount;
-                }
-            }
-            else
-            {
-                SW_LOG_ERROR_ID( "LeaderboardCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, pElement );
-            }
-        }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "LeaderboardCatalog.NoBoardAchievementEntries", "%#: no <Board> or <Achievement> entries", sourceName );
-        return loadedCount;
+        using Element                          = XMLCatalogElement<LeaderboardCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&LeaderboardCatalog::loadBoard>( "Board" ),
+            Element::of<&LeaderboardCatalog::_listAchievement>( "Achievement" ),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
+
+    bool LeaderboardCatalog::loadBoard( const XMLNode& node, string_view sourceName )
+    {
+        LeaderboardDef board;
+        if ( readBoard( node, sourceName, board ) == false )
+            return false;
+        _listBoard.push_back( std::move( board ) );
+        return true;
     }
 
     bool LeaderboardCatalog::readBoard( const XMLNode& node, string_view sourceName, LeaderboardDef& outBoard )

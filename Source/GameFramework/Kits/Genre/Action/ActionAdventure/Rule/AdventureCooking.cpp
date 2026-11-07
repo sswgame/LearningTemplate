@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -47,27 +48,28 @@ namespace sw
         if ( XMLFields::readFields( root, rules, sourceName ) == false )
             return 0;
         _rules = rules;
-        for ( XMLNode node = root.findChild( "Effect" ); node; node = node.findNextSibling( "Effect" ) )
+        // 재료가 효과를 가리키므로 효과를 먼저 다 읽는다.
+        using Element                          = XMLCatalogElement<AdventureCooking>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&AdventureCooking::_effectCatalog>( "Effect" ).uncounted(),
+            Element::of<&AdventureCooking::loadIngredient>( "Ingredient" ),
+        };
+        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
+
+    bool AdventureCooking::loadIngredient( const XMLNode& node, string_view sourceName )
+    {
+
+        AdventureIngredientDef ingredient;
+        if ( XMLFields::readFields( node, ingredient, sourceName ) == false )
+            return false;
+        if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
         {
-            AdventureCookEffectDef effect;
-            if ( XMLFields::readFields( node, effect, sourceName ) )
-                (void)_effectCatalog.add( effect );
+            SW_LOG_ERROR_ID( "AdventureCooking.IngredientUndeclaredEffectNot", "%#: ingredient '%#' has an undeclared effect '%#' - not added", sourceName, ingredient._id.c_str(), ingredient._effect.c_str() );
+            return false;
         }
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
-        {
-            AdventureIngredientDef ingredient;
-            if ( XMLFields::readFields( node, ingredient, sourceName ) == false )
-                continue;
-            if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
-            {
-                SW_LOG_ERROR_ID( "AdventureCooking.IngredientUndeclaredEffectNot", "%#: ingredient '%#' has an undeclared effect '%#' - not added", sourceName, ingredient._id.c_str(), ingredient._effect.c_str() );
-                continue;
-            }
-            (void)_ingredientCatalog.add( ingredient );
-            ++loadedCount;
-        }
-        return loadedCount;
+        (void)_ingredientCatalog.add( ingredient );
+        return true;
     }
 
     AdventureCookResult AdventureCooking::evaluate( const vector<hashed_string>& listIngredient, AdventureDish& outDish ) const

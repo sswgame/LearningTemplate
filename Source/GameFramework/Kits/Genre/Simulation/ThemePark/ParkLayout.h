@@ -182,6 +182,8 @@ namespace sw
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
+        [[nodiscard]] bool loadFlatRide( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadCoaster( const XMLNode& node, const CoasterLayoutCatalog& layouts, string_view sourceName );
 
     private:
         vector<ParkRidePlacement>              _listPlacement;

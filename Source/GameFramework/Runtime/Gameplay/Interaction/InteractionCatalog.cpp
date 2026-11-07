@@ -13,6 +13,8 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
     namespace
@@ -162,38 +164,37 @@ namespace sw
 
     bool InteractionCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        bool bValid = true;
-        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
+        using Element                          = XMLCatalogElement<InteractionCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&InteractionCatalog::loadInteraction>( "Interaction" ).uncounted(),
+            Element::of<&InteractionCatalog::loadSmartObject>( "SmartObject" ).uncounted(),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement ).isClean();
+    }
+
+    bool InteractionCatalog::loadInteraction( const XMLNode& node, string_view sourceName )
+    {
+        InteractionDef def;
+        const bool     bValid = readInteraction( node, def, sourceName );
+        if ( def._id.empty() )
         {
-            if ( StringUtil::equals( child.getName(), "Interaction" ) )
-            {
-                InteractionDef def;
-                bValid = readInteraction( child, def, sourceName ) && bValid;
-                if ( def._id.empty() )
-                {
-                    SW_LOG_WARNING_ID( "InteractionCatalog.InteractionWithoutIdSkipped", "%#: <Interaction> without an id - skipped", sourceName );
-                    bValid = false;
-                    continue;
-                }
-                addInteraction( def );
-                continue;
-            }
-            if ( StringUtil::equals( child.getName(), "SmartObject" ) )
-            {
-                SmartObjectDef def;
-                bValid = readSmartObject( child, def, sourceName ) && bValid;
-                if ( def._id.empty() )
-                {
-                    SW_LOG_WARNING_ID( "InteractionCatalog.SmartObjectWithoutIdSkipped", "%#: <SmartObject> without an id - skipped", sourceName );
-                    bValid = false;
-                    continue;
-                }
-                addSmartObject( def );
-                continue;
-            }
-            SW_LOG_WARNING_ID( "InteractionCatalog.UnknownElementInteractions", "%#: unknown element <%#> in <Interactions>", sourceName, child.getName() );
-            bValid = false;
+            SW_LOG_WARNING_ID( "InteractionCatalog.InteractionWithoutIdSkipped", "%#: <Interaction> without an id - skipped", sourceName );
+            return false;
         }
+        addInteraction( def );
+        return bValid;
+    }
+
+    bool InteractionCatalog::loadSmartObject( const XMLNode& node, string_view sourceName )
+    {
+        SmartObjectDef def;
+        const bool     bValid = readSmartObject( node, def, sourceName );
+        if ( def._id.empty() )
+        {
+            SW_LOG_WARNING_ID( "InteractionCatalog.SmartObjectWithoutIdSkipped", "%#: <SmartObject> without an id - skipped", sourceName );
+            return false;
+        }
+        addSmartObject( def );
         return bValid;
     }
 

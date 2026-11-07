@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -33,14 +34,11 @@ namespace sw
         RTSCatalogRootDef rootDef;
         if ( XMLFields::readFields( root, rootDef, sourceName ) )
             _supplyMax = rootDef._supplyMax;
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Unit" ) == false )
-                SW_LOG_ERROR_ID( "RTSCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            else if ( loadUnit( node, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<RTSCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&RTSCatalog::loadUnit>( "Unit" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         for ( const RTSUnitDef& def : getAll() )
         {
             if ( def._producedBy.empty() == false && find( def._producedBy ) == nullptr )
@@ -48,7 +46,7 @@ namespace sw
             if ( def._requires.empty() == false && find( def._requires ) == nullptr )
                 SW_LOG_ERROR_ID( "RTSCatalog.RequiresUnknown", "%#: '%#' requires unknown '%#'", sourceName, def._id.c_str(), def._requires.c_str() );
         }
-        return loadedCount;
+        return result._loadedCount;
     }
 
     bool RTSCatalog::loadUnit( const XMLNode& node, string_view sourceName )

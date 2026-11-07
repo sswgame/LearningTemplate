@@ -7,6 +7,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaAbilitySet.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -84,33 +85,21 @@ namespace sw
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         if ( loadRules( root, sourceName ) == false )
             return 0;
-        uint32 loadedCount = 0;
-        // 줍는 것이 능력 · 부적을 가리키므로 종류 순서대로 읽는다.
-        for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
-        {
-            loadedCount += loadAbility( node, sourceName ) ? 1 : 0;
-        }
-        for ( XMLNode node = root.findChild( "Charm" ); node; node = node.findNextSibling( "Charm" ) )
-        {
-            loadedCount += loadCharm( node, sourceName ) ? 1 : 0;
-        }
-        for ( XMLNode node = root.findChild( "Map" ); node; node = node.findNextSibling( "Map" ) )
-        {
-            loadedCount += GameDataXML::readInto( node, sourceName, _mapCatalog ) ? 1 : 0;
-        }
-        for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
-        {
-            loadedCount += GameDataXML::readInto( node, sourceName, _siteCatalog ) ? 1 : 0;
-        }
-        for ( XMLNode node = root.findChild( "Pickup" ); node; node = node.findNextSibling( "Pickup" ) )
-        {
-            loadedCount += loadPickup( node, sourceName ) ? 1 : 0;
-        }
-        for ( XMLNode node = root.findChild( "Enemy" ); node; node = node.findNextSibling( "Enemy" ) )
-        {
-            loadedCount += loadEnemy( node, sourceName ) ? 1 : 0;
-        }
-        return loadedCount;
+        // 줍는 것이 능력 · 부적을 가리키므로 표의 순서대로 읽는다.
+        using Element                          = XMLCatalogElement<MetroidvaniaCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::known( "Rules" ),
+            Element::known( "Health" ),
+            Element::known( "Stamina" ),
+            Element::known( "Parry" ),
+            Element::of<&MetroidvaniaCatalog::loadAbility>( "Ability" ),
+            Element::of<&MetroidvaniaCatalog::loadCharm>( "Charm" ),
+            Element::of<&MetroidvaniaCatalog::_mapCatalog>( "Map" ),
+            Element::of<&MetroidvaniaCatalog::_siteCatalog>( "Site" ),
+            Element::of<&MetroidvaniaCatalog::loadPickup>( "Pickup" ),
+            Element::of<&MetroidvaniaCatalog::loadEnemy>( "Enemy" ),
+        };
+        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool MetroidvaniaCatalog::loadAbility( const XMLNode& node, string_view sourceName )

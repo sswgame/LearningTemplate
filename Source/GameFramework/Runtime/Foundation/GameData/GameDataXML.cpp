@@ -32,9 +32,12 @@ namespace sw
     {
         outCurve._listKey.clear();
         const XMLNode curveNode = parent.findChild( pElement );
-        if ( curveNode.isValid() == false )
-            return true;
+        return curveNode.isValid() == false || readFloatCurveElement( curveNode, minValue, outCurve, sourceName );
+    }
 
+    bool GameDataXML::readFloatCurveElement( const XMLNode& curveNode, float32 minValue, FloatCurve& outCurve, string_view sourceName )
+    {
+        outCurve._listKey.clear();
         bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName );
         for ( XMLNode keyNode = curveNode.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
         {

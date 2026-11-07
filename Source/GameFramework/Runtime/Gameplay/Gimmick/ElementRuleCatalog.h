@@ -269,6 +269,11 @@ namespace sw
 
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadFlag( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadStatus( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadMaterial( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadStimulus( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadStep( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
         [[nodiscard]] bool readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const;
         /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 -1 로 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */

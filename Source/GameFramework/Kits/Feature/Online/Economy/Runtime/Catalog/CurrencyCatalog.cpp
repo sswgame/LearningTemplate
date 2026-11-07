@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -63,14 +64,11 @@ namespace sw
     uint32 CurrencyCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Currency" ) == false )
-                SW_LOG_ERROR_ID( "CurrencyCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-            else if ( loadCurrency( node, sourceName ) )
-                ++loadedCount;
-        }
+        using Element                          = XMLCatalogElement<CurrencyCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&CurrencyCatalog::loadCurrency>( "Currency" ),
+        };
+        uint32 loadedCount = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
         // 가상 화폐의 재원은 정의된 비가상 화폐여야 한다. 적힌 순서와 상관없이 모두 읽은 뒤에 확인한다.
         for ( size_t defIndex = 0; defIndex < _listCurrency.size(); )
         {
@@ -83,8 +81,6 @@ namespace sw
             }
             ++defIndex;
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "CurrencyCatalog.NoCurrencyEntries", "%#: no <Currency> entries", sourceName );
         return loadedCount;
     }
 

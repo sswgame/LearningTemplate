@@ -957,7 +957,6 @@ SW_TEST_CASE( FightingTest, CatalogRefusesBrokenFighters )
 {
     SW_EXPECT_LOG( "FighterCatalog.IdNeedsReadableCommand" );
     SW_EXPECT_LOG( "FighterCatalog.FighterIdErrorsNot" );
-    SW_EXPECT_LOG( "FighterCatalog.NoFighterEntries" );
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_EXPECT_LOG( "FighterCatalog.FighterNoUsableMove" );

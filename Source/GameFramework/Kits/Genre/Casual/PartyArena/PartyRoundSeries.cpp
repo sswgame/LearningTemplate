@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <optional>
 
@@ -119,31 +120,23 @@ namespace sw
                 return 0;
             }
         }
-        vector<PartyRoundDef> listRound;
-        uint32                loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-        {
-            if ( StringUtil::equals( node.getName(), "Round" ) == false )
-            {
-                SW_LOG_ERROR_ID( "PartyRoundSeries.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-                continue;
-            }
-            PartyRoundDef round;
-            if ( XMLFields::readFields( node, round, sourceName ) == false )
-                continue; // 오류는 readFields 가 남겼고, 그 판만 빠진다
-            listRound.push_back( round );
-            ++loadedCount;
-        }
+        // 앞 판은 읽기가 끝나야 버린다. 틀린 판은 readFields 가 알리고 그 판만 빠진다.
+        vector<PartyRoundDef> listPreviousRound;
+        listPreviousRound.swap( _listRound );
+        using Element                          = XMLCatalogElement<PartyRoundSeries>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&PartyRoundSeries::_listRound>( "Round" ),
+        };
+        const uint32 loadedCount = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
         if ( loadedCount == 0 )
         {
-            SW_LOG_ERROR_ID( "PartyRoundSeries.NoRound", "%#: no <Round>", sourceName );
+            _listRound.swap( listPreviousRound );
             return 0;
         }
         if ( winScore.has_value() )
             _seriesSettings._winScore = *winScore;
         if ( points.empty() == false )
             _seriesSettings._listPlacementPoint = listPlacementPoint;
-        _listRound = std::move( listRound );
         return loadedCount;
     }
 

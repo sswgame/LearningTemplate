@@ -94,6 +94,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "WeatherCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool           loadWeather( const XMLNode& node, string_view sourceName );
 
     private:
         float32 _transitionTime{ 60.0f };

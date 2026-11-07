@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 #include <algorithm>
@@ -87,25 +88,31 @@ namespace sw
 
     uint32 RecipeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Recipe" ); node; node = node.findNextSibling( "Recipe" ) )
+        using Element                          = XMLCatalogElement<RecipeCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&RecipeCatalog::loadRecipe>( "Recipe" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool RecipeCatalog::loadRecipe( const XMLNode& node, string_view sourceName )
+    {
+
+        // 적지 않은 칸은 RecipeDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 레시피를 넣지 않는 오류다(자르지 않는다).
+        RecipeDef         recipe;
+        bool              bValid = XMLFields::readFields( node, recipe, sourceName );
+        const utf8* const pID    = recipe._id.c_str();
+        bValid                   = CraftingInternal::readItems( node, "In", recipe._inputs, sourceName ) && bValid;
+        bValid                   = CraftingInternal::readItems( node, "Tool", recipe._tools, sourceName ) && bValid;
+        bValid                   = CraftingInternal::readItems( node, "Out", recipe._outputs, sourceName ) && bValid;
+        if ( bValid == false )
         {
-            // 적지 않은 칸은 RecipeDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 레시피를 넣지 않는 오류다(자르지 않는다).
-            RecipeDef         recipe;
-            bool              bValid = XMLFields::readFields( node, recipe, sourceName );
-            const utf8* const pID    = recipe._id.c_str();
-            bValid                   = CraftingInternal::readItems( node, "In", recipe._inputs, sourceName ) && bValid;
-            bValid                   = CraftingInternal::readItems( node, "Tool", recipe._tools, sourceName ) && bValid;
-            bValid                   = CraftingInternal::readItems( node, "Out", recipe._outputs, sourceName ) && bValid;
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "Crafting.RecipeInvalidFieldsSkipped", "%#: recipe '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            add( recipe );
-            ++loadedCount;
+            SW_LOG_ERROR_ID( "Crafting.RecipeInvalidFieldsSkipped", "%#: recipe '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
         }
-        return loadedCount;
+        add( recipe );
+        return true;
     }
 
     void RecipeCatalog::findRecipesFor( const hashed_string& itemID, vector<const RecipeDef*>& outListRecipe ) const

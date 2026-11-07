@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
 namespace sw
@@ -95,43 +96,53 @@ namespace sw
     uint32 ElementChart::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
-        for ( XMLNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
-        {
-            ElementDeclParams element;
-            if ( XMLFields::readFields( node, element, sourceName ) )
-                addElement( element._id );
-        }
-        if ( _listElement.empty() )
-        {
-            SW_LOG_WARNING_ID( "ElementChart.NoElementEntries", "%#: no <Element> entries", sourceName );
-            return 0;
-        }
-
-        for ( XMLNode node = root.findChild( "Rule" ); node; node = node.findNextSibling( "Rule" ) )
-        {
-            ElementRuleParams rule; // 칸 · 배율 >= 0 은 PROPERTY 가 본다
-            if ( XMLFields::readFields( node, rule, sourceName ) == false )
-                continue;
-            if ( hasElement( rule._attack ) == false || hasElement( rule._defend ) == false )
-            {
-                SW_LOG_WARNING_ID( "ElementChart.RuleNamesUndeclaredElement", "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, rule._attack.c_str(), rule._defend.c_str() );
-                continue;
-            }
-            (void)setMultiplier( rule._attack, rule._defend, rule._multiplier ); // 음수는 위에서 막았다
-        }
-
-        for ( XMLNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )
-        {
-            ElementStatusChance entry; // 칸 · 확률 0..1 은 PROPERTY 가 본다
-            const bool          bEntryValid = XMLFields::readFields( node, entry, sourceName ) && hasElement( entry._element );
-            if ( bEntryValid == false )
-            {
-                SW_LOG_WARNING_ID( "ElementChart.StatusInvalidSkipped", "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );
-                continue;
-            }
-            addStatusChance( entry );
-        }
+        // 규칙 · 상태는 선언한 속성만 가리키므로 속성을 먼저 다 읽는다.
+        using Element                          = XMLCatalogElement<ElementChart>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ElementChart::loadElement>( "Element" ),
+            Element::of<&ElementChart::loadRule>( "Rule" ).uncounted(),
+            Element::of<&ElementChart::loadStatus>( "Status" ).uncounted(),
+        };
+        (void)XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
         return static_cast<uint32>( _listElement.size() );
+    }
+
+    bool ElementChart::loadElement( const XMLNode& node, string_view sourceName )
+    {
+        ElementDeclParams element;
+        if ( XMLFields::readFields( node, element, sourceName ) == false )
+            return false;
+        addElement( element._id );
+        return true;
+    }
+
+    bool ElementChart::loadRule( const XMLNode& node, string_view sourceName )
+    {
+
+        ElementRuleParams rule; // 칸 · 배율 >= 0 은 PROPERTY 가 본다
+        if ( XMLFields::readFields( node, rule, sourceName ) == false )
+            return false;
+        if ( hasElement( rule._attack ) == false || hasElement( rule._defend ) == false )
+        {
+            SW_LOG_WARNING_ID( "ElementChart.RuleNamesUndeclaredElement", "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, rule._attack.c_str(), rule._defend.c_str() );
+            return false;
+        }
+        (void)setMultiplier( rule._attack, rule._defend, rule._multiplier ); // 음수는 위에서 막았다
+        return true;
+    }
+
+    bool ElementChart::loadStatus( const XMLNode& node, string_view sourceName )
+    {
+
+        ElementStatusChance entry; // 칸 · 확률 0..1 은 PROPERTY 가 본다
+        const bool          bEntryValid = XMLFields::readFields( node, entry, sourceName ) && hasElement( entry._element );
+        if ( bEntryValid == false )
+        {
+            SW_LOG_WARNING_ID( "ElementChart.StatusInvalidSkipped", "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );
+            return false;
+        }
+        addStatusChance( entry );
+        return true;
     }
 } // namespace sw
 

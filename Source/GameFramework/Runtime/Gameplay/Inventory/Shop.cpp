@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -153,44 +154,48 @@ namespace sw
 
     uint32 ShopCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Shop" ); node; node = node.findNextSibling( "Shop" ) )
+        using Element                          = XMLCatalogElement<ShopCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ShopCatalog::loadShop>( "Shop" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool ShopCatalog::loadShop( const XMLNode& node, string_view sourceName )
+    {
+
+        // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
+        ShopDef def;
+        bool    bValid = XMLFields::readFields( node, def, sourceName );
+        if ( def._id.empty() )
+            return false;
+        const utf8* const pID = def._id.c_str();
+        if ( def._currency.empty() )
+            def._currency = Wallet::getDefaultCurrency();
+        for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
         {
-            // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
-            ShopDef def;
-            bool    bValid = XMLFields::readFields( node, def, sourceName );
-            if ( def._id.empty() )
-                continue;
-            const utf8* const pID = def._id.c_str();
-            if ( def._currency.empty() )
-                def._currency = Wallet::getDefaultCurrency();
-            for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
+            ShopStockDef stock; // item 필수 · 재고 범위는 PROPERTY 가 본다
+            if ( XMLFields::readFields( stockNode, stock, sourceName ) == false || stock._itemID.empty() )
             {
-                ShopStockDef stock; // item 필수 · 재고 범위는 PROPERTY 가 본다
-                if ( XMLFields::readFields( stockNode, stock, sourceName ) == false || stock._itemID.empty() )
-                {
-                    SW_LOG_ERROR_ID( "Shop.ShopStockInvalid", "%#: shop '%#' has a <Stock> without an item or with invalid fields", sourceName, pID );
-                    bValid = false;
-                    continue;
-                }
-                if ( ConditionExpr::compile( stock._requirement, sourceName, stock._condition ) == false )
-                {
-                    bValid = false;
-                    continue;
-                }
-                def._listStock.push_back( stock );
-            }
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "Shop.ShopInvalidFieldsSkipped", "%#: shop '%#' has invalid fields - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "Shop.ShopStockInvalid", "%#: shop '%#' has a <Stock> without an item or with invalid fields", sourceName, pID );
+                bValid = false;
                 continue;
             }
-            add( def );
-            ++loadedCount;
+            if ( ConditionExpr::compile( stock._requirement, sourceName, stock._condition ) == false )
+            {
+                bValid = false;
+                continue;
+            }
+            def._listStock.push_back( stock );
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "Shop.NoShopEntries", "%#: no <Shop> entries", sourceName );
-        return loadedCount;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "Shop.ShopInvalidFieldsSkipped", "%#: shop '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        add( def );
+        return true;
     }
 
     // ------------------------------------------------------------------------------

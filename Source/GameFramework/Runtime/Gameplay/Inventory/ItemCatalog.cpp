@@ -14,6 +14,8 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
     namespace
@@ -91,44 +93,48 @@ namespace sw
 
     uint32 ItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+        using Element                          = XMLCatalogElement<ItemCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ItemCatalog::loadItem>( "Item" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool ItemCatalog::loadItem( const XMLNode& node, string_view sourceName )
+    {
+
+        // 적지 않은 칸은 ItemDef 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 깨짐 정책은 그 아이템을 넣지 않는 오류다(자르지 않는다).
+        ItemDef def;
+        bool    bValid = XMLFields::readFields( node, def, sourceName );
+        if ( def._id.empty() )
+            return false;
+        const utf8* const pID = def._id.c_str();
+        if ( def._name.empty() )
+            def._name = pID;
+        if ( def._maxDurability > 0.0f && def._maxStack > 1 )
         {
-            // 적지 않은 칸은 ItemDef 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 깨짐 정책은 그 아이템을 넣지 않는 오류다(자르지 않는다).
-            ItemDef def;
-            bool    bValid = XMLFields::readFields( node, def, sourceName );
-            if ( def._id.empty() )
-                continue;
-            const utf8* const pID = def._id.c_str();
-            if ( def._name.empty() )
-                def._name = pID;
-            if ( def._maxDurability > 0.0f && def._maxStack > 1 )
-            {
-                SW_LOG_WARNING_ID( "ItemCatalog.DurabilityStacksLimited", "%#: '%#' has durability - stacks are limited to 1", sourceName, pID );
-                def._maxStack = 1;
-            }
-            const XMLNode statNode = node.findChild( "Stats" );
-            if ( statNode )
-                def._stats.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
-            for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
-            {
-                EquipmentCondition condition;
-                if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pID ) )
-                    def._listEquipCondition.push_back( condition );
-                else
-                    bValid = false;
-            }
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "ItemCatalog.ItemInvalidFieldsSkipped", "%#: item '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            add( def );
-            ++loadedCount;
+            SW_LOG_WARNING_ID( "ItemCatalog.DurabilityStacksLimited", "%#: '%#' has durability - stacks are limited to 1", sourceName, pID );
+            def._maxStack = 1;
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "ItemCatalog.NoItemEntries", "%#: no <Item> entries", sourceName );
-        return loadedCount;
+        const XMLNode statNode = node.findChild( "Stats" );
+        if ( statNode )
+            def._stats.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
+        for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
+        {
+            EquipmentCondition condition;
+            if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pID ) )
+                def._listEquipCondition.push_back( condition );
+            else
+                bValid = false;
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "ItemCatalog.ItemInvalidFieldsSkipped", "%#: item '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        add( def );
+        return true;
     }
 } // namespace sw
 

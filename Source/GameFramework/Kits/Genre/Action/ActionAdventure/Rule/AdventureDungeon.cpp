@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -69,13 +70,12 @@ namespace sw
     uint32 AdventureDungeonCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 던전을 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode dungeonNode = root.findChild( "Dungeon" ); dungeonNode; dungeonNode = dungeonNode.findNextSibling( "Dungeon" ) )
-        {
-            if ( loadDungeon( dungeonNode, sourceName ) )
-                ++loadedCount;
-        }
-        return loadedCount;
+        using Element                          = XMLCatalogElement<AdventureDungeonCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&AdventureDungeonCatalog::loadDungeon>( "Dungeon" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
     }
 
     bool AdventureDungeonCatalog::loadDungeon( const XMLNode& dungeonNode, string_view sourceName )

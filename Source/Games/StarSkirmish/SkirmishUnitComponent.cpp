@@ -16,6 +16,8 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 #include "Games/StarSkirmish/SkirmishGameModeComponent.h"
 
 namespace sw
@@ -102,38 +104,42 @@ namespace sw
 
     uint32 SkirmishUnitModelCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Model" ); node; node = node.findNextSibling( "Model" ) )
+        using Element                          = XMLCatalogElement<SkirmishUnitModelCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&SkirmishUnitModelCatalog::loadModel>( "Model" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool SkirmishUnitModelCatalog::loadModel( const XMLNode& node, string_view sourceName )
+    {
+
+        const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
+        if ( pID == nullptr )
+            return false;
+        hashed_string     modelName;
+        SkirmishUnitModel entry;
+        entry._id   = hashed_string( pID );
+        bool bValid = XMLReadUtil::readRequiredName( node, "model", sourceName, modelName );
+        // 폭은 필수다(적지 않은 칸이 조용히 1 이 되지 않는다). 0 이하는 오류다.
+        if ( node.findAttribute( "width" ) == nullptr )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            hashed_string     modelName;
-            SkirmishUnitModel entry;
-            entry._id   = hashed_string( pID );
-            bool bValid = XMLReadUtil::readRequiredName( node, "model", sourceName, modelName );
-            // 폭은 필수다(적지 않은 칸이 조용히 1 이 되지 않는다). 0 이하는 오류다.
-            if ( node.findAttribute( "width" ) == nullptr )
-            {
-                SW_LOG_ERROR_ID( "SkirmishUnit.ModelNoWidth", "%#: model '%#' has no width", sourceName, pID );
-                bValid = false;
-            }
-            else
-            {
-                bValid = XMLReadUtil::readOptionalNumber( node, "width", sourceName, 0.01f, 1000.0f, entry._width ) && bValid;
-            }
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, pID );
-                continue;
-            }
-            entry._model = string( modelName.c_str() );
-            add( entry );
-            ++loadedCount;
+            SW_LOG_ERROR_ID( "SkirmishUnit.ModelNoWidth", "%#: model '%#' has no width", sourceName, pID );
+            bValid = false;
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING_ID( "SkirmishUnit.NoModelEntries", "%#: no <Model> entries", sourceName );
-        return loadedCount;
+        else
+        {
+            bValid = XMLReadUtil::readOptionalNumber( node, "width", sourceName, 0.01f, 1000.0f, entry._width ) && bValid;
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, pID );
+            return false;
+        }
+        entry._model = string( modelName.c_str() );
+        add( entry );
+        return true;
     }
 
     float32 SkirmishUnitComponent::measureViewLag() const

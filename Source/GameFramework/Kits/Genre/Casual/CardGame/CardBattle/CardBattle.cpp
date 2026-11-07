@@ -12,6 +12,7 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -60,34 +61,32 @@ namespace sw
     uint32 CardBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 카드는 넣지 않고 오류다(readFields 가 남긴다).
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+        using Element                          = XMLCatalogElement<CardBattleCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&CardBattleCatalog::loadCard>( "Card" ),
+        };
+        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+    }
+
+    bool CardBattleCatalog::loadCard( const XMLNode& node, string_view sourceName )
+    {
+        CardBattleCardDef def;
+        bool              bValid = XMLFields::readFields( node, def, sourceName, { "effects" } );
+        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, XMLReadUtil::MissingValue::Reject,
+                                         [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
         {
-            if ( StringUtil::equals( node.getName(), "Card" ) == false )
+            CardBattleEffect effect;
+            const bool       bKind = CardBattleInternal::parseEffectKind( kindName, effect._kind );
+            effect._amount         = amount;
+            if ( bKind && bAmount )
+                def._listEffect.push_back( effect );
+            else
             {
-                SW_LOG_ERROR_ID( "CardBattle.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
-                continue;
+                SW_LOG_ERROR_ID( "CardBattle.CardUnreadableEffect", "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
+                bValid = false;
             }
-            CardBattleCardDef def;
-            bool              bValid = XMLFields::readFields( node, def, sourceName, { "effects" } );
-            XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, XMLReadUtil::MissingValue::Reject,
-                                             [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
-            {
-                CardBattleEffect effect;
-                const bool       bKind = CardBattleInternal::parseEffectKind( kindName, effect._kind );
-                effect._amount         = amount;
-                if ( bKind && bAmount )
-                    def._listEffect.push_back( effect );
-                else
-                {
-                    SW_LOG_ERROR_ID( "CardBattle.CardUnreadableEffect", "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
-                    bValid = false;
-                }
-            } );
-            if ( bValid && add( def ) >= 0 )
-                ++loadedCount;
-        }
-        return loadedCount;
+        } );
+        return bValid && add( def ) >= 0;
     }
 
     CardBattle::CardBattle()

@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
@@ -109,29 +110,30 @@ namespace sw
     {
         using Internal = AIDirectorProfileInternal;
         clear();
-        static constexpr const utf8* kArrRootChild[] = { "Calendar", "Intensity", "Phase", "Pool" };
-        bool                         bValid          = Internal::validateAttributes( root, Internal::kArrRootAttribute, false, sourceName );
-        bValid                                       = Internal::validateChildren( root, kArrRootChild, sourceName ) && bValid;
-        _startPhase                                  = hashed_string( root.getAttributeText( "startPhase" ) );
+        bool bValid = Internal::validateAttributes( root, Internal::kArrRootAttribute, false, sourceName );
+        _startPhase = hashed_string( root.getAttributeText( "startPhase" ) );
 
+        /** 풀은 달력 어휘를 받아야 해서 문맥을 든 읽는 쪽을 둔다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. */
+        struct DirectorElementReader
+        {
+            AIDirectorProfile&      _profile;
+            ScheduleConditionSchema _vocabulary;
+
+            bool loadCalendar( const XMLNode& node, string_view sourceName ) { return XMLFields::readFields( node, _vocabulary, sourceName ); }
+            bool loadIntensity( const XMLNode& node, string_view sourceName ) { return _profile.readIntensity( node, sourceName ); }
+            bool loadPhase( const XMLNode& node, string_view sourceName ) { return _profile.readPhase( node, sourceName ); }
+            bool loadPool( const XMLNode& node, string_view sourceName ) { return _profile.readPool( node, _vocabulary, sourceName ); }
+        };
         // 조건 이름의 어휘는 풀보다 먼저 읽는다(파일 안 순서와 상관없이).
-        ScheduleConditionSchema vocabulary;
-        for ( XMLNode node = root.findChild( "Calendar" ); node; node = node.findNextSibling( "Calendar" ) )
-        {
-            bValid = XMLFields::readFields( node, vocabulary, sourceName ) && bValid;
-        }
-        for ( XMLNode node = root.findChild( "Intensity" ); node; node = node.findNextSibling( "Intensity" ) )
-        {
-            bValid = readIntensity( node, sourceName ) && bValid;
-        }
-        for ( XMLNode node = root.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
-        {
-            bValid = readPhase( node, sourceName ) && bValid;
-        }
-        for ( XMLNode node = root.findChild( "Pool" ); node; node = node.findNextSibling( "Pool" ) )
-        {
-            bValid = readPool( node, vocabulary, sourceName ) && bValid;
-        }
+        using Element                          = XMLCatalogElement<DirectorElementReader>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&DirectorElementReader::loadCalendar>( "Calendar" ).uncounted(),
+            Element::of<&DirectorElementReader::loadIntensity>( "Intensity" ).uncounted(),
+            Element::of<&DirectorElementReader::loadPhase>( "Phase" ).uncounted(),
+            Element::of<&DirectorElementReader::loadPool>( "Pool" ).uncounted(),
+        };
+        DirectorElementReader reader{ *this, {} };
+        bValid = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement ).isClean() && bValid;
         bValid = resolveReferences( sourceName ) && bValid;
         if ( bValid == false )
             clear();

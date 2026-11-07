@@ -691,8 +691,7 @@ SW_TEST_CASE( MonsterCatalogTest, BrokenMonstersAreSkipped )
     SW_EXPECT_LOG( "MonsterCatalog.ShooterNeedsCoolTime" );
     SW_EXPECT_LOG( "MonsterCatalog.UnknownChild" );
     SW_EXPECT_LOG( "MonsterCatalog.DropNeedsIntegerMore" );
-    SW_EXPECT_LOG( "MonsterCatalog.UnknownElementSkipped" );
-    SW_EXPECT_LOG( "MonsterCatalog.ElementNotLoadedListed" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
 
     sw::MonsterCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCatalog>
@@ -714,9 +713,8 @@ SW_TEST_CASE( MonsterCatalogTest, BrokenMonstersAreSkipped )
  */
 SW_TEST_CASE( MonsterCatalogTest, ReadingNothingFails )
 {
-    SW_EXPECT_LOG( "MonsterCatalog.UnknownElementSkipped" );
-    SW_EXPECT_LOG( "MonsterCatalog.ElementNotLoadedListed" );
-    SW_EXPECT_LOG( "MonsterCatalog.NoMonsterEntries" );
+    SW_EXPECT_LOG( "Xml.UnknownElement" );
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
 
     sw::MonsterCatalog catalog;
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<MonsterCatalog><monster id="typo" name="t"/></MonsterCatalog>)", "typo" ) );
@@ -729,7 +727,6 @@ SW_TEST_CASE( MonsterCatalogTest, ReadingNothingFails )
 SW_TEST_CASE( MonsterCatalogTest, UnusedAIFieldIsRejected )
 {
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
-    SW_EXPECT_LOG( "MonsterCatalog.ElementNotLoadedListed" );
 
     sw::MonsterCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCatalog><Monster id="a" name="a"><AI patrolRange="4"/></Monster><Monster id="b" name="b"><AI coolTime="1"/></Monster></MonsterCatalog>)", "dropped" ) );

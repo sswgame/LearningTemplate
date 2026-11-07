@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include <algorithm>
 #include <optional>
@@ -192,27 +193,29 @@ namespace sw
         _laneCount                = rootDef._laneCount;
         _offset                   = rootDef._offset;
 
-        vector<RhythmBpmChange> listBpmChange;
-        vector<RhythmStop>      listStop;
         _listMeasureChange.clear();
         _listNote.clear();
-        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+        /** 빠르기와 멈춤은 다 읽은 뒤 박자표로 바뀌므로 칸으로 두지 않는다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. */
+        struct RhythmElementReader
         {
-            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( name == "Bpm" )
-                bValid = GameDataXML::readInto( node, sourceName, listBpmChange ) && bValid;
-            else if ( name == "Stop" )
-                bValid = GameDataXML::readInto( node, sourceName, listStop ) && bValid;
-            else if ( name == "Measure" )
-                bValid = GameDataXML::readInto( node, sourceName, _listMeasureChange ) && bValid;
-            else if ( name == "Note" )
-                bValid = RhythmChartInternal::readNote( node, sourceName, _laneCount, _listNote ) && bValid;
-            else
-            {
-                SW_LOG_ERROR_ID( "RhythmChart.UnknownElement", "%#: unknown element <%#> - skipped", sourceName, name );
-                bValid = false;
-            }
-        }
+            RhythmChart&            _chart;
+            vector<RhythmBpmChange> _listBpmChange;
+            vector<RhythmStop>      _listStop;
+
+            bool loadMeasure( const XMLNode& node, string_view sourceName ) { return GameDataXML::readInto( node, sourceName, _chart._listMeasureChange ); }
+            bool loadNote( const XMLNode& node, string_view sourceName ) { return RhythmChartInternal::readNote( node, sourceName, _chart._laneCount, _chart._listNote ); }
+        };
+        using Element                          = XMLCatalogElement<RhythmElementReader>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&RhythmElementReader::_listBpmChange>( "Bpm" ).uncounted(),
+            Element::of<&RhythmElementReader::_listStop>( "Stop" ).uncounted(),
+            Element::of<&RhythmElementReader::loadMeasure>( "Measure" ).uncounted(),
+            Element::of<&RhythmElementReader::loadNote>( "Note" ).uncounted(),
+        };
+        RhythmElementReader reader{ *this, {}, {} };
+        bValid                                  = XMLCatalogReader::readInDocumentOrder( reader, root, sourceName, kArrElement ).isClean() && bValid;
+        vector<RhythmBpmChange>&  listBpmChange = reader._listBpmChange;
+        const vector<RhythmStop>& listStop      = reader._listStop;
         // `<Bpm>` 이 없으면 루트의 bpm 하나가 처음부터 끝까지의 빠르기다.
         if ( listBpmChange.empty() )
         {

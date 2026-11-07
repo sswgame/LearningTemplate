@@ -15,6 +15,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 namespace sw
 {
     namespace
@@ -60,19 +61,25 @@ namespace sw
 
     uint32 StatCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Stat" ); node; node = node.findNextSibling( "Stat" ) )
-        {
-            // 칸 · 종류 이름 · 상한 >= 0 은 StatDef 의 PROPERTY 가 본다. 틀린 통계는 넣지 않는다(자르지 않는다).
-            StatDef def;
-            if ( XMLFields::readFields( node, def, sourceName ) == false )
-                continue;
-            if ( def._name.empty() )
-                def._name = def._id.c_str();
-            addStat( def );
-            ++loadedCount;
-        }
-        return loadedCount;
+        using Element                          = XMLCatalogElement<StatCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&StatCatalog::loadStat>( "Stat" ),
+        };
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        return result._loadedCount;
+    }
+
+    bool StatCatalog::loadStat( const XMLNode& node, string_view sourceName )
+    {
+
+        // 칸 · 종류 이름 · 상한 >= 0 은 StatDef 의 PROPERTY 가 본다. 틀린 통계는 넣지 않는다(자르지 않는다).
+        StatDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
+            return false;
+        if ( def._name.empty() )
+            def._name = def._id.c_str();
+        addStat( def );
+        return true;
     }
 
     // ------------------------------------------------------------------------------

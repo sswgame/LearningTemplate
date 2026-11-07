@@ -12,6 +12,8 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
     namespace
@@ -270,92 +272,102 @@ namespace sw
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
         ElementRuleRootParams rootParams{ _stepTime };
-        bool                  bValid = XMLFields::readFields( root, rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
-        _stepTime                    = bValid ? rootParams._stepTime : _stepTime;
-        // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
-        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
+        const bool            bRoot = XMLFields::readFields( root, rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        _stepTime                   = bRoot ? rootParams._stepTime : _stepTime;
+        // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 상태, 재질을 먼저 모두 읽고 규칙을 읽는다.
+        using Element                          = XMLCatalogElement<ElementRuleCatalog>;
+        static constexpr Element kArrElement[] = {
+            Element::of<&ElementRuleCatalog::loadFlag>( "Flag" ).uncounted(),
+            Element::of<&ElementRuleCatalog::loadStatus>( "Status" ).uncounted(),
+            Element::of<&ElementRuleCatalog::loadMaterial>( "Material" ).uncounted(),
+            Element::of<&ElementRuleCatalog::loadStimulus>( "Stimulus" ).uncounted(),
+            Element::of<&ElementRuleCatalog::loadStep>( "Step" ).uncounted(),
+        };
+        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement ).isClean() && bRoot;
+    }
+
+    bool ElementRuleCatalog::loadFlag( const XMLNode& node, string_view sourceName )
+    {
+        ElementNameParams flag;
+        const bool        bRead = XMLFields::readFields( node, flag, sourceName );
+        if ( addFlag( flag._id ) < 0 )
         {
-            if ( XMLReadUtil::isElement( child.getName(), "Flag" ) )
-            {
-                ElementNameParams flag;
-                bValid = XMLFields::readFields( child, flag, sourceName ) && bValid;
-                if ( addFlag( flag._id ) < 0 )
-                {
-                    SW_LOG_WARNING_ID( "ElementRuleCatalog.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
-                    bValid = false;
-                }
-            }
-            else if ( XMLReadUtil::isElement( child.getName(), "Status" ) )
-            {
-                ElementStatusDef status; // 종류는 ENUM() 이름 · steps >= 1
-                bValid = XMLFields::readFields( child, status, sourceName ) && bValid;
-                if ( addStatus( status._id, status._kind, status._steps ) < 0 )
-                {
-                    SW_LOG_WARNING_ID( "ElementRuleCatalog.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
-                    bValid = false;
-                }
-            }
+            SW_LOG_WARNING_ID( "ElementRuleCatalog.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
+            return false;
         }
-        for ( XMLNode child = root.findChild( "Material" ); child; child = child.findNextSibling( "Material" ) )
+        return bRead;
+    }
+
+    bool ElementRuleCatalog::loadStatus( const XMLNode& node, string_view sourceName )
+    {
+        ElementStatusDef status; // 종류는 ENUM() 이름 · steps >= 1
+        const bool       bRead = XMLFields::readFields( node, status, sourceName );
+        if ( addStatus( status._id, status._kind, status._steps ) < 0 )
         {
-            vector<hashed_string> listFlag;
-            StringUtil::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
-            { listFlag.push_back( hashed_string( string( token ).c_str() ) ); } );
-            const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
-            if ( material < 0 )
+            SW_LOG_WARNING_ID( "ElementRuleCatalog.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
+            return false;
+        }
+        return bRead;
+    }
+
+    bool ElementRuleCatalog::loadMaterial( const XMLNode& child, string_view sourceName )
+    {
+        bool bValid = true;
+
+        vector<hashed_string> listFlag;
+        StringUtil::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
+        { listFlag.push_back( hashed_string( string( token ).c_str() ) ); } );
+        const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
+        if ( material < 0 )
+        {
+            SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
+            bValid = false;
+            return false;
+        }
+        for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        {
+            const bool bReserved = StringUtil::equals( attribute.getName(), "id" ) || StringUtil::equals( attribute.getName(), "flags" );
+            if ( bReserved )
+                continue;
+            int32 value{ 0 };
+            if ( StringUtil::parseInt( attribute.getValue(), value ) == false )
             {
-                SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdDuplicateNames", "%#: <Material id=\"%#\"> is a duplicate or names an undeclared flag", sourceName, child.getAttributeText( "id" ) );
+                SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdNotInteger", "%#: <Material id=\"%#\"> %#=\"%#\" is not an integer", sourceName, child.getAttributeText( "id" ), attribute.getName(), attribute.getValue() );
                 bValid = false;
                 continue;
             }
-            for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-            {
-                const bool bReserved = StringUtil::equals( attribute.getName(), "id" ) || StringUtil::equals( attribute.getName(), "flags" );
-                if ( bReserved )
-                    continue;
-                int32 value{ 0 };
-                if ( StringUtil::parseInt( attribute.getValue(), value ) == false )
-                {
-                    SW_LOG_WARNING_ID( "ElementRuleCatalog.MaterialIdNotInteger", "%#: <Material id=\"%#\"> %#=\"%#\" is not an integer", sourceName, child.getAttributeText( "id" ), attribute.getName(), attribute.getValue() );
-                    bValid = false;
-                    continue;
-                }
-                setMaterialParam( material, hashed_string( attribute.getName() ), value );
-            }
+            setMaterialParam( material, hashed_string( attribute.getName() ), value );
         }
-        for ( XMLNode child = root.findChild( "Stimulus" ); child; child = child.findNextSibling( "Stimulus" ) )
+        return bValid;
+    }
+
+    bool ElementRuleCatalog::loadStimulus( const XMLNode& child, string_view sourceName )
+    {
+        bool bValid = true;
+
+        ElementNameParams stimulusFields;
+        bValid               = XMLFields::readFields( child, stimulusFields, sourceName ) && bValid;
+        const int32 stimulus = addStimulus( stimulusFields._id );
+        for ( XMLNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
         {
-            ElementNameParams stimulusFields;
-            bValid               = XMLFields::readFields( child, stimulusFields, sourceName ) && bValid;
-            const int32 stimulus = addStimulus( stimulusFields._id );
-            for ( XMLNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
-            {
-                ElementStimulusRule rule;
-                bValid = readStimulusRule( ruleNode, rule, sourceName ) && bValid;
-                addStimulusRule( stimulus, rule );
-            }
+            ElementStimulusRule rule;
+            bValid = readStimulusRule( ruleNode, rule, sourceName ) && bValid;
+            addStimulusRule( stimulus, rule );
         }
-        for ( XMLNode stepNode = root.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
+        return bValid;
+    }
+
+    bool ElementRuleCatalog::loadStep( const XMLNode& stepNode, string_view sourceName )
+    {
+        bool bValid = true;
+
+        for ( XMLNode ruleNode = stepNode.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
         {
-            for ( XMLNode ruleNode = stepNode.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
-            {
-                ElementStepRule rule;
-                if ( readStepRule( ruleNode, rule, sourceName ) )
-                    addStepRule( rule );
-                else
-                    bValid = false;
-            }
-        }
-        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
-        {
-            const bool bKnown = XMLReadUtil::isElement( child.getName(), "Flag" ) || XMLReadUtil::isElement( child.getName(), "Status" ) ||
-                                XMLReadUtil::isElement( child.getName(), "Material" ) || XMLReadUtil::isElement( child.getName(), "Stimulus" ) ||
-                                XMLReadUtil::isElement( child.getName(), "Step" );
-            if ( bKnown == false )
-            {
-                SW_LOG_WARNING_ID( "ElementRuleCatalog.UnknownElementElementRules", "%#: unknown element <%#> in <ElementRules>", sourceName, child.getName() );
+            ElementStepRule rule;
+            if ( readStepRule( ruleNode, rule, sourceName ) )
+                addStepRule( rule );
+            else
                 bValid = false;
-            }
         }
         return bValid;
     }
